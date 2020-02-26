@@ -207,16 +207,21 @@ if (target_cpu == "arm64") {
 
   package("amlogic_decoder_firmware") {
     deprecated_system_image = true
-    if (amlogic_decoder_firmware_path == "") {
-      amlogic_decoder_firmware_path =
-          "//prebuilt/media/firmware/amlogic-decoder/video_ucode.bin"
+
+    # internal access is needed to get the firmware from the default path
+    if (target_cpu == "arm64" &&
+        (internal_access || amlogic_decoder_firmware_path != "")) {
+      if (amlogic_decoder_firmware_path == "") {
+        amlogic_decoder_firmware_path =
+            "//prebuilt/media/firmware/amlogic-decoder/video_ucode.bin"
+      }
+      libraries = [
+        {
+          source = rebase_path(amlogic_decoder_firmware_path)
+          name = "firmware/amlogic_video_ucode.bin"
+        },
+      ]
     }
-    libraries = [
-      {
-        source = rebase_path(amlogic_decoder_firmware_path)
-        name = "firmware/amlogic_video_ucode.bin"
-      },
-    ]
   }
 
   package("amlogic_decoder_package") {
