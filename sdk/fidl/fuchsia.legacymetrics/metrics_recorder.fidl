@@ -17,12 +17,11 @@ protocol MetricsRecorder {
 /// cache local metric events until they're requested.
 protocol MetricsProvider {
     /// Requests the next available batch of events from this provider.
-    /// When specified, |max_count| limits the number of metrics returned by
-    /// this call; otherwise, it returns all available events. Note that this
-    /// method is a "hanging get" - if an implementor of this interface has no
-    /// events to report, it should hang the response until it has at least 1
-    /// event to report.
-    GetEvents(uint32? max_count) -> (vector<Event>:MAX events);
+    /// |max_count| limits the number of metrics returned by this call.
+    /// Note that this method is a "hanging get" - if an implementor of this
+    /// interface has no events to report, it should hang the response until it
+    /// has at least 1 event to report.
+    GetEvents(uint32 max_count) -> (vector<Event>:MAX events);
 
     // TODO(fxb/46943): Indicate when events are dropped by the provider.
 };
