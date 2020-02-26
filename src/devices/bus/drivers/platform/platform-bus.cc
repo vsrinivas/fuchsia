@@ -14,6 +14,8 @@
 #include <zircon/process.h>
 #include <zircon/syscalls/iommu.h>
 
+#include <algorithm>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
@@ -466,6 +468,25 @@ PlatformBus::PlatformBus(zx_device_t* parent, zx::channel items_svc)
   sync_completion_reset(&proto_completion_);
 }
 
+zx_status_t PlatformBus::GetBoardInfo(zbi_board_info_t* board_info) {
+  zx::vmo vmo;
+  uint32_t len;
+  zx_status_t status = GetBootItem(ZBI_TYPE_DRV_BOARD_INFO, 0, &vmo, &len);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Boot Item ZBI_TYPE_DRV_BOARD_INFO not found\n");
+    return status;
+  }
+  if (!vmo.is_valid()) {
+    zxlogf(ERROR, "Invalid zbi_board_info_t VMO\n");
+    return ZX_ERR_UNAVAILABLE;
+  }
+  status = vmo.read(board_info, 0, std::min<uint64_t>(len, sizeof(*board_info)));
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to read zbi_board_info_t VMO\n");
+  }
+  return status;
+}
+
 zx_status_t PlatformBus::Init() {
   zx_status_t status;
   // Set up a dummy IOMMU protocol to use in the case where our board driver
@@ -536,25 +557,9 @@ zx_status_t PlatformBus::Init() {
   }
 
   // Set default board_revision
-  board_info_.board_revision = 0;
-  zx::vmo boardinfo_vmo;
-  uint32_t boardinfo_len;
-  zbi_board_info_t zbi_boardinfo;
-  status = GetBootItem(ZBI_TYPE_DRV_BOARD_INFO, 0, &boardinfo_vmo, &boardinfo_len);
-  if (status == ZX_OK) {
-    if (boardinfo_vmo.is_valid()) {
-      status = boardinfo_vmo.read(&zbi_boardinfo, 0, boardinfo_len);
-      if (status == ZX_OK) {
-        board_info_.board_revision = zbi_boardinfo.revision;
-      } else {
-        zxlogf(ERROR, "Failed to read zbi_boardinfo_t VMO\n");
-      }
-    } else {
-      zxlogf(ERROR, "Invalid zbi_boardinfo_t VMO\n");
-    }
-  } else {
-    zxlogf(ERROR, "Boot Item ZBI_TYPE_DRV_BOARD_INFO not found\n");
-  }
+  zbi_board_info_t zbi_board_info = {};
+  GetBoardInfo(&zbi_board_info);
+  board_info_.board_revision = zbi_board_info.revision;
 
   // Then we attach the platform-bus device below it.
   zx_device_prop_t props[] = {

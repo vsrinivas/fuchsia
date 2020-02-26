@@ -13,6 +13,7 @@
 #include <lib/zx/vmo.h>
 #include <stdint.h>
 #include <threads.h>
+#include <zircon/boot/image.h>
 #include <zircon/types.h>
 
 #include <optional>
@@ -93,6 +94,7 @@ class PlatformBus : public PlatformBusType,
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(PlatformBus);
 
+  zx_status_t GetBoardInfo(zbi_board_info_t* board_info);
   zx_status_t Init();
 
   zx::channel items_svc_;
