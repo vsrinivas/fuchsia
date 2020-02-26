@@ -36,6 +36,8 @@ class FakeTestRunner extends Fake implements TestRunner {
     String command,
     List<String> args, {
     String workingDirectory,
+    Function(String) realtimeOutputSink,
+    Function(String) realtimeErrorSink,
   }) async {
     return Future.value(
       ProcessResult(1, 0, args.join(' '), workingDirectory.toString()),
@@ -513,10 +515,10 @@ void main() {
 
     test('when there are pass-thru commands', () async {
       var testsConfig = TestsConfig(
-        flags: Flags.defaults(),
-        passThroughTokens: ['--xyz'],
+        flags: Flags(),
         runnerTokens: const [],
         testNames: ['example test'],
+        passThroughTokens: ['--xyz'],
       );
       ParsedManifest manifest = tr.aggregateTests(
         buildDir: '/custom',
@@ -541,7 +543,7 @@ void main() {
 
     test('when there are no pass-thru commands', () async {
       var testsConfig = TestsConfig(
-        flags: Flags.defaults(),
+        flags: Flags(),
         passThroughTokens: [''],
         runnerTokens: const [],
         testNames: ['example test'],
@@ -680,6 +682,33 @@ void main() {
         (cmd.analyticsReporter as AnalyticsFaker).reportHistory,
         hasLength(0),
       );
+    });
+  });
+  group('test output is routed correctly', () {
+    test('when -o is passed', () async {
+      var strings = <String>[];
+      void addStrings(String s) {
+        strings.add(s);
+      }
+
+      ProcessResult result = await TestRunner.runner.run(
+        './test/output_tester.sh',
+        [],
+        realtimeOutputSink: addStrings,
+      );
+
+      expect(strings.length, 2);
+      expect(strings[0], 'line 1');
+      expect(strings[1], 'line 2');
+      expect(result.stdout, 'line 1line 2');
+    });
+
+    test('when -o is not passed', () async {
+      ProcessResult result = await TestRunner.runner.run(
+        './test/output_tester.sh',
+        [],
+      );
+      expect(result.stdout, 'line 1\nline 2\n');
     });
   });
 }

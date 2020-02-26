@@ -34,9 +34,9 @@ class Flags {
     this.realm,
     this.allOutput = false,
     this.simpleOutput = false,
+    this.shouldFailFast = false,
     this.shouldOnlyRunDeviceTests = false,
     this.shouldOnlyRunHostTests = false,
-    this.shouldFailFast = false,
     this.shouldPrintSkipped = false,
     this.shouldRandomizeTestOrder = false,
     this.shouldRebuild = true,
@@ -62,27 +62,6 @@ class Flags {
       shouldRandomizeTestOrder: argResults['random'],
       shouldSilenceUnsupported: argResults['silenceunsupported'],
       warnSlowerThan: int.parse(argResults['warnslow'] ?? '0'),
-    );
-  }
-
-  factory Flags.defaults({
-    bool shouldOnlyRunDeviceTests = false,
-    bool shouldOnlyRunHostTests = false,
-  }) {
-    return Flags(
-      dryRun: false,
-      limit: 0,
-      realm: null,
-      isVerbose: false,
-      allOutput: false,
-      simpleOutput: true,
-      shouldFailFast: false,
-      shouldOnlyRunDeviceTests: shouldOnlyRunDeviceTests,
-      shouldOnlyRunHostTests: shouldOnlyRunHostTests,
-      shouldPrintSkipped: false,
-      shouldRandomizeTestOrder: false,
-      shouldSilenceUnsupported: false,
-      warnSlowerThan: 0,
     );
   }
 
@@ -160,7 +139,7 @@ class TestsConfig {
       runnerTokens: const [],
       passThroughTokens: const [],
       testNames: tNames ?? [],
-      flags: Flags.defaults(),
+      flags: Flags(),
     );
   }
 
@@ -169,7 +148,7 @@ class TestsConfig {
       runnerTokens: const [],
       passThroughTokens: const [],
       testNames: tNames,
-      flags: Flags.defaults(
+      flags: Flags(
         shouldOnlyRunDeviceTests: false,
         shouldOnlyRunHostTests: true,
       ),
@@ -181,7 +160,7 @@ class TestsConfig {
       testNames: tNames,
       runnerTokens: const [],
       passThroughTokens: const [],
-      flags: Flags.defaults(
+      flags: Flags(
         shouldOnlyRunDeviceTests: true,
         shouldOnlyRunHostTests: false,
       ),

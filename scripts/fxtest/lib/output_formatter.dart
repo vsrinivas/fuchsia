@@ -8,7 +8,6 @@ import 'package:io/ansi.dart';
 abstract class OutputFormatter {
   final bool verbose;
   final bool shouldColorizeOutput;
-  final bool shouldShowPassedTestsOutput;
   final Duration slowTestThreshold;
   final List<TestInfo> _infoEvents;
   final List<TestStarted> _testStartedEvents;
@@ -19,7 +18,6 @@ abstract class OutputFormatter {
   OutputFormatter({
     this.verbose,
     this.shouldColorizeOutput = true,
-    this.shouldShowPassedTestsOutput = false,
     this.slowTestThreshold,
     OutputBuffer buffer,
   })  : _testResultEvents = [],
@@ -138,13 +136,11 @@ abstract class OutputFormatter {
 class VerboseOutputFormatter extends OutputFormatter {
   VerboseOutputFormatter({
     shouldColorizeOutput = true,
-    shouldShowPassedTestsOutput,
     slowTestThreshold,
     OutputBuffer buffer,
   }) : super(
           verbose: true,
           shouldColorizeOutput: shouldColorizeOutput,
-          shouldShowPassedTestsOutput: shouldShowPassedTestsOutput,
           slowTestThreshold: slowTestThreshold,
           buffer: buffer,
         );
@@ -153,12 +149,12 @@ class VerboseOutputFormatter extends OutputFormatter {
   void _handleTestInfo(TestInfo event) {
     _buffer.addLines([
       // Padding for info events that appear in the middle of the result stream
-      if (hasStartedTests)
+      if (hasStartedTests && event.requiresPadding)
         ' ',
       // The message itself
       event.message,
       // Padding for info events that appear in the middle of the result stream
-      if (hasStartedTests)
+      if (hasStartedTests && event.requiresPadding)
         ' ',
     ]);
   }
@@ -166,7 +162,7 @@ class VerboseOutputFormatter extends OutputFormatter {
   @override
   void _handleTestStarted(TestStarted event) {
     String testName = colorize(event.testName, [cyan]);
-    // Add sine padding for our first test event
+    // Add some padding for our first test event
     if (_testStartedEvents.length == 1) {
       _buffer.addLine('');
     }
@@ -191,12 +187,6 @@ class VerboseOutputFormatter extends OutputFormatter {
             : '';
 
     _buffer.updateLines(['$emoji $testName$runtime']);
-
-    // `stdout` content is included in the message for a failed test, so we
-    // would be duplicating that for failed tests
-    if (shouldShowPassedTestsOutput && event.isSuccess) {
-      _buffer.addLines(event.message.split('\n'));
-    }
   }
 
   @override

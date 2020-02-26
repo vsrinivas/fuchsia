@@ -60,7 +60,8 @@ class TestResult extends TestEvent {
 
 class TestInfo extends TestEvent {
   final String message;
-  TestInfo(this.message);
+  final bool requiresPadding;
+  TestInfo(this.message, {this.requiresPadding = true});
 
   @override
   String toString() => '<TestInfo $message>';

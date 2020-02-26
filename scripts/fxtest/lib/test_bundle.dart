@@ -47,7 +47,7 @@ class TestBundle {
   /// Invokes the actual test that this class wraps.
   ///
   /// Returns a stream of test events that send feedback to the user.
-  Stream<TestEvent> run() async* {
+  Stream<TestEvent> run({Function(String) realtimeOutputSink}) async* {
     CommandTokens commandTokens =
         testDefinition.executionHandle.getInvocationTokens(runnerFlags);
 
@@ -77,6 +77,7 @@ class TestBundle {
       commandTokens.command,
       commandTokens.args..addAll(extraFlags),
       workingDirectory: workingDirectory,
+      realtimeOutputSink: realtimeOutputSink,
     );
 
     yield TestResult(

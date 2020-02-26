@@ -103,7 +103,6 @@ class FuchsiaTestCommandCli {
         ? VerboseOutputFormatter(
             slowTestThreshold: slowTestThreshold,
             shouldColorizeOutput: testsConfig.flags.simpleOutput,
-            shouldShowPassedTestsOutput: testsConfig.flags.allOutput,
           )
         : CondensedOutputFormatter(
             slowTestThreshold: slowTestThreshold,

@@ -6,7 +6,6 @@ import 'dart:async';
 
 import 'package:fxtest/fxtest.dart';
 import 'package:meta/meta.dart';
-import 'package:pedantic/pedantic.dart';
 
 /// Main entry-point for all Fuchsia tests, both host and on-device.
 ///
@@ -114,9 +113,15 @@ class FuchsiaTestCommand {
   }
 
   Stream<TestEvent> runTests(List<TestBundle> testBundles) async* {
+    Function(String) realtimeOutputSink = testsConfig.flags.allOutput
+        ? (String val) {
+            emitEvent(TestInfo(val, requiresPadding: false));
+          }
+        : null;
+
     var count = 0;
     for (TestBundle testBundle in testBundles) {
-      yield* testBundle.run();
+      yield* testBundle.run(realtimeOutputSink: realtimeOutputSink);
 
       count += 1;
       _numberOfTests = count;
