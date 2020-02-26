@@ -22,7 +22,7 @@ copy("copy") {
 go_library("system_tests_lib") {
   testonly = true
   name = "fuchsia.googlesource.com/system_tests"
-  deps = [ "//src/testing/host-target-testing" ]
+  deps = [ "//src/sys/pkg/testing/host-target-testing" ]
   non_go_deps = [ ":copy" ]
   metadata = {
     test_runtime_deps = get_target_outputs(":copy")

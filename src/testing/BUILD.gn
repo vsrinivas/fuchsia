@@ -7,7 +7,6 @@ group("testing") {
   deps = [
     ":tests",
     "fuzzing",
-    "host-target-testing",
     "loadbench",
   ]
 }
