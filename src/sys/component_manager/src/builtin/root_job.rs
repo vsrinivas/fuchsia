@@ -17,7 +17,7 @@ use {
     fidl_fuchsia_boot as fboot,
     fuchsia_runtime::job_default,
     fuchsia_zircon as zx,
-    futures::{future::BoxFuture, prelude::*},
+    futures::prelude::*,
     lazy_static::lazy_static,
     std::{convert::TryInto, sync::Arc},
 };
@@ -70,20 +70,18 @@ impl BuiltinCapability for RootJob {
     }
 }
 
+#[async_trait]
 impl Hook for RootJob {
-    fn on(self: Arc<Self>, event: &Event) -> BoxFuture<Result<(), ModelError>> {
-        Box::pin(async move {
-            if let EventPayload::RouteCapability {
-                source: CapabilitySource::Framework { capability, scope_moniker: None },
-                capability_provider,
-            } = &event.payload
-            {
-                let mut provider = capability_provider.lock().await;
-                *provider =
-                    self.on_route_framework_capability(&capability, provider.take()).await?;
-            };
-            Ok(())
-        })
+    async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
+        if let EventPayload::RouteCapability {
+            source: CapabilitySource::Framework { capability, scope_moniker: None },
+            capability_provider,
+        } = &event.payload
+        {
+            let mut provider = capability_provider.lock().await;
+            *provider = self.on_route_framework_capability(&capability, provider.take()).await?;
+        };
+        Ok(())
     }
 }
 

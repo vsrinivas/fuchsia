@@ -22,7 +22,7 @@ use {
     fidl_fuchsia_io::{MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE},
     fidl_fuchsia_io2 as fio2, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_zircon as zx,
-    futures::{future::BoxFuture, join, lock::Mutex, TryStreamExt},
+    futures::{join, lock::Mutex, TryStreamExt},
     log::*,
     std::{
         convert::{TryFrom, TryInto},
@@ -73,26 +73,25 @@ async fn use_framework_service() {
         }
     }
 
+    #[async_trait]
     impl Hook for MockRealmCapabilityHost {
-        fn on(self: Arc<Self>, event: &Event) -> BoxFuture<Result<(), ModelError>> {
-            Box::pin(async move {
-                if let EventPayload::RouteCapability {
-                    source:
-                        CapabilitySource::Framework { capability, scope_moniker: Some(scope_moniker) },
-                    capability_provider,
-                } = &event.payload
-                {
-                    let mut capability_provider = capability_provider.lock().await;
-                    *capability_provider = self
-                        .on_route_scoped_framework_capability_async(
-                            scope_moniker.clone(),
-                            &capability,
-                            capability_provider.take(),
-                        )
-                        .await?;
-                }
-                Ok(())
-            })
+        async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
+            if let EventPayload::RouteCapability {
+                source:
+                    CapabilitySource::Framework { capability, scope_moniker: Some(scope_moniker) },
+                capability_provider,
+            } = &event.payload
+            {
+                let mut capability_provider = capability_provider.lock().await;
+                *capability_provider = self
+                    .on_route_scoped_framework_capability_async(
+                        scope_moniker.clone(),
+                        &capability,
+                        capability_provider.take(),
+                    )
+                    .await?;
+            }
+            Ok(())
         }
     }
 

@@ -27,7 +27,7 @@ use {
     fidl_fuchsia_io::{DirectoryProxy, NodeMarker, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_DIRECTORY},
     fuchsia_async::EHandle,
     fuchsia_trace as trace, fuchsia_zircon as zx,
-    futures::{future::BoxFuture, lock::Mutex},
+    futures::lock::Mutex,
     std::{
         collections::HashMap,
         path::PathBuf,
@@ -594,55 +594,51 @@ impl Hub {
     }
 }
 
+#[async_trait]
 impl Hook for Hub {
-    fn on(self: Arc<Self>, event: &Event) -> BoxFuture<Result<(), ModelError>> {
-        Box::pin(async move {
-            match &event.payload {
-                EventPayload::BeforeStartInstance {
-                    component_url,
-                    runtime,
-                    component_decl,
-                    live_children,
-                    routing_facade,
-                } => {
-                    self.on_before_start_instance_async(
-                        &event.target_moniker,
-                        component_url.clone(),
-                        &runtime,
-                        &component_decl,
-                        &live_children,
-                        routing_facade.clone(),
-                    )
+    async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
+        match &event.payload {
+            EventPayload::BeforeStartInstance {
+                component_url,
+                runtime,
+                component_decl,
+                live_children,
+                routing_facade,
+            } => {
+                self.on_before_start_instance_async(
+                    &event.target_moniker,
+                    component_url.clone(),
+                    &runtime,
+                    &component_decl,
+                    &live_children,
+                    routing_facade.clone(),
+                )
+                .await?;
+            }
+            EventPayload::AddDynamicChild { component_url } => {
+                self.on_add_dynamic_child_async(&event.target_moniker, component_url.to_string())
                     .await?;
-                }
-                EventPayload::AddDynamicChild { component_url } => {
-                    self.on_add_dynamic_child_async(
-                        &event.target_moniker,
-                        component_url.to_string(),
-                    )
-                    .await?;
-                }
-                EventPayload::PreDestroyInstance => {
-                    self.on_pre_destroy_instance_async(&event.target_moniker).await?;
-                }
-                EventPayload::StopInstance => {
-                    self.on_stop_instance_async(&event.target_moniker).await?;
-                }
-                EventPayload::PostDestroyInstance => {
-                    self.on_post_destroy_instance_async(&event.target_moniker).await?;
-                }
-                EventPayload::RouteCapability { source, capability_provider } => {
-                    self.on_route_capability_async(
-                        &event.target_moniker,
-                        source.clone(),
-                        capability_provider.clone(),
-                    )
-                    .await?;
-                }
-                _ => {}
-            };
-            Ok(())
-        })
+            }
+            EventPayload::PreDestroyInstance => {
+                self.on_pre_destroy_instance_async(&event.target_moniker).await?;
+            }
+            EventPayload::StopInstance => {
+                self.on_stop_instance_async(&event.target_moniker).await?;
+            }
+            EventPayload::PostDestroyInstance => {
+                self.on_post_destroy_instance_async(&event.target_moniker).await?;
+            }
+            EventPayload::RouteCapability { source, capability_provider } => {
+                self.on_route_capability_async(
+                    &event.target_moniker,
+                    source.clone(),
+                    capability_provider.clone(),
+                )
+                .await?;
+            }
+            _ => {}
+        };
+        Ok(())
     }
 }
 

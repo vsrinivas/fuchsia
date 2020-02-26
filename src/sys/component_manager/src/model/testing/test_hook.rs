@@ -19,7 +19,7 @@ use {
     fidl_fuchsia_io::DirectoryMarker,
     fuchsia_async::EHandle,
     fuchsia_zircon as zx,
-    futures::{executor::block_on, future::BoxFuture, lock::Mutex, prelude::*},
+    futures::{executor::block_on, lock::Mutex, prelude::*},
     std::{
         cmp::Eq,
         collections::HashMap,
@@ -264,30 +264,28 @@ impl TestHook {
     }
 }
 
+#[async_trait]
 impl Hook for TestHook {
-    fn on<'a>(self: Arc<Self>, event: &'a Event) -> BoxFuture<'a, Result<(), ModelError>> {
-        Box::pin(async move {
-            match &event.payload {
-                EventPayload::BeforeStartInstance { live_children, .. } => {
-                    self.on_before_start_instance_async(&event.target_moniker, &live_children)
-                        .await?;
-                }
-                EventPayload::AddDynamicChild { .. } => {
-                    self.create_instance_if_necessary(&event.target_moniker).await?;
-                }
-                EventPayload::StopInstance => {
-                    self.on_stop_instance_async(&event.target_moniker).await?;
-                }
-                EventPayload::PreDestroyInstance => {
-                    self.on_pre_destroy_instance_async(&event.target_moniker).await?;
-                }
-                EventPayload::PostDestroyInstance => {
-                    self.on_destroy_instance_async(&event.target_moniker).await?;
-                }
-                _ => (),
-            };
-            Ok(())
-        })
+    async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
+        match &event.payload {
+            EventPayload::BeforeStartInstance { live_children, .. } => {
+                self.on_before_start_instance_async(&event.target_moniker, &live_children).await?;
+            }
+            EventPayload::AddDynamicChild { .. } => {
+                self.create_instance_if_necessary(&event.target_moniker).await?;
+            }
+            EventPayload::StopInstance => {
+                self.on_stop_instance_async(&event.target_moniker).await?;
+            }
+            EventPayload::PreDestroyInstance => {
+                self.on_pre_destroy_instance_async(&event.target_moniker).await?;
+            }
+            EventPayload::PostDestroyInstance => {
+                self.on_destroy_instance_async(&event.target_moniker).await?;
+            }
+            _ => (),
+        };
+        Ok(())
     }
 }
 
@@ -331,26 +329,24 @@ impl HubInjectionTestHook {
     }
 }
 
+#[async_trait]
 impl Hook for HubInjectionTestHook {
-    fn on(self: Arc<Self>, event: &Event) -> BoxFuture<Result<(), ModelError>> {
-        Box::pin(async move {
-            if let EventPayload::RouteCapability {
-                source:
-                    CapabilitySource::Framework { capability, scope_moniker: Some(scope_moniker) },
-                capability_provider,
-            } = &event.payload
-            {
-                let mut capability_provider = capability_provider.lock().await;
-                *capability_provider = self
-                    .on_route_scoped_framework_capability_async(
-                        scope_moniker.clone(),
-                        capability,
-                        capability_provider.take(),
-                    )
-                    .await?;
-            }
-            Ok(())
-        })
+    async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
+        if let EventPayload::RouteCapability {
+            source: CapabilitySource::Framework { capability, scope_moniker: Some(scope_moniker) },
+            capability_provider,
+        } = &event.payload
+        {
+            let mut capability_provider = capability_provider.lock().await;
+            *capability_provider = self
+                .on_route_scoped_framework_capability_async(
+                    scope_moniker.clone(),
+                    capability,
+                    capability_provider.take(),
+                )
+                .await?;
+        }
+        Ok(())
     }
 }
 

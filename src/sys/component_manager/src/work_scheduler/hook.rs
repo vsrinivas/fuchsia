@@ -18,7 +18,7 @@ use {
     async_trait::async_trait,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
-    futures::{future::BoxFuture, TryStreamExt},
+    futures::TryStreamExt,
     log::warn,
     std::{
         path::PathBuf,
@@ -88,43 +88,39 @@ impl WorkScheduler {
     }
 }
 
+#[async_trait]
 impl Hook for WorkScheduler {
-    fn on(self: Arc<Self>, event: &Event) -> BoxFuture<Result<(), ModelError>> {
-        Box::pin(async move {
-            match &event.payload {
-                EventPayload::ResolveInstance { decl } => {
-                    self.try_add_realm_as_worker(&event.target_moniker, &decl).await;
-                }
-                EventPayload::RouteCapability {
-                    source: CapabilitySource::Framework { capability, scope_moniker: None },
-                    capability_provider,
-                } => {
-                    let mut capability_provider = capability_provider.lock().await;
-                    *capability_provider = self
-                        .on_route_framework_capability_async(
-                            &capability,
-                            capability_provider.take(),
-                        )
-                        .await?;
-                }
-                EventPayload::RouteCapability {
-                    source:
-                        CapabilitySource::Framework { capability, scope_moniker: Some(scope_moniker) },
-                    capability_provider,
-                } => {
-                    let mut capability_provider = capability_provider.lock().await;
-                    *capability_provider = self
-                        .on_route_scoped_framework_capability_async(
-                            scope_moniker.clone(),
-                            &capability,
-                            capability_provider.take(),
-                        )
-                        .await?;
-                }
-                _ => {}
-            };
-            Ok(())
-        })
+    async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
+        match &event.payload {
+            EventPayload::ResolveInstance { decl } => {
+                self.try_add_realm_as_worker(&event.target_moniker, &decl).await;
+            }
+            EventPayload::RouteCapability {
+                source: CapabilitySource::Framework { capability, scope_moniker: None },
+                capability_provider,
+            } => {
+                let mut capability_provider = capability_provider.lock().await;
+                *capability_provider = self
+                    .on_route_framework_capability_async(&capability, capability_provider.take())
+                    .await?;
+            }
+            EventPayload::RouteCapability {
+                source:
+                    CapabilitySource::Framework { capability, scope_moniker: Some(scope_moniker) },
+                capability_provider,
+            } => {
+                let mut capability_provider = capability_provider.lock().await;
+                *capability_provider = self
+                    .on_route_scoped_framework_capability_async(
+                        scope_moniker.clone(),
+                        &capability,
+                        capability_provider.take(),
+                    )
+                    .await?;
+            }
+            _ => {}
+        };
+        Ok(())
     }
 }
 

@@ -10,7 +10,6 @@ use {
     fidl_fidl_examples_echo::{EchoMarker, EchoRequest, EchoRequestStream},
     fuchsia_async as fasync,
     fuchsia_zircon::{self as zx},
-    futures::future::BoxFuture,
     futures::prelude::*,
     lazy_static::lazy_static,
     std::{
@@ -86,20 +85,19 @@ impl EchoService {
     }
 }
 
+#[async_trait]
 impl Hook for EchoService {
-    fn on(self: Arc<Self>, event: &Event) -> BoxFuture<Result<(), ModelError>> {
-        Box::pin(async move {
-            if let EventPayload::RouteCapability {
-                source: CapabilitySource::Framework { capability, scope_moniker: None },
-                capability_provider,
-            } = &event.payload
-            {
-                let mut capability_provider = capability_provider.lock().await;
-                *capability_provider = self
-                    .on_route_framework_capability_async(&capability, capability_provider.take())
-                    .await?;
-            };
-            Ok(())
-        })
+    async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
+        if let EventPayload::RouteCapability {
+            source: CapabilitySource::Framework { capability, scope_moniker: None },
+            capability_provider,
+        } = &event.payload
+        {
+            let mut capability_provider = capability_provider.lock().await;
+            *capability_provider = self
+                .on_route_framework_capability_async(&capability, capability_provider.take())
+                .await?;
+        };
+        Ok(())
     }
 }

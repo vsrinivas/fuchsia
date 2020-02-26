@@ -19,7 +19,7 @@ use {
     fidl_fuchsia_sys2::*,
     fuchsia_async::{self as fasync},
     fuchsia_zircon as zx,
-    futures::{future::BoxFuture, prelude::*},
+    futures::prelude::*,
     lazy_static::lazy_static,
     log::warn,
     std::{
@@ -69,21 +69,20 @@ impl SystemController {
     }
 }
 
+#[async_trait]
 impl Hook for SystemController {
-    fn on(self: Arc<Self>, event: &Event) -> BoxFuture<Result<(), ModelError>> {
-        Box::pin(async move {
-            if let EventPayload::RouteCapability {
-                source: CapabilitySource::Framework { capability, scope_moniker: None },
-                capability_provider,
-            } = &event.payload
-            {
-                let mut capability_provider = capability_provider.lock().await;
-                *capability_provider = self
-                    .on_route_framework_capability_async(&capability, capability_provider.take())
-                    .await?;
-            };
-            Ok(())
-        })
+    async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
+        if let EventPayload::RouteCapability {
+            source: CapabilitySource::Framework { capability, scope_moniker: None },
+            capability_provider,
+        } = &event.payload
+        {
+            let mut capability_provider = capability_provider.lock().await;
+            *capability_provider = self
+                .on_route_framework_capability_async(&capability, capability_provider.take())
+                .await?;
+        };
+        Ok(())
     }
 }
 

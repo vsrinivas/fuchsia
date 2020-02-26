@@ -63,10 +63,12 @@ use {
         realm::Realm,
     },
     fuchsia_async as fasync,
-    futures::future::{join_all, poll_fn, BoxFuture},
-    futures::lock::Mutex,
-    futures::pending,
-    futures::task::{Poll, Waker},
+    futures::{
+        future::{join_all, poll_fn, BoxFuture},
+        lock::Mutex,
+        pending,
+        task::{Poll, Waker},
+    },
     std::collections::HashMap,
     std::sync::Arc,
 };
@@ -306,6 +308,7 @@ pub mod tests {
                 test_hook::Lifecycle,
             },
         },
+        async_trait::async_trait,
         cm_rust::{
             CapabilityPath, DependencyType, ExposeDecl, ExposeProtocolDecl, ExposeSource,
             ExposeTarget, OfferDecl, OfferProtocolDecl, OfferServiceSource, OfferTarget, UseDecl,
@@ -1537,14 +1540,13 @@ pub mod tests {
             }
         }
 
+        #[async_trait]
         impl Hook for StopErrorHook {
-            fn on<'a>(self: Arc<Self>, event: &'a Event) -> BoxFuture<'a, Result<(), ModelError>> {
-                Box::pin(async move {
-                    if let EventPayload::StopInstance = event.payload {
-                        self.on_shutdown_instance_async(&event.target_moniker).await?;
-                    }
-                    Ok(())
-                })
+            async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
+                if let EventPayload::StopInstance = event.payload {
+                    self.on_shutdown_instance_async(&event.target_moniker).await?;
+                }
+                Ok(())
             }
         }
 
@@ -2259,14 +2261,13 @@ pub mod tests {
             }
         }
 
+        #[async_trait]
         impl Hook for DestroyErrorHook {
-            fn on<'a>(self: Arc<Self>, event: &'a Event) -> BoxFuture<'a, Result<(), ModelError>> {
-                Box::pin(async move {
-                    if let EventPayload::PostDestroyInstance = event.payload {
-                        self.on_destroy_instance_async(&event.target_moniker).await?;
-                    }
-                    Ok(())
-                })
+            async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
+                if let EventPayload::PostDestroyInstance = event.payload {
+                    self.on_destroy_instance_async(&event.target_moniker).await?;
+                }
+                Ok(())
             }
         }
 

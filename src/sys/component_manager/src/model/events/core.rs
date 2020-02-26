@@ -19,7 +19,7 @@ use {
     async_trait::async_trait,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_test_events as fevents, fuchsia_async as fasync, fuchsia_zircon as zx,
-    futures::{future::BoxFuture, lock::Mutex},
+    futures::lock::Mutex,
     lazy_static::lazy_static,
     std::{
         collections::HashMap,
@@ -94,40 +94,39 @@ impl EventSourceFactory {
     }
 }
 
+#[async_trait]
 impl Hook for EventSourceFactory {
-    fn on(self: Arc<Self>, event: &Event) -> BoxFuture<'_, Result<(), ModelError>> {
-        Box::pin(async move {
-            match &event.payload {
-                EventPayload::RouteCapability {
-                    source:
-                        CapabilitySource::Framework { capability, scope_moniker: Some(scope_moniker) },
-                    capability_provider,
-                } => {
-                    let mut capability_provider = capability_provider.lock().await;
-                    *capability_provider = self
-                        .on_route_scoped_framework_capability_async(
-                            &capability,
-                            scope_moniker.clone(),
-                            capability_provider.take(),
-                        )
-                        .await?;
-                }
-                EventPayload::ResolveInstance { decl } => {
-                    if decl.uses_protocol_from_framework(&EVENT_SOURCE_SYNC_SERVICE) {
-                        let key = Some(event.target_moniker.clone());
-                        let mut event_source_registry = self.event_source_registry.lock().await;
-                        // It is currently assumed that a component instance's declaration
-                        // is resolved only once. Someday, this may no longer be true if individual
-                        // components can be updated.
-                        assert!(!event_source_registry.contains_key(&key));
-                        let event_source = self.create(key.clone()).await;
-                        event_source_registry.insert(key, event_source);
-                    }
-                }
-                _ => {}
+    async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
+        match &event.payload {
+            EventPayload::RouteCapability {
+                source:
+                    CapabilitySource::Framework { capability, scope_moniker: Some(scope_moniker) },
+                capability_provider,
+            } => {
+                let mut capability_provider = capability_provider.lock().await;
+                *capability_provider = self
+                    .on_route_scoped_framework_capability_async(
+                        &capability,
+                        scope_moniker.clone(),
+                        capability_provider.take(),
+                    )
+                    .await?;
             }
-            Ok(())
-        })
+            EventPayload::ResolveInstance { decl } => {
+                if decl.uses_protocol_from_framework(&EVENT_SOURCE_SYNC_SERVICE) {
+                    let key = Some(event.target_moniker.clone());
+                    let mut event_source_registry = self.event_source_registry.lock().await;
+                    // It is currently assumed that a component instance's declaration
+                    // is resolved only once. Someday, this may no longer be true if individual
+                    // components can be updated.
+                    assert!(!event_source_registry.contains_key(&key));
+                    let event_source = self.create(key.clone()).await;
+                    event_source_registry.insert(key, event_source);
+                }
+            }
+            _ => {}
+        }
+        Ok(())
     }
 }
 

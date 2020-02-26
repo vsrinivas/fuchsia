@@ -14,7 +14,6 @@ use {
     cm_rust::CapabilityName,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_component_runner as fcrunner, fuchsia_async as fasync, fuchsia_zircon as zx,
-    futures::future::BoxFuture,
     futures::stream::TryStreamExt,
     std::{
         path::PathBuf,
@@ -43,26 +42,25 @@ impl BuiltinRunner {
     }
 }
 
+#[async_trait]
 impl Hook for BuiltinRunner {
-    fn on(self: Arc<Self>, event: &Event) -> BoxFuture<Result<(), ModelError>> {
-        Box::pin(async move {
-            if let EventPayload::RouteCapability {
-                source: CapabilitySource::Framework { capability, scope_moniker: None },
-                capability_provider,
-            } = &event.payload
-            {
-                // If we are being asked about the runner capability we own, pass a
-                // copy back to the caller.
-                let mut capability_provider = capability_provider.lock().await;
-                if let FrameworkCapability::Runner(runner_name) = capability {
-                    if self.name == *runner_name {
-                        *capability_provider =
-                            Some(Box::new(RunnerCapabilityProvider::new(self.runner.clone())));
-                    }
+    async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
+        if let EventPayload::RouteCapability {
+            source: CapabilitySource::Framework { capability, scope_moniker: None },
+            capability_provider,
+        } = &event.payload
+        {
+            // If we are being asked about the runner capability we own, pass a
+            // copy back to the caller.
+            let mut capability_provider = capability_provider.lock().await;
+            if let FrameworkCapability::Runner(runner_name) = capability {
+                if self.name == *runner_name {
+                    *capability_provider =
+                        Some(Box::new(RunnerCapabilityProvider::new(self.runner.clone())));
                 }
             }
-            Ok(())
-        })
+        }
+        Ok(())
     }
 }
 

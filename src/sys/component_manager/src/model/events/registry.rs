@@ -9,8 +9,9 @@ use {
         moniker::AbsoluteMoniker,
     },
     anyhow::Error,
+    async_trait::async_trait,
     fuchsia_trace as trace,
-    futures::{channel::*, future::BoxFuture, lock::Mutex, sink::SinkExt, StreamExt},
+    futures::{channel::*, lock::Mutex, sink::SinkExt, StreamExt},
     std::{
         collections::HashMap,
         sync::{Arc, Weak},
@@ -230,11 +231,10 @@ impl EventRegistry {
     }
 }
 
+#[async_trait]
 impl Hook for EventRegistry {
-    fn on(self: Arc<Self>, event: &ComponentEvent) -> BoxFuture<Result<(), ModelError>> {
-        Box::pin(async move {
-            self.send(event).await?;
-            Ok(())
-        })
+    async fn on(self: Arc<Self>, event: &ComponentEvent) -> Result<(), ModelError> {
+        self.send(event).await?;
+        Ok(())
     }
 }

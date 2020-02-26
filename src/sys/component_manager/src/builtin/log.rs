@@ -16,7 +16,7 @@ use {
     cm_rust::CapabilityPath,
     fidl_fuchsia_boot as fboot,
     fuchsia_zircon::{self as zx, DebugLog, DebugLogOpts, HandleBased, Resource},
-    futures::{future::BoxFuture, prelude::*},
+    futures::prelude::*,
     lazy_static::lazy_static,
     std::{convert::TryInto, sync::Arc},
 };
@@ -83,20 +83,18 @@ impl BuiltinCapability for ReadOnlyLog {
     }
 }
 
+#[async_trait]
 impl Hook for ReadOnlyLog {
-    fn on(self: Arc<Self>, event: &Event) -> BoxFuture<Result<(), ModelError>> {
-        Box::pin(async move {
-            if let EventPayload::RouteCapability {
-                source: CapabilitySource::Framework { capability, scope_moniker: None },
-                capability_provider,
-            } = &event.payload
-            {
-                let mut provider = capability_provider.lock().await;
-                *provider =
-                    self.on_route_framework_capability(&capability, provider.take()).await?;
-            };
-            Ok(())
-        })
+    async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
+        if let EventPayload::RouteCapability {
+            source: CapabilitySource::Framework { capability, scope_moniker: None },
+            capability_provider,
+        } = &event.payload
+        {
+            let mut provider = capability_provider.lock().await;
+            *provider = self.on_route_framework_capability(&capability, provider.take()).await?;
+        };
+        Ok(())
     }
 }
 
@@ -144,20 +142,18 @@ impl BuiltinCapability for WriteOnlyLog {
     }
 }
 
+#[async_trait]
 impl Hook for WriteOnlyLog {
-    fn on(self: Arc<Self>, event: &Event) -> BoxFuture<Result<(), ModelError>> {
-        Box::pin(async move {
-            if let EventPayload::RouteCapability {
-                source: CapabilitySource::Framework { capability, scope_moniker: None },
-                capability_provider,
-            } = &event.payload
-            {
-                let mut provider = capability_provider.lock().await;
-                *provider =
-                    self.on_route_framework_capability(&capability, provider.take()).await?;
-            };
-            Ok(())
-        })
+    async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
+        if let EventPayload::RouteCapability {
+            source: CapabilitySource::Framework { capability, scope_moniker: None },
+            capability_provider,
+        } = &event.payload
+        {
+            let mut provider = capability_provider.lock().await;
+            *provider = self.on_route_framework_capability(&capability, provider.take()).await?;
+        };
+        Ok(())
     }
 }
 

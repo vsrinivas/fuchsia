@@ -10,6 +10,7 @@ use {
             routing_facade::RoutingFacade,
         },
     },
+    async_trait::async_trait,
     cm_rust::ComponentDecl,
     fidl_fuchsia_io::{DirectoryProxy, CLONE_FLAG_SAME_RIGHTS},
     fuchsia_trace as trace,
@@ -59,8 +60,9 @@ pub enum EventType {
 /// component manager events. Hooks block the flow of a task, and can mutate, decorate and replace
 /// capabilities. This permits `Hook` to serve as a point of extensibility for the component
 /// manager.
+#[async_trait]
 pub trait Hook: Send + Sync {
-    fn on(self: Arc<Self>, event: &Event) -> BoxFuture<Result<(), ModelError>>;
+    async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError>;
 }
 
 /// An object registers a hook into a component manager event via a `HooksRegistration` object.
@@ -354,14 +356,13 @@ mod tests {
         }
     }
 
+    #[async_trait]
     impl Hook for CallCounter {
-        fn on(self: Arc<Self>, event: &Event) -> BoxFuture<Result<(), ModelError>> {
-            Box::pin(async move {
-                if let EventPayload::AddDynamicChild { .. } = event.payload {
-                    self.on_add_dynamic_child_async().await?;
-                }
-                Ok(())
-            })
+        async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
+            if let EventPayload::AddDynamicChild { .. } = event.payload {
+                self.on_add_dynamic_child_async().await?;
+            }
+            Ok(())
         }
     }
 

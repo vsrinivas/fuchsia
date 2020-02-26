@@ -7,9 +7,8 @@ use {
         error::ModelError,
         hooks::{Event, EventType, Hook, HooksRegistration},
     },
-    futures::channel::*,
-    futures::future::BoxFuture,
-    futures::lock::Mutex,
+    async_trait::async_trait,
+    futures::{channel::*, lock::Mutex},
     std::sync::{Arc, Weak},
 };
 
@@ -43,16 +42,15 @@ impl RootRealmStopNotifier {
     }
 }
 
+#[async_trait]
 impl Hook for RootRealmStopNotifier {
-    fn on<'a>(self: Arc<Self>, event: &'a Event) -> BoxFuture<'a, Result<(), ModelError>> {
-        Box::pin(async move {
-            if event.target_moniker.is_root() {
-                let tx = { self.tx.lock().await.take() };
-                if let Some(tx) = tx {
-                    tx.send(()).expect("Could not notify on StopInstance of root realm");
-                }
+    async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
+        if event.target_moniker.is_root() {
+            let tx = { self.tx.lock().await.take() };
+            if let Some(tx) = tx {
+                tx.send(()).expect("Could not notify on StopInstance of root realm");
             }
-            Ok(())
-        })
+        }
+        Ok(())
     }
 }
