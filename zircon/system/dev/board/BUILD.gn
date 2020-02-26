@@ -16,7 +16,5 @@ group("board") {
       "msm8x53-som",
       "mt8167s_ref",
     ]
-  } else if (current_cpu == "x64") {
-    deps += [ "x86" ]
   }
 }

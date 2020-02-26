@@ -152,7 +152,6 @@ aggregate_manifest("legacy-image") {
   } else if (target_cpu == "x64") {
     deps += [
 #------------------
-      ":driver.platform-bus-x86",
 #------------------
     ]
   }
@@ -785,19 +784,14 @@ aggregate_manifest("legacy-aux") {
   } else if (target_cpu == "x64") {
     deps += [
 #------------------
-      ":test.ddk.x86-battery-test",
 #------------------
 #------------------
-      ":test.ddk.x86-board-test-test",
 #------------------
 #------------------
-      ":test.ddk.x86-lid-test",
 #------------------
 #------------------
-      ":test.ddk.x86-pwrsrc-test",
 #------------------
 #------------------
-      ":test.ddk.x86-thermal-test",
 #------------------
 #------------------
 #------------------
@@ -1224,19 +1218,14 @@ aggregate_manifest("legacy-tests") {
   } else if (target_cpu == "x64") {
     deps += [
 #------------------
-      ":test.ddk.x86-battery-test",
 #------------------
 #------------------
-      ":test.ddk.x86-board-test-test",
 #------------------
 #------------------
-      ":test.ddk.x86-lid-test",
 #------------------
 #------------------
-      ":test.ddk.x86-pwrsrc-test",
 #------------------
 #------------------
-      ":test.ddk.x86-thermal-test",
 #------------------
 #------------------
 #------------------
@@ -1631,6 +1620,7 @@ aggregate_manifest("migrated-image") {
       "//src/devices/rtc/drivers/intel-rtc:intel-rtc-manifest",
       "//src/devices/serial/drivers/intel-serialio:intel-serialio-manifest",
       "//src/devices/serial/drivers/uart16550:uart16550-manifest",
+      "//zircon/system/dev/board/x86:platform-bus-x86-manifest",
     ]
   }
 
@@ -3248,6 +3238,11 @@ aggregate_manifest("migrated-aux") {
     deps += []
   } else if (target_cpu == "x64") {
     deps += [
+      "//zircon/system/dev/board/x86:x86-battery-test-manifest",
+      "//zircon/system/dev/board/x86:x86-board-test-manifest",
+      "//zircon/system/dev/board/x86:x86-lid-test-manifest",
+      "//zircon/system/dev/board/x86:x86-pwrsrc-test-manifest",
+      "//zircon/system/dev/board/x86:x86-thermal-test-manifest",
       "//zircon/system/utest/x86-umip:x86-umip-manifest",
     ]
   }
@@ -3962,6 +3957,11 @@ aggregate_manifest("migrated-tests") {
     deps += []
   } else if (target_cpu == "x64") {
     deps += [
+      "//zircon/system/dev/board/x86:x86-battery-test-manifest",
+      "//zircon/system/dev/board/x86:x86-board-test-manifest",
+      "//zircon/system/dev/board/x86:x86-lid-test-manifest",
+      "//zircon/system/dev/board/x86:x86-pwrsrc-test-manifest",
+      "//zircon/system/dev/board/x86:x86-thermal-test-manifest",
       "//zircon/system/utest/x86-umip:x86-umip-manifest",
     ]
   }

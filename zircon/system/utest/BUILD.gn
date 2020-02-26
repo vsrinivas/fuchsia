@@ -192,19 +192,14 @@ if (current_cpu != "") {
     if (current_cpu == "x64") {
       deps += [
 #------------------
-        "$zx/system/dev/board/x86:x86-battery-test",
 #------------------
 #------------------
-        "$zx/system/dev/board/x86:x86-board-test",
 #------------------
 #------------------
-        "$zx/system/dev/board/x86:x86-lid-test",
 #------------------
 #------------------
-        "$zx/system/dev/board/x86:x86-pwrsrc-test",
 #------------------
 #------------------
-        "$zx/system/dev/board/x86:x86-thermal-test",
 #------------------
 #------------------
 #------------------

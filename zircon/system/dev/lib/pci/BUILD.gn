@@ -9,7 +9,7 @@ zx_library("pci") {
     "include/lib/pci/root.h",
   ]
   sources = [ "pio.cc" ]
-  public_deps = [
+  deps = [
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",

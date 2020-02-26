@@ -4,6 +4,16 @@
 
 assert(current_cpu == "x64")
 
-zx_library("chromiumos-platform-ec") {
+config("headers.config") {
+  visibility = [ ":*" ]
+  include_dirs = [ "include" ]
+}
+
+group("headers") {
+  public_configs = [ ":headers.config" ]
+}
+
+static_library("chromiumos-platform-ec") {
   sources = [ "comm-lpc.cc" ]
+  public_deps = [ ":headers" ]
 }
