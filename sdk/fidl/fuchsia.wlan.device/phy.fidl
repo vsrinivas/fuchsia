@@ -8,25 +8,25 @@ using fuchsia.wlan.common;
 using fuchsia.wlan.mlme;
 
 enum SupportedPhy {
-    DSSS = 0;
-    CCK = 1;
-    OFDM = 2;
-    HT = 3;
-    VHT = 4;
+    DSSS = 1;
+    CCK = 2;
+    OFDM = 3;
+    HT = 4;
+    VHT = 5;
 };
 
 enum MacRole {
-    CLIENT = 0;
-    AP = 1;
-    MESH = 2;
+    CLIENT = 1;
+    AP = 2;
+    MESH = 3;
 };
 
 enum Capability {
-    SHORT_PREAMBLE = 0;
-    SPECTRUM_MGMT = 1;
-    SHORT_SLOT_TIME = 2;
-    RADIO_MSMT = 3;
-    SIMULTANEOUS_CLIENT_AP = 4;
+    SHORT_PREAMBLE = 1;
+    SPECTRUM_MGMT = 2;
+    SHORT_SLOT_TIME = 3;
+    RADIO_MSMT = 4;
+    SIMULTANEOUS_CLIENT_AP = 5;
 };
 
 struct HtCapabilities {
