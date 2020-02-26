@@ -31,9 +31,6 @@ void unregister_print_callback(print_callback_t* cb);
 void __kernel_serial_write(const char* str, size_t len);
 void __kernel_console_write(const char* str, size_t len);
 
-/* path from printf() to kernel debug output */
-int __printf_output_func(const char* s, size_t len, void* state);
-
 __END_CDECLS
 
 #endif  // ZIRCON_KERNEL_LIB_IO_INCLUDE_LIB_IO_H_

@@ -11,7 +11,7 @@
 #include <lib/counters.h>
 #include <lib/ktrace.h>
 #include <platform.h>
-#include <printf.h>
+#include <stdio.h>
 #include <string.h>
 #include <target.h>
 #include <trace.h>
@@ -761,7 +761,8 @@ void Scheduler::UnblockIdle(Thread* thread) {
   DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
   DEBUG_ASSERT(thread->IsIdle());
-  DEBUG_ASSERT(thread->hard_affinity_ && (thread->hard_affinity_ & (thread->hard_affinity_ - 1)) == 0);
+  DEBUG_ASSERT(thread->hard_affinity_ &&
+               (thread->hard_affinity_ & (thread->hard_affinity_ - 1)) == 0);
 
   SCHED_LTRACEF("thread=%s now=%ld\n", thread->name_, current_time());
 

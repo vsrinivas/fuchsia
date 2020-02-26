@@ -9,7 +9,6 @@
 
 #include <ctype.h>
 #include <platform.h>
-#include <printf.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <zircon/boot/crash-reason.h>
@@ -46,11 +45,9 @@ void _panic(void* caller, void* frame, const char* fmt, ...) {
   platform_halt(HALT_ACTION_HALT, ZirconCrashReason::Panic);
 }
 
-static void puts_for_panic(const char* msg, size_t len) { __printf_output_func(msg, len, NULL); }
-
 void _panic_no_format(const char* msg, size_t len) {
   platform_panic_start();
-  puts_for_panic(msg, len);
+  stdout->Write(msg, len);
   platform_halt(HALT_ACTION_HALT, ZirconCrashReason::Panic);
 }
 

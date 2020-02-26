@@ -51,11 +51,11 @@ static inline void hexdump8_very_ex(const void *ptr, size_t len, uint64_t disp_a
 #endif /* DISABLE_DEBUG_OUTPUT */
 
 static inline void hexdump_ex(const void *ptr, size_t len, uint64_t disp_addr_start) {
-  hexdump_very_ex(ptr, len, disp_addr_start, _printf);
+  hexdump_very_ex(ptr, len, disp_addr_start, printf);
 }
 
 static inline void hexdump8_ex(const void *ptr, size_t len, uint64_t disp_addr_start) {
-  hexdump8_very_ex(ptr, len, disp_addr_start, _printf);
+  hexdump8_very_ex(ptr, len, disp_addr_start, printf);
 }
 
 static inline void hexdump(const void *ptr, size_t len) {

@@ -25,7 +25,7 @@
 #include <lib/ktrace.h>
 #include <lib/version.h>
 #include <platform.h>
-#include <printf.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <target.h>

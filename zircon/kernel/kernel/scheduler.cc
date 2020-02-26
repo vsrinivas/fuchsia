@@ -13,7 +13,7 @@
 #include <lib/counters.h>
 #include <lib/ktrace.h>
 #include <platform.h>
-#include <printf.h>
+#include <stdio.h>
 #include <string.h>
 #include <target.h>
 #include <trace.h>

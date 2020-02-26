@@ -9,7 +9,7 @@
 #include <lib/crashlog.h>
 #include <lib/version.h>
 #include <platform.h>
-#include <printf.h>
+#include <stdio.h>
 #include <string.h>
 #include <zircon/boot/crash-reason.h>
 

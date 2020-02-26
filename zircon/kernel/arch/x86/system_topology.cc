@@ -8,7 +8,7 @@
 
 #include <lib/system-topology.h>
 #include <pow2.h>
-#include <printf.h>
+#include <stdio.h>
 #include <trace.h>
 
 #include <algorithm>

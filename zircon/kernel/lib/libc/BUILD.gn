@@ -10,9 +10,10 @@ source_set("libc") {
     "cxa_atexit.cc",
     "cxa_pure_virtual.cc",
     "cxx_allocator.cc",
+    "fprintf.cc",
     "printf.cc",
     "rand.cc",
-    "stdio.cc",
+    "snprintf.cc",
     "strtol.cc",
     "strtoul.cc",
   ]

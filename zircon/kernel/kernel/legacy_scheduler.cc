@@ -12,7 +12,7 @@
 #include <lib/counters.h>
 #include <lib/ktrace.h>
 #include <platform.h>
-#include <printf.h>
+#include <stdio.h>
 #include <string.h>
 #include <target.h>
 #include <trace.h>
@@ -650,8 +650,8 @@ void sched_migrate(Thread* t) {
       }
 
       // it's sitting in a run queue somewhere, so pull it out of that one and find a new home
-      DEBUG_ASSERT_MSG(list_in_list(&t->queue_node_), "thread %p name %s curr_cpu %u\n", t, t->name_,
-                       t->curr_cpu_);
+      DEBUG_ASSERT_MSG(list_in_list(&t->queue_node_), "thread %p name %s curr_cpu %u\n", t,
+                       t->name_, t->curr_cpu_);
       remove_from_run_queue(t, t->effec_priority_);
 
       find_cpu_and_insert(t, &local_resched, &accum_cpu_mask);
@@ -688,8 +688,8 @@ static void sched_priority_changed(Thread* t, int old_prio, bool* local_resched,
       break;
     case THREAD_READY:
       // it's sitting in a run queue somewhere, remove and add back to the proper queue on that cpu
-      DEBUG_ASSERT_MSG(list_in_list(&t->queue_node_), "thread %p name %s curr_cpu %u\n", t, t->name_,
-                       t->curr_cpu_);
+      DEBUG_ASSERT_MSG(list_in_list(&t->queue_node_), "thread %p name %s curr_cpu %u\n", t,
+                       t->name_, t->curr_cpu_);
       remove_from_run_queue(t, old_prio);
 
       // insert ourself into the new queue
@@ -893,7 +893,7 @@ void sched_resched_internal() {
 
   // update system latency metrics.
   zx_duration_t queue_time_ns =
-    newthread->IsIdle() ? 0 : zx_time_sub_time(now, newthread->last_started_running_);
+      newthread->IsIdle() ? 0 : zx_time_sub_time(now, newthread->last_started_running_);
   update_counters(queue_time_ns);
 
   newthread->last_started_running_ = now;

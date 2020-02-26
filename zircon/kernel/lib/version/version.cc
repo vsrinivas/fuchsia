@@ -88,12 +88,12 @@ void print_backtrace_version_info() {
   // Log the ELF build ID in the format the symbolizer scripts understand.
   if (gElfBuildIdString[0] != '\0') {
     const uintptr_t bias = KERNEL_BASE - reinterpret_cast<uintptr_t>(__code_start);
-    print_module(_printf, gElfBuildIdString);
+    print_module(printf, gElfBuildIdString);
     // These four mappings match the mappings printed by vm_init().
-    print_mmap(_printf, bias, __code_start, __code_end, "rx");
-    print_mmap(_printf, bias, __rodata_start, __rodata_end, "r");
-    print_mmap(_printf, bias, __data_start, __data_end, "rw");
-    print_mmap(_printf, bias, __bss_start, _end, "rw");
+    print_mmap(printf, bias, __code_start, __code_end, "rx");
+    print_mmap(printf, bias, __rodata_start, __rodata_end, "r");
+    print_mmap(printf, bias, __data_start, __data_end, "rw");
+    print_mmap(printf, bias, __bss_start, _end, "rw");
     printf("dso: id=%s base=%#lx name=zircon.elf\n", gElfBuildIdString,
            reinterpret_cast<uintptr_t>(__code_start));
   }

@@ -24,16 +24,18 @@ static bool test_printf(const char* expected, const char* format, ...) {
     printf("vsnprintf() returned %d\n", length);
     return false;
   }
+
+  bool success = true;
   if (buf[length] != '\0') {
     printf("missing string terminator\n");
-    return false;
+    success = false;
   }
   if (length != (int)strlen(expected) || memcmp(buf, expected, length + 1) != 0) {
     printf("expected: \"%s\" (length %zu)\n", expected, strlen(expected));
     printf("but got:  \"%s\" (length %zu) with return value %d)\n", buf, strlen(buf), length);
-    return false;
+    success = false;
   }
-  return true;
+  return success;
 }
 
 static bool printf_tests() {

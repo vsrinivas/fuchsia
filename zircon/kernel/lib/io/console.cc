@@ -94,7 +94,14 @@ static void __kernel_stdout_write_buffered(const char* str, size_t len) {
   }
   t->linebuffer_pos_ = pos;
 }
-#endif
+
+static constexpr auto kStdoutWrite = __kernel_stdout_write_buffered;
+
+#else  // !WITH_DEBUG_LINEBUFFER
+
+static constexpr auto kStdoutWrite = __kernel_stdout_write;
+
+#endif  // WITH_DEBUG_LINEBUFFER
 
 void register_print_callback(print_callback_t* cb) {
   AutoSpinLock guard(&print_spin_lock);
@@ -108,11 +115,10 @@ void unregister_print_callback(print_callback_t* cb) {
   list_delete(&cb->entry);
 }
 
-int __printf_output_func(const char* s, size_t len, void* state) {
-#if WITH_DEBUG_LINEBUFFER
-  __kernel_stdout_write_buffered(s, len);
-#else
-  __kernel_stdout_write(s, len);
-#endif
-  return static_cast<int>(len);
-}
+// This is what printf calls.  Really this could and should be const.
+// But all the stdio function signatures require non-const `FILE*`.
+FILE FILE::stdout_{[](const char* s, size_t len, void*) {
+                     kStdoutWrite(s, len);
+                     return static_cast<int>(len);
+                   },
+                   nullptr};

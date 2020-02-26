@@ -7,6 +7,7 @@
 #include <err.h>
 #include <inttypes.h>
 #include <lib/debuglog.h>
+#include <lib/io.h>
 #include <platform.h>
 #include <stdio.h>
 #include <stdlib.h>
