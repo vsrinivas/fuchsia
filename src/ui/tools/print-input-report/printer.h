@@ -83,6 +83,17 @@ const char* const kLedTypeStrings[] = {
     "ERROR", "NUM_LOCK", "CAPS_LOCK", "SCROLL_LOCK", "COMPOSE", "KANA",
 };
 
+static_assert(static_cast<int>(fuchsia_input_report::ConsumerControlButton::VOLUME_UP) == 1);
+static_assert(static_cast<int>(fuchsia_input_report::ConsumerControlButton::VOLUME_DOWN) == 2);
+static_assert(static_cast<int>(fuchsia_input_report::ConsumerControlButton::PAUSE) == 3);
+static_assert(static_cast<int>(fuchsia_input_report::ConsumerControlButton::FACTORY_RESET) == 4);
+static_assert(static_cast<int>(fuchsia_input_report::ConsumerControlButton::MIC_MUTE) == 5);
+static_assert(static_cast<int>(fuchsia_input_report::ConsumerControlButton::REBOOT) == 6);
+// These strings must be ordered based on the enums in fuchsia.input.report/consumer_control.fidl.
+const char* const kConsumerControlButtonStrings[] = {
+    "ERROR", "VOLUME_UP", "VOLUME_DOWN", "PAUSE", "FACTORY_RESET", "MIC_MUTE", "REBOOT",
+};
+
 class Printer {
  public:
   Printer() = default;
@@ -121,6 +132,15 @@ class Printer {
       return kLedTypeStrings[0];
     }
     return kLedTypeStrings[unit_index];
+  }
+
+  static const char* ConsumerControlButtonToString(
+      fuchsia_input_report::ConsumerControlButton type) {
+    uint32_t unit_index = static_cast<uint32_t>(type);
+    if (unit_index >= countof(kConsumerControlButtonStrings)) {
+      return kConsumerControlButtonStrings[0];
+    }
+    return kConsumerControlButtonStrings[unit_index];
   }
 
   void PrintAxis(fuchsia_input_report::Axis axis) {

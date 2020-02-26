@@ -32,6 +32,11 @@ void PrintKeyboardDesc(Printer* printer,
 void PrintKeyboardInputReport(Printer* printer,
                               const fuchsia_input_report::KeyboardInputReport& keyboard_report);
 
+void PrintConsumerControlDesc(Printer* printer,
+                              const fuchsia_input_report::ConsumerControlDescriptor& descriptor);
+void PrintConsumerControlInputReport(
+    Printer* printer, const fuchsia_input_report::ConsumerControlInputReport& report);
+
 }  // namespace print_input_report
 
 #endif  // SRC_UI_TOOLS_PRINT_INPUT_REPORT_DEVICES_H_

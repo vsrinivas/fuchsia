@@ -36,6 +36,9 @@ zx_status_t PrintInputDescriptor(Printer* printer,
   if (result->descriptor.has_keyboard()) {
     PrintKeyboardDesc(printer, result->descriptor.keyboard());
   }
+  if (result->descriptor.has_consumer_control()) {
+    PrintConsumerControlDesc(printer, result->descriptor.consumer_control());
+  }
   return ZX_OK;
 }
 
@@ -149,6 +152,24 @@ void PrintKeyboardDesc(Printer* printer,
   }
 }
 
+void PrintConsumerControlDesc(Printer* printer,
+                              const fuchsia_input_report::ConsumerControlDescriptor& descriptor) {
+  printer->Print("ConsumerControl Descriptor:\n");
+
+  if (descriptor.has_input()) {
+    const fuchsia_input_report::ConsumerControlInputDescriptor& input = descriptor.input();
+    printer->Print("Input Report:\n");
+    printer->IncreaseIndent();
+    if (input.has_buttons()) {
+      for (size_t i = 0; i < input.buttons().count(); i++) {
+        printer->Print("Button: %16s\n",
+                       Printer::ConsumerControlButtonToString(input.buttons()[i]));
+      }
+    }
+    printer->DecreaseIndent();
+  }
+}
+
 int PrintInputReport(Printer* printer, fuchsia_input_report::InputDevice::SyncClient* client,
                      size_t num_reads) {
   // Get the reports event.
@@ -197,6 +218,9 @@ int PrintInputReport(Printer* printer, fuchsia_input_report::InputDevice::SyncCl
       }
       if (report.has_keyboard()) {
         PrintKeyboardInputReport(printer, report.keyboard());
+      }
+      if (report.has_consumer_control()) {
+        PrintConsumerControlInputReport(printer, report.consumer_control());
       }
       printer->Print("\n");
     }
@@ -274,6 +298,19 @@ void PrintKeyboardInputReport(Printer* printer,
     }
     if (keyboard_report.pressed_keys().count() == 0) {
       printer->Print("No keys pressed\n");
+    }
+  }
+  printer->DecreaseIndent();
+}
+
+void PrintConsumerControlInputReport(
+    Printer* printer, const fuchsia_input_report::ConsumerControlInputReport& report) {
+  printer->Print("ConsumerControl Report\n");
+  printer->IncreaseIndent();
+  if (report.has_pressed_buttons()) {
+    for (size_t i = 0; i < report.pressed_buttons().count(); i++) {
+      printer->Print("Button: %16s\n",
+                     Printer::ConsumerControlButtonToString(report.pressed_buttons()[i]));
     }
   }
   printer->DecreaseIndent();

@@ -447,4 +447,56 @@ TEST_F(PrintInputReport, PrintKeyboardInputReportNoKeys) {
   print_input_report::PrintInputReport(&printer, &client_.value(), 1);
 }
 
+TEST_F(PrintInputReport, PrintConsumerControlDescriptor) {
+  hid_input_report::ConsumerControlDescriptor descriptor = {};
+
+  descriptor.input = hid_input_report::ConsumerControlInputDescriptor();
+  descriptor.input->num_buttons = 3;
+  descriptor.input->buttons[0] = fuchsia_input_report::ConsumerControlButton::VOLUME_UP;
+  descriptor.input->buttons[1] = fuchsia_input_report::ConsumerControlButton::VOLUME_DOWN;
+  descriptor.input->buttons[2] = fuchsia_input_report::ConsumerControlButton::REBOOT;
+
+  hid_input_report::ReportDescriptor report_descriptor;
+  report_descriptor.descriptor = descriptor;
+
+  fake_device_->SetDescriptor(report_descriptor);
+
+  FakePrinter printer;
+  printer.SetExpectedStrings(std::vector<std::string>{
+      "ConsumerControl Descriptor:\n",
+      "Input Report:\n",
+      "  Button:        VOLUME_UP\n",
+      "  Button:      VOLUME_DOWN\n",
+      "  Button:           REBOOT\n",
+      "\n",
+  });
+
+  print_input_report::PrintInputDescriptor(&printer, &client_.value());
+}
+
+TEST_F(PrintInputReport, PrintConsumerControlReport) {
+  hid_input_report::ConsumerControlInputReport report = {};
+
+  report.num_pressed_buttons = 3;
+  report.pressed_buttons[0] = fuchsia_input_report::ConsumerControlButton::VOLUME_UP;
+  report.pressed_buttons[1] = fuchsia_input_report::ConsumerControlButton::VOLUME_DOWN;
+  report.pressed_buttons[2] = fuchsia_input_report::ConsumerControlButton::REBOOT;
+
+  hid_input_report::InputReport input_report;
+  input_report.report = report;
+
+  fake_device_->SetReport(input_report);
+
+  FakePrinter printer;
+  printer.SetExpectedStrings(std::vector<std::string>{
+      "ConsumerControl Report\n",
+      "  Button:        VOLUME_UP\n",
+      "  Button:      VOLUME_DOWN\n",
+      "  Button:           REBOOT\n",
+      "\n",
+  });
+
+  print_input_report::PrintInputReport(&printer, &client_.value(), 1);
+}
+
 }  // namespace test
