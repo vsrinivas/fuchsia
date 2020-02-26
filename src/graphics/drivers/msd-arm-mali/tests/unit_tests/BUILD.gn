@@ -35,6 +35,10 @@ source_set("tests_not_requiring_hardware") {
     ":test_deps",
     "//src/graphics/lib/magma/tests/mock:bus_mapper",
   ]
+
+  # TODO(47016): UBSan has found an instance of undefined behavior in this target.
+  # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
+  configs += [ "//build/config:temporarily_disable_ubsan_do_not_use" ]
 }
 
 # These tests require ARM Mali graphics hardware to run.  They can be
