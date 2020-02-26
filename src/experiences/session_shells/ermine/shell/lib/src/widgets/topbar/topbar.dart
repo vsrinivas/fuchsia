@@ -69,8 +69,8 @@ class Topbar extends StatelessWidget {
                   key: model.statusButtonKey,
                   child: AnimatedBuilder(
                     animation: model.appModel.currentTime,
-                    builder: (_, __) => Text(DateFormat()
-                        .add_E()
+                    builder: (_, __) => Text(DateFormat.E()
+                        .add_yMd()
                         .add_jm()
                         .format(model.appModel.currentTime.value)),
                   ),
