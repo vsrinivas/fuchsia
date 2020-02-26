@@ -348,12 +348,19 @@ class TestH264 {
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
       EXPECT_EQ(ZX_OK, video->video_decoder_->Initialize());
-      client.SetFrameReadyNotifier([&video, &frame_count](std::shared_ptr<VideoFrame> frame) {
-        ++frame_count;
-        DLOG("Got frame %d coded_width: %d coded_height: %d\n", frame_count, frame->coded_width,
-             frame->coded_height);
-        ReturnFrame(video.get(), frame);
-      });
+      client.SetFrameReadyNotifier(
+          [&video, &frame_count, &first_wait_valid](std::shared_ptr<VideoFrame> frame) {
+            ++frame_count;
+            DLOG("Got frame %d coded_width: %d coded_height: %d\n", frame_count, frame->coded_width,
+                 frame->coded_height);
+            ReturnFrame(video.get(), frame);
+            constexpr uint32_t kFirstVideoFrameCount = 26;
+            if (frame_count == kFirstVideoFrameCount) {
+              // Even when malformed, there's a low probability that we end up here anyway, which is
+              // fine.
+              first_wait_valid.set_value();
+            }
+          });
     }
 
     std::vector<uint8_t> video_data(bear_h264->ptr, bear_h264->ptr + bear_h264->size);
@@ -399,7 +406,7 @@ TEST(H264, DecodeNalUnitsNoParser) { TestH264::DecodeNalUnits(false); }
 
 TEST(H264, DecodeMalformedHang) {
   // Parameters found through fuzzing.
-  TestH264::DecodeMalformed(638, 44, true);
+  TestH264::DecodeMalformed(638, 44, false);
 }
 
 TEST(H264, DecodeMalformedTooLarge) {
