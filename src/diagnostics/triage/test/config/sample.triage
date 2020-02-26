@@ -1,6 +1,6 @@
 {
-    "metrics": {
-        "c1": {"Eval": "other::m == 1"},
+    metrics: {
+        c1: {Eval: "other::m == 1"}, // JSON5: Comments work, don't need so many quotes.
         "c2": {"Eval": "other::m > 1"},
         "total": {"Selector": "global_data:root.stats:total_bytes"},
         "used": {"Selector": "global_data:root.stats:used_bytes"},

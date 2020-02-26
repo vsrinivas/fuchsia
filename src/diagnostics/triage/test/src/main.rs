@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{bail, Error},
+    anyhow::{anyhow, Error},
     lazy_static::lazy_static,
     std::process::{Command, Output},
     structopt::StructOpt,
@@ -33,15 +33,22 @@ lazy_static! {
 
 fn main() -> Result<(), Error> {
     if look_for_error() {
-        return Err(format_err!("A test failed."));
+        return Err(anyhow!("A test failed."));
     } else {
         println!("All tests passed.");
     }
     Ok(())
 }
 
-fn run_command(inspect: &str, configs: &Vec<&str>) -> Result<Output, Error> {
+fn run_command(inspect: &str, configs: &Vec<&str>, format: Option<&str>) -> Result<Output, Error> {
     let mut args = Vec::new();
+    match format {
+        Some(string) => {
+            args.push("--output_format".to_owned());
+            args.push(string.to_owned());
+        }
+        None => {}
+    }
     args.push("--inspect".to_owned());
     args.push(format!(
         "{}/src/diagnostics/triage/test/inspect/{}",
@@ -58,7 +65,7 @@ fn run_command(inspect: &str, configs: &Vec<&str>) -> Result<Output, Error> {
     }
     match Command::new(COMMAND.to_string()).args(args).output() {
         Ok(o) => Ok(o),
-        Err(err) => return Err(format_err!("Command didn't run: {:?}", err.kind())),
+        Err(err) => return Err(anyhow!("Command didn't run: {:?}", err.kind())),
     }
 }
 
@@ -66,11 +73,12 @@ fn run_command(inspect: &str, configs: &Vec<&str>) -> Result<Output, Error> {
 fn report_error(
     inspect: &str,
     config: &Vec<&str>,
+    format: Option<&str>,
     rc: i32,
     substring: &str,
     should_output: bool,
 ) -> bool {
-    match run_command(inspect, config) {
+    match run_command(inspect, config, format) {
         Ok(output) => {
             let stdout =
                 std::str::from_utf8(&output.stdout).unwrap_or("Non-UTF8 return from command");
@@ -92,7 +100,7 @@ fn report_error(
                 }
             } else {
                 println!(
-                    "Bad return code {:?} (expected {}) from {} and {:?}; output:\n'{}'\n",
+                    "Bad return code {:?} (expected Some({})) from {} and {:?}; output:\n'{}'\n",
                     output.status.code(),
                     rc,
                     inspect,
@@ -111,24 +119,25 @@ fn report_error(
 fn look_for_error() -> bool {
     let mut failed = false;
     macro_rules! should {
-        (@internal $name:expr, $inspect:expr, $config:expr, $rc:expr, $string:expr,
+        (@internal $name:expr, $inspect:expr, $config:expr, $format:expr, $rc:expr, $string:expr,
                 $contains:expr) => {
             println!("Testing: {}", $name);
-            if report_error($inspect, $config, $rc, $string, $contains) {
+            if report_error($inspect, $config, $format, $rc, $string, $contains) {
                 failed = true;
             }
         };
-        ($name:expr, $inspect:expr, $config:expr, $rc:expr, not $out:expr) => {
-            should!(@internal $name, $inspect, $config, $rc, $out, false);
+        ($name:expr, $inspect:expr, $config:expr, $format:expr, $rc:expr, not $out:expr) => {
+            should!(@internal $name, $inspect, $config, $format, $rc, $out, false);
         };
-        ($name:expr, $inspect:expr, $config:expr, $rc:expr, $out:expr) => {
-            should!(@internal $name, $inspect, $config, $rc, $out, true);
+        ($name:expr, $inspect:expr, $config:expr, $format:expr, $rc:expr, $out:expr) => {
+            should!(@internal $name, $inspect, $config, $format, $rc, $out, true);
         };
     }
     should!(
         "Report missing inspect.json",
         "not_found_file",
         &vec!["sample.triage"],
+        None,
         0,
         "Couldn't read Inspect file"
     );
@@ -136,15 +145,17 @@ fn look_for_error() -> bool {
         "Report missing config file",
         "inspect.json",
         &vec!["cfg2"],
+        None,
         0,
         "Couldn't read config file"
     );
     should!("Successfully read correct files",
-        "inspect.json", &vec!["other.triage", "sample.triage"], 0, not "Couldn't");
+        "inspect.json", &vec!["other.triage", "sample.triage"], None, 0, not "Couldn't");
     should!(
         "Use namespace in actions",
         "inspect.json",
         &vec!["other.triage", "sample.triage"],
+        None,
         0,
         "Warning: 'act1' in 'other' detected 'yes on A!': 'sample::c1' was true"
     );
@@ -152,6 +163,7 @@ fn look_for_error() -> bool {
         "Use namespace in metrics",
         "inspect.json",
         &vec!["other.triage", "sample.triage"],
+        None,
         0,
         "Warning: 'some_disk' in 'sample' detected 'Used some of disk': 'tiny' was true"
     );
@@ -159,8 +171,26 @@ fn look_for_error() -> bool {
         "Fail on missing namespace",
         "inspect.json",
         &vec!["sample.triage"],
+        None,
         0,
         "Bad namespace"
+    );
+    should!("Die on bad format arg", "inspect.json", &vec!["sample.triage"], Some("foo"), 1, "");
+    should!(
+        "Normal output on text format",
+        "inspect.json",
+        &vec!["other.triage", "sample.triage"],
+        Some("text"),
+        0,
+        "Warning: 'some_disk' in 'sample' detected 'Used some of disk': 'tiny' was true"
+    );
+    should!(
+        "CSV output on csv format",
+        "inspect.json",
+        &vec!["other.triage", "sample.triage"],
+        Some("csv"),
+        0,
+        "inspect.json,true,false,false,true"
     );
     failed
 }

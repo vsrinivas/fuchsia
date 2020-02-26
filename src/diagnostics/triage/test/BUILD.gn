@@ -30,3 +30,10 @@ install_host_tools("install") {
 
   outputs = [ "triage_test" ]
 }
+
+group("triage_test_host") {
+  deps = [
+    ":install",
+    ":triage_test($host_toolchain)",
+  ]
+}

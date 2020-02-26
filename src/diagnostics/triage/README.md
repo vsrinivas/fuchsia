@@ -53,13 +53,16 @@ Config file format is described in [Configuring 'fx triage'](config.md). Briefly
 
 ## Testing
 
+Use `--with //src/diagnostics/triage:triage_tests` for all tests.
+
 Unit tests for the Rust code are linked into CQ/CI. To run them manually:
-use `--with //src/diagnostics/triage:triage_tests` and then:
+
 ```
 fx run-test triage_tests
 ```
 
 There's a manually launched integration test to test the bash script:
+
 ```
 fx build && fx triage --test
 ```

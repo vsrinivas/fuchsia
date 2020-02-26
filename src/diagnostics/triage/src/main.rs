@@ -29,7 +29,7 @@ pub struct Options {
     inspect: Option<String>,
 
     /// How to print the results.
-    #[structopt(long = "output_format")]
+    #[structopt(long = "output_format", default_value = "text")]
     output_format: OutputFormat,
 
     /// Directories to read "inspect.json" files from.

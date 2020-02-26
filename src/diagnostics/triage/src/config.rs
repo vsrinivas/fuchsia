@@ -35,7 +35,7 @@ pub struct ConfigFileSchema {
 
 impl ConfigFileSchema {
     pub fn parse(s: String) -> Result<ConfigFileSchema, Error> {
-        match serde_json::from_str::<ConfigFileSchema>(&s) {
+        match json5::from_str::<ConfigFileSchema>(&s) {
             Ok(config) => Ok(config),
             Err(e) => return Err(format_err!("Error {}", e)),
         }
