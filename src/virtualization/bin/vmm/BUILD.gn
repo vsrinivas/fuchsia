@@ -219,6 +219,10 @@ executable("vmm_unittests") {
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
   ]
+
+  # TODO(47042): UBSan has found an instance of undefined behavior in this target.
+  # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
+  configs += [ "//build/config:temporarily_disable_ubsan_do_not_use" ]
 }
 
 test_package("vmm_tests") {
