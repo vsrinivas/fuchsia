@@ -548,55 +548,65 @@ void ExpectRealSegmentsGraph(const PlayerCore& player_core) {
 
 // Tests a player_core with real segments constructed source-first.
 TEST_F(PlayerTest, BuildGraphWithRealSegmentsSourceFirst) {
-  PlayerCore player_core(dispatcher());
-  std::unique_ptr<DecoderFactory> decoder_factory = DecoderFactory::Create(nullptr);
+  {
+    PlayerCore player_core(dispatcher());
+    std::unique_ptr<DecoderFactory> decoder_factory = DecoderFactory::Create(nullptr);
 
-  auto source_segment = DemuxSourceSegment::Create(FakeDemux::Create());
+    auto source_segment = DemuxSourceSegment::Create(FakeDemux::Create());
 
-  source_segment->Provision(player_core.graph(), dispatcher(), nullptr, nullptr);
+    source_segment->Provision(player_core.graph(), dispatcher(), nullptr, nullptr);
 
-  player_core.SetSourceSegment(std::move(source_segment), []() {});
+    player_core.SetSourceSegment(std::move(source_segment), []() {});
 
-  player_core.SetSinkSegment(
-      RendererSinkSegment::Create(FakeAudioRenderer::Create(), decoder_factory.get()),
-      StreamType::Medium::kAudio);
+    player_core.SetSinkSegment(
+        RendererSinkSegment::Create(FakeAudioRenderer::Create(), decoder_factory.get()),
+        StreamType::Medium::kAudio);
+    RunLoopUntilIdle();
+    EXPECT_TRUE(player_core.medium_connected(StreamType::Medium::kAudio));
+
+    player_core.SetSinkSegment(
+        RendererSinkSegment::Create(FakeVideoRenderer::Create(), decoder_factory.get()),
+        StreamType::Medium::kVideo);
+    RunLoopUntilIdle();
+    EXPECT_TRUE(player_core.medium_connected(StreamType::Medium::kVideo));
+
+    ExpectRealSegmentsGraph(player_core);
+  }
+
+  // Wait for async graph cleanup to complete.
   RunLoopUntilIdle();
-  EXPECT_TRUE(player_core.medium_connected(StreamType::Medium::kAudio));
-
-  player_core.SetSinkSegment(
-      RendererSinkSegment::Create(FakeVideoRenderer::Create(), decoder_factory.get()),
-      StreamType::Medium::kVideo);
-  RunLoopUntilIdle();
-  EXPECT_TRUE(player_core.medium_connected(StreamType::Medium::kVideo));
-
-  ExpectRealSegmentsGraph(player_core);
 }
 
 // Tests a player_core with real segments constructed sinks-first.
 TEST_F(PlayerTest, BuildGraphWithRealSegmentsSinksFirst) {
-  PlayerCore player_core(dispatcher());
-  std::unique_ptr<DecoderFactory> decoder_factory = DecoderFactory::Create(nullptr);
+  {
+    PlayerCore player_core(dispatcher());
+    std::unique_ptr<DecoderFactory> decoder_factory = DecoderFactory::Create(nullptr);
 
-  player_core.SetSinkSegment(
-      RendererSinkSegment::Create(FakeAudioRenderer::Create(), decoder_factory.get()),
-      StreamType::Medium::kAudio);
-  EXPECT_FALSE(player_core.medium_connected(StreamType::Medium::kAudio));
+    player_core.SetSinkSegment(
+        RendererSinkSegment::Create(FakeAudioRenderer::Create(), decoder_factory.get()),
+        StreamType::Medium::kAudio);
+    EXPECT_FALSE(player_core.medium_connected(StreamType::Medium::kAudio));
 
-  player_core.SetSinkSegment(
-      RendererSinkSegment::Create(FakeVideoRenderer::Create(), decoder_factory.get()),
-      StreamType::Medium::kVideo);
-  EXPECT_FALSE(player_core.medium_connected(StreamType::Medium::kVideo));
+    player_core.SetSinkSegment(
+        RendererSinkSegment::Create(FakeVideoRenderer::Create(), decoder_factory.get()),
+        StreamType::Medium::kVideo);
+    EXPECT_FALSE(player_core.medium_connected(StreamType::Medium::kVideo));
 
-  auto source_segment = DemuxSourceSegment::Create(FakeDemux::Create());
+    auto source_segment = DemuxSourceSegment::Create(FakeDemux::Create());
 
-  source_segment->Provision(player_core.graph(), dispatcher(), nullptr, nullptr);
+    source_segment->Provision(player_core.graph(), dispatcher(), nullptr, nullptr);
 
-  player_core.SetSourceSegment(std::move(source_segment), []() {});
+    player_core.SetSourceSegment(std::move(source_segment), []() {});
+    RunLoopUntilIdle();
+    EXPECT_TRUE(player_core.medium_connected(StreamType::Medium::kAudio));
+    EXPECT_TRUE(player_core.medium_connected(StreamType::Medium::kVideo));
+
+    ExpectRealSegmentsGraph(player_core);
+  }
+
+  // Wait for async graph cleanup to complete.
   RunLoopUntilIdle();
-  EXPECT_TRUE(player_core.medium_connected(StreamType::Medium::kAudio));
-  EXPECT_TRUE(player_core.medium_connected(StreamType::Medium::kVideo));
-
-  ExpectRealSegmentsGraph(player_core);
 }
 
 }  // namespace test
