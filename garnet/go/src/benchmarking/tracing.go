@@ -5,6 +5,7 @@
 package benchmarking
 
 import (
+	"bytes"
 	"encoding/json"
 	"math"
 	"sort"
@@ -19,6 +20,33 @@ func (a ByStartTime) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a ByStartTime) Less(i, j int) bool { return a[i].Ts < a[j].Ts }
 
 // Structs for parsing trace files (JSON).
+
+var _ json.Unmarshaler = (*ID)(nil)
+
+// ID accomodates numbers of the form: 7, "43", "0x123".
+type ID uint64
+
+func (i *ID) UnmarshalJSON(b []byte) error {
+	if quote := []byte{'"'}; bytes.HasPrefix(b, quote) && bytes.HasSuffix(b, quote) {
+		b = bytes.TrimPrefix(b, quote)
+		b = bytes.TrimSuffix(b, quote)
+	}
+
+	if hexPrefix := []byte{'0', 'x'}; bytes.HasPrefix(b, hexPrefix) {
+		b = bytes.TrimPrefix(b, hexPrefix)
+		n, err := strconv.ParseUint(string(b), 16, 64)
+		if err == nil {
+			*i = ID(n)
+		}
+		return err
+	}
+
+	n, err := strconv.ParseUint(string(b), 10, 64)
+	if err == nil {
+		*i = ID(n)
+	}
+	return err
+}
 
 // A struct that represents objects found within the list at the "traceEvents"
 // field of the root trace object.  Note that the "Dur" field not actually
@@ -48,15 +76,14 @@ type traceEvent struct {
 	Pid  uint64
 	Tid  uint64
 	Ts   float64
-	Id   json.Number // accomodates ids of the form: 7, "43", "0x123".
+	Id   ID
 	Dur  float64
 	Args map[string]interface{}
 }
 
 // Converts the Id from json.Number to uint64.
 func (t traceEvent) ID() uint64 {
-	val, _ := strconv.ParseUint(t.Id.String(), 0, 64)
-	return val
+	return uint64(t.Id)
 }
 
 // A struct that represents objects within the "events" list in the
