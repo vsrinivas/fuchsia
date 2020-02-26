@@ -15,4 +15,8 @@ source_set("testing") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/fidl/fuchsia-io",
   ]
+
+  # TODO(47046): UBSan has found an instance of undefined behavior in this target.
+  # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
+  configs += [ "//build/config:temporarily_disable_ubsan_do_not_use" ]
 }
