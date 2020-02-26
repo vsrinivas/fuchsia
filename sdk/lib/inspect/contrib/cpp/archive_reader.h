@@ -6,6 +6,8 @@
 #define LIB_INSPECT_CONTRIB_CPP_ARCHIVE_READER_H_
 
 #include <fuchsia/diagnostics/cpp/fidl.h>
+#include <lib/async/cpp/executor.h>
+#include <lib/fit/bridge.h>
 #include <lib/fit/promise.h>
 #include <lib/fit/scope.h>
 
@@ -50,22 +52,34 @@ class ArchiveReader {
  public:
   // Create a new ArchiveReader.
   //
-  // archive: A connected interface pointer to the Archive.
+  // archive: A connected interface pointer to the Archive. Must be bound.
   // selectors: The selectors for data to be returned by this call. Empty means to return all data.
-  ArchiveReader(fuchsia::diagnostics::ArchivePtr archive, std::vector<std::string> selectors)
-      : archive_(std::move(archive)), selectors_(std::move(selectors)) {}
+  //
+  // Note: This constructor asserts that archive is bound.
+  ArchiveReader(fuchsia::diagnostics::ArchivePtr archive, std::vector<std::string> selectors);
 
   // Get a snapshot of the Inspect data at the current point in time.
+  //
+  // Returns an error if the ArchivePtr is not bound.
   fit::promise<std::vector<DiagnosticsData>, std::string> GetInspectSnapshot();
 
   // Gets a snapshot of the Inspect data at the point in time in which all listed component
   // names are present.
+  //
+  // Returns an error if the ArchivePtr is not bound.
   fit::promise<std::vector<DiagnosticsData>, std::string> SnapshotInspectUntilPresent(
       std::vector<std::string> component_names);
 
  private:
+  void InnerSnapshotInspectUntilPresent(
+      fit::completer<std::vector<DiagnosticsData>, std::string> bridge,
+      std::vector<std::string> component_names);
+
   // The pointer to the archive this object is connected to.
   fuchsia::diagnostics::ArchivePtr archive_;
+
+  // The executor on which promise continuations run.
+  async::Executor executor_;
 
   // The selectors used to filter data streamed from this reader.
   std::vector<std::string> selectors_;

@@ -6,6 +6,7 @@ import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 group("cpp") {
+  testonly = true
   deps = [
     ":archive_reader",
     ":read_visitor",
@@ -30,6 +31,7 @@ source_set("read_visitor") {
 }
 
 source_set("archive_reader") {
+  testonly = true
   sources = [
     "archive_reader.cc",
     "archive_reader.h",

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/async/cpp/task.h>
 #include <lib/fit/bridge.h>
 #include <lib/fit/optional.h>
 #include <lib/inspect/contrib/cpp/archive_reader.h>
@@ -20,6 +21,12 @@ namespace contrib {
 
 constexpr char kPathName[] = "path";
 constexpr char kContentsName[] = "contents";
+
+// Time to delay between snapshots to find components.
+// 250ms so that tests are not overly delayed. Missing the component at
+// first is common since the system needs time to start it and receive
+// the events.
+constexpr size_t kDelayMs = 250;
 
 namespace {
 
@@ -112,6 +119,15 @@ const rapidjson::Value& DiagnosticsData::GetByPath(const std::vector<std::string
   }
 }
 
+ArchiveReader::ArchiveReader(fuchsia::diagnostics::ArchivePtr archive,
+                             std::vector<std::string> selectors)
+
+    : archive_(std::move(archive)),
+      executor_(archive_.dispatcher()),
+      selectors_(std::move(selectors)) {
+  ZX_ASSERT(archive_.dispatcher() != nullptr);
+}
+
 fit::promise<std::vector<DiagnosticsData>, std::string> ArchiveReader::GetInspectSnapshot() {
   return fit::make_promise([this] {
            std::vector<fuchsia::diagnostics::SelectorArgument> selector_args;
@@ -139,37 +155,51 @@ fit::promise<std::vector<DiagnosticsData>, std::string> ArchiveReader::GetInspec
 
 fit::promise<std::vector<DiagnosticsData>, std::string> ArchiveReader::SnapshotInspectUntilPresent(
     std::vector<std::string> component_names) {
-  return fit::make_promise([this, component_names = std::move(component_names)] {
-           return GetInspectSnapshot().and_then(
-               [this,
-                component_names = std::move(component_names)](std::vector<DiagnosticsData>& result)
-                   -> fit::promise<std::vector<DiagnosticsData>, std::string> {
-                 std::set<std::string> remaining(component_names.begin(), component_names.end());
+  fit::bridge<std::vector<DiagnosticsData>, std::string> bridge;
 
-                 for (const auto& val : result) {
-                   remaining.erase(val.component_name());
-                 }
+  InnerSnapshotInspectUntilPresent(std::move(bridge.completer), std::move(component_names));
 
-                 if (remaining.empty()) {
-                   return fit::make_result_promise<std::vector<DiagnosticsData>, std::string>(
-                       fit::ok(std::move(result)));
-                 } else {
-                   // Use a separate thread to control the delay between snapshots.
-                   fit::bridge<> bridge;
-                   std::thread([completer = std::move(bridge.completer)]() mutable {
-                     // Hardcoded sleep of 200ms for now.
-                     usleep(200000);
-                     completer.complete_ok();
-                   }).detach();
-                   return bridge.consumer.promise_or(fit::error())
-                       .then([this,
-                              component_names = std::move(component_names)](fit::result<>& unused) {
-                         return SnapshotInspectUntilPresent(std::move(component_names));
-                       });
-                 }
-               });
-         })
-      .wrap_with(scope_);
+  return bridge.consumer.promise_or(fit::error("Failed to create bridge promise"));
+}
+
+void ArchiveReader::InnerSnapshotInspectUntilPresent(
+    fit::completer<std::vector<DiagnosticsData>, std::string> completer,
+    std::vector<std::string> component_names) {
+  executor_.schedule_task(
+      GetInspectSnapshot()
+          .then([this, component_names = std::move(component_names),
+                 completer = std::move(completer)](
+                    fit::result<std::vector<DiagnosticsData>, std::string>& result) mutable {
+            if (result.is_error()) {
+              completer.complete_error(result.take_error());
+              return;
+            }
+
+            auto value = result.take_value();
+            std::set<std::string> remaining(component_names.begin(), component_names.end());
+            for (const auto& val : value) {
+              remaining.erase(val.component_name());
+            }
+
+            if (remaining.empty()) {
+              completer.complete_ok(std::move(value));
+            } else {
+              fit::bridge<> timeout;
+              async::PostDelayedTask(
+                  executor_.dispatcher(),
+                  [completer = std::move(timeout.completer)]() mutable { completer.complete_ok(); },
+                  zx::msec(kDelayMs));
+              executor_.schedule_task(timeout.consumer.promise_or(fit::error())
+                                          .then([this, completer = std::move(completer),
+                                                 component_names = std::move(component_names)](
+                                                    fit::result<>& res) mutable {
+                                            InnerSnapshotInspectUntilPresent(
+                                                std::move(completer), std::move(component_names));
+                                          })
+                                          .wrap_with(scope_));
+            }
+          })
+          .wrap_with(scope_));
 }
 
 }  // namespace contrib
