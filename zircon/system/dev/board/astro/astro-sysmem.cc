@@ -29,19 +29,11 @@ static const sysmem_metadata_t sysmem_metadata = {
     // optee reserved range passed to Zircon during boot - the specific location is obtained by
     // sysmem calling the secmem TA via fuchsia::sysmem::Tee protocol between sysmem and TEE
     // Controller.
-    .protected_memory_size = 32 * 1024 * 1024,
-    // Support h.264 5.1, which has a max DPB size of 70,778,880 bytes (with NV12), and add some
-    // extra size for additional pictures for buffering and several framebuffers (1024*608*4 bytes
-    // each).
     //
-    // For now, if we were to support 16 VP9 frames at 4096x2176 (* 3 / 2 for NV12), we'd need 204
-    // MiB, plus more for several framebuffers (1024*608*4 bytes each), for a total of ~256 MiB.
-    //
-    // TODO(dustingreen): Plumb actual frame counts in the VP9 and h.264 decoders, so that the
-    // decoder doesn't demand so much RAM.  For the moment, avoid increasing the reserved contig RAM
-    // beyond 100 MiB, which means we won't be able to decode larger VP9 decode conformance streams
-    // yet, but that's ok for now.
-    .contiguous_memory_size = 100 * 1024 * 1024,
+    // The values below aren't use and are overridden by the kernel command-line set in the board
+    // file.
+    .protected_memory_size = 0,
+    .contiguous_memory_size = 0,
 };
 
 static const pbus_metadata_t sysmem_metadata_list[] = {{
