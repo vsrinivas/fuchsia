@@ -89,6 +89,13 @@ test_package("cobalt_tests") {
 test_package("cobalt_tests_do_not_run_manually") {
   deps = [ "testapp:cobalt_testapp" ]
 
+  binaries = [
+    # Referred to by cobalt_testapp_for_prober_do_not_run_manually.cmx
+    {
+      name = "cobalt_testapp"
+    },
+  ]
+
   tests = [
     {
       name =
