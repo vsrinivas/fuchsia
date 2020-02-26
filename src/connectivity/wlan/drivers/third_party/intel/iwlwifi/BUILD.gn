@@ -112,6 +112,11 @@ source_set("pcie") {
   # should be addressed. The config is removed from this target in the
   # meantime.
   configs -= [ "//build/config/fuchsia:thread_safety_annotations" ]
+
+  # TODO(47044): UBSan has found an instance of undefined behavior in this target.
+  # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
+  # Add this to public configs since the UB is found in a public header.
+  public_configs = [ "//build/config:temporarily_disable_ubsan_do_not_use" ]
 }
 
 driver_module("iwlwifi_driver") {
