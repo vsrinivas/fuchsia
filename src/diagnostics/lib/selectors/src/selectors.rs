@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::selector_evaluator,
     anyhow::{format_err, Error},
     fidl_fuchsia_diagnostics::{self, ComponentSelector, Selector, StringSelector, TreeSelector},
     lazy_static::lazy_static,
@@ -11,6 +12,7 @@ use {
     std::fs,
     std::io::{BufRead, BufReader},
     std::path::{Path, PathBuf},
+    std::sync::Arc,
 };
 // Character used to delimit the different sections of an inspect selector,
 // the component selector, the tree selector, and the property selector.
@@ -116,7 +118,7 @@ fn validate_path_selection_vector(
 ///       Selectors::validate_node_path specification.
 ///    3) Require that the target_properties field, if it is present,
 ///       is valid per Selectors::validate_string_pattern specification.
-pub fn validate_tree_selector(tree_selector: &TreeSelector) -> Result<(), Error> {
+fn validate_tree_selector(tree_selector: &TreeSelector) -> Result<(), Error> {
     match &tree_selector.node_path {
         Some(node_path) => {
             if node_path.is_empty() {
@@ -160,7 +162,7 @@ pub fn validate_tree_selector(tree_selector: &TreeSelector) -> Result<(), Error>
 ///    1) Require a present component_moniker field.
 ///    2) Require that all entries within the component_moniker vector are valid per
 ///       Selectors::validate_node_path specification.
-pub fn validate_component_selector(component_selector: &ComponentSelector) -> Result<(), Error> {
+fn validate_component_selector(component_selector: &ComponentSelector) -> Result<(), Error> {
     match &component_selector.moniker_segments {
         Some(moniker) => {
             if moniker.is_empty() {
@@ -249,7 +251,7 @@ pub fn tokenize_string(untokenized_selector: &str, delimiter: char) -> Result<Ve
 }
 
 /// Converts an unparsed component selector string into a ComponentSelector.
-pub fn parse_component_selector(
+fn parse_component_selector(
     unparsed_component_selector: &String,
 ) -> Result<ComponentSelector, Error> {
     if unparsed_component_selector.is_empty() {
@@ -275,7 +277,7 @@ pub fn parse_component_selector(
 
 /// Converts an unparsed node path selector and an unparsed property selector into
 /// a TreeSelector.
-pub fn parse_tree_selector(
+fn parse_tree_selector(
     unparsed_node_path: &String,
     unparsed_property_selector: Option<&String>,
 ) -> Result<TreeSelector, Error> {
@@ -523,6 +525,54 @@ pub fn sanitize_string_for_selectors(node: &str) -> String {
     }
 
     sanitized_string
+}
+
+/// Evaluates a component moniker against a single selector, returning
+/// True if the selector matches the component, else false.
+///
+/// Requires: hierarchy_path is not empty.
+///           selectors contains valid Selectors.
+pub fn match_component_moniker_against_selector<'a>(
+    moniker: &Vec<String>,
+    selector: &Arc<Selector>,
+) -> Result<bool, Error> {
+    let component_selector = &selector.component_selector;
+    let moniker_selector: &Vec<StringSelector> = match &component_selector.moniker_segments {
+        Some(path_vec) => &path_vec,
+        None => return Err(format_err!("Component selectors require moniker segments.")),
+    };
+
+    if moniker_selector.is_empty() {
+        return Err(format_err!("Component selector moniker segments cannot be empty."));
+    }
+    let mut automata = selector_evaluator::SelectorAutomata::new(moniker_selector);
+    Ok(automata.evaluate_automata_against_path(moniker))
+}
+
+/// Evaluates a component moniker against a list of selectors, returning
+/// all of the selectors which are matches for that moniker.
+///
+/// Requires: hierarchy_path is not empty.
+///           selectors contains valid Selectors.
+pub fn match_component_moniker_against_selectors<'a>(
+    moniker: &Vec<String>,
+    selectors: &Vec<Arc<Selector>>,
+) -> Result<Vec<Arc<Selector>>, Error> {
+    if moniker.is_empty() {
+        return Err(format_err!(
+            "Cannot have empty monikers, at least the component name is required."
+        ));
+    }
+
+    selectors
+        .iter()
+        // TODO(4601): Run these DFA executions concurrently with async.
+        .filter_map(|selector| {
+            match_component_moniker_against_selector(moniker, selector)
+                .map(|is_match| if is_match { Some(selector.clone()) } else { None })
+                .transpose()
+        })
+        .collect::<Result<Vec<Arc<Selector>>, Error>>()
 }
 
 #[cfg(test)]

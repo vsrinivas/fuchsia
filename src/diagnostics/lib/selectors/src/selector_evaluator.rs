@@ -2,19 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    crate::selectors,
-    anyhow::{format_err, Error},
-    fidl_fuchsia_diagnostics::{Selector, StringSelector},
-    std::collections::HashSet,
-    std::sync::Arc,
-};
+use {crate::selectors, fidl_fuchsia_diagnostics::StringSelector, std::collections::HashSet};
 
 /// Struct that encodes the information needed to
 /// represent a component selector as a DFA. This DFA representation
 /// is used to evaluate a component_hierarchy path against a selector
 /// to determine if the data under the path is being selected for.
-struct SelectorAutomata<'a> {
+pub(crate) struct SelectorAutomata<'a> {
     // The individual states that make up
     // the selector state-machine.
     states: &'a Vec<StringSelector>,
@@ -32,7 +26,7 @@ impl<'a> SelectorAutomata<'a> {
     /// to a target component, evaluates a SelectorAutomata
     /// representing a component selector to see if the
     /// tokenized realm path is selected for by the automata.
-    fn evaluate_automata_against_path(&mut self, hierarchy_path: &Vec<String>) -> bool {
+    pub fn evaluate_automata_against_path(&mut self, hierarchy_path: &Vec<String>) -> bool {
         debug_assert!(&self.state_indices.is_none());
 
         // Initialize the DFA to be staged for execution starting
@@ -87,48 +81,6 @@ impl<'a> SelectorAutomata<'a> {
         }
         unreachable!("There is no way to reach this point.");
     }
-}
-
-/// Evaluates a hierarchy path against a list of selectors, returning
-/// all of the selectors for which that component is validly matched.
-///
-/// Requires: hierarchy_path is not empty.
-///           selectors contains valid Selectors.
-pub fn match_component_moniker_against_selectors<'a>(
-    hierarchy_path: &Vec<String>,
-    selectors: &Vec<Arc<Selector>>,
-) -> Result<Vec<Arc<Selector>>, Error> {
-    if hierarchy_path.is_empty() {
-        return Err(format_err!(
-            "Cannot have empty hierarchy paths, at least the component name is required."
-        ));
-    }
-
-    let matching_selectors: Vec<Arc<Selector>> = selectors
-        .iter()
-        // TODO(4601): Run these DFA executions concurrently with async.
-        .filter_map(|selector| {
-            let component_selector = &selector.component_selector;
-            let component_moniker: &Vec<StringSelector> = match &component_selector.moniker_segments
-            {
-                Some(path_vec) => &path_vec,
-                None => panic!("This is an invalid component selector."),
-            };
-
-            if component_moniker.is_empty() {
-                panic!("This is an invalid component selector.")
-            }
-
-            let mut automata = SelectorAutomata::new(component_moniker);
-            if automata.evaluate_automata_against_path(hierarchy_path) {
-                Some(selector.clone())
-            } else {
-                None
-            }
-        })
-        .collect();
-
-    return Ok(matching_selectors);
 }
 
 // Checks to see whether a given tokenized value
