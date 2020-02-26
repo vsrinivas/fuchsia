@@ -176,25 +176,37 @@ impl TestEnv {
         &'a self,
         args: SystemUpdaterArgs<'a>,
     ) -> Result<(), fuchsia_component::client::OutputError> {
+        let mut v = vec![
+            format!("-initiator={}", args.initiator),
+            format!("-target={}", args.target),
+        ];
+
+        if let Some(update) = args.update {
+            v.push(format!("-update={}", update));
+        }
+        if let Some(reboot) = args.reboot {
+            v.push(format!("-reboot={}", reboot));
+        }
+
+        self.run_system_updater_args(v).await
+    }
+
+    async fn run_system_updater_args<'a>(
+        &'a self,
+        args: impl IntoIterator<Item = impl Into<String>>,
+    ) -> Result<(), fuchsia_component::client::OutputError> {
         let launcher = self.launcher();
         let blobfs_dir = File::open(&self.blobfs_path).expect("open blob dir");
         let fake_dir = File::open(&self.fake_path).expect("open fake stimulus dir");
 
-        let mut system_updater = AppBuilder::new(
+        let system_updater = AppBuilder::new(
             "fuchsia-pkg://fuchsia.com/system-updater-integration-tests#meta/system_updater_isolated.cmx",
         )
         .add_dir_to_namespace("/blob".to_string(), blobfs_dir)
         .expect("/blob to mount")
         .add_dir_to_namespace("/fake".to_string(), fake_dir)
         .expect("/fake to mount")
-        .arg(format!("-initiator={}", args.initiator))
-        .arg(format!("-target={}", args.target));
-        if let Some(update) = args.update {
-            system_updater = system_updater.arg(format!("-update={}", update));
-        }
-        if let Some(reboot) = args.reboot {
-            system_updater = system_updater.arg(format!("-reboot={}", reboot));
-        }
+        .args(args);
 
         let output = system_updater
             .output(launcher)
@@ -1378,5 +1390,55 @@ async fn test_rejects_invalid_update_package_url() {
 
     assert_eq!(*env.space_service.called.lock(), 1);
     assert_eq!(*env.resolver.resolved_urls.lock(), vec![bogus_url]);
+    assert_eq!(*env.reboot_service.called.lock(), 0);
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_rejects_unknown_flags() {
+    let mut env = TestEnv::new();
+
+    env.register_package("update", "upd4t3")
+        .add_file(
+            "packages",
+            "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
+        )
+        .add_file("zbi", "fake zbi");
+
+    let result = env
+        .run_system_updater_args(vec![
+            "-initiator=manual",
+            "-target=m3rk13",
+            "-foo=bar",
+        ])
+        .await;
+    assert!(result.is_err(), "system_updater succeeded when it should fail");
+
+    assert_eq!(*env.space_service.called.lock(), 0);
+    assert_eq!(*env.resolver.resolved_urls.lock(), Vec::<String>::new());
+    assert_eq!(*env.reboot_service.called.lock(), 0);
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_rejects_extra_args() {
+    let mut env = TestEnv::new();
+
+    env.register_package("update", "upd4t3")
+        .add_file(
+            "packages",
+            "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
+        )
+        .add_file("zbi", "fake zbi");
+
+    let result = env
+        .run_system_updater_args(vec![
+            "-initiator=manual",
+            "-target=m3rk13",
+            "foo",
+        ])
+        .await;
+    assert!(result.is_err(), "system_updater succeeded when it should fail");
+
+    assert_eq!(*env.space_service.called.lock(), 0);
+    assert_eq!(*env.resolver.resolved_urls.lock(), Vec::<String>::new());
     assert_eq!(*env.reboot_service.called.lock(), 0);
 }

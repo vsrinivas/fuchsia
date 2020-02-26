@@ -259,6 +259,10 @@ func Main() {
 	flag.BoolVar(&reboot, "reboot", true, "if true, reboot the system after successful OTA")
 	flag.Parse()
 
+	if len(flag.Args()) != 0 {
+		syslog.Fatalf("unexpected arguments: %s", flag.Args())
+	}
+
 	startTime = time.Unix(0, *start)
 
 	if err := run(ctx); err != nil {
