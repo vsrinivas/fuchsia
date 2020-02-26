@@ -176,6 +176,9 @@ async fn handle_passthrough_command<'a>(
     let timer = fasync::Timer::new(Time::after(Duration::from_millis(100))).fuse();
     pin_mut!(timer);
 
+    // As per Table 9.27 in AV/C 4.0, send back the state_flag, operation_id, and operation_data.
+    let buf: Vec<u8> = command.body().to_vec();
+
     let handle_cmd = async {
         match delegate.send_passthrough_command(key, pressed).await {
             Ok(()) => AvcResponseType::Accepted,
@@ -189,10 +192,12 @@ async fn handle_passthrough_command<'a>(
     match futures::future::select(timer, handle_cmd).await {
         Either::Left((_, _)) => {
             // timer fired. let the client know it was rejected.
-            command.send_response(AvcResponseType::Rejected, &[]).map_err(|e| Error::AvctpError(e))
+            command
+                .send_response(AvcResponseType::Rejected, &buf[..])
+                .map_err(|e| Error::AvctpError(e))
         }
         Either::Right((return_type, _)) => {
-            command.send_response(return_type, &[]).map_err(|e| Error::AvctpError(e))
+            command.send_response(return_type, &buf[..]).map_err(|e| Error::AvctpError(e))
         }
     }
 }
@@ -732,8 +737,11 @@ mod test {
                         responder.send(&mut Err(TargetAvcError::RejectedInternalError))
                     }
                     TargetHandlerRequest::SendCommand { command, pressed: _, responder } => {
-                        assert_eq!(command, AvcPanelCommand::Play);
-                        responder.send(&mut Ok(()))
+                        if command == AvcPanelCommand::Play {
+                            responder.send(&mut Ok(()))
+                        } else {
+                            responder.send(&mut Err(TargetPassthroughError::CommandNotImplemented))
+                        }
                     }
                     TargetHandlerRequest::ListPlayerApplicationSettingAttributes { responder } => {
                         responder.send(&mut Ok(vec![
@@ -1106,13 +1114,40 @@ mod test {
             0x00, // additional params len is 0
         ]
         .to_vec();
+        let expected_packet_response: Vec<u8> = packet_body.clone();
 
         let command = MockAvcCommand::new(
             AvcPacketType::Command(AvcCommandType::Control),
             AvcOpCode::Passthrough,
             packet_body,
         )
-        .expect_accept();
+        .expect_accept()
+        .expect_body(expected_packet_response);
+
+        cmd_handler.handle_command_internal(command).await
+    }
+
+    /// Test correctness of response of a passthrough command that is not implemented.
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn handle_send_passthrough_not_implemented() -> Result<(), Error> {
+        let target_proxy = create_dumby_target_handler(false);
+        let cmd_handler = create_command_handler(Some(target_proxy), None);
+
+        // play key
+        let packet_body: Vec<u8> = [
+            0x4b, // Forward key, pressed down. Not implemented by mock target handler.
+            0x00, // additional params len is 0
+        ]
+        .to_vec();
+        let expected_packet_response: Vec<u8> = packet_body.clone();
+
+        let command = MockAvcCommand::new(
+            AvcPacketType::Command(AvcCommandType::Control),
+            AvcOpCode::Passthrough,
+            packet_body,
+        )
+        .expect_response_type(AvcResponseType::NotImplemented)
+        .expect_body(expected_packet_response);
 
         cmd_handler.handle_command_internal(command).await
     }
