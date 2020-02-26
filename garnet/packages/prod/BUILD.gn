@@ -45,7 +45,6 @@ group("bluetooth_intel") {
 group("scenic") {
   testonly = true
   public_deps = [
-    "//garnet/packages/prod:factory_reset",
     "//garnet/packages/prod:sysmem_connector",
     "//garnet/packages/prod:vulkan",
     "//src/ui/bin/activity",
@@ -112,7 +111,6 @@ group("all") {
     "//garnet/packages/prod:cpuperf",
     "//garnet/packages/prod:debug_agent",
     "//garnet/packages/prod:drivers",
-    "//garnet/packages/prod:factory_reset",
     "//garnet/packages/prod:far",
     "//garnet/packages/prod:guest_runner",
     "//garnet/packages/prod:insntrace",
@@ -578,12 +576,4 @@ group("tee_manager") {
 group("goldfish-vulkan") {
   testonly = true
   public_deps = [ "//garnet/lib/goldfish-vulkan/gnbuild:goldfish-vulkan" ]
-}
-
-group("factory_reset") {
-  testonly = true
-  public_deps = [
-    "//src/recovery/factory_reset",
-    "//src/recovery/factory_reset:configs",
-  ]
 }
