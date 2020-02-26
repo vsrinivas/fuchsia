@@ -36,6 +36,9 @@ TEST(ImgtecNoHardware, QueryReturnsBuffer) {
   void* data;
   EXPECT_EQ(MAGMA_STATUS_OK, magma_map(connection, buffer, &data));
   EXPECT_EQ(no_hardware_testing::kDummyQueryResult, *reinterpret_cast<uint32_t*>(data));
+
+  magma_release_buffer(connection, buffer);
+  magma_release_connection(connection);
 }
 
 }  // namespace
