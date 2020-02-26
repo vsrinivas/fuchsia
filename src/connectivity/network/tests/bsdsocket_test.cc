@@ -962,13 +962,11 @@ TEST_P(SocketOptsTest, SetReceiveTOSShort) {
 
   SockOption t = GetRecvTOSOption();
   if (IsIPv6()) {
-    ASSERT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOn2Byte, sizeof(kSockOptOn2Byte)),
-              -1)
+    ASSERT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOn2Byte, sizeof(kSockOptOn2Byte)), -1)
         << strerror(errno);
     EXPECT_EQ(errno, EINVAL) << strerror(errno);
   } else {
-    ASSERT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOn2Byte, sizeof(kSockOptOn2Byte)),
-              0)
+    ASSERT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOn2Byte, sizeof(kSockOptOn2Byte)), 0)
         << strerror(errno);
   }
 
@@ -1015,13 +1013,11 @@ TEST_P(SocketOptsTest, SetReceiveTOSChar) {
 
   SockOption t = GetRecvTOSOption();
   if (IsIPv6()) {
-    ASSERT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOnChar, sizeof(kSockOptOnChar)),
-              -1)
+    ASSERT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOnChar, sizeof(kSockOptOnChar)), -1)
         << strerror(errno);
     EXPECT_EQ(errno, EINVAL) << strerror(errno);
   } else {
-    ASSERT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOnChar, sizeof(kSockOptOnChar)),
-              0)
+    ASSERT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOnChar, sizeof(kSockOptOnChar)), 0)
         << strerror(errno);
   }
 
@@ -1036,13 +1032,11 @@ TEST_P(SocketOptsTest, SetReceiveTOSChar) {
   }
 
   if (IsIPv6()) {
-    ASSERT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOffChar, sizeof(kSockOptOffChar)),
-              -1)
+    ASSERT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOffChar, sizeof(kSockOptOffChar)), -1)
         << strerror(errno);
     EXPECT_EQ(errno, EINVAL) << strerror(errno);
   } else {
-    ASSERT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOffChar, sizeof(kSockOptOffChar)),
-              0)
+    ASSERT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOffChar, sizeof(kSockOptOffChar)), 0)
         << strerror(errno);
   }
 
@@ -2793,6 +2787,32 @@ INSTANTIATE_TEST_SUITE_P(NetSocket, SocketKindTest,
                          ::testing::Combine(::testing::Values(AF_INET, AF_INET6),
                                             ::testing::Values(SOCK_DGRAM, SOCK_STREAM)),
                          socketKindToString);
+
+using DomainProtocol = std::pair<int, int>;
+class IcmpSocketTest : public ::testing::TestWithParam<DomainProtocol> {};
+
+TEST_P(IcmpSocketTest, GetSockoptSoProtocol) {
+#if !defined(__Fuchsia__)
+  if (!IsRoot()) {
+    GTEST_SKIP() << "This test requires root";
+  }
+#endif
+  std::pair<int, int> p = GetParam();
+  int domain = std::get<0>(p);
+  int protocol = std::get<1>(p);
+
+  fbl::unique_fd fd;
+  ASSERT_TRUE(fd = fbl::unique_fd(socket(domain, SOCK_DGRAM, protocol))) << strerror(errno);
+
+  int opt;
+  socklen_t optlen = sizeof(opt);
+  EXPECT_EQ(getsockopt(fd.get(), SOL_SOCKET, SO_PROTOCOL, &opt, &optlen), 0) << strerror(errno);
+  EXPECT_EQ(opt, protocol);
+}
+
+INSTANTIATE_TEST_SUITE_P(NetSocket, IcmpSocketTest,
+                         ::testing::Values(std::make_pair(AF_INET, IPPROTO_ICMP),
+                                           std::make_pair(AF_INET6, IPPROTO_ICMPV6)));
 
 TEST(NetDatagramTest, PingIpv4LoopbackAddresses) {
   const char* msg = "hello";

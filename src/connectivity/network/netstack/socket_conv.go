@@ -14,6 +14,7 @@ import (
 	"syslog"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
+	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv6"
 	"gvisor.dev/gvisor/pkg/tcpip/transport/tcp"
@@ -90,10 +91,8 @@ func getSockOptSocket(ep tcpip.Endpoint, ns *Netstack, netProto tcpip.NetworkPro
 		switch transProto {
 		case tcp.ProtocolNumber:
 			return int32(C.SOCK_STREAM), nil
-
 		case udp.ProtocolNumber:
 			return int32(C.SOCK_DGRAM), nil
-
 		default:
 			return 0, tcpip.ErrNotSupported
 		}
@@ -102,10 +101,22 @@ func getSockOptSocket(ep tcpip.Endpoint, ns *Netstack, netProto tcpip.NetworkPro
 		switch netProto {
 		case ipv4.ProtocolNumber:
 			return int32(C.AF_INET), nil
-
 		case ipv6.ProtocolNumber:
 			return int32(C.AF_INET6), nil
+		default:
+			return 0, tcpip.ErrNotSupported
+		}
 
+	case C.SO_PROTOCOL:
+		switch transProto {
+		case tcp.ProtocolNumber:
+			return int32(C.IPPROTO_TCP), nil
+		case udp.ProtocolNumber:
+			return int32(C.IPPROTO_UDP), nil
+		case header.ICMPv4ProtocolNumber:
+			return int32(C.IPPROTO_ICMP), nil
+		case header.ICMPv6ProtocolNumber:
+			return int32(C.IPPROTO_ICMPV6), nil
 		default:
 			return 0, tcpip.ErrNotSupported
 		}
@@ -254,13 +265,21 @@ func getSockOptTCP(ep tcpip.Endpoint, name int16) (interface{}, *tcpip.Error) {
 
 		return int32(v), nil
 
+	case C.TCP_MAXSEG:
+		var v tcpip.MaxSegOption
+		if err := ep.GetSockOpt(&v); err != nil {
+			return nil, err
+		}
+
+		return int32(v), nil
+
 	case C.TCP_KEEPIDLE:
 		var v tcpip.KeepaliveIdleOption
 		if err := ep.GetSockOpt(&v); err != nil {
 			return nil, err
 		}
 
-		return int32(time.Duration(v) / time.Second), nil
+		return int32(time.Duration(v).Seconds()), nil
 
 	case C.TCP_KEEPINTVL:
 		var v tcpip.KeepaliveIntervalOption
@@ -268,7 +287,7 @@ func getSockOptTCP(ep tcpip.Endpoint, name int16) (interface{}, *tcpip.Error) {
 			return nil, err
 		}
 
-		return int32(time.Duration(v) / time.Second), nil
+		return int32(time.Duration(v).Seconds()), nil
 
 	case C.TCP_KEEPCNT:
 		var v tcpip.KeepaliveCountOption
@@ -277,6 +296,39 @@ func getSockOptTCP(ep tcpip.Endpoint, name int16) (interface{}, *tcpip.Error) {
 		}
 
 		return int32(v), nil
+
+	case C.TCP_USER_TIMEOUT:
+		var v tcpip.TCPUserTimeoutOption
+		if err := ep.GetSockOpt(&v); err != nil {
+			return nil, err
+		}
+
+		return int32(time.Duration(v).Milliseconds()), nil
+
+	case C.TCP_CONGESTION:
+		var v tcpip.CongestionControlOption
+		if err := ep.GetSockOpt(&v); err != nil {
+			return nil, err
+		}
+		// https://github.com/torvalds/linux/blob/f2850dd5ee015bd7b77043f731632888887689c7/include/net/tcp.h#L1012
+		tcpCANameMax := 16
+		// TODO(fxb/41621): should we change getsocketopt fidl to pass optlen?
+		b := []byte(v)
+		// Linux uses min(optlen, TCP_CA_NAME_MAX) for length of returned name.
+		//
+		// https://github.com/torvalds/linux/blob/33b40134e5cfbbccad7f3040d1919889537a3df7/net/ipv4/tcp.c#L3502
+		if len(b) > tcpCANameMax {
+			b = b[:tcpCANameMax]
+		}
+		return b, nil
+
+	case C.TCP_DEFER_ACCEPT:
+		var v tcpip.TCPDeferAcceptOption
+		if err := ep.GetSockOpt(&v); err != nil {
+			return nil, err
+		}
+
+		return int32(time.Duration(v).Seconds()), nil
 
 	case C.TCP_INFO:
 		var v tcpip.TCPInfoOption
@@ -301,6 +353,13 @@ func getSockOptTCP(ep tcpip.Endpoint, name int16) (interface{}, *tcpip.Error) {
 	return nil, tcpip.ErrUnknownProtocolOption
 }
 
+func boolToInt32(b bool) int32 {
+	if b {
+		return 1
+	}
+	return 0
+}
+
 func getSockOptIPv6(ep tcpip.Endpoint, name int16) (interface{}, *tcpip.Error) {
 	switch name {
 	case C.IPV6_V6ONLY:
@@ -308,11 +367,7 @@ func getSockOptIPv6(ep tcpip.Endpoint, name int16) (interface{}, *tcpip.Error) {
 		if err != nil {
 			return nil, err
 		}
-		var o int32
-		if v {
-			o = 1
-		}
-		return o, nil
+		return boolToInt32(v), nil
 
 	case C.IPV6_PATHMTU:
 
@@ -343,22 +398,14 @@ func getSockOptIPv6(ep tcpip.Endpoint, name int16) (interface{}, *tcpip.Error) {
 		if err := ep.GetSockOpt(&v); err != nil {
 			return nil, err
 		}
-
-		if v {
-			return int32(1), nil
-		}
-		return int32(0), nil
+		return boolToInt32(bool(v)), nil
 
 	case C.IPV6_RECVTCLASS:
 		v, err := ep.GetSockOptBool(tcpip.ReceiveTClassOption)
 		if err != nil {
 			return nil, err
 		}
-		var o int32
-		if v {
-			o = 1
-		}
-		return o, nil
+		return boolToInt32(v), nil
 
 	default:
 		syslog.Infof("unimplemented getsockopt: SOL_IPV6 name=%d", name)
@@ -426,11 +473,14 @@ func getSockOptIP(ep tcpip.Endpoint, name int16) (interface{}, *tcpip.Error) {
 		if err != nil {
 			return nil, err
 		}
-		var o int32
-		if v {
-			o = 1
+		return boolToInt32(v), nil
+
+	case C.IP_PKTINFO:
+		v, err := ep.GetSockOptBool(tcpip.ReceiveIPPacketInfoOption)
+		if err != nil {
+			return nil, err
 		}
-		return o, nil
+		return boolToInt32(v), nil
 
 	default:
 		syslog.Infof("unimplemented getsockopt: SOL_IP name=%d", name)
@@ -546,6 +596,14 @@ func setSockOptSocket(ep tcpip.Endpoint, ns *Netstack, name int16, optVal []byte
 	case C.SO_RCVTIMEO:
 		return tcpip.ErrNotSupported
 
+	case C.SO_OOBINLINE:
+		if len(optVal) < sizeOfInt32 {
+			return tcpip.ErrInvalidOptionValue
+		}
+
+		v := binary.LittleEndian.Uint32(optVal)
+		return ep.SetSockOpt(tcpip.OutOfBandInlineOption(v))
+
 	default:
 		syslog.Infof("unimplemented setsockopt: SOL_SOCKET name=%d optVal=%x", name, optVal)
 
@@ -585,6 +643,14 @@ func setSockOptTCP(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error {
 		v := binary.LittleEndian.Uint32(optVal)
 		return ep.SetSockOpt(tcpip.QuickAckOption(v))
 
+	case C.TCP_MAXSEG:
+		if len(optVal) < sizeOfInt32 {
+			return tcpip.ErrInvalidOptionValue
+		}
+
+		v := binary.LittleEndian.Uint32(optVal)
+		return ep.SetSockOpt(tcpip.MaxSegOption(v))
+
 	case C.TCP_KEEPIDLE:
 		if len(optVal) < sizeOfInt32 {
 			return tcpip.ErrInvalidOptionValue
@@ -616,6 +682,33 @@ func setSockOptTCP(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error {
 
 		v := binary.LittleEndian.Uint32(optVal)
 		return ep.SetSockOpt(tcpip.KeepaliveCountOption(v))
+
+	case C.TCP_USER_TIMEOUT:
+		if len(optVal) < sizeOfInt32 {
+			return tcpip.ErrInvalidOptionValue
+		}
+		v := int32(binary.LittleEndian.Uint32(optVal))
+		// https://github.com/torvalds/linux/blob/33b40134e5cfbbccad7f3040d1919889537a3df7/net/ipv4/tcp.c#L3086-L3094
+		if v < 0 {
+			return tcpip.ErrInvalidOptionValue
+		}
+		return ep.SetSockOpt(tcpip.TCPUserTimeoutOption(time.Millisecond * time.Duration(v)))
+
+	case C.TCP_CONGESTION:
+		return ep.SetSockOpt(tcpip.CongestionControlOption(optVal))
+
+	case C.TCP_DEFER_ACCEPT:
+		if len(optVal) < sizeOfInt32 {
+			return tcpip.ErrInvalidOptionValue
+		}
+		v := int32(binary.LittleEndian.Uint32(optVal))
+		// Use 0 if negative to match Linux.
+		//
+		// https://github.com/torvalds/linux/blob/33b40134e5cfbbccad7f3040d1919889537a3df7/net/ipv4/tcp.c#L3045
+		if v < 0 {
+			v = 0
+		}
+		return ep.SetSockOpt(tcpip.TCPDeferAcceptOption(time.Second * time.Duration(v)))
 
 	case C.TCP_REPAIR_OPTIONS:
 
@@ -734,7 +827,7 @@ func setSockOptIPv6(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error {
 		}
 		v, err := parseIntOrChar(optVal)
 		if err != nil {
-			return nil
+			return err
 		}
 		return ep.SetSockOptBool(tcpip.ReceiveTClassOption, v != 0)
 
@@ -886,9 +979,19 @@ func setSockOptIP(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error {
 	case C.IP_RECVTOS:
 		v, err := parseIntOrChar(optVal)
 		if err != nil {
-			return nil
+			return err
 		}
 		return ep.SetSockOptBool(tcpip.ReceiveTOSOption, v != 0)
+
+	case C.IP_PKTINFO:
+		if len(optVal) == 0 {
+			return nil
+		}
+		v, err := parseIntOrChar(optVal)
+		if err != nil {
+			return err
+		}
+		return ep.SetSockOptBool(tcpip.ReceiveIPPacketInfoOption, v != 0)
 
 	case
 		C.IP_ADD_SOURCE_MEMBERSHIP,
@@ -906,7 +1009,6 @@ func setSockOptIP(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error {
 		C.IP_NODEFRAG,
 		C.IP_OPTIONS,
 		C.IP_PASSSEC,
-		C.IP_PKTINFO,
 		C.IP_RECVERR,
 		C.IP_RECVOPTS,
 		C.IP_RECVORIGDSTADDR,
