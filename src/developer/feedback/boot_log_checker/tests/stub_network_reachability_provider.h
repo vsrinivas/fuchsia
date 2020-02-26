@@ -9,6 +9,8 @@
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_handle.h>
 
+#include "src/lib/fxl/logging.h"
+
 namespace feedback {
 
 class StubConnectivity : public fuchsia::net::Connectivity {
@@ -22,6 +24,7 @@ class StubConnectivity : public fuchsia::net::Connectivity {
   }
 
   void TriggerOnNetworkReachable(bool reachable) {
+    FXL_CHECK(binding_) << "No client is connected to the stub server yet";
     binding_->events().OnNetworkReachable(reachable);
   }
 
