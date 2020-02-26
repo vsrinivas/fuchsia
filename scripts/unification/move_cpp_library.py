@@ -9,6 +9,8 @@ import json
 import os
 import re
 import sys
+import tempfile
+
 
 from common import (FUCHSIA_ROOT, run_command, is_tree_clean, fx_format,
                     is_in_fuchsia_project)
@@ -21,141 +23,164 @@ SCRIPT_LABEL = '//' + os.path.relpath(os.path.abspath(__file__),
 def main():
     parser = argparse.ArgumentParser(
             description='Moves a C/C++ library from //zircon to //sdk')
-    parser.add_argument('lib',
+    parser.add_argument('--lib',
                         help='Name of the library folder to migrate, e.g. '
-                             'ulib/foo or dev/lib/bar')
+                             'ulib/foo or dev/lib/bar',
+                        action='append')
     args = parser.parse_args()
+
+    if not args.lib:
+        print('Need to specify at least one library.')
+        return 1
 
     # Check that the fuchsia.git tree is clean.
     if not is_tree_clean():
         return 1
 
-    # Verify that the library may be migrated at this time.
-    build_path = os.path.join(FUCHSIA_ROOT, 'zircon', 'system', args.lib,
-                              'BUILD.gn')
-    base_label = '//zircon/system/' + args.lib
-    stats = get_library_stats(build_path)
+    # Whether any of the libraries required changes in a non-fuchsia.git project.
+    global_multiple_projects_affected = False
 
-    # No kernel!
-    has_kernel = len([s for s in stats if s.kernel]) != 0
-    if has_kernel:
-        print('Some libraries in the given folder are used in the kernel and '
-              'may not be migrated at the moment')
-        return 1
+    for lib in args.lib:
+        # Verify that the library may be migrated at this time.
+        build_path = os.path.join(FUCHSIA_ROOT, 'zircon', 'system', lib,
+                                  'BUILD.gn')
+        base_label = '//zircon/system/' + lib
+        stats = get_library_stats(build_path)
 
-    # Only source libraries!
-    non_source_sdk = len([s for s in stats if s.sdk != Sdk.SOURCE]) != 0
-    if non_source_sdk:
-        print('Can only convert libraries exported as "sources" for now')
-        return 1
+        # No kernel!
+        has_kernel = len([s for s in stats if s.kernel]) != 0
+        if has_kernel:
+            print('Some libraries in the given folder are used in the kernel and '
+                  'may not be migrated at the moment')
+            return 1
 
-    # Rewrite the library's build file.
-    import_added = False
-    for line in fileinput.FileInput(build_path, inplace=True):
-        # Remove references to libzircon.
-        if '$zx/system/ulib/zircon' in line and not 'zircon-internal' in line:
-            line = ''
-        # Update references to libraries.
-        line = line.replace('$zx/system/ulib', '//zircon/public/lib')
-        line = line.replace('$zx/system/dev/lib', '//zircon/public/lib')
-        # Update known configs.
-        line = line.replace('$zx_build/public/gn/config:static-libc++',
-                            '//build/config/fuchsia:static_cpp_standard_library')
-        # Update references to Zircon in general.
-        line = line.replace('$zx', '//zircon')
-        # Update deps on libdriver.
-        line = line.replace('//zircon/public/lib/driver', '//src/devices/lib/driver')
-        # Remove header target specifier.
-        line = line.replace('.headers', '')
-        line = line.replace(':headers', '')
-        sys.stdout.write(line)
+        # Only source libraries!
+        non_source_sdk = len([s for s in stats if s.sdk != Sdk.SOURCE]) != 0
+        if non_source_sdk:
+            print('Can only convert libraries exported as "sources" for now')
+            return 1
 
-        if not line.strip() and not import_added:
-            import_added = True
-            sys.stdout.write('##########################################\n')
-            sys.stdout.write('# Though under //zircon, this build file #\n')
-            sys.stdout.write('# is meant to be used in the Fuchsia GN  #\n')
-            sys.stdout.write('# build.                                 #\n')
-            sys.stdout.write('# See fxb/36548.                         #\n')
-            sys.stdout.write('##########################################\n')
-            sys.stdout.write('\n')
-            sys.stdout.write('assert(!defined(zx) || zx != "/", "This file can only be used in the Fuchsia GN build.")\n')
-            sys.stdout.write('\n')
-            sys.stdout.write('import("//build/unification/zx_library.gni")\n')
-            sys.stdout.write('\n')
-    fx_format(build_path)
+        # Rewrite the library's build file.
+        import_added = False
+        for line in fileinput.FileInput(build_path, inplace=True):
+            # Remove references to libzircon.
+            if '$zx/system/ulib/zircon' in line and not 'zircon-internal' in line:
+                line = ''
+            # Update references to libraries.
+            line = line.replace('$zx/system/ulib', '//zircon/public/lib')
+            line = line.replace('$zx/system/dev/lib', '//zircon/public/lib')
+            # Update known configs.
+            line = line.replace('$zx_build/public/gn/config:static-libc++',
+                                '//build/config/fuchsia:static_cpp_standard_library')
+            # Update references to Zircon in general.
+            line = line.replace('$zx', '//zircon')
+            # Update deps on libdriver.
+            line = line.replace('//zircon/public/lib/driver',
+                                '//src/devices/lib/driver')
+            # Remove header target specifier.
+            line = line.replace('.headers', '')
+            line = line.replace(':headers', '')
+            sys.stdout.write(line)
 
-    # Track whether fuchsia.git was the only affected project.
-    multiple_projects_affected = False
+            if not line.strip() and not import_added:
+                import_added = True
+                sys.stdout.write('##########################################\n')
+                sys.stdout.write('# Though under //zircon, this build file #\n')
+                sys.stdout.write('# is meant to be used in the Fuchsia GN  #\n')
+                sys.stdout.write('# build.                                 #\n')
+                sys.stdout.write('# See fxb/36548.                         #\n')
+                sys.stdout.write('##########################################\n')
+                sys.stdout.write('\n')
+                sys.stdout.write('assert(!defined(zx) || zx != "/", "This file can only be used in the Fuchsia GN build.")\n')
+                sys.stdout.write('\n')
+                sys.stdout.write('import("//build/unification/zx_library.gni")\n')
+                sys.stdout.write('\n')
+        fx_format(build_path)
 
-    # Edit references to the library.
-    for base, _, files in os.walk(FUCHSIA_ROOT):
-        for file in files:
-            if file != 'BUILD.gn':
-                continue
-            has_matches = False
-            file_path = os.path.join(base, file)
-            for line in fileinput.FileInput(file_path, inplace=True):
-                for name in [s.name for s in stats]:
-                    new_label = '"' + base_label
-                    if os.path.basename(new_label) != name:
-                        new_label = new_label + ':' + name
-                    new_label = new_label + '"'
-                    line, count = re.subn('"//zircon/public/lib/' + name + '"',
-                                          new_label, line)
-                    if count:
-                        has_matches = True
-                sys.stdout.write(line)
-            if has_matches:
-                fx_format(file_path)
-                if not is_in_fuchsia_project(file_path):
-                    multiple_projects_affected = True
+        # Track whether fuchsia.git was the only affected project.
+        multiple_projects_affected = False
 
-    # Generate an alias for the library under //zircon/public/lib if a soft
-    # transition is necessary.
-    if multiple_projects_affected:
-        alias_path = os.path.join(FUCHSIA_ROOT, 'build', 'unification',
-                                  'zircon_library_mappings.json')
-        with open(alias_path, 'r') as alias_file:
-            data = json.load(alias_file)
-        for s in stats:
-            data.append({
-                'name': s.name,
-                'sdk': s.sdk_publishable,
-                'label': base_label + ":" + s.name,
-            })
-        data = sorted(data, key=lambda item: item['name'])
-        with open(alias_path, 'w') as alias_file:
-            json.dump(data, alias_file, indent=2, sort_keys=True,
-                      separators=(',', ': '))
+        # Edit references to the library.
+        for base, _, files in os.walk(FUCHSIA_ROOT):
+            for file in files:
+                if file != 'BUILD.gn':
+                    continue
+                has_matches = False
+                file_path = os.path.join(base, file)
+                for line in fileinput.FileInput(file_path, inplace=True):
+                    for name in [s.name for s in stats]:
+                        new_label = '"' + base_label
+                        if os.path.basename(new_label) != name:
+                            new_label = new_label + ':' + name
+                        new_label = new_label + '"'
+                        line, count = re.subn('"//zircon/public/lib/' + name + '"',
+                                              new_label, line)
+                        if count:
+                            has_matches = True
+                    sys.stdout.write(line)
+                if has_matches:
+                    fx_format(file_path)
+                    if not is_in_fuchsia_project(file_path):
+                        multiple_projects_affected = True
 
-    # Remove the reference in the ZN aggregation target.
-    aggregation_path = os.path.join(FUCHSIA_ROOT, 'zircon', 'system',
-                                    os.path.dirname(args.lib), 'BUILD.gn')
-    folder = os.path.basename(args.lib)
-    for line in fileinput.FileInput(aggregation_path, inplace=True):
-        for s in stats:
-            if (not '"' + folder + ':' + name + '"' in line and
-                not '"' + folder + '"' in line):
-                sys.stdout.write(line)
+        # Generate an alias for the library under //zircon/public/lib if a soft
+        # transition is necessary.
+        if multiple_projects_affected:
+            global_multiple_projects_affected = True
+
+            alias_path = os.path.join(FUCHSIA_ROOT, 'build', 'unification',
+                                      'zircon_library_mappings.json')
+            with open(alias_path, 'r') as alias_file:
+                data = json.load(alias_file)
+            for s in stats:
+                data.append({
+                    'name': s.name,
+                    'sdk': s.sdk_publishable,
+                    'label': base_label + ":" + s.name,
+                })
+            data = sorted(data, key=lambda item: item['name'])
+            with open(alias_path, 'w') as alias_file:
+                json.dump(data, alias_file, indent=2, sort_keys=True,
+                          separators=(',', ': '))
+
+        # Remove the reference in the ZN aggregation target.
+        aggregation_path = os.path.join(FUCHSIA_ROOT, 'zircon', 'system',
+                                        os.path.dirname(lib), 'BUILD.gn')
+        folder = os.path.basename(lib)
+        for line in fileinput.FileInput(aggregation_path, inplace=True):
+            for s in stats:
+                if (not '"' + folder + ':' + name + '"' in line and
+                    not '"' + folder + '"' in line):
+                    sys.stdout.write(line)
 
     # Create a commit.
-    lib = args.lib.replace('/', '_')
-    run_command(['git', 'checkout', '-b', 'lib-move-' + lib, 'JIRI_HEAD'])
+    libs = sorted(args.lib)
+    under_libs = [l.replace('/', '_') for l in libs]
+    branch_name = 'lib-move-' + under_libs[0]
+    lib_name = '//zircon/system/' + libs[0]
+    if len(libs) > 1:
+        branch_name += '-and-co'
+        lib_name += ' and others'
+    run_command(['git', 'checkout', '-b', branch_name, 'JIRI_HEAD'])
     run_command(['git', 'add', FUCHSIA_ROOT])
     message = [
-        '[unification] Move //zircon/system/' + args.lib + ' to the GN build',
+        '[unification] Move ' + lib_name + ' to the GN build',
         '',
-        'Generated with: ' + SCRIPT_LABEL + ' ' + args.lib,
+    ] + ['//zircon/system/' + l for l in libs] + [
+        '',
+        'Generated with ' + SCRIPT_LABEL,
         '',
         'Bug: 36548'
     ]
-    commit_command = ['git', 'commit', '-a']
-    for line in message:
-        commit_command += ['-m', line]
+    fd, message_path = tempfile.mkstemp()
+    with open(message_path, 'w') as message_file:
+        message_file.write('\n'.join(message))
+    commit_command = ['git', 'commit', '-a', '-F', message_path]
     run_command(commit_command)
+    os.close(fd)
+    os.remove(message_path)
 
-    if multiple_projects_affected:
+    if global_multiple_projects_affected:
         print('*** Warning: multiple Git projects were affected by this move!')
         print('Run jiri status to view affected projects.')
         print('Staging procedure:')
