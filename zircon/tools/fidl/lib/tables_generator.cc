@@ -327,6 +327,8 @@ void TablesGenerator::Generate(const coded::HandleType& handle_type) {
   Emit(&tables_file_, NameTable(handle_type.coded_name));
   Emit(&tables_file_, " = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=");
   Emit(&tables_file_, NameHandleZXObjType(handle_type.subtype));
+  Emit(&tables_file_, ", .handle_rights=");
+  Emit(&tables_file_, handle_type.rights);
   Emit(&tables_file_, ", .nullable=");
   Emit(&tables_file_, handle_type.nullability);
   Emit(&tables_file_, "}}};\n\n");

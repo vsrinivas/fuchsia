@@ -24,24 +24,30 @@ uint32_t ArrayCount(T const (&array)[N]) {
 const fidl_type_t nonnullable_handle = {
     .type_tag = kFidlTypeHandle,
     {.coded_handle = {.handle_subtype = ZX_OBJ_TYPE_NONE,
+                      .handle_rights = 0,
                       .nullable = kFidlNullability_Nonnullable}}};
-const fidl_type_t nullable_handle = {
-    .type_tag = kFidlTypeHandle,
-    {.coded_handle = {.handle_subtype = ZX_OBJ_TYPE_NONE, .nullable = kFidlNullability_Nullable}}};
+const fidl_type_t nullable_handle = {.type_tag = kFidlTypeHandle,
+                                     {.coded_handle = {.handle_subtype = ZX_OBJ_TYPE_NONE,
+                                                       .handle_rights = 0,
+                                                       .nullable = kFidlNullability_Nullable}}};
 const fidl_type_t nullable_channel_handle = {
     .type_tag = kFidlTypeHandle,
     {.coded_handle = {.handle_subtype = ZX_OBJ_TYPE_CHANNEL,
+                      .handle_rights = 0,
                       .nullable = kFidlNullability_Nullable}}};
-const fidl_type_t nullable_vmo_handle = {
-    .type_tag = kFidlTypeHandle,
-    {.coded_handle = {.handle_subtype = ZX_OBJ_TYPE_VMO, .nullable = kFidlNullability_Nullable}}};
+const fidl_type_t nullable_vmo_handle = {.type_tag = kFidlTypeHandle,
+                                         {.coded_handle = {.handle_subtype = ZX_OBJ_TYPE_VMO,
+                                                           .handle_rights = 0,
+                                                           .nullable = kFidlNullability_Nullable}}};
 const fidl_type_t nonnullable_channel_handle = {
     .type_tag = kFidlTypeHandle,
     {.coded_handle = {.handle_subtype = ZX_OBJ_TYPE_CHANNEL,
+                      .handle_rights = 0,
                       .nullable = kFidlNullability_Nonnullable}}};
 const fidl_type_t nonnullable_vmo_handle = {
     .type_tag = kFidlTypeHandle,
     {.coded_handle = {.handle_subtype = ZX_OBJ_TYPE_VMO,
+                      .handle_rights = 0,
                       .nullable = kFidlNullability_Nonnullable}}};
 
 // Array types.

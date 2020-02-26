@@ -89,8 +89,10 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
       if (iter != handle_type_map_.end())
         return iter->second;
       auto name = NameCodedHandle(handle_type->subtype, handle_type->nullability, wire_format);
+      zx_rights_t rights =
+          static_cast<const flat::NumericConstantValue<zx_rights_t>&>(handle_type->rights->Value());
       auto coded_handle_type = std::make_unique<coded::HandleType>(
-          std::move(name), handle_type->subtype, handle_type->nullability);
+          std::move(name), handle_type->subtype, rights, handle_type->nullability);
       handle_type_map_[handle_type] = coded_handle_type.get();
       coded_types_.push_back(std::move(coded_handle_type));
       return coded_types_.back().get();

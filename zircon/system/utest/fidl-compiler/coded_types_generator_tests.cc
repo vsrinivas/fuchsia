@@ -347,6 +347,37 @@ struct WithString {
   END_TEST;
 }
 
+bool CodedHandle() {
+  BEGIN_TEST;
+
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
+
+  TestLibrary library(R"FIDL(
+library example;
+
+struct MyStruct {
+  handle<vmo, 1> h;
+};
+
+)FIDL",
+                      std::move(experimental_flags));
+
+  ASSERT_TRUE(library.Compile());
+  fidl::CodedTypesGenerator gen(library.library());
+  gen.CompileCodedTypes(fidl::WireFormat::kV1NoEe);
+
+  auto struct_name = fidl::flat::Name::Key(library.library(), "MyStruct");
+  auto struct_type = static_cast<const fidl::coded::StructType*>(gen.CodedTypeFor(struct_name));
+  auto handle_type = static_cast<const fidl::coded::HandleType*>(struct_type->fields[0].type);
+
+  ASSERT_EQ(fidl::types::HandleSubtype::kVmo, handle_type->subtype);
+  ASSERT_EQ(1, handle_type->rights);
+  ASSERT_EQ(fidl::types::Nullability::kNonnullable, handle_type->nullability);
+
+  END_TEST;
+}
+
 bool CodedTypesOfStructsWithPaddings() {
   BEGIN_TEST;
 
@@ -894,6 +925,7 @@ RUN_TEST(CodedTypesOfUnionsWithReverseOrdinals);
 RUN_TEST(field_num_in_struct);
 RUN_TEST(field_num_in_message);
 RUN_TEST(UnboundedOutOfLineContainsUnion);
+RUN_TEST(CodedHandle);
 RUN_TEST(duplicate_coded_types_two_unions);
 RUN_TEST(duplicate_coded_types_union_array_array);
 RUN_TEST(duplicate_coded_types_union_vector_array);

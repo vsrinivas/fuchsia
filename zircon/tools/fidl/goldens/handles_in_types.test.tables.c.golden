@@ -25,7 +25,7 @@ extern const fidl_type_t test_name_TableWithHandleTable;
 extern const fidl_type_t test_name_HandlesInTypesTable;
 
 
-static const fidl_type_t HandlevmononnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_VMO, .nullable=kFidlNullability_Nonnullable}}};
+static const fidl_type_t HandlevmononnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_VMO, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable}}};
 
 static const fidl_type_t Vector4294967295nonnullable20HandlevmononnullableTable = {.type_tag=kFidlTypeVector, {.coded_vector={.element=&HandlevmononnullableTable, .max_count=4294967295u, .element_size=4u, .nullable=kFidlNullability_Nonnullable, .alt_type=&v1_Vector4294967295nonnullable23v1_HandlevmononnullableTable}}};
 
@@ -65,7 +65,7 @@ extern const fidl_type_t v1_test_name_TableWithHandleTable;
 extern const fidl_type_t v1_test_name_HandlesInTypesTable;
 
 
-static const fidl_type_t v1_HandlevmononnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_VMO, .nullable=kFidlNullability_Nonnullable}}};
+static const fidl_type_t v1_HandlevmononnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_VMO, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable}}};
 
 static const fidl_type_t v1_Vector4294967295nonnullable23v1_HandlevmononnullableTable = {.type_tag=kFidlTypeVector, {.coded_vector={.element=&v1_HandlevmononnullableTable, .max_count=4294967295u, .element_size=4u, .nullable=kFidlNullability_Nonnullable, .alt_type=&Vector4294967295nonnullable20HandlevmononnullableTable}}};
 

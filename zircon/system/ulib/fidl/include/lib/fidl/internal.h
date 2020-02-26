@@ -228,6 +228,7 @@ struct FidlCodedArrayNew {
 
 struct FidlCodedHandle {
   const zx_obj_type_t handle_subtype;
+  const zx_rights_t handle_rights;
   const FidlNullability nullable;
 
   static_assert(ZX_OBJ_TYPE_UPPER_BOUND <= UINT32_MAX, "");

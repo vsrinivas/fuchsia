@@ -2,17 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <memory>
-#include <utility>
-#include <optional>
-
 #include <lib/fidl/internal.h>
 #include <lib/fidl/llcpp/array.h>
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/sync_call.h>
 #include <lib/zx/channel.h>
-#include <unittest/unittest.h>
 #include <zircon/fidl.h>
+
+#include <memory>
+#include <optional>
+#include <utility>
+
+#include <unittest/unittest.h>
 
 namespace {
 
@@ -45,6 +46,7 @@ struct NonnullableChannelMessage {
 const fidl_type_t NonnullableChannelType = {
     .type_tag = kFidlTypeHandle,
     {.coded_handle = {.handle_subtype = ZX_OBJ_TYPE_CHANNEL,
+                      .handle_rights = 0,
                       .nullable = kFidlNullability_Nonnullable}}};
 const FidlStructField NonnullableChannelMessageFields[] = {
     FidlStructField(&NonnullableChannelType, offsetof(NonnullableChannelMessage, channel), 4),
