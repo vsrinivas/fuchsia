@@ -11,6 +11,7 @@ rustc_test("integration_test") {
 
   deps = [
     "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
+    "//src/diagnostics/examples/inspect/fidl:fuchsia.examples.inspect-rustc",
     "//src/diagnostics/examples/inspect/rust/inspect-codelab-shared",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

@@ -15,6 +15,7 @@ rustc_binary("bin") {
   with_unit_tests = true
 
   deps = [
+    "//garnet/lib/rust/io_util",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
@@ -36,6 +37,7 @@ rustc_test("ext4_server_integration_test") {
   edition = "2018"
 
   deps = [
+    "//garnet/lib/rust/io_util",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
@@ -44,6 +46,7 @@ rustc_test("ext4_server_integration_test") {
     "//src/storage/ext4/server/fidl:ext4_readonly-rustc",
     "//third_party/rust_crates:anyhow",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
+    "//zircon/system/fidl/fuchsia-mem:fuchsia-mem-rustc",
   ]
 }
 

@@ -37,7 +37,11 @@ rustc_test("ot-radio-tx-rx-test") {
   name = "ot_radio_tx_rx_test"
   source_root = "real-device/ot_radio_tx_rx_test.rs"
   edition = "2018"
-  deps = [ "//src/connectivity/openthread/tests/lib" ]
+  deps = [
+    "//src/connectivity/openthread/tests/lib",
+    "//src/lib/fuchsia-async",
+    "//src/lib/syslog/rust:syslog",
+  ]
   non_rust_deps = [ "//zircon/public/lib/syslog" ]
 }
 
@@ -53,7 +57,11 @@ rustc_test("ot-stack-device-open") {
   name = "ot_stack_device_open"
   source_root = "real-device/ot_stack_device_open.rs"
   edition = "2018"
-  deps = [ "//src/connectivity/openthread/tests/lib" ]
+  deps = [
+    "//src/connectivity/openthread/tests/lib",
+    "//src/lib/fuchsia-async",
+    "//src/lib/syslog/rust:syslog",
+  ]
   non_rust_deps = [ "//zircon/public/lib/syslog" ]
 }
 
@@ -80,6 +88,8 @@ rustc_test("ot-stack-device-open-mock") {
   deps = [
     "//sdk/fidl/fuchsia.lowpan.spinel:fuchsia.lowpan.spinel-rustc",
     "//src/connectivity/openthread/tests/lib",
+    "//src/lib/fuchsia-async",
+    "//src/lib/syslog/rust:syslog",
   ]
   non_rust_deps = [ "//zircon/public/lib/syslog" ]
 }

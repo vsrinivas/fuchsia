@@ -63,6 +63,7 @@ rustc_binary("bin") {
 
   deps = [
     ":lib",
+    "//src/lib/trace/rust:trace-provider",
     "//src/lib/ui/carnelian",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:thiserror",

@@ -23,6 +23,7 @@ rustc_binary("bin") {
     "//src/lib/fuchsia-component",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:structopt",
+    "//zircon/system/fidl/fuchsia-device-manager:fuchsia-device-manager-rustc",
   ]
 }
 

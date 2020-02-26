@@ -23,6 +23,7 @@ rustc_binary("collection_realm_bin") {
   source_root = "collection_realm.rs"
   deps = [
     "//garnet/lib/rust/io_util",
+    "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -41,6 +42,7 @@ rustc_binary("trigger_bin") {
   source_root = "trigger.rs"
   deps = [
     "//examples/components/routing/fidl:echo-rustc",
+    "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/sys/component_manager/tests:test_utils_lib",

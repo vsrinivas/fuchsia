@@ -61,6 +61,7 @@ rustc_library("lib") {
     "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-device-manager:fuchsia-device-manager-rustc",
     "//zircon/system/fidl/fuchsia-hardware-input:fuchsia-hardware-input-rustc",
+    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }
 

@@ -19,6 +19,7 @@ rustc_library("hub_report_capability") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
+    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }
 
@@ -30,12 +31,14 @@ rustc_test("hub_integration_test_bin") {
     ":hub_report_capability",
     "//examples/components/routing/fidl:echo-rustc",
     "//garnet/lib/rust/io_util",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/sys/component_manager/tests:test_utils_lib",
     "//src/sys/component_manager/tests/fidl:events-rustc",
     "//src/sys/component_manager/tests/fidl:hub-rustc",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
+    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }
 

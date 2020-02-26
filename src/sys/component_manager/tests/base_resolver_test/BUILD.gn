@@ -18,6 +18,7 @@ rustc_test("base_resolver_test_bin") {
     "//src/lib/fuchsia-component",
     "//src/sys/component_manager/tests:test_utils_lib",
     "//third_party/rust_crates:anyhow",
+    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }
 

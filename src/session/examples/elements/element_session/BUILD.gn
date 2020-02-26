@@ -24,6 +24,7 @@ rustc_binary("element_session_bin") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/session/fidl:session_examples-rustc",
     "//src/session/lib/element_management",
     "//third_party/rust_crates:anyhow",

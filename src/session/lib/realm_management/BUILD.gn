@@ -13,6 +13,7 @@ rustc_library("realm_management") {
   deps = [
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
@@ -24,9 +25,7 @@ rustc_library("realm_management") {
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 
-  test_deps = [
-    "//src/lib/test_util",
-  ]
+  test_deps = [ "//src/lib/test_util" ]
 }
 
 test_package("realm_management_tests") {

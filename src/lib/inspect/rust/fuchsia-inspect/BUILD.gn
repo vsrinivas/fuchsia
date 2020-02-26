@@ -12,6 +12,7 @@ rustc_library("fuchsia-inspect") {
 
   deps = [
     "//garnet/lib/rust/io_util",
+    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
     "//sdk/fidl/fuchsia.inspect:fuchsia.inspect-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/lib/fdio/rust:fdio",

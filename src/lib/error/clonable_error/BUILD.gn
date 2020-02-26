@@ -14,6 +14,7 @@ rustc_library("clonable_error") {
   visibility = [
     ":*",
     ":tests",
+    "//src/fonts:*",
     "//src/fonts/manifest:*",
     "//src/sys/component_manager:*",
   ]

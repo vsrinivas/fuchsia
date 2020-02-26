@@ -10,7 +10,13 @@ rustc_test("test") {
   edition = "2018"
   source_root = "src/main.rs"
 
-  deps = [ "//src/session/bin/session_manager:lib" ]
+  deps = [
+    "//src/lib/fuchsia-async",
+    "//src/lib/syslog/rust:syslog",
+    "//src/session/bin/session_manager:lib",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:thiserror",
+  ]
 }
 
 package("session_manager_integration_tests") {

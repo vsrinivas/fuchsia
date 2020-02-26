@@ -34,6 +34,7 @@ if (!is_fuchsia) {
 
     deps = [
       ":lib",
+      "//src/connectivity/overnet/lib/hoist",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:argh",
       "//third_party/rust_crates:futures",

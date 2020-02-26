@@ -13,6 +13,7 @@ test_package("tests") {
     "integration:bt-integration-tests",
     "//src/connectivity/bluetooth/core/bt-host:tests",
     "//src/connectivity/bluetooth/lib/fidl:tests",
+    "//src/lib/syslog/rust:syslog",
   ]
 
   tests = [
