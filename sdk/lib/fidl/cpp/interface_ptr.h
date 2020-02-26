@@ -201,8 +201,9 @@ class InterfacePtr final {
   // receives a reply to that transaction or the |InterfacePtr| is unbound from
   // the channel.
   //
-  // When this |InterfacePtr| is not bound, it is an error to call methods on
-  // the returned |Interface|.
+  // When this |InterfacePtr| is not bound, calling methods on the returned
+  // |Interface| simply discards the arguments and closes any handles contained
+  // in those arguments.
   //
   // The returned |Interface| is thread-hostile and can be used only on the
   // thread to which the |InterfacePtr| was bound.
