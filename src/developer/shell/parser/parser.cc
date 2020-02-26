@@ -68,14 +68,15 @@ ParseResultStream UnescapedIdentifier(ParseResultStream prefixes) {
 //     myVariable
 //     @0_day_variable
 ParseResultStream Identifier(ParseResultStream prefixes) {
-  return Alt(Seq(Token("@"), UnescapedIdentifier),
-             Seq(Not(Digit), Not(Token("s#")), UnescapedIdentifier))(std::move(prefixes));
+  return NT<ast::Identifier>(Alt(Seq(Token("@"), UnescapedIdentifier),
+                                 Seq(Not(Digit), Not(Token("s#")), UnescapedIdentifier)))(
+      std::move(prefixes));
 }
 
 // Parses an expression. This is effectively unimplemented right now.
 ParseResultStream Expression(ParseResultStream prefixes) {
   // Unimplemented
-  return Digit(std::move(prefixes));
+  return NT<ast::Expression>(Digit)(std::move(prefixes));
 }
 
 // Parses a variable declaration:

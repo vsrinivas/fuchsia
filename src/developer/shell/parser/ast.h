@@ -6,6 +6,7 @@
 #define SRC_DEVELOPER_SHELL_PARSER_AST_H_
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <variant>
@@ -15,6 +16,11 @@ namespace shell::parser::ast {
 
 class Terminal;
 class Nonterminal;
+class Error;
+class Program;
+class VariableDecl;
+class Identifier;
+class Expression;
 
 // A node in our AST.
 class Node {
@@ -39,6 +45,21 @@ class Node {
 
   // Whether this node is a whitespace node.
   virtual bool IsWhitespace() const { return false; }
+
+  // Whether this node or any of its children contains parse errors.
+  virtual bool HasErrors() const { return IsError(); }
+
+  // Downcasting methods
+  virtual Error* AsError() { return nullptr; }
+  const Error* AsError() const { return const_cast<Node*>(this)->AsError(); }
+  virtual Program* AsProgram() { return nullptr; }
+  const Program* AsProgram() const { return const_cast<Node*>(this)->AsProgram(); }
+  virtual VariableDecl* AsVariableDecl() { return nullptr; }
+  const VariableDecl* AsVariableDecl() const { return const_cast<Node*>(this)->AsVariableDecl(); }
+  virtual Identifier* AsIdentifier() { return nullptr; }
+  const Identifier* AsIdentifier() const { return const_cast<Node*>(this)->AsIdentifier(); }
+  virtual Expression* AsExpression() { return nullptr; }
+  const Expression* AsExpression() const { return const_cast<Node*>(this)->AsExpression(); }
 
  private:
   // Offset into the original text where the text this node corresponds to starts.
@@ -66,9 +87,12 @@ class Error : public Terminal {
   Error(size_t start, size_t size, const std::string& message)
       : Terminal(start, size), message_(message) {}
 
+  const std::string& message() const { return message_; }
+
   bool IsError() const override { return true; }
 
   std::string ToString(std::string_view unit) const override;
+  Error* AsError() override { return this; }
 
  private:
   const std::string message_;
@@ -78,7 +102,14 @@ class Error : public Terminal {
 class Nonterminal : public Node {
  public:
   Nonterminal(size_t start, std::vector<std::shared_ptr<Node>> children)
-      : Node(start), children_(std::move(children)) {}
+      : Node(start), children_(std::move(children)) {
+    for (const auto& child : children_) {
+      if (child->HasErrors()) {
+        has_errors_ = true;
+        break;
+      }
+    }
+  }
 
   // Name of this node as a string.
   virtual std::string_view Name() const = 0;
@@ -94,7 +125,10 @@ class Nonterminal : public Node {
 
   std::string ToString(std::string_view unit) const override;
 
+  bool HasErrors() const override { return has_errors_; }
+
  private:
+  bool has_errors_ = false;
   std::vector<std::shared_ptr<Node>> children_;
 };
 
@@ -128,6 +162,7 @@ class Program : public Nonterminal {
       : Nonterminal(start, std::move(children)) {}
 
   std::string_view Name() const override { return "Program"; }
+  Program* AsProgram() override { return this; }
 };
 
 class VariableDecl : public Nonterminal {
@@ -136,6 +171,27 @@ class VariableDecl : public Nonterminal {
       : Nonterminal(start, std::move(children)) {}
 
   std::string_view Name() const override { return "VariableDecl"; }
+  VariableDecl* AsVariableDecl() override { return this; }
+};
+
+class Identifier : public Nonterminal {
+ public:
+  Identifier(size_t start, std::vector<std::shared_ptr<Node>> children)
+      : Nonterminal(start, std::move(children)) {}
+
+  std::string_view Name() const override { return "Identifier"; }
+
+  std::optional<std::string> GetIdentifier(std::string_view unit) const;
+  Identifier* AsIdentifier() override { return this; }
+};
+
+class Expression : public Nonterminal {
+ public:
+  Expression(size_t start, std::vector<std::shared_ptr<Node>> children)
+      : Nonterminal(start, std::move(children)) {}
+
+  std::string_view Name() const override { return "Expression"; }
+  Expression* AsExpression() override { return this; }
 };
 
 }  // namespace shell::parser::ast

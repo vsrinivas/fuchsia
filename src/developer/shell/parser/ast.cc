@@ -33,4 +33,20 @@ std::string Nonterminal::ToString(std::string_view unit) const {
 
 std::string Error::ToString(std::string_view unit) const { return "E[" + message_ + "]"; }
 
+std::optional<std::string> Identifier::GetIdentifier(std::string_view unit) const {
+  for (const auto& child : Children()) {
+    if (child->HasErrors()) {
+      continue;
+    }
+
+    auto text = child->ToString(unit);
+    if (text != "@") {
+      return text;
+    }
+  }
+
+  // TODO: DCHECK(HasErrors()) // We should only get here if the parse failed.
+  return std::nullopt;
+}
+
 }  // namespace shell::parser::ast
