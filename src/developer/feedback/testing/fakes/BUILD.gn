@@ -4,6 +4,19 @@
 
 import("//build/package.gni")
 
+package("fake_crash_reporter") {
+  binary = "fake_crash_reporter"
+
+  meta = [
+    {
+      path = "meta/fake_crash_reporter.cmx"
+      dest = "fake_crash_reporter.cmx"
+    },
+  ]
+
+  deps = [ ":fake_crash_reporter_main" ]
+}
+
 package("fake_data_provider") {
   binary = "fake_data_provider"
 
@@ -22,6 +35,25 @@ package("fake_data_provider") {
   ]
 
   deps = [ ":fake_data_provider_main" ]
+}
+
+executable("fake_crash_reporter_main") {
+  output_name = "fake_crash_reporter"
+
+  sources = [
+    "fake_crash_reporter.cc",
+    "fake_crash_reporter.h",
+    "fake_crash_reporter_main.cc",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/syslog/cpp",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+  ]
 }
 
 executable("fake_data_provider_main") {

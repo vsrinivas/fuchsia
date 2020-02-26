@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FEEDBACK_TESTING_FAKES_FAKE_DATA_PROVIDER_AGENT_H_
-#define SRC_DEVELOPER_FEEDBACK_TESTING_FAKES_FAKE_DATA_PROVIDER_AGENT_H_
+#ifndef SRC_DEVELOPER_FEEDBACK_TESTING_FAKES_FAKE_DATA_PROVIDER_H_
+#define SRC_DEVELOPER_FEEDBACK_TESTING_FAKES_FAKE_DATA_PROVIDER_H_
 
 #include <fuchsia/feedback/cpp/fidl.h>
 

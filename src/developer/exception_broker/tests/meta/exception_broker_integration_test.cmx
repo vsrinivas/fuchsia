@@ -4,7 +4,7 @@
             "injected-services": {
                 "fuchsia.exception.Handler": "fuchsia-pkg://fuchsia.com/exception_broker#meta/exception_broker.cmx",
                 "fuchsia.exception.ProcessLimbo": "fuchsia-pkg://fuchsia.com/exception_broker#meta/exception_broker.cmx",
-                "fuchsia.feedback.CrashReporter": "fuchsia-pkg://fuchsia.com/crashpad_agent#meta/crashpad_agent.cmx"
+                "fuchsia.feedback.CrashReporter": "fuchsia-pkg://fuchsia.com/fake_crash_reporter#meta/fake_crash_reporter.cmx"
             }
         }
     },

@@ -12,7 +12,7 @@ group("tests") {
 
     # Packages for the components that we are injecting in the integration tests.
     "//src/developer/exception_broker",
-    "//src/diagnostics/archivist",
+    "//src/developer/feedback/testing/fakes:fake_crash_reporter",
   ]
 }
 
