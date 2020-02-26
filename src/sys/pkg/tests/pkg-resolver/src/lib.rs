@@ -25,6 +25,7 @@ use {
     fuchsia_inspect::reader::{NodeHierarchy, PartialNodeHierarchy},
     fuchsia_merkle::{Hash, MerkleTree},
     fuchsia_pkg_testing::{serve::ServedRepository, Package, PackageBuilder},
+    fuchsia_url::pkg_url::RepoUrl,
     fuchsia_zircon::{self as zx, Status},
     futures::prelude::*,
     pkgfs_ramdisk::PkgfsRamdisk,
@@ -417,9 +418,15 @@ impl<P: PkgFs> TestEnv<P> {
     }
 
     pub async fn register_repo(&self, repo: &ServedRepository) {
-        let repo_url = "fuchsia-pkg://test".parse().unwrap();
-        let repo_config = repo.make_repo_config(repo_url);
+        self.register_repo_at_url(repo, "fuchsia-pkg://test").await;
+    }
 
+    pub async fn register_repo_at_url<R>(&self, repo: &ServedRepository, url: R)
+    where
+        R: TryInto<RepoUrl>,
+        R::Error: std::fmt::Debug,
+    {
+        let repo_config = repo.make_repo_config(url.try_into().unwrap());
         self.proxies.repo_manager.add(repo_config.into()).await.unwrap();
     }
 

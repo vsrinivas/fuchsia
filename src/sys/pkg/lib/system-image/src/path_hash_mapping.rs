@@ -54,6 +54,11 @@ impl<T> PathHashMapping<T> {
         self.contents.iter().map(|(_, hash)| hash)
     }
 
+    /// Get the hash for a package.
+    pub fn hash_for_package(&self, path: &PackagePath) -> Option<Hash> {
+        self.contents.iter().find_map(|(n, hash)| if n == path { Some(*hash) } else { None })
+    }
+
     /// Create a `PathHashMapping` from a `Vec` of `(PackagePath, Hash)` pairs.
     pub fn from_entries(entries: Vec<(PackagePath, Hash)>) -> Self {
         Self { contents: entries, phantom: PhantomData }
@@ -135,6 +140,35 @@ mod tests {
             serialized,
             &b"name0/0=0000000000000000000000000000000000000000000000000000000000000000\n"[..]
         );
+    }
+
+    #[test]
+    fn hash_for_package_success() {
+        let bytes =
+            "name/variant=0000000000000000000000000000000000000000000000000000000000000000\n\
+             "
+            .as_bytes();
+        let static_packages = StaticPackages::deserialize(bytes).unwrap();
+        let res = static_packages
+            .hash_for_package(&PackagePath::from_name_and_variant("name", "variant").unwrap());
+        assert_eq!(
+            res,
+            Some(
+                "0000000000000000000000000000000000000000000000000000000000000000".parse().unwrap(),
+            )
+        );
+    }
+
+    #[test]
+    fn hash_for_missing_package_is_none() {
+        let bytes =
+            "name/variant=0000000000000000000000000000000000000000000000000000000000000000\n\
+             "
+            .as_bytes();
+        let static_packages = StaticPackages::deserialize(bytes).unwrap();
+        let res = static_packages
+            .hash_for_package(&PackagePath::from_name_and_variant("nope", "variant").unwrap());
+        assert_eq!(res, None);
     }
 
     prop_compose! {
