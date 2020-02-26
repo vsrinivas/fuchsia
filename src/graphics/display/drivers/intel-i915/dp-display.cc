@@ -1267,7 +1267,7 @@ double DpDisplay::GetBacklightBrightness() {
     uint16_t max = static_cast<uint16_t>(backlight_ctrl.modulation_freq());
     uint16_t duty_cycle = static_cast<uint16_t>(backlight_ctrl.duty_cycle());
 
-    percent = duty_cycle / max;
+    percent = (duty_cycle * 1.0f) / max;
   }
 
   return percent;

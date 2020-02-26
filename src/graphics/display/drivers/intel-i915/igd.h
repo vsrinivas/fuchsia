@@ -233,6 +233,8 @@ class IgdOpRegion {
 
   double GetMinBacklightBrightness() const { return min_backlight_brightness_; }
 
+  void SetIsEdpForTesting(registers::Ddi ddi, bool is_edp) { ddi_is_edp_[ddi] = is_edp; }
+
  private:
   template <typename T>
   T* GetSection(uint16_t* size);

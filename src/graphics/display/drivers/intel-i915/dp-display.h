@@ -49,6 +49,10 @@ class DpDisplay : public DisplayDevice {
  public:
   DpDisplay(Controller* controller, uint64_t id, registers::Ddi ddi);
 
+  // Gets the backlight brightness as a coefficient on the maximum brightness,
+  // between the minimum brightness and 1.
+  double GetBacklightBrightness();
+
  private:
   bool Query() final;
   bool InitDdi() final;
@@ -88,10 +92,6 @@ class DpDisplay : public DisplayDevice {
   // brightness, then |val| will be clamped to [min, 1].
   bool SetBacklightBrightness(double val);
 
-  // Gets the backlight brightness as a coefficient on the maximum brightness,
-  // between the minimum brightness and 1.
-  double GetBacklightBrightness();
-
   bool HandleHotplug(bool long_pulse) override;
   bool HasBacklight() override;
   zx_status_t SetBacklightState(bool power, double brightness) override;
@@ -109,8 +109,8 @@ class DpDisplay : public DisplayDevice {
 
   uint8_t dpcd_capabilities_[16];
   uint8_t dpcd_edp_capabilities_[5];
-  bool backlight_aux_brightness_;
-  bool backlight_aux_power_;
+  bool backlight_aux_brightness_{};
+  bool backlight_aux_power_{};
 
   // The backlight brightness coefficient, in the range [min brightness, 1].
   double backlight_brightness_ = 1.0f;

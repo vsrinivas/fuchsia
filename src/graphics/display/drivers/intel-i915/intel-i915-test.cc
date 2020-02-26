@@ -65,4 +65,29 @@ TEST(IntelI915Display, SetInterruptCallback) {
   interrupts->~Interrupts();
 }
 
+TEST(IntelI915Display, BacklightValue) {
+  i915::Controller controller(nullptr);
+  i915::DpDisplay display(&controller, 0, registers::kDdis[0]);
+
+  constexpr uint32_t kMinimumRegCount = 0xd0000 / sizeof(uint32_t);
+  std::vector<uint32_t> regs(kMinimumRegCount);
+  mmio_buffer_t buffer{.vaddr = regs.data(),
+                       .offset = 0,
+                       .size = regs.size() * sizeof(uint32_t),
+                       .vmo = ZX_HANDLE_INVALID};
+  controller.SetMmioForTesting(ddk::MmioBuffer(buffer));
+  registers::SouthBacklightCtl2::Get()
+      .FromValue(0)
+      .set_modulation_freq(1024)
+      .set_duty_cycle(512)
+      .WriteTo(controller.mmio_space());
+
+  const_cast<i915::IgdOpRegion&>(controller.igd_opregion())
+      .SetIsEdpForTesting(registers::kDdis[0], true);
+  EXPECT_EQ(0.5, display.GetBacklightBrightness());
+
+  // Unset so controller teardown doesn't crash.
+  controller.ResetMmioSpaceForTesting();
+}
+
 }  // namespace

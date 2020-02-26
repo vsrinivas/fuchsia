@@ -147,6 +147,10 @@ class Controller : public DeviceType,
   registers::Dpll SelectDpll(bool is_edp, const dpll_state_t& state);
   const dpll_state_t* GetDpllState(registers::Dpll dpll);
 
+  void SetMmioForTesting(ddk::MmioBuffer mmio_space) { mmio_space_ = std::move(mmio_space); }
+
+  void ResetMmioSpaceForTesting() { mmio_space_.reset(); }
+
  private:
   void EnableBacklight(bool enable);
   void InitDisplays();
