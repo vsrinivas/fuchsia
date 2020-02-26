@@ -166,6 +166,8 @@ TEST_F(DigestUnitTest, DefaultBuckets) {
                       {.koid = 18, .name = "test", .committed_bytes = 18},
                       {.koid = 19, .name = "test", .committed_bytes = 19},
                       {.koid = 20, .name = "test", .committed_bytes = 20},
+                      {.koid = 21, .name = "test", .committed_bytes = 21},
+                      {.koid = 22, .name = "test", .committed_bytes = 22},
                   },
               .processes =
                   {
@@ -185,36 +187,26 @@ TEST_F(DigestUnitTest, DefaultBuckets) {
                       {.koid = 14, .name = "web_engine_exe:renderer", .vmos = {14}},
                       {.koid = 15, .name = "web_engine_exe:gpu", .vmos = {15}},
                       {.koid = 16, .name = "chromium.cmx", .vmos = {16}},
-                      {.koid = 17, .name = "fshost", .vmos = {17}},
+                      {.koid = 17, .name = "fshost.cm", .vmos = {17}},
                       {.koid = 18, .name = "archivist.cmx", .vmos = {18}},
                       {.koid = 19, .name = "cobalt.cmx", .vmos = {19}},
-                      {.koid = 20, .name = "new", .vmos = {20}},
+                      {.koid = 20, .name = "audio_core.cmx", .vmos = {20}},
+                      {.koid = 21, .name = "context_provider.cmx", .vmos = {21}},
+                      {.koid = 22, .name = "new", .vmos = {22}},
                   },
           });
   Digester digester;
   Digest d(c, &digester);
   EXPECT_EQ(1U, d.undigested_vmos().size());
 
-  ConfirmBuckets(d, {
-                        {"Web", 45U},
-                        {"Cobalt", 19U},
-                        {"Archivist", 18U},
-                        {"Fshost", 17U},
-                        {"Cast", 13U},
-                        {"Pkgfs", 12U},
-                        {"Amber", 11U},
-                        {"Netstack", 10U},
-                        {"Amlogic", 9U},
-                        {"Scenic", 8U},
-                        {"Kronk", 7U},
-                        {"Flutter", 6U},
-                        {"Blobfs", 5U},
-                        {"Minfs", 4U},
-                        {"Video Buffer", 3U},
-                        {"Graphics", 2U},
-                        {"ZBI Buffer", 1U},
-                        {"Undigested", 20U},
-                    });
+  ConfirmBuckets(
+      d, {
+             {"Web", 45U},         {"Context", 21U},  {"Audio", 20U},     {"Cobalt", 19U},
+             {"Archivist", 18U},   {"Fshost", 17U},   {"Cast", 13U},      {"Pkgfs", 12U},
+             {"Amber", 11U},       {"Netstack", 10U}, {"Amlogic", 9U},    {"Scenic", 8U},
+             {"Kronk", 7U},        {"Flutter", 6U},   {"Blobfs", 5U},     {"Minfs", 4U},
+             {"Video Buffer", 3U}, {"Graphics", 2U},  {"ZBI Buffer", 1U}, {"Undigested", 22U},
+         });
 }
 
 }  // namespace test

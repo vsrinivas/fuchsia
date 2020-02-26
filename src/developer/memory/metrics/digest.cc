@@ -14,7 +14,7 @@ const std::vector<const BucketMatch> Digester::kDefaultBucketMatches = {
     {"ZBI Buffer", ".*", "uncompressed-bootfs"},
     {"Graphics", ".*", "magma_create_buffer"},
     {"Video Buffer", "driver_host:sys", "Sysmem.*"},
-    {"Fshost", "fshost", ".*"},
+    {"Fshost", "fshost.cm", ".*"},
     {"Minfs", ".*minfs", ".*"},
     {"Blobfs", ".*blobfs", ".*"},
     {"Flutter", "io\\.flutter\\..*", ".*"},
@@ -28,6 +28,8 @@ const std::vector<const BucketMatch> Digester::kDefaultBucketMatches = {
     {"Cast", "cast_agent.cmx", ".*"},
     {"Archivist", "archivist.cmx", ".*"},
     {"Cobalt", "cobalt.cmx", ".*"},
+    {"Audio", "audio_core.cmx", ".*"},
+    {"Context", "context_provider.cmx", ".*"},
 };
 
 BucketMatch::BucketMatch(const std::string& name, const std::string& process,

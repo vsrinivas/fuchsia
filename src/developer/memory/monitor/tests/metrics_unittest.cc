@@ -58,6 +58,8 @@ TEST_F(MetricsUnitTest, All) {
               {.koid = 16, .name = "test", .committed_bytes = 16},
               {.koid = 17, .name = "test", .committed_bytes = 17},
               {.koid = 18, .name = "test", .committed_bytes = 18},
+              {.koid = 19, .name = "test", .committed_bytes = 19},
+              {.koid = 20, .name = "test", .committed_bytes = 20},
           },
       .processes =
           {
@@ -76,9 +78,11 @@ TEST_F(MetricsUnitTest, All) {
               {.koid = 13, .name = "pkgfs", .vmos = {13}},
               {.koid = 14, .name = "cast_agent.cmx", .vmos = {14}},
               {.koid = 15, .name = "chromium.cmx", .vmos = {15}},
-              {.koid = 16, .name = "fshost", .vmos = {16}},
+              {.koid = 16, .name = "fshost.cm", .vmos = {16}},
               {.koid = 17, .name = "archivist.cmx", .vmos = {17}},
               {.koid = 18, .name = "cobalt.cmx", .vmos = {18}},
+              {.koid = 19, .name = "audio_core.cmx", .vmos = {19}},
+              {.koid = 20, .name = "context_provider.cmx", .vmos = {20}},
           },
   }});
   cobalt::FakeLogger_Sync logger;
@@ -89,8 +93,8 @@ TEST_F(MetricsUnitTest, All) {
   // memory metric: 18 buckets + 3 (Orphaned, Kernel and Free buckets)  +
   // memory_general_breakdown metric: 10 +
   // memory_leak metric: 10
-  // = 41
-  EXPECT_EQ(41U, logger.logged_events().size());
+  // = 43
+  EXPECT_EQ(43U, logger.logged_events().size());
   using Breakdown = cobalt_registry::MemoryGeneralBreakdownMetricDimensionGeneralBreakdown;
   using Breakdown2 = cobalt_registry::MemoryLeakMetricDimensionGeneralBreakdown;
   for (const auto& cobalt_event : logger.logged_events()) {
@@ -109,8 +113,8 @@ TEST_F(MetricsUnitTest, All) {
             EXPECT_EQ(14u, cobalt_event.payload.memory_bytes_used());
             break;
           case MemoryMetricDimensionBucket::Orphaned:
-            // 900 kmem.vmo - (1 + 2 + 3 + ... + 18) vmo digested in buckets = 764
-            EXPECT_EQ(729u, cobalt_event.payload.memory_bytes_used());
+            // 900 kmem.vmo - (1 + 2 + 3 + ... + 20) vmo digested in buckets = 690
+            EXPECT_EQ(690U, cobalt_event.payload.memory_bytes_used());
             break;
           case MemoryMetricDimensionBucket::Kernel:
             // 60 wired + 200 total_heap + 60 mmu_overhead + 10 ipc + 20 other = 350
@@ -120,7 +124,7 @@ TEST_F(MetricsUnitTest, All) {
             EXPECT_EQ(800u, cobalt_event.payload.memory_bytes_used());
             break;
           default:
-            EXPECT_TRUE(cobalt_event.payload.memory_bytes_used() < 19);
+            EXPECT_TRUE(cobalt_event.payload.memory_bytes_used() < 21);
             break;
         }
         break;
