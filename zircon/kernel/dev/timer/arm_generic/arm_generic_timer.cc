@@ -349,17 +349,21 @@ static void arm_generic_timer_pdev_init(const void* driver_data, uint32_t length
     // If we did not boot at EL2 or above, prefer the virtual timer.
     irq_phys = 0;
   }
+  const char* timer_str = "";
   if (irq_phys) {
+    timer_str = "phys";
     timer_irq = irq_phys;
     timer_assignment = IRQ_PHYS;
     reg_procs = &cntp_procs;
     entry_ticks_idx = 0;
   } else if (irq_virt) {
+    timer_str = "virt";
     timer_irq = irq_virt;
     timer_assignment = IRQ_VIRT;
     reg_procs = &cntv_procs;
     entry_ticks_idx = 1;
   } else if (irq_sphys) {
+    timer_str = "sphys";
     timer_irq = irq_sphys;
     timer_assignment = IRQ_SPHYS;
     reg_procs = &cntps_procs;
@@ -371,6 +375,8 @@ static void arm_generic_timer_pdev_init(const void* driver_data, uint32_t length
 
   timeline_zbi_entry.Set(kernel_entry_ticks[entry_ticks_idx]);
   timeline_virtual_entry.Set(kernel_virtual_entry_ticks[entry_ticks_idx]);
+
+  dprintf(INFO, "arm generic timer using %s timer, irq %d\n", timer_str, timer_irq);
 
   arm_generic_timer_init(driver->freq_override);
 }
