@@ -4,13 +4,13 @@
 
 use {
     crate::{
-        format::{block::Block, block_type::BlockType, constants},
+        format::{bitfields::BlockHeader, block::Block, block_type::BlockType, constants},
         utils, Inspector,
     },
     anyhow::{format_err, Error},
     fuchsia_zircon::Vmo,
     std::{
-        convert::TryFrom,
+        convert::{TryFrom, TryInto},
         sync::atomic::{fence, Ordering},
     },
 };
@@ -21,6 +21,8 @@ pub use crate::reader::tree_reader::SnapshotTree;
 pub struct Snapshot {
     /// The buffer read from an Inspect VMO.
     buffer: Vec<u8>,
+
+    version: usize,
 }
 
 /// A scanned block.
@@ -31,13 +33,13 @@ const SNAPSHOT_TRIES: u64 = 1024;
 impl Snapshot {
     /// Returns an iterator that returns all the Blocks in the buffer.
     pub fn scan(&self) -> BlockIterator {
-        BlockIterator::from(self.buffer.as_ref())
+        return BlockIterator::new(self.buffer.as_ref(), self.version);
     }
 
     /// Gets the block at the given |index|.
     pub fn get_block(&self, index: u32) -> Option<ScannedBlock> {
         if utils::offset_for_index(index) < self.buffer.len() {
-            Some(Block::new(&self.buffer, index))
+            Some(Block::new_with_version(&self.buffer, index, self.version))
         } else {
             None
         }
@@ -67,13 +69,20 @@ impl Snapshot {
             let size = vmo.get_size()?;
             let mut buffer = vec![0u8; size as usize];
             vmo.read(&mut buffer[..], 0)?;
-            let block = Block::new(&buffer[..16], 0);
+            let header = BlockHeader(u64::from_le_bytes(buffer[..8].try_into().unwrap()));
+            let mut expected_version = constants::HEADER_VERSION_NUMBER;
+            let mut block = Block::new_with_version(&buffer[..16], 0, 1);
+            if header.header_version() == 0 {
+                block.make_v0();
+                expected_version = 0;
+            }
             if block.block_type_or().unwrap_or(BlockType::Reserved) == BlockType::Header
                 && block.header_magic().unwrap() == constants::HEADER_MAGIC_NUMBER
-                && block.header_version().unwrap() == constants::HEADER_VERSION_NUMBER
+                && block.header_version().unwrap() == expected_version
                 && block.header_generation_count().unwrap() == gen
             {
-                return Ok(Snapshot { buffer });
+                let version = block.version.unwrap();
+                return Ok(Snapshot { buffer, version });
             }
         }
 
@@ -95,7 +104,7 @@ impl Snapshot {
     // Used for snapshot tests.
     #[cfg(test)]
     pub fn build(bytes: &[u8]) -> Self {
-        Snapshot { buffer: bytes.to_vec() }
+        Snapshot { buffer: bytes.to_vec(), version: 1 }
     }
 }
 
@@ -107,10 +116,16 @@ fn header_generation_count(bytes: &[u8]) -> Option<u64> {
         return None;
     }
     fence(Ordering::Acquire);
-    let block = Block::new(&bytes[..16], 0);
+    let header = BlockHeader(u64::from_le_bytes(bytes[..8].try_into().unwrap()));
+    let mut expected_version = constants::HEADER_VERSION_NUMBER;
+    let mut block = Block::new_with_version(&bytes[..16], 0, 1);
+    if header.header_version() == 0 {
+        block.make_v0();
+        expected_version = 0;
+    }
     if block.block_type_or().unwrap_or(BlockType::Reserved) == BlockType::Header
         && block.header_magic().unwrap() == constants::HEADER_MAGIC_NUMBER
-        && block.header_version().unwrap() == constants::HEADER_VERSION_NUMBER
+        && block.header_version().unwrap() == expected_version
         && !block.header_is_locked().unwrap()
     {
         return block.header_generation_count().ok();
@@ -124,7 +139,7 @@ impl TryFrom<&[u8]> for Snapshot {
 
     fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
         if header_generation_count(&bytes).is_some() {
-            Ok(Snapshot { buffer: bytes.to_vec() })
+            Ok(Snapshot { buffer: bytes.to_vec(), version: 1 })
         } else {
             return Err(format_err!("expected block with at least a header"));
         }
@@ -169,11 +184,19 @@ pub struct BlockIterator<'h> {
 
     /// The bytes being read.
     container: &'h [u8],
+
+    version: usize,
 }
 
 impl<'a> From<&'a [u8]> for BlockIterator<'a> {
     fn from(container: &'a [u8]) -> Self {
-        BlockIterator { offset: 0, container }
+        BlockIterator { offset: 0, container: container, version: 1 }
+    }
+}
+
+impl<'a> BlockIterator<'a> {
+    fn new(container: &'a [u8], version: usize) -> Self {
+        Self { container, offset: 0, version }
     }
 }
 
@@ -185,7 +208,7 @@ impl<'h> Iterator for BlockIterator<'h> {
             return None;
         }
         let index = utils::index_for_offset(self.offset);
-        let block = Block::new(self.container.clone(), index);
+        let block = Block::new_with_version(self.container.clone(), index, self.version);
         if self.container.len() - self.offset < utils::order_to_size(block.order()) {
             return None;
         }
@@ -197,7 +220,14 @@ impl<'h> Iterator for BlockIterator<'h> {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::format::block::WritableBlockContainer, mapped_vmo::Mapping, std::sync::Arc,
+        super::*,
+        crate::format::{
+            bitfields::{BlockHeader, Payload},
+            block::WritableBlockContainer,
+        },
+        mapped_vmo::Mapping,
+        num_traits::ToPrimitive,
+        std::sync::Arc,
     };
 
     #[test]
@@ -313,5 +343,49 @@ mod tests {
         assert!(Snapshot::try_from(values).is_err());
         assert!(Snapshot::try_from(vec![]).is_err());
         assert!(Snapshot::try_from(vec![0u8, 1, 2, 3, 4]).is_err());
+    }
+
+    #[test]
+    fn snapshot_v0() -> Result<(), Error> {
+        let (mapping, vmo) = Mapping::allocate(4096).expect("failed to allocate");
+        let mapping_ref = Arc::new(mapping);
+        let header_block = Block::new_free(mapping_ref.clone(), 0, 0, 0)
+            .expect("failed to create free for header");
+        let mut header = BlockHeader(0);
+        header.set_order(0);
+        header.set_block_type_v0(BlockType::Header.to_u8().unwrap());
+        header.set_header_magic(constants::HEADER_MAGIC_NUMBER);
+        header.set_header_version_v0(0);
+        header_block.write(header, Payload(0));
+
+        let some_block =
+            Block::new_free(mapping_ref.clone(), 1, 0, 0).expect("failed to create free for vlaue");
+        let mut header = BlockHeader(0);
+        header.set_order(0);
+        header.set_block_type_v0(BlockType::UintValue.to_u8().unwrap());
+        header.set_value_name_index_v0(1);
+        header.set_value_parent_index_v0(2);
+        let mut payload = Payload(0);
+        payload.set_numeric_value(123);
+        some_block.write(header, payload);
+
+        let snapshot = Snapshot::try_from(&vmo).expect("Failed to load snapshot");
+
+        let blocks = snapshot.scan().collect::<Vec<ScannedBlock>>();
+
+        assert_eq!(blocks[0].block_type(), BlockType::Header);
+        assert_eq!(blocks[0].index(), 0);
+        assert_eq!(blocks[0].order(), 0);
+        assert_eq!(blocks[0].header_magic().unwrap(), constants::HEADER_MAGIC_NUMBER);
+        assert_eq!(blocks[0].header_version().unwrap(), 0);
+
+        assert_eq!(blocks[1].block_type(), BlockType::UintValue);
+        assert_eq!(blocks[1].index(), 1);
+        assert_eq!(blocks[1].order(), 0);
+        assert_eq!(blocks[1].name_index().unwrap(), 1);
+        assert_eq!(blocks[1].parent_index().unwrap(), 2);
+        assert_eq!(blocks[1].uint_value().unwrap(), 123);
+        assert!(blocks[2..].iter().all(|b| b.block_type() == BlockType::Free));
+        Ok(())
     }
 }
