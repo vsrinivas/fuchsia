@@ -100,6 +100,7 @@ class MsdVslDevice : public msd_device_t,
 
   int InterruptThreadLoop();
   magma::Status ProcessInterrupt();
+  void ProcessRequestBacklog();
 
   // Events for triggering interrupts.
   // If |free_on_complete| is true, the event will be freed automatically after the corresponding
@@ -189,10 +190,20 @@ class MsdVslDevice : public msd_device_t,
   std::mutex device_request_mutex_;
   std::list<std::unique_ptr<DeviceRequest>> device_request_list_;
 
+  struct DeferredRequest {
+    std::unique_ptr<MappedBatch> batch;
+    bool do_flush;
+  };
+
+  std::list<DeferredRequest> request_backlog_;
+
   Event events_[kNumEvents] = {};
 
   friend class TestMsdVslDevice;
   friend class TestCommandBuffer;
+  friend class TestExec;
+  friend class TestExec_Backlog_Test;
+  friend class TestExec_BacklogWithInvalidBatch_Test;
   friend class TestExec_ReuseGpuAddress_Test;
   friend class TestExec_SubmitBatchWithOffset_Test;
   friend class TestEvents;

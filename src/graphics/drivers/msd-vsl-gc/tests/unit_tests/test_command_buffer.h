@@ -20,7 +20,7 @@ class TestCommandBuffer : public ::testing::Test {
   };
 
   void SetUp() override {
-    device_ = MsdVslDevice::Create(GetTestDeviceHandle(), true /* start_device_thread */);
+    device_ = MsdVslDevice::Create(GetTestDeviceHandle(), false /* start_device_thread */);
     ASSERT_NE(device_, nullptr);
     ASSERT_TRUE(device_->IsIdle());
 
@@ -90,6 +90,9 @@ class TestCommandBuffer : public ::testing::Test {
   // If |out_buffer| is non-null, it will be populated with the created buffer.
   void CreateAndSubmitBuffer(const BufferDesc& buffer_desc,
                              std::shared_ptr<MsdVslBuffer>* out_buffer = nullptr);
+
+  // Writes a single WAIT command in |buf| at |offset|.
+  void WriteWaitCommand(std::shared_ptr<MsdVslBuffer> buf, uint32_t offset);
 
   std::shared_ptr<MsdVslConnection> connection() { return client_->connection; }
   std::shared_ptr<MsdVslContext> context() { return client_->context; }

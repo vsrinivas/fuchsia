@@ -5,6 +5,7 @@
 #include "msd_vsl_device.h"
 
 #include <chrono>
+#include <fbl/auto_call.h>
 #include <thread>
 
 #include "command_buffer.h"
@@ -315,7 +316,43 @@ magma::Status MsdVslDevice::ProcessInterrupt() {
     DMESSAGE("Interrupt thread did not find any interrupt events");
   }
   interrupt_->Complete();
+
+  ProcessRequestBacklog();
+
   return MAGMA_STATUS_OK;
+}
+
+void MsdVslDevice::ProcessRequestBacklog() {
+  CHECK_THREAD_IS_CURRENT(device_thread_id_);
+
+  while (!request_backlog_.empty()) {
+    uint32_t event_id;
+    if (!AllocInterruptEvent(true /* free_on_complete */, &event_id)) {
+      // No more events available, we will continue processing after the next interrupt.
+      return;
+    }
+    // Free the interrupt event if submitting fails.
+    auto free_event = fbl::MakeAutoCall([this, event_id]() { FreeInterruptEvent(event_id); });
+
+    auto request = std::move(request_backlog_.front());
+    request_backlog_.pop_front();
+
+    auto context = request.batch->GetContext().lock();
+    if (!context) {
+      DMESSAGE("No context for batch %lu, IsCommandBuffer=%d",
+               request.batch->GetBatchBufferId(), request.batch->IsCommandBuffer());
+      // If a batch fails, we will drop it and try the next one.
+      continue;
+    }
+    auto address_space = context->exec_address_space();
+
+    if (!SubmitCommandBuffer(address_space, address_space->page_table_array_slot(),
+                             request.do_flush, std::move(request.batch), event_id)) {
+      DMESSAGE("Failed to submit command buffer");
+      continue;
+    }
+    free_event.cancel();
+  }
 }
 
 bool MsdVslDevice::AllocInterruptEvent(bool free_on_complete, uint32_t* out_event_id) {
@@ -777,11 +814,14 @@ magma::Status MsdVslDevice::ProcessBatch(std::unique_ptr<MappedBatch> batch, boo
 
   uint32_t event_id;
   if (!AllocInterruptEvent(true /* free_on_complete */, &event_id)) {
-    // TODO(fxb/39354): queue the buffer to try again after an interrupt completes.
-    return DRET_MSG(MAGMA_STATUS_UNIMPLEMENTED, "No events remaining");
+    DLOG("No events remaining, deferring execution of command buffer until next interrupt");
+    // Not an error, just need to wait for a pending command buffer to complete.
+    request_backlog_.emplace_back(DeferredRequest{std::move(batch), do_flush});
+    return MAGMA_STATUS_OK;
   }
   if (!SubmitCommandBuffer(address_space, address_space->page_table_array_slot(), do_flush,
                            std::move(batch), event_id)) {
+    FreeInterruptEvent(event_id);
     return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Failed to submit command buffer");
   }
 

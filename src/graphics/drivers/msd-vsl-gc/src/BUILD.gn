@@ -49,6 +49,7 @@ source_set("src") {
     "//src/graphics/lib/magma/src/magma_util/platform:logger",
     "//src/graphics/lib/magma/src/magma_util/platform:semaphore",
     "//src/graphics/lib/magma/src/magma_util/platform:thread",
+    "//zircon/public/lib/fbl",
   ]
   friend = [
     "../tests/mock:*",

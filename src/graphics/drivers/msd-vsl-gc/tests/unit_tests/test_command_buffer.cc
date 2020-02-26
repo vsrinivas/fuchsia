@@ -78,11 +78,7 @@ void TestCommandBuffer::CreateAndSubmitBuffer(const BufferDesc& buffer_desc,
                                              buffer_desc.gpu_addr, &buffer));
 
   // Write a WAIT command at offset |kBatchOffset|.
-  uint32_t* cmd_ptr;
-  ASSERT_TRUE(buffer->platform_buffer()->MapCpu(reinterpret_cast<void**>(&cmd_ptr)));
-  BufferWriter buf_writer(cmd_ptr, buffer_desc.buffer_size, buffer_desc.batch_offset);
-  MiWait::write(&buf_writer);
-  ASSERT_TRUE(buffer->platform_buffer()->UnmapCpu());
+  WriteWaitCommand(buffer, buffer_desc.batch_offset);
 
   // Submit the batch and verify we get a completion event.
   auto semaphore = magma::PlatformSemaphore::Create();
@@ -101,6 +97,14 @@ void TestCommandBuffer::CreateAndSubmitBuffer(const BufferDesc& buffer_desc,
   if (out_buffer) {
     *out_buffer = buffer;
   }
+}
+
+void TestCommandBuffer::WriteWaitCommand(std::shared_ptr<MsdVslBuffer> buffer, uint32_t offset) {
+  uint32_t* cmd_ptr;
+  ASSERT_TRUE(buffer->platform_buffer()->MapCpu(reinterpret_cast<void**>(&cmd_ptr)));
+  BufferWriter buf_writer(cmd_ptr, buffer->platform_buffer()->size(), offset);
+  MiWait::write(&buf_writer);
+  ASSERT_TRUE(buffer->platform_buffer()->UnmapCpu());
 }
 
 // Unit tests for |IsValidBatchBatch|.
