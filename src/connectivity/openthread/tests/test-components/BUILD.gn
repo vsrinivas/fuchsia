@@ -84,11 +84,16 @@ test_package("ot-radio-component-tests") {
   public_deps = [
     ":devmgr-manifest",
     ":ot-stack-device-open-mock",
+    ":ot-stack-ncp-ver-query-mock",
   ]
 
   tests = [
     {
       name = "ot_stack_device_open_mock"
+      environments = basic_envs
+    },
+    {
+      name = "ot_stack_ncp_ver_query_mock"
       environments = basic_envs
     },
   ]
@@ -103,6 +108,17 @@ rustc_test("ot-stack-device-open-mock") {
     "//src/connectivity/openthread/tests/lib",
     "//src/lib/fuchsia-async",
     "//src/lib/syslog/rust:syslog",
+  ]
+  non_rust_deps = [ "//zircon/public/lib/syslog" ]
+}
+
+rustc_test("ot-stack-ncp-ver-query-mock") {
+  name = "ot_stack_ncp_ver_query_mock"
+  source_root = "mock-device/ot_stack_ncp_ver_query_mock.rs"
+  edition = "2018"
+  deps = [
+    "//sdk/fidl/fuchsia.lowpan.spinel:fuchsia.lowpan.spinel-rustc",
+    "//src/connectivity/openthread/tests/lib",
   ]
   non_rust_deps = [ "//zircon/public/lib/syslog" ]
 }

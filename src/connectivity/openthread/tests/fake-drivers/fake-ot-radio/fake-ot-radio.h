@@ -57,6 +57,9 @@ class FakeOtRadioDevice
   zx_status_t RadioThread();
   uint32_t GetTimeoutMs();
   zx_status_t TrySendInboundFrame();
+  void TryHandleOutboundFrame();
+  void FrameHandler(::fidl::VectorView<uint8_t> data);
+  void PostSendInboundFrameTask(std::vector<uint8_t> packet);
 
   // Nested class for FIDL implementation
   class LowpanSpinelDeviceFidlImpl : public llcpp::fuchsia::lowpan::spinel::Device::Interface {
@@ -80,7 +83,11 @@ class FakeOtRadioDevice
   async::Loop loop_;
   zx::port port_;
 
-  std::queue<std::vector<uint8_t>> inbound_queue_;
+  fbl::Mutex inbound_lock_;
+  std::queue<std::vector<uint8_t>> inbound_queue_ __TA_GUARDED(inbound_lock_);
+
+  fbl::Mutex outbound_lock_;
+  std::queue<::fidl::VectorView<uint8_t>> outbound_queue_ __TA_GUARDED(outbound_lock_);
 
   uint32_t inbound_allowance_ = 0;
   uint32_t outbound_allowance_ = kOutboundAllowanceInit;
