@@ -30,6 +30,19 @@ var (
 )
 
 func run(ctx *context.Context) (err error) {
+	syslog.Infof("starting system update at %s", startTime)
+	syslog.Infof("initiator: %s", initiator)
+	if sourceVersion != "" {
+		syslog.Infof("source version: %s", sourceVersion)
+	}
+	if targetVersion != "" {
+		syslog.Infof("target version: %s", targetVersion)
+	}
+	if updateURL != "" {
+		syslog.Infof("update URL: %s", updateURL)
+	}
+	syslog.Infof("reboot after update: %t", reboot)
+
 	metrics.Log(metrics.OtaStart{
 		Initiator: initiator,
 		Target:    targetVersion,

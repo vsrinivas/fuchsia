@@ -13,6 +13,7 @@ use fuchsia_component::client::{connect_to_service, launcher, AppBuilder, ExitSt
 use fuchsia_zircon::{self as zx, Duration};
 use futures::future::{select, BoxFuture, Either};
 use futures::prelude::*;
+use log::info;
 use omaha_client::{
     installer::{Installer, ProgressObserver},
     protocol::request::InstallSource,
@@ -66,6 +67,7 @@ impl Installer for FuchsiaInstaller {
             InstallSource::ScheduledTask => "automatic",
             InstallSource::OnDemand => "manual",
         };
+        info!("starting system_updater");
         let system_updater = async move {
             AppBuilder::new("fuchsia-pkg://fuchsia.com/amber#meta/system_updater.cmx")
                 .arg("-initiator")
