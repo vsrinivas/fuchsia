@@ -142,7 +142,7 @@ class VshCommandRunnerTest : public gtest::TestLoopFixture {
   }
 
  private:
-  bool thread_running_;
+  bool thread_running_ = false;
   thrd_t thread_;
   FakeVshd vshd_;
   fuchsia::virtualization::RealmPtr realm_;
