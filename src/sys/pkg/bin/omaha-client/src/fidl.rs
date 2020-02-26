@@ -139,10 +139,10 @@ where
         let server = Rc::new(RefCell::new(self));
         // Handle each client connection concurrently.
         let fs_fut = fs.for_each_concurrent(MAX_CONCURRENT, |stream| {
-            Self::handle_client(server.clone(), stream).unwrap_or_else(|e| error!("{:?}", e))
+            Self::handle_client(Rc::clone(&server), stream).unwrap_or_else(|e| error!("{:?}", e))
         });
         Self::setup_observer(
-            server.clone(),
+            Rc::clone(&server),
             schedule_node,
             protocol_state_node,
             last_results_node,
@@ -159,7 +159,7 @@ where
         last_results_node: LastResultsNode,
         notified_cobalt: bool,
     ) {
-        let state_machine_ref = server.borrow().state_machine_ref.clone();
+        let state_machine_ref = Rc::clone(&server.borrow().state_machine_ref);
         let mut state_machine = state_machine_ref.borrow_mut();
         let app_set = server.borrow().app_set.clone();
         state_machine.set_observer(FuchsiaObserver::<PE, HR, IN, TM, MR, ST>::new(
@@ -182,21 +182,21 @@ where
                 while let Some(request) =
                     stream.try_next().await.context("error receiving Manager request")?
                 {
-                    Self::handle_manager_request(server.clone(), request)?;
+                    Self::handle_manager_request(Rc::clone(&server), request)?;
                 }
             }
             IncomingServices::ChannelControl(mut stream) => {
                 while let Some(request) =
                     stream.try_next().await.context("error receiving ChannelControl request")?
                 {
-                    Self::handle_channel_control_request(server.clone(), request).await?;
+                    Self::handle_channel_control_request(Rc::clone(&server), request).await?;
                 }
             }
             IncomingServices::ChannelProvider(mut stream) => {
                 while let Some(request) =
                     stream.try_next().await.context("error receiving Provider request")?
                 {
-                    Self::handle_channel_provider_request(server.clone(), request).await?;
+                    Self::handle_channel_provider_request(Rc::clone(&server), request).await?;
                 }
             }
         }
@@ -229,9 +229,10 @@ where
                                 None => return Err(format_err!("Options.Initiator is required")),
                             },
                         };
-                        let state_machine_ref = server.borrow().state_machine_ref.clone();
+                        let state_machine_ref = Rc::clone(&server.borrow().state_machine_ref);
                         // TODO: Detect and return CheckStartedResult::Throttled.
                         fasync::spawn_local(async move {
+                            // FIXME awaiting with runtime borrow!
                             let mut state_machine = state_machine_ref.borrow_mut();
                             state_machine.start_update_check(options).await;
                         });
@@ -306,7 +307,7 @@ where
                     let config = OtaUpdateChannelConfig::new(&channel, tuf_repo)?;
                     write_channel_config(&config)?;
 
-                    let storage_ref = server.storage_ref.clone();
+                    let storage_ref = Rc::clone(&server.storage_ref);
                     // Don't borrow server across await.
                     drop(server);
                     let mut storage = storage_ref.lock().await;
@@ -361,8 +362,10 @@ where
     }
 
     /// The state change callback from StateMachine.
-    pub async fn on_state_change(&mut self, state: state_machine::State) {
-        self.state.state = Some(match state {
+    pub async fn on_state_change(server: Rc<RefCell<Self>>, state: state_machine::State) {
+        let mut s = server.borrow_mut();
+
+        s.state.state = Some(match state {
             state_machine::State::Idle => ManagerState::Idle,
             state_machine::State::CheckingForUpdates => ManagerState::CheckingForUpdates,
             state_machine::State::UpdateAvailable => ManagerState::UpdateAvailable,
@@ -373,7 +376,7 @@ where
         });
 
         // Send the new state to all monitor handles and remove the handle if it fails.
-        let state = clone(&self.state);
+        let state = clone(&s.state);
         let send_state_and_remove_failed =
             |handle: &MonitorControlHandle| match handle.send_on_state(clone(&state)) {
                 Ok(()) => true,
@@ -385,22 +388,25 @@ where
                     false
                 }
             };
-        self.current_monitor_handles.retain(send_state_and_remove_failed);
-        self.monitor_handles.retain(send_state_and_remove_failed);
+        s.current_monitor_handles.retain(send_state_and_remove_failed);
+        s.monitor_handles.retain(send_state_and_remove_failed);
 
         // State is back to idle, clear the current update monitor handles.
-        if self.state.state == Some(ManagerState::Idle) {
-            self.current_monitor_handles.clear();
+        if s.state.state == Some(ManagerState::Idle) {
+            s.current_monitor_handles.clear();
         }
 
-        self.state_node.set(&self.state);
+        s.state_node.set(&s.state);
 
         // The state machine might make changes to apps only when state changes to `Idle` or
         // `WaitingForReboot`, update the apps node in inspect.
-        if self.state.state == Some(ManagerState::Idle)
-            || self.state.state == Some(ManagerState::WaitingForReboot)
+        if s.state.state == Some(ManagerState::Idle)
+            || s.state.state == Some(ManagerState::WaitingForReboot)
         {
-            self.apps_node.set(&self.app_set.to_vec().await);
+            let app_set = s.app_set.clone();
+            drop(s);
+            let app_set = app_set.to_vec().await;
+            server.borrow_mut().apps_node.set(&app_set);
         }
     }
 }
@@ -411,7 +417,7 @@ fn clone(state: &State) -> State {
 }
 
 #[cfg(test)]
-pub use stub::FidlServerBuilder;
+pub use stub::{FidlServerBuilder, StubFidlServer};
 
 #[cfg(test)]
 mod stub {
@@ -465,7 +471,7 @@ mod stub {
             self
         }
 
-        pub async fn build(self) -> StubFidlServer {
+        pub async fn build(self) -> Rc<RefCell<StubFidlServer>> {
             let config = configuration::get_config("0.1.2");
             let storage_ref = Rc::new(Mutex::new(MemStorage::new()));
             let app_set = if self.apps.is_empty() {
@@ -480,7 +486,7 @@ mod stub {
                 &config,
                 StubTimer,
                 StubMetricsReporter,
-                storage_ref.clone(),
+                Rc::clone(&storage_ref),
                 app_set.clone(),
             )
             .await;
@@ -488,14 +494,14 @@ mod stub {
             let root = inspector.root();
             let apps_node = self.apps_node.unwrap_or(AppsNode::new(root.create_child("apps")));
             let state_node = self.state_node.unwrap_or(StateNode::new(root.create_child("state")));
-            FidlServer::new(
+            Rc::new(RefCell::new(FidlServer::new(
                 Rc::new(RefCell::new(state_machine)),
                 storage_ref,
                 app_set,
                 apps_node,
                 state_node,
                 self.channel_configs,
-            )
+            )))
         }
     }
 }
@@ -524,15 +530,17 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_on_state_change() {
-        let mut fidl = FidlServerBuilder::new().build().await;
-        fidl.on_state_change(state_machine::State::CheckingForUpdates).await;
-        assert_eq!(Some(ManagerState::CheckingForUpdates), fidl.state.state);
+        let fidl = FidlServerBuilder::new().build().await;
+
+        StubFidlServer::on_state_change(Rc::clone(&fidl), state_machine::State::CheckingForUpdates)
+            .await;
+        assert_eq!(Some(ManagerState::CheckingForUpdates), fidl.borrow().state.state);
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_get_state() {
-        let fidl = Rc::new(RefCell::new(FidlServerBuilder::new().build().await));
-        let proxy = spawn_fidl_server::<ManagerMarker>(fidl.clone(), IncomingServices::Manager);
+        let fidl = FidlServerBuilder::new().build().await;
+        let proxy = spawn_fidl_server::<ManagerMarker>(Rc::clone(&fidl), IncomingServices::Manager);
         let state = proxy.get_state().await.unwrap();
         let fidl = fidl.borrow();
         assert_eq!(state, fidl.state);
@@ -540,8 +548,8 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_monitor() {
-        let fidl = Rc::new(RefCell::new(FidlServerBuilder::new().build().await));
-        let proxy = spawn_fidl_server::<ManagerMarker>(fidl.clone(), IncomingServices::Manager);
+        let fidl = FidlServerBuilder::new().build().await;
+        let proxy = spawn_fidl_server::<ManagerMarker>(Rc::clone(&fidl), IncomingServices::Manager);
         let (client_proxy, server_end) = create_proxy::<MonitorMarker>().unwrap();
         proxy.add_monitor(server_end).unwrap();
         let mut stream = client_proxy.take_event_stream();
@@ -557,7 +565,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_check_now() {
-        let fidl = Rc::new(RefCell::new(FidlServerBuilder::new().build().await));
+        let fidl = FidlServerBuilder::new().build().await;
         let proxy = spawn_fidl_server::<ManagerMarker>(fidl, IncomingServices::Manager);
         let options = Options { initiator: Some(Initiator::User) };
         let result = proxy.check_now(options, None).await.unwrap();
@@ -566,20 +574,20 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_check_now_with_monitor() {
-        let fidl = Rc::new(RefCell::new(FidlServerBuilder::new().build().await));
+        let fidl = FidlServerBuilder::new().build().await;
         let inspector = Inspector::new();
         let schedule_node = ScheduleNode::new(inspector.root().create_child("schedule"));
         let protocol_state_node =
             ProtocolStateNode::new(inspector.root().create_child("protocol_state"));
         let last_results_node = LastResultsNode::new(inspector.root().create_child("last_results"));
         FidlServer::setup_observer(
-            fidl.clone(),
+            Rc::clone(&fidl),
             schedule_node,
             protocol_state_node,
             last_results_node,
             true,
         );
-        let proxy = spawn_fidl_server::<ManagerMarker>(fidl.clone(), IncomingServices::Manager);
+        let proxy = spawn_fidl_server::<ManagerMarker>(Rc::clone(&fidl), IncomingServices::Manager);
         let (client_proxy, server_end) = create_proxy::<MonitorMarker>().unwrap();
         let options = Options { initiator: Some(Initiator::User) };
         let result = proxy.check_now(options, Some(server_end)).await.unwrap();
@@ -610,7 +618,7 @@ mod tests {
             [1, 0],
             Cohort { name: Some("current-channel".to_string()), ..Cohort::default() },
         )];
-        let fidl = Rc::new(RefCell::new(FidlServerBuilder::new().with_apps(apps).build().await));
+        let fidl = FidlServerBuilder::new().with_apps(apps).build().await;
 
         let proxy =
             spawn_fidl_server::<ChannelControlMarker>(fidl, IncomingServices::ChannelControl);
@@ -625,7 +633,7 @@ mod tests {
             [1, 0],
             Cohort { name: Some("current-channel".to_string()), ..Cohort::default() },
         )];
-        let fidl = Rc::new(RefCell::new(FidlServerBuilder::new().with_apps(apps).build().await));
+        let fidl = FidlServerBuilder::new().with_apps(apps).build().await;
 
         let proxy = spawn_fidl_server::<ProviderMarker>(fidl, IncomingServices::ChannelProvider);
 
@@ -635,7 +643,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_get_target() {
         let apps = vec![App::new("id", [1, 0], Cohort::from_hint("target-channel"))];
-        let fidl = Rc::new(RefCell::new(FidlServerBuilder::new().with_apps(apps).build().await));
+        let fidl = FidlServerBuilder::new().with_apps(apps).build().await;
 
         let proxy =
             spawn_fidl_server::<ChannelControlMarker>(fidl, IncomingServices::ChannelControl);
@@ -644,21 +652,19 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_set_target() {
-        let fidl = Rc::new(RefCell::new(
-            FidlServerBuilder::new()
-                .with_channel_configs(ChannelConfigs {
-                    default_channel: None,
-                    known_channels: vec![
-                        ChannelConfig::new("some-channel"),
-                        ChannelConfig::new("target-channel"),
-                    ],
-                })
-                .build()
-                .await,
-        ));
+        let fidl = FidlServerBuilder::new()
+            .with_channel_configs(ChannelConfigs {
+                default_channel: None,
+                known_channels: vec![
+                    ChannelConfig::new("some-channel"),
+                    ChannelConfig::new("target-channel"),
+                ],
+            })
+            .build()
+            .await;
 
         let proxy = spawn_fidl_server::<ChannelControlMarker>(
-            fidl.clone(),
+            Rc::clone(&fidl),
             IncomingServices::ChannelControl,
         );
         proxy.set_target("target-channel").await.unwrap();
@@ -672,18 +678,16 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_set_target_empty() {
-        let fidl = Rc::new(RefCell::new(
-            FidlServerBuilder::new()
-                .with_channel_configs(ChannelConfigs {
-                    default_channel: Some("default-channel".to_string()),
-                    known_channels: vec![],
-                })
-                .build()
-                .await,
-        ));
+        let fidl = FidlServerBuilder::new()
+            .with_channel_configs(ChannelConfigs {
+                default_channel: Some("default-channel".to_string()),
+                known_channels: vec![],
+            })
+            .build()
+            .await;
 
         let proxy = spawn_fidl_server::<ChannelControlMarker>(
-            fidl.clone(),
+            Rc::clone(&fidl),
             IncomingServices::ChannelControl,
         );
         proxy.set_target("").await.unwrap();
@@ -697,18 +701,16 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_get_target_list() {
-        let fidl = Rc::new(RefCell::new(
-            FidlServerBuilder::new()
-                .with_channel_configs(ChannelConfigs {
-                    default_channel: None,
-                    known_channels: vec![
-                        ChannelConfig::new("some-channel"),
-                        ChannelConfig::new("some-other-channel"),
-                    ],
-                })
-                .build()
-                .await,
-        ));
+        let fidl = FidlServerBuilder::new()
+            .with_channel_configs(ChannelConfigs {
+                default_channel: None,
+                known_channels: vec![
+                    ChannelConfig::new("some-channel"),
+                    ChannelConfig::new("some-other-channel"),
+                ],
+            })
+            .build()
+            .await;
 
         let proxy =
             spawn_fidl_server::<ChannelControlMarker>(fidl, IncomingServices::ChannelControl);
@@ -721,7 +723,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_get_target_list_when_no_channels_configured() {
-        let fidl = Rc::new(RefCell::new(FidlServerBuilder::new().build().await));
+        let fidl = FidlServerBuilder::new().build().await;
 
         let proxy =
             spawn_fidl_server::<ChannelControlMarker>(fidl, IncomingServices::ChannelControl);
@@ -734,15 +736,16 @@ mod tests {
     async fn test_inspect_apps_on_state_change() {
         let inspector = Inspector::new();
         let apps_node = AppsNode::new(inspector.root().create_child("apps"));
-        let mut fidl = FidlServerBuilder::new().with_apps_node(apps_node).build().await;
+        let fidl = FidlServerBuilder::new().with_apps_node(apps_node).build().await;
 
-        fidl.on_state_change(state_machine::State::Idle).await;
+        StubFidlServer::on_state_change(Rc::clone(&fidl), state_machine::State::Idle).await;
 
+        let app_set = fidl.borrow().app_set.clone();
         assert_inspect_tree!(
             inspector,
             root: {
                 apps: {
-                    apps: format!("{:?}", fidl.app_set.to_vec().await),
+                    apps: format!("{:?}", app_set.to_vec().await),
                 }
             }
         );
@@ -752,19 +755,17 @@ mod tests {
     async fn test_inspect_apps_on_channel_change() {
         let inspector = Inspector::new();
         let apps_node = AppsNode::new(inspector.root().create_child("apps"));
-        let fidl = Rc::new(RefCell::new(
-            FidlServerBuilder::new()
-                .with_apps_node(apps_node)
-                .with_channel_configs(ChannelConfigs {
-                    default_channel: None,
-                    known_channels: vec![ChannelConfig::new("target-channel")],
-                })
-                .build()
-                .await,
-        ));
+        let fidl = FidlServerBuilder::new()
+            .with_apps_node(apps_node)
+            .with_channel_configs(ChannelConfigs {
+                default_channel: None,
+                known_channels: vec![ChannelConfig::new("target-channel")],
+            })
+            .build()
+            .await;
 
         let proxy = spawn_fidl_server::<ChannelControlMarker>(
-            fidl.clone(),
+            Rc::clone(&fidl),
             IncomingServices::ChannelControl,
         );
         proxy.set_target("target-channel").await.unwrap();
@@ -784,24 +785,25 @@ mod tests {
     async fn test_inspect_state() {
         let inspector = Inspector::new();
         let state_node = StateNode::new(inspector.root().create_child("state"));
-        let mut fidl = FidlServerBuilder::new().with_state_node(state_node).build().await;
+        let fidl = FidlServerBuilder::new().with_state_node(state_node).build().await;
 
         assert_inspect_tree!(
             inspector,
             root: {
                 state: {
-                    state: format!("{:?}", fidl.state),
+                    state: format!("{:?}", fidl.borrow().state),
                 }
             }
         );
 
-        fidl.on_state_change(state_machine::State::PerformingUpdate).await;
+        StubFidlServer::on_state_change(Rc::clone(&fidl), state_machine::State::PerformingUpdate)
+            .await;
 
         assert_inspect_tree!(
             inspector,
             root: {
                 state: {
-                    state: format!("{:?}", fidl.state),
+                    state: format!("{:?}", fidl.borrow().state),
                 }
             }
         );

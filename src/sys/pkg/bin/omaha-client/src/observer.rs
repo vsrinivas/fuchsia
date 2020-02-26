@@ -82,11 +82,7 @@ where
         if state == State::CheckingForUpdates {
             self.last_update_start_time = clock::now();
         }
-        async move {
-            let mut server = self.fidl_server.borrow_mut();
-            server.on_state_change(state).await;
-        }
-        .boxed_local()
+        FidlServer::on_state_change(Rc::clone(&self.fidl_server), state).boxed_local()
     }
 
     fn on_schedule_change(&mut self, schedule: &UpdateCheckSchedule) -> LocalBoxFuture<'_, ()> {
@@ -142,7 +138,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_notify_cobalt() {
-        let fidl = Rc::new(RefCell::new(FidlServerBuilder::new().build().await));
+        let fidl = FidlServerBuilder::new().build().await;
         let inspector = Inspector::new();
         let schedule_node = ScheduleNode::new(inspector.root().create_child("schedule"));
         let protocol_state_node =
