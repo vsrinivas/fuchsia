@@ -1,0 +1,26 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("tests") {
+  testonly = true
+  public_deps = [ ":annotation_tests" ]
+}
+
+executable("annotation_tests") {
+  testonly = true
+
+  sources = [ "annotation_view_test.cc" ]
+
+  deps = [
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//sdk/lib/ui/scenic/cpp",
+    "//src/lib/fxl/test:gtest_main_with_syslog",
+    "//src/lib/testing/loop_fixture",
+    "//src/ui/a11y/lib/annotation",
+    "//src/ui/a11y/lib/semantics/tests/mocks",
+    "//src/ui/a11y/lib/testing:input",
+    "//src/ui/a11y/lib/view",
+    "//third_party/googletest:gtest",
+  ]
+}
