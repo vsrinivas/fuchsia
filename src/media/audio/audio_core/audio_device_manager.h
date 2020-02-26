@@ -20,9 +20,9 @@
 #include "src/media/audio/audio_core/audio_device.h"
 #include "src/media/audio/audio_core/audio_input.h"
 #include "src/media/audio/audio_core/audio_output.h"
-#include "src/media/audio/audio_core/audio_plug_detector_impl.h"
 #include "src/media/audio/audio_core/audio_renderer_impl.h"
 #include "src/media/audio/audio_core/device_registry.h"
+#include "src/media/audio/audio_core/plug_detector.h"
 #include "src/media/audio/audio_core/route_graph.h"
 #include "src/media/audio/audio_core/threading_model.h"
 
@@ -123,7 +123,7 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator, public 
   std::unordered_map<uint64_t, std::shared_ptr<AudioDevice>> devices_;
 
   // A helper class we will use to detect plug/unplug events for audio devices
-  AudioPlugDetectorImpl plug_detector_;
+  std::unique_ptr<PlugDetector> plug_detector_;
 
   uint64_t default_output_token_ = ZX_KOID_INVALID;
   uint64_t default_input_token_ = ZX_KOID_INVALID;

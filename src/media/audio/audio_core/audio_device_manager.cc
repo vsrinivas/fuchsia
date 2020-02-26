@@ -13,9 +13,9 @@
 
 #include "src/media/audio/audio_core/audio_capturer_impl.h"
 #include "src/media/audio/audio_core/audio_core_impl.h"
-#include "src/media/audio/audio_core/audio_plug_detector.h"
 #include "src/media/audio/audio_core/audio_renderer_impl.h"
 #include "src/media/audio/audio_core/driver_output.h"
+#include "src/media/audio/audio_core/plug_detector.h"
 #include "src/media/audio/audio_core/reporter.h"
 #include "src/media/audio/lib/logging/logging.h"
 
@@ -23,7 +23,10 @@ namespace media::audio {
 
 AudioDeviceManager::AudioDeviceManager(ThreadingModel* threading_model, RouteGraph* route_graph,
                                        LinkMatrix* link_matrix)
-    : threading_model_(*threading_model), route_graph_(*route_graph), link_matrix_(*link_matrix) {
+    : threading_model_(*threading_model),
+      route_graph_(*route_graph),
+      plug_detector_(PlugDetector::Create()),
+      link_matrix_(*link_matrix) {
   FX_DCHECK(route_graph);
   FX_DCHECK(threading_model);
   FX_DCHECK(link_matrix);
@@ -40,7 +43,7 @@ zx_status_t AudioDeviceManager::Init() {
 
   // Start monitoring for plug/unplug events of pluggable audio output devices.
   zx_status_t res =
-      plug_detector_.Start(fit::bind_member(this, &AudioDeviceManager::AddDeviceByChannel));
+      plug_detector_->Start(fit::bind_member(this, &AudioDeviceManager::AddDeviceByChannel));
   if (res != ZX_OK) {
     FX_PLOGS(ERROR, res) << "AudioDeviceManager failed to start plug detector";
     return res;
@@ -52,7 +55,7 @@ zx_status_t AudioDeviceManager::Init() {
 // We are no longer managing audio devices, unwind everything.
 void AudioDeviceManager::Shutdown() {
   TRACE_DURATION("audio", "AudioDeviceManager::Shutdown");
-  plug_detector_.Stop();
+  plug_detector_->Stop();
 
   std::vector<fit::promise<void>> device_promises;
   for (auto& [_, device] : devices_pending_init_) {

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/media/audio/audio_core/audio_plug_detector_impl.h"
+#include "src/media/audio/audio_core/plug_detector.h"
 
 #include <fuchsia/hardware/audio/cpp/fidl.h>
 #include <fuchsia/io/cpp/fidl.h>
@@ -70,7 +70,7 @@ class DeviceTracker {
   std::vector<DeviceConnection> devices_;
 };
 
-class AudioPlugDetectorImplTest : public gtest::RealLoopFixture {
+class PlugDetectorTest : public gtest::RealLoopFixture {
  protected:
   void SetUp() override {
     vfs_loop_.StartThread("vfs-loop");
@@ -146,7 +146,7 @@ class AudioPlugDetectorImplTest : public gtest::RealLoopFixture {
   fbl::RefPtr<fs::PseudoDir> output_dir_{fbl::MakeRefCounted<fs::PseudoDir>()};
 };
 
-TEST_F(AudioPlugDetectorImplTest, DetectExistingDevices) {
+TEST_F(PlugDetectorTest, DetectExistingDevices) {
   // Add some devices that will exist before the plug detector starts.
   FakeAudioDevice input0, input1;
   auto d1 = AddInputDevice(&input0);
@@ -157,12 +157,12 @@ TEST_F(AudioPlugDetectorImplTest, DetectExistingDevices) {
 
   // Create the plug detector; no events should be sent until |Start|.
   DeviceTracker tracker;
-  AudioPlugDetectorImpl plug_detector;
+  auto plug_detector = PlugDetector::Create();
   RunLoopUntilIdle();
   EXPECT_EQ(0u, tracker.size());
 
   // Start the detector; expect 4 events (1 for each device above);
-  ASSERT_EQ(ZX_OK, plug_detector.Start(tracker.GetHandler()));
+  ASSERT_EQ(ZX_OK, plug_detector->Start(tracker.GetHandler()));
   RunLoopUntil([&tracker] { return tracker.size() == 4; });
   EXPECT_EQ(4u, tracker.size());
   EXPECT_TRUE(input0.is_bound());
@@ -170,13 +170,13 @@ TEST_F(AudioPlugDetectorImplTest, DetectExistingDevices) {
   EXPECT_TRUE(output0.is_bound());
   EXPECT_TRUE(output1.is_bound());
 
-  plug_detector.Stop();
+  plug_detector->Stop();
 }
 
-TEST_F(AudioPlugDetectorImplTest, DetectHotplugDevices) {
+TEST_F(PlugDetectorTest, DetectHotplugDevices) {
   DeviceTracker tracker;
-  AudioPlugDetectorImpl plug_detector;
-  ASSERT_EQ(ZX_OK, plug_detector.Start(tracker.GetHandler()));
+  auto plug_detector = PlugDetector::Create();
+  ASSERT_EQ(ZX_OK, plug_detector->Start(tracker.GetHandler()));
   RunLoopUntilIdle();
   EXPECT_EQ(0u, tracker.size());
 
@@ -189,7 +189,7 @@ TEST_F(AudioPlugDetectorImplTest, DetectHotplugDevices) {
   EXPECT_TRUE(device.is_input);
   EXPECT_TRUE(input0.is_bound());
 
-  plug_detector.Stop();
+  plug_detector->Stop();
 }
 
 }  // namespace
