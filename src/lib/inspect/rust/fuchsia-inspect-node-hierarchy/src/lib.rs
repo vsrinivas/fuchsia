@@ -12,7 +12,7 @@ use {
     regex::{Regex, RegexSet},
     std::{
         collections::HashMap,
-        convert::TryFrom,
+        convert::{TryFrom, TryInto},
         ops::{Add, AddAssign, MulAssign},
         sync::Arc,
     },
@@ -510,6 +510,57 @@ impl TryFrom<&Vec<Arc<Selector>>> for InspectHierarchyMatcher {
     }
 }
 
+// PropertyEntry is a container of Properties, and their locations in the hierarchy.
+//
+// eg: {property_node_path: "root/a/b/c", property: Property::Int("foo", -4)}
+//     is a PropertyEntry specifying an integer property named Foo
+//     found at node c.
+#[derive(Debug, PartialEq)]
+pub struct PropertyEntry {
+    // A forward-slash (/) delimited string of node names from the root node of a hierarchy
+    // to the node holding the Property.
+    // eg: "root/a/b/c" is a property_node_path specifying that `property`
+    //     can found at node c, under node b, which is under node a, which is under root.
+    pub property_node_path: String,
+
+    // A clone of the property found in the node hierarchy at the node specified by
+    // `property_node_path`.
+    pub property: Property,
+}
+
+// Applies a single selector to a NodeHierarchy, returning a vector of tuples for every property
+// in the hierarchy matched by the selector.
+// TODO(47015): Benchmark performance issues with full-filters for selection.
+pub fn select_from_node_hierarchy(
+    root_node: NodeHierarchy,
+    selector: Selector,
+) -> Result<Vec<PropertyEntry>, Error> {
+    let single_selector_hierarchy_matcher = (&vec![Arc::new(selector)]).try_into()?;
+
+    // TODO(47015): Extraction doesn't require a full tree filter. Instead, the hierarchy
+    // should be traversed like a state machine, and all matching nodes should search for
+    // their properties.
+    let filtered_hierarchy = filter_node_hierarchy(root_node, &single_selector_hierarchy_matcher)?;
+
+    match filtered_hierarchy {
+        Some(new_root) => Ok(new_root
+            .property_iter()
+            .map(|(node_path, property)| {
+                let formatted_node_path = node_path
+                    .iter()
+                    .map(|s| selectors::sanitize_string_for_selectors(s))
+                    .collect::<Vec<String>>()
+                    .join("/");
+                PropertyEntry {
+                    property_node_path: formatted_node_path,
+                    property: property.clone(),
+                }
+            })
+            .collect::<Vec<PropertyEntry>>()),
+        None => Ok(Vec::new()),
+    }
+}
+
 // Filters a node hierarchy using a set of path selectors and their asscoaited property
 // selectors.
 //
@@ -518,7 +569,7 @@ impl TryFrom<&Vec<Arc<Selector>>> for InspectHierarchyMatcher {
 // - If the return type is Ok(None) that implies that the filter encountered no errors AND
 //    the tree was filtered to be empty at the end.
 // - If the return type is Error that implies the filter encountered errors.
-pub fn filter_inspect_snapshot(
+pub fn filter_node_hierarchy(
     root_node: NodeHierarchy,
     hierarchy_matcher: &InspectHierarchyMatcher,
 ) -> Result<Option<NodeHierarchy>, Error> {
@@ -590,7 +641,6 @@ pub fn filter_inspect_snapshot(
 mod tests {
     use super::*;
     use selectors;
-    use std::convert::TryInto;
 
     #[test]
     fn test_node_hierarchy_iteration() {
@@ -870,11 +920,22 @@ mod tests {
         let hierarchy_matcher: InspectHierarchyMatcher =
             (&parsed_test_selectors).try_into().unwrap();
 
-        let mut filtered_hierarchy = filter_inspect_snapshot(hierarchy, &hierarchy_matcher)
+        let mut filtered_hierarchy = filter_node_hierarchy(hierarchy, &hierarchy_matcher)
             .expect("filtered hierarchy should succeed.")
             .expect("There should be an actual resulting hierarchy.");
         filtered_hierarchy.sort();
         filtered_hierarchy
+    }
+
+    fn parse_selector_and_select_from_hierarchy(
+        hierarchy: NodeHierarchy,
+        test_selector: &str,
+    ) -> Vec<PropertyEntry> {
+        let parsed_selector = selectors::parse_selector(test_selector)
+            .expect("All test selectors are valid and parsable.");
+
+        select_from_node_hierarchy(hierarchy, parsed_selector)
+            .expect("Selecting from hierarchy should succeed.")
     }
 
     fn get_test_hierarchy() -> NodeHierarchy {
@@ -943,5 +1004,75 @@ mod tests {
             parse_selectors_and_filter_hierarchy(get_test_hierarchy(), test_selectors),
             sorted_expected
         );
+    }
+
+    #[test]
+    fn test_select_from_hierarchy() {
+        let test_cases = vec![
+            (
+                "*:root/foo:11",
+                vec![PropertyEntry {
+                    property_node_path: "root/foo".to_string(),
+                    property: Property::Int("11".to_string(), -4),
+                }],
+            ),
+            (
+                "*:root/foo:*",
+                vec![
+                    PropertyEntry {
+                        property_node_path: "root/foo".to_string(),
+                        property: Property::Double("0".to_string(), 8.1),
+                    },
+                    PropertyEntry {
+                        property_node_path: "root/foo".to_string(),
+                        property: Property::Int("11".to_string(), -4),
+                    },
+                    PropertyEntry {
+                        property_node_path: "root/foo".to_string(),
+                        property: Property::Bytes(
+                            "123".to_string(),
+                            "foo".bytes().into_iter().collect(),
+                        ),
+                    },
+                ],
+            ),
+            ("*:root/foo:nonexistant", vec![]),
+            (
+                "*:root/foo",
+                vec![
+                    PropertyEntry {
+                        property_node_path: "root/foo".to_string(),
+                        property: Property::Double("0".to_string(), 8.1),
+                    },
+                    PropertyEntry {
+                        property_node_path: "root/foo".to_string(),
+                        property: Property::Int("11".to_string(), -4),
+                    },
+                    PropertyEntry {
+                        property_node_path: "root/foo".to_string(),
+                        property: Property::Bytes(
+                            "123".to_string(),
+                            "foo".bytes().into_iter().collect(),
+                        ),
+                    },
+                    PropertyEntry {
+                        property_node_path: "root/foo/zed".to_string(),
+                        property: Property::Int("13".to_string(), -4),
+                    },
+                ],
+            ),
+        ];
+
+        for (test_selector, expected_vector) in test_cases {
+            let mut property_entry_vec =
+                parse_selector_and_select_from_hierarchy(get_test_hierarchy(), test_selector);
+
+            property_entry_vec.sort_by(|p1, p2| {
+                let p1_string = format!("{}/{}", p1.property_node_path, p1.property.name());
+                let p2_string = format!("{}/{}", p2.property_node_path, p2.property.name());
+                p1_string.cmp(&p2_string)
+            });
+            assert_eq!(property_entry_vec, expected_vector);
+        }
     }
 }

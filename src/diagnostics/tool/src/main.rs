@@ -231,7 +231,7 @@ fn filter_json_schema_by_selectors(
                     let inspect_matcher: InspectHierarchyMatcher =
                         (&matched_selectors).try_into().unwrap();
 
-                    match fuchsia_inspect_node_hierarchy::filter_inspect_snapshot(
+                    match fuchsia_inspect_node_hierarchy::filter_node_hierarchy(
                         hierarchy,
                         &inspect_matcher,
                     ) {

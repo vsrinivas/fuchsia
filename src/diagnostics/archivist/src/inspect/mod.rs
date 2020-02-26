@@ -527,7 +527,7 @@ impl ReaderServer {
                 .into_iter()
                 .filter_map(|snapshot| match convert_snapshot_to_node_hierarchy(snapshot) {
                     Ok(node_hierarchy) => {
-                        match fuchsia_inspect_node_hierarchy::filter_inspect_snapshot(
+                        match fuchsia_inspect_node_hierarchy::filter_node_hierarchy(
                             node_hierarchy,
                             &static_matcher,
                         ) {
@@ -577,7 +577,7 @@ hierarchy: {:?}",
                 Some(Some(dynamic_matcher)) => statically_filtered_hierarchies
                     .into_iter()
                     .filter_map(|hierarchy| {
-                        fuchsia_inspect_node_hierarchy::filter_inspect_snapshot(
+                        fuchsia_inspect_node_hierarchy::filter_node_hierarchy(
                             hierarchy,
                             &dynamic_matcher,
                         )
