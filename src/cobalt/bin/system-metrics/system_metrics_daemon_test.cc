@@ -96,13 +96,6 @@ class SystemMetricsDaemonTest : public gtest::TestLoopFixture {
 
   seconds LogCpuUsage() { return daemon_->LogCpuUsage(); }
 
-  void PrepareForLogCpuUsageDeprecated() {
-    for (int i = 0; i < 59; i++) {
-      daemon_->cpu_percentages_.push_back(
-          {static_cast<double>(i), fuchsia::ui::activity::State::UNKNOWN});
-    }
-  }
-
   void PrepareForLogCpuUsage() {
     daemon_->cpu_data_stored_ = 599;
     daemon_->activity_state_to_cpu_map_.clear();
@@ -540,25 +533,6 @@ TEST_F(SystemMetricsDaemonTest, RepeatedlyLogUpPingAndLifeTimeEvents) {
 // does not use FIDL. Does not use the message loop.
 TEST_F(SystemMetricsDaemonTest, LogCpuUsage) {
   fake_logger_.reset();
-  // When LogCpuUsage() is invoked it should log 60 events
-  // in 1 FIDL call, and return 1 second.
-  PrepareForLogCpuUsageDeprecated();
-  UpdateState(fuchsia::ui::activity::State::ACTIVE);
-  EXPECT_EQ(seconds(1).count(), LogCpuUsage().count());
-  // Call count is 1. Just one call to LogCobaltEvents, with 60 events.
-  CheckValues(cobalt::kLogCobaltEvents, 1,
-              fuchsia_system_metrics::kFuchsiaCpuPercentageExperimentalMetricId,
-              DeviceState::Active, -1 /*no second position event code*/, 60);
-
-  PrepareForLogCpuUsageDeprecated();
-  UpdateState(fuchsia::ui::activity::State::IDLE);
-  EXPECT_EQ(seconds(1).count(), LogCpuUsage().count());
-  // Another call to LogCobaltEvents, with 60 events.
-  CheckValues(cobalt::kLogCobaltEvents, 2,
-              fuchsia_system_metrics::kFuchsiaCpuPercentageExperimentalMetricId, DeviceState::Idle,
-              -1 /*no second position event code*/, 60);
-
-  fake_logger_.reset();
   PrepareForLogCpuUsage();
   UpdateState(fuchsia::ui::activity::State::ACTIVE);
   EXPECT_EQ(seconds(1).count(), LogCpuUsage().count());
@@ -657,7 +631,8 @@ class MockLogger : public ::fuchsia::cobalt::testing::Logger_TestBase {
     num_events_ += events.size();
     callback(fuchsia::cobalt::Status::OK);
   }
-  void LogEvent(uint32_t metric_id, uint32_t event_code, LogCobaltEventsCallback callback) override {
+  void LogEvent(uint32_t metric_id, uint32_t event_code,
+                LogCobaltEventsCallback callback) override {
     num_calls_++;
     num_events_ += 1;
     callback(fuchsia::cobalt::Status::OK);

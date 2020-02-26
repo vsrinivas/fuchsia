@@ -141,13 +141,11 @@ class SystemMetricsDaemon {
   std::chrono::seconds LogCpuUsage();
 
   // Helper function to store the fetched CPU data and store until flush.
-  void StoreCpuData(double cpu_percentage);            // histogram, flush every 10 min
-  void StoreCpuDataDeprecated(double cpu_percentage);  // list, flush every 1 min
+  void StoreCpuData(double cpu_percentage);  // histogram, flush every 10 min
 
   // Helper function to call Cobalt logger's LogCobaltEvent to log
   // cpu percentages.
-  bool LogCpuToCobalt();            // INT_HISTOGRAM metric type
-  void LogCpuToCobaltDeprecated();  // MEMORY_USAGE metric type
+  bool LogCpuToCobalt();  // INT_HISTOGRAM metric type
 
   // Fetches and logs device temperature.
   //
@@ -190,7 +188,6 @@ class SystemMetricsDaemon {
     double cpu_percentage;
     fuchsia::ui::activity::State state;
   };
-  std::vector<CpuWithActivityState> cpu_percentages_;  // This will deprecate.
   std::unordered_map<fuchsia::ui::activity::State, std::unordered_map<uint32_t, uint32_t>>
       activity_state_to_cpu_map_;
   std::unordered_map<uint32_t, uint32_t> temperature_map_;

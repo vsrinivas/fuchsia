@@ -374,7 +374,6 @@ std::chrono::seconds SystemMetricsDaemon::LogCpuUsage() {
   if (!cpu_stats_fetcher_->FetchCpuPercentage(&cpu_percentage)) {
     return std::chrono::minutes(1);
   }
-  StoreCpuDataDeprecated(cpu_percentage);
   StoreCpuData(cpu_percentage);
   return std::chrono::seconds(1);
 }
@@ -389,15 +388,6 @@ void SystemMetricsDaemon::StoreCpuData(double cpu_percentage) {
       activity_state_to_cpu_map_.clear();
       cpu_data_stored_ = 0;
     }
-  }
-}
-
-void SystemMetricsDaemon::StoreCpuDataDeprecated(double cpu_percentage) {
-  cpu_percentages_.push_back({cpu_percentage, current_state_});
-  if (cpu_percentages_.size() == 60) {  // Flush every minute.
-    LogCpuToCobaltDeprecated();
-    // Drop the data even if logging does not succeed.
-    cpu_percentages_.clear();
   }
 }
 
@@ -426,30 +416,6 @@ bool SystemMetricsDaemon::LogCpuToCobalt() {
     return false;
   }
   return true;
-}
-
-void SystemMetricsDaemon::LogCpuToCobaltDeprecated() {
-  TRACE_DURATION("system_metrics", "SystemMetricsDaemon::LogCpuToCobaltDeprecated");
-  using EventCode =
-      fuchsia_system_metrics::FuchsiaCpuPercentageExperimentalMetricDimensionDeviceState;
-  std::vector<CobaltEvent> events;
-  auto builder =
-      CobaltEventBuilder(fuchsia_system_metrics::kFuchsiaCpuPercentageExperimentalMetricId);
-  for (unsigned i = 0; i < cpu_percentages_.size(); i++) {
-    // TODO(CB-253) Change to CPU metric type and
-    // take away "* 100" if the new metric type supports double.
-    events.push_back(
-        builder.Clone()
-            .with_event_code(GetCobaltEventCodeForDeviceState<EventCode>(cpu_percentages_[i].state))
-            .as_memory_usage(cpu_percentages_[i].cpu_percentage * 100));
-  }
-  // call cobalt FIDL
-  fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
-  ReinitializeIfPeerClosed(logger_->LogCobaltEvents(std::move(events), &status));
-  if (status != fuchsia::cobalt::Status::OK) {
-    FX_LOGS(ERROR) << "LogCpuToCobaltDeprecated returned status=" << StatusToString(status);
-  }
-  return;
 }
 
 std::chrono::seconds SystemMetricsDaemon::LogTemperature() {
