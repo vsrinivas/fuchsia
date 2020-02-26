@@ -12,6 +12,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fidl/cpp/builder.h>
+#include <lib/sync/completion.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
 #include <zircon/assert.h>
@@ -173,6 +174,9 @@ class Client : public llcpp::fuchsia::hardware::display::Controller::Interface,
     }
   }
 
+  // Used for testing
+  sync_completion_t* fidl_unbound() { return &fidl_unbound_; }
+
  private:
   bool _ImportEvent(zx::event event, uint64_t id) __TA_EXCLUDES(fence_mtx_);
 
@@ -261,6 +265,8 @@ class Client : public llcpp::fuchsia::hardware::display::Controller::Interface,
   // a configuration. This does not account for changes due to waiting images.
   uint32_t client_apply_count_ = 0;
 
+  sync_completion_t fidl_unbound_;
+
   zx::channel sysmem_allocator_;
 
   struct Collections {
@@ -292,7 +298,8 @@ class Client : public llcpp::fuchsia::hardware::display::Controller::Interface,
   uint64_t GetActiveCaptureImage() { return current_capture_image_; }
 
   fit::optional<fidl::BindingRef> fidl_binding_;
-
+  // This is the channel returned by fidl bind during unbound
+  zx::channel fidl_channel_;
   // Capture related book keeping
   uint64_t capture_fence_id_ = INVALID_ID;
   uint64_t current_capture_image_ = INVALID_ID;

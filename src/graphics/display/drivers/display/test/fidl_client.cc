@@ -180,17 +180,6 @@ TestFidlClient::~TestFidlClient() {
       }
     }
   }
-
-  fbl::AutoLock lock(mtx());
-
-  ASSERT_TRUE(dc_ != nullptr);
-  if (layer_id_ != 0) {
-    dc_->SetDisplayLayers(display_id(), {});
-    dc_->DestroyLayer(layer_id_);
-  }
-  if (image_id_ != 0) {
-    dc_->ReleaseImage(image_id_);
-  }
 }
 
 zx_status_t TestFidlClient::PresentImage() {

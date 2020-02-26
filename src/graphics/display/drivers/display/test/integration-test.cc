@@ -9,6 +9,8 @@
 #include <zircon/pixelformat.h>
 #include <zircon/types.h>
 
+#include <memory>
+
 #include <fbl/auto_lock.h>
 #include <zxtest/zxtest.h>
 
@@ -43,6 +45,16 @@ class IntegrationTest : public TestBase {
             controller()->primary_client_ == controller()->active_client_ &&
             // DC processed the EnableVsync request. We can now expect vsync events.
             controller()->primary_client_->enable_vsync_);
+  }
+
+  void SendVsyncAfterUnbind(std::unique_ptr<TestFidlClient> client, uint64_t display_id) {
+    fbl::AutoLock l(controller()->mtx());
+    // Reseting client will *start* client tear down.
+    client.reset();
+    ClientProxy* client_ptr = controller()->active_client_;
+    EXPECT_OK(sync_completion_wait(client_ptr->handler_.fidl_unbound(), zx::sec(1).get()));
+    // EnableVsync(false) has not completed here, because we are still holding controller()->mtx()
+    client_ptr->OnDisplayVsync(display_id, 0, nullptr, 0);
   }
 
   bool primary_client_dead() {
@@ -210,4 +222,13 @@ TEST_F(IntegrationTest, DISABLED_SendVsyncsAfterClientsBail) {
   EXPECT_EQ(2, primary_client->vsync_count());
 }
 
+TEST_F(IntegrationTest, SendVsyncsAfterClientDies) {
+  auto primary_client = std::make_unique<TestFidlClient>(sysmem_.get());
+  ASSERT_TRUE(primary_client->CreateChannel(display_fidl()->get(), /*is_vc=*/false));
+  ASSERT_TRUE(primary_client->Bind(dispatcher()));
+  EXPECT_TRUE(
+      RunLoopWithTimeoutOrUntil([this]() { return primary_client_connected(); }, zx::sec(1)));
+  auto id = primary_client->display_id();
+  SendVsyncAfterUnbind(std::move(primary_client), id);
+}
 }  // namespace display

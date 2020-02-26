@@ -1659,11 +1659,15 @@ zx_status_t Client::Init(zx::channel server_channel) {
   server_handle_ = server_channel.get();
 
   fidl::OnUnboundFn<Client> cb = [](Client* client, fidl::UnboundReason reason, zx::channel ch) {
-    // DdkRelease will call unbind before releasing the client. Therefore, we do not want
-    // to perform any client operations (since it will be released)
+    sync_completion_signal(client->fidl_unbound());
+    // DdkRelease will cancel the FIDL binding before destroying the client. Therefore, we should
+    // TearDown() so that no further tasks are scheduled on the controller loop.
     if (reason != fidl::UnboundReason::kUnbind) {
       client->TearDown();
     }
+    // fidl_channel_ is the zx::channel alias of server_channel_. Hold on to it so that
+    // OnDisplayVsync works until this client is destroyed.
+    client->fidl_channel_ = std::move(ch);
   };
 
   auto res = fidl::AsyncBind(controller_->loop().dispatcher(), std::move(server_channel), this,
@@ -1786,7 +1790,9 @@ zx_status_t ClientProxy::OnDisplayVsync(uint64_t display_id, zx_time_t timestamp
   zx_status_t status =
       fhd::Controller::SendOnVsyncEvent(zx::unowned_channel(server_channel_), display_id, timestamp,
                                         fidl::VectorView(image_ids, count));
-
+  // Make sure status is not ZX_ERR_BAD_HANDLE, otherwise, depending on policy setting
+  // the above will crash
+  ZX_DEBUG_ASSERT(status != ZX_ERR_BAD_HANDLE);
   if (status != ZX_OK) {
     if (status == ZX_ERR_NO_MEMORY) {
       total_oom_errors_++;
