@@ -5,11 +5,11 @@
 use {
     super::{
         act::{Actions, ActionsSchema},
-        metrics::{Metrics, MetricsSchema},
+        metrics::{Metric, Metrics},
         validate::{validate, TestsSchema},
         Options,
     },
-    anyhow::{format_err, Error},
+    anyhow::{bail, format_err, Error},
     serde_derive::Deserialize,
     serde_json as json,
     std::{collections::HashMap, fs, path::Path, str::FromStr},
@@ -19,18 +19,21 @@ pub mod parse;
 
 /// Schema for JSON triage configuration. This structure is parsed directly from the configuration
 /// files using serde_json.
-///
-/// Field names will appear as map keys in the human-written files, so they're named simply as,
-/// for example, "metrics" instead of something more descriptive like "file_metrics"
 #[derive(Deserialize, Default, Debug)]
 pub struct ConfigFileSchema {
-    /// Map of named Metrics. Each Metric selects or calculates a value.
-    pub metrics: MetricsSchema,
+    /// Map of named Selectors. Each Selector selects a value from Diagnostic data.
+    #[serde(rename = "select")]
+    pub file_selectors: HashMap<String, String>,
+    /// Map of named Evals. Each Eval calculates a value.
+    #[serde(rename = "eval")]
+    pub file_evals: HashMap<String, String>,
     /// Map of named Actions. Each Action uses a boolean value to trigger a warning.
-    pub actions: ActionsSchema,
+    #[serde(rename = "act")]
+    pub file_actions: ActionsSchema,
     /// Map of named Tests. Each test applies sample data to lists of actions that should or
     /// should not trigger.
-    pub tests: TestsSchema,
+    #[serde(rename = "test")]
+    pub file_tests: TestsSchema,
 }
 
 impl ConfigFileSchema {
@@ -137,7 +140,7 @@ pub fn initialize(options: Options) -> Result<StateHolder, Error> {
     }
 
     if config_files.len() == 0 {
-        return Err(format_err!("Need at least one config file; use --config"));
+        bail!("Need at least one config file; use --config");
     }
     let mut actions = HashMap::new();
     let mut metrics = HashMap::new();
@@ -147,15 +150,24 @@ pub fn initialize(options: Options) -> Result<StateHolder, Error> {
         let file_data = match fs::read_to_string(file_name.clone()) {
             Ok(data) => data,
             Err(_) => {
-                return Err(format_err!("Couldn't read config file '{}' to string", file_name))
+                bail!("Couldn't read config file '{}' to string", file_name);
             }
         };
         let file_config = match ConfigFileSchema::parse(file_data) {
             Ok(c) => c,
-            Err(e) => return Err(format_err!("Parsing file '{}': {}", file_name, e)),
+            Err(e) => bail!("Parsing file '{}': {}", file_name, e),
         };
-        let ConfigFileSchema { actions: file_actions, metrics: file_metrics, tests: file_tests } =
-            file_config;
+        let ConfigFileSchema { file_actions, file_selectors, file_evals, file_tests } = file_config;
+        let mut file_metrics = HashMap::new();
+        for (key, value) in file_selectors.into_iter() {
+            file_metrics.insert(key, Metric::Selector(value));
+        }
+        for (key, value) in file_evals.into_iter() {
+            if file_metrics.contains_key(&key) {
+                bail!("Duplicate metric name {} in file {}", key, namespace);
+            }
+            file_metrics.insert(key, Metric::Eval(value));
+        }
         metrics.insert(namespace.clone(), file_metrics);
         actions.insert(namespace.clone(), file_actions);
         tests.insert(namespace, file_tests);
@@ -172,7 +184,7 @@ fn base_name(path: &String) -> Result<String, Error> {
             return Ok(s.to_owned());
         }
     }
-    return Err(format_err!("Bad path {} - can't find file_stem", path));
+    bail!("Bad path {} - can't find file_stem", path)
 }
 
 #[cfg(test)]

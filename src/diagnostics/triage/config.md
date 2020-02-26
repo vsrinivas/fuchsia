@@ -10,29 +10,34 @@ for off-nominal conditions.
 By default, the config files are read from
 `//src/diagnostics/config/triage/*.triage`. Just add a new config file there.
 
-Config file syntax is JSON.
+Config file syntax is JSON5.
 
-Each config file specifies three kinds of configuration: Metrics, Actions, and
-Tests.
+Each config file specifies four kinds of configuration: Selectors and Evals
+(collectively called "Metrics"), Actions, and Tests.
 
-* Metrics load and/or calculate values for use by Actions.
+* Selectors load values for use by Evals and Actions.
+* Evals calculate values for use by Evals and Actions.
 * Actions are triggered by boolean Metrics, and print warnings if triggered.
-* Tests include sample data to verify that Actions trigger correctly.
+* Tests include sample data to verify that specified Actions trigger correctly.
 
-Each Metric, Test, and Action has a name. Thus, the structure of a
+Each Select, Eval, Test, and Action has a name. Thus, the structure of a
 config file is:
 
 ```JSON
 {
-    "metrics": {
-        "metric1": { .... },
-        "metric2": { .... }
+    "select": {
+        "select1": "type:component:node/path:property",
+        "select2": "type:component:node/path:property"
     },
-    "actions": {
+    "eval": {
+        "name1": "select1+select2",
+        "name2": "select1 - select2"
+    },
+    "act": {
         "action1": { .... },
         "action2": { .... }
     },
-    "tests": {
+    "test": {
         "test1": { .... },
         "test2": { .... }
     }
@@ -41,36 +46,21 @@ config file is:
 
 ## Names and namespaces
 
-Metric, Action, Test, and config file names consist of one
+Select, Eval, Action, Test, and config file names consist of one
 alphabetic-or-underscore character followed by
 zero or more alphanumeric-or-underscore characters. Thus, "abc123" and
 "_abc_123" are valid names, but "123abc" and "abc-123" are not.
 
-Items (Metrics, Tests, and Actions) in one file can refer to items in another
-file. The file basename is used as a namespace. `::` is used as the separator.
-For example, if file `foo.triage` is loaded
+Evals, Tests, and Actions in one file can refer to Selectors, Evals, and Actions
+in another file. The file basename is used as a namespace. `::` is used as the
+separator. For example, if file `foo.triage` is loaded
 and contains a Metric named `bar` then any config file may refer to `foo::bar`.
 
-Names may be reused between Metrics, Tests, and Actions.
+Names may be reused between Metrics, Tests, and Actions, but not between Select
+and Eval.
 
 NOTE: The current version of the program is not guaranteed to enforce these
 restrictions.
-
-## Metrics
-
-There are two kinds of Metrics: those that select data from the inspect.json
-file, and those that calculate values based on other Metrics.
-
-```JSON
-    "metrics": {
-        "metric1": {
-            "Selector": "global_data:root.stats:total_bytes"
-        },
-        "metric2": {
-            "Eval": "metric1 / 5.0 > 2"
-        }
-    },
-```
 
 ### Selectors
 
@@ -84,10 +74,22 @@ in place.
 
 ### Calculation
 
-The string after `"Eval"` is an infix math expression with
-normal operator precedence. () may be used.
+Eval strings are infix math expressions with normal operator precedence.
 
-Arithmetic operators are + - * /
+() may be used.
+
+Arithmetic operators are + - * / //. / is float division; // is int division.
+
+Functions are a function name, '(', comma-separated expression list, ')'.
+Supported functions include:
+
+ * Boolean
+     * And (1+ args)
+     * Or (1+ args)
+     * Not (1 arg)
+ * Numeric
+     * Min (1+ args)
+     * Max (1+ args)
 
 Metric type follows the type read from the Inspect file. Currently, UInt
 is converted to Int upon reading. Operating on an Int and Float promotes the
@@ -95,8 +97,6 @@ result to Float.
 
 Boolean operations are > < >= <= == !=. The expression should have only 0 or 1
 of them.
-
-Functions of the form Func(param, param...) are not supported (yet).
 
 Arrays / vectors are not supported (yet).
 

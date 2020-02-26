@@ -1,12 +1,13 @@
 {
-    "metrics": {
-        "m": {"Selector":  "feedback_agent.cmx:root:current_num_connections"}
+    select: {
+        m: "feedback_agent.cmx:root:current_num_connections"
     },
 
-    "actions": {
-        "act1": {"trigger": "sample::c1", "print": "yes on A!"}
+    eval: {},
+
+    act: {
+        act1: {trigger: "sample::c1", print: "yes on A!"}
     },
 
-    "tests": {
-    }
+    test: {},
 }

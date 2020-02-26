@@ -139,7 +139,7 @@ mod test {
     use {
         super::*,
         crate::config::InspectData,
-        crate::metrics::{Metric, MetricsSchema},
+        crate::metrics::{Metric, Metrics},
     };
 
     /// Tells whether any of the stored warnings include a substring.
@@ -154,11 +154,11 @@ mod test {
 
     #[test]
     fn actions_fire_correctly() {
+        let mut eval_file = HashMap::new();
+        eval_file.insert("true".to_string(), Metric::Eval("0==0".to_string()));
+        eval_file.insert("false".to_string(), Metric::Eval("0==1".to_string()));
         let mut metrics = Metrics::new();
-        let mut metric_file = MetricsSchema::new();
-        metric_file.insert("true".to_string(), Metric::Eval("0==0".to_string()));
-        metric_file.insert("false".to_string(), Metric::Eval("0==1".to_string()));
-        metrics.insert("file".to_string(), metric_file);
+        metrics.insert("file".to_string(), eval_file);
         let mut actions = Actions::new();
         let mut action_file = ActionsSchema::new();
         action_file.insert(

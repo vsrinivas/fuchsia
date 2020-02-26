@@ -11,18 +11,6 @@ use {
     std::{clone::Clone, collections::HashMap},
 };
 
-/// [Metrics] are a map from namespaces to the named metrics stored within that namespace.
-pub type Metrics = HashMap<String, MetricsSchema>;
-pub type MetricsSchema = HashMap<String, Metric>;
-
-/// Contains all the information needed to look up and evaluate a Metric - other
-/// Metrics that may be referred to, and Inspect data (entries for each
-/// component) that can be accessed by Selector-type Metrics.
-pub struct MetricState<'a> {
-    pub metrics: &'a Metrics,
-    pub inspect_data: &'a InspectData,
-}
-
 /// The contents of a single Metric. Metrics produce a value for use in Actions or other Metrics.
 #[derive(Deserialize, Clone, Debug)]
 pub enum Metric {
@@ -31,6 +19,17 @@ pub enum Metric {
     /// Eval contains an arithmetic expression,
     // TODO(cphoenix): Parse and validate this at load-time.
     Eval(String),
+}
+
+/// [Metrics] are a map from namespaces to the named [Metric]s stored within that namespace.
+pub type Metrics = HashMap<String, HashMap<String, Metric>>;
+
+/// Contains all the information needed to look up and evaluate a Metric - other
+/// [Metric]s that may be referred to, and Inspect data (entries for each
+/// component) that can be accessed by Selector-type Metrics.
+pub struct MetricState<'a> {
+    pub metrics: &'a Metrics,
+    pub inspect_data: &'a InspectData,
 }
 
 /// The calculated or selected value of a Metric.

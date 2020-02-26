@@ -41,12 +41,11 @@ path in quotes.
 
 TODO(cphoenix): Should these paths be relative to tree-root, or CWD?
 
-Config file format is described in [Configuring 'fx triage'](config.md). Briefly, you specify:
+Config file format is described in [Configuring 'fx triage'](config.md). It includes:
 
- *   Metrics
-     *   Selector metrics specify the data to extract from the inspect.json produced
+ *   Selector metrics which specify the data to extract from the inspect.json produced
          by bugreport.zip
-     *   Eval metrics specify calculations
+ *   Eval metrics which specify calculations
  *   Actions to take if a condition is true (currently, only "print a warning")
  *   Tests to ensure your actions trigger (or not) appropriately with sample data
      you supply.
@@ -89,7 +88,6 @@ fx build && fx triage --test
     *   validate.rs - The data structures and business logic to store and
         evaluate the self-tests specified in the config files.
     *   config.rs - Loads configuration information from *.triage files.
-        *   config/parse.rs - A `nom`-based parser for Metrics that calculate
-            values.
+        *   config/parse.rs - A `nom`-based parser for Eval metrics.
 *   //src/diagnostics/triage/test/src/main.rs - Integration tester that invokes
     the "fx triage" script and evaluates its output.

@@ -1,24 +1,29 @@
 {
-    metrics: {
-        c1: {Eval: "other::m == 1"}, // JSON5: Comments work, don't need so many quotes.
-        "c2": {"Eval": "other::m > 1"},
-        "total": {"Selector": "global_data:root.stats:total_bytes"},
-        "used": {"Selector": "global_data:root.stats:used_bytes"},
-        "ratio": {"Eval": "used / (total + 0.0)"},
-        "small": {"Eval": "ratio > 0.001"},
-        "tiny": {"Eval": "ratio > 0.00000001"}
+    select: {
+        total: "global_data:root.stats:total_bytes",
+        used: "global_data:root.stats:used_bytes",
     },
 
-    "actions": {
-        "act2": {"trigger": "c2", "print": "yes on A!"},
-        "some_disk": {"trigger": "tiny", "print": "Used some of disk"},
-        "more_disk": {"trigger": "small", "print": "Used more of the disk"}
+    eval: {
+        c1: "other::m == 1", // JSON5: Comments work, don't need so many quotes.
+        c2: "other::m > 1",
+        ratio: "used / (total + 0.0)",
+        small: "ratio > 0.001",
+        tiny: "ratio > 0.00000001"
     },
 
-    "tests": {
-        "trial1": {"yes": ["some_disk", "more_disk"], "no": [],
-            "inspect": [
-                {"path": "global_data",
-                 "contents": {"root": {"stats": {"total_bytes": 10, "used_bytes": 9}}}}]}
+    act: {
+        act2: {trigger: "c2", print: "yes on A!"},
+        some_disk: {trigger: "tiny", print: "Used some of disk"},
+        more_disk: {trigger: "small", print: "Used more of the disk"}
+    },
+
+    test: {
+        trial1: {
+            yes: ["some_disk", "more_disk"],
+            no: [],
+            inspect: [{
+                path: "global_data",
+                 contents: {root: {stats: {total_bytes: 10, used_bytes: 9}}}}]}
     }
 }
