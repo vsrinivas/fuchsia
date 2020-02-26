@@ -129,8 +129,8 @@ Members are appointed by each functional area of the project:
 | ----------------- | ------------------------ |
 | Architecture      | silberst@google.com      |
 | Auth              | jsankey@google.com       |
+| Bluetooth         | jamuraa@google.com       |
 | Component Runtime | geb@google.com           |
-| Connectivity      | jamuraa@google.com       |
 | DDK               | teisenbe@google.com      |
 | Developer         | dschulyer@google.com     |
 | Diagnostics       | crjohns@google.com       |
@@ -143,6 +143,7 @@ Members are appointed by each functional area of the project:
 | Ledger            | qsr@google.com           |
 | Media             | dalesat@google.com       |
 | Metrics           | rudominer@google.com     |
+| Netstack          | brunodalbo@google.com    |
 | Security          | jsankey@google.com       |
 | Sessions          | lindkvist@google.com     |
 | Software Delivery | computerdruid@google.com |
@@ -151,6 +152,7 @@ Members are appointed by each functional area of the project:
 | Toolchain         | mcgrathr@google.com      |
 | Virtualization    | abdulla@google.com       |
 | Web               | wez@google.com           |
+| WLAN              | silberst@google.com      |
 
 As the project evolves, the list of functional areas (and therefore the makeup
 of the council) will evolve as well. The list of functional areas is maintained
