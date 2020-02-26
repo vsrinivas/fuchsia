@@ -7,14 +7,10 @@
 # device.
 
 set -e
+SCRIPT_SRC_DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd)"
+source "${SCRIPT_SRC_DIR}/gn-bash-test-lib.sh"
 
-# Sets up an ssh mock binary on the $PATH of any subshells and creates a stub
-# authorized_keys.
-set_up_ssh() {
-  PATH_DIR_FOR_TEST="$(mktemp -d)"
-  cp "${BT_TEMP_DIR}/ssh" "${PATH_DIR_FOR_TEST}"
-  export PATH="${PATH_DIR_FOR_TEST}:${PATH}"
-
+BT_INIT_TEMP_DIR() {
   # This authorized_keys file must not be empty, but its contents aren't used.
   mkdir -p "${BT_TEMP_DIR}/scripts/sdk/gn/base/testdata"
   echo ssh-ed25519 00000000000000000000000000000000000000000000000000000000000000000000 \
@@ -45,92 +41,96 @@ echo fe80::c0ff:eec0:ffee%coffee
 SETVAR
 }
 
-# Helpers.
+TEST_fssh_help() {
+  BT_EXPECT_FAIL  "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fssh.sh" --help > "${BT_TEMP_DIR}/usage.txt"
 
-# Runs a bash script. The function provides these conveniences over calling the
-# script directly:
-#
-# * Rather than calling the bash script directly, this command explicitly
-#   invokes Bash and propagates some option flags.
-# * Rather than showing the bash output, this command only outputs output if a
-#   test fails.
-#
-# Args: the script to run and all args to pass.
-run_bash_script() {
-  local shell_flags
-  # propagate certain bash flags if present
-  shell_flags=()
-  if [[ $- == *x* ]]; then
-    shell_flags+=(-x)
-  fi
-  local output
-
-  if ! output=$(bash "${shell_flags[@]}" "$@" 2>&1); then
-    echo "${output}"
-  fi
-}
-
-# Verifies that the given arguments appear in the command line invocation of the
-# most previously sourced mock state. Any arguments passed to this function will
-# be searched for in the actual arguments. This succeeds if the arguments are
-# found in adjacent positions in the correct order.
-#
-# This function only checks for presence. As a result, it will NOT verify any of
-# the following:
-#
-# * The arguments only appear once.
-# * The arguments don't appear with conflicting arguments.
-# * Any given argument --foo isn't overridden, say with a --no-foo flag later.
-#
-# Args: any number of arguments to check.
-# Returns: 0 if found; 1 if not found.
-check_mock_has_args() {
-  local expected=("$@")
-  for j in "${!BT_MOCK_ARGS[@]}"; do
-    local window=("${BT_MOCK_ARGS[@]:$j:${#expected}}")
-    local found=true
-    for k in "${!expected[@]}"; do
-      if [[ "${expected[$k]}" != "${window[$k]}" ]]; then
-        found=false
-        break
-      fi
-    done
-    if [[ "${found}" == "true" ]]; then
-      return 0
-    fi
-  done
-  return 1
+readonly EXPECTED_HELP="Unknown option --help
+Usage: ${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fssh.sh
+  [--device-name <device hostname>]
+    Connects to a device by looking up the given device hostname.
+  [--device-ip <device ipaddr>]
+    Connects to a device by using the provided IP address, cannot use with --device-name
+  [--private-key <identity file>]
+    Uses additional private key when using ssh to access the device."
+  BT_EXPECT_FILE_CONTAINS "${BT_TEMP_DIR}/usage.txt" "${EXPECTED_HELP}"
 }
 
 # Verifies that the correct ssh command is run by fssh.
 TEST_fssh() {
-  set_up_ssh
   set_up_device_finder
 
+  # Add the ssh mock to the path so fssh uses it vs. the real ssh.
+  export PATH="${BT_TEMP_DIR}/isolated_path_for:${PATH}"
+
   # Run command.
-  BT_EXPECT run_bash_script "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fssh.sh"
+  BT_EXPECT gn-test-run-bash-script "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fssh.sh"
 
   # Verify that ssh was run correctly.
-  source "${PATH_DIR_FOR_TEST}/ssh.mock_state"
+  # shellcheck disable=SC1090
+  source "${BT_TEMP_DIR}/isolated_path_for/ssh.mock_state"
 
-  BT_EXPECT_EQ 4 "${#BT_MOCK_ARGS[@]}"
-  check_mock_has_args -F "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/sshconfig"
-  check_mock_has_args fe80::c0ff:eec0:ffee%coffee
-  BT_EXPECT_FILE_DOES_NOT_EXIST "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/ssh.mock_state.1"
+  gn-test-check-mock-args _ANY_ -F "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/sshconfig" fe80::c0ff:eec0:ffee%coffee
+
+  BT_EXPECT_FILE_DOES_NOT_EXIST "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/ssh.mock_state"
 }
 
+TEST_fssh_by_ip() {
+   set_up_device_finder
+
+  # Add the ssh mock to the path so fssh uses it vs. the real ssh.
+  export PATH="${BT_TEMP_DIR}/isolated_path_for:${PATH}"
+
+  # Run command.
+  BT_EXPECT gn-test-run-bash-script "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fssh.sh" --device-ip fe80::d098:513f:9cfb:eb53%hardcoded
+
+  # Verify that ssh was run correctly.
+  # shellcheck disable=SC1090
+  source "${BT_TEMP_DIR}/isolated_path_for/ssh.mock_state"
+
+  gn-test-check-mock-args _ANY_ -F "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/sshconfig" fe80::d098:513f:9cfb:eb53%hardcoded
+}
+
+TEST_fssh_by_name() {
+   set_up_device_finder
+
+  # Add the ssh mock to the path so fssh uses it vs. the real ssh.
+  export PATH="${BT_TEMP_DIR}/isolated_path_for:${PATH}"
+
+  # Run command.
+  BT_EXPECT gn-test-run-bash-script "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fssh.sh" --device-name coffee-coffee-coffee-coffee
+
+  # Verify that ssh was run correctly.
+  # shellcheck disable=SC1090
+  source "${BT_TEMP_DIR}/isolated_path_for/ssh.mock_state"
+
+  gn-test-check-mock-args _ANY_ -F "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/sshconfig" fe80::c0ff:eec0:ffee%coffee
+}
+
+TEST_fssh_name_not_found() {
+  echo 2 > "${BT_TEMP_DIR}/scripts/sdk/gn/base/tools/device-finder.mock_status"
+  echo "2020/02/25 07:42:59 no devices with domain matching 'name-not-found'" >  "${BT_TEMP_DIR}/scripts/sdk/gn/base/tools/device-finder.stderr"
+
+  # Add the ssh mock to the path so fssh uses it vs. the real ssh.
+  export PATH="${BT_TEMP_DIR}/isolated_path_for:${PATH}"
+
+  # Run command.
+  BT_EXPECT_FAIL gn-test-run-bash-script "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fssh.sh" --device-name name-not-found
+}
+
+
+
 # Test initialization.
+# shellcheck disable=SC2034
 BT_FILE_DEPS=(
   scripts/sdk/gn/base/bin/fssh.sh
   scripts/sdk/gn/base/bin/fuchsia-common.sh
+  scripts/sdk/gn/base/bin/sshconfig
+  scripts/sdk/gn/bash_tests/gn-bash-test-lib.sh
 )
+# shellcheck disable=SC2034
 BT_MOCKED_TOOLS=(
   scripts/sdk/gn/base/tools/device-finder
-  ssh
+  isolated_path_for/ssh
 )
-
-BT_INIT_TEMP_DIR() {
-  mkdir -p "${BT_TEMP_DIR}/scripts/sdk/gn/base/sdk/meta"
-}
 
 BT_RUN_TESTS "$@"

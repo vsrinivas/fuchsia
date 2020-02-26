@@ -7,12 +7,13 @@
 set -eu
 
 # Source common functions
-SCRIPT_SRC_DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd)"
+readonly MY_SCRIPT_SRC_DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd)"
 
 # Fuchsia command common functions.
-source "${SCRIPT_SRC_DIR}/fuchsia-common.sh" || exit $?
+# shellcheck disable=SC1090
+source "${MY_SCRIPT_SRC_DIR}/fuchsia-common.sh" || exit $?
 
-FUCHSIA_SDK_PATH="$(realpath "${SCRIPT_SRC_DIR}/..")"
+readonly FUCHSIA_SDK_PATH="$(realpath "${MY_SCRIPT_SRC_DIR}/..")"
 
 function usage {
   echo "Usage: $0"
@@ -27,7 +28,7 @@ function usage {
 PRIVATE_KEY_FILE=""
 DEVICE_NAME_FILTER=""
 DEVICE_IP=""
-declare -a POSITIONAL
+POSITIONAL=()
 
 # Parse command line
 while (( "$#" )); do
@@ -60,6 +61,13 @@ esac
 shift
 done
 
+readonly PRIVATE_KEY_FILE
+readonly DEVICE_NAME_FILTER
+readonly DEVICE_IP
+readonly POSITIONAL
+
+target_device_ip="${DEVICE_IP}"
+
 # Check for core SDK being present
 if [[ ! -d "${FUCHSIA_SDK_PATH}" ]]; then
   fx-error "Fuchsia Core SDK not found at ${FUCHSIA_SDK_PATH}."
@@ -68,8 +76,8 @@ fi
 
 # Get the device IP address.
 if [[ "${DEVICE_IP}" == "" ]]; then
-  DEVICE_IP=$(get-device-ip-by-name "$FUCHSIA_SDK_PATH" "$DEVICE_NAME_FILTER")
-  if [[ ! "$?" || -z "$DEVICE_IP" ]]; then
+  target_device_ip=$(get-device-ip-by-name "$FUCHSIA_SDK_PATH" "$DEVICE_NAME_FILTER")
+  if [[ ! "$?" || -z "$target_device_ip" ]]; then
     fx-error "Error finding device"
     exit 2
   fi
@@ -80,12 +88,12 @@ else
   fi
 fi
 
-SSH_ARGS=()
+ssh_args=()
 if [[ "${PRIVATE_KEY_FILE}" != "" ]]; then
-  SSH_ARGS+=( "-i" "${PRIVATE_KEY_FILE}" )
+  ssh_args+=( "-i" "${PRIVATE_KEY_FILE}" )
 fi
 
-SSH_ARGS+=( "${DEVICE_IP}" )
-SSH_ARGS+=( "${POSITIONAL[@]}" )
+ssh_args+=( "${target_device_ip}" )
+ssh_args+=( "${POSITIONAL[@]}" )
 
-ssh-cmd "${SSH_ARGS[@]}"
+ssh-cmd "${ssh_args[@]}"
