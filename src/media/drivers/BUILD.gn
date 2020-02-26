@@ -3,10 +3,11 @@
 # found in the LICENSE file.
 
 group("drivers") {
-  deps = [ "amlogic_encoder" ]
-
   if (target_cpu == "arm64") {
-    deps += [ "amlogic_decoder:amlogic_decoder" ]
+    deps = [
+      "amlogic_decoder:amlogic_decoder",
+      "amlogic_encoder",
+    ]
   }
 }
 
