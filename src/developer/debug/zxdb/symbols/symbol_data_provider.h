@@ -12,6 +12,7 @@
 
 #include "lib/fit/function.h"
 #include "src/developer/debug/ipc/protocol.h"
+#include "src/developer/debug/zxdb/common/err_or.h"
 #include "src/developer/debug/zxdb/common/int128_t.h"
 #include "src/developer/debug/zxdb/symbols/symbol.h"
 #include "src/lib/containers/cpp/array_view.h"
@@ -38,6 +39,8 @@ class SymbolContext;
 class SymbolDataProvider : public fxl::RefCountedThreadSafe<SymbolDataProvider> {
  public:
   using GetMemoryCallback = fit::callback<void(const Err&, std::vector<uint8_t>)>;
+
+  using GetTLSSegmentCallback = fit::callback<void(ErrOr<uint64_t>)>;
 
   // The Err indicates whether the operation was successful. Common failure cases are the thread is
   // running or this register wasn't saved on the stack frame.
@@ -87,8 +90,11 @@ class SymbolDataProvider : public fxl::RefCountedThreadSafe<SymbolDataProvider> 
   virtual uint64_t GetCanonicalFrameAddress() const;
 
   // Synchronously returns the debug address for a symbol context if available.
-  virtual std::optional<uint64_t> GetDebugAddressForContext(
-      const SymbolContext& context) const;
+  virtual std::optional<uint64_t> GetDebugAddressForContext(const SymbolContext& context) const;
+
+  // Get the address of the TLS segment for the given context. The TLS segment is where thread-local
+  // variables live.
+  virtual void GetTLSSegment(const SymbolContext& symbol_context, GetTLSSegmentCallback cb);
 
   // Request to retrieve a memory block from the debugged process. On success, the implementation
   // will call the callback with the retrieved data pointer.

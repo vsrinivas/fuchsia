@@ -27,6 +27,7 @@ class ProcessSymbolDataProvider : public SymbolDataProvider {
   debug_ipc::Arch GetArch() override;
   void GetMemoryAsync(uint64_t address, uint32_t size, GetMemoryCallback callback) override;
   void WriteMemory(uint64_t address, std::vector<uint8_t> data, WriteCallback cb) override;
+  void GetTLSSegment(const SymbolContext& symbol_context, GetTLSSegmentCallback cb) override;
 
   std::optional<uint64_t> GetDebugAddressForContext(const SymbolContext& context) const override;
 

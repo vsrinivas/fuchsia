@@ -65,6 +65,14 @@ fxl::RefPtr<SymbolDataProvider> MockProcess::GetSymbolDataProvider() const {
   return fxl::MakeRefCounted<SymbolDataProvider>();
 }
 
+void MockProcess::GetTLSHelpers(GetTLSHelpersCallback cb) {
+  if (tls_helpers_) {
+    return cb(&*tls_helpers_);
+  } else {
+    return cb(Err("MockProcess was not provided with TLS Helpers."));
+  }
+}
+
 void MockProcess::ReadMemory(uint64_t address, uint32_t size,
                              fit::callback<void(const Err&, MemoryDump)> cb) {
   MessageLoop::Current()->PostTask(FROM_HERE,

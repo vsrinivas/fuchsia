@@ -251,6 +251,7 @@ source_set("tests") {
     "pretty_frame_glob_unittest.cc",
     "pretty_stack_manager_unittest.cc",
     "process_impl_unittest.cc",
+    "process_symbol_data_provider_unittest.cc",
     "session_unittest.cc",
     "setting_schema_unittest.cc",
     "setting_value_unittest.cc",

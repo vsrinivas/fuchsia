@@ -57,27 +57,21 @@ void DwarfExprEvalTest::DoEvalTest(const std::vector<uint8_t> data, bool expecte
   eval_.Clear();
 
   bool callback_issued = false;
-  EXPECT_EQ(
-      expected_completion,
-      eval_.Eval(provider(), symbol_context_, data,
-                 [&callback_issued, expected_success, expected_completion, expected_result,
-                  expected_result_type, expected_message](DwarfExprEval* eval, const Err& err) {
-                   EXPECT_TRUE(eval->is_complete());
-                   EXPECT_EQ(expected_success, !err.has_error()) << err.msg();
-                   if (err.ok()) {
-                     EXPECT_EQ(expected_result_type, eval->GetResultType());
-                     if (expected_result_type != DwarfExprEval::ResultType::kData)
-                       EXPECT_EQ(expected_result, eval->GetResult());
-                   } else if (expected_message) {
-                     EXPECT_EQ(expected_message, err.msg());
-                   }
-                   callback_issued = true;
-
-                   // When we're doing an async completion, need to exit the
-                   // message loop to continue with the test.
-                   if (expected_completion == DwarfExprEval::Completion::kAsync)
-                     debug_ipc::MessageLoop::Current()->QuitNow();
-                 }));
+  EXPECT_EQ(expected_completion,
+            eval_.Eval(provider(), symbol_context_, data,
+                       [&callback_issued, expected_success, expected_result, expected_result_type,
+                        expected_message](DwarfExprEval* eval, const Err& err) {
+                         EXPECT_TRUE(eval->is_complete());
+                         EXPECT_EQ(expected_success, !err.has_error()) << err.msg();
+                         if (err.ok()) {
+                           EXPECT_EQ(expected_result_type, eval->GetResultType());
+                           if (expected_result_type != DwarfExprEval::ResultType::kData)
+                             EXPECT_EQ(expected_result, eval->GetResult());
+                         } else if (expected_message) {
+                           EXPECT_EQ(expected_message, err.msg());
+                         }
+                         callback_issued = true;
+                       }));
 
   if (expected_completion == DwarfExprEval::Completion::kAsync) {
     // In the async case the message loop needs to be run to get the result.
@@ -85,7 +79,7 @@ void DwarfExprEvalTest::DoEvalTest(const std::vector<uint8_t> data, bool expecte
     EXPECT_FALSE(callback_issued);
 
     // Ensure the callback was made after running the loop.
-    loop().Run();
+    loop().RunUntilNoTasks();
   }
 
   EXPECT_TRUE(eval_.is_complete());
@@ -792,6 +786,17 @@ TEST_F(DwarfExprEvalTest, Piece_Memory) {
   // Result should be {x = 2, y = 17}.
   std::vector<uint8_t> expected{0x02, 0, 0, 0, 0x11, 0, 0, 0};
   EXPECT_EQ(expected, eval().result_data());
+}
+
+TEST_F(DwarfExprEvalTest, GetTLSAddr) {
+  std::vector<uint8_t> program{
+      llvm::dwarf::DW_OP_const8u, 0, 1, 2, 3, 4, 5, 6, 7, llvm::dwarf::DW_OP_form_tls_address,
+  };
+
+  provider()->set_tls_segment(0xdeadbeef);
+
+  DoEvalTest(program, true, DwarfExprEval::Completion::kAsync, 0x7060504e1afbfef,
+             DwarfExprEval::ResultType::kPointer);
 }
 
 }  // namespace zxdb

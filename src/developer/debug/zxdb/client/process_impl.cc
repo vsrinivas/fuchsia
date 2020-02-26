@@ -6,8 +6,10 @@
 
 #include <inttypes.h>
 
+#include <algorithm>
 #include <set>
 
+#include "lib/fit/defer.h"
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/zxdb/client/memory_dump.h"
 #include "src/developer/debug/zxdb/client/process_symbol_data_provider.h"
@@ -16,6 +18,7 @@
 #include "src/developer/debug/zxdb/client/setting_schema_definition.h"
 #include "src/developer/debug/zxdb/client/target_impl.h"
 #include "src/developer/debug/zxdb/client/thread_impl.h"
+#include "src/developer/debug/zxdb/symbols/elf_symbol.h"
 #include "src/developer/debug/zxdb/symbols/input_location.h"
 #include "src/developer/debug/zxdb/symbols/loaded_module_symbols.h"
 #include "src/developer/debug/zxdb/symbols/module_symbol_status.h"
@@ -153,6 +156,18 @@ fxl::RefPtr<SymbolDataProvider> ProcessImpl::GetSymbolDataProvider() const {
         fxl::MakeRefCounted<ProcessSymbolDataProvider>(const_cast<ProcessImpl*>(this));
   }
   return symbol_data_provider_;
+}
+
+void ProcessImpl::GetTLSHelpers(GetTLSHelpersCallback cb) {
+  DoWithHelpers([cb = std::move(cb), this, weak_this = GetWeakPtr()](bool have_helpers) mutable {
+    if (!weak_this) {
+      cb(Err("Process died while getting TLS helper."));
+    } else if (have_helpers) {
+      cb(&tls_helpers_);
+    } else {
+      cb(Err("Could not find Zxdb support code."));
+    }
+  });
 }
 
 void ProcessImpl::ReadMemory(uint64_t address, uint32_t size,
@@ -300,6 +315,107 @@ void ProcessImpl::DidLoadModuleSymbols(LoadedModuleSymbols* module) {
 void ProcessImpl::WillUnloadModuleSymbols(LoadedModuleSymbols* module) {
   for (auto& observer : session()->process_observers())
     observer.WillUnloadModuleSymbols(this, module);
+}
+
+uint64_t ProcessImpl::GetSymbolAddress(const std::string& symbol, uint64_t* size) {
+  InputLocation location((Identifier(symbol)));
+  auto locs = symbols_.ResolveInputLocation(location);
+
+  for (const auto& loc : locs) {
+    if (auto sym = loc.symbol().Get()) {
+      if (auto elf_sym = sym->AsElfSymbol()) {
+        *size = elf_sym->size();
+        return loc.address();
+      }
+    }
+  }
+
+  return 0;
+}
+
+void ProcessImpl::DoWithHelpers(fit::callback<void(bool)> cb) {
+  if (tls_helper_state_ == kFailed) {
+    cb(false);
+  } else if (tls_helper_state_ == kLoaded) {
+    cb(true);
+  } else {
+    helper_waiters_.push_back(std::move(cb));
+    LoadTLSHelpers();
+  }
+}
+
+void ProcessImpl::LoadTLSHelpers() {
+  if (tls_helper_state_ != kUnloaded) {
+    return;
+  }
+
+  tls_helper_state_ = kLoading;
+
+  struct HelperToLoad {
+    uint64_t addr;
+    uint64_t size;
+    std::vector<uint8_t>* target;
+  };
+
+  std::vector<HelperToLoad> regions;
+  regions.resize(3);
+
+  regions[0].addr = GetSymbolAddress("zxdb.thrd_t", &regions[0].size);
+  regions[0].target = &tls_helpers_.thrd_t;
+  regions[1].addr = GetSymbolAddress("zxdb.link_map_tls_modid", &regions[1].size);
+  regions[1].target = &tls_helpers_.link_map_tls_modid;
+  regions[2].addr = GetSymbolAddress("zxdb.tlsbase", &regions[2].size);
+  regions[2].target = &tls_helpers_.tlsbase;
+
+  for (const auto& region : regions) {
+    if (region.addr && region.size) {
+      continue;
+    }
+
+    tls_helper_state_ = kFailed;
+
+    for (auto& cb : helper_waiters_) {
+      cb(false);
+    }
+
+    helper_waiters_.clear();
+
+    return;
+  }
+
+  std::shared_ptr<fit::deferred_callback> finish = std::make_shared<fit::deferred_callback>(
+      fit::defer_callback([this, weak_this = GetWeakPtr()]() {
+        if (!weak_this) {
+          return;
+        }
+
+        bool failed = tls_helpers_.thrd_t.empty() || tls_helpers_.link_map_tls_modid.empty() ||
+                      tls_helpers_.tlsbase.empty();
+
+        if (failed) {
+          tls_helper_state_ = kFailed;
+        } else {
+          tls_helper_state_ = kLoaded;
+        }
+
+        for (auto& cb : helper_waiters_) {
+          cb(!failed);
+        }
+
+        helper_waiters_.clear();
+      }));
+
+  for (const auto& region : regions) {
+    ReadMemory(region.addr, region.size,
+               [target = region.target, weak_this = GetWeakPtr(), finish](const Err& err,
+                                                                          MemoryDump dump) {
+                 if (weak_this && !err.has_error() && dump.AllValid()) {
+                   for (const auto& block : dump.blocks()) {
+                     std::copy(block.data.begin(), block.data.end(), std::back_inserter(*target));
+                   }
+                 }
+               });
+  }
 }
 
 void ProcessImpl::OnSymbolLoadFailure(const Err& err) {

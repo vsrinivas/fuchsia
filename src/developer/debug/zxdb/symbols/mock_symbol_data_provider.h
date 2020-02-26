@@ -27,6 +27,7 @@ class MockSymbolDataProvider : public SymbolDataProvider {
   void set_ip(uint64_t ip) { ip_ = ip; }
   void set_bp(uint64_t bp) { bp_ = bp; }
   void set_cfa(uint64_t cfa) { cfa_ = cfa; }
+  void set_tls_segment(uint64_t address) { tls_segment_ = address; }
 
   // Adds the given canned result for the given register. Set synchronous if the register contents
   // should be synchronously available, false if it should require a callback to retrieve. If the
@@ -52,6 +53,8 @@ class MockSymbolDataProvider : public SymbolDataProvider {
                      WriteCallback cb) override;
   std::optional<uint64_t> GetFrameBase() override;
   void GetFrameBaseAsync(GetFrameBaseCallback callback) override;
+  std::optional<uint64_t> GetDebugAddressForContext(const SymbolContext&) const override;
+  void GetTLSSegment(const SymbolContext& symbol_context, GetTLSSegmentCallback cb) override;
   uint64_t GetCanonicalFrameAddress() const override;
   void GetMemoryAsync(uint64_t address, uint32_t size, GetMemoryCallback callback) override;
   void WriteMemory(uint64_t address, std::vector<uint8_t> data, WriteCallback cb) override;
@@ -68,6 +71,8 @@ class MockSymbolDataProvider : public SymbolDataProvider {
   uint64_t ip_ = 0;
   uint64_t bp_ = 0;
   uint64_t cfa_ = 0;
+  uint64_t tls_segment_;
+  std::optional<std::tuple<uint8_t*, uint8_t*, uint8_t*>> tls_helpers_;
   std::map<debug_ipc::RegisterID, RegData> regs_;
 
   MockMemory memory_;

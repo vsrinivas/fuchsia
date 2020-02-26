@@ -211,6 +211,7 @@ class DwarfExprEval {
   Completion OpSkip();
   Completion OpStackValue();
   Completion OpSwap();
+  Completion OpTlsAddr();
 
   // Adjusts the instruction offset by the given amount, handling out-of-bounds as appropriate. This
   // is the backend for jumps and branches.

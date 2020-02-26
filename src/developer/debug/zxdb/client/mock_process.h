@@ -19,6 +19,9 @@ class MockProcess : public Process {
   // Sets the value returned by GetSymbols(). Does not take ownership.
   void set_symbols(ProcessSymbols* s) { symbols_ = s; }
 
+  // Sets the value returned by GetTLSHelpers().
+  void set_tls_helpers(TLSHelpers h) { tls_helpers_ = h; }
+
   // Process implementation:
   Target* GetTarget() const override;
   uint64_t GetKoid() const override;
@@ -36,6 +39,7 @@ class MockProcess : public Process {
   void ContinueUntil(std::vector<InputLocation> location,
                      fit::callback<void(const Err&)> cb) override;
   fxl::RefPtr<SymbolDataProvider> GetSymbolDataProvider() const override;
+  void GetTLSHelpers(GetTLSHelpersCallback cb) override;
   void ReadMemory(uint64_t address, uint32_t size,
                   fit::callback<void(const Err&, MemoryDump)> callback) override;
   void WriteMemory(uint64_t address, std::vector<uint8_t> data,
@@ -43,6 +47,7 @@ class MockProcess : public Process {
 
  private:
   ProcessSymbols* symbols_ = nullptr;
+  std::optional<TLSHelpers> tls_helpers_ = std::nullopt;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(MockProcess);
 };

@@ -48,6 +48,11 @@ std::optional<uint64_t> SymbolDataProvider::GetDebugAddressForContext(
   return std::nullopt;
 }
 
+void SymbolDataProvider::GetTLSSegment(const SymbolContext& /*symbol_context*/,
+                                       GetTLSSegmentCallback cb) {
+  cb(NoProcessErr());
+}
+
 void SymbolDataProvider::GetMemoryAsync(uint64_t address, uint32_t size, GetMemoryCallback cb) {
   debug_ipc::MessageLoop::Current()->PostTask(
       FROM_HERE, [cb = std::move(cb)]() mutable { cb(NoProcessErr(), std::vector<uint8_t>()); });

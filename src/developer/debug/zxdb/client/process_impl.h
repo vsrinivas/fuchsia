@@ -48,6 +48,7 @@ class ProcessImpl : public Process, public ProcessSymbols::Notifications {
   void ContinueUntil(std::vector<InputLocation> location,
                      fit::callback<void(const Err&)> cb) override;
   fxl::RefPtr<SymbolDataProvider> GetSymbolDataProvider() const override;
+  void GetTLSHelpers(GetTLSHelpersCallback cb) override;
   void ReadMemory(uint64_t address, uint32_t size,
                   fit::callback<void(const Err&, MemoryDump)> callback) override;
   virtual void WriteMemory(uint64_t address, std::vector<uint8_t> data,
@@ -68,12 +69,28 @@ class ProcessImpl : public Process, public ProcessSymbols::Notifications {
   void OnSymbolLoadFailure(const Err& err) override;
 
  private:
+  enum {
+    kUnloaded,
+    kLoading,
+    kLoaded,
+    kFailed,
+  } tls_helper_state_ = kUnloaded;
+
   // Syncs the threads_ list to the new list of threads passed in .
   void UpdateThreads(const std::vector<debug_ipc::ThreadRecord>& new_threads);
 
   // ProcessSymbols::Notifications implementation:
   void DidLoadModuleSymbols(LoadedModuleSymbols* module) override;
   void WillUnloadModuleSymbols(LoadedModuleSymbols* module) override;
+
+  uint64_t GetSymbolAddress(const std::string& symbol, uint64_t* size);
+
+  // Run the given callback as soon as the TLS helpers are loaded. If the TLS helpers failed to
+  // load, pass false to the callback.
+  void DoWithHelpers(fit::callback<void(bool)> cb);
+
+  // Load the TLS helpers.
+  void LoadTLSHelpers();
 
   TargetImpl* const target_;  // The target owns |this|.
   const uint64_t koid_;
@@ -83,6 +100,12 @@ class ProcessImpl : public Process, public ProcessSymbols::Notifications {
   std::map<uint64_t, std::unique_ptr<ThreadImpl>> threads_;
 
   ProcessSymbols symbols_;
+
+  // TLS Helper blobs.
+  TLSHelpers tls_helpers_;
+
+  // Queue of tasks waiting for the helper blobs to be loaded.
+  std::vector<fit::callback<void(bool)>> helper_waiters_;
 
   // Lazily-populated.
   mutable fxl::RefPtr<ProcessSymbolDataProvider> symbol_data_provider_;

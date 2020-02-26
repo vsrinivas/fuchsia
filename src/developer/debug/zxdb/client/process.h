@@ -13,6 +13,8 @@
 #include "lib/fit/function.h"
 #include "src/developer/debug/zxdb/client/client_object.h"
 #include "src/developer/debug/zxdb/client/process_observer.h"
+#include "src/developer/debug/zxdb/common/err_or.h"
+#include "src/developer/debug/zxdb/symbols/symbol_data_provider.h"
 #include "src/lib/containers/cpp/circular_deque.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
@@ -32,12 +34,19 @@ struct InputLocation;
 class BacktraceCache;
 class MemoryDump;
 class ProcessSymbols;
-class SymbolDataProvider;
 class Target;
 class Thread;
 
 class Process : public ClientObject {
  public:
+  struct TLSHelpers {
+    std::vector<uint8_t> thrd_t;
+    std::vector<uint8_t> link_map_tls_modid;
+    std::vector<uint8_t> tlsbase;
+  };
+
+  using GetTLSHelpersCallback = fit::callback<void(ErrOr<const TLSHelpers*>)>;
+
   // Documents how this process was started.
   // This is useful for user feedback.
   enum class StartType {
@@ -122,6 +131,11 @@ class Process : public ClientObject {
   // If the caller has a Frame, prefer Frame::GetSymbolDataProvider() which does have access to
   // registers and other frame data.
   virtual fxl::RefPtr<SymbolDataProvider> GetSymbolDataProvider() const = 0;
+
+  // Get the TLS helper code for this process. These are memory blobs containing DWARF programs
+  // which we can run to evaluate thread-local addresses. The callback is issued synchronously if
+  // the data is available.
+  virtual void GetTLSHelpers(GetTLSHelpersCallback cb) = 0;
 
   // Reads memory from the debugged process.
   virtual void ReadMemory(uint64_t address, uint32_t size,

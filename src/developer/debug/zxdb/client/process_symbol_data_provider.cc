@@ -13,8 +13,9 @@
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/common/err.h"
-#include "src/developer/debug/zxdb/symbols/process_symbols.h"
+#include "src/developer/debug/zxdb/symbols/dwarf_expr_eval.h"
 #include "src/developer/debug/zxdb/symbols/loaded_module_symbols.h"
+#include "src/developer/debug/zxdb/symbols/process_symbols.h"
 #include "src/developer/debug/zxdb/symbols/symbol_context.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
@@ -116,6 +117,55 @@ std::optional<uint64_t> ProcessSymbolDataProvider::GetDebugAddressForContext(
   }
 
   return std::nullopt;
+}
+
+void ProcessSymbolDataProvider::GetTLSSegment(const SymbolContext& symbol_context,
+                                              GetTLSSegmentCallback cb) {
+  if (!process_) {
+    return cb(Err("Thread-local storage requires a current process."));
+  }
+
+  auto syms = process_->GetSymbols();
+  if (!syms) {
+    return cb(Err("Could not load symbols for process when resolving TLS segment."));
+  }
+
+  auto lms = syms->GetModuleForAddress(symbol_context.load_address());
+  if (!lms) {
+    return cb(Err("Could not find current module when resolving TLS segment."));
+  }
+
+  process_->GetTLSHelpers([debug_address = lms->debug_address(), this_ref = RefPtrTo(this),
+                           symbol_context,
+                           cb = std::move(cb)](ErrOr<const Process::TLSHelpers*> helpers) mutable {
+    if (helpers.has_error()) {
+      return cb(helpers.err());
+    }
+
+    std::vector<uint8_t> program;
+    program.reserve(helpers.value()->link_map_tls_modid.size() + helpers.value()->tlsbase.size() +
+                    1);
+
+    std::copy(helpers.value()->link_map_tls_modid.begin(),
+              helpers.value()->link_map_tls_modid.end(), std::back_inserter(program));
+    std::copy(helpers.value()->tlsbase.begin(), helpers.value()->tlsbase.end(),
+              std::back_inserter(program));
+
+    auto dwarf_eval = std::make_shared<DwarfExprEval>();
+    dwarf_eval->Push(static_cast<DwarfExprEval::StackEntry>(debug_address));
+    dwarf_eval->Eval(this_ref, symbol_context, program,
+                     [dwarf_eval, cb = std::move(cb)](DwarfExprEval*, const Err& err) mutable {
+                       if (err.has_error()) {
+                         return cb(err);
+                       }
+
+                       if (dwarf_eval->GetResultType() != DwarfExprEval::ResultType::kPointer) {
+                         return cb(Err("TLS DWARF expression did not produce a pointer."));
+                       }
+
+                       cb(static_cast<uint64_t>(dwarf_eval->GetResult()));
+                     });
+  });
 }
 
 }  // namespace zxdb

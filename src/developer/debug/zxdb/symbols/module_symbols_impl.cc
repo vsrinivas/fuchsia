@@ -634,10 +634,11 @@ void ModuleSymbolsImpl::FillElfSymbols() {
   // save more flags and expose them in the ElfSymbol class.
   for (const auto& [name, sym] : elf_syms) {
     // The symbol type is the low 4 bits. The higher bits encode the visibility which we don't
-    // care about. We only need to index objects and code.
+    // care about. We only need to index objects and code, and a couple of special symbols left
+    // specifically for Zxdb's usage.
     int symbol_type = sym.st_info & 0xf;
     if (symbol_type != elflib::STT_OBJECT && symbol_type != elflib::STT_FUNC &&
-        symbol_type != elflib::STT_TLS)
+        symbol_type != elflib::STT_TLS && name.substr(0, 5) != "zxdb.")
       continue;
 
     if (sym.st_value == 0)

@@ -250,7 +250,6 @@ DwarfExprEval::Completion DwarfExprEval::EvalOneOp() {
     case llvm::dwarf::DW_OP_call2:     // 2-byte offset of DIE.
     case llvm::dwarf::DW_OP_call4:     // 4-byte offset of DIE.
     case llvm::dwarf::DW_OP_call_ref:  // 4- or 8-byte offset of DIE.
-    case llvm::dwarf::DW_OP_form_tls_address:
       // TODO(brettw) implement these.
       ReportUnimplementedOpcode(op);
       return Completion::kSync;
@@ -274,9 +273,8 @@ DwarfExprEval::Completion DwarfExprEval::EvalOneOp() {
     case llvm::dwarf::DW_OP_stack_value:
       return OpStackValue();
     case llvm::dwarf::DW_OP_GNU_push_tls_address:
-      // TODO(DX-694) support TLS.
-      ReportError("TLS not currently supported. See DX-694.");
-      return Completion::kSync;
+    case llvm::dwarf::DW_OP_form_tls_address:
+      return OpTlsAddr();
 
     case llvm::dwarf::DW_OP_implicit_pointer:
     case 0xf2:  // DW_OP_GNU_implicit_pointer (pre-DWARF5 GNU extension for this).
@@ -870,6 +868,37 @@ DwarfExprEval::Completion DwarfExprEval::OpSwap() {
   else
     std::swap(stack_[stack_.size() - 1], stack_[stack_.size() - 2]);
   return Completion::kSync;
+}
+
+DwarfExprEval::Completion DwarfExprEval::OpTlsAddr() {
+  if (stack_.size() < 1) {
+    ReportStackUnderflow();
+    return Completion::kSync;
+  }
+
+  auto debug_address = data_provider_->GetDebugAddressForContext(symbol_context_);
+
+  if (!debug_address) {
+    ReportError("Debug address unavailable.");
+    return Completion::kSync;
+  }
+
+  data_provider_->GetTLSSegment(
+      symbol_context_, [weak_eval = weak_factory_.GetWeakPtr()](ErrOr<uint64_t> value) {
+        if (!weak_eval) {
+          return;
+        }
+
+        if (value.has_error()) {
+          weak_eval->ReportError(value.err());
+          return;
+        }
+
+        weak_eval->stack_.back() += static_cast<StackEntry>(value.value());
+        weak_eval->ContinueEval();
+      });
+
+  return Completion::kAsync;
 }
 
 void DwarfExprEval::Skip(SignedStackEntry amount) {

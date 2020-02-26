@@ -93,6 +93,17 @@ void MockSymbolDataProvider::GetFrameBaseAsync(GetFrameBaseCallback callback) {
       });
 }
 
+std::optional<uint64_t> MockSymbolDataProvider::GetDebugAddressForContext(
+    const SymbolContext&) const {
+  return 0;
+}
+
+void MockSymbolDataProvider::GetTLSSegment(const SymbolContext& /*symbol_context*/,
+                                           GetTLSSegmentCallback cb) {
+  debug_ipc::MessageLoop::Current()->PostTask(
+      FROM_HERE, [cb = std::move(cb), tls_segment = tls_segment_]() mutable { cb(tls_segment); });
+}
+
 uint64_t MockSymbolDataProvider::GetCanonicalFrameAddress() const { return cfa_; }
 
 void MockSymbolDataProvider::GetMemoryAsync(uint64_t address, uint32_t size,
