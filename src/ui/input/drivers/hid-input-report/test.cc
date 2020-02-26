@@ -12,9 +12,11 @@
 #include <unistd.h>
 #include <zircon/syscalls.h>
 
+#include <ddk/metadata/buttons.h>
 #include <ddktl/protocol/hiddevice.h>
 #include <hid/ambient-light.h>
 #include <hid/boot.h>
+#include <hid/buttons.h>
 #include <hid/paradise.h>
 #include <hid/usages.h>
 #include <zxtest/zxtest.h>
@@ -510,6 +512,82 @@ TEST_F(HidDevTest, KeyboardOutputReportTest) {
   std::vector<uint8_t> set_report = fake_hid_.GetLastSetReport();
   ASSERT_EQ(set_report.size(), 1);
   ASSERT_EQ(set_report[0], 0b101);
+  // Close the instance device.
+  dev_ops.ops->close(dev_ops.ctx, 0);
+}
+
+TEST_F(HidDevTest, ConsumerControlTest) {
+  {
+    const uint8_t* descriptor;
+    size_t descriptor_size = get_buttons_report_desc(&descriptor);
+    std::vector<uint8_t> desc_vector(descriptor, descriptor + descriptor_size);
+    fake_hid_.SetReportDesc(desc_vector);
+  }
+
+  device_->Bind();
+
+  // Open an instance device.
+  zx_device_t* open_dev;
+  ASSERT_OK(device_->DdkOpen(&open_dev, 0));
+  // Opening the device created an instance device to be created, and we can
+  // get its arguments here.
+  ProtocolDeviceOps dev_ops = ddk_.GetLastDeviceOps();
+
+  auto sync_client = fuchsia_input_report::InputDevice::SyncClient(std::move(ddk_.FidlClient()));
+
+  // Get the report descriptor.
+  fuchsia_input_report::InputDevice::ResultOf::GetDescriptor result = sync_client.GetDescriptor();
+  ASSERT_OK(result.status());
+  fuchsia_input_report::DeviceDescriptor& desc = result->descriptor;
+  ASSERT_TRUE(desc.has_consumer_control());
+  ASSERT_TRUE(desc.consumer_control().has_input());
+  fuchsia_input_report::ConsumerControlInputDescriptor& consumer_control_desc =
+      desc.consumer_control().input();
+  ASSERT_TRUE(consumer_control_desc.has_buttons());
+  ASSERT_EQ(4, consumer_control_desc.buttons().count());
+
+  ASSERT_EQ(consumer_control_desc.buttons()[0],
+            llcpp::fuchsia::input::report::ConsumerControlButton::VOLUME_UP);
+  ASSERT_EQ(consumer_control_desc.buttons()[1],
+            llcpp::fuchsia::input::report::ConsumerControlButton::VOLUME_DOWN);
+  ASSERT_EQ(consumer_control_desc.buttons()[2],
+            llcpp::fuchsia::input::report::ConsumerControlButton::REBOOT);
+  ASSERT_EQ(consumer_control_desc.buttons()[3],
+            llcpp::fuchsia::input::report::ConsumerControlButton::MIC_MUTE);
+
+  // Create the report.
+  {
+    struct buttons_input_rpt report = {};
+    report.rpt_id = BUTTONS_RPT_ID_INPUT;
+    fill_button_in_report(BUTTONS_ID_VOLUME_UP, true, &report);
+    fill_button_in_report(BUTTONS_ID_FDR, true, &report);
+    fill_button_in_report(BUTTONS_ID_MIC_MUTE, true, &report);
+
+    std::vector<uint8_t> report_vector(reinterpret_cast<uint8_t*>(&report),
+                                       reinterpret_cast<uint8_t*>(&report) + sizeof(report));
+    fake_hid_.SetReport(report_vector);
+    fake_hid_.SendReport();
+  }
+
+  // Get the report.
+  fuchsia_input_report::InputDevice::ResultOf::GetReports report_result = sync_client.GetReports();
+  ASSERT_OK(result.status());
+
+  fidl::VectorView<fuchsia_input_report::InputReport>& reports = report_result->reports;
+  ASSERT_EQ(1, reports.count());
+
+  ASSERT_TRUE(reports[0].has_consumer_control());
+  fuchsia_input_report::ConsumerControlInputReport& report = reports[0].consumer_control();
+  EXPECT_TRUE(report.has_pressed_buttons());
+  EXPECT_EQ(3, report.pressed_buttons().count());
+
+  EXPECT_EQ(report.pressed_buttons()[0],
+            llcpp::fuchsia::input::report::ConsumerControlButton::VOLUME_UP);
+  EXPECT_EQ(report.pressed_buttons()[1],
+            llcpp::fuchsia::input::report::ConsumerControlButton::REBOOT);
+  EXPECT_EQ(report.pressed_buttons()[2],
+            llcpp::fuchsia::input::report::ConsumerControlButton::MIC_MUTE);
+
   // Close the instance device.
   dev_ops.ops->close(dev_ops.ctx, 0);
 }

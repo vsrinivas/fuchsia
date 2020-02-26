@@ -9,6 +9,7 @@ source_set("hid-input-report") {
   sources = [
     "axis.cc",
     "consumer_control.cc",
+    "device.cc",
     "fidl.cc",
     "keyboard.cc",
     "mouse.cc",
@@ -29,6 +30,7 @@ test("lib-hid-input-report-test") {
   sources = [
     "axis.cc",
     "consumer_control.cc",
+    "device.cc",
     "fidl.cc",
     "keyboard.cc",
     "mouse.cc",

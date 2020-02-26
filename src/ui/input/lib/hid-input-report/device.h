@@ -43,6 +43,11 @@ class Device {
   virtual uint8_t InputReportId() const = 0;
 };
 
+// Create `out_device` from a HID descriptor. `out_device` is returned fully formed,
+// it does not need any additional initialization.
+ParseResult CreateDevice(const hid::ReportDescriptor* descriptor,
+                         std::unique_ptr<Device>* out_device);
+
 }  // namespace hid_input_report
 
 #endif  // SRC_UI_INPUT_LIB_HID_INPUT_REPORT_DEVICE_H_

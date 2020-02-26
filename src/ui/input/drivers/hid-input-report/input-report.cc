@@ -24,10 +24,6 @@
 
 #include "src/ui/input/lib/hid-input-report/descriptors.h"
 #include "src/ui/input/lib/hid-input-report/device.h"
-#include "src/ui/input/lib/hid-input-report/keyboard.h"
-#include "src/ui/input/lib/hid-input-report/mouse.h"
-#include "src/ui/input/lib/hid-input-report/sensor.h"
-#include "src/ui/input/lib/hid-input-report/touch.h"
 
 namespace hid_input_report_dev {
 
@@ -89,49 +85,14 @@ void InputReport::RemoveInstanceFromList(InputReportInstance* instance) {
 }
 
 bool InputReport::ParseHidInputReportDescriptor(const hid::ReportDescriptor* report_desc) {
-  // Traverse up the nested collections to the Application collection.
-  hid::Collection* collection = report_desc->input_fields[0].col;
-  while (collection != nullptr) {
-    if (collection->type == hid::CollectionType::kApplication) {
-      break;
-    }
-    collection = collection->parent;
-  }
-
-  if (collection == nullptr) {
-    zxlogf(ERROR,
-           "Can't process HID report descriptor; Needed a valid Collection but didn't get one\n");
+  std::unique_ptr<hid_input_report::Device> device;
+  hid_input_report::ParseResult result = hid_input_report::CreateDevice(report_desc, &device);
+  if (result != hid_input_report::ParseResult::kParseOk) {
     return false;
   }
 
-  std::unique_ptr<hid_input_report::Device> parse_device;
-  if ((collection->usage.page == ::hid::usage::Page::kGenericDesktop) &&
-      (collection->usage.usage == ::hid::usage::GenericDesktop::kMouse)) {
-    parse_device = std::make_unique<hid_input_report::Mouse>();
-  } else if (collection->usage.page == ::hid::usage::Page::kSensor) {
-    parse_device = std::make_unique<hid_input_report::Sensor>();
-  } else if (collection->usage.page == ::hid::usage::Page::kDigitizer &&
-             (collection->usage.usage == ::hid::usage::Digitizer::kTouchScreen)) {
-    parse_device = std::make_unique<hid_input_report::Touch>();
-  } else if (collection->usage.page == ::hid::usage::Page::kDigitizer &&
-             (collection->usage.usage == ::hid::usage::Digitizer::kTouchPad)) {
-    parse_device = std::make_unique<hid_input_report::Touch>();
-  } else if (collection->usage.page == ::hid::usage::Page::kGenericDesktop &&
-             (collection->usage.usage == ::hid::usage::GenericDesktop::kKeyboard)) {
-    parse_device = std::make_unique<hid_input_report::Keyboard>();
-  }
-
-  if (!parse_device) {
-    return false;
-  }
-
-  if (parse_device->ParseReportDescriptor(*report_desc) !=
-      hid_input_report::ParseResult::kParseOk) {
-    zxlogf(ERROR, "Failed to parse mouse descriptor");
-  }
-
-  descriptors_.push_back(parse_device->GetDescriptor());
-  devices_.push_back(std::move(parse_device));
+  descriptors_.push_back(device->GetDescriptor());
+  devices_.push_back(std::move(device));
   return true;
 }
 
