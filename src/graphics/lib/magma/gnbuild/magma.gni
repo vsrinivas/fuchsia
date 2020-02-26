@@ -81,9 +81,11 @@ magma_libvulkan_hardware_envs += magma_libvulkan_arm_hardware_envs
 
 template("magma_vulkan_icd") {
   assert(defined(invoker.output_name), "output_name must be provided")
+  if (is_fuchsia) {
+    assert(defined(invoker.imported_symbols_allowlist),
+           "imported_symbols_allowlist must be provided")
+  }
 
-  # TODO(39136): Enable this assert once all instances of this template have an allowlist.
-  # assert(defined(invoker.imported_symbols_allowlist), "imported_symbols_allowlist must be provided")
   has_allowlist = defined(invoker.imported_symbols_allowlist)
 
   shared_library_target_name = "${target_name}__shlib"
