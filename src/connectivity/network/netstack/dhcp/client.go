@@ -610,7 +610,7 @@ func (c *Client) send(ctx context.Context, info *Info, ep tcpip.Endpoint, opts o
 			panic(fmt.Sprintf("UDP writes are nonblocking; saw %d/%d", n, len(payload)))
 		}
 		if err != nil {
-			return fmt.Errorf("client write: %w", err)
+			return fmt.Errorf("client write: %s", err)
 		}
 		return nil
 	}

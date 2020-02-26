@@ -763,7 +763,7 @@ func (ns *Netstack) addLoopback() error {
 
 	// Loopback interfaces do not need NDP.
 	if err := ns.stack.SetNDPConfigurations(nicid, stack.NDPConfigurations{}); err != nil {
-		return fmt.Errorf("error setting NDP configurations to NIC ID %d: %w", nicid, err)
+		return fmt.Errorf("error setting NDP configurations to NIC ID %d: %s", nicid, err)
 	}
 
 	ipv4LoopbackPrefix := tcpip.AddressMask(net.IP(ipv4Loopback).DefaultMask()).Prefix()
