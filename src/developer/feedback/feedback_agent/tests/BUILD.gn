@@ -252,7 +252,7 @@ executable("feedback_agent_integration_test") {
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.update.channel",
     "//sdk/lib/fidl/cpp",
-    "//sdk/lib/inspect/testing/cpp",
+    "//sdk/lib/inspect/contrib/cpp:archive_reader",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/developer/feedback/feedback_agent:constants",

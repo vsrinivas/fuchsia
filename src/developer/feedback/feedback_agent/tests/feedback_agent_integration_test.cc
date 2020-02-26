@@ -14,8 +14,7 @@
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fit/result.h>
 #include <lib/gtest/real_loop_fixture.h>
-#include <lib/inspect/cpp/reader.h>
-#include <lib/inspect/testing/cpp/inspect.h>
+#include <lib/inspect/contrib/cpp/archive_reader.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 #include <lib/zx/job.h>
@@ -61,8 +60,6 @@ using fuchsia::hwinfo::BoardInfo;
 using fuchsia::hwinfo::BoardPtr;
 using fuchsia::hwinfo::ProductInfo;
 using fuchsia::hwinfo::ProductPtr;
-using inspect::testing::PropertyList;
-using inspect::testing::UintIs;
 using testing::UnorderedElementsAreArray;
 
 class LogListener : public fuchsia::logger::LogListener {
@@ -155,6 +152,19 @@ class FeedbackAgentIntegrationTest : public sys::testing::TestWithEnvironment {
     bool ready = false;
     inspect_test_app_controller_.events().OnDirectoryReady = [&ready] { ready = true; };
     RunLoopUntil([&ready] { return ready; });
+
+    // Additionally wait for the component to appear in the observer's output.
+    async::Executor executor(dispatcher());
+
+    inspect::contrib::ArchiveReader reader(
+        environment_services_->Connect<fuchsia::diagnostics::Archive>(),
+        {"inspect_test_app_environment/inspect_test_app.cmx:root"});
+
+    bool done = false;
+    executor.schedule_task(reader.SnapshotInspectUntilPresent({"inspect_test_app.cmx"})
+                               .then([&](fit::result<std::vector<inspect::contrib::DiagnosticsData>,
+                                                     std::string>& unused) { done = true; }));
+    RunLoopUntil([&done] { return done; });
   }
 
   // Makes sure the component serving fuchsia.hwinfo.BoardInfo is up and running as the
@@ -289,27 +299,34 @@ class FeedbackAgentIntegrationTest : public sys::testing::TestWithEnvironment {
   }
 
   // Checks the Inspect tree for "feedback_agent.cmx".
-  void CheckFeedbackAgentInspectTree(const uint64_t expected_total_num_connections,
-                                     const uint64_t expected_current_num_connections) {
-    const std::string glob_pattern = fxl::Substitute(
-        "/hub/r/$0/*/c/feedback_agent.cmx/*/*/diagnostics/root.inspect", test_name_);
-    // Wait until the |root.inspect| file is created.
-    RunLoopUntil([&glob_pattern] {
-      files::Glob glob(glob_pattern);
-      return glob.size() > 0;
-    });
+  void CheckFeedbackAgentInspectTree(const int64_t expected_total_num_connections,
+                                     const int64_t expected_current_num_connections) {
+    async::Executor executor(dispatcher());
 
-    files::Glob glob(glob_pattern);
-    EXPECT_EQ(glob.size(), 1u);
+    inspect::contrib::ArchiveReader reader(
+        environment_services_->Connect<fuchsia::diagnostics::Archive>(),
+        {fxl::Substitute("$0/feedback_agent.cmx:root", test_name_)});
 
-    std::vector<uint8_t> buffer;
-    ASSERT_TRUE(files::ReadFileToVector(*glob.begin(), &buffer));
-    inspect::Hierarchy tree = inspect::ReadFromBuffer(std::move(buffer)).take_value();
-    EXPECT_THAT(tree.node(),
-                PropertyList(testing::UnorderedElementsAreArray({
-                    UintIs("total_num_connections", expected_total_num_connections),
-                    UintIs("current_num_connections", expected_current_num_connections),
-                })));
+    fit::result<inspect::contrib::DiagnosticsData, std::string> data;
+
+    executor.schedule_task(
+        reader.SnapshotInspectUntilPresent({"feedback_agent.cmx"})
+            .then(
+                [&](fit::result<std::vector<inspect::contrib::DiagnosticsData>, std::string>& val) {
+                  if (val.is_error()) {
+                    data = fit::error(val.take_error());
+                  } else {
+                    data = fit::ok(std::move(val.take_value()[0]));
+                  }
+                }));
+
+    RunLoopUntil([&] { return !!data; });
+
+    ASSERT_TRUE(data.is_ok());
+    EXPECT_EQ(rapidjson::Value(expected_total_num_connections),
+              data.value().GetByPath({"root", "total_num_connections"}));
+    EXPECT_EQ(rapidjson::Value(expected_current_num_connections),
+              data.value().GetByPath({"root", "current_num_connections"}));
   }
 
  private:
