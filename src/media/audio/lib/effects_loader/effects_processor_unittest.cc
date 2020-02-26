@@ -20,10 +20,10 @@ class EffectsProcessorTest : public testing::EffectsLoaderTestBase {};
 TEST_F(EffectsProcessorTest, CreateDelete) {
   test_effects().AddEffect("assign_to_1.0").WithAction(TEST_EFFECTS_ACTION_ASSIGN, 1.0);
 
-  Effect effect3 = effects_loader()->CreateEffect(0, 1, 1, 1, {});
-  Effect effect1 = effects_loader()->CreateEffect(0, 1, 1, 1, {});
-  Effect effect2 = effects_loader()->CreateEffect(0, 1, 1, 1, {});
-  Effect effect4 = effects_loader()->CreateEffect(0, 1, 1, 1, {});
+  Effect effect3 = effects_loader()->CreateEffect(0, "", 1, 1, 1, {});
+  Effect effect1 = effects_loader()->CreateEffect(0, "", 1, 1, 1, {});
+  Effect effect2 = effects_loader()->CreateEffect(0, "", 1, 1, 1, {});
+  Effect effect4 = effects_loader()->CreateEffect(0, "", 1, 1, 1, {});
 
   ASSERT_TRUE(effect1);
   ASSERT_TRUE(effect2);
@@ -62,9 +62,9 @@ TEST_F(EffectsProcessorTest, CreateDelete) {
 
 TEST_F(EffectsProcessorTest, AddEffectWithMismatchedChannelConfig) {
   test_effects().AddEffect("assign_to_1.0").WithAction(TEST_EFFECTS_ACTION_ASSIGN, 1.0);
-  Effect single_channel_effect1 = effects_loader()->CreateEffect(0, 1, 1, 1, {});
-  Effect single_channel_effect2 = effects_loader()->CreateEffect(0, 1, 1, 1, {});
-  Effect two_channel_effect = effects_loader()->CreateEffect(0, 1, 2, 2, {});
+  Effect single_channel_effect1 = effects_loader()->CreateEffect(0, "", 1, 1, 1, {});
+  Effect single_channel_effect2 = effects_loader()->CreateEffect(0, "", 1, 1, 1, {});
+  Effect two_channel_effect = effects_loader()->CreateEffect(0, "", 1, 2, 2, {});
 
   EffectsProcessor processor;
   EXPECT_EQ(processor.channels_in(), 0u);
@@ -104,10 +104,10 @@ TEST_F(EffectsProcessorTest, ProcessInPlaceFlush) {
   EXPECT_EQ(3.0, buff[3]);
 
   // Chaining four instances together, ProcessInPlace and flush should succeed.
-  Effect effect1 = effects_loader()->CreateEffect(0, 1, 1, 1, {});
-  Effect effect2 = effects_loader()->CreateEffect(1, 1, 1, 1, {});
-  Effect effect3 = effects_loader()->CreateEffect(2, 1, 1, 1, {});
-  Effect effect4 = effects_loader()->CreateEffect(3, 1, 1, 1, {});
+  Effect effect1 = effects_loader()->CreateEffect(0, "", 1, 1, 1, {});
+  Effect effect2 = effects_loader()->CreateEffect(1, "", 1, 1, 1, {});
+  Effect effect3 = effects_loader()->CreateEffect(2, "", 1, 1, 1, {});
+  Effect effect4 = effects_loader()->CreateEffect(3, "", 1, 1, 1, {});
   ASSERT_TRUE(effect1 && effect2 && effect3 && effect4);
 
   EXPECT_EQ(processor.AddEffect(std::move(effect1)), ZX_OK);
@@ -180,24 +180,24 @@ TEST_F(EffectsProcessorTest, ReportBlockSize) {
   EXPECT_EQ(1u, processor.block_size());
 
   // Add an effect and observe a change in block_size.
-  Effect effect1 = effects_loader()->CreateEffectByName("block_size_3", 1, 1, 1, {});
+  Effect effect1 = effects_loader()->CreateEffectByName("block_size_3", "", 1, 1, 1, {});
   ASSERT_TRUE(effect1);
   processor.AddEffect(std::move(effect1));
   EXPECT_EQ(3u, processor.block_size());
 
   // Add another effect and observe a change in block_size (lcm(3,5)
-  Effect effect2 = effects_loader()->CreateEffectByName("block_size_5", 1, 1, 1, {});
+  Effect effect2 = effects_loader()->CreateEffectByName("block_size_5", "", 1, 1, 1, {});
   ASSERT_TRUE(effect2);
   processor.AddEffect(std::move(effect2));
   EXPECT_EQ(15u, processor.block_size());
 
   // Add some final effects that should not change block_size.
-  Effect effect3 = effects_loader()->CreateEffectByName("block_size_any", 1, 1, 1, {});
+  Effect effect3 = effects_loader()->CreateEffectByName("block_size_any", "", 1, 1, 1, {});
   ASSERT_TRUE(effect3);
   processor.AddEffect(std::move(effect3));
   EXPECT_EQ(15u, processor.block_size());
 
-  Effect effect4 = effects_loader()->CreateEffectByName("block_size_1", 1, 1, 1, {});
+  Effect effect4 = effects_loader()->CreateEffectByName("block_size_1", "", 1, 1, 1, {});
   ASSERT_TRUE(effect4);
   processor.AddEffect(std::move(effect4));
   EXPECT_EQ(15u, processor.block_size());
@@ -218,25 +218,25 @@ TEST_F(EffectsProcessorTest, ReportMaxBufferSize) {
 
   // Add an effect and observe a change in buffer size.
   {
-    Effect effect = effects_loader()->CreateEffectByName("max_buffer_1024", 1, 1, 1, {});
+    Effect effect = effects_loader()->CreateEffectByName("max_buffer_1024", "", 1, 1, 1, {});
     ASSERT_TRUE(effect);
     processor.AddEffect(std::move(effect));
     EXPECT_EQ(1024u, processor.max_batch_size());
   }
   {
-    Effect effect = effects_loader()->CreateEffectByName("max_buffer_512", 1, 1, 1, {});
+    Effect effect = effects_loader()->CreateEffectByName("max_buffer_512", "", 1, 1, 1, {});
     ASSERT_TRUE(effect);
     processor.AddEffect(std::move(effect));
     EXPECT_EQ(512u, processor.max_batch_size());
   }
   {
-    Effect effect = effects_loader()->CreateEffectByName("max_buffer_256", 1, 1, 1, {});
+    Effect effect = effects_loader()->CreateEffectByName("max_buffer_256", "", 1, 1, 1, {});
     ASSERT_TRUE(effect);
     processor.AddEffect(std::move(effect));
     EXPECT_EQ(256u, processor.max_batch_size());
   }
   {
-    Effect effect = effects_loader()->CreateEffectByName("max_buffer_128", 1, 1, 1, {});
+    Effect effect = effects_loader()->CreateEffectByName("max_buffer_128", "", 1, 1, 1, {});
     ASSERT_TRUE(effect);
     processor.AddEffect(std::move(effect));
     EXPECT_EQ(128u, processor.max_batch_size());
@@ -245,7 +245,7 @@ TEST_F(EffectsProcessorTest, ReportMaxBufferSize) {
   // Add a final effect with an increasing max block size to verify we don't increase the reported
   // buffer size.
   {
-    Effect effect = effects_loader()->CreateEffectByName("max_buffer_1024", 1, 1, 1, {});
+    Effect effect = effects_loader()->CreateEffectByName("max_buffer_1024", "", 1, 1, 1, {});
     ASSERT_TRUE(effect);
     processor.AddEffect(std::move(effect));
     EXPECT_EQ(128u, processor.max_batch_size());
@@ -277,7 +277,8 @@ TEST_F(EffectsProcessorTest, AlignBufferWithBlockSize) {
   EXPECT_EQ(1u, processor.block_size());
 
   {
-    Effect effect = effects_loader()->CreateEffectByName("max_buffer_1024_any_align", 1, 1, 1, {});
+    Effect effect =
+        effects_loader()->CreateEffectByName("max_buffer_1024_any_align", "", 1, 1, 1, {});
     ASSERT_TRUE(effect);
     processor.AddEffect(std::move(effect));
     EXPECT_EQ(1024u, processor.max_batch_size());
@@ -286,7 +287,7 @@ TEST_F(EffectsProcessorTest, AlignBufferWithBlockSize) {
 
   // Adding an effect with 300 alignment should drop our max buffer size from 1024 -> 900.
   {
-    Effect effect = effects_loader()->CreateEffectByName("any_buffer_300_align", 1, 1, 1, {});
+    Effect effect = effects_loader()->CreateEffectByName("any_buffer_300_align", "", 1, 1, 1, {});
     ASSERT_TRUE(effect);
     processor.AddEffect(std::move(effect));
     EXPECT_EQ(900u, processor.max_batch_size());
@@ -294,7 +295,8 @@ TEST_F(EffectsProcessorTest, AlignBufferWithBlockSize) {
   }
   // Adding an effect with max buffer of 800 should drop aggregate max buffer to 600.
   {
-    Effect effect = effects_loader()->CreateEffectByName("max_buffer_800_any_align", 1, 1, 1, {});
+    Effect effect =
+        effects_loader()->CreateEffectByName("max_buffer_800_any_align", "", 1, 1, 1, {});
     ASSERT_TRUE(effect);
     processor.AddEffect(std::move(effect));
     EXPECT_EQ(600u, processor.max_batch_size());
