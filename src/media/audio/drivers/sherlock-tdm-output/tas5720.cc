@@ -62,12 +62,17 @@ zx_status_t Tas5720::SetGain(float gain) {
 
 bool Tas5720::ValidGain(float gain) const { return (gain <= kMaxGain) && (gain >= kMinGain); }
 
-zx_status_t Tas5720::Init(std::optional<uint8_t> slot) {
+zx_status_t Tas5720::Init(std::optional<uint8_t> slot, uint32_t rate) {
+  if (rate != 48000 && rate != 96000) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   auto status = Standby();
   if (status != ZX_OK) {
     return status;
   }
-  status = WriteReg(kRegDigitalControl1, 0x45);  // Use Slot, Stereo Left Justified.
+  // Use Slot, Stereo Left Justified. If 96kHz set double rate.
+  status = WriteReg(kRegDigitalControl1, ((rate == 96000) ? 0x08 : 0) | 0x45);
   if (status != ZX_OK) {
     return status;
   }

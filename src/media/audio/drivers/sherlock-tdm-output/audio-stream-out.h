@@ -63,6 +63,8 @@ class SherlockAudioStreamOut : public SimpleAudioStream {
   void ProcessRingNotification();
 
   uint32_t us_per_notification_ = 0;
+  uint32_t frames_per_second_ = 0;
+
   async::TaskClosureMethod<SherlockAudioStreamOut, &SherlockAudioStreamOut::ProcessRingNotification>
       notify_timer_ TA_GUARDED(domain_token()){this};
   ddk::PDev pdev_ TA_GUARDED(domain_token());

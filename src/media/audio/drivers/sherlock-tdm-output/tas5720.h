@@ -25,7 +25,8 @@ class Tas5720 {  // Not final for unit testing.
   bool ValidGain(float gain);
   virtual zx_status_t SetGain(float gain);  // virtual for unit testing.
   bool ValidGain(float gain) const;
-  virtual zx_status_t Init(std::optional<uint8_t> slot);  // virtual for unit testing.
+  virtual zx_status_t Init(std::optional<uint8_t> slot,
+                           uint32_t rate);  // virtual for unit testing.
   zx_status_t Reset();
   zx_status_t Standby();
   zx_status_t ExitStandby();

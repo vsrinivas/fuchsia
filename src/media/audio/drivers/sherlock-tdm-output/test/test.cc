@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/audio/llcpp/fidl.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/mock-i2c/mock-i2c.h>
 
+#include <audio-utils/audio-output.h>
 #include <mock-mmio-reg/mock-mmio-reg.h>
 #include <mock/ddktl/protocol/gpio.h>
 #include <zxtest/zxtest.h>
@@ -14,16 +16,18 @@
 namespace audio {
 namespace sherlock {
 
+using ::llcpp::fuchsia::hardware::audio::Device;
+
 // TODO(46617): This test is valid for Astro and Nelson once AMLogic audio drivers are unified.
 struct Tas5720GoodInitTest : Tas5720 {
   Tas5720GoodInitTest(ddk::I2cChannel i2c) : Tas5720(std::move(i2c)) {}
-  zx_status_t Init(std::optional<uint8_t> slot) override { return ZX_OK; }
+  zx_status_t Init(std::optional<uint8_t> slot, uint32_t rate) override { return ZX_OK; }
   zx_status_t SetGain(float gain) override { return ZX_OK; }
 };
 
 struct Tas5720BadInitTest : Tas5720 {
   Tas5720BadInitTest(ddk::I2cChannel i2c) : Tas5720(std::move(i2c)) {}
-  zx_status_t Init(std::optional<uint8_t> slot) override { return ZX_ERR_INTERNAL; }
+  zx_status_t Init(std::optional<uint8_t> slot, uint32_t rate) override { return ZX_ERR_INTERNAL; }
   // Normally SetGain would not be called after a bad Init, but we fake continuing a bad
   // Init in the LibraryShutdwonOnInitWithError test, so we add a no-op SetGain anyways.
   zx_status_t SetGain(float gain) override { return ZX_OK; }
@@ -31,7 +35,7 @@ struct Tas5720BadInitTest : Tas5720 {
 
 struct Tas5720SomeBadInitTest : Tas5720 {
   Tas5720SomeBadInitTest(ddk::I2cChannel i2c) : Tas5720(std::move(i2c)) {}
-  zx_status_t Init(std::optional<uint8_t> slot) override {
+  zx_status_t Init(std::optional<uint8_t> slot, uint32_t rate) override {
     if (slot.value() == 0) {
       return ZX_OK;
     } else {
@@ -239,6 +243,93 @@ TEST(SherlockAudioStreamOutTest, LibraryShutdwonOnInitWithError) {
   server->DdkUnbindDeprecated();
   EXPECT_TRUE(tester.Ok());
   audio_enable_gpio.VerifyAndClear();
+}
+
+TEST(SherlockAudioStreamOutTest, ChangeRate96K) {
+  static constexpr uint32_t kTestFrameRate1 = 48000;
+  static constexpr uint32_t kTestFrameRate2 = 96000;
+  static constexpr uint8_t kTestNumberOfChannels = 2;
+  static constexpr uint32_t kTestFifoDepth = 16;
+  struct CodecRate96KTest : Tas5720 {
+    CodecRate96KTest(ddk::I2cChannel i2c) : Tas5720(std::move(i2c)) {}
+    zx_status_t Init(std::optional<uint8_t> slot, uint32_t rate) override {
+      last_rate_requested_ = rate;
+      return ZX_OK;
+    }
+    zx_status_t SetGain(float gain) override { return ZX_OK; }
+    uint32_t last_rate_requested_ = 0;
+  };
+  struct Rate96KTest : public SherlockAudioStreamOut {
+    Rate96KTest(zx_device_t* parent, fbl::Array<std::unique_ptr<Tas5720>> codecs,
+                const gpio_protocol_t* audio_enable_gpio)
+        : SherlockAudioStreamOut(parent) {
+      codecs_ = std::move(codecs);
+      audio_en_ = ddk::GpioProtocolClient(audio_enable_gpio);
+      aml_audio_ = AmlTdmDeviceTest::Create();
+    }
+    zx_status_t Init() __TA_REQUIRES(domain_token()) override {
+      audio_stream_format_range_t range;
+      range.min_channels = kTestNumberOfChannels;
+      range.max_channels = kTestNumberOfChannels;
+      range.sample_formats = AUDIO_SAMPLE_FORMAT_16BIT;
+      range.min_frames_per_second = kTestFrameRate1;
+      range.max_frames_per_second = kTestFrameRate2;
+      range.flags = ASF_RANGE_FLAG_FPS_48000_FAMILY;
+      supported_formats_.push_back(range);
+
+      fifo_depth_ = kTestFifoDepth;
+
+      cur_gain_state_ = {};
+
+      SetInitialPlugState(AUDIO_PDNF_CAN_NOTIFY);
+
+      snprintf(device_name_, sizeof(device_name_), "test-audio-in");
+      snprintf(mfr_name_, sizeof(mfr_name_), "Bike Sheds, Inc.");
+      snprintf(prod_name_, sizeof(prod_name_), "testy_mctestface");
+
+      unique_id_ = AUDIO_STREAM_UNIQUE_ID_BUILTIN_MICROPHONE;
+
+      return ZX_OK;
+    }
+
+    bool init_hw_called_ = false;
+  };
+
+  fake_ddk::Bind tester;
+  mock_i2c::MockI2c mock_i2c;
+
+  ddk::MockGpio audio_enable_gpio;
+  audio_enable_gpio.ExpectWrite(ZX_OK, 1);
+  audio_enable_gpio.ExpectWrite(ZX_OK, 0);
+
+  auto codecs = fbl::Array(new std::unique_ptr<Tas5720>[3], 3);
+  CodecRate96KTest* raw_codecs[3];
+  raw_codecs[0] = new CodecRate96KTest(mock_i2c.GetProto());
+  raw_codecs[1] = new CodecRate96KTest(mock_i2c.GetProto());
+  raw_codecs[2] = new CodecRate96KTest(mock_i2c.GetProto());
+  codecs[0] = std::unique_ptr<CodecRate96KTest>(raw_codecs[0]);
+  codecs[1] = std::unique_ptr<CodecRate96KTest>(raw_codecs[1]);
+  codecs[2] = std::unique_ptr<CodecRate96KTest>(raw_codecs[2]);
+  auto server = audio::SimpleAudioStream::Create<Rate96KTest>(
+      fake_ddk::kFakeParent, std::move(codecs), audio_enable_gpio.GetProto());
+  ASSERT_NOT_NULL(server);
+
+  Device::SyncClient client(std::move(tester.FidlClient()));
+  Device::ResultOf::GetChannel channel_wrap = client.GetChannel();
+  ASSERT_EQ(channel_wrap.status(), ZX_OK);
+
+  // After we get the channel we use audio::utils serialization until we convert to FIDL.
+  auto channel_client = audio::utils::AudioOutput::Create(1);
+  channel_client->SetStreamChannel(std::move(channel_wrap->channel));
+
+  audio_sample_format_t format = AUDIO_SAMPLE_FORMAT_16BIT;
+  ASSERT_OK(channel_client->SetFormat(kTestFrameRate2, kTestNumberOfChannels, format));
+  ASSERT_EQ(raw_codecs[0]->last_rate_requested_, kTestFrameRate2);
+  ASSERT_EQ(raw_codecs[1]->last_rate_requested_, kTestFrameRate2);
+  ASSERT_EQ(raw_codecs[2]->last_rate_requested_, kTestFrameRate2);
+
+  server->DdkUnbindDeprecated();
+  EXPECT_TRUE(tester.Ok());
 }
 
 }  // namespace sherlock
