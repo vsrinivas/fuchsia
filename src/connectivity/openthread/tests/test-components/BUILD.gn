@@ -15,6 +15,7 @@ test_package("ot-radio-tests") {
   public_deps = [
     ":ot-radio-soft-reset-test",
     ":ot-radio-tx-rx-test",
+    ":ot-stack-device-open",
   ]
   tests = [
     {
@@ -25,12 +26,16 @@ test_package("ot-radio-tests") {
       name = "ot_radio_soft_reset_test"
       environments = basic_envs
     },
+    {
+      name = "ot_stack_device_open"
+      environments = basic_envs
+    },
   ]
 }
 
 rustc_test("ot-radio-tx-rx-test") {
   name = "ot_radio_tx_rx_test"
-  source_root = "src/ot_radio_tx_rx_test.rs"
+  source_root = "real-device/ot_radio_tx_rx_test.rs"
   edition = "2018"
   deps = [ "//src/connectivity/openthread/tests/lib" ]
   non_rust_deps = [ "//zircon/public/lib/syslog" ]
@@ -38,7 +43,15 @@ rustc_test("ot-radio-tx-rx-test") {
 
 rustc_test("ot-radio-soft-reset-test") {
   name = "ot_radio_soft_reset_test"
-  source_root = "src/ot_radio_soft_reset_test.rs"
+  source_root = "real-device/ot_radio_soft_reset_test.rs"
+  edition = "2018"
+  deps = [ "//src/connectivity/openthread/tests/lib" ]
+  non_rust_deps = [ "//zircon/public/lib/syslog" ]
+}
+
+rustc_test("ot-stack-device-open") {
+  name = "ot_stack_device_open"
+  source_root = "real-device/ot_stack_device_open.rs"
   edition = "2018"
   deps = [ "//src/connectivity/openthread/tests/lib" ]
   non_rust_deps = [ "//zircon/public/lib/syslog" ]
@@ -49,21 +62,24 @@ test_package("ot-radio-component-tests") {
 
   public_deps = [
     ":devmgr-manifest",
-    ":ot-radio-fake-driver-open",
+    ":ot-stack-device-open-mock",
   ]
 
   tests = [
     {
-      name = "ot_fake_driver_open"
+      name = "ot_stack_device_open_mock"
       environments = basic_envs
     },
   ]
 }
 
-rustc_test("ot-radio-fake-driver-open") {
-  name = "ot_fake_driver_open"
-  source_root = "src/ot_fake_driver_open.rs"
+rustc_test("ot-stack-device-open-mock") {
+  name = "ot_stack_device_open_mock"
+  source_root = "mock-device/ot_stack_device_open_mock.rs"
   edition = "2018"
-  deps = [ "//src/connectivity/openthread/tests/lib" ]
+  deps = [
+    "//sdk/fidl/fuchsia.lowpan.spinel:fuchsia.lowpan.spinel-rustc",
+    "//src/connectivity/openthread/tests/lib",
+  ]
   non_rust_deps = [ "//zircon/public/lib/syslog" ]
 }

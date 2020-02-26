@@ -1,0 +1,21 @@
+{
+    "program": {
+        "binary": "test/ot_stack_device_open"
+    },
+    "sandbox": {
+        "boot": [
+            "bin",
+            "driver",
+            "lib"
+        ],
+        "dev": [
+            "class/ot-radio",
+            "test/test"
+        ],
+        "services": [
+            "fuchsia.lowpan.spinel.Device",
+            "fuchsia.logger.LogSink",
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}

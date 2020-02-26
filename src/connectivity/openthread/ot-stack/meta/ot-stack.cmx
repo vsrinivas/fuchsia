@@ -1,0 +1,21 @@
+{
+    "program": {
+        "binary": "bin/ot-stack"
+    },
+    "sandbox": {
+        "boot": [
+            "bin",
+            "driver",
+            "lib"
+        ],
+        "dev": [
+            "class/ot-radio"
+        ],
+        "services": [
+            "fuchsia.openthread.devmgr.IsolatedDevmgr",
+            "fuchsia.exception.Handler",
+            "fuchsia.logger.LogSink",
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}

@@ -1,0 +1,58 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/package.gni")
+import("//build/test/test_package.gni")
+
+source_set("app") {
+  sources = [
+    "src/app.cc",
+    "src/app.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.lowpan.spinel:fuchsia.lowpan.spinel_llcpp",
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/lib/svc",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/syslog/cpp",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fidl-async-cpp",
+  ]
+}
+
+executable("bin") {
+  output_name = "ot-stack"
+
+  sources = [ "src/main.cc" ]
+
+  deps = [ ":app" ]
+}
+
+group("ot-stack") {
+  testonly = true
+  public_deps = [ ":pkg" ]
+}
+
+package("pkg") {
+  package_name = "ot-stack"
+  deps = [ ":bin" ]
+
+  binaries = [
+    {
+      name = "ot-stack"
+    },
+  ]
+
+  meta = [
+    {
+      path = "meta/ot-stack.cmx"
+      dest = "ot-stack.cmx"
+    },
+  ]
+}
