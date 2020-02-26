@@ -37,7 +37,7 @@ class DeviceInstance {
   std::shared_ptr<sys::ServiceDirectory> published_services_;
   fuchsia::sys::ComponentControllerPtr component_controller_;
   bool services_ready_ = false;
-  std::vector<fidl::InterfaceRequest<fuchsia::camera2::hal::Controller>> pending_requests_;
+  std::vector<fidl::InterfaceRequest<fuchsia::camera3::Device>> pending_requests_;
 };
 
 #endif  // SRC_CAMERA_BIN_DEVICE_WATCHER_DEVICE_INSTANCE_H_

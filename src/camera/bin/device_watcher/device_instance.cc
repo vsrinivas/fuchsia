@@ -97,13 +97,17 @@ fit::result<std::unique_ptr<DeviceInstance>, zx_status_t> DeviceInstance::Create
 }
 
 void DeviceInstance::OnCameraRequested(fidl::InterfaceRequest<fuchsia::camera3::Device> request) {
+  if (!services_ready_) {
+    pending_requests_.push_back(std::move(request));
+    return;
+  }
   published_services_->Connect(std::move(request), kCameraPublishedServiceName);
 }
 
 void DeviceInstance::OnServicesReady() {
   services_ready_ = true;
   for (auto& request : pending_requests_) {
-    OnControllerRequested(std::move(request));
+    OnCameraRequested(std::move(request));
   }
 }
 
@@ -111,10 +115,6 @@ void DeviceInstance::OnControllerRequested(
     fidl::InterfaceRequest<fuchsia::camera2::hal::Controller> request) {
   if (!camera_) {
     request.Close(ZX_ERR_UNAVAILABLE);
-    return;
-  }
-  if (!services_ready_) {
-    pending_requests_.push_back(std::move(request));
     return;
   }
   camera_->GetChannel2(request.TakeChannel());
