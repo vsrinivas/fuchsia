@@ -16,6 +16,7 @@ test_package("ot-radio-tests") {
     ":ot-radio-soft-reset-test",
     ":ot-radio-tx-rx-test",
     ":ot-stack-device-open",
+    ":ot-stack-ncp-ver-query",
   ]
   tests = [
     {
@@ -28,6 +29,10 @@ test_package("ot-radio-tests") {
     },
     {
       name = "ot_stack_device_open"
+      environments = basic_envs
+    },
+    {
+      name = "ot_stack_ncp_ver_query"
       environments = basic_envs
     },
   ]
@@ -62,6 +67,14 @@ rustc_test("ot-stack-device-open") {
     "//src/lib/fuchsia-async",
     "//src/lib/syslog/rust:syslog",
   ]
+  non_rust_deps = [ "//zircon/public/lib/syslog" ]
+}
+
+rustc_test("ot-stack-ncp-ver-query") {
+  name = "ot_stack_ncp_ver_query"
+  source_root = "real-device/ot_stack_ncp_ver_query.rs"
+  edition = "2018"
+  deps = [ "//src/connectivity/openthread/tests/lib" ]
   non_rust_deps = [ "//zircon/public/lib/syslog" ]
 }
 

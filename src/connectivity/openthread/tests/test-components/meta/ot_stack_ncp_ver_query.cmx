@@ -1,0 +1,18 @@
+{
+    "program": {
+        "binary": "test/ot_stack_ncp_ver_query"
+    },
+    "sandbox": {
+        "dev": [
+            "class/ot-radio"
+        ],
+        "pkgfs": [
+            "packages"
+        ],
+        "services": [
+            "fuchsia.lowpan.spinel.Device",
+            "fuchsia.logger.LogSink",
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}
