@@ -144,7 +144,7 @@ fn send_decode_error_response(
             send_avc_reject(command, pdu_id, StatusCode::InvalidCommand)
         }
         DecodeError::VendorPduNotImplemented(pdu_id) => {
-            send_avc_reject(command, pdu_id, StatusCode::InvalidParameter)
+            send_avc_reject(command, pdu_id, StatusCode::InvalidCommand)
         }
         DecodeError::VendorPacketTypeNotImplemented(_packet_type) => {
             // remote sent a vendor packet that was not a status, control, or notify type.
