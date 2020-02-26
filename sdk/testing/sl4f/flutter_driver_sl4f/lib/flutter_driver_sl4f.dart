@@ -126,7 +126,8 @@ class _Sl4fCommandRunner extends frdp.SshCommandRunner {
   Future<List<String>> run(String cmd) async {
     final result = await _ssh.run(cmd);
     if (result.exitCode != 0) {
-      throw frdp.SshCommandError('SSH Command failed: $cmd');
+      throw frdp.SshCommandError(
+          'SSH Command failed: $cmd\nstdout: ${result.stdout}\nstderr: ${result.stderr}');
     }
     return result.stdout.split('\n');
   }

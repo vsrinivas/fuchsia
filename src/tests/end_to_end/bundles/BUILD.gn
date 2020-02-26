@@ -35,6 +35,9 @@ group("end_to_end_deps") {
     # Needed for file exist verification.
     "//third_party/sbase:ls",
 
+    # Needed for flutter driver using find to get vmservice-port.
+    "//third_party/sbase:find",
+
     # Needed to query inspect.
     "//garnet/packages/prod:iquery",
 
