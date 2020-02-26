@@ -18,7 +18,8 @@ web.ContextProxy createWebContext() {
       contextProviderProxyRequest.passChannel());
   final channel = Channel.fromFile('/svc');
   final web.CreateContextParams params = web.CreateContextParams(
-      serviceDirectory: InterfaceHandle<fidl_io.Directory>(channel));
+      serviceDirectory: InterfaceHandle<fidl_io.Directory>(channel),
+      features: web.ContextFeatureFlags.vulkan);
   contextProvider.create(params, context.ctrl.request());
   contextProvider.ctrl.close();
 
