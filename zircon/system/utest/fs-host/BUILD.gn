@@ -2,7 +2,34 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_test("fs-host") {
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+test("fs-host") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  if (is_fuchsia) {
+    testonly = false
+  }
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
   sources = [
     "test-basic.cc",
     "test-directory.cc",
@@ -13,9 +40,13 @@ zx_test("fs-host") {
     "util.cc",
   ]
   deps = [
-    "$zx/system/ulib/fs/journal",
-    "$zx/system/ulib/minfs",
-    "$zx/system/ulib/unittest",
-    "$zx/system/ulib/zircon-internal",
+    "//zircon/public/lib/journal-host",
+    "//zircon/public/lib/minfs-host",
+    "//zircon/public/lib/unittest-static-host",
+    "//zircon/public/lib/zircon-internal-host",
   ]
+}
+
+migrated_manifest("fs-host-manifest") {
+  deps = [ ":fs-host" ]
 }
