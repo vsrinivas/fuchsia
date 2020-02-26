@@ -8,6 +8,9 @@ use {crate::selectors, fidl_fuchsia_diagnostics::StringSelector, std::collection
 /// represent a component selector as a DFA. This DFA representation
 /// is used to evaluate a component_hierarchy path against a selector
 /// to determine if the data under the path is being selected for.
+// TODO(47015): The component DFA is going to be unusued until we implement the custom
+// DFA traversal for selection of specific properties on a hierarchy.
+#[allow(dead_code)]
 pub(crate) struct SelectorAutomata<'a> {
     // The individual states that make up
     // the selector state-machine.
@@ -17,6 +20,9 @@ pub(crate) struct SelectorAutomata<'a> {
     state_indices: Option<HashSet<usize>>,
 }
 
+// TODO(47015): The component DFA is going to be unusued until we implement the custom
+// DFA traversal for selection of specific properties on a hierarchy.
+#[allow(dead_code)]
 impl<'a> SelectorAutomata<'a> {
     pub fn new(states: &'a Vec<StringSelector>) -> Self {
         SelectorAutomata { states: states, state_indices: None }

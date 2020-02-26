@@ -9,7 +9,7 @@ use {
     fidl_fuchsia_diagnostics::{Selector, StringSelector},
     num_derive::{FromPrimitive, ToPrimitive},
     num_traits::bounds::Bounded,
-    regex::{Regex, RegexSet},
+    regex::RegexSet,
     std::{
         collections::HashMap,
         convert::{TryFrom, TryInto},
@@ -459,14 +459,14 @@ pub struct InspectHierarchyMatcher {
     /// RegexSet encoding all the node path selectors for
     /// inspect hierarchies under this component's out directory.
     pub component_node_selector: RegexSet,
-    /// Vector of Regexes corresponding to the node path selectors
+    /// Vector of strings encoding regexes corresponding to the node path selectors
     /// in the regex set.
-    /// Note: Order of Regexes matters here, this vector must be aligned
+    /// Note: Order of regex strings matters here, this vector must be aligned
     /// with the vector used to construct component_node_selector since
     /// conponent_node_selector.matches() returns a vector of ints used to
     /// find all the relevant property selectors corresponding to the matching
     /// node selectors.
-    pub node_property_selectors: Vec<Regex>,
+    pub node_property_selectors: Vec<String>,
 }
 
 impl TryFrom<&Vec<Arc<Selector>>> for InspectHierarchyMatcher {
@@ -482,14 +482,9 @@ impl TryFrom<&Vec<Arc<Selector>>> for InspectHierarchyMatcher {
                 ),
                 None => unreachable!("Selectors are required to specify a node path."),
             })
-            .collect::<Result<Vec<Regex>, Error>>()?;
+            .collect::<Result<Vec<String>, Error>>()?;
 
-        let node_path_regex_set = RegexSet::new(
-            &node_path_regexes
-                .iter()
-                .map(|selector_regex| selector_regex.as_str())
-                .collect::<Vec<&str>>(),
-        )?;
+        let node_path_regex_set = RegexSet::new(&node_path_regexes)?;
 
         let property_regexes = selectors
             .iter()
@@ -501,7 +496,7 @@ impl TryFrom<&Vec<Arc<Selector>>> for InspectHierarchyMatcher {
                     &StringSelector::StringPattern("*".to_string()),
                 ),
             })
-            .collect::<Result<Vec<Regex>, Error>>()?;
+            .collect::<Result<Vec<String>, Error>>()?;
 
         Ok(InspectHierarchyMatcher {
             component_node_selector: node_path_regex_set,
@@ -607,11 +602,9 @@ pub fn filter_node_hierarchy(
                     .matches(&formatted_node_path)
                     .into_iter()
                     .map(|property_index| {
-                        let property_selector: &Regex =
-                            &hierarchy_matcher.node_property_selectors[property_index];
-                        property_selector.as_str()
+                        &hierarchy_matcher.node_property_selectors[property_index]
                     })
-                    .collect::<Vec<&str>>();
+                    .collect::<Vec<&String>>();
 
                 let property_regex_set = RegexSet::new(property_regex_strings)?;
                 working_node_path = Some(formatted_node_path);

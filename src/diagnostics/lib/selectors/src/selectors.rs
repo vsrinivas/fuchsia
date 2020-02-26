@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    crate::selector_evaluator,
     anyhow::{format_err, Error},
     fidl_fuchsia_diagnostics::{self, ComponentSelector, Selector, StringSelector, TreeSelector},
     lazy_static::lazy_static,
@@ -457,8 +456,8 @@ pub fn convert_string_selector_to_regex(
     }
 }
 
-/// Converts a vector of StringSelectors into a single regular expression which matches
-/// strings encoding paths.
+/// Converts a vector of StringSelectors into a string capable of constructing a
+/// regular expression which matches against strings encoding paths.
 ///
 /// NOTE: The resulting regular expression makes the assumption that all "nodes" in the
 /// strings encoding paths that it will match against have been sanitized by the
@@ -466,7 +465,7 @@ pub fn convert_string_selector_to_regex(
 pub fn convert_path_selector_to_regex(
     selector: &[StringSelector],
     is_subtree_selector: bool,
-) -> Result<Regex, Error> {
+) -> Result<String, Error> {
     let mut regex_string = "^".to_string();
     for path_selector in selector {
         // Path selectors replace wildcards with a regex that only extends to the next
@@ -484,16 +483,16 @@ pub fn convert_path_selector_to_regex(
 
     regex_string.push_str("$");
 
-    Ok(Regex::new(&regex_string)?)
+    Ok(regex_string)
 }
 
-/// Converts a single StringSelectors into a  regular expression which matches
-/// strings encoding a property name on a node.
+/// Converts a single StringSelectors into a string capable of constructing a regular
+/// expression which matches strings encoding a property name on a node.
 ///
 /// NOTE: The resulting regular expression makes the assumption that the property names
 /// that it will match against have been sanitized by the  sanitize_string_for_selectors API in
 /// this crate.
-pub fn convert_property_selector_to_regex(selector: &StringSelector) -> Result<Regex, Error> {
+pub fn convert_property_selector_to_regex(selector: &StringSelector) -> Result<String, Error> {
     let mut regex_string = "^".to_string();
 
     // Property selectors replace wildcards with GLOB like behavior since there is no
@@ -503,7 +502,7 @@ pub fn convert_property_selector_to_regex(selector: &StringSelector) -> Result<R
 
     regex_string.push_str("$");
 
-    Ok(Regex::new(&regex_string)?)
+    Ok(regex_string)
 }
 
 /// Sanitizes raw strings from the system such that they align with the
@@ -532,21 +531,41 @@ pub fn sanitize_string_for_selectors(node: &str) -> String {
 ///
 /// Requires: hierarchy_path is not empty.
 ///           selectors contains valid Selectors.
-pub fn match_component_moniker_against_selector<'a>(
-    moniker: &Vec<String>,
+pub fn match_component_moniker_against_selector(
+    moniker: &Vec<impl AsRef<str> + std::string::ToString>,
     selector: &Arc<Selector>,
 ) -> Result<bool, Error> {
+    validate_selector(selector)?;
+
+    if moniker.is_empty() {
+        return Err(format_err!(
+            "Cannot have empty monikers, at least the component name is required."
+        ));
+    }
+
     let component_selector = &selector.component_selector;
+
     let moniker_selector: &Vec<StringSelector> = match &component_selector.moniker_segments {
         Some(path_vec) => &path_vec,
         None => return Err(format_err!("Component selectors require moniker segments.")),
     };
 
-    if moniker_selector.is_empty() {
-        return Err(format_err!("Component selector moniker segments cannot be empty."));
-    }
-    let mut automata = selector_evaluator::SelectorAutomata::new(moniker_selector);
-    Ok(automata.evaluate_automata_against_path(moniker))
+    let mut sanitized_moniker = moniker
+        .iter()
+        .map(|s| sanitize_string_for_selectors(s.as_ref()))
+        .collect::<Vec<String>>()
+        .join("/");
+
+    // We must append a "/" because the regex strings assume that all paths end
+    // in a slash.
+    sanitized_moniker.push('/');
+
+    let moniker_regex = Regex::new(&convert_path_selector_to_regex(
+        moniker_selector,
+        /*is_subtree_selector=*/ false,
+    )?)?;
+
+    Ok(moniker_regex.is_match(&sanitized_moniker))
 }
 
 /// Evaluates a component moniker against a list of selectors, returning
@@ -554,7 +573,7 @@ pub fn match_component_moniker_against_selector<'a>(
 ///
 /// Requires: hierarchy_path is not empty.
 ///           selectors contains valid Selectors.
-pub fn match_component_moniker_against_selectors<'a>(
+pub fn match_component_moniker_against_selectors(
     moniker: &Vec<String>,
     selectors: &Vec<Arc<Selector>>,
 ) -> Result<Vec<Arc<Selector>>, Error> {
@@ -564,9 +583,16 @@ pub fn match_component_moniker_against_selectors<'a>(
         ));
     }
 
-    selectors
+    let selectors: Result<Vec<Arc<Selector>>, Error> = selectors
         .iter()
-        // TODO(4601): Run these DFA executions concurrently with async.
+        .map(|selector| {
+            validate_selector(selector)?;
+            Ok(selector.clone())
+        })
+        .collect::<Result<Vec<Arc<Selector>>, Error>>();
+
+    selectors?
+        .iter()
         .filter_map(|selector| {
             match_component_moniker_against_selector(moniker, selector)
                 .map(|is_match| if is_match { Some(selector.clone()) } else { None })
@@ -832,8 +858,10 @@ mod tests {
             let tree_selector = parsed_selector.tree_selector;
             let node_path = tree_selector.node_path.unwrap();
             let is_subtree_selector = tree_selector.target_properties.is_none();
-            let selector_regex =
-                convert_path_selector_to_regex(&node_path, is_subtree_selector).unwrap();
+            let selector_regex = Regex::new(
+                &convert_path_selector_to_regex(&node_path, is_subtree_selector).unwrap(),
+            )
+            .unwrap();
             assert!(selector_regex.is_match(&sanitized_node_path));
         }
     }
@@ -865,8 +893,10 @@ mod tests {
             let tree_selector = parsed_selector.tree_selector;
             let node_path = tree_selector.node_path.unwrap();
             let is_subtree_selector = tree_selector.target_properties.is_none();
-            let selector_regex =
-                convert_path_selector_to_regex(&node_path, is_subtree_selector).unwrap();
+            let selector_regex = Regex::new(
+                &convert_path_selector_to_regex(&node_path, is_subtree_selector).unwrap(),
+            )
+            .unwrap();
             assert!(!selector_regex.is_match(&sanitized_node_path));
         }
     }
@@ -885,7 +915,9 @@ mod tests {
             let parsed_selector = parse_selector(selector).unwrap();
             let tree_selector = parsed_selector.tree_selector;
             let property_selector = tree_selector.target_properties.unwrap();
-            let selector_regex = convert_property_selector_to_regex(&property_selector).unwrap();
+            let selector_regex =
+                Regex::new(&convert_property_selector_to_regex(&property_selector).unwrap())
+                    .unwrap();
             assert!(selector_regex.is_match(&sanitize_string_for_selectors(string_to_match)));
         }
     }
@@ -903,7 +935,9 @@ mod tests {
             let parsed_selector = parse_selector(selector).unwrap();
             let tree_selector = parsed_selector.tree_selector;
             let target_properties = tree_selector.target_properties.unwrap();
-            let selector_regex = convert_property_selector_to_regex(&target_properties).unwrap();
+            let selector_regex =
+                Regex::new(&convert_property_selector_to_regex(&target_properties).unwrap())
+                    .unwrap();
             assert!(!selector_regex.is_match(&sanitize_string_for_selectors(string_to_match)));
         }
     }
@@ -1012,6 +1046,38 @@ mod tests {
                 validate_component_selector(&component_selector).is_err(),
                 format!("Failed to validate component selector: {:?}", component_selector)
             );
+        }
+    }
+
+    #[test]
+    fn component_selector_match_test() {
+        // Note: We provide the full selector syntax but this test is only validating it
+        // against the provided moniker
+        let passing_test_cases = vec![
+            (r#"echo.cmx:*:*"#, vec!["echo.cmx"]),
+            (r#"*/echo.cmx:*:*"#, vec!["abc", "echo.cmx"]),
+            (r#"ab*/echo.cmx:*:*"#, vec!["abc", "echo.cmx"]),
+            (r#"ab*/echo.cmx:*:*"#, vec!["abcde", "echo.cmx"]),
+            (r#"*/ab*/echo.cmx:*:*"#, vec!["123", "abcde", "echo.cmx"]),
+            (r#"a\/\*/echo.cmx:*:*"#, vec!["a/*", "echo.cmx"]),
+        ];
+
+        for (selector, moniker) in passing_test_cases {
+            let parsed_selector = Arc::new(parse_selector(selector).unwrap());
+            assert!(match_component_moniker_against_selector(&moniker, &parsed_selector).unwrap());
+        }
+
+        // Note: We provide the full selector syntax but this test is only validating it
+        // against the provided moniker
+        let failing_test_cases = vec![
+            (r#"echo.cmx*:*:*"#, vec!["echo.cmx"]),
+            (r#"*/echo.cmx:*:*"#, vec!["123", "abc", "echo.cmx"]),
+            (r#"ab*/echo.cmx:*:*"#, vec!["ab", "echo.cmx"]),
+        ];
+
+        for (selector, moniker) in failing_test_cases {
+            let parsed_selector = Arc::new(parse_selector(selector).unwrap());
+            assert!(!match_component_moniker_against_selector(&moniker, &parsed_selector).unwrap());
         }
     }
 }

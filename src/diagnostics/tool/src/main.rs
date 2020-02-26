@@ -602,7 +602,7 @@ account_manager.cmx:root/listeners:total_opened";
     #[test]
     fn legacy_filter_data_to_lines_test() {
         let full_tree_selector = "account_manager.cmx:root/accounts:active
-account_manager.cmx:root/accounts:total
+account_*:root/accounts:total
 account_manager.cmx:root/auth_providers:types
 account_manager.cmx:root/listeners:active
 account_manager.cmx:root/listeners:events
@@ -648,11 +648,11 @@ account_manager.cmx:root/listeners:total_opened";
 
     #[test]
     fn filter_data_to_lines_test() {
-        let full_tree_selector = "realm1/realm2/session5/account_manager.cmx:root/accounts:active
-realm1/realm2/session5/account_manager.cmx:root/accounts:total
+        let full_tree_selector = "*/realm2/session5/account_manager.cmx:root/accounts:active
+realm1/realm*/sessio*/account_manager.cmx:root/accounts:total
 realm1/realm2/session5/account_manager.cmx:root/auth_providers:types
 realm1/realm2/session5/account_manager.cmx:root/listeners:active
-realm1/realm2/session5/account_manager.cmx:root/listeners:events
+realm1/realm2/session5/account_*:root/listeners:events
 realm1/realm2/session5/account_manager.cmx:root/listeners:total_opened";
 
         setup_and_run_selector_filtering(
