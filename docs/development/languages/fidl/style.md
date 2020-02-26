@@ -3,6 +3,8 @@
 This section contains style-related information for
 [Fuchsia Interface Definition Language](/docs/development/languages/fidl/README.md) files.
 
+See also the [FIDL API Rubric](/docs/concepts/api/fidl.md).
+
 [TOC]
 
 ## Names

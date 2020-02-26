@@ -8,6 +8,8 @@ This section presents techniques, best practices, and general advice about
 defining protocols in the [Fuchsia Interface Definition
 Language](/docs/development/languages/fidl/README.md).
 
+See also the [FIDL Style Guide](/docs/development/languages/fidl/style.md).
+
 ### Protocols not objects
 
 FIDL is a language for defining interprocess communication protocols.  Although
