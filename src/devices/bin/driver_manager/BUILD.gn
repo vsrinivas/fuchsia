@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/cmx/cmx.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
 import("//build/test/test_package.gni")
@@ -95,6 +96,10 @@ executable("driver_manager") {
   deps = [ ":lib" ]
 
   defines = [ "_ALL_SOURCE=1" ]
+}
+
+cm_compile("driver_manager.cm") {
+  data = rebase_path("meta/driver_manager.cml")
 }
 
 test("driver_manager_test") {

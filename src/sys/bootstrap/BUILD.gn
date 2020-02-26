@@ -15,9 +15,6 @@ cm_compile("bootstrap.cm") {
 # TODO(BLD-448): These should move into their appropriate packages that are
 # included in bootfs along with the binaries and other resources/libraries. For
 # now they here since cm_compile doesn't exist in //zircon.
-cm_compile("driver_manager.cm") {
-  data = rebase_path("meta/driver_manager.cml")
-}
 cm_compile("console.cm") {
   data = rebase_path("meta/console.cml")
 }
@@ -31,21 +28,24 @@ cm_compile("fshost.cm") {
   data = rebase_path("meta/fshost.cml")
 }
 
+driver_manager_cm = "//src/devices/bin/driver_manager:driver_manager.cm"
+
 # TODO(BLD-448): Should become a package just containing the root manifests.
 generate_manifest("root_manifests.bootfs") {
   deps = [
     ":bootstrap.cm",
     ":console.cm",
-    ":driver_manager.cm",
     ":fshost.cm",
     ":ptysvc.cm",
     ":root.cm",
     ":sysinfo.cm",
+    driver_manager_cm,
   ]
 
   root_cm_out = get_target_outputs(":root.cm")
   bootstrap_cm_out = get_target_outputs(":bootstrap.cm")
-  devc_cm_out = get_target_outputs(":driver_manager.cm")
+  devc_cm_out =
+      get_label_info(driver_manager_cm, "target_out_dir") + "/driver_manager.cm"
   fshost_cm_out = get_target_outputs(":fshost.cm")
   console_cm_out = get_target_outputs(":console.cm")
   ptysvc_cm_out = get_target_outputs(":ptysvc.cm")
@@ -53,7 +53,7 @@ generate_manifest("root_manifests.bootfs") {
   args = [
     "--entry=meta/root.cm=" + rebase_path(root_cm_out[0]),
     "--entry=meta/bootstrap.cm=" + rebase_path(bootstrap_cm_out[0]),
-    "--entry=meta/driver_manager.cm=" + rebase_path(devc_cm_out[0]),
+    "--entry=meta/driver_manager.cm=" + rebase_path(devc_cm_out),
     "--entry=meta/console.cm=" + rebase_path(console_cm_out[0]),
     "--entry=meta/ptysvc.cm=" + rebase_path(ptysvc_cm_out[0]),
     "--entry=meta/sysinfo.cm=" + rebase_path(sysinfo_cm_out[0]),
