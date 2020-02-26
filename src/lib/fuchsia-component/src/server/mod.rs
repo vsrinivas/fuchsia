@@ -136,6 +136,7 @@ const OPEN_REQ_SUPPORTED_FLAGS: u32 = OPEN_RIGHT_READABLE
     | OPEN_FLAG_DESCRIBE
     | OPEN_FLAG_POSIX
     | OPEN_FLAG_DIRECTORY
+    | OPEN_FLAG_NOT_DIRECTORY
     | OPEN_FLAG_NODE_REFERENCE;
 
 impl<'a, Output: 'a> ServiceFs<ServiceObjLocal<'a, Output>> {
@@ -327,10 +328,7 @@ macro_rules! add_functions {
             path: impl Into<String>,
             service: impl Into<ServiceObjTy>,
         ) -> &mut Self {
-            self.add_entry_at(
-                path.into(),
-                ServiceFsNode::Service(service.into()),
-            )
+            self.add_entry_at(path.into(), ServiceFsNode::Service(service.into()))
         }
 
         /// Adds a FIDL service to the directory.
@@ -375,20 +373,14 @@ macro_rules! add_functions {
         ///
         /// The FIDL service will be hosted at the name provided by the
         /// `[Discoverable]` annotation in the FIDL source.
-        pub fn add_fidl_service<F, RS>(
-            &mut self,
-            service: F,
-        ) -> &mut Self
+        pub fn add_fidl_service<F, RS>(&mut self, service: F) -> &mut Self
         where
             F: FnMut(RS) -> ServiceObjTy::Output,
             RS: RequestStream,
             RS::Service: DiscoverableService,
             FidlService<F, RS, ServiceObjTy::Output>: Into<ServiceObjTy>,
         {
-            self.add_fidl_service_at(
-                RS::Service::SERVICE_NAME,
-                service,
-            )
+            self.add_fidl_service_at(RS::Service::SERVICE_NAME, service)
         }
 
         /// Adds a FIDL service to the directory at the given path.
@@ -407,10 +399,7 @@ macro_rules! add_functions {
             RS::Service: DiscoverableService,
             FidlService<F, RS, ServiceObjTy::Output>: Into<ServiceObjTy>,
         {
-            self.add_service_at(
-                path,
-                FidlService::from(service),
-            )
+            self.add_service_at(path, FidlService::from(service))
         }
 
         /// Adds a FIDL Unified Service to the directory as the default instance.
@@ -433,20 +422,14 @@ macro_rules! add_functions {
         /// ```
         ///
         /// The `SERVICE_NAME` of FIDL Service `Bar` would be `lib.foo.Bar`.
-        pub fn add_unified_service<F, USR>(
-            &mut self,
-            service: F,
-        ) -> &mut Self
+        pub fn add_unified_service<F, USR>(&mut self, service: F) -> &mut Self
         where
             F: Fn(USR) -> ServiceObjTy::Output,
             F: Clone,
             USR: UnifiedServiceRequest,
             FidlServiceMember<F, USR, ServiceObjTy::Output>: Into<ServiceObjTy>,
         {
-            self.add_unified_service_at(
-                USR::Service::SERVICE_NAME,
-                service,
-            )
+            self.add_unified_service_at(USR::Service::SERVICE_NAME, service)
         }
 
         /// Adds a FIDL Unified Service to the directory as the default instance at the given path.
@@ -500,11 +483,7 @@ macro_rules! add_functions {
             USR: UnifiedServiceRequest,
             FidlServiceMember<F, USR, ServiceObjTy::Output>: Into<ServiceObjTy>,
         {
-            self.add_unified_service_instance_at(
-                USR::Service::SERVICE_NAME,
-                instance,
-                service,
-            )
+            self.add_unified_service_instance_at(USR::Service::SERVICE_NAME, instance, service)
         }
 
         /// Adds a named instance of a FIDL Unified Service to the directory at the given path.
@@ -530,10 +509,7 @@ macro_rules! add_functions {
 
             // Attach member protocols under the instance directory.
             for member in USR::member_names() {
-                dir.add_service_at(
-                    *member,
-                    FidlServiceMember::from(service.clone()),
-                );
+                dir.add_service_at(*member, FidlServiceMember::from(service.clone()));
             }
             self
         }
@@ -547,25 +523,24 @@ macro_rules! add_functions {
             ServiceObjTy: From<Proxy<S, O>>,
             ServiceObjTy: ServiceObjTrait<Output = O>,
         {
-            self.add_service_at(
-                S::SERVICE_NAME,
-                Proxy::<S, ServiceObjTy::Output>(PhantomData),
-            )
+            self.add_service_at(S::SERVICE_NAME, Proxy::<S, ServiceObjTy::Output>(PhantomData))
         }
 
         /// Adds a service that proxies requests to the given component.
         // NOTE: we'd like to be able to remove the type parameter `O` here,
         //  but unfortunately the bound `ServiceObjTy: From<Proxy<S, ServiceObjTy::Output>>`
         //  makes type checking angry.
-        pub fn add_proxy_service_to<S: DiscoverableService, O>(&mut self, directory_request: Arc<zx::Channel>) -> &mut Self
+        pub fn add_proxy_service_to<S: DiscoverableService, O>(
+            &mut self,
+            directory_request: Arc<zx::Channel>,
+        ) -> &mut Self
         where
             ServiceObjTy: From<ProxyTo<S, O>>,
             ServiceObjTy: ServiceObjTrait<Output = O>,
         {
             self.add_service_at(
                 S::SERVICE_NAME,
-                ProxyTo::<S, ServiceObjTy::Output>{
-                    directory_request, _phantom: PhantomData}
+                ProxyTo::<S, ServiceObjTy::Output> { directory_request, _phantom: PhantomData },
             )
         }
 
@@ -586,7 +561,7 @@ macro_rules! add_functions {
                     launch_data: Some(LaunchData { component_url, arguments }),
                     launched_app: None,
                     _marker: PhantomData,
-                }
+                },
             )
         }
 
@@ -602,10 +577,7 @@ macro_rules! add_functions {
             offset: u64,
             length: u64,
         ) -> &mut Self {
-            self.add_entry_at(
-                path.into(),
-                ServiceFsNode::VmoFile { vmo, offset, length },
-            )
+            self.add_entry_at(path.into(), ServiceFsNode::VmoFile { vmo, offset, length })
         }
     };
 }

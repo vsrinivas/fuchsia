@@ -13,8 +13,8 @@ use {
         CounterRequest, CounterRequestStream, CounterServiceMarker, CounterServiceRequest,
     },
     fidl_fuchsia_io::{
-        DirectoryMarker, DirectoryProxy, FileMarker, FileProxy, NodeInfo, NodeMarker, SeekOrigin,
-        Service, OPEN_RIGHT_READABLE,
+        DirectoryMarker, DirectoryProxy, FileMarker, FileProxy, NodeEvent, NodeInfo, NodeMarker,
+        NodeProxy, SeekOrigin, Service, OPEN_RIGHT_READABLE,
     },
     files_async::readdir,
     fuchsia_async::{self as fasync, run_until_stalled},
@@ -24,14 +24,19 @@ use {
     },
     fuchsia_zircon::{self as zx, HandleBased as _},
     futures::{future::try_join, stream::TryStreamExt, FutureExt, StreamExt},
-    std::future::Future,
-    std::path::Path,
+    std::{future::Future, path::Path, sync::atomic},
     test_util::assert_matches,
 };
 
 #[run_until_stalled(test)]
 async fn complete_with_no_clients() {
     ServiceFs::new().collect().await
+}
+
+#[run_until_stalled(test)]
+async fn complete_with_no_remaining_clients() {
+    let (fs, _) = fs_with_connection();
+    fs.collect().await
 }
 
 fn fs_with_connection<'a, T: 'a>() -> (ServiceFs<ServiceObj<'a, T>>, DirectoryProxy) {
@@ -163,6 +168,54 @@ async fn clone_service_dir() -> Result<(), Error> {
     };
 
     let ((), ()) = try_join(serve_fut, open_reference_fut).await?;
+    Ok(())
+}
+
+#[run_until_stalled(test)]
+async fn handles_dir_not_dir_flags() -> Result<(), Error> {
+    let service_open_count = atomic::AtomicU32::new(0);
+
+    let (mut fs, root_proxy) = fs_with_connection();
+    fs.dir("dir").add_service_at("notdir", |chan| {
+        service_open_count.fetch_add(1, atomic::Ordering::SeqCst);
+        let (_request_stream, control_handle) =
+            ServerEnd::<NodeMarker>::new(chan).into_stream_and_control_handle().unwrap();
+        control_handle.send_on_open_(zx::Status::OK.into_raw(), None).unwrap();
+        None
+    });
+    let serve_fut = fs.collect().map(Ok);
+
+    let service_open_count = &service_open_count;
+    let test_fut = async move {
+        let dir_flags = fidl_fuchsia_io::OPEN_FLAG_DESCRIBE | fidl_fuchsia_io::OPEN_FLAG_DIRECTORY;
+        let not_dir_flags =
+            fidl_fuchsia_io::OPEN_FLAG_DESCRIBE | fidl_fuchsia_io::OPEN_FLAG_NOT_DIRECTORY;
+
+        // Verify flags when opening a directory.
+        let (node_proxy, node_end) = create_proxy::<NodeMarker>()?;
+        root_proxy.open(dir_flags, 0, "dir", node_end)?;
+        assert_open_status(&node_proxy, zx::Status::OK).await;
+
+        let (node_proxy, node_end) = create_proxy::<NodeMarker>()?;
+        root_proxy.open(not_dir_flags, 0, "dir", node_end)?;
+        assert_open_status(&node_proxy, zx::Status::NOT_FILE).await;
+
+        // Verify flags when opening a file.
+        assert_eq!(service_open_count.load(atomic::Ordering::SeqCst), 0);
+        let (node_proxy, node_end) = create_proxy::<NodeMarker>()?;
+        root_proxy.open(dir_flags, 0, "dir/notdir", node_end)?;
+        assert_open_status(&node_proxy, zx::Status::NOT_DIR).await;
+        assert_eq!(service_open_count.load(atomic::Ordering::SeqCst), 0);
+
+        let (node_proxy, node_end) = create_proxy::<NodeMarker>()?;
+        root_proxy.open(not_dir_flags, 0, "dir/notdir", node_end)?;
+        assert_open_status(&node_proxy, zx::Status::OK).await;
+        assert_eq!(service_open_count.load(atomic::Ordering::SeqCst), 1);
+
+        Ok::<(), Error>(())
+    };
+
+    let ((), ()) = try_join(serve_fut, test_fut).await?;
     Ok(())
 }
 
@@ -342,6 +395,14 @@ async fn connect_to_unified_service_member_of_default_instance() -> Result<(), E
     assert_eq!(value, 1);
     drop(dir_request);
     Ok(())
+}
+
+async fn assert_open_status(proxy: &NodeProxy, expected: zx::Status) {
+    let mut events = proxy.take_event_stream();
+    let NodeEvent::OnOpen_ { s: actual, info: _ } =
+        events.next().await.expect("event").expect("no error");
+
+    assert_eq!(zx::Status::from_raw(actual), expected);
 }
 
 async fn assert_read<'a>(
