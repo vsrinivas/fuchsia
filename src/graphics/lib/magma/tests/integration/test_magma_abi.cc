@@ -12,6 +12,8 @@
 #include <lib/fdio/directory.h>
 #include <lib/zx/channel.h>
 
+#include <filesystem>
+
 #include "fuchsia/sysmem/cpp/fidl.h"
 #include "magma_sysmem.h"
 #include "platform_logger.h"
@@ -39,16 +41,22 @@ inline int64_t ms_to_signed_ns(uint64_t ms) {
 
 class TestConnection {
  public:
-  static constexpr const char* kDeviceNameFuchsia = "/dev/class/gpu/000";
+  static constexpr const char* kDevicePathFuchsia = "/dev/class/gpu";
   static constexpr const char* kDeviceNameLinux = "/dev/dri/renderD128";
   static constexpr const char* kDeviceNameVirt = "/dev/magma0";
 
 #if defined(VIRTMAGMA)
-  static const char* device_name() { return kDeviceNameVirt; }
-#elif defined(__Fuchsia__)
-  static const char* device_name() { return kDeviceNameFuchsia; }
+  static std::string device_name() { return kDeviceNameVirt; }
 #elif defined(__linux__)
-  static const char* device_name() { return kDeviceNameLinux; }
+  static std::string device_name() { return kDeviceNameLinux; }
+#elif defined(__Fuchsia__)
+  static std::string device_name() {
+    // Return the first entry in the device path
+    for (auto& p : std::filesystem::directory_iterator(kDevicePathFuchsia)) {
+      return p.path();
+    }
+    return "";
+  }
 #else
 #error Unimplemented
 #endif
@@ -56,16 +64,22 @@ class TestConnection {
   static bool is_virtmagma() { return device_name() == kDeviceNameVirt; }
 
   TestConnection() {
+    std::string device = device_name();
+    EXPECT_FALSE(device.empty()) << " No GPU device";
+    if (device.empty())
+      return;
+
 #if defined(__Fuchsia__)
     zx::channel server_end, client_end;
     zx::channel::create(0, &server_end, &client_end);
-    zx_status_t status = fdio_service_connect(device_name(), server_end.release());
+
+    zx_status_t status = fdio_service_connect(device.c_str(), server_end.release());
     EXPECT_EQ(status, ZX_OK);
     if (status == ZX_OK) {
       EXPECT_EQ(MAGMA_STATUS_OK, magma_device_import(client_end.release(), &device_));
     }
 #elif defined(__linux__)
-    int fd = open(device_name(), O_RDWR);
+    int fd = open(device.c_str(), O_RDWR);
     EXPECT_TRUE(fd >= 0);
     if (fd >= 0) {
       EXPECT_EQ(MAGMA_STATUS_OK, magma_device_import(fd, &device_));
@@ -630,7 +644,7 @@ TEST(MagmaAbi, SysmemLinearFormatModifier) {
   test.Sysmem(true);
 }
 
-TEST(MagmaAbi, FromC) { EXPECT_TRUE(test_magma_abi_from_c(TestConnection::device_name())); }
+TEST(MagmaAbi, FromC) { EXPECT_TRUE(test_magma_abi_from_c(TestConnection::device_name().c_str())); }
 
 TEST(MagmaAbi, ExecuteCommandBufferWithResources) {
   TestConnectionWithContext().ExecuteCommandBufferWithResources(5);
