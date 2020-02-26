@@ -90,3 +90,33 @@ group("kitchen_sink") {
     "//topaz",
   ]
 }
+
+# While we don't necessarily want to run all tests on devices with limited flash, we should run a
+# few amlogic-HW-dependent tests on astro and/or sherlock.  This list is those tests.  This list
+# intentionally doesn't include all of :tests above.
+group("amlogic_hw_dependent_tests") {
+  testonly = true
+
+  public_deps = [
+    # Verify communication with amlogic optee.
+    "//src/security/tee_manager:optee_smoke_test",
+
+    # Test amlogic-video h264 decode.  Can also work in QEMU using SW decode, but when decode HW is
+    # present we'll use that to decode.
+    "//src/media/codec/examples:use_h264_decoder_test",
+
+    # Test amlogic-video h264 decode without output buffers mapped for CPU access.
+    "//src/media/codec/examples:use_h264_decoder_secure_output_test",
+
+    # Test amlogic-video vp9 decode.
+    "//src/media/codec/examples:use_vp9_decoder_test",
+
+    # Test amlogic-video vp9 decode with max output frame count, on environments that
+    # have enough contiguous SYSTEM_RAM configured for sysmem.
+    "//src/media/codec/examples:use_vp9_decoder_24_output_frames_test",
+
+    # Test amlogic-video vp9 decode.  This uses the same test executable as
+    # VP9 decode conformance tests.
+    "//src/media/codec/examples:vp9_decoder_conformance_test__bear-vp9",
+  ]
+}
