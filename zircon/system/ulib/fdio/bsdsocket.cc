@@ -425,6 +425,11 @@ int setsockopt(int fd, int level, int optname, const void* optval, socklen_t opt
           return ERRNO(EINVAL);
         }
         const struct timeval* duration_tv = static_cast<const struct timeval*>(optval);
+        // https://github.com/torvalds/linux/blob/bd2463ac7d7ec51d432f23bf0e893fb371a908cd/net/core/sock.c#L392-L393
+        constexpr int kUsecPerSec = 1000000;
+        if (duration_tv->tv_usec < 0 || duration_tv->tv_usec >= kUsecPerSec) {
+          return ERRNO(EDOM);
+        }
         if (duration_tv->tv_sec || duration_tv->tv_usec) {
           *timeout = zx::sec(duration_tv->tv_sec) + zx::usec(duration_tv->tv_usec);
         } else {
