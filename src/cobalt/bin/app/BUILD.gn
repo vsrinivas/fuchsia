@@ -66,7 +66,9 @@ source_set("lib") {
     "//third_party/cobalt/src/lib/util:posix_file_system",
     "//third_party/cobalt/src/logger",
     "//third_party/cobalt/src/logger:project_context_factory",
+    "//third_party/cobalt/src/public:cobalt_config",
     "//third_party/cobalt/src/public:cobalt_service",
+    "//third_party/cobalt/src/public:cobalt_service_interface",
     "//third_party/cobalt/src/system_data",
     "//third_party/cobalt/src/system_data:configuration_data",
     "//zircon/public/lib/async-loop-cpp",
@@ -166,10 +168,21 @@ package("cobalt") {
   ]
 }
 
+metrics_registry("testapp_metrics_registry") {
+  # This must match the ID of the test_app2 Cobalt project as specified in:
+  # third_party/cobalt_config/projects.yaml
+  project_id = 657579885
+  namespace = "testapp_registry"
+  for_testing = true
+  generate_cc = true
+  generate_binarypb = true
+}
+
 executable("cobalt_app_unittests") {
   testonly = true
 
   sources = [
+    "cobalt_app_test.cc",
     "configuration_data_test.cc",
     "logger_impl_test.cc",
     "system_data_updater_impl_test.cc",
@@ -179,12 +192,16 @@ executable("cobalt_app_unittests") {
 
   deps = [
     ":lib",
+    ":testapp_metrics_registry_cc",
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp/testing:unit",
+    "//src/cobalt/bin/testapp:fake_timekeeper_lib",
     "//src/lib/cobalt/cpp:cobalt_event_builder",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/network_wrapper:fake",
     "//third_party/cobalt/src/logger:logger_test_utils",
+    "//third_party/cobalt/src/public/testing:fake_cobalt_service",
     "//third_party/googletest:gmock",
     "//zircon/system/fidl/fuchsia-cobalt",
   ]

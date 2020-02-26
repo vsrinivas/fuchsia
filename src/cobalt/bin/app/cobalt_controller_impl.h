@@ -8,16 +8,15 @@
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 
-#include "third_party/cobalt/src/local_aggregation/event_aggregator_mgr.h"
-#include "third_party/cobalt/src/observation_store/observation_store.h"
-#include "third_party/cobalt/src/public/cobalt_service.h"
+#include "src/lib/fxl/macros.h"
+#include "third_party/cobalt/src/public/cobalt_service_interface.h"
 
 namespace cobalt {
 
 class CobaltControllerImpl : public fuchsia::cobalt::Controller {
  public:
   // All of the pointers passed to the constructor must be non-null.
-  CobaltControllerImpl(async_dispatcher_t* dispatcher, CobaltService* cobalt_service);
+  CobaltControllerImpl(async_dispatcher_t* dispatcher, CobaltServiceInterface* cobalt_service);
 
  private:
   void RequestSendSoon(RequestSendSoonCallback callback) override;
@@ -36,7 +35,7 @@ class CobaltControllerImpl : public fuchsia::cobalt::Controller {
                                       GenerateAggregatedObservationsCallback callback) override;
 
   async_dispatcher_t* const dispatcher_;
-  CobaltService* cobalt_service_;  // not owned
+  CobaltServiceInterface* cobalt_service_;  // not owned
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CobaltControllerImpl);
 };

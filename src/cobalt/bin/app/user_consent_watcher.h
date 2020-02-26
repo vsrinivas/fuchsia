@@ -13,14 +13,14 @@
 #include "src/lib/backoff/exponential_backoff.h"
 #include "src/lib/fxl/functional/cancelable_callback.h"
 #include "src/lib/fxl/macros.h"
-#include "third_party/cobalt/src/public/cobalt_service.h"
+#include "third_party/cobalt/src/public/cobalt_service_interface.h"
 #include "zircon/system/ulib/async/include/lib/async/dispatcher.h"
 
 namespace cobalt {
 
-// Calls a callback with an updated CobaltService::DataCollectionPolicy when the "user data sharing
-// consent" option changes. The callback will be called once when the Watcher connects to the
-// service (but not before), and each time the PrivacySettings change.
+// Calls a callback with an updated CobaltServiceInterface::DataCollectionPolicy when the "user data
+// sharing consent" option changes. The callback will be called once when the Watcher connects to
+// the service (but not before), and each time the PrivacySettings change.
 //
 // In case of failure, e.g., loss of connection, error returned, the data collection policy is set
 // to DO_NOT_UPLOAD regardless of its current state, and the connection to the service will be
@@ -31,9 +31,9 @@ namespace cobalt {
 class UserConsentWatcher {
  public:
   // fuchsia.settings.Privacy is expected to be in |services|.
-  UserConsentWatcher(async_dispatcher_t* dispatcher,
-                     std::shared_ptr<sys::ServiceDirectory> services,
-                     std::function<void(const CobaltService::DataCollectionPolicy&)> callback);
+  UserConsentWatcher(
+      async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
+      std::function<void(const CobaltServiceInterface::DataCollectionPolicy&)> callback);
 
   // Connects to fuchsia.settings.Privacy and watches for "user data sharing consent" changes.
   void StartWatching();
@@ -54,7 +54,7 @@ class UserConsentWatcher {
 
   async_dispatcher_t* dispatcher_;
   const std::shared_ptr<sys::ServiceDirectory> services_;
-  std::function<void(const CobaltService::DataCollectionPolicy&)> callback_;
+  std::function<void(const CobaltServiceInterface::DataCollectionPolicy&)> callback_;
 
   fuchsia::settings::PrivacySettings privacy_settings_;
   fuchsia::settings::PrivacyPtr privacy_settings_ptr_;

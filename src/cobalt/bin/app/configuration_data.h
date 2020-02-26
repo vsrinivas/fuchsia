@@ -10,7 +10,7 @@
 
 #include "src/lib/json_parser/json_parser.h"
 #include "third_party/cobalt/src/lib/statusor/statusor.h"
-#include "third_party/cobalt/src/public/cobalt_service.h"
+#include "third_party/cobalt/src/public/cobalt_service_interface.h"
 #include "third_party/cobalt/src/registry/metric_definition.pb.h"
 #include "third_party/cobalt/src/system_data/configuration_data.h"
 
@@ -51,7 +51,7 @@ class FuchsiaConfigurationData {
 
   cobalt::ReleaseStage GetReleaseStage() const;
 
-  cobalt::CobaltService::DataCollectionPolicy GetDataCollectionPolicy() const;
+  cobalt::CobaltServiceInterface::DataCollectionPolicy GetDataCollectionPolicy() const;
 
   bool GetWatchForUserConsent() const;
 
@@ -67,7 +67,7 @@ class FuchsiaConfigurationData {
 
   JSONHelper json_helper_;
   cobalt::ReleaseStage release_stage_;
-  cobalt::CobaltService::DataCollectionPolicy data_collection_policy_;
+  cobalt::CobaltServiceInterface::DataCollectionPolicy data_collection_policy_;
   bool watch_for_user_consent_;
 };
 

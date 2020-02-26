@@ -11,7 +11,7 @@
 #include "src/lib/fxl/strings/trim.h"
 #include "src/lib/json_parser/json_parser.h"
 #include "third_party/cobalt/src/lib/util/file_util.h"
-#include "third_party/cobalt/src/public/cobalt_service.h"
+#include "third_party/cobalt/src/public/cobalt_service_interface.h"
 
 namespace cobalt {
 
@@ -39,8 +39,8 @@ constexpr char kDefaultDataCollectionPolicyKey[] = "default_data_collection_poli
 // If we started with DO_NOT_COLLECT, we could possibly miss early boot metrics entirely, and if
 // we started with COLLECT_AND_UPLOAD, we could possibly violate the user's chosen
 // DataCollectionPolicy by uploading metrics when they have opted out.
-const cobalt::CobaltService::DataCollectionPolicy kDefaultDataCollectionPolicy =
-    cobalt::CobaltService::DataCollectionPolicy::DO_NOT_UPLOAD;
+const cobalt::CobaltServiceInterface::DataCollectionPolicy kDefaultDataCollectionPolicy =
+    cobalt::CobaltServiceInterface::DataCollectionPolicy::DO_NOT_UPLOAD;
 
 constexpr char kWatchForUserConsentKey[] = "watch_for_user_consent";
 const bool kDefaultWatchForUserConsent = true;
@@ -179,7 +179,7 @@ cobalt::ReleaseStage LookupReleaseStage(const JSONHelper& json_helper) {
   return kDefaultReleaseStage;
 }
 
-cobalt::CobaltService::DataCollectionPolicy LookupDataCollectionPolicy(
+cobalt::CobaltServiceInterface::DataCollectionPolicy LookupDataCollectionPolicy(
     const JSONHelper& json_helper) {
   ASSIGN_OR_RETURN_DEFAULT(auto data_collection_policy, kDefaultDataCollectionPolicy,
                            json_helper.GetString(kDefaultDataCollectionPolicyKey));
@@ -187,11 +187,11 @@ cobalt::CobaltService::DataCollectionPolicy LookupDataCollectionPolicy(
   FX_LOGS(INFO) << "Loaded Cobalt data collection policy from config file: "
                 << data_collection_policy;
   if (data_collection_policy == "DO_NOT_COLLECT") {
-    return cobalt::CobaltService::DataCollectionPolicy::DO_NOT_COLLECT;
+    return cobalt::CobaltServiceInterface::DataCollectionPolicy::DO_NOT_COLLECT;
   } else if (data_collection_policy == "DO_NOT_UPLOAD") {
-    return cobalt::CobaltService::DataCollectionPolicy::DO_NOT_UPLOAD;
+    return cobalt::CobaltServiceInterface::DataCollectionPolicy::DO_NOT_UPLOAD;
   } else if (data_collection_policy == "COLLECT_AND_UPLOAD") {
-    return cobalt::CobaltService::DataCollectionPolicy::COLLECT_AND_UPLOAD;
+    return cobalt::CobaltServiceInterface::DataCollectionPolicy::COLLECT_AND_UPLOAD;
   }
 
   FX_LOGS(ERROR) << "Failed to parse the data collection policy: `" << data_collection_policy
@@ -252,8 +252,8 @@ int32_t FuchsiaConfigurationData::GetLogSourceId() const {
 
 cobalt::ReleaseStage FuchsiaConfigurationData::GetReleaseStage() const { return release_stage_; }
 
-cobalt::CobaltService::DataCollectionPolicy FuchsiaConfigurationData::GetDataCollectionPolicy()
-    const {
+cobalt::CobaltServiceInterface::DataCollectionPolicy
+FuchsiaConfigurationData::GetDataCollectionPolicy() const {
   return data_collection_policy_;
 }
 

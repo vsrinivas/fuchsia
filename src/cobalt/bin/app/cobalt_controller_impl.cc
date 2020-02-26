@@ -9,10 +9,8 @@
 
 namespace cobalt {
 
-using encoder::ShippingManager;
-
 CobaltControllerImpl::CobaltControllerImpl(async_dispatcher_t* dispatcher,
-                                           CobaltService* cobalt_service)
+                                           CobaltServiceInterface* cobalt_service)
     : dispatcher_(dispatcher), cobalt_service_(cobalt_service) {}
 
 void CobaltControllerImpl::RequestSendSoon(RequestSendSoonCallback callback) {
@@ -20,45 +18,44 @@ void CobaltControllerImpl::RequestSendSoon(RequestSendSoonCallback callback) {
   // std::function, so wrap the callback in a copyable shared_ptr.
   std::shared_ptr<RequestSendSoonCallback> copyable_callback =
       std::make_shared<RequestSendSoonCallback>(std::move(callback));
-  cobalt_service_->shipping_manager()->RequestSendSoon(
-      [copyable_callback, dispatcher = dispatcher_](bool success) mutable {
-        // invokes |callback| on the main thread
-        async::PostTask(dispatcher, [callback = std::move(*copyable_callback), success]() {
-          callback(success);
-        });
-      });
+  cobalt_service_->ShippingRequestSendSoon([copyable_callback,
+                                            dispatcher = dispatcher_](bool success) mutable {
+    // invokes |callback| on the main thread
+    async::PostTask(dispatcher,
+                    [callback = std::move(*copyable_callback), success]() { callback(success); });
+  });
 }
 
 void CobaltControllerImpl::BlockUntilEmpty(uint32_t max_wait_seconds,
                                            BlockUntilEmptyCallback callback) {
-  cobalt_service_->shipping_manager()->WaitUntilIdle(std::chrono::seconds(max_wait_seconds));
+  cobalt_service_->WaitUntilShippingIdle(std::chrono::seconds(max_wait_seconds));
   callback();
 }
 
 void CobaltControllerImpl::GetNumSendAttempts(GetNumSendAttemptsCallback callback) {
-  callback(cobalt_service_->shipping_manager()->num_send_attempts());
+  callback(cobalt_service_->num_shipping_send_attempts());
 }
 
 void CobaltControllerImpl::GetFailedSendAttempts(GetFailedSendAttemptsCallback callback) {
-  callback(cobalt_service_->shipping_manager()->num_failed_attempts());
+  callback(cobalt_service_->num_shipping_failed_attempts());
 }
 
 void CobaltControllerImpl::GetNumObservationsAdded(GetNumObservationsAddedCallback callback) {
-  callback(cobalt_service_->observation_store()->num_observations_added());
+  callback(cobalt_service_->num_observations_added());
 }
 
 void CobaltControllerImpl::GetNumEventAggregatorRuns(GetNumEventAggregatorRunsCallback callback) {
-  callback(cobalt_service_->event_aggregator_manager()->num_runs());
+  callback(cobalt_service_->num_aggregator_runs());
 }
 
 void CobaltControllerImpl::GenerateAggregatedObservations(
     uint32_t day_index, std::vector<uint32_t> report_ids,
     GenerateAggregatedObservationsCallback callback) {
   std::vector<uint64_t> num_obs_before =
-      cobalt_service_->observation_store()->num_observations_added_for_reports(report_ids);
-  cobalt_service_->event_aggregator_manager()->GenerateObservationsNoWorker(day_index);
+      cobalt_service_->num_observations_added_for_reports(report_ids);
+  cobalt_service_->GenerateAggregatedObservations(day_index);
   std::vector<uint64_t> num_obs_after =
-      cobalt_service_->observation_store()->num_observations_added_for_reports(report_ids);
+      cobalt_service_->num_observations_added_for_reports(report_ids);
   std::vector<uint64_t> num_new_obs;
   for (size_t i = 0; i < report_ids.size(); i++) {
     num_new_obs.push_back(num_obs_after[i] - num_obs_before[i]);

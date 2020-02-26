@@ -228,11 +228,11 @@ int main(int argc, const char** argv) {
 
   auto boardname = ReadBoardName(context->svc());
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher(), "cobalt_fidl_provider");
-  cobalt::CobaltApp app(std::move(context), loop.dispatcher(), schedule_interval, min_interval,
-                        initial_interval, event_aggregator_backfill_days,
-                        start_event_aggregator_worker, use_memory_observation_store,
-                        max_bytes_per_observation_store, ReadBuildInfo("product"), boardname,
-                        ReadBuildInfo("version"));
+  cobalt::CobaltApp app = cobalt::CobaltApp::CreateCobaltApp(
+      std::move(context), loop.dispatcher(), schedule_interval, min_interval, initial_interval,
+      event_aggregator_backfill_days, start_event_aggregator_worker, use_memory_observation_store,
+      max_bytes_per_observation_store, ReadBuildInfo("product"), boardname,
+      ReadBuildInfo("version"));
   loop.Run();
   return 0;
 }

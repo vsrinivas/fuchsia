@@ -18,7 +18,7 @@ constexpr uint32_t kFuchsiaCustomerId = 1;
 
 LoggerFactoryImpl::LoggerFactoryImpl(
     std::shared_ptr<cobalt::logger::ProjectContextFactory> global_project_context_factory,
-    TimerManager* timer_manager, CobaltService* cobalt_service)
+    TimerManager* timer_manager, CobaltServiceInterface* cobalt_service)
     : global_project_context_factory_(std::move(global_project_context_factory)),
       timer_manager_(timer_manager),
       cobalt_service_(cobalt_service) {}

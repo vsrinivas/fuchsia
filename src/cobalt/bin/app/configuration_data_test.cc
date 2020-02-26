@@ -93,7 +93,7 @@ TEST(ConfigTest, DataCollectionPolicyDoNotUpload) {
 
   FuchsiaConfigurationData config_data(kTestDir, kTestDir);
 
-  EXPECT_EQ(cobalt::CobaltService::DataCollectionPolicy::DO_NOT_UPLOAD,
+  EXPECT_EQ(cobalt::CobaltServiceInterface::DataCollectionPolicy::DO_NOT_UPLOAD,
             config_data.GetDataCollectionPolicy());
 }
 
@@ -105,7 +105,7 @@ TEST(ConfigTest, DataCollectionPolicyCollectAndUpload) {
 
   FuchsiaConfigurationData config_data(kTestDir, kTestDir);
 
-  EXPECT_EQ(cobalt::CobaltService::DataCollectionPolicy::COLLECT_AND_UPLOAD,
+  EXPECT_EQ(cobalt::CobaltServiceInterface::DataCollectionPolicy::COLLECT_AND_UPLOAD,
             config_data.GetDataCollectionPolicy());
 }
 

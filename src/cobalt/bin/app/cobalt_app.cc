@@ -7,12 +7,14 @@
 #include <memory>
 
 #include "lib/sys/cpp/component_context.h"
-#include "src/cobalt/bin/app/logger_impl.h"
 #include "src/cobalt/bin/app/utils.h"
 #include "src/cobalt/bin/utils/fuchsia_http_client.h"
 #include "src/lib/backoff/exponential_backoff.h"
 #include "src/lib/network_wrapper/network_wrapper_impl.h"
 #include "third_party/cobalt/src/lib/util/posix_file_system.h"
+#include "third_party/cobalt/src/logger/project_context_factory.h"
+#include "third_party/cobalt/src/public/cobalt_config.h"
+#include "third_party/cobalt/src/public/cobalt_service.h"
 
 namespace cobalt {
 
@@ -35,8 +37,6 @@ constexpr char kLocalLogFilePath[] = "/data/cobalt_observations.pb";
 
 const size_t kClearcutMaxRetries = 5;
 
-namespace {
-
 std::string ReadGlobalMetricsRegistryBytes(const std::string& global_metrics_registry_path) {
   std::ifstream registry_file_stream;
   registry_file_stream.open(global_metrics_registry_path);
@@ -50,40 +50,31 @@ std::string ReadGlobalMetricsRegistryBytes(const std::string& global_metrics_reg
   return global_metrics_registry_bytes;
 }
 
-}  // namespace
-
-CobaltApp::CobaltApp(std::unique_ptr<sys::ComponentContext> context, async_dispatcher_t* dispatcher,
-                     std::chrono::seconds target_interval, std::chrono::seconds min_interval,
-                     std::chrono::seconds initial_interval, size_t event_aggregator_backfill_days,
-                     bool start_event_aggregator_worker, bool use_memory_observation_store,
-                     size_t max_bytes_per_observation_store, const std::string& product_name,
-                     const std::string& board_name, const std::string& version)
-    : context_(std::move(context)),
-      system_clock_(std::make_unique<FuchsiaSystemClock>(context_->svc())),
-      network_wrapper_(std::make_unique<network_wrapper::NetworkWrapperImpl>(
-          dispatcher, std::make_unique<backoff::ExponentialBackoff>(),
-          [this] { return context_->svc()->Connect<http::HttpService>(); })),
-      timer_manager_(dispatcher) {
-  auto global_project_context_factory =
-      std::make_shared<ProjectContextFactory>(ReadGlobalMetricsRegistryBytes(kMetricsRegistryPath));
-
+CobaltConfig CobaltApp::CreateCobaltConfig(
+    async_dispatcher_t* dispatcher,
+    cobalt::logger::ProjectContextFactory* global_project_context_factory,
+    const FuchsiaConfigurationData& configuration_data, FuchsiaSystemClockInterface* system_clock,
+    network_wrapper::NetworkWrapper* network_wrapper, std::chrono::seconds target_interval,
+    std::chrono::seconds min_interval, std::chrono::seconds initial_interval,
+    size_t event_aggregator_backfill_days, bool use_memory_observation_store,
+    size_t max_bytes_per_observation_store, const std::string& product_name,
+    const std::string& board_name, const std::string& version) {
   // |target_pipeline| is the pipeline used for sending data to cobalt. In particular, it is the
   // source of the encryption keys, as well as determining the destination for generated
   // observations (either clearcut, or the local filesystem).
   std::unique_ptr<TargetPipelineInterface> target_pipeline;
-  const auto& backend_environment = configuration_data_.GetBackendEnvironment();
+  const auto& backend_environment = configuration_data.GetBackendEnvironment();
   if (backend_environment == system_data::Environment::LOCAL) {
     target_pipeline = std::make_unique<LocalPipeline>();
   } else {
     target_pipeline = std::make_unique<TargetPipeline>(
-        backend_environment, ReadPublicKeyPem(configuration_data_.ShufflerPublicKeyPath()),
-        ReadPublicKeyPem(configuration_data_.AnalyzerPublicKeyPath()),
-        std::make_unique<FuchsiaHTTPClient>(network_wrapper_.get(), dispatcher),
-        kClearcutMaxRetries);
+        backend_environment, ReadPublicKeyPem(configuration_data.ShufflerPublicKeyPath()),
+        ReadPublicKeyPem(configuration_data.AnalyzerPublicKeyPath()),
+        std::make_unique<FuchsiaHTTPClient>(network_wrapper, dispatcher), kClearcutMaxRetries);
   }
 
-  auto internal_project_context = global_project_context_factory->NewProjectContext(
-      logger::kCustomerId, logger::kProjectId);
+  auto internal_project_context =
+      global_project_context_factory->NewProjectContext(logger::kCustomerId, logger::kProjectId);
   if (!internal_project_context) {
     FX_LOGS(ERROR) << "The CobaltRegistry bundled with Cobalt does not "
                       "include the expected internal metrics project. "
@@ -94,7 +85,7 @@ CobaltApp::CobaltApp(std::unique_ptr<sys::ComponentContext> context, async_dispa
       .product_name = product_name,
       .board_name_suggestion = board_name,
       .version = version,
-      .release_stage = configuration_data_.GetReleaseStage(),
+      .release_stage = configuration_data.GetReleaseStage(),
 
       .file_system = std::make_unique<PosixFileSystem>(),
       .use_memory_observation_store = use_memory_observation_store,
@@ -114,19 +105,63 @@ CobaltApp::CobaltApp(std::unique_ptr<sys::ComponentContext> context, async_dispa
 
       .local_shipping_manager_path = kLocalLogFilePath,
 
-      .api_key = configuration_data_.GetApiKey(),
-      .client_secret = getClientSecret(),
+      .api_key = configuration_data.GetApiKey(),
+      .client_secret = CobaltApp::getClientSecret(),
       .internal_logger_project_context = std::move(internal_project_context),
 
       .local_aggregation_backfill_days = event_aggregator_backfill_days,
 
-      .validated_clock = system_clock_.get(),
+      .validated_clock = system_clock,
   };
+  return cfg;
+}
 
-  cobalt_service_ = std::make_unique<CobaltService>(std::move(cfg));
+CobaltApp CobaltApp::CreateCobaltApp(
+    std::unique_ptr<sys::ComponentContext> context, async_dispatcher_t* dispatcher,
+    std::chrono::seconds target_interval, std::chrono::seconds min_interval,
+    std::chrono::seconds initial_interval, size_t event_aggregator_backfill_days,
+    bool start_event_aggregator_worker, bool use_memory_observation_store,
+    size_t max_bytes_per_observation_store, const std::string& product_name,
+    const std::string& board_name, const std::string& version) {
+  auto global_project_context_factory =
+      std::make_shared<ProjectContextFactory>(ReadGlobalMetricsRegistryBytes(kMetricsRegistryPath));
 
-  cobalt_service_->SetDataCollectionPolicy(configuration_data_.GetDataCollectionPolicy());
+  // Create the configuration data from the data in the filesystem.
+  FuchsiaConfigurationData configuration_data;
 
+  sys::ComponentContext* context_ptr = context.get();
+  auto network_wrapper = std::make_unique<network_wrapper::NetworkWrapperImpl>(
+      dispatcher, std::make_unique<backoff::ExponentialBackoff>(),
+      [context_ptr] { return context_ptr->svc()->Connect<http::HttpService>(); });
+
+  auto system_clock = std::make_unique<FuchsiaSystemClock>(context_ptr->svc());
+
+  auto cobalt_service = std::make_unique<CobaltService>(CreateCobaltConfig(
+      dispatcher, global_project_context_factory.get(), configuration_data, system_clock.get(),
+      network_wrapper.get(), target_interval, min_interval, initial_interval,
+      event_aggregator_backfill_days, use_memory_observation_store, max_bytes_per_observation_store,
+      product_name, board_name, version));
+
+  cobalt_service->SetDataCollectionPolicy(configuration_data.GetDataCollectionPolicy());
+
+  return CobaltApp(std::move(context), dispatcher, std::move(cobalt_service),
+                   std::move(system_clock), std::move(network_wrapper),
+                   std::move(global_project_context_factory), start_event_aggregator_worker,
+                   configuration_data.GetWatchForUserConsent());
+}
+
+CobaltApp::CobaltApp(
+    std::unique_ptr<sys::ComponentContext> context, async_dispatcher_t* dispatcher,
+    std::unique_ptr<CobaltServiceInterface> cobalt_service,
+    std::unique_ptr<FuchsiaSystemClockInterface> system_clock,
+    std::unique_ptr<network_wrapper::NetworkWrapper> network_wrapper,
+    std::shared_ptr<cobalt::logger::ProjectContextFactory> global_project_context_factory,
+    bool start_event_aggregator_worker, bool watch_for_user_consent)
+    : context_(std::move(context)),
+      cobalt_service_(std::move(cobalt_service)),
+      system_clock_(std::move(system_clock)),
+      network_wrapper_(std::move(network_wrapper)),
+      timer_manager_(dispatcher) {
   auto current_time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
   FX_LOGS(INFO) << "Waiting for the system clock to become accurate at: "
                 << std::put_time(std::localtime(&current_time), "%F %T %z");
@@ -141,22 +176,19 @@ CobaltApp::CobaltApp(std::unique_ptr<sys::ComponentContext> context, async_dispa
     cobalt_service_->SystemClockIsAccurate(std::move(system_clock), start_event_aggregator_worker);
   });
 
-  // Create LoggerFactory.
+  // Create LoggerFactory protocol implementation and start serving it.
   logger_factory_impl_.reset(new LoggerFactoryImpl(std::move(global_project_context_factory),
                                                    &timer_manager_, cobalt_service_.get()));
-
   context_->outgoing()->AddPublicService(
       logger_factory_bindings_.GetHandler(logger_factory_impl_.get()));
 
-  // Create SystemDataUpdater
+  // Create SystemDataUpdater protocol implementation and start serving it.
   system_data_updater_impl_.reset(
       new SystemDataUpdaterImpl(cobalt_service_->system_data(), kSystemDataCachePrefix));
   context_->outgoing()->AddPublicService(
       system_data_updater_bindings_.GetHandler(system_data_updater_impl_.get()));
 
-  controller_impl_ = std::make_unique<CobaltControllerImpl>(dispatcher, cobalt_service_.get());
-
-  if (configuration_data_.GetWatchForUserConsent()) {
+  if (watch_for_user_consent) {
     user_consent_watcher_ = std::make_unique<UserConsentWatcher>(
         dispatcher, context_->svc(), [this](const CobaltService::DataCollectionPolicy& new_policy) {
           cobalt_service_->SetDataCollectionPolicy(new_policy);
@@ -165,7 +197,8 @@ CobaltApp::CobaltApp(std::unique_ptr<sys::ComponentContext> context, async_dispa
     user_consent_watcher_->StartWatching();
   }
 
-  // Add other bindings.
+  // Create Controller protocol implementation and start serving it.
+  controller_impl_ = std::make_unique<CobaltControllerImpl>(dispatcher, cobalt_service_.get());
   context_->outgoing()->AddPublicService(controller_bindings_.GetHandler(controller_impl_.get()));
 }
 

@@ -18,7 +18,7 @@ namespace cobalt {
 
 UserConsentWatcher::UserConsentWatcher(
     async_dispatcher_t *dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-    std::function<void(const CobaltService::DataCollectionPolicy &)> callback)
+    std::function<void(const CobaltServiceInterface::DataCollectionPolicy &)> callback)
     : dispatcher_(dispatcher),
       services_(services),
       callback_(callback),
@@ -70,11 +70,11 @@ void UserConsentWatcher::ResetConsent() {
 
 void UserConsentWatcher::Update() {
   if (!privacy_settings_.has_user_data_sharing_consent()) {
-    callback_(CobaltService::DataCollectionPolicy::DO_NOT_UPLOAD);
+    callback_(CobaltServiceInterface::DataCollectionPolicy::DO_NOT_UPLOAD);
   } else if (privacy_settings_.user_data_sharing_consent()) {
-    callback_(CobaltService::DataCollectionPolicy::COLLECT_AND_UPLOAD);
+    callback_(CobaltServiceInterface::DataCollectionPolicy::COLLECT_AND_UPLOAD);
   } else {
-    callback_(CobaltService::DataCollectionPolicy::DO_NOT_COLLECT);
+    callback_(CobaltServiceInterface::DataCollectionPolicy::DO_NOT_COLLECT);
   }
 }
 

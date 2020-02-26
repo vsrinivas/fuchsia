@@ -23,6 +23,8 @@ test_package("cobalt_tests") {
   deps = [
     "app:app",
     "app:cobalt_app_unittests",
+    "app:global_metrics_registry",
+    "app:testapp_metrics_registry",
     "system-metrics:cobalt_system_metrics_unittests",
     "testapp:cobalt_fake_timekeeper",
     "testapp:cobalt_testapp",
@@ -82,6 +84,31 @@ test_package("cobalt_tests") {
       # whose output is inspected.
       disabled = true
       environments = basic_envs
+    },
+  ]
+
+  resources = [
+    {
+      # Cobalt 1.0 analyzer public key for devel environment.
+      path = rebase_path("//third_party/cobalt/keys/analyzer_public.cobalt_key")
+      dest = "keys/analyzer_devel_public"
+    },
+    {
+      # Cobalt 1.0 shuffler public key for devel environment.
+      path = rebase_path("//third_party/cobalt/keys/shuffler_public.cobalt_key")
+      dest = "keys/shuffler_devel_public"
+    },
+    {
+      path = rebase_path(
+              get_label_info("app:global_metrics_registry", "target_gen_dir") +
+              "/global_metrics_registry.pb")
+      dest = "global_metrics_registry.pb"
+    },
+    {
+      path = rebase_path(
+              get_label_info("app:testapp_metrics_registry", "target_gen_dir") +
+              "/testapp_metrics_registry.pb")
+      dest = "testapp_metrics_registry.pb"
     },
   ]
 }

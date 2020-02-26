@@ -12,7 +12,7 @@
 #include "src/cobalt/bin/app/logger_impl.h"
 #include "src/cobalt/bin/app/timer_manager.h"
 #include "third_party/cobalt/src/logger/project_context_factory.h"
-#include "third_party/cobalt/src/public/cobalt_service.h"
+#include "third_party/cobalt/src/public/cobalt_service_interface.h"
 
 namespace cobalt {
 
@@ -20,7 +20,7 @@ class LoggerFactoryImpl : public fuchsia::cobalt::LoggerFactory {
  public:
   LoggerFactoryImpl(
       std::shared_ptr<cobalt::logger::ProjectContextFactory> global_project_context_factory,
-      TimerManager* timer_manager, CobaltService* cobalt_service);
+      TimerManager* timer_manager, CobaltServiceInterface* cobalt_service);
 
  private:
   // Constructs a new LoggerImpl based on |project_context|, binds it to
@@ -55,8 +55,8 @@ class LoggerFactoryImpl : public fuchsia::cobalt::LoggerFactory {
       logger_simple_bindings_;
 
   std::shared_ptr<cobalt::logger::ProjectContextFactory> global_project_context_factory_;
-  TimerManager* timer_manager_;    // not owned
-  CobaltService* cobalt_service_;  // not owned
+  TimerManager* timer_manager_;             // not owned
+  CobaltServiceInterface* cobalt_service_;  // not owned
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LoggerFactoryImpl);
 };

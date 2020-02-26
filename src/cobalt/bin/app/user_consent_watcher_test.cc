@@ -104,9 +104,13 @@ class UserConsentWatcherTest : public gtest::TestLoopFixture,
       : gtest::TestLoopFixture(),
         service_directory_provider_(dispatcher()),
         watcher_(dispatcher(), service_directory_provider_.service_directory(),
-                 [this](const CobaltService::DataCollectionPolicy& policy) { Callback(policy); }) {}
+                 [this](const CobaltServiceInterface::DataCollectionPolicy& policy) {
+                   Callback(policy);
+                 }) {}
 
-  void Callback(const CobaltService::DataCollectionPolicy& policy) { current_policy_ = policy; }
+  void Callback(const CobaltServiceInterface::DataCollectionPolicy& policy) {
+    current_policy_ = policy;
+  }
 
   void SetPrivacyProvider(std::unique_ptr<FakePrivacy> privacy_provider) {
     privacy_provider_ = std::move(privacy_provider);
@@ -126,7 +130,7 @@ class UserConsentWatcherTest : public gtest::TestLoopFixture,
  protected:
   sys::testing::ServiceDirectoryProvider service_directory_provider_;
   UserConsentWatcher watcher_;
-  CobaltService::DataCollectionPolicy current_policy_;
+  CobaltServiceInterface::DataCollectionPolicy current_policy_;
   PrivacySettings last_settings_;
   std::unique_ptr<FakePrivacy> privacy_provider_;
 };
@@ -150,7 +154,7 @@ TEST_F(UserConsentWatcherTest, CallbackCalledIfServerNotAvailable) {
   watcher_.StartWatching();
   RunLoopUntilIdle();
   EXPECT_FALSE(watcher_.IsConnected());
-  EXPECT_EQ(current_policy_, CobaltService::DataCollectionPolicy::DO_NOT_UPLOAD);
+  EXPECT_EQ(current_policy_, CobaltServiceInterface::DataCollectionPolicy::DO_NOT_UPLOAD);
   EXPECT_TRUE(watcher_.privacy_settings().IsEmpty());
 }
 
@@ -162,7 +166,7 @@ TEST_P(UserConsentWatcherTest, ConsentResetIfServerClosesConnection) {
   RunLoopUntilIdle();
 
   EXPECT_FALSE(watcher_.IsConnected());
-  EXPECT_EQ(current_policy_, CobaltService::DataCollectionPolicy::DO_NOT_UPLOAD);
+  EXPECT_EQ(current_policy_, CobaltServiceInterface::DataCollectionPolicy::DO_NOT_UPLOAD);
   EXPECT_TRUE(watcher_.privacy_settings().IsEmpty());
 }
 
@@ -177,13 +181,13 @@ TEST_P(UserConsentWatcherTest, WatcherReconnectsIfServerClosesConnection) {
   if (GetParam().has_value()) {
     EXPECT_FALSE(watcher_.privacy_settings().IsEmpty());
     if (GetParam().value()) {
-      EXPECT_EQ(current_policy_, CobaltService::DataCollectionPolicy::COLLECT_AND_UPLOAD);
+      EXPECT_EQ(current_policy_, CobaltServiceInterface::DataCollectionPolicy::COLLECT_AND_UPLOAD);
     } else {
-      EXPECT_EQ(current_policy_, CobaltService::DataCollectionPolicy::DO_NOT_COLLECT);
+      EXPECT_EQ(current_policy_, CobaltServiceInterface::DataCollectionPolicy::DO_NOT_COLLECT);
     }
   } else {
     EXPECT_TRUE(watcher_.privacy_settings().IsEmpty());
-    EXPECT_EQ(current_policy_, CobaltService::DataCollectionPolicy::DO_NOT_UPLOAD);
+    EXPECT_EQ(current_policy_, CobaltServiceInterface::DataCollectionPolicy::DO_NOT_UPLOAD);
   }
 }
 
@@ -194,7 +198,7 @@ TEST_F(UserConsentWatcherTest, ConsentStateDefaultsToDoNotUpload) {
   RunLoopUntilIdle();
 
   EXPECT_TRUE(watcher_.IsConnected());
-  EXPECT_EQ(current_policy_, CobaltService::DataCollectionPolicy::DO_NOT_UPLOAD);
+  EXPECT_EQ(current_policy_, CobaltServiceInterface::DataCollectionPolicy::DO_NOT_UPLOAD);
   EXPECT_TRUE(watcher_.privacy_settings().IsEmpty());
 }
 
@@ -227,17 +231,17 @@ TEST_P(UserConsentWatcherTest, ContinuesWatching) {
   SetPrivacySetting(false);
   RunLoopUntilIdle();
   EXPECT_EQ(watcher_.privacy_settings().user_data_sharing_consent(), false);
-  EXPECT_EQ(current_policy_, CobaltService::DataCollectionPolicy::DO_NOT_COLLECT);
+  EXPECT_EQ(current_policy_, CobaltServiceInterface::DataCollectionPolicy::DO_NOT_COLLECT);
 
   SetPrivacySetting(true);
   RunLoopUntilIdle();
   EXPECT_EQ(watcher_.privacy_settings().user_data_sharing_consent(), true);
-  EXPECT_EQ(current_policy_, CobaltService::DataCollectionPolicy::COLLECT_AND_UPLOAD);
+  EXPECT_EQ(current_policy_, CobaltServiceInterface::DataCollectionPolicy::COLLECT_AND_UPLOAD);
 
   SetPrivacySetting(std::nullopt);
   RunLoopUntilIdle();
   EXPECT_EQ(watcher_.privacy_settings().has_user_data_sharing_consent(), false);
-  EXPECT_EQ(current_policy_, CobaltService::DataCollectionPolicy::DO_NOT_UPLOAD);
+  EXPECT_EQ(current_policy_, CobaltServiceInterface::DataCollectionPolicy::DO_NOT_UPLOAD);
 
   SetPrivacySetting(GetParam());
   RunLoopUntilIdle();
@@ -249,17 +253,17 @@ TEST_P(UserConsentWatcherTest, ContinuesWatching) {
   SetPrivacySetting(false);
   RunLoopUntilIdle();
   EXPECT_EQ(watcher_.privacy_settings().user_data_sharing_consent(), false);
-  EXPECT_EQ(current_policy_, CobaltService::DataCollectionPolicy::DO_NOT_COLLECT);
+  EXPECT_EQ(current_policy_, CobaltServiceInterface::DataCollectionPolicy::DO_NOT_COLLECT);
 
   SetPrivacySetting(true);
   RunLoopUntilIdle();
   EXPECT_EQ(watcher_.privacy_settings().user_data_sharing_consent(), true);
-  EXPECT_EQ(current_policy_, CobaltService::DataCollectionPolicy::COLLECT_AND_UPLOAD);
+  EXPECT_EQ(current_policy_, CobaltServiceInterface::DataCollectionPolicy::COLLECT_AND_UPLOAD);
 
   SetPrivacySetting(std::nullopt);
   RunLoopUntilIdle();
   EXPECT_EQ(watcher_.privacy_settings().has_user_data_sharing_consent(), false);
-  EXPECT_EQ(current_policy_, CobaltService::DataCollectionPolicy::DO_NOT_UPLOAD);
+  EXPECT_EQ(current_policy_, CobaltServiceInterface::DataCollectionPolicy::DO_NOT_UPLOAD);
 
   SetPrivacySetting(GetParam());
   RunLoopUntilIdle();
