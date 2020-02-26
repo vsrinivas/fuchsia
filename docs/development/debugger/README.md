@@ -379,23 +379,44 @@ that will activate many logging statements for the debugger:
 zxdb --debug-mode
 ```
 
-You can also debug the client on GDB or LLDB on your host machine. You will want
-to run the unstripped binary: `out/<yourbuild>/host_x64/exe.unstripped/zxdb`.
-Since this path is different than the default, you will need to specify the
-location of ids.txt (in the root build directory) with `-s` on the command line.
+You can also debug the client on GDB or LLDB on your host machine.
+
+  * Use the unstripped binary in `host_x64/exe.unstripped` to get symbols.
+  * The Fuchsia build generates symbols relative to your build directory
+    (`out/x64` or similar), so you must run GDB/LLDB with that as the
+    current directory.
+  * Launching zxdb from the debugger with the right flags to connect can be
+    tricky. To debug initialization, copy the command-line from "ps". Otherwise,
+    it's easiest to attach after starting the debugger in the normal fashion.
+
+```sh
+cd out/x64    # Substitute your build directory as needed.
+sudo gdb host_x64/exe.unstripped/zxdb
+... GDB startup messages ...
+(gdb) attach 12345    # Use the PID of the zxdb already running.
+... the program will be stopped when GDB attaches ...
+(gdb) continue
+```
 
 There are tests for the debugger that run on the host. These are relevant
 if you're working on the debugger client.
 
 ```sh
-fx run-host-tests zxdb_tests
+cd out/x64    # Substitute your build directory as needed.
+host_x64/zxdb_tests
 ```
 
-or directly with
+To run the unit tests in the debugger:
 
 ```sh
-out/x64/host_tests/zxdb_tests
+cd out/x64
+cp host_x64/exe.unstripped/zxdb_tests host_x64/
+gdb host_x64/zxdb_tests
 ```
+
+Most tests can be debugged by omitting the copy step and debugging the
+symbolized file in `exe_unstripped` directly, but some tests require data files
+at a certain place relative to the test binary and these will fail.
 
 ### Debug Agent
 
