@@ -21,7 +21,10 @@ test("astro-audio-out-test") {
     "//sdk/banjo/ddk.protocol.composite",
     "//zircon/public/lib/amlogic",
     "//zircon/public/lib/audio-driver-proto",
+    "//zircon/public/lib/audio-driver-proto",
     "//zircon/public/lib/audio-proto-utils",
+    "//zircon/public/lib/audio-proto-utils",
+    "//zircon/public/lib/audio-utils",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/device-protocol-i2c-channel",
@@ -32,6 +35,7 @@ test("astro-audio-out-test") {
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/mock-function",
     "//zircon/public/lib/mock-i2c",
+    "//zircon/public/lib/mock-mmio-reg",
     "//zircon/public/lib/simple-audio-stream",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
@@ -39,6 +43,7 @@ test("astro-audio-out-test") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/banjo/ddk.protocol.gpio:ddk.protocol.gpio_mock",
     "//zircon/system/banjo/ddk.protocol.i2c",
+    "//zircon/system/fidl/fuchsia-hardware-audio:llcpp",
   ]
 
   # TODO(46334): Fix the leaks and remove this.

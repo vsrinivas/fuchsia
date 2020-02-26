@@ -34,8 +34,8 @@ class AstroAudioStreamOut : public SimpleAudioStream {
 
  protected:
   zx_status_t Init() __TA_REQUIRES(domain_token()) override;
-  zx_status_t ChangeFormat(const audio_proto::StreamSetFmtReq& req)
-      __TA_REQUIRES(domain_token()) override;
+  virtual zx_status_t ChangeFormat(const audio_proto::StreamSetFmtReq& req)
+      __TA_REQUIRES(domain_token()) override;  // virtual for unit testing.
   zx_status_t GetBuffer(const audio_proto::RingBufGetBufferReq& req, uint32_t* out_num_rb_frames,
                         zx::vmo* out_buffer) __TA_REQUIRES(domain_token()) override;
   zx_status_t Start(uint64_t* out_start_time) __TA_REQUIRES(domain_token()) override;
@@ -45,8 +45,9 @@ class AstroAudioStreamOut : public SimpleAudioStream {
 
   zx_status_t InitCodec();  // protected for unit test.
 
-  std::unique_ptr<Tas27xx> codec_;    // protected for unit test.
-  ddk::GpioProtocolClient audio_en_;  // protected for unit test.
+  std::unique_ptr<Tas27xx> codec_;           // protected for unit test.
+  ddk::GpioProtocolClient audio_en_;         // protected for unit test.
+  std::unique_ptr<AmlTdmDevice> aml_audio_;  // protected for unit test.
 
  private:
   friend class fbl::RefPtr<AstroAudioStreamOut>;
@@ -60,6 +61,7 @@ class AstroAudioStreamOut : public SimpleAudioStream {
   void ProcessRingNotification();
 
   uint32_t us_per_notification_ = 0;
+  uint32_t frames_per_second_ = 0;
 
   async::TaskClosureMethod<AstroAudioStreamOut, &AstroAudioStreamOut::ProcessRingNotification>
       notify_timer_ __TA_GUARDED(domain_token()){this};
@@ -69,7 +71,6 @@ class AstroAudioStreamOut : public SimpleAudioStream {
   zx::vmo ring_buffer_vmo_;
   fzl::PinnedVmo pinned_ring_buffer_;
 
-  std::unique_ptr<AmlTdmDevice> aml_audio_;
   ddk::GpioProtocolClient audio_fault_;
 
   zx::bti bti_;
