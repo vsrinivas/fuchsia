@@ -71,4 +71,8 @@ bool SandboxMetadata::HasService(const std::string& service) const {
   return std::find(services_.begin(), services_.end(), service) != services_.end();
 }
 
+bool SandboxMetadata::HasPkgFsPath(const std::string& pkgfs_path) const {
+  return std::find(pkgfs_.begin(), pkgfs_.end(), pkgfs_path) != pkgfs_.end();
+}
+
 }  // namespace component

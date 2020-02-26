@@ -26,6 +26,9 @@ class SandboxMetadata {
 
   bool HasInternalFeature(const std::string& feature) const;
 
+  // Returns true if the |pkgfs_path| is provided in this namespace.
+  bool HasPkgFsPath(const std::string& pkgfs_path) const;
+
   const std::vector<std::string>& dev() const { return dev_; }
   const std::vector<std::string>& system() const { return system_; }
   const std::vector<std::string>& services() const { return services_; }
