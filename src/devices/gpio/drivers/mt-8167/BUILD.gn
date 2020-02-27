@@ -20,7 +20,6 @@ driver_module("mt-8167") {
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
-    "//zircon/public/lib/device-protocol-platform-device",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/mmio",
@@ -31,6 +30,7 @@ driver_module("mt-8167") {
     "//zircon/system/banjo/ddk.protocol.gpioimpl",
     "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/banjo/ddk.protocol.platform.device",
+    "//zircon/system/dev/lib/device-protocol-platform-device",
   ]
 }
 
@@ -47,7 +47,6 @@ test("mtk-gpio") {
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
-    "//zircon/public/lib/device-protocol-platform-device",
     "//zircon/public/lib/fake_ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/hwreg",
@@ -61,6 +60,7 @@ test("mtk-gpio") {
     "//zircon/system/banjo/ddk.protocol.gpioimpl",
     "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/banjo/ddk.protocol.platform.device",
+    "//zircon/system/dev/lib/device-protocol-platform-device",
   ]
 }
 

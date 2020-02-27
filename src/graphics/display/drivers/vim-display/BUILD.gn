@@ -16,7 +16,6 @@ source_set("common") {
     "//zircon/public/lib/boringssl",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
-    "//zircon/public/lib/device-protocol-platform-device",
     "//zircon/public/lib/digest",
     "//zircon/public/lib/dispatcher-pool",
     "//zircon/public/lib/fbl",
@@ -32,6 +31,7 @@ source_set("common") {
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.sysmem",
     "//zircon/system/dev/audio/lib/simple-audio-stream",
+    "//zircon/system/dev/lib/device-protocol-platform-device",
     "//zircon/system/fidl/fuchsia-sysmem:c",
   ]
 }

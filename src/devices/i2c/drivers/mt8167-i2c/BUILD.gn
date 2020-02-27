@@ -20,7 +20,6 @@ driver_module("mt8167-i2c") {
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/device-protocol-pdev",
-    "//zircon/public/lib/device-protocol-platform-device",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/mmio",
@@ -30,6 +29,7 @@ driver_module("mt8167-i2c") {
     "//zircon/system/banjo/ddk.protocol.gpio",
     "//zircon/system/banjo/ddk.protocol.i2c",
     "//zircon/system/banjo/ddk.protocol.platform.device",
+    "//zircon/system/dev/lib/device-protocol-platform-device",
   ]
 }
 
@@ -50,7 +50,6 @@ test("mt8167-i2c-test") {
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/device-protocol-pdev",
-    "//zircon/public/lib/device-protocol-platform-device",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/hwreg",
@@ -65,6 +64,7 @@ test("mt8167-i2c-test") {
     "//zircon/system/banjo/ddk.protocol.i2c",
     "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/banjo/ddk.protocol.platform.device",
+    "//zircon/system/dev/lib/device-protocol-platform-device",
   ]
 }
 

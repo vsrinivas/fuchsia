@@ -118,7 +118,7 @@ source_set("device") {
     "//sdk/banjo/ddk.protocol.composite",
     "//src/devices/lib/driver",
     "//zircon/public/lib/device-protocol-pci",
-    "//zircon/public/lib/device-protocol-platform-device",
+    "//zircon/system/dev/lib/device-protocol-platform-device",
   ]
 }
 

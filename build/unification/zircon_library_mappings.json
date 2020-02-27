@@ -1,2 +1,7 @@
 [
+  {
+    "label": "//zircon/system/dev/lib/device-protocol-platform-device:device-protocol-platform-device",
+    "name": "device-protocol-platform-device",
+    "sdk": false
+  }
 ]

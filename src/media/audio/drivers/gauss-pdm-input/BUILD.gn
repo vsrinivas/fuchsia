@@ -25,12 +25,12 @@ driver_module("gauss-pdm-input") {
     "//zircon/public/lib/audio-proto-utils",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
-    "//zircon/public/lib/device-protocol-platform-device",
     "//zircon/public/lib/dispatcher-pool",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.platform.device",
+    "//zircon/system/dev/lib/device-protocol-platform-device",
     "//zircon/system/fidl/fuchsia-hardware-audio:llcpp",
   ]
 }

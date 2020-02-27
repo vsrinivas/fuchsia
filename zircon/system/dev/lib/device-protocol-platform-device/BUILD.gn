@@ -2,15 +2,27 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36548.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/zx_library.gni")
+
 zx_library("device-protocol-platform-device") {
   sdk = "source"
   sdk_headers = [ "lib/device-protocol/platform-device.h" ]
   sources = []
   public_deps = [
     # <lib/device-protocol-platform-device/platform-device.h> has #include <ddk/protocol/platform/device.h>
-    "$zx/system/banjo/ddk.protocol.platform.device",
+    "//zircon/system/banjo/ddk.protocol.platform.device",
 
     # <lib/device-protocol-platform-device/platform-device.h> has #include <zircon/types.h>
-    "$zx/system/ulib/zx:headers",
+    "//zircon/public/lib/zx",
   ]
 }

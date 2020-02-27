@@ -21,11 +21,11 @@ driver_module("aml-spi") {
     "//zircon/public/lib/amlogic",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
-    "//zircon/public/lib/device-protocol-platform-device",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/sync",
     "//zircon/system/banjo/ddk.protocol.gpio",
+    "//zircon/system/dev/lib/device-protocol-platform-device",
   ]
 }
 
