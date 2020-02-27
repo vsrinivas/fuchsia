@@ -368,6 +368,7 @@ fn test_media_and_avrcp_listener() -> Result<(), Error> {
         let res = target_proxy.get_events_supported().await.expect("FIDL call should work");
         assert_eq!(
             Ok(vec![
+                NotificationEvent::AddressedPlayerChanged,
                 NotificationEvent::PlayerApplicationSettingChanged,
                 NotificationEvent::PlaybackStatusChanged,
                 NotificationEvent::TrackChanged,

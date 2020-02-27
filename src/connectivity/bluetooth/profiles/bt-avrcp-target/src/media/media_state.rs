@@ -15,6 +15,12 @@ use crate::media::media_types::{
     ValidPlayerApplicationSettings,
 };
 
+/// A fixed address for a MediaSession.
+///
+/// The address is fixed because we currently only support one MediaSession. This
+/// addressed ID is used for AVRCP notifications.
+const MEDIA_SESSION_ADDRESSED_PLAYER_ID: u16 = 1;
+
 #[derive(Clone, Debug)]
 pub(crate) struct MediaState {
     session_control: SessionControlProxy,
@@ -161,6 +167,15 @@ impl SessionInfo {
         &self.playback_rate
     }
 
+    /// Return a static value indicating the ID of the player.
+    /// For the purposes of Fuchsia Media, there will only be one player, so the
+    /// chosen identifier is 1.
+    ///
+    /// Used for AddressedPlayerChanged notifications.
+    pub fn get_player_id(&self) -> u16 {
+        MEDIA_SESSION_ADDRESSED_PLAYER_ID
+    }
+
     /// If no `attribute_ids` are provided, return all of the current player
     /// application settings that are supported by the MediaPlayer.
     /// Otherwise, return the currently set settings specified by `attribute_ids`.
@@ -223,6 +238,9 @@ impl SessionInfo {
             fidl_avrcp::NotificationEvent::TrackPosChanged => {
                 notification.pos = Some(self.play_status.get_playback_position());
             }
+            fidl_avrcp::NotificationEvent::AddressedPlayerChanged => {
+                notification.player_id = Some(self.get_player_id());
+            }
             _ => {
                 fx_log_warn!(
                     "Received notification request for unsupported notification event_id {:?}",
@@ -274,6 +292,7 @@ impl From<SessionInfo> for Notification {
         );
         notification.track_id = Some(src.media_info.get_track_id());
         notification.pos = Some(src.play_status.get_playback_position());
+        notification.player_id = Some(src.get_player_id());
         notification
     }
 }

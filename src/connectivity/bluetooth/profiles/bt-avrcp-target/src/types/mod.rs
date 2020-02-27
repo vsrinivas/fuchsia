@@ -110,6 +110,9 @@ impl NotificationData {
                     || self.expected_response_time.map_or(false, |t| fasync::Time::now() >= t);
                 Ok(flag)
             }
+            fidl_avrcp::NotificationEvent::AddressedPlayerChanged => {
+                Ok(self.current_value.player_id != new_value.player_id)
+            }
             _ => {
                 fx_log_warn!(
                     "Received notification request for unsupported notification event_id {:?}",

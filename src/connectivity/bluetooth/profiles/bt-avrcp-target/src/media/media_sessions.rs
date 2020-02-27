@@ -187,6 +187,7 @@ impl MediaSessionsInner {
 
     pub fn get_supported_notification_events(&self) -> Vec<fidl_avrcp::NotificationEvent> {
         vec![
+            fidl_avrcp::NotificationEvent::AddressedPlayerChanged,
             fidl_avrcp::NotificationEvent::PlayerApplicationSettingChanged,
             fidl_avrcp::NotificationEvent::PlaybackStatusChanged,
             fidl_avrcp::NotificationEvent::TrackChanged,
@@ -317,6 +318,10 @@ impl MediaSessionsInner {
         // and use current local values.
         // The response timeout (nanos) will be the scaled (nonezero) `pos_change_interval`
         // duration after the current time.
+        //
+        // For AddressedPlayerChanged, send an immediate reject because we currently only
+        // support one player.
+        //
         // For all other event_ids, use the provided `current` parameter, and
         // the `response_timeout` is not needed.
         let active_session = match self.get_active_session() {
@@ -338,6 +343,11 @@ impl MediaSessionsInner {
                     .get_playback_rate()
                     .reference_deadline((interval as i64).seconds());
                 (current_values, response_timeout)
+            }
+            (fidl_avrcp::NotificationEvent::AddressedPlayerChanged, _) => {
+                responder
+                    .send(&mut Err(fidl_avrcp::TargetAvcError::RejectedAddressedPlayerChanged))?;
+                return Ok(None);
             }
             (_, _) => (current, None),
         };
@@ -528,6 +538,43 @@ pub(crate) mod tests {
 
     #[fasync::run_singlethreaded]
     #[test]
+    /// Test the insertion of a AddressedPlayerChanged notification.
+    /// It should resolve immediately with a RejectedPlayerChanged because we only
+    /// have at most one media player at all times.
+    async fn test_register_notification_addressed_player_changed() -> Result<(), Error> {
+        let (discovery, _request_stream) = create_proxy::<DiscoveryMarker>()
+            .expect("Couldn't create discovery service endpoints.");
+        let (mut proxy, mut stream) = create_proxy_and_stream::<TargetHandlerMarker>()
+            .expect("Couldn't create proxy and stream");
+        let disc_clone = discovery.clone();
+
+        let (result_fut, responder) =
+            generate_empty_watch_notification(&mut proxy, &mut stream).await?;
+
+        // Create an active session.
+        let id = MediaSessionId(1234);
+        let mut inner = create_session(disc_clone.clone(), id, true);
+
+        let supported_id = fidl_avrcp::NotificationEvent::AddressedPlayerChanged;
+        let res = inner.register_notification(
+            supported_id,
+            fidl_avrcp::Notification::new_empty().into(),
+            2,
+            responder,
+        );
+        assert_eq!(Ok(None), res.map_err(|e| e.to_string()));
+        assert!(!inner.notifications.contains_key(&supported_id));
+
+        // Should return AddressedPlayerChanged.
+        assert_eq!(
+            Err("RejectedAddressedPlayerChanged".to_string()),
+            result_fut.await.expect("Fidl call should work").map_err(|e| format!("{:?}", e))
+        );
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded]
+    #[test]
     /// Test the insertion of a supported notification, but no active session.
     /// Upon insertion, the supported notification should be rejected and sent over
     /// the responder.
@@ -683,7 +730,7 @@ pub(crate) mod tests {
     #[fasync::run_singlethreaded]
     #[test]
     /// Tests that updating any outstanding responders behaves as expected.
-    /// 1. Makes 3 calls to `watch_notification` to create 3 responders.
+    /// 1. Makes n calls to `watch_notification` to create n responders.
     /// 2. Inserts these responders into the map.
     /// 3. Mocks an update from MediaSession that changes internal state.
     /// 4. Updates all responders.
@@ -699,8 +746,14 @@ pub(crate) mod tests {
         let id = MediaSessionId(1234);
         let mut sessions = create_session(discovery, id, true);
 
-        // Create 4 WatchNotification responders.
-        let n: usize = 4;
+        // Create n WatchNotification responders.
+        let supported_event_ids = vec![
+            fidl_avrcp::NotificationEvent::PlayerApplicationSettingChanged,
+            fidl_avrcp::NotificationEvent::PlaybackStatusChanged,
+            fidl_avrcp::NotificationEvent::TrackChanged,
+            fidl_avrcp::NotificationEvent::TrackPosChanged,
+        ];
+        let n: usize = supported_event_ids.len();
         let mut responders = vec![];
         let mut proxied_futs = vec![];
 
@@ -713,7 +766,6 @@ pub(crate) mod tests {
         }
 
         {
-            let supported_event_ids = sessions.get_supported_notification_events();
             for (event_id, responder) in supported_event_ids.into_iter().zip(responders.into_iter())
             {
                 let current_val = match event_id {
