@@ -26,11 +26,10 @@ use {
 /// ```
 /// let ime_handler =
 ///     ImeHandler::new(scene_manager.session.clone(), scene_manager.compositor_id).await?;
-/// let touch_handler = TouchHandler::new(
+/// let touch_handler = TouchHandler::new2(
 ///     scene_manager.session.clone(),
 ///     scene_manager.compositor_id,
-///     scene_manager.display_width as i64,
-///     scene_manager.display_height as i64,
+///     scene_manager.display_size
 /// ).await?;
 ///
 /// let input_pipeline = InputPipeline::new(
@@ -205,6 +204,7 @@ mod tests {
         crate::fake_input_handler,
         crate::input_device::{self, InputDeviceBinding},
         crate::mouse,
+        crate::utils::Position,
         fidl::endpoints::create_proxy,
         fidl_fuchsia_io::{OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
         fidl_fuchsia_ui_input as fidl_ui_input, fuchsia_async as fasync, fuchsia_zircon as zx,
@@ -225,12 +225,11 @@ mod tests {
     fn send_input_event(mut sender: Sender<input_device::InputEvent>) -> input_device::InputEvent {
         let mut rng = rand::thread_rng();
         let input_event = input_device::InputEvent {
-            device_event: input_device::InputDeviceEvent::Mouse(mouse::MouseEvent {
-                movement_x: rng.gen_range(0, 10),
-                movement_y: rng.gen_range(0, 10),
-                phase: fidl_ui_input::PointerEventPhase::Move,
-                buttons: HashSet::new(),
-            }),
+            device_event: input_device::InputDeviceEvent::Mouse(mouse::MouseEvent::new(
+                Position { x: rng.gen_range(0, 10) as f32, y: rng.gen_range(0, 10) as f32 },
+                fidl_ui_input::PointerEventPhase::Move,
+                HashSet::new(),
+            )),
             device_descriptor: input_device::InputDeviceDescriptor::Mouse(
                 mouse::MouseDeviceDescriptor { device_id: 1 },
             ),

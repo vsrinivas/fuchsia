@@ -6,6 +6,7 @@ use {
     crate::input_device,
     crate::input_handler::InputHandler,
     crate::mouse,
+    crate::utils::Position,
     async_trait::async_trait,
     fidl_fuchsia_ui_input as fidl_ui_input, fidl_fuchsia_ui_scenic as fidl_ui_scenic,
     fuchsia_scenic as scenic,
@@ -28,14 +29,17 @@ pub struct CursorLocation {
 /// Clients can customize the starting position for the cursor, and also specify
 /// a custom mouse cursor to render.
 pub struct MouseHandler {
-    /// The current cursor location.
-    current_cursor_location: CursorLocation,
+    /// The current position.
+    current_position: Position,
 
-    /// The maximum cursor location, used to bound events sent to clients.
-    max_cursor_location: CursorLocation,
+    /// The maximum position, used to bound events sent to clients.
+    max_position: Position,
 
     /// A [`Sender`] used to communicate the current cursor location.
     cursor_location_sender: Option<Sender<CursorLocation>>,
+
+    /// A [`Sender`] used to communicate the current position.
+    position_sender: Option<Sender<Position>>,
 
     /// The Scenic session to send pointer events to.
     scenic_session: scenic::SessionPtr,
@@ -88,45 +92,77 @@ impl MouseHandler {
     ) -> MouseHandler {
         MouseHandler {
             cursor_location_sender,
-            current_cursor_location: CursorLocation { x: 0.0, y: 0.0 },
-            max_cursor_location,
             scenic_session,
             scenic_compositor_id,
+            current_position: Position { x: 0.0, y: 0.0 },
+            max_position: Position { x: max_cursor_location.x, y: max_cursor_location.y },
+            position_sender: None,
+        }
+    }
+
+    /// Creates a new [`MouseHandler `] that sends pointer events to Scenic and tracks cursor
+    /// position.
+    ///
+    /// # Parameters
+    /// - `max_position`: The maximum position, used to bound events sent to clients.
+    /// - `position_sender`: A [`Sender`] used to communicate the current position.
+    /// - `scenic_session`: The Scenic session to send pointer events to.
+    /// - `scenic_compositor_id`: The Scenic compositor id to tag pointer events with.
+    pub fn new2(
+        max_position: Position,
+        position_sender: Option<Sender<Position>>,
+        scenic_session: scenic::SessionPtr,
+        scenic_compositor_id: u32,
+    ) -> MouseHandler {
+        MouseHandler {
+            max_position,
+            position_sender,
+            scenic_session,
+            scenic_compositor_id,
+            current_position: Position { x: 0.0, y: 0.0 },
+            cursor_location_sender: None,
         }
     }
 
     /// Updates the current cursor position according to the received mouse event.
     ///
-    /// The updated cursor location is sent to a client via `self.cursor_location_sender`.
+    /// The updated position is sent to a client via either `self.position_sender` or
+    /// `self.cursor_location_sender`.
     ///
     /// If there is no movement, the location is not sent to clients.
     ///
     /// # Parameters
     /// - `mouse_event`: The mouse event to use to update the cursor location.
     async fn update_cursor_position(&mut self, mouse_event: &mouse::MouseEvent) {
-        if mouse_event.movement_x == 0 && mouse_event.movement_y == 0 {
+        if mouse_event.movement().x == 0.0 && mouse_event.movement().y == 0.0 {
             return;
         }
 
+        self.current_position.x += mouse_event.movement().x;
+        self.current_position.y += mouse_event.movement().y;
+
+        if self.current_position.x > self.max_position.x {
+            self.current_position.x = self.max_position.x;
+        }
+        if self.current_position.y > self.max_position.y {
+            self.current_position.y = self.max_position.y;
+        }
+
+        if self.current_position.x < 0.0 {
+            self.current_position.x = 0.0;
+        }
+        if self.current_position.y < 0.0 {
+            self.current_position.y = 0.0;
+        }
+
         if let Some(cursor_location_sender) = &mut self.cursor_location_sender {
-            self.current_cursor_location.x += mouse_event.movement_x as f32;
-            self.current_cursor_location.y += mouse_event.movement_y as f32;
+            let _ = cursor_location_sender
+                .send(CursorLocation { x: self.current_position.x, y: self.current_position.y })
+                .await;
+        }
 
-            if self.current_cursor_location.x > self.max_cursor_location.x {
-                self.current_cursor_location.x = self.max_cursor_location.x;
-            }
-            if self.current_cursor_location.y > self.max_cursor_location.y {
-                self.current_cursor_location.y = self.max_cursor_location.y;
-            }
-
-            if self.current_cursor_location.x < 0.0 {
-                self.current_cursor_location.x = 0.0;
-            }
-            if self.current_cursor_location.y < 0.0 {
-                self.current_cursor_location.y = 0.0;
-            }
-
-            let _ = cursor_location_sender.send(self.current_cursor_location).await;
+        if let Some(position_sender) = &mut self.position_sender {
+            let _ = position_sender.send(self.current_position).await;
         }
     }
 
@@ -152,8 +188,8 @@ impl MouseHandler {
             pointer_id: 0,
             type_: fidl_ui_input::PointerEventType::Mouse,
             phase,
-            x: self.current_cursor_location.x,
-            y: self.current_cursor_location.y,
+            x: self.current_position.x,
+            y: self.current_position.y,
             radius_major: 0.0,
             radius_minor: 0.0,
             buttons,
@@ -174,7 +210,7 @@ impl MouseHandler {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::testing_utilities::create_mouse_event,
+        super::*, crate::testing_utilities::create_mouse_event, crate::utils::Position,
         fidl_fuchsia_ui_scenic as fidl_ui_scenic, fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::StreamExt,
     };
@@ -190,14 +226,12 @@ mod tests {
     /// Creates a PointerEvent with the given parameters.
     ///
     /// # Parameters
-    /// - `x`: The x location of the event.
-    /// - `y`: The y location of the event.
+    /// - `position`: The location of the event.
     /// - `phase`: The phase of the event.
     /// - `device_id`: The id of the device where this event originated.
     /// - `event_time: The time of the event.
     fn create_pointer_event(
-        x: f32,
-        y: f32,
+        position: Position,
         phase: fidl_ui_input::PointerEventPhase,
         device_id: u32,
         event_time: input_device::EventTime,
@@ -208,8 +242,8 @@ mod tests {
             pointer_id: 0,
             type_: fidl_ui_input::PointerEventType::Mouse,
             phase,
-            x: x as f32,
-            y: y as f32,
+            x: position.x,
+            y: position.y,
             radius_major: 0.0,
             radius_minor: 0.0,
             buttons: 0,
@@ -279,14 +313,12 @@ mod tests {
             SCENIC_COMPOSITOR_ID,
         );
 
-        const CURSOR_X_MOVEMENT: i64 = 50;
-        const CURSOR_Y_MOVEMENT: i64 = 75;
+        let cursor_movement = Position { x: 50.0, y: 75.0 };
         let descriptor = mouse_device_descriptor(DEVICE_ID);
         let event_time =
             zx::Time::get(zx::ClockId::Monotonic).into_nanos() as input_device::EventTime;
         let input_events = vec![create_mouse_event(
-            CURSOR_X_MOVEMENT,
-            CURSOR_Y_MOVEMENT,
+            cursor_movement,
             fidl_ui_input::PointerEventPhase::Move,
             HashSet::<mouse::MouseButton>::new(),
             event_time,
@@ -294,8 +326,7 @@ mod tests {
         )];
 
         let expected_commands = vec![create_pointer_event(
-            CURSOR_X_MOVEMENT as f32,
-            CURSOR_Y_MOVEMENT as f32,
+            cursor_movement,
             fidl_ui_input::PointerEventPhase::Move,
             DEVICE_ID,
             event_time,
@@ -310,7 +341,7 @@ mod tests {
         );
 
         let expected_cursor_location =
-            CursorLocation { x: CURSOR_X_MOVEMENT as f32, y: CURSOR_Y_MOVEMENT as f32 };
+            CursorLocation { x: cursor_movement.x, y: cursor_movement.y };
         match receiver.next().await {
             Some(cursor_location) => assert_eq!(cursor_location, expected_cursor_location),
             _ => assert!(false),
@@ -337,14 +368,14 @@ mod tests {
             SCENIC_COMPOSITOR_ID,
         );
 
-        const CURSOR_X_MOVEMENT: f32 = SCENIC_DISPLAY_WIDTH + 2.0;
-        const CURSOR_Y_MOVEMENT: f32 = SCENIC_DISPLAY_HEIGHT + 2.0;
+        let start = Position { x: SCENIC_DISPLAY_WIDTH, y: SCENIC_DISPLAY_HEIGHT };
+        let cursor_movement =
+            Position { x: SCENIC_DISPLAY_WIDTH + 2.0, y: SCENIC_DISPLAY_HEIGHT + 2.0 };
         let descriptor = mouse_device_descriptor(DEVICE_ID);
         let event_time =
             zx::Time::get(zx::ClockId::Monotonic).into_nanos() as input_device::EventTime;
         let input_events = vec![create_mouse_event(
-            CURSOR_X_MOVEMENT as i64,
-            CURSOR_Y_MOVEMENT as i64,
+            cursor_movement,
             fidl_ui_input::PointerEventPhase::Move,
             HashSet::<mouse::MouseButton>::new(),
             event_time,
@@ -352,8 +383,7 @@ mod tests {
         )];
 
         let expected_commands = vec![create_pointer_event(
-            SCENIC_DISPLAY_WIDTH,
-            SCENIC_DISPLAY_HEIGHT,
+            start,
             fidl_ui_input::PointerEventPhase::Move,
             DEVICE_ID,
             event_time,
@@ -395,14 +425,12 @@ mod tests {
             SCENIC_COMPOSITOR_ID,
         );
 
-        const CURSOR_X_MOVEMENT: i64 = -20;
-        const CURSOR_Y_MOVEMENT: i64 = -15;
+        let cursor_movement = Position { x: -20.0, y: -15.0 };
         let descriptor = mouse_device_descriptor(DEVICE_ID);
         let event_time =
             zx::Time::get(zx::ClockId::Monotonic).into_nanos() as input_device::EventTime;
         let input_events = vec![create_mouse_event(
-            CURSOR_X_MOVEMENT,
-            CURSOR_Y_MOVEMENT,
+            cursor_movement,
             fidl_ui_input::PointerEventPhase::Move,
             HashSet::<mouse::MouseButton>::new(),
             event_time,
@@ -410,8 +438,7 @@ mod tests {
         )];
 
         let expected_commands = vec![create_pointer_event(
-            0.0,
-            0.0,
+            Position { x: 0.0, y: 0.0 },
             fidl_ui_input::PointerEventPhase::Move,
             DEVICE_ID,
             event_time,

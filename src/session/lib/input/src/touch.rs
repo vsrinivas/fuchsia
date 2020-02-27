@@ -4,6 +4,7 @@
 
 use {
     crate::input_device::{self, InputDeviceBinding, InputEvent},
+    crate::utils::{Position, Size},
     anyhow::{format_err, Error},
     async_trait::async_trait,
     fidl_fuchsia_input_report as fidl,
@@ -61,11 +62,55 @@ pub struct TouchContact {
 
     /// The width of the touch event, in the units of the associated
     /// [`ContactDeviceDescriptor`]'s `width_range`.
-    pub contact_width: Option<i64>,
+    contact_width: Option<i64>,
 
     /// The height of the touch event, in the units of the associated
     /// [`ContactDeviceDescriptor`]'s `height_range`.
-    pub contact_height: Option<i64>,
+    contact_height: Option<i64>,
+}
+
+impl TouchContact {
+    pub fn new(
+        id: u32,
+        position: Position,
+        pressure: Option<i64>,
+        contact_size: Option<Size>,
+    ) -> Self {
+        if let Some(size) = contact_size {
+            Self {
+                id,
+                pressure,
+                contact_width: Some(size.width as i64),
+                contact_height: Some(size.height as i64),
+                position_x: position.x as i64,
+                position_y: position.y as i64,
+            }
+        } else {
+            Self {
+                id,
+                pressure,
+                contact_width: None,
+                contact_height: None,
+                position_x: position.x as i64,
+                position_y: position.y as i64,
+            }
+        }
+    }
+
+    pub fn position(&self) -> Position {
+        Position { x: self.position_x as f32, y: self.position_y as f32 }
+    }
+
+    pub fn contact_size(&self) -> Option<Size> {
+        if self.contact_width.is_some() && self.contact_height.is_some() {
+            Some(Size {
+                width: self.contact_width.unwrap() as f32,
+                height: self.contact_height.unwrap() as f32,
+            })
+        } else {
+            None
+        }
+    }
 }
 
 impl Eq for TouchContact {}
@@ -378,6 +423,7 @@ mod tests {
         crate::testing_utilities::{
             self, create_touch_contact, create_touch_event, create_touch_input_report,
         },
+        crate::utils::Position,
         fuchsia_async as fasync,
         futures::StreamExt,
     };
@@ -406,9 +452,9 @@ mod tests {
         let expected_events = vec![create_touch_event(
             hashmap! {
                 fidl_ui_input::PointerEventPhase::Add
-                    => vec![create_touch_contact(TOUCH_ID, 0, 0)],
+                    => vec![create_touch_contact(TOUCH_ID, Position { x: 0.0, y: 0.0 })],
                 fidl_ui_input::PointerEventPhase::Down
-                    => vec![create_touch_contact(TOUCH_ID, 0, 0)],
+                    => vec![create_touch_contact(TOUCH_ID, Position { x: 0.0, y: 0.0 })],
             },
             event_time_u64,
             &descriptor,
@@ -450,9 +496,9 @@ mod tests {
             create_touch_event(
                 hashmap! {
                     fidl_ui_input::PointerEventPhase::Add
-                        => vec![create_touch_contact(TOUCH_ID, 0, 0)],
+                        => vec![create_touch_contact(TOUCH_ID, Position { x: 0.0, y: 0.0 })],
                     fidl_ui_input::PointerEventPhase::Down
-                        => vec![create_touch_contact(TOUCH_ID, 0, 0)],
+                        => vec![create_touch_contact(TOUCH_ID, Position { x: 0.0, y: 0.0 })],
                 },
                 event_time_u64,
                 &descriptor,
@@ -460,9 +506,9 @@ mod tests {
             create_touch_event(
                 hashmap! {
                     fidl_ui_input::PointerEventPhase::Up
-                        => vec![create_touch_contact(TOUCH_ID, 0, 0)],
+                        => vec![create_touch_contact(TOUCH_ID, Position { x: 0.0, y: 0.0 })],
                     fidl_ui_input::PointerEventPhase::Remove
-                        => vec![create_touch_contact(TOUCH_ID, 0, 0)],
+                        => vec![create_touch_contact(TOUCH_ID, Position { x: 0.0, y: 0.0 })],
                 },
                 event_time_u64,
                 &descriptor,
@@ -481,8 +527,8 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn add_down_move() {
         const TOUCH_ID: u32 = 2;
-        const FIRST_X: i64 = 10;
-        const FIRST_Y: i64 = 30;
+        let first = Position { x: 10.0, y: 30.0 };
+        let second = Position { x: first.x * 2.0, y: first.y * 2.0 };
 
         let descriptor = input_device::InputDeviceDescriptor::Touch(TouchDeviceDescriptor {
             device_id: 1,
@@ -492,16 +538,16 @@ mod tests {
 
         let first_contact = fidl_fuchsia_input_report::ContactInputReport {
             contact_id: Some(TOUCH_ID),
-            position_x: Some(FIRST_X),
-            position_y: Some(FIRST_Y),
+            position_x: Some(first.x as i64),
+            position_y: Some(first.y as i64),
             pressure: None,
             contact_width: None,
             contact_height: None,
         };
         let second_contact = fidl_fuchsia_input_report::ContactInputReport {
             contact_id: Some(TOUCH_ID),
-            position_x: Some(FIRST_X * 2),
-            position_y: Some(FIRST_Y * 2),
+            position_x: Some(first.x as i64 * 2),
+            position_y: Some(first.y as i64 * 2),
             pressure: None,
             contact_width: None,
             contact_height: None,
@@ -516,9 +562,9 @@ mod tests {
             create_touch_event(
                 hashmap! {
                     fidl_ui_input::PointerEventPhase::Add
-                        => vec![create_touch_contact(TOUCH_ID, FIRST_X, FIRST_Y)],
+                        => vec![create_touch_contact(TOUCH_ID, first)],
                     fidl_ui_input::PointerEventPhase::Down
-                        => vec![create_touch_contact(TOUCH_ID, FIRST_X, FIRST_Y)],
+                        => vec![create_touch_contact(TOUCH_ID, first)],
                 },
                 event_time_u64,
                 &descriptor,
@@ -526,7 +572,7 @@ mod tests {
             create_touch_event(
                 hashmap! {
                     fidl_ui_input::PointerEventPhase::Move
-                        => vec![create_touch_contact(TOUCH_ID, FIRST_X*2, FIRST_Y*2)],
+                        => vec![create_touch_contact(TOUCH_ID, second)],
                 },
                 event_time_u64,
                 &descriptor,

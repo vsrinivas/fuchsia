@@ -6,6 +6,7 @@ use {
     crate::input_device,
     crate::input_handler::InputHandler,
     crate::touch,
+    crate::utils::{Position, Size},
     anyhow::{format_err, Error},
     async_trait::async_trait,
     fidl_fuchsia_ui_input as fidl_ui_input, fidl_fuchsia_ui_scenic as fidl_ui_scenic,
@@ -20,15 +21,10 @@ pub struct TouchHandler {
     /// The Scenic compositor id to tag input events with.
     scenic_compositor_id: u32,
 
-    /// The width of the display associated with the touch device, used to convert
+    /// The size of the display associated with the touch device, used to convert
     /// coordinates from the touch input report to device coordinates (which is what
     /// Scenic expects).
-    display_width: i64,
-
-    /// The height of the display associated with the touch device, used to convert
-    /// coordinates from the touch input report to device coordinates (which is what
-    /// Scenic expects).
-    display_height: i64,
+    display_size: Size,
 }
 
 #[async_trait]
@@ -80,9 +76,30 @@ impl TouchHandler {
             _ => Ok(TouchHandler {
                 scenic_session,
                 scenic_compositor_id,
-                display_width,
-                display_height,
+                display_size: Size { width: display_width as f32, height: display_height as f32 },
             }),
+        }
+    }
+
+    /// Creates a new touch handler that sends events to the given Scenic session.
+    ///
+    /// # Parameters
+    /// - `scenic_session`: The Scenic session to send events to.
+    /// - `scenic_compositor_id`: The compositor id to tag input events with.
+    /// - `display_size`: The size of the associated touch display,
+    /// used to convert coordinates into device coordinates. Width and Height must be non-zero.
+    ///
+    /// # Errors
+    /// If the display height or width is 0.
+    pub async fn new2(
+        scenic_session: scenic::SessionPtr,
+        scenic_compositor_id: u32,
+        display_size: Size,
+    ) -> Result<Self, Error> {
+        if display_size.width == 0.0 || display_size.height == 0.0 {
+            Err(format_err!("Display height: {} and width: {} are required to be non-zero."))
+        } else {
+            Ok(TouchHandler { scenic_session, scenic_compositor_id, display_size })
         }
     }
 
@@ -138,7 +155,7 @@ impl TouchHandler {
         touch_descriptor: &touch::TouchDeviceDescriptor,
         event_time: input_device::EventTime,
     ) -> fidl_ui_scenic::Command {
-        let (x, y) = self.device_coordinate_from_contact(&contact, &touch_descriptor);
+        let position = self.device_coordinate_from_contact(&contact, &touch_descriptor);
 
         let pointer_event = fidl_ui_input::PointerEvent {
             event_time,
@@ -146,8 +163,8 @@ impl TouchHandler {
             pointer_id: contact.id,
             type_: fidl_ui_input::PointerEventType::Touch,
             phase,
-            x,
-            y,
+            x: position.x,
+            y: position.y,
             radius_major: 0.0,
             radius_minor: 0.0,
             buttons: 0,
@@ -175,21 +192,21 @@ impl TouchHandler {
         &self,
         contact: &touch::TouchContact,
         touch_descriptor: &touch::TouchDeviceDescriptor,
-    ) -> (f32, f32) {
-        let default = (contact.position_x as f32, contact.position_y as f32);
+    ) -> Position {
         if let Some(contact_descriptor) = touch_descriptor.contacts.first() {
-            let x_range = (contact_descriptor.x_range.max - contact_descriptor.x_range.min) as f32;
-            let y_range = (contact_descriptor.y_range.max - contact_descriptor.y_range.min) as f32;
+            let range = Position {
+                x: (contact_descriptor.x_range.max - contact_descriptor.x_range.min) as f32,
+                y: (contact_descriptor.y_range.max - contact_descriptor.y_range.min) as f32,
+            };
 
-            if x_range == 0.0 || y_range == 0.0 {
-                return default;
+            if range.x == 0.0 || range.y == 0.0 {
+                return contact.position();
             }
 
-            let normalized_x = contact.position_x as f32 / x_range;
-            let normalized_y = contact.position_y as f32 / y_range;
-            (normalized_x * self.display_width as f32, normalized_y * self.display_height as f32)
+            let normalized = contact.position() / range;
+            normalized * self.display_size
         } else {
-            return default;
+            return contact.position();
         }
     }
 }
@@ -199,6 +216,7 @@ mod tests {
     use {
         super::*,
         crate::testing_utilities::{create_touch_contact, create_touch_event},
+        crate::utils::Position,
         fidl_fuchsia_input_report as fidl_input_report, fidl_fuchsia_ui_scenic as fidl_ui_scenic,
         fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::StreamExt,
@@ -226,13 +244,11 @@ mod tests {
     /// Creates a PointerEvent with the given parameters.
     ///
     /// # Parameters
-    /// - `x`: The x location of the event.
-    /// - `y`: The y location of the event.
+    /// - `position`: The location of the event.
     /// - `phase`: The phase of the event.
     /// - `event_time`: The time of the event.
     fn create_pointer_event(
-        x: f32,
-        y: f32,
+        position: Position,
         phase: fidl_ui_input::PointerEventPhase,
         event_time: input_device::EventTime,
     ) -> fidl_ui_input::PointerEvent {
@@ -242,8 +258,8 @@ mod tests {
             pointer_id: 1,
             type_: fidl_ui_input::PointerEventType::Touch,
             phase,
-            x: x as f32,
-            y: y as f32,
+            x: position.x,
+            y: position.y,
             radius_major: 0.0,
             radius_minor: 0.0,
             buttons: 0,
@@ -315,17 +331,25 @@ mod tests {
         let input_events = vec![create_touch_event(
             hashmap! {
                 fidl_ui_input::PointerEventPhase::Add
-                    => vec![create_touch_contact(TOUCH_ID, 20, 40)],
+                    => vec![create_touch_contact(TOUCH_ID, Position{ x: 20.0, y: 40.0 })],
                 fidl_ui_input::PointerEventPhase::Down
-                    => vec![create_touch_contact(TOUCH_ID, 20, 40)],
+                    => vec![create_touch_contact(TOUCH_ID, Position{ x: 20.0, y: 40.0 })],
             },
             event_time,
             &descriptor,
         )];
 
         let expected_commands = vec![
-            create_pointer_event(20.0, 40.0, fidl_ui_input::PointerEventPhase::Add, event_time),
-            create_pointer_event(20.0, 40.0, fidl_ui_input::PointerEventPhase::Down, event_time),
+            create_pointer_event(
+                Position { x: 20.0, y: 40.0 },
+                fidl_ui_input::PointerEventPhase::Add,
+                event_time,
+            ),
+            create_pointer_event(
+                Position { x: 20.0, y: 40.0 },
+                fidl_ui_input::PointerEventPhase::Down,
+                event_time,
+            ),
         ];
 
         assert_input_event_sequence_generates_scenic_events!(
@@ -360,17 +384,25 @@ mod tests {
         let input_events = vec![create_touch_event(
             hashmap! {
                 fidl_ui_input::PointerEventPhase::Up
-                    => vec![create_touch_contact(TOUCH_ID, 20, 40)],
+                    => vec![create_touch_contact(TOUCH_ID, Position{ x: 20.0, y: 40.0 })],
                 fidl_ui_input::PointerEventPhase::Remove
-                    => vec![create_touch_contact(TOUCH_ID, 20, 40)],
+                    => vec![create_touch_contact(TOUCH_ID, Position{ x: 20.0, y: 40.0 })],
             },
             event_time,
             &descriptor,
         )];
 
         let expected_commands = vec![
-            create_pointer_event(20.0, 40.0, fidl_ui_input::PointerEventPhase::Up, event_time),
-            create_pointer_event(20.0, 40.0, fidl_ui_input::PointerEventPhase::Remove, event_time),
+            create_pointer_event(
+                Position { x: 20.0, y: 40.0 },
+                fidl_ui_input::PointerEventPhase::Up,
+                event_time,
+            ),
+            create_pointer_event(
+                Position { x: 20.0, y: 40.0 },
+                fidl_ui_input::PointerEventPhase::Remove,
+                event_time,
+            ),
         ];
 
         assert_input_event_sequence_generates_scenic_events!(
@@ -386,8 +418,6 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn add_down_move() {
         const TOUCH_ID: u32 = 1;
-        const X: i64 = 20;
-        const Y: i64 = 40;
         let (session_proxy, mut session_request_stream) =
             fidl::endpoints::create_proxy_and_stream::<fidl_ui_scenic::SessionMarker>()
                 .expect("Failed to create ScenicProxy and stream.");
@@ -407,11 +437,11 @@ mod tests {
         let input_events = vec![create_touch_event(
             hashmap! {
                 fidl_ui_input::PointerEventPhase::Add
-                    => vec![create_touch_contact(TOUCH_ID, X, Y)],
+                    => vec![create_touch_contact(TOUCH_ID, Position{ x: 20.0, y: 40.0 })],
                 fidl_ui_input::PointerEventPhase::Down
-                    => vec![create_touch_contact(TOUCH_ID, X, Y)],
+                    => vec![create_touch_contact(TOUCH_ID, Position{ x: 20.0, y: 40.0 })],
                 fidl_ui_input::PointerEventPhase::Move
-                    => vec![create_touch_contact(TOUCH_ID, X*2, Y*2)]
+                    => vec![create_touch_contact(TOUCH_ID, Position{ x: 40.0, y: 80.0 })]
             },
             event_time,
             &descriptor,
@@ -419,20 +449,17 @@ mod tests {
 
         let expected_commands = vec![
             create_pointer_event(
-                X as f32,
-                Y as f32,
+                Position { x: 20.0, y: 40.0 },
                 fidl_ui_input::PointerEventPhase::Add,
                 event_time,
             ),
             create_pointer_event(
-                X as f32,
-                Y as f32,
+                Position { x: 20.0, y: 40.0 },
                 fidl_ui_input::PointerEventPhase::Down,
                 event_time,
             ),
             create_pointer_event(
-                (X * 2) as f32,
-                (Y * 2) as f32,
+                Position { x: 40.0, y: 80.0 },
                 fidl_ui_input::PointerEventPhase::Move,
                 event_time,
             ),

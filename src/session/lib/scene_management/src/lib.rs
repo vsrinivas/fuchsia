@@ -9,4 +9,6 @@ mod scene_manager;
 
 pub use display_metrics::DisplayMetrics;
 pub use flat_scene_manager::FlatSceneManager;
+pub use graphics_utils::ScreenCoordinates;
+pub use graphics_utils::ScreenSize;
 pub use scene_manager::SceneManager;

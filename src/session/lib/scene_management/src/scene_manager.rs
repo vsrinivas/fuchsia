@@ -3,11 +3,17 @@
 // found in the LICENSE file.
 
 use {
-    crate::graphics_utils::ImageResource, anyhow::Error, async_trait::async_trait,
+    crate::display_metrics::{DisplayMetrics, ViewingDistance},
+    crate::graphics_utils::{ImageResource, ScreenCoordinates},
+    anyhow::Error,
+    async_trait::async_trait,
     fidl_fuchsia_ui_app as ui_app, fidl_fuchsia_ui_gfx as ui_gfx,
     fidl_fuchsia_ui_scenic as ui_scenic, fuchsia_async as fasync, fuchsia_scenic as scenic,
-    fuchsia_scenic, fuchsia_syslog as syslog, futures::future::TryFutureExt, futures::prelude::*,
-    parking_lot::Mutex, std::sync::Weak,
+    fuchsia_scenic, fuchsia_syslog as syslog,
+    futures::future::TryFutureExt,
+    futures::prelude::*,
+    parking_lot::Mutex,
+    std::sync::Weak,
 };
 
 /// A [`SceneManager`] sets up and manages a Scenic scene graph.
@@ -36,7 +42,7 @@ pub trait SceneManager: Sized {
     async fn new(
         scenic: ui_scenic::ScenicProxy,
         display_pixel_density: Option<f32>,
-        viewing_distance: Option<f32>,
+        viewing_distance: Option<ViewingDistance>,
     ) -> Result<Self, Error>;
 
     /// Requests a view from the view provider and adds it to the scene.
@@ -61,7 +67,13 @@ pub trait SceneManager: Sized {
     ///
     /// # Returns
     /// The [`scenic::SessionPtr`] for the scene_manager.
-    fn get_session(&self) -> scenic::SessionPtr;
+    fn session(&self) -> scenic::SessionPtr;
+
+    /// Requests the [`DisplayMetrics`] for this display.
+    ///
+    /// # Returns
+    /// The [`DisplayMetrics`] for this display.
+    fn display_metrics(&self) -> DisplayMetrics;
 
     /// Sets the location of the cursor in the current scene. If no cursor has been created it will
     /// create one using default settings.
@@ -75,6 +87,17 @@ pub trait SceneManager: Sized {
     /// cursor will be created and added to the scene.
     fn set_cursor_location(&mut self, x: f32, y: f32);
 
+    /// Sets the location of the cursor in the current scene. If no cursor has been created it will
+    /// create one using default settings.
+    ///
+    /// # Parameters
+    /// - `location`: A [`ScreenCoordinates`] struct representing the cursor location.
+    ///
+    /// # Notes
+    /// If a custom cursor has not been set using `set_cursor_image` or `set_cursor_shape` a default
+    /// cursor will be created and added to the scene.
+    fn set_cursor_location2(&mut self, location: ScreenCoordinates);
+
     /// Sets the image to use for the scene's cursor.
     ///
     /// # Parameters
@@ -84,9 +107,9 @@ pub trait SceneManager: Sized {
     /// Due to a current limitation in the `Scenic` api this should only be called once and must be
     /// called *before* `set_cursor_location`.
     fn set_cursor_image(&mut self, image_path: &str) -> Result<(), Error> {
-        let image = ImageResource::new(image_path, self.get_session())?;
-        let cursor_rect = scenic::Rectangle::new(self.get_session(), image.width, image.height);
-        let cursor_shape = scenic::ShapeNode::new(self.get_session());
+        let image = ImageResource::new(image_path, self.session())?;
+        let cursor_rect = scenic::Rectangle::new(self.session(), image.width, image.height);
+        let cursor_shape = scenic::ShapeNode::new(self.session());
         cursor_shape.set_shape(&cursor_rect);
         cursor_shape.set_material(&image.material);
 
@@ -113,7 +136,7 @@ pub trait SceneManager: Sized {
         const CURSOR_DEFAULT_HEIGHT: f32 = 20.0;
 
         let cursor_rect = scenic::RoundedRectangle::new(
-            self.get_session(),
+            self.session(),
             CURSOR_DEFAULT_WIDTH,
             CURSOR_DEFAULT_HEIGHT,
             0.0,
@@ -121,13 +144,13 @@ pub trait SceneManager: Sized {
             CURSOR_DEFAULT_WIDTH / 2.0,
             CURSOR_DEFAULT_WIDTH / 2.0,
         );
-        let cursor_shape = scenic::ShapeNode::new(self.get_session());
+        let cursor_shape = scenic::ShapeNode::new(self.session());
         cursor_shape.set_shape(&cursor_rect);
 
         // Adjust position so that the upper left corner matches the pointer location
         cursor_shape.set_translation(CURSOR_DEFAULT_WIDTH / 2.0, CURSOR_DEFAULT_HEIGHT / 2.0, 0.0);
 
-        let material = scenic::Material::new(self.get_session());
+        let material = scenic::Material::new(self.session());
         material.set_color(ui_gfx::ColorRgba { red: 255, green: 0, blue: 255, alpha: 255 });
         cursor_shape.set_material(&material);
 

@@ -6,6 +6,7 @@
 mod testing_utilities;
 mod fake_input_device_binding;
 mod fake_input_handler;
+mod utils;
 
 pub mod input_device;
 pub mod keyboard;
@@ -19,3 +20,6 @@ pub mod shortcut_handler;
 pub mod touch_handler;
 
 pub mod input_pipeline;
+
+pub use utils::Position;
+pub use utils::Size;

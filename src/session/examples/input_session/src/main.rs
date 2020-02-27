@@ -31,8 +31,8 @@ impl InputHandler for MouseEventPrinter {
                 device_descriptor: input_device::InputDeviceDescriptor::Mouse(_mouse_descriptor),
                 event_time,
             } => {
-                fx_log_info!("movement_x: {}", mouse_event.movement_x);
-                fx_log_info!("movement_y: {}", mouse_event.movement_y);
+                fx_log_info!("movement_x: {}", mouse_event.movement().x);
+                fx_log_info!("movement_y: {}", mouse_event.movement().y);
                 fx_log_info!("phase: {:?}", mouse_event.phase);
                 fx_log_info!("buttons: {:?}", mouse_event.buttons);
                 fx_log_info!("event_time: {:?}", event_time);

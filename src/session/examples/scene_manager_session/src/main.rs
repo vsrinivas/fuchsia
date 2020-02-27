@@ -9,29 +9,15 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
     fuchsia_syslog as fsyslog,
-    input::{input_device, input_handler::InputHandler, input_pipeline::InputPipeline},
-    scene_management::{self, SceneManager},
+    input::{input_device, input_handler::InputHandler, input_pipeline::InputPipeline, Position},
+    scene_management::{self, SceneManager, ScreenCoordinates},
 };
 
 /// A simple InputHandler that draws a cursor on screen.
 struct SimpleCursor {
-    x: f32,
-    y: f32,
-    width: f32,
-    height: f32,
+    position: Position,
+    max_position: Position,
     scene_manager: scene_management::FlatSceneManager,
-}
-
-impl SimpleCursor {
-    pub fn new(
-        x: f32,
-        y: f32,
-        width: f32,
-        height: f32,
-        scene_manager: scene_management::FlatSceneManager,
-    ) -> Self {
-        SimpleCursor { x, y, width, height, scene_manager }
-    }
 }
 
 #[async_trait]
@@ -46,11 +32,12 @@ impl InputHandler for SimpleCursor {
                 device_descriptor: input_device::InputDeviceDescriptor::Mouse(_mouse_descriptor),
                 event_time: _,
             } => {
-                self.x += mouse_event.movement_x as f32;
-                self.y += mouse_event.movement_y as f32;
-                clamp(&mut self.x, 0.0, self.width);
-                clamp(&mut self.y, 0.0, self.height);
-                self.scene_manager.set_cursor_location(self.x, self.y);
+                self.position += mouse_event.movement();
+                clamp(&mut self.position, Position { x: 0.0, y: 0.0 }, self.max_position);
+                self.scene_manager.set_cursor_location2(ScreenCoordinates::from_position(
+                    &self.position,
+                    self.scene_manager.display_metrics,
+                ));
 
                 vec![]
             }
@@ -67,14 +54,15 @@ async fn main() -> Result<(), Error> {
     let scenic = connect_to_service::<ScenicMarker>()?;
     let scene_manager = scene_management::FlatSceneManager::new(scenic, None, None).await?;
 
-    let width = scene_manager.display_metrics.width_in_pips();
-    let height = scene_manager.display_metrics.height_in_pips();
-    let x = width / 2.0;
-    let y = height / 2.0;
+    let width = scene_manager.display_metrics.width_in_pixels() as f32;
+    let height = scene_manager.display_metrics.height_in_pixels() as f32;
+
+    let position = Position { x: width / 2.0, y: height / 2.0 };
+    let max_position = Position { x: width, y: height };
 
     let input_pipeline = InputPipeline::new(
         vec![input_device::InputDeviceType::Mouse],
-        vec![Box::new(SimpleCursor::new(x, y, width, height, scene_manager))],
+        vec![Box::new(SimpleCursor { position, max_position, scene_manager })],
     )
     .await
     .context("Failed to create InputPipeline.")?;
@@ -84,14 +72,19 @@ async fn main() -> Result<(), Error> {
     Ok(())
 }
 
-// TODO: f32::clamp is still experimental so just implement our own
-// https://github.com/rust-lang/rust/issues/44095
-fn clamp(target: &mut f32, min: f32, max: f32) {
-    if *target < min {
-        *target = min;
+fn clamp(target: &mut Position, min: Position, max: Position) {
+    if (*target).x < min.x {
+        (*target).x = min.x;
     }
-    if *target > max {
-        *target = max;
+    if (*target).x > max.x {
+        (*target).x = max.x;
+    }
+
+    if (*target).y < min.y {
+        (*target).y = min.y;
+    }
+    if (*target).y > max.y {
+        (*target).y = max.y;
     }
 }
 

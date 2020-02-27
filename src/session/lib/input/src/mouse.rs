@@ -4,6 +4,7 @@
 
 use {
     crate::input_device::{self, InputDeviceBinding},
+    crate::utils::Position,
     anyhow::{format_err, Error},
     async_trait::async_trait,
     fidl_fuchsia_input_report as fidl_input_report,
@@ -25,12 +26,12 @@ pub type MouseButton = u8;
 ///
 /// ```
 /// let mouse_device_event = input_device::InputDeviceEvent::Mouse({
-///     MouseEvent {
-///         movement_x: 40,
-///         movement_y: 20,
+///     MouseEvent::new (
+///         movement: Position { x: 40.0, y: 20.0 },
 ///         phase: fidl_fuchsia_ui_input::PointerEventPhase::Move,
 ///         buttons: 1,
-///     }});
+///     )
+/// });
 /// ```
 #[derive(Clone, Debug, PartialEq)]
 pub struct MouseEvent {
@@ -45,6 +46,20 @@ pub struct MouseEvent {
 
     /// The buttons relevant to this event.
     pub buttons: HashSet<MouseButton>,
+}
+
+impl MouseEvent {
+    pub fn new(
+        movement: Position,
+        phase: fidl_fuchsia_ui_input::PointerEventPhase,
+        buttons: HashSet<MouseButton>,
+    ) -> Self {
+        Self { movement_x: movement.x as i64, movement_y: movement.y as i64, phase, buttons }
+    }
+
+    pub fn movement(&self) -> Position {
+        Position { x: self.movement_x as f32, y: self.movement_y as f32 }
+    }
 }
 
 /// A [`MouseBinding`] represents a connection to a mouse input device.
@@ -177,8 +192,7 @@ impl MouseBinding {
 
         // Down events are sent for the buttons which did not exist in the previous report.
         send_mouse_event(
-            0,
-            0,
+            Position { x: 0.0, y: 0.0 },
             fidl_fuchsia_ui_input::PointerEventPhase::Down,
             current_buttons.difference(&previous_buttons).cloned().collect(),
             device_descriptor,
@@ -188,8 +202,10 @@ impl MouseBinding {
 
         // Move events are sent for both previous and current buttons.
         send_mouse_event(
-            mouse_report.movement_x.unwrap_or_default(),
-            mouse_report.movement_y.unwrap_or_default(),
+            Position {
+                x: mouse_report.movement_x.unwrap_or_default() as f32,
+                y: mouse_report.movement_y.unwrap_or_default() as f32,
+            },
             fidl_fuchsia_ui_input::PointerEventPhase::Move,
             current_buttons.union(&previous_buttons).cloned().collect(),
             device_descriptor,
@@ -199,8 +215,7 @@ impl MouseBinding {
 
         // Up events are sent for previous buttons that are no longer present in the current buttons.
         send_mouse_event(
-            0,
-            0,
+            Position { x: 0.0, y: 0.0 },
             fidl_fuchsia_ui_input::PointerEventPhase::Up,
             previous_buttons.difference(&current_buttons).cloned().collect(),
             device_descriptor,
@@ -218,16 +233,14 @@ impl MouseBinding {
 /// be sent.
 ///
 /// # Parameters
-/// - `movement_x`: The movement in the x axis.
-/// - `movement_y`: The movement in the y axis.
+/// - `movement`: The movement.
 /// - `phase`: The phase of the [`buttons`] associated with the input event.
 /// - `buttons`: The buttons relevant to the event.
 /// - `device_descriptor`: The descriptor for the input device generating the input reports.
 /// - `event_time`: The time in nanoseconds when the event was first recorded.
 /// - `sender`: The stream to send the MouseEvent to.
 fn send_mouse_event(
-    movement_x: i64,
-    movement_y: i64,
+    movement: Position,
     phase: fidl_fuchsia_ui_input::PointerEventPhase,
     buttons: HashSet<MouseButton>,
     device_descriptor: &input_device::InputDeviceDescriptor,
@@ -240,18 +253,17 @@ fn send_mouse_event(
     }
 
     // Don't send move events when there is no movement.
-    if phase == fidl_fuchsia_ui_input::PointerEventPhase::Move && movement_x == 0 && movement_y == 0
+    if phase == fidl_fuchsia_ui_input::PointerEventPhase::Move
+        && movement.x == 0.0
+        && movement.y == 0.0
     {
         return;
     }
 
     match sender.try_send(input_device::InputEvent {
-        device_event: input_device::InputDeviceEvent::Mouse(MouseEvent {
-            movement_x,
-            movement_y,
-            phase,
-            buttons,
-        }),
+        device_event: input_device::InputDeviceEvent::Mouse(MouseEvent::new(
+            movement, phase, buttons,
+        )),
         device_descriptor: device_descriptor.clone(),
         event_time,
     }) {
@@ -354,22 +366,16 @@ mod tests {
     /// Tests that a report containing no buttons but with movement generates a move event.
     #[fasync::run_singlethreaded(test)]
     async fn movement_without_button() {
-        const MOVEMENT_X: i64 = 10;
-        const MOVEMENT_Y: i64 = 16;
+        let movement = Position { x: 10.0, y: 16.0 };
         let (event_time_i64, event_time_u64) = testing_utilities::event_times();
-        let first_report = testing_utilities::create_mouse_input_report(
-            MOVEMENT_X,
-            MOVEMENT_Y,
-            vec![],
-            event_time_i64,
-        );
+        let first_report =
+            testing_utilities::create_mouse_input_report(movement, vec![], event_time_i64);
         let descriptor =
             input_device::InputDeviceDescriptor::Mouse(MouseDeviceDescriptor { device_id: 1 });
 
         let input_reports = vec![first_report];
         let expected_events = vec![testing_utilities::create_mouse_event(
-            MOVEMENT_X,
-            MOVEMENT_Y,
+            movement,
             fidl_fuchsia_ui_input::PointerEventPhase::Move,
             HashSet::new(),
             event_time_u64,
@@ -389,15 +395,17 @@ mod tests {
     async fn down_without_movement() {
         let mouse_button: MouseButton = 3;
         let (event_time_i64, event_time_u64) = testing_utilities::event_times();
-        let first_report =
-            testing_utilities::create_mouse_input_report(0, 0, vec![mouse_button], event_time_i64);
+        let first_report = testing_utilities::create_mouse_input_report(
+            Position { x: 0.0, y: 0.0 },
+            vec![mouse_button],
+            event_time_i64,
+        );
         let descriptor =
             input_device::InputDeviceDescriptor::Mouse(MouseDeviceDescriptor { device_id: 1 });
 
         let input_reports = vec![first_report];
         let expected_events = vec![testing_utilities::create_mouse_event(
-            0,
-            0,
+            Position { x: 0.0, y: 0.0 },
             fidl_fuchsia_ui_input::PointerEventPhase::Down,
             HashSet::from_iter(vec![mouse_button].into_iter()),
             event_time_u64,
@@ -416,13 +424,11 @@ mod tests {
     /// move event.
     #[fasync::run_singlethreaded(test)]
     async fn down_with_movement() {
-        const MOVEMENT_X: i64 = 10;
-        const MOVEMENT_Y: i64 = 16;
+        let movement = Position { x: 10.0, y: 16.0 };
         let mouse_button: MouseButton = 3;
         let (event_time_i64, event_time_u64) = testing_utilities::event_times();
         let first_report = testing_utilities::create_mouse_input_report(
-            MOVEMENT_X,
-            MOVEMENT_Y,
+            movement,
             vec![mouse_button],
             event_time_i64,
         );
@@ -432,16 +438,14 @@ mod tests {
         let input_reports = vec![first_report];
         let expected_events = vec![
             testing_utilities::create_mouse_event(
-                0,
-                0,
+                Position { x: 0.0, y: 0.0 },
                 fidl_fuchsia_ui_input::PointerEventPhase::Down,
                 HashSet::from_iter(vec![mouse_button].into_iter()),
                 event_time_u64,
                 &descriptor,
             ),
             testing_utilities::create_mouse_event(
-                MOVEMENT_X,
-                MOVEMENT_Y,
+                movement,
                 fidl_fuchsia_ui_input::PointerEventPhase::Move,
                 HashSet::from_iter(vec![mouse_button].into_iter()),
                 event_time_u64,
@@ -462,26 +466,30 @@ mod tests {
     async fn down_up() {
         let button = 1;
         let (event_time_i64, event_time_u64) = testing_utilities::event_times();
-        let first_report =
-            testing_utilities::create_mouse_input_report(0, 0, vec![button], event_time_i64);
-        let second_report =
-            testing_utilities::create_mouse_input_report(0, 0, vec![], event_time_i64);
+        let first_report = testing_utilities::create_mouse_input_report(
+            Position { x: 0.0, y: 0.0 },
+            vec![button],
+            event_time_i64,
+        );
+        let second_report = testing_utilities::create_mouse_input_report(
+            Position { x: 0.0, y: 0.0 },
+            vec![],
+            event_time_i64,
+        );
         let descriptor =
             input_device::InputDeviceDescriptor::Mouse(MouseDeviceDescriptor { device_id: 1 });
 
         let input_reports = vec![first_report, second_report];
         let expected_events = vec![
             testing_utilities::create_mouse_event(
-                0,
-                0,
+                Position { x: 0.0, y: 0.0 },
                 fidl_fuchsia_ui_input::PointerEventPhase::Down,
                 HashSet::from_iter(vec![button].into_iter()),
                 event_time_u64,
                 &descriptor,
             ),
             testing_utilities::create_mouse_event(
-                0,
-                0,
+                Position { x: 0.0, y: 0.0 },
                 fidl_fuchsia_ui_input::PointerEventPhase::Up,
                 HashSet::from_iter(vec![button].into_iter()),
                 event_time_u64,
@@ -500,43 +508,38 @@ mod tests {
     /// Tests that a press and release of a mouse button with movement generates down, move, and up events.
     #[fasync::run_singlethreaded(test)]
     async fn down_up_with_movement() {
-        const MOVEMENT_X: i64 = 10;
-        const MOVEMENT_Y: i64 = 16;
+        let movement = Position { x: 10.0, y: 16.0 };
         let button = 1;
 
         let (event_time_i64, event_time_u64) = testing_utilities::event_times();
-        let first_report =
-            testing_utilities::create_mouse_input_report(0, 0, vec![button], event_time_i64);
-        let second_report = testing_utilities::create_mouse_input_report(
-            MOVEMENT_X,
-            MOVEMENT_Y,
-            vec![],
+        let first_report = testing_utilities::create_mouse_input_report(
+            Position { x: 0.0, y: 0.0 },
+            vec![button],
             event_time_i64,
         );
+        let second_report =
+            testing_utilities::create_mouse_input_report(movement, vec![], event_time_i64);
         let descriptor =
             input_device::InputDeviceDescriptor::Mouse(MouseDeviceDescriptor { device_id: 1 });
 
         let input_reports = vec![first_report, second_report];
         let expected_events = vec![
             testing_utilities::create_mouse_event(
-                0,
-                0,
+                Position { x: 0.0, y: 0.0 },
                 fidl_fuchsia_ui_input::PointerEventPhase::Down,
                 HashSet::from_iter(vec![button].into_iter()),
                 event_time_u64,
                 &descriptor,
             ),
             testing_utilities::create_mouse_event(
-                MOVEMENT_X,
-                MOVEMENT_Y,
+                movement,
                 fidl_fuchsia_ui_input::PointerEventPhase::Move,
                 HashSet::from_iter(vec![button].into_iter()),
                 event_time_u64,
                 &descriptor,
             ),
             testing_utilities::create_mouse_event(
-                0,
-                0,
+                Position { x: 0.0, y: 0.0 },
                 fidl_fuchsia_ui_input::PointerEventPhase::Up,
                 HashSet::from_iter(vec![button].into_iter()),
                 event_time_u64,
@@ -557,45 +560,43 @@ mod tests {
     /// the movement as part of the down or up events.
     #[fasync::run_singlethreaded(test)]
     async fn down_move_up() {
-        const MOVEMENT_X: i64 = 10;
-        const MOVEMENT_Y: i64 = 16;
+        let movement = Position { x: 10.0, y: 16.0 };
         let button = 1;
 
         let (event_time_i64, event_time_u64) = testing_utilities::event_times();
-        let first_report =
-            testing_utilities::create_mouse_input_report(0, 0, vec![button], event_time_i64);
-        let second_report = testing_utilities::create_mouse_input_report(
-            MOVEMENT_X,
-            MOVEMENT_Y,
+        let first_report = testing_utilities::create_mouse_input_report(
+            Position { x: 0.0, y: 0.0 },
             vec![button],
             event_time_i64,
         );
-        let third_report =
-            testing_utilities::create_mouse_input_report(0, 0, vec![], event_time_i64);
+        let second_report =
+            testing_utilities::create_mouse_input_report(movement, vec![button], event_time_i64);
+        let third_report = testing_utilities::create_mouse_input_report(
+            Position { x: 0.0, y: 0.0 },
+            vec![],
+            event_time_i64,
+        );
         let descriptor =
             input_device::InputDeviceDescriptor::Mouse(MouseDeviceDescriptor { device_id: 1 });
 
         let input_reports = vec![first_report, second_report, third_report];
         let expected_events = vec![
             testing_utilities::create_mouse_event(
-                0,
-                0,
+                Position { x: 0.0, y: 0.0 },
                 fidl_fuchsia_ui_input::PointerEventPhase::Down,
                 HashSet::from_iter(vec![button].into_iter()),
                 event_time_u64,
                 &descriptor,
             ),
             testing_utilities::create_mouse_event(
-                MOVEMENT_X,
-                MOVEMENT_Y,
+                movement,
                 fidl_fuchsia_ui_input::PointerEventPhase::Move,
                 HashSet::from_iter(vec![button].into_iter()),
                 event_time_u64,
                 &descriptor,
             ),
             testing_utilities::create_mouse_event(
-                0,
-                0,
+                Position { x: 0.0, y: 0.0 },
                 fidl_fuchsia_ui_input::PointerEventPhase::Up,
                 HashSet::from_iter(vec![button].into_iter()),
                 event_time_u64,

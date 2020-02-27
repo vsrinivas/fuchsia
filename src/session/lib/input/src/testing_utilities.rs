@@ -4,6 +4,7 @@
 
 #[cfg(test)]
 use {
+    crate::utils::Position,
     crate::{input_device, keyboard, mouse, touch},
     fidl_fuchsia_input_report as fidl_input_report, fidl_fuchsia_ui_input as fidl_ui_input,
     fidl_fuchsia_ui_input2 as fidl_ui_input2, fuchsia_zircon as zx,
@@ -79,8 +80,7 @@ pub fn create_keyboard_event(
 /// - `event_time`: The time of event.
 #[cfg(test)]
 pub fn create_mouse_input_report(
-    x: i64,
-    y: i64,
+    position: Position,
     buttons: Vec<u8>,
     event_time: i64,
 ) -> fidl_input_report::InputReport {
@@ -88,8 +88,8 @@ pub fn create_mouse_input_report(
         event_time: Some(event_time),
         keyboard: None,
         mouse: Some(fidl_input_report::MouseInputReport {
-            movement_x: Some(x),
-            movement_y: Some(y),
+            movement_x: Some(position.x as i64),
+            movement_y: Some(position.y as i64),
             scroll_h: None,
             scroll_v: None,
             pressed_buttons: Some(buttons),
@@ -112,20 +112,16 @@ pub fn create_mouse_input_report(
 /// - `device_descriptor`: The device descriptor to add to the event.
 #[cfg(test)]
 pub fn create_mouse_event(
-    movement_x: i64,
-    movement_y: i64,
+    movement: Position,
     phase: fidl_ui_input::PointerEventPhase,
     buttons: HashSet<mouse::MouseButton>,
     event_time: input_device::EventTime,
     device_descriptor: &input_device::InputDeviceDescriptor,
 ) -> input_device::InputEvent {
     input_device::InputEvent {
-        device_event: input_device::InputDeviceEvent::Mouse(mouse::MouseEvent {
-            movement_x,
-            movement_y,
-            phase,
-            buttons,
-        }),
+        device_event: input_device::InputDeviceEvent::Mouse(mouse::MouseEvent::new(
+            movement, phase, buttons,
+        )),
         device_descriptor: device_descriptor.clone(),
         event_time: event_time,
     }
@@ -156,15 +152,8 @@ pub fn create_touch_input_report(
 }
 
 #[cfg(test)]
-pub fn create_touch_contact(id: u32, position_x: i64, position_y: i64) -> touch::TouchContact {
-    touch::TouchContact {
-        id,
-        position_x,
-        position_y,
-        pressure: None,
-        contact_width: None,
-        contact_height: None,
-    }
+pub fn create_touch_contact(id: u32, position: Position) -> touch::TouchContact {
+    touch::TouchContact::new(id, position, None, None)
 }
 
 /// Creates a [`touch::TouchEvent`] with the provided parameters.

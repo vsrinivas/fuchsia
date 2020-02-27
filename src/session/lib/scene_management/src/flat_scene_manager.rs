@@ -3,13 +3,15 @@
 // found in the LICENSE file.
 
 use {
-    crate::display_metrics::DisplayMetrics,
+    crate::display_metrics::{DisplayMetrics, ViewingDistance},
+    crate::graphics_utils::{ScreenCoordinates, ScreenSize},
     crate::scene_manager::{self, SceneManager},
     anyhow::Error,
     async_trait::async_trait,
     fidl, fidl_fuchsia_ui_app as ui_app, fidl_fuchsia_ui_gfx as ui_gfx,
     fidl_fuchsia_ui_scenic as ui_scenic, fidl_fuchsia_ui_views as ui_views,
     fuchsia_scenic as scenic, fuchsia_scenic,
+    input::Size,
     std::sync::Arc,
 };
 
@@ -68,7 +70,7 @@ impl SceneManager for FlatSceneManager {
     async fn new(
         scenic: ui_scenic::ScenicProxy,
         display_pixel_density: Option<f32>,
-        viewing_distance: Option<f32>,
+        viewing_distance: Option<ViewingDistance>,
     ) -> Result<Self, Error> {
         let session: scenic::SessionPtr = FlatSceneManager::create_session(&scenic)?;
 
@@ -81,20 +83,17 @@ impl SceneManager for FlatSceneManager {
         // Size the layer to fit the size of the display.
         let display_info = scenic.get_display_info().await?;
 
-        let display_metrics = DisplayMetrics::new(
-            display_info.width_in_px,
-            display_info.height_in_px,
-            display_pixel_density,
-            viewing_distance,
-        );
+        let size_in_pixels = Size {
+            width: display_info.width_in_px as f32,
+            height: display_info.height_in_px as f32,
+        };
+
+        let display_metrics =
+            DisplayMetrics::new2(size_in_pixels, display_pixel_density, viewing_distance, None);
 
         scene.set_scale(display_metrics.pixels_per_pip(), display_metrics.pixels_per_pip(), 1.0);
 
-        let (display_width, display_height) =
-            (display_info.width_in_px as f32, display_info.height_in_px as f32);
-
-        let layer =
-            FlatSceneManager::create_layer(&session, &renderer, display_width, display_height);
+        let layer = FlatSceneManager::create_layer(&session, &renderer, size_in_pixels);
         let layer_stack = FlatSceneManager::create_layer_stack(&session, &layer);
         let compositor = FlatSceneManager::create_compositor(&session, &layer_stack);
 
@@ -119,8 +118,8 @@ impl SceneManager for FlatSceneManager {
         Ok(FlatSceneManager {
             session,
             root_node,
-            display_width,
-            display_height,
+            display_width: size_in_pixels.width,
+            display_height: size_in_pixels.height,
             compositor_id,
             _resources: resources,
             views: vec![],
@@ -142,16 +141,25 @@ impl SceneManager for FlatSceneManager {
         Ok(view_holder_node)
     }
 
-    fn get_session(&self) -> scenic::SessionPtr {
+    fn session(&self) -> scenic::SessionPtr {
         return self.session.clone();
     }
 
+    fn display_metrics(&self) -> DisplayMetrics {
+        self.display_metrics
+    }
+
     fn set_cursor_location(&mut self, x: f32, y: f32) {
+        self.set_cursor_location2(ScreenCoordinates::from_pips(x, y, self.display_metrics));
+    }
+
+    fn set_cursor_location2(&mut self, location: ScreenCoordinates) {
         if self.cursor_node.is_none() {
             // We don't already have a cursor node so let's make one with the default cursor
             self.set_cursor_shape(self.get_default_cursor());
         }
 
+        let (x, y) = location.pips();
         self.cursor_node().set_translation(x, y, FlatSceneManager::CURSOR_DEPTH);
     }
 
@@ -231,16 +239,14 @@ impl FlatSceneManager {
     /// # Parameters
     /// - `session`: The Scenic session to create the layer in.
     /// - `renderer`: The renderer for the layer.
-    /// - `display_width`: The width of the display.
-    /// - `display_height`: The height of the display.
+    /// - `display_size`: The size of the display in pixels.
     fn create_layer(
         session: &scenic::SessionPtr,
         renderer: &scenic::Renderer,
-        display_width: f32,
-        display_height: f32,
+        display_size: Size,
     ) -> scenic::Layer {
         let layer = scenic::Layer::new(session.clone());
-        layer.set_size(display_width, display_height);
+        layer.set_size(display_size.width, display_size.height);
         layer.set_renderer(&renderer);
 
         layer
@@ -324,5 +330,10 @@ impl FlatSceneManager {
         }
 
         self.cursor_node.as_ref().unwrap()
+    }
+
+    /// Get the display size
+    pub fn display_size(&self) -> ScreenSize {
+        ScreenSize::from_pixels(self.display_width, self.display_height, self.display_metrics)
     }
 }
