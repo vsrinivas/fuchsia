@@ -13,7 +13,10 @@ rustc_library("event-queue") {
   edition = "2018"
   with_unit_tests = true
 
-  deps = [ "//third_party/rust_crates:futures" ]
+  deps = [
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:thiserror",
+  ]
 
   test_deps = [
     ":test.pkg.eventqueue-rustc",

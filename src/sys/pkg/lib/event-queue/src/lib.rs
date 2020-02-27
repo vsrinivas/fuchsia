@@ -51,6 +51,7 @@ use futures::{
     select,
 };
 use std::collections::VecDeque;
+use thiserror::Error;
 
 const DEFAULT_EVENTS_LIMIT: usize = 10;
 
@@ -63,11 +64,13 @@ pub trait Event: Clone {
 }
 
 /// The client is closed and should be removed from the event queue.
-#[derive(Debug)]
+#[derive(Debug, Error)]
+#[error("The client is closed and should be removed from the event queue.")]
 pub struct ClosedClient;
 
 /// The event queue future was dropped before calling control handle functions.
-#[derive(Debug)]
+#[derive(Debug, Error)]
+#[error("The event queue future was dropped before calling control handle functions.")]
 pub struct EventQueueDropped;
 
 /// This trait defines how an event should be notified for a client. The struct that implements
@@ -82,6 +85,7 @@ where
     fn notify(&self, event: E) -> BoxFuture<'static, Result<(), ClosedClient>>;
 }
 
+#[derive(Debug)]
 enum Command<N, E> {
     AddClient(N),
     Clear,
@@ -89,12 +93,23 @@ enum Command<N, E> {
 }
 
 /// A control handle that can control the event queue.
+#[derive(Debug)]
 pub struct ControlHandle<N, E>
 where
     N: Notify<E>,
     E: Event,
 {
     sender: mpsc::Sender<Command<N, E>>,
+}
+
+impl<N, E> Clone for ControlHandle<N, E>
+where
+    N: Notify<E>,
+    E: Event,
+{
+    fn clone(&self) -> Self {
+        ControlHandle { sender: self.sender.clone() }
+    }
 }
 
 impl<N, E> ControlHandle<N, E>
@@ -112,7 +127,8 @@ where
         self.sender.send(Command::AddClient(notifier)).await.map_err(|_| EventQueueDropped)
     }
 
-    /// Clear all clients and events from the event queue.
+    /// Make all existing clients in the event queue stop adding new events to their queue, and
+    /// once they receive all queued events, they will be dropped.
     pub async fn clear(&mut self) -> Result<(), EventQueueDropped> {
         self.sender.send(Command::Clear).await.map_err(|_| EventQueueDropped)
     }
@@ -173,7 +189,7 @@ where
                 (result, index, _) = select_all_events => {
                     let i = self.find_client_index(index);
                     match result {
-                        Ok(()) => self.clients[i].next_event(),
+                        Ok(()) => self.next_event(i),
                         Err(ClosedClient)=> {
                             self.clients.swap_remove(i);
                         },
@@ -199,9 +215,17 @@ where
         self.clients.push(client);
     }
 
+    // Remove clients that have no pending events, otherwise tell them to not accept any new events.
     fn clear(&mut self) {
-        self.clients.clear();
-        self.last_event = None;
+        let mut i = 0;
+        while i < self.clients.len() {
+            if self.clients[i].pending_event.is_none() {
+                self.clients.swap_remove(i);
+            } else {
+                self.clients[i].accept_new_events = false;
+                i += 1;
+            }
+        }
     }
 
     fn queue_event(&mut self, event: E) {
@@ -232,6 +256,13 @@ where
         }
         panic!("index {} too large", index);
     }
+
+    fn next_event(&mut self, i: usize) {
+        self.clients[i].next_event();
+        if !self.clients[i].accept_new_events && self.clients[i].pending_event.is_none() {
+            self.clients.swap_remove(i);
+        }
+    }
 }
 
 struct Client<N, E>
@@ -242,6 +273,7 @@ where
     notifier: N,
     pending_event: Option<BoxFuture<'static, Result<(), ClosedClient>>>,
     events: VecDeque<E>,
+    accept_new_events: bool,
 }
 
 impl<N, E> Client<N, E>
@@ -250,10 +282,13 @@ where
     E: Event,
 {
     fn new(notifier: N) -> Self {
-        Client { notifier, pending_event: None, events: VecDeque::new() }
+        Client { notifier, pending_event: None, events: VecDeque::new(), accept_new_events: true }
     }
 
     fn queue_event(&mut self, event: E, events_limit: usize) -> bool {
+        if !self.accept_new_events {
+            return true;
+        }
         let mut num_events = self.events.len();
         if self.pending_event.is_some() {
             num_events += 1;
@@ -411,12 +446,13 @@ mod tests {
         handle.clear().await.unwrap();
         let mut stream2 = add_client(&mut handle).await;
         handle.queue_event("event3".into()).await.unwrap();
-        assert_client_dropped(&mut stream1, "event1").await;
-        // No event2 because the client was dropped before responding to event1.
+        assert_events(&mut stream2, &["event2", "event3"]).await;
+        assert_events(&mut stream1, &["event1", "event2"]).await;
+        // No event3 because the event queue was cleared.
         assert_matches!(stream1.next().await, None);
 
-        assert_events(&mut stream2, &["event3"]).await;
-        drop(handle);
+        // client2 should have no pending events and be dropped.
+        handle.clear().await.unwrap();
         assert_matches!(stream2.next().await, None);
     }
 
