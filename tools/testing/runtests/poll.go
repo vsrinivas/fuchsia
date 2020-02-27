@@ -25,7 +25,7 @@ import (
 
 // PollForSummary polls a node waiting for a summary.json to be written; this relies on
 // runtests having been run on target.
-func PollForSummary(ctx context.Context, t tftp.Client, summaryFilename, testResultsDir, outputArchive string, filePollInterval time.Duration) error {
+func PollForSummary(ctx context.Context, t tftp.Client, summaryFilename, testResultsDir, outputArchive, outputDir string, filePollInterval time.Duration) error {
 	var buffer bytes.Buffer
 	var writer io.WriterTo
 	var err error
@@ -49,21 +49,24 @@ func PollForSummary(ctx context.Context, t tftp.Client, summaryFilename, testRes
 		return fmt.Errorf("cannot unmarshall test results: %v", err)
 	}
 
-	outFile, err := os.OpenFile(outputArchive, os.O_WRONLY|os.O_CREATE, 0666)
-	if err != nil {
-		return fmt.Errorf("failed to create file %s: %v", outputArchive, err)
-	}
+	var tw *tar.Writer
+	if outputArchive != "" {
+		outFile, err := os.OpenFile(outputArchive, os.O_WRONLY|os.O_CREATE, 0666)
+		if err != nil {
+			return fmt.Errorf("failed to create file %s: %v", outputArchive, err)
+		}
+		defer outFile.Close()
+		tw = tar.NewWriter(outFile)
+		defer tw.Close()
 
-	tw := tar.NewWriter(outFile)
-	defer tw.Close()
-
-	if err = tarutil.TarBytes(tw, buffer.Bytes(), summaryFilename); err != nil {
-		return err
+		if err = tarutil.TarBytes(tw, buffer.Bytes(), summaryFilename); err != nil {
+			return err
+		}
 	}
 
 	logger.Debugf(ctx, "copying test output\n")
 
-	// Tar in a subroutine while busy-printing so that we do not hit an i/o timeout when
+	// Tar or copy in a subroutine while busy-printing so that we do not hit an i/o timeout when
 	// dealing with large files.
 	c := make(chan error)
 	ctx, cancel := context.WithCancel(ctx)
@@ -74,14 +77,14 @@ func PollForSummary(ctx context.Context, t tftp.Client, summaryFilename, testRes
 	for _, output := range result.Outputs {
 		go func(output string) {
 			remote := filepath.Join(testResultsDir, output)
-			err := botanist.FetchAndArchiveFile(ctx, t, tw, remote, output, &tarLock)
+			err := botanist.FetchAndCopyFile(ctx, t, tw, remote, output, &tarLock, outputDir)
 			c <- err
 		}(output)
 	}
 	for _, test := range result.Tests {
 		go func(test TestDetails) {
 			remote := filepath.Join(testResultsDir, test.OutputFile)
-			err := botanist.FetchAndArchiveFile(ctx, t, tw, remote, test.OutputFile, &tarLock)
+			err := botanist.FetchAndCopyFile(ctx, t, tw, remote, test.OutputFile, &tarLock, outputDir)
 			c <- err
 		}(test)
 		// Copy data sinks if any are present.
@@ -90,7 +93,7 @@ func PollForSummary(ctx context.Context, t tftp.Client, summaryFilename, testRes
 			for _, sink := range sinks {
 				go func(sink DataSink) {
 					remote := filepath.Join(testResultsDir, sink.File)
-					err := botanist.FetchAndArchiveFile(ctx, t, tw, remote, sink.File, &tarLock)
+					err := botanist.FetchAndCopyFile(ctx, t, tw, remote, sink.File, &tarLock, outputDir)
 					c <- err
 				}(sink)
 			}

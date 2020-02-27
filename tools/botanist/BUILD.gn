@@ -12,6 +12,7 @@ go_library("botanist_lib") {
     "//third_party/golibs:golang.org/x/crypto",
     "//tools/build",
     "//tools/lib/logger",
+    "//tools/lib/osmisc",
     "//tools/lib/retry",
     "//tools/lib/runner",
     "//tools/lib/syslog",

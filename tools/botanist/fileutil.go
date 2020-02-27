@@ -9,16 +9,19 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
+	"path/filepath"
 	"sync"
 	"time"
 
+	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/retry"
 	"go.fuchsia.dev/fuchsia/tools/net/tftp"
 )
 
-// FetchAndArchiveFile fetches a remote file via TFTP from a given node, and
-// writes it an archive.
-func FetchAndArchiveFile(ctx context.Context, t tftp.Client, tw *tar.Writer, path, name string, lock *sync.Mutex) error {
+// FetchAndCopyFile fetches a remote file via TFTP from a given node, and
+// writes it to an archive or output directory.
+func FetchAndCopyFile(ctx context.Context, t tftp.Client, tw *tar.Writer, path, name string, lock *sync.Mutex, outDir string) error {
 	return retry.Retry(ctx, retry.WithMaxRetries(retry.NewConstantBackoff(time.Second), 3), func() error {
 		var err error
 		var reader *bytes.Reader
@@ -34,17 +37,27 @@ func FetchAndArchiveFile(ctx context.Context, t tftp.Client, tw *tar.Writer, pat
 			}
 			break
 		}
-		lock.Lock()
-		defer lock.Unlock()
-		hdr := &tar.Header{
-			Name: name,
-			Size: int64(reader.Len()),
-			Mode: 0666,
+		var w io.Writer
+		if tw != nil {
+			lock.Lock()
+			defer lock.Unlock()
+			hdr := &tar.Header{
+				Name: name,
+				Size: int64(reader.Len()),
+				Mode: 0666,
+			}
+			if err := tw.WriteHeader(hdr); err != nil {
+				return err
+			}
+			w = tw
+		} else {
+			outputFile := filepath.Join(outDir, name)
+			w, err = osmisc.CreateFile(outputFile)
+			if err != nil {
+				return fmt.Errorf("failed to create file: %v", err)
+			}
 		}
-		if err := tw.WriteHeader(hdr); err != nil {
-			return err
-		}
-		_, err = reader.WriteTo(tw)
+		_, err = reader.WriteTo(w)
 		return err
 	}, nil)
 }
