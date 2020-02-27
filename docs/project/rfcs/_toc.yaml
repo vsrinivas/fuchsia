@@ -2,5 +2,7 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
+- title: "RFC 0001 RFC Process"
+  path: /docs/project/rfcs/0001_rfc_process.md
 - title: "RFC template"
   path: /docs/project/rfcs/TEMPLATE.md

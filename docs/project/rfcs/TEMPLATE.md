@@ -5,9 +5,10 @@ One-sentence summary goes here.
 Field     | Value
 ----------|--------------------------
 Status    | Draft
-Authors   | *your name*
+Author(s) | *your names*
 Submitted | YYYY-MM-DD
 Reviewed  | *leave blank until reviewed*
+Issue     | *link to bugs.fuchsia.dev issue*
 
 [TOC]
 
