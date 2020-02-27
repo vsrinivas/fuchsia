@@ -54,7 +54,7 @@ impl BuiltinCapability for RootJob {
         Ok(())
     }
 
-    async fn on_route_framework_capability<'a>(
+    async fn on_framework_capability_routed<'a>(
         self: &'a Arc<Self>,
         capability: &'a FrameworkCapability,
         capability_provider: Option<Box<dyn CapabilityProvider>>,
@@ -73,13 +73,13 @@ impl BuiltinCapability for RootJob {
 #[async_trait]
 impl Hook for RootJob {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
-        if let EventPayload::RouteCapability {
+        if let EventPayload::CapabilityRouted {
             source: CapabilitySource::Framework { capability, scope_moniker: None },
             capability_provider,
         } = &event.payload
         {
             let mut provider = capability_provider.lock().await;
-            *provider = self.on_route_framework_capability(&capability, provider.take()).await?;
+            *provider = self.on_framework_capability_routed(&capability, provider.take()).await?;
         };
         Ok(())
     }
@@ -126,7 +126,7 @@ mod tests {
 
         let event = Event::new(
             AbsoluteMoniker::root(),
-            EventPayload::RouteCapability { source, capability_provider: provider.clone() },
+            EventPayload::CapabilityRouted { source, capability_provider: provider.clone() },
         );
         hooks.dispatch(&event).await?;
 

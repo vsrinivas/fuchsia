@@ -222,7 +222,7 @@ async fn do_mark_deleting(realm: Arc<Realm>, moniker: ChildMoniker) -> Result<()
         state.get_live_child_realm(&partial_moniker).map(|r| r.clone())
     };
     if let Some(child_realm) = child_realm {
-        let event = Event::new(child_realm.abs_moniker.clone(), EventPayload::PreDestroyInstance);
+        let event = Event::new(child_realm.abs_moniker.clone(), EventPayload::MarkedForDestruction);
         child_realm.hooks.dispatch(&event).await?;
         let mut state = realm.lock_state().await;
         let state = state.as_mut().expect("do_mark_deleting: not resolved");
@@ -256,7 +256,7 @@ async fn do_delete_child(
             let mut state = realm.lock_state().await;
             state.as_mut().expect("do_delete_child: not resolved").remove_child_realm(&moniker);
         }
-        let event = Event::new(child_realm.abs_moniker.clone(), EventPayload::PostDestroyInstance);
+        let event = Event::new(child_realm.abs_moniker.clone(), EventPayload::Destroyed);
         child_realm.hooks.dispatch(&event).await?;
     }
 
@@ -1524,7 +1524,7 @@ pub mod tests {
             fn hooks(self: &Arc<Self>) -> Vec<HooksRegistration> {
                 vec![HooksRegistration::new(
                     "StopErrorHook",
-                    vec![EventType::StopInstance],
+                    vec![EventType::Stopped],
                     Arc::downgrade(self) as Weak<dyn Hook>,
                 )]
             }
@@ -1543,7 +1543,7 @@ pub mod tests {
         #[async_trait]
         impl Hook for StopErrorHook {
             async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
-                if let EventPayload::StopInstance = event.payload {
+                if let EventPayload::Stopped = event.payload {
                     self.on_shutdown_instance_async(&event.target_moniker).await?;
                 }
                 Ok(())
@@ -2245,12 +2245,12 @@ pub mod tests {
             fn hooks(self: &Arc<Self>) -> Vec<HooksRegistration> {
                 vec![HooksRegistration::new(
                     "DestroyErrorHook",
-                    vec![EventType::PostDestroyInstance],
+                    vec![EventType::Destroyed],
                     Arc::downgrade(self) as Weak<dyn Hook>,
                 )]
             }
 
-            async fn on_destroy_instance_async(
+            async fn on_destroyed_async(
                 &self,
                 target_moniker: &AbsoluteMoniker,
             ) -> Result<(), ModelError> {
@@ -2264,8 +2264,8 @@ pub mod tests {
         #[async_trait]
         impl Hook for DestroyErrorHook {
             async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
-                if let EventPayload::PostDestroyInstance = event.payload {
-                    self.on_destroy_instance_async(&event.target_moniker).await?;
+                if let EventPayload::Destroyed = event.payload {
+                    self.on_destroyed_async(&event.target_moniker).await?;
                 }
                 Ok(())
             }

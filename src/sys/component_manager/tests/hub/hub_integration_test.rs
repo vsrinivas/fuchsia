@@ -38,17 +38,16 @@ impl TestRunner {
         let (hub_report_capability, channel_close_rx) = HubReportCapability::new();
 
         let (event_source, event_stream) = {
-            // Subscribe to temporary event streams for BeforeStartInstance and RouteCapability.
+            // Subscribe to temporary event streams for Started and CapabilityRouted.
             // These events are subscribed to separately because the events do not happen
-            // in predictable orders. There is a possibility for the RouteCapability event
-            // to be interleaved between the BeforeStartInstance events.
+            // in predictable orders. There is a possibility for the CapabilityRouted event
+            // to be interleaved between the Started events.
             let event_source = test.connect_to_event_source().await?;
-            let mut start_event_stream =
-                event_source.subscribe(vec![BeforeStartInstance::TYPE]).await?;
+            let mut start_event_stream = event_source.subscribe(vec![Started::TYPE]).await?;
 
             // Subscribe to events which are required by this test runner.
             // TODO(xbhatnag): There may be problems here if event_types contains
-            // BeforeStartInstance or RouteCapability
+            // Started or CapabilityRouted
             let event_stream = event_source.subscribe(event_types).await?;
 
             // Inject HubReportCapability wherever it's requested.
@@ -58,11 +57,11 @@ impl TestRunner {
             event_source.start_component_tree().await?;
 
             // Wait for the root component to start up
-            start_event_stream.expect_exact::<BeforeStartInstance>(".").await?.resume().await?;
+            start_event_stream.expect_exact::<Started>(".").await?.resume().await?;
 
             // Wait for all child components to start up
             for _ in 1..=(num_eager_static_components - 1) {
-                start_event_stream.expect_type::<BeforeStartInstance>().await?.resume().await?;
+                start_event_stream.expect_type::<Started>().await?.resume().await?;
             }
 
             // Return the event_stream to be used later
@@ -343,7 +342,7 @@ async fn dynamic_child_test() -> Result<(), Error> {
     let (test_runner, mut event_stream) = TestRunner::start(
         "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/dynamic_child_reporter.cm",
         1,
-        vec![PreDestroyInstance::TYPE, StopInstance::TYPE, PostDestroyInstance::TYPE],
+        vec![MarkedForDestruction::TYPE, Stopped::TYPE, Destroyed::TYPE],
     )
     .await?;
 
@@ -388,7 +387,8 @@ async fn dynamic_child_test() -> Result<(), Error> {
         .send()?;
 
     // Wait for the dynamic child to begin deletion
-    let event = event_stream.expect_exact::<PreDestroyInstance>("./coll:simple_instance:1").await?;
+    let event =
+        event_stream.expect_exact::<MarkedForDestruction>("./coll:simple_instance:1").await?;
 
     // When deletion begins, the dynamic child should be moved to the deleting directory
     test_runner.verify_directory_listing("children", vec![]).await;
@@ -404,7 +404,7 @@ async fn dynamic_child_test() -> Result<(), Error> {
     event.resume().await?;
 
     // Wait for the dynamic child to stop
-    let event = event_stream.expect_exact::<StopInstance>("./coll:simple_instance:1").await?;
+    let event = event_stream.expect_exact::<Stopped>("./coll:simple_instance:1").await?;
 
     // After stopping, the dynamic child should not have an exec directory
     test_runner
@@ -418,8 +418,9 @@ async fn dynamic_child_test() -> Result<(), Error> {
     event.resume().await?;
 
     // Wait for the dynamic child's static child to begin deletion
-    let event =
-        event_stream.expect_exact::<PreDestroyInstance>("./coll:simple_instance:1/child:0").await?;
+    let event = event_stream
+        .expect_exact::<MarkedForDestruction>("./coll:simple_instance:1/child:0")
+        .await?;
 
     // When deletion begins, the dynamic child's static child should be moved to the deleting directory
     test_runner.verify_directory_listing("deleting/coll:simple_instance:1/children", vec![]).await;
@@ -437,9 +438,7 @@ async fn dynamic_child_test() -> Result<(), Error> {
     event.resume().await?;
 
     // Wait for the dynamic child's static child to be destroyed
-    let event = event_stream
-        .expect_exact::<PostDestroyInstance>("./coll:simple_instance:1/child:0")
-        .await?;
+    let event = event_stream.expect_exact::<Destroyed>("./coll:simple_instance:1/child:0").await?;
 
     // The dynamic child's static child should not be visible in the hub anymore
     test_runner.verify_directory_listing("deleting/coll:simple_instance:1/deleting", vec![]).await;
@@ -448,8 +447,7 @@ async fn dynamic_child_test() -> Result<(), Error> {
     event.resume().await?;
 
     // Wait for the dynamic child to be destroyed
-    let event =
-        event_stream.expect_exact::<PostDestroyInstance>("./coll:simple_instance:1").await?;
+    let event = event_stream.expect_exact::<Destroyed>("./coll:simple_instance:1").await?;
 
     // After deletion, verify that parent can no longer see the dynamic child in the Hub
     test_runner.verify_directory_listing("deleting", vec![]).await;

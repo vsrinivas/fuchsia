@@ -29,7 +29,7 @@ impl RootRealmStopNotifier {
     pub fn hooks(self: &Arc<Self>) -> Vec<HooksRegistration> {
         vec![HooksRegistration::new(
             "RootRealmStopNotifier",
-            vec![EventType::StopInstance],
+            vec![EventType::Stopped],
             Arc::downgrade(self) as Weak<dyn Hook>,
         )]
     }
@@ -48,7 +48,7 @@ impl Hook for RootRealmStopNotifier {
         if event.target_moniker.is_root() {
             let tx = { self.tx.lock().await.take() };
             if let Some(tx) = tx {
-                tx.send(()).expect("Could not notify on StopInstance of root realm");
+                tx.send(()).expect("Could not notify on Stopped of root realm");
             }
         }
         Ok(())

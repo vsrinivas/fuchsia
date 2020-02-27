@@ -766,7 +766,7 @@ mod connect_tests {
 
         let event = Event::new(
             AbsoluteMoniker::root(),
-            EventPayload::RouteCapability {
+            EventPayload::CapabilityRouted {
                 source,
                 capability_provider: capability_provider.clone(),
             },

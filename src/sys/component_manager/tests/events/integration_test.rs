@@ -48,7 +48,7 @@ async fn scoped_events_test() -> Result<(), Error> {
 
     // Inject an echo capability for `echo_reporter` so that we can observe its messages here.
     let mut echo_rx = {
-        let mut event_stream = event_source.subscribe(vec![RouteCapability::TYPE]).await?;
+        let mut event_stream = event_source.subscribe(vec![CapabilityRouted::TYPE]).await?;
 
         event_source.start_component_tree().await?;
 
@@ -70,30 +70,30 @@ async fn scoped_events_test() -> Result<(), Error> {
     };
 
     // Wait to receive the start trigger that echo_reporter recieved. This
-    // indicates to `echo_reporter` that it should start collecting `RouteCapability`
+    // indicates to `echo_reporter` that it should start collecting `CapabilityRouted`
     // events.
     let start_trigger_echo = echo_rx.next().await.unwrap();
     assert_eq!(start_trigger_echo.message, "Start trigger");
     start_trigger_echo.resume();
 
-    // This indicates that `echo_reporter` will stop receiving `RouteCapability`
+    // This indicates that `echo_reporter` will stop receiving `CapabilityRouted`
     // events.
     let stop_trigger_echo = echo_rx.next().await.unwrap();
     assert_eq!(stop_trigger_echo.message, "Stop trigger");
     stop_trigger_echo.resume();
 
-    // Verify that the `echo_reporter` sees `BeforeStartInstance` and
-    // a `RouteCapability` event to itself (routing the ELF runner
-    // capability at startup), but not other `RouteCapability` events
-    // because the target of other `RouteCapability` events are outside
+    // Verify that the `echo_reporter` sees `Started` and
+    // a `CapabilityRouted` event to itself (routing the ELF runner
+    // capability at startup), but not other `CapabilityRouted` events
+    // because the target of other `CapabilityRouted` events are outside
     // its realm.
     let events_echo = echo_rx.next().await.unwrap();
     assert_eq!(
         events_echo.message,
         concat!(
             "Events: [",
-            "RecordedEvent { event_type: RouteCapability, target_moniker: \"./echo_server:0\", capability_id: Some(\"elf\") }, ",
-            "RecordedEvent { event_type: BeforeStartInstance, target_moniker: \"./echo_server:0\", capability_id: None }",
+            "RecordedEvent { event_type: CapabilityRouted, target_moniker: \"./echo_server:0\", capability_id: Some(\"elf\") }, ",
+            "RecordedEvent { event_type: Started, target_moniker: \"./echo_server:0\", capability_id: None }",
             "]"
         )
     );

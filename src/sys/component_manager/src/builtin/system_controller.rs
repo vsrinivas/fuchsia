@@ -47,12 +47,12 @@ impl SystemController {
     pub fn hooks(self: &Arc<Self>) -> Vec<HooksRegistration> {
         vec![HooksRegistration::new(
             "SystemController",
-            vec![EventType::RouteCapability],
+            vec![EventType::CapabilityRouted],
             Arc::downgrade(self) as Weak<dyn Hook>,
         )]
     }
 
-    async fn on_route_framework_capability_async<'a>(
+    async fn on_framework_capability_routed_async<'a>(
         self: Arc<Self>,
         capability: &'a FrameworkCapability,
         capability_provider: Option<Box<dyn CapabilityProvider>>,
@@ -72,14 +72,14 @@ impl SystemController {
 #[async_trait]
 impl Hook for SystemController {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
-        if let EventPayload::RouteCapability {
+        if let EventPayload::CapabilityRouted {
             source: CapabilitySource::Framework { capability, scope_moniker: None },
             capability_provider,
         } = &event.payload
         {
             let mut capability_provider = capability_provider.lock().await;
             *capability_provider = self
-                .on_route_framework_capability_async(&capability, capability_provider.take())
+                .on_framework_capability_routed_async(&capability, capability_provider.take())
                 .await?;
         };
         Ok(())

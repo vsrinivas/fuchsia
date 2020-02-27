@@ -34,14 +34,14 @@ impl WorkScheduler {
     pub fn hooks(self: &Arc<Self>) -> Vec<HooksRegistration> {
         vec![HooksRegistration::new(
             "WorkScheduler",
-            vec![EventType::ResolveInstance, EventType::RouteCapability],
+            vec![EventType::Resolved, EventType::CapabilityRouted],
             Arc::downgrade(self) as Weak<dyn Hook>,
         )]
     }
 
     /// Route capability to access `fuchsia.sys2.WorkSchedulerControl` protocol as a framework
     /// capability.
-    async fn on_route_framework_capability_async<'a>(
+    async fn on_framework_capability_routed_async<'a>(
         self: Arc<Self>,
         capability: &'a FrameworkCapability,
         capability_provider: Option<Box<dyn CapabilityProvider>>,
@@ -59,7 +59,7 @@ impl WorkScheduler {
 
     /// Route capability to access `fuchsia.sys2.WorkScheduler` protocol as a scoped framework
     /// capability.
-    async fn on_route_scoped_framework_capability_async<'a>(
+    async fn on_scoped_framework_capability_routed_async<'a>(
         self: Arc<Self>,
         scope_moniker: AbsoluteMoniker,
         capability: &'a FrameworkCapability,
@@ -92,31 +92,31 @@ impl WorkScheduler {
 impl Hook for WorkScheduler {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
         match &event.payload {
-            EventPayload::ResolveInstance { decl } => {
-                self.try_add_realm_as_worker(&event.target_moniker, &decl).await;
-            }
-            EventPayload::RouteCapability {
+            EventPayload::CapabilityRouted {
                 source: CapabilitySource::Framework { capability, scope_moniker: None },
                 capability_provider,
             } => {
                 let mut capability_provider = capability_provider.lock().await;
                 *capability_provider = self
-                    .on_route_framework_capability_async(&capability, capability_provider.take())
+                    .on_framework_capability_routed_async(&capability, capability_provider.take())
                     .await?;
             }
-            EventPayload::RouteCapability {
+            EventPayload::CapabilityRouted {
                 source:
                     CapabilitySource::Framework { capability, scope_moniker: Some(scope_moniker) },
                 capability_provider,
             } => {
                 let mut capability_provider = capability_provider.lock().await;
                 *capability_provider = self
-                    .on_route_scoped_framework_capability_async(
+                    .on_scoped_framework_capability_routed_async(
                         scope_moniker.clone(),
                         &capability,
                         capability_provider.take(),
                     )
                     .await?;
+            }
+            EventPayload::Resolved { decl } => {
+                self.try_add_realm_as_worker(&event.target_moniker, &decl).await;
             }
             _ => {}
         };

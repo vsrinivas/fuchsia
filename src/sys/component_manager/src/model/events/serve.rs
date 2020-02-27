@@ -100,7 +100,7 @@ fn maybe_create_event_payload(
     event_payload: EventPayload,
 ) -> Option<fevents::EventPayload> {
     match event_payload {
-        EventPayload::RouteCapability { source, capability_provider, .. } => {
+        EventPayload::CapabilityRouted { source, capability_provider, .. } => {
             let routing_protocol = Some(serve_routing_protocol_async(capability_provider));
 
             // Runners are special. They do not have a path, so their name is the capability ID.
@@ -267,24 +267,24 @@ fn serve_handler_async(event: Event) -> ClientEnd<fevents::HandlerMarker> {
 
 fn convert_fidl_event_type_to_std(event_type: fevents::EventType) -> EventType {
     match event_type {
-        fevents::EventType::AddDynamicChild => EventType::AddDynamicChild,
-        fevents::EventType::BeforeStartInstance => EventType::BeforeStartInstance,
-        fevents::EventType::PostDestroyInstance => EventType::PostDestroyInstance,
-        fevents::EventType::PreDestroyInstance => EventType::PreDestroyInstance,
-        fevents::EventType::ResolveInstance => EventType::ResolveInstance,
-        fevents::EventType::RouteCapability => EventType::RouteCapability,
-        fevents::EventType::StopInstance => EventType::StopInstance,
+        fevents::EventType::CapabilityRouted => EventType::CapabilityRouted,
+        fevents::EventType::Destroyed => EventType::Destroyed,
+        fevents::EventType::DynamicChildAdded => EventType::DynamicChildAdded,
+        fevents::EventType::MarkedForDestruction => EventType::MarkedForDestruction,
+        fevents::EventType::Resolved => EventType::Resolved,
+        fevents::EventType::Started => EventType::Started,
+        fevents::EventType::Stopped => EventType::Stopped,
     }
 }
 
 fn convert_std_event_type_to_fidl(event_type: EventType) -> fevents::EventType {
     match event_type {
-        EventType::AddDynamicChild => fevents::EventType::AddDynamicChild,
-        EventType::BeforeStartInstance => fevents::EventType::BeforeStartInstance,
-        EventType::PostDestroyInstance => fevents::EventType::PostDestroyInstance,
-        EventType::PreDestroyInstance => fevents::EventType::PreDestroyInstance,
-        EventType::ResolveInstance => fevents::EventType::ResolveInstance,
-        EventType::RouteCapability => fevents::EventType::RouteCapability,
-        EventType::StopInstance => fevents::EventType::StopInstance,
+        EventType::CapabilityRouted => fevents::EventType::CapabilityRouted,
+        EventType::Destroyed => fevents::EventType::Destroyed,
+        EventType::DynamicChildAdded => fevents::EventType::DynamicChildAdded,
+        EventType::MarkedForDestruction => fevents::EventType::MarkedForDestruction,
+        EventType::Resolved => fevents::EventType::Resolved,
+        EventType::Started => fevents::EventType::Started,
+        EventType::Stopped => fevents::EventType::Stopped,
     }
 }

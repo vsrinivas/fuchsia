@@ -163,7 +163,7 @@ impl FrameworkCapability {
 /// capability request. For example, a `CapabitilityProvider` can be interposed
 /// between the primary `CapabilityProvider and the client for the purpose of
 /// logging and testing. A `CapabilityProvider` is typically provided by a
-/// corresponding `Hook` in response to the `RouteCapability` event.
+/// corresponding `Hook` in response to the `CapabilityRouted` event.
 /// A capability provider is used exactly once as a result of exactly one route.
 #[async_trait]
 pub trait CapabilityProvider: Send + Sync {

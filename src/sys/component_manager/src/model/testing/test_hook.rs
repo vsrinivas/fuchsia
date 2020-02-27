@@ -142,11 +142,11 @@ impl TestHook {
         vec![HooksRegistration::new(
             "TestHook",
             vec![
-                EventType::AddDynamicChild,
-                EventType::BeforeStartInstance,
-                EventType::PostDestroyInstance,
-                EventType::PreDestroyInstance,
-                EventType::StopInstance,
+                EventType::Destroyed,
+                EventType::DynamicChildAdded,
+                EventType::MarkedForDestruction,
+                EventType::Started,
+                EventType::Stopped,
             ],
             Arc::downgrade(self) as Weak<dyn Hook>,
         )]
@@ -167,7 +167,7 @@ impl TestHook {
         block_on(self.lifecycle_events.lock()).clone()
     }
 
-    pub async fn on_before_start_instance_async<'a>(
+    pub async fn on_started_async<'a>(
         &'a self,
         target_moniker: &AbsoluteMoniker,
         live_children: &'a Vec<ComponentDescriptor>,
@@ -181,7 +181,7 @@ impl TestHook {
         Ok(())
     }
 
-    pub async fn on_stop_instance_async<'a>(
+    pub async fn on_stopped_async<'a>(
         &'a self,
         target_moniker: &AbsoluteMoniker,
     ) -> Result<(), ModelError> {
@@ -190,7 +190,7 @@ impl TestHook {
         Ok(())
     }
 
-    pub async fn on_pre_destroy_instance_async<'a>(
+    pub async fn on_marked_for_destruction_async<'a>(
         &'a self,
         target_moniker: &AbsoluteMoniker,
     ) -> Result<(), ModelError> {
@@ -207,7 +207,7 @@ impl TestHook {
         Ok(())
     }
 
-    pub async fn on_destroy_instance_async<'a>(
+    pub async fn on_destroyed_async<'a>(
         &'a self,
         target_moniker: &AbsoluteMoniker,
     ) -> Result<(), ModelError> {
@@ -268,20 +268,20 @@ impl TestHook {
 impl Hook for TestHook {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
         match &event.payload {
-            EventPayload::BeforeStartInstance { live_children, .. } => {
-                self.on_before_start_instance_async(&event.target_moniker, &live_children).await?;
+            EventPayload::Destroyed => {
+                self.on_destroyed_async(&event.target_moniker).await?;
             }
-            EventPayload::AddDynamicChild { .. } => {
+            EventPayload::DynamicChildAdded { .. } => {
                 self.create_instance_if_necessary(&event.target_moniker).await?;
             }
-            EventPayload::StopInstance => {
-                self.on_stop_instance_async(&event.target_moniker).await?;
+            EventPayload::MarkedForDestruction => {
+                self.on_marked_for_destruction_async(&event.target_moniker).await?;
             }
-            EventPayload::PreDestroyInstance => {
-                self.on_pre_destroy_instance_async(&event.target_moniker).await?;
+            EventPayload::Started { live_children, .. } => {
+                self.on_started_async(&event.target_moniker, &live_children).await?;
             }
-            EventPayload::PostDestroyInstance => {
-                self.on_destroy_instance_async(&event.target_moniker).await?;
+            EventPayload::Stopped => {
+                self.on_stopped_async(&event.target_moniker).await?;
             }
             _ => (),
         };
@@ -299,12 +299,12 @@ impl HubInjectionTestHook {
     pub fn hooks(self: &Arc<Self>) -> Vec<HooksRegistration> {
         vec![HooksRegistration::new(
             "TestHook",
-            vec![EventType::RouteCapability],
+            vec![EventType::CapabilityRouted],
             Arc::downgrade(self) as Weak<dyn Hook>,
         )]
     }
 
-    pub async fn on_route_scoped_framework_capability_async<'a>(
+    pub async fn on_scoped_framework_capability_routed_async<'a>(
         &'a self,
         scope_moniker: AbsoluteMoniker,
         capability: &'a FrameworkCapability,
@@ -332,14 +332,14 @@ impl HubInjectionTestHook {
 #[async_trait]
 impl Hook for HubInjectionTestHook {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
-        if let EventPayload::RouteCapability {
+        if let EventPayload::CapabilityRouted {
             source: CapabilitySource::Framework { capability, scope_moniker: Some(scope_moniker) },
             capability_provider,
         } = &event.payload
         {
             let mut capability_provider = capability_provider.lock().await;
             *capability_provider = self
-                .on_route_scoped_framework_capability_async(
+                .on_scoped_framework_capability_routed_async(
                     scope_moniker.clone(),
                     capability,
                     capability_provider.take(),

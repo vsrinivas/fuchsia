@@ -151,11 +151,10 @@ impl Realm {
                 false
             }
         };
-        // Only dispatch the `ResolveInstance` event if a `RealmState` was installed
+        // Only dispatch the `Resolved` event if a `RealmState` was installed
         // in this call.
         if new_realm_state {
-            let event =
-                Event::new(self.abs_moniker.clone(), EventPayload::ResolveInstance { decl });
+            let event = Event::new(self.abs_moniker.clone(), EventPayload::Resolved { decl });
             self.hooks.dispatch(&event).await?;
         }
         Ok(())
@@ -298,7 +297,7 @@ impl Realm {
         // Call hooks outside of lock
         let event = Event::new(
             child_realm.abs_moniker.clone(),
-            EventPayload::AddDynamicChild { component_url: child_realm.component_url.clone() },
+            EventPayload::DynamicChildAdded { component_url: child_realm.component_url.clone() },
         );
         self.hooks.dispatch(&event).await?;
         Ok(())
@@ -374,7 +373,7 @@ impl Realm {
         // destroyed.
         self.destroy_transient_children(model.clone()).await?;
         if was_running {
-            let event = Event::new(self.abs_moniker.clone(), EventPayload::StopInstance);
+            let event = Event::new(self.abs_moniker.clone(), EventPayload::Stopped);
             self.hooks.dispatch(&event).await?;
         }
         Ok(())

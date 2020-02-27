@@ -28,32 +28,32 @@ use {
 pub enum EventType {
     /// Keep the event types listed below in alphabetical order!
 
-    /// A dynamic child was added to the parent instance.
-    /// Depending on its eagerness, this child may/may not be started yet.
-    AddDynamicChild,
-
-    /// An instance is about to be started.
-    BeforeStartInstance,
+    /// A capability is being requested by a component and requires routing.
+    /// The event propagation system is used to supply the capability being requested.
+    CapabilityRouted,
 
     /// An instance was destroyed successfully. The instance is stopped and no longer
     /// exists in the parent's realm.
-    PostDestroyInstance,
+    Destroyed,
+
+    /// A dynamic child was added to the parent instance.
+    /// Depending on its eagerness, this child may/may not be started yet.
+    DynamicChildAdded,
 
     /// Destruction of an instance has begun. The instance may/may not be stopped by this point.
     /// The instance still exists in the parent's realm but will soon be removed.
     /// TODO(fxb/39417): Ensure the instance is stopped before this event.
-    PreDestroyInstance,
+    MarkedForDestruction,
 
     /// An instance's declaration was resolved successfully for the first time.
-    ResolveInstance,
+    Resolved,
 
-    /// A capability is being requested by a component and requires routing.
-    /// The event propagation system is used to supply the capability being requested.
-    RouteCapability,
+    /// An instance is about to be started.
+    Started,
 
     /// An instance was stopped successfully.
-    /// This event must occur before PostDestroyInstance.
-    StopInstance,
+    /// This event must occur before Destroyed.
+    Stopped,
 }
 
 /// The component manager calls out to objects that implement the `Hook` trait on registered
@@ -88,32 +88,32 @@ impl HooksRegistration {
 #[derive(Clone)]
 pub enum EventPayload {
     // Keep the events listed below in alphabetical order!
-    AddDynamicChild {
-        component_url: String,
-    },
-    BeforeStartInstance {
-        component_url: String,
-        runtime: RuntimeInfo,
-        component_decl: ComponentDecl,
-        live_children: Vec<ComponentDescriptor>,
-        routing_facade: RoutingFacade,
-    },
-    PostDestroyInstance,
-    PreDestroyInstance,
-    ResolveInstance {
-        decl: ComponentDecl,
-    },
-    RouteCapability {
+    CapabilityRouted {
         source: CapabilitySource,
         // Events are passed to hooks as immutable borrows. In order to mutate,
         // a field within an Event, interior mutability is employed here with
         // a Mutex.
         capability_provider: Arc<Mutex<Option<Box<dyn CapabilityProvider>>>>,
     },
-    StopInstance,
+    Destroyed,
+    DynamicChildAdded {
+        component_url: String,
+    },
+    MarkedForDestruction,
+    Resolved {
+        decl: ComponentDecl,
+    },
+    Started {
+        component_url: String,
+        runtime: RuntimeInfo,
+        component_decl: ComponentDecl,
+        live_children: Vec<ComponentDescriptor>,
+        routing_facade: RoutingFacade,
+    },
+    Stopped,
 }
 
-/// Information about a component's runtime provided to `BeforeStartInstance`.
+/// Information about a component's runtime provided to `Started`.
 #[derive(Clone)]
 pub struct RuntimeInfo {
     pub resolved_url: String,
@@ -142,13 +142,13 @@ fn clone_dir(dir: Option<&DirectoryProxy>) -> Option<DirectoryProxy> {
 impl EventPayload {
     pub fn type_(&self) -> EventType {
         match self {
-            EventPayload::AddDynamicChild { .. } => EventType::AddDynamicChild,
-            EventPayload::BeforeStartInstance { .. } => EventType::BeforeStartInstance,
-            EventPayload::PostDestroyInstance => EventType::PostDestroyInstance,
-            EventPayload::PreDestroyInstance => EventType::PreDestroyInstance,
-            EventPayload::ResolveInstance { .. } => EventType::ResolveInstance,
-            EventPayload::RouteCapability { .. } => EventType::RouteCapability,
-            EventPayload::StopInstance => EventType::StopInstance,
+            EventPayload::CapabilityRouted { .. } => EventType::CapabilityRouted,
+            EventPayload::Destroyed => EventType::Destroyed,
+            EventPayload::DynamicChildAdded { .. } => EventType::DynamicChildAdded,
+            EventPayload::MarkedForDestruction => EventType::MarkedForDestruction,
+            EventPayload::Resolved { .. } => EventType::Resolved,
+            EventPayload::Started { .. } => EventType::Started,
+            EventPayload::Stopped => EventType::Stopped,
         }
     }
 }
@@ -158,19 +158,19 @@ impl fmt::Debug for EventPayload {
         let mut formatter = fmt.debug_struct("EventPayload");
         formatter.field("type", &self.type_());
         match self {
-            EventPayload::AddDynamicChild { component_url } => {
-                formatter.field("component_url", component_url).finish()
-            }
-            EventPayload::BeforeStartInstance { component_decl, .. } => {
-                formatter.field("component_decl", &component_decl).finish()
-            }
-            EventPayload::ResolveInstance { decl } => formatter.field("decl", decl).finish(),
-            EventPayload::RouteCapability { source: capability, .. } => {
+            EventPayload::CapabilityRouted { source: capability, .. } => {
                 formatter.field("capability", &capability).finish()
             }
-            EventPayload::PostDestroyInstance
-            | EventPayload::PreDestroyInstance
-            | EventPayload::StopInstance => formatter.finish(),
+            EventPayload::DynamicChildAdded { component_url } => {
+                formatter.field("component_url", component_url).finish()
+            }
+            EventPayload::Started { component_decl, .. } => {
+                formatter.field("component_decl", &component_decl).finish()
+            }
+            EventPayload::Resolved { decl } => formatter.field("decl", decl).finish(),
+            EventPayload::Destroyed
+            | EventPayload::MarkedForDestruction
+            | EventPayload::Stopped => formatter.finish(),
         }
     }
 }
@@ -345,11 +345,11 @@ mod tests {
             *self.call_count.lock().await
         }
 
-        async fn on_add_dynamic_child_async(&self) -> Result<(), ModelError> {
+        async fn on_dynamic_child_added_async(&self) -> Result<(), ModelError> {
             let mut call_count = self.call_count.lock().await;
             *call_count += 1;
             if let Some(logger) = &self.logger {
-                let fut = logger.append(format!("{}::OnAddDynamicChild", self.name));
+                let fut = logger.append(format!("{}::OnDynamicChildAdded", self.name));
                 fut.await;
             }
             Ok(())
@@ -359,8 +359,8 @@ mod tests {
     #[async_trait]
     impl Hook for CallCounter {
         async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
-            if let EventPayload::AddDynamicChild { .. } = event.payload {
-                self.on_add_dynamic_child_async().await?;
+            if let EventPayload::DynamicChildAdded { .. } = event.payload {
+                self.on_dynamic_child_added_async().await?;
             }
             Ok(())
         }
@@ -373,7 +373,7 @@ mod tests {
     // This test verifies that a hook cannot be installed twice.
     #[fuchsia_async::run_singlethreaded(test)]
     async fn install_hook_twice() {
-        // CallCounter counts the number of AddDynamicChild events it receives.
+        // CallCounter counts the number of DynamicChildAdded events it receives.
         // It should only ever receive one.
         let call_counter = CallCounter::new("CallCounter", None);
         let hooks = Hooks::new(None);
@@ -382,14 +382,14 @@ mod tests {
         hooks
             .install(vec![HooksRegistration::new(
                 "FirstInstall",
-                vec![EventType::AddDynamicChild],
+                vec![EventType::DynamicChildAdded],
                 Arc::downgrade(&call_counter) as Weak<dyn Hook>,
             )])
             .await;
         hooks
             .install(vec![HooksRegistration::new(
                 "SecondInstall",
-                vec![EventType::AddDynamicChild],
+                vec![EventType::DynamicChildAdded],
                 Arc::downgrade(&call_counter) as Weak<dyn Hook>,
             )])
             .await;
@@ -397,7 +397,7 @@ mod tests {
         let root_component_url = "test:///root".to_string();
         let event = Event::new(
             AbsoluteMoniker::root(),
-            EventPayload::AddDynamicChild { component_url: root_component_url },
+            EventPayload::DynamicChildAdded { component_url: root_component_url },
         );
         hooks.dispatch(&event).await.expect("Unable to call hooks.");
         assert_eq!(1, call_counter.count().await);
@@ -414,7 +414,7 @@ mod tests {
         parent_hooks
             .install(vec![HooksRegistration::new(
                 "ParentHook",
-                vec![EventType::AddDynamicChild],
+                vec![EventType::DynamicChildAdded],
                 Arc::downgrade(&parent_call_counter) as Weak<dyn Hook>,
             )])
             .await;
@@ -423,7 +423,7 @@ mod tests {
         child_hooks
             .install(vec![HooksRegistration::new(
                 "ChildHook",
-                vec![EventType::AddDynamicChild],
+                vec![EventType::DynamicChildAdded],
                 Arc::downgrade(&child_call_counter) as Weak<dyn Hook>,
             )])
             .await;
@@ -434,7 +434,7 @@ mod tests {
         let root_component_url = "test:///root".to_string();
         let event = Event::new(
             AbsoluteMoniker::root(),
-            EventPayload::AddDynamicChild { component_url: root_component_url },
+            EventPayload::DynamicChildAdded { component_url: root_component_url },
         );
         child_hooks.dispatch(&event).await.expect("Unable to call hooks.");
         // parent_call_counter gets informed of the event on child_hooks even though it has
@@ -454,9 +454,9 @@ mod tests {
         // ChildCallCounter should be called before ParentCallCounter.
         assert_eq!(
             log(vec![
-                "ChildCallCounter::OnAddDynamicChild",
-                "ParentCallCounter::OnAddDynamicChild",
-                "ParentCallCounter::OnAddDynamicChild",
+                "ChildCallCounter::OnDynamicChildAdded",
+                "ParentCallCounter::OnDynamicChildAdded",
+                "ParentCallCounter::OnDynamicChildAdded",
             ]),
             event_log.get().await
         );

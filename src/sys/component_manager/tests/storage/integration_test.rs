@@ -38,19 +38,19 @@ async fn storage() -> Result<(), Error> {
     .await?;
 
     let event_source = test.connect_to_event_source().await?;
-    let mut event_stream = event_source.subscribe(vec![BeforeStartInstance::TYPE]).await?;
+    let mut event_stream = event_source.subscribe(vec![Started::TYPE]).await?;
 
     event_source.start_component_tree().await?;
 
     // Expect the root component to be bound to
-    let event = event_stream.expect_exact::<BeforeStartInstance>(".").await?;
+    let event = event_stream.expect_exact::<Started>(".").await?;
     event.resume().await?;
 
     // Expect the 2 children to be bound to
-    let event = event_stream.expect_type::<BeforeStartInstance>().await?;
+    let event = event_stream.expect_type::<Started>().await?;
     event.resume().await?;
 
-    let event = event_stream.expect_type::<BeforeStartInstance>().await?;
+    let event = event_stream.expect_type::<Started>().await?;
     event.resume().await?;
 
     let component_manager_path = test.get_component_manager_path();
@@ -73,11 +73,7 @@ async fn storage_from_collection() -> Result<(), Error> {
 
     let event_source = test.connect_to_event_source().await?;
     let mut event_stream = event_source
-        .subscribe(vec![
-            BeforeStartInstance::TYPE,
-            PostDestroyInstance::TYPE,
-            RouteCapability::TYPE,
-        ])
+        .subscribe(vec![Started::TYPE, Destroyed::TYPE, CapabilityRouted::TYPE])
         .await?;
 
     // The root component connects to the Trigger capability to start the dynamic child.
@@ -88,15 +84,15 @@ async fn storage_from_collection() -> Result<(), Error> {
     event_source.start_component_tree().await?;
 
     // Expect the root component to be started
-    let event = event_stream.wait_until_exact::<BeforeStartInstance>(".").await?;
+    let event = event_stream.wait_until_exact::<Started>(".").await?;
     event.resume().await?;
 
     // Expect 2 children to be started - one static and one dynamic
     // Order is irrelevant
-    let event = event_stream.wait_until_type::<BeforeStartInstance>().await?;
+    let event = event_stream.wait_until_type::<Started>().await?;
     event.resume().await?;
 
-    let event = event_stream.wait_until_type::<BeforeStartInstance>().await?;
+    let event = event_stream.wait_until_type::<Started>().await?;
     event.resume().await?;
 
     // With all children started, do the test
@@ -108,8 +104,7 @@ async fn storage_from_collection() -> Result<(), Error> {
     check_storage(memfs_path.clone(), data_path, "coll:storage_user:1").await?;
 
     // Expect the dynamic child to be destroyed
-    let event =
-        event_stream.wait_until_exact::<PostDestroyInstance>("./coll:storage_user:1").await?;
+    let event = event_stream.wait_until_exact::<Destroyed>("./coll:storage_user:1").await?;
 
     println!("checking that storage was destroyed");
     let memfs_proxy = io_util::open_directory_in_namespace(

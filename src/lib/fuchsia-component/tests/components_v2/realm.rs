@@ -8,7 +8,7 @@ use {
     fuchsia_component::client,
     fuchsia_syslog as syslog,
     log::*,
-    test_utils_lib::events::{Event, EventSource, Ordering, PostDestroyInstance, RecordedEvent},
+    test_utils_lib::events::{Destroyed, Event, EventSource, Ordering, RecordedEvent},
 };
 
 #[fasync::run_singlethreaded]
@@ -50,7 +50,7 @@ async fn test_scoped_instance(event_source: &EventSource) -> Result<(), Error> {
     // Dropping the scoped instances should cause them to all be destroyed.
     drop(instances);
     let event = RecordedEvent {
-        event_type: PostDestroyInstance::TYPE,
+        event_type: Destroyed::TYPE,
         target_moniker: "./coll:auto-*".to_string(),
         capability_id: None,
     };

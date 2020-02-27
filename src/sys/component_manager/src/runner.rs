@@ -36,7 +36,7 @@ impl BuiltinRunner {
     pub fn hooks(self: &Arc<Self>) -> Vec<HooksRegistration> {
         vec![HooksRegistration::new(
             "BuiltinRunner",
-            vec![EventType::RouteCapability],
+            vec![EventType::CapabilityRouted],
             Arc::downgrade(self) as Weak<dyn Hook>,
         )]
     }
@@ -45,7 +45,7 @@ impl BuiltinRunner {
 #[async_trait]
 impl Hook for BuiltinRunner {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
-        if let EventPayload::RouteCapability {
+        if let EventPayload::CapabilityRouted {
             source: CapabilitySource::Framework { capability, scope_moniker: None },
             capability_provider,
         } = &event.payload
@@ -148,7 +148,7 @@ mod tests {
         hooks
             .dispatch(&Event::new(
                 AbsoluteMoniker::root(),
-                EventPayload::RouteCapability {
+                EventPayload::CapabilityRouted {
                     source: CapabilitySource::Framework {
                         capability: FrameworkCapability::Runner("elf".into()),
                         scope_moniker: None,

@@ -44,13 +44,13 @@ pub trait BuiltinCapability {
     {
         vec![HooksRegistration::new(
             Self::NAME,
-            vec![EventType::RouteCapability],
+            vec![EventType::CapabilityRouted],
             Arc::downgrade(self) as Weak<dyn Hook>,
         )]
     }
 
     /// Returns a `CapabilityProvider` for a given framework capability.
-    async fn on_route_framework_capability<'a>(
+    async fn on_framework_capability_routed<'a>(
         self: &'a Arc<Self>,
         capability: &'a FrameworkCapability,
         capability_provider: Option<Box<dyn CapabilityProvider>>,

@@ -202,7 +202,7 @@ pub async fn open_capability_at_source(
     let capability_provider = Arc::new(Mutex::new(get_default_provider(model, &source)));
     let event = Event::new(
         target_realm.abs_moniker.clone(),
-        EventPayload::RouteCapability {
+        EventPayload::CapabilityRouted {
             source: source.clone(),
             capability_provider: capability_provider.clone(),
         },

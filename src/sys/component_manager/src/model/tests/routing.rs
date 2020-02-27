@@ -76,7 +76,7 @@ async fn use_framework_service() {
     #[async_trait]
     impl Hook for MockRealmCapabilityHost {
         async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
-            if let EventPayload::RouteCapability {
+            if let EventPayload::CapabilityRouted {
                 source:
                     CapabilitySource::Framework { capability, scope_moniker: Some(scope_moniker) },
                 capability_provider,
@@ -84,7 +84,7 @@ async fn use_framework_service() {
             {
                 let mut capability_provider = capability_provider.lock().await;
                 *capability_provider = self
-                    .on_route_scoped_framework_capability_async(
+                    .on_scoped_framework_capability_routed_async(
                         scope_moniker.clone(),
                         &capability,
                         capability_provider.take(),
@@ -134,7 +134,7 @@ async fn use_framework_service() {
             Ok(())
         }
 
-        pub async fn on_route_scoped_framework_capability_async<'a>(
+        pub async fn on_scoped_framework_capability_routed_async<'a>(
             &'a self,
             scope_moniker: AbsoluteMoniker,
             capability: &'a FrameworkCapability,
@@ -185,7 +185,7 @@ async fn use_framework_service() {
         .hooks
         .install(vec![HooksRegistration::new(
             "MockRealmCapabilityHost",
-            vec![EventType::RouteCapability],
+            vec![EventType::CapabilityRouted],
             Arc::downgrade(&realm_service_host) as Weak<dyn Hook>,
         )])
         .await;

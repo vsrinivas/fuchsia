@@ -232,7 +232,7 @@ mod tests {
         );
         mock_resolver.add_component("system", component_decl_with_test_runner());
 
-        let events = vec![EventType::BeforeStartInstance];
+        let events = vec![EventType::Started];
         let event_registry = Arc::new(EventRegistry::new());
         let mut event_stream =
             event_registry.subscribe(Some(AbsoluteMoniker::root()), events.clone()).await;
@@ -252,13 +252,10 @@ mod tests {
         }
         .remote_handle();
         fasync::spawn(f);
-        let event =
-            event_stream.wait_until(EventType::BeforeStartInstance, vec![].into()).await.unwrap();
+        let event = event_stream.wait_until(EventType::Started, vec![].into()).await.unwrap();
         event.resume();
-        let event = event_stream
-            .wait_until(EventType::BeforeStartInstance, vec!["system:0"].into())
-            .await
-            .unwrap();
+        let event =
+            event_stream.wait_until(EventType::Started, vec!["system:0"].into()).await.unwrap();
         {
             let expected_urls: Vec<String> = vec!["test:///root_resolved".to_string()];
             assert_eq!(mock_runner.urls_run(), expected_urls);

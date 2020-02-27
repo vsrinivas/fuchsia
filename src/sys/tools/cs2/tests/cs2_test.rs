@@ -29,12 +29,12 @@ fn compare_output(actual: Vec<String>, expected: Vec<&str>) {
 async fn empty_component() -> Result<(), Error> {
     let test = BlackBoxTest::default("fuchsia-pkg://fuchsia.com/cs2_test#meta/empty.cm").await?;
     let event_source = test.connect_to_event_source().await?;
-    let mut event_stream = event_source.subscribe(vec![BeforeStartInstance::TYPE]).await?;
+    let mut event_stream = event_source.subscribe(vec![Started::TYPE]).await?;
 
     event_source.start_component_tree().await?;
 
     // Root must be created first
-    let event = event_stream.expect_exact::<BeforeStartInstance>(".").await?;
+    let event = event_stream.expect_exact::<Started>(".").await?;
     event.resume().await?;
 
     let actual = launch_cs2(test.get_hub_v2_path());
@@ -59,17 +59,17 @@ async fn empty_component() -> Result<(), Error> {
 async fn tree() -> Result<(), Error> {
     let test = BlackBoxTest::default("fuchsia-pkg://fuchsia.com/cs2_test#meta/root.cm").await?;
     let event_source = test.connect_to_event_source().await?;
-    let mut event_stream = event_source.subscribe(vec![BeforeStartInstance::TYPE]).await?;
+    let mut event_stream = event_source.subscribe(vec![Started::TYPE]).await?;
 
     event_source.start_component_tree().await?;
 
     // Root must be created first
-    let event = event_stream.expect_exact::<BeforeStartInstance>(".").await?;
+    let event = event_stream.expect_exact::<Started>(".").await?;
     event.resume().await?;
 
     // 6 descendants are created eagerly. Order is irrelevant.
     for _ in 1..=6 {
-        let event = event_stream.expect_type::<BeforeStartInstance>().await?;
+        let event = event_stream.expect_type::<Started>().await?;
         event.resume().await?;
     }
 
@@ -151,14 +151,14 @@ async fn echo_realm() -> Result<(), Error> {
         BlackBoxTest::default("fuchsia-pkg://fuchsia.com/cs2_test#meta/echo_realm.cm").await?;
     let event_source = test.connect_to_event_source().await?;
 
-    let mut event_stream = event_source.subscribe(vec![BeforeStartInstance::TYPE]).await?;
+    let mut event_stream = event_source.subscribe(vec![Started::TYPE]).await?;
     event_source.start_component_tree().await?;
 
     // 3 components are started. Order is irrelevant.
     // root and echo_client are started eagerly.
     // echo_server is started after echo_client connects to the Echo service.
     for _ in 1..=3 {
-        let event = event_stream.expect_type::<BeforeStartInstance>().await?;
+        let event = event_stream.expect_type::<Started>().await?;
         event.resume().await?;
     }
 

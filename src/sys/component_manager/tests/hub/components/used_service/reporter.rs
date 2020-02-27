@@ -12,15 +12,15 @@ use {
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
-    // Accessing the hub triggers a RouteCapability event.
+    // Accessing the hub triggers a CapabilityRouted event.
     // Hence, code is placed in blocks so that event_streams are dropped.
 
     let event_source = EventSource::new()?;
     event_source.start_component_tree().await?;
 
     let hub_report = {
-        // Subscribes to RouteCapability events
-        let mut event_stream = event_source.subscribe(vec![RouteCapability::TYPE]).await?;
+        // Subscribes to CapabilityRouted events
+        let mut event_stream = event_source.subscribe(vec![CapabilityRouted::TYPE]).await?;
 
         // Connect to the HubReport service
         let hub_report = HubReport::new()?;
@@ -39,8 +39,8 @@ async fn main() -> Result<(), Error> {
     hub_report.report_directory_contents("/hub/exec/used/svc").await?;
 
     {
-        // Subscribes to RouteCapability events
-        let mut event_stream = event_source.subscribe(vec![RouteCapability::TYPE]).await?;
+        // Subscribes to CapabilityRouted events
+        let mut event_stream = event_source.subscribe(vec![CapabilityRouted::TYPE]).await?;
 
         // Connect to the Echo capability.
         connect_to_service::<fecho::EchoMarker>().context("error connecting to Echo service")?;
@@ -58,8 +58,8 @@ async fn main() -> Result<(), Error> {
     hub_report.report_directory_contents("/hub/exec/used/svc").await?;
 
     {
-        // Subscribes to RouteCapability events
-        let mut event_stream = event_source.subscribe(vec![RouteCapability::TYPE]).await?;
+        // Subscribes to CapabilityRouted events
+        let mut event_stream = event_source.subscribe(vec![CapabilityRouted::TYPE]).await?;
 
         // Connect to the Echo capability again
         connect_to_service::<fecho::EchoMarker>().context("error connecting to Echo service")?;

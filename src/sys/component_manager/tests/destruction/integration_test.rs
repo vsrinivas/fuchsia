@@ -28,13 +28,12 @@ async fn destruction() -> Result<(), Error> {
 
     let event_source = test.connect_to_event_source().await?;
 
-    let sink =
-        event_source.soak_events(vec![StopInstance::TYPE, PostDestroyInstance::TYPE]).await?;
-    let mut event_stream = event_source.subscribe(vec![PostDestroyInstance::TYPE]).await?;
+    let sink = event_source.soak_events(vec![Stopped::TYPE, Destroyed::TYPE]).await?;
+    let mut event_stream = event_source.subscribe(vec![Destroyed::TYPE]).await?;
     event_source.start_component_tree().await?;
 
     // Wait for `coll:root` to be destroyed.
-    let event = event_stream.wait_until_exact::<PostDestroyInstance>("./coll:root:1").await?;
+    let event = event_stream.wait_until_exact::<Destroyed>("./coll:root:1").await?;
 
     // Assert that root component has no children.
     let child_dir_path = test.get_hub_v2_path().join("children");
@@ -50,12 +49,12 @@ async fn destruction() -> Result<(), Error> {
         &mut events,
         vec![
             RecordedEvent {
-                event_type: StopInstance::TYPE,
+                event_type: Stopped::TYPE,
                 target_moniker: "./coll:root:1/trigger_a:0".to_string(),
                 capability_id: None,
             },
             RecordedEvent {
-                event_type: StopInstance::TYPE,
+                event_type: Stopped::TYPE,
                 target_moniker: "./coll:root:1/trigger_b:0".to_string(),
                 capability_id: None,
             },
@@ -65,7 +64,7 @@ async fn destruction() -> Result<(), Error> {
     expect_next(
         &mut events,
         vec![RecordedEvent {
-            event_type: StopInstance::TYPE,
+            event_type: Stopped::TYPE,
             target_moniker: "./coll:root:1".to_string(),
             capability_id: None,
         }],
@@ -75,12 +74,12 @@ async fn destruction() -> Result<(), Error> {
         &mut events,
         vec![
             RecordedEvent {
-                event_type: PostDestroyInstance::TYPE,
+                event_type: Destroyed::TYPE,
                 target_moniker: "./coll:root:1/trigger_a:0".to_string(),
                 capability_id: None,
             },
             RecordedEvent {
-                event_type: PostDestroyInstance::TYPE,
+                event_type: Destroyed::TYPE,
                 target_moniker: "./coll:root:1/trigger_b:0".to_string(),
                 capability_id: None,
             },
@@ -90,7 +89,7 @@ async fn destruction() -> Result<(), Error> {
     expect_next(
         &mut events,
         vec![RecordedEvent {
-            event_type: PostDestroyInstance::TYPE,
+            event_type: Destroyed::TYPE,
             target_moniker: "./coll:root:1".to_string(),
             capability_id: None,
         }],

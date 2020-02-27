@@ -9,7 +9,7 @@ use {
     fuchsia_component::server::ServiceFs,
     futures::StreamExt,
     test_utils_lib::{
-        events::{BeforeStartInstance, Event, EventSource, RouteCapability},
+        events::{CapabilityRouted, Event, EventSource, Started},
         trigger_capability::{TriggerCapability, TriggerReceiver},
     },
 };
@@ -36,8 +36,7 @@ async fn start_echo_reporter(mut trigger_receiver: TriggerReceiver) -> Result<()
 
     // Subscribe to relevant events.
     let event_source = EventSource::new()?;
-    let sink =
-        event_source.soak_events(vec![BeforeStartInstance::TYPE, RouteCapability::TYPE]).await?;
+    let sink = event_source.soak_events(vec![Started::TYPE, CapabilityRouted::TYPE]).await?;
 
     event_source.start_component_tree().await?;
 

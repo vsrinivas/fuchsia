@@ -81,17 +81,17 @@ mod tests {
         let event_future = async move {
             let expected_events = vec![
                 RecordedEvent {
-                    event_type: EventType::RouteCapability,
+                    event_type: EventType::CapabilityRouted,
                     target_moniker: "./session:session:*".to_string(),
                     capability_id: Some("elf".to_string()),
                 },
                 RecordedEvent {
-                    event_type: EventType::RouteCapability,
+                    event_type: EventType::CapabilityRouted,
                     target_moniker: "./session:session:*".to_string(),
                     capability_id: Some("/svc/fuchsia.logger.LogSink".to_string()),
                 },
                 RecordedEvent {
-                    event_type: EventType::RouteCapability,
+                    event_type: EventType::CapabilityRouted,
                     target_moniker: "./session:session:*".to_string(),
                     capability_id: Some("/dev/class/input-report".to_string()),
                 },
@@ -122,12 +122,12 @@ mod tests {
         let event_future = async move {
             let expected_events = vec![
                 RecordedEvent {
-                    event_type: EventType::ResolveInstance,
+                    event_type: EventType::Resolved,
                     target_moniker: "./session:session:*".to_string(),
                     capability_id: None,
                 },
                 RecordedEvent {
-                    event_type: EventType::BeforeStartInstance,
+                    event_type: EventType::Started,
                     target_moniker: "./session:session:*".to_string(),
                     capability_id: None,
                 },

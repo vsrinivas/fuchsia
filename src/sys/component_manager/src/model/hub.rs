@@ -132,12 +132,12 @@ impl Hub {
         vec![HooksRegistration::new(
             "Hub",
             vec![
-                EventType::AddDynamicChild,
-                EventType::PostDestroyInstance,
-                EventType::PreDestroyInstance,
-                EventType::RouteCapability,
-                EventType::BeforeStartInstance,
-                EventType::StopInstance,
+                EventType::CapabilityRouted,
+                EventType::Destroyed,
+                EventType::DynamicChildAdded,
+                EventType::MarkedForDestruction,
+                EventType::Started,
+                EventType::Stopped,
             ],
             Arc::downgrade(self) as Weak<dyn Hook>,
         )]
@@ -335,7 +335,7 @@ impl Hub {
         Ok(())
     }
 
-    async fn on_before_start_instance_async<'a>(
+    async fn on_started_async<'a>(
         &'a self,
         target_moniker: &AbsoluteMoniker,
         component_url: String,
@@ -428,12 +428,12 @@ impl Hub {
         Ok(())
     }
 
-    async fn on_add_dynamic_child_async(
+    async fn on_dynamic_child_added_async(
         &self,
         target_moniker: &AbsoluteMoniker,
         component_url: String,
     ) -> Result<(), ModelError> {
-        trace::duration!("component_manager", "hub:on_add_dynamic_child_async");
+        trace::duration!("component_manager", "hub:on_dynamic_child_added_async");
         let mut instances_map = self.instances.lock().await;
         Self::add_instance_to_parent_if_necessary(
             target_moniker,
@@ -444,11 +444,8 @@ impl Hub {
         Ok(())
     }
 
-    async fn on_post_destroy_instance_async(
-        &self,
-        target_moniker: &AbsoluteMoniker,
-    ) -> Result<(), ModelError> {
-        trace::duration!("component_manager", "hub:on_post_destroy_instance_async");
+    async fn on_destroyed_async(&self, target_moniker: &AbsoluteMoniker) -> Result<(), ModelError> {
+        trace::duration!("component_manager", "hub:on_destroyed_async");
         let mut instance_map = self.instances.lock().await;
 
         // TODO(xbhatnag): Investigate error handling scenarios here.
@@ -464,33 +461,30 @@ impl Hub {
         Ok(())
     }
 
-    async fn on_stop_instance_async(
-        &self,
-        target_moniker: &AbsoluteMoniker,
-    ) -> Result<(), ModelError> {
-        trace::duration!("component_manager", "hub:on_stop_instance_async");
+    async fn on_stopped_async(&self, target_moniker: &AbsoluteMoniker) -> Result<(), ModelError> {
+        trace::duration!("component_manager", "hub:on_stopped_async");
         let mut instance_map = self.instances.lock().await;
         instance_map[target_moniker].directory.remove_node("exec")?;
         instance_map.get_mut(target_moniker).expect("instance must exist").execution = None;
         Ok(())
     }
 
-    async fn on_pre_destroy_instance_async(
+    async fn on_marked_for_destruction_async(
         &self,
         target_moniker: &AbsoluteMoniker,
     ) -> Result<(), ModelError> {
-        trace::duration!("component_manager", "hub:on_pre_destroy_instance_async");
+        trace::duration!("component_manager", "hub:on_marked_for_destruction_async");
         let parent_moniker = target_moniker.parent().expect("A root component cannot be destroyed");
         let instance_map = self.instances.lock().await;
         if !instance_map.contains_key(&parent_moniker) {
-            // Evidently this a duplicate dispatch of PreDestroyInstance.
+            // Evidently this a duplicate dispatch of MarkedForDestruction.
             return Ok(());
         }
 
         let leaf = target_moniker.leaf().expect("A root component cannot be destroyed");
 
         // In the children directory, the child's instance id is not used
-        // TODO: It's possible for the PreDestroyInstance event to be dispatched twice if there
+        // TODO: It's possible for the MarkedForDestruction event to be dispatched twice if there
         // are two concurrent `DestroyChild` operations. In such cases we should probably cause
         // this update to no-op instead of returning an error.
         let partial_moniker = leaf.to_partial();
@@ -540,13 +534,13 @@ impl Hub {
         }
     }
 
-    async fn on_route_capability_async(
+    async fn on_capability_routed_async(
         self: Arc<Self>,
         target_moniker: &AbsoluteMoniker,
         source: CapabilitySource,
         capability_provider: Arc<Mutex<Option<Box<dyn CapabilityProvider>>>>,
     ) -> Result<(), ModelError> {
-        trace::duration!("component_manager", "hub:on_route_capability_async");
+        trace::duration!("component_manager", "hub:on_capability_routed_async");
         self.clone().try_provide_hub_capability(&source, capability_provider).await;
 
         // Track used capabilities.
@@ -598,14 +592,32 @@ impl Hub {
 impl Hook for Hub {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
         match &event.payload {
-            EventPayload::BeforeStartInstance {
+            EventPayload::CapabilityRouted { source, capability_provider } => {
+                self.on_capability_routed_async(
+                    &event.target_moniker,
+                    source.clone(),
+                    capability_provider.clone(),
+                )
+                .await?;
+            }
+            EventPayload::Destroyed => {
+                self.on_destroyed_async(&event.target_moniker).await?;
+            }
+            EventPayload::DynamicChildAdded { component_url } => {
+                self.on_dynamic_child_added_async(&event.target_moniker, component_url.to_string())
+                    .await?;
+            }
+            EventPayload::MarkedForDestruction => {
+                self.on_marked_for_destruction_async(&event.target_moniker).await?;
+            }
+            EventPayload::Started {
                 component_url,
                 runtime,
                 component_decl,
                 live_children,
                 routing_facade,
             } => {
-                self.on_before_start_instance_async(
+                self.on_started_async(
                     &event.target_moniker,
                     component_url.clone(),
                     &runtime,
@@ -615,26 +627,8 @@ impl Hook for Hub {
                 )
                 .await?;
             }
-            EventPayload::AddDynamicChild { component_url } => {
-                self.on_add_dynamic_child_async(&event.target_moniker, component_url.to_string())
-                    .await?;
-            }
-            EventPayload::PreDestroyInstance => {
-                self.on_pre_destroy_instance_async(&event.target_moniker).await?;
-            }
-            EventPayload::StopInstance => {
-                self.on_stop_instance_async(&event.target_moniker).await?;
-            }
-            EventPayload::PostDestroyInstance => {
-                self.on_post_destroy_instance_async(&event.target_moniker).await?;
-            }
-            EventPayload::RouteCapability { source, capability_provider } => {
-                self.on_route_capability_async(
-                    &event.target_moniker,
-                    source.clone(),
-                    capability_provider.clone(),
-                )
-                .await?;
+            EventPayload::Stopped => {
+                self.on_stopped_async(&event.target_moniker).await?;
             }
             _ => {}
         };

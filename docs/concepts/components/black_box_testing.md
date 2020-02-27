@@ -97,13 +97,13 @@ the component manager. The following example shows you how to use the
 
 ```rust
 let event_source = test.connect_to_event_source().await?;
-let event_stream = event_source.subscribe(vec![StopInstance::TYPE]).await?;
+let event_stream = event_source.subscribe(vec![Stopped::TYPE]).await?;
 event_source.start_component_tree().await?;
 ```
 
 By the end of this code block:
 
-- An `event_stream` has been created which receives `StopInstance` events.
+- An `event_stream` has been created which receives `Stopped` events.
 - Component manager’s execution has begun.
 - The root component (and its eager children, if any) will be started soon.
 
@@ -165,15 +165,15 @@ The workflow for the `EventSource` library looks something like this:
 // provided by BlackBoxTest
 let test = BlackBoxTest::default("fuchsia-pkg://fuchsia.com/foo#meta/root.cm").await?;
 
-// Get an event stream of the `BeforeStartInstance` event.
+// Get an event stream of the `Started` event.
 let event_source = test.connect_to_event_source().await?;
-let event_stream = event_source.subscribe(vec![BeforeStartInstance::TYPE]).await?;
+let event_stream = event_source.subscribe(vec![Started::TYPE]).await?;
 
 // Unblock component manager
 event_source.start_component_tree().await?;
 
 // Wait for an event
-let event = event_stream.expect_type::<BeforeStartInstance>().await?;
+let event = event_stream.expect_type::<Started>().await?;
 
 // Verify state
 ...
@@ -233,20 +233,20 @@ It is possible to register multiple event streams, each listening to their own s
 of events:
 
 ```rust
-// BeforeStartInstance and RouteCapability events can be interleaved,
+// Started and CapabilityRouted events can be interleaved,
 // so use different event streams.
-let start_event_stream = event_source.subscribe(vec![BeforeStartInstance::TYPE]).await?;
+let start_event_stream = event_source.subscribe(vec![Started::TYPE]).await?;
 let route_event_stream =
-    event_source.subscribe(vec![RouteCapability::TYPE]).await?;
+    event_source.subscribe(vec![CapabilityRouted::TYPE]).await?;
 
 // Expect 5 components to start
 for _ in 1..=5 {
-    let event = start_event_stream.expect_type::<BeforeStartInstance>().await?;
+    let event = start_event_stream.expect_type::<Started>().await?;
     event.resume().await?;
 }
 
-// Expect a RouteCapability event from ./foo:0
-let event = route_event_stream.expect_exact::<RouteCapability>("./foo:0").await?;
+// Expect a CapabilityRouted event from ./foo:0
+let event = route_event_stream.expect_exact::<CapabilityRouted>("./foo:0").await?;
 event.resume().await?;
 ```
 
@@ -256,25 +256,25 @@ It is possible to listen for specific events and then discard the event stream,
 causing future events to be ignored:
 
 ```rust
-// Subscribe to StopInstance events
-let stop_event_stream = event_source.subscribe(vec![StopInstance::TYPE]).await?;
+// Subscribe to Stopped events
+let stop_event_stream = event_source.subscribe(vec![Stopped::TYPE]).await?;
 
 {
-    // Temporarily subscribe to RouteCapability events
-    let use_event_stream = event_source.subscribe(vec![RouteCapability::TYPE]).await?;
+    // Temporarily subscribe to CapabilityRouted events
+    let use_event_stream = event_source.subscribe(vec![CapabilityRouted::TYPE]).await?;
 
-    // Expect a RouteCapability event from ./bar:0
-    let event = route_event_stream.expect_exact::<RouteCapability>("./bar:0").await?;
+    // Expect a CapabilityRouted event from ./bar:0
+    let event = route_event_stream.expect_exact::<CapabilityRouted>("./bar:0").await?;
     println!("/bar:0 used capability -> {}", event.capability_id);
     event.resume().await?;
 }
 
-// At this point, the test does not care about RouteCapability events, so the
+// At this point, the test does not care about CapabilityRouted events, so the
 // event stream can be dropped. If the event stream were left instantiated,
-// component manager would halt on future RouteCapability events.
+// component manager would halt on future CapabilityRouted events.
 
-// Expect a StopInstance event
-let event = stop_event_stream.expect_type::<StopInstance>().await?;
+// Expect a Stopped event
+let event = stop_event_stream.expect_type::<Stopped>().await?;
 println!("{} was stopped!", event.target_moniker);
 event.resume().await?;
 ```
@@ -306,14 +306,14 @@ impl Injector for EchoCapability {
 }
 ```
 
-It is possible to listen for a `RouteCapability` event and install the injector:
+It is possible to listen for a `CapabilityRouted` event and install the injector:
 
 ```rust
 // Create the server end of EchoService
 let echo_capability = EchoCapability::new();
 
-// Subscribe to RouteCapability events
-let event_stream = event_source.subscribe(vec![RouteCapability::TYPE]).await?;
+// Subscribe to CapabilityRouted events
+let event_stream = event_source.subscribe(vec![CapabilityRouted::TYPE]).await?;
 
 // Wait until ./foo:0 attempts to connect to the EchoService component capability
 let event = event_stream.wait_until_component_capability(
@@ -382,7 +382,7 @@ impl Interposer for EchoInterposer {
 }
 ```
 
-The test can use `EchoInterposer` on any `RouteCapability` event:
+The test can use `EchoInterposer` on any `CapabilityRouted` event:
 
 ```rust
 // Wait for echo_looper to attempt to connect to the Echo service
@@ -414,11 +414,11 @@ It is possible to soak up events of certain types and drain them at a later
 point in time:
 
 ```rust
-let event_stream = event_source.subscribe(vec![PostDestroyInstance::TYPE]).await?;
-let sink = event_source.soak_events(vec![BeforeStartInstance::TYPE]).await?;
+let event_stream = event_source.subscribe(vec![Destroyed::TYPE]).await?;
+let sink = event_source.soak_events(vec![Started::TYPE]).await?;
 
 // Wait for the root component to be destroyed
-let event = event_stream.expect_exact::<PostDestroyInstance>(".").await?;
+let event = event_stream.expect_exact::<Destroyed>(".").await?;
 event.resume().await?;
 
 // Drain events from the sink
@@ -427,15 +427,15 @@ let events = sink.drain().await;
 // Verify that the 3 components were started in the correct order
 assert_eq!(events, vec![
     DrainedEvent {
-        event_type: BeforeStartInstance::TYPE,
+        event_type: Started::TYPE,
         target_moniker: "./".to_string()
     },
     DrainedEvent {
-        event_type: BeforeStartInstance::TYPE,
+        event_type: Started::TYPE,
         target_moniker: "./foo:0".to_string()
     },
     DrainedEvent {
-        event_type: BeforeStartInstance::TYPE,
+        event_type: Started::TYPE,
         target_moniker: "./foo:0/bar:0".to_string()
     }
 ]);

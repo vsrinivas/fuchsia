@@ -74,7 +74,7 @@ async fn main() -> Result<(), Error> {
 
     // Subscribe to relevant events
     let mut event_stream = event_source
-        .subscribe(vec![StopInstance::TYPE, PreDestroyInstance::TYPE, PostDestroyInstance::TYPE])
+        .subscribe(vec![Stopped::TYPE, MarkedForDestruction::TYPE, Destroyed::TYPE])
         .await?;
 
     // Delete the dynamic child
@@ -86,7 +86,8 @@ async fn main() -> Result<(), Error> {
     fasync::spawn(f);
 
     // Wait for the dynamic child to begin deletion
-    let event = event_stream.expect_exact::<PreDestroyInstance>("./coll:simple_instance:1").await?;
+    let event =
+        event_stream.expect_exact::<MarkedForDestruction>("./coll:simple_instance:1").await?;
     hub_report.report_directory_contents("/hub/children").await?;
     hub_report.report_directory_contents("/hub/deleting").await?;
     hub_report.report_directory_contents("/hub/deleting/coll:simple_instance:1").await?;
@@ -96,13 +97,14 @@ async fn main() -> Result<(), Error> {
     destroy_handle.await.context("delete_child failed")?.expect("failed to delete child");
 
     // Wait for the dynamic child to stop
-    let event = event_stream.expect_exact::<StopInstance>("./coll:simple_instance:1").await?;
+    let event = event_stream.expect_exact::<Stopped>("./coll:simple_instance:1").await?;
     hub_report.report_directory_contents("/hub/deleting/coll:simple_instance:1").await?;
     event.resume().await?;
 
     // Wait for the dynamic child's static child to begin deletion
-    let event =
-        event_stream.expect_exact::<PreDestroyInstance>("./coll:simple_instance:1/child:0").await?;
+    let event = event_stream
+        .expect_exact::<MarkedForDestruction>("./coll:simple_instance:1/child:0")
+        .await?;
     hub_report.report_directory_contents("/hub/deleting/coll:simple_instance:1/children").await?;
     hub_report.report_directory_contents("/hub/deleting/coll:simple_instance:1/deleting").await?;
     hub_report
@@ -111,15 +113,12 @@ async fn main() -> Result<(), Error> {
     event.resume().await?;
 
     // Wait for the dynamic child's static child to be destroyed
-    let event = event_stream
-        .expect_exact::<PostDestroyInstance>("./coll:simple_instance:1/child:0")
-        .await?;
+    let event = event_stream.expect_exact::<Destroyed>("./coll:simple_instance:1/child:0").await?;
     hub_report.report_directory_contents("/hub/deleting/coll:simple_instance:1/deleting").await?;
     event.resume().await?;
 
     // Wait for the dynamic child to be destroyed
-    let event =
-        event_stream.expect_exact::<PostDestroyInstance>("./coll:simple_instance:1").await?;
+    let event = event_stream.expect_exact::<Destroyed>("./coll:simple_instance:1").await?;
     hub_report.report_directory_contents("/hub/deleting").await?;
     event.resume().await?;
 

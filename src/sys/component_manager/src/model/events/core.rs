@@ -53,7 +53,7 @@ impl EventSourceFactory {
             // This hook provides the EventSource capability to components in the tree
             HooksRegistration::new(
                 "EventSourceFactory",
-                vec![EventType::ResolveInstance, EventType::RouteCapability],
+                vec![EventType::Resolved, EventType::CapabilityRouted],
                 Arc::downgrade(self) as Weak<dyn Hook>,
             ),
         ]);
@@ -68,7 +68,7 @@ impl EventSourceFactory {
 
     /// Returns an EventSource. An EventSource holds an AbsoluteMoniker that
     /// corresponds to the realm in which it will receive events.
-    async fn on_route_scoped_framework_capability_async(
+    async fn on_scoped_framework_capability_routed_async(
         self: Arc<Self>,
         capability_decl: &FrameworkCapability,
         scope_moniker: AbsoluteMoniker,
@@ -98,21 +98,21 @@ impl EventSourceFactory {
 impl Hook for EventSourceFactory {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
         match &event.payload {
-            EventPayload::RouteCapability {
+            EventPayload::CapabilityRouted {
                 source:
                     CapabilitySource::Framework { capability, scope_moniker: Some(scope_moniker) },
                 capability_provider,
             } => {
                 let mut capability_provider = capability_provider.lock().await;
                 *capability_provider = self
-                    .on_route_scoped_framework_capability_async(
+                    .on_scoped_framework_capability_routed_async(
                         &capability,
                         scope_moniker.clone(),
                         capability_provider.take(),
                     )
                     .await?;
             }
-            EventPayload::ResolveInstance { decl } => {
+            EventPayload::Resolved { decl } => {
                 if decl.uses_protocol_from_framework(&EVENT_SOURCE_SYNC_SERVICE) {
                     let key = Some(event.target_moniker.clone());
                     let mut event_source_registry = self.event_source_registry.lock().await;
@@ -141,12 +141,12 @@ pub struct EventSource {
 impl EventSource {
     pub async fn new(scope_moniker: Option<AbsoluteMoniker>, registry: Arc<EventRegistry>) -> Self {
         let resolve_instance_event_stream = Arc::new(Mutex::new(Some(
-            registry.subscribe(scope_moniker.clone(), vec![EventType::ResolveInstance]).await,
+            registry.subscribe(scope_moniker.clone(), vec![EventType::Resolved]).await,
         )));
         Self { scope_moniker, registry, resolve_instance_event_stream }
     }
 
-    /// Drops the `ResolveInstance` event stream, thereby permitting components within the
+    /// Drops the `Resolved` event stream, thereby permitting components within the
     /// realm to be started.
     pub async fn start_component_tree(&mut self) {
         let mut resolve_instance_event_stream = self.resolve_instance_event_stream.lock().await;

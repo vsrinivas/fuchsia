@@ -73,7 +73,7 @@ pub(super) async fn do_start(model: Arc<Model>, realm: Arc<Realm>) -> Result<(),
         let routing_facade = RoutingFacade::new(model.clone());
         let event = Event::new(
             realm.abs_moniker.clone(),
-            EventPayload::BeforeStartInstance {
+            EventPayload::Started {
                 component_url: realm.component_url.clone(),
                 runtime: RuntimeInfo::from_runtime(&pending_runtime),
                 component_decl: decl.clone(),

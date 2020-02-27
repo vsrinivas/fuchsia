@@ -88,7 +88,7 @@ impl RealmCapabilityHost {
     pub fn hooks(self: &Arc<Self>) -> Vec<HooksRegistration> {
         vec![HooksRegistration::new(
             "RealmCapabilityHost",
-            vec![EventType::RouteCapability],
+            vec![EventType::CapabilityRouted],
             Arc::downgrade(self) as Weak<dyn Hook>,
         )]
     }
@@ -289,7 +289,7 @@ impl RealmCapabilityHost {
         Ok(())
     }
 
-    async fn on_route_scoped_framework_capability_async<'a>(
+    async fn on_scoped_framework_capability_routed_async<'a>(
         self: Arc<Self>,
         scope_moniker: AbsoluteMoniker,
         capability: &'a FrameworkCapability,
@@ -314,14 +314,14 @@ impl RealmCapabilityHost {
 #[async_trait]
 impl Hook for RealmCapabilityHost {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
-        if let EventPayload::RouteCapability {
+        if let EventPayload::CapabilityRouted {
             source: CapabilitySource::Framework { capability, scope_moniker: Some(scope_moniker) },
             capability_provider,
         } = &event.payload
         {
             let mut capability_provider = capability_provider.lock().await;
             *capability_provider = self
-                .on_route_scoped_framework_capability_async(
+                .on_scoped_framework_capability_routed_async(
                     scope_moniker.clone(),
                     &capability,
                     capability_provider.take(),
@@ -594,7 +594,7 @@ mod tests {
 
         let hook = Arc::new(TestHook::new());
 
-        let events = vec![EventType::PreDestroyInstance, EventType::PostDestroyInstance];
+        let events = vec![EventType::MarkedForDestruction, EventType::Destroyed];
         let event_registry = Arc::new(EventRegistry::new());
         let mut event_stream = event_registry.subscribe(None, events.clone()).await;
 
@@ -643,7 +643,7 @@ mod tests {
         fasync::spawn(f);
 
         let event = event_stream
-            .wait_until(EventType::PreDestroyInstance, vec!["system:0", "coll:a:1"].into())
+            .wait_until(EventType::MarkedForDestruction, vec!["system:0", "coll:a:1"].into())
             .await
             .unwrap();
 
@@ -676,7 +676,7 @@ mod tests {
 
         // Wait until 'PostDestroy' event for "a"
         let event = event_stream
-            .wait_until(EventType::PostDestroyInstance, vec!["system:0", "coll:a:1"].into())
+            .wait_until(EventType::Destroyed, vec!["system:0", "coll:a:1"].into())
             .await
             .unwrap();
         event.resume();

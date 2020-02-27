@@ -32,17 +32,17 @@ async fn base_resolver_test() -> Result<(), Error> {
     let event_source = &test.connect_to_event_source().await?;
 
     // Subscribe to events and begin execution of component manager
-    let mut event_stream = event_source.subscribe(vec![BeforeStartInstance::TYPE]).await?;
+    let mut event_stream = event_source.subscribe(vec![Started::TYPE]).await?;
 
     // Begin component manager's execution
     event_source.start_component_tree().await?;
 
     // Expect the root component to be bound to
-    let event = event_stream.expect_exact::<BeforeStartInstance>(".").await?;
+    let event = event_stream.expect_exact::<Started>(".").await?;
     event.resume().await?;
 
     // Expect the echo_server component to be bound to
-    let event = event_stream.expect_exact::<BeforeStartInstance>("./echo_server:0").await?;
+    let event = event_stream.expect_exact::<Started>("./echo_server:0").await?;
     event.resume().await?;
 
     // Connect to the echo service

@@ -15,7 +15,7 @@ async fn main() {
     // 2.  Connects to `echo_server`.
     // 3.  Issues 10 echos to `echo_server`.
     // 4.  Sends an end trigger to `echo_reporter`.
-    // `echo_reporter` begins tracking `RouteCapability` events after step 1.
+    // `echo_reporter` begins tracking `CapabilityRouted` events after step 1.
     // It is expected `echo_reporter` will not see `echo_client` attempting
     // to connect to `echo_server` because it is scoped to events from realms.
     let trigger =

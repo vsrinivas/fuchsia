@@ -62,21 +62,21 @@ impl EventSource {
         Ok(EventSink::soak_async(event_stream))
     }
 
-    // This is a convenience method that sets a breakpoint on the the `RouteCapability`,
+    // This is a convenience method that sets a breakpoint on the the `CapabilityRouted`,
     // spawns a new task, and injects the service provided by the injector if requested
     // by the event.
     pub async fn install_injector<I: 'static>(&self, injector: Arc<I>) -> Result<AbortHandle, Error>
     where
         I: Injector,
     {
-        let mut event_stream = self.subscribe(vec![RouteCapability::TYPE]).await?;
+        let mut event_stream = self.subscribe(vec![CapabilityRouted::TYPE]).await?;
         let (abort_handle, abort_registration) = AbortHandle::new_pair();
         fasync::spawn(
             Abortable::new(
                 async move {
                     loop {
                         let event = event_stream
-                            .wait_until_type::<RouteCapability>()
+                            .wait_until_type::<CapabilityRouted>()
                             .await
                             .expect("Type mismatch");
 
@@ -94,7 +94,7 @@ impl EventSource {
         Ok(abort_handle)
     }
 
-    // This is a convenience method that sets a breakpoint on the the `RouteCapability`,
+    // This is a convenience method that sets a breakpoint on the the `CapabilityRouted`,
     // spawns a new task, and interposes the service provided by the interposer if requested
     // by the event.
     pub async fn install_interposer<I: 'static>(
@@ -104,14 +104,14 @@ impl EventSource {
     where
         I: Interposer,
     {
-        let mut event_stream = self.subscribe(vec![RouteCapability::TYPE]).await?;
+        let mut event_stream = self.subscribe(vec![CapabilityRouted::TYPE]).await?;
         let (abort_handle, abort_registration) = AbortHandle::new_pair();
         fasync::spawn(
             Abortable::new(
                 async move {
                     loop {
                         let event = event_stream
-                            .wait_until_type::<RouteCapability>()
+                            .wait_until_type::<CapabilityRouted>()
                             .await
                             .expect("Type mismatch");
 
@@ -264,9 +264,9 @@ impl EventStream {
         &mut self,
         expected_target_moniker: &str,
         expected_capability_id: &str,
-    ) -> Result<RouteCapability, Error> {
+    ) -> Result<CapabilityRouted, Error> {
         loop {
-            let event = self.wait_until_exact::<RouteCapability>(expected_target_moniker).await?;
+            let event = self.wait_until_exact::<CapabilityRouted>(expected_target_moniker).await?;
             if expected_capability_id == event.capability_id {
                 match event.source {
                     fevents::CapabilitySource::Component(_) => return Ok(event),
@@ -285,9 +285,9 @@ impl EventStream {
         expected_target_moniker: &str,
         expected_capability_id: &str,
         expected_scope_moniker: Option<&str>,
-    ) -> Result<RouteCapability, Error> {
+    ) -> Result<CapabilityRouted, Error> {
         loop {
-            let event = self.wait_until_exact::<RouteCapability>(expected_target_moniker).await?;
+            let event = self.wait_until_exact::<CapabilityRouted>(expected_target_moniker).await?;
 
             // If the capability ID matches and the capability source is framework
             // with a matching optional scope moniker, then return the event.
@@ -490,7 +490,7 @@ pub struct RecordedEvent {
 ///
 /// ```
 /// RecordedEvent {
-///    event_type: EventType::RouteCapability,
+///    event_type: EventType::CapabilityRouted,
 ///    target_moniker: "./session:session:*".to_string(),
 ///    capability_id: Some("elf".to_string()),
 /// },
@@ -746,14 +746,14 @@ macro_rules! create_event {
 }
 
 // To create a class for an event, use the above macro here.
-create_event!(AddDynamicChild);
-create_event!(BeforeStartInstance);
-create_event!(PostDestroyInstance);
-create_event!(PreDestroyInstance);
-create_event!(ResolveInstance);
-create_event!(StopInstance);
+create_event!(Destroyed);
+create_event!(DynamicChildAdded);
+create_event!(MarkedForDestruction);
+create_event!(Resolved);
+create_event!(Started);
+create_event!(Stopped);
 create_event!(
-    event_type: RouteCapability,
+    event_type: CapabilityRouted,
     payload: {
         name: routing_payload,
         data: {
