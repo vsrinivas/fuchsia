@@ -255,8 +255,7 @@ class Parser {
       std::unique_ptr<raw::Identifier> method_name);
   // ParseProtocolMember parses any one protocol member, i.e. an event,
   // a method, or a compose stanza.
-  void ParseProtocolMember(std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope,
-                           std::vector<std::unique_ptr<raw::ComposeProtocol>>* composed_protocols,
+  void ParseProtocolMember(std::vector<std::unique_ptr<raw::ComposeProtocol>>* composed_protocols,
                            std::vector<std::unique_ptr<raw::ProtocolMethod>>* methods);
   std::unique_ptr<raw::ProtocolDeclaration> ParseProtocolDeclaration(
       std::unique_ptr<raw::AttributeList> attributes, ASTScope&);

@@ -135,6 +135,26 @@ protocol Child : Parent {};
   END_TEST;
 }
 
+bool invalid_doc_comment_outside_attribute_list() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol WellDocumented {
+    Method();
+    /// Misplaced doc comment
+};
+
+)FIDL");
+  ASSERT_FALSE(library.Compile());
+  auto errors = library.errors();
+  ASSERT_EQ(errors.size(), 1);
+  ASSERT_STR_STR(errors[0].c_str(), "expected protocol member");
+
+  END_TEST;
+}
+
 bool invalid_cannot_attach_attributes_to_compose() {
   BEGIN_TEST;
 
@@ -232,7 +252,7 @@ protocol NoMoreOrdinals {
   ASSERT_FALSE(library.Compile());
   auto errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "unexpected token NumericLiteral, was expecting RightCurly");
+  ASSERT_STR_STR(errors[0].c_str(), "expected protocol member");
 
   END_TEST;
 }
@@ -383,6 +403,7 @@ RUN_TEST(valid_empty_protocol)
 RUN_TEST(valid_compose_method)
 RUN_TEST(valid_protocol_composition)
 RUN_TEST(invalid_colon_syntax_is_not_supported)
+RUN_TEST(invalid_doc_comment_outside_attribute_list)
 RUN_TEST(invalid_cannot_attach_attributes_to_compose)
 RUN_TEST(invalid_cannot_compose_yourself)
 RUN_TEST(invalid_cannot_compose_twice_the_same_protocol)

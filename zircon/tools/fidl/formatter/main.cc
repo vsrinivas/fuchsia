@@ -72,7 +72,7 @@ bool Format(const fidl::SourceFile& source_file, fidl::ErrorReporter* error_repo
     std::string filename(source_file.filename());
     Fail(
         "Internal formatter failure: output is not the same as input processing file %s. "
-        "Please report a bug.",
+        "Please report a bug.\n",
         filename.c_str());
   }
 

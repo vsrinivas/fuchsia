@@ -98,6 +98,6 @@ protocol Light {
     /// Use GetGroupInfo to check if group supports this operation.
     SetGroupRgbValue(uint32 group_id, vector<Rgb>:MAX values) -> (zx.status status);
 
-    /// TODO: Ideas for future expansion
-    /// - Hardware blinking configuration, for lights that have hardware or MCU support for blinking.
+    // TODO: Ideas for future expansion
+    // - Hardware blinking configuration, for lights that have hardware or MCU support for blinking.
 };

@@ -806,9 +806,13 @@ std::unique_ptr<raw::ProtocolMethod> Parser::ParseProtocolMethod(
 }
 
 void Parser::ParseProtocolMember(
-    std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope,
     std::vector<std::unique_ptr<raw::ComposeProtocol>>* composed_protocols,
     std::vector<std::unique_ptr<raw::ProtocolMethod>>* methods) {
+  ASTScope scope(this);
+  std::unique_ptr<raw::AttributeList> attributes = MaybeParseAttributeList();
+  if (!Ok())
+    Fail();
+
   switch (Peek().kind()) {
     case Token::Kind::kArrow: {
       auto event = ParseProtocolEvent(std::move(attributes), scope);
@@ -840,6 +844,7 @@ void Parser::ParseProtocolMember(
       }
     }
     default:
+      Fail("expected protocol member");
       break;
   }
 }
@@ -862,20 +867,12 @@ std::unique_ptr<raw::ProtocolDeclaration> Parser::ParseProtocolDeclaration(
     return Fail();
 
   auto parse_member = [&composed_protocols, &methods, this]() {
-    ASTScope scope(this);
-    std::unique_ptr<raw::AttributeList> attributes = MaybeParseAttributeList();
-    if (!Ok())
+    if (Peek().kind() == Token::Kind::kRightCurly) {
+      ConsumeToken(OfKind(Token::Kind::kRightCurly));
+      return Done;
+    } else {
+      ParseProtocolMember(&composed_protocols, &methods);
       return More;
-
-    switch (Peek().kind()) {
-      default:
-        ConsumeToken(OfKind(Token::Kind::kRightCurly));
-        return Done;
-
-      case Token::Kind::kArrow:
-      case Token::Kind::kIdentifier:
-        ParseProtocolMember(std::move(attributes), scope, &composed_protocols, &methods);
-        return More;
     }
   };
 
