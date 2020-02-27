@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::{ops::RangeBounds, ptr, slice, vec::Splice};
+use std::{ops::RangeBounds, ptr, slice};
 
 use euclid::Rect;
 use spinel_rs_sys::*;
 
 use crate::{
-    render::{
+    render::generic::{
         spinel::{init, InnerContext, Spinel},
         BlendMode, Composition, Fill, FillRule, Layer, Style,
     },
@@ -87,8 +87,8 @@ fn group_layers(
 
 #[derive(Clone, Debug)]
 pub struct SpinelComposition {
-    layers: Vec<Layer<Spinel>>,
-    background_color: [f32; 4],
+    pub(crate) layers: Vec<Layer<Spinel>>,
+    pub(crate) background_color: [f32; 4],
 }
 
 impl SpinelComposition {
@@ -223,11 +223,11 @@ impl Composition<Spinel> for SpinelComposition {
         self.layers.clear();
     }
 
-    fn splice<R, I>(&mut self, range: R, replace_with: I) -> Splice<'_, I::IntoIter>
+    fn replace<R, I>(&mut self, range: R, with: I)
     where
         R: RangeBounds<usize>,
         I: IntoIterator<Item = Layer<Spinel>>,
     {
-        self.layers.splice(range, replace_with)
+        self.layers.splice(range, with);
     }
 }

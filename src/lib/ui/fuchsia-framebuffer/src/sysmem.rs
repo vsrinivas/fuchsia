@@ -147,6 +147,7 @@ pub struct BufferCollectionAllocator {
     width: u32,
     height: u32,
     pixel_type: PixelFormatType,
+    usage: FrameUsage,
     buffer_count: usize,
     sysmem: fidl_fuchsia_sysmem::AllocatorProxy,
     collection_client: Option<fidl_fuchsia_sysmem::BufferCollectionProxy>,
@@ -157,6 +158,7 @@ impl BufferCollectionAllocator {
         width: u32,
         height: u32,
         pixel_type: PixelFormatType,
+        usage: FrameUsage,
         buffer_count: usize,
     ) -> Result<BufferCollectionAllocator, Error> {
         let sysmem = connect_to_service::<fidl_fuchsia_sysmem::AllocatorMarker>()?;
@@ -171,6 +173,7 @@ impl BufferCollectionAllocator {
             width,
             height,
             pixel_type,
+            usage,
             buffer_count,
             sysmem,
             collection_client: None,
@@ -179,6 +182,7 @@ impl BufferCollectionAllocator {
 
     pub async fn allocate_buffers(
         &mut self,
+        set_constraints: bool,
     ) -> Result<fidl_fuchsia_sysmem::BufferCollectionInfo2, Error> {
         let token = self.token.take().expect("token");
         let (collection_client, collection_request) =
@@ -193,11 +197,12 @@ impl BufferCollectionAllocator {
             self.height,
             self.pixel_type,
             self.buffer_count as u32,
-            FrameUsage::Cpu,
+            self.usage,
         );
         collection_client
-            .set_constraints(true, &mut buffer_collection_constraints)
+            .set_constraints(set_constraints, &mut buffer_collection_constraints)
             .context("Sending buffer constraints to sysmem")?;
+
         let (status, buffers) = collection_client.wait_for_buffers_allocated().await?;
         self.collection_client = Some(collection_client);
         if status != zx::sys::ZX_OK {

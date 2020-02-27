@@ -3,5 +3,7 @@
 // found in the LICENSE file.
 pub(crate) mod base;
 pub(crate) mod framebuffer;
+pub(crate) mod framebuffer_render;
 pub(crate) mod scenic;
 pub(crate) mod scenic_canvas;
+pub(crate) mod scenic_render;

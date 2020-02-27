@@ -9,7 +9,7 @@ use std::{
 use spinel_rs_sys::*;
 use vk_sys as vk;
 
-use crate::render::spinel::*;
+use crate::render::generic::spinel::*;
 
 // Make sure that the Spinel callback actually reads from the right place by pinning the
 // vk::DevicePointers in memory. Possible improvement would be to send a Weak pointer through the

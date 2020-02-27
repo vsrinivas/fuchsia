@@ -120,6 +120,7 @@ impl Into<fidl_fuchsia_sysmem::PixelFormatType> for PixelFormat {
             PixelFormat::Abgr8888 => fidl_fuchsia_sysmem::PixelFormatType::R8G8B8A8,
             PixelFormat::Argb8888 => fidl_fuchsia_sysmem::PixelFormatType::Bgra32,
             PixelFormat::RgbX888 => fidl_fuchsia_sysmem::PixelFormatType::Bgra32,
+            PixelFormat::BgrX888 => fidl_fuchsia_sysmem::PixelFormatType::R8G8B8A8,
             _ => fidl_fuchsia_sysmem::PixelFormatType::Invalid,
         }
     }
@@ -466,14 +467,15 @@ impl FrameBuffer {
                 ));
             }
         }
+        let pixel_size_bytes = pixel_format_bytes(pixel_format) as u32;
         Ok(Config {
             display_id: display_id,
             width: width,
             height: height,
             refresh_rate_e2: refresh_rate_e2,
-            linear_stride_bytes: 0,
+            linear_stride_bytes: width * pixel_size_bytes,
             format: pixel_format.into(),
-            pixel_size_bytes: pixel_format_bytes(pixel_format) as u32,
+            pixel_size_bytes: pixel_size_bytes,
         })
     }
 
@@ -638,14 +640,15 @@ impl FrameBuffer {
         frame_count: usize,
         format: PixelFormat,
     ) -> Result<(), Error> {
+        let pixel_size_bytes = pixel_format_bytes(format.into()) as u32;
         let mut config = Config {
             display_id: self.config.display_id,
             width: self.config.width,
             height: self.config.height,
             refresh_rate_e2: self.config.refresh_rate_e2,
-            linear_stride_bytes: 0,
+            linear_stride_bytes: self.config.width * pixel_size_bytes,
             format: format.into(),
-            pixel_size_bytes: pixel_format_bytes(format.into()) as u32,
+            pixel_size_bytes: pixel_size_bytes,
         };
         let collection_proxy = self.allocate_buffer_collection(frame_count, &config).await?;
 

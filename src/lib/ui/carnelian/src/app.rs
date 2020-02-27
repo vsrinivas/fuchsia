@@ -40,6 +40,8 @@ pub enum ViewMode {
     /// This app's views requires an image pipe and Carnelian should
     /// take care of creating a buffer collection for view created by this app.
     ImagePipe,
+    /// This apps view use the render module.
+    Render { use_mold: bool },
 }
 
 #[derive(Clone)]
@@ -114,6 +116,14 @@ pub trait AppAssistant {
         )
     }
 
+    /// Called when the Fuchsia view system requests that a view be created for
+    /// apps running in ViewMode::Render.
+    fn create_view_assistant_render(&mut self, _: ViewKey) -> Result<ViewAssistantPtr, Error> {
+        anyhow::bail!(
+            "Assistant has ViewMode::Render but doesn't implement create_view_assistant_render."
+        )
+    }
+
     /// Return the list of names of services this app wants to provide
     fn outgoing_services_names(&self) -> Vec<&'static str> {
         Vec::new()
@@ -173,7 +183,7 @@ struct FrameBufferAppStrategy {
     frame_buffer: FrameBufferPtr,
 }
 
-const FRAME_COUNT: usize = 2;
+pub const FRAME_COUNT: usize = 2;
 
 #[async_trait(?Send)]
 impl AppStrategy for FrameBufferAppStrategy {
@@ -211,10 +221,8 @@ impl AppStrategy for FrameBufferAppStrategy {
 
     async fn post_setup(
         &mut self,
-        pixel_format: fuchsia_framebuffer::PixelFormat,
+        _pixel_format: fuchsia_framebuffer::PixelFormat,
     ) -> Result<(), Error> {
-        let mut fb = self.frame_buffer.borrow_mut();
-        fb.allocate_frames(FRAME_COUNT, pixel_format).await?;
         Ok(())
     }
 }
@@ -224,8 +232,17 @@ async fn create_app_strategy(
     assistant: &AppAssistantPtr,
     internal_sender: &UnboundedSender<MessageInternal>,
 ) -> Result<AppStrategyPtr, Error> {
-    let usage =
-        if assistant.get_mode() == ViewMode::ImagePipe { FrameUsage::Gpu } else { FrameUsage::Cpu };
+    let usage = match assistant.get_mode() {
+        ViewMode::ImagePipe => FrameUsage::Gpu,
+        ViewMode::Render { use_mold } => {
+            if use_mold {
+                FrameUsage::Cpu
+            } else {
+                FrameUsage::Gpu
+            }
+        }
+        _ => FrameUsage::Cpu,
+    };
     let (sender, mut receiver) = unbounded::<VSyncMessage>();
     let fb = FrameBuffer::new(usage, None, Some(sender)).await;
     if fb.is_err() {
@@ -555,6 +572,12 @@ impl App {
         Ok(self.assistant.as_mut().unwrap().create_view_assistant_canvas(self.next_key)?)
     }
 
+    // Creates a view assistant for views that are using the render view mode feature, either
+    // in Scenic or framebuffer mode.
+    fn create_view_assistant_render(&mut self) -> Result<ViewAssistantPtr, Error> {
+        Ok(self.assistant.as_mut().unwrap().create_view_assistant_render(self.next_key)?)
+    }
+
     fn get_view_mode(&self) -> ViewMode {
         self.assistant.as_ref().unwrap().get_mode()
     }
@@ -569,6 +592,7 @@ impl App {
         let view_assistant = match view_mode {
             ViewMode::Scenic => self.create_view_assistant(&session)?,
             ViewMode::Canvas => self.create_view_assistant_canvas()?,
+            ViewMode::Render { .. } => self.create_view_assistant_render()?,
             ViewMode::ImagePipe => {
                 return Err(format_err!("ImagePipe mode is not yet supported with Scenic."))
             }
@@ -604,10 +628,15 @@ impl App {
     async fn create_view_framebuffer_async(&mut self) -> Result<(), Error> {
         let view_mode = self.get_view_mode();
         let signals_wait_event = self.get_signals_wait_event();
-        let view_assistant = if view_mode == ViewMode::ImagePipe {
-            self.create_view_assistant_image_pipe()?
-        } else {
-            self.create_view_assistant_canvas()?
+        let view_assistant = match view_mode {
+            ViewMode::Scenic => {
+                return Err(format_err!(
+                    "Scenic mode is not yet supported when running on the framebuffer."
+                ))
+            }
+            ViewMode::Canvas => self.create_view_assistant_canvas()?,
+            ViewMode::Render { .. } => self.create_view_assistant_render()?,
+            ViewMode::ImagePipe => self.create_view_assistant_image_pipe()?,
         };
         let strat = self.strategy.as_mut().unwrap();
         let pixel_format = if view_mode == ViewMode::ImagePipe {
@@ -620,6 +649,7 @@ impl App {
         let size = strat.get_frame_buffer_size().unwrap();
         let mut view_controller = ViewController::new_with_frame_buffer(
             self.next_key,
+            view_mode,
             size,
             strat.get_pixel_size(),
             pixel_format,
@@ -628,7 +658,8 @@ impl App {
             self.sender.as_ref().expect("sender").clone(),
             strat.get_frame_buffer().unwrap(),
             signals_wait_event,
-        )?;
+        )
+        .await?;
 
         // For framebuffer apps, always use vsync to drive update
         // TODO: limit update rate in update if the requested refresh

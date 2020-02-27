@@ -6,15 +6,14 @@ use {
     anyhow::Error,
     argh::FromArgs,
     carnelian::{
-        make_app_assistant, render::*, AnimationMode, App, AppAssistant, Color, FrameBufferPtr,
-        Point, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMode,
+        make_app_assistant, render::*, AnimationMode, App, AppAssistant, Color, Point, Size,
+        ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMode,
     },
     chrono::{Local, Timelike},
     euclid::{Angle, Point2D, Rect, Size2D, Transform2D, Vector2D},
-    fidl::endpoints::create_endpoints,
-    fidl_fuchsia_sysmem::BufferCollectionTokenMarker,
     fuchsia_trace::{self, duration},
     fuchsia_trace_provider,
+    fuchsia_zircon::{AsHandleRef, Event, Signals},
     std::{collections::BTreeMap, f32},
 };
 
@@ -30,66 +29,42 @@ struct Args {
 }
 
 #[derive(Default)]
-struct ClockfaceAppAssistant;
+struct ClockfaceAppAssistant {
+    use_mold: bool,
+}
 
 impl AppAssistant for ClockfaceAppAssistant {
     fn setup(&mut self) -> Result<(), Error> {
+        let args: Args = argh::from_env();
+        self.use_mold = args.use_mold;
         Ok(())
     }
 
-    fn create_view_assistant_image_pipe(
-        &mut self,
-        _: ViewKey,
-        fb: FrameBufferPtr,
-    ) -> Result<ViewAssistantPtr, Error> {
-        let args: Args = argh::from_env();
-        println!("back-end: {}", if args.use_mold { "mold" } else { "spinel" });
-
-        let (token, token_request) =
-            create_endpoints::<BufferCollectionTokenMarker>().expect("create_endpoint");
-        fb.borrow()
-            .local_token
-            .as_ref()
-            .unwrap()
-            .duplicate(std::u32::MAX, token_request)
-            .expect("duplicate");
-        let config = &fb.borrow().get_config();
-        let size = Size2D::new(config.width, config.height);
-
-        if args.use_mold {
-            Ok(Box::new(ClockfaceViewAssistant::new(Mold::new_context(token, size))))
-        } else {
-            Ok(Box::new(ClockfaceViewAssistant::new(Spinel::new_context(token, size))))
-        }
+    fn create_view_assistant_render(&mut self, _: ViewKey) -> Result<ViewAssistantPtr, Error> {
+        Ok(Box::new(ClockfaceViewAssistant::new()))
     }
 
     fn get_mode(&self) -> ViewMode {
-        ViewMode::ImagePipe
+        ViewMode::Render { use_mold: self.use_mold }
     }
 }
 
-fn line<B: Backend>(path_builder: &mut impl PathBuilder<B>, p0: Point, p1: Point) {
+fn line(path_builder: &mut PathBuilder, p0: Point, p1: Point) {
     path_builder.move_to(p0);
     path_builder.line_to(p1);
 }
 
-fn cubic<B: Backend>(
-    path_builder: &mut impl PathBuilder<B>,
-    p0: Point,
-    p1: Point,
-    p2: Point,
-    p3: Point,
-) {
+fn cubic(path_builder: &mut PathBuilder, p0: Point, p1: Point, p2: Point, p3: Point) {
     path_builder.move_to(p0);
     path_builder.cubic_to(p1, p2, p3);
 }
 
-struct RoundedLine<B: Backend> {
-    path: B::Path,
+struct RoundedLine {
+    path: Path,
 }
 
-impl<B: Backend> RoundedLine<B> {
-    fn new(mut path_builder: impl PathBuilder<B>, pos: Point, length: f32, thickness: f32) -> Self {
+impl RoundedLine {
+    fn new(mut path_builder: PathBuilder, pos: Point, length: f32, thickness: f32) -> Self {
         let dist = 4.0 / 3.0 * (f32::consts::PI / 8.0).tan();
         let radius = thickness / 2.0;
         let control_dist = dist * radius;
@@ -127,15 +102,15 @@ impl<B: Backend> RoundedLine<B> {
     }
 }
 
-struct Hand<B: Backend> {
-    line: RoundedLine<B>,
-    raster: Option<B::Raster>,
+struct Hand {
+    line: RoundedLine,
+    raster: Option<Raster>,
     color: Color,
 }
 
-impl<B: Backend> Hand<B> {
+impl Hand {
     fn new(
-        path_builder: impl PathBuilder<B>,
+        path_builder: PathBuilder,
         thickness: f32,
         length: f32,
         offset: f32,
@@ -151,7 +126,7 @@ impl<B: Backend> Hand<B> {
         Self { line, raster: None, color }
     }
 
-    fn update(&mut self, context: &mut impl Context<B>, scale: f32, angle: f32) {
+    fn update(&mut self, context: &mut Context, scale: f32, angle: f32) {
         let rotation = Transform2D::create_rotation(Angle::radians(angle)).post_scale(scale, scale);
         let mut raster_builder = context.raster_builder().unwrap();
         raster_builder.add(&self.line.path, Some(&rotation));
@@ -159,18 +134,18 @@ impl<B: Backend> Hand<B> {
     }
 }
 
-struct Scene<B: Backend> {
+struct Scene {
     size: Size,
-    hour_hand: Hand<B>,
-    minute_hand: Hand<B>,
-    second_hand: Hand<B>,
+    hour_hand: Hand,
+    minute_hand: Hand,
+    second_hand: Hand,
     hour_index: usize,
     minute_index: usize,
     second_index: usize,
 }
 
-impl<B: Backend> Scene<B> {
-    fn new(context: &mut impl Context<B>) -> Self {
+impl Scene {
+    fn new(context: &mut Context) -> Self {
         const HOUR_HAND_COLOR: Color = Color { r: 254, g: 72, b: 100, a: 255 };
         const MINUTE_HAND_COLOR: Color = Color { r: 254, g: 72, b: 100, a: 127 };
         const SECOND_HAND_COLOR: Color = Color::white();
@@ -206,7 +181,7 @@ impl<B: Backend> Scene<B> {
         }
     }
 
-    fn update(&mut self, context: &mut impl Context<B>, size: &Size, scale: f32) {
+    fn update(&mut self, context: &mut Context, size: &Size, scale: f32) {
         if self.size != *size {
             self.size = *size;
             self.hour_index = std::usize::MAX;
@@ -244,21 +219,21 @@ impl<B: Backend> Scene<B> {
     }
 }
 
-struct Contents<B: Backend> {
-    image: B::Image,
-    composition: B::Composition,
+struct Contents {
+    image: Image,
+    composition: Composition,
     size: Size,
-    previous_rasters: Vec<B::Raster>,
+    previous_rasters: Vec<Raster>,
 }
 
-impl<B: Backend> Contents<B> {
-    fn new(image: B::Image) -> Self {
+impl Contents {
+    fn new(image: Image) -> Self {
         let composition = Composition::new(BACKGROUND_COLOR);
 
         Self { image, composition, size: Size::zero(), previous_rasters: Vec::new() }
     }
 
-    fn update(&mut self, context: &mut impl Context<B>, scene: &Scene<B>, size: &Size, scale: f32) {
+    fn update(&mut self, context: &mut Context, scene: &Scene, size: &Size, scale: f32) {
         const SHADOW_COLOR: Color = Color { r: 0, g: 0, b: 0, a: 13 };
         const ELEVATION: f32 = 0.01;
 
@@ -296,7 +271,7 @@ impl<B: Backend> Contents<B> {
             .chain(std::iter::once(Layer {
                 raster: hands
                     .iter()
-                    .fold(None, |raster_union: Option<B::Raster>, hand| {
+                    .fold(None, |raster_union: Option<Raster>, hand| {
                         let raster = hand.raster.clone().unwrap().translate(shadow_offset);
                         if let Some(raster_union) = raster_union {
                             Some(raster_union + raster)
@@ -315,7 +290,7 @@ impl<B: Backend> Contents<B> {
                 raster: hands
                     .iter()
                     .enumerate()
-                    .fold(None, |raster_union: Option<B::Raster>, (i, hand)| {
+                    .fold(None, |raster_union: Option<Raster>, (i, hand)| {
                         if i != 1 {
                             let raster = hand.raster.clone().unwrap().translate(shadow_offset);
                             if let Some(raster_union) = raster_union {
@@ -342,7 +317,7 @@ impl<B: Backend> Contents<B> {
                     blend_mode: BlendMode::Over,
                 },
             }));
-        self.composition.splice(.., layers);
+        self.composition.replace(.., layers);
 
         context.render(&self.composition, Some(clip), self.image, &ext);
         context.flush_image(self.image);
@@ -356,48 +331,76 @@ impl<B: Backend> Contents<B> {
     }
 }
 
-struct ClockfaceViewAssistant<B: Backend, C: Context<B>> {
-    context: C,
-    scene: Scene<B>,
-    contents: BTreeMap<u64, Contents<B>>,
+struct Clockface {
+    scene: Scene,
+    contents: BTreeMap<u64, Contents>,
 }
 
-impl<B: Backend, C: Context<B>> ClockfaceViewAssistant<B, C> {
-    pub fn new(mut context: C) -> Self {
-        let scene = Scene::new(&mut context);
+impl Clockface {
+    pub fn new(context: &mut Context) -> Self {
+        let scene = Scene::new(context);
 
-        Self { context, scene, contents: BTreeMap::new() }
+        Self { scene, contents: BTreeMap::new() }
+    }
+
+    fn update(
+        &mut self,
+        render_context: &mut Context,
+        context: &ViewAssistantContext<'_>,
+    ) -> Result<(), Error> {
+        duration!("gfx", "update");
+
+        let size = &context.size;
+        let image_id = context.image_id;
+        let scale = size.width.min(size.height);
+
+        self.scene.update(render_context, size, scale);
+
+        let image = render_context.get_current_image(context);
+        let content = self.contents.entry(image_id).or_insert_with(|| Contents::new(image));
+
+        content.update(render_context, &self.scene, size, scale);
+
+        Ok(())
     }
 }
 
-impl<B: Backend, C: Context<B>> ViewAssistant for ClockfaceViewAssistant<B, C> {
+struct ClockfaceViewAssistant {
+    size: Size,
+    clockface: Option<Clockface>,
+}
+
+impl ClockfaceViewAssistant {
+    pub fn new() -> Self {
+        Self { size: Size::zero(), clockface: None }
+    }
+}
+
+impl ViewAssistant for ClockfaceViewAssistant {
     fn setup(&mut self, _context: &ViewAssistantContext<'_>) -> Result<(), Error> {
         Ok(())
     }
 
-    fn update(&mut self, context: &ViewAssistantContext<'_>) -> Result<(), Error> {
-        duration!("gfx", "update");
-        let canvas = context.canvas.as_ref().unwrap().borrow();
-        let size = &context.size;
-        let scale = size.width.min(size.height);
+    fn update(&mut self, _: &ViewAssistantContext<'_>) -> Result<(), Error> {
+        Ok(())
+    }
 
-        self.scene.update(&mut self.context, size, scale);
-
-        // Temporary hack to deal with the fact that carnelian
-        // allocates a new buffer for each frame with the same
-        // image ID of zero.
-        let mut temp_content;
-        let content;
-        let image = self.context.get_current_image(context);
-
-        if canvas.id == 0 {
-            temp_content = Contents::new(image);
-            content = &mut temp_content;
-        } else {
-            content = self.contents.entry(canvas.id).or_insert_with(|| Contents::new(image));
+    fn render(
+        &mut self,
+        render_context: &mut Context,
+        ready_event: Event,
+        context: &ViewAssistantContext<'_>,
+    ) -> Result<(), Error> {
+        if context.size != self.size || self.clockface.is_none() {
+            self.size = context.size;
+            self.clockface = Some(Clockface::new(render_context));
         }
 
-        content.update(&mut self.context, &self.scene, size, scale);
+        if let Some(clockface) = self.clockface.as_mut() {
+            clockface.update(render_context, context).expect("clockface.update");
+        }
+
+        ready_event.as_handle_ref().signal(Signals::NONE, Signals::EVENT_SIGNALED)?;
 
         Ok(())
     }
@@ -405,14 +408,11 @@ impl<B: Backend, C: Context<B>> ViewAssistant for ClockfaceViewAssistant<B, C> {
     fn initial_animation_mode(&mut self) -> AnimationMode {
         return AnimationMode::EveryFrame;
     }
-
-    fn get_pixel_format(&self) -> fuchsia_framebuffer::PixelFormat {
-        self.context.pixel_format()
-    }
 }
 
 fn main() -> Result<(), Error> {
     fuchsia_trace_provider::trace_provider_create_with_fdio();
 
+    println!("Clockface Example");
     App::run(make_app_assistant::<ClockfaceAppAssistant>())
 }

@@ -6,16 +6,14 @@ use {
     anyhow::Error,
     argh::FromArgs,
     carnelian::{
-        make_app_assistant, render::*, AnimationMode, App, AppAssistant, Color, FrameBufferPtr,
-        Point, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMode,
+        make_app_assistant, render::*, AnimationMode, App, AppAssistant, Color, Point, Size,
+        ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMode,
     },
     euclid::{Angle, Point2D, Rect, Size2D, Transform2D, Vector2D},
-    fidl::endpoints::create_endpoints,
     fidl_fuchsia_hardware_input as hid, fidl_fuchsia_input_report as hid_input_report,
-    fidl_fuchsia_sysmem::BufferCollectionTokenMarker,
     fuchsia_trace::{self, duration},
     fuchsia_trace_provider,
-    fuchsia_zircon::{self as zx, ClockId, Time},
+    fuchsia_zircon::{self as zx, AsHandleRef, ClockId, Event, Signals, Time},
     rand::{thread_rng, Rng},
     std::{collections::BTreeMap, f32, fs, ops::Range},
 };
@@ -102,17 +100,17 @@ impl<'a> InkPathBuilder for PointPathBuilder<'a> {
     }
 }
 
-struct PathBuilderWrapper<'a, B: Backend> {
-    path_builder: &'a mut B::PathBuilder,
+struct PathBuilderWrapper<'a> {
+    path_builder: &'a mut PathBuilder,
 }
 
-impl<'a, B: Backend> PathBuilderWrapper<'a, B> {
-    fn new(path_builder: &'a mut B::PathBuilder) -> Self {
+impl<'a> PathBuilderWrapper<'a> {
+    fn new(path_builder: &'a mut PathBuilder) -> Self {
         Self { path_builder }
     }
 }
 
-impl<'a, B: Backend> InkPathBuilder for PathBuilderWrapper<'a, B> {
+impl<'a> InkPathBuilder for PathBuilderWrapper<'a> {
     fn line_to(&mut self, p: Point) {
         self.path_builder.line_to(p);
     }
@@ -225,52 +223,33 @@ struct Args {
 }
 
 #[derive(Default)]
-struct InkAppAssistant;
+struct InkAppAssistant {
+    use_mold: bool,
+}
 
 impl AppAssistant for InkAppAssistant {
     fn setup(&mut self) -> Result<(), Error> {
+        let args: Args = argh::from_env();
+        self.use_mold = args.use_mold;
         Ok(())
     }
 
-    fn create_view_assistant_image_pipe(
-        &mut self,
-        _: ViewKey,
-        fb: FrameBufferPtr,
-    ) -> Result<ViewAssistantPtr, Error> {
-        let args: Args = argh::from_env();
-        println!("back-end: {}", if args.use_mold { "mold" } else { "spinel" });
-
-        let (token, token_request) =
-            create_endpoints::<BufferCollectionTokenMarker>().expect("create_endpoint");
-        fb.borrow()
-            .local_token
-            .as_ref()
-            .unwrap()
-            .duplicate(std::u32::MAX, token_request)
-            .expect("duplicate");
-        let config = &fb.borrow().get_config();
-
-        let size = Size2D::new(config.width, config.height);
-
-        if args.use_mold {
-            Ok(Box::new(InkViewAssistant::new(Mold::new_context(token, size))))
-        } else {
-            Ok(Box::new(InkViewAssistant::new(Spinel::new_context(token, size))))
-        }
+    fn create_view_assistant_render(&mut self, _: ViewKey) -> Result<ViewAssistantPtr, Error> {
+        Ok(Box::new(InkViewAssistant::new()))
     }
 
     fn get_mode(&self) -> ViewMode {
-        ViewMode::ImagePipe
+        ViewMode::Render { use_mold: self.use_mold }
     }
 }
 
-struct InkFill<B: Backend> {
-    raster: B::Raster,
+struct InkFill {
+    raster: Raster,
     color: Color,
 }
 
-impl<B: Backend> InkFill<B> {
-    fn new(context: &mut impl Context<B>, color: &Color, points: &Vec<Point>) -> Self {
+impl InkFill {
+    fn new(context: &mut Context, color: &Color, points: &Vec<Point>) -> Self {
         let path = {
             let mut path_builder = context.path_builder().unwrap();
             let mut p0 = Point::zero();
@@ -294,9 +273,9 @@ impl<B: Backend> InkFill<B> {
     }
 }
 
-struct Segment<B: Backend> {
-    path: B::Path,
-    raster: Option<B::Raster>,
+struct Segment {
+    path: Path,
+    raster: Option<Raster>,
 }
 
 struct StrokePoint {
@@ -306,24 +285,20 @@ struct StrokePoint {
     thickness: f32,
 }
 
-struct InkStroke<B: Backend> {
+struct InkStroke {
     points: Vec<StrokePoint>,
-    segments: Vec<(usize, Segment<B>)>,
+    segments: Vec<(usize, Segment)>,
     color: Color,
     thickness: f32,
     transform: Transform2D<f32>,
 }
 
-impl<B: Backend> InkStroke<B> {
+impl InkStroke {
     fn new(color: Color, thickness: f32, transform: Transform2D<f32>) -> Self {
         Self { points: Vec::new(), segments: Vec::new(), color, thickness, transform }
     }
 
-    fn raster(
-        context: &mut impl Context<B>,
-        path: &B::Path,
-        transform: &Transform2D<f32>,
-    ) -> B::Raster {
+    fn raster(context: &mut Context, path: &Path, transform: &Transform2D<f32>) -> Raster {
         let mut raster_builder = context.raster_builder().unwrap();
         raster_builder.add(path, Some(transform));
         raster_builder.build()
@@ -389,7 +364,7 @@ impl<B: Backend> InkStroke<B> {
         }
     }
 
-    fn push_segment(&mut self, context: &mut impl Context<B>, i0: usize, i1: usize) {
+    fn push_segment(&mut self, context: &mut Context, i0: usize, i1: usize) {
         let path = {
             let mut path_builder = context.path_builder().unwrap();
 
@@ -428,7 +403,7 @@ impl<B: Backend> InkStroke<B> {
                     let c2 = p1 - $p.normal1 * control_dist;
                     let c3 = p2 - n * control_dist;
 
-                    let mut wrapper = PathBuilderWrapper::<'_, B>::new(&mut path_builder);
+                    let mut wrapper = PathBuilderWrapper::new(&mut path_builder);
                     wrapper.cubic_to(p0, c0, c1, p1, offset);
                     wrapper.cubic_to(p1, c2, c3, p2, offset);
                 };
@@ -458,7 +433,7 @@ impl<B: Backend> InkStroke<B> {
         self.segments.push((i0, Segment { path, raster: None }));
     }
 
-    fn update_thickness(&mut self, context: &mut impl Context<B>) {
+    fn update_thickness(&mut self, context: &mut Context) {
         assert_eq!(self.points.is_empty(), false);
 
         // No update needed if last point has correct thickness. This assumes
@@ -501,7 +476,7 @@ impl<B: Backend> InkStroke<B> {
         }
     }
 
-    fn update(&mut self, context: &mut impl Context<B>) -> bool {
+    fn update(&mut self, context: &mut Context) -> bool {
         self.update_thickness(context);
 
         let mut changed = false;
@@ -525,17 +500,17 @@ impl<B: Backend> InkStroke<B> {
     }
 }
 
-struct Scene<B: Backend> {
-    tools: Vec<(InkStroke<B>, InkFill<B>, Point)>,
-    strokes: Vec<InkStroke<B>>,
+struct Scene {
+    tools: Vec<(InkStroke, InkFill, Point)>,
+    strokes: Vec<InkStroke>,
 }
 
-impl<B: Backend> Scene<B> {
+impl Scene {
     fn new() -> Self {
         Self { tools: Vec::new(), strokes: Vec::new() }
     }
 
-    fn setup(&mut self, context: &mut impl Context<B>, size: &Size, tools: &Vec<(&Color, &f32)>) {
+    fn setup(&mut self, context: &mut Context, size: Size, tools: &Vec<(&Color, &f32)>) {
         const TOOL_SIZE: f32 = (TOOL_RADIUS + TOOL_PADDING) * 2.0;
 
         // Layout tools at top-center.
@@ -580,7 +555,7 @@ impl<B: Backend> Scene<B> {
         self.strokes.push(stroke);
     }
 
-    fn last_stroke(&mut self) -> Option<&mut InkStroke<B>> {
+    fn last_stroke(&mut self) -> Option<&mut InkStroke> {
         self.strokes.last_mut()
     }
 
@@ -588,7 +563,7 @@ impl<B: Backend> Scene<B> {
         self.strokes.clear();
     }
 
-    fn update_tools(&mut self, context: &mut impl Context<B>) -> Option<Range<usize>> {
+    fn update_tools(&mut self, context: &mut Context) -> Option<Range<usize>> {
         let mut damage: Option<Range<usize>> = None;
 
         for (i, (stroke, _, _)) in self.tools.iter_mut().enumerate() {
@@ -605,7 +580,7 @@ impl<B: Backend> Scene<B> {
         damage
     }
 
-    fn update_strokes(&mut self, context: &mut impl Context<B>) -> Option<Range<usize>> {
+    fn update_strokes(&mut self, context: &mut Context) -> Option<Range<usize>> {
         let mut damage: Option<Range<usize>> = None;
 
         for (i, stroke) in self.strokes.iter_mut().enumerate() {
@@ -629,9 +604,9 @@ impl<B: Backend> Scene<B> {
     }
 }
 
-struct Contents<B: Backend> {
-    image: B::Image,
-    composition: B::Composition,
+struct Contents {
+    image: Image,
+    composition: Composition,
     size: Size,
     tool_count: usize,
     tool_damage: Option<Range<usize>>,
@@ -639,8 +614,8 @@ struct Contents<B: Backend> {
     stroke_damage: Option<Range<usize>>,
 }
 
-impl<B: Backend> Contents<B> {
-    fn new(image: B::Image) -> Self {
+impl Contents {
+    fn new(image: Image) -> Self {
         let composition = Composition::new(BACKGROUND_COLOR);
 
         Self {
@@ -654,7 +629,7 @@ impl<B: Backend> Contents<B> {
         }
     }
 
-    fn update(&mut self, context: &mut impl Context<B>, scene: &Scene<B>, size: &Size) {
+    fn update(&mut self, context: &mut Context, scene: &Scene, size: &Size) {
         let clip = Rect::new(
             Point2D::new(0, 0),
             Size2D::new(size.width.floor() as u32, size.height.floor() as u32),
@@ -680,7 +655,7 @@ impl<B: Backend> Contents<B> {
                         raster: stroke
                             .segments
                             .iter()
-                            .fold(None, |raster_union: Option<B::Raster>, segment| {
+                            .fold(None, |raster_union: Option<Raster>, segment| {
                                 if let Some(raster) = &segment.1.raster {
                                     if let Some(raster_union) = raster_union {
                                         Some(raster_union + raster.clone())
@@ -710,10 +685,10 @@ impl<B: Backend> Contents<B> {
             let range = (damage.start * 2)..(damage.end * 2);
             // Add tool layers if needed.
             if self.tool_count < damage.end {
-                self.composition.splice(range.start.., layers);
+                self.composition.replace(range.start.., layers);
                 self.tool_count = damage.end;
             } else {
-                self.composition.splice(range, layers);
+                self.composition.replace(range, layers);
             }
         }
 
@@ -724,7 +699,7 @@ impl<B: Backend> Contents<B> {
                 raster: stroke
                     .segments
                     .iter()
-                    .fold(None, |raster_union: Option<B::Raster>, segment| {
+                    .fold(None, |raster_union: Option<Raster>, segment| {
                         if let Some(raster) = &segment.1.raster {
                             if let Some(raster_union) = raster_union {
                                 Some(raster_union + raster.clone())
@@ -747,16 +722,16 @@ impl<B: Backend> Contents<B> {
             // Add more stroke layers if needed.
             if self.stroke_count < scene.strokes.len() {
                 let count = scene.strokes.len() - self.stroke_count;
-                self.composition.splice(range.start..(range.end - count), layers);
+                self.composition.replace(range.start..(range.end - count), layers);
                 self.stroke_count = scene.strokes.len();
             } else {
-                self.composition.splice(range, layers);
+                self.composition.replace(range, layers);
             }
         }
 
         // Remove strokes that are no longer part of the scene.
         if self.stroke_count > scene.strokes.len() {
-            self.composition.splice(bottom.., std::iter::empty::<Layer<B>>());
+            self.composition.replace(bottom.., std::iter::empty::<Layer>());
             self.stroke_count = scene.strokes.len();
         }
 
@@ -911,10 +886,9 @@ impl TouchDevice {
     }
 }
 
-struct InkViewAssistant<B: Backend, C: Context<B>> {
-    context: C,
-    scene: Scene<B>,
-    contents: BTreeMap<u64, Contents<B>>,
+struct Ink {
+    scene: Scene,
+    contents: BTreeMap<u64, Contents>,
     touch_device: Option<TouchDevice>,
     touch_points: Vec<Point>,
     stylus_device: Option<StylusDevice>,
@@ -931,9 +905,18 @@ struct InkViewAssistant<B: Backend, C: Context<B>> {
     clear_origin: Vector2D<f32>,
 }
 
-impl<B: Backend, C: Context<B>> InkViewAssistant<B, C> {
-    pub fn new(context: C) -> Self {
-        let scene = Scene::new();
+impl Ink {
+    pub fn new(context: &mut Context, size: Size) -> Self {
+        let mut scene = Scene::new();
+
+        let color_iter = COLORS.iter().map(|color| (color, &TOOL_RADIUS));
+        let pencil_iter = PENCILS.iter().map(|size| (&Color { r: 0, g: 0, b: 0, a: 255 }, size));
+        let tools = color_iter.chain(pencil_iter).collect::<Vec<_>>();
+        scene.setup(context, size, &tools);
+        let color = 0;
+        let pencil = 1;
+        scene.select_tools(&vec![color, COLORS.len() + pencil]);
+
         let touch_device = TouchDevice::create().ok();
         let stylus_device = StylusDevice::create().ok();
         let flower_start = Time::from_nanos(
@@ -943,7 +926,6 @@ impl<B: Backend, C: Context<B>> InkViewAssistant<B, C> {
         );
 
         Self {
-            context,
             scene,
             contents: BTreeMap::new(),
             touch_device,
@@ -954,33 +936,23 @@ impl<B: Backend, C: Context<B>> InkViewAssistant<B, C> {
             last_stylus_point: None,
             flower: None,
             flower_start,
-            color: 0,
-            pencil: 1,
+            color,
+            pencil,
             pan_origin: Vector2D::zero(),
             scale_distance: 0.0,
             rotation_angle: 0.0,
             clear_origin: Vector2D::zero(),
         }
     }
-}
 
-impl<B: Backend, C: Context<B>> ViewAssistant for InkViewAssistant<B, C> {
-    fn setup(&mut self, context: &ViewAssistantContext<'_>) -> Result<(), Error> {
-        let size = &context.size;
-        let context = &mut self.context;
-        let color_iter = COLORS.iter().map(|color| (color, &TOOL_RADIUS));
-        let pencil_iter = PENCILS.iter().map(|size| (&Color { r: 0, g: 0, b: 0, a: 255 }, size));
-        let tools = color_iter.chain(pencil_iter).collect::<Vec<_>>();
-        self.scene.setup(context, size, &tools);
-        self.scene.select_tools(&vec![self.color, COLORS.len() + self.pencil]);
-
-        Ok(())
-    }
-
-    fn update(&mut self, context: &ViewAssistantContext<'_>) -> Result<(), Error> {
+    fn update(
+        &mut self,
+        render_context: &mut Context,
+        context: &ViewAssistantContext<'_>,
+    ) -> Result<(), Error> {
         duration!("gfx", "update");
+
         let time_now = Time::get(ClockId::Monotonic);
-        let canvas = context.canvas.as_ref().unwrap().borrow();
         let size = &context.size;
         let mut full_damage = false;
 
@@ -1194,34 +1166,67 @@ impl<B: Backend, C: Context<B>> ViewAssistant for InkViewAssistant<B, C> {
         }
 
         // Update tools and add damage to each content.
-        if let Some(tool_damage) = self.scene.update_tools(&mut self.context) {
+        if let Some(tool_damage) = self.scene.update_tools(render_context) {
             for content in self.contents.values_mut() {
                 content.add_tool_damage(&tool_damage);
             }
         }
 
         // Update strokes and add damage to each content.
-        if let Some(stroke_damage) = self.scene.update_strokes(&mut self.context) {
+        if let Some(stroke_damage) = self.scene.update_strokes(render_context) {
             for content in self.contents.values_mut() {
                 content.add_stroke_damage(&stroke_damage);
             }
         }
 
-        // Temporary hack to deal with the fact that carnelian
-        // allocates a new buffer for each frame with the same
-        // image ID of zero.
-        let mut temp_content;
-        let content;
-        let image = self.context.get_current_image(context);
+        let image_id = context.image_id;
+        let image = render_context.get_current_image(context);
+        let content = self.contents.entry(image_id).or_insert_with(|| Contents::new(image));
 
-        if canvas.id == 0 {
-            temp_content = Contents::new(image);
-            content = &mut temp_content;
-        } else {
-            content = self.contents.entry(canvas.id).or_insert_with(|| Contents::new(image));
+        content.update(render_context, &self.scene, size);
+
+        Ok(())
+    }
+}
+
+struct InkViewAssistant {
+    size: Size,
+    ink: Option<Ink>,
+}
+
+impl InkViewAssistant {
+    pub fn new() -> Self {
+        Self { size: Size::zero(), ink: None }
+    }
+}
+
+impl ViewAssistant for InkViewAssistant {
+    fn setup(&mut self, _context: &ViewAssistantContext<'_>) -> Result<(), Error> {
+        Ok(())
+    }
+
+    fn update(&mut self, _context: &ViewAssistantContext<'_>) -> Result<(), Error> {
+        Ok(())
+    }
+
+    fn render(
+        &mut self,
+        render_context: &mut Context,
+        ready_event: Event,
+        context: &ViewAssistantContext<'_>,
+    ) -> Result<(), Error> {
+        if context.size != self.size || self.ink.is_none() {
+            let ink = Ink::new(render_context, context.size);
+
+            self.size = context.size;
+            self.ink = Some(ink);
         }
 
-        content.update(&mut self.context, &self.scene, size);
+        if let Some(ink) = self.ink.as_mut() {
+            ink.update(render_context, context).expect("ink.update");
+        }
+
+        ready_event.as_handle_ref().signal(Signals::NONE, Signals::EVENT_SIGNALED)?;
 
         Ok(())
     }
@@ -1229,14 +1234,11 @@ impl<B: Backend, C: Context<B>> ViewAssistant for InkViewAssistant<B, C> {
     fn initial_animation_mode(&mut self) -> AnimationMode {
         return AnimationMode::EveryFrame;
     }
-
-    fn get_pixel_format(&self) -> fuchsia_framebuffer::PixelFormat {
-        self.context.pixel_format()
-    }
 }
 
 fn main() -> Result<(), Error> {
     fuchsia_trace_provider::trace_provider_create_with_fdio();
 
+    println!("Ink Example");
     App::run(make_app_assistant::<InkAppAssistant>())
 }

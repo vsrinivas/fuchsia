@@ -42,6 +42,8 @@ impl ScenicViewStrategy {
             canvas: None,
             buffer_count: None,
             wait_event: None,
+            image_id: 0,
+            image_index: 0,
         }
     }
 }

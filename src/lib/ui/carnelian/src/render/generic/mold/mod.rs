@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::render::Backend;
+use crate::render::generic::Backend;
 
 use euclid::Size2D;
 use fidl::endpoints::ClientEnd;
@@ -46,11 +46,11 @@ mod tests {
 
     use fidl::endpoints::create_endpoints;
 
-    use crate::render;
+    use crate::render::generic;
 
     #[test]
     fn mold_init() {
-        render::tests::run(|| {
+        generic::tests::run(|| {
             let (token, _) =
                 create_endpoints::<BufferCollectionTokenMarker>().expect("create_endpoint");
             Mold::new_context(token, Size2D::new(100, 100));

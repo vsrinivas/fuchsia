@@ -9,7 +9,7 @@ use fidl_fuchsia_sysmem::BufferCollectionSynchronousProxy;
 use fuchsia_zircon::{self as zx, prelude::*};
 use mapped_vmo::Mapping;
 
-use crate::render::mold::MoldComposition;
+use crate::render::generic::mold::MoldComposition;
 
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct MoldImage(pub(crate) usize);

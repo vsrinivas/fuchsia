@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::{ops::RangeBounds, rc::Rc, vec::Splice};
+use std::ops::RangeBounds;
 
 use crate::{
-    render::{mold::Mold, BlendMode, Composition, Fill, FillRule, Layer, Style},
+    render::generic::{mold::Mold, BlendMode, Composition, Fill, FillRule, Layer, Style},
     Color,
 };
 
@@ -29,8 +29,8 @@ fn style_to_ops(style: &Style) -> Vec<mold::tile::Op> {
 
 #[derive(Clone, Debug)]
 pub struct MoldComposition {
-    layers: Rc<Vec<Layer<Mold>>>,
-    background_color: Color,
+    pub(crate) layers: Vec<Layer<Mold>>,
+    pub(crate) background_color: Color,
 }
 
 impl MoldComposition {
@@ -93,22 +93,22 @@ impl MoldComposition {
 
 impl Composition<Mold> for MoldComposition {
     fn new(background_color: Color) -> Self {
-        Self { layers: Rc::new(vec![]), background_color }
+        Self { layers: vec![], background_color }
     }
 
     fn with_layers(layers: impl IntoIterator<Item = Layer<Mold>>, background_color: Color) -> Self {
-        Self { layers: Rc::new(layers.into_iter().collect()), background_color }
+        Self { layers: layers.into_iter().collect(), background_color }
     }
 
     fn clear(&mut self) {
-        Rc::get_mut(&mut self.layers).unwrap().clear();
+        self.layers.clear();
     }
 
-    fn splice<R, I>(&mut self, range: R, replace_with: I) -> Splice<'_, I::IntoIter>
+    fn replace<R, I>(&mut self, range: R, with: I)
     where
         R: RangeBounds<usize>,
         I: IntoIterator<Item = Layer<Mold>>,
     {
-        Rc::get_mut(&mut self.layers).unwrap().splice(range, replace_with)
+        self.layers.splice(range, with);
     }
 }

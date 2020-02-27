@@ -18,6 +18,6 @@ additional_shared_libraries = [
 ]
 
 data_files = [
-    { src = "examples/shaders/copy.comp.spv", dst = "data/shaders/copy.comp.spv"},
-    { src = "examples/shaders/motioncopy.comp.spv", dst = "data/shaders/motioncopy.comp.spv"},
+    { src = "src/render/shaders/copy.comp.spv", dst = "data/shaders/copy.comp.spv"},
+    { src = "src/render/shaders/motioncopy.comp.spv", dst = "data/shaders/motioncopy.comp.spv"},
 ]

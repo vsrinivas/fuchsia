@@ -7,7 +7,7 @@ use std::{ops::Add, rc::Rc};
 use euclid::{Transform2D, Vector2D};
 use smallvec::{smallvec, SmallVec};
 
-use crate::render::{
+use crate::render::generic::{
     mold::{Mold, MoldPath},
     Raster, RasterBuilder,
 };

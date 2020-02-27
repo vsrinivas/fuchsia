@@ -1,18 +1,22 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use crate::{
     app::{FrameBufferPtr, MessageInternal, FRAME_COUNT},
-    canvas::{Canvas, MappingPixelSink},
-    geometry::IntSize,
+    geometry::{IntSize, UintSize},
     message::Message,
+    render::{
+        generic::{self, Backend},
+        Context, ContextInner,
+    },
     view::{
         strategies::base::{ViewStrategy, ViewStrategyPtr},
-        Canvases, ViewAssistantContext, ViewAssistantPtr, ViewDetails, ViewKey,
+        ViewAssistantContext, ViewAssistantPtr, ViewDetails, ViewKey,
     },
 };
 use anyhow::Error;
 use async_trait::async_trait;
+use fidl::endpoints::create_endpoints;
 use fuchsia_async::{self as fasync};
 use fuchsia_framebuffer::{FrameSet, ImageId};
 use fuchsia_zircon::{self as zx, ClockId, Duration, Event, HandleBased, Time};
@@ -20,56 +24,56 @@ use futures::{
     channel::mpsc::{unbounded, UnboundedSender},
     StreamExt,
 };
-use std::{cell::RefCell, collections::BTreeMap};
+use std::collections::BTreeMap;
 
 type WaitEvents = BTreeMap<ImageId, Event>;
 
-pub(crate) struct FrameBufferViewStrategy {
+pub(crate) struct FrameBufferRenderViewStrategy {
     frame_buffer: FrameBufferPtr,
-    canvases: Canvases,
     frame_set: FrameSet,
-    image_sender: futures::channel::mpsc::UnboundedSender<u64>,
+    image_indexes: BTreeMap<ImageId, u32>,
+    context: Context,
     wait_events: WaitEvents,
-    signals_wait_event: bool,
+    image_sender: futures::channel::mpsc::UnboundedSender<u64>,
     vsync_phase: Time,
     vsync_interval: Duration,
 }
 
-impl FrameBufferViewStrategy {
+const RENDER_FRAME_COUNT: usize = FRAME_COUNT;
+
+impl FrameBufferRenderViewStrategy {
     pub(crate) async fn new(
         key: ViewKey,
+        use_mold: bool,
         size: &IntSize,
-        pixel_size: u32,
         pixel_format: fuchsia_framebuffer::PixelFormat,
-        stride: u32,
         app_sender: UnboundedSender<MessageInternal>,
         frame_buffer: FrameBufferPtr,
-        signals_wait_event: bool,
     ) -> Result<ViewStrategyPtr, Error> {
+        let unsize = UintSize::new(size.width as u32, size.height as u32);
         let mut fb = frame_buffer.borrow_mut();
-        fb.allocate_frames(FRAME_COUNT, pixel_format).await?;
-        let mut canvases: Canvases = Canvases::new();
-        let mut wait_events: WaitEvents = WaitEvents::new();
-        let image_ids = fb.get_image_ids();
-        image_ids.iter().for_each(|image_id| {
-            let frame = fb.get_frame_mut(*image_id);
-            let canvas = RefCell::new(Canvas::new(
-                *size,
-                MappingPixelSink::new(&frame.mapping),
-                stride,
-                pixel_size,
-                frame.image_id,
-                frame.image_index,
-            ));
-            canvases.insert(frame.image_id, canvas);
-            if signals_wait_event {
-                let wait_event = frame
-                    .wait_event
-                    .duplicate_handle(zx::Rights::SAME_RIGHTS)
-                    .expect("duplicate_handle");
-                wait_events.insert(frame.image_id, wait_event);
+        let fb_pixel_format =
+            if use_mold { pixel_format } else { fuchsia_framebuffer::PixelFormat::BgrX888 };
+        let context = {
+            let (context_token, context_token_request) =
+                create_endpoints::<fidl_fuchsia_sysmem::BufferCollectionTokenMarker>()?;
+
+            // Duplicate local token for display.
+            fb.local_token
+                .as_ref()
+                .expect("local_token")
+                .duplicate(std::u32::MAX, context_token_request)?;
+
+            // Ensure that duplicate message has been processed by sysmem.
+            fb.local_token.as_ref().expect("local_token").sync().await?;
+            Context {
+                inner: if use_mold {
+                    ContextInner::Mold(generic::Mold::new_context(context_token, unsize))
+                } else {
+                    ContextInner::Spinel(generic::Spinel::new_context(context_token, unsize))
+                },
             }
-        });
+        };
         let (image_sender, mut image_receiver) = unbounded::<u64>();
         // wait for events from the image freed fence to know when an
         // image can prepared.
@@ -80,14 +84,28 @@ impl FrameBufferViewStrategy {
                     .expect("unbounded_send");
             }
         });
-        let frame_set = FrameSet::new(image_ids);
-        Ok(Box::new(FrameBufferViewStrategy {
-            canvases,
+        fb.allocate_frames(RENDER_FRAME_COUNT, fb_pixel_format).await?;
+        let fb_image_ids = fb.get_image_ids();
+        let mut image_indexes = BTreeMap::new();
+        let mut wait_events: WaitEvents = WaitEvents::new();
+        for frame_image_id in &fb_image_ids {
+            let frame = fb.get_frame(*frame_image_id);
+            let frame_index = frame.image_index;
+            image_indexes.insert(*frame_image_id, frame_index);
+            let wait_event = frame
+                .wait_event
+                .duplicate_handle(zx::Rights::SAME_RIGHTS)
+                .expect("duplicate_handle");
+            wait_events.insert(frame.image_id, wait_event);
+        }
+        let frame_set = FrameSet::new(fb_image_ids);
+        Ok(Box::new(FrameBufferRenderViewStrategy {
             frame_buffer: frame_buffer.clone(),
             frame_set: frame_set,
-            image_sender: image_sender,
+            image_indexes,
+            context,
             wait_events,
-            signals_wait_event,
+            image_sender: image_sender,
             vsync_phase: Time::get(ClockId::Monotonic),
             vsync_interval: Duration::from_millis(16),
         }))
@@ -97,13 +115,8 @@ impl FrameBufferViewStrategy {
         &mut self,
         view_details: &ViewDetails,
         image_id: ImageId,
-    ) -> ViewAssistantContext<'_> {
-        let wait_event = if self.signals_wait_event {
-            let stored_wait_event = self.wait_events.get(&image_id).expect("wait event");
-            Some(stored_wait_event)
-        } else {
-            None
-        };
+    ) -> (ViewAssistantContext<'_>, &mut Context) {
+        let render_context = &mut self.context;
 
         let time_now = Time::get(ClockId::Monotonic);
         // |interval_offset| is the offset from |time_now| to the next multiple
@@ -118,30 +131,33 @@ impl FrameBufferViewStrategy {
             interval_offset += self.vsync_interval;
         }
 
-        ViewAssistantContext {
-            key: view_details.key,
-            logical_size: view_details.logical_size,
-            size: view_details.physical_size,
-            metrics: view_details.metrics,
-            presentation_time: time_now + interval_offset,
-            messages: Vec::new(),
-            scenic_resources: None,
-            canvas: Some(
-                &self.canvases.get(&image_id).expect("failed to get canvas in make_context"),
-            ),
-            buffer_count: Some(self.frame_buffer.borrow().get_frame_count()),
-            wait_event: wait_event,
-            image_id,
-            image_index: 0,
-        }
+        let image_index = *self.image_indexes.get(&image_id).expect("image index");
+
+        (
+            ViewAssistantContext {
+                key: view_details.key,
+                logical_size: view_details.logical_size,
+                size: view_details.physical_size,
+                metrics: view_details.metrics,
+                presentation_time: time_now + interval_offset,
+                messages: Vec::new(),
+                scenic_resources: None,
+                canvas: None,
+                buffer_count: Some(self.frame_buffer.borrow().get_frame_count()),
+                wait_event: None,
+                image_id,
+                image_index,
+            },
+            render_context,
+        )
     }
 }
 
 #[async_trait(?Send)]
-impl ViewStrategy for FrameBufferViewStrategy {
+impl ViewStrategy for FrameBufferRenderViewStrategy {
     fn setup(&mut self, view_details: &ViewDetails, view_assistant: &mut ViewAssistantPtr) {
         if let Some(available) = self.frame_set.get_available_image() {
-            let framebuffer_context = self.make_context(view_details, available);
+            let (framebuffer_context, ..) = self.make_context(view_details, available);
             view_assistant
                 .setup(&framebuffer_context)
                 .unwrap_or_else(|e| panic!("Setup error: {:?}", e));
@@ -151,9 +167,13 @@ impl ViewStrategy for FrameBufferViewStrategy {
 
     async fn update(&mut self, view_details: &ViewDetails, view_assistant: &mut ViewAssistantPtr) {
         if let Some(available) = self.frame_set.get_available_image() {
-            let framebuffer_context = self.make_context(view_details, available);
+            let buffer_ready_event = self.wait_events.get(&available).expect("wait event");
+            let buffer_ready_event = buffer_ready_event
+                .duplicate_handle(zx::Rights::SAME_RIGHTS)
+                .expect("duplicate_handle");
+            let (framebuffer_context, render_context) = self.make_context(view_details, available);
             view_assistant
-                .update(&framebuffer_context)
+                .render(render_context, buffer_ready_event, &framebuffer_context)
                 .unwrap_or_else(|e| panic!("Update error: {:?}", e));
             self.frame_set.mark_prepared(available);
         }
@@ -162,7 +182,7 @@ impl ViewStrategy for FrameBufferViewStrategy {
     fn present(&mut self, _view_details: &ViewDetails) {
         if let Some(prepared) = self.frame_set.prepared {
             let mut fb = self.frame_buffer.borrow_mut();
-            fb.present_frame(prepared, Some(self.image_sender.clone()), !self.signals_wait_event)
+            fb.present_frame(prepared, Some(self.image_sender.clone()), false)
                 .unwrap_or_else(|e| panic!("Present error: {:?}", e));
             self.frame_set.mark_presented(prepared);
         }

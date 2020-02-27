@@ -8,7 +8,7 @@ use euclid::{Transform2D, Vector2D};
 use smallvec::{smallvec, SmallVec};
 use spinel_rs_sys::*;
 
-use crate::render::{
+use crate::render::generic::{
     spinel::{Spinel, SpinelPath},
     Raster, RasterBuilder,
 };

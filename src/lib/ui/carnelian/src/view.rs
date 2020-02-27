@@ -7,13 +7,15 @@ use crate::{
     canvas::{Canvas, MappingPixelSink},
     geometry::{IntSize, Size},
     message::Message,
+    render::Context,
     scenic_utils::PresentationTime,
     view::strategies::{
-        base::ViewStrategyPtr, framebuffer::FrameBufferViewStrategy, scenic::ScenicViewStrategy,
-        scenic_canvas::ScenicCanvasViewStrategy,
+        base::ViewStrategyPtr, framebuffer::FrameBufferViewStrategy,
+        framebuffer_render::FrameBufferRenderViewStrategy, scenic::ScenicViewStrategy,
+        scenic_canvas::ScenicCanvasViewStrategy, scenic_render::RenderViewStrategy,
     },
 };
-use anyhow::Error;
+use anyhow::{bail, Error};
 use fidl_fuchsia_ui_gfx::{self as gfx, Metrics, ViewProperties};
 use fidl_fuchsia_ui_input::{
     FocusEvent, InputEvent, KeyboardEvent, PointerEvent, SetHardKeyboardDeliveryCmd,
@@ -74,6 +76,17 @@ pub struct ViewAssistantContext<'a> {
     /// set frame
     pub wait_event: Option<&'a Event>,
 
+    /// The ID of the Image being rendered in a buffer in
+    /// preparation for being displayed. Used to keep track
+    /// of what content needs to be rendered for a particular image
+    /// in double or triple buffering configurations.
+    pub image_id: ImageId,
+
+    /// The index of the buffer in a buffer collection that is
+    /// being used as the contents of the image specified in
+    /// `image_id`.
+    pub image_index: u32,
+
     messages: Vec<Message>,
 }
 
@@ -102,6 +115,16 @@ pub trait ViewAssistant {
 
     /// This method is called when a view controller has been asked to update the view.
     fn update(&mut self, context: &ViewAssistantContext<'_>) -> Result<(), Error>;
+
+    /// render for render mode views
+    fn render(
+        &mut self,
+        _render_context: &mut Context,
+        _buffer_ready_event: Event,
+        _view_context: &ViewAssistantContext<'_>,
+    ) -> Result<(), Error> {
+        anyhow::bail!("Assistant has ViewMode::Render but doesn't implement render.")
+    }
 
     /// This method is called when input events come from scenic to this view.
     fn handle_input_event(
@@ -262,10 +285,15 @@ impl ViewController {
         mut view_assistant: ViewAssistantPtr,
         app_sender: UnboundedSender<MessageInternal>,
     ) -> Result<ViewController, Error> {
-        let strategy = if mode == ViewMode::Canvas {
-            ScenicCanvasViewStrategy::new(&session, view_token, app_sender.clone()).await?
-        } else {
-            ScenicViewStrategy::new(&session, view_token, app_sender.clone())
+        let strategy = match mode {
+            ViewMode::Canvas => {
+                ScenicCanvasViewStrategy::new(&session, view_token, app_sender.clone()).await?
+            }
+            ViewMode::Scenic => ScenicViewStrategy::new(&session, view_token, app_sender.clone()),
+            ViewMode::Render { use_mold } => {
+                RenderViewStrategy::new(&session, use_mold, view_token, app_sender.clone()).await?
+            }
+            ViewMode::ImagePipe => bail!("ImagePipe mode is not yet supported with Scenic"),
         };
 
         let initial_animation_mode = view_assistant.initial_animation_mode();
@@ -289,8 +317,9 @@ impl ViewController {
     }
 
     /// new_with_frame_buffer
-    pub(crate) fn new_with_frame_buffer(
+    pub(crate) async fn new_with_frame_buffer(
         key: ViewKey,
+        view_mode: ViewMode,
         size: IntSize,
         pixel_size: u32,
         pixel_format: fuchsia_framebuffer::PixelFormat,
@@ -300,16 +329,33 @@ impl ViewController {
         frame_buffer: FrameBufferPtr,
         signals_wait_event: bool,
     ) -> Result<ViewController, Error> {
-        let strategy = FrameBufferViewStrategy::new(
-            key,
-            &size,
-            pixel_size,
-            pixel_format,
-            stride,
-            app_sender.clone(),
-            frame_buffer,
-            signals_wait_event,
-        );
+        let strategy = match view_mode {
+            ViewMode::Render { use_mold } => {
+                FrameBufferRenderViewStrategy::new(
+                    key,
+                    use_mold,
+                    &size,
+                    pixel_format,
+                    app_sender.clone(),
+                    frame_buffer,
+                )
+                .await?
+            }
+            ViewMode::ImagePipe | ViewMode::Canvas => {
+                FrameBufferViewStrategy::new(
+                    key,
+                    &size,
+                    pixel_size,
+                    pixel_format,
+                    stride,
+                    app_sender.clone(),
+                    frame_buffer,
+                    signals_wait_event,
+                )
+                .await?
+            }
+            _ => bail!("Invalid view mode {:#?} when running without Scenic", view_mode),
+        };
         let initial_animation_mode = view_assistant.initial_animation_mode();
         let mut view_controller = ViewController {
             key,

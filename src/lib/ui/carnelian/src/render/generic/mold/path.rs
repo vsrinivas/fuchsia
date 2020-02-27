@@ -7,7 +7,7 @@ use std::rc::Rc;
 use mold;
 
 use crate::{
-    render::{mold::Mold, PathBuilder},
+    render::generic::{mold::Mold, PathBuilder},
     Point,
 };
 

@@ -7,7 +7,7 @@ use std::{cell::RefCell, rc::Rc};
 use spinel_rs_sys::*;
 
 use crate::{
-    render::{
+    render::generic::{
         spinel::{init, InnerContext, Spinel},
         PathBuilder,
     },

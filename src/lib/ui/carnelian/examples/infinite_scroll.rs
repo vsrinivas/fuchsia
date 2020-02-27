@@ -6,18 +6,14 @@ use {
     anyhow::Error,
     argh::FromArgs,
     carnelian::{
-        make_app_assistant, render::*, AnimationMode, App, AppAssistant, Color, FontFace,
-        FrameBufferPtr, Point, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr,
-        ViewKey, ViewMode,
+        make_app_assistant, render::*, AnimationMode, App, AppAssistant, Color, FontFace, Point,
+        Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMode,
     },
     euclid::{Point2D, Rect, Size2D, Vector2D},
-    fidl::endpoints::create_endpoints,
-    fidl_fuchsia_input_report as hid_input_report,
-    fidl_fuchsia_sysmem::BufferCollectionTokenMarker,
-    fuchsia_async as fasync,
+    fidl_fuchsia_input_report as hid_input_report, fuchsia_async as fasync,
     fuchsia_trace::{self, counter, duration},
     fuchsia_trace_provider,
-    fuchsia_zircon::{self as zx, ClockId, Time},
+    fuchsia_zircon::{self as zx, AsHandleRef, ClockId, Event, Signals, Time},
     futures::channel::mpsc::UnboundedReceiver,
     lazy_static::lazy_static,
     lipsum::{lipsum_title, lipsum_words},
@@ -72,7 +68,7 @@ lazy_static! {
 }
 
 /// Infinite scroll.
-#[derive(Debug, FromArgs)]
+#[derive(Clone, Debug, FromArgs)]
 #[argh(name = "infinite_scroll_rs")]
 struct Args {
     /// use mold (software rendering back-end)
@@ -105,18 +101,12 @@ struct Args {
 }
 
 #[derive(Default)]
-struct InfiniteScrollAppAssistant;
+struct InfiniteScrollAppAssistant {
+    args: Option<Args>,
+}
 
 impl AppAssistant for InfiniteScrollAppAssistant {
     fn setup(&mut self) -> Result<(), Error> {
-        Ok(())
-    }
-
-    fn create_view_assistant_image_pipe(
-        &mut self,
-        _: ViewKey,
-        fb: FrameBufferPtr,
-    ) -> Result<ViewAssistantPtr, Error> {
         let args: Args = argh::from_env();
         println!("back-end: {}", if args.use_mold { "mold" } else { "spinel" });
         println!("scale: {}", args.scale);
@@ -128,43 +118,20 @@ impl AppAssistant for InfiniteScrollAppAssistant {
             _ => {}
         }
         println!("touch sampling offset: {} ms", args.touch_sampling_offset_ms);
+        self.args = Some(args);
+        Ok(())
+    }
 
-        let (token, token_request) =
-            create_endpoints::<BufferCollectionTokenMarker>().expect("create_endpoint");
-        fb.borrow()
-            .local_token
-            .as_ref()
-            .unwrap()
-            .duplicate(std::u32::MAX, token_request)
-            .expect("duplicate");
-        let config = &fb.borrow().get_config();
-        let size = Size2D::new(config.width, config.height);
-
-        if args.use_mold {
-            Ok(Box::new(InfiniteScrollViewAssistant::new(
-                Mold::new_context(token, size),
-                args.scale,
-                args.scroll_method,
-                args.exposure,
-                zx::Duration::from_millis(args.touch_sampling_offset_ms),
-                args.max_columns,
-                args.disable_text,
-            )))
-        } else {
-            Ok(Box::new(InfiniteScrollViewAssistant::new(
-                Spinel::new_context(token, size),
-                args.scale,
-                args.scroll_method,
-                args.exposure,
-                zx::Duration::from_millis(args.touch_sampling_offset_ms),
-                args.max_columns,
-                args.disable_text,
-            )))
-        }
+    fn create_view_assistant_render(&mut self, _: ViewKey) -> Result<ViewAssistantPtr, Error> {
+        Ok(Box::new(InfiniteScrollViewAssistant::new(
+            self.args.clone().expect("AppAssistant::setup not run"),
+        )))
     }
 
     fn get_mode(&self) -> ViewMode {
-        ViewMode::ImagePipe
+        ViewMode::Render {
+            use_mold: self.args.as_ref().map(|args| args.use_mold).unwrap_or_default(),
+        }
     }
 }
 
@@ -197,8 +164,8 @@ fn lerp(t: f32, p0: Point, p1: Point) -> Point {
     Point::new(p0.x * (1.0 - t) + p1.x * t, p0.y * (1.0 - t) + p1.y * t)
 }
 
-fn cubic<B: Backend>(
-    path_builder: &mut impl PathBuilder<B>,
+fn cubic(
+    path_builder: &mut PathBuilder,
     p0: Point,
     p1: Point,
     p2: Point,
@@ -240,13 +207,13 @@ fn cubic<B: Backend>(
     *bounding_box = bounding_box.union(&p3);
 }
 
-struct Glyph<B: Backend> {
-    raster: B::Raster,
+struct Glyph {
+    raster: Raster,
     bounding_box: Rect<f32>,
 }
 
-impl<B: Backend> Glyph<B> {
-    fn new(context: &mut impl Context<B>, face: &FontFace<'_>, size: f32, id: GlyphId) -> Self {
+impl Glyph {
+    fn new(context: &mut Context, face: &FontFace<'_>, size: f32, id: GlyphId) -> Self {
         duration!("gfx", "Glyph::new");
 
         let mut path_builder = context.path_builder().unwrap();
@@ -298,19 +265,19 @@ impl<B: Backend> Glyph<B> {
     }
 }
 
-struct Text<B: Backend> {
-    raster: B::Raster,
+struct Text {
+    raster: Raster,
     bounding_box: Rect<f32>,
 }
 
-impl<B: Backend> Text<B> {
+impl Text {
     fn new(
-        context: &mut impl Context<B>,
+        context: &mut Context,
         text: &str,
         size: f32,
         wrap: usize,
         face: &FontFace<'_>,
-        glyphs: &mut BTreeMap<GlyphId, Glyph<B>>,
+        glyphs: &mut BTreeMap<GlyphId, Glyph>,
     ) -> Self {
         duration!("gfx", "Text::new");
 
@@ -363,13 +330,13 @@ impl<B: Backend> Text<B> {
     }
 }
 
-struct Flower<B: Backend> {
-    raster: B::Raster,
+struct Flower {
+    raster: Raster,
     bounding_box: Rect<f32>,
 }
 
-impl<B: Backend> Flower<B> {
-    fn new(context: &mut impl Context<B>, petal_count: usize, r1: f32, r2: f32) -> Self {
+impl Flower {
+    fn new(context: &mut Context, petal_count: usize, r1: f32, r2: f32) -> Self {
         duration!("gfx", "Flower::new");
 
         let mut bounding_box = Box2D::new();
@@ -431,28 +398,28 @@ const ITEM_TYPE_BODY_MAX: i32 = 3;
 const ITEM_TYPE_FLOWER: i32 = 4;
 const ITEM_TYPE_COUNT: i32 = 5;
 
-struct Item<B: Backend> {
-    raster: B::Raster,
+struct Item {
+    raster: Raster,
     bounding_box: Rect<f32>,
-    bounding_box_raster: B::Raster,
+    bounding_box_raster: Raster,
     color: Color,
     id: i32,
 }
 
-struct Scene<B: Backend> {
+struct Scene {
     scale: f32,
     exposure: f32,
     max_columns: u32,
     text_disabled: bool,
     scroll_offset_y: u32,
     last_scroll_offset_y: u32,
-    title_glyphs: BTreeMap<GlyphId, Glyph<B>>,
-    body_glyphs: BTreeMap<GlyphId, Glyph<B>>,
-    columns: Vec<VecDeque<Item<B>>>,
+    title_glyphs: BTreeMap<GlyphId, Glyph>,
+    body_glyphs: BTreeMap<GlyphId, Glyph>,
+    columns: Vec<VecDeque<Item>>,
     total_items: usize,
 }
 
-impl<B: Backend> Scene<B> {
+impl Scene {
     fn new(scale: f32, exposure: f32, max_columns: u32, text_disabled: bool) -> Self {
         // Equal amount of coordinate space above and below.
         let scroll_offset_y = (SCROLL_OFFSET_RANGE[0] + SCROLL_OFFSET_RANGE[1]) / 2;
@@ -472,16 +439,16 @@ impl<B: Backend> Scene<B> {
     }
 
     fn new_item(
-        context: &mut impl Context<B>,
+        context: &mut Context,
         offset: Vector2D<i32>,
         align_bottom: bool,
         scale: f32,
-        title_glyphs: &mut BTreeMap<GlyphId, Glyph<B>>,
-        body_glyphs: &mut BTreeMap<GlyphId, Glyph<B>>,
+        title_glyphs: &mut BTreeMap<GlyphId, Glyph>,
+        body_glyphs: &mut BTreeMap<GlyphId, Glyph>,
         id: i32,
         column_width: f32,
         text_disabled: bool,
-    ) -> Item<B> {
+    ) -> Item {
         let item_type =
             if text_disabled { ITEM_TYPE_FLOWER } else { id.rem_euclid(ITEM_TYPE_COUNT) };
         // Alternate between title, body, and flower shape.
@@ -554,7 +521,7 @@ impl<B: Backend> Scene<B> {
         }
     }
 
-    fn update(&mut self, context: &mut impl Context<B>, size: &Size, scroll_delta: i32) {
+    fn update(&mut self, context: &mut Context, size: &Size, scroll_delta: i32) {
         counter!("gfx", "scroll_dy", 0, "dy" => scroll_delta.abs());
 
         let new_offset = self.scroll_offset_y as i32 + scroll_delta;
@@ -668,7 +635,7 @@ impl<B: Backend> Scene<B> {
 
     fn prepend_clear_layers_to_composition(
         &self,
-        composition: &mut B::Composition,
+        composition: &mut Composition,
         viewport: &Rect<f32>,
         ty: i32,
     ) {
@@ -686,12 +653,12 @@ impl<B: Backend> Scene<B> {
                 },
             });
 
-        composition.splice(..0, layers);
+        composition.replace(..0, layers);
     }
 
     fn prepend_layers_to_composition(
         &self,
-        composition: &mut B::Composition,
+        composition: &mut Composition,
         viewport: &Rect<f32>,
         ty: i32,
     ) {
@@ -709,20 +676,20 @@ impl<B: Backend> Scene<B> {
                 },
             });
 
-        composition.splice(..0, layers);
+        composition.replace(..0, layers);
     }
 }
 
-struct Contents<B: Backend> {
-    image: B::Image,
+struct Contents {
+    image: Image,
     scroll_method: ScrollMethod,
     scroll_offset_y: u32,
     size: Size,
-    composition: B::Composition,
+    composition: Composition,
 }
 
-impl<B: Backend> Contents<B> {
-    fn new(image: B::Image, scroll_method: ScrollMethod) -> Self {
+impl Contents {
+    fn new(image: Image, scroll_method: ScrollMethod) -> Self {
         let composition = Composition::new(BACKGROUND_COLOR);
 
         Self { image, scroll_method, scroll_offset_y: 0, size: Size::zero(), composition }
@@ -730,10 +697,10 @@ impl<B: Backend> Contents<B> {
 
     fn update(
         &mut self,
-        context: &mut impl Context<B>,
-        scene: &mut Scene<B>,
+        context: &mut Context,
+        scene: &mut Scene,
         size: &Size,
-        staging_image: &mut Option<B::Image>,
+        staging_image: &mut Option<Image>,
     ) {
         let width = size.width.floor() as u32;
         let height = size.height.floor() as u32;
@@ -1166,12 +1133,11 @@ impl FlingCurve {
     }
 }
 
-struct InfiniteScrollViewAssistant<B: Backend, C: Context<B>> {
-    context: C,
+struct InfiniteScroll {
     scroll_method: ScrollMethod,
     touch_sampling_offset: zx::Duration,
-    scene: Scene<B>,
-    contents: BTreeMap<u64, Contents<B>>,
+    scene: Scene,
+    contents: BTreeMap<u64, Contents>,
     last_presentation_time: Time,
     touch_device: Option<TouchDevice>,
     touch_points: Vec<Point>,
@@ -1182,12 +1148,11 @@ struct InfiniteScrollViewAssistant<B: Backend, C: Context<B>> {
     fling_curve: Option<FlingCurve>,
     fake_scroll_start: Time,
     fake_scroll_velocity: Option<f32>,
-    staging_image: Option<B::Image>,
+    staging_image: Option<Image>,
 }
 
-impl<B: Backend, C: Context<B>> InfiniteScrollViewAssistant<B, C> {
+impl InfiniteScroll {
     pub fn new(
-        context: C,
         scale: f32,
         scroll_method: ScrollMethod,
         exposure: f32,
@@ -1203,7 +1168,6 @@ impl<B: Backend, C: Context<B>> InfiniteScrollViewAssistant<B, C> {
             ));
 
         Self {
-            context,
             scroll_method,
             touch_sampling_offset,
             scene,
@@ -1221,17 +1185,14 @@ impl<B: Backend, C: Context<B>> InfiniteScrollViewAssistant<B, C> {
             staging_image: None,
         }
     }
-}
 
-impl<B: Backend, C: Context<B>> ViewAssistant for InfiniteScrollViewAssistant<B, C> {
-    fn setup(&mut self, _context: &ViewAssistantContext<'_>) -> Result<(), Error> {
-        Ok(())
-    }
-
-    fn update(&mut self, context: &ViewAssistantContext<'_>) -> Result<(), Error> {
+    fn update(
+        &mut self,
+        render_context: &mut Context,
+        context: &ViewAssistantContext<'_>,
+    ) -> Result<(), Error> {
         duration!("gfx", "InfiniteScrollViewAssistant::update");
 
-        let canvas = context.canvas.as_ref().unwrap().borrow();
         let size = &context.size;
         let presentation_time = context.presentation_time;
         let elapsed = presentation_time - self.last_presentation_time;
@@ -1384,27 +1345,67 @@ impl<B: Backend, C: Context<B>> ViewAssistant for InfiniteScrollViewAssistant<B,
         }
 
         // Update the scene using our scroll delta.
-        self.scene.update(&mut self.context, size, scroll_delta);
+        self.scene.update(render_context, size, scroll_delta);
 
-        // Temporary hack to deal with the fact that carnelian
-        // allocates a new buffer for each frame with the same
-        // image ID of zero.
-        let mut temp_content;
-        let content;
-        let image = self.context.get_current_image(context);
+        let image_id = context.image_id;
+        let image = render_context.get_current_image(context);
+        let content =
+            self.contents.entry(image_id).or_insert_with(|| Contents::new(image, scroll_method));
 
-        if canvas.id == 0 {
-            temp_content = Contents::new(image, scroll_method);
-            content = &mut temp_content;
-        } else {
-            content = self
-                .contents
-                .entry(canvas.id)
-                .or_insert_with(|| Contents::new(image, scroll_method));
-        }
-        content.update(&mut self.context, &mut self.scene, size, &mut self.staging_image);
+        content.update(render_context, &mut self.scene, size, &mut self.staging_image);
 
         self.last_presentation_time = presentation_time;
+
+        Ok(())
+    }
+}
+
+struct InfiniteScrollViewAssistant {
+    size: Size,
+    args: Args,
+    infinite_scroll: Option<InfiniteScroll>,
+}
+
+impl InfiniteScrollViewAssistant {
+    pub fn new(args: Args) -> Self {
+        Self { size: Size::zero(), args, infinite_scroll: None }
+    }
+}
+
+impl ViewAssistant for InfiniteScrollViewAssistant {
+    fn setup(&mut self, _context: &ViewAssistantContext<'_>) -> Result<(), Error> {
+        Ok(())
+    }
+
+    fn update(&mut self, _context: &ViewAssistantContext<'_>) -> Result<(), Error> {
+        Ok(())
+    }
+
+    fn render(
+        &mut self,
+        render_context: &mut Context,
+        ready_event: Event,
+        context: &ViewAssistantContext<'_>,
+    ) -> Result<(), Error> {
+        if context.size != self.size || self.infinite_scroll.is_none() {
+            let infinite_scroll = InfiniteScroll::new(
+                self.args.scale,
+                self.args.scroll_method,
+                self.args.exposure,
+                zx::Duration::from_millis(self.args.touch_sampling_offset_ms),
+                self.args.max_columns,
+                self.args.disable_text,
+            );
+
+            self.size = context.size;
+            self.infinite_scroll = Some(infinite_scroll);
+        }
+
+        if let Some(infinite_scroll) = self.infinite_scroll.as_mut() {
+            infinite_scroll.update(render_context, context).expect("infinite_scroll.update");
+        }
+
+        ready_event.as_handle_ref().signal(Signals::NONE, Signals::EVENT_SIGNALED)?;
 
         Ok(())
     }
@@ -1412,14 +1413,11 @@ impl<B: Backend, C: Context<B>> ViewAssistant for InfiniteScrollViewAssistant<B,
     fn initial_animation_mode(&mut self) -> AnimationMode {
         return AnimationMode::EveryFrame;
     }
-
-    fn get_pixel_format(&self) -> fuchsia_framebuffer::PixelFormat {
-        self.context.pixel_format()
-    }
 }
 
 fn main() -> Result<(), Error> {
     fuchsia_trace_provider::trace_provider_create_with_fdio();
 
+    println!("Infinite Scroll Example");
     App::run(make_app_assistant::<InfiniteScrollAppAssistant>())
 }

@@ -17,7 +17,7 @@ use fuchsia_framebuffer::PixelFormat;
 use fuchsia_zircon as zx;
 
 use crate::{
-    render::{
+    render::generic::{
         mold::{
             image::VmoImage, Mold, MoldComposition, MoldImage, MoldPathBuilder, MoldRasterBuilder,
         },
@@ -176,7 +176,7 @@ impl Context<Mold> for MoldContext {
     }
 
     fn get_current_image(&mut self, context: &ViewAssistantContext<'_>) -> MoldImage {
-        let image_index = context.canvas.as_ref().unwrap().borrow().index;
+        let image_index = context.image_index;
 
         let buffer_collection = &mut self.buffer_collection;
         let images = &mut self.images;

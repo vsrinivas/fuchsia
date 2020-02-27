@@ -12,7 +12,7 @@ use fidl::endpoints::ClientEnd;
 use fidl_fuchsia_sysmem::BufferCollectionTokenMarker;
 use vk_sys as vk;
 
-use crate::render::Backend;
+use crate::render::generic::Backend;
 
 // Required spinel libraries.
 #[link(name = "spinel", kind = "static")]
@@ -231,11 +231,11 @@ mod tests {
 
     use fidl::endpoints::create_endpoints;
 
-    use crate::render;
+    use crate::render::generic;
 
     #[test]
     fn spinel_init() {
-        render::tests::run(|| {
+        generic::tests::run(|| {
             let (token, _) =
                 create_endpoints::<BufferCollectionTokenMarker>().expect("create_endpoint");
             Spinel::new_context(token, Size2D::new(100, 100));

@@ -24,7 +24,7 @@ use spinel_rs_sys::*;
 use vk_sys as vk;
 
 use crate::{
-    render::{
+    render::generic::{
         spinel::{
             image::{image_create_info, update_descriptor_set, VulkanImage},
             *,
@@ -712,7 +712,7 @@ impl Context<Spinel> for SpinelContext {
     }
 
     fn get_current_image(&mut self, context: &ViewAssistantContext<'_>) -> SpinelImage {
-        let image_index = context.canvas.as_ref().unwrap().borrow().index;
+        let image_index = context.image_index;
 
         let vulkan = &self.vulkan;
         let images = &mut self.images;
