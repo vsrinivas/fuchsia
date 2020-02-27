@@ -20,7 +20,6 @@ driver_module("lite-on") {
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/device-protocol-i2c",
-    "//zircon/public/lib/device-protocol-i2c-channel",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/hid",
@@ -30,6 +29,7 @@ driver_module("lite-on") {
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.hidbus",
     "//zircon/system/banjo/ddk.protocol.i2c",
+    "//zircon/system/dev/lib/device-protocol-i2c-channel",
   ]
 }
 
@@ -56,20 +56,20 @@ test("ltr-578als-test") {
   deps = [
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/device-protocol-i2c",
-    "//zircon/public/lib/device-protocol-i2c-channel",
     "//zircon/public/lib/fake_ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/hid",
     "//zircon/public/lib/mmio",
-    "//zircon/public/lib/mock-hidbus-ifc",
-    "//zircon/public/lib/mock-i2c",
     "//zircon/public/lib/simplehid",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/unittest",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/banjo/ddk.protocol.i2c",
+    "//zircon/system/dev/lib/device-protocol-i2c-channel",
+    "//zircon/system/dev/lib/mock-hidbus-ifc",
+    "//zircon/system/dev/lib/mock-i2c",
   ]
 }
 

@@ -18,7 +18,6 @@ driver_module("max98373") {
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
-    "//zircon/public/lib/device-protocol-i2c-channel",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
@@ -26,6 +25,7 @@ driver_module("max98373") {
     "//zircon/system/banjo/ddk.protocol.gpio",
     "//zircon/system/banjo/ddk.protocol.i2c",
     "//zircon/system/banjo/ddk.protocol.platform.device",
+    "//zircon/system/dev/lib/device-protocol-i2c-channel",
   ]
 }
 
@@ -43,11 +43,9 @@ test("max98373-test") {
     "//sdk/banjo/ddk.protocol.composite",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
-    "//zircon/public/lib/device-protocol-i2c-channel",
     "//zircon/public/lib/fake_ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/mock-function",
-    "//zircon/public/lib/mock-i2c",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
@@ -56,6 +54,8 @@ test("max98373-test") {
     "//zircon/system/banjo/ddk.protocol.gpio",
     "//zircon/system/banjo/ddk.protocol.gpio:ddk.protocol.gpio_mock",
     "//zircon/system/banjo/ddk.protocol.i2c",
+    "//zircon/system/dev/lib/device-protocol-i2c-channel",
+    "//zircon/system/dev/lib/mock-i2c",
   ]
 }
 

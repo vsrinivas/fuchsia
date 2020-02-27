@@ -54,13 +54,13 @@ test("as370-power-test") {
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/mock-function",
-    "//zircon/public/lib/mock-i2c",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.powerimpl",
+    "//zircon/system/dev/lib/mock-i2c",
   ]
 }
 

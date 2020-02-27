@@ -2,16 +2,28 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36548.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/zx_library.gni")
+
 zx_library("mock-hidbus-ifc") {
   sdk = "source"
   sdk_headers = [ "lib/mock-hidbus-ifc/mock-hidbus-ifc.h" ]
   testonly = true
   sources = []
   deps = [
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/ddktl",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/sync",
-    "$zx/system/ulib/zxtest",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zxtest",
   ]
 }
