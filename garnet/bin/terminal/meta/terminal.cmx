@@ -19,17 +19,23 @@
             "fuchsia.hardware.pty.Device",
             "fuchsia.logger.Log",
             "fuchsia.net.NameLookup",
+            "fuchsia.pkg.PackageCache",
+            "fuchsia.pkg.PackageResolverAdmin",
+            "fuchsia.pkg.RepositoryManager",
+            "fuchsia.pkg.rewrite.Engine",
             "fuchsia.posix.socket.Provider",
             "fuchsia.process.Launcher",
             "fuchsia.process.Resolver",
-            "fuchsia.tracing.provider.Registry",
+            "fuchsia.space.Manager",
             "fuchsia.sys.Environment",
             "fuchsia.sys.index.FuzzySearch",
             "fuchsia.sys.Launcher",
             "fuchsia.sys.Loader",
             "fuchsia.sysmem.Allocator",
+            "fuchsia.tracing.provider.Registry",
             "fuchsia.ui.input.ImeService",
-            "fuchsia.ui.scenic.Scenic"
+            "fuchsia.ui.scenic.Scenic",
+            "fuchsia.update.Manager"
         ]
     }
 }
