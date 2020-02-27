@@ -52,8 +52,6 @@ impl FrameBufferRenderViewStrategy {
     ) -> Result<ViewStrategyPtr, Error> {
         let unsize = UintSize::new(size.width as u32, size.height as u32);
         let mut fb = frame_buffer.borrow_mut();
-        let fb_pixel_format =
-            if use_mold { pixel_format } else { fuchsia_framebuffer::PixelFormat::BgrX888 };
         let context = {
             let (context_token, context_token_request) =
                 create_endpoints::<fidl_fuchsia_sysmem::BufferCollectionTokenMarker>()?;
@@ -84,6 +82,7 @@ impl FrameBufferRenderViewStrategy {
                     .expect("unbounded_send");
             }
         });
+        let fb_pixel_format = if use_mold { pixel_format } else { context.pixel_format() };
         fb.allocate_frames(RENDER_FRAME_COUNT, fb_pixel_format).await?;
         let fb_image_ids = fb.get_image_ids();
         let mut image_indexes = BTreeMap::new();
