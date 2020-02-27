@@ -53,7 +53,7 @@ This page is a non-comprehensive index of the zircon documentation.
 + [C++ fit::promise<> guide](/docs/development/languages/c-cpp/fit_promise_guide.md)
 
 + [Testing](/docs/development/testing/testing.md)
-+ [Kernel tracing](/docs/development/tracing/ktrace.md)
++ [Kernel tracing](/docs/development/tracing/advanced/recording-a-kernel-trace.md)
 + [Block device testing](/docs/development/testing/block_device_testing.md)
 + [nand Testing](/docs/development/testing/nand_testing.md)
 

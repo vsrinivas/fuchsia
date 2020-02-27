@@ -1,0 +1,8 @@
+# Please, read https://fuchsia.dev/fuchsia-src/community/contribute/docs/documentation_navigation_toc
+# before making changes to this file, and add a member of the fuchsia.dev
+# team as reviewer.
+toc:
+- title: "Fuchsia tracing system"
+  path: /docs/concepts/tracing/README.md
+- title: "Tracing provider buffering modes"
+  path: /docs/concepts/tracing/tracing-provider-buffering-modes.md

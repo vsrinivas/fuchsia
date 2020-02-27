@@ -64,6 +64,9 @@ toc:
 - title: "Testing"
   section:
   - include: /docs/concepts/testing/_toc.yaml
+- title: "Tracing"
+  section:
+  - include: /docs/concepts/tracing/_toc.yaml
 - title: "USB"
   section:
   - include: /docs/concepts/usb/_toc.yaml

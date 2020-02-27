@@ -1,22 +1,27 @@
-# Fuchsia Tracing
+# Fuchsia tracing guides
 
-- [Quickstart](quick-start/README.md)
+If you are unfamiliar with the Fuchsia tracing system, see
+[Fuchsia tracing system](/docs/concepts/tracing/README.md).
 
-## Collecting Traces
+## Tutorial
 
-- [Tracing Boot](tracing-boot.md)
-- [Tutorial](tutorial.md)
-- [Usage Guide](usage-guide.md)
+These guides describe the steps necessary to add tracing to your Fuchsia
+components:
 
-## Visualing Traces
+Note: If you are unfamiliar with tracing, you should complete these guides
+sequentially. However, you can also use each guide individually.
 
-- (external) [Chrome Trace Viewer](https://www.chromium.org/developers/how-tos/trace-event-profiling-tool)
+* [Registering a trace provider](/docs/development/tracing/tutorial/registering-a-trace-provider.md)
+* [Adding tracing in your code](/docs/development/tracing/tutorial/adding-tracing-in-code.md)
+* [Recording a trace](/docs/development/tracing/tutorial/recording-a-fuchsia-trace.md)
+* [Converting and visualizing a trace](/docs/development/tracing/tutorial/converting-visualizing-a-trace.md)
 
-## Individual Trace Providers
+## Advanced guides
 
-- [CPU Performance Monitor](cpuperf-provider.md)
+These guides are for advanced users who already understand the basics
+of tracing in Fuchsia:
 
-## Internal Documentation
-
-- [Design](design.md)
-- [Trace Format](trace-format/README.md)
+* [Tracing booting Fuchsia](/docs/development/tracing/advanced/recording-a-boot-trace.md)
+* [CPU performance monitor](/docs/development/tracing/advanced/recording-a-cpu-performance-trace.md)
+* [Kernel tracing](/docs/development/tracing/advanced/recording-a-kernel-trace.md)
+* [Asynchronous tracing](/docs/development/tracing/advanced/tracing-asynchronously.md)

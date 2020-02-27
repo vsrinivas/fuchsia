@@ -1,10 +1,10 @@
-# CPU Performance Monitor
+# CPU performance monitor
 
 ## Introduction
 
 The CPU Performance Monitor Trace Provider gives the user access to the
 performance counters built into the CPU using the
-[tracing system provided by Fuchsia](usage-guide.md).
+[Fuchsia tracing system](/docs/concepts/tracing/README.md).
 
 At present this is only supported for Intel chipsets.
 

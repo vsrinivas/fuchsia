@@ -4,7 +4,7 @@ This document describes how to add tracing to device drivers.
 
 ## Overview
 
-Please read [Fuchsia Tracing System Design](/docs/development/tracing/design.md)
+Please read [Fuchsia tracing system](/docs/concepts/tracing/README.md)
 for an overview of tracing.
 
 ## Trace Provider

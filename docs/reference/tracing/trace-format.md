@@ -1,24 +1,27 @@
-# Fuchsia Trace Format
+# Fuchsia trace format
 
 This document describes the binary format used to collect, store, and
 transmit Fuchsia trace records.
+You can use this document to search for detailed information
+about each field in the Fuchsia trace format.
 
-See [Fuchsia Tracing System Design](../design.md) for an overview.
+Note: For information about the Fuchsia tracing system,
+see [Fuchsia tracing system](/docs/concepts/tracing/README.md).
 
-## Purpose
+## Overview
 
-While a trace is running, _trace providers_ write records into a trace buffer
+While a trace is running, trace providers write records into a trace buffer
 VMO shared with the trace manager using the binary format described in this
 document.
 
 The binary format is designed to introduce minimal impact upon the
-performance of the subject under trace while writing traces.  The records
+performance of the subject under trace while writing traces. The records
 are also written sequentially so that if a trace terminates (normally or
 abnormally), the trace manager can still recover partial trace data already
 stored in the trace buffer by reading everything up to the last well-formed
 record.
 
-As the trace progresses, the _trace manager_ aggregates records from all
+As the trace progresses, the trace manager aggregates records from all
 trace providers which are participating in trace collection and concatenates
 them together with some special metadata records to form a trace archive.
 
@@ -41,29 +44,21 @@ or save them to a file for later consumption.
   - There's room to define new record types as needed.
   - Unrecognized or malformed trace records can be skipped.
 
-## Encoding Primitives
+## Encoding primitives {#encoding-primitives}
 
-### Records
+The Fuchsia trace format has the following encoding primitives:
 
-A trace record is a binary encoded piece of trace information consisting of
-a sequence of [atoms](#atoms).
+* [Atmos](#atmos)
+* [Records](#records)
+* [Archives](#archives)
+* [Timestamps](#timestamps)
+* [String references](#string-references)
+* [Thread references](#thread-references)
+* [Userspace object information](#userspace-object-information)
+* [Kernel object information](#kernel-object-information)
+* [Arguments](#arguments)
 
-All records include a header word which contains the following basic
-information:
-
-- **Record Type**: A 4-bit field which identifies the type of the record
-  and the information it contains.  See [Record Types](#record-types).
-- **Record Size**: Typically, a 12-bit field which indicates the number of words
-  (multiples of 8 byte units) within the record _including the record
-  header itself_.  The maximum possible size of a record is 4095 words
-  (32760 bytes).  Very simple records may be just 1 word (8 bytes) long.
-  Large records use a 32-bit size field and therefore have a higher
-  maximum size.
-
-Records are always a multiple of 8 bytes in length and are stored with
-8 byte alignment.
-
-### Atoms
+### Atoms {#atmos}
 
 Each record is constructed as a sequence of atoms.
 
@@ -90,7 +85,27 @@ by the record format.
 **Streams** may store either UTF-8 strings or binary data, as specified by
 the record format.
 
-### Archives
+### Records {#records}
+
+A trace record is a binary encoded piece of trace information consisting of
+a sequence of [atoms](#atoms).
+
+All records include a header word which contains the following basic
+information:
+
+- **Record type**: A 4-bit field which identifies the type of the record
+  and the information it contains. See [Record Types](#record-types).
+- **Record size**: Typically, a 12-bit field which indicates the number of words
+  (multiples of 8 byte units) within the record _including the record
+  header itself_.  The maximum possible size of a record is 4095 words
+  (32760 bytes).  Very simple records may be just 1 word (8 bytes) long.
+  Large records use a 32-bit size field and therefore have a higher
+  maximum size.
+
+Records are always a multiple of 8 bytes in length and are stored with
+8 byte alignment.
+
+### Archives {#archives}
 
 A trace archive is a sequence of trace records, concatenated end to end,
 which stores information collected by trace providers while a trace is
@@ -103,7 +118,7 @@ which appear later in the trace.  The trace system provides tools for
 extracting information from trace archives and converting it into other
 forms for visualization.
 
-### Timestamps
+### Timestamps {#timestamps}
 
 Timestamps are represented as 64-bit ticks derived from a hardware counter.
 The trace initialization record describes the number of ticks per second
@@ -111,7 +126,7 @@ of real time.
 
 By default, we assume that 1 tick equals 1 nanosecond.
 
-### String References
+### String references {#string-references}
 
 Strings are encoded as **String Refs** which are 16-bit values of the
 following form:
@@ -119,64 +134,64 @@ following form:
 - **Empty strings**: Value is zero.
 - **Indexed strings**: Most significant bit is zero.  The lower 15 bits
   denote an index in the **string table** which was previously assigned using a
-  **String Record**.
+  **String record**.
 - **Inline strings**: Most significant bit is one.  The lower 15 bits
   denote the length of the string in bytes.  The string's content appears
   inline in another part of the record as specified by the record format.
 
 To make traces more compact, frequently referenced strings, such as event
 category and name constants, should be registered into the **string table**
-using **String Records** then referenced by index.
+using **string records** then referenced by index.
 
 There can be at most 32767 strings in the string table.  If this limit is
 reached, additional strings can be encoded by replacing existing entries
 or by encoding strings inline.
 
-String content itself is stored as a UTF-8 **Stream** without termination.
+String content itself is stored as a UTF-8 **stream** without termination.
 
 The theoretical maximum length of a string is 32767 bytes but in practice this
 will be further reduced by the space required to store the rest of the record
 which contains it, so we set a conservative maximum string length limit of
 32000 bytes.
 
-### Thread References
+### Thread references {#thread-references}
 
-Thread and process kernel object ids (koids) are encoded as **Thread Refs**
+Thread and process kernel object ids (koids) are encoded as **thread refs**
 which are 8-bit values of the following form:
 
 - **Inline threads**: Value is zero.  The thread and process koid appears
   inline in another part of the record as specified by the record format.
 - **Indexed threads**: Value is non-zero.  The value denotes an index in
-  the **thread table** which was previously assigned using a **Thread Record**.
+  the **thread table** which was previously assigned using a **thread record**.
 
 To make traces more compact, frequently referenced threads should be registered
-into the **thread table** using **Thread Records** then referenced by index.
+into the **thread table** using **thread records** then referenced by index.
 
 There can be at most 255 threads in the string table.  If this limit is
 reached, additional threads can be encoded by replacing existing entries
 or by encoding threads inline.
 
-### Userspace Object Information
+### Userspace object information {#userspace-object-information}
 
 Traces can include annotations about userspace objects (anything that can be
 referenced using a pointer-like value such as a C++ or Dart object) in the
-form of **Userspace Object Records**.  Trace providers typically generate
+form of **userspace object records**.  Trace providers typically generate
 such records when the object is created.
 
-Thereafter, any **Pointer Arguments** which refer to the same pointer will
+Thereafter, any **pointer arguments** which refer to the same pointer will
 be associated with the referent's annotations.
 
 This makes it easy to associate human-readable labels and other information
 with objects which appear later in the trace.
 
-### Kernel Object Information
+### Kernel object information {#kernel-object-information}
 
 Traces can include annotations about kernel objects (anything that can be
 referenced using a Zircon koid such as a process, channel, or event)
-form of **Kernel Object Records**.  Trace providers typically generate such
+form of **kernel object records**.  Trace providers typically generate such
 records when the object is created.
 
-Thereafter, any **Kernel Object Id Arguments** which refer to the same koid will
+Thereafter, any **kernel object Id arguments** which refer to the same koid will
 be associated with the referent's annotations.
 
 This makes it easy to associate human-readable labels and other information
@@ -185,7 +200,7 @@ with objects which appear later in the trace.
 In particular, this is how the tracing system associates names with process
 and thread koids.
 
-### Arguments
+### Arguments {#arguments}
 
 Arguments are typed key value pairs.
 
@@ -195,11 +210,15 @@ provide additional information from the developer.
 Arguments are size-prefixed like ordinary records so that unrecognized
 argument types can be skipped.
 
-See also [Argument Types](#argument-types).
+For more information, see [Argument Types](#argument-types).
 
-## Extending the Format
+## Extend the format {#extend-the-format}
 
 The trace format can be extended in the following ways:
+
+Note: To preserve compatibility as the trace format evolves, all extensions must be
+documented authoritatively in this file. Currently there is no support for
+private extensions.
 
 - Defining new record types.
 - Storing new information in reserved fields of existing record types.
@@ -207,25 +226,35 @@ The trace format can be extended in the following ways:
   information can be detected by examining the record's size and payload).
 - Defining new argument types.
 
-_To preserve compatibility as the trace format evolves, all extensions must be
-documented authoritatively in this file.  Currently there is no support for
-private extensions._
-
-## Notation
-
-In the record format descriptions which follow, each constituent atom
-is labeled in italics followed by a bullet-point description of its contents.
-
 ## Record Types
 
-### Record Header
+There are the following record types:
+
+Note: In the record format descriptions, each constituent atom is labeled in italics
+followed by a bullet-point description of its contents.
+
+* [Record header](#record-header)
+* [Large record header](#large-record-header)
+* [Metada record (record type = 0)](#metada-record)
+* [Initialization record (record type = 1)](#initialization-record)
+* [String record (record type = 2)](#string-record)
+* [Thread record (record type = 3)](#thread-record)
+* [Event record (record type = 4)](#event-record)
+* [Blob record (record type = 5)](#blob-record)
+* [Userspace object record (record type = 6)](#userspace-object-record)
+* [Kernel object record (record type = 7)](#kernel-object-record)
+* [Context switch record (record type = 8)](#context-switch-record)
+* [Log record (record type = 9)](#log-record)
+* [Large BLOB record (record type = 15, large type = 0)](#large-blob-record)
+
+### Record header {#record-header}
 
 All records include this header which specifies the record's type and size
 together with 48 bits of data whose usage varies by record type.
 
 ##### Format
 
-![drawing](record.png)
+![drawing](images/trace-format/record.png)
 
 _header word_
 
@@ -233,12 +262,12 @@ _header word_
 - `[4 .. 15]`: record size (inclusive of this word) as a multiple of 8 bytes
 - `[16 .. 63]`: varies by record type (must be zero if unused)
 
-### Large Record Header
+### Large record header {#large-record-header}
 
 Provides support for records larger than 32KB. Large records have a
 32 bit size field rather than the normal 12 bits.
 
-![drawing](largerecord.png)
+![drawing](images/trace-format/largerecord.png)
 
 _header word_
 
@@ -247,13 +276,13 @@ _header word_
 - `[36 .. 39]`: large record type
 - `[40 .. 63]`: varies by large record type (must be zero if unused)
 
-### Metadata Record (record type = 0)
+### Metadata record (record type = 0) {#metadata-record}
 
 Provides metadata about trace data which follows.
 
 This record type is reserved for use by the _trace manager_ when generating
 trace archives.  It must not be emitted by trace providers themselves.
-If the trace manager encounters a **Metadata Record** within a trace produced
+If the trace manager encounters a **metadata record** within a trace produced
 by a trace provider, it treats it as garbage and skips over it.
 
 There are several metadata record subtypes, each of which contain different
@@ -261,7 +290,7 @@ information.
 
 ##### Format
 
-![drawing](metadata.png)
+![drawing](images/trace-format/metadata.png)
 
 _header word_
 
@@ -270,18 +299,18 @@ _header word_
 - `[16 .. 19]`: metadata type
 - `[20 .. 63]`: varies by metadata type (must be zero if unused)
 
-#### Provider Info Metadata (metadata type = 1)
+#### Provider info metadata (metadata type = 1) {#provider-info-metadata}
 
 This metadata identifies a trace provider which has contributed information to
 the trace.
 
-All data which follows until the next **Provider Section Metadata** or
-**Provider Info Metadata** is encountered must have been collected from the
+All data which follows until the next **provider section metadata** or
+**provider info metadata** is encountered must have been collected from the
 same provider.
 
 ##### Format
 
-![drawing](metadata1.png)
+![drawing](images/trace-format/metadata1.png)
 
 _header word_
 
@@ -296,24 +325,24 @@ _provider name stream_
 
 - UTF-8 string, padded with zeros to 8 byte alignment
 
-#### Provider Section Metadata (metadata type = 2)
+#### Provider section metadata (metadata type = 2) {#provider-section-metadata}
 
 This metadata delimits sections of the trace which have been obtained from
 different providers.
 
-All data which follows until the next **Provider Section Metadata** or
-**Provider Info Metadata** is encountered is assumed to have been collected
+All data which follows until the next **provider section metadata** or
+**provider info metadata** is encountered is assumed to have been collected
 from the same provider.
 
 When reading a trace consisting of an accumulation of traces from different
 trace providers, the reader must maintain state separately for each provider's
 traces (such as the initialization data, string table, thread table,
 userspace object table, and kernel object table) and switch contexts
-whenever it encounters a new **Provider Section Metadata** record.
+whenever it encounters a new **provider section metadata** record.
 
 ##### Format
 
-![drawing](metadata2.png)
+![drawing](images/trace-format/metadata2.png)
 
 _header word_
 
@@ -323,16 +352,17 @@ _header word_
 - `[20 .. 51]`: provider id (token used to identify the provider in the trace)
 - `[52 .. 63]`: reserved (must be zero)
 
-#### Provider Event Metadata (metadata type = 3)
+#### Provider event metadata (metadata type = 3) {#provider-event-metadata}
 
 This metadata provides running notification of events that the provider
 wants to report.
+
 This record may appear anywhere in the output, and does not delimit what
 came before it or what comes after it.
 
 ##### Format
 
-![drawing](metadata3.png)
+![drawing](images/trace-format/metadata3.png)
 
 _header word_
 
@@ -349,7 +379,7 @@ The following events are defined.
 
 - `0`: a buffer filled up, records were likely dropped
 
-#### Trace Info Metadata (metadata type = 4)
+#### Trace info metadata (metadata type = 4) {#trace-info-metadata}
 
 This metadata provides information about the trace as a whole. This record is
 not associated with a particular provider.
@@ -364,11 +394,11 @@ _header word_
 - `[20 .. 23]`: trace info type
 - `[24 .. 63]`: varies by trace info type (must be zero if unused)
 
-#### Magic Number Record (trace info type = 0)
+#### Magic number record (trace info type = 0) {#magic-number-record}
 
 This record serves as an indicator that the binary data is in the Fuchsia
 tracing format. Generally it should appear at the start of a trace. It carries
-no other information. The magic number 0x16547846 is the string "FxT"
+no other information. The magic number `0x16547846` is the string "FxT"
 followed by a byte that was chosen at random.
 
 To allow the first eight bytes of a trace to be treated together as a magic
@@ -393,14 +423,14 @@ _header word_
 - `[24 .. 55]`: the magic number 0x16547846
 - `[56 .. 63]`: zero
 
-### Initialization Record (record type = 1)
+### Initialization record (record type = 1) {#initialization-record}
 
 Provides parameters needed to interpret the records which follow.  In absence
 of this record, the reader may assume that 1 tick is 1 nanosecond.
 
 ##### Format
 
-![drawing](initialization.png)
+![drawing](images/trace-format/initialization.png)
 
 _header word_
 
@@ -412,7 +442,7 @@ _tick multiplier word_
 
 - `[0 .. 63]`: number of ticks per second
 
-### String Record (record type = 2)
+### String record (record type = 2) {#string-record}
 
 Registers a string in the string table, assigning it a string index in the
 range `0x0001` to `0x7fff`.  The registration replaces any prior registration
@@ -426,7 +456,7 @@ pointless since the empty string can simply be encoded as zero in a string ref.
 
 ##### Format
 
-![drawing](string.png)
+![drawing](images/trace-format/string.png)
 
 _header word_
 
@@ -442,7 +472,7 @@ _string value stream_
 
 - UTF-8 string, padded with zeros to 8 byte alignment
 
-### Thread Record (record type = 3)
+### Thread record (record type = 3) {#thread-record}
 
 Registers a process id and thread id pair in the thread table, assigning it a
 thread index in the range `0x01` to `0xff`.  The registration replaces any
@@ -455,7 +485,7 @@ must be ignored.
 
 ##### Format
 
-![drawing](thread.png)
+![drawing](images/trace-format/thread.png)
 
 _header word_
 
@@ -472,7 +502,7 @@ _thread id word_
 
 - `[0 .. 63]`: thread koid (kernel object id)
 
-### Event Record (record type = 4)
+### Event record (record type = 4) {#event-record}
 
 Describes a timestamped event.
 
@@ -482,7 +512,7 @@ specific data.
 
 ##### Format
 
-![drawing](event.png)
+![drawing](images/trace-format/event.png)
 
 _header word_
 
@@ -520,168 +550,179 @@ _argument data_ (repeats for each argument)
 
 _event-type specific data_
 
-- (see below)
+- Can be any of the following:
+  - [Instant event (event type = 0)](#instant-event)
+  - [Counter event (event type = 1)](#counter-event)
+  - [Duration begin event (event type = 2)](#duration-begin-event)
+  - [Duration end event (event type = 3)](#duration-end-event)
+  - [Duration complete event (event type = 4)](#duration-complete-event)
+  - [Async begin event (event type = 5)](#async-begin-event)
+  - [Async instant event (event type = 6)](#async-instant-event)
+  - [Async end event (event type = 7)](#async-end-event)
+  - [Flow begin event (event type = 8)](#flow-begin-event)
+  - [Flow step event (event type = 9)](#flow-step-event)
+  - [Flow end event (event type = 10)](#flow-end-event)
 
-#### Instant Event (event type = 0)
+#### Instant event (event type = 0) {#instant-event}
 
-Marks a moment in time on this thread.  These are equivalent to Zircon
+Marks a moment in time on this thread. These are equivalent to Zircon
 kernel probes.
 
 ##### Format
 
-![drawing](event0.png)
+![drawing](images/trace-format/event0.png)
 
 No event-type specific data required.
 
-#### Counter Event (event type = 1)
+#### Counter event (event type = 1) {#counter-event}
 
 Records sample values of each argument as data in a time series associated
-with the counter's name and id.  The values may be presented graphically as a
+with the counter's name and id. The values may be presented graphically as a
 stacked area chart.
 
 ##### Format
 
-![drawing](event1.png)
+![drawing](images/trace-format/event1.png)
 
 _counter word_
 
 - `[0 .. 63]`: counter id
 
-#### Duration Begin Event (event type = 2)
+#### Duration begin event (event type = 2) {#duration-begin-event}
 
-Marks the beginning of an operation on a particular thread.  Must be matched
-by a **Duration End Event**.  May be nested.
+Marks the beginning of an operation on a particular thread. Must be matched
+by a **duration end event**. May be nested.
 
 ##### Format
 
-![drawing](event23.png)
+![drawing](images/trace-format/event23.png)
 
 No event-type specific data required.
 
-#### Duration End Event (event type = 3)
+#### Duration end event (event type = 3) {#duration-end-event}
 
 Marks the end of an operation on a particular thread.
 
 ##### Format
 
-![drawing](event23.png)
+![drawing](images/trace-format/event23.png)
 
 No event-type specific data required.
 
-#### Duration Complete Event (event type = 4)
+#### Duration complete event (event type = 4) {#duration-complete-event}
 
 Marks the beginning and end of an operation on a particular thread.
 
 ##### Format
 
-![drawing](event4.png)
+![drawing](images/trace-format/event4.png)
 
 _end time word_
 
 - `[0 .. 63]`: end time number of ticks
 
-#### Async Begin Event (event type = 5)
+#### Async begin event (event type = 5) {#async-begin-event}
 
 Marks the beginning of an operation which may span threads.  Must be matched
-by an **Async End Event** using the same async correlation id.
+by an **async end event** using the same async correlation id.
 
 ##### Format
 
-![drawing](event567.png)
+![drawing](images/trace-format/event567.png)
 
 _async correlation word_
 
 - `[0 .. 63]`: async correlation id
 
-#### Async Instant Event (event type = 6)
+#### Async instant Event (event type = 6) {#async-instant-event}
 
-Marks a moment within an operation which may span threads.  Must appear
-between **Async Begin Event** and **Async End Event** using the same async
+Marks a moment within an operation which may span threads. Must appear
+between **async begin event** and **async end event** using the same async
 correlation id.
 
 ##### Format
 
-![drawing](event567.png)
+![drawing](images/trace-format/event567.png)
 
 _async correlation word_
 
 - `[0 .. 63]`: async correlation id
 
-#### Async End Event (event type = 7)
+#### Async end event (event type = 7) {#async-end-event}
 
 Marks the end of an operation which may span threads.
 
 ##### Format
 
-![drawing](event567.png)
+![drawing](images/trace-format/event567.png)
 
 _async correlation word_
 
 - `[0 .. 63]`: async correlation id
 
-#### Flow Begin Event (event type = 8)
+#### Flow begin event (event type = 8) {#flow-begin-event}
 
 Marks the beginning of an operation which results in a sequence of actions
-which may span multiple threads or abstraction layers.  Must be matched by a
-**Flow End Event** using the same flow correlation id.  This can be envisioned
+which may span multiple threads or abstraction layers. Must be matched by a
+**flow end event** using the same flow correlation id. This can be envisioned
 as an arrow between duration events.
 
 The beginning of the flow is associated with the enclosing duration event
-for this thread; it begins where the enclosing **Duration Event** ends.
+for this thread; it begins where the enclosing **duration event** ends.
 
 ##### Format
 
-![drawing](event8910.png)
+![drawing](images/trace-format/event8910.png)
 
 _flow correlation word_
 
 - `[0 .. 63]`: flow correlation id
 
-#### Flow Step Event (event type = 9)
+#### Flow step event (event type = 9) {#flow-step-event}
 
 Marks a point within a flow.
 
 The step is associated with the enclosing duration event for this thread;
 the flow resumes where the enclosing duration event begins then is suspended
-at the point where the enclosing **Duration Event** event ends.
+at the point where the enclosing **duration event** event ends.
 
 ##### Format
 
-![drawing](event8910.png)
+![drawing](images/trace-format/event8910.png)
 
 _flow correlation word_
 
 - `[0 .. 63]`: flow correlation id
 
-#### Flow End Event (event type = 10)
+#### Flow end event (event type = 10) {#flow-end-event}
 
 Marks the end of a flow.
 
 The end of the flow is associated with the enclosing duration event for this
-thread; the flow resumes where the enclosing **Duration Event** begins.
+thread; the flow resumes where the enclosing **duration event** begins.
 
 ##### Format
 
-![drawing](event8910.png)
+![drawing](images/trace-format/event8910.png)
 
 _flow correlation word_
 
 - `[0 .. 63]`: flow correlation id
 
-### Blob Record (record type = 5)
+### BLOB record (record type = 5) {#blob-record}
 
-Provides uninterpreted bulk data to be included in the trace.  This can be
+Provides uninterpreted bulk data to be included in the trace. This can be
 useful for embedding captured trace data in other formats.
 
 The blob name uniquely identifies separate blob data streams within the trace.
 By writing multiple blob records with the same name, additional chunks of
-data can be appended to a previously created blob.
+data can be appended to a previously created BLOB.
 
-The blob type indicates the representation of the blob's content.
+The BLOB type indicates the representation of the BLOB's content.
 
 ##### Format
 
-![drawing](blob.png)
+![drawing](images/trace-format/blob.png)
 
 _header word_
 
@@ -701,29 +742,31 @@ _payload stream_ (variable size)
 
 - binary data, padded with zeros to 8 byte alignment
 
-##### Blob Types
+##### Blob types
 
 The following blob types are defined:
 
 - `TRACE_BLOB_TYPE_DATA` = `0x01`: Raw untyped data. The consumer is expected to know
   how to consume it, perhaps based on context.
 - `TRACE_BLOB_TYPE_LAST_BRANCH` = `0x02`: Last Branch Record of Intel Performance Monitor.
-  The format is defined by the [Cpuperf Trace Provider](../cpuperf-provider.md).
+  The format is defined by the
+[CPU performance
+monitor](/docs/development/tracing/advanced/recording-a-cpu-performance-trace.md).
 
-### Userspace Object Record (record type = 6)
+### Userspace object record (record type = 6) {#userspace-object-record}
 
 Describes a userspace object, assigns it a label, and optionally associates
-key/value data with it as arguments.  Information about the object is added
+key/value data with it as arguments. Information about the object is added
 to a per-process userspace object table.
 
-When a trace consumer encounters an event with a **Pointer Argument** whose
+When a trace consumer encounters an event with a **pointer argument** whose
 value matches an entry in the process's object table, it can cross-reference
-the argument's pointer value with a prior **Userspace Object Record** to find a
+the argument's pointer value with a prior **userspace object record** to find a
 description of the referent.
 
 ##### Format
 
-![drawing](userspace.png)
+![drawing](images/trace-format/userspace.png)
 
 _header word_
 
@@ -750,26 +793,27 @@ _argument data_ (repeats for each argument)
 
 - (see below)
 
-### Kernel Object Record (record type = 7)
+### Kernel object record (record type = 7) {#kernel-object-record}
 
 Describes a kernel object, assigns it a label, and optionally associates
-key/value data with it as arguments.  Information about the object is added
+key/value data with it as arguments. Information about the object is added
 to a global kernel object table.
 
-When a trace consumer encounters an event with a **Koid Argument**
+When a trace consumer encounters an event with a **koid argument**
 whose value matches an entry in the kernel object table, it can
-cross-reference the argument's koid value with a prior **Kernel Object Record**
+cross-reference the argument's koid value with a prior **kernel object record**
 to find a description of the referent.
 
 ##### Format
 
-![drawing](kernel.png)
+![drawing](images/trace-format/kernel.png)
 
 _header word_
 
 - `[0 .. 3]`: record type (7)
 - `[4 .. 15]`: record size (inclusive of this word) as a multiple of 8 bytes
-- `[16 .. 23]`: kernel object type (one of the ZX_OBJ_TYPE_XXX constants from <zircon/syscalls/object.h>)
+- `[16 .. 23]`: kernel object type (one of the ZX_OBJ_TYPE_XXX constants from
+  [zircon/syscalls/object.h](/zircon/system/public/zircon/syscalls/object.h)
 - `[24 .. 39]`: name (string ref)
 - `[40 .. 43]`: number of arguments
 - `[44 .. 63]`: reserved (must be zero)
@@ -792,23 +836,23 @@ By convention, the trace writer should include the following named arguments
 when writing kernel object records about objects of particular types.  This
 helps trace consumers correlate relationships among kernel objects.
 
-_This information may not always be available._
+Note: This information may not always be available.
 
 - `"process"`: for `ZX_OBJ_TYPE_THREAD` objects, specifies the koid of the
   process which contains the thread
 
-### Context Switch Record (record type = 8)
+### Context switch record (record type = 8) {#context-switch-record}
 
 Describes a context switch during which a CPU handed off control from an
 outgoing thread to an incoming thread which resumes execution.
 
 The record specifies the new state of the outgoing thread following the
-context switch.  By definition, the new state of the incoming thread is
+context switch. By definition, the new state of the incoming thread is
 "running" since it was just resumed.
 
 ##### Format
 
-![drawing](context.png)
+![drawing](images/trace-format/context.png)
 
 _header word_
 
@@ -853,15 +897,16 @@ The following thread states are defined:
 - `4`: dying
 - `5`: dead
 
-These values align with the `ZX_THREAD_STATE_XXX` constants from <zircon/syscalls/object.h>.
+These values align with the `ZX_THREAD_STATE_XXX` constants from
+[zircon/syscalls/object.h](/zircon/system/public/zircon/syscalls/object.h).
 
-### Log Record (record type = 9)
+### Log record (record type = 9) {#log-record}
 
 Describes a message written to the log at a particular moment in time.
 
 ##### Format
 
-![drawing](log.png)
+![drawing](images/trace-format/log.png)
 
 _header word_
 
@@ -888,18 +933,18 @@ _log message stream_
 
 - UTF-8 string, padded with zeros to 8 byte alignment
 
-### Large Blob Record (record type = 15, large type = 0)
+### Large BLOB record (record type = 15, large type = 0) {#large-blob-record}
 
-Provides large binary blob data to be embedded within a trace. It
+Provides large binary BLOB data to be embedded within a trace. It
 uses the large record header.
 
-The large blob record supports a number of different formats. These
-formats can be used for varying the types of blob data and metadata
+The large BLOB record supports a number of different formats. These
+formats can be used for varying the types of BLOB data and metadata
 included in the record.
 
 ##### Format
 
-![drawing](largeblob.png)
+![drawing](images/trace-format/largeblob.png)
 
 _header word_
 
@@ -920,7 +965,7 @@ within the blob.
 
 ##### Format
 
-![drawing](largeblob0.png)
+![drawing](images/trace-format/largeblob0.png)
 
 _header word_
 
@@ -981,7 +1026,7 @@ within the blob.
 
 ##### Format
 
-![drawing](largeblob1.png)
+![drawing](images/trace-format/largeblob1.png)
 
 _header word_
 
@@ -1013,18 +1058,30 @@ _payload stream_ (variable size)
 
 - binary data, padded with zeros to 8 byte alignment
 
+## Argument types {#argument-types}
 
-## Argument Types
-
-Arguments associate typed key/value data records.  They are used together
-with **Event Record** and **Userspace Object Record** and
-**Kernel Object Record**.
+Arguments associate typed key and value data records. They are used together
+with **event record** and **userspace object record** and
+**kernel object record**.
 
 Each argument consists of a one word header followed by a variable number
-words of payload.  In many cases, the header itself is sufficient to encode
+words of payload. In many cases, the header itself is sufficient to encode
 the content of the argument.
 
-### Argument Header
+There are the following argument types:
+
+- [Argument header](#argument-header)
+- [Null argument](#null-argument)
+- [32-bit signed integer argument](#32-bit-signed-integer-argument)
+- [32-bit unsigned integer argument](#32-bit-unsigned-integer-argument)
+- [64-bit signed integer argument](#64-bit-signed-integer-argument)
+- [64-bit unsigned integer argument](#32-bit-unsigned-integer-argument)
+- [Double-precision floating point argument](#double-precision-floating-point-argument)
+- [String argument](#string-argument)
+- [Pointer argument](#pointer-argument)
+- [Kernel object id argument](#kernel-object-id-argument)
+
+### Argument header {#argument-header}
 
 All arguments include this header which specifies the argument's type,
 name, and size together with 32 bits of data whose usage varies by
@@ -1032,7 +1089,7 @@ argument type.
 
 ##### Format
 
-![drawing](argument.png)
+![drawing](images/trace-format/argument.png)
 
 _argument header word_
 
@@ -1045,13 +1102,13 @@ _argument name stream_ (omitted unless string ref denotes inline string)
 
 - UTF-8 string, padded with zeros to 8 byte alignment
 
-### Null Argument (argument type = 0)
+### Null argument (argument type = 0) {#null-argument}
 
 Represents an argument which appears in name only without a value.
 
 ##### Format
 
-![drawing](argument0.png)
+![drawing](images/trace-format/argument0.png)
 
 _argument header word_
 
@@ -1064,13 +1121,13 @@ _argument name stream_ (omitted unless string ref denotes inline string)
 
 - UTF-8 string, padded with zeros to 8 byte alignment
 
-### 32-bit Signed Integer Argument (argument type = 1)
+### 32-bit signed integer argument (argument type = 1) {#32-bit-signed-integer-argument}
 
 Represents a 32-bit signed integer.
 
 ##### Format
 
-![drawing](argument1.png)
+![drawing](images/trace-format/argument1.png)
 
 _argument header word_
 
@@ -1083,13 +1140,13 @@ _argument name stream_ (omitted unless string ref denotes inline string)
 
 - UTF-8 string, padded with zeros to 8 byte alignment
 
-### 32-bit Unsigned Integer Argument (argument type = 2)
+### 32-bit unsigned integer argument (argument type = 2) {#32-bit-unsigned-integer-argument}
 
 Represents a 32-bit unsigned integer.
 
 ##### Format
 
-![drawing](argument2.png)
+![drawing](images/trace-format/argument2.png)
 
 _argument header word_
 
@@ -1102,14 +1159,14 @@ _argument name stream_ (omitted unless string ref denotes inline string)
 
 - UTF-8 string, padded with zeros to 8 byte alignment
 
-### 64-bit Signed Integer Argument (argument type = 3)
+### 64-bit signed integer argument (argument type = 3) {#64-bit-signed-integer-argument}
 
-Represents a 64-bit signed integer.  If a value will fit in 32-bits, prefer
-using the **32-bit Signed Integer Argument** type instead.
+Represents a 64-bit signed integer. If a value fits in 32-bits,
+use the **32-bit signed integer argument** type instead.
 
 ##### Format
 
-![drawing](argument3.png)
+![drawing](images/trace-format/argument3.png)
 
 _argument header word_
 
@@ -1126,14 +1183,14 @@ _argument value word_
 
 - `[0 .. 63]`: 64-bit signed integer
 
-### 64-bit Unsigned Integer Argument (argument type = 4)
+### 64-bit unsigned integer argument (argument type = 4) {#64-bit-unsigned-integer-argument}
 
-Represents a 64-bit unsigned integer.  If a value will fit in 32-bits, prefer
-using the **32-bit Unsigned Integer Argument** type instead.
+Represents a 64-bit unsigned integer. If a value fits in 32-bits,
+use the **32-bit unsigned integer argument** type instead.
 
 ##### Format
 
-![drawing](argument4.png)
+![drawing](images/trace-format/argument4.png)
 
 _argument header word_
 
@@ -1150,13 +1207,13 @@ _argument value word_
 
 - `[0 .. 63]`: 64-bit unsigned integer
 
-### Double-precision Floating Point Argument (argument type = 5)
+### Double-precision floating point argument (argument type = 5) {#double-precision-floating-point-argument}
 
 Represents a double-precision floating point number.
 
 ##### Format
 
-![drawing](argument5.png)
+![drawing](images/trace-format/argument5.png)
 
 _argument header word_
 
@@ -1173,13 +1230,13 @@ _argument value word_
 
 - `[0 .. 63]`: double-precision floating point number
 
-### String Argument (argument type = 6)
+### String argument (argument type = 6) {#string-argument}
 
 Represents a string value.
 
 ##### Format
 
-![drawing](argument6.png)
+![drawing](images/trace-format/argument6.png)
 
 _argument header word_
 
@@ -1197,14 +1254,14 @@ _argument value stream_ (omitted unless string ref denotes inline string)
 
 - UTF-8 string, padded with zeros to 8 byte alignment
 
-### Pointer Argument (argument type = 7)
+### Pointer argument (argument type = 7) {#pointer-argument}
 
-Represents a pointer value.  Additional information about the referent can
-be provided by a **Userspace Object Record** associated with the same pointer.
+Represents a pointer value. Additional information about the referent can
+be provided by a **userspace object record** associated with the same pointer.
 
 ##### Format
 
-![drawing](argument7.png)
+![drawing](images/trace-format/argument7.png)
 
 _argument header word_
 
@@ -1221,15 +1278,15 @@ _argument value word_
 
 - `[0 .. 63]`: the pointer value
 
-### Kernel Object Id Argument (argument type = 8)
+### Kernel object id argument (argument type = 8) {#kernerl-object-id-argument}
 
-Represents a koid (kernel object id).  Additional information about the
-referent can be provided by a **Kernel Object Record** associated with the
+Represents a koid (kernel object id). Additional information about the
+referent can be provided by a **kernel object record** associated with the
 same koid.
 
 ##### Format
 
-![drawing](argument8.png)
+![drawing](images/trace-format/argument8.png)
 
 _argument header word_
 

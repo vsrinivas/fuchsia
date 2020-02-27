@@ -13,3 +13,6 @@ toc:
 - title: "Kernel"
   section:
   - include: /docs/reference/kernel/_toc.yaml
+- title: "Tracing"
+  section:
+  - include: /docs/reference/tracing/_toc.yaml

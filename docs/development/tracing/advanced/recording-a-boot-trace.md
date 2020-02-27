@@ -1,4 +1,4 @@
-# Tracing Booting Fuchsia
+# Tracing booting Fuchsia
 
 The Zircon kernel's internal tracing system can be active on boot
 (and in fact is currently the default). This means that one can trace
@@ -53,7 +53,7 @@ that as requesting the default which is ten seconds.
 The `--stream` arg just says to send the results directly to the development
 host instead of first writing them to disk on the target.
 
-# Changing kernel trace parameters at boot
+## Changing kernel trace parameters at boot
 
 The size of the kernel's trace buffer can be changed at boot time
 with the `ktrace.bufsize=N` command line option, where `N` is the size
@@ -67,7 +67,4 @@ The default is 0xfff which enables all trace categories (or groups in
 ktrace parlance).
 
 For more information on Zircon command line options see
-[kernel\_cmdline][kernel_cmdline].
-
-
-[kernel_cmdline]: /docs/reference/kernel/kernel_cmdline.md
+[kernel\_cmdline](/docs/reference/kernel/kernel_cmdline.md).
