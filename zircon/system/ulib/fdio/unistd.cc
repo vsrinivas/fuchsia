@@ -1226,16 +1226,14 @@ off_t lseek(int fd, off_t offset, int whence) {
 
   size_t result = 0u;
   zx_status_t status = zxio_seek(fdio_get_zxio(io), whence, offset, &result);
+  fdio_release(io);
   if (status == ZX_ERR_WRONG_TYPE) {
     // Although 'ESPIPE' is a bit of a misnomer, it is the valid errno
     // for any fd which does not implement seeking (i.e., for pipes,
     // sockets, etc).
-    fdio_release(io);
     return ERRNO(ESPIPE);
-  } else {
-    fdio_release(io);
-    return status != ZX_OK ? STATUS(status) : (off_t)result;
   }
+  return status != ZX_OK ? STATUS(status) : (off_t)result;
 }
 
 static int truncateat(int dirfd, const char* path, off_t len) {
@@ -1776,12 +1774,8 @@ __EXPORT
 int closedir(DIR* dir) {
   if (dir->is_iterator_initialized) {
     fdio_t* io = fd_to_io(dir->fd);
-    auto clean_io = fbl::MakeAutoCall([io] {
-      if (io != nullptr) {
-        fdio_release(io);
-      }
-    });
     fdio_get_ops(io)->dirent_iterator_destroy(io, &dir->iterator);
+    fdio_release(io);
   }
   close(dir->fd);
   delete dir;
@@ -1865,6 +1859,7 @@ void rewinddir(DIR* dir) {
   if (dir->is_iterator_initialized) {
     fdio_t* io = fd_to_io(dir->fd);
     fdio_get_ops(io)->dirent_iterator_destroy(io, &dir->iterator);
+    fdio_release(io);
     dir->is_iterator_initialized = false;
   }
 }

@@ -18,6 +18,8 @@
 #include <cstring>
 #include <mutex>
 
+#include <fbl/auto_call.h>
+
 #include "private.h"
 #include "unistd.h"
 
@@ -358,6 +360,7 @@ int getsockopt(int fd, int level, int optname, void* __restrict optval,
   if (io == nullptr) {
     return ERRNO(EBADF);
   }
+  auto clean_io = fbl::MakeAutoCall([io] { fdio_release(io); });
 
   // Handle client-maintained socket options.
   if (level == SOL_SOCKET) {
@@ -391,7 +394,6 @@ int getsockopt(int fd, int level, int optname, void* __restrict optval,
 
   int16_t out_code;
   zx_status_t status = fdio_get_ops(io)->getsockopt(io, level, optname, optval, optlen, &out_code);
-  fdio_release(io);
   if (status != ZX_OK) {
     return ERROR(status);
   }
@@ -407,6 +409,7 @@ int setsockopt(int fd, int level, int optname, const void* optval, socklen_t opt
   if (io == NULL) {
     return ERRNO(EBADF);
   }
+  auto clean_io = fbl::MakeAutoCall([io] { fdio_release(io); });
 
   switch (level) {
     case SOL_SOCKET: {
@@ -469,7 +472,6 @@ int setsockopt(int fd, int level, int optname, const void* optval, socklen_t opt
 
   int16_t out_code;
   zx_status_t status = fdio_get_ops(io)->setsockopt(io, level, optname, optval, optlen, &out_code);
-  fdio_release(io);
   if (status != ZX_OK) {
     return ERROR(status);
   }
