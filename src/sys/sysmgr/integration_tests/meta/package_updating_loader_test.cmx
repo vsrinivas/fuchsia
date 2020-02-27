@@ -3,9 +3,6 @@
         "binary": "test/package_updating_loader_test"
     },
     "sandbox": {
-        "features": [
-            "deprecated-ambient-replace-as-executable"
-        ],
         "pkgfs": [
             "packages"
         ],

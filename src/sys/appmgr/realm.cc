@@ -496,9 +496,16 @@ void Realm::Resolve(fidl::StringPtr name, fuchsia::process::Resolver::ResolveCal
     return;
   }
 
+  FuchsiaPkgUrl pkg_url;
+  if (!pkg_url.Parse(canon_url)) {
+    FXL_LOG(ERROR) << "Cannot load " << canon_url << " because the URL is not valid.";
+    callback(ZX_ERR_INVALID_ARGS, std::move(binary), std::move(loader));
+    return;
+  }
+
   auto trace_id = TRACE_NONCE();
   TRACE_ASYNC_BEGIN("appmgr", "Realm::ResolveLoader::LoadUrl", trace_id, "url", canon_url);
-  loader_->LoadUrl(canon_url, [trace_id, callback = std::move(callback)](
+  loader_->LoadUrl(canon_url, [trace_id, callback = std::move(callback), pkg_url](
                                   fuchsia::sys::PackagePtr package) mutable {
     TRACE_ASYNC_END("appmgr", "Realm::ResolveLoader::LoadUrl", trace_id);
 
@@ -512,14 +519,39 @@ void Realm::Resolve(fidl::StringPtr name, fuchsia::process::Resolver::ResolveCal
       callback(ZX_ERR_NOT_FOUND, std::move(binary), std::move(loader));
       return;
     }
-    binary.swap(package->data->vmo);
-
     if (!package->directory) {
       callback(ZX_ERR_NOT_FOUND, std::move(binary), std::move(loader));
       return;
     }
     fbl::unique_fd dirfd = fsl::OpenChannelAsFileDescriptor(std::move(package->directory));
 
+    // The package loader itself is not expected to give us an executable VMO at
+    // package->data, but it is expected to give us a directory handle that is
+    // capable of opening other children with OPEN_RIGHT_EXECUTABLE.
+    // Get the executably-mappable ELF VMO out of the package directory.
+
+    // Open the resource_path() out of the directory.
+    uint32_t flags = fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_EXECUTABLE;
+    fbl::unique_fd exec_fd;
+    zx_status_t status = fdio_open_fd_at(dirfd.get(), pkg_url.resource_path().c_str(), flags,
+                                         exec_fd.reset_and_get_address());
+    if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "fdio_open_fd_at(" << dirfd.get() << ", "
+                     << pkg_url.resource_path().c_str() << ", "
+                     << flags << ") failed: " << zx_status_get_string(status);
+      callback(status, std::move(binary), std::move(loader));
+      return;
+    }
+
+    // Get the executable VMO.
+    status = fdio_get_vmo_exec(exec_fd.get(), binary.reset_and_get_address());
+    if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "fdio_get_vmo_exec() failed: " << zx_status_get_string(status);
+      callback(status, std::move(binary), std::move(loader));
+      return;
+    }
+
+    // Start up the library loader.
     zx::channel chan;
     if (DynamicLibraryLoader::Start(std::move(dirfd), &chan) != ZX_OK) {
       callback(ZX_ERR_INTERNAL, std::move(binary), std::move(loader));

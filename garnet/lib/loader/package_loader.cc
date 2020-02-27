@@ -88,9 +88,6 @@ bool LoadPackageResource(const std::string& path, fuchsia::sys::Package& package
     return false;
   }
 
-  if (resource.ReplaceAsExecutable(zx::handle()) != ZX_OK)
-    return false;
-
   resource.vmo().set_property(ZX_PROP_NAME, path.c_str(), path.length());
   package.data = fidl::MakeOptional(std::move(resource).ToTransport());
 

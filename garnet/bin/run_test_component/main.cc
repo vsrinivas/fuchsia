@@ -4,7 +4,6 @@
 
 #include <fuchsia/debugdata/cpp/fidl.h>
 #include <fuchsia/logger/cpp/fidl.h>
-#include <fuchsia/process/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -135,32 +134,35 @@ int main(int argc, const char** argv) {
   // We make a request to the resolver API to ensure that the on-disk package
   // data is up to date before continuing to try and parse the CMX file.
   // TODO(raggi): replace this with fuchsia.pkg.Resolver, once it is stable.
-  fuchsia::process::ResolverSyncPtr resolver;
+  fuchsia::sys::LoaderSyncPtr loader;
   zx_status_t status =
-      namespace_services->Connect<fuchsia::process::Resolver>(resolver.NewRequest());
+      namespace_services->Connect<fuchsia::sys::Loader>(loader.NewRequest());
   if (status != ZX_OK) {
     fprintf(stderr, "connect to %s failed: %s. Can not continue.\n",
-            fuchsia::process::Resolver::Name_, zx_status_get_string(status));
+            fuchsia::sys::Loader::Name_, zx_status_get_string(status));
     return 1;
   }
-  zx::vmo cmx_data;
-  fidl::InterfaceHandle<::fuchsia::ldsvc::Loader> ldsvc_unused;
-  resolver->Resolve(program_name, &status, &cmx_data, &ldsvc_unused);
+  fuchsia::sys::PackagePtr pkg;
+  status = loader->LoadUrl(program_name, &pkg);
   if (status != ZX_OK) {
-    fprintf(stderr, "Failed to resolve %s: %s\n", program_name.c_str(),
+    fprintf(stderr, "Failed to load %s: %s\n", program_name.c_str(),
             zx_status_get_string(status));
     return 1;
   }
 
-  uint64_t size;
-  status = cmx_data.get_size(&size);
-  if (status != ZX_OK) {
-    fprintf(stderr, "error getting size of cmx file from vmo %s: %s\n", program_name.c_str(),
-            zx_status_get_string(status));
+  if (!pkg) {
+    fprintf(stderr, "Got no package for %s\n", program_name.c_str());
     return 1;
   }
+
+  if (!pkg->data) {
+    fprintf(stderr, "Got no package metadata for %s\n", program_name.c_str());
+    return 1;
+  }
+
+  uint64_t size = pkg->data->size;
   std::string cmx_str(size, ' ');
-  status = cmx_data.read(cmx_str.data(), 0, size);
+  status = pkg->data->vmo.read(cmx_str.data(), 0, size);
   if (status != ZX_OK) {
     fprintf(stderr, "error reading cmx file from vmo %s: %s\n", program_name.c_str(),
             zx_status_get_string(status));

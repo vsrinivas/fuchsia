@@ -7,6 +7,8 @@ library fuchsia.sys;
 /// An interface for loading from packages.
 [Discoverable]
 protocol Loader {
-    /// LoadUrl a package by url.
+    /// Load a package by url.  The returned `package`'s `data` VMO handle will
+    /// not have `ZX_RIGHT_EXECUTE`, but the `directory` field, if present, will
+    /// have both the `READABLE` and `EXECUTABLE` rights.
     LoadUrl(component_url url) -> (Package? package);
 };
