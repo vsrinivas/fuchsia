@@ -66,11 +66,11 @@ source_set("iommu") {
   configs += [ ":config" ]
 
   deps = [
+    "//third_party/acpica",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/zx",
-    "//zircon/third_party/lib/acpica",
   ]
 }
 
@@ -122,6 +122,7 @@ driver_module("platform-bus-x86") {
     ":iommu",
     ":smbios",
     "//src/devices/lib/driver",
+    "//third_party/acpica",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/driver-unit-test",
@@ -144,7 +145,6 @@ driver_module("platform-bus-x86") {
     "//zircon/system/fidl/fuchsia-hardware-thermal:c",
     "//zircon/system/fidl/fuchsia-sysinfo:c",
     "//zircon/system/fidl/fuchsia-sysmem:c",
-    "//zircon/third_party/lib/acpica",
     "//zircon/third_party/ulib/chromiumos-platform-ec",
   ]
   public_configs = [ "$zx_build/public/gn/config:default_warnings" ]
@@ -174,6 +174,7 @@ test("x86-battery-test") {
   configs += [ ":config" ]
   deps = [
     "//src/devices/lib/driver",
+    "//third_party/acpica",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
@@ -191,7 +192,6 @@ test("x86-battery-test") {
     "//zircon/system/banjo/ddk.protocol.sysmem",
     "//zircon/system/fidl/fuchsia-hardware-power:c",
     "//zircon/system/fidl/fuchsia-hardware-thermal:c",
-    "//zircon/third_party/lib/acpica",
     "//zircon/third_party/ulib/chromiumos-platform-ec",
   ]
 }
@@ -220,6 +220,7 @@ test("x86-lid-test") {
   ]
   configs += [ ":config" ]
   deps = [
+    "//third_party/acpica",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fake_ddk",
@@ -231,7 +232,6 @@ test("x86-lid-test") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/banjo/ddk.protocol.acpi",
     "//zircon/system/banjo/ddk.protocol.hidbus",
-    "//zircon/third_party/lib/acpica",
   ]
 }
 
@@ -258,6 +258,7 @@ test("x86-pwrsrc-test") {
   ]
   configs += [ ":config" ]
   deps = [
+    "//third_party/acpica",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fdio",
@@ -270,7 +271,6 @@ test("x86-pwrsrc-test") {
     "//zircon/system/banjo/ddk.protocol.scpi",
     "//zircon/system/banjo/ddk.protocol.sysmem",
     "//zircon/system/fidl/fuchsia-hardware-power:c",
-    "//zircon/third_party/lib/acpica",
   ]
 }
 
@@ -298,10 +298,10 @@ test("x86-board-test") {
   deps = [
     ":iommu",
     ":smbios",
+    "//third_party/acpica",
     "//zircon/public/lib/fake_ddk",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zxtest",
-    "//zircon/third_party/lib/acpica",
   ]
 }
 
@@ -329,6 +329,7 @@ test("x86-thermal-test") {
   ]
   configs += [ ":config" ]
   deps = [
+    "//third_party/acpica",
     "//zircon/public/lib/async-loop",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/ddk",
@@ -340,7 +341,6 @@ test("x86-thermal-test") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/banjo/ddk.protocol.acpi",
     "//zircon/system/fidl/fuchsia-hardware-thermal:c",
-    "//zircon/third_party/lib/acpica",
   ]
 }
 

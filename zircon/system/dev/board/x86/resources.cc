@@ -134,7 +134,7 @@ zx_status_t resource_parse_irq(ACPI_RESOURCE* res, resource_irq_t* out) {
       ACPI_RESOURCE_IRQ* irq = &res->Data.Irq;
       out->trigger = irq->Triggering;
       out->polarity = irq->Polarity;
-      out->sharable = irq->Sharable;
+      out->sharable = irq->Shareable;
       out->wake_capable = irq->WakeCapable;
       out->pin_count = irq->InterruptCount;
       if (irq->InterruptCount > countof(out->pins)) {
@@ -149,7 +149,7 @@ zx_status_t resource_parse_irq(ACPI_RESOURCE* res, resource_irq_t* out) {
       ACPI_RESOURCE_EXTENDED_IRQ* irq = &res->Data.ExtendedIrq;
       out->trigger = irq->Triggering;
       out->polarity = irq->Polarity;
-      out->sharable = irq->Sharable;
+      out->sharable = irq->Shareable;
       out->wake_capable = irq->WakeCapable;
       out->pin_count = irq->InterruptCount;
       if (irq->InterruptCount > countof(out->pins)) {

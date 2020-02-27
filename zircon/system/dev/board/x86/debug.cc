@@ -121,7 +121,7 @@ static ACPI_STATUS acpi_print_resources(ACPI_HANDLE object, unsigned int level,
             break;
         }
         INDENT_PRINTF("polarity: %s\n", pol);
-        INDENT_PRINTF("sharable: %d\n", irq->Sharable);
+        INDENT_PRINTF("sharable: %d\n", irq->Shareable);
         INDENT_PRINTF("wake_cap: %d\n", irq->WakeCapable);
         for (unsigned int i = 0; i < irq->InterruptCount; ++i) {
           INDENT_PRINTF("irq #%d: %d\n", i, irq->Interrupts[i]);
@@ -146,7 +146,7 @@ static ACPI_STATUS acpi_print_resources(ACPI_HANDLE object, unsigned int level,
             break;
         }
         INDENT_PRINTF("polarity: %s\n", pol);
-        INDENT_PRINTF("sharable: %d\n", irq->Sharable);
+        INDENT_PRINTF("sharable: %d\n", irq->Shareable);
         INDENT_PRINTF("wake_cap: %d\n", irq->WakeCapable);
         for (unsigned int i = 0; i < irq->InterruptCount; ++i) {
           INDENT_PRINTF("irq #%d: %d\n", i, irq->Interrupts[i]);

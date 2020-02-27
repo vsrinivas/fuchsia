@@ -1129,6 +1129,22 @@ ACPI_STATUS AcpiOsWritePciConfiguration(ACPI_PCI_ID* PciId, UINT32 Register, UIN
 }
 
 /**
+ * @brief A hook before writing sleep registers to enter the sleep state.
+ *
+ * @param Which sleep state to enter
+ * @param Register A value
+ * @param Register B value
+ *
+ * @return AE_CTRL_TERMINATE to skip further sleep register writes, otherwise AE_OK
+ */
+
+ACPI_STATUS AcpiOsEnterSleep(UINT8 SleepState, UINT32 RegaValue, UINT32 RegbValue) {
+  // We have no need to deny any particular sleep states, so just return OK and let the sleep
+  // happen.
+  return (AE_OK);
+}
+
+/**
  * @brief Formatted stream output.
  *
  * @param Format A standard print format string.
@@ -1160,10 +1176,7 @@ void AcpiOsVprintf(const char* Format, va_list Args) {
  *
  * @return The current value of the system timer in 100-ns units.
  */
-UINT64 AcpiOsGetTimer() {
-  assert(false);
-  return 0;
-}
+UINT64 AcpiOsGetTimer() { return zx_clock_get_monotonic() / 100; }
 
 /**
  * @brief Break to the debugger or display a breakpoint message.
@@ -1179,6 +1192,23 @@ ACPI_STATUS AcpiOsSignal(UINT32 Function, void* Info) {
   return AE_OK;
 }
 
+/*
+ * According to the the ACPI specification, section 5.2.10, the platform boot firmware aligns the
+ * FACS (Firmware ACPI Control Structure) on a 64-byte boundary anywhere within the system’s
+ * memory address space. This means we can assume the alignment when interacting with it.
+ * Specifically we need to be able to manipulate the GlobalLock contained in the FACS table with
+ * atomic operations, and these require aligned accesses.
+ *
+ * Although we know that the table will be aligned, to prevent the compiler from complaining we use
+ * a wrapper struct to set the alignment attribute.
+ */
+struct AlignedFacs {
+  ACPI_TABLE_FACS table;
+} __attribute__((aligned(8)));
+
+/* Setting the alignment should not have changed the size. */
+static_assert(sizeof(AlignedFacs) == sizeof(ACPI_TABLE_FACS));
+
 /* @brief Acquire the ACPI global lock
  *
  * Implementation for ACPI_ACQUIRE_GLOBAL_LOCK
@@ -1188,18 +1218,19 @@ ACPI_STATUS AcpiOsSignal(UINT32 Function, void* Info) {
  * @return True if the lock was successfully acquired
  */
 bool _acpica_acquire_global_lock(void* FacsPtr) {
-  ACPI_TABLE_FACS* table = (ACPI_TABLE_FACS*)FacsPtr;
+  assert(reinterpret_cast<uintptr_t>(FacsPtr) % 8 == 0);
+  AlignedFacs* table = (AlignedFacs*)FacsPtr;
   uint32_t old_val, new_val, test_val;
   do {
-    old_val = test_val = table->GlobalLock;
+    old_val = test_val = table->table.GlobalLock;
     new_val = old_val & ~ACPI_GLOCK_PENDING;
     // If the lock is owned, we'll mark it pending
     if (new_val & ACPI_GLOCK_OWNED) {
       new_val |= ACPI_GLOCK_PENDING;
     }
     new_val |= ACPI_GLOCK_OWNED;
-    __atomic_compare_exchange_n(&table->GlobalLock, &old_val, new_val, false, __ATOMIC_SEQ_CST,
-                                __ATOMIC_SEQ_CST);
+    __atomic_compare_exchange_n(&table->table.GlobalLock, &old_val, new_val, false,
+                                __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
   } while (old_val != test_val);
 
   /* If we're here, we either acquired the lock or marked it pending */
@@ -1215,13 +1246,16 @@ bool _acpica_acquire_global_lock(void* FacsPtr) {
  * @return True if there is someone waiting to acquire the lock
  */
 bool _acpica_release_global_lock(void* FacsPtr) {
-  ACPI_TABLE_FACS* table = (ACPI_TABLE_FACS*)FacsPtr;
+  // the FACS table is required to be 8 byte aligned, so sanity check with an assert but otherwise
+  // we can just treat it as being aligned.
+  assert(reinterpret_cast<uintptr_t>(FacsPtr) % 8 == 0);
+  AlignedFacs* table = (AlignedFacs*)FacsPtr;
   uint32_t old_val, new_val, test_val;
   do {
-    old_val = test_val = table->GlobalLock;
+    old_val = test_val = table->table.GlobalLock;
     new_val = old_val & ~(ACPI_GLOCK_PENDING | ACPI_GLOCK_OWNED);
-    __atomic_compare_exchange_n(&table->GlobalLock, &old_val, new_val, false, __ATOMIC_SEQ_CST,
-                                __ATOMIC_SEQ_CST);
+    __atomic_compare_exchange_n(&table->table.GlobalLock, &old_val, new_val, false,
+                                __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
   } while (old_val != test_val);
 
   return !!(old_val & ACPI_GLOCK_PENDING);
