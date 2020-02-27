@@ -61,6 +61,89 @@ macro_rules! assert_matches {
     };
 }
 
+/// Asserts that the first argument is strictly less than the second.
+#[macro_export]
+macro_rules! assert_lt {
+    ($x:expr, $y:expr) => {
+        assert!(
+            $x < $y,
+            "assertion `{} < {}` failed; actual: {} is not less than {}",
+            stringify!($x),
+            stringify!($y),
+            $x,
+            $y
+        );
+    };
+}
+
+/// Asserts that the first argument is less than or equal to the second.
+#[macro_export]
+macro_rules! assert_leq {
+    ($x:expr, $y:expr) => {
+        assert!(
+            $x <= $y,
+            "assertion `{} <= {}` failed; actual: {} is not less than or equal to {}",
+            stringify!($x),
+            stringify!($y),
+            $x,
+            $y
+        );
+    };
+}
+
+/// Asserts that the first argument is strictly greater than the second.
+#[macro_export]
+macro_rules! assert_gt {
+    ($x:expr, $y:expr) => {
+        assert!(
+            $x > $y,
+            "assertion `{} > {}` failed; actual: {} is not greater than {}",
+            stringify!($x),
+            stringify!($y),
+            $x,
+            $y
+        );
+    };
+}
+
+/// Asserts that the first argument is greater than or equal to the second.
+#[macro_export]
+macro_rules! assert_geq {
+    ($x:expr, $y:expr) => {
+        assert!(
+            $x >= $y,
+            "assertion `{} >= {}` failed; actual: {} is not greater than or equal to {}",
+            stringify!($x),
+            stringify!($y),
+            $x,
+            $y
+        );
+    };
+}
+
+/// Asserts that `x` and `y` are within `delta` of one another.
+///
+/// `x` and `y` must be of a common type that supports both subtraction and negation. (Note that it
+/// would be natural to define this macro using `abs()`, but when attempting to do so, the compiler
+/// fails to apply its inference rule for under-constrained types. See
+/// [https://github.com/rust-lang/reference/issues/104].)
+#[macro_export]
+macro_rules! assert_near {
+    ($x: expr, $y: expr, $delta: expr) => {
+        let difference = $x - $y;
+        assert!(
+            -$delta <= difference && difference <= $delta,
+            "assertion `{} is near {} (within delta {})` failed; actual: |{} - {}| > {}",
+            stringify!($x),
+            stringify!($y),
+            stringify!($delta),
+            $x,
+            $y,
+            $delta
+        );
+    };
+}
+
 /// A mutually exclusive counter that is not shareable, but can be defined statically for the
 /// duration of a test. This simplifies the implementation of a simple test-global counter,
 /// avoiding the complexity of alternatives like std::sync::atomic objects that are typically
@@ -188,6 +271,149 @@ mod tests {
         if let Foo::Bar(ref val) = input {
             assert_eq!(val, "foo");
         }
+    }
+
+    #[test]
+    fn test_assert_lt_passes() {
+        assert_lt!(1, 2);
+        assert_lt!(1u8, 2u8);
+        assert_lt!(1u16, 2u16);
+        assert_lt!(1u32, 2u32);
+        assert_lt!(1u64, 2u64);
+        assert_lt!(-1, 3);
+        assert_lt!(-1i8, 3i8);
+        assert_lt!(-1i16, 3i16);
+        assert_lt!(-1i32, 3i32);
+        assert_lt!(-1i64, 3i64);
+        assert_lt!(-2.0, 7.0);
+        assert_lt!(-2.0f32, 7.0f32);
+        assert_lt!(-2.0f64, 7.0f64);
+        assert_lt!('a', 'b');
+    }
+
+    #[test]
+    #[should_panic(expected = "assertion `a < b` failed; actual: 2 is not less than 2")]
+    fn test_assert_lt_fails_a_equals_b() {
+        let a = 2;
+        let b = 2;
+        assert_lt!(a, b);
+    }
+
+    #[test]
+    #[should_panic(expected = "assertion `a < b` failed; actual: 5 is not less than 2")]
+    fn test_assert_lt_fails_a_greater_than_b() {
+        let a = 5;
+        let b = 2;
+        assert_lt!(a, b);
+    }
+
+    #[test]
+    fn test_assert_leq_passes() {
+        assert_leq!(1, 2);
+        assert_leq!(2, 2);
+        assert_leq!(-2.0, 3.0);
+        assert_leq!(3.0, 3.0);
+        assert_leq!('a', 'b');
+        assert_leq!('b', 'b');
+    }
+
+    #[test]
+    #[should_panic(
+        expected = "assertion `a <= b` failed; actual: 3 is not less than or equal to 2"
+    )]
+    fn test_assert_leq_fails() {
+        let a = 3;
+        let b = 2;
+        assert_leq!(a, b);
+    }
+
+    #[test]
+    fn test_assert_gt_passes() {
+        assert_gt!(2, 1);
+        assert_gt!(2u8, 1u8);
+        assert_gt!(2u16, 1u16);
+        assert_gt!(2u32, 1u32);
+        assert_gt!(2u64, 1u64);
+        assert_gt!(3, -1);
+        assert_gt!(3i8, -1i8);
+        assert_gt!(3i16, -1i16);
+        assert_gt!(3i32, -1i32);
+        assert_gt!(3i64, -1i64);
+        assert_gt!(7.0, -2.0);
+        assert_gt!(7.0f32, -2.0f32);
+        assert_gt!(7.0f64, -2.0f64);
+        assert_gt!('b', 'a');
+    }
+
+    #[test]
+    #[should_panic(expected = "assertion `a > b` failed; actual: 2 is not greater than 2")]
+    fn test_assert_gt_fails_a_equals_b() {
+        let a = 2;
+        let b = 2;
+        assert_gt!(a, b);
+    }
+
+    #[test]
+    #[should_panic(expected = "assertion `a > b` failed; actual: -1 is not greater than 2")]
+    fn test_assert_gt_fails_a_less_than_b() {
+        let a = -1;
+        let b = 2;
+        assert_gt!(a, b);
+    }
+
+    #[test]
+    fn test_assert_geq_passes() {
+        assert_geq!(2, 1);
+        assert_geq!(2, 2);
+        assert_geq!(3.0, -2.0);
+        assert_geq!(3.0, 3.0);
+        assert_geq!('b', 'a');
+        assert_geq!('b', 'b');
+    }
+
+    #[test]
+    #[should_panic(
+        expected = "assertion `a >= b` failed; actual: 2 is not greater than or equal to 3"
+    )]
+    fn test_assert_geq_fails() {
+        let a = 2;
+        let b = 3;
+        assert_geq!(a, b);
+    }
+
+    #[test]
+    fn test_assert_near_passes() {
+        // Test both possible orderings and equality with literals.
+        assert_near!(1.0001, 1.0, 0.01);
+        assert_near!(1.0, 1.0001, 0.01);
+        assert_near!(1.0, 1.0, 0.0);
+
+        // Ensure the macro operates on all other expected input types.
+        assert_near!(1.0001f32, 1.0f32, 0.01f32);
+        assert_near!(1.0001f64, 1.0f64, 0.01f64);
+        assert_near!(7, 5, 2);
+        assert_near!(7i8, 5i8, 2i8);
+        assert_near!(7i16, 5i16, 2i16);
+        assert_near!(7i32, 5i32, 2i32);
+        assert_near!(7i64, 5i64, 2i64);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_assert_near_fails() {
+        assert_near!(1.00001, 1.0, 1e-8);
+    }
+
+    // Test error message with integers so display is predictable.
+    #[test]
+    #[should_panic(
+        expected = "assertion `a is near b (within delta d)` failed; actual: |3 - 5| > 1"
+    )]
+    fn test_assert_near_fails_with_message() {
+        let a = 3;
+        let b = 5;
+        let d = 1;
+        assert_near!(a, b, d);
     }
 
     #[test]
