@@ -598,7 +598,7 @@ void WaitBeginEnd(uint32_t type) {
 
   fdio_unsafe_wait_begin(io, POLLOUT, handle.reset_and_get_address(), &signals);
   EXPECT_NE(handle.get(), ZX_HANDLE_INVALID);
-  EXPECT_EQ(signals, ZX_SOCKET_WRITABLE | ZX_SOCKET_PEER_CLOSED | ZX_SOCKET_WRITE_DISABLED);
+  EXPECT_EQ(signals, ZX_SOCKET_WRITABLE | ZX_SOCKET_WRITE_DISABLED);
 
   signals = ZX_SIGNAL_NONE;
   fdio_unsafe_wait_begin(io, POLLRDHUP, handle.reset_and_get_address(), &signals);
@@ -613,7 +613,7 @@ void WaitBeginEnd(uint32_t type) {
 
   events = 0u;
   fdio_unsafe_wait_end(io, ZX_SOCKET_PEER_CLOSED, &events);
-  EXPECT_EQ(events, (uint32_t)(POLLIN | POLLOUT | POLLHUP | POLLRDHUP | POLLERR));
+  EXPECT_EQ(events, (uint32_t)(POLLIN | POLLRDHUP));
 
   events = 0u;
   fdio_unsafe_wait_end(io, ZX_SOCKET_PEER_WRITE_DISABLED, &events);

@@ -60,18 +60,20 @@ zx_status_t fdio_zxio_close(fdio_t* io) {
 
 // TODO(fxb/45813): This is mainly used by pipes. Consider merging this with the
 // POSIX-to-zxio signal translation in |fdio_zxio_remote_wait_begin|.
+// TODO(fxb/47132): Do not change the signal mapping here and in |fdio_zxio_wait_end|
+// until linked issue is resolved.
 static void fdio_zxio_wait_begin(fdio_t* io, uint32_t events, zx_handle_t* out_handle,
                                  zx_signals_t* out_signals) {
   zxio_t* z = fdio_get_zxio(io);
-  zxio_signals_t signals = ZXIO_SIGNAL_PEER_CLOSED;
+  zxio_signals_t signals = ZXIO_SIGNAL_NONE;
   if (events & POLLIN) {
-    signals |= ZXIO_SIGNAL_READABLE | ZXIO_SIGNAL_READ_DISABLED;
+    signals |= ZXIO_SIGNAL_READABLE | ZXIO_SIGNAL_PEER_CLOSED | ZXIO_SIGNAL_READ_DISABLED;
   }
   if (events & POLLOUT) {
     signals |= ZXIO_SIGNAL_WRITABLE | ZXIO_SIGNAL_WRITE_DISABLED;
   }
   if (events & POLLRDHUP) {
-    signals |= ZXIO_SIGNAL_READ_DISABLED;
+    signals |= ZXIO_SIGNAL_READ_DISABLED | ZXIO_SIGNAL_PEER_CLOSED;
   }
   zxio_wait_begin(z, signals, out_handle, out_signals);
 }
@@ -82,17 +84,14 @@ static void fdio_zxio_wait_end(fdio_t* io, zx_signals_t signals, uint32_t* out_e
   zxio_wait_end(z, signals, &zxio_signals);
 
   uint32_t events = 0;
-  if (zxio_signals & (ZXIO_SIGNAL_READABLE | ZXIO_SIGNAL_READ_DISABLED)) {
+  if (zxio_signals & (ZXIO_SIGNAL_READABLE | ZXIO_SIGNAL_PEER_CLOSED | ZXIO_SIGNAL_READ_DISABLED)) {
     events |= POLLIN;
   }
   if (zxio_signals & (ZXIO_SIGNAL_WRITABLE | ZXIO_SIGNAL_WRITE_DISABLED)) {
     events |= POLLOUT;
   }
-  if (zxio_signals & ZXIO_SIGNAL_READ_DISABLED) {
-    events |= POLLIN | POLLRDHUP;
-  }
-  if (zxio_signals & ZXIO_SIGNAL_PEER_CLOSED) {
-    events |= POLLIN | POLLOUT | POLLHUP | POLLRDHUP | POLLERR;
+  if (zxio_signals & (ZXIO_SIGNAL_READ_DISABLED | ZXIO_SIGNAL_PEER_CLOSED)) {
+    events |= POLLRDHUP;
   }
   *out_events = events;
 }
