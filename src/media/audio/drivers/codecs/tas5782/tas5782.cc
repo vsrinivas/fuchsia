@@ -133,6 +133,10 @@ zx_status_t Tas5782::Create(zx_device_t* parent) {
   auto dev = std::unique_ptr<Tas5782>(new (&ac) Tas5782(parent, components[COMPONENT_I2C],
                                                         components[COMPONENT_RESET_GPIO],
                                                         components[COMPONENT_MUTE_GPIO]));
+  if (!ac.check()) {
+    zxlogf(ERROR, "%s Could not allocate memory\n", __FILE__);
+    return ZX_ERR_NO_MEMORY;
+  }
   status = dev->Bind();
   if (status != ZX_OK) {
     return status;

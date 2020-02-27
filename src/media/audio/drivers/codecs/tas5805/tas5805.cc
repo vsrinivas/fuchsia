@@ -154,6 +154,10 @@ zx_status_t Tas5805::Create(zx_device_t* parent) {
 
   fbl::AllocChecker ac;
   auto dev = std::unique_ptr<Tas5805>(new (&ac) Tas5805(parent, components[COMPONENT_I2C]));
+  if (!ac.check()) {
+    zxlogf(ERROR, "%s Could not allocate memory\n", __FILE__);
+    return ZX_ERR_NO_MEMORY;
+  }
   status = dev->Bind();
   if (status != ZX_OK) {
     return status;
