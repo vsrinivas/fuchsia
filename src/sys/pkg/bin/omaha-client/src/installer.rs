@@ -4,8 +4,6 @@
 
 //! This is the Fuchsia Installer implementation that talks to fuchsia.update.installer FIDL API.
 
-#![allow(dead_code)]
-
 use crate::install_plan::FuchsiaInstallPlan;
 use anyhow::anyhow;
 use fidl::endpoints::create_proxy;
@@ -54,6 +52,8 @@ pub struct FuchsiaInstaller {
 }
 
 impl FuchsiaInstaller {
+    // Unused until temp_installer.rs is removed.
+    #[allow(dead_code)]
     pub fn new() -> Result<Self, anyhow::Error> {
         let proxy = fuchsia_component::client::connect_to_service::<InstallerMarker>()?;
         Ok(FuchsiaInstaller { proxy })
