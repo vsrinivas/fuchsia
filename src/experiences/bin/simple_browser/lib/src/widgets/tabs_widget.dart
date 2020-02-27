@@ -15,9 +15,10 @@ const _kBorderWidth = 1.0;
 const _kTabPadding = EdgeInsets.symmetric(horizontal: _kTabBarHeight);
 const _kScrollToMargin = _kMinTabWidth / 3;
 const _kScrollAnimationDuration = 300;
+const _kAutoScrollOffset = 5.0;
 const _kIconSize = 14.0;
 
-enum _ScrollButtonType { left, right }
+enum _ScrollDirection { left, right }
 
 @visibleForTesting
 double get kTabBarHeight => _kTabBarHeight;
@@ -49,7 +50,7 @@ class _TabsWidgetState extends State<TabsWidget>
     with TickerProviderStateMixin<TabsWidget> {
   double _tabListWidth = 0.0;
   double _tabWidth = 0.0;
-  double _dragStartX = 0.0;
+  double _dragCursorOffset = 0.0;
   final _currentTabX = ValueNotifier<double>(0.0);
 
   int _ghostIndex = 0;
@@ -63,8 +64,8 @@ class _TabsWidgetState extends State<TabsWidget>
   AnimationController _rightNewGhostController;
 
   final _scrollController = ScrollController();
-  final _leftScrollButton = _ScrollButton(_ScrollButtonType.left);
-  final _rightScrollButton = _ScrollButton(_ScrollButtonType.right);
+  final _leftScrollButton = _ScrollButton(_ScrollDirection.left);
+  final _rightScrollButton = _ScrollButton(_ScrollDirection.right);
 
   ThemeData _browserTheme;
 
@@ -85,6 +86,7 @@ class _TabsWidgetState extends State<TabsWidget>
     _leftNewGhostController.value = 0.0;
     _rightNewGhostController.value = 0.0;
 
+    _currentTabX.addListener(_onCurrentTabXChanged);
     _leftNewGhostController.addStatusListener(_onLeftNewGhostControllerChanged);
     _rightNewGhostController
         .addStatusListener(_onRightNewGhostControllerChanged);
@@ -355,12 +357,10 @@ class _TabsWidgetState extends State<TabsWidget>
 
     if (_scrollController.hasClients) {
       final viewportWidth = _scrollController.position.viewportDimension;
-      final currentTabIndex = widget.bloc.currentTabIdx;
-      final currentTabPosition = currentTabIndex * _kMinTabWidth;
 
-      final offsetForLeftEdge = currentTabPosition - _kScrollToMargin;
+      final offsetForLeftEdge = _currentTabX.value - _kScrollToMargin;
       final offsetForRightEdge =
-          currentTabPosition - viewportWidth + _kMinTabWidth + _kScrollToMargin;
+          _currentTabX.value - viewportWidth + _kMinTabWidth + _kScrollToMargin;
 
       double newOffset;
 
@@ -385,6 +385,8 @@ class _TabsWidgetState extends State<TabsWidget>
     _currentTabX.value = _tabWidth * _ghostIndex;
   }
 
+  // Remembers the current values of properties such as the dragging target tab's
+  // position and the scroll controller's offset when dragging starts.
   void _onDragStart(int index, DragStartDetails details) {
     if (index != widget.bloc.currentTabIdx) {
       widget.bloc.request.add(FocusTabAction(tab: widget.bloc.tabs[index]));
@@ -392,23 +394,34 @@ class _TabsWidgetState extends State<TabsWidget>
     _isDragging = true;
     _dragStartIndex = index;
     _ghostIndex = index;
-    _dragStartX = details.globalPosition.dx;
+    double scrollOffset = 0.0;
+    if (_scrollController.hasClients) {
+      scrollOffset = _scrollController.offset;
+    }
+
+    // The distance between the mouse cursor and the moving tab's left edge
+    // on the X-axis.
+    _dragCursorOffset = (_tabWidth * _dragStartIndex - scrollOffset) -
+        details.globalPosition.dx;
   }
 
+  // Updates the moving tab's position as the mouse cursor moves.
   void _onDragUpdate(DragUpdateDetails details) {
-    double dragOffsetX = details.globalPosition.dx - _dragStartX;
-    double dragXMax = (_scrollController.hasClients)
-        ? (_tabWidth * widget.bloc.tabs.length) - _tabWidth
-        : (_tabListWidth - _tabWidth);
-    _currentTabX.value = ((_tabWidth * widget.bloc.currentTabIdx) + dragOffsetX)
-        .clamp(0.0, dragXMax);
+    double scrollOffset = 0.0;
+    double dragXMax = _tabListWidth - _tabWidth;
 
-    if (!_isAnimating) {
-      if (_isOverlappingLeftTabHalf()) {
-        _shiftLeftToRight();
-      }
-      if (_isOverlappingRightTabHalf()) {
-        _shiftRightToLeft();
+    if (_scrollController.hasClients) {
+      scrollOffset = _scrollController.offset;
+      dragXMax = (_kMinTabWidth * widget.bloc.tabs.length) - _kMinTabWidth;
+    }
+    double newX = details.globalPosition.dx + _dragCursorOffset + scrollOffset;
+    _currentTabX.value = newX.clamp(0.0, dragXMax);
+
+    if (_scrollController.hasClients) {
+      if (_didHitLeftEdge()) {
+        _autoScrollTo(_ScrollDirection.left);
+      } else if (_didHitRightEdge()) {
+        _autoScrollTo(_ScrollDirection.right);
       }
     }
   }
@@ -416,8 +429,8 @@ class _TabsWidgetState extends State<TabsWidget>
   void _onDragEnd(DragEndDetails details) {
     _isDragging = false;
 
-    // Rearranges the selected tab to the currently empty space only when there is no
-    // unfinished animations.
+    // Rearranges the selected tab to the currently empty space only when
+    // there is no unfinished animations.
     if (!_isAnimating) {
       _completeRearrangement();
     }
@@ -431,6 +444,22 @@ class _TabsWidgetState extends State<TabsWidget>
       _leftNewGhostController.value = 0.0;
 
       _onAnimationInterrupted();
+    }
+  }
+
+  void _onCurrentTabXChanged() {
+    if (_isDragging) {
+      // Sees if the moving tab is overlapping more than half of its neighbor tab,
+      // then shift the overlapped tab to the left/right accordingly.
+      // Does not check while a shifting animation is happening.
+      if (!_isAnimating) {
+        if (_isOverlappingLeftTabHalf()) {
+          _shiftLeftToRight();
+        }
+        if (_isOverlappingRightTabHalf()) {
+          _shiftRightToLeft();
+        }
+      }
     }
   }
 
@@ -453,6 +482,7 @@ class _TabsWidgetState extends State<TabsWidget>
     }
   }
 
+  // Changes the order of the tabs in the TabsBloc.
   void _completeRearrangement() {
     if (_ghostIndex != _dragStartIndex) {
       widget.bloc.request.add(RearrangeTabsAction(
@@ -479,13 +509,13 @@ class _TabsWidgetState extends State<TabsWidget>
   }
 
   void _onScrollEnd(ScrollMetrics metrics) {
-    if (_canScrollTo(_ScrollButtonType.left)) {
+    if (_canScrollTo(_ScrollDirection.left)) {
       _leftScrollButton.enable();
     } else {
       _leftScrollButton.disable();
     }
 
-    if (_canScrollTo(_ScrollButtonType.right)) {
+    if (_canScrollTo(_ScrollDirection.right)) {
       _rightScrollButton.enable();
     } else {
       _rightScrollButton.disable();
@@ -493,6 +523,20 @@ class _TabsWidgetState extends State<TabsWidget>
   }
 
   // CHECKERS
+
+  bool _didHitLeftEdge() {
+    final scrollOffset = _scrollController.offset;
+
+    return (_currentTabX.value < scrollOffset);
+  }
+
+  bool _didHitRightEdge() {
+    final scrollOffset = _scrollController.offset;
+    final listViewportWidth = _scrollController.position.viewportDimension;
+
+    return (_currentTabX.value + _kMinTabWidth >
+        scrollOffset + listViewportWidth);
+  }
 
   bool _isOverlappingLeftTabHalf() {
     if (_ghostIndex < 1) {
@@ -517,14 +561,14 @@ class _TabsWidgetState extends State<TabsWidget>
     return false;
   }
 
-  bool _canScrollTo(_ScrollButtonType direction) {
+  bool _canScrollTo(_ScrollDirection direction) {
     switch (direction) {
-      case _ScrollButtonType.left:
+      case _ScrollDirection.left:
         if (_scrollController.offset <= 0.0) {
           return false;
         }
         return true;
-      case _ScrollButtonType.right:
+      case _ScrollDirection.right:
         if (_scrollController.offset >=
             (_kMinTabWidth * widget.bloc.tabs.length -
                 _scrollController.position.viewportDimension)) {
@@ -537,6 +581,22 @@ class _TabsWidgetState extends State<TabsWidget>
   }
 
   // ANIMATORS
+
+  void _autoScrollTo(_ScrollDirection direction) {
+    final currentOffset = _scrollController.offset;
+    final addOnOffset = (direction == _ScrollDirection.left)
+        ? _kAutoScrollOffset * -1
+        : _kAutoScrollOffset;
+
+    final offsetMax = (_tabWidth * widget.bloc.tabs.length) -
+        _scrollController.position.viewportDimension;
+
+    final newOffset = (currentOffset + addOnOffset).clamp(0.0, offsetMax);
+
+    final tabXMax = (_tabWidth * widget.bloc.tabs.length) - _tabWidth;
+    _scrollController.jumpTo(newOffset);
+    _currentTabX.value = (_currentTabX.value + addOnOffset).clamp(0.0, tabXMax);
+  }
 
   void _shiftLeftToRight() {
     _isAnimating = true;
@@ -581,63 +641,54 @@ class _TabWidgetState extends State<_TabWidget> {
           _hovering.value = false;
         });
       },
-      // TODO(fxb/45239): Remove GestureDetector and Container.
-      child: GestureDetector(
-        onTap: widget.onSelect,
-        child: Container(
+      child: DefaultTextStyle(
+        style: baseTheme.textTheme.bodyText2.copyWith(
           color:
-              widget.selected ? baseTheme.accentColor : baseTheme.primaryColor,
-          child: DefaultTextStyle(
-            style: baseTheme.textTheme.bodyText2.copyWith(
-              color: widget.selected
-                  ? baseTheme.primaryColor
-                  : baseTheme.accentColor,
+              widget.selected ? baseTheme.primaryColor : baseTheme.accentColor,
+        ),
+        child: Stack(
+          children: <Widget>[
+            Center(
+              child: Padding(
+                padding: _kTabPadding,
+                child: AnimatedBuilder(
+                  animation: widget.bloc.pageTitleNotifier,
+                  builder: (_, __) => Text(
+                    widget.bloc.pageTitle ?? Strings.newtab.toUpperCase(),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
             ),
-            child: Stack(
-              children: <Widget>[
-                Center(
-                  child: Padding(
-                    padding: _kTabPadding,
-                    child: AnimatedBuilder(
-                      animation: widget.bloc.pageTitleNotifier,
-                      builder: (_, __) => Text(
-                        widget.bloc.pageTitle ?? Strings.newtab.toUpperCase(),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+            Positioned(
+              right: 0,
+              child: AnimatedBuilder(
+                animation: _hovering,
+                builder: (_, child) => Offstage(
+                  offstage: !(widget.selected || _hovering.value),
+                  child: child,
+                ),
+                child: Padding(
+                  padding: EdgeInsets.all(4),
+                  child: GestureDetector(
+                    onTap: widget.onClose,
+                    child: Container(
+                      color: Colors.transparent,
+                      alignment: Alignment.center,
+                      child: Icon(
+                        Icons.clear,
+                        color: widget.selected
+                            ? baseTheme.primaryColor
+                            : baseTheme.accentColor,
+                        size: _kIconSize,
                       ),
                     ),
                   ),
                 ),
-                Positioned(
-                  right: 0.0,
-                  child: AnimatedBuilder(
-                    animation: _hovering,
-                    builder: (_, child) => Offstage(
-                      offstage: !(widget.selected || _hovering.value),
-                      child: child,
-                    ),
-                    child: Padding(
-                      padding: EdgeInsets.all(4.0),
-                      child: GestureDetector(
-                        onTap: widget.onClose,
-                        child: Container(
-                          color: Colors.transparent,
-                          alignment: Alignment.center,
-                          child: Icon(
-                            Icons.clear,
-                            color: widget.selected
-                                ? baseTheme.primaryColor
-                                : baseTheme.accentColor,
-                            size: _kIconSize,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );
@@ -645,20 +696,20 @@ class _TabWidgetState extends State<_TabWidget> {
 }
 
 class _ScrollButton {
-  final _ScrollButtonType type;
+  final _ScrollDirection type;
   IconData icon;
   final ValueNotifier<bool> isEnabled = ValueNotifier<bool>(true);
   double directionFactor = 0.0;
 
   _ScrollButton(this.type)
       : assert(
-            type == _ScrollButtonType.left || type == _ScrollButtonType.right) {
+            type == _ScrollDirection.left || type == _ScrollDirection.right) {
     switch (type) {
-      case _ScrollButtonType.left:
+      case _ScrollDirection.left:
         icon = Icons.keyboard_arrow_left;
         directionFactor = -1.0;
         break;
-      case _ScrollButtonType.right:
+      case _ScrollDirection.right:
         icon = Icons.keyboard_arrow_right;
         directionFactor = 1.0;
         break;

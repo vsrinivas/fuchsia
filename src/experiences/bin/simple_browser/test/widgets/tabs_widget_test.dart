@@ -320,6 +320,125 @@ void main() {
     });
 
     testWidgets(
+        'The tab list should scroll to the left when the moving tab hits its left edge.',
+        (WidgetTester tester) async {
+      await _setUpTabsWidget(tester, tabsBloc);
+
+      const numTabs = 8;
+
+      // Creates 8 tabs.
+      await _addNTabsToTabsBloc(tester, tabsBloc, numTabs);
+
+      // The expected display of the initial tab list (*currently focused tab):
+      // |- 0 -| |- 1 -| |- 2 -| |- 3 -| |- 4 -| |- 5 -| |- 6 -| |- 7* -|
+      //              |-                     SCREEN                    -|
+
+      final tabs = _findMinTabWidgets();
+      _verifyFocusedTabIndex(tabsBloc, numTabs - 1);
+
+      // Saves the original tab positions.
+      final originalXs = <double>[];
+      for (int i = 0; i < numTabs; i++) {
+        originalXs.add(tester.getTopLeft(tabs.at(i)).dx);
+      }
+
+      // Drags the 3rd tab 35.0 to the left to hit the left edge of the list.
+      const tabIndexToDrag = 2;
+      await tester.drag(tabs.at(tabIndexToDrag), Offset(-35.0, 0.0));
+      await tester.pumpAndSettle();
+
+      // The expected display of the tab list (*currently focused tab):
+      // |- 0 -| |- 1 -| |- 2* -| |- 3 -| |- 4 -| |- 5 -| |- 6 -| |- 7 -|
+      //             |-                     SCREEN                    -|
+
+      _verifyFocusedTabIndex(tabsBloc, tabIndexToDrag);
+      final afterDragXs = <double>[];
+
+      // Saves the new tab positions to a list in the actual tab order.
+      for (int i = 0; i < tabIndexToDrag; i++) {
+        afterDragXs.add(tester.getTopLeft(tabs.at(i)).dx);
+      }
+      afterDragXs.add(tester.getTopLeft(tabs.last).dx);
+      for (int i = tabIndexToDrag; i < numTabs - 1; i++) {
+        afterDragXs.add(tester.getTopLeft(tabs.at(i)).dx);
+      }
+
+      // Sees if the list has auto-scrolled to the left by comparing
+      // the tab positions before and after the 3rd tab hit the left edge.
+      for (int i = 0; i < numTabs; i++) {
+        expect(afterDragXs[i] > originalXs[i], true);
+      }
+    });
+
+    testWidgets(
+        'The tab list should scroll to the right when the moving tab hits its right edge.',
+        (WidgetTester tester) async {
+      await _setUpTabsWidget(tester, tabsBloc);
+
+      const numTabs = 8;
+
+      // Creates 8 tabs.
+      await _addNTabsToTabsBloc(tester, tabsBloc, numTabs);
+
+      // The expected display of the initial tab list (*currently focused tab):
+      // |- 0 -| |- 1 -| |- 2 -| |- 3 -| |- 4 -| |- 5 -| |- 6 -| |- 7* -|
+      //              |-                     SCREEN                    -|
+
+      final tabs = _findMinTabWidgets();
+      _verifyFocusedTabIndex(tabsBloc, numTabs - 1);
+
+      _verifyPartlyOffscreenFromLeft(tester, tabs.at(1));
+
+      final leftScrollButton = find.byIcon(Icons.keyboard_arrow_left);
+      expect(leftScrollButton, findsOneWidget);
+
+      // Taps on the left scroll button.
+      await tester.tap(leftScrollButton);
+      await tester.pumpAndSettle();
+
+      // The expected display of the tab list (*currently focused tab):
+      // |- 0 -| |- 1 -| |- 2* -| |- 3 -| |- 4 -| |- 5 -| |- 6 -| |- 7 -|
+      // |-                     SCREEN                    -|
+
+      _verifyPartlyOffscreenFromRight(tester, tabs.at(6));
+      _verifyEntirelyOffscreenFromRight(tester, tabs.last);
+
+      // Saves the original tab positions.
+      final originalXs = <double>[];
+      for (int i = 0; i < numTabs; i++) {
+        originalXs.add(tester.getTopLeft(tabs.at(i)).dx);
+      }
+
+      // Drags the 6th tab 35.0 to the right to hit the right edge of the list.
+      const tabIndexToDrag = 5;
+      await tester.drag(tabs.at(tabIndexToDrag), Offset(35.0, 0.0));
+      await tester.pumpAndSettle();
+
+      // The expected display of the tab list (*currently focused tab):
+      // |- 0 -| |- 1 -| |- 2 -| |- 3 -| |- 4 -| |- 5* -| |- 6 -| |- 7 -|
+      //  |-                     SCREEN                    -|
+
+      _verifyFocusedTabIndex(tabsBloc, tabIndexToDrag);
+
+      final afterDragXs = <double>[];
+
+      // Saves the new tab positions to a list in the actual tab order.
+      for (int i = 0; i < tabIndexToDrag; i++) {
+        afterDragXs.add(tester.getTopLeft(tabs.at(i)).dx);
+      }
+      afterDragXs.add(tester.getTopLeft(tabs.last).dx);
+      for (int i = tabIndexToDrag; i < numTabs - 1; i++) {
+        afterDragXs.add(tester.getTopLeft(tabs.at(i)).dx);
+      }
+
+      // Sees if the list has auto-scrolled to the right by comparing
+      // the tab positions before and after the 6th tab hit the right edge.
+      for (int i = 0; i < numTabs; i++) {
+        expect(afterDragXs[i] < originalXs[i], true);
+      }
+    });
+
+    testWidgets(
         'The tab widget list should scroll if needed depending on the offset of the focused tab.',
         (WidgetTester tester) async {
       await _setUpTabsWidget(tester, tabsBloc);
