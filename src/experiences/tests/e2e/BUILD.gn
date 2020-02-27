@@ -13,6 +13,7 @@ dart_test("experiences_ermine_session_shell_e2e_test") {
     # "ermine_session_shell_ask_test.dart",
     # "ermine_session_shell_simple_browser_test.dart",
     # "ermine_session_shell_status_test.dart",
+    "ermine_intl_test.dart",
     "ermine_smoke_test.dart",
   ]
 
@@ -45,6 +46,11 @@ group("test") {
 
   if (is_debug) {
     # Ermine tests use Flutter Driver, which only works in debug builds.
-    deps += [ ":experiences_ermine_session_shell_e2e_test($host_toolchain)" ]
+    deps += [
+      ":experiences_ermine_session_shell_e2e_test($host_toolchain)",
+
+      # Used for intl tests.
+      "//garnet/bin/setui_client:setui_client",
+    ]
   }
 }
