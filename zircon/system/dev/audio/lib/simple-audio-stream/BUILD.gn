@@ -2,32 +2,43 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36548.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/zx_library.gni")
+
 zx_library("simple-audio-stream") {
   sdk = "source"
   sdk_headers = [ "lib/simple-audio-stream/simple-audio-stream.h" ]
   sources = [ "simple-audio-stream.cc" ]
   public_deps = [
-    "$zx/system/fidl/fuchsia-hardware-audio:llcpp.headers",
-    "$zx/system/ulib/async:async-cpp",
-    "$zx/system/ulib/async:headers",
-    "$zx/system/ulib/async-loop:async-loop-cpp",
-    "$zx/system/ulib/async-loop:async-loop-default",
-    "$zx/system/ulib/async-loop:headers",
-    "$zx/system/ulib/ddktl:headers",
-    "$zx/system/ulib/fbl:headers",
-    "$zx/system/ulib/zx:headers",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/async-loop",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-hardware-audio:llcpp",
   ]
   deps = [
-    "$zx/system/fidl/fuchsia-hardware-audio:llcpp",
-    "$zx/system/ulib/async:async-cpp",
-    "$zx/system/ulib/async-loop:async-loop-cpp",
-    "$zx/system/ulib/async-loop:async-loop-default",
-    "$zx/system/ulib/audio-driver-proto",
-    "$zx/system/ulib/audio-proto-utils",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/ddktl",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/zx",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/audio-driver-proto",
+    "//zircon/public/lib/audio-proto-utils",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-hardware-audio:llcpp",
   ]
 }
-

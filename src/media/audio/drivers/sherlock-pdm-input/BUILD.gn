@@ -24,7 +24,6 @@ driver_module("sherlock-pdm-input") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/mmio",
-    "//zircon/public/lib/simple-audio-stream",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
@@ -32,6 +31,7 @@ driver_module("sherlock-pdm-input") {
     "//zircon/system/banjo/ddk.protocol.gpio",
     "//zircon/system/banjo/ddk.protocol.i2c",
     "//zircon/system/banjo/ddk.protocol.platform.device",
+    "//zircon/system/dev/audio/lib/simple-audio-stream",
   ]
 }
 

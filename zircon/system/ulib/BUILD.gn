@@ -15,7 +15,6 @@ group("ulib") {
   testonly = true
   deps = [
 #------------------
-    "$zx/system/dev/audio/lib",
 #------------------
 #------------------
     "$zx/system/dev/lib",

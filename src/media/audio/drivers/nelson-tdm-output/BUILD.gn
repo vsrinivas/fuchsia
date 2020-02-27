@@ -28,13 +28,13 @@ driver_module("nelson-tdm-output") {
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/mmio",
-    "//zircon/public/lib/simple-audio-stream",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.clock",
     "//zircon/system/banjo/ddk.protocol.codec",
     "//zircon/system/banjo/ddk.protocol.platform.device",
+    "//zircon/system/dev/audio/lib/simple-audio-stream",
   ]
 }
 

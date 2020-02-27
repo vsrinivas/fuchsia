@@ -45,7 +45,7 @@ test("sa-unittest") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/public/lib/simple-audio-stream",
+    "//zircon/system/dev/audio/lib/simple-audio-stream",
     "//zircon/system/fidl/fuchsia-device:llcpp",
     "//zircon/system/fidl/fuchsia-hardware-audio:llcpp",
   ]
