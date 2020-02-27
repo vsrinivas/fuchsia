@@ -65,6 +65,7 @@ constexpr char kDeprecatedAmbientReplaceAsExecAllowlist[] =
     "allowlist/deprecated_ambient_replace_as_executable.txt";
 constexpr char kComponentEventProviderAllowlist[] = "allowlist/component_event_provider.txt";
 constexpr char kPackageResolverAllowlist[] = "allowlist/package_resolver.txt";
+constexpr char kPackageCacheAllowlist[] = "allowlist/package_cache.txt";
 
 using fuchsia::sys::TerminationReason;
 
@@ -875,6 +876,13 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
       component_request.SetReturnValues(kComponentCreationFailed, TerminationReason::UNSUPPORTED);
       return;
     }
+    if (sandbox.HasService("fuchsia.pkg.PkgCache") &&
+        !IsAllowedToUsePackageCache(fp.WithoutVariantAndHash())) {
+      FXL_LOG(ERROR) << "Component " << fp.WithoutVariantAndHash() << " is not allowed to use "
+                     << "fuchsia.pkg.PkgCache. go/no-package-cache";
+      component_request.SetReturnValues(kComponentCreationFailed, TerminationReason::UNSUPPORTED);
+      return;
+    }
   }
   if (!should_have_ambient_executable) {
     policies.push_back(zx_policy_basic_v2_t{.condition = ZX_POL_AMBIENT_MARK_VMO_EXEC,
@@ -1081,6 +1089,14 @@ bool Realm::IsAllowedToUsePackageResolver(std::string ns_id) {
   Allowlist package_resolver_allowlist(appmgr_config_dir_, kPackageResolverAllowlist,
                                        Allowlist::kExpected);
   return package_resolver_allowlist.IsAllowed(ns_id);
+}
+
+bool Realm::IsAllowedToUsePackageCache(std::string ns_id) {
+  // There is a more permissive allowlist for non-user builds, but we enforce some kind
+  // of allowlist in all build types.
+  Allowlist package_cache_allowlist(appmgr_config_dir_, kPackageCacheAllowlist,
+                                    Allowlist::kExpected);
+  return package_cache_allowlist.IsAllowed(ns_id);
 }
 
 void Realm::NotifyComponentStarted(const std::string& component_url,

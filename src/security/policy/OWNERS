@@ -2,5 +2,6 @@ jln@google.com
 dkrahn@google.com
 ampearce@google.com
 per-file package_resolver_allowlist_* = file: /src/sys/pkg/OWNERS
+per-file package_cache_allowlist_* = file: /src/sys/pkg/OWNERS
 
 # COMPONENT: Security
