@@ -37,13 +37,13 @@ use log::{error, info};
 use std::path::PathBuf;
 use std::sync::Arc;
 
-/// This flag (prefixed with `--`) results in a set of hermetic auth providers.
+/// This command line flag (prefixed with `--`) results in a set of hermetic auth providers.
 const DEV_AUTH_PROVIDERS_FLAG: &str = "dev-auth-providers";
 
-/// This flag (prefixed with `--`) results in a set of hermetic auth mechanisms.
+/// This command line flag (prefixed with `--`) results in a set of hermetic auth mechanisms.
 const DEV_AUTH_MECHANISMS_FLAG: &str = "dev-auth-mechanisms";
 
-/// This flag (prefixed with `--`) starts account manager with the prototype
+/// This command line flag (prefixed with `--`) starts account manager with the prototype
 /// account transfer interfaces enabled.
 const PROTOTYPE_TRANSFER_FLAG: &str = "prototype-account-transfer";
 

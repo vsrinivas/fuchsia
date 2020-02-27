@@ -15,20 +15,20 @@ use futures::StreamExt;
 use log::{error, info};
 use std::convert::TryFrom;
 
-/// This arg (prefixed with `--`) determines the mode of operation.
-const MODE_ARG: &str = "mode";
-
+/// This required command line option (prefixed with `--`) determines the mode of operation.
+const MODE_OPTION: &str = "mode";
+/// These are the valid arguments for the mode command line option.
 const MODE_ARG_ALWAYS_SUCCEED: &str = "ALWAYS_SUCCEED";
 const MODE_ARG_ALWAYS_FAIL_AUTHENTICATION: &str = "ALWAYS_FAIL_AUTHENTICATION";
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     let mut opts = getopts::Options::new();
-    opts.reqopt("", MODE_ARG, "set the mode of operation", "MODE");
+    opts.reqopt("", MODE_OPTION, "set the mode of operation", "MODE");
     let args: Vec<String> = std::env::args().collect();
     let options = opts.parse(args)?;
-    let arg_str = options.opt_str(MODE_ARG).expect("Internal getopts error");
-    let mode = Mode::try_from(arg_str.as_ref())?;
+    let mode_arg_str = options.opt_str(MODE_OPTION).expect("Internal getopts error");
+    let mode = Mode::try_from(mode_arg_str.as_ref())?;
 
     fuchsia_syslog::init_with_tags(&["auth"]).expect("Failed to initialize logger");
     info!("Starting dev authenticator");
