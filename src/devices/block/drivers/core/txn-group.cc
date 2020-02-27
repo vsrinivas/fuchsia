@@ -2,25 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/zx/fifo.h>
-#include <stdbool.h>
+#include "txn-group.h"
+
+#include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#include <zircon/compiler.h>
-#include <zircon/device/block.h>
+#include <zircon/assert.h>
 #include <zircon/syscalls.h>
 
-#include <new>
-
-#include <ddk/device.h>
-#include <ddk/protocol/block.h>
-#include <fbl/algorithm.h>
-#include <fbl/alloc_checker.h>
-#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
-#include <fbl/ref_ptr.h>
-
-#include "server.h"
 
 TransactionGroup::TransactionGroup() : fifo_(ZX_HANDLE_INVALID), flags_(0), ctr_(0) {
   memset(&response_, 0, sizeof(response_));

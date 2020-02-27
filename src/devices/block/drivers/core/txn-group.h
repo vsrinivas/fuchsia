@@ -2,25 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_BLOCK_DRIVERS_CORE_TXN_GROUP_H_
-#define SRC_STORAGE_BLOCK_DRIVERS_CORE_TXN_GROUP_H_
+#ifndef SRC_DEVICES_BLOCK_DRIVERS_CORE_TXN_GROUP_H_
+#define SRC_DEVICES_BLOCK_DRIVERS_CORE_TXN_GROUP_H_
 
-#include <lib/sync/completion.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/fifo.h>
-#include <lib/zx/vmo.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <zircon/device/block.h>
 #include <zircon/types.h>
 
-#include <ddk/protocol/block.h>
-#include <fbl/intrusive_double_list.h>
-#include <fbl/intrusive_wavl_tree.h>
 #include <fbl/mutex.h>
-#include <fbl/ref_counted.h>
-#include <fbl/ref_ptr.h>
 
 // Should a response be sent when we hit ctr?
 constexpr uint32_t kTxnFlagRespond = 0x00000001;
@@ -60,4 +50,4 @@ class TransactionGroup {
   uint32_t ctr_ TA_GUARDED(lock_);  // How many ops does the block device need to complete?
 };
 
-#endif  // SRC_STORAGE_BLOCK_DRIVERS_CORE_TXN_GROUP_H_
+#endif  // SRC_DEVICES_BLOCK_DRIVERS_CORE_TXN_GROUP_H_
