@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/async/cpp/task.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -171,8 +172,12 @@ bool TestMemfsInstall() {
     ASSERT_NULL(readdir(d));
 
     ASSERT_EQ(closedir(d), 0);
-
     ASSERT_EQ(memfs_install_at(loop.dispatcher(), "/mytmp", &fs_2), ZX_ERR_ALREADY_EXISTS);
+
+    // Wait for cleanup of failed memfs install.
+    sync_completion_t unmounted;
+    async::PostTask(loop.dispatcher(), [&unmounted]() { sync_completion_signal(&unmounted); });
+    ASSERT_EQ(sync_completion_wait(&unmounted, zx::duration::infinite().get()), ZX_OK);
 
     loop.Shutdown();
   }

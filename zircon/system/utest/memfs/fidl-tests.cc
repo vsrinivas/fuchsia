@@ -101,7 +101,7 @@ bool TestFidlOpenReadOnly() {
 
     loop.Shutdown();
   }
-  memfs_uninstall_unsafe(fs, nullptr);
+  memfs_uninstall_unsafe(fs, "/fidltmp-ro");
 
   // No way to clean up the namespace entry. See ZX-2013 for more details.
 
