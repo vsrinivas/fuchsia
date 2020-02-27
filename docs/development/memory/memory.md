@@ -1,11 +1,22 @@
-# Memory and resource usage
+# Memory usage
 
-This file contains information about memory and resource management in Zircon,
+This file contains information about memory management and diagnosis in Zircon,
 and talks about ways to examine process and system memory usage.
 
-TODO(dbort): Talk about the relationship between address spaces,
-[VMARs](/docs/reference/kernel_objects/vm_address_region.md), [mappings](/docs/reference/syscalls/vmar_map.md), and
-[VMOs](/docs/reference/kernel_objects/vm_object.md)
+A process can use memory 3 ways:
+
+ 1. Mapped memory in the form of heaps, thread stacks, executable code + data.
+    This memory is represented by [VMARs](/docs/reference/kernel_objects/vm_address_region.md)
+    which in turn hold a reference to [VMOs](/docs/reference/kernel_objects/vm_object.md).
+    The programmer usually interfaces with this memory via memory addresses.
+ 2. Stand-alone VMOs. These are sets of memory pages that are not mapped via a
+    VMAR. The programmer interfaces with this memory via handles; usually issuing
+    [vmo_read](/docs/reference/syscalls/vmo_read.md) and [vmo_write](/docs/reference/syscalls/vmo_write.md).
+ 3. Kernel memory in the form of handles to kernel objects.
+
+Fuchsia follows an over-commit model: processes can allocate more memory than
+can be satisfied at a given moment and as memory pages are written they are
+physically allocated (wired) on the fly by kernel.
 
 ## Userspace memory
 

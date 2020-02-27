@@ -40,6 +40,9 @@ toc:
 - title: "Manage memory"
   section:
   - include: /docs/development/memory/_toc.yaml
+- title: "Manage objects"
+  section:
+  - include: /docs/development/objects/_toc.yaml
 - title: "Manage threads"
   section:
   - include: /docs/development/threads/_toc.yaml
