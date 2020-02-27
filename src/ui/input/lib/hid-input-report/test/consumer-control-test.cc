@@ -20,7 +20,7 @@ TEST(ConsumerControlTest, HidButtonsTest) {
   ASSERT_EQ(hid::ParseResult::kParseOk, parse_res);
 
   hid_input_report::ConsumerControl consumer_control;
-  EXPECT_EQ(hid_input_report::ParseResult::kParseOk,
+  EXPECT_EQ(hid_input_report::ParseResult::kOk,
             consumer_control.ParseReportDescriptor(dev_desc->report[0]));
   hid_input_report::ReportDescriptor report_descriptor = consumer_control.GetDescriptor();
 
@@ -47,7 +47,7 @@ TEST(ConsumerControlTest, HidButtonsTest) {
   fill_button_in_report(BUTTONS_ID_MIC_MUTE, true, &report);
 
   hid_input_report::InputReport input_report = {};
-  EXPECT_EQ(hid_input_report::ParseResult::kParseOk,
+  EXPECT_EQ(hid_input_report::ParseResult::kOk,
             consumer_control.ParseInputReport(reinterpret_cast<uint8_t*>(&report), sizeof(report),
                                               &input_report));
   hid_input_report::ConsumerControlInputReport* consumer_control_report =
@@ -78,8 +78,7 @@ TEST(ConsumerControlTest, MaxButtonsTest) {
   descriptor.input_fields = fields.data();
 
   hid_input_report::ConsumerControl consumer_control;
-  ASSERT_EQ(hid_input_report::ParseResult::kParseOk,
-            consumer_control.ParseReportDescriptor(descriptor));
+  ASSERT_EQ(hid_input_report::ParseResult::kOk, consumer_control.ParseReportDescriptor(descriptor));
 }
 
 TEST(ConsumerControlTest, OverMaxButtonsTest) {
@@ -98,6 +97,6 @@ TEST(ConsumerControlTest, OverMaxButtonsTest) {
   descriptor.input_fields = fields.data();
 
   hid_input_report::ConsumerControl consumer_control;
-  ASSERT_EQ(hid_input_report::ParseResult::kParseTooManyItems,
+  ASSERT_EQ(hid_input_report::ParseResult::kTooManyItems,
             consumer_control.ParseReportDescriptor(descriptor));
 }

@@ -31,7 +31,7 @@ ParseResult Touch::ParseReportDescriptor(const hid::ReportDescriptor& hid_report
     main_collection = main_collection->parent;
   }
   if (!main_collection) {
-    return kParseNoCollection;
+    return ParseResult::kNoCollection;
   }
 
   if (main_collection->usage ==
@@ -41,7 +41,7 @@ ParseResult Touch::ParseReportDescriptor(const hid::ReportDescriptor& hid_report
              hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kTouchPad)) {
     descriptor.touch_type = fuchsia_input_report::TouchType::TOUCHPAD;
   } else {
-    return ParseResult::kParseNoCollection;
+    return ParseResult::kNoCollection;
   }
 
   hid::Collection* finger_collection = nullptr;
@@ -52,7 +52,7 @@ ParseResult Touch::ParseReportDescriptor(const hid::ReportDescriptor& hid_report
     // Process the global items.
     if (field.attr.usage.page == hid::usage::Page::kButton) {
       if (num_buttons == fuchsia_input_report::TOUCH_MAX_NUM_BUTTONS) {
-        return kParseTooManyItems;
+        return ParseResult::kTooManyItems;
       }
       buttons[num_buttons] = field.attr;
       descriptor.buttons[num_buttons] = static_cast<uint8_t>(field.attr.usage.usage);
@@ -73,10 +73,10 @@ ParseResult Touch::ParseReportDescriptor(const hid::ReportDescriptor& hid_report
     }
 
     if (num_contacts < 1) {
-      return ParseResult::kParseNoCollection;
+      return ParseResult::kNoCollection;
     }
     if (num_contacts > fuchsia_input_report::TOUCH_MAX_CONTACTS) {
-      return kParseTooManyItems;
+      return ParseResult::kTooManyItems;
     }
     ContactConfig* contact = &contacts[num_contacts - 1];
     ContactInputDescriptor* contact_descriptor = &descriptor.contacts[num_contacts - 1];
@@ -135,7 +135,7 @@ ParseResult Touch::ParseReportDescriptor(const hid::ReportDescriptor& hid_report
   report_size_ = hid_report_descriptor.input_byte_sz;
   report_id_ = hid_report_descriptor.report_id;
 
-  return kParseOk;
+  return ParseResult::kOk;
 }
 
 ReportDescriptor Touch::GetDescriptor() {
@@ -147,7 +147,7 @@ ReportDescriptor Touch::GetDescriptor() {
 ParseResult Touch::ParseInputReport(const uint8_t* data, size_t len, InputReport* report) {
   TouchInputReport touch_report = {};
   if (len != report_size_) {
-    return kParseReportSizeMismatch;
+    return ParseResult::kReportSizeMismatch;
   }
 
   double value_out;
@@ -217,7 +217,7 @@ ParseResult Touch::ParseInputReport(const uint8_t* data, size_t len, InputReport
   // Now that we can't fail, set the real report.
   report->report = touch_report;
 
-  return kParseOk;
+  return ParseResult::kOk;
 }
 
 }  // namespace hid_input_report

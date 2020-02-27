@@ -38,7 +38,7 @@ ParseResult Sensor::ParseReportDescriptor(const hid::ReportDescriptor& hid_repor
     }
 
     if (num_values == fuchsia_input_report::SENSOR_MAX_VALUES) {
-      return kParseTooManyItems;
+      return ParseResult::kTooManyItems;
     }
     values[num_values] = field.attr;
 
@@ -58,7 +58,7 @@ ParseResult Sensor::ParseReportDescriptor(const hid::ReportDescriptor& hid_repor
   report_size_ = hid_report_descriptor.input_byte_sz;
   report_id_ = hid_report_descriptor.report_id;
 
-  return kParseOk;
+  return ParseResult::kOk;
 }
 
 ReportDescriptor Sensor::GetDescriptor() {
@@ -70,7 +70,7 @@ ReportDescriptor Sensor::GetDescriptor() {
 ParseResult Sensor::ParseInputReport(const uint8_t* data, size_t len, InputReport* report) {
   SensorInputReport sensor_report = {};
   if (len != report_size_) {
-    return kParseReportSizeMismatch;
+    return ParseResult::kReportSizeMismatch;
   }
 
   for (size_t i = 0; i < num_values_; i++) {
@@ -84,7 +84,7 @@ ParseResult Sensor::ParseInputReport(const uint8_t* data, size_t len, InputRepor
   // Now that we can't fail, set the real report.
   report->report = sensor_report;
 
-  return kParseOk;
+  return ParseResult::kOk;
 }
 
 }  // namespace hid_input_report

@@ -24,7 +24,7 @@ ParseResult CreateDevice(const hid::ReportDescriptor* descriptor,
   }
 
   if (collection == nullptr) {
-    return kParseNoCollection;
+    return ParseResult::kNoCollection;
   }
 
   std::unique_ptr<hid_input_report::Device> parse_device;
@@ -51,11 +51,11 @@ ParseResult CreateDevice(const hid::ReportDescriptor* descriptor,
   }
 
   if (!parse_device) {
-    return kParseItemNotFound;
+    return ParseResult::kItemNotFound;
   }
 
   ParseResult result = parse_device->ParseReportDescriptor(*descriptor);
-  if (result == hid_input_report::ParseResult::kParseOk) {
+  if (result == hid_input_report::ParseResult::kOk) {
     *out_device = std::move(parse_device);
   }
   return result;

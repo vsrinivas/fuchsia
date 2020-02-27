@@ -41,13 +41,13 @@ ParseResult Keyboard::ParseInputReportDescriptor(
       }
       key_fields[num_keys++] = field;
       if (num_keys == fuchsia_input_report::KEYBOARD_MAX_NUM_KEYS) {
-        return ParseResult::kParseTooManyItems;
+        return ParseResult::kTooManyItems;
       }
     }
   }
 
   if (key_values.size() >= fuchsia_input_report::KEYBOARD_MAX_NUM_KEYS) {
-    return ParseResult::kParseTooManyItems;
+    return ParseResult::kTooManyItems;
   }
 
   // No error, write to class members.
@@ -70,7 +70,7 @@ ParseResult Keyboard::ParseInputReportDescriptor(
   input_report_size_ = hid_report_descriptor.input_byte_sz;
   input_report_id_ = hid_report_descriptor.report_id;
 
-  return kParseOk;
+  return ParseResult::kOk;
 }
 
 ParseResult Keyboard::ParseOutputReportDescriptor(
@@ -82,14 +82,14 @@ ParseResult Keyboard::ParseOutputReportDescriptor(
     const hid::ReportField& field = hid_report_descriptor.output_fields[i];
     if (field.attr.usage.page == hid::usage::Page::kLEDs) {
       if (num_leds == ::llcpp::fuchsia::input::report::KEYBOARD_MAX_NUM_LEDS) {
-        return ParseResult::kParseTooManyItems;
+        return ParseResult::kTooManyItems;
       }
       led_fields[num_leds++] = field;
     }
   }
 
   if (num_leds == 0) {
-    return kParseOk;
+    return ParseResult::kOk;
   }
 
   // No errors, write to class memebers.
@@ -99,7 +99,7 @@ ParseResult Keyboard::ParseOutputReportDescriptor(
         HidLedUsageToLlcppLedType(static_cast<hid::usage::LEDs>(led_fields[i].attr.usage.usage),
                                   &descriptor_.output->leds[i]);
     if (status != ZX_OK) {
-      return kParseBadReport;
+      return ParseResult::kBadReport;
     }
   }
   descriptor_.output->num_leds = num_leds;
@@ -109,12 +109,12 @@ ParseResult Keyboard::ParseOutputReportDescriptor(
   output_report_id_ = hid_report_descriptor.report_id;
   output_report_size_ = hid_report_descriptor.output_byte_sz;
 
-  return kParseOk;
+  return ParseResult::kOk;
 }
 
 ParseResult Keyboard::ParseReportDescriptor(const hid::ReportDescriptor& hid_report_descriptor) {
   ParseResult res = ParseInputReportDescriptor(hid_report_descriptor);
-  if (res != kParseOk) {
+  if (res != ParseResult::kOk) {
     return res;
   }
   return ParseOutputReportDescriptor(hid_report_descriptor);
@@ -130,7 +130,7 @@ ParseResult Keyboard::ParseInputReport(const uint8_t* data, size_t len, InputRep
   KeyboardInputReport keyboard_report = {};
   size_t key_index = 0;
   if (len != input_report_size_) {
-    return kParseReportSizeMismatch;
+    return ParseResult::kReportSizeMismatch;
   }
 
   for (hid::ReportField& field : fbl::Span(key_fields_.data(), num_keys_)) {
@@ -148,7 +148,7 @@ ParseResult Keyboard::ParseInputReport(const uint8_t* data, size_t len, InputRep
     uint32_t hid_key;
     if (field.flags & hid::FieldTypeFlags::kArray) {
       if (val_out == HID_USAGE_KEY_ERROR_ROLLOVER) {
-        return kParseBadReport;
+        return ParseResult::kBadReport;
       }
       hid_key = val_out;
     } else {
@@ -170,19 +170,19 @@ ParseResult Keyboard::ParseInputReport(const uint8_t* data, size_t len, InputRep
   // Now that we can't fail, set the real report.
   report->report = keyboard_report;
 
-  return kParseOk;
+  return ParseResult::kOk;
 }
 
 ParseResult Keyboard::SetOutputReport(const fuchsia_input_report::OutputReport* report,
                                       uint8_t* data, size_t data_size, size_t* data_out_size) {
   if (!report->has_keyboard()) {
-    return kParseNotImplemented;
+    return ParseResult::kNotImplemented;
   }
   if (!report->keyboard().has_enabled_leds()) {
-    return kParseNotImplemented;
+    return ParseResult::kNotImplemented;
   }
   if (data_size < output_report_size_) {
-    return kParseNoMemory;
+    return ParseResult::kNoMemory;
   }
   for (size_t i = 0; i < data_size; i++) {
     data[i] = 0;
@@ -197,22 +197,22 @@ ParseResult Keyboard::SetOutputReport(const fuchsia_input_report::OutputReport* 
       zx_status_t status = HidLedUsageToLlcppLedType(
           static_cast<hid::usage::LEDs>(hid_led.attr.usage.usage), &hid_led_type);
       if (status != ZX_OK) {
-        return kParseBadReport;
+        return ParseResult::kBadReport;
       }
       if (hid_led_type == led) {
         found = true;
         if (!InsertAsUnitType(data, data_size, hid_led.attr, 1)) {
-          return kParseBadReport;
+          return ParseResult::kBadReport;
         }
         break;
       }
     }
     if (!found) {
-      return kParseItemNotFound;
+      return ParseResult::kItemNotFound;
     }
   }
   *data_out_size = output_report_size_;
-  return kParseOk;
+  return ParseResult::kOk;
 }
 
 }  // namespace hid_input_report

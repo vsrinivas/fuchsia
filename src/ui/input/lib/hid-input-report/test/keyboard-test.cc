@@ -100,7 +100,7 @@ TEST(KeyboardTest, BootKeyboard) {
 
   hid_input_report::Keyboard keyboard;
 
-  EXPECT_EQ(hid_input_report::ParseResult::kParseOk,
+  EXPECT_EQ(hid_input_report::ParseResult::kOk,
             keyboard.ParseReportDescriptor(dev_desc->report[0]));
   hid_input_report::ReportDescriptor report_descriptor = keyboard.GetDescriptor();
 
@@ -118,7 +118,7 @@ TEST(KeyboardTest, BootKeyboard) {
   kbd_report.usage[2] = HID_USAGE_KEY_UP;
 
   hid_input_report::InputReport report = {};
-  EXPECT_EQ(hid_input_report::ParseResult::kParseOk,
+  EXPECT_EQ(hid_input_report::ParseResult::kOk,
             keyboard.ParseInputReport(reinterpret_cast<uint8_t*>(&kbd_report), sizeof(kbd_report),
                                       &report));
 
@@ -143,7 +143,7 @@ TEST(KeyboardTest, OutputDescriptor) {
 
   hid_input_report::Keyboard keyboard;
 
-  EXPECT_EQ(hid_input_report::ParseResult::kParseOk,
+  EXPECT_EQ(hid_input_report::ParseResult::kOk,
             keyboard.ParseReportDescriptor(dev_desc->report[0]));
   hid_input_report::ReportDescriptor report_descriptor = keyboard.GetDescriptor();
 
@@ -175,7 +175,7 @@ TEST(KeyboardTest, DoubleCountingKeys) {
   // Test the descriptor parses correctly.
   hid_input_report::Keyboard keyboard;
 
-  EXPECT_EQ(hid_input_report::ParseResult::kParseOk,
+  EXPECT_EQ(hid_input_report::ParseResult::kOk,
             keyboard.ParseReportDescriptor(dev_desc->report[0]));
   hid_input_report::ReportDescriptor report_descriptor = keyboard.GetDescriptor();
 
@@ -206,7 +206,7 @@ TEST(KeyboardTest, BootKeyboardOutputReport) {
   auto parse_res = hid::ParseReportDescriptor(boot_keyboard_descriptor, descriptor_size, &dev_desc);
   ASSERT_EQ(hid::ParseResult::kParseOk, parse_res);
   hid_input_report::Keyboard keyboard;
-  EXPECT_EQ(hid_input_report::ParseResult::kParseOk,
+  EXPECT_EQ(hid_input_report::ParseResult::kOk,
             keyboard.ParseReportDescriptor(dev_desc->report[0]));
   std::array<hid_input_report::fuchsia_input_report::LedType, 2> led_array;
   led_array[0] = hid_input_report::fuchsia_input_report::LedType::NUM_LOCK;
@@ -224,7 +224,7 @@ TEST(KeyboardTest, BootKeyboardOutputReport) {
   size_t out_report_size;
   auto result =
       keyboard.SetOutputReport(&fidl_report, &report_data, sizeof(report_data), &out_report_size);
-  ASSERT_EQ(result, hid_input_report::kParseOk);
+  ASSERT_EQ(result, hid_input_report::ParseResult::kOk);
   ASSERT_EQ(1, out_report_size);
   ASSERT_EQ(0b101, report_data);
 }
@@ -237,7 +237,7 @@ TEST(KeyboardTest, FullKeysKeyboard) {
 
   hid_input_report::Keyboard keyboard;
 
-  EXPECT_EQ(hid_input_report::ParseResult::kParseOk,
+  EXPECT_EQ(hid_input_report::ParseResult::kOk,
             keyboard.ParseReportDescriptor(dev_desc->report[0]));
   hid_input_report::ReportDescriptor report_descriptor = keyboard.GetDescriptor();
 
@@ -255,7 +255,7 @@ TEST(KeyboardTest, FullKeysKeyboard) {
   kbd_report.usage[2] = HID_USAGE_KEY_UP;
 
   hid_input_report::InputReport report = {};
-  EXPECT_EQ(hid_input_report::ParseResult::kParseOk,
+  EXPECT_EQ(hid_input_report::ParseResult::kOk,
             keyboard.ParseInputReport(reinterpret_cast<uint8_t*>(&kbd_report), sizeof(kbd_report),
                                       &report));
 

@@ -59,7 +59,7 @@ void InputReport::HidReportListenerReceiveReport(const uint8_t* report, size_t r
     input_report.time = report_time;
 
     if (device->ParseInputReport(report, report_size, &input_report) !=
-        hid_input_report::ParseResult::kParseOk) {
+        hid_input_report::ParseResult::kOk) {
       zxlogf(ERROR, "ReceiveReport: Device failed to parse report correctly\n");
       continue;
     }
@@ -87,7 +87,7 @@ void InputReport::RemoveInstanceFromList(InputReportInstance* instance) {
 bool InputReport::ParseHidInputReportDescriptor(const hid::ReportDescriptor* report_desc) {
   std::unique_ptr<hid_input_report::Device> device;
   hid_input_report::ParseResult result = hid_input_report::CreateDevice(report_desc, &device);
-  if (result != hid_input_report::ParseResult::kParseOk) {
+  if (result != hid_input_report::ParseResult::kOk) {
     return false;
   }
 
@@ -104,19 +104,19 @@ const hid_input_report::ReportDescriptor* InputReport::GetDescriptors(size_t* si
 zx_status_t InputReport::SendOutputReport(fuchsia_input_report::OutputReport report) {
   uint8_t hid_report[HID_MAX_DESC_LEN];
   size_t size;
-  hid_input_report::ParseResult result = hid_input_report::kParseNotImplemented;
+  hid_input_report::ParseResult result = hid_input_report::ParseResult::kNotImplemented;
   for (auto& device : devices_) {
     result = device->SetOutputReport(&report, hid_report, sizeof(hid_report), &size);
-    if (result == hid_input_report::kParseOk) {
+    if (result == hid_input_report::ParseResult::kOk) {
       break;
     }
     // Returning an error other than kParseNotImplemented means the device was supposed
     // to set the Output report but hit an error. When this happens we return the error.
-    if (result != hid_input_report::kParseNotImplemented) {
+    if (result != hid_input_report::ParseResult::kNotImplemented) {
       break;
     }
   }
-  if (result != hid_input_report::kParseOk) {
+  if (result != hid_input_report::ParseResult::kOk) {
     return ZX_ERR_INTERNAL;
   }
   return hiddev_.SetReport(HID_REPORT_TYPE_OUTPUT, hid_report[0], hid_report, size);

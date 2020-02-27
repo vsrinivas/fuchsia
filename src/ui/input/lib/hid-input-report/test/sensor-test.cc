@@ -28,8 +28,7 @@ TEST(SensorTest, AmbientLight) {
   hid_input_report::Sensor sensor;
 
   // Parse the descriptor.
-  EXPECT_EQ(hid_input_report::ParseResult::kParseOk,
-            sensor.ParseReportDescriptor(dev_desc->report[1]));
+  EXPECT_EQ(hid_input_report::ParseResult::kOk, sensor.ParseReportDescriptor(dev_desc->report[1]));
   hid_input_report::ReportDescriptor report_descriptor = sensor.GetDescriptor();
 
   hid_input_report::SensorDescriptor* sensor_descriptor =
@@ -76,7 +75,7 @@ TEST(SensorTest, AmbientLight) {
 
   // Parse the report.
   hid_input_report::InputReport report = {};
-  EXPECT_EQ(hid_input_report::ParseResult::kParseOk,
+  EXPECT_EQ(hid_input_report::ParseResult::kOk,
             sensor.ParseInputReport(reinterpret_cast<uint8_t*>(&report_data), sizeof(report_data),
                                     &report));
 

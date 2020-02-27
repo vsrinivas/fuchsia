@@ -15,15 +15,15 @@
 
 namespace hid_input_report {
 
-enum ParseResult : uint32_t {
-  kParseOk = 0,
-  kParseNoMemory = 1,
-  kParseTooManyItems = 2,
-  kParseReportSizeMismatch = 3,
-  kParseNoCollection = 4,
-  kParseBadReport = 5,
-  kParseNotImplemented = 6,
-  kParseItemNotFound = 7,
+enum class ParseResult : uint32_t {
+  kOk = 0,
+  kNoMemory = 1,
+  kTooManyItems = 2,
+  kReportSizeMismatch = 3,
+  kNoCollection = 4,
+  kBadReport = 5,
+  kNotImplemented = 6,
+  kItemNotFound = 7,
 };
 
 class Device {
@@ -37,7 +37,7 @@ class Device {
 
   virtual ParseResult SetOutputReport(const fuchsia_input_report::OutputReport* report,
                                       uint8_t* data, size_t data_size, size_t* data_out_size) {
-    return kParseNotImplemented;
+    return ParseResult::kNotImplemented;
   }
 
   virtual uint8_t InputReportId() const = 0;

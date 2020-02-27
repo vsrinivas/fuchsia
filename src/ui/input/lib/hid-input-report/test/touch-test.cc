@@ -41,7 +41,7 @@ TEST(TouchscreenTest, ParadiseV1) {
   HidParseTouchscreen(paradise_touch_v1_report_desc, desc_size, &hid_desc, &hid_report_desc);
 
   hid_input_report::Touch touch;
-  EXPECT_EQ(hid_input_report::ParseResult::kParseOk, touch.ParseReportDescriptor(*hid_report_desc));
+  EXPECT_EQ(hid_input_report::ParseResult::kOk, touch.ParseReportDescriptor(*hid_report_desc));
   hid_input_report::ReportDescriptor report_descriptor = touch.GetDescriptor();
 
   hid_input_report::TouchDescriptor* touch_descriptor =
@@ -70,7 +70,7 @@ TEST(TouchscreenTest, ParadiseV1) {
   touch_v1_report.fingers[1].y = 200;
 
   hid_input_report::InputReport report = {};
-  EXPECT_EQ(hid_input_report::ParseResult::kParseOk,
+  EXPECT_EQ(hid_input_report::ParseResult::kOk,
             touch.ParseInputReport(reinterpret_cast<uint8_t*>(&touch_v1_report),
                                    sizeof(touch_v1_report), &report));
 
@@ -102,7 +102,7 @@ TEST(TouchscreenTest, ParadiseV1Touchpad) {
   HidParseTouchscreen(desc, desc_size, &hid_desc, &hid_report_desc);
 
   hid_input_report::Touch touch;
-  EXPECT_EQ(hid_input_report::ParseResult::kParseOk, touch.ParseReportDescriptor(*hid_report_desc));
+  EXPECT_EQ(hid_input_report::ParseResult::kOk, touch.ParseReportDescriptor(*hid_report_desc));
   hid_input_report::ReportDescriptor report_descriptor = touch.GetDescriptor();
 
   hid_input_report::TouchDescriptor* touch_descriptor =
@@ -135,7 +135,7 @@ TEST(TouchscreenTest, ParadiseV1Touchpad) {
   touch_report.fingers[0].y = 100;
 
   hid_input_report::InputReport report = {};
-  EXPECT_EQ(hid_input_report::ParseResult::kParseOk,
+  EXPECT_EQ(hid_input_report::ParseResult::kOk,
             touch.ParseInputReport(reinterpret_cast<uint8_t*>(&touch_report), sizeof(touch_report),
                                    &report));
 

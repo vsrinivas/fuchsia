@@ -23,8 +23,7 @@ TEST(MouseTest, BootMouse) {
 
   hid_input_report::Mouse mouse;
 
-  EXPECT_EQ(hid_input_report::ParseResult::kParseOk,
-            mouse.ParseReportDescriptor(dev_desc->report[0]));
+  EXPECT_EQ(hid_input_report::ParseResult::kOk, mouse.ParseReportDescriptor(dev_desc->report[0]));
   hid_input_report::ReportDescriptor report_descriptor = mouse.GetDescriptor();
 
   hid_input_report::MouseDescriptor* mouse_descriptor =
@@ -46,7 +45,7 @@ TEST(MouseTest, BootMouse) {
   report_data.buttons = 0xFF;
 
   hid_input_report::InputReport report = {};
-  EXPECT_EQ(hid_input_report::ParseResult::kParseOk,
+  EXPECT_EQ(hid_input_report::ParseResult::kOk,
             mouse.ParseInputReport(reinterpret_cast<uint8_t*>(&report_data), sizeof(report_data),
                                    &report));
 

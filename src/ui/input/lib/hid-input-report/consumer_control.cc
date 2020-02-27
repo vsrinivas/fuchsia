@@ -61,7 +61,7 @@ ParseResult ConsumerControl::ParseInputReportDescriptor(
     auto button = HidToConsumerControlButton(field.attr.usage);
     if (button) {
       if (num_buttons >= button_fields.size()) {
-        return ParseResult::kParseTooManyItems;
+        return ParseResult::kTooManyItems;
       }
       descriptor_.input->buttons[num_buttons] = *button;
       button_fields[num_buttons] = field;
@@ -78,7 +78,7 @@ ParseResult ConsumerControl::ParseInputReportDescriptor(
   input_report_size_ = hid_report_descriptor.input_byte_sz;
   input_report_id_ = hid_report_descriptor.report_id;
 
-  return kParseOk;
+  return ParseResult::kOk;
 }
 
 ParseResult ConsumerControl::ParseReportDescriptor(
@@ -95,7 +95,7 @@ ReportDescriptor ConsumerControl::GetDescriptor() {
 ParseResult ConsumerControl::ParseInputReport(const uint8_t* data, size_t len,
                                               InputReport* report) {
   if (len != input_report_size_) {
-    return kParseReportSizeMismatch;
+    return ParseResult::kReportSizeMismatch;
   }
 
   ConsumerControlInputReport consumer_control_report = {};
@@ -124,7 +124,7 @@ ParseResult ConsumerControl::ParseInputReport(const uint8_t* data, size_t len,
   // Now that we can't fail, set the real report.
   report->report = consumer_control_report;
 
-  return kParseOk;
+  return ParseResult::kOk;
 }
 
 }  // namespace hid_input_report
