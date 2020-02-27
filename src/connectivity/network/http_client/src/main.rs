@@ -205,7 +205,7 @@ impl Loader {
         loader_client: net_http::LoaderClientProxy,
     ) -> BoxFuture<'static, Result<(), Error>> {
         async move {
-            let client = fhyper::new_client();
+            let client = fhyper::new_https_client();
             let hyper_response = match client.request(self.build_request()?).compat().await {
                 Ok(response) => response,
                 Err(error) => {
@@ -262,7 +262,7 @@ impl Loader {
         >,
     > {
         async move {
-            let client = fhyper::new_client();
+            let client = fhyper::new_https_client();
             let result = client.request(self.build_request()?).compat().await;
 
             Ok(match result {
@@ -313,7 +313,15 @@ fn spawn_server(stream: net_http::LoaderRequestStream) {
                 .try_for_each_concurrent(None, |message| async move {
                     match message {
                         net_http::LoaderRequest::Fetch { request, responder } => {
-                            debug!("Fetch request received: {:?}", request);
+                            debug!(
+                                "Fetch request received (url: {}): {:?}",
+                                request
+                                    .url
+                                    .as_ref()
+                                    .and_then(|url| String::from_utf8(url.to_vec()).ok())
+                                    .unwrap_or_else(|| String::new()),
+                                request
+                            );
                             let result = Loader::new(request).await?.fetch(MAX_REDIRECTS).await?;
                             responder.send(match result {
                                 Ok((hyper_response, final_url, final_method)) => {
@@ -324,7 +332,15 @@ fn spawn_server(stream: net_http::LoaderRequestStream) {
                             })?;
                         }
                         net_http::LoaderRequest::Start { request, client, control_handle } => {
-                            debug!("Start request received: {:?}", request);
+                            debug!(
+                                "Start request received (url: {}): {:?}",
+                                request
+                                    .url
+                                    .as_ref()
+                                    .and_then(|url| String::from_utf8(url.to_vec()).ok())
+                                    .unwrap_or_else(|| String::new()),
+                                request
+                            );
                             Loader::new(request).await?.start(client.into_proxy()?).await?;
                             control_handle.shutdown();
                         }

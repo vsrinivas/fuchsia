@@ -3,6 +3,9 @@
         "binary": "bin/http_client"
     },
     "sandbox": {
+        "features": [
+            "root-ssl-certificates"
+        ],
         "services": [
             "fuchsia.logger.LogSink",
             "fuchsia.net.NameLookup",

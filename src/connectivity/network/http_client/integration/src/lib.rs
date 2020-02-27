@@ -67,13 +67,8 @@ fn make_url(port: u16, path: &str) -> Vec<u8> {
     format!("http://127.0.0.1:{}{}", port, path).as_bytes().to_vec()
 }
 
-fn make_request(port: u16, method: &str, path: &str) -> http::Request {
-    http::Request {
-        url: Some(make_url(port, path)),
-        method: Some(method.to_string()),
-        headers: None,
-        body: None,
-    }
+fn make_request(method: &str, url: Vec<u8>) -> http::Request {
+    http::Request { url: Some(url), method: Some(method.to_string()), headers: None, body: None }
 }
 
 fn check_response(response: &http::Response) {
@@ -112,10 +107,31 @@ fn check_body(body: Option<zx::Socket>) {
 async fn test_fetch_http() -> Result<(), Error> {
     let (server_port, _http_client, loader) = setup()?;
 
-    let response = loader.fetch(make_request(server_port, "GET", "/")).await?;
+    let response = loader.fetch(make_request("GET", make_url(server_port, "/"))).await?;
 
     check_response(&response);
     check_body(response.body);
+
+    Ok(())
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_fetch_https() -> Result<(), Error> {
+    let (server_port, _http_client, loader) = setup()?;
+
+    let response = loader
+        .fetch(make_request(
+            "GET",
+            format!("https://127.0.0.1:{}", server_port).as_bytes().to_vec(),
+        ))
+        .await?;
+
+    // Using fhyper::new_client, the request will actually ignore the https:// completely and make
+    // the request successfully anyway (Since rouille doesn't care about https either). However,
+    // when we use fhyper::new_https_client, the request will be dropped with a Connect error
+    // because this isn't a valid https request.
+    assert_eq!(response.error.unwrap(), http::Error::Connect);
+    assert!(response.body.is_none());
 
     Ok(())
 }
@@ -127,7 +143,7 @@ async fn test_start_http() -> Result<(), Error> {
     let (tx, rx) = Channel::create()?;
     let mut rs = http::LoaderClientRequestStream::from_channel(fasync::Channel::from_channel(rx)?);
 
-    loader.start(make_request(server_port, "GET", "/"), tx.into())?;
+    loader.start(make_request("GET", make_url(server_port, "/")), tx.into())?;
 
     let (response, responder) = rs.next().await.unwrap()?.into_on_response().unwrap();
     check_response(&response);
@@ -142,7 +158,7 @@ async fn test_start_http() -> Result<(), Error> {
 async fn test_fetch_redirect() -> Result<(), Error> {
     let (server_port, _http_client, loader) = setup()?;
 
-    let response = loader.fetch(make_request(server_port, "GET", "/trigger_301")).await?;
+    let response = loader.fetch(make_request("GET", make_url(server_port, "/trigger_301"))).await?;
 
     check_response(&response);
 
@@ -160,7 +176,7 @@ async fn test_start_redirect() -> Result<(), Error> {
     let (tx, rx) = Channel::create()?;
     let mut rs = http::LoaderClientRequestStream::from_channel(fasync::Channel::from_channel(rx)?);
 
-    loader.start(make_request(server_port, "GET", "/trigger_301"), tx.into())?;
+    loader.start(make_request("GET", make_url(server_port, "/trigger_301")), tx.into())?;
 
     let (response, responder) = rs.next().await.unwrap()?.into_on_response().unwrap();
     assert_eq!(response.status_code.unwrap(), 301);
@@ -183,7 +199,7 @@ async fn test_start_redirect() -> Result<(), Error> {
 async fn test_fetch_see_other() -> Result<(), Error> {
     let (server_port, _http_client, loader) = setup()?;
 
-    let response = loader.fetch(make_request(server_port, "POST", "/see_other")).await?;
+    let response = loader.fetch(make_request("POST", make_url(server_port, "/see_other"))).await?;
 
     check_response(&response);
 
@@ -201,7 +217,7 @@ async fn test_start_see_other() -> Result<(), Error> {
     let (tx, rx) = Channel::create()?;
     let mut rs = http::LoaderClientRequestStream::from_channel(fasync::Channel::from_channel(rx)?);
 
-    loader.start(make_request(server_port, "POST", "/see_other"), tx.into())?;
+    loader.start(make_request("POST", make_url(server_port, "/see_other")), tx.into())?;
 
     let (response, responder) = rs.next().await.unwrap()?.into_on_response().unwrap();
     assert_eq!(response.status_code.unwrap(), 303);
@@ -224,7 +240,7 @@ async fn test_start_see_other() -> Result<(), Error> {
 async fn test_fetch_max_redirect() -> Result<(), Error> {
     let (server_port, _http_client, loader) = setup()?;
 
-    let response = loader.fetch(make_request(server_port, "GET", "/loop1")).await?;
+    let response = loader.fetch(make_request("GET", make_url(server_port, "/loop1"))).await?;
 
     // The last request in the redirect loop will always return status code 301
     assert_eq!(response.status_code.unwrap(), 301);
@@ -242,7 +258,7 @@ async fn test_start_redirect_loop() -> Result<(), Error> {
     let (tx, rx) = Channel::create()?;
     let mut rs = http::LoaderClientRequestStream::from_channel(fasync::Channel::from_channel(rx)?);
 
-    loader.start(make_request(server_port, "GET", "/loop1"), tx.into())?;
+    loader.start(make_request("GET", make_url(server_port, "/loop1")), tx.into())?;
 
     let (response, responder) = rs.next().await.unwrap()?.into_on_response().unwrap();
     assert_eq!(response.status_code.unwrap(), 301);
