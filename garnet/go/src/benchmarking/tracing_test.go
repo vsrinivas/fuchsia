@@ -232,28 +232,28 @@ func TestReadTrace(t *testing.T) {
 		Processes: []Process{
 			{Name: "", Pid: 9234, Threads: []Thread{
 				{Name: "", Tid: 5678, Events: []*Event{
-					{Type: 4, Cat: "system_metrics", Name: "cpu_usage", Pid: 9234, Tid: 5678, Start: 3.5241122375e+07, Dur: 0, Id: 0, Args: map[string]interface{}{"average_cpu_percentage": 0.89349317793, "max_cpu_usage": 0.1234}, Parent: nil, Children: make([]*Event, 0)},
+					{Type: 4, Cat: "system_metrics", Name: "cpu_usage", Pid: 9234, Tid: 5678, Start: 3.5241122375e+07, Args: map[string]interface{}{"average_cpu_percentage": 0.89349317793, "max_cpu_usage": 0.1234}},
 				}},
 			}},
 			{Name: "root_presenter", Pid: 7009, Threads: []Thread{
 				{Name: "initial-thread", Tid: 7022, Events: []*Event{
-					{Type: 1, Cat: "async", Name: "ReadWrite", Pid: 7009, Tid: 7022, Start: 6.87503138e+08, Dur: 0, Id: 43, Args: map[string]interface{}(nil), Parent: nil, Children: make([]*Event, 0)},
-					{Type: 0, Cat: "io", Name: "Write", Pid: 7009, Tid: 7022, Start: 6.977783282160872e+08, Dur: 268.38336956501007, Id: 0, Args: map[string]interface{}(nil), Parent: nil, Children: make([]*Event, 0)},
-					{Type: 3, Cat: "input", Name: "ReadWriteFlow", Pid: 7009, Tid: 7022, Start: 6.977783292160872e+08, Dur: 0.0, Id: 0, Args: map[string]interface{}(nil), Parent: nil, Children: make([]*Event, 0)},
+					{Type: 1, Cat: "async", Name: "ReadWrite", Pid: 7009, Tid: 7022, Start: 6.87503138e+08, Id: 43},
+					{Type: 0, Cat: "io", Name: "Write", Pid: 7009, Tid: 7022, Start: 6.977783282160872e+08, Dur: 268.38336956501007, Id: 0},
+					{Type: 3, Cat: "input", Name: "ReadWriteFlow", Pid: 7009, Tid: 7022, Start: 6.977783292160872e+08, Dur: 0.0, Id: 0},
 				}},
 				{Name: "", Tid: 7021, Events: []*Event{
-					{Type: 0, Cat: "input", Name: "Read", Pid: 7009, Tid: 7021, Start: 6.975031389531089e+08, Dur: 322.78645980358124, Id: 0, Args: map[string]interface{}(nil), Parent: nil, Children: make([]*Event, 0)},
-					{Type: 3, Cat: "input", Name: "ReadWriteFlow", Pid: 7009, Tid: 7021, Start: 6.975031399531089e+08, Dur: 0.0, Id: 0, Args: map[string]interface{}(nil), Parent: nil, Children: make([]*Event, 0)},
+					{Type: 0, Cat: "input", Name: "Read", Pid: 7009, Tid: 7021, Start: 6.975031389531089e+08, Dur: 322.78645980358124, Id: 0},
+					{Type: 3, Cat: "input", Name: "ReadWriteFlow", Pid: 7009, Tid: 7021, Start: 6.975031399531089e+08, Dur: 0.0, Id: 0},
 				}},
 			}},
 			{Name: "", Pid: 7010, Threads: []Thread{
 				{Name: "", Tid: 7023, Events: []*Event{
-					{Type: 0, Cat: "io", Name: "Read", Pid: 7010, Tid: 7023, Start: 6.978681853588456e+08, Dur: 386.2429618835449, Id: 0, Args: map[string]interface{}(nil), Parent: nil, Children: make([]*Event, 0)},
+					{Type: 0, Cat: "io", Name: "Read", Pid: 7010, Tid: 7023, Start: 6.978681853588456e+08, Dur: 386.2429618835449, Id: 0},
 				}},
 			}},
 			{Name: "", Pid: 5945, Threads: []Thread{
 				{Name: "", Tid: 5962, Events: []*Event{
-					{Type: 2, Cat: "", Name: "log", Pid: 5945, Tid: 5962, Start: 7.055567057312e+09, Dur: 0, Id: 0, Args: map[string]interface{}{"message": "[INFO:trace_manager.cc(66)] Stopping trace"}, Parent: nil, Children: make([]*Event, 0)},
+					{Type: 2, Cat: "", Name: "log", Pid: 5945, Tid: 5962, Start: 7.055567057312e+09, Args: map[string]interface{}{"message": "[INFO:trace_manager.cc(66)] Stopping trace"}},
 				}},
 			}},
 		},
@@ -296,14 +296,14 @@ func TestGetTotalTraceDurationInMicroseconds(t *testing.T) {
 		Processes: []Process{
 			{Name: "", Pid: 9234, Threads: []Thread{
 				{Name: "", Tid: 5678, Events: []*Event{
-					{Type: 4, Cat: "system_metrics", Name: "cpu_usage", Pid: 9234, Tid: 5678, Start: 3.6000000e+07, Dur: 0, Id: 0, Args: map[string]interface{}{"average_cpu_percentage": 0.89349317793, "max_cpu_usage": 0.1234}, Parent: nil, Children: make([]*Event, 0)},
+					{Type: 4, Cat: "system_metrics", Name: "cpu_usage", Pid: 9234, Tid: 5678, Start: 3.6000000e+07, Args: map[string]interface{}{"average_cpu_percentage": 0.89349317793, "max_cpu_usage": 0.1234}},
 				}},
 			}},
 			{Name: "root_presenter", Pid: 7009, Threads: []Thread{
 				{Name: "initial-thread", Tid: 7022, Events: []*Event{
-					{Type: 1, Cat: "async", Name: "ReadWrite", Pid: 7009, Tid: 7022, Start: 2.0000000e+07, Dur: 0, Id: 43, Args: map[string]interface{}(nil), Parent: nil, Children: make([]*Event, 0)},
-					{Type: 0, Cat: "io", Name: "Write", Pid: 7009, Tid: 7022, Start: 1.0000000e+07, Dur: 0.6000000e+07, Id: 0, Args: map[string]interface{}(nil), Parent: nil, Children: make([]*Event, 0)},
-					{Type: 3, Cat: "input", Name: "ReadWriteFlow", Pid: 7009, Tid: 7022, Start: 0.0050000e+07, Dur: 6.0000000e+07, Id: 0, Args: map[string]interface{}(nil), Parent: nil, Children: make([]*Event, 0)},
+					{Type: 1, Cat: "async", Name: "ReadWrite", Pid: 7009, Tid: 7022, Start: 2.0000000e+07, Id: 43},
+					{Type: 0, Cat: "io", Name: "Write", Pid: 7009, Tid: 7022, Start: 1.0000000e+07, Dur: 0.6000000e+07},
+					{Type: 3, Cat: "input", Name: "ReadWriteFlow", Pid: 7009, Tid: 7022, Start: 0.0050000e+07, Dur: 6.0000000e+07},
 				}},
 			}},
 		},
@@ -322,46 +322,52 @@ func TestFindEvents(t *testing.T) {
 	// Find events by Name
 	name := "Read"
 	expectedEvents := []*Event{
-		{Type: 0, Cat: "input", Name: "Read", Pid: 7009, Tid: 7021, Start: 6.975031389531089e+08, Dur: 322.78645980358124, Id: 0, Args: map[string]interface{}(nil), Parent: nil, Children: make([]*Event, 0)},
-		{Type: 0, Cat: "io", Name: "Read", Pid: 7010, Tid: 7023, Start: 6.978681853588456e+08, Dur: 386.2429618835449, Id: 0, Args: map[string]interface{}(nil), Parent: nil, Children: make([]*Event, 0)}}
+		{Type: 0, Cat: "input", Name: "Read", Pid: 7009, Tid: 7021, Start: 6.975031389531089e+08, Dur: 322.78645980358124},
+		{Type: 0, Cat: "io", Name: "Read", Pid: 7010, Tid: 7023, Start: 6.978681853588456e+08, Dur: 386.2429618835449},
+	}
 	events := model.FindEvents(EventsFilter{Name: &name})
 	compareEvents(t, "Find events by Name", expectedEvents, events)
 
 	// Find events by Category
 	cat := "io"
 	expectedEvents = []*Event{
-		{Type: 0, Cat: "io", Name: "Write", Pid: 7009, Tid: 7022, Start: 6.977783282160872e+08, Dur: 268.38336956501007, Id: 0, Args: map[string]interface{}(nil), Parent: nil, Children: make([]*Event, 0)},
-		{Type: 0, Cat: "io", Name: "Read", Pid: 7010, Tid: 7023, Start: 6.978681853588456e+08, Dur: 386.2429618835449, Id: 0, Args: map[string]interface{}(nil), Parent: nil, Children: make([]*Event, 0)}}
+		{Type: 0, Cat: "io", Name: "Write", Pid: 7009, Tid: 7022, Start: 6.977783282160872e+08, Dur: 268.38336956501007},
+		{Type: 0, Cat: "io", Name: "Read", Pid: 7010, Tid: 7023, Start: 6.978681853588456e+08, Dur: 386.2429618835449},
+	}
 	events = model.FindEvents(EventsFilter{Cat: &cat})
 	compareEvents(t, "Find events by Category", expectedEvents, events)
 
 	// Find events by Process
 	pid := uint64(7009)
 	expectedEvents = []*Event{
-		{Type: 1, Cat: "async", Name: "ReadWrite", Pid: 7009, Tid: 7022, Start: 6.87503138e+08, Dur: 0, Id: 43, Args: map[string]interface{}(nil), Parent: nil, Children: make([]*Event, 0)},
-		{Type: 0, Cat: "io", Name: "Write", Pid: 7009, Tid: 7022, Start: 6.977783282160872e+08, Dur: 268.38336956501007, Id: 0, Args: map[string]interface{}(nil), Parent: nil, Children: make([]*Event, 0)},
-		{Type: 0, Cat: "input", Name: "Read", Pid: 7009, Tid: 7021, Start: 6.975031389531089e+08, Dur: 322.78645980358124, Id: 0, Args: map[string]interface{}(nil), Parent: nil, Children: make([]*Event, 0)}}
+		{Type: 1, Cat: "async", Name: "ReadWrite", Pid: 7009, Tid: 7022, Start: 6.87503138e+08, Id: 43},
+		{Type: 0, Cat: "io", Name: "Write", Pid: 7009, Tid: 7022, Start: 6.977783282160872e+08, Dur: 268.38336956501007},
+		{Type: 0, Cat: "input", Name: "Read", Pid: 7009, Tid: 7021, Start: 6.975031389531089e+08, Dur: 322.78645980358124},
+	}
 	events = model.FindEvents(EventsFilter{Pid: &pid})
 	compareEvents(t, "Find events by Process", expectedEvents, events)
 
 	// Find events by Thread
 	tid := uint64(7022)
 	expectedEvents = []*Event{
-		{Type: 1, Cat: "async", Name: "ReadWrite", Pid: 7009, Tid: 7022, Start: 6.87503138e+08, Dur: 0, Id: 43, Args: map[string]interface{}(nil), Parent: nil, Children: make([]*Event, 0)},
-		{Type: 0, Cat: "io", Name: "Write", Pid: 7009, Tid: 7022, Start: 6.977783282160872e+08, Dur: 268.38336956501007, Id: 0, Args: map[string]interface{}(nil), Parent: nil, Children: make([]*Event, 0)}}
+		{Type: 1, Cat: "async", Name: "ReadWrite", Pid: 7009, Tid: 7022, Start: 6.87503138e+08, Id: 43},
+		{Type: 0, Cat: "io", Name: "Write", Pid: 7009, Tid: 7022, Start: 6.977783282160872e+08, Dur: 268.38336956501007},
+	}
 	events = model.FindEvents(EventsFilter{Tid: &tid})
 	compareEvents(t, "Find events by Thread", expectedEvents, events)
 
 	// Find events by Name and Category
 	expectedEvents = []*Event{
-		{Type: 0, Cat: "io", Name: "Read", Pid: 7010, Tid: 7023, Start: 6.978681853588456e+08, Dur: 386.2429618835449, Id: 0, Args: map[string]interface{}(nil), Parent: nil, Children: make([]*Event, 0)}}
+		{Type: 0, Cat: "io", Name: "Read", Pid: 7010, Tid: 7023, Start: 6.978681853588456e+08, Dur: 386.2429618835449},
+	}
 	events = model.FindEvents(EventsFilter{Name: &name, Cat: &cat})
 	compareEvents(t, "Find events by Name and Category", expectedEvents, events)
 
 	cat = "system_metrics"
 	name = "cpu_usage"
 	expectedEvents = []*Event{
-		{Type: 4, Cat: "system_metrics", Name: "cpu_usage", Pid: 9234, Tid: 5678, Start: 3.5241122375e+07, Dur: 0, Id: 0, Args: map[string]interface{}{"average_cpu_percentage": 0.89349317793, "max_cpu_usage": 0.1234}, Parent: nil, Children: make([]*Event, 0)}}
+		{Type: 4, Cat: "system_metrics", Name: "cpu_usage", Pid: 9234, Tid: 5678, Start: 3.5241122375e+07, Args: map[string]interface{}{"average_cpu_percentage": 0.89349317793, "max_cpu_usage": 0.1234}},
+	}
 	events = model.FindEvents(EventsFilter{Name: &name, Cat: &cat})
 	compareEvents(t, "Find events by Name and Category", expectedEvents, events)
 }
@@ -374,24 +380,29 @@ func compareAvgDurations(t *testing.T, listSize int, expected float64, actual fl
 
 func TestAvgDuration(t *testing.T) {
 	// Average of Zero events
-	eventList := make([]*Event, 0)
-	avg := AvgDuration(eventList)
+	avg := AvgDuration(nil)
 	if !math.IsNaN(avg) {
 		t.Errorf("Expected average duration of Zero events is: NaN, actual is: %v\n", avg)
 	}
 
-	// Average of One events.
-	eventList = []*Event{
-		{Type: 0, Cat: "io", Name: "Write", Pid: 7009, Tid: 7022, Start: 6.977783282160872e+08, Dur: 268.38336956501007, Id: 0, Args: map[string]interface{}(nil), Parent: nil, Children: make([]*Event, 0)}}
-	avg = AvgDuration(eventList)
-	compareAvgDurations(t, len(eventList), eventList[0].Dur, avg)
+	// Average of one event.
+	{
+		eventList := []*Event{
+			{Type: 0, Cat: "io", Name: "Write", Pid: 7009, Tid: 7022, Start: 6.977783282160872e+08, Dur: 268.38336956501007},
+		}
+		avg := AvgDuration(eventList)
+		compareAvgDurations(t, len(eventList), eventList[0].Dur, avg)
+	}
 
-	// Average of Two events.
-	eventList = []*Event{
-		{Type: 0, Cat: "input", Name: "Read", Pid: 7009, Tid: 7021, Start: 6.975031389531089e+08, Dur: 322.78645980358124, Id: 0, Args: map[string]interface{}(nil), Parent: nil, Children: make([]*Event, 0)},
-		{Type: 0, Cat: "io", Name: "Read", Pid: 7010, Tid: 7023, Start: 6.978681853588456e+08, Dur: 386.2429618835449, Id: 0, Args: map[string]interface{}(nil), Parent: nil, Children: make([]*Event, 0)}}
-	avg = AvgDuration(eventList)
-	compareAvgDurations(t, len(eventList), (eventList[0].Dur+eventList[1].Dur)/2.0, avg)
+	// Average of two events.
+	{
+		eventList := []*Event{
+			{Type: 0, Cat: "input", Name: "Read", Pid: 7009, Tid: 7021, Start: 6.975031389531089e+08, Dur: 322.78645980358124},
+			{Type: 0, Cat: "io", Name: "Read", Pid: 7010, Tid: 7023, Start: 6.978681853588456e+08, Dur: 386.2429618835449},
+		}
+		avg := AvgDuration(eventList)
+		compareAvgDurations(t, len(eventList), (eventList[0].Dur+eventList[1].Dur)/2.0, avg)
+	}
 }
 
 func TestTraceEventId(t *testing.T) {
@@ -414,8 +425,9 @@ func TestTraceEventId(t *testing.T) {
 	cat := "a"
 	events := model.FindEvents(EventsFilter{Cat: &cat})
 	expectedEvents := []*Event{
-		{Type: 1, Cat: "a", Name: "E1", Pid: 7009, Tid: 7022, Start: 10, Dur: 1, Id: 7, Args: map[string]interface{}(nil), Parent: nil, Children: make([]*Event, 0)},
-		{Type: 1, Cat: "a", Name: "E2", Pid: 7009, Tid: 7022, Start: 10, Dur: 2, Id: 44, Args: map[string]interface{}(nil), Parent: nil, Children: make([]*Event, 0)},
-		{Type: 1, Cat: "a", Name: "E3", Pid: 7009, Tid: 7022, Start: 10, Dur: 3, Id: 291, Args: map[string]interface{}(nil), Parent: nil, Children: make([]*Event, 0)}}
+		{Type: 1, Cat: "a", Name: "E1", Pid: 7009, Tid: 7022, Start: 10, Dur: 1, Id: 7},
+		{Type: 1, Cat: "a", Name: "E2", Pid: 7009, Tid: 7022, Start: 10, Dur: 2, Id: 44},
+		{Type: 1, Cat: "a", Name: "E3", Pid: 7009, Tid: 7022, Start: 10, Dur: 3, Id: 291},
+	}
 	compareEvents(t, "Match Events by Id of type num", expectedEvents, events)
 }

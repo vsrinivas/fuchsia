@@ -172,14 +172,14 @@ type Event struct {
 	// So for example, in:
 	//   (======foo=======)
 	//   (==bar==)(==baz==)
-	// foo will have children [bar, baz], bar will have children [], and baz
-	// will have children [].
+	// foo will have children [bar, baz], bar will have empty children, and baz
+	// will have empty children.
 	//
 	// For flow events: If the flow event is of flow type "start" or "step", the
-	// next flow event in the flow sequence.  [] if the flow event is of flow
+	// next flow event in the flow sequence. Empty if the flow event is of flow
 	// type "end".
 	//
-	// [] for all other events.
+	// Empty for all other events.
 	//
 	Children []*Event
 }
@@ -321,12 +321,8 @@ type FlowId struct {
 func (m *Model) processTraceEvents(traceEvents []traceEvent) {
 	// Create synthetic "E" events for all complete events, in order to assist
 	// with maintaining a stack.
-	extendedEvents := make([]traceEvent, len(traceEvents))
-	copy(extendedEvents, traceEvents)
-	n := len(traceEvents)
-	i := 0
-	for i < n {
-		event := traceEvents[i]
+	extendedEvents := append([]traceEvent(nil), traceEvents...)
+	for _, event := range traceEvents {
 		if event.Ph == "X" {
 			syntheticEnd := event
 			syntheticEnd.Ph = "E"
@@ -334,7 +330,6 @@ func (m *Model) processTraceEvents(traceEvents []traceEvent) {
 			syntheticEnd.Dur = -1.0
 			extendedEvents = append(extendedEvents, syntheticEnd)
 		}
-		i++
 	}
 
 	sort.Sort(ByStartTime(extendedEvents))
@@ -351,7 +346,7 @@ func (m *Model) processTraceEvents(traceEvents []traceEvent) {
 		case "X":
 			// Complete event.
 			durationEvent := Event{DurationEvent, traceEvent.Cat, traceEvent.Name, traceEvent.Pid,
-				traceEvent.Tid, traceEvent.Ts, traceEvent.Dur, traceEvent.ID(), traceEvent.Args, nil, make([]*Event, 0)}
+				traceEvent.Tid, traceEvent.Ts, traceEvent.Dur, traceEvent.ID(), traceEvent.Args, nil, nil}
 			thread.Events = append(thread.Events, &durationEvent)
 			durationStacks[pidAndTid] = append(durationStacks[pidAndTid], thread.Events[len(thread.Events)-1])
 			if len(durationStacks[pidAndTid]) > 1 {
@@ -362,7 +357,7 @@ func (m *Model) processTraceEvents(traceEvents []traceEvent) {
 			}
 		case "B":
 			durationEvent := Event{DurationEvent, traceEvent.Cat, traceEvent.Name, traceEvent.Pid,
-				traceEvent.Tid, traceEvent.Ts, -1.0, traceEvent.ID(), traceEvent.Args, nil, make([]*Event, 0)}
+				traceEvent.Tid, traceEvent.Ts, -1.0, traceEvent.ID(), traceEvent.Args, nil, nil}
 			thread.Events = append(thread.Events, &durationEvent)
 			durationStacks[pidAndTid] = append(durationStacks[pidAndTid], thread.Events[len(thread.Events)-1])
 			if len(durationStacks[pidAndTid]) > 1 {
@@ -400,15 +395,13 @@ func (m *Model) processTraceEvents(traceEvents []traceEvent) {
 				asyncEvent := Event{AsyncEvent, beginEvent.Cat,
 					beginEvent.Name, beginEvent.Pid, beginEvent.Tid,
 					beginEvent.Ts, traceEvent.Ts - beginEvent.Ts, beginEvent.ID(),
-					combineArgs(beginEvent, traceEvent), nil, make([]*Event, 0)}
-				thread := m.getOrCreateThreadById(traceEvent.Pid, traceEvent.Tid)
+					combineArgs(beginEvent, traceEvent), nil, nil}
 				thread.Events = append(thread.Events, &asyncEvent)
 			}
 		case "i":
 			// Instant event.
 			instantEvent := Event{InstantEvent, traceEvent.Cat, traceEvent.Name, traceEvent.Pid,
-				traceEvent.Tid, traceEvent.Ts, 0, traceEvent.ID(), traceEvent.Args, nil, make([]*Event, 0)}
-			thread := m.getOrCreateThreadById(traceEvent.Pid, traceEvent.Tid)
+				traceEvent.Tid, traceEvent.Ts, 0, traceEvent.ID(), traceEvent.Args, nil, nil}
 			thread.Events = append(thread.Events, &instantEvent)
 		case "s":
 			flowId := FlowId{traceEvent.ID(), traceEvent.Cat, traceEvent.Name}
@@ -417,8 +410,7 @@ func (m *Model) processTraceEvents(traceEvents []traceEvent) {
 				continue
 			}
 
-			flowEvent := Event{FlowEvent, traceEvent.Cat, traceEvent.Name, traceEvent.Pid, traceEvent.Tid, traceEvent.Ts, 0, traceEvent.ID(), traceEvent.Args, nil, make([]*Event, 0)}
-			thread := m.getOrCreateThreadById(traceEvent.Pid, traceEvent.Tid)
+			flowEvent := Event{FlowEvent, traceEvent.Cat, traceEvent.Name, traceEvent.Pid, traceEvent.Tid, traceEvent.Ts, 0, traceEvent.ID(), traceEvent.Args, nil, nil}
 			thread.Events = append(thread.Events, &flowEvent)
 			liveFlowEvents[flowId] = thread.Events[len(thread.Events)-1]
 
@@ -434,8 +426,7 @@ func (m *Model) processTraceEvents(traceEvents []traceEvent) {
 				continue
 			}
 			previousFlowEvent := liveFlowEvents[flowId]
-			flowEvent := Event{FlowEvent, traceEvent.Cat, traceEvent.Name, traceEvent.Pid, traceEvent.Tid, traceEvent.Ts, 0, traceEvent.ID(), traceEvent.Args, nil, make([]*Event, 0)}
-			thread := m.getOrCreateThreadById(traceEvent.Pid, traceEvent.Tid)
+			flowEvent := Event{FlowEvent, traceEvent.Cat, traceEvent.Name, traceEvent.Pid, traceEvent.Tid, traceEvent.Ts, 0, traceEvent.ID(), traceEvent.Args, nil, nil}
 			thread.Events = append(thread.Events, &flowEvent)
 			liveFlowEvents[flowId] = thread.Events[len(thread.Events)-1]
 
@@ -453,8 +444,7 @@ func (m *Model) processTraceEvents(traceEvents []traceEvent) {
 				continue
 			}
 			previousFlowEvent := liveFlowEvents[flowId]
-			flowEvent := Event{FlowEvent, traceEvent.Cat, traceEvent.Name, traceEvent.Pid, traceEvent.Tid, traceEvent.Ts, 0, traceEvent.ID(), traceEvent.Args, nil, make([]*Event, 0)}
-			thread := m.getOrCreateThreadById(traceEvent.Pid, traceEvent.Tid)
+			flowEvent := Event{FlowEvent, traceEvent.Cat, traceEvent.Name, traceEvent.Pid, traceEvent.Tid, traceEvent.Ts, 0, traceEvent.ID(), traceEvent.Args, nil, nil}
 			thread.Events = append(thread.Events, &flowEvent)
 			previousFlowEvent.Children = append(previousFlowEvent.Children, thread.Events[len(thread.Events)-1])
 			if len(durationStacks[pidAndTid]) > 0 {
@@ -466,8 +456,7 @@ func (m *Model) processTraceEvents(traceEvents []traceEvent) {
 		case "C":
 			// Counter event.
 			counterEvent := Event{CounterEvent, traceEvent.Cat, traceEvent.Name, traceEvent.Pid,
-				traceEvent.Tid, traceEvent.Ts, 0, traceEvent.ID(), traceEvent.Args, nil, make([]*Event, 0)}
-			thread := m.getOrCreateThreadById(traceEvent.Pid, traceEvent.Tid)
+				traceEvent.Tid, traceEvent.Ts, 0, traceEvent.ID(), traceEvent.Args, nil, nil}
 			thread.Events = append(thread.Events, &counterEvent)
 		}
 	}
