@@ -305,6 +305,10 @@ set_defaults("rustc_macro") {
   configs = default_shared_library_configs
 }
 
+set_defaults("rustc_staticlib") {
+  configs = default_common_binary_configs
+}
+
 if (toolchain_variant.with_shared) {
   if (!toolchain_variant.is_pic_default) {
     # In the main toolchain, shared_library just redirects to the same

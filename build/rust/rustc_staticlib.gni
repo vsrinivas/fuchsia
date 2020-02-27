@@ -22,13 +22,17 @@ import("//build/rust/rustc_test.gni")
 #   configs (optional)
 #     A list of config labels applying to this target.
 #
+#   test_configs (optional)
+#     A list of config labels applying to the test target, in addition to those in `configs`.
+#
 #   deps (optional)
 #     List of rust_library GN targets on which this crate depends.
 #     Third party crates can be included through paths like
 #     "//third_party/rust_crates:<cratename>",
 #
 #   test_deps (optional)
-#     List of rust_library GN targets on which this crate's tests depend.
+#     List of rust_library GN targets on which this crate's tests depend in addition to those in
+#     `deps`.
 #
 #   non_rust_deps (optional)
 #     List of non-rust_library GN targets on which this crate depends.
@@ -45,11 +49,6 @@ import("//build/rust/rustc_test.gni")
 #
 #   output_name (optional)
 #     Name of the output file.
-#
-#   features (optional)
-#     A list of conditional compilation flags to enable. This can be used to set features for crates
-#     built in-tree which are also published to crates.io. This would be passed to rustc as
-#     '--cfg feature=XXX'
 #
 # Example of usage:
 #
@@ -70,11 +69,24 @@ template("rustc_staticlib") {
   if (defined(invoker.with_unit_tests) && invoker.with_unit_tests == true) {
     rustc_test("${target_name}_test") {
       not_needed(invoker, [ "public" ])
+      deps = []
+      forward_variables_from(invoker,
+                             "*",
+                             [
+                               "name",
+                               "test_configs",
+                               "test_deps",
+                             ])
       name = invoker.target_name + "_staticlib_test"
       if (defined(invoker.name)) {
         name = invoker.name + "_staticlib_test"
       }
-      forward_variables_from(invoker, "*", [ "name" ])
+      if (defined(invoker.test_configs)) {
+        configs += invoker.test_configs
+      }
+      if (defined(invoker.test_deps)) {
+        deps += invoker.test_deps
+      }
     }
   }
 
@@ -100,7 +112,9 @@ template("rustc_staticlib") {
       data_deps = invoker.non_rust_deps
     }
 
-    if (invoker.edition == "2015") {
+    configs = []
+    configs = invoker.configs
+    if (defined(invoker.edition) && invoker.edition == "2015") {
       configs -= [ "//build/config:rust_edition_2018" ]
       configs += [ "//build/config:rust_edition_2015" ]
     }
