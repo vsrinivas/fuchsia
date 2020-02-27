@@ -4,10 +4,13 @@
 #ifndef SRC_CONNECTIVITY_WEAVE_ADAPTATION_CONFIGURATION_MANAGER_IMPL_H_
 #define SRC_CONNECTIVITY_WEAVE_ADAPTATION_CONFIGURATION_MANAGER_IMPL_H_
 
+// clang-format off
 #include <Weave/DeviceLayer/WeaveDeviceConfig.h>
 #include <Weave/DeviceLayer/internal/GenericConfigurationManagerImpl.h>
-
+// clang-format on
 #include "fuchsia_config.h"
+#include <fuchsia/wlan/device/service/cpp/fidl.h>
+#include <lib/sys/cpp/component_context.h>
 
 namespace nl {
 namespace Weave {
@@ -31,6 +34,8 @@ class ConfigurationManagerImpl final
   // Allow the GenericConfigurationManagerImpl base class to access helper methods and types
   // defined on this class.
   friend class Internal::GenericConfigurationManagerImpl<ConfigurationManagerImpl>;
+
+  ConfigurationManagerImpl() = default;
 
  private:
   // ===== Members that implement the ConfigurationManager public interface.
@@ -61,6 +66,12 @@ class ConfigurationManagerImpl final
       ::nl::Weave::Profiles::NetworkProvisioning::WiFiSecurityType& secType);
   WEAVE_ERROR UpdateWiFiStationSecurityType(
       ::nl::Weave::Profiles::NetworkProvisioning::WiFiSecurityType secType);
+
+  std::unique_ptr<sys::ComponentContext> context_;
+  fuchsia::wlan::device::service::DeviceServiceSyncPtr wlan_device_service_;
+
+ public:
+  ConfigurationManagerImpl(std::unique_ptr<sys::ComponentContext> context);
 };
 
 /**
