@@ -28,7 +28,8 @@ int main(int argc, const char** argv) {
   inspect::Node& root_node = inspector->root();
   feedback::FeedbackAgent agent(&root_node);
 
-  agent.SpawnSystemLogRecorder();
+  //  TODO(fxb/47000): re-enable once OOM issues are resolved.
+  //  agent.SpawnSystemLogRecorder();
 
   // We spawn a new process capable of handling fuchsia.feedback.DataProvider requests on every
   // incoming request. This has the advantage of tying each request to a different process that can
