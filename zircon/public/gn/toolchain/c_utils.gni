@@ -205,6 +205,12 @@ template("link_output_rspfile") {
 #     Type: string
 #     Default: "bin"
 #
+#   pure
+#     Optional: Check that executable needs no runtime relocation.
+#     This assumes it was linked with `--emit-relocs`.
+#     Type: bool
+#     Default: false
+#
 #   variant_target
 #     See toolchain_utils_action().
 #
@@ -212,6 +218,13 @@ template("image_binary") {
   image_target = target_name
   rspfile_target = "_image_binary.rsp.$target_name"
   rspfile = "$target_gen_dir/$target_name.image.rsp"
+  check_target = "_image_binary.pure-check.$target_name"
+
+  # It's a _variant_target() so it has the _build subtarget.
+  image_target_visibility = [
+    ":$image_target",
+    ":$image_target._build",
+  ]
 
   link_output_rspfile(rspfile_target) {
     forward_variables_from(invoker,
@@ -219,19 +232,33 @@ template("image_binary") {
                              "deps",
                              "testonly",
                            ])
-    visibility = [
-      ":$image_target",
-      ":$image_target._build",
-    ]
-    outputs = [
-      rspfile,
-    ]
+    visibility = image_target_visibility + [ ":$check_target" ]
+    outputs = [ rspfile ]
+  }
+
+  image_deps = [ ":$rspfile_target" ]
+  if (defined(invoker.pure) && invoker.pure) {
+    image_deps += [ ":$check_target" ]
+    toolchain_utils_action(check_target) {
+      visibility = image_target_visibility
+      deps = [ ":$rspfile_target" ]
+      sources = [ rspfile ]
+      outputs = [ "$target_out_dir/$image_target.pure-stamp" ]
+      script = "$zx/kernel/gen-kaslr-fixups.sh"
+      utils = [
+        "readelf",
+        "objdump",
+      ]
+      args = [
+        "--pure",
+        "@" + rebase_path(rspfile, root_build_dir),
+        rebase_path(outputs[0], root_build_dir),
+      ]
+    }
   }
 
   toolchain_utils_action(image_target) {
-    deps = [
-      ":$rspfile_target",
-    ]
+    deps = image_deps
     forward_variables_from(invoker,
                            [
                              "metadata",
@@ -259,12 +286,8 @@ template("image_binary") {
 
     utils = [ "objcopy" ]
     script = true
-    sources = [
-      rspfile,
-    ]
-    outputs = [
-      output_file,
-    ]
+    sources = [ rspfile ]
+    outputs = [ output_file ]
     args = [
       "-O",
       "binary",

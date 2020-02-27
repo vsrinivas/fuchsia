@@ -64,37 +64,17 @@ template("boot_shim") {
       outputs = [ shim_rspfile ]
     }
 
-    # The shim code should be purely position-independent code.
-    toolchain_utils_action("$shim_name-pure-check") {
-      visibility = [ ":*" ]
-      deps = [
-        ":$shim_name",
-        ":$shim_name.elf.rsp",
-      ]
-      sources = [ shim_rspfile ]
-      outputs = [ "$target_out_dir/$shim_name.pure-stamp" ]
-      script = "$zx/kernel/gen-kaslr-fixups.sh"
-      utils = [
-        "readelf",
-        "objdump",
-      ]
-      args = [
-        "--pure",
-        "@" + rebase_path(shim_rspfile, root_build_dir),
-        rebase_path(outputs[0], root_build_dir),
-      ]
-    }
-
     image_binary(board) {
       forward_variables_from(invoker,
                              [
                                "testonly",
                                "visibility",
                              ])
-      deps = [
-        ":$shim_name",
-        ":$shim_name-pure-check",
-      ]
+      deps = [ ":$shim_name" ]
+
+      # The shim code should be purely position-independent code.
+      pure = true
+
       output_dir = root_build_dir
       output_name = shim_name
       output_extension = "bin"
