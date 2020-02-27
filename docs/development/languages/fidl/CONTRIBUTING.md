@@ -333,6 +333,25 @@ execution, filter test cases, run benchmarks, etc. For instance:
 Tab 3> fx test go_fidl_tests -- -test.v -test.run 'TestAllSuccessCases/.*union.*'
 ```
 
+An example invocation that gets CPU and memory profiles from a benchmark might look like:
+
+```sh
+Tab 3> fx test -R bench -o go_fidl_tests -- -test.run=- -test.bench=. -test.cpuprofile=/data/cpuprofile -test.memprofile=/data/memprofile
+```
+
+To get the data off of the device under test, we can use the realm name (the
+argument to the -R flag we passed above) to look for the data on disk.
+
+```sh
+Tab 3> fx scp "[$(fx get-device-addr)]:/data/r/sys/r/bench/fuchsia.com:go_fidl_tests:0#meta:go_extended_fidl_test.cmx/cpuprofile" out/cpuprofile
+```
+
+To view the profile data, you can use `pprof`.
+
+```sh
+Tab 3> go tool pprof -http:8080 out/cpuprofile
+```
+
 ### Rust runtime
 
 You first need to have Fuchsia running in an emulator. Here are the steps:
