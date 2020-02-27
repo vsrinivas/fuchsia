@@ -25,7 +25,6 @@ class GNStatusParser {
   };
 
   List<Item> parseGn({ProcessResult processResult}) {
-    List<Item> results = [];
     if (processResult.exitCode != 0) {
       // Ideally, in the line below, we would `throw Exception(...)` and catch it
       // likewise up top, thought that is proving hard to format correctly in the test
@@ -43,12 +42,16 @@ class GNStatusParser {
       List<Map<String, dynamic>> argsTree =
           jsonDecode(json)['child'].cast<Map<String, dynamic>>().toList();
 
-      BasicGnParser parser = BasicGnParser(argsTree);
-      _addImportItems(parser, results);
-      _addDirectItems(parser, results);
-      _addCalculatedItems(parser, results);
-      return results;
+      return collectFromTreeParser(BasicGnParser(argsTree));
     }
+  }
+
+  List<Item> collectFromTreeParser(BasicGnParser parser) {
+    List<Item> results = [];
+    _addImportItems(parser, results);
+    _addDirectItems(parser, results);
+    _addCalculatedItems(parser, results);
+    return results;
   }
 
   void _addDirectItems(BasicGnParser parser, List<Item> appendTo) {
@@ -62,8 +65,7 @@ class GNStatusParser {
           title = gnTitles[key][0];
           notes = gnTitles[key][1];
         }
-        appendTo.add(
-            Item(CategoryType.buildInfo, key, title, value.toString(), notes));
+        appendTo.add(Item(CategoryType.buildInfo, key, title, value, notes));
       }
     }
   }

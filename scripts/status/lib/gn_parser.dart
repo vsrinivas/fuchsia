@@ -28,10 +28,11 @@ class BasicGnParser {
     var value = el['value'];
     // remove leading and trailing quotes, faster than regex:
     int start = 0, end = value.length;
-    if (end > 0 && value[start] == '\'') {
+    if (end > 0 && (value[start] == '\'' || value[start] == '"')) {
       start++;
     }
-    if ((end - start) > 0 && value[end - 1] == '\'') {
+    if ((end - start) > 0 &&
+        (value[end - 1] == '\'' || value[end - 1] == '"')) {
       end--;
     }
     return value.substring(start, end);
@@ -74,11 +75,11 @@ class BasicGnParser {
         previous = [previous];
       }
       if (value is List) {
-        value.addAll(List<String>.from(value));
+        previous.addAll(List<String>.from(value));
       } else {
         previous.add(value);
-        value = previous;
       }
+      value = previous;
     }
     assignedVariables[id] = value;
   }
