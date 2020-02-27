@@ -22,7 +22,4 @@ go_test("mdns_tests") {
     ":mdns",
     "//third_party/golibs:github.com/google/go-cmp",
   ]
-
-  # TODO(46754): Fix the leaks and remove this.
-  non_go_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
