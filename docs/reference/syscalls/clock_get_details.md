@@ -26,12 +26,12 @@ zx_status_t zx_clock_get_details(zx_handle_t handle,
 
 ## DESCRIPTION
 
-Fetches the fine grained details of the clock object.  See
+Fetches the fine grained details of the clock object. See
 [clocks](/docs/reference/kernel_objects/clock.md) for the specifics of the details
-reported.  Currently, there is only one details structure defined for clocks,
-`zx_clock_details_v1_t`.  Users must specify the version of the structure using
+reported. Currently, there is only one details structure defined for clocks,
+`zx_clock_details_v1_t`. Users must specify the version of the structure using
 the options parameter as well as providing at least
-`sizeof(zx_clock_details_v1_t)` bytes of storage via the `details`.  For
+`sizeof(zx_clock_details_v1_t)` bytes of storage via the `details`. For
 example:
 
 ```c

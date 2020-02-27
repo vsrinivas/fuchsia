@@ -16,18 +16,18 @@ clients.
 ### Properties
 
 The properties of a clock are established when the clock is created and cannot
-be changed afterwards.  Currently, three clock properties are defined.
+be changed afterwards. Currently, three clock properties are defined.
 
 #### **ZX_CLOCK_OPT_MONOTONIC**
 
-When set, the clock is guaranteed to have monotonic behavior.  This is to say
+When set, the clock is guaranteed to have monotonic behavior. This is to say
 that any sequence of observations of the clock is guaranteed to produce a
 sequence of times which are always greater than or equal to the previous
-observations.  A monotonic clock can never go backwards, although it _can_ jump
-forwards.  Formally:
+observations. A monotonic clock can never go backwards, although it _can_ jump
+forwards. Formally:
 
 Given a clock _C_, Let C(x) be the function which maps from the reference
-timeline _C's_ timeline.  C(x) is a piecewise linear function made up of all the
+timeline _C's_ timeline. C(x) is a piecewise linear function made up of all the
 affine transformation segments over all time as determined  by _C's_ maintainer.
 _C_ is monotonic if and only if:
 
@@ -37,13 +37,13 @@ _C(R<sub>2</sub>) >= C(R<sub>1</sub>)_
 
 #### **ZX_CLOCK_OPT_CONTINUOUS**
 
-When set, the clock is guaranteed to have continuous behavior.  This is to say
+When set, the clock is guaranteed to have continuous behavior. This is to say
 that any update to the clock transformation is guaranteed to be first order
-continuous with the previous transformation segment.  Formally:
+continuous with the previous transformation segment. Formally:
 
 Let _C<sub>i</sub>(x)_ be the _i<sub>th</sub>_ affine transformation segment of
-_C(x)_.  Let _R<sub>i</sub>_ be the first point in time on the reference timeline
-for which _C<sub>i</sub>(x)_ is defined.  A clock _C_ is continuous if and only
+_C(x)_. Let _R<sub>i</sub>_ be the first point in time on the reference timeline
+for which _C<sub>i</sub>(x)_ is defined. A clock _C_ is continuous if and only
 if: for all _i_
 
 _C<sub>i</sub>(R<sub>i + 1</sub>) = C<sub>i + 1</sub>(R<sub>i + 1</sub>)_
@@ -51,60 +51,60 @@ _C<sub>i</sub>(R<sub>i + 1</sub>) = C<sub>i + 1</sub>(R<sub>i + 1</sub>)_
 #### **Backstop Time**
 
 The backstop time of a clock represents the minimum value that a clock may ever
-be set to.  Since clocks can only tick forwards, and never backwards, it is
+be set to. Since clocks can only tick forwards, and never backwards, it is
 impossible for an observer of a clock to ever receive a value which is less than
 the backstop time configured by a clock's creator.
 
 A backstop time may be provided via the `zx_create_args_v1_t` structure at
-creation time.  Otherwise, it will default to 0.
+creation time. Otherwise, it will default to 0.
 
 During clock update operations, any attempt to set the clock's value to
-something less than the backstop time will fail with **ZX_ERR_INVALID_ARGS**.  A
+something less than the backstop time will fail with **ZX_ERR_INVALID_ARGS**. A
 clock which has not been initially set will always report the backstop time
-configured for the clock.  Backtop times may never be less than the default
+configured for the clock. Backtop times may never be less than the default
 value of zero.
 
 ### Implied properties
 
 + The reference clock for all clock objects in the system is clock monotonic.
-+ The nominal units of all clock objects are specified to be nanoseconds.  This
++ The nominal units of all clock objects are specified to be nanoseconds. This
   property is not configurable.
 + The units of frequency adjustment for all clock objects are specified to be
   parts per million, or PPM.
 + The maximum permissible range of frequency adjustment of a clock object is
-  specified to be [-1000, +1000] PPM.  This property is not configurable.
+  specified to be [-1000, +1000] PPM. This property is not configurable.
 
 ### Additional creation options
 
 #### **ZX_CLOCK_OPT_AUTO_START**
 When you use this option during clock creation, the clock begins in a started
-state instead of the default non-started state.  See [Starting a
+state instead of the default non-started state. See [Starting a
 clock](#starting-a-clock) for details.
 
 ### Reading the clock
 
 Given a clock handle, users may query the current time given by that clock using
-the `zx_clock_read()` syscall.  Clock reads **ZX_RIGHT_READ** permissions.  Clock
-reads are guaranteed to be coherent for all observers.  This is to say that, if
+the `zx_clock_read()` syscall. Clock reads **ZX_RIGHT_READ** permissions. Clock
+reads are guaranteed to be coherent for all observers. This is to say that, if
 two observers query the clock at exactly the same reference time _R_, that they
 will always see the same value _C(R)_.
 
 ### Reference timelines, `zx_ticks_get()`, and `zx_clock_get_monotonic()`
 
 As noted earlier, zx_clock_get_monotonic() is the reference timeline for all
-user-created zircon clocks.  This means that if a user knows a clock instance's
+user-created zircon clocks. This means that if a user knows a clock instance's
 current transformation, then given a value on the clock instance's timeline, the
 corresponding point on the clock monotonic timeline may be computed (and
-vice-versa).  It also means that in the absence of a rate adjustment made to the
+vice-versa). It also means that in the absence of a rate adjustment made to the
 kernel clock, clock monotonic and the kernel clock will tick at exactly the same
 rate.
 
 In addition to the clock monotonic timeline, the zircon kernel also exposes the
-"ticks" timeline via `zx_ticks_get()` and `zx_ticks_per_second()`.  Internally,
+"ticks" timeline via `zx_ticks_get()` and `zx_ticks_per_second()`. Internally,
 ticks is actually the reference timeline for clock monotonic and is read
 directly from an architecture appropriate timer unit accessible to the kernel.
 Clock monotonic is actually a linear transformation of the ticks timeline
-normalized to nanosecond units.  Both timelines start ticking from zero as the
+normalized to nanosecond units. Both timelines start ticking from zero as the
 kernel starts.
 
 Because clock monotonic is a static transformation based on ticks, and all kernel
@@ -115,7 +115,7 @@ reference clock for kernel clocks in addition to clock monotonic.
 
 In addition to simply reading the current value of the clock, advanced users who
 possess **ZX_RIGHT_READ** permissions may also read the clock and get extended
-details in the process using `zx_clock_get_details()`.  Upon a successful call,
+details in the process using `zx_clock_get_details()`. Upon a successful call,
 the details structure returned to callers will include:
 
 + The current clock monotonic to clock transformation.
@@ -146,18 +146,18 @@ to also:
 
 ### Starting a clock and clock signals {#starting-a-clock}
 
-Immediately after creation, a clock has not yet been started.  All attempts to
+Immediately after creation, a clock has not yet been started. All attempts to
 read the clock will return the clock's configured backstop time, which defaults
 to 0 if unspecified during creation.
 
 A clock begins running after the very first update operation performed by a
-clock's maintainer, which **must** include a set-value operation.  The clock
+clock's maintainer, which **must** include a set-value operation. The clock
 will begin running at that point with a rate equal to the reference clock plus
 the deviation from nominal specified by the maintainer.
 
 Clocks also have a **ZX_CLOCK_STARTED** signal which may be used by users to
-know when the clock has actually been started.  Initially, this signal is not
-set, but it becomes set after the first successful update operation.  Once
+know when the clock has actually been started. Initially, this signal is not
+set, but it becomes set after the first successful update operation. Once
 started, a clock will never stop and the **ZX_CLOCK_STARTED** signal will always
 be asserted.
 
@@ -178,16 +178,16 @@ clock's current time is set to a time before its backstop time.
 ### Maintaining a clock {#maintaining-a-clock}
 
 Users who possess **ZX_RIGHT_WRITE** permissions for a clock object may act as a
-maintainer of the clock using the `zx_clock_update()` syscall.  Three parameters
+maintainer of the clock using the `zx_clock_update()` syscall. Three parameters
 of the clock may be adjusted during each call to `zx_clock_update()`, but not
-all three need to be adjusted each time.  These values are:
+all three need to be adjusted each time. These values are:
 
 + The clock's absolute value.
 + The frequency adjustment of the clock (deviation from nominal expressed in
   ppm)
 + The absolute error estimate of the clock (expressed in nanoseconds)
 
-Changes to a clocks transformation occur during the syscall itself.  The
+Changes to a clocks transformation occur during the syscall itself. The
 specific reference time of the adjustment may not be specified by the user.
 
 Any change to the absolute value of a clock with the **ZX_CLOCK_OPT_MONOTONIC**

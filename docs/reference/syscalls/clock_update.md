@@ -34,19 +34,19 @@ They are
 + The clock's current estimated error bounds.
 
 When a clock maintainer wishes to change one or more of these parameters, they
-may do so using the `zx_clock_update` syscall.  Updating a clock's parameters is
+may do so using the `zx_clock_update` syscall. Updating a clock's parameters is
 an atomic operation from the perspective of all other users in the system.
 
 The first update operation performed by a clock maintainer must inclue a valid
-value.  This update is the update that starts the clock and defines its initial
-value.  Before this update operation has succeeded, the **ZX_CLOCK_STARTED**
+value. This update is the update that starts the clock and defines its initial
+value. Before this update operation has succeeded, the **ZX_CLOCK_STARTED**
 signal will be de-asserted, and afterwards it will be asserted and remain so for
 the lifetime of the clock.
 
 In order to update a clock, a user fills out the fields of a
 `zx_clock_update_args_v1_t` structure that they wish to adjust, then passes the
 structure to the update call, setting the bits in `options` which indicate which
-of these fields are valid and should be set.  Defined `options` bits are
+of these fields are valid and should be set. Defined `options` bits are
 
 + **ZX_CLOCK_UPDATE_OPTION_VALUE_VALID**
 + **ZX_CLOCK_UPDATE_OPTION_RATE_ADJUST_VALID**
@@ -66,7 +66,7 @@ void MaintainMyClock(zx_handle_t the_clock) {
   zx_handle_t the_clock;
   zx_status_t status;
 
-  // Set the clock's value to 1500.  Note that this also starts the clock.
+  // Set the clock's value to 1500. Note that this also starts the clock.
   args.value = 1500;
   status = zx_clock_update(the_clock,
                            ZX_CLOCK_ARGS_VERSION(1) | ZX_CLOCK_UPDATE_OPTION_VALUE_VALID,
@@ -113,8 +113,8 @@ On success, returns **ZX_OK**.
    an object type which is not **ZX_OBJ_TYPE_CLOCK**.
  - **ZX_ERR_ACCESS_DENIED** : *handle* lacks the **ZX_RIGHT_WRITE** right.
  - **ZX_ERR_INVALID_ARGS** : The update request made is incompatible with the
-   properties of the clock.  See the **DESCRIPTION** section for details of
-   permissible clock update operations.  Otherwise, the version/pointer of
+   properties of the clock. See the **DESCRIPTION** section for details of
+   permissible clock update operations. Otherwise, the version/pointer of
    the arguments structure is incorrect.
 
 ## SEE ALSO

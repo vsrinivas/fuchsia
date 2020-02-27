@@ -34,9 +34,9 @@ overview of clock objects.
 The following options are defined for clock objects:
 
 + **ZX_CLOCK_OPT_MONOTONIC** : When set, creates a clock object which is
-  guaranteed to never run backwards.  Monotonic clocks must always move forward.
+  guaranteed to never run backwards. Monotonic clocks must always move forward.
 + **ZX_CLOCK_OPT_CONTINUOUS** : When set, creates a clock which is guaranteed to
-  never jump either forwards or backwards.  Continuous clocks may only be
+  never jump either forwards or backwards. Continuous clocks may only be
   maintained using frequency adjustments and are, by definition, also monotonic.
   Attempting to create a clock object with the **ZX_CLOCK_OPT_CONTINUOUS** option
   specified, but without the **ZX_CLOCK_OPT_MONOTONIC** option specified is an
@@ -53,7 +53,7 @@ One additional creation-time argument may be specified when configuring the cloc
 time.  See [clocks](/docs/reference/kernel_objects/clock.md) for more details about backstop times.
 
 In order to configure a backstop time, a user must pass a `zx_clock_create_args_v1_t` structure to
-the `zx_clock_create` call via the `args` parameter.  Additionally, the `options` bits must have
+the `zx_clock_create` call via the `args` parameter. Additionally, the `options` bits must have
 `ZX_CLOCK_ARGS_VERSION(1)` set in them.
 
 For example, a user who wished to create a monotonic clock with a backstop time of 5500 might do
@@ -79,13 +79,13 @@ zx_handle_t MakeAClock() {
 }
 ```
 
-Users do not have to supply an arguments structure.  If an explicit backstop is not required, users
+Users do not have to supply an arguments structure. If an explicit backstop is not required, users
 may omit the version bits from the options parameter and simply pass nullptr for args.
 
 ## RETURN VALUE
 
 On success, returns **ZX_OK** along with a new clock object via the *out*
-handle.  Handles to newly created clock objects will have the **ZX_RIGHT_READ**
+handle. Handles to newly created clock objects will have the **ZX_RIGHT_READ**
 and **ZX_RIGHT_WRITE** rights assigned to them.
 
 ## ERRORS
