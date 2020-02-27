@@ -426,146 +426,146 @@ pub struct OfferServiceDecl {
 }
 
 fidl_into_enum!(UseDecl, UseDecl, fsys::UseDecl, fsys::UseDecl,
-                {
-                    Service(UseServiceDecl),
-                    Protocol(UseProtocolDecl),
-                    Directory(UseDirectoryDecl),
-                    Storage(UseStorageDecl),
-                    Runner(UseRunnerDecl),
-                });
+{
+    Service(UseServiceDecl),
+    Protocol(UseProtocolDecl),
+    Directory(UseDirectoryDecl),
+    Storage(UseStorageDecl),
+    Runner(UseRunnerDecl),
+});
 fidl_into_struct!(UseServiceDecl, UseServiceDecl, fsys::UseServiceDecl, fsys::UseServiceDecl,
-                  {
-                      source: UseSource,
-                      source_path: CapabilityPath,
-                      target_path: CapabilityPath,
-                  });
+{
+    source: UseSource,
+    source_path: CapabilityPath,
+    target_path: CapabilityPath,
+});
 fidl_into_struct!(UseProtocolDecl, UseProtocolDecl, fsys::UseProtocolDecl, fsys::UseProtocolDecl,
-                  {
-                      source: UseSource,
-                      source_path: CapabilityPath,
-                      target_path: CapabilityPath,
-                  });
+{
+    source: UseSource,
+    source_path: CapabilityPath,
+    target_path: CapabilityPath,
+});
 fidl_into_struct!(UseDirectoryDecl, UseDirectoryDecl, fsys::UseDirectoryDecl,
-                  fsys::UseDirectoryDecl,
-                  {
-                      source: UseSource,
-                      source_path: CapabilityPath,
-                      target_path: CapabilityPath,
-                      rights: fio2::Operations,
-                      subdir: Option<PathBuf>,
-                  });
+fsys::UseDirectoryDecl,
+{
+    source: UseSource,
+    source_path: CapabilityPath,
+    target_path: CapabilityPath,
+    rights: fio2::Operations,
+    subdir: Option<PathBuf>,
+});
 fidl_into_struct!(UseRunnerDecl, UseRunnerDecl, fsys::UseRunnerDecl,
-                  fsys::UseRunnerDecl,
-                  {
-                      source_name: CapabilityName,
-                  });
+fsys::UseRunnerDecl,
+{
+    source_name: CapabilityName,
+});
 
 fidl_into_struct!(ExposeProtocolDecl, ExposeProtocolDecl, fsys::ExposeProtocolDecl,
-                  fsys::ExposeProtocolDecl,
-                  {
-                      source: ExposeSource,
-                      source_path: CapabilityPath,
-                      target: ExposeTarget,
-                      target_path: CapabilityPath,
-                  });
+fsys::ExposeProtocolDecl,
+{
+    source: ExposeSource,
+    source_path: CapabilityPath,
+    target: ExposeTarget,
+    target_path: CapabilityPath,
+});
 fidl_into_struct!(ExposeDirectoryDecl, ExposeDirectoryDecl, fsys::ExposeDirectoryDecl,
-                  fsys::ExposeDirectoryDecl,
-                  {
-                      source: ExposeSource,
-                      source_path: CapabilityPath,
-                      target: ExposeTarget,
-                      target_path: CapabilityPath,
-                      rights: Option<fio2::Operations>,
-                      subdir: Option<PathBuf>,
-                  });
+fsys::ExposeDirectoryDecl,
+{
+    source: ExposeSource,
+    source_path: CapabilityPath,
+    target: ExposeTarget,
+    target_path: CapabilityPath,
+    rights: Option<fio2::Operations>,
+    subdir: Option<PathBuf>,
+});
 fidl_into_struct!(ExposeResolverDecl, ExposeResolverDecl, fsys::ExposeResolverDecl,
-                  fsys::ExposeResolverDecl,
-                  {
-                      source: ExposeSource,
-                      source_name: CapabilityName,
-                      target: ExposeTarget,
-                      target_name: CapabilityName,
-                  });
+fsys::ExposeResolverDecl,
+{
+    source: ExposeSource,
+    source_name: CapabilityName,
+    target: ExposeTarget,
+    target_name: CapabilityName,
+});
 fidl_into_struct!(ExposeRunnerDecl, ExposeRunnerDecl, fsys::ExposeRunnerDecl,
-                  fsys::ExposeRunnerDecl,
-                  {
-                      source: ExposeSource,
-                      source_name: CapabilityName,
-                      target: ExposeTarget,
-                      target_name: CapabilityName,
-                  });
+fsys::ExposeRunnerDecl,
+{
+    source: ExposeSource,
+    source_name: CapabilityName,
+    target: ExposeTarget,
+    target_name: CapabilityName,
+});
 fidl_into_struct!(StorageDecl, StorageDecl, fsys::StorageDecl,
-                  fsys::StorageDecl,
-                  {
-                      name: String,
-                      source: StorageDirectorySource,
-                      source_path: CapabilityPath,
-                  });
+fsys::StorageDecl,
+{
+    name: String,
+    source: StorageDirectorySource,
+    source_path: CapabilityPath,
+});
 fidl_into_struct!(OfferProtocolDecl, OfferProtocolDecl, fsys::OfferProtocolDecl,
-                  fsys::OfferProtocolDecl,
-                  {
-                      source: OfferServiceSource,
-                      source_path: CapabilityPath,
-                      target: OfferTarget,
-                      target_path: CapabilityPath,
-                      dependency_type: DependencyType,
-                  });
+fsys::OfferProtocolDecl,
+{
+    source: OfferServiceSource,
+    source_path: CapabilityPath,
+    target: OfferTarget,
+    target_path: CapabilityPath,
+    dependency_type: DependencyType,
+});
 fidl_into_struct!(OfferDirectoryDecl, OfferDirectoryDecl, fsys::OfferDirectoryDecl,
-                  fsys::OfferDirectoryDecl,
-                  {
-                      source: OfferDirectorySource,
-                      source_path: CapabilityPath,
-                      target: OfferTarget,
-                      target_path: CapabilityPath,
-                      rights: Option<fio2::Operations>,
-                      subdir: Option<PathBuf>,
-                      dependency_type: DependencyType,
-                  });
+fsys::OfferDirectoryDecl,
+{
+    source: OfferDirectorySource,
+    source_path: CapabilityPath,
+    target: OfferTarget,
+    target_path: CapabilityPath,
+    rights: Option<fio2::Operations>,
+    subdir: Option<PathBuf>,
+    dependency_type: DependencyType,
+});
 fidl_into_struct!(OfferResolverDecl, OfferResolverDecl, fsys::OfferResolverDecl,
-                  fsys::OfferResolverDecl,
-                  {
-                      source: OfferResolverSource,
-                      source_name: CapabilityName,
-                      target: OfferTarget,
-                      target_name: CapabilityName,
-                  });
+fsys::OfferResolverDecl,
+{
+    source: OfferResolverSource,
+    source_name: CapabilityName,
+    target: OfferTarget,
+    target_name: CapabilityName,
+});
 fidl_into_struct!(OfferRunnerDecl, OfferRunnerDecl, fsys::OfferRunnerDecl,
-                  fsys::OfferRunnerDecl,
-                  {
-                      source: OfferRunnerSource,
-                      source_name: CapabilityName,
-                      target: OfferTarget,
-                      target_name: CapabilityName,
-                  });
+fsys::OfferRunnerDecl,
+{
+    source: OfferRunnerSource,
+    source_name: CapabilityName,
+    target: OfferTarget,
+    target_name: CapabilityName,
+});
 fidl_into_struct!(ChildDecl, ChildDecl, fsys::ChildDecl, fsys::ChildDecl,
-                  {
-                      name: String,
-                      url: String,
-                      startup: fsys::StartupMode,
-                      environment: Option<String>,
-                  });
+{
+    name: String,
+    url: String,
+    startup: fsys::StartupMode,
+    environment: Option<String>,
+});
 
 fidl_into_struct!(CollectionDecl, CollectionDecl, fsys::CollectionDecl, fsys::CollectionDecl,
-                  {
-                      name: String,
-                      durability: fsys::Durability,
-                  });
+{
+    name: String,
+    durability: fsys::Durability,
+});
 fidl_into_struct!(ResolverDecl, ResolverDecl, fsys::ResolverDecl, fsys::ResolverDecl,
-                  {
-                      name: String,
-                      source_path: CapabilityPath,
-                  });
+{
+    name: String,
+    source_path: CapabilityPath,
+});
 fidl_into_struct!(RunnerDecl, RunnerDecl, fsys::RunnerDecl, fsys::RunnerDecl,
-                  {
-                      name: String,
-                      source: RunnerSource,
-                      source_path: CapabilityPath,
-                  });
+{
+    name: String,
+    source: RunnerSource,
+    source_path: CapabilityPath,
+});
 fidl_into_struct!(EnvironmentDecl, EnvironmentDecl, fsys::EnvironmentDecl, fsys::EnvironmentDecl,
-                  {
-                      name: String,
-                      extends: fsys::EnvironmentExtends,
-                  });
+{
+    name: String,
+    extends: fsys::EnvironmentExtends,
+});
 
 fidl_into_vec!(UseDecl, fsys::UseDecl);
 fidl_into_vec!(ChildDecl, fsys::ChildDecl);
