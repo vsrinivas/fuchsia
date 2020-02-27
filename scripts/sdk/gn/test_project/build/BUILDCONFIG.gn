@@ -150,7 +150,8 @@ if (is_fuchsia) {
         }
         if (!defined(invoker.no_default_deps) || !invoker.no_default_deps) {
           data_deps += [ "//build/config/clang:c++-runtime-deps" ]
-          deps += [ "//third_party/fuchsia-sdk:runtime_library" ]
+          deps +=
+              [ "//third_party/fuchsia-sdk/build/config:runtime_library_group" ]
         }
       }
     }

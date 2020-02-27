@@ -1,0 +1,66 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("config/config.gni")
+
+# Compiles a Components Framework v2 manifest (.cml) file to .cm
+#
+# The compiled manifest will be pretty-printed if is_debug is true.
+#
+# Parameters
+#
+#   manifest
+#     Required: The input Component Framework v2 manifest source (.cml) file.
+#     The file must have the extension ".cml".
+#
+#   output_name:
+#     Optional: Name of the output file to generate. Defaults to $target_name.
+#     This should not include a file extension (.cm)
+#
+#   deps
+#   public_deps
+#   testonly
+#   visibility
+#     Optional: Standard GN meaning.
+template("cmc_compile") {
+  output_name = target_name
+  if (defined(invoker.output_name)) {
+    output_name = invoker.output_name
+  }
+
+  action(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "manifest",
+                             "public_deps",
+                             "testonly",
+                             "visibility",
+                           ])
+    assert(defined(manifest), "manifest file required")
+
+    script = "${fuchsia_sdk}/build/gn_run_binary.py"
+
+    inputs = [
+      # Depend on the SDK hash, to ensure rebuild if the SDK tools change.
+      fuchsia_sdk_manifest_file,
+      manifest,
+    ]
+
+    output_file = "$target_out_dir/$output_name.cm"
+    outputs = [ output_file ]
+
+    args = [
+      rebase_path("${fuchsia_sdk}/tools/cmc", root_build_dir),
+      "compile",
+      "--output",
+      rebase_path(output_file, root_build_dir),
+      rebase_path(manifest, root_build_dir),
+    ]
+
+    if (is_debug) {
+      args += [ "--pretty" ]
+    }
+  }
+}

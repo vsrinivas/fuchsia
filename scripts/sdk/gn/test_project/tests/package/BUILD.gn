@@ -1,0 +1,62 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//third_party/fuchsia-sdk/build/component.gni")
+import("//third_party/fuchsia-sdk/build/package.gni")
+
+executable("hello_bin") {
+  sources = [ "hello.cc" ]
+}
+
+# Produces meta/test_component.cmx
+fuchsia_component("test_component_cmx") {
+  manifest = "meta/test_component.cmx"
+  data_deps = [ ":hello_bin" ]
+}
+
+# Produces meta/test_component_renamed.cmx
+fuchsia_component("test_component_renamed_cmx") {
+  manifest = "meta/test_component.cmx"
+  manifest_output_name = "test_component_renamed"
+  data_deps = [ ":hello_bin" ]
+}
+
+# Produces meta/test_component_no_ext_v1.cmx
+fuchsia_component("test_component_no_ext_v1_cmx") {
+  manifest = "meta/test_component_no_ext_v1"
+  manifest_version = "v1"
+  data_deps = [ ":hello_bin" ]
+}
+
+# Produces meta/test_component_no_ext_v1_renamed.cmx
+fuchsia_component("test_component_no_ext_v1_renamed_cmx") {
+  manifest = "meta/test_component_no_ext_v1"
+  manifest_output_name = "test_component_no_ext_v1_renamed"
+  manifest_version = "v1"
+  data_deps = [ ":hello_bin" ]
+}
+
+# Produces meta/test_component.cm
+fuchsia_component("test_component_cm") {
+  manifest = "meta/test_component.cml"
+  data_deps = [ ":hello_bin" ]
+}
+
+# Produces meta/test_component_renamed.cm
+fuchsia_component("test_component_renamed_cm") {
+  manifest = "meta/test_component.cml"
+  manifest_output_name = "test_component_renamed"
+  data_deps = [ ":hello_bin" ]
+}
+
+fuchsia_package("package") {
+  deps = [
+    ":test_component_cm",
+    ":test_component_cmx",
+    ":test_component_no_ext_v1_cmx",
+    ":test_component_no_ext_v1_renamed_cmx",
+    ":test_component_renamed_cm",
+    ":test_component_renamed_cmx",
+  ]
+}

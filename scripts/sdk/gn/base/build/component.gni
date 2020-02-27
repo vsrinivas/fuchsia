@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("cmc.gni")
+
 # Define a Fuchsia component() target.
 #
 # The target generates a json file defining the component contents. This
@@ -18,28 +20,89 @@
 #     the contents of the component. These are executables and libraries.
 #
 #   manifest
-#     Required: The manifest file for this component.
+#     Required: The source manifest file for this component. This can be
+#     either a v1 (.cmx) or v2 (.cml) manifest. v2 manifests must have
+#     the file extension ".cml".
+#
+#   manifest_output_name
+#     Optional: The name of the manifest file contained in the distribution
+#     that this component is included in.
+#
+#     By default, for v1 (.cmx) manifests, the output name is the same as
+#     `manifest` with the extension ".cmx", and for v2 (.cml) manifests,
+#     with the extension ".cm".
+#
+#     The output name should have no extension or prefixes. The resulting
+#     filename will have an extension that is determined by `manifest_version`.
+#
+#     For example, if `manifest` is "foo.cmx" and `manifest_output_name` is
+#     "bar", the filename will be "bar.cmx". If `manifest` is "foo.cml"
+#     (a v2 manifest), the filename will be "bar.cm".
+#
+#   manifest_version
+#     Optional: The version of the source `manifest` file. This can be either
+#     "v1" for .cmx manifests, or "v2" for .cml manifests.
+#
+#     By default, the version is guessed from the `manifest` file extension.
 #
 #   resources
 #     Optional: Non-executable resources to include in the component.
 #
 template("fuchsia_component") {
+  forward_variables_from(invoker,
+                         [
+                           "manifest",
+                           "manifest_output_name",
+                           "manifest_version",
+                         ])
+  assert(defined(manifest), "manifest file required for this component")
+
+  if (!defined(manifest_output_name)) {
+    manifest_output_name = get_path_info(manifest, "name")
+  }
+
+  # Guess `manifest_version` from the `manifest` file extension.
+  if (!defined(manifest_version)) {
+    manifest_extension = get_path_info(manifest, "extension")
+    if (manifest_extension == "cmx") {
+      manifest_version = "v1"
+    } else if (manifest_extension == "cml") {
+      manifest_version = "v2"
+    }
+  }
+
+  assert(
+      defined(manifest_version),
+      "manifest_version required and could not be determined from manifest file extension")
+  assert(manifest_version == "v1" || manifest_version == "v2",
+         "manifest_version must be one of: \"v1\", \"v2\"")
+
+  if (manifest_version == "v1") {
+    manifest_source = rebase_path(manifest)
+  } else if (manifest_version == "v2") {
+    compiled_manifest =
+        "compiled_" + target_name + "_" + get_path_info(manifest, "file")
+
+    cmc_compile(compiled_manifest) {
+      manifest = rebase_path(manifest)
+    }
+
+    compiled_manifest_outputs = get_target_outputs(":$compiled_manifest")
+    manifest_source = rebase_path(compiled_manifest_outputs[0])
+  }
+
   group(target_name) {
     forward_variables_from(invoker,
                            [
                              "deps",
                              "data_deps",
                              "friend",
-                             "manifest",
                              "resources",
                              "testonly",
                              "visibility",
                            ])
-
     assert(defined(data_deps),
            "data_deps required to define contents of this component")
-    assert(defined(manifest),
-           "manifest file (.cmx) required for this component")
 
     if (!defined(resources)) {
       resources = []
@@ -49,12 +112,14 @@ template("fuchsia_component") {
       deps = []
     }
 
-    component_manifest = []
+    if (manifest_version == "v2") {
+      deps += [ ":$compiled_manifest" ]
+    }
 
-    # TODO(fxb/42370): add cmx validation
+    component_contents = []
 
     foreach(dep, data_deps) {
-      component_manifest += [
+      component_contents += [
         {
           type = "dep"
           source = rebase_path(dep)
@@ -63,7 +128,7 @@ template("fuchsia_component") {
     }
 
     foreach(resource, resources) {
-      component_manifest += [
+      component_contents += [
         {
           type = "resource"
           source = rebase_path(resource.path)
@@ -71,10 +136,14 @@ template("fuchsia_component") {
       ]
     }
 
-    component_manifest += [
+    # TODO(fxb/42370): add cmx validation
+
+    component_contents += [
       {
         type = "manifest"
-        source = rebase_path(manifest)
+        source = manifest_source
+        output_name = manifest_output_name
+        manifest_version = manifest_version
       },
     ]
 
@@ -82,7 +151,7 @@ template("fuchsia_component") {
     # metadata. The metadata is processed by the package
     # template, or the distribution rule.
     metadata = {
-      contents = [ component_manifest ]
+      contents = [ component_contents ]
     }
   }
 }

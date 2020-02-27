@@ -1,5 +1,6 @@
 {
   "docs": [
+    "build/cmc.gni",
     "build/config/BUILD.gn",
     "build/config/config.gni",
     "build/fuchsia_sdk_pkg.gni",

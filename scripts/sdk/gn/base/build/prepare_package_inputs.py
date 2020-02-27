@@ -18,6 +18,13 @@ import sys
 import tempfile
 
 
+# File extension of a component manifest for each Component Framework version
+MANIFEST_VERSION_EXTENSIONS = {
+    "v1": ".cmx",
+    "v2": ".cm"
+}
+
+
 def make_package_path(file_path, roots):
     """Computes a path for |file_path| relative to one of the |roots|.
 
@@ -107,7 +114,8 @@ def _write_build_ids_txt(binary_paths, ids_txt_path):
                 # Paths to the unstripped executables listed in "ids.txt" are specified
                 # as relative paths to that file.
                 unstripped_rel_path = os.path.relpath(
-                    os.path.abspath(unprocessed_binary_paths[binary_shortname]),
+                    os.path.abspath(
+                        unprocessed_binary_paths[binary_shortname]),
                     os.path.dirname(os.path.abspath(ids_txt_path)))
 
                 build_id = line[len(READELF_BUILD_ID_PREFIX):]
@@ -130,17 +138,15 @@ def _get_app_filename(component_info):
             return c.get('source')[pos + 1:]
 
 
-def _get_manifest_file(component_info):
-    for c in component_info:
-        if c.get('type') == 'manifest':
-            return str(c.get('source'))
+def _get_component_manifests(component_info):
+    return [c for c in component_info if c.get('type') == 'manifest']
 
 
 def _build_manifest(args):
     component_info_list = _parse_component(args.json_file)
     binaries = []
     with open(args.manifest_path, 'w') as manifest, \
-         open(args.depfile_path, 'w') as depfile:
+            open(args.depfile_path, 'w') as depfile:
         for component_info in component_info_list:
             app_filename = _get_app_filename(component_info)
 
@@ -158,7 +164,8 @@ def _build_manifest(args):
                         for current_file in files:
                             if current_file.startswith('.'):
                                 continue
-                            expanded_files.add(os.path.join(root, current_file))
+                            expanded_files.add(
+                                os.path.join(root, current_file))
                 else:
                     expanded_files.add(os.path.normpath(next_path))
 
@@ -192,36 +199,39 @@ def _build_manifest(args):
                 raise Exception(
                     'Could not locate executable inside runtime_deps.')
 
-            # Write meta/package manifest file.
+            # Write meta/package manifest file and add to archive manifest.
             with open(os.path.join(os.path.dirname(args.manifest_path),
                                    'package'), 'w') as package_json:
-                json.dump({'version': '0', 'name': args.app_name}, package_json)
+                json.dump({'version': '0', 'name': args.app_name},
+                          package_json)
+                manifest.write(
+                    'meta/package=%s\n' %
+                    os.path.relpath(package_json.name,
+                                    args.out_dir))
 
-            # Write component manifest file.
-            cmx_source = _get_manifest_file(component_info)
-            cmx_file_path = os.path.join(
-                os.path.dirname(args.manifest_path), args.app_name + '.cmx')
-            manifest.write(
-                'meta/package=%s\n' %
-                os.path.relpath(package_json.name, args.out_dir))
+            # Copy component manifest files and add to archive manifest.
+            for component_manifest in _get_component_manifests(component_info):
+                manifest_version = component_manifest.get('manifest_version')
 
-            if not cmx_source:
-                # Create a defaullt cmx file for a binary, no sandbox.
-                with open(cmx_file_path, 'w') as component_manifest_file:
-                    component_manifest = {
-                        'program': {
-                            'binary': app_filename
-                        },
-                    }
-                json.dump(component_manifest, component_manifest_file)
+                if manifest_version not in MANIFEST_VERSION_EXTENSIONS:
+                    raise Exception(
+                        'Unknown manifest_version: {}'.format(manifest_version))
 
-            else:
-                shutil.copy(cmx_source, cmx_file_path)
+                extension = MANIFEST_VERSION_EXTENSIONS.get(
+                    manifest_version)
 
-            manifest.write(
-                'meta/%s=%s\n' % (
-                    os.path.basename(cmx_file_path),
-                    os.path.relpath(cmx_file_path, args.out_dir)))
+                manifest_dest_file_path = os.path.join(
+                    os.path.dirname(args.manifest_path),
+                    component_manifest.get('output_name') + extension)
+                shutil.copy(component_manifest.get('source'),
+                            manifest_dest_file_path)
+
+                manifest.write(
+                    'meta/%s=%s\n' % (
+                        os.path.basename(manifest_dest_file_path),
+                        os.path.relpath(manifest_dest_file_path, args.out_dir)))
+
+            # Write GN deps file.
             depfile.write(
                 '%s: %s' % (
                     os.path.relpath(args.manifest_path, args.out_dir), ' '.join(

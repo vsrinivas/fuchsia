@@ -1,0 +1,9 @@
+// This is a v2 component manifest.
+{
+  program: {
+    binary: "hello_bin"
+  },
+  use: [
+    { runner: "elf" }
+  ]
+}
