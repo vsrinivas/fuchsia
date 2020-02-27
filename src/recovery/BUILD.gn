@@ -16,7 +16,7 @@ group("tests") {
   deps = [
     "factory_reset:tests",
     "integration:tests",
-    # XXX: disabled as they do not pass: "simulator:tests",
+    "simulator:tests",
     "system:tests",
   ]
 }
