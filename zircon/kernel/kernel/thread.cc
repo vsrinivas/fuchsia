@@ -55,7 +55,7 @@
 #include <vm/vm_address_region.h>
 #include <vm/vm_aspace.h>
 
-// kernel counters. TODO(cpu): remove LK-era counters
+// kernel counters.
 // The counters below never decrease.
 //
 // counts the number of Threads successfully created.
