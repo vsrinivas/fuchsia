@@ -78,7 +78,7 @@
 ## Flags after -- are parsed by fidlcat.  Example usage:
 ##
 ## # Attaches to the process with the given pid on the target:
-## fx fidlcat --remote-pid 4755
+## fx fidlcat --remote-pid=4755
 ##
 ## # Launches the echo client, and monitors its FIDL chatter:
 ## fx fidlcat run fuchsia-pkg://fuchsia.com/echo_client_cpp#meta/echo_client_cpp.cmx
@@ -87,7 +87,7 @@
 ## fx fidlcat run echo_client_cpp.cmx
 ##
 ## # Will trace existing and future processes whose name contains "echo_client"
-## fx fidlcat --remote-name echo_client
+## fx fidlcat --remote-name=echo_client
 ##
 ## All three options --remote-pid, --remote-name and run can be used together.
 ## However, run must always be the last one.
