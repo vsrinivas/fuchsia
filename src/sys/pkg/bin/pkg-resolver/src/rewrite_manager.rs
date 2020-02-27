@@ -54,7 +54,7 @@ impl RewriteManager {
     /// Rewrite the given [PkgUrl] using the first dynamic or static rewrite rule that matches and
     /// produces a valid [PkgUrl]. If no rewrite rules match or all that do produce invalid
     /// [PkgUrl]s, return the original, unmodified [PkgUrl].
-    pub fn rewrite(&self, url: PkgUrl) -> PkgUrl {
+    pub fn rewrite(&self, url: &PkgUrl) -> PkgUrl {
         for rule in self.list() {
             match rule.apply(&url) {
                 Some(Ok(res)) => {
@@ -66,7 +66,7 @@ impl RewriteManager {
                 _ => {}
             }
         }
-        url
+        url.clone()
     }
 
     fn save(dynamic_rules: &mut Vec<Rule>, dynamic_rules_path: &Path) -> io::Result<()> {
@@ -459,7 +459,7 @@ pub(crate) mod tests {
         let manager = RewriteManagerBuilder::new(Some(&dynamic_config)).unwrap().build();
 
         let url: PkgUrl = "fuchsia-pkg://fuchsia.com/c".parse().unwrap();
-        assert_eq!(manager.rewrite(url.clone()), url);
+        assert_eq!(manager.rewrite(&url), url);
     }
 
     #[test]
@@ -473,7 +473,7 @@ pub(crate) mod tests {
         let manager = RewriteManagerBuilder::new(Some(&dynamic_config)).unwrap().build();
 
         let url = "fuchsia-pkg://fuchsia.com/package".parse().unwrap();
-        assert_eq!(manager.rewrite(url), "fuchsia-pkg://fuchsia.com/remapped".parse().unwrap());
+        assert_eq!(manager.rewrite(&url), "fuchsia-pkg://fuchsia.com/remapped".parse().unwrap());
     }
 
     #[test]
@@ -491,7 +491,7 @@ pub(crate) mod tests {
             .build();
 
         let url = "fuchsia-pkg://fuchsia.com/package".parse().unwrap();
-        assert_eq!(manager.rewrite(url), "fuchsia-pkg://fuchsia.com/remapped".parse().unwrap());
+        assert_eq!(manager.rewrite(&url), "fuchsia-pkg://fuchsia.com/remapped".parse().unwrap());
     }
 
     #[test]
@@ -511,7 +511,7 @@ pub(crate) mod tests {
             .build();
 
         let url = "fuchsia-pkg://fuchsia.com/package".parse().unwrap();
-        assert_eq!(manager.rewrite(url), "fuchsia-pkg://baz.com/package".parse().unwrap());
+        assert_eq!(manager.rewrite(&url), "fuchsia-pkg://baz.com/package".parse().unwrap());
     }
 
     #[test]
@@ -526,12 +526,12 @@ pub(crate) mod tests {
 
         // new rule is not yet committed and should not be used yet
         let url: PkgUrl = "fuchsia-pkg://fuchsia.com/a".parse().unwrap();
-        assert_eq!(manager.rewrite(url.clone()), "fuchsia-pkg://fuchsia.com/b".parse().unwrap());
+        assert_eq!(manager.rewrite(&url), "fuchsia-pkg://fuchsia.com/b".parse().unwrap());
 
         manager.apply(transaction).unwrap();
 
         let url = "fuchsia-pkg://fuchsia.com/a".parse().unwrap();
-        assert_eq!(manager.rewrite(url), "fuchsia-pkg://fuchsia.com/c".parse().unwrap());
+        assert_eq!(manager.rewrite(&url), "fuchsia-pkg://fuchsia.com/c".parse().unwrap());
     }
 
     #[test]

@@ -4,14 +4,13 @@
 
 use {
     crate::{
-        cache::{BlobFetcher, CacheError, MerkleForError, PackageCache, ToResolveStatus},
+        cache::{BlobFetcher, CacheError, PackageCache, ToResolveStatus},
         experiment::Experiments,
         inspect_util::{self, InspectableRepositoryConfig},
         repository::Repository,
     },
     fidl_fuchsia_pkg_ext::{BlobId, RepositoryConfig, RepositoryConfigs},
     fuchsia_inspect as inspect,
-    fuchsia_pkg::PackagePath,
     fuchsia_syslog::{fx_log_err, fx_log_info},
     fuchsia_url::pkg_url::{PkgUrl, RepoUrl},
     fuchsia_zircon::Status,
@@ -24,7 +23,6 @@ use {
         path::{Path, PathBuf},
         sync::Arc,
     },
-    system_image::CachePackages,
     thiserror::Error,
 };
 
@@ -237,17 +235,16 @@ impl RepositoryManager {
         &self,
         url: &'a PkgUrl,
         cache: &'a PackageCache,
-        cache_list: &'a CachePackages,
         blob_fetcher: &'a BlobFetcher,
-    ) -> LocalBoxFuture<'a, Result<BlobId, Status>> {
+    ) -> LocalBoxFuture<'a, Result<BlobId, GetPackageError>> {
         let config = if let Some(config) = self.get(url.repo()) {
             Arc::clone(config)
         } else {
             fx_log_err!("repo config not found: {}", url.repo());
-            return futures::future::ready(Err(Status::ADDRESS_UNREACHABLE)).boxed_local();
+            return futures::future::ready(Err(GetPackageError::RepoNotFound)).boxed_local();
         };
 
-        let repo = open_cached_or_new_repository(
+        let fut = open_cached_or_new_repository(
             Arc::clone(&self.repositories),
             Arc::clone(&config),
             Arc::clone(&self.inspect.repos_node),
@@ -255,37 +252,13 @@ impl RepositoryManager {
         );
 
         async move {
-            let res: Result<BlobId, GetPackageError> = async {
-                let repo = repo.await?;
-
-                let merkle =
-                    crate::cache::cache_package(repo, &config, url, cache, blob_fetcher).await?;
-
-                Ok(merkle)
-            }
-            .await;
-
-            let res = match res {
-                Ok(b) => Ok(b),
-                Err(GetPackageError::Cache(CacheError::MerkleFor(MerkleForError::NotFound))) => {
-                    // If we can get metadata but the repo doesn't know about the package,
-                    // it shouldn't be in the cache, and we wouldn't trust it if it was.
-                    res
-                }
-                Err(e) => {
-                    // If we couldn't get TUF metadata, we might not have networking. Check in
-                    // system/data/cache_packages (not to be confused with the package cache).
-                    // Return the existing error if not found in the cache.
-                    lookup_from_system_cache(url, cache_list).ok_or(e)
-                }
-            };
-
-            res.map_err(|e| {
-                if let GetPackageError::Cache(ref e) = e {
+            let repo = fut.await?;
+            crate::cache::cache_package(repo, &config, url, cache, blob_fetcher).await.map_err(
+                |e| {
                     fx_log_err!("while fetching package {} using rust tuf: {}", url, e);
-                }
-                e.to_resolve_status()
-            })
+                    GetPackageError::Cache(e)
+                },
+            )
         }
         .boxed_local()
     }
@@ -316,46 +289,6 @@ impl RepositoryManager {
         }
         .boxed_local()
     }
-}
-
-fn lookup_from_system_cache<'a>(
-    url: &'a PkgUrl,
-    system_cache_list: &'a CachePackages,
-) -> Option<BlobId> {
-    // If the URL isn't of the form fuchsia-pkg://fuchsia.com/$name[/0], don't bother.
-    if url.host() != "fuchsia.com" || url.resource().is_some() {
-        return None;
-    }
-    // Cache packages should only have a variant of 0 or none.
-    let variant = url.variant();
-    let variant = match variant {
-        Some("0") => "0",
-        None => "0",
-        _ => return None,
-    };
-    let package_name = url.name();
-    let package_name = match package_name {
-        Some(n) => n,
-        None => return None,
-    };
-
-    let package_path = PackagePath::from_name_and_variant(package_name, variant);
-    let package_path = match package_path {
-        Ok(p) => p,
-        Err(e) => {
-            fx_log_err!(
-                "cache fallback: PackagePath::name_and_variant failed for url {}: {}",
-                url,
-                e
-            );
-            return None;
-        }
-    };
-    if let Some(hash) = system_cache_list.hash_for_package(&package_path) {
-        fx_log_info!("found package {} using cache fallback", url);
-        return Some(hash.into());
-    }
-    None
 }
 
 async fn open_cached_or_new_repository(
@@ -716,7 +649,7 @@ pub enum RemoveError {
 
 #[derive(Debug, Error)]
 #[error("unable to open repository: {0}")]
-struct OpenRepoError(#[source] anyhow::Error);
+pub struct OpenRepoError(#[source] anyhow::Error);
 
 impl ToResolveStatus for OpenRepoError {
     fn to_resolve_status(&self) -> Status {
@@ -725,7 +658,10 @@ impl ToResolveStatus for OpenRepoError {
 }
 
 #[derive(Debug, Error)]
-enum GetPackageError {
+pub enum GetPackageError {
+    #[error("repo not found")]
+    RepoNotFound,
+
     #[error("while opening the repo: {0}")]
     OpenRepo(#[from] OpenRepoError),
 
@@ -736,6 +672,7 @@ enum GetPackageError {
 impl ToResolveStatus for GetPackageError {
     fn to_resolve_status(&self) -> Status {
         match self {
+            GetPackageError::RepoNotFound => Status::ADDRESS_UNREACHABLE,
             GetPackageError::OpenRepo(err) => err.to_resolve_status(),
             GetPackageError::Cache(err) => err.to_resolve_status(),
         }
@@ -1558,33 +1495,5 @@ mod tests {
                 }
             }
         );
-    }
-
-    #[test]
-    fn test_lookup_from_system_cache() {
-        let hash =
-            "0000000000000000000000000000000000000000000000000000000000000000".parse().unwrap();
-        let cache_packages = CachePackages::from_entries(vec![(
-            PackagePath::from_name_and_variant("potato", "0").unwrap(),
-            hash,
-        )]);
-        let empty_cache_packages = CachePackages::from_entries(vec![]);
-
-        let fuchsia_url = PkgUrl::parse("fuchsia-pkg://fuchsia.com/potato").unwrap();
-        let variant_zero_fuchsia_url = PkgUrl::parse("fuchsia-pkg://fuchsia.com/potato/0").unwrap();
-        let resource_url = PkgUrl::parse("fuchsia-pkg://fuchsia.com/potato#resource").unwrap();
-        let other_repo_url = PkgUrl::parse("fuchsia-pkg://nope.com/potato/0").unwrap();
-        let wrong_variant_fuchsia_url =
-            PkgUrl::parse("fuchsia-pkg://fuchsia.com/potato/17").unwrap();
-
-        assert_eq!(lookup_from_system_cache(&fuchsia_url, &cache_packages), Some(hash.into()));
-        assert_eq!(
-            lookup_from_system_cache(&variant_zero_fuchsia_url, &cache_packages),
-            Some(hash.into())
-        );
-        assert_eq!(lookup_from_system_cache(&other_repo_url, &cache_packages), None);
-        assert_eq!(lookup_from_system_cache(&wrong_variant_fuchsia_url, &cache_packages), None);
-        assert_eq!(lookup_from_system_cache(&resource_url, &cache_packages), None);
-        assert_eq!(lookup_from_system_cache(&fuchsia_url, &empty_cache_packages), None);
     }
 }
