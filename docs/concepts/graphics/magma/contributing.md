@@ -14,7 +14,7 @@ The core magma code is found under:
 
 Implementations of the magma service drivers are found under:
 
-* [drivers/gpu](/garnet/drivers/gpu)
+* [src/graphics/drivers](/src/graphics/drivers)
 
 Implementations of the magma application driver may be located in drivers/gpu; though
 often these are built from third party projects, such as third_party/mesa.
