@@ -57,3 +57,9 @@ group("VkLayer_image_pipe_swapchain") {
   ]
 }
 
+group("all"){
+  data_deps = [
+    ":VkLayer_core_validation",
+    ":VkLayer_image_pipe_swapchain",
+  ]
+}

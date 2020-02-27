@@ -19,3 +19,9 @@ fuchsia_sdk_pkg("media_cpp") {
     "../media_cpp_no_converters",
   ]
 }
+
+group("all"){
+  deps = [
+    ":media_cpp",
+  ]
+}

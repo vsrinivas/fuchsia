@@ -73,6 +73,13 @@ class GNBuilder(Frontend):
             directory=directory)
         self.target_arches = []
         self.fidl_targets = []  # List of all FIDL library targets generated
+        self.cc_prebuilt_targets = [
+        ]  # List of all CC prebuilt library targets generated
+        self.cc_source_targets = [
+        ]  # List of all CC source library targets generated
+        self.loadable_module_targets = [
+        ]  # List of all loadable module targets generated
+        self.sysroot_targets = []  # List of all sysroot targets generated
         self.build_files = []
 
     def prepare(self, arch, types):
@@ -193,6 +200,8 @@ class GNBuilder(Frontend):
 
     def install_cc_prebuilt_library_atom(self, atom):
         name = atom['name']
+        # Add atom to test targets
+        self.cc_prebuilt_targets.append(name)
         base = self.dest('pkg', name)
         library = model.CppPrebuiltLibrary(name)
         library.relative_path_to_root = os.path.relpath(self.output, start=base)
@@ -240,6 +249,8 @@ class GNBuilder(Frontend):
 
     def install_cc_source_library_atom(self, atom):
         name = atom['name']
+        # Add atom to test targets
+        self.cc_source_targets.append(name)
         base = self.dest('pkg', name)
         library = model.CppSourceLibrary(name)
         library.relative_path_to_root = os.path.relpath(self.output, start=base)
@@ -291,6 +302,9 @@ class GNBuilder(Frontend):
         if name != 'vulkan_layers':
             raise RuntimeError('Unsupported loadable_module: %s' % name)
 
+        # Add loadable modules to test targets
+        self.loadable_module_targets.append(name)
+
         # Copy resources and binaries
         resources = atom['resources']
         self.copy_files(resources)
@@ -304,7 +318,7 @@ class GNBuilder(Frontend):
             # been fixed to have the correct names.
             basename = os.path.basename(name)
             if basename[:3] == 'lib':
-              basename = basename[3:]
+                basename = basename[3:]
             return os.path.splitext(basename)[0]
 
         data = model.VulkanLibrary()
@@ -330,8 +344,7 @@ class GNBuilder(Frontend):
                 continue
 
             # Replace harcoded arch in the found binary filename.
-            binary = filtered[0].replace(
-                '/' + arch + '/', "/${target_cpu}/")
+            binary = filtered[0].replace('/' + arch + '/', "/${target_cpu}/")
 
             layer = model.VulkanLayer(
                 name=layer_name,
@@ -365,7 +378,7 @@ class GNBuilder(Frontend):
             # hardcode those names in build/config/BUILD.gn. This may need to
             # change if/when we support sanitized builds.
             self.copy_files(arch_data['dist_libs'], arch_root, base)
-        self.write_atom_metadata(self.dest('pkg','sysroot', 'meta.json'), atom)
+        self.write_atom_metadata(self.dest('pkg', 'sysroot', 'meta.json'), atom)
 
 
 class TestData(object):
@@ -394,6 +407,7 @@ def create_test_workspace(output):
 
     return True
 
+
 def create_archive(output_archive, output):
     # If file already exists remove it
     if os.path.exists(output_archive):
@@ -406,7 +420,6 @@ def create_archive(output_archive, output):
         archive_file.add(output, arcname='')
 
     return True
-
 
 
 def main(args_list=None):
@@ -430,7 +443,6 @@ def main(args_list=None):
         args = parser.parse_args(args_list)
     else:
         args = parser.parse_args()
-
 
     return run_generator(
         archive=args.archive,

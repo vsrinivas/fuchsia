@@ -18,3 +18,9 @@ fuchsia_sdk_pkg("${data.name}") {
     % endfor
   ]
 }
+
+group("all"){
+  deps = [
+    ":${data.name}",
+  ]
+}

@@ -20,3 +20,9 @@ fuchsia_sdk_pkg("svc") {
   ]
   include_dirs = [ "include" ]
 }
+
+group("all"){
+  deps = [
+    ":svc",
+  ]
+}

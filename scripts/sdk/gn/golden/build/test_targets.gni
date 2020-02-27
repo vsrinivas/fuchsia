@@ -10,14 +10,68 @@ assert(current_os == "fuchsia")
 
 import("fuchsia_sdk_pkg.gni")
 
-# This template is used to create build targets
+# These template is used to create build targets
 # that test the generated build targets. It does not
 # have any practical use outside testing.
-template("fuchsia_sdk_test_targets") {
+
+# All vulkan targets
+template("fuchsia_sdk_test_loadable_module_targets") {
   not_needed(["invoker"])
-  group(target_name) {
+  group(target_name){
     deps = [
-      "${fuchsia_sdk}/fidl/fuchsia.process",
+      "${fuchsia_sdk}/pkg/vulkan_layers:all",
+    ]
+  }
+}
+
+# All FIDL targets
+template("fuchsia_sdk_test_fidl_targets") {
+  not_needed(["invoker"])
+  group(target_name){
+    deps = [
+      "${fuchsia_sdk}/fidl/fuchsia.process:all",
+    ]
+  }
+}
+
+# All CC source targets
+template("fuchsia_sdk_test_cc_source_targets") {
+  not_needed(["invoker"])
+  group(target_name){
+    deps = [
+      "${fuchsia_sdk}/pkg/media_cpp:all",
+    ]
+  }
+}
+
+# All CC prebuilt targets
+template("fuchsia_sdk_test_cc_prebuilt_targets") {
+  not_needed(["invoker"])
+  group(target_name){
+    deps = [
+      "${fuchsia_sdk}/pkg/svc:all",
+      "${fuchsia_sdk}/pkg/sync:all",
+    ]
+  }
+}
+
+# All test targets
+template("fuchsia_sdk_test_targets"){
+  not_needed(["invoker"])
+  fuchsia_sdk_test_loadable_module_targets("loadable_module_targets"){
+  }
+  fuchsia_sdk_test_fidl_targets("fidl_targets"){
+  }
+  fuchsia_sdk_test_cc_source_targets("cc_source_targets"){
+  }
+  fuchsia_sdk_test_cc_prebuilt_targets("cc_prebuilt_targets"){
+  }
+  group(target_name){
+    deps = [
+      ":loadable_module_targets",
+      ":fidl_targets",
+      ":cc_source_targets",
+      ":cc_prebuilt_targets",
     ]
   }
 }

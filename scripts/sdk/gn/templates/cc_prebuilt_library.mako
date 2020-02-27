@@ -21,3 +21,9 @@ fuchsia_sdk_pkg("${data.name}") {
   ]
   include_dirs = [ "${data.includes}" ]
 }
+
+group("all"){
+  deps = [
+    ":${data.name}",
+  ]
+}

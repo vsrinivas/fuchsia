@@ -16,3 +16,9 @@ fidl_library("${data.name}") {
     % endfor
   ]
 }
+
+group("all"){
+  deps = [
+    ":${data.name}",
+  ]
+}

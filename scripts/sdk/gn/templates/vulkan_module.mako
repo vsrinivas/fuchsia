@@ -34,3 +34,10 @@ group("${layer.name}") {
 }
 
 % endfor
+group("all"){
+  data_deps = [
+  % for layer in data.layers:
+    ":${layer.name}",
+  %endfor%
+  ]
+}

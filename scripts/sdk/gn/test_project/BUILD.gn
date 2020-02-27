@@ -5,8 +5,8 @@
 # Top level BUILD file for gn samples
 
 import("//third_party/fuchsia-sdk/build/test_targets.gni")
-fuchsia_sdk_test_targets("fidl") {
+fuchsia_sdk_test_targets("all_sdk") {
 }
 group("default") {
-  deps = [ ":fidl" ]
+  deps = [ ":all_sdk" ]
 }

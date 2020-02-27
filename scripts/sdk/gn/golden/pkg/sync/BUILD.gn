@@ -22,3 +22,9 @@ fuchsia_sdk_pkg("sync") {
   ]
   include_dirs = [ "include" ]
 }
+
+group("all"){
+  deps = [
+    ":sync",
+  ]
+}
