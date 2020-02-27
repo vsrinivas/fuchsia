@@ -4,19 +4,14 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-//
 // Declares the lockdep instrumented global thread lock.
-//
-// Until more general C to C++ conversion is completed this header must only
-// be included in C++ source files. In particular this header must not be
-// included in kernel/wait.h or kernel/thread.h until the conversion is done.
 
 #ifndef ZIRCON_KERNEL_INCLUDE_KERNEL_THREAD_LOCK_H_
 #define ZIRCON_KERNEL_INCLUDE_KERNEL_THREAD_LOCK_H_
 
 #include <kernel/lockdep.h>
-#include <kernel/thread.h>
 
+extern spin_lock_t thread_lock;
 DECLARE_SINGLETON_LOCK_WRAPPER(ThreadLock, thread_lock,
                                (LockFlagsReportingDisabled | LockFlagsTrackingDisabled));
 

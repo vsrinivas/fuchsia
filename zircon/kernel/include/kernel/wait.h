@@ -18,11 +18,10 @@
 #include <arch/thread.h>
 #include <kernel/deadline.h>
 #include <kernel/spinlock.h>
+#include <kernel/thread_lock.h>
 #include <kernel/timer.h>
 
 __BEGIN_CDECLS
-
-extern spin_lock_t thread_lock;
 
 // wait queue stuff
 #define WAIT_QUEUE_MAGIC (0x77616974)  // 'wait'

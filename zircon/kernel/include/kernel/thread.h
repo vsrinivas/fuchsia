@@ -24,6 +24,7 @@
 #include <kernel/cpu.h>
 #include <kernel/scheduler_state.h>
 #include <kernel/spinlock.h>
+#include <kernel/thread_lock.h>
 #include <kernel/timer.h>
 #include <kernel/wait.h>
 #include <lockdep/thread_lock_state.h>
@@ -48,9 +49,6 @@ enum thread_state {
 
 // Returns a string constant for the given thread state.
 const char* ToString(enum thread_state state);
-
-// scheduler lock
-extern spin_lock_t thread_lock;
 
 typedef int (*thread_start_routine)(void* arg);
 typedef void (*thread_trampoline_routine)() __NO_RETURN;
