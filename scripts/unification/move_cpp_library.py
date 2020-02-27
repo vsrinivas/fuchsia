@@ -166,12 +166,16 @@ def main():
         # Remove the reference in the ZN aggregation target.
         aggregation_path = os.path.join(FUCHSIA_ROOT, 'zircon', 'system',
                                         os.path.dirname(lib), 'BUILD.gn')
-        folder = os.path.basename(lib)
-        for line in fileinput.FileInput(aggregation_path, inplace=True):
-            for name in [s.name for s in stats]:
-                if (not '"' + folder + ':' + name + '"' in line and
-                    not '"' + folder + '"' in line):
-                    sys.stdout.write(line)
+        if os.path.exists(aggregation_path):
+            folder = os.path.basename(lib)
+            for line in fileinput.FileInput(aggregation_path, inplace=True):
+                for name in [s.name for s in stats]:
+                    if (not '"' + folder + ':' + name + '"' in line and
+                        not '"' + folder + '"' in line):
+                        sys.stdout.write(line)
+        else:
+            print('Warning: some references to ' + lib + ' might still exist '
+                  'in the ZN build, please remove them manually')
 
     # Create a commit.
     libs = sorted(movable_libs.keys())
@@ -186,6 +190,7 @@ def main():
     message = [
         '[unification] Move ' + lib_name + ' to the GN build',
         '',
+        'Affected libraries:'
     ] + ['//zircon/system/' + l for l in libs] + [
         '',
         'Generated with ' + SCRIPT_LABEL,
