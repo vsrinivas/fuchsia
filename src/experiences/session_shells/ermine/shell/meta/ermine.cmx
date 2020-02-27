@@ -21,6 +21,7 @@
             "fuchsia.media.AudioCore",
             "fuchsia.memory.Monitor",
             "fuchsia.power.BatteryManager",
+            "fuchsia.session.ElementManager",
             "fuchsia.settings.Intl",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",

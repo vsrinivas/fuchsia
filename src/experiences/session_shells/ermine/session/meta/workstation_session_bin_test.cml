@@ -1,23 +1,27 @@
 {
-        "program": {
-        "binary": "bin/rust_test_adapter",
-        "args": [
+    program: {
+        binary: "bin/rust_test_adapter",
+        args: [
             "/pkg/test/workstation_session_bin_test",
         ]
     },
-    "expose": [
+    expose: [
         {
-            "protocol": "/svc/fuchsia.test.Suite",
-            "from": "self",
+            protocol: "/svc/fuchsia.test.Suite",
+            from: "self",
        },
     ],
-    "use": [
-        { "runner": "elf" },
+    use: [
+        { runner: "elf" },
         {
-            "protocol": "/svc/fuchsia.process.Launcher",
+            protocol: "/svc/fuchsia.sys2.Realm",
+            from: "realm",
         },
         {
-            "protocol": "/svc/fuchsia.logger.LogSink",
+            protocol: [
+                "/svc/fuchsia.process.Launcher",
+                "/svc/fuchsia.logger.LogSink",
+            ]
         },
     ],
 }

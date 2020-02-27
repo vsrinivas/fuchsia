@@ -2,12 +2,34 @@
     "program": {
         "binary": "bin/workstation_session",
     },
+    collections: [
+        {
+            name: "element_launchers",
+            durability: "transient",
+        },
+        {
+            name: "elements",
+            durability: "transient",
+        },
+    ],
+    expose: [
+        {
+            protocol: [
+                "/svc/fuchsia.session.ElementManager",
+            ],
+            from: "self",
+        },
+    ],
     "use": [
         { "runner": "elf" },
         {
             "directory": "/dev/class/input-report",
             "from": "realm",
             "rights": [ "r*",]
+        },
+        {
+            protocol: "/svc/fuchsia.sys2.Realm",
+            from: "framework",
         },
         {
             "protocol": "/svc/fuchsia.sys.Launcher",
@@ -26,6 +48,23 @@
         },
         {
             "protocol": "/svc/fuchsia.ui.shortcut.Manager",
+        },
+    ],
+    offer: [
+        // Offer the ELF runner to children.
+        {
+            "runner": "elf",
+            "from": "realm",
+            "to": [
+                "#elements",
+            ]
+        },
+        {
+            protocol: "/svc/fuchsia.session.ElementManager",
+            from: "self",
+            to: [
+                "#element_launchers",
+            ],
         },
     ],
 }
