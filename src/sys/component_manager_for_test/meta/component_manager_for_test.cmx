@@ -19,6 +19,9 @@
             "fuchsia.sys.Launcher",
             "fuchsia.sys.Loader",
             "fuchsia.sys2.Realm"
+        ],
+        "pkgfs": [
+            "packages/config-data/0/data"
         ]
     }
 }

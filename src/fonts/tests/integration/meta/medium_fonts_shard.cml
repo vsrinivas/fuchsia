@@ -1,0 +1,8 @@
+{
+    "program": {
+        "args": [
+            "--font-manifest",
+            "/config/data/test_fonts_medium.font_manifest.json"
+        ],
+    },
+}

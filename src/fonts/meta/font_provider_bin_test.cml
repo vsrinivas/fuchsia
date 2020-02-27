@@ -1,0 +1,23 @@
+{
+  "program": {
+      // Use the rust test adapter because we don't have the ability to use a runner yet.
+      "binary": "bin/rust_test_adapter",
+      "args": [ "/pkg/test/font_provider_bin_test" ],
+  },
+  "use": [
+      { "runner": "elf" },
+      // These "use" statements are needed for the RustTestAdapter trampoline
+      {
+          "protocol": [
+              "/svc/fuchsia.process.Launcher",
+              "/svc/fuchsia.logger.LogSink",
+          ],
+      },
+  ],
+  "expose": [
+      {
+          "protocol": "/svc/fuchsia.test.Suite",
+          "from": "self",
+      },
+  ],
+}

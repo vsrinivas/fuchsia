@@ -5,16 +5,15 @@
 use {
     anyhow::{format_err, Context as _, Error},
     fidl::endpoints,
-    fidl_fuchsia_io::{DirectoryMarker, MODE_TYPE_SERVICE},
-    fidl_fuchsia_sys2 as fsys, fidl_fuchsia_test_manager as ftest_manager,
+    fidl_fuchsia_io::DirectoryMarker,
+    fidl_fuchsia_sys2 as fsys, fidl_fuchsia_test as ftest,
+    fidl_fuchsia_test_manager as ftest_manager,
     ftest_manager::Result_,
     fuchsia_async as fasync,
     fuchsia_component::client,
     futures::io::AsyncWrite,
     futures::{channel::mpsc, prelude::*},
-    io_util::{self, OPEN_RIGHT_READABLE},
     std::collections::HashSet,
-    std::path::PathBuf,
     test_executor::TestEvent,
     uuid::Uuid,
 };
@@ -100,14 +99,8 @@ async fn run_test<W: std::marker::Unpin + AsyncWrite>(
         .context(format!("bind_child fidl call failed for {}", name))?
         .map_err(|e| format_err!("cannot bind to test: {:?} for {}", e, name))?;
 
-    let node_proxy = io_util::open_node(
-        &dir,
-        &PathBuf::from("svc/fuchsia.test.Suite"),
-        OPEN_RIGHT_READABLE,
-        MODE_TYPE_SERVICE,
-    )
-    .context("failed to open test suite service")?;
-    let suite = fidl_fuchsia_test::SuiteProxy::new(node_proxy.into_channel().unwrap());
+    let suite = client::connect_to_protocol_at_dir::<ftest::SuiteMarker>(&dir)
+        .context("failed to open test suite service")?;
 
     let (sender, mut recv) = mpsc::channel(1);
 

@@ -1,0 +1,48 @@
+{
+    "children": [
+        {
+            "name": "font_resolver",
+            "url": "fuchsia-pkg://fuchsia.com/font_provider_integration_tests#meta/mock_font_resolver.cm",
+        },
+        {
+            "name": "driver",
+            "url": "fuchsia-pkg://fuchsia.com/font_provider_integration_tests#meta/test_driver.cm",
+        },
+    ],
+    "expose": [
+        {
+            "protocol": "/svc/fuchsia.test.Suite",
+            "from": "#driver",
+        },
+    ],
+    "offer": [
+        {
+            "runner": "elf",
+            "from": "realm",
+            "to": [ "#driver", "#font_resolver" ],
+        },
+        {
+            "protocol": "/svc/fuchsia.pkg.FontResolver",
+            "from": "#font_resolver",
+            "to": [ "#driver" ],
+        },
+        // Some components run under test get fonts from /config/data.
+        {
+            "directory": "/pkgfs/packages/config-data/0/data",
+            "subdir": "fonts",
+            "from": "realm",
+            "to": [ "#driver" ],
+            "as": "/config/data",
+        },
+
+        // These "offer" statements are needed for the RustTestAdapter trampoline
+        {
+            "protocol": [
+                "/svc/fuchsia.process.Launcher",
+                "/svc/fuchsia.logger.LogSink",
+            ],
+            "from": "realm",
+            "to": [ "#driver" ],
+        },
+    ],
+}

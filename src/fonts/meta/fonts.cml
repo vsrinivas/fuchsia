@@ -1,0 +1,27 @@
+{
+    "program": {
+        "binary": "bin/app",
+    },
+    "use": [
+        { "runner": "elf" },
+        {
+            "protocol": [
+                "/svc/fuchsia.logger.LogSink",
+                "/svc/fuchsia.pkg.FontResolver",
+            ],
+        },
+        {
+            "directory": "/config/data",
+            "rights": [ "r*" ],
+        },
+    ],
+    "expose": [
+        {
+            "protocol": [
+                "/svc/fuchsia.fonts.Provider",
+                "/svc/fuchsia.fonts.experimental.Provider",
+            ],
+            "from": "self",
+        },
+    ],
+}

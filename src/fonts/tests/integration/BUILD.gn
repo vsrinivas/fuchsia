@@ -9,7 +9,6 @@ group("integration") {
   testonly = true
   deps = [
     ":font_provider_integration_tests",
-    "//src/fonts/testing:mock_font_resolver",
   ]
 }
 
@@ -45,16 +44,111 @@ rustc_test("font_provider_integration_tests_bin") {
   non_rust_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
+# Generate arg-specialized manifests for font_provider_integration_test
+
+cmx_merge("fonts_with_ephemeral_fonts_cml") {
+    sources = [
+        rebase_path("../../meta/fonts.cml"),
+        rebase_path("meta/ephemeral_fonts_shard.cml"),
+    ]
+    dest = "fonts_with_ephemeral_fonts.cml"
+}
+
+cmx_merge("fonts_with_aliases_fonts_cml") {
+    sources = [
+        rebase_path("../../meta/fonts.cml"),
+        rebase_path("meta/aliases_fonts_shard.cml"),
+    ]
+    dest = "fonts_with_aliases_fonts.cml"
+}
+
+cmx_merge("fonts_with_small_fonts_cml") {
+    sources = [
+        rebase_path("../../meta/fonts.cml"),
+        rebase_path("meta/small_fonts_shard.cml"),
+    ]
+    dest = "fonts_with_small_fonts.cml"
+}
+
+cmx_merge("fonts_with_medium_fonts_cml") {
+    sources = [
+        rebase_path("../../meta/fonts.cml"),
+        rebase_path("meta/medium_fonts_shard.cml"),
+    ]
+    dest = "fonts_with_medium_fonts.cml"
+}
+
+cmx_merge("fonts_with_large_fonts_cml") {
+    sources = [
+        rebase_path("../../meta/fonts.cml"),
+        rebase_path("meta/large_fonts_shard.cml"),
+    ]
+    dest = "fonts_with_large_fonts.cml"
+}
+
 test_package("font_provider_integration_tests") {
   deps = [
+    "//src/fonts:font_provider",
     ":font_provider_integration_tests_bin",
+    ":fonts_with_ephemeral_fonts_cml",
+    ":fonts_with_aliases_fonts_cml",
+    ":fonts_with_small_fonts_cml",
+    ":fonts_with_medium_fonts_cml",
+    ":fonts_with_large_fonts_cml",
     "//src/fonts/collections:test-fonts-large-collection",
     "//src/fonts/collections:test-fonts-medium-collection",
     "//src/fonts/collections:test-fonts-small-collection",
-    "//src/fonts/testing:mock_font_resolver",
+    "//src/fonts/testing/mock_font_resolver:mock_font_resolver_bin",
+    # TODO: Remove once tests use a test runner
+    "//src/sys/test_adapters/rust",
   ]
 
-  tests = [
+  meta = [
+    {
+      path = rebase_path("${target_out_dir}/fonts_with_ephemeral_fonts.cml")
+      dest = "fonts_with_ephemeral_fonts.cm"
+    },
+    {
+      path = rebase_path("${target_out_dir}/fonts_with_aliases_fonts.cml")
+      dest = "fonts_with_aliases_fonts.cm"
+    },
+    {
+      path = rebase_path("${target_out_dir}/fonts_with_small_fonts.cml")
+      dest = "fonts_with_small_fonts.cm"
+    },
+    {
+      path = rebase_path("${target_out_dir}/fonts_with_medium_fonts.cml")
+      dest = "fonts_with_medium_fonts.cm"
+    },
+    {
+      path = rebase_path("${target_out_dir}/fonts_with_large_fonts.cml")
+      dest = "fonts_with_large_fonts.cm"
+    },
+    {
+      path = rebase_path("../../testing/mock_font_resolver/meta/mock_font_resolver.cml")
+      dest = "mock_font_resolver.cm"
+    },
+    {
+      path = rebase_path("meta/font_provider_integration_tests_driver.cml")
+      dest = "test_driver.cm"
+    },
+  ]
+
+  binaries = [
+    {
+      # TODO: Remove once tests can use a test runner
+      name = "rust_test_adapter"
+    },
+    {
+      name = "mock_font_resolver"
+    },
+    {
+      name = "font_provider"
+      dest = "app"
+    },
+  ]
+
+  v2_tests = [
     {
       name = "font_provider_integration_tests"
       environments = basic_envs

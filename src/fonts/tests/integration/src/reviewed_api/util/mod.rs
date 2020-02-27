@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 pub use {
-    crate::FONTS_CMX,
+    crate::{FONTS_ALIASED_CM},
     anyhow::{Context as _, Error},
     fidl_fuchsia_fonts as fonts,
     fidl_fuchsia_fonts_ext::DecodableExt,
     fidl_fuchsia_intl as intl, fuchsia_async as fasync,
-    fuchsia_component::client::{launch, launch_with_options, launcher, App, LaunchOptions},
+    fuchsia_component::client::{create_scoped_dynamic_instance, ScopedInstance},
     fuchsia_zircon as zx,
     fuchsia_zircon::AsHandleRef,
 };
@@ -27,24 +27,18 @@ macro_rules! assert_buf_eq {
     };
 }
 
-pub fn start_provider_with_manifest(
-    manifest_file_path: impl AsRef<str>,
-) -> Result<(App, fonts::ProviderProxy), Error> {
-    let mut launch_options = LaunchOptions::new();
-    launch_options.add_dir_to_namespace(
-        "/testdata".to_string(),
-        std::fs::File::open("/pkg/data/testdata")?,
-    )?;
-
-    let launcher = launcher().context("Failed to open launcher service")?;
-    let args = vec!["--font-manifest".to_string(), manifest_file_path.as_ref().to_string()];
-
-    let app = launch_with_options(&launcher, FONTS_CMX.to_string(), Some(args), launch_options)
-        .context("Failed to launch fonts::Provider")?;
+// TODO: Instead of configuring fonts through a different manifest and command-line arguments,
+// offer a service or directory with the right fonts to the new component instance. This will
+// require support to dynamically offer a capability to a component.
+pub async fn start_provider(
+    fonts_cm: &str,
+) -> Result<(ScopedInstance, fonts::ProviderProxy), Error> {
+    let app = create_scoped_dynamic_instance("coll".to_string(), fonts_cm.to_string())
+        .await
+        .context("Failed to create dynamic component")?;
     let font_provider = app
-        .connect_to_service::<fonts::ProviderMarker>()
+        .connect_to_protocol_at_exposed_dir::<fonts::ProviderMarker>()
         .context("Failed to connect to fonts::Provider")?;
-
     Ok((app, font_provider))
 }
 

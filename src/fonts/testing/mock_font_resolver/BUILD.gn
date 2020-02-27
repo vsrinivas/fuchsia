@@ -26,21 +26,3 @@ rustc_binary("mock_font_resolver_bin") {
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }
-
-package("mock_font_resolver") {
-  testonly = true
-  deps = [ ":mock_font_resolver_bin" ]
-
-  meta = [
-    {
-      path = rebase_path("meta/mock_font_resolver.cmx")
-      dest = "mock_font_resolver.cmx"
-    },
-  ]
-
-  binaries = [
-    {
-      name = "mock_font_resolver"
-    },
-  ]
-}

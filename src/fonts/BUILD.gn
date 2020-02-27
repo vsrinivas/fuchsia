@@ -106,6 +106,7 @@ package("pkg") {
   binary = "font_provider"
 
   meta = [
+    # TODO: Remove fonts.cmx once external clients aren't using it.
     {
       path = rebase_path("meta/fonts.cmx")
       dest = "fonts.cmx"
@@ -117,9 +118,21 @@ package("pkg") {
   ]
 }
 
-unittest_package("font_provider_unit_tests") {
-  deps = [ ":font_provider_test" ]
-  tests = [
+test_package("font_provider_unit_tests") {
+  deps = [
+    ":font_provider_test",
+    # TODO: Remove once tests use a test runner
+    "//src/sys/test_adapters/rust",
+  ]
+
+  binaries = [
+    {
+      # TODO: Remove once tests use a test runner
+      name = "rust_test_adapter"
+    },
+  ]
+
+  v2_tests = [
     {
       name = "font_provider_bin_test"
       environments = basic_envs

@@ -1,0 +1,8 @@
+{
+    "program": {
+        "args": [
+            "--font-manifest",
+            "/pkg/data/testdata/aliases.font_manifest.json"
+        ],
+    },
+}

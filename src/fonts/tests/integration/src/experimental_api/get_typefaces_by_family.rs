@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file
 
-use {super::util::*, crate::MANIFEST_TEST_FONTS_SMALL};
+use {super::util::*, crate::FONTS_SMALL_CM};
 
 #[fasync::run_singlethreaded(test)]
 async fn test_get_typefaces_by_family() -> Result<(), Error> {
-    let (_app, font_provider) = start_provider_with_manifest(MANIFEST_TEST_FONTS_SMALL)?;
+    let (_app, font_provider) = start_provider(FONTS_SMALL_CM).await?;
     let mut family = fonts::FamilyName { name: String::from("Roboto") };
 
     let response = font_provider.get_typefaces_by_family(&mut family).await?;
@@ -21,7 +21,7 @@ async fn test_get_typefaces_by_family() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_get_typefaces_by_family_alias() -> Result<(), Error> {
-    let (_app, font_provider) = start_provider_with_manifest(MANIFEST_TEST_FONTS_SMALL)?;
+    let (_app, font_provider) = start_provider(FONTS_SMALL_CM).await?;
     let mut family = fonts::FamilyName { name: String::from("Material Design Icons") };
     let mut alias = fonts::FamilyName { name: String::from("MaterialIcons") };
 
@@ -39,7 +39,7 @@ async fn test_get_typefaces_by_family_alias() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_get_typefaces_by_family_not_found() -> Result<(), Error> {
-    let (_app, font_provider) = start_provider_with_manifest(MANIFEST_TEST_FONTS_SMALL)?;
+    let (_app, font_provider) = start_provider(FONTS_SMALL_CM).await?;
     let mut family = fonts::FamilyName { name: String::from("NoSuchFont") };
     let response = font_provider.get_typefaces_by_family(&mut family).await?;
     assert_eq!(response.unwrap_err(), fonts_exp::Error::NotFound);

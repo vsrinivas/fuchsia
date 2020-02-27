@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #[cfg(test)]
-mod tests {
+mod my_tests {
     #[test]
     fn simple_test_one() {
         println!("My only job is not to panic!()");

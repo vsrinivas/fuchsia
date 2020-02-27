@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::{FONTS_CMX, MANIFEST_TEST_FONTS_MEDIUM, MANIFEST_TEST_FONTS_SMALL},
+    crate::{FONTS_MEDIUM_CM, FONTS_SMALL_CM},
     anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_fonts as fonts, fuchsia_async as fasync,
-    fuchsia_component::client::{launch_with_options, launcher, App, LaunchOptions},
+    fuchsia_component::client::{create_scoped_dynamic_instance, ScopedInstance},
     fuchsia_zircon as zx,
     fuchsia_zircon::AsHandleRef,
 };
@@ -71,25 +71,23 @@ async fn get_font_info_basic(
     get_font_info(font_provider, name, None, '\0').await
 }
 
-pub fn start_provider_with_manifest(
-    manifest_file_path: impl AsRef<str>,
-) -> Result<(App, fonts::ProviderProxy), Error> {
-    let launcher = launcher().context("Failed to open launcher service")?;
-    let args = vec!["--font-manifest".to_string(), manifest_file_path.as_ref().to_string()];
-
-    let app =
-        launch_with_options(&launcher, FONTS_CMX.to_string(), Some(args), LaunchOptions::new())
-            .context("Failed to launch fonts::Provider")?;
+// TODO: Instead of configuring fonts through a different manifest and command-line arguments,
+// offer a service or directory with the right fonts to the new component instance. This will
+// require support to dynamically offer a capability to a component.
+async fn start_provider(fonts_cm: &str) -> Result<(ScopedInstance, fonts::ProviderProxy), Error>
+{
+    let app = create_scoped_dynamic_instance("coll".to_string(), fonts_cm.to_string())
+        .await
+        .context("Failed to create dynamic component")?;
     let font_provider = app
-        .connect_to_service::<fonts::ProviderMarker>()
+        .connect_to_protocol_at_exposed_dir::<fonts::ProviderMarker>()
         .context("Failed to connect to fonts::Provider")?;
-
     Ok((app, font_provider))
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn test_basic() -> Result<(), Error> {
-    let (_app, font_provider) = start_provider_with_manifest(MANIFEST_TEST_FONTS_SMALL)?;
+    let (_app, font_provider) = start_provider(FONTS_SMALL_CM).await?;
 
     let default =
         get_font_info_basic(&font_provider, None).await.context("Failed to load default font")?;
@@ -111,7 +109,7 @@ async fn test_basic() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_aliases() -> Result<(), Error> {
-    let (_app, font_provider) = start_provider_with_manifest(MANIFEST_TEST_FONTS_SMALL)?;
+    let (_app, font_provider) = start_provider(FONTS_SMALL_CM).await?;
 
     // Both requests should return the same font.
     let materialicons = get_font_info_basic(&font_provider, Some("MaterialIcons".to_string()))
@@ -129,7 +127,7 @@ async fn test_aliases() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_font_collections() -> Result<(), Error> {
-    let (_app, font_provider) = start_provider_with_manifest(MANIFEST_TEST_FONTS_MEDIUM)?;
+    let (_app, font_provider) = start_provider(FONTS_MEDIUM_CM).await?;
 
     // Request Japanese and Simplified Chinese versions of Noto Sans CJK. Both
     // fonts are part of the same TTC file, so font provider is expected to
@@ -167,7 +165,7 @@ async fn test_font_collections() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_fallback() -> Result<(), Error> {
-    let (_app, font_provider) = start_provider_with_manifest(MANIFEST_TEST_FONTS_MEDIUM)?;
+    let (_app, font_provider) = start_provider(FONTS_MEDIUM_CM).await?;
 
     let noto_sans_cjk_ja = get_font_info(
         &font_provider,
@@ -196,7 +194,7 @@ async fn test_fallback() -> Result<(), Error> {
 // Verify that the fallback group of the requested font is taken into account for fallback.
 #[fasync::run_singlethreaded(test)]
 async fn test_fallback_group() -> Result<(), Error> {
-    let (_app, font_provider) = start_provider_with_manifest(MANIFEST_TEST_FONTS_MEDIUM)?;
+    let (_app, font_provider) = start_provider(FONTS_MEDIUM_CM).await?;
 
     let noto_serif_cjk_ja = get_font_info(
         &font_provider,
@@ -226,7 +224,7 @@ async fn test_fallback_group() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_get_family_info() -> Result<(), Error> {
-    let (_app, font_provider) = start_provider_with_manifest(MANIFEST_TEST_FONTS_SMALL)?;
+    let (_app, font_provider) = start_provider(FONTS_SMALL_CM).await?;
 
     let family_info = font_provider.get_family_info("materialicons").await?;
 

@@ -226,7 +226,7 @@ impl RustTestAdapter {
             from_utf8(&output).context("Failed to convert logs from utf-8")?.to_string();
 
         let mut test_names = vec![];
-        let regex = Regex::new(r"(.*): test").unwrap();
+        let regex = Regex::new(r"^(.*): test$").unwrap();
 
         for test in test_list.split("\n") {
             if let Some(capture) = regex.captures(test) {
@@ -432,10 +432,10 @@ mod tests {
         let adapter = RustTestAdapter::new(test_info).expect("Cannot create adapter");
 
         let mut expected_tests = vec![
-            String::from("tests::simple_test_one"),
-            String::from("tests::simple_test_two"),
-            String::from("tests::simple_test_three"),
-            String::from("tests::simple_test_four"),
+            String::from("my_tests::simple_test_one"),
+            String::from("my_tests::simple_test_two"),
+            String::from("my_tests::simple_test_three"),
+            String::from("my_tests::simple_test_four"),
         ];
 
         expected_tests.sort();

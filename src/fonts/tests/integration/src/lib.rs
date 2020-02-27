@@ -2,13 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-pub const FONTS_CMX: &str = "fuchsia-pkg://fuchsia.com/fonts#meta/fonts.cmx";
-
-pub const MANIFEST_ALIASES: &str = "/testdata/aliases.font_manifest.json";
-pub const MANIFEST_EPHEMERAL: &str = "/testdata/ephemeral.font_manifest.json";
-pub const MANIFEST_TEST_FONTS_SMALL: &str = "/config/data/test_fonts_small.font_manifest.json";
-pub const MANIFEST_TEST_FONTS_MEDIUM: &str = "/config/data/test_fonts_medium.font_manifest.json";
-pub const MANIFEST_TEST_FONTS_LARGE: &str = "/config/data/test_fonts_large.font_manifest.json";
+pub const FONTS_EPHEMERAL_CM: &str = "fuchsia-pkg://fuchsia.com/font_provider_integration_tests#meta/fonts_with_ephemeral_fonts.cm";
+pub const FONTS_ALIASED_CM: &str = "fuchsia-pkg://fuchsia.com/font_provider_integration_tests#meta/fonts_with_aliases_fonts.cm";
+pub const FONTS_SMALL_CM: &str = "fuchsia-pkg://fuchsia.com/font_provider_integration_tests#meta/fonts_with_small_fonts.cm";
+pub const FONTS_MEDIUM_CM: &str = "fuchsia-pkg://fuchsia.com/font_provider_integration_tests#meta/fonts_with_medium_fonts.cm";
+pub const FONTS_LARGE_CM: &str = "fuchsia-pkg://fuchsia.com/font_provider_integration_tests#meta/fonts_with_large_fonts.cm";
 
 mod experimental_api;
 mod old_api;
