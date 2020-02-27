@@ -269,7 +269,7 @@ class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher, ZX_DEFAUL
   uint32_t exceptionate_type_ TA_GUARDED(get_lock()) = ZX_EXCEPTION_CHANNEL_TYPE_NONE;
 
   // cleanup dpc structure
-  dpc_t cleanup_dpc_ = {LIST_INITIAL_CLEARED_VALUE, nullptr, nullptr};
+  Dpc cleanup_dpc_;
 
   // Tracks the number of times Suspend() has been called. Resume() will resume this thread
   // only when this reference count reaches 0.

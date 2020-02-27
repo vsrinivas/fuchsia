@@ -12,7 +12,9 @@
 #include <zircon/listnode.h>
 
 #include <arch/ops.h>
+#include <fbl/intrusive_double_list.h>
 #include <kernel/align.h>
+#include <kernel/dpc.h>
 #include <kernel/event.h>
 #include <kernel/scheduler.h>
 #include <kernel/stats.h>
@@ -60,7 +62,7 @@ struct percpu {
   int64_t* counters;
 
   // dpc context
-  list_node_t dpc_list;
+  fbl::DoublyLinkedList<Dpc*> dpc_list;
   event_t dpc_event;
   // request the dpc thread to stop by setting to true; guarded by dpc_lock
   bool dpc_stop;

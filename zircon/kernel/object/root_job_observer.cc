@@ -39,12 +39,12 @@ StateObserver::Flags RootJobObserver::MaybeHalt(zx_signals_t state) {
   }
   // We may be in an interrupt context, e.g. thread_process_pending_signals(),
   // so we schedule a DPC.
-  dpc_queue(&dpc_, true);
+  dpc_.Queue(true);
   return kNeedRemoval;
 }
 
 // static
-void RootJobObserver::Halt(dpc_t* dpc) {
+void RootJobObserver::Halt(Dpc* dpc) {
   const char* notice = gCmdline.GetString("kernel.root-job.notice");
   if (notice != nullptr) {
     printf("root-job: notice: %s\n", notice);

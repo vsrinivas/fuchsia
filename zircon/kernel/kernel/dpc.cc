@@ -16,25 +16,21 @@
 #include <kernel/spinlock.h>
 #include <lk/init.h>
 
+#define DPC_THREAD_PRIORITY HIGH_PRIORITY
+
 static spin_lock_t dpc_lock = SPIN_LOCK_INITIAL_VALUE;
 
-zx_status_t dpc_queue(dpc_t* dpc, bool reschedule) {
-  DEBUG_ASSERT(dpc);
-  DEBUG_ASSERT(dpc->func);
+zx_status_t Dpc::Queue(bool reschedule) {
+  DEBUG_ASSERT(func_);
 
   // disable interrupts before finding lock
   spin_lock_saved_state_t state;
   spin_lock_irqsave(&dpc_lock, state);
 
-  if (list_in_list(&dpc->node)) {
-    spin_unlock_irqrestore(&dpc_lock, state);
-    return ZX_ERR_ALREADY_EXISTS;
-  }
-
   struct percpu* cpu = get_local_percpu();
 
   // put the dpc at the tail of the list and signal the worker
-  list_add_tail(&cpu->dpc_list, &dpc->node);
+  cpu->dpc_list.push_back(this);
 
   spin_unlock_irqrestore(&dpc_lock, state);
 
@@ -43,22 +39,16 @@ zx_status_t dpc_queue(dpc_t* dpc, bool reschedule) {
   return ZX_OK;
 }
 
-zx_status_t dpc_queue_thread_locked(dpc_t* dpc) {
-  DEBUG_ASSERT(dpc);
-  DEBUG_ASSERT(dpc->func);
+zx_status_t Dpc::QueueThreadLocked() {
+  DEBUG_ASSERT(func_);
 
   // interrupts are already disabled
   spin_lock(&dpc_lock);
 
-  if (list_in_list(&dpc->node)) {
-    spin_unlock(&dpc_lock);
-    return ZX_ERR_ALREADY_EXISTS;
-  }
-
   struct percpu* cpu = get_local_percpu();
 
   // put the dpc at the tail of the list and signal the worker
-  list_add_tail(&cpu->dpc_list, &dpc->node);
+  cpu->dpc_list.push_back(this);
   event_signal_thread_locked(&cpu->dpc_event);
 
   spin_unlock(&dpc_lock);
@@ -66,7 +56,7 @@ zx_status_t dpc_queue_thread_locked(dpc_t* dpc) {
   return ZX_OK;
 }
 
-void dpc_shutdown(uint cpu_id) {
+void Dpc::Shutdown(uint cpu_id) {
   DEBUG_ASSERT(cpu_id < SMP_MAX_CPUS);
 
   spin_lock_saved_state_t state;
@@ -94,7 +84,7 @@ void dpc_shutdown(uint cpu_id) {
   DEBUG_ASSERT(ret == 0);
 }
 
-void dpc_shutdown_transition_off_cpu(uint cpu_id) {
+void Dpc::ShutdownTransitionOffCpu(uint cpu_id) {
   DEBUG_ASSERT(cpu_id < SMP_MAX_CPUS);
 
   spin_lock_saved_state_t state;
@@ -108,31 +98,30 @@ void dpc_shutdown_transition_off_cpu(uint cpu_id) {
   DEBUG_ASSERT(percpu.dpc_stop);
   DEBUG_ASSERT(percpu.dpc_thread == nullptr);
 
-  list_node_t* src_list = &percpu.dpc_list;
-  list_node_t* dst_list = &percpu::Get(cur_cpu).dpc_list;
+  fbl::DoublyLinkedList<Dpc*>& src_list = percpu.dpc_list;
+  fbl::DoublyLinkedList<Dpc*>& dst_list = percpu::Get(cur_cpu).dpc_list;
 
-  dpc_t* dpc;
-  while ((dpc = list_remove_head_type(src_list, dpc_t, node))) {
-    list_add_tail(dst_list, &dpc->node);
-  }
+  // Move the contents of src_list to the back of dst_list.
+  auto back = dst_list.end();
+  dst_list.splice(back, src_list);
 
   // Reset the state so we can restart DPC processing if the CPU comes back online.
-  DEBUG_ASSERT(list_is_empty(&percpu.dpc_list));
+  DEBUG_ASSERT(percpu.dpc_list.is_empty());
   percpu.dpc_stop = false;
   event_destroy(&percpu.dpc_event);
 
   spin_unlock_irqrestore(&dpc_lock, state);
 }
 
-static int dpc_thread(void* arg) {
-  dpc_t dpc_local;
+int Dpc::WorkerThread(void* arg) {
+  Dpc dpc_local;
 
   spin_lock_saved_state_t state;
   arch_interrupt_save(&state, SPIN_LOCK_FLAG_INTERRUPTS);
 
   struct percpu* cpu = get_local_percpu();
   event_t* event = &cpu->dpc_event;
-  list_node_t* list = &cpu->dpc_list;
+  fbl::DoublyLinkedList<Dpc*>& list = cpu->dpc_list;
 
   arch_interrupt_restore(state, SPIN_LOCK_FLAG_INTERRUPTS);
 
@@ -149,12 +138,12 @@ static int dpc_thread(void* arg) {
     }
 
     // pop a dpc off the list, make a local copy.
-    dpc_t* dpc = list_remove_head_type(list, dpc_t, node);
+    Dpc* dpc = list.pop_front();
 
     // if the list is now empty, unsignal the event so we block until it is
     if (!dpc) {
       event_unsignal(event);
-      dpc_local.func = NULL;
+      dpc_local.func_ = nullptr;
     } else {
       dpc_local = *dpc;
     }
@@ -162,15 +151,15 @@ static int dpc_thread(void* arg) {
     spin_unlock_irqrestore(&dpc_lock, state);
 
     // call the dpc
-    if (dpc_local.func) {
-      dpc_local.func(&dpc_local);
+    if (dpc_local.func_) {
+      dpc_local.func_(&dpc_local);
     }
   }
 
   return 0;
 }
 
-void dpc_init_for_cpu(void) {
+void Dpc::InitForCpu() {
   struct percpu* cpu = get_local_percpu();
   uint cpu_num = arch_curr_cpu_num();
 
@@ -179,13 +168,12 @@ void dpc_init_for_cpu(void) {
     return;
   }
 
-  list_initialize(&cpu->dpc_list);
   event_init(&cpu->dpc_event, false, 0);
   cpu->dpc_stop = false;
 
   char name[10];
   snprintf(name, sizeof(name), "dpc-%u", cpu_num);
-  cpu->dpc_thread = Thread::Create(name, &dpc_thread, NULL, DPC_THREAD_PRIORITY);
+  cpu->dpc_thread = Thread::Create(name, &Dpc::WorkerThread, nullptr, DPC_THREAD_PRIORITY);
   DEBUG_ASSERT(cpu->dpc_thread != nullptr);
   cpu->dpc_thread->SetCpuAffinity(cpu_num_to_mask(cpu_num));
 
@@ -202,8 +190,8 @@ void dpc_init_for_cpu(void) {
 }
 
 static void dpc_init(unsigned int level) {
-  // initialize dpc for the main CPU
-  dpc_init_for_cpu();
+  // Initialize dpc for the main CPU.
+  Dpc::InitForCpu();
 }
 
 LK_INIT_HOOK(dpc, dpc_init, LK_INIT_LEVEL_THREADING)

@@ -18,13 +18,14 @@
 #include "tests.h"
 
 struct event_signal_from_dpc_context {
-  dpc_t dpc;
+  Dpc dpc;
   event_t event;
   ktl::atomic<uint> expected_cpu;
   ktl::atomic<bool> dpc_started;
 };
-static void event_signal_from_dpc_check_cpu(dpc_t* dpc) {
-  auto* const context = reinterpret_cast<struct event_signal_from_dpc_context*>(dpc->arg);
+
+static void event_signal_from_dpc_check_cpu(Dpc* dpc) {
+  auto* const context = dpc->arg<event_signal_from_dpc_context>();
   context->dpc_started = true;
 
   // DPCs allow interrupts and blocking.
@@ -46,25 +47,24 @@ static bool test_dpc_queue() {
 
   // Init all the DPCs and supporting context.
   for (int i = 0; i < kNumDPCs; i++) {
-    (*context)[i].dpc = DPC_INITIAL_VALUE;
     event_init(&(*context)[i].event, /*initial=*/false, /*flags=*/0);
     (*context)[i].dpc_started = false;
   }
 
   // Fire off DPCs.
   for (int i = 0; i < kNumDPCs; i++) {
-    (*context)[i].dpc.func = event_signal_from_dpc_check_cpu;
-    (*context)[i].dpc.arg = reinterpret_cast<void*>(&(*context)[i]);
+    (*context)[i].dpc =
+        Dpc{&event_signal_from_dpc_check_cpu, reinterpret_cast<void*>(&(*context)[i])};
     arch_disable_ints();
     (*context)[i].expected_cpu = arch_curr_cpu_num();
-    dpc_queue(&(*context)[i].dpc, /*reschedule=*/false);
+    (*context)[i].dpc.Queue(/*reschedule=*/false);
     arch_enable_ints();
   }
   for (int i = 0; i < kNumDPCs; i++) {
     if ((*context)[i].dpc_started) {
-      // Once the DPC has started executing, we can reclaim the submitted dpc_t. Zero it to
+      // Once the DPC has started executing, we can reclaim the submitted Dpc. Zero it to
       // try to check this.
-      (*context)[i].dpc = DPC_INITIAL_VALUE;
+      (*context)[i].dpc = Dpc();
     }
   }
   for (int i = 0; i < kNumDPCs; i++) {

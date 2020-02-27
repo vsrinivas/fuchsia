@@ -24,10 +24,11 @@ KCOUNTER(dispatcher_timer_destroy_count, "dispatcher.timer.destroy")
 static void timer_irq_callback(timer* timer, zx_time_t now, void* arg) {
   // We are in IRQ context and cannot touch the timer state_tracker, so we
   // schedule a DPC to do so. TODO(cpu): figure out ways to reduce the lag.
-  dpc_queue(reinterpret_cast<dpc_t*>(arg), true);
+  auto dpc = reinterpret_cast<Dpc*>(arg);
+  dpc->Queue(true);
 }
 
-static void dpc_callback(dpc_t* d) { reinterpret_cast<TimerDispatcher*>(d->arg)->OnTimerFired(); }
+static void dpc_callback(Dpc* d) { d->arg<TimerDispatcher>()->OnTimerFired(); }
 
 zx_status_t TimerDispatcher::Create(uint32_t options, KernelHandle<TimerDispatcher>* handle,
                                     zx_rights_t* rights) {
@@ -55,7 +56,7 @@ zx_status_t TimerDispatcher::Create(uint32_t options, KernelHandle<TimerDispatch
 
 TimerDispatcher::TimerDispatcher(uint32_t options)
     : options_(options),
-      timer_dpc_({LIST_INITIAL_CLEARED_VALUE, &dpc_callback, this}),
+      timer_dpc_(&dpc_callback, this),
       deadline_(0u),
       slack_amount_(0u),
       cancel_pending_(false),

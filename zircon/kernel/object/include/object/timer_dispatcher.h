@@ -42,7 +42,7 @@ class TimerDispatcher final : public SoloDispatcher<TimerDispatcher, ZX_DEFAULT_
   bool CancelTimerLocked() TA_REQ(get_lock());
 
   const uint32_t options_;
-  dpc_t timer_dpc_;
+  Dpc timer_dpc_;
   zx_time_t deadline_ TA_GUARDED(get_lock());
   zx_duration_t slack_amount_ TA_GUARDED(get_lock());
   bool cancel_pending_ TA_GUARDED(get_lock());

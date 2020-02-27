@@ -288,7 +288,7 @@ zx_status_t mp_hotplug_cpu_mask(cpu_mask_t cpu_mask) {
 static zx_status_t mp_unplug_cpu_mask_single_locked(cpu_num_t cpu_id, Thread** leaked_thread) {
   // Wait for |cpu_id| to complete any in-progress DPCs and terminate its DPC thread.  Later, once
   // nothing is running on it, we'll migrate its queued DPCs to another CPU.
-  dpc_shutdown(cpu_id);
+  Dpc::Shutdown(cpu_id);
 
   // TODO(maniscalco): |cpu_id| is about to shutdown.  We should ensure it has no pinned threads
   // (except maybe the idle thread).  Once we're confident we've terminated/migrated them all,
@@ -333,7 +333,7 @@ static zx_status_t mp_unplug_cpu_mask_single_locked(cpu_num_t cpu_id, Thread** l
   // Now that the CPU is no longer processing tasks, move all of its timers
   timer_transition_off_cpu(cpu_id);
   // Move the CPU's queued DPCs to the current CPU.
-  dpc_shutdown_transition_off_cpu(cpu_id);
+  Dpc::ShutdownTransitionOffCpu(cpu_id);
 
   status = platform_mp_cpu_unplug(cpu_id);
   if (status != ZX_OK) {

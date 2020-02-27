@@ -27,9 +27,9 @@ class RootJobObserver final : public StateObserver {
   bool HasChild(zx_signals_t state) const;
 
   Flags MaybeHalt(zx_signals_t state);
-  static void Halt(dpc_t* dpc);
+  static void Halt(Dpc* dpc);
 
-  dpc_t dpc_{LIST_INITIAL_CLEARED_VALUE, &Halt, nullptr};
+  Dpc dpc_{&Halt};
   fbl::RefPtr<JobDispatcher> root_job_;
 };
 

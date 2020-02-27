@@ -340,10 +340,10 @@ bool ThreadDispatcher::HasStartedLocked() const {
          lifecycle != ThreadState::Lifecycle::INITIALIZED;
 }
 
-static void ThreadCleanupDpc(dpc_t* d) {
+static void ThreadCleanupDpc(Dpc* d) {
   LTRACEF("dpc %p\n", d);
 
-  ThreadDispatcher* t = reinterpret_cast<ThreadDispatcher*>(d->arg);
+  ThreadDispatcher* t = d->arg<ThreadDispatcher>();
   DEBUG_ASSERT(t);
 
   delete t;
@@ -386,21 +386,20 @@ void ThreadDispatcher::Exiting() {
   // drop LK's reference
   if (Release()) {
     // We're the last reference, so will need to destruct ourself while running, which is not
-    // possible Use a dpc to pull this off
-    cleanup_dpc_.func = ThreadCleanupDpc;
-    cleanup_dpc_.arg = this;
+    // possible. Use a dpc to pull this off
+    cleanup_dpc_ = Dpc(&ThreadCleanupDpc, this);
 
-    // disable interrupts before queuing the dpc to prevent starving the DPC thread if it starts
-    // running before we're completed. disabling interrupts effectively raises us to maximum
-    // priority on this cpu. note this is only safe because we're about to exit the thread
+    // Disable interrupts before queuing the dpc to prevent starving the DPC thread if it starts
+    // running before we're completed. Disabling interrupts effectively raises us to maximum
+    // priority on this cpu. Note this is only safe because we're about to exit the thread
     // permanently so the context switch will effectively reenable interrupts in the new thread.
     arch_disable_ints();
 
-    // queue without reschedule since us exiting is a reschedule event already
-    dpc_queue(&cleanup_dpc_, false);
+    // Queue without reschedule since us exiting is a reschedule event already.
+    cleanup_dpc_.Queue(false);
   }
 
-  // after this point the thread will stop permanently
+  // After this point the thread will stop permanently.
   LTRACE_EXIT_OBJ;
 }
 

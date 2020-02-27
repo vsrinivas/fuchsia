@@ -488,8 +488,8 @@ zx_status_t Thread::Detach() {
 
 // called back in the DPC worker thread to free the stack and/or the thread structure
 // itself for a thread that is exiting on its own.
-static void thread_free_dpc(struct dpc* dpc) {
-  Thread* t = (Thread*)dpc->arg;
+static void thread_free_dpc(Dpc* dpc) {
+  Thread* t = dpc->arg<Thread>();
 
   DEBUG_ASSERT(t->magic_ == THREAD_MAGIC);
   DEBUG_ASSERT(t->state_ == THREAD_DEATH);
@@ -509,7 +509,7 @@ __NO_RETURN static void thread_exit_locked(Thread* current_thread, int retcode)
   // create a dpc on the stack to queue up a free.
   // must be put at top scope in this function to force the compiler to keep it from
   // reusing the stack before the function exits
-  dpc_t free_dpc = DPC_INITIAL_VALUE;
+  Dpc free_dpc;
 
   // enter the dead state
   current_thread->state_ = THREAD_DEATH;
@@ -532,9 +532,8 @@ __NO_RETURN static void thread_exit_locked(Thread* current_thread, int retcode)
 
     // queue a dpc to free the stack and, optionally, the thread structure
     if (current_thread->stack_.base || (current_thread->flags_ & THREAD_FLAG_FREE_STRUCT)) {
-      free_dpc.func = thread_free_dpc;
-      free_dpc.arg = (void*)current_thread;
-      zx_status_t status = dpc_queue_thread_locked(&free_dpc);
+      free_dpc = Dpc(&thread_free_dpc, current_thread);
+      zx_status_t status = free_dpc.QueueThreadLocked();
       DEBUG_ASSERT(status == ZX_OK);
     }
   } else {
@@ -1281,7 +1280,7 @@ void thread_secondary_cpu_init_early(Thread* t) {
 void thread_secondary_cpu_entry() {
   mp_set_curr_cpu_active(true);
 
-  dpc_init_for_cpu();
+  Dpc::InitForCpu();
 
   // Exit from our bootstrap thread, and enter the scheduler on this cpu
   Thread::Current::Exit(0);
