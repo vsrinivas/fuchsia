@@ -72,8 +72,10 @@ func (i *ID) UnmarshalJSON(b []byte) error {
 type traceEvent struct {
 	Cat  string
 	Name string
+	Bp   string
 	Ph   string
 	Pid  uint64
+	S    string
 	Tid  uint64
 	Ts   float64
 	Id   ID
@@ -496,7 +498,9 @@ func computeModel(trace trace) (model Model) {
 func ReadTrace(data []byte) (Model, error) {
 	// Parsing input.
 	var trace trace
-	var err = json.Unmarshal([]byte(data), &trace)
+	d := json.NewDecoder(bytes.NewReader(data))
+	d.DisallowUnknownFields()
+	err := d.Decode(&trace)
 	return computeModel(trace), err
 }
 
