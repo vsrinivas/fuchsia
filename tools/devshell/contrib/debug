@@ -169,7 +169,7 @@ else
     target=$(get-fuchsia-device-addr)
     connect_ops="--connect [${target}]:${port}"
   else
-    fx-error "Could not launch debug agent. Exiting."
+    fx-error "Could not launch debug agent. Exiting. Make sure you're running 'fx serve'."
     exit 1
   fi
 fi

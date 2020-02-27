@@ -253,6 +253,6 @@ if launch_debug_agent; then
     "${FUCHSIA_BUILD_DIR}/host-tools/fidlcat" ${arguments[@]}
   fi
 else
-  fx-error "Could not launch debug agent. Exiting."
+  fx-error "Could not launch debug agent. Exiting. Make sure you're running 'fx serve'."
   exit 1
 fi
