@@ -2,7 +2,7 @@
     "program": {
         // Using a trampoline
         "binary": "bin/gtest_adapter",
-        "args": ["/pkg/test/huge_gtest_adapter_example"]
+        "args": ["/pkg/test/disabled/huge_gtest_adapter_example"]
     },
     "use": [
         { "runner": "elf" },

@@ -28,6 +28,8 @@ package("huge_gtest_adapter_example") {
   tests = [
     {
       name = "huge_gtest_adapter_example"
+      # Takes too long to run
+      disabled = true
     },
   ]
 
