@@ -89,9 +89,6 @@ test("virtual-console-test-text") {
     ":common",
     "//zircon/public/lib/zxtest",
   ]
-
-  # TODO(46852): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 test("virtual-console-test-integration") {

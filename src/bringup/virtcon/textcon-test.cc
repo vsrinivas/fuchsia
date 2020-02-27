@@ -99,6 +99,7 @@ class TextconHelper {
   ~TextconHelper() {
     delete[] textbuf;
     vc_free(vc_dev);
+    vc_free_gfx(&main_test_graphics);
   }
 
   // Takes a snapshot of the vc_t's display.

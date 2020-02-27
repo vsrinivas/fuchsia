@@ -23,6 +23,36 @@ void vc_gfx_draw_char(vc_gfx_t* gfx, vc_t* vc, vc_char_t ch, unsigned x, unsigne
               palette_to_color(vc, fg_color), palette_to_color(vc, bg_color));
 }
 
+void vc_free_gfx(vc_gfx_t* gfx) {
+  if (gfx->vc_gfx) {
+    gfx_surface_destroy(gfx->vc_gfx);
+    gfx->vc_gfx = NULL;
+  }
+  if (gfx->vc_status_bar_gfx) {
+    gfx_surface_destroy(gfx->vc_status_bar_gfx);
+    gfx->vc_status_bar_gfx = NULL;
+  }
+#if BUILD_FOR_TEST
+  if (gfx->vc_test_gfx) {
+    gfx_surface_destroy(gfx->vc_test_gfx);
+    gfx->vc_test_gfx = NULL;
+  }
+#endif
+  if (gfx->vc_gfx_mem) {
+    zx_vmar_unmap(zx_vmar_root_self(), gfx->vc_gfx_mem, gfx->vc_gfx_size);
+    gfx->vc_gfx_mem = 0;
+  }
+  if (gfx->vc_gfx_vmo) {
+    zx_handle_close(gfx->vc_gfx_vmo);
+    gfx->vc_gfx_vmo = ZX_HANDLE_INVALID;
+  }
+  if (gfx->vc_hw_gfx_mem) {
+    zx_vmar_unmap(zx_vmar_root_self(), gfx->vc_hw_gfx_mem, gfx->vc_gfx_size);
+    gfx->vc_hw_gfx_mem = 0;
+  }
+}
+
+
 #if BUILD_FOR_TEST
 
 zx_status_t vc_init_gfx(vc_gfx_t* gfx, gfx_surface* test) {
@@ -81,29 +111,6 @@ void vc_gfx_invalidate_region(vc_gfx_t* gfx, vc_t* vc, unsigned x, unsigned y, u
   }
 }
 #else
-
-void vc_free_gfx(vc_gfx_t* gfx) {
-  if (gfx->vc_gfx) {
-    gfx_surface_destroy(gfx->vc_gfx);
-    gfx->vc_gfx = NULL;
-  }
-  if (gfx->vc_status_bar_gfx) {
-    gfx_surface_destroy(gfx->vc_status_bar_gfx);
-    gfx->vc_status_bar_gfx = NULL;
-  }
-  if (gfx->vc_gfx_mem) {
-    zx_vmar_unmap(zx_vmar_root_self(), gfx->vc_gfx_mem, gfx->vc_gfx_size);
-    gfx->vc_gfx_mem = 0;
-  }
-  if (gfx->vc_gfx_vmo) {
-    zx_handle_close(gfx->vc_gfx_vmo);
-    gfx->vc_gfx_vmo = ZX_HANDLE_INVALID;
-  }
-  if (gfx->vc_hw_gfx_mem) {
-    zx_vmar_unmap(zx_vmar_root_self(), gfx->vc_hw_gfx_mem, gfx->vc_gfx_size);
-    gfx->vc_hw_gfx_mem = 0;
-  }
-}
 
 zx_status_t vc_init_gfx(vc_gfx_t* gfx, zx_handle_t fb_vmo, int32_t width, int32_t height,
                         zx_pixel_format_t format, int32_t stride) {
