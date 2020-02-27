@@ -17,16 +17,10 @@
 #include "src/media/audio/audio_core/testing/stub_device_registry.h"
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
 #include "src/media/audio/audio_core/throttle_output.h"
-#include "src/media/audio/audio_core/usage_gain_adjustment.h"
 #include "src/media/audio/lib/logging/logging.h"
 
 namespace media::audio {
 namespace {
-
-class StubUsageGainAdjustment : public UsageGainAdjustment {
-  void SetRenderUsageGainAdjustment(fuchsia::media::AudioRenderUsage, float) override {}
-  void SetCaptureUsageGainAdjustment(fuchsia::media::AudioCaptureUsage, float) override {}
-};
 
 class StubPolicyActionReporter : public AudioAdmin::PolicyActionReporter {
   void ReportPolicyAction(fuchsia::media::Usage, fuchsia::media::Behavior) override {}
@@ -38,7 +32,7 @@ constexpr size_t kAudioCapturerUnittestVmarSize = 16ull * 1024;
 class AudioCapturerImplTest : public testing::ThreadingModelFixture {
  public:
   AudioCapturerImplTest()
-      : admin_(&gain_adjustment_, dispatcher(), &policy_action_reporter_),
+      : admin_(&volume_manager_, dispatcher(), &policy_action_reporter_),
         volume_manager_(dispatcher()),
         route_graph_(device_config_, &link_matrix_) {
     fzl::VmoMapper vmo_mapper;
@@ -83,7 +77,6 @@ class AudioCapturerImplTest : public testing::ThreadingModelFixture {
   }
 
  protected:
-  StubUsageGainAdjustment gain_adjustment_;
   StubPolicyActionReporter policy_action_reporter_;
   AudioAdmin admin_;
 

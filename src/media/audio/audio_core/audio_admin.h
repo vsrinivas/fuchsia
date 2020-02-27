@@ -17,11 +17,10 @@
 #include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/lib/fxl/synchronization/thread_checker.h"
 #include "src/media/audio/audio_core/policy_loader.h"
+#include "src/media/audio/audio_core/stream_volume_manager.h"
 
 namespace media {
 namespace audio {
-
-class UsageGainAdjustment;
 
 class AudioAdmin {
  public:
@@ -48,11 +47,11 @@ class AudioAdmin {
   // an interface that this object will use to apply the target gain values in |BehaviorGain|.
   //
   // |gain_adjustment| must be non-null.
-  AudioAdmin(BehaviorGain behavior_gain, UsageGainAdjustment* gain_adjustment,
+  AudioAdmin(BehaviorGain behavior_gain, StreamVolumeManager* volume_manager,
              PolicyActionReporter* policy_action_reporter, async_dispatcher_t* fidl_dispatcher);
 
   // Constructs an |AudioAdmin| using some default |BehaviorGain| values.
-  AudioAdmin(UsageGainAdjustment* gain_adjustment, async_dispatcher_t* fidl_dispatcher,
+  AudioAdmin(StreamVolumeManager* volume_manager, async_dispatcher_t* fidl_dispatcher,
              PolicyActionReporter* policy_action_reporter);
 
   // Sets the interaction behavior between |active| and |affected| usages.
@@ -79,7 +78,7 @@ class AudioAdmin {
 
  private:
   const BehaviorGain behavior_gain_;
-  UsageGainAdjustment& gain_adjustment_ FXL_GUARDED_BY(fidl_thread_checker_);
+  StreamVolumeManager& stream_volume_manager_ FXL_GUARDED_BY(fidl_thread_checker_);
   PolicyActionReporter& policy_action_reporter_ FXL_GUARDED_BY(fidl_thread_checker_);
 
   // Ensures we are always on the thread on which the class was constructed, which should

@@ -133,7 +133,6 @@ source_set("audio_core_lib") {
     "threading_model.cc",
     "threading_model.h",
     "throttle_output.h",
-    "usage_gain_adjustment.h",
     "usage_reporter_impl.cc",
     "usage_reporter_impl.h",
     "usage_settings.cc",

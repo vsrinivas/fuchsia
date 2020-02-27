@@ -29,7 +29,7 @@ AudioCoreImpl::AudioCoreImpl(ThreadingModel* threading_model,
     : threading_model_(*threading_model),
       device_manager_(threading_model, &route_graph_, &link_matrix_),
       volume_manager_(threading_model->FidlDomain().dispatcher()),
-      audio_admin_(this, threading_model->FidlDomain().dispatcher(), &usage_reporter_),
+      audio_admin_(&volume_manager_, threading_model->FidlDomain().dispatcher(), &usage_reporter_),
       route_graph_(ProcessConfig::instance().device_config(), &link_matrix_),
       component_context_(std::move(component_context)),
       vmar_manager_(
@@ -153,20 +153,6 @@ void AudioCoreImpl::SetCaptureUsageGain(fuchsia::media::AudioCaptureUsage captur
                   << " dB)";
   volume_manager_.SetUsageGain(fuchsia::media::Usage::WithCaptureUsage(std::move(capture_usage)),
                                gain_db);
-}
-
-void AudioCoreImpl::SetRenderUsageGainAdjustment(fuchsia::media::AudioRenderUsage render_usage,
-                                                 float db_gain) {
-  TRACE_DURATION("audio", "AudioCoreImpl::SetRenderUsageGainAdjustment");
-  volume_manager_.SetUsageGainAdjustment(
-      fuchsia::media::Usage::WithRenderUsage(std::move(render_usage)), db_gain);
-}
-
-void AudioCoreImpl::SetCaptureUsageGainAdjustment(fuchsia::media::AudioCaptureUsage capture_usage,
-                                                  float db_gain) {
-  TRACE_DURATION("audio", "AudioCoreImpl::SetCaptureUsageGainAdjustment");
-  volume_manager_.SetUsageGainAdjustment(
-      fuchsia::media::Usage::WithCaptureUsage(std::move(capture_usage)), db_gain);
 }
 
 void AudioCoreImpl::BindUsageVolumeControl(

@@ -19,12 +19,11 @@
 #include "src/media/audio/audio_core/stream_volume_manager.h"
 #include "src/media/audio/audio_core/thermal_agent.h"
 #include "src/media/audio/audio_core/threading_model.h"
-#include "src/media/audio/audio_core/usage_gain_adjustment.h"
 #include "src/media/audio/audio_core/usage_reporter_impl.h"
 
 namespace media::audio {
 
-class AudioCoreImpl : public fuchsia::media::AudioCore, UsageGainAdjustment {
+class AudioCoreImpl : public fuchsia::media::AudioCore {
  public:
   AudioCoreImpl(ThreadingModel* threading_model,
                 std::unique_ptr<sys::ComponentContext> component_context);
@@ -66,12 +65,6 @@ class AudioCoreImpl : public fuchsia::media::AudioCore, UsageGainAdjustment {
                       fuchsia::media::Behavior behavior) final;
   void ResetInteractions() final;
   void LoadDefaults() final;
-
- private:
-  // |UsageGainAdjustment|
-  void SetRenderUsageGainAdjustment(fuchsia::media::AudioRenderUsage usage, float gain_db) override;
-  void SetCaptureUsageGainAdjustment(fuchsia::media::AudioCaptureUsage usage,
-                                     float gain_db) override;
 
   void PublishServices();
   void Shutdown();

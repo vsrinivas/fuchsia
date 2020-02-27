@@ -12,7 +12,6 @@
 #include <trace/event.h>
 
 #include "src/lib/syslog/cpp/logger.h"
-#include "src/media/audio/audio_core/usage_gain_adjustment.h"
 
 namespace media::audio {
 namespace {
@@ -32,7 +31,8 @@ fuchsia::media::Usage Usage(fuchsia::media::AudioCaptureUsage u) {
 
 }  // namespace
 
-AudioAdmin::AudioAdmin(UsageGainAdjustment* gain_adjustment, async_dispatcher_t* fidl_dispatcher,
+AudioAdmin::AudioAdmin(StreamVolumeManager* stream_volume_manager,
+                       async_dispatcher_t* fidl_dispatcher,
                        PolicyActionReporter* policy_action_reporter)
     : AudioAdmin(
           BehaviorGain{
@@ -40,16 +40,16 @@ AudioAdmin::AudioAdmin(UsageGainAdjustment* gain_adjustment, async_dispatcher_t*
               .duck_gain_db = -35.0f,
               .mute_gain_db = fuchsia::media::audio::MUTED_GAIN_DB,
           },
-          gain_adjustment, policy_action_reporter, fidl_dispatcher) {}
+          stream_volume_manager, policy_action_reporter, fidl_dispatcher) {}
 
-AudioAdmin::AudioAdmin(BehaviorGain behavior_gain, UsageGainAdjustment* gain_adjustment,
+AudioAdmin::AudioAdmin(BehaviorGain behavior_gain, StreamVolumeManager* stream_volume_manager,
                        PolicyActionReporter* policy_action_reporter,
                        async_dispatcher_t* fidl_dispatcher)
     : behavior_gain_(behavior_gain),
-      gain_adjustment_(*gain_adjustment),
+      stream_volume_manager_(*stream_volume_manager),
       policy_action_reporter_(*policy_action_reporter),
       fidl_dispatcher_(fidl_dispatcher) {
-  FX_DCHECK(gain_adjustment);
+  FX_DCHECK(stream_volume_manager);
   FX_DCHECK(policy_action_reporter);
   FX_DCHECK(fidl_dispatcher);
 }
@@ -95,42 +95,48 @@ bool AudioAdmin::IsActive(fuchsia::media::AudioCaptureUsage usage) {
 void AudioAdmin::SetUsageNone(fuchsia::media::AudioRenderUsage usage) {
   TRACE_DURATION("audio", "AudioAdmin::SetUsageNone(Render)");
   std::lock_guard<fxl::ThreadChecker> lock(fidl_thread_checker_);
-  gain_adjustment_.SetRenderUsageGainAdjustment(usage, behavior_gain_.none_gain_db);
+  stream_volume_manager_.SetUsageGainAdjustment(
+      fuchsia::media::Usage::WithRenderUsage(fidl::Clone(usage)), behavior_gain_.none_gain_db);
   policy_action_reporter_.ReportPolicyAction(Usage(usage), fuchsia::media::Behavior::NONE);
 }
 
 void AudioAdmin::SetUsageNone(fuchsia::media::AudioCaptureUsage usage) {
   TRACE_DURATION("audio", "AudioAdmin::SetUsageNone(Capture)");
   std::lock_guard<fxl::ThreadChecker> lock(fidl_thread_checker_);
-  gain_adjustment_.SetCaptureUsageGainAdjustment(usage, behavior_gain_.none_gain_db);
+  stream_volume_manager_.SetUsageGainAdjustment(
+      fuchsia::media::Usage::WithCaptureUsage(fidl::Clone(usage)), behavior_gain_.none_gain_db);
   policy_action_reporter_.ReportPolicyAction(Usage(usage), fuchsia::media::Behavior::NONE);
 }
 
 void AudioAdmin::SetUsageMute(fuchsia::media::AudioRenderUsage usage) {
   TRACE_DURATION("audio", "AudioAdmin::SetUsageMute(Render)");
   std::lock_guard<fxl::ThreadChecker> lock(fidl_thread_checker_);
-  gain_adjustment_.SetRenderUsageGainAdjustment(usage, behavior_gain_.mute_gain_db);
+  stream_volume_manager_.SetUsageGainAdjustment(
+      fuchsia::media::Usage::WithRenderUsage(fidl::Clone(usage)), behavior_gain_.mute_gain_db);
   policy_action_reporter_.ReportPolicyAction(Usage(usage), fuchsia::media::Behavior::MUTE);
 }
 
 void AudioAdmin::SetUsageMute(fuchsia::media::AudioCaptureUsage usage) {
   TRACE_DURATION("audio", "AudioAdmin::SetUsageMute(Capture)");
   std::lock_guard<fxl::ThreadChecker> lock(fidl_thread_checker_);
-  gain_adjustment_.SetCaptureUsageGainAdjustment(usage, behavior_gain_.mute_gain_db);
+  stream_volume_manager_.SetUsageGainAdjustment(
+      fuchsia::media::Usage::WithCaptureUsage(fidl::Clone(usage)), behavior_gain_.mute_gain_db);
   policy_action_reporter_.ReportPolicyAction(Usage(usage), fuchsia::media::Behavior::MUTE);
 }
 
 void AudioAdmin::SetUsageDuck(fuchsia::media::AudioRenderUsage usage) {
   TRACE_DURATION("audio", "AudioAdmin::SetUsageDuck(Render)");
   std::lock_guard<fxl::ThreadChecker> lock(fidl_thread_checker_);
-  gain_adjustment_.SetRenderUsageGainAdjustment(usage, behavior_gain_.duck_gain_db);
+  stream_volume_manager_.SetUsageGainAdjustment(
+      fuchsia::media::Usage::WithRenderUsage(fidl::Clone(usage)), behavior_gain_.duck_gain_db);
   policy_action_reporter_.ReportPolicyAction(Usage(usage), fuchsia::media::Behavior::DUCK);
 }
 
 void AudioAdmin::SetUsageDuck(fuchsia::media::AudioCaptureUsage usage) {
   TRACE_DURATION("audio", "AudioAdmin::SetUsageDuck(Capture)");
   std::lock_guard<fxl::ThreadChecker> lock(fidl_thread_checker_);
-  gain_adjustment_.SetCaptureUsageGainAdjustment(usage, behavior_gain_.duck_gain_db);
+  stream_volume_manager_.SetUsageGainAdjustment(
+      fuchsia::media::Usage::WithCaptureUsage(fidl::Clone(usage)), behavior_gain_.duck_gain_db);
   policy_action_reporter_.ReportPolicyAction(Usage(usage), fuchsia::media::Behavior::DUCK);
 }
 
