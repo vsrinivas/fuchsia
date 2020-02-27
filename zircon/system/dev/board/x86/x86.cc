@@ -126,26 +126,25 @@ zx_status_t X86::Bind() {
     return status;
   }
 
-  char board_name[fuchsia_sysinfo_SYSINFO_BOARD_NAME_LEN + 1];
-  size_t board_name_actual = 0;
-  status = smbios_get_board_name(board_name, sizeof(board_name), &board_name_actual);
-  if (status != ZX_OK) {
-    if (status == ZX_ERR_BUFFER_TOO_SMALL) {
+  pbus_board_info_t board_info = {};
+  const char* board_name = "x64";
+
+  // Load SMBIOS information.
+  SmbiosInfo smbios;
+  status = smbios.Load();
+  if (status == ZX_OK) {
+    auto& name = smbios.board_name();
+    if (name.empty()) {
+      zxlogf(ERROR, "acpi: smbios board name could not be read\n");
+    } else if (name.size() >= sizeof(board_info.board_name)) {
       zxlogf(INFO, "acpi: smbios board name too big for sysinfo\n");
-    } else if (status != ZX_ERR_NOT_FOUND) {
-      zxlogf(ERROR, "acpi: smbios board name could not be read: %s\n",
-             zx_status_get_string(status));
+    } else {
+      board_name = name.data();
     }
-    strcpy(board_name, "x64");
-    board_name_actual = strlen(board_name) + 1;
   }
 
-  constexpr uint32_t dummy_board_rev = 42;
-
   // Inform platform bus of our board name.
-  pbus_board_info_t board_info = {};
   strlcpy(board_info.board_name, board_name, sizeof(board_info.board_name));
-  board_info.board_revision = dummy_board_rev;
   status = pbus_.SetBoardInfo(&board_info);
   if (status != ZX_OK) {
     zxlogf(ERROR, "SetBoardInfo failed: %d\n", status);

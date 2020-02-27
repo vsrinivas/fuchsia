@@ -4,14 +4,15 @@
 
 #include "smbios.h"
 
-#include <ddk/driver.h>
-#include <fbl/algorithm.h>
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/smbios/smbios.h>
 #include <lib/zx/resource.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
 #include <limits.h>
+
+#include <ddk/driver.h>
+#include <fbl/algorithm.h>
 
 namespace {
 
@@ -127,56 +128,51 @@ bool smbios_product_name_is_valid(const char* product_name) {
   return true;
 }
 
-zx_status_t smbios_get_board_name(char* board_name_buffer, size_t board_name_size,
-                                  size_t* board_name_actual) {
+zx_status_t SmbiosInfo::Load() {
   SmbiosState smbios;
   zx_status_t status = smbios.LoadFromFirmware();
   if (status != ZX_OK) {
     return status;
   }
 
-  // Search for the product name
-  const char* sys_product_name = nullptr;
-  const char* baseboard_product_name = nullptr;
-  auto struct_walk_cb = [&sys_product_name, &baseboard_product_name](
-                            smbios::SpecVersion version, const smbios::Header* h,
-                            const smbios::StringTable& st) -> zx_status_t {
-    if (h->type == smbios::StructType::SystemInfo && version.IncludesVersion(2, 0)) {
-      auto entry = reinterpret_cast<const smbios::SystemInformationStruct2_0*>(h);
-      zx_status_t status = st.GetString(entry->product_name_str_idx, &sys_product_name);
-      if (status != ZX_OK) {
-        sys_product_name = nullptr;
+  auto callback = [this](smbios::SpecVersion version, const smbios::Header* h,
+                         const smbios::StringTable& st) -> zx_status_t {
+    const char* name;
+    switch (h->type) {
+      case smbios::StructType::BiosInfo: {
+        if (!version.IncludesVersion(2, 0)) {
+          break;
+        }
+        auto entry = reinterpret_cast<const smbios::BiosInformationStruct2_0*>(h);
+        zx_status_t status = st.GetString(entry->vendor_str_idx, &name);
+        if (status == ZX_OK) {
+          vendor_name_ = name;
+        }
+        break;
       }
-    } else if (h->type == smbios::StructType::Baseboard) {
-      auto entry = reinterpret_cast<const smbios::BaseboardInformationStruct*>(h);
-      zx_status_t status = st.GetString(entry->product_name_str_idx, &baseboard_product_name);
-      if (status != ZX_OK) {
-        baseboard_product_name = nullptr;
+      case smbios::StructType::SystemInfo: {
+        if (!version.IncludesVersion(2, 0)) {
+          break;
+        }
+        auto entry = reinterpret_cast<const smbios::SystemInformationStruct2_0*>(h);
+        zx_status_t status = st.GetString(entry->product_name_str_idx, &name);
+        if (status == ZX_OK && smbios_product_name_is_valid(name)) {
+          board_name_ = name;
+        }
+        break;
       }
+      case smbios::StructType::Baseboard: {
+        auto entry = reinterpret_cast<const smbios::BaseboardInformationStruct*>(h);
+        zx_status_t status = st.GetString(entry->product_name_str_idx, &name);
+        if (status == ZX_OK && smbios_product_name_is_valid(name)) {
+          board_name_ = name;
+        }
+        break;
+      }
+      default:
+        break;
     }
     return ZX_OK;
   };
-  status = smbios.entry_point()->WalkStructs(smbios.struct_table_start(), struct_walk_cb);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  const char* product_name = nullptr;
-  for (auto possible_name : {sys_product_name, baseboard_product_name}) {
-    if (smbios_product_name_is_valid(possible_name)) {
-      product_name = possible_name;
-      break;
-    }
-  }
-  if (product_name == nullptr) {
-    return ZX_ERR_NOT_FOUND;
-  }
-
-  size_t product_name_len = strlen(product_name) + 1;
-  *board_name_actual = product_name_len;
-  if (product_name_len > board_name_size) {
-    return ZX_ERR_BUFFER_TOO_SMALL;
-  }
-  memcpy(board_name_buffer, product_name, product_name_len);
-  return ZX_OK;
+  return smbios.entry_point()->WalkStructs(smbios.struct_table_start(), callback);
 }
