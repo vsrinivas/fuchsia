@@ -284,7 +284,7 @@ func readDomain(data []byte, in io.Reader, domain *string) error {
 
 func (q *Question) deserialize(data []byte, in io.Reader) error {
 	if err := readDomain(data, in, &q.Domain); err != nil {
-		return fmt.Errorf("reading domain: %v", err)
+		return fmt.Errorf("reading domain: %w", err)
 	}
 	if err := readUint16(in, &q.Type); err != nil {
 		return err
@@ -762,7 +762,7 @@ func (c *mDNSConn4) InitReceiver(port int) error {
 // This allows us to listen on this specific interface.
 func (c *mDNSConn4) JoinGroup(iface net.Interface) error {
 	if err := c.receiver.JoinGroup(&iface, &c.dst); err != nil {
-		return fmt.Errorf("joining %v%%%v: %v", iface, c.dst, err)
+		return fmt.Errorf("joining addr %q on iface %q: %w", &c.dst, iface.Name, err)
 	}
 	return nil
 }
@@ -1010,16 +1010,9 @@ func (m *mDNS) Send(packet Packet) error {
 
 // connectToAnyAddr takes an mDNSConn and attempts to connect to the first
 // available addr on the interface.
-func connectToAnyAddr(c mDNSConn, iface *net.Interface, port int, ipv6 bool) (bool, error) {
+func connectToAnyAddr(c mDNSConn, iface *net.Interface, addrs []net.Addr, port int, ipv6 bool) (bool, error) {
 	if c == nil {
 		return false, nil
-	}
-	addrs, err := iface.Addrs()
-	if err != nil {
-		return false, fmt.Errorf("getting addresses of %v: %v", iface, err)
-	}
-	if len(addrs) == 0 {
-		return false, fmt.Errorf("no addrs for iface %q", iface.Name)
 	}
 
 	var lastConnectErr error
@@ -1051,7 +1044,12 @@ func connectToAnyAddr(c mDNSConn, iface *net.Interface, port int, ipv6 bool) (bo
 		connected = true
 		break
 	}
-	return connected, fmt.Errorf("unable to connect to any addr. last err: %v", lastConnectErr)
+	// This means there were no errors attempting to connect to a valid address,
+	// only that no candidate addrs were found.
+	if lastConnectErr == nil {
+		return connected, nil
+	}
+	return connected, fmt.Errorf("unable to connect to any addr. last err: %w", lastConnectErr)
 }
 
 // connectOnAllIfaces is a helper function that takes an mDNSConn and attempts
@@ -1068,14 +1066,22 @@ func connectOnAllIfaces(c mDNSConn, ifaces []net.Interface, port int, ipv6 bool)
 			log.Println(lastConnectErr)
 			continue
 		}
-		c, err := connectToAnyAddr(c, &iface, port, ipv6)
+		addrs, err := iface.Addrs()
+		if err != nil {
+			lastConnectErr = err
+			continue
+		}
+		if len(addrs) == 0 {
+			continue
+		}
+		c, err := connectToAnyAddr(c, &iface, addrs, port, ipv6)
 		if err != nil {
 			lastConnectErr = err
 		}
 		connected = connected || c
 	}
 	if !connected {
-		return fmt.Errorf("unable to connect to any addr. last error: %v", lastConnectErr)
+		return fmt.Errorf("unable to connect to any iface. last error: %w", lastConnectErr)
 	}
 	return nil
 }
@@ -1096,7 +1102,7 @@ func (m *mDNS) initMDNSConns(port int) error {
 	}
 	ifaces, err := net.Interfaces()
 	if err != nil {
-		return fmt.Errorf("listing interfaces: %v", err)
+		return fmt.Errorf("listing interfaces: %w", err)
 	}
 	var v4Err error
 	var v6Err error

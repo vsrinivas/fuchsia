@@ -24,6 +24,22 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/net/netboot"
 )
 
+type noConnectableAddressError struct {
+	lastConnectionError error
+}
+
+func (n noConnectableAddressError) Error() string {
+	return fmt.Sprintf("unable to connect to any address. last err: %v", n.lastConnectionError)
+}
+
+func (n noConnectableAddressError) Is(other error) bool {
+	otherConv, ok := other.(noConnectableAddressError)
+	if !ok {
+		return false
+	}
+	return errors.Is(n.lastConnectionError, otherConv.lastConnectionError)
+}
+
 var ipv6LinkLocalPrefix = []byte{0xfe, 0x80}
 
 type mDNSResponse struct {
@@ -230,6 +246,36 @@ func sortDeviceMap(deviceMap map[string]*fuchsiaDevice) []*fuchsiaDevice {
 	return res
 }
 
+func startMDNSHandlers(ctx context.Context, cmd *devFinderCmd, packet mdns.Packet, addrs []string, ports []int, f chan *fuchsiaDevice) error {
+	startedMDNS := false
+	var lastErr error
+	for _, addr := range addrs {
+		for _, p := range ports {
+			m := cmd.newMDNS(addr)
+			m.AddHandler(func(recv net.Interface, addr net.Addr, rxPacket mdns.Packet) {
+				response := mDNSResponse{recv, addr, rxPacket}
+				cmd.mdnsHandler(cmd, response, f)
+			})
+			m.AddErrorHandler(func(err error) {
+				f <- &fuchsiaDevice{err: err}
+			})
+			m.AddWarningHandler(func(addr net.Addr, err error) {
+				log.Printf("from: %s warn: %v\n", addr, err)
+			})
+			if err := m.Start(ctx, p); err != nil {
+				lastErr = fmt.Errorf("starting mdns: %w", err)
+				continue
+			}
+			m.Send(packet)
+			startedMDNS = true
+		}
+	}
+	if startedMDNS {
+		return nil
+	}
+	return noConnectableAddressError{lastConnectionError: lastErr}
+}
+
 func (cmd *devFinderCmd) sendMDNSPacket(ctx context.Context, packet mdns.Packet, f chan *fuchsiaDevice) error {
 	if cmd.mdnsHandler == nil {
 		return fmt.Errorf("packet handler is nil")
@@ -247,7 +293,10 @@ func (cmd *devFinderCmd) sendMDNSPacket(ctx context.Context, packet mdns.Packet,
 		}
 		ports = append(ports, int(p))
 	}
-	addrs := []string{}
+	if len(ports) == 0 {
+		return fmt.Errorf("no viable ports from %q", cmd.mdnsAddrs)
+	}
+	var addrs []string
 	for _, addr := range cmdAddrs {
 		ip := net.ParseIP(addr)
 		if ip == nil {
@@ -261,27 +310,7 @@ func (cmd *devFinderCmd) sendMDNSPacket(ctx context.Context, packet mdns.Packet,
 	if len(addrs) == 0 {
 		return fmt.Errorf("no viable addresses")
 	}
-	for _, addr := range addrs {
-		for _, p := range ports {
-			m := cmd.newMDNS(addr)
-			m.AddHandler(func(recv net.Interface, addr net.Addr, rxPacket mdns.Packet) {
-				response := mDNSResponse{recv, addr, rxPacket}
-				cmd.mdnsHandler(cmd, response, f)
-			})
-			m.AddErrorHandler(func(err error) {
-				f <- &fuchsiaDevice{err: err}
-			})
-			m.AddWarningHandler(func(addr net.Addr, err error) {
-				log.Printf("from: %v warn: %v\n", addr, err)
-			})
-			if err := m.Start(ctx, p); err != nil {
-				return fmt.Errorf("starting mdns: %v", err)
-			}
-			m.Send(packet)
-		}
-	}
-
-	return nil
+	return startMDNSHandlers(ctx, cmd, packet, addrs, ports, f)
 }
 
 type deviceFinder interface {

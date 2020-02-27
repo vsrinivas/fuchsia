@@ -179,6 +179,69 @@ func makeFakeMDNSConn(v6 bool) (mDNSConn, chan []byte, chan []byte, chan int) {
 	}
 }
 
+func TestConnectToAnyAddr(t *testing.T) {
+	iface := *fakeIfaceMCastUp
+	for _, test := range []struct {
+		name            string
+		addrs           []net.Addr
+		expectConnected bool
+		ipv6            bool
+	}{
+		{
+			name:            "ipv6 only expect ipv4",
+			ipv6:            false,
+			expectConnected: false,
+			addrs: []net.Addr{
+				&net.IPAddr{IP: net.ParseIP("fe80::1234:1234:1234:1234")},
+				&net.IPAddr{IP: net.ParseIP("fe80::1456:1456:1456:1456")},
+				&net.IPAddr{IP: net.ParseIP("fe80::6789:6789:6789:6789")},
+			},
+		},
+		{
+			name:            "ipv4 only expect ipv6",
+			ipv6:            true,
+			expectConnected: false,
+			addrs: []net.Addr{
+				&net.IPAddr{IP: net.ParseIP("127.1.1.2")},
+				&net.IPAddr{IP: net.ParseIP("128.1.1.2")},
+				&net.IPAddr{IP: net.ParseIP("129.1.1.2")},
+			},
+		},
+		{
+			name:            "ipv4 only expect ipv4",
+			ipv6:            false,
+			expectConnected: true,
+			addrs: []net.Addr{
+				&net.IPAddr{IP: net.ParseIP("127.1.1.2")},
+				&net.IPAddr{IP: net.ParseIP("128.1.1.2")},
+				&net.IPAddr{IP: net.ParseIP("129.1.1.2")},
+			},
+		},
+		{
+			name:            "ipv6 only expect ipv6",
+			ipv6:            true,
+			expectConnected: true,
+			addrs: []net.Addr{
+				&net.IPAddr{IP: net.ParseIP("fe80::1456:1456:1456:1456")},
+				&net.IPAddr{IP: net.ParseIP("fe80::6789:6789:6789:6789")},
+			},
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			c, _, _, _ := makeFakeMDNSConn(test.ipv6)
+			defer c.Close()
+			connected, err := connectToAnyAddr(c, &iface, test.addrs, 1234, test.ipv6)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if connected != test.expectConnected {
+				t.Errorf("connection invalid: want %t, got %t", test.expectConnected, connected)
+			}
+		})
+	}
+}
+
 func TestConnectToAnyIface_noValidConnections(t *testing.T) {
 	ifaces := []net.Interface{
 		*fakeIfaceMCastDown,

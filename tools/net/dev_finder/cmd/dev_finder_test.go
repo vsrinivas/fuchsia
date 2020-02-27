@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"strconv"
@@ -37,10 +38,19 @@ const defaultIPv6NetbootZone = "netbootIface0"
 
 const defaultNetbootNodename = "this-is-a-netboot-device-1"
 
+// TODO(awdavies): Induce an error in a way that is more predictable, and uses
+// the available API. This is a hack that makes errors occur when `Start()` is
+// called with this port to the `fakeMDNS` struct.
+const failurePort = 999999
+
 type nbDiscoverFunc func(chan<- *netboot.Target, string, bool) (func() error, error)
 
 type fakeNetbootClient struct {
 	discover nbDiscoverFunc
+}
+
+func nilNBDiscoverFunc(_ chan<- *netboot.Target, _ string, _ bool) (func() error, error) {
+	return func() error { return nil }, nil
 }
 
 func (m *fakeNetbootClient) StartDiscover(t chan<- *netboot.Target, nodename string, fuchsia bool) (func() error, error) {
@@ -166,7 +176,15 @@ func (m *fakeMDNS) Send(packet mdns.Packet) error {
 	}
 	return nil
 }
-func (m *fakeMDNS) Start(context.Context, int) error { return nil }
+
+var badPortTestError = errors.New("test failure caused by passing failure port")
+
+func (m *fakeMDNS) Start(_ context.Context, port int) error {
+	if port == failurePort {
+		return badPortTestError
+	}
+	return nil
+}
 
 func newDevFinderCmd(
 	handler mDNSHandler,
@@ -429,9 +447,7 @@ func TestListDevices(t *testing.T) {
 }
 
 func TestListDevice_allProtocolsDisabled(t *testing.T) {
-	nbDiscover := func(_ chan<- *netboot.Target, _ string, _ bool) (func() error, error) {
-		return func() error { return nil }, nil
-	}
+	nbDiscover := nilNBDiscoverFunc
 	cmd := listCmd{
 		devFinderCmd: newDevFinderCmd(
 			listMDNSHandler,
@@ -452,9 +468,7 @@ func TestListDevice_allProtocolsDisabled(t *testing.T) {
 }
 
 func TestListDevices_emptyData(t *testing.T) {
-	nbDiscover := func(_ chan<- *netboot.Target, _ string, _ bool) (func() error, error) {
-		return func() error { return nil }, nil
-	}
+	nbDiscover := nilNBDiscoverFunc
 	cmd := listCmd{
 		devFinderCmd: newDevFinderCmd(
 			listMDNSHandler,
@@ -473,9 +487,7 @@ func TestListDevices_emptyData(t *testing.T) {
 
 func TestListDevices_duplicateDevices(t *testing.T) {
 	runSubTests(t, "", func(t *testing.T, s subtest) {
-		nbDiscover := func(_ chan<- *netboot.Target, _ string, _ bool) (func() error, error) {
-			return func() error { return nil }, nil
-		}
+		nbDiscover := nilNBDiscoverFunc
 		cmd := listCmd{
 			devFinderCmd: newDevFinderCmd(
 				listMDNSHandler,
@@ -514,10 +526,87 @@ func TestListDevices_duplicateDevices(t *testing.T) {
 	})
 }
 
+func TestStartMDNSHandlers(t *testing.T) {
+	runSubTests(t, "", func(t *testing.T, s subtest) {
+		nbDiscover := nilNBDiscoverFunc
+		cmd := newDevFinderCmd(
+			listMDNSHandler,
+			[]string{
+				fuchsiaMDNSNodename1,
+				fuchsiaMDNSNodename2,
+			},
+			false,
+			false,
+			s,
+			nbDiscover,
+		)
+		for _, test := range []struct {
+			name      string
+			addrs     []string
+			ports     []int
+			expectErr error
+		}{
+			{
+				name:      "one ipv4 addr one port",
+				addrs:     []string{"192.168.1.2"},
+				ports:     []int{1234},
+				expectErr: nil,
+			},
+			{
+				name:      "one ipv6 addr two ports",
+				addrs:     []string{"fe80::1234:1234:1234:1234"},
+				ports:     []int{1234, 4567},
+				expectErr: nil,
+			},
+			{
+				name:      "one ipv6 addr one ipv4 two ports one failure",
+				addrs:     []string{"fe80::1234:1234:1234:1234", "192.168.1.2"},
+				ports:     []int{1234, failurePort, 4567},
+				expectErr: nil,
+			},
+			{
+				name:      "one ipv6 addr one ipv4 one port one failure",
+				addrs:     []string{"fe80::1234:1234:1234:1234", "192.168.1.2"},
+				ports:     []int{failurePort, 4567},
+				expectErr: nil,
+			},
+			{
+				name:      "no addrs one port",
+				addrs:     []string{},
+				ports:     []int{1234},
+				expectErr: noConnectableAddressError{},
+			},
+			{
+				name:      "one ipv6 addr all fail ports",
+				addrs:     []string{"fe80::1234:1234:1234:1234"},
+				ports:     []int{failurePort, failurePort, failurePort},
+				expectErr: noConnectableAddressError{badPortTestError},
+			},
+		} {
+			t.Run(fmt.Sprintf("%s expect error %t", test.name, test.expectErr != nil), func(t *testing.T) {
+				f := make(chan *fuchsiaDevice)
+				packet := mdns.Packet{
+					Header: mdns.Header{QDCount: 1},
+					Questions: []mdns.Question{
+						{
+							Domain:  fuchsiaMDNSService,
+							Type:    mdns.PTR,
+							Class:   mdns.IN,
+							Unicast: true,
+						},
+					},
+				}
+				expectedErr := test.expectErr
+				if err := startMDNSHandlers(context.Background(), &cmd, packet, test.addrs, test.ports, f); !errors.Is(err, expectedErr) {
+					t.Errorf("unexpected error. got %v expected %v", err, test.expectErr)
+				}
+			})
+		}
+	})
+}
+
 func TestListDevices_tooShortData(t *testing.T) {
-	nbDiscover := func(_ chan<- *netboot.Target, _ string, _ bool) (func() error, error) {
-		return func() error { return nil }, nil
-	}
+	nbDiscover := nilNBDiscoverFunc
 	cmd := listCmd{
 		devFinderCmd: newDevFinderCmd(
 			listMDNSHandler,
@@ -588,9 +677,7 @@ func TestResolveDevices(t *testing.T) {
 }
 
 func TestResolveDevices_allProtocolsDisabled(t *testing.T) {
-	nbDiscover := func(_ chan<- *netboot.Target, _ string, _ bool) (func() error, error) {
-		return func() error { return nil }, nil
-	}
+	nbDiscover := nilNBDiscoverFunc
 	cmd := resolveCmd{
 		devFinderCmd: newDevFinderCmd(
 			resolveMDNSHandler,
