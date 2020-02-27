@@ -79,6 +79,10 @@ struct PbusBoardInfo {
     uint32 board_revision;
 };
 
+struct PbusBootloaderInfo {
+    string:32 vendor_name;
+};
+
 [Layout = "ddk-callback"]
 protocol PbusSysSuspend {
     Callback(uint8 requested_state, bool enable_wake,
@@ -108,6 +112,8 @@ protocol PBus {
     /// (like the board revision number).
     /// Platform device drivers can access this via `pdev_get_board_info()`.
     SetBoardInfo(PbusBoardInfo info) -> (zx.status s);
+    /// Board drivers may use this to set information about the bootloader.
+    SetBootloaderInfo(PbusBootloaderInfo info) -> (zx.status s);
     RegisterSysSuspendCallback(PbusSysSuspend suspend_cb) -> (zx.status s);
     /// Adds a composite platform device to the bus. The platform device specified by |dev|
     /// is the zeroth component and the |components| array specifies components 1 through n.

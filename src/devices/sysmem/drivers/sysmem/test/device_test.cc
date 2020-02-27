@@ -36,6 +36,9 @@ class FakePBus : public ddk::PBusProtocol<FakePBus, ddk::base_protocol> {
   }
   zx_status_t PBusGetBoardInfo(pdev_board_info_t* out_info) { return ZX_ERR_NOT_SUPPORTED; }
   zx_status_t PBusSetBoardInfo(const pbus_board_info_t* info) { return ZX_ERR_NOT_SUPPORTED; }
+  zx_status_t PBusSetBootloaderInfo(const pbus_bootloader_info_t* info) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
   zx_status_t PBusCompositeDeviceAdd(const pbus_dev_t* dev,
                                      const device_component_t* components_list,
                                      size_t components_count, uint32_t coresident_device_index) {

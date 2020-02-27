@@ -154,7 +154,7 @@ zx_status_t PlatformBus::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
 void PlatformBus::GetBoardName(GetBoardNameCompleter::Sync completer) {
   fbl::AutoLock lock(&board_info_lock_);
   // Reply immediately if board name is valid
-  if (strlen(board_info_.board_name) != 0) {
+  if (board_info_.board_name[0]) {
     return completer.Reply(
         ZX_OK, fidl::StringView(board_info_.board_name, strlen(board_info_.board_name)));
   }
@@ -183,10 +183,10 @@ zx_status_t PlatformBus::PBusGetBoardInfo(pdev_board_info_t* out_info) {
 zx_status_t PlatformBus::PBusSetBoardInfo(const pbus_board_info_t* info) {
   fbl::AutoLock lock(&board_info_lock_);
   if (info->board_name[0]) {
-    zxlogf(INFO, "PlatformBus: setting board name to \"%s\"\n", info->board_name);
+    strlcpy(board_info_.board_name, info->board_name, sizeof(board_info_.board_name));
+    zxlogf(INFO, "PlatformBus: set board name to \"%s\"\n", board_info_.board_name);
 
     std::vector<GetBoardNameCompleter::Async> completer_tmp_;
-    strlcpy(board_info_.board_name, info->board_name, sizeof(board_info_.board_name));
     // Respond to pending boardname requests, if any.
     board_name_completer_.swap(completer_tmp_);
     while (!completer_tmp_.empty()) {
@@ -196,6 +196,15 @@ zx_status_t PlatformBus::PBusSetBoardInfo(const pbus_board_info_t* info) {
     }
   }
   board_info_.board_revision = info->board_revision;
+  return ZX_OK;
+}
+
+zx_status_t PlatformBus::PBusSetBootloaderInfo(const pbus_bootloader_info_t* info) {
+  fbl::AutoLock lock(&bootloader_info_lock_);
+  if (info->vendor_name[0]) {
+    strlcpy(bootloader_info_.vendor_name, info->vendor_name, sizeof(bootloader_info_.vendor_name));
+    zxlogf(INFO, "PlatformBus: set vendor name to \"%s\"\n", bootloader_info_.vendor_name);
+  }
   return ZX_OK;
 }
 

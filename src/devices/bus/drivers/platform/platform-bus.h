@@ -30,6 +30,7 @@
 #include <fbl/mutex.h>
 #include <fbl/vector.h>
 
+#include "ddk/protocol/platform/bus.h"
 #include "platform-device.h"
 #include "proxy-protocol.h"
 
@@ -57,6 +58,7 @@ class PlatformBus : public PlatformBusType,
   zx_status_t PBusRegisterProtocol(uint32_t proto_id, const void* protocol, size_t protocol_size);
   zx_status_t PBusGetBoardInfo(pdev_board_info_t* out_info);
   zx_status_t PBusSetBoardInfo(const pbus_board_info_t* info);
+  zx_status_t PBusSetBootloaderInfo(const pbus_bootloader_info_t* info);
   zx_status_t PBusCompositeDeviceAdd(const pbus_dev_t* dev,
                                      const device_component_t* components_list,
                                      size_t components_count, uint32_t coresident_device_index);
@@ -102,8 +104,11 @@ class PlatformBus : public PlatformBusType,
   // Protects board_name_completer_.
   fbl::Mutex board_info_lock_;
   pdev_board_info_t board_info_ __TA_GUARDED(board_info_lock_) = {};
-  // List to cache requests when boardname is not yet set.
+  // List to cache requests when board_name is not yet set.
   std::vector<GetBoardNameCompleter::Async> board_name_completer_ __TA_GUARDED(board_info_lock_);
+
+  fbl::Mutex bootloader_info_lock_;
+  pbus_bootloader_info_t bootloader_info_ __TA_GUARDED(bootloader_info_lock_) = {};
 
   ::llcpp::fuchsia::sysinfo::InterruptControllerType interrupt_controller_type_ =
       ::llcpp::fuchsia::sysinfo::InterruptControllerType::UNKNOWN;

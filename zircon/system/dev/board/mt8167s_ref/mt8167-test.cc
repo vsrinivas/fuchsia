@@ -36,6 +36,7 @@ class Mt8167Test : public Mt8167, public ddk::PBusProtocol<Mt8167Test> {
   }
   zx_status_t PBusGetBoardInfo(pdev_board_info_t* out_info) { return ZX_OK; }
   zx_status_t PBusSetBoardInfo(const pbus_board_info_t* info) { return ZX_OK; }
+  zx_status_t PBusSetBootloaderInfo(const pbus_bootloader_info_t* info) { return ZX_OK; }
   zx_status_t PBusRegisterSysSuspendCallback(const pbus_sys_suspend_t* suspend_cb) { return ZX_OK; }
   zx_status_t PBusCompositeDeviceAdd(const pbus_dev_t* dev,
                                      const device_component_t* components_list,
