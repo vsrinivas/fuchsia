@@ -58,7 +58,9 @@ class Finder(object):
             if not os.path.isfile(build_path):
                 return False
             with open(build_path, 'r') as build_file:
-                return '//build/unification/zx_library.gni' not in build_file.read()
+                content = build_file.read()
+                return ('//build/unification/zx_library.gni' not in content and
+                        '//build/unification/fidl_alias.gni' not in content)
         for _, dirs, _ in os.walk(base):
             return filter(has_zn_build_file, dirs)
 
