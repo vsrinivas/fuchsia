@@ -116,29 +116,41 @@ class FakeHidDevice : public ddk::HidDeviceProtocol<FakeHidDevice> {
   zx_status_t HidDeviceGetReport(hid_report_type_t rpt_type, uint8_t rpt_id,
                                  uint8_t* out_report_list, size_t report_count,
                                  size_t* out_report_actual) {
+    // If the client is Getting a report with a specific ID, check that it matches
+    // our saved report.
+    if ((rpt_id != 0) && (report_.size() > 0)) {
+      if (rpt_id != report_[0]) {
+        return ZX_ERR_WRONG_TYPE;
+      }
+    }
+
+    if (report_count < report_.size()) {
+      return ZX_ERR_BUFFER_TOO_SMALL;
+    }
+    memcpy(out_report_list, report_.data(), report_.size());
+    *out_report_actual = report_.size();
+
     return ZX_OK;
   }
 
   zx_status_t HidDeviceSetReport(hid_report_type_t rpt_type, uint8_t rpt_id,
                                  const uint8_t* report_list, size_t report_count) {
-    last_set_report_ = std::vector<uint8_t>(report_list, report_list + report_count);
+    report_ = std::vector<uint8_t>(report_list, report_list + report_count);
     return ZX_OK;
   }
-  std::vector<uint8_t> GetLastSetReport() { return last_set_report_; }
 
   void SetReportDesc(std::vector<uint8_t> report_desc) { report_desc_ = report_desc; }
-  void SetReport(std::vector<uint8_t> report) { report_ = report; }
 
-  void SendReport() {
-    listener_.ops->receive_report(listener_.ctx, report_.data(), report_.size(),
+  void SendReport(const std::vector<uint8_t>& report) {
+    listener_.ops->receive_report(listener_.ctx, report.data(), report.size(),
                                   zx_clock_get_monotonic());
   }
 
   hid_report_listener_protocol_t listener_;
   hid_device_protocol_t proto_;
   std::vector<uint8_t> report_desc_;
+
   std::vector<uint8_t> report_;
-  std::vector<uint8_t> last_set_report_;
 };
 
 class HidDevTest : public zxtest::Test {
@@ -235,8 +247,7 @@ TEST_F(HidDevTest, GetReportTest) {
 
   // Spoof send a report.
   std::vector<uint8_t> sent_report = {0xFF, 0x50, 0x70};
-  fake_hid_.SetReport(sent_report);
-  fake_hid_.SendReport();
+  fake_hid_.SendReport(sent_report);
 
   // Get the report.
   fuchsia_input_report::InputDevice::ResultOf::GetReports result = sync_client.GetReports();
@@ -321,8 +332,7 @@ TEST_F(HidDevTest, SensorTest) {
   std::vector<uint8_t> report_vector(
       reinterpret_cast<uint8_t*>(&report_data),
       reinterpret_cast<uint8_t*>(&report_data) + sizeof(report_data));
-  fake_hid_.SetReport(report_vector);
-  fake_hid_.SendReport();
+  fake_hid_.SendReport(report_vector);
 
   // Get the report.
   fuchsia_input_report::InputDevice::ResultOf::GetReports report_result = sync_client.GetReports();
@@ -377,8 +387,7 @@ TEST_F(HidDevTest, GetTouchInputReportTest) {
   std::vector<uint8_t> sent_report =
       std::vector<uint8_t>(reinterpret_cast<uint8_t*>(&touch_report),
                            reinterpret_cast<uint8_t*>(&touch_report) + sizeof(touch_report));
-  fake_hid_.SetReport(sent_report);
-  fake_hid_.SendReport();
+  fake_hid_.SendReport(sent_report);
 
   // Get the report.
   fuchsia_input_report::InputDevice::ResultOf::GetReports result = sync_client.GetReports();
@@ -456,8 +465,7 @@ TEST_F(HidDevTest, KeyboardTest) {
   std::vector<uint8_t> sent_report(
       reinterpret_cast<uint8_t*>(&keyboard_report),
       reinterpret_cast<uint8_t*>(&keyboard_report) + sizeof(keyboard_report));
-  fake_hid_.SetReport(sent_report);
-  fake_hid_.SendReport();
+  fake_hid_.SendReport(sent_report);
 
   // Get the report.
   fuchsia_input_report::InputDevice::ResultOf::GetReports result = sync_client.GetReports();
@@ -509,9 +517,12 @@ TEST_F(HidDevTest, KeyboardOutputReportTest) {
   ASSERT_OK(response.status());
   ASSERT_FALSE(response->result.is_err());
   // Get and check the hid output report.
-  std::vector<uint8_t> set_report = fake_hid_.GetLastSetReport();
-  ASSERT_EQ(set_report.size(), 1);
-  ASSERT_EQ(set_report[0], 0b101);
+  uint8_t report;
+  size_t out_size;
+  ASSERT_OK(
+      fake_hid_.HidDeviceGetReport(HID_REPORT_TYPE_OUTPUT, 0, &report, sizeof(report), &out_size));
+  ASSERT_EQ(out_size, sizeof(report));
+  ASSERT_EQ(report, 0b101);
   // Close the instance device.
   dev_ops.ops->close(dev_ops.ctx, 0);
 }
@@ -565,8 +576,7 @@ TEST_F(HidDevTest, ConsumerControlTest) {
 
     std::vector<uint8_t> report_vector(reinterpret_cast<uint8_t*>(&report),
                                        reinterpret_cast<uint8_t*>(&report) + sizeof(report));
-    fake_hid_.SetReport(report_vector);
-    fake_hid_.SendReport();
+    fake_hid_.SendReport(report_vector);
   }
 
   // Get the report.
