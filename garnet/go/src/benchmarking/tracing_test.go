@@ -8,6 +8,8 @@ import (
 	"math"
 	"reflect"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 func getTestTrace() []byte {
@@ -284,12 +286,8 @@ func TestReadTrace(t *testing.T) {
 }
 
 func compareEvents(t *testing.T, description string, expectedEvents []*Event, events []*Event) {
-	if !reflect.DeepEqual(expectedEvents, events) {
-		if len(expectedEvents) != len(events) {
-			t.Errorf("%s: Expecting %d events, got %d events\n", description, len(expectedEvents), len(events))
-		} else {
-			t.Errorf("%s: Expected and retrieved events did not match\n", description)
-		}
+	if diff := cmp.Diff(expectedEvents, events); diff != "" {
+		t.Errorf("%s: (-want +got)\n%s", description, diff)
 	}
 }
 

@@ -15,7 +15,10 @@ go_library("benchmarking") {
 go_test("go_benchmarking_test") {
   gopackages = [ "fuchsia.googlesource.com/benchmarking" ]
 
-  deps = [ ":benchmarking" ]
+  deps = [
+    ":benchmarking",
+    "//third_party/golibs:github.com/google/go-cmp",
+  ]
 }
 
 unittest_package("go_benchmarking_tests") {
