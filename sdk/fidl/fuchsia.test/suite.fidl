@@ -56,23 +56,29 @@ table Result {
     1: Status status;
 };
 
-/// Listens to updates from test case run.
-protocol TestCaseListener {
+/// Listens to updates from an individual test case run.
+protocol CaseListener {
     /// Indicates that an invididual test case has completed and result is
     /// available.
     Finished(Result result);
 };
 
 /// Listens to updates from test runs.
-protocol TestListener {
+protocol RunListener {
     /// Indicates that an individual test invocation has started execution.
-    OnTestCaseStarted(Invocation invocation, handle<socket> primary_log, request<TestCaseListener> listener);
+    OnTestCaseStarted(Invocation invocation, handle<socket> primary_log, request<CaseListener> listener);
+};
+
+/// Iterator for listing available test cases.
+protocol CaseIterator {
+    /// Returns the next batch of test cases.
+    GetNext() -> (vector<Case>:MAX cases);
 };
 
 [Discoverable]
 protocol Suite {
     /// Enumerate the test cases available in this test suite.
-    GetTests() -> (vector<Case>:MAX cases);
+    GetTests(request<CaseIterator> iterator);
 
     /// Run the specified test cases. Results are returned over the results
     /// channel.
@@ -80,5 +86,5 @@ protocol Suite {
     /// |tests| may contain duplicate elements, in which case the same test is
     /// run multiple times as indicated.
     /// Closing |test_listener| marks the end of this call.
-    Run(vector<Invocation>:MAX tests, RunOptions options, TestListener listener);
+    Run(vector<Invocation>:MAX tests, RunOptions options, RunListener listener);
 };

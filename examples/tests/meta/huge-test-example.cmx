@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "bin/huge-test-example"
+    }
+}

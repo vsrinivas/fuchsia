@@ -96,6 +96,36 @@ async fn launch_and_test_passing_v2_test() {
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
+async fn launch_and_test_empty_test() {
+    let mut output: Vec<u8> = vec![];
+    let (_result, executed, passed) = run_test(
+        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/no-test-example.cmx"
+            .to_string(),
+        &mut output,
+    )
+    .await
+    .expect("Running test should not fail");
+
+    assert_eq!(executed.len(), 0);
+    assert_eq!(passed.len(), 0);
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn launch_and_test_huge_test() {
+    let mut output: Vec<u8> = vec![];
+    let (_result, executed, passed) = run_test(
+        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/huge-test-example.cmx"
+            .to_string(),
+        &mut output,
+    )
+    .await
+    .expect("Running test should not fail");
+
+    assert_eq!(executed.len(), 1_000);
+    assert_eq!(passed.len(), 1_000);
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_failing_test() {
     let mut output: Vec<u8> = vec![];
     let (result, executed, passed) = run_test(

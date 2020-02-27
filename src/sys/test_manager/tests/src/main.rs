@@ -135,10 +135,22 @@ async fn run_test_suite(mut stream: ftest::SuiteRequestStream) -> Result<(), Err
     let test_name = "TestManager.CanRunTest";
     while let Some(event) = stream.try_next().await? {
         match event {
-            ftest::SuiteRequest::GetTests { responder } => {
-                responder
-                    .send(&mut vec![ftest::Case { name: Some(test_name.to_string()) }].into_iter())
-                    .expect("Should not error out");
+            ftest::SuiteRequest::GetTests { iterator, control_handle: _ } => {
+                let mut stream = iterator.into_stream()?;
+                fasync::spawn(
+                    async move {
+                        let mut iter =
+                            vec![ftest::Case { name: Some(test_name.to_string()) }].into_iter();
+                        while let Some(ftest::CaseIteratorRequest::GetNext { responder }) =
+                            stream.try_next().await?
+                        {
+                            const MAX_CASES_PER_PAGE: usize = 50;
+                            responder.send(&mut iter.by_ref().take(MAX_CASES_PER_PAGE))?;
+                        }
+                        Ok(())
+                    }
+                    .unwrap_or_else(|e: anyhow::Error| println!("error serving tests: {:?}", e)),
+                );
             }
             ftest::SuiteRequest::Run { mut tests, options: _, listener, .. } => {
                 assert_eq!(tests.len(), 1);
@@ -150,11 +162,11 @@ async fn run_test_suite(mut stream: ftest::SuiteRequestStream) -> Result<(), Err
                         .expect("cannot create socket.");
                 let mut result = ftest::Result_ { status: Some(ftest::Status::Passed) };
 
-                let (case_listener_proxy, listener) =
-                    fidl::endpoints::create_proxy::<fidl_fuchsia_test::TestCaseListenerMarker>()
+                let (case_listener_proxy, case_listener) =
+                    fidl::endpoints::create_proxy::<fidl_fuchsia_test::CaseListenerMarker>()
                         .expect("cannot create proxy");
                 proxy
-                    .on_test_case_started(tests.pop().unwrap(), log_end, listener)
+                    .on_test_case_started(tests.pop().unwrap(), log_end, case_listener)
                     .expect("on_test_case_started failed");
                 run_test(logger, &mut result).await?;
                 case_listener_proxy.finished(result).expect("on_test_case_finished failed");

@@ -6,7 +6,7 @@ use {
     anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_test as ftest,
     fsyslog::{fx_log_err, fx_log_info},
-    ftest::{Invocation, TestListenerProxy},
+    ftest::{Invocation, RunListenerProxy},
     fuchsia_async as fasync, fuchsia_syslog as fsyslog, fuchsia_zircon as zx,
     futures::io::AsyncWriteExt,
     futures::prelude::*,
@@ -109,17 +109,28 @@ impl RustTestAdapter {
             stream.try_next().await.context("Failed to get next test suite event")?
         {
             match event {
-                ftest::SuiteRequest::GetTests { responder } => {
+                ftest::SuiteRequest::GetTests { iterator, control_handle: _ } => {
                     fx_log_info!("gathering tests");
-                    let test_cases =
+                    let mut stream = iterator.into_stream()?;
+                    let test_names =
                         self.enumerate_tests().await.context("Failed to enumerate test cases")?;
-                    responder
-                        .send(
-                            &mut test_cases
-                                .into_iter()
-                                .map(|name| ftest::Case { name: Some(name) }),
-                        )
-                        .context("Failed to send test cases to fuchsia.test.Suite")?;
+                    let mut test_cases =
+                        test_names.into_iter().map(|name| ftest::Case { name: Some(name) });
+                    fasync::spawn(
+                        async move {
+                            while let Some(ftest::CaseIteratorRequest::GetNext { responder }) =
+                                stream.try_next().await?
+                            {
+                                const MAX_CASES_PER_PAGE: usize = 50;
+                                responder
+                                    .send(&mut test_cases.by_ref().take(MAX_CASES_PER_PAGE))?;
+                            }
+                            Ok(())
+                        }
+                        .unwrap_or_else(|e: anyhow::Error| {
+                            fx_log_err!("error serving tests: {:?}", e)
+                        }),
+                    );
                 }
                 ftest::SuiteRequest::Run { tests, listener, .. } => {
                     let proxy =
@@ -136,7 +147,7 @@ impl RustTestAdapter {
     async fn run_tests(
         &self,
         invocations: Vec<Invocation>,
-        proxy: TestListenerProxy,
+        proxy: RunListenerProxy,
     ) -> Result<(), Error> {
         fx_log_info!("running tests");
         for invocation in invocations {
@@ -152,7 +163,7 @@ impl RustTestAdapter {
             let mut test_logger = fasync::Socket::from_socket(test_logger)?;
 
             let (case_listener_proxy, listener) =
-                fidl::endpoints::create_proxy::<fidl_fuchsia_test::TestCaseListenerMarker>()
+                fidl::endpoints::create_proxy::<fidl_fuchsia_test::CaseListenerMarker>()
                     .context("cannot create proxy")?;
 
             proxy
@@ -360,8 +371,8 @@ mod tests {
     use {
         super::*,
         fidl_fuchsia_test::{
-            TestCaseListenerRequest::Finished, TestListenerMarker,
-            TestListenerRequest::OnTestCaseStarted, TestListenerRequestStream,
+            CaseListenerRequest::Finished, RunListenerMarker,
+            RunListenerRequest::OnTestCaseStarted, RunListenerRequestStream,
         },
         std::cmp::PartialEq,
     };
@@ -377,7 +388,7 @@ mod tests {
     }
 
     async fn collect_results(
-        mut listener: TestListenerRequestStream,
+        mut listener: RunListenerRequestStream,
     ) -> Result<Vec<ListenerEvent>, Error> {
         let mut events = vec![];
         while let Some(result_event) = listener.try_next().await? {
@@ -476,13 +487,13 @@ mod tests {
             "tests::c_passing_test",
         ]);
 
-        let (test_listener_client, test_listener) =
-            fidl::endpoints::create_request_stream::<TestListenerMarker>()
-                .expect("failed to create test_listener");
-        let proxy = test_listener_client.into_proxy().expect("can't convert listener into proxy");
+        let (run_listener_client, run_listener) =
+            fidl::endpoints::create_request_stream::<RunListenerMarker>()
+                .expect("failed to create run_listener");
+        let proxy = run_listener_client.into_proxy().expect("can't convert listener into proxy");
 
         let run_future = adapter.run_tests(tests, proxy);
-        let result_future = collect_results(test_listener);
+        let result_future = collect_results(run_listener);
 
         let (run_option, result_option) = future::join(run_future, result_future).await;
 
@@ -509,6 +520,18 @@ mod tests {
         let actual_results = result_option.expect("Failed to collect results");
 
         assert_eq!(expected_results, actual_results);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn enumerate_huge_tests() {
+        let test_info =
+            TestInfo { test_path: String::from("/pkg/bin/huge_rust_tests"), test_args: vec![] };
+
+        let adapter = RustTestAdapter::new(test_info).expect("Cannot create adapter");
+
+        let actual_tests = adapter.enumerate_tests().await.expect("Can't enumerate tests");
+
+        assert_eq!(1_000, actual_tests.len());
     }
 
     #[test]

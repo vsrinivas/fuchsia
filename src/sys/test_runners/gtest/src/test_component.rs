@@ -12,7 +12,7 @@ use {
         OPEN_RIGHT_WRITABLE,
     },
     fidl_fuchsia_process as fproc, fidl_fuchsia_test as ftest,
-    fidl_fuchsia_test::{Invocation, Result_ as TestResult, Status, TestListenerProxy},
+    fidl_fuchsia_test::{Invocation, Result_ as TestResult, RunListenerProxy, Status},
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_runtime::job_default,
@@ -433,7 +433,7 @@ impl TestServer {
         &self,
         invocation: Invocation,
         component: Arc<Component>,
-        test_listener: &TestListenerProxy,
+        run_listener: &RunListenerProxy,
     ) -> Result<(), RunTestError> {
         let test = invocation.name.as_ref().ok_or(RunTestError::TestCaseName)?.to_string();
         fx_log_info!("Running test {}", test);
@@ -470,11 +470,11 @@ impl TestServer {
             .unwrap();
 
         let (case_listener_proxy, listener) =
-            fidl::endpoints::create_proxy::<fidl_fuchsia_test::TestCaseListenerMarker>()
+            fidl::endpoints::create_proxy::<fidl_fuchsia_test::CaseListenerMarker>()
                 .map_err(FidlError::CreateProxy)
                 .unwrap();
 
-        test_listener
+        run_listener
             .on_test_case_started(invocation, log_client, listener)
             .map_err(RunTestError::SendStart)?;
         let test_logger =
@@ -563,17 +563,17 @@ impl TestServer {
         Ok(())
     }
 
-    /// Runs tests defined by `tests_names` and uses `test_listener` to send test events.
+    /// Runs requested tests and sends test events to the given listener.
     // TODO(45852): Support disabled tests.
     // TODO(45853): Support test stdout, or devise a mechanism to replace it.
     pub async fn run_tests(
         &self,
         invocations: Vec<Invocation>,
         component: Arc<Component>,
-        test_listener: TestListenerProxy,
+        run_listener: RunListenerProxy,
     ) -> Result<(), RunTestError> {
         for invocation in invocations {
-            self.run_test(invocation, component.clone(), &test_listener).await?;
+            self.run_test(invocation, component.clone(), &run_listener).await?;
         }
         Ok(())
     }
@@ -675,7 +675,7 @@ impl TestServer {
     ) -> Result<(), SuiteServerError> {
         while let Some(event) = stream.try_next().await.map_err(SuiteServerError::Stream)? {
             match event {
-                ftest::SuiteRequest::GetTests { responder } => {
+                ftest::SuiteRequest::GetTests { iterator, control_handle: _ } => {
                     let component = component.upgrade();
                     if component.is_none() {
                         // no component object, return, test has ended.
@@ -683,9 +683,16 @@ impl TestServer {
                     }
 
                     let tests = self.enumerate_tests(component.unwrap()).await?;
-                    responder
-                        .send(&mut tests.into_iter().map(|name| ftest::Case { name: Some(name) }))
-                        .map_err(SuiteServerError::Response)?;
+                    let mut stream = iterator.into_stream().map_err(SuiteServerError::Stream)?;
+                    let mut iter = tests.into_iter().map(|name| ftest::Case { name: Some(name) });
+                    while let Some(ftest::CaseIteratorRequest::GetNext { responder }) =
+                        stream.try_next().await.expect("Can't get next CaseIterator request")
+                    {
+                        const MAX_CASES_PER_PAGE: usize = 50;
+                        responder
+                            .send(&mut iter.by_ref().take(MAX_CASES_PER_PAGE))
+                            .map_err(SuiteServerError::Response)?;
+                    }
                 }
                 ftest::SuiteRequest::Run { tests, options: _, listener, .. } => {
                     let component = component.upgrade();
@@ -771,8 +778,8 @@ mod tests {
         anyhow::{Context as _, Error},
         fidl::endpoints::ClientEnd,
         fidl_fuchsia_test::{
-            TestCaseListenerRequest::Finished, TestListenerMarker,
-            TestListenerRequest::OnTestCaseStarted, TestListenerRequestStream,
+            CaseListenerRequest::Finished, RunListenerMarker,
+            RunListenerRequest::OnTestCaseStarted, RunListenerRequestStream,
         },
         fio::OPEN_RIGHT_WRITABLE,
         fuchsia_runtime::job_default,
@@ -905,7 +912,7 @@ mod tests {
     }
 
     async fn collect_listener_event(
-        mut listener: TestListenerRequestStream,
+        mut listener: RunListenerRequestStream,
     ) -> Result<Vec<ListenerEvent>, Error> {
         let mut ret = vec![];
         // collect loggers so that they do not die.
@@ -941,9 +948,9 @@ mod tests {
         let component = sample_test_component()?;
         let server = TestServer::new(test_data.proxy()?);
 
-        let (test_listener_client, test_listener) =
-            fidl::endpoints::create_request_stream::<TestListenerMarker>()
-                .expect("Failed to create test_listener");
+        let (run_listener_client, run_listener) =
+            fidl::endpoints::create_request_stream::<RunListenerMarker>()
+                .expect("Failed to create run_listener");
 
         let run_fut = server.run_tests(
             names_to_invocation(vec![
@@ -953,10 +960,10 @@ mod tests {
                 "Tests/SampleParameterizedTestFixture.Test/2",
             ]),
             component,
-            test_listener_client.into_proxy().expect("Can't convert listener into proxy"),
+            run_listener_client.into_proxy().expect("Can't convert listener into proxy"),
         );
 
-        let result_fut = collect_listener_event(test_listener);
+        let result_fut = collect_listener_event(run_listener);
 
         let (result, events_result) = future::join(run_fut, result_fut).await;
         result.expect("Failed to run tests");
@@ -996,17 +1003,17 @@ mod tests {
         let component = sample_test_component()?;
         let server = TestServer::new(test_data.proxy()?);
 
-        let (test_listener_client, test_listener) =
-            fidl::endpoints::create_request_stream::<TestListenerMarker>()
-                .expect("Failed to create test_listener");
+        let (run_listener_client, run_listener) =
+            fidl::endpoints::create_request_stream::<RunListenerMarker>()
+                .expect("Failed to create run_listener");
 
         let run_fut = server.run_tests(
             vec![],
             component,
-            test_listener_client.into_proxy().expect("Can't convert listener into proxy"),
+            run_listener_client.into_proxy().expect("Can't convert listener into proxy"),
         );
 
-        let result_fut = collect_listener_event(test_listener);
+        let result_fut = collect_listener_event(run_listener);
 
         let (result, events_result) = future::join(run_fut, result_fut).await;
         result.expect("Failed to run tests");
@@ -1023,17 +1030,17 @@ mod tests {
         let component = sample_test_component()?;
         let server = TestServer::new(test_data.proxy()?);
 
-        let (test_listener_client, test_listener) =
-            fidl::endpoints::create_request_stream::<TestListenerMarker>()
-                .expect("Failed to create test_listener");
+        let (run_listener_client, run_listener) =
+            fidl::endpoints::create_request_stream::<RunListenerMarker>()
+                .expect("Failed to create run_listener");
 
         let run_fut = server.run_tests(
             names_to_invocation(vec!["SampleTest2.SimplePass"]),
             component,
-            test_listener_client.into_proxy().expect("Can't convert listener into proxy"),
+            run_listener_client.into_proxy().expect("Can't convert listener into proxy"),
         );
 
-        let result_fut = collect_listener_event(test_listener);
+        let result_fut = collect_listener_event(run_listener);
 
         let (result, events_result) = future::join(run_fut, result_fut).await;
         result.expect("Failed to run tests");

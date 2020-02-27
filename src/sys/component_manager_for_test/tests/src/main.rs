@@ -18,9 +18,19 @@ async fn can_launch_and_connect_to_test_service() {
     )
     .expect("cannot launch component_manager_for_test");
 
-    let suite = app.connect_to_service::<SuiteMarker>().expect("cannot connect to Suite");
+    let suite = app.connect_to_service::<SuiteMarker>().expect("Cannot connect to Suite");
 
-    let tests = suite.get_tests().await.expect("Cannot get tests");
+    let (case_iterator, server_end) =
+        fidl::endpoints::create_proxy().expect("Cannot receive test cases");
+    suite.get_tests(server_end).ok();
+    let mut tests = vec![];
+    loop {
+        let chunk = case_iterator.get_next().await.expect("Cannot get next test cases");
+        if chunk.is_empty() {
+            break;
+        }
+        tests.extend(chunk);
+    }
 
     // make sure component_manager_for_test was able to launch test and expose the service.
     assert_eq!(tests.len(), 3);

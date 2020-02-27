@@ -66,6 +66,16 @@ executable("no-test-example") {
   sources = [ "no_test_example.cc" ]
 }
 
+executable("huge-test-example") {
+  deps = [
+    ":test_suite_lib",
+    "//sdk/lib/sys/cpp",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+  ]
+  sources = [ "huge_test_example.cc" ]
+}
+
 executable("get-tests-hangs-example") {
   deps = [
     ":test_suite_lib",
@@ -111,6 +121,7 @@ group("all_bins") {
     ":failing-test-example",
     ":get-tests-closes-channel-example",
     ":get-tests-hangs-example",
+    ":huge-test-example",
     ":incomplete-test-example",
     ":invalid-test-example",
     ":no-test-example",
@@ -130,11 +141,12 @@ package("example-tests") {
     {
       name = "passing-test-example"
     },
-
     {
       name = "no-test-example"
     },
-
+    {
+      name = "huge-test-example"
+    },
     {
       name = "failing-test-example"
     },
@@ -182,6 +194,10 @@ package("example-tests") {
     {
       path = "meta/no-test-example.cmx"
       dest = "no-test-example.cmx"
+    },
+    {
+      path = "meta/huge-test-example.cmx"
+      dest = "huge-test-example.cmx"
     },
     {
       path = "meta/failing-test-example.cmx"

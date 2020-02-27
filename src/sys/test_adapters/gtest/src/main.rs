@@ -8,7 +8,7 @@ use {
     anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_test as ftest, fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
-    fuchsia_syslog::fx_log_info,
+    fuchsia_syslog::{fx_log_err, fx_log_info},
     futures::prelude::*,
     gtest_adapter::GTestAdapter,
     std::env,
@@ -41,11 +41,23 @@ async fn run_test_suite(
 ) -> Result<(), Error> {
     while let Some(event) = stream.try_next().await? {
         match event {
-            ftest::SuiteRequest::GetTests { responder } => {
+            ftest::SuiteRequest::GetTests { iterator, control_handle: _ } => {
                 let tests = adapter.enumerate_tests().await?;
-                responder
-                    .send(&mut tests.into_iter().map(|name| ftest::Case { name: Some(name) }))
-                    .context("Cannot send fidl response")?;
+                let mut stream = iterator.into_stream()?;
+                fasync::spawn(
+                    async move {
+                        let mut iter =
+                            tests.into_iter().map(|name| ftest::Case { name: Some(name) });
+                        while let Some(ftest::CaseIteratorRequest::GetNext { responder }) =
+                            stream.try_next().await?
+                        {
+                            const MAX_CASES_PER_PAGE: usize = 50;
+                            responder.send(&mut iter.by_ref().take(MAX_CASES_PER_PAGE))?;
+                        }
+                        Ok(())
+                    }
+                    .unwrap_or_else(|e: anyhow::Error| fx_log_err!("error serving tests: {:?}", e)),
+                );
             }
             ftest::SuiteRequest::Run { tests, options: _, listener, .. } => {
                 adapter

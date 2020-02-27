@@ -1,0 +1,45 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+executable("bin") {
+  output_name = "huge_gtest_adapter_example"
+  testonly = true
+  sources = [ "huge_gtest_adapter_example.cc" ]
+
+  deps = [ "//src/lib/fxl/test:gtest_main" ]
+}
+
+package("huge_gtest_adapter_example") {
+  testonly = true
+  deps = [
+    ":bin",
+    "//src/sys/test_adapters/gtest",
+  ]
+
+  binaries = [
+    {
+      name = "gtest_adapter"
+    },
+  ]
+
+  tests = [
+    {
+      name = "huge_gtest_adapter_example"
+    },
+  ]
+
+  meta = [
+    {
+      path = "meta/huge_gtest_adapter_example.cml"
+      dest = "huge_gtest_adapter_example.cm"
+    },
+  ]
+}
+
+group("huge-example") {
+  testonly = true
+  deps = [ ":huge_gtest_adapter_example" ]
+}

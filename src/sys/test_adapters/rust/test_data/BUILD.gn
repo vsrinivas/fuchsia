@@ -5,6 +5,7 @@
 group("test_data") {
   testonly = true
   public_deps = [
+    "huge_rust_tests",
     "no_rust_tests",
     "simple_rust_tests",
     "test_results",

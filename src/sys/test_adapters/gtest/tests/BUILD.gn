@@ -61,6 +61,7 @@ group("tests") {
   deps = [
     ":gtest_adapter_integration_test",
     "echo-example",
+    "huge-example",
     "simple-example",
   ]
 }

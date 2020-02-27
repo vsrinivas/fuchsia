@@ -8,8 +8,8 @@ use {
     anyhow::{format_err, Context as _},
     fidl_fuchsia_sys::LauncherProxy,
     fidl_fuchsia_test::{
-        Invocation, TestCaseListenerRequest::Finished, TestCaseListenerRequestStream,
-        TestListenerRequest::OnTestCaseStarted,
+        CaseListenerRequest::Finished, CaseListenerRequestStream, Invocation,
+        RunListenerRequest::OnTestCaseStarted,
     },
     fuchsia_async as fasync,
     fuchsia_syslog::{fx_vlog, macros::*},
@@ -102,7 +102,7 @@ impl TestCaseProcessor {
     /// should call `wait_for_finish` method  to make sure all the background task completed.
     pub fn new(
         test_case_name: String,
-        listener: TestCaseListenerRequestStream,
+        listener: CaseListenerRequestStream,
         logger_socket: zx::Socket,
         sender: mpsc::Sender<TestEvent>,
     ) -> Self {
@@ -118,7 +118,7 @@ impl TestCaseProcessor {
 
     async fn process_run_event(
         name: String,
-        mut listener: TestCaseListenerRequestStream,
+        mut listener: CaseListenerRequestStream,
         mut log_fut: Option<BoxFuture<'static, Result<(), anyhow::Error>>>,
         mut sender: mpsc::Sender<TestEvent>,
     ) -> Result<(), anyhow::Error> {
@@ -211,27 +211,53 @@ pub async fn run_and_collect_results(
     test_url: String,
 ) -> Result<(), anyhow::Error> {
     fx_vlog!(1, "enumerating tests");
-    let cases =
-        suite.get_tests().await.map_err(|e| format_err!("Error getting test steps: {}", e))?;
-    fx_vlog!(1, "got test list: {:#?}", cases);
+    let (case_iterator, server_end) = fidl::endpoints::create_proxy()?;
+    suite.get_tests(server_end).map_err(|e| format_err!("Error getting test steps: {}", e))?;
+
     let mut invocations = Vec::<Invocation>::new();
-    for case in cases {
-        invocations.push(Invocation { name: Some(case.name.unwrap()), tag: None });
+    loop {
+        let cases = case_iterator.get_next().await?;
+        if cases.is_empty() {
+            break;
+        }
+        for case in cases {
+            invocations.push(Invocation { name: Some(case.name.unwrap()), tag: None });
+        }
     }
-    let (test_listener_client, mut test_listener) =
-        fidl::endpoints::create_request_stream::<fidl_fuchsia_test::TestListenerMarker>()
-            .map_err(|e| format_err!("Error creating request stream: {}", e))?;
+    fx_vlog!(1, "invocations: {:#?}", invocations);
+
     fx_vlog!(1, "running tests");
-    suite
-        .run(
-            &mut invocations.into_iter().map(|i| i.into()),
-            fidl_fuchsia_test::RunOptions {},
-            test_listener_client,
-        )
-        .map_err(|e| format_err!("Error running tests in '{}': {}", test_url, e))?;
+    let mut invocations_iter = invocations.into_iter();
+    loop {
+        const INVOCATIONS_CHUNK: usize = 50;
+        let chunk = invocations_iter.by_ref().take(INVOCATIONS_CHUNK).collect::<Vec<_>>();
+        if chunk.is_empty() {
+            break;
+        }
+        run_invocations(&suite, chunk, &mut sender)
+            .map_err(|e| format_err!("Error running tests in '{}': {}", test_url, e))
+            .await?;
+    }
+    Ok(())
+}
+
+/// Runs the test component using `suite` and collects logs and results.
+async fn run_invocations(
+    suite: &fidl_fuchsia_test::SuiteProxy,
+    invocations: Vec<Invocation>,
+    sender: &mut mpsc::Sender<TestEvent>,
+) -> Result<(), anyhow::Error> {
+    let (run_listener_client, mut run_listener) =
+        fidl::endpoints::create_request_stream::<fidl_fuchsia_test::RunListenerMarker>()
+            .map_err(|e| format_err!("Error creating request stream: {}", e))?;
+    suite.run(
+        &mut invocations.into_iter().map(|i| i.into()),
+        fidl_fuchsia_test::RunOptions {},
+        run_listener_client,
+    )?;
 
     let mut test_case_processors = Vec::new();
-    while let Some(result_event) = test_listener
+    while let Some(result_event) = run_listener
         .try_next()
         .await
         .map_err(|e| format_err!("Error waiting for listener: {}", e))?

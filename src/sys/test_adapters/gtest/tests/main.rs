@@ -87,3 +87,20 @@ async fn launch_and_run_sample_test() {
     assert_eq!(executed, vec!["SampleTest.Failing", "SampleTest.Passing"]);
     assert_eq!(passed, vec!["SampleTest.Passing"]);
 }
+
+// Stress test with a very large gtest suite.
+#[fuchsia_async::run_singlethreaded(test)]
+async fn launch_and_run_huge_test() {
+    let mut output: Vec<u8> = vec![];
+    let (result, executed, passed) = run_test(
+        "fuchsia-pkg://fuchsia.com/huge_gtest_adapter_example#meta/huge_gtest_adapter_example.cm"
+            .to_string(),
+        &mut output,
+    )
+    .await
+    .expect("Running test should not fail");
+
+    assert_eq!(result, TestResult::Passed);
+    assert_eq!(executed.len(), 1_000);
+    assert_eq!(passed.len(), 1_000);
+}

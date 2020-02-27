@@ -1,0 +1,26 @@
+{
+    "program": {
+        // Using a trampoline
+        "binary": "bin/gtest_adapter",
+        "args": ["/pkg/test/huge_gtest_adapter_example"]
+    },
+    "use": [
+        { "runner": "elf" },
+        {
+            "protocol": "/svc/fuchsia.process.Launcher",
+        },
+        {
+            "protocol": "/svc/fuchsia.logger.LogSink",
+        },
+        {
+            "directory": "/tmp",
+            "rights": ["rw*"],
+        },
+    ],
+    "expose": [
+        {
+            "protocol": "/svc/fuchsia.test.Suite",
+            "from": "self",
+        },
+    ],
+}

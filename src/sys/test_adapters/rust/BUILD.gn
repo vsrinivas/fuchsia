@@ -50,6 +50,9 @@ test_package("rust_test_adapter_tests") {
       name = "no_rust_tests"
     },
     {
+      name = "huge_rust_tests"
+    },
+    {
       name = "test_results"
     },
   ]

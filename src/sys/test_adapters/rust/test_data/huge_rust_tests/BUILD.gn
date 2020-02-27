@@ -1,0 +1,16 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_test.gni")
+
+rustc_test("test") {
+  name = "huge_rust_tests"
+  edition = "2018"
+  deps = [ "//src/sys/test_adapters/rust/test_data/huge_rust_tests/macro:gen-tests-macro" ]
+}
+
+group("huge_rust_tests") {
+  testonly = true
+  public_deps = [ ":test" ]
+}
