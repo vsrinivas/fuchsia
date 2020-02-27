@@ -491,7 +491,7 @@ TEST_F(FeedbackAgentIntegrationTest, GetData_CheckKeys) {
   EXPECT_TRUE(has_entry_for_test_app);
 }
 
-TEST_F(FeedbackAgentIntegrationTest, GetData_CheckCobalt) {
+TEST_F(FeedbackAgentIntegrationTest, DISABLED_GetData_CheckCobalt) {
   // We make sure the components serving the services GetData() connects to are up and running.
   WaitForLogger();
   WaitForChannelProvider();
