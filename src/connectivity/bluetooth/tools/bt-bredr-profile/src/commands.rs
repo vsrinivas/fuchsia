@@ -95,6 +95,9 @@ gen_commands! {
                             \t\t'channel-id' must correspond to a connected channel listed by the \n\
                             \t\t'channels' command\n\n\
                             \t\tExample: disconnect-l2cap 0"),
+        Write = ("write", ["channel-id", "data"],
+                "\n\t\tWrite 'data' on the socket/channel represented by 'channel-id'\n\n\
+                 \t\tExample: write 0 0123456789abcd"),
         Help = ("help", [], "Print command help"),
         Exit = ("exit", [], "Remove all services, close all channels, and exit the REPL."),
         Quit = ("quit", [], "Alias for 'exit'."),

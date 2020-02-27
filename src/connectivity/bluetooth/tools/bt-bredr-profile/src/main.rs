@@ -259,6 +259,23 @@ fn disconnect_l2cap(state: Arc<RwLock<ProfileState>>, args: &Vec<String>) -> Res
     Ok(())
 }
 
+fn write(state: Arc<RwLock<ProfileState>>, args: &Vec<String>) -> Result<(), Error> {
+    if args.len() != 2 {
+        return Err(anyhow!("Invalid number of arguments"));
+    }
+
+    let chan_id = args[0].parse::<u32>().map_err(|_| anyhow!("channel-id must be an integer"))?;
+    let bytes = args[1].as_bytes();
+
+    let num_bytes = match state.read().channels.map().get(&chan_id) {
+        Some(chan) => chan.socket.write(bytes).map_err(|_| anyhow!("error writing data"))?,
+        None => return Err(anyhow!("No channel with id {} exists", chan_id)),
+    };
+    println!("{} bytes written", num_bytes);
+
+    Ok(())
+}
+
 fn cleanup(state: Arc<RwLock<ProfileState>>, profile_svc: &ProfileProxy) {
     for (id, _) in &state.read().services {
         if let Err(e) = profile_svc.remove_service(*id) {
@@ -315,6 +332,9 @@ async fn handle_cmd(
         }
         Cmd::DisconnectL2cap => {
             disconnect_l2cap(state.clone(), &args)?;
+        }
+        Cmd::Write => {
+            write(state.clone(), &args)?;
         }
         Cmd::Help => {
             println!("{}", Cmd::help_msg());

@@ -1,5 +1,4 @@
 # bt-bredr-profile
-
 `bt-bredr-profile` is a command-line front-end for the BR/EDR profile API ([fuchsia.bluetooth.bredr/Profile](../../../../../sdk/fidl/fuchsia.bluetooth.bredr/profile.fidl)).
 
 ## Build
@@ -26,7 +25,6 @@ will fail for such peers. `bt-cli` may be used in conjunction with this tool to
 control peer connections.
 
 #### Usage
-
 `connect-l2cap <peer-id> <psm> <channel-mode> <max-rx-sdu-size>`
 
 ##### Arguments
@@ -61,11 +59,9 @@ Prints the assigned Ids of connected channels. These Ids are local to the REPL
 and are only used for indicating which channel to perform operations on in other commands.
 
 #### Usage
-
 `channels`
 
 #### Example
-
 ```
 profile> channels
 Channel:
@@ -73,6 +69,17 @@ Channel:
   Mode: Basic
   Max Tx Sdu Size: 672
 ```
+
+### write
+Write data on a socket/channel.
+
+#### Usage
+`write <channel-id> <data>`
+
+##### Arguments
+- `channel-id` is an integer assigned to a channel by the REPL. It must
+  correspond to a connected channel listed by the `channels` command.
+- `data` is a string of characters that will be written on the channel.
 
 ### add-service
 Targets `Profile.AddService`.
@@ -120,7 +127,6 @@ Lists services registered with the `add-service` command.
 `services`
 
 #### Example
-
 ```
 profile> services
 Service:
@@ -129,19 +135,15 @@ Service:
   Max Rx Sdu Size: 48
 ```
 
-
 ### exit / quit
-
 Removes all services, closes all open channels, and exits the REPL.
 
 ## Events
 ### OnConnected
-
 Corresponds to the `Profile.OnConnected` event. Printed when a channel connects to
 a service previously added with the `add-service` command.
 
 ### Example
-
 ```
  OnConnected Event:
   Service Id: 0
