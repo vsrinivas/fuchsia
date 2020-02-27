@@ -16,13 +16,7 @@ declare_args() {
 package("use_media_decoder") {
   testonly = true
 
-  deps = [
-    "//src/media/codec:codec_factory",
-    "//src/media/codec:codec_runner_sw_aac",
-    "//src/media/codec:codec_runner_sw_ffmpeg",
-    "//src/media/codec:codec_runner_sw_sbc",
-    "//src/media/codec/examples/use_media_decoder",
-  ]
+  deps = [ "//src/media/codec/examples/use_media_decoder" ]
 
   binaries = [
     {
@@ -42,11 +36,8 @@ package("use_media_decoder") {
 package("use_h264_decoder_test") {
   testonly = true
 
-  deps = [
-    "//src/media/codec:codec_factory",
-    "//src/media/codec:codec_runner_sw_ffmpeg",
-    "//src/media/codec/examples/use_media_decoder:use_h264_decoder_test",
-  ]
+  deps =
+      [ "//src/media/codec/examples/use_media_decoder:use_h264_decoder_test" ]
 
   meta = [
     {
@@ -81,10 +72,7 @@ package("use_h264_decoder_test") {
 package("use_h264_decoder_secure_output_test") {
   testonly = true
 
-  deps = [
-    "//src/media/codec:codec_factory",
-    "//src/media/codec/examples/use_media_decoder:use_h264_decoder_secure_output_test",
-  ]
+  deps = [ "//src/media/codec/examples/use_media_decoder:use_h264_decoder_secure_output_test" ]
 
   meta = [
     {
@@ -118,10 +106,7 @@ package("use_h264_decoder_secure_output_test") {
 package("use_h264_decoder_secure_input_output_test") {
   testonly = true
 
-  deps = [
-    "//src/media/codec:codec_factory",
-    "//src/media/codec/examples/use_media_decoder:use_h264_decoder_secure_input_output_test",
-  ]
+  deps = [ "//src/media/codec/examples/use_media_decoder:use_h264_decoder_secure_input_output_test" ]
 
   meta = [
     {
@@ -154,7 +139,6 @@ package("h264_decoder_fuzzer_test") {
   testonly = true
 
   deps = [
-    "//src/media/codec:codec_factory",
     "//src/media/codec/examples/use_media_decoder:h264_decoder_fuzzer_test",
   ]
 
@@ -191,10 +175,8 @@ package("h264_decoder_fuzzer_test") {
 package("vp9_decoder_fuzzer_test") {
   testonly = true
 
-  deps = [
-    "//src/media/codec:codec_factory",
-    "//src/media/codec/examples/use_media_decoder:vp9_decoder_fuzzer_test",
-  ]
+  deps =
+      [ "//src/media/codec/examples/use_media_decoder:vp9_decoder_fuzzer_test" ]
 
   meta = [
     {
@@ -231,11 +213,7 @@ package("vp9_decoder_fuzzer_test") {
 package("use_aac_decoder_test") {
   testonly = true
 
-  deps = [
-    "//src/media/codec:codec_factory",
-    "//src/media/codec:codec_runner_sw_aac",
-    "//src/media/codec/examples/use_media_decoder:use_aac_decoder_test",
-  ]
+  deps = [ "//src/media/codec/examples/use_media_decoder:use_aac_decoder_test" ]
 
   tests = [
     {
@@ -262,10 +240,7 @@ package("use_aac_decoder_test") {
 package("use_vp9_decoder_test") {
   testonly = true
 
-  deps = [
-    "//src/media/codec:codec_factory",
-    "//src/media/codec/examples/use_media_decoder:use_vp9_decoder_test",
-  ]
+  deps = [ "//src/media/codec/examples/use_media_decoder:use_vp9_decoder_test" ]
 
   meta = [
     {
@@ -305,10 +280,7 @@ package("use_vp9_decoder_test") {
 package("use_vp9_decoder_24_output_frames_test") {
   testonly = true
 
-  deps = [
-    "//src/media/codec:codec_factory",
-    "//src/media/codec/examples/use_media_decoder:use_vp9_decoder_24_output_frames_test",
-  ]
+  deps = [ "//src/media/codec/examples/use_media_decoder:use_vp9_decoder_24_output_frames_test" ]
 
   meta = [
     {
@@ -346,10 +318,7 @@ package("use_vp9_decoder_24_output_frames_test") {
 package("use_vp9_decoder_secure_output_test") {
   testonly = true
 
-  deps = [
-    "//src/media/codec:codec_factory",
-    "//src/media/codec/examples/use_media_decoder:use_vp9_decoder_secure_output_test",
-  ]
+  deps = [ "//src/media/codec/examples/use_media_decoder:use_vp9_decoder_secure_output_test" ]
 
   meta = [
     {
@@ -382,10 +351,7 @@ package("use_vp9_decoder_secure_output_test") {
 package("use_vp9_decoder_secure_input_output_test") {
   testonly = true
 
-  deps = [
-    "//src/media/codec:codec_factory",
-    "//src/media/codec/examples/use_media_decoder:use_vp9_decoder_secure_input_output_test",
-  ]
+  deps = [ "//src/media/codec/examples/use_media_decoder:use_vp9_decoder_secure_input_output_test" ]
 
   meta = [
     {
@@ -419,10 +385,7 @@ template("vp9_file_decoder_conformance_test") {
   package(target_name) {
     testonly = true
 
-    deps = [
-      "//src/media/codec:codec_factory",
-      "//src/media/codec/examples/use_media_decoder:vp9_decoder_conformance_test",
-    ]
+    deps = [ "//src/media/codec/examples/use_media_decoder:vp9_decoder_conformance_test" ]
 
     meta = [
       {
@@ -466,7 +429,6 @@ package("vp9_decoder_conformance_http") {
   testonly = true
 
   deps = [
-    "//src/media/codec:codec_factory",
     "//src/media/codec/examples/use_media_decoder:vp9_decoder_conformance_test",
   ]
 
