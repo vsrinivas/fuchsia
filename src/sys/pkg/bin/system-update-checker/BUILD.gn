@@ -58,7 +58,6 @@ package("system-update-checker") {
     {
       name = "system_update_checker"
       dest = "system-update-checker"
-      shell = true
     },
   ]
   meta = [
