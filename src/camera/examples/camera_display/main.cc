@@ -17,19 +17,15 @@ int main(int argc, const char** argv) {
 
   // Chaos mode adds random delays between frame acquisition, presentation, and release.
   bool chaos = false;
-  bool image_io = false;
   for (auto i = 1; i < argc; ++i) {
     if (std::string(argv[i]) == "--chaos") {
       std::cout << "Chaos mode enabled!" << std::endl;
       chaos = true;
-    } else if (std::string(argv[i]) == "--io") {
-      std::cout << "Image IO enabled!" << std::endl;
-      image_io = true;
     }
   }
   scenic::ViewProviderComponent component(
-      [&loop, chaos, image_io](scenic::ViewContext context) {
-        return camera::DemoView::Create(std::move(context), &loop, chaos, image_io);
+      [&loop, chaos](scenic::ViewContext context) {
+        return camera::DemoView::Create(std::move(context), &loop, chaos);
       },
       &loop);
   zx_status_t status = loop.Run();

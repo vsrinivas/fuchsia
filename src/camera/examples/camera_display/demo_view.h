@@ -27,10 +27,10 @@ namespace camera {
 // constructed with buffers populated by a stream provider.
 class DemoView : public scenic::BaseView {
  public:
-  explicit DemoView(scenic::ViewContext context, async::Loop* loop, bool chaos, bool image_io);
+  explicit DemoView(scenic::ViewContext context, async::Loop* loop, bool chaos);
   ~DemoView() override;
   static std::unique_ptr<DemoView> Create(scenic::ViewContext context, async::Loop* loop,
-                                          bool chaos, bool image_io);
+                                          bool chaos);
 
  private:
   // |scenic::BaseView|
@@ -54,7 +54,6 @@ class DemoView : public scenic::BaseView {
     float shape_height;
     bool should_rotate;
     std::map<uint32_t, std::pair<std::unique_ptr<async::Wait>, zx::event>> waiters;
-    std::unique_ptr<camera::ImageIOUtil> image_io_util;
   };
 
   async::Loop* loop_;
@@ -66,7 +65,6 @@ class DemoView : public scenic::BaseView {
   float total_width_;
   float max_height_;
   TextNode text_node_;
-  bool image_io_;
   trace::TraceProviderWithFdio trace_provider_;
 };
 

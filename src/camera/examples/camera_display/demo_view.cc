@@ -18,7 +18,6 @@
 
 #include <fbl/unique_fd.h>
 
-#include "src/camera/lib/stream_utils/image_io_util.h"
 #include "src/lib/syslog/cpp/logger.h"
 #include "src/ui/lib/glm_workaround/glm_workaround.h"
 
@@ -47,13 +46,12 @@ static fuchsia::images::PixelFormat convertFormat(fuchsia::sysmem::PixelFormatTy
   }
 }
 
-DemoView::DemoView(scenic::ViewContext context, async::Loop* loop, bool chaos, bool image_io)
+DemoView::DemoView(scenic::ViewContext context, async::Loop* loop, bool chaos)
     : BaseView(std::move(context), "Camera Demo"),
       loop_(loop),
       chaos_(chaos),
       chaos_dist_(kChaosMaxSleepMsec, static_cast<float>(kChaosMeanSleepMsec) / kChaosMaxSleepMsec),
       text_node_(session()),
-      image_io_(image_io),
       trace_provider_(loop->dispatcher()) {}
 
 DemoView::~DemoView() {
@@ -67,8 +65,8 @@ DemoView::~DemoView() {
 };
 
 std::unique_ptr<DemoView> DemoView::Create(scenic::ViewContext context, async::Loop* loop,
-                                           bool chaos, bool image_io) {
-  auto view = std::make_unique<DemoView>(std::move(context), loop, chaos, image_io);
+                                           bool chaos) {
+  auto view = std::make_unique<DemoView>(std::move(context), loop, chaos);
 
   view->stream_provider_ = StreamProvider::Create(StreamProvider::Source::CONTROLLER);
   if (!view->stream_provider_) {
@@ -100,15 +98,6 @@ std::unique_ptr<DemoView> DemoView::Create(scenic::ViewContext context, async::L
         [index, view = view.get()](fuchsia::camera2::FrameAvailableInfo info) {
           view->OnFrameAvailable(index, std::move(info));
         };
-
-    std::stringstream ss;
-    ss << "/demo/" << index;
-    ipp.image_io_util = camera::ImageIOUtil::Create(&buffers, ss.str());
-    if (ipp.image_io_util) {
-      FX_LOGS(ERROR) << "Failed to create ImageIOUtil";
-    } else {
-      FX_LOGS(INFO) << "ImageIOUtil Created!";
-    }
 
     uint32_t image_pipe_id = view->session()->AllocResourceId();
     view->session()->Enqueue(scenic::NewCreateImagePipeCmd(
@@ -223,16 +212,6 @@ void DemoView::OnFrameAvailable(uint32_t index, fuchsia::camera2::FrameAvailable
     FX_PLOGS(ERROR, status) << "Failed to duplicate fence";
     loop_->Quit();
     return;
-  }
-
-  // If flag is enabled, write frame to disk once.
-  if (ipp.image_io_util && image_io_) {
-    status = ipp.image_io_util->WriteImageData(info.buffer_id);
-    if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "Failed to write to disk";
-    }
-    FX_LOGS(INFO) << "Image written to disk";
-    image_io_ = false;
   }
 
   uint64_t now_ns = zx_clock_get_monotonic();
