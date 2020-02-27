@@ -16,8 +16,10 @@ namespace gfx {
 
 void ObjectLinkerBase::Link::LinkInvalidated(bool on_destruction) {
   if (link_invalidated_) {
-    link_invalidated_(on_destruction);
-    link_invalidated_ = nullptr;
+    // link_invalidated_ will be reset to nullptr; this way we can avoid
+    // assignment operators to |link_validated_|.
+    auto link_invalidated_fn = std::move(link_invalidated_);
+    link_invalidated_fn(on_destruction);
   }
 }
 

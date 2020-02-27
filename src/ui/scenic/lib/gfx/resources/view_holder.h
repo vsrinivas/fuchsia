@@ -19,11 +19,12 @@
 #include "src/ui/scenic/lib/gfx/resources/nodes/node.h"
 #include "src/ui/scenic/lib/gfx/resources/resource.h"
 #include "src/ui/scenic/lib/gfx/resources/resource_type_info.h"
-#include "src/ui/scenic/lib/gfx/resources/view.h"
 
 namespace scenic_impl {
 namespace gfx {
 
+// TODO(47147): Remove circular inclusion in View, ViewNode, ViewHolder and
+// ViewTreeUpdater.
 using ViewHolderPtr = fxl::RefPtr<ViewHolder>;
 using ViewLinker = ObjectLinker<ViewHolder*, View*>;
 
@@ -36,7 +37,8 @@ class ViewHolder final : public Node {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  ViewHolder(Session* session, SessionId session_id, ResourceId node_id, std::string debug_name,
+  ViewHolder(Session* session, SessionId session_id, ResourceId node_id, bool suppress_events,
+             std::string debug_name, std::shared_ptr<ErrorReporter> error_reporter,
              fxl::WeakPtr<ViewTreeUpdater> view_tree_updater);
   ~ViewHolder() override;
 
@@ -69,12 +71,17 @@ class ViewHolder final : public Node {
 
   zx_koid_t view_holder_koid() const { return view_holder_koid_; }
 
+  void SetOnDestroyedCallback(fit::function<void(void)> fn) { on_destroyed_ = std::move(fn); }
+
  protected:
   // |Node|
   bool CanAddChild(NodePtr child_node) override;
   void OnSceneChanged() override;
 
  private:
+  // TODO(46112): Remove friend usage.
+  friend class View;
+
   // |ViewLinker::ImportCallbacks|
   void LinkResolved(View* view);
   void LinkInvalidated(bool on_link_destruction);
@@ -97,6 +104,9 @@ class ViewHolder final : public Node {
   zx_koid_t view_holder_koid_ = ZX_KOID_INVALID;
   View* view_ = nullptr;
 
+  bool suppress_events_ = false;
+  fit::function<void(void)> on_destroyed_;
+
   fuchsia::ui::gfx::ViewProperties view_properties_;
   fuchsia::ui::gfx::ViewState view_state_;
   bool should_render_bounding_box_ = false;
@@ -111,6 +121,8 @@ class ViewHolder final : public Node {
   async::Wait render_waiter_;
 
   std::string debug_name_;
+
+  const std::shared_ptr<ErrorReporter> error_reporter_;
 
   fxl::WeakPtr<ViewTreeUpdater> view_tree_updater_;
 

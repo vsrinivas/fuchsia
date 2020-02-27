@@ -10,6 +10,7 @@
 #include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/fxl/logging.h"
 #include "src/ui/scenic/lib/gfx/engine/session.h"
+#include "src/ui/scenic/lib/gfx/resources/view.h"
 #include "src/ui/scenic/lib/gfx/util/unwrap.h"
 
 namespace scenic_impl {
@@ -19,9 +20,13 @@ const ResourceTypeInfo ViewHolder::kTypeInfo = {ResourceType::kNode | ResourceTy
                                                 "ViewHolder"};
 
 ViewHolder::ViewHolder(Session* session, SessionId session_id, ResourceId node_id,
-                       std::string debug_name, fxl::WeakPtr<ViewTreeUpdater> view_tree_updater)
+                       bool suppress_events, std::string debug_name,
+                       std::shared_ptr<ErrorReporter> error_reporter,
+                       fxl::WeakPtr<ViewTreeUpdater> view_tree_updater)
     : Node(session, session_id, node_id, ViewHolder::kTypeInfo),
+      suppress_events_(suppress_events),
       debug_name_(debug_name),
+      error_reporter_(std::move(error_reporter)),
       view_tree_updater_(view_tree_updater),
       weak_factory_(this) {}
 
@@ -52,10 +57,14 @@ void ViewHolder::LinkResolved(View* view) {
   // linking up the Nodes.
   FXL_DCHECK(!view_ && view);
   view_ = view;
-  // Set the render waiting event on the view.
-  ResetRenderEvent();
 
-  SendViewConnectedEvent();
+  if (!suppress_events_) {
+    // Set the render waiting event on the view.
+    ResetRenderEvent();
+
+    SendViewConnectedEvent();
+  }
+
   // If the ViewHolder is already attached to a scene, the linked view is now
   // also attached to the scene. Emit event.
   if (scene()) {
@@ -66,6 +75,9 @@ void ViewHolder::LinkResolved(View* view) {
   // ViewProperties.  Otherwise, e.g. if the ViewHolder properties were set
   // only once before the link was resolved, the View would never be notified.
   SendViewPropertiesChangedEvent();
+  for (const auto& annotation : view_->annotation_view_holders()) {
+    annotation->SendViewPropertiesChangedEvent();
+  }
 }
 
 void ViewHolder::LinkInvalidated(bool on_link_destruction) {
@@ -79,12 +91,18 @@ void ViewHolder::LinkInvalidated(bool on_link_destruction) {
   // destructor, including Detaching any child Nodes.
   view_ = nullptr;
 
-  CloseRenderEvent();
-  // Link was disconnected, the view can no longer be rendering. If the state
-  // was previously rendering, update with not rendering event.
-  SetIsViewRendering(false);
+  if (!suppress_events_) {
+    CloseRenderEvent();
+    // Link was disconnected, the view can no longer be rendering. If the state
+    // was previously rendering, update with not rendering event.
+    SetIsViewRendering(false);
 
-  SendViewDisconnectedEvent();
+    SendViewDisconnectedEvent();
+  }
+
+  if (on_destroyed_) {
+    on_destroyed_();
+  }
 }
 
 // Generates an escher::BoundingBox from the given view properties.
@@ -208,6 +226,7 @@ void ViewHolder::SendViewPropertiesChangedEvent() {
   fuchsia::ui::gfx::Event event;
   event.set_view_properties_changed({.view_id = view_->id(), .properties = view_properties_});
   view_->event_reporter()->EnqueueEvent(std::move(event));
+  view_->BroadcastViewPropertiesChangedEvent(view_properties_);
 }
 
 void ViewHolder::SendViewConnectedEvent() {

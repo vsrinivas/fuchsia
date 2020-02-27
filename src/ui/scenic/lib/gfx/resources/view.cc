@@ -167,5 +167,47 @@ void View::SendViewHolderDisconnectedEvent() {
   }
 }
 
+void View::BroadcastViewPropertiesChangedEvent(fuchsia::ui::gfx::ViewProperties view_properties) {
+  // Update annotation ViewHolders' properties.
+  // Focus changes are always suppressed.
+  for (const ViewHolderPtr& annotation_view_holder : annotation_view_holders()) {
+    auto new_annotation_view_properties = view_properties;
+    new_annotation_view_properties.focus_change = false;
+    annotation_view_holder->SetViewProperties(new_annotation_view_properties,
+                                              error_reporter_.get());
+  }
+}
+
+void View::OnAnnotationViewHolderDestroyed(ViewHolder* view_holder) {
+  RemoveAnnotationViewHolder(fxl::Ref(view_holder));
+}
+
+bool View::AddAnnotationViewHolder(ViewHolderPtr view_holder) {
+  if (annotation_view_holders_.find(view_holder) != annotation_view_holders_.end()) {
+    return false;
+  }
+  // |view_holder| doesn't exist, add it to the set.
+  GetViewNode()->AddChild(view_holder, error_reporter_.get());
+  view_holder->SetOnDestroyedCallback(
+      [view_weak_ptr = GetWeakPtr(), view_holder = view_holder.get()]() {
+        // View may be destroyed earlier, so we check the validity of WeakPtr first.
+        if (view_weak_ptr) {
+          view_weak_ptr->OnAnnotationViewHolderDestroyed(view_holder);
+        }
+      });
+  annotation_view_holders_.insert(std::move(view_holder));
+  return true;
+}
+
+bool View::RemoveAnnotationViewHolder(ViewHolderPtr view_holder) {
+  if (annotation_view_holders_.find(view_holder) == annotation_view_holders_.end()) {
+    return false;
+  }
+  // |view_holder| exists, remove it from the set.
+  view_holder->Detach(error_reporter_.get());
+  annotation_view_holders_.erase(view_holder);
+  return true;
+}
+
 }  // namespace gfx
 }  // namespace scenic_impl

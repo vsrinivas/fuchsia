@@ -21,12 +21,36 @@ namespace gfx {
 
 namespace test {
 
+namespace {
+
+ViewHolderPtr NewAnnotationViewHolder(
+    Session* session, ViewLinker* view_linker,
+    fuchsia::ui::views::ViewHolderToken annotation_view_holder_token) {
+  std::ostringstream annotation_debug_name;
+  annotation_debug_name << "Annotation ViewHolder [Test]";
+  ViewHolderPtr annotation_view_holder = fxl::MakeRefCounted<ViewHolder>(
+      session, session->id(), /* node_id */ 0U,
+      /* is_annotation */ true, annotation_debug_name.str(), session->shared_error_reporter(),
+      session->view_tree_updater());
+  // Set hit test behavior to kSuppress so it will suppress all hit testings.
+  annotation_view_holder->SetHitTestBehavior(fuchsia::ui::gfx::HitTestBehavior::kSuppress);
+  // Set up link with annotation View.
+  ViewLinker::ExportLink link = view_linker->CreateExport(
+      annotation_view_holder.get(), std::move(annotation_view_holder_token.value),
+      session->error_reporter());
+  FXL_CHECK(link.valid()) << "Cannot setup link with annotation View!";
+  annotation_view_holder->Connect(std::move(link));
+  return annotation_view_holder;
+}
+
 void VerifyViewState(const fuchsia::ui::scenic::Event& event, bool is_rendering_expected) {
   EXPECT_EQ(fuchsia::ui::scenic::Event::Tag::kGfx, event.Which());
   EXPECT_EQ(::fuchsia::ui::gfx::Event::Tag::kViewStateChanged, event.gfx().Which());
   const ::fuchsia::ui::gfx::ViewState& view_state = event.gfx().view_state_changed().state;
   EXPECT_EQ(is_rendering_expected, view_state.is_rendering);
 }
+
+} // namespace
 
 class ViewTest : public SessionTest {
  public:
@@ -686,6 +710,175 @@ TEST_F(ViewTest, RenderStateFalseWhenViewHolderDisconnectsFromScene) {
   VerifyViewState(event, false);
   const fuchsia::ui::scenic::Event& event2 = events().back();
   EXPECT_EQ(::fuchsia::ui::gfx::Event::Tag::kViewDetachedFromScene, event2.gfx().Which());
+}
+
+TEST_F(ViewTest, AnnotationViewReceivesViewPropertiesChangedEvent) {
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
+  auto [annotation_view_token, annotation_view_holder_token] = scenic::ViewTokenPair::New();
+
+  const ResourceId view_holder_id = 1u;
+  Apply(scenic::NewCreateViewHolderCmd(view_holder_id, std::move(view_holder_token),
+                                       "Holder [Test]"));
+  auto view_holder = FindResource<ViewHolder>(view_holder_id)->GetWeakPtr();
+
+  const ResourceId view_id = 2u;
+  Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test"));
+  auto view = FindResource<View>(view_id)->GetWeakPtr();
+
+  auto session_annotation = CreateSession();
+  auto cmd_ctx = CreateCommandContext();
+  const ResourceId annotation_view_id = 3u;
+  session_annotation->ApplyCommand(
+      &cmd_ctx,
+      scenic::NewCreateViewCmd(annotation_view_id, std::move(annotation_view_token), "Annotation"));
+  cmd_ctx.Flush();
+  auto annotation_view =
+      session_annotation->resources()->FindResource<View>(annotation_view_id)->GetWeakPtr();
+
+  // Create Annotation ViewHolder.
+  EXPECT_TRUE(view->AddAnnotationViewHolder(NewAnnotationViewHolder(
+      session_annotation.get(), view_linker_.get(), std::move(annotation_view_holder_token))));
+
+  // Set ViewProperties.
+  uint32_t event_size = events().size();
+  fuchsia::ui::gfx::BoundingBox bounding_box = {.min = {0, 0, 0}, .max = {100, 200, 300}};
+  fuchsia::ui::gfx::ViewProperties view_properties = {
+      .bounding_box = bounding_box,
+      .inset_from_min = {1, 2, 3},
+      .inset_from_max = {4, 5, 6},
+      .focus_change = true,
+      .downward_input = true,
+  };
+  view_holder->SetViewProperties(view_properties, session()->error_reporter());
+
+  RunLoopUntilIdle();
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
+
+  EXPECT_EQ(event_size + 2, events().size());
+  const auto& event_1 = events()[events().size() - 2];
+  const auto& event_2 = events()[events().size() - 1];
+  EXPECT_TRUE(event_1.is_gfx() && event_1.gfx().is_view_properties_changed());
+  EXPECT_TRUE(event_2.is_gfx() && event_2.gfx().is_view_properties_changed());
+
+  auto [event_view, event_annotation] =
+      event_1.gfx().view_properties_changed().view_id == view_id
+          ? std::make_pair(event_1.gfx().view_properties_changed(),
+                           event_2.gfx().view_properties_changed())
+          : std::make_pair(event_2.gfx().view_properties_changed(),
+                           event_1.gfx().view_properties_changed());
+
+  EXPECT_EQ(event_view.view_id, view_id);
+  EXPECT_EQ(event_annotation.view_id, annotation_view_id);
+
+  EXPECT_TRUE(fidl::Equals(event_view.properties, view_properties));
+  EXPECT_FALSE(event_annotation.properties.focus_change);
+  event_annotation.properties.focus_change = view_properties.focus_change;
+  EXPECT_TRUE(fidl::Equals(event_annotation.properties, view_properties));
+}
+
+TEST_F(ViewTest, AnnotationViewReceivesViewAttachedToSceneEvent) {
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
+  auto [annotation_view_token, annotation_view_holder_token] = scenic::ViewTokenPair::New();
+
+  const ResourceId view_holder_id = 1u;
+  Apply(scenic::NewCreateViewHolderCmd(view_holder_id, std::move(view_holder_token),
+                                       "Holder [Test]"));
+  auto view_holder = FindResource<ViewHolder>(view_holder_id)->GetWeakPtr();
+
+  const ResourceId view_id = 2u;
+  Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test"));
+  auto view = FindResource<View>(view_id)->GetWeakPtr();
+
+  auto session_annotation = CreateSession();
+  auto cmd_ctx = CreateCommandContext();
+  const ResourceId annotation_view_id = 3u;
+  session_annotation->ApplyCommand(
+      &cmd_ctx,
+      scenic::NewCreateViewCmd(annotation_view_id, std::move(annotation_view_token), "Annotation"));
+  cmd_ctx.Flush();
+  auto annotation_view =
+      session_annotation->resources()->FindResource<View>(annotation_view_id)->GetWeakPtr();
+
+  // Create Annotation ViewHolder.
+  EXPECT_TRUE(view->AddAnnotationViewHolder(NewAnnotationViewHolder(
+      session_annotation.get(), view_linker_.get(), std::move(annotation_view_holder_token))));
+
+  // Create a Scene and connect the ViewHolder to the Scene.
+  const size_t event_size = events().size();
+  const ResourceId scene_id = 4u;
+  Apply(scenic::NewCreateSceneCmd(scene_id));
+  auto scene = FindResource<Scene>(scene_id);
+  EXPECT_TRUE(scene);
+  Apply(scenic::NewAddChildCmd(scene_id, view_holder_id));
+
+  RunLoopUntilIdle();
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
+
+  EXPECT_EQ(event_size + 2, events().size());
+  const auto& event_1 = events()[events().size() - 2];
+  const auto& event_2 = events()[events().size() - 1];
+  EXPECT_TRUE(event_1.is_gfx() && event_1.gfx().is_view_attached_to_scene());
+  EXPECT_TRUE(event_2.is_gfx() && event_2.gfx().is_view_attached_to_scene());
+
+  const uint32_t event_1_view_id = event_1.gfx().view_attached_to_scene().view_id;
+  const uint32_t event_2_view_id = event_2.gfx().view_attached_to_scene().view_id;
+
+  EXPECT_TRUE((event_1_view_id == view_id && event_2_view_id == annotation_view_id) ||
+              (event_2_view_id == view_id && event_1_view_id == annotation_view_id));
+}
+
+TEST_F(ViewTest, AnnotationViewReceivesViewDetachedFromSceneEvent) {
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
+  auto [annotation_view_token, annotation_view_holder_token] = scenic::ViewTokenPair::New();
+
+  const ResourceId view_holder_id = 1u;
+  Apply(scenic::NewCreateViewHolderCmd(view_holder_id, std::move(view_holder_token),
+                                       "Holder [Test]"));
+  auto view_holder = FindResource<ViewHolder>(view_holder_id)->GetWeakPtr();
+
+  const ResourceId view_id = 2u;
+  Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test"));
+  auto view = FindResource<View>(view_id)->GetWeakPtr();
+
+  auto session_annotation = CreateSession();
+  auto cmd_ctx = CreateCommandContext();
+  const ResourceId annotation_view_id = 3u;
+  session_annotation->ApplyCommand(
+      &cmd_ctx,
+      scenic::NewCreateViewCmd(annotation_view_id, std::move(annotation_view_token), "Annotation"));
+  cmd_ctx.Flush();
+  auto annotation_view =
+      session_annotation->resources()->FindResource<View>(annotation_view_id)->GetWeakPtr();
+
+  // Create Annotation ViewHolder.
+  EXPECT_TRUE(view->AddAnnotationViewHolder(NewAnnotationViewHolder(
+      session_annotation.get(), view_linker_.get(), std::move(annotation_view_holder_token))));
+
+  // Create a Scene and connect the ViewHolder to the Scene.
+  const ResourceId scene_id = 4u;
+  Apply(scenic::NewCreateSceneCmd(scene_id));
+  auto scene = FindResource<Scene>(scene_id);
+  EXPECT_TRUE(scene);
+  Apply(scenic::NewAddChildCmd(scene_id, view_holder_id));
+
+  // Detach the ViewHolder from the scene graph.
+  const size_t event_size = events().size();
+  EXPECT_TRUE(Apply(scenic::NewDetachCmd(view_holder_id)));
+
+  RunLoopUntilIdle();
+  EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
+
+  EXPECT_EQ(event_size + 2, events().size());
+  const auto& event_1 = events()[events().size() - 2];
+  const auto& event_2 = events()[events().size() - 1];
+  EXPECT_TRUE(event_1.is_gfx() && event_1.gfx().is_view_detached_from_scene());
+  EXPECT_TRUE(event_2.is_gfx() && event_2.gfx().is_view_detached_from_scene());
+
+  const uint32_t event_1_view_id = event_1.gfx().view_detached_from_scene().view_id;
+  const uint32_t event_2_view_id = event_2.gfx().view_detached_from_scene().view_id;
+
+  EXPECT_TRUE((event_1_view_id == view_id && event_2_view_id == annotation_view_id) ||
+              (event_2_view_id == view_id && event_1_view_id == annotation_view_id));
 }
 
 }  // namespace test

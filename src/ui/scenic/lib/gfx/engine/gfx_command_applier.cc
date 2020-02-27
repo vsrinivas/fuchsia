@@ -1442,7 +1442,8 @@ ResourcePtr GfxCommandApplier::CreateViewHolder(Session* session, ResourceId id,
   // Create a ViewHolder and Link, then connect and return if the Link is valid.
   std::string debug_name = args.debug_name ? *args.debug_name : std::string();
   auto view_holder = fxl::MakeRefCounted<ViewHolder>(
-      session, session->id(), id, std::move(debug_name), session->view_tree_updater());
+      session, session->id(), id, /* suppress_events */ false, std::move(debug_name),
+      session->shared_error_reporter(), session->view_tree_updater());
   ViewLinker* view_linker = session->session_context().view_linker;
   ViewLinker::ExportLink link = view_linker->CreateExport(
       view_holder.get(), std::move(args.token.value), session->error_reporter());

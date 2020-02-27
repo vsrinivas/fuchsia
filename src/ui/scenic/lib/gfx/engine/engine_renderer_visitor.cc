@@ -63,6 +63,13 @@ void EngineRendererVisitor::Visit(ViewNode* r) {
     r->GetView()->SignalRender();
   }
 
+  // Render all the annotation ViewHolders.
+  if (r->GetView()) {
+    for (const auto annotation_view_holder : r->GetView()->annotation_view_holders()) {
+      Visit(annotation_view_holder.get());
+    }
+  }
+
   should_render_debug_bounds_ = previous_should_render_debug_bounds;
 }
 

@@ -54,8 +54,8 @@ TEST_F(DumpVisitorTest, DynamicVisitOfBaseImageTypes) {
   MaterialPtr image_material = fxl::MakeRefCounted<Material>(session(), next_id++);
   MaterialPtr pipe_material = fxl::MakeRefCounted<Material>(session(), next_id++);
   ImagePtr image = CreateImage(next_id++);
-  ImagePipePtr pipe = fxl::MakeRefCounted<ImagePipe>(
-      session(), next_id++, nullptr, session()->shared_error_reporter());
+  ImagePipePtr pipe = fxl::MakeRefCounted<ImagePipe>(session(), next_id++, nullptr,
+                                                     session()->shared_error_reporter());
 
   image_material->SetTexture(image);
   pipe_material->SetTexture(pipe);
@@ -81,7 +81,8 @@ TEST_F(DumpVisitorTest, ViewAndViewHolderDebugNames) {
       session()->event_reporter()->GetWeakPtr());
 
   ViewHolderPtr view_holder = fxl::MakeRefCounted<ViewHolder>(
-      session(), session()->id(), next_id++, "test_debug_name2", session()->view_tree_updater());
+      session(), session()->id(), next_id++, /* is_annotation */ false, "test_debug_name2",
+      session()->shared_error_reporter(), session()->view_tree_updater());
 
   std::ostringstream ostream;
   std::unordered_set<GlobalId, GlobalId::Hash> visited;

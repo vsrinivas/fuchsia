@@ -28,6 +28,8 @@ namespace gfx {
 
 class Session;
 
+// TODO(47147): Remove circular inclusion in View, ViewNode, ViewHolder and
+// ViewTreeUpdater.
 using ViewNodePtr = fxl::RefPtr<ViewNode>;
 using ViewLinker = ObjectLinker<ViewHolder*, View*>;
 using ViewPtr = fxl::RefPtr<View>;
@@ -68,12 +70,29 @@ class View final : public Resource {
 
   // Paired ViewHolder on the other side of the link.
   ViewHolder* view_holder() const { return view_holder_; }
+
   // Paired |ViewNode| used to attach this View and its children to the scene
   // graph.
+  //
+  // TODO(45371): This method is an implementation detail of View and should be
+  // private.
+  ViewNode* GetViewNode() const { return node_.get(); }
+
+  // -- Manage Annotation ViewHolders --
+  //
+  // Insert |view_holder| to |annotation_view_holders_| and return true.
+  // If it already exists, just return false.
+  bool AddAnnotationViewHolder(ViewHolderPtr view_holder);
+
+  // Remove the |view_holder| from |annotation_view_holders_| and return true.
+  // If it doesn't exist, just return false.
+  bool RemoveAnnotationViewHolder(ViewHolderPtr view_holder);
+
+  const std::unordered_set<ViewHolderPtr>& annotation_view_holders() const {
+    return annotation_view_holders_;
+  }
 
   std::string debug_name() { return debug_name_; }
-
-  ViewNode* GetViewNode() const { return node_.get(); }
 
   // Connection management.  Call once the View is created to initiate the link
   // to its partner ViewHolder.
@@ -101,16 +120,33 @@ class View final : public Resource {
   zx_koid_t view_ref_koid() const;
 
  private:
+  // TODO(46112): Remove friend usage.
+  friend class ViewHolder;
+
   // |ViewLinker::ExportCallbacks|
   void LinkResolved(ViewHolder* view_holder);
+
+  // |ViewLinker::ExportCallbacks|
   void LinkInvalidated(bool on_link_destruction);
 
-  // Sends an event to our SessionListener.
+  // -- Send / Broadcast View Events --
+  //
+  // Sends an event to its SessionListener only, but doesn't propagate to its
+  // annotation ViewHolders.
   void SendViewHolderConnectedEvent();
   void SendViewHolderDisconnectedEvent();
 
+  // Broadcast the event to its SessionListener and send the events to
+  // annotation ViewHolders if they exist.
+  void BroadcastViewPropertiesChangedEvent(fuchsia::ui::gfx::ViewProperties view_properties);
+
+  // Callback function when annotation ViewHolder is destroyed.
+  void OnAnnotationViewHolderDestroyed(ViewHolder* view_holder);
+
   std::optional<ViewLinker::ImportLink> link_;
   ViewHolder* view_holder_ = nullptr;
+
+  std::unordered_set<ViewHolderPtr> annotation_view_holders_;
 
   // The View's "phantom node". This is the node corresponding to the View in
   // the scene graph. All parent-child relationships are through this node.

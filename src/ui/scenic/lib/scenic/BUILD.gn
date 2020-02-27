@@ -16,6 +16,7 @@ source_set("scenic") {
     ":event_reporter",
     ":system",
     ":take_screenshot_delegate_deprecated",
+    "//sdk/fidl/fuchsia.ui.annotation",
     "//sdk/fidl/fuchsia.ui.focus",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.policy.accessibility",
