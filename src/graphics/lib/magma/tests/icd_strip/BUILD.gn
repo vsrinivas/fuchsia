@@ -1,0 +1,52 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test/test_package.gni")
+import("//src/graphics/lib/magma/gnbuild/magma.gni")
+
+magma_vulkan_icd("icd_strip_test") {
+  output_name = "libicd_strip_test"
+  sources = [ "icd.c" ]
+  deps = [ "//src/lib/vulkan:headers" ]
+
+  # Required
+  imported_symbols_allowlist =
+      rebase_path("//src/graphics/lib/magma/gnbuild/imported_symbols.allowlist")
+}
+
+executable("test_icd_strip_bin") {
+  testonly = true
+  output_name = "test_icd_strip"
+
+  sources = [ "test_icd_strip.cc" ]
+
+  deps = [ "//third_party/googletest:gtest" ]
+}
+
+test_package("test_icd_strip") {
+  tests = [
+    {
+      name = "test_icd_strip"
+    },
+  ]
+
+  # Packaging the ICD here is tricky; we have to use loadable_modules, but the ICD is a shared_library.
+  # We need to use the form "<arch>-shared/libicd_strip_test.so".
+  icd_path = get_label_info(":icd_strip_test($shlib_toolchain)",
+                            "root_out_dir") + "/libicd_strip_test.so"
+  loadable_modules = [
+    {
+      name = rebase_path(icd_path, root_out_dir)
+    },
+  ]
+  deps = [
+    ":icd_strip_test",
+    ":test_icd_strip_bin",
+  ]
+}
+
+group("icd_strip") {
+  testonly = true
+  deps = [ ":test_icd_strip" ]
+}

@@ -98,6 +98,9 @@ template("magma_vulkan_icd") {
         inputs = []
       }
       inputs += [ version_script ]
+      if (!defined(invoker.ldflags)) {
+        ldflags = []
+      }
       ldflags += [ "-Wl,--version-script=$version_script" ]
     }
   }

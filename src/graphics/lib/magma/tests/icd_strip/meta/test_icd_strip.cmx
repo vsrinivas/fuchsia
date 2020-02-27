@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/test_icd_strip"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}
