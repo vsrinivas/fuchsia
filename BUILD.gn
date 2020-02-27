@@ -377,6 +377,7 @@ build_api_module("tool_paths") {
     ":tool_paths.metadata",
     ":tool_paths.zircon",
     "//build/images:packages",
+    "//build/unification/tools",
   ]
 }
 

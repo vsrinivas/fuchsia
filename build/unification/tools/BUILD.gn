@@ -5,13 +5,18 @@
 import("//build/config/fuchsia/zircon.gni")
 
 # Lists tools migrated from Zircon.
+
 # This defines individual targets which provide a level of indirection necessary
 # to soft-transition projects which depend on these tools.
 
-_arm_out_dir =
-    get_label_info("//bogus($host_arm64_toolchain)", "root_out_dir")
+group("fvm") {
+  public_deps = [ "//zircon/tools/fvm($host_arm64_toolchain)" ]    
+}
 
-copy("fvm") {
-  sources = [ "$zircon_root_build_dir/tools-linux-arm64/fvm" ]
-  outputs = [ "$_arm_out_dir/fvm" ]
+# This is to make the tools available via a build API.
+
+group("tools") {
+  deps = [
+    "//zircon/tools/fvm($host_toolchain)",
+  ]
 }
