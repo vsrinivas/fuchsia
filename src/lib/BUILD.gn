@@ -65,6 +65,7 @@ group("tests") {
     "fuzzing:tests",
     "http-sse:tests",
     "icu:tests",
+    "icu_data:tests",
     "intl:tests",
     "isolated_devmgr:tests",
     "json_parser:tests",
