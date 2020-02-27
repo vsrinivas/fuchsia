@@ -12,6 +12,7 @@
 
 #include <algorithm>
 #include <memory>
+#include <random>
 
 #include <fbl/function.h>
 #include <fbl/string.h>
@@ -315,7 +316,8 @@ bool RunTest(const char* test_suite, const char* test_name,
 namespace internal {
 
 bool RunTests(const char* test_suite, TestList* test_list, uint32_t run_count,
-              const char* regex_string, FILE* log_stream, ResultsSet* results_set, bool quiet) {
+              const char* regex_string, FILE* log_stream, ResultsSet* results_set, bool quiet,
+              bool random_order) {
   // Compile the regular expression.
   regex_t regex;
   int err = regcomp(&regex, regex_string, REG_EXTENDED);
@@ -327,15 +329,25 @@ bool RunTests(const char* test_suite, TestList* test_list, uint32_t run_count,
     return false;
   }
 
-  // Make a sorted copy of the test list, so that we run the tests in
-  // sorted order.  Otherwise, the ordering can depend on things like link
-  // ordering, which depends on the build system and which might change
-  // unexpectedly and influence performance results.
+  // Use either a consistent or randomized order for the test cases,
+  // because the order in which tests are run can affect their performance
+  // results.
+  //
+  // The initial ordering of test_list can vary in undesirable ways: it can
+  // depend on things like the link ordering, which depends on the build
+  // system.
+  //
+  // Copy test_list so that we can change the ordering without modifying
+  // test_list itself.
   fbl::Vector<NamedTest*> test_list_copy;
   for (internal::NamedTest& test_case : *test_list) {
     test_list_copy.push_back(&test_case);
   }
-  std::sort(test_list_copy.begin(), test_list_copy.end(), CompareTestNames);
+  if (random_order) {
+    std::shuffle(test_list_copy.begin(), test_list_copy.end(), std::random_device());
+  } else {
+    std::sort(test_list_copy.begin(), test_list_copy.end(), CompareTestNames);
+  }
 
   bool found_regex_match = false;
   bool ok = true;
@@ -384,6 +396,7 @@ void ParseCommandArgs(int argc, char** argv, CommandArgs* dest) {
       {"filter", required_argument, nullptr, 'f'},
       {"runs", required_argument, nullptr, 'r'},
       {"quiet", no_argument, nullptr, 'q'},
+      {"random-order", no_argument, nullptr, 'n'},
       {"enable-tracing", no_argument, nullptr, 't'},
       {"startup-delay", required_argument, nullptr, 'd'},
   };
@@ -415,6 +428,9 @@ void ParseCommandArgs(int argc, char** argv, CommandArgs* dest) {
       }
       case 'q':
         dest->quiet = true;
+        break;
+      case 'n':
+        dest->random_order = true;
         break;
       case 't':
         dest->enable_tracing = true;
@@ -470,7 +486,7 @@ static bool PerfTestMode(const char* test_suite, int argc, char** argv) {
 
   ResultsSet results;
   bool success = RunTests(test_suite, g_tests, args.run_count, args.filter_regex, stdout, &results,
-                          args.quiet);
+                          args.quiet, args.random_order);
 
   if (!args.quiet) {
     printf("\n");
@@ -522,6 +538,9 @@ int PerfTestMain(int argc, char** argv, const char* test_suite) {
         "across the network) which skews the test results.  See PT-245.  "
         "This also disables printing the results, so it is only useful "
         "when used with '--out'.\n"
+        "  --random-order\n"
+        "      Run the tests in random order.  The default is to run them "
+        "in the order of their names.\n"
         "  --enable-tracing\n"
         "      Enable use of Fuchsia tracing: Enable registering as a "
         "TraceProvider.  This is off by default because the "

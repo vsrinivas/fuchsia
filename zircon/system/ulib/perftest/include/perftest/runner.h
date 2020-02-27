@@ -22,7 +22,7 @@ typedef fbl::Vector<NamedTest> TestList;
 
 bool RunTests(const char* test_suite, TestList* test_list, uint32_t run_count,
               const char* regex_string, FILE* log_stream, ResultsSet* results_set,
-              bool quiet = false);
+              bool quiet = false, bool random_order = false);
 
 struct CommandArgs {
   const char* output_filename = nullptr;
@@ -30,6 +30,7 @@ struct CommandArgs {
   const char* filter_regex = "";
   uint32_t run_count = 1000;
   bool quiet = false;
+  bool random_order = false;
   bool enable_tracing = false;
   double startup_delay_seconds = 0;
 };

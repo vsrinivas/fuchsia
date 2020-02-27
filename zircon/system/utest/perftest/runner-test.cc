@@ -9,7 +9,10 @@
 
 #include <fbl/algorithm.h>
 
+#include <algorithm>
+#include <string>
 #include <utility>
+#include <vector>
 
 // This is a helper for creating a FILE* that we can redirect output to, in
 // order to make the tests below less noisy.  We don't look at the output
@@ -326,7 +329,8 @@ static bool TestBytesProcessedParameterMultistep() {
   END_TEST;
 }
 
-// Check that test cases are run in sorted order, sorted by name.
+// Check that, by default, test cases are run in sorted order, sorted by
+// name.
 static bool TestRunningInSortedOrder() {
   BEGIN_TEST;
 
@@ -350,6 +354,51 @@ static bool TestRunningInSortedOrder() {
   EXPECT_STR_EQ((*test_cases)[0].label.c_str(), "test1");
   EXPECT_STR_EQ((*test_cases)[1].label.c_str(), "test2");
   EXPECT_STR_EQ((*test_cases)[2].label.c_str(), "test3");
+
+  END_TEST;
+}
+
+// Test the option for running tests in a randomized order.
+static bool TestRunningInRandomOrder() {
+  BEGIN_TEST;
+
+  perftest::internal::TestList test_list;
+  perftest::internal::NamedTest test1{"test1", NoOpTest};
+  perftest::internal::NamedTest test2{"test2", NoOpTest};
+  perftest::internal::NamedTest test3{"test3", NoOpTest};
+  test_list.push_back(std::move(test1));
+  test_list.push_back(std::move(test2));
+  test_list.push_back(std::move(test3));
+
+  // Run the tests in test_list and return the names of the tests in the
+  // order that they were run.
+  auto run_tests = [&] {
+    const uint32_t kRunCount = 5;
+    perftest::ResultsSet results;
+    DummyOutputStream out;
+    EXPECT_TRUE(perftest::internal::RunTests("test-suite", &test_list, kRunCount, "", out.fp(),
+                                             &results, /* quiet= */ false, /* random_order=*/true));
+    std::vector<std::string> names;
+    for (auto& test_case : *results.results()) {
+      names.push_back(test_case.label.c_str());
+    }
+
+    // Check that we did run all the test cases (ignoring the order).
+    std::vector<std::string> names_sorted = names;
+    std::sort(names_sorted.begin(), names_sorted.end());
+    EXPECT_EQ(names_sorted.size(), 3);
+    EXPECT_STR_EQ(names_sorted[0].c_str(), "test1");
+    EXPECT_STR_EQ(names_sorted[1].c_str(), "test2");
+    EXPECT_STR_EQ(names_sorted[2].c_str(), "test3");
+
+    return names;
+  };
+
+  // Check that the ordering varies between runs of test_list.  If the
+  // ordering does not vary, the following loop will fail to terminate.
+  std::vector<std::string> first_ordering = run_tests();
+  while (run_tests() == first_ordering) {
+  }
 
   END_TEST;
 }
@@ -390,6 +439,7 @@ RUN_TEST(TestBadNextStepCalls)
 RUN_TEST(TestBytesProcessedParameter)
 RUN_TEST(TestBytesProcessedParameterMultistep)
 RUN_TEST(TestRunningInSortedOrder)
+RUN_TEST(TestRunningInRandomOrder)
 RUN_TEST(TestParsingCommandArgs)
 END_TEST_CASE(perftest_runner_test)
 
