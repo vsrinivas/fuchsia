@@ -15,6 +15,7 @@ pub mod common_utils;
 pub mod factory_store;
 pub mod file;
 pub mod hwinfo;
+pub mod location;
 pub mod logging;
 pub mod netstack;
 pub mod paver;
