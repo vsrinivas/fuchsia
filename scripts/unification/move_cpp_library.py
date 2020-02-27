@@ -38,8 +38,9 @@ def main():
         return 1
 
     # Whether any of the libraries required changes in a non-fuchsia.git project.
-    global_multiple_projects_affected = False
+    global_cross_project = False
 
+    movable_libs = {}
     for lib in args.lib:
         # Verify that the library may be migrated at this time.
         build_path = os.path.join(FUCHSIA_ROOT, 'zircon', 'system', lib,
@@ -50,16 +51,48 @@ def main():
         # No kernel!
         has_kernel = len([s for s in stats if s.kernel]) != 0
         if has_kernel:
-            print('Some libraries in the given folder are used in the kernel and '
-                  'may not be migrated at the moment')
-            return 1
+            print('Some libraries are used in the kernel and may not be '
+                  'migrated at the moment, ignoring ' + lib)
+            continue
 
         # Only source libraries!
         non_source_sdk = len([s for s in stats if s.sdk != Sdk.SOURCE]) != 0
         if non_source_sdk:
-            print('Can only convert libraries exported as "sources" for now')
-            return 1
+            print('Can only convert libraries exported as "sources" for now, '
+                  'ignoring ' + lib)
+            continue
 
+        # Gather build files with references to the library.
+        build_files = []
+        cross_project = False
+        for base, _, files in os.walk(FUCHSIA_ROOT):
+            for file in files:
+                if file != 'BUILD.gn':
+                    continue
+                file_path = os.path.join(base, file)
+                with open(file_path, 'r') as build_file:
+                    content = build_file.read()
+                    for name in [s.name for s in stats]:
+                        reference = '"//zircon/public/lib/' + name + '"'
+                        if reference in content:
+                            build_files.append(file_path)
+                            if not is_in_fuchsia_project(file_path):
+                                cross_project = True
+                            break
+
+        movable_libs[lib] = (build_path, base_label, stats, build_files, cross_project)
+
+    if not movable_libs:
+        print('Could not find any library to convert, aborting')
+        return 1
+
+    solo_libs = [n for n, t in movable_libs.items() if t[4]]
+    if solo_libs and len(movable_libs) > 1:
+        print('These libraries may only be moved in a dedicated change: ' +
+              ', '.join(solo_libs))
+        return 1
+
+    for lib, (build_path, base_label, stats, build_files, cross_project) in movable_libs.items():
         # Rewrite the library's build file.
         import_added = False
         for line in fileinput.FileInput(build_path, inplace=True):
@@ -97,36 +130,23 @@ def main():
                 sys.stdout.write('\n')
         fx_format(build_path)
 
-        # Track whether fuchsia.git was the only affected project.
-        multiple_projects_affected = False
-
         # Edit references to the library.
-        for base, _, files in os.walk(FUCHSIA_ROOT):
-            for file in files:
-                if file != 'BUILD.gn':
-                    continue
-                has_matches = False
-                file_path = os.path.join(base, file)
-                for line in fileinput.FileInput(file_path, inplace=True):
-                    for name in [s.name for s in stats]:
-                        new_label = '"' + base_label
-                        if os.path.basename(new_label) != name:
-                            new_label = new_label + ':' + name
-                        new_label = new_label + '"'
-                        line, count = re.subn('"//zircon/public/lib/' + name + '"',
-                                              new_label, line)
-                        if count:
-                            has_matches = True
-                    sys.stdout.write(line)
-                if has_matches:
-                    fx_format(file_path)
-                    if not is_in_fuchsia_project(file_path):
-                        multiple_projects_affected = True
+        for file_path in build_files:
+            for line in fileinput.FileInput(file_path, inplace=True):
+                for name in [s.name for s in stats]:
+                    new_label = '"' + base_label
+                    if os.path.basename(new_label) != name:
+                        new_label = new_label + ':' + name
+                    new_label = new_label + '"'
+                    line = re.sub('"//zircon/public/lib/' + name + '"',
+                                  new_label, line)
+                sys.stdout.write(line)
+            fx_format(file_path)
 
         # Generate an alias for the library under //zircon/public/lib if a soft
         # transition is necessary.
-        if multiple_projects_affected:
-            global_multiple_projects_affected = True
+        if cross_project:
+            global_cross_project = True
 
             alias_path = os.path.join(FUCHSIA_ROOT, 'build', 'unification',
                                       'zircon_library_mappings.json')
@@ -148,13 +168,13 @@ def main():
                                         os.path.dirname(lib), 'BUILD.gn')
         folder = os.path.basename(lib)
         for line in fileinput.FileInput(aggregation_path, inplace=True):
-            for s in stats:
+            for name in [s.name for s in stats]:
                 if (not '"' + folder + ':' + name + '"' in line and
                     not '"' + folder + '"' in line):
                     sys.stdout.write(line)
 
     # Create a commit.
-    libs = sorted(args.lib)
+    libs = sorted(movable_libs.keys())
     under_libs = [l.replace('/', '_') for l in libs]
     branch_name = 'lib-move-' + under_libs[0]
     lib_name = '//zircon/system/' + libs[0]
@@ -180,7 +200,7 @@ def main():
     os.close(fd)
     os.remove(message_path)
 
-    if global_multiple_projects_affected:
+    if global_cross_project:
         print('*** Warning: multiple Git projects were affected by this move!')
         print('Run jiri status to view affected projects.')
         print('Staging procedure:')
