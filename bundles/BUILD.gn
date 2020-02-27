@@ -31,6 +31,7 @@ group("tools") {
     "//src/developer/system_monitor/bin/harvester:system_monitor_harvester",
     "//src/devices/bind/debugger",
     "//src/devices/tools/banjo:banjo_bin",
+    "//src/diagnostics/tool:diag_tool_host($host_toolchain)",
     "//src/diagnostics/triage:install($host_toolchain)",
     "//src/graphics/lib/magma:magma-tools",
     "//src/lib/icu:tools",
