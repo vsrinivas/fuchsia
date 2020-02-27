@@ -5,6 +5,7 @@
 #include <sys/select.h>
 #include <sys/stat.h>
 #include <sys/statfs.h>
+#include <sys/timerfd.h>
 #include <sys/uio.h>
 #include <sys/utsname.h>
 #include <unistd.h>
@@ -592,3 +593,26 @@ static int stub_fstatvfs(int fd, struct statvfs* buf) {
   return -1;
 }
 weak_alias(stub_fstatvfs, fstatvfs);
+
+static int stub_timerfd_create(int clockid, int flags) {
+  libc_io_functions_not_implemented_use_fdio_instead();
+  errno = ENOSYS;
+  return -1;
+}
+weak_alias(stub_timerfd_create, timerfd_create);
+
+static int stub_timerfd_settime(int fd, int flags,
+                                const struct itimerspec *new_value,
+                                struct itimerspec *old_value) {
+  libc_io_functions_not_implemented_use_fdio_instead();
+  errno = ENOSYS;
+  return -1;
+}
+weak_alias(stub_timerfd_settime, timerfd_settime);
+
+static int stub_timerfd_gettime(int fd, struct itimerspec *curr_value) {
+  libc_io_functions_not_implemented_use_fdio_instead();
+  errno = ENOSYS;
+  return -1;
+}
+weak_alias(stub_timerfd_gettime, timerfd_gettime);
