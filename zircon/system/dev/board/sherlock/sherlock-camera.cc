@@ -23,8 +23,7 @@ namespace {
 constexpr uint32_t kClk24MAltFunc = 7;
 constexpr uint32_t kClkGpioDriveStrength = 3;
 
-// TODO(CAM-138): This is a temporary hack. Remove when new driver validated.
-constexpr bool kUseArmDriver = false;
+constexpr bool kUseArmDriver = true;
 
 constexpr pbus_mmio_t ge2d_mmios[] = {
     // GE2D Base
