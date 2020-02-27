@@ -60,11 +60,11 @@ It must correspond to a connected channel listed by the `channels` command.
 Prints the assigned Ids of connected channels. These Ids are local to the REPL
 and are only used for indicating which channel to perform operations on in other commands.
 
-Usage:
+#### Usage
 
 `channels`
 
-Example:
+#### Example
 
 ```
 profile> channels
@@ -72,4 +72,81 @@ Channel:
   Id: 0
   Mode: Basic
   Max Tx Sdu Size: 672
+```
+
+### add-service
+Targets `Profile.AddService`.
+
+Registers an L2CAP service with the SDP server. After adding a service, the
+`OnConnected` event will be printed when a peer connects to that service.
+
+#### Usage
+`add-service <psm> <channel-mode> <max-rx-sdu-size>`
+
+For convenience, a valid Audio Sink service definition (with 1 UUID and 1 L2CAP
+protocol descriptor) is created from just the `psm` argument.
+
+##### Arguments
+- `psm` maps to the PSM included in the L2CAP protocol descriptor of the service definition.
+- `channel-mode` maps to `parameters.channel_mode` and is {`basic`|`ertm`} (which may be abbreviated to their first
+  letter).
+- `max-rx-sdu-size` maps to `parameters.max_rx_sdu_size` and is an integer in the
+  range 0 - 65535.
+
+#### Example
+
+```
+profile> add-service 25 ertm 672
+Service:
+  Id: 0
+```
+
+### remove-service
+Targets `Profile.RemoveService`.
+
+Unregisters an L2CAP service from the SDP server.
+
+#### Usage
+`remove-service <service-id>`
+
+##### Arguments
+- `service-id` is the unique service identifier received from the SDP server
+  after executing the `add-service` command.
+
+### services
+Lists services registered with the `add-service` command.
+
+#### Usage
+`services`
+
+#### Example
+
+```
+profile> services
+Service:
+  Id: 0
+  Mode: Basic
+  Max Rx Sdu Size: 48
+```
+
+
+### exit / quit
+
+Removes all services, closes all open channels, and exits the REPL.
+
+## Events
+### OnConnected
+
+Corresponds to the `Profile.OnConnected` event. Printed when a channel connects to
+a service previously added with the `add-service` command.
+
+### Example
+
+```
+ OnConnected Event:
+  Service Id: 0
+  Channel:
+    Id: 0
+    Mode: Basic
+    Max Tx Sdu Size: 672
 ```

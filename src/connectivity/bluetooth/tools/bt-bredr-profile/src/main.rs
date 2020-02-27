@@ -7,74 +7,35 @@ use {
     fidl_fuchsia_bluetooth_bredr::*,
     fuchsia_async::{self as fasync, futures::select},
     fuchsia_component::client::connect_to_service,
-    fuchsia_zircon as zx,
     futures::{
         channel::mpsc::{channel, SendError},
         FutureExt, Sink, SinkExt, Stream, StreamExt, TryStreamExt,
     },
+    parking_lot::RwLock,
     pin_utils::pin_mut,
     rustyline::{error::ReadlineError, CompletionType, Config, Editor},
-    std::{cmp::PartialEq, collections::HashMap, fmt::Debug, thread},
+    std::{sync::Arc, thread},
 };
 
-use crate::commands::{Cmd, CmdHelper, ReplControl};
+use crate::{
+    commands::{Cmd, CmdHelper, ReplControl},
+    types::*,
+};
 
 mod commands;
+mod types;
 
 /// Prompt to be shown for tool's REPL
 pub static PROMPT: &str = "\x1b[34mprofile>\x1b[0m ";
 
 /// Escape code to clear the pty line on which the cursor is located.
 /// Used when evented output is intermingled with the REPL prompt.
-pub static CLEAR_LINE: &str = "\x1b[2K";
+pub static RESET_LINE: &str = "\x1b[2K\r";
 
-/// Listen on the control event channel for new events.
-async fn profile_listener(mut stream: ProfileEventStream) -> Result<(), Error> {
-    while let Some(_event) = stream.try_next().await? {
-        print!("{}", CLEAR_LINE);
-        // TODO(40025): handle events
-    }
-    Ok(())
-}
+const SERVICE_CLASS_UUID: &str = "110B"; // Audio Sink
 
-#[derive(Debug, PartialEq)]
-struct L2capChannel {
-    socket: zx::Socket,
-    mode: ChannelMode,
-    max_tx_sdu_size: u16,
-}
-
-/// Tracks all state local to the command line tool.
-#[derive(Debug, PartialEq)]
-struct ChannelState<T> {
-    next_chan_id: u32,
-    channels: HashMap<u32, T>,
-}
-
-impl<T: Debug + PartialEq> ChannelState<T> {
-    pub fn new() -> ChannelState<T> {
-        ChannelState { next_chan_id: 0, channels: HashMap::new() }
-    }
-
-    pub fn channels(&self) -> &HashMap<u32, T> {
-        &self.channels
-    }
-
-    /// Returns id assigned to channel.
-    pub fn add_channel(&mut self, channel: T) -> u32 {
-        let chan_id = self.next_chan_id;
-        self.next_chan_id += 1;
-        assert_eq!(None, self.channels.insert(chan_id, channel));
-        chan_id
-    }
-
-    pub fn remove_channel(&mut self, channel_id: u32) -> Option<T> {
-        self.channels.remove(&channel_id)
-    }
-}
-
-fn channels(state: &mut ChannelState<L2capChannel>) {
-    for (chan_id, chan) in state.channels() {
+fn channels(state: Arc<RwLock<ProfileState>>) {
+    for (chan_id, chan) in state.read().channels.map() {
         print!(
             "Channel:\n  Id: {}\n  Mode: {:?}\n  Max Tx Sdu Size: {}\n",
             chan_id, chan.mode, chan.max_tx_sdu_size
@@ -82,9 +43,159 @@ fn channels(state: &mut ChannelState<L2capChannel>) {
     }
 }
 
+fn channel_mode_from_str(s: &str) -> Result<ChannelMode, Error> {
+    match s {
+        "basic" | "b" => Ok(ChannelMode::Basic),
+        "ertm" | "e" => Ok(ChannelMode::EnhancedRetransmission),
+        s => Err(anyhow!("Invalid channel mode {}", s)),
+    }
+}
+
+/// Listen on the control event channel for new events.
+async fn profile_listener(
+    mut stream: ProfileEventStream,
+    state: Arc<RwLock<ProfileState>>,
+) -> Result<(), Error> {
+    while let Some(event) = stream.try_next().await? {
+        print!("{}", RESET_LINE);
+        match event {
+            ProfileEvent::OnConnected { device_id: _, service_id, channel, protocol: _ } => {
+                let socket = match channel.socket {
+                    Some(s) => s,
+                    None => {
+                        println!("Error: OnConnected: missing socket in returned channel");
+                        return Ok(());
+                    }
+                };
+
+                let mode = match channel.channel_mode {
+                    Some(m) => m,
+                    None => {
+                        println!("Error: OnConnected: missing channel mode in returned channel");
+                        return Ok(());
+                    }
+                };
+
+                let max_tx_sdu_size = match channel.max_tx_sdu_size {
+                    Some(s) => s,
+                    None => {
+                        println!("Error: OnConnected: missing max tx sdu size in returned channel");
+                        return Ok(());
+                    }
+                };
+
+                let chan_id =
+                    state.write().channels.insert(L2capChannel { socket, mode, max_tx_sdu_size });
+
+                print!(
+                    "OnConnected Event:\n  Service Id: {}\n  Channel:\n    Id: {}\n    Mode: {:?}\n    Max Tx Sdu Size: {}\n",
+                    service_id, chan_id, mode, max_tx_sdu_size
+                );
+            }
+            _ => {
+                println!("Received unhandled event");
+            }
+        };
+    }
+
+    Ok(())
+}
+
+async fn add_service(
+    profile_svc: &ProfileProxy,
+    state: Arc<RwLock<ProfileState>>,
+    args: &Vec<String>,
+) -> Result<(), Error> {
+    if args.len() != 3 {
+        println!("Error: invalid number of arguments");
+        println!("{}", Cmd::help_msg());
+        return Ok(());
+    }
+
+    let psm = args[0].parse::<i64>().map_err(|_| anyhow!("psm must be an integer"))?;
+    let channel_mode =
+        channel_mode_from_str(args[1].as_ref()).map_err(|_| anyhow!("invalid channel mode"))?;
+    let max_rx_sdu_size = args[2]
+        .parse::<u16>()
+        .map_err(|_| anyhow!("max-rx-sdu-size must be an integer i the range 0 - 65535"))?;
+    let params = ChannelParameters {
+        channel_mode: Some(channel_mode),
+        max_rx_sdu_size: Some(max_rx_sdu_size),
+    };
+
+    let mut svc_def = ServiceDefinition {
+        service_class_uuids: vec![SERVICE_CLASS_UUID.to_string()],
+        protocol_descriptors: vec![ProtocolDescriptor {
+            protocol: ProtocolIdentifier::L2Cap,
+            params: vec![DataElement {
+                type_: DataElementType::UnsignedInteger,
+                size: 2,
+                data: DataElementData::Integer(psm),
+            }],
+        }],
+        profile_descriptors: vec![],
+        additional_protocol_descriptors: None,
+        information: vec![],
+        additional_attributes: None,
+    };
+
+    let (status, service_id) =
+        profile_svc.add_service(&mut svc_def, SecurityLevel::EncryptionOptional, params).await?;
+
+    if let Some(e) = status.error {
+        println!("Error: {:?}", e);
+        return Ok(());
+    }
+
+    print!("Service:\n  Id: {}\n", service_id);
+
+    state.write().services.insert(
+        service_id,
+        SdpService {
+            service_id,
+            params: ChannelParameters {
+                channel_mode: Some(channel_mode),
+                max_rx_sdu_size: Some(max_rx_sdu_size),
+            },
+        },
+    );
+    Ok(())
+}
+
+fn remove_service(
+    profile_svc: &ProfileProxy,
+    state: Arc<RwLock<ProfileState>>,
+    args: &Vec<String>,
+) -> Result<(), Error> {
+    if args.len() != 1 {
+        return Err(anyhow!("Invalid number of arguments"));
+    }
+
+    let service_id =
+        args[0].parse::<u64>().map_err(|_| anyhow!("service-id must be a positive number"))?;
+
+    match state.write().services.remove(&service_id) {
+        Some(_) => profile_svc
+            .remove_service(service_id)
+            .map_err(|e| anyhow!("Error removing service: {}", e)),
+        None => return Err(anyhow!("Unknown service")),
+    }
+}
+
+fn services(state: Arc<RwLock<ProfileState>>) {
+    for (id, service) in &state.read().services {
+        print!(
+            "Service:\n  Id: {}\n  Mode: {:?}, Max Rx Sdu Size: {}",
+            id,
+            service.params.channel_mode.unwrap(),
+            service.params.max_rx_sdu_size.unwrap()
+        );
+    }
+}
+
 async fn connect_l2cap(
     profile_svc: &ProfileProxy,
-    state: &mut ChannelState<L2capChannel>,
+    state: Arc<RwLock<ProfileState>>,
     args: &Vec<String>,
 ) -> Result<(), Error> {
     if args.len() != 4 {
@@ -92,11 +203,7 @@ async fn connect_l2cap(
     }
     let peer_id = &args[0];
     let psm = args[1].parse::<u16>().map_err(|_| anyhow!("Psm must be [0, 65535]"))?;
-    let channel_mode = match args[2].as_ref() {
-        "basic" => ChannelMode::Basic,
-        "ertm" => ChannelMode::EnhancedRetransmission,
-        arg => return Err(anyhow!("Invalid channel mode: {}", arg)),
-    };
+    let channel_mode = channel_mode_from_str(args[2].as_ref())?;
     let max_rx_sdu_size =
         args[3].parse::<u16>().map_err(|_| anyhow!("max-sdu-size must be [0, 65535]"))?;
     let params = ChannelParameters {
@@ -121,7 +228,9 @@ async fn connect_l2cap(
     };
 
     let chan_id = match channel.socket {
-        Some(socket) => state.add_channel(L2capChannel { socket, mode, max_tx_sdu_size }),
+        Some(socket) => {
+            state.write().channels.insert(L2capChannel { socket, mode, max_tx_sdu_size })
+        }
         None => {
             println!("Error: failed to receive a socket");
             return Ok(());
@@ -136,21 +245,30 @@ async fn connect_l2cap(
     Ok(())
 }
 
-fn disconnect_l2cap(
-    state: &mut ChannelState<L2capChannel>,
-    args: &Vec<String>,
-) -> Result<(), Error> {
+fn disconnect_l2cap(state: Arc<RwLock<ProfileState>>, args: &Vec<String>) -> Result<(), Error> {
     if args.len() != 1 {
         return Err(anyhow!("Invalid number of arguments"));
     }
 
     let chan_id = args[0].parse::<u32>().map_err(|_| anyhow!("channel-id must be an integer"))?;
 
-    match state.remove_channel(chan_id) {
+    match state.write().channels.remove(chan_id) {
         Some(_) => println!("Channel {} disconnected", chan_id),
         None => println!("No channel with id {} exists", chan_id),
     }
     Ok(())
+}
+
+fn cleanup(state: Arc<RwLock<ProfileState>>, profile_svc: &ProfileProxy) {
+    for (id, _) in &state.read().services {
+        if let Err(e) = profile_svc.remove_service(*id) {
+            println!("Error removing service: {:?}", e);
+        };
+    }
+    state.write().services.clear();
+
+    // Dropping sockets will disconnect channels.
+    state.write().channels = IncrementedIdMap::new();
 }
 
 enum ParsedCmd {
@@ -175,24 +293,36 @@ fn parse_cmd(line: String) -> Result<ParsedCmd, Error> {
 
 async fn handle_cmd(
     profile_svc: &ProfileProxy,
-    state: &mut ChannelState<L2capChannel>,
+    state: Arc<RwLock<ProfileState>>,
     cmd: Cmd,
     args: Vec<String>,
 ) -> Result<ReplControl, Error> {
     match cmd {
+        Cmd::AddService => {
+            add_service(profile_svc, state.clone(), &args).await?;
+        }
+        Cmd::RemoveService => {
+            remove_service(profile_svc, state.clone(), &args)?;
+        }
+        Cmd::Services => {
+            services(state.clone());
+        }
         Cmd::Channels => {
-            channels(state);
+            channels(state.clone());
         }
         Cmd::ConnectL2cap => {
-            connect_l2cap(profile_svc, state, &args).await?;
+            connect_l2cap(profile_svc, state.clone(), &args).await?;
         }
         Cmd::DisconnectL2cap => {
-            disconnect_l2cap(state, &args)?;
+            disconnect_l2cap(state.clone(), &args)?;
         }
         Cmd::Help => {
             println!("{}", Cmd::help_msg());
         }
-        Cmd::Exit | Cmd::Quit => return Ok(ReplControl::Break),
+        Cmd::Exit | Cmd::Quit => {
+            cleanup(state.clone(), profile_svc);
+            return Ok(ReplControl::Break);
+        }
     };
     Ok(ReplControl::Continue)
 }
@@ -250,17 +380,18 @@ fn cmd_stream() -> (impl Stream<Item = String>, impl Sink<(), Error = SendError>
 }
 
 /// Wait for raw commands from rustyline thread, and then parse and handle them.
-async fn run_repl(profile_svc: ProfileProxy) -> Result<(), Error> {
+async fn run_repl(
+    profile_svc: ProfileProxy,
+    state: Arc<RwLock<ProfileState>>,
+) -> Result<(), Error> {
     // `cmd_stream` blocks on input in a separate thread and passes commands and acks back to
     // the main thread via async channels.
     let (mut commands, mut acks) = cmd_stream();
 
-    let mut state = ChannelState::<L2capChannel>::new();
-
     while let Some(raw_cmd) = commands.next().await {
         match parse_cmd(raw_cmd) {
             Ok(ParsedCmd::Valid(cmd, args)) => {
-                match handle_cmd(&profile_svc, &mut state, cmd, args).await {
+                match handle_cmd(&profile_svc, state.clone(), cmd, args).await {
                     Ok(ReplControl::Continue) => {}
                     Ok(ReplControl::Break) => break,
                     Err(e) => println!("Error handling command: {}", e),
@@ -282,8 +413,10 @@ async fn main() -> Result<(), Error> {
         .context("failed to connect to bluetooth profile service")?;
     let event_stream = profile_svc.take_event_stream();
 
-    let listener = profile_listener(event_stream);
-    let repl = run_repl(profile_svc);
+    let state = Arc::new(RwLock::new(ProfileState::new()));
+
+    let listener = profile_listener(event_stream, state.clone());
+    let repl = run_repl(profile_svc, state.clone());
 
     pin_mut!(listener);
     pin_mut!(repl);
@@ -299,35 +432,24 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_add_channel() {
-        let mut state = ChannelState::<i32>::new();
-        assert_eq!(0, state.add_channel(0));
-        assert_eq!(1, state.add_channel(1));
-
-        assert_eq!(2, state.channels().len());
-        assert_eq!(Some(&0i32), state.channels().get(&0u32));
-        assert_eq!(Some(&1i32), state.channels().get(&1u32));
-    }
-
-    #[test]
     fn test_disconnect_l2cap() {
-        let mut state = ChannelState::new();
+        let state = Arc::new(RwLock::new(ProfileState::new()));
         let (s, _) = fidl::Socket::create(fidl::SocketOpts::STREAM).unwrap();
         assert_eq!(
             0,
-            state.add_channel(L2capChannel {
+            state.write().channels.insert(L2capChannel {
                 socket: s,
                 mode: ChannelMode::Basic,
                 max_tx_sdu_size: 672
             })
         );
-        assert_eq!(1, state.channels().len());
+        assert_eq!(1, state.read().channels.map().len());
         let args = vec!["0".to_string()];
-        assert!(disconnect_l2cap(&mut state, &args).is_ok());
-        assert!(state.channels().is_empty());
+        assert!(disconnect_l2cap(state.clone(), &args).is_ok());
+        assert!(state.read().channels.map().is_empty());
 
         // Disconnecting an already disconnected channel should not fail.
         // (It should only print a message)
-        assert!(disconnect_l2cap(&mut state, &args).is_ok());
+        assert!(disconnect_l2cap(state.clone(), &args).is_ok());
     }
 }
