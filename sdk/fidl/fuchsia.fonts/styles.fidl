@@ -7,15 +7,15 @@ library fuchsia.fonts;
 using Weight = uint16;
 
 // Commonly used constants for font weight.
-const uint16 WEIGHT_THIN = 100;
-const uint16 WEIGHT_EXTRA_LIGHT = 200;
-const uint16 WEIGHT_LIGHT = 300;
-const uint16 WEIGHT_NORMAL = 400;
-const uint16 WEIGHT_MEDIUM = 500;
-const uint16 WEIGHT_SEMI_BOLD = 600;
-const uint16 WEIGHT_BOLD = 700;
-const uint16 WEIGHT_EXTRA_BOLD = 800;
-const uint16 WEIGHT_BLACK = 900;
+const Weight WEIGHT_THIN = 100;
+const Weight WEIGHT_EXTRA_LIGHT = 200;
+const Weight WEIGHT_LIGHT = 300;
+const Weight WEIGHT_NORMAL = 400;
+const Weight WEIGHT_MEDIUM = 500;
+const Weight WEIGHT_SEMI_BOLD = 600;
+const Weight WEIGHT_BOLD = 700;
+const Weight WEIGHT_EXTRA_BOLD = 800;
+const Weight WEIGHT_BLACK = 900;
 
 /// The type of slant of a type face.
 enum Slant {
@@ -51,6 +51,15 @@ enum Width {
     /// 200% of normal width
     ULTRA_EXPANDED = 9;
 };
+
+/// Default weight of a typeface when none is specified.
+const Weight DEFAULT_WEIGHT = WEIGHT_NORMAL;
+
+/// Default slant of a typeface when none is specified.
+const Slant DEFAULT_SLANT = Slant.UPRIGHT;
+
+/// Default width of a typeface when none is specified.
+const Width DEFAULT_WIDTH = Width.NORMAL;
 
 /// Style properties that can be used when requesting or describing a type face.
 table Style2 {

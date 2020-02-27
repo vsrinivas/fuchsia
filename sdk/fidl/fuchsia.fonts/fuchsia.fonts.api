@@ -2,5 +2,5 @@
   "fidl/fuchsia.fonts/events.fidl": "76cdaf74e34960018d0c4559197b09b5",
   "fidl/fuchsia.fonts/font_provider.fidl": "d8f21e1ca35c7d4254f00c1970102ff9",
   "fidl/fuchsia.fonts/provider.fidl": "7d209c4335bf5f0a9cdf1fd76ff3d360",
-  "fidl/fuchsia.fonts/styles.fidl": "41d9a9b5ff9ecd5cccdf25cf1ac0f016"
+  "fidl/fuchsia.fonts/styles.fidl": "dc7893054f7c4c0131c61e3bc902a8f2"
 }
