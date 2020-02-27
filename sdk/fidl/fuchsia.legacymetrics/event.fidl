@@ -25,10 +25,9 @@ table UserActionEvent {
 
 /// A sample to add to a collected histogram. See
 /// https://chromium.googlesource.com/chromium/src.git/+/HEAD/tools/metrics/histograms/README.md
-table HistogramSample {
-    // |info| and |value| are required.
-    1: HistogramInfo info;
-    2: int64 value;
+struct HistogramSample {
+    HistogramInfo info;
+    int64 value;
 };
 
 /// Descriptor that identifies a histogram.
