@@ -19,6 +19,7 @@ pub mod bootstrap;
 pub mod control;
 pub mod emulator;
 pub mod host_driver;
+pub mod inspect;
 pub mod low_energy_central;
 pub mod low_energy_peripheral;
 pub mod profile;

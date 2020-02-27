@@ -16,6 +16,9 @@ pub mod control;
 /// Tests for the Bluetooth Host driver behavior
 pub mod host_driver;
 
+/// Tests for bt-gap Inspect data
+pub mod inspect;
+
 /// Tests for the fuchsia.bluetooth.le.Central protocol
 pub mod low_energy_central;
 
