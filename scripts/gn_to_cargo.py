@@ -141,7 +141,7 @@ def write_toml_file(fout, metadata, project, target, lookup):
             fout.write("[dependencies.\"%s\"]\n" % third_party_name)
             fout.write("version = \"%s\"\n" % version)
             if features:
-                fout.write("features = %s\n" % features)
+                fout.write("features = %s\n" % map(lambda f: f.encode('ascii'), features))
         # this is a in-tree rust target
         elif "crate_name" in project.targets[dep]:
             crate_name = lookup_gn_pkg_name(project, dep)
