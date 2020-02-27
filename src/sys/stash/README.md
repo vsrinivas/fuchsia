@@ -1,10 +1,15 @@
 # `stash`
 
-Reviewed on: 2019-07-18
+Reviewed on: 2020-02-26
 
-Stash exists to hold state for other system services. This state takes the form
-of a key/value store, which can be accessed over [FIDL][fidl]. More details on
-writing a program that uses stash is available [here](stash.md).
+Stash exists to hold persistent mutable state for early boot system services
+that are restricted from using mutable storage (usually for security reasons).
+Stash may be used to store device-wide state. Stash must not be used to store
+user-specific state, since data isn't saved to a user-encrypted partition.
+
+Persisted state takes the form of a key/value store, which can be accessed over
+FIDL. More details on writing a program that uses stash is available
+[here](stash.md).
 
 ## Building
 

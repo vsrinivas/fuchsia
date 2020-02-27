@@ -2,11 +2,22 @@
 
 ## Should I use Stash?
 
-Stash should be used by system services which require access to mutable storage
-before user login, as Stash stores its data on the device's data partition, and
-once a user has logged in data should go in the user's encrypted partition. If
-you're unsure of if your system service should use Stash or something else,
-reach out to [dgonyeo][dgonyeo] or [joshlf][joshlf].
+Stash may be used by system services which require access to mutable storage
+before user login, as Stash stores its data on the device's data partition.
+Once a user has logged in, such data should go in the user's encrypted
+partition.
+
+Components that can use an alternative to Stash, should.
+
+*   Storage in Stash is not attributed to the component that wrote it.
+    Clients should use Stash with care, or they risk filling up a mutable
+    storage partition without attribution.
+*   Reading state from Stash is not restricted to the component that wrote it.
+    Clients should use Stash with care, or they risk overwriting another
+    client's state, or establishing a side channel over Stash.
+
+If you're unsure if your system service should use Stash or not, reach out to
+the security team.
 
 ## How do I use Stash?
 
@@ -31,7 +42,7 @@ otherwise by the security team.
 
 When the [`test_package` GN template][test_package] is used to set up a hermetic
 environment for running tests, a standalone instance of Stash can be set up in
-this environment to run tests against. 
+this environment to run tests against.
 
 An instance of `fuchsia.stash.Store` that's been configured to use a temporary
 backing file is available at
