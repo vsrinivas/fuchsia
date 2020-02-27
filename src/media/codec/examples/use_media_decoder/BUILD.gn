@@ -90,10 +90,6 @@ test("use_h264_decoder_test") {
   sources = [ "test/use_h264_decoder_test.cc" ]
 
   deps = [ ":use_media_decoder_source_set" ]
-
-  # In environments without an h264 HW decoder, this test will fall back to a SW
-  # decoder.
-  environments = [ astro_env ] + basic_envs
 }
 
 test("use_h264_decoder_secure_output_test") {
@@ -104,10 +100,6 @@ test("use_h264_decoder_secure_output_test") {
   sources = [ "test/use_h264_decoder_secure_output_test.cc" ]
 
   deps = [ ":use_media_decoder_source_set" ]
-
-  # This test can only use HW decode because codec_impl won't map the output
-  # VMOs for CPU access.
-  environments = [ astro_env ]
 }
 
 test("use_h264_decoder_secure_input_output_test") {
@@ -118,9 +110,6 @@ test("use_h264_decoder_secure_input_output_test") {
   sources = [ "test/use_h264_decoder_secure_input_output_test.cc" ]
 
   deps = [ ":use_media_decoder_source_set" ]
-
-  # This test needs a the clearTVP TA
-  environments = [ sherlock_env ]
 }
 
 test("use_vp9_decoder_test") {
@@ -131,14 +120,6 @@ test("use_vp9_decoder_test") {
   sources = [ "test/use_vp9_decoder_test.cc" ]
 
   deps = [ ":use_media_decoder_source_set" ]
-
-  # In contrast to use_h264_decoder_test, there is no SW fallback for VP9 at the
-  # moment, so for now only list envs with HW decode.
-  environments = [
-    astro_env,
-    sherlock_env,
-    vim2_env,
-  ]
 }
 
 test("use_vp9_decoder_24_output_frames_test") {
@@ -149,16 +130,6 @@ test("use_vp9_decoder_24_output_frames_test") {
   sources = [ "test/use_vp9_decoder_24_output_frames_test.cc" ]
 
   deps = [ ":use_media_decoder_source_set" ]
-
-  # In contrast to use_h264_decoder_test, there is no SW fallback for VP9 at the
-  # moment, so for now only list envs with HW decode, and which also have
-  # sufficient contiguous sysmem heap to handle 24 frames from bear-vp9.ivf.
-  #
-  # TODO(fxb/41735): Enable on astro in future if/when posible.
-  environments = [
-    sherlock_env,
-    vim2_env,
-  ]
 }
 
 test("use_vp9_decoder_secure_output_test") {
@@ -189,10 +160,6 @@ test("vp9_decoder_conformance_test") {
   sources = [ "test/vp9_decoder_conformance_test.cc" ]
 
   deps = [ ":use_media_decoder_source_set" ]
-
-  # No VP9 SW fallback for now, so the test can only pass running on envs with
-  # HW decode.
-  environments = [ astro_env ]
 }
 
 source_set("decoder_fuzzer") {
