@@ -76,7 +76,7 @@ protocol Device {
     /// to do the parsing of the reports with the correct sizes and offset.
     /// It is guaranteed that only whole reports will be sent.
     /// If there are no reports, this will return ZX_ERR_SHOULD_WAIT, and the client can
-    /// wait on the event from |GetReportsEvent|.
+    /// wait on the event from `GetReportsEvent`.
     ReadReports() -> (zx.status status, vector<uint8>:MAX_REPORT_DATA data);
 
     /// Receive an event that will signal on `ZX_USER_SIGNAL_0` when there are reports in the

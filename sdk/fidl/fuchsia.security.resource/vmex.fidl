@@ -8,6 +8,6 @@ library fuchsia.security.resource;
 /// able to mark VMOs as executable.
 [Discoverable, Layout = "Simple"]
 protocol Vmex {
-    /// Get a VMEX resource handle as |resource|.
+    /// Get a VMEX resource handle as `resource`.
     Get() -> (handle<resource> vmex);
 };

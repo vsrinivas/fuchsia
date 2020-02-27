@@ -44,8 +44,8 @@ struct AddressRange {
 
 /// A buffer's configuration.
 struct BufferConfig {
-    /// A "buffer" is made up of |num_chunks| chunks with each chunk having
-    /// size |1<<chunk_order| pages.
+    /// A "buffer" is made up of `num_chunks` chunks with each chunk having
+    /// size `1<<chunk_order` pages.
     uint32 num_chunks;
 
     /// log2 of the number of pages
@@ -83,7 +83,7 @@ using BufferDescriptor = uint32;
 protocol Controller {
     /// Initialize the trace.
     /// This does not include allocating space for the trace buffers, that is
-    /// done later by |AllocateBuffer()|.
+    /// done later by `AllocateBuffer()`.
     Initialize(Allocation allocation) -> () error zx.status;
 
     /// Free all trace buffers and any other resources allocated for the trace.
@@ -122,13 +122,13 @@ protocol Controller {
     FreeBuffer(BufferDescriptor descriptor) -> ();
 
     /// Start tracing.
-    /// Must be called after |Initialize()| + |AllocateBuffer()|,
+    /// Must be called after `Initialize()` + `AllocateBuffer()`,
     /// with tracing off.
     Start() -> ();
 
     /// Stop tracing.
-    /// May be called any time after |Allocate()| has been called and before
-    /// |Free()|. If called at other times the call is ignored.
+    /// May be called any time after `Allocate()` has been called and before
+    /// `Free()`. If called at other times the call is ignored.
     /// May be called multiple times.
     // TODO(ZX-892): Support terminating the trace in THREAD mode.
     Stop() -> ();

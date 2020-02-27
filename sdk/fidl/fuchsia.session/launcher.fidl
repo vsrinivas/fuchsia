@@ -9,7 +9,7 @@ using fuchsia.url;
 /// A protocol used to launch sessions.
 [Discoverable]
 protocol Launcher {
-    /// Launches the session detailed in |configuration|.
+    /// Launches the session detailed in `configuration`.
     ///
     /// If a session is currently running, the component associated with the running session will
     /// be destroyed.

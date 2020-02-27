@@ -11,9 +11,9 @@ const uint8 MAX_HARDWARE_DERIVED_KEY_SIZE = 32;
 protocol StatelessKeyManager {
     /// Get a hardware key derived key.
     ///
-    /// Get a key derived from hardware root key using | key_info | as info and the trusted app ID
+    /// Get a key derived from hardware root key using `key_info` as info and the trusted app ID
     /// as salt. This call is deterministic and always returns the same result if given the same
-    /// | key_info | on the same device and would be different across different devices if they have
+    /// `key_info` on the same device and would be different across different devices if they have
     /// different hardware keys.
     GetHardwareDerivedKey(
         vector<uint8>:MAX_HARDWARE_DERIVE_KEY_INFO_SIZE key_info

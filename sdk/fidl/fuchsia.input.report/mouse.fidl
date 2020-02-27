@@ -38,7 +38,7 @@ table MouseDescriptor {
     1: MouseInputDescriptor input;
 };
 
-/// |MouseReport| gives the relative movement of the mouse and currently
+/// `MouseReport` gives the relative movement of the mouse and currently
 /// pressed buttons. Relative means the movement seen between the previous
 /// report and this report. The client is responsble for tracking this and
 /// converting it to absolute movement.

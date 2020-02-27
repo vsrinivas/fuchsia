@@ -63,7 +63,7 @@ protocol SkipBlock {
     Write(ReadWriteOperation op) -> (zx.status status, bool bad_block_grown);
 
     /// Erases and writes the specified bytes from the provided vmo. If offset
-    /// and size in |op| are not aligned to |block_size_bytes| then the driver will
+    /// and size in `op` are not aligned to `block_size_bytes` then the driver will
     /// first read the partitially written blocks and combine them with the
     /// provided vmo.
     ///

@@ -56,7 +56,7 @@ protocol DisplayListener {
                               bool owned_by_display_controller);
 };
 
-/// |DisplayManager| is a service that informs the client of new or removed
+/// `DisplayManager` is a service that informs the client of new or removed
 /// displays and allows changing of display configuration. Every display is
 /// associated with a DisplayRef which can also be used as a parameter to other
 /// apis (e.g. Scenic).

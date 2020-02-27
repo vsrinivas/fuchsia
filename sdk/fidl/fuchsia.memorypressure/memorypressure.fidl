@@ -45,7 +45,7 @@ enum Level {
 [Discoverable]
 protocol Provider {
     /// Used to register for memory pressure level changes.
-    /// |watcher|: memory pressure |Watcher| channel that the |Provider| will use to send
+    /// `watcher`: memory pressure `Watcher` channel that the `Provider` will use to send
     /// level change messages to the client.
     ///
     /// The current memory pressure level is immediately sent to the watcher
@@ -64,9 +64,9 @@ protocol Provider {
 /// To be implemented by clients who wish to be notified on memory pressure level changes.
 protocol Watcher {
     /// Sent to the registered client when the memory pressure level changes.
-    /// |level|: indicates the current memory pressure level.
+    /// `level`: indicates the current memory pressure level.
     ///
-    /// Will also be invoked on initial connection via |RegisterWatcher|, so that a newly
+    /// Will also be invoked on initial connection via `RegisterWatcher`, so that a newly
     /// registered client can discover the current memory pressure level.
     ///
     /// The watcher must immediately reply with a message to acknowledge that it has

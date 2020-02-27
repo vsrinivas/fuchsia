@@ -7,13 +7,13 @@ using zx;
 
 struct State {
     bool backlight_on;
-    /// |brightness| can either be:
+    /// `brightness` can either be:
     /// 1. The unitless brightness value on a linear scale where 0.0 is the minimum
     ///    brightness and 1.0 is the maximum brightness - represents the current /
     ///    desired brightness as a percentage within the supported range. Used
-    ///    by the |GetStateNormalized| / |SetStateNormalized| calls.
-    /// 2. Absolute brightness in nits. Used by the |GetStateAbsolute| /
-    ///    |SetStateAbsolute| calls.
+    ///    by the `GetStateNormalized` / `SetStateNormalized` calls.
+    /// 2. Absolute brightness in nits. Used by the `GetStateAbsolute` /
+    ///    `SetStateAbsolute` calls.
     float64 brightness;
 };
 

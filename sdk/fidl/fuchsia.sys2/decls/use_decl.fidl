@@ -25,7 +25,7 @@ xunion UseDecl {
 /// https://fuchsia.dev/fuchsia-src/glossary#service
 table UseServiceDecl {
     /// The provider of the service relative to the component itself. Must
-    /// be |realm| or |framework|.
+    /// be `realm` or `framework`.
     1: Ref source;
 
     /// Path identifying the service, by which it was presented to this
@@ -48,7 +48,7 @@ table UseServiceDecl {
 /// FIDL protocol.
 table UseProtocolDecl {
     /// The provider of the legacy service relative to the component itself.
-    /// Must be |realm| or |framework|.
+    /// Must be `realm` or `framework`.
     1: Ref source;
 
     /// Path identifying the legacy service, by which it was presented to this
@@ -66,7 +66,7 @@ table UseProtocolDecl {
 /// component's environment.
 table UseDirectoryDecl {
     /// The provider of the directory relative to the component itself. Must
-    /// be |realm| or |framework|.
+    /// be `realm` or `framework`.
     1: Ref source;
 
     /// Path identifying the directory, by which it was presented to this

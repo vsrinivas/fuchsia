@@ -46,13 +46,13 @@ enum Unit : uint32 {
     LUX = 11;
 };
 
-/// Describe a |Range| of values.
+/// Describe a `Range` of values.
 struct Range {
     int64 min;
     int64 max;
 };
 
-/// An |Axis| is defined as a |range| and a |unit|.
+/// An `Axis` is defined as a `range` and a `unit`.
 struct Axis {
     Range range;
     Unit unit;

@@ -6,9 +6,9 @@ library fuchsia.process.lifecycle;
 
 protocol Lifecycle {
     /// The process must clean up its state in preparation for termination, and
-    /// must close the channel hosting the |Lifecycle| protocol when it is
+    /// must close the channel hosting the `Lifecycle` protocol when it is
     /// ready to be terminated. At the discretion of the system the process may
-    /// be terminated before it closes the |Lifecycle| channel. The process may
+    /// be terminated before it closes the `Lifecycle` channel. The process may
     /// exit when it is ready.
     Stop();
 };

@@ -11,7 +11,7 @@ using zx;
 [Discoverable, Layout = "Simple"]
 protocol Counter {
     /// Retrives a VMO containining summarized kcounter data. The vmo returned
-    /// in |buffer| is in "inspect-vmo" format, documented elsewhere.
+    /// in `buffer` is in "inspect-vmo" format, documented elsewhere.
     GetInspectVmo() -> (zx.status status, fuchsia.mem.Buffer buffer);
 
     /// Request that the previously-returned VMO buffer's data be updated. The

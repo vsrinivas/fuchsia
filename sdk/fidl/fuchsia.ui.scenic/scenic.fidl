@@ -23,9 +23,9 @@ protocol Scenic {
     /// Create a new Session, which is the primary way to interact with Scenic.
     ///
     /// In this variant, the caller may register a request for focus management.
-    /// The |view_focuser|'s client is coupled to the requested |session|, and
+    /// The `view_focuser`'s client is coupled to the requested `session`, and
     /// this coupling acts as a security boundary: the ViewRef used as the basis
-    /// for authority by |view_focuser| must come from |session|.
+    /// for authority by `view_focuser` must come from `session`.
     [Transitional]
     CreateSession2(request<Session> session, SessionListener? listener,
                    request<fuchsia.ui.views.Focuser>? view_focuser);

@@ -49,7 +49,7 @@ struct WlanTxInfo {
     uint8 mcs;
 };
 
-/// An outgoing packet that is to be "sent" by the wlantap device. |data| contains the packet
+/// An outgoing packet that is to be "sent" by the wlantap device. `data` contains the packet
 /// in its wire format.
 struct WlanTxPacket {
     vector<uint8> data;
@@ -105,9 +105,9 @@ struct SetCountryArgs {
 /// Allow the test program to observe and control the behavior of the wlantap-phy device.
 /// A wlantap-phy device is a special vendor device and its driver (Fuchsia being the vendor)
 /// used for testing purpose.
-/// Implements a subset of |wlanmac_ifc_t| and |wlanmac_protocol_ops_t| in
+/// Implements a subset of `wlanmac_ifc_t` and `wlanmac_protocol_ops_t` in
 /// //garnet/lib/wlan/protocol/include/wlan/protocol/mac.h
-/// Implements a subset of |WlanphyImpl| protocol in
+/// Implements a subset of `WlanphyImpl` protocol in
 /// //zircon/system/banjo/ddk.protocol.wlanphyimpl/wlanphy-impl.banjo
 protocol WlantapPhy {
     // wlanmac_ifc_t callbacks

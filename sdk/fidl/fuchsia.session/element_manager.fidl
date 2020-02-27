@@ -89,6 +89,6 @@ struct AdditionalCapabilities {
     /// example, "/svc/fuchsia.util.SomeService").
     vector<fuchsia.io2.Path>:MAX paths;
 
-    /// The |Directory| from which the capabilities are served.
+    /// The `Directory` from which the capabilities are served.
     fuchsia.io.Directory host_directory;
 };

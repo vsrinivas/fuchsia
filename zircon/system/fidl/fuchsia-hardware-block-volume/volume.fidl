@@ -37,7 +37,7 @@ struct VolumeManagerInfo {
     // is initialized on a GPT partition that has extended beyond the originally allocated
     // capacity).
     // This resize occurs automatically on initialization of the Volume Manager,
-    // and adjusts the result of |current_slice_count| to reflect the currently usable size.
+    // and adjusts the result of `current_slice_count` to reflect the currently usable size.
     uint64 maximum_slice_count;
 };
 
@@ -61,7 +61,7 @@ protocol VolumeManager {
     // Gets slice size information about all volumes.
     Query() -> (zx.status status, VolumeInfo? info);
 
-    // Gets the VolumeManagerInfo describing this instance of the |VolumeManager|.
+    // Gets the VolumeManagerInfo describing this instance of the `VolumeManager`.
     GetInfo() -> (zx.status status, VolumeManagerInfo? info);
 
     // Atomically marks a vpartition (by instance GUID) as inactive, while finding

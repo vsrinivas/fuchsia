@@ -237,7 +237,7 @@ protocol Flatland {
     /// another process. The parent process has control over how the linked content is integrated
     /// into their Graph through this Link object, and the object's associated Link properties.
     ///
-    /// |LinkProperties| must have logical_size set. This is the initial size that will drive the
+    /// `LinkProperties` must have logical_size set. This is the initial size that will drive the
     /// layout of the child.
     CreateLink(LinkId link_id, ContentLinkToken token, LinkProperties properties,
                request<ContentLink> content_link);

@@ -13,7 +13,7 @@ protocol Device {
     ///
     /// Note:
     ///  * The VMO must be contiguous.
-    ///  * |secure_mem| is expected to have a stable physical address that is pinned by some other
+    ///  * `secure_mem` is expected to have a stable physical address that is pinned by some other
     ///    entity. The protocol implementation should not be expected to keep the VMO pinned.
     ///  * The server implementation must not use an IOMMU-backed BTI handle, as the physical
     ///    address of the VMO being pinned must be stable.

@@ -165,7 +165,7 @@ protocol Controller {
     SetDriverLogFlags(uint32 clear_flags, uint32 set_flags) -> (zx.status status);
 
     /// Runs compatibility tests for the driver that binds to this device.
-    /// The |hook_wait_time| is the time that the driver expects to take for
+    /// The `hook_wait_time` is the time that the driver expects to take for
     /// each device hook in nanoseconds.
     /// Returns whether the driver passed the compatibility check.
     RunCompatibilityTests(int64 hook_wait_time) -> (uint32 status);

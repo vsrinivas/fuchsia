@@ -151,7 +151,7 @@ table TestHarnessSpec {
     /// Optional.
     7: string environment_suffix;
 
-    /// DEPRECATED. Use |env_services.service_dir| to pass through services from
+    /// DEPRECATED. Use `env_services.service_dir` to pass through services from
     /// parent environment.
     3: vector<string> env_services_to_inherit;
 

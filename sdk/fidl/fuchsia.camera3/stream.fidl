@@ -80,7 +80,7 @@ struct FrameInfo {
     handle<eventpair> release_fence;
 };
 
-/// The frequency at which a Stream produces frames. The value is |numerator| / |denominator|, with
+/// The frequency at which a Stream produces frames. The value is `numerator` / `denominator`, with
 /// units of frames-per-second (Hz). The representation is not necessarily an irreducible fraction.
 struct FrameRate {
     /// Fraction numerator.

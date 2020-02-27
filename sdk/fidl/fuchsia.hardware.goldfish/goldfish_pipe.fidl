@@ -21,7 +21,7 @@ const uint32 SIGNAL_HANGUP = 0x04000000; // ZX_USER_SIGNAL_2
 /// Interface for the Goldfish pipe driver.
 [Layout = "Simple"]
 protocol PipeDevice {
-    /// Open pipe. A protocol request |pipe_request| provides an interface
+    /// Open pipe. A protocol request `pipe_request` provides an interface
     /// to the pipe. Multiple pipes can be opened for a single device.
     /// Closing the device connection will also close all pipe connections.
     /// TODO(DX-1766): Unify `device` and `pipe`.

@@ -17,7 +17,7 @@ const uint64 MAX_STREAMS = 64;
 /// Represents one stream within a particular configuration.
 struct StreamConfig {
     fuchsia.camera2.FrameRate frame_rate;
-    /// |constraints| should allow for all the image formats listed in image_formats.
+    /// `constraints` should allow for all the image formats listed in image_formats.
     fuchsia.sysmem.BufferCollectionConstraints constraints;
 
     /// Properties of the stream:
@@ -25,7 +25,7 @@ struct StreamConfig {
 
     /// We need to specify both the constraints & the image formats because
     /// there are fixed set of resolutions supported by the Camera Controller
-    /// so a range within the |constraints| won't be sufficient.
+    /// so a range within the `constraints` won't be sufficient.
     /// Some streams support multiple resolutions for same configuration
     /// We would need to change the resolution runtime, without stopping the
     /// streaming. This provides a list of resolutions a stream would be providing.
@@ -48,11 +48,11 @@ protocol Controller {
     GetConfigs() -> (vector<Config>:MAX_CONFIGURATIONS? configs, zx.status status);
 
     /// Set a particular configuration and create the requested stream.
-    /// |config_index| : Configuration index from the vector which needs to be applied.
-    /// |stream_index| : Stream index from the vector of streams provided within a config.
-    /// |buffer_collection| : Buffer collections for the stream.
-    /// |stream| : Stream channel for the stream requested
-    /// |image_format_index| : Image format index which needs to be set up upon creation.
+    /// `config_index` : Configuration index from the vector which needs to be applied.
+    /// `stream_index` : Stream index from the vector of streams provided within a config.
+    /// `buffer_collection` : Buffer collections for the stream.
+    /// `stream` : Stream channel for the stream requested
+    /// `image_format_index` : Image format index which needs to be set up upon creation.
     /// If there is already an active configuration which is different than the one
     /// which is requested to be set, then the HAL will be closing all existing streams
     /// and honor this new setup call.

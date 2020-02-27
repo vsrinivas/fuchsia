@@ -11,18 +11,18 @@ using zx;
 protocol Manager {
     /// Notifies the client when a camera becomes available.  A number of these events will
     /// be sent when a client first connects to this protocol.
-    /// |device_id| is used to identify the camera.  The device_id should not change throughout
+    /// `device_id` is used to identify the camera.  The device_id should not change throughout
     /// the lifetime of the camera.
-    /// |last_known_camera| is set to true when the Camera Manager has notified the client
+    /// `last_known_camera` is set to true when the Camera Manager has notified the client
     /// of all the devices it currently knows about.
-    /// |description| describes the properties of the camera.
+    /// `description` describes the properties of the camera.
     -> OnDeviceAvailable(int32 device_id, DeviceInfo description, bool last_known_camera);
 
     /// Notifies the client when a camera becomes unavailable.
     -> OnDeviceUnavailable(int32 device_id);
 
     /// Notifies the client when a camera becomes muted or unmuted.
-    /// |device_id| refers to the device_id from the description of a previous OnDeviceAvailable
+    /// `device_id` refers to the device_id from the description of a previous OnDeviceAvailable
     /// call.
     -> OnDeviceMuteChanged(int32 device_id, bool currently_muted);
 
@@ -31,20 +31,20 @@ protocol Manager {
     AcknowledgeDeviceEvent();
 
     /// Connect to a camera stream:
-    /// |device_id| Refers to a specific device_id that has been advertised by OnDeviceAvailable.
-    /// |constraints| contains a set of constraints on the requested stream.  The Camera
+    /// `device_id` Refers to a specific device_id that has been advertised by OnDeviceAvailable.
+    /// `constraints` contains a set of constraints on the requested stream.  The Camera
     /// Manager will attempt to find a stream that meets the constraints.  If multiple
     /// streams match, one of the matching streams will be connected.
-    /// |token| refers to a Sysmem buffer allocation that will be used to pass images using
+    /// `token` refers to a Sysmem buffer allocation that will be used to pass images using
     /// the Stream protocol.  The Camera Manager will apply a BufferCollectionContraints
     /// related to the image format(s), so the client does not need to apply any
     /// ImageFormatConstraints.
-    /// Sync is assumed to have been called on |token| before it is passed to
+    /// Sync is assumed to have been called on `token` before it is passed to
     /// ConnectToStream.
-    /// Since |constraints| may not dictate a specific format, the initial format of images
+    /// Since `constraints` may not dictate a specific format, the initial format of images
     /// on the stream is indicated on the response.
     /// The connection is considered to be successful once a response has been given, unless
-    /// |stream| is closed.
+    /// `stream` is closed.
     ConnectToStream(int32 device_id, StreamConstraints constraints,
                     fuchsia.sysmem.BufferCollectionToken token,
                     request<Stream> stream) -> (fuchsia.sysmem.ImageFormat_2 format);
@@ -56,7 +56,7 @@ protocol MuteControl {
     /// camera will not produce any more images until
     /// unmute is called.  You can still connect to streams from a muted camera, but they
     /// will not produce frames until the camera is unmuted.
-    /// |device_id| refers to the device_id from a previous OnDeviceAvailable call.
+    /// `device_id` refers to the device_id from a previous OnDeviceAvailable call.
     Mute(int32 device_id) -> (zx.status status);
     Unmute(int32 device_id) -> (zx.status status);
 };

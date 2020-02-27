@@ -7,6 +7,6 @@ library fuchsia.boot;
 /// Protocol for providing the root resource.
 [Discoverable, Layout = "Simple"]
 protocol RootResource {
-    /// Get the root |resource|.
+    /// Get the root `resource`.
     Get() -> (handle<resource> resource);
 };

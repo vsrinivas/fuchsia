@@ -22,7 +22,7 @@ const uint32 MAX_CATEGORY_NAME_LENGTH = 100;
 const uint32 MAX_CATEGORY_DESCRIPTION_LENGTH = 400;
 
 /// The state of the tracing session.
-/// A "session" is everything between |Initialize| and |Terminate|.
+/// A "session" is everything between `Initialize` and `Terminate`.
 enum SessionState {
     /// The tracing system is ready for a new session.
     /// There can be only one session at a time.
@@ -56,7 +56,7 @@ enum SessionState {
 /// to modify the trace controller.
 [Discoverable]
 protocol Controller {
-    /// Requests to initialize tracing with the specified |config|.
+    /// Requests to initialize tracing with the specified `config`.
     ///
     /// A bad request will terminate the connection.
     ///
@@ -68,19 +68,19 @@ protocol Controller {
     /// Requests to terminate tracing.
     ///
     /// If tracing has not yet stopped it is stopped first.
-    /// If |options.write_results| is true, then the trace controller
+    /// If `options.write_results` is true, then the trace controller
     /// continues to transfer any remaining data to the output socket
     /// until finished, then closes the output.
     TerminateTracing(TerminateOptions options) -> (TerminateResult result);
 
-    /// Requests to start tracing with the specified |options|.
+    /// Requests to start tracing with the specified `options`.
     ///
     /// If tracing has already started then the request is ignored,
     /// except to send back an error code.
     ///
     /// The trace controller acknowledges the request when all
     /// registered providers have been started or after
-    /// |TraceConfig.start_timeout_milliseconds| milliseconds.
+    /// `TraceConfig.start_timeout_milliseconds` milliseconds.
     /// One useful reason for the has-started acknowledgement is that the
     /// trace program can start a program to trace knowing that all the
     /// providers are started.
@@ -200,13 +200,13 @@ table StartOptions {
     /// This allows, for example, multiple Start/Stop trace runs to be
     /// collected in the same buffer.
     ///
-    /// If the preceding |Stop()| request had |save_after_stopped=true|
+    /// If the preceding `Stop()` request had `save_after_stopped=true`
     /// then this value is overridden to CLEAR_ENTIRE_BUFFER to avoid
     /// duplicate data being saved.
     1: BufferDisposition buffer_disposition;
 
     /// The trace categories to add to the initial set provided in
-    /// |TraceConfig|. If the combined number of categories goes over the
+    /// `TraceConfig`. If the combined number of categories goes over the
     /// limit then the extra categories past the limit are discarded.
     2: vector<string:MAX_CATEGORY_NAME_LENGTH>:MAX_NUM_CATEGORIES
            additional_categories;
@@ -221,7 +221,7 @@ table StopOptions {
     1: bool write_results;
 };
 
-/// Result of |GetKnownCategories|.
+/// Result of `GetKnownCategories`.
 struct KnownCategory {
     // Category name.
     string:MAX_CATEGORY_NAME_LENGTH name;
@@ -229,7 +229,7 @@ struct KnownCategory {
     string:MAX_CATEGORY_DESCRIPTION_LENGTH description;
 };
 
-/// Result of |GetProviders|.
+/// Result of `GetProviders`.
 table ProviderInfo {
     /// The provider's ID, assigned by trace-manager.
     1: uint32 id;

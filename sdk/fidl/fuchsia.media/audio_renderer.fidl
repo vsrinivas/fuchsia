@@ -11,12 +11,12 @@ using fuchsia.media.audio;
 /// renderer is considered operational whenever it has packets queued to be rendered; otherwise it
 /// is _configurable_. Once an AudioRenderer enters the operational state, calls to "configuring"
 /// methods are disallowed and will cause the audio service to disconnect the client's connection.
-/// The following are considered configuring methods: |AddPayloadBuffer|, |SetPcmStreamType|,
-/// |SetStreamType|, |SetPtsUnits|, |SetPtsContinuityThreshold|.
+/// The following are considered configuring methods: `AddPayloadBuffer`, `SetPcmStreamType`,
+/// `SetStreamType`, `SetPtsUnits`, `SetPtsContinuityThreshold`.
 ///
 /// If an AudioRenderer must be reconfigured, the client must ensure that no packets are still
 /// enqueued when these "configuring" methods are called. Thus it is best practice to call
-/// |DiscardAllPackets| on the AudioRenderer (and ideally |Stop| before |DiscardAllPackets|), prior
+/// `DiscardAllPackets` on the AudioRenderer (and ideally `Stop` before `DiscardAllPackets`), prior
 /// to reconfiguring the renderer.
 ///
 [FragileBase]
@@ -109,22 +109,22 @@ protocol AudioRenderer {
     SetReferenceClock(handle reference_clock);
 
     /// Sets the usage of the render stream. This method may not be called after
-    /// |SetPcmStreamType| is called. The default usage is `MEDIA`.
+    /// `SetPcmStreamType` is called. The default usage is `MEDIA`.
     SetUsage(AudioRenderUsage usage);
 
     /// Sets the type of the stream to be delivered by the client. Using this method implies
     /// that the stream encoding is `AUDIO_ENCODING_LPCM`.
     ///
-    /// This must be called before |Play| or |PlayNoReply|. After a call to |SetPcmStreamType|,
-    /// the client must then send an |AddPayloadBuffer| request, then the various |StreamSink|
-    /// methods such as |SendPacket|/|SendPacketNoReply|.
+    /// This must be called before `Play` or `PlayNoReply`. After a call to `SetPcmStreamType`,
+    /// the client must then send an `AddPayloadBuffer` request, then the various `StreamSink`
+    /// methods such as `SendPacket`/`SendPacketNoReply`.
     SetPcmStreamType(AudioStreamType type);
 
     /// Enable or disable notifications about changes to the minimum clock lead
     /// time (in nanoseconds) for this AudioRenderer. Calling this method with
-    /// 'enabled' set to true will trigger an immediate |OnMinLeadTimeChanged|
+    /// 'enabled' set to true will trigger an immediate `OnMinLeadTimeChanged`
     /// event with the current minimum lead time for the AudioRenderer. If the
-    /// value changes, an |OnMinLeadTimeChanged| event will be raised with the
+    /// value changes, an `OnMinLeadTimeChanged` event will be raised with the
     /// new value. This behavior will continue until the user calls
     /// `EnableMinLeadTimeEvents(false)`.
     ///
@@ -162,12 +162,12 @@ protocol AudioRenderer {
     // used by code requiring synchronous FIDL interfaces to talk to
     // AudioRenderers.
     ///
-    /// While it is possible to call |GetMinLeadTime| before |SetPcmStreamType|,
+    /// While it is possible to call `GetMinLeadTime` before `SetPcmStreamType`,
     /// there's little reason to do so. This is because lead time is a function
-    /// of format/rate, so lead time will be recalculated after |SetPcmStreamType|.
-    /// If min lead time events are enabled before |SetPcmStreamType| (with
-    /// |EnableMinLeadTimeEvents(true)|), then an event will be generated in
-    /// response to |SetPcmStreamType|.
+    /// of format/rate, so lead time will be recalculated after `SetPcmStreamType`.
+    /// If min lead time events are enabled before `SetPcmStreamType` (with
+    /// `EnableMinLeadTimeEvents(true)`), then an event will be generated in
+    /// response to `SetPcmStreamType`.
     GetMinLeadTime() -> (int64 min_lead_time_nsec);
 
     /// Immediately put the AudioRenderer into a playing state. Start the advance
@@ -179,8 +179,8 @@ protocol AudioRenderer {
     /// time).
     ///
     /// Local system time is specified in units of nanoseconds; media_time is
-    /// specified in the units defined by the user in the |SetPtsUnits| function,
-    /// or nanoseconds if |SetPtsUnits| is not called.
+    /// specified in the units defined by the user in the `SetPtsUnits` function,
+    /// or nanoseconds if `SetPtsUnits` is not called.
     ///
     /// The act of placing an AudioRenderer into the playback state establishes a
     /// relationship between 1) the user-defined media (or presentation) timeline
@@ -203,7 +203,7 @@ protocol AudioRenderer {
     /// With the corresponding reference_time and media_time values, a user can
     /// translate arbitrary time values from one timeline into the other. After
     /// calling `SetPtsUnits(pts_per_sec_numerator, pts_per_sec_denominator)` and
-    /// given the 'ref_start' and 'media_start' values from |Play|, then for
+    /// given the 'ref_start' and 'media_start' values from `Play`, then for
     /// any 'ref_time':
     ///
     /// media_time = ( (ref_time - ref_start) / 1e9
@@ -250,22 +250,22 @@ protocol AudioRenderer {
     /// specified or not) in the return value of the play call.
     ///
     /// Examples
-    /// 1. A user has queued some audio using |SendPacket| and simply wishes them
+    /// 1. A user has queued some audio using `SendPacket` and simply wishes them
     /// to start playing as soon as possible. The user may call Play without
     /// providing explicit timestamps -- `Play(NO_TIMESTAMP, NO_TIMESTAMP)`.
     ///
-    /// 2. A user has queued some audio using |SendPacket|, and wishes to start
+    /// 2. A user has queued some audio using `SendPacket`, and wishes to start
     /// playback at a specified 'reference_time', in sync with some other media
     /// stream, either initially or after discarding packets. The user would call
     /// `Play(reference_time, NO_TIMESTAMP)`.
     ///
-    /// 3. A user has queued some audio using |SendPacket|. The first of these
+    /// 3. A user has queued some audio using `SendPacket`. The first of these
     /// packets has a PTS of zero, and the user wishes playback to begin as soon
     /// as possible, but wishes to skip all of the audio content between PTS 0
     /// and PTS 'media_time'. The user would call
     /// `Play(NO_TIMESTAMP, media_time)`.
     ///
-    /// 4. A user has queued some audio using |SendPacket| and want to present
+    /// 4. A user has queued some audio using `SendPacket` and want to present
     /// this media in synch with another player in a different device. The
     /// coordinator of the group of distributed players sends an explicit
     /// message to each player telling them to begin presentation of audio at

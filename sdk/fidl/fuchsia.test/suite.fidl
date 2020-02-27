@@ -86,8 +86,8 @@ protocol Suite {
     /// Run the specified test cases. Results are returned over the results
     /// channel.
     ///
-    /// |tests| may contain duplicate elements, in which case the same test is
+    /// `tests` may contain duplicate elements, in which case the same test is
     /// run multiple times as indicated.
-    /// Closing |test_listener| marks the end of this call.
+    /// Closing `test_listener` marks the end of this call.
     Run(vector<Invocation>:MAX tests, RunOptions options, RunListener listener);
 };

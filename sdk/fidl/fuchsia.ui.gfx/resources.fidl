@@ -121,27 +121,27 @@ struct ViewArgs {
 };
 
 /// Represents the root of a subgraph within a larger scene graph.  Nodes can be
-/// attached to the |View| as children, and these Nodes will have the |View|s'
+/// attached to the `View` as children, and these Nodes will have the `View`s'
 /// coordinate transform applied to their own, in addition to being clipped to
-/// the |View|s' bounding box.
-/// See |ViewProperties|.
+/// the `View`s' bounding box.
+/// See `ViewProperties`.
 ///
-/// Each |View| is linked to a paired |ViewHolder| via a shared token pair.
+/// Each `View` is linked to a paired `ViewHolder` via a shared token pair.
 ///
-/// Usually the |View| and its associated |ViewHolder| exist in separate
+/// Usually the `View` and its associated `ViewHolder` exist in separate
 /// processes.  By combining them, the UI for an entire system can be built
 /// using content contributed from many different processes.
 ///
-/// Clients self-identify their |View| with a |ViewRef|, which is a stable
+/// Clients self-identify their `View` with a `ViewRef`, which is a stable
 /// identifier that may be cloned and passed to other components in a
-/// feed-forward style. It is accompanied by a |ViewRefControl|, which Scenic
-/// uses to signal |View| destruction across the system; the |ViewRefControl|
+/// feed-forward style. It is accompanied by a `ViewRefControl`, which Scenic
+/// uses to signal `View` destruction across the system; the `ViewRefControl`
 /// must be unique - do not clone it.
 struct ViewArgs3 {
     fuchsia.ui.views.ViewToken token;
-    /// |control_ref.reference| must have full rights (i.e., with signaling).
+    /// `control_ref.reference` must have full rights (i.e., with signaling).
     fuchsia.ui.views.ViewRefControl control_ref;
-    /// |view_ref.reference| must have basic rights (i.e., no signaling).
+    /// `view_ref.reference` must have basic rights (i.e., no signaling).
     fuchsia.ui.views.ViewRef view_ref;
     string? debug_name;
 };

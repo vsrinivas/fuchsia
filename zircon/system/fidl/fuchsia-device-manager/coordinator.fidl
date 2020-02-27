@@ -132,8 +132,8 @@ protocol DeviceController {
     Unbind() -> () error zx.status;
 
     /// Ask the devhost to complete the removal of this device, which previously had
-    /// invoked |ScheduleRemove|. This is a special case that can be removed
-    /// once |device_remove| invokes |unbind|.
+    /// invoked `ScheduleRemove`. This is a special case that can be removed
+    /// once `device_remove` invokes `unbind`.
     CompleteRemoval() -> () error zx.status;
 
     /// Ask devhost to suspend this device, using the target state indicated by `flags`.
@@ -220,7 +220,7 @@ protocol Coordinator {
 
     /// Requests the devcoordinator schedule the removal of this device,
     /// and the unbinding of its children.
-    /// If |unbind_self| is true, the unbind hook for this device will also be called.
+    /// If `unbind_self` is true, the unbind hook for this device will also be called.
     ScheduleRemove(bool unbind_self);
 
     /// Requests the devcoordinator schedule the unbinding of this device's children.

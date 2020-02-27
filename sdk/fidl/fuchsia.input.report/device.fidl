@@ -8,16 +8,16 @@ using zx;
 
 const uint32 MAX_DEVICE_REPORT_COUNT = 50;
 
-/// An |InputDevice| driver represents a single physical input device.
-/// The InputDevice maintains an internal FIFO of |MAX_DEVICE_REPORT_COUNT|
+/// An `InputDevice` driver represents a single physical input device.
+/// The InputDevice maintains an internal FIFO of `MAX_DEVICE_REPORT_COUNT`
 /// reports for each client that connects. Reports are removed from the FIFO
 /// once they are read by the client. If the FIFO is full, it will drop the
 /// oldest report to make room for an incoming report.
 protocol InputDevice {
     /// Receive an event that will be signalled when there are reports in the
-    /// Device's report FIFO. When there are events in the FIFO, |event| will have
-    /// |DEV_STATE_READABLE| triggered. When the client has read all of the events,
-    /// |DEV_STATE_READABLE| will be  cleared.
+    /// Device's report FIFO. When there are events in the FIFO, `event` will have
+    /// `DEV_STATE_READABLE` triggered. When the client has read all of the events,
+    /// `DEV_STATE_READABLE` will be  cleared.
     GetReportsEvent() -> (zx.status status, handle<event> event);
 
     /// Get all of the reports that have been seen since the last time this method was called.

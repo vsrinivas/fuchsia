@@ -19,21 +19,21 @@ enum ButtonType : uint8 {
 [Discoverable]
 protocol Buttons {
     /// Gets the state of the button requested.
-    /// |type| : Button type.
-    /// @Returns: |pressed| : True if button is pressed.
+    /// `type` : Button type.
+    /// @Returns: `pressed` : True if button is pressed.
     GetState(ButtonType type) -> (bool pressed);
 
     /// Registers to receive notifications of a state change for some buttons.
-    /// |types| : Bitmask which indicates the interested buttons. 0 means not
+    /// `types` : Bitmask which indicates the interested buttons. 0 means not
     ///           interested, 1 means interested. Bit position corresponds to
     ///           ButtonType, e.g. (1 << VOLUME_UP) means notify only when
     ///           the state of the VOLUME_UP button changes. Types not listed
     ///           in subsequent calls are removed.
-    /// @Returns: |status| : ZX_OK if succeeds.
+    /// @Returns: `status` : ZX_OK if succeeds.
     RegisterNotify(uint8 types) -> () error zx.status;
 
     /// Notify event. Called when state of previously registered button changes.
-    /// |type| : Button type.
-    /// |pressed| : True if button is pressed.
+    /// `type` : Button type.
+    /// `pressed` : True if button is pressed.
     -> OnNotify(ButtonType type, bool pressed);
 };

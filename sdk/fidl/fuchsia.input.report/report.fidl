@@ -6,19 +6,19 @@ library fuchsia.input.report;
 
 using zx;
 
-/// |InputReport| is a single report that is created by an input device.
+/// `InputReport` is a single report that is created by an input device.
 table InputReport {
-    /// |event_time| is in nanoseconds when the event was recorded.
+    /// `event_time` is in nanoseconds when the event was recorded.
     1: zx.time event_time;
-    /// |mouse| is the report generated if the device contains a mouse.
+    /// `mouse` is the report generated if the device contains a mouse.
     2: MouseInputReport mouse;
-    /// |sensor| is the report generated if the device contains a sensor.
+    /// `sensor` is the report generated if the device contains a sensor.
     4: SensorInputReport sensor;
-    /// |touch| is the report generated if the device contains a touch device.
+    /// `touch` is the report generated if the device contains a touch device.
     5: TouchInputReport touch;
-    /// |keyboard| is the report generated if the device contains a keyboard.
+    /// `keyboard` is the report generated if the device contains a keyboard.
     6: KeyboardInputReport keyboard;
-    /// |consumer_controls| is the report generated if the device contains a
+    /// `consumer_controls` is the report generated if the device contains a
     /// ConsumerControl device.
     7: ConsumerControlInputReport consumer_control;
 

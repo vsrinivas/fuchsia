@@ -34,18 +34,18 @@ protocol RemoteService {
     ///   d. The server does not support the long read procedure.
     ReadLongCharacteristic(uint64 id, uint16 offset, uint16 max_bytes) -> (fuchsia.bluetooth.Status status, bytes:MAX_VALUE_LENGTH value);
 
-    /// Writes |value| to the characteristic with |id|. This operation may return
+    /// Writes `value` to the characteristic with `id`. This operation may return
     /// an error if:
-    ///   a. The size of |value| exceeds the current MTU.
-    ///   b. The characteristic referred to by |id| does not have the 'write'
+    ///   a. The size of `value` exceeds the current MTU.
+    ///   b. The characteristic referred to by `id` does not have the 'write'
     ///      property.
     WriteCharacteristic(uint64 id, bytes value) -> (fuchsia.bluetooth.Status status);
 
-    /// Writes |value| to the characteristic with |id|, beginning at |offset|.
+    /// Writes `value` to the characteristic with `id`, beginning at `offset`.
     /// This procedure should be used if the value to be written is too long to
     /// fit in a single request or needs to be written at an offset. This may
     /// return an error if:
-    ///   a. The |offset| is invalid;
+    ///   a. The `offset` is invalid;
     ///   b. The server does not support the long write procedure.
     ///
     /// Long Writes require multiple messages to the remote service and take longer
@@ -82,20 +82,20 @@ protocol RemoteService {
     ///   c. The server does not support the long read procedure.
     ReadLongDescriptor(uint64 id, uint16 offset, uint16 max_bytes) -> (fuchsia.bluetooth.Status status, bytes value);
 
-    /// Writes |value| to the characteristic descriptor with |id|. This operation
+    /// Writes `value` to the characteristic descriptor with `id`. This operation
     /// may return an error if:
-    ///   a. The size of |value| exceeds the current MTU.
-    ///   b. |id| refers to an internally reserved descriptor type (e.g. the Client
+    ///   a. The size of `value` exceeds the current MTU.
+    ///   b. `id` refers to an internally reserved descriptor type (e.g. the Client
     ///      Characteristic Configuration descriptor).
     WriteDescriptor(uint64 id, bytes value) -> (fuchsia.bluetooth.Status status);
 
-    /// Writes |value| to the characteristic descriptor with |id|, beginning at
-    /// |offset|. This procedure should be used if the value to be written is too
+    /// Writes `value` to the characteristic descriptor with `id`, beginning at
+    /// `offset`. This procedure should be used if the value to be written is too
     /// long to fit in a single request or needs to be written at an offset. This
     /// may return an error if:
-    ///   a. The |offset| is invalid;
+    ///   a. The `offset` is invalid;
     ///   b. The server does not support the long write procedure.
-    ///   c. |id| refers to an internally reserved descriptor type (e.g. the Client
+    ///   c. `id` refers to an internally reserved descriptor type (e.g. the Client
     ///      Characteristic Configuration descriptor).
     ///
     /// Long Writes require multiple messages to the remote service and take longer

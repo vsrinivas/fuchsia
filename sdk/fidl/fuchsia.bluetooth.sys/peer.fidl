@@ -20,7 +20,7 @@ table Peer {
     1: bt.PeerId id;
 
     /// Bluetooth device address that identifies this peer. Clients
-    /// should display this field to the user when |name| is not available.
+    /// should display this field to the user when `name` is not available.
     ///
     /// This field is always present.
     ///

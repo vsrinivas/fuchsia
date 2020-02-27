@@ -101,7 +101,7 @@ table ProjectSpec {
 //
 [Discoverable]
 protocol MetricEventLoggerFactory {
-    // Create a MetricEventLogger for the project specified by |project_spec|.
+    // Create a MetricEventLogger for the project specified by `project_spec`.
     CreateMetricEventLogger(ProjectSpec project_spec,
                             request<MetricEventLogger> logger)
         -> (Status status);
@@ -138,7 +138,7 @@ protocol LoggerFactory {
 // A vector of event codes. When used in one of the Log*() calls below,
 // there must be one event code for each dimension of the metric whose
 // metric_id is supplied, or else the call will return INVALID_ARGUMENTS.
-// Each event code is a key from the |event_codes| map of the corresponding
+// Each event code is a key from the `event_codes` map of the corresponding
 // MetricDimension.
 //
 // This type is part of the Cobalt 1.1 interface which is still in development.
@@ -237,7 +237,7 @@ struct MetricEvent {
     // ID of the metric being logged. It must be one of the metrics
     // declared in Cobalt's registry for the project associated with the
     // MetricEventLogger being used and its type must match the type of
-    // |payload|.
+    // `payload`.
     uint32 metric_id;
 
     // `event_codes`. Enum parameters corresponding to the metric's additional

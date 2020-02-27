@@ -42,11 +42,11 @@ table HistogramInfo {
 
     /// The (inclusive) minimum and maximum values for the entire histogram,
     /// respectively. Required for all histogram types except ENUM, where
-    /// they can be inferred from |num_buckets|.
+    /// they can be inferred from `num_buckets`.
     3: int64 min;
     4: int64 max;
 
-    /// |num_buckets| describes the number of buckets in the entire histogram.
+    /// `num_buckets` describes the number of buckets in the entire histogram.
     /// Required for all histogram types.
     5: uint32 num_buckets;
 };
@@ -72,8 +72,8 @@ table ImplementationDefinedEvent {
     /// buffer serialized to its wire format.
     1: bytes data;
 
-    /// Event identifier required if it's not already included in binary |data|.
+    /// Event identifier required if it's not already included in binary `data`.
     /// This field takes precedence over any equivalent name included in binary
-    /// |data|, if both are provided.
+    /// `data`, if both are provided.
     2: string:MAX name;
 };

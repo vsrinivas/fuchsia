@@ -19,8 +19,8 @@ protocol DeviceWatcher {
     /// list of IDs, or when it is called by a client for the first time. The returned list may be
     /// empty, indicating no cameras are available. The IDs returned to the client will remain
     /// consistent with respect to the physical devices they represent for the duration of the
-    /// client's connection. Events will be sorted first by event type - |existing|, |added|,
-    /// |removed|. Within each event type range, IDs will be provided in ascending order. Events
+    /// client's connection. Events will be sorted first by event type - `existing`, `added`,
+    /// `removed`. Within each event type range, IDs will be provided in ascending order. Events
     /// are coalesced by the server, so a given ID will only appear once in each list of events.
     WatchDevices() -> (vector<WatchDevicesEvent>:MAX_WATCH_DEVICES_EVENTS events);
 

@@ -8,7 +8,7 @@ library fuchsia.accessibility.tts;
 [Discoverable]
 protocol EngineRegistry {
     /// A TTS engine registers itself to start listening for incoming speech
-    /// output requests through |engine|.
+    /// output requests through `engine`.
     /// At the moment, only one TTS Engine can be registered at a time.
     /// This registry owners the first engine to register itself.
     /// If an engine crashes and wants to register again, calling this method

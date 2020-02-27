@@ -56,7 +56,7 @@ protocol Device {
 
     /// Tells the device to remove the child devices for the configuration's interfaces
     /// and reset the list of functions to empty.
-    /// The caller should wait for the |FunctionsCleared| event.
+    /// The caller should wait for the `FunctionsCleared` event.
     ClearFunctions() -> ();
     /// Adds a state change listener that is invoked when a state change completes.
     SetStateChangeListener(request<Events> listener);

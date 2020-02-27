@@ -7,32 +7,32 @@ library fuchsia.scenic.scheduling;
 using zx;
 
 /// The times we predict for a future presentation, expressed in nanoseconds in
-/// the |CLOCK_MONOTONIC| timebase.
+/// the `CLOCK_MONOTONIC` timebase.
 table PresentationInfo {
     /// The time where Scenic processes all pending updates to its scene graph
     /// and render a new frame. Clients should aim to have all  commands sent
     /// and acquire fences reached in order to have their  content be
-    /// presented at the corresponding |presentation_time|. The |latch_point|
-    /// is guaranteed to be less than |presentation_time|.
+    /// presented at the corresponding `presentation_time`. The `latch_point`
+    /// is guaranteed to be less than `presentation_time`.
     1: zx.time latch_point;
 
-    /// The time in which the enqueued operations submitted before |latch_point|
+    /// The time in which the enqueued operations submitted before `latch_point`
     /// take visible effect. This time is usually but not necessarily vsync.
     2: zx.time presentation_time;
 };
 
 /// The times we record for each Present2, expressed in nanoseconds in the
-/// |CLOCK_MONOTONIC| timebase.
+/// `CLOCK_MONOTONIC` timebase.
 table PresentReceivedInfo {
     /// The time Scenic receives the Present2 call.
     1: zx.time present_received_time;
 
     /// The time Scenic latched the Present2 call to. This is guaranteed to be
-    /// greater than the |present_received_time|.
+    /// greater than the `present_received_time`.
     2: zx.time latched_time;
 };
 
-/// The data type returned in |fuchsia.ui.scenic::RequestPresentationTimes|. See
+/// The data type returned in `fuchsia.ui.scenic::RequestPresentationTimes`. See
 /// that method description for more information.
 struct FuturePresentationTimes {
     /// The future estimated presentation times. They represent the times Scenic
@@ -54,14 +54,14 @@ struct FuturePresentationTimes {
 
 struct FramePresentedInfo {
     /// The time the frame was presented to the user. This value was captured
-    /// after the fact, differentiating it from the |presentation_time|s
-    /// included in |FuturePresentationTimes|.
+    /// after the fact, differentiating it from the `presentation_time`s
+    /// included in `FuturePresentationTimes`.
     zx.time actual_presentation_time;
 
     /// The presentation informations for each Present2() that comprised the
     /// content of this frame. These are ordered by present submission order.
     vector<PresentReceivedInfo>:32 presentation_infos;
 
-    /// The number of times remaining that the client can call |Present2|.
+    /// The number of times remaining that the client can call `Present2`.
     uint64 num_presents_allowed;
 };

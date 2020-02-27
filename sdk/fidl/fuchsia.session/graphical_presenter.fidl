@@ -73,7 +73,7 @@ table ViewSpec {
 /// - presentation was rejected: `REJECTED`
 /// - view was dismissed: `ZX_OK`
 protocol ViewController {
-    /// Annotates the view with |annotations|.
+    /// Annotates the view with `annotations`.
     /// The presenter must observe incoming annotation requests and update
     /// the presentation accordingly.
     ///

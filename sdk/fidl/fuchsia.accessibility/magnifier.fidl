@@ -5,7 +5,7 @@
 library fuchsia.accessibility;
 
 /// Exposes a privileged magnifier API for camera control, typically on a
-/// |fuchsia.ui.policy.Presentation|.
+/// `fuchsia.ui.policy.Presentation`.
 protocol MagnificationHandler {
     /// Sets clip-space x-offset, y-offset, and scale for the presentation.
     /// x and y are in Vulkan NDC and are applied after scaling, which occurs

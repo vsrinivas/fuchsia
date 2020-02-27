@@ -19,27 +19,27 @@ struct DeviceInfo {
     string:MAX_DEVICE_NAME_LENGTH name;
 };
 
-/// |DeviceDescriptor| describes a physical input device. Some physical devices may
+/// `DeviceDescriptor` describes a physical input device. Some physical devices may
 /// send multiple types of reports (E.g: a physical touchscreen can send touch and
 /// stylus reports, so it will have both a TouchDescriptor and a StylusDescriptor).
 table DeviceDescriptor {
-    /// |device_info| should always be present to help distinguish between physical devices.
+    /// `device_info` should always be present to help distinguish between physical devices.
     1: DeviceInfo device_info;
 
-    /// When |mouse| is present the device has a mouse.
+    /// When `mouse` is present the device has a mouse.
     2: MouseDescriptor mouse;
 
-    /// When |sensor| is present the device has a sensor.
+    /// When `sensor` is present the device has a sensor.
     3: SensorDescriptor sensor;
 
-    /// When |touch| is present the device has a touch device.
+    /// When `touch` is present the device has a touch device.
     /// (E.g: Touchscreen, touchpad).
     4: TouchDescriptor touch;
 
-    /// When |keyboard| is present the device has a keyboard.
+    /// When `keyboard` is present the device has a keyboard.
     5: KeyboardDescriptor keyboard;
 
-    /// When |consumer_control| is present the device has a ConsumerControl
+    /// When `consumer_control` is present the device has a ConsumerControl
     /// device.
     6: ConsumerControlDescriptor consumer_control;
 };

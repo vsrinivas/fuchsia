@@ -21,8 +21,8 @@ protocol Audio {
 /// The source of the volume settings. The volume is set according to the source.
 enum AudioStreamSettingSource {
 
-    /// The volume is set by the user. When the |source| in AudioStreamSettings is
-    /// set to this, the audio volume is set to |user_volume|.
+    /// The volume is set by the user. When the `source` in AudioStreamSettings is
+    /// set to this, the audio volume is set to `user_volume`.
     USER = 0;
 
     /// The system takes control of the volume. This is used when the system constantly
@@ -36,7 +36,7 @@ table Volume {
     1: float32 level;
 
     /// True if the volume should be muted. If this is true, then the volume is silent,
-    /// regardless of |level|.
+    /// regardless of `level`.
     2: bool muted;
 };
 
@@ -44,11 +44,11 @@ table AudioStreamSettings {
     /// The audio stream which the settings are applying to.
     1: fuchsia.media.AudioRenderUsage stream;
 
-    /// The volume of |stream| is set according to the volume settings from |source|.
+    /// The volume of `stream` is set according to the volume settings from `source`.
     2: AudioStreamSettingSource source;
 
-    /// User level volume setting. If the |source| is USER, then the volume is set to
-    /// |user_volume|.
+    /// User level volume setting. If the `source` is USER, then the volume is set to
+    /// `user_volume`.
     3: Volume user_volume;
 };
 

@@ -41,11 +41,11 @@ struct ExceptionInfo {
 /// Generic wrapper over a thread exception. Mirrors closely the information
 /// given by an exception channel.
 table ProcessException {
-    // |exception| is guaranteed to be valid.
+    // `exception` is guaranteed to be valid.
     1: handle<exception> exception;
     2: ExceptionInfo info;
 
-    // Both |process| and |thread| will be valid if present.
+    // Both `process` and `thread` will be valid if present.
     3: handle<process> process;
 
     // The thread that generated the exception.

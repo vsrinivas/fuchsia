@@ -12,8 +12,8 @@ using zx;
 // provider's info.
 [Discoverable]
 protocol Registry {
-    // Register |provider| with the metric registry. If and when the Registry service comes up,
-    // will perform IPC to request the provider's |ProjectInfo|.
+    // Register `provider` with the metric registry. If and when the Registry service comes up,
+    // will perform IPC to request the provider's `ProjectInfo`.
     RegisterMetricProvider(Provider provider) -> (zx.status status);
 };
 
@@ -21,7 +21,7 @@ protocol Registry {
 // such that at a later stage these will be mapped to consuming services based
 // on the project configuration.
 protocol Provider {
-    // Returns a |ProjectInfo| with enough information for the metrics to be processed.
+    // Returns a `ProjectInfo` with enough information for the metrics to be processed.
     GetProviderInfo() -> (ProviderInfo info) error zx.status;
 };
 

@@ -19,7 +19,7 @@ using fuchsia.ui.activity;
 // TODO(38334): Remove this transitional interface.
 [Discoverable]
 protocol Control {
-    /// Sets the Activity Service's state to |state|.
+    /// Sets the Activity Service's state to `state`.
     /// All listeners registered through the Provider protocol will immediately
     /// be notified of the new state.
     ///

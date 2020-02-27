@@ -29,7 +29,7 @@ struct PeerKey {
 /// Represents a locally generated key that is distributed across one or more bonds.
 using LocalKey = Key;
 
-/// Represents a LE Long-Term peer key used for link encyrption. The |ediv| and |rand|
+/// Represents a LE Long-Term peer key used for link encyrption. The `ediv` and `rand`
 /// fields are zero if distributed using LE Secure Connections pairing.
 struct Ltk {
     PeerKey key;
@@ -109,7 +109,7 @@ table HostData {
     ///
     /// NOTE: This key is distributed to LE peers during pairing procedures. The client must take
     /// care to assign an IRK that consistent with the local bt-host identity.
-    // TODO(BT-815): Document behavior once there is a better privacy policy when |irk| is null.
+    // TODO(BT-815): Document behavior once there is a better privacy policy when `irk` is null.
     1: LocalKey irk;
 };
 
