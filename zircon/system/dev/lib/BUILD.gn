@@ -10,7 +10,6 @@ group("lib") {
   deps = [
     #"$zx/system/dev/audio/lib/simple-audio-stream",
 #------------------
-    "$zx/system/dev/clk/hisi-lib:hisi-lib",
 #------------------
 #------------------
     "$zx/system/dev/pci/designware:designware",

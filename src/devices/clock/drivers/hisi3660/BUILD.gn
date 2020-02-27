@@ -18,11 +18,11 @@ driver_module("hisi3660") {
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/hi3660",
-    "//zircon/public/lib/hisi-lib",
     "//zircon/public/lib/sync",
     "//zircon/system/banjo/ddk.protocol.clockimpl",
     "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/banjo/ddk.protocol.platform.device",
+    "//zircon/system/dev/clk/hisi-lib",
   ]
 }
 
