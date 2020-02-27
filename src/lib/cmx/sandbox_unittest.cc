@@ -82,14 +82,17 @@ TEST_F(SandboxMetadataTest, Parse) {
   // pkgfs
   {
     const std::string json = R"JSON({
-      "pkgfs": [ "packages" ]
+      "pkgfs": [ "packages", "versions"]
     })JSON";
     SandboxMetadata sandbox;
     std::string error;
     EXPECT_TRUE(ParseFrom(&sandbox, json, &error));
     EXPECT_EQ(error, "");
     EXPECT_FALSE(sandbox.IsNull());
-    EXPECT_THAT(sandbox.pkgfs(), ::testing::ElementsAre("packages"));
+    EXPECT_THAT(sandbox.pkgfs(), ::testing::ElementsAre("packages", "versions"));
+    EXPECT_TRUE(sandbox.HasPkgFsPath("packages"));
+    EXPECT_TRUE(sandbox.HasPkgFsPath("versions"));
+    EXPECT_FALSE(sandbox.HasPkgFsPath("ctl"));
   }
 
   // features
