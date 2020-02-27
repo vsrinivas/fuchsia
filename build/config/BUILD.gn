@@ -57,6 +57,7 @@ config("rust_target") {
   rustflags = [
     "--target",
     rust_target,
+    "--cap-lints=$rust_cap_lints"
   ]
 }
 
@@ -431,8 +432,8 @@ config("werror") {
 
       # Do not add additional -Wno-error to this config.
     ]
-    rustflags = [ "-Dwarnings" ]
   }
+  rustflags = [ "-Dwarnings" ]
 }
 
 config("temporarily_disable_ubsan_do_not_use") {
