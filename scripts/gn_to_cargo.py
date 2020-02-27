@@ -133,15 +133,19 @@ def write_toml_file(fout, metadata, project, target, lookup):
             third_party_name = str(match.groups()[0])
             dep_data = project.third_party[third_party_name]
             features = None
-            if "features" in dep_data["cargo_dependency_toml"]:
-                features = dep_data["cargo_dependency_toml"]["features"]
+            default_features = None
+            if isinstance(dep_data["cargo_dependency_toml"], dict):
+                features = dep_data["cargo_dependency_toml"].get("features")
+                default_features = dep_data["cargo_dependency_toml"].get("default-features")
                 version = dep_data["cargo_dependency_toml"]["version"]
             else:
                 version = dep_data["cargo_dependency_toml"]
             fout.write("[dependencies.\"%s\"]\n" % third_party_name)
             fout.write("version = \"%s\"\n" % version)
             if features:
-                fout.write("features = %s\n" % map(lambda f: f.encode('ascii'), features))
+                fout.write("features = %s\n" % json.dumps(features))
+            if default_features is not None:
+                fout.write("default-features = %s\n" % json.dumps(default_features))
         # this is a in-tree rust target
         elif "crate_name" in project.targets[dep]:
             crate_name = lookup_gn_pkg_name(project, dep)
