@@ -27,7 +27,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-device:fuchsia-device-rustc",
     "//zircon/system/fidl/fuchsia-device-manager:fuchsia-device-manager-rustc",
@@ -37,7 +36,10 @@ rustc_binary("bin") {
     "//zircon/system/fidl/fuchsia-thermal:fuchsia-thermal-rustc",
   ]
 
-  test_deps = [ "//garnet/bin/power_manager/rkf45:lib" ]
+  test_deps = [
+    "//garnet/bin/power_manager/rkf45:lib",
+    "//third_party/rust_crates:matches",
+  ]
 }
 
 package("power_manager") {

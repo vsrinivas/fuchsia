@@ -361,11 +361,8 @@ pub mod tests {
         }
     }
 
-    /// Tests that the 'GetTotalCpuLoad' message behaves as expected. Specifically:
-    ///     1) the first call should fail (because CPU load is calculated based on idle time
-    ///        since the previous call)
-    ///     2) the second call should succeed, and load should be reported as 1.0 * NUM_CORES in
-    ///        the test configuration
+    /// Tests that the node correctly calculates CPU load (1.0 * NUM_CORES in the test confguration)
+    /// as a response to the 'GetTotalCpuLoad' message.
     #[fasync::run_singlethreaded(test)]
     async fn test_handle_get_cpu_load() {
         let node = setup_simple_test_node().await;

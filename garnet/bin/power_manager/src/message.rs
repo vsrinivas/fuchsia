@@ -57,8 +57,11 @@ pub enum MessageReturn {
     /// 0.0 - [number_cpus]. The first call will return a load of 0.0.
     GetTotalCpuLoad(f32),
 
-    /// There is no arg in this MessageReturn type. It only serves as an ACK.
-    SetMaxPowerConsumption,
+    /// Arg: the max number of watts that the component will use. This number should typically be at
+    /// or below the number that was specified in the Message, but there may be cases where it
+    /// actually exceeds that number (e.g., a CPU that cannot operate below the requested power
+    /// level).
+    SetMaxPowerConsumption(Watts),
 
     /// There is no arg in this MessageReturn type. It only serves as an ACK.
     SystemShutdown,

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::node::Node;
-use crate::types::{Celsius, Farads, Seconds, Watts};
+use crate::types::{Celsius, Farads, Hertz, Seconds, Watts};
 use anyhow::{format_err, Error};
 use fuchsia_component::server::{ServiceFs, ServiceObjLocal};
 use fuchsia_inspect::component;
@@ -74,6 +74,7 @@ impl PowerManager {
             cpu_stats_node,
             cpu_dev_handler_node,
         )
+        .with_min_cpu_clock_speed(Hertz(1.0e9))
         .build()
         .await?;
         self.nodes.push(cpu_control_node.clone());
