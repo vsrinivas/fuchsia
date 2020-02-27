@@ -11,12 +11,20 @@ using fuchsia.sys;
 /// ModuleContext and an Agent gets it from its AgentContext.
 [Discoverable]
 protocol ComponentContext {
+    /// DEPRECATED: use the component's incoming namespace (for C++, see sys.ComponentContext)
+    /// to connect to services provided by agents. See
+    /// /docs/concepts/modular/guide/how_to_write_an_agent_cc.md for an example.
+    ///
     /// Used to start an agent in the user scope if it isn't already running, and
     /// connect to it.
     ConnectToAgent(string url,
                    request<fuchsia.sys.ServiceProvider> incoming_services,
                    request<AgentController> controller);
 
+    /// DEPRECATED: use the component's incoming namespace (for C++, see sys.ComponentContext)
+    /// to connect to services provided by agents. See
+    /// /docs/concepts/modular/guide/how_to_write_an_agent_cc.md for an example.
+    ///
     /// Connects to an agent that provides the given `request.service_name`, and
     /// then connects the given `request.channel` to that service.
     /// `request.agent_controller` must be kept alive until the service is no

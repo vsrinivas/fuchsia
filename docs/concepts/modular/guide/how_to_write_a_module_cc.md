@@ -51,21 +51,7 @@ TODO: Update guide to explain view connections.
 ### Connecting to `SimpleAgent`
 
 In order to provide `SimpleAgent` with a message queue `SimpleModule` first
-needs to connect to the agent via its `fuchsia::modular::ComponentContext`.
-
-```c++
-// Get the component context from the module context.
-modular::fuchsia::modular::ComponentContextPtr component_context;
-module_host->component_context()->svc()->Connect(
-    component_context.NewRequest());
-
-// Connect to the agent to retrieve it's outgoing services.
-modular::fuchsia::modular::AgentControllerPtr agent_controller;
-fuchsia::sys::ServiceProviderPtr agent_services;
-component_context->ConnectToAgent("system/bin/simple_agent",
-                                  agent_services.NewRequest(),
-                                  agent_controller.NewRequest());
-```
+needs to connect to the agent. See the instructions in (how to write an agent)[how_to_write_an_agent_cc.md]
 
 ### Running the Module
 

@@ -81,24 +81,26 @@ call methods on it. Those method calls will be delegated to the `simple_impl` ob
 
 ## Connecting to SimpleAgent
 
-To connect to the `SimpleAgent` from a different component:
+To connect to the `SimpleAgent` from a different component, a service mapping must be added to the
+Modular [config](config.md) for your product:
 
-```c++
-// The agent is guaranteed to stay alive as long as |agent_controller| stays in scope.
-fuchsia::modular::AgentControllerPtr agent_controller;
-fuchsia::sys::ServiceProviderPtr agent_services;
-SimplePtr simple;
-component_context->ConnectToAgent(agent_url,
-                                  agent_services.NewRequest(),
-                                  agent_controller.NewRequest());
-agent_services.ConnectToService(Simple::Name_, simple.NewRequest().TakeChannel());
+```json
+  agent_service_index = [
+    {
+      "service_name": "Simple",
+      "agent_url": "fuchisa-pkg://url/to/your/agent"
+    }
+  ]
 ```
 
-Here the component context is asked to connect to the fuchsia::modular::Agent at `agent_url`,
-and is given a request for the services that the `SimpleAgent` will provide via `agent_services`,
-and a controller for the `fuchsia::modular::Agent` via `agent_controller`.
+Then, in the component's implementation (i.e., `main.cc`):
 
-Then the client connects to the `Simple` protocol by invoking `ConnectToService` with
-a request for a new `SimplePtr`.
+```c++
+auto sys_component_context = sys::ComponentContext::Create();
+SimplePtr simple = sys_component_context->svc()->Connect<Simple>();
+```
+
+When your component asks for the `Simple` service, the `agent_service_index` is consulted.
+The agent listed there is launched and is asked to provide the `Simple` service.
 
 See the [SimpleModule](how_to_write_a_module_cc.md) guide for a more in-depth example.
