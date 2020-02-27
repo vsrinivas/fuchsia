@@ -7,15 +7,16 @@
 # and starts up a bootserver for paving.
 
 set -e
+SCRIPT_SRC_DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd)"
+# shellcheck disable=SC1090
+source "${SCRIPT_SRC_DIR}/gn-bash-test-lib.sh"
 
 FPAVE_CMD="${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fpave.sh"
 
 # Sets up an ssh mock binary on the $PATH of any subshells and creates a stub
 # authorized_keys.
 set_up_ssh() {
-  PATH_DIR_FOR_TEST="$(mktemp -d)"
-  cp "${BT_TEMP_DIR}/ssh" "${PATH_DIR_FOR_TEST}"
-  export PATH="${PATH_DIR_FOR_TEST}:${PATH}"
+  export PATH="${BT_TEMP_DIR}/isolated_path_for:${PATH}"
 
   # This authorized_keys file must not be empty, but its contents aren't used.
   echo ssh-ed25519 00000000000000000000000000000000000000000000000000000000000000000000 \
@@ -25,7 +26,7 @@ set_up_ssh() {
 # Sets up a device-finder mock. The implemented mock aims to produce minimal
 # output that parses correctly but is otherwise uninteresting.
 set_up_device_finder() {
-  cat >"${BT_TEMP_DIR}/scripts/sdk/gn/base/tools/device-finder.mock_side_effects" <<"SETVAR"
+  cat >"${BT_TEMP_DIR}/scripts/sdk/gn/base/tools/device-finder.mock_side_effects" <<"EOF"
 while (("$#")); do
   case "$1" in
   --local)
@@ -43,13 +44,13 @@ while (("$#")); do
 done
 
 echo fe80::c0ff:eec0:ffee%coffee
-SETVAR
+EOF
 }
 
 # Sets up a gsutil mock. The implemented mock creates an empty gzipped tarball
 # at the destination of the cp command.
 set_up_gsutil() {
-  cat >"${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/gsutil.mock_side_effects" <<"SETVAR"
+  cat >"${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/gsutil.mock_side_effects" <<"EOF"
 if [[ "$1" != "cp" ]]; then
   # Ignore any invocations other than cp.
   exit 0
@@ -57,9 +58,8 @@ fi
 
 outpath="$3"
 
-mkdir -p "$(dirname "${outpath}")"
-cp ../testdata/empty.tar.gz "${outpath}"
-SETVAR
+cp "${BT_TEMP_DIR}/scripts/sdk/gn/testdata/empty.tar.gz" "${outpath}"
+EOF
 }
 
 set_up_gsutil_multibucket() {
@@ -68,6 +68,10 @@ set_up_gsutil_multibucket() {
     if [[ "${2}" == *unknown.tgz ]]; then
       echo "ls: cannot access \'${2}\': No such file or directory"
       exit 1
+    elif [[ "${2}" == gs://fuchsia/development/*image1.tgz ]]; then
+      echo "${2}"
+    elif [[ "${2}" == gs://fuchsia/development/*image2.tgz ]]; then
+      echo "${2}"
     elif [[ "${2}" == gs://fuchsia/* ]]; then
       echo "gs://fuchsia/development/sdk_id/images/image1.tgz"
       echo "gs://fuchsia/development/sdk_id/images/image2.tgz"
@@ -96,66 +100,6 @@ set_up_sdk_stubs() {
   echo "${hash}  ${tarball}" >"${BT_TEMP_DIR}/scripts/sdk/gn/base/images/image/image.md5"
 }
 
-# Helpers.
-
-# Runs a bash script. The function provides these conveniences over calling the
-# script directly:
-#
-# * Rather than calling the bash script directly, this command explicitly
-#   invokes Bash and propagates some option flags.
-# * Rather than showing the bash output, this command only outputs output if a
-#   test fails.
-#
-# Args: the script to run and all args to pass.
-run_bash_script() {
-  local shell_flags
-  # propagate certain bash flags if present
-  shell_flags=()
-  if [[ $- == *x* ]]; then
-    shell_flags+=(-x)
-  fi
-  local output
-
-  output=$(bash "${shell_flags[@]}" "$@" 2>&1)
-  status=$?
-  if [[ ${status} != 0 ]]; then
-    echo "${output}"
-  fi
-
-  return ${status}
-}
-
-# Verifies that the given arguments appear in the command line invocation of the
-# most previously sourced mock state. Any arguments passed to this function will
-# be searched for in the actual arguments. This succeeds if the arguments are
-# found in adjacent positions in the correct order.
-#
-# This function only checks for presence. As a result, it will NOT verify any of
-# the following:
-#
-# * The arguments only appear once.
-# * The arguments don't appear with conflicting arguments.
-# * Any given argument --foo isn't overridden, say with a --no-foo flag later.
-#
-# Args: any number of arguments to check.
-# Returns: 0 if found; 1 if not found.
-check_mock_has_args() {
-  local expected=("$@")
-  for j in "${!BT_MOCK_ARGS[@]}"; do
-    local window=("${BT_MOCK_ARGS[@]:$j:${#expected}}")
-    local found=true
-    for k in "${!expected[@]}"; do
-      if [[ "${expected[$k]}" != "${window[$k]}" ]]; then
-        found=false
-        break
-      fi
-    done
-    if [[ "${found}" == "true" ]]; then
-      return 0
-    fi
-  done
-  return 1
-}
 
 # Verifies that the pave script correctly invokes ssh to restart the Fuchsia
 # device.
@@ -166,19 +110,20 @@ TEST_fpave_restarts_device() {
   set_up_sdk_stubs
 
   # Run command.
-  BT_EXPECT run_bash_script "${FPAVE_CMD}" \
+  BT_EXPECT gn-test-run-bash-script "${FPAVE_CMD}" \
     --authorized-keys "${BT_TEMP_DIR}/scripts/sdk/gn/base/testdata/authorized_keys"
 
   # Verify that the script attempted to reboot the device over SSH.
-  source "${PATH_DIR_FOR_TEST}/ssh.mock_state"
+  # shellcheck disable=SC1090
+  source "${BT_TEMP_DIR}/isolated_path_for/ssh.mock_state"
 
-  BT_EXPECT_EQ 6 "${#BT_MOCK_ARGS[@]}"
-  check_mock_has_args -F "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/sshconfig"
-  check_mock_has_args fe80::c0ff:eec0:ffee%coffee
-  check_mock_has_args dm reboot-recovery
+  local expected_args=( _ANY_ "-F" "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/sshconfig"
+                       "fe80::c0ff:eec0:ffee%coffee" "dm" "reboot-recovery" )
+  gn-test-check-mock-args "${expected_args[@]}"
+
 
   # Verify that ssh was only run once.
-  BT_EXPECT_FILE_DOES_NOT_EXIST "${PATH_DIR_FOR_TEST}/ssh.mock_state.1"
+  BT_EXPECT_FILE_DOES_NOT_EXIST "${BT_TEMP_DIR}/isolated_path_for/ssh.mock_state.1"
 }
 
 # Verifies that the pave script correctly invokes the pave script from the
@@ -190,17 +135,17 @@ TEST_fpave_starts_paving() {
   set_up_sdk_stubs
 
   # Run command.
-  BT_EXPECT run_bash_script \
+  BT_EXPECT gn-test-run-bash-script \
     "${FPAVE_CMD}" \
     --authorized-keys "${BT_TEMP_DIR}/scripts/sdk/gn/base/testdata/authorized_keys"
 
   # Verify that the pave.sh script from the Fuchsia SDK was started correctly.
+  # shellcheck disable=SC1090
   source "${BT_TEMP_DIR}/scripts/sdk/gn/base/images/image/pave.sh.mock_state"
 
-  BT_EXPECT_EQ 4 ${#BT_MOCK_ARGS[@]}
-  check_mock_has_args --authorized-keys "${BT_TEMP_DIR}/scripts/sdk/gn/base/testdata/authorized_keys"
-  check_mock_has_args -1
-
+  local expected_args=( _ANY_ --authorized-keys "${BT_TEMP_DIR}/scripts/sdk/gn/base/testdata/authorized_keys" -1 )
+  gn-test-check-mock-args "${expected_args[@]}"
+ 
   # Verify that pave.sh was only run once.
   BT_EXPECT_FILE_DOES_NOT_EXIST "${BT_TEMP_DIR}/scripts/sdk/gn/base/images/image/pave.sh.mock_state.1"
 }
@@ -209,14 +154,36 @@ TEST_fpave_starts_paving() {
 TEST_fpave_lists_images() {
   set_up_gsutil_multibucket
 
-  BT_EXPECT_FAIL run_bash_script "${FPAVE_CMD}" --image unknown \
+  BT_EXPECT_FAIL gn-test-run-bash-script "${FPAVE_CMD}" --image unknown \
     --authorized-keys "${BT_TEMP_DIR}/scripts/sdk/gn/base/testdata/authorized_keys" > list_images_output.txt  2>&1
   BT_EXPECT_FILE_CONTAINS_SUBSTRING "list_images_output.txt" "image1 image2 image3"
 
-  BT_EXPECT_FAIL run_bash_script "${FPAVE_CMD}" \
+  BT_EXPECT_FAIL gn-test-run-bash-script "${FPAVE_CMD}" \
     --authorized-keys "${BT_TEMP_DIR}/scripts/sdk/gn/base/testdata/authorized_keys" \
     --bucket other --image unknown > list_images_output.txt 2>&1
   BT_EXPECT_FILE_CONTAINS_SUBSTRING "list_images_output.txt" "image4 image5 image6 image1 image2 image3"
+}
+
+# Tests that paving the same image back to back does not re-unzip the image. Also tests that changing images
+# causes the old image to be deleted before unpackaging.
+TEST_fpave_switch_types() {
+ set_up_ssh
+ set_up_gsutil_multibucket
+ set_up_device_finder
+
+ BT_EXPECT "${FPAVE_CMD}" --prepare --image image1 --authorized-keys "${BT_TEMP_DIR}/scripts/sdk/gn/base/testdata/authorized_keys" > pave_image1.txt 2>&1
+ BT_EXPECT_FILE_CONTAINS pave_image1.txt ""
+ BT_EXPECT_FILE_CONTAINS_SUBSTRING "${BT_TEMP_DIR}/scripts/sdk/gn/base/images/image/image.md5" "8890373976687374912_image1.tgz"
+
+ # Same command, should skip download
+ BT_EXPECT "${FPAVE_CMD}" --prepare --image image1 --authorized-keys "${BT_TEMP_DIR}/scripts/sdk/gn/base/testdata/authorized_keys" > pave_image1_again.txt 2>&1
+ BT_EXPECT_FILE_CONTAINS pave_image1_again.txt "Skipping download, image exists."
+ BT_EXPECT_FILE_CONTAINS_SUBSTRING "${BT_TEMP_DIR}/scripts/sdk/gn/base/images/image/image.md5" "8890373976687374912_image1.tgz"
+
+ # Switch images, should delete old file.
+ BT_EXPECT "${FPAVE_CMD}" --prepare --image image2 --authorized-keys "${BT_TEMP_DIR}/scripts/sdk/gn/base/testdata/authorized_keys" > pave_image2.txt 2>&1
+ BT_EXPECT_FILE_CONTAINS  "pave_image2.txt" "WARNING: Removing old image files."
+ BT_EXPECT_FILE_CONTAINS_SUBSTRING "${BT_TEMP_DIR}/scripts/sdk/gn/base/images/image/image.md5" "8890373976687374912_image2.tgz"
 }
 
 # shellcheck disable=SC2034
@@ -224,16 +191,20 @@ TEST_fpave_lists_images() {
 BT_FILE_DEPS=(
   scripts/sdk/gn/base/bin/fpave.sh
   scripts/sdk/gn/base/bin/fuchsia-common.sh
-  scripts/sdk/gn/testdata/empty.tar.gz
+  scripts/sdk/gn/bash_tests/gn-bash-test-lib.sh
 )
 # shellcheck disable=SC2034
 BT_MOCKED_TOOLS=(
   scripts/sdk/gn/base/bin/gsutil
   scripts/sdk/gn/base/images/image/pave.sh
   scripts/sdk/gn/base/tools/device-finder
-  scripts/sdk/gn/base/tools/pm
-  ssh
+  isolated_path_for/ssh
 )
+
+BT_SET_UP() {
+  mkdir -p "${BT_TEMP_DIR}/scripts/sdk/gn/testdata"
+   tar czf "${BT_TEMP_DIR}/scripts/sdk/gn/testdata/empty.tar.gz" -C "${BT_TEMP_DIR}/scripts/sdk/gn/base/images"  "image"
+}
 
 BT_INIT_TEMP_DIR() {
   mkdir -p \

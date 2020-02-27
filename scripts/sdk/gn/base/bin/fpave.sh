@@ -12,6 +12,7 @@ set -u
 SCRIPT_SRC_DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd)"
 
 # Fuchsia command common functions.
+# shellcheck disable=SC1090
 source "${SCRIPT_SRC_DIR}/fuchsia-common.sh" || exit $?
 
 FUCHSIA_SDK_PATH="$(realpath "${SCRIPT_SRC_DIR}/..")"
@@ -114,7 +115,7 @@ IMAGE_FILENAME="${SDK_ID}_${IMAGE_NAME}.tgz"
 
 # Validate the image is found
 if [[ ! -f "${FUCHSIA_IMAGE_WORK_DIR}/${IMAGE_FILENAME}" ]] ; then
-  if ! run-gsutil ls "${FUCHSIA_TARGET_IMAGE}"; then
+  if ! run-gsutil ls "${FUCHSIA_TARGET_IMAGE}" > /dev/null; then
     echo "Image ${IMAGE_NAME} not found. Valid images for this SDK version are:"
     IMAGES=("$(get-available-images "${SDK_ID}" "${FUCHSIA_BUCKET}")")
     echo "${IMAGES[@]}"
@@ -135,7 +136,7 @@ CHECKSUM_FILE="${FUCHSIA_IMAGE_WORK_DIR}/image/image.md5"
 
 # check that any existing contents of the image directory match the intended target device
 if [[ -f "${CHECKSUM_FILE}" ]]; then
-  if ! md5sum --check "${CHECKSUM_FILE}" --quiet ; then
+  if [[ "$(md5sum "${FUCHSIA_IMAGE_WORK_DIR}/${IMAGE_FILENAME}")" != "$(< "${CHECKSUM_FILE}")" ]]; then
     fx-warn "Removing old image files."
     if ! rm -f "$(cut -d ' ' -f3 "${CHECKSUM_FILE}")"; then
       fx-error "Could not clean up old image archive."
