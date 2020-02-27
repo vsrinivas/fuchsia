@@ -33,6 +33,7 @@ if (current_toolchain == default_toolchain) {
 
         # TODO(44971): Many include/ headers use <ktl/*.h> headers.
         "$zx/kernel/lib/ktl:headers.config",
+        "$zx/kernel/lib/ktl:ktl.config",
 
         # <stdio.h> has #include <lib/io.h>.
         "$zx/kernel/lib/io:headers.config",

@@ -55,6 +55,9 @@ config("kernel") {
 
     # <arch/x86/page_tables/page_tables.h> has #include <hwreg/bitfields.h>.
     "$zx/system/ulib/hwreg:headers.config",
+
+    # <arch/x86/idle_states.h> has #include <ktl/atomic.h>.
+    "$zx/kernel/lib/ktl:headers.config",
   ]
 }
 
@@ -118,7 +121,6 @@ zx_library("x86") {
     "$zx/kernel/lib/crashlog",
     "$zx/kernel/lib/fbl",
     "$zx/kernel/lib/kpci",
-    "$zx/kernel/lib/ktl",
     "$zx/kernel/lib/ktrace",
     "$zx/kernel/lib/perfmon",
     "$zx/kernel/lib/topology",
@@ -151,6 +153,9 @@ zx_library("x86") {
 
     # <arch/x86/apic.h> has #include <dev/interrupt.h>.
     "$zx/kernel/dev/interrupt:headers",
+
+    # <arch/x86/idle_states.h> has #include <ktl/atomic.h>.
+    "$zx/kernel/lib/ktl:headers",
   ]
   public_configs = [ "$zx/public/gn/config:Wno-unused-function" ]
 }

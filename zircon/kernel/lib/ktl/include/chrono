@@ -1,0 +1,37 @@
+// Copyright 2020 The Fuchsia Authors
+//
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file or at
+// https://opensource.org/licenses/MIT
+
+#ifndef ZIRCON_KERNEL_LIB_KTL_INCLUDE_CHRONO
+#define ZIRCON_KERNEL_LIB_KTL_INCLUDE_CHRONO
+
+// libc++'s <atomic> includes this file.  The real libc++ implementation is
+// not kernel-friendly.  We just need enough declarations for the uses in
+// <atomic> to be harmless.  They are not used in the <ktl/atomic.h> subset.
+
+_LIBCPP_BEGIN_NAMESPACE_STD
+
+namespace chrono {
+
+struct nanoseconds {
+  nanoseconds() {}
+  template <typename T>
+  constexpr explicit nanoseconds(T) {}
+  static nanoseconds zero() { return {}; }
+  nanoseconds operator/(int);
+};
+
+using microseconds = nanoseconds;
+using milliseconds = nanoseconds;
+using seconds = nanoseconds;
+
+template <class ToDuration>
+ToDuration duration_cast(nanoseconds);
+
+};  // namespace chrono
+
+_LIBCPP_END_NAMESPACE_STD
+
+#endif  // ZIRCON_KERNEL_LIB_KTL_INCLUDE_CHRONO

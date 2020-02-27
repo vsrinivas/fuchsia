@@ -13,11 +13,26 @@ library("ktl") {
 }
 
 config("ktl.config") {
-  visibility = [ ":*" ]
+  visibility = [
+    ":*",
 
-  # This tells the headers not to use `extern template` declarations that
-  # expect specific instantiations/specializations to come from the libc++
-  # library rather than the headers.  In the kernel, only the headers are
-  # ever going to be available.
-  defines = [ "_LIBCPP_DISABLE_EXTERN_TEMPLATE" ]
+    # TODO(44971): Referenced in environment configs.
+    "$zx/kernel:*",
+  ]
+
+  defines = [
+    # This tells the headers not to use `extern template` declarations that
+    # expect specific instantiations/specializations to come from the libc++
+    # library rather than the headers.  In the kernel, only the headers are
+    # ever going to be available.
+    "_LIBCPP_DISABLE_EXTERN_TEMPLATE",
+
+    # This tells <atomic> not to use threading APIs.
+    "_LIBCPP_HAS_NO_PLATFORM_WAIT",
+
+    # This tells <atomic> et al to use <__external_threading> instead
+    # of expecting either POSIX or C11 threading APIs.
+    "_LIBCPP_HAS_THREAD_API_EXTERNAL",
+    "_LIBCPP_HAS_THREAD_LIBRARY_EXTERNAL",
+  ]
 }

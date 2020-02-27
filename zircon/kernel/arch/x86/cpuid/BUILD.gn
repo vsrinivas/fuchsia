@@ -8,6 +8,11 @@ zx_library("cpuid") {
   kernel = true
   sources = [ "cpuid.cc" ]
 
+  public_deps = [
+    # <arch/x86/cpuid.h> has #include <ktl/optional.h>.
+    "$zx/kernel/lib/ktl:headers",
+  ]
+
   # TODO: testonly
   deps = [ ":test" ]
 }

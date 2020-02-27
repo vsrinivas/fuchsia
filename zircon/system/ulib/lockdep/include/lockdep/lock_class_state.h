@@ -2,19 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LOCKDEP_LOCK_CLASS_STATE_H_
+#define LOCKDEP_LOCK_CLASS_STATE_H_
 
-#include <atomic>
-#include <fbl/algorithm.h>
 #include <stdint.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 
+#include <atomic>
+#include <type_traits>
+
+#include <fbl/algorithm.h>
 #include <lockdep/common.h>
 #include <lockdep/lock_dependency_set.h>
 #include <lockdep/lock_traits.h>
-
-#include <type_traits>
 
 namespace lockdep {
 
@@ -361,3 +362,5 @@ class LockClassState {
 static inline void LoopDetectionPass() { LockClassState::LoopDetectionPass(); }
 
 }  // namespace lockdep
+
+#endif  // LOCKDEP_LOCK_CLASS_STATE_H_

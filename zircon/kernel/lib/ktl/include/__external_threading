@@ -1,0 +1,44 @@
+// Copyright 2020 The Fuchsia Authors
+//
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file or at
+// https://opensource.org/licenses/MIT
+
+#ifndef ZIRCON_KERNEL_LIB_KTL_INCLUDE___EXTERNAL_THREADING
+#define ZIRCON_KERNEL_LIB_KTL_INCLUDE___EXTERNAL_THREADING
+
+// libc++'s <atomic> includes this file.  It needs these types and functions
+// declared, but only for use in interfaces that aren't supported in the
+// kernel, so dummy declarations are all they need.
+
+#include <chrono>
+#include <limits>
+
+_LIBCPP_BEGIN_NAMESPACE_STD
+
+template <class T> struct hash;
+
+struct __libcpp_timespec_t {
+  long int tv_sec, tv_nsec;
+};
+
+using __libcpp_thread_id = int;
+
+bool __libcpp_thread_id_equal(__libcpp_thread_id, __libcpp_thread_id);
+bool __libcpp_thread_id_less(__libcpp_thread_id, __libcpp_thread_id);
+__libcpp_thread_id __libcpp_thread_get_current_id();
+
+struct __libcpp_timed_backoff_policy {
+  bool operator()(chrono::nanoseconds) const;
+};
+
+void __libcpp_thread_sleep_for(chrono::nanoseconds);
+void __libcpp_thread_yield();
+
+template <class _Fn, class _BFn>
+bool __libcpp_thread_poll_with_backoff(_Fn&&, _BFn&&,
+                                       chrono::nanoseconds = chrono::nanoseconds::zero());
+
+_LIBCPP_END_NAMESPACE_STD
+
+#endif  // ZIRCON_KERNEL_LIB_KTL_INCLUDE___EXTERNAL_THREADING

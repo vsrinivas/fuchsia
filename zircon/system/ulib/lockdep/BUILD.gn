@@ -22,7 +22,10 @@ zx_library("lockdep") {
   static = true
   sources = []
   public_deps = [ "$zx/system/ulib/fbl:headers" ]
-  if (!is_kernel) {
+  if (is_kernel) {
+    # Anything using libc++ headers in the kernel needs this.
+    public_deps += [ "$zx/kernel/lib/ktl:headers" ]
+  } else {
     sources += [ "lock_dep.cc" ]
     deps = [
       "$zx/system/ulib/fbl",
