@@ -107,6 +107,8 @@ pub trait Context<B: Backend> {
     fn raster_builder(&self) -> Option<B::RasterBuilder>;
     /// Creates a new image with `size`.
     fn new_image(&mut self, size: Size2D<u32>) -> B::Image;
+    /// Returns the image at `image_index`.
+    fn get_image(&mut self, image_index: u32) -> B::Image;
     /// Returns the `context`'s current image.
     fn get_current_image(&mut self, context: &ViewAssistantContext<'_>) -> B::Image;
     /// Flushes the buffering backing the `image`.

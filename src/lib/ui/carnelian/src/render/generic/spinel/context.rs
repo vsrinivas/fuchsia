@@ -711,9 +711,7 @@ impl Context<Spinel> for SpinelContext {
         image
     }
 
-    fn get_current_image(&mut self, context: &ViewAssistantContext<'_>) -> SpinelImage {
-        let image_index = context.image_index;
-
+    fn get_image(&mut self, image_index: u32) -> SpinelImage {
         let vulkan = &self.vulkan;
         let images = &mut self.images;
 
@@ -735,6 +733,10 @@ impl Context<Spinel> for SpinelContext {
         });
 
         SpinelImage(*index)
+    }
+
+    fn get_current_image(&mut self, context: &ViewAssistantContext<'_>) -> SpinelImage {
+        self.get_image(context.image_index)
     }
 
     fn flush_image(&mut self, _image: SpinelImage) {}

@@ -136,6 +136,18 @@ impl Context {
         }
     }
 
+    /// Returns the image at `image_index`.
+    pub fn get_image(&mut self, image_index: u32) -> Image {
+        match &mut self.inner {
+            ContextInner::Mold(ref mut render_context) => {
+                Image { inner: ImageInner::Mold(render_context.get_image(image_index)) }
+            }
+            ContextInner::Spinel(ref mut render_context) => {
+                Image { inner: ImageInner::Spinel(render_context.get_image(image_index)) }
+            }
+        }
+    }
+
     /// Returns the `context`'s current image.
     pub fn get_current_image(&mut self, context: &ViewAssistantContext<'_>) -> Image {
         match &mut self.inner {

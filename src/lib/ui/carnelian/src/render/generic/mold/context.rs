@@ -175,9 +175,7 @@ impl Context<Mold> for MoldContext {
         image
     }
 
-    fn get_current_image(&mut self, context: &ViewAssistantContext<'_>) -> MoldImage {
-        let image_index = context.image_index;
-
+    fn get_image(&mut self, image_index: u32) -> MoldImage {
         let buffer_collection = &mut self.buffer_collection;
         let images = &mut self.images;
         let width = self.size.width;
@@ -196,6 +194,10 @@ impl Context<Mold> for MoldContext {
         });
 
         MoldImage(*index)
+    }
+
+    fn get_current_image(&mut self, context: &ViewAssistantContext<'_>) -> MoldImage {
+        self.get_image(context.image_index)
     }
 
     fn flush_image(&mut self, image: MoldImage) {

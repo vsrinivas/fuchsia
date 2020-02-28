@@ -65,7 +65,7 @@ impl Plumber {
         let image_pipe_token = buffer_allocator.duplicate_token().await?;
         image_pipe_client.add_buffer_collection(collection_id, image_pipe_token)?;
         let context_token = buffer_allocator.duplicate_token().await?;
-        let context = render::Context {
+        let mut context = render::Context {
             inner: if use_mold {
                 ContextInner::Mold(generic::Mold::new_context(context_token, size))
             } else {
@@ -73,6 +73,25 @@ impl Plumber {
             },
         };
         let buffers = buffer_allocator.allocate_buffers(true).await.context("allocate_buffers")?;
+        let buffers_pixel_format = if use_mold {
+            pixel_format
+        } else {
+            match context.pixel_format() {
+                fuchsia_framebuffer::PixelFormat::Abgr8888 => {
+                    fidl_fuchsia_sysmem::PixelFormatType::R8G8B8A8
+                }
+                fuchsia_framebuffer::PixelFormat::Argb8888 => {
+                    fidl_fuchsia_sysmem::PixelFormatType::Bgra32
+                }
+                fuchsia_framebuffer::PixelFormat::RgbX888 => {
+                    fidl_fuchsia_sysmem::PixelFormatType::Bgra32
+                }
+                fuchsia_framebuffer::PixelFormat::BgrX888 => {
+                    fidl_fuchsia_sysmem::PixelFormatType::R8G8B8A8
+                }
+                _ => fidl_fuchsia_sysmem::PixelFormatType::Invalid,
+            }
+        };
 
         let mut image_ids = BTreeSet::new();
         let mut image_indexes = BTreeMap::new();
@@ -81,12 +100,14 @@ impl Plumber {
             let image_id = index + first_image_id;
             image_ids.insert(image_id);
             let uindex = index as u32;
+            // Realized the image before passing it to image pipe.
+            let _render_image = context.get_image(uindex);
             image_pipe_client
                 .add_image(
                     image_id as u32,
                     collection_id,
                     uindex,
-                    &mut make_image_format(size.width, size.height, pixel_format),
+                    &mut make_image_format(size.width, size.height, buffers_pixel_format),
                 )
                 .expect("add_image");
             image_indexes.insert(image_id, uindex);
