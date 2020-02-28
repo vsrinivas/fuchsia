@@ -17,6 +17,7 @@ rustc_library("cm_json") {
   with_unit_tests = true
   edition = "2018"
   deps = [
+    "//garnet/lib/rust/cm_types",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:json5",
     "//third_party/rust_crates:serde",

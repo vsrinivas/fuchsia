@@ -11,6 +11,7 @@ rustc_library("cm_rust") {
   edition = "2018"
   deps = [
     "//garnet/lib/rust/cm_fidl_validator",
+    "//garnet/lib/rust/cm_types",
     "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//third_party/rust_crates:anyhow",

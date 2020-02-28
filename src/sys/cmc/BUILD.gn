@@ -17,6 +17,7 @@ rustc_binary_sdk("cmc") {
 
   deps = [
     "//garnet/lib/rust/cm_json",
+    "//garnet/lib/rust/cm_types",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:clap",
     "//third_party/rust_crates:lazy_static",

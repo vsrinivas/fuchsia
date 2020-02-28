@@ -5,49 +5,33 @@
 use {
     crate::one_or_many::{OneOrMany, OneOrManyBorrow},
     cm_json::cm,
-    lazy_static::lazy_static,
-    regex::Regex,
     serde_derive::Deserialize,
     serde_json::{Map, Value},
-    std::{collections::HashMap, fmt},
+    std::{collections::HashMap, fmt, str::FromStr},
+    thiserror::Error,
 };
+
+pub use cm_types::Name;
 
 pub const LAZY: &str = "lazy";
 pub const EAGER: &str = "eager";
 pub const PERSISTENT: &str = "persistent";
 pub const TRANSIENT: &str = "transient";
 
-/// Name of an object, such as a collection, component, or storage.
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Deserialize)]
-pub struct Name(String);
-
-impl Name {
-    pub fn new(name: &str) -> Name {
-        Name(name.to_string())
-    }
-
-    pub fn as_str<'a>(&'a self) -> &'a str {
-        self.0.as_str()
-    }
-
-    pub fn to_string(&self) -> String {
-        self.0.to_string()
-    }
-}
-
-/// Format a `Ref` as a string.
-impl fmt::Display for Name {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0.as_str())
-    }
-}
-
 /// A relative reference to another object.
+///
+/// This type can be parsed from a string. See the individual variants
+/// for details.
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub enum Ref {
+    /// A named reference. Parsed as `#name`, where `name` contains only
+    /// alphanumeric characters, `-`, `_`, and `.`.
     Named(Name),
+    /// A reference to the realm. Parsed as `realm`.
     Realm,
+    /// A reference to the framework (component manager). Parsed as `framework`.
     Framework,
+    /// A reference to self, the component that declares this reference. Parsed as `self`.
     Self_,
 }
 
@@ -55,11 +39,39 @@ pub enum Ref {
 impl fmt::Display for Ref {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Ref::Named(name) => write!(f, "#{}", name.as_str()),
+            Ref::Named(name) => write!(f, "#{}", name),
             Ref::Realm => write!(f, "realm"),
             Ref::Framework => write!(f, "framework"),
             Ref::Self_ => write!(f, "self"),
         }
+    }
+}
+
+/// An error that occurs during `Ref` validation.
+#[derive(Debug, Error)]
+pub enum RefValidationError {
+    #[error("must be one of `#name`, `realm`, `framework`, or `self`")]
+    InvalidRefType,
+    #[error("name is invalid")]
+    InvalidNamedRef(cm_types::NameValidationError),
+}
+
+impl FromStr for Ref {
+    type Err = RefValidationError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        if value.starts_with("#") {
+            return value[1..]
+                .parse::<Name>()
+                .map(Ref::Named)
+                .map_err(RefValidationError::InvalidNamedRef);
+        }
+        Ok(match value {
+            "framework" => Ref::Framework,
+            "realm" => Ref::Realm,
+            "self" => Ref::Self_,
+            _ => return Err(RefValidationError::InvalidRefType),
+        })
     }
 }
 
@@ -81,36 +93,12 @@ impl<'de> serde::de::Deserialize<'de> for Ref {
             where
                 E: serde::de::Error,
             {
-                parse_reference(value)
-                    .ok_or_else(|| E::custom(format!("invalid reference: \"{}\"", value)))
+                value
+                    .parse()
+                    .map_err(|e| E::custom(format!("invalid reference: \"{}\": {}", value, e)))
             }
         }
         deserializer.deserialize_str(RefVisitor)
-    }
-}
-
-lazy_static! {
-    static ref NAME_RE: Regex = Regex::new(r"^#([A-Za-z0-9\-_.]+)$").unwrap();
-}
-
-/// Parse the given name of the form `#some-name`, returning the
-/// name of the target if it is a valid target name, or `None`
-/// otherwise.
-pub fn parse_named_reference(reference: &str) -> Option<Name> {
-    NAME_RE.captures(reference).map_or(None, |c| c.get(1)).map(|c| Name::new(c.as_str()))
-}
-
-/// Parse the given relative reference, consisting of tokens such as
-/// `realm` or `#child`. Returns None if the name could not be parsed.
-pub fn parse_reference<'a>(value: &'a str) -> Option<Ref> {
-    if value.starts_with("#") {
-        return parse_named_reference(value).map(|c| Ref::Named(c));
-    }
-    match value {
-        "framework" => Some(Ref::Framework),
-        "realm" => Some(Ref::Realm),
-        "self" => Some(Ref::Self_),
-        _ => None,
     }
 }
 
@@ -532,24 +520,25 @@ mod tests {
 
     #[test]
     fn test_parse_named_reference() {
-        assert_eq!(parse_named_reference("#some-child"), Some(Name::new("some-child")));
-        assert_eq!(parse_named_reference("#-"), Some(Name::new("-")));
-        assert_eq!(parse_named_reference("#_"), Some(Name::new("_")));
-        assert_eq!(parse_named_reference("#7"), Some(Name::new("7")));
+        assert_matches!("#some-child".parse::<Ref>(), Ok(Ref::Named(name)) if name == "some-child");
+        assert_matches!("#-".parse::<Ref>(), Ok(Ref::Named(name)) if name == "-");
+        assert_matches!("#_".parse::<Ref>(), Ok(Ref::Named(name)) if name == "_");
+        assert_matches!("#7".parse::<Ref>(), Ok(Ref::Named(name)) if name == "7");
 
-        assert_eq!(parse_named_reference("#"), None);
-        assert_eq!(parse_named_reference("some-child"), None);
+        assert_matches!("#".parse::<Ref>(), Err(_));
+        assert_matches!("some-child".parse::<Ref>(), Err(_));
     }
 
     #[test]
     fn test_parse_reference_test() {
-        assert_eq!(parse_reference("realm"), Some(Ref::Realm));
-        assert_eq!(parse_reference("framework"), Some(Ref::Framework));
-        assert_eq!(parse_reference("self"), Some(Ref::Self_));
-        assert_eq!(parse_reference("#child"), Some(Ref::Named(Name::new("child"))));
+        assert_matches!("realm".parse::<Ref>(), Ok(Ref::Realm));
+        assert_matches!("realm".parse::<Ref>(), Ok(Ref::Realm));
+        assert_matches!("framework".parse::<Ref>(), Ok(Ref::Framework));
+        assert_matches!("self".parse::<Ref>(), Ok(Ref::Self_));
+        assert_matches!("#child".parse::<Ref>(), Ok(Ref::Named(name)) if name == "child");
 
-        assert_eq!(parse_reference("invalid"), None);
-        assert_eq!(parse_reference("#invalid-child^"), None);
+        assert_matches!("invalid".parse::<Ref>(), Err(_));
+        assert_matches!("#invalid-child^".parse::<Ref>(), Err(_));
     }
 
     fn parse_as_ref(input: &str) -> Result<Ref, Error> {
@@ -559,9 +548,9 @@ mod tests {
 
     #[test]
     fn test_deserialize_ref() -> Result<(), Error> {
-        assert_eq!(parse_as_ref("\"self\"")?, Ref::Self_);
-        assert_eq!(parse_as_ref("\"realm\"")?, Ref::Realm);
-        assert_eq!(parse_as_ref("\"#child\"")?, Ref::Named(Name::new("child")));
+        assert_matches!(parse_as_ref("\"self\""), Ok(Ref::Self_));
+        assert_matches!(parse_as_ref("\"realm\""), Ok(Ref::Realm));
+        assert_matches!(parse_as_ref("\"#child\""), Ok(Ref::Named(name)) if name == "child");
 
         assert_matches!(parse_as_ref(r#""invalid""#), Err(_));
 
