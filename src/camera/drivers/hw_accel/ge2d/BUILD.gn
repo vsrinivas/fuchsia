@@ -26,6 +26,7 @@ driver_module("ge2d-driver") {
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/device-protocol-pdev",
+    "//zircon/public/lib/driver-unit-test",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl-utils",
     "//zircon/public/lib/fit",

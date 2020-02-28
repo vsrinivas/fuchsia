@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/driver-unit-test/utils.h>
+
 #include <ddk/binding.h>
 
 #include "ge2d.h"
@@ -38,21 +40,7 @@ zx_status_t Ge2dBind(void* ctx, zx_device_t* device) {
 }
 
 bool run_unit_tests(void* ctx, zx_device_t* parent, zx_handle_t channel) {
-  std::unique_ptr<Ge2dDevice> ge2d_device;
-  zx_status_t status = ge2d::Ge2dDevice::Setup(parent, &ge2d_device);
-  if (status != ZX_OK) {
-    FX_PLOGST(ERROR, kTag, status) << "Could not setup ge2d device";
-    return false;
-  }
-
-  // Run the unit tests for this device
-  // Can be enabled by setting the driver.ge2d.tests.enable=true command-line arg.
-  status = ge2d::Ge2dDeviceTester::RunTests(ge2d_device.get());
-  if (status != ZX_OK) {
-    FX_LOG(ERROR, kTag, "Device Unit Tests Failed");
-    return false;
-  }
-  return true;
+  return driver_unit_test::RunZxTests("Ge2dTests", parent, channel);
 }
 
 static constexpr zx_driver_ops_t driver_ops = []() {
