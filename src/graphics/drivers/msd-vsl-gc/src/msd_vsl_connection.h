@@ -26,12 +26,16 @@ class MsdVslConnection {
   magma::Status MapBufferGpu(std::shared_ptr<MsdVslBuffer> buffer, uint64_t gpu_va,
                              uint64_t page_offset, uint64_t page_count);
 
+  magma::Status SubmitBatch(std::unique_ptr<MappedBatch> mapped_batch) {
+    return owner_->SubmitBatch(std::move(mapped_batch), false /* do_flush */);
+  }
+
   msd_client_id_t client_id() { return client_id_; }
 
   std::shared_ptr<AddressSpace> address_space() { return address_space_; }
 
  private:
-  [[maybe_unused]] Owner* owner_;
+  Owner* owner_;
   std::shared_ptr<AddressSpace> address_space_;
   msd_client_id_t client_id_;
 };

@@ -26,8 +26,11 @@ class NullBatch : public MappedBatch {
 class EventBatch : public NullBatch {
  public:
   EventBatch(std::shared_ptr<MsdVslContext> context,
+             std::vector<std::shared_ptr<magma::PlatformSemaphore>> wait_semaphores,
              std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores)
-      : context_(std::move(context)), signal_semaphores_(std::move(signal_semaphores)) {}
+      : context_(std::move(context)),
+        wait_semaphores_(std::move(wait_semaphores)),
+        signal_semaphores_(std::move(signal_semaphores)) {}
 
   ~EventBatch() {
     for (auto& semaphore : signal_semaphores_) {
@@ -41,6 +44,7 @@ class EventBatch : public NullBatch {
 
  private:
   std::shared_ptr<MsdVslContext> context_;
+  std::vector<std::shared_ptr<magma::PlatformSemaphore>> wait_semaphores_;
   std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores_;
   uint32_t seq_num_ = 0;
 };

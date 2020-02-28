@@ -9,6 +9,7 @@
 
 #include "address_space.h"
 #include "magma_util/macros.h"
+#include "mapped_batch.h"
 #include "msd.h"
 #include "msd_vsl_connection.h"
 
@@ -20,6 +21,15 @@ class MsdVslContext {
 
   std::shared_ptr<AddressSpace> exec_address_space() { return address_space_; }
   std::weak_ptr<MsdVslConnection> connection() { return connection_; }
+
+  magma::Status SubmitBatch(std::unique_ptr<MappedBatch> batch);
+
+  static std::unique_ptr<MappedBatch> CreateBatch(std::shared_ptr<MsdVslContext> context,
+                                                  magma_system_command_buffer* cmd_buf,
+                                                  magma_system_exec_resource* exec_resources,
+                                                  msd_buffer_t** msd_buffers,
+                                                  msd_semaphore_t** msd_wait_semaphores,
+                                                  msd_semaphore_t** msd_signal_semaphores);
 
  private:
   std::weak_ptr<MsdVslConnection> connection_;

@@ -9,12 +9,15 @@ executable("nonhardware_tests") {
   sources = [
     "test_address_space.cc",
     "test_connection.cc",
+    "test_context.cc",
     "test_page_table_slot_allocator.cc",
     "test_ringbuffer.cc",
   ]
 
   deps = [
     "//src/graphics/drivers/msd-vsl-gc/src",
+    "//src/graphics/lib/magma/src/magma_util:mapped_batch",
+    "//src/graphics/lib/magma/src/sys_driver:sys_driver",
     "//src/graphics/lib/magma/tests/helper:logger_init_helper",
     "//src/graphics/lib/magma/tests/mock:bus_mapper",
     "//src/graphics/lib/magma/tests/mock:mmio",

@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "test_command_buffer.h"
-
 #include "gtest/gtest.h"
 #include "src/graphics/drivers/msd-vsl-gc/src/command_buffer.h"
+#include "test_command_buffer.h"
 
 class TestExec : public TestCommandBuffer {};
 
@@ -14,12 +13,12 @@ TEST_F(TestExec, SubmitBatchWithOffset) {
   device_->StartDeviceThread();
 
   BufferDesc buffer_desc = {
-    .buffer_size = 4096,
-    .map_page_count = 1,
-    .data_size = 4,
-    // The user data will start at a non-zero offset.
-    .batch_offset = 80,
-    .gpu_addr = 0x10000,
+      .buffer_size = 4096,
+      .map_page_count = 1,
+      .data_size = 4,
+      // The user data will start at a non-zero offset.
+      .batch_offset = 80,
+      .gpu_addr = 0x10000,
   };
   ASSERT_NO_FATAL_FAILURE(CreateAndSubmitBuffer(buffer_desc));
 }
@@ -33,11 +32,11 @@ TEST_F(TestExec, ReuseGpuAddress) {
   device_->StartDeviceThread();
 
   BufferDesc buffer_desc = {
-    .buffer_size = 4096,
-    .map_page_count = 1,
-    .data_size = 8,
-    .batch_offset = 0,
-    .gpu_addr = 0x10000,
+      .buffer_size = 4096,
+      .map_page_count = 1,
+      .data_size = 8,
+      .batch_offset = 0,
+      .gpu_addr = 0x10000,
   };
   constexpr uint32_t unmapped_gpu_addr = 0x50000;
 
@@ -66,9 +65,9 @@ TEST_F(TestExec, ReuseGpuAddress) {
 
   // Map the second buffer at the same GPU address and try submitting it.
   std::shared_ptr<GpuMapping> gpu_mapping;
-  magma::Status status = AddressSpace::MapBufferGpu(
-      address_space(), msd_buffer, buffer_desc.gpu_addr, 0 /* page_offset */,
-      buffer_desc.map_page_count, &gpu_mapping);
+  magma::Status status =
+      AddressSpace::MapBufferGpu(address_space(), msd_buffer, buffer_desc.gpu_addr,
+                                 0 /* page_offset */, buffer_desc.map_page_count, &gpu_mapping);
   ASSERT_TRUE(status.ok());
   ASSERT_NE(gpu_mapping, nullptr);
 
@@ -97,10 +96,11 @@ TEST_F(TestExec, Backlog) {
     semaphores[i] = magma::PlatformSemaphore::Create();
     ASSERT_NE(semaphores[i], nullptr);
 
+    std::vector<std::shared_ptr<magma::PlatformSemaphore>> wait_semaphores;
     std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores;
     signal_semaphores.emplace_back(semaphores[i]->Clone());
 
-    auto batch = std::make_unique<EventBatch>(context(), signal_semaphores);
+    auto batch = std::make_unique<EventBatch>(context(), wait_semaphores, signal_semaphores);
     ASSERT_EQ(MAGMA_STATUS_OK, device_->SubmitBatch(std::move(batch), false /* do_flush */).get());
   }
 

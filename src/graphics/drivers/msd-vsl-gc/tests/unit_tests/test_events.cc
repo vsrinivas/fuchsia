@@ -127,7 +127,7 @@ TEST_F(TestEvents, WriteUnorderedEventIds) {
   uint32_t rb_link_addr = rb_gpu_addr + ringbuffer->tail();
 
   // Write event ids in reverse order, so we can test when it does not match batch sequence order.
-  for (unsigned i = MsdVslDevice::kNumEvents; i-- > 0; ) {
+  for (unsigned i = MsdVslDevice::kNumEvents; i-- > 0;) {
     auto copy = semaphores[i]->Clone();
     ASSERT_NE(copy, nullptr);
     auto mapped_batch = std::make_unique<MockMappedBatch>(std::move(copy));
@@ -158,10 +158,11 @@ TEST_F(TestEvents, Submit) {
     auto semaphore = magma::PlatformSemaphore::Create();
     ASSERT_NE(semaphore, nullptr);
 
+    std::vector<std::shared_ptr<magma::PlatformSemaphore>> wait_semaphores;
     std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores;
     signal_semaphores.emplace_back(semaphore->Clone());
 
-    auto batch = std::make_unique<EventBatch>(context_, signal_semaphores);
+    auto batch = std::make_unique<EventBatch>(context_, wait_semaphores, signal_semaphores);
     ASSERT_EQ(MAGMA_STATUS_OK, device_->SubmitBatch(std::move(batch)).get());
 
     constexpr uint64_t kTimeoutMs = 1000;

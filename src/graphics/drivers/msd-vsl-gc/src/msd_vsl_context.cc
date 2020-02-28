@@ -4,6 +4,71 @@
 
 #include "msd_vsl_context.h"
 
+#include "command_buffer.h"
+#include "msd_vsl_semaphore.h"
+
+std::unique_ptr<MappedBatch> MsdVslContext::CreateBatch(std::shared_ptr<MsdVslContext> context,
+                                                        magma_system_command_buffer* cmd_buf,
+                                                        magma_system_exec_resource* exec_resources,
+                                                        msd_buffer_t** msd_buffers,
+                                                        msd_semaphore_t** msd_wait_semaphores,
+                                                        msd_semaphore_t** msd_signal_semaphores) {
+  std::vector<CommandBuffer::ExecResource> resources;
+  resources.reserve(cmd_buf->num_resources);
+  for (uint32_t i = 0; i < cmd_buf->num_resources; i++) {
+    resources.emplace_back(CommandBuffer::ExecResource{MsdVslAbiBuffer::cast(msd_buffers[i])->ptr(),
+                                                       exec_resources[i].offset,
+                                                       exec_resources[i].length});
+  }
+
+  std::vector<std::shared_ptr<magma::PlatformSemaphore>> wait_semaphores;
+  wait_semaphores.reserve(cmd_buf->wait_semaphore_count);
+  for (uint32_t i = 0; i < cmd_buf->wait_semaphore_count; i++) {
+    wait_semaphores.emplace_back(MsdVslAbiSemaphore::cast(msd_wait_semaphores[i])->ptr());
+  }
+
+  std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores;
+  signal_semaphores.reserve(cmd_buf->signal_semaphore_count);
+  for (uint32_t i = 0; i < cmd_buf->signal_semaphore_count; i++) {
+    signal_semaphores.emplace_back(MsdVslAbiSemaphore::cast(msd_signal_semaphores[i])->ptr());
+  }
+
+  auto connection = context->connection().lock();
+  if (!connection) {
+    return DRETP(nullptr, "Connection is already dead");
+  }
+
+  std::unique_ptr<MappedBatch> batch;
+
+  // The CommandBuffer does not support batches with zero resources.
+  if (resources.size() > 0) {
+    auto command_buffer = std::make_unique<CommandBuffer>(
+        context, connection->client_id(), std::make_unique<magma_system_command_buffer>(*cmd_buf));
+
+    if (!command_buffer->InitializeResources(std::move(resources), std::move(wait_semaphores),
+                                             std::move(signal_semaphores))) {
+      return DRETP(nullptr, "Failed to initialize resources");
+    }
+    batch = std::move(command_buffer);
+  } else {
+    batch = std::make_unique<EventBatch>(context, std::move(wait_semaphores),
+                                         std::move(signal_semaphores));
+  }
+
+  return batch;
+}
+
+magma::Status MsdVslContext::SubmitBatch(std::unique_ptr<MappedBatch> batch) {
+  auto connection = connection_.lock();
+  if (!connection) {
+    DMESSAGE("Can't submit without connection");
+    return MAGMA_STATUS_OK;
+  }
+  // TODO(fxb/42234): check if we have to submit a TLB flush command
+  // TODO(fxb/42748): handle wait semaphores.
+  return connection->SubmitBatch(std::move(batch));
+}
+
 void msd_context_destroy(msd_context_t* abi_context) { delete MsdVslAbiContext::cast(abi_context); }
 
 magma_status_t msd_context_execute_immediate_commands(msd_context_t* ctx, uint64_t commands_size,
@@ -13,8 +78,20 @@ magma_status_t msd_context_execute_immediate_commands(msd_context_t* ctx, uint64
 }
 
 magma_status_t msd_context_execute_command_buffer_with_resources(
-    struct msd_context_t* ctx, struct magma_system_command_buffer* command_buffer,
+    struct msd_context_t* ctx, struct magma_system_command_buffer* cmd_buf,
     struct magma_system_exec_resource* exec_resources, struct msd_buffer_t** buffers,
     struct msd_semaphore_t** wait_semaphores, struct msd_semaphore_t** signal_semaphores) {
-  return MAGMA_STATUS_UNIMPLEMENTED;
+  auto context = MsdVslAbiContext::cast(ctx)->ptr();
+
+  std::unique_ptr<MappedBatch> batch = MsdVslContext::CreateBatch(
+      context, cmd_buf, exec_resources, buffers, wait_semaphores, signal_semaphores);
+  if (batch->IsCommandBuffer()) {
+    auto* command_buffer = static_cast<CommandBuffer*>(batch.get());
+    if (!command_buffer->PrepareForExecution()) {
+      return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR,
+                      "Failed to prepare command buffer for execution");
+    }
+  }
+  magma::Status status = context->SubmitBatch(std::move(batch));
+  return status.get();
 }
