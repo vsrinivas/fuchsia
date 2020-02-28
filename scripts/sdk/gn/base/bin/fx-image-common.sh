@@ -17,6 +17,7 @@ fi
 
 # Variables expected by fx emu
 ZIRCON_TOOLS_DIR="${FUCHSIA_SDK_PATH}/tools"
+HOST_OUT_DIR="${FUCHSIA_SDK_PATH}/tools"
 IMAGE_ZIRCONA_ZBI="zircon-a.zbi"
 IMAGE_QEMU_KERNEL_RAW="qemu-kernel.kernel"
 IMAGE_FVM_RAW="storage-full.blk"

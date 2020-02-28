@@ -32,7 +32,7 @@ function fx-fvm-extend-image {
     # need to modify it in order to extend it.
     echo -n "Creating disk image..."
     cp "${fvmraw}" "${fvmimg}"
-    "${ZIRCON_TOOLS_DIR}/fvm" "${fvmimg}" extend --length "${newsize}"
+    "${HOST_OUT_DIR}/fvm" "${fvmimg}" extend --length "${newsize}"
     echo "done"
   else
     fx-error "Could not extend fvm, unable to stat fvm image"
