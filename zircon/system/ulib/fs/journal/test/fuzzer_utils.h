@@ -20,7 +20,7 @@
 #include <storage/buffer/blocking_ring_buffer.h>
 #include <storage/buffer/vmo_buffer.h>
 #include <storage/buffer/vmoid_registry.h>
-#include <storage/operation/buffered_operation.h>
+#include <storage/operation/unbuffered_operation.h>
 #include <storage/operation/operation.h>
 
 namespace fs {

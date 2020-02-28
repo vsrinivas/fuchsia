@@ -12,7 +12,7 @@
 #include <fbl/mutex.h>
 #include <storage/buffer/block_buffer_view.h>
 #include <storage/buffer/vmo_buffer.h>
-#include <storage/operation/buffered_operation.h>
+#include <storage/operation/unbuffered_operation.h>
 
 namespace storage {
 

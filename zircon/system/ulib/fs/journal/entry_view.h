@@ -13,7 +13,7 @@
 #include <fs/journal/header_view.h>
 #include <fs/journal/superblock.h>
 #include <storage/buffer/block_buffer_view.h>
-#include <storage/operation/buffered_operation.h>
+#include <storage/operation/operation.h>
 
 namespace fs {
 

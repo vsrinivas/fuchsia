@@ -5,7 +5,6 @@
 #include "replay_tree.h"
 
 #include <fs/transaction/writeback.h>
-#include <storage/operation/buffered_operation.h>
 
 namespace fs {
 namespace internal {

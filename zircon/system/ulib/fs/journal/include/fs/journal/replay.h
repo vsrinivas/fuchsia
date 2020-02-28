@@ -11,7 +11,7 @@
 #include <fs/journal/superblock.h>
 #include <fs/transaction/block_transaction.h>
 #include <storage/buffer/vmo_buffer.h>
-#include <storage/operation/buffered_operation.h>
+#include <storage/operation/operation.h>
 
 namespace fs {
 

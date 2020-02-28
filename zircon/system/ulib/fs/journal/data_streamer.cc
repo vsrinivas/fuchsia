@@ -7,7 +7,7 @@
 #include <vector>
 
 #include <fs/journal/data_streamer.h>
-#include <storage/operation/buffered_operation.h>
+#include <storage/operation/unbuffered_operation.h>
 
 namespace fs {
 
