@@ -136,7 +136,8 @@ def write_toml_file(fout, metadata, project, target, lookup):
             default_features = None
             if isinstance(dep_data["cargo_dependency_toml"], dict):
                 features = dep_data["cargo_dependency_toml"].get("features")
-                default_features = dep_data["cargo_dependency_toml"].get("default-features")
+                default_features = dep_data["cargo_dependency_toml"].get(
+                    "default-features")
                 version = dep_data["cargo_dependency_toml"]["version"]
             else:
                 version = dep_data["cargo_dependency_toml"]
@@ -145,7 +146,8 @@ def write_toml_file(fout, metadata, project, target, lookup):
             if features:
                 fout.write("features = %s\n" % json.dumps(features))
             if default_features is not None:
-                fout.write("default-features = %s\n" % json.dumps(default_features))
+                fout.write(
+                    "default-features = %s\n" % json.dumps(default_features))
         # this is a in-tree rust target
         elif "crate_name" in project.targets[dep]:
             crate_name = lookup_gn_pkg_name(project, dep)
@@ -223,6 +225,11 @@ def main():
     gn_cargo_dir = rebase_gn_path(
         root_path, project.build_settings["build_dir"] + "cargo/")
     shutil.rmtree(gn_cargo_dir, ignore_errors=True)
+    os.makedirs(gn_cargo_dir)
+    # Write a stamp file with a predictable name so the build system knows the
+    # step ran successfully.
+    with open(os.path.join(gn_cargo_dir, "gn_to_cargo.stamp"), "w") as f:
+        f.truncate()
 
     for target in project.rust_targets():
         cargo_toml_dir = rebase_gn_path(

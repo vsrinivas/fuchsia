@@ -40,7 +40,7 @@ action("cargo_toml_gen") {
   sources = []
   inputs = []
 
-  outputs = [ "$target_gen_dir/cargo" ]
+  outputs = [ "$root_build_dir/cargo/gn_to_cargo.stamp" ]
   deps = [ "//third_party/rust_crates:build-third-party" ]
   args = [ rebase_path("$root_build_dir/project.json", "") ]
 }
