@@ -90,6 +90,7 @@ async fn launch_and_run_sample_test() {
 
 // Stress test with a very large gtest suite.
 #[fuchsia_async::run_singlethreaded(test)]
+#[ignore]
 async fn launch_and_run_huge_test() {
     let mut output: Vec<u8> = vec![];
     let (result, executed, passed) = run_test(
