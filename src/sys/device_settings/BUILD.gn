@@ -51,7 +51,7 @@ package("device_settings_manager") {
   ]
 }
 
-unittest_package("device_settings_manager_tests") {
+test_package("device_settings_manager_tests") {
   deps = [ ":bin_test" ]
 
   tests = [
@@ -60,4 +60,9 @@ unittest_package("device_settings_manager_tests") {
       environments = basic_envs
     },
   ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":device_settings_manager_tests" ]
 }
