@@ -103,6 +103,8 @@ void URLLoaderImpl::StartInternal(oldhttp::URLRequest request) {
   }
 
   do {
+    ZX_ASSERT_MSG(current_url_.host() == current_url_.HostNoBrackets(),
+                  "oldhttp doesn't handle numeric ipv6 in URL - use fuchsia.net.http instead");
     if (current_url_.SchemeIs("https")) {
 #ifdef NETWORK_SERVICE_USE_HTTPS
       asio::ssl::context ctx(asio::ssl::context::sslv23);
