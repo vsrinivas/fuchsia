@@ -58,6 +58,9 @@ class OutputNode : public ProcessNode {
     shutdown_callback();
   }
 
+  // Notifies that the client has requested to change resolution.
+  void OnResolutionChangeRequest(uint32_t output_format_index) override {}
+
  private:
   std::unique_ptr<StreamImpl> client_stream_;
 };

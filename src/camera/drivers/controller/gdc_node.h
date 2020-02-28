@@ -27,8 +27,7 @@ fit::result<gdc_config_info, zx_status_t> LoadGdcConfiguration(
 void OnGdcFrameAvailable(void* ctx, const frame_available_info_t* info);
 
 // Invoked by GDC on a Resolution change completion.
-// TODO(41730): Implement this.
-static void OnGdcResChange(void* ctx, const frame_available_info_t* info) {}
+void OnGdcResChange(void* ctx, const frame_available_info_t* info);
 
 class GdcNode : public ProcessNode {
  public:
@@ -82,6 +81,9 @@ class GdcNode : public ProcessNode {
 
   // Marks the GDC shutdown callback received.
   void OnTaskRemoved(zx_status_t status);
+
+  // Notifies that the client has requested to change resolution.
+  void OnResolutionChangeRequest(uint32_t output_format_index) override;
 
  private:
   // Invoked by GDC when a new frame is available.

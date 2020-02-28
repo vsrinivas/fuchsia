@@ -22,8 +22,9 @@ void OnGe2dFrameAvailable(void* ctx, const frame_available_info_t* info) {
   static_cast<camera::Ge2dNode*>(ctx)->OnFrameAvailable(info);
 }
 
-// TODO(41730): Implement this.
-void OnGe2dResChange(void* ctx, const frame_available_info_t* info) {}
+void OnGe2dResChange(void* ctx, const frame_available_info_t* info) {
+  static_cast<camera::ProcessNode*>(ctx)->OnResolutionChanged(info);
+}
 
 void OnGe2dTaskRemoved(void* ctx, task_remove_status_t status) {
   static_cast<Ge2dNode*>(ctx)->OnTaskRemoved(status);
@@ -61,7 +62,7 @@ fit::result<ProcessNode*, zx_status_t> Ge2dNode::CreateGe2dNode(
       dispatcher, ge2d, parent_node, internal_ge2d_node.image_formats,
       std::move(output_buffers_hlcpp), info->stream_config->properties.stream_type(),
       internal_ge2d_node.supported_streams, internal_ge2d_node.output_frame_rate,
-      internal_ge2d_node.ge2d_info.resize);
+      internal_ge2d_node.ge2d_info.resize, internal_ge2d_node.ge2d_info.config_type);
   if (!ge2d_node) {
     FX_LOGST(ERROR, kTag) << "Failed to create GE2D node";
     return fit::error(ZX_ERR_NO_MEMORY);
@@ -209,6 +210,17 @@ void Ge2dNode::OnShutdown(fit::function<void(void)> shutdown_callback) {
 
   // Forward the shutdown request to child node.
   child_nodes().at(0)->OnShutdown(child_shutdown_completion_callback);
+}
+
+void Ge2dNode::OnResolutionChangeRequest(uint32_t output_format_index) {
+  if (enabled_) {
+    TRACE_DURATION("camera", "Ge2dNode::OnResolutionChangeRequest", "index", output_format_index);
+    if (task_type_ == Ge2DConfig::GE2D_WATERMARK) {
+      ge2d_.SetInputAndOutputResolution(task_index_, output_format_index);
+    } else {
+      ge2d_.SetOutputResolution(task_index_, output_format_index);
+    }
+  }
 }
 
 }  // namespace camera

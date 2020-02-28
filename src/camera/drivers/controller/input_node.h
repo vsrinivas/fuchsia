@@ -76,6 +76,9 @@ class InputNode : public ProcessNode {
   // Notifies that the client has requested to stop streaming.
   void OnStopStreaming() override;
 
+  // Notifies that the client has requested to change resolution.
+  void OnResolutionChangeRequest(uint32_t output_format_index) override {}
+
  private:
   // Notifies when a new frame is available from the ISP.
   static void OnIspFrameAvailable(void* ctx, const frame_available_info_t* info) {

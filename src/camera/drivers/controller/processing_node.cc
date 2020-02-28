@@ -78,4 +78,14 @@ void ProcessNode::OnStopStreaming() {
   }
 }
 
+void ProcessNode::OnResolutionChanged(const frame_available_info* info) {
+  TRACE_DURATION("camera", "ProcessNode::OnResolutionChanged", "index",
+                 info->metadata.image_format_index);
+  for (auto& node : child_nodes_) {
+    if (node->enabled()) {
+      node->OnResolutionChangeRequest(info->metadata.image_format_index);
+    }
+  }
+}
+
 }  // namespace camera

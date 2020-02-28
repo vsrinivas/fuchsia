@@ -210,6 +210,7 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
       info.stream_config = &stream_config_;
       info.node = *stream_config_node;
       info.output_buffers = FakeBufferCollection();
+      info.image_format_index = 0;
       auto stream_request = stream.NewRequest();
       pipeline_manager_->ConfigureStreamPipeline(std::move(info), std::move(stream_request));
     });
@@ -799,6 +800,68 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     EXPECT_EQ(nullptr, pipeline_manager_->downscaled_resolution_stream());
   }
 
+  void TestResolutionChange() {
+    auto ds_stream_type = kStreamTypeMonitoring;
+    fuchsia::camera2::StreamPtr ds_stream;
+    ASSERT_EQ(ZX_OK, SetupStream(kMonitorConfig, ds_stream_type, ds_stream));
+
+    bool ds_stream_alive = true;
+    ds_stream.set_error_handler([&](zx_status_t /*status*/) { ds_stream_alive = false; });
+
+    uint32_t old_resolution = 0;
+    uint32_t new_resolution = 1;
+    uint32_t ds_frame_count = 0;
+    ds_stream.events().OnFrameAvailable = [&](fuchsia::camera2::FrameAvailableInfo info) {
+      ds_frame_count++;
+      if (ds_frame_count > 1) {
+        EXPECT_EQ(new_resolution, info.metadata.image_format_index());
+      } else {
+        EXPECT_EQ(old_resolution, info.metadata.image_format_index());
+      }
+    };
+
+    auto ds_head_node = pipeline_manager_->downscaled_resolution_stream();
+    auto gdc_node = static_cast<GdcNode*>(ds_head_node->child_nodes().at(0).get());
+    EXPECT_EQ(gdc_node->type(), NodeType::kGdc);
+
+    // Start streaming.
+    async::PostTask(dispatcher(), [&ds_stream]() { ds_stream->Start(); });
+    RunLoopUntilIdle();
+
+    // Invoke OnFrameAvailable() for the ISP node.
+    frame_available_info_t frame_info = {
+        .frame_status = FRAME_STATUS_OK,
+        .buffer_id = 0,
+        .metadata =
+            {
+                .timestamp = static_cast<uint64_t>(zx_clock_get_monotonic()),
+                .image_format_index = old_resolution,
+                .input_buffer_index = 0,
+            },
+    };
+    // Post 1 frame with old resolution.
+    async::PostTask(dispatcher(), [&frame_info, &ds_head_node]() {
+      ds_head_node->OnReadyToProcess(&frame_info);
+    });
+    RunLoopUntilIdle();
+
+    async::PostTask(dispatcher(), [&]() {
+      // Request for resolution change.
+      gdc_node->OnResolutionChangeRequest(new_resolution);
+    });
+    RunLoopUntilIdle();
+
+    // Post other frames.
+    for (uint32_t i = 1; i < kNumBuffers; i++) {
+      async::PostTask(dispatcher(), [&frame_info, &ds_head_node, i]() {
+        frame_info.buffer_id = i;
+        ds_head_node->OnReadyToProcess(&frame_info);
+      });
+      RunLoopUntilIdle();
+    }
+    EXPECT_EQ(ds_frame_count, static_cast<uint32_t>(kNumBuffers));
+  }
+
   FakeIsp fake_isp_;
   FakeGdc fake_gdc_;
   FakeGe2d fake_ge2d_;
@@ -857,6 +920,8 @@ TEST_F(ControllerProtocolTest, TestEnabledDisableStreaming) { TestEnabledDisable
 TEST_F(ControllerProtocolTest, TestMultipleFrameRates) { TestMultipleFrameRates(); }
 
 TEST_F(ControllerProtocolTest, TestFindGraphHead) { TestFindGraphHead(); }
+
+TEST_F(ControllerProtocolTest, TestResolutionChange) { TestResolutionChange(); }
 
 TEST_F(ControllerProtocolTest, TestPipelineManagerShutdown) { TestPipelineManagerShutdown(); }
 

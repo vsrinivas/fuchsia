@@ -62,6 +62,10 @@ void OnGdcFrameAvailable(void* ctx, const frame_available_info_t* info) {
   static_cast<camera::GdcNode*>(ctx)->OnFrameAvailable(info);
 }
 
+void OnGdcResChange(void* ctx, const frame_available_info_t* info) {
+  static_cast<camera::ProcessNode*>(ctx)->OnResolutionChanged(info);
+}
+
 fit::result<ProcessNode*, zx_status_t> GdcNode::CreateGdcNode(
     const ControllerMemoryAllocator& memory_allocator, async_dispatcher_t* dispatcher,
     zx_device_t* device, const ddk::GdcProtocolClient& gdc, StreamCreationData* info,
@@ -211,4 +215,10 @@ void GdcNode::OnShutdown(fit::function<void(void)> shutdown_callback) {
   child_nodes().at(0)->OnShutdown(child_shutdown_completion_callback);
 }
 
+void GdcNode::OnResolutionChangeRequest(uint32_t output_format_index) {
+  if (enabled_) {
+    TRACE_DURATION("camera", "GdcNode::OnResolutionChangeRequest", "index", output_format_index);
+    gdc_.SetOutputResolution(task_index_, output_format_index);
+  }
+}
 }  // namespace camera

@@ -105,6 +105,12 @@ class ProcessNode {
   // Shut down routine.
   virtual void OnShutdown(fit::function<void(void)> shutdown_callback) = 0;
 
+  // Notifies that the client has requested to change resolution.
+  virtual void OnResolutionChangeRequest(uint32_t output_format_index) = 0;
+
+  // Notifies that the resolution has been changed.
+  void OnResolutionChanged(const frame_available_info* info);
+
   void set_enabled(bool enabled) { enabled_ = enabled; }
 
   // Updates the frame counter for all child nodes.

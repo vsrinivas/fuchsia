@@ -39,11 +39,12 @@ class Ge2dNode : public ProcessNode {
            fuchsia::sysmem::BufferCollectionInfo_2 output_buffer_collection,
            fuchsia::camera2::CameraStreamType current_stream_type,
            const std::vector<fuchsia::camera2::CameraStreamType>& supported_streams,
-           fuchsia::camera2::FrameRate frame_rate, const resize_info_t& info)
+           fuchsia::camera2::FrameRate frame_rate, const resize_info_t& info, Ge2DConfig task_type)
       : ProcessNode(NodeType::kGe2d, parent_node, std::move(output_image_formats),
                     std::move(output_buffer_collection), current_stream_type,
                     std::move(supported_streams), dispatcher, frame_rate),
         ge2d_(ge2d),
+        task_type_(task_type),
         info_(info),
         frame_callback_{OnGe2dFrameAvailable, this},
         res_callback_{OnGe2dResChange, this},
@@ -85,11 +86,16 @@ class Ge2dNode : public ProcessNode {
   // Marks the GE2D shutdown callback received.
   void OnTaskRemoved(zx_status_t status);
 
+  // Notifies that the client has requested to change resolution.
+  void OnResolutionChangeRequest(uint32_t output_format_index) override;
+
  private:
   // Protocol to talk to the GE2D driver.
   ddk::Ge2dProtocolClient ge2d_;
   // Task index for this node.
   uint32_t task_index_;
+  // Task type.
+  Ge2DConfig task_type_;
   resize_info_t info_;
   hw_accel_frame_callback_t frame_callback_;
   hw_accel_res_change_callback_t res_callback_;
