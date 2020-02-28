@@ -89,7 +89,7 @@ template("fuchsia_pm_tool") {
       args += [
         command,
         "--output",
-        package_name,
+        rebase_path("${_pkg_out_dir}/${package_name}"),
       ]
     }
   }

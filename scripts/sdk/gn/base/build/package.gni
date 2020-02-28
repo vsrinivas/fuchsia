@@ -82,7 +82,8 @@ template("fuchsia_package") {
     if (!defined(deps)) {
       deps = []
     }
-    data_deps = deps
+    data_deps = _package_deps
+    deps += _package_deps
 
     # Use a depfile to trigger package rebuilds if any of the files (static
     # assets, shared libraries, etc.) included by the package have changed.
@@ -120,6 +121,7 @@ template("fuchsia_package") {
 
   # Creates a Fuchsia metadata package.
   fuchsia_pm_tool(_package_target) {
+    forward_variables_from(invoker, [ "testonly" ])
     package_name = package_name
     command = "build"
     archive_manifest = _archive_manifest
@@ -127,6 +129,7 @@ template("fuchsia_package") {
   }
 
   fuchsia_pm_tool(target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
     package_name = package_name
     command = "archive"
     archive_manifest = _archive_manifest
