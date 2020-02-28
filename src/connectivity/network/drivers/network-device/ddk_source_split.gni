@@ -21,6 +21,7 @@ template("ddk_source_split") {
                            [
                              "sources",
                              "public_deps",
+                             "public_configs",
                            ])
     defines += [ "NETDEV_DDK" ]
     public_deps += [
@@ -35,6 +36,7 @@ template("ddk_source_split") {
                            [
                              "sources",
                              "public_deps",
+                             "public_configs",
                            ])
     public_deps += [ "//zircon/public/lib/syslog" ]
   }

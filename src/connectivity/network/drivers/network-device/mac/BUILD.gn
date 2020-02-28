@@ -22,6 +22,11 @@ ddk_source_split("mac") {
     "//zircon/public/lib/fidl-utils",
     "//zircon/public/lib/fzl",
   ]
+
+  # TODO(44349): UBSan has found an instance of undefined behavior in this target.
+  # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
+  # Add to public_configs since the UB is exposed through a public header.
+  public_configs = [ "//build/config:temporarily_disable_ubsan_do_not_use" ]
 }
 
 group("tests") {
