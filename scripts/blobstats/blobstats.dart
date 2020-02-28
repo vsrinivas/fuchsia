@@ -93,37 +93,36 @@ class BlobStats {
   BlobStats(
       Directory this.buildDir, Directory this.outputDir, String this.suffix);
 
-  Future addManifest(String path) async {
-    var lines = await new File(pathJoin(buildDir.path, path)).readAsLines();
+  Future addManifest(String dir, String name) async {
+    var lines =
+        await new File(pathJoin(buildDir.path, dir, name)).readAsLines();
     for (var line in lines) {
       var parts = line.split("=");
       var hash = parts[0];
-      var path = parts[1];
-      if (!path.startsWith("/")) {
-        path = pathJoin(buildDir.path, path);
-      }
-      var file = new File(path);
-      if (path.endsWith("meta.far")) {
+      // Path entries are specified relative to the directory containing the manifest.
+      var entryPath = pathJoin(dir, parts[1]);
+      var file = new File(entryPath);
+      if (entryPath.endsWith("meta.far")) {
         pendingPackages.add(file);
       }
 
-      if (suffix != null && !path.endsWith(suffix)) {
+      if (suffix != null && !entryPath.endsWith(suffix)) {
         continue;
       }
 
       var stat = await file.stat();
       if (stat.type == FileSystemEntityType.NOT_FOUND) {
-        print("$path does not exist");
+        print("$entryPath does not exist");
         continue;
       }
       var blob = blobsByHash[hash];
       if (blob == null) {
         var blob = new Blob();
         blob.hash = hash;
-        blob.buildPath = path;
+        blob.buildPath = entryPath;
         blob.sizeOnHost = stat.size;
         blob.estimatedCompressedSize =
-            await estimateCompressedBlobSize(stat.size, hash, path);
+            await estimateCompressedBlobSize(stat.size, hash, entryPath);
         blob.count = 0;
         blobsByHash[hash] = blob;
       }
@@ -226,7 +225,8 @@ class BlobStats {
     var percent = (duplicatedSize - deduplicatedSize) * 100 ~/ duplicatedSize;
     print("");
     print("Total savings from deduplication:");
-    print("   $percent% ${formatSize(deduplicatedSize)} / ${formatSize(duplicatedSize)}");
+    print(
+        "   $percent% ${formatSize(deduplicatedSize)} / ${formatSize(duplicatedSize)}");
   }
 
   String metaFarToBlobsJson(String farPath) {
@@ -237,7 +237,11 @@ class BlobStats {
     if (!farPath.endsWith("/meta.far")) {
       throw "Build details have changed";
     }
-    return removeSuffix(farPath, "meta.far") + "blobs.json";
+    String path = removeSuffix(farPath, "meta.far") + "blobs.json";
+    if (!new File(path).existsSync()) {
+      throw "Build details have changed - path to blobs.json $path not found for $farPath";
+    }
+    return path;
   }
 
   Future computePackagesInParallel(int jobs) async {
@@ -253,9 +257,10 @@ class BlobStats {
       File far = pendingPackages.removeLast();
 
       var package = new Package();
-      package.path = far.path.substring(buildDir.path.length);
+      package.path = far.path;
       var parts = package.path.split("/");
-      package.name = removeSuffix(parts.length > 1 ? parts[parts.length - 2] : parts.last, ".meta");
+      package.name = removeSuffix(
+          parts.length > 1 ? parts[parts.length - 2] : parts.last, ".meta");
       package.size = 0;
       package.proportional = 0;
       package.private = 0;
@@ -390,10 +395,12 @@ class BlobStats {
     sink.write(json.encode(rootTree));
     await sink.close();
 
-    await new Directory(pathJoin(outputDir.path, "d3_v3")).create(recursive: true);
+    await new Directory(pathJoin(outputDir.path, "d3_v3"))
+        .create(recursive: true);
     var d3Dir = pathJoin(buildDir.path, "../../scripts/third_party/d3_v3/");
     for (var file in ["LICENSE", "d3.js"]) {
-      await new File(d3Dir + file).copy(pathJoin(outputDir.path, "d3_v3", file));
+      await new File(d3Dir + file)
+          .copy(pathJoin(outputDir.path, "d3_v3", file));
     }
     var templateDir =
         pathJoin(buildDir.path, "../../scripts/blobstats/template/");
@@ -415,9 +422,8 @@ class BlobStats {
         var dartPackageName = removeSuffix(path.split('/').last, ".dilp");
         if (dartPackageName == "main") return;
 
-        var dartPackage = dartPackagesMap
-            .putIfAbsent(dartPackageName,
-                         () => new DartPackage(dartPackageName));
+        var dartPackage = dartPackagesMap.putIfAbsent(
+            dartPackageName, () => new DartPackage(dartPackageName));
 
         dartPackage.blobs
             .putIfAbsent(blob, () => new List<String>())
@@ -440,9 +446,10 @@ class BlobStats {
       for (var blob in dartPackage.blobs.keys) {
         var fuchsiaPackages = dartPackage.blobs[blob];
 
-        var result = await Process.run(Platform.executable,
-            ["../../third_party/dart/pkg/vm/bin/list_libraries.dart",
-             blob.buildPath]);
+        var result = await Process.run(Platform.executable, [
+          "../../third_party/dart/pkg/vm/bin/list_libraries.dart",
+          blob.buildPath
+        ]);
         if (result.exitCode != 0) {
           print(result.stdout);
           print(result.stderr);
@@ -471,7 +478,9 @@ Future main(List<String> args) async {
         abbr: "l", defaultsTo: false, help: "Use (lz4) compressed size")
     ..addFlag(zstdCompression,
         abbr: "z", defaultsTo: false, help: "Use (zstd) compressed size")
-    ..addFlag(humanReadable, abbr: "h", defaultsTo: false,
+    ..addFlag(humanReadable,
+        abbr: "h",
+        defaultsTo: false,
         help: "Print human readable sizes (e.g., 1K 2M 3G)")
     ..addFlag("dart-packages",
         defaultsTo: false, help: "Describe duplication of Dart packages");
@@ -497,7 +506,7 @@ Future main(List<String> args) async {
   if (argResults[image] != null) {
     prefix = "${argResults[image]}_";
   }
-  await stats.addManifest("${prefix}blob.manifest");
+  await stats.addManifest("${prefix}obj/build/images", "blob.manifest");
   await stats.addBlobSizes("${prefix}blob.sizes");
   await stats.computePackagesInParallel(Platform.numberOfProcessors);
   stats.computeStats();

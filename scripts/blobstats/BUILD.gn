@@ -1,0 +1,33 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dart/dart.gni")
+import("//build/testing/platforms.gni")
+import("//build/testing/test_spec.gni")
+
+# This script does not require building anything to function, but the test_spec
+# template expects that ever test depends on something.
+group("empty") {
+}
+
+# This runs the blobstats script in a way similar to how developers invoke it
+# and tests that it exits with a successful exit code.
+test_spec("blobstats_host_test") {
+  name = "blobstats"
+  target = ":empty"
+  dart_binary = rebase_path("$dart_sdk/bin/dart")
+  packages_file = rebase_path("blobstats.packages")
+  blobstats_dart_file = rebase_path("blobstats.dart")
+  command = [
+    dart_binary,
+    "--packages=$packages_file",
+    blobstats_dart_file,
+    "--output=" + rebase_path(target_out_dir),
+  ]
+  environments = [ host_env ]
+}
+
+group("tests") {
+  deps = [ ":blobstats_host_test" ]
+}

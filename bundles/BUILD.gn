@@ -64,6 +64,7 @@ group("tests") {
   public_deps = [
     "//examples:tests",
     "//garnet/packages/tests:all",
+    "//scripts:tests",
     "//src:host_tests",
     "//src:tests",
     "//tools:tests",
