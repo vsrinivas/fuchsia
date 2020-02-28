@@ -133,6 +133,8 @@ exp2f
 fabs
 floor
 floorf
+fma
+fmaf
 fmod
 fmodf
 frexp
@@ -140,6 +142,7 @@ frexpf
 ilogbf
 ldexp
 ldexpf
+llabs
 llroundf
 log
 log10
@@ -302,6 +305,7 @@ strcoll
 strcpy
 strcspn
 strdup
+strerror
 strerror_r
 strlen
 strncat
