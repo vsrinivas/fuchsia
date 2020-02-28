@@ -169,7 +169,7 @@ class ProcessDispatcher final
   // Similar to |ForEachHandle|, but requires the caller to be holding the |handle_table_lock_|
   template <typename T>
   zx_status_t ForEachHandleLocked(T func) const TA_REQ_SHARED(handle_table_lock_) {
-    for (const auto& handle : handles_) {
+    for (const auto& handle : handle_table_) {
       const Dispatcher* dispatcher = handle.dispatcher().get();
       zx_status_t s = func(MapHandleToValue(&handle), handle.rights(), dispatcher);
       if (s != ZX_OK) {
@@ -443,14 +443,14 @@ class ProcessDispatcher final
   // our address space
   fbl::RefPtr<VmAspace> aspace_;
 
-  // Protects |handles_| and handle_cursors_.
+  // Protects |handle_table_| and handle_table_cursors_.
   mutable DECLARE_BRWLOCK_PI(ProcessDispatcher) handle_table_lock_;
   // This process's handle table.  When removing one or more handles from this list, be sure to
   // advance or invalidate any cursors that might point to the handles being removed.
-  uint32_t handle_count_ TA_GUARDED(handle_table_lock_) = 0;
-  HandleList handles_ TA_GUARDED(handle_table_lock_);
-  // A list of cursors that contain pointers to elements of handles_.
-  fbl::DoublyLinkedList<HandleCursor*> handle_cursors_ TA_GUARDED(handle_table_lock_);
+  uint32_t handle_table_count_ TA_GUARDED(handle_table_lock_) = 0;
+  HandleList handle_table_ TA_GUARDED(handle_table_lock_);
+  // A list of cursors that contain pointers to elements of handle_table_.
+  fbl::DoublyLinkedList<HandleCursor*> handle_table_cursors_ TA_GUARDED(handle_table_lock_);
 
   FutexContext futex_context_;
 

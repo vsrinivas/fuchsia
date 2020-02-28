@@ -126,9 +126,9 @@ ProcessDispatcher::~ProcessDispatcher() {
   DEBUG_ASSERT(state_ == State::INITIAL || state_ == State::DEAD);
 
   // Assert that the -> DEAD transition cleaned up what it should have.
-  DEBUG_ASSERT(handles_.is_empty());
+  DEBUG_ASSERT(handle_table_.is_empty());
   DEBUG_ASSERT(!aspace_ || aspace_->is_destroyed());
-  DEBUG_ASSERT(handle_count_ == 0);
+  DEBUG_ASSERT(handle_table_count_ == 0);
 
   kcounter_add(dispatcher_process_destroy_count, 1);
 
@@ -413,14 +413,14 @@ void ProcessDispatcher::FinishDeadTransition() {
   HandleList to_clean;
   {
     Guard<BrwLockPi, BrwLockPi::Writer> guard{&handle_table_lock_};
-    for (auto& cursor : handle_cursors_) {
+    for (auto& cursor : handle_table_cursors_) {
       cursor.Invalidate();
     }
-    for (auto& handle : handles_) {
+    for (auto& handle : handle_table_) {
       handle.set_process_id(ZX_KOID_INVALID);
     }
-    handle_count_ = 0;
-    to_clean.swap(handles_);
+    handle_table_count_ = 0;
+    to_clean.swap(handle_table_);
   }
 
   // This needs to be done outside of |get_lock()|.
@@ -489,7 +489,7 @@ Handle* ProcessDispatcher::GetHandleLocked(zx_handle_t handle_value, bool skip_p
 
 uint32_t ProcessDispatcher::HandleCount() const {
   Guard<BrwLockPi, BrwLockPi::Reader> guard{&handle_table_lock_};
-  return handle_count_;
+  return handle_table_count_;
 }
 
 void ProcessDispatcher::AddHandle(HandleOwner handle) {
@@ -499,20 +499,20 @@ void ProcessDispatcher::AddHandle(HandleOwner handle) {
 
 void ProcessDispatcher::AddHandleLocked(HandleOwner handle) {
   handle->set_process_id(get_koid());
-  handles_.push_front(handle.release());
-  handle_count_++;
+  handle_table_.push_front(handle.release());
+  handle_table_count_++;
 }
 
 HandleOwner ProcessDispatcher::RemoveHandleLocked(Handle* handle) {
-  DEBUG_ASSERT(handle_count_ > 0);
+  DEBUG_ASSERT(handle_table_count_ > 0);
   handle->set_process_id(ZX_KOID_INVALID);
   // Make sure we don't leave any dangling cursors.
-  for (auto& cursor : handle_cursors_) {
+  for (auto& cursor : handle_table_cursors_) {
     // If it points to |handle|, skip over it.
     cursor.AdvanceIf(handle);
   }
-  handles_.erase(*handle);
-  handle_count_--;
+  handle_table_.erase(*handle);
+  handle_table_count_--;
   return HandleOwner(handle);
 }
 
@@ -705,7 +705,7 @@ zx_status_t ProcessDispatcher::GetHandleInfo(fbl::Array<zx_info_handle_extended_
 
     {
       Guard<BrwLockPi, BrwLockPi::Reader> guard{&handle_table_lock_};
-      if (count != handle_count_) {
+      if (count != handle_table_count_) {
         continue;
       }
 
@@ -884,25 +884,25 @@ void ProcessDispatcher::OnProcessStartForJobDebugger(ThreadDispatcher* t,
 
 ProcessDispatcher::HandleCursor::HandleCursor(ProcessDispatcher* process) : process_(process) {
   Guard<BrwLockPi, BrwLockPi::Writer> guard{&process_->handle_table_lock_};
-  if (!process_->handles_.is_empty()) {
-    iter_ = process_->handles_.begin();
+  if (!process_->handle_table_.is_empty()) {
+    iter_ = process_->handle_table_.begin();
   } else {
-    iter_ = process_->handles_.end();
+    iter_ = process_->handle_table_.end();
   }
 
   // Register so this cursor can be invalidated or advanced if the handle it points to is removed.
-  process_->handle_cursors_.push_front(this);
+  process_->handle_table_cursors_.push_front(this);
 }
 
 ProcessDispatcher::HandleCursor::~HandleCursor() {
   Guard<BrwLockPi, BrwLockPi::Writer> guard{&process_->handle_table_lock_};
-  process_->handle_cursors_.erase(*this);
+  process_->handle_table_cursors_.erase(*this);
 }
 
-void ProcessDispatcher::HandleCursor::Invalidate() { iter_ = process_->handles_.end(); }
+void ProcessDispatcher::HandleCursor::Invalidate() { iter_ = process_->handle_table_.end(); }
 
 Handle* ProcessDispatcher::HandleCursor::Next() {
-  if (iter_ == process_->handles_.end()) {
+  if (iter_ == process_->handle_table_.end()) {
     return nullptr;
   }
 
@@ -912,7 +912,7 @@ Handle* ProcessDispatcher::HandleCursor::Next() {
 }
 
 void ProcessDispatcher::HandleCursor::AdvanceIf(const Handle* h) {
-  if (iter_ != process_->handles_.end()) {
+  if (iter_ != process_->handle_table_.end()) {
     if (&*iter_ == h) {
       iter_++;
     }
