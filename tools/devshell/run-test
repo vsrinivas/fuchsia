@@ -59,7 +59,7 @@ function main {
     shift
   esac
 
-  fx-warn "This command is being depreacted in favor of \`fx test\`. Read more at:\n  - https://fuchsia.dev/fuchsia-src/development/testing/running_tests_as_components#converting_from_run-test_or_run-host-tests\n"
+  fx-warn "This command is being deprecated in favor of \`fx test\`. Read more at:\n  - https://fuchsia.dev/fuchsia-src/development/testing/running_tests_as_components#converting_from_run-test_or_run-host-tests\n"
 
   check-for-amber-server || return 1
 
