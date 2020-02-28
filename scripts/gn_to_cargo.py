@@ -77,6 +77,22 @@ class Project(object):
             if "crate_root" in self.targets[target]:
                 yield target
 
+    def dereference_proc_macro(self, target):
+        """Dereference proc macro shims.
+
+        If the target happens to be a group which just redirects you to a
+        proc_macro target with the host toolchain, returns the real target
+        label. Otherwise, returns target.
+        """
+        meta = self.targets[target]
+        if meta["type"] == "group":
+            if len(meta["deps"]) == 1:
+                dep = meta["deps"][0]
+                dep_meta = self.targets[dep]
+                if dep_meta["type"] == "rust_proc_macro":
+                    return dep
+        return target
+
 
 def write_toml_file(fout, metadata, project, target, lookup):
     root_path = project.build_settings["root_path"]
@@ -126,6 +142,8 @@ def write_toml_file(fout, metadata, project, target, lookup):
     # collect all dependencies
     deps = []
     for dep in metadata["deps"]:
+        # handle proc macro shims:
+        dep = project.dereference_proc_macro(dep)
         # this is a rust target built by cargo
         # TODO remove this when all things use GN. temporary hack
         if "third_party/rust_crates:" in dep:
@@ -150,21 +168,6 @@ def write_toml_file(fout, metadata, project, target, lookup):
                     "default-features = %s\n" % json.dumps(default_features))
         # this is a in-tree rust target
         elif "crate_name" in project.targets[dep]:
-            crate_name = lookup_gn_pkg_name(project, dep)
-            output_name = project.targets[dep]["crate_name"]
-            dep_dir = rebase_gn_path(
-                root_path, project.build_settings["build_dir"] + "cargo/" +
-                str(lookup[dep]))
-            fout.write(
-                CARGO_PACKAGE_DEP % {
-                    "crate_path": dep_dir,
-                    "crate_name": crate_name,
-                })
-        elif "-macro" in dep and len(project.targets[dep]["deps"]) == 1:
-            # we need to special case proc macros in the fuchsia tree due to their host target redirection
-            # we confirm that this target only has a single dependency because it should only be treated as
-            # a macro if it's a single redirect.
-            dep = project.targets[dep]["deps"][0]
             crate_name = lookup_gn_pkg_name(project, dep)
             output_name = project.targets[dep]["crate_name"]
             dep_dir = rebase_gn_path(
