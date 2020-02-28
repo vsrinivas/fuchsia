@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_fuchsia_hardware_power as hpower;
-use fidl_fuchsia_power as fpower;
-use fidl_fuchsia_power_ext::CloneExt;
-use fuchsia_async as fasync;
-use fuchsia_syslog::{fx_log_err, fx_vlog};
-use fuchsia_zircon as zx;
-use futures::lock::Mutex;
-use std::sync::{Arc, RwLock};
-
-use crate::LOG_VERBOSITY;
-
+use {
+    crate::LOG_VERBOSITY,
+    anyhow::Error,
+    fidl_fuchsia_hardware_power as hpower, fidl_fuchsia_power as fpower,
+    fidl_fuchsia_power_ext::CloneExt,
+    fuchsia_async as fasync,
+    fuchsia_syslog::{fx_log_err, fx_vlog},
+    fuchsia_zircon as zx,
+    futures::{lock::Mutex, TryStreamExt},
+    std::sync::{Arc, RwLock},
+};
 #[derive(Debug, PartialEq)]
 enum StatusUpdateResult {
     Notify,
@@ -238,6 +238,47 @@ impl BatteryManager {
     pub fn get_battery_info_copy(&self) -> fpower::BatteryInfo {
         let info_lock = self.battery_info.read().unwrap();
         (*info_lock).clone()
+    }
+
+    pub(crate) async fn serve(
+        &self,
+        stream: fpower::BatteryManagerRequestStream,
+    ) -> Result<(), Error> {
+        stream.try_for_each_concurrent(None, move |request| {
+            async move {
+                match request {
+                    fpower::BatteryManagerRequest::GetBatteryInfo { responder, .. } => {
+                        let info = self.get_battery_info_copy();
+                        fx_vlog!(
+                            LOG_VERBOSITY,
+                            "::battery_manager_request:: handle GetBatteryInfo request with info: {:?}",
+                            &info
+                        );
+                        responder.send(info)?;
+
+                    }
+                    fpower::BatteryManagerRequest::Watch { watcher, .. } => {
+                        let watcher = watcher.into_proxy()?;
+                        fx_vlog!(LOG_VERBOSITY, "::battery_manager_request:: handle Watch request");
+                        self.add_watcher(watcher.clone()).await;
+
+                        // make sure watcher has current battery info
+                        let info = self.get_battery_info_copy();
+
+                        fx_vlog!(
+                            LOG_VERBOSITY,
+                            "::battery_manager_request:: callback on new watcher with info {:?}",
+                            &info
+                        );
+                        watcher.on_change_battery_info(info).await?;
+                    }
+                }
+                Ok(())
+            }
+        })
+        .await?;
+
+        Ok(())
     }
 }
 
