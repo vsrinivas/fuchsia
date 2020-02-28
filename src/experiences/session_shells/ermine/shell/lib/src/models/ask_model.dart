@@ -9,6 +9,7 @@ import 'package:flutter/services.dart'
     show RawKeyDownEvent, RawKeyEventDataFuchsia;
 
 import '../utils/styles.dart';
+import '../utils/suggestion.dart';
 import '../utils/suggestions.dart';
 
 /// Defines a model that holds the state for the [Ask] widget.

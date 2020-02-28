@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:fuchsia_scenic_flutter/child_view_connection.dart';
-
+import '../utils/suggestion.dart';
 import 'ermine_story.dart';
 
 /// Defines an interface for a session shell that primarily handles
@@ -14,13 +13,8 @@ import 'ermine_story.dart';
 /// - indirectly through keyboard actions
 /// - programmatically through scripting
 abstract class ErmineShell {
-  /// Creates a new [ErmineStory] with a given [id], [name] and
-  /// [childViewConnection] and adds it to the shell.
-  ErmineStory storyStarted(
-    String id,
-    String name,
-    ChildViewConnection childViewConnection,
-  );
+  /// Creates a new [ErmineStory] with a given [Suggestion].
+  void storyStarted(Suggestion suggestion);
 
   /// Handles a story removed from the shell.
   void storyDeleted(ErmineStory story);

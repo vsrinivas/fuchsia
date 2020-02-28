@@ -6,6 +6,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:fidl_fuchsia_intl/fidl_async.dart';
+import 'package:fidl_fuchsia_sys/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_input/fidl_async.dart' as input;
 import 'package:fidl_fuchsia_ui_shortcut/fidl_async.dart' as ui_shortcut
     show RegistryProxy;
@@ -31,6 +32,7 @@ class AppModel {
   final _pointerEventsListener = PointerEventsListener();
   final _shortcutRegistry = ui_shortcut.RegistryProxy();
   final _intl = PropertyProviderProxy();
+  final _launcher = LauncherProxy();
 
   SuggestionService _suggestionService;
 
@@ -41,7 +43,6 @@ class AppModel {
   final Color backgroundColor = Colors.grey[850];
   final _startupContext = StartupContext.fromStartupInfo();
 
-  final ClustersModel clustersModel = ClustersModel();
   final ValueNotifier<DateTime> currentTime =
       ValueNotifier<DateTime>(DateTime.now());
   ValueNotifier<bool> askVisibility = ValueNotifier(false);
@@ -52,6 +53,7 @@ class AppModel {
   ValueNotifier<bool> recentsVisibility = ValueNotifier(false);
   Stream<Locale> _localeStream;
   KeyboardShortcuts _keyboardShortcuts;
+  ClustersModel clustersModel;
   StatusModel status;
   TopbarModel topbarModel;
   String keyboardShortcuts = 'Help Me!';
@@ -60,12 +62,15 @@ class AppModel {
     _startupContext.incoming.connectToService(_shortcutRegistry);
     _startupContext.incoming.connectToService(_intl);
     _startupContext.incoming.connectToService(_presentation);
+    _startupContext.incoming.connectToService(_launcher);
 
     _localeStream = LocaleSource(_intl).stream().asBroadcastStream();
 
+    clustersModel = ClustersModel(_launcher);
+
     _suggestionService = SuggestionService.fromStartupContext(
       startupContext: _startupContext,
-      viewCreated: clustersModel.storyStarted,
+      onSuggestion: clustersModel.storyStarted,
     );
 
     topbarModel = TopbarModel(appModel: this);
@@ -231,6 +236,7 @@ class AppModel {
     _keyboardShortcuts.dispose();
     _shortcutRegistry.ctrl.close();
     _presentation.ctrl.close();
+    _launcher.ctrl.close();
   }
 
   void injectTap(Offset offset) {

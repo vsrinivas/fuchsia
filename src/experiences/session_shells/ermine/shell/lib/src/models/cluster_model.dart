@@ -4,9 +4,10 @@
 
 import 'package:flutter/material.dart';
 
-import 'package:fuchsia_scenic_flutter/child_view_connection.dart';
+import 'package:fidl_fuchsia_sys/fidl_async.dart';
 import 'package:tiler/tiler.dart' show TilerModel, TileModel;
 
+import '../utils/suggestion.dart';
 import 'ermine_shell.dart';
 import 'ermine_story.dart';
 
@@ -51,6 +52,10 @@ class ClustersModel extends ChangeNotifier implements ErmineShell {
   /// Returns a iterable of all [Story] objects.
   Iterable<ErmineStory> get stories => _storyToCluster.keys.map(getStory);
 
+  final LauncherProxy _launcher;
+
+  ClustersModel(Launcher launcher) : _launcher = launcher;
+
   /// Maximize the story to fullscreen: it's visual state to IMMERSIVE.
   void maximize(String id) {
     if (fullscreenStoryNotifier.value?.id == id) {
@@ -76,16 +81,11 @@ class ClustersModel extends ChangeNotifier implements ErmineShell {
   /// Creates and adds a [Story] to the current cluster given it's [StoryInfo],
   /// [SessionShell] and [StoryController]. Returns the created instance.
   @override
-  ErmineStory storyStarted(
-    String id,
-    String name,
-    ChildViewConnection childViewConnection,
-  ) {
-    assert(!_storyToCluster.containsKey(id));
+  void storyStarted(Suggestion suggestion) {
+    assert(!_storyToCluster.containsKey(suggestion.id));
     final story = ErmineStory(
-      id: id,
-      name: name,
-      childViewConnection: childViewConnection,
+      suggestion: suggestion,
+      launcher: _launcher,
       onDelete: storyDeleted,
       onChange: storyChanged,
     );
@@ -102,7 +102,6 @@ class ClustersModel extends ChangeNotifier implements ErmineShell {
     notifyListeners();
 
     story.focus();
-    return story;
   }
 
   /// Removes the [story] from the current cluster. If this is the last story

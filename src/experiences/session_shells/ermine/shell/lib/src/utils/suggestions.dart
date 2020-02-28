@@ -4,41 +4,34 @@
 
 import 'package:fidl_fuchsia_sys_index/fidl_async.dart';
 import 'package:fidl_fuchsia_sys/fidl_async.dart';
-import 'package:fidl_fuchsia_ui_app/fidl_async.dart';
-import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
-import 'package:fuchsia_scenic_flutter/child_view_connection.dart';
+import 'package:flutter/foundation.dart';
 import 'package:fuchsia_services/services.dart';
 import 'package:meta/meta.dart';
-import 'package:zircon/zircon.dart';
+
+import 'suggestion.dart';
 
 const _kComponentIndexUrl =
     'fuchsia-pkg://fuchsia.com/component_index#meta/component_index.cmx';
-
-typedef ViewCreatedCallback = void Function(
-  String,
-  String,
-  ChildViewConnection,
-);
 
 /// Class to encapsulate the functionality of the Suggestions Engine.
 class SuggestionService {
   final ComponentIndexProxy _componentIndex;
   final LauncherProxy _launcher;
-  final ViewCreatedCallback _viewCreated;
+  final ValueChanged<Suggestion> _onSuggestion;
 
   /// Constructor.
   const SuggestionService({
     @required ComponentIndex componentIndex,
     @required Launcher launcher,
-    ViewCreatedCallback viewCreated,
+    ValueChanged<Suggestion> onSuggestion,
   })  : _componentIndex = componentIndex,
         _launcher = launcher,
-        _viewCreated = viewCreated;
+        _onSuggestion = onSuggestion;
 
   /// Construct from [StartupContext].
   factory SuggestionService.fromStartupContext({
     StartupContext startupContext,
-    ViewCreatedCallback viewCreated,
+    ValueChanged<Suggestion> onSuggestion,
   }) {
     final launcher = LauncherProxy();
     startupContext.incoming.connectToService(launcher);
@@ -62,7 +55,7 @@ class SuggestionService {
     return SuggestionService(
       componentIndex: componentIndex,
       launcher: launcher,
-      viewCreated: viewCreated,
+      onSuggestion: onSuggestion,
     );
   }
 
@@ -97,44 +90,6 @@ class SuggestionService {
 
   /// Invokes the [suggestion].
   Future<void> invokeSuggestion(Suggestion suggestion) async {
-    final incoming = Incoming();
-    final componentController = ComponentControllerProxy();
-
-    await _launcher.createComponent(
-      LaunchInfo(
-        url: suggestion.url,
-        directoryRequest: incoming.request().passChannel(),
-      ),
-      componentController.ctrl.request(),
-    );
-
-    ViewProviderProxy viewProvider = ViewProviderProxy();
-    incoming.connectToService(viewProvider);
-    await incoming.close();
-
-    final viewTokens = EventPairPair();
-    assert(viewTokens.status == ZX.OK);
-    final viewHolderToken = ViewHolderToken(value: viewTokens.first);
-    final viewToken = ViewToken(value: viewTokens.second);
-
-    await viewProvider.createView(viewToken.value, null, null);
-    viewProvider.ctrl.close();
-
-    ChildViewConnection connection = ChildViewConnection(
-      viewHolderToken,
-      onAvailable: (_) {},
-      onUnavailable: (_) {},
-    );
-
-    _viewCreated?.call(suggestion.id, suggestion.title, connection);
+    _onSuggestion?.call(suggestion);
   }
-}
-
-/// Defines a class to hold attributes of a Suggestion.
-class Suggestion {
-  final String id;
-  final String url;
-  final String title;
-
-  const Suggestion({this.id, this.url, this.title});
 }

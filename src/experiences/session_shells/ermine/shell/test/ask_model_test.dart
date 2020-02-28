@@ -13,6 +13,7 @@ import 'package:mockito/mockito.dart';
 
 // ignore_for_file: implementation_imports
 import 'package:ermine_library/src/models/ask_model.dart';
+import 'package:ermine_library/src/utils/suggestion.dart';
 import 'package:ermine_library/src/utils/suggestions.dart';
 
 void main() {

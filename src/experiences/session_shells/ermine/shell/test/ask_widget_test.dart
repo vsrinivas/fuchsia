@@ -10,6 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 
 // ignore_for_file: implementation_imports
+import 'package:ermine_library/src/utils/suggestion.dart';
 import 'package:ermine_library/src/utils/suggestions.dart';
 import 'package:ermine_library/src/widgets/ask/ask.dart';
 
