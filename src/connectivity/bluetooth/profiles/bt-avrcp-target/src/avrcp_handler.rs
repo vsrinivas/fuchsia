@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    anyhow::anyhow,
     async_helpers::component_lifecycle::ComponentLifecycleServer,
     fidl::endpoints::create_request_stream,
     fidl_fuchsia_bluetooth_avrcp::{
@@ -129,8 +130,7 @@ pub(crate) async fn handle_target_requests(
         }
     }
 
-    fx_log_info!("AvrcpTarget finished");
-    Ok(())
+    Err(anyhow!("AVRCP TargetHandler dropped."))
 }
 
 /// Set up the AVRCP Service and register the target handler.
