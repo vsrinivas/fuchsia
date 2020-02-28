@@ -5,7 +5,6 @@
 group("session") {
   deps = [
     "//src/session/bin:all",
-    "//src/session/examples:all",
     "//src/session/lib:all",
     "//src/session/tools:all",
   ]
@@ -21,6 +20,7 @@ group("tests") {
   testonly = true
 
   deps = [
+    ":examples",
     "//src/session/bin:tests",
     "//src/session/examples:tests",
     "//src/session/lib:tests",
