@@ -18,13 +18,16 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
+const (
+	keepaliveInterval = 5 * time.Second
+)
+
 // Client is a wrapper around ssh that supports keepalive and auto-reconnection.
 type Client struct {
-	addr              string
-	config            *ssh.ClientConfig
-	shuttingDown      bool
-	done              chan struct{}
-	keepaliveDuration time.Duration
+	addr         string
+	config       *ssh.ClientConfig
+	shuttingDown bool
+	done         chan struct{}
 
 	// This mutex protects the following fields
 	mu                     sync.Mutex
@@ -37,13 +40,12 @@ type Client struct {
 // NewClient creates a new ssh client to the address.
 func NewClient(ctx context.Context, addr string, config *ssh.ClientConfig) (*Client, error) {
 	c := &Client{
-		addr:              addr,
-		config:            config,
-		client:            nil,
-		conn:              nil,
-		shuttingDown:      false,
-		done:              make(chan struct{}),
-		keepaliveDuration: 10 * time.Second,
+		addr:         addr,
+		config:       config,
+		client:       nil,
+		conn:         nil,
+		shuttingDown: false,
+		done:         make(chan struct{}),
 	}
 	go c.keepalive()
 
@@ -278,7 +280,7 @@ func (c *Client) keepalive() {
 
 	for {
 		select {
-		case <-time.After(c.keepaliveDuration):
+		case <-time.After(keepaliveInterval):
 			c.emitKeepalive(ctx)
 		case <-c.done:
 			return
@@ -301,7 +303,7 @@ func (c *Client) emitKeepalive(ctx context.Context) {
 	// ssh keepalive is not completely reliable. So in addition to emitting
 	// it, we'll also set a tcp deadline to timeout if we don't get a
 	// keepalive response within some period of time.
-	c.conn.SetDeadline(time.Now().Add(c.keepaliveDuration * 2))
+	c.conn.SetDeadline(time.Now().Add(keepaliveInterval).Add(15 * time.Second))
 
 	_, _, err := c.client.SendRequest("keepalive@openssh.com", true, nil)
 	if err != nil {
