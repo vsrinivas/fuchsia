@@ -17,7 +17,7 @@ that utilize this crate.
 generate_manifest("blobfs.manifest") {
   visibility = [ ":*" ]
   args = []
-  foreach(pattern, [ "bin/blobfs" ]) {
+  foreach(pattern, [ "bin/blobfs", ]) {
     args += [ "--binary=" + pattern ]
   }
 }

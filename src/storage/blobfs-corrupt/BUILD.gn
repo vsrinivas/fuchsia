@@ -1,0 +1,64 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+executable("blobfs-corrupt") {
+  sources = [ "main.cc" ]
+  deps = [
+    ":common",
+    "//zircon/public/lib/blobfs",
+    "//zircon/public/lib/block-client",
+    "//zircon/public/lib/digest",
+    "//zircon/public/lib/fbl",
+    "//zircon/system/fidl/fuchsia-hardware-block:c",
+  ]
+}
+
+executable("blobfs-corrupt-test") {
+  testonly = false
+  output_name = "blobfs-corrupt-test"
+  sources = [ "test/corrupt_blob_test.cc" ]
+  include_dirs = [ "." ]
+  deps = [
+    ":common",
+    "//zircon/public/lib/blobfs",
+    "//zircon/public/lib/digest",
+    "//zircon/public/lib/fake-device",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/fidl/fuchsia-hardware-block:c",
+  ]
+}
+
+source_set("common") {
+  sources = [
+    "corrupt_blob.cc",
+    "fs_block_client.cc",
+  ]
+  deps = [
+    "//zircon/public/lib/blobfs",
+    "//zircon/public/lib/block-client",
+    "//zircon/public/lib/digest",
+    "//zircon/public/lib/fbl",
+    "//zircon/system/fidl/fuchsia-hardware-block:c",
+  ]
+}
+
+unittest_package("blobfs-corrupt-tests") {
+  deps = [ ":blobfs-corrupt-test" ]
+
+  tests = [
+    {
+      name = "blobfs-corrupt-test"
+      environments = basic_envs
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":blobfs-corrupt-tests" ]
+}

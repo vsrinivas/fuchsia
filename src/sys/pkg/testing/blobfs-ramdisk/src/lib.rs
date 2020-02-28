@@ -13,12 +13,13 @@ use {
     fidl_fuchsia_io::{
         DirectoryAdminMarker, DirectoryAdminProxy, DirectoryMarker, DirectoryProxy, NodeProxy,
     },
+    fuchsia_component::server::ServiceFs,
     fuchsia_merkle::Hash,
     fuchsia_runtime::{HandleInfo, HandleType},
-    fuchsia_zircon as zx,
+    fuchsia_zircon::{self as zx, prelude::*},
+    futures::prelude::*,
     ramdevice_client::RamdiskClient,
     std::{collections::BTreeSet, ffi::CString},
-    zx::prelude::*,
 };
 
 #[cfg(test)]
@@ -32,17 +33,22 @@ pub struct BlobfsRamdisk {
 }
 
 impl BlobfsRamdisk {
-    /// Starts a blobfs backed by a ramdisk.
+    /// Starts a blobfs server backed by a freshly formatted ramdisk.
     pub fn start() -> Result<Self, Error> {
         // make a new ramdisk and format it with blobfs.
-        let test_ramdisk = Ramdisk::start().context("creating backing ramdisk for blobfs")?;
-        mkblobfs(&test_ramdisk)?;
+        let ramdisk = Ramdisk::start().context("creating backing ramdisk for blobfs")?;
+        mkblobfs(&ramdisk)?;
 
+        Self::start_with_ramdisk(ramdisk)
+    }
+
+    /// Starts a blobfs server backed by the given ramdisk.
+    pub fn start_with_ramdisk(ramdisk: Ramdisk) -> Result<Self, Error> {
         // spawn blobfs on top of the ramdisk.
         let block_device_handle_id = HandleInfo::new(HandleType::User0, 1);
         let fs_root_handle_id = HandleInfo::new(HandleType::User0, 0);
 
-        let block_handle = test_ramdisk.clone_channel().context("cloning ramdisk channel")?;
+        let block_handle = ramdisk.clone_channel().context("cloning ramdisk channel")?;
 
         let (proxy, blobfs_server_end) = fidl::endpoints::create_proxy::<DirectoryAdminMarker>()?;
         let process = fdio::spawn_etc(
@@ -59,7 +65,7 @@ impl BlobfsRamdisk {
         .map_err(|(status, _)| status)
         .context("spawning 'blobfs mount'")?;
 
-        Ok(Self { backing_ramdisk: test_ramdisk, process: process.into(), proxy })
+        Ok(Self { backing_ramdisk: ramdisk, process: process.into(), proxy })
     }
 
     /// Returns a new connection to blobfs's root directory as a raw zircon channel.
@@ -90,8 +96,8 @@ impl BlobfsRamdisk {
         Ok(dir)
     }
 
-    /// Signals blobfs to unmount and waits for it to exit cleanly.
-    pub async fn stop(self) -> Result<(), Error> {
+    /// Signals blobfs to unmount and waits for it to exit cleanly, returning the backing Ramdisk.
+    pub async fn unmount(self) -> Result<Ramdisk, Error> {
         zx::Status::ok(self.proxy.unmount().await.context("sending blobfs unmount")?)
             .context("unmounting blobfs")?;
 
@@ -106,7 +112,12 @@ impl BlobfsRamdisk {
             return Err(format_err!("'blobfs mount' returned nonzero exit code {}", ret));
         }
 
-        self.backing_ramdisk.stop()
+        Ok(self.backing_ramdisk)
+    }
+
+    /// Signals blobfs to unmount and waits for it to exit cleanly, stopping the inner ramdisk.
+    pub async fn stop(self) -> Result<(), Error> {
+        self.unmount().await?.stop()
     }
 
     /// Returns a sorted list of all blobs present in this blobfs instance.
@@ -141,13 +152,15 @@ impl BlobfsRamdisk {
 }
 
 /// A virtual memory-backed block device.
-struct Ramdisk {
+pub struct Ramdisk {
     proxy: NodeProxy,
     client: RamdiskClient,
 }
 
 impl Ramdisk {
-    fn start() -> Result<Self, Error> {
+    /// Starts a new ramdisk with 1024 * 1024 blocks and a block size of 512 bytes, or a drive with
+    /// 512MiB capacity.
+    pub fn start() -> Result<Self, Error> {
         let client = RamdiskClient::create(512, 1 << 20)?;
         let proxy = NodeProxy::new(fuchsia_async::Channel::from_channel(client.open()?)?);
         Ok(Ramdisk { proxy, client })
@@ -159,9 +172,80 @@ impl Ramdisk {
         Ok(result)
     }
 
-    fn stop(self) -> Result<(), Error> {
+    fn clone_handle(&self) -> Result<zx::Handle, Error> {
+        Ok(self.clone_channel().context("cloning ramdisk channel")?.into())
+    }
+
+    /// Shuts down this ramdisk.
+    pub fn stop(self) -> Result<(), Error> {
         Ok(self.client.destroy()?)
     }
+
+    /// Corrupt the blob given by merkle, assuming this ramdisk is formatted as blobfs.
+    pub async fn corrupt_blob(&self, merkle: &Hash) {
+        let ramdisk = Clone::clone(&self.proxy);
+        blobfs_corrupt_blob(ramdisk, merkle).await.unwrap();
+    }
+}
+
+async fn blobfs_corrupt_blob(ramdisk: NodeProxy, merkle: &Hash) -> Result<(), Error> {
+    let mut fs = ServiceFs::new();
+    fs.root_dir().add_service_at("block", |chan| {
+        ramdisk
+            .clone(
+                fidl_fuchsia_io::CLONE_FLAG_SAME_RIGHTS | fidl_fuchsia_io::OPEN_FLAG_DESCRIBE,
+                ServerEnd::new(chan),
+            )
+            .unwrap();
+        None
+    });
+
+    let (devfs_client, devfs_server) = zx::Channel::create()?;
+    fs.serve_connection(devfs_server)?;
+    let serve_fs = fs.collect::<()>();
+
+    let spawn_and_wait = async move {
+        let p = fdio::spawn_etc(
+            &fuchsia_runtime::job_default(),
+            SpawnOptions::CLONE_ALL - SpawnOptions::CLONE_NAMESPACE,
+            &CString::new("/pkg/bin/blobfs-corrupt").unwrap(),
+            &[
+                &CString::new("blobfs-corrupt").unwrap(),
+                &CString::new("--device").unwrap(),
+                &CString::new("/dev/block").unwrap(),
+                &CString::new("--merkle").unwrap(),
+                &CString::new(merkle.to_string()).unwrap(),
+            ],
+            None,
+            &mut [SpawnAction::add_namespace_entry(
+                &CString::new("/dev").unwrap(),
+                devfs_client.into(),
+            )],
+        )
+        .map_err(|(status, _)| status)
+        .context("spawning 'blobfs-corrupt'")?;
+
+        wait_for_process_async(p).await.context("'blobfs-corrupt'")?;
+        Ok(())
+    };
+
+    let ((), res) = futures::join!(serve_fs, spawn_and_wait);
+
+    res
+}
+
+async fn wait_for_process_async(proc: fuchsia_zircon::Process) -> Result<(), Error> {
+    let signals =
+        fuchsia_async::OnSignals::new(&proc.as_handle_ref(), zx::Signals::PROCESS_TERMINATED)
+            .await
+            .context("waiting for tool to terminate")?;
+    assert_eq!(signals, zx::Signals::PROCESS_TERMINATED);
+
+    let ret = proc.info().context("getting tool process info")?.return_code;
+    if ret != 0 {
+        return Err(format_err!("tool returned nonzero exit code {}", ret));
+    }
+    Ok(())
 }
 
 fn mkblobfs_block(block_device: zx::Handle) -> Result<(), Error> {
@@ -176,17 +260,26 @@ fn mkblobfs_block(block_device: zx::Handle) -> Result<(), Error> {
     )
     .map_err(|(status, _)| status)
     .context("spawning 'blobfs mkfs'")?;
-    p.wait_handle(zx::Signals::PROCESS_TERMINATED, zx::Time::after(zx::Duration::from_seconds(30)))
-        .context("waiting for 'blobfs mkfs' to terminate")?;
-    let ret = p.info().context("getting 'blobfs mkfs' process info")?.return_code;
+
+    wait_for_process(p).context("'blobfs mkfs'")?;
+    Ok(())
+}
+
+fn wait_for_process(proc: fuchsia_zircon::Process) -> Result<(), Error> {
+    proc.wait_handle(
+        zx::Signals::PROCESS_TERMINATED,
+        zx::Time::after(zx::Duration::from_seconds(30)),
+    )
+    .context("waiting for tool to terminate")?;
+    let ret = proc.info().context("getting tool process info")?.return_code;
     if ret != 0 {
-        return Err(format_err!("'blobfs mkfs' returned nonzero exit code {}", ret));
+        return Err(format_err!("tool returned nonzero exit code {}", ret));
     }
     Ok(())
 }
 
 fn mkblobfs(ramdisk: &Ramdisk) -> Result<(), Error> {
-    mkblobfs_block(ramdisk.clone_channel().context("cloning ramdisk channel")?.into())
+    mkblobfs_block(ramdisk.clone_handle()?)
 }
 
 /// An owned zircon job or process that is silently killed when dropped.

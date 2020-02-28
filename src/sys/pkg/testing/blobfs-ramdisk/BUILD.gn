@@ -16,6 +16,7 @@ rustc_library("blobfs-ramdisk") {
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-runtime",
     "//src/lib/storage/ramdevice_client",
     "//src/lib/zircon/rust:fuchsia-zircon",
@@ -49,6 +50,13 @@ test_package("blobfs-ramdisk-tests") {
   deps = [
     ":blobfs-ramdisk_test",
     ":blobfs.manifest",
+    "//src/storage/blobfs-corrupt",
+  ]
+
+  binaries = [
+    {
+      name = "blobfs-corrupt"
+    },
   ]
 
   tests = [

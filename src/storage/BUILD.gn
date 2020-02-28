@@ -9,6 +9,7 @@ group("storage") {
 group("tests") {
   testonly = true
   deps = [
+    "blobfs-corrupt:tests",
     "conformance:tests",
     "ext4:tests",
   ]
