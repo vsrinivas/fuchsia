@@ -335,6 +335,10 @@ static InternalConfigNode Gdc2() {
           {
               fuchsia::camera2::CameraStreamType::MONITORING,
           },
+      .dynamic_resolution_supported =
+          {
+              fuchsia::camera2::CameraStreamType::MONITORING,
+          },
       .child_nodes =
           {
               {

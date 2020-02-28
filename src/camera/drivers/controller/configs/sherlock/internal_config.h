@@ -63,6 +63,8 @@ struct InternalConfigNode {
   fuchsia::camera2::CameraStreamType input_stream_type;
   // Types of |stream_types| supported by this node.
   std::vector<fuchsia::camera2::CameraStreamType> supported_streams;
+  // This node support dynamic resolution for all streams part of this list.
+  std::vector<fuchsia::camera2::CameraStreamType> dynamic_resolution_supported;
   // Child nodes
   std::vector<InternalConfigNode> child_nodes;
   // HWAccelerator Info if applicable.

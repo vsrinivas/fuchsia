@@ -161,6 +161,10 @@ static InternalConfigNode Ge2d() {
           {
               fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE,
           },
+      .dynamic_resolution_supported =
+          {
+              fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE,
+          },
       .child_nodes =
           {
               {
