@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<manifest>
+  <!-- Prebuilts to test the XML parser, simulating the Fuchsia integration/prebuilts file -->
+  <packages>
+    <package
+      name="fuchsia/third_party/aemu/${platform}"
+      version="git_revision:a123456789abcdef0123456789abcdef01234567"/>
+    <package
+      name="fuchsia/third_party/qemu/${platform}"
+      version="git_revision:b123456789abcdef0123456789abcdef01234567"/>
+    <package
+      name="fuchsia/third_party/clang/${platform}"
+      version="git_revision:c123456789abcdef0123456789abcdef01234567"/>
+    <package
+      name="gn/gn/${platform}"
+      version="git_revision:d123456789abcdef0123456789abcdef01234567"/>
+    <package
+      name="infra/ninja/${platform}"
+      version="version:1.2.3"/>
+    <package
+      name="infra/tools/luci/gsutil/${platform}"
+      version="git_revision:e123456789abcdef0123456789abcdef01234567"/>
+    <package
+      name="unused/${platform}"
+      version="git_revision:0123456789abcdef0123456789abcdef01234567"/>
+  </packages>
+</manifest>
+

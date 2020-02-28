@@ -15,6 +15,7 @@ SCRIPT_SRC_DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd)"
 source "${SCRIPT_SRC_DIR}/fuchsia-common.sh" || exit $?
 FUCHSIA_BUCKET="${DEFAULT_FUCHSIA_BUCKET}"
 IMAGE_NAME="qemu-x64"
+VER_AEMU="$(cat "${SCRIPT_SRC_DIR}/aemu.version")"
 
 # Export variables needed here but also in femu.sh
 export FUCHSIA_SDK_PATH="$(realpath "${SCRIPT_SRC_DIR}/..")"
@@ -36,6 +37,9 @@ usage () {
   echo "  [--authorized-keys <file>]"
   echo "    The authorized public key file for securing the device.  Defaults to "
   echo "    the output of 'ssh-add -L'"
+  echo "  [--version <version>"
+  echo "    Specify the CIPD version of AEMU to download."
+  echo "    Defaults to aemu.version file with ${VER_AEMU}"
   echo "  [--help] [-h]"
   echo "    Show command line options for femu.sh and emu subscript"
   echo
@@ -63,6 +67,10 @@ case $1 in
     --authorized-keys)
     shift
     AUTH_KEYS_FILE="${1}"
+    ;;
+    --version)
+    shift
+    VER_AEMU="${1}"
     ;;
     --help|-h)
     usage
@@ -106,30 +114,37 @@ echo "Checking for system images and packages"
 "${SCRIPT_SRC_DIR}/fpave.sh"  --prepare --image "${IMAGE_NAME}" --bucket "${FUCHSIA_BUCKET}" --work-dir "${FUCHSIA_IMAGE_WORK_DIR}"
 "${SCRIPT_SRC_DIR}/fserve.sh" --prepare --image "${IMAGE_NAME}" --bucket "${FUCHSIA_BUCKET}" --work-dir "${FUCHSIA_IMAGE_WORK_DIR}"
 
-# Download aemu if it is not already present
-# TODO(fxb/43901): Need to handle downloading updates when aemu binaries change
-echo "Checking for aemu binaries"
+# Download aemu binaries for the aemu.version if not already present
 DOWNLOADS_DIR="${FUCHSIA_IMAGE_WORK_DIR}/emulator"
 # TODO(fxb/41836): Replace hardcoded linux-amd64 with OS detection
 ARCH="linux-amd64"
-VER_AEMU="latest"
-if [ ! -f "${DOWNLOADS_DIR}/aemu-${ARCH}-${VER_AEMU}.zip" ]; then
+CIPD_FILE="${DOWNLOADS_DIR}/aemu-${ARCH}-${VER_AEMU}.zip"
+if [ ! -f "${CIPD_FILE}" ]; then
   mkdir -p "${DOWNLOADS_DIR}"
-  echo -e "Downloading aemu archive...\c"
-  curl -sL "https://chrome-infra-packages.appspot.com/dl/fuchsia/third_party/aemu/${ARCH}/+/${VER_AEMU}" -o "${DOWNLOADS_DIR}/aemu-${ARCH}-${VER_AEMU}.zip"
-  echo "complete."
+  CIPD_URL="https://chrome-infra-packages.appspot.com/dl/fuchsia/third_party/aemu/${ARCH}/+/${VER_AEMU}"
+  echo "Downloading aemu archive from ${CIPD_URL} ..."
+  curl -L "${CIPD_URL}" -o "${CIPD_FILE}" -#
+  echo "Verifying aemu download ${CIPD_FILE}"
+  # CIPD will return a file containing "no such ref" if the URL is invalid, so need to check the ZIP file
+  if ! unzip -qq -t "${CIPD_FILE}" &> /dev/null; then
+    rm -f "${CIPD_FILE}"
+    fx-error "Downloaded archive from ${CIPD_URL} failed with invalid data"
+    exit 1
+  fi
+  echo "Download complete."
 fi
-if [ ! -d "${DOWNLOADS_DIR}/aemu-${ARCH}" ]; then
-  echo -e "Extracting aemu archive...\c"
-  rm -rf "${DOWNLOADS_DIR}/tmp-aemu-${ARCH}" "${DOWNLOADS_DIR}/aemu-${ARCH}"
-  unzip -q "${DOWNLOADS_DIR}/aemu-${ARCH}-${VER_AEMU}.zip" -d "${DOWNLOADS_DIR}/tmp-aemu-${ARCH}"
-  mv "${DOWNLOADS_DIR}/tmp-aemu-${ARCH}" "${DOWNLOADS_DIR}/aemu-${ARCH}"
-  echo "complete."
+CIPD_DIR="${DOWNLOADS_DIR}/aemu-${ARCH}-${VER_AEMU}"
+if [ ! -d "${CIPD_DIR}" ]; then
+  echo -e "Extracting aemu archive to ${CIPD_DIR} ..."
+  rm -rf "${DOWNLOADS_DIR}/tmp-aemu-${ARCH}-${VER_AEMU}" "${CIPD_DIR}"
+  unzip -q "${CIPD_FILE}" -d "${CIPD_DIR}-temp"
+  mv "${CIPD_DIR}-temp" "${CIPD_DIR}"
+  echo "Extract complete."
 fi
 
 # Export variables needed for fx emu and fx-image-common.sh
 export FUCHSIA_BUILD_DIR="${FUCHSIA_IMAGE_WORK_DIR}/image"
-export PREBUILT_AEMU_DIR="${FUCHSIA_IMAGE_WORK_DIR}/emulator/aemu-linux-amd64"
+export PREBUILT_AEMU_DIR="${CIPD_DIR}"
 
 # Need to make the SDK storage-full.blk writable so that the copy is writable as well, otherwise fvm extend fails in lib/fvm.sh
 source "${SCRIPT_SRC_DIR}/fx-image-common.sh"

@@ -8,35 +8,16 @@
 # the emulator, but check the arguments are as expected.
 
 set -e
+SCRIPT_SRC_DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd)"
+# shellcheck disable=SC1090
+source "${SCRIPT_SRC_DIR}/gn-bash-test-lib.sh"
+
+# Need to simulate the aemu.version file which is calculated in generate.py
+# from integration/prebuilts. This is just for testing and not a valid version.
+AEMU_VERSION="unknown"
+
 
 # Helpers.
-
-# Runs a bash script. The function provides these conveniences over calling the
-# script directly:
-#
-# * Rather than calling the bash script directly, this command explicitly
-#   invokes Bash and propagates some option flags.
-# * Rather than showing the bash output, this command only outputs output if a
-#   test fails.
-#
-# Args: the script to run and all args to pass.
-run_bash_script() {
-  local shell_flags
-  # propagate certain bash flags if present
-  shell_flags=()
-  if [[ $- == *x* ]]; then
-    shell_flags+=(-x)
-  fi
-  local output
-
-  output=$(bash "${shell_flags[@]}" "$@" 2>&1)
-  status=$?
-  if [[ ${status} != 0 ]]; then
-    echo "${output}"
-  fi
-
-  return ${status}
-}
 
 # Verifies that the given arguments appear in the command line invocation of the
 # most previously sourced mock state. Any arguments passed to this function will
@@ -72,96 +53,42 @@ check_mock_has_args() {
 
 # Verifies that the correct emulator command is run by femu, along with the image setup
 TEST_femu() {
-  # Create fake "ip tuntap show" command to let fx emu know the network is configured with some mocked output
-  PATH_DIR_FOR_TEST="$(mktemp -d)"
-  cat >"${PATH_DIR_FOR_TEST}/ip" <<"SETVAR"
-#!/bin/bash
-if [[ "$1" != "tuntap" ]]; then
-  echo "Arg 1 is \"$1\" and not \"tuntap\""
-  exit 1
-fi
-if [[ "$2" != "show" ]]; then
-  echo "Arg 2 is \"$2\" and not \"show\""
-  exit 1
-fi
-echo "qemu: tap persist user 238107"
-SETVAR
-  chmod ugo+x "${PATH_DIR_FOR_TEST}/ip"
-
-  # Create fake "stty sane" command so that fx emu succeeds when < /dev/null is being used
-  cat >"${PATH_DIR_FOR_TEST}/stty" <<"SETVAR"
-#!/bin/bash
-SETVAR
-  chmod ugo+x "${PATH_DIR_FOR_TEST}/stty"
-
+  PATH_DIR_FOR_TEST="${BT_TEMP_DIR}/_isolated_path_for"
   export PATH="${PATH_DIR_FOR_TEST}:${PATH}"
 
+  # Create fake "ip tuntap show" command to let fx emu know the network is configured with some mocked output
+  cat >"${PATH_DIR_FOR_TEST}/ip.mock_side_effects" <<INPUT
+echo "qemu: tap persist user 238107"
+INPUT
+
   # Run command.
-  BT_EXPECT run_bash_script "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/femu.sh" \
+  BT_EXPECT gn-test-run-bash-script "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/femu.sh" \
     -N \
     --authorized-keys "${BT_TEMP_DIR}/scripts/sdk/gn/base/testdata/authorized_keys"
 
   # Verify that fvm resized the disk file by 2x from the input 1024 to 2048.
-  # This is an internal operation in fvm.sh with mktemp, so we cannot check
-  # the input image path name, and so skip it with :2 when creating FVM_ARGS.
+  # shellcheck disable=SC1090
   source "${BT_TEMP_DIR}/scripts/sdk/gn/base/tools/fvm.mock_state"
-  local FVM_ARGS=("${BT_MOCK_ARGS[@]:2}")
-  local EXPECTED_FVM_ARGS=(
-    extend
-    --length 2048
-  )
-  BT_EXPECT_EQ ${#EXPECTED_FVM_ARGS[@]} ${#FVM_ARGS[@]}
-  for i in "${!EXPECTED_FVM_ARGS[@]}"; do
-    BT_EXPECT_EQ "${EXPECTED_FVM_ARGS[$i]}" "${FVM_ARGS[$i]}"
-  done
+  gn-test-check-mock-args _ANY_ _ANY_ extend --length 2048
 
   # Check that fpave.sh was called to download the needed system images
+  # shellcheck disable=SC1090
   source "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fpave.sh.mock_state"
-  local FPAVE_ARGS=("${BT_MOCK_ARGS[@]:1}")
-  local EXPECTED_FPAVE_ARGS=(
-    --prepare
-    --image qemu-x64
-    --bucket fuchsia
-    --work-dir "${BT_TEMP_DIR}/scripts/sdk/gn/base/images"
-  )
-  BT_EXPECT_EQ ${#EXPECTED_FPAVE_ARGS[@]} ${#FPAVE_ARGS[@]}
-  for i in "${!EXPECTED_FPAVE_ARGS[@]}"; do
-    BT_EXPECT_EQ "${EXPECTED_FPAVE_ARGS[$i]}" "${FPAVE_ARGS[$i]}"
-  done
+  gn-test-check-mock-args _ANY_ --prepare --image qemu-x64 --bucket fuchsia --work-dir "${BT_TEMP_DIR}/scripts/sdk/gn/base/images"
 
   # Check that fserve.sh was called to download the needed system images
+  # shellcheck disable=SC1090
   source "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fserve.sh.mock_state"
-  local FSERVE_ARGS=("${BT_MOCK_ARGS[@]:1}")
-  local EXPECTED_FSERVE_ARGS=(
-    --prepare
-    --image qemu-x64
-    --bucket fuchsia
-    --work-dir "${BT_TEMP_DIR}/scripts/sdk/gn/base/images"
-  )
-  BT_EXPECT_EQ ${#EXPECTED_FSERVE_ARGS[@]} ${#FSERVE_ARGS[@]}
-  for i in "${!EXPECTED_FSERVE_ARGS[@]}"; do
-    BT_EXPECT_EQ "${EXPECTED_FSERVE_ARGS[$i]}" "${FSERVE_ARGS[$i]}"
-  done
+  gn-test-check-mock-args _ANY_ --prepare --image qemu-x64 --bucket fuchsia --work-dir "${BT_TEMP_DIR}/scripts/sdk/gn/base/images"
 
   # Verify that zbi was called to add the authorized_keys
+  # shellcheck disable=SC1090
   source "${BT_TEMP_DIR}/scripts/sdk/gn/base/tools/zbi.mock_state"
-  local ZBI_ARGS=("${BT_MOCK_ARGS[@]:1}")
-  local EXPECTED_ZBI_ARGS=(
-    -o NOCHECK_ZBI_FILE
-    "${BT_TEMP_DIR}/scripts/sdk/gn/base/images/image/zircon-a.zbi"
-    --entry "data/ssh/authorized_keys=${BT_TEMP_DIR}/scripts/sdk/gn/base/testdata/authorized_keys"
-  )
-  BT_EXPECT_EQ ${#EXPECTED_ZBI_ARGS[@]} ${#ZBI_ARGS[@]}
-  for i in "${!EXPECTED_ZBI_ARGS[@]}"; do
-    # The zbi tools creates an internal mktemp file that we don't know, so do not match NOCHECK_ZBI_FILE
-    if [[ "${EXPECTED_ZBI_ARGS[$i]}" != "NOCHECK_ZBI_FILE" ]]; then
-      BT_EXPECT_EQ "${EXPECTED_ZBI_ARGS[$i]}" "${ZBI_ARGS[$i]}"
-    fi
-  done
+  gn-test-check-mock-args _ANY_ -o _ANY_ "${BT_TEMP_DIR}/scripts/sdk/gn/base/images/image/zircon-a.zbi" --entry "data/ssh/authorized_keys=${BT_TEMP_DIR}/scripts/sdk/gn/base/testdata/authorized_keys"
 
   # Verify some of the arguments passed to the emulator binary
-  source "${BT_TEMP_DIR}/scripts/sdk/gn/base/images/emulator/aemu-linux-amd64/emulator.mock_state"
-  local EMULATOR_ARGS=("${BT_MOCK_ARGS[@]:1}")
+  # shellcheck disable=SC1090
+  source "${BT_TEMP_DIR}/scripts/sdk/gn/base/images/emulator/aemu-linux-amd64-${AEMU_VERSION}/emulator.mock_state"
   # The mac address is computed with a hash function in fx emu but will not change if the device
   # is named qemu. We test the generated mac address here since our scripts use the mac for a
   # hard coded address to SSH into the device.
@@ -172,26 +99,33 @@ SETVAR
 
 # Test initialization. Note that we copy various tools/devshell files and need to replicate the
 # behavior of generate.py by copying these files into scripts/sdk/gn/base/bin/devshell
+# shellcheck disable=SC2034
 BT_FILE_DEPS=(
   scripts/sdk/gn/base/bin/femu.sh
   scripts/sdk/gn/base/bin/devshell/lib/image_build_vars.sh
   scripts/sdk/gn/base/bin/fuchsia-common.sh
   scripts/sdk/gn/base/bin/fx-image-common.sh
+  scripts/sdk/gn/bash_tests/gn-bash-test-lib.sh
   tools/devshell/emu
   tools/devshell/lib/fvm.sh
 )
+# shellcheck disable=SC2034
 BT_MOCKED_TOOLS=(
-  scripts/sdk/gn/base/images/emulator/aemu-linux-amd64/emulator
+  scripts/sdk/gn/base/images/emulator/aemu-linux-amd64-"${AEMU_VERSION}"/emulator
   scripts/sdk/gn/base/bin/fpave.sh
   scripts/sdk/gn/base/bin/fserve.sh
   scripts/sdk/gn/base/tools/zbi
   scripts/sdk/gn/base/tools/fvm
+  _isolated_path_for/ip
+  # Create fake "stty sane" command so that fx emu test succeeds when < /dev/null is being used
+  _isolated_path_for/stty
 )
 
 BT_INIT_TEMP_DIR() {
   # Do not download aemu, set up necessary files to skip this
-  touch "${BT_TEMP_DIR}/scripts/sdk/gn/base/images/emulator/aemu-linux-amd64-latest.zip"
-  mkdir -p "${BT_TEMP_DIR}/scripts/sdk/gn/base/images/aemu-linux-amd64"
+  echo "${AEMU_VERSION}" > "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/aemu.version"
+  touch "${BT_TEMP_DIR}/scripts/sdk/gn/base/images/emulator/aemu-linux-amd64-${AEMU_VERSION}.zip"
+  mkdir -p "${BT_TEMP_DIR}/scripts/sdk/gn/base/images/aemu-linux-amd64-${AEMU_VERSION}"
 
   # Create a small disk image to avoid downloading, and test if it is doubled in size as expected
   mkdir -p "${BT_TEMP_DIR}/scripts/sdk/gn/base/images/image"
