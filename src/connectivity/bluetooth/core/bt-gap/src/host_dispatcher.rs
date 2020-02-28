@@ -20,7 +20,7 @@ use {
         inspect::{DebugExt, Inspectable, ToProperty},
         types::{Address, BondingData, HostId, HostInfo, Identity, Peer, PeerId},
     },
-    fuchsia_inspect::{self as inspect, Property},
+    fuchsia_inspect::{self as inspect, unique_name, Property},
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn, fx_vlog},
     fuchsia_zircon::{self as zx, Duration},
     futures::{channel::mpsc, FutureExt, TryFutureExt},
@@ -650,12 +650,7 @@ impl HostDispatcher {
     /// Adds an adapter to the host dispatcher. Called by the watch_hosts device
     /// watcher
     pub async fn add_adapter(&self, host_path: &Path) -> Result<(), Error> {
-        let node = self
-            .state
-            .read()
-            .inspect
-            .hosts()
-            .create_child(format!("device {}", host_path.display()));
+        let node = self.state.read().inspect.hosts().create_child(unique_name("device_"));
         let host_dev = bt::util::open_rdwr(host_path)?;
         let device_topo = fdio::device_get_topo_path(&host_dev)?;
         fx_log_info!("Adding Adapter: {:?} (topology: {:?})", host_path, device_topo);
@@ -832,7 +827,9 @@ async fn init_host(path: &Path, node: inspect::Node) -> Result<Arc<RwLock<HostDe
     let handle = fasync::Channel::from_channel(handle.into())?;
     let host = HostProxy::new(handle);
 
-    // Obtain basic information and create and entry in the disptacher's map.
+    node.record_string("path", path.to_string_lossy());
+
+    // Obtain basic information and create and entry in the dispatcher's map.
     let host_info = host.watch_state().await.context("failed to obtain bt-host information")?;
     let host_info = Inspectable::new(HostInfo::try_from(host_info)?, node);
 
