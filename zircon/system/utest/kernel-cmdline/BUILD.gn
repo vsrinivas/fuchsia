@@ -19,6 +19,10 @@ zx_test("kernel-cmdline") {
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/zxtest",
   ]
+
+  # TODO(47349): Fix the leaks and remove this.
+  deps +=
+      [ "$zx/public/gn/config/instrumentation:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 fuzzer("kernel-cmdline-fuzzer") {

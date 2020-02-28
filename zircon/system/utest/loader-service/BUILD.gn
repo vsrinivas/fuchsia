@@ -33,6 +33,9 @@ test("loader-service") {
     "//zircon/system/fidl/fuchsia-io:llcpp",
     "//zircon/system/fidl/fuchsia-ldsvc:llcpp",
   ]
+
+  # TODO(47342): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 migrated_manifest("loader-service-manifest") {

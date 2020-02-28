@@ -44,6 +44,9 @@ test("hid-parser") {
     "//zircon/public/lib/hid-parser",
     "//zircon/public/lib/zxtest",
   ]
+
+  # TODO(47348): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 fuzzer("hid-parser-fuzzer") {

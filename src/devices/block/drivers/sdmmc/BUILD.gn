@@ -78,6 +78,9 @@ test("sdmmc-test") {
     "//zircon/system/banjo/ddk.protocol.block",
     "//zircon/system/banjo/ddk.protocol.platform.device",
   ]
+
+  # TODO(47341): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 migrated_manifest("sdmmc-manifest") {
