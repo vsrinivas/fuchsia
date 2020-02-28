@@ -4,6 +4,7 @@
 
 #include "src/camera/lib/fake_stream/fake_stream_impl.h"
 
+#include <fuchsia/sysmem/cpp/fidl.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
@@ -12,18 +13,11 @@
 
 namespace camera {
 
-// TODO(msandy): remove when fxr/361307 lands
-template <class T>
-static void CloseAllWithEpitaph(fidl::BindingSet<T>& bindings, zx_status_t epitaph_value) {
-  for (const auto& binding : bindings.bindings()) {
-    binding->Close(epitaph_value);
-  }
-  bindings.CloseAll();
-}
-
 fit::result<std::unique_ptr<FakeStream>, zx_status_t> FakeStream::Create(
-    fuchsia::camera3::StreamProperties properties) {
-  auto result = FakeStreamImpl::Create(std::move(properties));
+    fuchsia::camera3::StreamProperties properties,
+    fit::function<void(fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken>)>
+        on_set_buffer_collection) {
+  auto result = FakeStreamImpl::Create(std::move(properties), std::move(on_set_buffer_collection));
   if (result.is_error()) {
     return fit::error(result.error());
   }
@@ -53,28 +47,13 @@ static zx_status_t Validate(const fuchsia::camera3::StreamProperties& properties
     status = ZX_ERR_INVALID_ARGS;
     FX_PLOGS(ERROR, status) << "Invalid frame rate.";
   }
-  if (properties.supported_resolutions.empty()) {
-    status = ZX_ERR_INVALID_ARGS;
-    FX_PLOGS(ERROR, status) << "Supported resolutions must not be empty.";
-  }
-  for (const auto& resolution : properties.supported_resolutions) {
-    if (resolution.coded_size.width == 0 || resolution.coded_size.height == 0 ||
-        resolution.bytes_per_row == 0) {
-      status = ZX_ERR_INVALID_ARGS;
-      FX_PLOGS(ERROR, status) << "Invalid resolution or stride.";
-    }
-    if (static_cast<uint32_t>(resolution.coded_size.width) > properties.image_format.coded_width ||
-        static_cast<uint32_t>(resolution.coded_size.height) >
-            properties.image_format.coded_height) {
-      status = ZX_ERR_INVALID_ARGS;
-      FX_PLOGS(ERROR, status) << "Resolution too large for image format.";
-    }
-  }
   return status;
 }
 
 fit::result<std::unique_ptr<FakeStreamImpl>, zx_status_t> FakeStreamImpl::Create(
-    fuchsia::camera3::StreamProperties properties) {
+    fuchsia::camera3::StreamProperties properties,
+    fit::function<void(fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken>)>
+        on_set_buffer_collection) {
   auto stream = std::make_unique<FakeStreamImpl>();
 
   zx_status_t status = Validate(properties);
@@ -84,6 +63,8 @@ fit::result<std::unique_ptr<FakeStreamImpl>, zx_status_t> FakeStreamImpl::Create
   }
 
   stream->properties_ = std::move(properties);
+
+  stream->on_set_buffer_collection_ = std::move(on_set_buffer_collection);
 
   ZX_ASSERT(stream->loop_.StartThread("Fake Stream Loop") == ZX_OK);
 
@@ -114,27 +95,63 @@ void FakeStreamImpl::OnNewRequest(fidl::InterfaceRequest<fuchsia::camera3::Strea
   bindings_.AddBinding(this, std::move(request), loop_.dispatcher());
 }
 
-void FakeStreamImpl::OnDestruction() { CloseAllWithEpitaph(bindings_, ZX_ERR_IO_NOT_PRESENT); }
+void FakeStreamImpl::OnDestruction() { bindings_.CloseAll(ZX_ERR_IO_NOT_PRESENT); }
 
 void FakeStreamImpl::SetCropRegion(std::unique_ptr<fuchsia::math::RectF> region) {
-  CloseAllWithEpitaph(bindings_, ZX_ERR_NOT_SUPPORTED);
+  bindings_.CloseAll(ZX_ERR_NOT_SUPPORTED);
 }
 
 void FakeStreamImpl::WatchCropRegion(WatchCropRegionCallback callback) {
-  CloseAllWithEpitaph(bindings_, ZX_ERR_NOT_SUPPORTED);
+  bindings_.CloseAll(ZX_ERR_NOT_SUPPORTED);
 }
 
-void FakeStreamImpl::SetResolution(uint32_t index) {
-  CloseAllWithEpitaph(bindings_, ZX_ERR_NOT_SUPPORTED);
+void FakeStreamImpl::SetResolution(fuchsia::math::Size coded_size) {
+  bindings_.CloseAll(ZX_ERR_NOT_SUPPORTED);
 }
 
 void FakeStreamImpl::WatchResolution(WatchResolutionCallback callback) {
-  CloseAllWithEpitaph(bindings_, ZX_ERR_NOT_SUPPORTED);
+  bindings_.CloseAll(ZX_ERR_NOT_SUPPORTED);
+}
+
+void FakeStreamImpl::SetBufferCollection(
+    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
+  if (!token) {
+    on_set_buffer_collection_(nullptr);
+    return;
+  }
+
+  auto token_protocol = token.BindSync();
+  fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> client_token;
+  token_protocol->Duplicate(ZX_RIGHT_SAME_RIGHTS, client_token.NewRequest());
+  token_protocol->Sync();
+
+  if (token_request_) {
+    token_request_(std::move(client_token));
+    token_request_ = nullptr;
+  } else {
+    token_ = std::move(client_token);
+  }
+
+  on_set_buffer_collection_(std::move(token_protocol));
+}
+
+void FakeStreamImpl::WatchBufferCollection(WatchBufferCollectionCallback callback) {
+  if (token_request_) {
+    bindings_.CloseAll(ZX_ERR_BAD_STATE);
+  }
+
+  if (token_) {
+    callback(std::move(token_));
+    token_ = nullptr;
+    return;
+  }
+
+  token_request_ = std::move(callback);
 }
 
 void FakeStreamImpl::GetNextFrame(GetNextFrameCallback callback) {
   if (frame_request_) {
-    CloseAllWithEpitaph(bindings_, ZX_ERR_BAD_STATE);
+    bindings_.CloseAll(ZX_ERR_BAD_STATE);
     return;
   }
 
@@ -149,7 +166,7 @@ void FakeStreamImpl::GetNextFrame(GetNextFrameCallback callback) {
 
 void FakeStreamImpl::Rebind(fidl::InterfaceRequest<fuchsia::camera3::Stream> request) {
   request.Close(ZX_ERR_NOT_SUPPORTED);
-  CloseAllWithEpitaph(bindings_, ZX_ERR_NOT_SUPPORTED);
+  bindings_.CloseAll(ZX_ERR_NOT_SUPPORTED);
 }
 
 }  // namespace camera

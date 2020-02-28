@@ -40,12 +40,12 @@ static zx_status_t Validate(const std::vector<FakeConfiguration>& configurations
   }
 
   for (const auto& configuration : configurations) {
-    if (configuration.streams.empty()) {
+    if (configuration.empty()) {
       status = ZX_ERR_INVALID_ARGS;
-      FX_PLOGS(ERROR, status) << "Streams must not be empty.";
+      FX_PLOGS(ERROR, status) << "Configuration must not be empty.";
     }
-    for (const auto& stream : configuration.streams) {
-      if (!stream.stream) {
+    for (const auto& stream : configuration) {
+      if (!stream) {
         status = ZX_ERR_INVALID_ARGS;
         FX_PLOGS(ERROR, status) << "Stream must be non-null.";
       }
@@ -70,8 +70,8 @@ fit::result<std::unique_ptr<FakeCameraImpl>, zx_status_t> FakeCameraImpl::Create
 
   for (auto& configuration : camera->configurations_) {
     fuchsia::camera3::Configuration real_configuration;
-    for (auto& stream : configuration.streams) {
-      auto stream_impl = reinterpret_cast<FakeStreamImpl*>(stream.stream.get());
+    for (auto& stream : configuration) {
+      auto stream_impl = reinterpret_cast<FakeStreamImpl*>(stream.get());
       real_configuration.streams.push_back(stream_impl->properties_);
     }
     camera->real_configurations_.push_back(std::move(real_configuration));
@@ -129,12 +129,9 @@ void FakeCameraImpl::SetSoftwareMuteState(bool muted, SetSoftwareMuteStateCallba
   bindings_.CloseAll(ZX_ERR_NOT_SUPPORTED);
 }
 
-void FakeCameraImpl::ConnectToStream(
-    uint32_t index, fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
-    fidl::InterfaceRequest<fuchsia::camera3::Stream> request) {
-  auto& afs = configurations_[current_configuration_index_].streams[index];
-  afs.connection_callback(std::move(token));
-  afs.stream->GetHandler()(std::move(request));
+void FakeCameraImpl::ConnectToStream(uint32_t index,
+                                     fidl::InterfaceRequest<fuchsia::camera3::Stream> request) {
+  configurations_[current_configuration_index_][index]->GetHandler()(std::move(request));
 }
 
 void FakeCameraImpl::Rebind(fidl::InterfaceRequest<Device> request) {

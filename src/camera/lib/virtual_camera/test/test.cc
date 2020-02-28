@@ -61,23 +61,25 @@ TEST_F(VirtualCameraTest, FramesReceived) {
   RunLoopUntilFailureOr(configurations_received);
   ASSERT_FALSE(HasFailure());
 
-  fidl::InterfacePtr<fuchsia::sysmem::BufferCollectionToken> client_token;
-  SetFailOnError(client_token);
-  allocator_->AllocateSharedCollection(client_token.NewRequest());
-  fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> device_token;
-  client_token->Duplicate(ZX_RIGHT_SAME_RIGHTS, device_token.NewRequest());
-  bool duplicate_synced = false;
-  client_token->Sync([&]() { duplicate_synced = true; });
-  RunLoopUntilFailureOr(duplicate_synced);
-  ASSERT_FALSE(HasFailure());
+  fuchsia::camera3::StreamPtr stream;
+  SetFailOnError(stream, "Stream");
+  camera->ConnectToStream(0, stream.NewRequest());
+
+  fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token;
+  allocator_->AllocateSharedCollection(token.NewRequest());
+  stream->SetBufferCollection(std::move(token));
+  fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> client_token;
+  bool token_received = false;
+  stream->WatchBufferCollection(
+      [&](fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
+        client_token = std::move(token);
+        token_received = true;
+      });
+  RunLoopUntilFailureOr(token_received);
 
   fuchsia::sysmem::BufferCollectionPtr collection;
   SetFailOnError(collection);
   allocator_->BindSharedCollection(std::move(client_token), collection.NewRequest());
-
-  fuchsia::camera3::StreamPtr stream;
-  SetFailOnError(stream, "Stream");
-  camera->ConnectToStream(0, std::move(device_token), stream.NewRequest());
 
   fuchsia::sysmem::BufferCollectionConstraints constraints{
       .usage{.cpu = fuchsia::sysmem::cpuUsageRead}, .min_buffer_count_for_camping = 2};

@@ -23,13 +23,6 @@ static fuchsia::camera3::StreamProperties DefaultStreamProperties() {
               .numerator = 30,
               .denominator = 1,
           },
-          .supported_resolutions{{
-              .coded_size{
-                  .width = 256,
-                  .height = 128,
-              },
-              .bytes_per_row = 256,
-          }},
           .supports_crop_region = true};
 }
 
@@ -40,13 +33,13 @@ class FakeStreamTest : public gtest::RealLoopFixture {
 };
 
 TEST_F(FakeStreamTest, BadStreamProperties) {
-  auto result = camera::FakeStream::Create({});
+  auto result = camera::FakeStream::Create({}, nullptr);
   ASSERT_TRUE(result.is_error());
   EXPECT_EQ(result.error(), ZX_ERR_INVALID_ARGS);
 }
 
 TEST_F(FakeStreamTest, CanConnectToStream) {
-  auto result = camera::FakeStream::Create(DefaultStreamProperties());
+  auto result = camera::FakeStream::Create(DefaultStreamProperties(), nullptr);
   ASSERT_TRUE(result.is_ok());
   auto fake_stream = result.take_value();
   fuchsia::camera3::StreamPtr stream;

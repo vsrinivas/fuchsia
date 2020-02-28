@@ -14,15 +14,7 @@
 
 namespace camera {
 
-// A fake configuration composed of streams and frame generators.
-struct FakeConfiguration {
-  struct AttachedFakeStream {
-    std::shared_ptr<FakeStream> stream;
-    fit::function<void(fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken>)>
-        connection_callback;
-  };
-  std::vector<AttachedFakeStream> streams;
-};
+using FakeConfiguration = std::vector<std::shared_ptr<FakeStream>>;
 
 // This class provides a mechanism for simulating a camera device, controller driver, and content
 // streams. All methods are thread-safe.

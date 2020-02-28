@@ -23,7 +23,9 @@ class FakeStreamImpl : public FakeStream, public fuchsia::camera3::Stream {
   FakeStreamImpl();
   ~FakeStreamImpl() override;
   static fit::result<std::unique_ptr<FakeStreamImpl>, zx_status_t> Create(
-      fuchsia::camera3::StreamProperties properties);
+      fuchsia::camera3::StreamProperties properties,
+      fit::function<void(fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken>)>
+          on_set_buffer_collection);
   fidl::InterfaceRequestHandler<fuchsia::camera3::Stream> GetHandler() override;
   void AddFrame(fuchsia::camera3::FrameInfo info) override;
 
@@ -32,16 +34,23 @@ class FakeStreamImpl : public FakeStream, public fuchsia::camera3::Stream {
   void OnDestruction();
 
   // |fuchsia::camera3::Stream|
-  void SetCropRegion(::std::unique_ptr<::fuchsia::math::RectF> region) override;
+  void SetCropRegion(std::unique_ptr<fuchsia::math::RectF> region) override;
   void WatchCropRegion(WatchCropRegionCallback callback) override;
-  void SetResolution(uint32_t index) override;
+  void SetResolution(fuchsia::math::Size coded_size) override;
   void WatchResolution(WatchResolutionCallback callback) override;
+  void SetBufferCollection(
+      fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) override;
+  void WatchBufferCollection(WatchBufferCollectionCallback callback) override;
   void GetNextFrame(GetNextFrameCallback callback) override;
-  void Rebind(::fidl::InterfaceRequest<Stream> request) override;
+  void Rebind(fidl::InterfaceRequest<Stream> request) override;
 
   async::Loop loop_;
   fidl::BindingSet<fuchsia::camera3::Stream> bindings_;
   fuchsia::camera3::StreamProperties properties_;
+  fit::function<void(fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken>)>
+      on_set_buffer_collection_;
+  fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token_;
+  WatchBufferCollectionCallback token_request_;
   std::queue<fuchsia::camera3::FrameInfo> frames_;
   GetNextFrameCallback frame_request_;
 

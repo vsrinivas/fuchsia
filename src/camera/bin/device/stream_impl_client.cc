@@ -32,6 +32,21 @@ void StreamImpl::Client::PostSendFrame(fuchsia::camera3::FrameInfo frame) {
             }) == ZX_OK);
 }
 
+void StreamImpl::Client::PostReceiveBufferCollection(
+    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
+  ZX_ASSERT(async::PostTask(loop_.dispatcher(), [this, token = std::move(token)]() mutable {
+              if (watch_buffers_callback_) {
+                ZX_ASSERT(!token_);
+                watch_buffers_callback_(std::move(token));
+                watch_buffers_callback_ = nullptr;
+                return;
+              }
+              token_ = std::move(token);
+            }) == ZX_OK);
+}
+
+bool& StreamImpl::Client::Participant() { return participant_; }
+
 void StreamImpl::Client::OnClientDisconnected(zx_status_t status) {
   FX_PLOGS(DEBUG, status) << "Stream client " << id_ << " disconnected.";
   stream_.PostRemoveClient(id_);
@@ -50,10 +65,32 @@ void StreamImpl::Client::WatchCropRegion(WatchCropRegionCallback callback) {
   CloseConnection(ZX_ERR_NOT_SUPPORTED);
 }
 
-void StreamImpl::Client::SetResolution(uint32_t index) { CloseConnection(ZX_ERR_NOT_SUPPORTED); }
+void StreamImpl::Client::SetResolution(fuchsia::math::Size coded_size) {
+  CloseConnection(ZX_ERR_NOT_SUPPORTED);
+}
 
 void StreamImpl::Client::WatchResolution(WatchResolutionCallback callback) {
   CloseConnection(ZX_ERR_NOT_SUPPORTED);
+}
+
+void StreamImpl::Client::SetBufferCollection(
+    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
+  stream_.PostSetBufferCollection(id_, std::move(token));
+}
+
+void StreamImpl::Client::WatchBufferCollection(WatchBufferCollectionCallback callback) {
+  if (watch_buffers_callback_) {
+    CloseConnection(ZX_ERR_BAD_STATE);
+    return;
+  }
+
+  if (token_) {
+    callback(std::move(token_));
+    token_ = nullptr;
+    return;
+  }
+
+  watch_buffers_callback_ = std::move(callback);
 }
 
 void StreamImpl::Client::GetNextFrame(GetNextFrameCallback callback) {

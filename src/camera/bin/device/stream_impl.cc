@@ -9,19 +9,19 @@
 #include <lib/fit/function.h>
 #include <lib/syslog/cpp/logger.h>
 #include <lib/zx/time.h>
+#include <zircon/assert.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
 #include "src/camera/bin/device/messages.h"
 #include "src/camera/bin/device/util.h"
+#include "src/lib/syslog/cpp/logger.h"
 
-StreamImpl::StreamImpl(fidl::InterfaceHandle<fuchsia::camera2::Stream> legacy_stream,
-                       fidl::InterfaceRequest<fuchsia::camera3::Stream> request,
-                       uint32_t max_camping_buffers, fit::closure on_no_clients)
+StreamImpl::StreamImpl(fidl::InterfaceRequest<fuchsia::camera3::Stream> request,
+                       StreamRequestedCallback on_stream_requested, fit::closure on_no_clients)
     : loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
-      on_no_clients_(std::move(on_no_clients)),
-      max_camping_buffers_(max_camping_buffers) {
-  ZX_ASSERT(legacy_stream_.Bind(std::move(legacy_stream), loop_.dispatcher()) == ZX_OK);
+      on_stream_requested_(std::move(on_stream_requested)),
+      on_no_clients_(std::move(on_no_clients)) {
   legacy_stream_.set_error_handler(fit::bind_member(this, &StreamImpl::OnLegacyStreamDisconnected));
   legacy_stream_.events().OnFrameAvailable = fit::bind_member(this, &StreamImpl::OnFrameAvailable);
   auto client = std::make_unique<Client>(*this, client_id_next_, std::move(request));
@@ -93,6 +93,48 @@ void StreamImpl::OnFrameAvailable(fuchsia::camera2::FrameAvailableInfo info) {
 
   // Send the frame to any pending recipients.
   SendFrames();
+}
+
+void StreamImpl::PostSetBufferCollection(
+    uint64_t id, fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
+  async::PostTask(loop_.dispatcher(), [this, id, token_handle = std::move(token)]() mutable {
+    auto it = clients_.find(id);
+    if (it == clients_.end()) {
+      FX_LOGS(ERROR) << "Client " << id << " not found.";
+      token_handle.BindSync()->Close();
+      ZX_DEBUG_ASSERT(false);
+      return;
+    }
+    auto& client = it->second;
+
+    // If null, just unregister the client and return.
+    if (!token_handle) {
+      client->Participant() = false;
+      return;
+    }
+
+    client->Participant() = true;
+
+    // Bind and duplicate the token for each participating client.
+    fuchsia::sysmem::BufferCollectionTokenPtr token;
+    ZX_ASSERT(token.Bind(std::move(token_handle), loop_.dispatcher()) == ZX_OK);
+    for (auto& client : clients_) {
+      if (client.second->Participant()) {
+        fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> client_token;
+        token->Duplicate(ZX_RIGHT_SAME_RIGHTS, client_token.NewRequest());
+        client.second->PostReceiveBufferCollection(std::move(client_token));
+      }
+    }
+
+    // Synchronize duplications then pass the final token to the device for constraints application.
+    token->Sync([this, token = std::move(token)]() mutable {
+      ZX_ASSERT(on_stream_requested_);
+      frame_waiters_.clear();
+      on_stream_requested_(
+          std::move(token), legacy_stream_.NewRequest(loop_.dispatcher()),
+          [this](uint32_t max_camping_buffers) { max_camping_buffers_ = max_camping_buffers; });
+    });
+  });
 }
 
 void StreamImpl::SendFrames() {

@@ -19,6 +19,15 @@ namespace camera {
 // No-op function.
 static void nop() {}
 
+static void nop_stream_requested(
+    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
+    fidl::InterfaceRequest<fuchsia::camera2::Stream> request,
+    fit::function<void(uint32_t)> callback) {
+  token.Bind()->Close();
+  request.Close(ZX_ERR_NOT_SUPPORTED);
+  callback(0);
+}
+
 class DeviceTest : public gtest::RealLoopFixture {
  protected:
   DeviceTest() : context_(sys::ComponentContext::Create()) {}
@@ -59,42 +68,24 @@ class DeviceTest : public gtest::RealLoopFixture {
   fuchsia::sysmem::AllocatorPtr allocator_;
 };
 
-TEST_F(DeviceTest, CreateStreamNullConnection) { StreamImpl stream(nullptr, nullptr, 0, nop); }
-
-TEST_F(DeviceTest, CreateStreamFakeLegacyStream) {
-  fidl::InterfaceHandle<fuchsia::camera2::Stream> handle;
-  auto result = FakeLegacyStream::Create(handle.NewRequest());
-  ASSERT_TRUE(result.is_ok());
-  { StreamImpl stream(std::move(handle), nullptr, 0, nop); }
+TEST_F(DeviceTest, CreateStreamNullConnection) {
+  StreamImpl stream(nullptr, nop_stream_requested, nop);
 }
 
-TEST_F(DeviceTest, CreateStreamNoClientBuffers) {
-  fuchsia::camera3::DevicePtr device;
-  device_->GetHandler()(device.NewRequest());
-  device.set_error_handler(MakeErrorHandler("Device"));
-  fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token;
-  allocator_->AllocateSharedCollection(token.NewRequest());
-  fuchsia::camera3::StreamPtr stream;
-  device->ConnectToStream(0, std::move(token), stream.NewRequest());
-  bool stream_errored = false;
-  zx_status_t stream_status = ZX_OK;
-  stream.set_error_handler([&](zx_status_t status) {
-    stream_status = status;
-    stream_errored = true;
-  });
-  fuchsia::camera3::StreamPtr stream2;
-  stream->Rebind(stream2.NewRequest());
-  bool stream2_errored = false;
-  zx_status_t stream2_status = ZX_OK;
-  stream2.set_error_handler([&](zx_status_t status) {
-    stream2_status = status;
-    stream2_errored = true;
-  });
-  while (!HasFailure() && !(stream_errored && stream2_errored)) {
-    RunLoopUntilIdle();
-  }
-  EXPECT_EQ(stream_status, ZX_ERR_NOT_SUPPORTED);
-  EXPECT_EQ(stream2_status, ZX_ERR_NOT_SUPPORTED);
+TEST_F(DeviceTest, CreateStreamFakeLegacyStream) {
+  fidl::InterfaceHandle<fuchsia::camera3::Stream> stream;
+  StreamImpl stream_impl(
+      stream.NewRequest(),
+      [](fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
+         fidl::InterfaceRequest<fuchsia::camera2::Stream> request,
+         fit::function<void(uint32_t)> callback) {
+        token.Bind()->Close();
+        auto result = FakeLegacyStream::Create(std::move(request));
+        ASSERT_TRUE(result.is_ok());
+        callback(0);
+      },
+      nop);
+  RunLoopUntilIdle();
 }
 
 TEST_F(DeviceTest, ConvertConfig) {
@@ -107,23 +98,68 @@ TEST_F(DeviceTest, ConvertConfig) {
   ASSERT_TRUE(result.is_ok());
   auto b = result.take_value();
   EXPECT_EQ(a.stream_configs.size(), b.streams.size());
-  ASSERT_FALSE(b.streams[0].supported_resolutions.empty());
-  EXPECT_EQ(a.stream_configs[0].image_formats[0].bytes_per_row,
-            b.streams[0].supported_resolutions[0].bytes_per_row);
 }
 
 TEST_F(DeviceTest, GetFrames) {
-  fidl::InterfaceHandle<fuchsia::camera2::Stream> handle;
-  auto result = FakeLegacyStream::Create(handle.NewRequest());
-  ASSERT_TRUE(result.is_ok());
-  auto legacy_stream_fake = result.take_value();
   fuchsia::camera3::StreamPtr stream;
   stream.set_error_handler(MakeErrorHandler("Stream"));
-  constexpr uint32_t kMaxCampingBuffers = 2;
   constexpr uint32_t kBufferId1 = 42;
   constexpr uint32_t kBufferId2 = 17;
-  auto stream_impl =
-      std::make_unique<StreamImpl>(std::move(handle), stream.NewRequest(), kMaxCampingBuffers, nop);
+  std::unique_ptr<FakeLegacyStream> legacy_stream_fake;
+  bool legacy_stream_created = false;
+  auto stream_impl = std::make_unique<StreamImpl>(
+      stream.NewRequest(),
+      [&](fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
+          fidl::InterfaceRequest<fuchsia::camera2::Stream> request,
+          fit::function<void(uint32_t)> callback) {
+        auto result = FakeLegacyStream::Create(std::move(request));
+        ASSERT_TRUE(result.is_ok());
+        legacy_stream_fake = result.take_value();
+        token.BindSync()->Close();
+        legacy_stream_created = true;
+        callback(1);
+      },
+      nop);
+
+  fuchsia::sysmem::AllocatorPtr allocator;
+  context_->svc()->Connect(allocator.NewRequest());
+  fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token;
+  allocator->AllocateSharedCollection(token.NewRequest());
+  stream->SetBufferCollection(std::move(token));
+  fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> received_token;
+  bool buffer_collection_returned = false;
+  stream->WatchBufferCollection(
+      [&](fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
+        received_token = std::move(token);
+        buffer_collection_returned = true;
+      });
+
+  RunLoopUntil(
+      [&]() { return HasFailure() || (legacy_stream_created && buffer_collection_returned); });
+  ASSERT_FALSE(HasFailure());
+
+  fuchsia::sysmem::BufferCollectionPtr collection;
+  collection.set_error_handler(MakeErrorHandler("Buffer Collection"));
+  allocator_->BindSharedCollection(std::move(received_token), collection.NewRequest());
+  collection->SetConstraints(
+      true, {.usage{.cpu = fuchsia::sysmem::cpuUsageRead},
+             .min_buffer_count_for_camping = 2,
+             .image_format_constraints_count = 1,
+             .image_format_constraints{
+                 {{.pixel_format{.type = fuchsia::sysmem::PixelFormatType::NV12},
+                   .color_spaces_count = 1,
+                   .color_space{{{.type = fuchsia::sysmem::ColorSpaceType::REC601_NTSC}}},
+                   .min_coded_width = 1,
+                   .min_coded_height = 1}}}});
+  bool buffers_allocated_returned = false;
+  collection->WaitForBuffersAllocated(
+      [&](zx_status_t status, fuchsia::sysmem::BufferCollectionInfo_2 buffers) {
+        EXPECT_EQ(status, ZX_OK);
+        buffers_allocated_returned = true;
+      });
+  RunLoopUntil([&]() { return HasFailure() || buffers_allocated_returned; });
+  ASSERT_FALSE(HasFailure());
+
   bool frame1_received = false;
   bool frame2_received = false;
   auto callback2 = [&](fuchsia::camera3::FrameInfo info) {
@@ -156,17 +192,25 @@ TEST_F(DeviceTest, GetFrames) {
 }
 
 TEST_F(DeviceTest, GetFramesInvalidCall) {
-  fidl::InterfaceHandle<fuchsia::camera2::Stream> handle;
-  auto result = FakeLegacyStream::Create(handle.NewRequest());
-  ASSERT_TRUE(result.is_ok());
-  auto legacy_stream_fake = result.take_value();
   bool stream_errored = false;
   fuchsia::camera3::StreamPtr stream;
   stream.set_error_handler([&](zx_status_t status) {
     EXPECT_EQ(status, ZX_ERR_BAD_STATE);
     stream_errored = true;
   });
-  auto stream_impl = std::make_unique<StreamImpl>(std::move(handle), stream.NewRequest(), 0, nop);
+  std::unique_ptr<FakeLegacyStream> fake_legacy_stream;
+  auto stream_impl = std::make_unique<StreamImpl>(
+      stream.NewRequest(),
+      [&](fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
+          fidl::InterfaceRequest<fuchsia::camera2::Stream> request,
+          fit::function<void(uint32_t)> callback) {
+        auto result = FakeLegacyStream::Create(std::move(request));
+        ASSERT_TRUE(result.is_ok());
+        fake_legacy_stream = result.take_value();
+        token.BindSync()->Close();
+        callback(0);
+      },
+      nop);
   stream->GetNextFrame([](fuchsia::camera3::FrameInfo info) {});
   stream->GetNextFrame([](fuchsia::camera3::FrameInfo info) {});
   while (!HasFailure() && !stream_errored) {

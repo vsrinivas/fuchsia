@@ -8,18 +8,16 @@ using fuchsia.math;
 using fuchsia.sysmem;
 using zx;
 
-/// A Stream represents timing, sequencing, and other camera-specific properties that apply to a set
-/// of buffers.
+/// A Stream represents timing, sequencing, and other camera-specific properties applied to a buffer
+/// collection.
 protocol Stream {
     /// Sets the Stream's crop region to the provided region, with the top-left of the image
     /// represented by (0,0) and the bottom-right of the image represented by (1,1). The resulting
     /// content is subsequently scaled to fill the output buffer. If the implementation does not
     /// precisely support the provided value, it will be expanded to the minimum region that covers
-    /// the provided region. If region is set to null, the crop region is unset, which is
-    /// equivalent to specifying a region covering the entire image. Upon initial connection, the
-    /// region is unset. Frames requested after calling this method will return with the new
-    /// region, however previously sent frames may still be in flight using the previous region.
-    /// If the stream does not support crop region, the connection is closed with the
+    /// the provided region. If region is set to null, the crop region is unset, which is equivalent
+    /// to specifying a region covering the entire image. Upon initial connection, the region is
+    /// unset. If the stream does not support crop region, the connection is closed with the
     /// ZX_ERR_NOT_SUPPORTED epitaph.
     SetCropRegion(fuchsia.math.RectF? region);
 
@@ -28,21 +26,34 @@ protocol Stream {
     /// the use of the new region. See SetCropRegion for a description of the region parameter.
     WatchCropRegion() -> (fuchsia.math.RectF? region);
 
-    /// Sets the resolution of the stream to the provided index. Frames requested after calling
-    /// this method will return with the new resolution, however previously sent frames may still
-    /// be in flight using the previous resolution. Upon initial connection, the resolution used is
-    /// index 0.
-    SetResolution(uint32 index);
+    /// Sets the resolution of the stream to the provided value. If the implementation does not
+    /// precisely support the provided value, it will be expanded to the minimum resolution that
+    /// exceeds the provided resolution.
+    SetResolution(fuchsia.math.Size coded_size);
 
-    /// Returns the resolution index if it has changed from a previously returned value, or is
-    /// called by a client for the first time. Frame callbacks received after receiving this
-    /// callback reflect the new resolution.
-    WatchResolution() -> (uint32 index);
+    /// Returns the resolution if it has changed from a previously returned value, or is called by
+    /// a client for the first time. Frame callbacks received after receiving this callback reflect
+    /// the new resolution.
+    WatchResolution() -> (fuchsia.math.Size coded_size);
+
+    /// If non-null, requests renegotiation of the buffer collection backing this stream, and
+    /// identifies this client as a participant in buffer negotiation. If null, identifies this
+    /// client as a non-participant in buffer negotiation. Upon initial connection, the client is a
+    /// non-participant. After registering as a participant, clients must always have an outstanding
+    /// call to WatchBufferCollection to receive tokens from the server so that they are able to
+    /// respond to current and future renegotiation requests.
+    SetBufferCollection(fuchsia.sysmem.BufferCollectionToken? token);
+
+    /// Returns when the server or any buffer negotiation participant (including the current client)
+    /// requires buffer renegotiation, and the current client is registered as a participant. Frame
+    /// callbacks received after receiving this callback apply to the newly negotiated collection.
+    WatchBufferCollection() -> (fuchsia.sysmem.BufferCollectionToken token);
 
     /// Request the next available frame for this stream. Returns when the stream has completed
     /// populating the buffer and may be read by the client, provided the number of unreleased
-    /// buffers held by the client is less than the count provided in the buffer collection token
-    /// used to connect to this stream.
+    /// buffers held by the client is less than the count provided via the most recently negotiated
+    /// buffer collection token. If a buffer renegotiation is in progress, this call will return
+    /// only after the negotiation is complete and a new collection is available.
     GetNextFrame() -> (FrameInfo info);
 
     /// Request another connection to this Stream. This allows a client to delegate different
@@ -52,12 +63,13 @@ protocol Stream {
 
 /// Metadata concerning a given frame.
 struct FrameInfo {
-    /// The buffer index of the associated buffer collection.
+    /// Identifies the buffer used for this frame as an index into the most recently negotiated
+    /// buffer collection.
     uint32 buffer_index;
 
-    /// A monotonically increasing counter indicating the number of frames written to buffers
-    /// associated with this stream's buffer collection. Clients can use this to detect dropped
-    /// frames, or generate nominal timestamps using the associated stream's framerate.
+    /// A monotonically increasing counter indicating the number of frames written to this stream's
+    /// most recently negotiated buffer collection. Clients can use this to detect dropped frames
+    /// or generate nominal timestamps using the associated stream's framerate.
     uint64 frame_counter;
 
     /// The value of the system monotonic clock, measured at the time the hardware completed
@@ -66,16 +78,6 @@ struct FrameInfo {
 
     /// The client must close this when it has completed reading from the buffer.
     handle<eventpair> release_fence;
-};
-
-/// Properties describing image data in a buffer.
-struct Resolution {
-    /// Extents of the image in pixels.
-    fuchsia.math.Size coded_size;
-
-    /// The number of bytes between each row in the image. This may be larger than the value
-    /// implied by the image width.
-    uint32 bytes_per_row;
 };
 
 /// The frequency at which a Stream produces frames. The value is |numerator| / |denominator|, with
@@ -90,17 +92,11 @@ struct FrameRate {
 
 /// Describes the properties of a given stream.
 struct StreamProperties {
-    /// Describes the image format used by a stream. The resolution indicated has the same values
-    /// as the first element of supported_resolutions (below).
+    /// Describes the native image format used by a stream.
     fuchsia.sysmem.ImageFormat_2 image_format;
 
     /// Describes the framerate used by a stream.
     FrameRate frame_rate;
-
-    /// Describes the supported resolutions of a stream. Elements are provided in decreasing order
-    /// of total coded pixels (i.e. width * height). All streams will have at least one supported
-    /// resolution, and that resolution will match that specified by image_format.
-    vector<Resolution>:MAX_RESOLUTIONS_PER_STREAM supported_resolutions;
 
     /// Indicates whether a stream supports the SetCropRegion method.
     bool supports_crop_region;

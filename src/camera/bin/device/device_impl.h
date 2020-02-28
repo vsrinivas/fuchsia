@@ -57,13 +57,16 @@ class DeviceImpl {
 
   // Posts a task to connect to a stream.
   void PostConnectToStream(uint32_t index,
-                           fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
                            fidl::InterfaceRequest<fuchsia::camera3::Stream> request);
 
   // Connects to a stream.
-  void ConnectToStream(uint32_t index,
-                       fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
-                       fidl::InterfaceRequest<fuchsia::camera3::Stream> request);
+  void ConnectToStream(uint32_t index, fidl::InterfaceRequest<fuchsia::camera3::Stream> request);
+
+  // Called by a stream when it has sufficient information to connect to the legacy stream protocol.
+  void OnStreamRequested(uint32_t index,
+                         fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
+                         fidl::InterfaceRequest<fuchsia::camera2::Stream> request,
+                         fit::function<void(uint32_t)> max_camping_buffers_callback);
 
   // Represents a single client connection to the DeviceImpl class.
   class Client : public fuchsia::camera3::Device {
@@ -88,7 +91,6 @@ class DeviceImpl {
     void WatchMuteState(WatchMuteStateCallback callback) override;
     void SetSoftwareMuteState(bool muted, SetSoftwareMuteStateCallback callback) override;
     void ConnectToStream(uint32_t index,
-                         fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
                          fidl::InterfaceRequest<fuchsia::camera3::Stream> request) override;
     void Rebind(fidl::InterfaceRequest<fuchsia::camera3::Device> request) override;
 

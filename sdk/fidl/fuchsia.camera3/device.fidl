@@ -4,8 +4,6 @@
 
 library fuchsia.camera3;
 
-using fuchsia.sysmem;
-
 const uint32 MAX_IDENTIFIER_LENGTH = 256;
 const uint32 MAX_CONFIGURATIONS_PER_CAMERA = 256;
 const uint32 MAX_STREAMS_PER_CONFIGURATION = 256;
@@ -46,12 +44,9 @@ protocol Device {
     /// clients. When transitioning to the unmuted state, this method returns immediately.
     SetSoftwareMuteState(bool muted) -> ();
 
-    /// Connects to the Stream at the provided stream, using the provided token to negotiate
-    /// buffers. If any clients already exist for this stream, the request is closed with the
-    /// ZX_ERR_ALREADY_BOUND epitaph.
-    ConnectToStream(uint32 index,
-                    fuchsia.sysmem.BufferCollectionToken token,
-                    request<Stream> request);
+    /// Connects to the Stream at the provided index. If any clients already exist for this stream,
+    /// the request is closed with the ZX_ERR_ALREADY_BOUND epitaph.
+    ConnectToStream(uint32 index, request<Stream> request);
 
     /// Request another connection to this Device. This allows a client to delegate different
     /// operations to different coordinated clients.

@@ -20,7 +20,9 @@ class FakeStream {
 
   // Create a fake stream with the given properties.
   static fit::result<std::unique_ptr<FakeStream>, zx_status_t> Create(
-      fuchsia::camera3::StreamProperties properties);
+      fuchsia::camera3::StreamProperties properties,
+      fit::function<void(fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken>)>
+          on_set_buffer_collection);
 
   // Returns a request handler for the Stream interface.
   virtual fidl::InterfaceRequestHandler<fuchsia::camera3::Stream> GetHandler() = 0;

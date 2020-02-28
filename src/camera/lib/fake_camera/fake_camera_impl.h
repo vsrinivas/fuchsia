@@ -37,7 +37,6 @@ class FakeCameraImpl : public FakeCamera, public fuchsia::camera3::Device {
   void WatchMuteState(WatchMuteStateCallback callback) override;
   void SetSoftwareMuteState(bool muted, SetSoftwareMuteStateCallback callback) override;
   void ConnectToStream(uint32_t index,
-                       fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
                        fidl::InterfaceRequest<fuchsia::camera3::Stream> request) override;
   void Rebind(fidl::InterfaceRequest<Device> request) override;
 

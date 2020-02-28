@@ -34,15 +34,13 @@ VirtualCameraImpl::~VirtualCameraImpl() {
 }
 
 static fuchsia::camera3::StreamProperties DefaultStreamProperties() {
-  return {
-      .image_format{.pixel_format{.type = fuchsia::sysmem::PixelFormatType::NV12},
-                    .coded_width = 1280,
-                    .coded_height = 720,
-                    .bytes_per_row = 1280,
-                    .color_space{.type = fuchsia::sysmem::ColorSpaceType::REC601_NTSC}},
-      .frame_rate{.numerator = 30, .denominator = 1},
-      .supported_resolutions{{.coded_size{.width = 1280, .height = 720}, .bytes_per_row = 1280}},
-      .supports_crop_region = false};
+  return {.image_format{.pixel_format{.type = fuchsia::sysmem::PixelFormatType::NV12},
+                        .coded_width = 1280,
+                        .coded_height = 720,
+                        .bytes_per_row = 1280,
+                        .color_space{.type = fuchsia::sysmem::ColorSpaceType::REC601_NTSC}},
+          .frame_rate{.numerator = 30, .denominator = 1},
+          .supports_crop_region = false};
 }
 
 static fuchsia::sysmem::BufferCollectionConstraints DefaultBufferConstraints() {
@@ -107,7 +105,9 @@ fit::result<std::unique_ptr<VirtualCamera>, zx_status_t> VirtualCameraImpl::Crea
     camera->camera_ = nullptr;
   });
 
-  auto stream_result = FakeStream::Create(DefaultStreamProperties());
+  auto stream_result =
+      FakeStream::Create(DefaultStreamProperties(),
+                         fit::bind_member(camera.get(), &VirtualCameraImpl::OnSetBufferCollection));
   if (stream_result.is_error()) {
     FX_PLOGS(ERROR, stream_result.error()) << "Failed to create fake stream.";
     return fit::error(ZX_ERR_INTERNAL);
@@ -115,11 +115,8 @@ fit::result<std::unique_ptr<VirtualCamera>, zx_status_t> VirtualCameraImpl::Crea
 
   camera->stream_ = stream_result.take_value();
 
-  FakeConfiguration::AttachedFakeStream afs;
-  afs.stream = camera->stream_;
-  afs.connection_callback = fit::bind_member(camera.get(), &VirtualCameraImpl::OnStreamConnected);
   camera::FakeConfiguration config;
-  config.streams.push_back(std::move(afs));
+  config.push_back(camera->stream_);
   std::vector<camera::FakeConfiguration> configs;
   configs.push_back(std::move(config));
   auto camera_result = FakeCamera::Create("VirtualCamera", std::move(configs));
@@ -196,8 +193,13 @@ void VirtualCameraImpl::OnDestruction() {
   camera_ = nullptr;
 }
 
-void VirtualCameraImpl::OnStreamConnected(
+void VirtualCameraImpl::OnSetBufferCollection(
     fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
+  buffers_.reset();
+  while (!free_buffers_.empty()) {
+    free_buffers_.pop();
+  }
+
   fuchsia::sysmem::BufferCollectionPtr collection;
   allocator_->BindSharedCollection(std::move(token), collection.NewRequest(loop_.dispatcher()));
   collection.set_error_handler([this](zx_status_t status) {

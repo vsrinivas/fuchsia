@@ -47,16 +47,6 @@ inline fit::result<fuchsia::camera3::Configuration, zx_status_t> Convert(
     stream_properties.frame_rate.numerator = stream_config.frame_rate.frames_per_sec_numerator;
     stream_properties.frame_rate.denominator = stream_config.frame_rate.frames_per_sec_denominator;
     stream_properties.image_format = stream_config.image_formats[0];
-    for (const auto& format : stream_config.image_formats) {
-      fuchsia::camera3::Resolution resolution{
-          .coded_size{
-              .width = static_cast<int32_t>(format.coded_width),
-              .height = static_cast<int32_t>(format.coded_height),
-          },
-          .bytes_per_row = format.bytes_per_row,
-      };
-      stream_properties.supported_resolutions.push_back(resolution);
-    }
     ret.streams.push_back(std::move(stream_properties));
   }
   return fit::ok(std::move(ret));

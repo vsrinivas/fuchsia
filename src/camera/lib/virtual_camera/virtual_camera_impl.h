@@ -29,7 +29,7 @@ class VirtualCameraImpl : public VirtualCamera {
  private:
   void OnNewRequest(fidl::InterfaceRequest<fuchsia::camera3::Device> request);
   void OnDestruction();
-  void OnStreamConnected(fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token);
+  void OnSetBufferCollection(fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token);
   void FrameTick();
   void FillFrame(uint32_t buffer_index);
   void EmbedMetadata(const fuchsia::camera3::FrameInfo& info);
