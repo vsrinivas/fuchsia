@@ -258,5 +258,22 @@ TEST_F(WeaveConfigManagerTest, FailOnMismatchedTypes) {
             WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND);
 }
 
+TEST_F(WeaveConfigManagerTest, OverwriteKeys) {
+  constexpr char kTestKeyBool[] = "test-key-bool";
+  constexpr bool kTestValBool = true;
+  constexpr char kTestConfigStoreContents[] = "{\"test-key-bool\":true}";
+
+  EXPECT_EQ(WeaveConfigMgr().WriteConfigValue(kTestKeyBool, !kTestValBool), WEAVE_NO_ERROR);
+  EXPECT_EQ(WeaveConfigMgr().WriteConfigValue(kTestKeyBool, kTestValBool), WEAVE_NO_ERROR);
+
+  bool read_value = false;
+  EXPECT_EQ(WeaveConfigMgr().ReadConfigValue(kTestKeyBool, &read_value), WEAVE_NO_ERROR);
+  EXPECT_EQ(read_value, kTestValBool);
+
+  std::string file_contents;
+  EXPECT_TRUE(files::ReadFileToString(kWeaveConfigStoreTestPath, &file_contents));
+  EXPECT_EQ(file_contents, kTestConfigStoreContents);
+}
+
 }  // namespace testing
 }  // namespace nl::Weave::DeviceLayer::Internal

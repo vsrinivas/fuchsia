@@ -170,7 +170,12 @@ WEAVE_ERROR WeaveConfigManager::WriteKVPair(const std::string& key, rapidjson::V
   const std::lock_guard<std::mutex> write_lock(config_mutex_);
   rapidjson::Value key_value;
   key_value.SetString(key.c_str(), key.size(), config_.GetAllocator());
-  config_.AddMember(key_value, value, config_.GetAllocator());
+  rapidjson::Value::MemberIterator it = config_.FindMember(key_value);
+  if (it != config_.MemberEnd()) {
+    it->value = value;
+  } else {
+    config_.AddMember(key_value, value, config_.GetAllocator());
+  }
   return CommitKVPairs();
 }
 
