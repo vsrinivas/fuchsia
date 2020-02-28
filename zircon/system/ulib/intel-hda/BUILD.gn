@@ -2,6 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36548.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/zx_library.gni")
+
 zx_library("intel-hda") {
   sdk = "source"
   sdk_headers = [
@@ -27,23 +39,23 @@ zx_library("intel-hda") {
   ]
   public_deps = [
     # <intel-hda/codec-utils/stream-base.h> has #include <ddk/protocol/intelhda/codec.h>.
-    "$zx/system/banjo/ddk.protocol.intelhda.codec",
-    "$zx/system/fidl/fuchsia-hardware-audio:llcpp.headers",
-    "$zx/system/ulib/abs_clock:headers",
-    "$zx/system/ulib/audio-driver-proto:headers",
-    "$zx/system/ulib/dispatcher-pool:headers",
-    "$zx/system/ulib/zx:headers",
+    "//zircon/public/lib/abs_clock",
+    "//zircon/public/lib/audio-driver-proto",
+    "//zircon/public/lib/dispatcher-pool",
+    "//zircon/public/lib/zx",
+    "//zircon/system/banjo/ddk.protocol.intelhda.codec",
+    "//zircon/system/fidl/fuchsia-hardware-audio:llcpp",
   ]
   deps = [
-    "$zx/system/fidl/fuchsia-hardware-audio:llcpp",
-    "$zx/system/ulib/abs_clock",
-    "$zx/system/ulib/audio-driver-proto",
-    "$zx/system/ulib/audio-proto-utils",
-    "$zx/system/ulib/dispatcher-pool",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/dispatcher-pool",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/sync",
-    "$zx/system/ulib/zx",
+    "//zircon/public/lib/abs_clock",
+    "//zircon/public/lib/audio-driver-proto",
+    "//zircon/public/lib/audio-proto-utils",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/dispatcher-pool",
+    "//zircon/public/lib/dispatcher-pool",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-hardware-audio:llcpp",
   ]
 }

@@ -26,10 +26,10 @@ driver_module("qemu-audio-codec") {
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/dispatcher-pool",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/intel-hda",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.intelhda.codec",
     "//zircon/system/banjo/ddk.protocol.pci",
+    "//zircon/system/ulib/intel-hda",
   ]
 }
 
