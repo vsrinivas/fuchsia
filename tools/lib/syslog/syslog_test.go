@@ -7,6 +7,7 @@ package syslog
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -17,11 +18,12 @@ import (
 )
 
 type fakeSSHRunner struct {
-	pr          *io.PipeReader
-	closed      bool
-	reconnected bool
-	errs        chan error
-	lastCmd     []string
+	pr            *io.PipeReader
+	closed        bool
+	reconnected   bool
+	errs          chan error
+	reconnectErrs chan error
+	lastCmd       []string
 }
 
 func (r *fakeSSHRunner) Run(_ context.Context, cmd []string, stdout, _ io.Writer) error {
@@ -49,6 +51,14 @@ func (r *fakeSSHRunner) Run(_ context.Context, cmd []string, stdout, _ io.Writer
 }
 
 func (r *fakeSSHRunner) Reconnect(_ context.Context) error {
+	select {
+	case err := <-r.reconnectErrs:
+		if err != nil {
+			return err
+		}
+	default:
+		// If the channel is empty, we consider reconnection to be successful.
+	}
 	r.reconnected = true
 	return nil
 }
@@ -64,14 +74,16 @@ func TestStream(t *testing.T) {
 	ctx := logger.WithLogger(context.Background(), l)
 
 	pr, pw := io.Pipe()
-	r := &fakeSSHRunner{
-		pr:   pr,
-		errs: make(chan error),
-	}
 	defer pr.Close()
 	defer pw.Close()
+	r := &fakeSSHRunner{
+		pr:            pr,
+		errs:          make(chan error),
+		reconnectErrs: make(chan error, 10),
+	}
 
-	syslogger := Syslogger{r: r}
+	// Use a reconnectInterval of zero to avoid sleeping.
+	syslogger := Syslogger{r: r, reconnectInterval: 0}
 	defer func() {
 		syslogger.Close()
 		if !r.closed {
@@ -119,7 +131,7 @@ func TestStream(t *testing.T) {
 		}
 	})
 
-	// Finally, if we come across a connection error we should reconnect.
+	// If we come across a connection error we should reconnect.
 	t.Run("stream should recover from a connection error", func(t *testing.T) {
 		// After the first connection error, we should attempt to stream again,
 		// at which point we have a stubbed nil error waiting to be consumed.
@@ -132,6 +144,32 @@ func TestStream(t *testing.T) {
 			t.Errorf("unexpected streaming error: %v", err)
 		} else if !r.reconnected {
 			t.Errorf("runner failed to reconnect")
+		}
+	})
+
+	// If reconnection fails, we should keep trying to reconnect.
+	t.Run("stream should retry reconnection", func(t *testing.T) {
+		// After a connection error, we should keep trying to reconnect until we
+		// succeed.
+		reconnectErr := errors.New("failed to reconnect")
+		// Send N reconnection errors into the channel so that they get picked
+		// up when the syslogger tries to reconnect after being interrupted by
+		// the ConnectionError. This will cause Reconnect() to fail N times and
+		// succeed the N+1th time.
+		r.reconnectErrs <- reconnectErr
+		r.reconnectErrs <- reconnectErr
+		r.reconnectErrs <- reconnectErr
+		r.errs <- sshutil.ConnectionError
+		// Reconnection failures should not have caused `Stream()` to return, so
+		// the streamErrs channel should be empty.
+		select {
+		case err := <-streamErrs:
+			if err != nil {
+				t.Errorf("stream didn't keep trying to reconnect: %v", err)
+			} else {
+				t.Errorf("unexpected completion of streaming after reconnection failure")
+			}
+		default:
 		}
 	})
 }

@@ -12,6 +12,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"log"
 	"net"
 	"time"
 
@@ -38,6 +39,9 @@ const (
 	// A conventionally used global request name for checking the status of a client
 	// connection to an OpenSSH server.
 	keepAliveOpenSSH = "keepalive@openssh.com"
+
+	// Interval between keep-alive pings.
+	keepAliveInterval = 5 * time.Second
 )
 
 var (
@@ -113,7 +117,9 @@ func dialWithTimeout(network, addr string, config *ssh.ClientConfig, timeout tim
 		c.Close()
 		return nil, err
 	}
-	return ssh.NewClient(c, chans, reqs), nil
+	client := ssh.NewClient(c, chans, reqs)
+	go keepAlive(conn, client)
+	return client, nil
 }
 
 // ConnectToNode connects to the device with the given nodename.
@@ -169,4 +175,28 @@ func network(address net.Addr) (string, error) {
 		return "tcp6", nil // IPv6
 	}
 	return "", fmt.Errorf("cannot infer network for IP address %s", ip.String())
+}
+
+// keepAlive runs for the duration of the client's lifetime, sending periodic
+// pings (with reponse timeouts) to ensure that the client is still connected.
+// If a ping fails, it will close the client and exit.
+func keepAlive(conn net.Conn, client *ssh.Client) {
+	ticker := time.NewTicker(keepAliveInterval)
+	defer ticker.Stop()
+	for range ticker.C {
+		if err := emitKeepAlive(conn, client); err != nil {
+			// Try to close the client. It's possible the keep-alive failed
+			// because the client has already been closed, which is fine – this
+			// close will just silently fail.
+			log.Printf("ssh keep-alive failed, closing client")
+			client.Close()
+			return
+		}
+	}
+}
+
+func emitKeepAlive(conn net.Conn, client *ssh.Client) error {
+	responseTimeout := keepAliveInterval + 15*time.Second
+	conn.SetDeadline(time.Now().Add(responseTimeout))
+	return CheckConnection(client)
 }

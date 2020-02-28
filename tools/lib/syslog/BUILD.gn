@@ -8,17 +8,16 @@ import("//build/go/go_test.gni")
 go_library("syslog") {
   name = "go.fuchsia.dev/fuchsia/tools/lib/syslog"
   deps = [
+    "//third_party/golibs:golang.org/x/crypto",
     "//tools/lib/logger",
+    "//tools/lib/retry",
     "//tools/lib/runner",
     "//tools/net/sshutil",
-    "//third_party/golibs:golang.org/x/crypto",
   ]
 }
 
 go_test("tests") {
   output_name = "syslog_tests"
   gopackages = [ "go.fuchsia.dev/fuchsia/tools/lib/syslog" ]
-  deps = [
-    ":syslog",
-  ]
+  deps = [ ":syslog" ]
 }

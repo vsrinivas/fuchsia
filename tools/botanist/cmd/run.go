@@ -281,6 +281,9 @@ func (r *RunCommand) runAgainstTarget(ctx context.Context, t Target, args []stri
 			return err
 		}
 		defer func() {
+			// TODO(olivernewman): Don't try to close the client if the command
+			// exited because the client was closed by an ssh keep-alive
+			// failure.
 			if err := client.Close(); err != nil {
 				logger.Errorf(ctx, "failed to close SSH client: %v", err)
 			}

@@ -7,23 +7,31 @@ package syslog
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
+	"time"
 
 	"golang.org/x/crypto/ssh"
 
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
+	"go.fuchsia.dev/fuchsia/tools/lib/retry"
 	"go.fuchsia.dev/fuchsia/tools/lib/runner"
 	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
 )
 
-// The program on fuchsia used to stream system logs through a shell, not to be confused
-// with the zircon host tool "loglistener" (no underscore) used to stream zircon-level logs to host.
-const logListener = "/bin/log_listener"
+const (
+	// The program on fuchsia used to stream system logs through a shell, not to
+	// be confused with the zircon host tool "loglistener" (no underscore) used
+	// to stream zircon-level logs to host.
+	logListener = "/bin/log_listener"
+
+	// Time to wait between attempts to reconnect after losing the connection.
+	defaultReconnectInterval = 5 * time.Second
+)
 
 // Syslogger streams systems logs from a Fuchsia instance.
 type Syslogger struct {
-	r sshRunner
+	r                 sshRunner
+	reconnectInterval time.Duration
 }
 
 type sshRunner interface {
@@ -34,7 +42,10 @@ type sshRunner interface {
 
 // NewSyslogger creates a new Syslogger, given an SSH session with a Fuchsia instance.
 func NewSyslogger(client *ssh.Client, config *ssh.ClientConfig) *Syslogger {
-	return &Syslogger{r: runner.NewSSHRunner(client, config)}
+	return &Syslogger{
+		r:                 runner.NewSSHRunner(client, config),
+		reconnectInterval: defaultReconnectInterval,
+	}
 }
 
 // Stream writes system logs to a given writer; it blocks until the stream is
@@ -51,8 +62,18 @@ func (s *Syslogger) Stream(ctx context.Context, output io.Writer) error {
 			return err
 		}
 		logger.Errorf(ctx, "syslog: SSH client unresponsive; will attempt to reconnect and continue streaming: %v", err)
-		if err := s.r.Reconnect(ctx); err != nil {
-			err = fmt.Errorf("syslog: failed to refresh SSH client: %v", err)
+		err = retry.Retry(ctx, retry.NewConstantBackoff(s.reconnectInterval), func() error {
+			err := s.r.Reconnect(ctx)
+			if err != nil {
+				logger.Debugf(ctx, "syslog: failed to refresh SSH client, will try again after %s: %v", s.reconnectInterval, err)
+			} else {
+				logger.Infof(ctx, "syslog: refreshed ssh connection")
+			}
+			return err
+		}, nil)
+		if err != nil {
+			// The context probably got cancelled before we were able to
+			// reconnect.
 			return err
 		}
 		io.WriteString(output, "\n\n<< SYSLOG STREAM INTERRUPTED; RECONNECTING NOW >>\n\n")
