@@ -30,15 +30,6 @@ source_set("json") {
   ]
 }
 
-source_set("package_util") {
-  sources = [
-    "package_util.cc",
-    "package_util.h",
-  ]
-
-  deps = [ "//src/lib/fxl" ]
-}
-
 source_set("module_package_source") {
   sources = [
     "module_package_source.cc",
@@ -48,7 +39,6 @@ source_set("module_package_source") {
   public_deps = [
     ":json",
     ":module_manifest_source",
-    ":package_util",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//src/modular/lib:maxwell_internal",

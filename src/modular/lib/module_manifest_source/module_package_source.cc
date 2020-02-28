@@ -16,7 +16,6 @@
 #include "src/lib/fxl/strings/split_string.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/modular/lib/module_manifest_source/json.h"
-#include "src/modular/lib/module_manifest_source/package_util.h"
 
 namespace modular {
 
