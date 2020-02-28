@@ -723,8 +723,21 @@ const (
 	LinkUp   LinkStatus = 1
 )
 
+func (s LinkStatus) String() string {
+	switch s {
+	case LinkDown:
+		return "LinkDown"
+	case LinkUp:
+		return "LinkUp"
+	default:
+		panic("unreachable")
+	}
+}
+
 // GetStatus returns the underlying device's status.
 func (c *Client) GetStatus() (LinkStatus, error) {
 	status, err := c.device.GetStatus()
-	return LinkStatus(status & ethernet.DeviceStatusOnline), err
+	linkStatus := LinkStatus(status & ethernet.DeviceStatusOnline)
+	syslog.InfoTf(tag, "fuchsia.hardware.ethernet.Device.GetStatus() = %s", linkStatus)
+	return linkStatus, err
 }
