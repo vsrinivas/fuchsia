@@ -64,15 +64,12 @@ Sampler::Sampler(ResourceRecycler* resource_recycler, vk::Format format, vk::Fil
   sampler_info.maxLod = 0.0f;
   if (use_unnormalized_coordinates) {
     sampler_info.mipmapMode = vk::SamplerMipmapMode::eNearest;
-    sampler_info.addressModeU = vk::SamplerAddressMode::eClampToEdge;
-    sampler_info.addressModeV = vk::SamplerAddressMode::eClampToEdge;
-    sampler_info.addressModeW = vk::SamplerAddressMode::eClampToEdge;
   } else {
     sampler_info.mipmapMode = vk::SamplerMipmapMode::eLinear;
-    sampler_info.addressModeU = vk::SamplerAddressMode::eRepeat;
-    sampler_info.addressModeV = vk::SamplerAddressMode::eRepeat;
-    sampler_info.addressModeW = vk::SamplerAddressMode::eRepeat;
   }
+  sampler_info.addressModeU = vk::SamplerAddressMode::eClampToEdge;
+  sampler_info.addressModeV = vk::SamplerAddressMode::eClampToEdge;
+  sampler_info.addressModeW = vk::SamplerAddressMode::eClampToEdge;
 
   sampler_ = ESCHER_CHECKED_VK_RESULT(vk_device().createSampler(sampler_info));
 }
