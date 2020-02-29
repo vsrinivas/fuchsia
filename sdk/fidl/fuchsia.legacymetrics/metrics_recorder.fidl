@@ -4,24 +4,12 @@
 
 library fuchsia.legacymetrics;
 
-/// Gathers metrics events and uploads them to UMA backends for analysis.
+/// Accepts metrics events and uploads them to UMA servers for analysis. Metrics
+/// events are batched and uploaded at a regular interval. For similar behavior,
+/// see Chromium's MetricsService:
+/// https://chromium.googlesource.com/chromium/src.git/+/refs/heads/master/components/metrics/metrics_service.cc
 [Discoverable]
 protocol MetricsRecorder {
-    /// Registers a client's MetricsProvider implementation that this service
-    /// uses to pull metrics as soon as possible.
-    Connect(MetricsProvider provider);
-};
-
-/// Each client that wants to record metrics must implement this interface and
-/// connect it to the MetricsRecorder service. Implementors are required to
-/// cache local metric events until they're requested.
-protocol MetricsProvider {
-    /// Requests the next available batch of events from this provider.
-    /// |max_count| limits the number of metrics returned by this call.
-    /// Note that this method is a "hanging get" - if an implementor of this
-    /// interface has no events to report, it should hang the response until it
-    /// has at least 1 event to report.
-    GetEvents(uint32 max_count) -> (vector<Event>:MAX events);
-
-    // TODO(fxb/46943): Indicate when events are dropped by the provider.
+    /// Processes and enqueues a batch of events for upload.
+    Record(vector<Event>:MAX events) -> ();
 };
