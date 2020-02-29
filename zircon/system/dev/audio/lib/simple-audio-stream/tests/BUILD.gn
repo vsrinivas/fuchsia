@@ -34,7 +34,6 @@ test("sa-unittest") {
   deps = [
     "//zircon/public/lib/audio-driver-proto",
     "//zircon/public/lib/audio-proto-utils",
-    "//zircon/public/lib/audio-utils",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/dev-operation",
@@ -48,6 +47,7 @@ test("sa-unittest") {
     "//zircon/system/dev/audio/lib/simple-audio-stream",
     "//zircon/system/fidl/fuchsia-device:llcpp",
     "//zircon/system/fidl/fuchsia-hardware-audio:llcpp",
+    "//zircon/system/ulib/audio-utils",
   ]
 }
 

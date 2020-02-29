@@ -36,9 +36,9 @@ executable("fx_bin") {
     "//src/media/audio/lib/wav_writer:wav_writer",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
-    "//zircon/public/lib/audio-utils",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/fzl",
     "//zircon/system/fidl/fuchsia-scheduler",
+    "//zircon/system/ulib/audio-utils",
   ]
 }

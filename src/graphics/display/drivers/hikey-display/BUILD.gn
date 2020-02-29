@@ -23,7 +23,6 @@ driver_module("hikey-display") {
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/device-protocol-i2c",
-    "//zircon/public/lib/edid",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/mipi-dsi",
@@ -40,6 +39,7 @@ driver_module("hikey-display") {
     "//zircon/system/banjo/ddk.protocol.sysmem",
     "//zircon/system/dev/lib/device-protocol-platform-device",
     "//zircon/system/fidl/fuchsia-sysmem:c",
+    "//zircon/system/ulib/edid",
   ]
 }
 
@@ -61,7 +61,6 @@ test("hikey-display-test") {
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/device-protocol-i2c",
-    "//zircon/public/lib/edid",
     "//zircon/public/lib/fake_ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl-async-cpp",
@@ -83,6 +82,7 @@ test("hikey-display-test") {
     "//zircon/system/dev/lib/mock-sysmem",
     "//zircon/system/fidl/fuchsia-sysmem:c",
     "//zircon/system/fidl/fuchsia-sysmem:llcpp",
+    "//zircon/system/ulib/edid",
   ]
 }
 

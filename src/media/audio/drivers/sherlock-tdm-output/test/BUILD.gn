@@ -22,7 +22,6 @@ test("sherlock-audio-out-test") {
     "//zircon/public/lib/amlogic",
     "//zircon/public/lib/audio-driver-proto",
     "//zircon/public/lib/audio-proto-utils",
-    "//zircon/public/lib/audio-utils",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/device-protocol-pdev",
@@ -42,6 +41,7 @@ test("sherlock-audio-out-test") {
     "//zircon/system/dev/lib/device-protocol-i2c-channel",
     "//zircon/system/dev/lib/mock-i2c",
     "//zircon/system/fidl/fuchsia-hardware-audio:llcpp",
+    "//zircon/system/ulib/audio-utils",
   ]
 }
 
