@@ -11,6 +11,7 @@
 #include "src/ui/lib/escher/vk/vulkan_device_queues.h"
 #include "src/ui/scenic/lib/gfx/tests/session_test.h"
 #include "src/ui/scenic/lib/gfx/tests/vk_session_test.h"
+#include "src/ui/scenic/lib/gfx/tests/vk_util.h"
 
 using namespace escher;
 
@@ -65,6 +66,56 @@ class HostImageTest : public VkSessionTest {
 
   std::unique_ptr<ImageFactoryListener> listener;
 };
+
+// Test to make sure the Vulkan driver does not crash when we import
+// the same vmo twice.
+VK_TEST_F(HostImageTest, DupVmoHostTest) {
+  zx::vmo vmo;
+  zx_status_t status = zx::vmo::create(kVmoSize, 0u, &vmo);
+  ASSERT_EQ(ZX_OK, status);
+
+  zx::vmo dup_vmo;
+  status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup_vmo);
+  ASSERT_EQ(status, ZX_OK);
+
+  ASSERT_TRUE(Apply(scenic::NewCreateMemoryCmd(kMemoryId, std::move(vmo), kVmoSize,
+                                               fuchsia::images::MemoryType::HOST_MEMORY)));
+
+  ASSERT_TRUE(Apply(scenic::NewCreateMemoryCmd(kMemoryId + 1, std::move(dup_vmo), kVmoSize,
+                                               fuchsia::images::MemoryType::HOST_MEMORY)));
+}
+
+// Test to make sure the Vulkan driver does not crash when we import
+// the same vmo twice when the vmo is using device memory.
+VK_TEST_F(HostImageTest, DupVmoGPUTest) {
+  auto vulkan_queues = CreateVulkanDeviceQueues();
+  auto device = vulkan_queues->vk_device();
+  auto physical_device = vulkan_queues->vk_physical_device();
+
+  const vk::BufferUsageFlags kUsageFlags =
+      vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst |
+      vk::BufferUsageFlagBits::eStorageTexelBuffer | vk::BufferUsageFlagBits::eStorageBuffer |
+      vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eVertexBuffer;
+
+  auto memory_requirements = GetBufferRequirements(device, kVmoSize, kUsageFlags);
+  auto memory = AllocateExportableMemory(
+      device, physical_device, memory_requirements,
+      vk::MemoryPropertyFlagBits::eDeviceLocal);
+
+  // Import valid Vulkan device memory into Scenic.
+  zx::vmo vmo = ExportMemoryAsVmo(device, vulkan_queues->dispatch_loader(), memory);
+
+  zx::vmo dup_vmo;
+  auto status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup_vmo);
+  ASSERT_EQ(status, ZX_OK);
+
+  ASSERT_TRUE(Apply(scenic::NewCreateMemoryCmd(kMemoryId, std::move(vmo), kVmoSize,
+                                               fuchsia::images::MemoryType::VK_DEVICE_MEMORY)));
+
+  ASSERT_TRUE(Apply(scenic::NewCreateMemoryCmd(kMemoryId + 1, std::move(dup_vmo), kVmoSize,
+                                               fuchsia::images::MemoryType::VK_DEVICE_MEMORY)));
+  device.freeMemory(memory);
+}
 
 VK_TEST_F(HostImageTest, FindResource) {
   zx::vmo vmo;
