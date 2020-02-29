@@ -18,6 +18,17 @@
 # personally if you are added or removed from this list. This list is not a
 # "honor role" of respected contributors. It is a list of people who often make
 # certain kinds of changes to the codebase.
+#
+# To become a Global Approver:
+#
+# - The applicant must have a demonstrated ability to make large-scale
+#   changes across the whole codebase.
+#
+# - The applicant may self-nominate or get nominated by another committer.
+#
+# - The applicant must send out a CL notifying all existing global
+#   approvers, and then wait at least one business day for discussion and
+#   approval.
 
 abarth@google.com
 abdulla@google.com
