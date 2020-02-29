@@ -166,9 +166,12 @@ def main():
     if args.host != args.target:
         configure_triple(args.host, args, clang_c_compiler, env)
 
+    rustc_binary = os.path.normpath(os.path.join(os.getcwd(), args.rustc))
+    cargo_binary = os.path.normpath(os.path.join(os.getcwd(), args.cargo))
+
     env["CARGO_TARGET_DIR"] = args.out_dir
     env["CARGO_BUILD_DEP_INFO_BASEDIR"] = args.out_dir
-    env["RUSTC"] = args.rustc
+    env["RUSTC"] = rustc_binary
     env["RUST_BACKTRACE"] = "1"
     env["CC"] = clang_c_compiler
     if args.sysroot:
@@ -181,7 +184,7 @@ def main():
     env["PATH"] = "%s:%s" % (env["PATH"], args.cmake_dir)
 
     call_args = [
-        args.cargo,
+        cargo_binary,
         "build",
         "--color=always",
         "--target=%s" % args.target,

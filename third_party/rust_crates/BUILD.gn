@@ -136,7 +136,7 @@ action("build-third-party") {
   out_deps_data = "${out_dir}/deps_data.json"
   args = [
     "--cargo",
-    rebase_path("${rustc_prefix}/cargo"),
+    "${rustc_prefix}/cargo",
     "--crate-root",
     rebase_path("//third_party/rust_crates"),
     "--host",
