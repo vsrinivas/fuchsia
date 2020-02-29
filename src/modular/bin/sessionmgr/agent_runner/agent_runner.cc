@@ -14,6 +14,7 @@
 #include <utility>
 
 #include "src/lib/fsl/vmo/strings.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/bin/sessionmgr/agent_runner/agent_context_impl.h"
 #include "src/modular/bin/sessionmgr/storage/constants_and_utils.h"
 #include "src/modular/lib/fidl/array_to_string.h"
@@ -45,7 +46,7 @@ void AgentRunner::Teardown(fit::function<void()> callback) {
   // No new agents will be scheduled to run.
   *terminating_ = true;
 
-  FXL_LOG(INFO) << "AgentRunner::Teardown() " << running_agents_.size() << " agents";
+  FX_LOGS(INFO) << "AgentRunner::Teardown() " << running_agents_.size() << " agents";
 
   // No agents were running, we are good to go.
   if (running_agents_.empty()) {
@@ -64,7 +65,7 @@ void AgentRunner::Teardown(fit::function<void()> callback) {
         *called = true;
 
         if (from_timeout) {
-          FXL_LOG(ERROR) << "AgentRunner::Teardown() timed out";
+          FX_LOGS(ERROR) << "AgentRunner::Teardown() timed out";
         }
 
         callback();
@@ -144,11 +145,11 @@ void AgentRunner::RunAgent(const std::string& agent_url) {
   fuchsia::modular::AppConfig agent_config;
   agent_config.url = agent_url;
 
-  FXL_CHECK(running_agents_
-                .emplace(agent_url, std::make_unique<AgentContextImpl>(
-                                        info, std::move(agent_config),
-                                        session_inspect_node_->CreateChild(agent_url)))
-                .second);
+  FX_CHECK(running_agents_
+               .emplace(agent_url, std::make_unique<AgentContextImpl>(
+                                       info, std::move(agent_config),
+                                       session_inspect_node_->CreateChild(agent_url)))
+               .second);
 
   auto run_callbacks_it = run_agent_callbacks_.find(agent_url);
   if (run_callbacks_it != run_agent_callbacks_.end()) {
@@ -178,10 +179,10 @@ void AgentRunner::ConnectToAgent(
 }
 
 void AgentRunner::HandleAgentServiceNotFound(::zx::channel channel, std::string service_name) {
-  FXL_LOG(ERROR) << "No agent found for requested service_name: " << service_name;
+  FX_LOGS(ERROR) << "No agent found for requested service_name: " << service_name;
   zx_status_t status = fidl_epitaph_write(channel.get(), ZX_ERR_NOT_FOUND);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Error writing epitaph ZX_ERR_NOT_FOUND to channel. Status: "
+    FX_LOGS(ERROR) << "Error writing epitaph ZX_ERR_NOT_FOUND to channel. Status: "
                    << zx_status_get_string(status);
   }
 }
@@ -204,17 +205,17 @@ void AgentRunner::ConnectToAgentService(const std::string& requestor_url,
   }
 
   if (!request.has_service_name()) {
-    FXL_LOG(ERROR) << "Missing required service_name in AgentServiceRequest";
+    FX_LOGS(ERROR) << "Missing required service_name in AgentServiceRequest";
     return;
   }
 
   if (!request.has_channel()) {
-    FXL_LOG(ERROR) << "Missing required channel in AgentServiceRequest";
+    FX_LOGS(ERROR) << "Missing required channel in AgentServiceRequest";
     return;
   }
 
   if (!request.has_agent_controller()) {
-    FXL_LOG(ERROR) << "Missing required agent_controller in AgentServiceRequest";
+    FX_LOGS(ERROR) << "Missing required agent_controller in AgentServiceRequest";
     return;
   }
 

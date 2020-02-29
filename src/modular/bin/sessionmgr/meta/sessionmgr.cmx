@@ -10,6 +10,7 @@
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.intl.PropertyProvider",
             "fuchsia.ledger.cloud.CloudProvider",
+            "fuchsia.logger.LogSink",
             "fuchsia.net.NameLookup",
             "fuchsia.posix.socket.Provider",
             "fuchsia.sys.Environment",

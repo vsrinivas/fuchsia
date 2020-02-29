@@ -12,6 +12,7 @@
 #include <trace-provider/provider.h>
 
 #include "src/lib/fxl/macros.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/bin/basemgr/cobalt/cobalt.h"
 #include "src/modular/bin/sessionmgr/sessionmgr_impl.h"
 #include "src/modular/lib/app_driver/cpp/app_driver.h"
@@ -28,6 +29,7 @@ fit::deferred_action<fit::closure> SetupCobalt(const bool enable_cobalt,
 }
 
 int main(int argc, const char** argv) {
+  syslog::InitLogger({"sessionmgr"});
   // Read configurations from file. This sets default values for any
   // configurations that aren't specified in the configuration.
   auto config_reader = modular::ModularConfigReader::CreateFromNamespace();
