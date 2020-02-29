@@ -4,6 +4,7 @@
 
 use hermetic_audio_environment::prelude::*;
 use hermetic_audio_environment::virtual_audio::{with_connected_device, DeviceTestAssets};
+use test_util::assert_near;
 
 const NULL_TOKEN: u64 = zx::sys::ZX_KOID_INVALID as u64;
 const INVALID_TOKEN: u64 = 33;
@@ -118,7 +119,7 @@ async fn set_input_device_gain() -> Result<()> {
 
         assert_eq!(changed_token, assets.token);
         assert_eq!(gain_info.flags, 0);
-        assert!((gain_info.gain_db - -30.0).abs() < std::f32::EPSILON);
+        assert_near!(gain_info.gain_db, -30.0, std::f32::EPSILON);
 
         Ok(())
     })
@@ -147,7 +148,7 @@ async fn set_output_device_gain() -> Result<()> {
 
         assert_eq!(changed_token, assets.token);
         assert_eq!(gain_info.flags, 0);
-        assert!((gain_info.gain_db - -30.0).abs() < std::f32::EPSILON);
+        assert_near!(gain_info.gain_db, -30.0, std::f32::EPSILON);
 
         Ok(())
     })
@@ -159,7 +160,7 @@ async fn set_output_device_gain() -> Result<()> {
 async fn output_devices_initialize_to_unity_gain() -> Result<()> {
     with_connected_device(|assets: DeviceTestAssets<OutputProxy>| async move {
         let (_, gain_info) = assets.enumerator.get_device_gain(assets.token).await?;
-        assert!((0. - gain_info.gain_db).abs() < std::f32::EPSILON);
+        assert_near!(gain_info.gain_db, 0.0, std::f32::EPSILON);
         Ok(())
     })
     .await
@@ -170,7 +171,7 @@ async fn output_devices_initialize_to_unity_gain() -> Result<()> {
 async fn input_devices_initialize_to_unity_gain() -> Result<()> {
     with_connected_device(|assets: DeviceTestAssets<InputProxy>| async move {
         let (_, gain_info) = assets.enumerator.get_device_gain(assets.token).await?;
-        assert!((0. - gain_info.gain_db).abs() < std::f32::EPSILON);
+        assert_near!(gain_info.gain_db, 0.0, std::f32::EPSILON);
         Ok(())
     })
     .await

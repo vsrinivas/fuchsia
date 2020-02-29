@@ -13,6 +13,7 @@ use fuchsia_async as fasync;
 use rkf45;
 use std::cell::RefCell;
 use std::rc::Rc;
+use test_util::assert_near;
 
 #[derive(Clone, Debug)]
 struct SimulatedCpuParams {
@@ -453,7 +454,7 @@ fn test_fast_scale_thermal_dynamics() {
     let power = sim.get_cpu_power(0, operation_rate);
     let target_temp = sim.heat_sink_temperature.0
         + power.0 / sim.thermal_model_params.cpu_to_heat_sink_thermal_rate;
-    assert!((target_temp - sim.cpu_temperature.0).abs() < 1e-3);
+    assert_near!(target_temp, sim.cpu_temperature.0, 1e-3);
 }
 
 // Verifies that when the system runs consistently over the target temeprature, the CPU will
@@ -580,7 +581,7 @@ fn test_average_temperature() {
         }
         cumulative_sum / 100.0
     };
-    assert!((average_temperature - target_temperature.0).abs() < 0.1);
+    assert_near!(average_temperature, target_temperature.0, 0.1);
 }
 
 // Tests for a bug that led to jitter in P-state selection at max load.

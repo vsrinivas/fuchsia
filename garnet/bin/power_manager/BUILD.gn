@@ -38,6 +38,7 @@ rustc_binary("bin") {
 
   test_deps = [
     "//garnet/bin/power_manager/rkf45:lib",
+    "//src/lib/test_util",
     "//third_party/rust_crates:matches",
   ]
 }

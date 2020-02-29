@@ -333,32 +333,7 @@ pub fn rkf45_adaptive(
 mod tests {
     use super::*;
     use std::f64::consts::PI;
-
-    macro_rules! assert_lt {
-        ($x:expr, $y:expr) => {
-            assert!(
-                $x < $y,
-                "assertion {} < {} failed ({} vs. {})",
-                stringify!($x),
-                stringify!($y),
-                $x,
-                $y
-            );
-        };
-    }
-
-    macro_rules! assert_gt {
-        ($x:expr, $y:expr) => {
-            assert!(
-                $x > $y,
-                "assertion {} > {} failed ({} vs. {})",
-                stringify!($x),
-                stringify!($y),
-                $x,
-                $y
-            );
-        };
-    }
+    use test_util::{assert_gt, assert_lt};
 
     // rkf45_step requires ErrorControlOptions as an input. But when performing convergence
     // tests on that function, the options are meaningless. This is named to document that fact.
