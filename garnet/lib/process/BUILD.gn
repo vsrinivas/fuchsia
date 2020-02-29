@@ -18,7 +18,10 @@ source_set("process") {
     "//zircon/system/fidl/fuchsia-process",
   ]
 
-  deps = [ "//zircon/public/lib/fdio" ]
+  deps = [
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+  ]
 }
 
 executable("unittests") {
@@ -31,6 +34,7 @@ executable("unittests") {
     ":process",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/fbl",
   ]
 }
 

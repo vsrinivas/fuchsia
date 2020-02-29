@@ -4,7 +4,9 @@
 
 #include "garnet/lib/process/process_builder.h"
 
+#include <fbl/unique_fd.h>
 #include <fcntl.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/limits.h>
@@ -55,19 +57,17 @@ void ProcessBuilder::LoadVMO(zx::vmo executable) {
 }
 
 zx_status_t ProcessBuilder::LoadPath(const std::string& path) {
-  int fd = open(path.c_str(), O_RDONLY);
-  if (fd < 0)
-    return ZX_ERR_IO;
-
-  zx::vmo vmo;
-  zx::vmo executable_vmo;
-  zx_status_t status = fdio_get_vmo_clone(fd, vmo.reset_and_get_address());
-  close(fd);
+  fbl::unique_fd fd;
+  zx_status_t status = fdio_open_fd(path.c_str(),
+                                    fuchsia::io::OPEN_RIGHT_READABLE |
+                                    fuchsia::io::OPEN_RIGHT_EXECUTABLE,
+                                    fd.reset_and_get_address());
   if (status != ZX_OK) {
     return status;
   }
 
-  status = vmo.replace_as_executable(zx::handle(), &executable_vmo);
+  zx::vmo executable_vmo;
+  status = fdio_get_vmo_exec(fd.get(), executable_vmo.reset_and_get_address());
   if (status != ZX_OK) {
     return status;
   }

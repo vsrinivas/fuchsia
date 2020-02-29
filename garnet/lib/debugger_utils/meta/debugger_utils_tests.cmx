@@ -10,9 +10,6 @@
     "binary": "test/debugger_utils_tests"
   },
   "sandbox": {
-    "features": [
-      "deprecated-ambient-replace-as-executable"
-    ],
     "services": [
       "fuchsia.boot.RootJob",
       "fuchsia.process.Launcher",

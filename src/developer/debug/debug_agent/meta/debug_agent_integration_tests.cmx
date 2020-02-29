@@ -10,9 +10,6 @@
         "binary": "test/debug_agent_integration_tests"
     },
     "sandbox": {
-        "features": [
-            "deprecated-ambient-replace-as-executable"
-        ],
         "services": [
             "fuchsia.boot.RootJob",
             "fuchsia.exception.ProcessLimbo",
