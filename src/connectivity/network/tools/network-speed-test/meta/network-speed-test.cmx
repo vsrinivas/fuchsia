@@ -5,7 +5,7 @@
     "sandbox": {
         "services": [
             "fuchsia.logger.LogSink",
-            "fuchsia.net.oldhttp.HttpService",
+            "fuchsia.net.http.Loader",
             "fuchsia.net.stack.Stack"
         ]
     }

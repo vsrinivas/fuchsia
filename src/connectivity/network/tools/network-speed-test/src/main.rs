@@ -7,7 +7,7 @@ mod opts;
 use {
     crate::opts::Opt,
     anyhow::{format_err, Context, Error},
-    fidl_fuchsia_net_oldhttp::{self as http, HttpServiceProxy},
+    fidl_fuchsia_net_http::{self as http, LoaderProxy},
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
     fuchsia_syslog::{self as syslog, fx_log_info},
@@ -30,7 +30,11 @@ fn main() -> Result<(), Error> {
     let mut test_pass = true;
     if let Err(e) = run_test(opt, &mut test_results) {
         test_pass = false;
-        test_results.error_message = e.to_string();
+        let mut message = Vec::new();
+        for error in e.chain() {
+            message.push(format!("Error: {}", error));
+        }
+        test_results.error_message = message.join("\n");
     }
 
     report_results(&mut test_results);
@@ -45,11 +49,14 @@ fn main() -> Result<(), Error> {
 fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
     let mut exec = fasync::Executor::new().context("error creating event loop")?;
 
-    let http_svc = connect_to_service::<http::HttpServiceMarker>()?;
+    let http_svc = connect_to_service::<http::LoaderMarker>()
+        .context("Unable to connect to fuchsia.net.http.Loader")?;
     test_results.connect_to_http_service = true;
 
-    let url_request = create_url_request(opt.target_url);
-    let ind_download = exec.run_singlethreaded(fetch_and_discard_url(http_svc, url_request))?;
+    let url_request = create_request(opt.target_url);
+    let ind_download = exec
+        .run_singlethreaded(fetch_and_discard_url(http_svc, url_request))
+        .context("Failed to run fetch_and_discard_url")?;
     test_results.base_data_transfer = true;
 
     // TODO (NET-1665): aggregate info from individual results (when we do multiple requests)
@@ -84,46 +91,31 @@ fn report_results(test_results: &TestResults) {
     println!("{}", serde_json::to_string_pretty(&test_results).unwrap());
 }
 
-fn create_url_request<T: Into<String>>(url_string: T) -> http::UrlRequest {
-    http::UrlRequest {
-        url: url_string.into(),
-        method: String::from("GET"),
+fn create_request<T: Into<String>>(url_string: T) -> http::Request {
+    http::Request {
+        url: Some(url_string.into().as_bytes().to_vec()),
+        method: Some(String::from("GET")),
         headers: None,
         body: None,
-        response_body_buffer_size: 0,
-        auto_follow_redirects: true,
-        cache_mode: http::CacheMode::BypassCache,
-        response_body_mode: http::ResponseBodyMode::Stream,
     }
 }
 
 // TODO (NET-1663): move to helper method
 // TODO (NET-1664): verify checksum on data received
 async fn fetch_and_discard_url(
-    http_service: HttpServiceProxy,
-    mut url_request: http::UrlRequest,
+    loader_proxy: LoaderProxy,
+    request: http::Request,
 ) -> Result<IndividualDownload, anyhow::Error> {
-    // Create a UrlLoader instance
-    let (s, p) = zx::Channel::create().context("failed to create zx channel")?;
-    let proxy = fasync::Channel::from_channel(p).context("failed to make async channel")?;
-
-    let loader_server = fidl::endpoints::ServerEnd::<http::UrlLoaderMarker>::new(s);
-    http_service.create_url_loader(loader_server)?;
-
-    let loader_proxy = http::UrlLoaderProxy::new(proxy);
     let start_time = zx::Time::get(zx::ClockId::Monotonic);
-    let response = loader_proxy.start(&mut url_request).await?;
+    let response =
+        loader_proxy.fetch(request).await.context("Error while calling Loader::Fetch")?;
 
     if let Some(e) = response.error {
-        return Err(format_err!(
-            "UrlLoaderProxy error - code:{} ({})",
-            e.code,
-            e.description.unwrap_or("".into())
-        ));
+        return Err(format_err!("LoaderProxy error - {:?}", e));
     }
 
-    let socket = match response.body.map(|x| *x) {
-        Some(http::UrlBody::Stream(s)) => fasync::Socket::from_socket(s)?,
+    let socket = match response.body {
+        Some(s) => fasync::Socket::from_socket(s).context("Error while wrapping body socket")?,
         _ => {
             return Err(format_err!(
                 "failed to read UrlBody from the stream - error: {}",
@@ -134,7 +126,8 @@ async fn fetch_and_discard_url(
 
     // discard the bytes
     let mut stdio_sink = AllowStdIo::new(::std::io::sink());
-    let bytes_received = copy(socket, &mut stdio_sink).await?;
+    let bytes_received =
+        copy(socket, &mut stdio_sink).await.context("Failed to read bytes from the socket")?;
     let stop_time = zx::Time::get(zx::ClockId::Monotonic);
 
     let time_nanos = (stop_time - start_time).into_nanos() as u64;

@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "test/network_speed_test_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Loader"
+        ]
+    }
+}

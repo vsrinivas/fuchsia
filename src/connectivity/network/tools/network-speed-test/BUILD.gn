@@ -5,12 +5,17 @@
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 
+group("tests") {
+  testonly = true
+  deps = [ "integration:tests" ]
+}
+
 rustc_binary("bin") {
   name = "network_speed_test"
   edition = "2018"
 
   deps = [
-    "//sdk/fidl/fuchsia.net.oldhttp:fuchsia.net.oldhttp-rustc",
+    "//sdk/fidl/fuchsia.net.http:fuchsia.net.http-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

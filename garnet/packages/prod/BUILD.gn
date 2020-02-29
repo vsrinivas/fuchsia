@@ -342,7 +342,7 @@ group("bluetooth_a2dp") {
 
 group("network-speed-test") {
   testonly = true
-  public_deps = [ "//garnet/bin/network-speed-test" ]
+  public_deps = [ "//src/connectivity/network/tools/network-speed-test" ]
 }
 
 group("sbase") {
