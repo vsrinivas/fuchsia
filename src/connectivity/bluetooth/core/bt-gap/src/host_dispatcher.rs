@@ -593,7 +593,10 @@ impl HostDispatcher {
         });
 
         let mut state = self.state.write();
-        let node = state.inspect.peers().create_child(format!("peer {}", peer.id));
+
+        let node = state.inspect.peers().create_child(unique_name("peer_"));
+        node.record_string("peer_id", peer.id.to_string());
+
         let peer = Inspectable::new(peer, node);
         let _drop_old_value = state.peers.insert(peer.id.clone(), peer);
         state.inspect.peer_count.set(state.peers.len() as u64);
@@ -967,7 +970,8 @@ mod tests {
             system: contains {
                 peer_count: 1u64,
                 peers: {
-                    "peer 0000000000000001": contains {
+                    "peer_0": contains {
+                        peer_id: peer_id.to_string(),
                         technology: "LowEnergy"
                     }
                 }
