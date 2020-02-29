@@ -34,8 +34,10 @@ static uint8_t acpi_checksum(void* table, uint32_t length) {
 }
 
 static void acpi_header(ACPI_TABLE_HEADER* header, const char* table_id, const char* signature,
-                        uint32_t length) {
+                        uint8_t revision, uint32_t length) {
+  memset(header, 0, sizeof(*header));
   memcpy(header->Signature, signature, ACPI_NAME_SIZE);
+  header->Revision = revision;
   header->Length = length;
   memcpy(header->OemId, "ZX", 2);
   memcpy(header->OemTableId, table_id, ACPI_OEM_TABLE_ID_SIZE);
@@ -78,7 +80,6 @@ static zx_status_t create_madt(ACPI_TABLE_MADT* madt, zx_vaddr_t io_apic_addr, u
   uint32_t table_size =
       static_cast<uint32_t>(sizeof(ACPI_TABLE_MADT) + (num_cpus * sizeof(ACPI_MADT_LOCAL_APIC)) +
                             sizeof(ACPI_MADT_IO_APIC));
-  acpi_header(&madt->Header, "ZX MADT", ACPI_SIG_MADT, table_size);
 
   uint32_t offset = sizeof(ACPI_TABLE_MADT);
   for (uint8_t id = 0; id < num_cpus; ++id) {
@@ -93,6 +94,9 @@ static zx_status_t create_madt(ACPI_TABLE_MADT* madt, zx_vaddr_t io_apic_addr, u
   io_apic->Reserved = 0;
   io_apic->Address = static_cast<uint32_t>(io_apic_addr);
   io_apic->GlobalIrqBase = 0;
+
+  // add header, computing checksum for the entire table
+  acpi_header(&madt->Header, "ZX MADT", ACPI_SIG_MADT, 4, table_size);
 
   *actual = table_size;
   return ZX_OK;
@@ -123,7 +127,7 @@ zx_status_t create_acpi_table(const AcpiConfig& cfg, const PhysMem& phys_mem) {
   fadt->Pm1aControlBlock = kPm1ControlPort;
   fadt->Pm1ControlLength = ACPI_PM1_REGISTER_WIDTH / 8;
   // Table ID must match RSDT.
-  acpi_header(&fadt->Header, "ZX ACPI", ACPI_SIG_FADT, sizeof(ACPI_TABLE_FADT));
+  acpi_header(&fadt->Header, "ZX ACPI", ACPI_SIG_FADT, 6, sizeof(ACPI_TABLE_FADT));
 
   // DSDT.
   uint32_t actual;
@@ -152,6 +156,6 @@ zx_status_t create_acpi_table(const AcpiConfig& cfg, const PhysMem& phys_mem) {
   rsdt->TableOffsetEntry[1] = madt_off;
   rsdt->TableOffsetEntry[2] = mcfg_off;
   // Table ID must match FADT.
-  acpi_header(&rsdt->Header, "ZX ACPI", ACPI_SIG_RSDT, rsdt_length);
+  acpi_header(&rsdt->Header, "ZX ACPI", ACPI_SIG_RSDT, 1, rsdt_length);
   return ZX_OK;
 }
