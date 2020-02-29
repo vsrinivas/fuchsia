@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::{cell::RefCell, collections::HashMap, mem, u32};
+use std::{cell::RefCell, collections::HashMap, mem, ptr, u32};
 
 use euclid::{Rect, Size2D};
 use fidl::endpoints::{ClientEnd, ServerEnd};
@@ -82,13 +82,14 @@ fn buffer_collection_constraints(width: u32, height: u32) -> BufferCollectionCon
 }
 
 fn copy_region_to_image(
-    src: &mut [u8],
+    src_ptr: *mut u8,
     src_width: usize,
     src_height: usize,
     src_bytes_per_row: usize,
-    dst: &mut [u8],
+    dst_ptr: *mut u8,
+    dst_len: usize,
     dst_bytes_per_row: usize,
-    region: &CopyRegion,
+    region: &CopyRegion
 ) {
     let (mut y, dy) = if region.dst_offset.y < region.src_offset.y {
         // Copy forward.
@@ -112,9 +113,12 @@ fn copy_region_to_image(
             let src_offset = src_y as usize * src_bytes_per_row + src_x * 4;
             let dst_offset = dst_y as usize * dst_bytes_per_row + dst_x * 4;
 
-            assert!((dst_offset + dst_bytes_per_row) <= dst.len());
-            dst[dst_offset..dst_offset + mem::size_of::<u32>()]
-                .copy_from_slice(&src[src_offset..src_offset + mem::size_of::<u32>()]);
+            assert!((dst_offset + dst_bytes_per_row) <= dst_len);
+            let src = (src_ptr as usize).checked_add(src_offset).unwrap() as *mut u8;
+            let dst = (dst_ptr as usize).checked_add(dst_offset).unwrap() as *mut u8;
+            unsafe {
+                ptr::copy(src, dst, (columns * 4) as usize);
+            }
 
             width -= columns;
             dst_x += columns;
@@ -225,23 +229,29 @@ impl Context<Mold> for MoldContext {
         }
 
         if let Some(PreCopy { image: src_image_id, copy_region }) = ext.pre_copy {
-            let mut src_image = self
+            let dst_slice = image.as_mut_slice();
+            let dst_ptr = dst_slice.as_mut_ptr();
+            let dst_len = dst_slice.len();
+            let dst_bytes_per_row = image.bytes_per_row();
+
+            let src_image = self
                 .images
                 .get(src_image_id.0 as usize)
                 .expect(&format!("invalid PreCopy image {:?}", src_image_id))
-                .borrow_mut();
+                .try_borrow_mut();
 
-            let src_bytes_per_row = src_image.bytes_per_row();
-            let dst_bytes_per_row = image.bytes_per_row();
-            let src_slice = src_image.as_mut_slice();
-            let dst_slice = image.as_mut_slice();
+            let (src_ptr, src_bytes_per_row) = match src_image {
+                Ok(mut image) => (image.as_mut_slice().as_mut_ptr(), image.bytes_per_row()),
+                Err(_) => (image.as_mut_slice().as_mut_ptr(), image.bytes_per_row()),
+            };
 
             copy_region_to_image(
-                src_slice,
+                src_ptr,
                 width,
                 height,
                 src_bytes_per_row,
-                dst_slice,
+                dst_ptr,
+                dst_len,
                 dst_bytes_per_row,
                 &copy_region,
             );
@@ -264,11 +274,12 @@ impl Context<Mold> for MoldContext {
             let dst_slice = dst_image.as_mut_slice();
 
             copy_region_to_image(
-                src_slice,
+                src_slice.as_mut_ptr(),
                 width,
                 height,
                 src_bytes_per_row,
-                dst_slice,
+                dst_slice.as_mut_ptr(),
+                dst_slice.len(),
                 dst_bytes_per_row,
                 &copy_region,
             );
