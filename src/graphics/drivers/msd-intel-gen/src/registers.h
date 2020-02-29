@@ -545,6 +545,12 @@ class CacheMode1 {
   static constexpr uint32_t kPartialResolveInVcDisable = 1 << 1;
 };
 
+class RegisterOffset7300 {
+ public:
+  static constexpr uint32_t kOffset = 0x7300;
+  static constexpr uint16_t kWaForceEnableNonCoherent = 1 << 4;
+};
+
 }  // namespace registers
 
 #endif  // REGISTERS_H

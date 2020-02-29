@@ -8,7 +8,7 @@
 #include "registers.h"
 
 namespace {
-constexpr uint32_t kRegisterWriteCount = 1;
+constexpr uint32_t kRegisterWriteCount = 2;
 }
 
 uint64_t Workarounds::InstructionBytesRequired() {
@@ -24,11 +24,17 @@ bool Workarounds::Init(magma::InstructionWriter* writer, EngineCommandStreamerId
   std::vector<uint32_t> offsets;
   std::vector<uint32_t> values;
 
-  // Resolves a GPU hang seen in Vulkan conformance
+  // Workaround KBL-0556: Resolves a GPU hang seen in Vulkan conformance
   //(dEQP-VK.renderpass.suballocation.multisample.d24_unorm_s8_uint.samples_2)
   offsets.push_back(registers::CacheMode1::kOffset);
   uint32_t value = registers::CacheMode1::k4x4StcOptimizationDisable |
                    registers::CacheMode1::kPartialResolveInVcDisable;
+  values.push_back((value << 16) | value);
+
+  // Workaround KBL-0550: Resolves failures seen in Vulkan conformance; one example:
+  // dEQP-VK.memory_model.message_passing.ext.u32.coherent.fence_fence.atomicwrite.device.payload_nonlocal.workgroup.guard_local.physbuffer.comp
+  value = registers::RegisterOffset7300::kWaForceEnableNonCoherent;
+  offsets.push_back(registers::RegisterOffset7300::kOffset);
   values.push_back((value << 16) | value);
 
   DASSERT(offsets.size() == kRegisterWriteCount);
