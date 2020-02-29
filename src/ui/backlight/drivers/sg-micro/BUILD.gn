@@ -20,7 +20,6 @@ driver_module("sg-micro") {
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/device-protocol-i2c",
-    "//zircon/public/lib/device-protocol-pdev",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/mmio",
@@ -29,6 +28,7 @@ driver_module("sg-micro") {
     "//zircon/system/banjo/ddk.protocol.gpio",
     "//zircon/system/banjo/ddk.protocol.i2c",
     "//zircon/system/dev/lib/device-protocol-i2c-channel",
+    "//zircon/system/dev/lib/device-protocol-pdev",
   ]
 }
 
@@ -49,7 +49,6 @@ test("sgm37603a-test") {
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/device-protocol-i2c",
-    "//zircon/public/lib/device-protocol-pdev",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fidl",
@@ -58,6 +57,7 @@ test("sgm37603a-test") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/banjo/ddk.protocol.gpio",
     "//zircon/system/dev/lib/device-protocol-i2c-channel",
+    "//zircon/system/dev/lib/device-protocol-pdev",
     "//zircon/system/dev/lib/mock-i2c",
   ]
 }

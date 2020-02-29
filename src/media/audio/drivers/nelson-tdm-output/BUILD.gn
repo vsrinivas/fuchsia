@@ -23,7 +23,6 @@ driver_module("nelson-tdm-output") {
     "//zircon/public/lib/audio-proto-utils",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
-    "//zircon/public/lib/device-protocol-pdev",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/hwreg",
@@ -35,6 +34,7 @@ driver_module("nelson-tdm-output") {
     "//zircon/system/banjo/ddk.protocol.codec",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/dev/audio/lib/simple-audio-stream",
+    "//zircon/system/dev/lib/device-protocol-pdev",
   ]
 }
 

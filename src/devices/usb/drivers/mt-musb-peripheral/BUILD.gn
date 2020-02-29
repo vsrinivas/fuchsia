@@ -18,7 +18,6 @@ driver_module("mt-musb-peripheral") {
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/dev-operation",
-    "//zircon/public/lib/device-protocol-pdev",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/hwreg",
@@ -33,6 +32,7 @@ driver_module("mt-musb-peripheral") {
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.usb",
     "//zircon/system/banjo/ddk.protocol.usb.request",
+    "//zircon/system/dev/lib/device-protocol-pdev",
     "//zircon/system/dev/lib/device-protocol-platform-device",
   ]
 }

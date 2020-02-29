@@ -25,7 +25,6 @@ driver_module("syn-dma") {
     "//zircon/public/lib/as370",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
-    "//zircon/public/lib/device-protocol-pdev",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/hwreg",
@@ -36,6 +35,7 @@ driver_module("syn-dma") {
     "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.shareddma",
+    "//zircon/system/dev/lib/device-protocol-pdev",
     "//zircon/system/dev/lib/device-protocol-platform-device",
     "//zircon/system/dev/lib/qcom",
   ]
@@ -64,7 +64,6 @@ test("syn-dhub-test") {
     "//zircon/public/lib/as370",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
-    "//zircon/public/lib/device-protocol-pdev",
     "//zircon/public/lib/fake_ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
@@ -80,6 +79,7 @@ test("syn-dhub-test") {
     "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.shareddma",
+    "//zircon/system/dev/lib/device-protocol-pdev",
     "//zircon/system/dev/lib/device-protocol-platform-device",
     "//zircon/system/dev/lib/qcom",
   ]

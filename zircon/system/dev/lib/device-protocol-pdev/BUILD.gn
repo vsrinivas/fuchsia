@@ -2,23 +2,35 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36548.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/zx_library.gni")
+
 zx_library("device-protocol-pdev") {
   sdk = "source"
   sdk_headers = [ "lib/device-protocol/pdev.h" ]
   sources = [ "pdev.cc" ]
   public_deps = [
     # <lib/device-protocol/pdev.h> has #include <ddktl/protocol/platform/device.h>.
-    "$zx/system/banjo/ddk.protocol.platform.device",
+    "//zircon/system/banjo/ddk.protocol.platform.device",
 
     # Banjo protocols have #include <ddk/driver.h>.
-    "$zx/system/ulib/ddk:headers",
+    "//zircon/public/lib/ddk",
 
     # Banjo protocols have #include <ddktl/device-internal.h>.
-    "$zx/system/ulib/ddktl:headers",
+    "//zircon/public/lib/ddktl",
   ]
 
   deps = [
     # pdev.cpp has #include <lib/mmio/mmio.h>.
-    "$zx/system/dev/lib/mmio",
+    "//zircon/public/lib/mmio",
   ]
 }

@@ -59,7 +59,6 @@ driver_module("mali-009-driver") {
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
-    "//zircon/public/lib/device-protocol-pdev",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl-utils",
     "//zircon/public/lib/fit",
@@ -75,6 +74,7 @@ driver_module("mali-009-driver") {
     "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.sysmem",
+    "//zircon/system/dev/lib/device-protocol-pdev",
     "//zircon/system/dev/lib/device-protocol-platform-device",
     "//zircon/system/fidl/fuchsia-sysmem:fuchsia-sysmem_c",
   ]

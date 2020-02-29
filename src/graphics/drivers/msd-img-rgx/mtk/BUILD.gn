@@ -44,11 +44,11 @@ template("driver_source_template") {
       "//third_party/imgtec-pvr-rgx-km:src",
       "//zircon/public/lib/ddk",
       "//zircon/public/lib/ddktl",
-      "//zircon/public/lib/device-protocol-pdev",
       "//zircon/public/lib/fidl-utils",
       "//zircon/public/lib/mmio",
       "//zircon/system/banjo/ddk.protocol.clock",
       "//zircon/system/banjo/ddk.protocol.platform.device",
+      "//zircon/system/dev/lib/device-protocol-pdev",
       "//zircon/system/dev/lib/device-protocol-platform-device",
     ]
     if (invoker.developer_build) {
