@@ -31,9 +31,6 @@ executable("unittest_bin") {
     ":wav_writer",
     "//src/lib/fxl/test:gtest_main_with_syslog",
   ]
-
-  # TODO(46534): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 test_package("audio_wav_writer_unittests") {
