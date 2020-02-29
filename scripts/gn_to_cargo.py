@@ -114,6 +114,13 @@ def write_toml_file(fout, metadata, project, target, lookup):
     else:
         is_proc_macro = ""
 
+    features = []
+    feature_pat = re.compile(r"--cfg=feature=\"(.*)\"$")
+    for flag in metadata["rustflags"]:
+        match = feature_pat.match(flag)
+        if match:
+            features.append(match.group(1))
+
     crate_type = "rlib"
     package_name = lookup_gn_pkg_name(project, target)
 
@@ -133,11 +140,18 @@ def write_toml_file(fout, metadata, project, target, lookup):
             "rust_crates_path": rust_crates_path,
         })
 
-    fout.write("[patch.crates-io]\n")
+    if features:
+        fout.write("\n[features]\n")
+        fout.write("default = %s\n" % json.dumps(features))
+        for feature in features:
+            fout.write("%s = []\n" % feature)
+
+    fout.write("\n[patch.crates-io]\n")
     for patch in project.patches:
         path = project.patches[patch]["path"]
         fout.write(
             "%s = { path = \"%s/%s\" }\n" % (patch, rust_crates_path, path))
+    fout.write("\n")
 
     # collect all dependencies
     deps = []
@@ -148,7 +162,7 @@ def write_toml_file(fout, metadata, project, target, lookup):
         # TODO remove this when all things use GN. temporary hack
         if "third_party/rust_crates:" in dep:
             match = re.search("rust_crates:([\w-]*)", dep)
-            third_party_name = str(match.groups()[0])
+            third_party_name = str(match.group(1))
             dep_data = project.third_party[third_party_name]
             features = None
             default_features = None
