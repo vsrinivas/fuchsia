@@ -902,13 +902,13 @@ zx_status_t EfiDevicePartitioner::AddPartition(
       minimum_size_bytes = 16 * kMebibyte;
       break;
     case Partition::kZirconA:
-      minimum_size_bytes = 64 * kMebibyte;
+      minimum_size_bytes = 128 * kMebibyte;
       break;
     case Partition::kZirconB:
-      minimum_size_bytes = 64 * kMebibyte;
+      minimum_size_bytes = 128 * kMebibyte;
       break;
     case Partition::kZirconR:
-      minimum_size_bytes = 96 * kMebibyte;
+      minimum_size_bytes = 192 * kMebibyte;
       break;
     case Partition::kVbMetaA:
       minimum_size_bytes = 64 * kKibibyte;
