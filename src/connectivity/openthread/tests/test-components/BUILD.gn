@@ -74,7 +74,10 @@ rustc_test("ot-stack-ncp-ver-query") {
   name = "ot_stack_ncp_ver_query"
   source_root = "real-device/ot_stack_ncp_ver_query.rs"
   edition = "2018"
-  deps = [ "//src/connectivity/openthread/tests/lib" ]
+  deps = [
+    "//src/connectivity/openthread/tests/lib",
+    "//src/connectivity/openthread/tests/test-code",
+  ]
   non_rust_deps = [ "//zircon/public/lib/syslog" ]
 }
 
@@ -119,6 +122,7 @@ rustc_test("ot-stack-ncp-ver-query-mock") {
   deps = [
     "//sdk/fidl/fuchsia.lowpan.spinel:fuchsia.lowpan.spinel-rustc",
     "//src/connectivity/openthread/tests/lib",
+    "//src/connectivity/openthread/tests/test-code",
   ]
   non_rust_deps = [ "//zircon/public/lib/syslog" ]
 }
