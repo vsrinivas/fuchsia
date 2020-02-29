@@ -128,7 +128,6 @@ test("minfs-integration") {
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fdio-caller",
     "//zircon/public/lib/fs-management",
-    "//zircon/public/lib/fs-test-utils",
     "//zircon/public/lib/fs_test_support",
     "//zircon/public/lib/memfs",
     "//zircon/public/lib/minfs",
@@ -137,6 +136,7 @@ test("minfs-integration") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-io:llcpp",
     "//zircon/system/fidl/fuchsia-minfs:llcpp",
+    "//zircon/system/ulib/fs-test-utils",
   ]
 }
 

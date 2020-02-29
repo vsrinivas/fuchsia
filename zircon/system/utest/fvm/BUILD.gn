@@ -55,7 +55,6 @@ test("fvm") {
     "//zircon/public/lib/fs",
     "//zircon/public/lib/fs-management",
     "//zircon/public/lib/fvm",
-    "//zircon/public/lib/fvm-devices",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/gpt",
     "//zircon/public/lib/memfs",
@@ -71,6 +70,7 @@ test("fvm") {
     "//zircon/system/fidl/fuchsia-device:llcpp",
     "//zircon/system/fidl/fuchsia-hardware-block-volume:c",
     "//zircon/system/fidl/fuchsia-io:c",
+    "//zircon/system/ulib/fvm-devices",
   ]
 }
 
@@ -94,8 +94,8 @@ test("fvm-integration") {
   deps = [
     "//zircon/public/lib/devmgr-integration-test",
     "//zircon/public/lib/devmgr-launcher",
-    "//zircon/public/lib/fvm-devices",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fvm-devices",
   ]
 }
 

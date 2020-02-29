@@ -68,20 +68,20 @@ test("blobfs-unit") {
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/blobfs",
+    "//zircon/public/lib/buffer",
+    "//zircon/public/lib/cksum",
     "//zircon/public/lib/fake-device",
     "//zircon/public/lib/fidl-utils",
     "//zircon/public/lib/fs-management",
-    "//zircon/public/lib/fs-test-utils",
     "//zircon/public/lib/id_allocator",
-    "//zircon/public/lib/buffer",
+    "//zircon/public/lib/lz4",
     "//zircon/public/lib/operation",
+    "//zircon/public/lib/safemath",
     "//zircon/public/lib/sync",
+    "//zircon/public/lib/zstd",
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-blobfs:c",
-    "//zircon/public/lib/cksum",
-    "//zircon/public/lib/lz4",
-    "//zircon/public/lib/safemath",
-    "//zircon/public/lib/zstd",
+    "//zircon/system/ulib/fs-test-utils",
   ]
 
   include_dirs = [ ".." ]
@@ -102,10 +102,10 @@ source_set("integration-fixtures") {
   deps = [
     "//zircon/public/lib/blobfs",
     "//zircon/public/lib/fdio",
-    "//zircon/public/lib/fs-test-utils",
     "//zircon/public/lib/fs_test_support",
     "//zircon/public/lib/fvm",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fs-test-utils",
   ]
 }
 
@@ -139,7 +139,6 @@ test("blobfs-integration") {
     "//zircon/public/lib/blobfs",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fdio-caller",
-    "//zircon/public/lib/fs-test-utils",
     "//zircon/public/lib/fs_test_support",
     "//zircon/public/lib/fvm",
     "//zircon/public/lib/fzl",
@@ -149,6 +148,7 @@ test("blobfs-integration") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-blobfs:c",
     "//zircon/system/fidl/fuchsia-fs:llcpp",
+    "//zircon/system/ulib/fs-test-utils",
   ]
 
   include_dirs = [ ".." ]
@@ -182,20 +182,20 @@ test("blobfs-large-integration") {
     "//zircon/public/lib/blobfs",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fdio-caller",
-    "//zircon/public/lib/fs-test-utils",
     "//zircon/public/lib/fs_test_support",
     "//zircon/public/lib/fvm",
     "//zircon/public/lib/memfs",
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-sysinfo:llcpp",
+    "//zircon/system/ulib/fs-test-utils",
   ]
 }
 
 fuzzer("zstd-fuzzer") {
   sources = [ "zstd-fuzzer.cc" ]
   deps = [
-    "//zircon/public/lib/blobfs",
     "//third_party/zstd",
+    "//zircon/public/lib/blobfs",
   ]
   include_dirs = [ ".." ]
 }
@@ -212,8 +212,8 @@ fuzzer("lz4-fuzzer") {
 fuzzer("zstd-seekable-symmetric-fuzzer") {
   sources = [ "zstd-seekable-symmetric-fuzzer.cc" ]
   deps = [
-    "//zircon/public/lib/blobfs",
     "//third_party/zstd:zstdseek",
+    "//zircon/public/lib/blobfs",
   ]
   include_dirs = [ ".." ]
 }
@@ -221,8 +221,8 @@ fuzzer("zstd-seekable-symmetric-fuzzer") {
 fuzzer("zstd-seekable-fuzzer") {
   sources = [ "zstd-seekable-fuzzer.cc" ]
   deps = [
-    "//zircon/public/lib/blobfs",
     "//third_party/zstd:zstdseek",
+    "//zircon/public/lib/blobfs",
   ]
   include_dirs = [ ".." ]
 }

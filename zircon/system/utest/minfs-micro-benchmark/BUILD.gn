@@ -40,7 +40,6 @@ test("minfs-micro-benchmark") {
     "//zircon/public/lib/fit",
     "//zircon/public/lib/fs",
     "//zircon/public/lib/fs-management",
-    "//zircon/public/lib/fs-test-utils",
     "//zircon/public/lib/fvm",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/gpt",
@@ -58,6 +57,7 @@ test("minfs-micro-benchmark") {
     "//zircon/system/fidl/fuchsia-io:c",
     "//zircon/system/fidl/fuchsia-io:c",
     "//zircon/system/fidl/fuchsia-minfs:c",
+    "//zircon/system/ulib/fs-test-utils",
   ]
 }
 

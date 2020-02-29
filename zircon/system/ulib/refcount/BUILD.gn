@@ -2,16 +2,28 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36548.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/zx_library.gni")
+
 zx_library("refcount") {
   sdk = "source"
   sdk_headers = [ "refcount/blocking_refcount.h" ]
   sources = [ "blocking_refcount.cc" ]
   public_deps = [
-    "$zx/system/ulib/sync:headers",
-    "$zx/system/ulib/zx:headers",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zx",
   ]
   deps = [
-    "$zx/system/ulib/sync",
-    "$zx/system/ulib/zx",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zx",
   ]
 }

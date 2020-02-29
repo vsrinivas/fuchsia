@@ -28,10 +28,10 @@ test("fallback-rtc") {
     "//zircon/public/lib/devmgr-integration-test",
     "//zircon/public/lib/driver-integration-test",
     "//zircon/public/lib/fdio",
-    "//zircon/public/lib/rtc",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-hardware-rtc:c",
+    "//zircon/system/ulib/rtc",
   ]
 }
 

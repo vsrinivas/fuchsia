@@ -40,7 +40,6 @@ source_set("common") {
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/image-format",
     "//zircon/public/lib/image-format-llcpp",
-    "//zircon/public/lib/mipi-dsi",
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
@@ -53,6 +52,7 @@ source_set("common") {
     "//zircon/system/dev/lib/device-protocol-pdev",
     "//zircon/system/dev/lib/device-protocol-platform-device",
     "//zircon/system/fidl/fuchsia-sysmem:llcpp",
+    "//zircon/system/ulib/mipi-dsi",
   ]
 }
 

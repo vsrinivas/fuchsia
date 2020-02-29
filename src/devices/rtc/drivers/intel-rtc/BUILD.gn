@@ -16,8 +16,8 @@ driver_module("intel-rtc") {
   sources = [ "intel-rtc.c" ]
   deps = [
     "//zircon/public/lib/ddk",
-    "//zircon/public/lib/rtc",
     "//zircon/system/fidl/fuchsia-hardware-rtc:c",
+    "//zircon/system/ulib/rtc",
   ]
 }
 

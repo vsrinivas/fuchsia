@@ -8,6 +8,6 @@ executable("blobfs-load-generator") {
   deps = [
     "//zircon/public/lib/digest",
     "//zircon/public/lib/fs",
-    "//zircon/public/lib/fs-test-utils",
+    "//zircon/system/ulib/fs-test-utils",
   ]
 }

@@ -14,10 +14,10 @@ driver_module("pl031-rtc") {
   sources = [ "pl031-rtc.c" ]
   deps = [
     "//zircon/public/lib/ddk",
-    "//zircon/public/lib/rtc",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/dev/lib/device-protocol-platform-device",
     "//zircon/system/fidl/fuchsia-hardware-rtc:c",
+    "//zircon/system/ulib/rtc",
   ]
 }
 

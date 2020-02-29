@@ -2,9 +2,21 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36548.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/zx_library.gni")
+
 zx_library("mipi-dsi") {
   sdk = "source"
   sdk_headers = [ "lib/mipi-dsi/mipi-dsi.h" ]
   sources = [ "mipi-dsi.cc" ]
-  deps = [ "$zx/system/banjo/ddk.protocol.dsiimpl" ]
+  deps = [ "//zircon/system/banjo/ddk.protocol.dsiimpl" ]
 }

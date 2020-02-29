@@ -2,14 +2,25 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36548.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/zx_library.gni")
+
 zx_library("rtc") {
   sdk = "source"
   sdk_headers = [ "librtc.h" ]
   sources = [ "librtc.c" ]
   deps = [
-    "$zx/system/fidl/fuchsia-hardware-rtc:c",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/driver",
-    "$zx/system/ulib/zircon",
+    "//src/devices/lib/driver",
+    "//zircon/public/lib/ddk",
+    "//zircon/system/fidl/fuchsia-hardware-rtc:c",
   ]
 }

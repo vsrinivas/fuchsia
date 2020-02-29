@@ -19,7 +19,6 @@ driver_module("dsi-dw") {
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/hwreg",
-    "//zircon/public/lib/mipi-dsi",
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
@@ -32,6 +31,7 @@ driver_module("dsi-dw") {
     "//zircon/system/dev/lib/device-protocol-pdev",
     "//zircon/system/dev/lib/device-protocol-platform-device",
     "//zircon/system/fidl/fuchsia-sysmem:c",
+    "//zircon/system/ulib/mipi-dsi",
   ]
 }
 

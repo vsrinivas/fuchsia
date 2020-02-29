@@ -38,7 +38,6 @@ test("fs-management") {
     "//zircon/public/lib/fdio-caller",
     "//zircon/public/lib/fs",
     "//zircon/public/lib/fs-management",
-    "//zircon/public/lib/fs-test-utils",
     "//zircon/public/lib/fvm",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/gpt",
@@ -51,6 +50,7 @@ test("fs-management") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-io:c",
+    "//zircon/system/ulib/fs-test-utils",
   ]
 }
 
