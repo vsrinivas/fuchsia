@@ -43,6 +43,15 @@ Session::Session(fuchsia::ui::scenic::Scenic* scenic, async_dispatcher_t* dispat
                         session_listener_binding_.NewBinding(dispatcher));
 }
 
+Session::Session(fuchsia::ui::scenic::Scenic* scenic,
+                 fidl::InterfaceRequest<fuchsia::ui::views::Focuser> view_focuser,
+                 async_dispatcher_t* dispatcher)
+    : session_listener_binding_(this) {
+  ZX_DEBUG_ASSERT(scenic);
+  scenic->CreateSession2(session_.NewRequest(dispatcher),
+                         session_listener_binding_.NewBinding(dispatcher), std::move(view_focuser));
+}
+
 Session::Session(SessionPtrAndListenerRequest session_and_listener, async_dispatcher_t* dispatcher)
     : Session(std::move(session_and_listener.first), std::move(session_and_listener.second),
               dispatcher) {}
