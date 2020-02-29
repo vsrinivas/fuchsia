@@ -23,10 +23,37 @@ rustc_binary("echo_args_bin") {
   edition = "2018"
 }
 
+rustc_binary("lifecycle") {
+  source_root = "src/lifecycle.rs"
+  name = "lifecycle"
+  edition = "2018"
+
+  deps = [
+    "//src/lib/fuchsia-runtime",
+    "//src/lib/syslog/rust:syslog",
+  ]
+}
+
+rustc_binary("lifecycle_full") {
+  source_root = "src/lifecycle_full.rs"
+  name = "lifecycle_full"
+  edition = "2018"
+
+  deps = [
+    "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle-rustc",
+    "//src/lib/fuchsia-runtime",
+    "//src/lib/syslog/rust:syslog",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:futures-util",
+  ]
+}
+
 package("components_basic_example") {
   deps = [
     ":echo_args_bin",
     ":hello_world_bin",
+    ":lifecycle",
+    ":lifecycle_full",
     ":ls_root_pkg_bin",
   ]
 
@@ -39,6 +66,12 @@ package("components_basic_example") {
     },
     {
       name = "echo_args"
+    },
+    {
+      name = "lifecycle"
+    },
+    {
+      name = "lifecycle_full"
     },
   ]
 
@@ -54,6 +87,14 @@ package("components_basic_example") {
     {
       path = rebase_path("meta/echo_args.cml")
       dest = "echo_args.cm"
+    },
+    {
+      path = rebase_path("meta/lifecycle.cml")
+      dest = "lifecycle.cm"
+    },
+    {
+      path = rebase_path("meta/lifecycle_full.cml")
+      dest = "lifecycle_full.cm"
     },
   ]
 }
