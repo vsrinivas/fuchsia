@@ -10,8 +10,6 @@
 #include <ddktl/protocol/clock.h>
 #include <ddktl/protocol/clockimpl.h>
 
-namespace clock {
-
 class ClockDevice;
 using ClockDeviceType = ddk::Device<ClockDevice, ddk::UnbindableNew>;
 
@@ -42,7 +40,5 @@ class ClockDevice : public ClockDeviceType,
   const ddk::ClockImplProtocolClient clock_;
   const uint32_t id_;
 };
-
-}  // namespace clock
 
 #endif  // SRC_DEVICES_CLOCK_DRIVERS_CLOCK_CLOCK_H_

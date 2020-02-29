@@ -16,8 +16,6 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 
-namespace clock {
-
 zx_status_t ClockDevice::ClockEnable() { return clock_.Enable(id_); }
 
 zx_status_t ClockDevice::ClockDisable() { return clock_.Disable(id_); }
@@ -107,14 +105,16 @@ zx_status_t ClockDevice::Create(void* ctx, zx_device_t* parent) {
   return ZX_OK;
 }
 
-static constexpr zx_driver_ops_t driver_ops = []() {
+namespace {
+
+constexpr zx_driver_ops_t driver_ops = []() {
   zx_driver_ops_t ops = {};
   ops.version = DRIVER_OPS_VERSION;
   ops.bind = ClockDevice::Create;
   return ops;
 }();
 
-}  // namespace clock
+}  // namespace
 
-ZIRCON_DRIVER_BEGIN(clock, clock::driver_ops, "zircon", "0.1", 1)
+ZIRCON_DRIVER_BEGIN(clock, driver_ops, "zircon", "0.1", 1)
 BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK_IMPL), ZIRCON_DRIVER_END(clock)

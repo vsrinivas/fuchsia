@@ -15,8 +15,6 @@
 
 #define DRIVER_NAME "test-clock"
 
-namespace clock {
-
 class TestClockDevice;
 using DeviceType = ddk::Device<TestClockDevice, ddk::UnbindableDeprecated>;
 
@@ -164,6 +162,8 @@ zx_status_t TestClockDevice::ClockImplGetInput(uint32_t id, uint32_t* out) {
   return ZX_OK;
 }
 
+namespace {
+
 zx_status_t test_clock_bind(void* ctx, zx_device_t* parent) {
   return TestClockDevice::Create(parent);
 }
@@ -175,9 +175,9 @@ constexpr zx_driver_ops_t driver_ops = []() {
   return driver_ops;
 }();
 
-}  // namespace clock
+}  // namespace
 
-ZIRCON_DRIVER_BEGIN(test_clock, clock::driver_ops, "zircon", "0.1", 4)
+ZIRCON_DRIVER_BEGIN(test_clock, driver_ops, "zircon", "0.1", 4)
 BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TEST),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_PBUS_TEST),
