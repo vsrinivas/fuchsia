@@ -59,7 +59,15 @@ rustc_binary("bin") {
   with_unit_tests = true
 
   configs -= [ "//build/config/lto:default" ]
-  configs += [ "//build/config/lto:lto" ]
+
+  # TODO(47267): We run into a duplicate item in list error if we build with
+  # either the lto or thinlto variant. There's also a separate error that
+  # prevents us from adding, removing, then adding to the list again. As a
+  # workaround, just don't add this to the list again if we're already using
+  # lto.
+  if (!(toolchain_variant.name == "lto" || toolchain_variant.name == "thinlto")) {
+    configs += [ "//build/config/lto:lto" ]
+  }
 
   deps = [
     ":lib",
