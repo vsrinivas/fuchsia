@@ -133,6 +133,7 @@ void StreamImpl::PostSetBufferCollection(
       on_stream_requested_(
           std::move(token), legacy_stream_.NewRequest(loop_.dispatcher()),
           [this](uint32_t max_camping_buffers) { max_camping_buffers_ = max_camping_buffers; });
+      legacy_stream_->Start();
     });
   });
 }

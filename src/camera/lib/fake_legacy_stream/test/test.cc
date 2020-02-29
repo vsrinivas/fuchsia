@@ -22,6 +22,7 @@ class FakeLegacyStreamTest : public gtest::TestLoopFixture {
       stream_->ReleaseFrame(info.buffer_id);
       frames_.push_back(std::move(info));
     };
+    stream_->Start();
     RunLoopUntilIdle();
   }
 
