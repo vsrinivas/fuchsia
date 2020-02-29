@@ -124,7 +124,6 @@ async fn main_inner_async() -> Result<(), Error> {
         cache.clone(),
         Arc::clone(&system_cache_list),
         Arc::clone(&repo_manager),
-        Arc::clone(&rewrite_manager),
         blob_fetcher.clone(),
         MAX_CONCURRENT_PACKAGE_FETCHES,
     );
@@ -152,12 +151,14 @@ async fn main_inner_async() -> Result<(), Error> {
 
     let font_resolver_fb = {
         let cache = cache.clone();
+        let rewrite_manager = Arc::clone(&rewrite_manager);
         let package_fetcher = Arc::clone(&package_fetcher);
         move |stream| {
             fasync::spawn_local(
                 resolver_service::run_font_resolver_service(
                     Arc::clone(&font_package_manager),
                     cache.clone(),
+                    Arc::clone(&rewrite_manager),
                     Arc::clone(&package_fetcher),
                     stream,
                 )

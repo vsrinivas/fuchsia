@@ -1,7 +1,6 @@
 #![cfg(test)]
 use {
     blobfs_ramdisk::BlobfsRamdisk,
-    fidl_fuchsia_pkg_rewrite_ext::Rule,
     fuchsia_async as fasync,
     fuchsia_pkg_testing::{
         serve::handler, Package, PackageBuilder, RepositoryBuilder, SystemImageBuilder,
@@ -107,51 +106,6 @@ async fn test_cache_fallback_succeeds_no_targets() {
         .unwrap();
     // System cache fallback is only triggered for fuchsia.com repos.
     env.register_repo_at_url(&served_repository, "fuchsia-pkg://fuchsia.com").await;
-    let pkg_url = format!("fuchsia-pkg://fuchsia.com/{}", pkg_name);
-    let package_dir = env.resolve_package(&pkg_url).await.unwrap();
-    // Make sure we got the cache version, not the repo version.
-    cache_pkg.verify_contents(&package_dir).await.unwrap();
-    assert!(repo_pkg.verify_contents(&package_dir).await.is_err());
-
-    env.stop().await;
-}
-
-// The package is in the cache. Rewrite rule applies. Networking is totally down. Fallback succeeds.
-#[fasync::run_singlethreaded(test)]
-async fn test_cache_fallback_succeeds_rewrite_rule() {
-    let pkg_name = "test_cache_fallback_succeeds_rewrite_rule";
-    let cache_pkg = test_package(pkg_name, "cache").await;
-    // Put a copy of the package with altered contents in the repo to make sure
-    // we're getting the one from the cache.
-    let repo_pkg = test_package(pkg_name, "repo").await;
-    let system_image_package =
-        SystemImageBuilder::new(&[]).cache_packages(&[&cache_pkg]).build().await;
-    let pkgfs = pkgfs_with_system_image_and_pkg(&system_image_package, &cache_pkg).await;
-
-    let env = TestEnvBuilder::new().pkgfs(pkgfs).build();
-
-    let repo = Arc::new(
-        RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
-            .add_package(&system_image_package)
-            .add_package(&repo_pkg)
-            .build()
-            .await
-            .unwrap(),
-    );
-    let served_repository = repo
-        .server()
-        .uri_path_override_handler(handler::StaticResponseCode::server_error())
-        .start()
-        .unwrap();
-    // System cache fallback is only triggered for fuchsia.com repos, but
-    // a fuchsia.com transformed by a rewrite rule should still work.
-    env.register_repo_at_url(&served_repository, "fuchsia-pkg://test").await;
-    let (edit_transaction, edit_transaction_server) = fidl::endpoints::create_proxy().unwrap();
-    env.proxies.rewrite_engine.start_edit_transaction(edit_transaction_server).unwrap();
-    let rule = Rule::new("fuchsia.com", "test", "/", "/").unwrap();
-    edit_transaction.add(&mut rule.clone().into()).await.unwrap();
-    edit_transaction.commit().await.unwrap();
-
     let pkg_url = format!("fuchsia-pkg://fuchsia.com/{}", pkg_name);
     let package_dir = env.resolve_package(&pkg_url).await.unwrap();
     // Make sure we got the cache version, not the repo version.
