@@ -56,7 +56,6 @@ package("activity") {
   binaries = [
     {
       name = "activity"
-      shell = true
     },
   ]
 
