@@ -14,27 +14,29 @@ import("//build/cpp/sdk_executable.gni")
 sdk_executable("fvm") {
   category = "partner"
   sources = [ "main.cc" ]
+  deps = [ "//zircon/system/ulib/fvm-host" ]
   if (is_fuchsia) {
-    deps = [
+    deps += [
       "//zircon/public/lib/fbl",
       "//zircon/public/lib/fit",
       "//zircon/public/lib/fvm",
       "//zircon/public/lib/safemath",
-      "//zircon/system/ulib/fvm-host",
+    ]
+  } else {
+    deps += [
+      "//zircon/public/lib/fbl-host",
+      "//zircon/public/lib/fit-host",
+      "//zircon/public/lib/fvm-host",
+      "//zircon/public/lib/safemath-host",
+      "//zircon/public/lib/zx-panic-libc",
     ]
   }
 
   if (current_os == "linux") {
     sources += [ "mtd.cc" ]
-    deps = [
-      "//zircon/public/lib/fbl-host",
-      "//zircon/public/lib/fit-host",
-      "//zircon/public/lib/fvm-host",
-      "//zircon/public/lib/safemath-host",
-      "//zircon/system/ulib/fvm-host",
+    deps += [
       "//zircon/system/ulib/ftl-mtd",
       "//zircon/public/lib/mtd-host",
-      "//zircon/public/lib/zx-panic-libc",
     ]
   } else {
     sources += [ "mtd-stub.cc" ]

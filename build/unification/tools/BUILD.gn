@@ -6,13 +6,6 @@ import("//build/config/fuchsia/zircon.gni")
 
 # Lists tools migrated from Zircon.
 
-# This defines individual targets which provide a level of indirection necessary
-# to soft-transition projects which depend on these tools.
-
-group("fvm") {
-  public_deps = [ "//zircon/tools/fvm($host_arm64_toolchain)" ]    
-}
-
 # This is to make the tools available via a build API.
 
 group("tools") {
