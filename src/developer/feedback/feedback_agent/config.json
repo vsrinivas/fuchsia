@@ -24,7 +24,6 @@
         "build.snapshot.xml",
         "inspect.json",
         "log.kernel.txt",
-        "log.system.txt",
-        "log.system.previous_boot.txt"
+        "log.system.txt"
     ]
 }
