@@ -45,13 +45,14 @@ class MountTest : public zxtest::Test {
     zx::channel root_client, root_server;
     ASSERT_OK(zx::channel::create(0, &root_client, &root_server));
 
-    loop_ = new async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-    std::unique_ptr<blobfs::Runner> runner;
 
-    ASSERT_OK(blobfs::Runner::Create(loop_, std::move(device), &options, &runner));
+    loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
+
+    std::unique_ptr<blobfs::Runner> runner;
+    ASSERT_OK(blobfs::Runner::Create(loop_.get(), std::move(device), &options, &runner));
     ASSERT_OK(runner->ServeRoot(std::move(root_server), layout_));
     ASSERT_OK(loop_->StartThread("blobfs test dispatcher"));
-    runner_ = runner.release();
+    runner_ = std::move(runner);
 
     ASSERT_OK(fdio_fd_create(root_client.release(), root_fd_.reset_and_get_address()));
     ASSERT_TRUE(root_fd_.is_valid());
@@ -61,7 +62,6 @@ class MountTest : public zxtest::Test {
     zx::channel root_client;
     ASSERT_OK(fdio_fd_transfer(root_fd_.release(), root_client.reset_and_get_address()));
     ASSERT_OK(fio::DirectoryAdmin::Call::Unmount(zx::unowned_channel(root_client)).status());
-    loop_->Shutdown();
     ASSERT_OK(ramdisk_destroy(ramdisk_));
   }
 
@@ -69,10 +69,10 @@ class MountTest : public zxtest::Test {
   int root_fd() const { return root_fd_.get(); }
 
  private:
-  ramdisk_client_t* ramdisk_ = nullptr;
-  async::Loop* loop_ = nullptr;
-  blobfs::Runner* runner_ = nullptr;
   blobfs::ServeLayout layout_;
+  ramdisk_client_t* ramdisk_ = nullptr;
+  std::unique_ptr<async::Loop> loop_;
+  std::unique_ptr<blobfs::Runner> runner_;
   fbl::unique_fd root_fd_;
 };
 
