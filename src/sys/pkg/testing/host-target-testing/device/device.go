@@ -141,7 +141,9 @@ func (c *Client) Reboot(ctx context.Context, repo *packages.Repository, rpcClien
 		return fmt.Errorf("device did not disconnect: %s", ctx.Err())
 	}
 
-	c.verifyReboot(ctx, repo, rpcClient)
+	if err := c.verifyReboot(ctx, repo, rpcClient); err != nil {
+		return fmt.Errorf("failed to verify reboot: %s", err)
+	}
 
 	log.Printf("device rebooted")
 
@@ -208,7 +210,9 @@ func (c *Client) TriggerSystemOTA(ctx context.Context, repo *packages.Repository
 		return fmt.Errorf("device did not disconnect: %s", ctx.Err())
 	}
 
-	c.verifyReboot(ctx, repo, rpcClient)
+	if err := c.verifyReboot(ctx, repo, rpcClient); err != nil {
+		return fmt.Errorf("failed to verify reboot: %s", err)
+	}
 
 	log.Printf("device rebooted")
 
