@@ -3713,7 +3713,7 @@ mod tests {
                 },
             )
             .unwrap();
-        assert_eq!(src_ip, TEST_LOCAL_MAC.to_ipv6_link_local().get());
+        assert_eq!(src_ip, TEST_LOCAL_MAC.to_ipv6_link_local().addr().get());
         assert_eq!(dst_ip, Ipv6::ALL_NODES_LINK_LOCAL_ADDRESS);
         assert_eq!(code, IcmpUnusedCode);
         assert_eq!(message, RouterAdvertisement::new(64, false, false, lifetime, 0, 0));
@@ -4286,7 +4286,7 @@ mod tests {
         // so they will both give up using that address.
         set_logger_for_test();
         let mac = Mac::new([1, 2, 3, 4, 5, 6]);
-        let multicast_addr = mac.to_ipv6_link_local().get().to_solicited_node_address();
+        let multicast_addr = mac.to_ipv6_link_local().addr().get().to_solicited_node_address();
         let local = DummyEventDispatcherBuilder::default();
         let remote = DummyEventDispatcherBuilder::default();
         let device_id = DeviceId::new_ethernet(0);
@@ -4760,7 +4760,7 @@ mod tests {
         // Test receiving NDP RA where source ip is a link local address (should receive)
         //
 
-        let src_ip = Mac::new(src_mac).to_ipv6_link_local().get();
+        let src_ip = Mac::new(src_mac).to_ipv6_link_local().addr().get();
         let mut icmpv6_packet_buf =
             router_advertisement_message(src_ip, config.local_ip.get(), 1, false, false, 3, 4, 5);
         let icmpv6_packet = icmpv6_packet_buf
@@ -4776,7 +4776,7 @@ mod tests {
         let mut ctx = DummyEventDispatcherBuilder::from_config(config.clone())
             .build::<DummyEventDispatcher>();
         let device_id = DeviceId::new_ethernet(0);
-        let src_ip = config.remote_mac.to_ipv6_link_local();
+        let src_ip = config.remote_mac.to_ipv6_link_local().addr();
 
         //
         // Receive a router advertisement for a brand new router with a valid lifetime.
@@ -5098,7 +5098,7 @@ mod tests {
         fn inner_test(ctx: &mut Context<DummyEventDispatcher>, hop_limit: u8, frame_offset: usize) {
             let config = get_dummy_config::<Ipv6Addr>();
             let device_id = DeviceId::new_ethernet(0);
-            let src_ip = config.remote_mac.to_ipv6_link_local();
+            let src_ip = config.remote_mac.to_ipv6_link_local().addr();
 
             let mut icmpv6_packet_buf = router_advertisement_message(
                 src_ip.get(),
@@ -5161,7 +5161,7 @@ mod tests {
             .build::<DummyEventDispatcher>();
         let device_id = DeviceId::new_ethernet(0);
         let src_mac = Mac::new([10, 11, 12, 13, 14, 15]);
-        let src_ip = src_mac.to_ipv6_link_local();
+        let src_ip = src_mac.to_ipv6_link_local().addr();
         let src_mac_bytes = src_mac.bytes();
         let options = vec![NdpOption::SourceLinkLayerAddress(&src_mac_bytes[..])];
 
@@ -5282,7 +5282,7 @@ mod tests {
         let device = ctx.state.add_ethernet_device(TEST_LOCAL_MAC, hw_mtu);
         let device_id = device.id().into();
         let src_mac = Mac::new([10, 11, 12, 13, 14, 15]);
-        let src_ip = src_mac.to_ipv6_link_local();
+        let src_ip = src_mac.to_ipv6_link_local().addr();
 
         crate::device::initialize_device(&mut ctx, device);
 
@@ -5381,7 +5381,7 @@ mod tests {
         let device = DeviceId::new_ethernet(0);
         let device_id = device.id().into();
         let src_mac = Mac::new([10, 11, 12, 13, 14, 15]);
-        let src_ip = src_mac.to_ipv6_link_local().get();
+        let src_ip = src_mac.to_ipv6_link_local().addr().get();
         let prefix = Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 0]);
         let prefix_length = 120;
         let addr_subnet = AddrSubnet::new(prefix, prefix_length).unwrap();
@@ -5494,7 +5494,7 @@ mod tests {
         ) {
             let dummy_config = get_dummy_config::<Ipv6Addr>();
             assert_eq!(src_mac, dummy_config.local_mac);
-            assert_eq!(src_ip, dummy_config.local_mac.to_ipv6_link_local().get());
+            assert_eq!(src_ip, dummy_config.local_mac.to_ipv6_link_local().addr().get());
             assert_eq!(message, RouterSolicitation::default());
             assert_eq!(code, IcmpUnusedCode);
         }
@@ -6006,7 +6006,7 @@ mod tests {
             NdpContext::<EthernetLinkDevice>::ipv6_addr_state(
                 &ctx,
                 device.id().into(),
-                &TEST_LOCAL_MAC.to_ipv6_link_local().get()
+                &TEST_LOCAL_MAC.to_ipv6_link_local().addr().get()
             )
             .unwrap(),
             AddressState::Tentative
@@ -6016,7 +6016,7 @@ mod tests {
             NdpContext::<EthernetLinkDevice>::ipv6_addr_state(
                 &ctx,
                 device.id().into(),
-                &TEST_LOCAL_MAC.to_ipv6_link_local().get()
+                &TEST_LOCAL_MAC.to_ipv6_link_local().addr().get()
             )
             .unwrap(),
             AddressState::Assigned
@@ -6074,7 +6074,7 @@ mod tests {
                 },
             )
             .unwrap();
-        assert_eq!(src_ip, TEST_LOCAL_MAC.to_ipv6_link_local().get());
+        assert_eq!(src_ip, TEST_LOCAL_MAC.to_ipv6_link_local().addr().get());
         assert_eq!(dst_ip, Ipv6::ALL_NODES_LINK_LOCAL_ADDRESS);
         assert_eq!(code, IcmpUnusedCode);
         assert_eq!(message, RouterAdvertisement::new(64, false, false, 1800, 0, 0));
@@ -6133,7 +6133,7 @@ mod tests {
                 },
             )
             .unwrap();
-        assert_eq!(src_ip, TEST_LOCAL_MAC.to_ipv6_link_local().get());
+        assert_eq!(src_ip, TEST_LOCAL_MAC.to_ipv6_link_local().addr().get());
         assert_eq!(dst_ip, Ipv6::ALL_NODES_LINK_LOCAL_ADDRESS);
         assert_eq!(code, IcmpUnusedCode);
         assert_eq!(message, RouterAdvertisement::new(75, true, false, 2000, 50, 200));
@@ -6172,7 +6172,7 @@ mod tests {
                 *ctx.dispatcher().timer_events().last().unwrap().1,
                 NdpTimerId::new_dad_ns_transmission(
                     device.id().into(),
-                    TEST_LOCAL_MAC.to_ipv6_link_local().get()
+                    TEST_LOCAL_MAC.to_ipv6_link_local().addr().get()
                 )
                 .into()
             );
@@ -6783,7 +6783,7 @@ mod tests {
         crate::device::initialize_device(net.context("host"), device);
 
         // Host should not know about the router yet.
-        let router_ll = dummy_config.remote_mac.to_ipv6_link_local();
+        let router_ll = dummy_config.remote_mac.to_ipv6_link_local().addr();
         assert!(!StateContext::<NdpState<EthernetLinkDevice, DummyInstant>, _>::get_state_with(
             net.context("host"),
             device.id().into()
@@ -6812,7 +6812,7 @@ mod tests {
         net.run_for(MAX_INITIAL_RTR_ADVERT_INTERVAL);
 
         // Host should not know about the router anymore.
-        let router_ll = dummy_config.remote_mac.to_ipv6_link_local();
+        let router_ll = dummy_config.remote_mac.to_ipv6_link_local().addr();
         assert!(!StateContext::<NdpState<EthernetLinkDevice, DummyInstant>, _>::get_state_with(
             net.context("host"),
             device.id().into()
@@ -6866,7 +6866,7 @@ mod tests {
         crate::device::initialize_device(&mut ctx, device);
 
         let neighbor_mac = config.remote_mac;
-        let neighbor_ip = neighbor_mac.to_ipv6_link_local().get();
+        let neighbor_ip = neighbor_mac.to_ipv6_link_local().addr().get();
         let all_nodes_addr = SpecifiedAddr::new(Ipv6::ALL_NODES_LINK_LOCAL_ADDRESS).unwrap();
 
         // Should not know about the neighbor yet.
@@ -7199,7 +7199,7 @@ mod tests {
         crate::device::set_routing_enabled::<_, Ipv6>(&mut ctx, device, true);
 
         let src_mac = config.remote_mac;
-        let src_ip = src_mac.to_ipv6_link_local().get();
+        let src_ip = src_mac.to_ipv6_link_local().addr().get();
         let prefix = Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0]);
         let prefix_length = 64;
         let mut expected_addr = [1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0];
@@ -7244,7 +7244,7 @@ mod tests {
         crate::device::initialize_device(&mut ctx, device);
 
         let src_mac = config.remote_mac;
-        let src_ip = src_mac.to_ipv6_link_local().get();
+        let src_ip = src_mac.to_ipv6_link_local().addr().get();
         let prefix = Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0]);
         let prefix_length = 64;
         let addr_subnet = AddrSubnet::new(prefix, prefix_length).unwrap();
@@ -7491,7 +7491,7 @@ mod tests {
         crate::device::initialize_device(&mut ctx, device);
 
         let src_mac = config.remote_mac;
-        let src_ip = src_mac.to_ipv6_link_local().get();
+        let src_ip = src_mac.to_ipv6_link_local().addr().get();
         let prefix = Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0]);
         let prefix_length = 64;
         let mut expected_addr = [1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0];
@@ -7566,7 +7566,7 @@ mod tests {
         crate::device::initialize_device(&mut ctx, device);
 
         let src_mac = config.remote_mac;
-        let src_ip = src_mac.to_ipv6_link_local().get();
+        let src_ip = src_mac.to_ipv6_link_local().addr().get();
         let prefix = Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0]);
         let prefix_length = 64;
         let mut manual_addr_sub = [1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0];
@@ -7640,7 +7640,7 @@ mod tests {
         crate::device::initialize_device(&mut ctx, device);
 
         let src_mac = config.remote_mac;
-        let src_ip = src_mac.to_ipv6_link_local().get();
+        let src_ip = src_mac.to_ipv6_link_local().addr().get();
         let prefix = Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0]);
         let prefix_length = 64;
         let manual_addr = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
@@ -7719,7 +7719,7 @@ mod tests {
         crate::device::initialize_device(&mut ctx, device);
 
         let src_mac = config.remote_mac;
-        let src_ip = src_mac.to_ipv6_link_local().get();
+        let src_ip = src_mac.to_ipv6_link_local().addr().get();
         let prefix = Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0]);
         let prefix_length = 64;
 
@@ -7772,7 +7772,7 @@ mod tests {
         crate::device::initialize_device(&mut ctx, device);
 
         let src_mac = config.remote_mac;
-        let src_ip = src_mac.to_ipv6_link_local().get();
+        let src_ip = src_mac.to_ipv6_link_local().addr().get();
         let prefix = Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0]);
         let prefix_length = 64;
         let mut expected_addr = [1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0];
@@ -7974,7 +7974,7 @@ mod tests {
         crate::device::initialize_device(&mut ctx, device);
 
         let src_mac = config.remote_mac;
-        let src_ip = src_mac.to_ipv6_link_local().get();
+        let src_ip = src_mac.to_ipv6_link_local().addr().get();
         let dst_ip = config.local_ip;
         let prefix = Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0]);
         let prefix_length = 64;

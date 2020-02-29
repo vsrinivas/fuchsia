@@ -666,7 +666,7 @@ impl DummyEventDispatcherBuilder {
         // pre-cached.
         builder.ndp_table_entries.push((
             0,
-            cfg.remote_mac.to_ipv6_link_local().get(),
+            cfg.remote_mac.to_ipv6_link_local().addr().get(),
             cfg.remote_mac,
         ));
 

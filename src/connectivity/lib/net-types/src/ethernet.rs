@@ -8,7 +8,7 @@ use core::fmt::{self, Debug, Display, Formatter};
 
 use zerocopy::{AsBytes, FromBytes, Unaligned};
 
-use crate::ip::{IpAddress, Ipv6Addr};
+use crate::ip::{AddrSubnet, IpAddress, Ipv6, Ipv6Addr};
 use crate::{
     BroadcastAddress, LinkLocalAddr, MulticastAddr, MulticastAddress, UnicastAddress, Witness,
 };
@@ -81,41 +81,53 @@ impl Mac {
         eui
     }
 
-    /// Returns the link-local IPv6 address for this MAC address, as per [RFC
-    /// 4862], with the default EUI magic value.
+    /// Returns the link-local IPv6 address and subnet for this MAC address, as
+    /// per [RFC 4862], with the default EUI magic value.
     ///
     /// `mac.to_ipv6_link_local()` is equivalent to
     /// `mac.to_ipv6_link_local_with_magic(Mac::DEFAULT_EUI_MAGIC)`.
     ///
     /// [RFC 4291]: https://tools.ietf.org/html/rfc4291
     #[inline]
-    pub fn to_ipv6_link_local(self) -> LinkLocalAddr<Ipv6Addr> {
+    pub fn to_ipv6_link_local(self) -> AddrSubnet<Ipv6Addr, LinkLocalAddr<Ipv6Addr>> {
         self.to_ipv6_link_local_with_magic(Mac::DEFAULT_EUI_MAGIC)
     }
 
-    /// Returns the link-local IPv6 address for this MAC address, as per [RFC
-    /// 4862].
+    /// Returns the link-local IPv6 address and subnet for this MAC address, as
+    /// per [RFC 4862].
     ///
     /// `eui_magic` is the two bytes that are inserted between the bytes of the
     /// MAC address to form the identifier. Also see the [`to_ipv6_link_local`]
     /// method, which uses the default magic value of 0xFFFE.
     ///
-    /// [RFC 4291]: https://tools.ietf.org/html/rfc4291
+    /// The subnet prefix length is 128 -
+    /// [`Ipv6::UNICAST_INTERFACE_IDENTIFIER_BITS`].
+    ///
+    /// [RFC 4862]: https://tools.ietf.org/html/rfc4862
     /// [`to_ipv6_link_local`]: crate::ethernet::Mac::to_ipv6_link_local
+    /// [RFC 4291]: https://tools.ietf.org/html/rfc4291
     #[inline]
-    pub fn to_ipv6_link_local_with_magic(self, eui_magic: [u8; 2]) -> LinkLocalAddr<Ipv6Addr> {
+    pub fn to_ipv6_link_local_with_magic(
+        self,
+        eui_magic: [u8; 2],
+    ) -> AddrSubnet<Ipv6Addr, LinkLocalAddr<Ipv6Addr>> {
         let mut ipv6_addr = [0; 16];
         ipv6_addr[0..2].copy_from_slice(&[0xfe, 0x80]);
         ipv6_addr[8..16].copy_from_slice(&self.to_eui64_with_magic(eui_magic));
 
         // We know the call to `unwrap` will not panic because we know we are
-        // passing `LinkLocalAddr::new` a valid link local address as per RFC
-        // 4291 section 2.5.6. Specifically, the first 10 bits of the generated
-        // address is `0b1111111010`.
+        // passing `AddrSubnet::new` a valid link local address as per RFC 4291.
+        // Specifically, the first 10 bits of the generated address is
+        // `0b1111111010`. `AddrSubnet::new` also validates the prefix length,
+        // and we know that 64 is a valid IPv6 subnet prefix length.
         //
-        // TODO(ghanan): Investigate whether this unwrap is optimized out in practice as this code
-        //               will be on the hot path.
-        LinkLocalAddr::new(Ipv6Addr::new(ipv6_addr)).unwrap()
+        // TODO(ghanan): Investigate whether this unwrap is optimized out in
+        //               practice as this code will be on the hot path.
+        AddrSubnet::new(
+            Ipv6Addr::new(ipv6_addr),
+            Ipv6Addr::BYTES * 8 - Ipv6::UNICAST_INTERFACE_IDENTIFIER_BITS,
+        )
+        .unwrap()
     }
 }
 
@@ -262,22 +274,29 @@ mod tests {
     #[test]
     fn test_to_ipv6_link_local() {
         assert_eq!(
-            Mac::new([0x00, 0x1a, 0xaa, 0x12, 0x34, 0x56]).to_ipv6_link_local().get(),
-            Ipv6Addr::new([
-                0xfe, 0x80, // IPv6 link-local prefix
-                0, 0, 0, 0, 0, 0, // Padding zeroes
-                0x02, 0x1a, 0xaa, 0xff, 0xfe, 0x12, 0x34, 0x56, // EUI-64
-            ])
+            Mac::new([0x00, 0x1a, 0xaa, 0x12, 0x34, 0x56]).to_ipv6_link_local(),
+            AddrSubnet::new(
+                Ipv6Addr::new([
+                    0xfe, 0x80, // IPv6 link-local prefix
+                    0, 0, 0, 0, 0, 0, // Padding zeroes
+                    0x02, 0x1a, 0xaa, 0xff, 0xfe, 0x12, 0x34, 0x56, // EUI-64
+                ]),
+                64
+            )
+            .unwrap()
         );
         assert_eq!(
             Mac::new([0x00, 0x1a, 0xaa, 0x12, 0x34, 0x56])
-                .to_ipv6_link_local_with_magic([0xfe, 0xfe])
-                .get(),
-            Ipv6Addr::new([
-                0xfe, 0x80, // IPv6 link-local prefix
-                0, 0, 0, 0, 0, 0, // Padding zeroes
-                0x02, 0x1a, 0xaa, 0xfe, 0xfe, 0x12, 0x34, 0x56, // EUI-64
-            ])
+                .to_ipv6_link_local_with_magic([0xfe, 0xfe]),
+            AddrSubnet::new(
+                Ipv6Addr::new([
+                    0xfe, 0x80, // IPv6 link-local prefix
+                    0, 0, 0, 0, 0, 0, // Padding zeroes
+                    0x02, 0x1a, 0xaa, 0xfe, 0xfe, 0x12, 0x34, 0x56, // EUI-64
+                ]),
+                64
+            )
+            .unwrap()
         );
     }
 

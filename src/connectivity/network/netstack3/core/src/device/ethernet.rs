@@ -322,7 +322,8 @@ pub(super) fn initialize_device<C: EthernetIpDeviceContext>(ctx: &mut C, device_
     // Must not have a link local address yet.
     assert!(state.ip().ipv6_link_local_addr_sub.is_none());
 
-    let addr = state.link().mac.to_ipv6_link_local().get();
+    let addr_sub = state.link().mac.to_ipv6_link_local();
+    let addr = addr_sub.addr().get();
 
     // First, join the solicited-node multicast group for the link-local address.
     join_ip_multicast(ctx, device_id, addr.to_solicited_node_address());
@@ -332,7 +333,7 @@ pub(super) fn initialize_device<C: EthernetIpDeviceContext>(ctx: &mut C, device_
     // Associate the link-local address to the device, and mark it as Tentative, configured by
     // SLAAC, and not set to expire.
     state.ipv6_link_local_addr_sub = Some(AddressEntry::new(
-        AddrSubnet::new(addr, 128).unwrap(),
+        addr_sub,
         AddressState::Tentative,
         AddressConfigurationType::Slaac,
         None,

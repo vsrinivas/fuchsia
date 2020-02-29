@@ -537,7 +537,7 @@ mod tests {
 
     fn receive_mld_query<C: MldContext>(ctx: &mut C, device: C::DeviceId, resp_time: Duration) {
         let my_addr = MY_IP;
-        let router_addr = ROUTER_MAC.to_ipv6_link_local().get();
+        let router_addr = ROUTER_MAC.to_ipv6_link_local().addr().get();
         let mut buffer = Mldv1MessageBuilder::<MulticastListenerQuery>::new_with_max_resp_delay(
             GROUP_ADDR,
             resp_time.try_into().unwrap(),
@@ -564,7 +564,7 @@ mod tests {
 
     fn receive_mld_report<C: MldContext>(ctx: &mut C, device: C::DeviceId) {
         let my_addr = MY_IP;
-        let router_addr = ROUTER_MAC.to_ipv6_link_local().get();
+        let router_addr = ROUTER_MAC.to_ipv6_link_local().addr().get();
         let mut buffer = Mldv1MessageBuilder::<MulticastListenerReport>::new(
             MulticastAddr::new(GROUP_ADDR).unwrap(),
         )
@@ -796,12 +796,12 @@ mod tests {
     #[test]
     fn test_mld_with_link_local() {
         let mut ctx = DummyContext::default();
-        ctx.get_mut().ipv6_link_local = Some(MY_MAC.to_ipv6_link_local());
+        ctx.get_mut().ipv6_link_local = Some(MY_MAC.to_ipv6_link_local().addr());
         mld_join_group(&mut ctx, DummyDeviceId, MulticastAddr::new(GROUP_ADDR).unwrap());
         assert!(ctx.trigger_next_timer::<MldTimerHandler>());
         for (_, frame) in ctx.frames() {
             ensure_frame(&frame, 131, GROUP_ADDR, GROUP_ADDR);
-            ensure_slice_addr(&frame, 8, 24, MY_MAC.to_ipv6_link_local().get());
+            ensure_slice_addr(&frame, 8, 24, MY_MAC.to_ipv6_link_local().addr().get());
         }
     }
 }

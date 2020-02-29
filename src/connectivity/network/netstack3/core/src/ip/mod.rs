@@ -2588,7 +2588,11 @@ mod tests {
         let extra_ip = Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 100]);
         let extra_mac = Mac::new([13, 14, 15, 16, 17, 18]);
         dispatcher_builder.add_ndp_table_entry(0, extra_ip, extra_mac);
-        dispatcher_builder.add_ndp_table_entry(0, extra_mac.to_ipv6_link_local().get(), extra_mac);
+        dispatcher_builder.add_ndp_table_entry(
+            0,
+            extra_mac.to_ipv6_link_local().addr().get(),
+            extra_mac,
+        );
         let mut ctx = dispatcher_builder.build_with(state_builder, DummyEventDispatcher::default());
         let device = DeviceId::new_ethernet(0);
         set_routing_enabled::<_, Ipv6>(&mut ctx, device, true);
@@ -3102,7 +3106,7 @@ mod tests {
 
         let frame_dst = FrameDestination::Unicast;
 
-        let ip = config.local_mac.to_ipv6_link_local().get();
+        let ip = config.local_mac.to_ipv6_link_local().addr().get();
 
         let buf = Buf::new(vec![0; 10], ..)
             .encapsulate(Ipv6PacketBuilder::new(config.remote_ip, ip, 64, IpProto::Udp))
