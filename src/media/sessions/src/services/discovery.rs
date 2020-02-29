@@ -180,8 +180,22 @@ impl Discovery {
             .await;
     }
 
+    /// Connects a sink to the stream of `SessionsWatcherEvents` for the set of
+    /// all sessions.
+    async fn connect_session_watcher(
+        &mut self,
+        watch_options: WatchOptions,
+        sink: impl Sink<(u64, SessionsWatcherEvent), Error = anyhow::Error> + Send + 'static,
+    ) {
+        let session_info_stream = self.sessions_info_stream(Filter::new(watch_options));
+        let event_forward = session_info_stream.map(Ok).forward(sink).boxed();
+
+        let id = self.watcher_ids.next().expect("Taking next element from infinite sequence");
+        self.watchers.insert(id, stream::once(event_forward)).await;
+    }
+
     /// Connects a client to the set of all sessions.
-    async fn watch_sessions(
+    async fn handle_watch_sessions(
         &mut self,
         watch_options: WatchOptions,
         session_watcher: ClientEnd<SessionsWatcherMarker>,
@@ -198,12 +212,8 @@ impl Discovery {
             }
         };
 
-        let session_info_stream = self.sessions_info_stream(Filter::new(watch_options));
         let sink = FlowControlledProxySink::from(proxy);
-        let event_forward = session_info_stream.map(Ok).forward(sink).boxed();
-
-        let id = self.watcher_ids.next().expect("Taking next element from infinite sequence");
-        self.watchers.insert(id, stream::once(event_forward)).await;
+        self.connect_session_watcher(watch_options, sink).await;
     }
 
     async fn handle_player_update(
@@ -339,7 +349,7 @@ impl Discovery {
                             self.connect_to_session(session_id, session_control_request).await;
                         }
                         DiscoveryRequest::WatchSessions { watch_options, session_watcher, ..} => {
-                            self.watch_sessions(watch_options, session_watcher).await;
+                            self.handle_watch_sessions(watch_options, session_watcher).await;
                         }
                     }
                 }
@@ -353,7 +363,7 @@ impl Discovery {
                             self.observe_session(session_id, session_request).await;
                         },
                         ObserverDiscoveryRequest::WatchSessions { watch_options, sessions_watcher, .. } => {
-                            self.watch_sessions(watch_options, sessions_watcher).await;
+                            self.handle_watch_sessions(watch_options, sessions_watcher).await;
                         }
                     }
                 }
