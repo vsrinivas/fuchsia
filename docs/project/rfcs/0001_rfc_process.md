@@ -1,4 +1,4 @@
-# Fuchsia Request for Comments (RFC) process (RFC-NNNN)
+# Fuchsia Request for Comments (RFC) process (RFC-0001)
 
 A process for making project-wide, technical decisions.
 
