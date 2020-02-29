@@ -45,6 +45,9 @@ def main():
         # Verify that the library may be migrated at this time.
         build_path = os.path.join(FUCHSIA_ROOT, 'zircon', 'system', lib,
                                   'BUILD.gn')
+        if not os.path.exists(build_path):
+            print('Could not locate library ' + lib + ', ignoring')
+            continue
         base_label = '//zircon/system/' + lib
         stats = get_library_stats(build_path)
 
