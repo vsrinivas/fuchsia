@@ -8,6 +8,7 @@ group("lib") {
   public_deps = [
     "annotation",
     "configuration",
+    "focus_chain",
     "gesture_manager",
     "magnifier",
     "screen_reader",
@@ -27,6 +28,7 @@ test_package("a11y_lib_tests") {
   deps = [
     "annotation/tests",
     "configuration/tests",
+    "focus_chain/tests",
     "gesture_manager/arena/tests",
     "gesture_manager/recognizers/tests",
     "gesture_manager/tests",
@@ -72,6 +74,10 @@ test_package("a11y_lib_tests") {
     },
     {
       name = "configuration_tests"
+      environments = basic_envs
+    },
+    {
+      name = "focus_chain_manager_tests"
       environments = basic_envs
     },
     {

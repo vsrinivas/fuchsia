@@ -1,0 +1,21 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("focus_chain") {
+  sources = [
+    "accessibility_focus_chain_listener.h",
+    "focus_chain_manager.cc",
+    "focus_chain_manager.h",
+  ]
+
+  public_deps = [ "//sdk/fidl/fuchsia.ui.focus" ]
+
+  deps = [
+    "//garnet/public/lib/syslog/cpp",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
+    "//src/ui/a11y/lib/util",
+  ]
+}
