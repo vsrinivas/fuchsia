@@ -203,7 +203,7 @@ function help_list_commands {
   # list host tools build artifacts without corresponding metadata
   host_tools="$(find_host_tools)"
   if [[ -n "${host_tools}" ]]; then
-    echo "Host binaries produced by the build with no metadata (more info at //tools/devshel/README.md):"
+    echo "Host binaries produced by the build with no metadata (more info at //tools/devshell/README.md):"
     for i in ${host_tools}; do
       echo -n "  "
       basename $i
