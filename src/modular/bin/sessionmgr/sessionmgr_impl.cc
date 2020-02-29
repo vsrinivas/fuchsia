@@ -393,9 +393,6 @@ void SessionmgrImpl::InitializeModular(const fidl::StringPtr& session_shell_url,
   startup_agent_launcher_->StartAgents(agent_runner_.get(), config_.session_agents(),
                                        config_.startup_agents());
 
-  local_module_resolver_ = std::make_unique<LocalModuleResolver>();
-  AtEnd(Reset(&local_module_resolver_));
-
   session_shell_component_context_impl_ = std::make_unique<ComponentContextImpl>(
       component_context_info, kSessionShellComponentNamespace, session_shell_url.value_or(""),
       session_shell_url.value_or(""));
@@ -432,7 +429,6 @@ void SessionmgrImpl::InitializeModular(const fidl::StringPtr& session_shell_url,
       session_environment_.get(), LoadDeviceID(session_id_), session_storage_.get(),
       std::move(story_shell_config), std::move(story_shell_factory_ptr), component_context_info,
       std::move(focus_provider_story_provider), startup_agent_launcher_.get(),
-      static_cast<fuchsia::modular::ModuleResolver*>(local_module_resolver_.get()),
       entity_provider_runner_.get(), module_facet_reader_.get(), presentation_provider_impl_.get(),
       (config_.enable_story_shell_preload()), &inspect_root_node_));
 
@@ -458,8 +454,7 @@ void SessionmgrImpl::InitializeModular(const fidl::StringPtr& session_shell_url,
   AtEnd(Reset(&session_storage_));
   story_command_executor_ = MakeProductionStoryCommandExecutor(
       session_storage_.get(), std::move(focus_provider_puppet_master),
-      static_cast<fuchsia::modular::ModuleResolver*>(local_module_resolver_.get()),
-      entity_provider_runner_.get(), std::move(module_focuser));
+      std::move(module_focuser));
   puppet_master_impl_ =
       std::make_unique<PuppetMasterImpl>(session_storage_.get(), story_command_executor_.get());
 

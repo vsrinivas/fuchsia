@@ -70,7 +70,6 @@ source_set("sessionmgr_lib") {
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/modular/bin/basemgr/cobalt",
-    "//src/modular/bin/module_resolver:local_module_resolver",
     "//src/modular/bin/sessionmgr/entity_provider_runner",
     "//src/modular/bin/sessionmgr/puppet_master:make_production_impl",
     "//src/modular/bin/sessionmgr/puppet_master:puppet_master_impl",

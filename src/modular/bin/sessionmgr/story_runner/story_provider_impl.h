@@ -55,7 +55,6 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::Foc
                     const ComponentContextInfo& component_context_info,
                     fuchsia::modular::FocusProviderPtr focus_provider,
                     AgentServicesFactory* agent_services_factory,
-                    fuchsia::modular::ModuleResolver* module_resolver,
                     EntityProviderRunner* entity_provider_runner,
                     modular::ModuleFacetReader* module_facet_reader,
                     PresentationProvider* presentation_provider, bool enable_story_shell_preload,
@@ -87,9 +86,6 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::Foc
 
   // Called by StoryControllerImpl.
   AgentServicesFactory* agent_services_factory() { return agent_services_factory_; }
-
-  // Called by StoryControllerImpl.
-  fuchsia::modular::ModuleResolver* module_resolver() { return module_resolver_; }
 
   fuchsia::modular::EntityResolver* entity_resolver() { return entity_provider_runner_; }
 
@@ -271,7 +267,6 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::Foc
   const ComponentContextInfo component_context_info_;
 
   AgentServicesFactory* const agent_services_factory_;       // Not owned.
-  fuchsia::modular::ModuleResolver* const module_resolver_;  // Not owned.
   EntityProviderRunner* const entity_provider_runner_;       // Not owned.
   modular::ModuleFacetReader* const module_facet_reader_;    // Not owned.
   PresentationProvider* const presentation_provider_;        // Not owned.

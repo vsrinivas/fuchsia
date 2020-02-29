@@ -14,12 +14,7 @@ namespace modular {
 
 class AddModCommandRunner : public CommandRunner {
  public:
-  // The following dependencies are needed for adding a module to the story:
-  // * ModuleResolver: used to resolve an intent into a module.
-  // * EntityResolver: used to resolve an intent parameter's type, which is
-  //   supplied to the module resolver for use in resolution.
-  AddModCommandRunner(fuchsia::modular::ModuleResolver* const module_resolver,
-                      fuchsia::modular::EntityResolver* const entity_resolver);
+  AddModCommandRunner();
   ~AddModCommandRunner() override;
 
   void Execute(fidl::StringPtr story_id, StoryStorage* story_storage,
@@ -28,8 +23,6 @@ class AddModCommandRunner : public CommandRunner {
 
  private:
   OperationQueue operation_queue_;
-  fuchsia::modular::ModuleResolver* const module_resolver_;  // Not owned.
-  fuchsia::modular::EntityResolver* const entity_resolver_;  // Not owned.
 };
 
 }  // namespace modular

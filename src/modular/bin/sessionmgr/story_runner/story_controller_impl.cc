@@ -33,7 +33,6 @@
 #include "src/modular/bin/basemgr/cobalt/cobalt.h"
 #include "src/modular/bin/sessionmgr/annotations.h"
 #include "src/modular/bin/sessionmgr/puppet_master/command_runners/operation_calls/add_mod_call.h"
-#include "src/modular/bin/sessionmgr/puppet_master/command_runners/operation_calls/find_modules_call.h"
 #include "src/modular/bin/sessionmgr/puppet_master/command_runners/operation_calls/get_types_from_entity_call.h"
 #include "src/modular/bin/sessionmgr/puppet_master/command_runners/operation_calls/initialize_chain_call.h"
 #include "src/modular/bin/sessionmgr/storage/constants_and_utils.h"
@@ -853,9 +852,7 @@ class StoryControllerImpl::AddIntentCall : public Operation<fuchsia::modular::St
   void Run() override {
     FlowToken flow{this, &start_module_status_};
     AddAddModOperation(
-        &operation_queue_, story_controller_impl_->story_storage_,
-        story_controller_impl_->story_provider_impl_->module_resolver(),
-        story_controller_impl_->story_provider_impl_->entity_resolver(), std::move(add_mod_params_),
+        &operation_queue_, story_controller_impl_->story_storage_, std::move(add_mod_params_),
         [this, flow](fuchsia::modular::ExecuteResult result,
                      fuchsia::modular::ModuleData module_data) {
           if (result.status == fuchsia::modular::ExecuteStatus::NO_MODULES_FOUND) {

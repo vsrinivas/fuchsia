@@ -49,7 +49,6 @@ source_set("story_runner") {
     "//src/modular/bin/sessionmgr:presentation_provider",
     "//src/modular/bin/sessionmgr/agent_runner",
     "//src/modular/bin/sessionmgr/puppet_master/command_runners/operation_calls:add_mod_call",
-    "//src/modular/bin/sessionmgr/puppet_master/command_runners/operation_calls:find_modules_call",
     "//src/modular/bin/sessionmgr/puppet_master/command_runners/operation_calls:get_types_from_entity_call",
     "//src/modular/bin/sessionmgr/puppet_master/command_runners/operation_calls:initialize_chain_call",
     "//src/modular/bin/sessionmgr/storage:constants_and_utils",

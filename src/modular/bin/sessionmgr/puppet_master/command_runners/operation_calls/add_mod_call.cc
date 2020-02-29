@@ -8,7 +8,6 @@
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
-#include "src/modular/bin/sessionmgr/puppet_master/command_runners/operation_calls/find_modules_call.h"
 #include "src/modular/bin/sessionmgr/puppet_master/command_runners/operation_calls/get_types_from_entity_call.h"
 #include "src/modular/bin/sessionmgr/puppet_master/command_runners/operation_calls/initialize_chain_call.h"
 #include "src/modular/lib/entity/cpp/json.h"
@@ -20,14 +19,9 @@ namespace {
 
 class AddModCall : public Operation<fuchsia::modular::ExecuteResult, fuchsia::modular::ModuleData> {
  public:
-  AddModCall(StoryStorage* const story_storage,
-             fuchsia::modular::ModuleResolver* const module_resolver,
-             fuchsia::modular::EntityResolver* const entity_resolver, AddModParams add_mod_params,
-             ResultCall done)
+  AddModCall(StoryStorage* const story_storage, AddModParams add_mod_params, ResultCall done)
       : Operation("AddModCommandRunner::AddModCall", std::move(done)),
         story_storage_(story_storage),
-        module_resolver_(module_resolver),
-        entity_resolver_(entity_resolver),
         add_mod_params_(std::move(add_mod_params)) {}
 
  private:
@@ -38,51 +32,13 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult, fuchsia::mo
     // found.
     out_result_.status = fuchsia::modular::ExecuteStatus::OK;
 
-    // If we have an action, we use the module resolver to type-check and
-    // resolve the (action, parameter) and the supplied optional handler to a
-    // module. If the module resolver doesn't recognize a supplied handler, we
-    // forgivingly execute the handler anyway.
-    if (add_mod_params_.intent.action.has_value()) {
-      AddFindModulesOperation(
-          &operation_queue_, module_resolver_, entity_resolver_,
-          CloneOptional(add_mod_params_.intent), add_mod_params_.parent_mod_path,
-          [this, flow](fuchsia::modular::ExecuteResult result,
-                       fuchsia::modular::FindModulesResponse response) {
-            if (result.status != fuchsia::modular::ExecuteStatus::OK) {
-              out_result_ = std::move(result);
-              return;
-              // Operation finishes since |flow| goes out of scope.
-            }
-
-            // NOTE: leave this as a switch case and omit the default case; the
-            // compiler will make sure we're handling all error cases.
-            switch (response.status) {
-              case fuchsia::modular::FindModulesStatus::SUCCESS: {
-                if (response.results.empty()) {
-                  out_result_.status = fuchsia::modular::ExecuteStatus::NO_MODULES_FOUND;
-                  out_result_.error_message = "Resolution of intent gave zero results.";
-                  return;
-                  // Operation finishes since |flow| goes out of scope.
-                }
-
-                candidate_module_ = std::move(response.results.at(0));
-              } break;
-
-              case fuchsia::modular::FindModulesStatus::UNKNOWN_HANDLER: {
-                candidate_module_.module_id = add_mod_params_.intent.handler.value_or("");
-              } break;
-            }
-
-            CreateLinks(flow);
-          });
-    } else {
-      // We arrive here if the Intent has a handler, but no action.
-      FXL_DCHECK(add_mod_params_.intent.handler.has_value())
-          << "Cannot start a module without an action or a handler";
-      candidate_module_.module_id = add_mod_params_.intent.handler.value_or("");
-
-      CreateLinks(flow);
+    if (add_mod_params_.intent.action.has_value() && !add_mod_params_.intent.handler.has_value()) {
+      out_result_.status = fuchsia::modular::ExecuteStatus::NO_MODULES_FOUND;
+      out_result_.error_message = "Module resolution via Intent.action is deprecated.";
+      return;
     }
+
+    CreateLinks(flow);
   }
 
   // Create module parameters info and create links.
@@ -175,7 +131,7 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult, fuchsia::mo
   // Write module data
   void WriteModuleData(FlowToken flow, fuchsia::modular::ModuleParameterMapPtr map) {
     fidl::Clone(*map, out_module_data_.mutable_parameter_map());
-    out_module_data_.set_module_url(candidate_module_.module_id);
+    out_module_data_.set_module_url(add_mod_params_.intent.handler.value());
     out_module_data_.set_module_path(add_mod_params_.parent_mod_path);
     out_module_data_.mutable_module_path()->push_back(add_mod_params_.mod_name);
     out_module_data_.set_module_source(add_mod_params_.module_source);
@@ -194,11 +150,8 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult, fuchsia::mo
     story_storage_->WriteModuleData(std::move(module_data))->Then([flow] {});
   }
 
-  StoryStorage* const story_storage_;                        // Not owned.
-  fuchsia::modular::ModuleResolver* const module_resolver_;  // Not owned.
-  fuchsia::modular::EntityResolver* const entity_resolver_;  // Not owned.
+  StoryStorage* const story_storage_;  // Not owned.
   modular::AddModParams add_mod_params_;
-  fuchsia::modular::FindModulesResult candidate_module_;
   fuchsia::modular::CreateModuleParameterMapInfoPtr parameter_info_;
   fuchsia::modular::ModuleData out_module_data_;
   fuchsia::modular::ExecuteResult out_result_;
@@ -213,11 +166,10 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult, fuchsia::mo
 
 void AddAddModOperation(
     OperationContainer* const container, StoryStorage* const story_storage,
-    fuchsia::modular::ModuleResolver* const module_resolver,
-    fuchsia::modular::EntityResolver* const entity_resolver, AddModParams add_mod_params,
+    AddModParams add_mod_params,
     fit::function<void(fuchsia::modular::ExecuteResult, fuchsia::modular::ModuleData)> done) {
-  container->Add(std::make_unique<AddModCall>(story_storage, module_resolver, entity_resolver,
-                                              std::move(add_mod_params), std::move(done)));
+  container->Add(
+      std::make_unique<AddModCall>(story_storage, std::move(add_mod_params), std::move(done)));
 }
 
 }  // namespace modular

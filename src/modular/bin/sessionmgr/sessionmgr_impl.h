@@ -20,7 +20,6 @@
 #include <lib/sys/inspect/cpp/component.h>
 
 #include "src/lib/fxl/macros.h"
-#include "src/modular/bin/module_resolver/local_module_resolver.h"
 #include "src/modular/bin/sessionmgr/argv_injecting_launcher.h"
 #include "src/modular/bin/sessionmgr/entity_provider_runner/entity_provider_launcher.h"
 #include "src/modular/bin/sessionmgr/entity_provider_runner/entity_provider_runner.h"
@@ -204,8 +203,6 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   std::unique_ptr<SessionCtl> session_ctl_;
 
   std::unique_ptr<StartupAgentLauncher> startup_agent_launcher_;
-
-  std::unique_ptr<modular::LocalModuleResolver> local_module_resolver_;
 
   class PresentationProviderImpl;
   std::unique_ptr<PresentationProviderImpl> presentation_provider_impl_;

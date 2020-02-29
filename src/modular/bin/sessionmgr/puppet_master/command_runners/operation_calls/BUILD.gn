@@ -5,7 +5,6 @@
 source_set("operation_calls") {
   public_deps = [
     ":add_mod_call",
-    ":find_modules_call",
     ":get_types_from_entity_call",
     ":initialize_chain_call",
   ]
@@ -18,7 +17,6 @@ source_set("add_mod_call") {
   ]
 
   deps = [
-    ":find_modules_call",
     ":get_types_from_entity_call",
     ":initialize_chain_call",
     "//sdk/lib/fidl/cpp",
@@ -32,25 +30,6 @@ source_set("add_mod_call") {
     "//sdk/fidl/fuchsia.modular",
     "//src/modular/bin/sessionmgr/storage:story_storage",
     "//src/modular/lib/async/cpp:operation",
-    "//src/modular/lib/fidl:clone",
-  ]
-}
-
-source_set("find_modules_call") {
-  sources = [
-    "find_modules_call.cc",
-    "find_modules_call.h",
-  ]
-
-  deps = [
-    ":get_types_from_entity_call",
-    "//garnet/public/lib/fostr/fidl/fuchsia.modular",
-    "//sdk/fidl/fuchsia.modular",
-    "//src/lib/fsl",
-    "//src/lib/fxl",
-    "//src/modular/bin/sessionmgr/storage:story_storage",
-    "//src/modular/lib/async/cpp:operation",
-    "//src/modular/lib/entity/cpp:json",
     "//src/modular/lib/fidl:clone",
   ]
 }
