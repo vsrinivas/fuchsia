@@ -22,7 +22,8 @@ foreach(shader, escher_shaders_resources) {
   test_data += get_target_outputs(":$copy_name")
 }
 
-foreach(shader, escher_shaders_spirv_resources) {
+foreach(shader,
+        escher_shaders_spirv_resources + escher_test_shaders_spirv_resources) {
   name = get_path_info(shader.path, "file")
   copy_name = "copy_$name"
   copy(copy_name) {
