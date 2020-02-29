@@ -21,6 +21,7 @@ use fuchsia_component::client;
 use futures::{lock::Mutex, Future, StreamExt};
 use log::debug;
 use net_types::{
+    ethernet::Mac,
     ip::{AddrSubnetEither, IpAddr, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, SubnetEither},
     SpecifiedAddr, Witness,
 };
@@ -871,6 +872,8 @@ async fn test_list_interfaces() {
         let ep = t.get_endpoint(&ep_name).await.unwrap().into_proxy().unwrap();
         let ep_info = ep.get_info().await.unwrap();
         let mut if_ip = new_ipv4_addr_subnet([192, 168, 0, i as u8], 24).into_fidl();
+        let if_ipv6_ll = Mac::new(ep_info.mac.octets).to_ipv6_link_local().into_addr().ipv6_bytes();
+        let if_ipv6_ll = new_ipv6_addr_subnet(if_ipv6_ll, 64).into_fidl();
 
         let ep = t.get_endpoint(&ep_name).await.unwrap();
         let if_id = stack
@@ -888,7 +891,7 @@ async fn test_list_interfaces() {
             .await
             .squash_result()
             .expect("Add interface address succeeds");
-        if_props.insert(if_id, (ep_info, vec![if_ip]));
+        if_props.insert(if_id, (ep_info, vec![if_ip, if_ipv6_ll]));
     }
 
     let ifs = stack.list_interfaces().await.expect("List interfaces");
@@ -925,13 +928,16 @@ async fn test_get_interface_info() {
 
     test_stack.wait_for_interface_online(1).await;
 
+    let if_ipv6_ll = Mac::new(ep_info.mac.octets).to_ipv6_link_local().into_addr().ipv6_bytes();
+    let if_ipv6_ll = new_ipv6_addr_subnet(if_ipv6_ll, 64).into_fidl();
+
     // get the interface info:
     let if_info = stack.get_interface_info(if_id).await.unwrap().expect("Get interface info");
     assert_eq!(&if_info.properties.topopath, "fake_topo_path");
     assert_eq!(if_info.properties.mac.as_ref().unwrap().as_ref(), &ep_info.mac);
     assert_eq!(if_info.properties.mtu, ep_info.mtu);
     assert_eq!(if_info.properties.features, ep_info.features);
-    assert_eq!(if_info.properties.addresses, vec![ip.try_into_fidl().unwrap()]);
+    assert_eq!(if_info.properties.addresses, vec![ip.try_into_fidl().unwrap(), if_ipv6_ll]);
     assert_eq!(if_info.properties.administrative_status, AdministrativeStatus::Enabled);
     assert_eq!(if_info.properties.physical_status, PhysicalStatus::Up);
 

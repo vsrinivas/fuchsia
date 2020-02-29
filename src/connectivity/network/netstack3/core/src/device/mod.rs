@@ -537,11 +537,6 @@ struct IpDeviceState<I: Instant> {
     /// May be tentative (performing NDP's Duplicate Address Detection).
     ipv6_addr_sub: Vec<AddressEntry<Ipv6Addr, I>>,
 
-    /// Assigned IPv6 link-local address.
-    ///
-    /// May be tentative (performing NDP's Duplicate Address Detection).
-    ipv6_link_local_addr_sub: Option<AddressEntry<Ipv6Addr, I, LinkLocalAddr<Ipv6Addr>>>,
-
     /// IPv4 multicast groups this device has joined.
     ipv4_multicast_groups: HashMap<MulticastAddr<Ipv4Addr>, usize>,
 
@@ -587,7 +582,6 @@ impl<I: Instant> Default for IpDeviceState<I> {
         IpDeviceState {
             ipv4_addr_sub: Vec::new(),
             ipv6_addr_sub: Vec::new(),
-            ipv6_link_local_addr_sub: None,
             ipv4_multicast_groups: HashMap::new(),
             ipv6_multicast_groups: HashMap::new(),
             ipv6_hop_limit: ndp::HOP_LIMIT_DEFAULT,
@@ -676,6 +670,8 @@ pub(crate) enum AddressConfigurationType {
 }
 
 /// Data associated with an IP addressess on an interface.
+#[derive(Clone)]
+#[cfg_attr(test, derive(Debug, Eq, PartialEq))]
 pub struct AddressEntry<S: IpAddress, T: Instant, A: Witness<S> = SpecifiedAddr<S>> {
     addr_sub: AddrSubnet<S, A>,
     state: AddressState,
@@ -919,6 +915,8 @@ pub(crate) fn set_promiscuous_mode<D: EventDispatcher>(
 ///
 /// Note, tentative IP addresses (addresses which are not yet fully bound to a
 /// device) will not be returned by `get_ip_addr`.
+///
+/// For IPv6, this only returns global (not link-local) addresses.
 pub(crate) fn get_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
     ctx: &Context<D>,
     device: DeviceId,
@@ -974,6 +972,9 @@ pub(crate) fn is_local_addr<D: EventDispatcher, A: IpAddress>(
 }
 
 /// Adds an IP address and associated subnet to this device.
+///
+/// For IPv6, this function also joins the solicited-node multicast group and
+/// begins performing Duplicate Address Detection (DAD).
 ///
 /// # Panics
 ///

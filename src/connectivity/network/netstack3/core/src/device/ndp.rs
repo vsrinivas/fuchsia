@@ -24,7 +24,6 @@ use core::fmt::Debug;
 use core::marker::PhantomData;
 use core::num::{NonZeroU16, NonZeroU32, NonZeroU8};
 use core::ops::RangeInclusive;
-use core::slice::Iter;
 use core::time::Duration;
 
 use log::{debug, error, trace};
@@ -434,11 +433,14 @@ pub(crate) trait NdpContext<D: LinkDevice>:
     /// Get the interface identifier for a device as defined by RFC 4291 section 2.5.1.
     fn get_interface_identifier(&self, device_id: Self::DeviceId) -> [u8; 8];
 
-    /// Get the link-local address for a device.
+    /// Get a link-local address for a device.
     ///
     /// If no link-local address is assigned for `device_id`, `None` will be returned. Otherwise,
     /// a `Some(a)` will be returned.
-    fn get_link_local_addr(&self, device_id: Self::DeviceId) -> Option<Tentative<Ipv6Addr>>;
+    fn get_link_local_addr(
+        &self,
+        device_id: Self::DeviceId,
+    ) -> Option<Tentative<LinkLocalAddr<Ipv6Addr>>>;
 
     /// Get a non-tentative IPv6 address for this device.
     ///
@@ -449,15 +451,15 @@ pub(crate) trait NdpContext<D: LinkDevice>:
     /// any non-tentative global addresses.
     fn get_ipv6_addr(&self, device_id: Self::DeviceId) -> Option<Ipv6Addr>;
 
+    /// The type of the iterator returned from `get_ipv6_addr_entries`.
+    type AddrEntriesIter: Iterator<Item = AddressEntry<Ipv6Addr, Self::Instant>>;
+
     /// Get all global IPv6 addresses and associated data for this device.
     ///
     /// `get_ipv6_addr_entries` MUST return all **unicast** IPv6 addresses associated with
     /// `device_id`. This will include Tentative, Deprecated and Assigned addresses configured
     /// manually or via SLAAC. Violating this rule may result in incorrect IP packets being sent.
-    fn get_ipv6_addr_entries(
-        &self,
-        device_id: Self::DeviceId,
-    ) -> Iter<AddressEntry<Ipv6Addr, Self::Instant>>;
+    fn get_ipv6_addr_entries(&self, device_id: Self::DeviceId) -> Self::AddrEntriesIter;
 
     /// Returns the state of `address` on the device identified
     /// by `device_id` if it exists.
@@ -2463,8 +2465,15 @@ fn send_router_advertisement<D: LinkDevice, C: NdpContext<D>>(
     }
 
     // Attempt to send the router advertisement message.
-    if send_ndp_packet::<_, _, &[u8], _>(ctx, device_id, src_ip, dst_ip, message, &options[..])
-        .is_ok()
+    if send_ndp_packet::<_, _, &[u8], _>(
+        ctx,
+        device_id,
+        src_ip.get(),
+        dst_ip,
+        message,
+        &options[..],
+    )
+    .is_ok()
     {
         if dst_ip == Ipv6::ALL_NODES_LINK_LOCAL_ADDRESS {
             let now = ctx.now();
@@ -4407,7 +4416,7 @@ mod tests {
 
         net.step();
 
-        assert_eq!(get_ip_addr_subnets::<_, Ipv6Addr>(net.context("remote"), device_id).count(), 0);
+        assert_eq!(get_ip_addr_subnets::<_, Ipv6Addr>(net.context("remote"), device_id).count(), 1);
         // let's make sure that our local node still can use that address
         assert!(NdpContext::<EthernetLinkDevice>::ipv6_addr_state(
             net.context("local"),
@@ -4544,8 +4553,8 @@ mod tests {
 
         // they should now realize the address they intend to use has a duplicate
         // in the local network
-        assert_eq!(get_ip_addr_subnets::<_, Ipv6Addr>(net.context("local"), device_id).count(), 0);
-        assert_eq!(get_ip_addr_subnets::<_, Ipv6Addr>(net.context("remote"), device_id).count(), 0);
+        assert_eq!(get_ip_addr_subnets::<_, Ipv6Addr>(net.context("local"), device_id).count(), 1);
+        assert_eq!(get_ip_addr_subnets::<_, Ipv6Addr>(net.context("remote"), device_id).count(), 1);
     }
 
     #[test]

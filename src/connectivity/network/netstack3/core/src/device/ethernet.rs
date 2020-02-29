@@ -6,7 +6,7 @@
 
 use alloc::collections::HashMap;
 use alloc::collections::VecDeque;
-use alloc::vec::Vec;
+use alloc::vec::{IntoIter, Vec};
 use core::fmt::Debug;
 use core::iter::FilterMap;
 use core::num::NonZeroU8;
@@ -319,28 +319,17 @@ pub(super) fn initialize_device<C: EthernetIpDeviceContext>(ctx: &mut C, device_
 
     let state = ctx.get_state_with(device_id);
 
-    // Must not have a link local address yet.
-    assert!(state.ip().ipv6_link_local_addr_sub.is_none());
+    // There should be no way to add addresses to a device before it's
+    // initialized.
+    assert!(state.ip().ipv6_addr_sub.is_empty());
 
-    let addr_sub = state.link().mac.to_ipv6_link_local();
-    let addr = addr_sub.addr().get();
-
-    // First, join the solicited-node multicast group for the link-local address.
-    join_ip_multicast(ctx, device_id, addr.to_solicited_node_address());
-
-    let state = ctx.get_state_mut_with(device_id).ip_mut();
-
-    // Associate the link-local address to the device, and mark it as Tentative, configured by
-    // SLAAC, and not set to expire.
-    state.ipv6_link_local_addr_sub = Some(AddressEntry::new(
-        addr_sub,
-        AddressState::Tentative,
-        AddressConfigurationType::Slaac,
-        None,
-    ));
-
-    // Perform Duplicate Address Detection on the link-local address.
-    ctx.start_duplicate_address_detection(device_id, addr);
+    // Join the MAC-derived link-local address. Mark it as configured by SLAAC
+    // and not set to expire.
+    let addr_sub = state.link().mac.to_ipv6_link_local().into_witness();
+    add_ip_addr_subnet_inner(ctx, device_id, addr_sub, AddressConfigurationType::Slaac, None)
+        .expect(
+            "internal invariant violated: uninitialized device already had IP address assigned",
+        );
 }
 
 /// Send an IP packet in an Ethernet frame.
@@ -491,12 +480,20 @@ pub(super) fn set_promiscuous_mode<C: EthernetIpDeviceContext>(
 ///
 /// Note, tentative IP addresses (addresses which are not yet fully bound to a
 /// device) will not be returned by `get_ip_addr`.
+///
+/// For IPv6, this only returns global (not link-local) addresses.
 #[specialize_ip_address]
 pub(super) fn get_ip_addr_subnet<C: EthernetIpDeviceContext, A: IpAddress>(
     ctx: &C,
     device_id: C::DeviceId,
 ) -> Option<AddrSubnet<A>> {
-    get_ip_addr_subnets(ctx, device_id).nth(0)
+    #[ipv4addr]
+    return get_ip_addr_subnets(ctx, device_id).nth(0);
+    #[ipv6addr]
+    return get_ip_addr_subnets(ctx, device_id).find(|a| {
+        let addr: SpecifiedAddr<Ipv6Addr> = a.addr();
+        !addr.is_linklocal()
+    });
 }
 
 /// Get the IP address and subnet pais associated with this device.
@@ -597,7 +594,12 @@ fn get_ip_addr_state_inner<C: EthernetIpDeviceContext, A: IpAddress>(
     let state = ctx.get_state_with(device_id).ip();
 
     #[ipv4addr]
-    return state.ipv4_addr_sub.iter().find_map(|a| {
+    let addr_sub = &state.ipv4_addr_sub;
+
+    #[ipv6addr]
+    let addr_sub = &state.ipv6_addr_sub;
+
+    addr_sub.iter().find_map(|a| {
         if a.addr_sub().addr().get() == *addr
             && configuration_type.map_or(true, |x| x == a.configuration_type())
         {
@@ -605,40 +607,13 @@ fn get_ip_addr_state_inner<C: EthernetIpDeviceContext, A: IpAddress>(
         } else {
             None
         }
-    });
-
-    #[ipv6addr]
-    return state
-        .ipv6_addr_sub
-        .iter()
-        .find_map(|a| {
-            if a.addr_sub().addr().get() == *addr
-                && configuration_type.map_or(true, |x| x == a.configuration_type())
-            {
-                Some(a.state())
-            } else {
-                None
-            }
-        })
-        .or_else(|| {
-            state.ipv6_link_local_addr_sub.as_ref().and_then(|a| {
-                if a.addr_sub().addr().get() == *addr
-                    && configuration_type.map_or(true, |x| x == a.configuration_type())
-                {
-                    Some(a.state())
-                } else {
-                    None
-                }
-            })
-        });
+    })
 }
 
 /// Adds an IP address and associated subnet to this device.
 ///
-/// # Panics
-///
-/// Panics if `addr_sub` holds a link-local address.
-// TODO(ghanan): Use a witness type to guarantee non-link-local-ness for `addr_sub`.
+/// For IPv6, this function also joins the solicited-node multicast group and
+/// begins performing Duplicate Address Detection (DAD).
 pub(super) fn add_ip_addr_subnet<C: EthernetIpDeviceContext, A: IpAddress>(
     ctx: &mut C,
     device_id: C::DeviceId,
@@ -650,12 +625,11 @@ pub(super) fn add_ip_addr_subnet<C: EthernetIpDeviceContext, A: IpAddress>(
 
 /// Adds an IP address and associated subnet to this device.
 ///
-/// `configuration_type` is the way this address is being configured.
-/// See [`AddressConfigurationType`] for more details.
+/// `configuration_type` is the way this address is being configured. See
+/// [`AddressConfigurationType`] for more details.
 ///
-/// # Panics
-///
-/// Panics if `addr_sub` holds a link-local address.
+/// For IPv6, this function also joins the solicited-node multicast group and
+/// begins performing Duplicate Address Detection (DAD).
 #[specialize_ip_address]
 fn add_ip_addr_subnet_inner<C: EthernetIpDeviceContext, A: IpAddress>(
     ctx: &mut C,
@@ -665,9 +639,6 @@ fn add_ip_addr_subnet_inner<C: EthernetIpDeviceContext, A: IpAddress>(
     valid_until: Option<C::Instant>,
 ) -> Result<(), AddressError> {
     let addr = addr_sub.addr().get();
-
-    // MUST NOT be link-local.
-    assert!(!addr.is_linklocal());
 
     if get_ip_addr_state_inner(ctx, device_id, &addr, None).is_some() {
         return Err(AddressError::AlreadyExists);
@@ -722,10 +693,6 @@ pub(super) fn del_ip_addr<C: EthernetIpDeviceContext, A: IpAddress>(
 ///
 /// If `configuration_type` is provided, then only an address of that
 /// configuration type will be removed.
-///
-/// # Panics
-///
-/// Panics if `addr` is a link-local address.
 #[specialize_ip_address]
 fn del_ip_addr_inner<C: EthernetIpDeviceContext, A: IpAddress>(
     ctx: &mut C,
@@ -733,9 +700,6 @@ fn del_ip_addr_inner<C: EthernetIpDeviceContext, A: IpAddress>(
     addr: &A,
     configuration_type: Option<AddressConfigurationType>,
 ) -> Result<(), AddressError> {
-    // MUST NOT be link-local.
-    assert!(!addr.is_linklocal());
-
     #[ipv4addr]
     {
         let state = ctx.get_state_mut_with(device_id).ip_mut();
@@ -797,23 +761,24 @@ fn del_ip_addr_inner<C: EthernetIpDeviceContext, A: IpAddress>(
     }
 }
 
-/// Get the IPv6 link-local address associated with this device.
+/// Get a (non-tentative) IPv6 link-local address associated with this device.
 ///
-/// Returns `None` if the address is tentative.
+/// No guarantee is made that two calls to this function will return the same
+/// link-local address if multiple are available.
+///
+/// Returns `None` if `device_id` does not have a non-tentative link-local
+/// address.
 pub(super) fn get_ipv6_link_local_addr<C: EthernetIpDeviceContext>(
     ctx: &C,
     device_id: C::DeviceId,
 ) -> Option<LinkLocalAddr<Ipv6Addr>> {
-    // TODO(brunodalbo) the link local address is subject to the same collision
-    //  verifications as prefix global addresses, we should keep a state machine
-    //  about that check and cache the adopted address. For now, we just compose
-    //  the link-local from the ethernet MAC.
-    ctx.get_state_with(device_id)
-        .ip()
-        .ipv6_link_local_addr_sub
-        .as_ref()
-        .map(|a| if a.state().is_assigned() { Some(a.addr_sub().addr()) } else { None })
-        .unwrap_or(None)
+    ctx.get_state_with(device_id).ip().ipv6_addr_sub.iter().find_map(|a| {
+        if a.state().is_assigned() {
+            LinkLocalAddr::new(a.addr_sub().addr().get())
+        } else {
+            None
+        }
+    })
 }
 
 /// Add `device_id` to a link multicast group `multicast_addr`.
@@ -1225,13 +1190,17 @@ impl<C: EthernetIpDeviceContext> NdpContext<EthernetLinkDevice> for C {
         self.get_state_with(device_id).link().mac.to_eui64()
     }
 
-    fn get_link_local_addr(&self, device_id: C::DeviceId) -> Option<Tentative<Ipv6Addr>> {
-        self.get_state_with(device_id).ip().ipv6_link_local_addr_sub.as_ref().map(|a| {
-            if a.state().is_tentative() {
-                Tentative::new_tentative(a.addr_sub().addr().get())
+    fn get_link_local_addr(
+        &self,
+        device_id: C::DeviceId,
+    ) -> Option<Tentative<LinkLocalAddr<Ipv6Addr>>> {
+        self.get_state_with(device_id).ip().ipv6_addr_sub.iter().find_map(|a| {
+            let addr = LinkLocalAddr::new(a.addr_sub().addr().get())?;
+            Some(if a.state().is_tentative() {
+                Tentative::new_tentative(addr)
             } else {
-                Tentative::new_permanent(a.addr_sub().addr().get())
-            }
+                Tentative::new_permanent(addr)
+            })
         })
     }
 
@@ -1243,30 +1212,41 @@ impl<C: EthernetIpDeviceContext> NdpContext<EthernetLinkDevice> for C {
             Some(addr_sub) => Some(addr_sub.addr().get()),
             None => Self::get_link_local_addr(self, device_id)
                 .map(|a| a.try_into_permanent())
+                .map(|a| a.map(Witness::into_addr))
                 .unwrap_or(None),
         }
     }
 
+    type AddrEntriesIter = IntoIter<AddressEntry<Ipv6Addr, C::Instant>>;
+
     fn get_ipv6_addr_entries(
         &self,
         device_id: C::DeviceId,
-    ) -> Iter<AddressEntry<Ipv6Addr, C::Instant>> {
-        self.get_state_with(device_id).ip().ipv6_addr_sub.iter()
+    ) -> IntoIter<AddressEntry<Ipv6Addr, C::Instant>> {
+        // TODO(joshlf): The fact that we clone the entire list of entries here
+        // is just so that we can avoid writing out a large, ugly function
+        // signature for `get_ipv6_addr_entries`. We would like to have the
+        // return value be `impl Iterator`, but impl trait is not yet supported
+        // on trait methods. Instead, `NdpContext` has the associated
+        // `AddrEntriesIter` type. However, due to lifetime issues, this
+        // precludes us from returning an iterator whose lifetime returns on the
+        // lifetime of `self` passed to this method, which in turn means that
+        // our only option is to return entries by value, which requires
+        // cloning. Since this isn't in the hot path, we accept the cost of
+        // cloning the vector, but it would be great if we could solve this in a
+        // better way.
+        let mut addrs = self.get_state_with(device_id).ip().ipv6_addr_sub.clone();
+        addrs.retain(|a| {
+            let addr: SpecifiedAddr<Ipv6Addr> = a.addr_sub().addr();
+            !addr.is_linklocal()
+        });
+        addrs.into_iter()
     }
 
     fn ipv6_addr_state(&self, device_id: C::DeviceId, address: &Ipv6Addr) -> Option<AddressState> {
         let address = SpecifiedAddr::new(*address)?;
 
-        if let Some(state) = get_ip_addr_state::<_, Ipv6Addr>(self, device_id, &address) {
-            Some(state)
-        } else {
-            self.get_state_with(device_id)
-                .ip()
-                .ipv6_link_local_addr_sub
-                .as_ref()
-                .map(|a| if a.addr_sub().addr().get() == *address { Some(a.state()) } else { None })
-                .unwrap_or(None)
-        }
+        get_ip_addr_state::<_, Ipv6Addr>(self, device_id, &address)
     }
 
     fn address_resolved(&mut self, device_id: C::DeviceId, address: &Ipv6Addr, link_address: Mac) {
@@ -1282,23 +1262,11 @@ impl<C: EthernetIpDeviceContext> NdpContext<EthernetLinkDevice> for C {
 
         let original_size = state.ipv6_addr_sub.len();
         state.ipv6_addr_sub.retain(|x| x.addr_sub().addr().get() != addr);
-        let new_size = state.ipv6_addr_sub.len();
-
-        if original_size == new_size {
-            // Address was not a global address, check link-local address.
-            if state
-                .ipv6_link_local_addr_sub
-                .as_mut()
-                .filter(|a| a.addr_sub().addr().get() == addr)
-                .is_some()
-            {
-                state.ipv6_link_local_addr_sub = None;
-            } else {
-                panic!("Duplicate address not known, cannot be removed");
-            }
-        } else {
-            assert_eq!(original_size - new_size, 1);
-        }
+        assert_eq!(
+            state.ipv6_addr_sub.len(),
+            original_size - 1,
+            "duplicate address detected, but not in our list of addresses"
+        );
 
         // Leave the the solicited-node multicast group.
         leave_ip_multicast(self, device_id, addr.to_solicited_node_address());
@@ -1317,10 +1285,6 @@ impl<C: EthernetIpDeviceContext> NdpContext<EthernetLinkDevice> for C {
 
         if let Some(entry) =
             state.ipv6_addr_sub.iter_mut().find(|a| a.addr_sub().addr().get() == addr)
-        {
-            entry.mark_permanent();
-        } else if let Some(entry) =
-            state.ipv6_link_local_addr_sub.as_mut().filter(|a| a.addr_sub().addr().get() == addr)
         {
             entry.mark_permanent();
         } else {
@@ -1546,7 +1510,7 @@ mod tests {
     use specialize_ip_macro::{ip_test, specialize_ip};
 
     use super::*;
-    use crate::device::{is_routing_enabled, set_routing_enabled, DeviceId};
+    use crate::device::{is_routing_enabled, set_routing_enabled, DeviceId, EthernetDeviceId};
     use crate::ip::{
         dispatch_receive_ip_packet_name, receive_ip_packet, IpExt, IpPacketBuilder, IpProto,
         IPV6_MIN_MTU,
@@ -2190,5 +2154,58 @@ mod tests {
         receive_simple_ip_packet_test(&mut ctx, device, from_ip, ip1.get(), 5);
         receive_simple_ip_packet_test(&mut ctx, device, from_ip, ip2.get(), 6);
         receive_simple_ip_packet_test(&mut ctx, device, from_ip, sn_addr, 7);
+    }
+
+    #[test]
+    fn test_get_ip_addr_subnet() {
+        //
+        // Test that `get_ip_addr_subnet` only returns non-local IPv6 addresses.
+        //
+
+        let config = get_dummy_config::<Ipv6Addr>();
+        let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
+        let device = ctx.state_mut().add_ethernet_device(config.local_mac, crate::ip::IPV6_MIN_MTU);
+        assert_eq!(device.id, 0);
+        let device = EthernetDeviceId(0);
+
+        // `initialize_device` adds the MAC-derived link-local IPv6 address.
+        initialize_device(&mut ctx, device);
+        let addr_sub = &ctx.state().device.ethernet.get(0).unwrap().device.ip.ipv6_addr_sub;
+        // Verify that there is a single assigned address - the MAC-derived link-local.
+        assert_eq!(addr_sub.len(), 1);
+        assert_eq!(
+            addr_sub[0].addr_sub().addr().get(),
+            config.local_mac.to_ipv6_link_local().addr().get()
+        );
+        // Verify that `get_ip_addr_subnet` returns no address since the only
+        // address present is link-local.
+        assert_eq!(get_ip_addr_subnet::<_, Ipv6Addr>(&ctx, device), None);
+    }
+
+    #[test]
+    fn test_add_ip_addr_subnet_link_local() {
+        //
+        // Test that `add_ip_addr_subnet` allows link-local addresses.
+        //
+
+        let config = get_dummy_config::<Ipv6Addr>();
+        let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
+        let device = ctx.state_mut().add_ethernet_device(config.local_mac, crate::ip::IPV6_MIN_MTU);
+        assert_eq!(device.id, 0);
+        let device = EthernetDeviceId(0);
+
+        initialize_device(&mut ctx, device);
+        // Verify that there is a single assigned address.
+        assert_eq!(ctx.state().device.ethernet.get(0).unwrap().device.ip.ipv6_addr_sub.len(), 1);
+        add_ip_addr_subnet(
+            &mut ctx,
+            device,
+            AddrSubnet::new(Ipv6::LINK_LOCAL_UNICAST_SUBNET.network(), 128).unwrap(),
+        )
+        .unwrap();
+        // Assert that the new address got added.
+        let addr_sub = &ctx.state().device.ethernet.get(0).unwrap().device.ip.ipv6_addr_sub;
+        assert_eq!(addr_sub.len(), 2);
+        assert_eq!(addr_sub[1].addr_sub().addr().get(), Ipv6::LINK_LOCAL_UNICAST_SUBNET.network());
     }
 }
