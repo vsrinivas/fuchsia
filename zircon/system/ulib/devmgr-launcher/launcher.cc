@@ -202,6 +202,24 @@ zx_status_t Launch(Args args, zx::channel svc_client, zx::channel fshost_outgoin
       .ns = {.prefix = "/svc", .handle = svc_client.release()},
   });
 
+  // Include /system in the spawned process namespace if we have access to it.
+  fdio_flat_namespace_t* ns = nullptr;
+  status = fdio_ns_export_root(&ns);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  for (size_t i = 0; i < ns->count; i++) {
+    if (strncmp(ns->path[i], "/system", 7) == 0) {
+      actions.push_back(fdio_spawn_action_t{
+          .action = FDIO_SPAWN_ACTION_CLONE_DIR,
+          .dir = {.prefix = "/system"},
+      });
+      break;
+    }
+  }
+  fdio_ns_free_flat_ns(ns);
+
   if (!clone_stdio) {
     zx_handle_t stdio_clone;
     status = fdio_fd_clone(args.stdio.get(), &stdio_clone);
