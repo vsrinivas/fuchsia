@@ -26,7 +26,7 @@ fn ls_simple(d: openat::DirIter) -> Result<Vec<String>, Error> {
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
-async fn test_blobfs() -> Result<(), Error> {
+async fn blobfs() -> Result<(), Error> {
     let blobfs_server = BlobfsRamdisk::start()?;
 
     let d = blobfs_server.root_dir().context("get root dir")?;
@@ -164,7 +164,7 @@ async fn wait_for_blob_to_be_creatable(blobfs: &DirectoryProxy, merkle: &str) {
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
-async fn test_open_for_create_create() -> Result<(), Error> {
+async fn open_for_create_create() -> Result<(), Error> {
     let blobfs_server = BlobfsRamdisk::start()?;
     let root_dir = blobfs_server.root_dir_proxy()?;
 
@@ -181,7 +181,7 @@ async fn test_open_for_create_create() -> Result<(), Error> {
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
-async fn test_open_truncate_drop_create() -> Result<(), Error> {
+async fn open_truncate_drop_create() -> Result<(), Error> {
     let blobfs_server = BlobfsRamdisk::start()?;
     let root_dir = blobfs_server.root_dir_proxy()?;
 
@@ -201,7 +201,7 @@ async fn test_open_truncate_drop_create() -> Result<(), Error> {
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
-async fn test_open_partial_write_drop_create() -> Result<(), Error> {
+async fn open_partial_write_drop_create() -> Result<(), Error> {
     let blobfs_server = BlobfsRamdisk::start()?;
     let root_dir = blobfs_server.root_dir_proxy()?;
 
@@ -222,7 +222,7 @@ async fn test_open_partial_write_drop_create() -> Result<(), Error> {
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
-async fn test_open_partial_write_close_create() -> Result<(), Error> {
+async fn open_partial_write_close_create() -> Result<(), Error> {
     let blobfs_server = BlobfsRamdisk::start()?;
     let root_dir = blobfs_server.root_dir_proxy()?;
 
@@ -242,7 +242,7 @@ async fn test_open_partial_write_close_create() -> Result<(), Error> {
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
-async fn test_create_present_blob_fails() -> Result<(), Error> {
+async fn create_present_blob_fails() -> Result<(), Error> {
     let blobfs_server = BlobfsRamdisk::start()?;
     let root_dir = blobfs_server.root_dir_proxy()?;
 
@@ -260,7 +260,7 @@ async fn test_create_present_blob_fails() -> Result<(), Error> {
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
-async fn test_create_present_empty_blob_fails() -> Result<(), Error> {
+async fn create_present_empty_blob_fails() -> Result<(), Error> {
     let blobfs_server = BlobfsRamdisk::start()?;
     let root_dir = blobfs_server.root_dir_proxy()?;
 
@@ -278,7 +278,7 @@ async fn test_create_present_empty_blob_fails() -> Result<(), Error> {
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
-async fn test_open_truncate_open_for_create_fails() -> Result<(), Error> {
+async fn open_truncate_open_for_create_fails() -> Result<(), Error> {
     let blobfs_server = BlobfsRamdisk::start()?;
     let root_dir = blobfs_server.root_dir_proxy()?;
 
@@ -303,7 +303,7 @@ async fn test_open_truncate_open_for_create_fails() -> Result<(), Error> {
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
-async fn test_open_open_truncate_truncate_fails() -> Result<(), Error> {
+async fn open_open_truncate_truncate_fails() -> Result<(), Error> {
     let blobfs_server = BlobfsRamdisk::start()?;
     let root_dir = blobfs_server.root_dir_proxy()?;
 
@@ -329,7 +329,7 @@ async fn test_open_open_truncate_truncate_fails() -> Result<(), Error> {
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
-async fn test_open_truncate_open_read_fails() -> Result<(), Error> {
+async fn open_truncate_open_read_fails() -> Result<(), Error> {
     let blobfs_server = BlobfsRamdisk::start()?;
     let root_dir = blobfs_server.root_dir_proxy()?;
 
@@ -351,7 +351,7 @@ async fn test_open_truncate_open_read_fails() -> Result<(), Error> {
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
-async fn test_open_for_create_wait_for_signal() -> Result<(), Error> {
+async fn open_for_create_wait_for_signal() -> Result<(), Error> {
     let blobfs_server = BlobfsRamdisk::start()?;
     let root_dir = blobfs_server.root_dir_proxy()?;
 
@@ -380,7 +380,7 @@ async fn test_open_for_create_wait_for_signal() -> Result<(), Error> {
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
-async fn test_open_truncate_wait_for_signal() -> Result<(), Error> {
+async fn open_truncate_wait_for_signal() -> Result<(), Error> {
     let blobfs_server = BlobfsRamdisk::start()?;
     let root_dir = blobfs_server.root_dir_proxy()?;
 
@@ -409,7 +409,7 @@ async fn test_open_truncate_wait_for_signal() -> Result<(), Error> {
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
-async fn test_open_missing_fails() -> Result<(), Error> {
+async fn open_missing_fails() -> Result<(), Error> {
     let blobfs_server = BlobfsRamdisk::start()?;
     let root_dir = blobfs_server.root_dir_proxy()?;
 
@@ -449,7 +449,7 @@ impl BlobfsRamdisk {
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
-async fn test_corrupt_blob() {
+async fn corrupt_blob() {
     let blobfs = BlobfsRamdisk::start().unwrap();
 
     // write a few blobs and verify they are valid
@@ -473,7 +473,7 @@ async fn test_corrupt_blob() {
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
-async fn test_corrupt_blob_with_many_blobs() {
+async fn corrupt_blob_with_many_blobs() {
     let blobfs = BlobfsRamdisk::start().unwrap();
 
     const LIPSUM: &[u8] = b"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque ultrices pharetra ullamcorper. Duis vestibulum nulla eget porta lacinia. Nulla nunc nibh, dictum nec risus aliquam, accumsan aliquet tellus. Sed eget lectus sit amet odio ultrices maximus. Vestibulum eget mi ut eros porta consequat. Quisque a risus id purus cursus faucibus pulvinar et mi. Etiam vel scelerisque risus, eget ullamcorper quam.";
@@ -520,4 +520,27 @@ async fn test_corrupt_blob_with_many_blobs() {
     }
 
     blobfs.stop().await.unwrap();
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn corrupt_create_fails_on_last_byte_write() -> Result<(), Error> {
+    let blobfs_server = BlobfsRamdisk::start()?;
+    let root_dir = blobfs_server.root_dir_proxy()?;
+
+    let (blob, _) = open_blob(
+        &root_dir,
+        BLOB_MERKLE,
+        fidl_fuchsia_io::OPEN_FLAG_CREATE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
+    )
+    .await?;
+    Status::ok(blob.truncate(BLOB_CONTENTS.len() as u64).await?)?;
+
+    write_blob(&blob, &BLOB_CONTENTS[..BLOB_CONTENTS.len() - 1]).await?;
+    let wrong_trailing_byte = !BLOB_CONTENTS.last().unwrap();
+    assert_matches!(
+        write_blob(&blob, &[wrong_trailing_byte]).await,
+        Err(e) if *e.downcast_ref::<zx::Status>().unwrap() == zx::Status::IO_DATA_INTEGRITY
+    );
+
+    blobfs_server.stop().await
 }
