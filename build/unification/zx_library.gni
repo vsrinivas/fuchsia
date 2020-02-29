@@ -33,11 +33,9 @@ template("zx_library") {
          "Only libraries exposed as sources are supported")
 
   sdkable = defined(invoker.sdk_publishable) && invoker.sdk_publishable
+  assert(!sdkable, "Libraries available in SDKs are currently not supported")
 
-  target_type = "source_set"
-  if (sdkable) {
-    target_type = "sdk_source_set"
-  }
+  target_type = "static_library"
 
   main_target_name = target_name
   config_target_name = "$target_name.config"
