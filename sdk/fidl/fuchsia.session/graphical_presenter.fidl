@@ -30,7 +30,7 @@ protocol GraphicalPresenter {
     /// client.
     ///
     /// The client is notified of view events via the `ViewController`.
-    PresentView(ViewSpec view_spec, request<ViewController> view_controller_request);
+    PresentView(ViewSpec view_spec, request<ViewController>? view_controller_request);
 };
 
 /// Errors returned by `GraphicalPresenter.PresentView`.
