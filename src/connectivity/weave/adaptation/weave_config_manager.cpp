@@ -26,10 +26,10 @@ WeaveConfigManager& WeaveConfigManager::GetInstance() {
 
 WeaveConfigManager::WeaveConfigManager() : WeaveConfigManager(kWeaveConfigStorePath) {}
 
-WeaveConfigManager::WeaveConfigManager(const std::string& path) : config_store_path_(path) {
+WeaveConfigManager::WeaveConfigManager(const std::string& path) {
   json::JSONParser json_parser_;
-  if (files::IsFile(config_store_path_)) {
-    config_ = json_parser_.ParseFromFile(config_store_path_);
+  if (files::IsFile(path)) {
+    config_ = json_parser_.ParseFromFile(path);
   } else {
     config_.SetObject();
     FXL_CHECK(CommitKVPairs() == WEAVE_NO_ERROR) << "Failed to write init configuration to disk.";
@@ -185,7 +185,7 @@ WEAVE_ERROR WeaveConfigManager::CommitKVPairs() {
   config_.Accept(writer);
 
   const std::string output(buffer.GetString());
-  return files::WriteFile(config_store_path_.c_str(), output.c_str(), output.size())
+  return files::WriteFile(kWeaveConfigStorePath, output.c_str(), output.size())
              ? WEAVE_NO_ERROR
              : WEAVE_ERROR_PERSISTED_STORAGE_FAIL;
 }
