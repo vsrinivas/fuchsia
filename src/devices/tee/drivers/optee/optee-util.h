@@ -2,17 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_TEE_DRIVERS_OPTEE_UTIL_H_
-#define SRC_DEVICES_TEE_DRIVERS_OPTEE_UTIL_H_
+#ifndef SRC_DEVICES_TEE_DRIVERS_OPTEE_OPTEE_UTIL_H_
+#define SRC_DEVICES_TEE_DRIVERS_OPTEE_OPTEE_UTIL_H_
 
 #include <fuchsia/hardware/tee/llcpp/fidl.h>
-#include <inttypes.h>
-#include <stddef.h>
+
+#include <cinttypes>
+#include <cstddef>
+#include <string_view>
+
+#include <ddk/debug.h>
 
 namespace optee {
 
 namespace fuchsia_tee = ::llcpp::fuchsia::tee;
 namespace fuchsia_hardware_tee = ::llcpp::fuchsia::hardware::tee;
+
+constexpr std::string_view kDeviceName = "optee";
 
 // Uuid
 //
@@ -36,4 +42,7 @@ static_assert(sizeof(Uuid) == 16, "Uuid must remain exactly 16 bytes");
 
 }  // namespace optee
 
-#endif  // SRC_DEVICES_TEE_DRIVERS_OPTEE_UTIL_H_
+#define LOG(severity, fmt, ...) \
+  zxlogf(severity, "[%s::%s] " fmt "\n", optee::kDeviceName.data(), __FUNCTION__, ##__VA_ARGS__);
+
+#endif  // SRC_DEVICES_TEE_DRIVERS_OPTEE_OPTEE_UTIL_H_

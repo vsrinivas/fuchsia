@@ -23,6 +23,7 @@
 
 #include "optee-client.h"
 #include "optee-device-info.h"
+#include "optee-util.h"
 
 namespace optee {
 
@@ -128,7 +129,7 @@ zx_status_t OpteeController::InitializeSharedMemory() {
   zx_status_t status = DiscoverSharedMemoryConfig(&shared_mem_start, &shared_mem_size);
 
   if (status != ZX_OK) {
-    zxlogf(ERROR, "optee: Unable to discover shared memory configuration\n");
+    LOG(ERROR, "unable to discover shared memory configuration");
     return status;
   }
 
@@ -136,7 +137,7 @@ zx_status_t OpteeController::InitializeSharedMemory() {
   zx::bti bti;
   status = pdev_get_bti(&pdev_proto_, kTeeBtiIndex, bti.reset_and_get_address());
   if (status != ZX_OK) {
-    zxlogf(ERROR, "optee: Unable to get bti\n");
+    LOG(ERROR, "unable to get bti");
     return status;
   }
 
@@ -146,7 +147,7 @@ zx_status_t OpteeController::InitializeSharedMemory() {
   pdev_mmio_t mmio_dev;
   status = pdev_get_mmio(&pdev_proto_, kSecureWorldMemoryMmioIndex, &mmio_dev);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "optee: Unable to get secure world mmio\n");
+    LOG(ERROR, "unable to get secure world mmio");
     return status;
   }
 
@@ -156,7 +157,7 @@ zx_status_t OpteeController::InitializeSharedMemory() {
   status = bti.pin(ZX_BTI_PERM_READ | ZX_BTI_CONTIGUOUS, *zx::unowned_vmo(mmio_dev.vmo),
                    /*offset=*/0, ZX_PAGE_SIZE, &mmio_vmo_paddr, /*num_addrs=*/1, &pmt);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "optee: Unable to pin secure world memory\n");
+    LOG(ERROR, "unable to pin secure world memory");
     return status;
   }
 
@@ -167,7 +168,7 @@ zx_status_t OpteeController::InitializeSharedMemory() {
   size_t sw_size = mmio_dev.size;
   if (shared_mem_start < sw_base_paddr ||
       (shared_mem_start + shared_mem_size) > (sw_base_paddr + sw_size)) {
-    zxlogf(ERROR, "optee: Shared Memory outside of secure world range\n");
+    LOG(ERROR, "shared memory outside of secure world range");
     return ZX_ERR_OUT_OF_RANGE;
   }
 
@@ -176,7 +177,7 @@ zx_status_t OpteeController::InitializeSharedMemory() {
   status = mmio_buffer_init(&mmio, vmo_relative_offset, shared_mem_size, mmio_dev.vmo,
                             ZX_CACHE_POLICY_CACHED);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "optee: Unable to map secure world memory\n");
+    LOG(ERROR, "unable to map secure world memory");
     return status;
   }
 
@@ -184,7 +185,7 @@ zx_status_t OpteeController::InitializeSharedMemory() {
                                        std::move(bti), &shared_memory_manager_);
 
   if (status != ZX_OK) {
-    zxlogf(ERROR, "optee: Unable to initialize SharedMemoryManager\n");
+    LOG(ERROR, "unable to initialize SharedMemoryManager");
     return status;
   }
 
@@ -235,7 +236,7 @@ zx_status_t OpteeController::Bind() {
   composite_protocol_t composite;
   status = device_get_protocol(parent(), ZX_PROTOCOL_COMPOSITE, &composite);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "optee: Unable to get composite protocol\n");
+    LOG(ERROR, "unable to get composite protocol");
     return status;
   }
 
@@ -243,63 +244,63 @@ zx_status_t OpteeController::Bind() {
   size_t actual;
   composite_get_components(&composite, components, countof(components), &actual);
   if (actual != countof(components)) {
-    zxlogf(ERROR, "optee: Unable to composite_get_components()\n");
+    LOG(ERROR, "unable to composite_get_components()");
     return ZX_ERR_INTERNAL;
   }
 
   status = device_get_protocol(components[kComponentPdev], ZX_PROTOCOL_PDEV, &pdev_proto_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "optee: Unable to get pdev protocol\n");
+    LOG(ERROR, "unable to get pdev protocol");
     return status;
   }
 
   status = device_get_protocol(components[kComponentSysmem], ZX_PROTOCOL_SYSMEM, &sysmem_proto_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "optee: Unable to get sysmem protocol\n");
+    LOG(ERROR, "unable to get sysmem protocol");
     return status;
   }
 
   static constexpr uint32_t kTrustedOsSmcIndex = 0;
   status = pdev_get_smc(&pdev_proto_, kTrustedOsSmcIndex, secure_monitor_.reset_and_get_address());
   if (status != ZX_OK) {
-    zxlogf(ERROR, "optee: Unable to get secure monitor handle\n");
+    LOG(ERROR, "unable to get secure monitor handle");
     return status;
   }
 
   // TODO(MTWN-140): Remove this once we have a tee core driver that will discover the TEE OS
   status = ValidateApiUid();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "optee: API UID does not match\n");
+    LOG(ERROR, "API UID does not match");
     return status;
   }
 
   status = ValidateApiRevision();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "optee: API revision not supported\n");
+    LOG(ERROR, "API revision not supported");
     return status;
   }
 
   status = GetOsRevision();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "optee: Unable to get Trusted OS revision\n");
+    LOG(ERROR, "unable to get Trusted OS revision");
     return status;
   }
 
   status = ExchangeCapabilities();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "optee: Could not exchange capabilities\n");
+    LOG(ERROR, "could not exchange capabilities");
     return status;
   }
 
   status = InitializeSharedMemory();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "optee: Could not initialize shared memory\n");
+    LOG(ERROR, "could not initialize shared memory");
     return status;
   }
 
-  status = DdkAdd("optee-tz", DEVICE_ADD_ALLOW_MULTI_COMPOSITE);
+  status = DdkAdd(kDeviceName.data(), DEVICE_ADD_ALLOW_MULTI_COMPOSITE);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "optee: Failed to add device\n");
+    LOG(ERROR, "failed to add device");
     return status;
   }
 
@@ -380,7 +381,7 @@ void OpteeController::ConnectToDeviceInfo(
                                            device_info_request.release()  // client_remote
   );
   if (status != ZX_OK) {
-    zxlogf(ERROR, "optee: failed to create device info child\n");
+    LOG(ERROR, "failed to create device info child");
     return;
   }
 
@@ -409,7 +410,7 @@ void OpteeController::ConnectToApplication(
                                       application_request.release()  // client_remote
   );
   if (status != ZX_OK) {
-    zxlogf(ERROR, "optee: failed to create device info child (status: %d)\n", status);
+    LOG(ERROR, "failed to create device info child (status: %d)", status);
     return;
   }
 
@@ -455,14 +456,14 @@ uint32_t OpteeController::CallWithMessage(const optee::Message& message, RpcHand
 
     zx_status_t status = zx_smc_call(secure_monitor_.get(), &func_call.params, &result.raw);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "optee: unable to invoke SMC\n");
+      LOG(ERROR, "unable to invoke SMC");
       return return_value;
     }
 
     if (result.response.status == kReturnEThreadLimit) {
       // TODO(rjascani): This should actually block until a thread is available. For now,
       // just quit.
-      zxlogf(ERROR, "optee: hit thread limit, need to fix this\n");
+      LOG(ERROR, "hit thread limit, need to fix this");
       break;
     } else if (optee::IsReturnRpc(result.response.status)) {
       rpc_handler(result.rpc_args, &func_call.rpc_result);

@@ -19,8 +19,8 @@ driver_module("optee") {
     "optee-controller.cc",
     "optee-device-info.cc",
     "optee-message.cc",
+    "optee-util.cc",
     "shared-memory.cc",
-    "util.cc",
   ]
   deps = [
     "//sdk/banjo/ddk.protocol.composite",
@@ -66,9 +66,9 @@ test("optee-message-test") {
     "optee-controller.cc",
     "optee-device-info.cc",
     "optee-message.cc",
+    "optee-util.cc",
     "shared-memory.cc",
     "test/optee-message-test.cc",
-    "util.cc",
   ]
   include_dirs = [ "." ]
   deps = [

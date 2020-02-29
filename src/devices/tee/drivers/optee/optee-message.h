@@ -20,8 +20,8 @@
 
 #include "optee-llcpp.h"
 #include "optee-smc.h"
+#include "optee-util.h"
 #include "shared-memory.h"
-#include "util.h"
 
 namespace optee {
 

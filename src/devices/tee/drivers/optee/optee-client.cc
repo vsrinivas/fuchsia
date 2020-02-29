@@ -32,6 +32,7 @@
 
 #include "optee-llcpp.h"
 #include "optee-smc.h"
+#include "optee-util.h"
 
 namespace {
 
@@ -105,8 +106,7 @@ static zx_status_t ConvertOpteeToZxResult(uint32_t optee_return_code, uint32_t o
       zx_result->set_return_origin(fuchsia_tee::ReturnOrigin::TRUSTED_APPLICATION);
       break;
     default:
-      zxlogf(ERROR, "optee: optee returned an invalid return origin (%" PRIu32 ")\n",
-             optee_return_origin);
+      LOG(ERROR, "optee: returned an invalid return origin (%" PRIu32 ")", optee_return_origin);
       zx_result->set_return_code(TEEC_ERROR_COMMUNICATION);
       zx_result->set_return_origin(fuchsia_tee::ReturnOrigin::COMMUNICATION);
       return ZX_ERR_INTERNAL;
@@ -148,8 +148,7 @@ static zx_status_t AwaitIoOnOpenStatus(const zx::unowned_channel channel) {
   auto status =
       fuchsia_io::Node::Call::HandleEvents(zx::unowned_channel(channel), std::move(event_handlers));
   if (!call_was_successful) {
-    zxlogf(ERROR, "optee::%s: failed to wait for OnOpen event (status: %d)\n", __FUNCTION__,
-           status);
+    LOG(ERROR, "failed to wait for OnOpen event (status: %d)", status);
   }
   return status;
 }
@@ -168,7 +167,7 @@ static zx_status_t OpenObjectInDirectory(zx::unowned_channel root_channel, uint3
   zx::channel channel_server_end;
   zx_status_t status = zx::channel::create(0, &channel_client_end, &channel_server_end);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "optee::%s: failed to create channel pair (status: %d)\n", __FUNCTION__, status);
+    LOG(ERROR, "failed to create channel pair (status: %d)", status);
     return status;
   }
 
@@ -176,8 +175,7 @@ static zx_status_t OpenObjectInDirectory(zx::unowned_channel root_channel, uint3
       std::move(root_channel), flags, mode, fidl::StringView(path), std::move(channel_server_end));
   status = result.status();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "optee::%s: could not call fuchsia.io.Directory/Open (status: %d)\n",
-           __FUNCTION__, status);
+    LOG(ERROR, "could not call fuchsia.io.Directory/Open (status: %d)", status);
     return status;
   }
 
@@ -354,8 +352,7 @@ std::pair<uint32_t, OpResult> OpteeClient::OpenSessionInternal(
   auto create_result = OpenSessionMessage::TryCreate(
       controller_->driver_pool(), controller_->client_pool(), ta_uuid, parameter_set);
   if (!create_result.is_ok()) {
-    zxlogf(ERROR, "optee::%s: failed to create OpenSessionMessage (status: %d)", __FUNCTION__,
-           create_result.error());
+    LOG(ERROR, "failed to create OpenSessionMessage (status: %d)", create_result.error());
     result.set_return_code(TEEC_ERROR_COMMUNICATION);
     result.set_return_origin(fuchsia_tee::ReturnOrigin::COMMUNICATION);
     return std::pair(kInvalidSession, std::move(result));
@@ -371,8 +368,8 @@ std::pair<uint32_t, OpResult> OpteeClient::OpenSessionInternal(
     return std::pair(kInvalidSession, std::move(result));
   }
 
-  zxlogf(SPEW, "optee: OpenSession returned 0x%" PRIx32 " 0x%" PRIx32 " 0x%" PRIx32 "\n", call_code,
-         message.return_code(), message.return_origin());
+  LOG(SPEW, "OpenSession returned 0x%" PRIx32 " 0x%" PRIx32 " 0x%" PRIx32, call_code,
+      message.return_code(), message.return_origin());
 
   if (ConvertOpteeToZxResult(message.return_code(), message.return_origin(), &result) != ZX_OK) {
     return std::pair(kInvalidSession, std::move(result));
@@ -424,8 +421,7 @@ OpResult OpteeClient::InvokeCommandInternal(
       InvokeCommandMessage::TryCreate(controller_->driver_pool(), controller_->client_pool(),
                                       session_id, command_id, parameter_set);
   if (!create_result.is_ok()) {
-    zxlogf(ERROR, "optee::%s: failed to create InvokeCommandMessage (status: %d)", __FUNCTION__,
-           create_result.error());
+    LOG(ERROR, "failed to create InvokeCommandMessage (status: %d)", create_result.error());
     result.set_return_code(TEEC_ERROR_COMMUNICATION);
     result.set_return_origin(fuchsia_tee::ReturnOrigin::COMMUNICATION);
     return result;
@@ -441,8 +437,8 @@ OpResult OpteeClient::InvokeCommandInternal(
     return result;
   }
 
-  zxlogf(SPEW, "optee: InvokeCommand returned 0x%" PRIx32 " 0x%" PRIx32 " 0x%" PRIx32 "\n",
-         call_code, message.return_code(), message.return_origin());
+  LOG(SPEW, "InvokeCommand returned 0x%" PRIx32 " 0x%" PRIx32 " 0x%" PRIx32, call_code,
+      message.return_code(), message.return_origin());
 
   if (ConvertOpteeToZxResult(message.return_code(), message.return_origin(), &result) != ZX_OK) {
     return result;
@@ -462,8 +458,7 @@ OpResult OpteeClient::InvokeCommandInternal(
 zx_status_t OpteeClient::CloseSession(uint32_t session_id) {
   auto create_result = CloseSessionMessage::TryCreate(controller_->driver_pool(), session_id);
   if (!create_result.is_ok()) {
-    zxlogf(ERROR, "optee::%s: failed to create CloseSessionMessage (status: %d)", __FUNCTION__,
-           create_result.error());
+    LOG(ERROR, "failed to create CloseSessionMessage (status: %d)", create_result.error());
     return create_result.error();
   }
 
@@ -476,8 +471,8 @@ zx_status_t OpteeClient::CloseSession(uint32_t session_id) {
     open_sessions_.erase(session_id);
   }
 
-  zxlogf(SPEW, "optee: CloseSession returned %" PRIx32 " %" PRIx32 " %" PRIx32 "\n", call_code,
-         message.return_code(), message.return_origin());
+  LOG(SPEW, "CloseSession returned %" PRIx32 " %" PRIx32 " %" PRIx32, call_code,
+      message.return_code(), message.return_origin());
   return ZX_OK;
 }
 
@@ -557,7 +552,7 @@ std::optional<SharedMemoryView> OpteeClient::GetMemoryReference(SharedMemoryList
   std::optional<SharedMemoryView> result;
   if (!mem_iter.IsValid() ||
       !(result = mem_iter->SliceByPaddr(base_paddr, base_paddr + size)).has_value()) {
-    zxlogf(ERROR, "optee: received invalid shared memory region reference\n");
+    LOG(ERROR, "received invalid shared memory region reference");
   }
   return result;
 }
@@ -745,10 +740,10 @@ zx_status_t OpteeClient::HandleRpcCommand(const RpcFunctionExecuteCommandsArgs& 
       return HandleRpcCommandGetTime(&get_time_result.value());
     }
     case RpcMessage::Command::kWaitQueue:
-      zxlogf(ERROR, "optee: RPC command wait queue recognized but not implemented\n");
+      LOG(ERROR, "RPC command wait queue recognized but not implemented");
       return ZX_ERR_NOT_SUPPORTED;
     case RpcMessage::Command::kSuspend:
-      zxlogf(ERROR, "optee: RPC command to suspend recognized but not implemented\n");
+      LOG(ERROR, "RPC command to suspend recognized but not implemented");
       return ZX_ERR_NOT_SUPPORTED;
     case RpcMessage::Command::kAllocateMemory: {
       auto alloc_mem_result = AllocateMemoryRpcMessage::CreateFromRpcMessage(std::move(message));
@@ -765,20 +760,20 @@ zx_status_t OpteeClient::HandleRpcCommand(const RpcFunctionExecuteCommandsArgs& 
       return HandleRpcCommandFreeMemory(&free_mem_result.value());
     }
     case RpcMessage::Command::kPerformSocketIo:
-      zxlogf(ERROR, "optee: RPC command to perform socket IO recognized but not implemented\n");
+      LOG(ERROR, "RPC command to perform socket IO recognized but not implemented");
       message.set_return_code(TEEC_ERROR_NOT_SUPPORTED);
       return ZX_OK;
     case RpcMessage::Command::kAccessReplayProtectedMemoryBlock:
-      zxlogf(INFO, "optee: RPMB is not yet supported.\n");
+      LOG(INFO, "RPMB is not yet supported.");
       message.set_return_code(TEEC_ERROR_ITEM_NOT_FOUND);
       return ZX_OK;
     case RpcMessage::Command::kAccessSqlFileSystem:
     case RpcMessage::Command::kLoadGprof:
-      zxlogf(INFO, "optee: received unsupported RPC command\n");
+      LOG(INFO, "optee: received unsupported RPC command");
       message.set_return_code(TEEC_ERROR_NOT_SUPPORTED);
       return ZX_OK;
     default:
-      zxlogf(ERROR, "optee: unrecognized command passed to RPC 0x%" PRIu32 "\n", message.command());
+      LOG(ERROR, "unrecognized command passed to RPC 0x%" PRIu32, message.command());
       message.set_return_code(TEEC_ERROR_NOT_SUPPORTED);
       return ZX_ERR_NOT_SUPPORTED;
   }
@@ -813,16 +808,16 @@ zx_status_t OpteeClient::HandleRpcCommandLoadTa(LoadTaRpcMessage* message) {
 
   if (status != ZX_OK) {
     if (status == ZX_ERR_NOT_FOUND) {
-      zxlogf(ERROR, "optee: could not find trusted app %s!\n", ta_path.data());
+      LOG(ERROR, "could not find trusted app %s!", ta_path.data());
       message->set_return_code(TEEC_ERROR_ITEM_NOT_FOUND);
     } else {
-      zxlogf(ERROR, "optee: error loading trusted app %s!\n", ta_path.data());
+      LOG(ERROR, "error loading trusted app %s!", ta_path.data());
       message->set_return_code(TEEC_ERROR_GENERIC);
     }
 
     return status;
   } else if (ta_size == 0) {
-    zxlogf(ERROR, "optee: loaded trusted app %s with unexpected size!\n", ta_path.data());
+    LOG(ERROR, "loaded trusted app %s with unexpected size!", ta_path.data());
     message->set_return_code(TEEC_ERROR_GENERIC);
     return status;
   }
@@ -843,7 +838,7 @@ zx_status_t OpteeClient::HandleRpcCommandLoadTa(LoadTaRpcMessage* message) {
   // so we don't have to do a copy of the TA
   status = ta_vmo.read(reinterpret_cast<void*>(out_ta_mem->vaddr()), 0, ta_size);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "optee: failed to copy trusted app from VMO to shared memory!\n");
+    LOG(ERROR, "failed to copy trusted app from VMO to shared memory!");
     message->set_return_code(TEEC_ERROR_GENERIC);
     return status;
   }
@@ -887,7 +882,7 @@ zx_status_t OpteeClient::HandleRpcCommandAllocateMemory(AllocateMemoryRpcMessage
   ZX_DEBUG_ASSERT(message != nullptr);
 
   if (message->memory_type() == SharedMemoryType::kGlobal) {
-    zxlogf(ERROR, "optee: implementation currently does not support global shared memory!\n");
+    LOG(ERROR, "implementation currently does not support global shared memory!");
     message->set_return_code(TEEC_ERROR_NOT_SUPPORTED);
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -919,7 +914,7 @@ zx_status_t OpteeClient::HandleRpcCommandFreeMemory(FreeMemoryRpcMessage* messag
   ZX_DEBUG_ASSERT(message != nullptr);
 
   if (message->memory_type() == SharedMemoryType::kGlobal) {
-    zxlogf(ERROR, "optee: implementation currently does not support global shared memory!\n");
+    LOG(ERROR, "implementation currently does not support global shared memory!");
     message->set_return_code(TEEC_ERROR_NOT_SUPPORTED);
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -944,8 +939,7 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystem(FileSystemRpcMessage&& messa
   message.set_return_origin(TEEC_ORIGIN_COMMS);
 
   if (!provider_channel_.is_valid()) {
-    zxlogf(ERROR,
-           "optee: HandleRpcCommandFileSystem() called with !provider_channel_.is_valid()\n");
+    LOG(ERROR, "Filesystem RPC received with !provider_channel_.is_valid()");
     // Client did not connect with a Provider so none of these RPCs can be serviced
     message.set_return_code(TEEC_ERROR_BAD_STATE);
     return ZX_ERR_UNAVAILABLE;
@@ -1009,14 +1003,13 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystem(FileSystemRpcMessage&& messa
       return HandleRpcCommandFileSystemRenameFile(&result.value());
     }
     case FileSystemRpcMessage::FileSystemCommand::kOpenDirectory:
-      zxlogf(ERROR, "optee: RPC command to open directory recognized but not implemented\n");
+      LOG(ERROR, "RPC command to open directory recognized but not implemented");
       break;
     case FileSystemRpcMessage::FileSystemCommand::kCloseDirectory:
-      zxlogf(ERROR, "optee: RPC command to close directory recognized but not implemented\n");
+      LOG(ERROR, "RPC command to close directory recognized but not implemented");
       break;
     case FileSystemRpcMessage::FileSystemCommand::kGetNextFileInDirectory:
-      zxlogf(ERROR,
-             "optee: RPC command to get next file in directory recognized but not implemented\n");
+      LOG(ERROR, "RPC command to get next file in directory recognized but not implemented");
       break;
   }
 
@@ -1028,7 +1021,7 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemOpenFile(OpenFileFileSystemRp
   ZX_DEBUG_ASSERT(message != nullptr);
   ZX_DEBUG_ASSERT(provider_channel_.is_valid());
 
-  zxlogf(SPEW, "optee: received RPC to open file\n");
+  LOG(SPEW, "received RPC to open file");
 
   SharedMemoryList::iterator mem_iter = FindSharedMemory(message->path_memory_identifier());
   std::optional<SharedMemoryView> path_mem =
@@ -1045,11 +1038,11 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemOpenFile(OpenFileFileSystemRp
   constexpr bool kNoCreate = false;
   zx_status_t status = GetStorageDirectory(path.parent_path(), kNoCreate, &storage_channel);
   if (status == ZX_ERR_NOT_FOUND) {
-    zxlogf(ERROR, "optee::%s: parent path not found (status: %d)\n", __FUNCTION__, status);
+    LOG(ERROR, "parent path not found (status: %d)", status);
     message->set_return_code(TEEC_ERROR_ITEM_NOT_FOUND);
     return status;
   } else if (status != ZX_OK) {
-    zxlogf(ERROR, "optee::%s: unable to get parent directory (status: %d)\n", __FUNCTION__, status);
+    LOG(ERROR, "unable to get parent directory (status: %d)", status);
     message->set_return_code(TEEC_ERROR_BAD_STATE);
     return status;
   }
@@ -1062,11 +1055,11 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemOpenFile(OpenFileFileSystemRp
   status = OpenObjectInDirectory(zx::unowned_channel(storage_channel), kOpenFlags, kOpenMode,
                                  path.filename().string(), &file_channel);
   if (status == ZX_ERR_NOT_FOUND) {
-    zxlogf(ERROR, "optee::%s: file not found (status: %d)\n", __FUNCTION__, status);
+    LOG(ERROR, "file not found (status: %d)", status);
     message->set_return_code(TEEC_ERROR_ITEM_NOT_FOUND);
     return status;
   } else if (status != ZX_OK) {
-    zxlogf(ERROR, "optee::%s: unable to open file (status: %d)\n", __FUNCTION__, status);
+    LOG(ERROR, "unable to open file (status: %d)", status);
     message->set_return_code(TEEC_ERROR_GENERIC);
     return status;
   }
@@ -1082,7 +1075,7 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemCreateFile(
     CreateFileFileSystemRpcMessage* message) {
   ZX_DEBUG_ASSERT(message != nullptr);
 
-  zxlogf(SPEW, "optee: received RPC to create file\n");
+  LOG(SPEW, "received RPC to create file");
 
   std::optional<SharedMemoryView> path_mem =
       GetMemoryReference(FindSharedMemory(message->path_memory_identifier()),
@@ -1111,7 +1104,7 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemCreateFile(
   status = OpenObjectInDirectory(zx::unowned_channel(storage_channel), kCreateFlags, kCreateMode,
                                  path.filename().string(), &file_channel);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "optee::%s: unable to create file (status: %d)\n", __FUNCTION__, status);
+    LOG(ERROR, "unable to create file (status: %d)", status);
     message->set_return_code(status == ZX_ERR_ALREADY_EXISTS ? TEEC_ERROR_ACCESS_CONFLICT
                                                              : TEEC_ERROR_GENERIC);
     return status;
@@ -1128,10 +1121,10 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemCloseFile(
     CloseFileFileSystemRpcMessage* message) {
   ZX_DEBUG_ASSERT(message != nullptr);
 
-  zxlogf(SPEW, "optee: received RPC to close file\n");
+  LOG(SPEW, "received RPC to close file");
 
   if (!UntrackFileSystemObject(message->file_system_object_identifier())) {
-    zxlogf(ERROR, "optee: could not find the requested file to close\n");
+    LOG(ERROR, "could not find the requested file to close");
     message->set_return_code(TEEC_ERROR_ITEM_NOT_FOUND);
     return ZX_ERR_NOT_FOUND;
   }
@@ -1143,7 +1136,7 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemCloseFile(
 zx_status_t OpteeClient::HandleRpcCommandFileSystemReadFile(ReadFileFileSystemRpcMessage* message) {
   ZX_DEBUG_ASSERT(message != nullptr);
 
-  zxlogf(SPEW, "optee: received RPC to read from file\n");
+  LOG(SPEW, "received RPC to read from file");
 
   auto maybe_file_channel = GetFileSystemObjectChannel(message->file_system_object_identifier());
   if (!maybe_file_channel.has_value()) {
@@ -1178,8 +1171,7 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemReadFile(ReadFileFileSystemRp
                                        read_chunk_request, offset, response_buffer.view());
     io_status = result->s;
     if (status != ZX_OK || io_status != ZX_OK) {
-      zxlogf(ERROR, "optee::%s failed to read from file (FIDL status: %d, IO status: %d)\n",
-             __FUNCTION__, status, io_status);
+      LOG(ERROR, "failed to read from file (FIDL status: %d, IO status: %d)", status, io_status);
       message->set_return_code(TEEC_ERROR_GENERIC);
       return status;
     }
@@ -1206,7 +1198,7 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemWriteFile(
     WriteFileFileSystemRpcMessage* message) {
   ZX_DEBUG_ASSERT(message != nullptr);
 
-  zxlogf(SPEW, "optee: received RPC to write file\n");
+  LOG(SPEW, "received RPC to write file");
 
   auto maybe_file_channel = GetFileSystemObjectChannel(message->file_system_object_identifier());
   if (!maybe_file_channel.has_value()) {
@@ -1241,8 +1233,7 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemWriteFile(
     bytes_left -= result->actual;
 
     if (status != ZX_OK || io_status != ZX_OK) {
-      zxlogf(ERROR, "optee::%s failed to write to file (FIDL status: %d, IO status: %d)\n",
-             __FUNCTION__, status, io_status);
+      LOG(ERROR, "failed to write to file (FIDL status: %d, IO status: %d)", status, io_status);
       message->set_return_code(TEEC_ERROR_GENERIC);
       return status;
     }
@@ -1256,7 +1247,7 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemTruncateFile(
     TruncateFileFileSystemRpcMessage* message) {
   ZX_DEBUG_ASSERT(message != nullptr);
 
-  zxlogf(SPEW, "optee: received RPC to truncate file\n");
+  LOG(SPEW, "received RPC to truncate file");
 
   auto maybe_file_channel = GetFileSystemObjectChannel(message->file_system_object_identifier());
   if (!maybe_file_channel.has_value()) {
@@ -1271,8 +1262,7 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemTruncateFile(
   zx_status_t status = result.status();
   zx_status_t io_status = result->s;
   if (status != ZX_OK || io_status != ZX_OK) {
-    zxlogf(ERROR, "optee::%s failed to truncate file (FIDL status: %d, IO status: %d)\n",
-           __FUNCTION__, status, io_status);
+    LOG(ERROR, "failed to truncate file (FIDL status: %d, IO status: %d)", status, io_status);
     message->set_return_code(TEEC_ERROR_GENERIC);
     return status;
   }
@@ -1285,7 +1275,7 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemRemoveFile(
     RemoveFileFileSystemRpcMessage* message) {
   ZX_DEBUG_ASSERT(message != nullptr);
 
-  zxlogf(SPEW, "optee: received RPC to remove file\n");
+  LOG(SPEW, "received RPC to remove file");
 
   std::optional<SharedMemoryView> path_mem =
       GetMemoryReference(FindSharedMemory(message->path_memory_identifier()),
@@ -1302,7 +1292,7 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemRemoveFile(
   constexpr bool kNoCreate = false;
   zx_status_t status = GetStorageDirectory(path.parent_path(), kNoCreate, &storage_channel);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "optee::%s: failed to get storage directory (status %d)\n", __FUNCTION__, status);
+    LOG(ERROR, "failed to get storage directory (status %d)", status);
     message->set_return_code(TEEC_ERROR_BAD_STATE);
     return status;
   }
@@ -1313,8 +1303,7 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemRemoveFile(
   status = result.status();
   zx_status_t io_status = result->s;
   if (status != ZX_OK || io_status != ZX_OK) {
-    zxlogf(ERROR, "optee::%s failed to remove file (FIDL status: %d, IO status: %d)\n",
-           __FUNCTION__, status, io_status);
+    LOG(ERROR, "failed to remove file (FIDL status: %d, IO status: %d)", status, io_status);
     message->set_return_code(TEEC_ERROR_GENERIC);
     return status;
   }
@@ -1327,7 +1316,7 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemRenameFile(
     RenameFileFileSystemRpcMessage* message) {
   ZX_DEBUG_ASSERT(message != nullptr);
 
-  zxlogf(SPEW, "optee: received RPC to rename file\n");
+  LOG(SPEW, "received RPC to rename file");
 
   std::optional<SharedMemoryView> old_path_mem = GetMemoryReference(
       FindSharedMemory(message->old_file_name_memory_identifier()),
@@ -1371,15 +1360,11 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemRenameFile(
                                    kCheckRenameMode, new_name, &destination_channel);
     if (status == ZX_OK) {
       // The file exists but shouldn't be overwritten
-      zxlogf(INFO,
-             "optee::%s: refusing to rename file to path that already exists with overwrite "
-             "set to false\n",
-             __FUNCTION__);
+      LOG(INFO, "refusing to rename file to path that already exists with overwrite set to false");
       message->set_return_code(TEEC_ERROR_ACCESS_CONFLICT);
       return ZX_OK;
     } else if (status != ZX_ERR_NOT_FOUND) {
-      zxlogf(ERROR, "optee::%s: could not check file existence before renaming (status %d)\n",
-             __FUNCTION__, status);
+      LOG(ERROR, "could not check file existence before renaming (status %d)", status);
       message->set_return_code(TEEC_ERROR_GENERIC);
       return status;
     }
@@ -1397,10 +1382,9 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemRenameFile(
   status = token_result.status();
   auto io_status = token_result->s;
   if (status != ZX_OK || io_status != ZX_OK) {
-    zxlogf(ERROR,
-           "optee::%s: could not get destination directory's storage token "
-           "(FIDL status: %d, IO status: %d)\n",
-           __FUNCTION__, status, io_status);
+    LOG(ERROR,
+        "could not get destination directory's storage token (FIDL status: %d, IO status: %d)",
+        status, io_status);
     message->set_return_code(TEEC_ERROR_GENERIC);
     return status;
   }
@@ -1411,8 +1395,7 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemRenameFile(
   status = rename_result.status();
   io_status = rename_result->s;
   if (status != ZX_OK || io_status != ZX_OK) {
-    zxlogf(ERROR, "optee::%s failed to rename file (FIDL status: %d, IO status: %d)\n",
-           __FUNCTION__, status, io_status);
+    LOG(ERROR, "failed to rename file (FIDL status: %d, IO status: %d)", status, io_status);
     message->set_return_code(TEEC_ERROR_GENERIC);
     return status;
   }
