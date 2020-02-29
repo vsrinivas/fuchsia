@@ -12,10 +12,10 @@ use {
     futures::StreamExt,
     input::{
         ime_handler::ImeHandler, input_device, input_handler::InputHandler,
-        input_pipeline::InputPipeline, mouse_handler, mouse_handler::MouseHandler,
-        shortcut_handler::ShortcutHandler, touch_handler::TouchHandler,
+        input_pipeline::InputPipeline, mouse_handler::MouseHandler,
+        shortcut_handler::ShortcutHandler, touch_handler::TouchHandler, Position, Size,
     },
-    scene_management::{self, FlatSceneManager, SceneManager},
+    scene_management::{self, FlatSceneManager, SceneManager, ScreenCoordinates},
 };
 
 /// Begins handling input events. The returned future will complete when
@@ -82,11 +82,11 @@ async fn add_touch_handler(
     scene_manager: &FlatSceneManager,
     handlers: &mut Vec<Box<dyn InputHandler>>,
 ) {
-    if let Ok(touch_handler) = TouchHandler::new(
+    let (width_pixels, height_pixels) = scene_manager.display_size().pixels();
+    if let Ok(touch_handler) = TouchHandler::new2(
         scene_manager.session.clone(),
         scene_manager.compositor_id,
-        scene_manager.display_width as i64,
-        scene_manager.display_height as i64,
+        Size { width: width_pixels, height: height_pixels },
     )
     .await
     {
@@ -99,11 +99,9 @@ async fn add_mouse_handler(
     handlers: &mut Vec<Box<dyn InputHandler>>,
 ) {
     let (sender, mut receiver) = futures::channel::mpsc::channel(0);
-    let mouse_handler = MouseHandler::new(
-        mouse_handler::CursorLocation {
-            x: scene_manager.display_width,
-            y: scene_manager.display_height,
-        },
+    let (width_pixels, height_pixels) = scene_manager.display_size().pixels();
+    let mouse_handler = MouseHandler::new2(
+        Position { x: width_pixels, y: height_pixels },
         Some(sender),
         scene_manager.session.clone(),
         scene_manager.compositor_id,
@@ -111,11 +109,9 @@ async fn add_mouse_handler(
     handlers.push(Box::new(mouse_handler));
 
     fasync::spawn(async move {
-        while let Some(mouse_handler::CursorLocation { x, y }) = receiver.next().await {
-            scene_manager.set_cursor_location(
-                x / scene_manager.display_metrics.pixels_per_pip(),
-                y / scene_manager.display_metrics.pixels_per_pip(),
-            );
+        while let Some(Position { x, y }) = receiver.next().await {
+            let screen_coordinates = ScreenCoordinates::from_pixels(x, y, scene_manager.display_metrics);
+            scene_manager.set_cursor_location2(screen_coordinates);
         }
     });
 }
@@ -126,8 +122,7 @@ async fn add_mouse_hack(
     handlers: &mut Vec<Box<dyn InputHandler>>,
 ) {
     let mouse_hack = MousePointerHack::new(
-        scene_manager.display_width,
-        scene_manager.display_height,
+        scene_manager.display_size().size(),
         1.0 / scene_manager.display_metrics.pixels_per_pip(),
         pointer_hack_server.pointer_listeners.clone(),
     );
@@ -140,8 +135,7 @@ async fn add_touch_hack(
     handlers: &mut Vec<Box<dyn InputHandler>>,
 ) {
     let touch_hack = TouchPointerHack::new(
-        scene_manager.display_width,
-        scene_manager.display_height,
+        scene_manager.display_size().size(),
         1.0 / scene_manager.display_metrics.pixels_per_pip(),
         pointer_hack_server.pointer_listeners.clone(),
     );

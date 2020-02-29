@@ -5,7 +5,7 @@
 use {
     async_trait::async_trait, fidl_fuchsia_ui_input as fidl_ui_input,
     fidl_fuchsia_ui_policy::PointerCaptureListenerHackProxy, futures::lock::Mutex,
-    input::input_device, input::input_handler::InputHandler, input::touch, std::sync::Arc,
+    input::input_device, input::input_handler::InputHandler, input::touch, std::sync::Arc, input::{Position, Size}
 };
 
 /// A [`TouchPointerHack`] observes touch events and sends them to observers.
@@ -17,11 +17,8 @@ use {
 /// Once Ermine has a way to observe these events directly from Scenic, this handler
 /// can be removed.
 pub struct TouchPointerHack {
-    /// The width of the display, used to compute the sent touch location.
-    display_width: f32,
-
-    /// The height of the display, used to compute the sent touch location.
-    display_height: f32,
+    /// The size of the display, used to compute the sent touch location.
+    display_size: Size,
 
     /// The scale to apply to touch event before sending to listeners.
     event_scale: f32,
@@ -53,12 +50,11 @@ impl InputHandler for TouchPointerHack {
 
 impl TouchPointerHack {
     pub fn new(
-        display_width: f32,
-        display_height: f32,
+        display_size: Size,
         event_scale: f32,
         listeners: Arc<Mutex<Vec<PointerCaptureListenerHackProxy>>>,
     ) -> Self {
-        TouchPointerHack { display_width, display_height, event_scale, listeners }
+        TouchPointerHack { display_size, event_scale, listeners }
     }
 
     async fn handle_touch_event(
@@ -103,7 +99,7 @@ impl TouchPointerHack {
         event_time: input_device::EventTime,
         touch_descriptor: &touch::TouchDeviceDescriptor,
     ) -> fidl_ui_input::PointerEvent {
-        let (x, y) = self.device_coordinate_from_contact(&contact, &touch_descriptor);
+        let position = self.device_coordinate_from_contact(&contact, &touch_descriptor) * self.event_scale;
 
         fidl_ui_input::PointerEvent {
             event_time: event_time,
@@ -111,8 +107,8 @@ impl TouchPointerHack {
             pointer_id: contact.id,
             type_: fidl_ui_input::PointerEventType::Touch,
             phase,
-            x: x * self.event_scale,
-            y: y * self.event_scale,
+            x: position.x,
+            y: position.y,
             radius_major: 0.0,
             radius_minor: 0.0,
             buttons: 0,
@@ -127,21 +123,21 @@ impl TouchPointerHack {
         &self,
         contact: &touch::TouchContact,
         touch_descriptor: &touch::TouchDeviceDescriptor,
-    ) -> (f32, f32) {
-        let default = (contact.position_x as f32, contact.position_y as f32);
+    ) -> Position {
         if let Some(contact_descriptor) = touch_descriptor.contacts.first() {
-            let x_range = (contact_descriptor.x_range.max - contact_descriptor.x_range.min) as f32;
-            let y_range = (contact_descriptor.y_range.max - contact_descriptor.y_range.min) as f32;
+            let range = Position {
+                x: (contact_descriptor.x_range.max - contact_descriptor.x_range.min) as f32,
+                y: (contact_descriptor.y_range.max - contact_descriptor.y_range.min) as f32,
+            };
 
-            if x_range == 0.0 || y_range == 0.0 {
-                return default;
+            if range.x == 0.0 || range.y == 0.0 {
+                return contact.position();
             }
 
-            let normalized_x = contact.position_x as f32 / x_range;
-            let normalized_y = contact.position_y as f32 / y_range;
-            (normalized_x * self.display_width as f32, normalized_y * self.display_height as f32)
+            let normalized = contact.position() / range;
+            normalized * self.display_size
         } else {
-            return default;
+            return contact.position();
         }
     }
 }

@@ -6,18 +6,8 @@ use {
     async_trait::async_trait, fidl_fuchsia_ui_input as fidl_ui_input,
     fidl_fuchsia_ui_policy::PointerCaptureListenerHackProxy, futures::lock::Mutex,
     input::input_device, input::input_handler::InputHandler, input::mouse,
-    std::collections::HashSet, std::sync::Arc,
+    std::collections::HashSet, std::sync::Arc, input::{Position, Size},
 };
-
-/// The location of a mouse cursor.
-#[derive(Clone, Copy, Debug, PartialEq)]
-struct CursorLocation {
-    /// The x location of the cursor, in pixels.
-    pub x: f32,
-
-    /// The y location of the cursor, in pixels.
-    pub y: f32,
-}
 
 /// A [`MousePointerHack`] tracks the mouse position and sends it to observers.
 ///
@@ -29,10 +19,10 @@ struct CursorLocation {
 /// can be removed.
 pub struct MousePointerHack {
     /// The current cursor location.
-    current_cursor_location: CursorLocation,
+    current_position: Position,
 
-    /// The maximum cursor location, used to bound events sent to clients.
-    max_cursor_location: CursorLocation,
+    /// The maximum cursor position, used to bound events sent to clients.
+    screen_size: Size,
 
     /// The scale factor to be applied to cursor events before sending to listeners.
     event_scale: f32,
@@ -72,19 +62,17 @@ impl MousePointerHack {
     /// Creates a new [`MousePointerHack `] that sends pointer events to Ermine.
     ///
     /// # Parameters
-    /// - `max_x`: The maximum x-value to cap mouse movement at.
-    /// - `max_y`: The maximum y-value to cap mouse movement at.
+    /// - `max_cursor_position`: The maximum position to cap mouse movement at.
     /// - `event_scale`: The scale to apply to pointer events before sending them to listeners.
     /// - `listeners`: The listeners that will get notified of mouse events.
     pub fn new(
-        max_x: f32,
-        max_y: f32,
+        screen_size: Size,
         event_scale: f32,
         listeners: Arc<Mutex<Vec<PointerCaptureListenerHackProxy>>>,
     ) -> MousePointerHack {
         MousePointerHack {
-            current_cursor_location: CursorLocation { x: 0.0, y: 0.0 },
-            max_cursor_location: CursorLocation { x: max_x, y: max_y },
+            current_position: Position { x: 0.0, y: 0.0 },
+            screen_size,
             event_scale,
             listeners,
         }
@@ -95,25 +83,24 @@ impl MousePointerHack {
     /// # Parameters
     /// - `mouse_event`: The mouse event to use to update the cursor location.
     async fn update_cursor_position(&mut self, mouse_event: &mouse::MouseEvent) {
-        if mouse_event.movement_x == 0 && mouse_event.movement_y == 0 {
+        if mouse_event.movement().x == 0.0 && mouse_event.movement().y == 0.0 {
             return;
         }
 
-        self.current_cursor_location.x += mouse_event.movement_x as f32;
-        self.current_cursor_location.y += mouse_event.movement_y as f32;
+        self.current_position += mouse_event.movement();
 
-        if self.current_cursor_location.x > self.max_cursor_location.x {
-            self.current_cursor_location.x = self.max_cursor_location.x;
+        if self.current_position.x > self.screen_size.width {
+            self.current_position.x = self.screen_size.width;
         }
-        if self.current_cursor_location.y > self.max_cursor_location.y {
-            self.current_cursor_location.y = self.max_cursor_location.y;
+        if self.current_position.y > self.screen_size.height {
+            self.current_position.y = self.screen_size.height;
         }
 
-        if self.current_cursor_location.x < 0.0 {
-            self.current_cursor_location.x = 0.0;
+        if self.current_position.x < 0.0 {
+            self.current_position.x = 0.0;
         }
-        if self.current_cursor_location.y < 0.0 {
-            self.current_cursor_location.y = 0.0;
+        if self.current_position.y < 0.0 {
+            self.current_position.y = 0.0;
         }
     }
 
@@ -132,6 +119,7 @@ impl MousePointerHack {
         device_descriptor: &mouse::MouseDeviceDescriptor,
     ) {
         let buttons = mouse::get_u32_from_buttons(buttons);
+        let scaled_position = self.current_position * self.event_scale;
 
         let mut pointer = fidl_ui_input::PointerEvent {
             event_time: event_time,
@@ -142,8 +130,8 @@ impl MousePointerHack {
             // Since Ermine listens for these events it needs to receive them in Ermine's view's
             // coordinate space. Normally, Scenic would perform this scaling when traversing
             // scale nodes in the Scene graph, but here the scale needs to be done manually.
-            x: self.current_cursor_location.x * self.event_scale,
-            y: self.current_cursor_location.y * self.event_scale,
+            x: scaled_position.x,
+            y: scaled_position.y,
             radius_major: 0.0,
             radius_minor: 0.0,
             buttons,
