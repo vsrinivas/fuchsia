@@ -7,6 +7,7 @@
 ### start `pave` and `serve-updates` in a single command
 ## usage: fx serve [-v] [-l host[:port]] [-a target]
 ##   -l host:port for "pm serve" to listen on
+##   --no-auto-config do not configure this host as a package server on the device
 ##   -v enable more verbose output (must be first argument)
 ##   -a target ipv6 address for "fx pave --no-bind"
 
@@ -32,6 +33,9 @@ set -- "${FX_ARGV[@]}"
 while (($#)); do
   case "$1" in
     -v|-vv|--verbose)
+      serve_args+=("$1")
+      ;;
+    --no-auto-config)
       serve_args+=("$1")
       ;;
     -l)

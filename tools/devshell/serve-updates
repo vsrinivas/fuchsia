@@ -7,6 +7,7 @@
 ### start the update server and attach to a running fuchsia device
 ## usage: fx serve-updates [-v] [-l host[:port]]
 ##   -l host:port for "pm serve" to listen on
+##   --no-auto-config do not configure this host as a package server on the device
 ##   -v verbose (do not suppress `pm serve` output)
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
@@ -22,7 +23,7 @@ set -- "${FX_ARGV[@]}"
 port="8083"
 serve_flags=()
 verbose=false
-very_verbose=false
+auto_config=true
 while (($#)); do
   case "$1" in
     -l)
@@ -30,16 +31,11 @@ while (($#)); do
       port="${1##*:}"
       serve_flags+=(-l "$1")
       ;;
-    -v|--verbose)
-      if $verbose; then
-        very_verbose=true
-      else
-        verbose=true
-      fi
+    --no-auto-config)
+      auto_config=false
       ;;
-    -vv)
+    -v|--verbose)
       verbose=true
-      very_verbose=true
       ;;
     *)
       echo "Unrecognized option: $1"
@@ -70,11 +66,12 @@ log() {
   echo "$(date '+%Y-%m-%d %H:%M:%S') [serve-updates] $@"
 }
 
-log_verbose() {
-  if [[ "$very_verbose" == true ]]; then
-    log "$@"
-  fi
-}
+if [[ "${auto_config}" == false ]]; then
+  log "Flag '--no-auto-config' used, automatic device configuration disabled."
+  log "Use 'fx -d DEVICE add-update-source --port ${port}' to reconfigure devices as needed, since it is not persistent accross reboots."
+  log "Serving packages on port ${port}..."
+  exec "${FUCHSIA_BUILD_DIR}/host_x64/pm" serve -repo "${FUCHSIA_BUILD_DIR}/amber-files" "${serve_flags[@]}"
+fi
 
 if [[ -z "${pm_srv_pid}" ]]; then
   # The use of host_x64/ is deliberate over tools/.
