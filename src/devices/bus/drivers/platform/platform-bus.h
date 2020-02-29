@@ -66,12 +66,13 @@ class PlatformBus : public PlatformBusType,
   zx_status_t PBusRegisterSysSuspendCallback(const pbus_sys_suspend_t* suspend_cbin);
 
   // SysInfo protocol implementation.
-  void GetBoardName(GetBoardNameCompleter::Sync completer);
-  void GetInterruptControllerInfo(GetInterruptControllerInfoCompleter::Sync completer);
-  void GetBoardRevision(GetBoardRevisionCompleter::Sync completer);
   void GetHypervisorResource(GetHypervisorResourceCompleter::Sync completer) {
     completer.Reply(ZX_ERR_NOT_SUPPORTED, zx::resource());
   }
+  void GetBoardName(GetBoardNameCompleter::Sync completer);
+  void GetBoardRevision(GetBoardRevisionCompleter::Sync completer);
+  void GetBootloaderVendor(GetBootloaderVendorCompleter::Sync completer);
+  void GetInterruptControllerInfo(GetInterruptControllerInfoCompleter::Sync completer);
 
   // IOMMU protocol implementation.
   zx_status_t IommuGetBti(uint32_t iommu_index, uint32_t bti_id, zx::bti* out_bti);
@@ -109,6 +110,9 @@ class PlatformBus : public PlatformBusType,
 
   fbl::Mutex bootloader_info_lock_;
   pbus_bootloader_info_t bootloader_info_ __TA_GUARDED(bootloader_info_lock_) = {};
+  // List to cache requests when vendor is not yet set.
+  std::vector<GetBootloaderVendorCompleter::Async> bootloader_vendor_completer_
+      __TA_GUARDED(bootloader_info_lock_);
 
   ::llcpp::fuchsia::sysinfo::InterruptControllerType interrupt_controller_type_ =
       ::llcpp::fuchsia::sysinfo::InterruptControllerType::UNKNOWN;

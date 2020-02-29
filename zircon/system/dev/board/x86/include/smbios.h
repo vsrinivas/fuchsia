@@ -15,11 +15,11 @@ class SmbiosInfo {
   zx_status_t Load();
 
   const std::string& board_name() const { return board_name_; }
-  const std::string& vendor_name() const { return vendor_name_; }
+  const std::string& vendor() const { return vendor_; }
 
  private:
   std::string board_name_;
-  std::string vendor_name_;
+  std::string vendor_;
 };
 
 // Check if we consider the given product name to be valid.

@@ -35,7 +35,7 @@ fbl::String GetTestFilter() {
     return "Unknown";
   }
 
-  char board_name[fuchsia_sysinfo_SYSINFO_BOARD_NAME_LEN + 1];
+  char board_name[fuchsia_sysinfo_BOARD_NAME_LEN + 1];
   zx_status_t status;
   size_t actual_size;
   zx_status_t fidl_status = fuchsia_sysinfo_SysInfoGetBoardName(channel.get(), &status, board_name,

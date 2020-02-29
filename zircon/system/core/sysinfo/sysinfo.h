@@ -18,14 +18,16 @@ class SysInfo : public ::llcpp::fuchsia::sysinfo::SysInfo::Interface {
   void GetHypervisorResource(GetHypervisorResourceCompleter::Sync completer);
   void GetBoardName(GetBoardNameCompleter::Sync completer);
   void GetBoardRevision(GetBoardRevisionCompleter::Sync completer);
+  void GetBootloaderVendor(GetBootloaderVendorCompleter::Sync completer);
   void GetInterruptControllerInfo(GetInterruptControllerInfoCompleter::Sync completer);
 
  private:
+  zx_status_t GetHypervisorResource(zx::resource* hypervisor);
   zx_status_t GetBoardName(std::string* board_name);
   zx_status_t GetBoardRevision(uint32_t* board_revision);
-  zx_status_t GetHypervisorResource(zx::resource* hypervisor);
+  zx_status_t GetBootloaderVendor(std::string* bootloader_vendor);
   zx_status_t GetInterruptControllerInfo(::llcpp::fuchsia::sysinfo::InterruptControllerInfo* info);
-  zx_status_t ConnectToPBus(zx::channel* local);
+  zx_status_t ConnectToPBus(llcpp::fuchsia::sysinfo::SysInfo::SyncClient* client);
 };
 }  // namespace sysinfo
 #endif  // ZIRCON_SYSTEM_CORE_SYSINFO_SYSINFO_H_

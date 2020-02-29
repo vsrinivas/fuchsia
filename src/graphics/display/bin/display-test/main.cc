@@ -72,7 +72,7 @@ enum Platforms {
 };
 
 Platforms platform = UNKNOWN_PLATFORM;
-fbl::StringBuffer<sysinfo::SYSINFO_BOARD_NAME_LEN> board_name;
+fbl::StringBuffer<sysinfo::BOARD_NAME_LEN> board_name;
 
 Platforms GetPlatform();
 void Usage();

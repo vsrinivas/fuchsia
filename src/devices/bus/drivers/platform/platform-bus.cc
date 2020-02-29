@@ -153,18 +153,29 @@ zx_status_t PlatformBus::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
 
 void PlatformBus::GetBoardName(GetBoardNameCompleter::Sync completer) {
   fbl::AutoLock lock(&board_info_lock_);
-  // Reply immediately if board name is valid
+  // Reply immediately if board_name is valid.
   if (board_info_.board_name[0]) {
     return completer.Reply(
         ZX_OK, fidl::StringView(board_info_.board_name, strlen(board_info_.board_name)));
   }
-  // Cache the requests until the board name becomes valid
+  // Cache the requests until board_name becomes valid.
   board_name_completer_.push_back(completer.ToAsync());
 }
 
 void PlatformBus::GetBoardRevision(GetBoardRevisionCompleter::Sync completer) {
   fbl::AutoLock lock(&board_info_lock_);
   return completer.Reply(ZX_OK, board_info_.board_revision);
+}
+
+void PlatformBus::GetBootloaderVendor(GetBootloaderVendorCompleter::Sync completer) {
+  fbl::AutoLock lock(&bootloader_info_lock_);
+  // Reply immediately if vendor is valid.
+  if (bootloader_info_.vendor[0]) {
+    return completer.Reply(
+        ZX_OK, fidl::StringView(bootloader_info_.vendor, strlen(bootloader_info_.vendor)));
+  }
+  // Cache the requests until vendor becomes valid.
+  bootloader_vendor_completer_.push_back(completer.ToAsync());
 }
 
 void PlatformBus::GetInterruptControllerInfo(GetInterruptControllerInfoCompleter::Sync completer) {
@@ -201,9 +212,18 @@ zx_status_t PlatformBus::PBusSetBoardInfo(const pbus_board_info_t* info) {
 
 zx_status_t PlatformBus::PBusSetBootloaderInfo(const pbus_bootloader_info_t* info) {
   fbl::AutoLock lock(&bootloader_info_lock_);
-  if (info->vendor_name[0]) {
-    strlcpy(bootloader_info_.vendor_name, info->vendor_name, sizeof(bootloader_info_.vendor_name));
-    zxlogf(INFO, "PlatformBus: set vendor name to \"%s\"\n", bootloader_info_.vendor_name);
+  if (info->vendor[0]) {
+    strlcpy(bootloader_info_.vendor, info->vendor, sizeof(bootloader_info_.vendor));
+    zxlogf(INFO, "PlatformBus: set bootloader vendor to \"%s\"\n", bootloader_info_.vendor);
+
+    std::vector<GetBootloaderVendorCompleter::Async> completer_tmp_;
+    // Respond to pending boardname requests, if any.
+    bootloader_vendor_completer_.swap(completer_tmp_);
+    while (!completer_tmp_.empty()) {
+      completer_tmp_.back().Reply(
+          ZX_OK, fidl::StringView(bootloader_info_.vendor, strlen(bootloader_info_.vendor)));
+      completer_tmp_.pop_back();
+    }
   }
   return ZX_OK;
 }
@@ -539,6 +559,15 @@ zx_status_t PlatformBus::Init() {
     return status;
   }
 
+#if __aarch64__
+  {
+    // For arm64, we do not expect a board to set the bootloader info.
+    fbl::AutoLock lock(&bootloader_info_lock_);
+    auto vendor = "<unknown>";
+    strlcpy(bootloader_info_.vendor, vendor, sizeof(vendor));
+  }
+#endif
+
   fbl::AutoLock lock(&board_info_lock_);
   if (vmo.is_valid()) {
     zbi_platform_id_t platform_id;
@@ -553,19 +582,18 @@ zx_status_t PlatformBus::Init() {
     memcpy(board_info_.board_name, platform_id.board_name, sizeof(board_info_.board_name));
   } else {
 #if __x86_64__
-    // For x86_64, we might not find the ZBI_TYPE_PLATFORM_ID, old bootloaders
-    // won't support this, for example. If this is the case, cons up the VID/PID here
-    // to allow the acpi board driver to load and bind.
+    // For x64, we might not find the ZBI_TYPE_PLATFORM_ID, old bootloaders
+    // won't support this, for example. If this is the case, cons up the VID/PID
+    // here to allow the acpi board driver to load and bind.
     board_info_.vid = PDEV_VID_INTEL;
     board_info_.pid = PDEV_PID_X86;
-    strncpy(board_info_.board_name, "x86_64", sizeof(board_info_.board_name));
 #else
     zxlogf(ERROR, "platform_bus: ZBI_TYPE_PLATFORM_ID not found\n");
     return ZX_ERR_INTERNAL;
 #endif
   }
 
-  // Set default board_revision
+  // Set default board_revision.
   zbi_board_info_t zbi_board_info = {};
   GetBoardInfo(&zbi_board_info);
   board_info_.board_revision = zbi_board_info.revision;

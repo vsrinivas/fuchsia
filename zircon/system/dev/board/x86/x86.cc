@@ -109,6 +109,17 @@ zx_status_t X86::CreateAndBind(void* ctx, zx_device_t* parent) {
   return status;
 }
 
+template <size_t N>
+static void SetField(const char* label, const std::string& value, char (&out)[N]) {
+  if (value.empty()) {
+    zxlogf(ERROR, "acpi: smbios %s could not be read\n", label);
+  } else if (value.size() >= N) {
+    zxlogf(INFO, "acpi: smbios %s too big for sysinfo: %s\n", label, value.data());
+  } else {
+    strlcpy(out, value.data(), N);
+  }
+}
+
 zx_status_t X86::Bind() {
   // Do early init of ACPICA etc.
   zx_status_t status = EarlyInit();
@@ -126,28 +137,27 @@ zx_status_t X86::Bind() {
     return status;
   }
 
-  pbus_board_info_t board_info = {};
-  const char* board_name = "x64";
+  pbus_board_info_t board_info{.board_name = "x64", .board_revision = 0};
+  pbus_bootloader_info_t bootloader_info{.vendor = "<unknown>"};
 
   // Load SMBIOS information.
   SmbiosInfo smbios;
   status = smbios.Load();
   if (status == ZX_OK) {
-    auto& name = smbios.board_name();
-    if (name.empty()) {
-      zxlogf(ERROR, "acpi: smbios board name could not be read\n");
-    } else if (name.size() >= sizeof(board_info.board_name)) {
-      zxlogf(INFO, "acpi: smbios board name too big for sysinfo\n");
-    } else {
-      board_name = name.data();
-    }
+    SetField("board name", smbios.board_name(), board_info.board_name);
+    SetField("vendor", smbios.vendor(), bootloader_info.vendor);
   }
 
-  // Inform platform bus of our board name.
-  strlcpy(board_info.board_name, board_name, sizeof(board_info.board_name));
+  // Inform the platform bus of our board info.
   status = pbus_.SetBoardInfo(&board_info);
   if (status != ZX_OK) {
     zxlogf(ERROR, "SetBoardInfo failed: %d\n", status);
+  }
+
+  // Inform the platform bus of our bootloader info.
+  status = pbus_.SetBootloaderInfo(&bootloader_info);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "SetBootloaderInfo failed: %d\n", status);
   }
 
   // Set the "sys" suspend op in platform-bus.

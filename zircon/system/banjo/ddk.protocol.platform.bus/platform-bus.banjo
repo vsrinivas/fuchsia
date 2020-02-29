@@ -80,7 +80,7 @@ struct PbusBoardInfo {
 };
 
 struct PbusBootloaderInfo {
-    string:32 vendor_name;
+    string:32 vendor;
 };
 
 [Layout = "ddk-callback"]

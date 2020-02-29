@@ -78,11 +78,13 @@ class FakeSysinfo : public ::llcpp::fuchsia::sysinfo::SysInfo::Interface {
   }
 
   void GetBoardName(GetBoardNameCompleter::Sync completer) {
-    completer.Reply(ZX_OK, fidl::StringView(board_, 32));
+    completer.Reply(ZX_OK, fidl::StringView{board_, sizeof(board_)});
   }
 
-  void GetBoardRevision(GetBoardRevisionCompleter::Sync completer) {
-    completer.Reply(ZX_OK, board_rev_);
+  void GetBoardRevision(GetBoardRevisionCompleter::Sync completer) { completer.Reply(ZX_OK, 0); }
+
+  void GetBootloaderVendor(GetBootloaderVendorCompleter::Sync completer) {
+    completer.Reply(ZX_OK, fidl::StringView{vendor_, sizeof(vendor_)});
   }
 
   void GetInterruptControllerInfo(GetInterruptControllerInfoCompleter::Sync completer) {
@@ -91,13 +93,14 @@ class FakeSysinfo : public ::llcpp::fuchsia::sysinfo::SysInfo::Interface {
 
   zx::channel& svc_chan() { return svc_chan_; }
 
-  void set_board_name(const char* board) { strncpy(board_, board, 32); }
+  void set_board_name(const char* board) { strlcpy(board_, board, sizeof(board_)); }
+  void set_bootloader_vendor(const char* vendor) { strlcpy(vendor_, vendor, sizeof(vendor_)); }
 
  private:
   zx::channel svc_chan_;
 
   char board_[32] = {};
-  uint32_t board_rev_ = 0;
+  char vendor_[32] = {};
 };
 
 }  // namespace

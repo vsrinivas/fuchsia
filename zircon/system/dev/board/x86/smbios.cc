@@ -146,7 +146,7 @@ zx_status_t SmbiosInfo::Load() {
         auto entry = reinterpret_cast<const smbios::BiosInformationStruct2_0*>(h);
         zx_status_t status = st.GetString(entry->vendor_str_idx, &name);
         if (status == ZX_OK) {
-          vendor_name_ = name;
+          vendor_ = name;
         }
         break;
       }

@@ -65,6 +65,25 @@ TEST(SysinfoTest, GetBoardRevision) {
   ASSERT_OK(status, "Failed to get board revision");
 }
 
+TEST(SysinfoTest, GetBootloaderVendor) {
+  // Get the resource handle from the driver.
+  fbl::unique_fd fd(open(kSysinfoPath.c_str(), O_RDWR));
+  ASSERT_TRUE(fd.is_valid(), "Can't open sysinfo");
+
+  zx::channel channel;
+  ASSERT_OK(fdio_get_service_handle(fd.release(), channel.reset_and_get_address()),
+            "Failed to get channel");
+
+  // Test fuchsia_sysinfo_SysInfoGetBootloaderVendor().
+  char vendor[32] = {};
+  size_t vendor_size = 0;
+  zx_status_t status;
+  zx_status_t fidl_status = fuchsia_sysinfo_SysInfoGetBootloaderVendor(
+      channel.get(), &status, vendor, sizeof(vendor), &vendor_size);
+  ASSERT_OK(fidl_status, "Failed to get bootloader vendor");
+  ASSERT_OK(status, "Failed to get bootloader vendor");
+}
+
 TEST(SysinfoTest, GetInterruptControllerInfo) {
   // Get the resource handle from the driver.
   fbl::unique_fd fd(open(kSysinfoPath.c_str(), O_RDWR));

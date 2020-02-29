@@ -38,8 +38,14 @@ void SysInfo::GetBoardRevision(GetBoardRevisionCompleter::Sync completer) {
   return completer.Reply(status, revision);
 }
 
+void SysInfo::GetBootloaderVendor(GetBootloaderVendorCompleter::Sync completer) {
+  std::string bootloader_vendor;
+  zx_status_t status = GetBootloaderVendor(&bootloader_vendor);
+  return completer.Reply(status, fidl::StringView(bootloader_vendor));
+}
+
 void SysInfo::GetInterruptControllerInfo(GetInterruptControllerInfoCompleter::Sync completer) {
-  ::llcpp::fuchsia::sysinfo::InterruptControllerInfo info = {};
+  llcpp::fuchsia::sysinfo::InterruptControllerInfo info = {};
   zx_status_t status = GetInterruptControllerInfo(&info);
   return completer.Reply(status, fidl::unowned(&info));
 }
@@ -52,7 +58,7 @@ zx_status_t SysInfo::GetHypervisorResource(zx::resource *hypervisor) {
     printf("sysinfo: channel create failed: %s\n", zx_status_get_string(status));
     return status;
   }
-  auto svc_name = "/svc/" + std::string(::llcpp::fuchsia::boot::RootResource::Name);
+  auto svc_name = "/svc/" + std::string(llcpp::fuchsia::boot::RootResource::Name);
   status = fdio_service_connect(svc_name.c_str(), remote.release());
   if (status != ZX_OK) {
     printf("sysinfo: Could not connect to RootResource service: %s\n",
@@ -60,7 +66,7 @@ zx_status_t SysInfo::GetHypervisorResource(zx::resource *hypervisor) {
     return status;
   }
 
-  ::llcpp::fuchsia::boot::RootResource::SyncClient client(std::move(local));
+  llcpp::fuchsia::boot::RootResource::SyncClient client(std::move(local));
   auto result = client.Get();
   if (result.status() != ZX_OK) {
     printf("sysinfo: Could not retrieve RootResource: %s\n", zx_status_get_string(result.status()));
@@ -76,13 +82,11 @@ zx_status_t SysInfo::GetHypervisorResource(zx::resource *hypervisor) {
 }
 
 zx_status_t SysInfo::GetBoardName(std::string *board_name) {
-  zx::channel local;
-  zx_status_t status = ConnectToPBus(&local);
+  llcpp::fuchsia::sysinfo::SysInfo::SyncClient client{zx::channel()};
+  zx_status_t status = ConnectToPBus(&client);
   if (status != ZX_OK) {
-    printf("sysinfo: Could not connect to platform bus: %s\n", zx_status_get_string(status));
     return status;
   }
-  ::llcpp::fuchsia::sysinfo::SysInfo::SyncClient client(std::move(local));
 
   // Get board name from platform bus
   auto result = client.GetBoardName();
@@ -96,14 +100,11 @@ zx_status_t SysInfo::GetBoardName(std::string *board_name) {
 }
 
 zx_status_t SysInfo::GetBoardRevision(uint32_t *board_revision) {
-  zx::channel local;
-  zx_status_t status = ConnectToPBus(&local);
+  llcpp::fuchsia::sysinfo::SysInfo::SyncClient client{zx::channel()};
+  zx_status_t status = ConnectToPBus(&client);
   if (status != ZX_OK) {
-    printf("sysinfo: Could not connect to platform bus: %s\n", zx_status_get_string(status));
     return status;
   }
-
-  ::llcpp::fuchsia::sysinfo::SysInfo::SyncClient client(std::move(local));
 
   // Get board revision from platform bus
   auto result = client.GetBoardRevision();
@@ -116,15 +117,31 @@ zx_status_t SysInfo::GetBoardRevision(uint32_t *board_revision) {
   return status;
 }
 
-zx_status_t SysInfo::GetInterruptControllerInfo(
-    ::llcpp::fuchsia::sysinfo::InterruptControllerInfo *info) {
-  zx::channel local;
-  zx_status_t status = ConnectToPBus(&local);
+zx_status_t SysInfo::GetBootloaderVendor(std::string *bootloader_vendor) {
+  llcpp::fuchsia::sysinfo::SysInfo::SyncClient client{zx::channel()};
+  zx_status_t status = ConnectToPBus(&client);
   if (status != ZX_OK) {
-    printf("sysinfo: Could not connect to platform bus: %s\n", zx_status_get_string(status));
     return status;
   }
-  ::llcpp::fuchsia::sysinfo::SysInfo::SyncClient client(std::move(local));
+
+  // Get bootloader vendor from platform bus
+  auto result = client.GetBootloaderVendor();
+  if (!result.ok()) {
+    printf("sysinfo: Could not GetBootloaderVendor: %s\n", result.error());
+    return result.status();
+  }
+  *bootloader_vendor = std::string(result->vendor.cbegin(), result->vendor.size());
+
+  return status;
+}
+
+zx_status_t SysInfo::GetInterruptControllerInfo(
+    llcpp::fuchsia::sysinfo::InterruptControllerInfo *info) {
+  llcpp::fuchsia::sysinfo::SysInfo::SyncClient client{zx::channel()};
+  zx_status_t status = ConnectToPBus(&client);
+  if (status != ZX_OK) {
+    return status;
+  }
 
   // Get interrupt controller information from platform bus
   auto result = client.GetInterruptControllerInfo();
@@ -136,17 +153,17 @@ zx_status_t SysInfo::GetInterruptControllerInfo(
   return status;
 }
 
-zx_status_t SysInfo::ConnectToPBus(zx::channel *local) {
+zx_status_t SysInfo::ConnectToPBus(llcpp::fuchsia::sysinfo::SysInfo::SyncClient *client) {
   zx::channel remote;
-  zx_status_t status = zx::channel::create(0, local, &remote);
+  zx_status_t status = zx::channel::create(0, client->mutable_channel(), &remote);
   if (status != ZX_OK) {
-    printf("sysinfo: channel create failed: %s\n", zx_status_get_string(status));
+    printf("sysinfo: Channel create failed: %s\n", zx_status_get_string(status));
     return status;
   }
 
   status = fdio_service_connect("/dev/sys/platform", remote.release());
   if (status != ZX_OK) {
-    printf("sysinfo: Could not connect to pbus: %s\n", zx_status_get_string(status));
+    printf("sysinfo: Could not connect to platform bus: %s\n", zx_status_get_string(status));
     return status;
   }
   return ZX_OK;

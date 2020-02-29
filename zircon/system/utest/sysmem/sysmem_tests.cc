@@ -191,7 +191,7 @@ const std::string& GetBoardName() {
         fdio_get_service_handle(sysinfo.release(), channel.reset_and_get_address());
     ZX_ASSERT(status == ZX_OK);
 
-    char board_name[fuchsia_sysinfo_SYSINFO_BOARD_NAME_LEN + 1];
+    char board_name[fuchsia_sysinfo_BOARD_NAME_LEN + 1];
     size_t actual_size;
     zx_status_t fidl_status = fuchsia_sysinfo_SysInfoGetBoardName(
         channel.get(), &status, board_name, sizeof(board_name), &actual_size);
