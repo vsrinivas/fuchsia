@@ -63,12 +63,10 @@ test_package("cobalt_tests") {
       name = "cobalt_testapp"
       dest = "cobalt_testapp_no_environment"
 
-      # We don't want to run this version of cobalt_testapp in the Garnet
+      # We don't want to run this version of cobalt_testapp in
       # CI/CQ  because it uses the real network. We run cobalt_testapp_no_network
-      # instead. This version is run in the stand-alone cobalt_client CQ.
-      # TODO(46062): Move to cobalt_tests_do_not_run_manually and enable.
+      # instead.
       disabled = true
-      environments = basic_envs
     },
   ]
 
