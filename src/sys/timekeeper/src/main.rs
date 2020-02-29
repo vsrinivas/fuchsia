@@ -27,7 +27,7 @@ async fn main() -> Result<(), Error> {
     let mut fs = ServiceFs::new();
 
     info!("diagnostics initialized, connecting notifier to servicefs.");
-    diagnostics::INSPECTOR.serve(&mut fs)?;
+    diagnostics::INSPECTOR.serve_tree(&mut fs)?;
 
     let source = initial_utc_source("/config/build-info/minimum-utc-stamp".as_ref())?;
     let notifier = Notifier::new(source);
@@ -198,6 +198,7 @@ mod tests {
     use {
         super::*,
         chrono::{offset::TimeZone, NaiveDate},
+        fuchsia_inspect::{assert_inspect_tree, testing::AnyProperty},
         fuchsia_zircon as zx,
         std::{
             future::Future,
@@ -275,5 +276,18 @@ mod tests {
 
         info!("waiting for time source update");
         assert_eq!(hanging.await.unwrap().source.unwrap(), ftime::UtcSource::External);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn inspect_values_are_present() -> Result<(), Error> {
+        diagnostics::init();
+        assert_inspect_tree!(diagnostics::INSPECTOR,
+        root: contains {
+            start_time_monotonic_nanos: AnyProperty,
+            current: contains {
+                system_uptime_monotonic_nanos: AnyProperty,
+            }
+        });
+        Ok(())
     }
 }
