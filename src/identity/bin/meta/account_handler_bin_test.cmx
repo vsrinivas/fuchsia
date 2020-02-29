@@ -14,7 +14,8 @@
             "isolated-temp"
         ],
         "services": [
-            "fuchsia.stash.Store"
+            "fuchsia.stash.Store",
+            "fuchsia.logger.LogSink"
         ]
     }
 }
