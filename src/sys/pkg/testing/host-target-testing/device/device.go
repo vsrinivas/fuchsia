@@ -380,26 +380,29 @@ func (c *Client) ServePackageRepository(ctx context.Context, repo *packages.Repo
 }
 
 func (c *Client) StartRpcSession(ctx context.Context, repo *packages.Repository) (*sl4f.Client, error) {
+	log.Printf("connecting to sl4f")
+	startTime := time.Now()
+
 	// Determine the address of this device from the point of view of the target.
 	localHostname, err := c.sshClient.GetSshConnection(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get local hostname: %s", err)
 	}
 
 	// Ensure this client is running system_image or system_image_prime from repo.
 	currentSystemImageMerkle, err := c.GetSystemImageMerkle(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get system image merkle: %s", err)
 	}
 	if err := repo.VerifyMatchesAnyUpdateSystemImageMerkle(currentSystemImageMerkle); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("repo does not match system version: %s", err)
 	}
 
 	// Serve the package repository.
 	repoName := "host_target_testing_sl4f"
 	repoServer, err := repo.Serve(ctx, localHostname, repoName)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error serving repo to device: %s", err)
 	}
 	defer repoServer.Shutdown(ctx)
 
@@ -407,13 +410,15 @@ func (c *Client) StartRpcSession(ctx context.Context, repo *packages.Repository)
 	log.Printf("registering package repository: %s", repoServer.Dir)
 	cmd := fmt.Sprintf("amberctl add_repo_cfg -f %s -h %s", repoServer.URL, repoServer.Hash)
 	if err := c.sshClient.Run(ctx, cmd, os.Stdout, os.Stderr); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error registering repo: %s", err)
 	}
 
 	rpcClient, err := sl4f.NewClient(ctx, c.sshClient, net.JoinHostPort(c.deviceHostname, "80"), repoName)
 	if err != nil {
 		return nil, fmt.Errorf("error creating sl4f client: %s", err)
 	}
+
+	log.Printf("connected to sl4f in %s", time.Now().Sub(startTime))
 
 	return rpcClient, nil
 }

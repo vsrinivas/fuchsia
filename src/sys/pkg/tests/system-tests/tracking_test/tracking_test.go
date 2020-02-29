@@ -24,7 +24,8 @@ import (
 var c *Config
 
 func TestMain(m *testing.M) {
-	log.SetPrefix("upgrade-test: ")
+	log.SetPrefix("tracking-test: ")
+	log.SetFlags(log.Ldate | log.Ltime | log.LUTC | log.Lshortfile)
 
 	var err error
 	c, err = NewConfig(flag.CommandLine)

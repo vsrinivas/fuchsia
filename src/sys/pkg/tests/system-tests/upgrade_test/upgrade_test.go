@@ -12,6 +12,7 @@ import (
 	"os"
 	"sync"
 	"testing"
+	"time"
 
 	"fuchsia.googlesource.com/host_target_testing/device"
 	"fuchsia.googlesource.com/host_target_testing/packages"
@@ -22,6 +23,7 @@ var c *Config
 
 func TestMain(m *testing.M) {
 	log.SetPrefix("upgrade-test: ")
+	log.SetFlags(log.Ldate | log.Ltime | log.LUTC | log.Lshortfile)
 
 	var err error
 	c, err = NewConfig(flag.CommandLine)
@@ -43,7 +45,7 @@ func TestOTA(t *testing.T) {
 
 	device, err := c.deviceConfig.NewDeviceClient(ctx)
 	if err != nil {
-		t.Fatalf("failed to create ota test client: %s", err)
+		log.Fatalf("failed to create ota test client: %s", err)
 	}
 	defer device.Close()
 
@@ -64,7 +66,7 @@ func TestOTA(t *testing.T) {
 	if c.ShouldRepaveDevice() {
 		rpcClient, err = paveDevice(ctx, device)
 		if err != nil {
-			t.Fatalf("failed to pave device: %s", err)
+			log.Fatalf("failed to pave device: %s", err)
 		}
 	}
 
@@ -76,13 +78,16 @@ func testOTAs(t *testing.T, ctx context.Context, device *device.Client, rpcClien
 		log.Printf("OTA Attempt %d", i)
 
 		if err := doTestOTAs(ctx, device, rpcClient); err != nil {
-			t.Fatalf("OTA Attempt %d failed: %s", i, err)
+			log.Fatalf("OTA Attempt %d failed: %s", i, err)
 		}
 	}
 }
 
 func doTestOTAs(ctx context.Context, device *device.Client, rpcClient **sl4f.Client) error {
-	ctx, cancel := context.WithTimeout(ctx, c.cycleTimeout)
+	log.Printf("Starting OTA test cycle. Time out in %s", c.cycleTimeout)
+
+	startTime := time.Now()
+	ctx, cancel := context.WithDeadline(ctx, startTime.Add(c.cycleTimeout))
 	defer cancel()
 
 	outputDir, cleanup, err := c.archiveConfig.OutputDir()
@@ -107,33 +112,37 @@ func doTestOTAs(ctx context.Context, device *device.Client, rpcClient **sl4f.Cli
 		return fmt.Errorf("failed to check if device is up to date: %s", err)
 	}
 	if !upToDate {
-		log.Printf("\n\n")
 		log.Printf("starting OTA from N-1 -> N test")
+		otaTime := time.Now()
 		if err := systemOTA(ctx, device, rpcClient, repo, true); err != nil {
 			return fmt.Errorf("OTA from N-1 -> N failed: %s", err)
 		}
-		log.Printf("OTA from N-1 -> N successful")
+		log.Printf("OTA from N-1 -> N successful in %s", time.Now().Sub(otaTime))
 	}
 
-	log.Printf("\n\n")
 	log.Printf("starting OTA N -> N' test")
+	otaTime := time.Now()
 	if err := systemPrimeOTA(ctx, device, rpcClient, repo, false); err != nil {
 		return fmt.Errorf("OTA from N -> N' failed: %s", err)
 	}
-	log.Printf("OTA from N -> N' successful")
+	log.Printf("OTA from N -> N' successful in %s", time.Now().Sub(otaTime))
 
-	log.Printf("\n\n")
 	log.Printf("starting OTA N' -> N test")
+	otaTime = time.Now()
 	if err := systemOTA(ctx, device, rpcClient, repo, false); err != nil {
 		return fmt.Errorf("OTA from N' -> N failed: %s", err)
 	}
-	log.Printf("OTA from N' -> N successful")
+	log.Printf("OTA from N' -> N successful in %s", time.Now().Sub(otaTime))
+	log.Printf("OTA cycle sucessful in %s", time.Now().Sub(startTime))
 
 	return nil
 }
 
 func paveDevice(ctx context.Context, device *device.Client) (*sl4f.Client, error) {
-	ctx, cancel := context.WithTimeout(ctx, c.paveTimeout)
+	log.Printf("Starting to pave device. Time out in %s", c.paveTimeout)
+
+	startTime := time.Now()
+	ctx, cancel := context.WithDeadline(ctx, startTime.Add(c.paveTimeout))
 	defer cancel()
 
 	outputDir, cleanup, err := c.archiveConfig.OutputDir()
@@ -178,7 +187,7 @@ func paveDevice(ctx context.Context, device *device.Client) (*sl4f.Client, error
 		// FIXME(40913): every downgrade builder should at least build
 		// sl4f as a universe package.
 		log.Printf("unable to connect to sl4f after pave: %s", err)
-		//t.Fatalf("unable to connect to sl4f after pave: %s", err)
+		//log.Fatalf("unable to connect to sl4f after pave: %s", err)
 	}
 
 	// We always boot into the A partition after a pave.
@@ -188,7 +197,7 @@ func paveDevice(ctx context.Context, device *device.Client) (*sl4f.Client, error
 		return nil, err
 	}
 
-	log.Printf("paving successful")
+	log.Printf("paving successful in %s", time.Now().Sub(startTime))
 
 	return rpcClient, nil
 }
@@ -206,26 +215,26 @@ func paveDevice(ctx context.Context, device *device.Client) (*sl4f.Client, error
 func systemOTA(t *testing.T, ctx context.Context, device *device.Client, rpcClient **sl4f.Client, repo *packages.Repository, checkABR bool) {
 	expectedSystemImageMerkle, err := repo.LookupUpdateSystemImageMerkle()
 	if err != nil {
-		t.Fatalf("error extracting expected system image merkle: %s", err)
+		log.Fatalf("error extracting expected system image merkle: %s", err)
 	}
 
 	expectedConfig, err := determineTargetConfig(ctx, *rpcClient)
 	if err != nil {
-		t.Fatalf("error determining target config: %s", err)
+		log.Fatalf("error determining target config: %s", err)
 	}
 
 	if isDeviceUpToDate(ctx, device, *rpcClient, expectedSystemImageMerkle) {
-		t.Fatalf("device already updated to the expected version %q", expectedSystemImageMerkle)
+		log.Fatalf("device already updated to the expected version %q", expectedSystemImageMerkle)
 	}
 
 	server, err := device.ServePackageRepository(ctx, repo, "upgrade_test")
 	if err != nil {
-		t.Fatalf("error setting up server: %s", err)
+		log.Fatalf("error setting up server: %s", err)
 	}
 	defer server.Shutdown(ctx)
 
 	if err := device.TriggerSystemOTA(ctx, repo, rpcClient); err != nil {
-		t.Fatalf("OTA failed: %s", err)
+		log.Fatalf("OTA failed: %s", err)
 	}
 
 	log.Printf("OTA complete, validating device")
@@ -306,7 +315,8 @@ func otaToPackage(
 	var wg sync.WaitGroup
 	device.RegisterDisconnectListener(&wg)
 
-	log.Printf("starting system OTA")
+	log.Printf("Starting system OTA")
+	startTime := time.Now()
 
 	cmd := fmt.Sprintf("run \"fuchsia-pkg://fuchsia.com/amber#meta/system_updater.cmx\" --initiator manual --reboot=false --update \"%s\"", updatePackageUrl)
 	if err = device.Run(ctx, cmd, os.Stdout, os.Stderr); err != nil {
@@ -319,7 +329,9 @@ func otaToPackage(
 		return fmt.Errorf("device failed to reboot after OTA applied: %s", err)
 	}
 
-	log.Printf("OTA complete, validating device")
+	log.Printf("OTA complete in in %s", time.Now().Sub(startTime))
+
+	log.Printf("Validating device")
 	// FIXME: See comment in device.TriggerSystemOTA()
 	if *rpcClient != nil {
 		(*rpcClient).Close()

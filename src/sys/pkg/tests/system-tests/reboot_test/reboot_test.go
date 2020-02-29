@@ -19,6 +19,9 @@ import (
 var c *config
 
 func TestMain(m *testing.M) {
+	log.SetPrefix("reboot-test: ")
+	log.SetFlags(log.Ldate | log.Ltime | log.LUTC | log.Lshortfile)
+
 	var err error
 	c, err = newConfig(flag.CommandLine)
 	if err != nil {
@@ -35,8 +38,6 @@ func TestMain(m *testing.M) {
 }
 
 func TestReboot(t *testing.T) {
-	log.SetPrefix("reboot-test: ")
-
 	ctx := context.Background()
 
 	outputDir, cleanup, err := c.archiveConfig.OutputDir()
