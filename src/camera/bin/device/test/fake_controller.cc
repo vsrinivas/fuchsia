@@ -37,23 +37,37 @@ static std::vector<fuchsia::camera2::hal::Config> DefaultConfigs() {
           .max_coded_height = 4096,
           .coded_width_divisor = 128,
       }}}};
-  fuchsia::camera2::hal::StreamConfig stream_config{
-      .frame_rate =
-          {
-              .frames_per_sec_numerator = 30,
-              .frames_per_sec_denominator = 1,
-          },
-      .constraints = kBufferCollectionConstraints,
-      .image_formats = {{
-          .pixel_format = kBufferCollectionConstraints.image_format_constraints[0].pixel_format,
-          .coded_width = 1920,
-          .coded_height = 1080,
-          .bytes_per_row = 1920,
-      }}};
-  fuchsia::camera2::hal::Config config;
-  config.stream_configs.push_back(std::move(stream_config));
+  fuchsia::camera2::hal::Config config1;
+  config1.stream_configs.push_back(
+      {.frame_rate =
+           {
+               .frames_per_sec_numerator = 30,
+               .frames_per_sec_denominator = 1,
+           },
+       .constraints = kBufferCollectionConstraints,
+       .image_formats = {{
+           .pixel_format = kBufferCollectionConstraints.image_format_constraints[0].pixel_format,
+           .coded_width = 1920,
+           .coded_height = 1080,
+           .bytes_per_row = 1920,
+       }}});
+  fuchsia::camera2::hal::Config config2;
+  config2.stream_configs.push_back(
+      {.frame_rate =
+           {
+               .frames_per_sec_numerator = 30,
+               .frames_per_sec_denominator = 1,
+           },
+       .constraints = kBufferCollectionConstraints,
+       .image_formats = {{
+           .pixel_format = kBufferCollectionConstraints.image_format_constraints[0].pixel_format,
+           .coded_width = 1280,
+           .coded_height = 720,
+           .bytes_per_row = 1280,
+       }}});
   std::vector<fuchsia::camera2::hal::Config> configs;
-  configs.push_back(std::move(config));
+  configs.push_back(std::move(config1));
+  configs.push_back(std::move(config2));
   return configs;
 }
 

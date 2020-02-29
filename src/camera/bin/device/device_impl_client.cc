@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/default.h>
+#include <lib/async/cpp/task.h>
 #include <lib/syslog/cpp/logger.h>
 
 #include <sstream>
@@ -23,6 +24,25 @@ DeviceImpl::Client::Client(DeviceImpl& device, uint64_t id,
 
 DeviceImpl::Client::~Client() { loop_.Shutdown(); }
 
+void DeviceImpl::Client::PostConfigurationUpdated(uint32_t index) {
+  async::PostTask(loop_.dispatcher(), [this, index]() {
+    if (last_sent_configuration_.has_value() && last_sent_configuration_ == index) {
+      pending_configuration_.reset();
+      return;
+    }
+
+    if (watch_current_configuration_callback_) {
+      ZX_ASSERT(!pending_configuration_.has_value());
+      watch_current_configuration_callback_(index);
+      watch_current_configuration_callback_ = nullptr;
+      last_sent_configuration_ = index;
+      return;
+    }
+
+    pending_configuration_ = index;
+  });
+}
+
 void DeviceImpl::Client::OnClientDisconnected(zx_status_t status) {
   FX_PLOGS(DEBUG, status) << "Device client " << id_ << " disconnected.";
   device_.PostRemoveClient(id_);
@@ -42,15 +62,28 @@ void DeviceImpl::Client::GetConfigurations(GetConfigurationsCallback callback) {
 }
 
 void DeviceImpl::Client::WatchCurrentConfiguration(WatchCurrentConfigurationCallback callback) {
-  CloseConnection(ZX_ERR_NOT_SUPPORTED);
+  if (watch_current_configuration_callback_) {
+    CloseConnection(ZX_ERR_BAD_STATE);
+    return;
+  }
+
+  if (pending_configuration_.has_value()) {
+    callback(pending_configuration_.value());
+    last_sent_configuration_ = pending_configuration_;
+    pending_configuration_.reset();
+    return;
+  }
+
+  watch_current_configuration_callback_ = std::move(callback);
 }
 
 void DeviceImpl::Client::SetCurrentConfiguration(uint32_t index) {
   if (index < 0 || index >= device_.configurations_.size()) {
     CloseConnection(ZX_ERR_OUT_OF_RANGE);
+    return;
   }
 
-  CloseConnection(ZX_ERR_NOT_SUPPORTED);
+  device_.PostSetConfiguration(index);
 }
 
 void DeviceImpl::Client::WatchMuteState(WatchMuteStateCallback callback) {

@@ -11,7 +11,6 @@
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
-#include "lib/async/default.h"
 #include "src/camera/bin/device/messages.h"
 #include "src/camera/bin/device/util.h"
 
@@ -123,6 +122,7 @@ void DeviceImpl::OnNewRequest(fidl::InterfaceRequest<fuchsia::camera3::Device> r
       return;
     }
     auto client = std::make_unique<Client>(*this, client_id_next_, std::move(request));
+    client->PostConfigurationUpdated(0);
     clients_.emplace(client_id_next_++, std::move(client));
   };
   ZX_ASSERT(async::PostTask(loop_.dispatcher(), std::move(task)) == ZX_OK);
@@ -146,6 +146,9 @@ void DeviceImpl::SetConfiguration(uint32_t index) {
   streams_.clear();
   streams_.resize(configurations_[index].streams.size());
   current_configuration_index_ = index;
+  for (auto& client : clients_) {
+    client.second->PostConfigurationUpdated(current_configuration_index_);
+  }
 }
 
 void DeviceImpl::PostConnectToStream(uint32_t index,

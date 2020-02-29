@@ -75,6 +75,9 @@ class DeviceImpl {
            fidl::InterfaceRequest<fuchsia::camera3::Device> request);
     ~Client();
 
+    // Posts a task to inform the client of a new configuration.
+    void PostConfigurationUpdated(uint32_t index);
+
    private:
     // Closes |binding_| with the provided |status| epitaph, and removes the client instance from
     // the parent |clients_| map.
@@ -98,6 +101,9 @@ class DeviceImpl {
     uint64_t id_;
     async::Loop loop_;
     fidl::Binding<fuchsia::camera3::Device> binding_;
+    std::optional<uint32_t> last_sent_configuration_;
+    std::optional<uint32_t> pending_configuration_;
+    WatchCurrentConfigurationCallback watch_current_configuration_callback_;
   };
 
   async::Loop loop_;

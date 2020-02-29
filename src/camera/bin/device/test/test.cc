@@ -62,6 +62,17 @@ class DeviceTest : public gtest::RealLoopFixture {
     };
   }
 
+  template <class T>
+  static void SetFailOnError(fidl::InterfacePtr<T>& ptr, std::string name = T::Name_) {
+    ptr.set_error_handler([=](zx_status_t status) {
+      ADD_FAILURE() << name << " server disconnected: " << zx_status_get_string(status);
+    });
+  }
+
+  void RunLoopUntilFailureOr(bool& condition) {
+    RunLoopUntil([&]() { return HasFailure() || condition; });
+  }
+
   std::unique_ptr<sys::ComponentContext> context_;
   std::unique_ptr<DeviceImpl> device_;
   std::unique_ptr<FakeController> controller_;
@@ -216,6 +227,33 @@ TEST_F(DeviceTest, GetFramesInvalidCall) {
   while (!HasFailure() && !stream_errored) {
     RunLoopUntilIdle();
   }
+}
+
+TEST_F(DeviceTest, Configurations) {
+  fuchsia::camera3::DevicePtr device;
+  SetFailOnError(device, "Device");
+  device_->GetHandler()(device.NewRequest());
+
+  uint32_t callback_count = 0;
+  constexpr uint32_t kExpectedCallbackCount = 3;
+  bool all_callbacks_received = false;
+  device->GetConfigurations([&](std::vector<fuchsia::camera3::Configuration> configurations) {
+    EXPECT_GE(configurations.size(), 2u);
+    all_callbacks_received = ++callback_count == kExpectedCallbackCount;
+  });
+  device->SetCurrentConfiguration(0);
+  RunLoopUntilIdle();
+  device->WatchCurrentConfiguration([&](uint32_t index) {
+    EXPECT_EQ(index, 0u);
+    all_callbacks_received = ++callback_count == kExpectedCallbackCount;
+    device->WatchCurrentConfiguration([&](uint32_t index) {
+      EXPECT_EQ(index, 1u);
+      all_callbacks_received = ++callback_count == kExpectedCallbackCount;
+    });
+    RunLoopUntilIdle();
+    device->SetCurrentConfiguration(1);
+  });
+  RunLoopUntilFailureOr(all_callbacks_received);
 }
 
 }  // namespace camera
