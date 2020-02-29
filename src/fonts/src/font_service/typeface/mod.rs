@@ -6,6 +6,7 @@
 
 mod collection;
 mod matcher;
+mod test_util;
 mod typeface;
 
 pub use {
