@@ -169,8 +169,6 @@ func Main() {
 		panic(fmt.Sprintf("failed to get secret key for opaque IIDs: %s", err))
 	}
 
-	ndpDisp := newNDPDispatcher()
-
 	stk := tcpipstack.New(tcpipstack.Options{
 		NetworkProtocols: []tcpipstack.NetworkProtocol{
 			arp.NewProtocol(),
@@ -184,19 +182,22 @@ func Main() {
 			udp.NewProtocol(),
 		},
 		HandleLocal: true,
-		NDPConfigs: tcpipstack.NDPConfigurations{
-			DupAddrDetectTransmits:  dadTransmits,
-			RetransmitTimer:         dadRetransmitTimer,
-			MaxRtrSolicitations:     maxRtrSolicitations,
-			RtrSolicitationInterval: rtrSolicitationInterval,
-			MaxRtrSolicitationDelay: maxRtrSolicitationDelay,
-			HandleRAs:               true,
-			DiscoverDefaultRouters:  true,
-			DiscoverOnLinkPrefixes:  true,
-			AutoGenGlobalAddresses:  true,
-		},
-		NDPDisp:              ndpDisp,
-		AutoGenIPv6LinkLocal: true,
+
+		// TODO(b/150455090): Re-enable the below configuations.
+		//NDPConfigs: tcpipstack.NDPConfigurations{
+		//	DupAddrDetectTransmits:  dadTransmits,
+		//	RetransmitTimer:         dadRetransmitTimer,
+		//	MaxRtrSolicitations:     maxRtrSolicitations,
+		//	RtrSolicitationInterval: rtrSolicitationInterval,
+		//	MaxRtrSolicitationDelay: maxRtrSolicitationDelay,
+		//	HandleRAs:               true,
+		//	DiscoverDefaultRouters:  true,
+		//	DiscoverOnLinkPrefixes:  true,
+		//	AutoGenGlobalAddresses:  true,
+		//},
+		//NDPDisp:              ndpDisp,
+		//AutoGenIPv6LinkLocal: true,
+
 		// Raw sockets are typically used for implementing custom protocols. We intend
 		// to support custom protocols through structured FIDL APIs in the future, so
 		// disable raw sockets to prevent them from accidentally becoming load-bearing.
@@ -238,8 +239,6 @@ func Main() {
 		nameProvider: np,
 		stack:        stk,
 	}
-	ndpDisp.ns = ns
-	ndpDisp.start(ctx)
 
 	if err := ns.addLoopback(); err != nil {
 		syslog.Fatalf("loopback: %s", err)
