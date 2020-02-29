@@ -6,7 +6,10 @@ use crate::{id::Id, proxies::player::Player, Result};
 use anyhow::Context as _;
 use fidl_fuchsia_media_sessions2::*;
 use fuchsia_inspect as inspect;
+use fuchsia_syslog::fx_log_warn;
 use futures::{channel::mpsc, prelude::*};
+
+const LOG_TAG: &str = "publisher";
 
 /// Implements `fuchsia.media.session2.Publisher`.
 #[derive(Clone)]
@@ -50,7 +53,11 @@ impl<'a> Publisher<'a> {
             match player_result {
                 Ok(player) => self.player_sink.send(player).await?,
                 Err(e) => {
-                    eprintln!("A request to publish a player was invalid: {:?}", e);
+                    fx_log_warn!(
+                        tag: LOG_TAG,
+                        "A request to publish a player was invalid: {:?}",
+                        e
+                    );
                 }
             }
         }
