@@ -16,170 +16,6 @@ use {
 /// If passed in, this will be used for all MPSC channels created by the broker.
 pub const DEFAULT_CHANNEL_SIZE: usize = 128;
 
-/// A `HangingGet` object manages some internal state `S` and notifies observers of type `O`
-/// when their view of the state is outdated.
-///
-/// `S` - the type of State to be watched
-/// `O` - the type of Observers of `S`
-/// `F` - the type of observer notification behavior, where `F: Fn(&S, O)`
-/// `K` - the Key by which Observers are identified
-///
-/// While it _can_ be used directly, most API consumers will want to use the higher level
-/// `HangingGetBroker` object. `HangingGetBroker` and its companion types provide `Send`
-/// for use from multiple threads or async tasks.
-pub struct HangingGet<S, K, O, F: Fn(&S, O) -> bool> {
-    state: S,
-    notify: F,
-    observers: HashMap<K, Window<O>>,
-}
-
-impl<S, K, O, F> HangingGet<S, K, O, F>
-where
-    K: Eq + Hash,
-    F: Fn(&S, O) -> bool,
-{
-    fn notify_all(&mut self) {
-        for window in self.observers.values_mut() {
-            window.notify(&self.notify, &self.state);
-        }
-    }
-
-    /// Create a new `HangingGet`.
-    /// `state` is the initial state of the HangingGet
-    /// `notify` is a `Fn` that is used to notify observers of state.
-    pub fn new(state: S, notify: F) -> Self {
-        Self { state, notify, observers: HashMap::new() }
-    }
-
-    /// Set the internal state value to `state` and notify all observers.
-    /// Note that notification is not conditional on the _value_ set by calling the `set` function.
-    /// Notification will occur regardless of whether the `state` value differs from the value
-    /// currently stored by `HangingGet`.
-    pub fn set(&mut self, state: S) {
-        self.state = state;
-        self.notify_all();
-    }
-
-    /// Modify the internal state in-place using the `state_update` function. Notify all
-    /// observers if `state_update` returns true.
-    pub fn update(&mut self, state_update: impl FnOnce(&mut S) -> bool) {
-        if state_update(&mut self.state) {
-            self.notify_all();
-        }
-    }
-
-    /// Register an observer as a subscriber of the state. Observers are grouped by key and
-    /// all observers will the same key are assumed to have received the latest state update.
-    /// If an observer with a previously unseen key subscribes, it is immediately notified
-    /// to the stated. If an observer with a known key subscribes, it will only be
-    /// notified when the state is updated since last sent to an observer with the same
-    /// key. All unresolved observers will be resolved to the same value immediately after the state
-    /// is updated.
-    pub fn subscribe(&mut self, key: K, observer: O) {
-        self.observers.entry(key).or_insert_with(Window::new).observe(
-            observer,
-            &self.notify,
-            &self.state,
-        )
-    }
-
-    /// Deregister all observers that subscribed with `key`. If an observer is subsequently
-    /// subscribed with the same `key` value, it will be treated as a previously unseen `key`.
-    pub fn unsubscribe(&mut self, key: K) {
-        self.observers.remove(&key);
-    }
-}
-
-/// A new subscriber request is sent over as a oneshot sender that can be used
-/// to send the subscriber's mpsc sender end of a channel
-type NewSubscriberRequest<O> = oneshot::Sender<Subscriber<O>>;
-
-/// A cheaply copyable handle that can be used to register new `Subscriber`s with
-/// the `HangingGetBroker`.
-pub struct Handle<O> {
-    sender: mpsc::Sender<NewSubscriberRequest<O>>,
-}
-
-impl<O> Clone for Handle<O> {
-    fn clone(&self) -> Self {
-        Self { sender: self.sender.clone() }
-    }
-}
-
-impl<O> Handle<O> {
-    /// Register a new subscriber
-    pub async fn new_subscriber(&mut self) -> Result<Subscriber<O>, HangingGetServerError> {
-        let (request, response) = oneshot::channel();
-        self.sender.send(request).await?;
-        let sender = response.await.map_err(|_| HangingGetServerError::NoBroker)?;
-        Ok(sender)
-    }
-}
-
-/// A `Subscriber` can be used to register observation requests with the `HangingGetBroker`.
-/// These observations will be fulfilled when the state changes or immediately the first time
-/// a `Subscriber` registers an observation.
-pub struct Subscriber<O> {
-    sender: mpsc::Sender<O>,
-}
-
-impl<O> From<mpsc::Sender<O>> for Subscriber<O> {
-    fn from(sender: mpsc::Sender<O>) -> Self {
-        Self { sender }
-    }
-}
-
-impl<O> Subscriber<O> {
-    /// Register a new observation.
-    /// Errors occur when:
-    /// * A `Subscriber` is sending observation requests at too high a rate.
-    /// * The `HangingGetBroker` has been dropped by the server.
-    pub async fn register(&mut self, observation: O) -> Result<(), HangingGetServerError> {
-        Ok(self.sender.send(observation).await?)
-    }
-}
-
-/// `FnOnce` type that can be used by library consumers to make in-place modifications to
-/// the hanging get state.
-type UpdateFn<S> = Box<dyn FnOnce(&mut S) -> bool + Send + 'static>;
-
-/// A `Publisher` is used to make changes to the state contained within a `HangingGetBroker`.
-/// It is designed to be cheaply cloned and `Send`.
-pub struct Publisher<S> {
-    sender: mpsc::Sender<UpdateFn<S>>,
-}
-
-impl<S> Clone for Publisher<S> {
-    fn clone(&self) -> Self {
-        Publisher { sender: self.sender.clone() }
-    }
-}
-
-impl<S> Publisher<S>
-where
-    S: Send + 'static,
-{
-    /// `set` is a specialized form of `update` that sets the hanging get state to the value
-    /// passed in as the `state` parameter.
-    pub async fn set(&mut self, state: S) -> Result<(), HangingGetServerError> {
-        Ok(self
-            .sender
-            .send(Box::new(move |s| {
-                *s = state;
-                true
-            }))
-            .await?)
-    }
-
-    /// Pass a function to the hanging get that can update the hanging get state in place.
-    pub async fn update<F>(&mut self, update: F) -> Result<(), HangingGetServerError>
-    where
-        F: FnOnce(&mut S) -> bool + Send + 'static,
-    {
-        Ok(self.sender.send(Box::new(update)).await?)
-    }
-}
-
 /// A `Send` wrapper for a `HangingGet` that can receive messages via an async channel.
 /// The `HangingGetBroker` is the primary way of implementing server side hanging get using
 /// this library. It manages all state and reacts to inputs sent over channels.
@@ -343,6 +179,170 @@ where
                 complete => break,
             }
         }
+    }
+}
+
+/// A cheaply copyable handle that can be used to register new `Subscriber`s with
+/// the `HangingGetBroker`.
+pub struct Handle<O> {
+    sender: mpsc::Sender<NewSubscriberRequest<O>>,
+}
+
+impl<O> Clone for Handle<O> {
+    fn clone(&self) -> Self {
+        Self { sender: self.sender.clone() }
+    }
+}
+
+impl<O> Handle<O> {
+    /// Register a new subscriber
+    pub async fn new_subscriber(&mut self) -> Result<Subscriber<O>, HangingGetServerError> {
+        let (request, response) = oneshot::channel();
+        self.sender.send(request).await?;
+        let sender = response.await.map_err(|_| HangingGetServerError::NoBroker)?;
+        Ok(sender)
+    }
+}
+
+/// A new subscriber request is sent over as a oneshot sender that can be used
+/// to send the subscriber's mpsc sender end of a channel
+type NewSubscriberRequest<O> = oneshot::Sender<Subscriber<O>>;
+
+/// A `Subscriber` can be used to register observation requests with the `HangingGetBroker`.
+/// These observations will be fulfilled when the state changes or immediately the first time
+/// a `Subscriber` registers an observation.
+pub struct Subscriber<O> {
+    sender: mpsc::Sender<O>,
+}
+
+impl<O> From<mpsc::Sender<O>> for Subscriber<O> {
+    fn from(sender: mpsc::Sender<O>) -> Self {
+        Self { sender }
+    }
+}
+
+impl<O> Subscriber<O> {
+    /// Register a new observation.
+    /// Errors occur when:
+    /// * A `Subscriber` is sending observation requests at too high a rate.
+    /// * The `HangingGetBroker` has been dropped by the server.
+    pub async fn register(&mut self, observation: O) -> Result<(), HangingGetServerError> {
+        Ok(self.sender.send(observation).await?)
+    }
+}
+
+/// `FnOnce` type that can be used by library consumers to make in-place modifications to
+/// the hanging get state.
+type UpdateFn<S> = Box<dyn FnOnce(&mut S) -> bool + Send + 'static>;
+
+/// A `Publisher` is used to make changes to the state contained within a `HangingGetBroker`.
+/// It is designed to be cheaply cloned and `Send`.
+pub struct Publisher<S> {
+    sender: mpsc::Sender<UpdateFn<S>>,
+}
+
+impl<S> Clone for Publisher<S> {
+    fn clone(&self) -> Self {
+        Publisher { sender: self.sender.clone() }
+    }
+}
+
+impl<S> Publisher<S>
+where
+    S: Send + 'static,
+{
+    /// `set` is a specialized form of `update` that sets the hanging get state to the value
+    /// passed in as the `state` parameter.
+    pub async fn set(&mut self, state: S) -> Result<(), HangingGetServerError> {
+        Ok(self
+            .sender
+            .send(Box::new(move |s| {
+                *s = state;
+                true
+            }))
+            .await?)
+    }
+
+    /// Pass a function to the hanging get that can update the hanging get state in place.
+    pub async fn update<F>(&mut self, update: F) -> Result<(), HangingGetServerError>
+    where
+        F: FnOnce(&mut S) -> bool + Send + 'static,
+    {
+        Ok(self.sender.send(Box::new(update)).await?)
+    }
+}
+
+/// A `HangingGet` object manages some internal state `S` and notifies observers of type `O`
+/// when their view of the state is outdated.
+///
+/// `S` - the type of State to be watched
+/// `O` - the type of Observers of `S`
+/// `F` - the type of observer notification behavior, where `F: Fn(&S, O)`
+/// `K` - the Key by which Observers are identified
+///
+/// While it _can_ be used directly, most API consumers will want to use the higher level
+/// `HangingGetBroker` object. `HangingGetBroker` and its companion types provide `Send`
+/// for use from multiple threads or async tasks.
+pub struct HangingGet<S, K, O, F: Fn(&S, O) -> bool> {
+    state: S,
+    notify: F,
+    observers: HashMap<K, Window<O>>,
+}
+
+impl<S, K, O, F> HangingGet<S, K, O, F>
+where
+    K: Eq + Hash,
+    F: Fn(&S, O) -> bool,
+{
+    fn notify_all(&mut self) {
+        for window in self.observers.values_mut() {
+            window.notify(&self.notify, &self.state);
+        }
+    }
+
+    /// Create a new `HangingGet`.
+    /// `state` is the initial state of the HangingGet
+    /// `notify` is a `Fn` that is used to notify observers of state.
+    pub fn new(state: S, notify: F) -> Self {
+        Self { state, notify, observers: HashMap::new() }
+    }
+
+    /// Set the internal state value to `state` and notify all observers.
+    /// Note that notification is not conditional on the _value_ set by calling the `set` function.
+    /// Notification will occur regardless of whether the `state` value differs from the value
+    /// currently stored by `HangingGet`.
+    pub fn set(&mut self, state: S) {
+        self.state = state;
+        self.notify_all();
+    }
+
+    /// Modify the internal state in-place using the `state_update` function. Notify all
+    /// observers if `state_update` returns true.
+    pub fn update(&mut self, state_update: impl FnOnce(&mut S) -> bool) {
+        if state_update(&mut self.state) {
+            self.notify_all();
+        }
+    }
+
+    /// Register an observer as a subscriber of the state. Observers are grouped by key and
+    /// all observers will the same key are assumed to have received the latest state update.
+    /// If an observer with a previously unseen key subscribes, it is immediately notified
+    /// to the stated. If an observer with a known key subscribes, it will only be
+    /// notified when the state is updated since last sent to an observer with the same
+    /// key. All unresolved observers will be resolved to the same value immediately after the state
+    /// is updated.
+    pub fn subscribe(&mut self, key: K, observer: O) {
+        self.observers.entry(key).or_insert_with(Window::new).observe(
+            observer,
+            &self.notify,
+            &self.state,
+        )
+    }
+
+    /// Deregister all observers that subscribed with `key`. If an observer is subsequently
+    /// subscribed with the same `key` value, it will be treated as a previously unseen `key`.
+    pub fn unsubscribe(&mut self, key: K) {
+        self.observers.remove(&key);
     }
 }
 
