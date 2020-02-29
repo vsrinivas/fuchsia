@@ -6,10 +6,13 @@
             }
         }
     },
-   "program": {
+    "program": {
         "binary": "test/weavestack_unittests"
     },
     "sandbox": {
-        "services": [ "fuchsia.posix.socket.Provider" ]
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.posix.socket.Provider"
+        ]
     }
 }

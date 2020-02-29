@@ -122,6 +122,18 @@ WEAVE_ERROR GenericPlatformManagerImpl_Fuchsia<ImplClass>::_StartWeaveTimer(uint
     return WEAVE_NO_ERROR;
 }
 
+template<class ImplClass>
+System::Layer& GenericPlatformManagerImpl_Fuchsia<ImplClass>::GetSystemLayer()
+{
+  return system_layer_;
+}
+
+template<class ImplClass>
+nl::Inet::InetLayer& GenericPlatformManagerImpl_Fuchsia<ImplClass>::GetInetLayer()
+{
+  return inet_layer_;
+}
+
 // Fully instantiate the generic implementation class in whatever compilation unit includes this file.
 template class GenericPlatformManagerImpl_Fuchsia<PlatformManagerImpl>;
 

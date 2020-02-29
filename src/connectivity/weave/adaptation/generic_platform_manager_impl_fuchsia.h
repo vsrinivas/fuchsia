@@ -48,6 +48,9 @@ class GenericPlatformManagerImpl_Fuchsia : public GenericPlatformManagerImpl<Imp
   nl::Weave::WeaveFabricState fabric_state_;
   nl::Weave::WeaveMessageLayer message_layer_;
   nl::Weave::WeaveSecurityManager security_manager_;
+ public:
+  System::Layer& GetSystemLayer();
+  nl::Inet::InetLayer& GetInetLayer();
 };
 
 // Instruct the compiler to instantiate the template only when explicitly told to do so.

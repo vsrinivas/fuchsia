@@ -9,6 +9,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
+#include <Weave/Core/WeaveError.h>
 
 #include <thread>
 
@@ -19,25 +20,18 @@ class App {
   App();
   ~App();
 
-  async::Loop* loop() { return &loop_; }
-
+  void Quit();
+  WEAVE_ERROR Start();
+  WEAVE_ERROR Init();
+  void RunLoop();
+  void Join();
  private:
   App(const App&) = delete;
   App& operator=(const App&) = delete;
 
-  // Any state owned by the Weave thread
-  class WeaveState;
-
-  using WeaveOp = fit::function<void(WeaveState*)>;
-
-  void WeaveMain();
-  // Post op to be run by WeaveMain
-  void PostWeaveOp(WeaveOp op) { abort(); /* unimplemented */ }
-  // Post op to be run by main thread
-  void PostAppOp(fit::closure op) { async::PostTask(loop()->dispatcher(), std::move(op)); }
-
-  async::Loop loop_{&kAsyncLoopConfigAttachToCurrentThread};
-  std::thread weave_loop_{[this]() { WeaveMain(); }};
+  WEAVE_ERROR HandlePackets(void);
+  std::thread thread_;
+  std::atomic_flag running_ = ATOMIC_FLAG_INIT;
 };
 
 }  // namespace weavestack

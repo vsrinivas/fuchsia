@@ -3,11 +3,15 @@
 // found in the LICENSE file.
 
 #include "src/connectivity/weave/weavestack/app.h"
-
+#include <lib/async/cpp/time.h>
 #include <gtest/gtest.h>
 
 namespace weavestack {
 
-TEST(App, CanInstantiateApp) { EXPECT_EQ(ZX_OK, App().loop()->RunUntilIdle()); }
-
+TEST(App, CanInstantiateApp) {
+  App app;
+  EXPECT_EQ(WEAVE_NO_ERROR, app.Init());
+  EXPECT_EQ(WEAVE_NO_ERROR, app.Start());
+  app.Quit();
+}
 }  // namespace weavestack

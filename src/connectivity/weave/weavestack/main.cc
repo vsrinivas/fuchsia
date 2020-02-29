@@ -6,5 +6,19 @@
 
 int main(void) {
   weavestack::App app;
-  return app.loop()->Run() != ZX_OK;
+
+  WEAVE_ERROR ret = app.Init();
+  if (ret != WEAVE_NO_ERROR) {
+    return ret;
+  }
+
+  ret = app.Start();
+  if (ret != WEAVE_NO_ERROR) {
+    return ret;
+  }
+
+  // Wait for all the threads to complete.
+  app.Join();
+
+  return WEAVE_NO_ERROR;
 }
