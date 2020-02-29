@@ -31,15 +31,10 @@ bool ValidateTransport(const rapidjson::Value& interface) {
 }
 
 std::string StripLibraryName(const std::string& full_name) {
-  // "zx/" or "zz/".
-  constexpr size_t kPrefixLen = 3;
-  return full_name.substr(kPrefixLen, full_name.size() - kPrefixLen);
-}
-
-// Converts a type name to Zircon style: In particular, this converts the basic name to snake_case,
-// and then wraps it in "zx_" and "_t". For example, HandleInfo -> "zx_handle_info_t".
-std::string TypeNameToZirconStyle(const std::string& base_name) {
-  return "zx_" + CamelToSnake(base_name) + "_t";
+  auto prefix_pos = full_name.find_first_of('/');
+  ZX_ASSERT_MSG(prefix_pos != full_name.npos, "%s has no library prefix", full_name.c_str());
+  size_t prefix_len = prefix_pos + 1;
+  return full_name.substr(prefix_len, full_name.size() - prefix_len);
 }
 
 std::string GetCategory(const rapidjson::Value& interface, const std::string& interface_name) {
@@ -66,6 +61,19 @@ std::string GetDocAttribute(const rapidjson::Value& method) {
   return std::string();
 }
 
+Required GetRequiredAttribute(const rapidjson::Value& field) {
+  if (!field.HasMember("maybe_attributes")) {
+    return Required::kNo;
+  }
+  for (const auto& attrib : field["maybe_attributes"].GetArray()) {
+    if (attrib.GetObject()["name"].Get<std::string>() == "Required") {
+      ZX_ASSERT(attrib.GetObject()["value"].Get<std::string>() == "");
+      return Required::kYes;
+    }
+  }
+  return Required::kNo;
+}
+
 constexpr char kRightsPrefix[] = " Rights: ";
 
 std::string GetShortDescriptionFromDocAttribute(const std::string& full_doc_attribute) {
@@ -74,6 +82,16 @@ std::string GetShortDescriptionFromDocAttribute(const std::string& full_doc_attr
     return std::string();
   }
   return TrimString(lines[0], " \t\n");
+}
+
+std::vector<std::string> GetCleanDocAttribute(const std::string& full_doc_attribute) {
+  auto lines = SplitString(full_doc_attribute, '\n', kTrimWhitespace);
+  if (!lines.empty() && lines[lines.size() - 1].empty()) {
+    lines.pop_back();
+  }
+  std::for_each(lines.begin(), lines.end(),
+                [](std::string& line) { return TrimString(line, " \t\n"); });
+  return lines;
 }
 
 std::vector<std::string> GetRightsSpecsFromDocAttribute(const std::string& full_doc_attribute) {
@@ -88,6 +106,26 @@ std::vector<std::string> GetRightsSpecsFromDocAttribute(const std::string& full_
   return ret;
 }
 
+std::optional<Type> PrimitiveTypeFromName(std::string subtype) {
+  if (subtype == "uint8") {
+    return Type(TypeUint8{});
+  } else if (subtype == "uint16") {
+    return Type(TypeUint16{});
+  } else if (subtype == "int32") {
+    return Type(TypeInt32{});
+  } else if (subtype == "uint32") {
+    return Type(TypeUint32{});
+  } else if (subtype == "int64") {
+    return Type(TypeInt64{});
+  } else if (subtype == "uint64") {
+    return Type(TypeUint64{});
+  } else if (subtype == "bool") {
+    return Type(TypeBool{});
+  }
+
+  return std::nullopt;
+}
+
 Type TypeFromJson(const SyscallLibrary& library, const rapidjson::Value& type,
                   const rapidjson::Value* type_alias) {
   if (type_alias) {
@@ -96,15 +134,17 @@ Type TypeFromJson(const SyscallLibrary& library, const rapidjson::Value& type,
     // is likely mostly (?) temporary until there's 1) a more nailed down alias implementation in
     // the front end (fidlc) and 2) we move various parts of zx.fidl from being built-in to fidlc to
     // actual source level fidl and shared between the syscall definitions and normal FIDL.
-    const std::string full_name(type_alias->operator[]("name").GetString());
-    ZX_ASSERT(full_name.substr(0, 3) == "zx/" || full_name.substr(0, 3) == "zz/");
-    const std::string name = full_name.substr(3);
-    if (name == "duration" || name == "Futex" || name == "koid" || name == "paddr" ||
-        name == "rights" || name == "signals" || name == "status" || name == "time" ||
-        name == "ticks" || name == "vaddr" || name == "VmOption") {
-      return Type(TypeZxBasicAlias(CamelToSnake(name)));
+    const std::string full_name((*type_alias)["name"].GetString());
+    if (full_name.substr(0, 3) == "zx/" || full_name.substr(0, 3) == "zz/") {
+      const std::string name = full_name.substr(3);
+      if (name == "duration" || name == "Futex" || name == "koid" || name == "paddr" ||
+          name == "rights" || name == "signals" || name == "status" || name == "time" ||
+          name == "ticks" || name == "vaddr" || name == "VmOption") {
+        return Type(TypeZxBasicAlias(CamelToSnake(name)));
+      }
     }
 
+    const std::string name = StripLibraryName(full_name);
     if (name == "uintptr") {
       return Type(TypeUintptrT{});
     }
@@ -117,6 +157,8 @@ Type TypeFromJson(const SyscallLibrary& library, const rapidjson::Value& type,
     if (AliasWorkaround(name, library, &workaround_type)) {
       return workaround_type;
     }
+
+    return library.TypeFromIdentifier(full_name);
   }
 
   if (!type.HasMember("kind")) {
@@ -126,24 +168,10 @@ Type TypeFromJson(const SyscallLibrary& library, const rapidjson::Value& type,
 
   std::string kind = type["kind"].GetString();
   if (kind == "primitive") {
-    std::string subtype = type["subtype"].GetString();
-    if (subtype == "uint8") {
-      return Type(TypeUint8{});
-    } else if (subtype == "uint16") {
-      return Type(TypeUint16{});
-    } else if (subtype == "int32") {
-      return Type(TypeInt32{});
-    } else if (subtype == "uint32") {
-      return Type(TypeUint32{});
-    } else if (subtype == "int64") {
-      return Type(TypeInt64{});
-    } else if (subtype == "uint64") {
-      return Type(TypeUint64{});
-    } else if (subtype == "bool") {
-      return Type(TypeBool{});
-    } else {
-      ZX_ASSERT_MSG(false, "TODO: primitive subtype %s", subtype.c_str());
-    }
+    const rapidjson::Value& subtype_value = type["subtype"];
+    ZX_ASSERT(subtype_value.IsString());
+    std::string subtype = subtype_value.GetString();
+    return PrimitiveTypeFromName(subtype).value();
   } else if (kind == "identifier") {
     std::string id = type["identifier"].GetString();
     return library.TypeFromIdentifier(type["identifier"].GetString());
@@ -331,16 +359,17 @@ bool Syscall::HandleArgReorder() {
   return true;
 }
 
-void Enum::AddMember(const std::string& member_name, int value) {
+void Enum::AddMember(const std::string& member_name, EnumMember member) {
   ZX_ASSERT(!HasMember(member_name));
-  members_[member_name] = value;
+  members_[member_name] = std::move(member);
+  insertion_order_.push_back(member_name);
 }
 
 bool Enum::HasMember(const std::string& member_name) const {
   return members_.find(member_name) != members_.end();
 }
 
-int Enum::ValueForMember(const std::string& member_name) const {
+const EnumMember& Enum::ValueForMember(const std::string& member_name) const {
   ZX_ASSERT(HasMember(member_name));
   return members_.find(member_name)->second;
 }
@@ -359,6 +388,12 @@ Type SyscallLibrary::TypeFromIdentifier(const std::string& id) const {
     }
   }
 
+  for (const auto& alias : type_aliases_) {
+    if (alias->id() == id) {
+      return Type(TypeAlias(alias.get()));
+    }
+  }
+
   for (const auto& strukt : structs_) {
     if (strukt->id() == id) {
       return Type(TypeStruct(strukt.get()));
@@ -368,6 +403,13 @@ Type SyscallLibrary::TypeFromIdentifier(const std::string& id) const {
   // TODO: Load struct, union, usings and return one of them here!
   ZX_ASSERT_MSG(false, "unhandled TypeFromIdentifier for %s", id.c_str());
   return Type();
+}
+
+Type SyscallLibrary::TypeFromName(const std::string& name) const {
+  if (auto primitive = PrimitiveTypeFromName(name); primitive.has_value()) {
+    return primitive.value();
+  }
+  return TypeFromIdentifier(name);
 }
 
 void SyscallLibrary::FilterSyscalls(const std::set<std::string>& attributes_to_exclude) {
@@ -399,8 +441,9 @@ bool SyscallLibraryLoader::FromJson(const std::string& json_ir, SyscallLibrary* 
   }
 
   library->name_ = document["name"].GetString();
-  if (library->name_ != "zz" && library->name_ != "zx") {
-    fprintf(stderr, "Library name wasn't zz or zx as expected.\n");
+  if (library->name_ != "zz" && library->name_ != "zx" && library->name_ != "zxio") {
+    fprintf(stderr, "Library name %s wasn't zz or zx or zxio as expected.\n",
+            library->name_.c_str());
     return false;
   }
 
@@ -417,7 +460,15 @@ bool SyscallLibraryLoader::FromJson(const std::string& json_ir, SyscallLibrary* 
     return false;
   }
 
+  if (!LoadTypeAliases(document, library)) {
+    return false;
+  }
+
   if (!LoadStructs(document, library)) {
+    return false;
+  }
+
+  if (!LoadTables(document, library)) {
     return false;
   }
 
@@ -436,12 +487,40 @@ std::unique_ptr<Enum> SyscallLibraryLoader::ConvertBitsOrEnumMember(const rapidj
   auto obj = std::make_unique<Enum>();
   std::string full_name = json["name"].GetString();
   obj->id_ = full_name;
-  obj->original_name_ = StripLibraryName(full_name);
-  obj->name_ = TypeNameToZirconStyle(obj->original_name_);
+  std::string stripped = StripLibraryName(full_name);
+  obj->original_name_ = stripped;
+  obj->base_name_ = CamelToSnake(stripped);
+  std::string doc_attribute = GetDocAttribute(json);
+  obj->description_ = GetCleanDocAttribute(doc_attribute);
+  const rapidjson::Value& type = json["type"];
+  if (type.IsString()) {
+    // Enum
+    obj->underlying_type_ = PrimitiveTypeFromName(type.GetString()).value();
+  } else {
+    ZX_ASSERT(type.IsObject());
+    // Bits
+    ZX_ASSERT_MSG(type["kind"].GetString() == std::string("primitive"),
+                  "Enum %s not backed by primitive type", full_name.c_str());
+    const rapidjson::Value& subtype_value = type["subtype"];
+    ZX_ASSERT(subtype_value.IsString());
+    std::string subtype = subtype_value.GetString();
+    obj->underlying_type_ = PrimitiveTypeFromName(subtype).value();
+  }
   for (const auto& member : json["members"].GetArray()) {
     ZX_ASSERT_MSG(member["value"]["kind"] == "literal", "TODO: More complex value expressions");
-    int member_value = StringToInt(member["value"]["literal"]["value"].GetString());
-    obj->AddMember(member["name"].GetString(), member_value);
+    uint64_t member_value;
+    std::string decimal = member["value"]["literal"]["value"].GetString();
+    if (obj->underlying_type().IsUnsignedInt()) {
+      member_value = StringToUInt(decimal);
+    } else if (obj->underlying_type().IsSignedInt()) {
+      member_value = StringToInt(decimal);
+    } else {
+      ZX_PANIC("Unreachable");
+    }
+    std::string doc_attribute = GetDocAttribute(member);
+    obj->AddMember(
+        member["name"].GetString(),
+        EnumMember{.value = member_value, .description = GetCleanDocAttribute(doc_attribute)});
   }
   return obj;
 }
@@ -537,6 +616,26 @@ bool SyscallLibraryLoader::LoadInterfaces(const rapidjson::Document& document,
 }
 
 // static
+bool SyscallLibraryLoader::LoadTypeAliases(const rapidjson::Document& document,
+                                           SyscallLibrary* library) {
+  for (const auto& type_alias_json : document["type_alias_declarations"].GetArray()) {
+    auto obj = std::make_unique<Alias>();
+    std::string full_name = type_alias_json["name"].GetString();
+    obj->id_ = full_name;
+    std::string stripped = StripLibraryName(full_name);
+    obj->original_name_ = stripped;
+    obj->base_name_ = CamelToSnake(stripped);
+    const rapidjson::Value& partial_type_ctor = type_alias_json["partial_type_ctor"];
+    ZX_ASSERT(partial_type_ctor.IsObject());
+    obj->partial_type_ctor_ = partial_type_ctor["name"].GetString();
+    std::string doc_attribute = GetDocAttribute(type_alias_json);
+    obj->description_ = GetCleanDocAttribute(doc_attribute);
+    library->type_aliases_.push_back(std::move(obj));
+  }
+  return true;
+}
+
+// static
 bool SyscallLibraryLoader::LoadStructs(const rapidjson::Document& document,
                                        SyscallLibrary* library) {
   // TODO(scottmg): In transition, we're still relying on the existing Zircon headers to define all
@@ -548,9 +647,40 @@ bool SyscallLibraryLoader::LoadStructs(const rapidjson::Document& document,
     auto obj = std::make_unique<Struct>();
     std::string full_name = struct_json["name"].GetString();
     obj->id_ = full_name;
-    obj->original_name_ = StripLibraryName(full_name);
-    obj->name_ = TypeNameToZirconStyle(obj->original_name_);
+    std::string stripped = StripLibraryName(full_name);
+    obj->original_name_ = stripped;
+    obj->base_name_ = CamelToSnake(stripped);
     library->structs_.push_back(std::move(obj));
+  }
+  return true;
+}
+
+// static
+bool SyscallLibraryLoader::LoadTables(const rapidjson::Document& document,
+                                      SyscallLibrary* library) {
+  for (const auto& json : document["table_declarations"].GetArray()) {
+    auto obj = std::make_unique<Table>();
+    std::string full_name = json["name"].GetString();
+    obj->id_ = full_name;
+    std::string stripped = StripLibraryName(full_name);
+    obj->original_name_ = stripped;
+    obj->base_name_ = CamelToSnake(stripped);
+    std::string doc_attribute = GetDocAttribute(json);
+    obj->description_ = GetCleanDocAttribute(doc_attribute);
+    std::vector<TableMember> members;
+    for (const auto& member : json["members"].GetArray()) {
+      std::string name = member["name"].GetString();
+      const auto* type_alias = member.HasMember("experimental_maybe_from_type_alias")
+                                    ? &member["experimental_maybe_from_type_alias"]
+                                    : nullptr;
+      Type type = TypeFromJson(*library, member["type"], type_alias);
+      Required required = GetRequiredAttribute(member);
+      std::string doc_attribute = GetDocAttribute(member);
+      std::vector<std::string> description = GetCleanDocAttribute(doc_attribute);
+      members.emplace_back(std::move(name), std::move(type), std::move(description), required);
+    }
+    obj->members_ = std::move(members);
+    library->tables_.push_back(std::move(obj));
   }
   return true;
 }

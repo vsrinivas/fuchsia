@@ -1,0 +1,18 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library zxio;
+
+/// Doc Comments for Uint16Enum
+///
+/// Doc comments testing.
+enum Uint16Enum : uint16 {
+    /// Doc comment on enum member.
+    FOO = 0x1;
+};
+
+enum NoDocCommentEnum: uint32 {
+    FOO = 0x1;
+    BAR = 0x2;
+};

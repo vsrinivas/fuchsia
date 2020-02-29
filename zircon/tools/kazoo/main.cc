@@ -15,6 +15,7 @@ namespace {
 
 struct CommandLineOptions {
   std::optional<std::string> category;
+  std::optional<std::string> c_ulib_header;
   std::optional<std::string> go_syscall_arm64_asm;
   std::optional<std::string> go_syscall_stubs;
   std::optional<std::string> go_syscall_x86_asm;
@@ -42,6 +43,9 @@ Options:
 
 constexpr const char kCategoryHelp[] = R"(  --category=FILENAME
     The output name for the .inc categories file.)";
+
+constexpr const char kCUlibHeaderHelp[] = R"(  --c-ulib-header=FILENAME
+    The output name for the .h file used for a regular userspace library.)";
 
 constexpr const char kGoSyscallArm64AsmHelp[] = R"(  --go-syscall-arm64-asm=FILENAME
     The output name for the Go syscall/zx arm .s file.)";
@@ -97,6 +101,7 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOption
                                  std::set<std::string>* excludes) {
   cmdline::ArgsParser<CommandLineOptions> parser;
   parser.AddSwitch("category", 0, kCategoryHelp, &CommandLineOptions::category);
+  parser.AddSwitch("c-ulib-header", 0, kCUlibHeaderHelp, &CommandLineOptions::c_ulib_header);
   parser.AddSwitch("go-syscall-arm64-asm", 0, kGoSyscallArm64AsmHelp,
                    &CommandLineOptions::go_syscall_arm64_asm);
   parser.AddSwitch("go-syscall-stubs", 0, kGoSyscallStubsHelp,
@@ -171,6 +176,7 @@ int main(int argc, const char* argv[]) {
     bool (*output)(const SyscallLibrary&, Writer*);
   } backends[] = {
       {&options.category, CategoryOutput},
+      {&options.c_ulib_header, CUlibHeaderOutput},
       {&options.go_syscall_arm64_asm, GoSyscallsAsm},
       {&options.go_syscall_stubs, GoSyscallsStubs},
       {&options.go_syscall_x86_asm, GoSyscallsAsm},

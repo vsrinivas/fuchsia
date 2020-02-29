@@ -115,8 +115,12 @@ std::vector<std::string> SplitString(const std::string& input, char delimiter,
   return result;
 }
 
-int StringToInt(const std::string& str) {
-  return static_cast<int>(strtol(str.c_str(), nullptr, 10));
+int64_t StringToInt(const std::string& str) {
+  return static_cast<int64_t>(strtoll(str.c_str(), nullptr, 10));
+}
+
+uint64_t StringToUInt(const std::string& str) {
+  return static_cast<uint64_t>(strtoull(str.c_str(), nullptr, 10));
 }
 
 bool StartsWith(const std::string& str, const std::string& prefix) {

@@ -17,6 +17,7 @@
 #include "rapidjson/document.h"
 #include "tools/kazoo/macros.h"
 
+class Alias;
 class Enum;
 class Struct;
 class SyscallLibrary;
@@ -34,6 +35,7 @@ class TypeUintptrT {};
 class TypeVoid {};
 class TypeZxBasicAlias;
 
+class TypeAlias;
 class TypeEnum;
 class TypeHandle;
 class TypePointer;
@@ -43,7 +45,7 @@ class TypeVector;
 using TypeData =
     std::variant<std::monostate, TypeBool, TypeChar, TypeInt32, TypeInt64, TypeSizeT, TypeUint16,
                  TypeUint32, TypeUint64, TypeUint8, TypeUintptrT, TypeVoid, TypeZxBasicAlias,
-                 TypeEnum, TypeHandle, TypePointer, TypeString, TypeStruct, TypeVector>;
+                 TypeAlias, TypeEnum, TypeHandle, TypePointer, TypeString, TypeStruct, TypeVector>;
 
 class Type;
 
@@ -90,6 +92,16 @@ class TypePointer {
   bool was_vector_{false};
 };
 
+class TypeAlias {
+ public:
+  explicit TypeAlias(const Alias* alias_data) : alias_(alias_data) {}
+
+  const Alias& alias_data() const { return *alias_; }
+
+ private:
+  const Alias* alias_;
+};
+
 class TypeStruct {
  public:
   explicit TypeStruct(const Struct* struct_data) : struct_(struct_data) {}
@@ -118,6 +130,8 @@ class TypeVector {
   bool uint32_size_{false};
 };
 
+// A FIDL type alias pointing to one of the zircon "builtins". e.g. Futex, koid.
+// We want to implement special treatment for these types.
 class TypeZxBasicAlias {
  public:
   explicit TypeZxBasicAlias(const std::string& name)
@@ -174,6 +188,17 @@ class Type {
   bool IsString() const { return std::holds_alternative<TypeString>(type_data_); }
   bool IsStruct() const { return std::holds_alternative<TypeStruct>(type_data_); }
   bool IsHandle() const { return std::holds_alternative<TypeHandle>(type_data_); }
+  bool IsSignedInt() const {
+    return std::holds_alternative<TypeChar>(type_data_) ||
+           std::holds_alternative<TypeInt32>(type_data_) ||
+           std::holds_alternative<TypeInt64>(type_data_);
+  }
+  bool IsUnsignedInt() const {
+    return std::holds_alternative<TypeUint8>(type_data_) ||
+           std::holds_alternative<TypeUint16>(type_data_) ||
+           std::holds_alternative<TypeUint32>(type_data_) ||
+           std::holds_alternative<TypeUint64>(type_data_);
+  }
 
   const TypeVector& DataAsVector() const { return std::get<TypeVector>(type_data_); }
   const TypePointer& DataAsPointer() const { return std::get<TypePointer>(type_data_); }
@@ -185,6 +210,29 @@ class Type {
   TypeData type_data_;
   Constness constness_{Constness::kUnspecified};
   Optionality optionality_{Optionality::kUnspecified};
+};
+
+class Alias {
+ public:
+  Alias() = default;
+  ~Alias() = default;
+
+  const std::string& id() const { return id_; }
+  const std::string& original_name() const { return original_name_; }
+  const std::string& base_name() const { return base_name_; }
+  const std::string& partial_type_ctor() const { return partial_type_ctor_; }
+  const std::vector<std::string>& description() const { return description_; }
+
+ private:
+  friend class SyscallLibraryLoader;
+
+  std::string id_;                // "zx/MyAlias"
+  std::string original_name_;     // "MyAlias"
+  std::string base_name_;         // "my_alias"
+  std::string partial_type_ctor_; // "uint64"
+  std::vector<std::string> description_;
+
+  DISALLOW_COPY_AND_ASSIGN(Alias);
 };
 
 class StructMember {
@@ -217,7 +265,7 @@ class Struct {
 
   const std::string& id() const { return id_; }
   const std::string& original_name() const { return original_name_; }
-  const std::string& name() const { return name_; }
+  const std::string& base_name() const { return base_name_; }
   const std::vector<StructMember>& members() const { return members_; }
 
  private:
@@ -225,7 +273,7 @@ class Struct {
 
   std::string id_;                  // "zx/HandleInfo"
   std::string original_name_;       // "HandleInfo"
-  std::string name_;                // "zx_handle_info_t"
+  std::string base_name_;           // "handle_info"
   std::vector<StructMember> members_;
 
   DISALLOW_COPY_AND_ASSIGN(Struct);
@@ -278,6 +326,61 @@ class Syscall {
   DISALLOW_COPY_AND_ASSIGN(Syscall);
 };
 
+enum class Required {
+  kNo,
+  kYes
+};
+
+class TableMember {
+ public:
+  TableMember() = default;
+  TableMember(const std::string& name, const Type& type,
+              const std::vector<std::string>& description, Required required)
+      : name_(name), type_(type), description_(description), required_(required) {}
+  ~TableMember() = default;
+
+  const std::string& name() const { return name_; }
+  const Type& type() const { return type_; }
+  const std::vector<std::string>& description() const { return description_; }
+  Required required() const { return required_; }
+
+ private:
+  friend class SyscallLibraryLoader;
+
+  std::string name_;
+  Type type_;
+  std::vector<std::string> description_;
+  Required required_;
+};
+
+class Table {
+ public:
+  Table() = default;
+  ~Table() = default;
+
+  const std::string& id() const { return id_; }
+  const std::string& original_name() const { return original_name_; }
+  const std::string& base_name() const { return base_name_; }
+  const std::vector<std::string>& description() const { return description_; }
+  const std::vector<TableMember>& members() const { return members_; }
+
+ private:
+  friend class SyscallLibraryLoader;
+
+  std::string id_;             // "zx/HandleInfo"
+  std::string original_name_;  // "HandleInfo"
+  std::string base_name_;      // "handle_info"
+  std::vector<std::string> description_;
+  std::vector<TableMember> members_;
+
+  DISALLOW_COPY_AND_ASSIGN(Table);
+};
+
+struct EnumMember {
+  uint64_t value;
+  std::vector<std::string> description;
+};
+
 class Enum {
  public:
   Enum() = default;
@@ -285,20 +388,26 @@ class Enum {
 
   const std::string& id() const { return id_; }                        // "zx/ProfileInfoType"
   const std::string& original_name() const { return original_name_; }  // "ProfileInfoType"
-  const std::string& name() const { return name_; }                    // "zx_profile_info_type_t"
+  const std::string& base_name() const { return base_name_; }          // "profile_info_type"
+  const std::vector<std::string>& description() const { return description_; }
 
-  void AddMember(const std::string& member_name, int value);
-
+  void AddMember(const std::string& member_name, EnumMember member);
   bool HasMember(const std::string& member_name) const;
-  int ValueForMember(const std::string& member_name) const;
+  const EnumMember& ValueForMember(const std::string& member_name) const;
+
+  const std::vector<std::string>& members() const { return insertion_order_; }
+  const Type& underlying_type() const { return underlying_type_; }
 
  private:
   friend class SyscallLibraryLoader;
 
   std::string id_;
   std::string original_name_;
-  std::string name_;
-  std::map<std::string, int> members_;  // Maps enumeration name to value (kWhatever = 12).
+  std::string base_name_;
+  std::vector<std::string> description_;
+  Type underlying_type_;                       // uint32_t etc.
+  std::map<std::string, EnumMember> members_;  // Maps enumeration name to value (kWhatever = 12).
+  std::vector<std::string> insertion_order_;
 };
 
 class SyscallLibrary {
@@ -307,9 +416,14 @@ class SyscallLibrary {
   ~SyscallLibrary() = default;
 
   const std::string& name() const { return name_; }  // "zx"
+  const std::vector<std::unique_ptr<Enum>>& bits() const { return bits_; }
+  const std::vector<std::unique_ptr<Enum>>& enums() const { return enums_; }
   const std::vector<std::unique_ptr<Syscall>>& syscalls() const { return syscalls_; }
+  const std::vector<std::unique_ptr<Alias>>& type_aliases() const { return type_aliases_; }
+  const std::vector<std::unique_ptr<Table>>& tables() const { return tables_; }
 
   Type TypeFromIdentifier(const std::string& id) const;
+  Type TypeFromName(const std::string& name) const;
 
   void FilterSyscalls(const std::set<std::string>& attributes_to_exclude);
 
@@ -321,6 +435,8 @@ class SyscallLibrary {
   std::vector<std::unique_ptr<Enum>> enums_;
   std::vector<std::unique_ptr<Struct>> structs_;
   std::vector<std::unique_ptr<Syscall>> syscalls_;
+  std::vector<std::unique_ptr<Alias>> type_aliases_;
+  std::vector<std::unique_ptr<Table>> tables_;
 
   DISALLOW_COPY_AND_ASSIGN(SyscallLibrary);
 };
@@ -335,7 +451,9 @@ class SyscallLibraryLoader {
   static bool LoadBits(const rapidjson::Document& document, SyscallLibrary* library);
   static bool LoadEnums(const rapidjson::Document& document, SyscallLibrary* library);
   static bool LoadInterfaces(const rapidjson::Document& document, SyscallLibrary* library);
+  static bool LoadTypeAliases(const rapidjson::Document& document, SyscallLibrary* library);
   static bool LoadStructs(const rapidjson::Document& document, SyscallLibrary* library);
+  static bool LoadTables(const rapidjson::Document& document, SyscallLibrary* library);
 
   static std::unique_ptr<Enum> ConvertBitsOrEnumMember(const rapidjson::Value& json);
 };

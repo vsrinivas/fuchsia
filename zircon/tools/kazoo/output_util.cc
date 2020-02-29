@@ -36,6 +36,12 @@ std::string ToLowerAscii(const std::string& input) {
   return ret;
 }
 
+std::string ToUpperAscii(const std::string& input) {
+  std::string ret = input;
+  std::transform(ret.begin(), ret.end(), ret.begin(), ToUpperASCII);
+  return ret;
+}
+
 std::string CamelToSnake(const std::string& camel_fidl) {
   auto is_transition = [](char prev, char cur, char peek) {
     enum { Upper, Lower, Other };
@@ -48,7 +54,7 @@ std::string CamelToSnake(const std::string& camel_fidl) {
         return Upper;
       if ((c >= '0' && c <= '9') || c == '_')
         return Other;
-      ZX_ASSERT(false);
+      ZX_ASSERT_MSG(false, "%c is unexpected character", c);
       return Other;
     };
     auto prev_type = categorize(prev);
@@ -104,7 +110,8 @@ std::string CNameImpl(const Type& type) {
     void operator()(const TypeVoid&) { ret = "void"; }
     void operator()(const TypeZxBasicAlias& zx_basic_alias) { ret = zx_basic_alias.name(); }
 
-    void operator()(const TypeEnum& enm) { ret = enm.enum_data().name(); }
+    void operator()(const TypeAlias& alias) { ret = "zx_" + alias.alias_data().base_name() + "_t"; }
+    void operator()(const TypeEnum& enm) { ret = "zx_" + enm.enum_data().base_name() + "_t"; }
     void operator()(const TypeHandle& handle) {
       ret = "zx_handle_t";
       // TOOD(syscall-fidl-transition): Once we're not trying to match abigen, it might be nice to
@@ -118,7 +125,9 @@ std::string CNameImpl(const Type& type) {
       ZX_ASSERT(false && "can't convert string to C directly");
       ret = "<!>";
     }
-    void operator()(const TypeStruct& strukt) { ret = strukt.struct_data().name(); }
+    void operator()(const TypeStruct& strukt) {
+      ret = "zx_" + strukt.struct_data().base_name() + "_t";
+    }
     void operator()(const TypeVector&) {
       ZX_ASSERT(false && "can't convert vector to C directly");
       ret = "<!>";
@@ -137,7 +146,7 @@ std::string CNameImpl(const Type& type) {
 std::string GetCUserModeName(const Type& type) {
   if (type.IsPointer()) {
     ZX_ASSERT(type.constness() != Constness::kUnspecified &&
-              "Pointer should be explictly const or mutable by output time");
+              "Pointer should be explicitly const or mutable by output time");
     return (type.constness() == Constness::kConst ? "const " : "") +
            GetCUserModeName(type.DataAsPointer().pointed_to_type()) + "*";
   }
@@ -210,7 +219,8 @@ std::string GetGoNameImpl(const Type& type) {
     void operator()(const TypeVoid&) { ret = "void"; }
     void operator()(const TypeZxBasicAlias& zx_basic_alias) { ret = zx_basic_alias.go_name(); }
 
-    void operator()(const TypeEnum& enm) { ret = enm.enum_data().name(); }
+    void operator()(const TypeAlias& alias) { ret = "<TODO!>"; }
+    void operator()(const TypeEnum& enm) { ret = "zx_" + enm.enum_data().base_name() + "_t"; }
     void operator()(const TypeHandle& handle) { ret = "Handle"; }
     void operator()(const TypePointer& pointer) {
       if (pointer.pointed_to_type().IsVoid()) {
@@ -223,7 +233,9 @@ std::string GetGoNameImpl(const Type& type) {
       ZX_ASSERT(false && "can't convert string directly");
       ret = "<!>";
     }
-    void operator()(const TypeStruct& strukt) { ret = strukt.struct_data().name(); }
+    void operator()(const TypeStruct& strukt) {
+      ret = "zx_" + strukt.struct_data().base_name() + "_t";
+    }
     void operator()(const TypeVector&) {
       ZX_ASSERT(false && "can't convert vector directly");
       ret = "<!>";

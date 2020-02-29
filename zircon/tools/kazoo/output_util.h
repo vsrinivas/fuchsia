@@ -19,6 +19,9 @@ bool CopyrightHeaderWithHashComments(Writer* writer);
 // Converts |input| to lowercase, assuming it's entirely ASCII.
 std::string ToLowerAscii(const std::string& input);
 
+// Converts |input| to uppercase, assuming it's entirely ASCII.
+std::string ToUpperAscii(const std::string& input);
+
 // Maps a name from typical FidlCamelStyle to zircon_snake_style.
 std::string CamelToSnake(const std::string& camel_fidl);
 

@@ -29,6 +29,7 @@ if (defined(zx)) {
     sources = [
       "alias_workaround.cc",
       "alias_workaround.h",
+      "c_ulib_header_output.cc",
       "category_output.cc",
       "cdecl_output.cc",
       "go_syscalls_output.cc",
@@ -78,6 +79,7 @@ if (defined(zx)) {
 
     sources = [
       "alias_workaround_test.cc",
+      "c_ulib_header_output_test.cc",
       "category_output_test.cc",
       "cdecl_output_test.cc",
       "go_syscalls_output_test.cc",
@@ -123,6 +125,10 @@ if (defined(zx)) {
       "test_rights_specs.test.fidl",
       "test_rust_selection.test.fidl",
       "test_selection.test.fidl",
+      "test_ulib_bits.test.fidl",
+      "test_ulib_enums.test.fidl",
+      "test_ulib_tables.test.fidl",
+      "test_ulib_type_aliases.test.fidl",
       "test_various_categories.test.fidl",
       "test_vdsowrappers.test.fidl",
     ]

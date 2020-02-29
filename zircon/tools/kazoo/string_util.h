@@ -58,7 +58,11 @@ std::vector<std::string> SplitString(const std::string& input, char delimiter,
 
 inline char ToLowerASCII(char c) { return (c >= 'A' && c <= 'Z') ? (c + ('a' - 'A')) : c; }
 
-int StringToInt(const std::string& str);
+inline char ToUpperASCII(char c) { return (c >= 'a' && c <= 'z') ? (c - ('a' - 'A')) : c; }
+
+int64_t StringToInt(const std::string& str);
+
+uint64_t StringToUInt(const std::string& str);
 
 bool StartsWith(const std::string& str, const std::string& prefix);
 

@@ -1,0 +1,24 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library zxio;
+
+/// Table where all members are optional.
+table TableWithAllOptional {
+    /// foo doc comment.
+    1: uint16 foo;
+
+    /// bar doc comment.
+    2: uint32 bar;
+};
+
+/// Table where some members are required.
+table TableWithSomeRequired {
+    /// foo doc comment.
+    1: uint16 foo;
+
+    /// bar doc comment. This is required.
+    [Required]
+    2: uint32 bar;
+};
