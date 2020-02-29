@@ -101,6 +101,7 @@ group("migrated-tests") {
   deps = [
     "//zircon/system/ulib/fbl/test:fbl",
     "//zircon/system/ulib/ffl/test:ffl",
+    "//zircon/system/ulib/fs/transaction/test",
     "//zircon/system/ulib/libzbi/test:zbi",
     "//zircon/system/utest/cmdline",
     "//zircon/system/utest/fit",

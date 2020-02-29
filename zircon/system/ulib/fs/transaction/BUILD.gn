@@ -9,11 +9,10 @@ zx_library("transaction") {
 
   sdk = "source"
   sdk_headers = [
-    "fs/transaction/writeback.h",
     "fs/transaction/block_transaction.h",
+    "fs/transaction/buffered_operations_builder.h",
+    "fs/transaction/writeback.h",
   ]
-
-  sources = [ "block_transaction.cc" ]
 
   public_deps = [
     "$zx/system/ulib/fbl:headers",
@@ -21,21 +20,36 @@ zx_library("transaction") {
     "$zx/system/ulib/storage/operation:headers",
   ]
 
-  deps = [
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/storage/operation",
-    "$zx/system/ulib/zircon-internal",
-  ]
-
   if (is_fuchsia) {
-    sources += [ "writeback.cc" ]
+    sources = [
+      "block_transaction.cc",
+      "buffered_operations_builder.cc",
+      "writeback.cc",
+    ]
 
     public_deps += [
       "$zx/system/ulib/block-client:headers",
       "$zx/system/ulib/fit:headers",
     ]
 
-    deps += [ "$zx/system/ulib/zx" ]
+    deps = [
+      "$zx/system/ulib/fbl",
+      "$zx/system/ulib/fdio",
+      "$zx/system/ulib/storage/operation",
+      "$zx/system/ulib/zircon-internal",
+      "$zx/system/ulib/zx",
+    ]
+  } else {
+    sources = [
+      "block_transaction.cc",
+      "block_transaction_host.cc",
+      "buffered_operations_builder_host.cc",
+    ]
+
+    deps = [
+      "$zx/system/ulib/fbl",
+      "$zx/system/ulib/storage/operation",
+      "$zx/system/ulib/zircon",
+    ]
   }
 }

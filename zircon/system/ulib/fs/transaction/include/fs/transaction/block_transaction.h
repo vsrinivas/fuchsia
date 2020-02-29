@@ -8,6 +8,8 @@
 #include <zircon/assert.h>
 #include <zircon/device/block.h>
 
+#include <vector>
+
 #include <fbl/algorithm.h>
 #include <fbl/macros.h>
 #include <fbl/vector.h>
@@ -62,6 +64,16 @@ class TransactionHandler {
   // the FIFO exposed through GetDevice().
   virtual zx_status_t RunOperation(const storage::Operation& operation,
                                    storage::BlockBuffer* buffer) = 0;
+
+  // Runs the provided operations against the backing block device.
+  // The values inside |operations| are expected to be filesystem-level block numbers.
+  // This method blocks until the operation completes, but the implementation for Fuchsia forwards
+  // the requests to the underlying BlockDevice so it is expected that this interface will be
+  // upgraded to be fully asynchronous at some point.
+  // The caller should use a BufferedOperationsBuilder to construct the request.
+  // Note that the host-side implementation of this method does nothing, as each operation
+  // will be issued by the BufferedOperationsBuilder.
+  virtual zx_status_t RunRequests(const std::vector<storage::BufferedOperation>& operations);
 
 #ifdef __Fuchsia__
   // Acquires the block group on which the transaction should be issued.
