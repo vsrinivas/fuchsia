@@ -60,6 +60,7 @@ class WeaveConfigManager {
   friend WeaveConfigManager& WeaveConfigMgr(void);
   static WeaveConfigManager& GetInstance();
 
+  const std::string config_store_path_;
   rapidjson::Document config_;
   std::mutex config_mutex_;
 };
