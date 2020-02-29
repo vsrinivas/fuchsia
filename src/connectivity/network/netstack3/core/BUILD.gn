@@ -14,6 +14,11 @@ rustc_library("netstack3-core") {
   configs += [ "//build/config:netstack3_only_specialization_feature" ]
 
   deps = [
+    # TODO(https://github.com/rust-lang-nursery/portability-wg/issues/11): remove this module.
+    "fakealloc",
+
+    # TODO(https://github.com/dtolnay/thiserror/pull/64): remove this module.
+    "fakestd",
     "//garnet/lib/rust/never",
     "//src/connectivity/lib/internet-checksum",
     "//src/connectivity/lib/net-types",
@@ -39,6 +44,8 @@ rustc_test("netstack3-core_test") {
   configs += [ "//build/config:netstack3_only_specialization_feature" ]
 
   deps = [
+    # TODO(https://github.com/rust-lang-nursery/portability-wg/issues/11): remove this module.
+    "fakealloc",
     "//garnet/lib/rust/never",
     "//src/connectivity/lib/internet-checksum",
     "//src/connectivity/lib/net-types",

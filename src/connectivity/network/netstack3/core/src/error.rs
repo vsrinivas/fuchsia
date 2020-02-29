@@ -12,13 +12,13 @@ use crate::device::AddressError;
 use crate::wire::icmp::IcmpIpTypes;
 
 /// Results returned from many functions in the netstack.
-pub type Result<T> = std::result::Result<T, NetstackError>;
+pub type Result<T> = core::result::Result<T, NetstackError>;
 
 /// Results returned from parsing functions in the netstack.
-pub(crate) type ParseResult<T> = std::result::Result<T, ParseError>;
+pub(crate) type ParseResult<T> = core::result::Result<T, ParseError>;
 
 /// Results returned from IP packet parsing functions in the netstack.
-pub(crate) type IpParseResult<I, T> = std::result::Result<T, IpParseError<I>>;
+pub(crate) type IpParseResult<I, T> = core::result::Result<T, IpParseError<I>>;
 
 /// Top-level error type the netstack.
 #[derive(Error, Debug, PartialEq)]

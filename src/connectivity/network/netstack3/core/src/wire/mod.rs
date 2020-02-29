@@ -66,8 +66,8 @@ pub(crate) mod tcp;
 pub(crate) mod testdata;
 pub(crate) mod udp;
 
-use std::convert::TryInto;
-use std::ops::Deref;
+use core::convert::TryInto;
+use core::ops::Deref;
 
 use byteorder::{ByteOrder, NetworkEndian};
 use internet_checksum::Checksum;
@@ -88,7 +88,7 @@ fn update_transport_checksum_pseudo_header<A: IpAddress>(
     dst_ip: A,
     proto: IpProto,
     transport_len: usize,
-) -> Result<(), std::num::TryFromIntError> {
+) -> Result<(), core::num::TryFromIntError> {
     #[ipv4addr]
     let pseudo_header = {
         // 4 bytes for src_ip + 4 bytes for dst_ip + 1 byte of zeros + 1 byte

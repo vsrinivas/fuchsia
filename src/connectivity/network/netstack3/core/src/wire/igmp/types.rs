@@ -5,8 +5,8 @@
 //! IGMP parsing and serialization helper types.
 
 use super::IgmpMaxRespCode;
-use std::convert::{From, TryFrom, TryInto};
-use std::time::Duration;
+use core::convert::{From, TryFrom, TryInto};
+use core::time::Duration;
 
 /// IGMP-specific errors.
 #[derive(Debug)]
@@ -15,8 +15,8 @@ pub enum IgmpError {
     FloatFormatError,
 }
 
-impl From<std::num::TryFromIntError> for IgmpError {
-    fn from(_: std::num::TryFromIntError) -> Self {
+impl From<core::num::TryFromIntError> for IgmpError {
+    fn from(_: core::num::TryFromIntError) -> Self {
         IgmpError::FloatFormatError
     }
 }

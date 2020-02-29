@@ -4,6 +4,8 @@
 
 //! The Internet Control Message Protocol (ICMP).
 
+use alloc::vec::Vec;
+
 use byteorder::{ByteOrder, NetworkEndian};
 use log::{debug, trace};
 use net_types::ip::{Ip, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};

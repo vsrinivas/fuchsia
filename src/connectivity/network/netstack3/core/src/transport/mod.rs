@@ -58,8 +58,9 @@
 pub(crate) mod tcp;
 pub(crate) mod udp;
 
-use std::collections::HashMap;
-use std::hash::Hash;
+use alloc::collections::HashMap;
+use alloc::vec::Vec;
+use core::hash::Hash;
 
 use net_types::ip::{Ipv4, Ipv6};
 

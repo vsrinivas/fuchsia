@@ -4,11 +4,11 @@
 
 //! Parsing and serialization of UDP packets.
 
-use std::convert::TryInto;
+use core::convert::TryInto;
 #[cfg(test)]
-use std::fmt::{self, Debug, Formatter};
-use std::num::NonZeroU16;
-use std::ops::Range;
+use core::fmt::{self, Debug, Formatter};
+use core::num::NonZeroU16;
+use core::ops::Range;
 
 use net_types::ip::{Ip, IpAddress};
 use packet::{
@@ -249,7 +249,7 @@ where
                 // Per RFC 2675 Section 4, we only do that if the UDP header
                 // plus data is actually more than 65535.
                 if header.length.get() == 0
-                    && remaining_buff_len.saturating_add(HEADER_BYTES) >= (std::u16::MAX as usize)
+                    && remaining_buff_len.saturating_add(HEADER_BYTES) >= (core::u16::MAX as usize)
                 {
                     return Some(remaining_buff_len);
                 }

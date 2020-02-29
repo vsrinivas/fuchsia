@@ -7,8 +7,8 @@
 #![allow(private_in_public)]
 
 #[cfg(test)]
-use std::fmt::{self, Debug, Formatter};
-use std::mem;
+use core::fmt::{self, Debug, Formatter};
+use core::mem;
 
 use net_types::ethernet::Mac;
 use net_types::ip::Ipv4Addr;

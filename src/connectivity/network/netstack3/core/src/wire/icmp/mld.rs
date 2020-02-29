@@ -6,12 +6,12 @@
 //!
 //! Wire serialization and deserialization functions.
 
-use std::convert::TryFrom;
-use std::fmt::Debug;
-use std::mem::size_of;
-use std::ops::Deref;
-use std::result::Result;
-use std::time::Duration;
+use core::convert::TryFrom;
+use core::fmt::Debug;
+use core::mem::size_of;
+use core::ops::Deref;
+use core::result::Result;
+use core::time::Duration;
 
 use net_types::ip::{Ipv6, Ipv6Addr};
 use net_types::MulticastAddr;

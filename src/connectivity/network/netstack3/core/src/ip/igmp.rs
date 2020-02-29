@@ -7,9 +7,10 @@
 //! IGMP is a communications protocol used by hosts and adjacent routers on IPv4
 //! networks to establish multicast group memberships.
 
-use std::collections::HashMap;
-use std::fmt::{Debug, Display};
-use std::time::Duration;
+use alloc::collections::HashMap;
+use alloc::vec::Vec;
+use core::fmt::{Debug, Display};
+use core::time::Duration;
 
 use log::{debug, error};
 use net_types::ip::{AddrSubnet, Ipv4Addr};

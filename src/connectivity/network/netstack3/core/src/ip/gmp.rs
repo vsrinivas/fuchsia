@@ -9,8 +9,9 @@
 //! the term "Group Management Protocol", or "GMP", will be used to
 //! refer to both IGMP and MLD.
 
-use std::convert::TryFrom;
-use std::time::Duration;
+use alloc::vec::{self, Vec};
+use core::convert::TryFrom;
+use core::time::Duration;
 
 use rand::Rng;
 
@@ -126,7 +127,7 @@ impl<P: ProtocolSpecific> Actions<P> {
 
 impl<P: ProtocolSpecific> IntoIterator for Actions<P> {
     type Item = Action<P>;
-    type IntoIter = std::vec::IntoIter<Self::Item>;
+    type IntoIter = vec::IntoIter<Self::Item>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter()

@@ -10,6 +10,8 @@
 //! Used to provide collections keyed on [`crate::DeviceId`] that match hot path
 //! performance requirements.
 
+use alloc::vec::Vec;
+
 use super::id_map::{Entry, EntryKey};
 use super::IdMap;
 
@@ -54,7 +56,7 @@ pub struct IdMapCollection<K: IdMapCollectionKey, T> {
     // IdMapCollectionKey. When rust issue #43408 gets resolved we can switch
     // this to use the associated const and just have a fixed length array.
     data: Vec<IdMap<T>>,
-    _marker: std::marker::PhantomData<K>,
+    _marker: core::marker::PhantomData<K>,
 }
 
 impl<K: IdMapCollectionKey, T> IdMapCollection<K, T> {
@@ -62,7 +64,7 @@ impl<K: IdMapCollectionKey, T> IdMapCollection<K, T> {
     pub fn new() -> Self {
         let mut data = Vec::new();
         data.resize_with(K::VARIANT_COUNT, IdMap::default);
-        Self { data, _marker: std::marker::PhantomData }
+        Self { data, _marker: core::marker::PhantomData }
     }
 
     fn get_map(&self, key: &K) -> &IdMap<T> {

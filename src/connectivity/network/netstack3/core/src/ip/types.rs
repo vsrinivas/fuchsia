@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::fmt::{self, Debug, Formatter};
+use core::fmt::{self, Debug, Formatter};
 
 use net_types::ip::{Ip, IpAddr, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Subnet, SubnetEither};
 use net_types::SpecifiedAddr;

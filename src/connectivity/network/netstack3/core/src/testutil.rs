@@ -808,6 +808,20 @@ pub(crate) fn add_arp_or_ndp_table_entry<A: IpAddress>(
     builder.add_ndp_table_entry(device, ip, mac);
 }
 
+impl Instant for std::time::Instant {
+    fn duration_since(&self, earlier: std::time::Instant) -> Duration {
+        std::time::Instant::duration_since(self, earlier)
+    }
+
+    fn checked_add(&self, duration: Duration) -> Option<Self> {
+        std::time::Instant::checked_add(self, duration)
+    }
+
+    fn checked_sub(&self, duration: Duration) -> Option<Self> {
+        std::time::Instant::checked_sub(self, duration)
+    }
+}
+
 /// A dummy implementation of `Instant` for use in testing.
 #[derive(Default, Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
 pub(crate) struct DummyInstant {

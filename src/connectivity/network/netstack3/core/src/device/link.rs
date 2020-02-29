@@ -7,7 +7,7 @@
 //! This module contains definitions of link-layer devices, otherwise known as
 //! L2 devices.
 
-use std::fmt::Debug;
+use core::fmt::Debug;
 
 use net_types::ethernet::Mac;
 use zerocopy::{AsBytes, FromBytes, Unaligned};

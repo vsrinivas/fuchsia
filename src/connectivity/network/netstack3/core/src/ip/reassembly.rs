@@ -30,11 +30,13 @@
 //! header). If a link supports an MTU greater than the maximum size of a
 //! non-jumbogram packet, the packet should not be fragmented.
 
-use std::cmp::Ordering;
-use std::collections::{BTreeSet, BinaryHeap, HashMap};
-use std::convert::TryFrom;
-use std::marker::PhantomData;
-use std::time::Duration;
+use alloc::collections::HashMap;
+use alloc::collections::{BTreeSet, BinaryHeap};
+use alloc::vec::Vec;
+use core::cmp::Ordering;
+use core::convert::TryFrom;
+use core::marker::PhantomData;
+use core::time::Duration;
 
 use byteorder::{ByteOrder, NetworkEndian};
 use internet_checksum::Checksum;
@@ -205,7 +207,7 @@ struct FragmentCacheData {
     ///
     /// When creating a new instance of `FragmentCacheData`, we will set `missing_blocks`
     /// to a list with a single element representing all blocks, (0, MAX_VALUE).
-    /// In this case, MAX_VALUE will be set to `std::u16::MAX`.
+    /// In this case, MAX_VALUE will be set to `core::u16::MAX`.
     // TODO(ghanan): Consider a different data structure? With the BTreeSet, searches will be
     //               O(n) and inserts/removals may be O(log(n)). If we use a linked list,
     //               searches will be O(n) but inserts/removals will be O(1).
@@ -248,7 +250,7 @@ impl FragmentCacheData {
             header: None,
             total_size: 0,
         };
-        ret.missing_blocks.insert((0, std::u16::MAX));
+        ret.missing_blocks.insert((0, core::u16::MAX));
         ret
     }
 }
@@ -461,8 +463,8 @@ where
         // Make sure that if we are not adding a fragment after the packet, it
         // is because `packet` goes up to the `found_gap`'s end boundary, or
         // this is the last fragment. If it is the last fragment for a packet,
-        // we make sure that `found_gap`'s end value is `std::u16::MAX`.
-        assert!(found_gap.1 == fragment_blocks_range.1 || !m_flag && found_gap.1 == std::u16::MAX);
+        // we make sure that `found_gap`'s end value is `core::u16::MAX`.
+        assert!(found_gap.1 == fragment_blocks_range.1 || !m_flag && found_gap.1 == core::u16::MAX);
     }
 
     // Get header buffer from `packet` if its fragment offset equals to 0.
@@ -648,7 +650,7 @@ fn reassemble_packet_helper<B: ByteSliceMut, BV: BufferViewMut<B>, I: Ip>(
 
         // Make sure that the packet length is not more than the maximum
         // possible IPv4 packet length.
-        if byte_count > (std::u16::MAX as usize) {
+        if byte_count > (core::u16::MAX as usize) {
             return Err(FragmentReassemblyError::PacketParsingError);
         }
 
@@ -684,7 +686,7 @@ fn reassemble_packet_helper<B: ByteSliceMut, BV: BufferViewMut<B>, I: Ip>(
 
         // Make sure that the payload length is not more than the maximum
         // possible IPv4 packet length.
-        if payload_length > (std::u16::MAX as usize) {
+        if payload_length > (core::u16::MAX as usize) {
             return Err(FragmentReassemblyError::PacketParsingError);
         }
 

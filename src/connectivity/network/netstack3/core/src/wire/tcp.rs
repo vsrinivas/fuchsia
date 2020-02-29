@@ -5,9 +5,9 @@
 //! Parsing and serialization of TCP segments.
 
 #[cfg(test)]
-use std::fmt::{self, Debug, Formatter};
-use std::num::NonZeroU16;
-use std::ops::Range;
+use core::fmt::{self, Debug, Formatter};
+use core::num::NonZeroU16;
+use core::ops::Range;
 
 use net_types::ip::IpAddress;
 use packet::{

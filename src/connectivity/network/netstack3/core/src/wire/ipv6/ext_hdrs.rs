@@ -4,8 +4,8 @@
 
 //! Parsing of IPv6 Extension Headers.
 
-use std::convert::TryFrom;
-use std::marker::PhantomData;
+use core::convert::TryFrom;
+use core::marker::PhantomData;
 
 use byteorder::{ByteOrder, NetworkEndian, WriteBytesExt};
 use packet::BufferView;
@@ -184,13 +184,13 @@ impl Ipv6ExtensionHeaderImpl {
         let options = Records::parse_with_context(options, options_context).map_err(|e| {
             // We know the below `try_from` call will not result in a `None` value because
             // the maximum size of an IPv6 packet's payload (extension headers + body) is
-            // `std::u32::MAX`. This maximum size is only possible when using IPv6
+            // `core::u32::MAX`. This maximum size is only possible when using IPv6
             // jumbograms as defined by RFC 2675, which uses a 32 bit field for the payload
             // length. If we receive such a hypothetical packet with the maximum possible
             // payload length which only contains extension headers, we know that the offset
             // of any location within the payload must fit within an `u32`. If the packet is
             // a normal IPv6 packet (not a jumbogram), the maximum size of the payload is
-            // `std::u16::MAX` (as the normal payload length field is only 16 bits), which
+            // `core::u16::MAX` (as the normal payload length field is only 16 bits), which
             // is significantly less than the maximum possible size of a jumbogram.
             ext_hdr_opt_err_to_ext_hdr_err(
                 u32::try_from(context.bytes_parsed + 2).unwrap(),
@@ -311,13 +311,13 @@ impl Ipv6ExtensionHeaderImpl {
         let options = Records::parse_with_context(options, options_context).map_err(|e| {
             // We know the below `try_from` call will not result in a `None` value because
             // the maximum size of an IPv6 packet's payload (extension headers + body) is
-            // `std::u32::MAX`. This maximum size is only possible when using IPv6
+            // `core::u32::MAX`. This maximum size is only possible when using IPv6
             // jumbograms as defined by RFC 2675, which uses a 32 bit field for the payload
             // length. If we receive such a hypothetical packet with the maximum possible
             // payload length which only contains extension headers, we know that the offset
             // of any location within the payload must fit within an `u32`. If the packet is
             // a normal IPv6 packet (not a jumbogram), the maximum size of the payload is
-            // `std::u16::MAX` (as the normal payload length field is only 16 bits), which
+            // `core::u16::MAX` (as the normal payload length field is only 16 bits), which
             // is significantly less than the maximum possible size of a jumbogram.
             ext_hdr_opt_err_to_ext_hdr_err(
                 u32::try_from(context.bytes_parsed + 2).unwrap(),
@@ -552,7 +552,7 @@ impl<'a> AlignedOptionsSerializerImpl<'a> for HopByHopOptionsImpl {
 
     fn padding(buf: &mut [u8], length: usize) {
         assert!(length <= buf.len());
-        assert!(length <= (std::u8::MAX as usize) + 2);
+        assert!(length <= (core::u8::MAX as usize) + 2);
 
         if length == 1 {
             // Use Pad1
@@ -850,7 +850,7 @@ where
             ExtensionHeaderOptionDataParseResult::ErrorAt(offset) => {
                 // The precondition here is that `bytes_parsed + offset` must point inside the
                 // packet. So as reasoned in the next match arm, it is not possible to exceed
-                // `std::u32::max`. Given this reasoning, we know the call to `unwrap` should not
+                // `core::u32::max`. Given this reasoning, we know the call to `unwrap` should not
                 // panic.
                 Err(ExtensionHeaderOptionParsingError::ErroneousOptionField {
                     pointer: u32::try_from(context.bytes_parsed + offset as usize).unwrap(),
@@ -870,13 +870,13 @@ where
                     ),
                     // We know the below `try_from` call will not result in a `None` value because
                     // the maximum size of an IPv6 packet's payload (extension headers + body) is
-                    // `std::u32::MAX`. This maximum size is only possible when using IPv6
+                    // `core::u32::MAX`. This maximum size is only possible when using IPv6
                     // jumbograms as defined by RFC 2675, which uses a 32 bit field for the payload
                     // length. If we receive such a hypothetical packet with the maximum possible
                     // payload length which only contains extension headers, we know that the offset
                     // of any location within the payload must fit within an `u32`. If the packet is
                     // a normal IPv6 packet (not a jumbogram), the maximum size of the payload is
-                    // `std::u16::MAX` (as the normal payload length field is only 16 bits), which
+                    // `core::u16::MAX` (as the normal payload length field is only 16 bits), which
                     // is significantly less than the maximum possible size of a jumbogram.
                     _ => Err(ExtensionHeaderOptionParsingError::UnrecognizedOption {
                         pointer: u32::try_from(context.bytes_parsed).unwrap(),

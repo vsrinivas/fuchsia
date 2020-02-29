@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::fmt::{self, Display, Formatter};
-use std::ops::Deref;
+use core::fmt::{self, Display, Formatter};
+use core::ops::Deref;
 
 // NOTE: The "witness" types UnicastAddr and MulticastAddr - which provide the
 // invariant that the value they contain is a unicast or multicast address

@@ -6,9 +6,10 @@
 
 pub(crate) mod ext_hdrs;
 
-use std::convert::TryFrom;
-use std::fmt::{self, Debug, Formatter};
-use std::ops::Range;
+use alloc::vec::Vec;
+use core::convert::TryFrom;
+use core::fmt::{self, Debug, Formatter};
+use core::ops::Range;
 
 use log::debug;
 use net_types::ip::{Ipv6, Ipv6Addr};
@@ -43,9 +44,9 @@ pub(crate) const IPV6_PAYLOAD_LEN_BYTE_RANGE: Range<usize> = 4..6;
 const NEXT_HEADER_OFFSET: u8 = 6;
 
 // The maximum length for Hop-by-Hop Options. The stored byte's maximum
-// representable value is `std::u8::MAX` and it means the header has
+// representable value is `core::u8::MAX` and it means the header has
 // that many 8-octets, not including the first 8 octets.
-const IPV6_HBH_OPTIONS_MAX_LEN: usize = (std::u8::MAX as usize) * 8 + 8;
+const IPV6_HBH_OPTIONS_MAX_LEN: usize = (core::u8::MAX as usize) * 8 + 8;
 
 /// Convert an extension header parsing error to an IP packet
 /// parsing error.
@@ -533,7 +534,7 @@ impl<B: ByteSlice> Debug for Ipv6Packet<B> {
             .field("ecn", &self.ecn())
             .field("flowlabel", &self.flowlabel())
             .field("extension headers", &"TODO")
-            .field("body", &format!("<{} bytes>", self.body.len()))
+            .field("body", &alloc::format!("<{} bytes>", self.body.len()))
             .finish()
     }
 }
@@ -789,7 +790,7 @@ impl Ipv6PacketBuilder {
         // fine because, with debug assertions disabled, we'll just write an
         // incorrect header value, which is acceptable if the caller has
         // violated their contract.
-        debug_assert!(payload_len <= std::u16::MAX as usize);
+        debug_assert!(payload_len <= core::u16::MAX as usize);
         let payload_len = payload_len as u16;
         fixed_hdr.payload_len = U16::new(payload_len);
         fixed_hdr.next_hdr = next_hdr;

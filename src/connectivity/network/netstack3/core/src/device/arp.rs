@@ -4,12 +4,12 @@
 
 //! The Address Resolution Protocol (ARP).
 
-use std::collections::hash_map::Entry;
-use std::collections::HashMap;
-use std::hash::Hash;
-use std::marker::PhantomData;
-use std::mem;
-use std::time::Duration;
+use alloc::collections::hash_map::Entry;
+use alloc::collections::HashMap;
+use core::hash::Hash;
+use core::marker::PhantomData;
+use core::mem;
+use core::time::Duration;
 
 use log::{debug, error};
 use net_types::{ethernet::Mac, ip::Ipv4Addr};

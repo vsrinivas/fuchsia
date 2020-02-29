@@ -5,9 +5,9 @@
 //! Module for IP level paths' maximum transmission unit (PMTU) size
 //! cache support.
 
-use std::collections::HashMap;
-use std::marker::PhantomData;
-use std::time::Duration;
+use alloc::collections::HashMap;
+use core::marker::PhantomData;
+use core::time::Duration;
 
 use log::trace;
 use net_types::ip::{Ip, IpAddress};

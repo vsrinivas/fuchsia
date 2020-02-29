@@ -4,7 +4,7 @@
 
 //! ICMPv4
 
-use std::fmt;
+use core::fmt;
 
 use net_types::ip::{Ipv4, Ipv4Addr};
 use packet::{BufferView, ParsablePacket, ParseMetadata};

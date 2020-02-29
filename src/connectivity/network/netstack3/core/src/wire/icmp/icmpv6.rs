@@ -4,7 +4,7 @@
 
 //! ICMPv6
 
-use std::fmt;
+use core::fmt;
 
 use net_types::ip::{Ipv6, Ipv6Addr};
 use packet::{BufferView, ParsablePacket, ParseMetadata};

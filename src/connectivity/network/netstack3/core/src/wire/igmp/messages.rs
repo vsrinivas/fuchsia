@@ -124,8 +124,8 @@ impl MembershipQueryData {
     /// [RFC 3376 section 8.2]: https://tools.ietf.org/html/rfc3376#section-8.2
     // TODO(rheacock): remove `#[allow(dead_code)]` when this is used.
     #[allow(dead_code)]
-    pub(crate) const DEFAULT_QUERY_INTERVAL: std::time::Duration =
-        std::time::Duration::from_secs(1250);
+    pub(crate) const DEFAULT_QUERY_INTERVAL: core::time::Duration =
+        core::time::Duration::from_secs(1250);
 
     pub(crate) fn number_of_sources(self) -> u16 {
         self.number_of_sources.get()

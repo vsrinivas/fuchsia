@@ -7,6 +7,8 @@
 //! Defines the [`IdMap`] data structure: A generic container mapped keyed by an
 //! internally managed pool of identifiers kept densely packed.
 
+use alloc::vec::Vec;
+
 /// [`IdMap`]s use `usize`s for keys.
 pub(crate) type Key = usize;
 
@@ -96,7 +98,7 @@ impl<T> IdMapEntry<T> {
 
     /// Return the old entry and replace it with `new`.
     fn replace(&mut self, new: T) -> IdMapEntry<T> {
-        std::mem::replace(self, IdMapEntry::Allocated(new))
+        core::mem::replace(self, IdMapEntry::Allocated(new))
     }
 
     /// Take the old allocated entry and replace it with a free entry.
@@ -106,7 +108,7 @@ impl<T> IdMapEntry<T> {
     /// old entry is already free, this is a no-op.
     fn take_allocated(&mut self, next: Option<usize>) -> Option<T> {
         if self.is_allocated() {
-            std::mem::replace(self, IdMapEntry::Free(FreeListLink { prev: None, next }))
+            core::mem::replace(self, IdMapEntry::Free(FreeListLink { prev: None, next }))
                 .into_option()
         } else {
             // If it is currently free, we don't want to unlink the entry and
@@ -282,7 +284,7 @@ impl<T> IdMap<T> {
         if let Some(FreeList { head, .. }) = self.freelist.as_mut() {
             let ret = *head;
             let old =
-                std::mem::replace(self.data.get_mut(ret).unwrap(), IdMapEntry::Allocated(item));
+                core::mem::replace(self.data.get_mut(ret).unwrap(), IdMapEntry::Allocated(item));
             // Update the head of the freelist.
             match old.freelist_link().next {
                 Some(new_head) => *head = new_head,

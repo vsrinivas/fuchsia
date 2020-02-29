@@ -4,7 +4,7 @@
 
 //! Common ICMP packets.
 
-use std::num::NonZeroU16;
+use core::num::NonZeroU16;
 
 use super::IdAndSeq;
 use crate::wire::U16;

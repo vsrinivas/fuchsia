@@ -18,13 +18,14 @@
 //!
 //! [RFC 4861]: https://tools.ietf.org/html/rfc4861
 
-use std::collections::{HashMap, HashSet};
-use std::fmt::Debug;
-use std::marker::PhantomData;
-use std::num::{NonZeroU16, NonZeroU32, NonZeroU8};
-use std::ops::RangeInclusive;
-use std::slice::Iter;
-use std::time::Duration;
+use alloc::collections::{HashMap, HashSet};
+use alloc::vec::Vec;
+use core::fmt::Debug;
+use core::marker::PhantomData;
+use core::num::{NonZeroU16, NonZeroU32, NonZeroU8};
+use core::ops::RangeInclusive;
+use core::slice::Iter;
+use core::time::Duration;
 
 use log::{debug, error, trace};
 
@@ -2431,7 +2432,7 @@ fn send_router_advertisement<D: LinkDevice, C: NdpContext<D>>(
     );
 
     let src_ll = ctx.get_link_layer_addr(device_id);
-    let mut options = vec![NdpOption::SourceLinkLayerAddress(src_ll.bytes())];
+    let mut options = alloc::vec![NdpOption::SourceLinkLayerAddress(src_ll.bytes())];
 
     let ndp_state = ctx.get_state_mut_with(device_id);
 
@@ -2906,8 +2907,8 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                             }
 
                             // Reset invalidation timer.
-                            if prefix_info.valid_lifetime() == std::u32::MAX {
-                                // A valid lifetime of all 1 bits (== `std::u32::MAX`) represents
+                            if prefix_info.valid_lifetime() == core::u32::MAX {
+                                // A valid lifetime of all 1 bits (== `core::u32::MAX`) represents
                                 // infinity, as per RFC 4861 section 4.6.2. Given this, we do not
                                 // need a timer to mark the prefix as invalid.
                                 ctx.cancel_timer(timer_id);

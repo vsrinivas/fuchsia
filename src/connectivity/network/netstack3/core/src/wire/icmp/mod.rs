@@ -21,12 +21,12 @@ pub(crate) use self::icmpv6::*;
 #[cfg(test)]
 pub(crate) use self::ndp::*;
 
-use std::cmp;
-use std::convert::{TryFrom, TryInto};
-use std::fmt::Debug;
-use std::marker::PhantomData;
-use std::mem;
-use std::ops::Deref;
+use core::cmp;
+use core::convert::{TryFrom, TryInto};
+use core::fmt::Debug;
+use core::marker::PhantomData;
+use core::mem;
+use core::ops::Deref;
 
 use byteorder::{ByteOrder, NetworkEndian};
 use internet_checksum::Checksum;

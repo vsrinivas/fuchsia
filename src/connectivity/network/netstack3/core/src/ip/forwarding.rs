@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::collections::HashSet;
-use std::fmt::Debug;
+use alloc::collections::HashSet;
+use core::fmt::Debug;
 
 use net_types::ip::{Ip, IpAddress, Subnet};
 use net_types::SpecifiedAddr;
@@ -255,7 +255,7 @@ impl<I: Ip, D: Clone + Debug + PartialEq> ForwardingTable<I, D> {
 
     /// Get an iterator over all of the forwarding entries ([`Entry`]) this `ForwardingTable`
     /// knows about.
-    pub(crate) fn iter_installed(&self) -> std::slice::Iter<Entry<I::Addr, D>> {
+    pub(crate) fn iter_installed(&self) -> core::slice::Iter<Entry<I::Addr, D>> {
         self.installed.iter()
     }
 
@@ -330,6 +330,8 @@ impl<I: Ip, D: Clone + Debug + PartialEq> ForwardingTable<I, D> {
     /// Find the destination a packet destined to `address` should be routed to by inspecting the
     /// installed table.
     fn installed_lookup(&self, address: SpecifiedAddr<I::Addr>) -> Option<Destination<I::Addr, D>> {
+        use alloc::vec;
+
         let mut observed = vec![false; self.installed.len()];
         self.installed_lookup_helper(address, &mut observed)
     }

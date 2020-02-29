@@ -4,9 +4,9 @@
 
 //! The User Datagram Protocol (UDP).
 
-use std::collections::HashSet;
-use std::num::{NonZeroU16, NonZeroUsize};
-use std::ops::RangeInclusive;
+use alloc::collections::HashSet;
+use core::num::{NonZeroU16, NonZeroUsize};
+use core::ops::RangeInclusive;
 
 use log::trace;
 use net_types::ip::{Ip, IpAddress, Ipv4, Ipv6};
@@ -589,7 +589,7 @@ pub(crate) fn receive_ip_packet<I: IcmpIpExt, B: BufferMut, C: BufferUdpContext<
         // packet.parse_metadata().
         let meta =
             ParsablePacket::<_, crate::wire::udp::UdpParseArgs<I::Addr>>::parse_metadata(&packet);
-        std::mem::drop(packet);
+        core::mem::drop(packet);
         buffer.undo_parse(meta);
         Err(buffer)
     } else {
@@ -842,7 +842,9 @@ pub fn listen_udp<I: IcmpIpExt, C: UdpContext<I>>(
     match addr {
         None => {
             let state = ctx.get_state_mut();
-            Ok(UdpListenerId::new_wildcard(state.conn_state.wildcard_listeners.insert(vec![port])))
+            Ok(UdpListenerId::new_wildcard(
+                state.conn_state.wildcard_listeners.insert(alloc::vec![port]),
+            ))
         }
         Some(addr) => {
             if !ctx.is_local_addr(addr.get()) {
@@ -850,7 +852,7 @@ pub fn listen_udp<I: IcmpIpExt, C: UdpContext<I>>(
             }
             let state = ctx.get_state_mut();
             Ok(UdpListenerId::new_specified(
-                state.conn_state.listeners.insert(vec![Listener { addr, port }]),
+                state.conn_state.listeners.insert(alloc::vec![Listener { addr, port }]),
             ))
         }
     }
@@ -2063,7 +2065,7 @@ mod tests {
             err: I::ErrorCode,
             f: F,
         ) where
-            I::PacketBuilder: std::fmt::Debug,
+            I::PacketBuilder: core::fmt::Debug,
         {
             let packet = (&[0u8][..])
                 .into_serializer()
@@ -2087,8 +2089,8 @@ mod tests {
             f: F,
             other_remote_ip: I::Addr,
         ) where
-            I::PacketBuilder: std::fmt::Debug,
-            I::ErrorCode: Copy + std::fmt::Debug + PartialEq,
+            I::PacketBuilder: core::fmt::Debug,
+            I::ErrorCode: Copy + core::fmt::Debug + PartialEq,
         {
             let mut ctx = initialize_context::<I>();
 

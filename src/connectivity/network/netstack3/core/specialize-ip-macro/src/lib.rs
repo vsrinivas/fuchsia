@@ -8,7 +8,7 @@ extern crate quote;
 extern crate syn;
 extern crate proc_macro;
 
-use std::fmt::Display;
+use core::fmt::Display;
 
 use proc_macro::TokenStream;
 use proc_macro2::{Span, TokenStream as TokenStream2};

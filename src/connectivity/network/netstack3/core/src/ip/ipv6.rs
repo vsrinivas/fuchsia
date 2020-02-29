@@ -4,7 +4,7 @@
 
 //! IPv6 specific functionality.
 
-use std::iter::Iterator;
+use core::iter::Iterator;
 
 use zerocopy::ByteSlice;
 

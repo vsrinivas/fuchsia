@@ -9,10 +9,11 @@ pub(crate) mod ethernet;
 mod link;
 pub(crate) mod ndp;
 
-use std::collections::HashMap;
-use std::fmt::{self, Debug, Display, Formatter};
-use std::marker::PhantomData;
-use std::num::NonZeroU8;
+use alloc::collections::HashMap;
+use alloc::vec::Vec;
+use core::fmt::{self, Debug, Display, Formatter};
+use core::marker::PhantomData;
+use core::num::NonZeroU8;
 
 use log::{debug, trace};
 use net_types::ethernet::Mac;

@@ -15,6 +15,14 @@
 #![cfg_attr(feature = "benchmark", feature(test))]
 // TODO Follow 2018 idioms
 #![allow(elided_lifetimes_in_paths)]
+#![cfg_attr(not(test), no_std)]
+
+// TODO(https://github.com/rust-lang-nursery/portability-wg/issues/11): remove this module.
+extern crate fakealloc as alloc;
+
+// TODO(https://github.com/dtolnay/thiserror/pull/64): remove this module.
+#[cfg(not(test))]
+extern crate fakestd as std;
 
 #[cfg(all(test, feature = "benchmark"))]
 extern crate test;
@@ -55,8 +63,9 @@ pub use crate::transport::udp::{
 };
 pub use crate::transport::TransportLayerEventDispatcher;
 
-use std::fmt::Debug;
-use std::time;
+use alloc::vec::Vec;
+use core::fmt::Debug;
+use core::time;
 
 use net_types::ethernet::Mac;
 use net_types::ip::{AddrSubnetEither, IpAddr, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, SubnetEither};
@@ -319,20 +328,6 @@ pub trait Instant: Sized + Ord + Copy + Clone + Debug + Send + Sync {
     /// represented as `Instant` (which means it's inside the bounds of the
     /// underlying data structure), `None` otherwise.
     fn checked_sub(&self, duration: time::Duration) -> Option<Self>;
-}
-
-impl Instant for time::Instant {
-    fn duration_since(&self, earlier: time::Instant) -> time::Duration {
-        time::Instant::duration_since(self, earlier)
-    }
-
-    fn checked_add(&self, duration: time::Duration) -> Option<Self> {
-        time::Instant::checked_add(self, duration)
-    }
-
-    fn checked_sub(&self, duration: time::Duration) -> Option<Self> {
-        time::Instant::checked_sub(self, duration)
-    }
 }
 
 /// An `EventDispatcher` which supports sending buffers of a given type.

@@ -4,11 +4,13 @@
 
 //! The Ethernet protocol.
 
-use std::collections::{HashMap, VecDeque};
-use std::fmt::Debug;
-use std::iter::FilterMap;
-use std::num::NonZeroU8;
-use std::slice::Iter;
+use alloc::collections::HashMap;
+use alloc::collections::VecDeque;
+use alloc::vec::Vec;
+use core::fmt::Debug;
+use core::iter::FilterMap;
+use core::num::NonZeroU8;
+use core::slice::Iter;
 
 use log::{debug, trace};
 use net_types::ethernet::Mac;

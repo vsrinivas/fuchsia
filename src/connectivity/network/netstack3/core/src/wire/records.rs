@@ -12,9 +12,9 @@
 //! [`options`]: crate::wire::records::options
 
 use crate::wire::{FromRaw, MaybeParsed};
+use core::marker::PhantomData;
+use core::ops::Deref;
 use packet::{BufferView, BufferViewMut, InnerPacketBuilder};
-use std::marker::PhantomData;
-use std::ops::Deref;
 use zerocopy::ByteSlice;
 
 /// A parsed set of arbitrary sequential records.
@@ -767,8 +767,8 @@ impl<'a> AsRef<[u8]> for LongLivedBuff<'a> {
 impl<'a> packet::BufferView<&'a [u8]> for LongLivedBuff<'a> {
     fn take_front(&mut self, n: usize) -> Option<&'a [u8]> {
         if self.0.len() >= n {
-            let (prefix, rest) = std::mem::replace(&mut self.0, &[]).split_at(n);
-            std::mem::replace(&mut self.0, rest);
+            let (prefix, rest) = core::mem::replace(&mut self.0, &[]).split_at(n);
+            core::mem::replace(&mut self.0, rest);
             Some(prefix)
         } else {
             None
@@ -777,8 +777,8 @@ impl<'a> packet::BufferView<&'a [u8]> for LongLivedBuff<'a> {
 
     fn take_back(&mut self, n: usize) -> Option<&'a [u8]> {
         if self.0.len() >= n {
-            let (rest, suffix) = std::mem::replace(&mut self.0, &[]).split_at(n);
-            std::mem::replace(&mut self.0, rest);
+            let (rest, suffix) = core::mem::replace(&mut self.0, &[]).split_at(n);
+            core::mem::replace(&mut self.0, rest);
             Some(suffix)
         } else {
             None
@@ -911,8 +911,8 @@ mod test {
         type Error = ();
     }
 
-    impl std::fmt::Debug for FilterContext {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    impl core::fmt::Debug for FilterContext {
+        fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
             write!(f, "FilterContext{{disallowed:{:?}}}", &self.disallowed[..])
         }
     }
@@ -924,9 +924,9 @@ mod test {
             bytes: &mut BV,
             context: &mut Self::Context,
         ) -> Result<Option<Option<Self::Record>>, Self::Error> {
-            if bytes.len() < std::mem::size_of::<DummyRecord>() {
+            if bytes.len() < core::mem::size_of::<DummyRecord>() {
                 Ok(None)
-            } else if bytes.as_ref()[0..std::mem::size_of::<DummyRecord>()]
+            } else if bytes.as_ref()[0..core::mem::size_of::<DummyRecord>()]
                 .iter()
                 .any(|x| context.disallowed[*x as usize])
             {
@@ -1322,7 +1322,7 @@ pub(crate) mod options {
             let length = Self::record_length(record) / O::OPTION_LEN_MULTIPLIER;
             // option length not fitting in u8 is a contract violation. Without
             // debug assertions on, this will cause the packet to be malformed.
-            debug_assert!(length <= std::u8::MAX.into());
+            debug_assert!(length <= core::u8::MAX.into());
             data[1] = (length - O::LENGTH_OFFSET) as u8;
             // because padding may have occurred, we zero-fill data before
             // passing it along

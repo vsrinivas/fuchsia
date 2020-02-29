@@ -22,8 +22,9 @@ mod types;
 // re-exported from the root.
 pub use self::types::*;
 
-use std::fmt::{Debug, Display};
-use std::ops::Deref;
+use alloc::vec::Vec;
+use core::fmt::{Debug, Display};
+use core::ops::Deref;
 
 use log::{debug, trace};
 use net_types::ip::{AddrSubnet, Ip, IpAddress, IpVersion, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Subnet};
@@ -733,7 +734,7 @@ macro_rules! process_fragment {
             FragmentProcessingState::Ready { key, packet_len } => {
                 trace!("receive_ip_packet: fragmented, ready for reassembly");
                 // Allocate a buffer of `packet_len` bytes.
-                let mut buffer = Buf::new(vec![0; packet_len], ..);
+                let mut buffer = Buf::new(alloc::vec![0; packet_len], ..);
 
                 // Attempt to reassemble the packet.
                 match reassemble_packet::<$ip, _, _, _>($ctx, &key, buffer.buffer_view_mut()) {
@@ -1367,7 +1368,7 @@ pub(crate) fn del_device_route<D: EventDispatcher, A: IpAddress>(
 /// Return all the routes for the provided `IpAddress` type
 pub(crate) fn iter_all_routes<D: EventDispatcher, A: IpAddress>(
     ctx: &Context<D>,
-) -> std::slice::Iter<Entry<A, DeviceId>> {
+) -> core::slice::Iter<Entry<A, DeviceId>> {
     get_state_inner::<A::Version, _>(ctx.state()).table.iter_installed()
 }
 

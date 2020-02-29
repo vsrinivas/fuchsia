@@ -8,8 +8,9 @@
 //! IGMPv2. One important difference to note is that MLD uses ICMPv6 (IP
 //! Protocol 58) message types, rather than IGMP (IP Protocol 2) message types.
 
-use std::collections::HashMap;
-use std::time::Duration;
+use alloc::collections::HashMap;
+use alloc::vec::Vec;
+use core::time::Duration;
 
 use log::{debug, error};
 use net_types::ip::{Ip, Ipv6, Ipv6Addr};

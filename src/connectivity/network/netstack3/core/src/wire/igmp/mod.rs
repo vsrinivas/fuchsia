@@ -14,10 +14,10 @@ mod testdata;
 
 pub(crate) use self::types::*;
 
-use std::convert::TryFrom;
-use std::fmt::Debug;
-use std::marker::PhantomData;
-use std::mem;
+use core::convert::TryFrom;
+use core::fmt::Debug;
+use core::marker::PhantomData;
+use core::mem;
 
 use internet_checksum::Checksum;
 use net_types::ip::Ipv4Addr;
@@ -345,7 +345,7 @@ pub(crate) fn peek_message_type<MessageType: TryFrom<u8>>(
     // a long message is any message for which the size exceeds the common HeaderPrefix +
     // a single Ipv4Address
     let long_message =
-        bytes.len() > (std::mem::size_of::<HeaderPrefix>() + std::mem::size_of::<Ipv4Addr>());
+        bytes.len() > (core::mem::size_of::<HeaderPrefix>() + core::mem::size_of::<Ipv4Addr>());
     let (header, _) = LayoutVerified::<_, HeaderPrefix>::new_unaligned_from_prefix(bytes)
         .ok_or_else(debug_err_fn!(ParseError::Format, "too few bytes for header"))?;
     let msg_type = MessageType::try_from(header.msg_type).or_else(|_| {

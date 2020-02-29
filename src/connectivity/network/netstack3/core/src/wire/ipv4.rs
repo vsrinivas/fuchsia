@@ -4,9 +4,10 @@
 
 //! Parsing and serialization of IPv4 packets.
 
-use std::convert::TryFrom;
-use std::fmt::{self, Debug, Formatter};
-use std::ops::Range;
+use alloc::vec::Vec;
+use core::convert::TryFrom;
+use core::fmt::{self, Debug, Formatter};
+use core::ops::Range;
 
 use byteorder::{ByteOrder, NetworkEndian};
 use internet_checksum::Checksum;
@@ -345,7 +346,7 @@ where
             .field("ecn", &self.ecn())
             .field("mf_flag", &self.mf_flag())
             .field("df_flag", &self.df_flag())
-            .field("body", &format!("<{} bytes>", self.body.len()))
+            .field("body", &alloc::format!("<{} bytes>", self.body.len()))
             .finish()
     }
 }
@@ -601,7 +602,7 @@ impl Ipv4PacketBuilder {
         // fine because, with debug assertions disabled, we'll just write an
         // incorrect header value, which is acceptable if the caller has
         // violated their contract.
-        debug_assert!(total_len <= std::u16::MAX as usize);
+        debug_assert!(total_len <= core::u16::MAX as usize);
         hdr_prefix.total_len = U16::new(total_len as u16);
         hdr_prefix.id = U16::new(self.id);
         NetworkEndian::write_u16(

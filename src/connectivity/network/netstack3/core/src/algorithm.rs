@@ -11,10 +11,11 @@ pub(crate) use port_alloc::*;
 /// Defines the [`PortAlloc`] structure and [`PortAllocImpl`] trait, used for
 /// ephemeral port allocations in transport protocols.
 mod port_alloc {
-    use std::hash::Hash;
-    use std::marker::PhantomData;
-    use std::num::{NonZeroU16, NonZeroUsize};
-    use std::ops::RangeInclusive;
+    use alloc::vec::Vec;
+    use core::hash::Hash;
+    use core::marker::PhantomData;
+    use core::num::{NonZeroU16, NonZeroUsize};
+    use core::ops::RangeInclusive;
 
     use mundane::{hash::Digest, hmac::HmacSha256};
     use net_types::{ip::IpAddress, SpecifiedAddr};
@@ -148,7 +149,7 @@ mod port_alloc {
         table: Vec<PortNumber>,
         secret_a: [u8; SECRET_LEN],
         secret_b: [u8; SECRET_LEN],
-        _marker: std::marker::PhantomData<I>,
+        _marker: core::marker::PhantomData<I>,
     }
 
     /// A witness type for a port within some ephemeral port range.
@@ -203,7 +204,7 @@ mod port_alloc {
             let mut secret_b = [0; SECRET_LEN];
             rng.fill_bytes(&mut secret_a[..]);
             rng.fill_bytes(&mut secret_b[..]);
-            Self { table, secret_a, secret_b, _marker: std::marker::PhantomData }
+            Self { table, secret_a, secret_b, _marker: core::marker::PhantomData }
         }
 
         /// Attempts to allocate a new port for a flow with the given `id`.

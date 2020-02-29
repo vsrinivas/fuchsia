@@ -36,7 +36,7 @@ macro_rules! create_net_enum {
             }
         }
 
-        impl ::std::convert::TryFrom<u8> for $t {
+        impl ::core::convert::TryFrom<u8> for $t {
             type Error = ();
 
             fn try_from(value: u8) -> Result<$t, ()> {
