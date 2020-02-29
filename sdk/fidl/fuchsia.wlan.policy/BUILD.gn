@@ -8,7 +8,7 @@ fidl("fuchsia.wlan.policy") {
   # TODO(fxb/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
   excluded_checks = [ "vector-bounds-not-specified" ]
 
-  sdk_category = "internal"
+  sdk_category = "partner"
 
   sources = [
     "access_point_provider.fidl",

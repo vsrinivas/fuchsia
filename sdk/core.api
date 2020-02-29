@@ -93,6 +93,7 @@ sdk://fidl/fuchsia.update.channelcontrol
 sdk://fidl/fuchsia.url
 sdk://fidl/fuchsia.web
 sdk://fidl/fuchsia.wlan.common
+sdk://fidl/fuchsia.wlan.policy
 sdk://fidl/fuchsia.wlan.service
 sdk://fidl/fuchsia.wlan.stats
 sdk://pkg/async
