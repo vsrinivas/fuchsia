@@ -10,7 +10,10 @@
     "use": [
         { "runner": "elf" },
         {
-            "protocol": "/svc/fuchsia.sys2.SystemController",
+            "protocol": [
+                "/svc/fuchsia.sys2.SystemController",
+                "/svc/fuchsia.logger.LogSink",
+            ],
         },
     ]
 }

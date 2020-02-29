@@ -14,7 +14,10 @@
             ]
         },
         {
-            "protocol": "/svc/fuchsia.sys2.SystemController",
+            "protocol": [
+                "/svc/fuchsia.sys2.SystemController",
+                "/svc/fuchsia.logger.LogSink",
+            ],
             "from": "realm",
             "to": [ "#power_switch" ]
         },

@@ -5,7 +5,6 @@
     "sandbox": {
         "services": [
             "fuchsia.sys.Launcher",
-            "fuchsia.sys.Loader",
             "fuchsia.sys.Environment",
             "fuchsia.logger.LogSink"
         ],

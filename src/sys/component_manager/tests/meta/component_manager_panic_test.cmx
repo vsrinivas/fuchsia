@@ -1,11 +1,4 @@
 {
-    "facets": {
-        "fuchsia.test": {
-            "injected-services": {
-                "fuchsia.pkg.PackageResolver": "fuchsia-pkg://fuchsia.com/component_manager_panic_test#meta/mock_pkg_resolver.cmx"
-            }
-        }
-    },
     "program": {
         "binary": "test/component_manager_panic_test"
     },
@@ -15,8 +8,6 @@
         ],
         "services": [
             "fuchsia.logger.LogSink",
-            "fuchsia.pkg.PackageResolver",
-            "fuchsia.process.Launcher",
             "fuchsia.sys.Launcher",
             "fuchsia.sys.Environment"
         ]
