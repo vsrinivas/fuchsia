@@ -493,6 +493,7 @@ extern "C" {
     pub fn fdio_pipe_half(fd: *mut i32, handle: *mut zx_handle_t) -> zx_status_t;
     pub fn fdio_get_vmo_copy(fd: raw::c_int, out_vmo: *mut zx_handle_t) -> zx_status_t;
     pub fn fdio_get_vmo_clone(fd: raw::c_int, out_vmo: *mut zx_handle_t) -> zx_status_t;
+    pub fn fdio_get_vmo_exec(fd: raw::c_int, out_vmo: *mut zx_handle_t) -> zx_status_t;
     pub fn fdio_get_exact_vmo(fd: raw::c_int, out_vmo: *mut zx_handle_t) -> zx_status_t;
     pub fn fdio_ns_create(out: *mut *mut fdio_ns_t) -> zx_status_t;
     pub fn fdio_ns_destroy(ns: *mut fdio_ns_t) -> zx_status_t;

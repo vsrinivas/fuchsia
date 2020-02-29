@@ -925,10 +925,8 @@ mod tests {
         fuchsia_vfs_pseudo_fs::{
             directory::entry::DirectoryEntry, file::simple::read_only, pseudo_directory,
         },
-        std::fs::File,
         std::iter,
         std::mem,
-        std::path::Path,
         zerocopy::LayoutVerified,
     };
 
@@ -955,8 +953,9 @@ mod tests {
 
     fn create_test_util_builder() -> Result<ProcessBuilder, Error> {
         const TEST_UTIL_BIN: &'static str = "/pkg/bin/process_builder_test_util";
-        let binpath = Path::new(TEST_UTIL_BIN);
-        let vmo = fdio::get_vmo_copy_from_file(&File::open(binpath)?)?.replace_as_executable()?;
+        let file =
+            fdio::open_fd(TEST_UTIL_BIN, fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE)?;
+        let vmo = fdio::get_vmo_exec_from_file(&file)?;
         let job = fuchsia_runtime::job_default();
 
         let procname = CString::new(TEST_UTIL_BIN.to_owned())?;
@@ -1463,8 +1462,8 @@ mod tests {
     #[test]
     async fn start_static_pie_binary() -> Result<(), Error> {
         const TEST_BIN: &'static str = "/pkg/bin/static_pie_test_util";
-        let binpath = Path::new(TEST_BIN);
-        let vmo = fdio::get_vmo_copy_from_file(&File::open(binpath)?)?.replace_as_executable()?;
+        let file = fdio::open_fd(TEST_BIN, fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE)?;
+        let vmo = fdio::get_vmo_exec_from_file(&file)?;
         let job = fuchsia_runtime::job_default();
 
         let procname = CString::new(TEST_BIN.to_owned())?;

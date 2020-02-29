@@ -633,6 +633,17 @@ pub fn get_vmo_copy_from_file(file: &File) -> Result<zx::Vmo, zx::Status> {
     }
 }
 
+/// Gets a read-exec VMO containing the whole contents of the file.
+pub fn get_vmo_exec_from_file(file: &File) -> Result<zx::Vmo, zx::Status> {
+    unsafe {
+        let mut vmo_handle: zx::sys::zx_handle_t = zx::sys::ZX_HANDLE_INVALID;
+        match fdio_sys::fdio_get_vmo_exec(file.as_raw_fd(), &mut vmo_handle) {
+            0 => Ok(zx::Vmo::from(zx::Handle::from_raw(vmo_handle))),
+            error_code => Err(zx::Status::from_raw(error_code)),
+        }
+    }
+}
+
 pub struct Namespace {
     ns: *mut fdio_sys::fdio_ns_t,
 }
