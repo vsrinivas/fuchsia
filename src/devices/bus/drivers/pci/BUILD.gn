@@ -33,6 +33,7 @@ source_set("user_pci") {
     "upstream_node.cc",
   ]
   public_deps = [
+    "//sdk/banjo/ddk.protocol.pciroot",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
@@ -42,7 +43,6 @@ source_set("user_pci") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.pci",
-    "//zircon/system/banjo/ddk.protocol.pciroot",
 
     # TODO(ZX-4062): This shouldn't be here if the mmio code is actually
     # used in the test too.  Anything using that needs to be separately
@@ -100,12 +100,12 @@ if (enable_user_pci) {
     }
     sources = [ "kpci/kpci.c" ]
     deps = [
+      "//sdk/banjo/ddk.protocol.pciroot",
       "//src/devices/lib/driver",
       "//zircon/public/lib/ddk",
       "//zircon/public/lib/ddktl",
       "//zircon/public/lib/fidl",
       "//zircon/system/banjo/ddk.protocol.pci",
-      "//zircon/system/banjo/ddk.protocol.pciroot",
       "//zircon/system/banjo/ddk.protocol.platform.device",
       "//zircon/system/banjo/ddk.protocol.sysmem",
     ]
@@ -121,11 +121,11 @@ if (enable_user_pci) {
     }
     sources = [ "kpci/proxy.c" ]
     deps = [
+      "//sdk/banjo/ddk.protocol.pciroot",
       "//src/devices/lib/driver",
       "//zircon/public/lib/ddk",
       "//zircon/public/lib/ddktl",
       "//zircon/system/banjo/ddk.protocol.pci",
-      "//zircon/system/banjo/ddk.protocol.pciroot",
       "//zircon/system/banjo/ddk.protocol.platform.device",
       "//zircon/system/banjo/ddk.protocol.sysmem",
     ]

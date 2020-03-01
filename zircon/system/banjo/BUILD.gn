@@ -106,7 +106,6 @@ group("banjo") {
     "ddk.protocol.pci",
 #------------------
 #------------------
-    "ddk.protocol.pciroot",
 #------------------
 #------------------
     "ddk.protocol.platform.bus",
