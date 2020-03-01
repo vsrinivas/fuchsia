@@ -21,13 +21,13 @@ driver_module("realtek-audio-codec") {
   ]
   deps = [
     "//src/devices/lib/driver",
-    "//zircon/public/lib/audio-driver-proto",
-    "//zircon/public/lib/audio-proto-utils",
     "//zircon/public/lib/ddk",
-    "//zircon/public/lib/dispatcher-pool",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.pci",
+    "//zircon/system/ulib/audio-driver-proto",
+    "//zircon/system/ulib/audio-proto-utils",
+    "//zircon/system/ulib/dispatcher-pool",
     "//zircon/system/ulib/intel-hda",
   ]
 }

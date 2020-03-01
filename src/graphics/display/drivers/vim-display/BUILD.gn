@@ -11,13 +11,10 @@ source_set("common") {
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/banjo/ddk.protocol.i2cimpl",
     "//zircon/public/lib/amlogic",
-    "//zircon/public/lib/audio-driver-proto",
-    "//zircon/public/lib/audio-proto-utils",
     "//zircon/public/lib/boringssl",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/digest",
-    "//zircon/public/lib/dispatcher-pool",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/hwreg",
@@ -33,6 +30,9 @@ source_set("common") {
     "//zircon/system/dev/audio/lib/simple-audio-stream",
     "//zircon/system/dev/lib/device-protocol-platform-device",
     "//zircon/system/fidl/fuchsia-sysmem:c",
+    "//zircon/system/ulib/audio-driver-proto",
+    "//zircon/system/ulib/audio-proto-utils",
+    "//zircon/system/ulib/dispatcher-pool",
   ]
 }
 

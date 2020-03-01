@@ -60,9 +60,9 @@ source_set("src") {
   deps = [
     "//sdk/banjo/ddk.protocol.intelhda.codec",
     "//src/devices/lib/driver",
-    "//zircon/public/lib/audio-driver-proto",
-    "//zircon/public/lib/audio-proto-utils",
-    "//zircon/public/lib/dispatcher-pool",
+    "//zircon/system/ulib/audio-driver-proto",
+    "//zircon/system/ulib/audio-proto-utils",
+    "//zircon/system/ulib/dispatcher-pool",
   ]
   public_deps = [
     "//sdk/fidl/fuchsia.hardware.intel.hda:fuchsia.hardware.intel.hda_c",

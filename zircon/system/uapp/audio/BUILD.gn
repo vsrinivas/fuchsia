@@ -33,9 +33,9 @@ source_set("src") {
     "wav-source.cc",
   ]
   public_deps = [
-    "//zircon/public/lib/audio-proto-utils",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/audio-proto-utils",
     "//zircon/system/ulib/audio-utils",
   ]
   deps = [ "//zircon/public/lib/fdio" ]

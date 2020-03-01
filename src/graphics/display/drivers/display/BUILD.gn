@@ -33,7 +33,6 @@ source_set("shared") {
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
-    "//zircon/public/lib/audio-proto-utils",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
@@ -49,6 +48,7 @@ source_set("shared") {
     "//zircon/system/banjo/ddk.protocol.display.controller",
     "//zircon/system/fidl/fuchsia-hardware-display:llcpp",
     "//zircon/system/fidl/fuchsia-sysmem:c",
+    "//zircon/system/ulib/audio-proto-utils",
     "//zircon/system/ulib/edid",
   ]
 }

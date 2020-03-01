@@ -34,13 +34,10 @@ driver_module("usb-audio") {
     "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_llcpp",
     "//sdk/fidl/fuchsia.hardware.midi:fuchsia.hardware.midi_llcpp",
     "//src/devices/lib/driver",
-    "//zircon/public/lib/audio-driver-proto",
-    "//zircon/public/lib/audio-proto-utils",
     "//zircon/public/lib/boringssl",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/digest",
-    "//zircon/public/lib/dispatcher-pool",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/sync",
@@ -50,6 +47,9 @@ driver_module("usb-audio") {
     "//zircon/system/banjo/ddk.protocol.usb",
     "//zircon/system/banjo/ddk.protocol.usb.composite",
     "//zircon/system/banjo/ddk.protocol.usb.request",
+    "//zircon/system/ulib/audio-driver-proto",
+    "//zircon/system/ulib/audio-proto-utils",
+    "//zircon/system/ulib/dispatcher-pool",
   ]
   public_configs = [ ":Wno-unused-function" ]
 }

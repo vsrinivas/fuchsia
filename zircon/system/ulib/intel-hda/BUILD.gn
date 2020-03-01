@@ -41,21 +41,20 @@ zx_library("intel-hda") {
     # <intel-hda/codec-utils/stream-base.h> has #include <ddk/protocol/intelhda/codec.h>.
     "//sdk/banjo/ddk.protocol.intelhda.codec",
     "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_llcpp",
-    "//zircon/public/lib/abs_clock",
-    "//zircon/public/lib/audio-driver-proto",
-    "//zircon/public/lib/dispatcher-pool",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/abs_clock",
+    "//zircon/system/ulib/audio-driver-proto",
+    "//zircon/system/ulib/dispatcher-pool",
   ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_llcpp",
-    "//zircon/public/lib/abs_clock",
-    "//zircon/public/lib/audio-driver-proto",
-    "//zircon/public/lib/audio-proto-utils",
     "//zircon/public/lib/ddk",
-    "//zircon/public/lib/dispatcher-pool",
-    "//zircon/public/lib/dispatcher-pool",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/abs_clock",
+    "//zircon/system/ulib/audio-driver-proto",
+    "//zircon/system/ulib/audio-proto-utils",
+    "//zircon/system/ulib/dispatcher-pool",
   ]
 }

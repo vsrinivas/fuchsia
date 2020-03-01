@@ -28,6 +28,6 @@ source_set("testing") {
     "//src/media/audio/audio_core/mixer",
     "//src/media/audio/lib/test:message_transceiver",
     "//zircon/public/lib/async-testing",
-    "//zircon/public/lib/audio-proto-utils",
+    "//zircon/system/ulib/audio-proto-utils",
   ]
 }

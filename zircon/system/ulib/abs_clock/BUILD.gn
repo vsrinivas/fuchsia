@@ -2,14 +2,26 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36548.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/zx_library.gni")
+
 zx_library("abs_clock") {
   sdk = "source"
   sdk_headers = [ "abs_clock/clock.h" ]
   sources = [ "clock.cc" ]
   deps = [
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/sync",
-    "$zx/system/ulib/zx",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zx",
   ]
-  public_deps = [ "$zx/system/ulib/zx:headers" ]
+  public_deps = [ "//zircon/public/lib/zx" ]
 }
