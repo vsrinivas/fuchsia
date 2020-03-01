@@ -13,6 +13,7 @@ driver_module("dsi-dw") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "dsi-dw.cc" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.dsiimpl",
     "//src/devices/lib/driver",
     "//zircon/public/lib/bitmap",
     "//zircon/public/lib/ddk",
@@ -22,7 +23,6 @@ driver_module("dsi-dw") {
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.dsiimpl",
     "//zircon/system/banjo/ddk.protocol.gpio",
     "//zircon/system/banjo/ddk.protocol.i2c",
     "//zircon/system/banjo/ddk.protocol.platform.bus",

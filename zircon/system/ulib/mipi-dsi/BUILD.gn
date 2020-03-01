@@ -18,5 +18,5 @@ zx_library("mipi-dsi") {
   sdk = "source"
   sdk_headers = [ "lib/mipi-dsi/mipi-dsi.h" ]
   sources = [ "mipi-dsi.cc" ]
-  deps = [ "//zircon/system/banjo/ddk.protocol.dsiimpl" ]
+  deps = [ "//sdk/banjo/ddk.protocol.dsiimpl" ]
 }

@@ -37,11 +37,11 @@ test("mipidsi") {
   }
   sources = [ "mipi-dsi-test.cc" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.dsiimpl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/banjo/ddk.protocol.dsiimpl",
     "//zircon/system/ulib/mipi-dsi",
   ]
 }

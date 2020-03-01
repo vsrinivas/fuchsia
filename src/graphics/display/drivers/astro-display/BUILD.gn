@@ -24,6 +24,7 @@ driver_module("astro-display") {
   deps = [
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/banjo/ddk.protocol.display.capture",
+    "//sdk/banjo/ddk.protocol.dsiimpl",
     "//src/devices/lib/driver",
     "//zircon/public/lib/bitmap",
     "//zircon/public/lib/ddk",
@@ -39,7 +40,6 @@ driver_module("astro-display") {
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.amlogiccanvas",
     "//zircon/system/banjo/ddk.protocol.display.controller",
-    "//zircon/system/banjo/ddk.protocol.dsiimpl",
     "//zircon/system/banjo/ddk.protocol.gpio",
     "//zircon/system/banjo/ddk.protocol.i2c",
     "//zircon/system/banjo/ddk.protocol.platform.device",
@@ -68,6 +68,7 @@ test("astro-display-test") {
   deps = [
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/banjo/ddk.protocol.display.capture",
+    "//sdk/banjo/ddk.protocol.dsiimpl",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/bitmap",
@@ -87,7 +88,6 @@ test("astro-display-test") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/banjo/ddk.protocol.amlogiccanvas",
     "//zircon/system/banjo/ddk.protocol.display.controller",
-    "//zircon/system/banjo/ddk.protocol.dsiimpl",
     "//zircon/system/banjo/ddk.protocol.gpio",
     "//zircon/system/banjo/ddk.protocol.i2c",
     "//zircon/system/banjo/ddk.protocol.platform.device",
