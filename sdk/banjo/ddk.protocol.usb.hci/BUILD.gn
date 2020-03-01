@@ -9,8 +9,8 @@ banjo("ddk.protocol.usb.hci") {
   deps = [
     "//sdk/banjo/ddk.protocol.usb.bus",
     "//sdk/banjo/zircon.hw.usb.hub",
+    "//sdk/banjo/ddk.protocol.usb.hub",
     "//zircon/system/banjo/ddk.physiter",
-    "//zircon/system/banjo/ddk.protocol.usb.hub",
     "//zircon/system/banjo/ddk.protocol.usb.request",
     "//zircon/system/banjo/zircon.hw.usb",
   ]
