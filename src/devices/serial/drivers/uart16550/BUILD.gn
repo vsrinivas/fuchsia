@@ -14,6 +14,7 @@ driver_module("uart16550") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "uart16550.cc" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.acpi",
     "//sdk/banjo/ddk.protocol.serial",
     "//sdk/banjo/ddk.protocol.serialimpl",
     "//sdk/fidl/fuchsia.hardware.serial:fuchsia.hardware.serial_c",
@@ -23,7 +24,6 @@ driver_module("uart16550") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.acpi",
   ]
 }
 
@@ -38,6 +38,7 @@ test("uart16550-test") {
     "uart16550.cc",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.acpi",
     "//sdk/banjo/ddk.protocol.serial",
     "//sdk/banjo/ddk.protocol.serialimpl",
     "//sdk/fidl/fuchsia.hardware.serial:fuchsia.hardware.serial_c",
@@ -49,7 +50,6 @@ test("uart16550-test") {
     "//zircon/public/lib/mock-function",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/banjo/ddk.protocol.acpi",
   ]
 }
 

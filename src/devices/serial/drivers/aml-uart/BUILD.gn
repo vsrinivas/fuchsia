@@ -46,6 +46,7 @@ test("aml-uart-test") {
     "aml-uart.cc",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.acpi",
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/banjo/ddk.protocol.serial",
     "//sdk/banjo/ddk.protocol.serialimpl.async",
@@ -62,7 +63,6 @@ test("aml-uart-test") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/banjo/ddk.protocol.acpi",
     "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/dev/lib/device-protocol-pdev",

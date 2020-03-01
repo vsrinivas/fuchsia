@@ -18,7 +18,6 @@ group("banjo") {
     "ddk.physiter",
 #------------------
 #------------------
-    "ddk.protocol.acpi",
 #------------------
 #------------------
     "ddk.protocol.amlogiccanvas",

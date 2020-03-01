@@ -122,6 +122,7 @@ driver_module("platform-bus-x86") {
     ":iommu",
     ":smbios",
     "//sdk/fidl/fuchsia.hardware.power:fuchsia.hardware.power_c",
+    "//sdk/banjo/ddk.protocol.acpi",
     "//src/devices/lib/driver",
     "//third_party/acpica",
     "//zircon/public/lib/ddk",
@@ -135,7 +136,6 @@ driver_module("platform-bus-x86") {
     "//zircon/public/lib/region-alloc",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/banjo/ddk.protocol.acpi",
     "//zircon/system/banjo/ddk.protocol.hidbus",
     "//zircon/system/banjo/ddk.protocol.pciroot",
     "//zircon/system/banjo/ddk.protocol.platform.bus",
@@ -174,6 +174,7 @@ test("x86-battery-test") {
   configs += [ ":config" ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.power:fuchsia.hardware.power_c",
+    "//sdk/banjo/ddk.protocol.acpi",
     "//src/devices/lib/driver",
     "//third_party/acpica",
     "//zircon/public/lib/ddk",
@@ -184,7 +185,6 @@ test("x86-battery-test") {
     "//zircon/public/lib/pci",
     "//zircon/public/lib/region-alloc",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/banjo/ddk.protocol.acpi",
     "//zircon/system/banjo/ddk.protocol.hidbus",
     "//zircon/system/banjo/ddk.protocol.pciroot",
     "//zircon/system/banjo/ddk.protocol.platform.bus",
@@ -220,6 +220,7 @@ test("x86-lid-test") {
   ]
   configs += [ ":config" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.acpi",
     "//third_party/acpica",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -229,7 +230,6 @@ test("x86-lid-test") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/banjo/ddk.protocol.acpi",
     "//zircon/system/banjo/ddk.protocol.hidbus",
     "//zircon/system/dev/lib/mock-hidbus-ifc",
   ]
@@ -259,13 +259,13 @@ test("x86-pwrsrc-test") {
   configs += [ ":config" ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.power:fuchsia.hardware.power_c",
+    "//sdk/banjo/ddk.protocol.acpi",
     "//third_party/acpica",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/hid",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/banjo/ddk.protocol.acpi",
     "//zircon/system/banjo/ddk.protocol.hidbus",
     "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/banjo/ddk.protocol.platform.device",
@@ -329,6 +329,7 @@ test("x86-thermal-test") {
   ]
   configs += [ ":config" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.acpi",
     "//third_party/acpica",
     "//zircon/public/lib/async-loop",
     "//zircon/public/lib/async-loop-default",
@@ -339,7 +340,6 @@ test("x86-thermal-test") {
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fidl-async",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/banjo/ddk.protocol.acpi",
     "//zircon/system/fidl/fuchsia-hardware-thermal:c",
   ]
 }
