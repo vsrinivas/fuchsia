@@ -15,6 +15,7 @@ rustc_binary("bin") {
   deps = [
     "//garnet/lib/rust/fidl_fuchsia_power_ext",
     "//garnet/lib/rust/io_util",
+    "//sdk/fidl/fuchsia.hardware.power:fuchsia.hardware.power-rustc",
     "//sdk/fidl/fuchsia.power:fuchsia.power-rustc",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
@@ -29,7 +30,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:thiserror",
-    "//zircon/system/fidl/fuchsia-hardware-power:fuchsia-hardware-power-rustc",
   ]
 }
 

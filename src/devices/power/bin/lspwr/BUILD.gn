@@ -18,9 +18,9 @@ executable("lspwr") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "lspwr.cc" ]
   deps = [
+    "//sdk/fidl/fuchsia.hardware.power:fuchsia.hardware.power_c",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
-    "//zircon/system/fidl/fuchsia-hardware-power:c",
   ]
 }
 

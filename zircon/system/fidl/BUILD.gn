@@ -105,7 +105,6 @@ group("fidl") {
 #------------------
 #------------------
 #------------------
-    "fuchsia-hardware-power",
 #------------------
 #------------------
     "fuchsia-hardware-power-statecontrol",

@@ -121,6 +121,7 @@ driver_module("platform-bus-x86") {
   deps = [
     ":iommu",
     ":smbios",
+    "//sdk/fidl/fuchsia.hardware.power:fuchsia.hardware.power_c",
     "//src/devices/lib/driver",
     "//third_party/acpica",
     "//zircon/public/lib/ddk",
@@ -141,7 +142,6 @@ driver_module("platform-bus-x86") {
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.scpi",
     "//zircon/system/banjo/ddk.protocol.sysmem",
-    "//zircon/system/fidl/fuchsia-hardware-power:c",
     "//zircon/system/fidl/fuchsia-hardware-thermal:c",
     "//zircon/system/fidl/fuchsia-sysinfo:c",
     "//zircon/system/fidl/fuchsia-sysmem:c",
@@ -173,6 +173,7 @@ test("x86-battery-test") {
   ]
   configs += [ ":config" ]
   deps = [
+    "//sdk/fidl/fuchsia.hardware.power:fuchsia.hardware.power_c",
     "//src/devices/lib/driver",
     "//third_party/acpica",
     "//zircon/public/lib/ddk",
@@ -190,7 +191,6 @@ test("x86-battery-test") {
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.scpi",
     "//zircon/system/banjo/ddk.protocol.sysmem",
-    "//zircon/system/fidl/fuchsia-hardware-power:c",
     "//zircon/system/fidl/fuchsia-hardware-thermal:c",
     "//zircon/third_party/ulib/chromiumos-platform-ec",
   ]
@@ -258,6 +258,7 @@ test("x86-pwrsrc-test") {
   ]
   configs += [ ":config" ]
   deps = [
+    "//sdk/fidl/fuchsia.hardware.power:fuchsia.hardware.power_c",
     "//third_party/acpica",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -270,7 +271,6 @@ test("x86-pwrsrc-test") {
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.scpi",
     "//zircon/system/banjo/ddk.protocol.sysmem",
-    "//zircon/system/fidl/fuchsia-hardware-power:c",
   ]
 }
 
