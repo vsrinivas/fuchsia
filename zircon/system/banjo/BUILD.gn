@@ -213,7 +213,6 @@ group("banjo") {
     "zircon.hw.usb",
 #------------------
 #------------------
-    "zircon.hw.usb.hub",
 #------------------
 #------------------
     "zircon.syscalls.pci",
