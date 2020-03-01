@@ -31,6 +31,7 @@ driver_module("usb-audio") {
     "usb-midi-source.cc",
   ]
   deps = [
+    "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_llcpp",
     "//sdk/fidl/fuchsia.hardware.midi:fuchsia.hardware.midi_llcpp",
     "//src/devices/lib/driver",
     "//zircon/public/lib/audio-driver-proto",
@@ -49,7 +50,6 @@ driver_module("usb-audio") {
     "//zircon/system/banjo/ddk.protocol.usb",
     "//zircon/system/banjo/ddk.protocol.usb.composite",
     "//zircon/system/banjo/ddk.protocol.usb.request",
-    "//zircon/system/fidl/fuchsia-hardware-audio:llcpp",
   ]
   public_configs = [ ":Wno-unused-function" ]
 }

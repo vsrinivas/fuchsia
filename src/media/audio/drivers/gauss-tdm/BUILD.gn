@@ -18,6 +18,7 @@ driver_module("gauss-tdm") {
   ]
   deps = [
     "//sdk/banjo/ddk.protocol.composite",
+    "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_llcpp",
     "//src/devices/lib/driver",
     "//zircon/public/lib/amlogic",
     "//zircon/public/lib/audio-driver-proto",
@@ -33,7 +34,6 @@ driver_module("gauss-tdm") {
     "//zircon/system/banjo/ddk.protocol.i2c",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/dev/lib/device-protocol-platform-device",
-    "//zircon/system/fidl/fuchsia-hardware-audio:llcpp",
   ]
 }
 

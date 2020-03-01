@@ -44,6 +44,7 @@ executable("audio_driver_tests_bin") {
   ]
 
   deps = [
+    "//sdk/fidl/fuchsia.hardware.audio",
     "//sdk/fidl/fuchsia.media",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main_with_syslog",
@@ -52,6 +53,5 @@ executable("audio_driver_tests_bin") {
     "//src/media/audio/lib/test:message_transceiver",
     "//src/media/audio/lib/test:test_fixture",
     "//zircon/public/lib/fzl",
-    "//zircon/system/fidl/fuchsia-hardware-audio",
   ]
 }

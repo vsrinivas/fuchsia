@@ -32,6 +32,7 @@ test("sa-unittest") {
   }
   sources = [ "sas-test.cc" ]
   deps = [
+    "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_llcpp",
     "//zircon/public/lib/audio-driver-proto",
     "//zircon/public/lib/audio-proto-utils",
     "//zircon/public/lib/ddk",
@@ -46,7 +47,6 @@ test("sa-unittest") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/dev/audio/lib/simple-audio-stream",
     "//zircon/system/fidl/fuchsia-device:llcpp",
-    "//zircon/system/fidl/fuchsia-hardware-audio:llcpp",
     "//zircon/system/ulib/audio-utils",
   ]
 }
