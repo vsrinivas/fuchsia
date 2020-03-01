@@ -104,7 +104,8 @@ rustc_binary("bin") {
   # a 2018-era workstation). Fat LTO provides an even smaller binary (~70%
   # decrease from no-LTO), but is single threaded, requiring ~6x more wall time
   # to build (or roughly 60 seconds on a 2018-era workstation).
-  configs -= [ "//build/config/lto:default" ]
+  configs += [ "//build/config/lto:thinlto" ]
+  configs -= [ "//build/config/lto:thinlto" ]
   configs += [ "//build/config/lto:thinlto" ]
 
   force_opt = "z"
