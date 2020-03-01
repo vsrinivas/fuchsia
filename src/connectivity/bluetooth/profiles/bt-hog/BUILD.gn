@@ -15,10 +15,10 @@ driver_module("driver") {
   ]
 
   deps = [
+    "//sdk/banjo/ddk.protocol.bt.gattsvc",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.bt.gattsvc",
     "//zircon/system/banjo/ddk.protocol.hidbus",
     "//zircon/system/dev/lib/device-protocol-bt-gatt-svc",
   ]

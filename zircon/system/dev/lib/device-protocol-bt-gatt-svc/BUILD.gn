@@ -20,7 +20,7 @@ zx_library("device-protocol-bt-gatt-svc") {
   sources = []
   public_deps = [
     # <lib/device-protocol-bt-gatt-svc/bt-gatt-svc.h> has #include <ddk/protocol/bt/gattsvc.h>
-    "//zircon/system/banjo/ddk.protocol.bt.gattsvc",
+    "//sdk/banjo/ddk.protocol.bt.gattsvc",
 
     # <lib/device-protocol-bt-gatt-svc/bt-gatt-svc.h> has #include <zircon/types.h>
     "//zircon/public/lib/zx",

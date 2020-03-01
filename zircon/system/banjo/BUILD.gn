@@ -34,7 +34,6 @@ group("banjo") {
     "ddk.protocol.block.volume",
 #------------------
 #------------------
-    "ddk.protocol.bt.gattsvc",
 #------------------
 #------------------
     "ddk.protocol.buttons",
