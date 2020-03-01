@@ -9,7 +9,6 @@ import("//build/testing/environments.gni")
 rustc_library("packet") {
   name = "packet"
   version = "0.1.0"
-  with_unit_tests = true
   edition = "2018"
 
   deps = [
@@ -18,15 +17,14 @@ rustc_library("packet") {
   ]
 }
 
-unittest_package("tests") {
-  package_name = "packet-tests"
+rustc_test("packet_test") {
+  version = "0.1.0"
+  edition = "2018"
+  name = "packet_lib_test"
 
-  deps = [ ":packet_test" ]
-
-  tests = [
-    {
-      name = "packet_lib_test"
-      environments = basic_envs
-    },
+  deps = [
+    "//garnet/lib/rust/never",
+    "//src/lib/zerocopy",
+    "//third_party/rust_crates:rand",
   ]
 }

@@ -6,9 +6,10 @@
 
 use core::num::NonZeroU16;
 
+use zerocopy::{AsBytes, FromBytes, Unaligned};
+
 use super::IdAndSeq;
 use crate::wire::U16;
-use zerocopy::{AsBytes, FromBytes, Unaligned};
 
 /// An ICMP Destination Unreachable message.
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq, FromBytes, AsBytes, Unaligned)]

@@ -32,9 +32,10 @@ use byteorder::{ByteOrder, NetworkEndian};
 use internet_checksum::Checksum;
 use net_types::ip::{Ip, IpAddress, Ipv4, Ipv6};
 use never::Never;
+use packet::records::options::{Options, OptionsImpl};
 use packet::{
-    AsFragmentedByteSlice, BufferView, FragmentedByteSlice, PacketBuilder, PacketConstraints,
-    ParsablePacket, ParseMetadata, SerializeBuffer,
+    AsFragmentedByteSlice, BufferView, FragmentedByteSlice, FromRaw, PacketBuilder,
+    PacketConstraints, ParsablePacket, ParseMetadata, SerializeBuffer,
 };
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
@@ -42,8 +43,7 @@ use crate::error::{ParseError, ParseResult};
 use crate::ip::IpProto;
 use crate::wire::ipv4::{self, Ipv4PacketRaw};
 use crate::wire::ipv6::Ipv6PacketRaw;
-use crate::wire::records::options::{Options, OptionsImpl};
-use crate::wire::{FromRaw, U16};
+use crate::wire::U16;
 
 #[derive(Copy, Clone, Default, Debug, FromBytes, AsBytes, Unaligned)]
 #[repr(C)]

@@ -2,39 +2,50 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! Utilities for parsing sequential records.
+//! Utilities for parsing and serializing sequential records.
 //!
-//! This module provides utilities for parsing sequential records. IGMP message
-//! parsing is built using these utilities, as is another set of general
-//! utilities for IPv4, TCP, and NDP options parsing, provided in the
-//! [`options`] submodule.
+//! This module provides utilities for parsing and serializing repeated,
+//! sequential records. Examples of packet formats which include repeated,
+//! sequential records include IPv4, IPv6, TCP, NDP, and IGMP.
 //!
-//! [`options`]: crate::wire::records::options
+//! The utilities in this module are very flexible and generic. The user must
+//! supply a number of details about the format in order for parsing and
+//! serializing to work. See the TODO trait for more details.
+//!
+//! Some packet formats use a [type-length-value]-like encoding for options.
+//! Examples include IPv4, TCP, and NDP options. Special support for these
+//! formats is provided by the [`options`] submodule.
+//!
+//! [`options`]: crate::records::options
+//! [type-length-value]: https://en.wikipedia.org/wiki/Type-length-value
 
-use crate::wire::{FromRaw, MaybeParsed};
 use core::marker::PhantomData;
 use core::ops::Deref;
-use packet::{BufferView, BufferViewMut, InnerPacketBuilder};
+
 use zerocopy::ByteSlice;
 
-/// A parsed set of arbitrary sequential records.
+use crate::serialize::InnerPacketBuilder;
+use crate::util::{FromRaw, MaybeParsed};
+use crate::{BufferView, BufferViewMut};
+
+/// A parsed sequence of records.
 ///
-/// `Records` represents a pre-parsed set of records whose structure is enforced
-/// by the impl in `R`.
+/// `Records` represents a pre-parsed sequence of records whose structure is
+/// enforced by the impl in `R`.
 #[derive(Debug)]
-pub(crate) struct Records<B, R: RecordsImplLayout> {
+pub struct Records<B, R: RecordsImplLayout> {
     bytes: B,
     context: R::Context,
 }
 
-/// An unchecked set of arbitrary sequential records.
+/// An unchecked sequence of records.
 ///
-/// `RecordsRaw` represents a yet unparsed and not-validated set of
+/// `RecordsRaw` represents a not-yet-parsed and not-yet-validated sequence of
 /// records, whose structure is enforced by the impl in `R`.
 ///
-/// [`Records`] provides an implementation of [`FromRaw`] that can be used
-/// to validate a `RecordsRaw`.
-pub(crate) struct RecordsRaw<B, R: RecordsImplLayout> {
+/// [`Records`] provides an implementation of [`FromRaw`] that can be used to
+/// validate a `RecordsRaw`.
+pub struct RecordsRaw<B, R: RecordsImplLayout> {
     bytes: B,
     context: R::Context,
 }
@@ -44,7 +55,7 @@ where
     R: RecordsImplLayout<Context = ()>,
 {
     /// Creates a new `RecordsRaw` with the data in `bytes`.
-    pub(crate) fn new(bytes: B) -> Self {
+    pub fn new(bytes: B) -> Self {
         Self { bytes, context: () }
     }
 }
@@ -54,20 +65,20 @@ where
     R: for<'a> RecordsRawImpl<'a>,
     B: ByteSlice,
 {
-    /// Raw parse a set of records with a context.
+    /// Raw parse a sequence of records with a context.
     ///
     /// See [`RecordsRaw::parse_raw_with_mut_context`] for details on `bytes`,
     /// `context`, and return value. `parse_raw_with_context` just calls
     /// `parse_raw_with_mut_context` with a mutable reference to the `context`
-    /// (which is owned).
-    pub(crate) fn parse_raw_with_context<BV: BufferView<B>>(
+    /// which is passed by value to this function.
+    pub fn parse_raw_with_context<BV: BufferView<B>>(
         bytes: &mut BV,
         mut context: R::Context,
     ) -> MaybeParsed<Self, (B, R::Error)> {
         Self::parse_raw_with_mut_context(bytes, &mut context)
     }
 
-    /// Raw parse a set of records with a mutable context.
+    /// Raw parse a sequence of records with a mutable context.
     ///
     /// `parse_raw_with_mut_context` shallowly parses `bytes` as a sequence of
     /// records. `context` may be used by implementers to maintain state.
@@ -75,10 +86,10 @@ where
     /// `parse_raw_with_mut_context` performs a single pass over all of the
     /// records to be able to find the end of the records list and update
     /// `bytes` accordingly. Upon return, `bytes` is moved to the first byte
-    /// after the records list (If the return is a [`MaybeParsed::Complete`],
+    /// after the records list (if the return is a [`MaybeParsed::Complete`],
     /// otherwise `bytes` will be at the point where raw parsing error was
     /// found.
-    pub(crate) fn parse_raw_with_mut_context<BV: BufferView<B>>(
+    pub fn parse_raw_with_mut_context<BV: BufferView<B>>(
         bytes: &mut BV,
         context: &mut R::Context,
     ) -> MaybeParsed<Self, (B, R::Error)> {
@@ -109,13 +120,11 @@ where
         }
     }
 
-    /// Raw parses a set of records.
+    /// Raw parses a sequence of records.
     ///
     /// Equivalent to calling [`RecordsRaw::parse_raw_with_context`] with
     /// `context = ()`.
-    // TODO(rheacock): remove `allow(dead_code)` when this is used.
-    #[allow(dead_code)]
-    pub(crate) fn parse_raw<BV: BufferView<B>>(bytes: &mut BV) -> MaybeParsed<Self, (B, R::Error)>
+    pub fn parse_raw<BV: BufferView<B>>(bytes: &mut BV) -> MaybeParsed<Self, (B, R::Error)>
     where
         R: RecordsImplLayout<Context = ()>,
     {
@@ -135,83 +144,97 @@ where
     }
 }
 
-/// An iterator over the records contained inside a `Records` instance.
-pub(crate) struct RecordsIter<'a, R: RecordsImpl<'a>> {
+/// An iterator over the records contained inside a [`Records`] instance.
+pub struct RecordsIter<'a, R: RecordsImpl<'a>> {
     bytes: &'a [u8],
     context: R::Context,
 }
 
 /// The context kept while performing records parsing.
 ///
-/// Types which implement `RecordsContext` can be used as the long-lived
-/// context which is kept during records parsing. This context allows
-/// parsers to keep running computations over the span of multiple records.
-pub(crate) trait RecordsContext: Sized + Clone {
+/// Types which implement `RecordsContext` can be used as the long-lived context
+/// which is kept during records parsing. This context allows parsers to keep
+/// running computations over the span of multiple records.
+pub trait RecordsContext: Sized + Clone {
     /// Clone a context for iterator purposes.
     ///
-    /// `clone_for_iter` is useful for cloning a context to be
-    /// used by `RecordsIter`. Since `Records::parse_with_context`
-    /// will do a full pass over all the records to check for errors,
-    /// a `RecordsIter` should never error. Therefore, instead of doing
-    /// checks when iterating (if a context was used for checks), a
-    /// clone of a context can be made specifically for iterator purposes
-    /// that does not do checks (which may be expensive).
+    /// `clone_for_iter` is useful for cloning a context to be used by
+    /// `RecordsIter`. Since `Records::parse_with_context` will do a full pass
+    /// over all the records to check for errors, a `RecordsIter` should never
+    /// error. Therefore, instead of doing checks when iterating (if a context
+    /// was used for checks), a clone of a context can be made specifically for
+    /// iterator purposes that does not do checks (which may be expensive).
     ///
-    /// By default, just do a normal clone.
+    /// The default implementation of this method is equivalent to
+    /// `self.clone()`.
     fn clone_for_iter(&self) -> Self {
         self.clone()
     }
 }
 
-// Implement the `RecordsContext` trait for `usize` which will be used by
-// record limiting contexts (see [`LimitedRecordsImpl`]) and for `()`
-// which is to represent an empty/no context-type.
+// Implement the `RecordsContext` trait for `usize` which will be used by record
+// limiting contexts (see [`LimitedRecordsImpl`]) and for `()` which is to
+// represent an empty/no context-type.
 impl RecordsContext for usize {}
 impl RecordsContext for () {}
 
-/// Basic associated types used by a `RecordsImpl`.
+/// Basic associated types used by a [`RecordsImpl`].
 ///
-/// This trait is kept separate from `RecordsImpl` to keep the lifetimes
-/// separated.
-pub(crate) trait RecordsImplLayout {
-    /// A context type that can be used to maintain state or do checks.
+/// This trait is kept separate from `RecordsImpl` so that the associated types
+/// do not depend on the lifetime parameter to `RecordsImpl`.
+pub trait RecordsImplLayout {
+    // TODO(joshlf): Once associated type defaults are stable, give the
+    // `Context` type a default of `()`.
+
+    /// A context type that can be used to maintain state while parsing multiple
+    /// records.
     type Context: RecordsContext;
 
-    /// The type of errors that may be returned by a `RecordsImpl::parse_with_context`.
+    /// The type of errors that may be returned by a call to
+    /// [`RecordsImpl::parse_with_context`].
     type Error;
 }
 
 /// An implementation of a records parser.
 ///
 /// `RecordsImpl` provides functions to parse sequential records. It is required
-///  in order to construct a `Records` or `RecordsIter`.
-pub(crate) trait RecordsImpl<'a>: RecordsImplLayout {
-    /// The type of a single record; the output from the `parse_with_context` function.
+///  in order to construct a [`Records`] or [`RecordsIter`].
+pub trait RecordsImpl<'a>: RecordsImplLayout {
+    /// The type of a single record; the output from the [`parse_with_context`]
+    /// function.
     ///
-    /// For long or variable-length data, the user is advised to make `Record` a
-    /// reference into the bytes passed to `parse_with_context`. This is achievable
-    /// because of the lifetime parameter to this trait.
+    /// For long or variable-length data, implementers are advised to make
+    /// `Record` a reference into the bytes passed to `parse_with_context`. Such
+    /// a reference will need to carry the lifetime `'a`, which is the same
+    /// lifetime that is passed to `parse_with_context`, and is also the
+    /// lifetime parameter to this trait.
+    ///
+    /// [`parse_with_context`]: crate::records::RecordsImpl::parse_with_context
     type Record;
 
-    /// Parse a record with some context.
+    /// Parses a record with some context.
     ///
     /// `parse_with_context` takes a variable-length `data` and a `context` to
     /// maintain state, and returns `Ok(Some(Some(o)))` if the record is
-    /// successfully parsed as `o`, `Ok(Some(None))` if data is not malformed
-    /// but the implementer can't extract a concrete object (e.g. record is an
-    /// unimplemented enumeration, but we can still safely "skip" it), Ok(None)
-    /// if `parse_with_context` is unable to parse more records, and `Err(err)`
-    /// if the `data` was malformed for the attempted record parsing.
+    /// successfully parsed as `o`, `Ok(Some(None))` if the record is
+    /// well-formed but the implementer can't extract a concrete object (e.g.
+    /// the record is an unimplemented enumeration, but it can be safely
+    /// "skipped"), `Ok(None)` if `parse_with_context` is unable to parse more
+    /// records, and `Err(err)` if the `data` is malformed for the attempted
+    /// record parsing.
     ///
-    /// `data` MAY be empty. It is up to the implementer to handle an exhausted
+    /// `data` may be empty. It is up to the implementer to handle an exhausted
     /// `data`.
     ///
     /// When returning `Ok(Some(None))` it's the implementer's responsibility to
-    /// nonetheless skip the record (which may not be possible for some
-    /// implementations, in which case it should return an `Err`).
+    /// consume the bytes of the record from `data`. If this doesn't happen,
+    /// then `parse_with_context` will be called repeatedly on the same `data`,
+    /// and the program will be stuck in an infinite loop. If the implementation
+    /// is unable to know how many bytes to consume from `data` in order to skip
+    /// the record, `parse_with_context` must return `Err`.
     ///
     /// `parse_with_context` must be deterministic, or else
-    /// `Records::parse_with_context` cannot guarantee that future iterations
+    /// [`Records::parse_with_context`] cannot guarantee that future iterations
     /// will not produce errors (and panic).
     fn parse_with_context<BV: BufferView<&'a [u8]>>(
         data: &mut BV,
@@ -222,50 +245,54 @@ pub(crate) trait RecordsImpl<'a>: RecordsImplLayout {
 /// An implementation of a raw records parser.
 ///
 /// `RecordsRawImpl` provides functions to raw-parse sequential records. It is
-/// required to construct a partially parsed [`RecordsRaw`].
+/// required to construct a partially-parsed [`RecordsRaw`].
 ///
-/// `RecordsRawImpl` is meant to perform very little to no validation on each
-/// record it consumes. It is primarily used to be able to walk record sets with
+/// `RecordsRawImpl` is meant to perform little or no validation on each record
+/// it consumes. It is primarily used to be able to walk record sequences with
 /// unknown lengths.
-pub(crate) trait RecordsRawImpl<'a>: RecordsImplLayout {
-    /// Raw parses a single record with some context.
+pub trait RecordsRawImpl<'a>: RecordsImplLayout {
+    /// Raw-parses a single record with some context.
     ///
     /// `parse_raw_with_context` takes a variable length `data` and a `context`
-    /// to maintain state, and returns `Ok(true)` if a record is
-    /// successfully consumed, `Ok(false)` when it is unable to parse more
-    /// records, and `Err(err)` if the `data` was malformed in any way and the
-    /// parsing stopped short.
+    /// to maintain state, and returns `Ok(true)` if a record is successfully
+    /// consumed, `Ok(false)` if it is unable to parse more records, and
+    /// `Err(err)` if the `data` is malformed in any way.
     ///
-    /// `data` MAY be empty. It is up to the implementer to handle an exhausted
+    /// `data` may be empty. It is up to the implementer to handle an exhausted
     /// `data`.
     ///
-    /// It's the implementer's responsibility to move the `BufferView` forward
-    /// whenever returning `Ok(_)`.
+    /// It's the implementer's responsibility to consume exactly one record from
+    /// `data` when returning `Ok(_)`.
     fn parse_raw_with_context<BV: BufferView<&'a [u8]>>(
         data: &mut BV,
         context: &mut Self::Context,
     ) -> Result<bool, Self::Error>;
 }
 
-/// A limited parsed set of records.
+/// A limited, parsed sequence of records.
 ///
-/// `LimitedRecords` represents a parsed set of records that can be limited to a
-/// certain number of records. Unlike records with accepts a `RecordsImpl`,
-/// `LimitedRecords` accepts a type that implements `LimitedRecordsImpl` for `O`.
-pub(crate) type LimitedRecords<B, O> = Records<B, LimitedRecordsImplBridge<O>>;
+/// `LimitedRecords` represents a parsed sequence of records that can be limited
+/// to a certain number of records. Unlike [`Records`], which accepts a
+/// [`RecordsImpl`], `LimitedRecords` accepts a type that implements
+/// [`LimitedRecordsImpl`].
+pub type LimitedRecords<B, O> = Records<B, LimitedRecordsImplBridge<O>>;
 
 /// Create a bridge to `RecordsImplLayout` and `RecordsImpl` from an `O` that
-/// implements `LimitedRecordsImplLayout`. This is required so we can have a single
-/// implementation of `parse_with_context` and definition of `Context` that
-/// all implementers of `LimitedRecordsImpl` will get for free.
+/// implements `LimitedRecordsImplLayout`. This is required so we can have a
+/// single implementation of `parse_with_context` and definition of `Context`
+/// that all implementers of `LimitedRecordsImpl` will get for free.
+///
+/// `LimitedRecordsImplBridge` is `#[doc(hidden)]`; it is only `pub` because it
+/// appears in the type alias `LimitedRecords`.
 #[derive(Debug)]
-pub(crate) struct LimitedRecordsImplBridge<O>(PhantomData<O>);
+#[doc(hidden)]
+pub struct LimitedRecordsImplBridge<O>(PhantomData<O>);
 
 impl<O> RecordsImplLayout for LimitedRecordsImplBridge<O>
 where
     O: LimitedRecordsImplLayout,
 {
-    // All LimitedRecords get a context type of usize.
+    /// All `LimitedRecords` get a context type of usize.
     type Context = usize;
     type Error = O::Error;
 }
@@ -278,11 +305,12 @@ where
 
     /// Parse some bytes with a given `context` as a limit.
     ///
-    /// `parse_with_context` accepts a `bytes` buffer and limit `context`
-    /// and verifies that the limit has not been reached and that bytes is not empty.
-    /// See [`EXACT_LIMIT_ERROR`] for information about exact limiting. If the limit
-    /// has not been reached and `bytes` has not been exhausted, `LimitedRecordsImpl::parse`
-    /// will be called to do the actual parsing of a record.
+    /// `parse_with_context` accepts a `bytes` buffer and limit `context` and
+    /// verifies that the limit has not been reached and that `bytes` is not
+    /// empty. See [`EXACT_LIMIT_ERROR`] for information about exact limiting.
+    /// If the limit has not been reached and `bytes` has not been exhausted,
+    /// `LimitedRecordsImpl::parse` will be called to do the actual parsing of a
+    /// record.
     ///
     /// [`EXACT_LIMIT_ERROR`]: LimitedRecordsImplLayout::EXACT_LIMIT_ERROR
     fn parse_with_context<BV: BufferView<&'a [u8]>>(
@@ -304,24 +332,29 @@ where
     }
 }
 
-/// Trait that provides implementations to limit the amount of records read from
-/// a buffer. Some protocols will have some sort of header preceding the records
-/// that will indicate the number of records to follow (e.g. IGMP), while others
-/// will have that information inline (e.g. IPv4 options).
+/// A records implementation that limits the number of records read from a
+/// buffer.
 ///
-/// If the implementer of this trait wishes to impose an Exact Limit constraint,
-/// they should supply a value for `EXACT_LIMIT_ERROR`.
+/// Some protocol formats encode the number of records that appear in a given
+/// sequence, for example in a header preceding the records (as in IGMP).
+/// `LimitedRecordsImplLayout` is like [`RecordsImplLayout`], except that it
+/// imposes a limit on the number of records that may be present. If more are
+/// present than expected, a parsing error is returned.
 ///
-/// Note that implementations of `LimitedRecordsImpl` cannot be used in place of
-/// implementations of `RecordsImpl` directly as this does not implement
-/// `RecordsImpl`. Implementers will need to use the `LimitedRecordsImplBridge`
-/// to create bindings to a `RecordsImpl`. Alternatively, instead of using
-/// `Records<_, O>` where `O` is a type that implements `RecordsImpl`, implementers
-/// can use `LimitedRecords<_, P>` where `P` is a type that implements
-/// `LimitedRecordsImpl`. See [`LimitedRecords`].
-pub(crate) trait LimitedRecordsImplLayout {
-    /// See `RecordsImplLayout::Error` as this will be bound to a `RecordsImplLayout::Error`
-    /// associated type directly.
+/// By default, the limit is used as an upper bound - fewer records than the
+/// limit may be present. This behavior may be overridden by setting the
+/// associated [`EXACT_LIMIT_ERROR`] constant to `Some(e)`. In that case, if the
+/// buffer is exhausted before the limit is reached, the error `e` will be
+/// returned.
+///
+/// Note that an implementation, `R`, of `LimitedRecordsImpl` cannot be used as
+/// the [`RecordsImpl`] type parameter to [`Records`] (ie, `Records<_, R>`).
+/// Instead, use [`LimitedRecords<_, R>`].
+///
+/// [`EXACT_LIMIT_ERROR`]: crate::records::LimitedRecordsImplLayout::EXACT_LIMIT_ERROR
+/// [`LimitedRecords<_, R>`]: crate::records::LimitedRecords
+pub trait LimitedRecordsImplLayout {
+    /// The type of error returned from parsing.
     type Error;
 
     /// If `Some(E)`, `parse_with_context` of `LimitedRecordsImplBridge` will emit the
@@ -330,19 +363,29 @@ pub(crate) trait LimitedRecordsImplLayout {
     const EXACT_LIMIT_ERROR: Option<Self::Error> = None;
 }
 
-pub(crate) trait LimitedRecordsImpl<'a>: LimitedRecordsImplLayout {
-    /// See [`RecordsImpl::Record`] as this will be bound to a `RecordsImpl::Record`
-    /// associated type directly.
+/// An implementation of a limited records parser.
+///
+/// Like [`RecordsImpl`], `LimitedRecordsImpl` provides functions to parse
+/// sequential records. Unlike `RecordsImpl`, `LimitedRecordsImpl` also imposes
+/// a limit on the number of records that may be present. See
+/// [`LimitedRecordsImplLayout`] for more details.
+pub trait LimitedRecordsImpl<'a>: LimitedRecordsImplLayout {
+    /// The limited records analogue of [`RecordsImpl::Record`]; see that type's
+    /// documentation for more details.
     type Record;
 
-    /// Parse a record after limit check has completed.
+    /// Parses a record after limit check has completed.
     ///
-    /// `parse` will be called by a `LimitedRecordsImpl::parse_with_context` after
-    /// doing limit checks. When this method is called, it is guaranteed by
-    /// `LimitedRecordsImpl::parse_with_context` that the limit has not been reached,
-    /// so `parse` should parse exactly one record (if possible).
+    /// `parse` is like [`RecordsImpl::parse_with_context`], except that it is
+    /// only called after limit checks have been performed. When `parse` is
+    /// called, it is guaranteed that the limit has not yet been reached.
     ///
-    /// For information about return values, see [`RecordsImpl::parse_with_context`].
+    /// Each call to `parse` is assumed to parse exactly one record. If `parse`
+    /// parses zero or more than one record, it may cause a parsing that should
+    /// fail to succeed, or a parsing that should succeed to fail.
+    ///
+    /// For information about return values, see
+    /// [`RecordsImpl::parse_with_context`].
     fn parse<BV: BufferView<&'a [u8]>>(
         bytes: &mut BV,
     ) -> Result<Option<Option<Self::Record>>, Self::Error>;
@@ -352,42 +395,56 @@ pub(crate) trait LimitedRecordsImpl<'a>: LimitedRecordsImplLayout {
 ///
 /// `RecordsSerializerImpl` provides functions to serialize sequential records.
 /// It is required in order to construct a [`RecordsSerializer`].
-pub(crate) trait RecordsSerializerImpl<'a> {
+pub trait RecordsSerializerImpl<'a> {
     /// The input type to this serializer.
     ///
-    /// This is the analogous serializing version of `Record` in
-    /// [`RecordsImpl`]. Records serialization expects an `Iterator` of objects
-    /// of type `Record`.
+    /// This is the serialization analogue of [`RecordsImpl::Record`]. Records
+    /// serialization expects an [`Iterator`] of `Record`s.
     type Record;
+
     /// Provides the serialized length of a record.
     ///
-    /// Returns the total length, in bytes, of `record`.
+    /// Returns the total length, in bytes, of the serialized encoding of
+    /// `record`.
     fn record_length(record: &Self::Record) -> usize;
-    /// Serializes `record`. into buffer `data`.
+
+    /// Serializes `record` into a buffer.
     ///
-    /// The provided `data` buffer will **always** be sized to the value
-    /// returned by `record_length`.
+    /// `data` will be exactly `Self::record_length(record)` bytes long.
+    ///
+    /// # Panics
+    ///
+    /// If `data` is not exactly `Self::record_length(record)` bytes long,
+    /// `serialize` may panic.
     fn serialize(data: &mut [u8], record: &Self::Record);
 }
 
 /// An implementation of a serializer for records with alignment requirements.
-pub(crate) trait AlignedRecordsSerializerImpl<'a>: RecordsSerializerImpl<'a> {
-    /// Returned (x, y) is interpreted as the record must be aligned at
-    /// x * n + y bytes from the beginning.
+pub trait AlignedRecordsSerializerImpl<'a>: RecordsSerializerImpl<'a> {
+    /// Returns the alignment requirement of `record`.
+    ///
+    /// `alignment_requirement(record)` returns `(x, y)`, which means that the
+    /// serialized encoding of `record` must be aligned at `x * n + y` bytes
+    /// from the beginning of the records sequence for some non-negative `n`.
     ///
     /// `x` must be non-zero and `y` must be smaller than `x`.
-    fn get_alignment_requirement(record: &Self::Record) -> (usize, usize);
+    fn alignment_requirement(record: &Self::Record) -> (usize, usize);
 
-    /// Padding between the aligned records.
-    fn padding(buf: &mut [u8], length: usize);
+    /// Serialize the padding between subsequent aligned records.
+    ///
+    /// Some formats require that padding bytes have particular content. This
+    /// function serializes padding bytes as required by the format.
+    fn serialize_padding(buf: &mut [u8], length: usize);
 }
 
 /// An instance of records serialization.
 ///
-/// `RecordsSerializer` is instantiated with an `Iterator` that provides
-/// items to be serialized by a `RecordsSerializerImpl`.
+/// `RecordsSerializer` is instantiated with an [`Iterator`] that provides
+/// items to be serialized by a [`RecordsSerializerImpl`].
+///
+/// `RecordsSerializer` implements [`InnerPacketBuilder`].
 #[derive(Debug)]
-pub(crate) struct RecordsSerializer<'a, S, R: 'a, I>
+pub struct RecordsSerializer<'a, S, R: 'a, I>
 where
     S: RecordsSerializerImpl<'a, Record = R>,
     I: Iterator<Item = &'a R> + Clone,
@@ -404,18 +461,18 @@ where
     /// Creates a new `RecordsSerializer` with given `records`.
     ///
     /// `records` must produce the same sequence of values from every iterator,
-    /// even if cloned. Serialization typically performed with two passes on
+    /// even if cloned. Serialization is typically performed with two passes on
     /// `records`: one to calculate the total length in bytes
     /// (`records_bytes_len`) and another one to serialize to a buffer
     /// (`serialize_records`). Violating this rule may cause panics or malformed
     /// packets.
-    pub(crate) fn new(records: I) -> Self {
+    pub fn new(records: I) -> Self {
         Self { records, _marker: PhantomData }
     }
 
-    /// Returns the total length, in bytes, of the serialized records contained
-    /// within the `RecordsSerializer`.
-    pub(crate) fn records_bytes_len(&self) -> usize {
+    /// Returns the total length, in bytes, of the serialized encoding of the
+    /// records contained within the `RecordsSerializer`.
+    pub fn records_bytes_len(&self) -> usize {
         self.records.clone().map(|r| S::record_length(r)).sum()
     }
 
@@ -425,9 +482,9 @@ where
     /// # Panics
     ///
     /// `serialize_records` expects that `buffer` has enough bytes to serialize
-    /// the contained records (as obtained from `records_bytes_len`, otherwise
-    /// it's considered a violation of the API contract and the call will panic.
-    pub(crate) fn serialize_records(&self, buffer: &mut [u8]) {
+    /// the contained records (as obtained from `records_bytes_len`), otherwise
+    /// it's considered a violation of the API contract and the call may panic.
+    pub fn serialize_records(&self, buffer: &mut [u8]) {
         let mut b = &mut &mut buffer[..];
         for r in self.records.clone() {
             // SECURITY: Take a zeroed buffer from b to prevent leaking
@@ -439,10 +496,10 @@ where
 
 /// An instance of aligned records serialization.
 ///
-/// `AlignedRecordsSerializer` is instantiated with an `Iterator` that provides
-/// items to be serialized by a `AlignedRecordsSerializerImpl`.
+/// `AlignedRecordsSerializer` is instantiated with an [`Iterator`] that
+/// provides items to be serialized by a [`AlignedRecordsSerializerImpl`].
 #[derive(Debug)]
-pub(crate) struct AlignedRecordsSerializer<'a, S, R: 'a, I>
+pub struct AlignedRecordsSerializer<'a, S, R: 'a, I>
 where
     S: AlignedRecordsSerializerImpl<'a, Record = R>,
     I: Iterator<Item = &'a R> + Clone,
@@ -457,27 +514,39 @@ where
     S: AlignedRecordsSerializerImpl<'a, Record = R>,
     I: Iterator<Item = &'a R> + Clone,
 {
-    /// Creates a new `AlignedRecordsSerializer` with given `records` and `start_pos`.
+    /// Creates a new `AlignedRecordsSerializer` with given `records` and
+    /// `start_pos`.
     ///
     /// `records` must produce the same sequence of values from every iterator,
-    /// even if cloned. See `RecordsSerializer` for more details. `start_pos` is
-    /// the place where the records serialization starts. For example, for HopByHop
-    /// Options, you will want it to be 2 because The HopByHop Extension Header has
-    /// 2 bytes at the very beginning and alignment requirements documented in RFCs include
-    /// these 2 bytes. If not needed, just pass 0.
-    pub(crate) fn new(start_pos: usize, records: I) -> Self {
+    /// even if cloned. See `RecordsSerializer` for more details.
+    ///
+    /// Alignment is calculated relative to the beginning of a virtual space of
+    /// bytes. If non-zero, `start_pos` instructs the serializer to consider the
+    /// buffer passed to [`serialize_records`] to start at the byte `start_pos`
+    /// within this virtual space, and to calculate alignment and padding
+    /// accordingly. For example, in the IPv6 Hop-by-Hop extension header, a
+    /// fixed header of two bytes precedes that extension header's options, but
+    /// alignment is calculated relative to the beginning of the extension
+    /// header, not relative to the beginning of the options. Thus, when
+    /// constructing an `AlignedRecordsSerializer` to serialize those options,
+    /// `start_pos` would be 2.
+    ///
+    /// [`serialize_records`]: AlignedRecordsSerializer::serialize_records
+    pub fn new(start_pos: usize, records: I) -> Self {
         Self { start_pos, records, _marker: PhantomData }
     }
 
     /// Returns the total length, in bytes, of the serialized records contained
-    /// within the `AlignedRecordsSerializer`. And with that length, all records
-    /// can be put at the places that meet their alignment requirements.
-    pub(crate) fn records_bytes_len(&self) -> usize {
+    /// within the `AlignedRecordsSerializer`.
+    ///
+    /// Note that this length includes all padding required to ensure that all
+    /// records satisfy their alignment requirements.
+    pub fn records_bytes_len(&self) -> usize {
         let mut pos = self.start_pos;
         self.records
             .clone()
             .map(|r| {
-                let (x, y) = S::get_alignment_requirement(r);
+                let (x, y) = S::alignment_requirement(r);
                 let new_pos = align_up_to(pos, x, y) + S::record_length(r);
                 let result = new_pos - pos;
                 pos = new_pos;
@@ -492,17 +561,17 @@ where
     /// # Panics
     ///
     /// `serialize_records` expects that `buffer` has enough bytes to serialize
-    /// the contained records (as obtained from `records_bytes_len`, otherwise
-    /// it's considered a violation of the API contract and the call will panic.
-    pub(crate) fn serialize_records(&self, buffer: &mut [u8]) {
+    /// the contained records (as obtained from `records_bytes_len`), otherwise
+    /// it's considered a violation of the API contract and the call may panic.
+    pub fn serialize_records(&self, buffer: &mut [u8]) {
         let mut b = &mut &mut buffer[..];
         let mut pos = self.start_pos;
         for r in self.records.clone() {
-            let (x, y) = S::get_alignment_requirement(r);
+            let (x, y) = S::alignment_requirement(r);
             let aligned = align_up_to(pos, x, y);
             let pad_len = aligned - pos;
             let pad = b.take_front_zero(pad_len).unwrap();
-            S::padding(pad, pad_len);
+            S::serialize_padding(pad, pad_len);
             pos = aligned;
             // SECURITY: Take a zeroed buffer from b to prevent leaking
             // information from packets previously stored in this buffer.
@@ -511,11 +580,15 @@ where
         }
         // we have to pad the containing header to 8-octet boundary.
         let padding = b.take_rest_front_zero();
-        S::padding(padding, padding.len());
+        S::serialize_padding(padding, padding.len());
     }
 }
 
-/// Return the aligned offset which is at `x * n + y`.
+/// Returns the aligned offset which is at `x * n + y`.
+///
+/// # Panics
+///
+/// Panics if `x == 0` or `y >= x`.
 fn align_up_to(offset: usize, x: usize, y: usize) -> usize {
     assert!(x != 0 && y < x);
     // first add `x` to prevent overflow.
@@ -541,28 +614,30 @@ where
     B: ByteSlice,
     R: for<'a> RecordsImpl<'a>,
 {
-    /// Parse a set of records with a context.
+    /// Parses a sequence of records with a context.
     ///
     /// See `parse_with_mut_context` for details on `bytes`, `context`, and
     /// return value. `parse_with_context` just calls `parse_with_mut_context`
-    /// with a mutable reference to the `context` (which is owned).
-    pub(crate) fn parse_with_context(
+    /// with a mutable reference to the `context` which is passed by value to
+    /// this function.
+    pub fn parse_with_context(
         bytes: B,
         mut context: R::Context,
     ) -> Result<Records<B, R>, R::Error> {
         Self::parse_with_mut_context(bytes, &mut context)
     }
 
-    /// Parse a set of records with a mutable context.
+    /// Parses a sequence of records with a mutable context.
     ///
-    /// `parse_with_mut_context` parses `bytes` as a sequence of records. `context`
-    /// may be used by implementers to maintain state and do checks.
+    /// `parse_with_mut_context` parses `bytes` as a sequence of records.
+    /// `context` may be used by implementers to maintain state while parsing
+    /// multiple records.
     ///
-    /// `parse_with_mut_context` performs a single pass over all of the records to
-    /// verify that they are well-formed. Once `parse_with_context` returns
+    /// `parse_with_mut_context` performs a single pass over all of the records
+    /// to verify that they are well-formed. Once `parse_with_context` returns
     /// successfully, the resulting `Records` can be used to construct
     /// infallible iterators.
-    pub(crate) fn parse_with_mut_context(
+    pub fn parse_with_mut_context(
         bytes: B,
         context: &mut R::Context,
     ) -> Result<Records<B, R>, R::Error> {
@@ -571,57 +646,13 @@ where
         // can't change out from under us, and so we can treat any iterator over
         // these bytes as infallible. This makes a few assumptions, but none of
         // them are that big of a deal. In all cases, breaking these assumptions
-        // would just result in a runtime panic.
+        // would at worst result in a runtime panic.
         // - B could return different bytes each time
         // - R::parse could be non-deterministic
         let c = context.clone();
         let mut b = LongLivedBuff::new(bytes.deref());
         while next::<_, R>(&mut b, context)?.is_some() {}
         Ok(Records { bytes, context: c })
-    }
-
-    /// Parse a set of records with a context, using a `BufferView`.
-    ///
-    /// See `parse_bv_with_mut_context` for details on `bytes`, `context`, and
-    /// return value. `parse_bv_with_context` just calls `parse_bv_with_mut_context`
-    /// with a mutable reference to the `context` (which is owned).
-    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
-    #[cfg(test)]
-    pub(crate) fn parse_bv_with_context<BV: BufferView<B>>(
-        bytes: &mut BV,
-        mut context: R::Context,
-    ) -> Result<Records<B, R>, R::Error> {
-        Self::parse_bv_with_mut_context(bytes, &mut context)
-    }
-
-    /// Parse a set of records with a mutable context, using a `BufferView`.
-    ///
-    /// This function is exactly the same as `parse_with_mut_context` except instead
-    /// of operating on a `ByteSlice`, we operate on a `BufferView<B>` where `B`
-    /// is a `ByteSlice`. `parse_bv_with_mut_context` enables parsing records without
-    /// knowing the size of all records beforehand (unlike `parse_with_mut_context`
-    /// where callers need to pass in a `ByteSlice` of some predetermined sized).
-    /// Since callers will provide a mutable reference to a `BufferView`,
-    /// `parse_bv_with_mut_context` will take only the amount of bytes it needs to
-    /// parse records, leaving the rest in the `BufferView` object. That is, when
-    /// `parse_bv_with_mut_context` returns, the `BufferView` object provided will be
-    /// x bytes smaller, where x is the number of bytes required to parse the records.
-    // TODO(rheacock): remove `#[cfg(test)]` when this is used.
-    #[cfg(test)]
-    pub(crate) fn parse_bv_with_mut_context<BV: BufferView<B>>(
-        bytes: &mut BV,
-        context: &mut R::Context,
-    ) -> Result<Records<B, R>, R::Error> {
-        let c = context.clone();
-        let mut b = LongLivedBuff::new(bytes.as_ref());
-        while next::<_, R>(&mut b, context)?.is_some() {}
-
-        // When we get here, we know that whatever is left in `b` is not needed
-        // so we only take the amount of bytes we actually need from `bytes`,
-        // leaving the rest alone for the caller to continue parsing with.
-        let bytes_len = bytes.len();
-        let b_len = b.len();
-        Ok(Records { bytes: bytes.take_front(bytes_len - b_len).unwrap(), context: c })
     }
 }
 
@@ -630,10 +661,12 @@ where
     B: ByteSlice,
     R: for<'a> RecordsImpl<'a, Context = ()>,
 {
-    /// Parses a set of records.
+    /// Parses a sequence of records.
     ///
-    /// Equivalent to calling `parse_with_context` with `context = ()`.
-    pub(crate) fn parse(bytes: B) -> Result<Records<B, R>, R::Error> {
+    /// Equivalent to calling [`parse_with_context`] with `context = ()`.
+    ///
+    /// [`parse_with_context`]: crate::records::Records::parse_with_context
+    pub fn parse(bytes: B) -> Result<Records<B, R>, R::Error> {
         Self::parse_with_context(bytes, ())
     }
 }
@@ -654,10 +687,10 @@ impl<B: Deref<Target = [u8]>, R> Records<B, R>
 where
     R: for<'a> RecordsImpl<'a>,
 {
-    /// Get the underlying bytes.
+    /// Gets the underlying bytes.
     ///
-    /// `bytes` returns a reference to the byte slice backing this `Options`.
-    pub(crate) fn bytes(&self) -> &[u8] {
+    /// `bytes` returns a reference to the byte slice backing this `Records`.
+    pub fn bytes(&self) -> &[u8] {
         &self.bytes
     }
 }
@@ -667,12 +700,14 @@ where
     B: 'a + ByteSlice,
     R: RecordsImpl<'a>,
 {
-    /// Create an iterator over options.
+    /// Creates an iterator over options.
     ///
     /// `iter` constructs an iterator over the records. Since the records were
-    /// validated in `parse`, then so long as `from_kind` and `from_data` are
+    /// validated in `parse`, then so long as [`R::parse_with_context`] is
     /// deterministic, the iterator is infallible.
-    pub(crate) fn iter(&'a self) -> RecordsIter<'a, R> {
+    ///
+    /// [`R::parse_with_context`]: crate::records::RecordsImpl::parse_with_context
+    pub fn iter(&'a self) -> RecordsIter<'a, R> {
         RecordsIter { bytes: &self.bytes, context: self.context.clone_for_iter() }
     }
 }
@@ -681,8 +716,8 @@ impl<'a, R> RecordsIter<'a, R>
 where
     R: RecordsImpl<'a>,
 {
-    /// Get a reference to the context.
-    pub(crate) fn context(&self) -> &R::Context {
+    /// Gets a reference to the context.
+    pub fn context(&self) -> &R::Context {
         &self.context
     }
 }
@@ -717,22 +752,21 @@ where
 {
     loop {
         match R::parse_with_context(bytes, context) {
-            // `parse_with_context` cannot parse any more, return
-            // Ok(None) to let the caller know that we have parsed
-            // all possible records for a given `bytes`.
+            // `parse_with_context` cannot parse any more, return Ok(None) to
+            // let the caller know that we have parsed all possible records for
+            // a given `bytes`.
             Ok(None) => return Ok(None),
 
-            // `parse_with_context` was unable to parse a record, not
-            // because `bytes` was malformed but for other non fatal
-            // reasons, so we can skip.
+            // `parse_with_context` was unable to parse a record, not because
+            // `bytes` was malformed but for other non fatal reasons, so we can
+            // skip.
             Ok(Some(None)) => {}
 
-            // `parse_with_context` was able to parse a record, so
-            // return it.
+            // `parse_with_context` was able to parse a record, so return it.
             Ok(Some(Some(o))) => return Ok(Some(o)),
 
-            // `parse_with_context` had an error so pass that error
-            // to the caller.
+            // `parse_with_context` had an error so pass that error to the
+            // caller.
             Err(err) => return Err(err),
         }
     }
@@ -753,7 +787,7 @@ impl<'a> LongLivedBuff<'a> {
     ///
     /// All slices returned by the `BufferView` impl of `LongLivedBuff` are
     /// guaranteed to return slice references tied to the same lifetime `a`.
-    pub(crate) fn new(data: &'a [u8]) -> LongLivedBuff<'a> {
+    fn new(data: &'a [u8]) -> LongLivedBuff<'a> {
         LongLivedBuff::<'a>(data)
     }
 }
@@ -764,7 +798,7 @@ impl<'a> AsRef<[u8]> for LongLivedBuff<'a> {
     }
 }
 
-impl<'a> packet::BufferView<&'a [u8]> for LongLivedBuff<'a> {
+impl<'a> BufferView<&'a [u8]> for LongLivedBuff<'a> {
     fn take_front(&mut self, n: usize) -> Option<&'a [u8]> {
         if self.0.len() >= n {
             let (prefix, rest) = core::mem::replace(&mut self.0, &[]).split_at(n);
@@ -792,9 +826,9 @@ impl<'a> packet::BufferView<&'a [u8]> for LongLivedBuff<'a> {
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use packet::BufferView;
     use zerocopy::{AsBytes, FromBytes, LayoutVerified, Unaligned};
+
+    use super::*;
 
     const DUMMY_BYTES: [u8; 16] = [
         0x01, 0x02, 0x03, 0x04, 0x01, 0x02, 0x03, 0x04, 0x01, 0x02, 0x03, 0x04, 0x01, 0x02, 0x03,
@@ -1040,9 +1074,9 @@ mod test {
         records: Records<B, StatefulContextRecordImpl>,
         context: StatefulContext,
     ) {
-        // Should be 5 because on the last iteration, we should realize
-        // that we have no more bytes left and end before parsing (also
-        // explaining why `parse_counter` should only be 4.
+        // Should be 5 because on the last iteration, we should realize that we
+        // have no more bytes left and end before parsing (also explaining why
+        // `parse_counter` should only be 4.
         assert_eq!(context.pre_parse_counter, 5);
         assert_eq!(context.parse_counter, 4);
         assert_eq!(context.post_parse_counter, 4);
@@ -1068,6 +1102,61 @@ mod test {
         assert_eq!(context.parse_counter, 0);
         assert_eq!(context.post_parse_counter, 0);
         assert_eq!(context.iter, true);
+    }
+
+    //
+    // Utilities
+    //
+
+    impl<B, R> Records<B, R>
+    where
+        B: ByteSlice,
+        R: for<'a> RecordsImpl<'a>,
+    {
+        /// Parse a sequence of records with a context, using a `BufferView`.
+        ///
+        /// See `parse_bv_with_mut_context` for details on `bytes`, `context`,
+        /// and return value. `parse_bv_with_context` just calls
+        /// `parse_bv_with_mut_context` with a mutable reference to the
+        /// `context` which is passed by value to this function.
+        pub fn parse_bv_with_context<BV: BufferView<B>>(
+            bytes: &mut BV,
+            mut context: R::Context,
+        ) -> Result<Records<B, R>, R::Error> {
+            Self::parse_bv_with_mut_context(bytes, &mut context)
+        }
+
+        /// Parse a sequence of records with a mutable context, using a
+        /// `BufferView`.
+        ///
+        /// This function is exactly the same as `parse_with_mut_context` except
+        /// instead of operating on a `ByteSlice`, we operate on a
+        /// `BufferView<B>` where `B` is a `ByteSlice`.
+        /// `parse_bv_with_mut_context` enables parsing records without knowing
+        /// the size of all records beforehand (unlike `parse_with_mut_context`
+        /// where callers need to pass in a `ByteSlice` of some predetermined
+        /// sized). Since callers will provide a mutable reference to a
+        /// `BufferView`, `parse_bv_with_mut_context` will take only the amount
+        /// of bytes it needs to parse records, leaving the rest in the
+        /// `BufferView` object. That is, when `parse_bv_with_mut_context`
+        /// returns, the `BufferView` object provided will be x bytes smaller,
+        /// where x is the number of bytes required to parse the records.
+        pub fn parse_bv_with_mut_context<BV: BufferView<B>>(
+            bytes: &mut BV,
+            context: &mut R::Context,
+        ) -> Result<Records<B, R>, R::Error> {
+            let c = context.clone();
+            let mut b = LongLivedBuff::new(bytes.as_ref());
+            while next::<_, R>(&mut b, context)?.is_some() {}
+
+            // When we get here, we know that whatever is left in `b` is not
+            // needed so we only take the amount of bytes we actually need from
+            // `bytes`, leaving the rest alone for the caller to continue
+            // parsing with.
+            let bytes_len = bytes.len();
+            let b_len = b.len();
+            Ok(Records { bytes: bytes.take_front(bytes_len - b_len).unwrap(), context: c })
+        }
     }
 
     #[test]
@@ -1237,42 +1326,53 @@ mod test {
     }
 }
 
-/// Header options for IPv4 and TCP, and NDP.
+/// Utilities for parsing the options formats in protocols like IPv4, TCP, and
+/// NDP.
 ///
-/// This module provides a parser for the options formats used by IPv4, TCP, and
-/// NDP. These formats are not identical, but share enough in common that they
-/// can be implemented using the same utility with a bit of customization.
-pub(crate) mod options {
+/// This module provides parsing utilities for [type-length-value]-like records
+/// encoding like those used by the options in an IPv4 or TCP header or an NDP
+/// packet. These formats are not identical, but share enough in common that the
+/// utilities provided here only need a small amount of customization by the
+/// user to be fully functional.
+///
+/// [type-length-value]: https://en.wikipedia.org/wiki/Type-length-value
+pub mod options {
     use super::*;
-    use packet::BufferView;
 
-    /// A parsed set of header options.
+    /// A parsed sequence of options.
     ///
-    /// `Options` represents a parsed set of options from an IPv4 or TCP header
-    /// or an NDP packet. `Options` uses [`Records`] below the surface.
+    /// `Options` represents a parsed sequence of options, for example from an
+    /// IPv4 or TCP header or an NDP packet. `Options` uses [`Records`] under
+    /// the hood.
     ///
-    /// [`Records`]: crate::wire::records::Records
-    pub(crate) type Options<B, O> = Records<B, OptionsImplBridge<O>>;
+    /// [`Records`]: crate::records::Records
+    pub type Options<B, O> = Records<B, OptionsImplBridge<O>>;
 
-    /// A yet unparset set of header options.
+    /// A not-yet-parsed sequence of options.
     ///
-    /// `OptionsRaw` represents a yet unparsed and not validated set of
-    /// options from an IPv4 or TCP header or an NDP packet. `OptionsRaw`
-    /// uses [`RecordsRaw`] below the surface.
-    pub(crate) type OptionsRaw<B, O> = RecordsRaw<B, OptionsImplBridge<O>>;
+    /// `OptionsRaw` represents a not-yet-parsed and not-yet-validated sequence
+    /// of options, for example from an IPv4 or TCP header or an NDP packet.
+    /// `OptionsRaw` uses [`RecordsRaw`] under the hood.
+    ///
+    /// [`RecordsRaw`]: crate::records::RecordsRaw
+    pub type OptionsRaw<B, O> = RecordsRaw<B, OptionsImplBridge<O>>;
 
     /// An instance of options serialization.
     ///
-    /// `OptionsSerializer` is instantiated with an `Iterator` that provides
+    /// `OptionsSerializer` is instantiated with an [`Iterator`] that provides
     /// items to be serialized by an [`OptionsSerializerImpl`].
-    pub(crate) type OptionsSerializer<'a, S, O, I> = RecordsSerializer<'a, S, O, I>;
+    pub type OptionsSerializer<'a, S, O, I> = RecordsSerializer<'a, S, O, I>;
 
-    /// Create a bridge to `RecordsImplLayout` and `RecordsImpl` traits from an `O`
+    /// Create a bridge to `RecordsImplLayout` and `RecordsImpl` from an `O`
     /// that implements `OptionsImpl`. This is required so we can have a single
     /// implementation of `parse_with_context` and definition of `Context` that
     /// all implementers of `OptionsImpl` will get for free.
+    ///
+    /// `OptionsImplBridge` is `#[doc(hidden)]`; it is only `pub` because it
+    /// appears in the type aliases `Options` and `OptionsRaw`.
     #[derive(Debug)]
-    pub(crate) struct OptionsImplBridge<O>(PhantomData<O>);
+    #[doc(hidden)]
+    pub struct OptionsImplBridge<O>(PhantomData<O>);
 
     impl<O> RecordsImplLayout for OptionsImplBridge<O>
     where
@@ -1303,7 +1403,7 @@ pub(crate) mod options {
         type Record = O::Option;
 
         fn record_length(record: &Self::Record) -> usize {
-            let base = 2 + O::get_option_length(record);
+            let base = 2 + O::option_length(record);
 
             // Pad up to option_len_multiplier:
             (base + O::OPTION_LEN_MULTIPLIER - 1) / O::OPTION_LEN_MULTIPLIER
@@ -1312,20 +1412,27 @@ pub(crate) mod options {
 
         fn serialize(data: &mut [u8], record: &Self::Record) {
             // NOTE(brunodalbo) we don't currently support serializing the two
-            //  single-byte options used in tcp and ip: NOP and END_OF_OPTIONS.
+            //  single-byte options used in TCP and IP: NOP and END_OF_OPTIONS.
             //  If it is necessary to support those as part of TLV options
             //  serialization, some changes will be required here.
 
-            // data not having enough space is a contract violation, so we
-            // panic in that case.
-            data[0] = O::get_option_kind(record);
+            // Data not having enough space is a contract violation, so we panic
+            // in that case.
+            data[0] = O::option_kind(record);
             let length = Self::record_length(record) / O::OPTION_LEN_MULTIPLIER;
-            // option length not fitting in u8 is a contract violation. Without
+            // Option length not fitting in u8 is a contract violation. Without
             // debug assertions on, this will cause the packet to be malformed.
-            debug_assert!(length <= core::u8::MAX.into());
-            data[1] = (length - O::LENGTH_OFFSET) as u8;
-            // because padding may have occurred, we zero-fill data before
-            // passing it along
+            debug_assert!(length <= std::u8::MAX.into());
+            // The fact that we subtract after dividing by
+            // O::OPTION_LEN_MULTIPLIER doesn't matter since LENGTH_ENCODING
+            // cannot be ValueOnly when OPTION_LEN_MULTIPLIER is greater than
+            // one, and thus byte_offset() cannot return a non-zero value when
+            // OPTION_LEN_MULTIPLIER is greater than one. If we ever lift this
+            // restriction, we may need to change this code.
+            data[1] = (length - O::LENGTH_ENCODING.byte_offset()) as u8;
+            // SECURITY: Because padding may have occurred, we zero-fill data
+            // before passing it along in order to prevent leaking information
+            // from packets previously stored in the buffer.
             for b in data[2..].iter_mut() {
                 *b = 0;
             }
@@ -1337,14 +1444,14 @@ pub(crate) mod options {
     where
         O: AlignedOptionsSerializerImpl<'a>,
     {
-        fn get_alignment_requirement(record: &Self::Record) -> (usize, usize) {
-            // Use the underlying option's alignment requirement as the alignment
-            // requirement for the record.
-            O::get_alignment_requirement(record)
+        fn alignment_requirement(record: &Self::Record) -> (usize, usize) {
+            // Use the underlying option's alignment requirement as the
+            // alignment requirement for the record.
+            O::alignment_requirement(record)
         }
 
-        fn padding(buf: &mut [u8], length: usize) {
-            O::padding(buf, length);
+        fn serialize_padding(buf: &mut [u8], length: usize) {
+            O::serialize_padding(buf, length);
         }
     }
 
@@ -1353,32 +1460,61 @@ pub(crate) mod options {
     /// `OptionParseErr` is either `Internal`, which indicates that this module
     /// encountered a malformed sequence of options (likely with a length field
     /// larger than the remaining bytes in the options buffer), or `External`,
-    /// which indicates that the `OptionsImpl::parse` callback returned an error.
+    /// which indicates that the [`OptionsImpl::parse`] callback returned an
+    /// error.
     #[derive(Debug, Eq, PartialEq)]
-    pub(crate) enum OptionParseErr<E> {
+    pub enum OptionParseErr<E> {
         Internal,
         External(E),
     }
 
-    // End of Options List in both IPv4 and TCP
-    const END_OF_OPTIONS: u8 = 0;
+    // End of Options List in both IPv4 and TCP.
+    pub const END_OF_OPTIONS: u8 = 0;
 
-    // NOP in both IPv4 and TCP
-    const NOP: u8 = 1;
+    // NOP in both IPv4 and TCP.
+    pub const NOP: u8 = 1;
 
-    /// Common traits of option parsing and serialization.
+    /// Whether the length field of an option encodes the length of the entire
+    /// option (including type and length fields) or only of the value field.
     ///
-    /// This is split from `OptionsImpl` and `OptionsSerializerImpl` so that
-    /// the associated types do not depend on the lifetime parameter to
-    /// `OptionsImpl` and provide common behavior to parsers and serializers.
-    pub(crate) trait OptionsImplLayout {
-        /// The error type that can be returned in Options parsing.
+    /// Note that a `LengthEncoding` of `TypeLengthValue` must not be combined
+    /// with a greater-than-one value for the
+    /// [`OptionsImplLayout::OPTION_LEN_MULTIPLIER`] constant.
+    #[derive(Copy, Clone, Eq, PartialEq)]
+    pub enum LengthEncoding {
+        TypeLengthValue,
+        ValueOnly,
+    }
+
+    impl LengthEncoding {
+        /// The offset (in bytes) to subtract from the length of an option (when
+        /// that length includes the type and length bytes) in order to get the
+        /// value that should be encoded for the length byte.
+        fn byte_offset(self) -> usize {
+            match self {
+                LengthEncoding::TypeLengthValue => 0,
+                LengthEncoding::ValueOnly => 2,
+            }
+        }
+    }
+
+    /// Basic associated type and constants used by an [`OptionsImpl`].
+    ///
+    /// This trait is kept separate from `OptionsImpl` so that the associated
+    /// type and constants do not depend on the lifetime parameter to
+    /// `OptionsImpl`.
+    pub trait OptionsImplLayout {
+        /// The type of errors that may be returned by a call to
+        /// [`OptionsImpl::parse`].
         type Error;
 
         /// The value to multiply read lengths by.
         ///
-        /// By default, this value is 1, but for some protocols (such as NDP)
-        /// this may be different.
+        /// Some formats (such as NDP) do not directly encode the length in
+        /// bytes of each option, but instead encode a number which must be
+        /// multiplied by a constant in order to get the length in bytes.
+        ///
+        /// By default, this constant has the value 1.
         const OPTION_LEN_MULTIPLIER: usize = 1;
 
         /// The End of options type (if one exists).
@@ -1387,37 +1523,101 @@ pub(crate) mod options {
         /// The No-op type (if one exists).
         const NOP: Option<u8> = Some(NOP);
 
-        /// The offset need to be considered when serializing length information
+        /// The encoding of the length byte.
         ///
-        /// For example, an IPv4 Option's length field is the length of the whole option;
-        /// an IPv6 Option's length field is the length of its data.
-        const LENGTH_OFFSET: usize = 0;
+        /// Some formats (such as IPv4) use the length field to encode the
+        /// length of the entire option, including the type and length bytes.
+        /// Other formats (such as IPv6) use the length field to encode the
+        /// length of only the value. This constant specifies which encoding is
+        /// used.
+        ///
+        /// Note that if `LENGTH_ENCODING == ValueOnly`, then
+        /// [`OPTION_LEN_MULTIPLIER`] must be 1. This invariant is checked by a
+        /// link-time assertion; if it is not upheld, linking will fail due to
+        /// the missing symbol
+        /// `packet_records_options_impl_layout_length_encoding_option_len_multiplier`.
+        ///
+        /// [`OPTION_LEN_MULTIPLIER`]: crate::records::options::OptionsImplLayout::OPTION_LEN_MULTIPLIER
+        const LENGTH_ENCODING: LengthEncoding = LengthEncoding::TypeLengthValue;
+
+        // TODO(joshlf): Once const generics are stable, turn this link-time
+        // assertion into a compile-time assertion using the `static_assertions`
+        // crate.
+
+        #[doc(hidden)]
+        fn __assert_length_encoding_option_len_multiplier() {
+            if Self::LENGTH_ENCODING == LengthEncoding::ValueOnly && Self::OPTION_LEN_MULTIPLIER > 1
+            {
+                extern "C" {
+                    fn packet_records_options_impl_layout_length_encoding_option_len_multiplier();
+                }
+                unsafe {
+                    packet_records_options_impl_layout_length_encoding_option_len_multiplier()
+                };
+            }
+        }
     }
 
     /// An implementation of an options parser.
     ///
     /// `OptionsImpl` provides functions to parse fixed- and variable-length
-    /// options. It is required in order to construct an `Options`.
-    pub(crate) trait OptionsImpl<'a>: OptionsImplLayout {
-        /// The type of an option; the output from the `parse` function.
+    /// options. It is required in order to construct an [`Options`].
+    pub trait OptionsImpl<'a>: OptionsImplLayout {
+        /// The type of an option; the output from the [`parse`] function.
         ///
-        /// For long or variable-length data, the user is advised to make
-        /// `Option` a reference into the bytes passed to `parse`. This is
-        /// achievable because of the lifetime parameter to this trait.
+        /// For long or variable-length data, implementers advised to make
+        /// `Option` a reference into the bytes passed to `parse`. Such a
+        /// reference will need to carry the lifetime `'a`, which is the same
+        /// lifetime that is passed to `parse`, and is also the lifetime
+        /// parameter to this trait.
+        ///
+        /// [`parse`]: crate::records::options::OptionsImpl::parse
         type Option;
 
-        /// Parse an option.
+        /// Parses a record with some context.
         ///
-        /// `parse` takes a kind byte and variable-length data associated and
-        /// returns `Ok(Some(o))` if the option successfully parsed as `o`,
-        /// `Ok(None)` if the kind byte was unrecognized, and `Err(err)` if the
-        /// kind byte was recognized but `data` was malformed for that option
-        /// kind. `parse` is allowed to not recognize certain option kinds, as
-        /// the length field can still be used to safely skip over them.
+        /// `parse_with_context` takes a variable-length `data` and a `context` to
+        /// maintain state, and returns `Ok(Some(Some(o)))` if the record is
+        /// successfully parsed as `o`, `Ok(Some(None))` if the record is
+        /// well-formed but the implementer can't extract a concrete object (e.g.
+        /// the record is an unimplemented enumeration, but it can be safely
+        /// "skipped"), `Ok(None)` if `parse_with_context` is unable to parse more
+        /// records, and `Err(err)` if the `data` is malformed for the attempted
+        /// record parsing.
         ///
-        /// `parse` must be deterministic, or else `Options::parse` cannot
+        /// `data` may be empty. It is up to the implementer to handle an exhausted
+        /// `data`.
+        ///
+        /// When returning `Ok(Some(None))` it's the implementer's responsibility to
+        /// consume the bytes of the record from `data`. If this doesn't happen,
+        /// then `parse_with_context` will be called repeatedly on the same `data`,
+        /// and the program will be stuck in an infinite loop. If the implementation
+        /// is unable to know how many bytes to consume from `data` in order to skip
+        /// the record, `parse_with_context` must return `Err`.
+        ///
+        /// `parse_with_context` must be deterministic, or else
+        /// [`Records::parse_with_context`] cannot guarantee that future iterations
+        /// will not produce errors (and panic).
+
+        /// Parses an option.
+        ///
+        /// `parse` takes a kind byte and variable-length data and returns
+        /// `Ok(Some(o))` if the option successfully parsed as `o`, `Ok(None)`
+        /// if the kind byte was unrecognized, and `Err(err)` if the kind byte
+        /// was recognized but `data` was malformed for that option kind.
+        ///
+        /// `parse` is allowed to not recognize certain option kinds, as the
+        /// length field can still be used to safely skip over them, but it must
+        /// recognize all single-byte options (if it didn't, a single-byte
+        /// option would be spuriously interpreted as a multi-byte option, and
+        /// the first byte of the next option byte would be spuriously
+        /// interpreted as the option's length byte).
+        ///
+        /// `parse` must be deterministic, or else [`Options::parse`] cannot
         /// guarantee that future iterations will not produce errors (and
         /// panic).
+        ///
+        /// [`Options::parse`]: crate::records::Records::parse
         fn parse(kind: u8, data: &'a [u8]) -> Result<Option<Self::Option>, Self::Error>;
     }
 
@@ -1426,51 +1626,58 @@ pub(crate) mod options {
     /// `OptionsSerializerImpl` provides to functions to serialize fixed- and
     /// variable-length options. It is required in order to construct an
     /// `OptionsSerializer`.
-    pub(crate) trait OptionsSerializerImpl<'a>: OptionsImplLayout {
+    pub trait OptionsSerializerImpl<'a>: OptionsImplLayout {
         /// The input type to this serializer.
         ///
-        /// This is the analogous serializing version of `Option` in
-        /// [`OptionsImpl`]. Options serialization expects an `Iterator` of
-        /// objects of type `Option`.
+        /// This is the serialization analogue of [`OptionsImpl::Option`].
+        /// Options serialization expects an [`Iterator`] of `Option`s.
         type Option;
 
         /// Returns the serialized length, in bytes, of the given `option`.
         ///
-        ///
         /// Implementers must return the length, in bytes, of the **data***
         /// portion of the option field (not counting the type and length
         /// bytes). The internal machinery of options serialization takes care
-        /// of aligning options to their `OPTION_LEN_MULTIPLIER` boundaries,
+        /// of aligning options to their [`OPTION_LEN_MULTIPLIER`] boundaries,
         /// adding padding bytes if necessary.
-        fn get_option_length(option: &Self::Option) -> usize;
+        ///
+        /// [`OPTION_LEN_MULTIPLIER`]: crate::records::options::OptionsImplLayout::OPTION_LEN_MULTIPLIER
+        fn option_length(option: &Self::Option) -> usize;
 
         /// Returns the wire value for this option kind.
-        fn get_option_kind(option: &Self::Option) -> u8;
+        fn option_kind(option: &Self::Option) -> u8;
 
         /// Serializes `option` into `data`.
         ///
-        /// Implementers must write the **data** portion of `option` into
-        /// `data` (not the type or length octets, those are extracted through
-        /// calls to `get_option_kind` and `get_option_length`, respectively).
-        /// `data` is guaranteed to be long enough to fit `option` based on the
-        /// value returned by `get_option_length`.
+        /// `data` will be exactly `Self::option_length(option)` bytes long.
+        /// Implementers must write the **data** portion of `option` into `data`
+        /// (not the type or length bytes).
+        ///
+        /// # Panics
+        ///
+        /// If `data` is not exactly `Self::option_length(option)` bytes long,
+        /// `serialize` may panic.
         fn serialize(data: &mut [u8], option: &Self::Option);
     }
 
-    pub(crate) trait AlignedOptionsSerializerImpl<'a>: OptionsSerializerImpl<'a> {
-        /// Get the associated alignment requirement.
+    pub trait AlignedOptionsSerializerImpl<'a>: OptionsSerializerImpl<'a> {
+        /// Returns the alignment requirement of `option`.
         ///
-        /// The return value (x, y) is interpreted as: the option must
-        /// only appear at `x * n + y` bytes from the beginning of the
-        /// _header_. For example, Router Alert for Ipv6 HBH options
-        /// have alignment (2, 0), and Jumbo Payload has (4, 2).
-        /// (1, 0) means there is no alignment Requirement.
+        /// `alignment_requirement(option)` returns `(x, y)`, which means that
+        /// the serialized encoding of `option` must be aligned at `x * n + y`
+        /// bytes from the beginning of the options sequence for some
+        /// non-negative `n`. For example, the IPv6 Router Alert Hop-by-Hop
+        /// option has alignment (2, 0), while the Jumbo Payload option has
+        /// alignment (4, 2). (1, 0) means there is no alignment requirement.
         ///
         /// `x` must be non-zero and `y` must be smaller than `x`.
-        fn get_alignment_requirement(option: &Self::Option) -> (usize, usize);
+        fn alignment_requirement(option: &Self::Option) -> (usize, usize);
 
-        /// Padding between the aligned options.
-        fn padding(buf: &mut [u8], length: usize);
+        /// Serialize the padding between subsequent aligned options.
+        ///
+        /// Some formats require that padding bytes have particular content.
+        /// This function serializes padding bytes as required by the format.
+        fn serialize_padding(buf: &mut [u8], length: usize);
     }
 
     fn next<'a, BV, O>(
@@ -1486,8 +1693,8 @@ pub(crate) mod options {
             let kind = match bytes.take_byte_front() {
                 None => return Ok(None),
                 Some(k) => {
-                    // Can't do pattern matching with associated constants,
-                    // so do it the good-ol' way:
+                    // Can't do pattern matching with associated constants, so
+                    // do it the good-ol' way:
                     if Some(k) == O::NOP {
                         continue;
                     } else if Some(k) == O::END_OF_OPTIONS {
@@ -1502,10 +1709,11 @@ pub(crate) mod options {
             };
 
             if len < 2 || (len - 2) > bytes.len() {
-                return debug_err!(Err(OptionParseErr::Internal), "option length {} is either too short or longer than the total buffer length of {}", len, bytes.len());
+                return Err(OptionParseErr::Internal);
             }
 
-            // we can safely unwrap here since we verified the correct length above
+            // We can safely unwrap here since we verified the correct length
+            // above.
             let option_data = bytes.take_front(len - 2).unwrap();
             match O::parse(kind, option_data) {
                 Ok(Some(o)) => return Ok(Some(Some(o))),
@@ -1518,7 +1726,7 @@ pub(crate) mod options {
     #[cfg(test)]
     mod tests {
         use super::*;
-        use packet::Serializer;
+        use crate::Serializer;
 
         #[derive(Debug)]
         struct DummyOptionsImpl;
@@ -1540,11 +1748,11 @@ pub(crate) mod options {
         impl<'a> OptionsSerializerImpl<'a> for DummyOptionsImpl {
             type Option = (u8, Vec<u8>);
 
-            fn get_option_length(option: &Self::Option) -> usize {
+            fn option_length(option: &Self::Option) -> usize {
                 option.1.len()
             }
 
-            fn get_option_kind(option: &Self::Option) -> u8 {
+            fn option_kind(option: &Self::Option) -> u8 {
                 option.0
             }
 
@@ -1554,13 +1762,13 @@ pub(crate) mod options {
         }
 
         impl<'a> AlignedOptionsSerializerImpl<'a> for DummyOptionsImpl {
-            // for our `DummyOption`, we simply regard (length, kind) as their
+            // For our `DummyOption`, we simply regard (length, kind) as their
             // alignment requirement.
-            fn get_alignment_requirement(option: &Self::Option) -> (usize, usize) {
+            fn alignment_requirement(option: &Self::Option) -> (usize, usize) {
                 (option.1.len(), option.0 as usize)
             }
 
-            fn padding(buf: &mut [u8], length: usize) {
+            fn serialize_padding(buf: &mut [u8], length: usize) {
                 assert!(length <= buf.len());
                 assert!(length <= (std::u8::MAX as usize) + 2);
 
@@ -1619,11 +1827,11 @@ pub(crate) mod options {
         impl<'a> OptionsSerializerImpl<'a> for DummyNdpOptionsImpl {
             type Option = (u8, Vec<u8>);
 
-            fn get_option_length(option: &Self::Option) -> usize {
+            fn option_length(option: &Self::Option) -> usize {
                 option.1.len()
             }
 
-            fn get_option_kind(option: &Self::Option) -> u8 {
+            fn option_kind(option: &Self::Option) -> u8 {
                 option.0
             }
 
@@ -1772,7 +1980,7 @@ pub(crate) mod options {
 
             let collected = options
                 .iter()
-                .collect::<Vec<<DummyOptionsImpl as OptionsSerializerImpl>::Option>>();
+                .collect::<Vec<<DummyOptionsImpl as OptionsSerializerImpl<'_>>::Option>>();
             let ser = OptionsSerializer::<DummyOptionsImpl, _, _>::new(collected.iter());
 
             let serialized = ser.into_serializer().serialize_vec_outer().unwrap().as_ref().to_vec();
@@ -1795,7 +2003,7 @@ pub(crate) mod options {
             let options = Options::<_, DummyNdpOptionsImpl>::parse(bytes.as_slice()).unwrap();
             let collected = options
                 .iter()
-                .collect::<Vec<<DummyNdpOptionsImpl as OptionsSerializerImpl>::Option>>();
+                .collect::<Vec<<DummyNdpOptionsImpl as OptionsSerializerImpl<'_>>::Option>>();
             let ser = OptionsSerializer::<DummyNdpOptionsImpl, _, _>::new(collected.iter());
 
             let serialized = ser.into_serializer().serialize_vec_outer().unwrap().as_ref().to_vec();

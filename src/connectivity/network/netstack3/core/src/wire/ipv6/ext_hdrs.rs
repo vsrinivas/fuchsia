@@ -8,15 +8,13 @@ use core::convert::TryFrom;
 use core::marker::PhantomData;
 
 use byteorder::{ByteOrder, NetworkEndian, WriteBytesExt};
+use packet::records::options::{
+    AlignedOptionsSerializerImpl, LengthEncoding, OptionsImplLayout, OptionsSerializerImpl,
+};
+use packet::records::{Records, RecordsContext, RecordsImpl, RecordsImplLayout, RecordsRawImpl};
 use packet::BufferView;
 
 use crate::ip::{IpProto, Ipv6ExtHdrType};
-use crate::wire::records::options::{
-    AlignedOptionsSerializerImpl, OptionsImplLayout, OptionsSerializerImpl,
-};
-use crate::wire::records::{
-    Records, RecordsContext, RecordsImpl, RecordsImplLayout, RecordsRawImpl,
-};
 
 /// The length of an IPv6 Fragment Extension Header.
 pub(crate) const IPV6_FRAGMENT_EXT_HDR_LEN: usize = 8;
@@ -505,20 +503,20 @@ impl<'a> ExtensionHeaderOptionDataImpl<'a> for HopByHopOptionDataImpl {
 
 impl OptionsImplLayout for HopByHopOptionsImpl {
     type Error = ();
-    const LENGTH_OFFSET: usize = 2;
+    const LENGTH_ENCODING: LengthEncoding = LengthEncoding::ValueOnly;
 }
 
 impl<'a> OptionsSerializerImpl<'a> for HopByHopOptionsImpl {
     type Option = HopByHopOption<'a>;
 
-    fn get_option_length(option: &Self::Option) -> usize {
+    fn option_length(option: &Self::Option) -> usize {
         match option.data {
             HopByHopOptionData::RouterAlert { .. } => HBH_OPTION_RTRALRT_LEN,
             HopByHopOptionData::Unrecognized { len, .. } => len as usize,
         }
     }
 
-    fn get_option_kind(option: &Self::Option) -> u8 {
+    fn option_kind(option: &Self::Option) -> u8 {
         let action: u8 = option.action.into();
         let mutable = option.mutable as u8;
         let type_number = match option.data {
@@ -541,7 +539,7 @@ impl<'a> OptionsSerializerImpl<'a> for HopByHopOptionsImpl {
 }
 
 impl<'a> AlignedOptionsSerializerImpl<'a> for HopByHopOptionsImpl {
-    fn get_alignment_requirement(option: &HopByHopOption<'a>) -> (usize, usize) {
+    fn alignment_requirement(option: &HopByHopOption<'a>) -> (usize, usize) {
         match option.data {
             // RouterAlert must be aligned at 2 * n + 0 bytes.
             // See: https://tools.ietf.org/html/rfc2711#section-2.1
@@ -550,7 +548,7 @@ impl<'a> AlignedOptionsSerializerImpl<'a> for HopByHopOptionsImpl {
         }
     }
 
-    fn padding(buf: &mut [u8], length: usize) {
+    fn serialize_padding(buf: &mut [u8], length: usize) {
         assert!(length <= buf.len());
         assert!(length <= (core::u8::MAX as usize) + 2);
 
@@ -1058,7 +1056,7 @@ fn ext_hdr_opt_err_to_ext_hdr_err(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::wire::records::{AlignedRecordsSerializer, Records, RecordsSerializerImpl};
+    use packet::records::{AlignedRecordsSerializer, Records, RecordsSerializerImpl};
 
     #[test]
     fn test_is_valid_next_header_upper_layer() {

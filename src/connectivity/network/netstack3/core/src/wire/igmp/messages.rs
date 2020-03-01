@@ -5,6 +5,7 @@
 //! Implementation of IGMP Messages.
 
 use net_types::ip::Ipv4Addr;
+use packet::records::{LimitedRecords, LimitedRecordsImpl, LimitedRecordsImplLayout};
 use packet::{BufferView, ParsablePacket, ParseMetadata};
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
@@ -15,7 +16,6 @@ use super::{
 };
 use crate::error::ParseError;
 use crate::wire::igmp::MessageType;
-use crate::wire::records::{LimitedRecords, LimitedRecordsImpl, LimitedRecordsImplLayout};
 use crate::wire::U16;
 
 create_net_enum! {

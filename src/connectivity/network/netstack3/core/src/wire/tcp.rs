@@ -10,9 +10,10 @@ use core::num::NonZeroU16;
 use core::ops::Range;
 
 use net_types::ip::IpAddress;
+use packet::records::options::{Options, OptionsRaw};
 use packet::{
-    BufferView, BufferViewMut, PacketBuilder, PacketConstraints, ParsablePacket, ParseMetadata,
-    SerializeBuffer,
+    BufferView, BufferViewMut, FromRaw, MaybeParsed, PacketBuilder, PacketConstraints,
+    ParsablePacket, ParseMetadata, SerializeBuffer,
 };
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
@@ -20,9 +21,8 @@ use crate::error::{ParseError, ParseResult};
 use crate::ip::IpProto;
 #[cfg(test)]
 use crate::transport::tcp::TcpOption;
-use crate::wire::records::options::{Options, OptionsRaw};
 use crate::wire::{compute_transport_checksum_parts, compute_transport_checksum_serialize};
-use crate::wire::{FromRaw, MaybeParsed, U16, U32};
+use crate::wire::{U16, U32};
 
 use self::options::TcpOptionsImpl;
 
@@ -464,7 +464,7 @@ mod options {
     use zerocopy::LayoutVerified;
 
     use crate::transport::tcp::TcpOption;
-    use crate::wire::records::options::{OptionsImpl, OptionsImplLayout};
+    use packet::records::options::{OptionsImpl, OptionsImplLayout};
 
     const OPTION_KIND_EOL: u8 = 0;
     const OPTION_KIND_NOP: u8 = 1;

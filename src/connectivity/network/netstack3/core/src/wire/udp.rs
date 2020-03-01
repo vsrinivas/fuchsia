@@ -12,16 +12,16 @@ use core::ops::Range;
 
 use net_types::ip::{Ip, IpAddress};
 use packet::{
-    BufferView, BufferViewMut, PacketBuilder, PacketConstraints, ParsablePacket, ParseMetadata,
-    SerializeBuffer,
+    BufferView, BufferViewMut, FromRaw, MaybeParsed, PacketBuilder, PacketConstraints,
+    ParsablePacket, ParseMetadata, SerializeBuffer,
 };
 use specialize_ip_macro::specialize_ip;
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
 use crate::error::{ParseError, ParseResult};
 use crate::ip::{IpProto, IpVersionMarker};
+use crate::wire::U16;
 use crate::wire::{compute_transport_checksum_parts, compute_transport_checksum_serialize};
-use crate::wire::{FromRaw, MaybeParsed, U16};
 
 pub(crate) const HEADER_BYTES: usize = 8;
 const CHECKSUM_OFFSET: usize = 6;

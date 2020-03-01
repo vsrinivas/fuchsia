@@ -13,9 +13,10 @@ use core::ops::Range;
 
 use log::debug;
 use net_types::ip::{Ipv6, Ipv6Addr};
+use packet::records::{AlignedRecordsSerializer, Records, RecordsRaw};
 use packet::{
-    BufferView, BufferViewMut, PacketBuilder, PacketConstraints, ParsablePacket, ParseMetadata,
-    SerializeBuffer,
+    BufferView, BufferViewMut, FromRaw, MaybeParsed, PacketBuilder, PacketConstraints,
+    ParsablePacket, ParseMetadata, SerializeBuffer,
 };
 use zerocopy::{AsBytes, ByteSlice, ByteSliceMut, FromBytes, LayoutVerified, Unaligned};
 
@@ -24,8 +25,7 @@ use crate::ip::reassembly::FragmentablePacket;
 use crate::ip::{IpProto, Ipv6ExtHdrType};
 use crate::wire::icmp::Icmpv6ParameterProblemCode;
 use crate::wire::ipv6::ext_hdrs::{HopByHopOption, HopByHopOptionData, HopByHopOptionsImpl};
-use crate::wire::records::{AlignedRecordsSerializer, Records, RecordsRaw};
-use crate::wire::{FromRaw, MaybeParsed, U16};
+use crate::wire::U16;
 
 use ext_hdrs::{
     is_valid_next_header, is_valid_next_header_upper_layer, ExtensionHeaderOptionAction,

@@ -410,10 +410,13 @@
 //! least in the hot path.
 
 mod fragmented;
+pub mod records;
 pub mod serialize;
+mod util;
 
 pub use crate::fragmented::*;
 pub use crate::serialize::*;
+pub use crate::util::*;
 
 use std::cmp;
 use std::mem;

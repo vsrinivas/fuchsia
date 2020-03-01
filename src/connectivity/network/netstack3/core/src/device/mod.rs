@@ -463,7 +463,6 @@ enum InitializationStatus {
 }
 
 impl Default for InitializationStatus {
-    #[inline]
     fn default() -> InitializationStatus {
         InitializationStatus::Uninitialized
     }

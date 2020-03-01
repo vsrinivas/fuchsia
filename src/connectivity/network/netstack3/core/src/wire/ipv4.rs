@@ -12,18 +12,17 @@ use core::ops::Range;
 use byteorder::{ByteOrder, NetworkEndian};
 use internet_checksum::Checksum;
 use net_types::ip::{Ipv4, Ipv4Addr};
+use packet::records::options::OptionsRaw;
 use packet::{
-    BufferView, BufferViewMut, PacketBuilder, PacketConstraints, ParsablePacket, ParseMetadata,
-    SerializeBuffer,
+    BufferView, BufferViewMut, FromRaw, MaybeParsed, PacketBuilder, PacketConstraints,
+    ParsablePacket, ParseMetadata, SerializeBuffer,
 };
 use zerocopy::{AsBytes, ByteSlice, ByteSliceMut, FromBytes, LayoutVerified, Unaligned};
 
 use crate::error::{IpParseError, IpParseResult, ParseError};
 use crate::ip::reassembly::FragmentablePacket;
 use crate::ip::{IpProto, Ipv4Option};
-use crate::wire::records::options::OptionsRaw;
 use crate::wire::U16;
-use crate::wire::{FromRaw, MaybeParsed};
 
 use self::options::Ipv4OptionsImpl;
 
@@ -421,9 +420,9 @@ impl<B: ByteSlice> Ipv4PacketRaw<B> {
     }
 }
 
-pub(crate) type Options<B> = crate::wire::records::options::Options<B, Ipv4OptionsImpl>;
+pub(crate) type Options<B> = packet::records::options::Options<B, Ipv4OptionsImpl>;
 pub(crate) type OptionsSerializer<'a, I> =
-    crate::wire::records::options::OptionsSerializer<'a, Ipv4OptionsImpl, Ipv4Option<'a>, I>;
+    packet::records::options::OptionsSerializer<'a, Ipv4OptionsImpl, Ipv4Option<'a>, I>;
 
 /// A PacketBuilder for Ipv4 Packets but with options.
 #[derive(Debug)]
@@ -644,7 +643,7 @@ pub(crate) mod options {
     use byteorder::{ByteOrder, NetworkEndian, WriteBytesExt};
 
     use crate::ip::{Ipv4Option, Ipv4OptionData};
-    use crate::wire::records::options::{OptionsImpl, OptionsImplLayout, OptionsSerializerImpl};
+    use packet::records::options::{OptionsImpl, OptionsImplLayout, OptionsSerializerImpl};
 
     const OPTION_KIND_EOL: u8 = 0;
     const OPTION_KIND_NOP: u8 = 1;
@@ -701,14 +700,14 @@ pub(crate) mod options {
     impl<'a> OptionsSerializerImpl<'a> for Ipv4OptionsImpl {
         type Option = Ipv4Option<'a>;
 
-        fn get_option_length(option: &Self::Option) -> usize {
+        fn option_length(option: &Self::Option) -> usize {
             match option.data {
                 Ipv4OptionData::RouterAlert { .. } => OPTION_RTRALRT_LEN,
                 Ipv4OptionData::Unrecognized { len, .. } => len as usize,
             }
         }
 
-        fn get_option_kind(option: &Self::Option) -> u8 {
+        fn option_kind(option: &Self::Option) -> u8 {
             let number = match option.data {
                 Ipv4OptionData::RouterAlert { .. } => OPTION_KIND_RTRALRT,
                 Ipv4OptionData::Unrecognized { kind, .. } => kind,
@@ -729,8 +728,8 @@ pub(crate) mod options {
     #[cfg(test)]
     mod test {
         use super::*;
-        use crate::wire::records::options::Options;
-        use crate::wire::records::RecordsSerializerImpl;
+        use packet::records::options::Options;
+        use packet::records::RecordsSerializerImpl;
 
         #[test]
         fn test_serialize_router_alert() {

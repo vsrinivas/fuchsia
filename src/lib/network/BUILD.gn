@@ -12,6 +12,6 @@ group("tests") {
 
   deps = [
     ":network",
-    "packet:tests",
+    "packet:packet_test",
   ]
 }

@@ -20,8 +20,8 @@ pub(crate) enum NdpPacket<B: ByteSlice> {
     Redirect(IcmpPacket<Ipv6, B, Redirect>),
 }
 
-pub(crate) type Options<B> = crate::wire::records::options::Options<B, options::NdpOptionsImpl>;
-pub(crate) type OptionsSerializer<'a, I> = crate::wire::records::options::OptionsSerializer<
+pub(crate) type Options<B> = packet::records::options::Options<B, options::NdpOptionsImpl>;
+pub(crate) type OptionsSerializer<'a, I> = packet::records::options::OptionsSerializer<
     'a,
     options::NdpOptionsImpl,
     options::NdpOption<'a>,
@@ -234,8 +234,8 @@ pub(crate) mod options {
     use net_types::ip::{AddrSubnet, Ipv6Addr};
     use zerocopy::{AsBytes, FromBytes, LayoutVerified, Unaligned};
 
-    use crate::wire::records::options::{OptionsImpl, OptionsImplLayout, OptionsSerializerImpl};
     use crate::wire::U32;
+    use packet::records::options::{OptionsImpl, OptionsImplLayout, OptionsSerializerImpl};
 
     /// The length of an NDP MTU option, excluding the first 2 bytes (kind and length bytes).
     ///
@@ -445,7 +445,7 @@ pub(crate) mod options {
     impl<'a> OptionsSerializerImpl<'a> for NdpOptionsImpl {
         type Option = NdpOption<'a>;
 
-        fn get_option_length(option: &Self::Option) -> usize {
+        fn option_length(option: &Self::Option) -> usize {
             match option {
                 NdpOption::SourceLinkLayerAddress(data)
                 | NdpOption::TargetLinkLayerAddress(data)
@@ -455,7 +455,7 @@ pub(crate) mod options {
             }
         }
 
-        fn get_option_kind(option: &Self::Option) -> u8 {
+        fn option_kind(option: &Self::Option) -> u8 {
             NdpOptionType::from(option).into()
         }
 
