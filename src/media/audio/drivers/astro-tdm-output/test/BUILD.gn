@@ -28,7 +28,6 @@ test("astro-audio-out-test") {
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/mock-function",
-    "//zircon/public/lib/mock-mmio-reg",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",

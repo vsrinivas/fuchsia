@@ -34,13 +34,13 @@ class Tas27xx : public std::unique_ptr<Tas27xx> {
  public:
   static std::unique_ptr<Tas27xx> Create(ddk::I2cChannel&& i2c);
   bool ValidGain(float gain);
-  virtual zx_status_t SetGain(float gain);  // virtual for unit testing.
+  zx_status_t SetGain(float gain);
   float GetGain() const { return current_gain_; }
   float GetMinGain() const { return kMinGain; }
   float GetMaxGain() const { return kMaxGain; }
   float GetGainStep() const { return kGainStep; }
 
-  virtual zx_status_t Init(uint32_t rate);  // virtual for unit testing.
+  virtual zx_status_t Init();  // virtual for unit testing.
   zx_status_t Reset();
   zx_status_t Standby();
   zx_status_t ExitStandby();

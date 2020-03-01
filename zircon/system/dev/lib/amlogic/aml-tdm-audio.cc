@@ -142,18 +142,14 @@ uint32_t AmlTdmDevice::GetRingPosition() {
   return mmio_.Read32(GetFrddrOffset(FRDDR_STATUS2_OFFS)) -
          mmio_.Read32(GetFrddrOffset(FRDDR_START_ADDR_OFFS));
 }
-
 /* Notes:
     -sdiv is desired divider -1 (Want a divider of 10? write a value of 9)
+    -sclk needs to be at least 2x mclk.  writing a value of 0 (/1) to sdiv
+        will result in no sclk being generated on the sclk pin.  However, it
+        appears that it is running properly as a lrclk is still generated at
+        an expected rate (lrclk is derived from sclk)
 */
 zx_status_t AmlTdmDevice::SetSclkDiv(uint32_t sdiv, uint32_t lrduty, uint32_t lrdiv) {
-  if (sdiv == 0) {
-    // sclk needs to be at least 2x mclk.  writing a value of 0 (/1) to sdiv
-    // will result in no sclk being generated on the sclk pin.  However, it
-    // appears that it is running properly as a lrclk is still generated at
-    // an expected rate (lrclk is derived from sclk)
-    return ZX_ERR_INVALID_ARGS;
-  }
   ZX_DEBUG_ASSERT(sdiv < (1 << kSclkDivBits));
   ZX_DEBUG_ASSERT(lrdiv < (1 << kLRclkDivBits));
   // lrduty is in sclk cycles, so must be less than lrdiv
