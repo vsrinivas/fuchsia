@@ -20,6 +20,7 @@ driver_module("qemu-audio-codec") {
     "qemu-stream.cc",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.intelhda.codec",
     "//src/devices/lib/driver",
     "//zircon/public/lib/audio-driver-proto",
     "//zircon/public/lib/audio-proto-utils",
@@ -27,7 +28,6 @@ driver_module("qemu-audio-codec") {
     "//zircon/public/lib/dispatcher-pool",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.intelhda.codec",
     "//zircon/system/banjo/ddk.protocol.pci",
     "//zircon/system/ulib/intel-hda",
   ]
