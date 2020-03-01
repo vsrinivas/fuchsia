@@ -31,6 +31,7 @@ executable("system_time_updater_test_bin") {
     "//garnet/bin/network_time:lib",
     "//garnet/bin/network_time:time_util_lib",
     "//garnet/public/lib/syslog/cpp",
+    "//sdk/fidl/fuchsia.hardware.rtc",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
     "//sdk/lib/vfs/cpp",
@@ -41,7 +42,6 @@ executable("system_time_updater_test_bin") {
     "//third_party/googletest:gmock",
     "//third_party/roughtime:client_lib",
     "//third_party/roughtime:simple_server_lib",
-    "//zircon/system/fidl/fuchsia-hardware-rtc",
     "//zircon/system/fidl/fuchsia-io",
   ]
 

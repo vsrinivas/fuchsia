@@ -13,6 +13,7 @@ driver_module("nxp") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "pcf8563-rtc.c" ]
   deps = [
+    "//sdk/fidl/fuchsia.hardware.rtc:fuchsia.hardware.rtc_c",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/device-protocol-i2c",
@@ -21,7 +22,6 @@ driver_module("nxp") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.i2c",
-    "//zircon/system/fidl/fuchsia-hardware-rtc:c",
     "//zircon/system/ulib/rtc",
   ]
 }

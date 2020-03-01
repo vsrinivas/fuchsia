@@ -15,8 +15,8 @@ driver_module("intel-rtc") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "intel-rtc.c" ]
   deps = [
+    "//sdk/fidl/fuchsia.hardware.rtc:fuchsia.hardware.rtc_c",
     "//zircon/public/lib/ddk",
-    "//zircon/system/fidl/fuchsia-hardware-rtc:c",
     "//zircon/system/ulib/rtc",
   ]
 }
