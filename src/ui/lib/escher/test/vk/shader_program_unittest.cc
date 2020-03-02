@@ -243,6 +243,20 @@ VK_TEST_F(ShaderProgramTest, CachedVariants) {
   EXPECT_NE(program1, program3);
 }
 
+VK_TEST_F(ShaderProgramTest, NonExistentShaderDeathTest) {
+  auto escher = test::GetEscher();
+
+  ShaderVariantArgs variant1({{"USE_ATTRIBUTE_UV", "1"},
+                              {"USE_PAPER_SHADER_PUSH_CONSTANTS", "1"},
+                              {"NO_SHADOW_LIGHTING_PASS", "1"}});
+  const char* kNonExistentVert = "shaders/NON_EXISTENT_SHADER.vert";
+  const char* kNonExistentFrag = "shaders/NON_EXISTENT_SHADER.frag";
+
+  EXPECT_DEATH(
+      { auto program = escher->GetGraphicsProgram(kNonExistentVert, kNonExistentFrag, variant1); },
+      "");
+}
+
 // This tests the most direct form of pipeline generation, without all of the laziness and caching
 // done by CommandBuffer.  Fundamentally this requires 4 things:
 //   1) a set of vk::ShaderModules

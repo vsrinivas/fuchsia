@@ -255,7 +255,9 @@ void ShaderModuleTemplate::Variant::UpdateModule() {
     spirv.resize(num);
     memcpy(spirv.data(), contents.data(), num * sizeof(uint32_t));
   } else {
-    shader_util::ReadSpirvFromDisk(args_, *base_path + "/shaders/", template_->path_, &spirv);
+    bool result =
+        shader_util::ReadSpirvFromDisk(args_, *base_path + "/shaders/", template_->path_, &spirv);
+    FXL_CHECK(result) << "Read SPIR-V file failed!";
   }
   RecreateModuleFromSpirvAndNotifyListeners(spirv);
 }
