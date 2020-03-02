@@ -424,7 +424,9 @@ TEST(ChannelTest, ConcurrentReadsConsumeUniqueElements) {
   // Used to force both threads to stall until both are ready to run.
   zx::event event;
 
-  constexpr uint32_t kNumMessages = 5000;
+  // This number was 5000 but that triggers an ad-hoc policy exception on the number
+  // of pending messages a channel can have.
+  constexpr uint32_t kNumMessages = 2000;
   enum class ReadMessageStatus {
     kUnset,
     kReadFailed,

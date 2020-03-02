@@ -35,6 +35,12 @@ KCOUNTER(channel_packet_depth_unbounded, "channel.depth.unbounded")
 KCOUNTER(dispatcher_channel_create_count, "dispatcher.channel.create")
 KCOUNTER(dispatcher_channel_destroy_count, "dispatcher.channel.destroy")
 
+// Temporary hack to chase down bugs like fxb/47000 where upwards of 250MB of ipc
+// memory is consumed. The bet is that even if each message is at max size there
+// should be one or two channels with thousands of messages. If so, this check adds
+// no overhead to the existing code.
+constexpr size_t kMaxPendingMessageCount = 2500;
+
 // static
 zx_status_t ChannelDispatcher::Create(KernelHandle<ChannelDispatcher>* handle0,
                                       KernelHandle<ChannelDispatcher>* handle1,
@@ -348,6 +354,15 @@ void ChannelDispatcher::WriteSelf(MessagePacketPtr msg) {
   message_count_++;
   if (message_count_ > max_message_count_) {
     max_message_count_ = message_count_;
+  }
+
+  if (message_count_ > kMaxPendingMessageCount) {
+    // TODO(cpu): Remove this hack. See comment in kMaxPendingMessageCount definition.
+    auto process = ProcessDispatcher::GetCurrent();
+    char pname[ZX_MAX_NAME_LEN];
+    process->get_name(pname);
+    printf("KERN: channel has %zu messages (%s). Raising exception\n", message_count_, pname);
+    Thread::Current::SignalPolicyException();
   }
 
   UpdateStateLocked(0u, ZX_CHANNEL_READABLE);
