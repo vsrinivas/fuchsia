@@ -2,11 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{
-    id::Id,
-    services::discovery::{filter::*, player_event::PlayerEvent},
-    Result,
-};
+use crate::{id::Id, services::discovery::filter::*, Result};
 use fidl::endpoints::{ClientEnd, ServerEnd};
 use fidl::{self, client::QueryResponseFut};
 use fidl_fuchsia_media::*;
@@ -24,6 +20,7 @@ use inspect::Property;
 use std::{
     convert::*,
     pin::Pin,
+    sync::Arc,
     task::{Context, Poll, Waker},
 };
 
@@ -172,6 +169,23 @@ impl TryFrom<SessionControlRequest> for ForwardControlRequest {
     }
 }
 
+#[derive(Clone)]
+pub enum PlayerProxyEvent {
+    Updated(Arc<dyn Fn() -> SessionInfoDelta + Send + Sync>),
+    Removed,
+}
+
+impl std::fmt::Debug for PlayerProxyEvent {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+        match self {
+            PlayerProxyEvent::Updated(delta) => {
+                write!(f, "PlayerProxyEvent::Updated({:?})", delta())
+            }
+            PlayerProxyEvent::Removed => write!(f, "PlayerProxyEvent::Removed"),
+        }
+    }
+}
+
 /// A proxy for published `fuchsia.media.sessions2.Player` protocols.
 #[derive(Debug)]
 pub struct Player {
@@ -299,6 +313,29 @@ impl Player {
         self.waker.iter().for_each(Waker::wake_by_ref);
     }
 
+    fn session_info_delta(&self) -> impl Fn() -> SessionInfoDelta {
+        let state = self.state.clone();
+        let registration = self.registration.clone();
+        move || SessionInfoDelta {
+            is_locally_active: state.is_active(),
+            domain: Some(registration.domain.clone()),
+            is_local: state.local.clone(),
+            player_status: state.player_status.clone().map(Into::into),
+            metadata: state.metadata.clone(),
+            player_capabilities: state.player_capabilities.clone().map(Into::into),
+            media_images: state.media_images.clone().map(|media_images| {
+                media_images
+                    .into_iter()
+                    .map(|media_image| MediaImage {
+                        image_type: Some(media_image.image_type),
+                        sizes: Some(media_image.sizes),
+                    })
+                    .collect()
+            }),
+            ..Decodable::new_empty()
+        }
+    }
+
     fn options_satisfied(&self) -> WatchOptions {
         WatchOptions {
             only_active: Some(self.state.is_active().unwrap_or(false)),
@@ -310,7 +347,7 @@ impl Player {
 /// The Stream implementation for Player is a stream of full player states. A new state is emitted
 /// when the backing player implementation sends us an update.
 impl Stream for Player {
-    type Item = FilterApplicant<(u64, PlayerEvent)>;
+    type Item = FilterApplicant<(u64, PlayerProxyEvent)>;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         if self.terminated {
@@ -330,32 +367,28 @@ impl Stream for Player {
                 let event = match r {
                     Err(e) => match e {
                         fidl::Error::ClientRead(_) | fidl::Error::ClientWrite(_) => {
-                            PlayerEvent::Removed
+                            PlayerProxyEvent::Removed
                         }
                         e => {
                             fx_log_info!(tag: "player_proxy", "Player update failed: {:#?}", e);
-                            PlayerEvent::Removed
+                            PlayerProxyEvent::Removed
                         }
                     },
                     Ok(delta) => match ValidPlayerInfoDelta::try_from(delta) {
                         Ok(delta) => {
                             self.update(delta);
                             self.hanging_get = None;
-                            PlayerEvent::Updated {
-                                delta: self.state.clone(),
-                                registration: Some(self.registration.clone()),
-                                active: self.state.is_active(),
-                            }
+                            PlayerProxyEvent::Updated(Arc::new(self.session_info_delta()))
                         }
                         Err(e) => {
                             fx_log_info!(
                                 tag: "player_proxy",
                                 "Player sent invalid update: {:#?}", e);
-                            PlayerEvent::Removed
+                            PlayerProxyEvent::Removed
                         }
                     },
                 };
-                if let PlayerEvent::Removed = event {
+                if let PlayerProxyEvent::Removed = event {
                     self.terminated = true;
                 }
                 Poll::Ready(Some(FilterApplicant::new(
@@ -452,16 +485,14 @@ mod test {
 
         let mut player_stream = Pin::new(&mut player);
         let (_, event) = player_stream.next().await.expect("Polling player event").applicant;
+        let delta = match event {
+            PlayerProxyEvent::Updated(f) => f(),
+            _ => panic!("Expected update from player proxy"),
+        };
+
         assert_eq!(
-            event,
-            PlayerEvent::Updated {
-                delta: ValidPlayerInfoDelta::default(),
-                registration: Some(ValidPlayerRegistration {
-                    domain: TEST_DOMAIN.to_string(),
-                    usage: AudioRenderUsage::Media
-                }),
-                active: None,
-            }
+            delta,
+            SessionInfoDelta { domain: Some(TEST_DOMAIN.to_string()), ..Decodable::new_empty() }
         );
         assert!(!player_stream.is_terminated());
 
@@ -474,7 +505,7 @@ mod test {
         let (_inspector, mut player, _) = test_player();
         let mut player_stream = Pin::new(&mut player);
         let (_, event) = player_stream.next().await.expect("Polling player event").applicant;
-        assert_matches!(event, PlayerEvent::Removed);
+        assert_matches!(event, PlayerProxyEvent::Removed);
         assert!(player_stream.is_terminated());
     }
 
@@ -504,7 +535,7 @@ mod test {
 
         let mut player_stream = Pin::new(&mut player);
         let (_, event) = player_stream.next().await.expect("Polling player event").applicant;
-        assert_matches!(event, PlayerEvent::Removed);
+        assert_matches!(event, PlayerProxyEvent::Removed);
         assert!(player_stream.is_terminated());
 
         Ok(())

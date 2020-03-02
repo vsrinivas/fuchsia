@@ -3,20 +3,12 @@
 // found in the LICENSE file.
 
 pub mod filter;
-pub mod player_event;
 mod watcher;
 
-use self::{
-    filter::*,
-    player_event::{PlayerEvent, SessionsWatcherEvent},
-    watcher::*,
-};
+use self::{filter::*, watcher::*};
 use crate::{
     interrupter::*,
-    proxies::{
-        observer::*,
-        player::{ForwardControlRequest, Player},
-    },
+    proxies::{observer::*, player::*},
     Result, CHANNEL_BUFFER_SIZE,
 };
 use fidl::{
@@ -51,7 +43,7 @@ type SessionId = u64;
 /// Implements `fuchsia.media.session2.Discovery`.
 pub struct Discovery {
     player_stream: mpsc::Receiver<Player>,
-    catch_up_events: HashMap<SessionId, FilterApplicant<(SessionId, PlayerEvent)>>,
+    catch_up_events: HashMap<SessionId, FilterApplicant<(SessionId, PlayerProxyEvent)>>,
     watcher_ids: RangeFrom<usize>,
     /// Clients watching the stream of player events, through a collection view or
     /// through a `SessionControl` channel.
@@ -73,7 +65,7 @@ pub struct Discovery {
     /// A stream of interruptions of audio usages, observed from the audio service.
     interrupter: Interrupter,
     /// The sender through which we distribute player events to all watchers.
-    player_update_sender: mpmc::Sender<FilterApplicant<(SessionId, PlayerEvent)>>,
+    player_update_sender: mpmc::Sender<FilterApplicant<(SessionId, PlayerProxyEvent)>>,
 }
 
 impl Discovery {
@@ -100,8 +92,8 @@ impl Discovery {
     fn sessions_info_stream(
         &self,
         filter: Filter,
-    ) -> impl Stream<Item = (SessionId, SessionsWatcherEvent)> + Unpin + Send + 'static {
-        let queue: Vec<FilterApplicant<(SessionId, PlayerEvent)>> =
+    ) -> impl Stream<Item = (SessionId, PlayerProxyEvent)> + Unpin + Send + 'static {
+        let queue: Vec<FilterApplicant<(SessionId, PlayerProxyEvent)>> =
             self.catch_up_events.values().cloned().collect();
         stream::iter(queue)
             .chain(self.player_update_sender.new_receiver())
@@ -122,11 +114,12 @@ impl Discovery {
                 future::ready(None)
             } else {
                 match event {
-                    SessionsWatcherEvent::Updated(update) => future::ready(Some(update)),
+                    PlayerProxyEvent::Updated(update) => future::ready(Some(update)),
                     _ => future::ready(None),
                 }
             }
         })
+        .map(|delta| delta())
     }
 
     /// Connects a client to a single session if that session exists.
@@ -180,12 +173,12 @@ impl Discovery {
             .await;
     }
 
-    /// Connects a sink to the stream of `SessionsWatcherEvents` for the set of
+    /// Connects a sink to the stream of `PlayerProxyEvents` for the set of
     /// all sessions.
     async fn connect_session_watcher(
         &mut self,
         watch_options: WatchOptions,
-        sink: impl Sink<(u64, SessionsWatcherEvent), Error = anyhow::Error> + Send + 'static,
+        sink: impl Sink<(u64, PlayerProxyEvent), Error = anyhow::Error> + Send + 'static,
     ) {
         let session_info_stream = self.sessions_info_stream(Filter::new(watch_options));
         let event_forward = session_info_stream.map(Ok).forward(sink).boxed();
@@ -218,10 +211,10 @@ impl Discovery {
 
     async fn handle_player_update(
         &mut self,
-        player_update: FilterApplicant<(SessionId, PlayerEvent)>,
+        player_update: FilterApplicant<(SessionId, PlayerProxyEvent)>,
     ) {
         let (id, event) = &player_update.applicant;
-        if let PlayerEvent::Removed = event {
+        if let PlayerProxyEvent::Removed = event {
             self.catch_up_events.remove(id);
             self.interrupt_paused_players.remove(id);
         } else {

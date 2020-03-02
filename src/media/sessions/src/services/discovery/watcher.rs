@@ -2,11 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::{
-    filter::*,
-    player_event::{PlayerEvent, SessionsWatcherEvent},
-};
-use crate::{Result, MAX_EVENTS_SENT_WITHOUT_ACK};
+use super::filter::*;
+use crate::{proxies::player::PlayerProxyEvent, Result, MAX_EVENTS_SENT_WITHOUT_ACK};
 use fidl::client::QueryResponseFut;
 use fidl_fuchsia_media_sessions2::*;
 use futures::{
@@ -32,7 +29,7 @@ impl From<SessionsWatcherProxy> for FlowControlledProxySink {
     }
 }
 
-impl Sink<(u64, SessionsWatcherEvent)> for FlowControlledProxySink {
+impl Sink<(u64, PlayerProxyEvent)> for FlowControlledProxySink {
     type Error = anyhow::Error;
     fn poll_ready(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<()>> {
         if self.acks.len() < MAX_EVENTS_SENT_WITHOUT_ACK {
@@ -49,13 +46,10 @@ impl Sink<(u64, SessionsWatcherEvent)> for FlowControlledProxySink {
         }
     }
 
-    fn start_send(
-        mut self: Pin<&mut Self>,
-        (id, event): (u64, SessionsWatcherEvent),
-    ) -> Result<()> {
+    fn start_send(mut self: Pin<&mut Self>, (id, event): (u64, PlayerProxyEvent)) -> Result<()> {
         let ack_fut = match event {
-            SessionsWatcherEvent::Updated(delta) => self.proxy.session_updated(id, delta),
-            SessionsWatcherEvent::Removed => self.proxy.session_removed(id),
+            PlayerProxyEvent::Updated(delta) => self.proxy.session_updated(id, delta()),
+            PlayerProxyEvent::Removed => self.proxy.session_removed(id),
         };
         self.acks.push(ack_fut);
 
@@ -83,7 +77,8 @@ impl Sink<(u64, SessionsWatcherEvent)> for FlowControlledProxySink {
 
 pub fn watcher_filter(
     filter: Filter,
-) -> impl FnMut(FilterApplicant<(u64, PlayerEvent)>) -> Ready<Option<(u64, SessionsWatcherEvent)>> {
+) -> impl FnMut(FilterApplicant<(u64, PlayerProxyEvent)>) -> Ready<Option<(u64, PlayerProxyEvent)>>
+{
     let mut allow_list = HashSet::new();
 
     move |event| {
@@ -94,13 +89,13 @@ pub fn watcher_filter(
 
         future::ready(if allowed_now {
             allow_list.insert(id);
-            Some((id, event.sessions_watcher_event()))
+            Some((id, event))
         } else if allowed_before {
             allow_list.remove(&id);
 
             // The client was watching this player, so we notify them it is
             // removed from their watch set.
-            Some((id, PlayerEvent::Removed.sessions_watcher_event()))
+            Some((id, PlayerProxyEvent::Removed))
         } else {
             None
         })
@@ -110,11 +105,11 @@ pub fn watcher_filter(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::proxies::player::ValidPlayerInfoDelta;
     use fidl::{encoding::Decodable, endpoints::create_endpoints};
     use fuchsia_async as fasync;
     use futures::{stream, Future, SinkExt, StreamExt};
     use futures_test::task::*;
+    use std::sync::Arc;
     use test_util::assert_matches;
 
     #[fasync::run_singlethreaded]
@@ -129,8 +124,7 @@ mod test {
         assert_matches!(ready_when_empty, Poll::Ready(Ok(())));
 
         let mut dummy_stream = stream::iter(
-            (0..MAX_EVENTS_SENT_WITHOUT_ACK)
-                .map(|_| Ok((0u64, PlayerEvent::Removed.sessions_watcher_event()))),
+            (0..MAX_EVENTS_SENT_WITHOUT_ACK).map(|_| Ok((0u64, PlayerProxyEvent::Removed))),
         );
         let mut send_all_fut = SinkExt::send_all(&mut under_test, &mut dummy_stream);
         let mut ack_responders = vec![];
@@ -157,14 +151,7 @@ mod test {
         let make_event = |player_id: u64, is_active| {
             FilterApplicant::new(
                 WatchOptions { only_active: Some(is_active), ..Decodable::new_empty() },
-                (
-                    player_id,
-                    PlayerEvent::Updated {
-                        delta: ValidPlayerInfoDelta::default(),
-                        registration: None,
-                        active: None,
-                    },
-                ),
+                (player_id, PlayerProxyEvent::Updated(Arc::new(|| Decodable::new_empty()))),
             )
         };
 
