@@ -1,11 +1,11 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python2.7
 # Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 """Helper script for GN to run an arbitrary binary.
 
 Run with:
-  python2 gn_run_binary.py <binary_name> [args ...]
+  python2.7 gn_run_binary.py <binary_name> [args ...]
 """
 
 import os
