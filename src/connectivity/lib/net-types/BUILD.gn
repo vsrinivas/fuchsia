@@ -15,7 +15,6 @@ rustc_library("net-types") {
   deps = [
     "//garnet/lib/rust/never",
     "//src/lib/zerocopy",
-    "//third_party/rust_crates:byteorder",
   ]
 
   # TODO(46764): Fix the leaks and remove this.

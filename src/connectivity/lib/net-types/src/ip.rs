@@ -54,7 +54,6 @@ use core::hash::Hash;
 #[cfg(std)]
 use std::net;
 
-use byteorder::{ByteOrder, NetworkEndian};
 use never::Never;
 use zerocopy::{AsBytes, FromBytes, Unaligned};
 
@@ -749,10 +748,7 @@ impl IpAddress for Ipv4Addr {
             Ipv4Addr([0; 4])
         } else {
             let mask = <u32>::max_value() << (32 - bits);
-            let masked = NetworkEndian::read_u32(&self.0) & mask;
-            let mut ret = Ipv4Addr::default();
-            NetworkEndian::write_u32(&mut ret.0, masked);
-            ret
+            Self::new((u32::from_be_bytes(self.0) & mask).to_be_bytes())
         }
     }
 
@@ -901,10 +897,7 @@ impl IpAddress for Ipv6Addr {
             Ipv6Addr([0; 16])
         } else {
             let mask = <u128>::max_value() << (128 - bits);
-            let masked = NetworkEndian::read_u128(&self.0) & mask;
-            let mut ret = Ipv6Addr::default();
-            NetworkEndian::write_u128(&mut ret.0, masked);
-            ret
+            Self::new((u128::from_be_bytes(self.0) & mask).to_be_bytes())
         }
     }
 
@@ -979,7 +972,9 @@ impl Display for Ipv6Addr {
         // TODO(joshlf): Implement canonicalization even when the `std` feature
         // is not enabled.
 
-        let to_u16 = |idx| NetworkEndian::read_u16(&self.0[idx..idx + 2]);
+        use core::convert::TryInto;
+
+        let to_u16 = |idx| u16::from_be_bytes(self.0[idx..idx + 2].try_into().unwrap());
         #[cfg(std)]
         return Display::fmt(
             &net::Ipv6Addr::new(
@@ -1101,10 +1096,7 @@ impl Subnet<Ipv4Addr> {
             self.network
         } else {
             let mask = <u32>::max_value() >> self.prefix;
-            let masked = NetworkEndian::read_u32(&self.network.0) | mask;
-            let mut ret = Ipv4Addr::default();
-            NetworkEndian::write_u32(&mut ret.0, masked);
-            ret
+            Ipv4Addr::new((u32::from_be_bytes(self.network.0) | mask).to_be_bytes())
         }
     }
 }
