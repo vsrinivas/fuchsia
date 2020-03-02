@@ -15,6 +15,9 @@ executable("msd_intel_gen_nonhardware_tests") {
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
   ]
+
+  # TODO(47456): Fix the leaks and remove this.
+  deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 # These tests don't require Intel graphics hardware to run, so they
