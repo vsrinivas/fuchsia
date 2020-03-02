@@ -2,13 +2,39 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_driver("msm8998") {
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+driver_module("msm8998") {
+  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
   sources = [ "msm8998.cc" ]
   deps = [
-    "$zx/system/banjo/ddk.protocol.platform.bus",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/ddktl",
-    "$zx/system/ulib/fbl",
+    "//src/devices/lib/driver",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/fbl",
+    "//zircon/system/banjo/ddk.protocol.platform.bus",
   ]
-  data_deps = [ "$zx/kernel/target/arm64/boot-shim:msm8998" ]
+  # TODO(47406): restore some form of data dependency on msm8998
+  # boot shim.
+}
+
+migrated_manifest("msm8998-manifest") {
+  deps = [ ":msm8998" ]
 }

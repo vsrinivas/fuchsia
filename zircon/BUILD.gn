@@ -540,7 +540,6 @@ foreach(cpu, standard_fuchsia_cpus) {
       "$zx/bootloader",
       "$zx/kernel",
       "$zx/system/core",
-      "$zx/system/dev",
       "$zx/system/uapp",
       "$zx/third_party/uapp",
     ]

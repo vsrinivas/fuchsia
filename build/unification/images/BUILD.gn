@@ -127,25 +127,18 @@ aggregate_manifest("legacy-image") {
   if (target_cpu == "arm64") {
     deps += [
 #------------------
-      ":driver.as370",
 #------------------
 #------------------
-      ":driver.c18",
 #------------------
 #------------------
-      ":driver.hi3660-i2c-test",
 #------------------
 #------------------
-      ":driver.hikey960",
 #------------------
 #------------------
-      ":driver.msm8998",
 #------------------
 #------------------
-      ":driver.msm8x53-som",
 #------------------
 #------------------
-      ":driver.mt8167s_ref",
 #------------------
     ]
   } else if (target_cpu == "x64") {
@@ -204,7 +197,6 @@ aggregate_manifest("legacy-image") {
   #------------------
   #------------------
   #------------------
-      ":driver.qemu-arm64",
   #------------------
     ]
 
@@ -567,7 +559,6 @@ aggregate_manifest("legacy-aux") {
 #------------------
 #------------------
 #------------------
-    ":test.sys.mt8167s_ref-test",
 #------------------
 #------------------
     ":test.sys.netsvc-stress-test",
@@ -1132,7 +1123,6 @@ aggregate_manifest("legacy-tests") {
 #------------------
 #------------------
 #------------------
-    ":test.sys.mt8167s_ref-test",
 #------------------
 #------------------
     ":test.sys.netsvc-stress-test",
@@ -1599,11 +1589,19 @@ aggregate_manifest("migrated-image") {
 
   if (target_cpu == "arm64") {
     deps += [
+      "//zircon/system/dev/board/as370:as370-manifest",
       "//zircon/system/dev/board/astro:astro-manifest",
+      "//zircon/system/dev/board/c18:c18-manifest",
       "//zircon/system/dev/board/gauss:gauss-manifest",
       "//zircon/system/dev/board/gauss:gauss-i2c-test-manifest",
+      "//zircon/system/dev/board/hikey960:hi3660-i2c-test-manifest",
+      "//zircon/system/dev/board/hikey960:hikey960-manifest",
+      "//zircon/system/dev/board/msm8998:msm8998-manifest",
+      "//zircon/system/dev/board/msm8x53-som:msm8x53-som-manifest",
+      "//zircon/system/dev/board/mt8167s_ref:mt8167s_ref-manifest",
       "//zircon/system/dev/board/nelson:nelson-manifest",
       "//zircon/system/dev/board/sherlock:sherlock-manifest",
+      "//zircon/system/dev/board/qemu-arm64:qemu-arm64-manifest",
       "//zircon/system/dev/board/vim2:vim2-manifest",
       "//zircon/system/dev/board/vim3:vim3-manifest",
     ]
@@ -1679,7 +1677,7 @@ aggregate_manifest("migrated-image") {
     "//src/devices/misc/drivers/virtio-socket:virtio_socket-manifest",
   #------------------
   #------------------
-      #":driver.qemu-arm64",
+      "//zircon/system/dev/board/qemu-arm64:qemu-arm64-manifest",
   #------------------
       "//src/devices/tests/ddk-test:ddk-test-manifest",
       "//zircon/system/uapp/audio:test-manifest",
@@ -3020,7 +3018,7 @@ aggregate_manifest("migrated-aux") {
     "//src/devices/i2c/drivers/mt8167-i2c:mt8167-i2c-test-manifest",
     "//zircon/system/utest/mt8167-thermal:mt8167-thermal-manifest",
 #------------------
-    #":test.sys.mt8167s_ref-test",
+    "//zircon/system/dev/board/mt8167s_ref:mt8167s_ref-test-manifest",
 #------------------
     "//src/devices/gpio/drivers/mt-8167:mtk-gpio-manifest",
     "//src/devices/power/drivers/mtk-power:mtk-power-test-manifest",
@@ -3735,7 +3733,7 @@ aggregate_manifest("migrated-tests") {
     "//src/devices/i2c/drivers/mt8167-i2c:mt8167-i2c-test-manifest",
     "//zircon/system/utest/mt8167-thermal:mt8167-thermal-manifest",
 #------------------
-    #":test.sys.mt8167s_ref-test",
+    "//zircon/system/dev/board/mt8167s_ref:mt8167s_ref-test-manifest",
 #------------------
     "//src/devices/gpio/drivers/mt-8167:mtk-gpio-manifest",
     "//src/devices/power/drivers/mtk-power:mtk-power-test-manifest",

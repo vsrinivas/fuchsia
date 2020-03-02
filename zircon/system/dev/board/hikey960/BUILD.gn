@@ -2,7 +2,27 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_driver("hikey960") {
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+driver_module("hikey960") {
+  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
   sources = [
     "hikey960-devices.c",
     "hikey960-dsi.c",
@@ -14,35 +34,49 @@ zx_driver("hikey960") {
     "hikey960.c",
   ]
   deps = [
-    "$zx/system/banjo/ddk.protocol.gpio",
-    "$zx/system/banjo/ddk.protocol.gpioimpl",
-    "$zx/system/banjo/ddk.protocol.i2c",
-    "$zx/system/banjo/ddk.protocol.iommu",
-    "$zx/system/banjo/ddk.protocol.platform.bus",
-    "$zx/system/banjo/ddk.protocol.platform.device",
-    "$zx/system/banjo/ddk.protocol.usb.modeswitch",
-    "$zx/system/dev/lib/device-protocol-i2c",
-    "$zx/system/dev/lib/hi3660",
-    "$zx/system/fidl/fuchsia-sysmem:c",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/sync",
-    "$zx/system/ulib/zircon",
+    "//src/devices/lib/driver",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/device-protocol-i2c",
+    "//zircon/public/lib/hi3660",
+    "//zircon/public/lib/sync",
+    "//zircon/system/banjo/ddk.protocol.gpio",
+    "//zircon/system/banjo/ddk.protocol.gpioimpl",
+    "//zircon/system/banjo/ddk.protocol.i2c",
+    "//zircon/system/banjo/ddk.protocol.iommu",
+    "//zircon/system/banjo/ddk.protocol.platform.bus",
+    "//zircon/system/banjo/ddk.protocol.platform.device",
+    "//zircon/system/banjo/ddk.protocol.usb.modeswitch",
+    "//zircon/system/fidl/fuchsia-sysmem:c",
   ]
-  data_deps = [
-    ":hi3660-i2c-test",  # TODO: only for test configs
-    "$zx/kernel/target/arm64/boot-shim:hikey960",
-  ]
+  # TODO(47406): restore some form of data dependency on hikey960
+  # boot shim.
 }
 
-zx_driver("hi3660-i2c-test") {
+driver_module("hi3660-i2c-test") {
+  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+
   # TODO: testonly = true
   sources = [ "hikey960-i2c-test.c" ]
   deps = [
-    "$zx/system/banjo/ddk.protocol.i2c",
-    "$zx/system/banjo/ddk.protocol.platform.device",
-    "$zx/system/dev/lib/device-protocol-i2c",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/sync",
-    "$zx/system/ulib/zircon",
+    "//src/devices/lib/driver",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/device-protocol-i2c",
+    "//zircon/public/lib/sync",
+    "//zircon/system/banjo/ddk.protocol.i2c",
+    "//zircon/system/banjo/ddk.protocol.platform.device",
   ]
+}
+
+migrated_manifest("hikey960-manifest") {
+  deps = [ ":hikey960" ]
+}
+
+migrated_manifest("hi3660-i2c-test-manifest") {
+  deps = [ ":hi3660-i2c-test" ]
 }

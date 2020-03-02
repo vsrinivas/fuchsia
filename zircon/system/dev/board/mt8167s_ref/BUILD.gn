@@ -2,7 +2,28 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_driver("mt8167s_ref") {
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+driver_module("mt8167s_ref") {
+  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
   sources = [
     "mt8167-audio.cc",
     "mt8167-backlight.cc",
@@ -23,32 +44,44 @@ zx_driver("mt8167s_ref") {
     "mt8167.cc",
   ]
   deps = [
-    "$zx/system/banjo/ddk.protocol.clockimpl",
-    "$zx/system/banjo/ddk.protocol.gpio",
-    "$zx/system/banjo/ddk.protocol.gpioimpl",
-    "$zx/system/banjo/ddk.protocol.platform.bus",
-    "$zx/system/banjo/ddk.protocol.platform.device",
-    "$zx/system/banjo/ddk.protocol.powerimpl",
-    "$zx/system/banjo/ddk.protocol.scpi",
-    "$zx/system/dev/lib/focaltech",
-    "$zx/system/dev/lib/mmio",
-    "$zx/system/dev/lib/mt8167",
-    "$zx/system/fidl/fuchsia-hardware-thermal:c",
-    "$zx/system/fidl/fuchsia-sysmem:c",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/ddktl",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/hwreg",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
+    "//src/devices/lib/driver",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/focaltech",
+    "//zircon/public/lib/hwreg",
+    "//zircon/public/lib/mmio",
+    "//zircon/public/lib/mt8167",
+    "//zircon/public/lib/zx",
+    "//zircon/system/banjo/ddk.protocol.clockimpl",
+    "//zircon/system/banjo/ddk.protocol.gpio",
+    "//zircon/system/banjo/ddk.protocol.gpioimpl",
+    "//zircon/system/banjo/ddk.protocol.platform.bus",
+    "//zircon/system/banjo/ddk.protocol.platform.device",
+    "//zircon/system/banjo/ddk.protocol.powerimpl",
+    "//zircon/system/banjo/ddk.protocol.scpi",
+    "//zircon/system/fidl/fuchsia-hardware-thermal:c",
+    "//zircon/system/fidl/fuchsia-sysmem:c",
   ]
-  data_deps = [
-    "$zx/kernel/target/arm64/boot-shim:cleo",
-    "$zx/kernel/target/arm64/boot-shim:mt8167s_ref",
-  ]
+  # TODO(47406): restore some form of data dependency on cleo and mt8167s_ref
+  # boot shims.
 }
 
-zx_test("mt8167s_ref-test") {
+test("mt8167s_ref-test") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  if (is_fuchsia) {
+    testonly = false
+  }
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
   output_name = "mt8167s_ref-test"
   sources = [
     "mt8167-audio.cc",
@@ -71,24 +104,31 @@ zx_test("mt8167s_ref-test") {
     "mt8167.cc",
   ]
   deps = [
-    "$zx/system/banjo/ddk.protocol.clockimpl",
-    "$zx/system/banjo/ddk.protocol.gpioimpl",
-    "$zx/system/banjo/ddk.protocol.platform.bus",
-    "$zx/system/banjo/ddk.protocol.platform.device",
-    "$zx/system/banjo/ddk.protocol.powerimpl",
-    "$zx/system/dev/lib/focaltech",
-    "$zx/system/dev/lib/mmio",
-    "$zx/system/dev/lib/mt8167",
-    "$zx/system/fidl/fuchsia-hardware-thermal:c",
-    "$zx/system/fidl/fuchsia-sysmem:c",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/ddktl",
-    "$zx/system/ulib/driver",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/hwreg",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxtest",
+    "//src/devices/lib/driver",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/focaltech",
+    "//zircon/public/lib/hwreg",
+    "//zircon/public/lib/mmio",
+    "//zircon/public/lib/mt8167",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/banjo/ddk.protocol.clockimpl",
+    "//zircon/system/banjo/ddk.protocol.gpioimpl",
+    "//zircon/system/banjo/ddk.protocol.platform.bus",
+    "//zircon/system/banjo/ddk.protocol.platform.device",
+    "//zircon/system/banjo/ddk.protocol.powerimpl",
+    "//zircon/system/fidl/fuchsia-hardware-thermal:c",
+    "//zircon/system/fidl/fuchsia-sysmem:c",
   ]
+}
+
+migrated_manifest("mt8167s_ref-manifest") {
+  deps = [ ":mt8167s_ref" ]
+}
+
+migrated_manifest("mt8167s_ref-test-manifest") {
+  deps = [ ":mt8167s_ref-test" ]
 }

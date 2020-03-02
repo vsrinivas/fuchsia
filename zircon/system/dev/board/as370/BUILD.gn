@@ -2,7 +2,27 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_driver("as370") {
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+driver_module("as370") {
+  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
   sources = [
     "as370-audio.cc",
     "as370-clock.cc",
@@ -18,21 +38,24 @@ zx_driver("as370") {
     "as370.cc",
   ]
   deps = [
-    "$zx/system/banjo/ddk.protocol.gpioimpl",
-    "$zx/system/banjo/ddk.protocol.platform.bus",
-    "$zx/system/banjo/ddk.protocol.shareddma",
-    "$zx/system/dev/lib/as370",
-    "$zx/system/dev/lib/mmio",
-    "$zx/system/dev/lib/usb",
-    "$zx/system/fidl/fuchsia-hardware-thermal:llcpp",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/ddktl",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/hwreg",
-    "$zx/system/ulib/zx",
+    "//src/devices/lib/driver",
+    "//zircon/public/lib/as370",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/hwreg",
+    "//zircon/public/lib/mmio",
+    "//zircon/public/lib/usb",
+    "//zircon/public/lib/zx",
+    "//zircon/system/banjo/ddk.protocol.gpioimpl",
+    "//zircon/system/banjo/ddk.protocol.platform.bus",
+    "//zircon/system/banjo/ddk.protocol.shareddma",
+    "//zircon/system/fidl/fuchsia-hardware-thermal:llcpp",
   ]
-  data_deps = [
-    "$zx/kernel/target/arm64/boot-shim:as370",
-    "$zx/kernel/target/arm64/boot-shim:visalia",
-  ]
+  # TODO(47406): restore some form of data dependency on as370 and visalia
+  # boot shims.
+}
+
+migrated_manifest("as370-manifest") {
+  deps = [ ":as370" ]
 }

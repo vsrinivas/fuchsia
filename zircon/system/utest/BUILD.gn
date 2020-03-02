@@ -46,7 +46,6 @@ if (current_cpu != "") {
       "$zx/system/core/svchost:crashsvc-test",
 #------------------
 #------------------
-      "$zx/system/dev/board/mt8167s_ref:mt8167s_ref-test",
 #------------------
 #------------------
 #------------------
