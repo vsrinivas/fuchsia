@@ -1128,6 +1128,10 @@ impl Context<Spinel> for SpinelContext {
 impl Drop for SpinelContext {
     fn drop(&mut self) {
         self.inner.borrow_mut().is_dropped = true;
+
+        // Drop all images before Vulkan teardown.
+        self.images.clear();
+
         unsafe {
             for composition in self.compositions.values().copied() {
                 spn!(spn_composition_release(composition));
