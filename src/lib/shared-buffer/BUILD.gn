@@ -20,6 +20,9 @@ unittest_package("shared-buffer-tests") {
       name = "shared_buffer_lib_test"
     },
   ]
+
+  # TODO(fxb/47262): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 group("tests") {
