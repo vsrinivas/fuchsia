@@ -58,6 +58,9 @@ test("mbr-test") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/banjo/ddk.protocol.block",
   ]
+
+  # TODO(47443): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 migrated_manifest("mbr-manifest") {
