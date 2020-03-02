@@ -99,6 +99,9 @@ test("xhci-unittest") {
     "//zircon/system/dev/lib/device-protocol-platform-device",
     "//zircon/system/dev/lib/dma-buffer",
   ]
+
+  # TODO(47451): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 migrated_manifest("xhci-manifest") {
