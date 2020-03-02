@@ -59,6 +59,17 @@ type Binary struct {
 // more statically determines the ID from build metadata, while the latter
 // derives it directly from the ELF's notes section.
 func (binary Binary) ELFBuildID(buildDir string) (string, error) {
+	// First, consider the case where the debug binary is already in a
+	// .build-id format, in which case may read the build ID out of the
+	// file path, being of the form
+	// `.../.build-id/<first two characters of buildID>/<remaining characters>.debug`.
+	tokens := strings.Split(binary.Debug, string(os.PathSeparator))
+	l := len(tokens)
+	if l >= 3 && tokens[l-3] == ".build-id" {
+		// First two characters + the rest.
+		return tokens[l-2] + trimExt(filepath.Base(tokens[l-1])), nil
+	}
+
 	if binary.BuildIDFile != "" {
 		p, err := filepath.Abs(filepath.Join(buildDir, binary.BuildIDFile))
 		if err != nil {
@@ -79,18 +90,6 @@ func (binary Binary) ELFBuildID(buildDir string) (string, error) {
 			// fall through.
 			return "", err
 		}
-	}
-
-	// If no elf_build_id is present, then it might be that the binary is a
-	// prebuilt, as the former is a detail of the build. In this case, the
-	// path to the debug binary should be in ".build-id" format, from which one
-	// can easily derive the associated build ID. This format is
-	// `.../<first two characters of buildID>/<remaining characters>.debug`.
-	tokens := strings.Split(binary.Debug, string(os.PathSeparator))
-	l := len(tokens)
-	if l >= 3 && tokens[l-3] == ".build-id" {
-		// First two characters + the rest.
-		return tokens[l-2] + trimExt(filepath.Base(tokens[l-1])), nil
 	}
 
 	return "", ErrBuildIDNotFound

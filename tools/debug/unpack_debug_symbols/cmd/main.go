@@ -238,10 +238,12 @@ func unpack(ctx context.Context, br *runner.BatchRunner) ([]binaryRef, error) {
 		hdr, err := tr.Next()
 		if err == io.EOF {
 			break
-		}
-		if err != nil {
+		} else if err != nil {
 			return nil, fmt.Errorf("while reading %s: %v", debugArchive, err)
+		} else if hdr.Typeflag == tar.TypeDir {
+			continue
 		}
+
 		matches := buildIDFileRE.FindStringSubmatch(hdr.Name)
 		if matches == nil {
 			logger.Warningf(ctx, "%s in %s was not a debug binary", hdr.Name, debugArchive)
@@ -292,7 +294,9 @@ func writeManifest(bfrs []binaryRef) error {
 		return fmt.Errorf("while writing json to %s: %v", outputManifest, err)
 	}
 	defer file.Close()
-	if err = json.NewEncoder(file).Encode(out); err != nil {
+	enc := json.NewEncoder(file)
+	enc.SetIndent("", "  ")
+	if err = enc.Encode(out); err != nil {
 		return fmt.Errorf("while writing json to %s: %v", outputManifest, err)
 	}
 	return nil
