@@ -48,6 +48,9 @@ test("usb-request-cpp-test") {
     "//zircon/system/banjo/ddk.protocol.usb",
     "//zircon/system/banjo/ddk.protocol.usb.request",
   ]
+
+  # TODO(47449): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 test("usb-wrapper-test") {
