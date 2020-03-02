@@ -312,13 +312,13 @@ zx_status_t WipeBlockPartition(const fbl::unique_fd& devfs_root, const uint8_t* 
 }
 
 zx_status_t IsBoard(const fbl::unique_fd& devfs_root, fbl::StringPiece board_name) {
-  fdio_cpp::UnownedFdioCaller caller(devfs_root.get());
   zx::channel local, remote;
   zx_status_t status = zx::channel::create(0, &local, &remote);
   if (status != ZX_OK) {
     return status;
   }
 
+  fdio_cpp::UnownedFdioCaller caller(devfs_root.get());
   status = fdio_service_connect_at(caller.borrow_channel(), "sys/platform", remote.release());
   if (status != ZX_OK) {
     return status;
@@ -329,8 +329,32 @@ zx_status_t IsBoard(const fbl::unique_fd& devfs_root, fbl::StringPiece board_nam
   if (status != ZX_OK) {
     return status;
   }
-  if (result->name.size() == board_name.size() &&
-      strncmp(result->name.data(), board_name.data(), result->name.size()) == 0) {
+  if (strncmp(result->name.data(), board_name.data(), result->name.size()) == 0) {
+    return ZX_OK;
+  }
+
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t IsBootloader(const fbl::unique_fd& devfs_root, fbl::StringPiece vendor) {
+  zx::channel local, remote;
+  zx_status_t status = zx::channel::create(0, &local, &remote);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  fdio_cpp::UnownedFdioCaller caller(devfs_root.get());
+  status = fdio_service_connect_at(caller.borrow_channel(), "sys/platform", remote.release());
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  auto result = ::llcpp::fuchsia::sysinfo::SysInfo::Call::GetBootloaderVendor(zx::unowned(local));
+  status = result.ok() ? result->status : result.status();
+  if (status != ZX_OK) {
+    return status;
+  }
+  if (strncmp(result->vendor.data(), vendor.data(), result->vendor.size()) == 0) {
     return ZX_OK;
   }
 
@@ -884,10 +908,6 @@ zx_status_t EfiDevicePartitioner::Initialize(fbl::unique_fd devfs_root, Arch arc
   if (status != ZX_OK) {
     return status;
   }
-  if (is_cros(gpt->GetGpt())) {
-    ERROR("Use CrOS Device Partitioner.");
-    return ZX_ERR_WRONG_TYPE;
-  }
 
   LOG("Successfully initialized EFI Device Partitioner\n");
   *partitioner = WrapUnique(new EfiDevicePartitioner(std::move(gpt)));
@@ -1034,18 +1054,19 @@ zx_status_t CrosDevicePartitioner::Initialize(fbl::unique_fd devfs_root, Arch ar
     return ZX_ERR_NOT_FOUND;
   }
 
+  zx_status_t status = IsBootloader(devfs_root, "coreboot");
+  if (status != ZX_OK) {
+    return status;
+  }
+
   std::unique_ptr<GptDevicePartitioner> gpt_partitioner;
-  zx_status_t status = GptDevicePartitioner::InitializeGpt(
-      std::move(devfs_root), std::move(block_device), &gpt_partitioner);
+  status = GptDevicePartitioner::InitializeGpt(std::move(devfs_root), std::move(block_device),
+                                               &gpt_partitioner);
   if (status != ZX_OK) {
     return status;
   }
 
   GptDevice* gpt = gpt_partitioner->GetGpt();
-  if (!is_cros(gpt)) {
-    return ZX_ERR_WRONG_TYPE;
-  }
-
   block::BlockInfo info;
   gpt_partitioner->GetBlockInfo(&info);
 
@@ -1352,12 +1373,13 @@ zx_status_t FixedDevicePartitioner::WipePartitionTables() const { return ZX_ERR_
 zx_status_t SherlockPartitioner::Initialize(fbl::unique_fd devfs_root,
                                             std::optional<fbl::unique_fd> block_device,
                                             std::unique_ptr<DevicePartitioner>* partitioner) {
-  if (IsBoard(devfs_root, "sherlock") != ZX_OK) {
-    return ZX_ERR_NOT_SUPPORTED;
+  zx_status_t status = IsBoard(devfs_root, "sherlock");
+  if (status != ZX_OK) {
+    return status;
   }
 
   std::unique_ptr<GptDevicePartitioner> gpt;
-  zx_status_t status =
+  status =
       GptDevicePartitioner::InitializeGpt(std::move(devfs_root), std::move(block_device), &gpt);
   if (status != ZX_OK) {
     return status;
@@ -1673,8 +1695,9 @@ zx_status_t SkipBlockDevicePartitioner::WipeFvm() const {
 
 zx_status_t AstroPartitioner::Initialize(fbl::unique_fd devfs_root,
                                          std::unique_ptr<DevicePartitioner>* partitioner) {
-  if (IsBoard(devfs_root, "astro") != ZX_OK) {
-    return ZX_ERR_NOT_SUPPORTED;
+  zx_status_t status = IsBoard(devfs_root, "astro");
+  if (status != ZX_OK) {
+    return status;
   }
   LOG("Successfully initialized AstroPartitioner Device Partitioner\n");
   std::unique_ptr<SkipBlockDevicePartitioner> skip_block(
@@ -1768,8 +1791,9 @@ zx_status_t AstroPartitioner::WipePartitionTables() const { return ZX_ERR_NOT_SU
 
 zx_status_t As370Partitioner::Initialize(fbl::unique_fd devfs_root,
                                          std::unique_ptr<DevicePartitioner>* partitioner) {
-  if (IsBoard(devfs_root, "visalia") != ZX_OK) {
-    return ZX_ERR_NOT_SUPPORTED;
+  zx_status_t status = IsBoard(devfs_root, "visalia");
+  if (status != ZX_OK) {
+    return status;
   }
   LOG("Successfully initialized As370Partitioner Device Partitioner\n");
 

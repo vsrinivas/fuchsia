@@ -2,13 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <memory>
-
 #include <assert.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <threads.h>
+#include <unistd.h>
+#include <zircon/assert.h>
+#include <zircon/process.h>
+#include <zircon/syscalls.h>
+
+#include <memory>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
@@ -19,12 +22,8 @@
 #include <ddk/platform-defs.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/platform/bus.h>
-
 #include <fbl/array.h>
 #include <fbl/vector.h>
-#include <zircon/process.h>
-#include <zircon/syscalls.h>
-#include <zircon/assert.h>
 
 namespace board_test {
 
@@ -126,6 +125,15 @@ zx_status_t TestBoard::FetchAndDeserialize() {
     device.metadata_list = &devices_metadata_[devices_metadata_.size() - 1];
 
     devices_.push_back(device);
+  }
+
+  // Inform the platform bus of our bootloader info.
+  // This is set to "coreboot" specifically for CrosDevicePartitionerTests.
+  pbus_bootloader_info_t bootloader_info{.vendor = "coreboot"};
+  status = pbus_.SetBootloaderInfo(&bootloader_info);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "SetBootloaderInfo failed: %d\n", status);
+    return status;
   }
 
   return ZX_OK;

@@ -41,8 +41,6 @@ using driver_integration_test::IsolatedDevmgr;
 constexpr uint8_t kBootloaderType[GPT_GUID_LEN] = GUID_BOOTLOADER_VALUE;
 constexpr uint8_t kEfiType[GPT_GUID_LEN] = GUID_EFI_VALUE;
 constexpr uint8_t kCrosKernelType[GPT_GUID_LEN] = GUID_CROS_KERNEL_VALUE;
-constexpr uint8_t kCrosRootType[GPT_GUID_LEN] = GUID_CROS_ROOT_VALUE;
-constexpr uint8_t kCrosStateType[GPT_GUID_LEN] = GUID_CROS_STATE_VALUE;
 constexpr uint8_t kZirconAType[GPT_GUID_LEN] = GUID_ZIRCON_A_VALUE;
 constexpr uint8_t kZirconBType[GPT_GUID_LEN] = GUID_ZIRCON_B_VALUE;
 constexpr uint8_t kZirconRType[GPT_GUID_LEN] = GUID_ZIRCON_R_VALUE;
@@ -503,17 +501,12 @@ TEST_F(CrosDevicePartitionerTests, DISABLED_InitPartitionTables) {
   ASSERT_OK(gpt->Sync());
 
   // Write initial partitions to disk.
-  const std::array<PartitionDescription, 10> partitions_at_start{
-      PartitionDescription{"KERN-A", kCrosKernelType, 0x22, 0x1},
-      PartitionDescription{"KERN-B", kCrosKernelType, 0x23, 0x1},
-      PartitionDescription{"ROOT-A", kCrosRootType, 0x24, 0x1},
-      PartitionDescription{"ROOT-B", kCrosRootType, 0x25, 0x1},
-      PartitionDescription{"STATE", kCrosStateType, 0x26, 0x1},
-      PartitionDescription{"SYSCFG", kSysConfigType, 0x27, 0x800},
-      PartitionDescription{"ZIRCON-A", kCrosKernelType, 0x827, 0x20000},
-      PartitionDescription{"ZIRCON-B", kCrosKernelType, 0x20827, 0x20000},
-      PartitionDescription{"ZIRCON-R", kCrosKernelType, 0x40827, 0x20000},
-      PartitionDescription{"fvm", kFvmType, 0x60827, 0x1000000},
+  const std::array<PartitionDescription, 5> partitions_at_start{
+      PartitionDescription{"SYSCFG", kSysConfigType, 0x22, 0x800},
+      PartitionDescription{"ZIRCON-A", kCrosKernelType, 0x822, 0x20000},
+      PartitionDescription{"ZIRCON-B", kCrosKernelType, 0x20822, 0x20000},
+      PartitionDescription{"ZIRCON-R", kCrosKernelType, 0x40822, 0x20000},
+      PartitionDescription{"fvm", kFvmType, 0x60822, 0x1000000},
   };
   for (auto& part : partitions_at_start) {
     ASSERT_OK(gpt->AddPartition(part.name, part.type, GetRandomGuid(), part.start, part.length, 0),
@@ -531,10 +524,10 @@ TEST_F(CrosDevicePartitionerTests, DISABLED_InitPartitionTables) {
   // Ensure the final partition layout looks like we expect it to.
   ASSERT_OK(gpt::GptDevice::Create(gpt_dev->fd(), kBlockSize, kBlockCount, &gpt));
   const std::array<PartitionDescription, 4> partitions_at_end{
-      PartitionDescription{GUID_ZIRCON_A_NAME, kCrosKernelType, 0x827, 0x20000},
-      PartitionDescription{GUID_ZIRCON_B_NAME, kCrosKernelType, 0x20827, 0x20000},
-      PartitionDescription{GUID_ZIRCON_R_NAME, kCrosKernelType, 0x40827, 0x20000},
-      PartitionDescription{GUID_FVM_NAME, kFvmType, 0x60827, 0x2000000},
+      PartitionDescription{GUID_ZIRCON_A_NAME, kCrosKernelType, 0x822, 0x20000},
+      PartitionDescription{GUID_ZIRCON_B_NAME, kCrosKernelType, 0x20822, 0x20000},
+      PartitionDescription{GUID_ZIRCON_R_NAME, kCrosKernelType, 0x40822, 0x20000},
+      PartitionDescription{GUID_FVM_NAME, kFvmType, 0x60822, 0x2000000},
   };
   for (auto& part : partitions_at_end) {
     bool found = false;

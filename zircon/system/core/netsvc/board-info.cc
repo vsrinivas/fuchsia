@@ -9,8 +9,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <chromeos-disk-setup/chromeos-disk-setup.h>
-
 #include "lib/fidl/cpp/message_part.h"
 #include "lib/fidl/llcpp/traits.h"
 #include "zircon/types.h"
@@ -25,6 +23,7 @@
 #include <lib/zx/resource.h>
 #include <lib/zx/vmo.h>
 #include <zircon/boot/netboot.h>
+#include <zircon/device/block.h>
 #include <zircon/status.h>
 
 #include <algorithm>
@@ -101,32 +100,13 @@ fbl::unique_fd FindGpt() {
   return fbl::unique_fd();
 }  // namespace
 
-static bool IsChromebook() {
-  fbl::unique_fd gpt_fd(FindGpt());
-  if (!gpt_fd) {
-    return false;
-  }
-  fdio_cpp::UnownedFdioCaller caller(gpt_fd.get());
-  auto result = ::llcpp::fuchsia::hardware::block::Block::Call::GetInfo(caller.channel());
-  if (!result.ok()) {
-    fprintf(stderr, "netsvc: Could not acquire GPT block info: %s\n",
-            zx_status_get_string(result.status()));
-    return false;
-  }
-  const auto& response = result.value();
-  if (response.status != ZX_OK) {
-    fprintf(stderr, "netsvc: Could not acquire GPT block info: %s\n",
-            zx_status_get_string(response.status));
-    return false;
-  }
-  std::unique_ptr<gpt::GptDevice> gpt;
-  zx_status_t status = gpt::GptDevice::Create(gpt_fd.get(), response.info->block_size,
-                                              response.info->block_count, &gpt);
+static bool IsChromebook(const zx::channel& sysinfo) {
+  auto result = ::llcpp::fuchsia::sysinfo::SysInfo::Call::GetBootloaderVendor(zx::unowned(sysinfo));
+  zx_status_t status = result.ok() ? result->status : result.status();
   if (status != ZX_OK) {
-    fprintf(stderr, "netsvc: Failed to get GPT info: %s\n", zx_status_get_string(status));
-    return false;
+    return status;
   }
-  return is_cros(gpt.get());
+  return strncmp(result->vendor.data(), "coreboot", result->vendor.size()) == 0;
 }
 
 zx_status_t GetBoardName(const zx::channel& sysinfo, char* real_board_name) {
@@ -148,7 +128,7 @@ zx_status_t GetBoardName(const zx::channel& sysinfo, char* real_board_name) {
   // Special case x64. All x64 boards should get one of "chromebook-x64" or "x64" instead of the
   // more specific name from the BIOS (e.g. "NUC7i5DNHE".)
 #if __x86_64__
-  if (IsChromebook()) {
+  if (IsChromebook(sysinfo)) {
     strcpy(real_board_name, "chromebook-x64");
   } else {
     strcpy(real_board_name, "x64");
