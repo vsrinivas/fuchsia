@@ -18,6 +18,7 @@ import (
 
 	"go.fuchsia.dev/fuchsia/tools/botanist/lib"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
+	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/retry"
 	"go.fuchsia.dev/fuchsia/tools/lib/tarutil"
 	"go.fuchsia.dev/fuchsia/tools/net/tftp"
@@ -60,6 +61,17 @@ func PollForSummary(ctx context.Context, t tftp.Client, summaryFilename, testRes
 		defer tw.Close()
 
 		if err = tarutil.TarBytes(tw, buffer.Bytes(), summaryFilename); err != nil {
+			return err
+		}
+	}
+	if outputDir != "" {
+		outputFilename := filepath.Join(outputDir, summaryFilename)
+		outFile, err := osmisc.CreateFile(outputFilename)
+		if err != nil {
+			return fmt.Errorf("failed to create file %s: %v", outputFilename, err)
+		}
+		defer outFile.Close()
+		if _, err := io.Copy(outFile, &buffer); err != nil {
 			return err
 		}
 	}

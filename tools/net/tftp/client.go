@@ -17,7 +17,6 @@ import (
 
 // Client is used to Read or Write files to/from a TFTP remote.
 type Client interface {
-	newTransfer(opCode uint8, filename string) *transfer
 	Read(ctx context.Context, filename string) (*bytes.Reader, error)
 	Write(ctx context.Context, filename string, reader io.ReaderAt, size int64) error
 	RemoteAddr() *net.UDPAddr
