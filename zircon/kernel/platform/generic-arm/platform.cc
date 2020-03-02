@@ -36,6 +36,7 @@
 #include <fbl/ref_ptr.h>
 #include <kernel/dpc.h>
 #include <kernel/spinlock.h>
+#include <ktl/atomic.h>
 #include <lk/init.h>
 #include <object/resource_dispatcher.h>
 #include <platform/crashlog.h>
@@ -82,14 +83,12 @@ static pmm_arena_info_t mem_arena = {
 static uint8_t mexec_zbi[4096];
 static size_t mexec_zbi_length = 0;
 
-static volatile int panic_started;
-
 static constexpr bool kProcessZbiEarly = true;
 
 static void halt_other_cpus(void) {
-  static volatile int halted = 0;
+  static ktl::atomic<int> halted;
 
-  if (atomic_swap(&halted, 1) == 0) {
+  if (halted.exchange(1) == 0) {
     // stop the other cpus
     printf("stopping other cpus\n");
     arch_mp_send_ipi(MP_IPI_TARGET_ALL_BUT_LOCAL, 0, MP_IPI_HALT);
@@ -118,11 +117,13 @@ static uint64_t ToMpid(const zbi_topology_processor_t& processor) {
 }
 
 void platform_panic_start(void) {
+  static ktl::atomic<int> panic_started;
+
   arch_disable_ints();
 
   halt_other_cpus();
 
-  if (atomic_swap(&panic_started, 1) == 0) {
+  if (panic_started.exchange(1) == 0) {
     dlog_bluescreen_init();
   }
 }
