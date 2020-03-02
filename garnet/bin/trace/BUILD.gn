@@ -10,6 +10,9 @@ executable("bin") {
   sources = [ "main.cc" ]
 
   deps = [ ":trace_app" ]
+
+  # TODO(46850): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 source_set("trace_app") {
