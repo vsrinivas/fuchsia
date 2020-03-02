@@ -40,8 +40,8 @@ class Ge2dNode : public ProcessNode {
            fuchsia::camera2::CameraStreamType current_stream_type,
            const std::vector<fuchsia::camera2::CameraStreamType>& supported_streams,
            fuchsia::camera2::FrameRate frame_rate, const resize_info_t& info, Ge2DConfig task_type)
-      : ProcessNode(NodeType::kGe2d, parent_node, std::move(output_image_formats),
-                    std::move(output_buffer_collection), current_stream_type,
+      : ProcessNode(NodeType::kGe2d, parent_node, current_stream_type,
+                    std::move(output_image_formats), std::move(output_buffer_collection),
                     std::move(supported_streams), dispatcher, frame_rate),
         ge2d_(ge2d),
         task_type_(task_type),

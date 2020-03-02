@@ -219,6 +219,19 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     return ZX_OK;
   }
 
+  std::vector<fuchsia::sysmem::ImageFormat_2> GetOutputFormats(
+      const fuchsia::camera2::StreamPtr& stream) {
+    bool callback_called = false;
+    std::vector<fuchsia::sysmem::ImageFormat_2> output_formats;
+    stream->GetImageFormats([&](std::vector<fuchsia::sysmem::ImageFormat_2> formats) {
+      callback_called = true;
+      output_formats = formats;
+    });
+    RunLoopUntilIdle();
+    EXPECT_TRUE(callback_called);
+    return output_formats;
+  }
+
   void TestConfigureDebugConfig() {
     fuchsia::camera2::StreamPtr stream;
     auto stream_type = kStreamTypeFR;
@@ -234,6 +247,9 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     EXPECT_TRUE(HasAllStreams(output_node->configured_streams(), {stream_type}));
     EXPECT_TRUE(HasAllStreams(output_node->supported_streams(), {stream_type}));
     EXPECT_NE(nullptr, output_node->client_stream());
+
+    auto output_formats = GetOutputFormats(stream);
+    EXPECT_EQ(output_formats.size(), 1u);
   }
 
   void TestConfigureMonitorConfigStreamFR() {
@@ -257,6 +273,9 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
 
     // Check if client_stream is valid.
     EXPECT_NE(nullptr, output_node->client_stream());
+
+    auto output_formats = GetOutputFormats(stream);
+    EXPECT_EQ(output_formats.size(), 1u);
   }
 
   void TestConfigureMonitorConfigStreamDS() {
@@ -285,6 +304,9 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
 
     // Check if client_stream is valid.
     EXPECT_NE(nullptr, output_node->client_stream());
+
+    auto output_formats = GetOutputFormats(stream);
+    EXPECT_EQ(output_formats.size(), 1u);
   }
 
   void TestMonitorMultiStreamFR() {
@@ -337,6 +359,12 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     EXPECT_FALSE(fr_ml_output_node->enabled());
     EXPECT_FALSE(gdc_node->enabled());
     EXPECT_FALSE(ds_ml_output_node->enabled());
+
+    auto output_formats = GetOutputFormats(stream1);
+    EXPECT_EQ(output_formats.size(), 1u);
+
+    output_formats = GetOutputFormats(stream2);
+    EXPECT_EQ(output_formats.size(), 1u);
   }
 
   void TestMonitorMultiStreamFRBadOrder() {
@@ -394,6 +422,12 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     // Check if client_stream is valid.
     EXPECT_NE(nullptr, output_node->client_stream());
     EXPECT_NE(nullptr, output_node_video->client_stream());
+
+    auto output_formats = GetOutputFormats(stream);
+    EXPECT_EQ(output_formats.size(), 1u);
+
+    output_formats = GetOutputFormats(stream_video);
+    ASSERT_EQ(output_formats.size(), 3u);
   }
 
   void TestShutdownPathAfterStreamingOn() {

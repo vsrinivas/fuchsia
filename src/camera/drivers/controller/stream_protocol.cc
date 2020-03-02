@@ -97,9 +97,9 @@ void StreamImpl::SetImageFormat(uint32_t /*image_format_index*/,
   Shutdown(ZX_ERR_UNAVAILABLE);
 }
 
-void StreamImpl::GetImageFormats(GetImageFormatsCallback /*callback*/) {
-  FX_LOGST(ERROR, kTag) << __PRETTY_FUNCTION__ << " not implemented";
-  Shutdown(ZX_ERR_UNAVAILABLE);
+void StreamImpl::GetImageFormats(GetImageFormatsCallback callback) {
+  auto& available_image_formats = output_node_.output_image_formats();
+  callback({available_image_formats.begin(), available_image_formats.end()});
 }
 
 }  // namespace camera

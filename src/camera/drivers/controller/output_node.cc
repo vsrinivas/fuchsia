@@ -24,8 +24,11 @@ fit::result<OutputNode*, zx_status_t> OutputNode::CreateOutputNode(
     return fit::error(ZX_ERR_INVALID_ARGS);
   }
 
+  fuchsia::sysmem::BufferCollectionInfo_2 unused_buffer_collection;
+
   auto output_node = std::make_unique<camera::OutputNode>(
-      dispatcher, parent_node, info->stream_config->properties.stream_type(),
+      dispatcher, parent_node, internal_output_node.image_formats,
+      std::move(unused_buffer_collection), info->stream_config->properties.stream_type(),
       internal_output_node.supported_streams, internal_output_node.output_frame_rate);
   if (!output_node) {
     FX_LOGST(ERROR, kTag) << "Failed to create output ProcessNode";

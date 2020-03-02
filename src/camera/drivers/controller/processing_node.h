@@ -28,44 +28,10 @@ class StreamImpl;
 class ProcessNode {
  public:
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(ProcessNode);
-  ProcessNode(NodeType type,
-              const std::vector<fuchsia::sysmem::ImageFormat_2>& output_image_formats,
-              fuchsia::sysmem::BufferCollectionInfo_2 output_buffer_collection,
-              fuchsia::camera2::CameraStreamType current_stream_type,
-              const std::vector<fuchsia::camera2::CameraStreamType>& supported_streams,
-              async_dispatcher_t* dispatcher, fuchsia::camera2::FrameRate frame_rate)
-      : dispatcher_(dispatcher),
-        output_frame_rate_(frame_rate),
-        type_(type),
-        parent_node_(nullptr),
-        output_buffer_collection_(std::move(output_buffer_collection)),
-        output_image_formats_(output_image_formats),
-        enabled_(false),
-        supported_streams_(supported_streams),
-        in_use_buffer_count_(output_buffer_collection.buffer_count, 0) {
-    ZX_ASSERT(type == NodeType::kInputStream);
-    configured_streams_.push_back(current_stream_type);
-  }
-
   ProcessNode(NodeType type, ProcessNode* parent_node,
               fuchsia::camera2::CameraStreamType current_stream_type,
-              const std::vector<fuchsia::camera2::CameraStreamType>& supported_streams,
-              async_dispatcher_t* dispatcher, fuchsia::camera2::FrameRate frame_rate)
-      : dispatcher_(dispatcher),
-        output_frame_rate_(frame_rate),
-        type_(type),
-        parent_node_(parent_node),
-        enabled_(false),
-        supported_streams_(supported_streams) {
-    ZX_ASSERT(type == NodeType::kOutputStream);
-    ZX_ASSERT(parent_node_ != nullptr);
-    configured_streams_.push_back(current_stream_type);
-  }
-
-  ProcessNode(NodeType type, ProcessNode* parent_node,
               const std::vector<fuchsia::sysmem::ImageFormat_2>& output_image_formats,
               fuchsia::sysmem::BufferCollectionInfo_2 output_buffer_collection,
-              fuchsia::camera2::CameraStreamType current_stream_type,
               const std::vector<fuchsia::camera2::CameraStreamType>& supported_streams,
               async_dispatcher_t* dispatcher, fuchsia::camera2::FrameRate frame_rate)
       : dispatcher_(dispatcher),
@@ -77,7 +43,6 @@ class ProcessNode {
         enabled_(false),
         supported_streams_(supported_streams),
         in_use_buffer_count_(output_buffer_collection.buffer_count, 0) {
-    ZX_ASSERT(type == NodeType::kGdc || type == NodeType::kGe2d);
     configured_streams_.push_back(current_stream_type);
   }
 
