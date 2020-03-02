@@ -270,7 +270,7 @@ func resolvePackage(pkgURI string, resolver *pkg.PackageResolverInterface) (*fuc
 	return dirPxy, nil
 }
 
-func ValidateImgs(imgs []string, updatePkg *UpdatePackage) error {
+func ValidateUpdatePackage(updatePkg *UpdatePackage) error {
 	actual, err := updatePkg.ReadFile("board")
 	if err == nil {
 		expected, err := ioutil.ReadFile("/config/build-info/board")
@@ -284,6 +284,10 @@ func ValidateImgs(imgs []string, updatePkg *UpdatePackage) error {
 		return err
 	}
 
+	return nil
+}
+
+func ValidateImgs(imgs []string, updatePkg *UpdatePackage) error {
 	// Require a 'zbi' or 'zbi.signed' partition in the update package.
 	found := false
 	for _, img := range []string{"zbi", "zbi.signed"} {

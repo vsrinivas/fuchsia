@@ -24,6 +24,7 @@ use {
         collections::HashMap,
         convert::TryInto,
         fs::{create_dir, File},
+        io::Write,
         path::{Path, PathBuf},
         sync::Arc,
     },
@@ -118,6 +119,9 @@ impl TestEnvBuilder {
         let fake_path = test_dir.path().join("fake");
         create_dir(&fake_path).expect("create fake stimulus dir");
 
+        let config_path = test_dir.path().join("config");
+        create_dir(&config_path).expect("create config dir");
+
         TestEnv {
             env,
             resolver,
@@ -129,6 +133,7 @@ impl TestEnvBuilder {
             packages_path,
             blobfs_path,
             fake_path,
+            config_path,
         }
     }
 }
@@ -144,6 +149,7 @@ struct TestEnv {
     packages_path: PathBuf,
     blobfs_path: PathBuf,
     fake_path: PathBuf,
+    config_path: PathBuf,
 }
 
 impl TestEnv {
@@ -157,6 +163,17 @@ impl TestEnv {
 
     fn launcher(&self) -> &LauncherProxy {
         self.env.launcher()
+    }
+
+    /// Set the name of the board that system_updater is running on.
+    fn set_board_name(&self, board: impl AsRef<str>) {
+        // Create the /config/board-info directory.
+        let build_info_dir = self.config_path.join("build-info");
+        create_dir(&build_info_dir).expect("create build-info dir");
+
+        // Write the "board" file into the directory.
+        let mut file = File::create(build_info_dir.join("board")).expect("create board file");
+        file.write_all(board.as_ref().as_bytes()).expect("write board file");
     }
 
     fn register_package(&mut self, name: impl AsRef<str>, merkle: impl AsRef<str>) -> TestPackage {
@@ -196,6 +213,7 @@ impl TestEnv {
         let launcher = self.launcher();
         let blobfs_dir = File::open(&self.blobfs_path).expect("open blob dir");
         let fake_dir = File::open(&self.fake_path).expect("open fake stimulus dir");
+        let config_dir = File::open(&self.config_path).expect("open config dir");
 
         let system_updater = AppBuilder::new(
             "fuchsia-pkg://fuchsia.com/system-updater-integration-tests#meta/system_updater_isolated.cmx",
@@ -204,6 +222,8 @@ impl TestEnv {
         .expect("/blob to mount")
         .add_dir_to_namespace("/fake".to_string(), fake_dir)
         .expect("/fake to mount")
+        .add_dir_to_namespace("/config".to_string(), config_dir)
+        .expect("/config to mount")
         .args(args);
 
         let output = system_updater
@@ -983,6 +1003,79 @@ async fn test_requires_zbi() {
     assert!(result.is_err(), "system_updater succeeded when it should fail");
 
     assert_eq!(*env.space_service.called.lock(), 1);
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_validate_board() {
+    let mut env = TestEnv::new();
+
+    env.set_board_name("x64");
+
+    env.register_package("update", "upd4t3")
+        .add_file(
+            "packages",
+            "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
+        )
+        .add_file("board", "x64")
+        .add_file("zbi", "fake zbi")
+        .add_file("bootloader", "new bootloader");
+
+    env.run_system_updater(SystemUpdaterArgs {
+        initiator: "manual",
+        target: "m3rk13",
+        update: None,
+        reboot: None,
+    })
+    .await
+    .expect("success");
+
+    assert_eq!(*env.resolver.resolved_urls.lock(), vec![
+        "fuchsia-pkg://fuchsia.com/update",
+        "fuchsia-pkg://fuchsia.com/system_image/0?hash=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296",
+    ]);
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_invalid_board() {
+    let mut env = TestEnv::new();
+
+    env.set_board_name("x64");
+
+    env.register_package("update", "upd4t3")
+        .add_file(
+            "packages",
+            "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
+        )
+        .add_file("board", "arm")
+        .add_file("zbi", "fake zbi")
+        .add_file("bootloader", "new bootloader");
+
+    let result = env
+        .run_system_updater(SystemUpdaterArgs {
+            initiator: "manual",
+            target: "m3rk13",
+            update: None,
+            reboot: None,
+        })
+        .await;
+    assert!(result.is_err(), "system_updater succeeded when it should fail");
+
+    // Expect to have failed prior to downloading images.
+    assert_eq!(*env.resolver.resolved_urls.lock(), vec!["fuchsia-pkg://fuchsia.com/update"]);
+
+    let loggers = env.logger_factory.loggers.lock().clone();
+    assert_eq!(loggers.len(), 1);
+    let logger = loggers.into_iter().next().unwrap();
+    assert_eq!(
+        OtaMetrics::from_events(logger.cobalt_events.lock().clone()),
+        OtaMetrics {
+            initiator: metrics::OtaResultAttemptsMetricDimensionInitiator::UserInitiatedCheck
+                as u32,
+            phase: 0u32,
+            status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Error as u32,
+            target: "m3rk13".into(),
+        }
+    );
 }
 
 #[fasync::run_singlethreaded(test)]

@@ -127,6 +127,10 @@ func run(ctx *context.Context) (err error) {
 		return fmt.Errorf("could not parse requirements: %s", err)
 	}
 
+	if err := ValidateUpdatePackage(updatePkg); err != nil {
+		return fmt.Errorf("failed to validate update package: %s", err)
+	}
+
 	phase = metrics.PhasePackageDownload
 	if err := FetchPackages(pkgs, resolver); err != nil {
 		return fmt.Errorf("failed getting packages: %s", err)
