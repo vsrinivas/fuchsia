@@ -72,6 +72,9 @@ test("fvm") {
     "//zircon/system/fidl/fuchsia-io:c",
     "//zircon/system/ulib/fvm-devices",
   ]
+
+  # TODO(47415): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 test("fvm-integration") {
