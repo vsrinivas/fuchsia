@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/group_key_store_unittests"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-persistent-storage"
+        ]
+    }
+}
