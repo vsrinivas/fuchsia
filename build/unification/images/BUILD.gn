@@ -118,7 +118,6 @@ aggregate_manifest("legacy-image") {
     ":driver.component.proxy",
 #------------------
 #------------------
-    ":driver.e1000",
 #------------------
   ]
 
@@ -1434,7 +1433,7 @@ aggregate_manifest("migrated-image") {
     "//src/devices/usb/drivers/dwc3:dwc3-manifest",
     "//src/connectivity/ethernet/drivers/dwmac:dwmac-manifest",
 #------------------
-    #":driver.e1000",
+    "//zircon/third_party/dev/ethernet/e1000:e1000-manifest",
 #------------------
     "//src/connectivity/ethernet/drivers/ethernet:ethernet-manifest",
     "//src/connectivity/ethernet/drivers/ethertap:ethertap-manifest",
