@@ -29,14 +29,14 @@ zx_library("ftl-mtd") {
 
   public_deps = [
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/ftl",
+    "//zircon/system/ulib/ftl",
   ]
 
   deps = [
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/ftl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/mtd",
+    "//zircon/system/ulib/ftl",
     "//zircon/system/ulib/fvm-host",
   ]
 }

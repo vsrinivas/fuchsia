@@ -2,6 +2,46 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36548.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/zx_library.gni")
+
+config("header_config") {
+  include_dirs = [ "." ]
+}
+
+source_set("private_headers") {
+  visibility = [
+    ":*",
+    "test:*",
+  ]
+  sources = [
+    "ftl.h",
+    "ftl_private.h",
+    "ftln/ftlnp.h",
+    "inc/config.h",
+    "inc/kprivate/fsdriver.h",
+    "inc/kprivate/fsprivate.h",
+    "inc/kprivate/ndm.h",
+    "inc/posix.h",
+    "inc/sys.h",
+    "inc/targetos.h",
+    "ndm/ndmp.h",
+    "utils/bsp.h",
+    "utils/ftl_mc.h",
+    "utils/kernel.h",
+  ]
+  public_configs = [ ":header_config" ]
+}
+
 zx_library("ftl") {
   sdk = "source"
   sdk_headers = [
@@ -11,52 +51,35 @@ zx_library("ftl") {
   host = true
 
   sources = [
-    "ftl.h",
-    "ftl_private.h",
     "ftln/ftln_init.c",
     "ftln/ftln_intrnl.c",
     "ftln/ftln_rd.c",
     "ftln/ftln_util.c",
-    "ftln/ftlnp.h",
     "ftln/ndm-driver.cc",
     "ftln/volume.cc",
-    "inc/kprivate/fsdriver.h",
-    "inc/kprivate/fsprivate.h",
-    "inc/kprivate/ndm.h",
-    "inc/config.h",
-    "inc/posix.h",
-    "inc/sys.h",
-    "inc/targetos.h",
     "ndm/ndm_init.c",
     "ndm/ndm_intrnl.c",
     "ndm/ndm_vols.c",
-    "ndm/ndmp.h",
     "utils/aalloc.c",
-    "utils/bsp.h",
     "utils/crc32_tbl.c",
     "utils/fsmem.c",
     "utils/fsys.c",
     "utils/fsysinit.c",
     "utils/ftl_mc.c",
-    "utils/ftl_mc.h",
-    "utils/kernel.h",
     "utils/sys.c",
   ]
 
-  include_dirs = [ "." ]
-
   deps = [
-    "$zx/system/ulib/backtrace-request",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
+    ":private_headers",
+    "//zircon/public/lib/backtrace-request",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
   ]
 
   if (is_fuchsia) {
     sources += [ "utils/semaphore.cc" ]
-    deps += [ "$zx/system/ulib/zircon" ]
   } else {
     sources += [ "utils/semaphore_posix.cc" ]
-    deps += [ "$zx/system/ulib/zircon:headers" ]
   }
 
   defines = [ "NDM_DEBUG" ]

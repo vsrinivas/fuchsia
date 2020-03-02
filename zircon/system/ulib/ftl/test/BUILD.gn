@@ -41,11 +41,11 @@ test("ftl_test") {
     "ndm_test.cc",
   ]
   deps = [
-    "//zircon/public/lib/ftl",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/ftl",
+    "//zircon/system/ulib/ftl:private_headers",
   ]
   defines = [ "NDM_DEBUG" ]
-  include_dirs = [ ".." ]
 }
 
 migrated_manifest("ftl_test-manifest") {
