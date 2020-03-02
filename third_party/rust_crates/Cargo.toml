@@ -26,6 +26,7 @@ version = "0.1.0"
 [dependencies]
 # Keep this sorted alphabetically, please.
 anyhow = "1.0.25"
+arbitrary = { version = "0.4.0", features = ["derive"] }
 argh = "0.1"
 base64 = "0.9"
 bitfield = "0.13"

@@ -6,6 +6,11 @@
             "package_name": "anyhow"
         },
         {
+            "crate_name": "arbitrary",
+            "crate_type": "lib",
+            "package_name": "arbitrary"
+        },
+        {
             "crate_name": "argh",
             "crate_type": "lib",
             "package_name": "argh"
@@ -691,6 +696,11 @@
             "crate_name": "anyhow",
             "crate_type": "lib",
             "package_name": "anyhow"
+        },
+        {
+            "crate_name": "arbitrary",
+            "crate_type": "lib",
+            "package_name": "arbitrary"
         },
         {
             "crate_name": "argh",
