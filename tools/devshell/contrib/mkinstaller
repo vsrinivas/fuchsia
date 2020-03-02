@@ -1,0 +1,22 @@
+#!/bin/bash
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+#### CATEGORY=Software delivery
+### make a Fuchsia installer image
+
+## usage: fx mkinstaller [options] <usb device or filename>
+##  -f            force writing to a non-usb target.
+##  -c            create a new disk image. specifying -f will overwrite an existing image.
+##  -b            specify block size to use when reading/writing.
+
+# This script exists only to source the environment for mkinstaller.py, and then execute it.
+
+set -e
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
+fx-config-read
+
+PYTHONPATH="${PYTHONPATH}:${FUCHSIA_DIR}/scripts" python3 "${FUCHSIA_DIR}/scripts/mkinstaller/mkinstaller.py" $@
+exit $?
