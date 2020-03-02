@@ -55,7 +55,10 @@ test_package("vulkan-tests") {
     },
     {
       name = "vkreadback"
-      environments = magma_libvulkan_hardware_envs
+
+      # TODO(fxb/47373): Restore astro_env when fxb/44570 is fixed.
+      environments =
+          magma_libvulkan_hardware_envs + [ astro_env ] - [ astro_env ]
     },
     {
       name = "vkloop"
