@@ -41,12 +41,16 @@ test("runtests-utils") {
     ":test-data",
     ":test-scripts",
   ]
+
+  # TODO(47444): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 executable("publish-data-helper") {
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
+
   # TODO(44278): restore to true when properly convert to GN idioms.
   testonly = false
   visibility = [ ":*" ]
@@ -73,7 +77,11 @@ template("resource") {
   }
   source = rebase_path(source)
   group(target_name) {
-    forward_variables_from(invoker, ["deps", "testonly"])
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                           ])
     metadata = {
       migrated_manifest_lines = [ "${invoker.dest}=$source" ]
       migrated_manifest_barrier = []
@@ -115,8 +123,7 @@ template("runtests_test_script") {
     subdirectory = "${invoker.subdirectory}/"
   }
 
-  genfile =
-      "$target_out_dir/test/sys/runtests-utils-testdata/${subdirectory}${target_name}"
+  genfile = "$target_out_dir/test/sys/runtests-utils-testdata/${subdirectory}${target_name}"
   rebased_genfile = rebase_path(genfile)
 
   action("${target_name}.txt") {
