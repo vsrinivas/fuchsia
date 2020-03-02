@@ -16,6 +16,10 @@ use std::io::{Read, Seek, SeekFrom};
 ///
 /// This facade does not hold onto a Traceutil proxy as the server may be
 /// long-running while individual tests set up and tear down Traceutil.
+///
+/// WARNING: Use of this facade is discouraged as its functionality is only to download traces that
+/// were collected through other means (such as running the trace binary over ssh). Instead, see
+/// TracingFacade, which allows for control of the tracing system as well.
 #[derive(Debug)]
 pub struct TraceutilFacade {}
 

@@ -32,6 +32,7 @@
             "fuchsia.setui.SetUiService",
             "fuchsia.sys.Launcher",
             "fuchsia.sysmem.Allocator",
+            "fuchsia.tracing.controller.Controller",
             "fuchsia.tracing.provider.Registry",
             "fuchsia.ui.policy.Presenter",
             "fuchsia.ui.scenic.Scenic",

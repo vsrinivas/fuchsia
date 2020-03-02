@@ -70,6 +70,9 @@ use crate::test::facade::TestFacade;
 // Traceutil related includes
 use crate::traceutil::facade::TraceutilFacade;
 
+// Tracing related includes
+use crate::tracing::facade::TracingFacade;
+
 // Update related includes
 use crate::update::facade::UpdateFacade;
 
@@ -124,6 +127,7 @@ impl Sl4f {
                 "setui_facade" => SetUiFacade::new()?,
                 "test_facade" => TestFacade::new(),
                 "traceutil_facade" => TraceutilFacade::new(),
+                "tracing_facade" => TracingFacade::new(),
                 "update_facade" => UpdateFacade::new(),
                 "webdriver_facade" => WebdriverFacade::new(),
                 "wlan" => WlanFacade::new()?,

@@ -17,6 +17,8 @@ import (
 	"github.com/golang/glog"
 )
 
+// This list should be kept in sync with DEFAULT_CATEGORIES in
+// //garnet/bin/sl4f/src/tracing/facade.rs
 const defaultCategories = "app,audio,benchmark,gfx,input,kernel:meta,kernel:sched,ledger,magma,modular,motown,view,flutter,dart,dart:compiler,dart:dart,dart:debugger,dart:embedder,dart:gc,dart:isolate,dart:profiler,dart:vm"
 
 type captureTraceConfig struct {

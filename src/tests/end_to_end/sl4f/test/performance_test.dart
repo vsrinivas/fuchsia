@@ -24,9 +24,11 @@ void main() {
     dump = sl4f.Dump(dumpDir.path);
 
     performance = sl4f.Performance(sl4fDriver, dump);
+    await performance.terminateExistingTraceSession();
   });
 
   tearDown(() async {
+    await performance.terminateExistingTraceSession();
     dumpDir.deleteSync(recursive: true);
 
     await sl4fDriver.stopServer();
@@ -99,6 +101,23 @@ void main() {
           unorderedMatches([
             matches(RegExp(r'-test-binary-trace-trace.fxt$')),
             matches(RegExp(r'-test-binary-trace-trace.json$')),
+          ]));
+    });
+  }, timeout: Timeout(_timeout));
+
+  group(sl4f.Sl4f, () {
+    test('trace via facade', () async {
+      final traceSession = await performance.initializeTracing();
+      await traceSession.start();
+      await Future.delayed(Duration(seconds: 2));
+      await traceSession.stop();
+      final traceFile = await traceSession.terminateAndDownload('test-trace');
+
+      expect(traceFile.path, matches(RegExp(r'-test-trace-trace.fxt$')));
+      expect(
+          dumpDir.listSync().map((f) => f.path.split('/').last),
+          unorderedMatches([
+            matches(RegExp(r'-test-trace-trace.fxt$')),
           ]));
     });
   }, timeout: Timeout(_timeout));

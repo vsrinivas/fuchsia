@@ -65,6 +65,27 @@ class Performance {
     _sl4f.close();
   }
 
+  Future<TraceSession> initializeTracing(
+      {List<String> categories, int bufferSize}) async {
+    _log.info('Performance: Initializing trace session');
+    final params = {};
+    if (categories != null) {
+      params['categories'] = categories;
+    }
+    if (bufferSize != null) {
+      params['buffer_size'] = bufferSize;
+    }
+    await _sl4f.request('tracing_facade.Initialize', params);
+    return TraceSession(_sl4f, _dump);
+  }
+
+  /// Terminate any existing trace session without collecting trace data.
+  Future<void> terminateExistingTraceSession() async {
+    _log.info('Performance: Terminating any existing trace session');
+    await _sl4f
+        .request('tracing_facade.Terminate', {'results_destination': 'Ignore'});
+  }
+
   /// Starts tracing for the given [duration].
   ///
   /// If [binary] is true, then the trace will be captured in Fuchsia Trace
@@ -386,5 +407,47 @@ class Performance {
     }
     _log.info('Conversion to catapult results format completed.');
     return Future.value(File(outputFileName));
+  }
+}
+
+class TraceSession {
+  final Sl4f _sl4f;
+  final Dump _dump;
+  bool _closed;
+
+  TraceSession(this._sl4f, this._dump) : _closed = false;
+
+  /// Start tracing.
+  Future<void> start() async {
+    if (_closed) {
+      throw StateError('Cannot start: Session already terminated');
+    }
+    _log.info('Tracing: starting trace');
+    await _sl4f.request('tracing_facade.Start');
+  }
+
+  /// Stop tracing.
+  Future<void> stop() async {
+    if (_closed) {
+      throw StateError('Cannot stop: Session already terminated');
+    }
+    _log.info('Tracing: stopping trace');
+    await _sl4f.request('tracing_facade.Stop');
+  }
+
+  /// Terminate the trace session and download the trace data, returning a
+  /// [File] object with the Fuchsia trace format data.
+  ///
+  /// After a call to [terminateAndDownload], further calls on the
+  /// [TraceSession] object will throw a [StateError].
+  Future<File> terminateAndDownload(String traceName) async {
+    if (_closed) {
+      throw StateError('Cannot terminate: Session already terminated');
+    }
+    _log.info('Tracing: terminating trace');
+    final response = await _sl4f.request('tracing_facade.Terminate');
+    _closed = true;
+    final traceData = base64.decode(response['data']);
+    return _dump.writeAsBytes('$traceName-trace', 'fxt', traceData);
   }
 }

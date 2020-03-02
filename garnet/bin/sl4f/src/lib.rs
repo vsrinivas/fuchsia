@@ -24,6 +24,7 @@ pub mod server;
 pub mod setui;
 pub mod test;
 pub mod traceutil;
+pub mod tracing;
 pub mod update;
 pub mod webdriver;
 pub mod wlan;
