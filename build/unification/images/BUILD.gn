@@ -2816,7 +2816,6 @@ aggregate_manifest("migrated-aux") {
     "//zircon/system/ulib/bitmap/test:bitmap-manifest",
     "//zircon/system/utest/blobfs-bench:blobfs-bench-manifest",
     "//src/devices/block/drivers/core:core-unittest-manifest",
-    "//src/ui/input/drivers/bma253:bma253-test-manifest",
 #------------------
     "//zircon/system/ulib/bootfs/test:bootfs-test-manifest",
 #------------------
@@ -2843,7 +2842,6 @@ aggregate_manifest("migrated-aux") {
     #":test.sys.crashsvc-test",
 #------------------
     "//zircon/system/utest/ctor:ctor-manifest",
-    "//src/ui/input/drivers/cypress:cypress-touch-test-manifest",
     "//src/devices/tests/ddk-fidl-test:ddk-fidl-test-manifest",
     "//src/devices/tests/ddk-lifecycle:ddk-lifecycle-manifest",
     "//src/devices/tests/ddk-power:ddk-power-manifest",
@@ -2946,7 +2944,6 @@ aggregate_manifest("migrated-aux") {
     "//src/graphics/display/drivers/goldfish-display:goldfish-unittests-manifest",
     "//src/devices/block/drivers/gpt:gpt-device-test-manifest",
     "//zircon/system/ulib/gpt/test:gpt-unit-manifest",
-    "//src/ui/input/drivers/goodix:gt92xx-test-manifest",
     "//zircon/system/utest/handle-alias:handle-alias-manifest",
 #------------------
     #":test.sys.hermetic-compute-module-test",
@@ -2954,13 +2951,10 @@ aggregate_manifest("migrated-aux") {
 #------------------
     #":test.sys.hermetic-decompressor-test",
 #------------------
-    "//src/ui/input/drivers/hid-buttons:hid-buttons-test-manifest",
     "//zircon/system/utest/hid:hid-manifest",
     "//zircon/system/ulib/hid-parser/test:hid-parser-manifest",
-    "//src/ui/input/drivers/hid:hid-test-manifest",
     "//src/graphics/display/drivers/hikey-display:hikey-display-test-manifest",
     "//zircon/system/utest/hypervisor:hypervisor-manifest",
-    "//src/ui/input/drivers/i2c-hid:i2c-hid-test-manifest",
     "//zircon/system/ulib/id_allocator/test:id_allocator-manifest",
     "//zircon/system/ulib/image-format/test:image-format-test-manifest",
     "//zircon/system/ulib/inspect/test:inspect-manifest",
@@ -3199,7 +3193,6 @@ aggregate_manifest("migrated-aux") {
     "//zircon/system/utest/vdso-variant:vdso-variant-helper-manifest",
     "//src/graphics/display/drivers/vim-display:vim-display-test-manifest",
 #------------------
-    "//src/ui/input/drivers/virtio:virtio-input-test-manifest",
     "//src/graphics/drivers/virtio:virtio-gpu-test-manifest",
     "//src/devices/block/drivers/virtio:virtio-block-test-manifest",
     "//src/devices/block/drivers/virtio:virtio-scsi-test-manifest",
@@ -3536,7 +3529,6 @@ aggregate_manifest("migrated-tests") {
     "//zircon/system/ulib/bitmap/test:bitmap-manifest",
     "//zircon/system/utest/blobfs-bench:blobfs-bench-manifest",
     "//src/devices/block/drivers/core:core-unittest-manifest",
-    "//src/ui/input/drivers/bma253:bma253-test-manifest",
 #------------------
     "//zircon/system/ulib/bootfs/test:bootfs-test-manifest",
 #------------------
@@ -3563,7 +3555,6 @@ aggregate_manifest("migrated-tests") {
     #":test.sys.crashsvc-test",
 #------------------
     "//zircon/system/utest/ctor:ctor-manifest",
-    "//src/ui/input/drivers/cypress:cypress-touch-test-manifest",
     "//src/devices/tests/ddk-fidl-test:ddk-fidl-test-manifest",
     "//src/devices/tests/ddk-lifecycle:ddk-lifecycle-manifest",
     "//src/devices/tests/ddk-power:ddk-power-manifest",
@@ -3666,7 +3657,6 @@ aggregate_manifest("migrated-tests") {
     "//src/graphics/display/drivers/goldfish-display:goldfish-unittests-manifest",
     "//src/devices/block/drivers/gpt:gpt-device-test-manifest",
     "//zircon/system/ulib/gpt/test:gpt-unit-manifest",
-    "//src/ui/input/drivers/goodix:gt92xx-test-manifest",
     "//zircon/system/utest/handle-alias:handle-alias-manifest",
 #------------------
     #":test.sys.hermetic-compute-module-test",
@@ -3674,13 +3664,10 @@ aggregate_manifest("migrated-tests") {
 #------------------
     #":test.sys.hermetic-decompressor-test",
 #------------------
-    "//src/ui/input/drivers/hid-buttons:hid-buttons-test-manifest",
     "//zircon/system/utest/hid:hid-manifest",
     "//zircon/system/ulib/hid-parser/test:hid-parser-manifest",
-    "//src/ui/input/drivers/hid:hid-test-manifest",
     "//src/graphics/display/drivers/hikey-display:hikey-display-test-manifest",
     "//zircon/system/utest/hypervisor:hypervisor-manifest",
-    "//src/ui/input/drivers/i2c-hid:i2c-hid-test-manifest",
     "//zircon/system/ulib/id_allocator/test:id_allocator-manifest",
     "//zircon/system/ulib/image-format/test:image-format-test-manifest",
     "//zircon/system/ulib/inspect/test:inspect-manifest",
@@ -3917,7 +3904,6 @@ aggregate_manifest("migrated-tests") {
     "//zircon/system/utest/vdso-variant:vdso-variant-manifest",
     "//src/graphics/display/drivers/vim-display:vim-display-test-manifest",
 #------------------
-    "//src/ui/input/drivers/virtio:virtio-input-test-manifest",
     "//src/graphics/drivers/virtio:virtio-gpu-test-manifest",
     "//src/devices/block/drivers/virtio:virtio-block-test-manifest",
     "//src/devices/block/drivers/virtio:virtio-scsi-test-manifest",

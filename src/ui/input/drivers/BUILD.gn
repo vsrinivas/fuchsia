@@ -26,7 +26,14 @@ group("tests") {
   testonly = true
 
   deps = [
+    "bma253:tests",
+    "cypress:tests",
+    "goodix:tests",
+    "hid:tests",
+    "hid-buttons:tests",
     "hid-input-report:hid-input-report-test",
+    "i2c-hid:tests",
     "input-report-inject/test",
+    "virtio:tests",
   ]
 }
