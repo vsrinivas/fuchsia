@@ -55,6 +55,9 @@ test("zxio") {
     "//zircon/system/fidl/fuchsia-io:llcpp",
     "//zircon/system/fidl/fuchsia-io2:llcpp",
   ]
+
+  # TODO(47450): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 migrated_manifest("zxio-manifest") {
