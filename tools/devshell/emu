@@ -24,6 +24,7 @@
 ##   -k <authorized_keys_file> SSH authorized keys file, otherwise defaults to //.ssh/authorized_keys
 ##   --audio run with audio hardware added to the virtual machine
 ##   --headless run in headless mode
+##   --host-gpu run with host GPU acceleration
 ##   --software-gpu run without host GPU acceleration
 ##   --debugger pause on launch and wait for a debugger process to attach before resuming
 
@@ -45,7 +46,7 @@ WINDOW_SIZE="1280x800"
 GRPC=
 RTCFPS="30"
 TURNCFG=""
-GPU="host"
+GPU="auto"
 VULKAN=1
 HTTP=0
 GRPCWEBPROXY_DIR=""
@@ -152,6 +153,9 @@ while [[ $# -ge 1 ]]; do
   --debugger)
     DEBUGGER=1
     ;;
+  --host-gpu)
+    GPU="host"
+    ;;
   --software-gpu)
     GPU="swiftshader_indirect"
     ;;
@@ -203,6 +207,14 @@ if [[ "$ACCEL" == "auto" ]]; then
     ACCEL="hvf"
   else
     ACCEL="kvm"
+  fi
+fi
+
+if [[ "$GPU" == "auto" ]]; then
+  if [[ "$(uname -s)" == "Darwin" ]]; then
+    GPU="swiftshader_indirect"
+  else
+    GPU="host"
   fi
 fi
 
