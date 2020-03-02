@@ -2,21 +2,29 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "stream_protocol.h"
+#include "src/camera/drivers/controller/stream_protocol.h"
+
+#include <zircon/errors.h>
 
 #include <utility>
 
+#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 
-#include "processing_node.h"
+#include "src/camera/drivers/controller/graph_utils.h"
+#include "src/camera/drivers/controller/processing_node.h"
 #include "src/lib/syslog/cpp/logger.h"
 
 namespace camera {
 
 constexpr auto kTag = "camera_controller";
 
-StreamImpl::StreamImpl(async_dispatcher_t* dispatcher, ProcessNode* output_node)
-    : dispatcher_(dispatcher), binding_(this), output_node_(*output_node) {}
+StreamImpl::StreamImpl(async_dispatcher_t* dispatcher, ProcessNode* output_node,
+                       uint32_t output_image_format_index)
+    : dispatcher_(dispatcher),
+      binding_(this),
+      output_node_(*output_node),
+      output_image_format_index_(output_image_format_index) {}
 
 zx_status_t StreamImpl::Attach(zx::channel channel, fit::function<void(void)> disconnect_handler) {
   FX_DCHECK(!binding_.is_bound());
@@ -91,10 +99,31 @@ void StreamImpl::SetRegionOfInterest(float /*x_min*/, float /*y_min*/, float /*x
   Shutdown(ZX_ERR_UNAVAILABLE);
 }
 
-void StreamImpl::SetImageFormat(uint32_t /*image_format_index*/,
-                                SetImageFormatCallback /*callback*/) {
-  FX_LOGST(ERROR, kTag) << __PRETTY_FUNCTION__ << " not implemented";
-  Shutdown(ZX_ERR_UNAVAILABLE);
+void StreamImpl::SetImageFormat(uint32_t image_format_index, SetImageFormatCallback callback) {
+  zx_status_t status = ZX_OK;
+  auto cleanup = fbl::MakeAutoCall([&]() { callback(status); });
+
+  auto& available_image_formats = output_node_.output_image_formats();
+  if (image_format_index >= available_image_formats.size()) {
+    status = ZX_ERR_INVALID_ARGS;
+    return;
+  }
+
+  auto stream_type = output_node_.configured_streams().at(0);
+
+  auto* parent_node = output_node_.parent_node();
+  if (output_image_format_index_ != image_format_index) {
+    while (parent_node) {
+      if (HasStreamType(parent_node->dynamic_resolution_supported(), stream_type)) {
+        parent_node->OnResolutionChangeRequest(image_format_index);
+        break;
+      }
+      parent_node = parent_node->parent_node();
+    }
+    if (parent_node == nullptr) {
+      status = ZX_ERR_INVALID_ARGS;
+    }
+  }
 }
 
 void StreamImpl::GetImageFormats(GetImageFormatsCallback callback) {

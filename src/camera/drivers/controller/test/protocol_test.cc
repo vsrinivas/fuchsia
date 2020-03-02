@@ -879,11 +879,25 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     });
     RunLoopUntilIdle();
 
+    auto callback_called = false;
     async::PostTask(dispatcher(), [&]() {
-      // Request for resolution change.
-      gdc_node->OnResolutionChangeRequest(new_resolution);
+      ds_stream->SetImageFormat(10u, [&](zx_status_t status) {
+        callback_called = true;
+        EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
+      });
     });
     RunLoopUntilIdle();
+    ASSERT_EQ(callback_called, true);
+
+    callback_called = false;
+    async::PostTask(dispatcher(), [&]() {
+      ds_stream->SetImageFormat(new_resolution, [&](zx_status_t status) {
+        callback_called = true;
+        EXPECT_EQ(status, ZX_OK);
+      });
+    });
+    RunLoopUntilIdle();
+    EXPECT_TRUE(callback_called);
 
     // Post other frames.
     for (uint32_t i = 1; i < kNumBuffers; i++) {
