@@ -195,8 +195,8 @@ int main(int argc, const char* argv[]) {
 
   for (const auto& backend : backends) {
     if (*backend.name) {
-      FileWriter writer;
-      if (!writer.Open(**backend.name) || !backend.output(library, &writer)) {
+      StringWriter writer;
+      if (!backend.output(library, &writer) || !WriteFileIfChanged(**backend.name, writer.Out())) {
         return 1;
       }
       ++output_count;

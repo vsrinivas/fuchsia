@@ -60,7 +60,6 @@ void StringVAppendfHelper(std::string* dest, const char* format, va_list ap) {
 bool ReadFileToString(const std::string& path, std::string* result) {
   FILE* fp = fopen(path.c_str(), "rb");
   if (!fp) {
-    fprintf(stderr, "couldn't open '%s'\n", path.c_str());
     return false;
   }
   fseek(fp, 0, SEEK_END);

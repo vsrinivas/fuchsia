@@ -57,3 +57,13 @@ bool StringWriter::Puts(const std::string& str) {
   out_ += str;
   return true;
 }
+
+bool WriteFileIfChanged(const std::string& filename, const std::string& data) {
+  std::string old_data;
+  if (ReadFileToString(filename, &old_data) && old_data == data) {
+    // No need to rewrite the file.
+    return true;
+  }
+  FileWriter writer;
+  return writer.Open(filename) && writer.Puts(data);
+}

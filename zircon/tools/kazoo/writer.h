@@ -63,4 +63,9 @@ class StringWriter : public Writer {
   DISALLOW_COPY_ASSIGN_AND_MOVE(StringWriter);
 };
 
+// Write |data| to |filename|, but avoid modifying the file's timestamp if
+// it already contains |data|, in order to avoid causing unnecessary
+// rebuilds of dependencies.
+bool WriteFileIfChanged(const std::string& filename, const std::string& data);
+
 #endif  // TOOLS_KAZOO_WRITER_H_
