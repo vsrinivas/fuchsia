@@ -80,6 +80,9 @@ executable("auth_test") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fake_ddk",
   ]
+
+  # TODO(46539): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 executable("dynamic_if_test") {
