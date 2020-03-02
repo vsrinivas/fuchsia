@@ -37,7 +37,7 @@ test("util") {
       "//zircon/public/lib/unittest",
     ]
   } else {
-    deps = [ "//zircon/public/lib/unittest-static-host" ]
+    deps = [ "//zircon/public/lib/unittest-static" ]
   }
 }
 

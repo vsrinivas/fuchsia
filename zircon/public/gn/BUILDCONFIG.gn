@@ -414,11 +414,9 @@ template("library") {
   if (sdk != false && ((toolchain.environment == "user" &&
                         current_toolchain == toolchain.shlib) ||
                        toolchain.environment == "host")) {
-    name_suffix = ""
     if (toolchain.environment == "host") {
       # Host libraries are always exported as sources.
       sdk = "source"
-      name_suffix = "-host"
     }
     sdk_deps = []
     if (defined(invoker.public_deps)) {
@@ -474,12 +472,6 @@ template("library") {
       ]
     }
 
-    dep_suffix = ""
-    if (is_host) {
-      dep_suffix = "-host"
-    }
-    not_needed([ "dep_suffix" ])
-
     local_include_dirs = []
     if (defined(invoker.include_dirs)) {
       foreach(dir, invoker.include_dirs) {
@@ -500,7 +492,7 @@ template("library") {
 
     legacy_metadata = {
       legacy_barrier = []
-      legacy_dirs = [ "lib/$_library_name$name_suffix" ]
+      legacy_dirs = [ "lib/$_library_name" ]
       legacy_targets = [
         {
           _label = get_label_info(":$_library_name", "label_with_toolchain")
@@ -508,7 +500,7 @@ template("library") {
           forward_variables_from(invoker, [ "testonly" ])
           import = "//build/zircon/zircon_library.gni"
           target_type = "zircon_library"
-          target_name = "$_library_name$name_suffix"
+          target_name = "$_library_name"
           dir = "//zircon/" + rebase_path(".", "//")
           include_dirs = [ "//zircon/" + rebase_path("include", "$zx/") ]
           compilation_include_dirs = local_include_dirs
@@ -551,13 +543,13 @@ template("library") {
             } else if (get_label_info(dep, "name") == "headers") {
               dep = get_path_info(get_label_info(dep, "dir"), "name")
               if (dep != "c" && dep != "llcpp") {
-                public_deps += [ "//zircon/public/lib/$dep$dep_suffix" ]
+                public_deps += [ "//zircon/public/lib/$dep" ]
               }
             } else if (get_path_info(get_label_info(dep, "name"),
                                      "extension") == "headers") {
               dep = get_path_info(get_label_info(dep, "name"), "name")
               if (dep != "c" && dep != "llcpp") {
-                public_deps += [ "//zircon/public/lib/$dep$dep_suffix" ]
+                public_deps += [ "//zircon/public/lib/$dep" ]
               }
             } else {
               if (get_path_info(get_label_info(dep, "dir"), "dir") ==
@@ -567,11 +559,11 @@ template("library") {
               } else if (get_label_info(dep, "name") == "static" ||
                          get_label_info(dep, "name") == "shared") {
                 dep = get_path_info(get_label_info(dep, "dir"), "name")
-                deps += [ "//zircon/public/lib/$dep$dep_suffix" ]
+                deps += [ "//zircon/public/lib/$dep" ]
               } else {
                 dep = get_path_info(get_label_info(dep, "name"), "name")
                 if (dep != "common" && dep != "handler") {
-                  deps += [ "//zircon/public/lib/$dep$dep_suffix" ]
+                  deps += [ "//zircon/public/lib/$dep" ]
                 }
               }
             }
@@ -635,14 +627,14 @@ template("library") {
         public_deps = [ ":${_library_name}.headers" ]
         metadata = {
           legacy_barrier = []
-          legacy_dirs = [ "lib/$_library_name-host" ]
+          legacy_dirs = [ "lib/$_library_name" ]
           legacy_targets = [
             {
               _label = get_label_info(":$_library_name", "label_with_toolchain")
               _zircon_public = "lib"
               import = "//build/zircon/zircon_header_library.gni"
               target_type = "zircon_header_library"
-              target_name = "$_library_name-host"
+              target_name = "$_library_name"
               include_dirs = [ "//zircon/" + rebase_path("include", "$zx/") ]
             }
           ]

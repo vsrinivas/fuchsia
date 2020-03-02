@@ -36,18 +36,13 @@ test("ffl") {
     }
   }
   sources = [ "ffl_tests.cc" ]
-  
+  deps = [
+    "//zircon/public/lib/ffl",
+    "//zircon/public/lib/zxtest",
+  ]
+
   if (is_fuchsia) {
-    deps = [
-      "//zircon/public/lib/fdio",
-      "//zircon/public/lib/ffl",
-      "//zircon/public/lib/zxtest",
-    ]
-  } else {
-    deps = [
-      "//zircon/public/lib/ffl-host",
-      "//zircon/public/lib/zxtest-host",
-    ]
+    deps += [ "//zircon/public/lib/fdio" ]
   }
 }
 

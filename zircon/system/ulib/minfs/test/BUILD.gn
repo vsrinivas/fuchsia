@@ -195,8 +195,8 @@ test("minfs-host") {
   }
   sources = [ "host/bcache-test.cc" ]
   deps = [
-    "//zircon/public/lib/minfs-host",
-    "//zircon/public/lib/zxtest-host",
+    "//zircon/public/lib/minfs",
+    "//zircon/public/lib/zxtest",
   ]
 }
 

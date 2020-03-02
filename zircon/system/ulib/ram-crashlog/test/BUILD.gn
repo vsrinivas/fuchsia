@@ -36,13 +36,8 @@ test("ram-crashlog") {
   deps = [
     "//zircon/public/lib/cksum",
     "//zircon/public/lib/ram-crashlog",
+    "//zircon/public/lib/zxtest",
   ]
-
-  if (is_fuchsia) {
-    deps += [ "//zircon/public/lib/zxtest" ]
-  } else {
-    deps += [ "//zircon/public/lib/zxtest-host" ]
-  }
 }
 
 migrated_manifest("ram-crashlog-manifest") {

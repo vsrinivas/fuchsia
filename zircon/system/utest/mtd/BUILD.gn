@@ -32,17 +32,12 @@ test("mtd") {
   }
   sources = [ "mtd-interface-tests.cc" ]
 
-  if (is_fuchsia) {
-    deps = [ "//zircon/public/lib/zxtest" ]
-  }
+  deps = [ "//zircon/public/lib/zxtest" ]
 
   if (current_os == "linux") {
     # This library requires an environment with mtd/mtd-user.h and MTD support.
     # Currently, Linux is the only OS with that support.
-    deps = [
-      "//zircon/public/lib/mtd-host",
-      "//zircon/public/lib/zxtest-host",
-    ]
+    deps += [ "//zircon/public/lib/mtd" ]
   }
 
   if (current_cpu == "arm64") {

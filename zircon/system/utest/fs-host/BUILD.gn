@@ -40,10 +40,10 @@ test("fs-host") {
     "util.cc",
   ]
   deps = [
-    "//zircon/public/lib/journal-host",
-    "//zircon/public/lib/minfs-host",
-    "//zircon/public/lib/unittest-static-host",
-    "//zircon/public/lib/zircon-internal-host",
+    "//zircon/public/lib/journal",
+    "//zircon/public/lib/minfs",
+    "//zircon/public/lib/unittest-static",
+    "//zircon/public/lib/zircon-internal",
   ]
 }
 

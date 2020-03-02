@@ -35,23 +35,17 @@ test("trace-reader-test") {
     "reader_tests.cc",
     "records_tests.cc",
   ]
+  deps = [
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/trace-engine-headers-for-reader",
+    "//zircon/public/lib/trace-reader",
+    "//zircon/public/lib/zxtest",
+  ]
   if (is_fuchsia) {
-    deps = [
+    deps += [
       "//zircon/public/lib/fdio",
       "//zircon/public/lib/zx",
-      "//zircon/public/lib/fbl",
-      "//zircon/public/lib/fit",
-      "//zircon/public/lib/trace-engine-headers-for-reader",
-      "//zircon/public/lib/trace-reader",
-      "//zircon/public/lib/zxtest",
-    ]
-  } else if (is_host) {
-    deps = [
-      "//zircon/public/lib/fbl-host",
-      "//zircon/public/lib/fit-host",
-      "//zircon/public/lib/trace-engine-headers-for-reader-host",
-      "//zircon/public/lib/trace-reader-host",
-      "//zircon/public/lib/zxtest-host",
     ]
   }
 }

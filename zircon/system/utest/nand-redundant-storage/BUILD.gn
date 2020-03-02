@@ -32,15 +32,12 @@ test("nand-redundant-storage") {
   }
   sources = [ "nand-rs-tests.cc" ]
 
-  if (is_fuchsia) {
-    deps = [ "//zircon/public/lib/zxtest" ]
-  } else if (current_os == "linux") {
+  deps = [ "//zircon/public/lib/zxtest" ]
+
+  if (current_os == "linux") {
     # This library requires an environment with mtd/mtd-user.h and MTD support.
     # Currently, Linux is the only OS with that support.
-    deps = [
-      "//zircon/public/lib/nand-redundant-storage-host",
-      "//zircon/public/lib/zxtest-host",
-    ]
+    deps += [ "//zircon/public/lib/nand-redundant-storage" ]
   } else {
     assert(false, "Unsupported OS: $current_os")
   }

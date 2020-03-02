@@ -29,12 +29,7 @@ source_set("common") {
 
   sources = [ "fake-nand-interface.cc" ]
 
-  if (is_fuchsia) {
-    deps = [ "//zircon/public/lib/mtd" ]
-  }
-  if (is_host) {
-    deps = [ "//zircon/public/lib/mtd-host" ]
-  }
+  deps = [ "//zircon/public/lib/mtd" ]
  }
 
 test("nand-volume-driver") {
@@ -54,22 +49,12 @@ test("nand-volume-driver") {
   }
   sources = [ "nand-volume-driver-tests.cc" ]
 
-  deps = [ ":common" ]
-
-  if (is_fuchsia) {
-    deps += [
-      "//zircon/system/ulib/ftl-mtd",
-      "//zircon/public/lib/mtd",
-      "//zircon/public/lib/zxtest",
-    ]
-  }
-  if (is_host) {
-    deps += [
-      "//zircon/system/ulib/ftl-mtd",
-      "//zircon/public/lib/mtd-host",
-      "//zircon/public/lib/zxtest-host",
-    ]
-  }
+  deps = [
+    ":common",
+    "//zircon/system/ulib/ftl-mtd",
+    "//zircon/public/lib/mtd",
+    "//zircon/public/lib/zxtest",
+  ]
 }
 
 test("ftl-volume-wrapper") {
@@ -89,21 +74,12 @@ test("ftl-volume-wrapper") {
   }
   sources = [ "ftl-volume-wrapper-tests.cc" ]
 
-  if (is_fuchsia) {
-    deps = [
-      "//zircon/system/ulib/ftl-mtd",
-      "//zircon/public/lib/mtd",
-      "//zircon/public/lib/zxtest",
-      "//zircon/system/ulib/fvm-host",
-    ]
-  } else {
-    deps = [
-      "//zircon/system/ulib/ftl-mtd",
-      "//zircon/public/lib/mtd-host",
-      "//zircon/public/lib/zxtest-host",
-      "//zircon/system/ulib/fvm-host",
-    ]
-  }
+  deps = [
+    "//zircon/system/ulib/ftl-mtd",
+    "//zircon/public/lib/mtd",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fvm-host",
+  ]
 }
 
 migrated_manifest("nand-volume-driver-manifest") {

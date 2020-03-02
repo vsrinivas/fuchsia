@@ -32,9 +32,9 @@ test("fvm-host") {
   }
   sources = [ "main.cc" ]
   deps = [
-    "//zircon/public/lib/fit-host",
-    "//zircon/public/lib/unittest-static-host",
-    "//zircon/system/ulib/fvm-host",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/unittest-static",
+    "//zircon/system/ulib/fvm",
   ]
 }
 

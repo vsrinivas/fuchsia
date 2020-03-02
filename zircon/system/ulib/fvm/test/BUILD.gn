@@ -41,17 +41,10 @@ test("fvm-unit") {
     "partition-entry-test.cc",
     "slice-entry-test.cc",
   ]
-  if (is_fuchsia) {
-    deps = [
-      "//zircon/public/lib/fvm",
-      "//zircon/public/lib/zxtest",
-    ]
-  } else {
-    deps = [
-      "//zircon/public/lib/fvm-host",
-      "//zircon/public/lib/zxtest-host",
-    ]
-  }
+  deps = [
+    "//zircon/public/lib/fvm",
+    "//zircon/public/lib/zxtest",
+  ]
   if (is_fuchsia) {
     sources += [ "client-test.cc" ]
     deps += [

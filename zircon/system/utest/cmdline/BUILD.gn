@@ -32,8 +32,8 @@ test("cmdline") {
   }
   sources = [ "args_parser_unittest.cc" ]
   deps = [
-    "//zircon/public/lib/cmdline-host",
-    "//zircon/public/lib/zxtest-host",
+    "//zircon/public/lib/cmdline",
+    "//zircon/public/lib/zxtest",
   ]
 }
 

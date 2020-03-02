@@ -35,23 +35,19 @@ test("fs-transaction") {
       configs -= fdio_config
     }
   }
+  deps = [
+    "//zircon/public/lib/transaction",
+    "//zircon/public/lib/zxtest",
+  ]
   if (is_fuchsia) {
     sources = [
       "block_transaction_test.cc",
       "buffered_operations_builder_test.cc",
       "writeback_test.cc",
     ]
-    deps = [
-      "//zircon/public/lib/fake-device",
-      "//zircon/public/lib/transaction",
-      "//zircon/public/lib/zxtest",
-    ]
+    deps += [ "//zircon/public/lib/fake-device" ]
   } else {
     sources = [ "buffered_operations_builder_host_test.cc" ]
-    deps = [
-      "//zircon/public/lib/transaction-host",
-      "//zircon/public/lib/zxtest-host",
-    ]
   }
 }
 

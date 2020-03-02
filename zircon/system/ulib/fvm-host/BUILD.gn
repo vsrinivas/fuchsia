@@ -36,63 +36,32 @@ zx_library("fvm-host") {
     "fvm-info.cc",
     "sparse-paver.cc",
   ]
-  if (is_fuchsia) {
-    public_deps = [
-      # <fvm/format.h> has #include <fs-management/mount.h> though that
-      # library is not really meant for host code.
-      "//zircon/public/lib/fs-management",
+  public_deps = [
+    # <fvm/format.h> has #include <fs-management/mount.h> though that
+    # library is not really meant for host code.
+    "//zircon/public/lib/fs-management",
 
-      # <fvm-host/format.h> has #include <blobfs/format.h>.
-      "//zircon/public/lib/blobfs",
+    # <fvm-host/format.h> has #include <blobfs/format.h>.
+    "//zircon/public/lib/blobfs",
 
-      # <fvm-host/format.h> has #include <minfs/bcache.h>.
-      "//zircon/public/lib/minfs",
+    # <fvm-host/format.h> has #include <minfs/bcache.h>.
+    "//zircon/public/lib/minfs",
 
-      # <fvm-host/container.h> has #include <fvm/sparse-reader.h>.
-      "//zircon/public/lib/fvm",
-    ]
-    deps = [
-      "//zircon/public/lib/blobfs",
-      "//zircon/public/lib/digest",
-      "//zircon/public/lib/fbl",
-      "//zircon/public/lib/fit",
-      "//zircon/public/lib/fs",
-      "//zircon/public/lib/transaction",
-      "//zircon/public/lib/fvm",
-      "//zircon/public/lib/minfs",
-      "//third_party/boringssl",
-      "//zircon/public/lib/cksum",
-      "//zircon/public/lib/lz4",
-      "//zircon/public/lib/safemath",
-    ]
-  } else {
-    public_deps = [
-      # <fvm/format.h> has #include <fs-management/mount.h> though that
-      # library is not really meant for host code.
-      "//zircon/public/lib/fs-management-host",
-
-      # <fvm-host/format.h> has #include <blobfs/format.h>.
-      "//zircon/public/lib/blobfs-host",
-
-      # <fvm-host/format.h> has #include <minfs/bcache.h>.
-      "//zircon/public/lib/minfs-host",
-
-      # <fvm-host/container.h> has #include <fvm/sparse-reader.h>.
-      "//zircon/public/lib/fvm-host",
-    ]
-    deps = [
-      "//zircon/public/lib/blobfs-host",
-      "//zircon/public/lib/digest-host",
-      "//zircon/public/lib/fbl-host",
-      "//zircon/public/lib/fit-host",
-      "//zircon/public/lib/fs-host",
-      "//zircon/public/lib/transaction-host",
-      "//zircon/public/lib/fvm-host",
-      "//zircon/public/lib/minfs-host",
-      "//third_party/boringssl",
-      "//zircon/public/lib/cksum-host",
-      "//zircon/public/lib/lz4-host",
-      "//zircon/public/lib/safemath-host",
-    ]
-  }
+    # <fvm-host/container.h> has #include <fvm/sparse-reader.h>.
+    "//zircon/public/lib/fvm",
+  ]
+  deps = [
+    "//zircon/public/lib/blobfs",
+    "//zircon/public/lib/digest",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/fs",
+    "//zircon/public/lib/transaction",
+    "//zircon/public/lib/fvm",
+    "//zircon/public/lib/minfs",
+    "//third_party/boringssl",
+    "//zircon/public/lib/cksum",
+    "//zircon/public/lib/lz4",
+    "//zircon/public/lib/safemath",
+  ]
 }

@@ -56,14 +56,14 @@ test("fit") {
     "variant_tests.cc",
   ]
   deps = [ "//zircon/public/lib/fit" ]
-  if (is_fuchsia) {
-    deps += [ "//zircon/public/lib/unittest" ]
-  } else {
-    deps += [ "//zircon/public/lib/unittest-static-host" ]
-  }
   configs += [ ":shadow" ]
   if (is_fuchsia) {
-    deps += [ "//zircon/public/lib/fdio" ]
+    deps += [
+      "//zircon/public/lib/fdio",
+      "//zircon/public/lib/unittest",
+    ]
+  } else {
+    deps += [ "//zircon/public/lib/unittest-static" ]
   }
   public_configs = [ ":no_unused_function" ]
 }

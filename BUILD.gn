@@ -147,7 +147,8 @@ if (current_toolchain == default_toolchain) {
                 "$zircon_root_build_dir/legacy_dirs.json",
                 "//build/unification/zircon_library_forward.gn",
                 "//build/unification/zircon_library_mappings.json",
-                "//build/zircon/template.gn",
+                "//build/zircon/lib_template.gn",
+                "//build/zircon/tool_template.gn",
               ])
 }
 

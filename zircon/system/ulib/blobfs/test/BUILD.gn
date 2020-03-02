@@ -90,8 +90,8 @@ test("blobfs-unit") {
 test("blobfs-host") {
   sources = [ "host/host-test.cc" ]
   deps = [
-    "//zircon/public/lib/blobfs-host",
-    "//zircon/public/lib/zxtest-host",
+    "//zircon/public/lib/blobfs",
+    "//zircon/public/lib/zxtest",
   ]
 }
 

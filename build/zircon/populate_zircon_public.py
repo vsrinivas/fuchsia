@@ -11,9 +11,10 @@ import sys
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 FUCHSIA_ROOT = os.path.dirname(  # $root
     os.path.dirname(             # build
-        SCRIPT_DIR))                 # zircon
+        SCRIPT_DIR))             # zircon
 ZIRCON_PUBLIC = os.path.join(FUCHSIA_ROOT, 'zircon', 'public')
-EXPORT_TEMPLATE_FILE = os.path.join(SCRIPT_DIR, 'template.gn')
+EXPORT_TEMPLATE_FILE = os.path.join(SCRIPT_DIR, 'lib_template.gn')
+TOOL_TEMPLATE_FILE = os.path.join(SCRIPT_DIR, 'tool_template.gn')
 UNIFICATION_DIR = os.path.join(FUCHSIA_ROOT, 'build', 'unification')
 MAPPINGS_FILE = os.path.join(UNIFICATION_DIR, 'zircon_library_mappings.json')
 FORWARD_TEMPLATE_FILE = os.path.join(UNIFICATION_DIR,
@@ -58,7 +59,11 @@ def main():
     # Create a data structure holding all generated paths.
     all_dirs = {}
     for dir in legacy_dirs:
-        all_dirs[dir] = EXPORT_TEMPLATE_FILE
+        top_dir = os.path.dirname(dir)
+        if top_dir == 'tool':
+            all_dirs[dir] = TOOL_TEMPLATE_FILE
+        else:
+            all_dirs[dir] = EXPORT_TEMPLATE_FILE
     for dir in mapped_lib_dirs:
         all_dirs[dir] = FORWARD_TEMPLATE_FILE
 
@@ -73,7 +78,8 @@ def main():
         "%r from JSON should be a subset of %r" %
         (set(dirs.keys()), PUBLIC_DIRS))
     stats = dict([(f, os.lstat(f))
-                  for f in [EXPORT_TEMPLATE_FILE, FORWARD_TEMPLATE_FILE]])
+                  for f in [EXPORT_TEMPLATE_FILE, FORWARD_TEMPLATE_FILE,
+                            TOOL_TEMPLATE_FILE]])
     for top_dir in dirs:
         subdirs, templates = dirs[top_dir]
         top_dir_name = top_dir
