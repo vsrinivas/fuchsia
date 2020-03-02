@@ -123,7 +123,7 @@ TEST_F(BrcmfNetbuf, CanAllocate) { EXPECT_NE(buf, nullptr); }
 TEST_F(BrcmfNetbuf, AllocSizeAligned) {
   struct brcmf_netbuf* buf = brcmf_netbuf_allocate(SMALL_SIZE);
   EXPECT_NE(buf, nullptr);
-  EXPECT_EQ(buf->allocated_size, (SMALL_SIZE + 3) & ~3);
+  EXPECT_EQ(buf->allocated_size, (SMALL_SIZE + SDIOD_PAD_SIZE) & ~SDIOD_PAD_SIZE);
   brcmf_netbuf_free(buf);
 }
 

@@ -29,6 +29,8 @@
 #include <zircon/errors.h>
 #include <zircon/listnode.h>
 
+#define SDIOD_PAD_SIZE 3
+
 namespace wlan {
 namespace brcmfmac {
 

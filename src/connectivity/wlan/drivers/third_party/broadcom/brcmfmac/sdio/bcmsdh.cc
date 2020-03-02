@@ -442,8 +442,8 @@ zx_status_t brcmf_sdiod_recv_buf(struct brcmf_sdio_dev* sdiodev, uint8_t* buf, u
 
   SBSDIO_FORMAT_ADDR(addr);
 
-  req_sz = nbytes + 3;
-  req_sz &= (uint)~3;
+  req_sz = nbytes + SDIOD_PAD_SIZE;
+  req_sz &= (uint)~SDIOD_PAD_SIZE;
 
   err = brcmf_sdiod_transfer(sdiodev, SDIO_FN_2, addr, false, buf, req_sz, true);
 
@@ -522,8 +522,8 @@ zx_status_t brcmf_sdiod_send_buf(struct brcmf_sdio_dev* sdiodev, uint8_t* buf, u
 
   SBSDIO_FORMAT_ADDR(addr);
 
-  req_sz = nbytes + 3;
-  req_sz &= (uint)~3;
+  req_sz = nbytes + SDIOD_PAD_SIZE;
+  req_sz &= (uint)~SDIOD_PAD_SIZE;
 
   if (err == ZX_OK) {
     err = brcmf_sdiod_transfer(sdiodev, SDIO_FN_2, addr, true, buf, req_sz, false);

@@ -50,7 +50,7 @@ zx_status_t SdioDevice::Create(zx_device_t* parent_device) {
     return status;
   }
 
-  const size_t padded_size_firmware = (firmware_binary.size() + 3) & ~3;
+  const size_t padded_size_firmware = (firmware_binary.size() + SDIOD_PAD_SIZE) & ~SDIOD_PAD_SIZE;
   firmware_binary.resize(padded_size_firmware, '\0');
 
   std::string nvram_binary;
@@ -59,7 +59,7 @@ zx_status_t SdioDevice::Create(zx_device_t* parent_device) {
     return status;
   }
 
-  const size_t padded_size_nvram = (nvram_binary.size() + 3) & ~3;
+  const size_t padded_size_nvram = (nvram_binary.size() + SDIOD_PAD_SIZE) & ~SDIOD_PAD_SIZE;
   nvram_binary.resize(padded_size_nvram, '\0');
 
   if ((status = brcmf_sdio_firmware_callback(device->brcmf_pub_.get(), firmware_binary.data(),
