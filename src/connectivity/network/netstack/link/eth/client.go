@@ -716,23 +716,12 @@ func (c *Client) ListenTX() error {
 	return nil
 }
 
-type LinkStatus uint32
+type LinkStatus int
 
 const (
-	LinkDown LinkStatus = 0
-	LinkUp   LinkStatus = 1
+	LinkDown LinkStatus = iota
+	LinkUp
 )
-
-func (s LinkStatus) String() string {
-	switch s {
-	case LinkDown:
-		return "LinkDown"
-	case LinkUp:
-		return "LinkUp"
-	default:
-		panic("unreachable")
-	}
-}
 
 // GetStatus returns the underlying device's status.
 func (c *Client) GetStatus() (LinkStatus, error) {

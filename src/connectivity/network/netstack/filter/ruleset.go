@@ -18,17 +18,6 @@ const (
 	Outgoing
 )
 
-func (dir Direction) String() string {
-	switch dir {
-	case Incoming:
-		return "Incoming"
-	case Outgoing:
-		return "Outgoing"
-	default:
-		panic("Unknown direction")
-	}
-}
-
 // Action indicates how a packet is handled when a rule is matched.
 type Action int
 
@@ -37,19 +26,6 @@ const (
 	Drop
 	DropReset
 )
-
-func (action Action) String() string {
-	switch action {
-	case Pass:
-		return "Pass"
-	case Drop:
-		return "Drop"
-	case DropReset:
-		return "DropReset"
-	default:
-		panic("Unknown action")
-	}
-}
 
 // PortRange specifies an inclusive range of port numbers.
 type PortRange struct {

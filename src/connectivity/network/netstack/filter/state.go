@@ -104,33 +104,6 @@ const (
 	TCPClosed
 )
 
-func (state endpointState) String() string {
-	switch state {
-	case ICMPFirstPacket:
-		return "ICMPFirstPacket"
-	case UDPFirstPacket:
-		return "UDPFirstPacket"
-	case UDPSingle:
-		return "UDPSingle"
-	case UDPMultiple:
-		return "UDPMultiple"
-	case TCPFirstPacket:
-		return "TCPFirstPacket"
-	case TCPOpening:
-		return "TCPOpening"
-	case TCPEstablished:
-		return "TCPEstablished"
-	case TCPClosing:
-		return "TCPClosing"
-	case TCPFinWait:
-		return "TCPFinWait"
-	case TCPClosed:
-		return "TCPClosed"
-	default:
-		panic("Unknown state")
-	}
-}
-
 // endpoint maintains the current state and the sequence number information of an endpoint.
 type endpoint struct {
 	seqLo  seqnum // Max seqnum sent.

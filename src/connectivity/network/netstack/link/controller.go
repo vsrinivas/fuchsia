@@ -4,10 +4,6 @@
 
 package link
 
-import (
-	"fmt"
-)
-
 type State int
 
 const (
@@ -24,21 +20,6 @@ type Controller interface {
 	SetOnStateChange(func(State))
 
 	SetPromiscuousMode(bool) error
-}
-
-func (s State) String() string {
-	switch s {
-	case StateUnknown:
-		return "link unknown state"
-	case StateStarted:
-		return "link started"
-	case StateDown:
-		return "link down"
-	case StateClosed:
-		return "link stopped"
-	default:
-		return fmt.Sprintf("link bad state (%d)", s)
-	}
 }
 
 func NewLoopbackController() Controller {

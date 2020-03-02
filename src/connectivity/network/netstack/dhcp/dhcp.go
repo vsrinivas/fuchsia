@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"strings"
 	"time"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
@@ -187,6 +188,44 @@ func (h hdr) setOptions(opts []option) {
 	}
 }
 
+func (h hdr) String() string {
+	var buf strings.Builder
+	if _, err := fmt.Fprintf(&buf, "len=%d", len(h)); err != nil {
+		panic(err)
+	}
+	if !h.isValid() {
+		return fmt.Sprintf("DHCP invalid; %s; %x", buf.String(), []byte(h))
+	}
+	opts, err := h.options()
+	if err != nil {
+		return fmt.Sprintf("DHCP options=%s; %s; %x", err, buf.String(), []byte(h))
+	}
+	buf.WriteString(";options=")
+	for i, opt := range opts {
+		if i > 0 {
+			buf.WriteByte(',')
+		}
+		buf.WriteString(opt.String())
+	}
+	msgType, err := opts.dhcpMsgType()
+	if err != nil {
+		return fmt.Sprintf("DHCP type=%s; %s; %x", err, buf.String(), []byte(h))
+	}
+	if _, err := fmt.Fprintf(
+		&buf,
+		"type=%s;ciaddr=%s;yiaddr=%s;siaddr=%s;giaddr=%s;chaddr=%x",
+		msgType,
+		tcpip.Address(h.ciaddr()),
+		tcpip.Address(h.yiaddr()),
+		tcpip.Address(h.siaddr()),
+		tcpip.Address(h.giaddr()),
+		h.chaddr(),
+	); err != nil {
+		panic(err)
+	}
+	return buf.String()
+}
+
 // headerBaseSize is the size of a DHCP packet, including the magic cookie.
 //
 // Note that a DHCP packet is required to have an 'end' option that takes
@@ -196,6 +235,10 @@ const headerBaseSize = 240
 type option struct {
 	code optionCode
 	body []byte
+}
+
+func (opt option) String() string {
+	return fmt.Sprintf("%s: %x", opt.code, opt.body)
 }
 
 type optionCode byte
