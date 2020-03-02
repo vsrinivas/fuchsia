@@ -79,6 +79,9 @@ test("fzl") {
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-io:c",
   ]
+
+  # TODO(47439): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 migrated_manifest("fzl-zxtest-manifest") {
