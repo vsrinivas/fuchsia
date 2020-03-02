@@ -64,7 +64,7 @@ void BlobfsChecker::TraverseInodeBitmap() {
         inode_blocks_ += extent->Length();
       }
 
-      if (blobfs_->VerifyBlob(n) != ZX_OK) {
+      if (blobfs_->LoadAndVerifyBlob(n) != ZX_OK) {
         FS_TRACE_ERROR("check: detected inode %u with bad state\n", n);
         valid = false;
       }

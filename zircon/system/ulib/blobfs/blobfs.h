@@ -116,7 +116,7 @@ class Blobfs : public TransactionManager, public UserPager, public BlockIterator
   // Allows attaching VMOs, controlling the underlying volume, and sending transactions to the
   // underlying storage (optionally through the journal).
 
-  BlobfsMetrics& Metrics() final { return metrics_; }
+  BlobfsMetrics* Metrics() final { return &metrics_; }
   size_t WritebackCapacity() const final;
   fs::Journal* journal() final;
   Writability writability() const { return writability_; }
@@ -243,8 +243,8 @@ class Blobfs : public TransactionManager, public UserPager, public BlockIterator
   // "construction".
   zx_status_t CreateFsId();
 
-  // Verifies that the contents of a blob are valid.
-  zx_status_t VerifyBlob(uint32_t node_index);
+  // Loads the contents of a blob and verifies that the contents are valid.
+  zx_status_t LoadAndVerifyBlob(uint32_t node_index);
 
   // Updates the flags field in superblock.
   void UpdateFlags(storage::UnbufferedOperationsBuilder* operations, uint32_t flags, bool set);

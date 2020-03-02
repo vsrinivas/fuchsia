@@ -38,6 +38,7 @@
 #include "allocator/extent-reserver.h"
 #include "allocator/node-reserver.h"
 #include "blob-cache.h"
+#include "blob-verifier.h"
 #include "compression/blob-compressor.h"
 #include "compression/compressor.h"
 #include "format-assertions.h"
@@ -76,7 +77,7 @@ constexpr BlobFlags kBlobOtherMask        = 0x0000FF00;
 class Blob final : public CacheNode, fbl::Recyclable<Blob> {
  public:
   // Constructs a blob, reads in data, verifies the contents, then destroys the in-memory copy.
-  static zx_status_t VerifyBlob(Blobfs* bs, uint32_t node_index);
+  static zx_status_t LoadAndVerifyBlob(Blobfs* bs, uint32_t node_index);
 
   // Constructs actual blobs
   Blob(Blobfs* bs, const Digest& digest);
@@ -236,15 +237,22 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
 
   // Instantiates |verifier| with the Merkle tree mapped at the beginning of this
   // Blob's VMO. The |verifier| is then passed on to the |page_watcher_|, which owns it.
-  zx_status_t InitMerkleTreeVerifier(std::unique_ptr<MerkleTreeVerifier>* verifier);
+  zx_status_t InitBlobVerifier(std::unique_ptr<BlobVerifier>* verifier);
 
   // Called by the Vnode once the last write has completed, updating the
   // on-disk metadata.
   fit::promise<void, zx_status_t> WriteMetadata();
 
+  // Returns whether the data bytes are mapped and resident in memory.
+  bool IsDataLoaded() const;
+
   // Acquires a pointer to the mapped data or merkle tree
-  void* GetData() const;
-  void* GetMerkle() const;
+  void* GetDataBuffer() const;
+  void* GetMerkleTreeBuffer() const;
+
+  // Returns a digest::Digest containing the blob's merkle root.
+  // Equivalent to digest::Digest(GetKey()).
+  digest::Digest MerkleRoot() const;
 
   // Offset into the |mapping_| VMO at which blob data starts
   uint64_t GetDataStartOffset() const;

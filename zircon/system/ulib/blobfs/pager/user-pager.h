@@ -14,11 +14,9 @@
 #include <lib/async/dispatcher.h>
 #include <lib/zx/pager.h>
 
-#include <digest/merkle-tree.h>
+#include "../blob-verifier.h"
 
 namespace blobfs {
-
-using digest::MerkleTreeVerifier;
 
 // Info required by the user pager to read in and verify pages.
 // Initialized by the PageWatcher and passed on to the UserPager.
@@ -32,7 +30,8 @@ struct UserPagerInfo {
   // Total length of the data. The |verifier| must be set up to verify this length.
   uint64_t data_length_bytes;
   // Used to verify the pages as they are read in.
-  std::unique_ptr<MerkleTreeVerifier> verifier;
+  // TODO(44742): Make BlobVerifier movable, unwrap from unique_ptr.
+  std::unique_ptr<BlobVerifier> verifier;
 };
 
 // The size of a transfer buffer for reading from storage.

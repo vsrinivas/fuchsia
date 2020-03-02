@@ -31,7 +31,7 @@ enum class EnqueueType {
 class TransactionManager : public fs::TransactionHandler, public SpaceManager {
  public:
   virtual ~TransactionManager() = default;
-  virtual BlobfsMetrics& Metrics() = 0;
+  virtual BlobfsMetrics* Metrics() = 0;
 
   // Returns the capacity of the writeback buffer in blocks.
   virtual size_t WritebackCapacity() const = 0;

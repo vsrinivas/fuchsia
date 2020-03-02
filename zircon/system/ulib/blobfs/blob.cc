@@ -30,6 +30,7 @@
 #include <fs/vfs_types.h>
 
 #include "blobfs.h"
+#include "blob-verifier.h"
 #include "compression/lz4.h"
 #include "compression/zstd-plain.h"
 #include "compression/zstd-seekable.h"
@@ -60,96 +61,92 @@ void FormatVmoName(const char* prefix, fbl::StringBuffer<ZX_MAX_NAME_LEN>* vmo_n
 }  // namespace
 
 zx_status_t Blob::Verify() const {
-  TRACE_DURATION("blobfs", "Blobfs::Verify");
-  fs::Ticker ticker(blobfs_->Metrics().Collecting());
-
-  const void* data = inode_.blob_size ? GetData() : nullptr;
-  const void* tree = inode_.blob_size ? GetMerkle() : nullptr;
-  const uint64_t data_size = inode_.blob_size;
-
-  // TODO(smklein): We could lazily verify more of the VMO if
-  // we could fault in pages on-demand.
-  //
-  // For now, we aggressively verify the entire VMO up front.
-  MerkleTreeVerifier mtv;
-  zx_status_t status = mtv.SetDataLength(data_size);
-  size_t merkle_size = mtv.GetTreeLength();
-  if (status != ZX_OK ||
-      (status = mtv.SetTree(tree, merkle_size, GetKey(), digest::kSha256Length)) != ZX_OK ||
-      (status = mtv.Verify(data, data_size, 0)) != ZX_OK) {
-    Digest digest(GetKey());
-    FS_TRACE_ERROR("blobfs verify(%s) Failure: %s\n", digest.ToString().c_str(),
-                   zx_status_get_string(status));
+  if (inode_.blob_size > 0) {
+    ZX_ASSERT(IsDataLoaded());
   }
-  blobfs_->Metrics().UpdateMerkleVerify(data_size, merkle_size, ticker.End());
 
-  return status;
+  const uint64_t merkle_blocks = ComputeNumMerkleTreeBlocks(inode_);
+  uint64_t merkle_size;
+  if (mul_overflow(merkle_blocks, kBlobfsBlockSize, &merkle_size)) {
+    FS_TRACE_ERROR("blob: Verify() failed: would overflow; corrupted Inode?\n");
+    return ZX_ERR_IO_DATA_INTEGRITY;
+  }
+
+  zx_status_t status;
+  std::unique_ptr<BlobVerifier> verifier;
+  if (merkle_size == 0) {
+    // No merkle tree is stored for small blobs, because the entire blob can be verified based
+    // on its merkle root digest (i.e. the blob's merkle tree is just a single root digest).
+    // Still verify the blob's contents in this case.
+    if ((status = BlobVerifier::CreateWithoutTree(MerkleRoot(), blobfs_->Metrics(),
+                                                  inode_.blob_size, &verifier)) != ZX_OK) {
+      return status;
+    }
+  } else {
+    if ((status = BlobVerifier::Create(MerkleRoot(), blobfs_->Metrics(), GetMerkleTreeBuffer(),
+                                       merkle_size, inode_.blob_size, &verifier)) != ZX_OK) {
+      return status;
+    }
+  }
+
+  return verifier->Verify(GetDataBuffer(), inode_.blob_size);
 }
 
-zx_status_t Blob::InitMerkleTreeVerifier(std::unique_ptr<MerkleTreeVerifier>* verifier) {
+zx_status_t Blob::InitBlobVerifier(std::unique_ptr<BlobVerifier>* verifier) {
   fbl::StringBuffer<ZX_MAX_NAME_LEN> vmo_name;
   FormatVmoName(kMerkleNamePrefix, &vmo_name, Ino());
 
-  uint32_t merkle_blocks = MerkleTreeBlocks(inode_);
-  if (merkle_blocks > 0) {
-    zx_status_t status =
-        merkle_mapping_.CreateAndMap(merkle_blocks * kBlobfsBlockSize, vmo_name.c_str());
-    if (status != ZX_OK) {
-      FS_TRACE_ERROR("Failed to create Merkle VMO: %s\n", zx_status_get_string(status));
-      return status;
-    }
-
-    storage::OwnedVmoid merkle_vmoid(blobfs_);
-    status = merkle_vmoid.AttachVmo(merkle_mapping_.vmo());
-    if (status != ZX_OK) {
-      FS_TRACE_ERROR("Failed to attach Merkle VMO to blkdev: %s\n", zx_status_get_string(status));
-      return status;
-    }
-
-    fs::Ticker ticker(blobfs_->Metrics().Collecting());
-    fs::ReadTxn txn(blobfs_);
-    BlockIterator block_iter = blobfs_->BlockIteratorByNodeIndex(GetMapIndex());
-    const uint64_t data_start = DataStartBlock(blobfs_->Info());
-    status = StreamBlocks(&block_iter, merkle_blocks,
-                          [&](uint64_t vmo_offset, uint64_t dev_offset, uint32_t length) {
-                            txn.Enqueue(merkle_vmoid.vmoid(), vmo_offset, dev_offset + data_start,
-                                        length);
-                            return ZX_OK;
-                          });
-
-    if (status != ZX_OK) {
-      FS_TRACE_ERROR("Failed to enqueue read transactions: %s\n", zx_status_get_string(status));
-      return status;
-    }
-
-    status = txn.Transact();
-    if (status != ZX_OK) {
-      FS_TRACE_ERROR("Failed to flush read transactions: %s\n", zx_status_get_string(status));
-      return status;
-    }
-    blobfs_->Metrics().UpdateMerkleDiskRead(merkle_blocks * kBlobfsBlockSize, ticker.End());
+  uint32_t merkle_blocks = ComputeNumMerkleTreeBlocks(inode_);
+  uint64_t merkle_size;
+  if (mul_overflow(merkle_blocks, kBlobfsBlockSize, &merkle_size)) {
+    FS_TRACE_ERROR("blob: InitBlobVerifier() failed: would overflow; corrupted Inode?\n");
+    return ZX_ERR_IO_DATA_INTEGRITY;
+  }
+  if (merkle_size == 0) {
+    // No merkle tree is stored for small blobs, because the entire blob can be verified based
+    // on its merkle root digest (i.e. the blob's merkle tree is just a single root digest).
+    return BlobVerifier::CreateWithoutTree(MerkleRoot(), blobfs_->Metrics(), inode_.blob_size,
+                                           verifier);
   }
 
-  const void* tree = inode_.blob_size ? GetMerkle() : nullptr;
-  auto merkle_tree_verifier = std::make_unique<MerkleTreeVerifier>();
-
-  zx_status_t status = merkle_tree_verifier->SetDataLength(inode_.blob_size);
+  zx_status_t status = merkle_mapping_.CreateAndMap(merkle_size, vmo_name.c_str());
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("Failed to set data length for Merkle tree verifier: %s\n",
-                   zx_status_get_string(status));
+    FS_TRACE_ERROR("Failed to create Merkle VMO: %s\n", zx_status_get_string(status));
     return status;
   }
 
-  size_t merkle_size = merkle_tree_verifier->GetTreeLength();
-  status = merkle_tree_verifier->SetTree(tree, merkle_size, GetKey(), digest::kSha256Length);
+  storage::OwnedVmoid merkle_vmoid(blobfs_);
+  status = merkle_vmoid.AttachVmo(merkle_mapping_.vmo());
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("Failed to set tree for Merkle tree verifier: %s\n",
-                   zx_status_get_string(status));
+    FS_TRACE_ERROR("Failed to attach Merkle VMO to blkdev: %s\n", zx_status_get_string(status));
     return status;
   }
 
-  *verifier = std::move(merkle_tree_verifier);
-  return ZX_OK;
+  fs::Ticker ticker(blobfs_->Metrics()->Collecting());
+  fs::ReadTxn txn(blobfs_);
+  BlockIterator block_iter = blobfs_->BlockIteratorByNodeIndex(GetMapIndex());
+  const uint64_t data_start = DataStartBlock(blobfs_->Info());
+  status = StreamBlocks(&block_iter, merkle_blocks,
+                        [&](uint64_t vmo_offset, uint64_t dev_offset, uint32_t length) {
+                          txn.Enqueue(merkle_vmoid.vmoid(), vmo_offset, dev_offset + data_start,
+                                      length);
+                          return ZX_OK;
+                        });
+
+  if (status != ZX_OK) {
+    FS_TRACE_ERROR("Failed to enqueue read transactions: %s\n", zx_status_get_string(status));
+    return status;
+  }
+
+  status = txn.Transact();
+  if (status != ZX_OK) {
+    FS_TRACE_ERROR("Failed to flush read transactions: %s\n", zx_status_get_string(status));
+    return status;
+  }
+  blobfs_->Metrics()->UpdateMerkleDiskRead(merkle_blocks * kBlobfsBlockSize, ticker.End());
+
+  return BlobVerifier::Create(MerkleRoot(), blobfs_->Metrics(), GetMerkleTreeBuffer(), merkle_size,
+                              inode_.blob_size, verifier);
 }
 
 zx_status_t Blob::InitVmos() {
@@ -160,7 +157,7 @@ zx_status_t Blob::InitVmos() {
   }
 
   uint64_t data_blocks = BlobDataBlocks(inode_);
-  uint64_t merkle_blocks = MerkleTreeBlocks(inode_);
+  uint64_t merkle_blocks = ComputeNumMerkleTreeBlocks(inode_);
   uint64_t num_blocks = data_blocks + merkle_blocks;
 
   if (num_blocks == 0) {
@@ -231,16 +228,16 @@ zx_status_t Blob::InitVmos() {
 }
 
 zx_status_t Blob::InitVmosPaged() {
-  std::unique_ptr<MerkleTreeVerifier> verifier = nullptr;
+  std::unique_ptr<BlobVerifier> verifier = nullptr;
   // Pre-populate the Merkle tree blocks. Verification takes place on the page fault path, so we
   // can't block to fault in the Merkle tree then.
-  zx_status_t status = InitMerkleTreeVerifier(&verifier);
+  zx_status_t status = InitBlobVerifier(&verifier);
   if (status != ZX_OK) {
     return status;
   }
   UserPagerInfo userpager_info;
   userpager_info.identifier = GetMapIndex();
-  userpager_info.data_start_bytes = MerkleTreeBlocks(inode_) * kBlobfsBlockSize;
+  userpager_info.data_start_bytes = ComputeNumMerkleTreeBlocks(inode_) * kBlobfsBlockSize;
   userpager_info.data_length_bytes = inode_.blob_size;
   userpager_info.verifier = std::move(verifier);
 
@@ -269,9 +266,9 @@ zx_status_t Blob::InitVmosPaged() {
 zx_status_t Blob::InitCompressed(CompressionAlgorithm algorithm) {
   TRACE_DURATION("blobfs", "Blobfs::InitCompressed", "size", inode_.blob_size, "blocks",
                  inode_.block_count);
-  fs::Ticker ticker(blobfs_->Metrics().Collecting());
+  fs::Ticker ticker(blobfs_->Metrics()->Collecting());
   fs::ReadTxn txn(blobfs_);
-  uint32_t merkle_blocks = MerkleTreeBlocks(inode_);
+  uint32_t merkle_blocks = ComputeNumMerkleTreeBlocks(inode_);
 
   fzl::OwnedVmoMapper compressed_mapper;
   uint32_t compressed_blocks = (inode_.block_count - merkle_blocks);
@@ -340,7 +337,8 @@ zx_status_t Blob::InitCompressed(CompressionAlgorithm algorithm) {
     FS_TRACE_ERROR("Failed to create decompressor, status=%d", status);
     return status;
   }
-  status = decompressor->Decompress(GetData(), &target_size, compressed_buffer, compressed_size);
+  status = decompressor->Decompress(GetDataBuffer(), &target_size, compressed_buffer,
+                                    compressed_size);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("Failed to decompress data: %d\n", status);
     return status;
@@ -350,7 +348,7 @@ zx_status_t Blob::InitCompressed(CompressionAlgorithm algorithm) {
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
 
-  blobfs_->Metrics().UpdateMerkleDecompress(compressed_blocks * kBlobfsBlockSize, inode_.blob_size,
+  blobfs_->Metrics()->UpdateMerkleDecompress(compressed_blocks * kBlobfsBlockSize, inode_.blob_size,
                                             read_time, ticker.End());
   return ZX_OK;
 }
@@ -358,12 +356,12 @@ zx_status_t Blob::InitCompressed(CompressionAlgorithm algorithm) {
 zx_status_t Blob::InitUncompressed() {
   TRACE_DURATION("blobfs", "Blobfs::InitUncompressed", "size", inode_.blob_size, "blocks",
                  inode_.block_count);
-  fs::Ticker ticker(blobfs_->Metrics().Collecting());
+  fs::Ticker ticker(blobfs_->Metrics()->Collecting());
   fs::ReadTxn txn(blobfs_);
   BlockIterator block_iter = blobfs_->BlockIteratorByNodeIndex(GetMapIndex());
   // Read both the uncompressed merkle tree and data.
   const uint64_t blob_data_blocks = BlobDataBlocks(inode_);
-  const uint64_t merkle_blocks = MerkleTreeBlocks(inode_);
+  const uint64_t merkle_blocks = ComputeNumMerkleTreeBlocks(inode_);
   if (blob_data_blocks + merkle_blocks > std::numeric_limits<uint32_t>::max()) {
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
@@ -383,7 +381,7 @@ zx_status_t Blob::InitUncompressed() {
   if (status != ZX_OK) {
     return status;
   }
-  blobfs_->Metrics().UpdateMerkleDiskRead(length * kBlobfsBlockSize, ticker.End());
+  blobfs_->Metrics()->UpdateMerkleDiskRead(length * kBlobfsBlockSize, ticker.End());
   return status;
 }
 
@@ -419,7 +417,7 @@ void Blob::BlobCloseHandles() {
 
 zx_status_t Blob::SpaceAllocate(uint64_t size_data) {
   TRACE_DURATION("blobfs", "Blobfs::SpaceAllocate", "size_data", size_data);
-  fs::Ticker ticker(blobfs_->Metrics().Collecting());
+  fs::Ticker ticker(blobfs_->Metrics()->Collecting());
 
   if (GetState() != kBlobStateEmpty) {
     return ZX_ERR_BAD_STATE;
@@ -430,7 +428,8 @@ zx_status_t Blob::SpaceAllocate(uint64_t size_data) {
   // Initialize the inode with known fields.
   memset(inode_.merkle_root_hash, 0, sizeof(inode_.merkle_root_hash));
   inode_.blob_size = size_data;
-  inode_.block_count = MerkleTreeBlocks(inode_) + static_cast<uint32_t>(BlobDataBlocks(inode_));
+  inode_.block_count =
+      ComputeNumMerkleTreeBlocks(inode_) + static_cast<uint32_t>(BlobDataBlocks(inode_));
 
   // Special case for the null blob: We skip the write phase.
   if (inode_.blob_size == 0) {
@@ -502,29 +501,32 @@ zx_status_t Blob::SpaceAllocate(uint64_t size_data) {
   write_info_ = std::move(write_info);
 
   SetState(kBlobStateDataWrite);
-  blobfs_->Metrics().UpdateAllocation(size_data, ticker.End());
+  blobfs_->Metrics()->UpdateAllocation(size_data, ticker.End());
   return ZX_OK;
 }
 
-void* Blob::GetData() const {
+bool Blob::IsDataLoaded() const { return mapping_.vmo().is_valid(); }
+
+void* Blob::GetDataBuffer() const {
   if (merkle_mapping_.vmo().is_valid()) {
     return mapping_.start();
   }
-  return fs::GetBlock(kBlobfsBlockSize, mapping_.start(), MerkleTreeBlocks(inode_));
+  return fs::GetBlock(kBlobfsBlockSize, mapping_.start(), ComputeNumMerkleTreeBlocks(inode_));
 }
-
-void* Blob::GetMerkle() const {
+void* Blob::GetMerkleTreeBuffer() const {
   if (merkle_mapping_.vmo().is_valid()) {
     return merkle_mapping_.start();
   }
   return mapping_.start();
 }
 
+Digest Blob::MerkleRoot() const { return Digest(GetKey()); }
+
 uint64_t Blob::GetDataStartOffset() const {
   if (merkle_mapping_.vmo().is_valid()) {
     return 0;
   }
-  return MerkleTreeBlocks(inode_) * kBlobfsBlockSize;
+  return ComputeNumMerkleTreeBlocks(inode_) * kBlobfsBlockSize;
 }
 
 fit::promise<void, zx_status_t> Blob::WriteMetadata() {
@@ -616,7 +618,7 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
   }
 
   const uint64_t data_start = DataStartBlock(blobfs_->Info());
-  const uint32_t merkle_blocks = MerkleTreeBlocks(inode_);
+  const uint32_t merkle_blocks = ComputeNumMerkleTreeBlocks(inode_);
   const size_t merkle_bytes = merkle_blocks * kBlobfsBlockSize;
   if (GetState() == kBlobStateDataWrite) {
     size_t to_write = fbl::min(len, inode_.blob_size - write_info_->bytes_written);
@@ -667,13 +669,13 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
     size_t merkle_size = mtc.GetTreeLength();
     if (merkle_size > 0) {
       // Tracking generation time.
-      fs::Ticker ticker(blobfs_->Metrics().Collecting());
+      fs::Ticker ticker(blobfs_->Metrics()->Collecting());
 
       // TODO(smklein): As an optimization, use the Append method to create the merkle tree as we
       // write data, rather than waiting until the data is fully downloaded to create the tree.
       uint8_t root[digest::kSha256Length];
-      if ((status = mtc.SetTree(GetMerkle(), merkle_size, root, sizeof(root))) != ZX_OK ||
-          (status = mtc.Append(GetData(), inode_.blob_size)) != ZX_OK) {
+      if ((status = mtc.SetTree(GetMerkleTreeBuffer(), merkle_size, root, sizeof(root))) != ZX_OK ||
+          (status = mtc.Append(GetDataBuffer(), inode_.blob_size)) != ZX_OK) {
         return status;
       }
 
@@ -733,7 +735,7 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
       if (status != ZX_OK) {
         return status;
       }
-      blocks += MerkleTreeBlocks(inode_);
+      blocks += ComputeNumMerkleTreeBlocks(inode_);
       // By compressing, we used less blocks than we originally reserved.
       ZX_DEBUG_ASSERT(inode_.block_count > blocks);
 
@@ -765,13 +767,13 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
     fs::Journal::Promise write_all_data = streamer.Flush();
 
     // No more data to write. Flush to disk.
-    fs::Ticker ticker(blobfs_->Metrics().Collecting());  // Tracking enqueue time.
+    fs::Ticker ticker(blobfs_->Metrics()->Collecting());  // Tracking enqueue time.
 
     // Wrap all pending writes with a strong reference to this Blob, so that it stays
     // alive while there are writes in progress acting on it.
     auto task = fs::wrap_reference(write_all_data.and_then(WriteMetadata()), fbl::RefPtr(this));
     blobfs_->journal()->schedule_task(std::move(task));
-    blobfs_->Metrics().UpdateClientWrite(to_write, merkle_size, ticker.End(), generation_time);
+    blobfs_->Metrics()->UpdateClientWrite(to_write, merkle_size, ticker.End(), generation_time);
     set_error.cancel();
     return ZX_OK;
   }
@@ -907,14 +909,14 @@ zx_status_t Blob::QueueUnlink() {
   return TryPurge();
 }
 
-zx_status_t Blob::VerifyBlob(Blobfs* bs, uint32_t node_index) {
+zx_status_t Blob::LoadAndVerifyBlob(Blobfs* bs, uint32_t node_index) {
   Inode* inode = bs->GetNode(node_index);
   Digest digest(inode->merkle_root_hash);
   fbl::RefPtr<Blob> vn = fbl::AdoptRef(new Blob(bs, digest));
 
   vn->PopulateInode(node_index);
 
-  // If we are unable to read in the blob from disk, this should also be a VerifyBlob error.
+  // If we are unable to read in the blob from disk, this should also be a LoadAndVerifyBlob error.
   zx_status_t status = vn->InitVmos();
   if (status != ZX_OK) {
     return status;
@@ -972,19 +974,19 @@ zx_status_t Blob::GetNodeInfoForProtocol([[maybe_unused]] fs::VnodeProtocol prot
 
 zx_status_t Blob::Read(void* data, size_t len, size_t off, size_t* out_actual) {
   TRACE_DURATION("blobfs", "Blob::Read", "len", len, "off", off);
-  auto event = blobfs_->Metrics().NewLatencyEvent(fs_metrics::Event::kRead);
+  auto event = blobfs_->Metrics()->NewLatencyEvent(fs_metrics::Event::kRead);
 
   return ReadInternal(data, len, off, out_actual);
 }
 
 zx_status_t Blob::Write(const void* data, size_t len, size_t offset, size_t* out_actual) {
   TRACE_DURATION("blobfs", "Blob::Write", "len", len, "off", offset);
-  auto event = blobfs_->Metrics().NewLatencyEvent(fs_metrics::Event::kWrite);
+  auto event = blobfs_->Metrics()->NewLatencyEvent(fs_metrics::Event::kWrite);
   return WriteInternal(data, len, out_actual);
 }
 
 zx_status_t Blob::Append(const void* data, size_t len, size_t* out_end, size_t* out_actual) {
-  auto event = blobfs_->Metrics().NewLatencyEvent(fs_metrics::Event::kAppend);
+  auto event = blobfs_->Metrics()->NewLatencyEvent(fs_metrics::Event::kAppend);
   zx_status_t status = WriteInternal(data, len, out_actual);
   if (GetState() == kBlobStateDataWrite) {
     ZX_DEBUG_ASSERT(write_info_ != nullptr);
@@ -996,7 +998,7 @@ zx_status_t Blob::Append(const void* data, size_t len, size_t* out_end, size_t* 
 }
 
 zx_status_t Blob::GetAttributes(fs::VnodeAttributes* a) {
-  auto event = blobfs_->Metrics().NewLatencyEvent(fs_metrics::Event::kGetAttr);
+  auto event = blobfs_->Metrics()->NewLatencyEvent(fs_metrics::Event::kGetAttr);
   *a = fs::VnodeAttributes();
   a->mode = V_TYPE_FILE | V_IRUSR;
   a->inode = Ino();
@@ -1010,7 +1012,7 @@ zx_status_t Blob::GetAttributes(fs::VnodeAttributes* a) {
 
 zx_status_t Blob::Truncate(size_t len) {
   TRACE_DURATION("blobfs", "Blob::Truncate", "len", len);
-  auto event = blobfs_->Metrics().NewLatencyEvent(fs_metrics::Event::kTruncate);
+  auto event = blobfs_->Metrics()->NewLatencyEvent(fs_metrics::Event::kTruncate);
   if (len > 0 && fbl::round_up(len, kBlobfsBlockSize) == 0) {
     // Fail early if |len| would overflow when rounded up to block size.
     return ZX_ERR_OUT_OF_RANGE;
@@ -1066,7 +1068,7 @@ zx_status_t Blob::GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) {
 #endif
 
 void Blob::Sync(SyncCallback closure) {
-  auto event = blobfs_->Metrics().NewLatencyEvent(fs_metrics::Event::kSync);
+  auto event = blobfs_->Metrics()->NewLatencyEvent(fs_metrics::Event::kSync);
   if (atomic_load(&syncing_)) {
     blobfs_->Sync(
         [this, evt = std::move(event), cb = std::move(closure)](zx_status_t status) mutable {
@@ -1107,7 +1109,7 @@ zx_status_t Blob::Open([[maybe_unused]] ValidatedOptions options,
 }
 
 zx_status_t Blob::Close() {
-  auto event = blobfs_->Metrics().NewLatencyEvent(fs_metrics::Event::kClose);
+  auto event = blobfs_->Metrics()->NewLatencyEvent(fs_metrics::Event::kClose);
   ZX_DEBUG_ASSERT_MSG(fd_count_ > 0, "Closing blob with no fds open");
   fd_count_--;
   // Attempt purge in case blob was unlinked prior to close

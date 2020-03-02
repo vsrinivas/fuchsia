@@ -50,6 +50,7 @@ test("blobfs-unit") {
     "unit/allocator-test.cc",
     "unit/blob-cache-test.cc",
     "unit/blob-test.cc",
+    "unit/blob-verifier-test.cc",
     "unit/blobfs-checker-test.cc",
     "unit/blobfs-pager-test.cc",
     "unit/blobfs-test.cc",

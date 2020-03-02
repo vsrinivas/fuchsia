@@ -163,7 +163,7 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
   }
 
   if (options->metrics) {
-    fs->Metrics().Collect();
+    fs->Metrics()->Collect();
   }
 
   if (options->journal) {
@@ -291,7 +291,9 @@ std::unique_ptr<BlockDevice> Blobfs::Destroy(std::unique_ptr<Blobfs> blobfs) {
 
 Blobfs::~Blobfs() { Reset(); }
 
-zx_status_t Blobfs::VerifyBlob(uint32_t node_index) { return Blob::VerifyBlob(this, node_index); }
+zx_status_t Blobfs::LoadAndVerifyBlob(uint32_t node_index) {
+  return Blob::LoadAndVerifyBlob(this, node_index);
+}
 
 void Blobfs::PersistBlocks(const ReservedExtent& reserved_extent,
                            storage::UnbufferedOperationsBuilder* operations) {
@@ -521,6 +523,7 @@ zx_status_t Blobfs::AttachVmo(const zx::vmo& vmo, vmoid_t* out) {
   fuchsia_hardware_block_VmoId vmoid;
   zx_status_t status = Device()->BlockAttachVmo(vmo, &vmoid);
   if (status != ZX_OK) {
+    FS_TRACE_ERROR("Failed to attach blob VMO: %s\n", zx_status_get_string(status));
     return status;
   }
 
@@ -754,7 +757,7 @@ zx_status_t Blobfs::InitializeVnodes() {
                      digest.ToString().c_str(), node_index - 1);
       return status;
     }
-    Metrics().UpdateLookup(vnode->SizeData());
+    Metrics()->UpdateLookup(vnode->SizeData());
   }
 
   if (total_allocated != info_.alloc_inode_count) {
@@ -812,7 +815,7 @@ zx_status_t Blobfs::AttachTransferVmo(const zx::vmo& transfer_vmo) {
 }
 
 zx_status_t Blobfs::PopulateTransferVmo(uint64_t offset, uint64_t length, UserPagerInfo* info) {
-  fs::Ticker ticker(Metrics().Collecting());
+  fs::Ticker ticker(Metrics()->Collecting());
   fs::ReadTxn txn(this);
   BlockIterator block_iter = BlockIteratorByNodeIndex(info->identifier);
 
@@ -847,7 +850,7 @@ zx_status_t Blobfs::PopulateTransferVmo(uint64_t offset, uint64_t length, UserPa
                    zx_status_get_string(status));
     return status;
   }
-  Metrics().UpdateMerkleDiskRead(block_count * kBlobfsBlockSize, ticker.End());
+  Metrics()->UpdateMerkleDiskRead(block_count * kBlobfsBlockSize, ticker.End());
   return ZX_OK;
 }
 
@@ -856,9 +859,7 @@ zx_status_t Blobfs::VerifyTransferVmo(uint64_t offset, uint64_t length, const zx
   if (!info) {
     return ZX_ERR_INVALID_ARGS;
   }
-  ZX_DEBUG_ASSERT(info->verifier);
 
-  fs::Ticker ticker(Metrics().Collecting());
   fzl::VmoMapper mapping;
   // We need to unmap the transfer VMO before its pages can be transferred to the destination VMO,
   // via |zx_pager_supply_pages|.
@@ -871,18 +872,15 @@ zx_status_t Blobfs::VerifyTransferVmo(uint64_t offset, uint64_t length, const zx
     return status;
   }
 
-  status = info->verifier->Verify(mapping.start(), length, offset);
+  status = info->verifier->VerifyPartial(mapping.start(), length, offset);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("blobfs: Verification failure: %s\n", zx_status_get_string(status));
   }
-  Metrics().UpdateMerkleVerify(length, info->verifier->GetTreeLength(), ticker.End());
 
   return status;
 }
 
 zx_status_t Blobfs::AlignForVerification(uint64_t* offset, uint64_t* length, UserPagerInfo* info) {
-  ZX_DEBUG_ASSERT(info->verifier);
-
   uint64_t data_offset = *offset;
   uint64_t data_length = fbl::min(*length, info->data_length_bytes - data_offset);
 

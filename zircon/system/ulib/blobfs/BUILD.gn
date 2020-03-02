@@ -82,6 +82,7 @@ zx_library("blobfs") {
       "allocator/allocator.cc",
       "allocator/allocator.h",
       "blob-cache.cc",
+      "blob-verifier.cc",
       "blob.cc",
       "blobfs.cc",
       "cache-node.cc",

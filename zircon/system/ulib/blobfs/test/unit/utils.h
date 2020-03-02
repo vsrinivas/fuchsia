@@ -75,7 +75,7 @@ class MockTransactionManager : public TransactionManager {
 
   zx_status_t DetachVmo(vmoid_t vmoid) final;
 
-  BlobfsMetrics& Metrics() final { return metrics_; }
+  BlobfsMetrics* Metrics() final { return &metrics_; }
 
   size_t WritebackCapacity() const final { return kWritebackCapacity; }
 

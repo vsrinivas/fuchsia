@@ -232,7 +232,8 @@ void RunFragmentationTest(FilesystemTest* test) {
   // Calculate actual number of blocks required to store the blob (including the merkle tree).
   blobfs::Inode large_inode;
   large_inode.blob_size = kLargeSize;
-  size_t kLargeBlocks = blobfs::MerkleTreeBlocks(large_inode) + blobfs::BlobDataBlocks(large_inode);
+  size_t kLargeBlocks =
+      blobfs::ComputeNumMerkleTreeBlocks(large_inode) + blobfs::BlobDataBlocks(large_inode);
 
   // We shouldn't have space (before we try allocating) ...
   fio::FilesystemInfo usage;

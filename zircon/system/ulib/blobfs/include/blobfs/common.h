@@ -54,7 +54,10 @@ uint32_t SuggestJournalBlocks(uint32_t current, uint32_t available);
 // FVM-specific fields.
 void InitializeSuperblock(uint64_t block_count, Superblock* info);
 
-uint32_t MerkleTreeBlocks(const Inode& blobNode);
+// Computes the number of blocks necessary to store the merkle tree for the blob, based on its size.
+// May return 0 for small blobs (for which only the root digest is sufficient to verify the entire
+// contents of the blob).
+uint32_t ComputeNumMerkleTreeBlocks(const Inode& blobNode);
 
 // Get a pointer to the nth block of the bitmap.
 inline void* GetRawBitmapData(const RawBitmap& bm, uint64_t n) {

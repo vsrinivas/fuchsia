@@ -149,7 +149,7 @@ zx_status_t blobfs_add_mapped_blob_with_merkle(Blobfs* bs, FileSizeRecorder* siz
 
   Inode* inode = inode_block->GetInode();
   inode->blob_size = mapping.length();
-  uint64_t block_count = MerkleTreeBlocks(*inode) + info.GetDataBlocks();
+  uint64_t block_count = ComputeNumMerkleTreeBlocks(*inode) + info.GetDataBlocks();
   if (block_count > std::numeric_limits<uint32_t>::max()) {
     FS_TRACE_ERROR("error: Block count too large\n");
     return ZX_ERR_NOT_SUPPORTED;
@@ -647,7 +647,7 @@ zx_status_t Blobfs::WriteNode(std::unique_ptr<InodeBlock> ino_block) {
 }
 
 zx_status_t Blobfs::WriteData(Inode* inode, const void* merkle_data, const void* blob_data) {
-  const size_t merkle_blocks = MerkleTreeBlocks(*inode);
+  const size_t merkle_blocks = ComputeNumMerkleTreeBlocks(*inode);
   const size_t data_blocks = inode->block_count - merkle_blocks;
   for (size_t n = 0; n < merkle_blocks; n++) {
     const void* data = fs::GetBlock(kBlobfsBlockSize, merkle_data, n);
@@ -731,12 +731,12 @@ Inode* Blobfs::GetNode(uint32_t index) {
   return &iblock[index % kBlobfsInodesPerBlock];
 }
 
-zx_status_t Blobfs::VerifyBlob(uint32_t node_index) {
+zx_status_t Blobfs::LoadAndVerifyBlob(uint32_t node_index) {
   Inode inode = *GetNode(node_index);
 
   // Determine size for (uncompressed) data buffer.
   uint64_t data_blocks = BlobDataBlocks(inode);
-  uint64_t merkle_blocks = MerkleTreeBlocks(inode);
+  uint64_t merkle_blocks = ComputeNumMerkleTreeBlocks(inode);
   uint64_t num_blocks = data_blocks + merkle_blocks;
   size_t target_size;
   if (mul_overflow(num_blocks, kBlobfsBlockSize, &target_size)) {

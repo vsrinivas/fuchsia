@@ -60,6 +60,7 @@ zx_status_t UserPager::TransferPagesToVmo(uint64_t offset, uint64_t length, cons
   // Align the range to include pages needed for verification.
   zx_status_t status = AlignForVerification(&offset, &length, info);
   if (status != ZX_OK) {
+    FS_TRACE_ERROR("blobfs: Failed to align requested pages: %s\n", zx_status_get_string(status));
     return status;
   }
 
@@ -73,12 +74,14 @@ zx_status_t UserPager::TransferPagesToVmo(uint64_t offset, uint64_t length, cons
   // Read from storage into the transfer buffer.
   status = PopulateTransferVmo(offset, length, info);
   if (status != ZX_OK) {
+    FS_TRACE_ERROR("blobfs: Failed to populate transfer vmo: %s\n", zx_status_get_string(status));
     return status;
   }
 
   // Verify the pages read in.
   status = VerifyTransferVmo(offset, length, transfer_buffer_, info);
   if (status != ZX_OK) {
+    FS_TRACE_ERROR("blobfs: Failed to verify transfer vmo: %s\n", zx_status_get_string(status));
     return status;
   }
 

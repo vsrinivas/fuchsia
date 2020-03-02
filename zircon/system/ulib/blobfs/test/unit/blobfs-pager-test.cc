@@ -19,6 +19,7 @@
 #include <fbl/auto_call.h>
 #include <zxtest/zxtest.h>
 
+#include "blob-verifier.h"
 #include "pager/page-watcher.h"
 #include "pager/user-pager.h"
 
@@ -32,7 +33,7 @@ constexpr uint64_t kNumThreads = 10;
 // Like a Blob w.r.t. the pager - creates a VMO linked to the pager and issues reads on it.
 class MockBlob {
  public:
-  MockBlob(char identifier, UserPager* pager) : identifier_(identifier) {
+  MockBlob(char identifier, UserPager* pager, BlobfsMetrics* metrics) : identifier_(identifier) {
     char data[kPagedVmoSize];
     memset(data, identifier, kPagedVmoSize);
 
@@ -40,12 +41,12 @@ class MockBlob {
     ASSERT_OK(
         digest::MerkleTreeCreator::Create(data, kPagedVmoSize, &merkle_tree_, &tree_len, &root_));
 
-    auto mtv = std::make_unique<digest::MerkleTreeVerifier>();
-    ASSERT_OK(mtv->SetDataLength(kPagedVmoSize));
-    ASSERT_OK(mtv->SetTree(merkle_tree_.get(), tree_len, root_.get(), root_.len()));
+    std::unique_ptr<BlobVerifier> verifier;
+    ASSERT_OK(BlobVerifier::Create(digest::Digest(root_.get()), metrics, merkle_tree_.get(),
+                                   tree_len, kPagedVmoSize, &verifier));
 
     UserPagerInfo pager_info;
-    pager_info.verifier = std::move(mtv);
+    pager_info.verifier = std::move(verifier);
     pager_info.identifier = identifier_;
 
     page_watcher_ = std::make_unique<PageWatcher>(pager, std::move(pager_info));
@@ -127,7 +128,7 @@ class MockPager : public UserPager {
     if (status != ZX_OK) {
       return status;
     }
-    return info->verifier->Verify(mapping.start(), length, offset);
+    return info->verifier->VerifyPartial(mapping.start(), length, offset);
   }
 
   zx::unowned_vmo vmo_;
@@ -138,13 +139,14 @@ class BlobfsPagerTest : public zxtest::Test {
   void SetUp() override { pager_ = std::make_unique<MockPager>(); }
 
   std::unique_ptr<MockBlob> CreateBlob(char identifier = 'z') {
-    return std::make_unique<MockBlob>(identifier, pager_.get());
+    return std::make_unique<MockBlob>(identifier, pager_.get(), &metrics_);
   }
 
   void ResetPager() { pager_.reset(); }
 
  private:
   std::unique_ptr<MockPager> pager_;
+  BlobfsMetrics metrics_;
 };
 
 void GetRandomOffsetAndLength(unsigned int* seed, uint64_t* offset, uint64_t* length) {

@@ -184,7 +184,7 @@ class Blobfs : public fbl::RefCounted<Blobfs>, public NodeFinder {
 
   zx_status_t ResetCache();
 
-  zx_status_t VerifyBlob(uint32_t node_index);
+  zx_status_t LoadAndVerifyBlob(uint32_t node_index);
 
   RawBitmap block_map_{};
 

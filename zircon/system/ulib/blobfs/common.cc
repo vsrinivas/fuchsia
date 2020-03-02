@@ -77,7 +77,8 @@ void DumpSuperblock(const Superblock& info, FILE* out) {
 }  // namespace
 
 // Number of blocks reserved for the Merkle Tree
-uint32_t MerkleTreeBlocks(const Inode& blobNode) {
+// TODO(45457): Refactor this method to not require heap allocations.
+uint32_t ComputeNumMerkleTreeBlocks(const Inode& blobNode) {
   MerkleTreeCreator mtc;
   // If this fails, omit the Merkle tree. This will cause subsequent Merkle tree creation and/or
   // verification to fail.
