@@ -52,6 +52,8 @@ class TestBase : public ::testing::Test {
     status = fdio_ns_bind_fd(ns_, "/svc", fd.get());
     ASSERT_EQ(ZX_OK, status);
   }
+
+  void TearDown() override { fdio_ns_destroy(ns_); }
 };
 
 }  // namespace testing
