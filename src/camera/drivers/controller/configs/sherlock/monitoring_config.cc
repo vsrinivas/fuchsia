@@ -129,6 +129,7 @@ static InternalConfigNode OutputStreamMLFR() {
               fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
                   fuchsia::camera2::CameraStreamType::MACHINE_LEARNING,
           },
+      .image_formats = OutputStreamMLFRImageFormats(),
   };
 }
 
@@ -142,6 +143,7 @@ static InternalConfigNode OutputStreamMLDS() {
               fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION |
                   fuchsia::camera2::CameraStreamType::MACHINE_LEARNING,
           },
+      .image_formats = OutputStreamMLDSImageFormats(),
   };
 }
 
@@ -233,6 +235,7 @@ static InternalConfigNode OutputStreamMonitoring() {
           {
               fuchsia::camera2::CameraStreamType::MONITORING,
           },
+      .image_formats = OutputStreamMonitoringImageFormats(),
   };
 }
 

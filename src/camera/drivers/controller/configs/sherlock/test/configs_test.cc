@@ -94,6 +94,8 @@ TEST(ConfigTest, InternalMonitorConfiguration) {
 
   EXPECT_EQ(ge2d_ds_node.ge2d_info.config_type, Ge2DConfig::GE2D_WATERMARK);
 
+  EXPECT_EQ(output_ds_node.image_formats.size(), 3u);
+
   // FR graph validation.
   input_node = fr;
   ASSERT_EQ(fr.child_nodes.size(), 2u);
@@ -117,6 +119,9 @@ TEST(ConfigTest, InternalMonitorConfiguration) {
   EXPECT_EQ(gdc_ds_node.supported_streams.at(0), kStreamTypeML | kStreamTypeDS);
   EXPECT_EQ(output_ds_node.supported_streams.at(0), kStreamTypeML | kStreamTypeDS);
   EXPECT_EQ(output_fr_node.supported_streams.at(0), kStreamTypeML | kStreamTypeFR);
+
+  EXPECT_EQ(output_ds_node.image_formats.size(), 1u);
+  EXPECT_EQ(output_fr_node.image_formats.size(), 1u);
 }
 
 TEST(ConfigTest, InternalVideoConferenceConfiguration) {
@@ -150,6 +155,9 @@ TEST(ConfigTest, InternalVideoConferenceConfiguration) {
   EXPECT_EQ(NodeType::kGe2d, ge2d_node.type);
   EXPECT_EQ(NodeType::kOutputStream, output_ml_node.type);
   EXPECT_EQ(NodeType::kOutputStream, output_video_node.type);
+
+  EXPECT_EQ(output_ml_node.image_formats.size(), 1u);
+  EXPECT_EQ(output_video_node.image_formats.size(), 3u);
 }
 
 }  // namespace

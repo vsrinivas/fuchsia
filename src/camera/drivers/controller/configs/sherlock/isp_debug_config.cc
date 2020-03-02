@@ -71,6 +71,7 @@ static InternalConfigNode OutputStream() {
           {
               fuchsia::camera2::CameraStreamType::FULL_RESOLUTION,
           },
+      .image_formats = IspDebugStreamImageFormats(),
   };
 }
 

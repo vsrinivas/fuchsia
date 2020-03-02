@@ -87,6 +87,7 @@ static InternalConfigNode OutputMLFR() {
                   fuchsia::camera2::CameraStreamType::MACHINE_LEARNING |
                   fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE,
           },
+      .image_formats = MLFRImageFormats(),
   };
 }
 
@@ -100,6 +101,7 @@ static InternalConfigNode OutputVideoConferencing() {
 
               fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE,
           },
+      .image_formats = VideoImageFormats(),
   };
 }
 
