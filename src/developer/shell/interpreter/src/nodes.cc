@@ -34,6 +34,13 @@ void Type::GenerateIntegerLiteral(ExecutionContext* context, code::Code* code,
   context->EmitError(literal->id(), ss.str());
 }
 
+void Type::GenerateStringLiteral(ExecutionContext* context, code::Code* code,
+                                 const StringLiteral* literal) const {
+  std::stringstream ss;
+  ss << "Can't create a string literal of type " << *this << '.';
+  context->EmitError(literal->id(), ss.str());
+}
+
 void Type::LoadVariable(const ExecutionScope* scope, size_t index, Value* value) const {
   FXL_LOG(FATAL) << "Can't load variable of type " << *this;
 }

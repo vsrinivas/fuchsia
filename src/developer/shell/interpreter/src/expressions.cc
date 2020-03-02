@@ -28,5 +28,17 @@ void IntegerLiteral::Compile(ExecutionContext* context, code::Code* code,
   for_type->GenerateIntegerLiteral(context, code, this);
 }
 
+std::unique_ptr<Type> StringLiteral::GetType() const { return std::make_unique<TypeString>(); }
+
+void StringLiteral::Dump(std::ostream& os) const {
+  // TODO(vbelliard): escape special characters.
+  os << '"' << string()->value() << '"';
+}
+
+void StringLiteral::Compile(ExecutionContext* context, code::Code* code,
+                            const Type* for_type) const {
+  for_type->GenerateStringLiteral(context, code, this);
+}
+
 }  // namespace interpreter
 }  // namespace shell

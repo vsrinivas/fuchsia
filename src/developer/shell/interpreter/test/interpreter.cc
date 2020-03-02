@@ -127,6 +127,13 @@ class NodeBuilder {
     return AddNode(&node, /*root_node=*/false);
   }
 
+  /// Adds an integer literal to the list of nodes.
+  fuchsia::shell::NodeId StringLiteral(std::string value) {
+    fuchsia::shell::Node node;
+    node.set_string_literal(std::move(value));
+    return AddNode(&node, /*root_node=*/false);
+  }
+
   // Adds a variable definition to the list of nodes.
   fuchsia::shell::NodeId VariableDefinition(const char* name, fuchsia::shell::ShellType type,
                                             bool mutable_value,
@@ -284,30 +291,38 @@ TEST_F(InterpreterTest, VariableOk) {
   NodeBuilder builder(kFileId);
   builder.VariableDefinition("foo", TypeUint64(), false, builder.IntegerLiteral(1, false));
   builder.VariableDefinition("bar", TypeUint64(), false, builder.IntegerLiteral(10, false));
+  builder.VariableDefinition("groucho", TypeUndef(), false,
+                             builder.StringLiteral("A Marx brother"));
 
   shell()->AddNodes(context->id, std::move(*builder.nodes()));
   shell()->ExecuteExecutionContext(context->id);
   LoadGlobal("foo");
   LoadGlobal("bar");
+  LoadGlobal("groucho");
   LoadGlobal("x");
   Run();
 
   ASSERT_EQ(fuchsia::shell::ExecuteResult::OK, context->result);
 
-  fuchsia::shell::Value* foo = GetGlobal("foo");
+  fuchsia::shell::Node* foo = GetGlobal("foo");
   ASSERT_TRUE(foo->is_integer_literal());
   ASSERT_FALSE(foo->integer_literal().negative);
   ASSERT_EQ(foo->integer_literal().absolute_value.size(), static_cast<size_t>(1));
   ASSERT_EQ(foo->integer_literal().absolute_value[0], 1U);
 
-  fuchsia::shell::Value* bar = GetGlobal("bar");
+  fuchsia::shell::Node* bar = GetGlobal("bar");
   ASSERT_TRUE(bar->is_integer_literal());
   ASSERT_FALSE(bar->integer_literal().negative);
   ASSERT_EQ(bar->integer_literal().absolute_value.size(), static_cast<size_t>(1));
   ASSERT_EQ(bar->integer_literal().absolute_value[0], 10U);
 
-  fuchsia::shell::Value* x = GetGlobal("x");
-  ASSERT_TRUE(x->is_undef());
+  fuchsia::shell::Node* groucho = GetGlobal("groucho");
+  ASSERT_TRUE(groucho->is_string_literal());
+  ASSERT_EQ("A Marx brother",
+            std::string(groucho->string_literal().data(), groucho->string_literal().size()));
+
+  fuchsia::shell::Node* x = GetGlobal("x");
+  ASSERT_EQ(x, nullptr);
 }
 
 TEST_F(InterpreterTest, VariableNoTypeNorValue) {

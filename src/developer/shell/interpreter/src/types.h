@@ -54,16 +54,22 @@ class TypeChar : public TypeBuiltin {
   void Dump(std::ostream& os) const override;
 };
 
-class TypeString : public Type {
+class TypeString : public TypeBuiltin {
  public:
   TypeString() = default;
 
-  // TODO(vbelliard): Use the right size when it will be implemented.
-  size_t Size() const override { return 0; }
+  size_t Size() const override { return sizeof(String*); }
 
   std::unique_ptr<Type> Duplicate() const override;
 
   void Dump(std::ostream& os) const override;
+
+  void GenerateDefaultValue(ExecutionContext* context, code::Code* code) const override;
+
+  void GenerateStringLiteral(ExecutionContext* context, code::Code* code,
+                             const StringLiteral* literal) const override;
+
+  void LoadVariable(const ExecutionScope* scope, size_t index, Value* value) const override;
 };
 
 class TypeInt8 : public TypeBuiltin {

@@ -63,16 +63,19 @@ InterpreterTest::InterpreterTest()
     InterpreterTestContext* context = GetContext(context_id);
     ASSERT_NE(nullptr, context);
     context->result = result;
-    if (globals_.empty() || (result != fuchsia::shell::ExecuteResult::OK)) {
+    if (globals_to_load_.empty() || (result != fuchsia::shell::ExecuteResult::OK)) {
       Quit();
     } else {
       // Now that the execution is finished, loads all the global variables we asked using
       // LoadGlobal.
-      for (const auto& global : globals_) {
+      for (const auto& global : globals_to_load_) {
         ++pending_globals_;
-        const std::string& name = global.first;
-        shell()->LoadGlobal(name, [this, name](fuchsia::shell::Value value) {
-          globals_[name] = std::move(value);
+        shell()->LoadGlobal(global, [this, global](std::vector<fuchsia::shell::Node> nodes) {
+          if (!nodes.empty()) {
+            // Currently we only support single values.
+            ASSERT_EQ(nodes.size(), static_cast<size_t>(1));
+            globals_[global] = std::move(nodes[0]);
+          }
           if (--pending_globals_ == 0) {
             Quit();
           }

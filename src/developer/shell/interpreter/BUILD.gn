@@ -21,6 +21,7 @@ static_library("shell_interpreter") {
     "src/scope.cc",
     "src/thread.cc",
     "src/types.cc",
+    "src/value.cc",
   ]
 }
 
@@ -70,6 +71,18 @@ package("shell_server") {
   ]
 }
 
+executable("shell_interpreter_test_bin") {
+  testonly = true
+  sources = [ "test/interpreter_unit_tests.cc" ]
+
+  deps = [
+    ":shell_interpreter",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
 executable("shell_server_test_bin") {
   testonly = true
   sources = [
@@ -93,9 +106,16 @@ executable("shell_server_test_bin") {
   ]
 }
 
-test_package("shell_server_tests") {
-  deps = [ ":shell_server_test_bin" ]
+test_package("shell_interpreter_tests") {
+  deps = [
+    ":shell_interpreter_test_bin",
+    ":shell_server_test_bin",
+  ]
   tests = [
+    {
+      name = "shell_interpreter_test_bin"
+      environments = basic_envs
+    },
     {
       name = "shell_server_test_bin"
       environments = basic_envs
@@ -106,5 +126,5 @@ test_package("shell_server_tests") {
 group("tests") {
   testonly = true
 
-  deps = [ ":shell_server_tests" ]
+  deps = [ ":shell_interpreter_tests" ]
 }

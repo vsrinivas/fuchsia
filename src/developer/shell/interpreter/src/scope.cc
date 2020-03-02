@@ -27,6 +27,13 @@ void ExecutionScope::Execute(ExecutionContext* context, Thread* thread,
         thread->Push(value);
         break;
       }
+      case code::Opcode::kReferenceCountedLiteral: {
+        uint64_t value = code->code()[pc++];
+        auto object = reinterpret_cast<ReferenceCountedBase*>(value);
+        object->Use();
+        thread->Push(value);
+        break;
+      }
       case code::Opcode::kStore64: {
         uint64_t index = code->code()[pc++];
         auto destination = reinterpret_cast<uint64_t*>(

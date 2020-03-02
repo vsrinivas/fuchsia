@@ -7,9 +7,11 @@
 
 #include <cstdint>
 #include <memory>
+#include <string_view>
 #include <vector>
 
 #include "src/developer/shell/interpreter/src/nodes.h"
+#include "src/developer/shell/interpreter/src/value.h"
 
 namespace shell {
 namespace interpreter {
@@ -36,6 +38,25 @@ class IntegerLiteral : public Expression {
   const uint64_t absolute_value_;
   // If true, this is a negative value (-absolute_value_).
   const bool negative_;
+};
+
+// Defines a string value.
+class StringLiteral : public Expression {
+ public:
+  StringLiteral(Interpreter* interpreter, uint64_t file_id, uint64_t node_id,
+                std::string_view value)
+      : Expression(interpreter, file_id, node_id), string_(value) {}
+
+  String* string() const { return string_.data(); }
+
+  std::unique_ptr<Type> GetType() const override;
+  void Dump(std::ostream& os) const override;
+
+  void Compile(ExecutionContext* context, code::Code* code, const Type* for_type) const override;
+
+ private:
+  // The value for the string.
+  StringContainer string_;
 };
 
 }  // namespace interpreter

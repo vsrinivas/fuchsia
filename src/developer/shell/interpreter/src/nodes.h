@@ -23,6 +23,7 @@ class Instruction;
 class IntegerLiteral;
 class Interpreter;
 class Scope;
+class StringLiteral;
 class Variable;
 
 struct NodeId {
@@ -72,6 +73,12 @@ class Type {
   // compatible with the type.
   virtual void GenerateIntegerLiteral(ExecutionContext* context, code::Code* code,
                                       const IntegerLiteral* literal) const;
+
+  // Generates a string literal for this type. When the generated code is executed, it pushes the
+  // value to the thread's stack value. The generation can generate an error if the literal is not
+  // compatible with the type.
+  virtual void GenerateStringLiteral(ExecutionContext* context, code::Code* code,
+                                     const StringLiteral* literal) const;
 
   // Loads the current value of the variable stored at |index| in |scope| into |value|.
   virtual void LoadVariable(const ExecutionScope* scope, size_t index, Value* value) const;

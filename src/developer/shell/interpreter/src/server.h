@@ -163,6 +163,9 @@ class Service final : public llcpp::fuchsia::shell::Shell::Interface {
                              uint64_t node_node_id,
                              const llcpp::fuchsia::shell::VariableDefinition& node, bool root_node);
 
+  void AddStringLiteral(ServerInterpreterContext* context, uint64_t node_file_id,
+                        uint64_t node_node_id, const ::fidl::StringView& node, bool root_node);
+
   // The handle to communicate with the client.
   zx_handle_t handle_;
   // The interpreter associated with this service. An interpreter can only be associated to one

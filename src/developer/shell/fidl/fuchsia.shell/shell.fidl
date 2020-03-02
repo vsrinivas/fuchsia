@@ -98,6 +98,8 @@ union Node {
     1: IntegerLiteral integer_literal;
     /// A variable.
     2: VariableDefinition variable_definition;
+    /// A string value.
+    3: string:MAX string_literal;
 };
 
 /// Define a node which has to be inserted in the AST. The node will stay pending until it is used
@@ -121,13 +123,6 @@ struct NodeDefinition {
     /// When root_node is false, the node is pending and must be used by another node before
     /// ExecuteExecutionContext is called.
     bool root_node;
-};
-
-union Value {
-    /// Value not defined.
-    1: bool undef;
-    /// An integer value.
-    2: IntegerLiteral integer_literal;
 };
 
 /// Defines the protocol to communicate with a shell interpreter.
@@ -183,7 +178,7 @@ protocol Shell {
     /// may be modified later by the running code).
     ///
     /// - `name` the name of the variable to load.
-    LoadGlobal(string:MAX name) -> (Value value);
+    LoadGlobal(string:MAX name) -> (vector<Node>:MAX nodes);
 
     /// Called each time the shell detects an error. This method can be called several times.
     /// The execution is done (started with ExecuteExecutionContext) when OnExecutionDone is

@@ -8,6 +8,8 @@
 #include <memory>
 #include <vector>
 
+#include "src/developer/shell/interpreter/src/value.h"
+
 namespace shell {
 namespace interpreter {
 
@@ -19,6 +21,9 @@ enum class Opcode : uint64_t {
   kNop,
   // Pushes a 64 bit literal to the thread's value stack.
   kLiteral64,
+  // Pushes a reference counted literal to the thread's value stack. Increment the reference count
+  // for the object.
+  kReferenceCountedLiteral,
   // Stores a 64 bit value popped from the thread's value stack into a global variable.
   kStore64,
   // Return from code execution. The execution goes back to the calling scope or stops if it was
@@ -40,6 +45,13 @@ class Code {
     code_.emplace_back(value);
   }
 
+  // Adds a string literal operation.
+  void StringLiteral(String* value) {
+    strings_.emplace_back(value);
+    emplace_back_opcode(Opcode::kReferenceCountedLiteral);
+    code_.emplace_back(reinterpret_cast<uint64_t>(value));
+  }
+
   // Adds a 64 bit store within the global scope.
   void Store64(uint64_t index) {
     emplace_back_opcode(Opcode::kStore64);
@@ -54,6 +66,9 @@ class Code {
 
   // Contains the operations. It's a mix of opcodes and arguments for the operations.
   std::vector<uint64_t> code_;
+
+  // Keeps alive the string literals in the code.
+  std::vector<StringContainer> strings_;
 };
 
 }  // namespace code

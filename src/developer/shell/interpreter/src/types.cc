@@ -47,6 +47,21 @@ std::unique_ptr<Type> TypeString::Duplicate() const { return std::make_unique<Ty
 
 void TypeString::Dump(std::ostream& os) const { os << "string"; }
 
+void TypeString::GenerateDefaultValue(ExecutionContext* context, code::Code* code) const {
+  StringContainer string("");
+  code->StringLiteral(string.data());
+}
+
+void TypeString::GenerateStringLiteral(ExecutionContext* context, code::Code* code,
+                                       const StringLiteral* literal) const {
+  code->StringLiteral(literal->string());
+}
+
+void TypeString::LoadVariable(const ExecutionScope* scope, size_t index, Value* value) const {
+  auto data = reinterpret_cast<String* const*>(scope->Data(index, sizeof(String*)));
+  value->SetString(*data);
+}
+
 // - type int8 -------------------------------------------------------------------------------------
 
 std::unique_ptr<Type> TypeInt8::Duplicate() const { return std::make_unique<TypeInt8>(); }
@@ -112,7 +127,7 @@ void TypeUint64::GenerateIntegerLiteral(ExecutionContext* context, code::Code* c
 
 void TypeUint64::LoadVariable(const ExecutionScope* scope, size_t index, Value* value) const {
   const uint64_t* data = reinterpret_cast<const uint64_t*>(scope->Data(index, sizeof(uint64_t)));
-  value->Set(ValueType::kUint64, *data);
+  value->SetUint64(*data);
 }
 
 // - type integer ----------------------------------------------------------------------------------

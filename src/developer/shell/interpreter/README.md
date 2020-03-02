@@ -124,6 +124,9 @@ and we only have one thread left.
 Threads are associated to one isolate (which provides functions and global data) and to one
 execution context (which provide a way to send errors and results).
 
+A thread holds a stack of 64 bit values which are used to hold temporary results when computing
+expressions.
+
 # Execution scopes (class ExecutionScope)
 
 An execution scope hold the local state for a function or an iterator. The scopes are linked up to
@@ -131,9 +134,66 @@ the global execution scope (defined by the isolate). A scope is linked to exactl
 (or no scope for the global scope). However, several scopes can be linked to the same scope (this
 is, for example, the case for a function which uses two iterators).
 
+An execution scope holds a buffer which is used to store all the persistent values for this scope
+(local variables for a local scope, global variables for the global scope).
+
 # Scopes (class Scope)
 
 Scopes are used during the compilation to infer the variable, function, class, ... associated to a
 name.
 
 They can also be used for dynamic code when the name resolution can't be done during compilation.
+
+# Values
+
+The interpreter can manage a wide set of different values.
+
+There are basically three different kinds of values:
+
+*   Values that can be stored in a fixed size slot (for example, integers, Booleans).
+
+*   Values that needs additional storage. This storage is referenced by a pointer which is stored
+in a fixed size slot (for example strings).
+
+*   Values that can hold any type of value (that means that such a value can hold an integer and,
+later, hold a string). These values are stored using **shell::interpreter::Value** whose size is
+fixed.
+
+These values can be pushed to or popped from the thread's value stack (some values may take
+several slots).
+
+They can also be stored into the execution scope's buffer (case of global or local variables).
+
+## Fixed size slot values
+
+These values can be stored and copied just by writing a new value within the slot.
+
+## Values with additional storage
+
+These values are reference counted. The classes **ReferenceCountedBase**, **ReferenceCounted** and
+**Container** are used to handle the reference counting.
+
+The code class has a vector of **StringContainer** which keeps alive the strings directly
+referenced by operations (string literals).
+
+## Any type values
+
+These values are stored using the **Value** class. It contains a type and a 64 bit union which can
+hold the different value kinds:
+
+*   **uint64_t** for a 64 bit unsigned integer
+
+*   **String\*** for a string
+
+For the string case, the value takes a reference when it is assigned and releases it when it is
+destroyed (or overwritten).
+
+## Strings
+
+Strings are implemented using the classes **String** and **StringContainer**.
+
+The class **String** holds the string. It is encoded using UTF-8 but users of the language can see
+it as if all characters were encoded using code points. They are reference counted which means that
+they are only copied on write.
+
+The class **StringContainer** automatically manages a **String** (the reference).

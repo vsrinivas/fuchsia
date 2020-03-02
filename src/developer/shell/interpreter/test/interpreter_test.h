@@ -36,13 +36,10 @@ class InterpreterTest : public ::testing::Test {
   bool last_result_partial() const { return last_result_partial_; }
 
   // Loads a global variable. The loads are defered after the end of the execution.
-  void LoadGlobal(const std::string& name) {
-    fuchsia::shell::Value value;
-    globals_.emplace(name, std::move(value));
-  }
+  void LoadGlobal(const std::string& name) { globals_to_load_.emplace_back(name); }
 
   // Gets the value for a global variable we loaded using LoadGlobal.
-  fuchsia::shell::Value* GetGlobal(const std::string& name) {
+  fuchsia::shell::Node* GetGlobal(const std::string& name) {
     auto result = globals_.find(name);
     if (result == globals_.end()) {
       return nullptr;
@@ -76,7 +73,11 @@ class InterpreterTest : public ::testing::Test {
   std::vector<std::string> results_;
   bool last_result_partial_ = false;
   bool running_ = false;
-  std::map<std::string, fuchsia::shell::Value> globals_;
+  // Names for the global we will load when the execution will be done.
+  std::vector<std::string> globals_to_load_;
+  // Holds the values for the globals which have been loaded.
+  std::map<std::string, fuchsia::shell::Node> globals_;
+  // Count of global we are waiting for a result.
   int pending_globals_ = 0;
 };
 

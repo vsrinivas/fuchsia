@@ -193,6 +193,9 @@ void Service::AddNodes(uint64_t context_id,
       } else if (node.node.is_variable_definition()) {
         AddVariableDefinition(context, node.node_id.file_id, node.node_id.node_id,
                               node.node.variable_definition(), node.root_node);
+      } else if (node.node.is_string_literal()) {
+        AddStringLiteral(context, node.node_id.file_id, node.node_id.node_id,
+                         node.node.string_literal(), node.root_node);
       } else {
         interpreter_->EmitError(context->execution_context(),
                                 "Can't create node " + std::to_string(node.node_id.file_id) + ":" +
@@ -232,29 +235,37 @@ void Service::ExecuteExecutionContext(uint64_t context_id,
 
 void Service::LoadGlobal(::fidl::StringView name, LoadGlobalCompleter::Sync completer) {
   const Variable* variable = interpreter_->SearchGlobal(std::string(name.data(), name.size()));
-  llcpp::fuchsia::shell::Value shell_value;
-  fidl::aligned<bool> undef = true;
+  Value value;
+  std::vector<llcpp::fuchsia::shell::Node> nodes;
   llcpp::fuchsia::shell::IntegerLiteral integer_literal;
   std::vector<uint64_t> absolute_value;
-  if (variable == nullptr) {
-    shell_value.set_undef(fidl::tracking_ptr<bool>(fidl::unowned_ptr<fidl::aligned<bool>>(&undef)));
-  } else {
-    Value value;
+  fidl::StringView string;
+  if (variable != nullptr) {
     interpreter_->LoadGlobal(variable, &value);
     switch (value.type()) {
       case ValueType::kUndef:
-        shell_value.set_undef(
-            fidl::tracking_ptr<bool>(fidl::unowned_ptr<fidl::aligned<bool>>(&undef)));
         break;
-      case ValueType::kUint64:
-        absolute_value.emplace_back(value.value());
+      case ValueType::kUint64: {
+        absolute_value.emplace_back(value.GetUint64());
         integer_literal.absolute_value = fidl::VectorView(absolute_value);
+        llcpp::fuchsia::shell::Node shell_value;
         shell_value.set_integer_literal(
             fidl::unowned_ptr<llcpp::fuchsia::shell::IntegerLiteral>(&integer_literal));
+        nodes.emplace_back(std::move(shell_value));
         break;
+      }
+      case ValueType::kString: {
+        String* string_value = value.GetString();
+        string.set_data(string_value->value().data());
+        string.set_size(string_value->value().size());
+        llcpp::fuchsia::shell::Node shell_value;
+        shell_value.set_string_literal(fidl::unowned_ptr<fidl::StringView>(&string));
+        nodes.emplace_back(std::move(shell_value));
+        break;
+      }
     }
   }
-  completer.Reply(std::move(shell_value));
+  completer.Reply(fidl::VectorView(nodes));
 }
 
 void Service::AddIntegerLiteral(ServerInterpreterContext* context, uint64_t node_file_id,
@@ -287,6 +298,14 @@ void Service::AddVariableDefinition(ServerInterpreterContext* context, uint64_t 
       GetType(context, node_file_id, node_node_id, node.type), node.mutable_value,
       std::move(initial_value));
   interpreter_->AddInstruction(context, std::move(result), root_node);
+}
+
+void Service::AddStringLiteral(ServerInterpreterContext* context, uint64_t node_file_id,
+                               uint64_t node_node_id, const ::fidl::StringView& node,
+                               bool root_node) {
+  auto result = std::make_unique<StringLiteral>(interpreter(), node_file_id, node_node_id,
+                                                std::string_view(node.data(), node.size()));
+  interpreter_->AddExpression(context, std::move(result), root_node);
 }
 
 Server::Server() : loop_(&kAsyncLoopConfigAttachToCurrentThread) {}
