@@ -104,6 +104,9 @@ group("netstack_integration_tests") {
     # dhcpd is used to test DHCP address acquisition.
     "//src/connectivity/network/dhcp:dhcpd",
 
+    # netstack_debug provides extraneous debug information.
+    "//src/connectivity/network/netstack:netstack_debug",
+
     # netemul is used to create hermetic environments.
     "//src/connectivity/network/testing/netemul",
 

@@ -26,7 +26,8 @@ trait Netstack {
 enum Netstack2 {}
 
 impl Netstack for Netstack2 {
-    const URL: &'static str = "fuchsia-pkg://fuchsia.com/netstack#meta/netstack_debug.cmx";
+    const URL: &'static str =
+        fuchsia_component::fuchsia_single_component_package_url!("netstack_debug");
 }
 
 /// Uninstantiable type that represents Netstack3's implementation of a
