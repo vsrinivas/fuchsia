@@ -10,6 +10,7 @@ use {
     fidl_fuchsia_test_events as fevents, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
     futures::{
+        channel::oneshot,
         future::{AbortHandle, Abortable, BoxFuture, TryFutureExt},
         lock::Mutex,
         StreamExt,
@@ -146,18 +147,25 @@ impl EventSource {
     /// # Notes
     /// This function only listens for events directed at a component, not its Realm so any events
     /// with a target_moniker of "." are ignored.
-    pub async fn expect_events(
-        &self,
+    pub async fn expect_events<'a>(
+        &'a self,
         ordering: Ordering,
         expected_events: Vec<RecordedEvent>,
-    ) -> Result<(), Error> {
+    ) -> Result<BoxFuture<'a, Result<(), Error>>, Error> {
         let mut event_types = vec![];
         for event in &expected_events {
             event_types.push(event.event_type);
         }
         event_types.dedup();
 
-        self.subscribe(event_types).await?.validate(ordering, expected_events).await
+        let mut event_stream = self.subscribe(event_types).await?;
+        let (tx, rx) = oneshot::channel();
+        fasync::spawn(async move {
+            let res = event_stream.validate(ordering, expected_events).await;
+            tx.send(res).expect("Unable to send result");
+        });
+
+        Ok(Box::pin(async move { rx.await? }))
     }
 }
 

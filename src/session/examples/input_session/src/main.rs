@@ -65,87 +65,73 @@ async fn main() -> Result<(), Error> {
 mod tests {
     use {
         fidl_fuchsia_test_events::EventType,
-        fuchsia_async as fasync,
-        futures::future,
-        session_manager_lib,
+        fuchsia_async as fasync, session_manager_lib,
         test_utils_lib::events::{EventSource, Ordering, RecordedEvent},
     };
 
     /// Verifies that the session is routed the expected capabilities.
     #[fasync::run_singlethreaded(test)]
     async fn test_capability_routing() {
-        let event_source = EventSource::new().expect("EventSource is unavailable");
+        let event_source = EventSource::new().unwrap();
 
-        event_source.start_component_tree().await.expect("Failed to start InputSession");
+        event_source.start_component_tree().await.unwrap();
 
-        let event_future = async move {
-            let expected_events = vec![
-                RecordedEvent {
-                    event_type: EventType::CapabilityRouted,
-                    target_moniker: "./session:session:*".to_string(),
-                    capability_id: Some("elf".to_string()),
-                },
-                RecordedEvent {
-                    event_type: EventType::CapabilityRouted,
-                    target_moniker: "./session:session:*".to_string(),
-                    capability_id: Some("/svc/fuchsia.logger.LogSink".to_string()),
-                },
-                RecordedEvent {
-                    event_type: EventType::CapabilityRouted,
-                    target_moniker: "./session:session:*".to_string(),
-                    capability_id: Some("/dev/class/input-report".to_string()),
-                },
-            ];
+        let expected_events = vec![
+            RecordedEvent {
+                event_type: EventType::CapabilityRouted,
+                target_moniker: "./session:session:*".to_string(),
+                capability_id: Some("elf".to_string()),
+            },
+            RecordedEvent {
+                event_type: EventType::CapabilityRouted,
+                target_moniker: "./session:session:*".to_string(),
+                capability_id: Some("/svc/fuchsia.logger.LogSink".to_string()),
+            },
+            RecordedEvent {
+                event_type: EventType::CapabilityRouted,
+                target_moniker: "./session:session:*".to_string(),
+                capability_id: Some("/dev/class/input-report".to_string()),
+            },
+        ];
 
-            event_source
-                .expect_events(Ordering::Unordered, expected_events)
-                .await
-                .expect("Failed to expect capability events");
-        };
+        let expectation =
+            event_source.expect_events(Ordering::Unordered, expected_events).await.unwrap();
 
-        let session_future = async move {
-            let session_url = "fuchsia-pkg://fuchsia.com/input_session#meta/input_session.cm";
-            session_manager_lib::startup::launch_session(&session_url)
-                .await
-                .expect("Failed starting input session");
-        };
+        let session_url = "fuchsia-pkg://fuchsia.com/input_session#meta/input_session.cm";
+        session_manager_lib::startup::launch_session(&session_url)
+            .await
+            .expect("Failed starting input session");
 
-        future::join(event_future, session_future).await;
+        expectation.await.unwrap();
     }
 
     /// Verifies that the session is correctly resolved and launched with out errors.
     #[fasync::run_singlethreaded(test)]
     async fn test_session_lifecycle() {
-        let event_source = EventSource::new().expect("EventSource is unavailable");
-        event_source.start_component_tree().await.expect("Failed to start InputSession");
+        let event_source = EventSource::new().unwrap();
+        event_source.start_component_tree().await.unwrap();
 
-        let event_future = async move {
-            let expected_events = vec![
-                RecordedEvent {
-                    event_type: EventType::Resolved,
-                    target_moniker: "./session:session:*".to_string(),
-                    capability_id: None,
-                },
-                RecordedEvent {
-                    event_type: EventType::Started,
-                    target_moniker: "./session:session:*".to_string(),
-                    capability_id: None,
-                },
-            ];
+        let expected_events = vec![
+            RecordedEvent {
+                event_type: EventType::Resolved,
+                target_moniker: "./session:session:*".to_string(),
+                capability_id: None,
+            },
+            RecordedEvent {
+                event_type: EventType::Started,
+                target_moniker: "./session:session:*".to_string(),
+                capability_id: None,
+            },
+        ];
 
-            event_source
-                .expect_events(Ordering::Ordered, expected_events)
-                .await
-                .expect("Failed to expect lifecycle events");
-        };
+        let expectation =
+            event_source.expect_events(Ordering::Ordered, expected_events).await.unwrap();
 
-        let session_future = async move {
-            let session_url = "fuchsia-pkg://fuchsia.com/input_session#meta/input_session.cm";
-            session_manager_lib::startup::launch_session(&session_url)
-                .await
-                .expect("Failed starting input session");
-        };
+        let session_url = "fuchsia-pkg://fuchsia.com/input_session#meta/input_session.cm";
+        session_manager_lib::startup::launch_session(&session_url)
+            .await
+            .expect("Failed starting input session");
 
-        future::join(event_future, session_future).await;
+        expectation.await.unwrap();
     }
 }
