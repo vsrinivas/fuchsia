@@ -87,11 +87,13 @@ After a successful invocation of `fx-config-read` in a script, one would observe
 
 ```
 FUCHSIA_ARCH         - The current architecture selected (currently one of x64/arm64)
-FUCHSIA_BUILD_DIR    - The path to the current Fuchsia build directory
 FUCHSIA_DIR          - The path to the root of the Fuchsia source tree
-FUCHSIA_OUT_DIR      - (deprecated) "$FUCHSIA_DIR/out"
+FUCHSIA_BUILD_DIR    - The path to the current Fuchsia build directory
+HOST_OUT_DIR         - The path to the Fuchsia host-tools build directory
+                         (usually $FUCHSIA_BUILD_DIR/host_$HOST_ARCH)
 ZIRCON_BUILDROOT     - The path to the Zircon build directory
 ZIRCON_TOOLS_DIR     - The path to the Zircon host-tools build directory.
+FUCHSIA_OUT_DIR      - (deprecated) "$FUCHSIA_DIR/out"
 ```
 
 `fx-config-read` and/or `fx` could set additional environment variables, but
