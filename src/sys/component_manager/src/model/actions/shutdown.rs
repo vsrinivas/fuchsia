@@ -6,7 +6,6 @@ use {
     crate::model::{
         actions::{Action, ActionSet},
         error::ModelError,
-        model::Model,
         moniker::{ChildMoniker, PartialMoniker},
         realm::{Realm, RealmState},
     },
@@ -50,7 +49,7 @@ fn find_storage_provider(storage_decls: &Vec<StorageDecl>, name: &str) -> Option
 }
 
 async fn shutdown_component(child: ShutdownInfo) -> Result<ChildMoniker, ModelError> {
-    ActionSet::register(child.realm, child.model, Action::Shutdown).await.await?;
+    ActionSet::register(child.realm, Action::Shutdown).await.await?;
     Ok(child.moniker.clone())
 }
 
@@ -70,7 +69,7 @@ impl ShutdownJob {
     /// Creates a new ShutdownJob by examining the Realm's declaration and
     /// runtime state to build up the necessary data structures to stop
     /// components in the realm in dependency order.
-    pub async fn new(model: Arc<Model>, state: &RealmState) -> ShutdownJob {
+    pub async fn new(state: &RealmState) -> ShutdownJob {
         // `children` represents the dependency relationships between the
         // children as expressed in the realm's component declaration.
         // This representation must be reconciled with the runtime state of the
@@ -97,12 +96,7 @@ impl ShutdownJob {
 
                 source_to_targets.insert(
                     child.clone(),
-                    ShutdownInfo {
-                        moniker: child,
-                        dependents: deps.clone(),
-                        model: model.clone(),
-                        realm: realm,
-                    },
+                    ShutdownInfo { moniker: child, dependents: deps.clone(), realm: realm },
                 );
             }
         }
@@ -224,7 +218,7 @@ impl ShutdownJob {
     }
 }
 
-pub async fn do_shutdown(model: Arc<Model>, realm: Arc<Realm>) -> Result<(), ModelError> {
+pub async fn do_shutdown(realm: Arc<Realm>) -> Result<(), ModelError> {
     {
         let state_lock = realm.lock_state().await;
         {
@@ -234,7 +228,7 @@ pub async fn do_shutdown(model: Arc<Model>, realm: Arc<Realm>) -> Result<(), Mod
             }
         }
         if let Some(state) = state_lock.as_ref() {
-            let mut shutdown_job = ShutdownJob::new(model.clone(), state).await;
+            let mut shutdown_job = ShutdownJob::new(state).await;
             drop(state_lock);
             Box::pin(shutdown_job.execute()).await?;
         }
@@ -242,7 +236,7 @@ pub async fn do_shutdown(model: Arc<Model>, realm: Arc<Realm>) -> Result<(), Mod
     // Now that all children have shut down, shut down the parent.
     // TODO: Put the parent in a "shutting down" state so that if it creates new instances
     // after this point, they are created in a shut down state.
-    realm.stop_instance(model, true).await?;
+    realm.stop_instance(true).await?;
 
     Ok(())
 }
@@ -257,7 +251,6 @@ struct ShutdownInfo {
     /// The components that this component offers capabilities to
     pub dependents: HashSet<ChildMoniker>,
     pub realm: Arc<Realm>,
-    pub model: Arc<Model>,
 }
 
 impl fmt::Debug for ShutdownInfo {

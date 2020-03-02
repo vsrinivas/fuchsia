@@ -6,7 +6,6 @@ use {
     crate::{
         capability::{CapabilityProvider, CapabilitySource, FrameworkCapability},
         model::{
-            binding::Binder,
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
             model::{ComponentManagerConfig, Model},
@@ -115,12 +114,11 @@ impl RealmCapabilityHost {
                     responder.send(&mut res)?;
                 }
                 fsys::RealmRequest::BindChild { responder, child, exposed_dir } => {
-                    let mut res =
-                        Self::bind_child(self.model.clone(), realm, child, exposed_dir).await;
+                    let mut res = Self::bind_child(realm, child, exposed_dir).await;
                     responder.send(&mut res)?;
                 }
                 fsys::RealmRequest::DestroyChild { responder, child } => {
-                    let mut res = Self::destroy_child(self.model.clone(), realm, child).await;
+                    let mut res = Self::destroy_child(realm, child).await;
                     responder.send(&mut res)?;
                 }
                 fsys::RealmRequest::ListChildren { responder, collection, iter } => {
@@ -153,7 +151,6 @@ impl RealmCapabilityHost {
     }
 
     async fn bind_child(
-        model: Arc<Model>,
         realm: Arc<Realm>,
         child: fsys::ChildRef,
         exposed_dir: ServerEnd<DirectoryMarker>,
@@ -173,8 +170,8 @@ impl RealmCapabilityHost {
             realm_state.get_live_child_realm(&partial_moniker).map(|r| r.clone())
         };
         if let Some(child_realm) = child_realm {
-            model
-                .bind(&child_realm.abs_moniker)
+            child_realm
+                .bind()
                 .await
                 .map_err(|e| match e {
                     ModelError::ResolverError { err } => {
@@ -203,13 +200,12 @@ impl RealmCapabilityHost {
     }
 
     async fn destroy_child(
-        model: Arc<Model>,
         realm: Arc<Realm>,
         child: fsys::ChildRef,
     ) -> Result<(), fcomponent::Error> {
         child.collection.as_ref().ok_or(fcomponent::Error::InvalidArguments)?;
         let partial_moniker = PartialMoniker::new(child.name, child.collection);
-        let _ = realm.remove_dynamic_child(model, &partial_moniker).await.map_err(|e| match e {
+        let _ = realm.remove_dynamic_child(&partial_moniker).await.map_err(|e| match e {
             ModelError::InstanceNotFoundInRealm { .. } => fcomponent::Error::InstanceNotFound,
             ModelError::Unsupported { .. } => fcomponent::Error::Unsupported,
             e => {
@@ -340,6 +336,7 @@ mod tests {
         crate::{
             builtin_environment::BuiltinEnvironment,
             model::{
+                binding::Binder,
                 model::ModelParams,
                 moniker::AbsoluteMoniker,
                 resolver::ResolverRegistry,

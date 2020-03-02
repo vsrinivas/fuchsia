@@ -64,18 +64,18 @@ pub async fn bind_at_moniker<'a>(
 ) -> Result<Arc<Realm>, ModelError> {
     let mut cur_moniker = AbsoluteMoniker::root();
     let mut realm = model.root_realm.clone();
-    bind_at(model, realm.clone()).await?;
+    bind_at(realm.clone()).await?;
     for m in abs_moniker.path().iter() {
         cur_moniker = cur_moniker.child(m.clone());
         realm = model.look_up_realm(&cur_moniker).await?;
-        bind_at(model, realm.clone()).await?;
+        bind_at(realm.clone()).await?;
     }
     Ok(realm)
 }
 
 /// Binds to the component instance in the given realm, starting it if it's not already
 /// running.
-async fn bind_at(model: &Arc<Model>, realm: Arc<Realm>) -> Result<(), ModelError> {
+pub async fn bind_at(realm: Arc<Realm>) -> Result<(), ModelError> {
     // Skip starting a component instance that was already started.
     // Eager binding can cause `bind_at` to be re-entrant. It's important to bail out here so
     // we don't end up in an infinite loop of binding to the same eager child.
@@ -85,7 +85,7 @@ async fn bind_at(model: &Arc<Model>, realm: Arc<Realm>) -> Result<(), ModelError
             return res;
         }
     }
-    ActionSet::register(realm.clone(), model.clone(), Action::Start).await.await?;
+    ActionSet::register(realm.clone(), Action::Start).await.await?;
 
     let eager_children: Vec<_> = {
         let mut state = realm.lock_state().await;
@@ -98,7 +98,7 @@ async fn bind_at(model: &Arc<Model>, realm: Arc<Realm>) -> Result<(), ModelError
             })
             .collect()
     };
-    bind_eager_children_recursive(model, eager_children).await.or_else(|e| match e {
+    bind_eager_children_recursive(eager_children).await.or_else(|e| match e {
         ModelError::InstanceShutDown { .. } => Ok(()),
         _ => Err(e),
     })?;
@@ -108,13 +108,12 @@ async fn bind_at(model: &Arc<Model>, realm: Arc<Realm>) -> Result<(), ModelError
 /// Binds to a list of instances, and any eager children they may return.
 // This function recursive calls `bind_at`, so it returns a BoxFutuer,
 fn bind_eager_children_recursive<'a>(
-    model: &'a Arc<Model>,
     instances_to_bind: Vec<Arc<Realm>>,
 ) -> BoxFuture<'a, Result<(), ModelError>> {
     let f = async move {
         let futures: Vec<_> = instances_to_bind
             .iter()
-            .map(|realm| async move { bind_at(model, realm.clone()).await })
+            .map(|realm| async move { bind_at(realm.clone()).await })
             .collect();
         join_all(futures).await.into_iter().fold(Ok(()), |acc, r| acc.and_then(|_| r))?;
         Ok(())
@@ -265,7 +264,7 @@ mod tests {
         // action. Allow the original bind to proceed, then check the result of both bindings.
         let m: AbsoluteMoniker = vec!["system:0"].into();
         let realm = model.look_up_realm(&m).await.expect("failed realm lookup");
-        let nf = ActionSet::register(realm, model.clone(), Action::Start).await;
+        let nf = ActionSet::register(realm, Action::Start).await;
         event.resume();
         bind_handle.await;
         nf.await.expect("failed to bind 2");

@@ -50,3 +50,38 @@ The entrypoint is located in `src/main.rs`, and the core model implementation is
 under `src/model/`. Unit tests are co-located with the code, with the exception
 of `src/model/` which has unit tests in `src/model/tests/`. Integration tests
 live in `tests/`.
+
+## Development best practices
+
+### `Arc<Realm>` and `fasync::spawn`
+
+#### Problem
+
+Many parts of the code need access to a `Realm`. Some of those are long-running asynchronous
+operations, such as hosting a pseudo-fs directory with a closure (see `//src/sys/lib/directory_broker`).
+These operations are executed on the global executor through `fasync::spawn`.
+
+These closures should never capture an `Arc<Realm>`, as the closures lifetime is not bound to the `Realm`,
+even though it is conceptually tied to the life of `Realm`. This can lead to memory leaks / reference cycles.
+
+#### Solution
+
+Use `WeakRealm`, which wraps a `Weak<Realm>` (weak pointer to `Realm`) along with the `AbsoluteMoniker` of
+the realm, for good error-reporting when the `Realm` has been destroyed.
+
+```
+use crate::model::realm::{Realm, WeakRealm};
+
+let realm: Arc<Realm> = model.look_up_realm(...)?;
+let captured_realm: WeakRealm = realm.as_weak();
+fasync::spawn(async move {
+    let realm = match captured_realm.upgrade() {
+        Ok(realm) => realm,
+        Err(e) => {
+            log::error!("failed to upgrade WeakRealm: {}", e);
+            return;
+        }
+    };
+    ...
+});
+```

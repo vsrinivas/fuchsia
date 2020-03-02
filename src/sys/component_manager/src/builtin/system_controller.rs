@@ -111,14 +111,10 @@ impl SystemControllerCapabilityProvider {
                 // exit. main.rs waits on the model to observe the root realm
                 // disappear.
                 SystemControllerRequest::Shutdown { responder } => {
-                    ActionSet::register(
-                        self.model.root_realm.clone(),
-                        self.model.clone(),
-                        Action::Shutdown,
-                    )
-                    .await
-                    .await
-                    .context("got error waiting for shutdown action to complete")?;
+                    ActionSet::register(self.model.root_realm.clone(), Action::Shutdown)
+                        .await
+                        .await
+                        .context("got error waiting for shutdown action to complete")?;
                     match responder.send() {
                         Ok(()) => {}
                         Err(e) => {

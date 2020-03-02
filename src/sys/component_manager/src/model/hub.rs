@@ -15,7 +15,9 @@ use {
                 ComponentDescriptor, Event, EventPayload, EventType, Hook, HooksRegistration,
                 RuntimeInfo,
             },
+            model::Model,
             moniker::AbsoluteMoniker,
+            realm::Realm,
             routing_facade::RoutingFacade,
         },
         path::PathBufExt,
@@ -103,13 +105,14 @@ struct Execution {
 /// debugging and instrumentation tools can query information about component instances
 /// on the system, such as their component URLs, execution state and so on.
 pub struct Hub {
+    model: Weak<Model>,
     instances: Mutex<HashMap<AbsoluteMoniker, Instance>>,
     scope: ExecutionScope,
 }
 
 impl Hub {
     /// Create a new Hub given a `component_url` and a controller to the root directory.
-    pub fn new(component_url: String) -> Result<Self, ModelError> {
+    pub fn new(model: &Arc<Model>, component_url: String) -> Result<Self, ModelError> {
         let mut instances_map = HashMap::new();
         let abs_moniker = AbsoluteMoniker::root();
 
@@ -117,6 +120,7 @@ impl Hub {
             .expect("Did not create directory.");
 
         Ok(Hub {
+            model: Arc::downgrade(model),
             instances: Mutex::new(instances_map),
             scope: ExecutionScope::from_executor(Box::new(EHandle::local())),
         })
@@ -265,23 +269,23 @@ impl Hub {
         component_decl: ComponentDecl,
         package_dir: Option<DirectoryProxy>,
         routing_facade: &RoutingFacade,
-        abs_moniker: &AbsoluteMoniker,
+        target_realm: &Arc<Realm>,
     ) -> Result<(), ModelError> {
         let tree = DirTree::build_from_uses(
             routing_facade.route_use_fn_factory(),
-            abs_moniker,
+            target_realm.as_weak(),
             component_decl,
         );
         let mut in_dir = pfs::simple();
-        tree.install(abs_moniker, &mut in_dir)?;
+        tree.install(&target_realm.abs_moniker, &mut in_dir)?;
         if let Some(pkg_dir) = package_dir {
             in_dir.add_node(
                 "pkg",
                 directory_broker::DirectoryBroker::from_directory_proxy(pkg_dir),
-                abs_moniker,
+                &target_realm.abs_moniker,
             )?;
         }
-        execution_directory.add_node("in", in_dir, abs_moniker)?;
+        execution_directory.add_node("in", in_dir, &target_realm.abs_moniker)?;
         Ok(())
     }
 
@@ -289,17 +293,17 @@ impl Hub {
         execution_directory: Directory,
         component_decl: ComponentDecl,
         routing_facade: &RoutingFacade,
-        abs_moniker: &AbsoluteMoniker,
+        target_realm: &Arc<Realm>,
     ) -> Result<(), ModelError> {
         trace::duration!("component_manager", "hub:add_expose_directory");
         let tree = DirTree::build_from_exposes(
             routing_facade.route_expose_fn_factory(),
-            abs_moniker,
+            target_realm.as_weak(),
             component_decl,
         );
         let mut expose_dir = pfs::simple();
-        tree.install(abs_moniker, &mut expose_dir)?;
-        execution_directory.add_node("expose", expose_dir, abs_moniker)?;
+        tree.install(&target_realm.abs_moniker, &mut expose_dir)?;
+        execution_directory.add_node("expose", expose_dir, &target_realm.abs_moniker)?;
         Ok(())
     }
 
@@ -362,6 +366,9 @@ impl Hub {
         // If we haven't already created an execution directory, create one now.
         if instance.execution.is_none() {
             trace::duration!("component_manager", "hub:create_execution");
+            let model = self.model.upgrade().ok_or(ModelError::ModelNotAvailable)?;
+            let target_realm = model.look_up_realm(target_moniker).await?;
+
             let execution_directory = pfs::simple();
 
             let used = pfs::simple();
@@ -386,14 +393,14 @@ impl Hub {
                 component_decl.clone(),
                 Self::clone_dir(runtime.package_dir.as_ref()),
                 &routing_facade,
-                target_moniker,
+                &target_realm,
             )?;
 
             Self::add_expose_directory(
                 execution_directory.clone(),
                 component_decl.clone(),
                 &routing_facade,
-                &target_moniker,
+                &target_realm,
             )?;
 
             execution_directory.add_node("used", used, &target_moniker)?;
@@ -545,6 +552,9 @@ impl Hub {
 
         // Track used capabilities.
         if Self::is_capability_visible_in_namespace(&source) {
+            let model = self.model.upgrade().ok_or(ModelError::ModelNotAvailable)?;
+            let realm = model.look_up_realm(target_moniker).await?;
+
             let mut instance_map = self.instances.lock().await;
             let execution = instance_map
                 .get_mut(&target_moniker)
@@ -562,7 +572,7 @@ impl Hub {
             execution
                 .unwrap()
                 .capability_usage_tree
-                .mark_capability_used(target_moniker, source)
+                .mark_capability_used(realm.as_weak(), source)
                 .await?;
         }
         Ok(())

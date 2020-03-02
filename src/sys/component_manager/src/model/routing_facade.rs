@@ -6,8 +6,7 @@ use {
     crate::{
         capability::CapabilitySource,
         model::{
-            model::Model,
-            moniker::AbsoluteMoniker,
+            realm::WeakRealm,
             routing::{open_capability_at_source, route_expose_capability, route_use_capability},
         },
     },
@@ -17,142 +16,141 @@ use {
     fidl_fuchsia_io::NodeMarker,
     fuchsia_async as fasync,
     log::*,
-    std::{path::PathBuf, sync::Arc},
+    std::path::PathBuf,
 };
 
 /// A facade over `Model` that provides factories for routing functions.
 #[derive(Clone)]
-pub struct RoutingFacade {
-    model: Arc<Model>,
-}
+pub struct RoutingFacade;
 
 impl RoutingFacade {
-    pub fn new(model: Arc<Model>) -> Self {
-        RoutingFacade { model }
+    pub fn new() -> Self {
+        RoutingFacade {}
     }
 
     /// Returns a factory for functions that route a `use` declaration to its source.
-    pub fn route_use_fn_factory(&self) -> impl Fn(AbsoluteMoniker, UseDecl) -> RoutingFn {
-        let model = self.model.clone();
-        move |abs_moniker: AbsoluteMoniker, use_: UseDecl| {
-            let model = model.clone();
-            route_use_fn(model, abs_moniker, use_)
-        }
+    pub fn route_use_fn_factory(&self) -> impl Fn(WeakRealm, UseDecl) -> RoutingFn {
+        move |realm: WeakRealm, use_: UseDecl| route_use_fn(realm, use_)
     }
 
     /// Returns a factory for functions that route an `expose` declaration to its source.
-    pub fn route_expose_fn_factory(&self) -> impl Fn(AbsoluteMoniker, ExposeDecl) -> RoutingFn {
-        let model = self.model.clone();
-        move |abs_moniker: AbsoluteMoniker, expose: ExposeDecl| {
-            let model = model.clone();
-            route_expose_fn(model, abs_moniker, expose)
-        }
+    pub fn route_expose_fn_factory(&self) -> impl Fn(WeakRealm, ExposeDecl) -> RoutingFn {
+        move |realm: WeakRealm, expose: ExposeDecl| route_expose_fn(realm, expose)
     }
 
     /// Returns a factory for functions that route a component to a capability source.
     pub fn route_capability_source_fn_factory(
         &self,
-    ) -> impl Fn(AbsoluteMoniker, CapabilitySource) -> RoutingFn {
-        let model = self.model.clone();
-        move |abs_moniker: AbsoluteMoniker, source: CapabilitySource| {
-            let model = model.clone();
-            route_capability_source(model, abs_moniker, source)
-        }
+    ) -> impl Fn(WeakRealm, CapabilitySource) -> RoutingFn {
+        move |realm: WeakRealm, source: CapabilitySource| route_capability_source(realm, source)
     }
 }
 
-fn route_use_fn(model: Arc<Model>, abs_moniker: AbsoluteMoniker, use_: UseDecl) -> RoutingFn {
+fn route_use_fn(realm: WeakRealm, use_: UseDecl) -> RoutingFn {
     Box::new(
         move |flags: u32, mode: u32, relative_path: String, server_end: ServerEnd<NodeMarker>| {
-            let model = model.clone();
-            let abs_moniker = abs_moniker.clone();
+            let realm = realm.clone();
             let use_ = use_.clone();
             fasync::spawn(async move {
-                let abs_moniker_clone = abs_moniker.clone();
-                let res = async move {
-                    let target_realm = model.look_up_realm(&abs_moniker_clone).await?;
-                    route_use_capability(
-                        &model,
-                        flags,
-                        mode,
-                        relative_path,
-                        &use_,
-                        &target_realm,
-                        server_end.into_channel(),
-                    )
-                    .await
-                }
+                let realm = match realm.upgrade() {
+                    Ok(realm) => realm,
+                    Err(e) => {
+                        // This can happen if the component instance tree topology changes such
+                        // that the captured `realm` no longer exists.
+                        error!(
+                            "failed to upgrade WeakRealm while routing use decl `{:?}`: {:?}",
+                            &use_, e
+                        );
+                        return;
+                    }
+                };
+                let res = route_use_capability(
+                    flags,
+                    mode,
+                    relative_path,
+                    &use_,
+                    &realm,
+                    server_end.into_channel(),
+                )
                 .await;
                 if let Err(e) = res {
-                    error!("failed to route service for exposed dir {}: {:?}", abs_moniker, e);
+                    error!(
+                        "failed to route service from use decl `{:?}` for exposed dir {}: {:?}",
+                        &use_, &realm.abs_moniker, e
+                    )
                 }
             });
         },
     )
 }
 
-fn route_capability_source(
-    model: Arc<Model>,
-    abs_moniker: AbsoluteMoniker,
-    source: CapabilitySource,
-) -> RoutingFn {
+fn route_capability_source(realm: WeakRealm, source: CapabilitySource) -> RoutingFn {
     Box::new(
         move |flags: u32, mode: u32, relative_path: String, server_end: ServerEnd<NodeMarker>| {
-            let model = model.clone();
-            let abs_moniker = abs_moniker.clone();
+            let realm = realm.clone();
             let source = source.clone();
             fasync::spawn(async move {
-                let abs_moniker_clone = abs_moniker.clone();
-                let res = async move {
-                    let target_realm = model.look_up_realm(&abs_moniker_clone).await?;
-                    open_capability_at_source(
-                        &model,
-                        flags,
-                        mode,
-                        PathBuf::from(relative_path),
-                        source,
-                        &target_realm,
-                        server_end.into_channel(),
-                    )
-                    .await
-                }
+                let realm = match realm.upgrade() {
+                    Ok(realm) => realm,
+                    Err(e) => {
+                        // This can happen if the component instance tree topology changes such
+                        // that the captured `realm` no longer exists.
+                        error!(
+                            "failed to upgrade WeakRealm while opening `{:?}`: {:?}",
+                            &source, e
+                        );
+                        return;
+                    }
+                };
+                let res = open_capability_at_source(
+                    flags,
+                    mode,
+                    PathBuf::from(relative_path),
+                    source,
+                    &realm,
+                    server_end.into_channel(),
+                )
                 .await;
                 if let Err(e) = res {
-                    error!("failed to route service for {}: {:?}", abs_moniker, e);
+                    error!("failed to route capability for {}: {:?}", &realm.abs_moniker, e);
                 }
             });
         },
     )
 }
 
-fn route_expose_fn(
-    model: Arc<Model>,
-    abs_moniker: AbsoluteMoniker,
-    expose: ExposeDecl,
-) -> RoutingFn {
+fn route_expose_fn(realm: WeakRealm, expose: ExposeDecl) -> RoutingFn {
     Box::new(
         move |flags: u32, mode: u32, relative_path: String, server_end: ServerEnd<NodeMarker>| {
-            let model = model.clone();
-            let abs_moniker = abs_moniker.clone();
+            let realm = realm.clone();
             let expose = expose.clone();
             fasync::spawn(async move {
-                let abs_moniker_clone = abs_moniker.clone();
-                let res = async move {
-                    let target_realm = model.look_up_realm(&abs_moniker_clone).await?;
-                    route_expose_capability(
-                        &model,
-                        flags,
-                        mode,
-                        relative_path,
-                        &expose,
-                        &target_realm,
-                        server_end.into_channel(),
-                    )
-                    .await
-                }
+                let realm = match realm.upgrade() {
+                    Ok(realm) => realm,
+                    Err(e) => {
+                        // This can happen if the component instance tree topology changes such
+                        // that the captured `realm` no longer exists.
+                        error!(
+                            "failed to upgrade WeakRealm while routing expose decl `{:?}`: {:?}",
+                            &expose, e
+                        );
+                        return;
+                    }
+                };
+                let res = route_expose_capability(
+                    flags,
+                    mode,
+                    relative_path,
+                    &expose,
+                    &realm,
+                    server_end.into_channel(),
+                )
                 .await;
                 if let Err(e) = res {
-                    error!("failed to route service for exposed dir {}: {:?}", abs_moniker, e);
+                    error!(
+                        "failed to route service from expose decl `{:?}` for exposed dir {}: {:?}",
+                        &expose, &realm.abs_moniker, e
+                    );
                 }
             });
         },

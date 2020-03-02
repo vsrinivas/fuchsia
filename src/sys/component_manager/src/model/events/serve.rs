@@ -127,8 +127,9 @@ fn maybe_create_event_payload(
                         ..fevents::FrameworkCapability::empty()
                     })
                 }
-                CapabilitySource::Component { source_moniker, .. } => {
-                    let source_moniker = RelativeMoniker::from_absolute(scope, &source_moniker);
+                CapabilitySource::Component { realm, .. } => {
+                    let realm = realm.upgrade().ok()?;
+                    let source_moniker = RelativeMoniker::from_absolute(scope, &realm.abs_moniker);
                     fevents::CapabilitySource::Component(fevents::ComponentCapability {
                         source_moniker: Some(source_moniker.to_string()),
                         ..fevents::ComponentCapability::empty()

@@ -5,11 +5,11 @@
 use {
     crate::model::{
         actions::{Action, ActionSet, Notification},
+        binding,
         environment::Environment,
         error::ModelError,
         exposed_dir::ExposedDir,
         hooks::{Event, EventPayload, Hooks},
-        model::Model,
         moniker::{AbsoluteMoniker, ChildMoniker, InstanceId, PartialMoniker},
         namespace::IncomingNamespace,
         resolver::Resolver,
@@ -40,6 +40,29 @@ use {
     },
     vfs::path::Path,
 };
+
+/// A wrapper for a weak reference to `Realm`. Provides the absolute moniker of the
+/// realm, which is useful for error reporting if the original `Realm` has been destroyed.
+#[derive(Clone)]
+pub struct WeakRealm {
+    inner: Weak<Realm>,
+    /// The absolute moniker of the original realm.
+    pub moniker: AbsoluteMoniker,
+}
+
+impl WeakRealm {
+    /// Attempts to upgrade this `WeakRealm` into an `Arc<Realm>`, if the original realm has not
+    /// been destroyed.
+    pub fn upgrade(&self) -> Result<Arc<Realm>, ModelError> {
+        self.inner.upgrade().ok_or_else(|| ModelError::instance_not_found(self.moniker.clone()))
+    }
+}
+
+impl fmt::Debug for WeakRealm {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("WeakRealm").field("moniker", &self.moniker).finish()
+    }
+}
 
 /// A realm is a container for an individual component instance and its children.  It is provided
 /// by the parent of the instance or by the component manager itself in the case of the root realm.
@@ -84,6 +107,11 @@ impl Realm {
             actions: Mutex::new(ActionSet::new()),
             hooks: Arc::new(Hooks::new(None)),
         }
+    }
+
+    /// Returns a new `WeakRealm` pointing to this realm.
+    pub fn as_weak(self: &Arc<Self>) -> WeakRealm {
+        WeakRealm { inner: Arc::downgrade(self), moniker: self.abs_moniker.clone() }
     }
 
     /// Locks and returns the realm's mutable state. There is no guarantee that the realm
@@ -165,7 +193,6 @@ impl Realm {
     /// Ok(None) will be returned.
     pub async fn resolve_meta_dir(
         self: &Arc<Self>,
-        model: &Arc<Model>,
     ) -> Result<Option<Arc<DirectoryProxy>>, ModelError> {
         {
             // If our meta directory has already been resolved, just return the answer.
@@ -188,7 +215,6 @@ impl Realm {
             zx::Channel::create().expect("failed to create channel");
 
         routing::route_and_open_storage_capability(
-            model,
             &UseStorageDecl::Meta,
             MODE_TYPE_DIRECTORY,
             self,
@@ -216,7 +242,6 @@ impl Realm {
     // manually write out the type.
     pub fn resolve_runner<'a>(
         self: &'a Arc<Self>,
-        model: &'a Arc<Model>,
     ) -> BoxFuture<'a, Result<Arc<dyn Runner>, ModelError>> {
         async move {
             // Fetch component declaration.
@@ -236,7 +261,6 @@ impl Realm {
                     create_endpoints::<fcrunner::ComponentRunnerMarker>()
                         .map_err(|_| ModelError::InsufficientResources)?;
                 routing::route_use_capability(
-                    model,
                     /*flags=*/ 0,
                     /*open_mode=*/ 0,
                     String::new(),
@@ -307,7 +331,6 @@ impl Realm {
     /// action which the caller may await on.
     pub async fn remove_dynamic_child(
         self: &Arc<Self>,
-        model: Arc<Model>,
         partial_moniker: &PartialMoniker,
     ) -> Result<Notification, ModelError> {
         let tup = {
@@ -317,15 +340,10 @@ impl Realm {
         if let Some(tup) = tup {
             let (instance, _) = tup;
             let child_moniker = ChildMoniker::from_partial(partial_moniker, instance);
-            ActionSet::register(
-                self.clone(),
-                model.clone(),
-                Action::MarkDeleting(child_moniker.clone()),
-            )
-            .await
-            .await?;
-            let nf =
-                ActionSet::register(self.clone(), model, Action::DeleteChild(child_moniker)).await;
+            ActionSet::register(self.clone(), Action::MarkDeleting(child_moniker.clone()))
+                .await
+                .await?;
+            let nf = ActionSet::register(self.clone(), Action::DeleteChild(child_moniker)).await;
             Ok(nf)
         } else {
             Err(ModelError::instance_not_found_in_realm(
@@ -340,11 +358,7 @@ impl Realm {
     /// Returns whether the instance was already running.
     ///
     /// REQUIRES: All dependents have already been stopped.
-    pub async fn stop_instance(
-        self: &Arc<Self>,
-        model: Arc<Model>,
-        shut_down: bool,
-    ) -> Result<(), ModelError> {
+    pub async fn stop_instance(self: &Arc<Self>, shut_down: bool) -> Result<(), ModelError> {
         let was_running = {
             let mut execution = self.lock_execution().await;
             let was_running = execution.runtime.is_some();
@@ -371,7 +385,7 @@ impl Realm {
         };
         // When the realm is stopped, any child instances in transient collections must be
         // destroyed.
-        self.destroy_transient_children(model.clone()).await?;
+        self.destroy_transient_children().await?;
         if was_running {
             let event = Event::new(self.abs_moniker.clone(), EventPayload::Stopped);
             self.hooks.dispatch(&event).await?;
@@ -383,7 +397,7 @@ impl Realm {
     /// REQUIRES: All children have already been destroyed.
     // TODO: Need to:
     // - Delete the instance's persistent marker, if it was a persistent dynamic instance
-    pub async fn destroy_instance(self: &Arc<Self>, model: Arc<Model>) -> Result<(), ModelError> {
+    pub async fn destroy_instance(self: &Arc<Self>) -> Result<(), ModelError> {
         // Clean up isolated storage.
         let decl = {
             let state = self.lock_state().await;
@@ -397,7 +411,7 @@ impl Realm {
         };
         for use_ in decl.uses.iter() {
             if let UseDecl::Storage(use_storage) = use_ {
-                routing::route_and_delete_storage(&model, &use_storage, &self).await?;
+                routing::route_and_delete_storage(&use_storage, &self).await?;
                 break;
             }
         }
@@ -405,10 +419,7 @@ impl Realm {
     }
 
     /// Registers actions to destroy all children of `realm` that live in transient collections.
-    async fn destroy_transient_children(
-        self: &Arc<Self>,
-        model: Arc<Model>,
-    ) -> Result<(), ModelError> {
+    async fn destroy_transient_children(self: &Arc<Self>) -> Result<(), ModelError> {
         let (transient_colls, child_monikers) = {
             let state = self.lock_state().await;
             if state.is_none() {
@@ -435,16 +446,10 @@ impl Realm {
             // above.
             if let Some(coll) = m.collection() {
                 if transient_colls.contains(coll) {
-                    ActionSet::register(
-                        self.clone(),
-                        model.clone(),
-                        Action::MarkDeleting(m.clone()),
-                    )
-                    .await
-                    .await?;
-                    let nf =
-                        ActionSet::register(self.clone(), model.clone(), Action::DeleteChild(m))
-                            .await;
+                    ActionSet::register(self.clone(), Action::MarkDeleting(m.clone()))
+                        .await
+                        .await?;
+                    let nf = ActionSet::register(self.clone(), Action::DeleteChild(m)).await;
                     futures.push(nf);
                 }
             }
@@ -505,6 +510,25 @@ impl Realm {
         let flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_POSIX;
         exposed_dir.open(flags, fio::MODE_TYPE_DIRECTORY, Path::empty(), server_end);
         Ok(())
+    }
+
+    /// Binds to the component instance in this realm, starting it if it's not already running.
+    /// Binds to the parent realm's component instance if it is not already bound.
+    pub async fn bind(self: &Arc<Self>) -> Result<Arc<Self>, ModelError> {
+        // Push all Realms on the way to the root onto a stack.
+        let mut realms = Vec::new();
+        let mut current = Arc::clone(self);
+        realms.push(Arc::clone(&current));
+        while let Some(parent) = current.parent.as_ref().and_then(|w| w.upgrade()) {
+            realms.push(Arc::clone(&parent));
+            current = parent;
+        }
+
+        // Now bind to each realm starting at the root (last element).
+        for realm in realms.into_iter().rev() {
+            binding::bind_at(realm).await?;
+        }
+        Ok(Arc::clone(self))
     }
 }
 
@@ -1244,7 +1268,7 @@ pub mod tests {
         let proxy = DirectoryProxy::new(node_proxy.into_channel().unwrap());
         assert!(test_helpers::dir_contains(&proxy, "svc", "foo").await);
 
-        realm.stop_instance(Arc::clone(&test.model), false).await.expect("failed to stop instance");
+        realm.stop_instance(false).await.expect("failed to stop instance");
 
         // The directory should have received a PEER_CLOSED signal.
         fasync::OnSignals::new(&proxy.as_handle_ref(), zx::Signals::CHANNEL_PEER_CLOSED)

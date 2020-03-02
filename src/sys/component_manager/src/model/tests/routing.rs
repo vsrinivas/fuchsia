@@ -2162,7 +2162,6 @@ async fn use_with_destroyed_parent() {
     // cannot follow it.
     let (_client, server) = zx::Channel::create().unwrap();
     let err = routing::route_use_capability(
-        &test.model,
         OPEN_RIGHT_READABLE,
         MODE_TYPE_SERVICE,
         "hippo".to_string(),

@@ -145,7 +145,7 @@ impl BuiltinEnvironment {
         let realm_capability_host = Arc::new(RealmCapabilityHost::new(model.clone(), config));
         model.root_realm.hooks.install(realm_capability_host.hooks()).await;
 
-        let hub = Arc::new(Hub::new(args.root_component_url.clone())?);
+        let hub = Arc::new(Hub::new(model, args.root_component_url.clone())?);
 
         // Set up the builtin runners.
         let mut builtin_runner_hooks = HashMap::new();

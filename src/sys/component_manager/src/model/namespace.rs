@@ -4,9 +4,7 @@
 
 use {
     crate::constants::PKG_PATH,
-    crate::model::{
-        error::ModelError, model::Model, moniker::AbsoluteMoniker, rights::Rights, routing,
-    },
+    crate::model::{error::ModelError, realm::WeakRealm, rights::Rights, routing},
     cm_rust::{self, ComponentDecl, UseDecl, UseStorageDecl},
     directory_broker,
     fidl::endpoints::{create_endpoints, ClientEnd, ServerEnd},
@@ -62,8 +60,7 @@ impl IncomingNamespace {
     /// handles to pseudo directories.
     pub async fn populate<'a>(
         &'a mut self,
-        model: &'a Arc<Model>,
-        abs_moniker: &'a AbsoluteMoniker,
+        realm: WeakRealm,
         decl: &'a ComponentDecl,
     ) -> Result<Vec<fcrunner::ComponentNamespaceEntry>, ModelError> {
         let mut ns: Vec<fcrunner::ComponentNamespaceEntry> = vec![];
@@ -85,28 +82,16 @@ impl IncomingNamespace {
         for use_ in &decl.uses {
             match use_ {
                 cm_rust::UseDecl::Directory(_) => {
-                    Self::add_directory_use(
-                        &mut ns,
-                        &mut directory_waiters,
-                        use_,
-                        &model,
-                        abs_moniker.clone(),
-                    )?;
+                    Self::add_directory_use(&mut ns, &mut directory_waiters, use_, realm.clone())?;
                 }
                 cm_rust::UseDecl::Protocol(s) => {
-                    Self::add_service_use(&mut svc_dirs, s, model, abs_moniker.clone())?;
+                    Self::add_service_use(&mut svc_dirs, s, realm.clone())?;
                 }
                 cm_rust::UseDecl::Service(_) => {
                     return Err(ModelError::unsupported("Service capability"))
                 }
                 cm_rust::UseDecl::Storage(_) => {
-                    Self::add_storage_use(
-                        &mut ns,
-                        &mut directory_waiters,
-                        use_,
-                        model,
-                        abs_moniker.clone(),
-                    )?;
+                    Self::add_storage_use(&mut ns, &mut directory_waiters, use_, realm.clone())?;
                 }
                 cm_rust::UseDecl::Runner(_) => {
                     // Runner capabilities are handled in model::model,
@@ -150,10 +135,9 @@ impl IncomingNamespace {
         ns: &mut Vec<fcrunner::ComponentNamespaceEntry>,
         waiters: &mut Vec<BoxFuture<()>>,
         use_: &UseDecl,
-        model: &Arc<Model>,
-        abs_moniker: AbsoluteMoniker,
+        realm: WeakRealm,
     ) -> Result<(), ModelError> {
-        Self::add_directory_helper(ns, waiters, use_, model, abs_moniker)
+        Self::add_directory_helper(ns, waiters, use_, realm)
     }
 
     /// Adds a directory waiter to `waiters` and updates `ns` to contain a handle for the
@@ -164,18 +148,16 @@ impl IncomingNamespace {
         ns: &mut Vec<fcrunner::ComponentNamespaceEntry>,
         waiters: &mut Vec<BoxFuture<()>>,
         use_: &UseDecl,
-        model: &Arc<Model>,
-        abs_moniker: AbsoluteMoniker,
+        realm: WeakRealm,
     ) -> Result<(), ModelError> {
-        Self::add_directory_helper(ns, waiters, use_, model, abs_moniker)
+        Self::add_directory_helper(ns, waiters, use_, realm)
     }
 
     fn add_directory_helper(
         ns: &mut Vec<fcrunner::ComponentNamespaceEntry>,
         waiters: &mut Vec<BoxFuture<()>>,
         use_: &UseDecl,
-        model: &Arc<Model>,
-        abs_moniker: AbsoluteMoniker,
+        realm: WeakRealm,
     ) -> Result<(), ModelError> {
         let target_path = match use_ {
             UseDecl::Directory(d) => d.target_path.to_string(),
@@ -200,7 +182,6 @@ impl IncomingNamespace {
         let use_ = use_.clone();
         let (client_end, server_end) =
             create_endpoints().expect("could not create storage proxy endpoints");
-        let model = model.clone();
         let cloned_target_path = target_path.clone();
         let route_on_usage = async move {
             // Wait for the channel to become readable.
@@ -208,26 +189,26 @@ impl IncomingNamespace {
                 .expect("failed to convert server_end into async channel");
             let on_signal_fut = fasync::OnSignals::new(&server_end, zx::Signals::CHANNEL_READABLE);
             on_signal_fut.await.unwrap();
-
-            let abs_moniker_clone = abs_moniker.clone();
-            let res = async move {
-                let target_realm = model.look_up_realm(&abs_moniker_clone).await?;
-                routing::route_use_capability(
-                    &model,
-                    flags,
-                    fio::MODE_TYPE_DIRECTORY,
-                    String::new(),
-                    &use_,
-                    &target_realm,
-                    server_end.into_zx_channel(),
-                )
-                .await
-            }
+            let target_realm = match realm.upgrade() {
+                Ok(realm) => realm,
+                Err(e) => {
+                    error!("failed to upgrade WeakRealm routing use decl `{:?}`: {:?}", &use_, e);
+                    return;
+                }
+            };
+            let res = routing::route_use_capability(
+                flags,
+                fio::MODE_TYPE_DIRECTORY,
+                String::new(),
+                &use_,
+                &target_realm,
+                server_end.into_zx_channel(),
+            )
             .await;
             if let Err(e) = res {
                 error!(
                     "failed to route directory {} from {}: {:?}",
-                    cloned_target_path, abs_moniker, e
+                    cloned_target_path, &target_realm.abs_moniker, e
                 );
             }
         };
@@ -266,37 +247,41 @@ impl IncomingNamespace {
     fn add_service_use(
         svc_dirs: &mut HashMap<String, Directory>,
         use_: &cm_rust::UseProtocolDecl,
-        model: &Arc<Model>,
-        abs_moniker: AbsoluteMoniker,
+        realm: WeakRealm,
     ) -> Result<(), ModelError> {
         let use_clone = use_.clone();
-        let model = model.clone();
         let route_open_fn = Box::new(
             move |flags: u32,
                   mode: u32,
                   relative_path: String,
                   server_end: ServerEnd<NodeMarker>| {
                 let use_ = UseDecl::Protocol(use_clone.clone());
-                let abs_moniker = abs_moniker.clone();
-                let model = model.clone();
+                let realm = realm.clone();
                 fasync::spawn(async move {
-                    let abs_moniker_clone = abs_moniker.clone();
-                    let res = async move {
-                        let target_realm = model.look_up_realm(&abs_moniker_clone).await?;
-                        routing::route_use_capability(
-                            &model,
-                            flags,
-                            mode,
-                            relative_path,
-                            &use_,
-                            &target_realm,
-                            server_end.into_channel(),
-                        )
-                        .await
-                    }
+                    let target_realm = match realm.upgrade() {
+                        Ok(realm) => realm,
+                        Err(e) => {
+                            error!(
+                                "failed to upgrade WeakRealm routing use decl `{:?}`: {:?}",
+                                &use_, e
+                            );
+                            return;
+                        }
+                    };
+                    let res = routing::route_use_capability(
+                        flags,
+                        mode,
+                        relative_path,
+                        &use_,
+                        &target_realm,
+                        server_end.into_channel(),
+                    )
                     .await;
                     if let Err(e) = res {
-                        error!("failed to route service for component {}: {:?}", abs_moniker, e);
+                        error!(
+                            "failed to route service for component {}: {:?}",
+                            &target_realm.abs_moniker, e
+                        );
                     }
                 });
             },

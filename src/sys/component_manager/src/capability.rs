@@ -6,6 +6,7 @@ use {
     crate::model::{
         error::ModelError,
         moniker::{AbsoluteMoniker, ChildMoniker},
+        realm::WeakRealm,
     },
     async_trait::async_trait,
     cm_rust::*,
@@ -27,14 +28,14 @@ pub enum Error {
 pub enum CapabilitySource {
     /// This capability originates from the component instance for the given Realm.
     /// point.
-    Component { capability: ComponentCapability, source_moniker: AbsoluteMoniker },
+    Component { capability: ComponentCapability, realm: WeakRealm },
     /// This capability originates from component manager itself and is optionally
     /// scoped to a component's realm.
     Framework { capability: FrameworkCapability, scope_moniker: Option<AbsoluteMoniker> },
     /// This capability originates from a storage declaration in a component's decl.  `StorageDecl`
     /// describes the backing directory capability offered to this realm, into which storage
     /// requests should be fed.
-    StorageDecl(StorageDecl, AbsoluteMoniker),
+    StorageDecl(StorageDecl, WeakRealm),
 }
 
 impl CapabilitySource {

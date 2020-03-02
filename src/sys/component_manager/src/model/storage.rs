@@ -4,9 +4,8 @@
 
 use {
     crate::model::{
-        binding::Binder,
-        model::Model,
         moniker::{AbsoluteMoniker, RelativeMoniker},
+        realm::Realm,
     },
     anyhow::Error,
     clonable_error::ClonableError,
@@ -93,8 +92,7 @@ impl StorageError {
 /// `dir_source_realm` and `dir_source_path` are the realm hosting the directory and its capability
 /// path.
 pub async fn open_isolated_storage(
-    model: &Arc<Model>,
-    dir_source_moniker: Option<AbsoluteMoniker>,
+    dir_source_realm: Option<Arc<Realm>>,
     dir_source_path: &CapabilityPath,
     storage_type: fsys::StorageType,
     relative_moniker: &RelativeMoniker,
@@ -103,13 +101,13 @@ pub async fn open_isolated_storage(
     const FLAGS: u32 = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE;
     let (dir_proxy, local_server_end) =
         endpoints::create_proxy::<DirectoryMarker>().expect("failed to create proxy");
-    if let Some(dir_source_moniker) = dir_source_moniker.clone() {
-        model
-            .bind(&dir_source_moniker)
+    if let Some(dir_source_realm) = dir_source_realm.as_ref() {
+        dir_source_realm
+            .bind()
             .await
             .map_err(|e| {
                 StorageError::open(
-                    Some(dir_source_moniker.clone()),
+                    Some(dir_source_realm.abs_moniker.clone()),
                     dir_source_path.clone(),
                     relative_moniker.clone(),
                     e,
@@ -124,7 +122,7 @@ pub async fn open_isolated_storage(
             .await
             .map_err(|e| {
                 StorageError::open(
-                    Some(dir_source_moniker.clone()),
+                    Some(dir_source_realm.abs_moniker.clone()),
                     dir_source_path.clone(),
                     relative_moniker.clone(),
                     e,
@@ -147,7 +145,7 @@ pub async fn open_isolated_storage(
     )
     .map_err(|e| {
         StorageError::open(
-            dir_source_moniker.clone(),
+            dir_source_realm.as_ref().map(|r| r.abs_moniker.clone()),
             dir_source_path.clone(),
             relative_moniker.clone(),
             e,
@@ -159,20 +157,19 @@ pub async fn open_isolated_storage(
 /// Delete the isolated storage sub-directory for the given component.  `dir_source_realm` and
 /// `dir_source_path` are the realm hosting the directory and its capability path.
 pub async fn delete_isolated_storage(
-    model: &Arc<Model>,
-    dir_source_moniker: Option<AbsoluteMoniker>,
+    dir_source_realm: Option<Arc<Realm>>,
     dir_source_path: &CapabilityPath,
     relative_moniker: &RelativeMoniker,
 ) -> Result<(), StorageError> {
     let (root_dir, local_server_end) =
         endpoints::create_proxy::<DirectoryMarker>().expect("failed to create proxy");
-    if let Some(dir_source_moniker) = dir_source_moniker.clone() {
-        model
-            .bind(&dir_source_moniker)
+    if let Some(dir_source_realm) = dir_source_realm.as_ref() {
+        dir_source_realm
+            .bind()
             .await
             .map_err(|e| {
                 StorageError::open(
-                    Some(dir_source_moniker.clone()),
+                    Some(dir_source_realm.abs_moniker.clone()),
                     dir_source_path.clone(),
                     relative_moniker.clone(),
                     e,
@@ -187,7 +184,7 @@ pub async fn delete_isolated_storage(
             .await
             .map_err(|e| {
                 StorageError::open(
-                    Some(dir_source_moniker.clone()),
+                    Some(dir_source_realm.abs_moniker.clone()),
                     dir_source_path.clone(),
                     relative_moniker.clone(),
                     e,
@@ -218,7 +215,7 @@ pub async fn delete_isolated_storage(
     } else {
         io_util::open_directory(&root_dir, dir_path, FLAGS).map_err(|e| {
             StorageError::open(
-                dir_source_moniker.clone(),
+                dir_source_realm.as_ref().map(|r| r.abs_moniker.clone()),
                 dir_source_path.clone(),
                 relative_moniker.clone(),
                 e,
@@ -233,7 +230,7 @@ pub async fn delete_isolated_storage(
     // prior run.
     files_async::remove_dir_recursive(&dir, name).await.map_err(|e| {
         StorageError::remove(
-            dir_source_moniker.clone(),
+            dir_source_realm.as_ref().map(|r| r.abs_moniker.clone()),
             dir_source_path.clone(),
             relative_moniker.clone(),
             e,
@@ -337,14 +334,17 @@ mod tests {
             ),
         ];
         let test = RoutingTest::new("a", components).await;
-        let b_moniker: AbsoluteMoniker = vec!["b:0"].into();
+        let b_realm = test
+            .model
+            .look_up_realm(&vec!["b:0"].into())
+            .await
+            .expect("failed to find realm for b:0");
         let dir_source_path = CapabilityPath::try_from("/data").unwrap();
         let relative_moniker = RelativeMoniker::new(vec![], vec!["c:0".into(), "coll:d:1".into()]);
 
         // Open.
         let dir = open_isolated_storage(
-            &test.model,
-            Some(b_moniker.clone()),
+            Some(Arc::clone(&b_realm)),
             &dir_source_path,
             fsys::StorageType::Data,
             &relative_moniker,
@@ -358,8 +358,7 @@ mod tests {
 
         // Open again.
         let dir = open_isolated_storage(
-            &test.model,
-            Some(b_moniker.clone()),
+            Some(Arc::clone(&b_realm)),
             &dir_source_path,
             fsys::StorageType::Data,
             &relative_moniker,
@@ -373,8 +372,7 @@ mod tests {
         let relative_moniker =
             RelativeMoniker::new(vec![], vec!["c:0".into(), "coll:d:1".into(), "e:0".into()]);
         let dir = open_isolated_storage(
-            &test.model,
-            Some(b_moniker.clone()),
+            Some(Arc::clone(&b_realm)),
             &dir_source_path,
             fsys::StorageType::Data,
             &relative_moniker,
@@ -388,8 +386,7 @@ mod tests {
 
         // Open a different storage type.
         let dir = open_isolated_storage(
-            &test.model,
-            Some(b_moniker.clone()),
+            Some(Arc::clone(&b_realm)),
             &dir_source_path,
             fsys::StorageType::Cache,
             &relative_moniker,
@@ -414,11 +411,9 @@ mod tests {
             .await;
 
         // Try to open the storage. We expect an error.
-        let root_moniker = AbsoluteMoniker::root();
         let relative_moniker = RelativeMoniker::new(vec![], vec!["c:0".into(), "coll:d:1".into()]);
         let err = open_isolated_storage(
-            &test.model,
-            Some(root_moniker),
+            Some(Arc::clone(&test.model.root_realm)),
             &CapabilityPath::try_from("/data").unwrap(),
             fsys::StorageType::Data,
             &relative_moniker,
@@ -461,7 +456,11 @@ mod tests {
             ),
         ];
         let test = RoutingTest::new("a", components).await;
-        let b_moniker: AbsoluteMoniker = vec!["b:0"].into();
+        let b_realm = test
+            .model
+            .look_up_realm(&vec!["b:0"].into())
+            .await
+            .expect("failed to find realm for b:0");
         let dir_source_path = CapabilityPath::try_from("/data").unwrap();
         let parent_moniker = RelativeMoniker::new(vec![], vec!["c:0".into()]);
         let child_moniker = RelativeMoniker::new(vec![], vec!["c:0".into(), "coll:d:1".into()]);
@@ -471,8 +470,7 @@ mod tests {
             vec![fsys::StorageType::Data, fsys::StorageType::Cache, fsys::StorageType::Meta]
         {
             let dir = open_isolated_storage(
-                &test.model,
-                Some(b_moniker.clone()),
+                Some(Arc::clone(&b_realm)),
                 &dir_source_path,
                 storage_type,
                 &child_moniker,
@@ -487,8 +485,7 @@ mod tests {
 
         // Open parent's storage.
         let dir = open_isolated_storage(
-            &test.model,
-            Some(b_moniker.clone()),
+            Some(Arc::clone(&b_realm)),
             &dir_source_path,
             fsys::StorageType::Data,
             &parent_moniker,
@@ -501,19 +498,13 @@ mod tests {
         assert_eq!(test_helpers::list_directory(&dir).await, vec!["file".to_string()]);
 
         // Delete the child's storage.
-        delete_isolated_storage(
-            &test.model,
-            Some(b_moniker.clone()),
-            &dir_source_path,
-            &child_moniker,
-        )
-        .await
-        .expect("failed to delete child's isolated storage");
+        delete_isolated_storage(Some(Arc::clone(&b_realm)), &dir_source_path, &child_moniker)
+            .await
+            .expect("failed to delete child's isolated storage");
 
         // Open parent's storage again. Should work.
         let dir = open_isolated_storage(
-            &test.model,
-            Some(b_moniker.clone()),
+            Some(Arc::clone(&b_realm)),
             &dir_source_path,
             fsys::StorageType::Data,
             &parent_moniker,
@@ -530,14 +521,10 @@ mod tests {
         );
 
         // Error -- tried to delete nonexistent storage.
-        let err = delete_isolated_storage(
-            &test.model,
-            Some(b_moniker.clone()),
-            &dir_source_path,
-            &child_moniker,
-        )
-        .await
-        .expect_err("delete isolated storage not meant to succeed");
+        let err =
+            delete_isolated_storage(Some(Arc::clone(&b_realm)), &dir_source_path, &child_moniker)
+                .await
+                .expect_err("delete isolated storage not meant to succeed");
         match err {
             StorageError::Remove { .. } => {}
             _ => {

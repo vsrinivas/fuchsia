@@ -86,8 +86,7 @@ impl DirectoryEntry for DirectoryBroker {
     }
 
     fn entry_info(&self) -> fvfs::directory::entry::EntryInfo {
-        let this = self.inner.lock();
-        fvfs::directory::entry::EntryInfo::new(this.entry_info.inode(), this.entry_info.type_())
+        self.inner.lock().entry_info.clone()
     }
 
     fn can_hardlink(&self) -> bool {

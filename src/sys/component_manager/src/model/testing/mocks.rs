@@ -8,7 +8,7 @@ use {
         environment::Environment,
         error::ModelError,
         moniker::AbsoluteMoniker,
-        realm::Realm,
+        realm::{Realm, WeakRealm},
         resolver::{Resolver, ResolverError, ResolverFut, ResolverRegistry},
         runner::{Runner, RunnerError},
     },
@@ -39,17 +39,15 @@ use {
 /// Creates a routing function factory for `UseDecl` that does the following:
 /// - Redirects all directory capabilities to a directory with the file "hello".
 /// - Redirects all service capabilities to the echo service.
-pub fn proxy_use_routing_factory() -> impl Fn(AbsoluteMoniker, UseDecl) -> RoutingFn {
-    move |_abs_moniker: AbsoluteMoniker, use_decl: UseDecl| new_proxy_routing_fn(use_decl.into())
+pub fn proxy_use_routing_factory() -> impl Fn(WeakRealm, UseDecl) -> RoutingFn {
+    move |_realm: WeakRealm, use_decl: UseDecl| new_proxy_routing_fn(use_decl.into())
 }
 
 /// Creates a routing function factory for `ExposeDecl` that does the following:
 /// - Redirects all directory capabilities to a directory with the file "hello".
 /// - Redirects all service capabilities to the echo service.
-pub fn proxy_expose_routing_factory() -> impl Fn(AbsoluteMoniker, ExposeDecl) -> RoutingFn {
-    move |_abs_moniker: AbsoluteMoniker, expose_decl: ExposeDecl| {
-        new_proxy_routing_fn(expose_decl.into())
-    }
+pub fn proxy_expose_routing_factory() -> impl Fn(WeakRealm, ExposeDecl) -> RoutingFn {
+    move |_realm: WeakRealm, expose_decl: ExposeDecl| new_proxy_routing_fn(expose_decl.into())
 }
 
 enum CapabilityType {

@@ -4,7 +4,6 @@
 
 use {
     crate::model::{
-        binding::Binder,
         model::Model,
         resolver::{Resolver, ResolverError, ResolverFut},
         routing,
@@ -56,13 +55,15 @@ impl FuchsiaPkgResolver {
         let model_guard = self.model.lock().await;
         let model = model_guard.as_ref().expect("model reference missing");
         let model = model.upgrade().ok_or(ResolverError::model_not_available())?;
-        let (capability_path, abs_moniker) =
-            routing::find_exposed_root_directory_capability(&model, "/pkgfs".try_into().unwrap())
-                .await
-                .map_err(|e| format_err!("failed to route pkgfs handle: {}", e))?;
+        let (capability_path, realm) = routing::find_exposed_root_directory_capability(
+            &model.root_realm,
+            "/pkgfs".try_into().unwrap(),
+        )
+        .await
+        .map_err(|e| format_err!("failed to route pkgfs handle: {}", e))?;
         let (pkgfs_proxy, pkgfs_server) = create_proxy::<DirectoryMarker>()?;
-        model
-            .bind(&abs_moniker)
+        realm
+            .bind()
             .await
             .map_err(|e| format_err!("failed to bind to pkgfs provider: {}", e))?
             .open_outgoing(

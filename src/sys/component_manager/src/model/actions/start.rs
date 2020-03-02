@@ -7,10 +7,9 @@ use {
         error::ModelError,
         exposed_dir::ExposedDir,
         hooks::{ComponentDescriptor, Event, EventPayload, RuntimeInfo},
-        model::Model,
         moniker::AbsoluteMoniker,
         namespace::IncomingNamespace,
-        realm::{ExecutionState, Realm, Runtime},
+        realm::{ExecutionState, Realm, Runtime, WeakRealm},
         resolver::Resolver,
         routing_facade::RoutingFacade,
     },
@@ -26,7 +25,7 @@ use {
     vfs::execution_scope::ExecutionScope,
 };
 
-pub(super) async fn do_start(model: Arc<Model>, realm: Arc<Realm>) -> Result<(), ModelError> {
+pub(super) async fn do_start(realm: Arc<Realm>) -> Result<(), ModelError> {
     // Pre-flight check: if the component is already started, return now. Note that `bind_at` also
     // performs this check before scheduling the action; here, we do it again while the action is
     // registered so we avoid the risk of invoking the BeforeStart hook twice.
@@ -58,19 +57,18 @@ pub(super) async fn do_start(model: Arc<Model>, realm: Arc<Realm>) -> Result<(),
     };
 
     // Find the runner to use.
-    let runner = realm.resolve_runner(&model).await.map_err(|e| {
+    let runner = realm.resolve_runner().await.map_err(|e| {
         error!("failed to resolve runner for {}: {:?}", realm.abs_moniker, e);
         e
     })?;
 
     // Generate the Runtime which will be set in the Execution.
     let (pending_runtime, start_info, controller_server) =
-        make_execution_runtime(&model, &realm.abs_moniker, resolved_url.clone(), package, &decl)
-            .await?;
+        make_execution_runtime(realm.as_weak(), resolved_url.clone(), package, &decl).await?;
 
     // Invoke the BeforeStart hook.
     {
-        let routing_facade = RoutingFacade::new(model.clone());
+        let routing_facade = RoutingFacade::new();
         let event = Event::new(
             realm.abs_moniker.clone(),
             EventPayload::Started {
@@ -121,8 +119,7 @@ pub fn should_return_early(
 /// Returns a configured Runtime for a component and the start info (without actually starting
 /// the component).
 async fn make_execution_runtime(
-    model: &Arc<Model>,
-    abs_moniker: &AbsoluteMoniker,
+    realm: WeakRealm,
     url: String,
     package: Option<fsys::Package>,
     decl: &cm_rust::ComponentDecl,
@@ -133,8 +130,7 @@ async fn make_execution_runtime(
     // Create incoming/outgoing directories, and populate them.
     let exposed_dir = ExposedDir::new(
         ExecutionScope::from_executor(Box::new(EHandle::local())),
-        model.clone(),
-        abs_moniker,
+        realm.clone(),
         decl.clone(),
     )?;
     let (outgoing_dir_client, outgoing_dir_server) =
@@ -142,7 +138,7 @@ async fn make_execution_runtime(
     let (runtime_dir_client, runtime_dir_server) =
         zx::Channel::create().map_err(|e| ModelError::namespace_creation_failed(e))?;
     let mut namespace = IncomingNamespace::new(package)?;
-    let ns = namespace.populate(model, abs_moniker, decl).await?;
+    let ns = namespace.populate(realm, decl).await?;
 
     let (controller_client, controller_server) =
         endpoints::create_endpoints::<fcrunner::ComponentControllerMarker>()

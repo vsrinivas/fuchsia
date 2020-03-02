@@ -58,7 +58,6 @@ use {
     crate::model::{
         error::ModelError,
         hooks::{Event, EventPayload},
-        model::Model,
         moniker::ChildMoniker,
         realm::Realm,
     },
@@ -128,11 +127,11 @@ impl ActionSet {
     ///
     /// Returns a notification, i.e. a Future that completes when the action is finished. This can
     /// be chained with other futures to perform additional work when the action completes.
-    pub async fn register(realm: Arc<Realm>, model: Arc<Model>, action: Action) -> Notification {
+    pub async fn register(realm: Arc<Realm>, action: Action) -> Notification {
         let mut actions = realm.lock_actions().await;
         let (nf, needs_handle) = actions.register_inner(action.clone());
         if needs_handle {
-            action.handle(model, realm.clone());
+            action.handle(realm.clone());
         }
         nf
     }
@@ -195,19 +194,19 @@ impl Action {
     ///
     /// The work to fulfill these actions should be scheduled asynchronously, so this method is not
     /// `async`.
-    pub fn handle(&self, model: Arc<Model>, realm: Arc<Realm>) {
+    pub fn handle(&self, realm: Arc<Realm>) {
         let action = self.clone();
         fasync::spawn(async move {
             let res = match &action {
-                Action::Start => start::do_start(model, realm.clone()).await,
+                Action::Start => start::do_start(realm.clone()).await,
                 Action::MarkDeleting(moniker) => {
                     do_mark_deleting(realm.clone(), moniker.clone()).await
                 }
                 Action::DeleteChild(moniker) => {
-                    do_delete_child(model, realm.clone(), moniker.clone()).await
+                    do_delete_child(realm.clone(), moniker.clone()).await
                 }
-                Action::Destroy => do_destroy(model, realm.clone()).await,
-                Action::Shutdown => shutdown::do_shutdown(model, realm.clone()).await,
+                Action::Destroy => do_destroy(realm.clone()).await,
+                Action::Shutdown => shutdown::do_shutdown(realm.clone()).await,
             };
             ActionSet::finish(realm, &action, res).await;
         });
@@ -233,16 +232,10 @@ async fn do_mark_deleting(realm: Arc<Realm>, moniker: ChildMoniker) -> Result<()
     Ok(())
 }
 
-async fn do_delete_child(
-    model: Arc<Model>,
-    realm: Arc<Realm>,
-    moniker: ChildMoniker,
-) -> Result<(), ModelError> {
+async fn do_delete_child(realm: Arc<Realm>, moniker: ChildMoniker) -> Result<(), ModelError> {
     // Some paths may have already marked the child deleting before scheduling the DeleteChild
     // action, in which case this is a no-op.
-    ActionSet::register(realm.clone(), model.clone(), Action::MarkDeleting(moniker.clone()))
-        .await
-        .await?;
+    ActionSet::register(realm.clone(), Action::MarkDeleting(moniker.clone())).await.await?;
 
     // The child may not exist or may already be deleted by a previous DeleteChild action.
     let child_realm = {
@@ -251,7 +244,7 @@ async fn do_delete_child(
         state.all_child_realms().get(&moniker).map(|r| r.clone())
     };
     if let Some(child_realm) = child_realm {
-        ActionSet::register(child_realm.clone(), model.clone(), Action::Destroy).await.await?;
+        ActionSet::register(child_realm.clone(), Action::Destroy).await.await?;
         {
             let mut state = realm.lock_state().await;
             state.as_mut().expect("do_delete_child: not resolved").remove_child_realm(&moniker);
@@ -263,16 +256,15 @@ async fn do_delete_child(
     Ok(())
 }
 
-async fn do_destroy(model: Arc<Model>, realm: Arc<Realm>) -> Result<(), ModelError> {
+async fn do_destroy(realm: Arc<Realm>) -> Result<(), ModelError> {
     // For destruction to behave correctly, the component has to be shut down first.
-    ActionSet::register(realm.clone(), model.clone(), Action::Shutdown).await.await?;
+    ActionSet::register(realm.clone(), Action::Shutdown).await.await?;
 
     let nfs = if let Some(state) = realm.lock_state().await.as_ref() {
         let mut nfs = vec![];
         for (m, _) in state.all_child_realms().iter() {
             let realm = realm.clone();
-            let nf =
-                ActionSet::register(realm, model.clone(), Action::DeleteChild(m.clone())).await;
+            let nf = ActionSet::register(realm, Action::DeleteChild(m.clone())).await;
             nfs.push(nf);
         }
         nfs
@@ -284,7 +276,7 @@ async fn do_destroy(model: Arc<Model>, realm: Arc<Realm>) -> Result<(), ModelErr
     ok_or_first_error(results)?;
 
     // Now that all children have been destroyed, destroy the containing realm.
-    realm.destroy_instance(model).await?;
+    realm.destroy_instance().await?;
     Ok(())
 }
 
@@ -437,9 +429,7 @@ pub mod tests {
 
         // Register shutdown action, and wait for it. Component should shut down (no more
         // `Execution`).
-        execute_action(test.model.clone(), a_info.realm.clone(), Action::Shutdown)
-            .await
-            .expect("shutdown failed");
+        execute_action(a_info.realm.clone(), Action::Shutdown).await.expect("shutdown failed");
         a_info.check_is_shut_down(&test.runner).await;
 
         // Trying to bind to the component should fail because it's shut down.
@@ -449,9 +439,7 @@ pub mod tests {
             .expect_err("successfully bound to a after shutdown");
 
         // Shut down the component again. This succeeds, but has no additional effect.
-        execute_action(test.model.clone(), a_info.realm.clone(), Action::Shutdown)
-            .await
-            .expect("shutdown failed");
+        execute_action(a_info.realm.clone(), Action::Shutdown).await.expect("shutdown failed");
         &a_info.check_is_shut_down(&test.runner).await;
     }
 
@@ -507,7 +495,7 @@ pub mod tests {
         // Register shutdown action, and wait for it. Components should shut down (no more
         // `Execution`). Also, the instances in the collection should have been destroyed because
         // they were transient.
-        execute_action(test.model.clone(), realm_container_info.realm.clone(), Action::Shutdown)
+        execute_action(realm_container_info.realm.clone(), Action::Shutdown)
             .await
             .expect("shutdown failed");
         realm_container_info.check_is_shut_down(&test.runner).await;
@@ -575,17 +563,13 @@ pub mod tests {
         assert!(!is_executing(&realm_b).await);
 
         // Register shutdown action on "a", and wait for it.
-        execute_action(test.model.clone(), realm_a.clone(), Action::Shutdown)
-            .await
-            .expect("shutdown failed");
+        execute_action(realm_a.clone(), Action::Shutdown).await.expect("shutdown failed");
         assert!(execution_is_shut_down(&realm_a).await);
         assert!(execution_is_shut_down(&realm_b).await);
 
         // Now "a" is shut down. There should be no events though because the component was
         // never started.
-        execute_action(test.model.clone(), realm_a.clone(), Action::Shutdown)
-            .await
-            .expect("shutdown failed");
+        execute_action(realm_a.clone(), Action::Shutdown).await.expect("shutdown failed");
         assert!(execution_is_shut_down(&realm_a).await);
         assert!(execution_is_shut_down(&realm_b).await);
         {
@@ -634,9 +618,7 @@ pub mod tests {
         assert!(is_executing(&realm_a).await);
 
         // Register shutdown action on "a", and wait for it.
-        execute_action(test.model.clone(), realm_a.clone(), Action::Shutdown)
-            .await
-            .expect("shutdown failed");
+        execute_action(realm_a.clone(), Action::Shutdown).await.expect("shutdown failed");
         assert!(execution_is_shut_down(&realm_a).await);
         // Get realm_b without resolving it.
         let realm_b = {
@@ -717,7 +699,7 @@ pub mod tests {
 
         // Register shutdown action on "a", and wait for it. This should cause all components
         // to shut down, in bottom-up order.
-        execute_action(test.model.clone(), realm_a_info.realm.clone(), Action::Shutdown)
+        execute_action(realm_a_info.realm.clone(), Action::Shutdown)
             .await
             .expect("shutdown failed");
         realm_a_info.check_is_shut_down(&test.runner).await;
@@ -856,7 +838,7 @@ pub mod tests {
 
         // Register shutdown action on "a", and wait for it. This should cause all components
         // to shut down, in bottom-up order.
-        execute_action(test.model.clone(), realm_a_info.realm.clone(), Action::Shutdown)
+        execute_action(realm_a_info.realm.clone(), Action::Shutdown)
             .await
             .expect("shutdown failed");
         realm_a_info.check_is_shut_down(&test.runner).await;
@@ -1040,7 +1022,7 @@ pub mod tests {
 
         // Register shutdown action on "a", and wait for it. This should cause all components
         // to shut down, in bottom-up order.
-        execute_action(test.model.clone(), realm_a_info.realm.clone(), Action::Shutdown)
+        execute_action(realm_a_info.realm.clone(), Action::Shutdown)
             .await
             .expect("shutdown failed");
         realm_a_info.check_is_shut_down(&test.runner).await;
@@ -1256,7 +1238,7 @@ pub mod tests {
 
         // Register shutdown action on "a", and wait for it. This should cause all components
         // to shut down, in bottom-up order.
-        execute_action(test.model.clone(), realm_a_info.realm.clone(), Action::Shutdown)
+        execute_action(realm_a_info.realm.clone(), Action::Shutdown)
             .await
             .expect("shutdown failed");
         realm_a_info.check_is_shut_down(&test.runner).await;
@@ -1393,7 +1375,7 @@ pub mod tests {
 
         // Register shutdown action on "a", and wait for it. This should cause all components
         // to shut down, in bottom-up and dependency order.
-        execute_action(test.model.clone(), realm_a_info.realm.clone(), Action::Shutdown)
+        execute_action(realm_a_info.realm.clone(), Action::Shutdown)
             .await
             .expect("shutdown failed");
         realm_a_info.check_is_shut_down(&test.runner).await;
@@ -1475,7 +1457,7 @@ pub mod tests {
 
         // Register shutdown action on "a", and wait for it. This should cause all components
         // to shut down, in bottom-up and dependency order.
-        execute_action(test.model.clone(), realm_a_info.realm.clone(), Action::Shutdown)
+        execute_action(realm_a_info.realm.clone(), Action::Shutdown)
             .await
             .expect("shutdown failed");
         realm_a_info.check_is_shut_down(&test.runner).await;
@@ -1597,7 +1579,7 @@ pub mod tests {
 
         // Register shutdown action on "a", and wait for it. "b"'s realm shuts down, but "b"
         // returns an error so "a" does not.
-        execute_action(test.model.clone(), realm_a_info.realm.clone(), Action::Shutdown)
+        execute_action(realm_a_info.realm.clone(), Action::Shutdown)
             .await
             .expect_err("shutdown succeeded unexpectedly");
         realm_a_info.check_not_shut_down(&test.runner).await;
@@ -1627,7 +1609,7 @@ pub mod tests {
 
         // Register shutdown action on "a" again. "b"'s shutdown succeeds (it's a no-op), and
         // "a" is allowed to shut down this time.
-        execute_action(test.model.clone(), realm_a_info.realm.clone(), Action::Shutdown)
+        execute_action(realm_a_info.realm.clone(), Action::Shutdown)
             .await
             .expect("shutdown failed");
         realm_a_info.check_is_shut_down(&test.runner).await;
@@ -1678,7 +1660,7 @@ pub mod tests {
 
         // Register `mark_deleting` action, and wait for it. Component should be marked deleted.
         let realm_root = test.look_up(vec![].into()).await;
-        execute_action(test.model.clone(), realm_root.clone(), Action::MarkDeleting("a:0".into()))
+        execute_action(realm_root.clone(), Action::MarkDeleting("a:0".into()))
             .await
             .expect("mark delete failed");
         assert!(is_deleting(&realm_root, "a:0".into()).await);
@@ -1696,7 +1678,7 @@ pub mod tests {
         }
 
         // Execute action again, same state and no new events.
-        execute_action(test.model.clone(), realm_root.clone(), Action::MarkDeleting("a:0".into()))
+        execute_action(realm_root.clone(), Action::MarkDeleting("a:0".into()))
             .await
             .expect("mark delete failed");
         assert!(is_deleting(&realm_root, "a:0".into()).await);
@@ -1735,24 +1717,16 @@ pub mod tests {
 
         // Register `mark_deleting` action for "a" only.
         let realm_root = test.look_up(vec![].into()).await;
-        execute_action(
-            test.model.clone(),
-            realm_root.clone(),
-            Action::MarkDeleting("coll:a:1".into()),
-        )
-        .await
-        .expect("mark delete failed");
+        execute_action(realm_root.clone(), Action::MarkDeleting("coll:a:1".into()))
+            .await
+            .expect("mark delete failed");
         assert!(is_deleting(&realm_root, "coll:a:1".into()).await);
         assert!(!is_deleting(&realm_root, "coll:b:2".into()).await);
 
         // Register `mark_deleting` action for "b".
-        execute_action(
-            test.model.clone(),
-            realm_root.clone(),
-            Action::MarkDeleting("coll:b:1".into()),
-        )
-        .await
-        .expect("mark delete failed");
+        execute_action(realm_root.clone(), Action::MarkDeleting("coll:b:1".into()))
+            .await
+            .expect("mark delete failed");
         assert!(is_deleting(&realm_root, "coll:a:1".into()).await);
         assert!(is_deleting(&realm_root, "coll:b:2".into()).await);
         {
@@ -1796,7 +1770,7 @@ pub mod tests {
         assert!(is_executing(&realm_a).await);
 
         // Register delete child action, and wait for it. Component should be destroyed.
-        execute_action(test.model.clone(), realm_root.clone(), Action::DeleteChild("a:0".into()))
+        execute_action(realm_root.clone(), Action::DeleteChild("a:0".into()))
             .await
             .expect("destroy failed");
         assert!(is_destroyed(&realm_root, &realm_a).await);
@@ -1823,7 +1797,7 @@ pub mod tests {
             .expect_err("successfully bound to a after shutdown");
 
         // Destroy the component again. This succeeds, but has no additional effect.
-        execute_action(test.model.clone(), realm_root.clone(), Action::DeleteChild("a:0".into()))
+        execute_action(realm_root.clone(), Action::DeleteChild("a:0".into()))
             .await
             .expect("destroy failed");
         assert!(is_destroyed(&realm_root, &realm_a).await);
@@ -1870,13 +1844,9 @@ pub mod tests {
 
         // Register delete child action, and wait for it. Components should be destroyed.
         let realm_container = test.look_up(vec!["container:0"].into()).await;
-        execute_action(
-            test.model.clone(),
-            realm_root.clone(),
-            Action::DeleteChild("container:0".into()),
-        )
-        .await
-        .expect("destroy failed");
+        execute_action(realm_root.clone(), Action::DeleteChild("container:0".into()))
+            .await
+            .expect("destroy failed");
         assert!(is_destroyed(&realm_root, &realm_container).await);
         assert!(is_destroyed(&realm_container, &realm_a).await);
         assert!(is_destroyed(&realm_container, &realm_b).await);
@@ -1908,14 +1878,12 @@ pub mod tests {
 
         // Register shutdown action on "a", and wait for it. This should cause all components
         // to shut down, in bottom-up order.
-        execute_action(test.model.clone(), realm_a.clone(), Action::Shutdown)
-            .await
-            .expect("shutdown failed");
+        execute_action(realm_a.clone(), Action::Shutdown).await.expect("shutdown failed");
         assert!(execution_is_shut_down(&realm_a.clone()).await);
         assert!(execution_is_shut_down(&realm_b.clone()).await);
 
         // Now delete child "a". This should cause all components to be destroyed.
-        execute_action(test.model.clone(), realm_root.clone(), Action::DeleteChild("a:0".into()))
+        execute_action(realm_root.clone(), Action::DeleteChild("a:0".into()))
             .await
             .expect("destroy failed");
         assert!(is_destroyed(&realm_root, &realm_a).await);
@@ -1981,7 +1949,7 @@ pub mod tests {
         };
 
         // Register delete action on "a", and wait for it.
-        execute_action(test.model.clone(), realm_root.clone(), Action::DeleteChild("a:0".into()))
+        execute_action(realm_root.clone(), Action::DeleteChild("a:0".into()))
             .await
             .expect("destroy failed");
         assert!(is_destroyed(&realm_root, &realm_a).await);
@@ -2067,7 +2035,7 @@ pub mod tests {
         // Register destroy action on "a", and wait for it. This should cause all components
         // in "a"'s realm to be shut down and destroyed, in bottom-up order, but "x" is still
         // running.
-        execute_action(test.model.clone(), realm_root.clone(), Action::DeleteChild("a:0".into()))
+        execute_action(realm_root.clone(), Action::DeleteChild("a:0".into()))
             .await
             .expect("delete child failed");
         assert!(is_destroyed(&realm_root, &realm_a).await);
@@ -2183,7 +2151,7 @@ pub mod tests {
 
         // Register destroy action on "a", and wait for it. This should cause all components
         // that were started to be destroyed, in bottom-up order.
-        execute_action(test.model.clone(), realm_root.clone(), Action::DeleteChild("a:0".into()))
+        execute_action(realm_root.clone(), Action::DeleteChild("a:0".into()))
             .await
             .expect("delete child failed");
         assert!(is_destroyed(&realm_root, &realm_a).await);
@@ -2317,7 +2285,7 @@ pub mod tests {
 
         // Register delete action on "a", and wait for it. "b"'s realm is deleted, but "b"
         // returns an error so the delete action on "a" does not succeed.
-        execute_action(test.model.clone(), realm_root.clone(), Action::DeleteChild("a:0".into()))
+        execute_action(realm_root.clone(), Action::DeleteChild("a:0".into()))
             .await
             .expect_err("destroy succeeded unexpectedly");
         assert!(has_child(&realm_root, "a:0").await);
@@ -2347,7 +2315,7 @@ pub mod tests {
 
         // Register destroy action on "a:0" again. "b:0"'s delete succeeds, and "a:0" is deleted this
         // time.
-        execute_action(test.model.clone(), realm_root.clone(), Action::DeleteChild("a:0".into()))
+        execute_action(realm_root.clone(), Action::DeleteChild("a:0".into()))
             .await
             .expect("destroy failed");
         assert!(!has_child(&realm_root, "a:0").await);
@@ -2382,12 +2350,8 @@ pub mod tests {
         }
     }
 
-    async fn execute_action(
-        model: Arc<Model>,
-        realm: Arc<Realm>,
-        action: Action,
-    ) -> Result<(), ModelError> {
-        ActionSet::register(realm, model, action).await.await
+    async fn execute_action(realm: Arc<Realm>, action: Action) -> Result<(), ModelError> {
+        ActionSet::register(realm, action).await.await
     }
 
     async fn is_executing(realm: &Realm) -> bool {

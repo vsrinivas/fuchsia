@@ -9,6 +9,7 @@ use {
             addable_directory::{AddableDirectory, AddableDirectoryWithResult},
             error::ModelError,
             moniker::AbsoluteMoniker,
+            realm::WeakRealm,
             routing_facade::RoutingFacade,
         },
     },
@@ -34,7 +35,7 @@ impl CapabilityUsageTree {
 
     pub async fn mark_capability_used(
         &mut self,
-        abs_moniker: &AbsoluteMoniker,
+        target_realm: WeakRealm,
         source: CapabilitySource,
     ) -> Result<(), ModelError> {
         // Do nothing for capabilities without paths
@@ -45,17 +46,17 @@ impl CapabilityUsageTree {
             }
         };
         let basename = path.basename.to_string();
-        let tree = self.to_directory_node(path, abs_moniker).await?;
+        let tree = self.to_directory_node(path, &target_realm.moniker).await?;
         // TODO(44746): This is probably not correct. The capability source lacks crucial
         // information about the capability routing, such as rights to apply on a directory.  Could
         // possibly use `route_use_fn_factory` instead.
         let routing_factory = tree.routing_facade.route_capability_source_fn_factory();
-        let routing_fn = routing_factory(abs_moniker.clone(), source);
+        let routing_fn = routing_factory(target_realm.clone(), source);
 
         let node = DirectoryBroker::new(routing_fn);
 
         // Adding a node to the Hub can fail
-        tree.dir.add_node(&basename, node, abs_moniker).unwrap_or_else(|_| {
+        tree.dir.add_node(&basename, node, &target_realm.moniker).unwrap_or_else(|_| {
             // TODO(xbhatnag): The error received is not granular enough to know if the node
             // already exists, so treat this as a success for now. Ideally, pseudo_vfs should
             // have an exists() operation.
@@ -103,13 +104,13 @@ impl DirTree {
     /// `routing_factory` is a closure that generates the routing function that will be called
     /// when a leaf node is opened.
     pub fn build_from_uses(
-        routing_factory: impl Fn(AbsoluteMoniker, UseDecl) -> RoutingFn,
-        abs_moniker: &AbsoluteMoniker,
+        routing_factory: impl Fn(WeakRealm, UseDecl) -> RoutingFn,
+        realm: WeakRealm,
         decl: ComponentDecl,
     ) -> Self {
         let mut tree = DirTree { directory_nodes: HashMap::new(), broker_nodes: HashMap::new() };
         for use_ in decl.uses {
-            tree.add_use_capability(&routing_factory, abs_moniker, &use_);
+            tree.add_use_capability(&routing_factory, realm.clone(), &use_);
         }
         tree
     }
@@ -118,13 +119,13 @@ impl DirTree {
     /// `routing_factory` is a closure that generates the routing function that will be called
     /// when a leaf node is opened.
     pub fn build_from_exposes(
-        routing_factory: impl Fn(AbsoluteMoniker, ExposeDecl) -> RoutingFn,
-        abs_moniker: &AbsoluteMoniker,
+        routing_factory: impl Fn(WeakRealm, ExposeDecl) -> RoutingFn,
+        realm: WeakRealm,
         decl: ComponentDecl,
     ) -> Self {
         let mut tree = DirTree { directory_nodes: HashMap::new(), broker_nodes: HashMap::new() };
         for expose in decl.exposes {
-            tree.add_expose_capability(&routing_factory, abs_moniker, &expose);
+            tree.add_expose_capability(&routing_factory, realm.clone(), &expose);
         }
         tree
     }
@@ -149,8 +150,8 @@ impl DirTree {
 
     fn add_use_capability(
         &mut self,
-        routing_factory: &impl Fn(AbsoluteMoniker, UseDecl) -> RoutingFn,
-        abs_moniker: &AbsoluteMoniker,
+        routing_factory: &impl Fn(WeakRealm, UseDecl) -> RoutingFn,
+        realm: WeakRealm,
         use_: &UseDecl,
     ) {
         let path = match use_.path() {
@@ -158,14 +159,14 @@ impl DirTree {
             None => return,
         };
         let tree = self.to_directory_node(path);
-        let routing_fn = routing_factory(abs_moniker.clone(), use_.clone());
+        let routing_fn = routing_factory(realm, use_.clone());
         tree.broker_nodes.insert(path.basename.to_string(), routing_fn);
     }
 
     fn add_expose_capability(
         &mut self,
-        routing_factory: &impl Fn(AbsoluteMoniker, ExposeDecl) -> RoutingFn,
-        abs_moniker: &AbsoluteMoniker,
+        routing_factory: &impl Fn(WeakRealm, ExposeDecl) -> RoutingFn,
+        realm: WeakRealm,
         expose: &ExposeDecl,
     ) {
         let path = match expose {
@@ -178,7 +179,7 @@ impl DirTree {
             }
         };
         let tree = self.to_directory_node(path);
-        let routing_fn = routing_factory(abs_moniker.clone(), expose.clone());
+        let routing_fn = routing_factory(realm, expose.clone());
         tree.broker_nodes.insert(path.basename.to_string(), routing_fn);
     }
 
@@ -200,7 +201,11 @@ impl DirTree {
 mod tests {
     use {
         super::*,
-        crate::model::testing::{mocks, test_helpers, test_helpers::*},
+        crate::model::{
+            environment::Environment,
+            realm::Realm,
+            testing::{mocks, test_helpers, test_helpers::*},
+        },
         cm_rust::{
             CapabilityName, CapabilityPath, ExposeDecl, ExposeDirectoryDecl, ExposeProtocolDecl,
             ExposeRunnerDecl, ExposeSource, ExposeTarget, UseDecl, UseDirectoryDecl,
@@ -246,12 +251,14 @@ mod tests {
             ],
             ..default_component_decl()
         };
-        let abs_moniker = AbsoluteMoniker::root();
-        let tree = DirTree::build_from_uses(routing_factory, &abs_moniker, decl.clone());
+        let root_realm =
+            Arc::new(Realm::new_root_realm(Environment::empty(), "test://root".to_string()));
+        let tree = DirTree::build_from_uses(routing_factory, root_realm.as_weak(), decl.clone());
 
         // Convert the tree to a directory.
         let mut in_dir = pfs::simple();
-        tree.install(&abs_moniker, &mut in_dir).expect("Unable to build pseudodirectory");
+        tree.install(&root_realm.abs_moniker, &mut in_dir)
+            .expect("Unable to build pseudodirectory");
         let (in_dir_client, in_dir_server) = zx::Channel::create().unwrap();
         in_dir.open(
             ExecutionScope::from_executor(Box::new(EHandle::local())),
@@ -319,12 +326,14 @@ mod tests {
             ],
             ..default_component_decl()
         };
-        let abs_moniker = AbsoluteMoniker::root();
-        let tree = DirTree::build_from_exposes(routing_factory, &abs_moniker, decl.clone());
+        let root_realm =
+            Arc::new(Realm::new_root_realm(Environment::empty(), "test://root".to_string()));
+        let tree = DirTree::build_from_exposes(routing_factory, root_realm.as_weak(), decl.clone());
 
         // Convert the tree to a directory.
         let mut expose_dir = pfs::simple();
-        tree.install(&abs_moniker, &mut expose_dir).expect("Unable to build pseudodirectory");
+        tree.install(&root_realm.abs_moniker, &mut expose_dir)
+            .expect("Unable to build pseudodirectory");
         let (expose_dir_client, expose_dir_server) = zx::Channel::create().unwrap();
         expose_dir.open(
             ExecutionScope::from_executor(Box::new(EHandle::local())),
