@@ -896,6 +896,8 @@ zx_status_t EfiDevicePartitioner::Initialize(fbl::unique_fd devfs_root, Arch arc
 
 zx_status_t EfiDevicePartitioner::AddPartition(
     Partition partition_type, std::unique_ptr<PartitionClient>* out_partition) const {
+  // NOTE: If you update the minimum sizes of partitions, please update the
+  // EfiDevicePartitionerTests.InitPartitionTables test.
   size_t minimum_size_bytes = 0;
   switch (partition_type) {
     case Partition::kBootloader:
@@ -1070,6 +1072,8 @@ zx_status_t CrosDevicePartitioner::Initialize(fbl::unique_fd devfs_root, Arch ar
 
 zx_status_t CrosDevicePartitioner::AddPartition(
     Partition partition_type, std::unique_ptr<PartitionClient>* out_partition) const {
+  // NOTE: If you update the minimum sizes of partitions, please update the
+  // CrosDevicePartitionerTests.InitPartitionTables test.
   size_t minimum_size_bytes = 0;
   switch (partition_type) {
     case Partition::kZirconA:

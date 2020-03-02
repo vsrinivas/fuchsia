@@ -427,14 +427,14 @@ TEST_F(EfiDevicePartitionerTests, DISABLED_InitPartitionTables) {
   ASSERT_OK(gpt::GptDevice::Create(gpt_dev->fd(), kBlockSize, kBlockCount, &gpt));
   const std::array<PartitionDescription, 9> partitions_at_end{
       PartitionDescription{GUID_EFI_NAME, kEfiType, 0x22, 0x8000},
-      PartitionDescription{GUID_ZIRCON_A_NAME, kZirconAType, 0x8022, 0x20000},
-      PartitionDescription{GUID_ZIRCON_B_NAME, kZirconBType, 0x28022, 0x20000},
-      PartitionDescription{GUID_ZIRCON_R_NAME, kZirconRType, 0x48022, 0x30000},
-      PartitionDescription{GUID_VBMETA_A_NAME, kVbMetaAType, 0x78022, 0x80},
-      PartitionDescription{GUID_VBMETA_B_NAME, kVbMetaBType, 0x780a2, 0x80},
-      PartitionDescription{GUID_VBMETA_R_NAME, kVbMetaRType, 0x78122, 0x80},
-      PartitionDescription{GUID_ABR_META_NAME, kAbrMetaType, 0x781a2, 0x8},
-      PartitionDescription{GUID_FVM_NAME, kFvmType, 0x781aa, 0x2000000},
+      PartitionDescription{GUID_ZIRCON_A_NAME, kZirconAType, 0x8022, 0x40000},
+      PartitionDescription{GUID_ZIRCON_B_NAME, kZirconBType, 0x48022, 0x40000},
+      PartitionDescription{GUID_ZIRCON_R_NAME, kZirconRType, 0x88022, 0x60000},
+      PartitionDescription{GUID_VBMETA_A_NAME, kVbMetaAType, 0xe8022, 0x80},
+      PartitionDescription{GUID_VBMETA_B_NAME, kVbMetaBType, 0xe80a2, 0x80},
+      PartitionDescription{GUID_VBMETA_R_NAME, kVbMetaRType, 0xe8122, 0x80},
+      PartitionDescription{GUID_ABR_META_NAME, kAbrMetaType, 0xe81a2, 0x8},
+      PartitionDescription{GUID_FVM_NAME, kFvmType, 0xe81aa, 0x2000000},
   };
   for (auto& part : partitions_at_end) {
     bool found = false;
