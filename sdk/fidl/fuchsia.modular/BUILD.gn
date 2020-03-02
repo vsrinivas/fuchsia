@@ -36,7 +36,6 @@ fidl("fuchsia.modular") {
     "module/module_data.fidl",
     "module/module_manifest.fidl",
     "module/module_state.fidl",
-    "module_resolver/module_resolver.fidl",
     "session/focus.fidl",
     "session/session_shell.fidl",
     "story/create_link.fidl",

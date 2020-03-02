@@ -26,7 +26,6 @@ group("framework") {
     "//src/modular/bin/basemgr",
     "//src/modular/bin/basemgr:auto_login_base_shell",
     "//src/modular/bin/sessionmgr",
-    "//src/modular/cloud/go/src/remote_module_resolver:host",
   ]
 }
 
@@ -50,7 +49,6 @@ group("integration_testing") {
     "//src/modular/bin/basemgr:dev_base_shell",
     "//src/modular/bin/sessionmgr:dev_session_shell",
     "//src/modular/bin/sessionmgr/story_runner:dev_story_shell",
-    "//src/modular/cloud/go/src/remote_module_resolver:host",
   ]
 }
 

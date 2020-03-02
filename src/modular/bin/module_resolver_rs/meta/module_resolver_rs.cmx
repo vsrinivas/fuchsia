@@ -1,9 +1,0 @@
-{
-    "program": {
-        "binary": "test/module_resolver_rs_bin_tests"
-    },
-    "sandbox": {
-        "features": [],
-        "services": []
-    }
-}

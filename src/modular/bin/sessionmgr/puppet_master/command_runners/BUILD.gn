@@ -90,7 +90,6 @@ executable("add_mod_command_runner_unittest") {
     "//src/lib/fxl/test:gtest_main",
     "//src/modular/lib/testing:entity_resolver_fake",
     "//src/modular/lib/testing:module_facet_reader_fake",
-    "//src/modular/lib/testing:module_resolver_fake",
     "//src/modular/lib/testing:test_with_session_storage",
   ]
 }

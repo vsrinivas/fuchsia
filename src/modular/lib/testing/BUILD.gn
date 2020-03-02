@@ -11,7 +11,6 @@ group("testing") {
     ":ledger_repository_for_testing",
     ":mock_base",
     ":module_facet_reader_fake",
-    ":module_resolver_fake",
     ":session_shell_base",
     ":session_shell_impl",
     ":story_controller_mock",
@@ -64,20 +63,6 @@ source_set("entity_resolver_fake") {
   ]
 
   deps = [ "//src/lib/fsl" ]
-}
-
-source_set("module_resolver_fake") {
-  testonly = true
-
-  sources = [
-    "module_resolver_fake.cc",
-    "module_resolver_fake.h",
-  ]
-
-  public_deps = [
-    "//sdk/fidl/fuchsia.modular",
-    "//sdk/lib/fidl/cpp",
-  ]
 }
 
 source_set("module_facet_reader_fake") {
