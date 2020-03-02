@@ -53,6 +53,12 @@ zx_status_t MsiDispatcher::Create(fbl::RefPtr<MsiAllocation> alloc, uint32_t msi
     base_irq_id = alloc->block().base_irq_id;
   }
 
+  auto cleanup = fbl::MakeAutoCall([alloc, msi_id]() { alloc->ReleaseId(msi_id); });
+  zx_status_t st = alloc->ReserveId(msi_id);
+  if (st != ZX_OK) {
+    return st;
+  }
+
   // To handle MSI masking we need to create a kernel mapping for the VMO handed
   // to us, this will provide access to the register controlling the given MSI.
   // The VMO must be a contiguous VMO with the cache policy already configured.
@@ -66,9 +72,9 @@ zx_status_t MsiDispatcher::Create(fbl::RefPtr<MsiAllocation> alloc, uint32_t msi
   snprintf(name.data(), name.max_size(), "msi id %u (vector %u)", msi_id, vector);
   fbl::RefPtr<VmMapping> mapping;
   auto size = vmo->size();
-  zx_status_t st = vmar->CreateVmMapping(0, size, 0, 0, vmo, 0,
-                                         ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE,
-                                         name.data(), &mapping);
+  st = vmar->CreateVmMapping(0, size, 0, 0, vmo, 0,
+                             ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE, name.data(),
+                             &mapping);
   if (st != ZX_OK) {
     LTRACEF("Failed to create MSI mapping: %d\n", st);
     return st;
@@ -90,8 +96,10 @@ zx_status_t MsiDispatcher::Create(fbl::RefPtr<MsiAllocation> alloc, uint32_t msi
     LTRACEF("Failed to allocate MsiDispatcher\n");
     return ZX_ERR_NO_MEMORY;
   }
+  // If we allocated MsiDispatcher successfully then its dtor will release
+  // the id if necessary.
+  cleanup.cancel();
 
-  Guard<fbl::Mutex> guard(disp->get_lock());
   // MSI / MSI-X interrupts share a masking approach and should be masked while
   // being serviced and unmasked while waiting for an interrupt message to arrive.
   disp->set_flags(INTERRUPT_UNMASK_PREWAIT | INTERRUPT_MASK_POSTWAIT |
@@ -122,7 +130,14 @@ MsiDispatcher::MsiDispatcher(fbl::RefPtr<MsiAllocation>&& alloc, fbl::RefPtr<VmM
   kcounter_add(dispatcher_msi_create_count, 1);
 }
 
-MsiDispatcher::~MsiDispatcher() { kcounter_add(dispatcher_msi_destroy_count, 1); }
+MsiDispatcher::~MsiDispatcher() {
+  zx_status_t st = alloc_->ReleaseId(msi_id_);
+  if (st != ZX_OK) {
+    printf("MsiDispatcher: Failed to release MSI id %u (vector %u): %d\n", msi_id_,
+           base_irq_id_ + msi_id_, st);
+  }
+  kcounter_add(dispatcher_msi_destroy_count, 1);
+}
 
 // This IrqHandler acts as a trampoline to call into the base
 // InterruptDispatcher's InterruptHandler() routine. Masking and signaling will

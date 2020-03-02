@@ -16,6 +16,7 @@
 #include <dev/interrupt.h>
 #include <fbl/ref_counted.h>
 #include <kernel/spinlock.h>
+#include <ktl/limits.h>
 #include <ktl/move.h>
 #include <object/resource_dispatcher.h>
 
@@ -34,6 +35,12 @@ class MsiAllocation : public fbl::RefCounted<MsiAllocation> {
   using MsiAllocFn = zx_status_t (*)(uint32_t, bool, bool, msi_block_t*);
   using MsiFreeFn = void (*)(msi_block_t*);
   using MsiSupportedFn = bool (*)();
+  // For now limit the max number of allocations in a block to the limit of standard
+  // MSI. MSI-X's enhanced allocation limits are not going to come into play until
+  // we move interrupt allocation off of the bootstrap CPU.
+  using IdBitMaskType = uint32_t;
+  using MsiId = uint32_t;
+  static constexpr uint32_t kMsiAllocationCountMax = ktl::numeric_limits<IdBitMaskType>::digits;
 
   static zx_status_t Create(uint32_t irq_cnt, fbl::RefPtr<MsiAllocation>* obj,
                             // Defaults to allow test mocks to override.
@@ -48,6 +55,10 @@ class MsiAllocation : public fbl::RefCounted<MsiAllocation> {
 
   static zx_obj_type_t get_type() { return ZX_OBJ_TYPE_MSI_ALLOCATION; }
   const msi_block_t& block() const TA_REQ(lock_) { return block_; }
+  // Interface for MsiDispatchers to reserve a given MSI id for management.
+  zx_status_t ReserveId(MsiId msi_id) TA_EXCL(lock_);
+  zx_status_t ReleaseId(MsiId msi_id) TA_EXCL(lock_);
+
   Lock<SpinLock>& lock() TA_EXCL(lock_) TA_RET_CAP(lock_) { return lock_; }
 
  private:
@@ -62,6 +73,8 @@ class MsiAllocation : public fbl::RefCounted<MsiAllocation> {
   MsiFreeFn msi_free_fn_;
   // Function pointers for MSI platform functions to facilitate unit tests.
   msi_block_t block_ TA_GUARDED(lock_) = {};
+  // A bitfield of MSI ids currently associated with MsiDispatchers.
+  IdBitMaskType ids_in_use_ TA_GUARDED(lock_) = 0;
   // Used to synchronize access to an MSI vector control register for
   // MSI blocks that consist of multiple vectors and MsiInterruptDispatchers.
   // It is not used to protect the MsiAllocation itself.

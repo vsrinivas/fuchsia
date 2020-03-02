@@ -31,6 +31,12 @@ zx_status_t MsiAllocation::Create(uint32_t irq_cnt, fbl::RefPtr<MsiAllocation>* 
     }
   });
 
+  // Ensure the requested IRQs fit within the mask of permitted IRQs in an allocation.
+  // MSI supports up to 32, MSI-X supports up to 2048.
+  if (irq_cnt == 0 || irq_cnt > kMsiAllocationCountMax) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
   zx_status_t st = msi_alloc_fn(irq_cnt, false /* can_target_64bit */, false /* is_msix */, &block);
   if (st != ZX_OK) {
     return st;
@@ -67,6 +73,36 @@ zx_status_t MsiAllocation::Create(uint32_t irq_cnt, fbl::RefPtr<MsiAllocation>* 
   kcounter_add(msi_create_count, 1);
   cleanup.cancel();
   *obj = ktl::move(msi);
+  return ZX_OK;
+}
+
+zx_status_t MsiAllocation::ReserveId(MsiId msi_id) {
+  Guard<SpinLock, IrqSave> guard{&lock_};
+  if (msi_id >= block_.num_irq) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  auto id_mask = (1u << msi_id);
+  if (ids_in_use_ & id_mask) {
+    return ZX_ERR_ALREADY_BOUND;
+  }
+
+  ids_in_use_ |= id_mask;
+  return ZX_OK;
+}
+
+zx_status_t MsiAllocation::ReleaseId(MsiId msi_id) {
+  Guard<SpinLock, IrqSave> guard{&lock_};
+  if (msi_id >= block_.num_irq) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  auto id_mask = (1u << msi_id);
+  if (!(ids_in_use_ & id_mask)) {
+    return ZX_ERR_BAD_STATE;
+  }
+
+  ids_in_use_ &= ~id_mask;
   return ZX_OK;
 }
 

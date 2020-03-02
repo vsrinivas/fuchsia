@@ -76,6 +76,50 @@ static bool allocation_creation_and_info_test() {
   END_TEST;
 }
 
+static bool allocation_irq_count_test() {
+  BEGIN_TEST;
+
+  ResourceDispatcher::ResourceStorage rsrc_storage;
+  ASSERT_EQ(ZX_OK, ResourceDispatcher::InitializeAllocator(ZX_RSRC_KIND_IRQ, 0, kVectorMax,
+                                                           &rsrc_storage));
+  // Check that the valid range of allocation sizes work.
+  for (uint32_t cnt = 1; cnt < MsiAllocation::kMsiAllocationCountMax; cnt++) {
+    fbl::RefPtr<MsiAllocation> alloc;
+    ASSERT_EQ(ZX_OK, MsiAllocation::Create(cnt, &alloc, MsiAllocate, MsiFree, MsiIsSupportedTrue,
+                                           &rsrc_storage));
+  }
+
+  fbl::RefPtr<MsiAllocation> alloc;
+  // And check the failure cases.
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, MsiAllocation::Create(0, &alloc, MsiAllocate, MsiFree,
+                                                       MsiIsSupportedTrue, &rsrc_storage));
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS,
+            MsiAllocation::Create(MsiAllocation::kMsiAllocationCountMax + 1, &alloc, MsiAllocate,
+                                  MsiFree, MsiIsSupportedTrue, &rsrc_storage));
+
+  END_TEST;
+}
+
+static bool allocation_reservation_test() {
+  BEGIN_TEST;
+
+  ResourceDispatcher::ResourceStorage rsrc_storage;
+  ASSERT_EQ(ZX_OK, ResourceDispatcher::InitializeAllocator(ZX_RSRC_KIND_IRQ, 0, kVectorMax,
+                                                           &rsrc_storage));
+  fbl::RefPtr<MsiAllocation> alloc;
+  ASSERT_EQ(ZX_OK, MsiAllocation::Create(MsiAllocation::kMsiAllocationCountMax, &alloc, MsiAllocate,
+                                         MsiFree, MsiIsSupportedTrue, &rsrc_storage));
+
+  // Verify the bounds checking and state of id reservations.
+  ASSERT_EQ(ZX_ERR_BAD_STATE, alloc->ReleaseId(0));
+  ASSERT_EQ(ZX_OK, alloc->ReserveId(0));
+  ASSERT_EQ(ZX_ERR_ALREADY_BOUND, alloc->ReserveId(0));
+  ASSERT_EQ(ZX_OK, alloc->ReleaseId(0));
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, alloc->ReserveId(MsiAllocation::kMsiAllocationCountMax));
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, alloc->ReleaseId(MsiAllocation::kMsiAllocationCountMax));
+  END_TEST;
+}
+
 static bool allocation_support_test() {
   BEGIN_TEST;
   ResourceDispatcher::ResourceStorage rsrc_storage;
@@ -119,10 +163,10 @@ static bool interrupt_creation_test() {
                                          &rsrc_storage));
   ASSERT_EQ(1u, rsrc_storage.resource_list.size_slow());
 
-  // This test emulates a block of MSI interrupts each taking up a given bit in a register for their
-  // own masking. It validates that the MsiDispatcher masks / unmasks the correct bit, and that the
-  // operation of the inherited InterruptDispatcher side of things behaves correctly when interrupts
-  // are triggered.
+  // This test emulates a block of MSI interrupts each taking up a given bit in a register for
+  // their own masking. It validates that the MsiDispatcher masks / unmasks the correct bit, and
+  // that the operation of the inherited InterruptDispatcher side of things behaves correctly when
+  // interrupts are triggered.
   register_call_count = 0;
   for (uint32_t msi_id = 0; msi_id < msi_cnt; msi_id++) {
     zx_rights_t rights;
@@ -184,9 +228,43 @@ static bool interrupt_creation_test() {
   END_TEST;
 }
 
+static bool interrupt_duplication_test() {
+  BEGIN_TEST;
+  // Overhead to get into a place where we can create MsiDispatchers.
+  ResourceDispatcher::ResourceStorage rsrc_storage;
+  ASSERT_EQ(ZX_OK, ResourceDispatcher::InitializeAllocator(ZX_RSRC_KIND_IRQ, 0, kVectorMax,
+                                                           &rsrc_storage));
+  fbl::RefPtr<MsiAllocation> alloc;
+  ASSERT_EQ(ZX_OK, MsiAllocation::Create(MsiAllocation::kMsiAllocationCountMax, &alloc, MsiAllocate,
+                                         MsiFree, MsiIsSupportedTrue, &rsrc_storage));
+  ASSERT_EQ(1u, rsrc_storage.resource_list.size_slow());
+
+  size_t vmo_size = 48u;
+  fbl::RefPtr<VmObject> vmo;
+  ASSERT_EQ(ZX_OK,
+            VmObjectPaged::CreateContiguous(PMM_ALLOC_FLAG_ANY, vmo_size, 0 /* options */, &vmo));
+  ASSERT_EQ(ZX_OK, vmo->SetMappingCachePolicy(ZX_CACHE_POLICY_UNCACHED_DEVICE));
+
+  // Now to the meat of the test. Ensure that two MsiDispatchers cannot share
+  // the same MSI id, and that when a dispatcher is cleaned up it releases the
+  // Id reservation in the allocation.
+  zx_rights_t rights;
+  KernelHandle<InterruptDispatcher> d1, d2;
+  ASSERT_EQ(ZX_OK, MsiDispatcher::Create(alloc, 0, vmo, 0, 0, &rights, &d1, register_fn, true));
+  ASSERT_EQ(ZX_ERR_ALREADY_BOUND,
+            MsiDispatcher::Create(alloc, 0, vmo, 0, 0, &rights, &d2, register_fn, true));
+  d1.reset();
+  ASSERT_EQ(ZX_OK, MsiDispatcher::Create(alloc, 0, vmo, 0, 0, &rights, &d2, register_fn, true));
+
+  END_TEST;
+}
+
 UNITTEST_START_TESTCASE(msi_object)
-UNITTEST("simple test for creation / get_info", allocation_creation_and_info_test)
-UNITTEST("test for msi platform support", allocation_support_test)
+UNITTEST("Test that Create() and get_info() operate properly", allocation_creation_and_info_test)
+UNITTEST("Test allocation limits", allocation_irq_count_test)
+UNITTEST("Test reservations for MSI ids", allocation_reservation_test)
+UNITTEST("Test for MSI platform support hooks", allocation_support_test)
 // TODO(fxb/46894): Disable test flake until root cause is found and resolved.
-// UNITTEST("test basic msi dispatcher operation", interrupt_creation_test)
+// UNITTEST("Test MsiDispatcher operation", interrupt_creation_test)
+UNITTEST("Test MsiDispatchers cannot overlap on an MSI id", interrupt_duplication_test)
 UNITTEST_END_TESTCASE(msi_object, "msi", "Tests for MSI objects")
