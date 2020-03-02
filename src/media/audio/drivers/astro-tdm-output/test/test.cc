@@ -76,6 +76,7 @@ TEST(AstroAudioStreamOutTest, CodecInitGood) {
   server->DdkUnbindDeprecated();
   EXPECT_TRUE(tester.Ok());
   audio_enable_gpio.VerifyAndClear();
+  server->DdkRelease();
 }
 
 TEST(AstroAudioStreamOutTest, CodecInitBad) {
@@ -173,6 +174,7 @@ TEST(AstroAudioStreamOutTest, ChangeRate96K) {
 
   server->DdkUnbindDeprecated();
   EXPECT_TRUE(tester.Ok());
+  server->DdkRelease();
 }
 
 }  // namespace astro

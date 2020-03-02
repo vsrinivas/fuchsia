@@ -43,9 +43,6 @@ test("astro-audio-out-test") {
     "//zircon/system/ulib/audio-proto-utils",
     "//zircon/system/ulib/audio-utils",
   ]
-
-  # TODO(46334): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 migrated_manifest("astro-audio-out-test-manifest") {
