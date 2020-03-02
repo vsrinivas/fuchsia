@@ -176,10 +176,8 @@ impl TestEnv {
         &'a self,
         args: SystemUpdaterArgs<'a>,
     ) -> Result<(), fuchsia_component::client::OutputError> {
-        let mut v = vec![
-            format!("-initiator={}", args.initiator),
-            format!("-target={}", args.target),
-        ];
+        let mut v =
+            vec![format!("-initiator={}", args.initiator), format!("-target={}", args.target)];
 
         if let Some(update) = args.update {
             v.push(format!("-update={}", update));
@@ -1404,13 +1402,8 @@ async fn test_rejects_unknown_flags() {
         )
         .add_file("zbi", "fake zbi");
 
-    let result = env
-        .run_system_updater_args(vec![
-            "-initiator=manual",
-            "-target=m3rk13",
-            "-foo=bar",
-        ])
-        .await;
+    let result =
+        env.run_system_updater_args(vec!["-initiator=manual", "-target=m3rk13", "-foo=bar"]).await;
     assert!(result.is_err(), "system_updater succeeded when it should fail");
 
     assert_eq!(*env.space_service.called.lock(), 0);
@@ -1429,13 +1422,8 @@ async fn test_rejects_extra_args() {
         )
         .add_file("zbi", "fake zbi");
 
-    let result = env
-        .run_system_updater_args(vec![
-            "-initiator=manual",
-            "-target=m3rk13",
-            "foo",
-        ])
-        .await;
+    let result =
+        env.run_system_updater_args(vec!["-initiator=manual", "-target=m3rk13", "foo"]).await;
     assert!(result.is_err(), "system_updater succeeded when it should fail");
 
     assert_eq!(*env.space_service.called.lock(), 0);
