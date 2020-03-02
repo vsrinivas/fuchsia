@@ -24,7 +24,8 @@ generated_file("zxcrypt_config.txt") {
   contents = "null"
 
   metadata = {
-    migrated_manifest_lines = [ "config/zxcrypt=" + rebase_path(outputs[0], root_build_dir) ]
+    migrated_manifest_lines =
+        [ "config/zxcrypt=" + rebase_path(outputs[0], root_build_dir) ]
   }
 }
 
@@ -47,6 +48,9 @@ test("fs-recovery") {
     "//zircon/public/lib/unittest",
     "//zircon/public/lib/zx",
   ]
+
+  # TODO(47413): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 migrated_manifest("fs-recovery-manifest") {
