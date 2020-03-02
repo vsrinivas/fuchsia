@@ -1,0 +1,44 @@
+{
+    "program": {
+        "binary": "bin/rust_test_adapter",
+        "args": [ "/pkg/test/lifecycle_integration_test" ],
+    },
+    "use": [
+        {
+            "runner": "elf",
+        },
+        {
+            "protocol": [
+                "/svc/fuchsia.sys2.Realm",
+                "/svc/fuchsia.test.events.EventSourceSync",
+            ],
+            "from": "framework",
+        },
+        {
+            "protocol": [
+                "/svc/fuchsia.process.Launcher",
+                "/svc/fuchsia.cobalt.LoggerFactory",
+                "/svc/fuchsia.logger.LogSink",
+            ],
+        },
+    ],
+    "expose": [
+        {
+            "protocol": "/svc/fuchsia.test.Suite",
+            "from": "self",
+        },
+    ],
+    "offer": [
+        {
+            "runner": "elf",
+            "from": "realm",
+            to: [ "#test-collection" ],
+        },
+    ],
+    "collections": [
+        {
+            "name": "test-collection",
+            "durability": "transient",
+        },
+    ],
+}

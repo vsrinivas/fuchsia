@@ -8,7 +8,7 @@ use {
     fidl::endpoints::{create_request_stream, ClientEnd, ServerEnd, ServiceMarker},
     fidl::Channel,
     fidl_fuchsia_test_events as fevents, fuchsia_async as fasync,
-    fuchsia_component::client::*,
+    fuchsia_component::client::connect_to_service,
     futures::{
         future::{AbortHandle, Abortable, BoxFuture, TryFutureExt},
         lock::Mutex,
@@ -157,38 +157,7 @@ impl EventSource {
         }
         event_types.dedup();
 
-        let mut event_stream = self.subscribe(event_types).await?;
-        let mut expected_events = expected_events;
-
-        while let Ok(event) = event_stream.next().await {
-            let recorded_event = RecordedEvent::try_from(&event)?;
-            // Skip events directed at the Realm insted of the component.
-            if recorded_event.target_moniker != "." {
-                let expected_event;
-                match ordering {
-                    Ordering::Ordered => expected_event = expected_events.remove(0),
-                    Ordering::Unordered => {
-                        if let Some((index, _)) = expected_events
-                            .iter()
-                            .enumerate()
-                            .find(|&event| event.1 == &recorded_event)
-                        {
-                            expected_event = expected_events.remove(index);
-                        } else {
-                            panic!("Failed to find event: {:?}", recorded_event);
-                        }
-                    }
-                }
-
-                assert_eq!(expected_event, recorded_event);
-                event.resume().await?;
-                if expected_events.is_empty() {
-                    break;
-                }
-            }
-        }
-
-        Ok(())
+        self.subscribe(event_types).await?.validate(ordering, expected_events).await
     }
 }
 
@@ -305,6 +274,51 @@ impl EventStream {
 
             event.resume().await?;
         }
+    }
+
+    /// Validate that the events in `expected_events` are received.
+    /// # Parameters
+    /// - `ordering`: Determines whether events must arrive in the same order they appear in the
+    ///               Vec or may arrive in any order
+    /// - `expected_events`: A Vector of `RecordedEvent`s that represent which events are expected
+    ///
+    /// # Notes
+    /// This function only listens for events directed at a component, not its Realm so any events
+    /// with a target_moniker of "." are ignored.
+    pub async fn validate(
+        &mut self,
+        ordering: Ordering,
+        mut expected_events: Vec<RecordedEvent>,
+    ) -> Result<(), Error> {
+        while let Ok(event) = self.next().await {
+            let recorded_event = RecordedEvent::try_from(&event)?;
+            // Skip events directed at the Realm insted of the component.
+            if recorded_event.target_moniker != "." {
+                let expected_event;
+                match ordering {
+                    Ordering::Ordered => expected_event = expected_events.remove(0),
+                    Ordering::Unordered => {
+                        if let Some((index, _)) = expected_events
+                            .iter()
+                            .enumerate()
+                            .find(|&event| event.1 == &recorded_event)
+                        {
+                            expected_event = expected_events.remove(index);
+                        } else {
+                            panic!("Failed to find event: {:?}", recorded_event);
+                        }
+                    }
+                }
+
+                assert_eq!(expected_event, recorded_event);
+                event.resume().await?;
+                if expected_events.is_empty() {
+                    break;
+                }
+            }
+        }
+
+        Ok(())
     }
 }
 

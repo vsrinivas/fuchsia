@@ -315,6 +315,11 @@ impl ScopedInstance {
             .map_err(|e| format_err!("Failed to destroy child: {:?}", e))?;
         Ok(())
     }
+
+    /// Return the name of this instance.
+    pub fn child_name(&self) -> String {
+        return self.child_name.clone();
+    }
 }
 
 impl Drop for ScopedInstance {
