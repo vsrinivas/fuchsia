@@ -47,7 +47,11 @@ zx_status_t Tas27xx::SetGain(float gain) {
 
 bool Tas27xx::ValidGain(float gain) { return (gain <= kMaxGain) && (gain >= kMinGain); }
 
-zx_status_t Tas27xx::Init() {
+zx_status_t Tas27xx::Init(uint32_t rate) {
+  if (rate != 48000 && rate != 96000) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   // Put part in active, but muted state
   auto status = Standby();
   if (status != ZX_OK) {
@@ -59,10 +63,10 @@ zx_status_t Tas27xx::Init() {
   if (status != ZX_OK) {
     return status;
   }
-
-  // 48kHz, FSYNC on high to low transition
-  // Disable autorate detection
-  status = WriteReg(TDM_CFG0, (1 << 4) | (0x03 << 1) | 1);
+  // 48kHz or 96kHz if 96kHz set double rate, FSYNC on high to low transition.
+  // Disable auto rate detection
+  status = WriteReg(TDM_CFG0,
+                    static_cast<uint8_t>((1 << 4) | (((rate == 96000) ? 0x04 : 0x03) << 1) | 1));
   if (status != ZX_OK) {
     return status;
   }

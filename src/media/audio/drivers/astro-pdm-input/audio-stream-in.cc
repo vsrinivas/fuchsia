@@ -87,7 +87,7 @@ zx_status_t AstroAudioStreamIn::InitPDev() {
     return status;
   }
 
-  pdm_ = AmlPdmDevice::Create(*std::move(mmio0), *std::move(mmio1), HIFI_PLL, 7, 499, TODDR_B);
+  pdm_ = AmlPdmDevice::Create(*std::move(mmio0), *std::move(mmio1), HIFI_PLL, 15, 999, TODDR_B);
   if (pdm_ == nullptr) {
     zxlogf(ERROR, "%s failed to create pdm device\n", __func__);
     return ZX_ERR_NO_MEMORY;

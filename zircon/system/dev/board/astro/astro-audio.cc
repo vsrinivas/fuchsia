@@ -116,7 +116,7 @@ zx_status_t Astro::AudioInit() {
     return status;
   }
 
-  status = clk_impl_.SetRate(g12a_clk::CLK_HIFI_PLL, 1536000000);
+  status = clk_impl_.SetRate(g12a_clk::CLK_HIFI_PLL, 3072000000);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: SetRate(CLK_HIFI_PLL) failed, st = %d\n", __func__, status);
     return status;
@@ -133,6 +133,10 @@ zx_status_t Astro::AudioInit() {
   gpio_impl_.SetAltFunction(S905D2_GPIOA(2), S905D2_GPIOA_2_TDMB_FS_FN);
   gpio_impl_.SetAltFunction(S905D2_GPIOA(3), S905D2_GPIOA_3_TDMB_D0_FN);
   gpio_impl_.SetAltFunction(S905D2_GPIOA(6), S905D2_GPIOA_6_TDMB_DIN3_FN);
+  constexpr uint8_t medium_strength = 2;  // Not mA, unitless values from AMLogic.
+  gpio_impl_.SetDriveStrength(S905D2_GPIOA(1), medium_strength);
+  gpio_impl_.SetDriveStrength(S905D2_GPIOA(2), medium_strength);
+  gpio_impl_.SetDriveStrength(S905D2_GPIOA(3), medium_strength);
 
   // PDM pin assignments
   gpio_impl_.SetAltFunction(S905D2_GPIOA(7), S905D2_GPIOA_7_PDM_DCLK_FN);

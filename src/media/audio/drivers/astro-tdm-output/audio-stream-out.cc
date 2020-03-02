@@ -13,6 +13,7 @@
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/composite.h>
+#include <fbl/auto_call.h>
 
 namespace audio {
 namespace astro {
@@ -25,15 +26,21 @@ enum {
   COMPONENT_COUNT,
 };
 
-// Calculate ring buffer size for 1 second of 16-bit, 48kHz, stereo.
-constexpr size_t RB_SIZE = fbl::round_up<size_t, size_t>(48000 * 2 * 2u, PAGE_SIZE);
+constexpr size_t kNumberOfChannels = 2;
+constexpr size_t kMinSampleRate = 48000;
+constexpr size_t kMaxSampleRate = 96000;
+// Calculate ring buffer size for 1 second of 16-bit, max rate.
+constexpr size_t kRingBufferSize =
+    fbl::round_up<size_t, size_t>(kMaxSampleRate * 2 * kNumberOfChannels, PAGE_SIZE);
 
-AstroAudioStreamOut::AstroAudioStreamOut(zx_device_t* parent) : SimpleAudioStream(parent, false) {}
+AstroAudioStreamOut::AstroAudioStreamOut(zx_device_t* parent) : SimpleAudioStream(parent, false) {
+  frames_per_second_ = kMinSampleRate;
+}
 
 zx_status_t AstroAudioStreamOut::InitCodec() {
   audio_en_.Write(1);  // Enable codec by setting SOC_AUDIO_EN.
 
-  auto status = codec_->Init();
+  auto status = codec_->Init(frames_per_second_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s failed to initialize codec\n", __FILE__);
     audio_en_.Write(0);
@@ -52,6 +59,8 @@ zx_status_t AstroAudioStreamOut::InitHW() {
     return status;
   }
 
+  auto on_error = fbl::MakeAutoCall([this]() { aml_audio_->Shutdown(); });
+
   aml_audio_->Initialize();
   // Setup TDM.
 
@@ -62,18 +71,32 @@ zx_status_t AstroAudioStreamOut::InitHW() {
   aml_audio_->ConfigTdmOutSwaps(0x00000010);
 
   // Lane 0, unmask first 2 slots (0x00000003),
-  aml_audio_->ConfigTdmOutLane(0, 0x00000003);
+  status = aml_audio_->ConfigTdmOutLane(0, 0x00000003);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s could not configure TDM out lane %d\n", __FILE__, status);
+    return status;
+  }
 
-  // Setup appropriate tdm clock signals. mclk = 1536MHz/125 = 12.288MHz.
-  aml_audio_->SetMclkDiv(124);
+  // Setup appropriate tdm clock signals. mclk = 3.072GHz/125 = 24.576MHz.
+  status = aml_audio_->SetMclkDiv(124);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s could not configure MCLK %d\n", __FILE__, status);
+    return status;
+  }
 
   // No need to set mclk pad via SetMClkPad (TAS2770 features "MCLK Free Operation").
 
-  // sclk = 12.288MHz/2 = 6.144MHz, 1 every 128 sclks is frame sync.
-  aml_audio_->SetSclkDiv(1, 0, 127);
+  // 48kHz: sclk=24.576MHz/4= 6.144MHz, 6.144MHz/128=48k frame sync, sdiv=3, lrduty=0, lrdiv=127.
+  // 96kHz: sclk=24.576MHz/2=12.288MHz, 12.288MHz/128=96k frame sync, sdiv=1, lrduty=0, lrdiv=127.
+  status = aml_audio_->SetSclkDiv((192'000 / frames_per_second_ - 1), 0, 127);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s could not configure SCLK %d\n", __FILE__, status);
+    return status;
+  }
 
   aml_audio_->Sync();
 
+  on_error.cancel();
   return ZX_OK;
 }
 
@@ -137,10 +160,18 @@ zx_status_t AstroAudioStreamOut::InitPDev() {
   }
 
   // Initialize the ring buffer
-  InitBuffer(RB_SIZE);
+  status = InitBuffer(kRingBufferSize);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s failed to init buffer %d\n", __FILE__, status);
+    return status;
+  }
 
-  aml_audio_->SetBuffer(pinned_ring_buffer_.region(0).phys_addr,
-                        pinned_ring_buffer_.region(0).size);
+  status = aml_audio_->SetBuffer(pinned_ring_buffer_.region(0).phys_addr,
+                                 pinned_ring_buffer_.region(0).size);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s failed to set buffer %d\n", __FILE__, status);
+    return status;
+  }
 
   return InitHW();
 }
@@ -203,8 +234,26 @@ zx_status_t AstroAudioStreamOut::ChangeFormat(const audio_proto::StreamSetFmtReq
   fifo_depth_ = aml_audio_->fifo_depth();
   external_delay_nsec_ = 0;
 
-  // At this time only one format is supported, and hardware is initialized
-  //  during driver binding, so nothing to do at this time.
+  if (req.frames_per_second != 48000 && req.frames_per_second != 96000) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  if (req.frames_per_second != frames_per_second_) {
+    auto last_rate = frames_per_second_;
+    frames_per_second_ = req.frames_per_second;
+    auto status = InitHW();
+    if (status != ZX_OK) {
+      frames_per_second_ = last_rate;
+      return status;
+    }
+
+    // Set gain after the codec is reinitialized.
+    status = codec_->SetGain(cur_gain_state_.cur_gain);
+    if (status != ZX_OK) {
+      return status;
+    }
+  }
+
   return ZX_OK;
 }
 
@@ -248,8 +297,9 @@ zx_status_t AstroAudioStreamOut::Start(uint64_t* out_start_time) {
 
   uint32_t notifs = LoadNotificationsPerRing();
   if (notifs) {
-    us_per_notification_ = static_cast<uint32_t>(1000 * pinned_ring_buffer_.region(0).size /
-                                                 (frame_size_ * 48 * notifs));
+    us_per_notification_ =
+        static_cast<uint32_t>(1000 * pinned_ring_buffer_.region(0).size /
+                              (frame_size_ * frames_per_second_ / 1000 * notifs));
     notify_timer_.PostDelayed(dispatcher(), zx::usec(us_per_notification_));
   } else {
     us_per_notification_ = 0;
@@ -280,8 +330,8 @@ zx_status_t AstroAudioStreamOut::AddFormats() {
   range.min_channels = 2;
   range.max_channels = 2;
   range.sample_formats = AUDIO_SAMPLE_FORMAT_16BIT;
-  range.min_frames_per_second = 48000;
-  range.max_frames_per_second = 48000;
+  range.min_frames_per_second = kMinSampleRate;
+  range.max_frames_per_second = kMaxSampleRate;
   range.flags = ASF_RANGE_FLAG_FPS_48000_FAMILY;
 
   supported_formats_.push_back(range);
