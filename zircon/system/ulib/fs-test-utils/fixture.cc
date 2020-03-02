@@ -58,7 +58,7 @@ constexpr uint8_t kTestUniqueGUID[] = {0xFF, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
 constexpr uint8_t kTestPartGUID[] = {0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
                                      0xFF, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07};
 
-zx_status_t MountMemFs(async::Loop* loop) {
+zx_status_t MountMemFs(async::Loop* loop, memfs_filesystem_t** memfs_out) {
   zx_status_t result = ZX_OK;
   result = loop->StartThread(kMemFsThreadName);
   if (result != ZX_OK) {
@@ -66,9 +66,11 @@ zx_status_t MountMemFs(async::Loop* loop) {
     return result;
   }
 
-  result = memfs_install_at(loop->dispatcher(), kMemFsPath, nullptr);
+  return memfs_install_at(loop->dispatcher(), kMemFsPath, memfs_out);
+}
 
-  return result;
+zx_status_t UnmountMemFs(memfs_filesystem_t* memfs) {
+  return memfs_uninstall_unsafe(memfs, kMemFsPath);
 }
 
 zx_status_t MakeRamdisk(int devfs_root, const FixtureOptions& options,
@@ -480,11 +482,19 @@ zx_status_t Fixture::TearDownTestCase() {
 }
 
 int RunWithMemFs(const fbl::Function<int()>& main_fn) {
+  memfs_filesystem_t* fs;
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  if (MountMemFs(&loop) != ZX_OK) {
+  zx_status_t status;
+  if ((status = MountMemFs(&loop, &fs)) != ZX_OK) {
+    LOG_ERROR(status, "Failed to mount memfs\n");
     return -1;
   }
   int result = main_fn();
+  loop.Shutdown();
+  if ((status = UnmountMemFs(fs)) != ZX_OK) {
+    LOG_ERROR(status, "Failed to unmount memfs\n");
+    return -1;
+  }
   return result;
 }
 
