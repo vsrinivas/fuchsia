@@ -45,6 +45,17 @@ namespace {
 using ::llcpp::fuchsia::paver::Asset;
 using ::llcpp::fuchsia::paver::Configuration;
 
+// Get the architecture of the currently running platform.
+inline constexpr Arch GetCurrentArch() {
+#if defined(__x86_64__)
+  return Arch::kX64;
+#elif defined(__aarch64__)
+  return Arch::kArm64;
+#else
+#error "Unknown arch"
+#endif
+}
+
 Partition PartitionType(Configuration configuration, Asset asset) {
   switch (asset) {
     case Asset::KERNEL: {
@@ -657,14 +668,8 @@ zx_status_t DataSinkImpl::WipeVolume(zx::channel* out) {
 
 void DataSink::Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root, zx::channel svc_root,
                     zx::channel server) {
-#if defined(__x86_64__)
-  Arch arch = Arch::kX64;
-#elif defined(__aarch64__)
-  Arch arch = Arch::kArm64;
-#else
-#error "Unknown arch"
-#endif
-  auto partitioner = DevicePartitioner::Create(devfs_root.duplicate(), std::move(svc_root), arch);
+  auto partitioner =
+      DevicePartitioner::Create(devfs_root.duplicate(), std::move(svc_root), GetCurrentArch());
   if (!partitioner) {
     ERROR("Unable to initialize a partitioner.\n");
     fidl_epitaph_write(server.get(), ZX_ERR_BAD_STATE);
@@ -676,15 +681,8 @@ void DataSink::Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root, z
 
 void DynamicDataSink::Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root,
                            zx::channel svc_root, zx::channel block_device, zx::channel server) {
-#if defined(__x86_64__)
-  Arch arch = Arch::kX64;
-#elif defined(__aarch64__)
-  Arch arch = Arch::kArm64;
-#else
-#error "Unknown arch"
-#endif
-  auto partitioner = DevicePartitioner::Create(devfs_root.duplicate(), std::move(svc_root), arch,
-                                               std::move(block_device));
+  auto partitioner = DevicePartitioner::Create(devfs_root.duplicate(), std::move(svc_root),
+                                               GetCurrentArch(), std::move(block_device));
   if (!partitioner) {
     ERROR("Unable to initialize a partitioner.\n");
     fidl_epitaph_write(server.get(), ZX_ERR_BAD_STATE);
