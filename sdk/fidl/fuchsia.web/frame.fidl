@@ -258,7 +258,7 @@ protocol Frame {
     [Transitional]
     ForceContentDimensions(fuchsia.ui.gfx.vec2? web_dips);
 
-    /// Sets permission state for the specified `permission` and `web_origin`. By default all
+    /// Sets the permission state for the specified `permission` and `web_origin`. By default, all
     /// permissions are denied.
     [Transitional]
     SetPermissionState(PermissionDescriptor permission,
