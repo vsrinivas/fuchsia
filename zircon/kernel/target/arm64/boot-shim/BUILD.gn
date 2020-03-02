@@ -121,36 +121,32 @@ template("boot_shim") {
   }
 }
 
-boot_shim("as370") {
-}
+shims = [
+  "as370",
+  "c18",
+  "hikey960",
+  "cleo",
+  "msm8x53-som",
+  "msm8998",
+  "mt8167s_ref",
+  "visalia",
+]
 
-boot_shim("c18") {
-}
-
-boot_shim("hikey960") {
-}
-
-boot_shim("imx8mmevk") {
-}
-
-boot_shim("cleo") {
-}
-
-boot_shim("msm8x53-som") {
-}
-
-boot_shim("msm8998") {
-}
-
-boot_shim("mt8167s_ref") {
-}
-
-boot_shim("visalia") {
+foreach(shim, shims) {
+  boot_shim(shim) {
+  }
 }
 
 boot_shim("qemu") {
   image_metadata = {
     name = "qemu-kernel"
     type = "kernel"
+  }
+}
+
+group("boot-shim") {
+  deps = [ ":qemu" ]
+  foreach(shim, shims) {
+    deps += [ ":$shim" ]
   }
 }
