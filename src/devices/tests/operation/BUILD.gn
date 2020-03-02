@@ -24,6 +24,9 @@ test("operation") {
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zxtest",
   ]
+
+  # TODO(47419): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 migrated_manifest("operation-manifest") {
