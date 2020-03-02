@@ -32,6 +32,9 @@ test("driver-test") {
     "//zircon/system/fidl/fuchsia-device:c",
     "//zircon/system/fidl/fuchsia-device:llcpp",
   ]
+
+  # TODO(47452): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 migrated_manifest("driver-test-manifest") {
