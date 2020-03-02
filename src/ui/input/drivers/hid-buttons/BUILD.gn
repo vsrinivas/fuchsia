@@ -56,6 +56,9 @@ test("hid-buttons-test") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/banjo/ddk.protocol.gpio:ddk.protocol.gpio_mock",
   ]
+
+  # TODO(47441): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 migrated_manifest("hid-buttons-manifest") {
