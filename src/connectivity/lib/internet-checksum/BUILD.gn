@@ -12,8 +12,6 @@ rustc_library("internet-checksum") {
   edition = "2018"
   with_unit_tests = true
 
-  deps = [ "//third_party/rust_crates:byteorder" ]
-
   test_deps = [
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:rand_xorshift",
