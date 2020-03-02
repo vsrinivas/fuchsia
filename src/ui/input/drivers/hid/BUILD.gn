@@ -53,6 +53,9 @@ test("hid-test") {
     "//zircon/system/banjo/ddk.protocol.hidbus",
     "//zircon/system/fidl/fuchsia-hardware-input:llcpp",
   ]
+
+  # TODO(47416): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 migrated_manifest("hid-manifest") {
