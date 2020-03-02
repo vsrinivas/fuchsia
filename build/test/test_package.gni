@@ -320,6 +320,7 @@ template("unittest_package") {
                                  "name",
                                  "dest",
                                  "disabled",
+                                 "environments",
                                ])
         manifest = test_manifest
       },
