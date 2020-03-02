@@ -34,18 +34,17 @@ void OnGe2dTaskRemoved(void* ctx, task_remove_status_t status);
 class Ge2dNode : public ProcessNode {
  public:
   Ge2dNode(async_dispatcher_t* dispatcher, const ddk::Ge2dProtocolClient& ge2d,
-           ProcessNode* parent_node,
-           const std::vector<fuchsia::sysmem::ImageFormat_2>& output_image_formats,
+           ProcessNode* parent_node, const camera::InternalConfigNode& internal_ge2d_node,
            fuchsia::sysmem::BufferCollectionInfo_2 output_buffer_collection,
-           fuchsia::camera2::CameraStreamType current_stream_type,
-           const std::vector<fuchsia::camera2::CameraStreamType>& supported_streams,
-           fuchsia::camera2::FrameRate frame_rate, const resize_info_t& info, Ge2DConfig task_type)
+           fuchsia::camera2::CameraStreamType current_stream_type)
       : ProcessNode(NodeType::kGe2d, parent_node, current_stream_type,
-                    std::move(output_image_formats), std::move(output_buffer_collection),
-                    std::move(supported_streams), dispatcher, frame_rate),
+                    std::move(internal_ge2d_node.image_formats),
+                    std::move(output_buffer_collection), internal_ge2d_node.supported_streams,
+                    internal_ge2d_node.dynamic_resolution_supported, dispatcher,
+                    internal_ge2d_node.output_frame_rate),
         ge2d_(ge2d),
-        task_type_(task_type),
-        info_(info),
+        task_type_(internal_ge2d_node.ge2d_info.config_type),
+        info_(internal_ge2d_node.ge2d_info.resize),
         frame_callback_{OnGe2dFrameAvailable, this},
         res_callback_{OnGe2dResChange, this},
         remove_task_callback_{OnGe2dTaskRemoved, this} {}

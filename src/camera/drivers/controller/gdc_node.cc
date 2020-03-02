@@ -114,10 +114,9 @@ fit::result<ProcessNode*, zx_status_t> GdcNode::CreateGdcNode(
   });
 
   // Create GDC Node
-  auto gdc_node = std::make_unique<camera::GdcNode>(
-      dispatcher, gdc, parent_node, internal_gdc_node.image_formats,
-      std::move(output_buffers_hlcpp), info->stream_config->properties.stream_type(),
-      internal_gdc_node.supported_streams, internal_gdc_node.output_frame_rate);
+  auto gdc_node = std::make_unique<camera::GdcNode>(dispatcher, gdc, parent_node, internal_gdc_node,
+                                                    std::move(output_buffers_hlcpp),
+                                                    info->stream_config->properties.stream_type());
   if (!gdc_node) {
     FX_LOGST(ERROR, kTag) << "Failed to create GDC node";
     return fit::error(ZX_ERR_NO_MEMORY);

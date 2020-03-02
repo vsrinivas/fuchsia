@@ -32,14 +32,14 @@ void OnGdcResChange(void* ctx, const frame_available_info_t* info);
 class GdcNode : public ProcessNode {
  public:
   GdcNode(async_dispatcher_t* dispatcher, const ddk::GdcProtocolClient& gdc,
-          ProcessNode* parent_node,
-          const std::vector<fuchsia::sysmem::ImageFormat_2>& output_image_formats,
+          ProcessNode* parent_node, const camera::InternalConfigNode& internal_gdc_node,
           fuchsia::sysmem::BufferCollectionInfo_2 output_buffer_collection,
-          fuchsia::camera2::CameraStreamType current_stream_type,
-          const std::vector<fuchsia::camera2::CameraStreamType>& supported_streams,
-          fuchsia::camera2::FrameRate frame_rate)
-      : ProcessNode(NodeType::kGdc, parent_node, current_stream_type, output_image_formats,
-                    std::move(output_buffer_collection), supported_streams, dispatcher, frame_rate),
+          fuchsia::camera2::CameraStreamType current_stream_type)
+      : ProcessNode(NodeType::kGdc, parent_node, current_stream_type,
+                    internal_gdc_node.image_formats, std::move(output_buffer_collection),
+                    internal_gdc_node.supported_streams,
+                    internal_gdc_node.dynamic_resolution_supported, dispatcher,
+                    internal_gdc_node.output_frame_rate),
         gdc_(gdc),
         frame_callback_{OnGdcFrameAvailable, this},
         res_callback_{OnGdcResChange, this},

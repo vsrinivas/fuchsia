@@ -19,14 +19,14 @@ namespace camera {
 class OutputNode : public ProcessNode {
  public:
   OutputNode(async_dispatcher_t* dispatcher, ProcessNode* parent_node,
-             const std::vector<fuchsia::sysmem::ImageFormat_2>& output_image_formats,
+             const camera::InternalConfigNode& internal_output_node,
              fuchsia::sysmem::BufferCollectionInfo_2 output_buffer_collection,
-             fuchsia::camera2::CameraStreamType current_stream_type,
-             const std::vector<fuchsia::camera2::CameraStreamType>& supported_streams,
-             fuchsia::camera2::FrameRate frame_rate)
-      : ProcessNode(NodeType::kOutputStream, parent_node, current_stream_type, output_image_formats,
-                    std::move(output_buffer_collection), std::move(supported_streams), dispatcher,
-                    frame_rate){};
+             fuchsia::camera2::CameraStreamType current_stream_type)
+      : ProcessNode(NodeType::kOutputStream, parent_node, current_stream_type,
+                    internal_output_node.image_formats, std::move(output_buffer_collection),
+                    internal_output_node.supported_streams,
+                    internal_output_node.dynamic_resolution_supported, dispatcher,
+                    internal_output_node.output_frame_rate) {}
 
   // Creates an |OutputNode| object.
   // Args:

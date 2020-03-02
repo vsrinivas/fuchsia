@@ -33,6 +33,7 @@ class ProcessNode {
               const std::vector<fuchsia::sysmem::ImageFormat_2>& output_image_formats,
               fuchsia::sysmem::BufferCollectionInfo_2 output_buffer_collection,
               const std::vector<fuchsia::camera2::CameraStreamType>& supported_streams,
+              const std::vector<fuchsia::camera2::CameraStreamType>& dynamic_resolution_supported,
               async_dispatcher_t* dispatcher, fuchsia::camera2::FrameRate frame_rate)
       : dispatcher_(dispatcher),
         output_frame_rate_(frame_rate),
@@ -42,6 +43,7 @@ class ProcessNode {
         output_image_formats_(output_image_formats),
         enabled_(false),
         supported_streams_(supported_streams),
+        dynamic_resolution_supported_(dynamic_resolution_supported),
         in_use_buffer_count_(output_buffer_collection.buffer_count, 0) {
     configured_streams_.push_back(current_stream_type);
   }
@@ -119,7 +121,13 @@ class ProcessNode {
     }
   }
 
-  std::vector<fuchsia::camera2::CameraStreamType> supported_streams() { return supported_streams_; }
+  const std::vector<fuchsia::camera2::CameraStreamType>& supported_streams() {
+    return supported_streams_;
+  }
+
+  const std::vector<fuchsia::camera2::CameraStreamType>& dynamic_resolution_supported() {
+    return dynamic_resolution_supported_;
+  }
 
   std::vector<std::unique_ptr<ProcessNode>>& child_nodes() { return child_nodes_; }
 
@@ -170,6 +178,8 @@ class ProcessNode {
   std::vector<fuchsia::camera2::CameraStreamType> configured_streams_;
   // The Stream types this node could support as well.
   std::vector<fuchsia::camera2::CameraStreamType> supported_streams_;
+  // This node support dynamic resolution for all streams part of this list.
+  std::vector<fuchsia::camera2::CameraStreamType> dynamic_resolution_supported_;
   // A vector to keep track of outstanding in-use buffers handed off to all child nodes.
   // [buffer_index] --> [count]
   std::vector<uint32_t> in_use_buffer_count_ __TA_GUARDED(in_use_buffer_lock_);
