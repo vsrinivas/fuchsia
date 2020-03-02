@@ -35,4 +35,8 @@ zx_test("lazy_init-test") {
     ]
   }
   configs += [ "$zx_build/public/gn/config:static-libc++" ]
+
+  # TODO(47442): Fix the leaks and remove this.
+  deps +=
+      [ "$zx/public/gn/config/instrumentation:suppress-lsan.DO-NOT-USE-THIS" ]
 }
