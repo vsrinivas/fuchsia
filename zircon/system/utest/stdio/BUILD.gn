@@ -18,4 +18,8 @@ zx_test("stdio") {
     # For unittests of _impl.h headers.
     "$zx/third_party/ulib/musl:musl_internal_testing",
   ]
+
+  # TODO(47392): Fix the leaks and remove this.
+  deps +=
+      [ "$zx/public/gn/config/instrumentation:suppress-lsan.DO-NOT-USE-THIS" ]
 }
