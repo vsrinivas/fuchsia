@@ -400,9 +400,9 @@ impl EventLoop {
     ) -> Result<(), Error> {
         if let Some(nat) = security_features.nat {
             if nat {
-                self.device.enable_nat().await?;
+                self.device.enable_nat();
             } else {
-                self.device.disable_nat().await?;
+                self.device.disable_nat();
             }
         }
         // TODO(cgibson): Handle additional SecurityFeatures.

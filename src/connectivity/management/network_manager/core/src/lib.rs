@@ -203,10 +203,30 @@ impl DeviceState {
     }
 
     /// Restores state of global system options and services from stored configuration.
-    pub async fn setup_services(&self) -> error::Result<()> {
+    pub async fn setup_services(&mut self) -> error::Result<()> {
         info!("Restoring system services state...");
-        self.hal.set_ip_forwarding(self.config.get_ip_forwarding_state()).await?;
         self.packet_filter.clear_filters().await?;
+        self.hal.set_ip_forwarding(self.config.get_ip_forwarding_state()).await?;
+        if self.config.get_nat_state() {
+            self.service_manager.enable_nat();
+            match self.packet_filter.update_nat_config(self.service_manager.get_nat_config()).await
+            {
+                // If the result of this call was `UpdateNatPendingConfig` then NAT needs further
+                // configuration before it's ready to be enabled. Everything else is an error.
+                // Further configuration is done each time there is a change to the LIF in the
+                // `update_lif_properties()` method.
+                Ok(())
+                | Err(error::NetworkManager::Service(error::Service::UpdateNatPendingConfig)) => {}
+                Err(e) => {
+                    error!("Failed to install NAT rules: {:?}", e);
+                    return Err(e);
+                }
+            }
+        } else {
+            self.service_manager.disable_nat();
+            self.packet_filter.clear_nat_rules().await?;
+        }
+
         // TODO(cgibson): Configure DHCP server.
         // TODO(cgibson): Apply global packet filtering rules (i.e. rules that apply to all
         // interfaces) when we support a wildcard device_id's.
@@ -568,12 +588,10 @@ impl DeviceState {
                 _ => (),
             }
         }
-
         match self.packet_filter.update_nat_config(self.service_manager.get_nat_config()).await {
-            // If the result of this call was `UpdateNatPendingConfig` or `NatNotEnabled`,
-            // then NAT is not yet ready to be enabled until we have more configuration
-            // data.
-            Ok(_)
+            // If the result of this call was `UpdateNatPendingConfig` or `NatNotEnabled`, then NAT
+            // is not yet ready to be enabled until we have more configuration data.
+            Ok(())
             | Err(error::NetworkManager::Service(error::Service::UpdateNatPendingConfig))
             | Err(error::NetworkManager::Service(error::Service::NatNotEnabled)) => {}
             Err(e) => {
@@ -611,51 +629,23 @@ impl DeviceState {
         self.version
     }
 
-    /// Updates the current NAT configuration.
-    pub async fn update_nat_config(&mut self) -> error::Result<()> {
-        self.packet_filter.update_nat_config(self.service_manager.get_nat_config()).await
+    /// Returns whether NAT is administratively enabled.
+    pub fn is_nat_enabled(&self) -> bool {
+        self.service_manager.is_nat_enabled()
     }
 
     /// Enables NAT.
-    pub async fn enable_nat(&mut self) -> error::Result<()> {
-        if self.service_manager.is_nat_enabled() {
-            return Err(error::NetworkManager::Service(error::Service::NatAlreadyEnabled));
-        }
-        if let Err(e) = self.hal.set_ip_forwarding(true).await {
-            warn!("Failed to enable IP forwarding: {:?}", e);
-            return Err(error::NetworkManager::Service(
-                error::Service::ErrorEnableIpForwardingFailed,
-            ));
-        }
-        match self.packet_filter.update_nat_config(self.service_manager.get_nat_config()).await {
-            Err(error::NetworkManager::Service(error::Service::NatNotEnabled)) => {
-                self.service_manager.enable_nat();
-                self.packet_filter.update_nat_config(self.service_manager.get_nat_config()).await
-            }
-            Err(e) => Err(e),
-            Ok(_) => Ok(()),
-        }
+    ///
+    /// Administratively enable Network Address Translation.
+    pub fn enable_nat(&mut self) {
+        self.service_manager.enable_nat();
     }
 
     /// Disables NAT.
-    pub async fn disable_nat(&mut self) -> error::Result<()> {
-        if !self.service_manager.is_nat_enabled() {
-            return Err(error::NetworkManager::Service(error::Service::NatNotEnabled));
-        }
-        if let Err(e) = self.hal.set_ip_forwarding(false).await {
-            warn!("Failed to disable IP forwarding: {:?}", e);
-            return Err(error::NetworkManager::Service(
-                error::Service::ErrorDisableIpForwardingFailed,
-            ));
-        }
-        self.packet_filter.clear_nat_rules().await?;
+    ///
+    /// Administratively disable Network Address Translation.
+    pub fn disable_nat(&mut self) {
         self.service_manager.disable_nat();
-        Ok(())
-    }
-
-    /// Returns whether NAT is enabled or not.
-    pub fn is_nat_enabled(&self) -> bool {
-        self.service_manager.is_nat_enabled()
     }
 
     /// Installs a new packet filter [`netconfig::FilterRule`] on the provided `nicid`.

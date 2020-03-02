@@ -518,7 +518,7 @@ impl PacketFilter {
         ];
 
         // TODO(cgibson): We need to add an integration test that actually runs traffic so we can
-        // see it being correctly forwarded with nat enabled and disabled.
+        // see it being correctly forwarded with NAT enabled and disabled.
         self.install_nat_rules(&mut nat_rules).await
     }
 

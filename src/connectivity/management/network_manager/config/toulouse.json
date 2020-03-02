@@ -154,7 +154,8 @@
             }
         ],
         "services": {
-            "ip_forwarding": true
+            "ip_forwarding": true,
+            "nat": true
         }
     }
 }

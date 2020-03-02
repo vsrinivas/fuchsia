@@ -479,6 +479,11 @@
               "description": "Enables IP forwarding",
               "type": "boolean",
               "default": false
+            },
+            "nat": {
+              "description": "Enables NAT",
+              "type": "boolean",
+              "default": false
             }
           }
         }

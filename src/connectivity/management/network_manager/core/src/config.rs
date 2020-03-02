@@ -398,6 +398,8 @@ impl From<&PortRange> for fidl_fuchsia_router_config::PortRange {
 pub struct Services {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ip_forwarding: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub nat: Option<bool>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq)]
@@ -1458,6 +1460,14 @@ impl Config {
     pub fn get_ip_forwarding_state(&self) -> bool {
         self.get_services().ok().and_then(|s| s.ip_forwarding).unwrap_or(false)
     }
+
+    /// Returns the current NAT configuration.
+    ///
+    /// If NAT is enabled in the configuration, then this method will return true. NAT is disabled
+    /// by default.
+    pub fn get_nat_state(&self) -> bool {
+        self.get_services().ok().and_then(|s| s.nat).unwrap_or(false)
+    }
 }
 
 #[cfg(test)]
@@ -1801,7 +1811,7 @@ mod tests {
                         },
                     },
                 ]),
-                services: Some(Services { ip_forwarding: Some(true) }),
+                services: Some(Services { ip_forwarding: Some(true), nat: Some(true) }),
                 acls: Some(Acls {
                     acl_entries: vec![
                         AclEntry {
@@ -2761,6 +2771,18 @@ mod tests {
         test_config.device_config =
             Some(DeviceConfig { device: Device { acls: None, interfaces: None, services: None } });
         assert_eq!(test_config.get_ip_forwarding_state(), false);
+    }
+
+    #[test]
+    fn test_get_nat_state() {
+        let mut test_config = create_test_config_no_paths();
+        test_config.device_config = Some(build_full_config());
+        assert_eq!(test_config.get_nat_state(), true);
+
+        // removing the nat section of the config should still return the default of false.
+        test_config.device_config =
+            Some(DeviceConfig { device: Device { acls: None, interfaces: None, services: None } });
+        assert_eq!(test_config.get_nat_state(), false);
     }
 
     #[test]

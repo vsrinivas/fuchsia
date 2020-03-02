@@ -10,7 +10,6 @@ use thiserror::Error;
 pub type Result<T> = std::result::Result<T, NetworkManager>;
 
 /// Top-level error type the network manager.
-// TODO(45692): CamelCase these enums.
 #[derive(Error, Debug, PartialEq)]
 pub enum NetworkManager {
     /// Errors related to LIF and LIFManager
@@ -139,8 +138,6 @@ pub enum Service {
     ErrorUpdateNatFailed,
     #[error("Pending further config to update NAT rules")]
     UpdateNatPendingConfig,
-    #[error("NAT is already enabled")]
-    NatAlreadyEnabled,
     #[error("NAT is not enabled")]
     NatNotEnabled,
     #[error("Error while configuring NAT: {}", msg)]
