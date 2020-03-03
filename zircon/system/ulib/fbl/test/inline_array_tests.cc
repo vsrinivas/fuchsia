@@ -4,12 +4,12 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <lib/unittest/unittest.h>
 #include <stddef.h>
 
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/inline_array.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -30,9 +30,7 @@ struct TestType {
 size_t TestType::ctor_run_count = 0u;
 size_t TestType::dtor_run_count = 0u;
 
-bool inline_test() {
-  BEGIN_TEST;
-
+TEST(InlineArrayTest, inline_test) {
   for (size_t sz = 0u; sz <= 3u; sz++) {
     TestType::ResetRunCounts();
     {
@@ -43,14 +41,10 @@ bool inline_test() {
     EXPECT_EQ(sz, TestType::ctor_run_count);
     EXPECT_EQ(sz, TestType::dtor_run_count);
   }
-
-  END_TEST;
 }
 
-bool non_inline_test() {
+TEST(InlineArrayTest, non_inline_test) {
   static const size_t test_sizes[] = {4u, 5u, 6u, 10u, 100u, 1000u};
-
-  BEGIN_TEST;
 
   for (size_t i = 0u; i < fbl::count_of(test_sizes); i++) {
     size_t sz = test_sizes[i];
@@ -64,13 +58,6 @@ bool non_inline_test() {
     EXPECT_EQ(sz, TestType::ctor_run_count);
     EXPECT_EQ(sz, TestType::dtor_run_count);
   }
-
-  END_TEST;
 }
 
 }  // namespace
-
-UNITTEST_START_TESTCASE(inline_array_tests)
-UNITTEST("inline test", inline_test)
-UNITTEST("non-inline test", non_inline_test)
-UNITTEST_END_TESTCASE(inline_array_tests, "inlinearraytests", "Inline array test")

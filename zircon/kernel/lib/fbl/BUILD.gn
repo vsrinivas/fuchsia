@@ -26,7 +26,6 @@ source_set("tests") {
   sources = [
     "arena_tests.cc",
     "gparena_tests.cc",
-    "inline_array_tests.cc",
     "name_tests.cc",
   ]
 

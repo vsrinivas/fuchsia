@@ -261,7 +261,7 @@ FBL provides:
   - [slab malloc](/zircon/system/ulib/fbl/include/fbl/slab_malloc.h)
 - arrays
   - [fixed sized arrays](/zircon/system/ulib/fbl/include/fbl/array.h)
-  - [fixed sized arrays](/zircon/kernel/lib/fbl/include/fbl/inline_array.h),
+  - [fixed sized arrays](/zircon/system/ulib/fbl/include/fbl/inline_array.h),
     which stack allocates small arrays
 - inline containers
   - [doubly linked list](/zircon/system/ulib/fbl/include/fbl/intrusive_double_list.h)
