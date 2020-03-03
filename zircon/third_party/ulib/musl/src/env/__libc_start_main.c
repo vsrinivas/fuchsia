@@ -37,11 +37,11 @@ static void start_main(const struct start_params* p) {
   // reference clock, if one was provided to us.
   if (p->utc_reference != ZX_HANDLE_INVALID) {
     zx_handle_t old_clock = ZX_HANDLE_INVALID;
-    _zx_utc_reference_swap(p->utc_reference, &old_clock);
 
     // Success or fail, libc has consumed our clock handle.  It no longer
-    // belongs to us, so don't keep track of it.
-    ((struct start_params*)p)->utc_reference = ZX_HANDLE_INVALID;
+    // belongs to us.  From here on out, it is very important that nothing
+    // attempts to make use of p->utc_reference.
+    _zx_utc_reference_swap(p->utc_reference, &old_clock);
 
     // If there had been a clock previously, we now own it, but have no use for
     // it.  Simply close it.
@@ -133,7 +133,7 @@ NO_ASAN __NO_SAFESTACK _Noreturn void __libc_start_main(zx_handle_t bootstrap,
   __asm__("# keepalive %0" ::"m"(randoms));
 
   // extract process startup information from channel in arg
-  struct start_params p = {.main = main};
+  struct start_params p = {.main = main, .utc_reference = ZX_HANDLE_INVALID};
   zx_status_t status = processargs_message_size(bootstrap, &p.nbytes, &p.nhandles);
   if (status != ZX_OK) {
     p.nbytes = p.nhandles = 0;
@@ -147,7 +147,6 @@ NO_ASAN __NO_SAFESTACK _Noreturn void __libc_start_main(zx_handle_t bootstrap,
                               &p.handle_info);
   }
   zx_handle_t main_thread_handle = ZX_HANDLE_INVALID;
-  p.utc_reference = ZX_HANDLE_INVALID;
   processargs_extract_handles(p.nhandles, handles, p.handle_info, &__zircon_process_self,
                               &__zircon_job_default, &__zircon_vmar_root_self, &main_thread_handle,
                               &p.utc_reference);

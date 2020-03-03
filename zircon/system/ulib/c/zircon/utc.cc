@@ -7,12 +7,11 @@
 
 #include <atomic>
 
-static_assert(sizeof(zx_handle_t) == 4, "Zircon handles must be 32 bits");
 static std::atomic<zx_handle_t> g_zx_utc_reference_handle{ZX_HANDLE_INVALID};
 
 zx_handle_t _zx_utc_reference_get(void) { return g_zx_utc_reference_handle.load(); }
 
-__typeof(zx_utc_reference_get) zx_utc_reference_get
+decltype(zx_utc_reference_get) zx_utc_reference_get
     __attribute__((weak, alias("_zx_utc_reference_get")));
 
 zx_status_t _zx_utc_reference_swap(zx_handle_t new_utc_reference,
@@ -34,5 +33,5 @@ zx_status_t _zx_utc_reference_swap(zx_handle_t new_utc_reference,
   return ZX_OK;
 }
 
-__typeof(zx_utc_reference_swap) zx_utc_reference_swap
+decltype(zx_utc_reference_swap) zx_utc_reference_swap
     __attribute__((weak, alias("_zx_utc_reference_swap")));
