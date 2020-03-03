@@ -9,7 +9,7 @@ use self::{filter::*, watcher::*};
 use crate::{
     interrupter::*,
     proxies::{observer::*, player::*},
-    Result, CHANNEL_BUFFER_SIZE,
+    Result, SessionId, CHANNEL_BUFFER_SIZE,
 };
 use fidl::{
     encoding::Decodable,
@@ -38,7 +38,6 @@ use streammap::StreamMap;
 const LOG_TAG: &str = "discovery";
 
 type Task = Once<BoxFuture<'static, Result<()>>>;
-type SessionId = u64;
 
 /// Implements `fuchsia.media.session2.Discovery`.
 pub struct Discovery {
@@ -178,7 +177,7 @@ impl Discovery {
     async fn connect_session_watcher(
         &mut self,
         watch_options: WatchOptions,
-        sink: impl Sink<(u64, PlayerProxyEvent), Error = anyhow::Error> + Send + 'static,
+        sink: impl Sink<(SessionId, PlayerProxyEvent), Error = anyhow::Error> + Send + 'static,
     ) {
         let session_info_stream = self.sessions_info_stream(Filter::new(watch_options));
         let event_forward = session_info_stream.map(Ok).forward(sink).boxed();

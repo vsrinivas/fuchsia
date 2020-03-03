@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::Result;
+use crate::{Result, SessionId};
 use anyhow::Context as _;
 use fidl::encoding::Decodable;
 use fidl::endpoints::{create_endpoints, create_proxy, create_request_stream};
@@ -166,8 +166,8 @@ struct TestWatcher {
 }
 
 impl TestWatcher {
-    async fn wait_for_n_updates(&mut self, n: usize) -> Result<Vec<(u64, SessionInfoDelta)>> {
-        let mut updates: Vec<(u64, SessionInfoDelta)> = vec![];
+    async fn wait_for_n_updates(&mut self, n: usize) -> Result<Vec<(SessionId, SessionInfoDelta)>> {
+        let mut updates: Vec<(SessionId, SessionInfoDelta)> = vec![];
         for i in 0..n {
             let (id, delta, responder) = self
                 .watcher
@@ -181,7 +181,7 @@ impl TestWatcher {
         Ok(updates)
     }
 
-    async fn wait_for_removal(&mut self) -> Result<u64> {
+    async fn wait_for_removal(&mut self) -> Result<SessionId> {
         let (id, responder) = self
             .watcher
             .try_next()
@@ -195,7 +195,7 @@ impl TestWatcher {
 
 struct TestPlayer {
     requests: PlayerRequestStream,
-    id: u64,
+    id: SessionId,
 }
 
 impl TestPlayer {

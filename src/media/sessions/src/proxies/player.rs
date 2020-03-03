@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{id::Id, services::discovery::filter::*, Result};
+use crate::{id::Id, services::discovery::filter::*, Result, SessionId};
 use fidl::endpoints::{ClientEnd, ServerEnd};
 use fidl::{self, client::QueryResponseFut};
 use fidl_fuchsia_media::*;
@@ -222,7 +222,7 @@ impl Player {
         })
     }
 
-    pub fn id(&self) -> u64 {
+    pub fn id(&self) -> SessionId {
         self.id.get()
     }
 
@@ -347,7 +347,7 @@ impl Player {
 /// The Stream implementation for Player is a stream of full player states. A new state is emitted
 /// when the backing player implementation sends us an update.
 impl Stream for Player {
-    type Item = FilterApplicant<(u64, PlayerProxyEvent)>;
+    type Item = FilterApplicant<(SessionId, PlayerProxyEvent)>;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         if self.terminated {

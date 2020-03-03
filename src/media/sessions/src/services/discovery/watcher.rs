@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use super::filter::*;
-use crate::{proxies::player::PlayerProxyEvent, Result, MAX_EVENTS_SENT_WITHOUT_ACK};
+use crate::{proxies::player::PlayerProxyEvent, Result, SessionId, MAX_EVENTS_SENT_WITHOUT_ACK};
 use fidl::client::QueryResponseFut;
 use fidl_fuchsia_media_sessions2::*;
 use futures::{
@@ -29,7 +29,7 @@ impl From<SessionsWatcherProxy> for FlowControlledProxySink {
     }
 }
 
-impl Sink<(u64, PlayerProxyEvent)> for FlowControlledProxySink {
+impl Sink<(SessionId, PlayerProxyEvent)> for FlowControlledProxySink {
     type Error = anyhow::Error;
     fn poll_ready(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<()>> {
         if self.acks.len() < MAX_EVENTS_SENT_WITHOUT_ACK {
@@ -46,7 +46,10 @@ impl Sink<(u64, PlayerProxyEvent)> for FlowControlledProxySink {
         }
     }
 
-    fn start_send(mut self: Pin<&mut Self>, (id, event): (u64, PlayerProxyEvent)) -> Result<()> {
+    fn start_send(
+        mut self: Pin<&mut Self>,
+        (id, event): (SessionId, PlayerProxyEvent),
+    ) -> Result<()> {
         let ack_fut = match event {
             PlayerProxyEvent::Updated(delta) => self.proxy.session_updated(id, delta()),
             PlayerProxyEvent::Removed => self.proxy.session_removed(id),
@@ -77,8 +80,9 @@ impl Sink<(u64, PlayerProxyEvent)> for FlowControlledProxySink {
 
 pub fn watcher_filter(
     filter: Filter,
-) -> impl FnMut(FilterApplicant<(u64, PlayerProxyEvent)>) -> Ready<Option<(u64, PlayerProxyEvent)>>
-{
+) -> impl FnMut(
+    FilterApplicant<(SessionId, PlayerProxyEvent)>,
+) -> Ready<Option<(SessionId, PlayerProxyEvent)>> {
     let mut allow_list = HashSet::new();
 
     move |event| {
@@ -124,7 +128,7 @@ mod test {
         assert_matches!(ready_when_empty, Poll::Ready(Ok(())));
 
         let mut dummy_stream = stream::iter(
-            (0..MAX_EVENTS_SENT_WITHOUT_ACK).map(|_| Ok((0u64, PlayerProxyEvent::Removed))),
+            (0..MAX_EVENTS_SENT_WITHOUT_ACK).map(|_| Ok((064, PlayerProxyEvent::Removed))),
         );
         let mut send_all_fut = SinkExt::send_all(&mut under_test, &mut dummy_stream);
         let mut ack_responders = vec![];
@@ -148,7 +152,7 @@ mod test {
     #[fasync::run_singlethreaded]
     #[test]
     async fn player_filter() -> Result<()> {
-        let make_event = |player_id: u64, is_active| {
+        let make_event = |player_id: SessionId, is_active| {
             FilterApplicant::new(
                 WatchOptions { only_active: Some(is_active), ..Decodable::new_empty() },
                 (player_id, PlayerProxyEvent::Updated(Arc::new(|| Decodable::new_empty()))),

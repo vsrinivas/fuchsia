@@ -20,6 +20,7 @@ use fuchsia_syslog::fx_log_warn;
 use futures::{channel::mpsc, prelude::*};
 
 type Result<T> = std::result::Result<T, Error>;
+type SessionId = u64;
 
 const CHANNEL_BUFFER_SIZE: usize = 100;
 
