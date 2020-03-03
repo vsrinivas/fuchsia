@@ -29,24 +29,6 @@ class Writer {
   DISALLOW_COPY_ASSIGN_AND_MOVE(Writer);
 };
 
-class FileWriter : public Writer {
- public:
-  FileWriter();
-  ~FileWriter() override;
-
-  // Prepares the object for writing to the given file. Returns true on
-  // success, or false with a message logged.
-  bool Open(const std::string& filename);
-
-  // Writer:
-  bool Puts(const std::string& str) override;
-
- private:
-  FILE* outf_;
-
-  DISALLOW_COPY_ASSIGN_AND_MOVE(FileWriter);
-};
-
 class StringWriter : public Writer {
  public:
   StringWriter();

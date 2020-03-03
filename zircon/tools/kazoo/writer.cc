@@ -18,37 +18,6 @@ bool Writer::Printf(const char* format, ...) {
   return Puts(result);
 }
 
-FileWriter::FileWriter() : Writer() {}
-
-FileWriter::~FileWriter() {
-  if (outf_) {
-    fclose(outf_);
-  }
-}
-
-bool FileWriter::Open(const std::string& filename) {
-  outf_ = fopen(filename.c_str(), "wb");
-  if (!outf_) {
-    fprintf(stderr, "Couldn't open '%s' for output.\n", filename.c_str());
-    return false;
-  }
-  return true;
-}
-
-bool FileWriter::Puts(const std::string& str) {
-  ZX_ASSERT(outf_);
-  if (!outf_) {
-    return false;
-  }
-
-  size_t written = fwrite(str.c_str(), 1, str.size(), outf_);
-  if (written != str.size()) {
-    fprintf(stderr, "File write failed, %zu written but %zu expected.\n", written, str.size());
-    return false;
-  }
-  return true;
-}
-
 StringWriter::StringWriter() : Writer() {}
 
 StringWriter::~StringWriter() {}
@@ -64,6 +33,21 @@ bool WriteFileIfChanged(const std::string& filename, const std::string& data) {
     // No need to rewrite the file.
     return true;
   }
-  FileWriter writer;
-  return writer.Open(filename) && writer.Puts(data);
+
+  FILE* outf = fopen(filename.c_str(), "wb");
+  if (!outf) {
+    fprintf(stderr, "Couldn't open '%s' for output.\n", filename.c_str());
+    return false;
+  }
+  size_t written = fwrite(data.data(), 1, data.size(), outf);
+  if (written != data.size()) {
+    fprintf(stderr, "Writing file '%s' failed, %zu written but %zu expected.\n", filename.c_str(),
+            written, data.size());
+    return false;
+  }
+  if (fclose(outf) != 0) {
+    fprintf(stderr, "fclose() failed writing '%s'.\n", filename.c_str());
+    return false;
+  }
+  return true;
 }

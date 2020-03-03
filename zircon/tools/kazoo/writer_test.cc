@@ -40,47 +40,6 @@ TEST(Writer, CustomImplementation) {
   EXPECT_EQ(override_writer->data(), "PUTS: 123 3e7");
 }
 
-TEST(Writer, FileWriter) {
-  std::string filename("/tmp/Kazoo-FileWriter-testfile");
-
-  FileWriter* file_writer = new FileWriter;
-  ASSERT_TRUE(file_writer->Open(filename));
-  {
-    std::unique_ptr<Writer> writer(file_writer);
-    writer->Puts("xyz\n");
-    for (int i = 0; i < 20; ++i) {
-      writer->Printf("%d %x\n", i, i);
-    }
-  }
-
-  std::string result;
-  ASSERT_TRUE(ReadFileToString(filename, &result));
-  EXPECT_EQ(result, R"(xyz
-0 0
-1 1
-2 2
-3 3
-4 4
-5 5
-6 6
-7 7
-8 8
-9 9
-10 a
-11 b
-12 c
-13 d
-14 e
-15 f
-16 10
-17 11
-18 12
-19 13
-)");
-
-  unlink(filename.c_str());
-}
-
 TEST(Writer, WriteFileIfChanged) {
   // Create a temporary directory so that we can safely test (i.e. without
   // /tmp race conditions) writing a file that does not exist yet.
