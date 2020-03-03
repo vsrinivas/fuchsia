@@ -151,3 +151,15 @@ protocol ObserverDiscovery {
     ConnectToSession(SessionId session_id,
                      request<SessionObserver> session_request);
 };
+
+/// A protocol for watching the current active media session on the device.
+///
+/// The currently active media session is the most recent existing media session
+/// to announce a "Playing" state on the local device, even if it is now paused.
+[Discoverable]
+protocol ActiveSession {
+    /// Watches the active session. The first request will be answered immediately
+    /// with the current active session. Always leave a request hanging to receive
+    /// a reply when the active session changes.
+    WatchActiveSession() -> (SessionControl? session);
+};
