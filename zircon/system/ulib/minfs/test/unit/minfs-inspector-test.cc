@@ -4,6 +4,8 @@
 
 #include "minfs/minfs-inspector.h"
 
+#include <zircon/device/block.h>
+
 #include <iostream>
 
 #include <block-client/cpp/fake-device.h>
@@ -47,9 +49,46 @@ void SetupMinfsInspector(std::unique_ptr<MinfsInspector>* inspector) {
   ASSERT_OK(MinfsInspector::Create(Bcache::Destroy(std::move(bcache)), inspector));
 }
 
+// Initialize a MinfsInspector from an zero-ed out block device. This simulates
+// corruption to various metadata. Allows copying |count| bytes of |data| to
+// the start of the fake block device.
+void BadSetupMinfsInspector(std::unique_ptr<MinfsInspector>* inspector, void* data,
+                            uint64_t count) {
+  auto temp = std::make_unique<FakeBlockDevice>(kBlockCount, kBlockSize);
+  if (count > 0) {
+    zx::vmo buffer;
+    ASSERT_OK(zx::vmo::create(count, 0, &buffer));
+    ASSERT_OK(buffer.write(data, 0, count));
+
+    fuchsia_hardware_block_VmoId id;
+    ASSERT_OK(temp->BlockAttachVmo(buffer, &id));
+
+    std::vector<block_fifo_request_t> reqs = {{
+        .opcode = BLOCKIO_WRITE,
+        .reqid = 0x0,
+        .group = 0,
+        .vmoid = id.id,
+        .length = static_cast<uint32_t>(count / kBlockSize),
+        .vmo_offset = 0,
+        .dev_offset = 0,
+    }};
+    ASSERT_OK(temp->FifoTransaction(reqs.data(), 1));
+  }
+  ASSERT_OK(MinfsInspector::Create(std::move(temp), inspector));
+}
+
 TEST(MinfsInspector, CreateWithoutError) {
   std::unique_ptr<MinfsInspector> inspector;
   SetupMinfsInspector(&inspector);
+}
+
+TEST(MinfsInspector, CreateWithoutErrorOnBadSuperblock) {
+  ASSERT_NO_DEATH(
+      []() {
+        std::unique_ptr<MinfsInspector> inspector;
+        BadSetupMinfsInspector(&inspector, nullptr, 0);
+      },
+      "Could not initialize minfs inspector with bad superblock.");
 }
 
 TEST(MinfsInspector, InspectSuperblock) {
@@ -67,6 +106,23 @@ TEST(MinfsInspector, InspectSuperblock) {
   EXPECT_EQ(sb.inode_size, kMinfsInodeSize);
   EXPECT_EQ(sb.alloc_block_count, 2);
   EXPECT_EQ(sb.alloc_block_count, 2);
+}
+
+TEST(MinfsInspector, GetInodeCount) {
+  std::unique_ptr<MinfsInspector> inspector;
+  SetupMinfsInspector(&inspector);
+
+  Superblock sb = inspector->InspectSuperblock();
+  EXPECT_EQ(inspector->GetInodeCount(), sb.inode_count);
+}
+
+TEST(MinfsInspector, GetInodeBitmapCount) {
+  std::unique_ptr<MinfsInspector> inspector;
+  SetupMinfsInspector(&inspector);
+
+  Superblock sb = inspector->InspectSuperblock();
+  uint64_t expected_count = InodeBitmapBlocks(sb) * kMinfsBlockSize * CHAR_BIT;
+  EXPECT_EQ(inspector->GetInodeBitmapCount(), expected_count);
 }
 
 TEST(MinfsInspector, InspectInode) {
@@ -103,14 +159,6 @@ TEST(MinfsInspector, InspectInode) {
   EXPECT_EQ(inode.link_count, 0);
 }
 
-TEST(MinfsInspector, GetInodeCount) {
-  std::unique_ptr<MinfsInspector> inspector;
-  SetupMinfsInspector(&inspector);
-
-  Superblock sb = inspector->InspectSuperblock();
-  EXPECT_EQ(inspector->GetInodeCount(), sb.inode_count);
-}
-
 TEST(MinfsInspector, CheckInodeAllocated) {
   std::unique_ptr<MinfsInspector> inspector;
   SetupMinfsInspector(&inspector);
@@ -139,6 +187,27 @@ TEST(MinfsInspector, InspectJournalSuperblock) {
 
   EXPECT_EQ(journal_info.magic, fs::kJournalMagic);
   EXPECT_EQ(journal_info.start_block, 8);
+}
+
+TEST(MinfsInspector, GetJournalEntryCount) {
+  std::unique_ptr<MinfsInspector> inspector;
+  SetupMinfsInspector(&inspector);
+  Superblock sb = inspector->InspectSuperblock();
+  uint64_t expected_count = JournalBlocks(sb) - fs::kJournalMetadataBlocks;
+  EXPECT_EQ(inspector->GetJournalEntryCount(), expected_count);
+}
+
+// This ends up being a special case because we group both the journal superblock
+// and the journal entries in a single vmo, so we cannot just naively subtract
+// the number of superblocks from the size of the buffer in the case in which
+// the buffer is uninitialized/have capacity of zero.
+TEST(MinfsInspector, GetJournalEntryCountWithNoJournalBlocks) {
+  std::unique_ptr<MinfsInspector> inspector;
+  Superblock superblock = {};
+  superblock.integrity_start_block = 0;
+  superblock.dat_block = superblock.integrity_start_block + kBackupSuperblockBlocks;
+  BadSetupMinfsInspector(&inspector, &superblock, sizeof(superblock));
+  EXPECT_EQ(inspector->GetJournalEntryCount(), 0);
 }
 
 TEST(MinfsInspector, InspectJournalPrefix) {

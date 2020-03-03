@@ -28,7 +28,9 @@ zx_status_t Loader::LoadJournal(const Superblock& superblock, storage::BlockBuff
 
 zx_status_t Loader::RunReadOperation(storage::BlockBuffer* buffer, uint64_t vmo_offset,
                                      uint64_t dev_offset, uint64_t length) const {
-  ZX_DEBUG_ASSERT(buffer->capacity() >= length);
+  if (buffer->capacity() < length) {
+    return ZX_ERR_INVALID_ARGS;
+  }
   storage::Operation operation{
       .type = storage::OperationType::kRead,
       .vmo_offset = vmo_offset,

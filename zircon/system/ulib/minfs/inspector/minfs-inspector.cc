@@ -4,6 +4,8 @@
 
 #include "minfs/minfs-inspector.h"
 
+#include <algorithm>
+
 #include <disk_inspector/inspector_transaction_handler.h>
 #include <fs/journal/internal/inspector_parser.h>
 #include <fs/trace.h>
@@ -23,77 +25,83 @@ zx_status_t MinfsInspector::Create(std::unique_ptr<block_client::BlockDevice> de
   if (status != ZX_OK) {
     return status;
   }
-  out->reset(new MinfsInspector(std::move(handler)));
-  status = out->get()->Initialize();
+  auto* inspector = new MinfsInspector(std::move(handler));
+  status = inspector->ReloadSuperblock();
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("Cannot initialize minfs inspector. Some data may be garbage. err: %d\n",
-                   status);
+    FS_TRACE_ERROR("Cannot load superblock to initialize the inspector. err: %d\n", status);
     return status;
   }
+  inspector->ReloadMetadataFromSuperblock();
+  out->reset(inspector);
   return ZX_OK;
 }
 
-zx_status_t MinfsInspector::Initialize() {
+zx_status_t MinfsInspector::ReloadSuperblock() {
   Loader loader(handler_.get());
   superblock_ = std::make_unique<storage::VmoBuffer>();
-  zx_status_t status;
+  zx_status_t status = ZX_OK;
   status = superblock_->Initialize(handler_.get(), kSuperblockBlocks, kMinfsBlockSize,
                                    "superblock-buffer");
   if (status != ZX_OK) {
+    FS_TRACE_ERROR("Cannot create superblock buffer. err: %d\n", status);
     return status;
   }
   if ((status = loader.LoadSuperblock(kSuperblockStart, superblock_.get())) != ZX_OK) {
-    FS_TRACE_ERROR("Cannot load superblock. Some data may be garbage. err: %d\n", status);
-    return status;
+    FS_TRACE_ERROR("Cannot load superblock. err: %d\n", status);
   }
+  return status;
+}
 
+void MinfsInspector::ReloadMetadataFromSuperblock() {
+  Loader loader(handler_.get());
+  zx_status_t status;
   Superblock superblock = GetSuperblock(superblock_.get());
 
   inode_bitmap_ = std::make_unique<storage::VmoBuffer>();
+  inode_table_ = std::make_unique<storage::VmoBuffer>();
+  journal_ = std::make_unique<storage::VmoBuffer>();
+
   status = inode_bitmap_->Initialize(handler_.get(), InodeBitmapBlocks(superblock), kMinfsBlockSize,
                                      "inode-bitmap-buffer");
   if (status != ZX_OK) {
-    return status;
-  }
-  if ((status = loader.LoadInodeBitmap(superblock, inode_bitmap_.get())) != ZX_OK) {
-    FS_TRACE_ERROR("Cannot load inode bitmap. Some data may be garbage. err: %d\n", status);
-    return status;
+    FS_TRACE_ERROR("Cannot create inode bitmap buffer. err: %d\n", status);
+  } else {
+    if ((status = loader.LoadInodeBitmap(superblock, inode_bitmap_.get())) != ZX_OK) {
+      FS_TRACE_ERROR("Cannot load inode bitmap. Some data may be garbage. err: %d\n", status);
+    }
   }
 
-  inode_table_ = std::make_unique<storage::VmoBuffer>();
   status = inode_table_->Initialize(handler_.get(), InodeBlocks(superblock), kMinfsBlockSize,
                                     "inode-table-buffer");
   if (status != ZX_OK) {
-    return status;
-  }
-  if ((status = loader.LoadInodeTable(superblock, inode_table_.get())) != ZX_OK) {
-    FS_TRACE_ERROR("Cannot load inode table. Some data may be garbage. err: %d\n", status);
-    return status;
+    FS_TRACE_ERROR("Cannot create inode table buffer. err: %d\n", status);
+  } else {
+    if ((status = loader.LoadInodeTable(superblock, inode_table_.get())) != ZX_OK) {
+      FS_TRACE_ERROR("Cannot load inode table. Some data may be garbage. err: %d\n", status);
+    }
   }
 
-  journal_ = std::make_unique<storage::VmoBuffer>();
   status = journal_->Initialize(handler_.get(), JournalBlocks(superblock), kMinfsBlockSize,
                                 "journal-buffer");
   if (status != ZX_OK) {
-    return status;
+    FS_TRACE_ERROR("Cannot create journal buffer. err: %d\n", status);
+  } else {
+    if ((status = loader.LoadJournal(superblock, journal_.get())) != ZX_OK) {
+      FS_TRACE_ERROR("Cannot load journal. Some data may be garbage. err: %d\n", status);
+    }
   }
-  if ((status = loader.LoadJournal(superblock, journal_.get())) != ZX_OK) {
-    FS_TRACE_ERROR("Cannot load journal. Some data may be garbage. err: %d\n", status);
-    return status;
-  }
-
-  return ZX_OK;
 }
 
 Superblock MinfsInspector::InspectSuperblock() { return GetSuperblock(superblock_.get()); }
 
-Inode MinfsInspector::InspectInode(uint64_t index) {
-  return GetInodeElement(inode_table_.get(), index);
+uint64_t MinfsInspector::GetInodeCount() { return inode_table_->capacity() * kMinfsInodesPerBlock; }
+
+uint64_t MinfsInspector::GetInodeBitmapCount() {
+  return inode_bitmap_->capacity() * inode_bitmap_->BlockSize() * CHAR_BIT;
 }
 
-uint64_t MinfsInspector::GetInodeCount() {
-  Superblock superblock = GetSuperblock(superblock_.get());
-  return superblock.inode_count;
+Inode MinfsInspector::InspectInode(uint64_t index) {
+  return GetInodeElement(inode_table_.get(), index);
 }
 
 bool MinfsInspector::CheckInodeAllocated(uint64_t index) {
@@ -101,7 +109,20 @@ bool MinfsInspector::CheckInodeAllocated(uint64_t index) {
 }
 
 fs::JournalInfo MinfsInspector::InspectJournalSuperblock() {
+  if (journal_->capacity() == 0) {
+    fs::JournalInfo info = {};
+    return info;
+  }
   return fs::GetJournalSuperblock(journal_.get());
+}
+
+uint64_t MinfsInspector::GetJournalEntryCount() {
+  // Case in which the journal buffer could not be initialized. We treat it as though
+  // there are journal entries.
+  if (journal_->capacity() == 0) {
+    return 0;
+  }
+  return journal_->capacity() - fs::kJournalMetadataBlocks;
 }
 
 fs::JournalPrefix MinfsInspector::InspectJournalPrefix(uint64_t index) {
