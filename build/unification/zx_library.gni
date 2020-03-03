@@ -29,8 +29,8 @@ template("zx_library") {
 
   assert(defined(invoker.sdk),
          "Can only migrate libraries exposed to the GN build")
-  assert(invoker.sdk == "source",
-         "Only libraries exposed as sources are supported")
+  assert(invoker.sdk == "source" || invoker.sdk == "static",
+         "Only libraries exposed as static or sources are supported")
 
   sdkable = defined(invoker.sdk_publishable) && invoker.sdk_publishable
   assert(!sdkable, "Libraries available in SDKs are currently not supported")

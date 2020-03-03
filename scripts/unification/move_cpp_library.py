@@ -58,11 +58,18 @@ def main():
                   'migrated at the moment, ignoring ' + lib)
             continue
 
-        # Only source libraries!
-        non_source_sdk = len([s for s in stats if s.sdk != Sdk.SOURCE]) != 0
-        if non_source_sdk:
-            print('Can only convert libraries exported as "sources" for now, '
-                  'ignoring ' + lib)
+        # Only source or static libraries!
+        wrong_type = len([s for s in stats if s.sdk != Sdk.SOURCE and
+                                              s.sdk != Sdk.STATIC]) != 0
+        if wrong_type:
+            print('Can only convert libraries exported as "sources" or '
+                  '"static" for now, ignoring ' + lib)
+            continue
+
+        # No SDK libraries for now.
+        has_sdk = len([s for s in stats if s.sdk_publishable]) != 0
+        if has_sdk:
+            print('Cannot convert SDK libraries for now, ignoring ' + lib)
             continue
 
         # Gather build files with references to the library.
