@@ -53,6 +53,14 @@ class _Group {
   TimePoint end = TimePoint.fromEpochDelta(TimeDelta.zero());
 }
 
+class _FpsResult {
+  int flowedFrameCount;
+  TimeDelta totalDuration;
+  double get averageFps => (totalDuration == TimeDelta.zero())
+      ? (0.0)
+      : (flowedFrameCount / totalDuration.toSecondsF());
+}
+
 /// Compute the flowed, attempted-duration-adjusted FPS for a Flutter
 /// application specified by [uiThread] and [gpuThread].
 ///
@@ -67,7 +75,7 @@ class _Group {
 /// legitimately do not need to animate.  This is implemented by dividing by
 /// amount of time we spent with a frame request pending or in the full "vsync
 /// callback" -> "VSYNC" pipeline.
-double _computeFps(Model model, Thread uiThread, Thread gpuThread) {
+_FpsResult _computeFps(Model model, Thread uiThread, Thread gpuThread) {
   final refreshRate = _computeDisplayRefreshRate(model);
   final events = uiThread.events + gpuThread.events;
 
@@ -155,14 +163,13 @@ double _computeFps(Model model, Thread uiThread, Thread gpuThread) {
     totalDuration += adjustedGroupEnd - firstVsyncStart;
   }
 
-  if (countedDisplayVsyncs.isEmpty) {
-    return 0.0;
-  }
-  return countedDisplayVsyncs.length / totalDuration.toSecondsF();
+  return _FpsResult()
+    ..flowedFrameCount = countedDisplayVsyncs.length
+    ..totalDuration = totalDuration;
 }
 
 class _Results {
-  double averageFps;
+  _FpsResult fpsResult;
   List<double> frameBuildTimes;
   List<double> frameRasterizerTimes;
 }
@@ -173,7 +180,7 @@ _Results _flutterFrameStats(Model model, Thread uiThread, Thread gpuThread) {
   }
 
   return _Results()
-    ..averageFps = _computeFps(model, uiThread, gpuThread)
+    ..fpsResult = _computeFps(model, uiThread, gpuThread)
     ..frameBuildTimes = filterEventsTyped<DurationEvent>(uiThread.events,
             category: 'flutter', name: 'vsync callback')
         .map(getDurationInMilliseconds)
@@ -230,8 +237,8 @@ List<TestCaseResults> flutterFrameStatsMetricsProcessor(
     final results =
         _flutterFrameStats(model, uiThreads.first, gpuThreads.first);
     return [
-      TestCaseResults(
-          '${flutterAppName}_fps', Unit.framesPerSecond, [results.averageFps]),
+      TestCaseResults('${flutterAppName}_fps', Unit.framesPerSecond,
+          [results.fpsResult.averageFps]),
       TestCaseResults('${flutterAppName}_frame_build_times', Unit.milliseconds,
           results.frameBuildTimes),
       TestCaseResults('${flutterAppName}_frame_rasterizer_times',
@@ -289,7 +296,11 @@ $flutterAppName Flutter Frame Stats
       final results = _flutterFrameStats(model, uiThreads[i], gpuThreads[i]);
       buffer
         ..write('fps:\n')
-        ..write('  ${results.averageFps}\n')
+        ..write('  ${results.fpsResult.averageFps}\n')
+        ..write(
+            '    (flow adjusted) frame count: ${results.fpsResult.flowedFrameCount}\n')
+        ..write(
+            '    (work adjusted) total duration: ${results.fpsResult.totalDuration.toSecondsF()}\n')
         ..write('\n')
         ..write('frame_build_times:\n')
         ..write(describeValues(results.frameBuildTimes, indent: 2))
