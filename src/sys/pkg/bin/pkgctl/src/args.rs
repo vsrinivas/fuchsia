@@ -26,6 +26,7 @@ pub enum Command {
     Update(UpdateCommand),
     Gc(GcCommand),
     GetHash(GetHashCommand),
+    PkgStatus(PkgStatusCommand),
 }
 
 #[derive(FromArgs, Debug, PartialEq)]
@@ -213,6 +214,22 @@ pub struct GcCommand {}
 #[argh(subcommand, name = "get-hash")]
 /// Get the hash of a package.
 pub struct GetHashCommand {
+    #[argh(positional)]
+    pub pkg_url: String,
+}
+
+#[derive(FromArgs, Debug, PartialEq)]
+#[argh(
+    subcommand,
+    name = "pkg-status",
+    note = "Exit codes:",
+    note = "    0 - pkg in tuf repo and on disk",
+    note = "    2 - pkg in tuf repo but not on disk",
+    note = "    3 - pkg not in tuf repo",
+    note = "    1 - any other misc application error"
+)]
+/// Determine if a pkg is in a registered tuf repo and/or on disk.
+pub struct PkgStatusCommand {
     #[argh(positional)]
     pub pkg_url: String,
 }
@@ -438,6 +455,16 @@ mod tests {
         let url = "fuchsia-pkg://fuchsia.com/foo/bar";
         match Args::from_args(CMD_NAME, &["get-hash", url]).unwrap() {
             Args { command: Command::GetHash(GetHashCommand { pkg_url }) } if pkg_url == url => {}
+            result => panic!("unexpected result {:?}", result),
+        }
+    }
+
+    #[test]
+    fn pkg_status() {
+        let url = "fuchsia-pkg://fuchsia.com/foo/bar";
+        match Args::from_args(CMD_NAME, &["pkg-status", url]).unwrap() {
+            Args { command: Command::PkgStatus(PkgStatusCommand { pkg_url }) }
+                if pkg_url == url => {}
             result => panic!("unexpected result {:?}", result),
         }
     }

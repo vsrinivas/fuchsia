@@ -6,9 +6,10 @@
 use {
     anyhow::Error,
     fidl_fuchsia_pkg::{
-        ExperimentToggle as Experiment, PackageCacheRequestStream, PackageResolverAdminRequest,
-        PackageResolverAdminRequestStream, PackageResolverRequest, PackageResolverRequestStream,
-        RepositoryIteratorRequest, RepositoryManagerRequest, RepositoryManagerRequestStream,
+        ExperimentToggle as Experiment, PackageCacheRequest, PackageCacheRequestStream,
+        PackageResolverAdminRequest, PackageResolverAdminRequestStream, PackageResolverRequest,
+        PackageResolverRequestStream, RepositoryIteratorRequest, RepositoryManagerRequest,
+        RepositoryManagerRequestStream,
     },
     fidl_fuchsia_pkg_ext::{
         MirrorConfig, MirrorConfigBuilder, RepositoryBlobKey, RepositoryConfig,
@@ -186,7 +187,7 @@ impl TestEnv {
         &self,
         expected_args: Vec<CapturedRepositoryManagerRequest>,
     ) {
-        assert_eq!(*self.package_cache.call_count.lock(), 0);
+        assert_eq!(self.package_cache.captured_args.lock().len(), 0);
         assert_eq!(self.package_resolver.captured_args.lock().len(), 0);
         assert_eq!(self.package_resolver_admin.take_event(), None);
         assert_eq!(*self.rewrite_engine.call_count.lock(), 0);
@@ -199,7 +200,7 @@ impl TestEnv {
         &self,
         expected_args: Vec<CapturedUpdateManagerRequest>,
     ) {
-        assert_eq!(*self.package_cache.call_count.lock(), 0);
+        assert_eq!(self.package_cache.captured_args.lock().len(), 0);
         assert_eq!(self.package_resolver.captured_args.lock().len(), 0);
         assert_eq!(self.package_resolver_admin.take_event(), None);
         assert_eq!(*self.rewrite_engine.call_count.lock(), 0);
@@ -209,7 +210,7 @@ impl TestEnv {
     }
 
     fn assert_only_space_manager_called(&self) {
-        assert_eq!(*self.package_cache.call_count.lock(), 0);
+        assert_eq!(self.package_cache.captured_args.lock().len(), 0);
         assert_eq!(self.package_resolver.captured_args.lock().len(), 0);
         assert_eq!(self.package_resolver_admin.take_event(), None);
         assert_eq!(*self.rewrite_engine.call_count.lock(), 0);
@@ -219,7 +220,7 @@ impl TestEnv {
     }
 
     fn assert_only_package_resolver_admin_called_with(&self, event: ExperimentEvent) {
-        assert_eq!(*self.package_cache.call_count.lock(), 0);
+        assert_eq!(self.package_cache.captured_args.lock().len(), 0);
         assert_eq!(self.package_resolver.captured_args.lock().len(), 0);
         assert_eq!(*self.rewrite_engine.call_count.lock(), 0);
         assert_eq!(self.repository_manager.captured_args.lock().len(), 0);
@@ -229,13 +230,27 @@ impl TestEnv {
     }
 
     fn assert_only_package_resolver_called_with(&self, reqs: Vec<CapturedPackageResolverRequest>) {
-        assert_eq!(*self.package_cache.call_count.lock(), 0);
+        assert_eq!(self.package_cache.captured_args.lock().len(), 0);
         assert_eq!(self.package_resolver_admin.take_event(), None);
         assert_eq!(*self.rewrite_engine.call_count.lock(), 0);
         assert_eq!(self.repository_manager.captured_args.lock().len(), 0);
         assert_eq!(self.update_manager.captured_args.lock().len(), 0);
         assert_eq!(*self.space_manager.call_count.lock(), 0);
         assert_eq!(*self.package_resolver.captured_args.lock(), reqs);
+    }
+
+    fn assert_only_package_resolver_and_package_cache_called_with(
+        &self,
+        resolver_reqs: Vec<CapturedPackageResolverRequest>,
+        cache_reqs: Vec<CapturedPackageCacheRequest>,
+    ) {
+        assert_eq!(*self.package_cache.captured_args.lock(), cache_reqs);
+        assert_eq!(self.package_resolver_admin.take_event(), None);
+        assert_eq!(*self.rewrite_engine.call_count.lock(), 0);
+        assert_eq!(self.repository_manager.captured_args.lock().len(), 0);
+        assert_eq!(self.update_manager.captured_args.lock().len(), 0);
+        assert_eq!(*self.space_manager.call_count.lock(), 0);
+        assert_eq!(*self.package_resolver.captured_args.lock(), resolver_reqs);
     }
 }
 
@@ -386,20 +401,34 @@ impl MockPackageResolverAdminService {
     }
 }
 
+#[derive(PartialEq, Debug, Eq)]
+enum CapturedPackageCacheRequest {
+    Open { meta_far_blob_id: fidl_fuchsia_pkg::BlobId },
+}
+
 struct MockPackageCacheService {
-    call_count: Mutex<u32>,
+    captured_args: Mutex<Vec<CapturedPackageCacheRequest>>,
+    open_response: Mutex<Option<Status>>,
 }
 
 impl MockPackageCacheService {
     fn new() -> Self {
-        Self { call_count: Mutex::new(0) }
+        Self { captured_args: Mutex::new(vec![]), open_response: Mutex::new(Some(Status::OK)) }
     }
     async fn run_service(
         self: Arc<Self>,
         mut stream: PackageCacheRequestStream,
     ) -> Result<(), Error> {
-        while let Some(_req) = stream.try_next().await? {
-            *self.call_count.lock() += 1;
+        while let Some(req) = stream.try_next().await? {
+            match req {
+                PackageCacheRequest::Open { meta_far_blob_id, responder, .. } => {
+                    self.captured_args
+                        .lock()
+                        .push(CapturedPackageCacheRequest::Open { meta_far_blob_id });
+                    responder.send(self.open_response.lock().unwrap().into_raw()).expect("send ok");
+                }
+                PackageCacheRequest::Get { .. } => panic!("should only support Open requests"),
+            }
         }
         Ok(())
     }
@@ -507,6 +536,10 @@ fn assert_no_errors(output: &Output) {
 
 fn assert_stdout(output: &Output, expected: &str) {
     assert_no_errors(output);
+    assert_stdout_disregard_errors(output, expected);
+}
+
+fn assert_stdout_disregard_errors(output: &Output, expected: &str) {
     assert_eq!(std::str::from_utf8(output.stdout.as_slice()).expect("stdout utf8"), expected);
 }
 
@@ -719,6 +752,68 @@ async fn test_get_hash_failure() {
     let output = env.run_pkgctl(vec!["get-hash", "the-url"]).await;
 
     assert_stderr(&output, "Error: Failed to get package hash with error: UNAVAILABLE\n");
+    env.assert_only_package_resolver_called_with(vec![CapturedPackageResolverRequest::GetHash {
+        package_url: "the-url".into(),
+    }]);
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_pkg_status_success() {
+    let hash: fidl_fuchsia_pkg::BlobId =
+        "0000000000000000000000000000000000000000000000000000000000000000"
+            .parse::<fidl_fuchsia_pkg_ext::BlobId>()
+            .unwrap()
+            .into();
+    let env = TestEnv::new();
+    env.package_resolver.get_hash_response.lock().replace(Ok(hash));
+
+    let output = env.run_pkgctl(vec!["pkg-status", "the-url"]).await;
+
+    assert_stdout(&output,
+      "Package in registered TUF repo: yes (merkle=0000000000000000000000000000000000000000000000000000000000000000)\n\
+      Package on disk: yes (path=/pkgfs/versions/0000000000000000000000000000000000000000000000000000000000000000)\n");
+    env.assert_only_package_resolver_and_package_cache_called_with(
+        vec![CapturedPackageResolverRequest::GetHash { package_url: "the-url".into() }],
+        vec![CapturedPackageCacheRequest::Open { meta_far_blob_id: hash }],
+    );
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_pkg_status_fail_pkg_in_tuf_repo_but_not_on_disk() {
+    let hash: fidl_fuchsia_pkg::BlobId =
+        "0000000000000000000000000000000000000000000000000000000000000000"
+            .parse::<fidl_fuchsia_pkg_ext::BlobId>()
+            .unwrap()
+            .into();
+    let env = TestEnv::new();
+    env.package_resolver.get_hash_response.lock().replace(Ok(hash));
+    env.package_cache.open_response.lock().replace(Status::NOT_FOUND);
+
+    let output = env.run_pkgctl(vec!["pkg-status", "the-url"]).await;
+
+    assert_stdout_disregard_errors(&output,
+      "Package in registered TUF repo: yes (merkle=0000000000000000000000000000000000000000000000000000000000000000)\n\
+      Package on disk: no\n");
+    assert_eq!(output.exit_status.code(), 2);
+    env.assert_only_package_resolver_and_package_cache_called_with(
+        vec![CapturedPackageResolverRequest::GetHash { package_url: "the-url".into() }],
+        vec![CapturedPackageCacheRequest::Open { meta_far_blob_id: hash }],
+    );
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_pkg_status_fail_pkg_not_in_tuf_repo() {
+    let env = TestEnv::new();
+    env.package_resolver.get_hash_response.lock().replace(Err(Status::NOT_FOUND.into_raw()));
+
+    let output = env.run_pkgctl(vec!["pkg-status", "the-url"]).await;
+
+    assert_stdout_disregard_errors(
+        &output,
+        "Package in registered TUF repo: no\n\
+        Package on disk: unknown (did not check since not in tuf repo)\n",
+    );
+    assert_eq!(output.exit_status.code(), 3);
     env.assert_only_package_resolver_called_with(vec![CapturedPackageResolverRequest::GetHash {
         package_url: "the-url".into(),
     }]);
