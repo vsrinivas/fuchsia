@@ -3,8 +3,10 @@
 // found in the LICENSE file.
 
 mod directory;
+mod volume;
 
 pub use directory::InsecureKeyDirectoryStorageManager;
+pub use volume::EncryptedVolumeStorageManager;
 
 use account_common::AccountManagerError;
 use async_trait::async_trait;
