@@ -7,6 +7,9 @@
 
 #include <stdint.h>
 
+#include <zircon/assert.h>
+#include <threads.h>
+
 namespace fidl {
 namespace internal {
 class StubController;
@@ -44,13 +47,25 @@ class WeakStubController final {
   // The |StubController| to which this weak reference refers.
   //
   // After the weak reference has been invalidated, this method returns nullptr.
-  StubController* controller() const { return controller_; }
+  StubController* controller() const;
 
  private:
   ~WeakStubController();
 
   uint32_t ref_count_;  // starts at one
   StubController* controller_;
+#if ZX_DEBUG_ASSERT_IMPLEMENTED
+  // thrd_current() needs to match the thread on which this instance was
+  // created, so that non-atomic ref_count_ updates work as intended.
+  bool IsCurrentThreadOk() const;
+#endif
+  // If the WeakStubController constructor is release build, this field will be initialized to
+  // thrd_t{} by the constructor and stay that value until destruction.  If debug build, this field
+  // remembers the construction thread.  In a debug build, many of the methods will ZX_PANIC() if
+  // run on a thread other than the construction thread AND thread != thrd_t{}.  By checking vs.
+  // thrd_t{}, a WeakStubController constructed by release code, but passed to a debug method, will
+  // avoid asserting.
+  thrd_t thread_;
 };
 
 }  // namespace internal

@@ -157,20 +157,20 @@ void Device::Unbind() {
   // dispatcher thread, due to the FakeController object's thread-safety
   // requirements. It is OK to capture references to members in the task since
   // this function will block until the dispatcher loop has terminated.
-  async::PostTask(loop_.dispatcher(), [binding = &binding_, dev = fake_device_, loop = &loop_] {
+  async::PostTask(loop_.dispatcher(), [binding = &binding_, dev = fake_device_, loop = &loop_,
+                                       peers = &peers_] {
     binding->Unbind();
     dev->Stop();
     loop->Quit();
+    // Clean up all fake peers. This will close their local channels and remove them from the fake
+    // controller.
+    peers->clear();
   });
 
   // Block here until all the shutdown tasks we just posted are completed on the FIDL/emulator
   // dispatcher thread to guarantee that the operations below don't happen concurrently with them.
   loop_.JoinThreads();
   logf(TRACE, "emulator dispatcher shut down\n");
-
-  // Clean up all fake peers. This will close their local channels and remove them from the fake
-  // controller.
-  peers_.clear();
 
   // Destroy the FakeController here. Since |loop_| has been shutdown, we
   // don't expect it to be dereferenced again.

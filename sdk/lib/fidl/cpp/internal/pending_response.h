@@ -80,8 +80,8 @@ class PendingResponse final : public MessageSender {
   // This class should be small enough to fit into the inline storage for an
   // fit::function to avoid allocating additional storage when processing
   // messages. Currently, fit::function has space for three pointers.
-  zx_txid_t txid_;
-  WeakStubController* weak_controller_;
+  zx_txid_t txid_ = {};
+  WeakStubController* weak_controller_ = {};
 };
 
 }  // namespace internal
