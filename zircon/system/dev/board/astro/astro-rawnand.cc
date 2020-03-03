@@ -58,7 +58,7 @@ static const nand_config_t config = {
                     .table_end_block = 23,
                 },
         },
-    .extra_partition_config_count = 2,
+    .extra_partition_config_count = 3,
     .extra_partition_config =
         {
             {
