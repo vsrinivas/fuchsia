@@ -578,6 +578,7 @@ template("clang_toolchain_suite") {
         remove_common_configs = []
         remove_shared_configs = []
         deps = []
+        instrumented = false
         if (variant == false) {
           name = ""
           suffix = ""

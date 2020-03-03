@@ -113,6 +113,7 @@ if (!defined(toolchain_variant.name)) {
   toolchain_variant.deps = []
   toolchain_variant.is_pic_default = false
   toolchain_variant.with_shared = true
+  toolchain_variant.instrumented = false
 }
 
 is_android = false
@@ -450,7 +451,7 @@ if (toolchain_variant.with_shared) {
         # some targets (e.g. drivers) depend on it directly in the builder
         # toolchain.
         variant_dir = ""
-        if (toolchain_variant.name != "") {
+        if (toolchain_variant.instrumented) {
           variant_dir = "${toolchain_variant.name}/"
         }
         metadata = {
@@ -481,6 +482,7 @@ _asan_variant = {
     # -fsanitize=scudo is incompatible with -fsanitize=address.
     use_scudo = false
   }
+  instrumented = true
 }
 
 # When fuzzing with ASan, we configure it to be ClusterFuzz-friendly
@@ -583,6 +585,7 @@ declare_args() {
 
     {
       configs = [ "//build/config/profile" ]
+      instrumented = true
     },
 
     {
@@ -591,12 +594,14 @@ declare_args() {
 
     {
       configs = [ "//build/config/sanitizers:ubsan" ]
+      instrumented = true
     },
     {
       configs = [
         "//build/config/sanitizers:ubsan",
         "//build/config/sanitizers:sancov",
       ]
+      instrumented = true
     },
 
     _asan_variant,
@@ -650,6 +655,7 @@ declare_args() {
       configs += _fuzzer_remove_common_configs  # Ensure present when removing.
       remove_common_configs = _fuzzer_remove_common_configs
       remove_shared_configs = _fuzzer_remove_shared_configs
+      instrumented = true
     },
   ]
 
