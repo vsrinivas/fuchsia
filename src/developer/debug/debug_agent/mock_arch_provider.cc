@@ -50,6 +50,11 @@ zx_status_t MockArchProvider::GetInfo(const zx::thread& thread, zx_object_info_t
   return thread.get_info(topic, buffer, buffer_size, actual, avail);
 }
 
+void MockArchProvider::FillExceptionRecord(const zx::thread&,
+                                           debug_ipc::ExceptionRecord* out) const {
+  out->valid = false;
+}
+
 zx_status_t MockArchProvider::InstallHWBreakpoint(const zx::thread& thread, uint64_t address) {
   bp_installs_[address]++;
   return ZX_OK;

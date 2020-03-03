@@ -47,9 +47,8 @@ class ThreadImpl final : public Thread, public Stack::Delegate {
   // This function will check controllers and will either stop (dispatching notifications) or
   // transparently continue accordingly.
   //
-  // The his breakpoints should include all breakpoints, including internal ones.
-  void OnException(debug_ipc::ExceptionType type,
-                   const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints);
+  // The breakpoints will include all breakpoints, including internal ones.
+  void OnException(const StopInfo& info);
 
  private:
   FRIEND_TEST(ThreadImplTest, StopNoStack);

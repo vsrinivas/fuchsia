@@ -643,6 +643,9 @@ bool ReadNotifyException(MessageReader* reader, NotifyException* notify) {
     return false;
   notify->type = static_cast<ExceptionType>(type);
 
+  if (!reader->ReadBytes(sizeof(notify->exception), &notify->exception))
+    return false;
+
   return Deserialize(reader, &notify->hit_breakpoints);
 }
 

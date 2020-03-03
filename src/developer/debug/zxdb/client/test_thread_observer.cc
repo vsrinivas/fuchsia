@@ -18,12 +18,10 @@ TestThreadObserver::~TestThreadObserver() {
   thread_->session()->thread_observers().RemoveObserver(this);
 }
 
-void TestThreadObserver::OnThreadStopped(
-    Thread* thread, debug_ipc::ExceptionType type,
-    const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) {
+void TestThreadObserver::OnThreadStopped(Thread* thread, const StopInfo& info) {
   EXPECT_EQ(thread_, thread);
   got_stopped_ = true;
-  hit_breakpoints_ = hit_breakpoints;
+  hit_breakpoints_ = info.hit_breakpoints;
 }
 
 }  // namespace zxdb

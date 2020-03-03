@@ -65,6 +65,30 @@ enum class ExceptionType : uint32_t {
 const char* ExceptionTypeToString(ExceptionType);
 bool IsDebug(ExceptionType);
 
+struct ExceptionRecord {
+  ExceptionRecord() { memset(&arch, 0, sizeof(Arch)); }
+
+  // Race conditions or other errors can conspire to mean the exception records are not valid. In
+  // order to differentiate this case from "0" addresses, this flag indicates validity of the "arch"
+  // union.
+  bool valid = false;
+
+  union Arch {
+    // Exception record for x64.
+    struct {
+      uint64_t vector;
+      uint64_t err_code;
+      uint64_t cr2;
+    } x64;
+
+    // Exception record for ARM64.
+    struct {
+      uint32_t esr;
+      uint64_t far;
+    } arm64;
+  } arch;
+};
+
 // Note: see "ps" source:
 // https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/uapp/psutils/ps.c
 struct ProcessTreeRecord {

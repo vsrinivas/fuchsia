@@ -41,9 +41,7 @@ class InterceptingThreadObserver : public zxdb::ThreadObserver {
   InterceptingThreadObserver(const InterceptingThreadObserver&) = delete;
   InterceptingThreadObserver& operator=(const InterceptingThreadObserver&) = delete;
 
-  virtual void OnThreadStopped(
-      zxdb::Thread* thread, debug_ipc::ExceptionType type,
-      const std::vector<fxl::WeakPtr<zxdb::Breakpoint>>& hit_breakpoints) override;
+  virtual void OnThreadStopped(zxdb::Thread* thread, const zxdb::StopInfo& info) override;
 
   virtual ~InterceptingThreadObserver() {}
 

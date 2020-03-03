@@ -54,7 +54,7 @@ Err RunVerbJump(ConsoleContext* context, const Command& cmd) {
       console->context().SetActiveFrameIdForThread(thread.get(), 0);
 
       // Tell the user where they are.
-      console->context().OutputThreadContext(thread.get(), debug_ipc::ExceptionType::kNone, {});
+      console->context().OutputThreadContext(thread.get(), StopInfo());
     }
   });
 

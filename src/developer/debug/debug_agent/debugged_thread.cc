@@ -157,6 +157,7 @@ void DebuggedThread::OnException(zx::exception exception_handle,
 
   debug_ipc::NotifyException exception;
   exception.type = arch_provider_->DecodeExceptionType(*this, exception_info.type);
+  arch_provider_->FillExceptionRecord(handle_, &exception.exception);
 
   zx_thread_state_general_regs regs;
   zx_status_t status = arch_provider_->ReadGeneralState(handle_, &regs);

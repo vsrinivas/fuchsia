@@ -538,7 +538,9 @@ void Session::DispatchNotifyException(const debug_ipc::NotifyException& notify, 
     thread->SetMetadata(notify.thread);
 
   // The breakpoints that were hit to pass to the thread stop handler.
-  std::vector<fxl::WeakPtr<Breakpoint>> hit_breakpoints;
+  StopInfo info;
+  info.exception_type = notify.type;
+  info.exception_record = notify.exception;
 
   if (!notify.hit_breakpoints.empty()) {
     // Update breakpoints' hit counts and stats. This is done before any notifications are sent so
@@ -547,13 +549,13 @@ void Session::DispatchNotifyException(const debug_ipc::NotifyException& notify, 
       BreakpointImpl* impl = system_.BreakpointImplForId(stats.id);
       if (impl) {
         impl->UpdateStats(stats);
-        hit_breakpoints.push_back(impl->GetWeakPtr());
+        info.hit_breakpoints.push_back(impl->GetWeakPtr());
       }
     }
   }
 
   // This is the main notification of an exception.
-  thread->OnException(notify.type, hit_breakpoints);
+  thread->OnException(info);
 
   // Delete all one-shot breakpoints the backend deleted. This happens after the thread
   // notifications so observers can tell why the thread stopped.

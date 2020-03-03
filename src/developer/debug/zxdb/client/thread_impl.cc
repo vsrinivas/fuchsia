@@ -110,7 +110,9 @@ void ThreadImpl::Continue() {
       debug_ipc::MessageLoop::Current()->PostTask(
           FROM_HERE, [thread = weak_factory_.GetWeakPtr()]() {
             if (thread) {
-              thread->OnException(debug_ipc::ExceptionType::kSynthetic, {});
+              StopInfo info;
+              info.exception_type = debug_ipc::ExceptionType::kSynthetic;
+              thread->OnException(info);
             }
           });
       return;
@@ -215,11 +217,10 @@ void ThreadImpl::SetMetadata(const debug_ipc::ThreadRecord& record) {
   stack_.SetFrames(record.stack_amount, record.frames);
 }
 
-void ThreadImpl::OnException(debug_ipc::ExceptionType type,
-                             const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) {
+void ThreadImpl::OnException(const StopInfo& info) {
   if (settings().GetBool(ClientSettings::Thread::kDebugStepping)) {
     printf("----------\r\nGot %s exception @ 0x%" PRIx64 " in %s\r\n",
-           debug_ipc::ExceptionTypeToString(type), stack_[0]->GetAddress(),
+           debug_ipc::ExceptionTypeToString(info.exception_type), stack_[0]->GetAddress(),
            ThreadController::FrameFunctionNameForLog(stack_[0]).c_str());
   }
 
@@ -244,7 +245,7 @@ void ThreadImpl::OnException(debug_ipc::ExceptionType type,
   auto controller_iter = controllers_.begin();
   while (controller_iter != controllers_.end()) {
     ThreadController* controller = controller_iter->get();
-    switch (controller->OnThreadStop(type, hit_breakpoints)) {
+    switch (controller->OnThreadStop(info.exception_type, info.hit_breakpoints)) {
       case ThreadController::kContinue:
         // Try the next controller.
         controller->Log("Reported continue on exception.");
@@ -285,27 +286,26 @@ void ThreadImpl::OnException(debug_ipc::ExceptionType type,
   // "run until" operation active even after it was hit).
   //
   // Also, filter out internal breakpoints in the notification sent to the observers.
-  std::vector<fxl::WeakPtr<Breakpoint>> external_breakpoints;
-  for (auto& hit : hit_breakpoints) {
-    if (!hit)
-      continue;
-
-    if (!hit->IsInternal()) {
-      external_breakpoints.push_back(hit);
+  StopInfo external_info = info;
+  for (size_t i = 0; i < external_info.hit_breakpoints.size(); /* nothing */) {
+    if (external_info.hit_breakpoints[i] && !external_info.hit_breakpoints[i]->IsInternal()) {
       should_stop = true;
-      break;
+      i++;
+    } else {
+      // Erase all deleted weak pointers and internal breakpoints.
+      external_info.hit_breakpoints.erase(external_info.hit_breakpoints.begin() + i);
     }
   }
 
   // Non-debug exceptions also mean the thread should always stop (check this after running the
   // controllers for the same reason as the breakpoint check above).
-  if (!debug_ipc::IsDebug(type))
+  if (!debug_ipc::IsDebug(info.exception_type))
     should_stop = true;
 
   if (should_stop) {
     // Stay stopped and notify the observers.
     for (auto& observer : session()->thread_observers())
-      observer.OnThreadStopped(this, type, external_breakpoints);
+      observer.OnThreadStopped(this, external_info);
   } else {
     // Controllers all say to continue.
     Continue();

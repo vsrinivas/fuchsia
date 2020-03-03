@@ -12,7 +12,7 @@ namespace debug_ipc {
 // As defined in zircon/types.h
 using zx_status_t = int32_t;
 
-constexpr uint32_t kProtocolVersion = 23;
+constexpr uint32_t kProtocolVersion = 24;
 
 enum class Arch : uint32_t { kUnknown = 0, kX64, kArm64 };
 
@@ -423,6 +423,8 @@ struct NotifyException {
   ThreadRecord thread;
 
   ExceptionType type = ExceptionType::kNone;
+
+  ExceptionRecord exception;
 
   // When the stop was caused by hitting a breakpoint, this vector will contain
   // the post-hit stats of every hit breakpoint (since there can be more than

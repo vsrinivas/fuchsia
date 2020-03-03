@@ -103,8 +103,7 @@ class ConsoleContext : public ProcessObserver,
 
   // Outputs to the console information on the given stopped thread with the
   // given reasons for stopping.
-  void OutputThreadContext(const Thread* thread, debug_ipc::ExceptionType type,
-                           const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) const;
+  void OutputThreadContext(const Thread* thread, const StopInfo& info) const;
 
   // Fills the current effective process, thread, etc. into the given Command
   // structure based on what the command specifies and the current context.
@@ -175,8 +174,7 @@ class ConsoleContext : public ProcessObserver,
   // ThreadObserver implementation:
   void DidCreateThread(Thread* thread) override;
   void WillDestroyThread(Thread* thread) override;
-  void OnThreadStopped(Thread* thread, debug_ipc::ExceptionType type,
-                       const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) override;
+  void OnThreadStopped(Thread* thread, const StopInfo& info) override;
   void OnThreadFramesInvalidated(Thread* thread) override;
 
   // DownloadObserver implementation:

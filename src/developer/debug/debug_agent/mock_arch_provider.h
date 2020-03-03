@@ -27,6 +27,7 @@ class MockArchProvider : public arch::ArchProvider {
   zx_status_t WriteSingleStep(const zx::thread& thread, bool single_step) override;
   zx_status_t GetInfo(const zx::thread&, zx_object_info_topic_t topic, void* buffer,
                       size_t buffer_size, size_t* actual, size_t* avail) const override;
+  void FillExceptionRecord(const zx::thread&, debug_ipc::ExceptionRecord* out) const override;
 
   zx_status_t InstallHWBreakpoint(const zx::thread& thread, uint64_t address) override;
 

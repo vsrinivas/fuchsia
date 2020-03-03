@@ -12,6 +12,7 @@ namespace arch {
 
 class ArchProviderArm64 : public ArchProviderFuchsia {
  public:
+  void FillExceptionRecord(const zx::thread&, debug_ipc::ExceptionRecord* out) const override;
 };
 
 }  // namespace arch

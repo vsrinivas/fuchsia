@@ -851,6 +851,10 @@ TEST(Protocol, NotifyException) {
   initial.thread.frames.emplace_back(0x7647342634, 0x9861238251);
   initial.type = ExceptionType::kHardware;
 
+  initial.exception.arch.x64.vector = 22;
+  initial.exception.arch.x64.err_code = 5;
+  initial.exception.arch.x64.cr2 = 12345;
+
   initial.hit_breakpoints.emplace_back();
   initial.hit_breakpoints[0].id = 45;
   initial.hit_breakpoints[0].hit_count = 15;
@@ -871,6 +875,11 @@ TEST(Protocol, NotifyException) {
   EXPECT_EQ(initial.thread.stack_amount, second.thread.stack_amount);
   EXPECT_EQ(initial.thread.frames[0], second.thread.frames[0]);
   EXPECT_EQ(initial.type, second.type);
+
+  EXPECT_EQ(initial.exception.arch.x64.vector, second.exception.arch.x64.vector);
+  EXPECT_EQ(initial.exception.arch.x64.err_code, second.exception.arch.x64.err_code);
+  EXPECT_EQ(initial.exception.arch.x64.cr2, second.exception.arch.x64.cr2);
+
   ASSERT_EQ(initial.hit_breakpoints.size(), second.hit_breakpoints.size());
 
   EXPECT_EQ(initial.hit_breakpoints[0].id, second.hit_breakpoints[0].id);

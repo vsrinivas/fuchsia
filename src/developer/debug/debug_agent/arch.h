@@ -57,6 +57,11 @@ class ArchProvider {
                               size_t buffer_size, size_t* actual = nullptr,
                               size_t* avail = nullptr) const = 0;
 
+  // General Exceptions ----------------------------------------------------------------------------
+
+  // Converts a system exception info to an IPC exception record.
+  virtual void FillExceptionRecord(const zx::thread&, debug_ipc::ExceptionRecord* out) const = 0;
+
   // Software Exceptions ---------------------------------------------------------------------------
 
   // Returns the address of the breakpoint instruction given the address of

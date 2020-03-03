@@ -35,8 +35,7 @@ class MinidumpTest : public TestWithLoop, public ThreadObserver, public SystemOb
                                             fit::callback<void(const Err&, ReplyType)>));
 
   // ThreadObserver implementation.
-  void OnThreadStopped(Thread*, debug_ipc::ExceptionType type,
-                       const std::vector<fxl::WeakPtr<Breakpoint>>&) override;
+  void OnThreadStopped(Thread*, const StopInfo& info) override;
 
  private:
   debug_ipc::ExceptionType last_hit_ = debug_ipc::ExceptionType::kNone;
@@ -74,9 +73,8 @@ void MinidumpTest::DoRequest(
   loop().RunUntilNoTasks();
 }
 
-void MinidumpTest::OnThreadStopped(Thread*, debug_ipc::ExceptionType type,
-                                   const std::vector<fxl::WeakPtr<Breakpoint>>&) {
-  last_hit_ = type;
+void MinidumpTest::OnThreadStopped(Thread*, const StopInfo& info) {
+  last_hit_ = info.exception_type;
 }
 
 template <typename Data>

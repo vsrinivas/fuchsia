@@ -81,8 +81,7 @@ Err PauseThread(ConsoleContext* context, Thread* thread) {
     Console* console = Console::get();
     if (show_source) {
       // Output the full source location.
-      console->context().OutputThreadContext(weak_thread.get(), debug_ipc::ExceptionType::kNone,
-                                             {});
+      console->context().OutputThreadContext(weak_thread.get(), StopInfo());
 
     } else {
       // Not current, just output the one-line description.
@@ -118,8 +117,7 @@ Err PauseTarget(ConsoleContext* context, Target* target, Thread* current_thread)
 
     if (weak_thread) {
       // Thread is current, show current location.
-      console->context().OutputThreadContext(weak_thread.get(), debug_ipc::ExceptionType::kNone,
-                                             {});
+      console->context().OutputThreadContext(weak_thread.get(), StopInfo());
     }
   });
   return Err();
@@ -161,10 +159,8 @@ Err PauseSystem(System* system, Thread* current_thread) {
     }
 
     // Follow with the source context of the current thread if there is one.
-    if (weak_thread) {
-      console->context().OutputThreadContext(weak_thread.get(), debug_ipc::ExceptionType::kNone,
-                                             {});
-    }
+    if (weak_thread)
+      console->context().OutputThreadContext(weak_thread.get(), StopInfo());
   });
   return Err();
 }

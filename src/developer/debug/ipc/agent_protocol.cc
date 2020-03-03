@@ -570,6 +570,7 @@ void WriteNotifyException(const NotifyException& notify, MessageWriter* writer) 
   writer->WriteHeader(MsgHeader::Type::kNotifyException, 0);
   Serialize(notify.thread, writer);
   writer->WriteUint32(static_cast<uint32_t>(notify.type));
+  writer->WriteBytes(&notify.exception, sizeof(notify.exception));
   Serialize(notify.hit_breakpoints, writer);
 }
 
