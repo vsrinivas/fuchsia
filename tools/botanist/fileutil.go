@@ -37,7 +37,7 @@ func FetchAndCopyFile(ctx context.Context, t tftp.Client, tw *tar.Writer, path, 
 			}
 			break
 		}
-		var w io.Writer
+		var w io.WriteCloser
 		if tw != nil {
 			lock.Lock()
 			defer lock.Unlock()
@@ -56,6 +56,7 @@ func FetchAndCopyFile(ctx context.Context, t tftp.Client, tw *tar.Writer, path, 
 			if err != nil {
 				return fmt.Errorf("failed to create file: %v", err)
 			}
+			defer w.Close()
 		}
 		_, err = reader.WriteTo(w)
 		return err

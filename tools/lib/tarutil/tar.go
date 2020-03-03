@@ -35,6 +35,7 @@ func TarDirectory(tw *tar.Writer, dir string) error {
 		if err != nil {
 			return err
 		}
+		defer fi.Close()
 		_, err = io.Copy(tw, fi)
 		return err
 	})
@@ -65,6 +66,7 @@ func TarFile(tw *tar.Writer, src, dest string) error {
 	if err != nil {
 		return err
 	}
+	defer f.Close()
 	fi, err := f.Stat()
 	if err != nil {
 		return err
