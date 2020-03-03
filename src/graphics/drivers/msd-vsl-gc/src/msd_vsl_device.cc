@@ -674,10 +674,14 @@ bool MsdVslDevice::SubmitFlushTlb(std::shared_ptr<AddressSpace> address_space) {
   uint32_t gpu_addr = rb_gpu_addr + ringbuffer_->tail();
 
   auto reg = registers::MmuConfig::Get().addr();
-  constexpr uint32_t flush_command = 0x8 | 0x10;
+  // The MmuConfig register can also be used to change modes.
+  // Instruct the hardware to ignore mode change bits.
+  constexpr uint32_t kModeMask = 0x8;
+  constexpr uint32_t kFlushAllTlbs = 0x10;
+  constexpr uint32_t flush_command = kModeMask | kFlushAllTlbs;
   MiLoadState::write(ringbuffer_.get(), reg, flush_command);
-  MiSemaphore::write(ringbuffer_.get(), MiRecipient::Fe, MiRecipient::Pe);
-  MiStall::write(ringbuffer_.get(), MiRecipient::Fe, MiRecipient::Pe);
+  MiSemaphore::write(ringbuffer_.get(), MiRecipient::FetchEngine, MiRecipient::PixelEngine);
+  MiStall::write(ringbuffer_.get(), MiRecipient::FetchEngine, MiRecipient::PixelEngine);
 
   if (!AddRingbufferWaitLink()) {
     return DRETF(false, "Failed to add WAIT-LINK to ringbuffer");

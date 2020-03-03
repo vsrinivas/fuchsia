@@ -16,6 +16,7 @@ class MsdVslConnection {
  public:
   class Owner {
    public:
+    // If |do_flush| is true, a flush TLB command will be queued before the batch commands.
     virtual magma::Status SubmitBatch(std::unique_ptr<MappedBatch> batch, bool do_flush) = 0;
   };
 

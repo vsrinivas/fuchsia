@@ -153,7 +153,8 @@ class MsdVslDevice : public msd_device_t,
   }
 
   // MsdVslConnection::Owner
-  magma::Status SubmitBatch(std::unique_ptr<MappedBatch> batch, bool do_flush = false) override;
+  // If |do_flush| is true, a flush TLB command will be queued before the batch commands.
+  magma::Status SubmitBatch(std::unique_ptr<MappedBatch> batch, bool do_flush) override;
 
   PageTableArrays* page_table_arrays() { return page_table_arrays_.get(); }
 

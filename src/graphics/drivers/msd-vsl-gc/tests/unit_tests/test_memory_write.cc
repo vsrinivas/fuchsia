@@ -142,7 +142,7 @@ class TestMsdVslDevice : public drm_test_info {
     if (!batch->IsValidBatchBuffer()) {
       return DRETF(false, "failed to validate batch buffer");
     }
-    if (!device_.msd_vsl_device->SubmitBatch(std::move(batch)).ok()) {
+    if (!device_.msd_vsl_device->SubmitBatch(std::move(batch), false /* do_flush */).ok()) {
       return DRETF(false, "failed to submit batch");
     }
     return true;

@@ -163,7 +163,7 @@ TEST_F(TestEvents, Submit) {
     signal_semaphores.emplace_back(semaphore->Clone());
 
     auto batch = std::make_unique<EventBatch>(context_, wait_semaphores, signal_semaphores);
-    ASSERT_EQ(MAGMA_STATUS_OK, device_->SubmitBatch(std::move(batch)).get());
+    ASSERT_EQ(MAGMA_STATUS_OK, device_->SubmitBatch(std::move(batch), false /* do_flush */).get());
 
     constexpr uint64_t kTimeoutMs = 1000;
     ASSERT_EQ(MAGMA_STATUS_OK, semaphore->Wait(kTimeoutMs).get());

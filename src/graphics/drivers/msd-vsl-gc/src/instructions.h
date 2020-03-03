@@ -60,10 +60,11 @@ class MiEvent {
 };
 
 enum MiRecipient : uint32_t {
-  Fe = 0x1,
-  Pe = 0x7,
+  FetchEngine = 0x1,  // Also known as the Graphics Pipeline Front End.
+  PixelEngine = 0x7,
 };
 
+// Max allowed value for MiRecipient.
 static constexpr uint32_t kRecipientMask = 0x001f;
 
 class MiSemaphore {
