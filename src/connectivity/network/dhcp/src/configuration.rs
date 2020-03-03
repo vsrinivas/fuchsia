@@ -21,7 +21,7 @@ pub fn load_server_params_from_file(path: &str) -> Result<ServerParameters, Conf
 }
 
 /// A collection of the basic configuration parameters needed by the server.
-#[derive(Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct ServerParameters {
     /// The IPv4 addresses of the host running the server.
     pub server_ips: Vec<Ipv4Addr>,

@@ -25,6 +25,8 @@ pub enum Command {
     Set(Set),
     /// a primary command to list the values of all DHCP options or server parameters.
     List(List),
+    /// a primary command to reset the values of all DHCP options or server parameters.
+    Reset(Reset),
 }
 
 /// A primary command to retrieve the value of a DHCP option or server parameter.
@@ -51,6 +53,14 @@ pub struct List {
     pub arg: ListArg,
 }
 
+/// A primary command to reset the values of all DHCP options or server parameters.
+#[derive(Debug, FromArgs)]
+#[argh(subcommand, name = "reset")]
+pub struct Reset {
+    #[argh(subcommand)]
+    pub arg: ResetArg,
+}
+
 #[derive(Debug, FromArgs)]
 #[argh(subcommand)]
 pub enum GetArg {
@@ -71,6 +81,14 @@ pub enum SetArg {
 #[derive(Debug, FromArgs)]
 #[argh(subcommand)]
 pub enum ListArg {
+    Option(OptionToken),
+    Parameter(ParameterToken),
+}
+
+/// A primary command argument to reset the values of all DHCP options or server parameters.
+#[derive(Debug, FromArgs)]
+#[argh(subcommand)]
+pub enum ResetArg {
     Option(OptionToken),
     Parameter(ParameterToken),
 }

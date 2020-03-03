@@ -234,3 +234,77 @@ async fn test_list_parameter() {
     }])
     .await
 }
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_reset_option() {
+    test_cli(vec![
+        Command {
+            args: vec!["set", "option", "subnet-mask", "--mask", "255.255.255.0"],
+            expected_stdout: "",
+            expected_stderr: "",
+        },
+        Command {
+            args: vec!["list", "option"],
+            expected_stdout: r#"[
+    SubnetMask(
+        Ipv4Address {
+            addr: [
+                255,
+                255,
+                255,
+                0,
+            ],
+        },
+    ),
+]
+"#,
+            expected_stderr: "",
+        },
+        Command { args: vec!["reset", "option"], expected_stdout: "", expected_stderr: "" },
+        Command { args: vec!["list", "option"], expected_stdout: "[]\n", expected_stderr: "" },
+    ])
+    .await
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_reset_parameter() {
+    test_cli(vec![
+        Command {
+            args: vec!["set", "parameter", "lease-length", "--default", "42"],
+            expected_stdout: "",
+            expected_stderr: "",
+        },
+        Command {
+            args: vec!["get", "parameter", "lease-length"],
+            expected_stdout: r#"Lease(
+    LeaseLength {
+        default: Some(
+            42,
+        ),
+        max: Some(
+            42,
+        ),
+    },
+)
+"#,
+            expected_stderr: "",
+        },
+        Command { args: vec!["reset", "parameter"], expected_stdout: "", expected_stderr: "" },
+        Command {
+            args: vec!["get", "parameter", "lease-length"],
+            expected_stdout: r#"Lease(
+    LeaseLength {
+        default: Some(
+            86400,
+        ),
+        max: Some(
+            86400,
+        ),
+    },
+)
+"#,
+            expected_stderr: "",
+        },
+    ])
+    .await
+}

@@ -14,7 +14,6 @@ use {
     },
     fuchsia_async::{self as fasync, net::UdpSocket, Interval},
     fuchsia_component::server::ServiceFs,
-    fuchsia_syslog::{self as fx_syslog, fx_log_err, fx_log_info},
     fuchsia_zircon::DurationNum,
     futures::{Future, FutureExt, StreamExt, TryFutureExt, TryStreamExt},
     net2::unix::UnixUdpBuilderExt,
@@ -58,16 +57,17 @@ pub struct Args {
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
-    fx_syslog::init_with_tags(&["dhcpd"])?;
+    fuchsia_syslog::init_with_tags(&["dhcpd"])?;
 
     let Args { config, stash } = argh::from_env();
     let stash = dhcp::stash::Stash::new(&stash, DEFAULT_STASH_PREFIX)
         .context("failed to instantiate stash")?;
-    let params = stash.load_parameters().await.or_else(|e| {
-        fx_syslog::fx_log_warn!("failed to load parameters from stash: {}", e);
-        configuration::load_server_params_from_file(&config)
-            .context("failed to load server parameters from configuration file")
-    })?;
+    let default_params = configuration::load_server_params_from_file(&config)
+        .context("failed to load default server parameters from configuration file")?;
+    let params = stash.load_parameters().await.unwrap_or_else(|e| {
+        log::warn!("failed to load parameters from stash: {:?}", e);
+        default_params.clone()
+    });
     let socks = if params.bound_device_names.len() > 0 {
         params.bound_device_names.iter().map(String::as_str).try_fold::<_, _, Result<_, Error>>(
             Vec::new(),
@@ -81,14 +81,14 @@ async fn main() -> Result<(), Error> {
         vec![create_socket(None)?]
     };
     if socks.len() == 0 {
-        return Err(anyhow::format_err!("no valid sockets to receive messages from"));
+        return Err(anyhow::Error::msg("no valid sockets to receive messages from"));
     }
     let options = stash.load_options().await.unwrap_or_else(|e| {
-        fx_syslog::fx_log_warn!("failed to load options from stash: {}", e);
+        log::warn!("failed to load options from stash: {:?}", e);
         std::collections::HashMap::new()
     });
     let cache = stash.load_client_configs().await.unwrap_or_else(|e| {
-        fx_syslog::fx_log_warn!("failed to load cached client config from stash: {}", e);
+        log::warn!("failed to load cached client config from stash: {:?}", e);
         std::collections::HashMap::new()
     });
     let server = RefCell::new(Server::new(stash, params, options, cache));
@@ -100,21 +100,23 @@ async fn main() -> Result<(), Error> {
         fs.then(futures::future::ok).try_for_each_concurrent(None, |incoming_service| async {
             match incoming_service {
                 IncomingService::Server(stream) => {
-                    run_server(stream, &server).inspect_err(|e| log::info!("{:?}", e)).await?;
+                    run_server(stream, &server, &default_params)
+                        .inspect_err(|e| log::warn!("run_server failed: {:?}", e))
+                        .await?;
                     Ok(())
                 }
             }
         });
 
     if !server.borrow().is_serving() {
-        fx_log_info!("starting server in configuration only mode");
+        log::info!("starting server in configuration only mode");
         let () = admin_fut.await?;
     } else {
         let msg_loops = socks
             .into_iter()
             .map(|sock| define_msg_handling_loop_future(sock, &server).boxed_local());
         let lease_expiration_handler = define_lease_expiration_handler_future(&server);
-        fx_log_info!("starting server");
+        log::info!("starting server");
         let (_void, (), ()) = futures::try_join!(
             futures::future::select_ok(msg_loops),
             admin_fut,
@@ -163,18 +165,18 @@ async fn define_msg_handling_loop_future(
     loop {
         let (received, mut sender) =
             sock.recv_from(&mut buf).await.context("failed to read from socket")?;
-        fx_log_info!("received message from: {}", sender);
+        log::info!("received message from: {}", sender);
         let msg = Message::from_buffer(&buf[..received])?;
-        fx_log_info!("parsed message: {:?}", msg);
+        log::info!("parsed message: {:?}", msg);
 
         // This call should not block because the server is single-threaded.
         let result = server.borrow_mut().dispatch(msg);
         match result {
-            Err(e) => fx_log_err!("error processing client message: {}", e),
-            Ok(ServerAction::AddressRelease(addr)) => fx_log_info!("released address: {}", addr),
-            Ok(ServerAction::AddressDecline(addr)) => fx_log_info!("allocated address: {}", addr),
+            Err(e) => log::error!("error processing client message: {:?}", e),
+            Ok(ServerAction::AddressRelease(addr)) => log::info!("released address: {}", addr),
+            Ok(ServerAction::AddressDecline(addr)) => log::info!("allocated address: {}", addr),
             Ok(ServerAction::SendResponse(message, dest)) => {
-                fx_log_info!("generated response: {:?}", message);
+                log::info!("generated response: {:?}", message);
 
                 // Check if server returned an explicit destination ip.
                 if let Some(addr) = dest {
@@ -183,7 +185,7 @@ async fn define_msg_handling_loop_future(
 
                 let response_buffer = message.serialize();
                 sock.send_to(&response_buffer, sender).await.context("unable to send response")?;
-                fx_log_info!("response sent to: {}", sender);
+                log::info!("response sent to: {}", sender);
             }
         }
     }
@@ -202,6 +204,7 @@ fn define_lease_expiration_handler_future<'a>(
 async fn run_server<S: ServerDispatcher>(
     stream: fidl_fuchsia_net_dhcp::Server_RequestStream,
     server: &RefCell<S>,
+    default_params: &dhcp::configuration::ServerParameters,
 ) -> Result<(), fidl::Error> {
     stream
         .try_for_each(|request| async {
@@ -229,6 +232,15 @@ async fn run_server<S: ServerDispatcher>(
                 fidl_fuchsia_net_dhcp::Server_Request::ListParameters { responder: r } => r.send(
                     &mut server.borrow().dispatch_list_parameters().map_err(|e| e.into_raw()),
                 ),
+                fidl_fuchsia_net_dhcp::Server_Request::ResetOptions { responder: r } => r.send(
+                    &mut server.borrow_mut().dispatch_reset_options().map_err(|e| e.into_raw()),
+                ),
+                fidl_fuchsia_net_dhcp::Server_Request::ResetParameters { responder: r } => r.send(
+                    &mut server
+                        .borrow_mut()
+                        .dispatch_reset_parameters(&default_params)
+                        .map_err(|e| e.into_raw()),
+                ),
             }
         })
         .await
@@ -237,6 +249,7 @@ async fn run_server<S: ServerDispatcher>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::convert::TryFrom;
 
     struct CannedDispatcher {}
 
@@ -280,6 +293,38 @@ mod tests {
         ) -> Result<Vec<fidl_fuchsia_net_dhcp::Parameter>, fuchsia_zircon::Status> {
             Ok(vec![])
         }
+        fn dispatch_reset_options(&mut self) -> Result<(), fuchsia_zircon::Status> {
+            Ok(())
+        }
+        fn dispatch_reset_parameters(
+            &mut self,
+            _defaults: &dhcp::configuration::ServerParameters,
+        ) -> Result<(), fuchsia_zircon::Status> {
+            Ok(())
+        }
+    }
+
+    fn default_params() -> dhcp::configuration::ServerParameters {
+        dhcp::configuration::ServerParameters {
+            server_ips: vec![Ipv4Addr::from([192, 168, 0, 1])],
+            lease_length: dhcp::configuration::LeaseLength {
+                default_seconds: 86400,
+                max_seconds: 86400,
+            },
+            managed_addrs: dhcp::configuration::ManagedAddresses {
+                network_id: Ipv4Addr::from([192, 168, 0, 0]),
+                broadcast: Ipv4Addr::from([192, 168, 0, 128]),
+                mask: dhcp::configuration::SubnetMask::try_from(25).unwrap(),
+                pool_range_start: Ipv4Addr::from([192, 168, 0, 0]),
+                pool_range_stop: Ipv4Addr::from([192, 168, 0, 0]),
+            },
+            permitted_macs: dhcp::configuration::PermittedMacs(vec![]),
+            static_assignments: dhcp::configuration::StaticAssignments(
+                std::collections::HashMap::new(),
+            ),
+            arp_probe: false,
+            bound_device_names: vec![],
+        }
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -288,11 +333,11 @@ mod tests {
             fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_net_dhcp::Server_Marker>()?;
         let server = RefCell::new(CannedDispatcher {});
 
-        let res = proxy.get_option(fidl_fuchsia_net_dhcp::OptionCode::SubnetMask);
-        fasync::spawn_local(async move {
-            let () = run_server(stream, &server).await.unwrap_or(());
-        });
-        let res = res.await?;
+        let defaults = default_params();
+        let res = futures::select! {
+            res = proxy.get_option(fidl_fuchsia_net_dhcp::OptionCode::SubnetMask).fuse() => res.context("get_option failed"),
+            server_fut = run_server(stream, &server, &defaults).fuse() => Err(anyhow::Error::msg("server finished before request")),
+        }?;
 
         let expected_result =
             Ok(fidl_fuchsia_net_dhcp::Option_::SubnetMask(fidl_fuchsia_net::Ipv4Address {
@@ -308,12 +353,11 @@ mod tests {
             fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_net_dhcp::Server_Marker>()?;
         let server = RefCell::new(CannedDispatcher {});
 
-        let res = proxy.get_parameter(fidl_fuchsia_net_dhcp::ParameterName::LeaseLength);
-        fasync::spawn_local(async move {
-            let () = run_server(stream, &server).await.unwrap_or(());
-        });
-        let res = res.await?;
-
+        let defaults = default_params();
+        let res = futures::select! {
+            res = proxy.get_parameter(fidl_fuchsia_net_dhcp::ParameterName::LeaseLength).fuse() => res.context("get_parameter failed"),
+            server_fut = run_server(stream, &server, &defaults).fuse() => Err(anyhow::Error::msg("server finished before request")),
+        }?;
         let expected_result =
             Ok(fidl_fuchsia_net_dhcp::Parameter::Lease(fidl_fuchsia_net_dhcp::LeaseLength {
                 default: None,
@@ -329,14 +373,13 @@ mod tests {
             fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_net_dhcp::Server_Marker>()?;
         let server = RefCell::new(CannedDispatcher {});
 
-        let res = proxy.set_option(&mut fidl_fuchsia_net_dhcp::Option_::SubnetMask(
+        let defaults = default_params();
+        let res = futures::select! {
+            res = proxy.set_option(&mut fidl_fuchsia_net_dhcp::Option_::SubnetMask(
             fidl_fuchsia_net::Ipv4Address { addr: [0, 0, 0, 0] },
-        ));
-        fasync::spawn_local(async move {
-            let () = run_server(stream, &server).await.unwrap_or(());
-        });
-        let res = res.await?;
-
+        )).fuse() => res.context("set_option failed"),
+            server_fut = run_server(stream, &server, &defaults).fuse() => Err(anyhow::Error::msg("server finished before request")),
+        }?;
         assert_eq!(res, Ok(()));
         Ok(())
     }
@@ -347,14 +390,13 @@ mod tests {
             fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_net_dhcp::Server_Marker>()?;
         let server = RefCell::new(CannedDispatcher {});
 
-        let res = proxy.set_parameter(&mut fidl_fuchsia_net_dhcp::Parameter::Lease(
+        let defaults = default_params();
+        let res = futures::select! {
+            res = proxy.set_parameter(&mut fidl_fuchsia_net_dhcp::Parameter::Lease(
             fidl_fuchsia_net_dhcp::LeaseLength { default: None, max: None },
-        ));
-        fasync::spawn_local(async move {
-            let () = run_server(stream, &server).await.unwrap_or(());
-        });
-        let res = res.await?;
-
+        )).fuse() => res.context("set_parameter failed"),
+            server_fut = run_server(stream, &server, &defaults).fuse() => Err(anyhow::Error::msg("server finished before request")),
+        }?;
         assert_eq!(res, Ok(()));
         Ok(())
     }
@@ -365,12 +407,11 @@ mod tests {
             fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_net_dhcp::Server_Marker>()?;
         let server = RefCell::new(CannedDispatcher {});
 
-        let res = proxy.list_options();
-        fasync::spawn_local(async move {
-            let () = run_server(stream, &server).await.unwrap_or(());
-        });
-        let res = res.await?;
-
+        let defaults = default_params();
+        let res = futures::select! {
+            res = proxy.list_options().fuse() => res.context("list_options failed"),
+            server_fut = run_server(stream, &server, &defaults).fuse() => Err(anyhow::Error::msg("server finished before request")),
+        }?;
         assert_eq!(res, Ok(vec![]));
         Ok(())
     }
@@ -381,13 +422,44 @@ mod tests {
             fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_net_dhcp::Server_Marker>()?;
         let server = RefCell::new(CannedDispatcher {});
 
-        let res = proxy.list_parameters();
-        fasync::spawn_local(async move {
-            let () = run_server(stream, &server).await.unwrap_or(());
-        });
-        let res = res.await?;
-
+        let defaults = default_params();
+        let res = futures::select! {
+            res = proxy.list_parameters().fuse() => res.context("list_parameters failed"),
+            server_fut = run_server(stream, &server, &defaults).fuse() => Err(anyhow::Error::msg("server finished before request")),
+        }?;
         assert_eq!(res, Ok(vec![]));
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn reset_options_returns_unit() -> Result<(), Error> {
+        let (proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_net_dhcp::Server_Marker>()?;
+        let server = RefCell::new(CannedDispatcher {});
+
+        let defaults = default_params();
+        let res = futures::select! {
+            res = proxy.reset_options().fuse() => res.context("reset_options failed"),
+            server_fut = run_server(stream, &server, &defaults).fuse() => Err(anyhow::Error::msg("server finished before request")),
+        }?;
+
+        assert_eq!(res, Ok(()));
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn reset_parameters_returns_unit() -> Result<(), Error> {
+        let (proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_net_dhcp::Server_Marker>()?;
+        let server = RefCell::new(CannedDispatcher {});
+
+        let defaults = default_params();
+        let res = futures::select! {
+            res = proxy.reset_parameters().fuse() => res.context("reset_parameters failed"),
+            server_fut = run_server(stream, &server, &defaults).fuse() => Err(anyhow::Error::msg("server finished before request")),
+        }?;
+
+        assert_eq!(res, Ok(()));
         Ok(())
     }
 }

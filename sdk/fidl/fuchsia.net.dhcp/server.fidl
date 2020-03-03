@@ -106,37 +106,61 @@ protocol Server {
     /// * error a zx.status indicating why the value could not be retrieved.
     GetParameter(ParameterName name) -> (Parameter value) error zx.status;
 
-    /// Sets the Option to the argument. Each SetOption call is treated as its own atomic
-    /// transaction. On success, a SetOption will take effect immediately.
+    /// Sets the Option to the argument. On success, a SetOption will take
+    /// effect immediately.
     ///
-    /// + request `value` an Option whose value will be set to the value of this argument.
+    /// + request `value` an Option whose value will be set to the value of this
+    /// argument.
     /// * error a zx.status indicating the cause of failure.
     SetOption(Option value) -> () error zx.status;
 
-    /// Sets the Parameter to the argument. Each SetParameter call is treated as its own atomic
-    /// transaction. On success, a SetParameter will take effect immediately.
+    /// Sets the Parameter to the argument. On success, the new parameter value
+    /// can be queried by GetParameter or ListParameter immediately. However,
+    /// the server may require a restart in order for the new Parameter value to
+    /// take effect. To ensure expected operation, administrators should restart
+    /// the server after mutating its parameters with SetParameter or
+    /// ResetParameters.
     ///
-    /// + request `value` a Parameter whose value will be set to the value of this argument.
+    /// + request `value` a Parameter whose value will be set to the value of
+    /// this argument.
     /// * error a zx.status indicating the cause of failure.
     SetParameter(Parameter value) -> () error zx.status;
 
-    /// Lists all DHCP options for which the Server has a value. Any option which does
-    /// not have a value will be omitted from the returned list. ListOptions provides administrators
-    /// a means to print a server's configuration as opposed to querying the value of a single
-    /// Option.
+    /// Lists all DHCP options for which the Server has a value. Any option
+    /// which does not have a value will be omitted from the returned list.
+    /// ListOptions provides administrators a means to print a server's
+    /// configuration as opposed to querying the value of a single Option.
     ///
-    /// - response `options` a vector containing all of the options for which the Server has a
-    /// value. Bounded to 256 as options are identified by a 1 octet code and 256 is the maximum
-    /// number of such codes.
+    /// - response `options` a vector containing all of the options for which
+    /// the Server has a value. Bounded to 256 as options are identified by a 1
+    /// octet code and 256 is the maximum number of such codes.
     /// * error a zx.status indicating the cause of failure.
     ListOptions() -> (vector<Option>:256 options) error zx.status;
 
-    /// Lists all DHCP server parameters. ListParameters provides administrators a means to print a
-    /// server's configuration as opposed to querying the value of a single Parameter.
+    /// Lists all DHCP server parameters. ListParameters provides administrators
+    /// a means to print a server's configuration as opposed to querying the
+    /// value of a single Parameter.
     ///
-    /// - response `parameter` a vector containing the values of all of the Server's parameters.
-    /// Bounded to 256 to provide a generous upper limit on the number of server parameters while
-    /// being of the same size as ListOptions.
+    /// - response `parameter` a vector containing the values of all of the
+    /// Server's parameters. Bounded to 256 to provide a generous upper limit
+    /// on the number of server parameters while being of the same size as
+    /// ListOptions.
     /// * error a zx.status indicating the cause of failure.
     ListParameters() -> (vector<Parameter>:256 parameters) error zx.status;
+
+    /// Resets all DHCP options to have no value. On success, ResetOptions will
+    /// take effect immediately.
+    ///
+    /// * error a zx.status indicating the cause of failure.
+    ResetOptions() -> () error zx.status;
+
+    /// Resets all DHCP server parameters to their default value. On success,
+    /// the reset parameter values can be queried immediately with GetParameter
+    /// or ListParameters. However, the server must be restarted before all new
+    /// parameter values take effect. To ensure expected operation,
+    /// administrators should restart the server after mutating its parameters
+    /// with SetParameter or ResetParameters.
+    ///
+    /// * error a zx.status indicating the cause of failure.
+    ResetParameters() -> () error zx.status;
 };

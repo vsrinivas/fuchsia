@@ -20,6 +20,7 @@ async fn main() -> Result<(), Error> {
         Cli { cmd: Command::Get(get_arg) } => do_get(get_arg, server).await?,
         Cli { cmd: Command::Set(set_arg) } => do_set(set_arg, server).await?,
         Cli { cmd: Command::List(list_arg) } => do_list(list_arg, server).await?,
+        Cli { cmd: Command::Reset(reset_arg) } => do_reset(reset_arg, server).await?,
     };
 
     Ok(())
@@ -74,7 +75,7 @@ async fn do_list(list_arg: List, server: Server_Proxy) -> Result<(), Error> {
                 .list_options()
                 .await?
                 .map_err(|e| fuchsia_zircon::Status::from_raw(e))
-                .with_context(|| "list_options() failed")?;
+                .context("list_options() failed")?;
 
             println!("{:#?}", res);
         }
@@ -83,8 +84,28 @@ async fn do_list(list_arg: List, server: Server_Proxy) -> Result<(), Error> {
                 .list_parameters()
                 .await?
                 .map_err(|e| fuchsia_zircon::Status::from_raw(e))
-                .with_context(|| "list_parameters() failed")?;
+                .context("list_parameters() failed")?;
             println!("{:#?}", res);
+        }
+    };
+    Ok(())
+}
+
+async fn do_reset(reset_arg: Reset, server: Server_Proxy) -> Result<(), Error> {
+    match reset_arg.arg {
+        ResetArg::Option(OptionToken {}) => {
+            let () = server
+                .reset_options()
+                .await?
+                .map_err(fuchsia_zircon::Status::from_raw)
+                .context("reset_options() failed")?;
+        }
+        ResetArg::Parameter(ParameterToken {}) => {
+            let () = server
+                .reset_parameters()
+                .await?
+                .map_err(fuchsia_zircon::Status::from_raw)
+                .context("reset_parameters() failed")?;
         }
     };
     Ok(())

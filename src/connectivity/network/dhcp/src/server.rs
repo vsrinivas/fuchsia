@@ -655,6 +655,10 @@ pub trait ServerDispatcher {
     fn dispatch_list_options(&self) -> Result<Vec<fidl_fuchsia_net_dhcp::Option_>, Status>;
     /// Retrieves all of the stored DHCP parameter values.
     fn dispatch_list_parameters(&self) -> Result<Vec<fidl_fuchsia_net_dhcp::Parameter>, Status>;
+    /// Resets all DHCP options to have no value.
+    fn dispatch_reset_options(&mut self) -> Result<(), Status>;
+    /// Resets all DHCP server parameters to their default values in `defaults`.
+    fn dispatch_reset_parameters(&mut self, defaults: &ServerParameters) -> Result<(), Status>;
 }
 
 impl ServerDispatcher for Server {
@@ -843,6 +847,25 @@ impl ServerDispatcher for Server {
             fidl_fuchsia_net_dhcp::Parameter::ArpProbe(*arp_probe),
             fidl_fuchsia_net_dhcp::Parameter::BoundDeviceNames(bound_device_names.clone()),
         ])
+    }
+
+    fn dispatch_reset_options(&mut self) -> Result<(), Status> {
+        let () = self.options_repo.clear();
+        let opts: Vec<DhcpOption> = self.options_repo.values().cloned().collect();
+        let () = self.stash.store_options(&opts).map_err(|e| {
+            log::warn!("store_options({:?}) in stash failed: {}", opts, e);
+            fuchsia_zircon::Status::INTERNAL
+        })?;
+        Ok(())
+    }
+
+    fn dispatch_reset_parameters(&mut self, defaults: &ServerParameters) -> Result<(), Status> {
+        self.params = defaults.clone();
+        let () = self.stash.store_parameters(&self.params).map_err(|e| {
+            log::warn!("store_parameters({:?}) in stash failed: {}", self.params, e);
+            fuchsia_zircon::Status::INTERNAL
+        })?;
+        Ok(())
     }
 }
 
@@ -3038,6 +3061,44 @@ pub mod tests {
         let params_fields_ct = 7;
         assert_eq!(result.len(), params_fields_ct);
         assert!(result.contains(&expected));
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_server_dispatcher_reset_options() -> Result<(), Error> {
+        let mut server = new_test_minimal_server().await?;
+        let empty_map = HashMap::new();
+        assert_ne!(empty_map, server.options_repo);
+        let () = server.dispatch_reset_options()?;
+        assert_eq!(empty_map, server.options_repo);
+        let stored_opts = server.stash.load_options().await?;
+        assert_eq!(empty_map, stored_opts);
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_server_dispatcher_reset_parameters() -> Result<(), Error> {
+        let mut server = new_test_minimal_server().await?;
+        let default_params = ServerParameters {
+            server_ips: vec![Ipv4Addr::from([192, 168, 0, 1])],
+            lease_length: LeaseLength { default_seconds: 86400, max_seconds: 86400 },
+            managed_addrs: crate::configuration::ManagedAddresses {
+                network_id: Ipv4Addr::from([192, 168, 0, 0]),
+                broadcast: Ipv4Addr::from([192, 168, 0, 128]),
+                mask: crate::configuration::SubnetMask::try_from(25).unwrap(),
+                pool_range_start: Ipv4Addr::from([192, 168, 0, 0]),
+                pool_range_stop: Ipv4Addr::from([192, 168, 0, 0]),
+            },
+            permitted_macs: crate::configuration::PermittedMacs(vec![]),
+            static_assignments: crate::configuration::StaticAssignments(HashMap::new()),
+            arp_probe: false,
+            bound_device_names: vec![],
+        };
+        assert_ne!(default_params, server.params);
+        let () = server.dispatch_reset_parameters(&default_params)?;
+        assert_eq!(default_params, server.params);
+        let stored_params = server.stash.load_parameters().await?;
+        assert_eq!(default_params, stored_params);
         Ok(())
     }
 }
