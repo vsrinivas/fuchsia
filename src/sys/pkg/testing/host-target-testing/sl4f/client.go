@@ -55,9 +55,12 @@ func (c *Client) Close() {
 }
 
 func (c *Client) connect(ctx context.Context) error {
+	log.Printf("connecting to sl4f")
+
 	// If an ssh connection re-establishes without a reboot, sl4f may already be running.
 	pingCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	if err := c.ping(pingCtx); err == nil {
+		log.Printf("already connected to sl4f")
 		cancel()
 		return nil
 	}

@@ -11,7 +11,7 @@ use {
     },
     fidl_fuchsia_pkg_rewrite_ext::Rule,
     fuchsia_async as fasync,
-    fuchsia_syslog::fx_log_err,
+    fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
     fuchsia_url::pkg_url::PkgUrl,
     fuchsia_zircon::Status,
     futures::prelude::*,
@@ -86,6 +86,8 @@ impl RewriteService {
     }
 
     pub(self) fn serve_edit_transaction(&mut self, mut stream: EditTransactionRequestStream) {
+        fx_log_info!("opening rewrite transaction");
+
         let state = self.state.clone();
         let mut transaction = state.read().transaction();
 
@@ -116,9 +118,16 @@ impl RewriteService {
                         }
                         EditTransactionRequest::Commit { responder } => {
                             let status = match state.write().apply(transaction) {
-                                Ok(()) => Status::OK,
-                                Err(CommitError::TooLate) => Status::UNAVAILABLE,
+                                Ok(()) => {
+                                    fx_log_info!("rewrite transaction committed");
+                                    Status::OK
+                                }
+                                Err(CommitError::TooLate) => {
+                                    fx_log_warn!("rewrite transaction out of date");
+                                    Status::UNAVAILABLE
+                                }
                                 Err(CommitError::DynamicConfigurationDisabled) => {
+                                    fx_log_err!("rewrite transaction failed, dynamic configuration is disabled");
                                     Status::ACCESS_DENIED
                                 }
                             };
@@ -127,6 +136,9 @@ impl RewriteService {
                         }
                     }
                 }
+
+                fx_log_info!("rewrite transaction dropped");
+
                 Ok(())
             }
             .unwrap_or_else(|e: Error| {

@@ -10,7 +10,7 @@ use fidl_fuchsia_pkg::{
 };
 use fidl_fuchsia_pkg_ext::RepositoryConfig;
 use fuchsia_async as fasync;
-use fuchsia_syslog::fx_log_err;
+use fuchsia_syslog::{fx_log_err, fx_log_info};
 use fuchsia_url::pkg_url::RepoUrl;
 use fuchsia_zircon::Status;
 use futures::prelude::*;
@@ -62,6 +62,8 @@ impl RepositoryService {
     }
 
     fn serve_insert(&mut self, repo: FidlRepositoryConfig) -> Result<(), Status> {
+        fx_log_info!("inserting repository {:?}", repo.repo_url);
+
         let repo = match RepositoryConfig::try_from(repo) {
             Ok(repo) => repo,
             Err(err) => {
@@ -77,6 +79,8 @@ impl RepositoryService {
     }
 
     fn serve_remove(&mut self, repo_url: String) -> Result<(), Status> {
+        fx_log_info!("removing repository {}", repo_url);
+
         let repo_url = match RepoUrl::parse(&repo_url) {
             Ok(repo_url) => repo_url,
             Err(err) => {
