@@ -8,34 +8,21 @@
 
 namespace {
 
-class OverrideWriter : public Writer {
- public:
-  bool Puts(const std::string& str) override {
-    data_ += str;
-    return true;
-  }
-
-  const std::string& data() const { return data_; }
-
- private:
-  std::string data_;
-};
-
 TEST(OutputUtil, CppCopyrightHeader) {
-  OverrideWriter writer;
+  StringWriter writer;
   EXPECT_EQ(CopyrightHeaderWithCppComments(&writer), true);
-  ASSERT_TRUE(writer.data().size() > 2);
-  EXPECT_EQ(writer.data()[0], '/');
-  EXPECT_EQ(writer.data()[1], '/');
-  EXPECT_EQ(writer.data().back(), '\n');
+  ASSERT_TRUE(writer.Out().size() > 2);
+  EXPECT_EQ(writer.Out()[0], '/');
+  EXPECT_EQ(writer.Out()[1], '/');
+  EXPECT_EQ(writer.Out().back(), '\n');
 }
 
 TEST(OutputUtil, HashCopyrightHeader) {
-  OverrideWriter writer;
+  StringWriter writer;
   EXPECT_EQ(CopyrightHeaderWithHashComments(&writer), true);
-  ASSERT_TRUE(writer.data().size() > 1);
-  EXPECT_EQ(writer.data()[0], '#');
-  EXPECT_EQ(writer.data().back(), '\n');
+  ASSERT_TRUE(writer.Out().size() > 1);
+  EXPECT_EQ(writer.Out()[0], '#');
+  EXPECT_EQ(writer.Out().back(), '\n');
 }
 
 TEST(OutputUtil, CamelToSnake) {
