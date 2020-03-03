@@ -197,7 +197,8 @@ template("clang_toolchain") {
         # TODO: see the comment below
         command += "mkdir -p {{output_dir}}/exe.unstripped && "
       }
-      command += "$rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target {{rustflags}} -o \"$unstripped_outfile\" {{rustdeps}} {{externs}}"
+      # TODO(47565): Replacement for rustenv
+      command += "{{rustenv}} $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target {{rustflags}} -o \"$unstripped_outfile\" {{rustdeps}} {{externs}}"
       description = "RUST {{output}}"
       default_output_dir = "{{root_out_dir}}"
       outputs = [ outfile ]
@@ -232,7 +233,8 @@ template("clang_toolchain") {
     tool("rust_rlib") {
       pool = "//build/rust:pool($default_toolchain)"
       depfile = "{{output}}.d"
-      command = "$rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target {{rustflags}} -o {{output}} {{rustdeps}} {{externs}}"
+      # TODO(47565): Replacement for rustenv
+      command = "{{rustenv}} $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target {{rustflags}} -o {{output}} {{rustdeps}} {{externs}}"
       description = "RUST {{output}}"
       outputs =
           [ "{{output_dir}}/lib{{target_output_name}}{{output_extension}}" ]
@@ -243,7 +245,8 @@ template("clang_toolchain") {
     tool("rust_staticlib") {
       pool = "//build/rust:pool($default_toolchain)"
       depfile = "{{output}}.d"
-      command = "$rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target {{rustflags}} -o {{output}} {{rustdeps}} {{externs}}"
+      # TODO(47565): Replacement for rustenv
+      command = "{{rustenv}} $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target {{rustflags}} -o {{output}} {{rustdeps}} {{externs}}"
       description = "RUST {{output}}"
 
       # TODO: enable this once Ninja supports multiple outputs with depfile:
@@ -264,7 +267,8 @@ template("clang_toolchain") {
     tool("rust_cdylib") {
       pool = "//build/rust:pool($default_toolchain)"
       depfile = "{{output}}.d"
-      command = "$rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target {{rustflags}} -o {{output}} {{rustdeps}} {{externs}}"
+      # TODO(47565): Replacement for rustenv
+      command = "{{rustenv}} $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target {{rustflags}} -o {{output}} {{rustdeps}} {{externs}}"
       description = "RUST {{output}}"
       outputs = [ "{{output_dir}}/{{target_output_name}}{{output_extension}}" ]
       default_output_dir = "{{target_out_dir}}"
@@ -284,7 +288,7 @@ template("clang_toolchain") {
         # TODO: see the comment below
         command += "mkdir -p {{output_dir}}/exe.unstripped && "
       }
-      command += "$rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target {{rustflags}} -o \"$unstripped_outfile\" {{rustdeps}} {{externs}}"
+      command += "{{rustenv}} $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target {{rustflags}} -o \"$unstripped_outfile\" {{rustdeps}} {{externs}}"
       description = "RUST {{output}}"
       default_output_dir = "{{root_out_dir}}"
       if (invoker.toolchain_os == "mac") {
@@ -325,7 +329,8 @@ template("clang_toolchain") {
     tool("rust_macro") {
       pool = "//build/rust:pool($default_toolchain)"
       depfile = "{{output}}.d"
-      command = "$rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target {{rustflags}} -o {{output}} {{rustdeps}} {{externs}}"
+      # TODO(47565): Replacement for rustenv
+      command = "{{rustenv}} $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target {{rustflags}} -o {{output}} {{rustdeps}} {{externs}}"
       description = "RUST {{output}}"
       outputs = [ "{{output_dir}}/{{target_output_name}}{{output_extension}}" ]
       default_output_dir = "{{root_out_dir}}"
