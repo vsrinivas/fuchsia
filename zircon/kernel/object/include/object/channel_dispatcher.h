@@ -93,7 +93,7 @@ class ChannelDispatcher final
     zx_status_t status_;
   };
 
-  uint64_t get_message_count() const TA_REQ(get_lock()) { return message_count_; }
+  uint64_t get_message_count() const TA_REQ(get_lock()) { return messages_.size(); }
   uint64_t get_max_message_count() const TA_REQ(get_lock()) { return max_message_count_; }
 
   // PeeredDispatcher implementation.
@@ -103,7 +103,7 @@ class ChannelDispatcher final
   void set_owner(zx_koid_t new_owner) final;
 
  private:
-  using MessageList = fbl::DoublyLinkedList<MessagePacketPtr>;
+  using MessageList = fbl::SizedDoublyLinkedList<MessagePacketPtr>;
   using WaiterList = fbl::DoublyLinkedList<MessageWaiter*>;
 
   void RemoveWaiter(MessageWaiter* waiter);
@@ -114,7 +114,6 @@ class ChannelDispatcher final
   zx_status_t UserSignalSelf(uint32_t clear_mask, uint32_t set_mask) TA_REQ(get_lock());
 
   MessageList messages_ TA_GUARDED(get_lock());
-  uint64_t message_count_ TA_GUARDED(get_lock()) = 0;
   uint64_t max_message_count_ TA_GUARDED(get_lock()) = 0;
   // Tracks the process that is allowed to issue calls, for example write
   // to the opposite end. Without it, one can see writes out of order with

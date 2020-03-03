@@ -85,7 +85,6 @@ ChannelDispatcher::~ChannelDispatcher() {
   // It's not possible to do this safely in on_zero_handles()
 
   messages_.clear();
-  message_count_ = 0;
 
   switch (max_message_count_) {
     case 0 ... 1:
@@ -113,7 +112,7 @@ zx_status_t ChannelDispatcher::AddObserver(StateObserver* observer) {
   canary_.Assert();
 
   Guard<fbl::Mutex> guard{get_lock()};
-  StateObserver::CountInfo cinfo = {{{message_count_, ZX_CHANNEL_READABLE}, {0u, 0u}}};
+  StateObserver::CountInfo cinfo = {{{messages_.size(), ZX_CHANNEL_READABLE}, {0u, 0u}}};
   AddObserverLocked(observer, &cinfo);
   return ZX_OK;
 }
@@ -194,7 +193,6 @@ zx_status_t ChannelDispatcher::Read(zx_koid_t owner, uint32_t* msg_size, uint32_
   }
 
   *msg = messages_.pop_front();
-  message_count_--;
 
   if (messages_.is_empty())
     UpdateStateLocked(ZX_CHANNEL_READABLE, 0u);
@@ -345,9 +343,8 @@ void ChannelDispatcher::WriteSelf(MessagePacketPtr msg) {
     }
   }
   messages_.push_back(ktl::move(msg));
-  message_count_++;
-  if (message_count_ > max_message_count_) {
-    max_message_count_ = message_count_;
+  if (messages_.size() > max_message_count_) {
+    max_message_count_ = messages_.size();
   }
 
   UpdateStateLocked(0u, ZX_CHANNEL_READABLE);
