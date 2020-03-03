@@ -36,6 +36,11 @@ final ArgParser fxTestArgParser = ArgParser()
       defaultsTo: true,
       negatable: true,
       help: 'If true, invokes `fx build` before running the test suite')
+  ..addFlag('info',
+      defaultsTo: false,
+      negatable: false,
+      help: 'If true, prints the test specification in key:value format, '
+          'and exits')
   ..addFlag('random',
       abbr: 'r',
       defaultsTo: false,

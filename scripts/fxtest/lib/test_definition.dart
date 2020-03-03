@@ -22,9 +22,6 @@ class TestDefinition {
   final String name;
   final String os;
 
-  final List<String> deviceTypes;
-  final List<String> tags;
-
   ExecutionHandle _executionHandle;
   PackageUrl _parsedUrl;
 
@@ -38,8 +35,6 @@ class TestDefinition {
     this.label,
     this.packageUrl,
     this.path,
-    this.deviceTypes,
-    this.tags,
   });
 
   factory TestDefinition.fromJson(

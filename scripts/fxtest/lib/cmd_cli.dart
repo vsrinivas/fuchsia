@@ -96,18 +96,7 @@ class FuchsiaTestCommandCli {
       testNames: testNamesCollector.collect(),
     );
 
-    var slowTestThreshold = testsConfig.flags.warnSlowerThan > 0
-        ? Duration(seconds: testsConfig.flags.warnSlowerThan)
-        : null;
-    var formatter = testsConfig.flags.isVerbose
-        ? VerboseOutputFormatter(
-            slowTestThreshold: slowTestThreshold,
-            shouldColorizeOutput: testsConfig.flags.simpleOutput,
-          )
-        : CondensedOutputFormatter(
-            slowTestThreshold: slowTestThreshold,
-            shouldColorizeOutput: testsConfig.flags.simpleOutput,
-          );
+    var formatter = _getFormatter(testsConfig);
     _cmd = FuchsiaTestCommand(
       analyticsReporter: testsConfig.flags.dryRun
           ? AnalyticsReporter.noop()
@@ -124,6 +113,24 @@ class FuchsiaTestCommandCli {
       await rebuildFuchsia();
     }
     exitCode = await _cmd.runTestSuite(manifestReader: TestsManifestReader());
+  }
+
+  OutputFormatter _getFormatter(TestsConfig testsConfig) {
+    if (testsConfig.flags.infoOnly) {
+      return InfoFormatter();
+    }
+    var slowTestThreshold = testsConfig.flags.warnSlowerThan > 0
+        ? Duration(seconds: testsConfig.flags.warnSlowerThan)
+        : null;
+    return testsConfig.flags.isVerbose
+        ? VerboseOutputFormatter(
+            slowTestThreshold: slowTestThreshold,
+            shouldColorizeOutput: testsConfig.flags.simpleOutput,
+          )
+        : CondensedOutputFormatter(
+            slowTestThreshold: slowTestThreshold,
+            shouldColorizeOutput: testsConfig.flags.simpleOutput,
+          );
   }
 
   Future<void> terminateEarly() async {

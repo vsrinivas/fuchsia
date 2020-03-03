@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'package:fxtest/test_definition.dart';
 import 'package:meta/meta.dart';
 
 /// Base class for our test suite stream which keeps our output in sync with
@@ -68,9 +69,13 @@ class TestInfo extends TestEvent {
 }
 
 class TestStarted extends TestEvent {
+  final TestDefinition testDefinition;
   final String testName;
 
-  TestStarted({@required this.testName});
+  TestStarted({
+    @required this.testDefinition,
+    @required this.testName,
+  });
 
   @override
   String toString() => '<TestStarted $testName>';

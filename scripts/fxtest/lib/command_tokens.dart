@@ -22,4 +22,7 @@ class CommandTokens {
   String get command => tokens.first;
   List<String> get args => tokens.sublist(1);
   String get fullCommand => tokens.join(' ').trim();
+
+  @override
+  String toString() => fullCommand;
 }

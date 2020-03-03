@@ -284,3 +284,46 @@ class CondensedOutputFormatter extends OutputFormatter {
     }
   }
 }
+
+/// Special formatter for when the caller is only using this tool to translate
+/// shorthand test invocation patterns into fully-formed patterns.
+///
+/// This formatter is not intended to be paired with an actual test suite
+/// execution, and as such, ignores all events except `TestStarted`, which it
+/// uses to print a fully hydrated test invocation pattern.
+class InfoFormatter extends OutputFormatter {
+  @override
+  void _handleTestInfo(TestInfo event) {}
+  @override
+  void _handleTestStarted(TestStarted event) {
+    _buffer.addLines(infoPrint(event.testDefinition));
+  }
+
+  @override
+  void _handleTestResult(TestResult event) {}
+  @override
+  void _finalizeOutput() {}
+}
+
+List<String> infoPrint(TestDefinition testDefinition) {
+  var command =
+      testDefinition.executionHandle.getInvocationTokens(const []).toString();
+  return <String>[
+    _isTruthy(command) ? 'command: $command' : null,
+    _isTruthy(testDefinition.cpu) ? 'cpu: ${testDefinition.cpu}' : null,
+    _isTruthy(testDefinition.depsFile)
+        ? 'depsFile: ${testDefinition.depsFile}'
+        : null,
+    _isTruthy(testDefinition.name) ? 'name: ${testDefinition.name}' : null,
+    _isTruthy(testDefinition.os) ? 'os: ${testDefinition.os}' : null,
+    _isTruthy(testDefinition.packageUrl)
+        ? 'package_url: ${testDefinition.packageUrl}'
+        : null,
+    _isTruthy(testDefinition.label) ? 'label: ${testDefinition.label}' : null,
+    _isTruthy(testDefinition.path) ? 'path: ${testDefinition.path}' : null,
+    '',
+  ].where((_val) => _val != null).toList()
+    ..sort();
+}
+
+bool _isTruthy(String val) => val != null && val != '';

@@ -75,7 +75,7 @@ class TestBundle {
     }
 
     String fullCommand = commandTokens.fullCommand;
-    yield TestStarted(testName: fullCommand);
+    yield TestStarted(testDefinition: testDefinition, testName: fullCommand);
 
     if (isDryRun) {
       yield TestResult.skipped(testName: fullCommand);

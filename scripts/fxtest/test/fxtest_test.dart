@@ -624,6 +624,22 @@ void main() {
   });
 
   group('flags are parsed correctly', () {
+    test('with --info', () {
+      ArgResults results = fxTestArgParser.parse(['--info']);
+      var testsConfig = TestsConfig.fromArgResults(results: results);
+      expect(testsConfig.flags.infoOnly, true);
+      expect(testsConfig.flags.dryRun, true);
+      expect(testsConfig.flags.shouldRebuild, false);
+    });
+
+    test('with --dry', () {
+      ArgResults results = fxTestArgParser.parse(['--dry']);
+      var testsConfig = TestsConfig.fromArgResults(results: results);
+      expect(testsConfig.flags.infoOnly, false);
+      expect(testsConfig.flags.dryRun, true);
+      expect(testsConfig.flags.shouldRebuild, false);
+    });
+
     test('with --no-build', () {
       ArgResults results = fxTestArgParser.parse(['--no-build']);
       var testsConfig = TestsConfig.fromArgResults(results: results);

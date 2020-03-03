@@ -19,6 +19,7 @@ class Flags {
   final bool shouldRebuild;
 
   /// Extra tokens to be passed through to individual tests.
+  final bool infoOnly;
   final bool shouldFailFast;
   final bool simpleOutput;
   final bool shouldOnlyRunDeviceTests;
@@ -33,6 +34,7 @@ class Flags {
     this.limit = 0,
     this.realm,
     this.allOutput = false,
+    this.infoOnly = false,
     this.simpleOutput = false,
     this.shouldFailFast = false,
     this.shouldOnlyRunDeviceTests = false,
@@ -47,7 +49,8 @@ class Flags {
   factory Flags.fromArgResults(ArgResults argResults) {
     return Flags(
       allOutput: argResults['output'],
-      dryRun: argResults['dry'],
+      dryRun: argResults['info'] || argResults['dry'],
+      infoOnly: argResults['info'],
       isVerbose: argResults['verbose'] || argResults['output'],
       limit: int.parse(argResults['limit'] ?? '0'),
       realm: argResults['realm'],
@@ -58,7 +61,8 @@ class Flags {
       shouldPrintSkipped: argResults['skipped'],
 
       // True (aka, yes rebuild) if `no-build` is missing or set to `False`
-      shouldRebuild: (argResults['build'] == null || argResults['build']),
+      shouldRebuild: (!argResults['info'] && !argResults['dry']) &&
+          (argResults['build'] == null || argResults['build']),
       shouldRandomizeTestOrder: argResults['random'],
       shouldSilenceUnsupported: argResults['silenceunsupported'],
       warnSlowerThan: int.parse(argResults['warnslow'] ?? '0'),
@@ -72,6 +76,7 @@ class Flags {
   limit: $limit
   realm: $realm
   isVerbose: $isVerbose
+  info: $infoOnly,
   simpleOutput: $simpleOutput,
   shouldOnlyRunDeviceTests: $shouldOnlyRunDeviceTests
   shouldOnlyRunHostTests: $shouldOnlyRunHostTests
