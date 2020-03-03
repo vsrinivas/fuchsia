@@ -19,14 +19,14 @@
 #include "src/lib/files/path.h"
 #include "src/lib/files/unique_fd.h"
 #include "src/lib/fsl/io/fd.h"
-#include "src/sys/appmgr/allowlist.h"
+#include "src/sys/appmgr/allow_list.h"
 
 namespace component {
 
 constexpr char kDeprecatedDataName[] = "deprecated-data";
 constexpr char kBlockedDataName[] = "data";
 
-constexpr char kGlobalDataAllowlist[] = "allowlist/global_data.txt";
+constexpr char kGlobalDataAllowList[] = "allowlist/global_data.txt";
 
 NamespaceBuilder::~NamespaceBuilder() = default;
 
@@ -168,7 +168,7 @@ void NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox,
   }
 
   if (sandbox.HasInternalFeature("global-data")) {
-    Allowlist global_data_allowlist(appmgr_config_dir_, kGlobalDataAllowlist, Allowlist::kExpected);
+    AllowList global_data_allowlist(appmgr_config_dir_, kGlobalDataAllowList, AllowList::kExpected);
     if (global_data_allowlist.IsAllowed(ns_id)) {
       PushDirectoryFromPathAsWithPermissions("/data", "/global_data",
                                              O_DIRECTORY | O_RDONLY | O_ADMIN);

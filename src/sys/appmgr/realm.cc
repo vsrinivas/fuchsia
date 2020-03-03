@@ -42,7 +42,7 @@
 #include "src/lib/fxl/strings/substitute.h"
 #include "src/lib/json_parser/json_parser.h"
 #include "src/lib/pkg_url/url_resolver.h"
-#include "src/sys/appmgr/allowlist.h"
+#include "src/sys/appmgr/allow_list.h"
 #include "src/sys/appmgr/dynamic_library_loader.h"
 #include "src/sys/appmgr/hub/realm_hub.h"
 #include "src/sys/appmgr/namespace_builder.h"
@@ -60,13 +60,13 @@ constexpr char kBinaryKey[] = "binary";
 constexpr char kAppArgv0Prefix[] = "/pkg/";
 constexpr zx_status_t kComponentCreationFailed = -1;
 
-constexpr char kDeprecatedShellAllowlist[] = "allowlist/deprecated_shell.txt";
-constexpr char kDeprecatedAmbientReplaceAsExecAllowlist[] =
+constexpr char kDeprecatedShellAllowList[] = "allowlist/deprecated_shell.txt";
+constexpr char kDeprecatedAmbientReplaceAsExecAllowList[] =
     "allowlist/deprecated_ambient_replace_as_executable.txt";
-constexpr char kComponentEventProviderAllowlist[] = "allowlist/component_event_provider.txt";
-constexpr char kPackageResolverAllowlist[] = "allowlist/package_resolver.txt";
-constexpr char kPackageCacheAllowlist[] = "allowlist/package_cache.txt";
-constexpr char kPkgFsVersionsAllowlist[] = "allowlist/pkgfs_versions.txt";
+constexpr char kComponentEventProviderAllowList[] = "allowlist/component_event_provider.txt";
+constexpr char kPackageResolverAllowList[] = "allowlist/package_resolver.txt";
+constexpr char kPackageCacheAllowList[] = "allowlist/package_cache.txt";
+constexpr char kPkgFsVersionsAllowList[] = "allowlist/pkgfs_versions.txt";
 
 using fuchsia::sys::TerminationReason;
 
@@ -506,8 +506,8 @@ void Realm::Resolve(fidl::StringPtr name, fuchsia::process::Resolver::ResolveCal
 
   auto trace_id = TRACE_NONCE();
   TRACE_ASYNC_BEGIN("appmgr", "Realm::ResolveLoader::LoadUrl", trace_id, "url", canon_url);
-  loader_->LoadUrl(canon_url, [trace_id, callback = std::move(callback), pkg_url](
-                                  fuchsia::sys::PackagePtr package) mutable {
+  loader_->LoadUrl(canon_url, [trace_id, callback = std::move(callback),
+                               pkg_url](fuchsia::sys::PackagePtr package) mutable {
     TRACE_ASYNC_END("appmgr", "Realm::ResolveLoader::LoadUrl", trace_id);
 
     zx::vmo binary;
@@ -537,9 +537,8 @@ void Realm::Resolve(fidl::StringPtr name, fuchsia::process::Resolver::ResolveCal
     zx_status_t status = fdio_open_fd_at(dirfd.get(), pkg_url.resource_path().c_str(), flags,
                                          exec_fd.reset_and_get_address());
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "fdio_open_fd_at(" << dirfd.get() << ", "
-                     << pkg_url.resource_path().c_str() << ", "
-                     << flags << ") failed: " << zx_status_get_string(status);
+      FXL_LOG(ERROR) << "fdio_open_fd_at(" << dirfd.get() << ", " << pkg_url.resource_path().c_str()
+                     << ", " << flags << ") failed: " << zx_status_get_string(status);
       callback(status, std::move(binary), std::move(loader));
       return;
     }
@@ -1099,14 +1098,14 @@ std::string Realm::IsolatedPathForPackage(std::string path_prefix, const Fuchsia
 }
 
 bool Realm::IsAllowedToUseDeprecatedShell(std::string ns_id) {
-  Allowlist deprecated_shell_allowlist(appmgr_config_dir_, kDeprecatedShellAllowlist,
-                                       Allowlist::kExpected);
+  AllowList deprecated_shell_allowlist(appmgr_config_dir_, kDeprecatedShellAllowList,
+                                       AllowList::kExpected);
   return deprecated_shell_allowlist.IsAllowed(ns_id);
 }
 
 bool Realm::IsAllowedToUseDeprecatedAmbientReplaceAsExecutable(std::string ns_id) {
-  Allowlist deprecated_exec_allowlist(appmgr_config_dir_, kDeprecatedAmbientReplaceAsExecAllowlist,
-                                      Allowlist::kOptional);
+  AllowList deprecated_exec_allowlist(appmgr_config_dir_, kDeprecatedAmbientReplaceAsExecAllowList,
+                                      AllowList::kOptional);
   // We treat the absence of the allowlist as an indication that we should be
   // permissive and allow all components to use replace-as-executable.  We add
   // the allowlist in user builds to ensure we are enforcing policy.
@@ -1118,30 +1117,30 @@ bool Realm::IsAllowedToUseDeprecatedAmbientReplaceAsExecutable(std::string ns_id
 }
 
 bool Realm::IsAllowedToConnectToComponentEventProvider(std::string ns_id) {
-  Allowlist component_event_provider_allowlist(appmgr_config_dir_, kComponentEventProviderAllowlist,
-                                               Allowlist::kExpected);
+  AllowList component_event_provider_allowlist(appmgr_config_dir_, kComponentEventProviderAllowList,
+                                               AllowList::kExpected);
   return component_event_provider_allowlist.IsAllowed(ns_id);
 }
 
 bool Realm::IsAllowedToUsePackageResolver(std::string ns_id) {
   // There is a more permissive allowlist for non-user builds, but we enforce some kind
   // of allowlist in all build types.
-  Allowlist package_resolver_allowlist(appmgr_config_dir_, kPackageResolverAllowlist,
-                                       Allowlist::kExpected);
+  AllowList package_resolver_allowlist(appmgr_config_dir_, kPackageResolverAllowList,
+                                       AllowList::kExpected);
   return package_resolver_allowlist.IsAllowed(ns_id);
 }
 
 bool Realm::IsAllowedToUsePackageCache(std::string ns_id) {
   // There is a more permissive allowlist for non-user builds, but we enforce some kind
   // of allowlist in all build types.
-  Allowlist package_cache_allowlist(appmgr_config_dir_, kPackageCacheAllowlist,
-                                    Allowlist::kExpected);
+  AllowList package_cache_allowlist(appmgr_config_dir_, kPackageCacheAllowList,
+                                    AllowList::kExpected);
   return package_cache_allowlist.IsAllowed(ns_id);
 }
 
 bool Realm::IsAllowedToUsePkgFsVersions(std::string ns_id) {
-  Allowlist pkgfs_versions_allowlist(appmgr_config_dir_, kPkgFsVersionsAllowlist,
-                                     Allowlist::kExpected);
+  AllowList pkgfs_versions_allowlist(appmgr_config_dir_, kPkgFsVersionsAllowList,
+                                     AllowList::kExpected);
   return pkgfs_versions_allowlist.IsAllowed(ns_id);
 }
 

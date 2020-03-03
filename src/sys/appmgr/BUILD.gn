@@ -9,8 +9,8 @@ import("//build/testing/environments.gni")
 
 source_set("lib") {
   sources = [
-    "allowlist.cc",
-    "allowlist.h",
+    "allow_list.cc",
+    "allow_list.h",
     "cache_control.cc",
     "cache_control.h",
     "component_controller_impl.cc",
@@ -130,7 +130,7 @@ executable("unittest_bin") {
   output_name = "appmgr_unittests"
 
   sources = [
-    "allowlist_unittest.cc",
+    "allow_list_unittest.cc",
     "component_controller_unittest.cc",
     "component_event_provider_unittest.cc",
     "hub/hub_holder_unittest.cc",

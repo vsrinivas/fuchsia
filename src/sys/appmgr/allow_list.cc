@@ -2,18 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/sys/appmgr/allowlist.h"
+#include "src/sys/appmgr/allow_list.h"
 
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/strings/split_string.h"
 
 namespace component {
 
-Allowlist::Allowlist(const fxl::UniqueFD& dir, const std::string& path,
-                     Allowlist::Expectation expected) {
+AllowList::AllowList(const fxl::UniqueFD& dir, const std::string& path,
+                     AllowList::Expectation expected) {
   std::string result;
   if (!files::ReadFileToStringAt(dir.get(), path, &result)) {
-    if (expected == Allowlist::kExpected) {
+    if (expected == AllowList::kExpected) {
       FXL_LOG(ERROR) << "Failed to read allowlist " << path;
     }
     file_found_ = false;
