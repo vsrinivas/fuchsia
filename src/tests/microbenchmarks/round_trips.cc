@@ -19,6 +19,7 @@
 #include <thread>
 #include <vector>
 
+#include "assert.h"
 #include "lib/fidl/cpp/binding.h"
 #include "src/lib/fxl/arraysize.h"
 #include "src/lib/fxl/logging.h"
@@ -59,15 +60,13 @@ namespace {
 // Returns false if the channel's peer was closed.
 bool ChannelRead(const zx::channel& channel, std::vector<uint8_t>* msg) {
   zx_signals_t observed;
-  zx_status_t status = channel.wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
-                                        zx::time::infinite(), &observed);
-  FXL_CHECK(status == ZX_OK);
+  ASSERT_OK(channel.wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(),
+                             &observed));
   if (observed & ZX_CHANNEL_PEER_CLOSED)
     return false;
 
   uint32_t bytes_read;
-  status = channel.read(0, msg->data(), nullptr, msg->size(), 0, &bytes_read, nullptr);
-  FXL_CHECK(status == ZX_OK);
+  ASSERT_OK(channel.read(0, msg->data(), nullptr, msg->size(), 0, &bytes_read, nullptr));
   FXL_CHECK(bytes_read == msg->size());
   return true;
 }
@@ -90,8 +89,7 @@ void ChannelServe(const zx::channel& channel, uint32_t count, uint32_t size) {
     if (!ChannelReadMultiple(channel, count, &msg))
       break;
     for (uint32_t i = 0; i < count; ++i) {
-      zx_status_t status = channel.write(0, msg.data(), msg.size(), nullptr, 0);
-      FXL_CHECK(status == ZX_OK);
+      ASSERT_OK(channel.write(0, msg.data(), msg.size(), nullptr, 0));
     }
   }
 }
@@ -112,8 +110,7 @@ class ThreadOrProcess {
       thread_.join();
     if (subprocess_) {
       // Join the process.
-      FXL_CHECK(subprocess_.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(), nullptr) ==
-                ZX_OK);
+      ASSERT_OK(subprocess_.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(), nullptr));
     }
   }
 
@@ -163,13 +160,12 @@ class BasicChannelTest {
   explicit BasicChannelTest(MultiProc multiproc, uint32_t msg_count, uint32_t msg_size)
       : args_({msg_count, msg_size}), msg_(args_.msg_size) {
     zx::channel server;
-    FXL_CHECK(zx::channel::create(0, &server, &client_) == ZX_OK);
+    ASSERT_OK(zx::channel::create(0, &server, &client_));
     thread_or_process_.Launch("BasicChannelTest::ThreadFunc", MakeHandleVector(server.release()),
                               multiproc);
 
     // Pass the test arguments to the other thread.
-    zx_status_t status = client_.write(0, &args_, sizeof(args_), nullptr, 0);
-    FXL_CHECK(status == ZX_OK);
+    ASSERT_OK(client_.write(0, &args_, sizeof(args_), nullptr, 0));
   }
 
   static void ThreadFunc(std::vector<zx::handle>&& handles) {
@@ -182,7 +178,7 @@ class BasicChannelTest {
 
   void Run() {
     for (unsigned i = 0; i < args_.msg_count; ++i) {
-      FXL_CHECK(client_.write(0, msg_.data(), msg_.size(), nullptr, 0) == ZX_OK);
+      ASSERT_OK(client_.write(0, msg_.data(), msg_.size(), nullptr, 0));
     }
     FXL_CHECK(ChannelReadMultiple(client_, args_.msg_count, &msg_));
   }
@@ -213,23 +209,23 @@ class ChannelPortTest {
  public:
   explicit ChannelPortTest(MultiProc multiproc) {
     zx::channel server;
-    FXL_CHECK(zx::channel::create(0, &server, &client_) == ZX_OK);
+    ASSERT_OK(zx::channel::create(0, &server, &client_));
     thread_or_process_.Launch("ChannelPortTest::ThreadFunc", MakeHandleVector(server.release()),
                               multiproc);
-    FXL_CHECK(zx::port::create(0, &client_port_) == ZX_OK);
+    ASSERT_OK(zx::port::create(0, &client_port_));
   }
 
   static bool ChannelPortRead(const zx::channel& channel, const zx::port& port, uint32_t* msg) {
-    FXL_CHECK(channel.wait_async(port, 0, ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
-                                 ZX_WAIT_ASYNC_ONCE) == ZX_OK);
+    ASSERT_OK(channel.wait_async(port, 0, ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
+                                 ZX_WAIT_ASYNC_ONCE));
 
     zx_port_packet_t packet;
-    FXL_CHECK(port.wait(zx::time::infinite(), &packet) == ZX_OK);
+    ASSERT_OK(port.wait(zx::time::infinite(), &packet));
     if (packet.signal.observed & ZX_CHANNEL_PEER_CLOSED)
       return false;
 
     uint32_t bytes_read;
-    FXL_CHECK(channel.read(0, msg, nullptr, sizeof(*msg), 0, &bytes_read, nullptr) == ZX_OK);
+    ASSERT_OK(channel.read(0, msg, nullptr, sizeof(*msg), 0, &bytes_read, nullptr));
     FXL_CHECK(bytes_read == sizeof(*msg));
     return true;
   }
@@ -239,19 +235,19 @@ class ChannelPortTest {
     zx::channel channel(std::move(handles[0]));
 
     zx::port port;
-    FXL_CHECK(zx::port::create(0, &port) == ZX_OK);
+    ASSERT_OK(zx::port::create(0, &port));
 
     for (;;) {
       uint32_t msg;
       if (!ChannelPortRead(channel, port, &msg))
         break;
-      FXL_CHECK(channel.write(0, &msg, sizeof(msg), nullptr, 0) == ZX_OK);
+      ASSERT_OK(channel.write(0, &msg, sizeof(msg), nullptr, 0));
     }
   }
 
   void Run() {
     uint32_t msg = 123;
-    FXL_CHECK(client_.write(0, &msg, sizeof(msg), nullptr, 0) == ZX_OK);
+    ASSERT_OK(client_.write(0, &msg, sizeof(msg), nullptr, 0));
     FXL_CHECK(ChannelPortRead(client_, client_port_, &msg));
   }
 
@@ -268,7 +264,7 @@ class ChannelCallTest {
  public:
   explicit ChannelCallTest(MultiProc multiproc) {
     zx::channel server;
-    FXL_CHECK(zx::channel::create(0, &server, &client_) == ZX_OK);
+    ASSERT_OK(zx::channel::create(0, &server, &client_));
     thread_or_process_.Launch("ChannelCallTest::ThreadFunc", MakeHandleVector(server.release()),
                               multiproc);
 
@@ -292,8 +288,7 @@ class ChannelCallTest {
   void Run() {
     uint32_t bytes_read;
     uint32_t handles_read;
-    zx_status_t status = client_.call(0, zx::time::infinite(), &args_, &bytes_read, &handles_read);
-    FXL_CHECK(status == ZX_OK);
+    ASSERT_OK(client_.call(0, zx::time::infinite(), &args_, &bytes_read, &handles_read));
   }
 
  private:
@@ -310,13 +305,13 @@ class ChannelCallTest {
 class PortTest {
  public:
   explicit PortTest(MultiProc multiproc) {
-    FXL_CHECK(zx::port::create(0, &ports_[0]) == ZX_OK);
-    FXL_CHECK(zx::port::create(0, &ports_[1]) == ZX_OK);
+    ASSERT_OK(zx::port::create(0, &ports_[0]));
+    ASSERT_OK(zx::port::create(0, &ports_[1]));
 
     std::vector<zx::handle> ports_dup(2);
     for (int i = 0; i < 2; ++i) {
       zx::port dup;
-      FXL_CHECK(ports_[i].duplicate(ZX_RIGHT_SAME_RIGHTS, &dup) == ZX_OK);
+      ASSERT_OK(ports_[i].duplicate(ZX_RIGHT_SAME_RIGHTS, &dup));
       ports_dup[i] = std::move(dup);
     }
     thread_or_process_.Launch("PortTest::ThreadFunc", std::move(ports_dup), multiproc);
@@ -327,26 +322,26 @@ class PortTest {
     zx_port_packet_t packet = {};
     packet.type = ZX_PKT_TYPE_USER;
     packet.user.u32[0] = 1;
-    FXL_CHECK(ports_[0].queue(&packet) == ZX_OK);
+    ASSERT_OK(ports_[0].queue(&packet));
   }
 
   static void ThreadFunc(std::vector<zx::handle>&& ports) {
     FXL_CHECK(ports.size() == 2);
     for (;;) {
       zx_port_packet_t packet;
-      FXL_CHECK(zx_port_wait(ports[0].get(), ZX_TIME_INFINITE, &packet) == ZX_OK);
+      ASSERT_OK(zx_port_wait(ports[0].get(), ZX_TIME_INFINITE, &packet));
       // Check for a request to shut down.
       if (packet.user.u32[0])
         break;
-      FXL_CHECK(zx_port_queue(ports[1].get(), &packet) == ZX_OK);
+      ASSERT_OK(zx_port_queue(ports[1].get(), &packet));
     }
   }
 
   void Run() {
     zx_port_packet_t packet = {};
     packet.type = ZX_PKT_TYPE_USER;
-    FXL_CHECK(ports_[0].queue(&packet) == ZX_OK);
-    FXL_CHECK(ports_[1].wait(zx::time::infinite(), &packet) == ZX_OK);
+    ASSERT_OK(ports_[0].queue(&packet));
+    ASSERT_OK(ports_[1].wait(zx::time::infinite(), &packet));
   }
 
  private:
@@ -358,27 +353,27 @@ class PortTest {
 // uses a port for waiting on the event object.
 class EventPortSignaler {
  public:
-  EventPortSignaler() { FXL_CHECK(zx::port::create(0, &port_) == ZX_OK); }
+  EventPortSignaler() { ASSERT_OK(zx::port::create(0, &port_)); }
 
   void set_event(zx::eventpair&& event) { event_ = std::move(event); }
 
   // Waits for the event to be signaled.  Returns true if it was signaled
   // by Signal() and false if the peer event object was closed.
   bool Wait() {
-    FXL_CHECK(event_.wait_async(port_, 0, ZX_USER_SIGNAL_0 | ZX_EVENTPAIR_PEER_CLOSED,
-                                ZX_WAIT_ASYNC_ONCE) == ZX_OK);
+    ASSERT_OK(event_.wait_async(port_, 0, ZX_USER_SIGNAL_0 | ZX_EVENTPAIR_PEER_CLOSED,
+                                ZX_WAIT_ASYNC_ONCE));
     zx_port_packet_t packet;
-    FXL_CHECK(port_.wait(zx::time::infinite(), &packet) == ZX_OK);
+    ASSERT_OK(port_.wait(zx::time::infinite(), &packet));
     if (packet.signal.observed & ZX_EVENTPAIR_PEER_CLOSED)
       return false;
     // Clear the signal bit.
-    FXL_CHECK(event_.signal(ZX_USER_SIGNAL_0, 0) == ZX_OK);
+    ASSERT_OK(event_.signal(ZX_USER_SIGNAL_0, 0));
     return true;
   }
 
   void Signal() {
     // Set a signal bit.
-    FXL_CHECK(event_.signal_peer(0, ZX_USER_SIGNAL_0) == ZX_OK);
+    ASSERT_OK(event_.signal_peer(0, ZX_USER_SIGNAL_0));
   }
 
  private:
@@ -394,7 +389,7 @@ class EventPortTest {
   explicit EventPortTest(MultiProc multiproc) {
     zx::eventpair event1;
     zx::eventpair event2;
-    FXL_CHECK(zx::eventpair::create(0, &event1, &event2) == ZX_OK);
+    ASSERT_OK(zx::eventpair::create(0, &event1, &event2));
     signaler_.set_event(std::move(event1));
 
     thread_or_process_.Launch("EventPortTest::ThreadFunc", MakeHandleVector(event2.release()),
@@ -425,7 +420,7 @@ class EventPortTest {
 // uses a port for waiting on the socket object.
 class SocketPortSignaler {
  public:
-  SocketPortSignaler() { FXL_CHECK(zx::port::create(0, &port_) == ZX_OK); }
+  SocketPortSignaler() { ASSERT_OK(zx::port::create(0, &port_)); }
 
   void set_socket(zx::socket&& socket) { socket_ = std::move(socket); }
 
@@ -433,15 +428,15 @@ class SocketPortSignaler {
   // Returns true if it was signaled by Signal() and false if it was
   // signaled by SignalExit().
   bool Wait() {
-    FXL_CHECK(socket_.wait_async(port_, 0, ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED,
-                                 ZX_WAIT_ASYNC_ONCE) == ZX_OK);
+    ASSERT_OK(socket_.wait_async(port_, 0, ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED,
+                                 ZX_WAIT_ASYNC_ONCE));
     zx_port_packet_t packet;
-    FXL_CHECK(port_.wait(zx::time::infinite(), &packet) == ZX_OK);
+    ASSERT_OK(port_.wait(zx::time::infinite(), &packet));
     if (packet.signal.observed & ZX_SOCKET_PEER_CLOSED)
       return false;
     uint8_t message;
     size_t bytes_read = 0;
-    FXL_CHECK(socket_.read(0, &message, 1, &bytes_read) == ZX_OK);
+    ASSERT_OK(socket_.read(0, &message, 1, &bytes_read));
     FXL_CHECK(bytes_read == 1);
     return true;
   }
@@ -450,7 +445,7 @@ class SocketPortSignaler {
   void Signal() {
     uint8_t message = 0;
     size_t bytes_written = 0;
-    FXL_CHECK(socket_.write(0, &message, 1, &bytes_written) == ZX_OK);
+    ASSERT_OK(socket_.write(0, &message, 1, &bytes_written));
     FXL_CHECK(bytes_written == 1);
   }
 
@@ -468,7 +463,7 @@ class SocketPortTest {
   explicit SocketPortTest(MultiProc multiproc) {
     zx::socket socket1;
     zx::socket socket2;
-    FXL_CHECK(zx::socket::create(0, &socket1, &socket2) == ZX_OK);
+    ASSERT_OK(zx::socket::create(0, &socket1, &socket2));
     signaler_.set_socket(std::move(socket1));
 
     thread_or_process_.Launch("SocketPortTest::ThreadFunc", MakeHandleVector(socket2.release()),
@@ -527,7 +522,7 @@ class FidlTest {
 
   void Run() {
     uint32_t result;
-    FXL_CHECK(service_ptr_->RoundTripTest(123, &result) == ZX_OK);
+    ASSERT_OK(service_ptr_->RoundTripTest(123, &result));
     FXL_CHECK(result == 456);
   }
 
@@ -567,7 +562,7 @@ class FutexTest {
 
   void Wake(volatile int* ptr, int wake_value) {
     *ptr = wake_value;
-    FXL_CHECK(zx_futex_wake(const_cast<int*>(ptr), 1) == ZX_OK);
+    ASSERT_OK(zx_futex_wake(const_cast<int*>(ptr), 1));
   }
 
   bool Wait(volatile int* ptr) {
