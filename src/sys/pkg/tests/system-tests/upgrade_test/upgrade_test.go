@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"sync"
 	"testing"
 	"time"
 
@@ -311,9 +310,6 @@ func otaToPackage(
 	if err != nil {
 		return fmt.Errorf("error resolving the run package: %v", err)
 	}
-
-	var wg sync.WaitGroup
-	device.RegisterDisconnectListener(&wg)
 
 	log.Printf("Starting system OTA")
 	startTime := time.Now()

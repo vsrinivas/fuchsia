@@ -176,7 +176,7 @@ func (c *Client) WaitToBeConnected(ctx context.Context) error {
 	ch := make(chan struct{})
 	go func() {
 		wg.Wait()
-		ch <- struct{}{}
+		close(ch)
 	}()
 
 	select {
