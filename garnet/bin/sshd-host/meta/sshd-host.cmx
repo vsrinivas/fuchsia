@@ -6,8 +6,7 @@
         "features": [
             "config-data",
             "build-info",
-            "deprecated-shell",
-            "deprecated-ambient-replace-as-executable"
+            "deprecated-shell"
         ],
         "services": [
             "fuchsia.hardware.pty.Device",
