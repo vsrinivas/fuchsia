@@ -26,6 +26,7 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
+#include <fbl/span.h>
 #include <fbl/auto_call.h>
 #include <fbl/unique_fd.h>
 #include <fs-management/fvm.h>
@@ -304,12 +305,37 @@ zx_status_t PartitionRead(const DevicePartitioner& partitioner, Partition partit
   return ZX_OK;
 }
 
+zx_status_t ValidatePartitionPayload(const DevicePartitioner& partitioner,
+                                     const zx::vmo& payload_vmo, size_t payload_size,
+                                     Partition partition_type) {
+  fzl::VmoMapper payload_mapper;
+  zx_status_t status = payload_mapper.Map(payload_vmo, 0, 0, ZX_VM_PERM_READ);
+  if (status != ZX_OK) {
+    ERROR("Could not map payload into memory: %s\n", zx_status_get_string(status));
+    return status;
+  }
+  ZX_ASSERT(payload_mapper.size() >= payload_size);
+
+  auto payload =
+      fbl::Span<const uint8_t>(static_cast<const uint8_t*>(payload_mapper.start()), payload_size);
+  return partitioner.ValidatePayload(partition_type, payload);
+}
+
 // Paves an image onto the disk.
 zx_status_t PartitionPave(const DevicePartitioner& partitioner, zx::vmo payload_vmo,
                           size_t payload_size, Partition partition_type) {
   LOG("Paving partition \"%s\".\n", PartitionName(partition_type));
 
-  zx_status_t status;
+  // Perform basic safety checking on the partition before we attempt to write it.
+  zx_status_t status =
+      ValidatePartitionPayload(partitioner, payload_vmo, payload_size, partition_type);
+  if (status != ZX_OK) {
+    ERROR("Failed to validate partition \"%s\": %s\n", PartitionName(partition_type),
+          zx_status_get_string(status));
+    return status;
+  }
+
+  // Find or create the appropriate partition.
   std::unique_ptr<PartitionClient> partition;
   if ((status = partitioner.FindPartition(partition_type, &partition)) != ZX_OK) {
     if (status != ZX_ERR_NOT_FOUND) {

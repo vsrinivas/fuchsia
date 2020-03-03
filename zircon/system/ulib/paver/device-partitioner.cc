@@ -1043,6 +1043,12 @@ zx_status_t EfiDevicePartitioner::InitPartitionTables() const {
 zx_status_t EfiDevicePartitioner::WipePartitionTables() const {
   return gpt_->WipePartitionTables();
 }
+
+zx_status_t EfiDevicePartitioner::ValidatePayload(Partition type,
+                                                  fbl::Span<const uint8_t> data) const {
+  return ZX_OK;
+}
+
 /*====================================================*
  *                CROS SPECIFIC                       *
  *====================================================*/
@@ -1265,6 +1271,12 @@ zx_status_t CrosDevicePartitioner::InitPartitionTables() const {
 zx_status_t CrosDevicePartitioner::WipePartitionTables() const {
   return gpt_->WipePartitionTables();
 }
+
+zx_status_t CrosDevicePartitioner::ValidatePayload(Partition type,
+                                                   fbl::Span<const uint8_t> data) const {
+  return ZX_OK;
+}
+
 /*====================================================*
  *               FIXED PARTITION MAP                  *
  *====================================================*/
@@ -1365,6 +1377,11 @@ zx_status_t FixedDevicePartitioner::WipeFvm() const {
 zx_status_t FixedDevicePartitioner::InitPartitionTables() const { return ZX_ERR_NOT_SUPPORTED; }
 
 zx_status_t FixedDevicePartitioner::WipePartitionTables() const { return ZX_ERR_NOT_SUPPORTED; }
+
+zx_status_t FixedDevicePartitioner::ValidatePayload(Partition type,
+                                                    fbl::Span<const uint8_t> data) const {
+  return ZX_OK;
+}
 
 /*====================================================*
  *                    SHERLOCK                        *
@@ -1601,6 +1618,11 @@ zx_status_t SherlockPartitioner::InitPartitionTables() const {
 
 zx_status_t SherlockPartitioner::WipePartitionTables() const { return ZX_ERR_NOT_SUPPORTED; }
 
+zx_status_t SherlockPartitioner::ValidatePayload(Partition type,
+                                                 fbl::Span<const uint8_t> data) const {
+  return ZX_OK;
+}
+
 /*====================================================*
  *                SKIP BLOCK SPECIFIC                 *
  *====================================================*/
@@ -1789,6 +1811,10 @@ zx_status_t AstroPartitioner::InitPartitionTables() const { return ZX_ERR_NOT_SU
 
 zx_status_t AstroPartitioner::WipePartitionTables() const { return ZX_ERR_NOT_SUPPORTED; }
 
+zx_status_t AstroPartitioner::ValidatePayload(Partition type, fbl::Span<const uint8_t> data) const {
+  return ZX_OK;
+}
+
 zx_status_t As370Partitioner::Initialize(fbl::unique_fd devfs_root,
                                          std::unique_ptr<DevicePartitioner>* partitioner) {
   zx_status_t status = IsBoard(devfs_root, "visalia");
@@ -1842,5 +1868,9 @@ zx_status_t As370Partitioner::WipeFvm() const { return skip_block_->WipeFvm(); }
 zx_status_t As370Partitioner::InitPartitionTables() const { return ZX_ERR_NOT_SUPPORTED; }
 
 zx_status_t As370Partitioner::WipePartitionTables() const { return ZX_ERR_NOT_SUPPORTED; }
+
+zx_status_t As370Partitioner::ValidatePayload(Partition type, fbl::Span<const uint8_t> data) const {
+  return ZX_OK;
+}
 
 }  // namespace paver

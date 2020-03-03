@@ -18,6 +18,7 @@
 #include <vector>
 
 #include <fbl/function.h>
+#include <fbl/span.h>
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
 #include <gpt/gpt.h>
@@ -87,6 +88,12 @@ class DevicePartitioner {
 
   // Wipes partition tables.
   virtual zx_status_t WipePartitionTables() const = 0;
+
+  // Determine if the given data file is a valid image for this device.
+  //
+  // This analysis is best-effort only, providing only basic safety checks.
+  virtual zx_status_t ValidatePayload(Partition partition_type,
+                                      fbl::Span<const uint8_t> data) const = 0;
 };
 
 // Useful for when a GPT table is available (e.g. x86 devices). Provides common
@@ -195,6 +202,9 @@ class EfiDevicePartitioner : public DevicePartitioner {
 
   zx_status_t WipePartitionTables() const override;
 
+  zx_status_t ValidatePayload(Partition partition_type,
+                              fbl::Span<const uint8_t> data) const override;
+
  private:
   EfiDevicePartitioner(std::unique_ptr<GptDevicePartitioner> gpt) : gpt_(std::move(gpt)) {}
 
@@ -223,6 +233,9 @@ class CrosDevicePartitioner : public DevicePartitioner {
   zx_status_t InitPartitionTables() const override;
 
   zx_status_t WipePartitionTables() const override;
+
+  zx_status_t ValidatePayload(Partition partition_type,
+                              fbl::Span<const uint8_t> data) const override;
 
  private:
   CrosDevicePartitioner(std::unique_ptr<GptDevicePartitioner> gpt) : gpt_(std::move(gpt)) {}
@@ -254,6 +267,9 @@ class FixedDevicePartitioner : public DevicePartitioner {
   zx_status_t InitPartitionTables() const override;
 
   zx_status_t WipePartitionTables() const override;
+
+  zx_status_t ValidatePayload(Partition partition_type,
+                              fbl::Span<const uint8_t> data) const override;
 
  private:
   FixedDevicePartitioner(fbl::unique_fd devfs_root) : devfs_root_(std::move(devfs_root)) {}
@@ -304,6 +320,9 @@ class AstroPartitioner : public DevicePartitioner {
 
   zx_status_t WipePartitionTables() const override;
 
+  zx_status_t ValidatePayload(Partition partition_type,
+                              fbl::Span<const uint8_t> data) const override;
+
  private:
   AstroPartitioner(std::unique_ptr<SkipBlockDevicePartitioner> skip_block)
       : skip_block_(std::move(skip_block)) {}
@@ -331,6 +350,9 @@ class As370Partitioner : public DevicePartitioner {
   zx_status_t InitPartitionTables() const override;
 
   zx_status_t WipePartitionTables() const override;
+
+  zx_status_t ValidatePayload(Partition partition_type,
+                              fbl::Span<const uint8_t> data) const override;
 
  private:
   As370Partitioner(std::unique_ptr<SkipBlockDevicePartitioner> skip_block)
@@ -360,6 +382,9 @@ class SherlockPartitioner : public DevicePartitioner {
   zx_status_t InitPartitionTables() const override;
 
   zx_status_t WipePartitionTables() const override;
+
+  zx_status_t ValidatePayload(Partition partition_type,
+                              fbl::Span<const uint8_t> data) const override;
 
  private:
   SherlockPartitioner(std::unique_ptr<GptDevicePartitioner> gpt) : gpt_(std::move(gpt)) {}
