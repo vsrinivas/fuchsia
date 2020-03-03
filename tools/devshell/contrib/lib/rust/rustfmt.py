@@ -17,33 +17,31 @@ from rust import ROOT_PATH
 sys.path += [os.path.join(ROOT_PATH, "third_party", "pytoml")]
 import pytoml as toml
 
+
 def main():
     parser = argparse.ArgumentParser("Format a rust target")
-    parser.add_argument("gn_targets",
-                        metavar="gn_target",
-                        nargs="+",
-                        type=rust.GnTarget,
-                        help="GN target to format. \
+    parser.add_argument(
+        "gn_targets",
+        metavar="gn_target",
+        nargs="+",
+        type=rust.GnTarget,
+        help="GN target to format. \
                               Use '.[:target]' to discover the cargo target \
                               for the current directory or use the \
                               absolute path to the target \
                               (relative to $FUCHSIA_DIR). \
                               For example: //garnet/bin/foo/bar:baz.")
-    parser.add_argument("-v", "--verbose",
-                        action='store_true',
-                        help="Show verbose output")
-    parser.add_argument("-s", "--print-sources",
-                        action='store_true',
-                        help="Only print sources; do not format")
+    parser.add_argument(
+        "-v", "--verbose", action='store_true', help="Show verbose output")
+    parser.add_argument("--out-dir", help="Path to the Fuchsia build directory")
 
     args = parser.parse_args()
 
-    if args.print_sources and not all(os.path.exists(gn_target.manifest_path()) for gn_target in args.gn_targets):
-        return 0
+    build_dir = os.path.abspath(args.out_dir)
 
     cargo_tomls = []  # List of (gn_target, cargo_toml)
     for gn_target in args.gn_targets:
-        with open(gn_target.manifest_path(), "r") as fin:
+        with open(gn_target.manifest_path(build_dir), "r") as fin:
             cargo_tomls.append((gn_target, toml.load(fin)))
 
     main_files = []  # List of (gn_target, main_file)
@@ -51,23 +49,19 @@ def main():
         if 'bin' in cargo_toml:
             bins = cargo_toml['bin']
             if len(bins) != 1:
-                print("Expected a single bin target for {gn_target}, found {n}".format(
-                        gn_target = gn_target,
-                        n = len(bins)))
+                print(
+                    "Expected a single bin target for {gn_target}, found {n}".
+                    format(gn_target=gn_target, n=len(bins)))
                 return 1
             main_files.append((gn_target, bins[0]['path']))
         elif 'lib' in cargo_toml:
             main_files.append((gn_target, cargo_toml['lib']['path']))
 
-    if args.print_sources:
-        if main_files:
-            print('\n'.join(main_file[1] for main_file in main_files))
-        return 0
-
     for gn_target, main_file in main_files:
         if not main_file or not os.path.exists(main_file):
-            print("No source root (typically lib.rs or main.rs) found for {gn_target}".format(
-                gn_target=gn_target))
+            print(
+                "No source root (typically lib.rs or main.rs) found for {gn_target}"
+                .format(gn_target=gn_target))
             return 1
 
     host_platform = "%s-%s" % (
@@ -78,16 +72,16 @@ def main():
         }[platform.machine()],
     )
     buildtools_dir = os.path.join(ROOT_PATH, "prebuilt", "third_party")
-    rustfmt = os.path.join(buildtools_dir, "rust", host_platform, "bin", "rustfmt")
+    rustfmt = os.path.join(
+        buildtools_dir, "rust", host_platform, "bin", "rustfmt")
 
-    call_args = [
-        rustfmt
-    ] + [main_file[1] for main_file in main_files]
+    call_args = [rustfmt] + [main_file[1] for main_file in main_files]
 
     if args.verbose:
         call_args.append("-v")
 
     return subprocess.call(call_args)
+
 
 if __name__ == '__main__':
     sys.exit(main())

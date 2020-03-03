@@ -2,8 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import hashlib
 import os
 import platform
+import re
 import sys
 import subprocess
 
@@ -20,85 +22,70 @@ HOST_PLATFORM = "%s-%s" % (
     }[platform.machine()],
 )
 
-def _walk_up_path(path):
-    res = set([path])
-    while True:
-        path, basename = os.path.split(path)
-        if not path:
-            break
-        res.add(path)
-    return res
-
-def _find_cargo_target(path, target_filter=None):
-    match_paths = _walk_up_path(path)
-    all_targets = subprocess.check_output([FX_PATH, "build", "-t", "targets"])
-    for gn_target in all_targets.split("\n"):
-        target_parts = gn_target.split(":")
-        if len(target_parts) < 2:
-            continue
-        target_path, gn_target = target_parts[0], target_parts[1]
-        if target_path in match_paths and gn_target.endswith("_cargo"):
-            gn_target=gn_target[:gn_target.rindex("_")]
-            if target_filter and target_filter != gn_target:
-                continue
-            yield "{path}:{target}".format(
-                    path=target_path,
-                    target=gn_target,
-            )
 
 class GnTarget:
+
     def __init__(self, gn_target):
-        gn_target = gn_target.lstrip("/")
-        gn_target_parts = gn_target.split(":", 1)
+        # [\w-] is a valid GN name. We also accept '/' and '.' in paths.
+        # For the toolchain suffix, we take the whole label name at once, so we allow ':'.
+        match = re.match(
+            r"([\w/.-]*)" + r"(:([\w-]+))?" + r"(\(([\w/:-]+)\))?$", gn_target)
+        if match is None:
+            print "Invalid GN label '%s'" % gn_target
+            raise ValueError(gn_target)
+        path, name, toolchain = match.group(1, 3, 5)
 
-        if gn_target_parts[0] == ".":
-            cwd_rel_path = os.path.relpath(os.path.abspath("."), ROOT_PATH)
-            target_filter = None if len(gn_target_parts) == 1 else gn_target_parts[1]
-            gn_targets = list(_find_cargo_target(cwd_rel_path, target_filter))
-            if not gn_targets:
-                print "No cargo targets found at '{}'".format(cwd_rel_path)
-                raise ValueError(gn_target)
-            elif len(gn_targets) > 1:
-                print "Multiple cargo targets found at '{}'".format(cwd_rel_path)
-                for gn_target in gn_targets:
-                    print "- {}".format(gn_target)
-                raise ValueError(gn_target)
-            else:
-                gn_target, = gn_targets
-                gn_target_parts = gn_target.split(":", 1)
+        if path.startswith("//"):
+            path = path[2:]
+        else:
+            abs_path = os.path.join(os.path.abspath("."), path)
+            path = os.path.relpath(abs_path, ROOT_PATH)
 
-        self.gn_target = gn_target
-        self.parts = gn_target_parts
+        if name is None:
+            name = os.path.basename(path)
+
+        self.label_path = path
+        self.label_name = name
+        self.explicit_toolchain = toolchain
 
     def __str__(self):
         return self.gn_target
 
     @property
-    def path(self):
-        return os.path.join(ROOT_PATH, self.parts[0])
+    def ninja_target(self):
+        """The canonical GN label of this target, minus the leading '//'."""
+        return '%s:%s%s' % (
+            self.label_path, self.label_name, self.toolchain_suffix)
 
-    def manifest_path(self, build_dir=None, prefer_host=False):
+    @property
+    def gn_target(self):
+        """The canonical GN label of this target, including the leading '//'."""
+        return '//%s' % self.ninja_target
+
+    @property
+    def toolchain_suffix(self):
+        """The GN path suffix for this target's toolchain, if it is not the default."""
+        if self.explicit_toolchain is None:
+            return ''
+        if 'fuchsia' in self.explicit_toolchain:
+            # Default toolchain.
+            return ''
+        return '(%s)' % self.explicit_toolchain
+
+    @property
+    def src_path(self):
+        """The absolute path to the directory containing this target's BUILD.gn file."""
+        return os.path.join(ROOT_PATH, self.label_path)
+
+    def manifest_path(self, build_dir=None):
+        """The path to Cargo.toml for this target."""
         if build_dir is None:
-            build_dir = os.environ["FUCHSIA_BUILD_DIR"]
+            build_dir = FUCHSIA_BUILD_DIR
 
-        if len(self.parts) == 1:
-            # Turn foo/bar into foo/bar/bar
-            path = os.path.join(self.gn_target, os.path.basename(self.gn_target))
-        else:
-            # Turn foo/bar:baz into foo/bar/baz
-            path = self.gn_target.replace(":", os.sep)
+        hashed_gn_path = hashlib.sha1(str(
+            self.ninja_target).encode("utf-8")).hexdigest()
+        return os.path.join(build_dir, "cargo", hashed_gn_path, "Cargo.toml")
 
-        manifest_path_prefix = os.path.join(ROOT_PATH, build_dir)
-        manifest_path_suffix = os.path.join("gen", path, "Cargo.toml")
-
-        # By default, return the Fuchsia target Cargo.toml.
-        # Fall back to the
-        target_manifest_path = os.path.join(manifest_path_prefix, manifest_path_suffix)
-        host_manifest_path = os.path.join(manifest_path_prefix, "host_x64", manifest_path_suffix)
-        if not os.path.isfile(target_manifest_path) or prefer_host:
-            return host_manifest_path
-        else:
-            return target_manifest_path
 
 def get_rust_target_from_file(file):
     """Given a Rust file, return a GN target that references it. Raises ValueError if the file

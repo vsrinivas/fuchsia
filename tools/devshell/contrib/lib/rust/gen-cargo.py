@@ -8,11 +8,9 @@
 import argparse
 import os
 import subprocess
-import hashlib
 import sys
 
 import rust
-from rust import ROOT_PATH
 
 
 def main():
@@ -29,34 +27,31 @@ def main():
                               For example: //garnet/bin/foo/bar:baz")
     parser.add_argument(
         "--output", help="Path to Cargo.toml to generate", required=False)
-    parser.add_argument(
-        "--out-dir", help="Path to the Fuchsia build directory", required=False)
+    parser.add_argument("--out-dir", help="Path to the Fuchsia build directory")
     args = parser.parse_args()
 
-    if args.out_dir:
-        build_dir = args.out_dir
-    else:
-        build_dir = None
-
-    hashed_gn_path = hashlib.sha1(str(
-        args.gn_target).encode('utf-8')).hexdigest()
-    path = os.path.join(build_dir, "cargo", hashed_gn_path, "Cargo.toml")
+    build_dir = os.path.abspath(args.out_dir)
 
     if args.output:
-        output = args.output
+        output = os.path.abspath(args.output)
     else:
-        output = os.path.join(args.gn_target.path, "Cargo.toml")
+        output = os.path.join(args.gn_target.src_path, "Cargo.toml")
 
-    if os.path.exists(path):
+    manifest_path = args.gn_target.manifest_path(build_dir=build_dir)
+    if os.path.exists(manifest_path):
         try:
             os.remove(output)
         except OSError:
             pass
-        print "Creating '{}' pointing to '{}'".format(output, path)
-        os.symlink(path, output)
+        print "Linking '{}' for target '{}'".format(output, args.gn_target)
+        rel_path = os.path.relpath(manifest_path, os.path.dirname(output))
+        os.symlink(rel_path, output)
     else:
-        print "Internal error: path '{}' does not point to a Cargo.toml file".format(
-            path)
+        print "Could not find a Cargo.toml file at '{}'".format(manifest_path)
+        print
+        print "Is '{}' an existing Rust target?".format(args.gn_target)
+        print "If so, make sure it is included in your build configuration and that you have run 'fx build'."
+        return 1
 
 
 if __name__ == '__main__':
