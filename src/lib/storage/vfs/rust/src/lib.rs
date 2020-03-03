@@ -114,3 +114,17 @@ pub use vfs_macros::mut_pseudo_directory;
 // helper functions. External crates that use pseudo_directory! will rely on the pseudo_directory
 // export above.
 extern crate self as vfs;
+
+/// The maximum length, in bytes, of a single filesystem component
+pub const MAX_NAME_LENGTH: u64 = 255;
+
+#[cfg(test)]
+mod tests {
+    use super::MAX_NAME_LENGTH;
+    use fidl_fuchsia_io as io1;
+
+    #[test]
+    fn max_name_length_io1() {
+        assert_eq!(io1::MAX_FILENAME, MAX_NAME_LENGTH);
+    }
+}

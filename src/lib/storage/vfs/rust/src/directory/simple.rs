@@ -22,13 +22,12 @@ use crate::{
     },
     execution_scope::ExecutionScope,
     path::Path,
+    MAX_NAME_LENGTH,
 };
 
 use {
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io::{
-        NodeMarker, DIRENT_TYPE_DIRECTORY, INO_UNKNOWN, MAX_FILENAME, OPEN_FLAG_CREATE_IF_ABSENT,
-    },
+    fidl_fuchsia_io::{NodeMarker, DIRENT_TYPE_DIRECTORY, INO_UNKNOWN, OPEN_FLAG_CREATE_IF_ABSENT},
     fuchsia_async::Channel,
     fuchsia_zircon::Status,
     parking_lot::Mutex,
@@ -197,7 +196,7 @@ where
 {
     fn get_entry(self: Arc<Self>, name: String) -> AsyncGetEntry {
         assert_eq_size!(u64, usize);
-        if name.len() as u64 > MAX_FILENAME {
+        if name.len() as u64 > MAX_NAME_LENGTH {
             return Status::INVALID_ARGS.into();
         }
 
@@ -219,7 +218,7 @@ where
         entry: Arc<dyn DirectoryEntry>,
     ) -> Result<(), Status> {
         assert_eq_size!(u64, usize);
-        if name.len() as u64 > MAX_FILENAME {
+        if name.len() as u64 > MAX_NAME_LENGTH {
             return Err(Status::INVALID_ARGS);
         }
 
@@ -240,7 +239,7 @@ where
         name: String,
     ) -> Result<Option<Arc<dyn DirectoryEntry>>, Status> {
         assert_eq_size!(u64, usize);
-        if name.len() as u64 >= MAX_FILENAME {
+        if name.len() as u64 >= MAX_NAME_LENGTH {
             return Err(Status::INVALID_ARGS);
         }
 
@@ -252,7 +251,7 @@ where
     }
 
     fn link(self: Arc<Self>, name: String, entry: Arc<dyn DirectoryEntry>) -> Result<(), Status> {
-        if name.len() as u64 >= MAX_FILENAME {
+        if name.len() as u64 >= MAX_NAME_LENGTH {
             return Err(Status::INVALID_ARGS);
         }
 
@@ -269,7 +268,7 @@ where
         src: String,
         to: Box<dyn FnOnce(Arc<dyn DirectoryEntry>) -> Result<(), Status>>,
     ) -> Result<(), Status> {
-        if src.len() as u64 >= MAX_FILENAME {
+        if src.len() as u64 >= MAX_NAME_LENGTH {
             return Err(Status::INVALID_ARGS);
         }
 
@@ -295,7 +294,7 @@ where
         dst: String,
         from: Box<dyn FnOnce() -> Result<Arc<dyn DirectoryEntry>, Status>>,
     ) -> Result<(), Status> {
-        if dst.len() as u64 >= MAX_FILENAME {
+        if dst.len() as u64 >= MAX_NAME_LENGTH {
             return Err(Status::INVALID_ARGS);
         }
 
@@ -310,7 +309,7 @@ where
     }
 
     fn rename_within(self: Arc<Self>, src: String, dst: String) -> Result<(), Status> {
-        if src.len() as u64 >= MAX_FILENAME || dst.len() as u64 >= MAX_FILENAME {
+        if src.len() as u64 >= MAX_NAME_LENGTH || dst.len() as u64 >= MAX_NAME_LENGTH {
             return Err(Status::INVALID_ARGS);
         }
 
