@@ -1937,6 +1937,15 @@ __NO_SAFESTACK NO_ASAN static dl_start_return_t __dls3(void* start_arg) {
     nbytes = nhandles = 0;
   }
 
+  // Do not allow any zero length VLAs allocated on the stack.
+  //
+  // TODO(44088) : See this bug for options which might allow us to avoid the
+  // need for variable length arrays of any form at this stage.
+  if ((nbytes == 0) || (nhandles == 0)) {
+    __builtin_trap();
+    _exit(1);
+  }
+
   PROCESSARGS_BUFFER(buffer, nbytes);
   zx_handle_t handles[nhandles];
   zx_proc_args_t* procargs;

@@ -135,61 +135,69 @@ NO_ASAN __NO_SAFESTACK _Noreturn void __libc_start_main(zx_handle_t bootstrap,
   // extract process startup information from channel in arg
   struct start_params p = {.main = main, .utc_reference = ZX_HANDLE_INVALID};
   zx_status_t status = processargs_message_size(bootstrap, &p.nbytes, &p.nhandles);
-  if (status != ZX_OK) {
-    p.nbytes = p.nhandles = 0;
-  }
-  PROCESSARGS_BUFFER(buffer, p.nbytes);
-  zx_handle_t handles[p.nhandles];
-  p.buffer = buffer;
-  p.handles = handles;
-  if (status == ZX_OK) {
-    status = processargs_read(bootstrap, buffer, p.nbytes, handles, p.nhandles, &p.procargs,
-                              &p.handle_info);
-  }
-  zx_handle_t main_thread_handle = ZX_HANDLE_INVALID;
-  processargs_extract_handles(p.nhandles, handles, p.handle_info, &__zircon_process_self,
-                              &__zircon_job_default, &__zircon_vmar_root_self, &main_thread_handle,
-                              &p.utc_reference);
 
-  atomic_store(&libc.thread_count, 1);
+  // TODO(44088): Right now, we _always_ expect to receive at least some handles
+  // and some bytes in the initial startup message.  Make sure that we have both
+  // so that we do not accidentally end up declaring a 0-length VLA on the stack
+  // (which is UDB in C11).  See the bug referenced in the TODO, however.  We do
+  // not currently formally state that this is a requirement for starting a
+  // process, nor do we declare a maximum number of handles which can be sent
+  // during startup.  Restructuring and formalizing the process-args startup
+  // protocol could help with this situation.
+  if ((status == ZX_OK) && p.nbytes && p.nhandles) {
+    PROCESSARGS_BUFFER(buffer, p.nbytes);
+    zx_handle_t handles[p.nhandles];
+    p.buffer = buffer;
+    p.handles = handles;
+    if (status == ZX_OK) {
+      status = processargs_read(bootstrap, buffer, p.nbytes, handles, p.nhandles, &p.procargs,
+                                &p.handle_info);
+    }
+    zx_handle_t main_thread_handle = ZX_HANDLE_INVALID;
+    processargs_extract_handles(p.nhandles, handles, p.handle_info, &__zircon_process_self,
+                                &__zircon_job_default, &__zircon_vmar_root_self,
+                                &main_thread_handle, &p.utc_reference);
 
-  // This consumes the thread handle and sets up the thread pointer.
-  p.td = __init_main_thread(main_thread_handle);
+    atomic_store(&libc.thread_count, 1);
 
-  // Switch to the allocated stack and call start_main(&p) there.  The
-  // original stack stays around just to hold the message buffer and handles
-  // array.  The new stack is whole pages, so it's sufficiently aligned.
+    // This consumes the thread handle and sets up the thread pointer.
+    p.td = __init_main_thread(main_thread_handle);
+
+    // Switch to the allocated stack and call start_main(&p) there.  The
+    // original stack stays around just to hold the message buffer and handles
+    // array.  The new stack is whole pages, so it's sufficiently aligned.
 
 #ifdef __x86_64__
-  // The x86-64 ABI requires %rsp % 16 = 8 on entry.  The zero word
-  // at (%rsp) serves as the return address for the outermost frame.
-  __asm__(
-      "lea -8(%[base], %[len], 1), %%rsp\n"
-      "jmp start_main\n"
-      "# Target receives %[arg]"
-      :
-      : [ base ] "r"(p.td->safe_stack.iov_base), [ len ] "r"(p.td->safe_stack.iov_len),
-        "m"(p),  // Tell the compiler p's fields are all still alive.
-        [ arg ] "D"(&p));
+    // The x86-64 ABI requires %rsp % 16 = 8 on entry.  The zero word
+    // at (%rsp) serves as the return address for the outermost frame.
+    __asm__(
+        "lea -8(%[base], %[len], 1), %%rsp\n"
+        "jmp start_main\n"
+        "# Target receives %[arg]"
+        :
+        : [ base ] "r"(p.td->safe_stack.iov_base), [ len ] "r"(p.td->safe_stack.iov_len),
+          "m"(p),  // Tell the compiler p's fields are all still alive.
+          [ arg ] "D"(&p));
 #elif defined(__aarch64__)
-  __asm__(
-      "add sp, %[base], %[len]\n"
-      "mov x18, %[shadow_call_stack]\n"
-      // Neither sp nor x18 might be used as an input operand, but x0 might be.
-      // So clobber x0 last.  We don't need to declare it to the compiler as a
-      // clobber since we'll never come back and it's fine if it's used as an
-      // input operand.
-      "mov x0, %[arg]\n"
-      "b start_main"
-      :
-      : [ base ] "r"(p.td->safe_stack.iov_base), [ len ] "r"(p.td->safe_stack.iov_len),
-        // Shadow call stack grows up.
-        [ shadow_call_stack ] "r"(p.td->shadow_call_stack.iov_base),
-        "m"(p),  // Tell the compiler p's fields are all still alive.
-        [ arg ] "r"(&p));
+    __asm__(
+        "add sp, %[base], %[len]\n"
+        "mov x18, %[shadow_call_stack]\n"
+        // Neither sp nor x18 might be used as an input operand, but x0 might be.
+        // So clobber x0 last.  We don't need to declare it to the compiler as a
+        // clobber since we'll never come back and it's fine if it's used as an
+        // input operand.
+        "mov x0, %[arg]\n"
+        "b start_main"
+        :
+        : [ base ] "r"(p.td->safe_stack.iov_base), [ len ] "r"(p.td->safe_stack.iov_len),
+          // Shadow call stack grows up.
+          [ shadow_call_stack ] "r"(p.td->shadow_call_stack.iov_base),
+          "m"(p),  // Tell the compiler p's fields are all still alive.
+          [ arg ] "r"(&p));
 #else
 #error what architecture?
 #endif
+  }
 
   __builtin_unreachable();
 }
