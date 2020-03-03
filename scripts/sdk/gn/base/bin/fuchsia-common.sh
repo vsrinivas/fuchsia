@@ -58,11 +58,10 @@ function get-device-ip-by-name {
   # returns the IP address of an arbitrarily selected Fuchsia device.
 
   if [[ -n "$2" ]]; then
-    # There should typically only be one device that matches the domain filter,
-    # but we add a device-limit filter just in case.
-    # TODO(fxb/46829) work-around bug in device-finder: don't use -device-limit 1
-    # "${1}/tools/device-finder" list -netboot -domain-filter "${2}" -device-limit 1 -ipv4=false
-    "${1}/tools/device-finder" list -netboot -domain-filter "${2}" -ipv4=false
+    # There should typically only be one device that matches the nodename
+    # but we add a device-limit to speed up resolution by exiting when the first
+    # candidate is found.
+    "${1}/tools/device-finder" resolve -device-limit 1 -ipv4=false -netboot "${2}"
   else
     get-device-ip "$1"
   fi

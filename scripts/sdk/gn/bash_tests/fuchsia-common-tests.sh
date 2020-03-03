@@ -73,6 +73,35 @@ EOF
     BT_EXPECT_EQ "${DEVICE_NAME}" "atom-device-name-mocked"
 }
 
+TEST_get-device-ip-by-name() {
+    BT_ASSERT_FUNCTION_EXISTS get-device-ip-by-name
+    btf::make_mock "${MOCKED_DEVICE_FINDER}"
+    MOCK_DEVICE="atom-device-name-mocked"
+    get-device-ip-by-name "." "${MOCK_DEVICE}"
+    source "${MOCKED_DEVICE_FINDER}.mock_state"
+    EXPECTED_DEVICE_FINDER_CMD_LINE=("./${MOCKED_DEVICE_FINDER}" "resolve" "-device-limit" "1" "-ipv4=false" "-netboot" "${MOCK_DEVICE}")
+    BT_EXPECT_EQ "${EXPECTED_DEVICE_FINDER_CMD_LINE[*]}" "${BT_MOCK_ARGS[*]}"
+}
+
+TEST_get-device-ip-by-name-no-args() {
+    BT_ASSERT_FUNCTION_EXISTS get-device-ip-by-name
+    btf::make_mock "${MOCKED_DEVICE_FINDER}"
+    get-device-ip-by-name "."
+    source "${MOCKED_DEVICE_FINDER}.mock_state"
+    EXPECTED_DEVICE_FINDER_CMD_LINE=("./${MOCKED_DEVICE_FINDER}" "list" "-netboot" "-device-limit" "1" "-ipv4=false")
+    BT_EXPECT_EQ "${EXPECTED_DEVICE_FINDER_CMD_LINE[*]}" "${BT_MOCK_ARGS[*]}"
+}
+
+TEST_get-device-ip() {
+    BT_ASSERT_FUNCTION_EXISTS get-device-ip
+    btf::make_mock "${MOCKED_DEVICE_FINDER}"
+    MOCK_DEVICE="atom-device-name-mocked"
+    get-device-ip "."
+    source "${MOCKED_DEVICE_FINDER}.mock_state"
+    EXPECTED_DEVICE_FINDER_CMD_LINE=("./${MOCKED_DEVICE_FINDER}" "list" "-netboot" "-device-limit" "1" "-ipv4=false")
+    BT_EXPECT_EQ "${EXPECTED_DEVICE_FINDER_CMD_LINE[*]}" "${BT_MOCK_ARGS[*]}"
+}
+
 TEST_get-host-ip() {
      BT_ASSERT_FUNCTION_EXISTS get-host-ip
     btf::make_mock "${MOCKED_DEVICE_FINDER}"
