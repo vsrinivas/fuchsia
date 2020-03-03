@@ -39,12 +39,12 @@ namespace fbl {
 //  The Macros simply remove the risk of accidentally violating the rules
 //  at the price of ugly looking code:
 //
-//      BITFIELD_DEF_START(MyClass, uint32_t)
-//          BITFIELD_MEMBER(member1, 0, 3);
-//          BITFIELD_MEMBER(member2, 4, 2);
+//      FBL_BITFIELD_DEF_START(MyClass, uint32_t)
+//          FBL_BITFIELD_MEMBER(member1, 0, 3);
+//          FBL_BITFIELD_MEMBER(member2, 4, 2);
 //          ...
-//          BITFIELD_MEMBER(memberN, p, q);
-//      BITFIELD_DEF_END();
+//          FBL_BITFIELD_MEMBER(memberN, p, q);
+//      FBL_BITFIELD_DEF_END();
 //
 //   The usage is simple. It behaves as a set of unsigned integers with
 //   reduced ranges that are packed efficiently:
