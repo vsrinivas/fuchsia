@@ -28,7 +28,7 @@ async fn destruction() -> Result<(), Error> {
 
     let event_source = test.connect_to_event_source().await?;
 
-    let sink = event_source.soak_events(vec![Stopped::TYPE, Destroyed::TYPE]).await?;
+    let event_log = event_source.record_events(vec![Stopped::TYPE, Destroyed::TYPE]).await?;
     let mut event_stream = event_source.subscribe(vec![Destroyed::TYPE]).await?;
     event_source.start_component_tree().await?;
 
@@ -43,7 +43,7 @@ async fn destruction() -> Result<(), Error> {
     assert!(child_dir_contents.is_empty());
 
     // Assert the expected lifecycle events. The leaves can be stopped/destroyed in either order.
-    let mut events = sink.drain().await;
+    let mut events = event_log.flush().await;
 
     expect_next(
         &mut events,

@@ -225,7 +225,7 @@ functionality:
 - [Discardable event streams](#discardable-event-streams)
 - [Capability injection](#capability-injection)
 - [Capability interposition](#capability-interposition)
-- [Event sinks](#event-sinks)
+- [Event logs](#event-logs)
 
 #### Multiple event streams {#multiple-event-streams}
 
@@ -408,38 +408,41 @@ event_source.install_interposer(interposer).await?;
 event_source.start_component_tree().await?;
 ```
 
-#### Event sinks {#event-sinks}
+#### Event logs {#event-logs}
 
-It is possible to soak up events of certain types and drain them at a later
+It is possible to record events of certain types asynchronously and drain them at a later
 point in time:
 
 ```rust
 let event_stream = event_source.subscribe(vec![Destroyed::TYPE]).await?;
-let sink = event_source.soak_events(vec![Started::TYPE]).await?;
+let event_log = event_source.record_events(vec![Started::TYPE]).await?;
 
 // Wait for the root component to be destroyed
 let event = event_stream.expect_exact::<Destroyed>(".").await?;
 event.resume().await?;
 
-// Drain events from the sink
-let events = sink.drain().await;
+// Flush events from the log
+let events = event_log.flush().await;
 
 // Verify that the 3 components were started in the correct order
 assert_eq!(events, vec![
-    DrainedEvent {
+    RecordedEvent {
         event_type: Started::TYPE,
         target_moniker: "./".to_string()
     },
-    DrainedEvent {
+    RecordedEvent {
         event_type: Started::TYPE,
         target_moniker: "./foo:0".to_string()
     },
-    DrainedEvent {
+    RecordedEvent {
         event_type: Started::TYPE,
         target_moniker: "./foo:0/bar:0".to_string()
     }
 ]);
 ```
+
+Note that recording of events will continue until the `EventLog` object goes out
+of scope.
 
 ## Debug Mode {#debug-mode}
 

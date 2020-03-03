@@ -17,12 +17,12 @@ use {
 // `echo_reporter` does the following:
 // 1. Connect to the echo capability served the integration test.
 // 2. Wait for a start trigger to arrive from `echo_client` to indicate when to start
-//    soaking events in an `EventSink`.
-// 3. Unblock `echo_client` once the `EventSink` has been created and starts soaking events.
-// 4. Waits for a stop trigger to arrive from `echo_client` to indicate when to drain
-//    the EventSink. This trigger is sent after the `echo_client` has sent a number of
+//    soaking events in an `EventLog`.
+// 3. Unblock `echo_client` once the `EventLog` has been created and starts soaking events.
+// 4. Waits for a stop trigger to arrive from `echo_client` to indicate when to flush
+//    the EventLog. This trigger is sent after the `echo_client` has sent a number of
 //    messages over the Echo protocol.
-// 5. Sends out a string representation of the Events captured by the `EventSink` to the
+// 5. Sends out a string representation of the Events captured by the `EventLog` to the
 //    integration test.
 async fn start_echo_reporter(mut trigger_receiver: TriggerReceiver) -> Result<(), Error> {
     // Connect to the echo capability served by the integration test.
@@ -36,7 +36,7 @@ async fn start_echo_reporter(mut trigger_receiver: TriggerReceiver) -> Result<()
 
     // Subscribe to relevant events.
     let event_source = EventSource::new()?;
-    let sink = event_source.soak_events(vec![Started::TYPE, CapabilityRouted::TYPE]).await?;
+    let event_log = event_source.record_events(vec![Started::TYPE, CapabilityRouted::TYPE]).await?;
 
     event_source.start_component_tree().await?;
 
@@ -44,7 +44,7 @@ async fn start_echo_reporter(mut trigger_receiver: TriggerReceiver) -> Result<()
 
     let stop_logging_trigger = trigger_receiver.next().await.unwrap();
     let _ = echo.echo_string(Some("Stop trigger")).await?;
-    let events = sink.drain().await;
+    let events = event_log.flush().await;
     let _ = echo.echo_string(Some(&format!("Events: {:?}", events))).await?;
     stop_logging_trigger.resume();
 

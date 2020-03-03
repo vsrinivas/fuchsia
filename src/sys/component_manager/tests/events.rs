@@ -55,12 +55,12 @@ impl EventSource {
         Ok(EventStream::new(stream))
     }
 
-    pub async fn soak_events(
+    pub async fn record_events(
         &self,
         event_types: Vec<fevents::EventType>,
-    ) -> Result<EventSink, Error> {
+    ) -> Result<EventLog, Error> {
         let event_stream = self.subscribe(event_types).await?;
-        Ok(EventSink::soak_async(event_stream))
+        Ok(EventLog::new(event_stream))
     }
 
     // This is a convenience method that sets a breakpoint on the the `CapabilityRouted`,
@@ -497,7 +497,7 @@ pub trait RoutingProtocol {
     }
 }
 
-/// Describes an event recorded by the EventSink
+/// Describes an event recorded by the EventLog
 #[derive(Clone, Eq, PartialOrd, Ord, Debug)]
 pub struct RecordedEvent {
     pub event_type: fevents::EventType,
@@ -570,50 +570,62 @@ impl TryFrom<&fevents::Event> for RecordedEvent {
     }
 }
 
-/// Soaks events from an EventStream, allowing them to be
-/// drained at a later point in time.
-pub struct EventSink {
-    drained_events: Arc<Mutex<Vec<RecordedEvent>>>,
+/// Records events from an EventStream, allowing them to be
+/// flushed out into a vector at a later point in time.
+pub struct EventLog {
+    recorded_events: Arc<Mutex<Vec<RecordedEvent>>>,
+    abort_handle: AbortHandle,
 }
 
-impl EventSink {
-    fn soak_async(mut event_stream: EventStream) -> Self {
-        let drained_events = Arc::new(Mutex::new(vec![]));
+impl EventLog {
+    fn new(mut event_stream: EventStream) -> Self {
+        let (abort_handle, abort_registration) = AbortHandle::new_pair();
+        let recorded_events = Arc::new(Mutex::new(vec![]));
         {
-            // Start an async task that soaks up events from the event_stream
-            let drained_events = drained_events.clone();
-            fasync::spawn(async move {
-                // TODO(xbhatnag): Terminate this infinite loop when EventSink is dropped.
-                // Or pass in a Weak and terminate if it can't be upgraded.
-                loop {
-                    // Get the next event from the event_stream
-                    let event = event_stream
-                        .next()
-                        .await
-                        .expect("Failed to get next event from EventStreamSync");
+            // Start an async task that records events from the event_stream
+            let recorded_events = recorded_events.clone();
+            fasync::spawn(
+                Abortable::new(
+                    async move {
+                        loop {
+                            // Get the next event from the event_stream
+                            let event = event_stream
+                                .next()
+                                .await
+                                .expect("Failed to get next event from EventStreamSync");
 
-                    // Construct the RecordedEvent from the Event
-                    let drained_event = RecordedEvent::try_from(&event)
-                        .expect("Failed to convert Event to RecordedEvent");
+                            // Construct the RecordedEvent from the Event
+                            let recorded_event = RecordedEvent::try_from(&event)
+                                .expect("Failed to convert Event to RecordedEvent");
 
-                    // Insert the event into the list
-                    {
-                        let mut drained_events = drained_events.lock().await;
-                        drained_events.push(drained_event);
-                    }
+                            // Insert the event into the list
+                            {
+                                let mut recorded_events = recorded_events.lock().await;
+                                recorded_events.push(recorded_event);
+                            }
 
-                    // Resume from the event
-                    event.resume().await.expect("Could not resume from event");
-                }
-            });
+                            // Resume from the event
+                            event.resume().await.expect("Could not resume from event");
+                        }
+                    },
+                    abort_registration,
+                )
+                .unwrap_or_else(|_| ()),
+            );
         }
-        Self { drained_events }
+        Self { recorded_events, abort_handle }
     }
 
-    pub async fn drain(&self) -> Vec<RecordedEvent> {
-        // Lock and drain out all events from the vector
-        let mut drained_events = self.drained_events.lock().await;
-        drained_events.drain(..).collect()
+    pub async fn flush(&self) -> Vec<RecordedEvent> {
+        // Lock and flush out all events from the vector
+        let mut recorded_events = self.recorded_events.lock().await;
+        recorded_events.drain(..).collect()
+    }
+}
+
+impl Drop for EventLog {
+    fn drop(&mut self) {
+        self.abort_handle.abort();
     }
 }
 
