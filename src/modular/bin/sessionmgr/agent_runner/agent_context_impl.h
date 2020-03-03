@@ -128,9 +128,8 @@ class AgentContextImpl : fuchsia::modular::AgentContext,
   // application's namespace.
   component::ServiceProviderImpl service_provider_impl_;
 
-  fuchsia::auth::TokenManager* const token_manager_;                              // Not owned.
-  EntityProviderRunner* const entity_provider_runner_;                            // Not owned.
-  AgentServicesFactory* const agent_services_factory_;                            // Not owned.
+  EntityProviderRunner* const entity_provider_runner_;  // Not owned.
+  AgentServicesFactory* const agent_services_factory_;  // Not owned.
 
   inspect::Node agent_node_;
 
