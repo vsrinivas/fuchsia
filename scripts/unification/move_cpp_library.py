@@ -20,6 +20,22 @@ SCRIPT_LABEL = '//' + os.path.relpath(os.path.abspath(__file__),
                                       start=FUCHSIA_ROOT)
 
 
+class Library(object):
+
+    def __init__(self, name):
+        self.name = name
+        self.base_label = '//zircon/system/' + name
+        self.build_path = os.path.join(FUCHSIA_ROOT, 'zircon', 'system', name,
+                                       'BUILD.gn')
+        self.stats = get_library_stats(self.build_path)
+        self.build_files = []
+        self.cross_project = False
+        self.has_kernel = any(s.kernel for s in self.stats)
+        self.has_unexported = any(s.sdk == Sdk.NOPE for s in self.stats)
+        self.has_sdk = any(s.sdk_publishable for s in self.stats)
+        self.has_shared = any(s.sdk == Sdk.SHARED for s in self.stats)
+
+
 def main():
     parser = argparse.ArgumentParser(
             description='Moves a C/C++ library from //zircon to //sdk')
@@ -37,44 +53,32 @@ def main():
     if not is_tree_clean():
         return 1
 
-    # Whether any of the libraries required changes in a non-fuchsia.git project.
-    global_cross_project = False
-
-    movable_libs = {}
+    movable_libs = []
     for lib in args.lib:
         # Verify that the library may be migrated at this time.
-        build_path = os.path.join(FUCHSIA_ROOT, 'zircon', 'system', lib,
-                                  'BUILD.gn')
-        if not os.path.exists(build_path):
+        library = Library(lib)
+        if not os.path.exists(library.build_path):
             print('Could not locate library ' + lib + ', ignoring')
             continue
-        base_label = '//zircon/system/' + lib
-        stats = get_library_stats(build_path)
 
         # No kernel!
-        has_kernel = len([s for s in stats if s.kernel]) != 0
-        if has_kernel:
+        if library.has_kernel:
             print('Some libraries are used in the kernel and may not be '
                   'migrated at the moment, ignoring ' + lib)
             continue
 
-        # Only source or static libraries!
-        wrong_type = len([s for s in stats if s.sdk != Sdk.SOURCE and
-                                              s.sdk != Sdk.STATIC]) != 0
-        if wrong_type:
-            print('Can only convert libraries exported as "sources" or '
-                  '"static" for now, ignoring ' + lib)
+        # Only libraries that have been exported to the GN build already!
+        if library.has_unexported:
+            print('Can only convert libraries already exported to the GN build,'
+                  ' ignoring ' + lib)
             continue
 
         # No SDK libraries for now.
-        has_sdk = len([s for s in stats if s.sdk_publishable]) != 0
-        if has_sdk:
+        if library.has_sdk:
             print('Cannot convert SDK libraries for now, ignoring ' + lib)
             continue
 
         # Gather build files with references to the library.
-        build_files = []
-        cross_project = False
         for base, _, files in os.walk(FUCHSIA_ROOT):
             for file in files:
                 if file != 'BUILD.gn':
@@ -82,30 +86,31 @@ def main():
                 file_path = os.path.join(base, file)
                 with open(file_path, 'r') as build_file:
                     content = build_file.read()
-                    for name in [s.name for s in stats]:
+                    for name in [s.name for s in library.stats]:
                         reference = '"//zircon/public/lib/' + name + '"'
                         if reference in content:
-                            build_files.append(file_path)
+                            library.build_files.append(file_path)
                             if not is_in_fuchsia_project(file_path):
-                                cross_project = True
+                                library.cross_project = True
                             break
 
-        movable_libs[lib] = (build_path, base_label, stats, build_files, cross_project)
+        movable_libs.append(library)
 
     if not movable_libs:
         print('Could not find any library to convert, aborting')
         return 1
 
-    solo_libs = [n for n, t in movable_libs.items() if t[4]]
+    solo_libs = [l.name for l in movable_libs
+                 if l.cross_project or l.has_shared]
     if solo_libs and len(movable_libs) > 1:
         print('These libraries may only be moved in a dedicated change: ' +
               ', '.join(solo_libs))
         return 1
 
-    for lib, (build_path, base_label, stats, build_files, cross_project) in movable_libs.items():
+    for library in movable_libs:
         # Rewrite the library's build file.
         import_added = False
-        for line in fileinput.FileInput(build_path, inplace=True):
+        for line in fileinput.FileInput(library.build_path, inplace=True):
             # Remove references to libzircon.
             if '$zx/system/ulib/zircon' in line and not 'zircon-internal' in line:
                 line = ''
@@ -138,13 +143,13 @@ def main():
                 sys.stdout.write('\n')
                 sys.stdout.write('import("//build/unification/zx_library.gni")\n')
                 sys.stdout.write('\n')
-        fx_format(build_path)
+        fx_format(library.build_path)
 
         # Edit references to the library.
-        for file_path in build_files:
+        for file_path in library.build_files:
             for line in fileinput.FileInput(file_path, inplace=True):
-                for name in [s.name for s in stats]:
-                    new_label = '"' + base_label
+                for name in [s.name for s in library.stats]:
+                    new_label = '"' + library.base_label
                     if os.path.basename(new_label) != name:
                         new_label = new_label + ':' + name
                     new_label = new_label + '"'
@@ -153,20 +158,28 @@ def main():
                 sys.stdout.write(line)
             fx_format(file_path)
 
+        # Remove references to the library in the unification scaffolding if
+        # necessary.
+        if library.has_shared:
+            unification_path = os.path.join(FUCHSIA_ROOT, 'build',
+                                            'unification', 'images', 'BUILD.gn')
+            for line in fileinput.FileInput(unification_path, inplace=True):
+                for name in [s.name for s in library.stats]:
+                    if not re.match('^\s*"' + name + '",$', line):
+                        sys.stdout.write(line)
+
         # Generate an alias for the library under //zircon/public/lib if a soft
         # transition is necessary.
-        if cross_project:
-            global_cross_project = True
-
+        if library.cross_project:
             alias_path = os.path.join(FUCHSIA_ROOT, 'build', 'unification',
                                       'zircon_library_mappings.json')
             with open(alias_path, 'r') as alias_file:
                 data = json.load(alias_file)
-            for s in stats:
+            for s in library.stats:
                 data.append({
                     'name': s.name,
                     'sdk': s.sdk_publishable,
-                    'label': base_label + ":" + s.name,
+                    'label': library.base_label + ":" + s.name,
                 })
             data = sorted(data, key=lambda item: item['name'])
             with open(alias_path, 'w') as alias_file:
@@ -175,11 +188,12 @@ def main():
 
         # Remove the reference in the ZN aggregation target.
         aggregation_path = os.path.join(FUCHSIA_ROOT, 'zircon', 'system',
-                                        os.path.dirname(lib), 'BUILD.gn')
+                                        os.path.dirname(library.name),
+                                        'BUILD.gn')
         if os.path.exists(aggregation_path):
-            folder = os.path.basename(lib)
+            folder = os.path.basename(library.name)
             for line in fileinput.FileInput(aggregation_path, inplace=True):
-                for name in [s.name for s in stats]:
+                for name in [s.name for s in library.stats]:
                     if (not '"' + folder + ':' + name + '"' in line and
                         not '"' + folder + '"' in line):
                         sys.stdout.write(line)
@@ -188,7 +202,7 @@ def main():
                   'in the ZN build, please remove them manually')
 
     # Create a commit.
-    libs = sorted(movable_libs.keys())
+    libs = sorted([l.name for l in movable_libs])
     under_libs = [l.replace('/', '_') for l in libs]
     branch_name = 'lib-move-' + under_libs[0]
     lib_name = '//zircon/system/' + libs[0]
@@ -201,7 +215,15 @@ def main():
         '[unification] Move ' + lib_name + ' to the GN build',
         '',
         'Affected libraries:'
-    ] + ['//zircon/system/' + l for l in libs] + [
+    ] + ['//zircon/system/' + l for l in libs]
+    if any(l.has_shared for l in movable_libs):
+        message += [
+            '',
+            'scripts/unification/verify_element_move.py --reference local/initial.json:',
+            '',
+            'TODO PASTE VERIFICATION RESULT HERE',
+        ]
+    message += [
         '',
         'Generated with ' + SCRIPT_LABEL,
         '',
@@ -215,7 +237,7 @@ def main():
     os.close(fd)
     os.remove(message_path)
 
-    if global_cross_project:
+    if any(l.cross_project for l in movable_libs):
         print('*** Warning: multiple Git projects were affected by this move!')
         print('Run jiri status to view affected projects.')
         print('Staging procedure:')

@@ -27,15 +27,19 @@ template("zx_library") {
   assert(!defined(invoker.kernel) || !invoker.kernel,
          "Kernel libraries not supported")
 
-  assert(defined(invoker.sdk),
-         "Can only migrate libraries exposed to the GN build")
-  assert(invoker.sdk == "source" || invoker.sdk == "static",
-         "Only libraries exposed as static or sources are supported")
-
   sdkable = defined(invoker.sdk_publishable) && invoker.sdk_publishable
   assert(!sdkable, "Libraries available in SDKs are currently not supported")
 
-  target_type = "static_library"
+  assert(defined(invoker.sdk),
+         "Can only migrate libraries exposed to the GN build")
+  shape = invoker.sdk
+  if (shape == "source" || shape == "static") {
+    target_type = "static_library"
+  } else if (shape == "shared") {
+    target_type = "shared_library"
+  } else {
+    assert(false, "Unknown library type: $shape")
+  }
 
   main_target_name = target_name
   config_target_name = "$target_name.config"
@@ -46,6 +50,8 @@ template("zx_library") {
 
   target(target_type, main_target_name) {
     forward_variables_from(invoker, "*", template_params)
+
+    configs += [ "//build/unification/config:zircon-library" ]
 
     # Binaries depending on migrated libraries cannot be marked as testonly, and
     # therefore neither can the libraries themselves.
