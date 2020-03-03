@@ -1,0 +1,38 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+#
+
+import("//build/rust/rustc_test.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+group("storage_manager_integration") {
+  testonly = true
+  deps = [ ":storage_manager_integration_test_pkg" ]
+}
+
+rustc_test("test") {
+  name = "storage_manager_integration_test"
+  edition = "2018"
+
+  source_root = "tests/lib.rs"
+
+  deps = [
+    "//sdk/fidl/fuchsia.identity.account:fuchsia.identity.account-rustc",
+    "//src/identity/lib/account_common",
+    "//src/identity/lib/storage_manager",
+    "//third_party/rust_crates:lazy_static",
+  ]
+}
+
+test_package("storage_manager_integration_test_pkg") {
+  deps = [ ":test" ]
+
+  tests = [
+    {
+      name = "storage_manager_integration_test"
+      environments = basic_envs
+    },
+  ]
+}

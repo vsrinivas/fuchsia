@@ -38,8 +38,7 @@ impl StorageManager for EncryptedVolumeStorageManager {
 impl EncryptedVolumeStorageManager {
     /// Create a new `DirectoryStorageManager`, using the given account id to
     /// identify the correct volume.
-    #[allow(dead_code)]
-    fn new(_account_id: &LocalAccountId) -> Result<Self, AccountManagerError> {
+    pub fn new(_account_id: &LocalAccountId) -> Result<Self, AccountManagerError> {
         Ok(Self {})
     }
 }

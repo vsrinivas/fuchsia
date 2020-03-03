@@ -1,0 +1,12 @@
+{
+    "program": {
+        "binary": "test/storage_manager_integration_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Loader"
+        ]
+    }
+}
