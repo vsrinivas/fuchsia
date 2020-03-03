@@ -12,7 +12,10 @@ executable("view_tests") {
 
   testonly = true
 
-  sources = [ "view_manager_test.cc" ]
+  sources = [
+    "view_manager_test.cc",
+    "view_wrapper_test.cc",
+  ]
   public_deps = [ "//sdk/fidl/fuchsia.accessibility.semantics" ]
   deps = [
     "//garnet/public/lib/gtest",

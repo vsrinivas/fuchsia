@@ -6,6 +6,8 @@ source_set("view") {
   sources = [
     "view_manager.cc",
     "view_manager.h",
+    "view_wrapper.cc",
+    "view_wrapper.h",
   ]
 
   public_deps = [

@@ -97,7 +97,7 @@ class SemanticTreeServiceTest : public gtest::TestLoopFixture {
     zx::eventpair::create(0u, &a, &b_);
 
     a11y::SemanticTreeService::CloseChannelCallback close_channel_callback(
-        [this](zx_koid_t /*unused*/) { this->close_channel_called_ = true; });
+        [this]() { this->close_channel_called_ = true; });
     auto tree = std::make_unique<MockSemanticTree>();
     tree_ptr_ = tree.get();
     semantic_tree_ = std::make_unique<a11y::SemanticTreeService>(

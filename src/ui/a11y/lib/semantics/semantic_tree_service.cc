@@ -78,7 +78,7 @@ void SemanticTreeService::CommitUpdates(CommitUpdatesCallback callback) {
                    << " because client sent an invalid tree update. Tree before update: "
                    << tree_->ToString();
     callback();
-    close_channel_callback_(koid_);
+    close_channel_callback_();
   }
 }
 
@@ -134,7 +134,7 @@ void SemanticTreeService::PerformHitTesting(
 }
 
 void SemanticTreeService::EnableSemanticsUpdates(bool enabled) {
-  semantics_manager_enabled_ = enabled;
+  semantic_updates_enabled_ = enabled;
   // If Semantics Manager is disabled, then clear current semantic tree.
   if (!enabled) {
     tree_->Clear();
@@ -150,5 +150,4 @@ const fxl::WeakPtr<::a11y::SemanticTree> SemanticTreeService::Get() const {
   FX_DCHECK(semantic_tree_factory_.get());
   return semantic_tree_factory_->GetWeakPtr();
 }
-
 }  // namespace a11y

@@ -31,7 +31,7 @@ ViewManager::~ViewManager() {
     iterator.second->Cancel();
   }
   wait_map_.clear();
-  view_ref_map_.clear();
+  view_wrapper_map_.clear();
 }
 
 void ViewManager::RegisterViewForSemantics(
@@ -44,7 +44,12 @@ void ViewManager::RegisterViewForSemantics(
   // TODO(36199): When ViewRef is no longer valid, then all the holders of ViewRef will get a
   // signal, and Semantics Manager should then delete the binding for that ViewRef.
 
-  auto close_channel_callback = [this](zx_koid_t koid) { CloseChannel(koid); };
+  zx_koid_t koid = GetKoid(view_ref);
+
+  auto close_channel_callback = [this, koid]() {
+    wait_map_.erase(koid);
+    view_wrapper_map_.erase(koid);
+  };
 
   fuchsia::accessibility::semantics::SemanticListenerPtr semantic_listener = handle.Bind();
   semantic_listener.set_error_handler([](zx_status_t status) {
@@ -52,56 +57,40 @@ void ViewManager::RegisterViewForSemantics(
                    << zx_status_get_string(status);
   });
 
-  auto service = factory_->NewService(GetKoid(view_ref), std::move(semantic_listener), debug_dir_,
+  auto service = factory_->NewService(koid, std::move(semantic_listener), debug_dir_,
                                       std::move(close_channel_callback));
+
   // As part of the registration, client should get notified about the current Semantics Manager
   // enable settings.
   service->EnableSemanticsUpdates(semantics_enabled_);
 
-  semantic_tree_bindings_.AddBinding(std::move(service), std::move(semantic_tree_request));
-
+  // Start listening for signals on the view ref so that we can clean up associated state.
   auto wait_ptr = std::make_unique<async::WaitMethod<ViewManager, &ViewManager::ViewSignalHandler>>(
       this, view_ref.reference.get(), ZX_EVENTPAIR_PEER_CLOSED);
   FX_CHECK(wait_ptr->Begin(async_get_default_dispatcher()) == ZX_OK);
-  wait_map_[GetKoid(view_ref)] = std::move(wait_ptr);
-  view_ref_map_[GetKoid(view_ref)] = std::move(view_ref);
+  wait_map_[koid] = std::move(wait_ptr);
+  view_wrapper_map_[koid] = std::make_unique<ViewWrapper>(std::move(view_ref), std::move(service),
+                                                          std::move(semantic_tree_request));
 }
 
 const fxl::WeakPtr<::a11y::SemanticTree> ViewManager::GetTreeByKoid(const zx_koid_t koid) const {
-  for (auto& binding : semantic_tree_bindings_.bindings()) {
-    if (binding->impl()->view_ref_koid() == koid) {
-      return binding->impl()->Get();
-    }
-  }
-  return nullptr;
+  auto it = view_wrapper_map_.find(koid);
+  return it != view_wrapper_map_.end() ? it->second->GetTree() : nullptr;
 }
 
 void ViewManager::SetSemanticsEnabled(bool enabled) {
   semantics_enabled_ = enabled;
-  EnableSemanticsUpdates(semantics_enabled_);
-}
-
-void ViewManager::CloseChannel(zx_koid_t koid) {
-  for (auto& binding : semantic_tree_bindings_.bindings()) {
-    if (binding->impl()->view_ref_koid() == koid) {
-      semantic_tree_bindings_.RemoveBinding(binding->impl());
-    }
-  }
-  wait_map_.erase(koid);
-  view_ref_map_.erase(koid);
-}
-
-void ViewManager::EnableSemanticsUpdates(bool enabled) {
   // Notify all the Views about change in Semantics Enabled.
-  for (auto& binding : semantic_tree_bindings_.bindings()) {
-    binding->impl()->EnableSemanticsUpdates(enabled);
+  for (auto& view_wrapper : view_wrapper_map_) {
+    view_wrapper.second->EnableSemanticUpdates(enabled);
   }
 }
 
 void ViewManager::ViewSignalHandler(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                                     zx_status_t status, const zx_packet_signal* signal) {
   zx_koid_t koid = fsl::GetKoid(wait->object());
-  CloseChannel(koid);
+  wait_map_.erase(koid);
+  view_wrapper_map_.erase(koid);
 }
 
 }  // namespace a11y

@@ -13,6 +13,7 @@
 #include <zircon/types.h>
 
 #include "src/ui/a11y/lib/semantics/semantic_tree_service.h"
+#include "src/ui/a11y/lib/view/view_wrapper.h"
 
 namespace a11y {
 
@@ -39,7 +40,7 @@ class ViewManager : public fuchsia::accessibility::semantics::SemanticsManager {
   ~ViewManager() override;
 
   // Function to Enable/Disable Semantics Manager.
-  // When Semantics Manager is disabled, all the semantic tree bindings are
+  // When Semantics are disabled, all the semantic tree bindings are
   // closed, which deletes all the semantic tree data.
   void SetSemanticsEnabled(bool enabled);
 
@@ -59,23 +60,14 @@ class ViewManager : public fuchsia::accessibility::semantics::SemanticsManager {
       fidl::InterfaceRequest<fuchsia::accessibility::semantics::SemanticTree> semantic_tree_request)
       override;
 
-  // Closes the service channel of the View with |view_ref_koid| in |semantic_tree_bindings_|.
-  void CloseChannel(zx_koid_t view_ref_koid);
-
   // ViewSignalHandler is called when ViewRef peer is destroyed. It is
   // responsible for closing the channel and cleaning up the associated SemanticTree.
   void ViewSignalHandler(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                          const zx_packet_signal* signal);
 
-  // Helper function to enable semantic updates for all the Views.
-  void EnableSemanticsUpdates(bool enabled);
+  std::unordered_map<zx_koid_t, std::unique_ptr<ViewWrapper>> view_wrapper_map_;
 
-  fidl::BindingSet<fuchsia::accessibility::semantics::SemanticTree,
-                   std::unique_ptr<SemanticTreeService>>
-      semantic_tree_bindings_;
-
-  std::unordered_map<zx_koid_t, fuchsia::ui::views::ViewRef> view_ref_map_;
-
+  // TODO(36199): Move wait functions inside ViewWrapper.
   std::unordered_map<
       zx_koid_t, std::unique_ptr<async::WaitMethod<ViewManager, &ViewManager::ViewSignalHandler>>>
       wait_map_;

@@ -27,7 +27,7 @@ class SemanticTreeService : public fuchsia::accessibility::semantics::SemanticTr
  public:
   // Callback which will be used to notify that an error is encountered while trying to apply the
   // commit.
-  using CloseChannelCallback = fit::function<void(zx_koid_t)>;
+  using CloseChannelCallback = fit::function<void()>;
 
   SemanticTreeService(std::unique_ptr<::a11y::SemanticTree> tree, zx_koid_t koid,
                       fuchsia::accessibility::semantics::SemanticListenerPtr semantic_listener,
@@ -58,6 +58,9 @@ class SemanticTreeService : public fuchsia::accessibility::semantics::SemanticTr
 
   // |fuchsia::accessibility::semantics::SemanticsTree|
   void DeleteSemanticNodes(std::vector<uint32_t> node_ids) override;
+
+  // Whether semantic updates are currently enabled.
+  bool UpdatesEnabled() { return semantic_updates_enabled_; }
 
  private:
   // Asks the semantics provider to perform an accessibility action on the
@@ -102,7 +105,7 @@ class SemanticTreeService : public fuchsia::accessibility::semantics::SemanticTr
   fuchsia::accessibility::semantics::SemanticListenerPtr semantic_listener_;
 
   vfs::PseudoDir* const debug_dir_;
-  bool semantics_manager_enabled_ = false;
+  bool semantic_updates_enabled_ = false;
 
   // File name of the log file under debug directory.
   std::string debug_file_name_;
