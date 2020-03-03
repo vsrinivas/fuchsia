@@ -2,12 +2,12 @@
 
 Fuchsia's Go toolchain supports fuzzing Go packages using LLVM's
 [libFuzzer](https://llvm.org/docs/LibFuzzer.html). Most of the information in
-[C/C++ fuzzing guide](libfuzzer.md) still applies; this document only focuses on
+[C/C++ fuzzing guide](libfuzzer.md) still applies. This document only focuses on
 the details specific to Go.
 
-## Writing a Go fuzzer
+## Write a Go fuzzer
 
-Go fuzzer authors need to implement a fuzz target function that accepts a slice
+You need to implement a fuzz target function that accepts a slice
 of bytes and does something interesting with these bytes using the API under
 test. libFuzzer then searches for inputs that cause the function to panic.
 
@@ -22,10 +22,12 @@ func Fuzz(s []byte) {
 This is directly analogous to a [fuzz target function in
 C](https://llvm.org/docs/LibFuzzer.html#fuzz-target).
 
-## Building a Go fuzzer
+## Build a Go fuzzer
 
 The `go_fuzzer` GN template generates a GN target that compiles the Go fuzz
 target function into a C object file that it then links with libFuzzer.
+
+To build a Go fuzzer:
 
 1. Add a function `func Fuzz(s []byte)` to a Go package and export
    it. Alternatively, you may create new Go package if no existing package is a

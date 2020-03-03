@@ -21,15 +21,27 @@ group("tests") {
 }
 
 fuzzers_package("example_fuzzers") {
-  fuzzers = [
-    ":baz_fuzzer",
-    ":overflow_fuzzer",
-    ":trap_fuzzer",
-    ":fuzzed_data_provider_fuzzer",
-    ":corpus_fuzzer",
-    ":oom_fuzzer",
+  fuzzer_profiles = [
+    {
+      fuzzers = [
+        ":baz_fuzzer",
+        ":overflow_fuzzer",
+        ":trap_fuzzer",
+        ":fuzzed_data_provider_fuzzer",
+        ":corpus_fuzzer",
+        ":oom_fuzzer",
+      ]
+      sanitizers = [
+        "asan",
+        "ubsan",
+      ]
+      fuzz_host = true
+    },
+    {
+      fuzzers = [ "rust:rust_fuzzer" ]
+      sanitizers = [ "rust-asan" ]
+    },
   ]
-  fuzz_host = true
 }
 
 fuzzer("oom_fuzzer") {
