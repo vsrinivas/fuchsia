@@ -11,7 +11,7 @@ Some wrap lower-level [lk](/docs/glossary.md#lk) primitives.
 ## [System Calls](/docs/reference/syscalls/README.md)
 
 Userspace code interacts with kernel objects via system calls, and almost
-exclusively via [Handles](/docs/concepts/objects/handles.md).  In userspace, a Handle is represented as
+exclusively via [Handles](/docs/concepts/kernel/handles.md).  In userspace, a Handle is represented as
 32bit integer (type zx_handle_t).  When syscalls are executed, the kernel checks
 that Handle parameters refer to an actual handle that exists within the calling
 process's handle table.  The kernel further checks that the Handle is of the
@@ -43,7 +43,7 @@ Those definitions are first processed by `fidlc`, and then by `kazoo` which take
 representation from `fidlc` and outputs various formats that are used as glue in the VDSO, kernel,
 etc.
 
-## [Handles](/docs/concepts/objects/handles.md) and [Rights](/docs/concepts/kernel/rights.md)
+## [Handles](/docs/concepts/kernel/handles.md) and [Rights](/docs/concepts/kernel/rights.md)
 
 Objects may have multiple Handles (in one or more Processes) that refer to them.
 
@@ -160,7 +160,7 @@ signals on multiple handles.  Both calls allow for a timeout after
 which they'll return even if no signals are pending.
 
 Timeouts may deviate from the specified deadline according to timer
-slack. See [timer slack](/docs/concepts/objects/timer_slack.md) for more information.
+slack. See [timer slack](/docs/concepts/kernel/timer_slack.md) for more information.
 
 If a Thread is going to wait on a large set of handles, it is more efficient to use
 a Port, which is an Object that other Objects may be bound to such that when signals

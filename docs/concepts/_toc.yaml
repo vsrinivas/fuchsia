@@ -34,9 +34,6 @@ toc:
 - title: "Kernel"
   section:
   - include: /docs/concepts/kernel/_toc.yaml
-- title: "Kernel objects"
-  section:
-  - include: /docs/concepts/objects/_toc.yaml
 - title: "Media"
   section:
   - include: /docs/concepts/media/_toc.yaml

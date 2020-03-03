@@ -14,7 +14,7 @@ threads, along with a collection of resources.
 
 The process object is a container of the following resources:
 
-+ [Handles](/docs/concepts/objects/handles.md)
++ [Handles](/docs/concepts/kernel/handles.md)
 + [Virtual Memory Address Regions](vm_address_region.md)
 + [Threads](thread.md)
 

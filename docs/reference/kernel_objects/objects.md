@@ -84,4 +84,4 @@ single process can have two different handles to the same object with
 different rights.
 
 ## See Also
-[Handles](/docs/concepts/objects/handles.md)
+[Handles](/docs/concepts/kernel/handles.md)

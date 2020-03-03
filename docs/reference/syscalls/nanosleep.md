@@ -46,7 +46,7 @@ None.
 
 ## SEE ALSO
 
- - [timer slack](/docs/concepts/objects/timer_slack.md)
+ - [timer slack](/docs/concepts/kernel/timer_slack.md)
  - [`zx_deadline_after()`]
  - [`zx_timer_cancel()`]
  - [`zx_timer_create()`]

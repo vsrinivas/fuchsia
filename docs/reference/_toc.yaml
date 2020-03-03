@@ -7,7 +7,7 @@ toc:
 - title: "System calls"
   section:
   - include: /docs/reference/syscalls/_toc.yaml
-- title: "Objects"
+- title: "Kernel objects"
   section:
   - include: /docs/reference/kernel_objects/_toc.yaml
 - title: "Kernel"

@@ -64,7 +64,7 @@ out parameter.
 
 ## SEE ALSO
 
- - [clock transformations](/docs/concepts/objects/clock_transformations.md)
+ - [clock transformations](/docs/concepts/kernel/clock_transformations.md)
  - [clocks](/docs/reference/kernel_objects/clock.md)
  - [`zx_clock_create()`]
  - [`zx_clock_read()`]

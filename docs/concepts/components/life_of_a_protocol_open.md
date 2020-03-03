@@ -263,7 +263,7 @@ children with `use` declarations; it must use `BindChild()`.
 [protocol-open]: #a-component-opens-a-protocol
 [cap-routing]: #the-open-triggers-capability-routing
 [binding]: #binding-to-a-component-and-sending-a-protocol-channel
-[handle]: /docs/concepts/objects/handles.md
+[handle]: /docs/concepts/kernel/handles.md
 [channel]: /docs/reference/kernel_objects/channel.md
 [namespaces]: /docs/concepts/framework/namespaces.md
 [component-manifests]: component_manifests.md

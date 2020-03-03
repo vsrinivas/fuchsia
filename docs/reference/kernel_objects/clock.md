@@ -203,7 +203,7 @@ fail with a return code of **ZX_ERR_INVALID_ARGS**
 
 ## SYSCALLS
 
- - [clock transformations](/docs/concepts/objects/clock_transformations.md)
+ - [clock transformations](/docs/concepts/kernel/clock_transformations.md)
  - [`zx_clock_create()`] - create a clock
  - [`zx_clock_read()`] - read the time of the clock
  - [`zx_clock_get_details()`] - fetch the details of a clock's relationship to clock monotonic

@@ -36,7 +36,7 @@ The typical lifecycle is:
 
 ## SEE ALSO
 
-+ [timer slack](/docs/concepts/objects/timer_slack.md)
++ [timer slack](/docs/concepts/kernel/timer_slack.md)
 
 [`zx_object_wait_one()`]: /docs/reference/syscalls/object_wait_one.md
 [`zx_object_wait_many()`]: /docs/reference/syscalls/object_wait_many.md

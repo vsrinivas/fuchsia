@@ -521,12 +521,12 @@ def check_for_orphans(syscalls, root):
 
 # A few concept docs that are linked in SEE ALSO sections.
 SEE_ALSO_CONCEPTS = {
-    'clock transformations': '/docs/concepts/objects/clock_transformations.md',
-    'clocks': '/docs/concepts/objects/clock.md',
+    'clock transformations': '/docs/concepts/kernel/clock_transformations.md',
+    'clocks': '/docs/reference/kernel_objects/clock.md',
     'exceptions': '/docs/concepts/kernel/exceptions.md',
-    'futex objects': '/docs/concepts/objects/futex.md',
+    'futex objects': '/docs/reference/kernel_objects/futex.md',
     'rights': '/docs/concepts/kernel/rights.md',
-    'timer slack': '/docs/concepts/objects/timer_slack.md',
+    'timer slack': '/docs/concepts/kernel/timer_slack.md',
 }
 
 

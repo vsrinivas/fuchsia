@@ -447,7 +447,7 @@ repository.
 A Handle is how a userspace process refers to a [kernel object](#kernel-object).
 They can be passed to other processes over [Channels](#channel).
 
--   [Reference](/docs/concepts/objects/handles.md)
+-   [Reference](/docs/concepts/kernel/handles.md)
 
 ### **Hardware Driver** {#hardware-driver}
 

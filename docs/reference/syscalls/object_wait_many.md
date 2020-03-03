@@ -104,7 +104,7 @@ In a future build this error will no longer occur.
 
 ## SEE ALSO
 
- - [timer slack](/docs/concepts/objects/timer_slack.md)
+ - [timer slack](/docs/concepts/kernel/timer_slack.md)
  - [`zx_object_wait_async()`]
  - [`zx_object_wait_one()`]
 

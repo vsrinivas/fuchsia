@@ -97,7 +97,7 @@ A program loading request starts with:
    `ZX_RIGHT_EXECUTE` rights are required)
  * A list of argument strings (to become `argv[]` in a C/C++ program)
  * A list of environment strings (to become `environ[]` in a C/C++ program)
- * A list of initial [handles](/docs/concepts/objects/handles.md), each with
+ * A list of initial [handles](/docs/concepts/kernel/handles.md), each with
    a [*handle info entry*](#handle-info-entry)
 
 Three types of file are handled:
@@ -251,7 +251,7 @@ code.
 
 A bootstrap message conveys:
 
- * a list of initial [handles](/docs/concepts/objects/handles.md)
+ * a list of initial [handles](/docs/concepts/kernel/handles.md)
  * a 32-bit *handle info entry* corresponding to each handle
  * a list of name strings that a *handle info entry* can refer to
  * a list of argument strings (to become `argv[]` in a C/C++ program)

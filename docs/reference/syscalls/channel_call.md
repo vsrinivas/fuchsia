@@ -134,7 +134,7 @@ communications on a channel that is timing out.
 
 ## SEE ALSO
 
- - [timer slack](/docs/concepts/objects/timer_slack.md)
+ - [timer slack](/docs/concepts/kernel/timer_slack.md)
  - [`zx_channel_create()`]
  - [`zx_channel_read()`]
  - [`zx_channel_write()`]

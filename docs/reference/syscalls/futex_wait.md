@@ -81,7 +81,7 @@ None.
 ## SEE ALSO
 
  - [futex objects](/docs/reference/kernel_objects/futex.md)
- - [timer slack](/docs/concepts/objects/timer_slack.md)
+ - [timer slack](/docs/concepts/kernel/timer_slack.md)
  - [`zx_futex_requeue()`]
  - [`zx_futex_wake()`]
 
