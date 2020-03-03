@@ -142,7 +142,7 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
 
   void TestDebugStreamConfigNode() {
     EXPECT_NE(nullptr, GetStreamConfigNode(kDebugConfig, kStreamTypeFR));
-    EXPECT_EQ(nullptr, GetStreamConfigNode(kDebugConfig, kStreamTypeDS));
+    EXPECT_NE(nullptr, GetStreamConfigNode(kDebugConfig, kStreamTypeDS));
   }
 
   void TestOutputNode() {

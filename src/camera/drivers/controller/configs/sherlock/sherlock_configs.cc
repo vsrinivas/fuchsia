@@ -29,8 +29,14 @@ InternalConfigs SherlockInternalConfigs() {
               {
                   .streams_info =
                       {
-                          DebugConfigFullRes(),
+                          {
+                              DebugConfigFullRes(),
+                          },
+                          {
+                              DebugConfigDownScaledRes(),
+                          },
                       },
+
               },
               // Monitoring configuration.
               {

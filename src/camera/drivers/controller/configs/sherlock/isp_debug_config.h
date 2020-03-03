@@ -19,8 +19,26 @@
 
 namespace camera {
 
+namespace {
+
+// IspDebugStream Parameters
+constexpr uint32_t kStreamMinBufferForCamping = 5;
+constexpr uint32_t kFRStreamWidth = 2176;
+constexpr uint32_t kFRStreamHeight = 2720;
+constexpr uint32_t kDSStreamWidth = 1152;
+constexpr uint32_t kDSStreamHeight = 1440;
+constexpr uint32_t kFRStreamFrameRate = 30;
+constexpr uint32_t kDSStreamFrameRate = 30;
+constexpr fuchsia::sysmem::PixelFormatType kStreamPixelFormat =
+    fuchsia::sysmem::PixelFormatType::NV12;
+
+}  // namespace
+
 // Returns the internal debug configuration(FR).
 InternalConfigNode DebugConfigFullRes();
+
+// Returns the internal debug configuration(DS).
+InternalConfigNode DebugConfigDownScaledRes();
 
 // Return the external debug configuration.
 fuchsia::camera2::hal::Config DebugConfig();

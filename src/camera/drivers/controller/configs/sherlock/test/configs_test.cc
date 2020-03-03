@@ -34,9 +34,11 @@ TEST(ConfigTest, InternalDebugConfiguration) {
   auto internal_configs = SherlockInternalConfigs();
   auto debug_config = internal_configs.configs_info.at(0);
 
-  EXPECT_EQ(debug_config.streams_info.size(), 1u);
+  EXPECT_EQ(debug_config.streams_info.size(), 2u);
   // 1st stream is FR.
   EXPECT_EQ(debug_config.streams_info.at(0).input_stream_type, kStreamTypeFR);
+  // 2nd stream is DS.
+  EXPECT_EQ(debug_config.streams_info.at(1).input_stream_type, kStreamTypeDS);
   // FR supported streams.
   EXPECT_EQ(debug_config.streams_info.at(0).supported_streams.size(), 1u);
   EXPECT_EQ(debug_config.streams_info.at(0).supported_streams[0], kStreamTypeFR);
