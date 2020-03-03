@@ -10,6 +10,7 @@
 #include <zircon/types.h>
 
 #include <memory>
+#include <optional>
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
@@ -18,7 +19,12 @@
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/composite.h>
 #include <ddk/protocol/platform/device.h>
+#include <ddktl/protocol/composite.h>
 
+#include "ddktl/protocol/amlogiccanvas.h"
+#include "ddktl/protocol/sysmem.h"
+#include "lib/mmio/mmio.h"
+#include "lib/zx/interrupt.h"
 #include "src/media/drivers/amlogic_encoder/local_codec_factory.h"
 #include "src/media/drivers/amlogic_encoder/macros.h"
 #include "src/media/drivers/amlogic_encoder/memory_barriers.h"
@@ -54,17 +60,89 @@ const fuchsia_hardware_mediacodec_Device_ops_t kFidlOps = {
         },
 };
 
-std::pair<zx_status_t, std::unique_ptr<DeviceCtx>> DeviceCtx::Bind(zx_device_t* parent) {
-  auto device_ctx = std::make_unique<DeviceCtx>(parent);
-  auto status = device_ctx->Init();
-
-  if (status != ZX_OK) {
-    return {status, nullptr};
+std::unique_ptr<DeviceCtx> DeviceCtx::Create(zx_device_t* parent) {
+  ddk::CompositeProtocolClient composite(parent);
+  if (!composite.is_valid()) {
+    ENCODE_ERROR("Could not get composite protocol");
+    return nullptr;
   }
 
-  status = device_ctx->AddDevice();
+  zx_device_t* components[kComponentCount];
+  size_t component_count = 0;
+  composite.GetComponents(components, fbl::count_of(components), &component_count);
 
-  return {status, std::move(device_ctx)};
+  if (component_count != kComponentCount) {
+    ENCODE_ERROR("Could not get components");
+    return nullptr;
+  }
+
+  ddk::PDev pdev(components[kComponentPdev]);
+  if (!pdev.is_valid()) {
+    ENCODE_ERROR("Failed to get pdev protocol");
+    return nullptr;
+  }
+
+  ddk::SysmemProtocolClient sysmem(components[kComponentSysmem]);
+  if (!sysmem.is_valid()) {
+    ENCODE_ERROR("Could not get sysmem protocol");
+    return nullptr;
+  }
+
+  ddk::AmlogicCanvasProtocolClient canvas(components[kComponentCanvas]);
+  if (!canvas.is_valid()) {
+    ENCODE_ERROR("Could not get canvas protocol");
+    return nullptr;
+  }
+
+  std::optional<ddk::MmioBuffer> mmio;
+  auto status = pdev.MapMmio(kCbus, &mmio);
+  if (status != ZX_OK || !mmio) {
+    ENCODE_ERROR("Failed map cbus %d", status);
+    return nullptr;
+  }
+  CbusRegisterIo cbus(std::move(*mmio));
+
+  mmio = std::nullopt;
+  status = pdev.MapMmio(kDosbus, &mmio);
+  if (status != ZX_OK || !mmio) {
+    ENCODE_ERROR("Failed map dosbus %d", status);
+    return nullptr;
+  }
+  DosRegisterIo dosbus(std::move(*mmio));
+
+  mmio = std::nullopt;
+  status = pdev.MapMmio(kAobus, &mmio);
+  if (status != ZX_OK || !mmio) {
+    ENCODE_ERROR("Failed map aobus %d", status);
+    return nullptr;
+  }
+  AoRegisterIo aobus(std::move(*mmio));
+
+  mmio = std::nullopt;
+  status = pdev.MapMmio(kHiubus, &mmio);
+  if (status != ZX_OK) {
+    ENCODE_ERROR("Failed map hiubus %d", status);
+    return nullptr;
+  }
+  HiuRegisterIo hiubus(std::move(*mmio));
+
+  zx::interrupt interrupt;
+  status = pdev.GetInterrupt(kDosMbox2Irq, 0, &interrupt);
+  if (status != ZX_OK) {
+    ENCODE_ERROR("Failed get enc interrupt");
+    return nullptr;
+  }
+
+  zx::bti bti;
+  status = pdev.GetBti(0, &bti);
+  if (status != ZX_OK) {
+    ENCODE_ERROR("Failed get bti");
+    return nullptr;
+  }
+
+  return std::make_unique<DeviceCtx>(parent, pdev, canvas, sysmem, std::move(cbus),
+                                     std::move(dosbus), std::move(aobus), std::move(hiubus),
+                                     std::move(interrupt), std::move(bti));
 }
 
 void DeviceCtx::DdkUnbindNew(ddk::UnbindTxn txn) {
@@ -78,56 +156,19 @@ zx_status_t DeviceCtx::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
   return fuchsia_hardware_mediacodec_Device_dispatch(this, txn, msg, &kFidlOps);
 }
 
-void DeviceCtx::ShutDown() { loop_.Shutdown(); }
-
-zx_status_t DeviceCtx::AddDevice() {
-  auto status = loop_.StartThread("device-loop", &loop_thread_);
-  if (status != ZX_OK) {
-    ENCODE_ERROR("could not start loop thread");
-    return status;
+void DeviceCtx::ShutDown() {
+  if (interrupt_handle_) {
+    zx_interrupt_destroy(interrupt_handle_.get());
+    if (interrupt_thread_.joinable()) {
+      interrupt_thread_.join();
+    }
   }
-
-  status = DdkAdd("amlogic_video_enc");
-
-  return status;
+  loop_.Shutdown();
 }
 
-zx_status_t DeviceCtx::Init() {
-  composite_protocol_t composite;
-  auto status = device_get_protocol(parent(), ZX_PROTOCOL_COMPOSITE, &composite);
-  if (status != ZX_OK) {
-    ENCODE_ERROR("Could not get composite protocol\n");
-    return status;
-  }
-
-  zx_device_t* components[kComponentCount];
-  size_t actual;
-  composite_get_components(&composite, components, kComponentCount, &actual);
-  if (actual != kComponentCount) {
-    ENCODE_ERROR("could not get components\n");
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  status = device_get_protocol(components[kComponentPdev], ZX_PROTOCOL_PDEV, &pdev_);
-  if (status != ZX_OK) {
-    ENCODE_ERROR("Failed to get pdev protocol\n");
-    return ZX_ERR_NO_MEMORY;
-  }
-
-  status = device_get_protocol(components[kComponentSysmem], ZX_PROTOCOL_SYSMEM, &sysmem_);
-  if (status != ZX_OK) {
-    ENCODE_ERROR("Could not get SYSMEM protocol\n");
-    return status;
-  }
-
-  status = device_get_protocol(components[kComponentCanvas], ZX_PROTOCOL_AMLOGIC_CANVAS, &canvas_);
-  if (status != ZX_OK) {
-    ENCODE_ERROR("Could not get video CANVAS protocol\n");
-    return status;
-  }
-
+zx_status_t DeviceCtx::Bind() {
   pdev_device_info_t info;
-  status = pdev_get_device_info(&pdev_, &info);
+  auto status = pdev_.GetDeviceInfo(&info);
   if (status != ZX_OK) {
     ENCODE_ERROR("pdev_get_device_info failed");
     return status;
@@ -143,51 +184,6 @@ zx_status_t DeviceCtx::Init() {
     default:
       ENCODE_ERROR("Unknown soc pid: %d\n", info.pid);
       return ZX_ERR_INVALID_ARGS;
-  }
-
-  mmio_buffer_t cbus_mmio;
-  status = pdev_map_mmio_buffer(&pdev_, kCbus, ZX_CACHE_POLICY_UNCACHED_DEVICE, &cbus_mmio);
-  if (status != ZX_OK) {
-    ENCODE_ERROR("Failed map cbus");
-    return ZX_ERR_NO_MEMORY;
-  }
-  cbus_ = std::make_unique<CbusRegisterIo>(cbus_mmio);
-
-  mmio_buffer_t dosbus_mmio;
-  status = pdev_map_mmio_buffer(&pdev_, kDosbus, ZX_CACHE_POLICY_UNCACHED_DEVICE, &dosbus_mmio);
-  if (status != ZX_OK) {
-    ENCODE_ERROR("Failed map dosbus");
-    return ZX_ERR_NO_MEMORY;
-  }
-  dosbus_ = std::make_unique<DosRegisterIo>(dosbus_mmio);
-
-  mmio_buffer_t aobus_mmio;
-  status = pdev_map_mmio_buffer(&pdev_, kAobus, ZX_CACHE_POLICY_UNCACHED_DEVICE, &aobus_mmio);
-  if (status != ZX_OK) {
-    ENCODE_ERROR("Failed map aobus");
-    return ZX_ERR_NO_MEMORY;
-  }
-  aobus_ = std::make_unique<AoRegisterIo>(aobus_mmio);
-
-  mmio_buffer_t hiubus_mmio;
-  status = pdev_map_mmio_buffer(&pdev_, kHiubus, ZX_CACHE_POLICY_UNCACHED_DEVICE, &hiubus_mmio);
-  if (status != ZX_OK) {
-    ENCODE_ERROR("Failed map hiubus");
-    return ZX_ERR_NO_MEMORY;
-  }
-  hiubus_ = std::make_unique<HiuRegisterIo>(hiubus_mmio);
-
-  status =
-      pdev_get_interrupt(&pdev_, kDosMbox2Irq, 0, enc_interrupt_handle_.reset_and_get_address());
-  if (status != ZX_OK) {
-    ENCODE_ERROR("Failed get enc interrupt");
-    return ZX_ERR_NO_MEMORY;
-  }
-
-  status = pdev_get_bti(&pdev_, 0, bti_.reset_and_get_address());
-  if (status != ZX_OK) {
-    ENCODE_ERROR("Failed get bti");
-    return ZX_ERR_NO_MEMORY;
   }
 
   status = load_firmware(parent(), "h264_enc.bin", firmware_vmo_.reset_and_get_address(),
@@ -206,7 +202,17 @@ zx_status_t DeviceCtx::Init() {
     return status;
   }
 
-  return ZX_OK;
+  InterruptInit();
+
+  status = loop_.StartThread("device-loop", &loop_thread_);
+  if (status != ZX_OK) {
+    ENCODE_ERROR("could not start loop thread");
+    return status;
+  }
+
+  status = DdkAdd("amlogic_video_enc");
+
+  return status;
 }
 
 zx_status_t DeviceCtx::LoadFirmware() {
@@ -217,7 +223,7 @@ zx_status_t DeviceCtx::LoadFirmware() {
   const uint32_t kBufferAlignShift = 16;
   const char* kBufferName = "EncFirmware";
 
-  HcodecAssistMmcCtrl1::Get().FromValue(HcodecAssistMmcCtrl1::kCtrl).WriteTo(dosbus_.get());
+  HcodecAssistMmcCtrl1::Get().FromValue(HcodecAssistMmcCtrl1::kCtrl).WriteTo(&dosbus_);
 
   zx_status_t status = io_buffer_init_aligned(&firmware_buffer, bti_.get(), kFirmwareSize,
                                               kBufferAlignShift, IO_BUFFER_RW | IO_BUFFER_CONTIG);
@@ -235,26 +241,26 @@ zx_status_t DeviceCtx::LoadFirmware() {
 
   BarrierAfterFlush();
 
-  HcodecMpsr::Get().FromValue(0).WriteTo(dosbus_.get());
-  HcodecCpsr::Get().FromValue(0).WriteTo(dosbus_.get());
+  HcodecMpsr::Get().FromValue(0).WriteTo(&dosbus_);
+  HcodecCpsr::Get().FromValue(0).WriteTo(&dosbus_);
 
   // delay
   for (int i = 0; i < 3; i++) {
-    HcodecMpsr::Get().ReadFrom(dosbus_.get());
+    HcodecMpsr::Get().ReadFrom(&dosbus_);
   }
 
   HcodecImemDmaAdr::Get()
       .FromValue(truncate_to_32(io_buffer_phys(&firmware_buffer)))
-      .WriteTo(dosbus_.get());
-  HcodecImemDmaCount::Get().FromValue(kDmaCount).WriteTo(dosbus_.get());
+      .WriteTo(&dosbus_);
+  HcodecImemDmaCount::Get().FromValue(kDmaCount).WriteTo(&dosbus_);
   HcodecImemDmaCtrl::Get()
       .FromValue(0)
       .set_ready(1)
       .set_ctrl(HcodecImemDmaCtrl::kCtrl)
-      .WriteTo(dosbus_.get());
+      .WriteTo(&dosbus_);
 
   if (!WaitForRegister(std::chrono::seconds(1), [this] {
-        return HcodecImemDmaCtrl::Get().ReadFrom(dosbus_.get()).ready() == 0;
+        return HcodecImemDmaCtrl::Get().ReadFrom(&dosbus_).ready() == 0;
       })) {
     ENCODE_ERROR("Failed to load microcode.");
 
@@ -266,6 +272,24 @@ zx_status_t DeviceCtx::LoadFirmware() {
   BarrierBeforeRelease();
   io_buffer_release(&firmware_buffer);
   return ZX_OK;
+}
+
+void DeviceCtx::InterruptInit() {
+  interrupt_thread_ = std::thread([this]() {
+    while (true) {
+      zx_time_t time;
+      zx_status_t status = zx_interrupt_wait(interrupt_handle_.get(), &time);
+      if (status != ZX_OK) {
+        ENCODE_ERROR("zx_interrupt_wait() failed - status: %d", status);
+        return;
+      }
+
+      HcodecIrqMboxClear::Get().FromValue(1).WriteTo(&dosbus_);
+      hw_status_ =
+          static_cast<EncoderStatus>(HcodecEncoderStatus::Get().ReadFrom(&dosbus_).reg_value());
+      sync_completion_signal(&interrupt_sync_);
+    }
+  });
 }
 
 zx_status_t DeviceCtx::BufferAlloc() {
@@ -344,19 +368,19 @@ zx_status_t DeviceCtx::BufferAlloc() {
 zx_status_t DeviceCtx::PowerOn() {
   // ungate dos clk
   // TODO(45193) shared with vdec
-  HhiGclkMpeg0::Get().ReadFrom(hiubus_.get()).set_dos(true).WriteTo(hiubus_.get());
+  HhiGclkMpeg0::Get().ReadFrom(&hiubus_).set_dos(true).WriteTo(&hiubus_);
 
   // power up HCODEC
   AoRtiGenPwrSleep0::Get()
-      .ReadFrom(aobus_.get())
+      .ReadFrom(&aobus_)
       .set_dos_hcodec_d1_pwr_off(0)
       .set_dos_hcodec_pwr_off(0)
-      .WriteTo(aobus_.get());
+      .WriteTo(&aobus_);
   zx_nanosleep(zx_deadline_after(ZX_USEC(10)));
 
   // reset all of HCODEC
-  DosSwReset1::Get().FromValue(DosSwReset1::kAll).WriteTo(dosbus_.get());
-  DosSwReset1::Get().FromValue(DosSwReset1::kNone).WriteTo(dosbus_.get());
+  DosSwReset1::Get().FromValue(DosSwReset1::kAll).WriteTo(&dosbus_);
+  DosSwReset1::Get().FromValue(DosSwReset1::kNone).WriteTo(&dosbus_);
 
   // ungate clock
   switch (kClockLevel) {
@@ -364,11 +388,11 @@ zx_status_t DeviceCtx::PowerOn() {
     {
       // TODO(45193) shared with vdec, should be synchronized
       HhiVdecClkCntl::Get()
-          .ReadFrom(hiubus_.get())
+          .ReadFrom(&hiubus_)
           .set_hcodec_clk_sel(/*fclk_div4*/ 2)
           .set_hcodec_clk_en(1)
           .set_hcodec_clk_div(/*fclk_div2p5*/ 0)
-          .WriteTo(hiubus_.get());
+          .WriteTo(&hiubus_);
       break;
     }
     default:
@@ -376,23 +400,23 @@ zx_status_t DeviceCtx::PowerOn() {
   }
 
   // TODO(45193) shared with vdec
-  DosGclkEn0::Get().ReadFrom(dosbus_.get()).set_hcodec_en(0x7fff).WriteTo(dosbus_.get());
+  DosGclkEn0::Get().ReadFrom(&dosbus_).set_hcodec_en(0x7fff).WriteTo(&dosbus_);
 
   // powerup hcodec memories
-  DosMemPdHcodec::Get().FromValue(0).WriteTo(dosbus_.get());
+  DosMemPdHcodec::Get().FromValue(0).WriteTo(&dosbus_);
 
   // remove hcodec iso
   AoRtiGenPwrIso0::Get()
-      .ReadFrom(aobus_.get())
+      .ReadFrom(&aobus_)
       .set_dos_hcodec_iso_in_en(0)
       .set_dos_hcodec_iso_out_en(0)
-      .WriteTo(aobus_.get());
+      .WriteTo(&aobus_);
   zx_nanosleep(zx_deadline_after(ZX_USEC(10)));
 
   // TODO(45193) shared with vdec
   // disable auto clock gate
-  DosGenCtrl0::Get().ReadFrom(dosbus_.get()).set_hcodec_auto_clock_gate(1).WriteTo(dosbus_.get());
-  DosGenCtrl0::Get().ReadFrom(dosbus_.get()).set_hcodec_auto_clock_gate(0).WriteTo(dosbus_.get());
+  DosGenCtrl0::Get().ReadFrom(&dosbus_).set_hcodec_auto_clock_gate(1).WriteTo(&dosbus_);
+  DosGenCtrl0::Get().ReadFrom(&dosbus_).set_hcodec_auto_clock_gate(0).WriteTo(&dosbus_);
 
   zx_nanosleep(zx_deadline_after(ZX_USEC(10)));
 
@@ -404,7 +428,7 @@ zx_status_t DeviceCtx::CanvasInit() { return ZX_OK; }
 void DeviceCtx::Reset() {
   for (int i = 0; i < 3; i++) {
     // delay
-    DosSwReset1::Get().ReadFrom(dosbus_.get());
+    DosSwReset1::Get().ReadFrom(&dosbus_);
   }
 
   DosSwReset1::Get()
@@ -416,38 +440,38 @@ void DeviceCtx::Reset() {
       .set_hcodec_afifo(1)
       .set_hcodec_vlc(1)
       .set_hcodec_qdct(1)
-      .WriteTo(dosbus_.get());
+      .WriteTo(&dosbus_);
 
-  DosSwReset1::Get().FromValue(DosSwReset1::kNone).WriteTo(dosbus_.get());
+  DosSwReset1::Get().FromValue(DosSwReset1::kNone).WriteTo(&dosbus_);
 
   for (int i = 0; i < 3; i++) {
     // delay
-    DosSwReset1::Get().ReadFrom(dosbus_.get());
+    DosSwReset1::Get().ReadFrom(&dosbus_);
   }
 }
 
 void DeviceCtx::Config() {
-  HcodecVlcTotalBytes::Get().FromValue(0).WriteTo(dosbus_.get());
-  HcodecVlcConfig::Get().FromValue(0x7).WriteTo(dosbus_.get());
-  HcodecVlcIntControl::Get().FromValue(0).WriteTo(dosbus_.get());
+  HcodecVlcTotalBytes::Get().FromValue(0).WriteTo(&dosbus_);
+  HcodecVlcConfig::Get().FromValue(0x7).WriteTo(&dosbus_);
+  HcodecVlcIntControl::Get().FromValue(0).WriteTo(&dosbus_);
 
-  HcodecAssistAmr1Int0::Get().FromValue(0x15).WriteTo(dosbus_.get());
-  HcodecAssistAmr1Int1::Get().FromValue(0x8).WriteTo(dosbus_.get());
-  HcodecAssistAmr1Int3::Get().FromValue(0x14).WriteTo(dosbus_.get());
+  HcodecAssistAmr1Int0::Get().FromValue(0x15).WriteTo(&dosbus_);
+  HcodecAssistAmr1Int1::Get().FromValue(0x8).WriteTo(&dosbus_);
+  HcodecAssistAmr1Int3::Get().FromValue(0x14).WriteTo(&dosbus_);
 
-  HcodecIdrPicId::Get().FromValue(idr_pic_id_).WriteTo(dosbus_.get());
-  HcodecFrameNumber::Get().FromValue(frame_number_).WriteTo(dosbus_.get());
-  HcodecPicOrderCntLsb::Get().FromValue(pic_order_cnt_lsb_).WriteTo(dosbus_.get());
+  HcodecIdrPicId::Get().FromValue(idr_pic_id_).WriteTo(&dosbus_);
+  HcodecFrameNumber::Get().FromValue(frame_number_).WriteTo(&dosbus_);
+  HcodecPicOrderCntLsb::Get().FromValue(pic_order_cnt_lsb_).WriteTo(&dosbus_);
 
   const uint32_t kInitQpPicture = 26;
   const uint32_t kLog2MaxFrameNum = 4;
   const uint32_t kLog2MaxPicOrderCntLsb = 4;
   const uint32_t kAnc0BufferId = 0;
 
-  HcodecLog2MaxPicOrderCntLsb::Get().FromValue(kLog2MaxPicOrderCntLsb).WriteTo(dosbus_.get());
-  HcodecLog2MaxFrameNum::Get().FromValue(kLog2MaxFrameNum).WriteTo(dosbus_.get());
-  HcodecAnc0BufferId::Get().FromValue(kAnc0BufferId).WriteTo(dosbus_.get());
-  HcodecQpPicture::Get().FromValue(kInitQpPicture).WriteTo(dosbus_.get());
+  HcodecLog2MaxPicOrderCntLsb::Get().FromValue(kLog2MaxPicOrderCntLsb).WriteTo(&dosbus_);
+  HcodecLog2MaxFrameNum::Get().FromValue(kLog2MaxFrameNum).WriteTo(&dosbus_);
+  HcodecAnc0BufferId::Get().FromValue(kAnc0BufferId).WriteTo(&dosbus_);
+  HcodecQpPicture::Get().FromValue(kInitQpPicture).WriteTo(&dosbus_);
 }
 
 // encoder control
@@ -503,7 +527,7 @@ void DeviceCtx::SetEncodeParams(fuchsia::media::FormatDetails format_details) {}
 fidl::InterfaceHandle<fuchsia::sysmem::Allocator> DeviceCtx::ConnectToSysmem() {
   fidl::InterfaceHandle<fuchsia::sysmem::Allocator> client_end;
   fidl::InterfaceRequest<fuchsia::sysmem::Allocator> server_end = client_end.NewRequest();
-  zx_status_t connect_status = sysmem_connect(&sysmem_, server_end.TakeChannel().release());
+  zx_status_t connect_status = sysmem_.Connect(server_end.TakeChannel());
   if (connect_status != ZX_OK) {
     // failure
     return fidl::InterfaceHandle<fuchsia::sysmem::Allocator>();

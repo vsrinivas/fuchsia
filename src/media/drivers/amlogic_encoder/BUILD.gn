@@ -5,12 +5,11 @@
 import("//build/cipd.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/package.gni")
+import("//build/test/test_package.gni")
 
 # These targets only compile for arm64.
 if (target_cpu == "arm64") {
-  driver_module("amlogic_encoder_driver") {
-    output_name = "amlogic_video_encoder"
-
+  source_set("lib") {
     sources = [
       "binding.cc",
       "codec_adapter_h264.cc",
@@ -26,7 +25,7 @@ if (target_cpu == "arm64") {
       "registers.h",
     ]
 
-    deps = [
+    public_deps = [
       "//sdk/banjo/ddk.protocol.composite",
       "//sdk/fidl/fuchsia.hardware.mediacodec:fuchsia.hardware.mediacodec_c",
       "//sdk/fidl/fuchsia.mediacodec",
@@ -42,6 +41,7 @@ if (target_cpu == "arm64") {
       "//zircon/public/lib/fit",
       "//zircon/public/lib/hwreg",
       "//zircon/public/lib/mmio",
+      "//zircon/public/lib/sync",
       "//zircon/public/lib/zx",
       "//zircon/system/banjo/ddk.protocol.amlogiccanvas",
       "//zircon/system/banjo/ddk.protocol.platform.device",
@@ -49,6 +49,11 @@ if (target_cpu == "arm64") {
       "//zircon/system/dev/lib/device-protocol-pdev",
       "//zircon/system/dev/lib/device-protocol-platform-device",
     ]
+  }
+
+  driver_module("amlogic_encoder_driver") {
+    output_name = "amlogic_video_encoder"
+    deps = [ ":lib" ]
 
     configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
     configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
@@ -73,5 +78,32 @@ if (target_cpu == "arm64") {
         },
       ]
     }
+  }
+
+  executable("amlogic_encoder_unittests") {
+    testonly = true
+    sources = [ "test/device_test.cc" ]
+    deps = [
+      ":lib",
+      "//zircon/public/lib/fake-bti",
+      "//zircon/public/lib/fake_ddk",
+      "//zircon/public/lib/mock-mmio-reg",
+      "//zircon/public/lib/zxtest",
+    ]
+  }
+
+  test_package("amlogic_encoder_tests") {
+    deps = [ ":amlogic_encoder_unittests" ]
+    tests = [
+      {
+        name = "amlogic_encoder_unittests"
+        environments = basic_envs
+      },
+    ]
+  }
+
+  group("tests") {
+    testonly = true
+    deps = [ ":amlogic_encoder_tests" ]
   }
 }

@@ -14,11 +14,17 @@
 namespace amlogic_encoder {
 
 zx_status_t amlogic_encoder_bind(void* ctx, zx_device_t* parent) {
-  auto [device_bind_status, device_ctx] = DeviceCtx::Bind(parent);
+  auto device_ctx = DeviceCtx::Create(parent);
 
-  if (device_bind_status != ZX_OK) {
-    zxlogf(ERROR, "Failed to bind device: %d", device_bind_status);
-    return device_bind_status;
+  if (!device_ctx) {
+    zxlogf(ERROR, "Failed to create device");
+    return ZX_ERR_NO_MEMORY;
+  }
+
+  auto status = device_ctx->Bind();
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to bind device %d", status);
+    return status;
   }
 
   // Let the device context live forever.

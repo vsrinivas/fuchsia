@@ -11,7 +11,9 @@
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/fidl-utils/bind.h>
+#include <lib/sync/completion.h>
 #include <zircon/fidl.h>
+#include <zircon/types.h>
 
 #include <memory>
 #include <thread>
@@ -25,7 +27,12 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
 
+#include "ddktl/protocol/amlogiccanvas.h"
+#include "ddktl/protocol/platform/device.h"
+#include "ddktl/protocol/sysmem.h"
 #include "fuchsia/media/cpp/fidl.h"
+#include "lib/mmio/mmio.h"
+#include "lib/zx/interrupt.h"
 #include "src/media/drivers/amlogic_encoder/internal_buffer.h"
 #include "src/media/drivers/amlogic_encoder/local_codec_factory.h"
 #include "src/media/drivers/amlogic_encoder/registers.h"
@@ -51,10 +58,22 @@ class DeviceCtx : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_MEDIA
   // Creates and binds an instance of `DeviceCtx`. If successful, returns ZX_OK
   // and a bound instance of `DeviceCtx`, otherwise an error status and
   // `nullptr`.
-  static std::pair<zx_status_t, std::unique_ptr<DeviceCtx>> Bind(zx_device_t* parent);
+  static std::unique_ptr<DeviceCtx> Create(zx_device_t* parent);
 
-  explicit DeviceCtx(zx_device_t* parent)
+  explicit DeviceCtx(zx_device_t* parent, ddk::PDevProtocolClient pdev,
+                     ddk::AmlogicCanvasProtocolClient canvas, ddk::SysmemProtocolClient sysmem,
+                     CbusRegisterIo cbus, DosRegisterIo dosbus, AoRegisterIo aobus,
+                     HiuRegisterIo hiubus, zx::interrupt interrupt, zx::bti bti)
       : DeviceType(parent),
+        pdev_(pdev),
+        canvas_(canvas),
+        sysmem_(sysmem),
+        cbus_(std::move(cbus)),
+        dosbus_(std::move(dosbus)),
+        aobus_(std::move(aobus)),
+        hiubus_(std::move(hiubus)),
+        bti_(std::move(bti)),
+        interrupt_handle_(std::move(interrupt)),
         loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
         codec_admission_control_(std::make_unique<CodecAdmissionControl>(loop_.dispatcher())) {}
 
@@ -62,6 +81,9 @@ class DeviceCtx : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_MEDIA
   DeviceCtx& operator=(const DeviceCtx&) = delete;
 
   ~DeviceCtx() { ShutDown(); }
+
+  // init and add device
+  zx_status_t Bind();
 
   // media codec FIDL implementation
   void GetCodecFactory(zx::channel request);
@@ -91,12 +113,11 @@ class DeviceCtx : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_MEDIA
   void SetEncodeParams(fuchsia::media::FormatDetails format_details);
 
  private:
-  zx_status_t Init();
   void ShutDown();
-  zx_status_t AddDevice();
 
   zx_status_t EnsureHwInited();
   zx_status_t PowerOn();
+  void InterruptInit();
   zx_status_t BufferAlloc();
   zx_status_t CanvasInit();
   zx_status_t LoadFirmware();
@@ -104,22 +125,25 @@ class DeviceCtx : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_MEDIA
   // configures hcodec block with frame and pic count info.
   void Config();
 
-  pdev_protocol_t pdev_;
-  amlogic_canvas_protocol_t canvas_;
-  sysmem_protocol_t sysmem_;
+  ddk::PDevProtocolClient pdev_;
+  ddk::AmlogicCanvasProtocolClient canvas_;
+  ddk::SysmemProtocolClient sysmem_;
 
   SocType soc_type_ = SocType::kUnknown;
-  std::unique_ptr<CbusRegisterIo> cbus_;
-  std::unique_ptr<DosRegisterIo> dosbus_;
-  std::unique_ptr<AoRegisterIo> aobus_;
-  std::unique_ptr<HiuRegisterIo> hiubus_;
+  CbusRegisterIo cbus_;
+  DosRegisterIo dosbus_;
+  AoRegisterIo aobus_;
+  HiuRegisterIo hiubus_;
   zx::bti bti_;
   zx::vmo firmware_vmo_;
   uintptr_t firmware_ptr_ = 0;
   uint64_t firmware_size_ = 0;
 
-  zx::interrupt enc_interrupt_handle_;
-  std::thread enc_interrupt_thread_;
+  EncoderStatus hw_status_;
+
+  zx::interrupt interrupt_handle_;
+  std::thread interrupt_thread_;
+  sync_completion_t interrupt_sync_;
   fuchsia::sysmem::AllocatorSyncPtr sysmem_sync_ptr_;
 
   // working buffers for encoder

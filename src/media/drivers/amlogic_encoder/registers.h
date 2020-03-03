@@ -50,25 +50,25 @@ class TypedRegisterAddr : public hwreg::RegisterAddr<RegType> {
 // processing.
 class CbusRegisterIo : public ddk::MmioBuffer {
  public:
-  CbusRegisterIo(const mmio_buffer_t& mmio) : ddk::MmioBuffer(mmio) {}
+  CbusRegisterIo(MmioBuffer&& other) : ddk::MmioBuffer(std::move(other)) {}
 };
 
 // The DOS bus mainly seems to handle video decoding/encoding.
 class DosRegisterIo : public ddk::MmioBuffer {
  public:
-  DosRegisterIo(const mmio_buffer_t& mmio) : ddk::MmioBuffer(mmio) {}
+  DosRegisterIo(MmioBuffer&& other) : ddk::MmioBuffer(std::move(other)) {}
 };
 
 // Aobus communicates with the always-on power management processor.
 class AoRegisterIo : public ddk::MmioBuffer {
  public:
-  AoRegisterIo(const mmio_buffer_t& mmio) : ddk::MmioBuffer(mmio) {}
+  AoRegisterIo(MmioBuffer&& other) : ddk::MmioBuffer(std::move(other)) {}
 };
 
 // Hiubus mainly seems to handle clock control and gating.
 class HiuRegisterIo : public ddk::MmioBuffer {
  public:
-  HiuRegisterIo(const mmio_buffer_t& mmio) : ddk::MmioBuffer(mmio) {}
+  HiuRegisterIo(MmioBuffer&& other) : ddk::MmioBuffer(std::move(other)) {}
 };
 
 #define DEFINE_REGISTER(name, type, address)                           \

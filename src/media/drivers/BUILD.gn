@@ -15,6 +15,9 @@ group("tests") {
   testonly = true
 
   if (target_cpu == "arm64") {
-    deps = [ "amlogic_decoder:tests" ]
+    deps = [
+      "amlogic_decoder:tests",
+      "amlogic_encoder:tests",
+    ]
   }
 }
