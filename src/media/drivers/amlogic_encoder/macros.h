@@ -37,6 +37,9 @@ inline uint32_t truncate_to_32(uint64_t input) {
   return static_cast<uint32_t>(input);
 }
 
+// converts picture dimension to macroblock, assuming size 16 mb
+inline uint32_t picture_to_mb(uint32_t input) { return (input + 15) >> 4; }
+
 // Wait for a condition to become true, with a timeout.
 template <typename DurationType, typename T>
 bool WaitForRegister(DurationType timeout, T condition) {

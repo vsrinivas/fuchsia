@@ -26,6 +26,7 @@
 #include <ddktl/protocol/empty-protocol.h>
 
 #include "fuchsia/media/cpp/fidl.h"
+#include "src/media/drivers/amlogic_encoder/internal_buffer.h"
 #include "src/media/drivers/amlogic_encoder/local_codec_factory.h"
 #include "src/media/drivers/amlogic_encoder/registers.h"
 
@@ -77,7 +78,7 @@ class DeviceCtx : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_MEDIA
   fidl::InterfaceHandle<fuchsia::sysmem::Allocator> ConnectToSysmem();
 
   // encoder control, runs on input processing thread
-  zx_status_t InitEncoder(const fuchsia::media::FormatDetails& initial_format_details);
+  zx_status_t EncoderInit(const fuchsia::media::FormatDetails& format_details);
   zx_status_t StartEncoder();
   zx_status_t StopEncoder();
   zx_status_t WaitForIdle();
@@ -96,7 +97,7 @@ class DeviceCtx : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_MEDIA
 
   zx_status_t EnsureHwInited();
   zx_status_t PowerOn();
-  zx_status_t BufferInit();
+  zx_status_t BufferAlloc();
   zx_status_t CanvasInit();
   zx_status_t LoadFirmware();
   void Reset();
@@ -119,6 +120,15 @@ class DeviceCtx : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_MEDIA
 
   zx::interrupt enc_interrupt_handle_;
   std::thread enc_interrupt_thread_;
+  fuchsia::sysmem::AllocatorSyncPtr sysmem_sync_ptr_;
+
+  // working buffers for encoder
+  std::optional<InternalBuffer> dec0_;
+  std::optional<InternalBuffer> dec1_;
+  std::optional<InternalBuffer> assit_;
+  std::optional<InternalBuffer> scale_buff_;
+  std::optional<InternalBuffer> dump_info_;
+  std::optional<InternalBuffer> cbr_info_;
 
   async::Loop loop_;
   thrd_t loop_thread_;

@@ -199,6 +199,13 @@ zx_status_t DeviceCtx::Init() {
 
   zx::vmar::root_self()->map(0, firmware_vmo_, 0, firmware_size_, ZX_VM_PERM_READ, &firmware_ptr_);
 
+  sysmem_sync_ptr_.Bind(ConnectToSysmem());
+  if (!sysmem_sync_ptr_) {
+    ENCODE_ERROR("ConnectToSysmem() failed");
+    status = ZX_ERR_INTERNAL;
+    return status;
+  }
+
   return ZX_OK;
 }
 
@@ -261,7 +268,78 @@ zx_status_t DeviceCtx::LoadFirmware() {
   return ZX_OK;
 }
 
-zx_status_t DeviceCtx::BufferInit() { return ZX_OK; }
+zx_status_t DeviceCtx::BufferAlloc() {
+  constexpr uint32_t kDec0Size = 0x300000;
+  constexpr uint32_t kDec1Size = 0x300000;
+  constexpr uint32_t kAssitSize = 0xc0000;
+  constexpr uint32_t kScaleBufSize = 0x300000;
+  constexpr uint32_t kDumpInfoSize = 0xa0000;
+  constexpr uint32_t kCbrInfoSize = 0x2000;
+
+  auto result = InternalBuffer::Create("H264EncoderDec0", &sysmem_sync_ptr_, bti(), kDec0Size,
+                                       /*is_writable=*/true,
+                                       /*is_mapping_needed*/
+                                       false);
+  if (!result.is_ok()) {
+    ENCODE_ERROR("Failed to make buffer - status: %d", result.error());
+    return result.error();
+  }
+  dec0_.emplace(result.take_value());
+
+  result = InternalBuffer::Create("H264EncoderDec1", &sysmem_sync_ptr_, bti(), kDec1Size,
+
+                                  /*is_writable=*/true,
+                                  /*is_mapping_needed*/
+                                  false);
+  if (!result.is_ok()) {
+    ENCODE_ERROR("Failed to make buffer - status: %d", result.error());
+    return result.error();
+  }
+  dec1_.emplace(result.take_value());
+
+  result = InternalBuffer::Create("H264EncoderAssit", &sysmem_sync_ptr_, bti(), kAssitSize,
+
+                                  /*is_writable=*/true,
+                                  /*is_mapping_needed*/
+                                  false);
+  if (!result.is_ok()) {
+    ENCODE_ERROR("Failed to make buffer - status: %d", result.error());
+    return result.error();
+  }
+  assit_.emplace(result.take_value());
+
+  result = InternalBuffer::Create("H264EncoderScaleBuf", &sysmem_sync_ptr_, bti(), kScaleBufSize,
+                                  /*is_writable=*/true,
+                                  /*is_mapping_needed*/
+                                  false);
+  if (!result.is_ok()) {
+    ENCODE_ERROR("Failed to make buffer - status: %d", result.error());
+    return result.error();
+  }
+  scale_buff_.emplace(result.take_value());
+
+  result = InternalBuffer::Create("H264EncoderDumpInfo", &sysmem_sync_ptr_, bti(), kDumpInfoSize,
+                                  /*is_writable=*/true,
+                                  /*is_mapping_needed*/
+                                  false);
+  if (!result.is_ok()) {
+    ENCODE_ERROR("Failed to make buffer - status: %d", result.error());
+    return result.error();
+  }
+  dump_info_.emplace(result.take_value());
+
+  result = InternalBuffer::Create("H264EncoderCbrInfo", &sysmem_sync_ptr_, bti(), kCbrInfoSize,
+                                  /*is_writable=*/true,
+                                  /*is_mapping_needed*/
+                                  false);
+  if (!result.is_ok()) {
+    ENCODE_ERROR("Failed to make buffer - status: %d", result.error());
+    return result.error();
+  }
+  cbr_info_.emplace(result.take_value());
+
+  return ZX_OK;
+}
 
 zx_status_t DeviceCtx::PowerOn() {
   // ungate dos clk
@@ -373,8 +451,17 @@ void DeviceCtx::Config() {
 }
 
 // encoder control
-zx_status_t DeviceCtx::InitEncoder(const fuchsia::media::FormatDetails& initial_format_details) {
-  auto status = BufferInit();
+zx_status_t DeviceCtx::EncoderInit(const fuchsia::media::FormatDetails& format_details) {
+  if (!format_details.has_domain() || !format_details.domain().is_video() ||
+      !format_details.domain().video().is_uncompressed()) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  encoder_width_ = format_details.domain().video().uncompressed().image_format.display_width;
+  encoder_height_ = format_details.domain().video().uncompressed().image_format.display_height;
+  rows_per_slice_ = picture_to_mb(encoder_height_);
+
+  auto status = BufferAlloc();
   if (status != ZX_OK) {
     return status;
   }
