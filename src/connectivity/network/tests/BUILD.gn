@@ -16,6 +16,7 @@ group("tests") {
     ":netstack_external_network_test_client($host_toolchain)",
     ":netstack_if_nameindex_test($host_toolchain)",
     ":netstack_integration_tests",
+    "benchmarks",
     "integration",
   ]
 }

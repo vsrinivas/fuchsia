@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "bin/udp_benchmark"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.tracing.provider.Registry",
+            "fuchsia.posix.socket.Provider"
+        ]
+    }
+}

@@ -1,0 +1,64 @@
+{
+  "test_suite_name": "fuchsia.netstack.udp_micro_benchmarks",
+  "app": "fuchsia-pkg://fuchsia.com/netstack_benchmarks#meta/udp_benchmark.cmx",
+  "args": [],
+  "categories": ["benchmark"],
+  "measure": [
+    {
+      "type": "duration",
+      "expected_sample_count": 1000,
+      "event_category": "benchmark",
+      "event_name": "send_64bytes",
+      "output_test_name": "udp/send/64bytes"
+    },
+    {
+      "type": "duration",
+      "expected_sample_count": 1000,
+      "event_category": "benchmark",
+      "event_name": "send_1024bytes",
+      "output_test_name": "udp/send/1024bytes"
+    },
+    {
+      "type": "duration",
+      "expected_sample_count": 1000,
+      "event_category": "benchmark",
+      "event_name": "send_2048bytes",
+      "output_test_name": "udp/send/2048bytes"
+    },
+    {
+      "type": "duration",
+      "expected_sample_count": 1000,
+      "event_category": "benchmark",
+      "event_name": "send_4096bytes",
+      "output_test_name": "udp/send/4096bytes"
+    },
+    {
+      "type": "duration",
+      "expected_sample_count": 1000,
+      "event_category": "benchmark",
+      "event_name": "recv_64bytes",
+      "output_test_name": "udp/recv/64bytes"
+    },
+    {
+      "type": "duration",
+      "expected_sample_count": 1000,
+      "event_category": "benchmark",
+      "event_name": "recv_1024bytes",
+      "output_test_name": "udp/recv/1024bytes"
+    },
+    {
+      "type": "duration",
+      "expected_sample_count": 1000,
+      "event_category": "benchmark",
+      "event_name": "recv_2048bytes",
+      "output_test_name": "udp/recv/2048bytes"
+    },
+    {
+      "type": "duration",
+      "expected_sample_count": 1000,
+      "event_category": "benchmark",
+      "event_name": "recv_4096bytes",
+      "output_test_name": "udp/recv/4096bytes"
+    }
+  ]
+}

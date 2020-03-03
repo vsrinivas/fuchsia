@@ -1,0 +1,56 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/testing/environments.gni")
+
+executable("udp_benchmark") {
+  testonly = true
+  output_name = "udp_benchmark"
+  sources = [
+    "udp_benchmark.cc",
+    "util.cc",
+    "util.h",
+  ]
+
+  public_deps = [
+    "//src/lib/fsl",
+    "//src/lib/fxl",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/trace",
+    "//zircon/public/lib/trace-provider-with-fdio",
+  ]
+}
+
+package("netstack_benchmarks") {
+  testonly = true
+  deps = [ ":udp_benchmark" ]
+
+  binaries = [
+    {
+      name = "udp_benchmark"
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path("udp_benchmark.tspec")
+      dest = "udp_benchmark.tspec"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/udp_benchmark.cmx")
+      dest = "udp_benchmark.cmx"
+    },
+  ]
+}
+
+group("benchmarks") {
+  testonly = true
+  deps = [ ":netstack_benchmarks" ]
+}

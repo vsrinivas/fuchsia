@@ -18,6 +18,7 @@ test_list = [
   "kernel_boot_timeline_test",
   "ledger_perf_test",
   "microbenchmarks_test",
+  "netstack_benchmarks_test",
   "rust_inspect_benchmarks_test",
   "tspec_example_test",
 ]
@@ -65,6 +66,7 @@ group("package_deps") {
   public_deps = [
     "//garnet/examples/benchmark",
     "//garnet/tests/benchmarks/input_latency:garnet_input_latency_benchmarks",
+    "//src/connectivity/network/tests/benchmarks:netstack_benchmarks",
     "//src/ledger:bin",
     "//src/ledger/bin/tests/benchmark",
     "//src/lib/inspect/rust/fuchsia-inspect:benchmarks",
