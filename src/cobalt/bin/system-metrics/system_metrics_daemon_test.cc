@@ -31,8 +31,7 @@ using cobalt::FakeTemperatureFetcherNotSupported;
 using cobalt::LogMethod;
 using cobalt::TemperatureFetchStatus;
 using fuchsia_system_metrics::FuchsiaLifetimeEventsMetricDimensionEvents;
-using DeviceState =
-    fuchsia_system_metrics::FuchsiaCpuPercentageExperimentalMetricDimensionDeviceState;
+using DeviceState = fuchsia_system_metrics::CpuPercentageMetricDimensionDeviceState;
 using fuchsia_system_metrics::FuchsiaUpPingMetricDimensionUptime;
 using fuchsia_system_metrics::FuchsiaUptimeMetricDimensionUptimeRange;
 using std::chrono::hours;
