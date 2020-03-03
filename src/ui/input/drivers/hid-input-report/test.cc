@@ -42,7 +42,10 @@ class Binder : public fake_ddk::Bind {
 
     if (args && args->ops) {
       if (args->ops->message) {
-        if ((status = fidl_.SetMessageOp(args->ctx, args->ops->message)) < 0) {
+        fake_ddk::FidlMessenger messenger;
+        fidl_clients_.emplace_back(std::make_unique<fake_ddk::FidlMessenger>());
+        if ((status = fidl_clients_[fidl_clients_.size() - 1]->SetMessageOp(
+                 args->ctx, args->ops->message)) < 0) {
           return status;
         }
       }
@@ -58,8 +61,10 @@ class Binder : public fake_ddk::Bind {
   }
 
   ProtocolDeviceOps GetLastDeviceOps() { return last_ops_; }
+  zx::channel& GetLastFidlClient() { return fidl_clients_[fidl_clients_.size() - 1]->local(); }
 
  private:
+  std::vector<std::unique_ptr<fake_ddk::FidlMessenger>> fidl_clients_;
   ProtocolDeviceOps last_ops_;
 };
 
@@ -209,7 +214,8 @@ TEST_F(HidDevTest, GetReportDescTest) {
   // get its arguments here.
   ProtocolDeviceOps dev_ops = ddk_.GetLastDeviceOps();
 
-  auto sync_client = fuchsia_input_report::InputDevice::SyncClient(std::move(ddk_.FidlClient()));
+  auto sync_client =
+      fuchsia_input_report::InputDevice::SyncClient(std::move(ddk_.GetLastFidlClient()));
   fuchsia_input_report::InputDevice::ResultOf::GetDescriptor result = sync_client.GetDescriptor();
   ASSERT_OK(result.status());
 
@@ -243,7 +249,8 @@ TEST_F(HidDevTest, GetReportTest) {
   // get its arguments here.
   ProtocolDeviceOps dev_ops = ddk_.GetLastDeviceOps();
 
-  auto sync_client = fuchsia_input_report::InputDevice::SyncClient(std::move(ddk_.FidlClient()));
+  auto sync_client =
+      fuchsia_input_report::InputDevice::SyncClient(std::move(ddk_.GetLastFidlClient()));
 
   // Spoof send a report.
   std::vector<uint8_t> sent_report = {0xFF, 0x50, 0x70};
@@ -292,7 +299,8 @@ TEST_F(HidDevTest, SensorTest) {
   // get its arguments here.
   ProtocolDeviceOps dev_ops = ddk_.GetLastDeviceOps();
 
-  auto sync_client = fuchsia_input_report::InputDevice::SyncClient(std::move(ddk_.FidlClient()));
+  auto sync_client =
+      fuchsia_input_report::InputDevice::SyncClient(std::move(ddk_.GetLastFidlClient()));
 
   // Get the report descriptor.
   fuchsia_input_report::InputDevice::ResultOf::GetDescriptor result = sync_client.GetDescriptor();
@@ -373,7 +381,8 @@ TEST_F(HidDevTest, GetTouchInputReportTest) {
   // get its arguments here.
   ProtocolDeviceOps dev_ops = ddk_.GetLastDeviceOps();
 
-  auto sync_client = fuchsia_input_report::InputDevice::SyncClient(std::move(ddk_.FidlClient()));
+  auto sync_client =
+      fuchsia_input_report::InputDevice::SyncClient(std::move(ddk_.GetLastFidlClient()));
 
   // Spoof send a report.
   paradise_touch_t touch_report = {};
@@ -427,7 +436,8 @@ TEST_F(HidDevTest, GetTouchPadDescTest) {
   // get its arguments here.
   ProtocolDeviceOps dev_ops = ddk_.GetLastDeviceOps();
 
-  auto sync_client = fuchsia_input_report::InputDevice::SyncClient(std::move(ddk_.FidlClient()));
+  auto sync_client =
+      fuchsia_input_report::InputDevice::SyncClient(std::move(ddk_.GetLastFidlClient()));
   fuchsia_input_report::InputDevice::ResultOf::GetDescriptor result = sync_client.GetDescriptor();
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->descriptor.has_touch());
@@ -455,7 +465,8 @@ TEST_F(HidDevTest, KeyboardTest) {
   // get its arguments here.
   ProtocolDeviceOps dev_ops = ddk_.GetLastDeviceOps();
 
-  auto sync_client = fuchsia_input_report::InputDevice::SyncClient(std::move(ddk_.FidlClient()));
+  auto sync_client =
+      fuchsia_input_report::InputDevice::SyncClient(std::move(ddk_.GetLastFidlClient()));
   // Spoof send a report.
   hid_boot_kbd_report keyboard_report = {};
   keyboard_report.usage[0] = HID_USAGE_KEY_A;
@@ -498,7 +509,8 @@ TEST_F(HidDevTest, KeyboardOutputReportTest) {
   // Opening the device created an instance device to be created, and we can
   // get its arguments here.
   ProtocolDeviceOps dev_ops = ddk_.GetLastDeviceOps();
-  auto sync_client = fuchsia_input_report::InputDevice::SyncClient(std::move(ddk_.FidlClient()));
+  auto sync_client =
+      fuchsia_input_report::InputDevice::SyncClient(std::move(ddk_.GetLastFidlClient()));
   // Make an output report.
   std::array<hid_input_report::fuchsia_input_report::LedType, 2> led_array;
   led_array[0] = hid_input_report::fuchsia_input_report::LedType::NUM_LOCK;
@@ -535,6 +547,16 @@ TEST_F(HidDevTest, ConsumerControlTest) {
     fake_hid_.SetReportDesc(desc_vector);
   }
 
+  // Create the initial report that will be queried on DdkOpen().
+  {
+    struct buttons_input_rpt report = {};
+    report.rpt_id = BUTTONS_RPT_ID_INPUT;
+    std::vector<uint8_t> report_vector(reinterpret_cast<uint8_t*>(&report),
+                                       reinterpret_cast<uint8_t*>(&report) + sizeof(report));
+    fake_hid_.HidDeviceSetReport(HID_REPORT_TYPE_INPUT, BUTTONS_RPT_ID_INPUT, report_vector.data(),
+                                 report_vector.size());
+  }
+
   device_->Bind();
 
   // Open an instance device.
@@ -544,7 +566,8 @@ TEST_F(HidDevTest, ConsumerControlTest) {
   // get its arguments here.
   ProtocolDeviceOps dev_ops = ddk_.GetLastDeviceOps();
 
-  auto sync_client = fuchsia_input_report::InputDevice::SyncClient(std::move(ddk_.FidlClient()));
+  auto sync_client =
+      fuchsia_input_report::InputDevice::SyncClient(std::move(ddk_.GetLastFidlClient()));
 
   // Get the report descriptor.
   fuchsia_input_report::InputDevice::ResultOf::GetDescriptor result = sync_client.GetDescriptor();
@@ -566,7 +589,7 @@ TEST_F(HidDevTest, ConsumerControlTest) {
   ASSERT_EQ(consumer_control_desc.buttons()[3],
             llcpp::fuchsia::input::report::ConsumerControlButton::MIC_MUTE);
 
-  // Create the report.
+  // Create another report.
   {
     struct buttons_input_rpt report = {};
     report.rpt_id = BUTTONS_RPT_ID_INPUT;
@@ -579,26 +602,103 @@ TEST_F(HidDevTest, ConsumerControlTest) {
     fake_hid_.SendReport(report_vector);
   }
 
-  // Get the report.
+  // Get the reports.
   fuchsia_input_report::InputDevice::ResultOf::GetReports report_result = sync_client.GetReports();
   ASSERT_OK(result.status());
 
   fidl::VectorView<fuchsia_input_report::InputReport>& reports = report_result->reports;
-  ASSERT_EQ(1, reports.count());
+  ASSERT_EQ(2, reports.count());
 
-  ASSERT_TRUE(reports[0].has_consumer_control());
-  fuchsia_input_report::ConsumerControlInputReport& report = reports[0].consumer_control();
-  EXPECT_TRUE(report.has_pressed_buttons());
-  EXPECT_EQ(3, report.pressed_buttons().count());
+  // Check the initial report.
+  {
+    ASSERT_TRUE(reports[0].has_consumer_control());
+    fuchsia_input_report::ConsumerControlInputReport& report = reports[0].consumer_control();
+    EXPECT_TRUE(report.has_pressed_buttons());
+    EXPECT_EQ(0, report.pressed_buttons().count());
+  }
 
-  EXPECT_EQ(report.pressed_buttons()[0],
-            llcpp::fuchsia::input::report::ConsumerControlButton::VOLUME_UP);
-  EXPECT_EQ(report.pressed_buttons()[1],
-            llcpp::fuchsia::input::report::ConsumerControlButton::REBOOT);
-  EXPECT_EQ(report.pressed_buttons()[2],
-            llcpp::fuchsia::input::report::ConsumerControlButton::MIC_MUTE);
+  // Check the second report.
+  {
+    ASSERT_TRUE(reports[1].has_consumer_control());
+    fuchsia_input_report::ConsumerControlInputReport& report = reports[1].consumer_control();
+    EXPECT_TRUE(report.has_pressed_buttons());
+    EXPECT_EQ(3, report.pressed_buttons().count());
+
+    EXPECT_EQ(report.pressed_buttons()[0],
+              llcpp::fuchsia::input::report::ConsumerControlButton::VOLUME_UP);
+    EXPECT_EQ(report.pressed_buttons()[1],
+              llcpp::fuchsia::input::report::ConsumerControlButton::REBOOT);
+    EXPECT_EQ(report.pressed_buttons()[2],
+              llcpp::fuchsia::input::report::ConsumerControlButton::MIC_MUTE);
+  }
 
   // Close the instance device.
   dev_ops.ops->close(dev_ops.ctx, 0);
 }
+
+TEST_F(HidDevTest, ConsumerControlTwoClientsTest) {
+  {
+    const uint8_t* descriptor;
+    size_t descriptor_size = get_buttons_report_desc(&descriptor);
+    std::vector<uint8_t> desc_vector(descriptor, descriptor + descriptor_size);
+    fake_hid_.SetReportDesc(desc_vector);
+  }
+
+  // Create the initial report that will be queried on DdkOpen().
+  {
+    struct buttons_input_rpt report = {};
+    report.rpt_id = BUTTONS_RPT_ID_INPUT;
+    std::vector<uint8_t> report_vector(reinterpret_cast<uint8_t*>(&report),
+                                       reinterpret_cast<uint8_t*>(&report) + sizeof(report));
+    fake_hid_.HidDeviceSetReport(HID_REPORT_TYPE_INPUT, BUTTONS_RPT_ID_INPUT, report_vector.data(),
+                                 report_vector.size());
+  }
+
+  device_->Bind();
+
+  // Open the device (client a).
+  zx_device_t* dev_a;
+  ASSERT_OK(device_->DdkOpen(&dev_a, 0));
+  ProtocolDeviceOps ops_a = ddk_.GetLastDeviceOps();
+  auto client_a =
+      fuchsia_input_report::InputDevice::SyncClient(std::move(ddk_.GetLastFidlClient()));
+
+  // Open the device (client b).
+  zx_device_t* dev_b;
+  ASSERT_OK(device_->DdkOpen(&dev_b, 0));
+  ProtocolDeviceOps ops_b = ddk_.GetLastDeviceOps();
+  auto client_b =
+      fuchsia_input_report::InputDevice::SyncClient(std::move(ddk_.GetLastFidlClient()));
+
+  // Get and check report a.
+  {
+    fuchsia_input_report::InputDevice::ResultOf::GetReports reports_a = client_a.GetReports();
+    ASSERT_OK(reports_a.status());
+    ASSERT_EQ(1, reports_a->reports.count());
+
+    ASSERT_TRUE(reports_a->reports[0].has_consumer_control());
+    fuchsia_input_report::ConsumerControlInputReport& report =
+        reports_a->reports[0].consumer_control();
+    EXPECT_TRUE(report.has_pressed_buttons());
+    EXPECT_EQ(0, report.pressed_buttons().count());
+  }
+
+  // Get and check report b.
+  {
+    fuchsia_input_report::InputDevice::ResultOf::GetReports reports_b = client_b.GetReports();
+    ASSERT_OK(reports_b.status());
+    ASSERT_EQ(1, reports_b->reports.count());
+
+    ASSERT_TRUE(reports_b->reports[0].has_consumer_control());
+    fuchsia_input_report::ConsumerControlInputReport& report =
+        reports_b->reports[0].consumer_control();
+    EXPECT_TRUE(report.has_pressed_buttons());
+    EXPECT_EQ(0, report.pressed_buttons().count());
+  }
+
+  // Close the devices.
+  ops_a.ops->close(ops_a.ctx, 0);
+  ops_b.ops->close(ops_b.ctx, 0);
+}
+
 }  // namespace hid_input_report_dev

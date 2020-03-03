@@ -46,6 +46,9 @@ class InputReport : public DeviceType,
   zx_status_t SendOutputReport(fuchsia_input_report::OutputReport report) override;
 
  private:
+  zx_status_t GetReport(hid_input_report::Device* device,
+                        hid_input_report::InputReport* out_input_report);
+
   bool ParseHidInputReportDescriptor(const hid::ReportDescriptor* report_desc);
 
   ddk::HidDeviceProtocolClient hiddev_;

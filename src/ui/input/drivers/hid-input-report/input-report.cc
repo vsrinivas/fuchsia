@@ -5,6 +5,7 @@
 #include "input-report.h"
 
 #include <threads.h>
+#include <zircon/status.h>
 
 #include <array>
 
@@ -29,6 +30,27 @@ namespace hid_input_report_dev {
 
 void InputReport::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
 
+zx_status_t InputReport::GetReport(hid_input_report::Device* device,
+                                   hid_input_report::InputReport* out_input_report) {
+  std::array<uint8_t, HID_MAX_REPORT_LEN> report_data;
+  size_t report_size = 0;
+  zx_status_t status = hiddev_.GetReport(HID_REPORT_TYPE_INPUT, device->InputReportId(),
+                                         report_data.data(), report_data.size(), &report_size);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "hid-input-report: Failed to GET report (%s)\n", zx_status_get_string(status));
+    return status;
+  }
+
+  if (device->ParseInputReport(report_data.data(), report_size, out_input_report) !=
+      hid_input_report::ParseResult::kOk) {
+    zxlogf(ERROR, "ReceiveReport: Device failed to parse GET report correctly\n");
+    return ZX_ERR_INTERNAL;
+  }
+  out_input_report->time = zx_clock_get_monotonic();
+
+  return ZX_OK;
+}
+
 zx_status_t InputReport::DdkOpen(zx_device_t** dev_out, uint32_t flags) {
   auto inst = std::make_unique<InputReportInstance>(zxdev());
   zx_status_t status = inst->Bind(this);
@@ -39,6 +61,19 @@ zx_status_t InputReport::DdkOpen(zx_device_t** dev_out, uint32_t flags) {
   {
     fbl::AutoLock lock(&instance_lock_);
     instance_list_.push_front(inst.get());
+  }
+
+  // If we have a consumer control device, get a report and send it to the client,
+  // since the client needs the device's state.
+  for (auto& device : devices_) {
+    if (device->GetDeviceType() == hid_input_report::DeviceType::kConsumerControl) {
+      hid_input_report::InputReport report = {};
+      status = GetReport(device.get(), &report);
+      if (status != ZX_OK) {
+        continue;
+      }
+      inst->ReceiveReport(report);
+    }
   }
 
   *dev_out = inst->zxdev();
