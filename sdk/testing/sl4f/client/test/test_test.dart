@@ -32,6 +32,7 @@ void main(List<String> args) {
       ..duration_ms = 2
       ..outcome = 'passed'
       ..primary_log_path = 'log_path'
+      ..successful_completion = true
       ..steps = [
         TestStep()
           ..name = 'name1'

@@ -110,6 +110,10 @@ void main(List<String> args) async {
       }
     }
     print('Outcome: ${result.outcome}');
+    if (!result.successful_completion) {
+      print('test did not complete successfully.');
+      exitCode = 1;
+    }
   }
 
   await sl4fDriver.stopServer();

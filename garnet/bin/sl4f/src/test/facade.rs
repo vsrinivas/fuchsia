@@ -102,6 +102,7 @@ impl TestFacade {
         let mut status = Status::Passed;
 
         let mut current_step_map = HashMap::new();
+        let mut test_result = TestResult::default();
 
         while let Some(test_event) = recv.next().await {
             match test_event {
@@ -149,6 +150,10 @@ impl TestFacade {
                         }
                     }
                 }
+                TestEvent::Finish => {
+                    test_result.successful_completion = true;
+                    break;
+                }
             }
         }
 
@@ -182,7 +187,6 @@ impl TestFacade {
             step_results.push(StepResultItem::Result(step.result));
         }
 
-        let mut test_result = TestResult::default();
         test_result.result = status.to_string();
 
         test_result.steps = step_results;

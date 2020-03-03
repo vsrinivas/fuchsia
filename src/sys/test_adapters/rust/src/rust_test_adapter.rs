@@ -136,7 +136,8 @@ impl RustTestAdapter {
                     let proxy =
                         listener.into_proxy().context("Can't convert listener channel to proxy")?;
 
-                    self.run_tests(tests, proxy).await.context("Failed to run tests")?;
+                    self.run_tests(tests, &proxy).await.context("Failed to run tests")?;
+                    proxy.on_finished().context("on_finished failed")?;
                 }
             }
         }
@@ -147,7 +148,7 @@ impl RustTestAdapter {
     async fn run_tests(
         &self,
         invocations: Vec<Invocation>,
-        proxy: RunListenerProxy,
+        proxy: &RunListenerProxy,
     ) -> Result<(), Error> {
         fx_log_info!("running tests");
         for invocation in invocations {
@@ -371,8 +372,10 @@ mod tests {
     use {
         super::*,
         fidl_fuchsia_test::{
-            CaseListenerRequest::Finished, RunListenerMarker,
-            RunListenerRequest::OnTestCaseStarted, RunListenerRequestStream,
+            CaseListenerRequest::Finished,
+            RunListenerMarker,
+            RunListenerRequest::{OnFinished, OnTestCaseStarted},
+            RunListenerRequestStream, RunOptions, SuiteMarker,
         },
         std::cmp::PartialEq,
     };
@@ -385,6 +388,7 @@ mod tests {
     enum ListenerEvent {
         StartTest(String),
         FinishTest(String, ftest::Result_),
+        FinishAllTest,
     }
 
     async fn collect_results(
@@ -405,6 +409,10 @@ mod tests {
                             }
                         }
                     }
+                }
+                OnFinished { .. } => {
+                    events.push(ListenerEvent::FinishAllTest);
+                    break;
                 }
             }
         }
@@ -487,17 +495,23 @@ mod tests {
             "tests::c_passing_test",
         ]);
 
-        let (run_listener_client, run_listener) =
+        let (test_listener_client, test_listener) =
             fidl::endpoints::create_request_stream::<RunListenerMarker>()
-                .expect("failed to create run_listener");
-        let proxy = run_listener_client.into_proxy().expect("can't convert listener into proxy");
+                .expect("failed to create test_listener");
+        let (test_suite_client, test_suite) =
+            fidl::endpoints::create_request_stream::<SuiteMarker>()
+                .expect("failed to create suite");
 
-        let run_future = adapter.run_tests(tests, proxy);
-        let result_future = collect_results(run_listener);
+        let suite_proxy = test_suite_client.into_proxy().expect("can't convert suite into proxy");
+        fasync::spawn(async move {
+            adapter.run_test_suite(test_suite).await.expect("Failed to run test suite")
+        });
+        suite_proxy
+            .run(&mut tests.into_iter().map(|i| i.into()), RunOptions {}, test_listener_client)
+            .expect("cannot call run");
 
-        let (run_option, result_option) = future::join(run_future, result_future).await;
-
-        run_option.expect("Failed running tests");
+        let actual_results =
+            collect_results(test_listener).await.expect("Failed to collect results");
 
         let expected_results = vec![
             ListenerEvent::StartTest(String::from("tests::a_passing_test")),
@@ -515,9 +529,8 @@ mod tests {
                 String::from("tests::c_passing_test"),
                 ftest::Result_ { status: Some(ftest::Status::Passed) },
             ),
+            ListenerEvent::FinishAllTest,
         ];
-
-        let actual_results = result_option.expect("Failed to collect results");
 
         assert_eq!(expected_results, actual_results);
     }

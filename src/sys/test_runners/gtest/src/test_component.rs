@@ -570,10 +570,11 @@ impl TestServer {
         &self,
         invocations: Vec<Invocation>,
         component: Arc<Component>,
-        run_listener: RunListenerProxy,
+
+        run_listener: &RunListenerProxy,
     ) -> Result<(), RunTestError> {
         for invocation in invocations {
-            self.run_test(invocation, component.clone(), &run_listener).await?;
+            self.run_test(invocation, component.clone(), run_listener).await?;
         }
         Ok(())
     }
@@ -701,12 +702,11 @@ impl TestServer {
                         break;
                     }
 
-                    self.run_tests(
-                        tests,
-                        component.unwrap(),
-                        listener.into_proxy().map_err(FidlError::ClientEndToProxy).unwrap(),
-                    )
-                    .await?;
+                    let listener =
+                        listener.into_proxy().map_err(FidlError::ClientEndToProxy).unwrap();
+
+                    self.run_tests(tests, component.unwrap(), &listener).await?;
+                    listener.on_finished().map_err(RunTestError::SendFinishAllTests).unwrap();
                 }
             }
         }
@@ -778,8 +778,10 @@ mod tests {
         anyhow::{Context as _, Error},
         fidl::endpoints::ClientEnd,
         fidl_fuchsia_test::{
-            CaseListenerRequest::Finished, RunListenerMarker,
-            RunListenerRequest::OnTestCaseStarted, RunListenerRequestStream,
+            CaseListenerRequest::Finished,
+            RunListenerMarker,
+            RunListenerRequest::{OnFinished, OnTestCaseStarted},
+            RunListenerRequestStream, RunOptions, SuiteMarker,
         },
         fio::OPEN_RIGHT_WRITABLE,
         fuchsia_runtime::job_default,
@@ -909,6 +911,7 @@ mod tests {
     enum ListenerEvent {
         StartTest(String),
         FinishTest(String, TestResult),
+        FinishAllTests,
     }
 
     async fn collect_listener_event(
@@ -933,6 +936,10 @@ mod tests {
                         }
                     }
                 }
+                OnFinished { .. } => {
+                    ret.push(ListenerEvent::FinishAllTests);
+                    break;
+                }
             }
         }
         Ok(ret)
@@ -942,33 +949,45 @@ mod tests {
         names.iter().map(|s| Invocation { name: Some(s.to_string()), tag: None }).collect()
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn run_multiple_tests() -> Result<(), Error> {
-        let test_data = TestDataDir::new()?;
-        let component = sample_test_component()?;
-        let server = TestServer::new(test_data.proxy()?);
+    async fn run_tests(invocations: Vec<Invocation>) -> Result<Vec<ListenerEvent>, anyhow::Error> {
+        let test_data = TestDataDir::new().context("Cannot create test data")?;
+        let component = sample_test_component().context("Cannot create test component")?;
+        let weak_component = Arc::downgrade(&component);
+        let server = TestServer::new(test_data.proxy().context("Cannot create test server")?);
 
         let (run_listener_client, run_listener) =
             fidl::endpoints::create_request_stream::<RunListenerMarker>()
-                .expect("Failed to create run_listener");
+                .context("Failed to create run_listener")?;
+        let (test_suite_client, test_suite) =
+            fidl::endpoints::create_request_stream::<SuiteMarker>()
+                .context("failed to create suite")?;
 
-        let run_fut = server.run_tests(
-            names_to_invocation(vec![
-                "SampleTest1.SimpleFail",
-                "SampleTest1.Crashing",
-                "SampleTest2.SimplePass",
-                "Tests/SampleParameterizedTestFixture.Test/2",
-            ]),
-            component,
-            run_listener_client.into_proxy().expect("Can't convert listener into proxy"),
-        );
+        let suite_proxy =
+            test_suite_client.into_proxy().context("can't convert suite into proxy")?;
+        fasync::spawn(async move {
+            server
+                .serve_test_suite(test_suite, weak_component)
+                .await
+                .expect("Failed to run test suite")
+        });
 
-        let result_fut = collect_listener_event(run_listener);
+        suite_proxy
+            .run(&mut invocations.into_iter().map(|i| i.into()), RunOptions {}, run_listener_client)
+            .context("cannot call run")?;
 
-        let (result, events_result) = future::join(run_fut, result_fut).await;
-        result.expect("Failed to run tests");
+        collect_listener_event(run_listener).await.context("Failed to collect results")
+    }
 
-        let events = events_result.expect("Failed to collect events");
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn run_multiple_tests() -> Result<(), Error> {
+        let events = run_tests(names_to_invocation(vec![
+            "SampleTest1.SimpleFail",
+            "SampleTest1.Crashing",
+            "SampleTest2.SimplePass",
+            "Tests/SampleParameterizedTestFixture.Test/2",
+        ]))
+        .await
+        .unwrap();
 
         let expected_events = vec![
             ListenerEvent::StartTest("SampleTest1.SimpleFail".to_owned()),
@@ -991,6 +1010,7 @@ mod tests {
                 "Tests/SampleParameterizedTestFixture.Test/2".to_owned(),
                 TestResult { status: Some(Status::Passed) },
             ),
+            ListenerEvent::FinishAllTests,
         ];
 
         assert_eq!(expected_events, events);
@@ -999,53 +1019,17 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn run_no_test() -> Result<(), Error> {
-        let test_data = TestDataDir::new()?;
-        let component = sample_test_component()?;
-        let server = TestServer::new(test_data.proxy()?);
+        let events = run_tests(vec![]).await.unwrap();
 
-        let (run_listener_client, run_listener) =
-            fidl::endpoints::create_request_stream::<RunListenerMarker>()
-                .expect("Failed to create run_listener");
+        let expected_events = vec![ListenerEvent::FinishAllTests];
 
-        let run_fut = server.run_tests(
-            vec![],
-            component,
-            run_listener_client.into_proxy().expect("Can't convert listener into proxy"),
-        );
-
-        let result_fut = collect_listener_event(run_listener);
-
-        let (result, events_result) = future::join(run_fut, result_fut).await;
-        result.expect("Failed to run tests");
-
-        let events = events_result.expect("Failed to collect events");
-        assert_eq!(events.len(), 0);
-
+        assert_eq!(expected_events, events);
         Ok(())
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn run_one_test() -> Result<(), Error> {
-        let test_data = TestDataDir::new()?;
-        let component = sample_test_component()?;
-        let server = TestServer::new(test_data.proxy()?);
-
-        let (run_listener_client, run_listener) =
-            fidl::endpoints::create_request_stream::<RunListenerMarker>()
-                .expect("Failed to create run_listener");
-
-        let run_fut = server.run_tests(
-            names_to_invocation(vec!["SampleTest2.SimplePass"]),
-            component,
-            run_listener_client.into_proxy().expect("Can't convert listener into proxy"),
-        );
-
-        let result_fut = collect_listener_event(run_listener);
-
-        let (result, events_result) = future::join(run_fut, result_fut).await;
-        result.expect("Failed to run tests");
-
-        let events = events_result.expect("Failed to collect events");
+        let events = run_tests(names_to_invocation(vec!["SampleTest2.SimplePass"])).await.unwrap();
 
         let expected_events = vec![
             ListenerEvent::StartTest("SampleTest2.SimplePass".to_owned()),
@@ -1053,6 +1037,7 @@ mod tests {
                 "SampleTest2.SimplePass".to_owned(),
                 TestResult { status: Some(Status::Passed) },
             ),
+            ListenerEvent::FinishAllTests,
         ];
 
         assert_eq!(expected_events, events);

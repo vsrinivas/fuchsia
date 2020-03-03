@@ -52,6 +52,9 @@ class TestResult {
   /// Series of steps for this test.
   List<TestStep> steps;
 
+  /// Test completed successfully.
+  bool successful_completion; // ignore: non_constant_identifier_names
+
   @override
   String toString() {
     return jsonEncode(this);
@@ -76,7 +79,9 @@ class Test {
     TestResult result = TestResult()
       ..outcome = response['outcome']
       ..duration_ms = response['duration_ms']
-      ..primary_log_path = response['primary_log_path'];
+      ..primary_log_path = response['primary_log_path']
+      ..successful_completion = response['successful_completion'];
+
     if (response.containsKey('steps')) {
       result.steps = <TestStep>[];
       for (dynamic dynStep in response['steps']) {

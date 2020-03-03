@@ -120,6 +120,9 @@ pub enum RunTestError {
     #[error("cannot send finish event: {:?}", _0)]
     SendFinish(fidl::Error),
 
+    #[error("cannot send on_finished event: {:?}", _0)]
+    SendFinishAllTests(fidl::Error),
+
     #[error("can't get test result: {:?}", _0)]
     JsonParse(serde_json::error::Error),
 

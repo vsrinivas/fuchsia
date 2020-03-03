@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use regex::Regex;
-use run_test_suite_lib::{run_test, TestResult};
+use run_test_suite_lib::{run_test, Outcome};
 use std::str::from_utf8;
 
 // This test also acts as an example on how to write a v2 test.
@@ -12,7 +12,7 @@ use std::str::from_utf8;
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_run_echo_test() {
     let mut output: Vec<u8> = vec![];
-    let (result, executed, passed) = run_test(
+    let run_result = run_test(
         "fuchsia-pkg://fuchsia.com/gtest_adapter_echo_example#meta/echo_test_realm.cm".to_string(),
         &mut output,
     )
@@ -23,10 +23,11 @@ async fn launch_and_run_echo_test() {
 
     assert_eq!(from_utf8(&output), Ok(expected_output));
 
-    assert_eq!(result, TestResult::Passed);
+    assert_eq!(run_result.outcome, Outcome::Passed);
 
-    assert_eq!(executed, vec!["EchoTest.TestEcho"]);
-    assert_eq!(passed, vec!["EchoTest.TestEcho"]);
+    assert_eq!(run_result.executed, vec!["EchoTest.TestEcho"]);
+    assert_eq!(run_result.passed, vec!["EchoTest.TestEcho"]);
+    assert!(run_result.successful_completion)
 }
 
 // This test also acts as an example on how to write a v2 test.
@@ -34,7 +35,7 @@ async fn launch_and_run_echo_test() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_run_simple_test() {
     let mut output: Vec<u8> = vec![];
-    let (result, executed, passed) = run_test(
+    let run_result = run_test(
         "fuchsia-pkg://fuchsia.com/simple_gtest_adapter_example#meta/simple_gtest_adapter_example.cm".to_string(),
         &mut output,
     )
@@ -45,17 +46,18 @@ async fn launch_and_run_simple_test() {
 
     assert_eq!(from_utf8(&output), Ok(expected_output));
 
-    assert_eq!(result, TestResult::Passed);
+    assert_eq!(run_result.outcome, Outcome::Passed);
 
-    assert_eq!(executed, vec!["SimpleTest.Test"]);
-    assert_eq!(passed, vec!["SimpleTest.Test"]);
+    assert_eq!(run_result.executed, vec!["SimpleTest.Test"]);
+    assert_eq!(run_result.passed, vec!["SimpleTest.Test"]);
+    assert!(run_result.successful_completion)
 }
 
 // test that we are able to handle both passing and failing tests.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_run_sample_test() {
     let mut output: Vec<u8> = vec![];
-    let (result, executed, passed) = run_test(
+    let run_result = run_test(
         "fuchsia-pkg://fuchsia.com/gtest_adapter_integration_test#meta/sample_tests.cm".to_string(),
         &mut output,
     )
@@ -82,10 +84,11 @@ async fn launch_and_run_sample_test() {
         output
     );
 
-    assert_eq!(result, TestResult::Failed);
+    assert_eq!(run_result.outcome, Outcome::Failed);
 
-    assert_eq!(executed, vec!["SampleTest.Failing", "SampleTest.Passing"]);
-    assert_eq!(passed, vec!["SampleTest.Passing"]);
+    assert_eq!(run_result.executed, vec!["SampleTest.Failing", "SampleTest.Passing"]);
+    assert_eq!(run_result.passed, vec!["SampleTest.Passing"]);
+    assert!(run_result.successful_completion)
 }
 
 // Stress test with a very large gtest suite.
@@ -93,7 +96,7 @@ async fn launch_and_run_sample_test() {
 #[ignore]
 async fn launch_and_run_huge_test() {
     let mut output: Vec<u8> = vec![];
-    let (result, executed, passed) = run_test(
+    let run_result = run_test(
         "fuchsia-pkg://fuchsia.com/huge_gtest_adapter_example#meta/huge_gtest_adapter_example.cm"
             .to_string(),
         &mut output,
@@ -101,7 +104,8 @@ async fn launch_and_run_huge_test() {
     .await
     .expect("Running test should not fail");
 
-    assert_eq!(result, TestResult::Passed);
-    assert_eq!(executed.len(), 1_000);
-    assert_eq!(passed.len(), 1_000);
+    assert_eq!(run_result.outcome, Outcome::Passed);
+    assert_eq!(run_result.executed.len(), 1_000);
+    assert_eq!(run_result.passed.len(), 1_000);
+    assert!(run_result.successful_completion);
 }

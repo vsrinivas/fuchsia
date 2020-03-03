@@ -8,8 +8,9 @@ use {
     anyhow::{format_err, Context as _},
     fidl_fuchsia_sys::LauncherProxy,
     fidl_fuchsia_test::{
-        CaseListenerRequest::Finished, CaseListenerRequestStream, Invocation,
-        RunListenerRequest::OnTestCaseStarted,
+        CaseListenerRequest::Finished,
+        CaseListenerRequestStream, Invocation,
+        RunListenerRequest::{OnFinished, OnTestCaseStarted},
     },
     fuchsia_async as fasync,
     fuchsia_syslog::{fx_vlog, macros::*},
@@ -49,6 +50,7 @@ pub enum TestEvent {
     TestCaseStarted { test_case_name: String },
     TestCaseFinished { test_case_name: String, result: TestResult },
     LogMessage { test_case_name: String, msg: String },
+    Finish,
 }
 
 #[must_use = "futures/streams"]
@@ -227,6 +229,7 @@ pub async fn run_and_collect_results(
     fx_vlog!(1, "invocations: {:#?}", invocations);
 
     fx_vlog!(1, "running tests");
+    let mut successful_completion = true; // will remain true, if there are no tests to run.
     let mut invocations_iter = invocations.into_iter();
     loop {
         const INVOCATIONS_CHUNK: usize = 50;
@@ -234,8 +237,14 @@ pub async fn run_and_collect_results(
         if chunk.is_empty() {
             break;
         }
-        run_invocations(&suite, chunk, &mut sender)
+        successful_completion &= run_invocations(&suite, chunk, &mut sender)
             .map_err(|e| format_err!("Error running tests in '{}': {}", test_url, e))
+            .await?;
+    }
+    if successful_completion {
+        sender
+            .send(TestEvent::Finish)
+            .map_err(|e| format_err!("Error while sending TestFinished event: {}", e))
             .await?;
     }
     Ok(())
@@ -246,7 +255,7 @@ async fn run_invocations(
     suite: &fidl_fuchsia_test::SuiteProxy,
     invocations: Vec<Invocation>,
     sender: &mut mpsc::Sender<TestEvent>,
-) -> Result<(), anyhow::Error> {
+) -> Result<bool, anyhow::Error> {
     let (run_listener_client, mut run_listener) =
         fidl::endpoints::create_request_stream::<fidl_fuchsia_test::RunListenerMarker>()
             .map_err(|e| format_err!("Error creating request stream: {}", e))?;
@@ -257,6 +266,8 @@ async fn run_invocations(
     )?;
 
     let mut test_case_processors = Vec::new();
+    let mut successful_completion = false;
+
     while let Some(result_event) = run_listener
         .try_next()
         .await
@@ -274,6 +285,10 @@ async fn run_invocations(
                 );
                 test_case_processors.push(test_case_processor);
             }
+            OnFinished { .. } => {
+                successful_completion = true;
+                break;
+            }
         }
     }
 
@@ -281,7 +296,8 @@ async fn run_invocations(
     join_all(test_case_processors.iter_mut().map(|i| i.wait_for_finish()))
         .await
         .into_iter()
-        .fold(Ok(()), |acc, r| acc.and_then(|_| r))
+        .fold(Ok(()), |acc, r| acc.and_then(|_| r))?;
+    Ok(successful_completion)
 }
 
 /// Runs the test component defined by `test_url` and reports `TestEvent` to sender for each test case.

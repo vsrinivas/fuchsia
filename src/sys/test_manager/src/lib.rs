@@ -43,7 +43,7 @@ pub async fn run_test_manager(
                     continue;
                 }
 
-                let (result, executed, passed) = result.unwrap();
+                let (result, executed, passed, successful_completion) = result.unwrap();
 
                 logger
                     .write(
@@ -59,6 +59,13 @@ pub async fn run_test_manager(
                     .await
                     .context("Can't write output")?;
 
+                if !successful_completion {
+                    logger
+                        .write(format!("{} did not complete successfully\n", suite_url).as_bytes())
+                        .await
+                        .context("Can't write output")?;
+                }
+
                 responder.send(result).context("Can't send result back")?;
             }
         }
@@ -67,11 +74,11 @@ pub async fn run_test_manager(
 }
 
 // Runs test defined by `suite_url`, and writes logs to writer.
-// Returns (Result_, Names of tests executed, Names of tests passed).
+// Returns (Result_, Names of tests executed, Names of tests passed, Test exit cleanly).
 async fn run_test<W: std::marker::Unpin + AsyncWrite>(
     suite_url: String,
     writer: &mut W,
-) -> Result<(Result_, Vec<String>, Vec<String>), Error> {
+) -> Result<(Result_, Vec<String>, Vec<String>, bool), Error> {
     let realm = client::connect_to_service::<fsys::RealmMarker>()
         .context("could not connect to Realm service")?;
 
@@ -114,6 +121,8 @@ async fn run_test<W: std::marker::Unpin + AsyncWrite>(
     let mut test_cases_in_progress = HashSet::new();
     let mut test_cases_executed = HashSet::new();
     let mut test_cases_passed = HashSet::new();
+
+    let mut successful_completion = false;
 
     while let Some(test_event) = recv.next().await {
         match test_event {
@@ -173,6 +182,10 @@ async fn run_test<W: std::marker::Unpin + AsyncWrite>(
                         .context("Can't write output")?;
                 }
             }
+            TestEvent::Finish => {
+                successful_completion = true;
+                break;
+            }
         }
     }
 
@@ -203,5 +216,5 @@ async fn run_test<W: std::marker::Unpin + AsyncWrite>(
     test_cases_executed.sort();
     test_cases_passed.sort();
 
-    Ok((test_result, test_cases_executed, test_cases_passed))
+    Ok((test_result, test_cases_executed, test_cases_passed, successful_completion))
 }

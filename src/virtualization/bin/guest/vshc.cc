@@ -185,7 +185,7 @@ class ConsoleOut {
             if (msg_in.status_message().status() == vm_tools::vsh::EXITED) {
               exit(msg_in.status_message().code());
             } else {
-              FXL_LOG(ERROR) << "vsh did not exit cleanly.";
+              FXL_LOG(ERROR) << "vsh did not complete successfully.";
               exit(-1);
             }
           }

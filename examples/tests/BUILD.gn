@@ -28,6 +28,16 @@ executable("passing-test-example") {
   sources = [ "passing_test_example.cc" ]
 }
 
+executable("no-onfinished-after-test-example") {
+  deps = [
+    ":test_suite_lib",
+    "//sdk/lib/sys/cpp",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+  ]
+  sources = [ "no_onfinished_after_test_example.cc" ]
+}
+
 executable("failing-test-example") {
   deps = [
     ":test_suite_lib",
@@ -124,6 +134,7 @@ group("all_bins") {
     ":huge-test-example",
     ":incomplete-test-example",
     ":invalid-test-example",
+    ":no-onfinished-after-test-example",
     ":no-test-example",
     ":passing-test-example",
     ":run-closes-channel-example",
@@ -160,6 +171,9 @@ package("example-tests") {
       name = "run-hangs-example"
     },
     {
+      name = "no-onfinished-after-test-example"
+    },
+    {
       name = "get-tests-closes-channel-example"
     },
     {
@@ -186,6 +200,14 @@ package("example-tests") {
     {
       path = "meta/passing-test-example.cmx"
       dest = "passing-test-example.cmx"
+    },
+    {
+      path = "meta/no-onfinished-after-test-example.cmx"
+      dest = "no-onfinished-after-test-example.cmx"
+    },
+    {
+      path = "meta/no-onfinished-after-test-example.cml"
+      dest = "no-onfinished-after-test-example.cm"
     },
     {
       path = "meta/passing-test-example_v2.cml"

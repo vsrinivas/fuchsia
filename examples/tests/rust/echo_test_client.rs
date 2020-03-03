@@ -83,6 +83,8 @@ async fn run_test_suite(mut stream: ftest::SuiteRequestStream) -> Result<(), Err
                 run_echo("test_string2", &mut result).await?;
 
                 case_listener_proxy.finished(result).expect("on_test_case_finished failed");
+
+                proxy.on_finished().expect("on_finished failed");
             }
         }
     }

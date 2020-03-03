@@ -1,15 +1,19 @@
 {
     "program": {
-        "binary": "test/test_manager_test",
+        "binary": "bin/rust_test_adapter",
+        "args": [ "/pkg/test/test_manager_test" ],
     },
     "use": [
         { "runner": "elf" },
         {
-            "protocol": "/svc/fuchsia.logger.LogSink",
-        },
-        {
             "protocol": "/svc/fuchsia.sys2.Realm",
             "from": "framework",
+        },
+        {
+            protocol: [
+                "/svc/fuchsia.process.Launcher",
+                "/svc/fuchsia.logger.LogSink",
+            ],
         },
     ],
     "expose": [

@@ -18,6 +18,7 @@ struct Options {
   bool dont_service_run = false;
   bool close_channel_get_tests = false;
   bool close_channel_run = false;
+  bool dont_send_on_finish_event = false;
 };
 
 struct TestInput {

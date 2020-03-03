@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use run_test_suite_lib::{run_test, TestResult};
+use run_test_suite_lib::{run_test, Outcome};
 use std::str::from_utf8;
 
 /// split and sort output as output can come in any order.
@@ -25,7 +25,7 @@ macro_rules! assert_output {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_passing_test() {
     let mut output: Vec<u8> = vec![];
-    let (result, executed, passed) = run_test(
+    let run_result = run_test(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cmx"
             .to_string(),
         &mut output,
@@ -51,18 +51,57 @@ async fn launch_and_test_passing_test() {
 ";
     assert_output!(output, expected_output);
 
-    assert_eq!(result, TestResult::Passed);
-    assert_eq!(executed, passed);
+    assert_eq!(run_result.outcome, Outcome::Passed);
+    assert_eq!(run_result.executed, run_result.passed);
 
     let expected = vec!["Example.Test1", "Example.Test2", "Example.Test3"];
 
-    assert_eq!(executed, expected);
+    assert_eq!(run_result.executed, expected);
+    assert!(run_result.successful_completion);
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn launch_and_test_no_clean_exit() {
+    let mut output: Vec<u8> = vec![];
+    let run_result = run_test(
+        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/no-onfinished-after-test-example.cmx"
+            .to_string(),
+        &mut output,
+    )
+    .await
+    .expect("Running test should not fail");
+
+    let expected_output = "[RUNNING]	Example.Test1
+[Example.Test1]	log1 for Example.Test1
+[Example.Test1]	log2 for Example.Test1
+[Example.Test1]	log3 for Example.Test1
+[PASSED]	Example.Test1
+[RUNNING]	Example.Test2
+[Example.Test2]	log1 for Example.Test2
+[Example.Test2]	log2 for Example.Test2
+[Example.Test2]	log3 for Example.Test2
+[PASSED]	Example.Test2
+[RUNNING]	Example.Test3
+[Example.Test3]	log1 for Example.Test3
+[Example.Test3]	log2 for Example.Test3
+[Example.Test3]	log3 for Example.Test3
+[PASSED]	Example.Test3
+";
+    assert_output!(output, expected_output);
+
+    assert_eq!(run_result.outcome, Outcome::Passed);
+    assert_eq!(run_result.executed, run_result.passed);
+
+    let expected = vec!["Example.Test1", "Example.Test2", "Example.Test3"];
+
+    assert_eq!(run_result.executed, expected);
+    assert!(!run_result.successful_completion);
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_passing_v2_test() {
     let mut output: Vec<u8> = vec![];
-    let (result, executed, passed) = run_test(
+    let run_result = run_test(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example_v2.cm"
             .to_string(), &mut output
     )
@@ -87,18 +126,19 @@ async fn launch_and_test_passing_v2_test() {
 ";
     assert_output!(output, expected_output);
 
-    assert_eq!(result, TestResult::Passed);
-    assert_eq!(executed, passed);
+    assert_eq!(run_result.outcome, Outcome::Passed);
+    assert_eq!(run_result.executed, run_result.passed);
 
     let expected = vec!["Example.Test1", "Example.Test2", "Example.Test3"];
 
-    assert_eq!(executed, expected);
+    assert_eq!(run_result.executed, expected);
+    assert!(run_result.successful_completion);
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_empty_test() {
     let mut output: Vec<u8> = vec![];
-    let (_result, executed, passed) = run_test(
+    let run_result = run_test(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/no-test-example.cmx"
             .to_string(),
         &mut output,
@@ -106,15 +146,16 @@ async fn launch_and_test_empty_test() {
     .await
     .expect("Running test should not fail");
 
-    assert_eq!(executed.len(), 0);
-    assert_eq!(passed.len(), 0);
+    assert_eq!(run_result.executed.len(), 0);
+    assert_eq!(run_result.passed.len(), 0);
+    assert!(run_result.successful_completion);
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
 #[ignore = "fxb/47166: test is timing out"]
 async fn launch_and_test_huge_test() {
     let mut output: Vec<u8> = vec![];
-    let (_result, executed, passed) = run_test(
+    let run_result = run_test(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/huge-test-example.cmx"
             .to_string(),
         &mut output,
@@ -122,14 +163,15 @@ async fn launch_and_test_huge_test() {
     .await
     .expect("Running test should not fail");
 
-    assert_eq!(executed.len(), 1_000);
-    assert_eq!(passed.len(), 1_000);
+    assert_eq!(run_result.executed.len(), 1_000);
+    assert_eq!(run_result.passed.len(), 1_000);
+    assert!(run_result.successful_completion);
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_failing_test() {
     let mut output: Vec<u8> = vec![];
-    let (result, executed, passed) = run_test(
+    let run_result = run_test(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/failing-test-example.cmx"
             .to_string(),
         &mut output,
@@ -156,16 +198,17 @@ async fn launch_and_test_failing_test() {
 
     assert_output!(output, expected_output);
 
-    assert_eq!(result, TestResult::Failed);
+    assert_eq!(run_result.outcome, Outcome::Failed);
 
-    assert_eq!(executed, vec!["Example.Test1", "Example.Test2", "Example.Test3"]);
-    assert_eq!(passed, vec!["Example.Test1", "Example.Test3"]);
+    assert_eq!(run_result.executed, vec!["Example.Test1", "Example.Test2", "Example.Test3"]);
+    assert_eq!(run_result.passed, vec!["Example.Test1", "Example.Test3"]);
+    assert!(run_result.successful_completion);
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_incomplete_test() {
     let mut output: Vec<u8> = vec![];
-    let (result, executed, passed) = run_test(
+    let run_result = run_test(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/incomplete-test-example.cmx"
             .to_string(),
             &mut output,
@@ -194,16 +237,17 @@ Example.Test3
 
     assert_output!(output, expected_output);
 
-    assert_eq!(result, TestResult::Inconclusive);
+    assert_eq!(run_result.outcome, Outcome::Inconclusive);
 
-    assert_eq!(executed, vec!["Example.Test1", "Example.Test2", "Example.Test3"]);
-    assert_eq!(passed, vec!["Example.Test2"]);
+    assert_eq!(run_result.executed, vec!["Example.Test1", "Example.Test2", "Example.Test3"]);
+    assert_eq!(run_result.passed, vec!["Example.Test2"]);
+    assert!(run_result.successful_completion);
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_invalid_test() {
     let mut output: Vec<u8> = vec![];
-    let (result, executed, passed) = run_test(
+    let run_result = run_test(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/invalid-test-example.cmx"
             .to_string(),
         &mut output,
@@ -229,10 +273,11 @@ async fn launch_and_test_invalid_test() {
 ";
     assert_output!(output, expected_output);
 
-    assert_eq!(result, TestResult::Error);
+    assert_eq!(run_result.outcome, Outcome::Error);
 
-    assert_eq!(executed, vec!["Example.Test1", "Example.Test2", "Example.Test3"]);
-    assert_eq!(passed, vec!["Example.Test2"]);
+    assert_eq!(run_result.executed, vec!["Example.Test1", "Example.Test2", "Example.Test3"]);
+    assert_eq!(run_result.passed, vec!["Example.Test2"]);
+    assert!(run_result.successful_completion);
 }
 
 // This test also acts an example on how to right a v2 test.
@@ -241,7 +286,7 @@ async fn launch_and_test_invalid_test() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_run_echo_test() {
     let mut output: Vec<u8> = vec![];
-    let (result, executed, passed) = run_test(
+    let run_result = run_test(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/echo_test_realm.cm"
             .to_string(),
         &mut output,
@@ -254,8 +299,9 @@ async fn launch_and_run_echo_test() {
 ";
     assert_output!(output, expected_output);
 
-    assert_eq!(result, TestResult::Passed);
+    assert_eq!(run_result.outcome, Outcome::Passed);
 
-    assert_eq!(executed, vec!["EchoTest"]);
-    assert_eq!(passed, vec!["EchoTest"]);
+    assert_eq!(run_result.executed, vec!["EchoTest"]);
+    assert_eq!(run_result.passed, vec!["EchoTest"]);
+    assert!(run_result.successful_completion);
 }

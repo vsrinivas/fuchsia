@@ -27,12 +27,17 @@ async fn main() {
         std::process::exit(1);
     }
 
-    let (test_result, executed, passed) = result.unwrap();
+    let run_result = result.unwrap();
 
-    println!("\n{} out of {} tests passed...", passed.len(), executed.len());
-    println!("{} completed with result: {}", &args[1], test_result);
+    println!("\n{} out of {} tests passed...", run_result.passed.len(), run_result.executed.len());
+    println!("{} completed with result: {}", &args[1], run_result.outcome);
 
-    if test_result == run_test_suite_lib::TestResult::Passed {
+    if !run_result.successful_completion {
+        println!("{} did not complete successfully.", &args[1]);
+        std::process::exit(1);
+    }
+
+    if run_result.outcome == run_test_suite_lib::Outcome::Passed {
         std::process::exit(0);
     }
     std::process::exit(1);

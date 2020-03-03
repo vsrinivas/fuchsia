@@ -49,6 +49,12 @@ test_package("run_test_suite_integration_tests") {
       path = rebase_path("//examples/tests/meta/huge-test-example.cmx")
       dest = "huge-test-example.cmx"
     },
+
+    {
+      path = rebase_path(
+              "//examples/tests/meta/no-onfinished-after-test-example.cmx")
+      dest = "no-onfinished-after-test-example.cmx"
+    },
     {
       path = rebase_path("//examples/tests/meta/passing-test-example_v2.cml")
       dest = "passing-test-example_v2.cm"
@@ -70,6 +76,9 @@ test_package("run_test_suite_integration_tests") {
   binaries = [
     {
       name = "passing-test-example"
+    },
+    {
+      name = "no-onfinished-after-test-example"
     },
     {
       name = "failing-test-example"

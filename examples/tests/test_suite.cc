@@ -82,10 +82,12 @@ void TestSuite::Run(std::vector<fuchsia::test::Invocation> tests,
         break;
       }
     }
-
     if (send_finished_event) {
       case_list_ptr->Finished(std::move(result));
     }
+  }
+  if (!options_.dont_send_on_finish_event) {
+    ptr->OnFinished();
   }
 }
 

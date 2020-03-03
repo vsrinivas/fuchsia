@@ -67,6 +67,9 @@ protocol CaseListener {
 protocol RunListener {
     /// Indicates that an individual test invocation has started execution.
     OnTestCaseStarted(Invocation invocation, handle<socket> primary_log, request<CaseListener> listener);
+
+    /// Indicates that the last test case that started has finished, and no more test cases will start.
+    OnFinished();
 };
 
 /// Iterator for listing available test cases.

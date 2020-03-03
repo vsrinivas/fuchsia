@@ -53,6 +53,8 @@ pub struct TestResult {
     pub primary_log_path: String,
     /// Series of steps for this test.
     pub steps: Vec<StepResultItem>,
+    /// Test completed successfully.
+    pub successful_completion: bool,
 }
 
 #[derive(Serialize, Deserialize)]

@@ -8,11 +8,9 @@
 use {
     anyhow::{Context as _, Error},
     fidl::endpoints::RequestStream,
-    fidl_fuchsia_test as ftest, fidl_fuchsia_test_manager as ftest_manager,
+    fidl_fuchsia_test_manager as ftest_manager,
     ftest_manager::Result_,
-    fuchsia_async as fasync,
-    fuchsia_component::server::ServiceFs,
-    fuchsia_zircon as zx,
+    fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{
         io::{self, AsyncRead},
         prelude::*,
@@ -62,17 +60,21 @@ impl Stream for LoggerStream {
     }
 }
 
-fn main() -> Result<(), Error> {
-    let mut executor = fasync::Executor::new().context("error creating executor")?;
-    let mut fs = ServiceFs::new_local();
-    fs.dir("svc").add_fidl_service(move |stream| {
-        fasync::spawn_local(async move {
-            run_test_suite(stream).await.expect("failed to run test suite service")
-        });
-    });
-    fs.take_and_serve_directory_handle()?;
-    executor.run_singlethreaded(fs.collect::<()>());
-    Ok(())
+/// split and sort output as output can come in any order.
+/// `output` is of type vec<u8> and `expected_output` is a string.
+macro_rules! assert_output {
+    ($output:expr, $expected_output:expr) => {
+        let mut expected_output = $expected_output.split("\n").collect::<Vec<_>>();
+        let mut output = from_utf8(&$output)
+            .expect("we should not get utf8 error.")
+            .split("\n")
+            .collect::<Vec<_>>();
+
+        expected_output.sort();
+        output.sort();
+
+        assert_eq!(output, expected_output);
+    };
 }
 
 fn connect_test_manager() -> Result<ftest_manager::HarnessProxy, Error> {
@@ -89,89 +91,66 @@ fn connect_test_manager() -> Result<ftest_manager::HarnessProxy, Error> {
     Ok(ftest_manager::HarnessProxy::new(proxy))
 }
 
-async fn run_test(
-    logger: fuchsia_zircon::Socket,
-    result: &mut ftest::Result_,
-) -> Result<(), Error> {
-    let test_url = "fuchsia-pkg://fuchsia.com/example-tests#meta/echo_test_realm.cm";
-
+async fn run_test(test_url: &str) -> Result<(Result_, Vec<u8>), Error> {
     let proxy = connect_test_manager()?;
-
     let (client, log) = zx::Socket::create(zx::SocketOpts::STREAM)?;
-
     let ls = LoggerStream::new(client)?;
-
     let (log_fut, log_fut_remote) = ls.try_concat().remote_handle();
     fasync::spawn_local(async move {
         log_fut.await;
     });
-    let suite_result = proxy.run_suite(test_url, log).await?;
-    let logs = log_fut_remote.await?;
-    let logs = from_utf8(&logs).expect("should be a valid string").to_string();
+    let suite_result = proxy.run_suite(test_url, log).await.context("cannot get suite results")?;
+    let logs = log_fut_remote.await.context("Cannot get logs")?;
+    Ok((suite_result, logs))
+}
 
-    let expected = "[RUNNING]	EchoTest
+#[fuchsia_async::run_singlethreaded(test)]
+async fn launch_and_test_echo_test() {
+    let test_url = "fuchsia-pkg://fuchsia.com/example-tests#meta/echo_test_realm.cm";
+    let (suite_result, logs) = run_test(test_url).await.unwrap();
+    let expected = format!(
+        "[RUNNING]	EchoTest
 [PASSED]	EchoTest
 
 1 out of 1 tests passed...
-fuchsia-pkg://fuchsia.com/example-tests#meta/echo_test_realm.cm completed with result: Passed
-"
-    .to_owned();
+{} completed with result: Passed
+",
+        test_url
+    );
 
-    if expected != logs {
-        logger.write(format!("invalid logs:\n{}", logs).as_bytes())?;
-        result.status = Some(ftest::Status::Failed);
-    }
-    if suite_result != Result_::Passed {
-        logger.write(format!("echo test failed with status {:?}", result).as_bytes())?;
-        result.status = Some(ftest::Status::Failed);
-    }
-
-    Ok(())
+    assert_output!(logs, expected);
+    assert_eq!(suite_result, Result_::Passed)
 }
 
-// This implementation should eventually merge with rust test framework and we should be able to
-// run this  test as a normal rust test.
-async fn run_test_suite(mut stream: ftest::SuiteRequestStream) -> Result<(), Error> {
-    let test_name = "TestManager.CanRunTest";
-    while let Some(event) = stream.try_next().await? {
-        match event {
-            ftest::SuiteRequest::GetTests { iterator, control_handle: _ } => {
-                let mut stream = iterator.into_stream()?;
-                fasync::spawn(
-                    async move {
-                        let mut iter =
-                            vec![ftest::Case { name: Some(test_name.to_string()) }].into_iter();
-                        while let Some(ftest::CaseIteratorRequest::GetNext { responder }) =
-                            stream.try_next().await?
-                        {
-                            const MAX_CASES_PER_PAGE: usize = 50;
-                            responder.send(&mut iter.by_ref().take(MAX_CASES_PER_PAGE))?;
-                        }
-                        Ok(())
-                    }
-                    .unwrap_or_else(|e: anyhow::Error| println!("error serving tests: {:?}", e)),
-                );
-            }
-            ftest::SuiteRequest::Run { mut tests, options: _, listener, .. } => {
-                assert_eq!(tests.len(), 1);
-                assert_eq!(tests[0].name, Some(test_name.to_string()));
+#[fuchsia_async::run_singlethreaded(test)]
+async fn launch_and_test_no_on_finished() {
+    let test_url =
+        "fuchsia-pkg://fuchsia.com/example-tests#meta/no-onfinished-after-test-example.cm";
+    let (suite_result, logs) = run_test(test_url).await.unwrap();
+    let expected = format!(
+        "[RUNNING]	Example.Test1
+[Example.Test1]	log1 for Example.Test1
+[Example.Test1]	log2 for Example.Test1
+[Example.Test1]	log3 for Example.Test1
+[PASSED]	Example.Test1
+[RUNNING]	Example.Test2
+[Example.Test2]	log1 for Example.Test2
+[Example.Test2]	log2 for Example.Test2
+[Example.Test2]	log3 for Example.Test2
+[PASSED]	Example.Test2
+[RUNNING]	Example.Test3
+[Example.Test3]	log1 for Example.Test3
+[Example.Test3]	log2 for Example.Test3
+[Example.Test3]	log3 for Example.Test3
+[PASSED]	Example.Test3
 
-                let proxy = listener.into_proxy().expect("Can't convert listener channel to proxy");
-                let (log_end, logger) =
-                    fuchsia_zircon::Socket::create(fuchsia_zircon::SocketOpts::empty())
-                        .expect("cannot create socket.");
-                let mut result = ftest::Result_ { status: Some(ftest::Status::Passed) };
+3 out of 3 tests passed...
+{} completed with result: Passed
+{} did not complete successfully
+",
+        test_url, test_url
+    );
 
-                let (case_listener_proxy, case_listener) =
-                    fidl::endpoints::create_proxy::<fidl_fuchsia_test::CaseListenerMarker>()
-                        .expect("cannot create proxy");
-                proxy
-                    .on_test_case_started(tests.pop().unwrap(), log_end, case_listener)
-                    .expect("on_test_case_started failed");
-                run_test(logger, &mut result).await?;
-                case_listener_proxy.finished(result).expect("on_test_case_finished failed");
-            }
-        }
-    }
-    Ok(())
+    assert_output!(logs, expected);
+    assert_eq!(suite_result, Result_::Passed)
 }
