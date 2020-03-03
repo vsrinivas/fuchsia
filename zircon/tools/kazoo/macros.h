@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef TOOLS_KAZOO_MACROS_H_
-#define TOOLS_KAZOO_MACROS_H_
+#ifndef ZIRCON_TOOLS_KAZOO_MACROS_H_
+#define ZIRCON_TOOLS_KAZOO_MACROS_H_
 
 #define DISALLOW_COPY_AND_ASSIGN(TypeName) \
   TypeName(const TypeName&) = delete;      \
@@ -15,4 +15,4 @@
   TypeName& operator=(const TypeName&) = delete; \
   TypeName& operator=(TypeName&&) = delete
 
-#endif  // TOOLS_KAZOO_MACROS_H_
+#endif  // ZIRCON_TOOLS_KAZOO_MACROS_H_

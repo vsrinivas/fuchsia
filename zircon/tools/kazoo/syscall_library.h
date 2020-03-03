@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef TOOLS_KAZOO_JSON_TO_LIBRARY_H_
-#define TOOLS_KAZOO_JSON_TO_LIBRARY_H_
+#ifndef ZIRCON_TOOLS_KAZOO_SYSCALL_LIBRARY_H_
+#define ZIRCON_TOOLS_KAZOO_SYSCALL_LIBRARY_H_
 
 #include <stdint.h>
 
@@ -112,7 +112,7 @@ class TypeStruct {
   const Struct* struct_;
 };
 
-class UseUint32ForVectorSizeTag{};
+class UseUint32ForVectorSizeTag {};
 
 class TypeVector {
  public:
@@ -226,10 +226,10 @@ class Alias {
  private:
   friend class SyscallLibraryLoader;
 
-  std::string id_;                // "zx/MyAlias"
-  std::string original_name_;     // "MyAlias"
-  std::string base_name_;         // "my_alias"
-  std::string partial_type_ctor_; // "uint64"
+  std::string id_;                 // "zx/MyAlias"
+  std::string original_name_;      // "MyAlias"
+  std::string base_name_;          // "my_alias"
+  std::string partial_type_ctor_;  // "uint64"
   std::vector<std::string> description_;
 
   DISALLOW_COPY_AND_ASSIGN(Alias);
@@ -271,9 +271,9 @@ class Struct {
  private:
   friend class SyscallLibraryLoader;
 
-  std::string id_;                  // "zx/HandleInfo"
-  std::string original_name_;       // "HandleInfo"
-  std::string base_name_;           // "handle_info"
+  std::string id_;             // "zx/HandleInfo"
+  std::string original_name_;  // "HandleInfo"
+  std::string base_name_;      // "handle_info"
   std::vector<StructMember> members_;
 
   DISALLOW_COPY_AND_ASSIGN(Struct);
@@ -308,10 +308,10 @@ class Syscall {
   bool MapRequestResponseToKernelAbi();
   bool HandleArgReorder();
 
-  std::string id_;                  // "zx/Object"
-  std::string original_name_;       // "GetInfo"
-  std::string category_;            // "object"
-  std::string name_;                // "object_get_info"
+  std::string id_;             // "zx/Object"
+  std::string original_name_;  // "GetInfo"
+  std::string category_;       // "object"
+  std::string name_;           // "object_get_info"
   std::string short_description_;
   bool is_noreturn_ = false;
   std::map<std::string, std::string> attributes_;
@@ -326,10 +326,7 @@ class Syscall {
   DISALLOW_COPY_AND_ASSIGN(Syscall);
 };
 
-enum class Required {
-  kNo,
-  kYes
-};
+enum class Required { kNo, kYes };
 
 class TableMember {
  public:
@@ -458,4 +455,4 @@ class SyscallLibraryLoader {
   static std::unique_ptr<Enum> ConvertBitsOrEnumMember(const rapidjson::Value& json);
 };
 
-#endif  // TOOLS_KAZOO_SYSCALL_LIBRARY_H_
+#endif  // ZIRCON_TOOLS_KAZOO_SYSCALL_LIBRARY_H_

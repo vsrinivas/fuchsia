@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef TOOLS_KAZOO_TEST_H_
-#define TOOLS_KAZOO_TEST_H_
+#ifndef ZIRCON_TOOLS_KAZOO_TEST_H_
+#define ZIRCON_TOOLS_KAZOO_TEST_H_
 
 #include <string.h>
 
@@ -205,4 +205,4 @@ void RegisterTest(testing::Test* (*)(), const char*);
 #define ASSERT_STREQ(a, b) \
   TEST_ASSERT_(::testing::TestResult(strcmp(a, b) == 0, #a " str== " #b), TEST_FATAL_FAILURE_)
 
-#endif  // TOOLS_KAZOO_TEST_H_
+#endif  // ZIRCON_TOOLS_KAZOO_TEST_H_

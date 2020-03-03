@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef TOOLS_KAZOO_ALIAS_WORKAROUND_H_
-#define TOOLS_KAZOO_ALIAS_WORKAROUND_H_
+#ifndef ZIRCON_TOOLS_KAZOO_ALIAS_WORKAROUND_H_
+#define ZIRCON_TOOLS_KAZOO_ALIAS_WORKAROUND_H_
 
 #include <string>
 
@@ -14,4 +14,4 @@ class Type;
 // and return true. Otherwise, return false.
 bool AliasWorkaround(const std::string& name, const SyscallLibrary& library, Type* type);
 
-#endif  // TOOLS_KAZOO_ALIAS_WORKAROUND_H_
+#endif  // ZIRCON_TOOLS_KAZOO_ALIAS_WORKAROUND_H_

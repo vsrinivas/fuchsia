@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef TOOLS_KAZOO_WRITER_H_
-#define TOOLS_KAZOO_WRITER_H_
+#ifndef ZIRCON_TOOLS_KAZOO_WRITER_H_
+#define ZIRCON_TOOLS_KAZOO_WRITER_H_
 
 #include <stdio.h>
 #include <zircon/compiler.h>
@@ -68,4 +68,4 @@ class StringWriter : public Writer {
 // rebuilds of dependencies.
 bool WriteFileIfChanged(const std::string& filename, const std::string& data);
 
-#endif  // TOOLS_KAZOO_WRITER_H_
+#endif  // ZIRCON_TOOLS_KAZOO_WRITER_H_
