@@ -18,6 +18,7 @@ group("tools") {
     "//src/connectivity/network/dhcpd-cli",
     "//src/connectivity/network/netdump",
     "//src/connectivity/network/netstack:tools",
+    "//src/connectivity/overnet/overnetstack",
     "//src/connectivity/overnet/tools",
     "//src/connectivity/wlan:tools",
     "//src/developer/debug/zxdb:zxdb_host",
