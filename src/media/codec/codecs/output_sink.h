@@ -42,9 +42,11 @@ class OutputSink {
   // Output blocks are slices of the underlying packet and buffer.
   //
   // Output blocks will not overlap with one another, and are vended in order.
+  // `buffer` is a reference to the underlying codec buffer that `data` points into.
   struct OutputBlock {
     uint8_t* data;
     size_t len;
+    const CodecBuffer* buffer;
   };
 
   enum Status {

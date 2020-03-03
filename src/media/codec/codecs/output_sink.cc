@@ -50,6 +50,7 @@ OutputSink::Status OutputSink::NextOutputBlock(
   auto output_block = OutputBlock{
       .data = current_packet_->buffer()->base() + current_packet_->valid_length_bytes(),
       .len = write_size,
+      .buffer = current_packet_->buffer(),
   };
 
   auto [bytes_written, write_status] = output_block_writer(output_block);

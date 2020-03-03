@@ -68,6 +68,7 @@ TEST(OutputSink, Basic) {
           [write_size, &total_written](OutputSink::OutputBlock output_block) mutable
           -> std::pair<size_t, OutputSink::UserStatus> {
             EXPECT_NE(output_block.data, nullptr);
+            EXPECT_NE(output_block.buffer, nullptr);
             EXPECT_EQ(output_block.len, write_size);
             for (size_t i = 0; i < write_size; ++i) {
               output_block.data[i] = (total_written + i) % 256;
