@@ -39,10 +39,7 @@ std::optional<std::string> Identifier::GetIdentifier(std::string_view unit) cons
       continue;
     }
 
-    auto text = child->ToString(unit);
-    if (text != "@") {
-      return text;
-    }
+    return child->ToString(unit);
   }
 
   // TODO: DCHECK(HasErrors()) // We should only get here if the parse failed.

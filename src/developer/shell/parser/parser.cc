@@ -49,6 +49,10 @@ ParseResultStream Digit(ParseResultStream prefixes) {
   return CharGroup("digit", "0-9")(std::move(prefixes));
 }
 
+ParseResultStream HexDigit(ParseResultStream prefixes) {
+  return CharGroup("hex digit", "a-fA-F0-9")(std::move(prefixes));
+}
+
 ParseResultStream UnescapedIdentifier(ParseResultStream prefixes);
 fit::function<ParseResultStream(ParseResultStream)> Thingy(int min) {
   if (min > 0) {
@@ -66,17 +70,44 @@ ParseResultStream UnescapedIdentifier(ParseResultStream prefixes) {
 
 // Parses an identifier
 //     myVariable
-//     @0_day_variable
 ParseResultStream Identifier(ParseResultStream prefixes) {
-  return NT<ast::Identifier>(Alt(Seq(Token("@"), UnescapedIdentifier),
-                                 Seq(Not(Digit), Not(Token("s#")), UnescapedIdentifier)))(
+  return NT<ast::Identifier>(Seq(Not(Digit), UnescapedIdentifier))(std::move(prefixes));
+}
+
+// Parses an unadorned decimal Integer
+//     0
+//     12345
+//     12_345
+ParseResultStream DecimalInteger(ParseResultStream prefixes) {
+  return Alt(Seq(Token("0"), Not(Digit)),
+             Seq(Not(Token("0")), Token(OnePlus(Digit)),
+                 ZeroPlus(Seq(Token("_"), Token(OnePlus(Digit))))))(std::move(prefixes));
+}
+
+// Parses a hexadecimal integer marked by '0x'
+//     0x1234abcd
+//     0x12_abcd
+ParseResultStream HexInteger(ParseResultStream prefixes) {
+  return Seq(Token("0x"),
+             Seq(Token(OnePlus(HexDigit)), ZeroPlus(Seq(Token("_"), Token(OnePlus(HexDigit))))))(
       std::move(prefixes));
+}
+
+// Parses an integer.
+//     0
+//     12345
+//     12_345
+//     0x1234abcd
+//     0x12_abcd
+ParseResultStream Integer(ParseResultStream prefixes) {
+  // TODO: Binary integers, once we ask the FIDL team about them.
+  return NT<ast::Integer>(Alt(HexInteger, DecimalInteger))(std::move(prefixes));
 }
 
 // Parses an expression. This is effectively unimplemented right now.
 ParseResultStream Expression(ParseResultStream prefixes) {
   // Unimplemented
-  return NT<ast::Expression>(Digit)(std::move(prefixes));
+  return NT<ast::Expression>(Integer)(std::move(prefixes));
 }
 
 // Parses a variable declaration:

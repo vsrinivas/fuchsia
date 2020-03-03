@@ -20,6 +20,7 @@ class Error;
 class Program;
 class VariableDecl;
 class Identifier;
+class Integer;
 class Expression;
 
 // A node in our AST.
@@ -58,6 +59,8 @@ class Node {
   const VariableDecl* AsVariableDecl() const { return const_cast<Node*>(this)->AsVariableDecl(); }
   virtual Identifier* AsIdentifier() { return nullptr; }
   const Identifier* AsIdentifier() const { return const_cast<Node*>(this)->AsIdentifier(); }
+  virtual Integer* AsInteger() { return nullptr; }
+  const Integer* AsInteger() const { return const_cast<Node*>(this)->AsInteger(); }
   virtual Expression* AsExpression() { return nullptr; }
   const Expression* AsExpression() const { return const_cast<Node*>(this)->AsExpression(); }
 
@@ -172,6 +175,17 @@ class VariableDecl : public Nonterminal {
 
   std::string_view Name() const override { return "VariableDecl"; }
   VariableDecl* AsVariableDecl() override { return this; }
+};
+
+class Integer : public Nonterminal {
+ public:
+  Integer(size_t start, std::vector<std::shared_ptr<Node>> children)
+      : Nonterminal(start, std::move(children)) {}
+
+  std::string_view Name() const override { return "Integer"; }
+
+  std::optional<std::string> GetInteger(std::string_view unit) const;
+  Integer* AsInteger() override { return this; }
 };
 
 class Identifier : public Nonterminal {
