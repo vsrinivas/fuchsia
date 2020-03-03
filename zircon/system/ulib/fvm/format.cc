@@ -76,8 +76,7 @@ bool VPartitionEntry::IsFree() const { return !IsAllocated(); }
 
 void VPartitionEntry::Release() {
   memset(this, 0, sizeof(VPartitionEntry));
-  ZX_DEBUG_ASSERT_MSG(IsFree(),
-                      "VPartitionEntry must be free after calling VPartitionEntry::Release()");
+  ZX_ASSERT_MSG(IsFree(), "VPartitionEntry must be free after calling VPartitionEntry::Release()");
 }
 
 void VPartitionEntry::SetActive(bool is_active) {
@@ -95,8 +94,8 @@ SliceEntry SliceEntry::Create(uint64_t vpartition, uint64_t vslice) {
 }
 
 void SliceEntry::Set(uint64_t vpartition, uint64_t vslice) {
-  ZX_DEBUG_ASSERT(vpartition < kVPartitionEntryMax);
-  ZX_DEBUG_ASSERT(vslice < kSliceEntryVSliceMax);
+  ZX_ASSERT(vpartition < kVPartitionEntryMax);
+  ZX_ASSERT(vslice < kSliceEntryVSliceMax);
   data = 0ull | (vpartition & kVPartitionEntryMax) |
          ((vslice & kSliceEntryVSliceMax) << (kSliceEntryVPartitionBits));
 }
@@ -109,14 +108,13 @@ bool SliceEntry::IsFree() const { return !IsAllocated(); }
 
 uint64_t SliceEntry::VSlice() const {
   uint64_t vslice = (data & kSliceEntryVSliceMask) >> kSliceEntryVPartitionBits;
-  ZX_DEBUG_ASSERT_MSG(vslice < (1ul << kSliceEntryVSliceBits),
-                      "Slice assigned to vslice out of range.");
+  ZX_ASSERT_MSG(vslice < (1ul << kSliceEntryVSliceBits), "Slice assigned to vslice out of range.");
   return vslice;
 }
 
 uint64_t SliceEntry::VPartition() const {
   uint64_t vpartition = (data & kVPartitionEntryMask);
-  ZX_DEBUG_ASSERT_MSG(vpartition < kMaxVPartitions, "Slice assigned to Partition out of range.");
+  ZX_ASSERT_MSG(vpartition < kMaxVPartitions, "Slice assigned to Partition out of range.");
   return vpartition;
 }
 

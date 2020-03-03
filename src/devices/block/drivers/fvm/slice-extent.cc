@@ -11,8 +11,8 @@
 namespace fvm {
 
 std::unique_ptr<SliceExtent> SliceExtent::Split(size_t vslice) {
-  ZX_DEBUG_ASSERT(start() <= vslice);
-  ZX_DEBUG_ASSERT(vslice < end());
+  ZX_ASSERT(start() <= vslice);
+  ZX_ASSERT(vslice < end());
 
   std::unique_ptr<SliceExtent> new_extent(new SliceExtent(vslice + 1));
   new_extent->pslices_.reserve(end() - vslice);
@@ -27,7 +27,7 @@ std::unique_ptr<SliceExtent> SliceExtent::Split(size_t vslice) {
 }
 
 void SliceExtent::Merge(const SliceExtent& other) {
-  ZX_DEBUG_ASSERT(end() == other.start());
+  ZX_ASSERT(end() == other.start());
   pslices_.reserve(other.size());
 
   for (size_t vs = other.start(); vs < other.end(); vs++) {

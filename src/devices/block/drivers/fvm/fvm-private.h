@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_BLOCK_DRIVERS_FVM_FVM_PRIVATE_H_
-#define SRC_STORAGE_BLOCK_DRIVERS_FVM_FVM_PRIVATE_H_
+#ifndef SRC_DEVICES_BLOCK_DRIVERS_FVM_FVM_PRIVATE_H_
+#define SRC_DEVICES_BLOCK_DRIVERS_FVM_FVM_PRIVATE_H_
 
 #include <lib/zircon-internal/thread_annotations.h>
 #include <stdbool.h>
@@ -64,7 +64,7 @@ class VPartitionManager : public ManagerDeviceType {
   // will, as a consequence, not be de-allocated underneath us).
   vpart_entry_t* GetAllocatedVPartEntry(size_t index) const TA_NO_THREAD_SAFETY_ANALYSIS {
     auto entry = GetVPartEntryLocked(index);
-    ZX_DEBUG_ASSERT(entry->slices > 0);
+    ZX_ASSERT(entry->slices > 0);
     return entry;
   }
 
@@ -212,4 +212,4 @@ zx_status_t fvm_bind(zx_device_t* dev);
 
 __END_CDECLS
 
-#endif  // SRC_STORAGE_BLOCK_DRIVERS_FVM_FVM_PRIVATE_H_
+#endif  // SRC_DEVICES_BLOCK_DRIVERS_FVM_FVM_PRIVATE_H_

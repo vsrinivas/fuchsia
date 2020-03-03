@@ -30,7 +30,7 @@ void SetOperationDeviceOffset(uint64_t offset, block_op_t* txn) {
       txn->trim.offset_dev = offset;
       break;
     default:
-      ZX_DEBUG_ASSERT_MSG(false, "Unexpected operation type");
+      ZX_ASSERT_MSG(false, "Unexpected operation type");
   }
 }
 
@@ -43,7 +43,7 @@ void SetOperationVmoOffset(uint64_t offset, block_op_t* txn) {
     case BLOCK_OP_TRIM:
       break;
     default:
-      ZX_DEBUG_ASSERT_MSG(false, "Unexpected operation type");
+      ZX_ASSERT_MSG(false, "Unexpected operation type");
   }
 }
 
@@ -57,7 +57,7 @@ void SetOperationLength(uint32_t length, block_op_t* txn) {
       txn->trim.length = length;
       break;
     default:
-      ZX_DEBUG_ASSERT_MSG(false, "Unexpected operation type");
+      ZX_ASSERT_MSG(false, "Unexpected operation type");
   }
 }
 
@@ -73,7 +73,7 @@ VPartition::~VPartition() = default;
 
 zx_status_t VPartition::Create(VPartitionManager* vpm, size_t entry_index,
                                std::unique_ptr<VPartition>* out) {
-  ZX_DEBUG_ASSERT(entry_index != 0);
+  ZX_ASSERT(entry_index != 0);
 
   auto vp = std::make_unique<VPartition>(vpm, entry_index, vpm->BlockOpSize());
 
@@ -82,12 +82,12 @@ zx_status_t VPartition::Create(VPartitionManager* vpm, size_t entry_index,
 }
 
 bool VPartition::SliceGetLocked(uint64_t vslice, uint64_t* out_pslice) const {
-  ZX_DEBUG_ASSERT(vslice < mgr_->VSliceMax());
+  ZX_ASSERT(vslice < mgr_->VSliceMax());
   auto extent = --slice_map_.upper_bound(vslice);
   if (!extent.IsValid()) {
     return false;
   }
-  ZX_DEBUG_ASSERT(extent->start() <= vslice);
+  ZX_ASSERT(extent->start() <= vslice);
   return extent->find(vslice, out_pslice);
 }
 
@@ -107,7 +107,7 @@ zx_status_t VPartition::CheckSlices(uint64_t vslice_start, size_t* count, bool* 
 
   auto extent = --slice_map_.upper_bound(vslice_start);
   if (extent.IsValid()) {
-    ZX_DEBUG_ASSERT(extent->start() <= vslice_start);
+    ZX_ASSERT(extent->start() <= vslice_start);
     if (extent->start() + extent->size() > vslice_start) {
       *count = extent->size() - (vslice_start - extent->start());
       *allocated = true;
@@ -117,7 +117,7 @@ zx_status_t VPartition::CheckSlices(uint64_t vslice_start, size_t* count, bool* 
   if (!(*allocated)) {
     auto extent = slice_map_.upper_bound(vslice_start);
     if (extent.IsValid()) {
-      ZX_DEBUG_ASSERT(extent->start() > vslice_start);
+      ZX_ASSERT(extent->start() > vslice_start);
       *count = extent->start() - vslice_start;
     } else {
       *count = mgr_->VSliceMax() - vslice_start;
@@ -128,9 +128,9 @@ zx_status_t VPartition::CheckSlices(uint64_t vslice_start, size_t* count, bool* 
 }
 
 void VPartition::SliceSetLocked(uint64_t vslice, uint64_t pslice) {
-  ZX_DEBUG_ASSERT(vslice < mgr_->VSliceMax());
+  ZX_ASSERT(vslice < mgr_->VSliceMax());
   auto extent = --slice_map_.upper_bound(vslice);
-  ZX_DEBUG_ASSERT(!extent.IsValid() || !extent->contains(vslice));
+  ZX_ASSERT(!extent.IsValid() || !extent->contains(vslice));
   if (extent.IsValid() && (vslice == extent->end())) {
     // Easy case: append to existing slice
     extent->push_back(pslice);
@@ -143,7 +143,7 @@ void VPartition::SliceSetLocked(uint64_t vslice, uint64_t pslice) {
     extent = --slice_map_.upper_bound(vslice);
   }
 
-  ZX_DEBUG_ASSERT(([this, vslice, pslice]() TA_NO_THREAD_SAFETY_ANALYSIS {
+  ZX_ASSERT(([this, vslice, pslice]() TA_NO_THREAD_SAFETY_ANALYSIS {
     uint64_t mapped_pslice;
     return SliceGetLocked(vslice, &mapped_pslice) && mapped_pslice == pslice;
   }()));
@@ -158,8 +158,8 @@ void VPartition::SliceSetLocked(uint64_t vslice, uint64_t pslice) {
 }
 
 void VPartition::SliceFreeLocked(uint64_t vslice) {
-  ZX_DEBUG_ASSERT(vslice < mgr_->VSliceMax());
-  ZX_DEBUG_ASSERT(SliceCanFree(vslice));
+  ZX_ASSERT(vslice < mgr_->VSliceMax());
+  ZX_ASSERT(SliceCanFree(vslice));
   auto extent = --slice_map_.upper_bound(vslice);
   if (vslice != extent->end() - 1) {
     // Removing from the middle of an extent; this splits the extent in
@@ -177,8 +177,8 @@ void VPartition::SliceFreeLocked(uint64_t vslice) {
 }
 
 void VPartition::ExtentDestroyLocked(uint64_t vslice) TA_REQ(lock_) {
-  ZX_DEBUG_ASSERT(vslice < mgr_->VSliceMax());
-  ZX_DEBUG_ASSERT(SliceCanFree(vslice));
+  ZX_ASSERT(vslice < mgr_->VSliceMax());
+  ZX_ASSERT(SliceCanFree(vslice));
   auto extent = --slice_map_.upper_bound(vslice);
   size_t length = extent->size();
   slice_map_.erase(*extent);
@@ -259,7 +259,7 @@ static void multi_txn_completion(void* cookie, zx_status_t status, block_op_t* t
 
 void VPartition::BlockImplQueue(block_op_t* txn, block_impl_queue_callback completion_cb,
                                 void* cookie) {
-  ZX_DEBUG_ASSERT(mgr_->BlockOpSize() > 0);
+  ZX_ASSERT(mgr_->BlockOpSize() > 0);
   uint32_t txn_length = 0;
   uint64_t offset_dev = 0;
   uint64_t offset_vmo = 0;
@@ -367,8 +367,8 @@ void VPartition::BlockImplQueue(block_op_t* txn, block_impl_queue_callback compl
     } else {
       length = blocks_per_slice;
     }
-    ZX_DEBUG_ASSERT(length <= blocks_per_slice);
-    ZX_DEBUG_ASSERT(length <= length_remaining);
+    ZX_ASSERT(length <= blocks_per_slice);
+    ZX_ASSERT(length <= length_remaining);
 
     txns.push_back(reinterpret_cast<block_op_t*>(new uint8_t[mgr_->BlockOpSize()]));
 
@@ -383,7 +383,7 @@ void VPartition::BlockImplQueue(block_op_t* txn, block_impl_queue_callback compl
     offset_vmo += static_cast<uint32_t>(length);
     length_remaining -= static_cast<uint32_t>(length);
   }
-  ZX_DEBUG_ASSERT(length_remaining == 0);
+  ZX_ASSERT(length_remaining == 0);
 
   for (size_t i = 0; i < txn_count; i++) {
     mgr_->Queue(txns[i], multi_txn_completion, state.get());
@@ -490,7 +490,7 @@ zx_status_t VPartition::BlockVolumeDestroy() {
 zx_off_t VPartition::DdkGetSize() {
   const zx_off_t sz = mgr_->VSliceMax() * mgr_->SliceSize();
   // Check for overflow; enforced when loading driver
-  ZX_DEBUG_ASSERT(sz / mgr_->VSliceMax() == mgr_->SliceSize());
+  ZX_ASSERT(sz / mgr_->VSliceMax() == mgr_->SliceSize());
   return sz;
 }
 

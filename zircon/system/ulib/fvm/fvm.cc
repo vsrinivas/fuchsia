@@ -71,7 +71,7 @@ bool generation_ge(uint64_t g1, uint64_t g2) {
 // Validate the metadata's hash value.
 // Returns 'true' if it matches, 'false' otherwise.
 bool fvm_check_hash(const void* metadata, size_t metadata_size) {
-  ZX_DEBUG_ASSERT(metadata_size >= sizeof(fvm::Header));
+  ZX_ASSERT(metadata_size >= sizeof(fvm::Header));
   const fvm::Header* header = static_cast<const fvm::Header*>(metadata);
   const void* metadata_after_hash =
       reinterpret_cast<const void*>(header->hash + sizeof(header->hash));
