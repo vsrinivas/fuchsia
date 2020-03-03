@@ -112,6 +112,10 @@ package("pkg") {
       dest = "fonts.cmx"
     },
     {
+      path = rebase_path("meta/fonts.cml")
+      dest = "fonts.cm"
+    },
+    {
       path = rebase_path("meta/fonts_for_downstream_tests.cmx")
       dest = "fonts_for_downstream_tests.cmx"
     },

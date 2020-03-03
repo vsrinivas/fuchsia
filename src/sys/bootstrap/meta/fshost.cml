@@ -22,6 +22,12 @@
     { "directory": "/fs/data", "from": "self", "as": "/minfs", "rights": ["rw*", "admin"] },
     { "directory": "/fs/install", "from": "self", "as": "/install", "rights": ["rw*"] },
     { "directory": "/fs/pkgfs", "from": "self", "as": "/pkgfs", "rights": ["rx*"] },
+    {
+      "directory": "/fs/pkgfs/packages/config-data/0/data",
+      "from": "self",
+      "as": "/config/data",
+      "rights": ["r*"]
+    },
     { "directory": "/fs/system", "from": "self", "as": "/system", "rights": ["rx*"] },
     { "directory": "/fs/tmp", "from": "self", "as": "/tmp", "rights": ["rw*", "admin"] },
 

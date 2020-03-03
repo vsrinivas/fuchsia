@@ -42,6 +42,9 @@
     // From component_manager
     { "protocol": "/svc/fuchsia.process.Launcher", "as": "/svc_for_sys/fuchsia.process.Launcher" },
 
+    // From v2 components
+    { "protocol": "/svc/fuchsia.fonts.Provider", "as": "/svc_for_sys/fuchsia.fonts.Provider" },
+
     // From sysinfo
     { "protocol": "/svc/fuchsia.sysinfo.SysInfo", "as": "/svc_for_sys/fuchsia.sysinfo.SysInfo" },
 
@@ -76,6 +79,7 @@
         "/svc/fuchsia.net.stack.Log",
         "/svc/fuchsia.net.stack.Stack",
         "/svc/fuchsia.netstack.Netstack",
+        "/svc/fuchsia.pkg.FontResolver",
         "/svc/fuchsia.pkg.PackageResolver",
         "/svc/fuchsia.pkg.RepositoryManager",
         "/svc/fuchsia.pkg.rewrite.Engine",

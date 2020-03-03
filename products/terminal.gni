@@ -9,6 +9,7 @@ base_package_labels += [
   "//garnet/bin/sysmem_connector",
   "//src/ui/bin/root_presenter",
   "//src/ui/bin/root_presenter:configs",
+  "//src/fonts",
   "//src/graphics/bin/vulkan_loader",
   "//src/hwinfo:hwinfo_default_config",
   "//src/intl/intl_services:config",
@@ -21,7 +22,6 @@ base_package_labels += [
 cache_package_labels += [
   "//src/ui/tools/tiles",
   "//garnet/bin/terminal",
-  "//src/fonts",
   "//src/fonts:open-fonts-collection",
 ]
 

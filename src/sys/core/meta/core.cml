@@ -11,6 +11,10 @@
       "name": "test_manager",
       "url": "fuchsia-pkg://fuchsia.com/test_manager#meta/test_manager.cm",
     },
+    {
+      "name": "font_provider",
+      "url": "fuchsia-pkg://fuchsia.com/fonts#meta/fonts.cm",
+    },
   ],
   "expose": [
     // Non-zircon services for svchost
@@ -46,6 +50,14 @@
     },
   ],
   "offer": [
+    {
+      "protocol": [
+        "/svc/fuchsia.logger.LogSink",
+        "/svc/fuchsia.pkg.FontResolver",
+      ],
+      "from": "#appmgr",
+      "to": [ "#font_provider" ],
+    },
     // Passing from root realm to appmgr
     {
       "protocol": [
@@ -71,6 +83,17 @@
         "/svc/fuchsia.sysinfo.SysInfo",
       ],
       "from": "realm",
+      "to": [ "#appmgr" ],
+    },
+    {
+      "directory": "/config/data",
+      "subdir": "fonts",
+      "from": "realm",
+      "to": [ "#font_provider" ],
+    },
+    {
+      "protocol": "/svc/fuchsia.fonts.Provider",
+      "from": "#font_provider",
       "to": [ "#appmgr" ],
     },
     {
@@ -132,7 +155,8 @@
       "from": "realm",
       "to": [
         "#appmgr",
-        "#test_manager"
+        "#test_manager",
+        "#font_provider",
       ],
     },
   ],

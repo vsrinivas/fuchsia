@@ -200,6 +200,7 @@
     { "directory": "/pkgfs-delayed", "from": "#fshost" },
 
     { "directory": "/dev", "from": "#driver_manager" },
+    { "directory": "/config/data", "from": "#fshost" },
     { "directory": "/minfs", "from": "#fshost" },
     { "directory": "/pkgfs", "from": "#fshost" },
     { "directory": "/system", "from": "#fshost" },
