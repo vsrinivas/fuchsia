@@ -54,8 +54,22 @@ struct NetInterface {
     uint32 features;
     uint32 configuration;
     string name;
+    /// addr is one of the interface's IPv4 addresses, even if the interface
+    /// holds multiple. No guarantees are made about which address is used when
+    /// an interface has multiple IPv4 addresses.
+    ///
+    /// If the interface does not have an IPv4 address, addr is the unspecified
+    /// IPv4 address (0.0.0.0).
     fuchsia.net.IpAddress addr;
+    /// netmask is addr's corresponding network mask.
+    ///
+    /// If the interface does not have an IPv4 address, netmask is the 0 netmask
+    /// (0.0.0.0).
     fuchsia.net.IpAddress netmask;
+    /// netmask is addr's corresponding network's broadcast address.
+    ///
+    /// If the interface does not have an IPv4 address, broadaddr is the
+    /// unspecified IPv4 address (0.0.0.0).
     fuchsia.net.IpAddress broadaddr;
     vector<fuchsia.net.Subnet> ipv6addrs;
     bytes hwaddr;
@@ -71,8 +85,22 @@ struct NetInterface2 {
     uint32 configuration;
     uint32 metric;
     string name;
+    /// addr is one of the interface's IPv4 addresses, even if the interface
+    /// holds multiple. No guarantees are made about which address is used when
+    /// an interface has multiple IPv4 addresses.
+    ///
+    /// If the interface does not have an IPv4 address, addr is the unspecified
+    /// IPv4 address (0.0.0.0).
     fuchsia.net.IpAddress addr;
+    /// netmask is addr's corresponding network mask.
+    ///
+    /// If the interface does not have an IPv4 address, netmask is the 0 netmask
+    /// (0.0.0.0).
     fuchsia.net.IpAddress netmask;
+    /// netmask is addr's corresponding network's broadcast address.
+    ///
+    /// If the interface does not have an IPv4 address, broadaddr is the
+    /// unspecified IPv4 address (0.0.0.0).
     fuchsia.net.IpAddress broadaddr;
     vector<fuchsia.net.Subnet> ipv6addrs;
     bytes hwaddr;
