@@ -2,6 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+###############################################################################
+# SOURCES
+###############################################################################
 source_set("info") {
   public = [
     "agent_info.h",
@@ -31,8 +34,6 @@ source_set("info") {
   ]
 
   deps = [ "//src/lib/fxl" ]
-
-  visibility = [ "//src/developer/feedback/crashpad_agent/*" ]
 }
 
 # Exposed for testing purposes.
@@ -59,6 +60,4 @@ source_set("inspect_manager") {
     "//src/lib/files:files",
     "//src/lib/syslog/cpp",
   ]
-
-  visibility = [ "//src/developer/feedback/crashpad_agent/*" ]
 }

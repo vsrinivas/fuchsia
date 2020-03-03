@@ -4,12 +4,18 @@
 
 import("//build/test/test_package.gni")
 
+###############################################################################
+# GROUPS
+###############################################################################
 group("tests") {
   testonly = true
 
   public_deps = [ ":feedback_utils_tests" ]
 }
 
+###############################################################################
+# PACKAGES
+###############################################################################
 test_package("feedback_utils_tests") {
   tests = [
     {
@@ -62,6 +68,9 @@ test_package("feedback_utils_tests") {
   ]
 }
 
+###############################################################################
+# EXECUTABLES
+###############################################################################
 executable("archive_unittest") {
   testonly = true
 
@@ -101,40 +110,6 @@ executable("cobalt_unittest") {
     "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",
   ]
-}
-
-executable("rotating_file_set_unittest") {
-  testonly = true
-
-  sources = [ "rotating_file_set_unittest.cc" ]
-
-  deps = [
-    "//src/developer/feedback/utils:files",
-    "//src/lib/files",
-    "//src/lib/fxl/test:gtest_main",
-    "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
-  ]
-
-  # TODO(46561): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-}
-
-executable("write_only_file_unittest") {
-  testonly = true
-
-  sources = [ "write_only_file_unittest.cc" ]
-
-  deps = [
-    "//src/developer/feedback/utils:files",
-    "//src/lib/files",
-    "//src/lib/fxl/test:gtest_main",
-    "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
-  ]
-
-  # TODO(46561): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 executable("inspect_node_manager_unittest") {
@@ -180,6 +155,23 @@ executable("promise_unittest") {
   ]
 }
 
+executable("rotating_file_set_unittest") {
+  testonly = true
+
+  sources = [ "rotating_file_set_unittest.cc" ]
+
+  deps = [
+    "//src/developer/feedback/utils:files",
+    "//src/lib/files",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+
+  # TODO(46561): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+}
+
 executable("time_unittest") {
   testonly = true
 
@@ -210,4 +202,21 @@ executable("utc_time_provider_unittest") {
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
+}
+
+executable("write_only_file_unittest") {
+  testonly = true
+
+  sources = [ "write_only_file_unittest.cc" ]
+
+  deps = [
+    "//src/developer/feedback/utils:files",
+    "//src/lib/files",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+
+  # TODO(46561): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }

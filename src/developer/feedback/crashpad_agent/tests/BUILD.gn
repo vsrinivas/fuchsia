@@ -6,6 +6,9 @@ import("//build/config.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
+###############################################################################
+# GROUPS
+###############################################################################
 group("tests") {
   testonly = true
 
@@ -29,6 +32,9 @@ group("tests") {
   ]
 }
 
+###############################################################################
+# PACKAGES
+###############################################################################
 test_package("crashpad_agent_tests") {
   tests = [
     {
@@ -151,6 +157,9 @@ test_package("crashpad_agent_tests") {
   ]
 }
 
+###############################################################################
+# EXECUTABLES
+###############################################################################
 executable("config_unittest") {
   testonly = true
 
@@ -354,6 +363,9 @@ executable("queue_unittest") {
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
+###############################################################################
+# CONFIGS
+###############################################################################
 config_data("valid_override_config") {
   for_pkg = "fake_crashpad_agent_valid_override_config"
 

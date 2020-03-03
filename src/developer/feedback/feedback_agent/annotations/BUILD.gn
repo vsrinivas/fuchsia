@@ -2,6 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+###############################################################################
+# SOURCES
+###############################################################################
 source_set("annotation_providers") {
   public = [ "annotation_provider_factory.h" ]
 
@@ -43,32 +46,6 @@ source_set("annotation_providers") {
 }
 
 # Exposed separately for unit test purposes.
-source_set("channel_provider") {
-  public = [ "channel_provider.h" ]
-
-  sources = [
-    "annotation_provider.h",
-    "channel_provider.cc",
-    "channel_provider.h",
-  ]
-
-  public_deps = [
-    "//sdk/fidl/fuchsia.update.channel",
-    "//src/developer/feedback/utils:cobalt",
-  ]
-
-  deps = [
-    "//sdk/fidl/fuchsia.feedback",
-    "//sdk/lib/sys/cpp",
-    "//src/developer/feedback/feedback_agent:constants",
-    "//src/developer/feedback/utils:promise",
-    "//src/lib/fxl",
-    "//src/lib/syslog/cpp",
-    "//zircon/public/lib/fit",
-  ]
-}
-
-# Exposed separately for unit test purposes.
 source_set("board_info_provider") {
   public = [ "board_info_provider.h" ]
 
@@ -85,6 +62,32 @@ source_set("board_info_provider") {
   ]
 
   deps = [
+    "//sdk/lib/sys/cpp",
+    "//src/developer/feedback/feedback_agent:constants",
+    "//src/developer/feedback/utils:promise",
+    "//src/lib/fxl",
+    "//src/lib/syslog/cpp",
+    "//zircon/public/lib/fit",
+  ]
+}
+
+# Exposed separately for unit test purposes.
+source_set("channel_provider") {
+  public = [ "channel_provider.h" ]
+
+  sources = [
+    "annotation_provider.h",
+    "channel_provider.cc",
+    "channel_provider.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.update.channel",
+    "//src/developer/feedback/utils:cobalt",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/sys/cpp",
     "//src/developer/feedback/feedback_agent:constants",
     "//src/developer/feedback/utils:promise",

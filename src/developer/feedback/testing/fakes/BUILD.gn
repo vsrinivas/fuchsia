@@ -4,6 +4,9 @@
 
 import("//build/package.gni")
 
+###############################################################################
+# PACKAGES
+###############################################################################
 package("fake_crash_reporter") {
   binary = "fake_crash_reporter"
 
@@ -15,6 +18,11 @@ package("fake_crash_reporter") {
   ]
 
   deps = [ ":fake_crash_reporter_main" ]
+
+  visibility = [
+    "//src/developer/feedback/*",
+    "//src/developer/exception_broker/tests",
+  ]
 }
 
 package("fake_data_provider") {
@@ -35,8 +43,13 @@ package("fake_data_provider") {
   ]
 
   deps = [ ":fake_data_provider_main" ]
+
+  visibility = [ "//src/developer/feedback/*" ]
 }
 
+###############################################################################
+# EXECUTABLES
+###############################################################################
 executable("fake_crash_reporter_main") {
   output_name = "fake_crash_reporter"
 

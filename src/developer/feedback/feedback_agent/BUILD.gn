@@ -5,6 +5,9 @@
 import("//build/config.gni")
 import("//build/package.gni")
 
+###############################################################################
+# PACKAGES
+###############################################################################
 package("feedback_agent") {
   binaries = [
     {
@@ -39,6 +42,25 @@ package("feedback_agent") {
   ]
 }
 
+###############################################################################
+# EXECUTABLES
+###############################################################################
+executable("data_provider") {
+  sources = [ "data_provider_main.cc" ]
+
+  deps = [
+    ":data_provider_src",
+    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
+    "//src/lib/syslog/cpp",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/zx",
+  ]
+}
+
 executable("main") {
   output_name = "feedback_agent"
 
@@ -60,43 +82,26 @@ executable("main") {
   ]
 }
 
-source_set("feedback_agent_src") {
-  sources = [
-    "feedback_agent.cc",
-    "feedback_agent.h",
-  ]
+executable("system_log_recorder") {
+  sources = [ "system_log_recorder_main.cc" ]
 
   deps = [
     ":constants",
-    "//garnet/public/lib/syslog/cpp",
-    "//sdk/lib/fidl/cpp",
+    ":system_log_recorder_src",
     "//sdk/lib/sys/cpp",
-    "//zircon/public/lib/zx",
-  ]
-
-  public_deps = [
-    "//sdk/fidl/fuchsia.feedback",
-    "//sdk/lib/sys/inspect/cpp",
-    "//src/developer/feedback/utils:files",
-    "//src/lib/fxl",
-    "//zircon/public/lib/async-loop-cpp",
-  ]
-}
-
-executable("data_provider") {
-  sources = [ "data_provider_main.cc" ]
-
-  deps = [
-    ":data_provider_src",
-    "//sdk/fidl/fuchsia.feedback",
-    "//sdk/lib/fidl/cpp",
-    "//sdk/lib/sys/cpp",
-    "//src/lib/fxl",
     "//src/lib/syslog/cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
-    "//zircon/public/lib/zx",
   ]
+}
+
+###############################################################################
+# SOURCES
+###############################################################################
+source_set("constants") {
+  sources = [ "constants.h" ]
+
+  visibility = [ "//src/developer/feedback/feedback_agent/*" ]
 }
 
 source_set("data_provider_src") {
@@ -147,6 +152,29 @@ source_set("data_provider_src") {
   ]
 }
 
+source_set("feedback_agent_src") {
+  sources = [
+    "feedback_agent.cc",
+    "feedback_agent.h",
+  ]
+
+  deps = [
+    ":constants",
+    "//garnet/public/lib/syslog/cpp",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//zircon/public/lib/zx",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/lib/sys/inspect/cpp",
+    "//src/developer/feedback/utils:files",
+    "//src/lib/fxl",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
 source_set("feedback_id") {
   public = [ "feedback_id.h" ]
 
@@ -160,19 +188,6 @@ source_set("feedback_id") {
     "//src/lib/fxl",
     "//src/lib/syslog/cpp",
     "//src/lib/uuid",
-  ]
-}
-
-executable("system_log_recorder") {
-  sources = [ "system_log_recorder_main.cc" ]
-
-  deps = [
-    ":constants",
-    ":system_log_recorder_src",
-    "//sdk/lib/sys/cpp",
-    "//src/lib/syslog/cpp",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
   ]
 }
 
@@ -196,10 +211,4 @@ source_set("system_log_recorder_src") {
     "//src/lib/fxl",
     "//src/lib/syslog/cpp",
   ]
-}
-
-source_set("constants") {
-  sources = [ "constants.h" ]
-
-  visibility = [ "//src/developer/feedback/feedback_agent/*" ]
 }

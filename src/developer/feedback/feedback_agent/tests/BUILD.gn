@@ -7,6 +7,9 @@ import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 import("//src/hwinfo/hwinfo_config.gni")
 
+###############################################################################
+# GROUPS
+###############################################################################
 group("tests") {
   testonly = true
 
@@ -26,6 +29,9 @@ group("tests") {
   ]
 }
 
+###############################################################################
+# PACKAGES
+###############################################################################
 test_package("feedback_agent_tests") {
   tests = [
     {
@@ -151,6 +157,30 @@ test_package("feedback_agent_tests") {
     ":single_sync_annotation_provider_unittest",
     ":system_log_ptr_unittest",
     ":system_log_recorder_unittest",
+  ]
+}
+
+###############################################################################
+# EXECUTABLES
+###############################################################################
+executable("board_info_provider_unittest") {
+  testonly = true
+
+  sources = [ "board_info_provider_unittest.cc" ]
+
+  deps = [
+    ":stub_board",
+    "//src/developer/feedback/feedback_agent:constants",
+    "//src/developer/feedback/feedback_agent/annotations:board_info_provider",
+    "//src/developer/feedback/testing:cobalt_test_fixture",
+    "//src/developer/feedback/testing:gtest_with_syslog_main",
+    "//src/developer/feedback/testing:unit_test_fixture",
+    "//src/developer/feedback/testing/stubs:stub_cobalt_logger_factory",
+    "//src/lib/fxl",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/zx",
   ]
 }
 
@@ -364,52 +394,6 @@ executable("kernel_log_ptr_integration_test") {
   ]
 }
 
-executable("system_log_recorder_unittest") {
-  testonly = true
-
-  sources = [ "system_log_recorder_unittest.cc" ]
-
-  deps = [
-    ":stub_logger",
-    "//src/developer/feedback/feedback_agent:system_log_recorder_src",
-    "//src/developer/feedback/testing:gmatchers",
-    "//src/developer/feedback/testing:gpretty_printers",
-    "//src/developer/feedback/testing:gtest_with_syslog_main",
-    "//src/developer/feedback/testing:unit_test_fixture",
-    "//src/developer/feedback/utils:files",
-    "//src/lib/files",
-    "//src/lib/fxl",
-    "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
-    "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/zx",
-  ]
-
-  # TODO(46560): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-}
-
-executable("board_info_provider_unittest") {
-  testonly = true
-
-  sources = [ "board_info_provider_unittest.cc" ]
-
-  deps = [
-    ":stub_board",
-    "//src/developer/feedback/feedback_agent:constants",
-    "//src/developer/feedback/feedback_agent/annotations:board_info_provider",
-    "//src/developer/feedback/testing:cobalt_test_fixture",
-    "//src/developer/feedback/testing:gtest_with_syslog_main",
-    "//src/developer/feedback/testing:unit_test_fixture",
-    "//src/developer/feedback/testing/stubs:stub_cobalt_logger_factory",
-    "//src/lib/fxl",
-    "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
-    "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/zx",
-  ]
-}
-
 executable("product_info_provider_unittest") {
   testonly = true
 
@@ -509,32 +493,34 @@ executable("system_log_ptr_unittest") {
   ]
 }
 
-source_set("stub_channel_provider") {
-  sources = [
-    "stub_channel_provider.cc",
-    "stub_channel_provider.h",
-  ]
+executable("system_log_recorder_unittest") {
+  testonly = true
 
-  public_deps = [
-    "//sdk/fidl/fuchsia.update.channel",
-    "//sdk/lib/fidl/cpp",
-  ]
-}
+  sources = [ "system_log_recorder_unittest.cc" ]
 
-source_set("stub_logger") {
-  sources = [
-    "stub_logger.cc",
-    "stub_logger.h",
-  ]
-
-  public_deps = [
-    "//sdk/lib/fidl/cpp",
-    "//src/lib/syslog/cpp",
+  deps = [
+    ":stub_logger",
+    "//src/developer/feedback/feedback_agent:system_log_recorder_src",
+    "//src/developer/feedback/testing:gmatchers",
+    "//src/developer/feedback/testing:gpretty_printers",
+    "//src/developer/feedback/testing:gtest_with_syslog_main",
+    "//src/developer/feedback/testing:unit_test_fixture",
+    "//src/developer/feedback/utils:files",
+    "//src/lib/files",
+    "//src/lib/fxl",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-logger",
   ]
+
+  # TODO(46560): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
+###############################################################################
+# SOURCES
+###############################################################################
 source_set("stub_board") {
   sources = [
     "stub_board.cc",
@@ -543,6 +529,18 @@ source_set("stub_board") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.hwinfo",
+    "//sdk/lib/fidl/cpp",
+  ]
+}
+
+source_set("stub_channel_provider") {
+  sources = [
+    "stub_channel_provider.cc",
+    "stub_channel_provider.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.update.channel",
     "//sdk/lib/fidl/cpp",
   ]
 }
@@ -560,6 +558,20 @@ source_set("stub_inspect") {
     "//sdk/lib/fidl/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl",
+  ]
+}
+
+source_set("stub_logger") {
+  sources = [
+    "stub_logger.cc",
+    "stub_logger.h",
+  ]
+
+  public_deps = [
+    "//sdk/lib/fidl/cpp",
+    "//src/lib/syslog/cpp",
+    "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-logger",
   ]
 }
 
@@ -605,6 +617,9 @@ source_set("zx_object_util") {
   ]
 }
 
+###############################################################################
+# CONFIGS
+###############################################################################
 hwinfo_config_validate("fake_hwinfo_product_config_validate") {
   type = "product"
   config = "configs/hwinfo_product_config.json"

@@ -5,6 +5,9 @@
 import("//build/config.gni")
 import("//build/package.gni")
 
+###############################################################################
+# PACKAGES
+###############################################################################
 # We use a template to keep the real and fake packages in sync.
 template("crashpad_agent_package") {
   package(target_name) {
@@ -49,6 +52,9 @@ crashpad_agent_package("fake_crashpad_agent_valid_override_config") {
 crashpad_agent_package("fake_crashpad_agent_invalid_override_config") {
 }
 
+###############################################################################
+# EXECUTABLES
+###############################################################################
 executable("main") {
   output_name = "crashpad_agent"
 
@@ -64,6 +70,48 @@ executable("main") {
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
   ]
+}
+
+###############################################################################
+# SOURCES
+###############################################################################
+source_set("config") {
+  public = [ "config.h" ]
+
+  sources = [
+    "config.cc",
+    "config.h",
+  ]
+
+  deps = [
+    ":constants",
+    "//src/lib/files:files",
+    "//src/lib/syslog/cpp",
+    "//third_party/rapidjson",
+  ]
+}
+
+source_set("constants") {
+  sources = [ "constants.h" ]
+
+  visibility = [ "//src/developer/feedback/crashpad_agent/*" ]
+}
+
+source_set("settings") {
+  public = [ "settings.h" ]
+
+  sources = [
+    "settings.cc",
+    "settings.h",
+  ]
+
+  public_deps = [
+    ":config",
+    "//src/lib/fxl",
+    "//zircon/public/lib/fit",
+  ]
+
+  deps = [ "//src/lib/syslog/cpp" ]
 }
 
 source_set("src") {
@@ -116,49 +164,9 @@ source_set("src") {
   ]
 }
 
-source_set("config") {
-  public = [ "config.h" ]
-
-  sources = [
-    "config.cc",
-    "config.h",
-  ]
-
-  deps = [
-    ":constants",
-    "//src/lib/files:files",
-    "//src/lib/syslog/cpp",
-    "//third_party/rapidjson",
-  ]
-
-  visibility = [ "//src/developer/feedback/crashpad_agent/*" ]
-}
-
-source_set("constants") {
-  sources = [ "constants.h" ]
-
-  visibility = [ "//src/developer/feedback/crashpad_agent/*" ]
-}
-
-source_set("settings") {
-  public = [ "settings.h" ]
-
-  sources = [
-    "settings.cc",
-    "settings.h",
-  ]
-
-  public_deps = [
-    ":config",
-    "//src/lib/fxl",
-    "//zircon/public/lib/fit",
-  ]
-
-  deps = [ "//src/lib/syslog/cpp" ]
-
-  visibility = [ "//src/developer/feedback/crashpad_agent/*" ]
-}
-
+###############################################################################
+# CONFIGS
+###############################################################################
 config_data("production_config") {
   for_pkg = "crashpad_agent"
 

@@ -4,6 +4,9 @@
 
 import("//third_party/cobalt/metrics_registry.gni")
 
+###############################################################################
+# SOURCES
+###############################################################################
 source_set("archive") {
   sources = [
     "archive.cc",
@@ -150,6 +153,9 @@ source_set("utc_time_provider") {
   visibility = [ "//src/developer/feedback/*" ]
 }
 
+###############################################################################
+# METRICS
+###############################################################################
 metrics_registry("metrics_registry") {
   # This must match the ID of our Cobalt project as specified in:
   # third_party/cobalt_config/projects.yaml
