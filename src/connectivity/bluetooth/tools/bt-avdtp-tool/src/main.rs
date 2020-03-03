@@ -80,91 +80,180 @@ async fn peer_manager_listener(
 }
 
 async fn set_configuration<'a>(
-    _args: &'a [&'a str],
-    peer_controller: &PeerControllerProxy,
+    args: &'a [&'a str],
+    peer_map: Arc<RwLock<PeerFactoryMap>>,
 ) -> Result<String, Error> {
-    let _ = peer_controller.set_configuration().await;
-    Ok(String::from("Set configuration command"))
+    match get_controller_from_args(args, Cmd::SetConfig, peer_map) {
+        Ok(peer_controller) => {
+            let _ = peer_controller.set_configuration().await;
+            Ok(String::from("Set configuration command"))
+        }
+        Err(e) => Err(e),
+    }
 }
 
 async fn get_configuration<'a>(
-    _args: &'a [&'a str],
-    peer_controller: &PeerControllerProxy,
+    args: &'a [&'a str],
+    peer_map: Arc<RwLock<PeerFactoryMap>>,
 ) -> Result<String, Error> {
-    let _ = peer_controller.get_configuration().await;
-    Ok(String::from("Get configuration command"))
+    match get_controller_from_args(args, Cmd::GetConfig, peer_map) {
+        Ok(peer_controller) => {
+            let _ = peer_controller.get_configuration().await;
+            Ok(String::from("Get configuration command"))
+        }
+        Err(e) => Err(e),
+    }
 }
 
 async fn get_capabilities<'a>(
-    _args: &'a [&'a str],
-    peer_controller: &PeerControllerProxy,
+    args: &'a [&'a str],
+    peer_map: Arc<RwLock<PeerFactoryMap>>,
 ) -> Result<String, Error> {
-    let _ = peer_controller.get_capabilities().await;
-    Ok(String::from("Get capabilities command"))
+    match get_controller_from_args(args, Cmd::GetCapabilities, peer_map) {
+        Ok(peer_controller) => {
+            let _ = peer_controller.get_capabilities().await;
+            Ok(String::from("Get capabilities command"))
+        }
+        Err(e) => Err(e),
+    }
 }
 
 async fn get_all_capabilities<'a>(
-    _args: &'a [&'a str],
-    peer_controller: &PeerControllerProxy,
+    args: &'a [&'a str],
+    peer_map: Arc<RwLock<PeerFactoryMap>>,
 ) -> Result<String, Error> {
-    let _ = peer_controller.get_all_capabilities().await;
-    Ok(String::from("Get all capabilities command"))
+    match get_controller_from_args(args, Cmd::GetAllCapabilities, peer_map) {
+        Ok(peer_controller) => {
+            let _ = peer_controller.get_all_capabilities().await;
+            Ok(String::from("Get all capabilities command"))
+        }
+        Err(e) => Err(e),
+    }
 }
 
 async fn reconfigure<'a>(
-    _args: &'a [&'a str],
-    peer_controller: &PeerControllerProxy,
+    args: &'a [&'a str],
+    peer_map: Arc<RwLock<PeerFactoryMap>>,
 ) -> Result<String, Error> {
-    let _ = peer_controller.reconfigure_stream().await;
-    Ok(String::from("Reconfigure command"))
+    match get_controller_from_args(args, Cmd::Reconfigure, peer_map) {
+        Ok(peer_controller) => {
+            let _ = peer_controller.reconfigure_stream().await;
+            Ok(String::from("Reconfigure command"))
+        }
+        Err(e) => Err(e),
+    }
 }
 
 async fn suspend<'a>(
-    _args: &'a [&'a str],
-    peer_controller: &PeerControllerProxy,
+    args: &'a [&'a str],
+    peer_map: Arc<RwLock<PeerFactoryMap>>,
 ) -> Result<String, Error> {
-    let _ = peer_controller.suspend_stream().await;
-    Ok(String::from("Suspend command"))
+    match get_controller_from_args(args, Cmd::Suspend, peer_map) {
+        Ok(peer_controller) => {
+            let _ = peer_controller.suspend_stream().await;
+            Ok(String::from("Suspend command"))
+        }
+        Err(e) => Err(e),
+    }
 }
 
 async fn suspend_reconfigure<'a>(
-    _args: &'a [&'a str],
-    peer_controller: &PeerControllerProxy,
+    args: &'a [&'a str],
+    peer_map: Arc<RwLock<PeerFactoryMap>>,
 ) -> Result<String, Error> {
-    let _ = peer_controller.suspend_and_reconfigure().await;
-    Ok(String::from("Suspend and reconfigure command"))
+    match get_controller_from_args(args, Cmd::SuspendReconfigure, peer_map) {
+        Ok(peer_controller) => {
+            let _ = peer_controller.suspend_and_reconfigure().await;
+            Ok(String::from("Suspend and reconfigure command"))
+        }
+        Err(e) => Err(e),
+    }
 }
 
 async fn release_stream<'a>(
-    _args: &'a [&'a str],
-    peer_controller: &PeerControllerProxy,
+    args: &'a [&'a str],
+    peer_map: Arc<RwLock<PeerFactoryMap>>,
 ) -> Result<String, Error> {
-    let _ = peer_controller.release_stream().await;
-    Ok(String::from("Release stream command"))
+    match get_controller_from_args(args, Cmd::ReleaseStream, peer_map) {
+        Ok(peer_controller) => {
+            let _ = peer_controller.release_stream().await;
+            Ok(String::from("Release stream command"))
+        }
+        Err(e) => Err(e),
+    }
 }
 
 async fn establish_stream<'a>(
-    _args: &'a [&'a str],
-    peer_controller: &PeerControllerProxy,
+    args: &'a [&'a str],
+    peer_map: Arc<RwLock<PeerFactoryMap>>,
 ) -> Result<String, Error> {
-    let _ = peer_controller.establish_stream().await;
-    Ok(String::from("Establish stream command"))
+    match get_controller_from_args(args, Cmd::EstablishStream, peer_map) {
+        Ok(peer_controller) => {
+            let _ = peer_controller.establish_stream().await;
+            Ok(String::from("Establish stream command"))
+        }
+        Err(e) => Err(e),
+    }
 }
 
 async fn abort_stream<'a>(
-    _args: &'a [&'a str],
-    peer_controller: &PeerControllerProxy,
+    args: &'a [&'a str],
+    peer_map: Arc<RwLock<PeerFactoryMap>>,
 ) -> Result<String, Error> {
-    let _ = peer_controller.abort_stream().await;
-    Ok(String::from("Abort stream command"))
+    match get_controller_from_args(args, Cmd::AbortStream, peer_map) {
+        Ok(peer_controller) => {
+            let _ = peer_controller.abort_stream().await;
+            Ok(String::from("Abort stream command"))
+        }
+        Err(e) => Err(e),
+    }
 }
 
 async fn start_stream<'a>(
-    _args: &'a [&'a str],
-    peer_controller: &PeerControllerProxy,
+    args: &'a [&'a str],
+    peer_map: Arc<RwLock<PeerFactoryMap>>,
 ) -> Result<String, Error> {
-    let _ = peer_controller.start_stream().await;
-    Ok(String::from("Start stream command"))
+    match get_controller_from_args(args, Cmd::StartStream, peer_map) {
+        Ok(peer_controller) => {
+            let _ = peer_controller.start_stream().await;
+            Ok(String::from("Start stream command"))
+        }
+        Err(e) => Err(e),
+    }
+}
+
+fn get_controller_from_args<'a>(
+    args: &'a [&'a str],
+    cmd: Cmd,
+    peer_map: Arc<RwLock<PeerFactoryMap>>,
+) -> Result<PeerControllerProxy, Error> {
+    if args.len() < 1 {
+        return Err(format_err!("usage: {}", cmd.cmd_help()));
+    }
+
+    // Handle the case where user wants to understand command usage.
+    if args[0] == "help" {
+        return Err(format_err!("{}", cmd.cmd_help()));
+    }
+
+    let id = args[0];
+    match peer_map.write().entry(id.to_string()) {
+        Entry::Occupied(entry) => Ok(entry.get().clone()),
+        Entry::Vacant(_) => {
+            Err(format_err!("No peer with id: {:?}.\n Usage: {}", id, cmd.cmd_help()))
+        }
+    }
+}
+
+fn handle_help<'a>(args: &'a [&'a str]) -> Result<String, Error> {
+    if args.len() == 0 {
+        Ok(Cmd::help_msg().to_string())
+    } else {
+        match args[0].parse::<Cmd>() {
+            Err(_) => Err(format_err!("Unsupported command: {}", args[0])),
+            Ok(cmd) => Ok(cmd.cmd_help().to_string()),
+        }
+    }
 }
 
 /// Handle a single raw input command from a user and indicate whether the command should
@@ -179,32 +268,20 @@ async fn handle_cmd<'a>(
     }
     let (raw_cmd, args) = components.split_first().expect("not empty");
     let cmd = raw_cmd.parse();
-    // TODO(37089): With new ID tracking system, don't need to check this here.
-    if args.len() == 0 {
-        fx_log_info!("Id missing. Please include peer id with the command.");
-        return Ok(ReplControl::Continue);
-    }
-    let id = args[0];
-    let peer_controller = match peer_map.write().entry(id.to_string()) {
-        Entry::Occupied(entry) => entry.get().clone(),
-        Entry::Vacant(_) => {
-            fx_log_info!("No peer established with id: {:?}", id);
-            return Ok(ReplControl::Continue);
-        }
-    };
+
     let res = match cmd {
-        Ok(Cmd::AbortStream) => abort_stream(args, &peer_controller).await,
-        Ok(Cmd::EstablishStream) => establish_stream(args, &peer_controller).await,
-        Ok(Cmd::ReleaseStream) => release_stream(args, &peer_controller).await,
-        Ok(Cmd::StartStream) => start_stream(args, &peer_controller).await,
-        Ok(Cmd::SetConfig) => set_configuration(args, &peer_controller).await,
-        Ok(Cmd::GetConfig) => get_configuration(args, &peer_controller).await,
-        Ok(Cmd::GetCapabilities) => get_capabilities(args, &peer_controller).await,
-        Ok(Cmd::GetAllCapabilities) => get_all_capabilities(args, &peer_controller).await,
-        Ok(Cmd::Reconfigure) => reconfigure(args, &peer_controller).await,
-        Ok(Cmd::Suspend) => suspend(args, &peer_controller).await,
-        Ok(Cmd::SuspendReconfigure) => suspend_reconfigure(args, &peer_controller).await,
-        Ok(Cmd::Help) => Ok(Cmd::help_msg().to_string()),
+        Ok(Cmd::AbortStream) => abort_stream(args, peer_map).await,
+        Ok(Cmd::EstablishStream) => establish_stream(args, peer_map).await,
+        Ok(Cmd::ReleaseStream) => release_stream(args, peer_map).await,
+        Ok(Cmd::StartStream) => start_stream(args, peer_map).await,
+        Ok(Cmd::SetConfig) => set_configuration(args, peer_map).await,
+        Ok(Cmd::GetConfig) => get_configuration(args, peer_map).await,
+        Ok(Cmd::GetCapabilities) => get_capabilities(args, peer_map).await,
+        Ok(Cmd::GetAllCapabilities) => get_all_capabilities(args, peer_map).await,
+        Ok(Cmd::Reconfigure) => reconfigure(args, peer_map).await,
+        Ok(Cmd::Suspend) => suspend(args, peer_map).await,
+        Ok(Cmd::SuspendReconfigure) => suspend_reconfigure(args, peer_map).await,
+        Ok(Cmd::Help) => handle_help(args),
         Ok(Cmd::Exit) | Ok(Cmd::Quit) => return Ok(ReplControl::Break),
         Err(_) => {
             fx_log_info!("{} is not a valid command.", raw_cmd);
@@ -332,6 +409,8 @@ async fn main() -> Result<(), Error> {
 mod tests {
     use super::*;
 
+    use fidl::endpoints::create_proxy;
+
     #[test]
     // Please note finishing bug 37089 will make next_string() obsolete.
     // This bug fix will introduce a better ID management system that is more robust.
@@ -344,5 +423,47 @@ mod tests {
         let id = "10";
         let res = next_string(id);
         assert_eq!("11".to_string(), res);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    /// Tests parsing input arguments works successfully.
+    /// Success case: The id provided exists, and the PeerControllerProxy is correctly returned.
+    /// Error case: Invalid id, Error string + help message returned.
+    async fn test_get_controller_from_args() {
+        let mut peer_map = HashMap::new();
+        let (client_proxy, _server) =
+            create_proxy::<PeerControllerMarker>().expect("Failed to create peer endpoint");
+
+        let supported_id = "123";
+        peer_map.insert(supported_id.to_string(), client_proxy.clone());
+        let peer_map_obj = Arc::new(RwLock::new(peer_map));
+
+        let invalid_id_args = ["2"];
+        let res =
+            get_controller_from_args(&invalid_id_args, Cmd::StartStream, peer_map_obj.clone());
+        assert!(res.is_err());
+
+        let valid_id_args = [supported_id];
+        let res = get_controller_from_args(&valid_id_args, Cmd::StartStream, peer_map_obj);
+        assert!(res.is_ok());
+    }
+
+    #[test]
+    /// Tests parsing the help command works as intended.
+    fn test_handle_help() {
+        let invalid_cmd = ["foobar"];
+        let res = handle_help(&invalid_cmd);
+        assert_eq!(
+            res.map_err(|e| format!("{:?}", e)),
+            Err("Unsupported command: foobar".to_string())
+        );
+
+        let generic_help = [];
+        let res = handle_help(&generic_help);
+        assert!(res.is_ok());
+
+        let cmd_help = ["set-configuration"];
+        let res = handle_help(&cmd_help);
+        assert!(res.is_ok());
     }
 }

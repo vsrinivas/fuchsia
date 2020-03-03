@@ -40,7 +40,17 @@ macro_rules! gen_commands {
                 }
             }
 
-            /// Multiline help string for `$name` including usage of all variants.
+            /// Help string for a given variant. The format is "command <arg>.. -- help message"
+            #[allow(unused)]
+            pub fn cmd_help(&self) -> &'static str {
+                match self {
+                    $(
+                        $name::$variant => concat!($val, " ", $("<", $arg, "> ",)* "-- ", $help)
+                    ),*
+                }
+            }
+
+            /// Multiline help string for `$name` including usage of all variants
             pub fn help_msg() -> &'static str {
                 concat!("Commands:\n", $(
                     "\t", $val, " ", $("<", $arg, "> ",)* "-- ", $help, "\n"
