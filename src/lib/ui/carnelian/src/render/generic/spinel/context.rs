@@ -19,6 +19,7 @@ use euclid::{Rect, Size2D};
 use fidl::endpoints::ClientEnd;
 use fidl_fuchsia_sysmem::BufferCollectionTokenMarker;
 use fuchsia_framebuffer::PixelFormat;
+use fuchsia_trace as trace;
 use fuchsia_zircon::prelude::*;
 use spinel_rs_sys::*;
 use vk_sys as vk;
@@ -1121,6 +1122,27 @@ impl Context<Spinel> for SpinelContext {
             // TODO(reveman): Use fence instead of blocking.
             spn!(spn_composition_unseal(spn_composition));
             spn!(spn_styling_release(spn_styling));
+        }
+
+        if trace::category_enabled(cstr!(b"spinel:block-pool\0")) {
+            let mut block_pool = SpnVkStatusExtBlockPool {
+                ext: ptr::null_mut(),
+                type_: SpnVkStatusExtType::SpnVkStatusExtTypeBlockPool,
+                avail: 0,
+                inuse: 0,
+            };
+            let mut s = SpnStatus { ext: &mut block_pool as *mut _ as *mut c_void };
+            unsafe {
+                spn!(spn_context_status(spn_context, &mut s));
+            }
+
+            trace::counter!(
+                "spinel:block-pool",
+                "Spinel BlockPool",
+                0,
+                "avail" => (block_pool.avail / 1024) as u32,
+                "inuse" => (block_pool.inuse / 1024) as u32
+            );
         }
     }
 }
