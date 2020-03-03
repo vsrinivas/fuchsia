@@ -9,38 +9,31 @@
 #include <lib/async/cpp/executor.h>
 #include <lib/async/dispatcher.h>
 #include <lib/sys/cpp/service_directory.h>
-#include <lib/zx/time.h>
 
 #include <cstdint>
 #include <functional>
 #include <memory>
 
 #include "src/developer/feedback/feedback_agent/config.h"
-#include "src/developer/feedback/feedback_agent/ref_counted_delayed_task.h"
 #include "src/developer/feedback/utils/cobalt.h"
 #include "src/lib/timekeeper/clock.h"
 #include "src/lib/timekeeper/system_clock.h"
 
 namespace feedback {
 
-// Provides data useful to attach in feedback reports (crash or user feedback).
+// Provides data useful to attach in feedback reports (crash, user feedback or bug reports).
 class DataProvider : public fuchsia::feedback::DataProvider {
  public:
   // Static factory method.
   //
-  // |after_timeout| is executed if a duration of greater than |timeout| passes since the last call
-  // to this component by a client.
-  //
   // Returns nullptr if the data provider cannot be instantiated, e.g., because the config cannot be
   // parsed.
   static std::unique_ptr<DataProvider> TryCreate(async_dispatcher_t* dispatcher,
-                                                 std::shared_ptr<sys::ServiceDirectory> services,
-                                                 std::function<void()> after_timeout,
-                                                 zx::duration timeout);
+                                                 std::shared_ptr<sys::ServiceDirectory> services);
 
   DataProvider(
       async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-      const Config& config, std::function<void()> after_timeout, zx::duration timeout,
+      const Config& config,
       std::unique_ptr<timekeeper::Clock> clock = std::make_unique<timekeeper::SystemClock>());
 
   // |fuchsia.feedback.DataProvider|
@@ -56,7 +49,6 @@ class DataProvider : public fuchsia::feedback::DataProvider {
   const std::shared_ptr<sys::ServiceDirectory> services_;
   const Config config_;
   Cobalt cobalt_;
-  RefCountedDelayedTask after_timeout_;
   async::Executor executor_;
 
   bool shut_down_ = false;

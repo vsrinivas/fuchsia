@@ -227,77 +227,6 @@ class FeedbackAgentIntegrationTest : public sys::testing::TestWithEnvironment {
     RunLoopUntil([&done] { return done; });
   }
 
-  // EXPECTs that there is a "feedback_agent.cmx" process running in a child job of the test
-  // environment job and that this process has |expected_num_feedback_data_providers| sibling
-  // processes.
-  void CheckNumberOfFeedbackDataProviders(const uint32_t expected_num_feedback_data_providers) {
-    uint32_t num_feedback_agents = 0;
-    uint32_t num_feedback_data_providers = 0;
-    RunLoopUntil([&] {
-      GetNumberOfFeedbackDataProviders(&num_feedback_agents, &num_feedback_data_providers);
-      return num_feedback_data_providers == expected_num_feedback_data_providers;
-    });
-    EXPECT_EQ(num_feedback_data_providers, expected_num_feedback_data_providers);
-    EXPECT_EQ(num_feedback_agents, 1u);
-  }
-
-  // Returns the current number of processes named "feedback_agent.cmx" and
-  // "feedback_data_provider" in the test environment.
-  void GetNumberOfFeedbackDataProviders(uint32_t* num_feedback_agents,
-                                        uint32_t* num_feedback_data_providers) {
-    // We want to check how many feedback_data_provider subprocesses feedback_agent.cmx has spawned.
-    //
-    // The job and process hierarchy looks like this under the test environment:
-    // j: 109762 $test_name_
-    //   j: 109993
-    //     p: 109998 feedback_agent_integration_test
-    //   j: 112299
-    //     p: 112304 vulkan_loader.cmx
-    //   j: 115016
-    //     p: 115021 feedback_agent.cmx
-    //     p: 115022 feedback_data_provider
-    //     p: 115023 feedback_data_provider
-    //     p: 115024 feedback_data_provider
-    //   j: 116540
-    //     p: 116545 archivist.cmx
-    //
-    // There is basically a job the for the test component and a job for each injected service. The
-    // one of interest is feedback_agent.cmx and we check the number of sibling processes named
-    // "feedback_data_provider".
-
-    // We first get a handle to the test environment job.
-    fuchsia::sys::JobProviderSyncPtr job_provider;
-    files::Glob glob(fxl::Substitute("/hub/r/$0/*/job", test_name_));
-    ASSERT_EQ(glob.size(), 1u);
-    ASSERT_EQ(
-        fdio_service_connect(*glob.begin(), job_provider.NewRequest().TakeChannel().release()),
-        ZX_OK);
-    zx::job test_env_job;
-    ASSERT_EQ(job_provider->GetJob(&test_env_job), ZX_OK);
-    ASSERT_STREQ(fsl::GetObjectName(test_env_job.get()).c_str(), test_name_.c_str());
-
-    // We then get the child jobs under the test environment job.
-    // Child jobs are for the test component and each injected service, including DataProvider.
-    auto child_jobs = GetChildJobs(test_env_job.get());
-    ASSERT_GE(child_jobs.size(), 1u);
-
-    *num_feedback_agents = 0;
-    *num_feedback_data_providers = 0;
-    for (const auto& child_job : child_jobs) {
-      auto processes = GetChildProcesses(child_job.get());
-      ASSERT_GE(processes.size(), 1u);
-
-      for (const auto& process : processes) {
-        const std::string process_name = fsl::GetObjectName(process.get());
-        if (process_name == "feedback_agent.cmx") {
-          (*num_feedback_agents)++;
-        } else if (process_name == "feedback_data_provider") {
-          (*num_feedback_data_providers)++;
-        }
-      }
-    }
-  }
-
   // Checks the Inspect tree for "feedback_agent.cmx".
   void CheckFeedbackAgentInspectTree(const int64_t expected_total_num_connections,
                                      const int64_t expected_current_num_connections) {
@@ -514,39 +443,34 @@ TEST_F(FeedbackAgentIntegrationTest, DISABLED_GetData_CheckCobalt) {
               }));
 }
 
-TEST_F(FeedbackAgentIntegrationTest, OneDataProviderPerRequest) {
+TEST_F(FeedbackAgentIntegrationTest, DataProvider_CheckNumConnections) {
   auto env = CreateDataProviderEnvironment();
 
   DataProviderPtr data_provider_1;
   env->ConnectToService(data_provider_1.NewRequest());
   WaitForDataProvider(&data_provider_1);
-  CheckNumberOfFeedbackDataProviders(/*expected_num_feedback_data_providers=*/1u);
   CheckFeedbackAgentInspectTree(/*expected_total_num_connections=*/1u,
                                 /*expected_current_num_connections=*/1u);
 
   DataProviderPtr data_provider_2;
   env->ConnectToService(data_provider_2.NewRequest());
   WaitForDataProvider(&data_provider_2);
-  CheckNumberOfFeedbackDataProviders(/*expected_num_feedback_data_providers=*/2u);
   CheckFeedbackAgentInspectTree(/*expected_total_num_connections=*/2u,
                                 /*expected_current_num_connections=*/2u);
 
   data_provider_1.Unbind();
-  CheckNumberOfFeedbackDataProviders(/*expected_num_feedback_data_providers=*/1u);
   CheckFeedbackAgentInspectTree(/*expected_total_num_connections=*/2u,
                                 /*expected_current_num_connections=*/1u);
 
   DataProviderPtr data_provider_3;
   env->ConnectToService(data_provider_3.NewRequest());
   WaitForDataProvider(&data_provider_3);
-  CheckNumberOfFeedbackDataProviders(/*expected_num_feedback_data_providers=*/2u);
   CheckFeedbackAgentInspectTree(/*expected_total_num_connections=*/3u,
                                 /*expected_current_num_connections=*/2u);
 
   data_provider_2.Unbind();
   data_provider_3.Unbind();
 
-  CheckNumberOfFeedbackDataProviders(/*expected_num_feedback_data_providers=*/0u);
   CheckFeedbackAgentInspectTree(/*expected_total_num_connections=*/3u,
                                 /*expected_current_num_connections=*/0u);
 }

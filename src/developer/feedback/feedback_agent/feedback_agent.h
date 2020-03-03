@@ -6,36 +6,44 @@
 #define SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_FEEDBACK_AGENT_H_
 
 #include <fuchsia/feedback/cpp/fidl.h>
-#include <lib/async/cpp/wait.h>
+#include <lib/async/dispatcher.h>
+#include <lib/fidl/cpp/binding_set.h>
+#include <lib/sys/cpp/service_directory.h>
 
 #include <cstdint>
+#include <memory>
 
+#include "src/developer/feedback/feedback_agent/data_provider.h"
 #include "src/developer/feedback/feedback_agent/inspect_manager.h"
 #include "src/lib/fxl/macros.h"
 
 namespace feedback {
 
-// Launches and manages the lifetime of |data_provider| processes, keeping global Inspect state up
-// to date.
+// Main class that can spawn the system log recorder, handles incoming DataProvider requests,
+// manages the component's Inspect state, etc.
 class FeedbackAgent {
  public:
-  FeedbackAgent(inspect::Node* root_node);
+  // Static factory method.
+  //
+  // Returns nullptr if the agent cannot be instantiated, e.g., because the underlying DataProvider
+  // cannot be instantiated.
+  static std::unique_ptr<FeedbackAgent> TryCreate(async_dispatcher_t* dispatcher,
+                                                  std::shared_ptr<sys::ServiceDirectory> services,
+                                                  inspect::Node* root_node);
+
+  FeedbackAgent(async_dispatcher_t* dispatcher, inspect::Node* root_node,
+                std::unique_ptr<DataProvider> data_provider);
 
   void SpawnSystemLogRecorder();
-  void SpawnNewDataProvider(fidl::InterfaceRequest<fuchsia::feedback::DataProvider> request);
+  void HandleDataProviderRequest(fidl::InterfaceRequest<fuchsia::feedback::DataProvider> request);
 
  private:
-  void TaskTerminated(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
-                      const zx_packet_signal_t* signal);
-
+  async_dispatcher_t* dispatcher_;
   InspectManager inspect_manager_;
 
+  std::unique_ptr<DataProvider> data_provider_;
+  fidl::BindingSet<fuchsia::feedback::DataProvider> data_provider_connections_;
   uint64_t next_data_provider_connection_id_ = 1;
-
-  // Maps each subprocess to what to do when it exits.
-  std::map<zx_handle_t,
-           std::unique_ptr<async::WaitMethod<FeedbackAgent, &FeedbackAgent::TaskTerminated>>>
-      on_process_exit_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FeedbackAgent);
 };

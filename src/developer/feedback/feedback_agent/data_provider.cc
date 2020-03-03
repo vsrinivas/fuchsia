@@ -42,8 +42,7 @@ const zx::duration kScreenshotTimeout = zx::sec(10);
 }  // namespace
 
 std::unique_ptr<DataProvider> DataProvider::TryCreate(
-    async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-    std::function<void()> after_timeout, zx::duration timeout) {
+    async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services) {
   Config config;
 
   if (const zx_status_t status = ParseConfig(kConfigPath, &config); status != ZX_OK) {
@@ -53,25 +52,21 @@ std::unique_ptr<DataProvider> DataProvider::TryCreate(
     return nullptr;
   }
 
-  return std::make_unique<DataProvider>(dispatcher, std::move(services), config, after_timeout,
-                                        timeout);
+  return std::make_unique<DataProvider>(dispatcher, std::move(services), config);
 }
 
 DataProvider::DataProvider(async_dispatcher_t* dispatcher,
                            std::shared_ptr<sys::ServiceDirectory> services, const Config& config,
-                           std::function<void()> after_timeout, zx::duration timeout,
                            std::unique_ptr<timekeeper::Clock> clock)
     : dispatcher_(dispatcher),
       services_(services),
       config_(config),
       cobalt_(dispatcher_, services_, std::move(clock)),
-      after_timeout_(dispatcher, after_timeout, timeout),
       executor_(dispatcher) {}
 
 void DataProvider::GetData(GetDataCallback callback) {
   FX_CHECK(!shut_down_);
 
-  after_timeout_.Acquire();
   const uint64_t timer_id = cobalt_.StartTimer();
 
   auto annotations =
@@ -164,7 +159,6 @@ void DataProvider::GetData(GetDataCallback callback) {
               cobalt_.LogElapsedTime(BugreportGenerationFlow::kSuccess, timer_id);
             }
             callback(std::move(result));
-            after_timeout_.Release();
           });
 
   executor_.schedule_task(std::move(promise));
@@ -172,7 +166,6 @@ void DataProvider::GetData(GetDataCallback callback) {
 
 void DataProvider::GetScreenshot(ImageEncoding encoding, GetScreenshotCallback callback) {
   FX_CHECK(!shut_down_);
-  after_timeout_.Acquire();
   auto promise = TakeScreenshot(dispatcher_, services_, kScreenshotTimeout, &cobalt_)
                      .and_then([encoding](fuchsia::ui::scenic::ScreenshotData& raw_screenshot)
                                    -> fit::result<Screenshot> {
@@ -191,13 +184,12 @@ void DataProvider::GetScreenshot(ImageEncoding encoding, GetScreenshotCallback c
                        }
                        return fit::ok(std::move(screenshot));
                      })
-                     .then([this, callback = std::move(callback)](fit::result<Screenshot>& result) {
+                     .then([callback = std::move(callback)](fit::result<Screenshot>& result) {
                        if (!result.is_ok()) {
                          callback(/*screenshot=*/nullptr);
                        } else {
                          callback(std::make_unique<Screenshot>(result.take_value()));
                        }
-                       after_timeout_.Release();
                      });
 
   executor_.schedule_task(std::move(promise));

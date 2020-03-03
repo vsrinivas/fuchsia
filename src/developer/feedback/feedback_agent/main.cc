@@ -10,6 +10,8 @@
 #include <lib/sys/inspect/cpp/component.h>
 #include <lib/syslog/cpp/logger.h>
 
+#include <memory>
+
 #include "src/developer/feedback/feedback_agent/constants.h"
 #include "src/developer/feedback/feedback_agent/feedback_agent.h"
 #include "src/developer/feedback/feedback_agent/feedback_id.h"
@@ -26,19 +28,20 @@ int main(int argc, const char** argv) {
 
   auto inspector = std::make_unique<sys::ComponentInspector>(context.get());
   inspect::Node& root_node = inspector->root();
-  feedback::FeedbackAgent agent(&root_node);
+
+  std::unique_ptr<feedback::FeedbackAgent> agent =
+      feedback::FeedbackAgent::TryCreate(loop.dispatcher(), context->svc(), &root_node);
+  if (!agent) {
+    return EXIT_FAILURE;
+  }
 
   //  TODO(fxb/47000): re-enable once OOM issues are resolved.
-  //  agent.SpawnSystemLogRecorder();
+  //  agent->SpawnSystemLogRecorder();
 
-  // We spawn a new process capable of handling fuchsia.feedback.DataProvider requests on every
-  // incoming request. This has the advantage of tying each request to a different process that can
-  // be cleaned up once it is done or after a timeout and take care of dangling threads for
-  // instance, cf. CF-756.
   context->outgoing()->AddPublicService(
       fidl::InterfaceRequestHandler<fuchsia::feedback::DataProvider>(
-          [&](fidl::InterfaceRequest<fuchsia::feedback::DataProvider> request) {
-            agent.SpawnNewDataProvider(std::move(request));
+          [&agent](fidl::InterfaceRequest<fuchsia::feedback::DataProvider> request) {
+            agent->HandleDataProviderRequest(std::move(request));
           }));
 
   loop.Run();

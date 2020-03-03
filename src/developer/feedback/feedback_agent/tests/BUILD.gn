@@ -75,9 +75,6 @@ test_package("feedback_agent_tests") {
       name = "product_info_provider_unittest"
     },
     {
-      name = "ref_counted_delayed_task_unittest"
-    },
-    {
       name = "screenshot_ptr_unittest"
     },
     {
@@ -152,7 +149,6 @@ test_package("feedback_agent_tests") {
     ":inspect_ptr_unittest",
     ":kernel_log_ptr_integration_test",
     ":product_info_provider_unittest",
-    ":ref_counted_delayed_task_unittest",
     ":screenshot_ptr_unittest",
     ":single_sync_annotation_provider_unittest",
     ":system_log_ptr_unittest",
@@ -191,7 +187,7 @@ executable("channel_provider_unittest") {
 
   deps = [
     ":stub_channel_provider",
-    "//src/developer/feedback/feedback_agent:data_provider_src",
+    "//src/developer/feedback/feedback_agent:data_provider",
     "//src/developer/feedback/feedback_agent/annotations:channel_provider",
     "//src/developer/feedback/testing:cobalt_test_fixture",
     "//src/developer/feedback/testing:gtest_with_syslog_main",
@@ -214,7 +210,7 @@ executable("config_unittest") {
   sources = [ "config_unittest.cc" ]
 
   deps = [
-    "//src/developer/feedback/feedback_agent:data_provider_src",
+    "//src/developer/feedback/feedback_agent:data_provider",
     "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
@@ -245,7 +241,7 @@ executable("data_provider_unittest") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/developer/feedback/feedback_agent:constants",
-    "//src/developer/feedback/feedback_agent:data_provider_src",
+    "//src/developer/feedback/feedback_agent:data_provider",
     "//src/developer/feedback/feedback_agent:feedback_id",
     "//src/developer/feedback/testing:cobalt_test_fixture",
     "//src/developer/feedback/testing:gmatchers",
@@ -411,21 +407,6 @@ executable("product_info_provider_unittest") {
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/zx",
-  ]
-}
-
-executable("ref_counted_delayed_task_unittest") {
-  testonly = true
-
-  sources = [ "ref_counted_delayed_task_unittest.cc" ]
-
-  deps = [
-    "//garnet/public/lib/gtest",
-    "//src/developer/feedback/feedback_agent:data_provider_src",
-    "//src/developer/feedback/testing:gtest_with_syslog_main",
-    "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",
   ]
 }

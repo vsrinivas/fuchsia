@@ -30,7 +30,6 @@
     },
     "sandbox": {
         "features": [
-            "hub",
             "isolated-persistent-storage",
             "isolated-temp",
             "vulkan"

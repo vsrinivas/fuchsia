@@ -14,9 +14,6 @@ package("feedback_agent") {
       name = "feedback_agent"
     },
     {
-      name = "data_provider"
-    },
-    {
       name = "system_log_recorder"
     },
   ]
@@ -36,7 +33,6 @@ package("feedback_agent") {
   ]
 
   deps = [
-    ":data_provider",
     ":main",
     ":system_log_recorder",
   ]
@@ -45,22 +41,6 @@ package("feedback_agent") {
 ###############################################################################
 # EXECUTABLES
 ###############################################################################
-executable("data_provider") {
-  sources = [ "data_provider_main.cc" ]
-
-  deps = [
-    ":data_provider_src",
-    "//sdk/fidl/fuchsia.feedback",
-    "//sdk/lib/fidl/cpp",
-    "//sdk/lib/sys/cpp",
-    "//src/lib/fxl",
-    "//src/lib/syslog/cpp",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
-    "//zircon/public/lib/zx",
-  ]
-}
-
 executable("main") {
   output_name = "feedback_agent"
 
@@ -104,7 +84,7 @@ source_set("constants") {
   visibility = [ "//src/developer/feedback/feedback_agent/*" ]
 }
 
-source_set("data_provider_src") {
+source_set("data_provider") {
   sources = [
     "annotations.cc",
     "annotations.h",
@@ -116,8 +96,6 @@ source_set("data_provider_src") {
     "data_provider.h",
     "image_conversion.cc",
     "image_conversion.h",
-    "ref_counted_delayed_task.cc",
-    "ref_counted_delayed_task.h",
   ]
 
   public_deps = [
@@ -167,6 +145,7 @@ source_set("feedback_agent_src") {
   ]
 
   public_deps = [
+    ":data_provider",
     ":inspect_manager",
     "//sdk/fidl/fuchsia.feedback",
     "//src/developer/feedback/utils:files",

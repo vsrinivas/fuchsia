@@ -113,7 +113,6 @@ const Config kDefaultConfig = Config{kDefaultAnnotations, kDefaultAttachments};
 constexpr bool kSuccess = true;
 constexpr bool kFailure = false;
 
-constexpr zx::duration kDataProviderIdleTimeout = zx::sec(5);
 constexpr zx::duration kDefaultBugReportFlowDuration = zx::usec(5);
 
 // Returns a Screenshot with the right dimensions, no image.
@@ -235,17 +234,15 @@ class DataProviderTest : public UnitTestFixture, public CobaltTestFixture {
     // |clock_| on the heap and then give |data_provider_| ownership of it. This allows us to
     // control the time perceived by |data_provider_.cobalt_|.
     clock_ = new timekeeper::TestClock();
-    data_provider_.reset(new DataProvider(
-        dispatcher(), services(), config, [this] { data_provider_timed_out_ = true; },
-        kDataProviderIdleTimeout, std::unique_ptr<timekeeper::TestClock>(clock_)));
+    data_provider_.reset(new DataProvider(dispatcher(), services(), config,
+                                          std::unique_ptr<timekeeper::TestClock>(clock_)));
   }
 
   void SetUpDataProviderOnlyRequestingChannel(zx::duration timeout) {
     clock_ = new timekeeper::TestClock();
-    data_provider_.reset(new DataProvider(
-        dispatcher(), services(), Config{{kAnnotationChannel}, {}},
-        [this] { data_provider_timed_out_ = true; }, timeout,
-        std::unique_ptr<timekeeper::TestClock>(clock_)));
+    data_provider_.reset(new DataProvider(dispatcher(), services(),
+                                          Config{{kAnnotationChannel}, {}},
+                                          std::unique_ptr<timekeeper::TestClock>(clock_)));
   }
 
   void SetUpScenic(std::unique_ptr<StubScenic> scenic) {
@@ -339,7 +336,6 @@ class DataProviderTest : public UnitTestFixture, public CobaltTestFixture {
   }
 
   std::unique_ptr<DataProvider> data_provider_;
-  bool data_provider_timed_out_ = false;
 
  private:
   std::unique_ptr<StubChannelProvider> channel_provider_;
@@ -856,137 +852,6 @@ TEST_F(DataProviderTest, GetData_UnknownAllowlistedAttachment) {
   std::vector<Attachment> unpacked_attachments;
   UnpackAttachmentBundle(data, &unpacked_attachments);
   EXPECT_THAT(unpacked_attachments, testing::Contains(MatchesKey(kAttachmentAnnotations)));
-}
-
-TEST_F(DataProviderTest, Check_IdleTimeout) {
-  // This test checks that requests to the data provider properly delay the idle timeout function
-  // that data provider executes and that said function runs after data provider is idle for a
-  // sufficient period of time.
-  //
-  // We setup the system such that requests for both data and screentshots hang,
-  // relying on their respective timeouts to ensure that an error is returned. Additionally, we
-  // set the idle timeout of the data provider to be half as long as the time it takes for a
-  // request to return in order to determine that neither is interruped by the idle timeout while
-  // completing.
-  //
-  // We test scenarios in which a single request is made, sequential requests are made, and
-  // concurrent requests are made, in that order.
-
-  // Track if requests have completed.
-  bool got_data = false;
-  bool got_screenshot = false;
-
-  const zx::duration kGetScreenshotTimeout = zx::sec(10);
-  const zx::duration kGetDataTimeout = zx::sec(30);
-
-  ASSERT_GE(kGetScreenshotTimeout, kDataProviderIdleTimeout);
-  ASSERT_GE(kGetDataTimeout, kDataProviderIdleTimeout);
-
-  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
-  SetUpScenic(std::make_unique<StubScenicNeverReturns>());
-  SetUpChannelProvider(std::make_unique<StubChannelProviderNeverReturns>());
-  SetUpDataProviderOnlyRequestingChannel(kDataProviderIdleTimeout);
-
-  // In the following tests we list the current time of a stopwatch that starts at 0 seconds and
-  // the point in time at which the idle timeout function is expected to run. In the circumstance
-  // the idle timeout function is blocked from running we denote the timeout as X.
-
-  // Make a single request for a screenshot to check that the idle timeout happens after the
-  // screenshot has been returned.
-
-  // TIME = 0; TIMEOUT @ X (unset)
-  data_provider_->GetScreenshot(
-      ImageEncoding::PNG,
-      [&got_screenshot](std::unique_ptr<Screenshot> _) { got_screenshot = true; });
-  RunLoopFor(kGetScreenshotTimeout);
-
-  // TIME = 10; TIMEOUT @ 15 (10 + 5, current time + kDataProviderIdleTimeout)
-  ASSERT_TRUE(got_screenshot);
-  ASSERT_FALSE(data_provider_timed_out_);
-
-  RunLoopFor(kDataProviderIdleTimeout);
-
-  // TIME = 15; TIMEOUT @ 15 (unchanged)
-  ASSERT_TRUE(data_provider_timed_out_);
-
-  // Make a single request for data to check that the idle timeout happens after the data has been
-  // returned.
-
-  // TIME = 15; TIMEOUT @ X (reset)
-  data_provider_timed_out_ = false;
-  data_provider_->GetData([&got_data](fit::result<Data, zx_status_t> _) { got_data = true; });
-  RunLoopFor(kGetDataTimeout);
-
-  // TIME = 25; TIMEOUT @ 30 (25 + 5, current time + kDataProviderIdleTimeout)
-  ASSERT_TRUE(got_data);
-  ASSERT_FALSE(data_provider_timed_out_);
-
-  RunLoopFor(kDataProviderIdleTimeout);
-
-  // TIME = 30; TIMEOUT @ 30 (unchanged)
-  ASSERT_TRUE(data_provider_timed_out_);
-
-  got_screenshot = false;
-  got_data = false;
-  data_provider_timed_out_ = false;
-
-  // Check that sequential requests for a screenshot and data properly block the idle timeout
-  // function and that it executes when expected.
-
-  // TIME = 30; TIMEOUT @ X (reset)
-  data_provider_->GetScreenshot(
-      ImageEncoding::PNG,
-      [&got_screenshot](std::unique_ptr<Screenshot> _) { got_screenshot = true; });
-  RunLoopFor(kGetScreenshotTimeout);
-
-  // TIME = 40; TIMEOUT @ 45 (40 + 5, current time + kDataProviderIdleTimeout)
-  ASSERT_TRUE(got_screenshot);
-  ASSERT_FALSE(data_provider_timed_out_);
-
-  data_provider_->GetData([&got_data](fit::result<Data, zx_status_t> _) { got_data = true; });
-  RunLoopFor(kGetDataTimeout);
-
-  // TIME = 50; TIMEOUT @ 55 (50 + 5, current time + kDataProviderIdleTimeout)
-
-  ASSERT_TRUE(got_data);
-  ASSERT_FALSE(data_provider_timed_out_);
-
-  RunLoopFor(kDataProviderIdleTimeout);
-
-  // TIME = 55; TIMEOUT @ 55 (unchanged)
-  ASSERT_TRUE(data_provider_timed_out_);
-
-  got_screenshot = false;
-  got_data = false;
-  data_provider_timed_out_ = false;
-
-  // Check that concurrent requests for a screenshot and data properly block the idle timeout
-  // function and that it executes when expected.
-
-  // TIME = 55; TIMEOUT @ X (reset)
-  data_provider_->GetScreenshot(
-      ImageEncoding::PNG,
-      [&got_screenshot](std::unique_ptr<Screenshot> _) { got_screenshot = true; });
-  RunLoopFor(kDataProviderIdleTimeout);
-
-  // TIME = 60; TIMEOUT @ X (reset)
-  data_provider_->GetData([&got_data](fit::result<Data, zx_status_t> _) { got_data = true; });
-  RunLoopFor(kDataProviderIdleTimeout);
-
-  // TIME = 65; TIMEOUT @ X (reset)
-  ASSERT_TRUE(got_screenshot);
-  ASSERT_FALSE(got_data);
-  ASSERT_FALSE(data_provider_timed_out_);
-  RunLoopFor(kGetDataTimeout - kDataProviderIdleTimeout);
-
-  // TIME = 90; TIMEOUT @ 95 (90 + 5, current time + kDataProviderIdleTimeout)
-
-  ASSERT_TRUE(got_data);
-  ASSERT_FALSE(data_provider_timed_out_);
-  RunLoopFor(kDataProviderIdleTimeout);
-
-  // TIME = 95; TIMEOUT @ 95 (unchanged)
-  EXPECT_TRUE(data_provider_timed_out_);
 }
 
 }  // namespace
