@@ -27,4 +27,5 @@ cache_package_labels = []
 universe_package_labels = [
   "//garnet/tools/vboot_reference:cgpt_host",
   "//garnet/tools/vboot_reference:futility_host",
+  "//tools/net/dev_finder:host",
 ]
