@@ -59,7 +59,7 @@ typedef struct {
 #else  // LK_DEBUGLEVEL != 0
 
 #define STATIC_COMMAND_START \
-  __USED __SECTION(".data.rel.ro.commands") static const cmd _cmd_list[] = {
+  alignas(cmd) __USED __SECTION(".data.rel.ro.commands") static const cmd _cmd_list[] = {
 #define STATIC_COMMAND_END(name) \
   }                              \
   ;

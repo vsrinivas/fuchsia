@@ -133,36 +133,54 @@ SECTIONS
      * goes for orphans, and we can't abide the default placement of
      * orphans that should be RELRO.
      */
-    .data.rel.ro : ALIGN(8) {
+
+    .data.rel.ro.commands : {
         PROVIDE_HIDDEN(__start_commands = .);
         KEEP(*(.data.rel.ro.commands))
         PROVIDE_HIDDEN(__stop_commands = .);
+        ASSERT(ALIGNOF(.data.rel.ro.commands) == 8 ||
+               SIZEOF(.data.rel.ro.commands) == 0,
+               ".data.rel.ro.commands overalignment -> padding gaps");
+    }
 
-        PROVIDE_HIDDEN(__start_ktrace_probe = .);
-        KEEP(*(.data.rel.ro.ktrace_probe))
-        PROVIDE_HIDDEN(__stop_ktrace_probe = .);
-
+    .data.rel.ro.lk_init : {
         PROVIDE_HIDDEN(__start_lk_init = .);
         KEEP(*(.data.rel.ro.lk_init))
         PROVIDE_HIDDEN(__stop_lk_init = .);
+        ASSERT(ALIGNOF(.data.rel.ro.lk_init) == 8,
+               ".data.rel.ro.lk_init overalignment -> padding gaps");
+    }
 
+    .data.rel.ro.lk_pdev_init : {
         PROVIDE_HIDDEN(__start_lk_pdev_init = .);
         KEEP(*(.data.rel.ro.lk_pdev_init))
         PROVIDE_HIDDEN(__stop_lk_pdev_init = .);
+        ASSERT(ALIGNOF(.data.rel.ro.lk_pdev_init) == 8 ||
+               SIZEOF(.data.rel.ro.lk_pdev_init) == 0,
+               ".data.rel.ro.lk_pdev_init overalignment -> padding gaps");
+    }
 
+    .data.rel.ro.unittest_testcases : {
         PROVIDE_HIDDEN(__start_unittest_testcases = .);
         KEEP(*(.data.rel.ro.unittest_testcases))
         PROVIDE_HIDDEN(__stop_unittest_testcases = .);
+        ASSERT(ALIGNOF(.data.rel.ro.unittest_testcases) == 8 ||
+               SIZEOF(.data.rel.ro.unittest_testcases) == 0,
+               ".data.rel.ro.unittest_testcases overalignment -> padding gaps");
+    }
 
+    .data.rel.ro : {
         *(.data.rel.ro* .gnu.linkonce.d.rel.ro.*)
     }
 
-    .init_array : ALIGN(8) {
+    .init_array : {
         PROVIDE_HIDDEN(__init_array_start = .);
         KEEP(*(SORT_BY_INIT_PRIORITY(.init_array.*)
                SORT_BY_INIT_PRIORITY(.ctors.*)))
         KEEP(*(.init_array .ctors))
         PROVIDE_HIDDEN(__init_array_end = .);
+        ASSERT(ALIGNOF(.init_array) == 8 || SIZEOF(.init_array) == 0,
+               ".init_array overalignment -> maybe padding gaps");
     }
 
     /*
@@ -218,7 +236,7 @@ SECTIONS
     . = ALIGN(4096);
     PROVIDE_HIDDEN(__llvm_profile_vmo_end = .);
 
-    __sancov_guards : ALIGN(4) {
+    __sancov_guards : {
         PROVIDE_HIDDEN(__start___sancov_guards = .);
         *(__sancov_guards)
         PROVIDE_HIDDEN(__stop___sancov_guards = .);

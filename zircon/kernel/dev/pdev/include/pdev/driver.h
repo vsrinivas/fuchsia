@@ -23,14 +23,14 @@ struct lk_pdev_init_struct {
   const char* name;
 };
 
-#define LK_PDEV_INIT(_name, _type, _hook, _level)                                       \
-  __ALIGNED(sizeof(void*))                                                              \
-  __USED __SECTION(".data.rel.ro.lk_pdev_init") static const struct lk_pdev_init_struct \
-      _dev_init_struct_##_name = {                                                      \
-          .type = _type,                                                                \
-          .hook = _hook,                                                                \
-          .level = _level,                                                              \
-          .name = #_name,                                                               \
+#define LK_PDEV_INIT(_name, _type, _hook, _level)                                           \
+  alignas(lk_pdev_init_struct)                                                              \
+      __USED __SECTION(".data.rel.ro.lk_pdev_init") static const struct lk_pdev_init_struct \
+          _dev_init_struct_##_name = {                                                      \
+              .type = _type,                                                                \
+              .hook = _hook,                                                                \
+              .level = _level,                                                              \
+              .name = #_name,                                                               \
   };
 
 __END_CDECLS
