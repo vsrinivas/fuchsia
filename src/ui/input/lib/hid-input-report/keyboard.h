@@ -22,6 +22,8 @@ class Keyboard : public Device {
 
   uint8_t InputReportId() const override { return input_report_id_; }
 
+  DeviceType GetDeviceType() const override { return DeviceType::kKeyboard; }
+
  private:
   ParseResult ParseInputReportDescriptor(const hid::ReportDescriptor& hid_report_descriptor);
   ParseResult ParseOutputReportDescriptor(const hid::ReportDescriptor& hid_report_descriptor);

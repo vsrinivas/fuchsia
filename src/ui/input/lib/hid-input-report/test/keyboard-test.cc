@@ -269,3 +269,8 @@ TEST(KeyboardTest, FullKeysKeyboard) {
   EXPECT_EQ(keyboard_report->pressed_keys[3], llcpp::fuchsia::ui::input2::Key::NON_US_BACKSLASH);
   EXPECT_EQ(keyboard_report->pressed_keys[4], llcpp::fuchsia::ui::input2::Key::UP);
 }
+
+TEST(KeyboardTest, DeviceType) {
+  hid_input_report::Keyboard keyboard;
+  ASSERT_EQ(hid_input_report::DeviceType::kKeyboard, keyboard.GetDeviceType());
+}

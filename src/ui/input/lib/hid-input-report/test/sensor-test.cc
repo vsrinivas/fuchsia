@@ -92,4 +92,10 @@ TEST(SensorTest, AmbientLight) {
   EXPECT_EQ(kBlueTestVal * kLightUnitConversion, sensor_report->values[2]);
   EXPECT_EQ(kGreenTestVal * kLightUnitConversion, sensor_report->values[3]);
 }
+
+TEST(SensorTest, DeviceType) {
+  Sensor device;
+  ASSERT_EQ(DeviceType::kSensor, device.GetDeviceType());
+}
+
 }  // namespace hid_input_report

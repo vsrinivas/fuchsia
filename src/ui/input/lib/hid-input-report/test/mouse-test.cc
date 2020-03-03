@@ -102,3 +102,8 @@ TEST(MouseTest, ScrollMouse) {
   EXPECT_TRUE(mouse_report->scroll_v);
   EXPECT_EQ(100, mouse_report->scroll_v);
 }
+
+TEST(MouseTest, DeviceType) {
+  hid_input_report::Mouse device;
+  ASSERT_EQ(hid_input_report::DeviceType::kMouse, device.GetDeviceType());
+}

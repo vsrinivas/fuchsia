@@ -100,3 +100,8 @@ TEST(ConsumerControlTest, OverMaxButtonsTest) {
   ASSERT_EQ(hid_input_report::ParseResult::kTooManyItems,
             consumer_control.ParseReportDescriptor(descriptor));
 }
+
+TEST(ConsumerControlTest, DeviceType) {
+  hid_input_report::ConsumerControl device;
+  ASSERT_EQ(hid_input_report::DeviceType::kConsumerControl, device.GetDeviceType());
+}

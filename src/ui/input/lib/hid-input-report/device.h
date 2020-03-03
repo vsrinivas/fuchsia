@@ -26,6 +26,14 @@ enum class ParseResult : uint32_t {
   kItemNotFound = 7,
 };
 
+enum class DeviceType : uint32_t {
+  kMouse = 1,
+  kSensor = 2,
+  kTouch = 3,
+  kKeyboard = 4,
+  kConsumerControl = 5,
+};
+
 class Device {
  public:
   virtual ~Device() = default;
@@ -41,6 +49,7 @@ class Device {
   }
 
   virtual uint8_t InputReportId() const = 0;
+  virtual DeviceType GetDeviceType() const = 0;
 };
 
 // Create `out_device` from a HID descriptor. `out_device` is returned fully formed,

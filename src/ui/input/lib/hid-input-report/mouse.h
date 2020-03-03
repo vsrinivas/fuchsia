@@ -19,6 +19,8 @@ class Mouse : public Device {
 
   uint8_t InputReportId() const override { return report_id_; }
 
+  DeviceType GetDeviceType() const override { return DeviceType::kMouse; }
+
  private:
   hid::Attributes movement_x_ = {};
   hid::Attributes movement_y_ = {};

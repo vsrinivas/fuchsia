@@ -19,6 +19,8 @@ class Touch : public Device {
 
   uint8_t InputReportId() const override { return report_id_; }
 
+  DeviceType GetDeviceType() const override { return DeviceType::kTouch; }
+
  private:
   struct ContactConfig {
     hid::Attributes contact_id;

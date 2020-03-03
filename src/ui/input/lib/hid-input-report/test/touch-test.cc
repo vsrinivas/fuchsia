@@ -160,3 +160,8 @@ TEST(TouchscreenTest, ParadiseV1Touchpad) {
   EXPECT_EQ(1, touch_input_report->num_pressed_buttons);
   EXPECT_EQ(1, touch_input_report->pressed_buttons[0]);
 }
+
+TEST(TouchscreenTest, DeviceType) {
+  hid_input_report::Touch device;
+  ASSERT_EQ(hid_input_report::DeviceType::kTouch, device.GetDeviceType());
+}
