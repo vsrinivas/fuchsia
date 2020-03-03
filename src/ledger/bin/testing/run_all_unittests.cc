@@ -7,7 +7,7 @@
 #include "third_party/abseil-cpp/absl/flags/flag.h"
 #include "third_party/abseil-cpp/absl/flags/parse.h"
 
-ABSL_FLAG(int, test_loop_seed, 0, "random seed for the test loop");
+ABSL_FLAG(size_t, test_loop_seed, 0, "random seed for the test loop");
 ABSL_FLAG(int, verbose, 0, "level of verbosity");
 
 namespace ledger {
