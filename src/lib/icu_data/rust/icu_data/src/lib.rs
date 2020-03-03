@@ -26,13 +26,13 @@ use {
     anyhow::format_err,
     fuchsia_zircon as zx,
     lazy_static::lazy_static,
-    rust_icu_common as icu, rust_icu_udata as udata,
-    std::convert::TryFrom,
-    std::env,
-    std::fs,
-    std::io,
-    std::sync::Mutex,
-    std::sync::{Arc, Weak},
+    rust_icu_common as icu, rust_icu_ucal as ucal, rust_icu_udata as udata,
+    std::{
+        borrow::Cow,
+        convert::TryFrom,
+        env, fs, io,
+        sync::{Arc, Mutex, Weak},
+    },
     thiserror::Error,
 };
 
@@ -44,6 +44,9 @@ lazy_static! {
 // The default location at which to find the ICU data.
 const ICU_DATA_PATH_DEFAULT: &str = "/pkg/data/icudtl.dat";
 
+/// Expected length of a time zone revision ID (e.g. "2019c").
+const TZ_REVISION_ID_LENGTH: usize = 5;
+
 /// Error type returned by `icu_udata`. The individual enum values encode
 /// classes of possible errors returned.
 #[derive(Error, Debug)]
@@ -51,8 +54,8 @@ pub enum Error {
     #[error("[icu_data]: {}", _0)]
     Fail(anyhow::Error),
     /// The operation failed due to an underlying Zircon error.
-    #[error("[icu_data]: generic error: {}", _0)]
-    Status(zx::Status),
+    #[error("[icu_data]: generic error: {}, details: {:?}", _0, _1)]
+    Status(zx::Status, Option<Cow<'static, str>>),
     /// The operation failed due to an IO error.
     #[error("[icu_data]: IO error: {}", _0)]
     IO(io::Error),
@@ -62,7 +65,7 @@ pub enum Error {
 }
 impl From<zx::Status> for Error {
     fn from(status: zx::Status) -> Self {
-        Error::Status(status)
+        Error::Status(status, None)
     }
 }
 impl From<io::Error> for Error {
@@ -90,7 +93,7 @@ pub struct Loader {
     refs: Arc<udata::UDataMemory>,
     vmo_size_bytes: usize,
     file_size_bytes: usize,
-    icu_data_file_path: Option<String>,
+    icu_tzdata_dir_path: Option<String>,
     icu_data_path: String,
 }
 // Loader is OK to be sent to threads.
@@ -103,18 +106,32 @@ impl Loader {
     /// instances of `Loader` alive until the ICU data is needed.  You can make as many `Loader`
     /// objects as you need.  The data will be unloaded only after the last of them leaves scope.
     pub fn new() -> Result<Self, Error> {
-        Self::new_with_optional_resource(None)
+        Self::new_with_optional_tz_resources(None, None)
     }
 
-    /// Initializes ICU data from the supplied `path.`
+    /// Initializes ICU data, loading time zone resources from the supplied `path`.
     ///
     /// See documentation for `new` for calling constraints.
-    pub fn new_with_resource_path(path: &str) -> Result<Self, Error> {
-        Self::new_with_optional_resource(Some(path))
+    pub fn new_with_tz_resource_path(tzdata_dir_path: &str) -> Result<Self, Error> {
+        Self::new_with_optional_tz_resources(Some(tzdata_dir_path), None)
+    }
+
+    /// Initializes ICU data, loading time zone resources from the supplied `path` and validating
+    /// the time zone revision ID against the ID contained in the file at `revision_file_path`.
+    ///
+    /// See documentation for `new` for calling constraints.
+    pub fn new_with_tz_resources_and_validation(
+        tzdata_dir_path: &str,
+        tz_revision_file_path: &str,
+    ) -> Result<Self, Error> {
+        Self::new_with_optional_tz_resources(Some(tzdata_dir_path), Some(tz_revision_file_path))
     }
 
     // Ensures that all calls to create a `Loader` go through the same code path.
-    fn new_with_optional_resource(path: Option<&str>) -> Result<Self, Error> {
+    fn new_with_optional_tz_resources(
+        tzdata_dir_path: Option<&str>,
+        tz_revision_file_path: Option<&str>,
+    ) -> Result<Self, Error> {
         // The lock contention should not be an issue.  Only a few calls (single digits) to this
         // function are expected.  So we take a write lock immmediately.
         let mut l = REFCOUNT.lock().expect("refcount lock acquired");
@@ -123,12 +140,12 @@ impl Loader {
                 refs,
                 vmo_size_bytes: 0,
                 file_size_bytes: 0,
-                icu_data_file_path: None,
+                icu_tzdata_dir_path: None,
                 icu_data_path: "".to_string(),
             }),
             None => {
                 // Load up the TZ files directory.
-                if let Some(p) = path {
+                if let Some(p) = tzdata_dir_path {
                     let for_path = fs::File::open(p)?;
                     let meta = for_path.metadata()?;
                     if !meta.is_dir() {
@@ -149,14 +166,52 @@ impl Loader {
                 let mut buf: Vec<u8> = vec![0; file_size_bytes];
                 vmo.read(&mut buf, 0)?;
                 let refs = Arc::new(udata::UDataMemory::try_from(buf)?);
+                Self::validate_revision(tz_revision_file_path)?;
                 (*l) = Arc::downgrade(&refs);
                 Ok(Loader {
                     refs,
                     vmo_size_bytes,
                     file_size_bytes,
-                    icu_data_file_path: path.map(|p| p.to_string()),
+                    icu_tzdata_dir_path: tzdata_dir_path.map(|p| p.to_string()),
                     icu_data_path: ICU_DATA_PATH_DEFAULT.to_string(),
                 })
+            }
+        }
+    }
+
+    fn validate_revision(tz_revision_file_path: Option<&str>) -> Result<(), Error> {
+        match tz_revision_file_path {
+            None => Ok(()),
+            Some(tz_revision_file_path) => {
+                let expected_revision_id = std::fs::read_to_string(tz_revision_file_path)?;
+                if expected_revision_id.len() != TZ_REVISION_ID_LENGTH {
+                    return Err(Error::Status(
+                        zx::Status::IO_DATA_INTEGRITY,
+                        Some(
+                            format!(
+                                "invalid revision ID in {}: {}",
+                                tz_revision_file_path, expected_revision_id
+                            )
+                            .into(),
+                        ),
+                    ));
+                }
+
+                let actual_revision_id = ucal::get_tz_data_version()?;
+                if expected_revision_id != actual_revision_id {
+                    return Err(Error::Status(
+                        zx::Status::IO_DATA_INTEGRITY,
+                        Some(
+                            format!(
+                                "expected revision ID {} but got {}",
+                                expected_revision_id, actual_revision_id
+                            )
+                            .into(),
+                        ),
+                    ));
+                }
+
+                Ok(())
             }
         }
     }
@@ -164,8 +219,7 @@ impl Loader {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use rust_icu_uenum as uenum;
+    use {super::*, matches::assert_matches, rust_icu_uenum as uenum};
 
     // [START loader_example]
     #[test]
@@ -201,5 +255,36 @@ mod tests {
             assert_eq!(tz, "ACT");
         }
     }
-    // [START loader_example]
+    // [END loader_example]
+
+    #[test]
+    fn test_tz_res_loading_without_validation() -> Result<(), Error> {
+        let _loader = Loader::new().expect("loader is constructed with success");
+        let tz: String = uenum::open_time_zones()?.take(1).map(|e| e.unwrap()).collect();
+        assert_eq!(tz, "ACT");
+        Ok(())
+    }
+
+    #[test]
+    fn test_tz_res_loading_with_validation_valid() -> Result<(), Error> {
+        let _loader = Loader::new_with_tz_resources_and_validation(
+            "/config/data/tzdata/icu/44/le",
+            "/config/data/tzdata/revision.txt",
+        )
+        .expect("loader is constructed successfully");
+        let tz: String = uenum::open_time_zones()?.take(1).map(|e| e.unwrap()).collect();
+        assert_eq!(tz, "ACT");
+        Ok(())
+    }
+
+    #[test]
+    fn test_tz_res_loading_with_validation_invalid() -> Result<(), Error> {
+        let result = Loader::new_with_tz_resources_and_validation(
+            "/config/data/tzdata/icu/44/le",
+            "/pkg/data/test_bad_revision.txt",
+        );
+        let err = result.unwrap_err();
+        assert_matches!(err, Error::Status(zx::Status::IO_DATA_INTEGRITY, Some(_)));
+        Ok(())
+    }
 }

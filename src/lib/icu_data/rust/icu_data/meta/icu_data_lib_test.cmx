@@ -1,6 +1,10 @@
 {
     "program": {
         "binary": "test/icu_data_lib_test"
+    },
+    "sandbox": {
+        "features": [
+            "config-data"
+        ]
     }
 }
-

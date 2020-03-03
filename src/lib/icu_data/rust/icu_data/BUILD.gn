@@ -6,6 +6,7 @@ import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//src/lib/icu/tzdata/icu_tzdata_config_data.gni")
 
 rustc_library("icu_data") {
   edition = "2018"
@@ -18,10 +19,13 @@ rustc_library("icu_data") {
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:rust_icu_common",
     "//third_party/rust_crates:rust_icu_sys",
+    "//third_party/rust_crates:rust_icu_ucal",
     "//third_party/rust_crates:rust_icu_udata",
     "//third_party/rust_crates:rust_icu_uenum",
     "//third_party/rust_crates:thiserror",
   ]
+
+  test_deps = [ "//third_party/rust_crates:matches" ]
 
   non_rust_deps = [
     "../../cpp:icu_data_cpp",
@@ -30,8 +34,15 @@ rustc_library("icu_data") {
   ]
 }
 
+icu_tzdata_config_data("icu_tzdata_for_icu_data_rust_tests") {
+  for_pkg = "icu_data_rust_tests"
+}
+
 test_package("icu_data_rust_tests") {
-  deps = [ ":icu_data_test" ]
+  deps = [
+    ":icu_data_test",
+    ":icu_tzdata_for_icu_data_rust_tests",
+  ]
   tests = [
     {
       name = "icu_data_lib_test"
@@ -45,6 +56,12 @@ test_package("icu_data_rust_tests") {
 
       # This file is available to the package at "/pkg/data/icudtl.dat"
       dest = "icudtl.dat"
+    },
+    {
+      path = rebase_path("test_bad_revision.txt")
+
+      # This file is available to the package at "/pkg/data/test_bad_revision.txt"
+      dest = "test_bad_revision.txt"
     },
   ]
 }
