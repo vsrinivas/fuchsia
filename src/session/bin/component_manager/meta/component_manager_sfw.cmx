@@ -12,7 +12,6 @@
         "features": [
             "build-info",
             "config-data",
-            "deprecated-ambient-replace-as-executable",
             "isolated-persistent-storage",
             "isolated-temp",
             "root-ssl-certificates"
