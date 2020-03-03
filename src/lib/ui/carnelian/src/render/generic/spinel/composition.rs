@@ -135,7 +135,7 @@ impl SpinelComposition {
                     unsafe {
                         spn!(spn_raster_builder_add(
                             raster_builder,
-                            &**path,
+                            &*path.path,
                             ptr::null_mut(),
                             &transform,
                             ptr::null_mut(),

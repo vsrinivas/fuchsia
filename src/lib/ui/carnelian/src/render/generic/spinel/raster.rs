@@ -2,11 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::{ops::Add, rc::Rc};
+use std::ops::Add;
 
 use euclid::{Transform2D, Vector2D};
 use smallvec::{smallvec, SmallVec};
-use spinel_rs_sys::*;
 
 use crate::render::generic::{
     spinel::{Spinel, SpinelPath},
@@ -15,7 +14,7 @@ use crate::render::generic::{
 
 #[derive(Clone, Debug)]
 pub struct SpinelRaster {
-    pub(crate) rasters: SmallVec<[(Vec<(Rc<SpnPath>, Transform2D<f32>)>, Vector2D<f32>); 1]>,
+    pub(crate) rasters: SmallVec<[(Vec<(SpinelPath, Transform2D<f32>)>, Vector2D<f32>); 1]>,
 }
 
 impl Raster for SpinelRaster {
@@ -47,12 +46,12 @@ impl PartialEq for SpinelRaster {
 
 #[derive(Debug)]
 pub struct SpinelRasterBuilder {
-    pub(crate) paths: Vec<(Rc<SpnPath>, Transform2D<f32>)>,
+    pub(crate) paths: Vec<(SpinelPath, Transform2D<f32>)>,
 }
 
 impl RasterBuilder<Spinel> for SpinelRasterBuilder {
     fn add_with_transform(&mut self, path: &SpinelPath, transform: &Transform2D<f32>) -> &mut Self {
-        self.paths.push((Rc::clone(&path.path), *transform));
+        self.paths.push((path.clone(), *transform));
         self
     }
 
