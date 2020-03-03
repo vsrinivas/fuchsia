@@ -26,7 +26,7 @@ use crate::{
     common::send_on_open_with_error,
     directory::entry::{DirectoryEntry, EntryInfo},
     execution_scope::ExecutionScope,
-    file::vmo::connection::{AsyncConsumeVmo, AsyncInitVmo, FileConnection, FileConnectionApi},
+    file::vmo::connection::{self, AsyncConsumeVmo, AsyncInitVmo, FileConnectionApi},
     path::Path,
 };
 
@@ -308,7 +308,7 @@ where
 
         let readable = self.readable;
         let writable = self.writable;
-        FileConnection::create_connection(
+        connection::io1::FileConnection::create_connection(
             scope.clone(),
             self,
             flags,

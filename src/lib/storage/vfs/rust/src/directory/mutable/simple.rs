@@ -12,7 +12,7 @@ use crate::{
     directory::{
         entry::DirectoryEntry,
         mutable::{
-            connection::MutableConnection,
+            connection,
             entry_constructor::{EntryConstructor, NewEntryType},
         },
         simple,
@@ -23,7 +23,7 @@ use crate::{
 
 use {fuchsia_zircon::Status, std::sync::Arc};
 
-pub type Connection = MutableConnection<AlphabeticalTraversal>;
+pub type Connection = connection::io1::MutableConnection<AlphabeticalTraversal>;
 pub type Simple = simple::Simple<Connection>;
 
 /// Creates a mutable empty "simple" directory.  This directory holds a "static" set of entries,

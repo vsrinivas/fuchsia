@@ -25,9 +25,7 @@ use crate::{
     common::send_on_open_with_error,
     directory::entry::{DirectoryEntry, EntryInfo},
     execution_scope::ExecutionScope,
-    file::pcb::connection::{
-        AsyncInitBuffer, AsyncUpdate, FileConnection, FileWithPerConnectionBuffer,
-    },
+    file::pcb::connection::{self, AsyncInitBuffer, AsyncUpdate, FileWithPerConnectionBuffer},
     path::Path,
 };
 
@@ -256,7 +254,7 @@ where
         let readable = self.init_buffer.is_some();
         let writable = self.update.is_some();
         let capacity = self.capacity;
-        FileConnection::create_connection(
+        connection::io1::FileConnection::create_connection(
             scope.clone(),
             self,
             flags,

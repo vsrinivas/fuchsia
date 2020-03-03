@@ -8,12 +8,12 @@
 use crate::{
     common::send_on_open_with_error,
     directory::{
-        connection::DerivedConnection,
+        connection::io1::DerivedConnection,
         dirents_sink,
         entry::{DirectoryEntry, EntryInfo},
         entry_container::{self, AsyncGetEntry, AsyncReadDirents, EntryContainer},
-        immutable::connection::{ImmutableConnection, ImmutableConnectionClient},
-        mutable::connection::{MutableConnection, MutableConnectionClient},
+        immutable::connection::io1::{ImmutableConnection, ImmutableConnectionClient},
+        mutable::connection::io1::{MutableConnection, MutableConnectionClient},
         traversal_position::AlphabeticalTraversal,
         watchers::{
             event_producers::{SingleNameEventProducer, StaticVecEventProducer},

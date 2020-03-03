@@ -8,13 +8,11 @@
 #[cfg(test)]
 mod tests;
 
-use crate::directory::{
-    immutable::connection::ImmutableConnection, simple, traversal_position::AlphabeticalTraversal,
-};
+use crate::directory::{immutable::connection, simple, traversal_position::AlphabeticalTraversal};
 
 use std::sync::Arc;
 
-pub type Connection = ImmutableConnection<AlphabeticalTraversal>;
+pub type Connection = connection::io1::ImmutableConnection<AlphabeticalTraversal>;
 pub type Simple = simple::Simple<Connection>;
 
 /// Creates an immutable empty "simple" directory.  This directory holds a "static" set of entries,

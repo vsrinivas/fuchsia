@@ -15,7 +15,7 @@ use crate::{
     directory::entry::{DirectoryEntry, EntryInfo},
     execution_scope::ExecutionScope,
     path::Path,
-    service::{common::new_connection_validate_flags, connection::Connection},
+    service::{common::new_connection_validate_flags, connection::io1::Connection},
 };
 
 use {

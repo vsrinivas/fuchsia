@@ -12,11 +12,11 @@ mod watchers_task;
 use crate::{
     common::send_on_open_with_error,
     directory::{
-        connection::DerivedConnection,
+        connection::io1::DerivedConnection,
         dirents_sink,
         entry::{DirectoryEntry, EntryInfo},
         entry_container::{self, AsyncReadDirents, EntryContainer},
-        immutable::connection::ImmutableConnection,
+        immutable::connection::io1::ImmutableConnection,
     },
     execution_scope::ExecutionScope,
     path::Path,
