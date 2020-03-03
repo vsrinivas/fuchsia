@@ -33,14 +33,14 @@ void AddPerfTests(benchmarking::BenchmarksRunner* benchmarks_runner, bool perfco
 
     for (int process = 0; process < 6; ++process) {
       benchmarks_runner->AddLibPerfTestBenchmark(
-          fxl::StringPrintf("zircon_benchmarks_process%06d", process), "/bin/zircon_benchmarks",
-          extra_args);
+          fxl::StringPrintf("fuchsia_microbenchmarks_process%06d", process),
+          "/bin/fuchsia_microbenchmarks", extra_args);
     }
   } else {
     std::vector<std::string> extra_args = {"--quiet"};
 
-    benchmarks_runner->AddLibPerfTestBenchmark("zircon_benchmarks", "/bin/zircon_benchmarks",
-                                               extra_args);
+    benchmarks_runner->AddLibPerfTestBenchmark("fuchsia_microbenchmarks",
+                                               "/bin/fuchsia_microbenchmarks", extra_args);
   }
 
   // Fuchsia inspect Rust benchmarks.

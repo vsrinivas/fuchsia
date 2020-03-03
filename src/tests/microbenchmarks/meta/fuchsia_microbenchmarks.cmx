@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/zircon_benchmarks"
+        "binary": "test/fuchsia_microbenchmarks"
     },
     "sandbox": {
         "features": [

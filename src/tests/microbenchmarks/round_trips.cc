@@ -119,7 +119,7 @@ class ThreadOrProcess {
 
   void Launch(const char* func_name, std::vector<zx::handle>&& handles, MultiProc multiproc) {
     if (multiproc == MultiProcess) {
-      const char* executable_path = "/bin/zircon_benchmarks";
+      const char* executable_path = "/bin/fuchsia_microbenchmarks";
       const char* args[] = {executable_path, "--subprocess", func_name, nullptr};
       size_t action_count = handles.size() + 1;
       fdio_spawn_action_t actions[action_count];

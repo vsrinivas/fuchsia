@@ -9,7 +9,7 @@ import 'helpers.dart';
 void main() {
   enableLoggingOutput();
 
-  test('zircon_benchmarks', () async {
+  test('fuchsia_microbenchmarks', () async {
     final helper = await PerfTestHelper.make();
     const resultsFile = '/tmp/perf_results.json';
     // Log the full 32-bit exit status value in order to debug the flaky failure
@@ -19,7 +19,7 @@ void main() {
         r'echo exit status: $status; '
         r'if [ $status != 0 ]; then exit 1; fi';
     final result = await helper.sl4fDriver.ssh.run(
-        '/bin/zircon_benchmarks -p --quiet --out $resultsFile; $logStatus');
+        '/bin/fuchsia_microbenchmarks -p --quiet --out $resultsFile; $logStatus');
     expect(result.exitCode, equals(0));
     await helper.processResults(resultsFile);
   }, timeout: Timeout.none);

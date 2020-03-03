@@ -1,6 +1,10 @@
-# Zircon Benchmarks
+# Fuchsia Microbenchmarks
 
-Microbenchmarks for the Zircon kernel and services.
+This set of tests includes microbenchmarks for Zircon syscalls and IPC
+primitives, as well as microbenchmarks for other layers of Fuchsia.
+
+This used to be called "zircon_benchmarks", but it was renamed to reflect
+that it covers more than just Zircon.
 
 ## Writing Benchmarks
 
@@ -10,7 +14,7 @@ library.
 
 ## Running Benchmarks
 
-There are two ways to run zircon_benchmarks:
+There are two ways to run fuchsia_microbenchmarks:
 
 * perftest mode: This mode will record the times taken by each run of
   the benchmarks, allowing further analysis, which is useful for
@@ -18,8 +22,9 @@ There are two ways to run zircon_benchmarks:
   statistics.  This uses the test runner provided by Zircon's perftest
   library.
 
-  For this, run `zircon_benchmarks -p --out=output.json`. The result data
-  will be written to `output.json` using our [perf test result schema].
+  For this, run `fuchsia_microbenchmarks -p --out=output.json`. The result
+  data will be written to `output.json` using our [perf test result
+  schema].
 
   See Zircon's perftest library for details of the other command line
   options.
@@ -30,6 +35,6 @@ There are two ways to run zircon_benchmarks:
   performance information.
 
   For this, run
-  `run-test-component fuchsia-pkg://fuchsia.com/zircon_benchmarks#meta/zircon_benchmarks.cmx`.
+  `run-test-component fuchsia-pkg://fuchsia.com/fuchsia_microbenchmarks#meta/fuchsia_microbenchmarks.cmx`.
 
 [perf test result schema]: /docs/development/benchmarking/results_schema.md
