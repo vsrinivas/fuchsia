@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "test/storage_manager_lib_test"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-temp"
+        ],
+        "services": []
+    }
+}
