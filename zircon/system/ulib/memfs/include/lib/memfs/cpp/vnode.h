@@ -85,9 +85,9 @@ class VnodeFile final : public VnodeMemfs {
   fs::VnodeProtocolSet GetProtocols() const final;
 
  private:
-  zx_status_t Read(void* data, size_t len, size_t off, size_t* out_actual) final;
-  zx_status_t Write(const void* data, size_t len, size_t offset, size_t* out_actual) final;
-  zx_status_t Append(const void* data, size_t len, size_t* out_end, size_t* out_actual) final;
+  zx_status_t CreateStream(uint32_t stream_options, zx::stream* out_stream) final;
+  void DidModifyStream() final;
+
   zx_status_t Truncate(size_t len) final;
   zx_status_t GetAttributes(fs::VnodeAttributes* a) final;
   zx_status_t GetNodeInfoForProtocol(fs::VnodeProtocol protocol, fs::Rights rights,
@@ -102,7 +102,6 @@ class VnodeFile final : public VnodeMemfs {
   void ZeroTail(size_t start, size_t end);
 
   zx::vmo vmo_;
-  zx::stream stream_;
 };
 
 class VnodeDir final : public VnodeMemfs {

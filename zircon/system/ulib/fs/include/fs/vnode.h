@@ -32,7 +32,9 @@
 #ifdef __Fuchsia__
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/stream.h>
 #include <zircon/device/vfs.h>
+
 #include <fs/mount_channel.h>
 #endif  // __Fuchsia__
 
@@ -188,6 +190,25 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
   zx_status_t GetNodeInfo(Rights rights, VnodeRepresentation* info);
 
   virtual zx_status_t WatchDir(Vfs* vfs, uint32_t mask, uint32_t options, zx::channel watcher);
+
+  // Create a |zx::stream| for reading and writing this vnode.
+  //
+  // If this function returns |ZX_OK|, then all |Read|, |Write|, and |Append| operations will be
+  // directed to the stream returned via |out_stream| rather than to the |Read|, |Write|, and
+  // |Append| methods on the vnode. The |zx::stream| might be transported to a remote process to
+  // improve performance.
+  //
+  // If the client modifies the underlying data for this node via the returned |zx::stream|, the
+  // node will be notified via |DidModifyStream|.
+  //
+  // Implementations should pass the given |stream_options| as the options to |zx::stream::create|.
+  // These options ensure that the created |zx::stream| object has the appropriate rights for the
+  // given connection.
+  //
+  // If the vnode does not support reading and writing using a |zx::stream|, return
+  // ZX_ERR_NOT_SUPPORTED, which will cause |Read|, |Write|, and |Append| operations to be called as
+  // methods on the vnode. Other errors are considered fatal and will terminate the connection.
+  virtual zx_status_t CreateStream(uint32_t stream_options, zx::stream* out_stream);
 #endif
 
   // Closes the vnode. Will be called once for each successful Open().
@@ -199,19 +220,34 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
   //
   // If successful, returns the number of bytes read in |out_actual|. This must be
   // less than or equal to |len|.
+  //
+  // See |CreateStream| for a mechanism to offload |Read| to a |zx::stream| object.
   virtual zx_status_t Read(void* data, size_t len, size_t off, size_t* out_actual);
 
   // Write |len| bytes of |data| to the file, starting at |offset|.
   //
   // If successful, returns the number of bytes written in |out_actual|. This must be
   // less than or equal to |len|.
+  //
+  // See |CreateStream| for a mechanism to offload |Write| to a |zx::stream| object.
   virtual zx_status_t Write(const void* data, size_t len, size_t offset, size_t* out_actual);
 
   // Write |len| bytes of |data| to the end of the file.
   //
   // If successful, returns the number of bytes written in |out_actual|, and
   // returns the new end of file offset in |out_end|.
+  //
+  // See |CreateStream| for a mechanism to offload |Append| to a |zx::stream| object.
   virtual zx_status_t Append(const void* data, size_t len, size_t* out_end, size_t* out_actual);
+
+  // The data for this node was modified via the |zx::stream| returned by |CreateStream|.
+  //
+  // When a client writes to the |zx::stream| returned by |CreateStream|, there is currently no
+  // mechanism for the node to observe this modification and update its internal state (e.g., the
+  // modification time of the file represented by this node). This method provides that notification
+  // for the time being. In the future, we might switch to using a usermode pager to provide that
+  // notification.
+  virtual void DidModifyStream();
 
   // Change the size of the vnode.
   virtual zx_status_t Truncate(size_t len);

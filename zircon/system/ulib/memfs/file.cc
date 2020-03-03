@@ -31,54 +31,15 @@ VnodeFile::~VnodeFile() = default;
 
 fs::VnodeProtocolSet VnodeFile::GetProtocols() const { return fs::VnodeProtocol::kFile; }
 
-zx_status_t VnodeFile::Read(void* data, size_t length, size_t offset, size_t* out_actual) {
-  if (!stream_.is_valid()) {
-    *out_actual = 0;
-    return ZX_OK;
-  }
-  zx_iovec_t vector = {
-      .buffer = data,
-      .capacity = length,
-  };
-  return stream_.readv_at(0, offset, &vector, 1, out_actual);
-}
-
-zx_status_t VnodeFile::Write(const void* data, size_t len, size_t offset, size_t* out_actual) {
+zx_status_t VnodeFile::CreateStream(uint32_t stream_options, zx::stream* out_stream) {
   zx_status_t status = CreateBackingStoreIfNeeded();
   if (status != ZX_OK) {
     return status;
   }
-  zx_iovec_t vector = {
-      .buffer = const_cast<void*>(data),
-      .capacity = len,
-  };
-  status = stream_.writev_at(0, offset, &vector, 1, out_actual);
-  if (status != ZX_OK) {
-    return status;
-  }
-  UpdateModified();
-  return ZX_OK;
+  return zx::stream::create(stream_options, vmo_, 0u, out_stream);
 }
 
-zx_status_t VnodeFile::Append(const void* data, size_t len, size_t* out_end, size_t* out_actual) {
-  zx_status_t status = CreateBackingStoreIfNeeded();
-  if (status != ZX_OK) {
-    return status;
-  }
-  zx_iovec_t vector = {
-      .buffer = const_cast<void*>(data),
-      .capacity = len,
-  };
-  status = stream_.writev(ZX_STREAM_APPEND, &vector, 1, out_actual);
-  if (status != ZX_OK) {
-    return status;
-  }
-  // TODO: When we give clients direct access to a zx::stream, we will expose a race condition
-  // here because the content size could have changed after the writev above.
-  *out_end = GetContentSize();
-  UpdateModified();
-  return ZX_OK;
-}
+void VnodeFile::DidModifyStream() { UpdateModified(); }
 
 zx_status_t VnodeFile::GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) {
   zx_status_t status = CreateBackingStoreIfNeeded();
@@ -167,16 +128,7 @@ zx_status_t VnodeFile::CreateBackingStoreIfNeeded() {
   if (vmo_.is_valid()) {
     return ZX_OK;
   }
-  zx_status_t status = zx::vmo::create(kMemfsMaxFileSize, 0, &vmo_);
-  if (status != ZX_OK) {
-    return status;
-  }
-  status = zx::stream::create(ZX_STREAM_MODE_READ | ZX_STREAM_MODE_WRITE, vmo_, 0u, &stream_);
-  if (status != ZX_OK) {
-    vmo_.reset();
-    return status;
-  }
-  return ZX_OK;
+  return zx::vmo::create(kMemfsMaxFileSize, 0, &vmo_);
 }
 
 size_t VnodeFile::GetContentSize() const {

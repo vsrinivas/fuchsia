@@ -28,8 +28,9 @@
 #include <fbl/ref_ptr.h>
 #include <fs/internal/connection.h>
 #include <fs/internal/directory_connection.h>
-#include <fs/internal/file_connection.h>
 #include <fs/internal/node_connection.h>
+#include <fs/internal/remote_file_connection.h>
+#include <fs/internal/stream_file_connection.h>
 #include <fs/mount_channel.h>
 #include <fs/remote.h>
 
@@ -293,11 +294,24 @@ zx_status_t Vfs::Unlink(fbl::RefPtr<Vnode> vndir, fbl::StringPiece path) {
 #define TOKEN_RIGHTS (ZX_RIGHTS_BASIC)
 
 namespace {
+
 zx_koid_t GetTokenKoid(const zx::event& token) {
   zx_info_handle_basic_t info = {};
   token.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
   return info.koid;
 }
+
+uint32_t ToStreamOptions(const VnodeConnectionOptions& options) {
+  uint32_t stream_options = 0u;
+  if (options.rights.read) {
+    stream_options |= ZX_STREAM_MODE_READ;
+  }
+  if (options.rights.write) {
+    stream_options |= ZX_STREAM_MODE_WRITE;
+  }
+  return stream_options;
+}
+
 }  // namespace
 
 void Vfs::TokenDiscard(zx::event ios_token) {
@@ -491,23 +505,38 @@ zx_status_t Vfs::Serve(fbl::RefPtr<Vnode> vnode, zx::channel channel,
     return vnode->ConnectService(std::move(channel));
   }
 
-  auto connection = ([&, this]() -> std::unique_ptr<internal::Connection> {
+  std::unique_ptr<internal::Connection> connection;
+  zx_status_t status = ([&] {
     switch (protocol) {
       case VnodeProtocol::kFile:
       case VnodeProtocol::kDevice:
       case VnodeProtocol::kTty:
       // In memfs and bootfs, memory objects (vmo-files) appear to support |fuchsia.io/File.Read|.
       // Therefore choosing a file connection here is the closest approximation.
-      case VnodeProtocol::kMemory:
-        return std::make_unique<internal::FileConnection>(this, std::move(vnode), protocol,
-                                                          *options);
+      case VnodeProtocol::kMemory: {
+        zx::stream stream;
+        zx_status_t status = vnode->CreateStream(ToStreamOptions(*options), &stream);
+        if (status == ZX_OK) {
+          connection = std::make_unique<internal::StreamFileConnection>(
+              this, std::move(vnode), std::move(stream), protocol, *options);
+          return ZX_OK;
+        }
+        if (status == ZX_ERR_NOT_SUPPORTED) {
+          connection = std::make_unique<internal::RemoteFileConnection>(this, std::move(vnode),
+                                                                        protocol, *options);
+          return ZX_OK;
+        }
+        return status;
+      }
       case VnodeProtocol::kDirectory:
-        return std::make_unique<internal::DirectoryConnection>(this, std::move(vnode), protocol,
-                                                               *options);
+        connection = std::make_unique<internal::DirectoryConnection>(this, std::move(vnode),
+                                                                     protocol, *options);
+        return ZX_OK;
       case VnodeProtocol::kConnector:
       case VnodeProtocol::kPipe:
-        return std::make_unique<internal::NodeConnection>(this, std::move(vnode), protocol,
-                                                          *options);
+        connection =
+            std::make_unique<internal::NodeConnection>(this, std::move(vnode), protocol, *options);
+        return ZX_OK;
       case VnodeProtocol::kDatagramSocket:
         // The posix socket protocol is used by netstack and served through the
         // src/lib/component/go library.
@@ -522,8 +551,11 @@ zx_status_t Vfs::Serve(fbl::RefPtr<Vnode> vnode, zx::channel channel,
     // handling all defined enum members.
     __builtin_abort();
 #endif
-  })();
-  zx_status_t status = connection->StartDispatching(std::move(channel));
+  }());
+  if (status != ZX_OK) {
+    return status;
+  }
+  status = connection->StartDispatching(std::move(channel));
   if (status != ZX_OK) {
     return status;
   }

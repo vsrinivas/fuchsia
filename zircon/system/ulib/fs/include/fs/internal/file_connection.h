@@ -20,16 +20,15 @@ namespace fs {
 
 namespace internal {
 
-class FileConnection final : public Connection, public llcpp::fuchsia::io::File::Interface {
+class FileConnection : public Connection, public llcpp::fuchsia::io::File::Interface {
  public:
   // Refer to documentation for |Connection::Connection|.
   FileConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, VnodeProtocol protocol,
                  VnodeConnectionOptions options);
 
-  ~FileConnection() final = default;
+  ~FileConnection() = default;
 
- private:
-
+ protected:
   //
   // |fuchsia.io/Node| operations.
   //
@@ -48,20 +47,10 @@ class FileConnection final : public Connection, public llcpp::fuchsia::io::File:
   // |fuchsia.io/File| operations.
   //
 
-  void Read(uint64_t count, ReadCompleter::Sync completer) final;
-  void ReadAt(uint64_t count, uint64_t offset, ReadAtCompleter::Sync completer) final;
-  void Write(fidl::VectorView<uint8_t> data, WriteCompleter::Sync completer) final;
-  void WriteAt(fidl::VectorView<uint8_t> data, uint64_t offset,
-               WriteAtCompleter::Sync completer) final;
-  void Seek(int64_t offset, llcpp::fuchsia::io::SeekOrigin start,
-            SeekCompleter::Sync completer) final;
   void Truncate(uint64_t length, TruncateCompleter::Sync completer) final;
   void GetFlags(GetFlagsCompleter::Sync completer) final;
   void SetFlags(uint32_t flags, SetFlagsCompleter::Sync completer) final;
   void GetBuffer(uint32_t flags, GetBufferCompleter::Sync completer) final;
-
-  // Current seek offset.
-  size_t offset_ = 0;
 };
 
 }  // namespace internal

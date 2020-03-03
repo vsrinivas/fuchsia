@@ -28,6 +28,10 @@ Vnode::~Vnode() = default;
 
 #ifdef __Fuchsia__
 
+zx_status_t Vnode::CreateStream(uint32_t stream_options, zx::stream* out_stream) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
 zx_status_t Vnode::ConnectService(zx::channel channel) { return ZX_ERR_NOT_SUPPORTED; }
 
 void Vnode::HandleFsSpecificMessage(fidl_msg_t* msg, fidl::Transaction* txn) {
@@ -137,6 +141,8 @@ zx_status_t Vnode::Write(const void* data, size_t len, size_t offset, size_t* ou
 zx_status_t Vnode::Append(const void* data, size_t len, size_t* out_end, size_t* out_actual) {
   return ZX_ERR_NOT_SUPPORTED;
 }
+
+void Vnode::DidModifyStream() {}
 
 zx_status_t Vnode::Lookup(fbl::RefPtr<Vnode>* out, fbl::StringPiece name) {
   return ZX_ERR_NOT_SUPPORTED;

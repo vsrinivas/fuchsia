@@ -10,6 +10,8 @@ zx_library("fs") {
     "fs/internal/fidl_transaction.h",
     "fs/internal/file_connection.h",
     "fs/internal/node_connection.h",
+    "fs/internal/remote_file_connection.h",
+    "fs/internal/stream_file_connection.h",
     "fs/lazy_dir.h",
     "fs/locking.h",
     "fs/managed_vfs.h",
@@ -68,7 +70,9 @@ zx_library("fs") {
       "pseudo_dir.cc",
       "pseudo_file.cc",
       "remote_dir.cc",
+      "remote_file_connection.cc",
       "service.cc",
+      "stream_file_connection.cc",
       "synchronous_vfs.cc",
       "tracked_remote_dir.cc",
       "unmount.cc",
@@ -129,7 +133,9 @@ if (is_fuchsia) {
       "pseudo_dir.cc",
       "pseudo_file.cc",
       "remote_dir.cc",
+      "remote_file_connection.cc",
       "service.cc",
+      "stream_file_connection.cc",
       "synchronous_vfs.cc",
       "tracked_remote_dir.cc",
       "unmount.cc",
@@ -180,7 +186,6 @@ if (is_fuchsia) {
     ]
   }
 }
-
 
 group("posix") {
   deps = [ "posix:posix_tests" ]
