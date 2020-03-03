@@ -40,6 +40,10 @@ if (is_fuchsia) {
     testonly = true
     sources = []
     deps = [ ":common" ]
+
+    # TODO(46873): Fix the leaks and remove this.
+    deps +=
+        [ "$zx/public/gn/config/instrumentation:suppress-lsan.DO-NOT-USE-THIS" ]
   }
 
   zx_test("fidl") {
