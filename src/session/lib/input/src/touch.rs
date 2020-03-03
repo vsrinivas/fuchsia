@@ -172,15 +172,8 @@ pub struct ContactDeviceDescriptor {
 ///
 /// The [`TouchBinding`] parses and exposes touch descriptor properties (e.g., the range of
 /// possible x values for touch contacts) for the device it is associated with.
-/// It also parses [`InputReport`]s from the device, and sends them to clients
-/// via [`TouchBinding::input_event_stream()`].
-///
-/// # Example
-/// ```
-/// let mut touch_device: TouchBinding = input_device::InputDeviceBinding::new().await?;
-///
-/// while let Some(report) = touch_device.input_event_stream().next().await {}
-/// ```
+/// It also parses [`InputReport`]s from the device, and sends them to the device binding owner over
+/// `event_sender`.
 pub struct TouchBinding {
     /// The channel to stream InputEvents to.
     event_sender: Sender<InputEvent>,
@@ -204,7 +197,7 @@ impl TouchBinding {
     /// Creates a new [`InputDeviceBinding`] from the `device_proxy`.
     ///
     /// The binding will start listening for input reports immediately and send new InputEvents
-    /// to the InputPipeline over `input_event_sender`.
+    /// to the device binding owner over `input_event_sender`.
     ///
     /// # Parameters
     /// - `device_proxy`: The proxy to bind the new [`InputDeviceBinding`] to.
@@ -234,8 +227,8 @@ impl TouchBinding {
     /// - `input_event_sender`: The channel to send new InputEvents to.
     ///
     /// # Errors
-    /// If the device descriptor could not be retrieved, or the descriptor could
-    /// not be parsed correctly.
+    /// If the device descriptor could not be retrieved, or the descriptor could not be parsed
+    /// correctly.
     async fn bind_device(
         device: &InputDeviceProxy,
         input_event_sender: Sender<input_device::InputEvent>,
@@ -269,7 +262,7 @@ impl TouchBinding {
 
     /// Parses an [`InputReport`] into one or more [`InputEvent`]s.
     ///
-    /// The [`InputEvent`]s are sent to the device binding owner via [`sender`].
+    /// The [`InputEvent`]s are sent to the device binding owner via [`input_event_sender`].
     ///
     /// # Parameters
     /// - `report`: The incoming [`InputReport`].

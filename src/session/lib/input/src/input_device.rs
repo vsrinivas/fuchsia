@@ -4,18 +4,13 @@
 
 use {
     crate::{keyboard, mouse, touch},
-    anyhow::{format_err, Context, Error},
+    anyhow::{format_err, Error},
     async_trait::async_trait,
     fdio,
     fidl_fuchsia_input_report::{InputDeviceMarker, InputReport},
-    fidl_fuchsia_io::OPEN_RIGHT_READABLE,
     fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::channel::mpsc::Sender,
-    io_util::open_directory_in_namespace,
-    std::{
-        fs::{read_dir, ReadDir},
-        path::{Path, PathBuf},
-    },
+    std::path::PathBuf,
 };
 
 /// The buffer size for the stream that InputEvents are sent over.
@@ -83,17 +78,8 @@ pub enum InputDeviceType {
 /// [`InputDeviceBinding`]s expose information about the bound device. For example, a
 /// [`MouseBinding`] exposes the ranges of possible x and y values the device can generate.
 ///
-/// An [`InputDeviceBinding`] also forwards the bound input device's input report stream.
-/// The receiving end of the input stream is accessed by
-/// [`InputDeviceBinding::input_event_stream()`].
-///
-/// # Example
-///
-/// ```
-/// let mouse_binding = InputDeviceBinding::new().await;
-/// while let Some(input_event) = mouse_binding.input_event_stream().next().await {
-///     // Handle the input event.
-/// }
+/// An [`InputPipeline`] manages [`InputDeviceBinding`]s and holds the receiving end of a channel
+/// that an [`InputDeviceBinding`]s send [`InputEvent`]s over.
 /// ```
 #[async_trait]
 pub trait InputDeviceBinding: Send {
@@ -179,34 +165,6 @@ pub async fn is_device_type(
     }
 }
 
-/// Returns all the devices of the given device type.
-///
-/// # Parameters
-/// - `device_type`: The type of devices to return.
-///
-/// # Errors
-/// If the input device directory cannot be read.
-pub async fn all_devices(
-    device_type: InputDeviceType,
-) -> Result<Vec<fidl_fuchsia_input_report::InputDeviceProxy>, Error> {
-    let input_report_dir = Path::new(INPUT_REPORT_PATH);
-    let entries: ReadDir = read_dir(input_report_dir)
-        .with_context(|| format!("Failed to read input report directory {}", INPUT_REPORT_PATH))?;
-    let dir_proxy = open_directory_in_namespace(INPUT_REPORT_PATH, OPEN_RIGHT_READABLE)?;
-
-    let mut devices: Vec<fidl_fuchsia_input_report::InputDeviceProxy> = vec![];
-    for entry in entries.filter_map(Result::ok) {
-        let entry_path = PathBuf::from(entry.file_name());
-        if let Ok(input_device) = get_device_from_dir_entry_path(&dir_proxy, &entry_path) {
-            if is_device_type(&input_device, device_type).await {
-                devices.push(input_device);
-            }
-        }
-    }
-
-    Ok(devices)
-}
-
 /// Returns a new [`InputDeviceBinding`] of the given device type.
 ///
 /// # Parameters
@@ -231,14 +189,14 @@ pub async fn get_device_binding(
     }
 }
 
-/// Returns a proxy to the InputDevice in `entry` if it exists.
+/// Returns a proxy to the InputDevice in `entry_path` if it exists.
 ///
 /// # Parameters
 /// - `dir_proxy`: The directory containing InputDevice connections.
-/// - `entry`: The directory entry that contains an InputDevice.
+/// - `entry_path`: The directory entry that contains an InputDevice.
 ///
 /// # Errors
-/// If there is an error connecting to the InputDevice in `entry`.
+/// If there is an error connecting to the InputDevice in `entry_path`.
 pub fn get_device_from_dir_entry_path(
     dir_proxy: &fidl_fuchsia_io::DirectoryProxy,
     entry_path: &PathBuf,

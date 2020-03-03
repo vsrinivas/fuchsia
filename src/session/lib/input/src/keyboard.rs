@@ -64,17 +64,9 @@ pub struct KeyboardDeviceDescriptor {
 
 /// A [`KeyboardBinding`] represents a connection to a keyboard input device.
 ///
-/// The [`KeyboardBinding`] parses and exposes keyboard device descriptor properties (e.g., the available
-/// keyboard keys) for the device it is associated with. It also parses [`InputReport`]s
-/// from the device, and sends them to clients via the stream available at
-/// [`KeyboardBinding::input_event_stream()`].
-///
-/// # Example
-/// ```
-/// let mut keyboard_device: KeyboardBinding = input_device::InputDeviceBinding::new().await?;
-///
-/// while let Some(report) = keyboard_device.input_event_stream().next().await {}
-/// ```
+/// The [`KeyboardBinding`] parses and exposes keyboard device descriptor properties (e.g., the
+/// available keyboard keys) for the device it is associated with. It also parses [`InputReport`]s
+/// from the device, and sends them to the device binding owner over `event_sender`.
 pub struct KeyboardBinding {
     /// The channel to stream InputEvents to.
     event_sender: Sender<input_device::InputEvent>,
@@ -98,7 +90,7 @@ impl KeyboardBinding {
     /// Creates a new [`InputDeviceBinding`] from the `device_proxy`.
     ///
     /// The binding will start listening for input reports immediately and send new InputEvents
-    /// to the InputPipeline over `input_event_sender`.
+    /// to the device binding owner over `input_event_sender`.
     ///
     /// # Parameters
     /// - `device_proxy`: The proxy to bind the new [`InputDeviceBinding`] to.
@@ -123,8 +115,8 @@ impl KeyboardBinding {
 
     /// Converts a vector of keyboard keys to the appropriate [`Modifiers`] bitflags.
     ///
-    /// For example, if `keys` contains `Key::LeftAlt`, the bitflags will contain
-    /// the corresponding flags for `LeftAlt`.
+    /// For example, if `keys` contains `Key::LeftAlt`, the bitflags will contain the corresponding
+    /// flags for `LeftAlt`.
     ///
     /// # Parameters
     /// - `keys`: The keys to check for modifiers.
@@ -165,8 +157,8 @@ impl KeyboardBinding {
     /// - `input_event_sender`: The channel to send new InputEvents to.
     ///
     /// # Errors
-    /// If the device descriptor could not be retrieved, or the descriptor could
-    /// not be parsed correctly.
+    /// If the device descriptor could not be retrieved, or the descriptor could not be parsed
+    /// correctly.
     async fn bind_device(
         device: &InputDeviceProxy,
         input_event_sender: Sender<input_device::InputEvent>,
@@ -189,7 +181,7 @@ impl KeyboardBinding {
 
     /// Parses an [`InputReport`] into one or more [`InputEvent`]s.
     ///
-    /// The [`InputEvent`]s are sent to the device binding owner via [`sender`].
+    /// The [`InputEvent`]s are sent to the device binding owner via [`input_event_sender`].
     ///
     /// # Parameters
     /// `report`: The incoming [`InputReport`].
