@@ -236,6 +236,9 @@ void PrintMouseInputReport(Printer* printer,
   if (mouse_report.has_movement_y()) {
     printer->Print("Movement y: %08ld\n", mouse_report.movement_y());
   }
+  if (mouse_report.has_scroll_v()) {
+    printer->Print("Scroll v: %08ld\n", mouse_report.scroll_v());
+  }
   if (mouse_report.has_pressed_buttons()) {
     for (uint8_t button : mouse_report.pressed_buttons()) {
       printer->Print("Button %02d pressed\n", button);

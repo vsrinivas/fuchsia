@@ -21,6 +21,7 @@ zx_library("hid") {
     "hid/paradise.h",
     "hid/samsung.h",
     "hid/usages.h",
+    "hid/mouse.h",
   ]
   sources = [
     "acer12.c",
@@ -37,6 +38,7 @@ zx_library("hid") {
     "hid.c",
     "keymaps.c",
     "ltr-578als.c",
+    "mouse.c",
     "paradise.c",
     "samsung.c",
     "visalia-touch.c",

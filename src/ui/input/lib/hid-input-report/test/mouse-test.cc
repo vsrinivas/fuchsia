@@ -7,6 +7,7 @@
 #include <variant>
 
 #include <hid/boot.h>
+#include <hid/mouse.h>
 #include <zxtest/zxtest.h>
 
 #include "src/ui/input/lib/hid-input-report/device.h"
@@ -62,4 +63,42 @@ TEST(MouseTest, BootMouse) {
   EXPECT_EQ(1, mouse_report->buttons_pressed[0]);
   EXPECT_EQ(2, mouse_report->buttons_pressed[1]);
   EXPECT_EQ(3, mouse_report->buttons_pressed[2]);
+}
+
+TEST(MouseTest, ScrollMouse) {
+  hid::DeviceDescriptor* dev_desc = nullptr;
+  {
+    size_t descriptor_size;
+    const uint8_t* descriptor = get_scroll_mouse_report_desc(&descriptor_size);
+    auto parse_res = hid::ParseReportDescriptor(descriptor, descriptor_size, &dev_desc);
+    ASSERT_EQ(hid::ParseResult::kParseOk, parse_res);
+  }
+
+  hid_input_report::Mouse mouse;
+
+  EXPECT_EQ(hid_input_report::ParseResult::kOk,
+            mouse.ParseReportDescriptor(dev_desc->report[0]));
+  hid_input_report::ReportDescriptor report_descriptor = mouse.GetDescriptor();
+
+  hid_input_report::MouseDescriptor* mouse_descriptor =
+      std::get_if<hid_input_report::MouseDescriptor>(&report_descriptor.descriptor);
+  ASSERT_NOT_NULL(mouse_descriptor);
+
+  EXPECT_TRUE(mouse_descriptor->input->scroll_v);
+  EXPECT_EQ(-127, mouse_descriptor->input->scroll_v->range.min);
+  EXPECT_EQ(127, mouse_descriptor->input->scroll_v->range.max);
+
+  hid_scroll_mouse_report_t report_data = {};
+  report_data.scroll = 100;
+
+  hid_input_report::InputReport report = {};
+  EXPECT_EQ(hid_input_report::ParseResult::kOk,
+            mouse.ParseInputReport(reinterpret_cast<uint8_t*>(&report_data), sizeof(report_data),
+                                   &report));
+
+  hid_input_report::MouseInputReport* mouse_report =
+      std::get_if<hid_input_report::MouseInputReport>(&report.report);
+  ASSERT_NOT_NULL(mouse_report);
+  EXPECT_TRUE(mouse_report->scroll_v);
+  EXPECT_EQ(100, mouse_report->scroll_v);
 }

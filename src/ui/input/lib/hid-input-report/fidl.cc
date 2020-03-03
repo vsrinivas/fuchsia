@@ -37,6 +37,12 @@ void SetMouseInputReport(FidlMouseInputReport* report) {
   if (report->data.movement_y) {
     report->builder.set_movement_y(fidl::unowned(&report->data.movement_y.value()));
   }
+  if (report->data.scroll_v) {
+    report->builder.set_scroll_v(fidl::unowned(&report->data.scroll_v.value()));
+  }
+  if (report->data.scroll_h) {
+    report->builder.set_scroll_h(fidl::unowned(&report->data.scroll_h.value()));
+  }
   report->buttons_view = fidl::VectorView<uint8_t>(report->data.buttons_pressed.data(),
                                                    report->data.num_buttons_pressed);
 

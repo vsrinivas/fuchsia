@@ -65,6 +65,7 @@ TEST(FidlTest, MouseInputReport) {
   hid_input_report::MouseInputReport mouse = {};
   mouse.movement_x = 100;
   mouse.movement_y = 200;
+  mouse.scroll_v = 100;
   mouse.num_buttons_pressed = 3;
   mouse.buttons_pressed[0] = 1;
   mouse.buttons_pressed[1] = 10;
@@ -84,6 +85,7 @@ TEST(FidlTest, MouseInputReport) {
   // Check the fields.
   ASSERT_EQ(mouse.movement_x, new_mouse.movement_x);
   ASSERT_EQ(mouse.movement_y, new_mouse.movement_y);
+  ASSERT_EQ(mouse.scroll_v, new_mouse.scroll_v);
 
   ASSERT_EQ(mouse.num_buttons_pressed, new_mouse.num_buttons_pressed);
   for (size_t i = 0; i < mouse.num_buttons_pressed; i++) {

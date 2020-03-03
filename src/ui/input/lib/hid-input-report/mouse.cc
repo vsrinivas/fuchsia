@@ -18,6 +18,7 @@ namespace hid_input_report {
 ParseResult Mouse::ParseReportDescriptor(const hid::ReportDescriptor& hid_report_descriptor) {
   hid::Attributes movement_x = {};
   hid::Attributes movement_y = {};
+  hid::Attributes scroll_v = {};
   hid::Attributes buttons[fuchsia_input_report::MOUSE_MAX_NUM_BUTTONS];
   uint8_t num_buttons = 0;
 
@@ -34,6 +35,10 @@ ParseResult Mouse::ParseReportDescriptor(const hid::ReportDescriptor& hid_report
                hid::USAGE(hid::usage::Page::kGenericDesktop, hid::usage::GenericDesktop::kY)) {
       movement_y = field.attr;
       mouse_descriptor.movement_y = LlcppAxisFromAttribute(movement_y);
+    } else if (field.attr.usage ==
+               hid::USAGE(hid::usage::Page::kGenericDesktop, hid::usage::GenericDesktop::kWheel)) {
+      scroll_v = field.attr;
+      mouse_descriptor.scroll_v = LlcppAxisFromAttribute(scroll_v);
     } else if (field.attr.usage.page == hid::usage::Page::kButton) {
       if (num_buttons == fuchsia_input_report::MOUSE_MAX_NUM_BUTTONS) {
         return ParseResult::kTooManyItems;
@@ -46,6 +51,7 @@ ParseResult Mouse::ParseReportDescriptor(const hid::ReportDescriptor& hid_report
   // No error, write to class members.
   movement_x_ = movement_x;
   movement_y_ = movement_y;
+  scroll_v_ = scroll_v;
   for (size_t i = 0; i < num_buttons; i++) {
     buttons_[i] = buttons[i];
   }
@@ -82,6 +88,12 @@ ParseResult Mouse::ParseInputReport(const uint8_t* data, size_t len, InputReport
     double value_out;
     if (hid::ExtractAsUnitType(data, len, movement_y_, &value_out)) {
       mouse_report.movement_y = static_cast<int64_t>(value_out);
+    }
+  }
+  if (descriptor_.input->scroll_v) {
+    double value_out;
+    if (hid::ExtractAsUnitType(data, len, scroll_v_, &value_out)) {
+      mouse_report.scroll_v = static_cast<int64_t>(value_out);
     }
   }
   for (size_t i = 0; i < num_buttons_; i++) {
