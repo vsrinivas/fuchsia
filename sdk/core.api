@@ -43,6 +43,7 @@ sdk://fidl/fuchsia.inspect
 sdk://fidl/fuchsia.intl
 sdk://fidl/fuchsia.io
 sdk://fidl/fuchsia.ldsvc
+sdk://fidl/fuchsia.legacymetrics
 sdk://fidl/fuchsia.location.namedplace
 sdk://fidl/fuchsia.logger
 sdk://fidl/fuchsia.math
