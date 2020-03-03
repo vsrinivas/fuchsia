@@ -1373,7 +1373,7 @@ void dump_thread_locked(Thread* t, bool full_dump) {
   if (full_dump) {
     dprintf(INFO, "dump_thread: t %p (%s:%s)\n", t, oname, t->name_);
     dprintf(INFO,
-            "\tstate %s, curr/last cpu %d/%d, hard_affinity %#x, soft_cpu_affinty %#x, "
+            "\tstate %s, curr/last cpu %d/%d, hard_affinity %#x, soft_cpu_affinity %#x, "
             "priority %d [%d:%d,%d], remaining time slice %" PRIi64 "\n",
             thread_state_to_str(t->state_), (int)t->curr_cpu_, (int)t->last_cpu_, t->hard_affinity_,
             t->soft_affinity_, t->effec_priority_, t->base_priority_, t->priority_boost_,
