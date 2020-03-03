@@ -8,7 +8,7 @@ The Regulatory Region Service provides the abilities to
 
 ## Building
 
-* This project can be added to builds by including `--with
+* To add this project to your build, append `--with
   //src/connectivity/location/regulatory_region` in the `fx set` invocation.
 * To include tests, add `--with //src/connectivity/location/regulatory_region:tests`.
 

@@ -12,7 +12,7 @@ systems.
 
 ## Building
 
-This project can be added to builds by including `--with //src/sys/cmc` to the
+To add this project to your build, append `--with //src/sys/cmc` to the
 `fx set` invocation.
 
 ## Running

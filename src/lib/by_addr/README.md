@@ -6,7 +6,7 @@ Reviewed on: 2019-09-24
 
 ## Building
 
-This project can be added to builds by including `--with
+To add this project to your build, append `--with
 //src/sys/lib/by_addr` to the `fx set` invocation.
 
 ## Using

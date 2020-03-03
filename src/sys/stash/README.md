@@ -13,7 +13,7 @@ FIDL. More details on writing a program that uses stash is available
 
 ## Building
 
-This project can be added to builds by including `--with //src/sys/stash` to
+To add this project to your build, append `--with //src/sys/stash` to
 the `fx set` invocation.
 
 ## Running

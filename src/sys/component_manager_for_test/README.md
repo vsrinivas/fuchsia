@@ -8,7 +8,7 @@ manager which is started during boot.
 
 ## Building
 
-This project can be added to builds by including `--with //src/sys/component_manager_for_test` to the `fx
+To add this project to your build, append `--with //src/sys/component_manager_for_test` to the `fx
 set` invocation.
 
 ## Running

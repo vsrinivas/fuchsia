@@ -6,7 +6,7 @@ This directory contains the example program for the Inspect C++ Codelab.
 
 ## Building
 
-This project can be added to builds by including `--with
+To add this project to your build, append `--with
 //src/diagnostics/examples/inspect/cpp` to the `fx set` invocation.
 
 ## Running

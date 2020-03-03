@@ -7,7 +7,7 @@ Reviewed on: 2019-07-22
 
 ## Building
 
-This project can be added to builds by including `--with
+To add this project to your build, append `--with
 //garnet/bin/log_listener` to the `fx set` invocation.
 
 ## Running

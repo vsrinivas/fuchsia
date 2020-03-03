@@ -5,7 +5,7 @@ Reviewed on: 2020-02-04
 
 ## Building
 
-This project can be added to builds by including `--with-base //src/session/tools:all` to the `fx set` invocation.
+To add this project to your build, append `--with-base //src/session/tools:all` to the `fx set` invocation.
 
 It is also included in the larger `--with-base //src/session` target.
 

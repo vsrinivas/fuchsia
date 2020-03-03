@@ -7,7 +7,7 @@ It provides basic utility APIs.
 
 ## Building
 
-This project can be added to builds by including `--with //src/sys/lib/runner`
+To add this project to your build, append `--with //src/sys/lib/runner`
 to the `fx set` invocation.
 
 ## Using

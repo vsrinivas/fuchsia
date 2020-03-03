@@ -8,7 +8,7 @@ package URLs. Docs are available
 
 ## Building
 
-This project can be added to builds by including `--with //src/lib/fuchsia-url`
+To add this project to your build, append `--with //src/lib/fuchsia-url`
 to the `fx set` invocation.
 
 ## Using

@@ -8,7 +8,7 @@ to the specification.
 
 ## Building
 
-This project can be added to builds by including `--with //src/diagnostics/inspect_validator/lib/cpp:tests`
+To add this project to your build, append `--with //src/diagnostics/inspect_validator/lib/cpp:tests`
 to the `fx set` invocation.
 
 For example:

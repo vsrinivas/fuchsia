@@ -12,7 +12,7 @@ selector configuration.
 
 ## Building
 
-This project can be added to builds by including `--with //src/diagnostics/tool:diag_tool_host`
+To add this project to your build, append `--with //src/diagnostics/tool:diag_tool_host`
 to the `fx set` invocation.
 
 For example:

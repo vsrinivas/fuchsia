@@ -10,7 +10,7 @@ See also: `//src/sys/locate`
 
 ## Building
 
-This project can be added to builds by including `--with
+To add this project to your build, append `--with
 //src/sys/component_index` to the `fx set` invocation.
 
 ## Running

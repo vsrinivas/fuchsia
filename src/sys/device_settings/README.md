@@ -8,7 +8,7 @@ new clients should favor stash over `device_settings`.
 
 ## Building
 
-This project can be added to builds by including `--with
+To add this project to your build, append `--with
 //src/sys/device_settings` to the `fx set` invocation.
 
 ## Running

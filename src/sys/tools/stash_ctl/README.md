@@ -9,7 +9,7 @@ interacting with data store in stash by other clients.
 
 ## Building
 
-This project can be added to builds by including `--with //src/sys/tools/stash_ctl`
+To add this project to your build, append `--with //src/sys/tools/stash_ctl`
 to the `fx set` invocation.
 
 ## Running

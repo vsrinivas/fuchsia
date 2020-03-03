@@ -7,7 +7,7 @@ configuration files.
 
 ## Building
 
-This project can be added to builds by including `--with //src/diagnostics/triage`
+To add this project to your build, append `--with //src/diagnostics/triage`
 in the `fx set` invocation.
 
 For example:

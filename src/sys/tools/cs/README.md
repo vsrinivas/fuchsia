@@ -8,7 +8,7 @@ current state of the v1 component topology as run under
 
 ## Building
 
-This project can be added to builds by including `--with //src/sys/tools/cs` to the
+To add this project to your build, append `--with //src/sys/tools/cs` to the
 `fx set` invocation.
 
 ## Running
