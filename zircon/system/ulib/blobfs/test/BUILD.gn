@@ -49,6 +49,7 @@ test("blobfs-unit") {
     "unit/allocated-extent-iterator-test.cc",
     "unit/allocator-test.cc",
     "unit/blob-cache-test.cc",
+    "unit/blob-test.cc",
     "unit/blobfs-checker-test.cc",
     "unit/blobfs-pager-test.cc",
     "unit/blobfs-test.cc",

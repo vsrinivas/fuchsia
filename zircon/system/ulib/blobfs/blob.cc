@@ -1011,6 +1011,10 @@ zx_status_t Blob::GetAttributes(fs::VnodeAttributes* a) {
 zx_status_t Blob::Truncate(size_t len) {
   TRACE_DURATION("blobfs", "Blob::Truncate", "len", len);
   auto event = blobfs_->Metrics().NewLatencyEvent(fs_metrics::Event::kTruncate);
+  if (len > 0 && fbl::round_up(len, kBlobfsBlockSize) == 0) {
+    // Fail early if |len| would overflow when rounded up to block size.
+    return ZX_ERR_OUT_OF_RANGE;
+  }
   return SpaceAllocate(len);
 }
 
