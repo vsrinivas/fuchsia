@@ -47,6 +47,8 @@ using testing::SizeIs;
 namespace ledger {
 namespace {
 
+constexpr int kEntryCountToSendBeforeFlushing = 200;
+
 std::string ToString(const fuchsia::mem::BufferPtr& vmo) {
   std::string value;
   bool status = StringFromVmo(*vmo, &value);
@@ -147,6 +149,11 @@ class PageImplTest : public TestWithEnvironment {
     for (int i = 0; i < entry_count; ++i) {
       page_ptr_->Put(convert::ToArray(GetKey(i, min_key_size)),
                      convert::ToArray(GetValue(i, min_value_size)));
+      if (i % kEntryCountToSendBeforeFlushing == 0) {
+        // Drain the loop every so often, otherwise the kernel will kill the
+        // test because it queues too many messages on a channel.
+        DrainLoop();
+      }
     }
     page_ptr_->Commit();
   }
