@@ -268,6 +268,13 @@ When running an entropy collector quality test, use the provided entropy source.
 Currently recognized sources: `hw_rng`, `jitterentropy`. This option is ignored
 unless the kernel was built with `ENABLE_ENTROPY_COLLECTOR_TEST=1`.
 
+## kernel.force-watchdog-disabled=\<bool>
+
+If this option is set (disabled by default), the system will attempt to disable
+any hardware watchdog timer armed and passed by the bootloader as soon as it
+possibly can in the boot sequence, presuming that the bootloader provides enough
+information to know how to disable the WDT at all.
+
 ## kernel.halt-on-panic=\<bool>
 
 If this option is set (disabled by default), the system will halt on

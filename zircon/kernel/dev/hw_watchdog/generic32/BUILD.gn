@@ -6,5 +6,8 @@
 
 source_set("generic32") {
   sources = [ "hw_watchdog.cc" ]
-  deps = [ "$zx/kernel/dev/pdev" ]
+  deps = [
+    "$zx/kernel/dev/pdev",
+    "$zx/kernel/lib/cmdline",
+  ]
 }

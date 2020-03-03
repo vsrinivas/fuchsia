@@ -4,6 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/cmdline.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <platform.h>
 #include <reg.h>
@@ -18,6 +19,10 @@
 #include <pdev/driver.h>
 #include <pdev/watchdog.h>
 #include <vm/physmap.h>
+
+namespace {
+constexpr const char* kForceDisableWatchdogCmdLineFlag = "kernel.force-watchdog-disabled";
+}
 
 class GenericWatchdog32 {
  public:
@@ -168,15 +173,21 @@ void GenericWatchdog32::InitEarly(const void* driver_data, uint32_t length) {
   // Record our initial enabled/disabled state.
   is_enabled_ = (cfg_.flags & KDRV_GENERIC_32BIT_WATCHDOG_FLAG_ENABLED) != 0;
 
+  // If we are currently enabled, be sure to pet the dog ASAP.  We don't want it
+  // to fire while we are bringing up the kernel to the point where we can do
+  // stuff like set timers.  In addition, if the cmd-line flag was passed to
+  // force disable the watchdog, do so if possible just after we have pet it.
+  PetLocked();
+  if (gCmdline.GetBool(kForceDisableWatchdogCmdLineFlag, false) && is_enabled_ &&
+      cfg_.disable_action.addr) {
+    TakeAction(cfg_.disable_action);
+    is_enabled_ = false;
+  }
+
   // Register our driver.  Note that the pdev layer is going to hold onto our
   // thunk table, not make a copy.  We need to be sure that we don't let our
   // table go out of scope (which is why it is file local).
   pdev_register_watchdog(&THUNKS);
-
-  // Finally, if we are currently enabled, be sure to pet the dog ASAP.  We
-  // don't want it to fire while we are bringing up the kernel to the point
-  // where we can do stuff like set timers.
-  PetLocked();
 
   // Things went well.  Make sure the later init stage knows that.
   early_init_result_ = ZX_OK;
@@ -203,6 +214,17 @@ void GenericWatchdog32::Init(const void*, uint32_t) {
   dprintf(INFO, "WDT: Generic watchdog driver loaded.  Period (%ld.%03ld mSec) Enabled (%s)\n",
           timeout_nsec() / ZX_MSEC(1), (timeout_nsec() % ZX_MSEC(1)) / ZX_USEC(1),
           is_enabled_ ? "yes" : "no");
+
+  // If the force disable cmd line flag was passed, report that here.
+  if (gCmdline.GetBool(kForceDisableWatchdogCmdLineFlag, false)) {
+    if (cfg_.disable_action.addr) {
+      dprintf(INFO, "WDT: %s was set, watchdog was force-disabled\n",
+              kForceDisableWatchdogCmdLineFlag);
+    } else {
+      dprintf(INFO, "WDT: %s was set, but the watchdog cannot be disabled.  It is currently %s.\n",
+              kForceDisableWatchdogCmdLineFlag, is_enabled_ ? "enabled" : "disabled");
+    }
+  }
 
   // If we are enabled, pet the dog now and set our pet timer.
   HandlePetTimer();
