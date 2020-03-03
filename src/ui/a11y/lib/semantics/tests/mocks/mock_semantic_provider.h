@@ -27,6 +27,8 @@ class MockSemanticProvider {
 
   zx_koid_t koid() const { return a11y::GetKoid(view_ref_); };
 
+  const fuchsia::ui::views::ViewRef& view_ref() { return view_ref_; }
+
   // Calls UpdateSemanticNodes() on SemanticTree with given nodes list.
   void UpdateSemanticNodes(std::vector<fuchsia::accessibility::semantics::Node> nodes);
 

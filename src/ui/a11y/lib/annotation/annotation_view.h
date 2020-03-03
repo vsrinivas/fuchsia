@@ -13,6 +13,7 @@
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 
 #include <memory>
+#include <optional>
 
 #include "src/ui/a11y/lib/view/view_manager.h"
 
@@ -30,15 +31,15 @@ class AnnotationView : public fuchsia::ui::scenic::SessionListener {
     // True after the annotation view's node tree has been set up.
     bool tree_initialized = false;
 
-    // True if annotations are currently displayed, and false otherwise.
-    bool has_annotations = false;
+    // True if annotations are currently attached to client view, and false otherwise.
+    bool view_content_attached = false;
 
     // Node id for currently annotated node, if any.
-    bool annotated_node_id = 0;
+    std::optional<uint32_t> annotated_node_id = {};
   };
 
-  explicit AnnotationView(sys::ComponentContext* component_context,
-                          a11y::ViewManager* semantics_manager, zx_koid_t client_view_koid);
+  explicit AnnotationView(sys::ComponentContext* component_context, a11y::ViewManager* view_manager,
+                          zx_koid_t client_view_koid);
 
   ~AnnotationView() = default;
 
@@ -55,10 +56,32 @@ class AnnotationView : public fuchsia::ui::scenic::SessionListener {
   // view.
   void DetachViewContents();
 
+  zx_koid_t koid() { return client_view_koid_; }
+
+  // Width of the four rectangles that constitute the boundaries of the highlight.
+  static constexpr float kHighlightEdgeThickness = 0.01f;
+
+  // IDs for resources common to all annotation views.
+  static constexpr uint32_t kAnnotationViewId = 1;
+  static constexpr uint32_t kContentNodeId = 2;
+  static constexpr uint32_t kHighlightMaterialId = 3;
+  static constexpr uint32_t kHighlightLeftEdgeNodeId = 4;
+  static constexpr uint32_t kHighlightRightEdgeNodeId = 5;
+  static constexpr uint32_t kHighlightTopEdgeNodeId = 6;
+  static constexpr uint32_t kHighlightBottomEdgeNodeId = 7;
+
  private:
   // Helper function to draw four rectangles corresponding to the top, bottom, left, and right edges
   // of a node's bounding box.
   void DrawHighlight(const fuchsia::accessibility::semantics::Node* node);
+
+  // Draws a rectangle to represent one edge of a highlight bounding box.
+  void DrawHighlightEdge(std::vector<fuchsia::ui::scenic::Command>* cmds, int parent_node_id,
+                         float width, float height, float center_x, float center_y,
+                         float elevation);
+
+  // Creates a node to hold one of the four highlight rectangle edges.
+  void CreateHighlightEdgeNode(std::vector<fuchsia::ui::scenic::Command>* cmds, int edge_node_id);
 
   // Helper function to build a list of commands to enqueue.
   static void PushCommand(std::vector<fuchsia::ui::scenic::Command>* cmds,
@@ -91,6 +114,8 @@ class AnnotationView : public fuchsia::ui::scenic::SessionListener {
   // Interface between a11y manager and Scenic annotation registry to register annotation
   // viewholder with Scenic.
   fuchsia::ui::annotation::RegistryPtr annotation_registry_;
+
+  uint32_t next_resource_id_ = 8;
 };
 
 }  // namespace a11y
