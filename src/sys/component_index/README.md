@@ -6,10 +6,12 @@ Reviewed on: 2019-07-11
 [`fuchsia.sys.index.ComponentIndex`](fidl/index.fidl) service, which is used on
 Fuchsia devices to convert human input into component URLs for developers.
 
+See also: `//src/sys/locate`
+
 ## Building
 
 This project can be added to builds by including `--with
-//src/sys/component_idex` to the `fx set` invocation.
+//src/sys/component_index` to the `fx set` invocation.
 
 ## Running
 
