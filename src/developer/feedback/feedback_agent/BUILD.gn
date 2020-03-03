@@ -167,8 +167,8 @@ source_set("feedback_agent_src") {
   ]
 
   public_deps = [
+    ":inspect_manager",
     "//sdk/fidl/fuchsia.feedback",
-    "//sdk/lib/sys/inspect/cpp",
     "//src/developer/feedback/utils:files",
     "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
@@ -189,6 +189,19 @@ source_set("feedback_id") {
     "//src/lib/syslog/cpp",
     "//src/lib/uuid",
   ]
+}
+
+source_set("inspect_manager") {
+  public = [ "inspect_manager.h" ]
+
+  sources = [
+    "inspect_manager.cc",
+    "inspect_manager.h",
+  ]
+
+  deps = [ "//src/lib/fxl" ]
+
+  public_deps = [ "//src/developer/feedback/utils:inspect_node_manager" ]
 }
 
 source_set("system_log_recorder_src") {

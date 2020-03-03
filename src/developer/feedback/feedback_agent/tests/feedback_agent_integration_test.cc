@@ -324,9 +324,9 @@ class FeedbackAgentIntegrationTest : public sys::testing::TestWithEnvironment {
 
     ASSERT_TRUE(data.is_ok());
     EXPECT_EQ(rapidjson::Value(expected_total_num_connections),
-              data.value().GetByPath({"root", "total_num_connections"}));
+              data.value().GetByPath({"root", "data_provider", "total_num_connections"}));
     EXPECT_EQ(rapidjson::Value(expected_current_num_connections),
-              data.value().GetByPath({"root", "current_num_connections"}));
+              data.value().GetByPath({"root", "data_provider", "current_num_connections"}));
   }
 
  private:

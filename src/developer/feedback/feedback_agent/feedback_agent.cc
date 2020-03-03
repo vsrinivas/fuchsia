@@ -38,9 +38,7 @@ void MovePreviousLogs() {
 
 }  // namespace
 
-FeedbackAgent::FeedbackAgent(inspect::Node* node)
-    : total_num_connections_(node, "total_num_connections", 0),
-      current_num_connections_(node, "current_num_connections", 0) {
+FeedbackAgent::FeedbackAgent(inspect::Node* node) : inspect_manager_(node) {
   // We need to move the logs from the previous boot before spawning the system log recorder process
   // so that the new process doesn't overwrite the old logs. Additionally, to guarantee the data
   // providers see the complete previous logs, this needs to be done before spawning any data
@@ -60,8 +58,6 @@ void FeedbackAgent::SpawnSystemLogRecorder() {
 
 void FeedbackAgent::SpawnNewDataProvider(
     fidl::InterfaceRequest<fuchsia::feedback::DataProvider> request) {
-  total_num_connections_.Add(1);
-
   // We spawn a new process to which we forward the channel of the incoming request so it can
   // handle it.
   fdio_spawn_action_t actions = {};
@@ -70,7 +66,8 @@ void FeedbackAgent::SpawnNewDataProvider(
   actions.h.handle = request.TakeChannel().release();
 
   const std::string process_name = "feedback_data_provider";
-  const std::string connection_id = fxl::StringPrintf("%03" PRIu64, total_num_connections_.Get());
+  const std::string connection_id =
+      fxl::StringPrintf("%03" PRIu64, next_data_provider_connection_id_++);
   const char* args[] = {
       process_name.c_str(),
       connection_id.c_str(),
@@ -92,29 +89,16 @@ void FeedbackAgent::SpawnNewDataProvider(
   on_process_exit_[process] = std::move(hook);
   on_process_exit_[process]->Begin(async_get_default_dispatcher());
 
-  current_num_connections_.Add(1);
+  inspect_manager_.IncrementNumDataProviderConnections();
 }
 
 void FeedbackAgent::TaskTerminated(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                                    zx_status_t status, const zx_packet_signal_t* signal) {
-  current_num_connections_.Add(-1);
+  inspect_manager_.DecrementCurrentNumDataProviderConnections();
   zx_handle_t process = wait->object();
   if (auto entry = on_process_exit_.find(process); entry != on_process_exit_.end()) {
     on_process_exit_.erase(entry);
   }
 }
-
-FeedbackAgent::Counter::Counter(inspect::Node* parent, const std::string& name,
-                                const uint64_t value)
-    : value_(value) {
-  metric_ = parent->CreateUint(std::move(name), value);
-}
-
-void FeedbackAgent::Counter::Add(int64_t delta) {
-  value_ += delta;
-  metric_.Add(delta);
-}
-
-uint64_t FeedbackAgent::Counter::Get() { return value_; }
 
 }  // namespace feedback

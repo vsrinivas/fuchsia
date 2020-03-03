@@ -7,8 +7,10 @@
 
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
-#include <lib/sys/inspect/cpp/component.h>
 
+#include <cstdint>
+
+#include "src/developer/feedback/feedback_agent/inspect_manager.h"
 #include "src/lib/fxl/macros.h"
 
 namespace feedback {
@@ -23,29 +25,17 @@ class FeedbackAgent {
   void SpawnNewDataProvider(fidl::InterfaceRequest<fuchsia::feedback::DataProvider> request);
 
  private:
-  class Counter {
-   public:
-    Counter(inspect::Node* parent, const std::string& name, uint64_t value);
-
-    void Add(int64_t delta);
-    uint64_t Get();
-
-   private:
-    uint64_t value_;
-    inspect::UintProperty metric_;
-  };
-
   void TaskTerminated(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                       const zx_packet_signal_t* signal);
+
+  InspectManager inspect_manager_;
+
+  uint64_t next_data_provider_connection_id_ = 1;
 
   // Maps each subprocess to what to do when it exits.
   std::map<zx_handle_t,
            std::unique_ptr<async::WaitMethod<FeedbackAgent, &FeedbackAgent::TaskTerminated>>>
       on_process_exit_;
-
-  // Inspect data.
-  Counter total_num_connections_;
-  Counter current_num_connections_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FeedbackAgent);
 };
