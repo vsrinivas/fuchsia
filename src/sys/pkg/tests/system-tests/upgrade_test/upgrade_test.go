@@ -210,37 +210,50 @@ func paveDevice(ctx context.Context, device *device.Client) (*sl4f.Client, error
 //
 // We can revert back to this code once we've figured out how to implement this
 // customization.
-/*
-func systemOTA(t *testing.T, ctx context.Context, device *device.Client, rpcClient **sl4f.Client, repo *packages.Repository, checkABR bool) {
+func systemOTA(
+	ctx context.Context,
+	device *device.Client,
+	rpcClient **sl4f.Client,
+	repo *packages.Repository,
+	checkABR bool,
+) error {
 	expectedSystemImageMerkle, err := repo.LookupUpdateSystemImageMerkle()
 	if err != nil {
-		log.Fatalf("error extracting expected system image merkle: %s", err)
+		return fmt.Errorf("error extracting expected system image merkle: %s", err)
 	}
 
 	expectedConfig, err := determineTargetConfig(ctx, *rpcClient)
 	if err != nil {
-		log.Fatalf("error determining target config: %s", err)
+		return fmt.Errorf("error determining target config: %s", err)
 	}
 
-	if isDeviceUpToDate(ctx, device, *rpcClient, expectedSystemImageMerkle) {
-		log.Fatalf("device already updated to the expected version %q", expectedSystemImageMerkle)
+	upToDate, err := isDeviceUpToDate(ctx, device, *rpcClient, expectedSystemImageMerkle)
+	if err != nil {
+		return fmt.Errorf("failed to check if device is up to date: %s", err)
+	}
+	if upToDate {
+		return fmt.Errorf("device already updated to the expected version %q", expectedSystemImageMerkle)
 	}
 
 	server, err := device.ServePackageRepository(ctx, repo, "upgrade_test")
 	if err != nil {
-		log.Fatalf("error setting up server: %s", err)
+		return fmt.Errorf("error setting up server: %s", err)
 	}
 	defer server.Shutdown(ctx)
 
 	if err := device.TriggerSystemOTA(ctx, repo, rpcClient); err != nil {
-		log.Fatalf("OTA failed: %s", err)
+		return fmt.Errorf("OTA failed: %s", err)
 	}
 
 	log.Printf("OTA complete, validating device")
-	validateDevice(t, ctx, device, *rpcClient, repo, expectedSystemImageMerkle, expectedConfig, checkABR)
-}
-*/
+	if err := validateDevice(ctx, device, *rpcClient, repo, expectedSystemImageMerkle, expectedConfig, checkABR); err != nil {
+		return fmt.Errorf("failed to validate after OTA: %s", err)
+	}
 
+	return nil
+}
+
+/*
 func systemOTA(ctx context.Context, device *device.Client, rpcClient **sl4f.Client, repo *packages.Repository, checkABR bool) error {
 	expectedSystemImageMerkle, err := repo.LookupUpdateSystemImageMerkle()
 	if err != nil {
@@ -257,6 +270,7 @@ func systemOTA(ctx context.Context, device *device.Client, rpcClient **sl4f.Clie
 		checkABR,
 	)
 }
+*/
 
 func systemPrimeOTA(ctx context.Context, device *device.Client, rpcClient **sl4f.Client, repo *packages.Repository, checkABR bool) error {
 	expectedSystemImageMerkle, err := repo.LookupUpdatePrimeSystemImageMerkle()
