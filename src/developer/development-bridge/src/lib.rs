@@ -15,7 +15,6 @@ use {
     fidl_fuchsia_overnet_protocol::NodeId,
     futures::prelude::*,
     hoist::spawn,
-    std::path::Path,
     std::process::Command,
 };
 
@@ -182,7 +181,12 @@ async fn exec_server(daemon: Daemon, quiet: bool) -> Result<(), Error> {
 // start
 
 pub fn is_daemon_running() -> bool {
-    Path::new(SOCKET).exists()
+    // Try to connect directly to the socket. This will fail if nothing is listening on the other side
+    // (even if the path exists).
+    match std::os::unix::net::UnixStream::connect(SOCKET) {
+        Ok(_) => true,
+        Err(_) => false,
+    }
 }
 
 pub async fn start() -> Result<(), Error> {
