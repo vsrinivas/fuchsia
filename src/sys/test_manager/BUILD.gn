@@ -36,7 +36,7 @@ rustc_library("lib") {
 }
 
 rustc_binary("bin") {
-  name = "test_manager_bin"
+  name = "test_manager"
   with_unit_tests = true
   edition = "2018"
 
@@ -50,15 +50,20 @@ rustc_binary("bin") {
   ]
 }
 
-package("test_manager") {
+package("test_manager_pkg") {
   testonly = true
-  deps = [ ":bin" ]
+  deps = [
+    ":bin",
+    "//src/sys/component_manager/tests/memfs",
+  ]
+  package_name = "test_manager"
 
   binaries = [
     {
       name = "test_manager"
-      source = "test_manager_bin"
-      shell = true
+    },
+    {
+      name = "memfs"
     },
   ]
 
@@ -67,6 +72,19 @@ package("test_manager") {
       path = rebase_path("meta/test_manager.cml")
       dest = "test_manager.cm"
     },
+    {
+      path = rebase_path("meta/memfs.cml")
+      dest = "memfs.cm"
+    },
+  ]
+}
+
+# Defines test manager and its dependencies.
+group("test_manager") {
+  testonly = true
+  deps = [
+    ":test_manager_pkg",
+    "//src/sys/test_runners",
   ]
 }
 

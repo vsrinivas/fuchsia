@@ -28,19 +28,24 @@
             "runner": "elf",
             "from": "realm",
             "to": [
-                "#tests",
+                "#test_manager",
             ]
         },
         {
             "protocol": "/svc/fuchsia.logger.LogSink",
             "from": "realm",
-            "to": [ "#tests" ]
+            "to": [ "#test_manager" ]
+        },
+        {
+            "protocol": "/svc/fuchsia.process.Launcher",
+            "from": "realm",
+            "to": [ "#test_manager" ]
         },
     ],
-    "collections": [
+    children: [
         {
-            "name": "tests",
-            "durability": "transient",
+            name: "test_manager",
+            url: "fuchsia-pkg://fuchsia.com/test_manager#meta/test_manager.cm"
         },
     ],
 }

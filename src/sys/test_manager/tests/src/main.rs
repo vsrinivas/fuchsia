@@ -6,11 +6,15 @@
 //! v2 component.
 
 use {
-    anyhow::{Context as _, Error},
-    fidl::endpoints::RequestStream,
-    fidl_fuchsia_test_manager as ftest_manager,
+    anyhow::{format_err, Context as _, Error},
+    fidl::endpoints,
+    fidl_fuchsia_io::DirectoryMarker,
+    fidl_fuchsia_sys2 as fsys, fidl_fuchsia_test_manager as ftest_manager,
     ftest_manager::Result_,
-    fuchsia_async as fasync, fuchsia_zircon as zx,
+    fuchsia_async as fasync,
+    fuchsia_component::client,
+    fuchsia_component::client::connect_to_protocol_at_dir,
+    fuchsia_zircon as zx,
     futures::{
         io::{self, AsyncRead},
         prelude::*,
@@ -77,22 +81,24 @@ macro_rules! assert_output {
     };
 }
 
-fn connect_test_manager() -> Result<ftest_manager::HarnessProxy, Error> {
-    let (proxy, server) = zx::Channel::create()?;
-    let server = fasync::Channel::from_channel(server)?;
-    fasync::spawn_local(async move {
-        test_manager_lib::run_test_manager(ftest_manager::HarnessRequestStream::from_channel(
-            server,
-        ))
+async fn connect_test_manager() -> Result<ftest_manager::HarnessProxy, Error> {
+    let realm = client::connect_to_service::<fsys::RealmMarker>()
+        .context("could not connect to Realm service")?;
+
+    let mut child_ref = fsys::ChildRef { name: "test_manager".to_owned(), collection: None };
+    let (dir, server_end) = endpoints::create_proxy::<DirectoryMarker>()?;
+    realm
+        .bind_child(&mut child_ref, server_end)
         .await
-        .expect("failed to run test manager service")
-    });
-    let proxy = fasync::Channel::from_channel(proxy)?;
-    Ok(ftest_manager::HarnessProxy::new(proxy))
+        .context("bind_child fidl call failed for test manager")?
+        .map_err(|e| format_err!("failed to create test manager: {:?}", e))?;
+
+    connect_to_protocol_at_dir::<ftest_manager::HarnessMarker>(&dir)
+        .context("failed to open test suite service")
 }
 
 async fn run_test(test_url: &str) -> Result<(Result_, Vec<u8>), Error> {
-    let proxy = connect_test_manager()?;
+    let proxy = connect_test_manager().await?;
     let (client, log) = zx::Socket::create(zx::SocketOpts::STREAM)?;
     let ls = LoggerStream::new(client)?;
     let (log_fut, log_fut_remote) = ls.try_concat().remote_handle();
@@ -153,4 +159,48 @@ async fn launch_and_test_no_on_finished() {
 
     assert_output!(logs, expected);
     assert_eq!(suite_result, Result_::Passed)
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn launch_and_test_gtest_runner_sample_test() {
+    let test_url = "fuchsia-pkg://fuchsia.com/gtest_runner_example_tests#meta/sample_tests.cm";
+    let (suite_result, logs) = run_test(test_url).await.unwrap();
+    let expected = format!(
+        "[RUNNING]\tSampleDisabled.DISABLED_Test1
+[PASSED]\tSampleDisabled.DISABLED_Test1
+[RUNNING]\tSampleFixture.Test1
+[RUNNING]\tSampleFixture.Test2
+[PASSED]\tSampleFixture.Test1
+[PASSED]\tSampleFixture.Test2
+[RUNNING]\tSampleTest1.Crashing
+[RUNNING]\tSampleTest1.SimpleFail
+[RUNNING]\tSampleTest2.SimplePass
+[RUNNING]\tTests/SampleParameterizedTestFixture.Test/0
+[RUNNING]\tTests/SampleParameterizedTestFixture.Test/1
+[RUNNING]\tTests/SampleParameterizedTestFixture.Test/2
+[RUNNING]\tTests/SampleParameterizedTestFixture.Test/3
+[PASSED]\tTests/SampleParameterizedTestFixture.Test/0
+[PASSED]\tTests/SampleParameterizedTestFixture.Test/1
+[PASSED]\tTests/SampleParameterizedTestFixture.Test/2
+[PASSED]\tTests/SampleParameterizedTestFixture.Test/3
+[FAILED]\tSampleTest1.Crashing
+[FAILED]\tSampleTest1.SimpleFail
+[PASSED]\tSampleTest2.SimplePass
+[SampleTest1.Crashing]\t  Actual: true
+[SampleTest1.Crashing]\tExpected: false
+[SampleTest1.Crashing]\tValue of: true
+[SampleTest1.Crashing]\tfailure: ../../src/sys/test_runners/gtest/test_data/sample_tests.cc:9
+[SampleTest1.SimpleFail]\t  Actual: true
+[SampleTest1.SimpleFail]\tExpected: false
+[SampleTest1.SimpleFail]\tValue of: true
+[SampleTest1.SimpleFail]\tfailure: ../../src/sys/test_runners/gtest/test_data/sample_tests.cc:9
+
+8 out of 10 tests passed...
+{} completed with result: Failed
+",
+        test_url
+    );
+
+    assert_output!(logs, expected);
+    assert_eq!(suite_result, Result_::Failed)
 }

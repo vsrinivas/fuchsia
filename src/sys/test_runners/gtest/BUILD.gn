@@ -46,20 +46,12 @@ package("gtest_runner") {
   deps = [
     ":bin",
     ":bin_test",
-    "test_data",
     "//src/sys/component_manager/tests/memfs",
   ]
 
   binaries = [
     {
-      name = "gtest_runner_sample_tests"
-      dest = "sample_tests"
-    },
-    {
       name = "gtest_runner"
-    },
-    {
-      name = "memfs"
     },
   ]
 
@@ -67,18 +59,6 @@ package("gtest_runner") {
     {
       path = rebase_path("meta/gtest_runner.cml")
       dest = "gtest_runner.cm"
-    },
-    {
-      path = rebase_path("meta/root.cml")
-      dest = "root.cm"
-    },
-    {
-      path = rebase_path("meta/memfs.cml")
-      dest = "memfs.cm"
-    },
-    {
-      path = rebase_path("meta/sample_tests.cml")
-      dest = "sample_tests.cm"
     },
   ]
 }
@@ -109,6 +89,24 @@ test_package("gtest_runner_tests") {
     {
       name = "gtest_runner_bin_test"
       environments = basic_envs
+    },
+  ]
+}
+
+package("gtest_runner_example_tests") {
+  testonly = true
+  deps = [ "test_data" ]
+
+  binaries = [
+    {
+      name = "gtest_runner_sample_tests"
+      dest = "sample_tests"
+    },
+  ]
+  meta = [
+    {
+      path = rebase_path("meta/sample_tests.cml")
+      dest = "sample_tests.cm"
     },
   ]
 }

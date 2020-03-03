@@ -16,7 +16,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_runtime::job_default,
-    fuchsia_syslog::{fx_log_err, fx_log_info},
+    fuchsia_syslog::{fx_log_err, fx_log_info, fx_vlog},
     fuchsia_zircon::{self as zx, HandleBased, Task},
     futures::future::abortable,
     futures::future::AbortHandle,
@@ -237,9 +237,15 @@ fn launch_fidl_service(
     handles.push(test_suite_abortable_handle);
 
     fasync::spawn_local(async move {
-        if let Err(e) = fut.await {
-            fx_log_err!("server failed for test {}: {:?}", url, e);
+        match fut.await {
+            Ok(result) => {
+                if let Err(e) = result {
+                    fx_log_err!("server failed for test {}: {:?}", url, e);
+                }
+            }
+            Err(e) => fx_log_err!("server aborted for test {}: {:?}", url, e),
         }
+        fx_vlog!(1, "Done running server for {}.", url);
 
         // Even if `serve_test_suite` failed, clean local data directory as these files are no
         // longer needed and they are consuming space.
@@ -600,7 +606,6 @@ impl TestServer {
             "--gtest_list_tests".to_owned(),
             format!("--gtest_output=json:{}", test_list_path.display()),
         ];
-
         args.extend(component.args.clone());
 
         let (process, job, stdlogger) = test_runners_lib::launch_process(
@@ -626,7 +631,6 @@ impl TestServer {
             .unwrap();
 
         let process_info = process.info().map_err(KernelError::ProcessInfo).unwrap();
-
         if process_info.return_code != 0 {
             let logs = std_reader.get_logs().await?;
             // TODO(4610): logs might not be utf8, fix the code.
@@ -635,7 +639,6 @@ impl TestServer {
             fx_log_err!("Failed getting list of tests:\n{}", output);
             return Err(EnumerationError::ListTest);
         }
-
         let result_str = match read_file(&self.output_dir_proxy, &test_list_file).await {
             Ok(b) => b,
             Err(e) => {
@@ -682,18 +685,27 @@ impl TestServer {
                         // no component object, return, test has ended.
                         break;
                     }
-
-                    let tests = self.enumerate_tests(component.unwrap()).await?;
                     let mut stream = iterator.into_stream().map_err(SuiteServerError::Stream)?;
-                    let mut iter = tests.into_iter().map(|name| ftest::Case { name: Some(name) });
-                    while let Some(ftest::CaseIteratorRequest::GetNext { responder }) =
-                        stream.try_next().await.expect("Can't get next CaseIterator request")
-                    {
-                        const MAX_CASES_PER_PAGE: usize = 50;
-                        responder
-                            .send(&mut iter.by_ref().take(MAX_CASES_PER_PAGE))
-                            .map_err(SuiteServerError::Response)?;
-                    }
+                    let tests = self.enumerate_tests(component.unwrap()).await?;
+
+                    fasync::spawn(
+                        async move {
+                            let mut iter =
+                                tests.into_iter().map(|name| ftest::Case { name: Some(name) });
+                            while let Some(ftest::CaseIteratorRequest::GetNext { responder }) =
+                                stream.try_next().await?
+                            {
+                                const MAX_CASES_PER_PAGE: usize = 50;
+                                responder
+                                    .send(&mut iter.by_ref().take(MAX_CASES_PER_PAGE))
+                                    .map_err(SuiteServerError::Response)?;
+                            }
+                            Ok(())
+                        }
+                        .unwrap_or_else(|e: anyhow::Error| {
+                            fx_log_err!("error serving tests: {:?}", e)
+                        }),
+                    );
                 }
                 ftest::SuiteRequest::Run { tests, options: _, listener, .. } => {
                     let component = component.upgrade();

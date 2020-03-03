@@ -6,10 +6,13 @@ use {
     anyhow::{Context as _, Error},
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
+    fuchsia_syslog::fx_log_info,
     futures::StreamExt,
 };
 
 fn main() -> Result<(), Error> {
+    fuchsia_syslog::init_with_tags(&["test_manager"])?;
+    fx_log_info!("started");
     let mut executor = fasync::Executor::new().context("error creating executor")?;
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(move |stream| {

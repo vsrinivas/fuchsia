@@ -6,7 +6,7 @@
         {
             name: "gtest_runner",
             from: "self",
-            path: "/svc/fuchsia.sys2.ComponentRunner"
+            path: "/svc/fuchsia.component.runner.ComponentRunner"
         }
     ],
     use: [
@@ -15,11 +15,17 @@
         },
         {
             storage: "data"
-        }
+        },
+        {
+            protocol: [
+                "/svc/fuchsia.process.Launcher",
+                "/svc/fuchsia.logger.LogSink",
+            ],
+        },
     ],
     expose: [
         {
-            protocol: "/svc/fuchsia.sys2.ComponentRunner",
+            protocol: "/svc/fuchsia.component.runner.ComponentRunner",
             from: "self"
         },
         {

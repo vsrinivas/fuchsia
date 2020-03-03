@@ -9,7 +9,7 @@ use {
     anyhow::Context as _,
     fidl_fuchsia_component_runner as fcrunner, fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
-    fuchsia_syslog::fx_log_err,
+    fuchsia_syslog::{fx_log_err, fx_log_info},
     futures::prelude::*,
     std::{fs, path::Path},
     test_component::start_component,
@@ -18,6 +18,7 @@ use {
 
 fn main() -> Result<(), anyhow::Error> {
     fuchsia_syslog::init_with_tags(&["gtest_runner"])?;
+    fx_log_info!("started");
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
     // We will divide this directory up and pass to  tests as /test_result so that they can write
     // their json output
@@ -30,7 +31,6 @@ fn main() -> Result<(), anyhow::Error> {
             async move { start_runner(stream).await.expect("failed to start runner.") },
         );
     });
-
     fs.take_and_serve_directory_handle()?;
     executor.run_singlethreaded(fs.collect::<()>());
     Ok(())
