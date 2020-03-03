@@ -26,7 +26,7 @@ use {
 /// ```
 /// let ime_handler =
 ///     ImeHandler::new(scene_manager.session.clone(), scene_manager.compositor_id).await?;
-/// let touch_handler = TouchHandler::new2(
+/// let touch_handler = TouchHandler::new(
 ///     scene_manager.session.clone(),
 ///     scene_manager.compositor_id,
 ///     scene_manager.display_size
@@ -225,11 +225,14 @@ mod tests {
     fn send_input_event(mut sender: Sender<input_device::InputEvent>) -> input_device::InputEvent {
         let mut rng = rand::thread_rng();
         let input_event = input_device::InputEvent {
-            device_event: input_device::InputDeviceEvent::Mouse(mouse::MouseEvent::new(
-                Position { x: rng.gen_range(0, 10) as f32, y: rng.gen_range(0, 10) as f32 },
-                fidl_ui_input::PointerEventPhase::Move,
-                HashSet::new(),
-            )),
+            device_event: input_device::InputDeviceEvent::Mouse(mouse::MouseEvent {
+                movement: Position {
+                    x: rng.gen_range(0, 10) as f32,
+                    y: rng.gen_range(0, 10) as f32,
+                },
+                phase: fidl_ui_input::PointerEventPhase::Move,
+                buttons: HashSet::new(),
+            }),
             device_descriptor: input_device::InputDeviceDescriptor::Mouse(
                 mouse::MouseDeviceDescriptor { device_id: 1 },
             ),

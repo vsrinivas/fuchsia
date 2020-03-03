@@ -32,9 +32,9 @@ impl InputHandler for SimpleCursor {
                 device_descriptor: input_device::InputDeviceDescriptor::Mouse(_mouse_descriptor),
                 event_time: _,
             } => {
-                self.position += mouse_event.movement();
-                clamp(&mut self.position, Position { x: 0.0, y: 0.0 }, self.max_position);
-                self.scene_manager.set_cursor_location2(ScreenCoordinates::from_position(
+                self.position += mouse_event.movement;
+                Position::clamp(&mut self.position, Position { x: 0.0, y: 0.0 }, self.max_position);
+                self.scene_manager.set_cursor_location(ScreenCoordinates::from_position(
                     &self.position,
                     self.scene_manager.display_metrics,
                 ));
@@ -70,22 +70,6 @@ async fn main() -> Result<(), Error> {
     input_pipeline.handle_input_events().await;
 
     Ok(())
-}
-
-fn clamp(target: &mut Position, min: Position, max: Position) {
-    if (*target).x < min.x {
-        (*target).x = min.x;
-    }
-    if (*target).x > max.x {
-        (*target).x = max.x;
-    }
-
-    if (*target).y < min.y {
-        (*target).y = min.y;
-    }
-    if (*target).y > max.y {
-        (*target).y = max.y;
-    }
 }
 
 #[cfg(test)]

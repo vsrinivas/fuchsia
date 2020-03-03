@@ -14,6 +14,44 @@ pub struct Position {
     pub y: f32,
 }
 
+impl Position {
+    pub fn clamp(target: &mut Position, min: Position, max: Position) {
+        if (*target).x < min.x {
+            (*target).x = min.x;
+        }
+        if (*target).x > max.x {
+            (*target).x = max.x;
+        }
+
+        if (*target).y < min.y {
+            (*target).y = min.y;
+        }
+        if (*target).y > max.y {
+            (*target).y = max.y;
+        }
+    }
+
+    pub fn clamp_size(target: &mut Position, min: Size, max: Size) {
+        if (*target).x < min.width {
+            (*target).x = min.width;
+        }
+        if (*target).x > max.width {
+            (*target).x = max.width;
+        }
+
+        if (*target).y < min.height {
+            (*target).y = min.height;
+        }
+        if (*target).y > max.height {
+            (*target).y = max.height;
+        }
+    }
+
+    pub fn zero() -> Position {
+        Position { x: 0.0, y: 0.0 }
+    }
+}
+
 impl Add for Position {
     type Output = Self;
 
@@ -133,6 +171,12 @@ pub struct Size {
 
     /// The height in pixels.
     pub height: f32,
+}
+
+impl Size {
+    pub fn zero() -> Size {
+        Size { width: 0.0, height: 0.0 }
+    }
 }
 
 impl Add for Size {

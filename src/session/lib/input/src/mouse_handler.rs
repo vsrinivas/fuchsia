@@ -14,16 +14,6 @@ use {
     std::collections::HashSet,
 };
 
-/// The location of a mouse cursor.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct CursorLocation {
-    /// The x location of the cursor, in pixels.
-    pub x: f32,
-
-    /// The y location of the cursor, in pixels.
-    pub y: f32,
-}
-
 /// A [`MouseCursorHandler`] tracks the mouse position and renders a cursor.
 ///
 /// Clients can customize the starting position for the cursor, and also specify
@@ -34,9 +24,6 @@ pub struct MouseHandler {
 
     /// The maximum position, used to bound events sent to clients.
     max_position: Position,
-
-    /// A [`Sender`] used to communicate the current cursor location.
-    cursor_location_sender: Option<Sender<CursorLocation>>,
 
     /// A [`Sender`] used to communicate the current position.
     position_sender: Option<Sender<Position>>,
@@ -80,23 +67,22 @@ impl MouseHandler {
     /// position.
     ///
     /// # Parameters
-    /// - `max_cursor_location`: The maximum cursor location, used to bound events sent to clients.
-    /// - `cursor_location_sender`: A [`Sender`] used to communicate the current cursor location.
+    /// - `max_position`: The maximum position, used to bound events sent to clients.
+    /// - `position_sender`: A [`Sender`] used to communicate the current position.
     /// - `scenic_session`: The Scenic session to send pointer events to.
     /// - `scenic_compositor_id`: The Scenic compositor id to tag pointer events with.
     pub fn new(
-        max_cursor_location: CursorLocation,
-        cursor_location_sender: Option<Sender<CursorLocation>>,
+        max_position: Position,
+        position_sender: Option<Sender<Position>>,
         scenic_session: scenic::SessionPtr,
         scenic_compositor_id: u32,
     ) -> MouseHandler {
         MouseHandler {
-            cursor_location_sender,
+            max_position,
+            position_sender,
             scenic_session,
             scenic_compositor_id,
             current_position: Position { x: 0.0, y: 0.0 },
-            max_position: Position { x: max_cursor_location.x, y: max_cursor_location.y },
-            position_sender: None,
         }
     }
 
@@ -114,14 +100,7 @@ impl MouseHandler {
         scenic_session: scenic::SessionPtr,
         scenic_compositor_id: u32,
     ) -> MouseHandler {
-        MouseHandler {
-            max_position,
-            position_sender,
-            scenic_session,
-            scenic_compositor_id,
-            current_position: Position { x: 0.0, y: 0.0 },
-            cursor_location_sender: None,
-        }
+        Self::new(max_position, position_sender, scenic_session, scenic_compositor_id)
     }
 
     /// Updates the current cursor position according to the received mouse event.
@@ -134,32 +113,12 @@ impl MouseHandler {
     /// # Parameters
     /// - `mouse_event`: The mouse event to use to update the cursor location.
     async fn update_cursor_position(&mut self, mouse_event: &mouse::MouseEvent) {
-        if mouse_event.movement().x == 0.0 && mouse_event.movement().y == 0.0 {
+        if mouse_event.movement.x == 0.0 && mouse_event.movement.y == 0.0 {
             return;
         }
 
-        self.current_position.x += mouse_event.movement().x;
-        self.current_position.y += mouse_event.movement().y;
-
-        if self.current_position.x > self.max_position.x {
-            self.current_position.x = self.max_position.x;
-        }
-        if self.current_position.y > self.max_position.y {
-            self.current_position.y = self.max_position.y;
-        }
-
-        if self.current_position.x < 0.0 {
-            self.current_position.x = 0.0;
-        }
-        if self.current_position.y < 0.0 {
-            self.current_position.y = 0.0;
-        }
-
-        if let Some(cursor_location_sender) = &mut self.cursor_location_sender {
-            let _ = cursor_location_sender
-                .send(CursorLocation { x: self.current_position.x, y: self.current_position.y })
-                .await;
-        }
+        self.current_position += mouse_event.movement;
+        Position::clamp(&mut self.current_position, Position::zero(), self.max_position);
 
         if let Some(position_sender) = &mut self.position_sender {
             let _ = position_sender.send(self.current_position).await;
@@ -307,7 +266,7 @@ mod tests {
         let (sender, mut receiver) = futures::channel::mpsc::channel(1);
 
         let mut mouse_handler = MouseHandler::new(
-            CursorLocation { x: SCENIC_DISPLAY_WIDTH, y: SCENIC_DISPLAY_HEIGHT },
+            Position { x: SCENIC_DISPLAY_WIDTH, y: SCENIC_DISPLAY_HEIGHT },
             Some(sender),
             scenic_session.clone(),
             SCENIC_COMPOSITOR_ID,
@@ -340,8 +299,7 @@ mod tests {
             assert_command: verify_pointer_event,
         );
 
-        let expected_cursor_location =
-            CursorLocation { x: cursor_movement.x, y: cursor_movement.y };
+        let expected_cursor_location = Position { x: cursor_movement.x, y: cursor_movement.y };
         match receiver.next().await {
             Some(cursor_location) => assert_eq!(cursor_location, expected_cursor_location),
             _ => assert!(false),
@@ -362,7 +320,7 @@ mod tests {
         let (sender, mut receiver) = futures::channel::mpsc::channel(1);
 
         let mut mouse_handler = MouseHandler::new(
-            CursorLocation { x: SCENIC_DISPLAY_WIDTH, y: SCENIC_DISPLAY_HEIGHT },
+            Position { x: SCENIC_DISPLAY_WIDTH, y: SCENIC_DISPLAY_HEIGHT },
             Some(sender),
             scenic_session.clone(),
             SCENIC_COMPOSITOR_ID,
@@ -398,7 +356,7 @@ mod tests {
         );
 
         let expected_cursor_location =
-            CursorLocation { x: SCENIC_DISPLAY_WIDTH, y: SCENIC_DISPLAY_HEIGHT };
+            Position { x: SCENIC_DISPLAY_WIDTH, y: SCENIC_DISPLAY_HEIGHT };
         match receiver.next().await {
             Some(cursor_location) => assert_eq!(cursor_location, expected_cursor_location),
             _ => assert!(false),
@@ -419,7 +377,7 @@ mod tests {
         let (sender, mut receiver) = futures::channel::mpsc::channel(1);
 
         let mut mouse_handler = MouseHandler::new(
-            CursorLocation { x: SCENIC_DISPLAY_WIDTH, y: SCENIC_DISPLAY_HEIGHT },
+            Position { x: SCENIC_DISPLAY_WIDTH, y: SCENIC_DISPLAY_HEIGHT },
             Some(sender),
             scenic_session.clone(),
             SCENIC_COMPOSITOR_ID,
@@ -452,7 +410,7 @@ mod tests {
             assert_command: verify_pointer_event,
         );
 
-        let expected_cursor_location = CursorLocation { x: 0.0, y: 0.0 };
+        let expected_cursor_location = Position { x: 0.0, y: 0.0 };
         match receiver.next().await {
             Some(cursor_location) => assert_eq!(cursor_location, expected_cursor_location),
             _ => assert!(false),

@@ -119,9 +119,11 @@ pub fn create_mouse_event(
     device_descriptor: &input_device::InputDeviceDescriptor,
 ) -> input_device::InputEvent {
     input_device::InputEvent {
-        device_event: input_device::InputDeviceEvent::Mouse(mouse::MouseEvent::new(
-            movement, phase, buttons,
-        )),
+        device_event: input_device::InputDeviceEvent::Mouse(mouse::MouseEvent {
+            movement,
+            phase,
+            buttons,
+        }),
         device_descriptor: device_descriptor.clone(),
         event_time: event_time,
     }
@@ -153,7 +155,7 @@ pub fn create_touch_input_report(
 
 #[cfg(test)]
 pub fn create_touch_contact(id: u32, position: Position) -> touch::TouchContact {
-    touch::TouchContact::new(id, position, None, None)
+    touch::TouchContact { id, position, pressure: None, contact_size: None }
 }
 
 /// Creates a [`touch::TouchEvent`] with the provided parameters.

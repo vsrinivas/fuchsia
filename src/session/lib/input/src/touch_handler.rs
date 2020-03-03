@@ -56,28 +56,20 @@ impl TouchHandler {
     /// # Parameters
     /// - `scenic_session`: The Scenic session to send events to.
     /// - `scenic_compositor_id`: The compositor id to tag input events with.
-    /// - `display_width`: The width of the associated touch display,
-    /// used to convert coordinates into device coordinates. Can't be 0.
-    /// - `display_height`: The height of the associated touch display,
-    /// used to convert coordinates into device coordinates. Can't be 0.
+    /// - `display_size`: The size of the associated touch display,
+    /// used to convert coordinates into device coordinates. Width and Height must be non-zero.
     ///
     /// # Errors
     /// If the display height or width is 0.
     pub async fn new(
         scenic_session: scenic::SessionPtr,
         scenic_compositor_id: u32,
-        display_width: i64,
-        display_height: i64,
+        display_size: Size,
     ) -> Result<Self, Error> {
-        match (display_width, display_height) {
-            (0, _) | (_, 0) => {
-                Err(format_err!("Display height: {} and width: {} are required to be non-zero."))
-            }
-            _ => Ok(TouchHandler {
-                scenic_session,
-                scenic_compositor_id,
-                display_size: Size { width: display_width as f32, height: display_height as f32 },
-            }),
+        if display_size.width == 0.0 || display_size.height == 0.0 {
+            Err(format_err!("Display height: {} and width: {} are required to be non-zero."))
+        } else {
+            Ok(TouchHandler { scenic_session, scenic_compositor_id, display_size })
         }
     }
 
@@ -200,13 +192,13 @@ impl TouchHandler {
             };
 
             if range.x == 0.0 || range.y == 0.0 {
-                return contact.position();
+                return contact.position;
             }
 
-            let normalized = contact.position() / range;
+            let normalized = contact.position / range;
             normalized * self.display_size
         } else {
-            return contact.position();
+            return contact.position;
         }
     }
 }
@@ -224,8 +216,8 @@ mod tests {
     };
 
     const SCENIC_COMPOSITOR_ID: u32 = 1;
-    const SCENIC_DISPLAY_WIDTH: i64 = 100;
-    const SCENIC_DISPLAY_HEIGHT: i64 = 100;
+    const SCENIC_DISPLAY_WIDTH: f32 = 100.0;
+    const SCENIC_DISPLAY_HEIGHT: f32 = 100.0;
 
     /// Returns an TouchDescriptor.
     fn get_touch_device_descriptor() -> input_device::InputDeviceDescriptor {
@@ -319,8 +311,7 @@ mod tests {
         let mut touch_handler = TouchHandler::new(
             scenic_session.clone(),
             SCENIC_COMPOSITOR_ID,
-            SCENIC_DISPLAY_WIDTH,
-            SCENIC_DISPLAY_HEIGHT,
+            Size { width: SCENIC_DISPLAY_WIDTH, height: SCENIC_DISPLAY_HEIGHT },
         )
         .await
         .expect("Failed to create TouchHandler.");
@@ -372,8 +363,7 @@ mod tests {
         let mut touch_handler = TouchHandler::new(
             scenic_session.clone(),
             SCENIC_COMPOSITOR_ID,
-            SCENIC_DISPLAY_WIDTH,
-            SCENIC_DISPLAY_HEIGHT,
+            Size { width: SCENIC_DISPLAY_WIDTH, height: SCENIC_DISPLAY_HEIGHT },
         )
         .await
         .expect("Failed to create TouchHandler.");
@@ -425,8 +415,7 @@ mod tests {
         let mut touch_handler = TouchHandler::new(
             scenic_session.clone(),
             SCENIC_COMPOSITOR_ID,
-            SCENIC_DISPLAY_WIDTH,
-            SCENIC_DISPLAY_HEIGHT,
+            Size { width: SCENIC_DISPLAY_WIDTH, height: SCENIC_DISPLAY_HEIGHT },
         )
         .await
         .expect("Failed to create TouchHandler.");

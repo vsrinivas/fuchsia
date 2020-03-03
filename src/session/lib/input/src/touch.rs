@@ -48,25 +48,17 @@ pub struct TouchContact {
     /// The identifier of the contact. Unique per touch device.
     pub id: u32,
 
-    /// The x position of the touch event, in the units of the associated
-    /// [`ContactDeviceDescriptor`]'s `x_range`.
-    pub position_x: i64,
-
-    /// The y position of the touch event, in the units of the associated
-    /// [`ContactDeviceDescriptor`]'s `y_range`.
-    pub position_y: i64,
+    /// The position of the touch event, in the units of the associated
+    /// [`ContactDeviceDescriptor`]'s `range`.
+    pub position: Position,
 
     /// The pressure associated with the contact, in the units of the associated
     /// [`ContactDeviceDescriptor`]'s `pressure_range`.
     pub pressure: Option<i64>,
 
-    /// The width of the touch event, in the units of the associated
-    /// [`ContactDeviceDescriptor`]'s `width_range`.
-    contact_width: Option<i64>,
-
-    /// The height of the touch event, in the units of the associated
-    /// [`ContactDeviceDescriptor`]'s `height_range`.
-    contact_height: Option<i64>,
+    /// The size of the touch event, in the units of the associated
+    /// [`ContactDeviceDescriptor`]'s `range`.
+    pub contact_size: Option<Size>,
 }
 
 impl TouchContact {
@@ -76,40 +68,15 @@ impl TouchContact {
         pressure: Option<i64>,
         contact_size: Option<Size>,
     ) -> Self {
-        if let Some(size) = contact_size {
-            Self {
-                id,
-                pressure,
-                contact_width: Some(size.width as i64),
-                contact_height: Some(size.height as i64),
-                position_x: position.x as i64,
-                position_y: position.y as i64,
-            }
-        } else {
-            Self {
-                id,
-                pressure,
-                contact_width: None,
-                contact_height: None,
-                position_x: position.x as i64,
-                position_y: position.y as i64,
-            }
-        }
+        Self { id, position, pressure, contact_size }
     }
 
     pub fn position(&self) -> Position {
-        Position { x: self.position_x as f32, y: self.position_y as f32 }
+        self.position
     }
 
     pub fn contact_size(&self) -> Option<Size> {
-        if self.contact_width.is_some() && self.contact_height.is_some() {
-            Some(Size {
-                width: self.contact_width.unwrap() as f32,
-                height: self.contact_height.unwrap() as f32,
-            })
-        } else {
-            None
-        }
+        self.contact_size
     }
 }
 
@@ -117,13 +84,24 @@ impl Eq for TouchContact {}
 
 impl From<&fidl_fuchsia_input_report::ContactInputReport> for TouchContact {
     fn from(fidl_contact: &fidl_fuchsia_input_report::ContactInputReport) -> TouchContact {
+        let contact_size =
+            if fidl_contact.contact_width.is_some() && fidl_contact.contact_height.is_some() {
+                Some(Size {
+                    width: fidl_contact.contact_width.unwrap() as f32,
+                    height: fidl_contact.contact_height.unwrap() as f32,
+                })
+            } else {
+                None
+            };
+
         TouchContact {
             id: fidl_contact.contact_id.unwrap_or_default(),
-            position_x: fidl_contact.position_x.unwrap_or_default(),
-            position_y: fidl_contact.position_y.unwrap_or_default(),
+            position: Position {
+                x: fidl_contact.position_x.unwrap_or_default() as f32,
+                y: fidl_contact.position_y.unwrap_or_default() as f32,
+            },
             pressure: fidl_contact.pressure,
-            contact_width: fidl_contact.contact_width,
-            contact_height: fidl_contact.contact_height,
+            contact_size,
         }
     }
 }

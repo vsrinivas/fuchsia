@@ -35,11 +35,8 @@ pub type MouseButton = u8;
 /// ```
 #[derive(Clone, Debug, PartialEq)]
 pub struct MouseEvent {
-    /// The movement in the x axis.
-    pub movement_x: i64,
-
-    /// The movement in the y axis.
-    pub movement_y: i64,
+    /// The mouse movement.
+    pub movement: Position,
 
     /// The phase of the [`buttons`] associated with this input event.
     pub phase: fidl_fuchsia_ui_input::PointerEventPhase,
@@ -54,11 +51,11 @@ impl MouseEvent {
         phase: fidl_fuchsia_ui_input::PointerEventPhase,
         buttons: HashSet<MouseButton>,
     ) -> Self {
-        Self { movement_x: movement.x as i64, movement_y: movement.y as i64, phase, buttons }
+        Self { movement, phase, buttons }
     }
 
     pub fn movement(&self) -> Position {
-        Position { x: self.movement_x as f32, y: self.movement_y as f32 }
+        self.movement
     }
 }
 
@@ -254,9 +251,11 @@ fn send_mouse_event(
     }
 
     match sender.try_send(input_device::InputEvent {
-        device_event: input_device::InputDeviceEvent::Mouse(MouseEvent::new(
-            movement, phase, buttons,
-        )),
+        device_event: input_device::InputDeviceEvent::Mouse(MouseEvent {
+            movement,
+            phase,
+            buttons,
+        }),
         device_descriptor: device_descriptor.clone(),
         event_time,
     }) {

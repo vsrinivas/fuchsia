@@ -26,11 +26,8 @@ pub struct FlatSceneManager {
     /// The id of the compositor used for the scene's layer stack.
     pub compositor_id: u32,
 
-    /// The width of the display, as determined when [`FlatSceneManager::new()`] was called.
-    pub display_width: f32,
-
-    /// The height of the display, as determined when [`FlatSceneManager::new()`] was called.
-    pub display_height: f32,
+    /// The size of the display, as determined when [`FlatSceneManager::new()`] was called.
+    pub display_size: ScreenSize,
 
     /// The root node of the scene. Views are added as children of this node.
     pub root_node: scenic::EntityNode,
@@ -89,7 +86,7 @@ impl SceneManager for FlatSceneManager {
         };
 
         let display_metrics =
-            DisplayMetrics::new2(size_in_pixels, display_pixel_density, viewing_distance, None);
+            DisplayMetrics::new(size_in_pixels, display_pixel_density, viewing_distance, None);
 
         scene.set_scale(display_metrics.pixels_per_pip(), display_metrics.pixels_per_pip(), 1.0);
 
@@ -118,8 +115,7 @@ impl SceneManager for FlatSceneManager {
         Ok(FlatSceneManager {
             session,
             root_node,
-            display_width: size_in_pixels.width,
-            display_height: size_in_pixels.height,
+            display_size: ScreenSize::from_size(&size_in_pixels, display_metrics),
             compositor_id,
             _resources: resources,
             views: vec![],
@@ -149,11 +145,7 @@ impl SceneManager for FlatSceneManager {
         self.display_metrics
     }
 
-    fn set_cursor_location(&mut self, x: f32, y: f32) {
-        self.set_cursor_location2(ScreenCoordinates::from_pips(x, y, self.display_metrics));
-    }
-
-    fn set_cursor_location2(&mut self, location: ScreenCoordinates) {
+    fn set_cursor_location(&mut self, location: ScreenCoordinates) {
         if self.cursor_node.is_none() {
             // We don't already have a cursor node so let's make one with the default cursor
             self.set_cursor_shape(self.get_default_cursor());
@@ -161,6 +153,10 @@ impl SceneManager for FlatSceneManager {
 
         let (x, y) = location.pips();
         self.cursor_node().set_translation(x, y, FlatSceneManager::CURSOR_DEPTH);
+    }
+
+    fn set_cursor_location2(&mut self, location: ScreenCoordinates) {
+        self.set_cursor_location(location);
     }
 
     fn set_cursor_shape(&mut self, shape: scenic::ShapeNode) {
@@ -334,6 +330,6 @@ impl FlatSceneManager {
 
     /// Get the display size
     pub fn display_size(&self) -> ScreenSize {
-        ScreenSize::from_pixels(self.display_width, self.display_height, self.display_metrics)
+        self.display_size
     }
 }

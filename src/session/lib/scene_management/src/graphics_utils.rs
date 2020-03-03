@@ -84,6 +84,7 @@ impl ImageResource {
 
 /// [`ScreenCoordinates`] represents a point on the screen. It can be created from pixels, pips, or
 /// millimeters and the coordinate vales can be retrieved in any of those units.
+#[derive(Clone, Copy, Debug)]
 pub struct ScreenCoordinates {
     x_pixels: f32,
     y_pixels: f32,
@@ -147,6 +148,7 @@ impl ScreenCoordinates {
 
 /// [`ScreenSize`] represents a size on the screen. It can be created from pixels, pips, or
 /// millimeters and can be retrieved in any of those units.
+#[derive(Clone, Copy, Debug)]
 pub struct ScreenSize {
     width_pixels: f32,
     height_pixels: f32,
@@ -232,7 +234,7 @@ mod tests {
     #[test]
     fn test_pixel_constructor() {
         let display_metrics =
-            DisplayMetrics::new2(Size { width: 1000.0, height: 500.0 }, Some(10.0), None, None);
+            DisplayMetrics::new(Size { width: 1000.0, height: 500.0 }, Some(10.0), None, None);
         let coords = ScreenCoordinates::from_pixels(100.0, 100.0, display_metrics);
 
         assert_close_enough(coords.pixels(), (100.0, 100.0));
@@ -244,7 +246,7 @@ mod tests {
     #[test]
     fn test_pip_constructor() {
         let display_metrics =
-            DisplayMetrics::new2(Size { width: 1000.0, height: 500.0 }, Some(10.0), None, None);
+            DisplayMetrics::new(Size { width: 1000.0, height: 500.0 }, Some(10.0), None, None);
         let coords = ScreenCoordinates::from_pips(52.2449, 52.2449, display_metrics);
 
         assert_close_enough(coords.pixels(), (100.0, 100.0));
@@ -256,7 +258,7 @@ mod tests {
     #[test]
     fn test_mm_constructor() {
         let display_metrics =
-            DisplayMetrics::new2(Size { width: 1000.0, height: 500.0 }, Some(10.0), None, None);
+            DisplayMetrics::new(Size { width: 1000.0, height: 500.0 }, Some(10.0), None, None);
         let coords = ScreenCoordinates::from_mm(272.9529, 272.9529, display_metrics);
 
         assert_close_enough(coords.pixels(), (100.0, 100.0));
@@ -268,7 +270,7 @@ mod tests {
     #[test]
     fn test_position_constructor() {
         let display_metrics =
-            DisplayMetrics::new2(Size { width: 1000.0, height: 500.0 }, Some(10.0), None, None);
+            DisplayMetrics::new(Size { width: 1000.0, height: 500.0 }, Some(10.0), None, None);
         let coords =
             ScreenCoordinates::from_position(&Position { x: 100.0, y: 100.0 }, display_metrics);
 

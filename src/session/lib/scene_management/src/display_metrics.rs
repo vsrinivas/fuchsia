@@ -112,21 +112,6 @@ impl DisplayMetrics {
     /// user is expected to be from the display) in mm. Defaults to [`DisplayMetrics::DEFAULT_VIEWING_DISTANCE`].
     /// This is used to compute the ratio of pixels per pip.
     pub fn new(
-        width_in_pixels: u32,
-        height_in_pixels: u32,
-        density_in_pixels_per_mm: Option<f32>,
-        viewing_distance: Option<ViewingDistance>,
-        display_rotation: Option<DisplayRotation>,
-    ) -> DisplayMetrics {
-        Self::new2(
-            Size { width: width_in_pixels as f32, height: height_in_pixels as f32 },
-            density_in_pixels_per_mm,
-            viewing_distance,
-            display_rotation,
-        )
-    }
-
-    pub fn new2(
         size_in_pixels: Size,
         density_in_pixels_per_mm: Option<f32>,
         viewing_distance: Option<ViewingDistance>,
@@ -166,6 +151,15 @@ impl DisplayMetrics {
             scale_in_pixels_per_pip,
             density_in_pips_per_mm,
         }
+    }
+
+    pub fn new2(
+        size_in_pixels: Size,
+        density_in_pixels_per_mm: Option<f32>,
+        viewing_distance: Option<ViewingDistance>,
+        display_rotation: Option<DisplayRotation>,
+    ) -> DisplayMetrics {
+        Self::new(size_in_pixels, density_in_pixels_per_mm, viewing_distance, display_rotation)
     }
 
     /// Computes and returns `scale_in_pixels_per_pip`.
@@ -378,8 +372,10 @@ mod tests {
     // Density is used as the denominator in pip calculation, so must be handled explicitly.
     #[test]
     fn test_zero_density() {
-        let metrics = DisplayMetrics::new(100, 100, Some(0.0), None, None);
-        let second_metrics = DisplayMetrics::new(100, 100, None, None, None);
+        let metrics =
+            DisplayMetrics::new(Size { width: 100.0, height: 100.0 }, Some(0.0), None, None);
+        let second_metrics =
+            DisplayMetrics::new(Size { width: 100.0, height: 100.0 }, None, None, None);
         assert_eq!(metrics.width_in_pips(), second_metrics.width_in_pips());
         assert_eq!(metrics.height_in_pips(), second_metrics.height_in_pips());
     }
@@ -387,8 +383,14 @@ mod tests {
     // Viewing distance is used as the denominator in pip calculation, so must be handled explicitly.
     #[test]
     fn test_zero_distance() {
-        let metrics = DisplayMetrics::new(100, 100, None, Some(ViewingDistance::Unknown), None);
-        let second_metrics = DisplayMetrics::new(100, 100, None, None, None);
+        let metrics = DisplayMetrics::new(
+            Size { width: 100.0, height: 100.0 },
+            None,
+            Some(ViewingDistance::Unknown),
+            None,
+        );
+        let second_metrics =
+            DisplayMetrics::new(Size { width: 100.0, height: 100.0 }, None, None, None);
         assert_eq!(metrics.width_in_pips(), second_metrics.width_in_pips());
         assert_eq!(metrics.height_in_pips(), second_metrics.height_in_pips());
     }
@@ -397,10 +399,14 @@ mod tests {
     #[test]
     fn test_pixels_per_pip_default() {
         let dimensions = DisplayMetrics::ACER_SWITCH_12_ALPHA_DIMENSIONS;
-        let metrics = DisplayMetrics::new(dimensions.0, dimensions.1, None, None, None);
+        let metrics = DisplayMetrics::new(
+            Size { width: dimensions.0 as f32, height: dimensions.1 as f32 },
+            None,
+            None,
+            None,
+        );
         let second_metrics = DisplayMetrics::new(
-            dimensions.0,
-            dimensions.1,
+            Size { width: dimensions.0 as f32, height: dimensions.1 as f32 },
             Some(DisplayMetrics::ACER_SWITCH_12_ALPHA_DENSITY),
             Some(ViewingDistance::Close),
             None,
