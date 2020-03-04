@@ -1,0 +1,15 @@
+{
+    "program": {
+        "binary": "test/test_magma_vsi_exec_bin"
+    },
+    "sandbox": {
+        "features": [
+            "vulkan"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.tracing.provider.Registry",
+            "fuchsia.vulkan.loader.Loader"
+        ]
+    }
+}

@@ -1,0 +1,39 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test.gni")
+import("//build/test/test_package.gni")
+
+test("test_magma_vsi_exec_bin") {
+  sources = [
+    "//third_party/etnaviv_gpu_tests/src/etnaviv_cl_test_gc7000.c",
+    "test_magma_vsi.h",
+    "test_magma_vsi_execute_command.cc",
+  ]
+
+  include_dirs = [ "//third_party/etnaviv_gpu_tests/src/" ]
+
+  deps = [
+    "//src/graphics/lib/magma/src/libmagma",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+test_package("test_magma_vsi_exec") {
+  deps = [ ":test_magma_vsi_exec_bin" ]
+
+  tests = [
+    {
+      name = "test_magma_vsi_exec_bin"
+      manifest = "meta/test_magma_vsi_exec.cmx"
+    },
+  ]
+}
+
+group("magma_vsi_exec") {
+  testonly = true
+  deps = [ ":test_magma_vsi_exec" ]
+}
