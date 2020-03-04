@@ -4,6 +4,7 @@
 
 library fuchsia.ui.input3;
 
+using fuchsia.input;
 using zx;
 
 /// Type of the keyboard key input event.
@@ -34,7 +35,7 @@ table KeyEvent {
     2: KeyEventType type;
 
     /// Identifies the key ignoring modifiers, layout, prior key events, etc.
-    3: Key key;
+    3: fuchsia.input.Key key;
 
     /// Modifiers in effect at the time of the event.
     /// Example:
