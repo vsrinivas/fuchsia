@@ -305,7 +305,7 @@ WrapperType State::InnerCreateProperty(const std::string& name, BlockIndex paren
 
   BlockIndex name_index, value_index;
   zx_status_t status;
-  status = InnerCreateValue(name, BlockType::kPropertyValue, parent, &name_index, &value_index);
+  status = InnerCreateValue(name, BlockType::kBufferValue, parent, &name_index, &value_index);
   if (status != ZX_OK) {
     return WrapperType();
   }
@@ -876,7 +876,7 @@ zx_status_t State::InnerCreateValue(const std::string& name, BlockType type,
 
 void State::InnerFreeStringExtents(BlockIndex string_index) {
   auto* str = heap_->GetBlock(string_index);
-  if (!str || GetType(str) != BlockType::kPropertyValue) {
+  if (!str || GetType(str) != BlockType::kBufferValue) {
     return;
   }
 

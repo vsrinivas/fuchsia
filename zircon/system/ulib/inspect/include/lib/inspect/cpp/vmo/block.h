@@ -22,7 +22,7 @@ enum class BlockType : uint8_t {
   kIntValue = 4,
   kUintValue = 5,
   kDoubleValue = 6,
-  kPropertyValue = 7,
+  kBufferValue = 7,
   kExtent = 8,
   kName = 9,
   kTombstone = 10,

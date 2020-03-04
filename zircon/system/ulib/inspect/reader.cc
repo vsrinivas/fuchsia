@@ -192,7 +192,7 @@ void Reader::InnerScanBlocks() {
       // property into the properties field of the ParsedNode.
       auto parent_index = ValueBlockFields::ParentIndex::Get<BlockIndex>(block->header);
       InnerParseNumericProperty(GetOrCreate(parent_index), block);
-    } else if (type == BlockType::kPropertyValue) {
+    } else if (type == BlockType::kBufferValue) {
       // This block defines a property for an Object, parse the property
       // into the properties field of the ParsedNode.
       auto parent_index = ValueBlockFields::ParentIndex::Get<BlockIndex>(block->header);
@@ -327,7 +327,7 @@ void Reader::InnerParseNumericProperty(ParsedNode* parent, const Block* block) {
       return;
     case BlockType::kBoolValue:
       parent_node->add_property(
-        PropertyValue(std::move(name.value()), BoolPropertyValue(block->payload.u64)));
+          PropertyValue(std::move(name.value()), BoolPropertyValue(block->payload.u64)));
       return;
     case BlockType::kArrayValue: {
       auto entry_type = ArrayBlockPayload::EntryType::Get<BlockType>(block->payload.u64);

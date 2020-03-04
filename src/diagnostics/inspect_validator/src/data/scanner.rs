@@ -172,7 +172,7 @@ impl Scanner {
                 | Ok(BlockType::UintValue)
                 | Ok(BlockType::DoubleValue)
                 | Ok(BlockType::ArrayValue)
-                | Ok(BlockType::PropertyValue)
+                | Ok(BlockType::BufferValue)
                 | Ok(BlockType::BoolValue) => ret.process_property(block, buffer)?,
                 Ok(BlockType::Extent) => ret.process_extent(block, buffer)?,
                 Ok(BlockType::Name) => ret.process_name(block, buffer)?,
@@ -394,7 +394,7 @@ impl Scanner {
             BlockType::UintValue => ScannedPayload::Uint(block.uint_value()?),
             BlockType::DoubleValue => ScannedPayload::Double(block.double_value()?),
             BlockType::BoolValue => ScannedPayload::Bool(block.bool_value()?),
-            BlockType::PropertyValue => {
+            BlockType::BufferValue => {
                 let format = block.property_format()?;
                 let length = block.property_total_length()?;
                 let link = block.property_extent_index()?;

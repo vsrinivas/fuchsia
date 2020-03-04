@@ -138,7 +138,7 @@ TEST(Reader, LargeExtentsWithCycle) {
   // Manually create a property.
   Block* value = reinterpret_cast<Block*>(buf.data() + kMinOrderSize);
   value->header = ValueBlockFields::Order::Make(0) |
-                  ValueBlockFields::Type::Make(BlockType::kPropertyValue) |
+                  ValueBlockFields::Type::Make(BlockType::kBufferValue) |
                   ValueBlockFields::NameIndex::Make(2);
   value->payload.u64 = PropertyBlockPayload::TotalLength::Make(0xFFFFFFFF) |
                        PropertyBlockPayload::ExtentIndex::Make(3);

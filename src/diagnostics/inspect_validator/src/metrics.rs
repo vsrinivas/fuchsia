@@ -116,7 +116,7 @@ impl Description for Block<&[u8]> {
             BlockType::ArrayValue => {
                 Ok(format!("ARRAY({:?}, {})", self.array_format()?, self.array_entry_type()?))
             }
-            BlockType::PropertyValue => match self.property_format()? {
+            BlockType::BufferValue => match self.property_format()? {
                 PropertyFormat::String => Ok("STRING".to_owned()),
                 PropertyFormat::Bytes => Ok("BYTES".to_owned()),
             },
@@ -160,7 +160,7 @@ impl Metrics {
             | BlockType::NodeValue
             | BlockType::Free
             | BlockType::Extent
-            | BlockType::PropertyValue
+            | BlockType::BufferValue
             | BlockType::Tombstone
             | BlockType::LinkValue => 0,
             BlockType::IntValue
@@ -175,7 +175,7 @@ impl Metrics {
         let header_bytes = match block_type {
             BlockType::Header
             | BlockType::NodeValue
-            | BlockType::PropertyValue
+            | BlockType::BufferValue
             | BlockType::Free
             | BlockType::Reserved
             | BlockType::Tombstone
@@ -379,7 +379,7 @@ mod tests {
         let mut buffer = [0u8; 256];
         init_vmo_contents(&mut buffer);
         let mut value_header = BlockHeader(0);
-        set_type!(value_header, PropertyValue);
+        set_type!(value_header, BufferValue);
         value_header.set_value_name_index(NAME_INDEX);
         value_header.set_value_parent_index(0);
         put_header!(value_header, 1, &mut buffer);

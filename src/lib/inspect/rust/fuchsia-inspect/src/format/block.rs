@@ -174,19 +174,19 @@ impl<T: ReadableBlockContainer> Block<T> {
 
     /// Gets the index of the EXTENT of the PROPERTY block.
     pub fn property_extent_index(&self) -> Result<u32, Error> {
-        self.check_type(BlockType::PropertyValue)?;
+        self.check_type(BlockType::BufferValue)?;
         Ok(self.read_payload().property_extent_index())
     }
 
     /// Gets the total length of a PROPERTY block.
     pub fn property_total_length(&self) -> Result<usize, Error> {
-        self.check_type(BlockType::PropertyValue)?;
+        self.check_type(BlockType::BufferValue)?;
         Ok(self.read_payload().property_total_length().to_usize().unwrap())
     }
 
     /// Gets the flags of a PROPERTY block.
     pub fn property_format(&self) -> Result<PropertyFormat, Error> {
-        self.check_type(BlockType::PropertyValue)?;
+        self.check_type(BlockType::BufferValue)?;
         let raw_format = self.read_payload().property_flags();
         PropertyFormat::from_u8(raw_format).ok_or_else(|| {
             format_err!("Invalid property format {} at index {}", raw_format, self.index())
@@ -744,32 +744,32 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
         Ok(())
     }
 
-    /// Converts a *_VALUE block into a PROPERTY_VALUE block.
+    /// Converts a *_VALUE block into a BUFFER_VALUE block.
     pub fn become_property(
         &self,
         name_index: u32,
         parent_index: u32,
         format: PropertyFormat,
     ) -> Result<(), Error> {
-        self.write_value_header(BlockType::PropertyValue, name_index, parent_index)?;
+        self.write_value_header(BlockType::BufferValue, name_index, parent_index)?;
         let mut payload = Payload(0);
         payload.set_property_flags(format.to_u8().unwrap());
         self.write_payload(payload);
         Ok(())
     }
 
-    /// Sets the total length of a PROPERTY_VALUE block.
+    /// Sets the total length of a BUFFER_VALUE block.
     pub fn set_property_total_length(&self, length: u32) -> Result<(), Error> {
-        self.check_type(BlockType::PropertyValue)?;
+        self.check_type(BlockType::BufferValue)?;
         let mut payload = self.read_payload();
         payload.set_property_total_length(length);
         self.write_payload(payload);
         Ok(())
     }
 
-    /// Sets the index of the EXTENT of a PROPERTY_VALUE block.
+    /// Sets the index of the EXTENT of a BUFFER_VALUE block.
     pub fn set_property_extent_index(&self, index: u32) -> Result<(), Error> {
-        self.check_type(BlockType::PropertyValue)?;
+        self.check_type(BlockType::BufferValue)?;
         let mut payload = self.read_payload();
         payload.set_property_extent_index(index);
         self.write_payload(payload);
@@ -1172,7 +1172,7 @@ mod tests {
             BlockType::IntValue,
             BlockType::UintValue,
             BlockType::NodeValue,
-            BlockType::PropertyValue,
+            BlockType::BufferValue,
             BlockType::ArrayValue,
             BlockType::LinkValue,
             BlockType::BoolValue,
@@ -1308,7 +1308,7 @@ mod tests {
         let container = [0u8; constants::MIN_ORDER_SIZE];
         let block = get_reserved(&container);
         assert!(block.become_property(2, 3, PropertyFormat::Bytes).is_ok());
-        assert_eq!(block.block_type(), BlockType::PropertyValue);
+        assert_eq!(block.block_type(), BlockType::BufferValue);
         assert_eq!(block.name_index().unwrap(), 2);
         assert_eq!(block.parent_index().unwrap(), 3);
         assert_eq!(block.property_format().unwrap(), PropertyFormat::Bytes);
@@ -1331,7 +1331,7 @@ mod tests {
         assert_eq!(container[..8], [0x01, 0x07, 0x03, 0x00, 0x00, 0x02, 0x00, 0x00]);
         assert_eq!(container[8..], [0x0a, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x10]);
 
-        let types = BTreeSet::from_iter(vec![BlockType::PropertyValue]);
+        let types = BTreeSet::from_iter(vec![BlockType::BufferValue]);
         test_ok_types(move |b| b.set_property_extent_index(4), &types);
         test_ok_types(move |b| b.set_property_total_length(4), &types);
         test_ok_types(move |b| b.property_extent_index(), &types);

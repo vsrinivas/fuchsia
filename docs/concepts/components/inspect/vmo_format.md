@@ -141,7 +141,7 @@ enum             | value | type name | category
 `kIntValue`      | 4     | `INT_VALUE`        | Value
 `kUintValue`     | 5     | `UINT_VALUE`       | Value
 `kDoubleValue`   | 6     | `DOUBLE_VALUE`     | Value
-`kPropertyValue` | 7     | `PROPERTY_VALUE`   | Value
+`kBufferValue`   | 7     | `BUFFER_VALUE`     | Value
 `kExtent`        | 8     | `EXTENT`           | Extent
 `kName`          | 9     | `NAME`             | Name
 `kTombstone`     | 10    | `TOMBSTONE`        | Value
@@ -173,7 +173,7 @@ Each type interprets the payload differently, as follows:
 * [INT\_VALUE](#numeric)
 * [UINT\_VALUE](#numeric)
 * [DOUBLE\_VALUE](#numeric)
-* [PROPERTY\_VALUE](#property)
+* [BUFFER\_VALUE](#buffer_value)
 * [EXTENT](#extent)
 * [NAME](#name)
 * [TOMBSTONE](#node)
@@ -331,7 +331,7 @@ Type = {4,5,6,13}
 Numeric `VALUE` blocks all contain the 64-bit numeric type inlined into
 the second 8 bytes of the block.
 
-## PROPERTY\_VALUE {#property}
+## BUFFER\_VALUE {#buffer_value}
 
 ```
 .---------------------------------------------------------------.
@@ -346,15 +346,15 @@ the second 8 bytes of the block.
 O = Order
 R = Reserved, must be 0
 Type = 7
-Total length = size of the string
-Extent index = index of the extent containing bytes for the string
+Total length = size of the buffer
+Extent index = index of the first extent containing bytes for the buffer
 F = Display format {0,1}
 ```
 
-General `PROPERTY_VALUE` blocks reference arbitrary byte data across
+General `BUFFER_VALUE` blocks reference arbitrary byte data across
 one or more linked `EXTENT` blocks.
 
-`PROPERTY_VALUE` blocks contain the index of the first `EXTENT` block holding
+`BUFFER_VALUE` blocks contain the index of the first `EXTENT` block holding
 the binary data, and they contain the total length of the data in bytes
 across all extents.
 
@@ -383,12 +383,12 @@ R = Reserved, must be 0
 Type = 8
 Next extent index = index of next extent in the chain
 Extent index = index of the extent containing bytes for the string
-Payload = string payload up to at most the end of the block. Size
+Payload = byte data payload up to at most the end of the block. Size
           depends on the order
 ```
 
 `EXTENT` blocks contain an arbitrary byte data payload and the index of
-the next `EXTENT` in the chain. The byte data for a property is retrieved
+the next `EXTENT` in the chain. The byte data for an buffer_value is retrieved
 by reading each `EXTENT` in order until **Total Length** bytes are read.
 
 ## NAME {#name}

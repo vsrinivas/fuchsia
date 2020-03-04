@@ -731,7 +731,7 @@ mod tests {
         // Creates with value
         let block =
             state.create_property("test", b"test-property", PropertyFormat::String, 0).unwrap();
-        assert_eq!(block.block_type(), BlockType::PropertyValue);
+        assert_eq!(block.block_type(), BlockType::BufferValue);
         assert_eq!(block.index(), 1);
         assert_eq!(block.parent_index().unwrap(), 0);
         assert_eq!(block.name_index().unwrap(), 2);
@@ -756,7 +756,7 @@ mod tests {
         let blocks: Vec<Block<&[u8]>> = snapshot.scan().collect();
         assert_eq!(blocks.len(), 11);
         assert_eq!(blocks[0].block_type(), BlockType::Header);
-        assert_eq!(blocks[1].block_type(), BlockType::PropertyValue);
+        assert_eq!(blocks[1].block_type(), BlockType::BufferValue);
         assert_eq!(blocks[2].block_type(), BlockType::Name);
         assert_eq!(blocks[3].block_type(), BlockType::Free);
         assert_eq!(blocks[4].block_type(), BlockType::Extent);
@@ -777,7 +777,7 @@ mod tests {
         // Creates with value
         let block =
             state.create_property("test", b"test-property", PropertyFormat::Bytes, 0).unwrap();
-        assert_eq!(block.block_type(), BlockType::PropertyValue);
+        assert_eq!(block.block_type(), BlockType::BufferValue);
         assert_eq!(block.index(), 1);
         assert_eq!(block.parent_index().unwrap(), 0);
         assert_eq!(block.name_index().unwrap(), 2);
@@ -803,7 +803,7 @@ mod tests {
         let blocks: Vec<Block<&[u8]>> = snapshot.scan().collect();
         assert_eq!(blocks.len(), 11);
         assert_eq!(blocks[0].block_type(), BlockType::Header);
-        assert_eq!(blocks[1].block_type(), BlockType::PropertyValue);
+        assert_eq!(blocks[1].block_type(), BlockType::BufferValue);
         assert_eq!(blocks[2].block_type(), BlockType::Name);
         assert_eq!(blocks[3].block_type(), BlockType::Free);
         assert_eq!(blocks[4].block_type(), BlockType::Extent);
@@ -901,7 +901,7 @@ mod tests {
         let data = chars.iter().cycle().take(6000).collect::<String>();
         let block =
             state.create_property("test", data.as_bytes(), PropertyFormat::String, 0).unwrap();
-        assert_eq!(block.block_type(), BlockType::PropertyValue);
+        assert_eq!(block.block_type(), BlockType::BufferValue);
         assert_eq!(block.index(), 1);
         assert_eq!(block.parent_index().unwrap(), 0);
         assert_eq!(block.name_index().unwrap(), 2);
@@ -947,7 +947,7 @@ mod tests {
         let blocks: Vec<Block<&[u8]>> = snapshot.scan().collect();
         assert_eq!(blocks.len(), 12);
         assert_eq!(blocks[0].block_type(), BlockType::Header);
-        assert_eq!(blocks[1].block_type(), BlockType::PropertyValue);
+        assert_eq!(blocks[1].block_type(), BlockType::BufferValue);
         assert_eq!(blocks[2].block_type(), BlockType::Name);
         assert!(blocks[3..9].iter().all(|b| b.block_type() == BlockType::Free));
         assert_eq!(blocks[9].block_type(), BlockType::Extent);

@@ -152,7 +152,7 @@ fn scan_blocks<'a>(snapshot: &'a Snapshot) -> Result<ScanResult<'a>, Error> {
             BlockType::ArrayValue => {
                 result.parse_array_property(&block)?;
             }
-            BlockType::PropertyValue => {
+            BlockType::BufferValue => {
                 result.parse_property(&block)?;
             }
             BlockType::LinkValue => {

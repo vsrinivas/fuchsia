@@ -29,7 +29,7 @@ pub enum BlockType {
     DoubleValue = 6,
 
     // String or bytevector property value.
-    PropertyValue = 7,
+    BufferValue = 7,
 
     // Contains a string payload.
     Extent = 8,
@@ -60,7 +60,7 @@ impl fmt::Display for BlockType {
             BlockType::IntValue => write!(f, "INT_VALUE"),
             BlockType::UintValue => write!(f, "UINT_VALUE"),
             BlockType::DoubleValue => write!(f, "DOUBLE_VALUE"),
-            BlockType::PropertyValue => write!(f, "PROPERTY_VALUE"),
+            BlockType::BufferValue => write!(f, "BUFFER_VALUE"),
             BlockType::Extent => write!(f, "EXTENT"),
             BlockType::Name => write!(f, "NAME"),
             BlockType::Tombstone => write!(f, "TOMBSTONE"),
@@ -79,7 +79,7 @@ impl BlockType {
             | BlockType::IntValue
             | BlockType::UintValue
             | BlockType::DoubleValue
-            | BlockType::PropertyValue
+            | BlockType::BufferValue
             | BlockType::ArrayValue
             | BlockType::LinkValue
             | BlockType::BoolValue => true,
@@ -113,7 +113,7 @@ impl BlockType {
             BlockType::IntValue,
             BlockType::UintValue,
             BlockType::DoubleValue,
-            BlockType::PropertyValue,
+            BlockType::BufferValue,
             BlockType::Extent,
             BlockType::Name,
             BlockType::Tombstone,

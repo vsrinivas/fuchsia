@@ -773,7 +773,7 @@ TEST(State, CreateSmallProperties) {
 
   // Property a fits in the first 3 blocks (value, name, extent).
   CompareBlock(blocks.find(1)->block,
-               MakeBlock(ValueBlockFields::Type::Make(BlockType::kPropertyValue) |
+               MakeBlock(ValueBlockFields::Type::Make(BlockType::kBufferValue) |
                              ValueBlockFields::NameIndex::Make(2),
                          PropertyBlockPayload::ExtentIndex::Make(3) |
                              PropertyBlockPayload::TotalLength::Make(5)));
@@ -787,7 +787,7 @@ TEST(State, CreateSmallProperties) {
   // Property b fits in the next 3 blocks (value, name, extent).
 
   CompareBlock(blocks.find(4)->block,
-               MakeBlock(ValueBlockFields::Type::Make(BlockType::kPropertyValue) |
+               MakeBlock(ValueBlockFields::Type::Make(BlockType::kBufferValue) |
                              ValueBlockFields::NameIndex::Make(5),
                          PropertyBlockPayload::ExtentIndex::Make(6) |
                              PropertyBlockPayload::TotalLength::Make(8) |
@@ -829,7 +829,7 @@ TEST(State, CreateLargeSingleExtentProperties) {
   // Property a has the first 2 blocks for value and name, but needs a large block for the
   // contents.
   CompareBlock(blocks.find(1)->block,
-               MakeBlock(ValueBlockFields::Type::Make(BlockType::kPropertyValue) |
+               MakeBlock(ValueBlockFields::Type::Make(BlockType::kBufferValue) |
                              ValueBlockFields::NameIndex::Make(2),
                          PropertyBlockPayload::ExtentIndex::Make(128) |
                              PropertyBlockPayload::TotalLength::Make(2040)));
@@ -846,7 +846,7 @@ TEST(State, CreateLargeSingleExtentProperties) {
   // another large block for the extent.
 
   CompareBlock(blocks.find(3)->block,
-               MakeBlock(ValueBlockFields::Type::Make(BlockType::kPropertyValue) |
+               MakeBlock(ValueBlockFields::Type::Make(BlockType::kBufferValue) |
                              ValueBlockFields::NameIndex::Make(4),
                          PropertyBlockPayload::ExtentIndex::Make(256) |
                              PropertyBlockPayload::TotalLength::Make(2040) |
@@ -886,7 +886,7 @@ TEST(State, CreateMultiExtentProperty) {
 
   // Property a has the first 2 blocks for its value and name.
   CompareBlock(blocks.find(1)->block,
-               MakeBlock(ValueBlockFields::Type::Make(BlockType::kPropertyValue) |
+               MakeBlock(ValueBlockFields::Type::Make(BlockType::kBufferValue) |
                              ValueBlockFields::NameIndex::Make(2),
                          PropertyBlockPayload::ExtentIndex::Make(128) |
                              PropertyBlockPayload::TotalLength::Make(6000)));
@@ -935,7 +935,7 @@ TEST(State, SetSmallStringProperty) {
 
   // Property a fits in the first 3 blocks (value, name, extent).
   CompareBlock(blocks.find(1)->block,
-               MakeBlock(ValueBlockFields::Type::Make(BlockType::kPropertyValue) |
+               MakeBlock(ValueBlockFields::Type::Make(BlockType::kBufferValue) |
                              ValueBlockFields::NameIndex::Make(2),
                          PropertyBlockPayload::ExtentIndex::Make(3) |
                              PropertyBlockPayload::TotalLength::Make(5) |
@@ -969,7 +969,7 @@ TEST(State, SetSmallBinaryProperty) {
 
   // Property a fits in the first 3 blocks (value, name, extent).
   CompareBlock(blocks.find(1)->block,
-               MakeBlock(ValueBlockFields::Type::Make(BlockType::kPropertyValue) |
+               MakeBlock(ValueBlockFields::Type::Make(BlockType::kBufferValue) |
                              ValueBlockFields::NameIndex::Make(2),
                          PropertyBlockPayload::ExtentIndex::Make(3) |
                              PropertyBlockPayload::TotalLength::Make(4) |
@@ -1010,7 +1010,7 @@ TEST(State, SetLargeProperty) {
 
   // Property a fits in the first 3 blocks (value, name, extent).
   CompareBlock(blocks.find(1)->block,
-               MakeBlock(ValueBlockFields::Type::Make(BlockType::kPropertyValue) |
+               MakeBlock(ValueBlockFields::Type::Make(BlockType::kBufferValue) |
                              ValueBlockFields::NameIndex::Make(2),
                          PropertyBlockPayload::ExtentIndex::Make(3) |
                              PropertyBlockPayload::TotalLength::Make(5)));
@@ -1113,7 +1113,7 @@ TEST(State, CreateNodeHierarchy) {
   // Version property
   CompareBlock(
       blocks.find(9)->block,
-      MakeBlock(ValueBlockFields::Type::Make(BlockType::kPropertyValue) |
+      MakeBlock(ValueBlockFields::Type::Make(BlockType::kBufferValue) |
                     ValueBlockFields::ParentIndex::Make(1) | ValueBlockFields::NameIndex::Make(10),
                 PropertyBlockPayload::ExtentIndex::Make(11) |
                     PropertyBlockPayload::TotalLength::Make(8)));
