@@ -536,7 +536,7 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 							c.mu.Unlock()
 						}
 					}
-					if obs&(zx.SignalFIFOReadable) != 0 {
+					if obs&zx.SignalFIFOReadable != 0 {
 						switch status, count := FifoRead(c.fifos.Rx, scratch); status {
 						case zx.ErrOk:
 							c.Stats.Rx.Reads(count).Increment()
@@ -549,8 +549,9 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 						default:
 							return &zx.Error{Status: status, Text: "FifoRead(RX)"}
 						}
+						break
 					}
-					if obs&(zx.SignalFIFOWritable) != 0 {
+					if obs&zx.SignalFIFOWritable != 0 {
 						break
 					}
 				}
