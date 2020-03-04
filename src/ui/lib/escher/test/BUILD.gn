@@ -60,6 +60,7 @@ if (is_mac) {
       "renderer/buffer_cache_unittest.cc",
       "renderer/frame_unittest.cc",
       "renderer/render_queue_unittest.cc",
+      "renderer/sampler_cache_unittest.cc",
       "run_all_unittests.cc",
       "scene/directional_light_unittest.cc",
       "shape/rounded_rect_unittest.cc",

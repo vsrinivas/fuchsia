@@ -7,6 +7,7 @@
 
 #include <unordered_map>
 
+#include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/ui/lib/escher/impl/command_buffer_sequencer.h"
 #include "src/ui/lib/escher/resources/resource_manager.h"
 
@@ -22,6 +23,8 @@ class ResourceRecycler : public ResourceManager, public impl::CommandBufferSeque
   explicit ResourceRecycler(EscherWeakPtr escher);
 
   virtual ~ResourceRecycler();
+
+  fxl::WeakPtr<ResourceRecycler> GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
  private:
   // Gives subclasses a chance to recycle the resource. Default implementation
@@ -43,6 +46,10 @@ class ResourceRecycler : public ResourceManager, public impl::CommandBufferSeque
   // can't modify elements of an unordered_set, which prevents us from
   // removing a unique_ptr.
   std::unordered_map<Resource*, std::unique_ptr<Resource>> unused_resources_;
+
+  fxl::WeakPtrFactory<ResourceRecycler> weak_factory_;  // must be last
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(ResourceRecycler);
 };
 
 }  // namespace escher

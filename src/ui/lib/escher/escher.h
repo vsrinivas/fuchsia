@@ -128,6 +128,7 @@ class Escher final : public MeshBuilderFactory, public ShaderProgramFactory {
 
   ImageFactory* image_cache() { return image_cache_.get(); }
   BufferCache* buffer_cache() { return buffer_cache_.get(); }
+  SamplerCache* sampler_cache() { return sampler_cache_.get(); }
   impl::MeshManager* mesh_manager() { return mesh_manager_.get(); }
   impl::PipelineLayoutCache* pipeline_layout_cache() { return pipeline_layout_cache_.get(); }
   impl::RenderPassCache* render_pass_cache() const { return render_pass_cache_.get(); }
@@ -174,9 +175,10 @@ class Escher final : public MeshBuilderFactory, public ShaderProgramFactory {
   // Everything below this point requires |weak_factory_| to be initialized
   // before they can be constructed.
 
+  std::unique_ptr<ResourceRecycler> resource_recycler_;
   std::unique_ptr<impl::ImageCache> image_cache_;
   std::unique_ptr<BufferCache> buffer_cache_;
-  std::unique_ptr<ResourceRecycler> resource_recycler_;
+  std::unique_ptr<SamplerCache> sampler_cache_;
   std::unique_ptr<impl::MeshManager> mesh_manager_;
   std::unique_ptr<DefaultShaderProgramFactory> shader_program_factory_;
 

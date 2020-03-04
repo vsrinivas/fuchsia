@@ -4,38 +4,11 @@
 
 #include "src/ui/scenic/lib/gfx/resources/material.h"
 
+#include "src/ui/lib/escher/renderer/sampler_cache.h"
 #include "src/ui/scenic/lib/gfx/engine/session.h"
 #include "src/ui/scenic/lib/gfx/resources/image.h"
 #include "src/ui/scenic/lib/gfx/resources/image_base.h"
 #include "src/ui/scenic/lib/gfx/resources/image_pipe.h"
-
-namespace {
-
-// TODO(SCN-1380): This is a hack that temporarily avoids memory and performance
-// issues involving immutable samplers. It relies on the fact that Scenic is
-// currently a singleton service with a single vk::Device, with no user-provided
-// parameters that affect sampler construction other than image format. SCN-1380
-// covers the real task to solve this problem, which involves design work both
-// at the Scenic and Escher levels.
-escher::SamplerPtr CreateNV12Sampler(escher::ResourceRecycler* recycler) {
-  static vk::Device last_device;
-  static escher::SamplerPtr last_sampler;
-
-  if (recycler->vulkan_context().device == last_device && last_sampler)
-    return last_sampler;
-
-  if (last_sampler) {
-    FXL_LOG(WARNING) << "YUV Sampler was not successfully cached, memory "
-                        "footprint will increase.";
-  }
-
-  last_device = recycler->vulkan_context().device;
-  last_sampler = fxl::MakeRefCounted<escher::Sampler>(recycler, vk::Format::eG8B8R82Plane420Unorm,
-                                                      vk::Filter::eLinear);
-  return last_sampler;
-}
-
-}  // namespace
 
 namespace scenic_impl {
 namespace gfx {
@@ -65,29 +38,37 @@ void Material::UpdateEscherMaterial(escher::BatchGpuUploader* gpu_uploader,
     texture_->UpdateEscherImage(gpu_uploader, layout_updater);
     escher_image = texture_->GetEscherImage();
   }
-  const escher::TexturePtr& escher_texture = escher_material_->texture();
+  const escher::TexturePtr& old_escher_texture = escher_material_->texture();
 
-  if (!escher_texture || escher_image != escher_texture->image()) {
-    escher::TexturePtr texture;
+  if (!old_escher_texture || escher_image != old_escher_texture->image()) {
+    escher::TexturePtr new_escher_texture;
     if (escher_image) {
-      auto recycler = resource_context().escher_resource_recycler;
+      escher::SamplerPtr sampler;
+
       // TODO(SCN-1403): Technically, eG8B8R82Plane420Unorm is not enough to
       // assume NV12, but it's currently the only format we support at the
       // sampler level.
       if (escher_image->format() == vk::Format::eG8B8R82Plane420Unorm) {
-        texture = fxl::MakeRefCounted<escher::Texture>(recycler, CreateNV12Sampler(recycler),
-                                                       escher_image);
+        // TODO(ES-199, ES-200): Reusing samplers is just good policy, but it is a necessity for
+        // immutable samplers, because allocating duplicate samplers will result in creation of
+        // duplicate pipelines, descriptor set allocators.
+        // NOTE: the previous comment said that until ES-199, ES-200 are fixed "Escher will keep
+        // these samplers around forever."  Not quite sure what this means... is it because the
+        // pipelines hang on to the sampler?  If so, that's bad, but generation tons of redundant
+        // pipelines is worse (both for FPS and OOMing).
+        sampler = resource_context().escher_sampler_cache->ObtainYuvSampler(escher_image->format(),
+                                                                            vk::Filter::eLinear);
+        FXL_DCHECK(sampler->is_immutable());
+
       } else {
-        texture = escher::Texture::New(recycler, escher_image, vk::Filter::eLinear);
-        // TODO(ES-199, ES-200): Reusing samplers is just good policy, but it is
-        // required for immutable samplers because, until these bugs are fixed,
-        // Escher will keep these samplers around forever.
-        FXL_DCHECK(!texture->sampler()->is_immutable())
-            << "Immutable samplers need to be cached to avoid unbounded memory "
-               "consumption";
+        sampler = resource_context().escher_sampler_cache->ObtainSampler(vk::Filter::eLinear);
+        FXL_DCHECK(!sampler->is_immutable());  // Just checking our expectation.
       }
+
+      new_escher_texture = fxl::MakeRefCounted<escher::Texture>(
+          resource_context().escher_resource_recycler, sampler, escher_image);
     }
-    escher_material_->SetTexture(std::move(texture));
+    escher_material_->SetTexture(std::move(new_escher_texture));
   }
 }
 
