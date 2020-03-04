@@ -30,8 +30,9 @@ Fuchsia infrastructure, we map our own data into these fields with the following
 * `Bot` == A Fuchsia LUCI builder that has run the benchmark at least once.
 * `Subtest` == The name of the test case in your benchmark suite.
 
-Type the name of your benchmark suite in the first box to begin searching.   As an
-example, we can see the zircon_benchmarks suite if we type "zircon"
+Type the name of your benchmark suite in the first box to begin searching.  For
+example, if we have a benchmark suite named "zircon_benchmarks", it will get
+displayed via autocomplete if we type "zircon".
 
 ![test_suite_example](/docs/images/benchmarking/test_suite_example.png "test_suite_example")
 

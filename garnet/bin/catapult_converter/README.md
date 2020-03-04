@@ -18,9 +18,8 @@ the dashboard:
   to order results from different builds in a graph.
 
 * benchmarks: This parameter is taken from the `test_suite` field in
-  the JSON input file.  This is often the name of the executable
-  containing the perf tests, prefixed by "fuchsia.",
-  e.g. "fuchsia.zircon_benchmarks".
+  the JSON input file.  This usually has the prefix "fuchsia.",
+  e.g. "fuchsia.microbenchmarks".
 
 * masters: The term "master" is an outdated term from when Buildbot
   was used by Chrome infrastructure.  The convention now is to use the

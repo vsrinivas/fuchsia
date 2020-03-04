@@ -52,7 +52,7 @@ void LogPerfResult(const char* test_suite_name, const char* test_name, double va
   // Format: //zircon/system/ulib/perftest/performance-results-schema.json
   // Example line:
   //  {"label":"Vmo/CloneWrite/10000kbytes.close",
-  //   "test_suite":"fuchsia.zircon_benchmarks",
+  //   "test_suite":"fuchsia.microbenchmarks",
   //   "unit":"nanoseconds",
   //   "values":[2346.961749]}
 

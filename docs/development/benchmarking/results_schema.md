@@ -63,14 +63,14 @@ of the result's `values`.
 [
     {
         "label": "Channel/WriteRead/64bytes",
-        "test_suite": "fuchsia.zircon_benchmarks",
+        "test_suite": "fuchsia.microbenchmarks",
         "unit": "nanoseconds",
         "values": [105.45, 697.916667, 672.743056],
         "split_first": true
     },
     {
         "label":"Channel/WriteRead/1024bytes",
-        "test_suite":"fuchsia.zircon_benchmarks",
+        "test_suite":"fuchsia.microbenchmarks",
         "unit":"nanoseconds",
         "values":[102.23, 1004.340278, 906.250000],
         "split_first": true
