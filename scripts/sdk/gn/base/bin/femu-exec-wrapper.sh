@@ -11,8 +11,7 @@ function usage() {
   echo "  [--exec <script>]"
   echo "    Executes the specified script or command that can access the emulator"
   echo "  [--femu-log <file>]"
-  echo "    Writes femu output to log file, can also be /dev/null or /dev/stdout"
-  echo "    Default log output is ${FEMU_LOG}"
+  echo "    Specify log file instead of mktemp, can also be /dev/null or /dev/stdout"
   echo "  [--headless]"
   echo "    Do not use any graphics support, do not open any new windows"
   echo "  [--interactive]"
@@ -40,6 +39,16 @@ function get_child_pids {
   echo "$children"
 }
 
+# Called when there is an error and we need to dump the log
+function dump_femu_log {
+  if [[ "${FEMU_LOG}" = /dev/* ]]; then
+    echo "Cannot dump log for device ${FEMU_LOG}"
+  else
+    echo "Dumping log file ${FEMU_LOG}"
+    cat --number "${FEMU_LOG}"
+  fi
+}
+
 # This is only used after femu.sh has been started
 function cleanup {
   # The emu, emulator*, and qemu* children need to be terminated separately since it is detached from the script
@@ -55,7 +64,8 @@ HEADLESS=""
 INTERACTIVE=""
 EXEC_SCRIPT=""
 IMAGE_NAME="qemu-x64"
-FEMU_LOG="/dev/null"
+FEMU_LOG=""
+FEMU_LOG_TEMP=""
 
 # Check for some of the emu flags, but pass everything else on to femu.sh
 while (( "$#" )); do
@@ -93,13 +103,19 @@ done
 # This IPv6 address is always generated according to the hash of the qemu network interface in femu.sh
 EMULATOR_ADDRESS="fe80::5054:ff:fe63:5e7a%qemu"
 
+# Set up log file if not specified
+if [[ "${INTERACTIVE}" == "yes" && "${FEMU_LOG}" != "" && "${FEMU_LOG}" != "/dev/null" ]]; then
+  fx-error "--interactive does not write to --femu-log"
+  exit 1
+fi
+if [[ "${FEMU_LOG}" == "" ]]; then
+  FEMU_LOG="$(mktemp)"
+  FEMU_LOG_TEMP="${FEMU_LOG_TEMP}"
+fi
+
 # Always start with -N for SSH access to the emulator
-echo "Starting emulator"
+echo "Starting emulator with logging to ${FEMU_LOG}"
 if [[ "${INTERACTIVE}" == "yes" ]]; then
-  if [[ "${FEMU_LOG}" != "" && "${FEMU_LOG}" != "/dev/null" ]]; then
-    fx-error "--interactive does not write to --femu-log"
-    exit 1
-  fi
   # Start up the emulator in the background within a new window, useful for interactive debugging
   xterm -T "femu" -e "${SCRIPT_SRC_DIR}/femu.sh --image ${IMAGE_NAME} -N ${EMU_ARGS[@]}" &
 elif [[ "${HEADLESS}" == "yes" ]]; then
@@ -117,7 +133,7 @@ echo "Waiting for emulator to start"
 COUNT=0
 COUNT_TIMEOUT=120
 while [[ $COUNT -lt $COUNT_TIMEOUT ]] ; do
-  kill -0 ${FEMU_PID} &> /dev/null || ( echo "ERROR: Emulator pid $FEMU_PID has exited, cannot connect"; exit 1; )
+  kill -0 ${FEMU_PID} &> /dev/null || ( echo "ERROR: Emulator pid $FEMU_PID has exited, cannot connect"; dump_femu_log; exit 1; )
   "${SCRIPT_SRC_DIR}/fssh.sh" --device-ip "${EMULATOR_ADDRESS}" "echo hello" &> /dev/null && break
   echo "Waiting for emulator SSH server ${EMULATOR_ADDRESS} - attempt ${COUNT} ..."
   COUNT=$((COUNT+1))
@@ -125,13 +141,14 @@ while [[ $COUNT -lt $COUNT_TIMEOUT ]] ; do
 done
 if (( COUNT == COUNT_TIMEOUT )); then
   echo "ERROR: Timeout of ${COUNT_TIMEOUT} seconds reached waiting for emulator pid $FEMU_PID to start, cannot connect"
+  dump_femu_log
   exit 1
 fi
 echo "Emulator pid ${FEMU_PID} is running and accepting connections"
 
 # Start the package server after the emulator is ready, so we know it is configured when we run commands
 echo "Starting package server"
-"${SCRIPT_SRC_DIR}/fserve.sh" --image "${IMAGE_NAME}" &> /dev/null
+"${SCRIPT_SRC_DIR}/fserve.sh" --image "${IMAGE_NAME}"
 
 # Execute the script specified on the command-line
 EXEC_RESULT=0
@@ -144,6 +161,12 @@ fi
 
 if [[ "${EXEC_RESULT}" != "0" ]]; then
   fx-error "ERROR: \"${EXEC_SCRIPT}\" returned ${EXEC_RESULT}"
+  dump_femu_log
+else
+  # Clean up the temporary file on success
+  if [[ "${FEMU_LOG_TEMP}" != "" ]]; then
+    rm -f "${FEMU_LOG_TEMP}"
+  fi
 fi
 
 # Exit with the result of the test script, and also run the cleanup function
