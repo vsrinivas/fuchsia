@@ -288,15 +288,15 @@ impl Monitor {
 
     /// Reports all information.
     pub fn report_state(&mut self) {
-        info!("reachability state IPv4 {:?}", self.system_state[&Proto::IPv4]);
-        info!("reachability state IPv6 {:?}", self.system_state[&Proto::IPv4]);
-        info!("reachability stats {:?}", self.stats());
+        debug!("reachability state IPv4 {:?}", self.system_state[&Proto::IPv4]);
+        debug!("reachability state IPv6 {:?}", self.system_state[&Proto::IPv4]);
+        debug!("reachability stats {:?}", self.stats());
         self.report_state_duration_for_all();
     }
 
     // Reports current state duration for all interfaces.
     fn report_state_duration_for_all(&mut self) {
-        info!("report_state_duration_for_all");
+        debug!("report_state_duration_for_all");
     }
 
     fn report_system_updated(&mut self, updated: HashSet<Proto>) {
