@@ -1,0 +1,10 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+declare_args() {
+  # Enables/Disables flutter driver using '--args=flutter_driver_enabled=[true/false]'
+  # in fx set. (Disabled by default)
+  # This is effective only on debug builds.
+  flutter_driver_enabled = false
+}
