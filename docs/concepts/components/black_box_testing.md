@@ -410,7 +410,7 @@ event_source.start_component_tree().await?;
 
 #### Event logs {#event-logs}
 
-It is possible to record events of certain types asynchronously and drain them at a later
+It is possible to record events of certain types asynchronously and flush them at a later
 point in time:
 
 ```rust
