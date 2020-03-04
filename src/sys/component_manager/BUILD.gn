@@ -89,6 +89,9 @@ rustc_library("lib") {
     "//src/sys/lib/directory_broker",
     "//third_party/rust_crates:matches",
   ]
+
+  # TODO(47215): Fix the leaks and remove this.
+  non_rust_deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 rustc_binary("bin") {
