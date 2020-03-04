@@ -30,3 +30,18 @@ source_set("stub_cobalt_logger_factory") {
 
   visibility = [ "//src/developer/feedback/*" ]
 }
+
+source_set("stub_network_reachability_provider") {
+  testonly = true
+
+  public = [ "stub_network_reachability_provider.h" ]
+
+  sources = [ "stub_network_reachability_provider.h" ]
+
+  deps = [
+    "//src/lib/fxl",
+    "//zircon/system/fidl/fuchsia-net",
+  ]
+
+  visibility = [ "//src/developer/feedback/*" ]
+}

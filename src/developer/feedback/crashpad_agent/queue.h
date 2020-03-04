@@ -5,6 +5,7 @@
 #ifndef SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_QUEUE_H_
 #define SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_QUEUE_H_
 
+#include <fuchsia/net/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 
 #include <map>
@@ -24,6 +25,7 @@ namespace feedback {
 class Queue {
  public:
   static std::unique_ptr<Queue> TryCreate(async_dispatcher_t* dispatcher,
+                                          std::shared_ptr<sys::ServiceDirectory> services,
                                           std::shared_ptr<InfoContext> info_context,
                                           CrashServer* crash_server);
 
@@ -48,8 +50,9 @@ class Queue {
   const crashpad::UUID& LatestReport() { return pending_reports_.back(); }
 
  private:
-  Queue(async_dispatcher_t* dispatcher, std::shared_ptr<InfoContext> info_context,
-        std::unique_ptr<Database> database, CrashServer* crash_server);
+  Queue(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
+        std::shared_ptr<InfoContext> info_context, std::unique_ptr<Database> database,
+        CrashServer* crash_server);
 
   // How the queue should handle processing existing pending reports and new reports.
   enum class State {
@@ -77,10 +80,15 @@ class Queue {
   // Schedules ProcessAll() to run every hour.
   void ProcessAllEveryHour();
 
+  // Calls ProcessAll() whenever the network becomes reachable.
+  void ProcessAllOnNetworkReachable();
+
   async_dispatcher_t* dispatcher_;
+  const std::shared_ptr<sys::ServiceDirectory> services_;
   std::unique_ptr<Database> database_;
   CrashServer* crash_server_;
   QueueInfo info_;
+  fuchsia::net::ConnectivityPtr connectivity_;
 
   State state_ = State::LeaveAsPending;
 

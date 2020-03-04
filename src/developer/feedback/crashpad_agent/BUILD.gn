@@ -149,6 +149,7 @@ source_set("src") {
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-mem",
+    "//zircon/system/fidl/fuchsia-net",
   ]
 
   deps = [

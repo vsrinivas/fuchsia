@@ -14,6 +14,7 @@
 #include "src/developer/feedback/crashpad_agent/info/info_context.h"
 #include "src/developer/feedback/crashpad_agent/settings.h"
 #include "src/developer/feedback/crashpad_agent/tests/stub_crash_server.h"
+#include "src/developer/feedback/testing/stubs/stub_network_reachability_provider.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
@@ -80,6 +81,15 @@ class QueueTest : public UnitTestFixture {
     ASSERT_TRUE(files::DeletePath(kCrashpadDatabasePath, /*recursive=*/true));
   }
 
+ protected:
+  void SetUpNetworkReachabilityProvider(
+      std::unique_ptr<StubConnectivity> network_reachability_provider) {
+    network_reachability_provider_ = std::move(network_reachability_provider);
+    if (network_reachability_provider_) {
+      InjectServiceProvider(network_reachability_provider_.get());
+    }
+  }
+
   void SetUpQueue(std::vector<bool> upload_attempt_results = std::vector<bool>{}) {
     program_id_ = 1;
     state_ = QueueOps::SetStateToLeaveAsPending;
@@ -90,16 +100,18 @@ class QueueTest : public UnitTestFixture {
     settings_.set_upload_policy(UploadPolicy::LIMBO);
     crash_server_ = std::make_unique<StubCrashServer>(upload_attempt_results_);
     inspector_ = std::make_unique<inspect::Inspector>();
+
+    SetUpNetworkReachabilityProvider(std::make_unique<StubConnectivity>());
+
     info_context_ =
         std::make_shared<InfoContext>(&inspector_->GetRoot(), clock_, dispatcher(), services());
-    queue_ = Queue::TryCreate(dispatcher(), info_context_, crash_server_.get());
+    queue_ = Queue::TryCreate(dispatcher(), services(), info_context_, crash_server_.get());
 
     ASSERT_TRUE(queue_);
 
     queue_->WatchSettings(&settings_);
   }
 
- protected:
   enum class QueueOps {
     AddNewReport,
     DeleteOneReport,
@@ -185,6 +197,7 @@ class QueueTest : public UnitTestFixture {
 
   std::unique_ptr<Queue> queue_;
   std::vector<UUID> expected_queue_contents_;
+  std::unique_ptr<StubConnectivity> network_reachability_provider_;
 
  private:
   void AddExpectedReport(const UUID& uuid) {
@@ -439,6 +452,42 @@ TEST_F(QueueTest, Check_ProcessAll_ScheduledTwice) {
   ASSERT_FALSE(queue_->IsEmpty());
 
   RunLoopFor(zx::hour(1));
+  EXPECT_TRUE(queue_->IsEmpty());
+}
+
+TEST_F(QueueTest, Check_ProcessAllTwice_OnNetworkReachable) {
+  // Setup crash report upload outcome
+  SetUpQueue({
+      // First crash report: automatic upload fails, succeed when the network becomes reachable.
+      kUploadFailed,
+      kUploadSuccessful,
+      // Second crash report: automatic upload fails, succeed when then network becomes reachable.
+      kUploadFailed,
+      kUploadSuccessful,
+  });
+
+  // First crash report: automatic upload fails. Succeed on the second upload attempt when the
+  // network becomes reachable.
+  ApplyQueueOps({
+      QueueOps::AddNewReport,
+      QueueOps::SetStateToUpload,
+  });
+  ASSERT_FALSE(queue_->IsEmpty());
+  network_reachability_provider_->TriggerOnNetworkReachable(true);
+  RunLoopUntilIdle();
+  EXPECT_TRUE(queue_->IsEmpty());
+
+  // Second crash report: Insert a new crash report that fails to upload at first,
+  // and then check that it gets uploaded when the network becomes reachable again.
+  ApplyQueueOps({
+      QueueOps::AddNewReport,
+  });
+  ASSERT_FALSE(queue_->IsEmpty());
+  network_reachability_provider_->TriggerOnNetworkReachable(false);
+  RunLoopUntilIdle();
+  EXPECT_FALSE(queue_->IsEmpty());
+  network_reachability_provider_->TriggerOnNetworkReachable(true);
+  RunLoopUntilIdle();
   EXPECT_TRUE(queue_->IsEmpty());
 }
 

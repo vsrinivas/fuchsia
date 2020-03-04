@@ -354,6 +354,7 @@ executable("queue_unittest") {
     "//src/developer/feedback/crashpad_agent/info:info",
     "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//src/developer/feedback/testing:unit_test_fixture",
+    "//src/developer/feedback/testing/stubs:stub_network_reachability_provider",
     "//src/lib/fsl:fsl",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",

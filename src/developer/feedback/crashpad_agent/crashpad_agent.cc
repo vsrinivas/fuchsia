@@ -90,7 +90,7 @@ std::unique_ptr<CrashpadAgent> CrashpadAgent::TryCreate(
     async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
     const timekeeper::Clock& clock, std::shared_ptr<InfoContext> info_context, Config config,
     std::unique_ptr<CrashServer> crash_server) {
-  auto queue = Queue::TryCreate(dispatcher, info_context, crash_server.get());
+  auto queue = Queue::TryCreate(dispatcher, services, info_context, crash_server.get());
   if (!queue) {
     FX_LOGS(FATAL) << "Failed to set up crash reporter";
     return nullptr;

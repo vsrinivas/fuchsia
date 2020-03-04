@@ -13,6 +13,7 @@
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.feedback.DataProvider",
             "fuchsia.logger.LogSink",
+            "fuchsia.net.Connectivity",
             "fuchsia.net.NameLookup",
             "fuchsia.posix.socket.Provider",
             "fuchsia.settings.Privacy",

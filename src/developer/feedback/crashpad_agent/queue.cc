@@ -21,6 +21,7 @@ using crashpad::UUID;
 using UploadPolicy = feedback::Settings::UploadPolicy;
 
 std::unique_ptr<Queue> Queue::TryCreate(async_dispatcher_t* dispatcher,
+                                        std::shared_ptr<sys::ServiceDirectory> services,
                                         std::shared_ptr<InfoContext> info_context,
                                         CrashServer* crash_server) {
   auto database = Database::TryCreate(info_context);
@@ -29,7 +30,7 @@ std::unique_ptr<Queue> Queue::TryCreate(async_dispatcher_t* dispatcher,
   }
 
   return std::unique_ptr<Queue>(
-      new Queue(dispatcher, std::move(info_context), std::move(database), crash_server));
+      new Queue(dispatcher, services, std::move(info_context), std::move(database), crash_server));
 }
 
 void Queue::WatchSettings(feedback::Settings* settings) {
@@ -37,9 +38,11 @@ void Queue::WatchSettings(feedback::Settings* settings) {
       [this](const UploadPolicy& upload_policy) { OnUploadPolicyChange(upload_policy); });
 }
 
-Queue::Queue(async_dispatcher_t* dispatcher, std::shared_ptr<InfoContext> info_context,
-             std::unique_ptr<Database> database, CrashServer* crash_server)
+Queue::Queue(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
+             std::shared_ptr<InfoContext> info_context, std::unique_ptr<Database> database,
+             CrashServer* crash_server)
     : dispatcher_(dispatcher),
+      services_(services),
       database_(std::move(database)),
       crash_server_(crash_server),
       info_(std::move(info_context)) {
@@ -47,6 +50,7 @@ Queue::Queue(async_dispatcher_t* dispatcher, std::shared_ptr<InfoContext> info_c
   FXL_DCHECK(database_);
 
   ProcessAllEveryHour();
+  ProcessAllOnNetworkReachable();
 }
 
 bool Queue::Contains(const UUID& uuid) const {
@@ -172,7 +176,7 @@ void Queue::ProcessAllEveryHour() {
   if (const auto status = PostDelayedTask(
           dispatcher_,
           [this] {
-            if (ProcessAll() != 0) {
+            if (ProcessAll() > 0) {
               FX_LOGS(INFO) << "Hourly processing of pending crash reports queue";
             }
             ProcessAllEveryHour();
@@ -181,6 +185,21 @@ void Queue::ProcessAllEveryHour() {
       status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Error posting hourly process task to async loop. Won't retry.";
   }
+}
+
+void Queue::ProcessAllOnNetworkReachable() {
+  connectivity_ = services_->Connect<fuchsia::net::Connectivity>();
+  connectivity_.set_error_handler([](zx_status_t status) {
+    FX_PLOGS(ERROR, status) << "Lost connection to fuchsia.net.Connectivity";
+    // TODO(fxb/46775): try to reconnect with exponential backoff timing.
+  });
+  connectivity_.events().OnNetworkReachable = [this](bool reachable) {
+    if (reachable) {
+      if (ProcessAll() > 0) {
+        FX_LOGS(INFO) << "Processing of pending crash reports queue on network reachable";
+      }
+    }
+  };
 }
 
 }  // namespace feedback

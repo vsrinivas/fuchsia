@@ -36,7 +36,6 @@ executable("reboot_log_handler_unittest") {
     "reboot_log_handler_unittest.cc",
     "stub_crash_reporter.cc",
     "stub_crash_reporter.h",
-    "stub_network_reachability_provider.h",
   ]
 
   deps = [
@@ -47,6 +46,7 @@ executable("reboot_log_handler_unittest") {
     "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//src/developer/feedback/testing:unit_test_fixture",
     "//src/developer/feedback/testing/stubs:stub_cobalt_logger_factory",
+    "//src/developer/feedback/testing/stubs:stub_network_reachability_provider",
     "//src/developer/feedback/utils:cobalt",
     "//src/lib/files",
     "//third_party/googletest:gmock",
