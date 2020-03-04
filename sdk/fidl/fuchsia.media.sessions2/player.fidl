@@ -182,11 +182,35 @@ table PlayerInfoDelta {
     /// local machine; this should be true if this is the device streaming
     /// from a music service, but false or omitted if this machine is just
     /// receiving an audio stream to act as a speaker.
+    ///
+    /// If omitted, the previous value is retained. If no value is ever
+    /// sent, the default is `true`.
     1: bool local;
+    /// The status of the player.
+    ///
+    /// If omitted, the previous status is retained. This must be included
+    /// at least once.
     2: PlayerStatus player_status;
+    /// The metadata of the playing media.
+    ///
+    /// If omitted, the previous metadata is retained. Including this at
+    /// least once for each new media is highly recommended.
     3: fuchsia.media.Metadata metadata;
+    /// The images associated with the playing media.
+    ///
+    /// If omitted, the previous media images are retained. Send an empty
+    /// vector to clear media images.
     4: vector<MediaImage>:16 media_images;
+    /// The capabilities of the player.
+    ///
+    /// If omitted, the previous capabilities are retained. This must be
+    /// sent at least once.
     5: PlayerCapabilities player_capabilities;
+    /// The behavior the player would like to engage in when interrupted
+    /// by something, such as an alarm.
+    ///
+    /// If omitted, the previous behavior is retained. If no value is ever
+    /// sent, the default is `NONE`.
     6: InterruptionBehavior interruption_behavior;
 };
 
