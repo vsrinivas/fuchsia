@@ -34,6 +34,8 @@
 #include "third_party/shaderc/libshaderc/include/shaderc/shaderc.hpp"  // nogncheck
 #endif
 
+#include <chrono>
+
 namespace {
 using namespace escher;
 
@@ -132,6 +134,32 @@ VK_TEST_F(ShaderProgramTest, ShaderConstantsTest) {
   EXPECT_EQ(program1, program2);
   EXPECT_EQ(program3, program4);
   EXPECT_NE(program1, program3);
+}
+
+// This test simply records the length of time in microseconds that it takes for
+// Escher to load up all of the shaders it uses for PaperRenderer and Flatland.
+// This is useful for getting a quick idea for how long this process takes on
+// different platforms as well as depending on whether or not we're recompiling
+// shader source code or loading in precompiled binaries.
+VK_TEST_F(ShaderProgramTest, TimingTest) {
+  auto escher = test::GetEscher();
+
+  // Clear out the shader program factory's cache so that the test is hermetic and
+  // does not change depending on whether or not previous tests have loaded these
+  // shaders into the cache already.
+  escher->shader_program_factory()->Clear();
+
+  auto start = std::chrono::high_resolution_clock::now();
+  auto program1 = escher->GetProgram(kAmbientLightProgramData);
+  auto program2 = escher->GetProgram(kNoLightingProgramData);
+  auto program3 = escher->GetProgram(kPointLightProgramData);
+  auto program4 = escher->GetProgram(kPointLightFalloffProgramData);
+  auto program5 = escher->GetProgram(kShadowVolumeGeometryProgramData);
+  auto program6 = escher->GetProgram(kShadowVolumeGeometryDebugProgramData);
+  auto program7 = escher->GetProgram(kFlatlandStandardProgram);
+  auto stop = std::chrono::high_resolution_clock::now();
+  auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+  FXL_LOG(INFO) << "Time taken to load shaders: " << duration.count() << " microseconds.";
 }
 
 // Go through all of the shader programs in |paper_renderer_static_config.h| and make
