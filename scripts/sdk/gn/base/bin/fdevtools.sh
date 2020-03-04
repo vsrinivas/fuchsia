@@ -13,9 +13,12 @@ set -e
 
 SCRIPT_SRC_DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd)"
 source "${SCRIPT_SRC_DIR}/fuchsia-common.sh" || exit $?
+# Computed from instance id at https://chrome-infra-packages.appspot.com/p/fuchsia_internal/gui_tools/fuchsia_devtools/linux-amd64/+/dogfood-1-1
+VER_DEVTOOLS="$(cat "${SCRIPT_SRC_DIR}/devtools.version")"
 
 export FUCHSIA_SDK_PATH="$(realpath "${SCRIPT_SRC_DIR}/..")"
 export FUCHSIA_IMAGE_WORK_DIR="$(realpath "${SCRIPT_SRC_DIR}/../images")"
+
 
 usage () {
   echo "Usage: $0"
@@ -24,6 +27,11 @@ usage () {
   echo "  [--authorized-keys <file>]"
   echo "    The authorized public key file for securing the device.  Defaults to "
   echo "    the output of 'ssh-add -L'"
+  echo "  [--version <version>"
+  echo "    Specify the CIPD version of DevTools to download."
+  echo "    Defaults to devtools.version file with ${VER_DEVTOOLS}"
+  echo "  [--help] [-h]"
+  echo "    Show command line options available"
 }
 AUTH_KEYS_FILE=""
 FDT_ARGS=()
@@ -38,6 +46,10 @@ case $1 in
   --authorized-keys)
     shift
     AUTH_KEYS_FILE="${1}"
+    ;;
+  --version)
+    shift
+    VER_DEVTOOLS="${1}"
     ;;
   --help|-h)
     usage
@@ -77,18 +89,17 @@ if [[ ! "$(wc -l < "${AUTH_KEYS_FILE}")" -ge 1 ]]; then
 fi
 
 # Can download Fuchsia DevTools from CIPD with either "latest" or a CIPD hash
-echo "Downloading latest Fuchsia DevTools with CIPD"
-FDT_VERSION="latest"
+echo "Downloading Fuchsia DevTools ${VER_DEVTOOLS} with CIPD"
 TEMP_ENSURE=$(mktemp /tmp/fuchsia_devtools_cipd_XXXXXX.ensure)
 cat << end > "${TEMP_ENSURE}"
 \$ServiceURL https://chrome-infra-packages.appspot.com/
-fuchsia_internal/gui_tools/fuchsia_devtools/\${platform} $FDT_VERSION
+fuchsia_internal/gui_tools/fuchsia_devtools/\${platform} $VER_DEVTOOLS
 end
 
-FDT_DIR="${FUCHSIA_IMAGE_WORK_DIR}/fuchsia_devtools"
+FDT_DIR="${FUCHSIA_IMAGE_WORK_DIR}/fuchsia_devtools-${VER_DEVTOOLS}"
 if ! $(run-cipd ensure -ensure-file "${TEMP_ENSURE}" -root "${FDT_DIR}"); then
   rm "$TEMP_ENSURE"
-  echo "Failed to download Fuchsia DevTools ${FDT_VERSION}."
+  echo "Failed to download Fuchsia DevTools ${VER_DEVTOOLS}."
   exit 1
 fi
 rm "${TEMP_ENSURE}"

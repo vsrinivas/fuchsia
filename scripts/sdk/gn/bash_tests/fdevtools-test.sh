@@ -9,7 +9,11 @@
 
 set -e
 SCRIPT_SRC_DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd)"
+# shellcheck disable=SC1090
 source "${SCRIPT_SRC_DIR}/gn-bash-test-lib.sh"
+
+# Retrieve the expected version of DevTools with the CIPD instance id
+DEVTOOLS_VERSION=$(cat "${SCRIPT_SRC_DIR}/../base/bin/devtools.version")
 
 # Verifies that the correct commands are run before starting Fuchsia DevTools
 TEST_fdevtools() {
@@ -18,33 +22,27 @@ TEST_fdevtools() {
     --authorized-keys "${BT_TEMP_DIR}/scripts/sdk/gn/base/testdata/authorized_keys"
 
   # Verify that cipd was called to download the correct path
+  # shellcheck disable=SC1090
   source "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/cipd.mock_state"
-  local CIPD_ARGS=("${BT_MOCK_ARGS[@]:1}")
-  local EXPECTED_CIPD_ARGS=(
-    _ANY_
-    ensure
-    -ensure-file _ANY_
-    -root "${BT_TEMP_DIR}/scripts/sdk/gn/base/images/fuchsia_devtools"
-  )
-
-  gn-test-check-mock-args "${EXPECTED_CIPD_ARGS[@]}"
+  gn-test-check-mock-args _ANY_ ensure -ensure-file _ANY_ -root "${BT_TEMP_DIR}/scripts/sdk/gn/base/images/fuchsia_devtools-${DEVTOOLS_VERSION}"
 
   # Verify that the executable is called, no arguments are passed
-  source "${BT_TEMP_DIR}/scripts/sdk/gn/base/images/fuchsia_devtools/system_monitor/linux/system_monitor.mock_state"
-
-  gn-test-check-mock-args "${BT_TEMP_DIR}/scripts/sdk/gn/base/images/fuchsia_devtools/system_monitor/linux/system_monitor"
-
+  # shellcheck disable=SC1090
+  source "${BT_TEMP_DIR}/scripts/sdk/gn/base/images/fuchsia_devtools-${DEVTOOLS_VERSION}/system_monitor/linux/system_monitor.mock_state"
+  gn-test-check-mock-args "${BT_TEMP_DIR}/scripts/sdk/gn/base/images/fuchsia_devtools-${DEVTOOLS_VERSION}/system_monitor/linux/system_monitor"
 }
 
-# Test initialization. Note that we copy various tools/devshell files and need to replicate the
-# behavior of generate.py by copying these files into scripts/sdk/gn/base/bin/devshell
+# Test initialization.
+# shellcheck disable=SC2034
 BT_FILE_DEPS=(
+  scripts/sdk/gn/base/bin/devtools.version
   scripts/sdk/gn/base/bin/fdevtools.sh
   scripts/sdk/gn/base/bin/fuchsia-common.sh
   scripts/sdk/gn/bash_tests/gn-bash-test-lib.sh
 )
+# shellcheck disable=SC2034
 BT_MOCKED_TOOLS=(
-  scripts/sdk/gn/base/images/fuchsia_devtools/system_monitor/linux/system_monitor
+  scripts/sdk/gn/base/images/fuchsia_devtools-"${DEVTOOLS_VERSION}"/system_monitor/linux/system_monitor
   scripts/sdk/gn/base/bin/cipd
 )
 

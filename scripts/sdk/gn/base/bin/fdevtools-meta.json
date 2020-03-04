@@ -1,5 +1,6 @@
 {
     "files": [
+        "bin/devtools.version",
         "bin/fdevtools.sh",
         "bin/fuchsia-common.sh"
     ],
