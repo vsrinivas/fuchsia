@@ -36,6 +36,10 @@
 #include "src/media/drivers/amlogic_encoder/internal_buffer.h"
 #include "src/media/drivers/amlogic_encoder/local_codec_factory.h"
 #include "src/media/drivers/amlogic_encoder/registers.h"
+#include "src/media/drivers/amlogic_encoder/scoped_canvas.h"
+
+constexpr uint32_t kCanvasMinWidthAlignment = 32;
+constexpr uint32_t kCanvasMinHeightAlignment = 16;
 
 enum class SocType {
   kUnknown,
@@ -124,6 +128,10 @@ class DeviceCtx : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_MEDIA
   void Reset();
   // configures hcodec block with frame and pic count info.
   void Config();
+  zx_status_t CanvasConfig(zx_handle_t vmo, uint32_t height, uint32_t bytes_per_row,
+                           uint32_t offset, ScopedCanvasId* canvas_id_out, uint32_t alloc_flag);
+
+zx_status_t CanvasInitReference(InternalBuffer* buf, ScopedCanvasId* y_canvas, ScopedCanvasId* uv_canvas, uint32_t* packed_canvas_ids);
 
   ddk::PDevProtocolClient pdev_;
   ddk::AmlogicCanvasProtocolClient canvas_;
@@ -172,6 +180,15 @@ class DeviceCtx : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_MEDIA
   uint32_t frame_number_ = 0;
   // reset to 0 for IDR and imcrement by 2 for NON-IDR
   uint32_t pic_order_cnt_lsb_ = 0;
+
+  ScopedCanvasId input_y_canvas_;
+  ScopedCanvasId input_uv_canvas_;
+  ScopedCanvasId dec0_y_canvas_;
+  ScopedCanvasId dec0_uv_canvas_;
+  ScopedCanvasId dec1_y_canvas_;
+  ScopedCanvasId dec1_uv_canvas_;
+  uint32_t dblk_buf_canvas_;
+  uint32_t ref_buf_canvas_;
 };
 
 #endif  // SRC_MEDIA_DRIVERS_AMLOGIC_ENCODER_DEVICE_CTX_H_

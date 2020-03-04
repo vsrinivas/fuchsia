@@ -29,6 +29,7 @@
 #include "src/media/drivers/amlogic_encoder/macros.h"
 #include "src/media/drivers/amlogic_encoder/memory_barriers.h"
 #include "src/media/drivers/amlogic_encoder/registers.h"
+#include "src/media/drivers/amlogic_encoder/scoped_canvas.h"
 
 enum MmioRegion {
   kCbus,
@@ -423,7 +424,73 @@ zx_status_t DeviceCtx::PowerOn() {
   return ZX_OK;
 }
 
-zx_status_t DeviceCtx::CanvasInit() { return ZX_OK; }
+zx_status_t DeviceCtx::CanvasConfig(zx_handle_t vmo, uint32_t bytes_per_row, uint32_t height,
+                                    uint32_t offset, ScopedCanvasId* canvas_id_out,
+                                    uint32_t alloc_flag) {
+  canvas_info_t info = {};
+  info.height = height;
+  info.stride_bytes = bytes_per_row;
+  info.flags = alloc_flag;
+  uint8_t id;
+  zx_handle_t vmo_dup;
+  zx_status_t status = zx_handle_duplicate(vmo, ZX_RIGHT_SAME_RIGHTS, &vmo_dup);
+  if (status != ZX_OK) {
+    return status;
+  }
+  status = canvas_.Config(zx::vmo(vmo_dup), offset, &info, &id);
+  if (status != ZX_OK) {
+    return status;
+  }
+  *canvas_id_out = ScopedCanvasId(&canvas_, id);
+  return ZX_OK;
+}
+
+zx_status_t DeviceCtx::CanvasInitReference(InternalBuffer* buf, ScopedCanvasId* y_canvas, ScopedCanvasId* uv_canvas, uint32_t* packed_canvas_ids)
+{
+  uint32_t canvas_width = fbl::round_up(encoder_width_, kCanvasMinWidthAlignment);
+  uint32_t canvas_height = fbl::round_up(encoder_height_, kCanvasMinHeightAlignment);
+
+  zx::vmo dup_vmo;
+  auto status = buf->vmo_duplicate(&dup_vmo);
+  if (status != ZX_OK) {
+    return status;
+  }
+  status = CanvasConfig(dup_vmo.get(), canvas_width, canvas_height, /*offset=*/0, y_canvas,
+                        CANVAS_FLAGS_READ);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  status = buf->vmo_duplicate(&dup_vmo);
+  if (status != ZX_OK) {
+    return status;
+  }
+  status =
+      CanvasConfig(dup_vmo.get(), canvas_width, canvas_height / 2,
+                   /*offset=*/canvas_width * canvas_height, uv_canvas, CANVAS_FLAGS_READ);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  // use same canvas for both u and v as they share memory
+  *packed_canvas_ids = (uv_canvas->id() << 16) | (uv_canvas->id() << 8) | (y_canvas->id());
+  return ZX_OK;
+}
+
+zx_status_t DeviceCtx::CanvasInit() {
+
+  auto status = CanvasInitReference(&*dec0_, &dec0_y_canvas_, &dec0_uv_canvas_, &dblk_buf_canvas_);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  status = CanvasInitReference(&*dec1_, &dec1_y_canvas_, &dec1_uv_canvas_, &ref_buf_canvas_);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  return ZX_OK;
+}
 
 void DeviceCtx::Reset() {
   for (int i = 0; i < 3; i++) {

@@ -23,6 +23,8 @@ if (target_cpu == "arm64") {
       "macros.h",
       "memory_barriers.h",
       "registers.h",
+      "scoped_canvas.cc",
+      "scoped_canvas.h",
     ]
 
     public_deps = [
