@@ -64,6 +64,7 @@ class TestMsdArmDevice {
     static constexpr uint64_t kFaultAddress = 0xffffffff88888888lu;
     registers::GpuFaultAddress::Get().FromValue(kFaultAddress).WriteTo(reg_io.get());
     registers::GpuFaultStatus::Get().FromValue(5).WriteTo(reg_io.get());
+    registers::JobIrqFlags::GetRawStat().FromValue(0).set_failed_slots(1).WriteTo(reg_io.get());
 
     registers::AsRegisters(7).Status().FromValue(5).WriteTo(reg_io.get());
     registers::AsRegisters(7).FaultStatus().FromValue(12).WriteTo(reg_io.get());
@@ -95,6 +96,7 @@ class TestMsdArmDevice {
     EXPECT_EQ(8u, dump_state.job_slot_status[0].tail);
     EXPECT_EQ(7u, dump_state.job_slot_status[0].config);
     EXPECT_TRUE(found);
+    EXPECT_EQ(1u << 16, dump_state.job_irq_rawstat);
   }
 
   void ProcessRequest() {

@@ -158,6 +158,14 @@ class JobIrqFlags : public magma::RegisterBase {
   static auto GetStatus() { return magma::RegisterAddr<JobIrqFlags>(0x100c); }
 };
 
+class JobJsState : public magma::RegisterBase {
+ public:
+  DEF_FIELD(15, 0, job_active);
+  DEF_FIELD(31, 16, job_next_active);
+
+  static auto Get() { return magma::RegisterAddr<JobIrqFlags>(0x1010); }
+};
+
 class ShaderConfig : public magma::RegisterBase {
  public:
   DEF_BIT(16, ls_allow_attr_types);

@@ -11,6 +11,7 @@
 #include <string>
 
 #include <fbl/algorithm.h>
+#include <fbl/auto_call.h>
 #include <fbl/string_printf.h>
 
 #include "job_scheduler.h"
@@ -348,6 +349,9 @@ int MsdArmDevice::GpuInterruptThreadLoop() {
     DLOG("GPU waiting for interrupt");
     gpu_interrupt_->Wait();
     DLOG("GPU Returned from interrupt wait!");
+    // Resets flag at end of loop iteration.
+    handling_gpu_interrupt_ = true;
+    auto ac = fbl::MakeAutoCall([&]() { handling_gpu_interrupt_ = false; });
 
     if (interrupt_thread_quit_flag_)
       break;
@@ -461,6 +465,9 @@ int MsdArmDevice::JobInterruptThreadLoop() {
     DLOG("Job waiting for interrupt");
     job_interrupt_->Wait();
     DLOG("Job Returned from interrupt wait!");
+    // Resets flag at end of loop iteration.
+    handling_job_interrupt_ = true;
+    auto ac = fbl::MakeAutoCall([&]() { handling_job_interrupt_ = false; });
 
     if (interrupt_thread_quit_flag_)
       break;
@@ -633,6 +640,9 @@ int MsdArmDevice::MmuInterruptThreadLoop() {
     DLOG("MMU waiting for interrupt");
     mmu_interrupt_->Wait();
     DLOG("MMU Returned from interrupt wait!");
+    // Resets flag at end of loop iteration.
+    handling_mmu_interrupt_ = true;
+    auto ac = fbl::MakeAutoCall([&]() { handling_mmu_interrupt_ = false; });
 
     if (interrupt_thread_quit_flag_)
       break;
@@ -760,6 +770,19 @@ void MsdArmDevice::DumpRegisters(const GpuFeatures& features, magma::RegisterIo*
   dump_state->cycle_count = registers::CycleCount::Get().ReadFrom(io).reg_value();
   dump_state->timestamp = registers::Timestamp::Get().ReadFrom(io).reg_value();
 
+  dump_state->gpu_irq_rawstat = registers::GpuIrqFlags::GetRawStat().ReadFrom(io).reg_value();
+  dump_state->gpu_irq_status = registers::GpuIrqFlags::GetStatus().ReadFrom(io).reg_value();
+  dump_state->gpu_irq_mask = registers::GpuIrqFlags::GetIrqMask().ReadFrom(io).reg_value();
+
+  dump_state->job_irq_rawstat = registers::JobIrqFlags::GetRawStat().ReadFrom(io).reg_value();
+  dump_state->job_irq_status = registers::JobIrqFlags::GetStatus().ReadFrom(io).reg_value();
+  dump_state->job_irq_mask = registers::JobIrqFlags::GetIrqMask().ReadFrom(io).reg_value();
+  dump_state->job_irq_js_state = registers::JobJsState::Get().ReadFrom(io).reg_value();
+
+  dump_state->mmu_irq_rawstat = registers::MmuIrqFlags::GetRawStat().ReadFrom(io).reg_value();
+  dump_state->mmu_irq_status = registers::MmuIrqFlags::GetStatus().ReadFrom(io).reg_value();
+  dump_state->mmu_irq_mask = registers::MmuIrqFlags::GetIrqMask().ReadFrom(io).reg_value();
+
   for (size_t i = 0; i < features.job_slot_count; i++) {
     DumpState::JobSlotStatus status;
     auto js_regs = registers::JobSlotRegisters(i);
@@ -782,6 +805,11 @@ void MsdArmDevice::DumpRegisters(const GpuFeatures& features, magma::RegisterIo*
 
 void MsdArmDevice::Dump(DumpState* dump_state, bool on_device_thread) {
   DumpRegisters(gpu_features_, register_io_.get(), dump_state);
+
+  // These are atomics, so they can be accessed on any thread.
+  dump_state->handling_gpu_interrupt = handling_gpu_interrupt_;
+  dump_state->handling_job_interrupt = handling_job_interrupt_;
+  dump_state->handling_mmu_interrupt = handling_mmu_interrupt_;
 
   if (on_device_thread) {
     std::chrono::steady_clock::duration total_time;
@@ -866,6 +894,27 @@ void MsdArmDevice::FormatDump(DumpState& dump_state, std::vector<std::string>* d
   dump_string->push_back(fbl::StringPrintf("Gpu cycle count %ld, timestamp %ld\n",
                                            dump_state.cycle_count, dump_state.timestamp)
                              .c_str());
+
+  dump_string->push_back(fbl::StringPrintf("GPU IRQ Rawstat 0x%x Status 0x%x Mask 0x%x",
+                                           dump_state.gpu_irq_rawstat, dump_state.gpu_irq_status,
+                                           dump_state.gpu_irq_mask)
+                             .c_str());
+  dump_string->push_back(
+      fbl::StringPrintf("JOB IRQ Rawstat 0x%x Status 0x%x Mask 0x%x JsState 0x%x",
+                        dump_state.job_irq_rawstat, dump_state.job_irq_status,
+                        dump_state.job_irq_mask, dump_state.job_irq_js_state)
+          .c_str());
+  dump_string->push_back(fbl::StringPrintf("MMU IRQ Rawstat 0x%x Status 0x%x Mask 0x%x",
+                                           dump_state.mmu_irq_rawstat, dump_state.mmu_irq_status,
+                                           dump_state.mmu_irq_mask)
+                             .c_str());
+  dump_string->push_back(
+      fbl::StringPrintf(
+          "GPU IRQ handler running: %d Job IRQ handler running: %d Mmu IRQ handler running: %d",
+          dump_state.handling_gpu_interrupt, dump_state.handling_job_interrupt,
+          dump_state.handling_mmu_interrupt)
+          .c_str());
+
   for (size_t i = 0; i < dump_state.job_slot_status.size(); i++) {
     auto* status = &dump_state.job_slot_status[i];
     dump_string->push_back(
