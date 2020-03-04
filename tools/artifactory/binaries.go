@@ -32,7 +32,9 @@ func debugBinaryUploads(mods binModules, namespace string) ([]Upload, []string, 
 	}
 
 	var uploads []Upload
-	var buildIDs []string
+	var fuchsiaBuildIDs []string
+	buildIDSet := map[string]bool{}
+
 	for _, bin := range bins {
 		id, err := bin.ELFBuildID(mods.BuildDir())
 		// OK if there was no build ID found for an associated binary.
@@ -42,8 +44,14 @@ func debugBinaryUploads(mods binModules, namespace string) ([]Upload, []string, 
 			return nil, nil, err
 		}
 
+		// Skip duplicate build IDs.
+		if _, ok := buildIDSet[id]; ok {
+			continue
+		}
+		buildIDSet[id] = true
+
 		if bin.OS == "fuchsia" {
-			buildIDs = append(buildIDs, id)
+			fuchsiaBuildIDs = append(fuchsiaBuildIDs, id)
 		}
 
 		// We upload all debug binaries to a flat namespace.
@@ -65,7 +73,7 @@ func debugBinaryUploads(mods binModules, namespace string) ([]Upload, []string, 
 		}
 	}
 
-	return uploads, buildIDs, nil
+	return uploads, fuchsiaBuildIDs, nil
 }
 
 type binModules interface {

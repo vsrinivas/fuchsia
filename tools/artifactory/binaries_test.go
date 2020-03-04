@@ -50,6 +50,11 @@ func TestDebugBinaryUploads(t *testing.T) {
 			OS:       "fuchsia",
 		},
 		{
+			Debug:    filepath.Join(".build-id", "pr", "ebuiltA.debug"),
+			Breakpad: filepath.Join("gen", "prebuiltA.sym"),
+			OS:       "fuchsia",
+		},
+		{
 			Debug:    filepath.Join(".build-id", "pr", "ebuiltB.debug"),
 			Breakpad: filepath.Join("host", "gen", "prebuiltB.sym"),
 			OS:       "linux",
@@ -62,6 +67,11 @@ func TestDebugBinaryUploads(t *testing.T) {
 	m := &mockBinModules{
 		buildDir: buildDir,
 		bins: []build.Binary{
+			{
+				Debug:    filepath.Join(".build-id", "fi", "rst.debug"),
+				Breakpad: filepath.Join("gen", "first.sym"),
+				OS:       "fuchsia",
+			},
 			{
 				Debug:    filepath.Join(".build-id", "fi", "rst.debug"),
 				Breakpad: filepath.Join("gen", "first.sym"),
