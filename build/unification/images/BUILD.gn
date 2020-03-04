@@ -1596,6 +1596,7 @@ aggregate_manifest("migrated-image") {
       "//zircon/system/dev/board/gauss:gauss-i2c-test-manifest",
       "//zircon/system/dev/board/hikey960:hi3660-i2c-test-manifest",
       "//zircon/system/dev/board/hikey960:hikey960-manifest",
+      "//zircon/system/dev/board/luis:luis-manifest",
       "//zircon/system/dev/board/msm8998:msm8998-manifest",
       "//zircon/system/dev/board/msm8x53-som:msm8x53-som-manifest",
       "//zircon/system/dev/board/mt8167s_ref:mt8167s_ref-manifest",

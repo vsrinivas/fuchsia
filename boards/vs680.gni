@@ -1,0 +1,8 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//boards/arm64.gni")
+
+# serial console
+board_zedboot_cmdline_args = [ "kernel.bypass-debuglog=true" ]

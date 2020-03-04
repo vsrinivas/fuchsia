@@ -80,6 +80,7 @@ __BEGIN_CDECLS
 #define PDEV_PID_VISALIA            8
 #define PDEV_PID_C18                9
 #define PDEV_PID_NELSON             10
+#define PDEV_PID_LUIS               11
 
 #define PDEV_DID_GAUSS_AUDIO_IN     1
 #define PDEV_DID_GAUSS_AUDIO_OUT    2
@@ -284,6 +285,7 @@ __BEGIN_CDECLS
 // Synaptics
 #define PDEV_VID_SYNAPTICS          20
 #define PDEV_PID_SYNAPTICS_AS370     1
+#define PDEV_PID_SYNAPTICS_VS680     2
 #define PDEV_DID_SYNAPTICS_GPIO      1
 #define PDEV_DID_AS370_USB_PHY       2
 #define PDEV_DID_AS370_AUDIO_OUT     3
