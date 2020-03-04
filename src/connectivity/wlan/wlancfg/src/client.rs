@@ -155,18 +155,25 @@ async fn attempt_auto_connect(services: &Services) -> Result<Option<Vec<u8>>, an
         return Ok(None);
     }
 
+    // Look up each scan result in saved networks if the seen network is compatible with WLAN
+    // configuration and has a usable security type.
     let txn = start_scan_txn(&services.sme)?;
     let results = fetch_scan_results(txn).await?;
     let network_by_ssid = results
         .into_iter()
-        .map(|b| {
-            services
-                .saved_networks
-                .lookup(NetworkIdentifier::new(
-                    b.ssid.to_vec(),
-                    security_from_protection(b.protection),
-                ))
-                .into_iter()
+        .filter_map(|b| {
+            if b.compatible {
+                security_from_protection(b.protection).map(|security| {
+                    services
+                        .saved_networks
+                        .lookup(NetworkIdentifier::new(b.ssid.to_vec(), security))
+                })
+            } else {
+                Some(vec![])
+            }
+        })
+        .map(|cfgs| {
+            cfgs.into_iter()
                 .map(|cfg| ((cfg.ssid.clone(), cfg.security_type.clone()), cfg.credential.clone()))
         })
         .flatten()
@@ -184,11 +191,21 @@ async fn attempt_auto_connect(services: &Services) -> Result<Option<Vec<u8>>, an
     Ok(None)
 }
 
-fn security_from_protection(protection: fidl_sme::Protection) -> SecurityType {
+/// Match the protection type we would see on a scan result to the security type we would search
+/// for in our saved networks when auto connecting. Currently it is only used to find the
+/// credential of the network if it has been saved.
+fn security_from_protection(protection: fidl_sme::Protection) -> Option<SecurityType> {
     use fidl_sme::Protection;
     match protection {
-        Protection::Wpa2Enterprise | Protection::Wpa2Personal => SecurityType::Wpa2,
-        _ => SecurityType::None,
+        Protection::Wpa3Enterprise | Protection::Wpa3Personal => Some(SecurityType::Wpa3),
+        Protection::Wpa2Enterprise
+        | Protection::Wpa2Personal
+        | Protection::Wpa2Wpa3Personal
+        | Protection::Wpa1Wpa2Personal => Some(SecurityType::Wpa2),
+        Protection::Wpa1 => Some(SecurityType::Wpa),
+        Protection::Wep => Some(SecurityType::Wep),
+        Protection::Open => Some(SecurityType::None),
+        _ => None,
     }
 }
 
@@ -540,6 +557,145 @@ mod tests {
             .pop()
             .expect("Failed to get network config");
         assert!(config.has_ever_connected);
+    }
+
+    #[test]
+    fn auto_connect_to_wep() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let id = "auto_connect_to_known_ess";
+        let temp_dir = TempDir::new().expect("failed to create temporary directory");
+        let path = temp_dir.path().join("networks.json");
+        let tmp_path = temp_dir.path().join("networks.tmp");
+        let saved_networks = exec.run_singlethreaded(create_saved_networks(id, &path, &tmp_path));
+        let saved_ssid = b"bar";
+        let saved_password_str = b"qwertyuio";
+        let saved_password = Credential::Password(saved_password_str.to_vec());
+        let saved_net_id = NetworkIdentifier::new(saved_ssid.to_vec(), SecurityType::Wep);
+        // save the network to trigger a scan
+        saved_networks
+            .store(saved_net_id.clone(), saved_password)
+            .expect("failed to store a network password");
+
+        // create a WEP BSS info that we would see in scan results
+        let mut bss_wep = bss_info(saved_ssid);
+        bss_wep.protection = fidl_sme::Protection::Wep;
+
+        let saved_network = Some((saved_ssid, saved_password_str));
+        attempt_an_auto_connect(
+            &mut exec,
+            Arc::clone(&saved_networks),
+            &mut vec![bss_wep],
+            saved_network,
+        );
+
+        let config =
+            saved_networks.lookup(saved_net_id).pop().expect("Failed to get network config");
+        assert!(config.has_ever_connected);
+    }
+
+    #[test]
+    fn auto_connect_to_wpa1() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let id = "auto_connect_to_known_ess";
+        let temp_dir = TempDir::new().expect("failed to create temporary directory");
+        let path = temp_dir.path().join("networks.json");
+        let tmp_path = temp_dir.path().join("networks.tmp");
+        let saved_networks = exec.run_singlethreaded(create_saved_networks(id, &path, &tmp_path));
+        let saved_ssid = b"bar";
+        let saved_password_str = b"qwertyuio";
+        let saved_password = Credential::Password(saved_password_str.to_vec());
+        let saved_net_id = NetworkIdentifier::new(saved_ssid.to_vec(), SecurityType::Wpa);
+        // save the network to trigger a scan
+        saved_networks
+            .store(saved_net_id.clone(), saved_password)
+            .expect("failed to store a network password");
+
+        // create a WPA1 BSS info that we would see in scan results
+        let mut bss_wpa1 = bss_info(saved_ssid);
+        bss_wpa1.protection = fidl_sme::Protection::Wpa1;
+
+        let saved_network = Some((saved_ssid, saved_password_str));
+        attempt_an_auto_connect(
+            &mut exec,
+            Arc::clone(&saved_networks),
+            &mut vec![bss_wpa1],
+            saved_network,
+        );
+
+        let config =
+            saved_networks.lookup(saved_net_id).pop().expect("Failed to get network config");
+        assert!(config.has_ever_connected);
+    }
+
+    #[test]
+    fn auto_connect_to_wpa1wpa2() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let id = "auto_connect_to_known_ess";
+        let temp_dir = TempDir::new().expect("failed to create temporary directory");
+        let path = temp_dir.path().join("networks.json");
+        let tmp_path = temp_dir.path().join("networks.tmp");
+        let saved_networks = exec.run_singlethreaded(create_saved_networks(id, &path, &tmp_path));
+        let saved_ssid = b"bar";
+        let saved_password_str = b"qwertyuio";
+        let saved_password = Credential::Password(saved_password_str.to_vec());
+        // Our Wpa1Wpa2 scan result should match a saved Wpa2 network
+        let saved_net_id = NetworkIdentifier::new(saved_ssid.to_vec(), SecurityType::Wpa2);
+        // save the network to trigger a scan
+        saved_networks
+            .store(saved_net_id.clone(), saved_password)
+            .expect("failed to store a network password");
+
+        // create a WPA1WPA2 BSS info that we would see in scan results
+        let mut bss_wpa1wpa2 = bss_info(saved_ssid);
+        bss_wpa1wpa2.protection = fidl_sme::Protection::Wpa1Wpa2Personal;
+
+        let saved_network = Some((saved_ssid, saved_password_str));
+        attempt_an_auto_connect(
+            &mut exec,
+            Arc::clone(&saved_networks),
+            &mut vec![bss_wpa1wpa2],
+            saved_network,
+        );
+
+        let config =
+            saved_networks.lookup(saved_net_id).pop().expect("Failed to get network config");
+        assert!(config.has_ever_connected);
+    }
+
+    #[test]
+    fn auto_connect_falis_incompatible() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let id = "auto_connect_to_known_ess";
+        let temp_dir = TempDir::new().expect("failed to create temporary directory");
+        let path = temp_dir.path().join("networks.json");
+        let tmp_path = temp_dir.path().join("networks.tmp");
+        let saved_networks = exec.run_singlethreaded(create_saved_networks(id, &path, &tmp_path));
+        let saved_ssid = b"bar";
+        let saved_password_str = b"qwertyuio";
+        let saved_password = Credential::Password(saved_password_str.to_vec());
+        let saved_net_id = NetworkIdentifier::new(saved_ssid.to_vec(), SecurityType::Wpa);
+        // save the network to trigger a scan
+        saved_networks
+            .store(saved_net_id.clone(), saved_password)
+            .expect("failed to store a network password");
+
+        // create an incompatible BSS info that we would see in scan results
+        let mut bad_bss = bss_info(saved_ssid);
+        bad_bss.compatible = false;
+        let expected_connect: Option<(&str, &str)> = None;
+
+        // attempt to auto connect will expect to fail
+        attempt_an_auto_connect(
+            &mut exec,
+            Arc::clone(&saved_networks),
+            &mut vec![bad_bss],
+            expected_connect,
+        );
+
+        // After failed auto connect, the network should not have been marked connected
+        let config =
+            saved_networks.lookup(saved_net_id).pop().expect("Failed to get network config");
+        assert_eq!(false, config.has_ever_connected);
     }
 
     #[test]
@@ -1332,6 +1488,59 @@ mod tests {
             channel: 1,
             protection: fidl_sme::Protection::Wpa2Personal,
             compatible: true,
+        }
+    }
+
+    /// Simulate attempting a single auto connect for a test. It will expect to either succeed or fail
+    /// an auto connect with the provided scan results and the networks that have been saved before
+    /// this is called.
+    /// This may not be suitable for a test with multiple autoconnects because it creates a client
+    /// each time it is run.
+    /// Args:
+    ///     exec: The Executor of the function
+    ///     scan_results: The networks that the client sees when trying to auto connect which it could
+    ///                   try to connecto
+    ///     expected_network: An option, some SSID and credential if the network is expected to
+    ///         auto connect or None should be provided if it should fail.
+    fn attempt_an_auto_connect(
+        mut exec: &mut fasync::Executor,
+        saved_networks: Arc<SavedNetworksManager>,
+        mut scan_results: &mut Vec<fidl_sme::BssInfo>,
+        expected_network: Option<(impl AsRef<[u8]>, impl AsRef<[u8]>)>,
+    ) {
+        let (_client, fut, sme_server) = create_client(Arc::clone(&saved_networks));
+        let mut next_sme_req = sme_server.into_future();
+        pin_mut!(fut);
+
+        // Send the scan results
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
+        send_scan_results(&mut exec, &mut next_sme_req, &mut scan_results);
+
+        // Let the state machine process the results
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
+
+        // If auto connect is expected to work, expect a "connect" request to SME and reply to it
+        if let Some((ssid, credential)) = expected_network {
+            exchange_connect_with_sme(
+                &mut exec,
+                &mut next_sme_req,
+                ssid.as_ref(),
+                credential.as_ref(),
+                fidl_sme::ConnectResultCode::Success,
+            );
+
+            // Let the state machine absorb the connect ack
+            assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
+
+            // We should be in the 'connected' state now, with a pending status request and
+            // no pending timers
+            expect_status_req_to_sme(&mut exec, &mut next_sme_req);
+            assert_eq!(None, exec.wake_next_timer());
+        } else {
+            // Expect auto connect to fail, should remain in the 'auto connect' state and sleep
+            assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
+            assert!(poll_sme_req(&mut exec, &mut next_sme_req).is_pending());
+            assert!(exec.wake_next_timer().is_some());
         }
     }
 }
