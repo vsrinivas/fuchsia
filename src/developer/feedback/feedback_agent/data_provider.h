@@ -15,6 +15,7 @@
 #include <memory>
 
 #include "src/developer/feedback/feedback_agent/config.h"
+#include "src/developer/feedback/feedback_agent/datastore.h"
 #include "src/developer/feedback/utils/cobalt.h"
 #include "src/lib/timekeeper/clock.h"
 #include "src/lib/timekeeper/system_clock.h"
@@ -50,6 +51,7 @@ class DataProvider : public fuchsia::feedback::DataProvider {
   const Config config_;
   Cobalt cobalt_;
   async::Executor executor_;
+  Datastore datastore_;
 
   bool shut_down_ = false;
 };

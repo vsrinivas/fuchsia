@@ -14,6 +14,7 @@
 #include <memory>
 
 #include "src/developer/feedback/feedback_agent/data_provider.h"
+#include "src/developer/feedback/feedback_agent/datastore.h"
 #include "src/developer/feedback/feedback_agent/inspect_manager.h"
 #include "src/lib/fxl/macros.h"
 
@@ -40,6 +41,7 @@ class FeedbackAgent {
  private:
   async_dispatcher_t* dispatcher_;
   InspectManager inspect_manager_;
+  std::unique_ptr<Datastore> datastore_;
 
   std::unique_ptr<DataProvider> data_provider_;
   fidl::BindingSet<fuchsia::feedback::DataProvider> data_provider_connections_;

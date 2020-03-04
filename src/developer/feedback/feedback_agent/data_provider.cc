@@ -15,7 +15,6 @@
 
 #include <memory>
 
-#include "src/developer/feedback/feedback_agent/annotations.h"
 #include "src/developer/feedback/feedback_agent/annotations/aliases.h"
 #include "src/developer/feedback/feedback_agent/attachments.h"
 #include "src/developer/feedback/feedback_agent/attachments/screenshot_ptr.h"
@@ -62,34 +61,13 @@ DataProvider::DataProvider(async_dispatcher_t* dispatcher,
       services_(services),
       config_(config),
       cobalt_(dispatcher_, services_, std::move(clock)),
-      executor_(dispatcher) {}
+      executor_(dispatcher),
+      datastore_(dispatcher_, services_, &cobalt_, kDataTimeout, config_.annotation_allowlist) {}
 
 void DataProvider::GetData(GetDataCallback callback) {
   FX_CHECK(!shut_down_);
 
   const uint64_t timer_id = cobalt_.StartTimer();
-
-  auto annotations =
-      fit::join_promise_vector(GetAnnotations(dispatcher_, services_, config_.annotation_allowlist,
-                                              kDataTimeout, &cobalt_))
-          .and_then([](std::vector<fit::result<Annotations>>& annotation_promises)
-                        -> fit::result<Annotations> {
-            Annotations ok_annotations;
-            for (auto& promise : annotation_promises) {
-              if (promise.is_ok()) {
-                auto annotations = promise.take_value();
-                for (const auto& [key, value] : annotations) {
-                  ok_annotations[key] = value;
-                }
-              }
-            }
-
-            if (ok_annotations.empty()) {
-              return fit::error();
-            }
-
-            return fit::ok(ok_annotations);
-          });
 
   auto attachments =
       fit::join_promise_vector(GetAttachments(dispatcher_, services_, config_.attachment_allowlist,
@@ -111,7 +89,7 @@ void DataProvider::GetData(GetDataCallback callback) {
           });
 
   auto promise =
-      fit::join_promises(std::move(annotations), std::move(attachments))
+      fit::join_promises(datastore_.GetAnnotations(), std::move(attachments))
           .and_then([](std::tuple<fit::result<Annotations>, fit::result<std::vector<Attachment>>>&
                            annotations_and_attachments) {
             Data data;

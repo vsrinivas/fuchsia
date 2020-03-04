@@ -86,14 +86,14 @@ source_set("constants") {
 
 source_set("data_provider") {
   sources = [
-    "annotations.cc",
-    "annotations.h",
     "attachments.cc",
     "attachments.h",
     "config.cc",
     "config.h",
     "data_provider.cc",
     "data_provider.h",
+    "datastore.cc",
+    "datastore.h",
     "image_conversion.cc",
     "image_conversion.h",
   ]
