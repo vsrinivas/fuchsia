@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 group("services") {
-  testonly = true
   deps = [ "//src/media/sessions:mediasession" ]
 }
 
@@ -23,6 +22,5 @@ group("examples") {
 }
 
 group("config") {
-  testonly = true
   deps = [ "//src/media/sessions:mediasession_config" ]
 }
