@@ -46,11 +46,11 @@ pub const DEFAULT_CHANNEL_SIZE: usize = 128;
 ///
 /// // Create a new publisher that can be used to publish updates to the state
 /// let mut publisher = broker.new_publisher();
-/// // Create a new registrar that can be used to register subscribers
-/// let mut registrar = broker.new_registrar();
+/// // Create a new handle that can be used to register subscribers
+/// let mut handle = broker.new_handle();
 ///
 /// // Spawn broker as an async task that will run until there are not any more
-/// // `SubscriptionRegistrar`, `Publisher`, or `Subscriber` objects that can update the system.
+/// // `Handle`, `Publisher`, or `Subscriber` objects that can update the system.
 /// fuchsia_async::spawn(broker.run());
 ///
 /// // Spawn a background task to count sheep
@@ -66,13 +66,13 @@ pub const DEFAULT_CHANNEL_SIZE: usize = 128;
 /// let mut fs = ServiceFs::new();
 /// fs.dir("svc").add_fidl_service(|s: SheepCounterRequestStream| s);
 ///
-/// // SubscriptionRegistrar new client connections sequentially
+/// // Handle new client connections sequentially
 /// while let Some(mut stream) = fs.next().await {
 ///
 ///     // Create a new subscriber associated with this client's request stream
-///     let mut subscriber = registrar.new_subscriber().await.unwrap();
+///     let mut subscriber = handle.new_subscriber().await.unwrap();
 ///
-///     // SubscriptionRegistrar requests from this client by registering new observers
+///     // Handle requests from this client by registering new observers
 ///     fuchsia_async::spawn(async move {
 ///         while let Some(Ok(SheepCounterWatchCountRequest { responder })) = stream.next().await {
 ///             subscriber.register(responder).await.unwrap();
@@ -84,7 +84,7 @@ pub struct HangingGetBroker<S, O: Unpin + 'static, F: Fn(&S, O) -> bool> {
     inner: HangingGet<S, subscriber_key::Key, O, F>,
     publisher: Publisher<S>,
     updates: mpsc::Receiver<UpdateFn<S>>,
-    registrar: SubscriptionRegistrar<O>,
+    handle: Handle<O>,
     subscribers: mpsc::Receiver<NewSubscriberRequest<O>>,
     /// A `subscriber_key::Key` held by the broker to track the next unique key that the broker can
     /// assign to a `Subscriber`.
@@ -106,12 +106,12 @@ where
         let (sender, updates) = mpsc::channel(channel_size);
         let publisher = Publisher { sender };
         let (sender, subscribers) = mpsc::channel(channel_size);
-        let registrar = SubscriptionRegistrar { sender };
+        let handle = Handle { sender };
         Self {
             inner: HangingGet::new(state, notify),
             publisher,
             updates,
-            registrar,
+            handle,
             subscribers,
             subscriber_key_generator: subscriber_key::Generator::default(),
             channel_size,
@@ -124,21 +124,21 @@ where
         self.publisher.clone()
     }
 
-    /// Create a new `SubscriptionRegistrar` that can be used to register new subscribers
+    /// Create a new `Handle` that can be used to register new subscribers
     /// with this `HangingGetBroker` from another thread or async task.
-    pub fn new_registrar(&self) -> SubscriptionRegistrar<O> {
-        self.registrar.clone()
+    pub fn new_handle(&self) -> Handle<O> {
+        self.handle.clone()
     }
 
     /// Consume `HangingGetBroker`, returning a Future object that can be polled to drive updates
     /// to the HangingGet object. The Future completes when there are no remaining
-    /// `SubscriptionRegistrars` for this object.
+    /// `Handles` for this object.
     pub async fn run(mut self) {
-        // Drop internally held references to incoming registrar.
+        // Drop internally held references to incoming sender handles.
         // They are no longer externally reachable and will prevent the
         // select! macro from completing if they are not dropped.
         drop(self.publisher);
-        drop(self.registrar);
+        drop(self.handle);
 
         // A combined stream of all active subscribers which yields
         // `observer` objects from those subscribers as they request
@@ -153,7 +153,7 @@ where
                         self.inner.update(update)
                     }
                 }
-                // A request for a new subscriber as been requested from a `SubscriptionRegistrar`.
+                // A request for a new subscriber as been requested from a `Handle`.
                 subscriber = self.subscribers.next() => {
                     if let Some(subscriber) = subscriber {
                         let (sender, mut receiver) = mpsc::channel(self.channel_size);
@@ -184,17 +184,17 @@ where
 
 /// A cheaply copyable handle that can be used to register new `Subscriber`s with
 /// the `HangingGetBroker`.
-pub struct SubscriptionRegistrar<O> {
+pub struct Handle<O> {
     sender: mpsc::Sender<NewSubscriberRequest<O>>,
 }
 
-impl<O> Clone for SubscriptionRegistrar<O> {
+impl<O> Clone for Handle<O> {
     fn clone(&self) -> Self {
         Self { sender: self.sender.clone() }
     }
 }
 
-impl<O> SubscriptionRegistrar<O> {
+impl<O> Handle<O> {
     /// Register a new subscriber
     pub async fn new_subscriber(&mut self) -> Result<Subscriber<O>, HangingGetServerError> {
         let (request, response) = oneshot::channel();
@@ -628,17 +628,17 @@ mod tests {
             TEST_CHANNEL_SIZE,
         );
         let publisher = broker.new_publisher();
-        let registrar = broker.new_registrar();
+        let handle = broker.new_handle();
         let broker_future = broker.run();
         futures::pin_mut!(broker_future);
 
-        // Broker future is still pending when registrars are live.
+        // Broker future is still pending when handles are live.
         assert_eq!(ex.run_until_stalled(&mut broker_future), Poll::Pending);
 
         drop(publisher);
-        drop(registrar);
+        drop(handle);
 
-        // Broker future completes when registrars are dropped.
+        // Broker future completes when handles are dropped.
         assert_eq!(ex.run_until_stalled(&mut broker_future), Poll::Ready(()));
     }
 
@@ -650,9 +650,9 @@ mod tests {
             TEST_CHANNEL_SIZE,
         );
         let mut publisher = broker.new_publisher();
-        let mut registrar = broker.new_registrar();
+        let mut handle = broker.new_handle();
         let fut = async move {
-            let mut subscriber = registrar.new_subscriber().await.unwrap();
+            let mut subscriber = handle.new_subscriber().await.unwrap();
 
             // Initial observation is immediate
             let (sender, receiver) = oneshot::channel();
@@ -679,10 +679,10 @@ mod tests {
             TEST_CHANNEL_SIZE,
         );
         let mut publisher = broker.new_publisher();
-        let mut registrar = broker.new_registrar();
+        let mut handle = broker.new_handle();
         let fut = async move {
-            let mut sub1 = registrar.new_subscriber().await.unwrap();
-            let mut sub2 = registrar.new_subscriber().await.unwrap();
+            let mut sub1 = handle.new_subscriber().await.unwrap();
+            let mut sub2 = handle.new_subscriber().await.unwrap();
 
             // Initial observation for subscribers is immediate
             let (sender, receiver) = oneshot::channel();

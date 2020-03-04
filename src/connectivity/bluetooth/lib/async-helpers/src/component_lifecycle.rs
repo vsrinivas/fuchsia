@@ -4,7 +4,7 @@
 
 use crate::hanging_get::{
     error::HangingGetServerError,
-    server::{HangingGetBroker, Publisher, SubscriptionRegistrar, DEFAULT_CHANNEL_SIZE},
+    server::{Handle, HangingGetBroker, Publisher, DEFAULT_CHANNEL_SIZE},
 };
 use {
     fidl_fuchsia_bluetooth_component::{
@@ -20,8 +20,8 @@ use {
 /// Lifecycle state.
 #[derive(Clone)]
 pub struct ComponentLifecycleServer {
-    publisher: Publisher<LifecycleState>,
-    registrar: SubscriptionRegistrar<LifecycleGetStateResponder>,
+    inner: Publisher<LifecycleState>,
+    handle: Handle<LifecycleGetStateResponder>,
 }
 
 impl ComponentLifecycleServer {
@@ -32,10 +32,10 @@ impl ComponentLifecycleServer {
             |s, o: LifecycleGetStateResponder| o.send(*s).is_ok(),
             DEFAULT_CHANNEL_SIZE,
         );
-        let publisher = broker.new_publisher();
-        let registrar = broker.new_registrar();
+        let inner = broker.new_publisher();
+        let handle = broker.new_handle();
         fasync::spawn(broker.run());
-        Self { publisher, registrar }
+        Self { inner, handle }
     }
 
     /// Return a `FnMut` that can be passed to a `ServiceFs` to handle FIDL service requests for
@@ -43,11 +43,11 @@ impl ComponentLifecycleServer {
     /// `ComponentLifecycleServer` instance and will respect any modifications made by the `set`
     /// method.
     pub fn fidl_service(&self) -> impl FnMut(LifecycleRequestStream) {
-        let registrar = self.registrar.clone();
+        let handle = self.handle.clone();
         move |mut stream: LifecycleRequestStream| {
-            let mut registrar = registrar.clone();
+            let mut handle = handle.clone();
             fasync::spawn(async move {
-                if let Ok(mut subscriber) = registrar.new_subscriber().await {
+                if let Ok(mut subscriber) = handle.new_subscriber().await {
                     while let Some(request) = stream.next().await {
                         match request {
                             Ok(LifecycleRequest::GetState { responder }) => {
@@ -64,6 +64,6 @@ impl ComponentLifecycleServer {
     /// Set the `LifecycleState` that this server will report and update all hanging-get clients
     /// with the new value.
     pub async fn set(&mut self, state: LifecycleState) -> Result<(), HangingGetServerError> {
-        self.publisher.set(state).await
+        self.inner.set(state).await
     }
 }
