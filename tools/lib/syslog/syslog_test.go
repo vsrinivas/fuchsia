@@ -15,8 +15,6 @@ import (
 
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
-
-	"golang.org/x/crypto/ssh"
 )
 
 type fakeSSHRunner struct {
@@ -52,17 +50,17 @@ func (r *fakeSSHRunner) Run(_ context.Context, cmd []string, stdout, _ io.Writer
 	}
 }
 
-func (r *fakeSSHRunner) Reconnect(_ context.Context) (*ssh.Client, error) {
+func (r *fakeSSHRunner) Reconnect(_ context.Context) error {
 	select {
 	case err := <-r.reconnectErrs:
 		if err != nil {
-			return nil, err
+			return err
 		}
 	default:
 		// If the channel is empty, we consider reconnection to be successful.
 	}
 	r.reconnected = true
-	return nil, nil
+	return nil
 }
 
 func (r *fakeSSHRunner) Close() error {
