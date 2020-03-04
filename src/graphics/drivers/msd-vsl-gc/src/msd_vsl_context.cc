@@ -64,7 +64,13 @@ magma::Status MsdVslContext::SubmitBatch(std::unique_ptr<MappedBatch> batch) {
     DMESSAGE("Can't submit without connection");
     return MAGMA_STATUS_OK;
   }
-  // TODO(fxb/42234): check if we have to submit a TLB flush command
+
+  std::shared_ptr<MsdVslContext> context = batch->GetContext().lock();
+  DASSERT(context.get() == static_cast<MsdVslContext*>(this));
+
+  // If there are any mappings pending release, submit them now.
+  connection->SubmitPendingReleaseMappings(context);
+
   // TODO(fxb/42748): handle wait semaphores.
   return connection->SubmitBatch(std::move(batch));
 }

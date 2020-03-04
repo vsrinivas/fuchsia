@@ -19,7 +19,11 @@ class NullBatch : public MappedBatch {
  public:
   uint64_t GetGpuAddress() const override { return 0; }
   uint64_t GetLength() const override { return 0; }
+  void SetSequenceNumber(uint32_t sequence_number) override { seq_num_ = sequence_number; }
+  uint32_t GetSequenceNumber() const override { return seq_num_; }
   const magma::GpuMappingView<MsdVslBuffer>* GetBatchMapping() const override { return nullptr; }
+
+  uint32_t seq_num_ = 0;
 };
 
 // Signals the semaphores when destroyed.
@@ -39,14 +43,25 @@ class EventBatch : public NullBatch {
   }
 
   std::weak_ptr<MsdVslContext> GetContext() const override { return context_; }
-  void SetSequenceNumber(uint32_t sequence_number) override { seq_num_ = sequence_number; }
-  uint32_t GetSequenceNumber() const override { return seq_num_; }
 
  private:
   std::shared_ptr<MsdVslContext> context_;
   std::vector<std::shared_ptr<magma::PlatformSemaphore>> wait_semaphores_;
   std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores_;
-  uint32_t seq_num_ = 0;
+};
+
+// Releases the list of bus mappings when destroyed.
+class MappingReleaseBatch : public NullBatch {
+ public:
+  MappingReleaseBatch(std::shared_ptr<MsdVslContext> context,
+                      std::vector<std::unique_ptr<magma::PlatformBusMapper::BusMapping>> mappings)
+      : context_(std::move(context)), mappings_(std::move(mappings)) {}
+
+  std::weak_ptr<MsdVslContext> GetContext() const override { return context_; }
+
+ private:
+  std::shared_ptr<MsdVslContext> context_;
+  std::vector<std::unique_ptr<magma::PlatformBusMapper::BusMapping>> mappings_;
 };
 
 #endif  // MAPPED_BATCH_H

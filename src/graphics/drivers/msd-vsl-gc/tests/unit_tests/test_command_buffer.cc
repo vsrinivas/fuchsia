@@ -10,7 +10,6 @@
 #include "src/graphics/drivers/msd-vsl-gc/src/instructions.h"
 #include "src/graphics/drivers/msd-vsl-gc/src/msd_vsl_device.h"
 
-
 void TestCommandBuffer::CreateMsdBuffer(uint32_t buffer_size,
                                         std::shared_ptr<MsdVslBuffer>* out_buffer) {
   std::unique_ptr<magma::PlatformBuffer> buffer =
@@ -89,7 +88,7 @@ void TestCommandBuffer::CreateAndSubmitBuffer(const BufferDesc& buffer_desc,
       buffer, buffer_desc.data_size, buffer_desc.batch_offset, semaphore->Clone(), &batch));
   ASSERT_TRUE(batch->IsValidBatchBuffer());
 
-  ASSERT_TRUE(device_->SubmitBatch(std::move(batch), false /* do_flush */).ok());
+  ASSERT_TRUE(context()->SubmitBatch(std::move(batch)).ok());
 
   constexpr uint64_t kTimeoutMs = 1000;
   ASSERT_EQ(MAGMA_STATUS_OK, semaphore->Wait(kTimeoutMs).get());

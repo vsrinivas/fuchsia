@@ -60,18 +60,13 @@ TEST_F(TestExec, ReuseGpuAddress) {
   ASSERT_TRUE(submitted_buffer->platform_buffer()->UnmapCpu());
 
   // Free the GPU address.
-  std::vector<std::shared_ptr<GpuMapping>> mappings;
-  address_space()->ReleaseBuffer(submitted_buffer->platform_buffer(), &mappings);
+  ASSERT_TRUE(
+      connection()->ReleaseMapping(submitted_buffer->platform_buffer(), buffer_desc.gpu_addr));
 
   // Map the second buffer at the same GPU address and try submitting it.
-  std::shared_ptr<GpuMapping> gpu_mapping;
-  magma::Status status =
-      AddressSpace::MapBufferGpu(address_space(), msd_buffer, buffer_desc.gpu_addr,
-                                 0 /* page_offset */, buffer_desc.map_page_count, &gpu_mapping);
+  magma::Status status = connection()->MapBufferGpu(
+      msd_buffer, buffer_desc.gpu_addr, 0 /* page_offset */, buffer_desc.map_page_count);
   ASSERT_TRUE(status.ok());
-  ASSERT_NE(gpu_mapping, nullptr);
-
-  ASSERT_TRUE(address_space()->AddMapping(std::move(gpu_mapping)));
 
   // Submit the batch and verify we get a completion event.
   auto semaphore = magma::PlatformSemaphore::Create();
@@ -82,7 +77,8 @@ TEST_F(TestExec, ReuseGpuAddress) {
       msd_buffer, buffer_desc.data_size, buffer_desc.batch_offset, semaphore->Clone(), &batch));
   ASSERT_TRUE(batch->IsValidBatchBuffer());
 
-  ASSERT_TRUE(device_->SubmitBatch(std::move(batch), true /* do_flush */).ok());
+  // The context should determine that TLB flushing is required.
+  ASSERT_TRUE(context()->SubmitBatch(std::move(batch)).ok());
 
   constexpr uint64_t kTimeoutMs = 1000;
   EXPECT_EQ(MAGMA_STATUS_OK, semaphore->Wait(kTimeoutMs).get());

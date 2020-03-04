@@ -185,6 +185,7 @@ class MsdVslDevice : public msd_device_t,
 
   class BatchRequest;
   class InterruptRequest;
+  class MappingReleaseRequest;
 
   // Thread-shared data members
   std::unique_ptr<magma::PlatformSemaphore> device_request_semaphore_;
