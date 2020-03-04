@@ -31,7 +31,7 @@
 namespace audio {
 namespace usb {
 
-static constexpr uint32_t MAX_OUTSTANDING_REQ = 8;
+static constexpr uint32_t MAX_OUTSTANDING_REQ = 3;
 
 static constexpr uint32_t ExtractSampleRate(const usb_audio_as_samp_freq& sr) {
   return static_cast<uint32_t>(sr.freq[0]) | (static_cast<uint32_t>(sr.freq[1]) << 8) |
@@ -125,9 +125,20 @@ zx_status_t UsbAudioStream::Bind() {
         status);
   }
 
-  status = device_get_profile(zxdev_, 24 /* HIGH_PRIORITY in LK */,
-                              "src/media/audio/drivers/usb-audio/usb-audio-stream",
-                              profile_handle_.reset_and_get_address());
+  // Configure and fetch a deadline profile for our USB IRQ callback thread.  We
+  // will be running at a 1 mSec isochronous rate, and we mostly want to be sure
+  // that we are done and have queued the next job before the next cycle starts.
+  // Currently, there shouldn't be any great amount of work to be done, just
+  // memcpying the data into the buffer used by the USB controller driver.
+  // 250uSec should be more than enough time.
+  status = device_get_deadline_profile(
+      zxdev_,
+      ZX_USEC(250),  // capacity: we agree to run for no more than 250 uSec max
+      ZX_USEC(700),  // deadline: Let this be scheduled as late as 700 uSec into the cycle
+      ZX_USEC(995),  // period:   we need to do this at a rate of ~1KHz
+      "src/media/audio/drivers/usb-audio/usb-audio-stream",
+      profile_handle_.reset_and_get_address());
+
   if (status != ZX_OK) {
     LOG(ERROR, "Failed to retrieve profile, status %d\n", status);
     return status;
@@ -529,21 +540,23 @@ zx_status_t UsbAudioStream::OnSetStreamFormatLocked(dispatcher::Channel* channel
   bytes_per_packet_ = bytes_per_packet;
   fractional_bpp_inc_ = fractional_bpp_inc;
 
-  // Compute the effective fifo depth for this stream.  Right now, we assume
-  // that the controller will never get farther ahead than two isochronous usb
-  // requests, so we report this as the worst case fifo_depth.
+  // Compute the effective fifo depth for this stream.  Right now, we are in a
+  // situation where, for an output, we need to memcpy payloads from the mixer
+  // ring buffer into the jobs that we send to the USB host controller.  For an
+  // input, when the jobs complete, we need to copy the data from the completed
+  // job into the ring buffer.
   //
-  // Based on our cadence generation parameters, adjust this number based on
-  // whether or not it is possible to have 0, 1 or 2 long packets back to back
-  // at any point in time during the sequence.
+  // This gives us two different "fifo" depths we may need to report.  For an
+  // input, if job X just completed, we will be copying the data sometime during
+  // job X+1, assuming that we are hitting our callback targets.  Because of
+  // this, we should be safe to report our fifo depth as being 2 times the size
+  // of a single maximum sized job.
   //
-  // TODO(johngro): This is not the proper way to report the FIFO depth.  How
-  // far ahead the USB controller will read ahead into its FIFO is going to be
-  // a property of the controller and the properties of the endpoint.  It is
-  // possible that this is negotiable to some extent as well.  I need to work
-  // with voydanof@ to determine what we can expose from the USB bus driver in
-  // order to report this accurately.
-  fifo_bytes_ = bytes_per_packet_ << 1;
+  // For output, we are attempting to stay MAX_OUTSTANDING_REQ ahead, and we are
+  // copying the data from the mixer ring buffer as we go.  Because of this, our
+  // reported fifo depth is going to be MAX_OUTSTANDING_REQ maximum sized jobs
+  // ahead of the nominal read pointer.
+  fifo_bytes_ = bytes_per_packet_ * (is_input() ? 2 : MAX_OUTSTANDING_REQ);
 
   // If we have no fractional portion to accumulate, we always send
   // short packets.  If our fractional portion is <= 1/2 of our

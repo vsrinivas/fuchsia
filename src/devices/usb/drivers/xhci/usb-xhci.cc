@@ -294,8 +294,17 @@ zx_status_t UsbXhci::FinishBind() {
     return status;
   }
 
-  status = device_get_profile(zxdev_, /*HIGH_PRIORITY*/ 24, "src/devices/usb/drivers/xhci/usb-xhci",
-                              xhci_->profile_handle.reset_and_get_address());
+  // Configure and fetch a deadline profile for the high priority USB completer
+  // thread.  In a case where we are taking an interrupt on every microframe, we
+  // will need to run at 8KHz and have reserved up to 66% of a CPU for work in
+  // that period.
+  status = device_get_deadline_profile(
+      zxdev_,
+      ZX_USEC(80),   // capacity: we agree to run for no more than 80 uSec max
+      ZX_USEC(120),  // deadline: we need to be done before the next microframe (125 uSec)
+      ZX_USEC(120),  // period:   Worst case period is one IRQ per microframe (8KHz)
+      "src/devices/usb/drivers/xhci/usb-xhci", xhci_->profile_handle.reset_and_get_address());
+
   if (status != ZX_OK) {
     zxlogf(WARN, "Failed to obtain scheduler profile for high priority completer (res %d)\n",
            status);
