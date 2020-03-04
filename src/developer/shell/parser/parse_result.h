@@ -35,9 +35,10 @@ class ParseResult {
   std::shared_ptr<ast::Node> node() const { return frame_ ? frame_->node : nullptr; }
 
   // Move parsing ahead by len bytes, and push a token of that length.
+  template <typename T = ast::Terminal>
   ParseResult Advance(size_t size) {
     return ParseResult(tail_.substr(size), offset_ + size, 0, 0, error_score(),
-                       std::make_shared<ast::Terminal>(offset_, size), frame_);
+                       std::make_shared<T>(offset_, size), frame_);
   }
 
   // Swap the node in the current frame. Essentially this is a Pop() followed by a Push(). Usually

@@ -5,47 +5,9 @@
 #include "src/developer/shell/parser/text_match.h"
 
 namespace shell::parser {
+namespace internal {}  // namespace internal
+
 namespace {
-
-// Produces a parse result for a fixed token or character. This is NOT a parser or combinator; it
-// must be told via its arguments whether the initial parse succeeds. The ident argument should
-// provide a rendering of what is being matched suitable for error messages. The token matched must
-// always be of the given size. The find callback will be used to look ahead for error correction.
-// Given a starting offset into the prefix tail, it should return the next location at which a match
-// is possible.
-ParseResultStream FixedTextResult(ParseResult prefix, const std::string& ident, bool success,
-                                  size_t size, fit::function<size_t()> find) {
-  if (success) {
-    return ParseResultStream(prefix.Advance(size));
-  }
-
-  return ParseResultStream(false, [prefix, size, ident, find = std::move(find), done = false,
-                                   next = std::optional<ParseResult>()]() mutable {
-    if (done) {
-      return prefix.End();
-    }
-
-    if (next) {
-      done = true;
-      return std::move(*next);
-    }
-
-    size_t pos = find();
-
-    ParseResult skip = pos == std::string::npos
-                           ? prefix.Skip(prefix.tail().size()).Expected(size, ident)
-                           : prefix.Skip(pos).Advance(size);
-    ParseResult inject = prefix.Expected(size, ident);
-
-    if (skip.error_score() < inject.error_score()) {
-      next = std::move(inject);
-      return skip;
-    }
-
-    next = std::move(skip);
-    return inject;
-  });
-}
 
 // Produce a parser which parses any single character from the given list. If invert is true,
 // character must NOT be in the list instead.
@@ -55,7 +17,7 @@ fit::function<ParseResultStream(ParseResultStream)> AnyCharMayInvert(std::string
   return [chars, invert, name](ParseResultStream prefixes) {
     return std::move(prefixes).Follow([chars, invert, name](ParseResult prefix) {
       auto tail = prefix.tail();
-      return FixedTextResult(
+      return internal::FixedTextResult(
           std::move(prefix), name,
           tail.size() > 0 && (chars.find(tail[0]) == std::string::npos) == invert, 1,
           [chars, invert, tail]() {
@@ -112,7 +74,7 @@ fit::function<ParseResultStream(ParseResultStream)> CharGroup(const std::string&
     return std::move(prefixes).Follow([chars, name](ParseResult prefix) {
       auto tail = prefix.tail();
       bool matched = tail.size() > 0 && MatchCharGroup(chars, tail[0]);
-      return FixedTextResult(std::move(prefix), name, matched, 1, [chars, tail]() {
+      return internal::FixedTextResult(std::move(prefix), name, matched, 1, [chars, tail]() {
         size_t i = 0;
 
         while (i < tail.size() && !MatchCharGroup(chars, tail[i])) {
@@ -121,62 +83,6 @@ fit::function<ParseResultStream(ParseResultStream)> CharGroup(const std::string&
 
         return i;
       });
-    });
-  };
-}
-
-// Produce a parser to parse a fixed text string.
-fit::function<ParseResultStream(ParseResultStream)> Token(const std::string& token) {
-  return [token](ParseResultStream prefixes) {
-    return std::move(prefixes).Follow([token](ParseResult prefix) {
-      return FixedTextResult(std::move(prefix), "'" + token + "'",
-                             prefix.tail().substr(0, token.size()) == token, token.size(),
-                             [tail = prefix.tail(), token]() { return tail.find(token); });
-    });
-  };
-}
-
-fit::function<ParseResultStream(ParseResultStream)> Token(
-    fit::function<ParseResultStream(ParseResultStream)> parser) {
-  return [parser = std::move(parser)](ParseResultStream prefix) {
-    return parser(std::move(prefix).Mark()).Reduce<ast::TokenResult>().Map([](ParseResult result) {
-      // The goal here is to return a single terminal representing the parsed region of the result,
-      // but terminals don't have children, and thus can't have errors. As such, if we have error
-      // children, we return an unnamed non-terminal, where we combine all the regular parse results
-      // into single tokens, but leave the error tokens in place. So if we parsed ('foo' 'bar'
-      // 'baz'), we'd finish with just 'foobarbaz' on the stack, but if we parsed ('foo' 'bar'
-      // E[Expected 'baz']) we'd end with ('foobar' E[Expected 'baz']).
-      std::optional<size_t> start = std::nullopt;
-      size_t end;
-      std::vector<std::shared_ptr<ast::Node>> children;
-      for (const auto& child : result.node()->Children()) {
-        if (child->IsError()) {
-          if (start) {
-            children.push_back(std::make_shared<ast::Terminal>(*start, child->start()));
-          }
-          children.push_back(child);
-          start = std::nullopt;
-        } else {
-          if (!start) {
-            start = child->start();
-          }
-
-          end = child->start() + child->Size();
-        }
-      }
-
-      if (start) {
-        children.push_back(std::make_shared<ast::Terminal>(*start, end - *start));
-      }
-
-      std::shared_ptr<ast::Node> new_child;
-      if (children.size() == 1) {
-        new_child = children.front();
-      } else {
-        new_child = std::make_shared<ast::TokenResult>(result.node()->start(), std::move(children));
-      }
-
-      return result.SetNode(new_child);
     });
   };
 }
