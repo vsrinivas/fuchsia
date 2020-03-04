@@ -141,6 +141,7 @@ zx_status_t fidl_async_txn_complete(fidl_async_txn_t* async_txn, bool rebind) {
     status = async_begin_wait(async_txn->connection.binding->dispatcher,
                               &async_txn->connection.binding->wait);
     if (status == ZX_OK) {
+      free(async_txn);
       return ZX_OK;
     }
   }

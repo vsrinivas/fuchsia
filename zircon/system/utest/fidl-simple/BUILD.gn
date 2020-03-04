@@ -57,9 +57,6 @@ test("fidl-simple") {
     "//zircon/system/fidl/fuchsia-mem:c",
   ]
 
-  # TODO(46420): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-
   # TODO(42496): UBSan has found an instance of undefined behavior in this target.
   # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
   configs += [ "//build/config:temporarily_disable_ubsan_do_not_use" ]

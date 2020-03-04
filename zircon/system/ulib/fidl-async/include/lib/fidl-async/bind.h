@@ -80,12 +80,19 @@ fidl_async_txn_t* fidl_async_txn_create(fidl_txn_t* txn);
 fidl_txn_t* fidl_async_txn_borrow(fidl_async_txn_t* async_txn);
 
 // Destroys an asynchronous transaction created with |fidl_async_txn_create|.
+// This function is intented to be the single termination function.
 //
 // If requested, rebinds the underlying txn against the binding.
 // Returns an error if |rebind| is true and the transaction could not be
 // re-bound.
 //
 // In all cases, the |async_txn| object is consumed.
+//
+// Note: Regardless of whether the client wants to rebind the txn or not,
+// `fidl_async_txn_complete` should be the final function invoked. As such, if
+// this function fails to rebind, there isn't much we can do with the
+// |async_txn| beyond that point, and we therefore prefer to consume it in all
+// cases.
 zx_status_t fidl_async_txn_complete(fidl_async_txn_t* async_txn, bool rebind);
 
 __END_CDECLS
