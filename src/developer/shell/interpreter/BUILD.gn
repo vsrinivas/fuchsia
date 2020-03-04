@@ -10,6 +10,7 @@ static_library("shell_interpreter") {
     "src/instructions.h",
     "src/interpreter.h",
     "src/nodes.h",
+    "src/schema.h",
     "src/types.h",
   ]
 
@@ -18,11 +19,14 @@ static_library("shell_interpreter") {
     "src/instructions.cc",
     "src/interpreter.cc",
     "src/nodes.cc",
+    "src/schema.cc",
     "src/scope.cc",
     "src/thread.cc",
     "src/types.cc",
     "src/value.cc",
   ]
+
+  deps = [ "//src/lib/syslog/cpp" ]
 }
 
 static_library("shell_server_lib") {
@@ -34,6 +38,7 @@ static_library("shell_server_lib") {
     "//sdk/lib/sys/cpp",
     "//src/developer/shell/fidl/fuchsia.shell:shell_llcpp",
     "//src/lib/fxl",
+    "//src/lib/syslog/cpp",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop",
     "//zircon/public/lib/async-loop-cpp",

@@ -12,6 +12,7 @@
 #include "lib/svc/dir.h"
 #include "src/developer/shell/interpreter/src/expressions.h"
 #include "src/developer/shell/interpreter/src/instructions.h"
+#include "src/developer/shell/interpreter/src/schema.h"
 #include "src/developer/shell/interpreter/src/types.h"
 #include "src/lib/fxl/logging.h"
 #include "zircon/process.h"
@@ -66,6 +67,16 @@ std::unique_ptr<Type> GetType(ServerInterpreterContext* context, uint64_t node_f
         break;
     }
   }
+  if (shell_type.is_object_schema()) {
+    NodeId node_id(shell_type.object_schema().file_id, shell_type.object_schema().node_id);
+    Node* schema_node = context->execution_context()->interpreter()->GetNode(node_id);
+    if (schema_node == nullptr) {
+      context->execution_context()->EmitError(NodeId(node_file_id, node_node_id),
+                                              "Type not found for object");
+      return std::make_unique<TypeUndefined>();
+    }
+    return schema_node->AsObjectSchema()->GetType();
+  }
   context->execution_context()->EmitError(NodeId(node_file_id, node_node_id), "Bad type.");
   return std::make_unique<TypeUndefined>();
 }
@@ -78,6 +89,40 @@ std::unique_ptr<Expression> ServerInterpreterContext::GetExpression(const NodeId
   auto returned_value = std::move(result->second);
   FXL_DCHECK(returned_value != nullptr);
   expressions_.erase(result);
+  return returned_value;
+}
+
+// Return the schema declared by the given node id.
+std::unique_ptr<Schema> ServerInterpreterContext::GetSchema(const NodeId& node_id) {
+  auto result = schemas_.find(node_id);
+  if (result == schemas_.end()) {
+    return nullptr;
+  }
+  auto returned_value = std::move(result->second);
+  FXL_DCHECK(returned_value != nullptr);
+  return returned_value;
+}
+
+// Retrieves the field corresponding to the given node id.
+std::unique_ptr<ObjectField> ServerInterpreterContext::GetObjectField(const NodeId& node_id) {
+  auto result = fields_.find(node_id);
+  if (result == fields_.end()) {
+    return nullptr;
+  }
+  auto returned_value = std::move(result->second);
+  FXL_DCHECK(returned_value != nullptr);
+  return returned_value;
+}
+
+// Retrieves the schema of the field definition for the given node id.
+std::unique_ptr<ObjectFieldSchema> ServerInterpreterContext::GetObjectFieldSchema(
+    const NodeId& node_id) {
+  auto result = object_field_schemas_.find(node_id);
+  if (result == object_field_schemas_.end()) {
+    return nullptr;
+  }
+  auto returned_value = std::move(result->second);
+  FXL_DCHECK(returned_value != nullptr);
   return returned_value;
 }
 
@@ -143,6 +188,32 @@ void ServerInterpreter::AddExpression(ServerInterpreterContext* context,
   context->AddExpression(std::move(expression));
 }
 
+void ServerInterpreter::AddSchema(ServerInterpreterContext* context,
+                                  std::unique_ptr<Schema> definition, bool root_node) {
+  context->AddSchema(std::move(definition));
+}
+
+void ServerInterpreter::AddObjectFieldSchema(ServerInterpreterContext* context,
+                                             std::unique_ptr<ObjectFieldSchema> definition,
+                                             bool root_node) {
+  if (root_node) {
+    EmitError(context->execution_context(),
+              "Node " + definition->StringId() + " can't be a root node.");
+    return;
+  }
+  context->AddObjectFieldSchema(std::move(definition));
+}
+
+void ServerInterpreter::AddObjectField(ServerInterpreterContext* context,
+                                       std::unique_ptr<ObjectField> definition, bool root_node) {
+  if (root_node) {
+    EmitError(context->execution_context(),
+              "Node " + definition->StringId() + " can't be a root node.");
+    return;
+  }
+  context->AddObjectField(std::move(definition));
+}
+
 void ServerInterpreter::AddInstruction(ServerInterpreterContext* context,
                                        std::unique_ptr<Instruction> instruction, bool root_node) {
   if (root_node) {
@@ -158,6 +229,32 @@ std::unique_ptr<Expression> ServerInterpreter::GetExpression(ServerInterpreterCo
     return nullptr;
   }
   auto result = context->GetExpression(node_id);
+  if (result == nullptr) {
+    EmitError(context->execution_context(), "Can't find node " + node_id.StringId());
+    return nullptr;
+  }
+  return result;
+}
+
+std::unique_ptr<Schema> ServerInterpreter::GetSchema(ServerInterpreterContext* context,
+                                                     const NodeId& node_id) {
+  if (node_id.node_id == 0) {
+    return nullptr;
+  }
+  auto result = context->GetSchema(node_id);
+  if (result == nullptr) {
+    EmitError(context->execution_context(), "Can't find schema node " + node_id.StringId());
+    return nullptr;
+  }
+  return result;
+}
+
+std::unique_ptr<ObjectFieldSchema> ServerInterpreter::GetObjectFieldSchema(
+    ServerInterpreterContext* context, const NodeId& node_id) {
+  if (node_id.node_id == 0) {
+    return nullptr;
+  }
+  auto result = context->GetObjectFieldSchema(node_id);
   if (result == nullptr) {
     EmitError(context->execution_context(), "Can't find node " + node_id.StringId());
     return nullptr;
@@ -193,6 +290,18 @@ void Service::AddNodes(uint64_t context_id,
       } else if (node.node.is_variable_definition()) {
         AddVariableDefinition(context, node.node_id.file_id, node.node_id.node_id,
                               node.node.variable_definition(), node.root_node);
+      } else if (node.node.is_object_schema()) {
+        AddObjectType(context, node.node_id.file_id, node.node_id.node_id,
+                      node.node.object_schema(), node.root_node);
+      } else if (node.node.is_field_schema()) {
+        AddObjectTypeField(context, node.node_id.file_id, node.node_id.node_id,
+                           node.node.field_schema(), node.root_node);
+      } else if (node.node.is_object()) {
+        AddObject(context, node.node_id.file_id, node.node_id.node_id, node.node.object(),
+                  node.root_node);
+      } else if (node.node.is_object_field()) {
+        AddObjectField(context, node.node_id.file_id, node.node_id.node_id,
+                       node.node.object_field(), node.root_node);
       } else if (node.node.is_string_literal()) {
         AddStringLiteral(context, node.node_id.file_id, node.node_id.node_id,
                          node.node.string_literal(), node.root_node);
@@ -285,6 +394,75 @@ void Service::AddIntegerLiteral(ServerInterpreterContext* context, uint64_t node
   auto result = std::make_unique<IntegerLiteral>(interpreter(), node_file_id, node_node_id,
                                                  absolute_value, negative);
   interpreter_->AddExpression(context, std::move(result), root_node);
+}
+
+void Service::AddObjectType(ServerInterpreterContext* context, uint64_t node_file_id,
+                            uint64_t node_node_id,
+                            const llcpp::fuchsia::shell::ObjectSchemaDefinition& node,
+                            bool root_node) {
+  std::vector<std::unique_ptr<ObjectFieldSchema>> fields;
+  for (auto& field : node.fields) {
+    fields.push_back(
+        interpreter_->GetObjectFieldSchema(context, NodeId(field.file_id, field.node_id)));
+  }
+  auto definition =
+      std::make_unique<ObjectSchema>(interpreter(), node_file_id, node_node_id, std::move(fields));
+  interpreter_->AddSchema(context, std::move(definition), root_node);
+}
+
+void Service::AddObjectTypeField(
+    ServerInterpreterContext* context, uint64_t node_file_id, uint64_t node_node_id,
+    const llcpp::fuchsia::shell::ObjectFieldSchemaDefinition& field_type, bool root_node) {
+  auto definition = std::make_unique<ObjectFieldSchema>(
+      interpreter(), node_file_id, node_node_id, field_type.name.data(),
+      GetType(context, node_file_id, node_node_id, field_type.type));
+  interpreter_->AddObjectFieldSchema(context, std::move(definition), root_node);
+}
+
+void Service::AddObject(ServerInterpreterContext* context, uint64_t node_file_id,
+                        uint64_t node_node_id, const llcpp::fuchsia::shell::ObjectDefinition& node,
+                        bool root_node) {
+  NodeId schema_node_id(node.object_schema.file_id, node.object_schema.node_id);
+
+  Node* schema_node = interpreter_->GetNode(schema_node_id);
+  if (schema_node == nullptr) {
+    interpreter_->EmitError(context->execution_context(), "Schema of object variable not defined");
+    return;
+  }
+  if (schema_node->AsObjectSchema() == nullptr) {
+    interpreter_->EmitError(context->execution_context(), "IR mismatch: Node type is not schema");
+    return;
+  }
+  std::unique_ptr<Type> type = schema_node->AsObjectSchema()->GetType();
+  auto type_object = std::unique_ptr<TypeObject>(type.release()->AsTypeObject());
+
+  std::vector<std::unique_ptr<ObjectField>> fields;
+  for (auto& field : node.fields) {
+    NodeId field_id(field.file_id, field.node_id);
+    std::unique_ptr<ObjectField> field_node = context->GetObjectField(field_id);
+    fields.push_back(std::move(field_node));
+  }
+
+  auto definition = std::make_unique<Object>(interpreter(), node_file_id, node_node_id,
+                                             std::move(type_object), std::move(fields));
+  interpreter_->AddExpression(context, std::move(definition), root_node);
+}
+
+void Service::AddObjectField(ServerInterpreterContext* context, uint64_t node_file_id,
+                             uint64_t node_node_id,
+                             const llcpp::fuchsia::shell::ObjectFieldDefinition& node,
+                             bool root_node) {
+  NodeId schema_id(node.object_field_schema.file_id, node.object_field_schema.node_id);
+  Node* type_node = interpreter_->GetNode(schema_id);
+  if (type_node == nullptr) {
+    interpreter_->EmitError(context->execution_context(), "Type of object field not defined");
+    return;
+  }
+  NodeId value_id(node.value.file_id, node.value.node_id);
+  std::unique_ptr<Expression> value = interpreter_->GetExpression(context, value_id);
+  auto definition =
+      std::make_unique<ObjectField>(interpreter(), node_file_id, node_node_id, std::move(value));
+  interpreter_->AddObjectField(context, std::move(definition), root_node);
 }
 
 void Service::AddVariableDefinition(ServerInterpreterContext* context, uint64_t node_file_id,

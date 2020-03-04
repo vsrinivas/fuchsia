@@ -108,7 +108,7 @@ class Interpreter {
   // Erases an execution context.
   void EraseContext(uint64_t context_id) { contexts_.erase(context_id); }
 
-  // Returns the node with the specified id.
+  // Returns the node with the specified id.  The node is still owned by the interpreter.
   Node* GetNode(uint64_t file_id, uint64_t node_id) const {
     auto result = nodes_.find(std::make_pair(file_id, node_id));
     if (result == nodes_.end()) {
@@ -116,8 +116,13 @@ class Interpreter {
     }
     return result->second;
   }
-  // Associates a node to an id.
+
+  Node* GetNode(NodeId id) const { return GetNode(id.file_id, id.node_id); }
+
+  // Associates a node with an id.  Node is kept alive directly or indirectly by the execution
+  // context.
   void AddNode(uint64_t file_id, uint64_t node_id, Node* node);
+
   // Removes the association between a node and an id.
   void RemoveNode(uint64_t file_id, uint64_t node_id);
 

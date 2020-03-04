@@ -201,6 +201,27 @@ class TypeFloat64 : public TypeBuiltin {
   void Dump(std::ostream& os) const override;
 };
 
+class TypeObject : public Type {
+ public:
+  TypeObject(const ObjectSchema* schema) : schema_(schema) {}
+  TypeObject() = delete;
+  TypeObject(TypeObject&) = delete;
+  TypeObject operator=(TypeObject& t) = delete;
+
+  void Dump(std::ostream& os) const override;
+
+  // The size for the type in bytes.
+  virtual size_t Size() const override;
+
+  // Creates an exact copy of the type.
+  virtual std::unique_ptr<Type> Duplicate() const override;
+
+  virtual TypeObject* AsTypeObject() override { return this; }
+
+ private:
+  const ObjectSchema* schema_;
+};
+
 }  // namespace interpreter
 }  // namespace shell
 

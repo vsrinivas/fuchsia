@@ -62,12 +62,26 @@ enum BuiltinType : uint32 {
     FLOAT64 = 13;
 };
 
+/// A definition of a field of an object.
+struct ObjectFieldSchemaDefinition {
+    /// The type of the field.
+    ShellType type;
+    /// The name of the field.
+    string:MAX name;
+};
+
+struct ObjectSchemaDefinition {
+    vector<NodeId>:MAX fields;
+};
+
 /// Defines a type used by the shell.
 union ShellType {
-    /// Undefined type (can be used when the type can be infered).
+    /// Undefined type (can be used when the type can be inferred).
     1: bool undef;
     /// A builtin type.
     2: BuiltinType builtin_type;
+    /// The NodeId corresponding to an object schema.
+    3: NodeId object_schema;
 };
 
 /// Define an integer value.
@@ -78,6 +92,22 @@ struct IntegerLiteral {
     /// If true, the value is negative (-absolute_value).
     /// There is no negative zero. That means that, for zero, negative should be false.
     bool negative;
+};
+
+struct ObjectFieldDefinition {
+    /// The schema of this field.
+    NodeId object_field_schema;
+    /// The nodeid containing the value of this field.
+    NodeId value;
+};
+
+/// Defines an object value.
+struct ObjectDefinition {
+    /// A list of nodes of type ObjectField corresponding to the fields of this object
+    /// object.
+    vector<NodeId>:MAX fields;
+    // A node of type ObjectSchemaDefinition corresponding to the type of this object.
+    NodeId object_schema;
 };
 
 /// Define a variable.
@@ -98,8 +128,16 @@ union Node {
     1: IntegerLiteral integer_literal;
     /// A variable.
     2: VariableDefinition variable_definition;
+    // A schema definition.
+    3: ObjectSchemaDefinition object_schema;
+    // A field schema definition
+    4: ObjectFieldSchemaDefinition field_schema;
+    // An object definition.
+    5: ObjectDefinition object;
+    // A object field definition
+    6: ObjectFieldDefinition object_field;
     /// A string value.
-    3: string:MAX string_literal;
+    7: string:MAX string_literal;
 };
 
 /// Define a node which has to be inserted in the AST. The node will stay pending until it is used

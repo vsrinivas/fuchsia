@@ -37,7 +37,7 @@ class AstBuilder {
 
   template <class T>
   T* ManageCopyOf(const T* value, size_t size = sizeof(T)) {
-    auto buf = bufs_.emplace_back(new char[size]).get();
+    auto buf = bufs_.emplace_back(new char[size]()).get();
     T* def = reinterpret_cast<T*>(buf);
     memcpy(buf, value, size);
     return def;
@@ -45,7 +45,13 @@ class AstBuilder {
 
   template <class T>
   T* ManageNew() {
-    auto buf = bufs_.emplace_back(new char[sizeof(T)]).get();
+    auto buf = bufs_.emplace_back(new char[sizeof(T)]()).get();
+    return reinterpret_cast<T*>(buf);
+  }
+
+  template <class T>
+  T* ManageNewArray(size_t size) {
+    auto buf = bufs_.emplace_back(new char[sizeof(T) * size]()).get();
     return reinterpret_cast<T*>(buf);
   }
 
@@ -62,6 +68,20 @@ class AstBuilder {
   // Adds an integer literal node with the value |i|.  Returns the resulting node_id.
   uint64_t AddIntegerLiteral(int64_t i);
 
+  struct NodePair {
+    uint64_t value_node;
+    uint64_t schema_node;
+  };
+
+  // Call OpenObject when you start parsing an object, and CloseObject when you finish.
+  // The resulting NodePair will contain nodes with its schema and value.
+  void OpenObject();
+  NodePair CloseObject(uint64_t file_id);
+
+  // Adds a field type
+  NodePair AddField(const std::string& key, uint64_t file_id, uint64_t expression_node_id,
+                    llcpp::fuchsia::shell::ShellType&& type);
+
   AstBuilder& operator=(const AstBuilder&) = delete;
   AstBuilder(const AstBuilder&) = delete;
 
@@ -73,7 +93,16 @@ class AstBuilder {
   std::vector<llcpp::fuchsia::shell::NodeDefinition> nodes_;
 
   // Returns the added node_id
-  uint64_t AddNode(llcpp::fuchsia::shell::Node&& node);
+  uint64_t AddNode(llcpp::fuchsia::shell::Node&& node, bool is_root = false);
+
+  struct FidlNodeIdPair {
+    FidlNodeIdPair(llcpp::fuchsia::shell::NodeId&& schema, llcpp::fuchsia::shell::NodeId&& value)
+        : schema_id(std::move(schema)), value_id(std::move(value)) {}
+    llcpp::fuchsia::shell::NodeId schema_id;
+    llcpp::fuchsia::shell::NodeId value_id;
+  };
+
+  std::vector<std::vector<FidlNodeIdPair>> object_stack_;
 };
 
 }  // namespace shell::console

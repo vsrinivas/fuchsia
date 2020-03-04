@@ -10,8 +10,10 @@
 
 #include "src/developer/shell/interpreter/src/expressions.h"
 #include "src/developer/shell/interpreter/src/interpreter.h"
+#include "src/developer/shell/interpreter/src/schema.h"
 #include "src/developer/shell/interpreter/src/scope.h"
 #include "src/developer/shell/interpreter/src/value.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace shell {
 namespace interpreter {
@@ -147,6 +149,37 @@ void TypeFloat32::Dump(std::ostream& os) const { os << "float32"; }
 std::unique_ptr<Type> TypeFloat64::Duplicate() const { return std::make_unique<TypeFloat64>(); }
 
 void TypeFloat64::Dump(std::ostream& os) const { os << "float64"; }
+
+// - type object
+// ----------------------------------------------------------------------------------
+
+void TypeObject::Dump(std::ostream& os) const {
+  // TODO: improve indentation.
+  os << "{" << std::endl;
+  for (auto& field : schema_->fields()) {
+    ObjectFieldSchema* field_schema = field->AsObjectFieldSchema();
+
+    FX_DCHECK(field_schema != nullptr) << "Bad node found as field schema";
+    os << field_schema->name() << " : ";
+    field_schema->type()->Dump(os);
+    os << "," << std::endl;
+  }
+  os << "}";
+}
+
+size_t TypeObject::Size() const {
+  // TODO: If we want the alignment right, we need to know the alignment of the largest contained
+  // element.  We therefore need an Alignment() method.
+  size_t size = 0;
+  for (auto& field : schema_->fields()) {
+    size += field->type()->Size();
+  }
+  return size;
+}
+
+std::unique_ptr<Type> TypeObject::Duplicate() const {
+  return std::make_unique<TypeObject>(schema_);
+}
 
 }  // namespace interpreter
 }  // namespace shell

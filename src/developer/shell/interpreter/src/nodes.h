@@ -22,8 +22,11 @@ class Expression;
 class Instruction;
 class IntegerLiteral;
 class Interpreter;
+class ObjectSchema;
+class ObjectFieldSchema;
 class Scope;
 class StringLiteral;
+class TypeObject;
 class Variable;
 
 struct NodeId {
@@ -82,6 +85,9 @@ class Type {
 
   // Loads the current value of the variable stored at |index| in |scope| into |value|.
   virtual void LoadVariable(const ExecutionScope* scope, size_t index, Value* value) const;
+
+  // Returns a reference to this if the object is of type ObjectType.
+  virtual TypeObject* AsTypeObject() { return nullptr; }
 };
 
 inline std::ostream& operator<<(std::ostream& os, const Type& type) {
@@ -102,6 +108,9 @@ class Node {
 
   // Returns a text representation of the node id.
   std::string StringId() const { return id_.StringId(); }
+
+  virtual ObjectSchema* AsObjectSchema() { return nullptr; }
+  virtual ObjectFieldSchema* AsObjectFieldSchema() { return nullptr; }
 
  private:
   // The interpreter which owns the node.
@@ -143,6 +152,13 @@ class Instruction : public Node {
 
   // Compiles the instruction (performs the semantic checks and generates code).
   virtual void Compile(ExecutionContext* context, code::Code* code) const = 0;
+};
+
+// Base class for schemas described by the client (for definining objects).
+class Schema : public Node {
+ public:
+  Schema(Interpreter* interpreter, uint64_t file_id, uint64_t node_id)
+      : Node(interpreter, file_id, node_id) {}
 };
 
 inline std::ostream& operator<<(std::ostream& os, const Instruction& instruction) {

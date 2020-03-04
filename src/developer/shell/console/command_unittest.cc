@@ -26,4 +26,18 @@ TEST(Command, ParseSimpleVarDecls) {
   EXPECT_FALSE(command.Parse("var i = 0_0"));
 }
 
+TEST(Command, ParseObjectVarDecls) {
+  Command command;
+  EXPECT_TRUE(command.Parse("var i = {}"));
+  EXPECT_TRUE(command.Parse("const i = { }"));
+  EXPECT_TRUE(command.Parse("var i = {a: 1}"));
+  EXPECT_TRUE(command.Parse("const i = {a:1,}"));
+  EXPECT_TRUE(command.Parse("var i = {a: 1, b : 2}"));
+  EXPECT_TRUE(command.Parse("const i = {a:1,b:2,}"));
+
+  EXPECT_FALSE(command.Parse("var i = {"));
+  EXPECT_FALSE(command.Parse("var i = { a }"));
+  EXPECT_FALSE(command.Parse("var i = { a,, }"));
+}
+
 }  // namespace shell::console

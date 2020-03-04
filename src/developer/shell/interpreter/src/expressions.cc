@@ -7,6 +7,7 @@
 #include <ostream>
 
 #include "src/developer/shell/interpreter/src/nodes.h"
+#include "src/developer/shell/interpreter/src/schema.h"
 #include "src/developer/shell/interpreter/src/types.h"
 
 namespace shell {
@@ -26,6 +27,22 @@ void IntegerLiteral::Dump(std::ostream& os) const {
 void IntegerLiteral::Compile(ExecutionContext* context, code::Code* code,
                              const Type* for_type) const {
   for_type->GenerateIntegerLiteral(context, code, this);
+}
+
+void ObjectField::Dump(std::ostream& os) const { os << *type_ << " : " << *expression_; }
+
+void Object::Dump(std::ostream& os) const {
+  os << "{";
+  const char* separator = "";
+  for (size_t i = 0; i < fields_.size(); i++) {
+    os << separator << *(fields_[i]);
+    separator = ", ";
+  }
+  os << "}";
+}
+
+void Object::Compile(ExecutionContext* context, code::Code* code, const Type* for_type) const {
+  // TODO: Actually do something when we encounter a object
 }
 
 std::unique_ptr<Type> StringLiteral::GetType() const { return std::make_unique<TypeString>(); }

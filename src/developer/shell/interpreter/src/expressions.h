@@ -6,11 +6,13 @@
 #define SRC_DEVELOPER_SHELL_INTERPRETER_SRC_EXPRESSIONS_H_
 
 #include <cstdint>
+#include <map>
 #include <memory>
 #include <string_view>
 #include <vector>
 
 #include "src/developer/shell/interpreter/src/nodes.h"
+#include "src/developer/shell/interpreter/src/types.h"
 #include "src/developer/shell/interpreter/src/value.h"
 
 namespace shell {
@@ -38,6 +40,50 @@ class IntegerLiteral : public Expression {
   const uint64_t absolute_value_;
   // If true, this is a negative value (-absolute_value_).
   const bool negative_;
+};
+
+// Fields of objects.  Objects themselves are expressions.
+// Located in this file for proximity to Objects.
+class ObjectField : public Node {
+ public:
+  ObjectField(Interpreter* interpreter, uint64_t file_id, uint64_t node_id,
+              std::unique_ptr<Expression> value)
+      : Node(interpreter, file_id, node_id), expression_(std::move(value)) {}
+
+  // Prints the field.
+  void Dump(std::ostream& os) const;
+
+  std::unique_ptr<Type> GetType() { return type_->Duplicate(); }
+
+ private:
+  std::unique_ptr<Type> type_;
+  std::unique_ptr<Expression> expression_;
+};
+
+inline std::ostream& operator<<(std::ostream& os, const ObjectField& field) {
+  field.Dump(os);
+  return os;
+}
+
+// Objects are Objects (whether builtin or FIDL).
+class Object : public Expression {
+ public:
+  Object(Interpreter* interpreter, uint64_t file_id, uint64_t node_id,
+         std::unique_ptr<TypeObject> type, std::vector<std::unique_ptr<ObjectField>>&& fields)
+      : Expression(interpreter, file_id, node_id),
+        type_(std::move(type)),
+        fields_(std::move(fields)) {}
+
+  // Prints the instruction.
+  virtual void Dump(std::ostream& os) const override;
+
+  // Compiles the instruction (performs the semantic checks and generates code).
+  virtual void Compile(ExecutionContext* context, code::Code* code,
+                       const Type* for_type) const override;
+
+ private:
+  std::unique_ptr<TypeObject> type_;
+  std::vector<std::unique_ptr<ObjectField>> fields_;
 };
 
 // Defines a string value.
