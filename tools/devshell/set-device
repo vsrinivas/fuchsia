@@ -36,7 +36,7 @@ function select_device() {
 
 device="$1"
 if [[ -z "$device" ]]; then
-  devices="$("${FUCHSIA_BUILD_DIR}/host-tools/device-finder" list -mdns -netboot=false -full | cut -d ' ' -f 2)"
+  devices="$("${FUCHSIA_BUILD_DIR}/host-tools/device-finder" list -mdns -netboot -ipv4=false -full | cut -d ' ' -f 2)"
   if [[ -z "${devices}" ]]; then
     echo 2>&1 "No devices discovered, please supply a device name"
     exit 1
