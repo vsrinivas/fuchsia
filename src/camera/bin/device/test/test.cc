@@ -180,6 +180,12 @@ TEST_F(DeviceTest, GetFrames) {
   auto callback1 = [&](fuchsia::camera3::FrameInfo info) {
     ASSERT_EQ(info.buffer_index, kBufferId1);
     frame1_received = true;
+    info.release_fence.reset();
+    fuchsia::camera2::FrameAvailableInfo frame2_info;
+    frame2_info.frame_status = fuchsia::camera2::FrameStatus::OK;
+    frame2_info.buffer_id = kBufferId2;
+    frame2_info.metadata.set_timestamp(0);
+    ASSERT_EQ(legacy_stream_fake->SendFrameAvailable(std::move(frame2_info)), ZX_OK);
     stream->GetNextFrame(std::move(callback2));
   };
   stream->GetNextFrame(std::move(callback1));
@@ -188,11 +194,6 @@ TEST_F(DeviceTest, GetFrames) {
   frame1_info.buffer_id = kBufferId1;
   frame1_info.metadata.set_timestamp(0);
   ASSERT_EQ(legacy_stream_fake->SendFrameAvailable(std::move(frame1_info)), ZX_OK);
-  fuchsia::camera2::FrameAvailableInfo frame2_info;
-  frame2_info.frame_status = fuchsia::camera2::FrameStatus::OK;
-  frame2_info.buffer_id = kBufferId2;
-  frame2_info.metadata.set_timestamp(0);
-  ASSERT_EQ(legacy_stream_fake->SendFrameAvailable(std::move(frame2_info)), ZX_OK);
   while (!HasFailure() && (!frame1_received || !frame2_received)) {
     RunLoopUntilIdle();
   }
