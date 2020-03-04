@@ -13,31 +13,23 @@
 
 namespace {
 
-class OverrideWriter : public Writer {
- public:
-  bool Puts(const std::string& str) override {
-    data_ += "PUTS: " + str;
-    return true;
-  }
+TEST(Writer, PrintSpacerLine) {
+  StringWriter writer;
+  EXPECT_EQ(writer.Out(), "");
 
-  void Clear() { data_ = ""; }
+  // When there is no previous line, PrintSpacerLine() should have no effect.
+  writer.PrintSpacerLine();
+  EXPECT_EQ(writer.Out(), "");
 
-  const std::string& data() const { return data_; }
+  // When the last line is non-empty, PrintSpacerLine() should print an empty
+  // line.
+  writer.Puts("Non-empty line\n");
+  writer.PrintSpacerLine();
+  EXPECT_EQ(writer.Out(), "Non-empty line\n\n");
 
- private:
-  std::string data_;
-};
-
-TEST(Writer, CustomImplementation) {
-  OverrideWriter* override_writer = new OverrideWriter;
-  std::unique_ptr<Writer> writer(override_writer);
-
-  writer->Puts("abc");
-  EXPECT_EQ(override_writer->data(), "PUTS: abc");
-
-  override_writer->Clear();
-  writer->Printf("%d %x", 123, 999);
-  EXPECT_EQ(override_writer->data(), "PUTS: 123 3e7");
+  // When the last line is empty, PrintSpacerLine() should have no effect.
+  writer.PrintSpacerLine();
+  EXPECT_EQ(writer.Out(), "Non-empty line\n\n");
 }
 
 TEST(Writer, WriteFileIfChanged) {

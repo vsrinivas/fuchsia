@@ -25,6 +25,9 @@ class Writer {
   // false with a message logged.
   __PRINTFLIKE(2, 3) bool Printf(const char* format, ...);
 
+  // Prints a newline character if (and only if) the last line was not empty.
+  virtual void PrintSpacerLine() = 0;
+
  private:
   DISALLOW_COPY_ASSIGN_AND_MOVE(Writer);
 };
@@ -36,6 +39,7 @@ class StringWriter : public Writer {
 
   // Writer:
   bool Puts(const std::string& str) override;
+  void PrintSpacerLine() override;
 
   const std::string& Out() const { return out_; }
 

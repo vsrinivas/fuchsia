@@ -175,41 +175,10 @@ std::string MakeTitleLine(const std::string& base_name) {
   return "// " + title;
 }
 
-// Forwards content to an upstream writer, at the same time keeping track of
-// whether the last line written was empty.
-class NewLineTrackingWriter : public Writer {
- public:
-  explicit NewLineTrackingWriter(Writer* upstream) : upstream_(upstream) {}
-
-  bool Puts(const std::string& str) override {
-    if (str.length() == 1) {
-      last_last_char_ = last_char_;
-      last_char_ = str[0];
-    } else if (str.length() > 1) {
-      last_last_char_ = str[str.length() - 2];
-      last_char_ = str[str.length() - 1];
-    }
-    return upstream_->Puts(str);
-  }
-
-  // Prints a new line if and only if the last line was not empty.
-  bool MaybePrintln() {
-    if (last_char_ != '\n' || last_last_char_ != '\n') {
-      return Puts("\n");
-    }
-    return true;
-  }
-
- private:
-  Writer* upstream_;
-  char last_char_ = '\n';
-  char last_last_char_ = '\n';
-};
-
-void PrintDocComments(const std::vector<std::string>& lines, NewLineTrackingWriter* writer,
+void PrintDocComments(const std::vector<std::string>& lines, Writer* writer,
                       uint32_t indent_level = 0) {
   if (!lines.empty()) {
-    writer->MaybePrintln();
+    writer->PrintSpacerLine();
   }
   std::string indent(2 * indent_level, ' ');
   for (const auto& line : lines) {
@@ -223,10 +192,7 @@ void PrintDocComments(const std::vector<std::string>& lines, NewLineTrackingWrit
 
 }  // namespace
 
-bool CUlibHeaderOutput(const SyscallLibrary& library, Writer* upstream_writer) {
-  NewLineTrackingWriter tracking_writer(upstream_writer);
-  NewLineTrackingWriter* writer = &tracking_writer;
-
+bool CUlibHeaderOutput(const SyscallLibrary& library, Writer* writer) {
   if (!CopyrightHeaderWithCppComments(writer)) {
     return false;
   }

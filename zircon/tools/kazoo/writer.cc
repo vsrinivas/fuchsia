@@ -27,6 +27,15 @@ bool StringWriter::Puts(const std::string& str) {
   return true;
 }
 
+void StringWriter::PrintSpacerLine() {
+  size_t size = out_.size();
+  if (size < 2 || (out_[size - 2] == '\n' && out_[size - 1] == '\n')) {
+    // The last line was empty.
+    return;
+  }
+  Puts("\n");
+}
+
 bool WriteFileIfChanged(const std::string& filename, const std::string& data) {
   std::string old_data;
   if (ReadFileToString(filename, &old_data) && old_data == data) {
