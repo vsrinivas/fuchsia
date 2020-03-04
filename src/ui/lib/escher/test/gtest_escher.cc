@@ -23,15 +23,17 @@ static void LoadShadersFromDisk(HackFilesystemPtr fs) {
       "shaders/shaders_flatland_flat_main_vert14695981039346656037.spirv",
 
       // Paper renderer.
-      "shaders/shaders_model_renderer_main_frag17553292397499926694.spirv",
-      "shaders/shaders_model_renderer_main_frag8280587512758179706.spirv",
-      "shaders/shaders_model_renderer_main_vert11112688489391456647.spirv",
-      "shaders/shaders_model_renderer_main_vert17553292397499926694.spirv",
-      "shaders/shaders_model_renderer_main_vert4295183060635058569.spirv",
-      "shaders/shaders_model_renderer_main_vert8280587512758179706.spirv",
-      "shaders/shaders_paper_frag_main_ambient_light_frag17553292397499926694.spirv",
-      "shaders/shaders_paper_frag_main_point_light_frag11112688489391456647.spirv",
-      "shaders/shaders_paper_frag_main_point_light_frag4295183060635058569.spirv",
+      "shaders/shaders_model_renderer_main_frag12890958529260787213.spirv",
+      "shaders/shaders_model_renderer_main_frag15276133142244279294.spirv",
+      "shaders/shaders_model_renderer_main_frag4304586084079301274.spirv",
+      "shaders/shaders_model_renderer_main_vert12890958529260787213.spirv",
+      "shaders/shaders_model_renderer_main_vert15064700897732225279.spirv",
+      "shaders/shaders_model_renderer_main_vert15276133142244279294.spirv",
+      "shaders/shaders_model_renderer_main_vert4304586084079301274.spirv",
+      "shaders/shaders_model_renderer_main_vert817427562299648481.spirv",
+      "shaders/shaders_paper_frag_main_ambient_light_frag4304586084079301274.spirv",
+      "shaders/shaders_paper_frag_main_point_light_frag15064700897732225279.spirv",
+      "shaders/shaders_paper_frag_main_point_light_frag817427562299648481.spirv",
 
       // Pose buffer latching compute shader, from pose_buffer_latching_shader.cc.
       "shaders/shaders_compute_pose_buffer_latching_comp14695981039346656037.spirv",

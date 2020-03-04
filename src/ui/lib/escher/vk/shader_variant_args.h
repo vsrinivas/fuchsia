@@ -5,6 +5,7 @@
 #ifndef SRC_UI_LIB_ESCHER_VK_SHADER_VARIANT_ARGS_H_
 #define SRC_UI_LIB_ESCHER_VK_SHADER_VARIANT_ARGS_H_
 
+#include <algorithm>
 #include <map>
 #include <string>
 #include <utility>
@@ -24,7 +25,7 @@ namespace escher {
 class ShaderVariantArgs : public Hashable {
  public:
   explicit ShaderVariantArgs(std::vector<std::pair<std::string, std::string>> defs)
-      : definitions_(std::move(defs)) {}
+      : definitions_(Canonicalize(defs)) {}
 
   ShaderVariantArgs() {}
   ShaderVariantArgs(ShaderVariantArgs&& other) = default;
@@ -44,6 +45,11 @@ class ShaderVariantArgs : public Hashable {
  private:
   // |Hashable|.
   Hash GenerateHash() const override;
+
+  // Canonicalize removes duplicates and sorts definitions to ensure a stable hash across build
+  // types and platforms.
+  static std::vector<std::pair<std::string, std::string>> Canonicalize(
+      const std::vector<std::pair<std::string, std::string>>& defs);
 
   std::vector<std::pair<std::string, std::string>> definitions_;
 };
@@ -65,7 +71,7 @@ inline const std::vector<std::pair<std::string, std::string>>& ShaderVariantArgs
 
 inline void ShaderVariantArgs::set_definitions(
     std::vector<std::pair<std::string, std::string>> defs) {
-  definitions_ = std::move(defs);
+  definitions_ = Canonicalize(defs);
   InvalidateHash();
 }
 
