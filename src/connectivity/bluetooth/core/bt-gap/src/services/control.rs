@@ -133,7 +133,7 @@ async fn handler(
         }
         ControlRequest::SetPairingDelegate { delegate, responder } => {
             let status = match delegate.map(|d| d.into_proxy()) {
-                Some(Ok(proxy)) => hd.set_pairing_delegate(Some(proxy)),
+                Some(Ok(proxy)) => hd.set_control_pairing_delegate(Some(proxy)),
                 Some(Err(err)) => {
                     fx_log_warn!(
                         "Invalid Pairing Delegate passed to SetPairingDelegate - ignoring: {}",
@@ -141,7 +141,7 @@ async fn handler(
                     );
                     false
                 }
-                None => hd.set_pairing_delegate(None),
+                None => hd.set_control_pairing_delegate(None),
             };
             responder.send(status)
         }

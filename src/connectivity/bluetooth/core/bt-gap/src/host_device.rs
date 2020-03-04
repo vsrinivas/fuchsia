@@ -131,21 +131,52 @@ impl HostDevice {
     }
 }
 
+/// A type that can be notified when a Host or the peers it knows about change
+///
+/// Each of these trait methods returns a future that should be polled to completion. Once that
+/// returned future is complete, the target type can be considered to have been notified of the
+/// update event. This allows asynchronous notifications such as via an asynchronous msg channel.
+///
+/// The host takes care to serialize updates so that subsequent notifications are not triggered
+/// until the previous future has been completed. This allows a HostListener type to ensure they
+/// maintain ordering. If required, the implementation of these methods should ensure that
+/// completing the future before sending a new update is sufficient to ensure ordering.
+///
+/// Since the notifying Host will wait on the completion of the returned futures, HostListeners
+/// should not perform heavy work that may block or take an unnecessary length of time. If the
+/// implementor needs to perform potentially-blocking work in response to these notifications, that
+/// should be done in a separate task or thread that does not block the returned future.
 pub trait HostListener {
-    fn on_peer_updated(&mut self, peer: Peer);
-    fn on_peer_removed(&mut self, id: PeerId);
-
+    /// The return Future type of `on_peer_updated`
+    type PeerUpdatedFut: Future<Output = ()>;
+    /// The return Future type of `on_peer_removed`
+    type PeerRemovedFut: Future<Output = ()>;
+    /// The return Future type of `on_new_host_bond`
     type HostBondFut: Future<Output = Result<(), anyhow::Error>>;
+    /// The return Future type of `on_host_updated`
+    type HostInfoFut: Future<Output = Result<(), anyhow::Error>>;
+
+    /// Indicate that a Peer `Peer` has been added or updated
+    fn on_peer_updated(&mut self, peer: Peer) -> Self::PeerUpdatedFut;
+
+    /// Indicate that a Peer identified by `id` has been removed
+    fn on_peer_removed(&mut self, id: PeerId) -> Self::PeerRemovedFut;
+
+    /// Indicate that a new bond described by `data` has been made
     fn on_new_host_bond(&mut self, data: BondingData) -> Self::HostBondFut;
+
+    /// Indicate that the Host now has properties described by `info`
+    fn on_host_updated(&mut self, info: HostInfo) -> Self::HostInfoFut;
 }
 
 // TODO(armansito): It feels odd to expose it only so it is available to test/host_device.rs. It
 // might be better to move the host_device tests into this module.
-pub async fn refresh_host_info(host: Arc<RwLock<HostDevice>>) -> types::Result<()> {
+pub async fn refresh_host_info(host: Arc<RwLock<HostDevice>>) -> types::Result<HostInfo> {
     let proxy = host.read().host.clone();
     let info = proxy.watch_state().await?;
-    host.write().info.update(info.try_into()?);
-    Ok(())
+    let info: HostInfo = info.try_into()?;
+    host.write().info.update(info.clone());
+    Ok(info)
 }
 
 /// Monitors updates from a bt-host device and notifies `listener`. The returned Future represents
@@ -156,8 +187,8 @@ pub async fn watch_events<H: HostListener + Clone>(
     host: Arc<RwLock<HostDevice>>,
 ) -> types::Result<()> {
     let handle_fidl = handle_fidl_events(listener.clone(), host.clone());
-    let watch_peers = watch_peers(listener, host.clone());
-    let watch_state = watch_state(host);
+    let watch_peers = watch_peers(listener.clone(), host.clone());
+    let watch_state = watch_state(listener, host);
     pin_mut!(handle_fidl);
     pin_mut!(watch_peers);
     pin_mut!(watch_state);
@@ -201,16 +232,20 @@ async fn watch_peers<H: HostListener + Clone>(
     loop {
         let (updated, removed) = proxy.watch_peers().await?;
         for peer in updated.into_iter() {
-            listener.on_peer_updated(peer.try_into()?);
+            listener.on_peer_updated(peer.try_into()?).await;
         }
         for id in removed.into_iter() {
-            listener.on_peer_removed(id.into());
+            listener.on_peer_removed(id.into()).await;
         }
     }
 }
 
-async fn watch_state(host: Arc<RwLock<HostDevice>>) -> types::Result<()> {
+async fn watch_state<H: HostListener>(
+    mut listener: H,
+    host: Arc<RwLock<HostDevice>>,
+) -> types::Result<()> {
     loop {
-        refresh_host_info(host.clone()).await?;
+        let info = refresh_host_info(host.clone()).await?;
+        listener.on_host_updated(info).await?;
     }
 }

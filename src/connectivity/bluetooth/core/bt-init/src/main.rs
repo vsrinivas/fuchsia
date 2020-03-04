@@ -10,6 +10,7 @@ use {
     fidl_fuchsia_bluetooth_gatt::Server_Marker,
     fidl_fuchsia_bluetooth_le::{CentralMarker, PeripheralMarker},
     fidl_fuchsia_bluetooth_snoop::SnoopMarker,
+    fidl_fuchsia_bluetooth_sys::AccessMarker,
     fuchsia_async as fasync,
     fuchsia_component::{client, fuchsia_single_component_package_url, server},
     fuchsia_syslog::{self as syslog, fx_log_info, fx_log_warn},
@@ -46,6 +47,7 @@ fn main() -> Result<(), Error> {
 
     let mut fs = server::ServiceFs::new();
     fs.dir("svc")
+        .add_service_at(AccessMarker::NAME, |chan| Some((AccessMarker::NAME, chan)))
         .add_service_at(ControlMarker::NAME, |chan| Some((ControlMarker::NAME, chan)))
         .add_service_at(CentralMarker::NAME, |chan| Some((CentralMarker::NAME, chan)))
         .add_service_at(PeripheralMarker::NAME, |chan| Some((PeripheralMarker::NAME, chan)))

@@ -4,12 +4,14 @@
 
 use {
     anyhow::{format_err, Error},
+    async_helpers::hanging_get::server as hanging_get,
     fidl_fuchsia_bluetooth::Appearance,
     fidl_fuchsia_bluetooth_control::ControlMarker,
     fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
     fuchsia_bluetooth::inspect::placeholder_node,
     fuchsia_zircon::DurationNum,
     futures::{channel::mpsc, FutureExt},
+    std::collections::HashMap,
 };
 
 use crate::{
@@ -23,12 +25,26 @@ use crate::{
 async fn close_channel_when_client_dropped() -> Result<(), Error> {
     let (client, server) = create_fidl_endpoints::<ControlMarker>()?;
     let (gas_channel_sender, _ignored_gas_task_req_stream) = mpsc::channel(0);
+    let watch_peers_broker = hanging_get::HangingGetBroker::new(
+        HashMap::new(),
+        |_, _| true,
+        hanging_get::DEFAULT_CHANNEL_SIZE,
+    );
+    let watch_hosts_broker = hanging_get::HangingGetBroker::new(
+        Vec::new(),
+        |_, _| true,
+        hanging_get::DEFAULT_CHANNEL_SIZE,
+    );
     let hd = HostDispatcher::new(
         "test".to_string(),
         Appearance::Display,
         Stash::stub()?,
         placeholder_node(),
         gas_channel_sender,
+        watch_peers_broker.new_publisher(),
+        watch_peers_broker.new_handle(),
+        watch_hosts_broker.new_publisher(),
+        watch_hosts_broker.new_handle(),
     );
     let serve_until_done = start_control_service(hd, server);
 
