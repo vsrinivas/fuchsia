@@ -62,8 +62,6 @@ class SessionHandlerTest : public ErrorReportingTest, public scheduling::Session
   std::unique_ptr<Scenic> scenic_;
   std::unique_ptr<Engine> engine_;
   std::shared_ptr<scheduling::FrameScheduler> frame_scheduler_;
-  std::unique_ptr<Sysmem> sysmem_;
-  std::shared_ptr<const scheduling::VsyncTiming> vsync_timing_;
   std::unique_ptr<scenic_impl::Session> scenic_session_;
   CommandDispatcherUniquePtr command_dispatcher_;
   std::unique_ptr<SessionManager> session_manager_;
