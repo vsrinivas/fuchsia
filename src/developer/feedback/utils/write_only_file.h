@@ -13,11 +13,10 @@
 
 namespace feedback {
 
-// Allows writing a predefined number of bytes to a file.
+// Allows writing a predefined number of bytes (|capacity|) to a file.
 class WriteOnlyFile {
  public:
-  WriteOnlyFile(FileSize capacity) : capacity_(capacity) {}
-  ~WriteOnlyFile();
+  WriteOnlyFile(FileSize capacity);
 
   // Open and truncate the file at |path|.
   //
@@ -34,6 +33,7 @@ class WriteOnlyFile {
   uint64_t BytesRemaining() const;
 
  private:
+  // The stream will be flushed and closed upon destruction.
   std::ofstream out_;
   FileSize capacity_;
 };

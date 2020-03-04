@@ -60,9 +60,9 @@ class SystemLogRecorderTest : public UnitTestFixture {
  private:
   files::ScopedTempDir temp_dir_;
   std::unique_ptr<StubLogger> logger_;
-  std::unique_ptr<SystemLogRecorder> system_log_recorder_;
 
  protected:
+  std::unique_ptr<SystemLogRecorder> system_log_recorder_;
   std::vector<const std::string> log_file_paths_;
 };
 
@@ -110,6 +110,9 @@ TEST_F(SystemLogRecorderTest, Check_RecordsLogsCorrectly) {
   // Run the loop for as much time needed to ensure at the stub calls LogMany() and Log() as
   // specified in the constructor.
   RunLoopFor(total_dump_delays + total_message_delays);
+
+  // Delete system log recorder to flush the underlying buffer.
+  system_log_recorder_.reset(nullptr);
 
   const std::string output_path = files::JoinPath(RootDirectory(), "output.txt");
 

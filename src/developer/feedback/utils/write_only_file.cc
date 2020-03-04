@@ -4,12 +4,11 @@
 
 #include "src/developer/feedback/utils/write_only_file.h"
 
+#include <cstring>
+
 namespace feedback {
 
-WriteOnlyFile::~WriteOnlyFile() {
-  out_.flush();
-  out_.close();
-}
+WriteOnlyFile::WriteOnlyFile(FileSize capacity) : capacity_(capacity) {}
 
 bool WriteOnlyFile::Open(const std::string& path) {
   out_.open(path, std::ofstream::out | std::ofstream::trunc);
@@ -20,8 +19,8 @@ bool WriteOnlyFile::Write(const std::string& str) {
   if (!out_.is_open() || str.size() > BytesRemaining()) {
     return false;
   }
+
   out_.write(str.c_str(), str.size());
-  out_.flush();
 
   capacity_ -= str.size();
   return str.size();

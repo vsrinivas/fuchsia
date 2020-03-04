@@ -16,9 +16,9 @@ namespace feedback {
 // Rotating file set allows for recording a fixed amount of text data in a number of files such that
 // the most recent data is always present.
 //
-// Take the example of 3 files with a size of 8 bytes, 0.txt, 1.txt, and 2.txt, that make up the
-// set, in that order. If we wish to write the string 'bytesX' to the set 4 times, the set evolves
-// as follows:
+// Take the example of 3 files with a |total_size| of 8 bytes, 0.txt, 1.txt, and 2.txt, that make up
+// the set, in that order. If we wish to write the string 'bytesX' to the set 4 times, the set
+// evolves as follows:
 //
 //  write bytes0:
 //    0.txt: bytes0
@@ -41,7 +41,7 @@ namespace feedback {
 // the set.
 class RotatingFileSetWriter {
  public:
-  RotatingFileSetWriter(const std::vector<const std::string>& file_paths, FileSize set_size);
+  RotatingFileSetWriter(const std::vector<const std::string>& file_paths, FileSize total_size);
 
   void Write(const std::string& line);
 

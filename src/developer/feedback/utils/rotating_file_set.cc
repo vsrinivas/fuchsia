@@ -13,8 +13,8 @@
 namespace feedback {
 
 RotatingFileSetWriter::RotatingFileSetWriter(const std::vector<const std::string>& file_paths,
-                                             FileSize set_size)
-    : file_paths_(file_paths), individual_file_size_(set_size / file_paths.size()) {
+                                             FileSize total_size)
+    : file_paths_(file_paths), individual_file_size_(total_size / file_paths.size()) {
   assert(file_paths_.size() > 0 && "|file_paths_| must have non-zero size");
 
   for (size_t i = 0; i < file_paths_.size(); ++i) {

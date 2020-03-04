@@ -51,19 +51,22 @@ TEST_F(WriteOnlyFileTest, Check_WriteToFile) {
 
   FileSize expected_bytes_remaining(file_capacity);
 
-  WriteOnlyFile file(file_capacity);
-  file.Open(file_path);
-
   std::string line1("line1\n");
-  EXPECT_TRUE(file.Write(line1));
-  expected_bytes_remaining -= line1.size();
-
   std::string line2("line2\n");
-  EXPECT_TRUE(file.Write(line2));
-  expected_bytes_remaining -= line2.size();
 
-  EXPECT_EQ(file.BytesRemaining(), expected_bytes_remaining.to_bytes());
+  // Destroy |file| at the end of this scope to force the underlying buffer to flush.
+  {
+    WriteOnlyFile file(file_capacity);
+    file.Open(file_path);
 
+    EXPECT_TRUE(file.Write(line1));
+    expected_bytes_remaining -= line1.size();
+
+    EXPECT_TRUE(file.Write(line2));
+    expected_bytes_remaining -= line2.size();
+
+    EXPECT_EQ(file.BytesRemaining(), expected_bytes_remaining.to_bytes());
+  }
   std::string file_contents;
   ReadFileContents(file_path, &file_contents);
   EXPECT_EQ(file_contents, line1 + line2);
@@ -75,20 +78,24 @@ TEST_F(WriteOnlyFileTest, Check_WriteMoreThanCapacity) {
 
   FileSize expected_bytes_remaining(file_capacity);
 
-  WriteOnlyFile file(file_capacity);
-  file.Open(file_path);
-
   std::string line1("line1\n");
-  EXPECT_TRUE(file.Write(line1));
-  expected_bytes_remaining -= line1.size();
-
   std::string line2("line2\n");
-  EXPECT_TRUE(file.Write(line2));
-  expected_bytes_remaining -= line2.size();
 
-  EXPECT_FALSE(file.Write("line3\n"));
+  // Destroy |file| at the end of this scope to force the underlying buffer to flush.
+  {
+    WriteOnlyFile file(file_capacity);
+    file.Open(file_path);
 
-  EXPECT_EQ(file.BytesRemaining(), expected_bytes_remaining.to_bytes());
+    EXPECT_TRUE(file.Write(line1));
+    expected_bytes_remaining -= line1.size();
+
+    EXPECT_TRUE(file.Write(line2));
+    expected_bytes_remaining -= line2.size();
+
+    EXPECT_FALSE(file.Write("line3\n"));
+
+    EXPECT_EQ(file.BytesRemaining(), expected_bytes_remaining.to_bytes());
+  }
 
   std::string file_contents;
   ReadFileContents(file_path, &file_contents);
