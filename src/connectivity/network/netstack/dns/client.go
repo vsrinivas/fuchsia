@@ -45,6 +45,7 @@ type Client struct {
 	stack  *stack.Stack
 	config clientConfig
 	cache  cacheInfo
+	serversConfig
 }
 
 // A Resolver answers DNS Questions.
@@ -79,10 +80,10 @@ func NewClient(s *stack.Stack) *Client {
 			attempts: 3,
 			rotate:   true,
 		},
-		cache: makeCache(),
+		cache:         makeCache(),
+		serversConfig: makeServersConfig(),
 	}
 	c.config.mu.resolver = c.defaultResolver()
-	c.config.mu.expiringServers = make(map[tcpip.FullAddress]expiringDNSServerState)
 	return c
 }
 
@@ -310,40 +311,11 @@ func addrRecordList(rrs []dnsmessage.Resource) []tcpip.Address {
 	return addrs
 }
 
-// expiringDNSServerState is the state for an expiring DNS server.
-type expiringDNSServerState struct {
-	timer tcpip.CancellableTimer
-}
-
 // A clientConfig represents a DNS stub resolver configuration.
 type clientConfig struct {
 	mu struct {
 		sync.RWMutex
-
-		// Default DNS server addresses.
-		//
-		// defaultServers are assumed to use defaultDNSPort for DNS queries.
-		defaultServers []tcpip.Address
-
-		// References to slices of DNS servers configured at runtime.
-		//
-		// Unlike expiringServers, these servers do not have a set lifetime; they
-		// are valid forever until updated.
-		//
-		// runtimeServers are assumed to use defaultDNSPort for DNS queries.
-		runtimeServers []*[]tcpip.Address
-
-		// DNS server and associated port configured at runtime that may expire
-		// after some lifetime.
-		expiringServers map[tcpip.FullAddress]expiringDNSServerState
-
-		// A cache of the available DNS server addresses and associated port that
-		// may be used until invalidation.
-		//
-		// Must be cleared when defaultServers, runtimeServers or expiringServers
-		// gets updated.
-		serversCache []tcpip.FullAddress
-		resolver     Resolver // a handler which answers DNS Questions
+		resolver Resolver // a handler which answers DNS Questions
 	}
 	search   []string      // rooted suffixes to append to local name
 	ndots    int           // number of dots in name to trigger absolute lookup
@@ -397,191 +369,6 @@ func (conf *clientConfig) nameList(name string) []string {
 		names = append(names, name)
 	}
 	return names
-}
-
-// GetServersCache returns a list of tcpip.FullAddress to DNS servers.
-//
-// The expiring servers will be at the front of the list, followed by
-// the runtime and default servers. The list will be deduplicated.
-func (c *Client) GetServersCache() []tcpip.FullAddress {
-	// If we already have a populated cache, return it.
-	c.config.mu.RLock()
-	cache := c.config.mu.serversCache
-	c.config.mu.RUnlock()
-	if cache != nil {
-		return cache
-	}
-
-	// At this point the cache may need to be generated.
-
-	c.config.mu.Lock()
-	defer c.config.mu.Unlock()
-
-	// We check if the cache is populated again so that the read lock is leveraged
-	// above. We need to check c.config.mu.serversCache after taking the Write
-	// lock to avoid duplicate work when multiple concurrent calls to
-	// GetServersCache are made.
-	//
-	// Without this check, the following can occur (T1 and T2 are goroutines
-	// that are trying to get the servers cache):
-	//   T1: Take RLock, Drop RLock, cache == nil
-	//   T2: Take RLock  Drop RLock, cache == nil
-	//   T1: Take WLock
-	//   T2: Attempt to take WLock, block
-	//   T1: Generate cache, drop WLock
-	//   T2: Obtain WLock, generate cache, drop WLock
-	//
-	// This example can be expanded to many more goroutines like T2.
-	//
-	// Here we can see that T2 unnessessarily regenerates the cache after T1. By
-	// checking if the servers cache is populated after obtaining the WLock, this
-	// can be avoided.
-	if cache := c.config.mu.serversCache; cache != nil {
-		return cache
-	}
-
-	have := make(map[tcpip.FullAddress]struct{})
-
-	for s := range c.config.mu.expiringServers {
-		// We don't check if s is already in have since c.config.mu.expiringServers
-		// is a map - we will not see the same key twice.
-		have[s] = struct{}{}
-		cache = append(cache, s)
-	}
-
-	for _, serverLists := range [][]*[]tcpip.Address{c.config.mu.runtimeServers, {&c.config.mu.defaultServers}} {
-		for _, serverList := range serverLists {
-			for _, server := range *serverList {
-				s := tcpip.FullAddress{Addr: server, Port: defaultDNSPort}
-				if _, ok := have[s]; ok {
-					// cache already has s in it, do not duplicate it.
-					continue
-				}
-
-				have[s] = struct{}{}
-				cache = append(cache, s)
-			}
-		}
-	}
-
-	c.config.mu.serversCache = cache
-	return cache
-}
-
-func (c *Client) GetDefaultServers() []tcpip.Address {
-	c.config.mu.RLock()
-	defer c.config.mu.RUnlock()
-
-	return append([]tcpip.Address(nil), c.config.mu.defaultServers...)
-}
-
-// SetDefaultServers sets the default list of nameservers to query.
-// This usually comes from a system-wide configuration file.
-// Servers are checked sequentially, in order.
-// Takes ownership of the passed-in slice of addrs.
-func (c *Client) SetDefaultServers(servers []tcpip.Address) {
-	c.config.mu.Lock()
-	defer c.config.mu.Unlock()
-
-	// Clear the cache of DNS servers.
-	c.config.mu.serversCache = nil
-	c.config.mu.defaultServers = servers
-}
-
-// SetRuntimeServers sets the list of lists of runtime servers to query (e.g.
-// collected from DHCP responses).  Servers are checked sequentially, in order.
-// Takes ownership of the passed-in list of runtimeServerRefs.
-//
-// It's possible to introduce aliasing issues if a slice pointer passed here is
-// obviated later but SetRuntimeServers isn't called again.
-//
-// E.g., if one of the network interface structs containing a slice pointer is
-// deleted, SetRuntimeServers should be called again with an updated list of
-// runtime server refs.
-func (c *Client) SetRuntimeServers(runtimeServerRefs []*[]tcpip.Address) {
-	c.config.mu.Lock()
-	defer c.config.mu.Unlock()
-
-	// Clear the cache of DNS servers.
-	c.config.mu.serversCache = nil
-	c.config.mu.runtimeServers = runtimeServerRefs
-}
-
-// UpdateExpiringServers updates the list of expiring servers to query.
-//
-// If a server already known by c, its lifetime will be refreshed. If a server
-// is not known and has a non-zero lifetime, it will be stored and set to
-// expire after lifetime.
-//
-// A lifetime value of less than 0 indicates that servers are not to expire
-// (they will become valid forever until another update refreshes the lifetime).
-func (c *Client) UpdateExpiringServers(servers []tcpip.FullAddress, lifetime time.Duration) {
-	c.config.mu.Lock()
-	defer c.config.mu.Unlock()
-
-	for _, s := range servers {
-		// If s.Port is 0, then assume the default DNS port.
-		if s.Port == 0 {
-			s.Port = defaultDNSPort
-		}
-
-		state, ok := c.config.mu.expiringServers[s]
-		if lifetime != 0 {
-			if !ok {
-				// Clear the cache of DNS servers since we add a new server.
-				c.config.mu.serversCache = nil
-
-				// We do not yet have the server and it has a non-zero lifetime.
-				s := s
-				state = expiringDNSServerState{
-					timer: tcpip.MakeCancellableTimer(&c.config.mu, func() {
-						// Clear the cache of DNS servers.
-						c.config.mu.serversCache = nil
-						delete(c.config.mu.expiringServers, s)
-					}),
-				}
-			}
-
-			// Refresh s's lifetime.
-			state.timer.StopLocked()
-			if lifetime > 0 {
-				// s is valid for a finite lifetime.
-				state.timer.Reset(lifetime)
-			}
-
-			c.config.mu.expiringServers[s] = state
-		} else if ok {
-			// Clear the cache of DNS servers since we remove a server.
-			c.config.mu.serversCache = nil
-
-			// We have the server and it is no longer to be used.
-			state.timer.StopLocked()
-			delete(c.config.mu.expiringServers, s)
-		}
-	}
-}
-
-// RemoveAllServersWithNIC removes all servers associated with the specified
-// NIC.
-//
-// If a NIC is not specified (nicID == 0), then RemoveAllServersWithNIC does
-// nothing.
-func (c *Client) RemoveAllServersWithNIC(nicID tcpip.NICID) {
-	if nicID == 0 {
-		return
-	}
-
-	c.config.mu.Lock()
-	defer c.config.mu.Unlock()
-
-	// Clear the cache of DNS servers.
-	c.config.mu.serversCache = nil
-
-	for k := range c.config.mu.expiringServers {
-		if k.NIC == nicID {
-			delete(c.config.mu.expiringServers, k)
-		}
-	}
 }
 
 // SetResolver is used to configure the way c looks up domain names.
