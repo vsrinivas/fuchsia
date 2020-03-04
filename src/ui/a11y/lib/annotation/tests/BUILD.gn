@@ -23,4 +23,7 @@ executable("annotation_tests") {
     "//src/ui/a11y/lib/view",
     "//third_party/googletest:gtest",
   ]
+
+  # TODO(46525): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
