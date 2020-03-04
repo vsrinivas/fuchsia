@@ -221,6 +221,7 @@ async fn manual_connect_state(
         "wlancfg: Connecting to '{}' because of a manual request from the user",
         String::from_utf8_lossy(&req.ssid)
     );
+    // This can only be password or none - PSK is not supported by legacy connect calls.
     let credential = Credential::from_bytes(req.password.clone());
     let txn = start_connect_txn(&services.sme, &req.ssid, &credential)?;
     let connected_fut = wait_until_connected(txn);

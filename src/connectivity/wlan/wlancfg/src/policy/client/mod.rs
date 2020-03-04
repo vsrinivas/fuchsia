@@ -487,7 +487,7 @@ mod tests {
         super::*,
         crate::{
             config_manager::SavedNetworksManager,
-            network_config::{NetworkConfig, SecurityType},
+            network_config::{NetworkConfig, SecurityType, PSK_BYTE_LEN},
         },
         fidl::{
             endpoints::{create_proxy, create_request_stream},
@@ -519,7 +519,7 @@ mod tests {
             .store(network_id_password, Credential::Password(b"supersecure".to_vec()))
             .expect("error saving network");
         saved_networks
-            .store(network_id_psk, Credential::Psk(vec![64; 64].to_vec()))
+            .store(network_id_psk, Credential::Psk(vec![64; PSK_BYTE_LEN].to_vec()))
             .expect("error saving network foobar-psk");
 
         saved_networks
@@ -751,7 +751,7 @@ mod tests {
                 req, ..
             }))) => {
                 assert_eq!(b"foobar-psk", &req.ssid[..]);
-                assert_eq!(fidl_sme::Credential::Psk([64;64].to_vec()), req.credential);
+                assert_eq!(fidl_sme::Credential::Psk([64; PSK_BYTE_LEN].to_vec()), req.credential);
                 // TODO(hahnr): Send connection response.
             }
         );

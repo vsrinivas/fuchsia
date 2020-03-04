@@ -135,8 +135,9 @@ impl SavedNetworksManager {
         };
         let mut saved_networks = HashMap::<NetworkIdentifier, Vec<NetworkConfig>>::new();
         for config in config_list {
-            // Choose appropriate unknown values based on password and how known
-            // ESS have been used for connections.
+            // Choose appropriate unknown values based on password and how known ESS have been used
+            // for connections. Credential cannot be read in as PSK - PSK's were not supported by
+            // before the new storage was in place.
             let credential = Credential::from_bytes(config.password);
             let network_id =
                 NetworkIdentifier::new(config.ssid, credential.derived_security_type());
@@ -200,7 +201,10 @@ impl SavedNetworksManager {
             .write(&network_id, &network_configs)
             .map_err(|_| NetworkConfigError::StashWriteError)?;
         // Write saved networks to the legacy store only if they are WPA2 or Open, as legacy store
-        // does not support more types.
+        // does not support more types. Do not write PSK to legacy storage.
+        if let Credential::Psk(_) = credential {
+            return Ok(());
+        }
         if network_id.security_type == SecurityType::Wpa2
             || network_id.security_type == SecurityType::None
         {
@@ -314,13 +318,11 @@ mod tests {
 
         // Store another network and verify.
         let network_id_baz = NetworkIdentifier::new("baz", SecurityType::Wpa2);
-        saved_networks
-            .store(network_id_baz.clone(), Credential::Psk(vec![1; 64]))
-            .expect("storing 'baz' with PSK failed");
-        assert_eq!(
-            vec![network_config("baz", [1; 64].to_vec())],
-            saved_networks.lookup(network_id_baz.clone())
-        );
+        let psk = Credential::Psk(vec![1; 32]);
+        let config_baz = NetworkConfig::new(network_id_baz.clone(), psk.clone(), false, false)
+            .expect("failed to create network config");
+        saved_networks.store(network_id_baz.clone(), psk).expect("storing 'baz' with PSK failed");
+        assert_eq!(vec![config_baz.clone()], saved_networks.lookup(network_id_baz.clone()));
         assert_eq!(2, saved_networks.known_network_count());
 
         // Saved networks should persist when we create a saved networks manager with the same ID.
@@ -332,10 +334,7 @@ mod tests {
             vec![network_config("foo", "12345678")],
             saved_networks.lookup(network_id_foo.clone())
         );
-        assert_eq!(
-            vec![network_config("baz", [1; 64].to_vec())],
-            saved_networks.lookup(network_id_baz)
-        );
+        assert_eq!(vec![config_baz], saved_networks.lookup(network_id_baz));
         assert_eq!(2, saved_networks.known_network_count());
     }
 
@@ -726,7 +725,9 @@ mod tests {
         saved_networks
     }
 
-    // hard code unused fields for tests same as known_ess_store until they are used
+    /// Convience function for creating network configs with default values as they would be
+    /// initialized when read from KnownEssStore. Credential is password or none, and security
+    /// type is WPA2 or none.
     fn network_config(ssid: impl Into<Vec<u8>>, password: impl Into<Vec<u8>>) -> NetworkConfig {
         let credential = Credential::from_bytes(password.into());
         NetworkConfig {

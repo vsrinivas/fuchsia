@@ -8,6 +8,7 @@ use {
     fidl::endpoints::create_proxy,
     fidl_fuchsia_stash as fidl_stash,
     fuchsia_component::client::connect_to_service,
+    log::error,
     serde_derive::{Deserialize, Serialize},
     std::collections::HashMap,
     wlan_stash::{StashNode, NODE_SEPARATOR},
@@ -100,21 +101,40 @@ impl Stash {
     }
 
     /// Load all saved network configs from stash. Will create HashMap of network configs by SSID
-    /// as saved in the stash
+    /// as saved in the stash. If something in stash can't be interpreted, we ignore it.
     pub async fn load(&self) -> Result<HashMap<NetworkIdentifier, Vec<NetworkConfig>>, Error> {
         // get all the children nodes of root, which represent the unique identifiers,
         let id_nodes = self.root.children().await?;
-        let mut network_configs = HashMap::new();
 
+        let mut network_configs = HashMap::new();
         // for each child representing a network config, read in values
         for id_node in id_nodes {
             let mut config_list = vec![];
-            let net_id = self.id_from_key(&id_node)?;
-            for config_node in id_node.children().await? {
-                let network_config = Self::read_config(net_id.clone(), &config_node).await?;
-                config_list.push(network_config);
+            match self.id_from_key(&id_node) {
+                Ok(net_id) => {
+                    for config_node in id_node.children().await? {
+                        match Self::read_config(net_id.clone(), &config_node).await {
+                            // If there is an error reading a saved network from stash, make a note
+                            // but don't prevent wlancfg starting up.
+                            Ok(network_config) => {
+                                config_list.push(network_config);
+                            }
+                            Err(e) => {
+                                error!("wlancfg: Error loading from stash: {:?}", e);
+                            }
+                        }
+                    }
+                    // If we encountered an error reading the configs, don't add.
+                    if config_list.is_empty() {
+                        continue;
+                    }
+                    network_configs.insert(net_id, config_list);
+                }
+                Err(e) => {
+                    error!("wlancfg: Error reading network identifier from stash: {:?}", e);
+                    continue;
+                }
             }
-            network_configs.insert(net_id, config_list);
         }
 
         Ok(network_configs)
@@ -163,7 +183,7 @@ impl PersistentData {
 mod tests {
     use {
         super::*,
-        crate::network_config::{Credential, NetworkIdentifier, SecurityType},
+        crate::network_config::{Credential, NetworkIdentifier, SecurityType, PSK_BYTE_LEN},
         fuchsia_async as fasync,
     };
 
@@ -248,7 +268,7 @@ mod tests {
 
         // create and write configs with each type credential
         let password = Credential::Password(b"config-password".to_vec());
-        let psk = Credential::Psk([65; 64].to_vec());
+        let psk = Credential::Psk([65; PSK_BYTE_LEN].to_vec());
 
         let cfg_none = new_config(net_id_none.clone(), Credential::None);
         let cfg_password = new_config(net_id_password.clone(), password);
@@ -319,6 +339,23 @@ mod tests {
         expected_cfgs.insert(foo_net_id.clone(), vec![cfg_foo]);
         expected_cfgs.insert(bar_net_id.clone(), vec![cfg_bar]);
         assert_eq!(expected_cfgs, store.load().await.expect("Failed to load configs from stash"));
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn load_stash_ignore_bad_values() {
+        let stash = new_stash("load_stash_ignore_bad_values");
+
+        // write bad value directly to StashNode
+        let some_net_id = network_id("foo", SecurityType::Wpa2);
+        let net_id_str =
+            Stash::serialize_key(&some_net_id).expect("failed to serialize network identifier");
+        let mut config_node = stash.root.child(&net_id_str).child(&format!("{}", 0));
+        let bad_value = "some bad value".to_string();
+        config_node.write_str(DATA, bad_value).expect("failed to write to stashnode");
+
+        // check that load doesn't fail because of bad string
+        let loaded_configs = stash.load().await.expect("failed to load stash");
+        assert!(loaded_configs.is_empty());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

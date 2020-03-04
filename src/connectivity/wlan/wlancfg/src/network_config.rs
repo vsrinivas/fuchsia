@@ -20,7 +20,8 @@ const NUM_DENY_REASONS: usize = 10;
 /// constants for the constraints on valid credential values
 const MIN_PASSWORD_LEN: usize = 8;
 const MAX_PASSWORD_LEN: usize = 63;
-const PSK_LEN: usize = 64;
+/// The PSK provided must be the bytes form of the 64 hexadecimal character hash
+pub const PSK_BYTE_LEN: usize = 32;
 /// constraint on valid SSID legnth
 const MAX_SSID_LEN: usize = 32;
 
@@ -127,16 +128,14 @@ pub enum Credential {
 impl Credential {
     /// Returns:
     /// - an Open-Credential instance iff `bytes` is empty,
-    /// - a PSK-Credential instance iff `bytes` holds exactly 64 bytes,
     /// - a Password-Credential in all other cases.
-    /// In the PSK case, the provided bytes must represent the PSK in hex format.
-    /// Note: This function is of temporary nature until connection results communicate
-    /// type of credential
+    /// This function does not support reading PSK from bytes because the PSK byte length overlaps
+    /// with a valid password length. This function should only be used to load legacy data, where
+    /// PSK was not supported.
+    /// Note: This function is of temporary nature to support legacy code.
     pub fn from_bytes(bytes: impl AsRef<[u8]> + Into<Vec<u8>>) -> Self {
-        const PSK_HEX_STRING_LENGTH: usize = 64;
         match bytes.as_ref().len() {
             0 => Credential::None,
-            PSK_HEX_STRING_LENGTH => Credential::Psk(bytes.into()),
             _ => Credential::Password(bytes.into()),
         }
     }
@@ -259,7 +258,7 @@ fn check_config_errors(
                 }
             }
             Credential::Psk(psk) => {
-                if psk.clone().len() != PSK_LEN {
+                if psk.clone().len() != PSK_BYTE_LEN {
                     return Err(NetworkConfigError::PskLen);
                 }
             }
@@ -298,7 +297,7 @@ impl Debug for NetworkConfigError {
                 "password must be between {} and {} characters long",
                 MIN_PASSWORD_LEN, MAX_PASSWORD_LEN
             ),
-            NetworkConfigError::PskLen => write!(f, "PSK must have length of {}", PSK_LEN),
+            NetworkConfigError::PskLen => write!(f, "PSK must have length of {}", PSK_BYTE_LEN),
             NetworkConfigError::SsidLen => {
                 write!(f, "SSID has max allowed length of {}", MAX_SSID_LEN)
             }
@@ -377,7 +376,7 @@ mod tests {
 
     #[test]
     fn new_network_config_psk_credential() {
-        let credential = Credential::Psk([1; 64].to_vec());
+        let credential = Credential::Psk([1; PSK_BYTE_LEN].to_vec());
 
         let network_config = NetworkConfig::new(
             NetworkIdentifier::new("foo", SecurityType::Wpa2),
@@ -389,7 +388,7 @@ mod tests {
 
         assert_eq!(network_config.ssid, b"foo".to_vec());
         assert_eq!(network_config.security_type, SecurityType::Wpa2);
-        assert_eq!(network_config.credential, Credential::Psk([1; 64].to_vec()));
+        assert_eq!(network_config.credential, Credential::Psk([1; PSK_BYTE_LEN].to_vec()));
         assert_eq!(network_config.has_ever_connected, false);
         assert!(network_config.perf_stats.deny_list.0.is_empty());
     }
@@ -455,15 +454,15 @@ mod tests {
 
     #[test]
     fn check_config_errors_invalid_psk() {
-        // PSK length not 64 characters
-        let short_psk = Credential::Psk([6, 63].to_vec());
+        // PSK length not 32 characters
+        let short_psk = Credential::Psk([6; PSK_BYTE_LEN - 1].to_vec());
 
         assert_variant!(
             check_config_errors(&b"valid_ssid".to_vec(), &SecurityType::Wpa2, &short_psk),
             Err(NetworkConfigError::PskLen)
         );
 
-        let long_psk = Credential::Psk([7, 65].to_vec());
+        let long_psk = Credential::Psk([7; PSK_BYTE_LEN + 1].to_vec());
         assert_variant!(
             check_config_errors(&b"valid_ssid".to_vec(), &SecurityType::Wpa2, &long_psk),
             Err(NetworkConfigError::PskLen)
@@ -479,7 +478,7 @@ mod tests {
             Err(NetworkConfigError::OpenNetworkPassword)
         );
 
-        let psk = Credential::Psk([1, 64].to_vec());
+        let psk = Credential::Psk([1; PSK_BYTE_LEN].to_vec());
         assert_variant!(
             check_config_errors(&b"valid_ssid".to_vec(), &SecurityType::None, &psk),
             Err(NetworkConfigError::OpenNetworkPassword)
@@ -505,7 +504,7 @@ mod tests {
     #[test]
     fn check_config_errors_invalid_ssid() {
         // The longest valid SSID length is 32, so 33 characters is too long.
-        let long_ssid = [64; 33].to_vec();
+        let long_ssid = [6; 33].to_vec();
         assert_variant!(
             check_config_errors(&long_ssid, &SecurityType::None, &Credential::None),
             Err(NetworkConfigError::SsidLen)
@@ -583,7 +582,11 @@ mod tests {
     fn test_credential_from_bytes() {
         assert_eq!(Credential::from_bytes(vec![1]), Credential::Password(vec![1]));
         assert_eq!(Credential::from_bytes(vec![2; 63]), Credential::Password(vec![2; 63]));
-        assert_eq!(Credential::from_bytes(vec![2; 64]), Credential::Psk(vec![2; 64]));
+        // credential from bytes should only be used to load legacy data, so PSK won't be supported
+        assert_eq!(
+            Credential::from_bytes(vec![2; PSK_BYTE_LEN]),
+            Credential::Password(vec![2; PSK_BYTE_LEN])
+        );
         assert_eq!(Credential::from_bytes(vec![]), Credential::None);
     }
 
