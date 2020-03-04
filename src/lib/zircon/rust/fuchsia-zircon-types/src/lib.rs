@@ -398,6 +398,9 @@ pub const ZX_CHANNEL_MAX_MSG_BYTES: u32 = 65536;
 // fifo write size constants
 pub const ZX_FIFO_MAX_SIZE_BYTES: u32 = 4096;
 
+// Page size constant
+pub const ZX_PAGE_SIZE: u32 = 4096;
+
 // Task response codes if a process is externally killed
 pub const ZX_TASK_RETCODE_SYSCALL_KILL: i64 = -1024;
 pub const ZX_TASK_RETCODE_OOM_KILL: i64 = -1025;
