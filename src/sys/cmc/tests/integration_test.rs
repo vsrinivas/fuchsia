@@ -1,3 +1,7 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 use anyhow::Error;
 use cm_fidl_translator;
 use fidl_fuchsia_data as fdata;
@@ -6,8 +10,8 @@ use fidl_fuchsia_sys2::{
     ChildDecl, ChildRef, CollectionDecl, CollectionRef, ComponentDecl, DependencyType, Durability,
     Entry, ExposeDecl, ExposeDirectoryDecl, ExposeProtocolDecl, ExposeServiceDecl, FrameworkRef,
     Object, OfferDecl, OfferProtocolDecl, OfferRunnerDecl, OfferServiceDecl, RealmRef, Ref,
-    RunnerDecl, SelfRef, StartupMode, UseDecl, UseProtocolDecl, UseRunnerDecl, UseServiceDecl,
-    Value,
+    RunnerDecl, SelfRef, StartupMode, UseDecl, UseEventDecl, UseProtocolDecl, UseRunnerDecl,
+    UseServiceDecl, Value,
 };
 use std::fs::File;
 use std::io::Read;
@@ -37,6 +41,14 @@ fn main() {
                 source: Some(Ref::Realm(RealmRef {})),
                 source_path: Some("/fonts/LegacyCoolFonts".to_string()),
                 target_path: Some("/svc/fuchsia.fonts.LegacyProvider".to_string()),
+            }),
+            UseDecl::Event(UseEventDecl {
+                source_name: Some("started".to_string()),
+                target_name: Some("started".to_string()),
+            }),
+            UseDecl::Event(UseEventDecl {
+                source_name: Some("capability_ready_diagnostics".to_string()),
+                target_name: Some("capability_ready".to_string()),
             }),
         ];
         let runners = vec![RunnerDecl {

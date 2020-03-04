@@ -81,6 +81,10 @@ pub(super) async fn route_use_capability<'a>(
             route_and_open_storage_capability(storage_decl, open_mode, target_realm, server_chan)
                 .await
         }
+        UseDecl::Event(_) => {
+            // TODO(fxb/47285):  implement
+            Ok(())
+        }
     }
 }
 

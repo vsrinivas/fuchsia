@@ -156,6 +156,7 @@ enum CapabilityId<'a> {
     Runner(&'a str),
     Resolver(&'a str),
     StorageType(&'a str),
+    Event(&'a str),
 }
 
 impl<'a> CapabilityId<'a> {
@@ -167,7 +168,8 @@ impl<'a> CapabilityId<'a> {
             | CapabilityId::Directory(p)
             | CapabilityId::Runner(p)
             | CapabilityId::Resolver(p)
-            | CapabilityId::StorageType(p) => p,
+            | CapabilityId::StorageType(p)
+            | CapabilityId::Event(p) => p,
         }
     }
 
@@ -180,6 +182,7 @@ impl<'a> CapabilityId<'a> {
             CapabilityId::Runner(_) => "runner",
             CapabilityId::Resolver(_) => "resolver",
             CapabilityId::StorageType(_) => "storage type",
+            CapabilityId::Event(_) => "event",
         }
     }
 
@@ -231,6 +234,8 @@ impl<'a> CapabilityId<'a> {
             return Ok(vec![CapabilityId::Resolver(
                 alias.map(|s| s.as_str()).unwrap_or(p.as_str()),
             )]);
+        } else if let Some(p) = clause.event().as_ref() {
+            return Ok(vec![CapabilityId::Event(alias.map(|a| a.as_str()).unwrap_or(p.as_str()))]);
         }
 
         // Offers rules prohibit using the "as" clause for storage; this is validated outside the
@@ -361,6 +366,13 @@ impl<'a> ValidationContext<'a> {
         use_: &'a cml::Use,
         used_ids: &mut HashMap<&'a str, CapabilityId<'a>>,
     ) -> Result<(), Error> {
+        match (&use_.runner, &use_.r#as) {
+            (Some(_), Some(_)) => {
+                Err(Error::validate("\"as\" field cannot be used with \"runner\""))
+            }
+            _ => Ok(()),
+        }?;
+
         let storage = use_.storage.as_ref().map(|s| s.as_str());
         match (storage, &use_.r#as) {
             (Some("meta"), Some(_)) => {
@@ -926,7 +938,9 @@ mod tests {
                   { "storage": "data", "as": "/example" },
                   { "storage": "cache", "as": "/tmp" },
                   { "storage": "meta" },
-                  { "runner": "elf" }
+                  { "runner": "elf" },
+                  { "event": "started" },
+                  { "event": "capability_ready_diagnostics", "as": "capability_ready" },
                 ]
             }),
             result = Ok(()),
@@ -947,7 +961,7 @@ mod tests {
             input = json!({
                 "use": [ { "runner": "elf", "as": "xxx" } ]
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /use/0/as")),
+            result = Err(Error::validate("\"as\" field cannot be used with \"runner\"")),
         },
         test_cml_use_from_with_meta_storage => {
             input = json!({

@@ -15,6 +15,13 @@
       "protocol": "/fonts/LegacyCoolFonts",
       "as": "/svc/fuchsia.fonts.LegacyProvider",
     },
+    {
+      "event": "started",
+    },
+    {
+      "event": "capability_ready_diagnostics",
+      "as": "capability_ready"
+    },
   ],
   "expose": [
     {

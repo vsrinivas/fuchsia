@@ -69,6 +69,7 @@ impl CmInto<fsys::UseDecl> for cm::Use {
             cm::Use::Directory(d) => fsys::UseDecl::Directory(d.cm_into()?),
             cm::Use::Storage(s) => fsys::UseDecl::Storage(s.cm_into()?),
             cm::Use::Runner(r) => fsys::UseDecl::Runner(r.cm_into()?),
+            cm::Use::Event(e) => fsys::UseDecl::Event(e.cm_into()?),
         })
     }
 }
@@ -160,6 +161,15 @@ impl CmInto<fsys::UseStorageDecl> for cm::UseStorage {
 impl CmInto<fsys::UseRunnerDecl> for cm::UseRunner {
     fn cm_into(self) -> Result<fsys::UseRunnerDecl, Error> {
         Ok(fsys::UseRunnerDecl { source_name: Some(self.source_name.into()) })
+    }
+}
+
+impl CmInto<fsys::UseEventDecl> for cm::UseEvent {
+    fn cm_into(self) -> Result<fsys::UseEventDecl, Error> {
+        Ok(fsys::UseEventDecl {
+            source_name: Some(self.source_name.into()),
+            target_name: Some(self.target_name.into()),
+        })
     }
 }
 
@@ -756,6 +766,12 @@ mod tests {
                         "runner": {
                             "source_name": "elf"
                         }
+                    },
+                    {
+                        "event": {
+                            "source_name": "started_on_x",
+                            "target_name": "started"
+                        }
                     }
                 ]
             }),
@@ -801,6 +817,10 @@ mod tests {
                     }),
                     fsys::UseDecl::Runner(fsys::UseRunnerDecl {
                         source_name: Some("elf".to_string()),
+                    }),
+                    fsys::UseDecl::Event(fsys::UseEventDecl {
+                        source_name: Some("started_on_x".to_string()),
+                        target_name: Some("started".to_string()),
                     }),
                 ];
                 let mut decl = new_component_decl();

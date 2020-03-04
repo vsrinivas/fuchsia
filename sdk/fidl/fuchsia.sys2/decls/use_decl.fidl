@@ -4,8 +4,8 @@
 
 library fuchsia.sys2;
 
-using fuchsia.io2;
 using fuchsia.component;
+using fuchsia.io2;
 
 /// Declares a capability used by a component, which was offered to the
 /// component's environment.
@@ -15,6 +15,7 @@ xunion UseDecl {
     3: UseDirectoryDecl directory;
     4: UseStorageDecl storage;
     5: UseRunnerDecl runner;
+    6: UseEventDecl event;
 };
 
 /// Declares a service used by a component, which was offered to the component's
@@ -104,4 +105,13 @@ table UseRunnerDecl {
     /// The name of the runner, as it was presented to this component by the
     /// realm.
     1: fuchsia.component.runner_name source_name;
+};
+
+/// Declares an event used by a component.
+table UseEventDecl {
+    /// Name identifying the event which was presented to this component.
+    1: fuchsia.component.event_name source_name;
+
+    /// The name which the component will use to refer to this event.
+    2: fuchsia.component.event_name target_name;
 };

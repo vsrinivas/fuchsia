@@ -143,6 +143,12 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<cm::Use>, Error> {
             }));
         } else if let Some(p) = use_.runner() {
             out_uses.push(cm::Use::Runner(cm::UseRunner { source_name: cm::Name::new(p.clone())? }))
+        } else if let Some(p) = use_.event() {
+            let target_id = one_target_capability_id(use_, use_)?;
+            out_uses.push(cm::Use::Event(cm::UseEvent {
+                source_name: cm::Name::new(p.clone())?,
+                target_name: cm::Name::new(target_id)?,
+            }));
         } else {
             return Err(Error::internal(format!("no capability in use declaration")));
         };
@@ -645,6 +651,8 @@ where
             Some(OneOrMany::One(p.clone()))
         } else if let Some(p) = in_obj.resolver() {
             Some(OneOrMany::One(p.to_string()))
+        } else if let Some(p) = in_obj.event() {
+            Some(OneOrMany::One(p.clone()))
         } else if let Some(type_) = in_obj.storage() {
             match type_.as_str() {
                 "data" => Some(OneOrMany::One("/data".to_string())),
@@ -780,6 +788,8 @@ mod tests {
                     { "storage": "cache", "as": "/tmp" },
                     { "runner": "elf" },
                     { "runner": "web" },
+                    { "event": "started" },
+                    { "event": "diagnostics_on_x", "as": "diagnostics" },
                 ],
             }),
             output = r#"{
@@ -864,6 +874,18 @@ mod tests {
         {
             "runner": {
                 "source_name": "web"
+            }
+        },
+        {
+            "event": {
+                "source_name": "started",
+                "target_name": "started"
+            }
+        },
+        {
+            "event": {
+                "source_name": "diagnostics_on_x",
+                "target_name": "diagnostics"
             }
         }
     ]

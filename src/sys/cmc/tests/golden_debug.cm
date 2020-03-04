@@ -25,6 +25,18 @@
                 "source_path": "/fonts/LegacyCoolFonts",
                 "target_path": "/svc/fuchsia.fonts.LegacyProvider"
             }
+        },
+        {
+            "event": {
+                "source_name": "started",
+                "target_name": "started"
+            }
+        },
+        {
+            "event": {
+                "source_name": "capability_ready_diagnostics",
+                "target_name": "capability_ready"
+            }
         }
     ],
     "exposes": [

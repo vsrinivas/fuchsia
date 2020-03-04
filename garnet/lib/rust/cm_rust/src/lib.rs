@@ -433,6 +433,7 @@ fidl_into_enum!(UseDecl, UseDecl, fsys::UseDecl, fsys::UseDecl,
     Directory(UseDirectoryDecl),
     Storage(UseStorageDecl),
     Runner(UseRunnerDecl),
+    Event(UseEventDecl),
 });
 fidl_into_struct!(UseServiceDecl, UseServiceDecl, fsys::UseServiceDecl, fsys::UseServiceDecl,
 {
@@ -459,6 +460,12 @@ fidl_into_struct!(UseRunnerDecl, UseRunnerDecl, fsys::UseRunnerDecl,
 fsys::UseRunnerDecl,
 {
     source_name: CapabilityName,
+});
+fidl_into_struct!(UseEventDecl, UseEventDecl, fsys::UseEventDecl,
+fsys::UseEventDecl,
+{
+    source_name: CapabilityName,
+    target_name: CapabilityName,
 });
 
 fidl_into_struct!(ExposeProtocolDecl, ExposeProtocolDecl, fsys::ExposeProtocolDecl,
@@ -647,7 +654,7 @@ impl UseDecl {
             UseDecl::Directory(d) => &d.target_path,
             UseDecl::Storage(UseStorageDecl::Data(p)) => &p,
             UseDecl::Storage(UseStorageDecl::Cache(p)) => &p,
-            UseDecl::Storage(UseStorageDecl::Meta) | UseDecl::Runner(_) => {
+            UseDecl::Storage(UseStorageDecl::Meta) | UseDecl::Runner(_) | UseDecl::Event(_) => {
                 // Meta storage and runners don't show up in the namespace; no capability path.
                 return None;
             }
@@ -1548,6 +1555,10 @@ mod tests {
                    fsys::UseDecl::Runner(fsys::UseRunnerDecl {
                        source_name: Some("myrunner".to_string()),
                    }),
+                   fsys::UseDecl::Event(fsys::UseEventDecl {
+                       source_name: Some("started_on_x".to_string()),
+                       target_name: Some("started".to_string()),
+                   }),
                ]),
                exposes: Some(vec![
                    fsys::ExposeDecl::Protocol(fsys::ExposeProtocolDecl {
@@ -1779,6 +1790,10 @@ mod tests {
                         UseDecl::Runner(UseRunnerDecl {
                             source_name: "myrunner".into(),
                         }),
+                        UseDecl::Event(UseEventDecl {
+                            source_name: "started_on_x".into(),
+                            target_name: "started".into(),
+                        })
                     ],
                     exposes: vec![
                         ExposeDecl::Protocol(ExposeProtocolDecl {

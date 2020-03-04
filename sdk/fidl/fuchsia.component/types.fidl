@@ -9,3 +9,4 @@ using collection_name = string:MAX_COLLECTION_NAME_LENGTH;
 using environment_name = string:MAX_ENVIRONMENT_NAME_LENGTH;
 using resolver_name = string:MAX_RESOLVER_NAME_LENGTH;
 using runner_name = string:MAX_RUNNER_NAME_LENGTH;
+using event_name = string:MAX_EVENT_NAME_LENGTH;

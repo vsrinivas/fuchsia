@@ -482,7 +482,7 @@ impl RoutingTest {
                 UseDecl::Storage(UseStorageDecl::Data(p)) => Some(p.to_string()),
                 UseDecl::Storage(UseStorageDecl::Cache(p)) => Some(p.to_string()),
                 UseDecl::Storage(UseStorageDecl::Meta) => None,
-                UseDecl::Runner(_) => None,
+                UseDecl::Runner(_) | UseDecl::Event(_) => None,
             })
             .collect();
         let mut expected_paths = vec![];

@@ -180,6 +180,8 @@ pub enum Use {
     Storage(UseStorage),
     /// Used runner capability.
     Runner(UseRunner),
+    /// Used event capability.
+    Event(UseEvent),
 }
 
 /// Used service capability. See [`UseServiceDecl`].
@@ -245,6 +247,17 @@ pub struct UseStorage {
 pub struct UseRunner {
     /// Used runner name.
     pub source_name: Name,
+}
+
+/// Used event capability. See [`UseEventDecl`].
+///
+/// [`UseEventDecl`]: ../../fidl_fuchsia_sys2/struct.UseEventDecl.html
+#[derive(Serialize, Deserialize, Debug)]
+pub struct UseEvent {
+    /// Used event source name.
+    pub source_name: Name,
+    /// Used event target name.
+    pub target_name: Name,
 }
 
 /// Exposed capability destination. See [`ExposeTargetDecl`].

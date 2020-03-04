@@ -420,6 +420,10 @@ impl<'a> ValidationContext<'a> {
                     &mut self.errors,
                 );
             }
+            fsys::UseDecl::Event(e) => {
+                check_name(e.source_name.as_ref(), "UseEventDecl", "source_name", &mut self.errors);
+                check_name(e.target_name.as_ref(), "UseEventDecl", "target_name", &mut self.errors);
+            }
             fsys::UseDecl::__UnknownVariant { .. } => {
                 self.errors.push(Error::invalid_field("ComponentDecl", "use"));
             }
@@ -1372,7 +1376,8 @@ mod tests {
             FrameworkRef, OfferDecl, OfferDirectoryDecl, OfferProtocolDecl, OfferResolverDecl,
             OfferRunnerDecl, OfferServiceDecl, OfferStorageDecl, RealmRef, Ref, ResolverDecl,
             RunnerDecl, SelfRef, StartupMode, StorageDecl, StorageRef, StorageType, UseDecl,
-            UseDirectoryDecl, UseProtocolDecl, UseRunnerDecl, UseServiceDecl, UseStorageDecl,
+            UseDirectoryDecl, UseEventDecl, UseProtocolDecl, UseRunnerDecl, UseServiceDecl,
+            UseStorageDecl,
         },
         lazy_static::lazy_static,
         proptest::prelude::*,
@@ -1652,6 +1657,10 @@ mod tests {
                     UseDecl::Runner(UseRunnerDecl {
                         source_name: None,
                     }),
+                    UseDecl::Event(UseEventDecl {
+                        source_name: None,
+                        target_name: None,
+                    })
                 ]);
                 decl
             },
@@ -1669,6 +1678,8 @@ mod tests {
                 Error::missing_field("UseStorageDecl", "type"),
                 Error::missing_field("UseStorageDecl", "target_path"),
                 Error::missing_field("UseRunnerDecl", "source_name"),
+                Error::missing_field("UseEventDecl", "source_name"),
+                Error::missing_field("UseEventDecl", "target_name"),
             ])),
         },
         test_validate_uses_invalid_identifiers => {
@@ -1700,6 +1711,10 @@ mod tests {
                         type_: Some(StorageType::Meta),
                         target_path: Some("/meta".to_string()),
                     }),
+                    UseDecl::Event(UseEventDecl {
+                        source_name: Some("/foo".to_string()),
+                        target_name: Some("/foo".to_string()),
+                    }),
                 ]);
                 decl
             },
@@ -1716,6 +1731,8 @@ mod tests {
                 Error::invalid_field("UseDirectoryDecl", "subdir"),
                 Error::invalid_field("UseStorageDecl", "target_path"),
                 Error::invalid_field("UseStorageDecl", "target_path"),
+                Error::invalid_character_in_field("UseEventDecl", "source_name", '/'),
+                Error::invalid_character_in_field("UseEventDecl", "target_name", '/'),
             ])),
         },
         test_validate_uses_multiple_runners => {
@@ -1763,6 +1780,10 @@ mod tests {
                     UseDecl::Runner(UseRunnerDecl {
                         source_name: Some(format!("{}", "a".repeat(101))),
                     }),
+                    UseDecl::Event(UseEventDecl {
+                        source_name: Some(format!("{}", "a".repeat(101))),
+                        target_name: Some(format!("{}", "a".repeat(101)))
+                    }),
                 ]);
                 decl
             },
@@ -1775,6 +1796,8 @@ mod tests {
                 Error::field_too_long("UseDirectoryDecl", "target_path"),
                 Error::field_too_long("UseStorageDecl", "target_path"),
                 Error::field_too_long("UseRunnerDecl", "source_name"),
+                Error::field_too_long("UseEventDecl", "source_name"),
+                Error::field_too_long("UseEventDecl", "target_name"),
             ])),
         },
 

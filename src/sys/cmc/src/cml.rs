@@ -271,6 +271,7 @@ pub struct Use {
     pub r#as: Option<String>,
     pub rights: Option<Vec<String>>,
     pub subdir: Option<String>,
+    pub event: Option<String>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -348,6 +349,7 @@ pub trait CapabilityClause {
     fn storage(&self) -> &Option<String>;
     fn runner(&self) -> &Option<String>;
     fn resolver(&self) -> &Option<Name>;
+    fn event(&self) -> &Option<String>;
 
     /// Returns the name of the capability for display purposes.
     /// If `service()` returns `Some`, the capability name must be "service", etc.
@@ -377,6 +379,9 @@ impl CapabilityClause for Use {
     fn resolver(&self) -> &Option<Name> {
         &None
     }
+    fn event(&self) -> &Option<String> {
+        &self.event
+    }
     fn capability_name(&self) -> &'static str {
         if self.service.is_some() {
             "service"
@@ -388,6 +393,8 @@ impl CapabilityClause for Use {
             "storage"
         } else if self.runner.is_some() {
             "runner"
+        } else if self.event.is_some() {
+            "event"
         } else {
             ""
         }
@@ -426,6 +433,9 @@ impl CapabilityClause for Expose {
     }
     fn resolver(&self) -> &Option<Name> {
         &self.resolver
+    }
+    fn event(&self) -> &Option<String> {
+        &None
     }
     fn capability_name(&self) -> &'static str {
         if self.service.is_some() {
@@ -474,6 +484,10 @@ impl CapabilityClause for Offer {
     }
     fn resolver(&self) -> &Option<Name> {
         &self.resolver
+    }
+    fn event(&self) -> &Option<String> {
+        // TODO(fxb/47276): allow to offer events
+        &None
     }
     fn capability_name(&self) -> &'static str {
         if self.service.is_some() {

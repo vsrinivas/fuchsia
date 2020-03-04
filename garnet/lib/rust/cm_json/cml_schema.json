@@ -158,6 +158,11 @@
             "required": [
               "runner"
             ]
+          },
+          {
+            "required": [
+              "event"
+            ]
           }
         ],
         "properties": {
@@ -224,6 +229,18 @@
               "elf"
             ]
           },
+          "event": {
+            "title": "Used event name",
+            "description": "The name of the event",
+            "allOf": [
+                {
+                    "$ref": "#/definitions/name-clause"
+                }
+            ],
+            "examples": [
+                "started"
+            ]
+          },
           "from": {
             "title": "Used capability source",
             "pattern": "^(realm|framework)$",
@@ -236,9 +253,12 @@
           "as": {
             "title": "Used capability target path",
             "description": "The path to which the capability will be installed in the component's incoming namespace. Defaults to \"service\"/\"directory\". May not be specified for runners.",
-            "allOf": [
+            "oneOf": [
               {
                 "$ref": "#/definitions/path-clause"
+              },
+              {
+                "$ref": "#/definitions/name-clause"
               }
             ],
             "examples": [
