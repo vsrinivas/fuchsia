@@ -3,7 +3,11 @@
 // found in the LICENSE file.
 package main
 
-// #include "dnssdfinder.h"
+/*
+#include "dnssdfinder.h"
+#include <errno.h>
+#include <string.h>
+*/
 import "C"
 
 import (
@@ -14,6 +18,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"syscall"
 	"unsafe"
 )
 
@@ -34,21 +39,21 @@ type dnsSDRef struct {
 	cptr *C.DNSServiceRef
 }
 
-type dnsRefAllocator func(cptr unsafe.Pointer) int
+type dnsRefAllocator func(cptr unsafe.Pointer) dnsSDError
 
-func defaultDNSRefAlloc(cptr unsafe.Pointer) int {
-	return int(C.dnsAllocate((*C.DNSServiceRef)(cptr)))
+func defaultDNSRefAlloc(cptr unsafe.Pointer) dnsSDError {
+	return dnsSDError(C.dnsAllocate((*C.DNSServiceRef)(cptr)))
 }
 
-func newDNSSDRef(allocator dnsRefAllocator) (*dnsSDRef, int) {
+func newDNSSDRef(allocator dnsRefAllocator) (*dnsSDRef, dnsSDError) {
 	if allocator == nil {
 		allocator = defaultDNSRefAlloc
 	}
 	var cptr C.DNSServiceRef
 	d := &dnsSDRef{}
 	d.cptr = &cptr
-	if cerr := allocator(unsafe.Pointer(d.cptr)); cerr != 0 {
-		return nil, cerr
+	if err := allocator(unsafe.Pointer(d.cptr)); err != dnsSDNoError {
+		return nil, err
 	}
 	runtime.SetFinalizer(d, freeDNSSDRef)
 	return d, 0
@@ -63,10 +68,25 @@ func freeDNSSDRef(d *dnsSDRef) {
 	}
 }
 
+type pollingFunction func(*dnsSDContext, int) (bool, syscall.Errno)
+
+func defaultPollingFunction(d *dnsSDContext, timeout int) (bool, syscall.Errno) {
+	var errno C.int
+	res := C.dnsPollDaemon(*d.ref.cptr, daemonPollTimeoutMs, &errno)
+	if res < 0 {
+		return false, syscall.Errno(errno)
+	}
+	if res == 0 {
+		return false, 0
+	}
+	return true, 0
+}
+
 type dnsSDContext struct {
-	ref    *dnsSDRef
-	finder *dnsSDFinder
-	idx    uintptr
+	ref         *dnsSDRef
+	finder      *dnsSDFinder
+	idx         uintptr
+	pollingFunc pollingFunction
 }
 
 var (
@@ -81,11 +101,11 @@ var (
 func newDNSSDContext(m *dnsSDFinder, allocator dnsRefAllocator) *dnsSDContext {
 	cm.Lock()
 	defer cm.Unlock()
-	dnsSDRef, cerr := newDNSSDRef(allocator)
-	if cerr != 0 {
+	dnsSDRef, err := newDNSSDRef(allocator)
+	if err != dnsSDNoError {
 		go func() {
 			m.deviceChannel <- &fuchsiaDevice{
-				err: fmt.Errorf("allocating DNS-SD ref returned %v", cerr),
+				err: fmt.Errorf("allocating DNS-SD ref returned %w", err),
 			}
 		}()
 		return nil
@@ -100,23 +120,47 @@ func newDNSSDContext(m *dnsSDFinder, allocator dnsRefAllocator) *dnsSDContext {
 	return ctx
 }
 
+func (d *dnsSDContext) pollWrapper() (bool, syscall.Errno) {
+	if d.pollingFunc != nil {
+		return d.pollingFunc(d, daemonPollTimeoutMs)
+	}
+	return defaultPollingFunction(d, daemonPollTimeoutMs)
+}
+
 // poll polls the daemon, firing off callbacks if necessary.
 func (d *dnsSDContext) poll() {
-	res := C.dnsPollDaemon(*d.ref.cptr, daemonPollTimeoutMs)
-	if res > 0 {
-		if cerr := C.dnsProcessResults(*d.ref.cptr); cerr != 0 {
+	var results bool
+	var errno syscall.Errno
+	for {
+		results, errno = d.pollWrapper()
+		if errno != 0 {
+			// `Timeout()` is a subset of the checks included in
+			// `Temporary()` and must be checked first.
+			if errno.Timeout() {
+				return
+			}
+			if errno.Temporary() {
+				continue
+			}
 			go func() {
 				d.finder.deviceChannel <- &fuchsiaDevice{
-					err: fmt.Errorf("dns-sd process results returned: %v", cerr),
+					err: fmt.Errorf("polling dns-sd daemon: %w", errno),
+				}
+			}()
+			return
+		}
+
+		break
+	}
+
+	if results {
+		if err := dnsSDError(C.dnsProcessResults(*d.ref.cptr)); err != dnsSDNoError {
+			go func() {
+				d.finder.deviceChannel <- &fuchsiaDevice{
+					err: fmt.Errorf("dns-sd process results returned: %w", err),
 				}
 			}()
 		}
-	} else if res < 0 {
-		go func() {
-			d.finder.deviceChannel <- &fuchsiaDevice{
-				err: fmt.Errorf("polling dns-sd daemon: %v", res),
-			}
-		}()
 	}
 }
 
@@ -149,10 +193,10 @@ func (m *dnsSDFinder) dnsSDResolve(nodename string) {
 	resolveString := fmt.Sprintf("%s.%s", nodename, "local")
 	cString := C.CString(resolveString)
 	defer C.free(unsafe.Pointer(cString))
-	if res := C.dnsResolve(cString, dctx.ref.cptr, C.bool(m.cmd.ipv4), C.bool(m.cmd.ipv6), unsafe.Pointer(dctx.idx)); res != 0 {
+	if err := dnsSDError(C.dnsResolve(cString, dctx.ref.cptr, C.bool(m.cmd.ipv4), C.bool(m.cmd.ipv6), unsafe.Pointer(dctx.idx))); err != dnsSDNoError {
 		go func() {
 			dctx.finder.deviceChannel <- &fuchsiaDevice{
-				err: fmt.Errorf("received error %d from dnsResolve", res),
+				err: fmt.Errorf("received error from dnsResolve: %w", err),
 			}
 		}()
 		return
@@ -167,10 +211,10 @@ func (m *dnsSDFinder) dnsSDBrowse(ctx context.Context) {
 	}
 	cString := C.CString(fuchsiaMDNSServiceMac)
 	defer C.free(unsafe.Pointer(cString))
-	if res := C.dnsBrowse(cString, dctx.ref.cptr, unsafe.Pointer(dctx.idx)); res != 0 {
+	if err := dnsSDError(C.dnsBrowse(cString, dctx.ref.cptr, unsafe.Pointer(dctx.idx))); err != dnsSDNoError {
 		go func() {
 			m.deviceChannel <- &fuchsiaDevice{
-				err: fmt.Errorf("dnsBrowse returned %d", res),
+				err: fmt.Errorf("dnsBrowse: %w", err),
 			}
 		}()
 		return
@@ -211,11 +255,11 @@ func newDNSSDFinder(cmd *devFinderCmd) *dnsSDFinder {
 	return &dnsSDFinder{deviceFinderBase{cmd: cmd}, nil, wg}
 }
 
-func browseCallback(cerr int, nodename string, dctx *dnsSDContext) {
-	if cerr != 0 {
+func browseCallback(err dnsSDError, nodename string, dctx *dnsSDContext) {
+	if err != dnsSDNoError {
 		go func() {
 			dctx.finder.deviceChannel <- &fuchsiaDevice{
-				err: fmt.Errorf("dns-sd browse callback error: %v", cerr),
+				err: fmt.Errorf("dns-sd browse callback error: %w", err),
 			}
 		}()
 		return
@@ -223,11 +267,11 @@ func browseCallback(cerr int, nodename string, dctx *dnsSDContext) {
 	dctx.finder.dnsSDResolve(nodename)
 }
 
-func resolveCallback(cerr int, hostname, ipString string, iface *net.Interface, dctx *dnsSDContext) {
-	if cerr != 0 {
+func resolveCallback(err dnsSDError, hostname, ipString string, iface *net.Interface, dctx *dnsSDContext) {
+	if err != dnsSDNoError {
 		go func() {
 			dctx.finder.deviceChannel <- &fuchsiaDevice{
-				err: fmt.Errorf("dns-sd browse callback error: %v", cerr),
+				err: fmt.Errorf("dns-sd browse callback error: %w", err),
 			}
 		}()
 		return
@@ -235,7 +279,7 @@ func resolveCallback(cerr int, hostname, ipString string, iface *net.Interface, 
 	if net.ParseIP(ipString) == nil {
 		go func() {
 			dctx.finder.deviceChannel <- &fuchsiaDevice{
-				err: fmt.Errorf("unable to parse IP received from dns-sd %v", ipString),
+				err: fmt.Errorf("unable to parse IP received from dns-sd %s", ipString),
 			}
 		}()
 		return
@@ -265,12 +309,12 @@ func resolveCallback(cerr int, hostname, ipString string, iface *net.Interface, 
 //////// C Callbacks
 
 //export browseCallbackGoFunc
-func browseCallbackGoFunc(cerr C.int, replyName *C.char, idx unsafe.Pointer) {
-	browseCallback(int(cerr), C.GoString(replyName), getDNSSDContext(uintptr(idx)))
+func browseCallbackGoFunc(err C.int, replyName *C.char, idx unsafe.Pointer) {
+	browseCallback(dnsSDError(err), C.GoString(replyName), getDNSSDContext(uintptr(idx)))
 }
 
 //export resolveCallbackGoFunc
-func resolveCallbackGoFunc(cerr C.int, fullname, ip *C.char, zoneIdx uint32, idx unsafe.Pointer) {
+func resolveCallbackGoFunc(err C.int, fullname, ip *C.char, zoneIdx uint32, idx unsafe.Pointer) {
 	dctx := getDNSSDContext(uintptr(idx))
 	var iface *net.Interface
 	if zoneIdx > 0 {
@@ -279,11 +323,11 @@ func resolveCallbackGoFunc(cerr C.int, fullname, ip *C.char, zoneIdx uint32, idx
 		if err != nil {
 			go func() {
 				dctx.finder.deviceChannel <- &fuchsiaDevice{
-					err: fmt.Errorf("error getting iface: %v", err),
+					err: fmt.Errorf("error getting iface: %w", err),
 				}
 			}()
 			return
 		}
 	}
-	resolveCallback(int(cerr), C.GoString(fullname), C.GoString(ip), iface, dctx)
+	resolveCallback(dnsSDError(err), C.GoString(fullname), C.GoString(ip), iface, dctx)
 }

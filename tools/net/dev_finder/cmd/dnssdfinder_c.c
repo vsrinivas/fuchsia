@@ -7,6 +7,7 @@
 
 #ifdef __APPLE__
 #include <arpa/inet.h>
+#include <errno.h>
 #include <netinet/in.h>
 #include <stdio.h>
 #include <sys/select.h>
@@ -43,7 +44,7 @@ int dnsBrowse(char *domain, DNSServiceRef *ref, void *ctx) {
 
 int dnsProcessResults(DNSServiceRef ref) { return DNSServiceProcessResult(ref); }
 
-int dnsPollDaemon(DNSServiceRef ref, int timeout_milliseconds) {
+int dnsPollDaemon(DNSServiceRef ref, int timeout_milliseconds, int *err_out) {
   int fd = DNSServiceRefSockFD(ref);
   int nfds = fd + 1;
   struct timeval tv;
@@ -58,6 +59,9 @@ int dnsPollDaemon(DNSServiceRef ref, int timeout_milliseconds) {
   } else if (result == 0) {
     return 0;
   } else {
+    if (err_out != NULL) {
+      *err_out = errno;
+    }
     return -1;
   }
 }
@@ -101,7 +105,7 @@ int dnsProcessResults(DNSServiceRef ref) {
   return -1;
 }
 
-int dnsPollDaemon(DNSServiceRef ref, int timeout_milliseconds) {
+int dnsPollDaemon(DNSServiceRef ref, int timeout_milliseconds, int *err_out) {
   fprintf(stderr, "dnsPollDaemon must be compiled and invoked on darwin\n");
   return -1;
 }

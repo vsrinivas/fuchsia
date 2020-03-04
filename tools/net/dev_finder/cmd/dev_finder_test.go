@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"testing"
 	"time"
 	"unsafe"
@@ -42,6 +43,8 @@ const defaultNetbootNodename = "this-is-a-netboot-device-1"
 // the available API. This is a hack that makes errors occur when `Start()` is
 // called with this port to the `fakeMDNS` struct.
 const failurePort = 999999
+
+const pollTestTimeout = time.Second
 
 type nbDiscoverFunc func(chan<- *netboot.Target, string, bool) (func() error, error)
 
@@ -948,7 +951,7 @@ func TestDNSContextStoreAndLookup(t *testing.T) {
 			t.Helper()
 			defer w.Done()
 			want := fmt.Sprintf("%v", i)
-			ctx := newDNSSDContext(makeDNSSDFinderForTest(want), func(_ unsafe.Pointer) int { return 0 })
+			ctx := newDNSSDContext(makeDNSSDFinderForTest(want), func(unsafe.Pointer) dnsSDError { return 0 })
 			ctx = getDNSSDContext(ctx.idx)
 			got := <-ctx.finder.deviceChannel
 			if want != got.domain {
@@ -962,11 +965,238 @@ func TestDNSContextStoreAndLookup(t *testing.T) {
 func TestDNSContextStoreAndLookup_badAllocCall(t *testing.T) {
 	f := makeDNSSDFinderForTest(fuchsiaMDNSNodename1)
 	<-f.deviceChannel // flush out unused value.
-	ctx := newDNSSDContext(f, func(_ unsafe.Pointer) int { return -1 })
+	ctx := newDNSSDContext(f, func(unsafe.Pointer) dnsSDError { return -1 })
 	if ctx != nil {
 		t.Errorf("expecting nil context")
 	}
 	if target := <-f.deviceChannel; target.err == nil {
 		t.Errorf("expecting no error from channel")
+	}
+}
+
+func TestDNSSDErrorMessages(t *testing.T) {
+	for _, test := range []struct {
+		err      dnsSDError
+		expected string
+	}{
+		{
+			dnsSDNoError,
+			"NoError",
+		},
+		{
+			dnsSDUnknown,
+			"Unknown",
+		},
+		{
+			dnsSDNoSuchName,
+			"NoSuchName",
+		},
+		{
+			dnsSDNoMemory,
+			"NoMemory",
+		},
+		{
+			dnsSDBadParam,
+			"BadParam",
+		},
+		{
+			dnsSDBadReference,
+			"BadReference",
+		},
+		{
+			dnsSDBadState,
+			"BadState",
+		},
+		{
+			dnsSDBadFlags,
+			"BadFlags",
+		},
+		{
+			dnsSDUnsupported,
+			"Unsupported",
+		},
+		{
+			dnsSDNotInitialized,
+			"NotInitialized",
+		},
+		{
+			dnsSDAlreadyRegistered,
+			"AlreadyRegistered",
+		},
+		{
+			dnsSDNameConflict,
+			"NameConflict",
+		},
+		{
+			dnsSDInvalid,
+			"Invalid",
+		},
+		{
+			dnsSDFirewall,
+			"Firewall",
+		},
+		{
+			dnsSDIncompatible,
+			"Incompatible",
+		},
+		{
+			dnsSDBadInterfaceIndex,
+			"BadInterfaceIndex",
+		},
+		{
+			dnsSDRefused,
+			"Refused",
+		},
+		{
+			dnsSDNoSuchRecord,
+			"NoSuchRecord",
+		},
+		{
+			dnsSDNoAuth,
+			"NoAuth",
+		},
+		{
+			dnsSDNoSuchKey,
+			"NoSuchKey",
+		},
+		{
+			dnsSDNATTraversal,
+			"NATTraversal",
+		},
+		{
+			dnsSDDoubleNAT,
+			"DoubleNAT",
+		},
+		{
+			dnsSDBadTime,
+			"BadTime",
+		},
+		{
+			dnsSDBadSig,
+			"BadSig",
+		},
+		{
+			dnsSDBadKey,
+			"BadKey",
+		},
+		{
+			dnsSDTransient,
+			"Transient",
+		},
+		{
+			dnsSDServiceNotRunning,
+			"ServiceNotRunning",
+		},
+		{
+			dnsSDNATPortMappingUnsupported,
+			"NATPortMappingUnsupported",
+		},
+		{
+			dnsSDNATPortMappingDisabled,
+			"NATPortMappingDisabled",
+		},
+		{
+			dnsSDNoRouter,
+			"NoRouter",
+		},
+		{
+			dnsSDPollingMode,
+			"PollingMode",
+		},
+		{
+			dnsSDTimeout,
+			"Timeout",
+		},
+		{
+			dnsSDError(-3),
+			"Unrecognized Error Code: -3",
+		},
+		{
+			dnsSDError(5),
+			"Unrecognized Error Code: 5",
+		},
+	} {
+		if test.err.Error() != test.expected {
+			t.Errorf("expected %q for error code %d, got %q", test.expected, int32(test.err), test.err.Error())
+		}
+	}
+}
+
+func TestDNSSDPollErrors(t *testing.T) {
+	for _, test := range []struct {
+		name        string
+		results     []syscall.Errno
+		expectedErr syscall.Errno
+	}{
+		{
+			name: "eintr and eagain",
+			results: []syscall.Errno{
+				syscall.EINTR,
+				syscall.EINTR,
+				syscall.EINTR,
+				syscall.EAGAIN,
+			},
+			expectedErr: 0,
+		},
+		{
+			name: "eintr to non-err",
+			results: []syscall.Errno{
+				syscall.EINTR,
+				0,
+			},
+			expectedErr: 0,
+		},
+		{
+			name: "eagain",
+			results: []syscall.Errno{
+				syscall.EAGAIN,
+			},
+			expectedErr: 0,
+		},
+		{
+			name: "eintr to fatal error",
+			results: []syscall.Errno{
+				syscall.EINTR,
+				syscall.EINVAL,
+			},
+			expectedErr: syscall.EINVAL,
+		},
+		{
+			name: "badf",
+			results: []syscall.Errno{
+				syscall.EBADF,
+			},
+			expectedErr: syscall.EBADF,
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			f := makeDNSSDFinderForTest(fuchsiaMDNSNodename1)
+			// This value is unused outside of verifying that storage/lookup of a
+			// DNS-SD context is working.
+			<-f.deviceChannel
+			dctx := newDNSSDContext(f, func(unsafe.Pointer) dnsSDError { return 0 })
+			resultIdx := 0
+			dctx.pollingFunc = func(d *dnsSDContext, timeout int) (bool, syscall.Errno) {
+				res := test.results[resultIdx]
+				resultIdx += 1
+				// Don't return ready as we're not intending to process results ever.
+				return false, res
+			}
+			// This can crash if one of the above test cases isn't setup properly, e.g.
+			// an error intended to return from the polling function (EAGAIN) causing
+			// the polling function to contine looping would create an index out of
+			// bounds error.
+			dctx.poll()
+			if test.expectedErr != 0 {
+				select {
+				case <-time.After(pollTestTimeout):
+					t.Fatal("timeout")
+				case chErr := <-f.deviceChannel:
+					if err := chErr.err; !errors.Is(err, test.expectedErr) {
+						t.Fatalf("expected error %q received %q", test.expectedErr, err)
+					}
+				}
+			}
+		})
 	}
 }
