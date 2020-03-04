@@ -1,0 +1,39 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.lowpan.device;
+
+using fuchsia.lowpan;
+
+/// Protocol for returning the results of a network scan operation.
+///
+/// Closing the client end of an instance of this protocol will effectively
+/// cancel the scan operation.
+protocol BeaconInfoStream {
+    /// Called to fetch the next set of received beacons.
+    ///
+    /// The last set will have zero items. Once all received
+    /// beacons have been returned, this channel will close.
+    Next() -> (vector<fuchsia.lowpan.BeaconInfo>:MAX_STREAM_SET_SIZE beacons);
+};
+
+/// Describes the parameters of a network scan.
+table NetworkScanParameters {
+    /// Subset of channels to scan.
+    ///
+    /// If unspecified, all channels will be scanned.
+    1: vector<ChannelIndex>:fuchsia.lowpan.MAX_CHANNELS channels;
+
+    /// Transmit power (in dBm to the antenna) for transmitting
+    /// beacon requests.
+    ///
+    /// Note that hardware limitations may cause the actual
+    /// used transmit power to differ from what is specified.
+    /// In that case the used transmit power will always be
+    /// the highest available transmit power that is less than
+    /// the specified transmit power. If the desired transmit
+    /// power is lower than the lowest transmit power supported
+    /// by the hardware, then that will be used instead.
+    2: int32 tx_power_dbm;
+};

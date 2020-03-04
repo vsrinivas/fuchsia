@@ -1,0 +1,48 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.lowpan.test;
+
+using fuchsia.lowpan;
+
+protocol DeviceTest {
+    /// Resets this network interface, returning
+    /// all volatile state to default values. Any
+    /// information stored in non-volatile memory
+    /// is preserved. If the interface was attached
+    /// to a network, this method will cause the
+    /// interface to detach. In that case, once the
+    /// interface has finished initialization the
+    /// interface will attempt to reattach to the
+    /// previous network.
+    Reset() -> ();
+
+    /// Returns the version string describing the firmware/stack
+    /// version that is in use.
+    GetNcpVersion() -> (string:256 version);
+
+    /// Returns the current RSSI measured by the radio.
+    GetCurrentRssi() -> (int32 rssi);
+
+    /// Returns the factory-assigned static MAC address.
+    GetFactoryMacAddress() -> (bytes:8 address);
+
+    /// Returns the currently used MAC address, which can
+    /// differ from the static factory-assigned MAC address.
+    GetCurrentMacAddress() -> (bytes:8 address);
+
+    /// Returns the current channel index for the radio.
+    GetCurrentChannel() -> (fuchsia.lowpan.ChannelIndex channel_index);
+
+    /// Returns the partition ID of the currently associated
+    /// network partition.
+    GetPartitionId() -> (uint32 pid);
+
+    GetThreadRloc16() -> (uint16 rloc);
+
+    GetThreadRouterId() -> (uint8 router_id);
+
+    // TODO(fxb/44678): Get Neighbor Table
+    // TODO(fxb/44680): Get/Insert/Remove Filterlist
+};

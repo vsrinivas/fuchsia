@@ -4,7 +4,11 @@
 
 library fuchsia.lowpan;
 
-struct ChannelInfo {
+table ChannelInfo {
+    /// The index used by the interface to identify
+    /// this channel.
+    1: ChannelIndex index;
+
     /// Human-readable identifier for channel.
     ///
     /// For most network types, this is just
@@ -21,15 +25,11 @@ struct ChannelInfo {
     ///  * Numbers (`0`-`9`)
     ///  * Letters (`a`-`z`, `A`-`Z`)
     ///
-    string:16 id;
-
-    /// The index used by the interface to identify
-    /// this channel.
-    uint16 index;
+    2: string:16 id;
 
     /// The maximum transmit power allowed on
     /// this channel, in dBm.
-    int32 max_transmit_power;
+    3: int32 max_transmit_power;
 
     /// The center RF frequency of this channel, in Hz.
     ///
@@ -53,7 +53,7 @@ struct ChannelInfo {
     /// 24      | 2,470,000,000
     /// 25      | 2,475,000,000
     /// 26      | 2,480,000,000
-    uint64 spectrum_center_frequency;
+    4: uint64 spectrum_center_frequency;
 
     /// The RF spectrum bandwidth used by this
     /// channel where the power level is expected to
@@ -61,10 +61,10 @@ struct ChannelInfo {
     ///
     /// For example, 802.15.4 channels 11 thru 26 would
     /// have the value 2,000,000 (2 MHz).
-    uint64 spectrum_bandwidth;
+    5: uint64 spectrum_bandwidth;
 
     /// Indicates if this channel is masked by the
     /// current regulatory domain and is thus unable
     /// to be used.
-    bool masked_by_regulatory_domain;
+    6: bool masked_by_regulatory_domain;
 };

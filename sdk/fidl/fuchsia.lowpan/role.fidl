@@ -4,6 +4,9 @@
 
 library fuchsia.lowpan;
 
+/// LoWPAN Role Type.
+///
+/// This type describes the role a device can assume on a network.
 enum Role : int32 {
     /// Detached role. The interface is not
     /// currently participating on the network,

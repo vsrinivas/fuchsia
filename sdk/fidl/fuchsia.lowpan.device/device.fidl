@@ -1,0 +1,242 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.lowpan.device;
+
+using fuchsia.lowpan;
+
+/// Combined State for LoWPAN Devices
+///
+/// Contains the various properties of a LoWPAN device
+/// that define its current operational state.
+///
+/// You will get a snapshot of the current state upon the first
+/// invocation of `WatchDeviceState()`, after which future
+/// invocations of that method will return deltas.
+table DeviceState {
+    /// LoWPAN Connectivity State
+    ///
+    /// This field describes the current level of connectivity being
+    /// provided by this device.
+    1: fuchsia.lowpan.ConnectivityState connectivity_state;
+
+    /// LoWPAN Role
+    ///
+    /// This field describes the current role this device is taking
+    /// on the current network.
+    2: fuchsia.lowpan.Role role;
+};
+
+/// LoWPAN Device Protocol.
+///
+/// This protocol provides clients with a way to control and
+/// monitor the device.
+///
+/// Note that aspects of the device that deal with PII must
+/// be monitored and controlled via the `DeviceExtra` protocol.
+protocol Device {
+    /// Provision the interface for the network described by identity
+    /// and credential. This is similar to `JoinNetwork`, except that
+    /// (assuming the identity and credential are valid) it will (assuming
+    /// all preconditions are met) always succeed, even if there are no
+    /// peers nearby.
+    ///
+    /// The following fields of `ProvisioningParams` MUST
+    /// be specified:
+    ///
+    /// * `identity.raw_name`
+    /// * `identity.xpanid`
+    /// * `identity.panid`
+    /// * `identity.channel_index`
+    /// * `credential`
+    ///
+    /// If any of the required fields are unspecified, the
+    /// channel will be closed with the epitaph `ZX_ERR_INVALID_ARGUMENT`.
+    ///
+    /// Additionally, if the `identity.net_type` field is present
+    /// and does not match a network type supported by this device,
+    /// the channel will also be closed with the epitaph `ZX_ERR_NOT_SUPPORTED`.
+    ///
+    /// This method returns once the device has been reconfigured successfully.
+    /// The resulting change in state can be monitored via `WatchDeviceState()`.
+    /// Any error that prevents the operation from completing successfully
+    /// will result in the protocol being closed.
+    ProvisionNetwork(fuchsia.lowpan.ProvisioningParams params) -> ();
+
+    /// Bring down the network interface and forget
+    /// all non-volatile details about the current network.
+    ///
+    /// Upon completion, all non-volatile and transient state
+    /// about the current network is cleared and the interface
+    /// will be offline.
+    ///
+    /// Specifically, calling this method will cause the following
+    /// observable effects:
+    ///
+    /// * `DeviceState.connectivity_state` will transition
+    ///   to `State::OFFLINE`, assuming it wasn't in that state already.
+    /// * `DeviceExtra::WatchIdentity` will emit an empty `Identity`,
+    ///   assuming it wasn't already empty.
+    ///
+    /// If the interface was not previously provisioned,
+    /// calling this method does nothing.
+    LeaveNetwork() -> ();
+
+    /// Activate ("bring-up") or deactivate ("shut-down") the
+    /// network interface.
+    ///
+    /// Note that simply setting this to `true` does not mean that
+    /// the network interface will necessarily become online and usable,
+    /// see the `connectivity_state` field of the `DeviceState` table for
+    /// more information.
+    ///
+    /// This method returns once the operation has completed successfully.
+    /// The resulting change in state can be monitored via `WatchDeviceState()`.
+    /// Any error that prevents the operation from completing successfully
+    /// will result in the protocol being closed.
+    SetActive(bool active) -> ();
+
+    /// Returns the types of networks supported by this interface.
+    ///
+    /// LoWPAN devices typically only support a single network type,
+    /// but some devices may support more than one. Up to `MAX_NETWORK_TYPES`
+    /// network types may be returned.
+    GetSupportedNetworkTypes()
+        -> (vector<fuchsia.lowpan.NetworkType>:MAX_NETWORK_TYPES network_types);
+
+    /// Returns a vector of information about the
+    /// channels supported by this interface.
+    GetSupportedChannels()
+        -> (vector<fuchsia.lowpan.ChannelInfo>:fuchsia.lowpan.MAX_CHANNELS channels_info);
+
+    /// Observes changes to the `DeviceState`.
+    ///
+    /// First call always returns a snapshot of the current state.
+    /// Subsequent calls will block until the state has changed
+    /// and returns the delta against the device's internal state.
+    ///
+    /// Changes are not queued. The returned value always represents
+    /// the latest and most accurate state values, even if several changes
+    /// had happened in-between calls.
+    WatchDeviceState() -> (DeviceState device_combined_state);
+};
+
+/// LoWPAN Device "Extra" Protocol.
+///
+/// This protocol provides clients with a way to control and
+/// monitor aspects of the LoWPAN device that can, either
+/// directly or indirectly, leak PII or cryptographic keys.
+protocol DeviceExtra {
+    // *****************************************************
+    // ALL METHODS IN THIS CLASS DEAL WITH PII.
+    // *****************************************************
+
+    /// Forms a new network with the given provisioning parameters.
+    ///
+    /// Any unspecified fields that are required by the underlying
+    /// device or network type will assigned with default values.
+    /// If the credential is unspecified, a random one will be
+    /// generated automatically.
+    ///
+    /// This method will cause the device to leave any previously
+    /// provisioned network.
+    ///
+    /// Calling this method while the device is not active will
+    /// implicitly make the device active.
+    ///
+    /// Upon success, the device will be active and provisioned
+    /// for the newly created network.
+    ///
+    /// The progress of the operation can be monitored via
+    /// the `ProvisioningMonitor` protocol instance. The operation
+    /// may be cancelled by closing the `ProvisioningMonitor`.
+    FormNetwork(fuchsia.lowpan.ProvisioningParams params, request<ProvisioningMonitor> progress);
+
+    /// Attempts to join a pre-existing nearby network
+    /// with the given provisioning parameters.
+    ///
+    /// Upon success, the device will be active and provisioned
+    /// for the newly created network.
+    ///
+    /// The progress of the operation can be monitored via
+    /// the `ProvisioningMonitor` protocol instance. The operation
+    /// may be cancelled by closing the `ProvisioningMonitor`.
+    JoinNetwork(fuchsia.lowpan.ProvisioningParams params, request<ProvisioningMonitor> progress);
+
+    /// Fetches the current credential.
+    ///
+    /// The returned credential will have originated from a previous call
+    /// to `ProvisionNetwork`, `JoinNetwork`, or `FormNetwork`. If the
+    /// device is not provisioned (for example, by calling `LeaveNetwork()`)
+    /// then this method returns nothing.
+    GetCredential() -> (fuchsia.lowpan.Credential? credential);
+
+    /// Starts an energy scan operation.
+    ///
+    /// This can be used for surveying the spectrum to identify channels
+    /// that should be avoided.
+    ///
+    /// The scan operation may be cancelled by closing the stream protocol.
+    ///
+    /// If a scan is started while another scan is in progress,
+    /// the previous scan is allowed to complete before
+    /// the new scan executes and starts returning results.
+    ///
+    /// All scans should be expected to completely occupy the
+    /// LoWPAN device while it is in progress, preventing other operations
+    /// from completing until the scan has completed. Additionally, all
+    /// network packets should be expected to be dropped while a scan is
+    /// in progress.
+    ///
+    /// Performing energy scans could be used to profile the spectrum
+    /// energy for a location and thus be used to determine or refine coarse
+    /// location information.
+    StartEnergyScan(EnergyScanParameters params, request<EnergyScanResultStream> stream);
+
+    /// Starts an active network scan operation.
+    ///
+    /// This scan is used to identify other nearby networks in order
+    /// to identify channels that should be avoided.
+    ///
+    /// The scan operation may be cancelled by closing the stream protocol.
+    ///
+    /// If a scan is started while another scan is in progress,
+    /// the previous scan is allowed to complete before
+    /// the new scan executes and starts returning results.
+    ///
+    /// All scans should be expected to completely occupy the
+    /// LoWPAN device while it is in progress, preventing other operations
+    /// from completing until the scan has completed. Additionally, all
+    /// network packets should be expected to be dropped while a scan is
+    /// in progress.
+    ///
+    /// A `NetworkScanner` instance could be used to expose coarse
+    /// location information.
+    StartNetworkScan(NetworkScanParameters params, request<BeaconInfoStream> stream);
+
+    /// Observes changes to the current network identity.
+    ///
+    /// First call always returns a snapshot of the current identity.
+    /// Subsequent calls will block until the identity has changed,
+    /// upon which the entire updated identity is returned.
+    ///
+    /// If there is no identity currently associated with the
+    /// device, then the returned identity will be empty.
+    ///
+    /// Changes are not queued. The returned identity always represents
+    /// the latest and most accurate value, even if several changes
+    /// had happened in-between calls.
+    ///
+    /// Note that the changes are NOT incremental: whenever there
+    /// is a change, the entire current LoWPAN identity is returned.
+    ///
+    /// The value of the identity can be changed by any of the
+    /// following calls:
+    ///
+    /// * `Device.ProvisionNetwork()`
+    /// * `Device.LeaveNetwork()`
+    /// * `DeviceExtra.JoinNetwork()`
+    /// * `DeviceExtra.FormNetwork()`
+    WatchIdentity() -> (fuchsia.lowpan.Identity identity);
+};

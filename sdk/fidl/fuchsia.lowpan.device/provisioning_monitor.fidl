@@ -1,0 +1,56 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.lowpan.device;
+
+using fuchsia.lowpan;
+
+/// LoWPAN Provisioning Error
+///
+/// Returned by `ProvisioningMonitor.WatchProgress()`.
+enum ProvisionError : int32 {
+    /// Provisioning did not successfully complete because the
+    /// credential was rejected. For example, the key was incorrect.
+    ///
+    /// This may be interpreted as an argument error.
+    CREDENTIAL_REJECTED = 1;
+
+    /// Provisioning did not successfully complete because the
+    /// no peers on the requested network are in range.
+    NETWORK_NOT_FOUND = 2;
+
+    /// Forming a new network did not successfully complete because the
+    /// a peer with the requested network identity is in range.
+    NETWORK_ALREADY_EXISTS = 3;
+};
+
+/// Indicates the current status of the form/join operation.
+///
+/// Returned by `ProvisioningMonitor.WatchProgress()`.
+union ProvisioningProgress {
+    /// Approximate percent complete indication for a user interface.
+    1: float32 progress;
+
+    /// The final Identity when the operation has completed successfully.
+    2: fuchsia.lowpan.Identity identity;
+};
+
+/// Reports the progress of a provisioning operation like Join or Form.
+///
+/// If there was a problem with the arguments passed to the originating
+/// function (Join/Form) then the channel will be closed with `ZX_ERR_INVALID_ARGS`.
+protocol ProvisioningMonitor {
+    /// Call this method to receive an update on the provisioning progress.
+    ///
+    /// When first called, this method will return immediately with the
+    /// current status. On subsequent calls, it will block until the status
+    /// changes.
+    ///
+    /// If provisioning error is encountered, it is returned as a `ProvisionError`. See
+    /// the documentation for `ProvisionError` details on error handling.
+    ///
+    /// Once the method has either returned an identity or indicated a `ProvisionError`,
+    /// the ProvisioningMonitor will close with `ZX_OK`.
+    WatchProgress() -> (ProvisioningProgress progress) error ProvisionError;
+};

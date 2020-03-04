@@ -31,7 +31,7 @@ table Identity {
     3: string:MAX_NET_TYPE_LEN net_type;
 
     /// Channel Index.
-    4: uint16 channel;
+    4: ChannelIndex channel;
 
     /// PANID for 802.14.5-based networks (or the equivalent).
     5: uint16 panid;

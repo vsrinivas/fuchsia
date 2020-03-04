@@ -4,78 +4,103 @@
 
 library fuchsia.lowpan;
 
-enum State : int32 {
+/// LoWPAN Connectivity State
+///
+/// This enum describes the level of connectivity being provided
+/// by a device.
+enum ConnectivityState : int32 {
+    /// Inactive state.
+    ///
+    /// In this state the device is unprovisioned and administratively
+    /// disabled (inactive).
+    ///
+    /// This state can always be explicitly entered by calling `Leave`
+    /// followed by `SetActive(false)`.
+    INACTIVE = 1;
+
+    /// Ready state.
+    ///
+    /// In this state the device is provisioned for a network, but is
+    /// administratively disabled (inactive).
+    ///
+    /// This state can be directly entered with the following actions
+    /// based on the current connectivity state:
+    ///
+    /// * `INACTIVE`: by calling `ProvisionNetwork(...)`.
+    /// * `ATTACHING`, `ATTACHED`, `ISOLATED`, `COMMISSIONING`: by calling `SetActive(false)`.
+    READY = 2;
+
     /// Offline state.
     ///
-    /// This is the initial state of the LoWPAN
-    /// interface when the underlying driver starts.
-    /// In this state the NCP is idle and not
-    /// connected to any network.
+    /// In this state the device is administratively enabled (active)
+    /// but is not provisioned and thus has no network to attach to.
     ///
-    /// This state can be explicitly entered by
-    /// calling `Reset`, `Leave`, or `setUp(false)`,
-    /// with the later two only working if we were not
-    /// previously in `State::FAULT`.
-    OFFLINE = 1;
+    /// This state can be directly entered with the following actions
+    /// based on the current connectivity state:
+    ///
+    /// * `INACTIVE`: by calling `SetActive(true)`.
+    /// * `ATTACHING`, `ATTACHED`, `ISOLATED`, `COMMISSIONING`: by calling `Leave()`.
+    OFFLINE = 3;
 
     /// Attaching state.
     ///
-    /// The interface enters this state when it starts
-    /// the process of trying to find other nodes so
-    /// that it can attach to any pre-existing network
-    /// fragment, or when it is in the process of
-    /// calculating the optimal values for unspecified
-    /// parameters when forming a new network.
+    /// In this state the device is administratively enabled
+    /// (active) and either provisioned for a network or shortly
+    /// about to become provisioned for a network.
     ///
-    /// The interface may stay in this state for a
-    /// prolonged period of time (or may spontaneously
-    /// enter this state from `State::ATTACHED` if the
-    /// underlying network technology is hierarchical
-    /// (like ZigBee IP) or if the device role is that
-    /// of an "end-device" (`Role::END_DEVICE`). This
-    /// is because such roles cannot create their own
-    /// network fragments.
-    ATTACHING = 2;
+    /// The interface enters this state when it starts the process
+    /// of trying to find other nodes so that it can attach to any
+    /// pre-existing network fragment, or when it is in the process
+    /// of calculating the optimal values for unspecified parameters
+    /// when forming a new network.
+    ///
+    /// This state can be directly entered with the following actions
+    /// based on the current connectivity state:
+    ///
+    /// * `READY`: by calling `SetActive(true)`
+    /// * `OFFLINE`, `ATTACHING`, `ATTACHED`, `ISOLATED`, `COMMISSIONING`:
+    ///    by calling `ProvisionNetwork(...)`, `FormNetwork(...)`, or `JoinNetwork(...)`
+    ATTACHING = 4;
 
     /// Attached state.
     ///
-    /// This state indicates that we are an active
-    /// participant on a network that has at least one
-    /// other peer node in range.
+    /// In this state the device is both administratively enabled
+    /// (active) and provisioned for a network. The device is an
+    /// active participant on the network and can communicate with
+    /// peers.
     ///
-    /// The Interface can enter this state from
-    /// `State::ATTACHING`.
-    ATTACHED = 3;
+    /// This state usually implies that peers are available, but that
+    /// may not actually be the case due to current network conditions
+    /// or privacy-protecting measures.
+    ///
+    /// This state cannot generally be entered directly, rather
+    /// the device will enter this state automatically from the
+    /// `ATTACHING` or `ISOLATED` states once connectivity has been
+    /// (re)established.
+    ATTACHED = 5;
 
     /// Isolated state.
     ///
-    /// This state indicates that there are no nearby
-    /// nodes for the provisioned network in range.
-    /// Once other nodes come into range, the
-    /// interface will automatically switch to
-    /// `State::ATTACHED`.
+    /// In this state the device is both administratively enabled
+    /// (active) and provisioned for a network. However, the device
+    /// has no connectivity because there are no peers in range on
+    /// the provisioned network.
     ///
-    /// The interface can enter this state from either
-    /// `State::ATTACHING` or `State::ATTACHED`.
-    ISOLATED = 4;
-
-    /// Fault state.
+    /// Once peer devices on the same network come into range
+    /// the connectivity state will eventually switch back to
+    /// `ATTACHED`, indicating restored connectivity with at least
+    /// one peer.
     ///
-    /// The interface will enter this state when
-    /// the driver has detected some sort of problem
-    /// from which it was not immediately able to
-    /// recover.
-    ///
-    /// This state can be entered spontaneously from
-    /// any other state. Calling `Reset` will cause
-    /// the device to return to `State::OFFLINE`.
-    FAULT = 5;
+    /// This state cannot generally be entered directly, rather
+    /// the device may enter this state automatically from the
+    /// `ATTACHING` or `ATTACHED` states.
+    ISOLATED = 6;
 
     /// Commissioning state.
     ///
-    /// The interface enters this state after a call
-    /// to `startCommissioningSession(LowpanBeaconInfo)`.
-    /// This state may only be entered directly from
-    /// `State::OFFLINE`.
-    COMMISSIONING = 6;
+    /// Currently unused, but will later be used to
+    /// support in-band commissioning. It is usually appropriate
+    /// to consider this as a synonym for the `ATTACHING` state
+    /// except that the device remains unprovisioned.
+    COMMISSIONING = 7;
 };

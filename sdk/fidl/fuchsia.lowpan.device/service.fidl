@@ -1,0 +1,108 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.lowpan.device;
+
+using fuchsia.lowpan.test;
+
+const uint32 MAX_LOWPAN_DEVICES = 8;
+
+/// Type describing the name of the network interface.
+///
+/// Interface names must satisfy the following regular expression:
+///
+///     ^[a-z_][-_.+0-9a-z]{1,31}$
+///
+using InterfaceName = string:32;
+
+enum ServiceError : int32 {
+    /// One of the arguments to this method was invalid.
+    ///
+    /// This error is only returned if none of the other
+    /// error codes would be a better description.
+    INVALID_ARGUMENT = 1;
+
+    /// A device with this interface name has not been registered.
+    DEVICE_NOT_FOUND = 2;
+
+    /// A device with this interface name has already been registered.
+    DEVICE_ALREADY_EXISTS = 3;
+
+    /// The given interface name was invalid.
+    ///
+    /// See the documentation for `InterfaceName` for more details.
+    INVALID_INTERFACE_NAME = 4;
+
+    /// Too many LoWPAN devices have already been registered.
+    TOO_MANY_DEVICES = 5;
+};
+
+/// Table of protocol requests that is passed into `Lookup.Lookup()`
+/// and `Driver.GetProtocols()`.
+table Protocols {
+    1: request<Device> device;
+    2: request<DeviceExtra> device_extra;
+    3: request<fuchsia.lowpan.test.DeviceTest> device_test;
+};
+
+/// Struct describing changes to the devices being managed
+/// by the LoWPAN service.
+struct DeviceChanges {
+    vector<InterfaceName>:MAX_LOWPAN_DEVICES removed;
+    vector<InterfaceName>:MAX_LOWPAN_DEVICES added;
+};
+
+/// Protocol representing a LoWPAN driver instance.
+[Discoverable]
+protocol Driver {
+    /// Request protocols to control this device.
+    /// Unsupported protocols are closed.
+    GetProtocols(Protocols protocols);
+};
+
+/// Protocol for discovering and resolving LoWPAN interfaces and their
+/// associated control protocol instances.
+[Discoverable]
+protocol Lookup {
+    /// Looks up the LoWPAN `Device` for the given interface name.
+    ///
+    /// The name of the interface can be learned by calling `GetDevices()`.
+    LookupDevice(InterfaceName name, Protocols protocols) -> () error ServiceError;
+
+    /// Returns the list of all registered LoWPAN device interface names.
+    GetDevices() -> (vector<InterfaceName>:MAX_LOWPAN_DEVICES device_names);
+
+    /// Observes when devices are added or removed.
+    ///
+    /// The first call to this method returns immediately with a
+    /// `DeviceChanges` struct containing only items in the `added` field with
+    /// the names of all of the current devices. Subsequent calls
+    /// will block until a device has been added or removed, at which
+    /// point it will return with the `added` and/or `removed` fields
+    /// filled out accordingly. The changes are reported since the
+    /// time that the method returned.
+    ///
+    /// If both the `added` and `removed` fields have names in the returned
+    /// table, then the `removed` field MUST be processed BEFORE `added` field.
+    ///
+    /// If a device was added and then removed in-between calls to this
+    /// method, the device will be absent from both the `added` and `removed`
+    /// lists.
+    ///
+    /// If the same device name is listed on both the `added` and `removed`
+    /// fields, then the client should assume that the original device was
+    /// removed and a new device instance started in its place. However, while
+    /// the client should be able to handle this condition, it should not depend
+    /// on the server will always have this behavior.
+    WatchDevices() -> (DeviceChanges device_changes);
+};
+
+/// Protocol for registering LoWPAN interfaces and their
+/// associated control protocols with the LoWPAN service.
+[Discoverable]
+protocol Register {
+    /// Registers the given LoWPAN device with the LoWPAN Service
+    /// using the given interface name.
+    RegisterDevice(InterfaceName name, Driver driver) -> () error ServiceError;
+};
