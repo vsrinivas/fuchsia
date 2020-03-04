@@ -26,16 +26,11 @@ enum class ArgType {
   kUint64,
 };
 
-// Struct representing the field of a command and its type.
+// Struct representing the field of a command, its type, and description of itself.
 struct Field {
   std::string name;
   ArgType type;
-};
-
-// Struct representing a string command with its name and list of fields.
-struct Command {
-  std::string name;
-  std::vector<Field> fields;
+  std::string help_message;
 };
 
 // Struct representing a command string in which the fields are parsed to
@@ -45,6 +40,18 @@ struct ParsedCommand {
   std::string name;
   std::unordered_map<std::string, std::string> string_fields;
   std::unordered_map<std::string, uint64_t> uint64_fields;
+};
+
+using CommandFunction = std::function<zx_status_t(ParsedCommand)>;
+
+// Struct representing a command with its name, list of fields, description of
+// what it does, and a wrapper lambda taking in a ParsedCommand to call the
+// actual function with the parsed arguments.
+struct Command {
+  std::string name;
+  std::vector<Field> fields;
+  std::string help_message;
+  CommandFunction function;
 };
 
 // Returns a string representing a command in the form of:

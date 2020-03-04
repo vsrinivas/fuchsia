@@ -17,6 +17,8 @@
 
 namespace minfs {
 
+using ParsedCommand = disk_inspector::ParsedCommand;
+
 zx_status_t CommandHandler::Create(std::unique_ptr<block_client::BlockDevice> device,
                                    std::unique_ptr<disk_inspector::CommandHandler>* out) {
   std::unique_ptr<MinfsInspector> inspector;
@@ -42,7 +44,7 @@ zx_status_t CommandHandler::CallCommand(std::vector<std::string> command_args) {
   if (command_index == name_to_index_.end()) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  disk_inspector::Command command = command_list_[command_index->second];
+  const disk_inspector::Command& command = command_list_[command_index->second];
   auto fit_result = disk_inspector::ParseCommand(command_args, command);
   if (fit_result.is_error()) {
     std::ostringstream os;
@@ -51,86 +53,92 @@ zx_status_t CommandHandler::CallCommand(std::vector<std::string> command_args) {
     std::cerr << os.str();
     return fit_result.take_error();
   }
-  // TODO(fxb/47553) Add function as a part of the Command struct and handle
-  // getting arguments there to eliminate this switch statement and make the
-  // code cleaner.
-  disk_inspector::ParsedCommand args = fit_result.take_ok_result().value;
-  zx_status_t status = ZX_OK;
-  if (command_name == "ToggleUseHex") {
-    status = TogglePrintHex();
-  } else if (command_name == "ToggleHideArray") {
-    status = ToggleHideArray();
-  } else if (command_name == "PrintSuperblock") {
-    status = PrintSuperblock();
-  } else if (command_name == "PrintInode") {
-    status = PrintInode(args.uint64_fields["index"]);
-  } else if (command_name == "PrintInodes") {
-    status = PrintInodes(args.uint64_fields["max"]);
-  } else if (command_name == "PrintAllocatedInodes") {
-    status = PrintAllocatedInodes(args.uint64_fields["max"]);
-  } else if (command_name == "PrintJournalSuperblock") {
-    status = PrintJournalSuperblock();
-  } else if (command_name == "PrintJournalEntries") {
-    status = PrintJournalEntries(args.uint64_fields["max"]);
-  } else if (command_name == "PrintJournalHeader") {
-    status = PrintJournalHeader(args.uint64_fields["index"]);
-  } else if (command_name == "PrintJournalCommit") {
-    status = PrintJournalCommit(args.uint64_fields["index"]);
-  } else if (command_name == "PrintBackupSuperblock") {
-    status = PrintBackupSuperblock();
-  }
-  return status;
+  ParsedCommand args = fit_result.take_ok_result().value;
+  return command.function(std::move(args));
 }
 
 void CommandHandler::InitializeCommands() {
   command_list_ = {
-      {"ToggleUseHex", {}},
-      {"ToggleHideArray", {}},
-      {"PrintSuperblock", {}},
+      {"TogglePrintHex",
+       {},
+       "Toggles printing fields in hexadecimal.",
+       [this](ParsedCommand args) -> zx_status_t { return TogglePrintHex(); }},
+
+      {"ToggleHideArray",
+       {},
+       "Toggles showing array field entries.",
+       [this](ParsedCommand args) -> zx_status_t { return ToggleHideArray(); }},
+
+      {"PrintSuperblock",
+       {},
+       "Prints the superblock.",
+       [this](ParsedCommand args) -> zx_status_t { return PrintSuperblock(); }},
+
       {"PrintInode",
        {
-           {
-               "index",
-               ArgType::kUint64,
-           },
+           {"index", ArgType::kUint64, "Index of inode in inode table."},
+       },
+       "Prints an inode from the inode table.",
+       [this](ParsedCommand args) -> zx_status_t {
+         return PrintInode(args.uint64_fields["index"]);
        }},
+
       {"PrintInodes",
        {
-           {
-               "max",
-               ArgType::kUint64,
-           },
+           {"max", ArgType::kUint64, "Maximum number of inodes to print."},
+       },
+       "Prints all the inodes in the inode table",
+       [this](ParsedCommand args) -> zx_status_t {
+         return PrintInodes(args.uint64_fields["max"]);
        }},
+
       {"PrintAllocatedInodes",
        {
-           {
-               "max",
-               ArgType::kUint64,
-           },
+           {"max", ArgType::kUint64, "Maximum number of allocated inodes to print."},
+       },
+       "Prints all the allocated inodes in the inode table based on the inode allocation bitmap.",
+       [this](ParsedCommand args) -> zx_status_t {
+         return PrintAllocatedInodes(args.uint64_fields["max"]);
        }},
-      {"PrintJournalSuperblock", {}},
+
+      {"PrintJournalSuperblock",
+       {},
+       "Prints the journal superblock.",
+       [this](ParsedCommand args) -> zx_status_t { return PrintJournalSuperblock(); }},
+
       {"PrintJournalEntries",
        {
-           {
-               "max",
-               ArgType::kUint64,
-           },
+           {"max", ArgType::kUint64, "Maximum number of entries to print."},
+       },
+       "Prints all the journal entries as headers, commits, revocation and unknown based on entry "
+       "prefix.",
+       [this](ParsedCommand args) -> zx_status_t {
+         return PrintJournalEntries(args.uint64_fields["max"]);
        }},
+
       {"PrintJournalHeader",
        {
-           {
-               "index",
-               ArgType::kUint64,
-           },
+           {"index", ArgType::kUint64, "Index of journal entry to cast."},
+       },
+       "Prints a journal entry cast as a journal header.",
+       [this](ParsedCommand args) -> zx_status_t {
+         return PrintJournalHeader(args.uint64_fields["index"]);
        }},
+
       {"PrintJournalCommit",
        {
-           {
-               "index",
-               ArgType::kUint64,
-           },
+           {"index", ArgType::kUint64, "Index of journal entry to cast."},
+       },
+       "Prints a journal entry cast as a journal commit.",
+       [this](ParsedCommand args) -> zx_status_t {
+         return PrintJournalCommit(args.uint64_fields["index"]);
        }},
-      {"PrintBackupSuperblock", {}},
+
+      {"PrintBackupSuperblock",
+       {},
+       "Prints the backup superblock.",
+       [this](ParsedCommand args) -> zx_status_t { return PrintBackupSuperblock(); }},
+
   };
 
   for (uint64_t i = 0; i < command_list_.size(); ++i) {

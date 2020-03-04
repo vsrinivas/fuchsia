@@ -31,6 +31,11 @@ std::string PrintCommandList(const std::vector<Command>& commands) {
       os << " [" << field.name << "]";
     }
     os << "\n";
+    os << "\t" << command.help_message << "\n";
+    for (const auto& field : command.fields) {
+      os << "\t\t" << field.name << ": " << field.help_message << "\n";
+    }
+    os << "\n";
   }
   return os.str();
 }

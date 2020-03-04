@@ -12,10 +12,12 @@ namespace {
 TEST(CommandTest, PrintCommand) {
   Command command = {"command",
                      {
-                         {"field1", ArgType::kString},
-                         {"field2", ArgType::kString},
-                         {"field3", ArgType::kString},
-                     }};
+                         {"field1", ArgType::kString, "test1"},
+                         {"field2", ArgType::kString, "test2"},
+                         {"field3", ArgType::kString, "test3"},
+                     },
+                     "test",
+                     nullptr};
   EXPECT_STR_EQ(PrintCommand(command), "command [field1] [field2] [field3]");
 }
 
@@ -23,34 +25,58 @@ TEST(CommandTest, PrintCommands) {
   std::vector<Command> commands = {
       {"command1",
        {
-           {"field1", ArgType::kString},
-       }},
+           {"field1", ArgType::kString, "test1"},
+       },
+       "test",
+       nullptr},
       {"command2",
        {
-           {"field1", ArgType::kString},
-           {"field2", ArgType::kString},
-       }},
+           {"field1", ArgType::kString, "test1"},
+           {"field2", ArgType::kString, "test2"},
+       },
+       "test",
+       nullptr},
       {"command3",
        {
-           {"field1", ArgType::kString},
-           {"field2", ArgType::kString},
-           {"field3", ArgType::kString},
-       }},
+           {"field1", ArgType::kString, "test1"},
+           {"field2", ArgType::kString, "test2"},
+           {"field3", ArgType::kString, "test3"},
+       },
+       "test",
+       nullptr},
   };
-  EXPECT_STR_EQ(PrintCommandList(commands),
-                "command1 [field1]\n"
-                "command2 [field1] [field2]\n"
-                "command3 [field1] [field2] [field3]\n");
+
+  std::string expected =
+      R"""(command1 [field1]
+	test
+		field1: test1
+
+command2 [field1] [field2]
+	test
+		field1: test1
+		field2: test2
+
+command3 [field1] [field2] [field3]
+	test
+		field1: test1
+		field2: test2
+		field3: test3
+
+)""";
+
+  EXPECT_STR_EQ(PrintCommandList(commands).c_str(), expected.c_str());
 }
 
 TEST(CommandTest, ParseCommand) {
   Command command = {"command",
                      {
-                         {"field1", ArgType::kString},
-                         {"field2", ArgType::kUint64},
-                         {"field3", ArgType::kUint64},
-                         {"field4", ArgType::kString},
-                     }};
+                         {"field1", ArgType::kString, "test1"},
+                         {"field2", ArgType::kUint64, "test2"},
+                         {"field3", ArgType::kUint64, "test3"},
+                         {"field4", ArgType::kString, "test4"},
+                     },
+                     "test",
+                     nullptr};
   std::vector<std::string> input = {"command", "testing", "123", "42", "hello"};
   fit::result<ParsedCommand, zx_status_t> result = disk_inspector::ParseCommand(input, command);
   ASSERT_TRUE(result.is_ok());
@@ -68,8 +94,10 @@ TEST(CommandTest, ParseCommand) {
 TEST(CommandTest, ParseCommandInvalidArgumentNumberFail) {
   Command command = {"command",
                      {
-                         {"field1", ArgType::kString},
-                     }};
+                         {"field1", ArgType::kString, "test1"},
+                     },
+                     "test",
+                     nullptr};
   std::vector<std::string> input = {"command", "testing", "123", "42", "hello"};
   fit::result<ParsedCommand, zx_status_t> result = disk_inspector::ParseCommand(input, command);
   ASSERT_TRUE(result.is_error());
@@ -78,8 +106,10 @@ TEST(CommandTest, ParseCommandInvalidArgumentNumberFail) {
 TEST(CommandTest, ParseCommandInvalidTypeFail) {
   Command command = {"command",
                      {
-                         {"field1", ArgType::kUint64},
-                     }};
+                         {"field1", ArgType::kUint64, "test1"},
+                     },
+                     "test",
+                     nullptr};
   std::vector<std::string> input = {"command", "testing"};
   fit::result<ParsedCommand, zx_status_t> result = disk_inspector::ParseCommand(input, command);
   ASSERT_TRUE(result.is_error());

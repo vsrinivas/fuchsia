@@ -31,24 +31,52 @@ TEST(MinfsCommandHandler, GetSupportedCommands) {
   handler.SetOutputStream(&output_stream);
   handler.PrintSupportedCommands();
 
-  std::string expected = R"""(ToggleUseHex
+  std::string expected = R"""(TogglePrintHex
+	Toggles printing fields in hexadecimal.
+
 ToggleHideArray
+	Toggles showing array field entries.
+
 PrintSuperblock
+	Prints the superblock.
+
 PrintInode [index]
+	Prints an inode from the inode table.
+		index: Index of inode in inode table.
+
 PrintInodes [max]
+	Prints all the inodes in the inode table
+		max: Maximum number of inodes to print.
+
 PrintAllocatedInodes [max]
+	Prints all the allocated inodes in the inode table based on the inode allocation bitmap.
+		max: Maximum number of allocated inodes to print.
+
 PrintJournalSuperblock
+	Prints the journal superblock.
+
 PrintJournalEntries [max]
+	Prints all the journal entries as headers, commits, revocation and unknown based on entry prefix.
+		max: Maximum number of entries to print.
+
 PrintJournalHeader [index]
+	Prints a journal entry cast as a journal header.
+		index: Index of journal entry to cast.
+
 PrintJournalCommit [index]
+	Prints a journal entry cast as a journal commit.
+		index: Index of journal entry to cast.
+
 PrintBackupSuperblock
+	Prints the backup superblock.
+
 )""";
 
   EXPECT_STR_EQ(output_stream.str().c_str(), expected.c_str());
 }
 
 std::vector<std::vector<std::string>> test_commands = {{"InvalidCommand", "1", "2", "3"},
-                                                       {"ToggleUseHex"},
+                                                       {"TogglePrintHex"},
                                                        {"ToggleHideArray"},
                                                        {"PrintInode", "0"},
                                                        {"PrintInodes", "5"},
