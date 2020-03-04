@@ -128,7 +128,7 @@ template("assemble_system") {
     testonly = true
     outputs = [ system_image_manifest_args ]
     data_keys = [ "system_image_rsps" ]
-    walk_keys = [ "package_barrier" ]
+    walk_keys = [ "system_image_barrier" ]
     deps = [ ":${image_name}_base_packages" ]
   }
 
