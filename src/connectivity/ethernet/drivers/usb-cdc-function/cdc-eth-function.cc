@@ -492,7 +492,6 @@ static void cdc_rx_complete(void* ctx, usb_request_t* req) {
 
 static void cdc_tx_complete(void* ctx, usb_request_t* req) {
   auto* cdc = static_cast<usb_cdc_t*>(ctx);
-
   zxlogf(LTRACE, "%s %d %ld\n", __func__, req->response.status, req->response.actual);
   if (cdc->unbound) {
     return;
@@ -504,10 +503,16 @@ static void cdc_tx_complete(void* ctx, usb_request_t* req) {
   bool additional_tx_queued = false;
   txn_info_t* txn;
   zx_status_t send_status = ZX_OK;
-  if ((txn = list_peek_head_type(&cdc->tx_pending_infos, txn_info_t, node))) {
-    if ((send_status = cdc_send_locked(cdc, &txn->netbuf)) != ZX_ERR_SHOULD_WAIT) {
-      list_remove_head(&cdc->tx_pending_infos);
-      additional_tx_queued = true;
+  // When we receive ZX_ERR_IO_NOT_PRESENT, our parent is either unbinding
+  // or suspending and we should stop queuing requests.
+  // TODO (fxb/47581): Implement a suspend hook to prevent
+  // this from ever happening.
+  if (req->response.status != ZX_ERR_IO_NOT_PRESENT) {
+    if ((txn = list_peek_head_type(&cdc->tx_pending_infos, txn_info_t, node))) {
+      if ((send_status = cdc_send_locked(cdc, &txn->netbuf)) != ZX_ERR_SHOULD_WAIT) {
+        list_remove_head(&cdc->tx_pending_infos);
+        additional_tx_queued = true;
+      }
     }
   }
   mtx_unlock(&cdc->tx_mutex);
