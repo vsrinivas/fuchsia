@@ -266,6 +266,19 @@ static bool increment_counters() {
   END_TEST;
 }
 
+static bool add_basic_policy_deny_process_only() {
+  BEGIN_TEST;
+
+  auto p = JobPolicy::CreateRootPolicy();
+  zx_policy_basic_v2_t policy{ZX_POL_NEW_PROCESS, ZX_POL_ACTION_DENY, 0};
+
+  ASSERT_EQ(ZX_OK, p.AddBasicPolicy(ZX_JOB_POL_ABSOLUTE, &policy, 1));
+  ASSERT_EQ(ZX_POL_ACTION_DENY, p.QueryBasicPolicy(ZX_POL_NEW_PROCESS));
+  ASSERT_EQ(ZX_POL_ACTION_ALLOW, p.QueryBasicPolicy(ZX_POL_NEW_PROFILE));
+
+  END_TEST;
+}
+
 }  // namespace
 
 UNITTEST_START_TESTCASE(job_policy_tests)
@@ -284,4 +297,5 @@ UNITTEST("add_basic_policy_deny_any_new_no_override", add_basic_policy_deny_any_
 UNITTEST("add_basic_policy_deny_any_new_with_override", add_basic_policy_deny_any_new_with_override)
 UNITTEST("set_get_timer_slack", set_get_timer_slack)
 UNITTEST("increment_counters", increment_counters)
+UNITTEST("add_basic_policy_deny_process_only", add_basic_policy_deny_process_only)
 UNITTEST_END_TESTCASE(job_policy_tests, "job_policy", "JobPolicy tests")
