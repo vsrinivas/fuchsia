@@ -72,7 +72,11 @@ function get-host-ip {
   # $2 is the hostname of the Fuchsia device. If $2 is empty, this function
   # returns the IP address of an arbitrarily selected Fuchsia device.
   local DEVICE_NAME
-  DEVICE_NAME="$(get-device-name "${1}" "${2}")"
+  if [[ "${2}" != "" ]]; then
+    DEVICE_NAME="${2}"
+  else
+    DEVICE_NAME="$(get-device-name "${1}")"
+  fi
   # -ipv4 false: Disable IPv4. Fuchsia devices are IPv6-compatible, so
   #   forcing IPv6 allows for easier manipulation of the result.
   # cut: Remove the IPv6 scope, if present. For link-local addresses, the scope
