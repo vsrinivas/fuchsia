@@ -2,6 +2,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <poll.h>
+#include <sys/eventfd.h>
 #include <sys/select.h>
 #include <sys/stat.h>
 #include <sys/statfs.h>
@@ -602,17 +603,38 @@ static int stub_timerfd_create(int clockid, int flags) {
 weak_alias(stub_timerfd_create, timerfd_create);
 
 static int stub_timerfd_settime(int fd, int flags,
-                                const struct itimerspec *new_value,
-                                struct itimerspec *old_value) {
+                                const struct itimerspec* new_value,
+                                struct itimerspec* old_value) {
   libc_io_functions_not_implemented_use_fdio_instead();
   errno = ENOSYS;
   return -1;
 }
 weak_alias(stub_timerfd_settime, timerfd_settime);
 
-static int stub_timerfd_gettime(int fd, struct itimerspec *curr_value) {
+static int stub_timerfd_gettime(int fd, struct itimerspec* curr_value) {
   libc_io_functions_not_implemented_use_fdio_instead();
   errno = ENOSYS;
   return -1;
 }
 weak_alias(stub_timerfd_gettime, timerfd_gettime);
+
+static int stub_eventfd(unsigned int initval, int flags) {
+  libc_io_functions_not_implemented_use_fdio_instead();
+  errno = ENOSYS;
+  return -1;
+}
+weak_alias(stub_eventfd, eventfd);
+
+static int stub_eventfd_read(int fd, eventfd_t* value) {
+  libc_io_functions_not_implemented_use_fdio_instead();
+  errno = ENOSYS;
+  return -1;
+}
+weak_alias(stub_eventfd_read, eventfd_read);
+
+static int stub_eventfd_write(int fd, eventfd_t value) {
+  libc_io_functions_not_implemented_use_fdio_instead();
+  errno = ENOSYS;
+  return -1;
+}
+weak_alias(stub_eventfd_write, eventfd_write);
