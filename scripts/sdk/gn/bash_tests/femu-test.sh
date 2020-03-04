@@ -99,7 +99,9 @@ SETVAR
   # Run command.
   BT_EXPECT run_bash_script "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/femu.sh" \
     -N \
-    --authorized-keys "${BT_TEMP_DIR}/scripts/sdk/gn/base/testdata/authorized_keys"
+    --unknown-arg1-to-qemu \
+    --authorized-keys "${BT_TEMP_DIR}/scripts/sdk/gn/base/testdata/authorized_keys" \
+    --unknown-arg2-to-qemu
 
   # Verify that fvm resized the disk file by 2x from the input 1024 to 2048.
   # This is an internal operation in fvm.sh with mktemp, so we cannot check
@@ -168,6 +170,8 @@ SETVAR
   check_mock_has_args -fuchsia
   check_mock_has_args -netdev type=tap,ifname=qemu,script=no,downscript=no,id=net0
   check_mock_has_args -device e1000,netdev=net0,mac=52:54:00:63:5e:7a
+  check_mock_has_args --unknown-arg1-to-qemu
+  check_mock_has_args --unknown-arg2-to-qemu
 }
 
 # Test initialization. Note that we copy various tools/devshell files and need to replicate the

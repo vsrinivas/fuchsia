@@ -39,8 +39,10 @@ usage () {
   echo "  [--help] [-h]"
   echo "    Show command line options for femu.sh and emu subscript"
   echo
-  echo "Extra emu arguments:"
+  echo "Remaining arguments are passed to emu wrapper and emulator:"
   emu_help
+  echo
+  echo "Invalid argument names are not flagged as errors, and are passed on to emulator"
 }
 AUTH_KEYS_FILE=""
 EMU_ARGS=()
@@ -137,4 +139,4 @@ echo "Setting writable permissions on $FUCHSIA_BUILD_DIR/$IMAGE_FVM_RAW"
 chmod u+w "$FUCHSIA_BUILD_DIR/$IMAGE_FVM_RAW"
 
 
-"${SCRIPT_SRC_DIR}/devshell/emu" "${EMU_ARGS[@]}" -k "${AUTH_KEYS_FILE}"
+"${SCRIPT_SRC_DIR}/devshell/emu" -k "${AUTH_KEYS_FILE}" "${EMU_ARGS[@]}"
