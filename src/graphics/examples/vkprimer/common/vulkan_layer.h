@@ -19,9 +19,10 @@ class VulkanLayer {
 
   bool Init();
 
-  static bool CheckInstanceLayerSupport();
+  static bool CheckValidationLayerSupport();
   static void AppendRequiredInstanceExtensions(std::vector<const char *> *extensions);
   static void AppendRequiredInstanceLayers(std::vector<const char *> *layers);
+  static void AppendValidationInstanceLayers(std::vector<const char *> *layers);
   static void AppendRequiredDeviceLayers(std::vector<const char *> *layers);
 
  private:

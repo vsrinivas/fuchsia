@@ -12,12 +12,13 @@
 
 namespace {
 
-static const std::vector<const char *> s_instance_layer_names = {
 #ifdef __Fuchsia__
-    "VK_LAYER_FUCHSIA_imagepipe_swapchain_fb",
+static const char *s_instance_layer_name = "VK_LAYER_FUCHSIA_imagepipe_swapchain_fb";
+#else
+static const char *s_instance_layer_name = nullptr;
 #endif
-    "VK_LAYER_KHRONOS_validation",
-};
+
+static const char *s_instance_validation_layer_name = "VK_LAYER_KHRONOS_validation";
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
     VkDebugUtilsMessageSeverityFlagBitsEXT msg_severity, VkDebugUtilsMessageTypeFlagsEXT msg_type,
@@ -88,17 +89,19 @@ void VulkanLayer::AppendRequiredInstanceExtensions(std::vector<const char *> *ex
 }
 
 void VulkanLayer::AppendRequiredInstanceLayers(std::vector<const char *> *layers) {
-  for (const auto &layer : s_instance_layer_names) {
-    layers->emplace_back(layer);
-  }
+  layers->emplace_back(s_instance_layer_name);
+}
+
+void VulkanLayer::AppendValidationInstanceLayers(std::vector<const char *> *layers) {
+  layers->emplace_back(s_instance_validation_layer_name);
 }
 
 void VulkanLayer::AppendRequiredDeviceLayers(std::vector<const char *> *layers) {
   fprintf(stderr, "No required device layers.\n");
 }
 
-bool VulkanLayer::CheckInstanceLayerSupport() {
-  return !FindMatchingProperties(s_instance_layer_names, vkp::INSTANCE_LAYER_PROP,
-                                 nullptr /* device */, nullptr /* layer */,
-                                 nullptr /* missing_props */);
+bool VulkanLayer::CheckValidationLayerSupport() {
+  const std::vector<const char *> validation_layers(1, s_instance_validation_layer_name);
+  return !FindMatchingProperties(validation_layers, vkp::INSTANCE_LAYER_PROP, nullptr /* device */,
+                                 nullptr /* layer */, nullptr /* missing_props */);
 }

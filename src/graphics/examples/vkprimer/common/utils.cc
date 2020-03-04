@@ -154,4 +154,34 @@ int FindMemoryIndex(const vk::PhysicalDevice &phys_dev, const uint32_t memory_ty
   RTN_MSG(-1, "Error: Unable to find memory property index.");
 }
 
+void LogMemoryProperties(const vk::PhysicalDevice &phys_dev) {
+  vk::PhysicalDeviceMemoryProperties memory_props;
+  phys_dev.getMemoryProperties(&memory_props);
+  const uint32_t memory_type_ct = memory_props.memoryTypeCount;
+  const vk::MemoryType *types = memory_props.memoryTypes;
+
+  printf("\nMemory Types: %d\n", memory_type_ct);
+  for (uint32_t i = 0; i < memory_type_ct; i++) {
+    const vk::MemoryType &type = types[i];
+    printf("\tHeap Index: %d\n", type.heapIndex);
+    if (type.propertyFlags & vk::MemoryPropertyFlagBits::eDeviceLocal)
+      printf("\t\tDevice Local\n");
+    if (type.propertyFlags & vk::MemoryPropertyFlagBits::eHostVisible)
+      printf("\t\tHost Visible\n");
+    if (type.propertyFlags & vk::MemoryPropertyFlagBits::eHostCoherent)
+      printf("\t\tHost Coherent\n");
+    if (type.propertyFlags & vk::MemoryPropertyFlagBits::eHostCached)
+      printf("\t\tHost Cached\n");
+    if (type.propertyFlags & vk::MemoryPropertyFlagBits::eLazilyAllocated)
+      printf("\t\tLazily Allocated\n");
+    if (type.propertyFlags & vk::MemoryPropertyFlagBits::eProtected)
+      printf("\t\tProtected\n");
+    if (type.propertyFlags & vk::MemoryPropertyFlagBits::eDeviceCoherentAMD)
+      printf("\t\tDevice Coherent AMD\n");
+    if (type.propertyFlags & vk::MemoryPropertyFlagBits::eDeviceUncachedAMD)
+      printf("\t\tDevice Uncached AMD\n");
+  }
+  printf("\n");
+}
+
 }  // namespace vkp

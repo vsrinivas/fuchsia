@@ -68,7 +68,7 @@ bool VulkanInstance::Init(bool enable_validation, GLFWwindow *window) {
 #else
 bool VulkanInstance::Init(bool enable_validation) {
 #endif
-  if (enable_validation && !VulkanLayer::CheckInstanceLayerSupport()) {
+  if (enable_validation && !VulkanLayer::CheckValidationLayerSupport()) {
     RTN_MSG(false, "Validation layers requested, but not available!");
   }
 
@@ -86,15 +86,17 @@ bool VulkanInstance::Init(bool enable_validation) {
 
   // Extensions
   extensions_ = GetExtensions();
-
-  // Layers
-  if (enable_validation) {
-    VulkanLayer::AppendRequiredInstanceExtensions(&extensions_);
-    VulkanLayer::AppendRequiredInstanceLayers(&layers_);
-  }
+  VulkanLayer::AppendRequiredInstanceExtensions(&extensions_);
 
   create_info.enabledExtensionCount = static_cast<uint32_t>(extensions_.size());
   create_info.ppEnabledExtensionNames = extensions_.data();
+
+  // Layers
+  VulkanLayer::AppendRequiredInstanceLayers(&layers_);
+
+  if (enable_validation) {
+    VulkanLayer::AppendValidationInstanceLayers(&layers_);
+  }
 
   create_info.enabledLayerCount = static_cast<uint32_t>(layers_.size());
   create_info.ppEnabledLayerNames = layers_.data();

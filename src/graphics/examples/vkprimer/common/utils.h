@@ -48,6 +48,9 @@ bool FindGraphicsQueueFamilies(vk::PhysicalDevice phys_device, VkSurfaceKHR surf
 int FindMemoryIndex(const vk::PhysicalDevice &phys_dev, const uint32_t memory_type_bits,
                     const vk::MemoryPropertyFlags &properties);
 
+// Log physical device memory properties.
+void LogMemoryProperties(const vk::PhysicalDevice &phys_dev);
+
 }  // namespace vkp
 
 #endif  // SRC_GRAPHICS_EXAMPLES_VKPRIMER_COMMON_UTILS_H_

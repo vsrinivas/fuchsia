@@ -62,6 +62,7 @@ bool VulkanPhysicalDevice::Init() {
 
   for (const auto &phys_device : phys_devices) {
     if (ChooseGraphicsDevice(phys_device, params_->surface_, &phys_device_)) {
+      vkp::LogMemoryProperties(phys_device_);
       initialized_ = true;
       break;
     }
