@@ -112,7 +112,7 @@ class Image : public fbl::RefCounted<Image>, public IdMappable<fbl::RefPtr<Image
   bool retiring_ __TA_GUARDED(mtx()) = false;
 
   // flag used to distinguish between an image used for display vs capture
-  bool capture_image_ = false;
+  const bool capture_image_ = false;
 
   const zx::vmo vmo_;
 };

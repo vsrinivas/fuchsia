@@ -65,8 +65,8 @@ TEST_F(ImageTest, RetiredImagesAreAlwaysUsable) {
   info.pixel_format = ZX_PIXEL_FORMAT_RGB_x888;
   info.type = 0;
   auto image = ImportImage(std::move(vmo), info);
-  fbl::AutoCall image_cleanup([controller = controller(), image]() {
-    controller->AssertMtxAliasHeld(image->mtx());
+  fbl::AutoCall image_cleanup([image]() {
+    fbl::AutoLock l(image->mtx());
     image->ResetFences();
   });
 

@@ -17,12 +17,13 @@
 namespace display {
 
 Image::Image(Controller* controller, const image_t& info, zx::vmo handle, uint32_t stride_px)
-    : info_(info), stride_px_(stride_px), controller_(controller), vmo_(std::move(handle)) {
-  capture_image_ = false;
-}
-Image::Image(Controller* controller, const image_t& info) : info_(info), controller_(controller) {
-  capture_image_ = true;
-}
+    : info_(info),
+      stride_px_(stride_px),
+      controller_(controller),
+      capture_image_(false),
+      vmo_(std::move(handle)) {}
+Image::Image(Controller* controller, const image_t& info)
+    : info_(info), controller_(controller), capture_image_(true) {}
 
 Image::~Image() {
   if (!capture_image_) {
@@ -59,7 +60,7 @@ void Image::OnFenceReady(FenceReference* fence) {
 
 void Image::StartPresent() {
   ZX_DEBUG_ASSERT(wait_fence_ == nullptr);
-  ZX_DEBUG_ASSERT(mtx_trylock(controller_->mtx()) == thrd_busy);
+  ZX_DEBUG_ASSERT(mtx_trylock(mtx()) == thrd_busy);
   TRACE_DURATION("gfx", "Image::StartPresent", "id", id);
 
   presenting_ = true;
@@ -90,7 +91,7 @@ void Image::RetireWithFence(fbl::RefPtr<FenceReference>&& fence) {
 
 void Image::StartRetire() {
   ZX_DEBUG_ASSERT(wait_fence_ == nullptr);
-  ZX_DEBUG_ASSERT(mtx_trylock(controller_->mtx()) == thrd_busy);
+  ZX_DEBUG_ASSERT(mtx_trylock(mtx()) == thrd_busy);
 
   if (!presenting_) {
     RetireWithFence(std::move(signal_fence_));
@@ -101,7 +102,7 @@ void Image::StartRetire() {
 }
 
 void Image::OnRetire() {
-  ZX_DEBUG_ASSERT(mtx_trylock(controller_->mtx()) == thrd_busy);
+  ZX_DEBUG_ASSERT(mtx_trylock(mtx()) == thrd_busy);
 
   presenting_ = false;
 
