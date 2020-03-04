@@ -257,4 +257,18 @@ TEST_F(DeviceTest, Configurations) {
   RunLoopUntilFailureOr(all_callbacks_received);
 }
 
+TEST_F(DeviceTest, Identifier) {
+  fuchsia::camera3::DevicePtr device;
+  SetFailOnError(device, "Device");
+  device_->GetHandler()(device.NewRequest());
+  bool callback_received = false;
+  device->GetIdentifier([&](fidl::StringPtr identifier) {
+    ASSERT_TRUE(identifier.has_value());
+    constexpr auto kExpectedDeviceIdentifier = "FFFF0ABC";
+    EXPECT_EQ(identifier.value(), kExpectedDeviceIdentifier);
+    callback_received = true;
+  });
+  RunLoopUntilFailureOr(callback_received);
+}
+
 }  // namespace camera

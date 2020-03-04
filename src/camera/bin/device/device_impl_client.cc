@@ -6,6 +6,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/syslog/cpp/logger.h>
 
+#include <iomanip>
 #include <sstream>
 
 #include "src/camera/bin/device/device_impl.h"
@@ -54,7 +55,16 @@ void DeviceImpl::Client::CloseConnection(zx_status_t status) {
 }
 
 void DeviceImpl::Client::GetIdentifier(GetIdentifierCallback callback) {
-  CloseConnection(ZX_ERR_NOT_SUPPORTED);
+  if (!device_.device_info_.has_vendor_id() || !device_.device_info_.has_product_id()) {
+    callback(nullptr);
+    return;
+  }
+
+  std::ostringstream oss;
+  oss << std::hex << std::uppercase << std::setfill('0');
+  oss << std::setw(4) << device_.device_info_.vendor_id();
+  oss << std::setw(4) << device_.device_info_.product_id();
+  callback(oss.str());
 }
 
 void DeviceImpl::Client::GetConfigurations(GetConfigurationsCallback callback) {

@@ -11,7 +11,7 @@ static fuchsia::camera2::DeviceInfo DefaultDeviceInfo() {
   fuchsia::camera2::DeviceInfo device_info{};
   device_info.set_vendor_id(0xFFFF);
   device_info.set_vendor_name("Fake Vendor Name");
-  device_info.set_product_id(0xABCD);
+  device_info.set_product_id(0x0ABC);
   device_info.set_product_name("Fake Product Name");
   device_info.set_type(fuchsia::camera2::DeviceType::VIRTUAL);
   return device_info;
