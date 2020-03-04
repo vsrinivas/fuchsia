@@ -114,7 +114,7 @@ impl ViewAssistant for DrawingViewAssistant {
 
         let canvas = &mut context.canvas.as_ref().unwrap().borrow_mut();
 
-        let new_bounds = Rect::new(Point::zero(), context.size);
+        let new_bounds = Rect::new(Point::zero(), context.logical_size);
         self.bounds = new_bounds;
 
         let min_dimension = self.bounds.size.width.min(self.bounds.size.height);

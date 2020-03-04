@@ -308,7 +308,7 @@ impl ViewStrategy for ScenicCanvasViewStrategy {
     }
 
     async fn update(&mut self, view_details: &ViewDetails, view_assistant: &mut ViewAssistantPtr) {
-        let size = view_details.physical_size.floor().to_u32();
+        let size = view_details.logical_size.floor().to_u32();
         if size.width > 0 && size.height > 0 {
             let session = self.scenic_resources.session.clone();
             if self.plumber.is_none() {
@@ -327,8 +327,8 @@ impl ViewStrategy for ScenicCanvasViewStrategy {
             self.content_node.set_translation(center_x, center_y, -0.1);
             let rectangle = Rectangle::new(
                 self.scenic_resources.session.clone(),
-                size.width as f32,
-                size.height as f32,
+                view_details.physical_size.width,
+                view_details.physical_size.height,
             );
             if let Some(available) = plumber.frame_set.get_available_image() {
                 let canvas = plumber.canvases.get(&available).expect("canvas");

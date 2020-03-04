@@ -290,12 +290,15 @@ impl ViewAssistant for DrawingViewAssistant {
         let content;
 
         if canvas.id == 0 {
-            temp_content = Contents::new(context.size);
+            temp_content = Contents::new(context.logical_size);
             content = &mut temp_content;
         } else {
-            content = self.contents.entry(canvas.id).or_insert_with(|| Contents::new(context.size));
+            content = self
+                .contents
+                .entry(canvas.id)
+                .or_insert_with(|| Contents::new(context.logical_size));
         }
-        content.update(&context.size, &self.start, &canvas);
+        content.update(&context.logical_size, &self.start, &canvas);
         Ok(())
     }
 

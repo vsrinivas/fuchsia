@@ -70,7 +70,10 @@ impl GridView {
         cells: RenderableCellsIter<'a, C>,
     ) {
         ftrace::duration!("terminal", "Views:GridView:render");
-        let mut font_description = FontDescription { face: &self.font, size: 20, baseline: 18 };
+        let font_size = self.cell_size.height * 0.9;
+        let baseline = font_size * 0.9;
+        let mut font_description =
+            FontDescription { face: &self.font, size: font_size as u32, baseline: baseline as i32 };
 
         let size = self.cell_size;
 

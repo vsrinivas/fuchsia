@@ -5,7 +5,7 @@
 #![allow(dead_code)]
 use {
     crate::ui::terminal_views::{BackgroundView, GridView, ScrollBar},
-    carnelian::{Canvas, Color, Coord, MappingPixelSink, Point, Rect, Size},
+    carnelian::{Canvas, Color, Coord, MappingPixelSink, Point, Rect, Size, ViewAssistantContext},
     fidl_fuchsia_ui_input::{PointerEvent, PointerEventPhase, PointerEventType},
     fuchsia_trace as ftrace,
     term_model::term::RenderableCellsIter,
@@ -19,7 +19,7 @@ pub struct TerminalScene {
     scroll_context: ScrollContext,
 }
 
-const SCROLL_BAR_WIDTH: f32 = 8.0;
+const SCROLL_BAR_WIDTH: f32 = 16.0;
 
 pub enum PointerEventResponse {
     /// Indicates that the pointer event resulted in the user wanting to scroll the grid
@@ -82,14 +82,18 @@ impl TerminalScene {
         }
     }
 
-    pub fn handle_pointer_event(&mut self, event: &PointerEvent) -> Option<PointerEventResponse> {
+    pub fn handle_pointer_event(
+        &mut self,
+        event: &PointerEvent,
+        ctx: &mut ViewAssistantContext<'_>,
+    ) -> Option<PointerEventResponse> {
         if event.type_ == PointerEventType::Mouse
             && event.buttons != fidl_fuchsia_ui_input::MOUSE_PRIMARY_BUTTON
         {
             return None;
         }
 
-        let point = Point::new(event.x, event.y);
+        let point = ctx.physical_to_logical(&Point::new(event.x, event.y));
         if self.scroll_bar.frame.contains(&point) || self.scroll_bar.is_tracking() {
             return self.handle_primary_pointer_event_for_scroll_bar(&event, point);
         }
@@ -267,7 +271,7 @@ mod tests {
         let size = Size::new(100.0, 100.0);
         let calculated = TerminalScene::calculate_term_size_from_size(&size);
 
-        assert_eq!(calculated.width, 92.0);
+        assert_eq!(calculated.width, 84.0);
         assert_eq!(calculated.height, 100.0);
     }
 
@@ -278,8 +282,11 @@ mod tests {
         scene.update_size(size, Size::zero());
 
         assert_eq!(scene.background_view.frame, Rect::new(Point::zero(), Size::new(100.0, 100.0)));
-        assert_eq!(scene.grid_view.frame, Rect::new(Point::zero(), Size::new(92.0, 100.0)));
-        assert_eq!(scene.scroll_bar.frame, Rect::new(Point::new(92.0, 0.0), Size::new(8.0, 100.0)));
+        assert_eq!(scene.grid_view.frame, Rect::new(Point::zero(), Size::new(84.0, 100.0)));
+        assert_eq!(
+            scene.scroll_bar.frame,
+            Rect::new(Point::new(84.0, 0.0), Size::new(16.0, 100.0))
+        );
     }
 
     #[test]

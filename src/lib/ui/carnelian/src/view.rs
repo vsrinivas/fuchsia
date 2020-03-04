@@ -5,7 +5,7 @@
 use crate::{
     app::{FrameBufferPtr, MessageInternal, ViewMode},
     canvas::{Canvas, MappingPixelSink},
-    geometry::{IntSize, Size},
+    geometry::{IntSize, Point, Size},
     message::Message,
     render::Context,
     scenic_utils::PresentationTime,
@@ -104,6 +104,14 @@ impl<'a> ViewAssistantContext<'a> {
     /// Get the session for scenic based apps
     pub fn session(&self) -> &SessionPtr {
         &self.scenic_resources.as_ref().unwrap().session
+    }
+
+    /// Given a point in the physical space, like those
+    /// contained in PointerEvents, return the logical
+    /// space point that is useful for drawing in the
+    /// canvas.
+    pub fn physical_to_logical(&self, pt: &Point) -> Point {
+        Point::new(pt.x * self.metrics.width, pt.y * self.metrics.height)
     }
 }
 

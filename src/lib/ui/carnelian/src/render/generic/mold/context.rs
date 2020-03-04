@@ -89,7 +89,7 @@ fn copy_region_to_image(
     dst_ptr: *mut u8,
     dst_len: usize,
     dst_bytes_per_row: usize,
-    region: &CopyRegion
+    region: &CopyRegion,
 ) {
     let (mut y, dy) = if region.dst_offset.y < region.src_offset.y {
         // Copy forward.

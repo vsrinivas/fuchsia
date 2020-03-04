@@ -589,11 +589,7 @@ impl Composition {
 
     /// Replaces the specified range in the composition with the given `with` iterator.
     /// `replace_with` does not need to be the same length as `range`.
-    pub fn replace<R, I>(
-        &mut self,
-        range: R,
-        with: I,
-    )
+    pub fn replace<R, I>(&mut self, range: R, with: I)
     where
         R: RangeBounds<usize>,
         I: IntoIterator<Item = Layer>,
@@ -614,32 +610,30 @@ impl Composition {
 
         match &mut self.layers {
             Layers::Mold(layers) => {
-                layers
-                    .splice(
-                        range,
-                        iter.map(|layer| generic::Layer {
-                            raster: if let RasterInner::Mold(raster) = layer.raster.inner {
-                                raster
-                            } else {
-                                panic!("mismatched backends");
-                            },
-                            style: layer.style,
-                        }),
-                    );
+                layers.splice(
+                    range,
+                    iter.map(|layer| generic::Layer {
+                        raster: if let RasterInner::Mold(raster) = layer.raster.inner {
+                            raster
+                        } else {
+                            panic!("mismatched backends");
+                        },
+                        style: layer.style,
+                    }),
+                );
             }
             Layers::Spinel(layers) => {
-                layers
-                    .splice(
-                        range,
-                        iter.map(|layer| generic::Layer {
-                            raster: if let RasterInner::Spinel(raster) = layer.raster.inner {
-                                raster
-                            } else {
-                                panic!("mismatched backends");
-                            },
-                            style: layer.style,
-                        }),
-                    );
+                layers.splice(
+                    range,
+                    iter.map(|layer| generic::Layer {
+                        raster: if let RasterInner::Spinel(raster) = layer.raster.inner {
+                            raster
+                        } else {
+                            panic!("mismatched backends");
+                        },
+                        style: layer.style,
+                    }),
+                );
             }
             _ => unreachable!(),
         }
