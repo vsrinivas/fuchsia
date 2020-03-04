@@ -3,8 +3,8 @@
  * found in the LICENSE file.
  */
 
-#ifndef FIRMWARE_LIBABR_ABR_SYSDEPS_H_
-#define FIRMWARE_LIBABR_ABR_SYSDEPS_H_
+#ifndef LIBABR_ABR_SYSDEPS_H_
+#define LIBABR_ABR_SYSDEPS_H_
 
 /* Define this to zero to remove all standard library dependencies. Note you'll
  * need to define some standard types and implement the abr_* functions declared

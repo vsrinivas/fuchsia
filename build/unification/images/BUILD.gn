@@ -3065,6 +3065,7 @@ aggregate_manifest("migrated-aux") {
     "//src/devices/tee/drivers/optee:optee-message-test-manifest",
 #------------------
     "//zircon/system/ulib/paver/test:paver-test-manifest",
+    "//zircon/system/ulib/libabr/test:libabr-test-manifest",
 #------------------
 #------------------
     "//src/devices/bus/drivers/pci/test:pci-driver-manifest",
@@ -3780,6 +3781,7 @@ aggregate_manifest("migrated-tests") {
     "//src/devices/tee/drivers/optee:optee-message-test-manifest",
 #------------------
     "//zircon/system/ulib/paver/test:paver-test-manifest",
+    "//zircon/system/ulib/libabr/test:libabr-test-manifest",
 #------------------
 #------------------
     "//src/devices/bus/drivers/pci/test:pci-driver-manifest",

@@ -1,0 +1,18 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+zx_library("libabr") {
+  output_prefix_override = true
+  sdk = "static"
+  sdk_headers = [
+    "libabr/abr_data.h",
+    "libabr/abr_ops.h",
+    "libabr/abr_sysdeps.h",
+    "libabr/abr_util.h",
+    "libabr/libabr.h",
+  ]
+  sources = [
+    "abr_flow.c",
+    "abr_util.c",
+  ]
+}

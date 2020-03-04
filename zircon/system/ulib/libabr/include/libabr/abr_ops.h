@@ -3,8 +3,8 @@
  * found in the LICENSE file.
  */
 
-#ifndef FIRMWARE_LIBABR_ABR_OPS_H_
-#define FIRMWARE_LIBABR_ABR_OPS_H_
+#ifndef LIBABR_ABR_OPS_H_
+#define LIBABR_ABR_OPS_H_
 
 #include "abr_sysdeps.h"
 

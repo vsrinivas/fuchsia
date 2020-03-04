@@ -3,8 +3,8 @@
  * found in the LICENSE file.
  */
 
-#ifndef FIRMWARE_LIBABR_ABR_UTIL_H_
-#define FIRMWARE_LIBABR_ABR_UTIL_H_
+#ifndef LIBABR_ABR_UTIL_H_
+#define LIBABR_ABR_UTIL_H_
 
 #ifdef __cplusplus
 extern "C" {

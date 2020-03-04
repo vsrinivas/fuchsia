@@ -7,8 +7,8 @@
  * to include directly. Most callers only need to call AbrGetBootSlot().
  */
 
-#ifndef FIRMWARE_LIBABR_LIBABR_H_
-#define FIRMWARE_LIBABR_LIBABR_H_
+#ifndef LIBABR_LIBABR_H_
+#define LIBABR_LIBABR_H_
 
 #include "abr_ops.h"
 #include "abr_sysdeps.h"

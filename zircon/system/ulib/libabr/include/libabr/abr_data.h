@@ -3,8 +3,8 @@
  * found in the LICENSE file.
  */
 
-#ifndef FIRMWARE_LIBABR_ABR_DATA_H_
-#define FIRMWARE_LIBABR_ABR_DATA_H_
+#ifndef LIBABR_ABR_DATA_H_
+#define LIBABR_ABR_DATA_H_
 
 #include "abr_sysdeps.h"
 
@@ -18,7 +18,7 @@ extern "C" {
 
 /* Magic for the A/B struct when serialized. */
 static const char* kAbrMagic = "\0AB0";
-static const size_t kAbrMagicLen = 4;
+#define kAbrMagicLen 4
 
 /* Versioning for the on-disk A/B metadata. */
 static const uint8_t kAbrMajorVersion = 2;

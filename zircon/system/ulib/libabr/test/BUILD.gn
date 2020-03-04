@@ -1,0 +1,33 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+group("test") {
+  testonly = true
+  deps = [ ":libabr-test" ]
+}
+
+test("libabr-test") {
+  if (is_fuchsia) {
+    testonly = false
+  }
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  sources = [ "libabr_test.cc" ]
+  output_name = "libabr-test"
+  deps = [
+    "//zircon/public/lib/cksum",
+    "//zircon/public/lib/libabr",
+    "//zircon/public/lib/unittest",
+    "//zircon/public/lib/zxtest",
+  ]
+  include_dirs = [ "//zircon/public/lib/libabr" ]
+}
+
+migrated_manifest("libabr-test-manifest") {
+  deps = [ ":libabr-test" ]
+}

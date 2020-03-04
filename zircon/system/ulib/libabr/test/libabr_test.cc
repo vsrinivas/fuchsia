@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/libabr.h"
+#include <lib/cksum.h>
 
-#include "gtest/gtest.h"
-#include "lib/abr_data.h"
-#include "lib/abr_util.h"
-#include "zlib.h"
+#include <libabr/abr_data.h>
+#include <libabr/abr_util.h>
+#include <libabr/libabr.h>
+#include <zxtest/zxtest.h>
+#include <string>
 
 namespace {
 
@@ -466,12 +467,14 @@ TEST(LibabrTest, GetBootSlotNoExtraneousWritesOneUpdate) {
 }
 
 TEST(LibabrTest, GetSlotSuffix) {
-  EXPECT_EQ("_a", AbrGetSlotSuffix(kAbrSlotIndexA));
-  EXPECT_EQ("_b", AbrGetSlotSuffix(kAbrSlotIndexB));
-  EXPECT_EQ("_r", AbrGetSlotSuffix(kAbrSlotIndexR));
+  EXPECT_EQ(std::string("_a"), AbrGetSlotSuffix(kAbrSlotIndexA));
+  EXPECT_EQ(std::string("_b"), AbrGetSlotSuffix(kAbrSlotIndexB));
+  EXPECT_EQ(std::string("_r"), AbrGetSlotSuffix(kAbrSlotIndexR));
 }
 
-TEST(LibabrTest, GetSlotSuffixInvalidIndex) { EXPECT_EQ("", AbrGetSlotSuffix((AbrSlotIndex)-1)); }
+TEST(LibabrTest, GetSlotSuffixInvalidIndex) {
+  EXPECT_EQ(std::string(""), AbrGetSlotSuffix((AbrSlotIndex)-1));
+}
 
 void MarkSlotActive(AbrSlotIndex slot_index) {
   AbrSlotIndex other_slot_index = OtherSlot(slot_index);

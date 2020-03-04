@@ -5,7 +5,7 @@
 
 #include <stdarg.h>
 
-#include "libabr.h"
+#include <libabr/libabr.h>
 
 /* Returns |in| in big-endian byte order. */
 static uint32_t MakeBigEndian(uint32_t in) {
