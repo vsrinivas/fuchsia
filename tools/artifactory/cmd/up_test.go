@@ -163,6 +163,30 @@ func TestUploading(t *testing.T) {
 		}
 	})
 
+	t.Run("all files are uploaded", func(t *testing.T) {
+		actual := map[string][]byte{
+			"a":       []byte("one"),
+			"b":       []byte("two"),
+			"c/d":     []byte("three"),
+			"c/e/f/g": []byte("four"),
+		}
+		dir := artifactory.Upload{Source: newDirWithContents(t, actual), Recursive: true}
+		defer os.RemoveAll(dir.Source)
+		expected := []artifactory.Upload{
+			{Source: filepath.Join(dir.Source, "a"), Destination: "a"},
+			{Source: filepath.Join(dir.Source, "b"), Destination: "b"},
+			{Source: filepath.Join(dir.Source, "c/d"), Destination: "c/d"},
+			{Source: filepath.Join(dir.Source, "c/e/f/g"), Destination: "c/e/f/g"},
+		}
+		files, err := dirToFiles(context.Background(), dir)
+		if err != nil {
+			t.Fatalf("failed to read dir: %v", err)
+		}
+		if !reflect.DeepEqual(files, expected) {
+			t.Fatalf("unexpected files from dir: actual: %v, expected: %v", files, expected)
+		}
+	})
+
 	t.Run("non-existent or empty sources are skipped", func(t *testing.T) {
 		dir, err := ioutil.TempDir("", "artifactory")
 		if err != nil {

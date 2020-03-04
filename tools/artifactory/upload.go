@@ -17,4 +17,8 @@ type Upload struct {
 	// not fail in the event of a collision, allowing for deduplication of, for
 	// example, content-addressed uploads.
 	Deduplicate bool
+
+	// Recursive tells whether to recursively upload all files in Source if
+	// Source is a directory.
+	Recursive bool
 }

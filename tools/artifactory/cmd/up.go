@@ -40,6 +40,7 @@ const (
 	blobDirName     = "blobs"
 	imageDirName    = "images"
 	debugDirName    = "debug"
+	targetDirName   = "targets"
 
 	// A record of all of the fuchsia debug symbols processed.
 	// This is eventually consumed by crash reporting infrastructure.
@@ -70,6 +71,8 @@ Uploads artifacts from a build to $GCS_BUCKET with the following structure:
 │   │   │   └── <blob names>
 │   │   ├── $UUID
 │   │   │   ├── repository
+│   │   │   │   ├── targets
+│   │   │   │   │   └── <package repo target files>
 │   │   │   │   └── <package repo metadata files>
 │   │   │   ├── keys
 │   │   │   │   └── <package repo keys>
@@ -123,6 +126,7 @@ func (cmd upCommand) execute(ctx context.Context, buildDir string) error {
 	metadataDir := path.Join(repo, metadataDirName)
 	keyDir := path.Join(repo, keyDirName)
 	blobDir := path.Join(metadataDir, blobDirName)
+	targetDir := path.Join(metadataDir, targetDirName)
 
 	dirs := []artifactory.Upload{
 		{
@@ -139,6 +143,12 @@ func (cmd upCommand) execute(ctx context.Context, buildDir string) error {
 			Source:      keyDir,
 			Destination: path.Join(cmd.uuid, keyDirName),
 			Deduplicate: false,
+		},
+		{
+			Source:      targetDir,
+			Destination: path.Join(cmd.uuid, metadataDirName, targetDirName),
+			Deduplicate: false,
+			Recursive:   true,
 		},
 	}
 
@@ -327,23 +337,48 @@ func checkGCSErr(ctx context.Context, err error, name string) error {
 	return err
 }
 
-// dirToFiles returns a list of the top-level files in the dir.
+// dirToFiles returns a list of the top-level files in the dir if dir.Recursive
+// is false, else it returns all files in the dir.
 func dirToFiles(ctx context.Context, dir artifactory.Upload) ([]artifactory.Upload, error) {
 	var files []artifactory.Upload
-	entries, err := ioutil.ReadDir(dir.Source)
+	var err error
+	var paths []string
+	if dir.Recursive {
+		err = filepath.Walk(dir.Source, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			if !info.IsDir() {
+				relPath, err := filepath.Rel(dir.Source, path)
+				if err != nil {
+					return err
+				}
+				paths = append(paths, relPath)
+			}
+			return nil
+		})
+	} else {
+		var entries []os.FileInfo
+		entries, err = ioutil.ReadDir(dir.Source)
+		if err == nil {
+			for _, fi := range entries {
+				if fi.IsDir() {
+					continue
+				}
+				paths = append(paths, fi.Name())
+			}
+		}
+	}
 	if os.IsNotExist(err) {
 		logger.Debugf(ctx, "%s does not exist; skipping upload", dir.Source)
 		return nil, nil
 	} else if err != nil {
 		return nil, err
 	}
-	for _, fi := range entries {
-		if fi.IsDir() {
-			continue
-		}
+	for _, path := range paths {
 		files = append(files, artifactory.Upload{
-			Source:      filepath.Join(dir.Source, fi.Name()),
-			Destination: filepath.Join(dir.Destination, fi.Name()),
+			Source:      filepath.Join(dir.Source, path),
+			Destination: filepath.Join(dir.Destination, path),
 			Deduplicate: dir.Deduplicate,
 		})
 	}
