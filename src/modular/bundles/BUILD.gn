@@ -20,7 +20,6 @@ group("tools") {
 }
 
 group("framework") {
-  testonly = true
   public_deps = [
     "//src/ledger/bin",
     "//src/modular/bin/basemgr",
