@@ -251,6 +251,18 @@ fn delta_with_state(state: PlayerState) -> PlayerInfoDelta {
     }
 }
 
+fn local_delta_with_state(state: PlayerState) -> PlayerInfoDelta {
+    let mut delta = delta_with_state(state);
+    delta.local = Some(true);
+    delta
+}
+
+fn remote_delta_with_state(state: PlayerState) -> PlayerInfoDelta {
+    let mut delta = delta_with_state(state);
+    delta.local = Some(false);
+    delta
+}
+
 fn delta_with_interruption(
     state: PlayerState,
     interruption_behavior: InterruptionBehavior,
@@ -332,25 +344,56 @@ test!(can_receive_deltas, || async {
 test!(active_status, || async {
     let service = TestService::new()?;
 
-    let mut player1 = TestPlayer::new(&service).await?;
-    let mut player2 = TestPlayer::new(&service).await?;
+    let mut player = TestPlayer::new(&service).await?;
     let mut watcher = service.new_watcher(Decodable::new_empty())?;
 
-    player1.emit_delta(delta_with_state(PlayerState::Idle)).await?;
-    player2.emit_delta(delta_with_state(PlayerState::Idle)).await?;
-    let _ = watcher.wait_for_n_updates(2).await?;
+    player.emit_delta(delta_with_state(PlayerState::Idle)).await?;
+    let _ = watcher.wait_for_n_updates(1).await?;
 
-    player1.emit_delta(delta_with_state(PlayerState::Playing)).await?;
+    player.emit_delta(delta_with_state(PlayerState::Playing)).await?;
     let mut updates = watcher.wait_for_n_updates(1).await?;
-    let (active_id, delta) = updates.remove(0);
-    assert_eq!(delta.is_locally_active, Some(true));
+    let (_, delta) = updates.remove(0);
+    assert_eq!(
+        delta.is_locally_active,
+        Some(true),
+        "Expected unknown locality playing state to be locally active."
+    );
 
-    player2.emit_delta(delta_with_state(PlayerState::Paused)).await?;
+    player.emit_delta(delta_with_state(PlayerState::Paused)).await?;
     let mut updates = watcher.wait_for_n_updates(1).await?;
-    let (new_active_id, delta) = updates.remove(0);
-    assert_eq!(delta.is_locally_active, Some(false));
+    let (_, delta) = updates.remove(0);
+    assert_eq!(
+        delta.is_locally_active,
+        Some(false),
+        "Expected unknown locality paused state not to be locally active."
+    );
 
-    assert_ne!(new_active_id, active_id);
+    player.emit_delta(local_delta_with_state(PlayerState::Playing)).await?;
+    let mut updates = watcher.wait_for_n_updates(1).await?;
+    let (_, delta) = updates.remove(0);
+    assert_eq!(
+        delta.is_locally_active,
+        Some(true),
+        "Expected local playing state to be locally active."
+    );
+
+    player.emit_delta(remote_delta_with_state(PlayerState::Playing)).await?;
+    let mut updates = watcher.wait_for_n_updates(1).await?;
+    let (_, delta) = updates.remove(0);
+    assert_eq!(
+        delta.is_locally_active,
+        Some(false),
+        "Expected remote playing state not to be locally active."
+    );
+
+    player.emit_delta(local_delta_with_state(PlayerState::Playing)).await?;
+    let mut updates = watcher.wait_for_n_updates(1).await?;
+    let (_, delta) = updates.remove(0);
+    assert_eq!(
+        delta.is_locally_active,
+        Some(true),
+        "Expected local playing state to be locally active."
+    );
 
     Ok(())
 });

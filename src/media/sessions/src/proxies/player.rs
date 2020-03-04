@@ -316,10 +316,11 @@ impl Player {
     fn session_info_delta(&self) -> impl Fn() -> SessionInfoDelta {
         let state = self.state.clone();
         let registration = self.registration.clone();
+        let local = state.local.unwrap_or(true);
         move || SessionInfoDelta {
-            is_locally_active: state.is_active(),
+            is_locally_active: state.is_active().map(|active| active && local),
             domain: Some(registration.domain.clone()),
-            is_local: state.local.clone(),
+            is_local: Some(local),
             player_status: state.player_status.clone().map(Into::into),
             metadata: state.metadata.clone(),
             player_capabilities: state.player_capabilities.clone().map(Into::into),
@@ -492,7 +493,11 @@ mod test {
 
         assert_eq!(
             delta,
-            SessionInfoDelta { domain: Some(TEST_DOMAIN.to_string()), ..Decodable::new_empty() }
+            SessionInfoDelta {
+                is_local: Some(true),
+                domain: Some(TEST_DOMAIN.to_string()),
+                ..Decodable::new_empty()
+            }
         );
         assert!(!player_stream.is_terminated());
 
