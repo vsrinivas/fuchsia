@@ -5,7 +5,6 @@
 #ifndef SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_ANNOTATIONS_BOARD_INFO_PROVIDER_H_
 #define SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_ANNOTATIONS_BOARD_INFO_PROVIDER_H_
 
-#include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/hwinfo/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fit/bridge.h>
@@ -13,10 +12,7 @@
 #include <lib/sys/cpp/service_directory.h>
 #include <zircon/time.h>
 
-#include <map>
-#include <set>
-#include <string>
-
+#include "src/developer/feedback/feedback_agent/annotations/aliases.h"
 #include "src/developer/feedback/feedback_agent/annotations/annotation_provider.h"
 #include "src/developer/feedback/utils/cobalt.h"
 #include "src/lib/fxl/functional/cancelable_callback.h"
@@ -28,15 +24,15 @@ namespace feedback {
 class BoardInfoProvider : public AnnotationProvider {
  public:
   // fuchsia.hwinfo.Board is expected to be in |services|.
-  BoardInfoProvider(const std::set<std::string>& annotations_to_get, async_dispatcher_t* dispatcher,
+  BoardInfoProvider(const AnnotationKeys& annotations_to_get, async_dispatcher_t* dispatcher,
                     std::shared_ptr<sys::ServiceDirectory> services, zx::duration timeout,
                     Cobalt* cobalt);
 
-  static std::set<std::string> GetSupportedAnnotations();
-  fit::promise<std::vector<fuchsia::feedback::Annotation>> GetAnnotations() override;
+  static AnnotationKeys GetSupportedAnnotations();
+  fit::promise<Annotations> GetAnnotations() override;
 
  private:
-  std::set<std::string> annotations_to_get_;
+  AnnotationKeys annotations_to_get_;
   async_dispatcher_t* dispatcher_;
   const std::shared_ptr<sys::ServiceDirectory> services_;
   const zx::duration timeout_;
@@ -54,7 +50,7 @@ class BoardInfoPtr {
   BoardInfoPtr(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
                Cobalt* cobalt);
 
-  fit::promise<std::map<std::string, std::string>> GetBoardInfo(zx::duration timeout);
+  fit::promise<Annotations> GetBoardInfo(zx::duration timeout);
 
  private:
   async_dispatcher_t* dispatcher_;
@@ -64,7 +60,7 @@ class BoardInfoPtr {
   bool has_called_get_board_info_ = false;
 
   fuchsia::hwinfo::BoardPtr board_ptr_;
-  fit::bridge<std::map<std::string, std::string>> done_;
+  fit::bridge<Annotations> done_;
 
   // We wrap the delayed task we post on the async loop to timeout in a CancelableClosure so we can
   // cancel it if we are done another way.

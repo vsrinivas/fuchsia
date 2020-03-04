@@ -1,15 +1,13 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be // found in the LICENSE
-// file.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
 
 #ifndef SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_ANNOTATIONS_ANNOTATION_PROVIDER_H_
 #define SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_ANNOTATIONS_ANNOTATION_PROVIDER_H_
 
-#include <fuchsia/feedback/cpp/fidl.h>
 #include <lib/fit/promise.h>
 
-#include <string>
-#include <vector>
+#include "src/developer/feedback/feedback_agent/annotations/aliases.h"
 
 namespace feedback {
 
@@ -23,7 +21,7 @@ class AnnotationProvider {
  public:
   virtual ~AnnotationProvider() = default;
 
-  virtual fit::promise<std::vector<fuchsia::feedback::Annotation>> GetAnnotations() = 0;
+  virtual fit::promise<Annotations> GetAnnotations() = 0;
 };
 
 }  // namespace feedback

@@ -1,6 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be // found in the LICENSE
-// file.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
 
 #include "src/developer/feedback/feedback_agent/annotations/single_sync_annotation_provider.h"
 
@@ -11,26 +11,16 @@
 
 namespace feedback {
 
-using fuchsia::feedback::Annotation;
-
 SingleSyncAnnotationProvider::SingleSyncAnnotationProvider(const std::string& key) : key_(key) {}
 
-fit::promise<std::vector<Annotation>> SingleSyncAnnotationProvider::GetAnnotations() {
+fit::promise<Annotations> SingleSyncAnnotationProvider::GetAnnotations() {
   const auto annotation_value = GetAnnotation();
-  if (!annotation_value) {
+  if (!annotation_value.has_value()) {
     FX_LOGS(WARNING) << "Failed to build annotation " << key_;
-
-    return fit::make_result_promise<std::vector<Annotation>>(fit::error());
+    return fit::make_result_promise<Annotations>(fit::error());
   }
 
-  Annotation annotation;
-  annotation.key = key_;
-  annotation.value = std::move(annotation_value.value());
-
-  std::vector<Annotation> annotations;
-  annotations.push_back(std::move(annotation));
-
-  return fit::make_ok_promise(std::move(annotations));
+  return fit::make_ok_promise(Annotations({{key_, annotation_value.value()}}));
 }
 
 }  // namespace feedback

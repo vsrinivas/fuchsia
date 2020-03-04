@@ -1,6 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be // found in the LICENSE
-// file.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
 
 #include "src/developer/feedback/feedback_agent/annotations/channel_provider.h"
 
@@ -8,6 +8,7 @@
 #include <lib/async/default.h>
 #include <zircon/errors.h>
 
+#include "src/developer/feedback/feedback_agent/annotations/aliases.h"
 #include "src/developer/feedback/feedback_agent/constants.h"
 #include "src/developer/feedback/utils/promise.h"
 #include "src/lib/fxl/logging.h"
@@ -16,7 +17,6 @@
 namespace feedback {
 namespace {
 
-using fuchsia::feedback::Annotation;
 using internal::ChannelProviderPtr;
 
 }  // namespace
@@ -26,13 +26,13 @@ ChannelProvider::ChannelProvider(async_dispatcher_t* dispatcher,
                                  zx::duration timeout, Cobalt* cobalt)
     : dispatcher_(dispatcher), services_(services), timeout_(timeout), cobalt_(cobalt) {}
 
-std::set<std::string> ChannelProvider::GetSupportedAnnotations() {
+AnnotationKeys ChannelProvider::GetSupportedAnnotations() {
   return {
       kAnnotationChannel,
   };
 }
 
-fit::promise<std::vector<Annotation>> ChannelProvider::GetAnnotations() {
+fit::promise<Annotations> ChannelProvider::GetAnnotations() {
   auto channel_ptr = std::make_unique<ChannelProviderPtr>(dispatcher_, services_, cobalt_);
 
   // We must store the promise in a variable due to the fact that the order of evaluation of
@@ -40,15 +40,8 @@ fit::promise<std::vector<Annotation>> ChannelProvider::GetAnnotations() {
   auto channel = channel_ptr->GetCurrent(timeout_);
   return ExtendArgsLifetimeBeyondPromise(/*promise=*/std::move(channel),
                                          /*args=*/std::move(channel_ptr))
-      .and_then([](const std::string& channel) {
-        std::vector<Annotation> annotations;
-
-        Annotation annotation;
-        annotation.key = kAnnotationChannel;
-        annotation.value = channel;
-
-        annotations.push_back(std::move(annotation));
-        return fit::ok(std::move(annotations));
+      .and_then([](const AnnotationValue& channel) -> fit::result<Annotations> {
+        return fit::ok(Annotations({{kAnnotationChannel, channel}}));
       })
       .or_else([] {
         FX_LOGS(WARNING) << "Failed to build annotation " << kAnnotationChannel;
@@ -63,7 +56,7 @@ ChannelProviderPtr::ChannelProviderPtr(async_dispatcher_t* dispatcher,
                                        Cobalt* cobalt)
     : dispatcher_(dispatcher), services_(services), cobalt_(cobalt) {}
 
-fit::promise<std::string> ChannelProviderPtr::GetCurrent(zx::duration timeout) {
+fit::promise<AnnotationValue> ChannelProviderPtr::GetCurrent(zx::duration timeout) {
   FXL_CHECK(!has_called_get_current_) << "GetCurrent() is not intended to be called twice";
   has_called_get_current_ = true;
 
@@ -111,7 +104,7 @@ fit::promise<std::string> ChannelProviderPtr::GetCurrent(zx::duration timeout) {
     done_.completer.complete_ok(std::move(channel));
   });
 
-  return done_.consumer.promise_or(fit::error()).then([this](fit::result<std::string>& result) {
+  return done_.consumer.promise_or(fit::error()).then([this](fit::result<AnnotationValue>& result) {
     done_after_timeout_.Cancel();
     return std::move(result);
   });

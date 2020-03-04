@@ -7,11 +7,12 @@
 #include <fuchsia/intl/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
-#include <lib/fit/sequencer.h>
 #include <zircon/errors.h>
 
 #include <optional>
+#include <string>
 
+#include "src/developer/feedback/feedback_agent/annotations/aliases.h"
 #include "src/developer/feedback/feedback_agent/constants.h"
 #include "src/developer/feedback/utils/promise.h"
 #include "src/lib/fxl/logging.h"
@@ -21,23 +22,22 @@
 namespace feedback {
 namespace {
 
-using fuchsia::feedback::Annotation;
 using fuchsia::hwinfo::ProductInfo;
 
 // Required annotations as per /src/hwinfo/hwinfo_product_config_schema.json.
-bool IsRequired(const std::string& annotation) {
-  static const std::set<std::string> required_annotaitons = {
+bool IsRequired(const AnnotationKey& annotation) {
+  static const AnnotationKeys required_annotations = {
       kAnnotationHardwareProductName,
       kAnnotationHardwareProductModel,
       kAnnotationHardwareProductManufacturer,
   };
 
-  return required_annotaitons.find(annotation) != required_annotaitons.end();
+  return required_annotations.find(annotation) != required_annotations.end();
 }
 
 }  // namespace
 
-ProductInfoProvider::ProductInfoProvider(const std::set<std::string>& annotations_to_get,
+ProductInfoProvider::ProductInfoProvider(const AnnotationKeys& annotations_to_get,
                                          async_dispatcher_t* dispatcher,
                                          std::shared_ptr<sys::ServiceDirectory> services,
                                          zx::duration timeout, Cobalt* cobalt)
@@ -47,11 +47,11 @@ ProductInfoProvider::ProductInfoProvider(const std::set<std::string>& annotation
       timeout_(timeout),
       cobalt_(cobalt) {
   const auto supported_annotations = GetSupportedAnnotations();
-  std::vector<std::string> not_supported;
+  AnnotationKeys not_supported;
   for (const auto& annotation : annotations_to_get_) {
     if (supported_annotations.find(annotation) == supported_annotations.end()) {
-      FX_LOGS(WARNING) << "annotation " << annotation << " not supported by BoardInfoProvider";
-      not_supported.push_back(annotation);
+      FX_LOGS(WARNING) << "annotation " << annotation << " not supported by ProductInfoProvider";
+      not_supported.insert(annotation);
     }
   }
 
@@ -60,7 +60,7 @@ ProductInfoProvider::ProductInfoProvider(const std::set<std::string>& annotation
   }
 }
 
-std::set<std::string> ProductInfoProvider::GetSupportedAnnotations() {
+AnnotationKeys ProductInfoProvider::GetSupportedAnnotations() {
   return {
       kAnnotationHardwareProductSKU,
       kAnnotationHardwareProductLanguage,
@@ -72,8 +72,7 @@ std::set<std::string> ProductInfoProvider::GetSupportedAnnotations() {
   };
 }
 
-fit::promise<std::vector<Annotation>> ProductInfoProvider::GetAnnotations() {
-  std::vector<fit::promise<Annotation>> annotations;
+fit::promise<Annotations> ProductInfoProvider::GetAnnotations() {
   auto product_info_ptr =
       std::make_unique<internal::ProductInfoPtr>(dispatcher_, services_, cobalt_);
 
@@ -81,9 +80,8 @@ fit::promise<std::vector<Annotation>> ProductInfoProvider::GetAnnotations() {
 
   return ExtendArgsLifetimeBeyondPromise(std::move(product_info),
                                          /*args=*/std::move(product_info_ptr))
-      .and_then([annotations_to_get =
-                     annotations_to_get_](const std::map<std::string, std::string>& product_info) {
-        std::vector<Annotation> annotations;
+      .and_then([annotations_to_get = annotations_to_get_](const Annotations& product_info) {
+        Annotations annotations;
 
         for (const auto& key : annotations_to_get) {
           if (product_info.find(key) == product_info.end()) {
@@ -92,12 +90,7 @@ fit::promise<std::vector<Annotation>> ProductInfoProvider::GetAnnotations() {
             }
             continue;
           }
-
-          Annotation annotation;
-          annotation.key = key;
-          annotation.value = product_info.at(key);
-
-          annotations.push_back(std::move(annotation));
+          annotations[key] = product_info.at(key);
         }
 
         return fit::ok(std::move(annotations));
@@ -135,12 +128,10 @@ std::optional<std::string> Join(const std::vector<LocaleId>& locale_list) {
 namespace internal {
 
 ProductInfoPtr::ProductInfoPtr(async_dispatcher_t* dispatcher,
-                               std::shared_ptr<sys::ServiceDirectory> services,
-                               Cobalt* cobalt)
+                               std::shared_ptr<sys::ServiceDirectory> services, Cobalt* cobalt)
     : dispatcher_(dispatcher), services_(services), cobalt_(cobalt) {}
 
-fit::promise<std::map<std::string, std::string>> ProductInfoPtr::GetProductInfo(
-    zx::duration timeout) {
+fit::promise<Annotations> ProductInfoPtr::GetProductInfo(zx::duration timeout) {
   FXL_CHECK(!has_called_get_product_info_) << "GetProductInfo() is not intended to be called twice";
   has_called_get_product_info_ = true;
 
@@ -170,7 +161,7 @@ fit::promise<std::map<std::string, std::string>> ProductInfoPtr::GetProductInfo(
     FX_PLOGS(ERROR, post_status) << "Failed to post delayed task";
     FX_LOGS(ERROR)
         << "Skipping hardware product info retrieval as it is not safe without a timeout";
-    return fit::make_result_promise<std::map<std::string, std::string>>(fit::error());
+    return fit::make_result_promise<Annotations>(fit::error());
   }
 
   product_ptr_.set_error_handler([this](zx_status_t status) {
@@ -184,7 +175,7 @@ fit::promise<std::map<std::string, std::string>> ProductInfoPtr::GetProductInfo(
   });
 
   product_ptr_->GetInfo([this](ProductInfo info) {
-    std::map<std::string, std::string> product_info;
+    Annotations product_info;
 
     if (info.has_sku()) {
       product_info[kAnnotationHardwareProductSKU] = info.sku();
@@ -223,11 +214,10 @@ fit::promise<std::map<std::string, std::string>> ProductInfoPtr::GetProductInfo(
     done_.completer.complete_ok(std::move(product_info));
   });
 
-  return done_.consumer.promise_or(fit::error())
-      .then([this](fit::result<std::map<std::string, std::string>>& result) {
-        done_after_timeout_.Cancel();
-        return std::move(result);
-      });
+  return done_.consumer.promise_or(fit::error()).then([this](fit::result<Annotations>& result) {
+    done_after_timeout_.Cancel();
+    return std::move(result);
+  });
 }
 
 }  // namespace internal

@@ -4,7 +4,6 @@
 
 #include "src/developer/feedback/feedback_agent/annotations/board_info_provider.h"
 
-#include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/hwinfo/cpp/fidl.h>
 #include <lib/async/cpp/executor.h>
 #include <lib/zx/time.h>
@@ -14,6 +13,7 @@
 #include <memory>
 #include <string>
 
+#include "src/developer/feedback/feedback_agent/annotations/aliases.h"
 #include "src/developer/feedback/feedback_agent/constants.h"
 #include "src/developer/feedback/feedback_agent/tests/stub_board.h"
 #include "src/developer/feedback/testing/cobalt_test_fixture.h"
@@ -29,13 +29,12 @@
 namespace feedback {
 namespace {
 
-using fuchsia::feedback::Annotation;
 using fuchsia::hwinfo::BoardInfo;
 using fxl::SplitResult::kSplitWantNonEmpty;
 using fxl::WhiteSpaceHandling::kTrimWhitespace;
 using sys::testing::ServiceDirectoryProvider;
+using testing::ElementsAreArray;
 using testing::Pair;
-using testing::UnorderedElementsAreArray;
 
 class BoardInfoProviderTest : public UnitTestFixture, public CobaltTestFixture {
  public:
@@ -50,31 +49,29 @@ class BoardInfoProviderTest : public UnitTestFixture, public CobaltTestFixture {
     }
   }
 
-  std::map<std::string, std::string> GetBoardInfo(
-      const std::set<std::string>& annotations_to_get = {},
-      const zx::duration timeout = zx::sec(1)) {
+  Annotations GetBoardInfo(const AnnotationKeys& annotations_to_get = {},
+                           const zx::duration timeout = zx::sec(1)) {
     SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
     Cobalt cobalt(dispatcher(), services());
 
     BoardInfoProvider provider(annotations_to_get, dispatcher(), services(), timeout, &cobalt);
     auto promise = provider.GetAnnotations();
 
-    std::vector<Annotation> annotations;
-    executor_.schedule_task(
-        std::move(promise).then([&annotations](fit::result<std::vector<Annotation>>& res) {
-          if (res.is_ok()) {
-            annotations = res.take_value();
-          }
-        }));
+    Annotations annotations;
+    executor_.schedule_task(std::move(promise).then([&annotations](fit::result<Annotations>& res) {
+      if (res.is_ok()) {
+        annotations = res.take_value();
+      }
+    }));
     RunLoopFor(timeout);
 
     if (annotations.empty()) {
       return {};
     }
 
-    std::map<std::string, std::string> board_info;
-    for (auto& annotation : annotations) {
-      board_info[annotation.key] = std::move(annotation.value);
+    Annotations board_info;
+    for (auto& [key, value] : annotations) {
+      board_info[key] = std::move(value);
     }
 
     return board_info;
@@ -86,7 +83,7 @@ class BoardInfoProviderTest : public UnitTestFixture, public CobaltTestFixture {
   std::unique_ptr<StubBoard> board_provider_;
 };
 
-BoardInfo CreateBoardInfo(const std::map<std::string, std::string>& annotations) {
+BoardInfo CreateBoardInfo(const Annotations& annotations) {
   BoardInfo info;
 
   for (const auto& [key, value] : annotations) {
@@ -111,7 +108,7 @@ TEST_F(BoardInfoProviderTest, Succeed_AllAnnotationsRequested) {
       kAnnotationHardwareBoardName,
       kAnnotationHardwareBoardRevision,
   });
-  EXPECT_THAT(board_info, UnorderedElementsAreArray({
+  EXPECT_THAT(board_info, ElementsAreArray({
                               Pair(kAnnotationHardwareBoardName, "some-name"),
                               Pair(kAnnotationHardwareBoardRevision, "some-revision"),
                           }));
@@ -126,7 +123,7 @@ TEST_F(BoardInfoProviderTest, Succeed_SingleAnnotationRequested) {
       kAnnotationHardwareBoardName,
       kAnnotationHardwareBoardRevision,
   });
-  EXPECT_THAT(board_info, UnorderedElementsAreArray({
+  EXPECT_THAT(board_info, ElementsAreArray({
                               Pair(kAnnotationHardwareBoardName, "some-name"),
                           }));
 }
@@ -143,7 +140,7 @@ TEST_F(BoardInfoProviderTest, Succeed_SpuriousAnnotationRequested) {
       kAnnotationHardwareBoardRevision,
       "bad-key",
   });
-  EXPECT_THAT(board_info, UnorderedElementsAreArray({
+  EXPECT_THAT(board_info, ElementsAreArray({
                               Pair(kAnnotationHardwareBoardName, "some-name"),
                               Pair(kAnnotationHardwareBoardRevision, "some-revision"),
                           }));
@@ -159,7 +156,7 @@ TEST_F(BoardInfoProviderTest, Succeed_MissingAnnotationReturned) {
       kAnnotationHardwareBoardName,
       kAnnotationHardwareBoardRevision,
   });
-  EXPECT_THAT(board_info, UnorderedElementsAreArray({
+  EXPECT_THAT(board_info, ElementsAreArray({
                               Pair(kAnnotationHardwareBoardName, "some-name"),
                           }));
 }
@@ -170,7 +167,7 @@ TEST_F(BoardInfoProviderTest, Check_CobaltLogsTimeout) {
   auto board_info = GetBoardInfo();
 
   ASSERT_TRUE(board_info.empty());
-  EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({
+  EXPECT_THAT(ReceivedCobaltEvents(), ElementsAreArray({
                                           CobaltEvent(TimedOutData::kBoardInfo),
                                       }));
 }

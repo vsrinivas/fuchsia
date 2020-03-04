@@ -340,7 +340,7 @@ TEST_F(FeedbackAgentIntegrationTest, GetData_CheckKeys) {
   // depend on which device the test runs (e.g., board name) or what happened prior to running this
   // test (e.g., logs). But we should expect the keys to be present.
   ASSERT_TRUE(data.has_annotations());
-  EXPECT_THAT(data.annotations(), testing::UnorderedElementsAreArray({
+  EXPECT_THAT(data.annotations(), testing::ElementsAreArray({
                                       MatchesKey(kAnnotationBuildBoard),
                                       MatchesKey(kAnnotationBuildIsDebug),
                                       MatchesKey(kAnnotationBuildLatestCommitDate),
@@ -353,13 +353,13 @@ TEST_F(FeedbackAgentIntegrationTest, GetData_CheckKeys) {
                                       MatchesKey(kAnnotationDeviceUTCTime),
                                       MatchesKey(kAnnotationHardwareBoardName),
                                       MatchesKey(kAnnotationHardwareBoardRevision),
-                                      MatchesKey(kAnnotationHardwareProductSKU),
                                       MatchesKey(kAnnotationHardwareProductLanguage),
-                                      MatchesKey(kAnnotationHardwareProductRegulatoryDomain),
                                       MatchesKey(kAnnotationHardwareProductLocaleList),
-                                      MatchesKey(kAnnotationHardwareProductName),
-                                      MatchesKey(kAnnotationHardwareProductModel),
                                       MatchesKey(kAnnotationHardwareProductManufacturer),
+                                      MatchesKey(kAnnotationHardwareProductModel),
+                                      MatchesKey(kAnnotationHardwareProductName),
+                                      MatchesKey(kAnnotationHardwareProductRegulatoryDomain),
+                                      MatchesKey(kAnnotationHardwareProductSKU),
                                   }));
 
   ASSERT_TRUE(data.has_attachment_bundle());

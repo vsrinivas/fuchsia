@@ -16,6 +16,7 @@
 #include <memory>
 
 #include "src/developer/feedback/feedback_agent/annotations.h"
+#include "src/developer/feedback/feedback_agent/annotations/aliases.h"
 #include "src/developer/feedback/feedback_agent/attachments.h"
 #include "src/developer/feedback/feedback_agent/attachments/screenshot_ptr.h"
 #include "src/developer/feedback/feedback_agent/config.h"
@@ -26,7 +27,6 @@
 namespace feedback {
 namespace {
 
-using fuchsia::feedback::Annotation;
 using fuchsia::feedback::Attachment;
 using fuchsia::feedback::Data;
 using fuchsia::feedback::ImageEncoding;
@@ -72,14 +72,14 @@ void DataProvider::GetData(GetDataCallback callback) {
   auto annotations =
       fit::join_promise_vector(GetAnnotations(dispatcher_, services_, config_.annotation_allowlist,
                                               kDataTimeout, &cobalt_))
-          .and_then([](std::vector<fit::result<std::vector<Annotation>>>& annotation_promises)
-                        -> fit::result<std::vector<Annotation>> {
-            std::vector<Annotation> ok_annotations;
+          .and_then([](std::vector<fit::result<Annotations>>& annotation_promises)
+                        -> fit::result<Annotations> {
+            Annotations ok_annotations;
             for (auto& promise : annotation_promises) {
               if (promise.is_ok()) {
                 auto annotations = promise.take_value();
-                for (const auto& annotation : annotations) {
-                  ok_annotations.push_back(std::move(annotation));
+                for (const auto& [key, value] : annotations) {
+                  ok_annotations[key] = value;
                 }
               }
             }
@@ -112,44 +112,51 @@ void DataProvider::GetData(GetDataCallback callback) {
 
   auto promise =
       fit::join_promises(std::move(annotations), std::move(attachments))
-          .and_then(
-              [](std::tuple<fit::result<std::vector<Annotation>>,
-                            fit::result<std::vector<Attachment>>>& annotations_and_attachments) {
-                Data data;
+          .and_then([](std::tuple<fit::result<Annotations>, fit::result<std::vector<Attachment>>>&
+                           annotations_and_attachments) {
+            Data data;
 
-                auto& annotations_or_error = std::get<0>(annotations_and_attachments);
-                if (annotations_or_error.is_ok()) {
-                  data.set_annotations(annotations_or_error.take_value());
-                } else {
-                  FX_LOGS(WARNING) << "Failed to retrieve any annotations";
-                }
+            auto& annotations_or_error = std::get<0>(annotations_and_attachments);
+            if (annotations_or_error.is_ok()) {
+              Annotations annotations = annotations_or_error.take_value();
+              std::vector<fuchsia::feedback::Annotation> vec;
+              for (const auto& [key, value] : annotations) {
+                fuchsia::feedback::Annotation annotation;
+                annotation.key = key;
+                annotation.value = value;
+                vec.push_back(std::move(annotation));
+              }
+              data.set_annotations(std::move(vec));
+            } else {
+              FX_LOGS(WARNING) << "Failed to retrieve any annotations";
+            }
 
-                auto& attachments_or_error = std::get<1>(annotations_and_attachments);
-                std::vector<Attachment> attachments;
-                if (attachments_or_error.is_ok()) {
-                  attachments = attachments_or_error.take_value();
-                } else {
-                  FX_LOGS(WARNING) << "Failed to retrieve any attachments";
-                }
+            auto& attachments_or_error = std::get<1>(annotations_and_attachments);
+            std::vector<Attachment> attachments;
+            if (attachments_or_error.is_ok()) {
+              attachments = attachments_or_error.take_value();
+            } else {
+              FX_LOGS(WARNING) << "Failed to retrieve any attachments";
+            }
 
-                // We also add the annotations as a single extra attachment.
-                // This is useful for clients that surface the annotations differentily in the UI
-                // but still want all the annotations to be easily downloadable in one file.
-                if (data.has_annotations()) {
-                  AddAnnotationsAsExtraAttachment(data.annotations(), &attachments);
-                }
+            // We also add the annotations as a single extra attachment.
+            // This is useful for clients that surface the annotations differentily in the UI
+            // but still want all the annotations to be easily downloadable in one file.
+            if (data.has_annotations()) {
+              AddAnnotationsAsExtraAttachment(data.annotations(), &attachments);
+            }
 
-                // We bundle the attachments into a single attachment.
-                // This is useful for most clients that want to pass around a single bundle.
-                if (!attachments.empty()) {
-                  Attachment bundle;
-                  if (BundleAttachments(attachments, &bundle)) {
-                    data.set_attachment_bundle(std::move(bundle));
-                  }
-                }
+            // We bundle the attachments into a single attachment.
+            // This is useful for most clients that want to pass around a single bundle.
+            if (!attachments.empty()) {
+              Attachment bundle;
+              if (BundleAttachments(attachments, &bundle)) {
+                data.set_attachment_bundle(std::move(bundle));
+              }
+            }
 
-                return fit::ok(std::move(data));
-              })
+            return fit::ok(std::move(data));
+          })
           .or_else([]() { return fit::error(ZX_ERR_INTERNAL); })
           .then([this, callback = std::move(callback),
                  timer_id](fit::result<Data, zx_status_t>& result) {

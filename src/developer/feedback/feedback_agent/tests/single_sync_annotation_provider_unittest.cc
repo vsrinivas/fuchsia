@@ -19,8 +19,6 @@
 namespace feedback {
 namespace {
 
-using fuchsia::feedback::Annotation;
-
 class SingleAnnotationProvider : public SingleSyncAnnotationProvider {
  public:
   SingleAnnotationProvider(std::optional<std::string> return_value)
@@ -40,10 +38,10 @@ class SingleSyncAnnotationProviderTest : public UnitTestFixture {
     provider_ = std::make_unique<SingleAnnotationProvider>(return_value);
   }
 
-  fit::result<std::vector<Annotation>> RunGetAnnotations() {
-    fit::result<std::vector<Annotation>> result;
+  fit::result<Annotations> RunGetAnnotations() {
+    fit::result<Annotations> result;
     executor_.schedule_task(provider_->GetAnnotations().then(
-        [&result](fit::result<std::vector<Annotation>>& res) { result = std::move(res); }));
+        [&result](fit::result<Annotations>& res) { result = std::move(res); }));
     RunLoopUntilIdle();
     return result;
   }

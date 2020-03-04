@@ -5,6 +5,10 @@
 ###############################################################################
 # SOURCES
 ###############################################################################
+source_set("aliases") {
+  sources = [ "aliases.h" ]
+}
+
 source_set("annotation_providers") {
   public = [ "annotation_provider_factory.h" ]
 
@@ -25,10 +29,10 @@ source_set("annotation_providers") {
   ]
 
   deps = [
+    ":aliases",
     ":board_info_provider",
     ":channel_provider",
     ":product_info_provider",
-    "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/sys/cpp",
     "//src/developer/feedback/feedback_agent:constants",
     "//src/developer/feedback/utils:time",
@@ -41,8 +45,6 @@ source_set("annotation_providers") {
     "//zircon/public/lib/fit",
     "//zircon/system/fidl/fuchsia-sysinfo",
   ]
-
-  visibility = [ "//src/developer/feedback/feedback_agent/*" ]
 }
 
 # Exposed separately for unit test purposes.
@@ -56,6 +58,7 @@ source_set("board_info_provider") {
   ]
 
   public_deps = [
+    ":aliases",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/fidl/fuchsia.hwinfo",
     "//src/developer/feedback/utils:cobalt",
@@ -82,6 +85,7 @@ source_set("channel_provider") {
   ]
 
   public_deps = [
+    ":aliases",
     "//sdk/fidl/fuchsia.update.channel",
     "//src/developer/feedback/utils:cobalt",
   ]
@@ -128,6 +132,7 @@ source_set("product_info_provider") {
   ]
 
   public_deps = [
+    ":aliases",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/fidl/fuchsia.hwinfo",
     "//src/developer/feedback/utils:cobalt",
@@ -155,6 +160,7 @@ source_set("single_sync_annotation_provider") {
   ]
 
   public_deps = [
+    ":aliases",
     "//sdk/fidl/fuchsia.feedback",
     "//zircon/public/lib/fit",
   ]

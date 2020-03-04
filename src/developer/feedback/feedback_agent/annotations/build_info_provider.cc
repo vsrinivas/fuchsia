@@ -1,13 +1,13 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be // found in the LICENSE
-// file.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
 
 #include "src/developer/feedback/feedback_agent/annotations/build_info_provider.h"
 
-#include <map>
 #include <optional>
 #include <string>
 
+#include "src/developer/feedback/feedback_agent/annotations/aliases.h"
 #include "src/developer/feedback/feedback_agent/constants.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/strings/trim.h"
@@ -15,8 +15,6 @@
 
 namespace feedback {
 namespace {
-
-using fuchsia::feedback::Annotation;
 
 std::optional<std::string> ReadStringFromFile(const std::string& filepath) {
   std::string content;
@@ -27,8 +25,8 @@ std::optional<std::string> ReadStringFromFile(const std::string& filepath) {
   return fxl::TrimString(content, "\r\n").ToString();
 }
 
-const std::map<std::string, std::string>& GetAnnotationFilepaths() {
-  static const std::map<std::string, std::string> annotation_filepaths = {
+const Annotations& GetAnnotationFilepaths() {
+  static const Annotations annotation_filepaths = {
       {kAnnotationBuildBoard, "/config/build-info/board"},
       {kAnnotationBuildProduct, "/config/build-info/product"},
       {kAnnotationBuildLatestCommitDate, "/config/build-info/latest-commit-date"},
@@ -37,7 +35,7 @@ const std::map<std::string, std::string>& GetAnnotationFilepaths() {
   return annotation_filepaths;
 }
 
-std::optional<std::string> GetAnnotation(const std::string& annotation_key) {
+std::optional<AnnotationValue> GetAnnotation(const AnnotationKey& annotation_key) {
   if (annotation_key == kAnnotationBuildIsDebug) {
 #ifndef NDEBUG
     return "true";
@@ -56,7 +54,7 @@ std::optional<std::string> GetAnnotation(const std::string& annotation_key) {
 
 }  // namespace
 
-BuildInfoProvider::BuildInfoProvider(const std::set<std::string>& annotations_to_get)
+BuildInfoProvider::BuildInfoProvider(const AnnotationKeys& annotations_to_get)
     : annotations_to_get_(annotations_to_get) {
   const auto supported_annotations = GetSupportedAnnotations();
   for (const auto& annotation : annotations_to_get_) {
@@ -64,8 +62,8 @@ BuildInfoProvider::BuildInfoProvider(const std::set<std::string>& annotations_to
   }
 }
 
-std::set<std::string> BuildInfoProvider::GetSupportedAnnotations() {
-  std::set<std::string> annotations;
+AnnotationKeys BuildInfoProvider::GetSupportedAnnotations() {
+  AnnotationKeys annotations;
   for (const auto& [key, _] : GetAnnotationFilepaths()) {
     annotations.insert(key);
   }
@@ -73,18 +71,14 @@ std::set<std::string> BuildInfoProvider::GetSupportedAnnotations() {
   return annotations;
 }
 
-fit::promise<std::vector<Annotation>> BuildInfoProvider::GetAnnotations() {
-  std::vector<Annotation> annotations;
-  for (const auto& annotation_key : annotations_to_get_) {
-    auto annotation_value = GetAnnotation(annotation_key);
+fit::promise<Annotations> BuildInfoProvider::GetAnnotations() {
+  Annotations annotations;
+  for (const auto& key : annotations_to_get_) {
+    auto annotation_value = GetAnnotation(key);
     if (annotation_value) {
-      Annotation annotation;
-      annotation.key = annotation_key;
-      annotation.value = std::move(annotation_value.value());
-
-      annotations.push_back(std::move(annotation));
+      annotations[key] = std::move(annotation_value.value());
     } else {
-      FX_LOGS(WARNING) << "Failed to build annotation " << annotation_key;
+      FX_LOGS(WARNING) << "Failed to build annotation " << key;
     }
   }
 

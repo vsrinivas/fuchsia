@@ -10,12 +10,14 @@
 #include <set>
 #include <string>
 
+#include "src/developer/feedback/feedback_agent/annotations/aliases.h"
+
 namespace feedback {
 
 // Feedback data provider configuration.
 struct Config {
   // Set of annotation keys to return data for in fuchsia.feedback.DataProvider.GetData().
-  std::set<std::string> annotation_allowlist;
+  AnnotationKeys annotation_allowlist;
 
   // Set of attachment keys to return data for in fuchsia.feedback.DataProvider.GetData().
   std::set<std::string> attachment_allowlist;

@@ -1,6 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be // found in the LICENSE
-// file.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
 
 #include "src/developer/feedback/feedback_agent/annotations/board_name_provider.h"
 
@@ -14,23 +14,22 @@
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
+#include "src/developer/feedback/feedback_agent/annotations/aliases.h"
 #include "src/developer/feedback/feedback_agent/constants.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 
-using fuchsia::feedback::Annotation;
-
 BoardNameProvider::BoardNameProvider() : SingleSyncAnnotationProvider(kAnnotationDeviceBoardName) {}
 
-std::set<std::string> BoardNameProvider::GetSupportedAnnotations() {
+AnnotationKeys BoardNameProvider::GetSupportedAnnotations() {
   return {
       kAnnotationDeviceBoardName,
   };
 }
 
-std::optional<std::string> BoardNameProvider::GetAnnotation() {
+std::optional<AnnotationValue> BoardNameProvider::GetAnnotation() {
   fuchsia::sysinfo::SysInfoSyncPtr sysinfo;
 
   zx_status_t out_status = fdio_service_connect("/svc/fuchsia.sysinfo.SysInfo",

@@ -1,6 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be // found in the LICENSE
-// file.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
 
 #include "src/developer/feedback/feedback_agent/annotations/time_provider.h"
 
@@ -9,6 +9,7 @@
 #include <optional>
 #include <string>
 
+#include "src/developer/feedback/feedback_agent/annotations/aliases.h"
 #include "src/developer/feedback/feedback_agent/constants.h"
 #include "src/developer/feedback/utils/time.h"
 #include "src/lib/fxl/logging.h"
@@ -18,7 +19,6 @@
 namespace feedback {
 namespace {
 
-using fuchsia::feedback::Annotation;
 using timekeeper::Clock;
 
 std::optional<std::string> GetUptime() {
@@ -41,8 +41,7 @@ std::optional<std::string> GetUTCTime(const Clock& clock) {
 
 }  // namespace
 
-TimeProvider::TimeProvider(const std::set<std::string>& annotations_to_get,
-                           std::unique_ptr<Clock> clock)
+TimeProvider::TimeProvider(const AnnotationKeys& annotations_to_get, std::unique_ptr<Clock> clock)
     : annotations_to_get_(annotations_to_get), clock_(std::move(clock)) {
   const auto supported_annotations = GetSupportedAnnotations();
   for (const auto& annotation : annotations_to_get_) {
@@ -50,32 +49,28 @@ TimeProvider::TimeProvider(const std::set<std::string>& annotations_to_get,
   }
 }
 
-std::set<std::string> TimeProvider::GetSupportedAnnotations() {
+AnnotationKeys TimeProvider::GetSupportedAnnotations() {
   return {
       kAnnotationDeviceUptime,
       kAnnotationDeviceUTCTime,
   };
 }
 
-fit::promise<std::vector<Annotation>> TimeProvider::GetAnnotations() {
-  std::vector<Annotation> annotations;
+fit::promise<Annotations> TimeProvider::GetAnnotations() {
+  Annotations annotations;
 
-  std::optional<std::string> annotation_value;
-  for (const auto& annotation_key : annotations_to_get_) {
-    if (annotation_key == kAnnotationDeviceUptime) {
-      annotation_value = GetUptime();
-    } else if (annotation_key == kAnnotationDeviceUTCTime) {
-      annotation_value = GetUTCTime(*clock_);
+  for (const auto& key : annotations_to_get_) {
+    std::optional<AnnotationValue> value;
+    if (key == kAnnotationDeviceUptime) {
+      value = GetUptime();
+    } else if (key == kAnnotationDeviceUTCTime) {
+      value = GetUTCTime(*clock_);
     }
 
-    if (annotation_value) {
-      Annotation annotation;
-      annotation.key = annotation_key;
-      annotation.value = std::move(annotation_value.value());
-
-      annotations.push_back(std::move(annotation));
+    if (value) {
+      annotations[key] = std::move(value.value());
     } else {
-      FX_LOGS(WARNING) << "Failed to build annotation " << annotation_key;
+      FX_LOGS(WARNING) << "Failed to build annotation " << key;
     }
   }
   return fit::make_ok_promise(annotations);

@@ -6,11 +6,11 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
-#include <lib/fit/sequencer.h>
 #include <zircon/errors.h>
 
 #include <optional>
 
+#include "src/developer/feedback/feedback_agent/annotations/aliases.h"
 #include "src/developer/feedback/feedback_agent/constants.h"
 #include "src/developer/feedback/utils/promise.h"
 #include "src/lib/fxl/logging.h"
@@ -20,12 +20,11 @@
 namespace feedback {
 namespace {
 
-using fuchsia::feedback::Annotation;
 using fuchsia::hwinfo::BoardInfo;
 
 }  // namespace
 
-BoardInfoProvider::BoardInfoProvider(const std::set<std::string>& annotations_to_get,
+BoardInfoProvider::BoardInfoProvider(const AnnotationKeys& annotations_to_get,
                                      async_dispatcher_t* dispatcher,
                                      std::shared_ptr<sys::ServiceDirectory> services,
                                      zx::duration timeout, Cobalt* cobalt)
@@ -35,11 +34,11 @@ BoardInfoProvider::BoardInfoProvider(const std::set<std::string>& annotations_to
       timeout_(timeout),
       cobalt_(cobalt) {
   const auto supported_annotations = GetSupportedAnnotations();
-  std::vector<std::string> not_supported;
+  AnnotationKeys not_supported;
   for (const auto& annotation : annotations_to_get_) {
     if (supported_annotations.find(annotation) == supported_annotations.end()) {
       FX_LOGS(WARNING) << "annotation " << annotation << " not supported by BoardInfoProvider";
-      not_supported.push_back(annotation);
+      not_supported.insert(annotation);
     }
   }
 
@@ -48,35 +47,28 @@ BoardInfoProvider::BoardInfoProvider(const std::set<std::string>& annotations_to
   }
 }
 
-std::set<std::string> BoardInfoProvider::GetSupportedAnnotations() {
+AnnotationKeys BoardInfoProvider::GetSupportedAnnotations() {
   return {
       kAnnotationHardwareBoardName,
       kAnnotationHardwareBoardRevision,
   };
 }
 
-fit::promise<std::vector<Annotation>> BoardInfoProvider::GetAnnotations() {
-  std::vector<fit::promise<Annotation>> annotations;
+fit::promise<Annotations> BoardInfoProvider::GetAnnotations() {
   auto board_info_ptr = std::make_unique<internal::BoardInfoPtr>(dispatcher_, services_, cobalt_);
 
   auto board_info = board_info_ptr->GetBoardInfo(timeout_);
 
   return ExtendArgsLifetimeBeyondPromise(std::move(board_info), /*args=*/std::move(board_info_ptr))
-      .and_then([annotations_to_get =
-                     annotations_to_get_](const std::map<std::string, std::string>& board_info) {
-        std::vector<Annotation> annotations;
+      .and_then([annotations_to_get = annotations_to_get_](const Annotations& board_info) {
+        Annotations annotations;
 
         for (const auto& key : annotations_to_get) {
           if (board_info.find(key) == board_info.end()) {
             FX_LOGS(WARNING) << "Failed to build annotation " << key;
             continue;
           }
-
-          Annotation annotation;
-          annotation.key = key;
-          annotation.value = board_info.at(key);
-
-          annotations.push_back(std::move(annotation));
+          annotations[key] = board_info.at(key);
         }
 
         return fit::ok(std::move(annotations));
@@ -85,11 +77,10 @@ fit::promise<std::vector<Annotation>> BoardInfoProvider::GetAnnotations() {
 
 namespace internal {
 BoardInfoPtr::BoardInfoPtr(async_dispatcher_t* dispatcher,
-                           std::shared_ptr<sys::ServiceDirectory> services,
-                           Cobalt* cobalt)
+                           std::shared_ptr<sys::ServiceDirectory> services, Cobalt* cobalt)
     : dispatcher_(dispatcher), services_(services), cobalt_(cobalt) {}
 
-fit::promise<std::map<std::string, std::string>> BoardInfoPtr::GetBoardInfo(zx::duration timeout) {
+fit::promise<Annotations> BoardInfoPtr::GetBoardInfo(zx::duration timeout) {
   FXL_CHECK(!has_called_get_board_info_) << "GetBoardInfo() is not intended to be called twice";
   has_called_get_board_info_ = true;
 
@@ -118,7 +109,7 @@ fit::promise<std::map<std::string, std::string>> BoardInfoPtr::GetBoardInfo(zx::
   if (post_status != ZX_OK) {
     FX_PLOGS(ERROR, post_status) << "Failed to post delayed task";
     FX_LOGS(ERROR) << "Skipping hardware board info retrieval as it is not safe without a timeout";
-    return fit::make_result_promise<std::map<std::string, std::string>>(fit::error());
+    return fit::make_result_promise<Annotations>(fit::error());
   }
 
   board_ptr_.set_error_handler([this](zx_status_t status) {
@@ -132,7 +123,7 @@ fit::promise<std::map<std::string, std::string>> BoardInfoPtr::GetBoardInfo(zx::
   });
 
   board_ptr_->GetInfo([this](BoardInfo info) {
-    std::map<std::string, std::string> board_info;
+    Annotations board_info;
 
     if (info.has_name()) {
       board_info[kAnnotationHardwareBoardName] = info.name();
@@ -145,11 +136,10 @@ fit::promise<std::map<std::string, std::string>> BoardInfoPtr::GetBoardInfo(zx::
     done_.completer.complete_ok(std::move(board_info));
   });
 
-  return done_.consumer.promise_or(fit::error())
-      .then([this](fit::result<std::map<std::string, std::string>>& result) {
-        done_after_timeout_.Cancel();
-        return std::move(result);
-      });
+  return done_.consumer.promise_or(fit::error()).then([this](fit::result<Annotations>& result) {
+    done_after_timeout_.Cancel();
+    return std::move(result);
+  });
 }
 
 }  // namespace internal

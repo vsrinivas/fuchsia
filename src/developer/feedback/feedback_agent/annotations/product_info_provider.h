@@ -5,17 +5,12 @@
 #ifndef SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_ANNOTATIONS_PRODUCT_INFO_PROVIDER_H_
 #define SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_ANNOTATIONS_PRODUCT_INFO_PROVIDER_H_
 
-#include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/hwinfo/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fit/bridge.h>
 #include <lib/fit/promise.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <zircon/time.h>
-
-#include <map>
-#include <set>
-#include <string>
 
 #include "src/developer/feedback/feedback_agent/annotations/annotation_provider.h"
 #include "src/developer/feedback/utils/cobalt.h"
@@ -28,16 +23,16 @@ namespace feedback {
 class ProductInfoProvider : public AnnotationProvider {
  public:
   // fuchsia.hwinfo.Product is expected to be in |services|.
-  ProductInfoProvider(const std::set<std::string>& annotations_to_get,
-                      async_dispatcher_t* dispatcher,
+  ProductInfoProvider(const AnnotationKeys& annotations_to_get, async_dispatcher_t* dispatcher,
                       std::shared_ptr<sys::ServiceDirectory> services, zx::duration timeout,
                       Cobalt* cobalt);
 
-  static std::set<std::string> GetSupportedAnnotations();
-  fit::promise<std::vector<fuchsia::feedback::Annotation>> GetAnnotations() override;
+  static AnnotationKeys GetSupportedAnnotations();
+
+  fit::promise<Annotations> GetAnnotations() override;
 
  private:
-  std::set<std::string> annotations_to_get_;
+  AnnotationKeys annotations_to_get_;
   async_dispatcher_t* dispatcher_;
   const std::shared_ptr<sys::ServiceDirectory> services_;
   const zx::duration timeout_;
@@ -55,7 +50,7 @@ class ProductInfoPtr {
   ProductInfoPtr(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
                  Cobalt* cobalt);
 
-  fit::promise<std::map<std::string, std::string>> GetProductInfo(zx::duration timeout);
+  fit::promise<Annotations> GetProductInfo(zx::duration timeout);
 
  private:
   async_dispatcher_t* dispatcher_;
@@ -65,7 +60,7 @@ class ProductInfoPtr {
   bool has_called_get_product_info_ = false;
 
   fuchsia::hwinfo::ProductPtr product_ptr_;
-  fit::bridge<std::map<std::string, std::string>> done_;
+  fit::bridge<Annotations> done_;
 
   // We wrap the delayed task we post on the async loop to timeout in a CancelableClosure so we can
   // cancel it if we are done another way.

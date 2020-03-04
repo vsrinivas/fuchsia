@@ -1,11 +1,10 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be // found in the LICENSE
-// file.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
 
 #ifndef SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_ANNOTATIONS_CHANNEL_PROVIDER_H_
 #define SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_ANNOTATIONS_CHANNEL_PROVIDER_H_
 
-#include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/update/channel/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fit/bridge.h>
@@ -13,10 +12,8 @@
 #include <lib/sys/cpp/service_directory.h>
 
 #include <memory>
-#include <set>
-#include <string>
-#include <vector>
 
+#include "src/developer/feedback/feedback_agent/annotations/aliases.h"
 #include "src/developer/feedback/feedback_agent/annotations/annotation_provider.h"
 #include "src/developer/feedback/utils/cobalt.h"
 #include "src/lib/fxl/functional/cancelable_callback.h"
@@ -31,8 +28,9 @@ class ChannelProvider : public AnnotationProvider {
   ChannelProvider(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
                   zx::duration timeout, Cobalt* cobalt);
 
-  static std::set<std::string> GetSupportedAnnotations();
-  fit::promise<std::vector<fuchsia::feedback::Annotation>> GetAnnotations() override;
+  static AnnotationKeys GetSupportedAnnotations();
+
+  fit::promise<Annotations> GetAnnotations() override;
 
  private:
   async_dispatcher_t* dispatcher_;
@@ -52,7 +50,7 @@ class ChannelProviderPtr {
   ChannelProviderPtr(async_dispatcher_t* dispatcher,
                      std::shared_ptr<sys::ServiceDirectory> services, Cobalt* cobalt);
 
-  fit::promise<std::string> GetCurrent(zx::duration timeout);
+  fit::promise<AnnotationValue> GetCurrent(zx::duration timeout);
 
  private:
   async_dispatcher_t* dispatcher_;
@@ -62,7 +60,7 @@ class ChannelProviderPtr {
   bool has_called_get_current_ = false;
 
   fuchsia::update::channel::ProviderPtr update_info_;
-  fit::bridge<std::string> done_;
+  fit::bridge<AnnotationValue> done_;
   // We wrap the delayed task we post on the async loop to timeout in a CancelableClosure so we can
   // cancel it if we are done another way.
   fxl::CancelableClosure done_after_timeout_;

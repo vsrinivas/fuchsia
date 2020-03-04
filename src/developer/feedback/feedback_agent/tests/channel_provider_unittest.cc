@@ -12,6 +12,7 @@
 #include <optional>
 #include <string>
 
+#include "src/developer/feedback/feedback_agent/annotations/aliases.h"
 #include "src/developer/feedback/feedback_agent/tests/stub_channel_provider.h"
 #include "src/developer/feedback/testing/cobalt_test_fixture.h"
 #include "src/developer/feedback/testing/stubs/stub_cobalt_logger_factory.h"
@@ -25,7 +26,6 @@
 namespace feedback {
 namespace {
 
-using fuchsia::feedback::Annotation;
 using testing::UnorderedElementsAreArray;
 
 class ChannelProviderTest : public UnitTestFixture, public CobaltTestFixture {
@@ -47,20 +47,19 @@ class ChannelProviderTest : public UnitTestFixture, public CobaltTestFixture {
     std::optional<std::string> channel;
     ChannelProvider provider(dispatcher(), services(), timeout, &cobalt);
     auto promises = provider.GetAnnotations();
-    executor_.schedule_task(
-        std::move(promises).then([&channel](fit::result<std::vector<Annotation>>& res) {
-          if (res.is_error()) {
-            channel = std::nullopt;
-          } else {
-            std::vector<Annotation> vec = res.take_value();
-            if (vec.empty()) {
-              channel = std::nullopt;
-            } else {
-              FX_CHECK(vec.size() == 1u);
-              channel = std::move(vec.back().value);
-            }
-          }
-        }));
+    executor_.schedule_task(std::move(promises).then([&channel](fit::result<Annotations>& res) {
+      if (res.is_error()) {
+        channel = std::nullopt;
+      } else {
+        Annotations annotations = res.take_value();
+        if (annotations.empty()) {
+          channel = std::nullopt;
+        } else {
+          FX_CHECK(annotations.size() == 1u);
+          channel = std::move(annotations.begin()->second);
+        }
+      }
+    }));
     RunLoopFor(timeout);
     return channel;
   }

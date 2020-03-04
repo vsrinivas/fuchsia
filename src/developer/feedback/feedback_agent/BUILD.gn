@@ -116,6 +116,7 @@ source_set("data_provider") {
     ":constants",
     "//garnet/public/lib/fostr/fidl/fuchsia.images",
     "//sdk/fidl/fuchsia.ui.scenic",
+    "//src/developer/feedback/feedback_agent/annotations:aliases",
     "//src/developer/feedback/feedback_agent/annotations:annotation_providers",
     "//src/developer/feedback/feedback_agent/attachments:attachment_providers",
     "//src/developer/feedback/utils:archive",

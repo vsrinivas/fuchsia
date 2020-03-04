@@ -1,11 +1,13 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be found in the LICENSE
-// file.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
 
 #include "src/developer/feedback/feedback_agent/annotations/annotation_provider_factory.h"
 
 #include <memory>
+#include <vector>
 
+#include "src/developer/feedback/feedback_agent/annotations/aliases.h"
 #include "src/developer/feedback/feedback_agent/annotations/board_info_provider.h"
 #include "src/developer/feedback/feedback_agent/annotations/board_name_provider.h"
 #include "src/developer/feedback/feedback_agent/annotations/build_info_provider.h"
@@ -44,7 +46,7 @@ enum class AnnotationType {
 const auto GetAnnotationTypes =
     AllEnumValues<AnnotationType, AnnotationType::BoardName, AnnotationType::Time>;
 
-std::set<std::string> GetSupportedAnnotations(const AnnotationType type) {
+AnnotationKeys GetSupportedAnnotations(const AnnotationType type) {
   switch (type) {
     case AnnotationType::BoardName:
       return BoardNameProvider::GetSupportedAnnotations();
@@ -63,18 +65,17 @@ std::set<std::string> GetSupportedAnnotations(const AnnotationType type) {
   }
 }
 
-std::set<std::string> AnnotationsToCollect(const AnnotationType type,
-                                           const std::set<std::string>& allowlist) {
-  const std::set<std::string> supported = GetSupportedAnnotations(type);
+AnnotationKeys AnnotationsToCollect(const AnnotationType type, const AnnotationKeys& allowlist) {
+  const AnnotationKeys supported = GetSupportedAnnotations(type);
 
-  std::vector<std::string> intersection;
+  std::vector<AnnotationKey> intersection;
   std::set_intersection(allowlist.begin(), allowlist.end(), supported.begin(), supported.end(),
                         std::back_inserter(intersection));
   return std::set(intersection.begin(), intersection.end());
 }
 
 std::unique_ptr<AnnotationProvider> GetProvider(const AnnotationType type,
-                                                const std::set<std::string>& annotations,
+                                                const AnnotationKeys& annotations,
                                                 async_dispatcher_t* dispatcher,
                                                 std::shared_ptr<sys::ServiceDirectory> services,
                                                 const zx::duration timeout, Cobalt* cobalt) {
@@ -99,10 +100,9 @@ std::unique_ptr<AnnotationProvider> GetProvider(const AnnotationType type,
   }
 }
 
-std::set<std::string> AddIfAnnotationsIntersect(
-    const AnnotationType type, const std::set<std::string>& allowlist,
-    async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-    const zx::duration timeout, Cobalt* cobalt,
+AnnotationKeys AddIfAnnotationsIntersect(
+    const AnnotationType type, const AnnotationKeys& allowlist, async_dispatcher_t* dispatcher,
+    std::shared_ptr<sys::ServiceDirectory> services, const zx::duration timeout, Cobalt* cobalt,
     std::vector<std::unique_ptr<AnnotationProvider>>* providers) {
   auto annotations = AnnotationsToCollect(type, allowlist);
   if (!annotations.empty()) {
@@ -115,11 +115,11 @@ std::set<std::string> AddIfAnnotationsIntersect(
 }  // namespace
 
 std::vector<std::unique_ptr<AnnotationProvider>> GetProviders(
-    const std::set<std::string>& allowlist, async_dispatcher_t* dispatcher,
+    const AnnotationKeys& allowlist, async_dispatcher_t* dispatcher,
     std::shared_ptr<sys::ServiceDirectory> services, const zx::duration timeout, Cobalt* cobalt) {
   static auto annotation_types = GetAnnotationTypes();
 
-  std::set<std::string> ignored_annotations = allowlist;
+  AnnotationKeys ignored_annotations = allowlist;
   std::vector<std::unique_ptr<AnnotationProvider>> providers;
   for (const auto& type : annotation_types) {
     const auto annotations = AddIfAnnotationsIntersect(type, allowlist, dispatcher, services,

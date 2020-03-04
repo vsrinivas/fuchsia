@@ -5,7 +5,6 @@
 #ifndef SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_ANNOTATIONS_H_
 #define SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_ANNOTATIONS_H_
 
-#include <fuchsia/feedback/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fit/promise.h>
 #include <lib/sys/cpp/service_directory.h>
@@ -16,17 +15,18 @@
 #include <string>
 #include <vector>
 
+#include "src/developer/feedback/feedback_agent/annotations/aliases.h"
 #include "src/developer/feedback/utils/cobalt.h"
 
 namespace feedback {
 
-// Returns annotations useful to attach in feedback reports (crash or user feedback).
+// Returns annotations useful to attach in feedback reports (crash, user feedback or bug reports).
 //
 // * only annotations which keys are in the |allowlist| will be returned.
 // * |timeout| is per annotation.
-std::vector<fit::promise<std::vector<fuchsia::feedback::Annotation>>> GetAnnotations(
+std::vector<fit::promise<Annotations>> GetAnnotations(
     async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-    const std::set<std::string>& allowlist, zx::duration timeout, Cobalt* cobalt);
+    const AnnotationKeys& allowlist, zx::duration timeout, Cobalt* cobalt);
 
 }  // namespace feedback
 
