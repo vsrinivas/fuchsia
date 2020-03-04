@@ -434,8 +434,9 @@ func (c *Client) acquire(ctx context.Context, info *Info) (Config, error) {
 			c.stats.SendDiscovers.Increment()
 
 			// Receive a DHCPOFFER message from a responding DHCP server.
+			timeoutCh := time.After(info.Retransmission)
 			for {
-				srcAddr, addr, opts, typ, timedOut, err := c.recv(ctx, info, ep, ch, xid[:])
+				srcAddr, addr, opts, typ, timedOut, err := c.recv(ctx, ep, ch, xid[:], timeoutCh)
 				if err != nil {
 					if timedOut {
 						c.stats.RecvOfferAcquisitionTimeout.Increment()
@@ -516,8 +517,9 @@ retransmitRequest:
 		c.stats.SendRequests.Increment()
 
 		// Receive a DHCPACK/DHCPNAK from the server.
+		timeoutCh := time.After(info.Retransmission)
 		for {
-			fromAddr, addr, opts, typ, timedOut, err := c.recv(ctx, info, ep, ch, xid[:])
+			fromAddr, addr, opts, typ, timedOut, err := c.recv(ctx, ep, ch, xid[:], timeoutCh)
 			if err != nil {
 				if timedOut {
 					c.stats.RecvAckAcquisitionTimeout.Increment()
@@ -616,7 +618,7 @@ func (c *Client) send(ctx context.Context, info *Info, ep tcpip.Endpoint, opts o
 	}
 }
 
-func (c *Client) recv(ctx context.Context, info *Info, ep tcpip.Endpoint, ch <-chan struct{}, xid []byte) (tcpip.FullAddress, tcpip.Address, options, dhcpMsgType, bool, error) {
+func (c *Client) recv(ctx context.Context, ep tcpip.Endpoint, ch <-chan struct{}, xid []byte, timeoutCh <-chan time.Time) (tcpip.FullAddress, tcpip.Address, options, dhcpMsgType, bool, error) {
 	for {
 		var srcAddr tcpip.FullAddress
 		v, _, err := ep.Read(&srcAddr)
@@ -624,7 +626,7 @@ func (c *Client) recv(ctx context.Context, info *Info, ep tcpip.Endpoint, ch <-c
 			select {
 			case <-ch:
 				continue
-			case <-time.After(info.Retransmission):
+			case <-timeoutCh:
 				return tcpip.FullAddress{}, "", nil, 0, true, nil
 			case <-ctx.Done():
 				return tcpip.FullAddress{}, "", nil, 0, true, fmt.Errorf("read: %w", ctx.Err())
