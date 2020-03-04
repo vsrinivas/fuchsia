@@ -67,6 +67,9 @@ final ArgParser fxTestArgParser = ArgParser()
       defaultsTo: null,
       help: 'If passed, runs the tests in a named realm instead of a '
           'randomized one. ')
+  ..addFlag('exact',
+      defaultsTo: false,
+      help: 'If true, does not perform any fuzzy-matching on tests')
   ..addFlag('skipped',
       abbr: 's',
       defaultsTo: false,

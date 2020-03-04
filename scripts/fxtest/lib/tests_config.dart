@@ -19,6 +19,7 @@ class Flags {
   final bool shouldRebuild;
 
   /// Extra tokens to be passed through to individual tests.
+  final bool exactMatches;
   final bool infoOnly;
   final bool shouldFailFast;
   final bool simpleOutput;
@@ -34,6 +35,7 @@ class Flags {
     this.limit = 0,
     this.realm,
     this.allOutput = false,
+    this.exactMatches = false,
     this.infoOnly = false,
     this.simpleOutput = false,
     this.shouldFailFast = false,
@@ -50,6 +52,7 @@ class Flags {
     return Flags(
       allOutput: argResults['output'],
       dryRun: argResults['info'] || argResults['dry'],
+      exactMatches: argResults['exact'],
       infoOnly: argResults['info'],
       isVerbose: argResults['verbose'] || argResults['output'],
       limit: int.parse(argResults['limit'] ?? '0'),
@@ -76,6 +79,7 @@ class Flags {
   limit: $limit
   realm: $realm
   isVerbose: $isVerbose
+  exactMatches: $exactMatches,
   info: $infoOnly,
   simpleOutput: $simpleOutput,
   shouldOnlyRunDeviceTests: $shouldOnlyRunDeviceTests
@@ -139,16 +143,16 @@ class TestsConfig {
     );
   }
 
-  factory TestsConfig.all([List<String> tNames]) {
+  factory TestsConfig.all({List<String> tNames, Flags flags}) {
     return TestsConfig(
       runnerTokens: const [],
       passThroughTokens: const [],
       testNames: tNames ?? [],
-      flags: Flags(),
+      flags: flags ?? Flags(),
     );
   }
 
-  factory TestsConfig.host(List<String> tNames) {
+  factory TestsConfig.host({List<String> tNames}) {
     return TestsConfig(
       runnerTokens: const [],
       passThroughTokens: const [],

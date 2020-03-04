@@ -17,9 +17,11 @@ abstract class Checker {
   /// Checker subclasses to solve the possibly combinatorial amount of
   /// situations.
   bool canHandle(
-      PermutatedTestsConfig testsConfig, TestDefinition testDefinition) {
+      PermutatedTestsConfig testsConfig, TestDefinition testDefinition,
+      {bool exactMatching}) {
     return _testPassesConfig(testsConfig, testDefinition) &&
-        _testPassesNameCheck(testsConfig.testName, testDefinition);
+        _testPassesNameCheck(testsConfig.testName, testDefinition,
+            exactMatching: exactMatching);
   }
 
   /// Compares a [TestDefinition] against the complete set of flags provided by
@@ -52,14 +54,20 @@ abstract class Checker {
   /// number of `testNames` provided by the user. In a situation where the
   ///  developer supplied `["//networking", "//graphics"]` for `testNames`, this
   /// function will be called twice (once for each value) for each test.
-  bool _testPassesNameCheck(String testName, TestDefinition testDefinition);
+  bool _testPassesNameCheck(String testName, TestDefinition testDefinition,
+      {bool exactMatching});
 }
 
 class ComponentTestChecker extends Checker {
   /// Returns `true` if the [TestDefinition] from `tests.json` both starts
   /// with "//" and starts with our `testName` value.
   @override
-  bool _testPassesNameCheck(String testName, TestDefinition testDefinition) {
+  bool _testPassesNameCheck(String testName, TestDefinition testDefinition,
+      {bool exactMatching}) {
+    if (exactMatching) {
+      return testName == testDefinition.name ||
+          testName == testDefinition.label;
+    }
     return testName != null &&
         testName.startsWith('//') &&
         (testDefinition.name.startsWith(testName) ||
@@ -70,7 +78,8 @@ class ComponentTestChecker extends Checker {
 
 class NameMatchChecker extends Checker {
   @override
-  bool _testPassesNameCheck(String testName, TestDefinition testDefinition) {
+  bool _testPassesNameCheck(String testName, TestDefinition testDefinition,
+      {bool exactMatching}) {
     return testName.toLowerCase() == testDefinition.name.toLowerCase();
   }
 }
@@ -81,7 +90,11 @@ class FullUrlComponentChecker extends Checker {
   /// Returns `true` if passed `testName` is both a validated Fuchsia Package
   /// URL and matches a [TestDefinition] from `tests.json`
   @override
-  bool _testPassesNameCheck(String testName, TestDefinition testDefinition) {
+  bool _testPassesNameCheck(String testName, TestDefinition testDefinition,
+      {bool exactMatching}) {
+    if (exactMatching) {
+      return testName == testDefinition.packageUrl;
+    }
     return testName != null &&
         testName.startsWith(FullUrlComponentChecker._fuchsiaPkgPrefix) &&
         testDefinition.packageUrl != null &&
@@ -93,7 +106,8 @@ class UrlNameComponentChecker extends Checker {
   /// Returns `true` if passed `testName` matches the `packageName` chunk of
   /// this [TestDefinition] instance's [PackageUrl] object
   @override
-  bool _testPassesNameCheck(String testName, TestDefinition testDefinition) {
+  bool _testPassesNameCheck(String testName, TestDefinition testDefinition,
+      {bool exactMatching}) {
     return testName != null &&
         (testName == testDefinition.parsedUrl.packageName ||
             testName == testDefinition.parsedUrl.resourcePath ||
@@ -107,7 +121,8 @@ class NoArgumentsChecker extends Checker {
   /// Returns [true] if the supplied `testName` is `null`. AKA, if the developer
   /// executed `fx test` with no positional arguments (but possibly some flags).
   @override
-  bool _testPassesNameCheck(String testName, TestDefinition testDefinition) =>
+  bool _testPassesNameCheck(String testName, TestDefinition testDefinition,
+          {bool exactMatching}) =>
       testName == null;
 }
 
@@ -115,8 +130,10 @@ class NoArgumentsChecker extends Checker {
 /// path in the build output.
 class PathMatchChecker extends Checker {
   @override
-  bool _testPassesNameCheck(String testName, TestDefinition testDefinition) {
+  bool _testPassesNameCheck(String testName, TestDefinition testDefinition,
+      {bool exactMatching}) {
     if (testDefinition.path == null) return false;
+    if (exactMatching) return testName == testDefinition.path;
 
     // A dot here signifies that the user ran `fx test .` *from the build
     // directory itself*, which means that all host test paths, which are

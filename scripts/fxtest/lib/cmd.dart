@@ -107,6 +107,7 @@ class FuchsiaTestCommand {
     return manifestReader.aggregateTests(
       buildDir: fuchsiaLocator.buildDir,
       eventEmitter: emitEvent,
+      exactMatching: testsConfig.flags.exactMatches,
       testDefinitions: testDefinitions,
       testsConfig: testsConfig,
     );

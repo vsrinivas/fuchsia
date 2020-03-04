@@ -167,23 +167,65 @@ void main() {
 
     // Helper function to parse lots of data for tests
     ParsedManifest parseFromArgs({
-      List<String> args,
-      bool device = false,
+      List<String> args = const [],
       List<TestDefinition> testDefs,
     }) {
       TestsConfig testsConfig;
-      if (device) {
-        testsConfig = TestsConfig.device(args);
-      } else {
-        testsConfig = TestsConfig.all(args);
-      }
+      var parsedArgs = fxTestArgParser.parse(args);
+      var testNamesCollector = TestNamesCollector([
+        parsedArgs['testNames'],
+        parsedArgs.rest,
+      ]);
+      testsConfig = TestsConfig.fromArgResults(
+        results: parsedArgs,
+        testNames: testNamesCollector.collect(),
+      );
       return tr.aggregateTests(
-        testDefinitions: testDefs ?? testDefinitions,
         buildDir: buildDir,
         eventEmitter: _ignoreEvents,
+        exactMatching: testsConfig.flags.exactMatches,
         testsConfig: testsConfig,
+        testDefinitions: testDefs ?? testDefinitions,
       );
     }
+
+    test('when the --exact flag is passed for a test name', () {
+      // --exact correctly catches exact name matches
+      ParsedManifest parsedManifest =
+          parseFromArgs(args: ['//host/test', '--exact']);
+      expect(parsedManifest.testBundles, hasLength(1));
+      expect(parsedManifest.testBundles[0].testDefinition.name, '//host/test');
+
+      // --exact kills partial name matches
+      parsedManifest = parseFromArgs(args: ['//host', '--exact']);
+      expect(parsedManifest.testBundles, hasLength(0));
+    });
+
+    test('when the --exact flag is passed for a test path', () {
+      // --exact correctly catches exact path matches
+      ParsedManifest parsedManifest = parseFromArgs(args: ['/asdf', '--exact']);
+      expect(parsedManifest.testBundles, hasLength(1));
+      expect(parsedManifest.testBundles[0].testDefinition.path, '/asdf');
+
+      // --exact kills partial path matches
+      parsedManifest = parseFromArgs(args: ['asdf', '--exact']);
+      expect(parsedManifest.testBundles, hasLength(0));
+    });
+
+    test('when the --exact flag is passed for a test packageUrl', () {
+      // --exact correctly catches exact packageUrl matches
+      ParsedManifest parsedManifest = parseFromArgs(args: [
+        'fuchsia-pkg://fuchsia.com/fancy#superBigTest.cmx',
+        '--exact'
+      ]);
+      expect(parsedManifest.testBundles, hasLength(1));
+      expect(parsedManifest.testBundles[0].testDefinition.name, 'device test');
+
+      // --exact kills partial packageUrl matches
+      parsedManifest =
+          parseFromArgs(args: ['fuchsia-pkg://fuchsia.com/fancy', '--exact']);
+      expect(parsedManifest.testBundles, hasLength(0));
+    });
 
     test('when the -h flag is passed', () {
       ParsedManifest parsedManifest = parseFromArgs(args: ['//host/test']);
@@ -193,8 +235,7 @@ void main() {
 
     test('when the -d flag is passed', () {
       ParsedManifest parsedManifest = parseFromArgs(
-        args: ['fuchsia-pkg://fuchsia.com/fancy#superBigTest.cmx'],
-        device: true,
+        args: ['fuchsia-pkg://fuchsia.com/fancy#superBigTest.cmx', '--device'],
       );
       expect(parsedManifest.testBundles, hasLength(1));
       expect(parsedManifest.testBundles[0].testDefinition.name, 'device test');
@@ -238,7 +279,7 @@ void main() {
     });
 
     test('when packageUrl.packageName is matched', () {
-      TestsConfig testsConfig = TestsConfig.all(['fancy']);
+      TestsConfig testsConfig = TestsConfig.all(tNames: ['fancy']);
       ParsedManifest parsedManifest = tr.aggregateTests(
         testDefinitions: testDefinitions,
         buildDir: buildDir,
@@ -252,7 +293,7 @@ void main() {
     test(
         'when packageUrl.packageName is matched but discriminating '
         'flag prevents', () {
-      TestsConfig testsConfig = TestsConfig.host(['fancy']);
+      TestsConfig testsConfig = TestsConfig.host(tNames: ['fancy']);
       ParsedManifest parsedManifest = tr.aggregateTests(
         testDefinitions: testDefinitions,
         buildDir: buildDir,
@@ -263,7 +304,7 @@ void main() {
     });
 
     test('when . is passed from the build dir', () {
-      TestsConfig testsConfig = TestsConfig.host(['.']);
+      TestsConfig testsConfig = TestsConfig.host(tNames: ['.']);
       // Copy the list
       var tds = testDefinitions.sublist(0)
         ..addAll([
@@ -289,7 +330,7 @@ void main() {
     });
 
     test('when . is passed from the build dir and there\'s device tests', () {
-      TestsConfig testsConfig = TestsConfig.all(['.']);
+      TestsConfig testsConfig = TestsConfig.all(tNames: ['.']);
       // Copy the list
       var tds = testDefinitions.sublist(0)
         ..addAll([

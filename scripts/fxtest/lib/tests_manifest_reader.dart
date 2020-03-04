@@ -107,6 +107,7 @@ class TestsManifestReader {
     @required void Function(TestEvent) eventEmitter,
     @required TestsConfig testsConfig,
     @required String buildDir,
+    bool exactMatching = false,
     TestRunner testRunner,
   }) {
     List<TestBundle> testBundles = [];
@@ -151,7 +152,8 @@ class TestsManifestReader {
         if (testIsClaimed) break;
 
         for (var checker in checkers) {
-          if (checker.canHandle(permutatedTestConfig, testDefinition)) {
+          if (checker.canHandle(permutatedTestConfig, testDefinition,
+              exactMatching: exactMatching)) {
             // Certain test definitions result in multiple entries in `tests.json`,
             // but invoking the test runner on their shared package name already
             // captures all tests. Therefore, any such sibling entry further down
