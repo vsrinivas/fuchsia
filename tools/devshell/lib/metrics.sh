@@ -8,9 +8,9 @@
 ### depends on FUCHSIA_DIR being defined correctly.
 
 declare -r GA_PROPERTY_ID="UA-127897021-6"
-declare -r TRACK_ALL_ARGS="set,fidlcat"
-declare -r TRACK_RESULTS="set,build"
-declare -r ALLOWS_CUSTOM_REPORTING="test"
+declare -r TRACK_ALL_ARGS=( "set" "fidlcat" "run-test" "run-test-component" "run-host-tests" )
+declare -r TRACK_RESULTS=( "set" "build" )
+declare -r ALLOWS_CUSTOM_REPORTING=( "test" )
 declare -r DEBUG_LOG_CONFIG="/tmp/.fx_metrics_debugfile"
 
 # To properly enable unit testing, METRICS_CONFIG is not read-only
@@ -31,6 +31,18 @@ declare -r BATCH_SIZE=20
 hit_count=0
 # Holds curl args for the current batch of hits.
 curl_args=()
+
+function __is_in {
+  local v="$1"
+  shift
+  while [[ $# -gt 0 ]]; do
+    if [[ "$1" == "$v" ]]; then
+      return 0
+    fi
+    shift
+  done
+  return 1
+}
 
 function metrics-read-config {
   METRICS_UUID=""
@@ -135,7 +147,7 @@ function track-subcommand-custom-event {
   local event_label="$*"
 
   # Only allow custom arguments to subcommands defined in # $ALLOWS_CUSTOM_REPORTING
-  if [[ $ALLOWS_CUSTOM_REPORTING != *"${subcommand}"* ]]; then
+  if ! __is_in "$subcommand" "${ALLOWS_CUSTOM_REPORTING[@]}"; then
     return 1
   fi
 
@@ -187,7 +199,7 @@ function track-command-execution {
   fi
 
   # Only track arguments to the subcommands in $TRACK_ALL_ARGS
-  if [[ $TRACK_ALL_ARGS != *"$subcommand"* ]]; then
+  if ! __is_in "$subcommand" "${TRACK_ALL_ARGS[@]}"; then
     args=""
   else
     # Limit to the first 100 characters of arguments.
@@ -267,12 +279,12 @@ function track-command-finished {
   args="$*"
 
   metrics-read-config
-  if [[ $METRICS_ENABLED == 0 || $TRACK_RESULTS != *"$subcommand"* ]]; then
+  if [[ $METRICS_ENABLED == 0 ]] || ! __is_in "$subcommand" "${TRACK_RESULTS[@]}"; then
     return 0
   fi
 
   # Only track arguments to the subcommands in $TRACK_ALL_ARGS
-  if [[ $TRACK_ALL_ARGS != *"$subcommand"* ]]; then
+  if ! __is_in "$subcommand" "${TRACK_ALL_ARGS[@]}"; then
     args=""
   else
     # Limit to the first 100 characters of arguments.

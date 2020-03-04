@@ -51,7 +51,7 @@ the session and user workflow in order to improve the user experience:
 2. For the following subcomand(s) [${TRACK_ALL_ARGS}]:
    - All arguments passed to the subcommand
 
-3. (in the future) For the following subcomand(s) [${TRACK_RESULTS}]:
+3. For the following subcomand(s) [${TRACK_RESULTS}]:
    - Time taken to complete
    - Exit status
 

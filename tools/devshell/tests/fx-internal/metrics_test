@@ -1,0 +1,159 @@
+
+#!/bin/bash
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### Test expected behavior of fx symbolize
+
+
+BT_FILE_DEPS=(
+  "scripts/fx"
+  "tools/devshell/metrics"
+  "tools/devshell/lib/vars.sh"
+  "tools/devshell/lib/prebuilt.sh"
+  "tools/devshell/lib/metrics.sh"
+  "tools/devshell/lib/style.sh"
+)
+
+BT_MOCKED_TOOLS=(
+  # commands defined in tools/devshell/lib/metrics.sh constants:
+  "tools/devshell/set"
+  "tools/devshell/fidlcat"
+  "tools/devshell/run-test"
+  "tools/devshell/run-test-component"
+  "tools/devshell/run-host-tests"
+  "tools/devshell/build"
+  "tools/devshell/test"
+
+  # this is a fake command that is a substring of a valid command
+  "tools/devshell/fidl"
+)
+
+declare fx mycurl metrics_log
+
+BT_SET_UP() {
+  source "${BT_TEMP_DIR}/tools/devshell/tests/lib/fuchsia-mock.sh"
+  fx="$(btf::setup_fx_with_metrics)"
+  mycurl="$(btf::make_mock_binary curl)"
+  btf::add_binary_to_path "${mycurl}"
+  metrics_log="${BT_TEMP_DIR}/metrics_log"
+  BT_ASSERT_FILE_DOES_NOT_EXIST "${BT_TEMP_DIR}/.fx-metrics-config"
+  ${fx} metrics enable "--log=${metrics_log}" > /dev/null
+}
+
+verify_execution_event() {
+  local cmd="$1"
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${metrics_log}" "t=event"
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${metrics_log}" "ec=fx"
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${metrics_log}" "ea=${cmd}"
+  for f in "${mycurl}".mock_state*; do
+    if \
+        btf::does-mock-args-contain "${f}" "--data-urlencode" "t=event" && \
+        btf::does-mock-args-contain "${f}" "--data-urlencode" "ec=fx" && \
+        btf::does-mock-args-contain "${f}" "--data-urlencode" "ea=${cmd}"; then
+      return 0
+    fi
+  done
+  btf::_fail 1 \
+      "Couldn't find expected arguments in any of ${mycurl}.mock_state* files"
+}
+
+# A previous version of metrics would match command names incorrectly,
+# matching substrings. This test validates that it is fixed.
+TEST_metrics_doesnt_match_cmd_substring() {
+  local cmd="fidl"
+  local arg="someargs"
+  ${fx} ${cmd} "${arg}"
+  sleep 0.1  # sleep is required because metrics are collected as background jobs
+  verify_execution_event ${cmd}
+
+  # verify that the "fidl" command doesn't trigger the all args tracking that
+  # should be enabled for the "fidlcat" command
+  for f in "${mycurl}".mock_state*; do
+    if btf::does-mock-args-contain "${f}" "--data-urlencode" "el=${arg}"; then
+      btf::_fail 1 \
+          "Found unexpected arguments in calls to curl. fx ${cmd} should not track arguments: ${f}"
+      break
+    fi
+  done
+}
+
+TEST_metrics_no_arguments_tracking() {
+  local cmd="build"
+  local arg="something"
+  ${fx} ${cmd} "${arg}"
+  sleep 0.1  # sleep is required because metrics are collected as background jobs
+  verify_execution_event ${cmd}
+  # the "build" command does not track arguments:
+  for f in "${mycurl}".mock_state*; do
+    if btf::does-mock-args-contain "${f}" "--data-urlencode" "el=${arg}"; then
+      btf::_fail 1 \
+          "Found unexpected arguments in calls to curl. fx ${cmd} should not track arguments: ${f}"
+      return 1
+    fi
+  done
+}
+
+TEST_metrics_track_arguments() {
+  local cmd="set"
+  local arg="some argument"
+  ${fx} ${cmd} "${arg}"
+  # The "set" command tracks all arguments, let's verify:
+  sleep 0.1  # sleep is required because metrics are collected as background jobs
+  verify_execution_event ${cmd}
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${metrics_log}" "el=${arg}"
+  for f in "${mycurl}".mock_state*; do
+    if btf::does-mock-args-contain "${f}" "--data-urlencode" "el=${arg}"; then
+      return 0  # success
+    fi
+  done
+  btf::_fail 1 \
+      "Could not find execution arguments in calls to curl. fx ${cmd} should track all arguments: ${mycurl}.mock_state*"
+}
+
+TEST_metrics_custom_track() {
+  local cmd="test"
+  local action="myaction"
+  local label="mylabel"
+
+  cat > "${BT_TEMP_DIR}/tools/devshell/${cmd}.mock_side_effects" <<EOF
+source "\${FUCHSIA_DIR}/tools/devshell/lib/metrics.sh" || exit $?
+track-subcommand-custom-event "${cmd}" "${action}" "${label}"
+EOF
+  ${fx} ${cmd}
+  # The "set" command tracks all arguments, let's verify:
+  sleep 0.1  # sleep is required because metrics are collected as background jobs
+  verify_execution_event ${cmd}
+  for f in "${mycurl}".mock_state*; do
+    if btf::does-mock-args-contain "${f}" "--data-urlencode" "ec=fx_custom_${cmd}"; then
+      return 0  # success
+    fi
+  done
+  btf::_fail 1 \
+      "Could not find custom tracking in calls to curl. fx ${cmd} should allow for custom tracking in one of: ${mycurl}.mock_state*"
+}
+
+TEST_metrics_no_custom_track() {
+  local cmd="build"
+  local action="myaction"
+  local label="mylabel"
+
+  cat > "${BT_TEMP_DIR}/tools/devshell/${cmd}.mock_side_effects" <<EOF
+source "\${FUCHSIA_DIR}/tools/devshell/lib/metrics.sh" || exit $?
+track-subcommand-custom-event "${cmd}" "${action}" "${label}"
+EOF
+  ${fx} ${cmd}
+  # The "set" command tracks all arguments, let's verify:
+  sleep 0.1  # sleep is required because metrics are collected as background jobs
+  verify_execution_event ${cmd}
+  for f in "${mycurl}".mock_state*; do
+    if btf::does-mock-args-contain "${f}" "--data-urlencode" "ec=fx_custom_${cmd}"; then
+      btf::_fail 1 \
+          "Found custom tracking in calls to curl. fx ${cmd} should not allow for custom tracking in one of: ${mycurl}.mock_state*"
+      return 1
+    fi
+  done
+}
+
+BT_RUN_TESTS "$@"
