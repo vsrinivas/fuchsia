@@ -14,6 +14,7 @@ zx_library("paver") {
     "paver.cc",
     "provider.cc",
     "stream-reader.cc",
+    "validation.cc",
   ]
   deps = [
     "$zx/system/dev/lib/amlogic:amlogic.headers",

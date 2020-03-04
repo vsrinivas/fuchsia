@@ -26,8 +26,8 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/span.h>
 #include <fbl/auto_call.h>
+#include <fbl/span.h>
 #include <fbl/unique_fd.h>
 #include <fs-management/fvm.h>
 #include <fs-management/mount.h>
@@ -117,66 +117,6 @@ bool CheckIfSame(PartitionClient* partition, const zx::vmo& vmo, size_t payload_
   }
   return memcmp(first_mapper.start(), second_mapper.start(), payload_size) == 0;
 }
-
-#if 0
-// Checks first few bytes of buffer to ensure it is a ZBI.
-// Also validates architecture in kernel header matches the target.
-bool ValidateKernelZbi(const uint8_t* buffer, size_t size, Arch arch) {
-    const auto payload = reinterpret_cast<const zircon_kernel_t*>(buffer);
-    const uint32_t expected_kernel =
-        (arch == Arch::X64) ? ZBI_TYPE_KERNEL_X64 : ZBI_TYPE_KERNEL_ARM64;
-
-    const auto crc_valid = [](const zbi_header_t* hdr) {
-        const uint32_t crc = crc32(0, reinterpret_cast<const uint8_t*>(hdr + 1), hdr->length);
-        return hdr->crc32 == crc;
-    };
-
-    return size >= sizeof(zircon_kernel_t) &&
-           // Container header
-           payload->hdr_file.type == ZBI_TYPE_CONTAINER &&
-           payload->hdr_file.extra == ZBI_CONTAINER_MAGIC &&
-           (payload->hdr_file.length - offsetof(zircon_kernel_t, hdr_kernel)) <= size &&
-           payload->hdr_file.magic == ZBI_ITEM_MAGIC &&
-           payload->hdr_file.flags == ZBI_FLAG_VERSION &&
-           payload->hdr_file.crc32 == ZBI_ITEM_NO_CRC32 &&
-           // Kernel header
-           payload->hdr_kernel.type == expected_kernel &&
-           (payload->hdr_kernel.length - offsetof(zircon_kernel_t, data_kernel)) <= size &&
-           payload->hdr_kernel.magic == ZBI_ITEM_MAGIC &&
-           (payload->hdr_kernel.flags & ZBI_FLAG_VERSION) == ZBI_FLAG_VERSION &&
-           ((payload->hdr_kernel.flags & ZBI_FLAG_CRC32)
-                ? crc_valid(&payload->hdr_kernel)
-                : payload->hdr_kernel.crc32 == ZBI_ITEM_NO_CRC32);
-}
-
-// Parses a partition and validates that it matches the expected format.
-zx_status_t ValidateKernelPayload(const fzl::ResizeableVmoMapper& mapper, size_t vmo_size,
-                                  Partition partition_type, Arch arch) {
-    // TODO(surajmalhotra): Re-enable this as soon as we have a good way to
-    // determine whether the payload is signed or not. (Might require bootserver
-    // changes).
-    if (false) {
-        const auto* buffer = reinterpret_cast<uint8_t*>(mapper.start());
-        switch (partition_type) {
-        case Partition::kZirconA:
-        case Partition::kZirconB:
-        case Partition::kZirconR:
-            if (!ValidateKernelZbi(buffer, vmo_size, arch)) {
-                ERROR("Invalid ZBI payload!");
-                return ZX_ERR_BAD_STATE;
-            }
-            break;
-
-        default:
-            // TODO(surajmalhotra): Validate non-zbi payloads as well.
-            LOG("Skipping validation as payload is not a ZBI\n");
-            break;
-        }
-    }
-
-    return ZX_OK;
-}
-#endif
 
 // Returns a client for the FVM partition. If the FVM volume doesn't exist, a new
 // volume will be created, without any associated children partitions.

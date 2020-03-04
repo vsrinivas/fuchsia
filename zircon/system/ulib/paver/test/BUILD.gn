@@ -44,6 +44,7 @@ test("paver-test") {
     "paversvc-test.cc",
     "stream-reader-test.cc",
     "test-utils.cc",
+    "validation-test.cc",
   ]
   include_dirs = [
     "//zircon/public/lib/paver",
