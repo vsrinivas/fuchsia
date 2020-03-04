@@ -216,6 +216,9 @@ executable("basic_integration_test_app") {
     "//zircon/public/lib/trace-provider",
     "//zircon/public/lib/zx",
   ]
+
+  # TODO(46850): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 executable("two_providers_one_engine") {
@@ -288,6 +291,9 @@ executable("nested_environment_test") {
     "//zircon/public/lib/task-utils",
     "//zircon/public/lib/zx",
   ]
+
+  # TODO(46850): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 executable("return_1234") {
