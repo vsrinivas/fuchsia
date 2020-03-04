@@ -5,6 +5,7 @@ use super::*;
 
 mod notification_stream;
 
+use crate::types::PeerError;
 use notification_stream::NotificationStream;
 
 /// Processes incoming commands from the control stream and dispatches them to the control command
@@ -20,24 +21,24 @@ async fn process_control_stream(peer: Arc<RwLock<RemotePeer>>) {
         }
     };
 
-    let mut command_stream = connection.take_command_stream();
+    let command_stream = connection.take_command_stream();
 
-    while let Some(result) = command_stream.next().await {
-        match result {
-            Ok(command) => {
-                let handle_command_fut = { peer.read().command_handler.handle_command(command) };
-
-                if let Err(e) = handle_command_fut.await {
-                    fx_log_info!("Command returned error from command handler {:?}", e);
-                }
-            }
-            Err(e) => {
-                fx_log_info!("Command stream returned error {:?}", e);
-                break;
-            }
-        }
+    // Limit to 16 since that is the max number of transactions we can process at any one time per
+    // AVCTP
+    match command_stream
+        .map(Ok)
+        .try_for_each_concurrent(16, |command| async {
+            let fut = peer.read().command_handler.handle_command(command.unwrap());
+            let result: Result<(), PeerError> = fut.await;
+            result
+        })
+        .await
+    {
+        Ok(_) => fx_log_info!("Peer command stream closed"),
+        Err(e) => fx_log_err!("Peer command returned error {:?}", e),
     }
-    // command stream closed or errored. Disconnect the peer.
+
+    // Command stream closed/errored. Disconnect the peer.
     {
         peer.write().reset_connection(false);
     }

@@ -4,9 +4,10 @@
 
 use super::*;
 
+use fidl::encoding::Decodable;
 use fidl_fuchsia_bluetooth_avrcp::{
-    self as fidl_avrcp, AbsoluteVolumeHandlerProxy, MediaAttributes, NotificationEvent, PlayStatus,
-    TargetAvcError, TargetHandlerProxy, TargetPassthroughError,
+    self as fidl_avrcp, AbsoluteVolumeHandlerProxy, MediaAttributes, Notification,
+    NotificationEvent, PlayStatus, TargetAvcError, TargetHandlerProxy, TargetPassthroughError,
 };
 
 /// Delegates commands received on any peer channels to the currently registered target handler and
@@ -107,25 +108,32 @@ impl TargetDelegate {
     /// a target handler set.
     pub async fn get_supported_events(&self) -> Vec<NotificationEvent> {
         // Spec requires that we reply with at least two notification types.
-        const DEFAULT_EVENTS: &'static [NotificationEvent] =
-            &[NotificationEvent::VolumeChanged, NotificationEvent::AddressedPlayerChanged];
+        // Reply we support volume change always and if there is no absolute volume handler, we
+        // respond with an error of no players available.
+        // Also respond we have address player change so we can synthesize that event.
+        let mut default_events =
+            vec![NotificationEvent::VolumeChanged, NotificationEvent::AddressedPlayerChanged];
 
         let cmd_fut = {
             let inner_guard = self.inner.lock();
             match &inner_guard.target_handler {
                 Some(target_handler) => target_handler.get_events_supported(),
                 // we have don't have a target handler, return default set of events.
-                None => return DEFAULT_EVENTS.to_vec(),
+                None => return default_events,
             }
         };
 
-        if let Ok(Ok(value)) = cmd_fut.await {
+        if let Ok(Ok(mut value)) = cmd_fut.await {
+            // Append we support volume change and addressed player changed if it's not already
+            // there.
+            value.append(&mut default_events);
+            value.sort_unstable();
+            value.dedup();
             value
         } else {
             // we swallow both FIDL errors and errors from the target handler and return a default
             // set of notifications we support.
-            // TODO: audit this behavior is ideal
-            DEFAULT_EVENTS.to_vec()
+            default_events
         }
     }
 
@@ -154,8 +162,86 @@ impl TargetDelegate {
             }
         };
 
-        // if we have a FIDL error, return no players available
-        send_command_fut.await.map_err(|_| TargetAvcError::RejectedNoAvailablePlayers)
+        // if we have a FIDL error, return invalid parameter
+        send_command_fut.await.map_err(|_| TargetAvcError::RejectedInvalidParameter)
+    }
+
+    /// Get current value of the notification
+    pub async fn send_get_notification(
+        &self,
+        event: NotificationEvent,
+    ) -> Result<Notification, TargetAvcError> {
+        if event == NotificationEvent::VolumeChanged {
+            let send_command_fut = {
+                let inner_guard = self.inner.lock();
+                match &inner_guard.absolute_volume_handler {
+                    Some(absolute_volume_handler) => absolute_volume_handler.get_current_volume(),
+                    // we have don't have a target handler, return no players available
+                    None => return Err(TargetAvcError::RejectedNoAvailablePlayers),
+                }
+            };
+
+            // if we have a FIDL error return no players
+            let volume =
+                send_command_fut.await.map_err(|_| TargetAvcError::RejectedNoAvailablePlayers)?;
+
+            let mut notif = Notification::new_empty();
+            notif.volume = Some(volume);
+            Ok(notif)
+        } else {
+            let send_command_fut = {
+                let inner_guard = self.inner.lock();
+                match &inner_guard.target_handler {
+                    Some(target_handler) => target_handler.get_notification(event),
+                    // we have don't have a target handler, return no players available
+                    None => return Err(TargetAvcError::RejectedNoAvailablePlayers),
+                }
+            };
+
+            // if we have a FIDL error, return no players available
+            send_command_fut.await.map_err(|_| TargetAvcError::RejectedNoAvailablePlayers)?
+        }
+    }
+
+    /// Watch for the change of the notification value
+    pub async fn send_watch_notification(
+        &self,
+        event: NotificationEvent,
+        current_value: Notification,
+        pos_change_interval: u32,
+    ) -> Result<Notification, TargetAvcError> {
+        if event == NotificationEvent::VolumeChanged {
+            let send_command_fut = {
+                let inner_guard = self.inner.lock();
+                match &inner_guard.absolute_volume_handler {
+                    Some(absolute_volume_handler) => absolute_volume_handler.on_volume_changed(),
+                    // we have don't have a target handler, return no players available
+                    None => return Err(TargetAvcError::RejectedAddressedPlayerChanged),
+                }
+            };
+
+            let volume = send_command_fut
+                .await
+                .map_err(|_| TargetAvcError::RejectedAddressedPlayerChanged)?;
+
+            let mut notif = Notification::new_empty();
+            notif.volume = Some(volume);
+            Ok(notif)
+        } else {
+            let send_command_fut = {
+                let inner_guard = self.inner.lock();
+                match &inner_guard.target_handler {
+                    Some(target_handler) => {
+                        target_handler.watch_notification(event, current_value, pos_change_interval)
+                    }
+                    // we have don't have a target handler, return no players available
+                    None => return Err(TargetAvcError::RejectedAddressedPlayerChanged),
+                }
+            };
+
+            // if we have a FIDL error, that the players changed
+            send_command_fut.await.map_err(|_| TargetAvcError::RejectedAddressedPlayerChanged)?
+        }
     }
 
     pub async fn send_get_media_attributes_command(
@@ -469,10 +555,9 @@ mod tests {
 
             match exec.run_until_stalled(&mut get_supported_events_fut) {
                 Poll::Ready(events) => {
-                    assert_eq!(
-                        events,
-                        vec![NotificationEvent::VolumeChanged, NotificationEvent::TrackPosChanged]
-                    );
+                    assert!(events.contains(&NotificationEvent::VolumeChanged));
+                    assert!(events.contains(&NotificationEvent::AddressedPlayerChanged));
+                    assert!(events.contains(&NotificationEvent::TrackPosChanged));
                 }
                 _ => assert!(false, "unexpected state"),
             }

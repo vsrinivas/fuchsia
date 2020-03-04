@@ -4,7 +4,7 @@
 
 use super::*;
 
-use fidl_fuchsia_bluetooth_avrcp::TargetPassthroughError;
+use fidl_fuchsia_bluetooth_avrcp::{Notification, TargetPassthroughError};
 
 mod decoders;
 
@@ -141,10 +141,10 @@ fn send_decode_error_response(
             .send_response(AvcResponseType::NotImplemented, &[])
             .map_err(|e| Error::AvctpError(e)),
         DecodeError::VendorInvalidPreamble(pdu_id, _error) => {
-            send_avc_reject(command, pdu_id, StatusCode::InvalidCommand)
+            send_avc_reject(&command, pdu_id, StatusCode::InvalidCommand)
         }
         DecodeError::VendorPduNotImplemented(pdu_id) => {
-            send_avc_reject(command, pdu_id, StatusCode::InvalidCommand)
+            send_avc_reject(&command, pdu_id, StatusCode::InvalidCommand)
         }
         DecodeError::VendorPacketTypeNotImplemented(_packet_type) => {
             // remote sent a vendor packet that was not a status, control, or notify type.
@@ -161,7 +161,7 @@ fn send_decode_error_response(
                 PacketError::OutOfRange => StatusCode::InvalidCommand,
                 _ => StatusCode::InternalError,
             };
-            send_avc_reject(command, u8::from(&pdu_id), status_code)
+            send_avc_reject(&command, u8::from(&pdu_id), status_code)
         }
     }
 }
@@ -203,7 +203,7 @@ async fn handle_passthrough_command<'a>(
 }
 
 fn send_avc_reject(
-    command: impl IncomingTargetCommand,
+    command: &impl IncomingTargetCommand,
     pdu: u8,
     status_code: StatusCode,
 ) -> Result<(), Error> {
@@ -213,14 +213,129 @@ fn send_avc_reject(
     command.send_response(AvcResponseType::Rejected, &buf[..]).map_err(|e| Error::AvctpError(e))
 }
 
-// TODO(41701): implement target notifications.
-async fn handle_notify_command(
-    _delegate: Arc<TargetDelegate>,
-    command: impl IncomingTargetCommand,
-    _notify_command: RegisterNotificationCommand,
+/// Parse a notification and return a response encoder impl
+fn notification_response(
+    notification: &Notification,
+    notify_event_id: &NotificationEventId,
+) -> Result<Box<dyn PacketEncodable>, StatusCode> {
+    // Unsupported events:
+    // Probably never: TrackReachedEnd, TrackReachedStart,
+    // TODO(47597): Battery/power notifications: BattStatusChanged, SystemStatusChanged,
+    // TODO(2744): Browse channel notifcations: PlayerApplicationSettingChanged,
+    //             NowPlayingContentChanged, AvailablePlayersChanged, and UidsChanged
+
+    Ok(match notify_event_id {
+        &NotificationEventId::EventPlaybackStatusChanged => {
+            Box::new(PlaybackStatusChangedNotificationResponse::new(
+                notification.status.ok_or(StatusCode::InternalError)?.into(),
+            ))
+        }
+        &NotificationEventId::EventTrackChanged => Box::new(TrackChangedNotificationResponse::new(
+            notification.track_id.ok_or(StatusCode::InternalError)?,
+        )),
+        &NotificationEventId::EventAddressedPlayerChanged => {
+            // uid_counter is zero until we implement a uid database
+            Box::new(AddressedPlayerChangedNotificationResponse::new(
+                notification.player_id.ok_or(StatusCode::InternalError)?,
+                0,
+            ))
+        }
+        &NotificationEventId::EventPlaybackPosChanged => {
+            Box::new(PlaybackPosChangedNotificationResponse::new(
+                notification.pos.ok_or(StatusCode::InternalError)?,
+            ))
+        }
+        &NotificationEventId::EventVolumeChanged => {
+            Box::new(VolumeChangedNotificationResponse::new(
+                notification.volume.ok_or(StatusCode::InternalError)?,
+            ))
+        }
+        _ => return Err(StatusCode::InvalidParameter),
+    })
+}
+
+fn send_notification(
+    command: &impl IncomingTargetCommand,
+    notify_event_id: &NotificationEventId,
+    notification: &Notification,
+    success_response_type: AvcResponseType,
 ) -> Result<(), Error> {
-    // TODO(41701): remove. temporary response
-    command.send_response(AvcResponseType::NotImplemented, &[]).map_err(|e| Error::AvctpError(e))
+    match notification_response(&notification, notify_event_id) {
+        Ok(encoder) => match encoder.encode_packet() {
+            Ok(packet) => command
+                .send_response(success_response_type, &packet[..])
+                .map_err(|e| Error::AvctpError(e)),
+            Err(e) => {
+                fx_log_err!("unable to encode target response packet {:?}", e);
+                send_avc_reject(
+                    command,
+                    PduId::RegisterNotification as u8,
+                    StatusCode::InternalError,
+                )
+            }
+        },
+        Err(status_code) => {
+            send_avc_reject(command, PduId::RegisterNotification as u8, status_code)
+        }
+    }
+}
+
+async fn handle_notify_command(
+    delegate: Arc<TargetDelegate>,
+    command: impl IncomingTargetCommand,
+    notify_command: RegisterNotificationCommand,
+) -> Result<(), Error> {
+    let pdu_id = notify_command.raw_pdu_id();
+
+    if pdu_id != PduId::RegisterNotification as u8 {
+        return send_avc_reject(&command, pdu_id, StatusCode::InvalidCommand);
+    }
+
+    let notification_fut = delegate.send_get_notification(notify_command.event_id().into()).fuse();
+    pin_mut!(notification_fut);
+
+    let interim_timer = fasync::Timer::new(Time::after(Duration::from_millis(1000))).fuse();
+    pin_mut!(interim_timer);
+
+    let notification: Notification = futures::select! {
+        _ = interim_timer => {
+            fx_log_err!("target handler timed out with interim response");
+            return send_avc_reject(&command, pdu_id, StatusCode::InternalError);
+        }
+        result = notification_fut => {
+           match result {
+               Ok(notification) => notification,
+               Err(target_error) => {
+                    return send_avc_reject(&command, pdu_id, target_error.into());
+               }
+           }
+        }
+    };
+
+    // send interim value
+    send_notification(
+        &command,
+        notify_command.event_id(),
+        &notification,
+        AvcResponseType::Interim,
+    )?;
+
+    let notification = match delegate
+        .send_watch_notification(
+            notify_command.event_id().into(),
+            notification,
+            notify_command.playback_interval(),
+        )
+        .await
+    {
+        Ok(notification) => notification,
+        Err(target_error) => {
+            return send_avc_reject(&command, pdu_id, target_error.into());
+        }
+    };
+
+    // send changed value
+    send_notification(&command, notify_command.event_id(), &notification, AvcResponseType::Changed)
 }
 
 async fn handle_get_capabilities(
@@ -426,7 +541,7 @@ fn send_status_response(
                 }
                 Err(e) => {
                     fx_log_err!("Error trying to encode response packet. Sending internal_error rejection to peer {:?}", e);
-                    send_avc_reject(command, u8::from(&pdu_id), StatusCode::InternalError)
+                    send_avc_reject(&command, u8::from(&pdu_id), StatusCode::InternalError)
                 }
             }
         }
@@ -435,7 +550,7 @@ fn send_status_response(
                 "Error trying to encode response packet. Sending rejection to peer {:?}",
                 status_code
             );
-            send_avc_reject(command, u8::from(&pdu_id), status_code)
+            send_avc_reject(&command, u8::from(&pdu_id), status_code)
         }
     }
 }
@@ -508,7 +623,7 @@ fn send_control_response(
                 .map_err(|e| Error::AvctpError(e)),
             Err(e) => {
                 fx_log_err!("Error trying to encode response packet. Sending internal_error rejection to peer {:?}", e);
-                send_avc_reject(command, u8::from(&pdu_id), StatusCode::InternalError)
+                send_avc_reject(&command, u8::from(&pdu_id), StatusCode::InternalError)
             }
         },
         Err(status_code) => {
@@ -516,7 +631,7 @@ fn send_control_response(
                 "Error trying to encode response packet. Sending rejection to peer {:?}",
                 status_code
             );
-            send_avc_reject(command, u8::from(&pdu_id), status_code)
+            send_avc_reject(&command, u8::from(&pdu_id), status_code)
         }
     }
 }
@@ -617,6 +732,7 @@ mod test {
         packet_type: AvcPacketType,
         op_code: AvcOpCode,
         body: Vec<u8>,
+        expect_response_interim_first: bool,
         expect_response_type: Option<AvcResponseType>,
         expect_body: Option<Vec<u8>>,
         expect_send: bool,
@@ -629,6 +745,7 @@ mod test {
                 packet_type,
                 op_code,
                 body,
+                expect_response_interim_first: false,
                 expect_response_type: None,
                 expect_body: None,
                 expect_send: false,
@@ -666,8 +783,13 @@ mod test {
             self.expect_response_type(AvcResponseType::ImplementedStable)
         }
 
-        fn expect_interim(self) -> Self {
-            self.expect_response_type(AvcResponseType::Interim)
+        fn expect_changed(self) -> Self {
+            self.expect_response_type(AvcResponseType::Changed)
+        }
+
+        fn expect_interim(mut self) -> Self {
+            self.expect_response_interim_first = true;
+            self
         }
     }
 
@@ -689,7 +811,9 @@ mod test {
             response_type: AvcResponseType,
             body: &[u8],
         ) -> Result<(), bt_avctp::Error> {
-            if let Some(expect_response_type) = &self.expect_response_type {
+            if !self.send_called.load(Ordering::SeqCst) && self.expect_response_interim_first {
+                assert_eq!(&response_type, &AvcResponseType::Interim);
+            } else if let Some(expect_response_type) = &self.expect_response_type {
                 assert_eq!(&response_type, expect_response_type);
             }
 
@@ -761,15 +885,20 @@ mod test {
                     } => {
                         responder.send(&mut Ok(fidl_avrcp::PlayerApplicationSettings::new_empty()))
                     }
-                    TargetHandlerRequest::GetNotification { event_id: _, responder } => {
-                        responder.send(&mut Err(TargetAvcError::RejectedInternalError))
-                    }
+                    TargetHandlerRequest::GetNotification { event_id: _, responder } => responder
+                        .send(&mut Ok(Notification {
+                            status: Some(fidl_fuchsia_bluetooth_avrcp::PlaybackStatus::Playing),
+                            ..Notification::empty()
+                        })),
                     TargetHandlerRequest::WatchNotification {
                         event_id: _,
                         current: _,
                         pos_change_interval: _,
                         responder,
-                    } => responder.send(&mut Err(TargetAvcError::RejectedInternalError)),
+                    } => responder.send(&mut Ok(Notification {
+                        status: Some(fidl_fuchsia_bluetooth_avrcp::PlaybackStatus::Stopped),
+                        ..Notification::empty()
+                    })),
                 };
             }
         });
@@ -1182,6 +1311,72 @@ mod test {
         // we drop the mock command and if the expected reject wasn't called, the test will fail
     }
 
+    /// test notifications on absolute volume handler
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn handle_register_notification_volume() -> Result<(), Error> {
+        let (volume_proxy, mut volume_stream) =
+            create_proxy_and_stream::<AbsoluteVolumeHandlerMarker>()
+                .expect("Error creating AbsoluteVolumeHandler endpoint");
+        let cmd_handler = create_command_handler(None, Some(volume_proxy));
+
+        fasync::spawn(async move {
+            while let Some(Ok(event)) = volume_stream.next().await {
+                match event {
+                    AbsoluteVolumeHandlerRequest::GetCurrentVolume { responder } => {
+                        let _result = responder.send(10);
+                    }
+                    AbsoluteVolumeHandlerRequest::OnVolumeChanged { responder } => {
+                        let _result = responder.send(11);
+                    }
+                    _ => panic!("unexpected command"),
+                };
+            }
+        });
+
+        let packet_body: Vec<u8> = [
+            0x31, // RegisterNotification
+            0x00, // single packet
+            0x00, 0x05, // param len, 4 bytes
+            0x0d, 0x00, 0x00, 0x00, 0x00, // volume change event
+        ]
+        .to_vec();
+
+        let command = MockAvcCommand::new(
+            AvcPacketType::Command(AvcCommandType::Notify),
+            AvcOpCode::VendorDependent,
+            packet_body,
+        )
+        .expect_interim()
+        .expect_changed();
+
+        cmd_handler.handle_command_internal(command).await
+    }
+
+    /// test notifications on target handler
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn handle_register_notification_target() -> Result<(), Error> {
+        let target_proxy = create_dumby_target_handler(false);
+        let cmd_handler = create_command_handler(Some(target_proxy), None);
+
+        let packet_body: Vec<u8> = [
+            0x31, // RegisterNotification
+            0x00, // single packet
+            0x00, 0x05, // param len, 4 bytes
+            0x01, 0x00, 0x00, 0x00, 0x00, // playback status change event
+        ]
+        .to_vec();
+
+        let command = MockAvcCommand::new(
+            AvcPacketType::Command(AvcCommandType::Notify),
+            AvcOpCode::VendorDependent,
+            packet_body,
+        )
+        .expect_interim()
+        .expect_changed();
+
+        cmd_handler.handle_command_internal(command).await
+    }
+
     /// test we get a command and it responds as expected.
     #[fuchsia_async::run_singlethreaded(test)]
     async fn handle_set_absolute_volume_cmd() -> Result<(), Error> {
@@ -1245,7 +1440,6 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn handle_set_absolute_volume_cmd_bad_packet() -> Result<(), Error> {
         // absolute volume handler shouldn't even get called since the packet decode should fail.
-
         let (volume_proxy, volume_stream) =
             create_proxy_and_stream::<AbsoluteVolumeHandlerMarker>()
                 .expect("Error creating AbsoluteVolumeHandler endpoint");

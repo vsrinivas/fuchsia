@@ -5,6 +5,7 @@
 use std::{u32, u64};
 
 use super::*;
+use fidl_fuchsia_bluetooth_avrcp::NotificationEvent;
 
 pub_decodable_enum! {
     /// AVRCP 1.6.1 section 28 "Appendix H: list of defined notification events"
@@ -45,6 +46,70 @@ pub_decodable_enum! {
     }
 }
 
+impl From<&fidl_avrcp::NotificationEvent> for NotificationEventId {
+    fn from(event: &NotificationEvent) -> Self {
+        match event {
+            &NotificationEvent::PlaybackStatusChanged => {
+                NotificationEventId::EventPlaybackStatusChanged
+            }
+            &NotificationEvent::TrackChanged => NotificationEventId::EventTrackChanged,
+            &NotificationEvent::TrackReachedEnd => NotificationEventId::EventTrackReachedEnd,
+            &NotificationEvent::TrackReachedStart => NotificationEventId::EventTrackReachedStart,
+            &NotificationEvent::TrackPosChanged => NotificationEventId::EventPlaybackPosChanged,
+            &NotificationEvent::BattStatusChanged => NotificationEventId::EventBattStatusChanged,
+            &NotificationEvent::SystemStatusChanged => {
+                NotificationEventId::EventSystemStatusChanged
+            }
+            &NotificationEvent::PlayerApplicationSettingChanged => {
+                NotificationEventId::EventPlayerApplicationSettingChanged
+            }
+            &NotificationEvent::NowPlayingContentChanged => {
+                NotificationEventId::EventNowPlayingContentChanged
+            }
+            &NotificationEvent::AvailablePlayersChanged => {
+                NotificationEventId::EventAvailablePlayersChanged
+            }
+            &NotificationEvent::AddressedPlayerChanged => {
+                NotificationEventId::EventAddressedPlayerChanged
+            }
+            &NotificationEvent::UidsChanged => NotificationEventId::EventUidsChanged,
+            &NotificationEvent::VolumeChanged => NotificationEventId::EventVolumeChanged,
+        }
+    }
+}
+
+impl From<&NotificationEventId> for fidl_avrcp::NotificationEvent {
+    fn from(event: &NotificationEventId) -> Self {
+        match event {
+            &NotificationEventId::EventPlaybackStatusChanged => {
+                NotificationEvent::PlaybackStatusChanged
+            }
+            &NotificationEventId::EventTrackChanged => NotificationEvent::TrackChanged,
+            &NotificationEventId::EventTrackReachedEnd => NotificationEvent::TrackReachedEnd,
+            &NotificationEventId::EventTrackReachedStart => NotificationEvent::TrackReachedStart,
+            &NotificationEventId::EventPlaybackPosChanged => NotificationEvent::TrackPosChanged,
+            &NotificationEventId::EventBattStatusChanged => NotificationEvent::BattStatusChanged,
+            &NotificationEventId::EventSystemStatusChanged => {
+                NotificationEvent::SystemStatusChanged
+            }
+            &NotificationEventId::EventPlayerApplicationSettingChanged => {
+                NotificationEvent::PlayerApplicationSettingChanged
+            }
+            &NotificationEventId::EventNowPlayingContentChanged => {
+                NotificationEvent::NowPlayingContentChanged
+            }
+            &NotificationEventId::EventAvailablePlayersChanged => {
+                NotificationEvent::AvailablePlayersChanged
+            }
+            &NotificationEventId::EventAddressedPlayerChanged => {
+                NotificationEvent::AddressedPlayerChanged
+            }
+            &NotificationEventId::EventUidsChanged => NotificationEvent::UidsChanged,
+            &NotificationEventId::EventVolumeChanged => NotificationEvent::VolumeChanged,
+        }
+    }
+}
+
 #[derive(Debug)]
 /// AVRCP 1.6.1 section 6.7.2 RegisterNotification
 pub struct RegisterNotificationCommand {
@@ -64,7 +129,6 @@ impl RegisterNotificationCommand {
         Self { event_id: NotificationEventId::EventPlaybackPosChanged, playback_interval }
     }
 
-    #[allow(dead_code)] // TODO(BT-2218): WIP. Remove once used.
     pub fn event_id(&self) -> &NotificationEventId {
         &self.event_id
     }
@@ -363,6 +427,78 @@ impl Encodable for PlaybackPosChangedNotificationResponse {
     }
 }
 
+#[derive(Debug)]
+/// AVRCP 1.6.1 section 6.7.2 RegisterNotification
+pub struct AddressedPlayerChangedNotificationResponse {
+    player_id: u16,
+    uid_counter: u16,
+}
+
+impl AddressedPlayerChangedNotificationResponse {
+    pub fn new(player_id: u16, uid_counter: u16) -> Self {
+        Self { player_id, uid_counter }
+    }
+
+    #[cfg(test)] // only used by tests today
+    pub fn player_id(&self) -> u16 {
+        self.player_id
+    }
+
+    #[cfg(test)] // only used by tests today
+    pub fn uid_counter(&self) -> u16 {
+        self.uid_counter
+    }
+}
+
+impl VendorDependentPdu for AddressedPlayerChangedNotificationResponse {
+    fn pdu_id(&self) -> PduId {
+        PduId::RegisterNotification
+    }
+}
+
+impl Decodable for AddressedPlayerChangedNotificationResponse {
+    fn decode(buf: &[u8]) -> PacketResult<Self> {
+        if buf.len() < 5 {
+            return Err(Error::InvalidMessage);
+        }
+
+        if buf[0] != u8::from(&NotificationEventId::EventAddressedPlayerChanged) {
+            return Err(Error::InvalidMessage);
+        }
+
+        let player_id = {
+            let mut temp = [0; 2];
+            temp.copy_from_slice(&buf[1..3]);
+            u16::from_be_bytes(temp)
+        };
+
+        let uid_counter = {
+            let mut temp = [0; 2];
+            temp.copy_from_slice(&buf[3..5]);
+            u16::from_be_bytes(temp)
+        };
+
+        Ok(Self { player_id, uid_counter })
+    }
+}
+
+impl Encodable for AddressedPlayerChangedNotificationResponse {
+    fn encoded_len(&self) -> usize {
+        5
+    }
+
+    fn encode(&self, buf: &mut [u8]) -> PacketResult<()> {
+        if buf.len() < self.encoded_len() {
+            return Err(Error::InvalidMessageLength);
+        }
+
+        buf[0] = u8::from(&NotificationEventId::EventAddressedPlayerChanged);
+        buf[1..3].copy_from_slice(&self.player_id.to_be_bytes());
+        buf[3..5].copy_from_slice(&self.uid_counter.to_be_bytes());
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -539,5 +675,23 @@ mod tests {
     fn test_playback_status_changed_invalid() {
         let cmd = PlaybackStatusChangedNotificationResponse::decode(&[0x01, 0xF1]);
         assert_eq!(cmd.unwrap_err(), Error::OutOfRange);
+    }
+
+    #[test]
+    fn test_addressed_player_changed_encode_decode() {
+        let cmd_a = AddressedPlayerChangedNotificationResponse::new(15535, 5535);
+        let mut buf = vec![0; cmd_a.encoded_len()];
+        cmd_a.encode(&mut buf[..]).expect("unable to encode packet");
+        let cmd_b = AddressedPlayerChangedNotificationResponse::decode(&buf[..])
+            .expect("unable to decode packet");
+
+        assert_eq!(cmd_a.uid_counter(), cmd_b.uid_counter());
+        assert_eq!(cmd_a.player_id(), cmd_b.player_id());
+    }
+
+    #[test]
+    fn test_addressed_player_changed_invalid() {
+        let cmd = AddressedPlayerChangedNotificationResponse::decode(&[0x13, 0xF1]);
+        assert_eq!(cmd.unwrap_err(), Error::InvalidMessage);
     }
 }
