@@ -619,6 +619,10 @@ async fn walk_offer_chain<'a>(
             OfferDecl::Storage(s) => OfferSource::Storage(s.source()),
             OfferDecl::Runner(r) => OfferSource::Runner(&r.source),
             OfferDecl::Resolver(_) => return Err(ModelError::unsupported("Resolver capability")),
+            OfferDecl::Event(_) => {
+                // TODO(fxb/47285): implement
+                return Err(ModelError::unsupported("Event capability"));
+            }
         };
         let (dir_rights, decl_subdir) = match offer {
             OfferDecl::Directory(OfferDirectoryDecl { rights, subdir, .. }) => {

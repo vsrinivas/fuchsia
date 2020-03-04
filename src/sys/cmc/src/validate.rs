@@ -1342,6 +1342,12 @@ mod tests {
                         "from": "realm",
                         "to": [ "#modular" ],
                     },
+                    {
+                        "event": "started",
+                        "from": "realm",
+                        "to": [ "#modular" ],
+                        "as": "started-modular",
+                    },
                 ],
                 "children": [
                     {
@@ -2803,6 +2809,7 @@ mod tests {
             storage: None,
             runner: None,
             resolver: None,
+            event: None,
             from: OneOrMany::One(cml::Ref::Self_),
             to: vec![],
             r#as: None,

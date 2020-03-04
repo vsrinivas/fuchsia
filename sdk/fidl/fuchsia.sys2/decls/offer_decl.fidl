@@ -17,6 +17,7 @@ xunion OfferDecl {
     4: OfferStorageDecl storage;
     5: OfferRunnerDecl runner;
     6: OfferResolverDecl resolver;
+    7: OfferEventDecl event;
 };
 
 /// Describes the type of dependency implied by the capability.
@@ -164,5 +165,20 @@ table OfferResolverDecl {
     3: Ref target;
 
     /// Name under which the capability is being offered.
+    4: fuchsia.component.resolver_name target_name;
+};
+
+/// Declares an event offered by a component.
+table OfferEventDecl {
+    /// The provider of the event. Must be `realm`.
+    1: Ref source;
+
+    /// Name of the event being offered.
+    2: fuchsia.component.event_name source_name;
+
+    /// Reference to the target of the event. Must be `child` or `collection`.
+    3: Ref target;
+
+    /// Name under which the event is being offered.
     4: fuchsia.component.resolver_name target_name;
 };

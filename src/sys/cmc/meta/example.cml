@@ -59,6 +59,12 @@
       "from": "realm",
       "to": [ "#logger", "#modular" ]
     },
+    {
+      "event": "stopped",
+      "from": "realm",
+      "to": [ "#logger" ],
+      "as": "stopped-logger",
+    },
   ],
   "children": [
     {

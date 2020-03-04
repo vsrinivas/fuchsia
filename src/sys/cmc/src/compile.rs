@@ -332,6 +332,17 @@ fn translate_offer(
                     target_name: cm::Name::new(target_id)?,
                 }));
             }
+        } else if let Some(e) = offer.event() {
+            let source = extract_single_offer_source(offer)?;
+            let targets = extract_all_targets_for_each_child(offer, all_children, all_collections)?;
+            for (target, target_id) in targets {
+                out_offers.push(cm::Offer::Event(cm::OfferEvent {
+                    source: source.clone(),
+                    source_name: cm::Name::new(e.clone())?,
+                    target,
+                    target_name: cm::Name::new(target_id)?,
+                }));
+            }
         } else {
             return Err(Error::internal(format!("no capability")));
         }
@@ -1141,6 +1152,17 @@ mod tests {
                         "to": [ "#modular" ],
                         "as": "elf-renamed",
                     },
+                    {
+                        "event": "stopped",
+                        "from": "realm",
+                        "to": [ "#modular" ],
+                    },
+                    {
+                        "event": "started",
+                        "from": "realm",
+                        "to": [ "#netstack" ],
+                        "as": "started-modular",
+                    },
                 ],
                 "children": [
                     {
@@ -1396,6 +1418,34 @@ mod tests {
                     }
                 },
                 "target_name": "elf-renamed"
+            }
+        },
+        {
+            "event": {
+                "source": {
+                    "realm": {}
+                },
+                "source_name": "stopped",
+                "target": {
+                    "collection": {
+                        "name": "modular"
+                    }
+                },
+                "target_name": "stopped"
+            }
+        },
+        {
+            "event": {
+                "source": {
+                    "realm": {}
+                },
+                "source_name": "started",
+                "target": {
+                    "child": {
+                        "name": "netstack"
+                    }
+                },
+                "target_name": "started-modular"
             }
         }
     ],

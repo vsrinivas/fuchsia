@@ -296,6 +296,7 @@ pub struct Offer {
     pub storage: Option<String>,
     pub runner: Option<String>,
     pub resolver: Option<Name>,
+    pub event: Option<String>,
     pub from: OneOrMany<Ref>,
     pub to: Vec<Ref>,
     pub r#as: Option<String>,
@@ -486,8 +487,7 @@ impl CapabilityClause for Offer {
         &self.resolver
     }
     fn event(&self) -> &Option<String> {
-        // TODO(fxb/47276): allow to offer events
-        &None
+        &self.event
     }
     fn capability_name(&self) -> &'static str {
         if self.service.is_some() {

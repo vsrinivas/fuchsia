@@ -113,6 +113,7 @@ impl CmInto<fsys::OfferDecl> for cm::Offer {
             cm::Offer::Storage(s) => fsys::OfferDecl::Storage(s.cm_into()?),
             cm::Offer::Runner(r) => fsys::OfferDecl::Runner(r.cm_into()?),
             cm::Offer::Resolver(r) => fsys::OfferDecl::Resolver(r.cm_into()?),
+            cm::Offer::Event(e) => fsys::OfferDecl::Event(e.cm_into()?),
         })
     }
 }
@@ -297,6 +298,17 @@ impl CmInto<fsys::OfferRunnerDecl> for cm::OfferRunner {
 impl CmInto<fsys::OfferResolverDecl> for cm::OfferResolver {
     fn cm_into(self) -> Result<fsys::OfferResolverDecl, Error> {
         Ok(fsys::OfferResolverDecl {
+            source: Some(self.source.cm_into()?),
+            source_name: Some(self.source_name.into()),
+            target: Some(self.target.cm_into()?),
+            target_name: Some(self.target_name.into()),
+        })
+    }
+}
+
+impl CmInto<fsys::OfferEventDecl> for cm::OfferEvent {
+    fn cm_into(self) -> Result<fsys::OfferEventDecl, Error> {
+        Ok(fsys::OfferEventDecl {
             source: Some(self.source.cm_into()?),
             source_name: Some(self.source_name.into()),
             target: Some(self.target.cm_into()?),
@@ -1195,6 +1207,20 @@ mod tests {
                             },
                             "target_name": "pkg_resolver",
                         }
+                    },
+                    {
+                        "event": {
+                            "source_name": "started_on_x",
+                            "source": {
+                                "realm": {}
+                            },
+                            "target": {
+                                "child": {
+                                    "name": "logger"
+                                }
+                            },
+                            "target_name": "started",
+                        }
                     }
                 ],
                 "children": [
@@ -1367,6 +1393,17 @@ mod tests {
                             }
                         )),
                         target_name: Some("pkg_resolver".to_string()),
+                    }),
+                    fsys::OfferDecl::Event(fsys::OfferEventDecl {
+                        source_name: Some("started_on_x".to_string()),
+                        source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                        target: Some(fsys::Ref::Child(
+                            fsys::ChildRef {
+                                name: "logger".to_string(),
+                                collection: None,
+                            }
+                        )),
+                        target_name: Some("started".to_string()),
                     }),
                 ];
                 let children = vec![

@@ -240,6 +240,9 @@ impl FidlIntoNative<ComponentDecl> for fsys::ComponentDecl {
                     fsys::OfferDecl::Resolver(r) => {
                         offers.push(OfferDecl::Resolver(r.fidl_into_native()))
                     }
+                    fsys::OfferDecl::Event(e) => {
+                        offers.push(OfferDecl::Event(e.fidl_into_native()))
+                    }
                     fsys::OfferDecl::__UnknownVariant { .. } => panic!("invalid variant"),
                 }
             }
@@ -320,6 +323,7 @@ impl NativeIntoFidl<fsys::ComponentDecl> for ComponentDecl {
                 OfferDecl::Resolver(r) => {
                     offers.push(fsys::OfferDecl::Resolver(r.native_into_fidl()))
                 }
+                OfferDecl::Event(e) => offers.push(fsys::OfferDecl::Event(e.native_into_fidl())),
             }
         }
         fsys::ComponentDecl {
@@ -417,6 +421,7 @@ pub enum OfferDecl {
     Storage(OfferStorageDecl),
     Runner(OfferRunnerDecl),
     Resolver(OfferResolverDecl),
+    Event(OfferEventDecl),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -541,6 +546,14 @@ fidl_into_struct!(OfferRunnerDecl, OfferRunnerDecl, fsys::OfferRunnerDecl,
 fsys::OfferRunnerDecl,
 {
     source: OfferRunnerSource,
+    source_name: CapabilityName,
+    target: OfferTarget,
+    target_name: CapabilityName,
+});
+fidl_into_struct!(OfferEventDecl, OfferEventDecl, fsys::OfferEventDecl,
+fsys::OfferEventDecl,
+{
+    source: OfferEventSource,
     source_name: CapabilityName,
     target: OfferTarget,
     target_name: CapabilityName,
@@ -1301,6 +1314,28 @@ impl NativeIntoFidl<Option<fsys::Ref>> for OfferResolverSource {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum OfferEventSource {
+    Realm,
+}
+
+impl FidlIntoNative<OfferEventSource> for Option<fsys::Ref> {
+    fn fidl_into_native(self) -> OfferEventSource {
+        match self.unwrap() {
+            fsys::Ref::Realm(_) => OfferEventSource::Realm,
+            _ => panic!("invalid OfferEventSource variant"),
+        }
+    }
+}
+
+impl NativeIntoFidl<Option<fsys::Ref>> for OfferEventSource {
+    fn native_into_fidl(self) -> Option<fsys::Ref> {
+        Some(match self {
+            OfferEventSource::Realm => fsys::Ref::Realm(fsys::RealmRef {}),
+        })
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum OfferTarget {
     Child(String),
@@ -1673,6 +1708,17 @@ mod tests {
                        )),
                        target_name: Some("pkg".to_string()),
                    }),
+                   fsys::OfferDecl::Event(fsys::OfferEventDecl {
+                       source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                       source_name: Some("started".to_string()),
+                       target: Some(fsys::Ref::Child(
+                          fsys::ChildRef {
+                              name: "echo".to_string(),
+                              collection: None,
+                          }
+                       )),
+                       target_name: Some("mystarted".to_string()),
+                   }),
                    fsys::OfferDecl::Service(fsys::OfferServiceDecl {
                        source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
                        source_path: Some("/svc/netstack1".to_string()),
@@ -1872,6 +1918,12 @@ mod tests {
                             target: OfferTarget::Child("echo".to_string()),
                             target_name: "pkg".try_into().unwrap(),
                         }),
+                        OfferDecl::Event(OfferEventDecl {
+                            source: OfferEventSource::Realm,
+                            source_name: "started".into(),
+                            target: OfferTarget::Child("echo".to_string()),
+                            target_name: "mystarted".into(),
+                        }),
                         OfferDecl::Service(OfferServiceDecl {
                             sources: vec![
                                 ServiceSource::<OfferServiceSource> {
@@ -2020,6 +2072,12 @@ mod tests {
                 OfferServiceSource::Child("foo".to_string()),
             ],
             result_type = OfferServiceSource,
+        },
+        fidl_into_and_from_offer_event_source => {
+            input = vec![Some(fsys::Ref::Realm(fsys::RealmRef {}))],
+            input_type = Option<fsys::Ref>,
+            result = vec![OfferEventSource::Realm],
+            result_type = OfferEventSource,
         },
         fidl_into_and_from_offer_directory_source => {
             input = vec![

@@ -147,6 +147,20 @@
                 },
                 "target_name": "elf"
             }
+        },
+        {
+            "event": {
+                "source": {
+                    "realm": {}
+                },
+                "source_name": "stopped",
+                "target": {
+                    "child": {
+                        "name": "logger"
+                    }
+                },
+                "target_name": "stopped-logger"
+            }
         }
     ],
     "children": [

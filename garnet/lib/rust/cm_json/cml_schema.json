@@ -541,6 +541,11 @@
             "required": [
               "resolver"
             ]
+          },
+          {
+            "required": [
+              "event"
+            ]
           }
         ],
         "properties": {
@@ -621,6 +626,15 @@
             ],
             "examples": [
               "pkg_resolver"
+            ]
+          },
+          "event": {
+            "title": "Offered event name",
+            "description": "The name of the event",
+            "allOf": [
+                {
+                    "$ref": "#/definitions/name-clause"
+                }
             ]
           },
           "from": {

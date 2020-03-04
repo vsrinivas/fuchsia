@@ -210,6 +210,7 @@ pub fn validate(decl: &fsys::ComponentDecl) -> Result<(), ErrorList> {
         target_paths: HashMap::new(),
         offered_runner_names: HashMap::new(),
         offered_resolver_names: HashMap::new(),
+        offered_event_names: HashMap::new(),
         errors: vec![],
     };
     ctx.validate().map_err(|errs| ErrorList::new(errs))
@@ -244,6 +245,7 @@ struct ValidationContext<'a> {
     target_paths: PathMap<'a>,
     offered_runner_names: NameMap<'a>,
     offered_resolver_names: NameMap<'a>,
+    offered_event_names: NameMap<'a>,
     errors: Vec<Error>,
 }
 
@@ -862,6 +864,9 @@ impl<'a> ValidationContext<'a> {
             fsys::OfferDecl::Resolver(o) => {
                 self.validate_resolver_offer_fields(o);
             }
+            fsys::OfferDecl::Event(e) => {
+                self.validate_event_offer_fields(e);
+            }
             fsys::OfferDecl::__UnknownVariant { .. } => {
                 self.errors.push(Error::invalid_field("ComponentDecl", "offer"));
             }
@@ -1044,6 +1049,33 @@ impl<'a> ValidationContext<'a> {
             decl,
             &mut self.errors,
         );
+    }
+
+    fn validate_event_offer_fields(&mut self, event: &'a fsys::OfferEventDecl) {
+        let decl = "OfferEventDecl";
+        check_name(event.source_name.as_ref(), decl, "source_name", &mut self.errors);
+
+        // Only offer from realm is allowed.
+        match event.source.as_ref() {
+            Some(fsys::Ref::Realm(_)) => {}
+            None => self.errors.push(Error::missing_field(decl, "source")),
+            _ => self.errors.push(Error::invalid_field(decl, "source")),
+        }
+
+        let target_id = self.validate_offer_target(&event.target, decl, "target");
+        if let (Some(target_id), Some(target_name)) = (target_id, event.target_name.as_ref()) {
+            // Assuming the target_name is valid, ensure the target_name isn't already used.
+            if !self
+                .offered_event_names
+                .entry(target_id)
+                .or_insert(HashSet::new())
+                .insert(target_name)
+            {
+                self.errors.push(Error::duplicate_field(decl, "target_name", target_name as &str));
+            }
+        }
+
+        check_name(event.target_name.as_ref(), decl, "target_name", &mut self.errors);
     }
 
     /// Check a `ChildRef` contains a valid child that exists.
@@ -1373,11 +1405,11 @@ mod tests {
             ChildDecl, ChildRef, CollectionDecl, CollectionRef, ComponentDecl, DependencyType,
             Durability, EnvironmentDecl, EnvironmentExtends, ExposeDecl, ExposeDirectoryDecl,
             ExposeProtocolDecl, ExposeResolverDecl, ExposeRunnerDecl, ExposeServiceDecl,
-            FrameworkRef, OfferDecl, OfferDirectoryDecl, OfferProtocolDecl, OfferResolverDecl,
-            OfferRunnerDecl, OfferServiceDecl, OfferStorageDecl, RealmRef, Ref, ResolverDecl,
-            RunnerDecl, SelfRef, StartupMode, StorageDecl, StorageRef, StorageType, UseDecl,
-            UseDirectoryDecl, UseEventDecl, UseProtocolDecl, UseRunnerDecl, UseServiceDecl,
-            UseStorageDecl,
+            FrameworkRef, OfferDecl, OfferDirectoryDecl, OfferEventDecl, OfferProtocolDecl,
+            OfferResolverDecl, OfferRunnerDecl, OfferServiceDecl, OfferStorageDecl, RealmRef, Ref,
+            ResolverDecl, RunnerDecl, SelfRef, StartupMode, StorageDecl, StorageRef, StorageType,
+            UseDecl, UseDirectoryDecl, UseEventDecl, UseProtocolDecl, UseRunnerDecl,
+            UseServiceDecl, UseStorageDecl,
         },
         lazy_static::lazy_static,
         proptest::prelude::*,
@@ -2356,7 +2388,12 @@ mod tests {
                         target: None,
                         target_name: None,
                     }),
-
+                    OfferDecl::Event(OfferEventDecl {
+                        source: None,
+                        source_name: None,
+                        target: None,
+                        target_name: None,
+                    })
                 ]);
                 decl
             },
@@ -2382,6 +2419,10 @@ mod tests {
                 Error::missing_field("OfferRunnerDecl", "source_name"),
                 Error::missing_field("OfferRunnerDecl", "target"),
                 Error::missing_field("OfferRunnerDecl", "target_name"),
+                Error::missing_field("OfferEventDecl", "source_name"),
+                Error::missing_field("OfferEventDecl", "source"),
+                Error::missing_field("OfferEventDecl", "target"),
+                Error::missing_field("OfferEventDecl", "target_name"),
             ])),
         },
         test_validate_offers_long_identifiers => {
@@ -2511,6 +2552,15 @@ mod tests {
                         )),
                         target_name: Some("d".repeat(101)),
                     }),
+                    OfferDecl::Event(OfferEventDecl {
+                        source: Some(Ref::Realm(RealmRef {})),
+                        source_name: Some(format!("{}", "a".repeat(101))),
+                        target: Some(Ref::Child(ChildRef {
+                            name: "a".repeat(101),
+                            collection: None
+                        })),
+                        target_name: Some(format!("{}", "a".repeat(101))),
+                    }),
                 ]);
                 decl
             },
@@ -2543,6 +2593,9 @@ mod tests {
                 Error::field_too_long("OfferResolverDecl", "source_name"),
                 Error::field_too_long("OfferResolverDecl", "target.collection.name"),
                 Error::field_too_long("OfferResolverDecl", "target_name"),
+                Error::field_too_long("OfferEventDecl", "source_name"),
+                Error::field_too_long("OfferEventDecl", "target.child.name"),
+                Error::field_too_long("OfferEventDecl", "target_name"),
             ])),
         },
         test_validate_offers_rights => {
@@ -2742,6 +2795,15 @@ mod tests {
                         })),
                         target_name: Some("pkg!".to_string()),
                     }),
+                    OfferDecl::Event(OfferEventDecl {
+                        source: Some(Ref::Realm(RealmRef {})),
+                        source_name: Some("/path".to_string()),
+                        target: Some(Ref::Child(ChildRef {
+                            name: "%bad".to_string(),
+                            collection: None,
+                        })),
+                        target_name: Some("/path".to_string()),
+                    })
                 ]);
                 decl
             },
@@ -2767,6 +2829,9 @@ mod tests {
                 Error::invalid_character_in_field("OfferResolverDecl", "source_name", '/'),
                 Error::invalid_character_in_field("OfferResolverDecl", "target.child.name", '%'),
                 Error::invalid_character_in_field("OfferResolverDecl", "target_name", '!'),
+                Error::invalid_character_in_field("OfferEventDecl", "source_name", '/'),
+                Error::invalid_character_in_field("OfferEventDecl", "target.child.name", '%'),
+                Error::invalid_character_in_field("OfferEventDecl", "target_name", '/'),
             ])),
         },
         test_validate_offers_target_equals_source => {
@@ -3073,6 +3138,24 @@ mod tests {
                         )),
                         target_name: Some("duplicated".to_string()),
                     }),
+                    OfferDecl::Event(OfferEventDecl {
+                        source: Some(Ref::Realm(RealmRef {})),
+                        source_name: Some("stopped".to_string()),
+                        target: Some(Ref::Child(ChildRef {
+                            name: "netstack".to_string(),
+                            collection: None,
+                        })),
+                        target_name: Some("started".to_string()),
+                    }),
+                    OfferDecl::Event(OfferEventDecl {
+                        source: Some(Ref::Realm(RealmRef {})),
+                        source_name: Some("started_on_x".to_string()),
+                        target: Some(Ref::Child(ChildRef {
+                            name: "netstack".to_string(),
+                            collection: None,
+                        })),
+                        target_name: Some("started".to_string()),
+                    }),
                 ]);
                 decl.children = Some(vec![
                     ChildDecl{
@@ -3095,6 +3178,7 @@ mod tests {
                 Error::duplicate_field("OfferDirectoryDecl", "target_path", "/data"),
                 Error::duplicate_field("OfferRunnerDecl", "target_name", "duplicated"),
                 Error::duplicate_field("OfferResolverDecl", "target_name", "duplicated"),
+                Error::duplicate_field("OfferEventDecl", "target_name", "started"),
             ])),
         },
         test_validate_offers_target_invalid => {
@@ -3221,6 +3305,25 @@ mod tests {
                         )),
                         target_name: Some("pkg".to_string()),
                     }),
+                    OfferDecl::Event(OfferEventDecl {
+                        source_name: Some("started".to_string()),
+                        source: Some(Ref::Realm(RealmRef {})),
+                        target_name: Some("started".to_string()),
+                        target: Some(Ref::Child(
+                            ChildRef {
+                                name: "netstack".to_string(),
+                                collection: None,
+                            }
+                        )),
+                    }),
+                    OfferDecl::Event(OfferEventDecl {
+                        source_name: Some("started".to_string()),
+                        source: Some(Ref::Realm(RealmRef {})),
+                        target_name: Some("started".to_string()),
+                        target: Some(Ref::Collection(
+                           CollectionRef { name: "modular".to_string(), }
+                        )),
+                    }),
                 ]);
                 decl
             },
@@ -3237,6 +3340,57 @@ mod tests {
                 Error::invalid_collection("OfferRunnerDecl", "target", "modular"),
                 Error::invalid_child("OfferResolverDecl", "target", "netstack"),
                 Error::invalid_collection("OfferResolverDecl", "target", "modular"),
+                Error::invalid_child("OfferEventDecl", "target", "netstack"),
+                Error::invalid_collection("OfferEventDecl", "target", "modular"),
+            ])),
+        },
+        test_validate_offers_event_from_realm => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.offers = Some(
+                    vec![
+                        Ref::Self_(SelfRef {}),
+                        Ref::Child(ChildRef {name: "netstack".to_string(), collection: None }),
+                        Ref::Collection(CollectionRef {name: "modular".to_string() }),
+                        Ref::Storage(StorageRef {name: "a".to_string()}),
+                        Ref::Framework(FrameworkRef {}),
+                    ]
+                    .into_iter()
+                    .enumerate()
+                    .map(|(i, source)| {
+                        OfferDecl::Event(OfferEventDecl {
+                            source: Some(source),
+                            source_name: Some("started".to_string()),
+                            target: Some(Ref::Child(ChildRef {
+                                name: "netstack".to_string(),
+                                collection: None,
+                            })),
+                            target_name: Some(format!("started_{}", i)),
+                        })
+                    })
+                    .collect());
+                decl.children = Some(vec![
+                    ChildDecl{
+                        name: Some("netstack".to_string()),
+                        url: Some("fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm".to_string()),
+                        startup: Some(StartupMode::Eager),
+                        environment: None,
+                    },
+                ]);
+                decl.collections = Some(vec![
+                    CollectionDecl {
+                        name: Some("modular".to_string()),
+                        durability: Some(Durability::Persistent),
+                    },
+                ]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::invalid_field("OfferEventDecl", "source"),
+                Error::invalid_field("OfferEventDecl", "source"),
+                Error::invalid_field("OfferEventDecl", "source"),
+                Error::invalid_field("OfferEventDecl", "source"),
+                Error::invalid_field("OfferEventDecl", "source"),
             ])),
         },
 

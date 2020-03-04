@@ -364,6 +364,7 @@ pub enum Offer {
     Storage(OfferStorage),
     Runner(OfferRunner),
     Resolver(OfferResolver),
+    Event(OfferEvent),
 }
 
 /// Offered service capability. See [`OfferServiceDecl`].
@@ -433,6 +434,17 @@ pub struct OfferRunner {
 /// [`OfferResolverDecl`]: ../../fidl_fuchsia_sys2/struct.OfferResolverDecl.html
 #[derive(Serialize, Deserialize, Debug)]
 pub struct OfferResolver {
+    pub source: Ref,
+    pub source_name: Name,
+    pub target: Ref,
+    pub target_name: Name,
+}
+
+/// Offered event capability. See [`OfferEventDecl`].
+///
+/// [`OfferEventDecl`]: ../../fidl_fuchsia_sys2/struct.OfferEventDecl.html
+#[derive(Serialize, Deserialize, Debug)]
+pub struct OfferEvent {
     pub source: Ref,
     pub source_name: Name,
     pub target: Ref,

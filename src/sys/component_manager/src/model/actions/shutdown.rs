@@ -451,6 +451,10 @@ pub fn process_component_dependencies(
                     }
                 }
             }
+            OfferDecl::Event(_) => {
+                // Events aren't tracked as dependencies for shutdown.
+                continue;
+            }
         };
 
         for (capability_provider, capability_target) in source_target_pairs {

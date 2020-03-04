@@ -9,9 +9,9 @@ use fidl_fuchsia_io2 as fio2;
 use fidl_fuchsia_sys2::{
     ChildDecl, ChildRef, CollectionDecl, CollectionRef, ComponentDecl, DependencyType, Durability,
     Entry, ExposeDecl, ExposeDirectoryDecl, ExposeProtocolDecl, ExposeServiceDecl, FrameworkRef,
-    Object, OfferDecl, OfferProtocolDecl, OfferRunnerDecl, OfferServiceDecl, RealmRef, Ref,
-    RunnerDecl, SelfRef, StartupMode, UseDecl, UseEventDecl, UseProtocolDecl, UseRunnerDecl,
-    UseServiceDecl, Value,
+    Object, OfferDecl, OfferEventDecl, OfferProtocolDecl, OfferRunnerDecl, OfferServiceDecl,
+    RealmRef, Ref, RunnerDecl, SelfRef, StartupMode, UseDecl, UseEventDecl, UseProtocolDecl,
+    UseRunnerDecl, UseServiceDecl, Value,
 };
 use std::fs::File;
 use std::io::Read;
@@ -112,6 +112,12 @@ fn main() {
                 source_name: Some("elf".to_string()),
                 target: Some(Ref::Collection(CollectionRef { name: "modular".to_string() })),
                 target_name: Some("elf".to_string()),
+            }),
+            OfferDecl::Event(OfferEventDecl {
+                source: Some(Ref::Realm(RealmRef {})),
+                source_name: Some("stopped".to_string()),
+                target: Some(Ref::Child(ChildRef { name: "logger".to_string(), collection: None })),
+                target_name: Some("stopped-logger".to_string()),
             }),
         ];
         let children = vec![ChildDecl {
