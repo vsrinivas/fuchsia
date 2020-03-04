@@ -53,13 +53,13 @@ enum FlushError {
 /// The iterator returned when a series of keys are being listed. Returns an
 /// empty vector when there are no more remaining ListItems.
 protocol ListIterator {
-    GetNext() -> (vector<ListItem> keys);
+    GetNext() -> (vector<ListItem>:MAX keys);
 };
 
 /// The iterator returned when a series of keys are being read. Returns an
 /// empty vector when there are no more remaining KeyValues.
 protocol GetIterator {
-    GetNext() -> (vector<KeyValue> kvs);
+    GetNext() -> (vector<KeyValue>:MAX kvs);
 };
 
 /// The interface returned when a new accessor is created.
