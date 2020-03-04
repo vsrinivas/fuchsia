@@ -395,55 +395,42 @@ func TestListDevices(t *testing.T) {
 		}()
 		return func() error { return nil }, nil
 	}
-
-	for _, filter := range []string{"", "-1"} {
-		filter := filter
-		t.Run(fmt.Sprintf("domainFilter=%q", filter), func(t *testing.T) {
-			runSubTests(t, "", func(t *testing.T, s subtest) {
-				cmd := listCmd{
-					devFinderCmd: newDevFinderCmd(
-						listMDNSHandler,
-						[]string{
-							fuchsiaMDNSNodename1,
-							fuchsiaMDNSNodename2,
-						},
-						false,
-						false,
-						s,
-						nbDiscover),
-					domainFilter: filter,
-				}
-				got, err := cmd.listDevices(context.Background())
-				if err != nil {
-					t.Fatalf("listDevices: %v", err)
-				}
-				want := []*fuchsiaDevice{
-					{
-						addr:   s.defaultMDNSIP(),
-						zone:   s.defaultMDNSZone(),
-						domain: fuchsiaMDNSNodename1,
-					},
-				}
-				// If not filtering, add the remaining MDNS device that
-				// would not have been filtered.
-				if len(filter) == 0 {
-					want = append(want,
-						&fuchsiaDevice{
-							addr:   s.defaultMDNSIP(),
-							zone:   s.defaultMDNSZone(),
-							domain: fuchsiaMDNSNodename2,
-						},
-					)
-				}
-				if s.ipv6 {
-					want = append(want, s.defaultNetbootDevice())
-				}
-				if d := cmp.Diff(want, got, cmp.Comparer(compareFuchsiaDevices)); d != "" {
-					t.Errorf("listDevices mismatch: (-want +got):\n%s", d)
-				}
-			})
-		})
-	}
+	runSubTests(t, "", func(t *testing.T, s subtest) {
+		cmd := listCmd{
+			devFinderCmd: newDevFinderCmd(
+				listMDNSHandler,
+				[]string{
+					fuchsiaMDNSNodename1,
+					fuchsiaMDNSNodename2,
+				},
+				false,
+				false,
+				s,
+				nbDiscover),
+		}
+		got, err := cmd.listDevices(context.Background())
+		if err != nil {
+			t.Fatalf("listDevices: %s", err)
+		}
+		want := []*fuchsiaDevice{
+			{
+				addr:   s.defaultMDNSIP(),
+				zone:   s.defaultMDNSZone(),
+				domain: fuchsiaMDNSNodename1,
+			},
+			{
+				addr:   s.defaultMDNSIP(),
+				zone:   s.defaultMDNSZone(),
+				domain: fuchsiaMDNSNodename2,
+			},
+		}
+		if s.ipv6 {
+			want = append(want, s.defaultNetbootDevice())
+		}
+		if d := cmp.Diff(want, got, cmp.Comparer(compareFuchsiaDevices)); d != "" {
+			t.Errorf("listDevices mismatch: (-want +got):\n%s", d)
+		}
+	})
 }
 
 func TestListDevice_allProtocolsDisabled(t *testing.T) {

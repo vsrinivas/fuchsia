@@ -9,7 +9,6 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"strings"
 
 	"github.com/google/subcommands"
 )
@@ -19,8 +18,6 @@ type listCmd struct {
 
 	// Determines whether or not to print the full device info.
 	fullInfo bool
-	// Filters domains that match this string when listing devices.
-	domainFilter string
 }
 
 func (*listCmd) Name() string {
@@ -37,7 +34,6 @@ func (*listCmd) Synopsis() string {
 
 func (cmd *listCmd) SetFlags(f *flag.FlagSet) {
 	cmd.SetCommonFlags(f)
-	f.StringVar(&cmd.domainFilter, "domain-filter", "", "When using the \"list\" command, returns only devices that match this domain name.")
 	f.BoolVar(&cmd.fullInfo, "full", false, "Print device address and domain")
 }
 
@@ -55,29 +51,20 @@ func (cmd *listCmd) listDevices(ctx context.Context) ([]*fuchsiaDevice, error) {
 	if len(devices) == 0 {
 		return nil, fmt.Errorf("no devices found")
 	}
-	var filteredDevices []*fuchsiaDevice
-	for _, device := range devices {
-		if strings.Contains(device.domain, cmd.domainFilter) {
-			filteredDevices = append(filteredDevices, device)
-		}
-	}
-	if len(filteredDevices) == 0 {
-		return nil, fmt.Errorf("no devices with domain matching '%v'", cmd.domainFilter)
-	}
-	return filteredDevices, nil
+	return devices, nil
 }
 
 func (cmd *listCmd) execute(ctx context.Context) error {
 	cmd.mdnsHandler = listMDNSHandler
-	filteredDevices, err := cmd.listDevices(ctx)
+	devices, err := cmd.listDevices(ctx)
 	if err != nil {
 		return err
 	}
 
 	if cmd.json {
-		return cmd.outputJSON(filteredDevices, cmd.fullInfo)
+		return cmd.outputJSON(devices, cmd.fullInfo)
 	}
-	return cmd.outputNormal(filteredDevices, cmd.fullInfo)
+	return cmd.outputNormal(devices, cmd.fullInfo)
 }
 
 func (cmd *listCmd) Execute(ctx context.Context, _ *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
