@@ -254,6 +254,11 @@ impl AutoClient {
                         );
                         continue;
                     }
+                    fx_log_info!(
+                        "AutoClient for {:?} observed valid event: {:?}",
+                        self.auto_url,
+                        event
+                    );
                     if let Some(updating_client) = self.updating_client.upgrade() {
                         self.inspect.update_attempt_count.increment();
                         if let Err(e) = updating_client.lock().await.update().await {
