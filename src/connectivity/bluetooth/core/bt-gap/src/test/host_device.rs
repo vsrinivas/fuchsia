@@ -24,23 +24,10 @@ use crate::{
 
 // An impl that ignores all events
 impl HostListener for () {
-    type PeerUpdatedFut = future::Ready<()>;
-    fn on_peer_updated(&mut self, _peer: Peer) -> Self::PeerRemovedFut {
-        future::ready(())
-    }
-
-    type PeerRemovedFut = future::Ready<()>;
-    fn on_peer_removed(&mut self, _id: PeerId) -> Self::PeerRemovedFut {
-        future::ready(())
-    }
-
+    fn on_peer_updated(&mut self, _peer: Peer) {}
+    fn on_peer_removed(&mut self, _id: PeerId) {}
     type HostBondFut = future::Ready<Result<(), anyhow::Error>>;
     fn on_new_host_bond(&mut self, _data: BondingData) -> Self::HostBondFut {
-        future::ok(())
-    }
-
-    type HostInfoFut = future::Ready<Result<(), anyhow::Error>>;
-    fn on_host_updated(&mut self, _info: HostInfo) -> Self::HostInfoFut {
         future::ok(())
     }
 }

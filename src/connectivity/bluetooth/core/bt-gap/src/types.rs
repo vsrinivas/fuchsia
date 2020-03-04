@@ -72,16 +72,6 @@ impl From<sys::Error> for Error {
     }
 }
 
-impl Into<sys::Error> for Error {
-    fn into(self) -> sys::Error {
-        match self {
-            Error::SysError(err) => err,
-            Error::InternalError(_) => sys::Error::Failed,
-            Error::HostError(err) => deprecated_error_to_sys(err),
-        }
-    }
-}
-
 impl From<anyhow::Error> for Error {
     fn from(err: anyhow::Error) -> Error {
         Error::InternalError(err)
@@ -123,25 +113,6 @@ fn sys_error_to_deprecated(e: sys::Error) -> bt::Error {
         },
         protocol_error_code: 0,
         description: None,
-    }
-}
-
-// Maps a fuchsia.bluetooth.Error value to a fuchsia.bluetooth.sys.Error. This is maintained for
-// compatibility until fuchsia.bluetooth.control and fuchsia.bluetooth.Status are removed.
-fn deprecated_error_to_sys(e: bt::Error) -> sys::Error {
-    match e.error_code {
-        bt::ErrorCode::Failed => sys::Error::Failed,
-        bt::ErrorCode::NotFound => sys::Error::PeerNotFound,
-        bt::ErrorCode::TimedOut => sys::Error::TimedOut,
-        bt::ErrorCode::Canceled => sys::Error::Canceled,
-        bt::ErrorCode::InProgress => sys::Error::InProgress,
-        bt::ErrorCode::NotSupported => sys::Error::NotSupported,
-        bt::ErrorCode::InvalidArguments => sys::Error::InvalidArguments,
-        bt::ErrorCode::BluetoothNotAvailable => sys::Error::Failed,
-        bt::ErrorCode::BadState => sys::Error::Failed,
-        bt::ErrorCode::Unknown => sys::Error::Failed,
-        bt::ErrorCode::Already => sys::Error::InProgress,
-        bt::ErrorCode::ProtocolError => sys::Error::Failed,
     }
 }
 

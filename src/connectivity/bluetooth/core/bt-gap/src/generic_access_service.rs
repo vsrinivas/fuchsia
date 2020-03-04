@@ -190,7 +190,6 @@ mod tests {
     use {
         super::*,
         crate::store::stash::Stash,
-        async_helpers::hanging_get::server as hanging_get,
         fidl::endpoints::{create_endpoints, create_proxy_and_stream},
         fidl_fuchsia_bluetooth::Appearance,
         fidl_fuchsia_bluetooth_gatt::{
@@ -200,7 +199,6 @@ mod tests {
         fuchsia_async as fasync, fuchsia_inspect as inspect,
         fuchsia_syslog::fx_log_warn,
         futures::FutureExt,
-        std::collections::HashMap,
     };
 
     const TEST_DEVICE_NAME: &str = "test-generic-access-service";
@@ -228,26 +226,12 @@ mod tests {
         let stash = Stash::stub().expect("Create stash stub");
         let inspector = inspect::Inspector::new();
         let system_inspect = inspector.root().create_child("system");
-        let watch_peers_broker = hanging_get::HangingGetBroker::new(
-            HashMap::new(),
-            |_, _| true,
-            hanging_get::DEFAULT_CHANNEL_SIZE,
-        );
-        let watch_hosts_broker = hanging_get::HangingGetBroker::new(
-            Vec::new(),
-            |_, _| true,
-            hanging_get::DEFAULT_CHANNEL_SIZE,
-        );
         let dispatcher = HostDispatcher::new(
             TEST_DEVICE_NAME.to_string(),
             TEST_DEVICE_APPEARANCE,
             stash,
             system_inspect,
             gas_task_channel,
-            watch_peers_broker.new_publisher(),
-            watch_peers_broker.new_handle(),
-            watch_hosts_broker.new_publisher(),
-            watch_hosts_broker.new_handle(),
         );
 
         let service = GenericAccessService { hd: dispatcher.clone(), generic_access_req_stream };

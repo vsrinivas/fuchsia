@@ -5,7 +5,7 @@
 use {
     anyhow::{Context as _, Error},
     fuchsia_async as fasync,
-    fuchsia_syslog::{fx_log_err, fx_log_info},
+    fuchsia_syslog::{fx_log_info, fx_log_err},
     futures::future::BoxFuture,
     futures::{future, select, Future, FutureExt},
     pin_utils::pin_mut,
@@ -15,12 +15,10 @@ use {
 pub mod expect;
 
 // Test harnesses
-pub mod access;
 pub mod bootstrap;
 pub mod control;
 pub mod emulator;
 pub mod host_driver;
-pub mod host_watcher;
 pub mod inspect;
 pub mod low_energy_central;
 pub mod low_energy_peripheral;
@@ -56,7 +54,7 @@ where
     F: FnOnce(H) -> Fut + Send + 'static,
     Fut: Future<Output = Result<(), Error>> + Send + 'static,
 {
-    let (harness, env, runner) = H::init().await.context("Error initializing harness")?;
+    let (harness, env, runner) = H::init().await?;
 
     let run_test = test_func(harness);
     pin_mut!(run_test);
@@ -64,10 +62,10 @@ where
 
     let result = select! {
         test_result = run_test.fuse() => test_result,
-        runner_result = runner.fuse() => runner_result.context("Error running harness background task"),
+        runner_result = runner.fuse() => runner_result,
     };
 
-    let term_result = H::terminate(env).await.context("Error terminating harness");
+    let term_result = H::terminate(env).await;
     // Return test failure if it exists, else return terminate failure, else return the
     // successful test result
     result.and_then(|ok| term_result.map(|_| ok))
@@ -75,10 +73,7 @@ where
 
 /// Sets up the test environment and the given test case. Each integration test case is an
 /// asynchronous function from some harness `H` to the result of the test run.
-pub fn run_test<H, Fut>(
-    test: impl FnOnce(H) -> Fut + Send + 'static,
-    name: &str,
-) -> Result<(), Error>
+pub fn run_test<H, Fut>(test: impl FnOnce(H) -> Fut + Send + 'static, name: &str) -> Result<(), Error>
 where
     Fut: Future<Output = Result<(), Error>> + Send + 'static,
     H: TestHarness,
