@@ -169,11 +169,6 @@ int DiscoverTestsInDirGlobs(const fbl::Vector<fbl::String>& dir_globs, const cha
                             const fbl::Vector<fbl::String>& basename_whitelist,
                             fbl::Vector<fbl::String>* test_paths);
 
-// Reads |test_list_file| and appends whatever tests it finds to |test_paths|.
-//
-// Returns 0 on success, else an error code compatible with errno.
-int DiscoverTestsInListFile(FILE* test_list_file, fbl::Vector<fbl::String>* test_paths);
-
 // Discovers and runs tests based on command line arguments.
 //
 // |argc|: length of |argv|.

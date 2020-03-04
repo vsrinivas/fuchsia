@@ -74,7 +74,6 @@ int Usage(const char* name, const fbl::Vector<fbl::String>& default_test_dirs) {
           "       basenames. Also accepts fuchsia-pkg URIs, which\n"
           "       are run regardless of directory globs.         \n"
           "       (accepts a comma-separated list)               \n"
-          "   -f: Run tests specified in this file [3]           \n"
           "   -r: Repeat the test suite this many times          \n"
           "   -o: Write test output to a directory [4]           \n"
           "   -w: Watchdog timeout [5]                           \n"
@@ -91,9 +90,6 @@ int Usage(const char* name, const fbl::Vector<fbl::String>& default_test_dirs) {
           "[2] The test selection options -[sSmMlLpP] only work  \n"
           "    for tests that support the RUNTESTS_TEST_CLASS    \n"
           "    environment variable.                             \n"
-          "\n"
-          "[3] -f and [directory globs ...] are mutually         \n"
-          "    exclusive.                                        \n"
           "\n"
           "[4] If -o is enabled, then a JSON summary of the test \n"
           "    results will be written to a file named           \n"
@@ -128,7 +124,6 @@ int DiscoverAndRunTests(int argc, const char* const* argv,
   signed char verbosity = -1;
   int watchdog_timeout_seconds = -1;
   unsigned int timeout_seconds = 0;
-  const char* test_list_path = nullptr;
   int repeat = 1;
   bool dry_run = false;
 
@@ -207,13 +202,6 @@ int DiscoverAndRunTests(int argc, const char* const* argv,
         }
         output_dir = argv[optind++];
         break;
-      case 'f':
-        if (optind > argc) {
-          fprintf(stderr, "Missing argument for -f\n");
-          return EXIT_FAILURE;
-        }
-        test_list_path = argv[optind++];
-        break;
       case 'r': {
         if (optind > argc) {
           fprintf(stderr, "Missing argument for -r\n");
@@ -262,11 +250,6 @@ int DiscoverAndRunTests(int argc, const char* const* argv,
     }
   }
 
-  if (test_list_path && !test_dir_globs.is_empty()) {
-    fprintf(stderr, "Can't set both -f and directory globs.\n");
-    return Usage(argv[0], default_test_dirs);
-  }
-
   // Configure the types of tests which are meant to be executed by putting
   // it in an environment variable. Test executables can consume this environment
   // variable and process it as they would like.
@@ -295,19 +278,7 @@ int DiscoverAndRunTests(int argc, const char* const* argv,
   fbl::Vector<fbl::String> test_paths;
   const auto* test_dir_globs_or_default =
       test_dir_globs.is_empty() ? &default_test_dirs : &test_dir_globs;
-  if (test_list_path) {
-    FILE* test_list_file = fopen(test_list_path, "r");
-    if (!test_list_file) {
-      fprintf(stderr, "Failed to open test list file %s: %s\n", test_list_path, strerror(errno));
-      return false;
-    }
-    const int err = DiscoverTestsInListFile(test_list_file, &test_paths);
-    fclose(test_list_file);
-    if (err) {
-      fprintf(stderr, "Failed to read test list from %s: %s\n", test_list_path, strerror(err));
-      return EXIT_FAILURE;
-    }
-  } else if (!test_dir_globs_or_default->is_empty()) {
+  if (!test_dir_globs_or_default->is_empty()) {
     const int err = DiscoverTestsInDirGlobs(*test_dir_globs_or_default, kIgnoreDirName,
                                             basename_whitelist, &test_paths);
     if (err) {
@@ -316,8 +287,7 @@ int DiscoverAndRunTests(int argc, const char* const* argv,
     }
     CopyFuchsiaPkgURIs(basename_whitelist, &test_paths);
   } else {
-    fprintf(stderr,
-            "Test list path, test directory globs or default test directories must be specified.");
+    fprintf(stderr, "Test directory globs or default test directories must be specified.");
     return EXIT_FAILURE;
   }
 

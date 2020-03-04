@@ -295,31 +295,6 @@ int DiscoverTestsInDirGlobs(const fbl::Vector<fbl::String>& dir_globs, const cha
   return 0;
 }
 
-int DiscoverTestsInListFile(FILE* test_list_file, fbl::Vector<fbl::String>* test_paths) {
-  char* line = nullptr;
-  size_t line_capacity = 0;
-  auto free_line = fbl::MakeAutoCall([&line]() { free(line); });
-  while (true) {
-    ssize_t line_length = getline(&line, &line_capacity, test_list_file);
-    if (line_length < 0) {
-      if (feof(test_list_file)) {
-        break;
-      }
-      return errno;
-    }
-    // Don't include trailing space.
-    while (line_length && isspace(line[line_length - 1])) {
-      line_length -= 1;
-    }
-    if (!line_length) {
-      continue;
-    }
-    line[line_length] = '\0';
-    test_paths->push_back(line);
-  }
-  return 0;
-}
-
 bool RunTests(const fbl::Vector<fbl::String>& test_paths, const fbl::Vector<fbl::String>& test_args,
               int repeat, uint64_t timeout_msec, const char* output_dir,
               const fbl::StringPiece output_file_basename, signed char verbosity, int* failed_count,

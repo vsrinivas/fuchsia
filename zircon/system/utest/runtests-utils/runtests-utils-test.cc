@@ -503,27 +503,6 @@ bool DiscoverTestsInDirGlobsIgnore() {
   END_TEST;
 }
 
-bool DiscoverTestsInListFileWithTrailingWhitespace() {
-  BEGIN_TEST;
-  const char* lines[] = {"trailing/tab\t\n", "trailing/space \n", "trailing/return\r"};
-  size_t total_size = strlen(lines[0]) + strlen(lines[1]) + strlen(lines[2]);
-  std::unique_ptr<char[]> buf(new char[total_size]);
-  FILE* test_list_file = fmemopen(buf.get(), total_size, "w");
-  fprintf(test_list_file, "%s", lines[0]);
-  fprintf(test_list_file, "%s", lines[1]);
-  fprintf(test_list_file, "%s", lines[2]);
-  fclose(test_list_file);
-  test_list_file = fmemopen(buf.get(), total_size, "r");
-  fbl::Vector<fbl::String> test_paths;
-  EXPECT_EQ(0, DiscoverTestsInListFile(test_list_file, &test_paths));
-  EXPECT_EQ(3, test_paths.size());
-  EXPECT_STR_EQ("trailing/tab", test_paths[0].c_str());
-  EXPECT_STR_EQ("trailing/space", test_paths[1].c_str());
-  EXPECT_STR_EQ("trailing/return", test_paths[2].c_str());
-  fclose(test_list_file);
-  END_TEST;
-}
-
 bool RunTestsWithVerbosity() {
   BEGIN_TEST;
 
@@ -881,10 +860,6 @@ RUN_TEST(DiscoverTestsInDirGlobsBasic)
 RUN_TEST(DiscoverTestsInDirGlobsFilter)
 RUN_TEST(DiscoverTestsInDirGlobsIgnore)
 END_TEST_CASE(DiscoverTestsInDirGlobs)
-
-BEGIN_TEST_CASE(DiscoverTestsInListFile)
-RUN_TEST(DiscoverTestsInListFileWithTrailingWhitespace)
-END_TEST_CASE(DiscoverTestsInListFile)
 
 BEGIN_TEST_CASE(RunTests)
 RUN_TEST(RunTestsCreatesOutputFile)
