@@ -4,4 +4,4 @@
 
 mod constants;
 
-pub mod ot_stack_ncp_ver_query;
+pub mod spinel_device_ncp_ver_query;
