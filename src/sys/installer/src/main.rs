@@ -5,10 +5,13 @@
 use {
     anyhow::{anyhow, Context, Error},
     fdio,
-    fidl::endpoints::Proxy,
+    fidl::endpoints::{Proxy, ServerEnd},
     fidl_fuchsia_device::ControllerProxy,
     fidl_fuchsia_hardware_block::BlockProxy,
-    fuchsia_async as fasync, fuchsia_zircon as zx, fuchsia_zircon_status as zx_status,
+    fidl_fuchsia_paver::{DynamicDataSinkProxy, PaverMarker, PaverProxy},
+    fuchsia_async as fasync,
+    fuchsia_component::client,
+    fuchsia_zircon as zx, fuchsia_zircon_status as zx_status,
     std::{
         fs,
         io::{self, BufRead, Write},
@@ -109,6 +112,20 @@ fn select_block_device(devices: &Vec<(String, u64)>) -> Result<&String, Error> {
     get_user_selection(devices.iter().map(|(path, _)| path).collect())
 }
 
+fn paver_connect(path: &str) -> Result<(PaverProxy, DynamicDataSinkProxy), Error> {
+    let (block_device_chan, block_remote) = zx::Channel::create()?;
+    fdio::service_connect(&path, block_remote)?;
+    let (data_sink_chan, data_remote) = zx::Channel::create()?;
+
+    let paver: PaverProxy =
+        client::connect_to_service::<PaverMarker>().context("Could not connect to paver")?;
+    paver.use_block_device(ServerEnd::from(block_device_chan), ServerEnd::from(data_remote))?;
+
+    let data_sink =
+        DynamicDataSinkProxy::from_channel(fidl::AsyncChannel::from_channel(data_sink_chan)?);
+    Ok((paver, data_sink))
+}
+
 fn do_confirmation_prompt() -> Result<bool, Error> {
     print!("Do you wish to proceed? (yes/[no]) ");
     io::stdout().flush()?;
@@ -164,6 +181,15 @@ async fn main() -> Result<(), Error> {
         println!("Invalid block device path!");
         return Ok(());
     }
+
+    let (_paver, data_sink) =
+        paver_connect(&block_device_path).context("Could not contact paver")?;
+
+    println!("Wiping old partition tables...");
+    data_sink.wipe_partition_tables().await?;
+    println!("Initializing Fuchsia partition tables...");
+    data_sink.initialize_partition_tables().await?;
+    println!("Success.");
 
     println!("TODO(44595): actually install something");
     Ok(())
