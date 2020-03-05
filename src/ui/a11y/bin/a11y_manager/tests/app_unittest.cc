@@ -347,5 +347,26 @@ TEST_F(AppUnitTest, ColorInversionApplied) {
   EXPECT_TRUE(mock_color_transform_handler.GetColorInversionEnabled());
 }
 
+TEST_F(AppUnitTest, ScreenReaderOnAtStartup) {
+  // Create mock pointer event registry.
+  MockPointerEventRegistry registry(&context_provider_);
+
+  // Create a mock setUI & configure initial settings (screen reader on).
+  MockSetUIAccessibility mock_setui(&context_provider_);
+  fuchsia::settings::AccessibilitySettings accessibilitySettings;
+  accessibilitySettings.set_screen_reader(true);
+  accessibilitySettings.set_color_inversion(false);
+  accessibilitySettings.set_enable_magnification(false);
+  accessibilitySettings.set_color_correction(fuchsia::settings::ColorBlindnessType::NONE);
+  mock_setui.Set(std::move(accessibilitySettings), [](auto) {});
+  a11y_manager::App app = a11y_manager::App(context_provider_.TakeContext());
+  RunLoopUntilIdle();
+
+  // Verify that screen reader is on and the pointer event registry is wired up.
+  EXPECT_TRUE(app.state().screen_reader_enabled());
+  ASSERT_TRUE(registry.listener());
+  EXPECT_EQ(SendUnrecognizedGesture(&registry.listener()), EventHandling::CONSUMED);
+}
+
 }  // namespace
 }  // namespace accessibility_test
