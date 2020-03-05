@@ -14,11 +14,26 @@ following tools to be up-to-date:
  * Unzip
  * Git
 
-To install or update these tools, run the following script:
+### Linux
 
-```
+Install or update the following packages:
+
+```posix-terminal
 sudo apt-get install build-essential curl git python unzip
 ```
+
+### macOS
+
+Do the following:
+
+1.  Install the Xcode command line tools:
+
+    ```posix-terminal
+    xcode-select --install
+    ```
+
+1.  Install the latest version of
+    [Xcode](https://developer.apple.com/xcode/){:.external}.
 
 ## Download Fuchsia source
 
@@ -124,6 +139,6 @@ your PATH.
 
 ## See also
 
-For the next steps, see [Build Fuchsia](/docs/getting_started.md#build_fuchsia) in
+For the next steps, see [Configure and build Fuchsia](/docs/getting_started.md#configure-and-build-fuchsia) in
 the Getting started guide.
 

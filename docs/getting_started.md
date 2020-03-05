@@ -2,233 +2,161 @@
 
 Pink + Purple == Fuchsia (a new Operating System)
 
-Welcome to Fuchsia! This document has everything you need to get started with
+Welcome to Fuchsia! This guide has everything you need to get started with
 Fuchsia.
 
 Note: The Fuchsia source includes [Zircon](/zircon/README.md),
-the core platform that underpins Fuchsia. The Fuchsia build process will
-build Zircon as a side-effect; to work on Zircon only, read and follow
-Zircon's [Getting Started](/docs/development/kernel/getting_started.md) doc.
+the core platform that underpins Fuchsia. To work on Zircon, see
+[Getting started with Zircon](/docs/development/kernel/getting_started.md).
 
-[TOC]
+## Get the source code
 
-## Prerequisites
+To set up your build environment and download Fuchsia source code, follow the instructions in [Get Fuchsia source code](/docs/development/source_code/README.md).
 
-### Prepare your build environment (once per build environment)
+## Configure and build Fuchsia {#configure-and-build-fuchsia}
 
-#### Debian
+To build Fuchsia, you need to be able to run the `fx` command in your terminal.
 
+Note: If you haven't set up your environment variable, see [Set up environment
+variables](/docs/development/source_code#set_up_environment_variables).
+
+### Set build configuration
+
+To set your build configuration, run the following command:
+
+```posix-terminal
+fx set core.x64
 ```
-sudo apt-get install build-essential curl git python unzip
-```
+The `fx set` command takes a `PRODUCT.BOARD` argument, which defines the
+[product and board](/docs/concepts/build_system/boards_and_products.md) configuration
+of your build. This configuration informs the build system what packages to build
+for your Fuchsia device. `core` is a product with  a minimal feature set,
+which includes common network capabilities. `x64` refers to the x64 architecture.
 
-#### macOS
+See [Configure a build](/docs/development/build/fx.md#configure-a-build) for
+more options.
 
-1.  Install Command Line Tools:
+#### Accelerate the build with ccache
 
+Note: This step is optional.
+
+To accelerate Fuchsia builds, [`ccache`](https://ccache.dev/){:.external} caches artifacts
+from previous builds.
+
+`ccache` is enabled automatically if the `CCACHE_DIR` environment
+variable refers to an existing directory.
+
+To override the default behaviors, pass the following flags to `fx set`:
+
+*   Force use of ccache even if other accelerators are available:
+
+    ```posix-terminal
+    fx set core.x64 --ccache
     ```
-    xcode-select --install
+
+*   Disable use of ccache:
+
+    ```posix-terminal
+    fx set core.x64 --no-ccache
     ```
 
-1.  In addition to Command Line Tools, you also need to
-    install a recent version of [Xcode](https://developer.apple.com/xcode/).
+### Build Fuchisa
 
-## Get the Source
+To build Fuchsia, run the following command:
 
-Follow [the instructions to get the Fuchsia source](development/source_code/README.md)
-and then return to this document.
-
-## Build Fuchsia
-
-Note: A quick overview of the basic build-and-pave workflow can be found [here](development/build/build_and_pave_quickstart.md).
-
-
-If you added `.jiri_root/bin` to your path as part of getting the source code,
-the `fx` command should already be in your path. If not, the command is also
-available as `scripts/fx`.
-
-```sh
-fx set core.x64 --with //bundles:kitchen_sink
+```posix-terminal
 fx build
 ```
+The `fx build` command executes the build to transform source code into
+packages and other build artifacts.
 
-The `fx set` command configures the contents of your build and generates
-build rules and metadata in the default output directories, `out/default` and
-`out/default.zircon`. The argument `core.x64` refers to
-[product and board definitions](/docs/concepts/build_system/boards_and_products.md) that
-describe, among other things, what packages are built and available
-to your Fuchsia device.
+If you modify source code, re-run the `fx build` command to
+perform an incremental build, or run the `fx -i build` command
+to start a watcher, which automatically builds whenever you update source code.
 
-A Fuchsia device can ephemerally download and install packages over the network,
-and in a development environment, your development workstation is the source of
-these ephemeral packages. The board and product definitions contain a set of packages,
-but if you need to add other packages, use the `--with` flag. This example
-includes `kitchen_sink`, which is an idiom in english meaning "practically
-everything". As you become more focused in your development, you will probably
-use more specific `--with` options to minimize build times.
+See [Execute a build](/docs/development/build/fx.md#execute-a-build) for more information.
 
-The `fx build` command executes the build, transforming source code into
-packages and other build artifacts. If you modify source code,
-you can do an incremental build by re-running the `fx build` command alone.
-`fx -i build` starts a watcher and automatically builds whenever a file is changed.
+## Set up a Fuchsia device
 
-See the [underlying build system](/docs/concepts/build_system/index.md) for more details.
+To run Fuchsia on a device, install Fuchsia on hardware or use
+an emulator.
 
-{% dynamic if user.is_googler %}
-### Accelerate the build with goma
+### Install Fuchsia on hardware
 
-`goma` accelerates builds by distributing compilation across
-many machines.  If you have `goma` installed in `~/goma`, it is used by default.
+To get Fuchsia running on hardware, see
+[Install Fuchsia on a device](/docs/development/hardware/paving.md).
 
-If goma cannot be found, `ccache` is used if available.
+### Set up the emulator
 
-It is also used by default in preference to `ccache`.
-
-To disable using goma, pass `--no-goma` to `fx set`.
-
-{% dynamic endif %}
-
-### _Optional:_ Accelerate the build with ccache
-[`ccache`](https://ccache.dev/){: .external} accelerates builds by caching artifacts
-from previous builds. `ccache` is enabled automatically if the `CCACHE_DIR` environment
-variable is set and refers to a directory that exists.
-
-To override the default behaviors, pass flags to `fx set`:
-
-```sh
---ccache     # force use of ccache even if goma is available
---no-ccache  # disable use of ccache
-```
-
-## Boot Fuchsia
-
-### Installing and booting from hardware
-
-To get Fuchsia running on hardware requires using the paver, which these
-[instructions](development/hardware/paving.md) will help you get up and running
-with.
-
-Note: A quick overview of the basic build-and-pave workflow can be found
-[here](development/build/build_and_pave_quickstart.md).
-
-### Boot from QEMU
-
-If you don't have the supported hardware, you can run Fuchsia under emulation
+If you don't have supported hardware, you can run Fuchsia in an emulator
 using [QEMU](/docs/development/emulator/qemu.md).
-Fuchsia includes prebuilt binaries for QEMU under `prebuilt/third_party/qemu`.
 
-The `fx emu` command will launch Fuchsia within QEMU, using the locally built
-disk image:
+#### Configure network
+
+For ephemeral software to work in the emulator, you need to configure an IPv6 network.
+
+On Linux, run the following commands:
 
 ```sh
-fx emu
+sudo ip tuntap add dev qemu mode tap user $USER
+sudo ip link set qemu up
 ```
 
-There are various flags for `fx emu` to control the emulator configuration:
+On macOS, see [Enabling networking under QEMU](/docs/development/emulator/qemu.md#enabling_networking_under_qemu).
 
-* `-N` enables networking (see below).
-* `--headless` disable graphics (see below).
-* `-c` pass additional arguments to the kernel.
+#### Start the emulator
 
-Use `fx emu -h` to see all available options.
+To start the emulator with networking enabled, run the following command:
 
-Note: Before you can run any commands, you will need to follow the instructions in the [Explore Fuchsia](#explore-fuchsia) section below.
-
-#### Enabling Network
-
-In order for ephemeral software to work in the emulator, an IPv6 network must
-be configured.
-
-On macOS: Install "http://tuntaposx.sourceforge.net/download.xhtml"
-On Linux: Run `sudo ip tuntap add dev qemu mode tap user $USER && sudo ip link set qemu up`
-
-Now the emulator can be run with networking enabled:
-
-```
+```posix-terminal
 fx emu -N
 ```
 
-The above is sufficient for ephemeral software (that is served by `fx serve`,
-see below) to work, including many tools such as `uname` and `fortune` (if
-built).
+Note: If you need to reach the internet from the emulator,
+configure IP forwarding and IPv4 support on the emulator TAP
+interface.
 
-Users who also wish to reach the internet from the emulator will need to
-configure some manner of IP forwarding and IPv4 support on the emulator TAP
-interface. Details of this process are beyond the scope of this document.
+## Pave the device with Fuchsia
 
-## Explore Fuchsia {#explore-fuchsia}
+In a new terminal, pave the device with your Fuchsia image:
 
-In a separate shell, start the development update server, if it isn't already
-running:
-
-```sh
+```posix-terminal
 fx serve
 ```
 
-Boot Fuchsia with networking. This can be done either in QEMU via the `-N` flag,
-or on a paved hardware, both described above.
-When Fuchsia has booted and displays the "$" shell prompt, you can run programs!
+See [Serve a build](/docs/development/build/fx.md#serve-a-build)  for more information.
 
-For example, to receive deep wisdom, run:
+## Explore Fuchsia {#explore-fuchsia}
 
-```sh
-fortune
-```
+When Fuchsia is booted and displays the `$` shell prompt, you can now run programs,
+or [components](/docs/concepts/components/). In Fuchsia, components are
+the basic unit of executable software.
 
-To shutdown or reboot Fuchsia, use the `dm` command:
+To run components on your Fuchsia device, see
+[Run an example component](/docs/development/run/run-examples.md).
+
+To shutdown or reboot Fuchsia, use the following `dm` commands in the shell prompt:
 
 ```sh
 dm shutdown
 dm reboot
 ```
 
-### Change some source
+See [Connect to a target shell](/docs/development/build/fx.md#connect-to-a-target-shell)
+for more information.
 
-Almost everything that exists on a Fuchsia system is stored in a Fuchsia
-package. A typical development
-[workflow](/docs/concepts/packages/package_update.md) involves re-building and
-pushing Fuchsia packages to a development device or QEMU virtual device.
+## Run tests
 
-Make a change to the rolldice binary in `examples/rolldice/src/main.rs`.
+To run tests on your Fuchsia device, see
+[Running tests as components](/docs/development/testing/running_tests_as_components.md).
 
-Re-build and push the rolldice package to a running Fuchsia device with:
+## Launch a graphical component
 
-```sh
-fx build-push rolldice
-```
+Warning: QEMU doesn't support Vulkan and therefore cannot run the graphics stack.
+Commands in this section don't work on QEMU.
 
-From a shell prompt on the Fuchsia device, run the updated rolldice component
-with:
-
-```sh
-rolldice
-```
-
-### Select a tab
-
-Fuchsia shows multiple tabs after booting [with graphics
-enabled](#enabling-graphics). The currently selected tab is highlighted in
-yellow at the top of the screen.
-
-The following keyboard shortcuts help you navigate the terminal:
-
-- Alt+Tab switches between tabs.
-- Alt+F{1,2,...} switches directly to a tab.
-  - Tab zero is the console, which displays the boot and component log.
-  - Tabs 1, 2 and 3 contain shells.
-  - Tabs 4 and higher contain components you've launched.
-- Alt+Up/Down scrolls up and down by lines.
-- Shift+PgUp/PgDown scrolls up and down by half page.
-- Ctrl+Alt+Delete reboots.
-
-Note: To select tabs, you may need to enter "console mode". See the next section for details.
-
-### Launch a graphical component
-
-Warning: QEMU does not support Vulkan and therefore cannot run our graphics stack. Commands in this section will not work on QEMU.
-
-Most graphical components in Fuchsia use the [Scenic](/src/ui/scenic/) system
-compositor. You can launch such components, commonly found in `/system/apps`,
+Most graphical components in Fuchsia use the [Scenic](/docs/concepts/graphics/scenic/scenic.md)
+system compositor. You can launch such components, commonly found in `/system/apps`,
 like this:
 
 ```sh
@@ -244,35 +172,32 @@ of the text shells. In order to use the text shell, you will need to enter "cons
 pressing Alt-Escape. In console mode, Alt-Tab will have the behavior described in the previous
 section, and pressing Alt-Escape again will take you back to the graphical shell.
 
-## Running tests
+### Select a tab
 
-Compiled test binaries are cached in pkgfs like other components, and are referenced by a URI.
-You can run a test by invoking it in the terminal. For example:
+Fuchsia shows multiple tabs after booting with graphics
+enabled. The currently selected tab is highlighted in
+yellow at the top of the screen.
 
-```sh
-run fuchsia-pkg://fuchsia.com/ledger_tests#meta/ledger_unittests.cmx
-```
+The following keyboard shortcuts help you navigate the terminal:
 
-If you want to leave Fuchsia running and recompile and re-run a test, run
-Fuchsia with networking enabled in one terminal, then in another terminal, run:
-
-```sh
-fx test <test name> [<test args>]
-```
-
-You may wish to peruse the [testing FAQ](development/testing/faq.md).
+- Alt+Tab switches between tabs.
+- Alt+F{1,2,...} switches directly to a tab.
+  - Tab zero is the console, which displays the boot and component log.
+  - Tabs 1, 2 and 3 contain shells.
+  - Tabs 4 and higher contain components you've launched.
+- Alt+Up/Down scrolls up and down by lines.
+- Shift+PgUp/PgDown scrolls up and down by half page.
+- Ctrl+Alt+Delete reboots.
 
 ## Contribute changes
 
-* See [CONTRIBUTING.md](/CONTRIBUTING.md).
+To submit your contribution to Fuchsia, see [Contribute changes](/docs/development/source_code/contribute_changes.md).
 
-## Additional helpful documents
+## See also
 
-* [Fuchsia documentation](README.md) hub
-* Working with Zircon - [copying files, network booting, log viewing, and
-more](/docs/development/kernel/getting_started.md#Copying-files-to-and-from-Zircon)
-* [Documentation Standards](/docs/community/contribute/docs/documentation_standards.md) - best practices
-  for documentation
-* [Information on the system bootstrap component](/src/sys/sysmgr/).
-* [Workflow tips and FAQ](development/source_code/workflow_tips_and_faq.md) that help increase
-  productivity.
+* [fx worflows](/docs/development/build/fx.md)
+* [Workflow tips and questions](/docs/development/source_code/workflow_tips_and_faq.md)
+* [Configure editors](/docs/development/editors/)
+* [Source code layout](/docs/concepts/source_code/layout.md)
+* [Build system](/docs/concepts/build_system/index.md)
+
