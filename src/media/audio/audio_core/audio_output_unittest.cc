@@ -4,11 +4,9 @@
 
 #include "src/media/audio/audio_core/audio_output.h"
 
-#include "src/media/audio/audio_core/link_matrix.h"
+#include "src/media/audio/audio_core/audio_device_manager.h"
 #include "src/media/audio/audio_core/loudness_transform.h"
 #include "src/media/audio/audio_core/testing/fake_audio_renderer.h"
-#include "src/media/audio/audio_core/testing/stub_device_registry.h"
-#include "src/media/audio/audio_core/testing/test_process_config.h"
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
 
 namespace media::audio {
@@ -67,23 +65,20 @@ class TestAudioOutput : public AudioOutput {
 
 class AudioOutputTest : public testing::ThreadingModelFixture {
  protected:
-  LinkMatrix link_matrix_;
   VolumeCurve volume_curve_ = VolumeCurve::DefaultForMinGain(Gain::kMinGainDb);
-  testing::TestProcessConfig process_config_;
-  testing::StubDeviceRegistry device_registry_;
-  std::shared_ptr<TestAudioOutput> audio_output_ =
-      std::make_shared<TestAudioOutput>(&threading_model(), &device_registry_, &link_matrix_);
+  std::shared_ptr<TestAudioOutput> audio_output_ = std::make_shared<TestAudioOutput>(
+      &threading_model(), &context().device_manager(), &context().link_matrix());
 };
 
 TEST_F(AudioOutputTest, ProcessTrimsInputStreamsIfNoMixJobProvided) {
-  auto renderer =
-      testing::FakeAudioRenderer::CreateWithDefaultFormatInfo(dispatcher(), &link_matrix_);
+  auto renderer = testing::FakeAudioRenderer::CreateWithDefaultFormatInfo(dispatcher(),
+                                                                          &context().link_matrix());
   static const TimelineFunction kOneFramePerMs = TimelineFunction(TimelineRate(1, 1'000'000));
   auto format_result = Format::Create(renderer->format()->stream_type());
   ASSERT_TRUE(format_result.is_ok());
   audio_output_->SetupMixTask(format_result.value(), zx::msec(1).to_msecs(), kOneFramePerMs);
-  link_matrix_.LinkObjects(renderer, audio_output_,
-                           std::make_shared<MappedLoudnessTransform>(volume_curve_));
+  context().link_matrix().LinkObjects(renderer, audio_output_,
+                                      std::make_shared<MappedLoudnessTransform>(volume_curve_));
 
   // StartMixJob always returns nullopt (no work) and schedules another mix 1ms in the future.
   audio_output_->set_start_mix_delegate([this, audio_output = audio_output_.get()](zx::time now) {

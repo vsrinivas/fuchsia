@@ -17,6 +17,7 @@
 #include <unordered_map>
 
 #include "src/media/audio/audio_core/audio_object.h"
+#include "src/media/audio/audio_core/context.h"
 #include "src/media/audio/audio_core/format.h"
 #include "src/media/audio/audio_core/link_matrix.h"
 #include "src/media/audio/audio_core/packet_queue.h"
@@ -31,7 +32,6 @@ namespace media::audio {
 constexpr bool kEnableRendererWavWriters = false;
 
 class AudioAdmin;
-class AudioCoreImpl;
 class StreamRegistry;
 
 class AudioRendererImpl : public AudioObject,
@@ -41,12 +41,7 @@ class AudioRendererImpl : public AudioObject,
  public:
   static std::unique_ptr<AudioRendererImpl> Create(
       fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request,
-      async_dispatcher_t* dispatcher, RouteGraph* route_graph, AudioAdmin* admin,
-      fbl::RefPtr<fzl::VmarManager> vmar, StreamVolumeManager* volume_manager,
-      LinkMatrix* link_matrix);
-  static std::unique_ptr<AudioRendererImpl> Create(
-      fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request,
-      AudioCoreImpl* owner);
+      Context* context);
 
   ~AudioRendererImpl() override;
 
@@ -122,9 +117,7 @@ class AudioRendererImpl : public AudioObject,
   friend class GainControlBinding;
 
   AudioRendererImpl(fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request,
-                    async_dispatcher_t* dispatcher, RouteGraph* route_graph, AudioAdmin* admin,
-                    fbl::RefPtr<fzl::VmarManager> vmar, StreamVolumeManager* volume_manager,
-                    LinkMatrix* link_matrix);
+                    Context* context);
 
   // Recompute the minimum clock lead time based on the current set of outputs
   // we are linked to.  If this requirement is different from the previous
@@ -153,11 +146,7 @@ class AudioRendererImpl : public AudioObject,
   fuchsia::media::Usage GetStreamUsage() const final;
   void RealizeVolume(VolumeCommand volume_command) final;
 
-  async_dispatcher_t* dispatcher_;
-  RouteGraph& route_graph_;
-  AudioAdmin& admin_;
-  fbl::RefPtr<fzl::VmarManager> vmar_;
-  StreamVolumeManager& volume_manager_;
+  Context& context_;
 
   fidl::Binding<fuchsia::media::AudioRenderer> audio_renderer_binding_;
   fidl::BindingSet<fuchsia::media::audio::GainControl, std::unique_ptr<GainControlBinding>>
@@ -189,8 +178,6 @@ class AudioRendererImpl : public AudioObject,
   Packet::Allocator packet_allocator_;
 
   WavWriter<kEnableRendererWavWriters> wav_writer_;
-
-  LinkMatrix& link_matrix_;
 };
 
 }  // namespace media::audio

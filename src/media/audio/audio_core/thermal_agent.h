@@ -10,6 +10,7 @@
 
 #include <vector>
 
+#include "src/media/audio/audio_core/context.h"
 #include "src/media/audio/audio_core/device_config.h"
 #include "src/media/audio/audio_core/thermal_config.h"
 
@@ -17,6 +18,8 @@ namespace media::audio {
 
 class ThermalAgent : public fuchsia::thermal::Actor {
  public:
+  static std::unique_ptr<ThermalAgent> CreateAndServe(Context* context);
+
   // Merged thermal policy for one target.
   class Target {
    public:

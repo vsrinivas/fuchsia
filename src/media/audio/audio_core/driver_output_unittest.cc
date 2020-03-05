@@ -10,13 +10,11 @@
 #include <fbl/span.h>
 #include <gmock/gmock.h>
 
+#include "src/media/audio/audio_core/audio_device_manager.h"
 #include "src/media/audio/audio_core/audio_driver.h"
-#include "src/media/audio/audio_core/link_matrix.h"
 #include "src/media/audio/audio_core/loudness_transform.h"
 #include "src/media/audio/audio_core/testing/fake_audio_driver.h"
 #include "src/media/audio/audio_core/testing/fake_audio_renderer.h"
-#include "src/media/audio/audio_core/testing/stub_device_registry.h"
-#include "src/media/audio/audio_core/testing/test_process_config.h"
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
 #include "src/media/audio/lib/logging/logging.h"
 
@@ -42,8 +40,8 @@ class DriverOutputTest : public testing::ThreadingModelFixture {
     ASSERT_NE(driver_, nullptr);
     driver_->Start();
 
-    output_ =
-        DriverOutput::Create(std::move(c2), &threading_model(), &device_registry_, &link_matrix_);
+    output_ = DriverOutput::Create(std::move(c2), &threading_model(), &context().device_manager(),
+                                   &context().link_matrix());
     ASSERT_NE(output_, nullptr);
 
     ring_buffer_mapper_ = driver_->CreateRingBuffer(kRingBufferSizeBytes);
@@ -81,10 +79,7 @@ class DriverOutputTest : public testing::ThreadingModelFixture {
     }});
   }
 
-  LinkMatrix link_matrix_;
   VolumeCurve volume_curve_ = VolumeCurve::DefaultForMinGain(Gain::kMinGainDb);
-  testing::TestProcessConfig process_config_;
-  testing::StubDeviceRegistry device_registry_;
   std::unique_ptr<testing::FakeAudioDriver> driver_;
   std::shared_ptr<AudioOutput> output_;
   fzl::VmoMapper ring_buffer_mapper_;
@@ -138,10 +133,10 @@ TEST_F(DriverOutputTest, RendererOutput) {
   RunLoopUntilIdle();
   EXPECT_TRUE(driver_->is_running());
 
-  auto renderer =
-      testing::FakeAudioRenderer::CreateWithDefaultFormatInfo(dispatcher(), &link_matrix_);
-  link_matrix_.LinkObjects(renderer, output_,
-                           std::make_shared<MappedLoudnessTransform>(volume_curve_));
+  auto renderer = testing::FakeAudioRenderer::CreateWithDefaultFormatInfo(dispatcher(),
+                                                                          &context().link_matrix());
+  context().link_matrix().LinkObjects(renderer, output_,
+                                      std::make_shared<MappedLoudnessTransform>(volume_curve_));
   renderer->EnqueueAudioPacket(1.0, zx::msec(5));
   renderer->EnqueueAudioPacket(1.0, zx::msec(5));
 
@@ -189,10 +184,10 @@ TEST_F(DriverOutputTest, MixAtExpectedInterval) {
   RunLoopUntilIdle();
   EXPECT_TRUE(driver_->is_running());
 
-  auto renderer =
-      testing::FakeAudioRenderer::CreateWithDefaultFormatInfo(dispatcher(), &link_matrix_);
-  link_matrix_.LinkObjects(renderer, output_,
-                           std::make_shared<MappedLoudnessTransform>(volume_curve_));
+  auto renderer = testing::FakeAudioRenderer::CreateWithDefaultFormatInfo(dispatcher(),
+                                                                          &context().link_matrix());
+  context().link_matrix().LinkObjects(renderer, output_,
+                                      std::make_shared<MappedLoudnessTransform>(volume_curve_));
   renderer->EnqueueAudioPacket(1.0, kExpectedMixInterval);
   renderer->EnqueueAudioPacket(-1.0, kExpectedMixInterval);
 
@@ -268,10 +263,10 @@ TEST_F(DriverOutputTest, WriteSilenceToRingWhenMuted) {
 
   // Create an add a renderer. We enqueue some audio in this renderer, however we'll expect the
   // ring to only contain silence since the output is muted.
-  auto renderer =
-      testing::FakeAudioRenderer::CreateWithDefaultFormatInfo(dispatcher(), &link_matrix_);
-  link_matrix_.LinkObjects(renderer, output_,
-                           std::make_shared<MappedLoudnessTransform>(volume_curve_));
+  auto renderer = testing::FakeAudioRenderer::CreateWithDefaultFormatInfo(dispatcher(),
+                                                                          &context().link_matrix());
+  context().link_matrix().LinkObjects(renderer, output_,
+                                      std::make_shared<MappedLoudnessTransform>(volume_curve_));
   bool packet1_released = false;
   bool packet2_released = false;
   renderer->EnqueueAudioPacket(1.0, kExpectedMixInterval,

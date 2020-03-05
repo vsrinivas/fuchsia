@@ -8,7 +8,8 @@
 
 namespace media::audio {
 
-fidl::InterfaceRequestHandler<fuchsia::media::UsageReporter> UsageReporterImpl::GetHandler() {
+fidl::InterfaceRequestHandler<fuchsia::media::UsageReporter>
+UsageReporterImpl::GetFidlRequestHandler() {
   return bindings_.GetHandler(this);
 }
 

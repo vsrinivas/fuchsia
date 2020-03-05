@@ -9,8 +9,10 @@
 #endif
 
 #include "src/media/audio/audio_core/audio_core_impl.h"
+#include "src/media/audio/audio_core/plug_detector.h"
 #include "src/media/audio/audio_core/process_config_loader.h"
 #include "src/media/audio/audio_core/reporter.h"
+#include "src/media/audio/audio_core/thermal_agent.h"
 #include "src/media/audio/audio_core/threading_model.h"
 #include "src/media/audio/lib/logging/logging.h"
 
@@ -47,9 +49,15 @@ int main(int argc, const char** argv) {
     process_config = {std::move(default_config)};
   }
   FX_CHECK(process_config);
-  auto config_handle = ProcessConfig::set_instance(std::move(*process_config));
+  auto config_handle = ProcessConfig::set_instance(*process_config);
 
-  AudioCoreImpl impl(threading_model.get(), std::move(component_context));
-  threading_model->RunAndJoinAllThreads();
+  auto context = Context::Create(std::move(threading_model), std::move(component_context),
+                                 PlugDetector::Create(), std::move(*process_config));
+  context->PublishOutgoingServices();
+
+  AudioCoreImpl audio_core(context.get());
+  auto thermal_agent = ThermalAgent::CreateAndServe(context.get());
+
+  context->threading_model().RunAndJoinAllThreads();
   return 0;
 }

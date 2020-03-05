@@ -5,6 +5,7 @@
 #ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_CAPTURER_IMPL_H_
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_CAPTURER_IMPL_H_
 
+#include <fuchsia/media/audio/cpp/fidl.h>
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/binding_set.h>
@@ -18,13 +19,12 @@
 #include <fbl/intrusive_double_list.h>
 
 #include "src/media/audio/audio_core/audio_object.h"
-#include "src/media/audio/audio_core/link_matrix.h"
+#include "src/media/audio/audio_core/context.h"
 #include "src/media/audio/audio_core/mixer/mixer.h"
 #include "src/media/audio/audio_core/mixer/output_producer.h"
 #include "src/media/audio/audio_core/pending_capture_buffer.h"
 #include "src/media/audio/audio_core/route_graph.h"
 #include "src/media/audio/audio_core/stream_volume_manager.h"
-#include "src/media/audio/audio_core/threading_model.h"
 #include "src/media/audio/audio_core/usage_settings.h"
 #include "src/media/audio/audio_core/utils.h"
 
@@ -42,13 +42,7 @@ class AudioCapturerImpl : public AudioObject,
       fuchsia::media::AudioCapturerConfiguration configuration, std::optional<Format> format,
       std::optional<fuchsia::media::AudioCaptureUsage> usage,
       fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
-      AudioCoreImpl* owner);
-  static std::unique_ptr<AudioCapturerImpl> Create(
-      fuchsia::media::AudioCapturerConfiguration configuration, std::optional<Format> format,
-      std::optional<fuchsia::media::AudioCaptureUsage> usage,
-      fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
-      ThreadingModel* threading_model, RouteGraph* route_graph, AudioAdmin* admin,
-      StreamVolumeManager* volume_manager, LinkMatrix* link_matrix);
+      Context* context);
 
   ~AudioCapturerImpl() override;
 
@@ -125,8 +119,7 @@ class AudioCapturerImpl : public AudioObject,
                     std::optional<Format> format,
                     std::optional<fuchsia::media::AudioCaptureUsage> usage,
                     fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
-                    ThreadingModel* threading_model, RouteGraph* route_graph, AudioAdmin* admin,
-                    StreamVolumeManager* volume_manager, LinkMatrix* link_matrix);
+                    Context* context);
 
   using PcbList = ::fbl::DoublyLinkedList<std::unique_ptr<PendingCaptureBuffer>>;
 
@@ -205,7 +198,7 @@ class AudioCapturerImpl : public AudioObject,
   void RecomputeMinFenceTime();
 
   void Shutdown(std::unique_ptr<AudioCapturerImpl> self)
-      FXL_LOCKS_EXCLUDED(threading_model_.FidlDomain().token());
+      FXL_LOCKS_EXCLUDED(context_.threading_model().FidlDomain().token());
 
   TimelineRate dest_frames_to_clock_mono_rate() {
     return TimelineRate(ZX_SEC(1), format_.frames_per_second());
@@ -218,11 +211,8 @@ class AudioCapturerImpl : public AudioObject,
   fuchsia::media::AudioCaptureUsage usage_ = fuchsia::media::AudioCaptureUsage::FOREGROUND;
   fidl::Binding<fuchsia::media::AudioCapturer> binding_;
   fidl::BindingSet<fuchsia::media::audio::GainControl> gain_control_bindings_;
-  ThreadingModel& threading_model_;
+  Context& context_;
   ThreadingModel::OwnedDomainPtr mix_domain_;
-  AudioAdmin& admin_;
-  StreamVolumeManager& volume_manager_;
-  RouteGraph& route_graph_;
   std::atomic<State> state_;
   const bool loopback_;
   zx::duration min_fence_time_;
@@ -266,8 +256,6 @@ class AudioCapturerImpl : public AudioObject,
   std::atomic<uint16_t> partial_overflow_count_;
 
   std::shared_ptr<MixStage> mix_stage_;
-
-  LinkMatrix& link_matrix_;
 };
 
 }  // namespace media::audio

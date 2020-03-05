@@ -78,6 +78,8 @@ source_set("audio_core_lib") {
     "audio_policy.h",
     "audio_renderer_impl.cc",
     "audio_renderer_impl.h",
+    "context.cc",
+    "context.h",
     "device_config.cc",
     "device_config.h",
     "device_registry.h",

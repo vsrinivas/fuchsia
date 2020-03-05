@@ -11,6 +11,7 @@
 
 #include <memory>
 
+#include "src/media/audio/audio_core/audio_admin.h"
 #include "src/media/audio/audio_core/audio_core_impl.h"
 #include "src/media/audio/audio_core/audio_driver.h"
 #include "src/media/audio/audio_core/reporter.h"
@@ -57,37 +58,19 @@ std::unique_ptr<AudioCapturerImpl> AudioCapturerImpl::Create(
     fuchsia::media::AudioCapturerConfiguration configuration, std::optional<Format> format,
     std::optional<fuchsia::media::AudioCaptureUsage> usage,
     fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
-    AudioCoreImpl* owner) {
+    Context* context) {
   return std::unique_ptr<AudioCapturerImpl>(new AudioCapturerImpl(
-      std::move(configuration), format, usage, std::move(audio_capturer_request),
-      &owner->threading_model(), &owner->route_graph(), &owner->audio_admin(),
-      &owner->volume_manager(), &owner->link_matrix()));
-}
-
-std::unique_ptr<AudioCapturerImpl> AudioCapturerImpl::Create(
-    fuchsia::media::AudioCapturerConfiguration configuration, std::optional<Format> format,
-    std::optional<fuchsia::media::AudioCaptureUsage> usage,
-    fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
-    ThreadingModel* threading_model, RouteGraph* route_graph, AudioAdmin* admin,
-    StreamVolumeManager* volume_manager, LinkMatrix* link_matrix) {
-  return std::unique_ptr<AudioCapturerImpl>(new AudioCapturerImpl(
-      std::move(configuration), format, usage, std::move(audio_capturer_request), threading_model,
-      route_graph, admin, volume_manager, link_matrix));
+      std::move(configuration), format, usage, std::move(audio_capturer_request), context));
 }
 
 AudioCapturerImpl::AudioCapturerImpl(
     fuchsia::media::AudioCapturerConfiguration configuration, std::optional<Format> format,
     std::optional<fuchsia::media::AudioCaptureUsage> usage,
-    fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
-    ThreadingModel* threading_model, RouteGraph* route_graph, AudioAdmin* admin,
-    StreamVolumeManager* volume_manager, LinkMatrix* link_matrix)
+    fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request, Context* context)
     : AudioObject(Type::AudioCapturer),
       binding_(this, std::move(audio_capturer_request)),
-      threading_model_(*threading_model),
-      mix_domain_(threading_model_.AcquireMixDomain()),
-      admin_(*admin),
-      volume_manager_(*volume_manager),
-      route_graph_(*route_graph),
+      context_(*context),
+      mix_domain_(context_.threading_model().AcquireMixDomain()),
       state_(State::WaitingForVmo),
       loopback_(configuration.is_loopback()),
       min_fence_time_(zx::nsec(0)),
@@ -96,15 +79,11 @@ AudioCapturerImpl::AudioCapturerImpl(
       stream_gain_db_(kInitialCaptureGainDb),
       mute_(false),
       overflow_count_(0u),
-      partial_overflow_count_(0u),
-      link_matrix_(*link_matrix) {
-  FX_DCHECK(route_graph);
-  FX_DCHECK(admin);
+      partial_overflow_count_(0u) {
   FX_DCHECK(mix_domain_);
-  FX_DCHECK(link_matrix);
   REP(AddingCapturer(*this));
 
-  volume_manager_.AddStream(this);
+  context_.volume_manager().AddStream(this);
 
   binding_.set_error_handler([this](zx_status_t status) { BeginShutdown(); });
   source_links_.reserve(16u);
@@ -121,16 +100,20 @@ AudioCapturerImpl::AudioCapturerImpl(
 AudioCapturerImpl::~AudioCapturerImpl() {
   TRACE_DURATION("audio.debug", "AudioCapturerImpl::~AudioCapturerImpl");
 
-  volume_manager_.RemoveStream(this);
+  context_.volume_manager().RemoveStream(this);
   REP(RemovingCapturer(*this));
 }
 
-void AudioCapturerImpl::ReportStart() { admin_.UpdateCapturerState(usage_, true, this); }
+void AudioCapturerImpl::ReportStart() {
+  context_.audio_admin().UpdateCapturerState(usage_, true, this);
+}
 
-void AudioCapturerImpl::ReportStop() { admin_.UpdateCapturerState(usage_, false, this); }
+void AudioCapturerImpl::ReportStop() {
+  context_.audio_admin().UpdateCapturerState(usage_, false, this);
+}
 
 void AudioCapturerImpl::OnLinkAdded() {
-  volume_manager_.NotifyStreamChanged(this);
+  context_.volume_manager().NotifyStreamChanged(this);
   RecomputeMinFenceTime();
 }
 
@@ -148,15 +131,16 @@ void AudioCapturerImpl::RealizeVolume(VolumeCommand volume_command) {
         << "Requested ramp of capturer; ramping for destination gains is unimplemented.";
   }
 
-  link_matrix_.ForEachSourceLink(*this, [this, &volume_command](LinkMatrix::LinkHandle link) {
-    float gain_db = link.loudness_transform->Evaluate<3>({
-        VolumeValue{volume_command.volume},
-        GainDbFsValue{volume_command.gain_db_adjustment},
-        GainDbFsValue{stream_gain_db_.load()},
-    });
+  context_.link_matrix().ForEachSourceLink(*this,
+                                           [this, &volume_command](LinkMatrix::LinkHandle link) {
+                                             float gain_db = link.loudness_transform->Evaluate<3>({
+                                                 VolumeValue{volume_command.volume},
+                                                 GainDbFsValue{volume_command.gain_db_adjustment},
+                                                 GainDbFsValue{stream_gain_db_.load()},
+                                             });
 
-    link.mixer->bookkeeping().gain.SetDestGain(gain_db);
-  });
+                                             link.mixer->bookkeeping().gain.SetDestGain(gain_db);
+                                           });
 }
 
 fit::promise<> AudioCapturerImpl::Cleanup() {
@@ -187,11 +171,11 @@ void AudioCapturerImpl::CleanupFromMixThread() {
 }
 
 void AudioCapturerImpl::BeginShutdown() {
-  threading_model_.FidlDomain().ScheduleTask(Cleanup().then([this](fit::result<>&) {
+  context_.threading_model().FidlDomain().ScheduleTask(Cleanup().then([this](fit::result<>&) {
     if (loopback_) {
-      route_graph_.RemoveLoopbackCapturer(*this);
+      context_.route_graph().RemoveLoopbackCapturer(*this);
     } else {
-      route_graph_.RemoveCapturer(*this);
+      context_.route_graph().RemoveCapturer(*this);
     }
   }));
 }
@@ -199,9 +183,9 @@ void AudioCapturerImpl::BeginShutdown() {
 void AudioCapturerImpl::SetRoutingProfile() {
   auto profile = RoutingProfile{.routable = StateIsRoutable(state_), .usage = GetStreamUsage()};
   if (loopback_) {
-    route_graph_.SetLoopbackCapturerRoutingProfile(*this, std::move(profile));
+    context_.route_graph().SetLoopbackCapturerRoutingProfile(*this, std::move(profile));
   } else {
-    route_graph_.SetCapturerRoutingProfile(*this, std::move(profile));
+    context_.route_graph().SetCapturerRoutingProfile(*this, std::move(profile));
   }
 }
 
@@ -363,9 +347,9 @@ void AudioCapturerImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
   state_.store(State::OperatingSync);
 
   // Mark ourselves as routable now that we're fully configured.
-  FX_DCHECK(link_matrix_.SourceLinkCount(*this) == 0u)
+  FX_DCHECK(context_.link_matrix().SourceLinkCount(*this) == 0u)
       << "No links should be established before a capturer has a payload buffer";
-  volume_manager_.NotifyStreamChanged(this);
+  context_.volume_manager().NotifyStreamChanged(this);
   SetRoutingProfile();
   cleanup.cancel();
 }
@@ -568,14 +552,15 @@ void AudioCapturerImpl::RecomputeMinFenceTime() {
   TRACE_DURATION("audio", "AudioCapturerImpl::RecomputeMinFenceTime");
 
   zx::duration cur_min_fence_time{0};
-  link_matrix_.ForEachSourceLink(*this, [&cur_min_fence_time](LinkMatrix::LinkHandle link) {
-    if (link.object->is_input()) {
-      const auto& device = static_cast<const AudioDevice&>(*link.object);
-      auto fence_time = device.driver()->fifo_depth_duration();
+  context_.link_matrix().ForEachSourceLink(
+      *this, [&cur_min_fence_time](LinkMatrix::LinkHandle link) {
+        if (link.object->is_input()) {
+          const auto& device = static_cast<const AudioDevice&>(*link.object);
+          auto fence_time = device.driver()->fifo_depth_duration();
 
-      cur_min_fence_time = std::max(cur_min_fence_time, fence_time);
-    }
-  });
+          cur_min_fence_time = std::max(cur_min_fence_time, fence_time);
+        }
+      });
 
   if (min_fence_time_ != cur_min_fence_time) {
     FX_VLOGS(TRACE) << "Changing min_fence_time_ (ns) from " << min_fence_time_.get() << " to "
@@ -792,7 +777,7 @@ zx_status_t AudioCapturerImpl::Process() {
 
     // If we need to poke the service thread, do so.
     if (wakeup_service_thread) {
-      async::PostTask(threading_model_.FidlDomain().dispatcher(),
+      async::PostTask(context_.threading_model().FidlDomain().dispatcher(),
                       [this]() { FinishBuffersThunk(); });
     }
 
@@ -813,7 +798,7 @@ void AudioCapturerImpl::SetUsage(fuchsia::media::AudioCaptureUsage usage) {
 
   ReportStop();
   usage_ = usage;
-  volume_manager_.NotifyStreamChanged(this);
+  context_.volume_manager().NotifyStreamChanged(this);
   State state = state_.load();
   SetRoutingProfile();
   if (state == State::OperatingAsync) {
@@ -929,7 +914,8 @@ void AudioCapturerImpl::DoStopAsyncCapture() {
   // Transition to the AsyncStoppingCallbackPending state, and signal the
   // service thread so it can complete the stop operation.
   state_.store(State::AsyncStoppingCallbackPending);
-  async::PostTask(threading_model_.FidlDomain().dispatcher(), [this]() { FinishAsyncStopThunk(); });
+  async::PostTask(context_.threading_model().FidlDomain().dispatcher(),
+                  [this]() { FinishAsyncStopThunk(); });
 }
 
 bool AudioCapturerImpl::QueueNextAsyncPendingBuffer() {
@@ -972,7 +958,8 @@ bool AudioCapturerImpl::QueueNextAsyncPendingBuffer() {
 
 void AudioCapturerImpl::ShutdownFromMixDomain() {
   TRACE_DURATION("audio", "AudioCapturerImpl::ShutdownFromMixDomain");
-  async::PostTask(threading_model_.FidlDomain().dispatcher(), [this]() { BeginShutdown(); });
+  async::PostTask(context_.threading_model().FidlDomain().dispatcher(),
+                  [this]() { BeginShutdown(); });
 }
 
 void AudioCapturerImpl::FinishAsyncStopThunk() {
@@ -1109,7 +1096,7 @@ void AudioCapturerImpl::SetGain(float gain_db) {
   REP(SettingCapturerGain(*this, gain_db));
 
   stream_gain_db_.store(gain_db);
-  volume_manager_.NotifyStreamChanged(this);
+  context_.volume_manager().NotifyStreamChanged(this);
 
   NotifyGainMuteChanged();
 }
@@ -1125,7 +1112,7 @@ void AudioCapturerImpl::SetMute(bool mute) {
 
   mute_ = mute;
 
-  volume_manager_.NotifyStreamChanged(this);
+  context_.volume_manager().NotifyStreamChanged(this);
   NotifyGainMuteChanged();
 }
 

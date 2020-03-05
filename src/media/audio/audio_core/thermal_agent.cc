@@ -7,6 +7,7 @@
 #include <set>
 
 #include "src/lib/syslog/cpp/logger.h"
+#include "src/media/audio/audio_core/audio_device_manager.h"
 
 namespace media::audio {
 namespace {
@@ -45,6 +46,21 @@ std::vector<std::string> ConfigsByState(const std::vector<ThermalConfig::State>&
 }
 
 }  // namespace
+
+// static
+std::unique_ptr<ThermalAgent> ThermalAgent::CreateAndServe(Context* context) {
+  auto& thermal_config = context->process_config().thermal_config();
+  if (thermal_config.entries().empty()) {
+    // No thermal config so we don't start the thermal agent.
+    return nullptr;
+  }
+  return std::make_unique<ThermalAgent>(
+      context->component_context().svc()->Connect<fuchsia::thermal::Controller>(), thermal_config,
+      context->process_config().device_config(),
+      [context](const std::string& target_name, const std::string& config) {
+        context->device_manager().SetEffectConfig(target_name, config);
+      });
+}
 
 ThermalAgent::ThermalAgent(fuchsia::thermal::ControllerPtr thermal_controller,
                            const ThermalConfig& thermal_config, const DeviceConfig& device_config,

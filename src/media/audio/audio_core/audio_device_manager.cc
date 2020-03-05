@@ -21,11 +21,12 @@
 
 namespace media::audio {
 
-AudioDeviceManager::AudioDeviceManager(ThreadingModel* threading_model, RouteGraph* route_graph,
-                                       LinkMatrix* link_matrix)
+AudioDeviceManager::AudioDeviceManager(ThreadingModel* threading_model,
+                                       std::unique_ptr<PlugDetector> plug_detector,
+                                       RouteGraph* route_graph, LinkMatrix* link_matrix)
     : threading_model_(*threading_model),
       route_graph_(*route_graph),
-      plug_detector_(PlugDetector::Create()),
+      plug_detector_(std::move(plug_detector)),
       link_matrix_(*link_matrix) {
   FX_DCHECK(route_graph);
   FX_DCHECK(threading_model);

@@ -9,9 +9,13 @@
 #include <lib/async/cpp/executor.h>
 #include <lib/async/dispatcher.h>
 #include <lib/gtest/test_loop_fixture.h>
+#include <lib/sys/cpp/testing/component_context_provider.h>
 #include <zircon/compiler.h>
 
 #include "src/lib/syslog/cpp/logger.h"
+#include "src/media/audio/audio_core/context.h"
+#include "src/media/audio/audio_core/testing/fake_plug_detector.h"
+#include "src/media/audio/audio_core/testing/test_process_config.h"
 #include "src/media/audio/audio_core/threading_model.h"
 
 namespace media::audio::testing {
@@ -66,13 +70,34 @@ class TestThreadingModel : public ThreadingModel {
 //     AssertScheduledWorkCompleted(&bar);
 //   }
 class ThreadingModelFixture : public gtest::TestLoopFixture {
+ public:
+  ThreadingModelFixture(ProcessConfig config) : process_config_(std::move(config)) { Init(); }
+
+  ThreadingModelFixture() { Init(); }
+
  protected:
   // This threading model will be backed by an |async::TestLoop|. Control the loop using the methods
   // in |gtest::TestLoopFixture|.
-  ThreadingModel& threading_model() { return threading_model_; };
+  ThreadingModel& threading_model() { return context_->threading_model(); };
+
+  Context& context() { return *context_; }
+
+  FakePlugDetector* fake_plug_detector() const { return fake_plug_detector_; }
 
  private:
+  void Init() {
+    auto threading_model = std::make_unique<TestThreadingModel>(&test_loop());
+    auto plug_detector = std::make_unique<testing::FakePlugDetector>();
+    fake_plug_detector_ = plug_detector.get();
+    context_ =
+        Context::Create(std::move(threading_model), component_context_provider_.TakeContext(),
+                        std::move(plug_detector), ProcessConfig::instance());
+  }
+  TestProcessConfig process_config_;
   TestThreadingModel threading_model_{&test_loop()};
+  sys::testing::ComponentContextProvider component_context_provider_;
+  testing::FakePlugDetector* fake_plug_detector_;
+  std::unique_ptr<Context> context_;
 };
 
 }  // namespace media::audio::testing

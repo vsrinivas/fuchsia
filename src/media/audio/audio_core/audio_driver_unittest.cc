@@ -4,6 +4,7 @@
 
 #include "src/media/audio/audio_core/audio_driver.h"
 
+#include "src/media/audio/audio_core/audio_device_manager.h"
 #include "src/media/audio/audio_core/testing/fake_audio_device.h"
 #include "src/media/audio/audio_core/testing/fake_audio_driver.h"
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
@@ -21,10 +22,8 @@ class AudioDriverTest : public testing::ThreadingModelFixture {
   }
 
  protected:
-  LinkMatrix link_matrix_;
-  testing::StubDeviceRegistry device_registry_;
-  std::shared_ptr<testing::FakeAudioOutput> device_{
-      testing::FakeAudioOutput::Create(&threading_model(), &device_registry_, &link_matrix_)};
+  std::shared_ptr<testing::FakeAudioOutput> device_{testing::FakeAudioOutput::Create(
+      &threading_model(), &context().device_manager(), &context().link_matrix())};
   AudioDriver driver_{device_.get(), [this](auto delay) { last_late_command_ = delay; }};
   // While |driver_| is the object under test, this object simulates the channel messages that
   // normally come from the actual driver instance.

@@ -6,6 +6,7 @@
 #include <lib/fit/defer.h>
 
 #include "src/lib/fxl/arraysize.h"
+#include "src/media/audio/audio_core/audio_admin.h"
 #include "src/media/audio/audio_core/audio_core_impl.h"
 #include "src/media/audio/audio_core/audio_output.h"
 #include "src/media/audio/audio_core/reporter.h"
@@ -30,53 +31,31 @@ constexpr size_t kMaxPacketAllocatorSlabs = 4;
 
 std::unique_ptr<AudioRendererImpl> AudioRendererImpl::Create(
     fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request,
-    async_dispatcher_t* dispatcher, RouteGraph* route_graph, AudioAdmin* admin,
-    fbl::RefPtr<fzl::VmarManager> vmar, StreamVolumeManager* volume_manager,
-    LinkMatrix* link_matrix) {
+    Context* context) {
   return std::unique_ptr<AudioRendererImpl>(
-      new AudioRendererImpl(std::move(audio_renderer_request), dispatcher, route_graph, admin, vmar,
-                            volume_manager, link_matrix));
-}
-
-std::unique_ptr<AudioRendererImpl> AudioRendererImpl::Create(
-    fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request,
-    AudioCoreImpl* owner) {
-  return Create(std::move(audio_renderer_request),
-                owner->threading_model().FidlDomain().dispatcher(), &owner->route_graph(),
-                &owner->audio_admin(), owner->vmar(), &owner->volume_manager(),
-                &owner->link_matrix());
+      new AudioRendererImpl(std::move(audio_renderer_request), context));
 }
 
 AudioRendererImpl::AudioRendererImpl(
-    fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request,
-    async_dispatcher_t* dispatcher, RouteGraph* route_graph, AudioAdmin* admin,
-    fbl::RefPtr<fzl::VmarManager> vmar, StreamVolumeManager* volume_manager,
-    LinkMatrix* link_matrix)
+    fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request, Context* context)
     : AudioObject(Type::AudioRenderer),
-      dispatcher_(dispatcher),
-      route_graph_(*route_graph),
-      admin_(*admin),
-      vmar_(std::move(vmar)),
-      volume_manager_(*volume_manager),
+      context_(*context),
       audio_renderer_binding_(this, std::move(audio_renderer_request)),
       pts_ticks_per_second_(1000000000, 1),
       reference_clock_to_fractional_frames_(fbl::MakeRefCounted<VersionedTimelineFunction>()),
-      packet_allocator_(kMaxPacketAllocatorSlabs, true),
-      link_matrix_(*link_matrix) {
+      packet_allocator_(kMaxPacketAllocatorSlabs, true) {
   TRACE_DURATION("audio", "AudioRendererImpl::AudioRendererImpl");
-  FX_DCHECK(admin);
-  FX_DCHECK(route_graph);
-  FX_DCHECK(link_matrix);
+  FX_DCHECK(context);
   REP(AddingRenderer(*this));
   AUD_VLOG_OBJ(TRACE, this);
 
-  volume_manager_.AddStream(this);
+  context_.volume_manager().AddStream(this);
 
   audio_renderer_binding_.set_error_handler([this](zx_status_t status) {
     TRACE_DURATION("audio", "AudioRendererImpl::audio_renderer_binding_.error_handler", "zx_status",
                    status);
     FX_PLOGS(INFO, status) << "Client disconnected";
-    route_graph_.RemoveRenderer(*this);
+    context_.route_graph().RemoveRenderer(*this);
   });
 }
 
@@ -85,13 +64,17 @@ AudioRendererImpl::~AudioRendererImpl() {
 
   Shutdown();
 
-  volume_manager_.RemoveStream(this);
+  context_.volume_manager().RemoveStream(this);
   REP(RemovingRenderer(*this));
 }
 
-void AudioRendererImpl::ReportStart() { admin_.UpdateRendererState(usage_, true, this); }
+void AudioRendererImpl::ReportStart() {
+  context_.audio_admin().UpdateRendererState(usage_, true, this);
+}
 
-void AudioRendererImpl::ReportStop() { admin_.UpdateRendererState(usage_, false, this); }
+void AudioRendererImpl::ReportStop() {
+  context_.audio_admin().UpdateRendererState(usage_, false, this);
+}
 
 void AudioRendererImpl::Shutdown() {
   TRACE_DURATION("audio", "AudioRendererImpl::Shutdown");
@@ -123,7 +106,7 @@ void AudioRendererImpl::RecomputeMinLeadTime() {
   TRACE_DURATION("audio", "AudioRendererImpl::RecomputeMinLeadTime");
   zx::duration cur_lead_time;
 
-  link_matrix_.ForEachDestLink(*this, [&cur_lead_time](LinkMatrix::LinkHandle link) {
+  context_.link_matrix().ForEachDestLink(*this, [&cur_lead_time](LinkMatrix::LinkHandle link) {
     const auto& output = static_cast<const AudioDevice&>(*link.object);
 
     cur_lead_time = std::max(cur_lead_time, output.min_lead_time());
@@ -140,7 +123,7 @@ void AudioRendererImpl::SetUsage(fuchsia::media::AudioRenderUsage usage) {
   TRACE_DURATION("audio", "AudioRendererImpl::SetUsage");
   if (format_) {
     FX_LOGS(ERROR) << "SetUsage called after SetPcmStreamType.";
-    route_graph_.RemoveRenderer(*this);
+    context_.route_graph().RemoveRenderer(*this);
     return;
   }
   usage_ = usage;
@@ -231,7 +214,7 @@ void AudioRendererImpl::ComputePtsToFracFrames(int64_t first_pts) {
 //
 void AudioRendererImpl::SetPcmStreamType(fuchsia::media::AudioStreamType stream_type) {
   TRACE_DURATION("audio", "AudioRendererImpl::SetPcmStreamType");
-  auto cleanup = fit::defer([this]() { route_graph_.RemoveRenderer(*this); });
+  auto cleanup = fit::defer([this]() { context_.route_graph().RemoveRenderer(*this); });
 
   AUD_VLOG_OBJ(TRACE, this);
 
@@ -250,8 +233,9 @@ void AudioRendererImpl::SetPcmStreamType(fuchsia::media::AudioStreamType stream_
 
   REP(SettingRendererStreamType(*this, stream_type));
 
-  route_graph_.SetRendererRoutingProfile(*this, {.routable = true, .usage = GetStreamUsage()});
-  volume_manager_.NotifyStreamChanged(this);
+  context_.route_graph().SetRendererRoutingProfile(*this,
+                                                   {.routable = true, .usage = GetStreamUsage()});
+  context_.volume_manager().NotifyStreamChanged(this);
 
   // Things went well, cancel the cleanup hook. If our config had been validated previously, it will
   // have to be revalidated as we move into the operational phase of our life.
@@ -261,7 +245,7 @@ void AudioRendererImpl::SetPcmStreamType(fuchsia::media::AudioStreamType stream_
 
 void AudioRendererImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buffer) {
   TRACE_DURATION("audio", "AudioRendererImpl::AddPayloadBuffer");
-  auto cleanup = fit::defer([this]() { route_graph_.RemoveRenderer(*this); });
+  auto cleanup = fit::defer([this]() { context_.route_graph().RemoveRenderer(*this); });
 
   AUD_VLOG_OBJ(TRACE, this) << " (id: " << id << ")";
 
@@ -276,7 +260,7 @@ void AudioRendererImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buffer) {
   // some clients currently rely on being able to update the payload buffer without first calling
   // |RemovePayloadBuffer|.
   payload_buffers_[id] = vmo_mapper;
-  zx_status_t res = vmo_mapper->Map(payload_buffer, 0, 0, ZX_VM_PERM_READ, vmar_);
+  zx_status_t res = vmo_mapper->Map(payload_buffer, 0, 0, ZX_VM_PERM_READ, context_.vmar());
   if (res != ZX_OK) {
     FX_PLOGS(ERROR, res) << "Failed to map payload buffer";
     return;
@@ -292,7 +276,7 @@ void AudioRendererImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buffer) {
 
 void AudioRendererImpl::RemovePayloadBuffer(uint32_t id) {
   TRACE_DURATION("audio", "AudioRendererImpl::RemovePayloadBuffer");
-  auto cleanup = fit::defer([this]() { route_graph_.RemoveRenderer(*this); });
+  auto cleanup = fit::defer([this]() { context_.route_graph().RemoveRenderer(*this); });
 
   AUD_VLOG_OBJ(TRACE, this) << " (id: " << id << ")";
 
@@ -314,7 +298,7 @@ void AudioRendererImpl::RemovePayloadBuffer(uint32_t id) {
 void AudioRendererImpl::SetPtsUnits(uint32_t tick_per_second_numerator,
                                     uint32_t tick_per_second_denominator) {
   TRACE_DURATION("audio", "AudioRendererImpl::SetPtsUnits");
-  auto cleanup = fit::defer([this]() { route_graph_.RemoveRenderer(*this); });
+  auto cleanup = fit::defer([this]() { context_.route_graph().RemoveRenderer(*this); });
 
   AUD_VLOG_OBJ(TRACE, this) << " (pts ticks per sec: " << std::dec << tick_per_second_numerator
                             << " / " << tick_per_second_denominator << ")";
@@ -340,7 +324,7 @@ void AudioRendererImpl::SetPtsUnits(uint32_t tick_per_second_numerator,
 
 void AudioRendererImpl::SetPtsContinuityThreshold(float threshold_seconds) {
   TRACE_DURATION("audio", "AudioRendererImpl::SetPtsContinuityThreshold");
-  auto cleanup = fit::defer([this]() { route_graph_.RemoveRenderer(*this); });
+  auto cleanup = fit::defer([this]() { context_.route_graph().RemoveRenderer(*this); });
 
   AUD_VLOG_OBJ(TRACE, this) << " (" << threshold_seconds << " sec)";
 
@@ -367,7 +351,7 @@ void AudioRendererImpl::SetPtsContinuityThreshold(float threshold_seconds) {
 
 void AudioRendererImpl::SetReferenceClock(zx::handle ref_clock) {
   TRACE_DURATION("audio", "AudioRendererImpl::SetReferenceClock");
-  auto cleanup = fit::defer([this]() { route_graph_.RemoveRenderer(*this); });
+  auto cleanup = fit::defer([this]() { context_.route_graph().RemoveRenderer(*this); });
 
   AUD_VLOG_OBJ(TRACE, this);
 
@@ -382,7 +366,7 @@ void AudioRendererImpl::SetReferenceClock(zx::handle ref_clock) {
 void AudioRendererImpl::SendPacket(fuchsia::media::StreamPacket packet,
                                    SendPacketCallback callback) {
   TRACE_DURATION("audio", "AudioRendererImpl::SendPacket");
-  auto cleanup = fit::defer([this]() { route_graph_.RemoveRenderer(*this); });
+  auto cleanup = fit::defer([this]() { context_.route_graph().RemoveRenderer(*this); });
 
   // It is an error to attempt to send a packet before we have established at least a minimum valid
   // configuration. IOW - the format must have been configured, and we must have an established
@@ -477,9 +461,9 @@ void AudioRendererImpl::SendPacket(fuchsia::media::StreamPacket packet,
   start_pts = FractionalFrames<int64_t>(start_pts.Floor());
 
   // Create the packet.
-  auto packet_ref = packet_allocator_.New(payload_buffer, packet.payload_offset,
-                                          FractionalFrames<uint32_t>(frame_count), start_pts,
-                                          dispatcher_, std::move(callback));
+  auto packet_ref = packet_allocator_.New(
+      payload_buffer, packet.payload_offset, FractionalFrames<uint32_t>(frame_count), start_pts,
+      context_.threading_model().FidlDomain().dispatcher(), std::move(callback));
   if (!packet_ref) {
     FX_LOGS(ERROR) << "Client created too many concurrent Packets; Allocator has created "
                    << packet_allocator_.obj_count() << " / " << packet_allocator_.max_obj_count()
@@ -523,7 +507,8 @@ void AudioRendererImpl::DiscardAllPackets(DiscardAllPacketsCallback callback) {
   // at the proper time.
   fbl::RefPtr<PendingFlushToken> flush_token;
   if (callback != nullptr) {
-    flush_token = PendingFlushToken::Create(dispatcher_, std::move(callback));
+    flush_token = PendingFlushToken::Create(context_.threading_model().FidlDomain().dispatcher(),
+                                            std::move(callback));
   }
 
   // Tell each link to flush. If link is currently processing pending data, it will take a reference
@@ -548,7 +533,7 @@ void AudioRendererImpl::Play(int64_t _reference_time, int64_t media_time, PlayCa
       << ", media: " << (media_time == fuchsia::media::NO_TIMESTAMP ? -1 : media_time) << ")";
   zx::time reference_time(_reference_time);
 
-  auto cleanup = fit::defer([this]() { route_graph_.RemoveRenderer(*this); });
+  auto cleanup = fit::defer([this]() { context_.route_graph().RemoveRenderer(*this); });
 
   if (!ValidateConfig()) {
     FX_LOGS(ERROR) << "Failed to validate configuration during Play";
@@ -643,7 +628,7 @@ void AudioRendererImpl::PlayNoReply(int64_t reference_time, int64_t media_time) 
 
 void AudioRendererImpl::Pause(PauseCallback callback) {
   TRACE_DURATION("audio", "AudioRendererImpl::Pause");
-  auto cleanup = fit::defer([this]() { route_graph_.RemoveRenderer(*this); });
+  auto cleanup = fit::defer([this]() { context_.route_graph().RemoveRenderer(*this); });
 
   if (!ValidateConfig()) {
     FX_LOGS(ERROR) << "Failed to validate configuration during Pause";
@@ -692,7 +677,7 @@ void AudioRendererImpl::PauseNoReply() {
 }
 
 void AudioRendererImpl::OnLinkAdded() {
-  volume_manager_.NotifyStreamChanged(this);
+  context_.volume_manager().NotifyStreamChanged(this);
   RecomputeMinLeadTime();
 }
 
@@ -705,24 +690,25 @@ fuchsia::media::Usage AudioRendererImpl::GetStreamUsage() const {
 }
 
 void AudioRendererImpl::RealizeVolume(VolumeCommand volume_command) {
-  link_matrix_.ForEachDestLink(*this, [this, &volume_command](LinkMatrix::LinkHandle link) {
-    float gain_db = link.loudness_transform->Evaluate<3>({
-        VolumeValue{volume_command.volume},
-        GainDbFsValue{volume_command.gain_db_adjustment},
-        GainDbFsValue{stream_gain_db_},
-    });
+  context_.link_matrix().ForEachDestLink(
+      *this, [this, &volume_command](LinkMatrix::LinkHandle link) {
+        float gain_db = link.loudness_transform->Evaluate<3>({
+            VolumeValue{volume_command.volume},
+            GainDbFsValue{volume_command.gain_db_adjustment},
+            GainDbFsValue{stream_gain_db_},
+        });
 
-    auto& gain = link.mixer->bookkeeping().gain;
+        auto& gain = link.mixer->bookkeeping().gain;
 
-    REP(SettingRendererFinalGain(*this, gain_db));
+        REP(SettingRendererFinalGain(*this, gain_db));
 
-    if (volume_command.ramp.has_value()) {
-      gain.SetSourceGainWithRamp(gain_db, volume_command.ramp->duration,
-                                 volume_command.ramp->ramp_type);
-    } else {
-      gain.SetSourceGain(gain_db);
-    }
-  });
+        if (volume_command.ramp.has_value()) {
+          gain.SetSourceGainWithRamp(gain_db, volume_command.ramp->duration,
+                                     volume_command.ramp->ramp_type);
+        } else {
+          gain.SetSourceGain(gain_db);
+        }
+      });
 }
 
 // Set the stream gain, in each Renderer -> Output audio path. The Gain object contains multiple
@@ -736,7 +722,7 @@ void AudioRendererImpl::SetGain(float gain_db) {
   if (gain_db > fuchsia::media::audio::MAX_GAIN_DB ||
       gain_db < fuchsia::media::audio::MUTED_GAIN_DB || isnan(gain_db)) {
     FX_LOGS(ERROR) << "SetGain(" << gain_db << " dB) out of range.";
-    route_graph_.RemoveRenderer(*this);
+    context_.route_graph().RemoveRenderer(*this);
     return;
   }
 
@@ -747,7 +733,7 @@ void AudioRendererImpl::SetGain(float gain_db) {
   REP(SettingRendererGain(*this, gain_db));
 
   stream_gain_db_ = gain_db;
-  volume_manager_.NotifyStreamChanged(this);
+  context_.volume_manager().NotifyStreamChanged(this);
 
   NotifyGainMuteChanged();
 }
@@ -763,13 +749,13 @@ void AudioRendererImpl::SetGainWithRamp(float gain_db, int64_t duration_ns,
   if (gain_db > fuchsia::media::audio::MAX_GAIN_DB ||
       gain_db < fuchsia::media::audio::MUTED_GAIN_DB || isnan(gain_db)) {
     FX_LOGS(ERROR) << "SetGainWithRamp(" << gain_db << " dB) out of range.";
-    route_graph_.RemoveRenderer(*this);
+    context_.route_graph().RemoveRenderer(*this);
     return;
   }
 
   REP(SettingRendererGainWithRamp(*this, gain_db, duration, ramp_type));
 
-  volume_manager_.NotifyStreamChanged(this, Ramp{duration, ramp_type});
+  context_.volume_manager().NotifyStreamChanged(this, Ramp{duration, ramp_type});
 
   // TODO(mpuryear): implement GainControl notifications for gain ramps.
 }
@@ -788,7 +774,7 @@ void AudioRendererImpl::SetMute(bool mute) {
   REP(SettingRendererMute(*this, mute));
   mute_ = mute;
 
-  volume_manager_.NotifyStreamChanged(this);
+  context_.volume_manager().NotifyStreamChanged(this);
   NotifyGainMuteChanged();
 }
 

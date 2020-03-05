@@ -33,9 +33,13 @@ class SystemGainMuteProvider;
 
 class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator, public DeviceRegistry {
  public:
-  AudioDeviceManager(ThreadingModel* threading_model, RouteGraph* route_graph,
-                     LinkMatrix* link_matrix);
+  AudioDeviceManager(ThreadingModel* threading_model, std::unique_ptr<PlugDetector> plug_detector,
+                     RouteGraph* route_graph, LinkMatrix* link_matrix);
   ~AudioDeviceManager();
+
+  fidl::InterfaceRequestHandler<fuchsia::media::AudioDeviceEnumerator> GetFidlRequestHandler() {
+    return bindings_.GetHandler(this);
+  }
 
   ThreadingModel& threading_model() { return threading_model_; }
 

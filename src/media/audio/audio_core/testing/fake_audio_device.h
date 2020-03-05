@@ -6,9 +6,9 @@
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_TESTING_FAKE_AUDIO_DEVICE_H_
 
 #include "src/media/audio/audio_core/audio_device.h"
+#include "src/media/audio/audio_core/device_registry.h"
 #include "src/media/audio/audio_core/mixer/mixer.h"
 #include "src/media/audio/audio_core/mixer/no_op.h"
-#include "src/media/audio/audio_core/testing/stub_device_registry.h"
 
 namespace media::audio::testing {
 

@@ -17,7 +17,7 @@ namespace media::audio {
 class UsageReporterImpl : public AudioAdmin::PolicyActionReporter,
                           public fuchsia::media::UsageReporter {
  public:
-  fidl::InterfaceRequestHandler<fuchsia::media::UsageReporter> GetHandler();
+  fidl::InterfaceRequestHandler<fuchsia::media::UsageReporter> GetFidlRequestHandler();
 
  private:
   struct Watcher {

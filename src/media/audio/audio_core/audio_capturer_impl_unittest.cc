@@ -9,60 +9,42 @@
 #include <gtest/gtest.h>
 
 #include "src/media/audio/audio_core/audio_admin.h"
+#include "src/media/audio/audio_core/audio_device_manager.h"
 #include "src/media/audio/audio_core/audio_driver.h"
 #include "src/media/audio/audio_core/audio_input.h"
-#include "src/media/audio/audio_core/process_config.h"
 #include "src/media/audio/audio_core/stream_volume_manager.h"
 #include "src/media/audio/audio_core/testing/fake_audio_driver.h"
-#include "src/media/audio/audio_core/testing/stub_device_registry.h"
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
-#include "src/media/audio/audio_core/throttle_output.h"
 #include "src/media/audio/lib/logging/logging.h"
 
 namespace media::audio {
 namespace {
-
-class StubPolicyActionReporter : public AudioAdmin::PolicyActionReporter {
-  void ReportPolicyAction(fuchsia::media::Usage, fuchsia::media::Behavior) override {}
-};
 
 constexpr uint32_t kAudioCapturerUnittestFrameRate = 48000;
 constexpr size_t kAudioCapturerUnittestVmarSize = 16ull * 1024;
 
 class AudioCapturerImplTest : public testing::ThreadingModelFixture {
  public:
-  AudioCapturerImplTest()
-      : admin_(&volume_manager_, dispatcher(), &policy_action_reporter_),
-        volume_manager_(dispatcher()),
-        route_graph_(device_config_, &link_matrix_) {
-    fzl::VmoMapper vmo_mapper;
-    FX_CHECK(vmo_mapper.CreateAndMap(kAudioCapturerUnittestVmarSize,
-                                     /*flags=*/0, nullptr, &vmo_) == ZX_OK);
+  AudioCapturerImplTest() {
+    FX_CHECK(vmo_mapper_.CreateAndMap(kAudioCapturerUnittestVmarSize,
+                                      /*flags=*/0, nullptr, &vmo_) == ZX_OK);
   }
 
  protected:
   void SetUp() override {
-    Logging::Init(-media::audio::SPEW, {"route_graph_test"});
+    Logging::Init(-media::audio::SPEW, {"audio_capturer_impl_test"});
     testing::ThreadingModelFixture::SetUp();
 
-    auto default_curve = VolumeCurve::DefaultForMinGain(-33.0);
-    auto process_config = ProcessConfig::Builder().SetDefaultVolumeCurve(default_curve).Build();
-    config_handle_ = ProcessConfig::set_instance(process_config);
-
-    route_graph_.SetThrottleOutput(
-        &threading_model(),
-        ThrottleOutput::Create(&threading_model(), &device_registry_, &link_matrix_));
-
     auto format = Format::Create(stream_type_).take_value();
-    auto capturer = AudioCapturerImpl::Create(
-        fuchsia::media::AudioCapturerConfiguration::WithInput(
-            fuchsia::media::InputAudioCapturerConfiguration()),
-        {format}, {fuchsia::media::AudioCaptureUsage::BACKGROUND}, fidl_capturer_.NewRequest(),
-        &threading_model(), &route_graph_, &admin_, &volume_manager_, &link_matrix_);
+    auto capturer =
+        AudioCapturerImpl::Create(fuchsia::media::AudioCapturerConfiguration::WithInput(
+                                      fuchsia::media::InputAudioCapturerConfiguration()),
+                                  {format}, {fuchsia::media::AudioCaptureUsage::BACKGROUND},
+                                  fidl_capturer_.NewRequest(), &context());
     capturer_ = capturer.get();
     EXPECT_NE(capturer_, nullptr);
 
-    route_graph_.AddCapturer(std::move(capturer));
+    context().route_graph().AddCapturer(std::move(capturer));
   }
 
   void TearDown() override {
@@ -77,19 +59,10 @@ class AudioCapturerImplTest : public testing::ThreadingModelFixture {
   }
 
  protected:
-  StubPolicyActionReporter policy_action_reporter_;
-  AudioAdmin admin_;
-
-  testing::StubDeviceRegistry device_registry_;
-  DeviceConfig device_config_;
-  StreamVolumeManager volume_manager_;
-  LinkMatrix link_matrix_;
-  RouteGraph route_graph_;
-
   AudioCapturerImpl* capturer_;
   fuchsia::media::AudioCapturerPtr fidl_capturer_;
 
-  ProcessConfig::Handle config_handle_;
+  fzl::VmoMapper vmo_mapper_;
   zx::vmo vmo_;
 
   fuchsia::media::AudioStreamType stream_type_ = {
@@ -109,7 +82,7 @@ TEST_F(AudioCapturerImplTest, CanShutdownWithUnusedBuffer) {
 }
 
 TEST_F(AudioCapturerImplTest, RegistersWithRouteGraphIfHasUsageStreamTypeAndBuffers) {
-  EXPECT_EQ(link_matrix_.SourceLinkCount(*capturer_), 0u);
+  EXPECT_EQ(context().link_matrix().SourceLinkCount(*capturer_), 0u);
 
   zx::vmo duplicate;
   ASSERT_EQ(
@@ -118,8 +91,8 @@ TEST_F(AudioCapturerImplTest, RegistersWithRouteGraphIfHasUsageStreamTypeAndBuff
 
   zx::channel c1, c2;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &c1, &c2));
-  auto input =
-      AudioInput::Create(zx::channel(), &threading_model(), &device_registry_, &link_matrix_);
+  auto input = AudioInput::Create(zx::channel(), &threading_model(), &context().device_manager(),
+                                  &context().link_matrix());
   auto fake_driver =
       testing::FakeAudioDriver(std::move(c1), threading_model().FidlDomain().dispatcher());
 
@@ -139,13 +112,13 @@ TEST_F(AudioCapturerImplTest, RegistersWithRouteGraphIfHasUsageStreamTypeAndBuff
       .max_channels = 100,
       .flags = 0,
   }});
-  route_graph_.AddInput(input.get());
+  context().route_graph().AddInput(input.get());
   RunLoopUntilIdle();
 
   fidl_capturer_->AddPayloadBuffer(0, std::move(duplicate));
 
   RunLoopUntilIdle();
-  EXPECT_EQ(link_matrix_.SourceLinkCount(*capturer_), 1u);
+  EXPECT_EQ(context().link_matrix().SourceLinkCount(*capturer_), 1u);
 }
 
 TEST_F(AudioCapturerImplTest, CanReleasePacketWithoutDroppingConnection) {

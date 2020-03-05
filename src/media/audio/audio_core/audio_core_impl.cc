@@ -6,6 +6,7 @@
 
 #include <lib/async/cpp/task.h>
 
+#include "src/media/audio/audio_core/audio_admin.h"
 #include "src/media/audio/audio_core/audio_capturer_impl.h"
 #include "src/media/audio/audio_core/audio_device_manager.h"
 #include "src/media/audio/audio_core/audio_renderer_impl.h"
@@ -14,33 +15,14 @@
 #include "src/media/audio/lib/logging/logging.h"
 
 namespace media::audio {
-namespace {
-// All audio renderer buffers will need to fit within this VMAR. We want to choose a size here large
-// enough that will accomodate all the mappings required by all clients while also being small
-// enough to avoid unnecessary page table fragmentation.
-constexpr size_t kAudioRendererVmarSize = 16ull * 1024 * 1024 * 1024;
-constexpr zx_vm_option_t kAudioRendererVmarFlags =
-    ZX_VM_COMPACT | ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_ALIGN_1GB;
 
-}  // namespace
-
-AudioCoreImpl::AudioCoreImpl(ThreadingModel* threading_model,
-                             std::unique_ptr<sys::ComponentContext> component_context)
-    : threading_model_(*threading_model),
-      device_manager_(threading_model, &route_graph_, &link_matrix_),
-      volume_manager_(threading_model->FidlDomain().dispatcher()),
-      audio_admin_(&volume_manager_, threading_model->FidlDomain().dispatcher(), &usage_reporter_),
-      route_graph_(ProcessConfig::instance().device_config(), &link_matrix_),
-      component_context_(std::move(component_context)),
-      vmar_manager_(
-          fzl::VmarManager::Create(kAudioRendererVmarSize, nullptr, kAudioRendererVmarFlags)) {
-  FX_DCHECK(vmar_manager_ != nullptr) << "Failed to allocate VMAR";
-
+AudioCoreImpl::AudioCoreImpl(Context* context) : context_(*context) {
+  FX_DCHECK(context);
   // The main async_t here is responsible for receiving audio payloads sent by applications, so it
   // has real time requirements just like mixing threads. Ideally, this task would not run on the
   // same thread that processes *all* non-mix audio service jobs (even non-realtime ones), but that
   // will take more significant restructuring, when we can deal with realtime requirements in place.
-  AcquireAudioCoreImplProfile(component_context_.get(), [](zx::profile profile) {
+  AcquireAudioCoreImplProfile(&context_.component_context(), [](zx::profile profile) {
     FX_DCHECK(profile);
     if (profile) {
       zx_status_t status = zx::thread::self()->set_profile(profile, 0);
@@ -48,49 +30,17 @@ AudioCoreImpl::AudioCoreImpl(ThreadingModel* threading_model,
     }
   });
 
-  zx_status_t res = device_manager_.Init();
-  FX_DCHECK(res == ZX_OK);
-
-  route_graph_.SetThrottleOutput(
-      threading_model, ThrottleOutput::Create(threading_model, &device_manager_, &link_matrix_));
-
   // Set up our audio policy.
   LoadDefaults();
 
-  PublishServices();
-
-  // If there's a thermal configuration, start the thermal agent.
-  auto& thermal_config = ProcessConfig::instance().thermal_config();
-  if (!thermal_config.entries().empty()) {
-    thermal_agent_ = std::make_unique<ThermalAgent>(
-        component_context_->svc()->Connect<fuchsia::thermal::Controller>(), thermal_config,
-        ProcessConfig::instance().device_config(),
-        [this](const std::string& target_name, const std::string& config) {
-          device_manager_.SetEffectConfig(target_name, config);
-        });
-  }
+  context_.component_context().outgoing()->AddPublicService(bindings_.GetHandler(this));
 }
 
 AudioCoreImpl::~AudioCoreImpl() { Shutdown(); }
 
-void AudioCoreImpl::PublishServices() {
-  component_context_->outgoing()->AddPublicService<fuchsia::media::AudioCore>(
-      [this](fidl::InterfaceRequest<fuchsia::media::AudioCore> request) {
-        bindings_.AddBinding(this, std::move(request));
-      });
-
-  component_context_->outgoing()->AddPublicService<fuchsia::media::AudioDeviceEnumerator>(
-      [this](fidl::InterfaceRequest<fuchsia::media::AudioDeviceEnumerator> request) {
-        device_manager_.AddDeviceEnumeratorClient(std::move(request));
-      });
-
-  component_context_->outgoing()->AddPublicService<fuchsia::media::UsageReporter>(
-      usage_reporter_.GetHandler());
-}
-
 void AudioCoreImpl::Shutdown() {
   TRACE_DURATION("audio", "AudioCoreImpl::Shutdown");
-  device_manager_.Shutdown();
+  context_.device_manager().Shutdown();
 }
 
 void AudioCoreImpl::CreateAudioRenderer(
@@ -98,7 +48,8 @@ void AudioCoreImpl::CreateAudioRenderer(
   TRACE_DURATION("audio", "AudioCoreImpl::CreateAudioRenderer");
   AUD_VLOG(TRACE);
 
-  route_graph_.AddRenderer(AudioRendererImpl::Create(std::move(audio_renderer_request), this));
+  context_.route_graph().AddRenderer(
+      AudioRendererImpl::Create(std::move(audio_renderer_request), &context_));
 }
 
 void AudioCoreImpl::CreateAudioCapturerWithConfiguration(
@@ -111,9 +62,9 @@ void AudioCoreImpl::CreateAudioCapturerWithConfiguration(
     return;
   }
 
-  route_graph_.AddLoopbackCapturer(
+  context_.route_graph().AddLoopbackCapturer(
       AudioCapturerImpl::Create(std::move(configuration), {format.take_value()}, {usage},
-                                std::move(audio_capturer_request), this));
+                                std::move(audio_capturer_request), &context_));
 }
 
 void AudioCoreImpl::CreateAudioCapturer(
@@ -122,19 +73,19 @@ void AudioCoreImpl::CreateAudioCapturer(
   AUD_VLOG(TRACE);
 
   if (loopback) {
-    route_graph_.AddLoopbackCapturer(AudioCapturerImpl::Create(
+    context_.route_graph().AddLoopbackCapturer(AudioCapturerImpl::Create(
         fuchsia::media::AudioCapturerConfiguration::WithLoopback(
             fuchsia::media::LoopbackAudioCapturerConfiguration()),
         /*format= */ std::nullopt,
-        /*usage= */ std::nullopt, std::move(audio_capturer_request), this));
+        /*usage= */ std::nullopt, std::move(audio_capturer_request), &context_));
     return;
   }
 
-  route_graph_.AddCapturer(
-      AudioCapturerImpl::Create(fuchsia::media::AudioCapturerConfiguration::WithInput(
-                                    fuchsia::media::InputAudioCapturerConfiguration()),
-                                /*format= */ std::nullopt,
-                                /*usage= */ std::nullopt, std::move(audio_capturer_request), this));
+  context_.route_graph().AddCapturer(AudioCapturerImpl::Create(
+      fuchsia::media::AudioCapturerConfiguration::WithInput(
+          fuchsia::media::InputAudioCapturerConfiguration()),
+      /*format= */ std::nullopt,
+      /*usage= */ std::nullopt, std::move(audio_capturer_request), &context_));
 }
 
 void AudioCoreImpl::SetRenderUsageGain(fuchsia::media::AudioRenderUsage render_usage,
@@ -142,8 +93,8 @@ void AudioCoreImpl::SetRenderUsageGain(fuchsia::media::AudioRenderUsage render_u
   TRACE_DURATION("audio", "AudioCoreImpl::SetRenderUsageGain");
   AUD_VLOG(TRACE) << " (render_usage: " << static_cast<int>(render_usage) << ", " << gain_db
                   << " dB)";
-  volume_manager_.SetUsageGain(fuchsia::media::Usage::WithRenderUsage(std::move(render_usage)),
-                               gain_db);
+  context_.volume_manager().SetUsageGain(
+      fuchsia::media::Usage::WithRenderUsage(std::move(render_usage)), gain_db);
 }
 
 void AudioCoreImpl::SetCaptureUsageGain(fuchsia::media::AudioCaptureUsage capture_usage,
@@ -151,33 +102,33 @@ void AudioCoreImpl::SetCaptureUsageGain(fuchsia::media::AudioCaptureUsage captur
   TRACE_DURATION("audio", "AudioCoreImpl::SetCaptureUsageGain");
   AUD_VLOG(TRACE) << " (capture_usage: " << static_cast<int>(capture_usage) << ", " << gain_db
                   << " dB)";
-  volume_manager_.SetUsageGain(fuchsia::media::Usage::WithCaptureUsage(std::move(capture_usage)),
-                               gain_db);
+  context_.volume_manager().SetUsageGain(
+      fuchsia::media::Usage::WithCaptureUsage(std::move(capture_usage)), gain_db);
 }
 
 void AudioCoreImpl::BindUsageVolumeControl(
     fuchsia::media::Usage usage,
     fidl::InterfaceRequest<fuchsia::media::audio::VolumeControl> volume_control) {
   TRACE_DURATION("audio", "AudioCoreImpl::BindUsageVolumeControl");
-  volume_manager_.BindUsageVolumeClient(std::move(usage), std::move(volume_control));
+  context_.volume_manager().BindUsageVolumeClient(std::move(usage), std::move(volume_control));
 }
 
 void AudioCoreImpl::SetInteraction(fuchsia::media::Usage active, fuchsia::media::Usage affected,
                                    fuchsia::media::Behavior behavior) {
   TRACE_DURATION("audio", "AudioCoreImpl::SetInteraction");
-  audio_admin_.SetInteraction(std::move(active), std::move(affected), behavior);
+  context_.audio_admin().SetInteraction(std::move(active), std::move(affected), behavior);
 }
 
 void AudioCoreImpl::LoadDefaults() {
   TRACE_DURATION("audio", "AudioCoreImpl::LoadDefaults");
   auto policy = PolicyLoader::LoadDefaultPolicy();
   FX_CHECK(policy);
-  audio_admin_.SetInteractionsFromAudioPolicy(std::move(*policy));
+  context_.audio_admin().SetInteractionsFromAudioPolicy(std::move(*policy));
 }
 
 void AudioCoreImpl::ResetInteractions() {
   TRACE_DURATION("audio", "AudioCoreImpl::ResetInteractions");
-  audio_admin_.ResetInteractions();
+  context_.audio_admin().ResetInteractions();
 }
 
 }  // namespace media::audio

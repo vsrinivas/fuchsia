@@ -150,7 +150,7 @@ class RouteGraph {
 
   LinkMatrix& link_matrix_;
 
-  const DeviceConfig& device_config_;
+  DeviceConfig device_config_;
 
   Targets targets_;
 
