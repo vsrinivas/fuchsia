@@ -14,11 +14,14 @@ TEST(IcdStrip, LoadEntryPoints) {
   void* handle = nullptr;
 
   // The ICD is packaged under /pkg/lib/x64-shared or /pkg/lib/arm64-shared
+  // Beware of other subdirectories (such as asan).
   for (auto& dir : std::filesystem::directory_iterator("/pkg/lib")) {
     if (!dir.is_directory())
       continue;
     for (auto& file : std::filesystem::directory_iterator(dir.path())) {
-      ASSERT_FALSE(file.is_directory());
+      if (file.path().filename() != "libicd_strip_test.so") {
+        continue;
+      }
       // dlopen takes path relative to /lib
       auto lib = dir.path().stem() / file.path().filename();
       handle = dlopen(lib.c_str(), RTLD_NOW);
@@ -38,7 +41,7 @@ TEST(IcdStrip, LoadEntryPoints) {
 
   for (auto& entry_point : entry_points) {
     void* ptr = dlsym(handle, entry_point);
-    EXPECT_TRUE(ptr) << " Couldn't find entry point: " << entry_point;
+    EXPECT_TRUE(ptr) << " Couldn't find entry point: " << entry_point << " dlerror: " << dlerror();
   }
 
   dlclose(handle);
