@@ -136,8 +136,11 @@ class IntegralType : public Type {
     }
     T value = *reinterpret_cast<const T*>(got);
     if (value < 0) {
+      // Sign-extend to 64 bits so the cast to uint64_t is a no-op.
       int64_t tmp = value;
-      return std::make_unique<IntegerValue>(-tmp, true);
+      // Cast to uint64 before the negation to avoid a int64 overflow (-min_int64 can't be
+      // represented with a int64).
+      return std::make_unique<IntegerValue>(-static_cast<uint64_t>(tmp), true);
     }
     return std::make_unique<IntegerValue>(value, false);
   }
