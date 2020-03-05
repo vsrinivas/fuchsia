@@ -163,4 +163,12 @@ protocol Server {
     ///
     /// * error a zx.status indicating the cause of failure.
     ResetParameters() -> () error zx.status;
+
+    /// Clears all leases maintained by the Server. On success, ClearLeases will
+    /// take effect immediately. Server administrators should take care when
+    /// calling this method as the DHCP protocol does not provide a mechanism by
+    /// which a Server can notify a client that its lease has been cleared.
+    ///
+    /// * error a zx.status indicating the cause of failure.
+    ClearLeases() -> () error zx.status;
 };

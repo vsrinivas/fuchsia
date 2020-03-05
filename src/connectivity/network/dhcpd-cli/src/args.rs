@@ -27,6 +27,9 @@ pub enum Command {
     List(List),
     /// a primary command to reset the values of all DHCP options or server parameters.
     Reset(Reset),
+    /// a primary command to clear the leases maintained by dhcpd.
+    // The value of this variant is required by the argh crate but is not actually used.
+    ClearLeases(ClearLeases),
 }
 
 /// A primary command to retrieve the value of a DHCP option or server parameter.
@@ -60,6 +63,11 @@ pub struct Reset {
     #[argh(subcommand)]
     pub arg: ResetArg,
 }
+
+/// A primary command to clear the leases maintained by dhcpd.
+#[derive(Debug, FromArgs)]
+#[argh(subcommand, name = "clear-leases")]
+pub struct ClearLeases {}
 
 #[derive(Debug, FromArgs)]
 #[argh(subcommand)]

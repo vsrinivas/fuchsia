@@ -241,6 +241,12 @@ async fn run_server<S: ServerDispatcher>(
                         .dispatch_reset_parameters(&default_params)
                         .map_err(|e| e.into_raw()),
                 ),
+                fidl_fuchsia_net_dhcp::Server_Request::ClearLeases { responder: r } => r.send(
+                    &mut server
+                        .borrow_mut()
+                        .dispatch_clear_leases()
+                        .map_err(fuchsia_zircon::Status::into_raw),
+                ),
             }
         })
         .await
@@ -300,6 +306,9 @@ mod tests {
             &mut self,
             _defaults: &dhcp::configuration::ServerParameters,
         ) -> Result<(), fuchsia_zircon::Status> {
+            Ok(())
+        }
+        fn dispatch_clear_leases(&mut self) -> Result<(), fuchsia_zircon::Status> {
             Ok(())
         }
     }
@@ -456,6 +465,22 @@ mod tests {
         let defaults = default_params();
         let res = futures::select! {
             res = proxy.reset_parameters().fuse() => res.context("reset_parameters failed"),
+            server_fut = run_server(stream, &server, &defaults).fuse() => Err(anyhow::Error::msg("server finished before request")),
+        }?;
+
+        assert_eq!(res, Ok(()));
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn clear_leases_returns_unit() -> Result<(), Error> {
+        let (proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_net_dhcp::Server_Marker>()?;
+        let server = RefCell::new(CannedDispatcher {});
+
+        let defaults = default_params();
+        let res = futures::select! {
+            res = proxy.clear_leases().fuse() => res.context("clear_leases failed"),
             server_fut = run_server(stream, &server, &defaults).fuse() => Err(anyhow::Error::msg("server finished before request")),
         }?;
 

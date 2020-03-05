@@ -308,3 +308,9 @@ async fn test_reset_parameter() {
     ])
     .await
 }
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_clear_leases() {
+    test_cli(vec![Command { args: vec!["clear-leases"], expected_stdout: "", expected_stderr: "" }])
+        .await
+}

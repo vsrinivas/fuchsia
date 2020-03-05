@@ -631,8 +631,9 @@ impl Drop for Server {
 /// The ability to dispatch fuchsia.net.dhcp.Server protocol requests and return a value.
 ///
 /// Implementers of this trait can be used as the backing server-side logic of the
-/// fuchsia.net.dhcp.Server protocol. Implementers must maintain a store of DHCP Options and
-/// DHCP server parameters and support the trait methods to retrieve and modify them.
+/// fuchsia.net.dhcp.Server protocol. Implementers must maintain a store of DHCP Options, DHCP
+/// server parameters, and leases issued to clients, and support the trait methods to retrieve and
+/// modify these stores.
 pub trait ServerDispatcher {
     /// Retrieves the stored DHCP option value that corresponds to the OptionCode argument.
     fn dispatch_get_option(
@@ -659,6 +660,8 @@ pub trait ServerDispatcher {
     fn dispatch_reset_options(&mut self) -> Result<(), Status>;
     /// Resets all DHCP server parameters to their default values in `defaults`.
     fn dispatch_reset_parameters(&mut self, defaults: &ServerParameters) -> Result<(), Status>;
+    /// Clears all leases from the store maintained by the ServerDispatcher.
+    fn dispatch_clear_leases(&mut self) -> Result<(), Status>;
 }
 
 impl ServerDispatcher for Server {
@@ -867,6 +870,21 @@ impl ServerDispatcher for Server {
         })?;
         Ok(())
     }
+
+    fn dispatch_clear_leases(&mut self) -> Result<(), Status> {
+        for (mac, config) in &self.cache {
+            let () = self.pool.release_addr(config.client_addr).unwrap_or_else(|e| {
+                // Log and panic because server has irrecoverable inconsistent state.
+                log::error!("release_addr({}) failed: {:?}", config.client_addr, e);
+                panic!("server tried to release unallocated addr {}", config.client_addr);
+            });
+            let () = self.stash.delete(mac).map_err(|e| {
+                log::warn!("delete({}) failed: {:?}", mac, e);
+                fuchsia_zircon::Status::INTERNAL
+            })?;
+        }
+        Ok(self.cache.clear())
+    }
 }
 
 /// A cache mapping clients to their configuration data.
@@ -882,7 +900,7 @@ pub type CachedClients = HashMap<MacAddr, CachedConfig>;
 /// A client's `MacAddr` maps to the `CachedConfig`: this mapping
 /// is stored in the `Server`s `CachedClients` instance at runtime, and in
 /// `fuchsia.stash` persistent storage.
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct CachedConfig {
     client_addr: Ipv4Addr,
     options: Vec<DhcpOption>,
@@ -3099,6 +3117,41 @@ pub mod tests {
         assert_eq!(default_params, server.params);
         let stored_params = server.stash.load_parameters().await?;
         assert_eq!(default_params, stored_params);
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_server_dispatcher_clear_leases() -> Result<(), Error> {
+        let mut server = new_test_minimal_server().await?;
+        server.params.managed_addrs.pool_range_stop = Ipv4Addr::from([192, 168, 0, 4]);
+        server.pool = AddressPool::new(server.params.managed_addrs.pool_range());
+        let client = Ipv4Addr::from([192, 168, 0, 2]);
+        let () = server
+            .pool
+            .allocate_addr(client)
+            .with_context(|| format!("allocate_addr({}) failed", client))?;
+        server.cache = [(
+            random_mac_generator(),
+            CachedConfig {
+                client_addr: client,
+                options: vec![],
+                lease_start_epoch_seconds: 0,
+                lease_length_seconds: 42,
+            },
+        )]
+        // TODO(atait): use into_iter after
+        // https://github.com/rust-lang/rust/issues/25725.
+        .iter()
+        .cloned()
+        .collect();
+        let () = server.dispatch_clear_leases().context("dispatch_clear_leases() failed")?;
+        let empty_map = HashMap::new();
+        assert_eq!(empty_map, server.cache);
+        assert!(server.pool.addr_is_available(client));
+        assert!(!server.pool.addr_is_allocated(client));
+        let stored_leases =
+            server.stash.load_client_configs().await.context("load_client_configs() failed")?;
+        assert_eq!(empty_map, stored_leases);
         Ok(())
     }
 }
