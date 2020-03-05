@@ -98,6 +98,39 @@ typedef struct zx_protocol_device {
   // synchronously in the same thread as the caller.
   zx_status_t (*get_protocol)(void* ctx, uint32_t proto_id, void* protocol);
 
+  //@ ## open_protocol_session_multibindable
+  // The open_protocol_session_multibindable hook is called when the component driver invokes
+  // **device_open_protocol_session_multibindable()** on a device object that supports multibinding.
+  // A driver that supports multibinding, may choose to implement this hook, if it needs to know
+  // which composite device is making the protocol ops it requested.
+  //
+  // The implementation must populate *protocol* with
+  // a protocol structure determined by *proto_id* and a protocol context that is unique to this
+  // session. If the requested *proto_id* is not supported, the implementation must return
+  // ZX_ERR_NOT_SUPPORTED.
+  //
+  //
+  // See the **device_open_protocol_session_multibindable()** docs for a description of the layout
+  // of *protocol*.
+  //
+  // This hook is never called by the devhost runtime other than when
+  // **device_open_protocol_session_multibindable()** is invoked by component driver. It is executed
+  // synchronously in the same thread as the caller.
+  zx_status_t (*open_protocol_session_multibindable)(void* ctx, uint32_t proto_id, void* protocol);
+  //@ ## close_protocol_session_multibindable
+  // The close_protocol_session_multibindable hook is called when the component driver invokes
+  // **device_close_protocol_session_multibindable()** on a device object that supports
+  // multibinding. A driver that supports multibinding, may choose to implement this hook along with
+  // open_protocol_session_multibindable, if it needs to know which composite device is making the
+  // protocol ops it requested.
+  //
+  // The implementation must identify the context passed and close the corresponding
+  // session.
+  //
+  // This hook is never called by the devhost runtime other than when
+  // **device_close_protocol_session_multibindable()** is invoked by component driver. It is
+  // executed synchronously in the same thread as the caller.
+  zx_status_t (*close_protocol_session_multibindable)(void* ctx, void* protocol);
   //@ ## init
   // The init hook is called when a device is initially added.
   //

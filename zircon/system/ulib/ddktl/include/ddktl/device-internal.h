@@ -332,6 +332,28 @@ constexpr void CheckChildPreReleaseable() {
                 "'void DdkChildPreRelease(void*)'.");
 }
 
+DECLARE_HAS_MEMBER_FN(has_ddk_open_protocol_session_multibindable,
+                      DdkOpenProtocolSessionMultibindable);
+DECLARE_HAS_MEMBER_FN(has_ddk_close_protocol_session_multibindable,
+                      DdkCloseProtocolSessionMultibindable);
+template <typename D>
+constexpr void CheckMultibindable() {
+  static_assert(has_ddk_open_protocol_session_multibindable<D>::value,
+                "Multibindable classes must implement DdkOpenProtocolSessionMultibindable");
+  static_assert(std::is_same<decltype(&D::DdkOpenProtocolSessionMultibindable),
+                             zx_status_t (D::*)(uint32_t, void*)>::value,
+                "DdkOpenProtocolSessionMultibindable must be a public non-static member function "
+                "with signature "
+                "'zx_status_t DdkOpenProtocolSessionMultibindable(uint32_t, void*)'.");
+  static_assert(has_ddk_close_protocol_session_multibindable<D>::value,
+                "Multibindable classes must implement DdkCloseProtocolSessionMultibindable");
+  static_assert(std::is_same<decltype(&D::DdkCloseProtocolSessionMultibindable),
+                             zx_status_t (D::*)(void*)>::value,
+                "DdkCloseProtocolSessionMultibindable must be a public non-static member function "
+                "with signature "
+                "'zx_status_t DdkCloseProtocolSessionMultibindable(void*)'.");
+}
+
 // all_mixins
 //
 // Checks a list of types to ensure that all of them are ddk mixins (i.e., they inherit from the
