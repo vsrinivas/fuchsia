@@ -19,6 +19,7 @@
 
 #include "src/developer/feedback/utils/cobalt.h"
 #include "src/lib/fsl/vmo/sized_vmo.h"
+#include "src/lib/fxl/functional/cancelable_callback.h"
 
 namespace feedback {
 
@@ -54,6 +55,7 @@ class RebootLogHandler {
   fit::promise<void> WaitForNetworkToBeReachable();
   fit::promise<void> FileCrashReport(RebootInfo info);
 
+  async_dispatcher_t* dispatcher_;
   const std::shared_ptr<sys::ServiceDirectory> services_;
   // Enforces the one-shot nature of Handle().
   bool has_called_handle_ = false;
@@ -62,8 +64,12 @@ class RebootLogHandler {
 
   fuchsia::net::ConnectivityPtr connectivity_;
   fit::bridge<void> network_reachable_;
+
   fuchsia::feedback::CrashReporterPtr crash_reporter_;
   fit::bridge<void> crash_reporting_done_;
+  // We wrap the delayed task we post on the async loop to delay the crash reporting in a
+  // CancelableClosure so we can cancel it if we are done another way.
+  fxl::CancelableClosure delayed_crash_reporting_;
 
   Cobalt cobalt_;
   fit::bridge<void> cobalt_logging_done_;
