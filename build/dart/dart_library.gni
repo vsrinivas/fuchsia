@@ -92,7 +92,11 @@ declare_args() {
 
 if (current_toolchain == dart_toolchain) {
   template("dart_library") {
-    forward_variables_from(invoker, [ "testonly" ])
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
 
     if (defined(invoker.package_name)) {
       package_name = invoker.package_name
@@ -182,9 +186,7 @@ if (current_toolchain == dart_toolchain) {
                   "$package_root/pubspec.yaml",
                 ]
 
-      outputs = [
-        dot_packages_file,
-      ]
+      outputs = [ dot_packages_file ]
 
       args = [
                "--out",
@@ -215,9 +217,7 @@ if (current_toolchain == dart_toolchain) {
       action(source_verification_target_name) {
         script = "//build/dart/verify_sources.py"
 
-        outputs = [
-          output_file,
-        ]
+        outputs = [ output_file ]
 
         args = [
           "--package_root",
@@ -265,9 +265,7 @@ if (current_toolchain == dart_toolchain) {
           source_file,
         ]
 
-        outputs = [
-          invocation_file,
-        ]
+        outputs = [ invocation_file ]
 
         args = [
           "--out",
@@ -307,9 +305,7 @@ if (current_toolchain == dart_toolchain) {
                    source_file,
                  ] + rebased_sources
 
-        outputs = [
-          output_file,
-        ]
+        outputs = [ output_file ]
 
         args = [
           "--source-file",
@@ -367,9 +363,7 @@ if (current_toolchain == dart_toolchain) {
                    source_file,
                  ] + rebased_sources
 
-        outputs = [
-          output_file,
-        ]
+        outputs = [ output_file ]
 
         args = [
           "--api-name",
@@ -399,9 +393,7 @@ if (current_toolchain == dart_toolchain) {
         data = rebase_path("$detect_target_file")
         schema = rebase_path("//build/dart/sdk/detect_api_changes/schema.json")
         deps = dart_sdk_deps + [ ":$detect_target_name" ]
-        public_deps = [
-          ":$detect_target_name",
-        ]
+        public_deps = [ ":$detect_target_name" ]
       }
     }
 
@@ -464,9 +456,7 @@ if (current_toolchain == dart_toolchain) {
 
         inputs = sdk_metas + third_party_pubspecs
 
-        outputs = [
-          metadata_file,
-        ]
+        outputs = [ metadata_file ]
 
         args = [
           "--out",
@@ -515,9 +505,7 @@ if (current_toolchain == dart_toolchain) {
       forward_variables_from(invoker, [ "testonly" ])
       not_needed(invoker, "*")
 
-      public_deps = [
-        ":$target_name($dart_toolchain)",
-      ]
+      public_deps = [ ":$target_name($dart_toolchain)" ]
     }
   }
 }
