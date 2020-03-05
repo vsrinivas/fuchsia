@@ -139,7 +139,9 @@ static zx_status_t deconstruct_instruction(const uint8_t* inst_buf, uint32_t ins
       if (inst_len < 3) {
         return ZX_ERR_NOT_SUPPORTED;
       }
-      *opcode = *(uint16_t*)inst_buf;
+      // Use memcpy instead of casting, otherwise we may cause an unaligned
+      // access, resulting in undefined behaviour.
+      memcpy(opcode, inst_buf, sizeof(uint16_t));
       *mod_rm = inst_buf[2];
       if (!has_sib_byte(*mod_rm)) {
         *sib = 0;
