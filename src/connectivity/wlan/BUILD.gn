@@ -19,7 +19,6 @@ group("service") {
 }
 
 group("service-legacy-privacy") {
-  testonly = true
   deps = [
     ":bin",
     "config:legacy-privacy",
@@ -27,7 +26,6 @@ group("service-legacy-privacy") {
 }
 
 group("bin") {
-  testonly = true
   public_deps = [
     "//src/connectivity/location/regulatory_region",
     "//src/connectivity/wlan/wlancfg",
