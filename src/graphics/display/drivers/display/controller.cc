@@ -653,7 +653,7 @@ void Controller::ApplyConfig(DisplayConfig* configs[], int32_t count, bool is_vc
       }
 
       display->switching_client = switching_client;
-      display->pending_layer_change = config->apply_layer_change() || display->switching_client;
+      display->pending_layer_change = config->apply_layer_change();
       display->vsync_layer_count = config->vsync_layer_count();
       display->delayed_apply = false;
 
@@ -672,8 +672,8 @@ void Controller::ApplyConfig(DisplayConfig* configs[], int32_t count, bool is_vc
         }
 
         // Set the image z index so vsync knows what layer the image is in
-        image->set_z_index(layer->z_order());
         AssertMtxAliasHeld(image->mtx());
+        image->set_z_index(layer->z_order());
         image->StartPresent();
 
         // It's possible that the image's layer was moved between displays. The logic around
@@ -683,7 +683,6 @@ void Controller::ApplyConfig(DisplayConfig* configs[], int32_t count, bool is_vc
         // Even if we're on the same display, the entry needs to be moved to the end of the
         // list to ensure that the last config->current.layer_count elements in the queue
         // are the current images.
-        AssertMtxAliasHeld(image->mtx());
         if (list_in_list(&image->node.link)) {
           list_delete(&image->node.link);
         } else {
@@ -697,7 +696,6 @@ void Controller::ApplyConfig(DisplayConfig* configs[], int32_t count, bool is_vc
     applied_stamp_ = client_stamp;
     applied_client_id_ = client_id;
   }
-
   dc_.ApplyConfiguration(display_configs.get(), display_count);
 }
 

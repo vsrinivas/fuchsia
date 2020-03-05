@@ -334,12 +334,12 @@ class ClientProxy : public ClientParent {
   zx_status_t OnCaptureComplete();
 
   void EnableVsync(bool enable) {
-    fbl::AutoLock lock(controller_->mtx());
+    fbl::AutoLock lock(&mtx_);
     enable_vsync_ = enable;
   }
 
   void EnableCapture(bool enable) {
-    ZX_DEBUG_ASSERT(mtx_trylock(controller_->mtx()) == thrd_busy);
+    fbl::AutoLock lock(&mtx_);
     enable_capture_ = enable;
   }
   void OnClientDead();
@@ -356,14 +356,15 @@ class ClientProxy : public ClientParent {
   void CloseOnControllerLoop();
   friend IntegrationTest;
 
+  mtx_t mtx_;
   Controller* controller_;
   bool is_vc_;
   // server_channel_ will be passed to handler_ which will in turn pass it to fidl::Bind who will
   // own the channel.
   zx::unowned_channel server_channel_;
   Client handler_;
-  bool enable_vsync_ = false;
-  bool enable_capture_ = false;
+  bool enable_vsync_ __TA_GUARDED(&mtx_) = false;
+  bool enable_capture_ __TA_GUARDED(&mtx_) = false;
 
   mtx_t task_mtx_;
   std::vector<std::unique_ptr<async::Task>> client_scheduled_tasks_ __TA_GUARDED(task_mtx_);
