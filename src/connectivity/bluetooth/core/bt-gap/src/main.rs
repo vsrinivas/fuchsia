@@ -8,6 +8,7 @@ extern crate serde_derive;
 
 use {
     anyhow::{format_err, Context as _, Error},
+    async_helpers::hanging_get::server as hanging_get,
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_bluetooth::Appearance,
     fidl_fuchsia_bluetooth_bredr::ProfileMarker,
@@ -18,14 +19,17 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::{client::connect_to_service, server::ServiceFs},
     fuchsia_syslog::{self as syslog, fx_log_err, fx_log_info, fx_log_warn},
-    futures::{channel::mpsc, future::try_join3, FutureExt, StreamExt, TryFutureExt, TryStreamExt},
+    futures::{channel::mpsc, future::try_join5, FutureExt, StreamExt, TryFutureExt, TryStreamExt},
     pin_utils::pin_mut,
+    std::collections::HashMap,
 };
 
 use crate::{
     adapters::{AdapterEvent::*, *},
     generic_access_service::GenericAccessService,
     host_dispatcher::{HostService::*, *},
+    services::host_watcher,
+    watch_peers::PeerWatcher,
 };
 
 mod adapters;
@@ -37,6 +41,7 @@ mod store;
 #[cfg(test)]
 mod test;
 mod types;
+mod watch_peers;
 
 const BT_GAP_COMPONENT_ID: &'static str = "bt-gap";
 
@@ -70,12 +75,44 @@ async fn run() -> Result<(), Error> {
 
     let local_name = get_host_name().await.unwrap_or(DEFAULT_DEVICE_NAME.to_string());
     let (gas_channel_sender, generic_access_req_stream) = mpsc::channel(0);
+
+    // Initialize a HangingGetBroker to process watch_peers requests
+    let watch_peers_broker = hanging_get::HangingGetBroker::new(
+        HashMap::new(),
+        PeerWatcher::observe,
+        hanging_get::DEFAULT_CHANNEL_SIZE,
+    );
+    let watch_peers_publisher = watch_peers_broker.new_publisher();
+    let watch_peers_handle = watch_peers_broker.new_handle();
+
+    // Initialize a HangingGetBroker to process watch_hosts requests
+    let watch_hosts_broker = hanging_get::HangingGetBroker::new(
+        Vec::new(),
+        host_watcher::observe_hosts,
+        hanging_get::DEFAULT_CHANNEL_SIZE,
+    );
+    let watch_hosts_publisher = watch_hosts_broker.new_publisher();
+    let watch_hosts_handle = watch_hosts_broker.new_handle();
+
+    // Process the watch_peers broker in the background
+    let run_watch_peers = watch_peers_broker
+        .run()
+        .map(|()| Err::<(), Error>(format_err!("WatchPeers broker terminated unexpectedly")));
+    // Process the watch_hosts broker in the background
+    let run_watch_hosts = watch_hosts_broker
+        .run()
+        .map(|()| Err::<(), Error>(format_err!("WatchHosts broker terminated unexpectedly")));
+
     let hd = HostDispatcher::new(
         local_name,
         Appearance::Display,
         stash,
         inspect.root().create_child("system"),
         gas_channel_sender,
+        watch_peers_publisher,
+        watch_peers_handle,
+        watch_hosts_publisher,
+        watch_hosts_handle,
     );
     let watch_hd = hd.clone();
     let central_hd = hd.clone();
@@ -84,6 +121,8 @@ async fn run() -> Result<(), Error> {
     let profile_hd = hd.clone();
     let gatt_hd = hd.clone();
     let bootstrap_hd = hd.clone();
+    let access_hd = hd.clone();
+    let hostwatcher_hd = hd.clone();
 
     let host_watcher_task = async {
         let stream = watch_hosts();
@@ -98,7 +137,7 @@ async fn run() -> Result<(), Error> {
                     result?
                 }
                 AdapterRemoved(device_path) => {
-                    watch_hd.rm_adapter(&device_path);
+                    watch_hd.rm_adapter(&device_path).await;
                 }
             }
         }
@@ -152,12 +191,32 @@ async fn run() -> Result<(), Error> {
                 services::bootstrap::run(bootstrap_hd.clone(), request_stream)
                     .unwrap_or_else(|e| fx_log_warn!("Bootstrap service failed: {:?}", e)),
             );
+        })
+        .add_fidl_service(move |request_stream| {
+            fx_log_info!("Serving Access Service");
+            fasync::spawn(
+                services::access::run(access_hd.clone(), request_stream)
+                    .unwrap_or_else(|e| fx_log_warn!("Access service failed: {:?}", e)),
+            );
+        })
+        .add_fidl_service(move |request_stream| {
+            fx_log_info!("Serving HostWatcher Service");
+            fasync::spawn(
+                services::host_watcher::run(hostwatcher_hd.clone(), request_stream)
+                    .unwrap_or_else(|e| fx_log_warn!("HostWatcher service failed: {:?}", e)),
+            );
         });
     fs.take_and_serve_directory_handle()?;
     let svc_fs_task = fs.collect::<()>().map(Ok);
-    try_join3(svc_fs_task, host_watcher_task, generic_access_service_task)
-        .await
-        .map(|((), (), ())| ())
+    try_join5(
+        svc_fs_task,
+        host_watcher_task,
+        generic_access_service_task,
+        run_watch_peers,
+        run_watch_hosts,
+    )
+    .await
+    .map(|_| ())
 }
 
 fn control_service(hd: HostDispatcher, stream: ControlRequestStream) {
