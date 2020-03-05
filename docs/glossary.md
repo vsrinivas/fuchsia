@@ -30,12 +30,10 @@ account for the changes in the ABI.
 This is a [Modular](/docs/concepts/modular/overview.md) concept that is being deprecated.
 
 An agent is a role a [component](#component) can play to execute in the
-background in the context of a [session](#session). An agent's life cycle is not
-tied to any [story](#story), is a singleton per session, and provides services
-to other components. An agent can be invoked by other components or by the
-system in response to triggers like push notifications. An agent can provide
-services to components, send and receive messages, and make proposals to give
-suggestions to the user.
+background in the context of a [session](#session). Agents are always a
+singleton within a session, and provide services to other components.
+
+See [Agent concept docs](/docs/concepts/modular/agent.md) for more.
 
 ### **AppMgr** {#appmgr}
 
@@ -49,12 +47,6 @@ as a [v2](#components-v2) component.
 Banjo is a language for defining protocols that are used to communicate between
 [drivers](#driver). It is different from [FIDL](#fidl) in that it specifies an
 ABI for drivers to use to call into each other, rather than an IPC protocol.
-
-### **Base shell** {#base-shell}
-
-The platform-guaranteed set of software functionality which provides a basic
-user-facing interface for boot, first-use, authentication, escape from and
-selection of session shells, and device recovery.
 
 ### **BlackBoxTest** {#black-box-test}
 
@@ -521,13 +513,11 @@ userspace, system calls -- features that Zircon added.
 
 This is a [Modular](/docs/concepts/modular/overview.md) concept that is being deprecated.
 
+A module is a role a [component](#Component) can play to contribute UI to a
+user experience container (story) within a Modular session.
+Any component that exports a Scenic `ViewProvider` can be be used as a module.
 
-A module is a role a [component](#Component) can play to participate in a
-[story](#Story). Every component can be be used as a module, but typically a
-module is asked to show UI. Additionally, a module can have a `module` metadata
-file which describes the Module's data compatibility and semantic role.
-
--   [Module metadata format](/docs/concepts/modular/module.md)
+See [Module concept docs](/docs/concepts/modular/module.md) for more.
 
 ### **Musl** {#musl}
 
@@ -676,24 +666,6 @@ client end of the channel is given to the
 
 Protocol capability is a [components v2](#components-v2) concept.
 
-### **Session** {#session}
-
-This is a [Modular](/docs/concepts/modular/overview.md) concept that is being deprecated.
-
-An interactive session with one or more users. Has a
-[session shell](#session-shell), which manages the UI for the session, and zero
-or more [stories](#story). A device might have multiple sessions, for example if
-users can interact with the device remotely or if the device has multiple
-terminals.
-
-### **Session Shell** {#session-shell}
-
-This is a [Modular](/docs/concepts/modular/overview.md) concept that is being deprecated.
-
-The replaceable set of software functionality that works in conjunction with
-devices to create an environment in which people can interact with mods, agents
-and suggestions.
-
 ### **Storage capability** {#storage-capability}
 
 A storage capability is a [capability](#capability) that allocates per-component
@@ -721,21 +693,6 @@ Storage capability is a [components v2](#components-v2) concept.
 
 -   [Capability routing](#capability-routing)
 -   [Storage capabilities](/docs/concepts/components/capabilities/storage.md)
-
-### **Story** {#story}
-
-This is a [Modular](/docs/concepts/modular/overview.md) concept that is being deprecated.
-
-A user-facing logical container encapsulating human activity, satisfied by one
-or more related modules. Stories allow users to organize activities in ways they
-find natural, without developers having to imagine all those ways ahead of time.
-
-### **Story Shell** {#story-shell}
-
-This is a [Modular](/docs/concepts/modular/overview.md) concept that is being deprecated.
-
-The system responsible for the visual presentation of a story. Includes the
-presenter component, plus structure and state information read from each story.
 
 ### **Thread** {#thread}
 
