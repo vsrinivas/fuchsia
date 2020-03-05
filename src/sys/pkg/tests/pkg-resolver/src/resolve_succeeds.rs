@@ -755,6 +755,7 @@ async fn dedup_concurrent_content_blob_fetches() {
 }
 
 #[fasync::run_singlethreaded(test)]
+#[ignore] // TODO(fxb/47614) Flaking.
 async fn https_endpoint() {
     let env = TestEnvBuilder::new().build();
 
