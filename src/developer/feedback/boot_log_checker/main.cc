@@ -7,7 +7,6 @@
 #include <lib/async/cpp/executor.h>
 #include <lib/fit/promise.h>
 #include <lib/sys/cpp/component_context.h>
-#include <lib/zx/time.h>
 
 #include <string>
 
@@ -31,11 +30,6 @@ int main(int argc, char** argv) {
                        loop.Quit();
                      });
 
-  // We delay asynchronously filing the crash report by 30 seconds so that memory_monitor has time
-  // to get picked up by the Inspect service and its data is included in the bugreport.zip generated
-  // by feedback_agent. The data is critical to debug OOM crash reports.
-  // TODO(fxb/46216): remove delay.
-  zx::nanosleep(zx::deadline_after(zx::sec(30)));
   executor.schedule_task(std::move(promise));
   loop.Run();
 
