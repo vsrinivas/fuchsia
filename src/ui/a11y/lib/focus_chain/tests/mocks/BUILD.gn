@@ -1,0 +1,25 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("mocks") {
+  testonly = true
+
+  public = [ "mock_focus_chain_requester.h" ]
+
+  sources = [
+    "mock_focus_chain_requester.cc",
+    "mock_focus_chain_requester.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/lib/fidl/cpp",
+    "//src/lib/fxl",
+  ]
+
+  deps = [
+    "//sdk/lib/sys/cpp",
+    "//src/ui/a11y/lib/focus_chain",
+  ]
+}

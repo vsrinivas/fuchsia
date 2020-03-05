@@ -5,6 +5,7 @@
 source_set("focus_chain") {
   sources = [
     "accessibility_focus_chain_listener.h",
+    "accessibility_focus_chain_requester.h",
     "focus_chain_manager.cc",
     "focus_chain_manager.h",
   ]
@@ -16,6 +17,7 @@ source_set("focus_chain") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
+    "//src/ui/a11y/lib/semantics",
     "//src/ui/a11y/lib/util",
   ]
 }
