@@ -65,6 +65,7 @@ group("all") {
     "//garnet/bin/trace2json:trace2json_tests($host_toolchain)",
     "//garnet/bin/trace_manager/tests:trace_manager_tests",
     "//garnet/bin/trace_stress",
+    "//garnet/bin/traceutil:zedmon_test($host_toolchain)",
     "//garnet/bin/vsock_service:vsock_service-tests",
     "//garnet/bin/wayland:wayland_tests",
     "//garnet/examples/fidl/echo_server_cpp",
@@ -254,5 +255,3 @@ group("zircon") {
     "//src/devices/tests/libdriver-integration-test:libdriver-integration-test",
   ]
 }
-# XXX: disabled as the test fails
-# "//garnet/bin/traceutil:zedmon_test($host_toolchain)",

@@ -5,6 +5,7 @@
 package zedmon
 
 import (
+	"flag"
 	"os"
 	"path"
 	"path/filepath"
@@ -12,6 +13,14 @@ import (
 	"testing"
 	"time"
 )
+
+var fakeZedmonRelpath = flag.String("fake_zedmon_relpath", "",
+	"Path to the fake_zedmon binary, relative to the test executable.")
+
+func TestMain(m *testing.M) {
+	flag.Parse()
+	os.Exit(m.Run())
+}
 
 func writeTestData(t *testing.T, basePath string, stderrLines []string, stdoutLines []string) func() {
 	stderrDataPath := basePath + ".stderr.testdata"
@@ -48,8 +57,11 @@ func setupTest(t *testing.T, stderrData, stdinData []string) (string, func()) {
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
+	fakeZedmonPath := path.Join(myDir, *fakeZedmonRelpath)
+	if _, err := os.Stat(fakeZedmonPath); os.IsNotExist(err) {
+		t.Fatalf("fake_zedmon executable not found at %s", fakeZedmonPath)
+	}
 
-	fakeZedmonPath := path.Join(myDir, "fake_zedmon")
 	cleanup := writeTestData(t, fakeZedmonPath, stderrData, stdinData)
 	return fakeZedmonPath, cleanup
 }

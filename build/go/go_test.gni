@@ -42,9 +42,7 @@ template("go_test") {
     group(target_name) {
       forward_variables_from(invoker, [ "visibility" ])
       testonly = true
-      public_deps = [
-        ":$target_name(${toolchain_variant.base})",
-      ]
+      public_deps = [ ":$target_name(${toolchain_variant.base})" ]
     }
     not_needed(invoker, "*")
   } else {
@@ -90,6 +88,8 @@ template("go_test") {
         }
         forward_variables_from(invoker, [ "environments" ])
       }
+    } else {
+      not_needed(invoker, [ "args" ])
     }
 
     go_build(_main_target_name) {
