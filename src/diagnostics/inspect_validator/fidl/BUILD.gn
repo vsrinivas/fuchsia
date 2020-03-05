@@ -8,4 +8,6 @@ fidl("validate") {
   name = "test.inspect.validate"
 
   sources = [ "validate.test.fidl" ]
+
+  public_deps = [ "//sdk/fidl/fuchsia.inspect:fuchsia.inspect" ]
 }

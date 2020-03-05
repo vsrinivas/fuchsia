@@ -407,6 +407,12 @@ async fn run_driver_service(mut stream: ValidateRequestStream) -> Result<(), Err
                 };
                 responder.send(result)?;
             }
+            ValidateRequest::InitializeTree { params: _, responder } => {
+                responder.send(None, TestResult::Unimplemented)?;
+            }
+            ValidateRequest::ActLazy { lazy_action: _, responder } => {
+                responder.send(TestResult::Unimplemented)?;
+            }
         }
     }
     Ok(())

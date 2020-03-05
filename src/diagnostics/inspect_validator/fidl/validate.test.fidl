@@ -9,6 +9,8 @@
 /// correctness and memory-packing efficiency.)
 library test.inspect.validate;
 
+using fuchsia.inspect as inspect;
+
 /// InitializationParams tells how to initialize the Inspect library.
 table InitializationParams {
     1: uint64 vmoSize;
@@ -24,6 +26,12 @@ enum TestResult {
     FAILED = 2;
     /// The driver and/or puppet-wrapper was in an illegal state.
     ILLEGAL = 3;
+};
+
+// One-to-one mapping flag used in LINK block
+enum LinkDisposition {
+    CHILD = 0;
+    INLINE = 1;
 };
 
 /// The data in the VMO is tree-structured, and
@@ -178,6 +186,41 @@ struct InsertMultiple {
     uint64 count;
 };
 
+// Action sent to instruct a Puppet to create a lazy node.
+struct CreateLazyNode {
+    // Unique id for parent block.
+    uint32 parent;
+
+    // Unique id used between Controller and Puppet to uniquely identify lazy node.
+    uint32 id;
+
+    // Name passed in to CreateLazy{Node,Values) method
+    string name;
+
+    // Disposition flag that determines appropriate method.
+    LinkDisposition disposition;
+
+    // Send a sequence of actions to execute within the lambda to create Inspect
+    // tree.
+    vector<Action> actions;
+};
+
+// Action sent to instruct a Puppet to update a lazy node.
+struct ModifyLazyNode {
+    // Unique id used between Controller and Puppet to uniquely identify lazy node.
+    uint32 id;
+
+    // Send a sequence of actions to execute within the lambda to create Inspect
+    // tree.
+    vector<Action> actions;
+};
+
+// Action sent to instruct a Puppet to delete a lazy node.
+struct DeleteLazyNode {
+    // Unique id used between Controller and Puppet to uniquely identify lazy node.
+    uint32 id;
+};
+
 /// Tells the puppet to do something to modify the VMO.
 xunion Action {
     1: CreateNode create_node;
@@ -203,11 +246,27 @@ xunion Action {
     21: SetBool set_bool;
 };
 
+/// Tells the puppet to do something to modify a lazy node.
+xunion LazyAction {
+    1: CreateLazyNode create_lazy_node;
+    2: ModifyLazyNode modify_lazy_node;
+    3: DeleteLazyNode delete_lazy_node;
+};
+
 [Discoverable]
 protocol Validate {
     /// Initializes the Inspect library being tested by the puppet.
     Initialize(InitializationParams params) -> (handle? vmo, TestResult result);
 
+    /// Use instead of `Initialize` on puppets which support the Tree / Lazy method of getting VMOs.
+    /// The root VMO can be obtained via the returned Tree protocol.
+    [Transitional]
+    InitializeTree(InitializationParams params) -> (inspect.Tree? tree, TestResult result);
+
     /// Modifies the contents of the VMO.
     Act(Action action) -> (TestResult result);
+
+    /// Modifies the contents of a lazy node.
+    [Transitional]
+    ActLazy(LazyAction lazy_action) -> (TestResult result);
 };

@@ -237,6 +237,12 @@ pub(crate) mod tests {
 
                             _ => responder.send(TestResult::Illegal)?,
                         },
+                        ValidateRequest::InitializeTree { params: _, responder } => {
+                            responder.send(None, TestResult::Unimplemented)?;
+                        }
+                        ValidateRequest::ActLazy { lazy_action: _, responder } => {
+                            responder.send(TestResult::Unimplemented)?;
+                        }
                     }
                 }
                 Ok(())

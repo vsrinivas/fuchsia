@@ -18,6 +18,7 @@ using fit::holds_alternative;
 using std::get;
 using test::inspect::validate::Action;
 using test::inspect::validate::InitializationParams;
+using test::inspect::validate::LazyAction;
 using test::inspect::validate::NumberType;
 using test::inspect::validate::ROOT_ID;
 using test::inspect::validate::TestResult;
