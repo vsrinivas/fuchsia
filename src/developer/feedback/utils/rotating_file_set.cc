@@ -16,17 +16,13 @@ namespace feedback {
 
 RotatingFileSetWriter::RotatingFileSetWriter(const std::vector<const std::string>& file_paths,
                                              FileSize total_size)
-    : file_paths_(file_paths), individual_file_size_(total_size / file_paths.size()) {
+    : file_paths_(file_paths),
+      individual_file_size_(total_size / file_paths.size()),
+      current_file_(individual_file_size_) {
   assert(file_paths_.size() > 0 && "|file_paths_| must have non-zero size");
 
-  for (size_t i = 0; i < file_paths_.size(); ++i) {
-    files_.emplace_back(individual_file_size_);
-  }
-
-  current_file_ = &files_.front();
-
   // This will truncate the file.
-  current_file_->Open(file_paths_.front());
+  current_file_.Open(file_paths_.front());
 }
 
 void RotatingFileSetWriter::Write(const std::string& line) {
@@ -36,22 +32,14 @@ void RotatingFileSetWriter::Write(const std::string& line) {
     return;
   }
 
-  if (current_file_->BytesRemaining() < line.size()) {
-    PositionNewFile();
+  if (current_file_.BytesRemaining() < line.size()) {
+    current_file_.Close();
     RotateFilePaths();
 
     // This re-creates the first file in the list.
-    current_file_->Open(file_paths_.front());
+    current_file_.Open(file_paths_.front());
   }
-  current_file_->Write(line);
-}
-
-void RotatingFileSetWriter::PositionNewFile() {
-  TRACE_DURATION("feedback:io", "RotatingFileSetWriter::PositionNewFile");
-
-  files_.pop_back();
-  files_.emplace_front(individual_file_size_);
-  current_file_ = &files_.front();
+  current_file_.Write(line);
 }
 
 void RotatingFileSetWriter::RotateFilePaths() {

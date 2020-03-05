@@ -13,6 +13,9 @@
 namespace feedback {
 namespace {
 
+// This value needs to be kept in sync with the value in write_only_file.h
+constexpr size_t kFlushSize = 4096u;
+
 class WriteOnlyFileTest : public testing::Test {
  protected:
   void DeleteFile(const std::string& file_path) {
@@ -42,64 +45,102 @@ TEST_F(WriteOnlyFileTest, Attempt_WriteToFileWithNoCapacity) {
   WriteOnlyFile file(FileSize::Megabytes(0));
 
   file.Open(file_path);
-  EXPECT_EQ(file.Write("test"), (size_t)0u);
+
+  EXPECT_FALSE(file.Write("test"));
 }
 
-TEST_F(WriteOnlyFileTest, Check_WriteToFile) {
+TEST_F(WriteOnlyFileTest, Attempt_WriteToClosedFile) {
   const std::string file_path = files::JoinPath(RootDirectory(), "file.txt");
-  const FileSize file_capacity(FileSize::Kilobytes(1));
+  WriteOnlyFile file(FileSize::Megabytes(0));
+
+  file.Open(file_path);
+  file.Close();
+
+  EXPECT_FALSE(file.Write("test"));
+}
+
+TEST_F(WriteOnlyFileTest, Check_CloseFlushes) {
+  const std::string file_path = files::JoinPath(RootDirectory(), "file.txt");
+  const FileSize file_capacity(FileSize::Bytes(kFlushSize));
 
   FileSize expected_bytes_remaining(file_capacity);
+
+  std::string file_contents;
 
   std::string line1("line1\n");
   std::string line2("line2\n");
 
-  // Destroy |file| at the end of this scope to force the underlying buffer to flush.
-  {
-    WriteOnlyFile file(file_capacity);
-    file.Open(file_path);
+  WriteOnlyFile file(file_capacity);
+  file.Open(file_path);
 
-    EXPECT_TRUE(file.Write(line1));
-    expected_bytes_remaining -= line1.size();
+  EXPECT_TRUE(file.Write(line1));
+  expected_bytes_remaining -= line1.size();
 
-    EXPECT_TRUE(file.Write(line2));
-    expected_bytes_remaining -= line2.size();
+  EXPECT_TRUE(file.Write(line2));
+  expected_bytes_remaining -= line2.size();
 
-    EXPECT_EQ(file.BytesRemaining(), expected_bytes_remaining.to_bytes());
-  }
-  std::string file_contents;
+  EXPECT_EQ(file.BytesRemaining(), expected_bytes_remaining.to_bytes());
+  ReadFileContents(file_path, &file_contents);
+  EXPECT_EQ(file_contents, "");
+
+  file.Close();
+
   ReadFileContents(file_path, &file_contents);
   EXPECT_EQ(file_contents, line1 + line2);
 }
 
-TEST_F(WriteOnlyFileTest, Check_WriteMoreThanCapacity) {
+TEST_F(WriteOnlyFileTest, Check_FlushesOnBufferFull) {
   const std::string file_path = files::JoinPath(RootDirectory(), "file.txt");
-  const FileSize file_capacity(FileSize::Bytes(13));
+  const FileSize file_capacity(FileSize::Bytes(kFlushSize * 2));
 
   FileSize expected_bytes_remaining(file_capacity);
 
-  std::string line1("line1\n");
-  std::string line2("line2\n");
+  std::string line1(kFlushSize, 'X');
+  std::string line2(kFlushSize, 'Y');
 
-  // Destroy |file| at the end of this scope to force the underlying buffer to flush.
-  {
-    WriteOnlyFile file(file_capacity);
-    file.Open(file_path);
+  WriteOnlyFile file(file_capacity);
+  file.Open(file_path);
 
-    EXPECT_TRUE(file.Write(line1));
-    expected_bytes_remaining -= line1.size();
-
-    EXPECT_TRUE(file.Write(line2));
-    expected_bytes_remaining -= line2.size();
-
-    EXPECT_FALSE(file.Write("line3\n"));
-
-    EXPECT_EQ(file.BytesRemaining(), expected_bytes_remaining.to_bytes());
-  }
+  EXPECT_TRUE(file.Write(line1));
+  expected_bytes_remaining -= line1.size();
 
   std::string file_contents;
   ReadFileContents(file_path, &file_contents);
+  EXPECT_EQ(file_contents, line1);
+
+  EXPECT_TRUE(file.Write(line2));
+  expected_bytes_remaining -= line2.size();
+
+  EXPECT_EQ(file.BytesRemaining(), expected_bytes_remaining.to_bytes());
+
+  ReadFileContents(file_path, &file_contents);
   EXPECT_EQ(file_contents, line1 + line2);
+}
+
+TEST_F(WriteOnlyFileTest, Check_WriteStringLargerThanFlushSize) {
+  const std::string file_path = files::JoinPath(RootDirectory(), "file.txt");
+  const FileSize file_capacity(FileSize::Bytes(kFlushSize * 2));
+
+  FileSize expected_bytes_remaining(file_capacity);
+
+  std::string line(kFlushSize + 1, 'X');
+
+  WriteOnlyFile file(file_capacity);
+  file.Open(file_path);
+
+  EXPECT_TRUE(file.Write(line));
+  expected_bytes_remaining -= line.size();
+
+  std::string file_contents;
+  ReadFileContents(file_path, &file_contents);
+  EXPECT_EQ(file_contents, std::string(kFlushSize, 'X'));
+
+  EXPECT_EQ(file.BytesRemaining(), expected_bytes_remaining.to_bytes());
+
+  file.Close();
+
+  ReadFileContents(file_path, &file_contents);
+  EXPECT_EQ(file_contents, line);
 }
 
 }  // namespace

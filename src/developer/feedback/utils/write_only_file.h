@@ -6,7 +6,6 @@
 #define SRC_DEVELOPER_FEEDBACK_UTILS_WRITE_ONLY_FILE_WITH_CAPACITY_H_
 
 #include <cstdint>
-#include <fstream>
 #include <string>
 
 #include "src/developer/feedback/utils/file_size.h"
@@ -17,11 +16,15 @@ namespace feedback {
 class WriteOnlyFile {
  public:
   WriteOnlyFile(FileSize capacity);
+  ~WriteOnlyFile();
 
   // Open and truncate the file at |path|.
   //
   // Return true if successful.
   bool Open(const std::string& path);
+
+  // Close the underlying file.
+  void Close();
 
   // Write |str| to the opened file.
   //
@@ -33,9 +36,18 @@ class WriteOnlyFile {
   uint64_t BytesRemaining() const;
 
  private:
-  // The stream will be flushed and closed upon destruction.
-  std::ofstream out_;
-  FileSize capacity_;
+  // Flush the underlying buffer.
+  void Flush();
+
+  int fd_ = -1;
+
+  // We flush every 4096 bytes.
+  char buf_[4096u];
+  const char buf_end_ = '\0';
+  char* buf_p_;
+
+  const FileSize capacity_;
+  FileSize capacity_remaining_;
 };
 
 }  // namespace feedback

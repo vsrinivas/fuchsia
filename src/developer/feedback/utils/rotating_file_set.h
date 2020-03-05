@@ -46,14 +46,12 @@ class RotatingFileSetWriter {
   void Write(const std::string& line);
 
  private:
-  void PositionNewFile();
   void RotateFilePaths();
 
   const std::vector<const std::string> file_paths_;
   const FileSize individual_file_size_;
 
-  WriteOnlyFile* current_file_;
-  std::deque<WriteOnlyFile> files_;
+  WriteOnlyFile current_file_;
 };
 
 class RotatingFileSetReader {
