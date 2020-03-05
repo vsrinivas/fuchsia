@@ -104,7 +104,7 @@ TEST(TimerFDTest, OneShotNonblocking) {
   ASSERT_EQ(EWOULDBLOCK, errno, "errno incorrect");
 
   struct itimerspec value = {};
-  value.it_value.tv_sec = 60;
+  value.it_value.tv_sec = 600;
   EXPECT_EQ(0, timerfd_settime(fd.get(), 0, &value, nullptr));
 
   EXPECT_EQ(-1, read(fd.get(), &counter, sizeof(counter)));
@@ -114,7 +114,7 @@ TEST(TimerFDTest, OneShotNonblocking) {
   value.it_value.tv_sec = 0;
   value.it_value.tv_nsec = ZX_MSEC(5);
   EXPECT_EQ(0, timerfd_settime(fd.get(), 0, &value, &old_value));
-  EXPECT_GE(60, old_value.it_value.tv_sec);
+  EXPECT_GE(600, old_value.it_value.tv_sec);
 
   fd_set rfds;
   FD_ZERO(&rfds);
@@ -140,20 +140,17 @@ TEST(TimerFDTest, RepeatingBlocking) {
   value.it_value.tv_nsec = ZX_MSEC(15);
   value.it_interval.tv_nsec = ZX_MSEC(15);
   EXPECT_EQ(0, timerfd_settime(fd.get(), 0, &value, nullptr));
-  uint64_t counter = 2934;
-  EXPECT_EQ(sizeof(counter), read(fd.get(), &counter, sizeof(counter)));
-  EXPECT_EQ(1, counter);
-  EXPECT_EQ(sizeof(counter), read(fd.get(), &counter, sizeof(counter)));
-  EXPECT_EQ(1, counter);
-  EXPECT_EQ(sizeof(counter), read(fd.get(), &counter, sizeof(counter)));
-  EXPECT_EQ(1, counter);
-  EXPECT_EQ(sizeof(counter), read(fd.get(), &counter, sizeof(counter)));
-  EXPECT_EQ(1, counter);
-  EXPECT_EQ(sizeof(counter), read(fd.get(), &counter, sizeof(counter)));
-  EXPECT_EQ(1, counter);
+
+  uint64_t total = 0u;
+  for (size_t i = 0; i < 5; ++i) {
+    uint64_t counter = 2934;
+    EXPECT_EQ(sizeof(counter), read(fd.get(), &counter, sizeof(counter)));
+    EXPECT_LE(1, counter);
+    total += counter;
+  }
 
   zx_time_t end = zx_clock_get_monotonic();
-  EXPECT_LE(5 * ZX_MSEC(15), end - start);
+  EXPECT_LE(total * ZX_MSEC(15), end - start);
 }
 
 TEST(TimerFDTest, Counter) {
@@ -168,7 +165,7 @@ TEST(TimerFDTest, Counter) {
   EXPECT_EQ(0, timerfd_settime(fd.get(), 0, &value, nullptr));
   uint64_t counter = 2934;
   EXPECT_EQ(sizeof(counter), read(fd.get(), &counter, sizeof(counter)));
-  EXPECT_EQ(1, counter);
+  EXPECT_LE(1, counter);
 
   struct timespec sleep = {.tv_sec = 0, .tv_nsec = ZX_MSEC(20)};
   EXPECT_EQ(0, nanosleep(&sleep, nullptr));
@@ -188,30 +185,24 @@ TEST(TimerFDTest, RepeatingNonblocking) {
   zx_time_t start = zx_clock_get_monotonic();
 
   struct itimerspec value = {};
-  value.it_value.tv_nsec = ZX_MSEC(30);
-  value.it_interval.tv_nsec = ZX_MSEC(30);
+  value.it_value.tv_nsec = ZX_MSEC(15);
+  value.it_interval.tv_nsec = ZX_MSEC(15);
   EXPECT_EQ(0, timerfd_settime(fd.get(), 0, &value, nullptr));
 
-  fd_set rfds;
-  FD_ZERO(&rfds);
-  FD_SET(fd.get(), &rfds);
+  uint64_t total = 0u;
+  for (size_t i = 0; i < 5; ++i) {
+    fd_set rfds;
+    FD_ZERO(&rfds);
+    FD_SET(fd.get(), &rfds);
 
-  EXPECT_LT(0, select(fd.get() + 1, &rfds, nullptr, nullptr, nullptr));
+    EXPECT_LT(0, select(fd.get() + 1, &rfds, nullptr, nullptr, nullptr));
 
-  uint64_t counter = 2934;
-  EXPECT_EQ(sizeof(counter), read(fd.get(), &counter, sizeof(counter)));
-  EXPECT_EQ(1, counter);
-  EXPECT_EQ(-1, read(fd.get(), &counter, sizeof(counter)));
-  ASSERT_EQ(EWOULDBLOCK, errno, "errno incorrect");
-
-  EXPECT_LT(0, select(fd.get() + 1, &rfds, nullptr, nullptr, nullptr));
-  EXPECT_EQ(sizeof(counter), read(fd.get(), &counter, sizeof(counter)));
-  EXPECT_EQ(1, counter);
-
-  EXPECT_LT(0, select(fd.get() + 1, &rfds, nullptr, nullptr, nullptr));
-  EXPECT_EQ(sizeof(counter), read(fd.get(), &counter, sizeof(counter)));
-  EXPECT_EQ(1, counter);
+    uint64_t counter = 2934;
+    EXPECT_EQ(sizeof(counter), read(fd.get(), &counter, sizeof(counter)));
+    EXPECT_LE(1, counter);
+    total += counter;
+  }
 
   zx_time_t end = zx_clock_get_monotonic();
-  EXPECT_LE(2 * ZX_MSEC(30), end - start);
+  EXPECT_LE(total * ZX_MSEC(15), end - start);
 }
