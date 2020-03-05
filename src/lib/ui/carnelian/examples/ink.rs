@@ -14,6 +14,7 @@ use {
     fuchsia_trace::{self, duration},
     fuchsia_trace_provider,
     fuchsia_zircon::{self as zx, AsHandleRef, ClockId, Event, Signals, Time},
+    itertools::izip,
     rand::{thread_rng, Rng},
     std::{collections::BTreeMap, f32, fs, ops::Range},
 };
@@ -285,17 +286,122 @@ struct StrokePoint {
     thickness: f32,
 }
 
+struct CurveFitter {
+    first_control_points: Vec<Vector2D<f32>>,
+    second_control_points: Vec<Vector2D<f32>>,
+    end_points: Vec<Vector2D<f32>>,
+    coefficients: Vec<f32>,
+}
+
+impl CurveFitter {
+    fn new() -> Self {
+        Self {
+            first_control_points: Vec::new(),
+            second_control_points: Vec::new(),
+            end_points: Vec::new(),
+            coefficients: Vec::new(),
+        }
+    }
+
+    // Takes a set of |points| and generates a fitted curve with two control points in between each
+    // point. Returns an iterator to (first control point, second control point, end point)
+    // for |range|. These items are ready to be used to build a path using cubic_to().
+    //
+    // Guided and simplified from
+    // https://ovpwp.wordpress.com/2008/12/17/how-to-draw-a-smooth-curve-through-a-set-of-2d-points-with-bezier-methods/
+    fn compute_control_points(
+        &mut self,
+        points: impl Iterator<Item = Point>,
+        range: Range<usize>,
+    ) -> impl Iterator<Item = (Point, Point, Point)> + '_ {
+        duration!("gfx", "CurveFitter::compute_control_points");
+        self.end_points.splice(.., points.map(|p| p.to_vector()));
+        self.first_control_points.clear();
+        self.second_control_points.clear();
+        self.coefficients.clear();
+
+        let num_control_points = self.end_points.len() - 1;
+        match num_control_points {
+            // Do nothing for a single point.
+            0 => {}
+            // Calculate average for two points.
+            1 => {
+                let p0 = self.end_points[0];
+                let p1 = self.end_points[1];
+                self.first_control_points.push((p0 * 2.0 + p1) / 3.0);
+                self.second_control_points.push((p0 + p1 * 2.0) / 3.0);
+            }
+            // Run the algorithm to generate two control points.
+            _ => {
+                // Compute first control points.
+                let mut b: f32 = 2.0;
+                let p0 = self.end_points[0];
+                let p1 = self.end_points[1];
+                let mut rhs = p0 + p1 * 2.0;
+                self.coefficients.push(0.0);
+                self.first_control_points.push(rhs / b);
+                for i in 1..num_control_points - 1 {
+                    self.coefficients.push(1.0 / b);
+                    b = 4.0 - self.coefficients[i];
+                    let p = self.end_points[i];
+                    let p_next = self.end_points[i + 1];
+                    rhs = p * 4.0 + p_next * 2.0;
+                    self.first_control_points.push((rhs - self.first_control_points[i - 1]) / b);
+                }
+                self.coefficients.push(1.0 / b);
+                let p_prev = self.end_points[num_control_points - 1];
+                let p_last = self.end_points[num_control_points];
+                rhs = (p_prev * 8.0 + p_last) / 2.0;
+                b = 3.5 - self.coefficients[num_control_points - 1];
+                self.first_control_points
+                    .push((rhs - self.first_control_points[num_control_points - 2]) / b);
+
+                // Back substitution.
+                for i in 1..num_control_points {
+                    let fcp = self.first_control_points[num_control_points - i - 1];
+                    let fcp_next = self.first_control_points[num_control_points - i];
+                    let c = self.coefficients[num_control_points - i];
+                    self.first_control_points[num_control_points - i - 1] = fcp - fcp_next * c;
+                }
+
+                // Compute second control points.
+                for i in 0..num_control_points - 1 {
+                    let p_next = self.end_points[i + 1];
+                    let fcp_next = self.first_control_points[i + 1];
+                    self.second_control_points.push(p_next * 2.0 - fcp_next);
+                }
+                let fcp_last = self.first_control_points[num_control_points - 1];
+                self.second_control_points.push((p_last + fcp_last) / 2.0);
+            }
+        }
+
+        izip!(
+            self.first_control_points[range.start..range.end - 1].iter().map(|v| v.to_point()),
+            self.second_control_points[range.start..range.end - 1].iter().map(|v| v.to_point()),
+            self.end_points[range.start + 1..range.end].iter().map(|v| v.to_point())
+        )
+    }
+}
+
 struct InkStroke {
     points: Vec<StrokePoint>,
     segments: Vec<(usize, Segment)>,
     color: Color,
     thickness: f32,
     transform: Transform2D<f32>,
+    curve_fitter: CurveFitter,
 }
 
 impl InkStroke {
     fn new(color: Color, thickness: f32, transform: Transform2D<f32>) -> Self {
-        Self { points: Vec::new(), segments: Vec::new(), color, thickness, transform }
+        Self {
+            points: Vec::new(),
+            segments: Vec::new(),
+            color,
+            thickness,
+            transform,
+            curve_fitter: CurveFitter::new(),
+        }
     }
 
     fn raster(context: &mut Context, path: &Path, transform: &Transform2D<f32>) -> Raster {
@@ -371,17 +477,18 @@ impl InkStroke {
             //
             // Convert stroke to fill and compute a bounding box.
             //
+            let mut p_draw_start = Point::zero();
+            if i1 > i0 {
+                p_draw_start =
+                    self.points[i0].point + self.points[i0].normal1 * self.points[i0].thickness;
+                path_builder.move_to(p_draw_start);
+            }
 
-            // Walk from point i0 to i1 and offset by radius at each point.
-            let mut a0 = Point::zero();
-            for (i, p) in self.points[i0..i1].iter().enumerate() {
-                let a = p.point + p.normal1 * p.thickness;
-                if i == 0 {
-                    path_builder.move_to(a);
-                    a0 = a;
-                } else {
-                    path_builder.line_to(a);
-                }
+            for p in self.curve_fitter.compute_control_points(
+                self.points.iter().map(|p| p.point + p.normal1 * p.thickness),
+                i0..i1,
+            ) {
+                path_builder.cubic_to(p.0, p.1, p.2);
             }
 
             let p_first = &self.points.first().unwrap();
@@ -413,11 +520,17 @@ impl InkStroke {
             if i1 == self.points.len() && p_first.point != p_last.point {
                 cap!(p_last, p_last.thickness);
             }
-
             // Walk from point i1 back to i0 and offset by radius at each point.
-            for p in self.points[i0..i1].iter().rev() {
-                let a = p.point - p.normal1 * p.thickness;
-                path_builder.line_to(a);
+            if i1 > i0 {
+                let p = &self.points[i1 - 1];
+                path_builder.line_to(p.point - p.normal1 * p.thickness);
+            }
+
+            for p in self.curve_fitter.compute_control_points(
+                self.points.iter().rev().map(|p| p.point - p.normal1 * p.thickness),
+                self.points.len() - i1..self.points.len() - i0,
+            ) {
+                path_builder.cubic_to(p.0, p.1, p.2);
             }
 
             // Produce start-cap if at the beginning of line and not connected to last point.
@@ -425,7 +538,7 @@ impl InkStroke {
                 cap!(p_first, -p_first.thickness);
             }
 
-            path_builder.line_to(a0);
+            path_builder.line_to(p_draw_start);
 
             path_builder.build()
         };
