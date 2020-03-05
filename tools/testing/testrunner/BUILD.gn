@@ -16,10 +16,12 @@ go_library("main") {
   source_dir = "cmd"
   deps = [
     ":lib",
+    "//third_party/golibs:golang.org/x/crypto",
     "//tools/build",
     "//tools/lib/color",
     "//tools/lib/logger",
     "//tools/lib/osmisc",
+    "//tools/lib/retry",
     "//tools/lib/runner",
     "//tools/net/sshutil",
     "//tools/testing/runtests",
