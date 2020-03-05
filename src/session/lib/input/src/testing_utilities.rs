@@ -90,6 +90,8 @@ pub fn create_mouse_input_report(
         mouse: Some(fidl_input_report::MouseInputReport {
             movement_x: Some(position.x as i64),
             movement_y: Some(position.y as i64),
+            position_x: None,
+            position_y: None,
             scroll_h: None,
             scroll_v: None,
             pressed_buttons: Some(buttons),

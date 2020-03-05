@@ -17,6 +17,12 @@ table MouseInputDescriptor {
     /// The range of relative Y movement.
     2: Axis movement_y;
 
+    /// The range of the absolute position of X.
+    6: Axis position_x;
+
+    /// The range of the absolute position of Y.
+    7: Axis position_y;
+
     /// The range of relative vertical scroll.
     3: Axis scroll_v;
 
@@ -41,6 +47,12 @@ table MouseInputReport {
     1: int64 movement_x;
     /// Relative Y positional displacement.
     2: int64 movement_y;
+
+    /// The absolute position of X.
+    6: Axis position_x;
+
+    /// The absolute position of Y.
+    7: Axis position_y;
 
     /// Relative vertical scrolling displacement.
     3: int64 scroll_v;

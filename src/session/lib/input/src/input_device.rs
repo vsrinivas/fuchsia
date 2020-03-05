@@ -282,6 +282,8 @@ mod tests {
                             input: Some(fidl_fuchsia_input_report::MouseInputDescriptor {
                                 movement_x: None,
                                 movement_y: None,
+                                position_x: None,
+                                position_y: None,
                                 scroll_v: None,
                                 scroll_h: None,
                                 buttons: None,
@@ -446,6 +448,8 @@ mod tests {
                             input: Some(fidl_fuchsia_input_report::MouseInputDescriptor {
                                 movement_x: None,
                                 movement_y: None,
+                                position_x: None,
+                                position_y: None,
                                 scroll_v: None,
                                 scroll_h: None,
                                 buttons: None,
