@@ -48,7 +48,15 @@ will execute all descendent tests.
 /// translating raw command line arguments into constructs that make sense to
 /// [FuchsiaTestCommand].
 Future<void> main(List<String> args) async {
-  var cmdCli = FuchsiaTestCommandCli(args, usage: usage);
+  FuchsiaTestCommandCli cmdCli;
+  try {
+    cmdCli = FuchsiaTestCommandCli(args, usage: usage);
+  } on Exception catch (ex) {
+    stderr.writeln('Invalid syntax: $ex');
+    usage(fxTestArgParser);
+    exitCode = 64; // Improper usage
+    return null;
+  }
 
   registerCleanUp(() async {
     await cmdCli.terminateEarly();
@@ -57,6 +65,19 @@ Future<void> main(List<String> args) async {
   _sigintSub ??= ProcessSignal.sigint.watch().listen(cleanUpAndExit);
 
   try {
+    // Before going through all the trouble of initializing everything for the
+    // command, make sure everything is valid and that the user doesn't want
+    // some simple debug output.
+    bool shouldRun = await cmdCli.preRunChecks(
+      cmdCli.parsedArgs,
+      FuchsiaLocator.shared.fx,
+      stdout.write,
+    );
+    if (!shouldRun) {
+      return;
+    }
+
+    // Finally, run the command
     await cmdCli.run();
   } on BuildException catch (err) {
     stderr.write('${wrapWith("Error:", [red])} ${err.toString()}');

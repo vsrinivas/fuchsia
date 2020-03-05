@@ -67,9 +67,10 @@ class FuchsiaTestCommand {
     _eventStreamController.sink.close();
   }
 
-  Future<int> runTestSuite({TestsManifestReader manifestReader}) async {
+  Future<int> runTestSuite(TestsManifestReader manifestReader) async {
     stream.listen(outputFormatter.update);
-    var parsedManifest = await parseManifest(manifestReader);
+    var parsedManifest = await readManifest(manifestReader);
+
     manifestReader.reportOnTestBundles(
       userFriendlyBuildDir: fuchsiaLocator.userFriendlyBuildDir,
       eventEmitter: emitEvent,
@@ -95,13 +96,12 @@ class FuchsiaTestCommand {
     return exitCode;
   }
 
-  Future<ParsedManifest> parseManifest(
+  Future<ParsedManifest> readManifest(
     TestsManifestReader manifestReader,
   ) async {
-    // ignore: parameter_assignments
-    manifestReader ??= TestsManifestReader();
     List<TestDefinition> testDefinitions = await manifestReader.loadTestsJson(
       buildDir: fuchsiaLocator.buildDir,
+      fxLocation: fuchsiaLocator.fx,
       manifestFileName: 'tests.json',
     );
     return manifestReader.aggregateTests(

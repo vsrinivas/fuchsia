@@ -22,24 +22,28 @@ class TestDefinition {
   final String name;
   final String os;
 
-  ExecutionHandle _executionHandle;
+  ExecutionHandle executionHandle;
   PackageUrl _parsedUrl;
 
   TestDefinition({
     @required this.buildDir,
     @required this.name,
     @required this.os,
+    @required String fx,
     this.cpu,
     this.command,
     this.depsFile,
     this.label,
     this.packageUrl,
     this.path,
-  });
+  }) {
+    executionHandle = _createExecutionHandle(fx);
+  }
 
   factory TestDefinition.fromJson(
     Map<String, dynamic> data, {
     @required String buildDir,
+    @required String fx,
   }) {
     Map<String, dynamic> testDetails = data['test'] ?? {};
     return TestDefinition(
@@ -47,6 +51,7 @@ class TestDefinition {
       command: List<String>.from(testDetails['command'] ?? []),
       cpu: testDetails['cpu'] ?? '',
       depsFile: testDetails['deps_file'] ?? '',
+      fx: fx,
       label: testDetails['label'] ?? '',
       name: testDetails['name'] ?? '',
       os: testDetails['os'] ?? '',
@@ -67,25 +72,21 @@ class TestDefinition {
   os: $os
 />''';
 
-  ExecutionHandle get executionHandle {
-    return _executionHandle ??= _createExecutionHandle();
-  }
-
-  ExecutionHandle _createExecutionHandle() {
+  ExecutionHandle _createExecutionHandle(String fxPath) {
     // `command` must be checked before `host`, because `command` is a subset
     // of all `host` tests
     if (command != null && command.isNotEmpty) {
-      return ExecutionHandle.command(command.join(' '), os);
+      return ExecutionHandle.command(fxPath, command.join(' '), os);
 
       // The order of `component` / `suite` does not currently matter
     } else if (packageUrl != '' && packageUrl != null) {
       // .cmx tests are considered components
       if (packageUrl.endsWith('.cmx')) {
-        return ExecutionHandle.component(packageUrl, os);
+        return ExecutionHandle.component(fxPath, packageUrl, os);
 
         // .cm tests are considered suites
       } else if (packageUrl.endsWith('.cm')) {
-        return ExecutionHandle.suite(packageUrl, os);
+        return ExecutionHandle.suite(fxPath, packageUrl, os);
       }
 
       // Package Urls must end with either ".cmx" or ".cm"
@@ -100,7 +101,7 @@ class TestDefinition {
         return ExecutionHandle.unsupportedDeviceTest(path);
       }
 
-      return ExecutionHandle.host(fullPath, os);
+      return ExecutionHandle.host(fxPath, fullPath, os);
     }
     return ExecutionHandle.unsupported();
   }

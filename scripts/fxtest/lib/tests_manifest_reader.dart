@@ -50,21 +50,31 @@ class TestsManifestReader {
   /// Reads and parses the tests manifest file at `manifestLocation`.
   Future<List<TestDefinition>> loadTestsJson({
     @required String buildDir,
+    @required String fxLocation,
     @required String manifestFileName,
   }) async {
     List<dynamic> testJson = await readManifest(
       p.join(buildDir, manifestFileName),
     );
-    return parseManifest(testJson, buildDir);
+    return parseManifest(
+      testJson: testJson,
+      buildDir: buildDir,
+      fxLocation: fxLocation,
+    );
   }
 
   /// Finishes loading the raw test manifest into a list of usable objects.
-  List<TestDefinition> parseManifest(List<dynamic> testJson, String buildDir) {
+  List<TestDefinition> parseManifest({
+    @required List<dynamic> testJson,
+    @required String buildDir,
+    @required String fxLocation,
+  }) {
     return [
       for (var data in testJson)
         TestDefinition.fromJson(
           Map<String, dynamic>.from(data),
           buildDir: buildDir,
+          fx: fxLocation,
         )
     ];
   }

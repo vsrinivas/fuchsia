@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'package:args/args.dart';
 import 'package:async/async.dart';
-import 'package:path/path.dart' as p;
 import 'package:fxtest/fxtest.dart';
 import 'package:meta/meta.dart';
 import 'package:mockito/mockito.dart';
@@ -46,11 +45,27 @@ class FakeTestRunner extends Fake implements TestRunner {
 }
 
 void main() {
-  // out of test, out of fxtest, out of scripts
-  // Alternatively, we could read the FUCHSIA_BUILD_DIR env variable,
-  // but we're trying to have this code remain env-variable independent
-  String buildDir = p.join('..', '..', '..', 'out/default');
   group('tests.json entries are correctly parsed', () {
+    var envReader = MockEnvReader();
+    when(envReader.getEnv('FUCHSIA_DIR')).thenReturn('/root/path/fuchsia');
+    when(envReader.getEnv('FUCHSIA_BUILD_DIR')).thenReturn(
+      '/root/path/fuchsia/out/default',
+    );
+    var fuchsiaLocator = FuchsiaLocator(envReader: envReader);
+    test('with respect to custom fuchsia locations', () {
+      var testDef = TestDefinition(
+        buildDir: fuchsiaLocator.buildDir,
+        fx: fuchsiaLocator.fx, // <-- this one is all that matters for this test
+        os: 'linux',
+        path: 'random-letters',
+        name: 'host test',
+      );
+      expect(
+        testDef.executionHandle.fx,
+        '/root/path/fuchsia/.jiri_root/bin/fx',
+      );
+    });
+
     test('for host tests', () {
       TestsManifestReader tr = TestsManifestReader();
       List<dynamic> testJson = [
@@ -67,8 +82,9 @@ void main() {
         },
       ];
       List<TestDefinition> tds = tr.parseManifest(
-        testJson,
-        buildDir,
+        testJson: testJson,
+        buildDir: fuchsiaLocator.buildDir,
+        fxLocation: fuchsiaLocator.fx,
       );
       expect(tds, hasLength(1));
       expect(tds[0].packageUrl, '');
@@ -97,8 +113,9 @@ void main() {
         },
       ];
       List<TestDefinition> tds = tr.parseManifest(
-        testJson,
-        buildDir,
+        testJson: testJson,
+        buildDir: fuchsiaLocator.buildDir,
+        fxLocation: fuchsiaLocator.fx,
       );
       expect(tds, hasLength(1));
       expect(tds[0].packageUrl, testJson[0]['test']['package_url']);
@@ -122,7 +139,11 @@ void main() {
           }
         },
       ];
-      List<TestDefinition> tds = tr.parseManifest(testJson, buildDir);
+      List<TestDefinition> tds = tr.parseManifest(
+        testJson: testJson,
+        buildDir: fuchsiaLocator.buildDir,
+        fxLocation: fuchsiaLocator.fx,
+      );
       expect(tds, hasLength(1));
       expect(tds[0].path, '');
       expect(tds[0].executionHandle.testType, TestType.unsupported);
@@ -141,24 +162,36 @@ void main() {
           }
         },
       ];
-      List<TestDefinition> tds = tr.parseManifest(testJson, buildDir);
+      List<TestDefinition> tds = tr.parseManifest(
+        testJson: testJson,
+        buildDir: fuchsiaLocator.buildDir,
+        fxLocation: fuchsiaLocator.fx,
+      );
       expect(tds, hasLength(1));
       expect(tds[0].executionHandle.testType, TestType.unsupportedDeviceTest);
     });
   });
 
   group('tests are aggregated correctly', () {
+    var envReader = MockEnvReader();
+    when(envReader.getEnv('FUCHSIA_DIR')).thenReturn('/root/path/fuchsia');
+    when(envReader.getEnv('FUCHSIA_BUILD_DIR'))
+        .thenReturn('/root/path/fuchsia/out/default');
+    var fuchsiaLocator = FuchsiaLocator(envReader: envReader);
+
     void _ignoreEvents(TestEvent _) {}
     TestsManifestReader tr = TestsManifestReader();
     List<TestDefinition> testDefinitions = [
       TestDefinition(
-        buildDir: buildDir,
+        buildDir: fuchsiaLocator.buildDir,
         os: 'fuchsia',
+        fx: fuchsiaLocator.fx,
         packageUrl: 'fuchsia-pkg://fuchsia.com/fancy#superBigTest.cmx',
         name: 'device test',
       ),
       TestDefinition(
-        buildDir: buildDir,
+        buildDir: fuchsiaLocator.buildDir,
+        fx: fuchsiaLocator.fx,
         os: 'linux',
         path: '/asdf',
         name: '//host/test',
@@ -181,7 +214,7 @@ void main() {
         testNames: testNamesCollector.collect(),
       );
       return tr.aggregateTests(
-        buildDir: buildDir,
+        buildDir: fuchsiaLocator.buildDir,
         eventEmitter: _ignoreEvents,
         exactMatching: testsConfig.flags.exactMatches,
         testsConfig: testsConfig,
@@ -258,22 +291,24 @@ void main() {
     });
 
     test('when packageUrl.resourcePath are not components', () {
-      var testDefs = <TestDefinition>[
-        TestDefinition(
-          buildDir: buildDir,
+      expect(
+        () => TestDefinition(
+          buildDir: fuchsiaLocator.buildDir,
+          fx: fuchsiaLocator.fx,
           os: 'fuchsia',
           packageUrl: 'fuchsia-pkg://fuchsia.com/fancy#meta/not-component',
           name: 'asdf-one',
         ),
-        TestDefinition(
-          buildDir: buildDir,
+        throwsA(TypeMatcher<MalformedFuchsiaUrlException>()),
+      );
+      expect(
+        () => TestDefinition(
+          buildDir: fuchsiaLocator.buildDir,
+          fx: fuchsiaLocator.fx,
           os: 'fuchsia',
           packageUrl: 'fuchsia-pkg://fuchsia.com/fancy#bin/def-not-comp.so',
           name: 'asdf-two',
         ),
-      ];
-      expect(
-        () => parseFromArgs(testDefs: testDefs),
         throwsA(TypeMatcher<MalformedFuchsiaUrlException>()),
       );
     });
@@ -282,7 +317,7 @@ void main() {
       TestsConfig testsConfig = TestsConfig.all(tNames: ['fancy']);
       ParsedManifest parsedManifest = tr.aggregateTests(
         testDefinitions: testDefinitions,
-        buildDir: buildDir,
+        buildDir: fuchsiaLocator.buildDir,
         eventEmitter: _ignoreEvents,
         testsConfig: testsConfig,
       );
@@ -296,7 +331,7 @@ void main() {
       TestsConfig testsConfig = TestsConfig.host(tNames: ['fancy']);
       ParsedManifest parsedManifest = tr.aggregateTests(
         testDefinitions: testDefinitions,
-        buildDir: buildDir,
+        buildDir: fuchsiaLocator.buildDir,
         eventEmitter: _ignoreEvents,
         testsConfig: testsConfig,
       );
@@ -309,7 +344,8 @@ void main() {
       var tds = testDefinitions.sublist(0)
         ..addAll([
           TestDefinition(
-            buildDir: buildDir,
+            buildDir: fuchsiaLocator.buildDir,
+            fx: fuchsiaLocator.fx,
             name: 'awesome host test',
             os: 'linux',
             path: 'host_x64/test',
@@ -317,7 +353,7 @@ void main() {
         ]);
       ParsedManifest parsedManifest = tr.aggregateTests(
         testDefinitions: tds,
-        buildDir: buildDir,
+        buildDir: fuchsiaLocator.buildDir,
         eventEmitter: _ignoreEvents,
         testsConfig: testsConfig,
       );
@@ -335,7 +371,8 @@ void main() {
       var tds = testDefinitions.sublist(0)
         ..addAll([
           TestDefinition(
-            buildDir: buildDir,
+            buildDir: fuchsiaLocator.buildDir,
+            fx: fuchsiaLocator.fx,
             name: 'awesome device test',
             os: 'fuchsia',
             path: '/pkgfs/stuff',
@@ -343,7 +380,7 @@ void main() {
         ]);
       ParsedManifest parsedManifest = tr.aggregateTests(
         testDefinitions: tds,
-        buildDir: buildDir,
+        buildDir: fuchsiaLocator.buildDir,
         eventEmitter: _ignoreEvents,
         testsConfig: testsConfig,
       );
@@ -555,17 +592,25 @@ void main() {
   });
 
   group('arguments are passed through correctly', () {
+    var envReader = MockEnvReader();
+    when(envReader.getEnv('FUCHSIA_DIR')).thenReturn('/root/path/fuchsia');
+    when(envReader.getEnv('FUCHSIA_BUILD_DIR'))
+        .thenReturn('/root/path/fuchsia/out/default');
+    var fuchsiaLocator = FuchsiaLocator(envReader: envReader);
+
     void _ignoreEvents(TestEvent _) {}
     TestsManifestReader tr = TestsManifestReader();
     List<TestDefinition> testDefinitions = [
       TestDefinition(
-        buildDir: buildDir,
+        buildDir: fuchsiaLocator.buildDir,
+        fx: fuchsiaLocator.fx,
         name: 'device test',
         os: 'fuchsia',
         packageUrl: 'fuchsia-pkg://fuchsia.com/fancy#test.cmx',
       ),
       TestDefinition(
-        buildDir: buildDir,
+        buildDir: fuchsiaLocator.buildDir,
+        fx: fuchsiaLocator.fx,
         name: 'example test',
         os: 'linux',
         path: '/asdf',
@@ -709,6 +754,7 @@ void main() {
         TestDefinition(
           buildDir: '/',
           command: ['asdf'],
+          fx: fuchsiaLocator.fx,
           name: 'Big Test',
           os: 'linux',
         ),
@@ -784,6 +830,40 @@ void main() {
         [],
       );
       expect(result.stdout, 'line 1\nline 2\n');
+    });
+  });
+
+  group('prechecks', () {
+    test('raise errors if fx is missing', () {
+      var logged = false;
+      var cmdCli = FuchsiaTestCommandCli([''], usage: (parser) {});
+      expect(
+        () => cmdCli.preRunChecks(
+          cmdCli.parsedArgs,
+          '/fake/fx',
+          (Object obj) => logged = true,
+        ),
+        throwsA(TypeMatcher<MissingFxException>()),
+      );
+      expect(logged, false);
+    });
+
+    test('prints tests when asked', () async {
+      var logged = false;
+      var calledUsage = false;
+      var cmdCli = FuchsiaTestCommandCli(['--printtests'], usage: (parser) {
+        calledUsage = true;
+      });
+      bool shouldRun = await cmdCli.preRunChecks(
+        cmdCli.parsedArgs,
+        '/fake/fx',
+        (Object obj) => logged = true,
+      );
+      expect(calledUsage, false);
+      expect(shouldRun, false);
+      // Passing `--printtests` does its thing and exits before `/fake/fx` is
+      // validated, which would otherwise throw an exception
+      expect(logged, true);
     });
   });
 }

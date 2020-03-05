@@ -31,8 +31,10 @@ class FuchsiaTestCommandCli {
   /// The underlying class which does all the work.
   FuchsiaTestCommand _cmd;
 
-  FuchsiaTestCommandCli(this.rawArgs, {@required this.usage})
-      : passThroughTokens = FuchsiaTestCommandCli.extractPassThroughTokens(
+  FuchsiaTestCommandCli(
+    this.rawArgs, {
+    @required this.usage,
+  })  : passThroughTokens = FuchsiaTestCommandCli.extractPassThroughTokens(
           rawArgs,
         ),
         parsedArgs = FuchsiaTestCommandCli.parseArgs(rawArgs, usage);
@@ -54,20 +56,19 @@ class FuchsiaTestCommandCli {
     return FuchsiaTestCommandCli.splitArgs(rawArgs)[1];
   }
 
-  static ArgResults parseArgs(List<String> rawArgs, Function(ArgParser) usage) {
+  static ArgResults parseArgs(
+    List<String> rawArgs,
+    Function(ArgParser) usage,
+  ) {
     var localArgs = FuchsiaTestCommandCli.splitArgs(rawArgs)[0];
-
-    try {
-      return fxTestArgParser.parse(localArgs);
-    } on Exception catch (ex) {
-      stderr.writeln('Invalid syntax: $ex');
-      usage(fxTestArgParser);
-      exitCode = 64; // Improper usage
-      return null;
-    }
+    return fxTestArgParser.parse(localArgs);
   }
 
-  Future<bool> preRunChecks() async {
+  Future<bool> preRunChecks(
+    ArgResults parsedArgs,
+    String fxLocation,
+    Function(Object) stdoutWriter,
+  ) async {
     if (parsedArgs['help']) {
       usage(fxTestArgParser);
       return false;
@@ -75,16 +76,21 @@ class FuchsiaTestCommandCli {
     if (parsedArgs['printtests']) {
       ProcessResult result = await Process.run('cat', ['tests.json'],
           workingDirectory: FuchsiaLocator.shared.buildDir);
-      stdout.write(result.stdout);
+      stdoutWriter(result.stdout);
       return false;
     }
+
+    // This command uses extensive fx re-entry, so it's good to make sure fx
+    // is actually located where we expect
+    var fxFile = File(fxLocation);
+    if (!fxFile.existsSync()) {
+      throw MissingFxException();
+    }
+
     return true;
   }
 
   Future<void> run() async {
-    bool shouldRun = await preRunChecks();
-    if (!shouldRun) return;
-
     var testNamesCollector = TestNamesCollector([
       parsedArgs['testNames'],
       parsedArgs.rest,
@@ -112,7 +118,7 @@ class FuchsiaTestCommandCli {
       formatter.update(TestInfo(wrapWith('> fx build', [green, styleBold])));
       await rebuildFuchsia();
     }
-    exitCode = await _cmd.runTestSuite(manifestReader: TestsManifestReader());
+    exitCode = await _cmd.runTestSuite(TestsManifestReader());
   }
 
   OutputFormatter _getFormatter(TestsConfig testsConfig) {

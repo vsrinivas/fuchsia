@@ -12,6 +12,9 @@ class FuchsiaLocator {
   final EnvReader envReader;
   FuchsiaLocator({envReader}) : envReader = envReader ?? EnvReader.shared;
 
+  /// Path to the fx executable
+  String get fx => p.join(fuchsiaDir, fxLocation);
+
   /// Absolute path to the build directory. Read from the environment variable.
   String get buildDir => envReader.getEnv('FUCHSIA_BUILD_DIR');
 

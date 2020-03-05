@@ -29,20 +29,26 @@ const Set<TestType> unsupportedTestTypes = {
 };
 
 class ExecutionHandle {
+  final String fx;
   final String handle;
   final String os;
   final TestType testType;
-  ExecutionHandle(this.handle, this.os, {this.testType});
-  ExecutionHandle.command(this.handle, this.os) : testType = TestType.command;
-  ExecutionHandle.component(this.handle, this.os)
+  ExecutionHandle(this.fx, this.handle, this.os, {this.testType});
+  ExecutionHandle.command(this.fx, this.handle, this.os)
+      : testType = TestType.command;
+  ExecutionHandle.component(this.fx, this.handle, this.os)
       : testType = TestType.component;
-  ExecutionHandle.suite(this.handle, this.os) : testType = TestType.suite;
-  ExecutionHandle.host(this.handle, this.os) : testType = TestType.host;
+  ExecutionHandle.suite(this.fx, this.handle, this.os)
+      : testType = TestType.suite;
+  ExecutionHandle.host(this.fx, this.handle, this.os)
+      : testType = TestType.host;
   ExecutionHandle.unsupportedDeviceTest(this.handle)
-      : os = 'linux',
+      : fx = '',
+        os = 'fuchsia',
         testType = TestType.unsupportedDeviceTest;
   ExecutionHandle.unsupported()
-      : handle = '',
+      : fx = '',
+        handle = '',
         os = '',
         testType = TestType.unsupported;
 
@@ -80,7 +86,7 @@ class ExecutionHandle {
     // correct syntax, but with a helpful warning.
     if (commandTokens.first == 'run') {
       return CommandTokens(
-        ['fx', 'shell', ...commandTokens.sublist(1)],
+        [fx, 'shell', ...commandTokens.sublist(1)],
         warning:
             'Warning! Only host tests are expected to use the "command" syntax. '
             'The test [$commandTokens] did not comply with this expectation.',
@@ -95,7 +101,7 @@ class ExecutionHandle {
     List<String> subCommand = os == 'fuchsia'
         ? ['shell', 'run-test-component'] + runnerFlags
         : ['run-host-test'];
-    return CommandTokens(['fx', ...subCommand, handle]);
+    return CommandTokens([fx, ...subCommand, handle]);
   }
 
   /// Handler for `tests.json` entries containing the `packageUrl` key ending
@@ -103,7 +109,7 @@ class ExecutionHandle {
   CommandTokens _getSuiteTokens() {
     List<String> subCommand =
         os == 'fuchsia' ? ['shell', 'run-test-suite'] : ['run-host-test'];
-    return CommandTokens(['fx', ...subCommand, handle]);
+    return CommandTokens([fx, ...subCommand, handle]);
   }
 
   /// Handler for `tests.json` entries containing the `path` key.

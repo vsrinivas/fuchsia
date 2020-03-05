@@ -1,3 +1,5 @@
+import 'package:fxtest/fxtest.dart';
+
 class BuildException implements Exception {
   final String buildHandle;
   final int exitCode;
@@ -39,3 +41,11 @@ class UnrunnableTestException implements Exception {
 }
 
 class SigIntException implements Exception {}
+
+const _missingFxMessage =
+    'Did not find `fx` command at expected location: //$fxLocation';
+
+class MissingFxException implements Exception {
+  @override
+  String toString() => _missingFxMessage;
+}
