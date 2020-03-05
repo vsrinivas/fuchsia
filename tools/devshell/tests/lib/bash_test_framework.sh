@@ -37,15 +37,19 @@
 #      framework to that directory.
 #   2. Creates the directories listed in the array BT_MKDIR_DEPS within the
 #      temp directory. The framework creates subdirectories within the paths.
-#   3. Copies the files lised in BT_FILE_DEPS to the same relative locations in
-#      the temp directory, creating any additional intermediate directires if
+#   3. Copies the files listed in BT_FILE_DEPS to the same relative locations in
+#      the temp directory, creating any additional intermediate directories if
 #      required.
-#   4. Copies the mock.sh mock executable script to the tool subpaths lised in
+#   4. Creates symbolic links for files and directories listed in
+#      BT_LINKED_DEPS to the same relative locations in
+#      the temp directory, creating any additional intermediate directories if
+#      required.
+#   5. Copies the mock.sh mock executable script to the tool subpaths lised in
 #      BT_MOCKED_TOOLS.
-#   5. Calls BT_INIT_TEMP_DIR() (if present).
-#   6. Launches the sandboxed subprocess (a new sub-shell without user-specific
+#   6. Calls BT_INIT_TEMP_DIR() (if present).
+#   7. Launches the sandboxed subprocess (a new sub-shell without user-specific
 #      settings)
-#   7. Then calls BT_SET_UP() (if present), the current "TEST_..." function,
+#   8. Then calls BT_SET_UP() (if present), the current "TEST_..." function,
 #      and BT_TEAR_DOWN() (if present).
 #
 # CONVENIENCE FUNCTIONS
@@ -281,6 +285,7 @@ declare _BTF_EVAL_OFFSET=0
 # Ensure array types
 declare -a BT_MKDIR_DEPS
 declare -a BT_FILE_DEPS
+declare -a BT_LINKED_DEPS
 declare -a BT_MOCKED_TOOLS
 declare -a BT_TEST_FUNCTIONS
 
@@ -1155,6 +1160,19 @@ which is outside the root directory '${bt_deps_root_realpath}'."
     fi
     mkdir -p $(dirname "${BT_TEMP_DIR}/${filepath}") || return $?
     cp -r "${BT_DEPS_ROOT}/${filepath}" "${BT_TEMP_DIR}/${filepath}" || return $?
+  done
+
+  # Link original files/directories declared by the test,
+  # creating intermediate directories as needed.
+  for filepath in "${BT_LINKED_DEPS[@]}"; do
+    local filepath_realpath="$(btf::realpath "${BT_DEPS_ROOT}/${filepath}")"
+    if [[ "${filepath_realpath}" != "${bt_deps_root_realpath}"/* ]]; then
+      btf::error "BT_LINKED_DEPS element '${filepath}' expands to '${filepath_realpath}',
+which is outside the root directory '${bt_deps_root_realpath}'."
+      return 1
+    fi
+    mkdir -p $(dirname "${BT_TEMP_DIR}/${filepath}") || return $?
+    ln -s "${BT_DEPS_ROOT}/${filepath}" "${BT_TEMP_DIR}/${filepath}" || return $?
   done
 
   # Make mock executables as hardlinks to the BT_TEMP_DIR copy of the framework's mock.sh.

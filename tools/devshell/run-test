@@ -86,8 +86,22 @@ function main {
     fi
   fi
 
-  # TODO: remove reliance on pkgfs/packages.
-  fx-command-run shell runtests "pkgfs/packages/${target}/0/test" "$@" 2>&1 \
+  local test_specs="$(fx-command-run test --exact --info "${target}")"
+  if [[ -z "${test_specs}" ]]; then
+    fx-error "Cannot find an exact match in test specs for \"${target}\". " \
+      "Try using \`fx test ${target}\` if you need partial matches."
+    exit 3
+  fi
+  # concatenate all package_urls found in a comma-separated list
+  local package_urls="$(sed -n 's/^package_url: \(.*\)/\1/p' <<< "${test_specs}" | paste -sd ',' -)"
+
+  if [[ -z "${package_urls}" ]]; then
+    fx-error "Test spec for \"${target}\" doesn't have a Fuchsia component URI. " \
+      "Try running it using \`fx test ${target}\` instead."
+    exit 3
+  fi
+
+  fx-command-run shell runtests -t "${package_urls}" "$@" 2>&1 \
     | fx-command-run symbolize
 }
 

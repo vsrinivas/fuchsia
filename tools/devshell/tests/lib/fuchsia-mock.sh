@@ -108,9 +108,9 @@ btf::expect-mock-args() {
   BT_ASSERT_FILE_EXISTS "${tool}.mock_state"
   shift
   source "${tool}.mock_state"
-  BT_EXPECT_EQ "$#" "${#BT_MOCK_ARGS[@]}"
   local expected=("$@")
-  local actual=("${BT_MOCK_ARGS[@]}")
+  local actual=("${BT_MOCK_ARGS[@]:1}")  # ignore the first arg, the mocked command
+  BT_EXPECT_EQ "${#actual[@]}" "${#expected[@]}"
   for (( i=0; i<"${#expected[@]}"; i++ )); do
     if [[ "${expected[$i]}" != "_ANY_" ]];  then
       BT_EXPECT_EQ "${actual[$i]}" "${expected[$i]}"

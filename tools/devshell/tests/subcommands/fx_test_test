@@ -1,0 +1,40 @@
+#!/bin/bash
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### Test expected behavior of fx test
+
+BT_LINKED_DEPS=(
+  "third_party"
+  "prebuilt/third_party/dart"
+  "scripts/fxtest"
+)
+
+BT_FILE_DEPS=(
+  "scripts/fx"
+  "tools/devshell/tests/subcommands/data/fx_test_test/tests_multiple_in_package.json"
+  "tools/devshell/lib/vars.sh"
+  "tools/devshell/lib/prebuilt.sh"
+  "tools/devshell/test"
+)
+
+declare fx DATA_DIR
+
+BT_SET_UP() {
+  source "${BT_TEMP_DIR}/tools/devshell/tests/lib/fuchsia-mock.sh"
+  fx="$(btf::setup_fx)"
+  DATA_DIR="${BT_TEMP_DIR}/tools/devshell/tests/subcommands/data/fx_test_test/"
+}
+
+# Test that the "fx test --info" outputs in the format expected by other
+# commands, eg `fx run-test`
+TEST_fxtest_info() {
+  cp "${DATA_DIR}/tests_multiple_in_package.json" "${BT_TEMP_DIR}/out/default/tests.json"
+  local test_specs="$(${fx} test --info --exact)"
+  local urls="$(sed -n 's/^package_url: \(.*\)/\1/p' <<< "${test_specs}" | wc -l)"
+  BT_EXPECT_EQ "${urls}" "7"
+}
+
+BT_RUN_TESTS "$@"
+

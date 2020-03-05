@@ -1,0 +1,78 @@
+#!/bin/bash
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### Test expected behavior of fx run-test
+
+BT_FILE_DEPS=(
+  "scripts/fx"
+  "tools/devshell/lib/vars.sh"
+  "tools/devshell/lib/prebuilt.sh"
+  "tools/devshell/run-test"
+)
+
+BT_MOCKED_TOOLS=(
+  "tools/devshell/lib/updates.sh"
+  "tools/devshell/build"
+  "tools/devshell/update"
+  "tools/devshell/wait"
+  "tools/devshell/push-package"
+  "tools/devshell/test"
+  "tools/devshell/shell"
+  "tools/devshell/symbolize"
+)
+
+declare fx DATA_DIR
+
+BT_SET_UP() {
+  source "${BT_TEMP_DIR}/tools/devshell/tests/lib/fuchsia-mock.sh"
+  fx="$(btf::setup_fx)"
+  mkdir -p "${BT_TEMP_DIR}/tools/devshell/lib"
+  cat > "${BT_TEMP_DIR}/tools/devshell/lib/updates.sh.mock_side_effects" <<EOF
+function check-for-amber-server {
+ return 0
+}
+EOF
+}
+
+# Test if "fx run-test" runs fx update when the package is in base
+TEST_in_base() {
+  local test_name="example_component"
+  echo "${test_name}" > "${BT_TEMP_DIR}/out/default/base_packages.list"
+  ${fx} run-test ${test_name} >/dev/null 2>&1
+  # check that "fx update" was called (because the test name is in base) with no arguments
+  btf::expect-mock-args "${BT_TEMP_DIR}/tools/devshell/update"
+}
+
+# Test if "fx run-test" executes "fx shell runtests" properly when
+# the name passed results in multiple test packages.
+TEST_multiple_tests() {
+  local component1_url="fuchsia-pkg://fuchsia.com/example_package#meta/example_component_1.cmx",
+  local component2_url="fuchsia-pkg://fuchsia.com/example_package#meta/example_component_2.cmx",
+  cat > "${BT_TEMP_DIR}/tools/devshell/test.mock_stdout" <<EOF
+command: fx shell run-test-component ${component1_url}
+cpu: arm64
+label: //src/connectivity/telephony/example:example_package(//build/toolchain/fuchsia:arm64)
+name: example_package_test
+os: fuchsia
+package_url: ${component1_url}
+path: /pkgfs/packages/example_package_test/0/test/example_package_test
+
+command: fx shell run-test-component ${component2_url}
+cpu: arm64
+label: //src/connectivity/telephony/example:example_package(//build/toolchain/fuchsia:arm64)
+name: example_package_test
+os: fuchsia
+package_url: ${component2_url}
+path: /pkgfs/packages/example_package_test/0/test/example_package_test
+EOF
+
+  ${fx} run-test example_package >/dev/null 2>&1
+  # check if "fx shell" was executed properly for runtests syntax
+  btf::expect-mock-args "${BT_TEMP_DIR}/tools/devshell/shell" \
+    "runtests" "-t" "${component1_url},${component2_url}"
+}
+
+BT_RUN_TESTS "$@"
+
