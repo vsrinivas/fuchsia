@@ -67,7 +67,13 @@ void SystemLogRecorder::WriteLogMessage(fuchsia::logger::LogMessage message) {
   TRACE_DURATION("feedback:io", "SystemLogRecorder::WriteLogMessage", "message_size",
                  message.msg.size());
 
-  logs_.Write(Format(message));
+  TRACE_DURATION_BEGIN("feedback:io", "SystemLogRecorder::WriteLogMessage::Format");
+  const std::string str = Format(std::move(message));
+  TRACE_DURATION_END("feedback:io", "SystemLogRecorder::WriteLogMessage::Format");
+
+  TRACE_DURATION_BEGIN("feedback:io", "SystemLogRecorder::WriteLogMessage::Write");
+  logs_.Write(str);
+  TRACE_DURATION_END("feedback:io", "SystemLogRecorder::WriteLogMessage::Write");
 }
 
 }  // namespace feedback

@@ -94,11 +94,16 @@ source_set("inspect_node_manager") {
 }
 
 source_set("logs") {
-  public = [ "log_format.h" ]
+  public = [
+    "log_format.h",
+    "log_message_queue.h",
+  ]
 
   sources = [
     "log_format.cc",
     "log_format.h",
+    "log_message_queue.cc",
+    "log_message_queue.h",
   ]
 
   public_deps = [ "//zircon/system/fidl/fuchsia-logger" ]
@@ -106,6 +111,7 @@ source_set("logs") {
   deps = [
     "//src/lib/fxl",
     "//src/lib/syslog/cpp",
+    "//zircon/public/lib/trace",
   ]
 }
 

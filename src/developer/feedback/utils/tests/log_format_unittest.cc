@@ -44,8 +44,8 @@ TEST(LogFormatTest, Check_CorrectSeverity) {
   log_message = Format(BuildLogMessage(FX_LOG_FATAL, "line 4"));
   EXPECT_EQ(log_message, "[15604.000][07559][07687][] FATAL: line 4\n");
 
-  log_message = Format(
-      BuildLogMessage(FX_LOG_INFO + FX_LOG_WARNING + FX_LOG_ERROR + FX_LOG_FATAL, "line 5"));
+  log_message =
+      Format(BuildLogMessage(FX_LOG_INFO + FX_LOG_WARNING + FX_LOG_ERROR + FX_LOG_FATAL, "line 5"));
   EXPECT_EQ(log_message, "[15604.000][07559][07687][] INVALID: line 5\n");
 
   log_message = Format(BuildLogMessage(-1, "line 6"));
@@ -53,14 +53,13 @@ TEST(LogFormatTest, Check_CorrectSeverity) {
 }
 
 TEST(LogFormatTest, Check_CorrectTime) {
-  std::string log_message =
-      Format(BuildLogMessage(FX_LOG_WARNING, "line 1", zx::msec(1)));
+  std::string log_message = Format(BuildLogMessage(FX_LOG_WARNING, "line 1", zx::msec(1)));
   EXPECT_EQ(log_message, "[15604.001][07559][07687][] WARN: line 1\n");
 }
 
 TEST(LogFormatTest, Check_CorrectTags) {
   std::string log_message = Format(BuildLogMessage(FX_LOG_INFO, "line 1", zx::msec(1),
-                                                             /*tags=*/{"foo", "bar"}));
+                                                   /*tags=*/{"foo", "bar"}));
   EXPECT_EQ(log_message, "[15604.001][07559][07687][foo, bar] INFO: line 1\n");
 }
 
