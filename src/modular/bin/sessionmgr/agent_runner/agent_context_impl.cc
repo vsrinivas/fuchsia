@@ -5,10 +5,15 @@
 #include "src/modular/bin/sessionmgr/agent_runner/agent_context_impl.h"
 
 #include <fuchsia/intl/cpp/fidl.h>
+#include <fuchsia/io/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
+#include <lib/fdio/directory.h>
+#include <lib/fdio/vfs.h>
+#include <zircon/status.h>
 
 #include <memory>
 
+#include "lib/fdio/directory.h"
 #include "src/modular/bin/sessionmgr/agent_runner/agent_runner.h"
 #include "src/modular/lib/common/teardown.h"
 
@@ -27,6 +32,37 @@ std::string HashAgentUrl(const std::string& agent_url) {
   std::size_t found = agent_url.find_last_of('/');
   auto last_part = found == agent_url.length() - 1 ? "" : agent_url.substr(found + 1);
   return std::to_string(std::hash<std::string>{}(agent_url)) + last_part;
+}
+
+// Get a list of names of the entries in a directory.
+void GetFidlDirectoryEntries(fuchsia::io::Directory* dir,
+                             fit::function<void(std::vector<std::string>)> callback) {
+  constexpr uint64_t max_bytes = 4096;
+
+  dir->ReadDirents(
+      max_bytes, [callback = std::move(callback)](int32_t status, std::vector<uint8_t> dirents) {
+        std::vector<std::string> entry_names{};
+
+        if (status != ZX_OK) {
+          FXL_LOG(ERROR) << "GetFidlDirectoryEntries: could not read directory entries, error "
+                         << status << " (" << zx_status_get_string(status) << ")";
+          callback(std::move(entry_names));
+          return;
+        }
+
+        uint64_t offset = 0;
+        auto* data_ptr = dirents.data();
+        while (dirents.size() - offset >= sizeof(vdirent_t)) {
+          vdirent_t* de = reinterpret_cast<vdirent_t*>(data_ptr + offset);
+          auto name = std::string(de->name, de->size);
+          if (name.at(0) != '.') {
+            entry_names.push_back(name);
+          }
+          offset += sizeof(vdirent_t) + de->size;
+        }
+
+        callback(std::move(entry_names));
+      });
 }
 
 };  // namespace
@@ -79,6 +115,18 @@ class AgentContextImpl::InitializeCall : public Operation<> {
     agent_context_impl_->app_client_->services().ConnectToService(
         agent_context_impl_->agent_.NewRequest());
 
+    // Enumerate the services that the agent has published in its outgoing directory.
+    auto agent_outgoing_dir_handle =
+        fdio_service_clone(agent_context_impl_->app_client_->services().directory().get());
+    FXL_CHECK(agent_outgoing_dir_handle != ZX_HANDLE_INVALID);
+    zx::channel agent_outgoing_dir_chan(agent_outgoing_dir_handle);
+    outgoing_dir_ptr_.Bind(std::move(agent_outgoing_dir_chan));
+
+    GetFidlDirectoryEntries(outgoing_dir_ptr_.get(), [this, flow](auto entries) {
+      agent_context_impl_->agent_outgoing_services_ = std::set<std::string>(
+          std::make_move_iterator(entries.begin()), std::make_move_iterator(entries.end()));
+    });
+
     // We only want to use fuchsia::modular::Lifecycle if it exists.
     agent_context_impl_->app_client_->primary_service().set_error_handler(
         [agent_context_impl = agent_context_impl_](zx_status_t status) {
@@ -102,6 +150,7 @@ class AgentContextImpl::InitializeCall : public Operation<> {
   AgentContextImpl* const agent_context_impl_;
   fuchsia::sys::Launcher* const launcher_;
   fuchsia::modular::AppConfig agent_config_;
+  fuchsia::io::DirectoryPtr outgoing_dir_ptr_;
 };
 
 // If |terminating| is set to true, the agent will be torn down irrespective
@@ -160,8 +209,8 @@ AgentContextImpl::AgentContextImpl(const AgentContextInfo& info,
                                    fuchsia::modular::AppConfig agent_config,
                                    inspect::Node agent_node)
     : url_(agent_config.url),
-      agent_runner_(info.component_context_info.agent_runner),
       component_context_impl_(info.component_context_info, kAgentComponentNamespace, url_, url_),
+      agent_runner_(info.component_context_info.agent_runner),
       entity_provider_runner_(info.component_context_info.entity_provider_runner),
       agent_services_factory_(info.agent_services_factory),
       agent_node_(std::move(agent_node)) {
@@ -186,6 +235,31 @@ AgentContextImpl::AgentContextImpl(const AgentContextInfo& info,
 }
 
 AgentContextImpl::~AgentContextImpl() = default;
+
+void AgentContextImpl::ConnectToService(
+    std::string requestor_url,
+    fidl::InterfaceRequest<fuchsia::modular::AgentController> agent_controller_request,
+    std::string service_name, ::zx::channel channel) {
+  // Run this task on the operation queue to ensure that all member variables are
+  // fully initialized before we query their state.
+  operation_queue_.Add(std::make_unique<SyncCall>(
+      [this, requestor_url, agent_controller_request = std::move(agent_controller_request),
+       service_name, channel = std::move(channel)]() mutable {
+        FXL_CHECK(state_ == State::RUNNING);
+
+        if (agent_outgoing_services_.count(service_name) > 0) {
+          app_client_->services().ConnectToService(std::move(channel), service_name);
+        } else {
+          fuchsia::sys::ServiceProviderPtr agent_services;
+          agent_->Connect(requestor_url, agent_services.NewRequest());
+          agent_services->ConnectToService(service_name, std::move(channel));
+        }
+
+        // Add a binding to the |controller|. When all the bindings go away,
+        // the agent will stop.
+        agent_controller_bindings_.AddBinding(this, std::move(agent_controller_request));
+      }));
+}
 
 void AgentContextImpl::NewAgentConnection(
     const std::string& requestor_url,

@@ -51,6 +51,7 @@ executable("entity_provider_runner_unittest") {
     "//src/modular/bin/sessionmgr/agent_runner",
     "//src/modular/lib/connect",
     "//src/modular/lib/fidl:array_to_string",
+    "//src/modular/lib/pseudo_dir",
     "//src/modular/lib/testing:mock_base",
     "//src/modular/lib/testing:test_with_ledger",
     "//zircon/public/lib/fs",
