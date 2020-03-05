@@ -41,7 +41,6 @@ class IntegrationTest : public TestBase {
 
   bool primary_client_connected() {
     fbl::AutoLock l(controller()->mtx());
-    fbl::AutoLock cl(&controller()->primary_client_->mtx_);
     return (controller()->primary_client_ &&
             controller()->primary_client_ == controller()->active_client_ &&
             // DC processed the EnableVsync request. We can now expect vsync events.

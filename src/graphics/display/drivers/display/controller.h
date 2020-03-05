@@ -14,7 +14,6 @@
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
 
-#include <functional>
 #include <memory>
 
 #include <ddktl/device.h>

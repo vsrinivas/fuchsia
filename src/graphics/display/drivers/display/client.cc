@@ -1333,6 +1333,7 @@ void Client::SetOwnership(bool is_owner) {
 void Client::OnDisplaysChanged(const uint64_t* displays_added, size_t added_count,
                                const uint64_t* displays_removed, size_t removed_count) {
   ZX_DEBUG_ASSERT(controller_->current_thread_is_loop());
+  controller_->AssertMtxAliasHeld(controller_->mtx());
 
   size_t actual_removed_count = 0;
   size_t actual_added_count = 0;
@@ -1345,7 +1346,6 @@ void Client::OnDisplaysChanged(const uint64_t* displays_added, size_t added_coun
     }
   }
 
-  controller_->AssertMtxAliasHeld(controller_->mtx());
   for (unsigned i = 0; i < added_count; i++) {
     fbl::AllocChecker ac;
     auto config = fbl::make_unique_checked<DisplayConfig>(&ac);
@@ -1772,7 +1772,6 @@ void ClientProxy::ReapplyConfig() {
 
 zx_status_t ClientProxy::OnCaptureComplete() {
   ZX_DEBUG_ASSERT(mtx_trylock(controller_->mtx()) == thrd_busy);
-  fbl::AutoLock l(&mtx_);
   if (enable_capture_) {
     handler_.CaptureCompleted();
   }
@@ -1784,11 +1783,8 @@ zx_status_t ClientProxy::OnDisplayVsync(uint64_t display_id, zx_time_t timestamp
                                         uint64_t* image_ids, size_t count) {
   ZX_DEBUG_ASSERT(mtx_trylock(controller_->mtx()) == thrd_busy);
 
-  {
-    fbl::AutoLock l(&mtx_);
-    if (!enable_vsync_) {
-      return ZX_ERR_NOT_SUPPORTED;
-    }
+  if (!enable_vsync_) {
+    return ZX_ERR_NOT_SUPPORTED;
   }
 
   zx_status_t status =
@@ -1900,9 +1896,7 @@ ClientProxy::ClientProxy(Controller* controller, bool is_vc, uint32_t client_id)
     : ClientParent(controller->zxdev()),
       controller_(controller),
       is_vc_(is_vc),
-      handler_(controller_, this, is_vc_, client_id) {
-  mtx_init(&mtx_, mtx_plain);
-}
+      handler_(controller_, this, is_vc_, client_id) {}
 
 ClientProxy::ClientProxy(Controller* controller, bool is_vc, uint32_t client_id,
                          zx::channel server_channel)
@@ -1910,14 +1904,9 @@ ClientProxy::ClientProxy(Controller* controller, bool is_vc, uint32_t client_id,
       controller_(controller),
       is_vc_(is_vc),
       server_channel_(zx::unowned_channel(server_channel)),
-      handler_(controller_, this, is_vc_, client_id, std::move(server_channel)) {
-  mtx_init(&mtx_, mtx_plain);
-}
+      handler_(controller_, this, is_vc_, client_id, std::move(server_channel)) {}
 
-ClientProxy::~ClientProxy() {
-  mtx_destroy(&mtx_);
-  mtx_destroy(&task_mtx_);
-}
+ClientProxy::~ClientProxy() { mtx_destroy(&task_mtx_); }
 
 }  // namespace display
 
