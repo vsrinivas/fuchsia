@@ -89,8 +89,10 @@ class Queue {
   std::unique_ptr<Database> database_;
   CrashServer* crash_server_;
   QueueInfo info_;
+
   fuchsia::net::ConnectivityPtr connectivity_;
-  fxl::CancelableClosure retry_task_;
+  // We need to be able to cancel a posted retry task when |this| is destroyed.
+  fxl::CancelableClosure network_reconnection_task_;
   backoff::ExponentialBackoff network_reconnection_backoff_;
 
   State state_ = State::LeaveAsPending;

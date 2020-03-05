@@ -194,9 +194,9 @@ void Queue::ProcessAllOnNetworkReachable() {
   connectivity_.set_error_handler([this](zx_status_t status) {
     FX_PLOGS(ERROR, status) << "Lost connection to fuchsia.net.Connectivity";
 
-    retry_task_.Reset([this]() mutable { ProcessAllOnNetworkReachable(); });
+    network_reconnection_task_.Reset([this]() mutable { ProcessAllOnNetworkReachable(); });
     async::PostDelayedTask(
-        dispatcher_, [retry_task = retry_task_.callback()]() { retry_task(); },
+        dispatcher_, [cb = network_reconnection_task_.callback()]() { cb(); },
         network_reconnection_backoff_.GetNext());
   });
   connectivity_.events().OnNetworkReachable = [this](bool reachable) {

@@ -506,11 +506,14 @@ TEST_F(QueueTest, Check_ProcessAll_OnReconnect_NetworkReachable) {
   });
   ASSERT_FALSE(queue_->IsEmpty());
 
-  // Re-establish the network connection and make sure that there is enough time
-  // for the network exponential backoff to reconnect.
+  // Close the connection to the network reachability service.
   network_reachability_provider_->CloseConnection();
+
+  // We run the loop longer than the delay to account for the nondeterminism of
+  // backoff::ExponentialBackoff.
   RunLoopFor(zx::min(3));
 
+  // We should be re-connected to the network reachability service.
   // Test upload on network reachable.
   network_reachability_provider_->TriggerOnNetworkReachable(false);
   RunLoopUntilIdle();
