@@ -156,11 +156,6 @@
             "package_name": "glob"
         },
         {
-            "crate_name": "harfbuzz",
-            "crate_type": "lib",
-            "package_name": "harfbuzz"
-        },
-        {
             "crate_name": "heck",
             "crate_type": "lib",
             "package_name": "heck"

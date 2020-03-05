@@ -121,7 +121,6 @@ eui48 = { version = "0.4.6", features = ["serde", "disp_hexstring"] }
 freetype = "0.4" # saved for future use
 getopts = "0.2"
 glob = "0.3.0"
-harfbuzz = { version = "0.3.1", default-features = false } # saved for future use
 hex = "0.3.2"
 http = "0.1"
 hyper = { version = "0.12.13", default-features = false }
