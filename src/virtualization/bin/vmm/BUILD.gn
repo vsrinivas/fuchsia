@@ -134,6 +134,10 @@ source_set("lib") {
     "//zircon/system/fidl/fuchsia-hardware-ethernet:fuchsia-hardware-ethernet_c",
     "//zircon/system/fidl/fuchsia-sysinfo",
   ]
+
+  # TODO(47042): UBSan has found an instance of undefined behavior in this target.
+  # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
+  configs += [ "//build/config:temporarily_disable_ubsan_do_not_use" ]
 }
 
 executable("bin") {
