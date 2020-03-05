@@ -45,7 +45,9 @@ Queue::Queue(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirecto
       services_(services),
       database_(std::move(database)),
       crash_server_(crash_server),
-      info_(std::move(info_context)) {
+      info_(std::move(info_context)),
+      network_reconnection_backoff_(/*initial_delay=*/zx::min(1), /*retry_factor=*/2u,
+                                   /*max_delay=*/zx::hour(1)) {
   FXL_DCHECK(dispatcher_);
   FXL_DCHECK(database_);
 
@@ -189,11 +191,16 @@ void Queue::ProcessAllEveryHour() {
 
 void Queue::ProcessAllOnNetworkReachable() {
   connectivity_ = services_->Connect<fuchsia::net::Connectivity>();
-  connectivity_.set_error_handler([](zx_status_t status) {
+  connectivity_.set_error_handler([this](zx_status_t status) {
     FX_PLOGS(ERROR, status) << "Lost connection to fuchsia.net.Connectivity";
-    // TODO(fxb/46775): try to reconnect with exponential backoff timing.
+
+    retry_task_.Reset([this]() mutable { ProcessAllOnNetworkReachable(); });
+    async::PostDelayedTask(
+        dispatcher_, [retry_task = retry_task_.callback()]() { retry_task(); },
+        network_reconnection_backoff_.GetNext());
   });
   connectivity_.events().OnNetworkReachable = [this](bool reachable) {
+    network_reconnection_backoff_.Reset();
     if (reachable) {
       if (ProcessAll() > 0) {
         FX_LOGS(INFO) << "Processing of pending crash reports queue on network reachable";

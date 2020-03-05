@@ -491,6 +491,35 @@ TEST_F(QueueTest, Check_ProcessAllTwice_OnNetworkReachable) {
   EXPECT_TRUE(queue_->IsEmpty());
 }
 
+TEST_F(QueueTest, Check_ProcessAll_OnReconnect_NetworkReachable) {
+  // Setup crash report upload outcome: Automatic upload fails,
+  // succeed when the network becomes reachable
+  SetUpQueue({
+      kUploadFailed,
+      kUploadSuccessful,
+  });
+
+  // Automatic crash report upload fails.
+  ApplyQueueOps({
+      QueueOps::AddNewReport,
+      QueueOps::SetStateToUpload,
+  });
+  ASSERT_FALSE(queue_->IsEmpty());
+
+  // Re-establish the network connection and make sure that there is enough time
+  // for the network exponential backoff to reconnect.
+  network_reachability_provider_->CloseConnection();
+  RunLoopFor(zx::min(3));
+
+  // Test upload on network reachable.
+  network_reachability_provider_->TriggerOnNetworkReachable(false);
+  RunLoopUntilIdle();
+  EXPECT_FALSE(queue_->IsEmpty());
+  network_reachability_provider_->TriggerOnNetworkReachable(true);
+  RunLoopUntilIdle();
+  EXPECT_TRUE(queue_->IsEmpty());
+}
+
 TEST_F(QueueTest, Check_InspectTree) {
   SetUpQueue({
       kUploadSuccessful,

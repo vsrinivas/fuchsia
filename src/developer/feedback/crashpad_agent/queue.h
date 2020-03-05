@@ -16,6 +16,7 @@
 #include "src/developer/feedback/crashpad_agent/info/info_context.h"
 #include "src/developer/feedback/crashpad_agent/info/queue_info.h"
 #include "src/developer/feedback/crashpad_agent/settings.h"
+#include "src/lib/backoff/exponential_backoff.h"
 #include "src/lib/fxl/macros.h"
 #include "third_party/crashpad/util/misc/uuid.h"
 
@@ -89,6 +90,8 @@ class Queue {
   CrashServer* crash_server_;
   QueueInfo info_;
   fuchsia::net::ConnectivityPtr connectivity_;
+  fxl::CancelableClosure retry_task_;
+  backoff::ExponentialBackoff network_reconnection_backoff_;
 
   State state_ = State::LeaveAsPending;
 
