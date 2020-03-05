@@ -12,6 +12,7 @@
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/shortcut/cpp/fidl.h>
+#include <fuchsia/ui/views/accessibility/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/binding_set.h>
@@ -44,6 +45,8 @@ class App : public fuchsia::ui::policy::Presenter,
             public fuchsia::ui::policy::DeviceListenerRegistry,
             public fuchsia::ui::input::InputDeviceRegistry,
             public fuchsia::ui::input::accessibility::PointerEventRegistry,
+            public fuchsia::ui::views::accessibility::FocuserRegistry,
+            public fuchsia::ui::views::Focuser,
             public ui_input::InputDeviceImpl::Listener {
  public:
   App(const fxl::CommandLine& command_line, async::Loop* loop);
@@ -57,6 +60,9 @@ class App : public fuchsia::ui::policy::Presenter,
   // |fuchsia.ui.input.accessibility.PointerEventRegistry|
   void Register(fidl::InterfaceHandle<fuchsia::ui::input::accessibility::PointerEventListener>
                     pointer_event_listener) override;
+
+  // |fuchsia.ui.views.accessibility.FocuserRegistry|
+  void RegisterFocuser(fidl::InterfaceRequest<fuchsia::ui::views::Focuser> view_focuser) override;
 
  private:
   // |Presenter|
@@ -101,12 +107,17 @@ class App : public fuchsia::ui::policy::Presenter,
   void SwitchToNextPresentation();
   void SwitchToPreviousPresentation();
 
+  // |fuchsia.ui.views.Focuser|
+  void RequestFocus(fuchsia::ui::views::ViewRef view_ref, RequestFocusCallback callback) override;
+
   std::unique_ptr<sys::ComponentContext> component_context_;
   fidl::BindingSet<fuchsia::ui::policy::Presenter> presenter_bindings_;
   fidl::BindingSet<fuchsia::ui::policy::DeviceListenerRegistry> device_listener_bindings_;
   fidl::BindingSet<fuchsia::ui::input::InputDeviceRegistry> input_receiver_bindings_;
   fidl::BindingSet<fuchsia::ui::input::accessibility::PointerEventRegistry>
       a11y_pointer_event_bindings_;
+  fidl::BindingSet<fuchsia::ui::views::accessibility::FocuserRegistry>
+      a11y_focuser_registry_bindings_;
   ui_input::InputReader input_reader_;
   std::unique_ptr<FactoryResetManager> fdr_manager_;
 
@@ -121,6 +132,14 @@ class App : public fuchsia::ui::policy::Presenter,
   // This is a privileged interface between Root Presenter and Scenic. It forwards the requests
   // incoming from accessibility services to start listening for pointer events.
   fuchsia::ui::policy::accessibility::PointerEventRegistryPtr pointer_event_registry_;
+  // This is a privileged interface between Root Presenter and Scenic. It forwards the Focuser
+  // requests incoming from accessibility services to Scenic. This Focuser is implicitly associated
+  // with the root view, which gives it access to change the Focus Chain to whatever view that is
+  // part of the hierarchy.
+  fuchsia::ui::views::FocuserPtr view_focuser_;
+  // Binding holding the connection between a11y and Root Presenter. The incoming Focuser calls are
+  // simply forwarded using |view_focuser_|.
+  fidl::Binding<fuchsia::ui::views::Focuser> focuser_binding_;
   // This is a privileged interface between Root Presenter and Accessibility. It allows Root
   // Presenter to register presentations with Accessibility for magnification.
   fuchsia::accessibility::MagnifierPtr magnifier_;
