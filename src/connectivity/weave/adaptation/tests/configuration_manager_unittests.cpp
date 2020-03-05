@@ -103,7 +103,8 @@ TEST_F(ConfigurationManagerTest, SetAndGetFabricId) {
   EXPECT_EQ(cfg_mgr_.GetFabricId(stored_fabric_id), WEAVE_NO_ERROR);
   EXPECT_EQ(stored_fabric_id, fabric_id);
 }
-TEST_F(ConfigurationManagerTest, GetPrimaryWiFiMacAddress) {
+
+TEST_F(ConfigurationManagerTest, DISABLED_GetPrimaryWiFiMacAddress) {
   uint8_t mac[ETH_ALEN];
   RunLoopUntilIdle();
   EXPECT_EQ(cfg_mgr_.GetPrimaryWiFiMACAddress(mac), WEAVE_NO_ERROR);
