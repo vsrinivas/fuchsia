@@ -32,13 +32,12 @@ WeaveConfigManager::WeaveConfigManager(const std::string& path) : config_store_p
     config_ = json_parser_.ParseFromFile(config_store_path_);
   } else {
     config_.SetObject();
-    FXL_CHECK(CommitKVPairs() == WEAVE_NO_ERROR) << "Failed to write init configuration to disk.";
   }
   FXL_CHECK(!json_parser_.HasError())
       << "Failed to load configuration: " << json_parser_.error_str();
 }
 
-WEAVE_ERROR WeaveConfigManager::ReadConfigValue(const std::string& key, bool* value) {
+WEAVE_ERROR WeaveConfigManager::ReadConfigValue(const std::string& key, bool* value) const {
   rapidjson::Value config_value;
   WEAVE_ERROR error = WEAVE_NO_ERROR;
   if ((error = ReadKVPair(key, config_value)) != WEAVE_NO_ERROR) {
@@ -50,7 +49,7 @@ WEAVE_ERROR WeaveConfigManager::ReadConfigValue(const std::string& key, bool* va
   return WEAVE_NO_ERROR;
 }
 
-WEAVE_ERROR WeaveConfigManager::ReadConfigValue(const std::string& key, uint32_t* value) {
+WEAVE_ERROR WeaveConfigManager::ReadConfigValue(const std::string& key, uint32_t* value) const {
   rapidjson::Value config_value;
   WEAVE_ERROR error = WEAVE_NO_ERROR;
   if ((error = ReadKVPair(key, config_value)) != WEAVE_NO_ERROR) {
@@ -62,7 +61,7 @@ WEAVE_ERROR WeaveConfigManager::ReadConfigValue(const std::string& key, uint32_t
   return WEAVE_NO_ERROR;
 }
 
-WEAVE_ERROR WeaveConfigManager::ReadConfigValue(const std::string& key, uint64_t* value) {
+WEAVE_ERROR WeaveConfigManager::ReadConfigValue(const std::string& key, uint64_t* value) const {
   rapidjson::Value config_value;
   WEAVE_ERROR error = WEAVE_NO_ERROR;
   if ((error = ReadKVPair(key, config_value)) != WEAVE_NO_ERROR) {
@@ -75,7 +74,7 @@ WEAVE_ERROR WeaveConfigManager::ReadConfigValue(const std::string& key, uint64_t
 }
 
 WEAVE_ERROR WeaveConfigManager::ReadConfigValueStr(const std::string& key, char* value,
-                                                   size_t value_size, size_t* out_size) {
+                                                   size_t value_size, size_t* out_size) const {
   rapidjson::Value config_value;
   WEAVE_ERROR error = WEAVE_NO_ERROR;
   if ((error = ReadKVPair(key, config_value)) != WEAVE_NO_ERROR) {
@@ -93,7 +92,7 @@ WEAVE_ERROR WeaveConfigManager::ReadConfigValueStr(const std::string& key, char*
 }
 
 WEAVE_ERROR WeaveConfigManager::ReadConfigValueBin(const std::string& key, uint8_t* value,
-                                                   size_t value_size, size_t* out_size) {
+                                                   size_t value_size, size_t* out_size) const {
   rapidjson::Value config_value;
   WEAVE_ERROR error = WEAVE_NO_ERROR;
   if ((error = ReadKVPair(key, config_value)) != WEAVE_NO_ERROR) {
@@ -146,7 +145,7 @@ WEAVE_ERROR WeaveConfigManager::ClearConfigValue(const std::string& key) {
   return CommitKVPairs();
 }
 
-bool WeaveConfigManager::ConfigValueExists(const std::string& key) {
+bool WeaveConfigManager::ConfigValueExists(const std::string& key) const {
   rapidjson::Value value;
   return ReadKVPair(key, value) == WEAVE_NO_ERROR;
 }
@@ -157,7 +156,7 @@ WEAVE_ERROR WeaveConfigManager::FactoryResetConfig() {
   return CommitKVPairs();
 }
 
-WEAVE_ERROR WeaveConfigManager::ReadKVPair(const std::string& key, rapidjson::Value& value) {
+WEAVE_ERROR WeaveConfigManager::ReadKVPair(const std::string& key, rapidjson::Value& value) const {
   const std::lock_guard<std::mutex> read_lock(config_mutex_);
   if (!config_.HasMember(key)) {
     return WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND;

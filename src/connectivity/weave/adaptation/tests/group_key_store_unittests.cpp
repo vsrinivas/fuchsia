@@ -78,8 +78,6 @@ class GroupKeyStoreTest : public ::gtest::TestLoopFixture {
   GroupKeyStoreImpl group_key_store_;
 };
 
-TEST_F(GroupKeyStoreTest, Initialize) { EXPECT_EQ(ReadConfigStore(), "{}"); }
-
 TEST_F(GroupKeyStoreTest, InitializeWithExistingStore) {
   uint32_t key_ids[kMaxGroupKeys];
   uint8_t key_count;

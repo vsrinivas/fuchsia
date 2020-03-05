@@ -15,6 +15,7 @@ namespace nl::Weave::DeviceLayer::Internal {
 namespace testing {
 namespace {
 constexpr char kWeaveConfigStoreTestPath[] = "/data/test_config.json";
+constexpr char kWeaveConfigStoreReadOnlyTestPath[] = "/pkg/data/test_config.json";
 constexpr char kWeaveConfigStoreAltTestPath[] = "/data/alt_test_config.json";
 }  // namespace
 
@@ -33,17 +34,6 @@ class WeaveConfigManagerTest : public ::gtest::TestLoopFixture {
  protected:
   WeaveConfigManager weave_config_manager_;
 };
-
-TEST_F(WeaveConfigManagerTest, InitializeConfigStore) {
-  EXPECT_FALSE(files::IsFile(kWeaveConfigStoreAltTestPath));
-
-  WeaveConfigManager weave_config_manager(kWeaveConfigStoreAltTestPath);
-
-  std::string file_contents;
-  EXPECT_TRUE(files::ReadFileToString(kWeaveConfigStoreAltTestPath, &file_contents));
-  EXPECT_EQ(file_contents, "{}");
-  EXPECT_TRUE(files::DeletePath(kWeaveConfigStoreAltTestPath, false));
-}
 
 TEST_F(WeaveConfigManagerTest, InitializeFromExistingConfigStore) {
   constexpr char kTestKeyUint64[] = "test-key-uint64";
@@ -123,13 +113,14 @@ TEST_F(WeaveConfigManagerTest, ReadWriteString) {
   char read_value[256];
   size_t read_value_size = 0;
   EXPECT_EQ(weave_config_manager_.ReadConfigValueStr(kTestKeyString, read_value, kTestValStringSize,
-                                                &read_value_size),
+                                                     &read_value_size),
             WEAVE_NO_ERROR);
   EXPECT_EQ(read_value_size, kTestValStringSize);
   EXPECT_EQ(memcmp(kTestValString, read_value, read_value_size), 0);
 
-  EXPECT_EQ(weave_config_manager_.ReadConfigValueStr(kTestKeyString, read_value, 0, &read_value_size),
-            WEAVE_ERROR_BUFFER_TOO_SMALL);
+  EXPECT_EQ(
+      weave_config_manager_.ReadConfigValueStr(kTestKeyString, read_value, 0, &read_value_size),
+      WEAVE_ERROR_BUFFER_TOO_SMALL);
 
   std::string file_contents;
   EXPECT_TRUE(files::ReadFileToString(kWeaveConfigStoreTestPath, &file_contents));
@@ -149,13 +140,14 @@ TEST_F(WeaveConfigManagerTest, ReadWriteBinary) {
   uint8_t read_value[256];
   size_t read_value_size = 0;
   EXPECT_EQ(weave_config_manager_.ReadConfigValueBin(kTestKeyBinary, read_value, kTestValBinarySize,
-                                                &read_value_size),
+                                                     &read_value_size),
             WEAVE_NO_ERROR);
   EXPECT_EQ(read_value_size, kTestValBinarySize);
   EXPECT_EQ(memcmp(kTestValBinary, read_value, read_value_size), 0);
 
-  EXPECT_EQ(weave_config_manager_.ReadConfigValueBin(kTestKeyBinary, read_value, 0, &read_value_size),
-            WEAVE_ERROR_BUFFER_TOO_SMALL);
+  EXPECT_EQ(
+      weave_config_manager_.ReadConfigValueBin(kTestKeyBinary, read_value, 0, &read_value_size),
+      WEAVE_ERROR_BUFFER_TOO_SMALL);
 
   std::string file_contents;
   EXPECT_TRUE(files::ReadFileToString(kWeaveConfigStoreTestPath, &file_contents));
@@ -260,9 +252,10 @@ TEST_F(WeaveConfigManagerTest, FailOnMismatchedTypes) {
             WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND);
   EXPECT_EQ(weave_config_manager_.ReadConfigValue(kTestKeyUint, &read_bool_value),
             WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND);
-  EXPECT_EQ(weave_config_manager_.ReadConfigValueStr(kTestKeyUint64, read_string_value,
-                                                sizeof(read_string_value), &read_string_value_size),
-            WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND);
+  EXPECT_EQ(
+      weave_config_manager_.ReadConfigValueStr(kTestKeyUint64, read_string_value,
+                                               sizeof(read_string_value), &read_string_value_size),
+      WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND);
   EXPECT_EQ(weave_config_manager_.ReadConfigValue(kTestKeyString, &read_uint64_value),
             WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND);
 }
@@ -282,6 +275,17 @@ TEST_F(WeaveConfigManagerTest, OverwriteKeys) {
   std::string file_contents;
   EXPECT_TRUE(files::ReadFileToString(kWeaveConfigStoreTestPath, &file_contents));
   EXPECT_EQ(file_contents, kTestConfigStoreContents);
+}
+
+TEST_F(WeaveConfigManagerTest, ReadOnly) {
+  constexpr char kTestKeyBool[] = "test-key-bool";
+  constexpr bool kTestValBool = true;
+  std::unique_ptr<WeaveConfigReader> reader =
+      WeaveConfigManager::CreateReadOnlyInstance(kWeaveConfigStoreReadOnlyTestPath);
+
+  bool read_value = false;
+  EXPECT_EQ(reader->ReadConfigValue(kTestKeyBool, &read_value), WEAVE_NO_ERROR);
+  EXPECT_EQ(read_value, kTestValBool);
 }
 
 }  // namespace testing

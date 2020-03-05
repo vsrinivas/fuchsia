@@ -32,6 +32,12 @@ test_package("adaptation_tests") {
     ":platform_manager_unittests",
     ":weave_config_manager_unittests",
   ]
+  resources = [
+    {
+      path = rebase_path("data/test_config.json")
+      dest = "test_config.json"
+    },
+  ]
 }
 
 executable("configuration_manager_unittests") {
