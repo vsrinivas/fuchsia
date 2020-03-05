@@ -11,8 +11,6 @@ use futures::stream::StreamExt;
 use futures::TryFutureExt;
 use parking_lot::RwLock;
 
-use anyhow::Error;
-
 use crate::registry::base::{Command, Context, Notifier, SettingHandler, State};
 use crate::registry::device_storage::{
     DeviceStorage, DeviceStorageCompatible, DeviceStorageFactory,
@@ -97,10 +95,10 @@ impl NightModeController {
                     }
                     _ => {
                         responder
-                            .send(Err(Error::new(SwitchboardError::UnimplementedRequest {
+                            .send(Err(SwitchboardError::UnimplementedRequest {
                                 setting_type: SettingType::NightMode,
                                 request: request,
-                            })))
+                            }))
                             .ok();
                     }
                 }
@@ -150,10 +148,9 @@ impl NightModeController {
             let write_request = storage_lock.write(&info, false).await;
             let _ = match write_request {
                 Ok(_) => responder.send(Ok(None)),
-                Err(err) => responder.send(Err(Error::new(SwitchboardError::StorageFailure {
+                Err(_) => responder.send(Err(SwitchboardError::StorageFailure {
                     setting_type: SettingType::NightMode,
-                    storage_error: err,
-                }))),
+                })),
             };
         });
     }

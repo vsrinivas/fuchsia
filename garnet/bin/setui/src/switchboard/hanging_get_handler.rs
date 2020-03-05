@@ -286,7 +286,7 @@ mod tests {
             &mut self,
             setting_type: SettingType,
             request: SettingRequest,
-            callback: futures::channel::oneshot::Sender<Result<Option<SettingResponse>, Error>>,
+            callback: futures::channel::oneshot::Sender<SettingResponseResult>,
         ) -> Result<(), Error> {
             assert_eq!(setting_type, SETTING_TYPE);
             assert_eq!(request, SettingRequest::Get);

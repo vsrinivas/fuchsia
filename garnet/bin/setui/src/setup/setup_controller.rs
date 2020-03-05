@@ -10,7 +10,6 @@ use crate::switchboard::base::{
     ConfigurationInterfaceFlags, SettingRequest, SettingRequestResponder, SettingResponse,
     SettingType, SetupInfo, SwitchboardError,
 };
-use anyhow::Error;
 use fuchsia_async as fasync;
 use futures::lock::Mutex;
 use futures::StreamExt;
@@ -72,10 +71,10 @@ impl SetupController {
                 }
                 _ => {
                     responder
-                        .send(Err(Error::new(SwitchboardError::UnimplementedRequest {
+                        .send(Err(SwitchboardError::UnimplementedRequest {
                             setting_type: SettingType::Setup,
                             request: request,
-                        })))
+                        }))
                         .ok();
                 }
             },

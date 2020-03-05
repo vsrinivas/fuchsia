@@ -6,10 +6,10 @@ use crate::conduit::base::{ConduitData, ConduitHandle, ConduitSender};
 use crate::registry::base::{Command, SettingHandler, SettingHandlerFactory, State};
 use crate::switchboard::base::{
     SettingAction, SettingActionData, SettingEvent, SettingRequest, SettingResponseResult,
-    SettingType,
+    SettingType, SwitchboardError,
 };
 
-use anyhow::{format_err, Context as _};
+use anyhow::Context as _;
 use fuchsia_async as fasync;
 
 use futures::channel::mpsc::UnboundedSender;
@@ -178,27 +178,29 @@ impl RegistryImpl {
             None => {
                 self.conduit_sender.send(ConduitData::Event(SettingEvent::Response(
                     id,
-                    Err(format_err!("no handler for requested type")),
+                    Err(SwitchboardError::UnhandledType { setting_type: setting_type }),
                 )));
             }
             Some(command_sender) => {
                 let (responder, receiver) =
                     futures::channel::oneshot::channel::<SettingResponseResult>();
                 let sender_clone = self.conduit_sender.clone();
-                let error_sender_clone = self.conduit_sender.clone();
-                fasync::spawn(
-                    async move {
-                        let response =
-                            receiver.await.context("getting response from controller")?;
-                        sender_clone.send(ConduitData::Event(SettingEvent::Response(id, response)));
+                fasync::spawn(async move {
+                    let response_result =
+                        receiver.await.context("getting response from controller");
 
-                        Ok(())
+                    if response_result.is_err() {
+                        sender_clone.send(ConduitData::Event(SettingEvent::Response(
+                            id,
+                            Err(SwitchboardError::UnexpectedError {
+                                description: "channel closed prematurely".to_string(),
+                            }),
+                        )));
+                        return;
                     }
-                    .unwrap_or_else(move |e: anyhow::Error| {
-                        error_sender_clone
-                            .send(ConduitData::Event(SettingEvent::Response(id, Err(e))));
-                    }),
-                );
+                    let response = response_result.unwrap();
+                    sender_clone.send(ConduitData::Event(SettingEvent::Response(id, response)));
+                });
 
                 command_sender.unbounded_send(Command::HandleRequest(request, responder)).ok();
             }

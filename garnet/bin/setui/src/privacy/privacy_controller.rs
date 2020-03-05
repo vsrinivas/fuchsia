@@ -19,7 +19,6 @@ use crate::switchboard::base::{
     PrivacyInfo, SettingRequest, SettingRequestResponder, SettingResponse, SettingType,
     SwitchboardError,
 };
-use anyhow::Error;
 
 type PrivacyStorage = Arc<Mutex<DeviceStorage<PrivacyInfo>>>;
 
@@ -96,10 +95,10 @@ impl PrivacyController {
                     }
                     _ => {
                         responder
-                            .send(Err(Error::new(SwitchboardError::UnimplementedRequest {
+                            .send(Err(SwitchboardError::UnimplementedRequest {
                                 setting_type: SettingType::Privacy,
                                 request: request,
-                            })))
+                            }))
                             .ok();
                     }
                 }
@@ -146,10 +145,9 @@ impl PrivacyController {
             let write_request = storage_lock.write(&info, false).await;
             let _ = match write_request {
                 Ok(_) => responder.send(Ok(None)),
-                Err(err) => responder.send(Err(Error::new(SwitchboardError::StorageFailure {
+                Err(_) => responder.send(Err(SwitchboardError::StorageFailure {
                     setting_type: SettingType::Privacy,
-                    storage_error: err,
-                }))),
+                })),
             };
         });
     }

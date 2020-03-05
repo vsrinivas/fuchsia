@@ -12,7 +12,6 @@ use {
         Merge, SettingRequest, SettingRequestResponder, SettingResponse, SettingType,
         SwitchboardError,
     },
-    anyhow::Error,
     fuchsia_async as fasync,
     fuchsia_syslog::fx_log_err,
     futures::lock::Mutex,
@@ -90,10 +89,10 @@ pub fn spawn_accessibility_controller<T: DeviceStorageFactory + Send + Sync + 's
                             }
                             _ => {
                                 responder
-                                    .send(Err(Error::new(SwitchboardError::UnimplementedRequest {
+                                    .send(Err(SwitchboardError::UnimplementedRequest {
                                         setting_type: SettingType::Accessibility,
                                         request: request,
-                                    })))
+                                    }))
                                     .ok();
                                 continue;
                             }
@@ -127,9 +126,8 @@ async fn persist_accessibility_info(
     let write_request = storage_lock.write(&info, false).await;
     let _ = match write_request {
         Ok(_) => responder.send(Ok(None)),
-        Err(err) => responder.send(Err(Error::new(SwitchboardError::StorageFailure {
+        Err(_) => responder.send(Err(SwitchboardError::StorageFailure {
             setting_type: SettingType::Accessibility,
-            storage_error: err,
-        }))),
+        })),
     };
 }

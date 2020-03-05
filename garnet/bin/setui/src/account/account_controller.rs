@@ -7,7 +7,6 @@ use {
     crate::registry::device_storage::DeviceStorageFactory,
     crate::service_context::ServiceContextHandle,
     crate::switchboard::base::*,
-    anyhow::Error,
     fuchsia_async as fasync,
     futures::StreamExt,
 };
@@ -16,20 +15,28 @@ const FACTORY_RESET_FLAG: &str = "FactoryReset";
 
 async fn schedule_clear_accounts(
     service_context_handle: ServiceContextHandle,
-) -> Result<(), Error> {
-    let device_settings_manager = service_context_handle
+) -> Result<(), SwitchboardError> {
+    let connect_result = service_context_handle
         .lock()
         .await
-        .connect::<fidl_fuchsia_devicesettings::DeviceSettingsManagerMarker>(
-    )?;
+        .connect::<fidl_fuchsia_devicesettings::DeviceSettingsManagerMarker>();
 
-    if let Err(error) = device_settings_manager.set_integer(FACTORY_RESET_FLAG, 1).await {
-        return Err(Error::new(SwitchboardError::ExternalFailure {
+    if connect_result.is_err() {
+        return Err(SwitchboardError::ExternalFailure {
+            setting_type: SettingType::Account,
+            dependency: "device_settings_manager".to_string(),
+            request: "connect".to_string(),
+        });
+    }
+
+    let device_settings_manager = connect_result.unwrap();
+
+    if let Err(_) = device_settings_manager.set_integer(FACTORY_RESET_FLAG, 1).await {
+        return Err(SwitchboardError::ExternalFailure {
             setting_type: SettingType::Account,
             dependency: "device_settings_manager".to_string(),
             request: "set factory reset integer".to_string(),
-            error: Error::new(error),
-        }));
+        });
     }
 
     return Ok(());
@@ -63,10 +70,10 @@ pub fn spawn_account_controller<T: DeviceStorageFactory + Send + Sync + 'static>
                         }
                         _ => {
                             responder
-                                .send(Err(Error::new(SwitchboardError::UnimplementedRequest {
+                                .send(Err(SwitchboardError::UnimplementedRequest {
                                     setting_type: SettingType::Account,
                                     request: request,
-                                })))
+                                }))
                                 .ok();
                         }
                     }

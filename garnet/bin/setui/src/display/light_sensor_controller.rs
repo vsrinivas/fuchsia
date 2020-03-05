@@ -8,7 +8,6 @@ use {
     crate::switchboard::base::{
         LightData, SettingRequest, SettingResponse, SettingType, SwitchboardError,
     },
-    anyhow::Error,
     fidl_fuchsia_hardware_input::{DeviceMarker as SensorMarker, DeviceProxy as SensorProxy},
     fuchsia_async::{self as fasync, DurationExt},
     fuchsia_syslog::fx_log_err,
@@ -103,10 +102,10 @@ async fn handle_commands(
                     }
                     _ => {
                         responder
-                            .send(Err(Error::new(SwitchboardError::UnimplementedRequest {
+                            .send(Err(SwitchboardError::UnimplementedRequest {
                                 setting_type: SettingType::LightSensor,
                                 request: request,
-                            })))
+                            }))
                             .ok();
                     }
                 }

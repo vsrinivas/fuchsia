@@ -7,7 +7,6 @@ use {
     crate::registry::device_storage::DeviceStorageFactory,
     crate::service_context::ServiceContextHandle,
     crate::switchboard::base::*,
-    anyhow::Error,
     fuchsia_async as fasync,
     futures::StreamExt,
 };
@@ -42,10 +41,10 @@ pub fn spawn_power_controller<T: DeviceStorageFactory + Send + Sync + 'static>(
                         }
                         _ => {
                             responder
-                                .send(Err(Error::new(SwitchboardError::UnimplementedRequest {
+                                .send(Err(SwitchboardError::UnimplementedRequest {
                                     setting_type: SettingType::Power,
                                     request: request,
-                                })))
+                                }))
                                 .ok();
                         }
                     }

@@ -6,7 +6,6 @@ use {
     crate::registry::base::{Command, Context, Notifier, SettingHandler, State},
     crate::registry::device_storage::{DeviceStorageCompatible, DeviceStorageFactory},
     crate::switchboard::base::*,
-    anyhow::Error,
     fuchsia_async as fasync,
     futures::StreamExt,
     parking_lot::RwLock,
@@ -76,10 +75,10 @@ pub fn spawn_system_controller<T: DeviceStorageFactory + Send + Sync + 'static>(
                         }
                         _ => {
                             responder
-                                .send(Err(Error::new(SwitchboardError::UnimplementedRequest {
+                                .send(Err(SwitchboardError::UnimplementedRequest {
                                     setting_type: SettingType::System,
                                     request: request,
-                                })))
+                                }))
                                 .ok();
                         }
                     }

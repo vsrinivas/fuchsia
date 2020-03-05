@@ -240,10 +240,10 @@ pub fn spawn_audio_controller<T: DeviceStorageFactory + Send + Sync + 'static>(
                         }
                         _ => {
                             responder
-                                .send(Err(Error::new(SwitchboardError::UnimplementedRequest {
+                                .send(Err(SwitchboardError::UnimplementedRequest {
                                     setting_type: SettingType::Audio,
                                     request: request,
-                                })))
+                                }))
                                 .ok();
                         }
                     }
@@ -284,12 +284,11 @@ async fn watch_background_usage(
                     Ordering::SeqCst,
                 );
             }
-            Err(e) => {
+            Err(_) => {
                 return Err(Error::new(SwitchboardError::ExternalFailure {
                     setting_type: SettingType::Audio,
                     dependency: "UseageReporterProxy".to_string(),
                     request: "watch".to_string(),
-                    error: Error::new(e),
                 }));
             }
         }

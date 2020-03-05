@@ -16,8 +16,6 @@ use {
     std::sync::Arc,
 };
 
-const DND_NAME: &str = "do_not_disturb";
-
 impl DeviceStorageCompatible for DoNotDisturbInfo {
     const KEY: &'static str = "do_not_disturb_info";
 
@@ -67,14 +65,7 @@ pub fn spawn_do_not_disturb_controller<T: DeviceStorageFactory + Send + Sync + '
                                 stored_value.night_mode_dnd = dnd_info.night_mode_dnd;
                             }
 
-                            write_value(
-                                stored_value,
-                                DND_NAME,
-                                &notifier_lock,
-                                &storage,
-                                responder,
-                            )
-                            .await;
+                            write_value(stored_value, &notifier_lock, &storage, responder).await;
                         }
                         SettingRequest::Get => {
                             let mut storage_lock = storage.lock().await;
@@ -84,10 +75,10 @@ pub fn spawn_do_not_disturb_controller<T: DeviceStorageFactory + Send + Sync + '
                         }
                         _ => {
                             responder
-                                .send(Err(Error::new(SwitchboardError::UnimplementedRequest {
+                                .send(Err(SwitchboardError::UnimplementedRequest {
                                     setting_type: SettingType::DoNotDisturb,
                                     request: request,
-                                })))
+                                }))
                                 .ok();
                         }
                     }
@@ -100,20 +91,15 @@ pub fn spawn_do_not_disturb_controller<T: DeviceStorageFactory + Send + Sync + '
 
 async fn write_value(
     request_info: DoNotDisturbInfo,
-    setting_name: &str,
     notifier_lock: &Arc<RwLock<Option<Notifier>>>,
     storage: &Arc<Mutex<DeviceStorage<DoNotDisturbInfo>>>,
     responder: SettingRequestResponder,
 ) {
     let mut storage_lock = storage.lock().await;
     let write_result = storage_lock.write(&request_info, false).await;
-    if let Err(error) = write_result {
+    if let Err(_) = write_result {
         responder
-            .send(Err(Error::new(SwitchboardError::StorageFailure {
-                setting_type: SettingType::DoNotDisturb,
-                storage_error: error,
-            })
-            .context(setting_name.to_string())))
+            .send(Err(SwitchboardError::StorageFailure { setting_type: SettingType::DoNotDisturb }))
             .ok();
         return;
     }

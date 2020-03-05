@@ -5,7 +5,6 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use anyhow::Error;
 use fuchsia_async as fasync;
 use fuchsia_syslog::fx_log_err;
 use futures::lock::Mutex;
@@ -125,10 +124,10 @@ impl IntlController {
                 }
                 _ => {
                     responder
-                        .send(Err(Error::new(SwitchboardError::UnimplementedRequest {
+                        .send(Err(SwitchboardError::UnimplementedRequest {
                             setting_type: SettingType::Intl,
                             request: request,
-                        })))
+                        }))
                         .ok();
                 }
             },
@@ -151,15 +150,15 @@ impl IntlController {
     }
 
     /// Checks if the given IntlInfo is valid.
-    fn validate_intl_info(&self, info: IntlInfo) -> Result<(), Error> {
+    fn validate_intl_info(&self, info: IntlInfo) -> Result<(), SwitchboardError> {
         if let Some(time_zone_id) = info.time_zone_id {
             // Make sure the given time zone ID is valid.
             if !self.time_zone_ids.contains(time_zone_id.as_str()) {
-                return Err(Error::new(SwitchboardError::InvalidArgument {
+                return Err(SwitchboardError::InvalidArgument {
                     setting_type: SettingType::Intl,
                     argument: "timezone id".to_string(),
                     value: time_zone_id.as_str().to_string(),
-                }));
+                });
             }
         }
 
@@ -234,10 +233,9 @@ impl IntlController {
             let write_request = storage_lock.write(&info, false).await;
             let _ = match write_request {
                 Ok(_) => responder.send(Ok(None)),
-                Err(err) => responder.send(Err(Error::new(SwitchboardError::StorageFailure {
+                Err(_) => responder.send(Err(SwitchboardError::StorageFailure {
                     setting_type: SettingType::Intl,
-                    storage_error: err,
-                }))),
+                })),
             };
         });
     }

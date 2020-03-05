@@ -9,7 +9,6 @@ use {
     crate::switchboard::base::{
         DisplayInfo, SettingRequest, SettingResponse, SettingType, SwitchboardError,
     },
-    anyhow::{format_err, Error},
     fuchsia_async as fasync,
     fuchsia_syslog::fx_log_err,
     futures::lock::Mutex,
@@ -75,12 +74,11 @@ pub fn spawn_display_controller<T: DeviceStorageFactory + Send + Sync + 'static>
                                 }
                                 Err(e) => {
                                     responder
-                                        .send(Err(Error::new(SwitchboardError::ExternalFailure {
+                                        .send(Err(SwitchboardError::ExternalFailure {
                                             setting_type: SettingType::Display,
                                             dependency: "brightness_service".to_string(),
                                             request: "set_brightness".to_string(),
-                                            error: format_err!("could not restore values"),
-                                        })))
+                                        }))
                                         .ok();
                                     fx_log_err!("failed to set brightness: {}", e);
                                 }
@@ -134,10 +132,10 @@ pub fn spawn_display_controller<T: DeviceStorageFactory + Send + Sync + 'static>
                         }
                         _ => {
                             responder
-                                .send(Err(Error::new(SwitchboardError::UnimplementedRequest {
+                                .send(Err(SwitchboardError::UnimplementedRequest {
                                     setting_type: SettingType::Display,
                                     request: request,
-                                })))
+                                }))
                                 .ok();
                         }
                     }

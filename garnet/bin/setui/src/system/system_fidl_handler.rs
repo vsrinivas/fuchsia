@@ -5,7 +5,6 @@ use {
     crate::fidl_processor::{process_stream, RequestContext},
     crate::switchboard::base::*,
     crate::switchboard::hanging_get_handler::Sender,
-    anyhow::format_err,
     fidl_fuchsia_settings::*,
     fuchsia_async as fasync,
     fuchsia_syslog::fx_log_err,
@@ -127,24 +126,24 @@ async fn request(
     setting_type: SettingType,
     setting_request: SettingRequest,
     description: &str,
-) -> SettingResponseResult {
+) -> Result<(), ()> {
     let (response_tx, response_rx) = futures::channel::oneshot::channel::<SettingResponseResult>();
     let result =
         switchboard.clone().lock().await.request(setting_type, setting_request, response_tx);
 
     match result {
         Ok(()) => match response_rx.await {
-            Ok(result) => {
-                return result;
+            Ok(_) => {
+                return Ok(());
             }
             Err(error) => {
                 fx_log_err!("request failed: {} error: {}", description, error);
-                return Err(format_err!("request failed: {} error: {}", description, error));
+                return Err(());
             }
         },
         Err(error) => {
             fx_log_err!("request failed: {} error: {}", description, error);
-            return Err(error);
+            return Err(());
         }
     }
 }

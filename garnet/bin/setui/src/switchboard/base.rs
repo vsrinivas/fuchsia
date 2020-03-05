@@ -15,7 +15,7 @@ use thiserror::Error;
 
 pub type SwitchboardHandle = Arc<Mutex<dyn Switchboard + Send + Sync>>;
 
-pub type SettingResponseResult = Result<Option<SettingResponse>, Error>;
+pub type SettingResponseResult = Result<Option<SettingResponse>, SwitchboardError>;
 pub type SettingRequestResponder = Sender<SettingResponseResult>;
 
 pub type ListenCallback = Arc<dyn Fn(SettingType) + Send + Sync>;
@@ -26,13 +26,13 @@ pub trait Merge {
     fn merge(&self, other: Self) -> Self;
 }
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, Clone)]
 pub enum SwitchboardError {
     #[error("Unimplemented Request:{request:?} for setting type: {setting_type:?}")]
     UnimplementedRequest { setting_type: SettingType, request: SettingRequest },
 
     #[error("Storage failure for setting type: {setting_type:?}")]
-    StorageFailure { setting_type: SettingType, storage_error: anyhow::Error },
+    StorageFailure { setting_type: SettingType },
 
     #[error(
         "Invalid argument for setting type: {setting_type:?} argument:{argument:?} value:{value:?}"
@@ -42,12 +42,13 @@ pub enum SwitchboardError {
     #[error(
         "External failure for setting type:{setting_type:?} dependency: {dependency:?} reqeust:{request:?}"
     )]
-    ExternalFailure {
-        setting_type: SettingType,
-        dependency: String,
-        request: String,
-        error: anyhow::Error,
-    },
+    ExternalFailure { setting_type: SettingType, dependency: String, request: String },
+
+    #[error("Unhandled type: {setting_type:?}")]
+    UnhandledType { setting_type: SettingType },
+
+    #[error("Unexpected error: {description:?}")]
+    UnexpectedError { description: String },
 }
 
 /// The setting types supported by the messaging system. This is used as a key
@@ -329,7 +330,7 @@ pub trait Switchboard {
         &mut self,
         setting_type: SettingType,
         request: SettingRequest,
-        callback: Sender<Result<Option<SettingResponse>, Error>>,
+        callback: Sender<SettingResponseResult>,
     ) -> Result<(), Error>;
 
     /// Establishes a continuous callback for change notifications around a

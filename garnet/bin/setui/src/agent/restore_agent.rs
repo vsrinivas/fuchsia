@@ -5,7 +5,7 @@
 /// The Restore Agent is responsible for signaling to all components to restore
 /// external sources to the last known value. It is invoked during startup.
 use crate::agent::base::{Agent, Invocation, Lifespan};
-use crate::switchboard::base::{SettingRequest, SettingResponse};
+use crate::switchboard::base::{SettingRequest, SettingResponseResult};
 use anyhow::Error;
 use fuchsia_async as fasync;
 use fuchsia_syslog::fx_log_err;
@@ -35,7 +35,7 @@ impl Agent for RestoreAgent {
         fasync::spawn(async move {
             for component in invocation.context.clone().available_components {
                 let (result_tx, result_rx) =
-                    futures::channel::oneshot::channel::<Result<Option<SettingResponse>, Error>>();
+                    futures::channel::oneshot::channel::<SettingResponseResult>();
                 let switchboard = invocation.context.switchboard.clone();
                 if switchboard
                     .lock()

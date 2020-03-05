@@ -11,7 +11,6 @@ use crate::switchboard::base::{
 use crate::tests::fakes::base::create_setting_handler;
 use crate::EnvironmentBuilder;
 use crate::Runtime;
-use anyhow::{format_err, Error};
 use futures::executor::block_on;
 use futures::lock::Mutex;
 use std::sync::Arc;
@@ -63,15 +62,19 @@ async fn test_restore() {
   // Snould succeed when the restore command is explicitly not handled.
   verify_restore_handling(
     Box::new(|| {
-      Err(Error::new(SwitchboardError::UnimplementedRequest {
+      Err(SwitchboardError::UnimplementedRequest {
         setting_type: SettingType::Unknown,
         request: SettingRequest::Restore,
-      }))
+      })
     }),
     true,
   )
   .await;
 
   // Snould fail when any other error is introduced.
-  verify_restore_handling(Box::new(|| Err(format_err!("unexpected error"))), false).await;
+  verify_restore_handling(
+    Box::new(|| Err(SwitchboardError::UnexpectedError { description: "foo".to_string() })),
+    false,
+  )
+  .await;
 }
