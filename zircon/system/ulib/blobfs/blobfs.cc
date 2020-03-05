@@ -163,7 +163,7 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
   }
 
   if (options->metrics) {
-    fs->Metrics()->Collect();
+    fs->metrics_.Collect();
   }
 
   if (options->journal) {
@@ -757,7 +757,7 @@ zx_status_t Blobfs::InitializeVnodes() {
                      digest.ToString().c_str(), node_index - 1);
       return status;
     }
-    Metrics()->UpdateLookup(vnode->SizeData());
+    metrics_.UpdateLookup(vnode->SizeData());
   }
 
   if (total_allocated != info_.alloc_inode_count) {
@@ -815,7 +815,7 @@ zx_status_t Blobfs::AttachTransferVmo(const zx::vmo& transfer_vmo) {
 }
 
 zx_status_t Blobfs::PopulateTransferVmo(uint64_t offset, uint64_t length, UserPagerInfo* info) {
-  fs::Ticker ticker(Metrics()->Collecting());
+  fs::Ticker ticker(metrics_.Collecting());
   fs::ReadTxn txn(this);
   BlockIterator block_iter = BlockIteratorByNodeIndex(info->identifier);
 
@@ -850,7 +850,7 @@ zx_status_t Blobfs::PopulateTransferVmo(uint64_t offset, uint64_t length, UserPa
                    zx_status_get_string(status));
     return status;
   }
-  Metrics()->UpdateMerkleDiskRead(block_count * kBlobfsBlockSize, ticker.End());
+  metrics_.UpdateMerkleDiskRead(block_count * kBlobfsBlockSize, ticker.End());
   return ZX_OK;
 }
 

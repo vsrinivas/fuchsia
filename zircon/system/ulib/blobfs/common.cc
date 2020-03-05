@@ -257,4 +257,23 @@ void InitializeSuperblock(uint64_t block_count, Superblock* info) {
   }
 }
 
+constexpr char kBlobVmoNamePrefix[] = "blob";
+constexpr char kBlobCompressedVmoNamePrefix[] = "blobCompressed";
+constexpr char kBlobMerkleVmoNamePrefix[] = "blob-merkle";
+
+void FormatBlobDataVmoName(uint32_t node_index, fbl::StringBuffer<ZX_MAX_NAME_LEN>* out) {
+  out->Clear();
+  out->AppendPrintf("%s-%x", kBlobVmoNamePrefix, node_index);
+}
+
+void FormatBlobCompressedVmoName(uint32_t node_index, fbl::StringBuffer<ZX_MAX_NAME_LEN>* out) {
+  out->Clear();
+  out->AppendPrintf("%s-%x", kBlobCompressedVmoNamePrefix, node_index);
+}
+
+void FormatBlobMerkleVmoName(uint32_t node_index, fbl::StringBuffer<ZX_MAX_NAME_LEN>* out) {
+  out->Clear();
+  out->AppendPrintf("%s-%x", kBlobMerkleVmoNamePrefix, node_index);
+}
+
 }  // namespace blobfs

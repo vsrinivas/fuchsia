@@ -243,7 +243,8 @@ class Blobfs : public TransactionManager, public UserPager, public BlockIterator
   // "construction".
   zx_status_t CreateFsId();
 
-  // Loads the contents of a blob and verifies that the contents are valid.
+  // Loads the blob with inode |node_index| and verifies that the contents of the blob are valid.
+  // Discards the blob's data after performing verification.
   zx_status_t LoadAndVerifyBlob(uint32_t node_index);
 
   // Updates the flags field in superblock.

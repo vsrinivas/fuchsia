@@ -14,7 +14,6 @@
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fit/promise.h>
-#include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/zx/event.h>
 #include <string.h>
 
@@ -38,7 +37,7 @@
 #include "allocator/extent-reserver.h"
 #include "allocator/node-reserver.h"
 #include "blob-cache.h"
-#include "blob-verifier.h"
+#include "blob-loader.h"
 #include "compression/blob-compressor.h"
 #include "compression/compressor.h"
 #include "format-assertions.h"
@@ -113,7 +112,7 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   uint32_t GetMapIndex() const { return map_index_; }
 
   // Returns a unique identifier for this blob
-  size_t Ino() const { return map_index_; }
+  uint32_t Ino() const { return map_index_; }
 
   void PopulateInode(uint32_t node_index);
 
@@ -169,8 +168,6 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   ////////////////
   // Other methods.
 
-  void BlobCloseHandles();
-
   // Returns a handle to an event which will be signalled when
   // the blob is readable.
   //
@@ -182,7 +179,7 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   //
   // Monitors the current VMO, keeping a reference to the Vnode
   // alive while the |out| VMO (and any clones it may have) are open.
-  zx_status_t CloneVmo(zx_rights_t rights, zx::vmo* out_vmo, size_t* out_size);
+  zx_status_t CloneDataVmo(zx_rights_t rights, zx::vmo* out_vmo, size_t* out_size);
   void HandleNoClones(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                       const zx_packet_signal_t* signal);
 
@@ -212,69 +209,61 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   // Requires: kBlobStateReadable
   zx_status_t ReadInternal(void* data, size_t len, size_t off, size_t* actual);
 
-  // Reads both VMOs into memory, if we haven't already.
+  // Loads the blob's data and merkle from disk, and initializes the data/merkle VMOs.
+  // If paging is enabled, the data VMO will be pager-backed and lazily loaded and verified as the
+  // client accesses the pages.
+  // If paging is disabled, the entire data VMO is loaded in and verified.
   //
-  // TODO(ZX-1481): When we have can register the Blob Store as a pager
-  // service, and it can properly handle pages faults on a vnode's contents,
-  // then we can avoid reading the entire blob up-front. Until then, read
-  // the contents of a VMO into memory when it is opened.
-  zx_status_t InitVmos();
+  // Idempotent (and has no effect if PrepareVmosForWriting() has already been called.)
+  zx_status_t LoadVmosFromDisk();
 
-  // Initializes the data and Merkle VMOs when the user pager is enabled.
-  zx_status_t InitVmosPaged();
-
-  // Initializes a compressed blob by reading it from disk and decompressing it.
-  // Does not verify the blob.
-  zx_status_t InitCompressed(CompressionAlgorithm algorithm);
-
-  // Initializes a decompressed blob by reading it from disk.
-  // Does not verify the blob.
-  zx_status_t InitUncompressed();
+  // Initializes the data/merkle VMOs for writing into by:
+  //  - Creating and mapping the VMOs, and
+  //  - Attaching the VMOs to the block device FIFO.
+  //
+  // Idempotent (and has no effect if LoadVmosFromDisk() has already been called.)
+  zx_status_t PrepareVmosForWriting(uint32_t node_index, size_t data_size);
 
   // Verifies the integrity of the in-memory Blob - operates on the entire blob at once.
-  // InitVmos() must have already been called for this blob.
+  // LoadVmosFromDisk() must have already been called for this blob.
   zx_status_t Verify() const;
-
-  // Instantiates |verifier| with the Merkle tree mapped at the beginning of this
-  // Blob's VMO. The |verifier| is then passed on to the |page_watcher_|, which owns it.
-  zx_status_t InitBlobVerifier(std::unique_ptr<BlobVerifier>* verifier);
 
   // Called by the Vnode once the last write has completed, updating the
   // on-disk metadata.
   fit::promise<void, zx_status_t> WriteMetadata();
 
-  // Returns whether the data bytes are mapped and resident in memory.
+  // Returns whether the data or merkle tree bytes are mapped and resident in memory.
   bool IsDataLoaded() const;
+  bool IsMerkleTreeLoaded() const;
 
-  // Acquires a pointer to the mapped data or merkle tree
+  // Acquires a pointer to the mapped data or merkle tree.
+  // May return nullptr if the mappings have not been initialized.
   void* GetDataBuffer() const;
   void* GetMerkleTreeBuffer() const;
+
+  // Returns whether the blob's contents are pager-backed or not.
+  bool IsPagerBacked() const;
 
   // Returns a digest::Digest containing the blob's merkle root.
   // Equivalent to digest::Digest(GetKey()).
   digest::Digest MerkleRoot() const;
 
-  // Offset into the |mapping_| VMO at which blob data starts
-  uint64_t GetDataStartOffset() const;
-
   Blobfs* const blobfs_;
   BlobFlags flags_ = {};
   std::atomic_bool syncing_;
 
-  // If the user pager is disabled, the mapping here consists of:
-  // 1) The Merkle Tree
-  // 2) The Blob itself, aligned to the nearest kBlobfsBlockSize
-  //
-  // If the user pager is enabled, the mapping consists of blob data only.
-  fzl::OwnedVmoMapper mapping_;
+  BlobLoader blob_loader_;
 
-  // If the user pager is enabled, this maps the Merkle tree which is read in directly,
-  // rather than being faulted in by the user pager.
+  // VMO mappings for the blob's merkle tree and data.
+  // Data is stored in a separate VMO from the merkle tree for several reasons:
+  //   - While data may be paged, the merkle tree (i.e. verification metadata) should always be
+  //     retained.
+  //   - VMO cloning when handing out a copy to read clients is simpler and requires no arithmetic.
+  //   - Makes memory accounting more granular.
+  // For small blobs, merkle_mapping_ may be absent, since small blobs may not have any stored
+  // merkle tree.
   fzl::OwnedVmoMapper merkle_mapping_;
-
-  // Maps |mapping_.vmo()| at the block device layer.
-  // When the user pager is enabled, this is only used on the write path.
-  storage::OwnedVmoid vmoid_;
+  fzl::OwnedVmoMapper data_mapping_;
 
   // Watches any clones of "vmo_" provided to clients.
   // Observes the ZX_VMO_ZERO_CHILDREN signal.

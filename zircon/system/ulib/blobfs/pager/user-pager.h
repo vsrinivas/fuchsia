@@ -69,6 +69,9 @@ class UserPager {
   // Sets up the transfer buffer, creates the pager and starts the pager thread.
   zx_status_t InitPager();
 
+  // Protected for unit test access
+  zx::pager pager_;
+
  private:
   // Virtual function to attach the transfer buffer to the underlying block device, so that blocks
   // can be read into it from storage.
@@ -100,8 +103,6 @@ class UserPager {
 
   // Async loop for pager requests.
   async::Loop pager_loop_ = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-
-  zx::pager pager_;
 };
 
 }  // namespace blobfs

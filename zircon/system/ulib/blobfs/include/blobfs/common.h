@@ -11,6 +11,7 @@
 #include <bitmap/storage.h>
 #include <fbl/algorithm.h>
 #include <fbl/macros.h>
+#include <fbl/string_buffer.h>
 #include <fs/transaction/block_transaction.h>
 #include <zircon/types.h>
 
@@ -65,5 +66,10 @@ inline void* GetRawBitmapData(const RawBitmap& bm, uint64_t n) {
   assert(kBlobfsBlockSize <= (n + 1) * kBlobfsBlockSize);  // Avoid overflow
   return fs::GetBlock(kBlobfsBlockSize, bm.StorageUnsafe()->GetData(), n);
 }
+
+// Fills |out| with the VMO names for a blob with inode index |node_index|.
+void FormatBlobDataVmoName(uint32_t node_index, fbl::StringBuffer<ZX_MAX_NAME_LEN>* out);
+void FormatBlobCompressedVmoName(uint32_t node_index, fbl::StringBuffer<ZX_MAX_NAME_LEN>* out);
+void FormatBlobMerkleVmoName(uint32_t node_index, fbl::StringBuffer<ZX_MAX_NAME_LEN>* out);
 
 }  // namespace blobfs
