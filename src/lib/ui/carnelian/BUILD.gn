@@ -218,13 +218,9 @@ rustc_binary("clockface") {
   edition = "2018"
   source_root = "examples/clockface.rs"
   deps = [
-    "//src/graphics/lib/compute/mold",
-    "//src/graphics/lib/compute/spinel-mold",
-    "//src/graphics/lib/compute/spinel-rs-sys",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
-    "//src/lib/mapped-vmo",
     "//src/lib/ui/carnelian",
     "//src/lib/ui/fuchsia-framebuffer",
     "//src/lib/ui/fuchsia-scenic",
@@ -236,23 +232,6 @@ rustc_binary("clockface") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:rusttype",
     "//third_party/rust_crates:thiserror",
-    "//third_party/rust_crates:vk-sys",
-    "//zircon/system/fidl/fuchsia-sysmem:fuchsia-sysmem-rustc",
-  ]
-  non_rust_deps = [
-    "//src/graphics/lib/compute/common",
-    "//src/graphics/lib/compute/common/vk",
-    "//src/graphics/lib/compute/hotsort/platforms/vk",
-    "//src/graphics/lib/compute/spinel",
-    "//src/graphics/lib/compute/spinel/platforms/vk",
-    "//src/graphics/lib/compute/spinel/platforms/vk:vk_find_target",
-    "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/amd/gcn3:generate",
-    "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/amd/gcn3/hotsort",
-    "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/intel/gen8:generate",
-    "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/intel/gen8/hotsort",
-    "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/nvidia/sm50:generate",
-    "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/nvidia/sm50/hotsort",
-    "//src/lib/vulkan",
   ]
 }
 
@@ -262,14 +241,10 @@ rustc_binary("ink") {
   source_root = "examples/ink.rs"
   deps = [
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report-rustc",
-    "//src/graphics/lib/compute/mold",
-    "//src/graphics/lib/compute/spinel-mold",
-    "//src/graphics/lib/compute/spinel-rs-sys",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
-    "//src/lib/mapped-vmo",
     "//src/lib/ui/carnelian",
     "//src/lib/ui/fuchsia-framebuffer",
     "//src/lib/ui/fuchsia-scenic",
@@ -282,24 +257,7 @@ rustc_binary("ink") {
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:rusttype",
     "//third_party/rust_crates:thiserror",
-    "//third_party/rust_crates:vk-sys",
     "//zircon/system/fidl/fuchsia-hardware-input:fuchsia-hardware-input-rustc",
-    "//zircon/system/fidl/fuchsia-sysmem:fuchsia-sysmem-rustc",
-  ]
-  non_rust_deps = [
-    "//src/graphics/lib/compute/common",
-    "//src/graphics/lib/compute/common/vk",
-    "//src/graphics/lib/compute/hotsort/platforms/vk",
-    "//src/graphics/lib/compute/spinel",
-    "//src/graphics/lib/compute/spinel/platforms/vk",
-    "//src/graphics/lib/compute/spinel/platforms/vk:vk_find_target",
-    "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/amd/gcn3:generate",
-    "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/amd/gcn3/hotsort",
-    "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/intel/gen8:generate",
-    "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/intel/gen8/hotsort",
-    "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/nvidia/sm50:generate",
-    "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/nvidia/sm50/hotsort",
-    "//src/graphics/lib/vulkan",
   ]
 }
 
@@ -310,16 +268,10 @@ rustc_binary("infinite_scroll") {
   deps = [
     "//sdk/fidl/fuchsia.fonts:fuchsia.fonts-rustc",
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report-rustc",
-    "//src/graphics/lib/compute/mold",
-    "//src/graphics/lib/compute/spinel-mold",
-    "//src/graphics/lib/compute/spinel-rs-sys",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
-    "//src/lib/mapped-vmo",
-    "//src/lib/trace/rust:trace",
-    "//src/lib/trace/rust:trace-provider",
     "//src/lib/ui/carnelian",
     "//src/lib/ui/fuchsia-framebuffer",
     "//src/lib/ui/fuchsia-scenic",
@@ -335,23 +287,6 @@ rustc_binary("infinite_scroll") {
     "//third_party/rust_crates:rusttype",
     "//third_party/rust_crates:textwrap",
     "//third_party/rust_crates:thiserror",
-    "//third_party/rust_crates:vk-sys",
-    "//zircon/system/fidl/fuchsia-sysmem:fuchsia-sysmem-rustc",
-  ]
-  non_rust_deps = [
-    "//src/graphics/lib/compute/common",
-    "//src/graphics/lib/compute/common/vk",
-    "//src/graphics/lib/compute/hotsort/platforms/vk",
-    "//src/graphics/lib/compute/spinel",
-    "//src/graphics/lib/compute/spinel/platforms/vk",
-    "//src/graphics/lib/compute/spinel/platforms/vk:vk_find_target",
-    "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/amd/gcn3:generate",
-    "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/amd/gcn3/hotsort",
-    "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/intel/gen8:generate",
-    "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/intel/gen8/hotsort",
-    "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/nvidia/sm50:generate",
-    "//src/graphics/lib/compute/spinel/platforms/vk/targets/vendors/nvidia/sm50/hotsort",
-    "//src/graphics/lib/vulkan",
   ]
 }
 
