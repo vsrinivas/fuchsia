@@ -9,6 +9,7 @@
 #include "src/lib/fidl_codec/semantic.h"
 #include "src/lib/fidl_codec/semantic_parser_test.h"
 #include "src/lib/fidl_codec/wire_object.h"
+#include "src/lib/fidl_codec/wire_types.h"
 
 namespace fidl_codec {
 namespace semantic {
@@ -17,6 +18,8 @@ constexpr uint64_t kPid = 0x1234;
 constexpr uint32_t kHandle = 0x1111;
 constexpr uint32_t kChannel0 = 0x1000;
 constexpr uint32_t kChannel1 = 0x2000;
+constexpr uint32_t kChannel2 = 0x3000;
+constexpr uint32_t kChannel3 = 0x4000;
 
 class BuiltinSemanticTest : public SemanticParserTest {
  public:
@@ -35,11 +38,14 @@ class BuiltinSemanticTest : public SemanticParserTest {
  protected:
   HandleSemantic handle_semantic_;
   const zx_handle_info_t channel0_;
+  const zx_handle_info_t channel2_;
 };
 
-BuiltinSemanticTest::BuiltinSemanticTest() : channel0_({kChannel0, 0, 0, 0}) {
+BuiltinSemanticTest::BuiltinSemanticTest()
+    : channel0_({kChannel0, 0, 0, 0}), channel2_({kChannel2, 0, 0, 0}) {
   library_loader_.ParseBuiltinSemantic();
   handle_semantic_.AddLinkedHandles(kPid, kChannel0, kChannel1);
+  handle_semantic_.AddLinkedHandles(kPid, kChannel2, kChannel3);
 }
 
 void BuiltinSemanticTest::ExecuteWrite(const MethodSemantic* method_semantic,
@@ -145,6 +151,49 @@ TEST_F(BuiltinSemanticTest, Open) {
   ASSERT_NE(description, nullptr);
   ASSERT_EQ(description->type(), "dir");
   ASSERT_EQ(description->path(), "/svc/fuchsia.sys.Launcher");
+}
+
+// Check Launcher::CreateComponent.
+TEST_F(BuiltinSemanticTest, CreateComponent) {
+  // Checks that Launcher::CreateComponent exists in fuchsia.sys.
+  Library* library = library_loader_.GetLibraryFromName("fuchsia.sys");
+  ASSERT_NE(library, nullptr);
+  library->DecodeTypes();
+  Interface* interface = nullptr;
+  library->GetInterfaceByName("fuchsia.sys/Launcher", &interface);
+  ASSERT_NE(interface, nullptr);
+  InterfaceMethod* method = interface->GetMethodByName("CreateComponent");
+  ASSERT_NE(method, nullptr);
+  // Checks that the builtin semantic is defined for CreateComponent.
+  ASSERT_NE(method->semantic(), nullptr);
+
+  // Check that by writing on this handle:
+  SetHandleSemantic("dir", "/svc/fuchsia.sys.Launcher");
+
+  // This message (we only define the fields used by the semantic):
+  StructValue request(*method->request());
+  auto launch_info = std::make_unique<StructValue>(
+      method->request()->SearchMember("launch_info")->type()->AsStructType()->struct_definition());
+  launch_info->AddField("url",
+                        std::make_unique<StringValue>(
+                            "fuchsia-pkg://fuchsia.com/echo_server_cpp#meta/echo_server_cpp.cmx"));
+  launch_info->AddField("directory_request", std::make_unique<HandleValue>(channel0_));
+  request.AddField("launch_info", std::move(launch_info));
+  request.AddField("controller", std::make_unique<HandleValue>(channel2_));
+
+  ExecuteWrite(method->semantic(), &request, nullptr);
+
+  // We have these handle semantics for kChannel1 and kChannel3.
+  const HandleDescription* description_1 = handle_semantic_.GetHandleDescription(kPid, kChannel1);
+  ASSERT_NE(description_1, nullptr);
+  ASSERT_EQ(description_1->type(), "server");
+  ASSERT_EQ(description_1->path(),
+            "fuchsia-pkg://fuchsia.com/echo_server_cpp#meta/echo_server_cpp.cmx");
+  const HandleDescription* description_2 = handle_semantic_.GetHandleDescription(kPid, kChannel3);
+  ASSERT_NE(description_2, nullptr);
+  ASSERT_EQ(description_2->type(), "server-control");
+  ASSERT_EQ(description_2->path(),
+            "fuchsia-pkg://fuchsia.com/echo_server_cpp#meta/echo_server_cpp.cmx");
 }
 
 }  // namespace semantic

@@ -70,6 +70,9 @@ void SemanticParser::NextLexicalToken() {
       case '\0':
         current_lexical_token_ = LexicalToken::kEof;
         return;
+      case '\'':
+        LexerString();
+        return;
       case '{':
         ++next_;
         current_lexical_token_ = LexicalToken::kLeftBrace;
@@ -77,6 +80,14 @@ void SemanticParser::NextLexicalToken() {
       case '}':
         ++next_;
         current_lexical_token_ = LexicalToken::kRightBrace;
+        return;
+      case '(':
+        ++next_;
+        current_lexical_token_ = LexicalToken::kLeftParenthesis;
+        return;
+      case ')':
+        ++next_;
+        current_lexical_token_ = LexicalToken::kRightParenthesis;
         return;
       case ':':
         ++next_;
@@ -86,6 +97,10 @@ void SemanticParser::NextLexicalToken() {
           AddError() << "Missing a second ':'.\n";
         }
         current_lexical_token_ = LexicalToken::kColonColon;
+        return;
+      case ',':
+        ++next_;
+        current_lexical_token_ = LexicalToken::kComma;
         return;
       case '.':
         ++next_;
@@ -108,7 +123,7 @@ void SemanticParser::NextLexicalToken() {
           LexerIdentifier();
           return;
         }
-        if (!error_found) {
+        if (!error_found && !ignore_unknown_characters_) {
           error_found = true;
           AddError() << "Unknown character <" << *next_ << ">\n";
         }
@@ -118,16 +133,36 @@ void SemanticParser::NextLexicalToken() {
   }
 }
 
+void SemanticParser::JumpToSemicolon() {
+  IgnoreUnknownCharacters ignore_unknown_characters(this);
+  while (!IsEof()) {
+    if (IsSemicolon() || IsRightBrace()) {
+      return;
+    }
+    if (ConsumeLeftParenthesis()) {
+      SkipRightParenthesis();
+    } else {
+      NextLexicalToken();
+    }
+  }
+}
+
 void SemanticParser::SkipSemicolon() {
+  IgnoreUnknownCharacters ignore_unknown_characters(this);
   while (!IsEof()) {
     if (ConsumeSemicolon() || IsRightBrace()) {
       return;
     }
-    NextLexicalToken();
+    if (ConsumeLeftParenthesis()) {
+      SkipRightParenthesis();
+    } else {
+      NextLexicalToken();
+    }
   }
 }
 
 void SemanticParser::SkipBlock() {
+  IgnoreUnknownCharacters ignore_unknown_characters(this);
   while (!IsEof()) {
     if (ConsumeRightBrace() || ConsumeSemicolon()) {
       return;
@@ -141,6 +176,7 @@ void SemanticParser::SkipBlock() {
 }
 
 void SemanticParser::SkipRightBrace() {
+  IgnoreUnknownCharacters ignore_unknown_characters(this);
   while (!IsEof()) {
     if (ConsumeRightBrace()) {
       return;
@@ -150,6 +186,38 @@ void SemanticParser::SkipRightBrace() {
     } else {
       NextLexicalToken();
     }
+  }
+}
+
+void SemanticParser::SkipRightParenthesis() {
+  IgnoreUnknownCharacters ignore_unknown_characters(this);
+  while (!IsEof()) {
+    if (ConsumeRightParenthesis() || IsSemicolon()) {
+      return;
+    }
+    if (ConsumeLeftBrace()) {
+      SkipRightBrace();
+    } else if (ConsumeLeftParenthesis()) {
+      SkipRightParenthesis();
+    } else {
+      NextLexicalToken();
+    }
+  }
+}
+
+std::string SemanticParser::ConsumeString() {
+  std::string result = std::string(current_string_);
+  size_t pos = 0;
+  for (;;) {
+    auto backslash = result.find('\\', pos);
+    if (backslash == std::string::npos) {
+      NextLexicalToken();
+      return result;
+    }
+    // We already checked that backslashes are followed by another character.
+    FXL_DCHECK(backslash < result.size() - 1);
+    result.erase(backslash);
+    pos = backslash + 1;
   }
 }
 
@@ -299,13 +367,46 @@ std::unique_ptr<Expression> SemanticParser::ParseAccessExpression() {
 }
 
 std::unique_ptr<Expression> SemanticParser::ParseTerminalExpression() {
+  if (IsString()) {
+    return std::make_unique<ExpressionStringLiteral>(ConsumeString());
+  }
   if (Consume("request")) {
     return std::make_unique<ExpressionRequest>();
   }
   if (Consume("handle")) {
     return std::make_unique<ExpressionHandle>();
   }
+  if (Consume("HandleDescription")) {
+    return ParseHandleDescription();
+  }
   return nullptr;
+}
+
+std::unique_ptr<Expression> SemanticParser::ParseHandleDescription() {
+  if (!ParseLeftParenthesis()) {
+    JumpToSemicolon();
+    return std::make_unique<ExpressionHandleDescription>(nullptr, nullptr);
+  }
+  std::unique_ptr<Expression> type = ParseExpression();
+  if (type == nullptr) {
+    AddError() << "Expression expected (handle type)";
+    SkipRightParenthesis();
+    return std::make_unique<ExpressionHandleDescription>(nullptr, nullptr);
+  }
+  if (!ParseComma()) {
+    SkipRightParenthesis();
+    return std::make_unique<ExpressionHandleDescription>(std::move(type), nullptr);
+  }
+  std::unique_ptr<Expression> path = ParseExpression();
+  if (path == nullptr) {
+    AddError() << "Expression expected (handle path)";
+    SkipRightParenthesis();
+    return std::make_unique<ExpressionHandleDescription>(std::move(type), nullptr);
+  }
+  if (!ParseRightParenthesis()) {
+    SkipRightParenthesis();
+  }
+  return std::make_unique<ExpressionHandleDescription>(std::move(type), std::move(path));
 }
 
 void SemanticParser::LexerIdentifier() {
@@ -315,6 +416,33 @@ void SemanticParser::LexerIdentifier() {
   }
   current_string_ = std::string_view(&*start, next_ - start);
   current_lexical_token_ = LexicalToken::kIdentifier;
+}
+
+void SemanticParser::LexerString() {
+  std::string::const_iterator start = ++next_;
+  while (*next_ != '\'') {
+    if (*next_ == '\0') {
+      AddError() << "Unterminated string.\n";
+      current_lexical_token_ = LexicalToken::kString;
+      next_ = start;
+      current_string_ = std::string_view(&*start, 0);
+      return;
+    }
+    if (*next_ == '\\') {
+      ++next_;
+      if (*next_ == '\0') {
+        AddError() << "Unterminated string.\n";
+        current_lexical_token_ = LexicalToken::kString;
+        next_ = start;
+        current_string_ = std::string_view(&*start, 0);
+        return;
+      }
+    }
+    ++next_;
+  }
+  current_string_ = std::string_view(&*start, next_ - start);
+  ++next_;
+  current_lexical_token_ = LexicalToken::kString;
 }
 
 }  // namespace semantic

@@ -7,6 +7,7 @@
 
 #include <map>
 #include <memory>
+#include <optional>
 #include <ostream>
 #include <string>
 #include <vector>
@@ -78,6 +79,18 @@ inline std::ostream& operator<<(std::ostream& os, const Expression& expression) 
   return os;
 }
 
+// Defines a string literal.
+class ExpressionStringLiteral : public Expression {
+ public:
+  ExpressionStringLiteral(std::string value) : value_(std::move(value)) {}
+
+  void Dump(std::ostream& os) const override;
+  bool Execute(SemanticContext* context, ExpressionValue* result) const override;
+
+ private:
+  const std::string value_;
+};
+
 // Defines an expression which accesses the request object.
 class ExpressionRequest : public Expression {
  public:
@@ -94,6 +107,20 @@ class ExpressionHandle : public Expression {
 
   void Dump(std::ostream& os) const override;
   bool Execute(SemanticContext* context, ExpressionValue* result) const override;
+};
+
+// Defines a handle description definition.
+class ExpressionHandleDescription : public Expression {
+ public:
+  ExpressionHandleDescription(std::unique_ptr<Expression> type, std::unique_ptr<Expression> path)
+      : type_(std::move(type)), path_(std::move(path)) {}
+
+  void Dump(std::ostream& os) const override;
+  bool Execute(SemanticContext* context, ExpressionValue* result) const override;
+
+ private:
+  std::unique_ptr<Expression> type_;
+  std::unique_ptr<Expression> path_;
 };
 
 // Defines the access to an object field.
@@ -290,10 +317,12 @@ class ExpressionValue {
   void set(std::string_view type, int64_t fd, std::string_view path) {
     handle_description_ = std::make_unique<HandleDescription>(type, fd, path);
   }
+  void set(const std::string& string) { string_ = string; }
 
   const Value* value() const { return value_; }
   zx_handle_t handle() const { return handle_; }
   const HandleDescription* handle_description() const { return handle_description_.get(); }
+  const std::optional<std::string>& string() const { return string_; }
 
  private:
   // If not null, the value is a FIDL value.
@@ -302,6 +331,8 @@ class ExpressionValue {
   zx_handle_t handle_ = ZX_HANDLE_INVALID;
   // If not null, the value is a handle description.
   std::unique_ptr<HandleDescription> handle_description_;
+  // A string.
+  std::optional<std::string> string_;
 };
 
 }  // namespace semantic

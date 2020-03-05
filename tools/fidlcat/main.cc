@@ -145,6 +145,7 @@ int ConsoleMain(int argc, const char* argv[]) {
 
   fidl_codec::LibraryReadError loader_err;
   fidl_codec::LibraryLoader loader(&paths, &loader_err);
+  loader.ParseBuiltinSemantic();
   if (loader_err.value != fidl_codec::LibraryReadError::kOk) {
     FXL_LOG(ERROR) << "Failed to read libraries";
     return 1;

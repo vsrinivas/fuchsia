@@ -52,6 +52,11 @@ TEST_F(SemanticParserTest, GlobalExample) {
       "  Directory::Open {\n"
       "    request.object = handle / request.path;\n"
       "  }\n"
+      "}\n"
+      "library fuchsia.sys {\n"
+      "  Launcher::CreateComponent {\n"
+      "   request.controller = HandleDescription('server-control', request.launch_info.url);\n"
+      "  }\n"
       "}\n";
   ParserErrors parser_errors;
   SemanticParser parser(&library_loader_, text, &parser_errors);
@@ -422,6 +427,104 @@ TEST_F(SemanticParserTest, SemicolonExpected) {
             "  }\n"
             "  ^\n"
             "4:3: Symbol ';' expected.\n");
+}
+
+TEST_F(SemanticParserTest, HandleDescriptionTypo) {
+  std::string text =
+      "library fuchsia.sys {\n"
+      "  Launcher::CreateComponent {\n"
+      "   request.controller = HandleDescriptions('server-control', request.launch_info.url);\n"
+      "  }\n"
+      "}\n";
+  std::stringstream error_stream;
+  ParserErrors parser_errors(error_stream);
+  SemanticParser parser(&library_loader_, text, &parser_errors);
+  parser.ParseSemantic();
+
+  std::string result = error_stream.str();
+  ASSERT_EQ(
+      result,
+      "   request.controller = HandleDescriptions('server-control', request.launch_info.url);\n"
+      "                        ^\n"
+      "3:25: Expression expected.\n");
+}
+
+TEST_F(SemanticParserTest, UnterminatedString) {
+  std::string text =
+      "library fuchsia.sys {\n"
+      "  Launcher::CreateComponent {\n"
+      "   request.controller = HandleDescription('server-control, request.launch_info.url);\n"
+      "  }\n"
+      "}\n";
+  std::stringstream error_stream;
+  ParserErrors parser_errors(error_stream);
+  SemanticParser parser(&library_loader_, text, &parser_errors);
+  parser.ParseSemantic();
+
+  std::string result = error_stream.str();
+  ASSERT_EQ(result,
+            "   request.controller = HandleDescription('server-control, request.launch_info.url);\n"
+            "                                          ^\n3:43: Unterminated string.\n"
+            "   request.controller = HandleDescription('server-control, request.launch_info.url);\n"
+            "                                           ^\n3:44: Symbol ',' expected.\n");
+}
+
+TEST_F(SemanticParserTest, LeftParenthesisExpected) {
+  std::string text =
+      "library fuchsia.sys {\n"
+      "  Launcher::CreateComponent {\n"
+      "   request.controller = HandleDescription 'server-control', request.launch_info.url);\n"
+      "  }\n"
+      "}\n";
+  std::stringstream error_stream;
+  ParserErrors parser_errors(error_stream);
+  SemanticParser parser(&library_loader_, text, &parser_errors);
+  parser.ParseSemantic();
+
+  std::string result = error_stream.str();
+  ASSERT_EQ(
+      result,
+      "   request.controller = HandleDescription 'server-control', request.launch_info.url);\n"
+      "                                          ^\n"
+      "3:43: Symbol '(' expected.\n");
+}
+
+TEST_F(SemanticParserTest, CommaExpected) {
+  std::string text =
+      "library fuchsia.sys {\n"
+      "  Launcher::CreateComponent {\n"
+      "   request.controller = HandleDescription('server-control' request.launch_info.url);\n"
+      "  }\n"
+      "}\n";
+  std::stringstream error_stream;
+  ParserErrors parser_errors(error_stream);
+  SemanticParser parser(&library_loader_, text, &parser_errors);
+  parser.ParseSemantic();
+
+  std::string result = error_stream.str();
+  ASSERT_EQ(result,
+            "   request.controller = HandleDescription('server-control' request.launch_info.url);\n"
+            "                                                           ^\n"
+            "3:60: Symbol ',' expected.\n");
+}
+
+TEST_F(SemanticParserTest, RightParenthesisExpected) {
+  std::string text =
+      "library fuchsia.sys {\n"
+      "  Launcher::CreateComponent {\n"
+      "   request.controller = HandleDescription('server-control', request.launch_info.url;\n"
+      "  }\n"
+      "}\n";
+  std::stringstream error_stream;
+  ParserErrors parser_errors(error_stream);
+  SemanticParser parser(&library_loader_, text, &parser_errors);
+  parser.ParseSemantic();
+
+  std::string result = error_stream.str();
+  ASSERT_EQ(result,
+            "   request.controller = HandleDescription('server-control', request.launch_info.url;\n"
+            "                                                                                   ^\n"
+            "3:84: Symbol ')' expected.\n");
 }
 
 }  // namespace semantic

@@ -11,19 +11,19 @@ handles are channels.
 However, we also need more information. For handles which are defined at the program startup, we
 have some extra information. For example:
 
-- fd:1
+*   fd:1
 
-- dir:/svc
+*   dir:/svc
 
-- directory-request:/
+*   directory-request:/
 
 That means that, for a handle, we can have three attributes:
 
-- a type (fd, dir, proc-self, vdso-vmo, ...).
+*   a type (fd, dir, proc-self, vdso-vmo, ...).
 
-- a file descriptor (a numerical value mostly used by the fd type).
+*   a file descriptor (a numerical value mostly used by the fd type).
 
-- a path (a string value used, for example, by the dir type).
+*   a path (a string value used, for example, by the dir type).
 
 For handles created during the process life, we can infer this information by analysing the FIDL
 method calls.
@@ -108,7 +108,13 @@ MultiplicativeExpression ::= AccessExpression [ '__/__' AccessExpression ]
 
 AccessExpression ::= TerminalExpression ( '__.__' FieldName )\*
 
-TerminalExpression ::= '__request__' | '__handle__'
+TerminalExpression ::= '__request__' | '__handle__' | HandleDescription | String
+
+HandleDescription ::= '__HandleDescription__' '__(__' HandleType '__,__' HandlePath '__)__'
+
+HandleType ::= Expression
+
+HandlePath ::= Expression
 
 FieldName ::= Identifier
 
@@ -118,16 +124,22 @@ underscore.
 IdentifierWithDots: a sequence of letters, numbers, dots and underscores which starts with a letter
 or an underscore.
 
+String: a sequence of characters between single quotes. Single quotes and backslahes within a
+string must be escaped with a backslash.
+
 Whitespaces (spaces, new lines, tabulations) are ignored (but they separate lexical items).
 
 ## Semantic of expressions
 
-We have two terminal expressions:
+Terminal expressions:
 
-- **handle**: the handle used to call **zx\_channel\_write** (or another system call which read/write FIDL
+*   **handle**: the handle used to call **zx\_channel\_write** (or another system call which read/write FIDL
 messages).
 
-- **request**: the FIDL method given to the **zx\_channel\_write**.
+*   **request**: the FIDL method given to the **zx\_channel\_write**.
+
+*   **HandleDescription**: creates a handle description using the arguments. Both arguments must be
+strings.
 
 The dot operator access a field within an object. It can be used on the terminal expression
 **request**. It can be also used on any expression with returns an object.

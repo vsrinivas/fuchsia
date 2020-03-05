@@ -566,7 +566,6 @@ void Library::FieldNotFound(std::string_view container_type, std::string_view co
 LibraryLoader::LibraryLoader(std::vector<std::unique_ptr<std::istream>>* library_streams,
                              LibraryReadError* err) {
   AddAll(library_streams, err);
-  ParseBuiltinSemantic();
 }
 
 bool LibraryLoader::AddAll(std::vector<std::unique_ptr<std::istream>>* library_streams,
@@ -635,8 +634,14 @@ void LibraryLoader::AddMethod(const InterfaceMethod* method) {
 
 void LibraryLoader::ParseBuiltinSemantic() {
   semantic::ParserErrors parser_errors;
-  semantic::SemanticParser parser(this, semantic::builtin_semantic, &parser_errors);
-  parser.ParseSemantic();
+  {
+    semantic::SemanticParser parser(this, semantic::builtin_semantic_fuchsia_io, &parser_errors);
+    parser.ParseSemantic();
+  }
+  {
+    semantic::SemanticParser parser(this, semantic::builtin_semantic_fuchsia_sys, &parser_errors);
+    parser.ParseSemantic();
+  }
 }
 
 }  // namespace fidl_codec

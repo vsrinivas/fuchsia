@@ -25,6 +25,7 @@ typedef uint32_t zx_handle_t;
 namespace fidl_codec {
 
 class LibraryLoader;
+class StructType;
 class TypeVisitor;
 
 // A FIDL type.  Provides methods for generating instances of this type.
@@ -38,6 +39,8 @@ class Type {
 
   // Returns a detailed representation of the type.
   std::string ToString(bool expand = false) const;
+
+  virtual const StructType* AsStructType() const { return nullptr; }
 
   // Returns true if the type is a ArrayType.
   virtual bool IsArray() const { return false; }
@@ -376,6 +379,8 @@ class StructType : public Type {
       : struct_definition_(struct_definition), nullable_(nullable) {}
 
   const Struct& struct_definition() const { return struct_definition_; }
+
+  const StructType* AsStructType() const override { return this; }
 
   std::string Name() const override;
 

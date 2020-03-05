@@ -61,12 +61,20 @@ enum class LexicalToken {
   kEof,
   // An identifier. If allow_dots_in_indentifiers is true, an identifier can contain dots.
   kIdentifier,
+  // A string (delimited by single quotes).
+  kString,
   // A left brace: {
   kLeftBrace,
   // A right brace: }
   kRightBrace,
+  // A left parenthesis: (
+  kLeftParenthesis,
+  // A right parenthesis: )
+  kRightParenthesis,
   // Two colons: ::
   kColonColon,
+  // A comma: ,
+  kComma,
   // A dot: .
   kDot,
   // The equal sign: =
@@ -96,6 +104,9 @@ class SemanticParser {
   // reduced by NextLexicalToken.
   void NextLexicalToken();
 
+  // Skips text until a semicolon or a right brace are found. If a semicolon or a right brace are
+  // found, the parsing continues before the semicolon or the right brace.
+  void JumpToSemicolon();
   // Skips text until a semicolon or a right brace are found. If a semicolon is found, the parsing
   // continues after the semicolon. If a right brace is found, the parsing continues before the
   // right brace.
@@ -107,13 +118,22 @@ class SemanticParser {
   // Skips text until a right brace is found. The parsing continue after the right brace. If an
   // embeded block is found (delimited by left and right braces), the block is skipped.
   void SkipRightBrace();
+  // Skips text until a right parenthesis is found. The parsing continue after the right
+  // parenthesis. If an embeded block is found (delimited by left and right braces or left and right
+  // parentheses), the block is skipped. If a semicolon is found, the parsing resumes before the
+  // semicolon.
+  void SkipRightParenthesis();
 
   // Helpers to check that we currently have a specified lexical token.
   bool Is(std::string_view keyword) { return IsIdentifier() && (current_string_ == keyword); }
   bool IsEof() const { return current_lexical_token_ == LexicalToken::kEof; }
   bool IsIdentifier() const { return current_lexical_token_ == LexicalToken::kIdentifier; }
+  bool IsString() const { return current_lexical_token_ == LexicalToken::kString; }
   bool IsLeftBrace() const { return current_lexical_token_ == LexicalToken::kLeftBrace; }
   bool IsRightBrace() const { return current_lexical_token_ == LexicalToken::kRightBrace; }
+  bool IsRightParenthesis() const {
+    return current_lexical_token_ == LexicalToken::kRightParenthesis;
+  }
   bool IsColonColon() const { return current_lexical_token_ == LexicalToken::kColonColon; }
   bool IsDot() const { return current_lexical_token_ == LexicalToken::kDot; }
   bool IsEqual() const { return current_lexical_token_ == LexicalToken::kEqual; }
@@ -137,6 +157,8 @@ class SemanticParser {
   }
   bool ConsumeLeftBrace() { return Consume(LexicalToken::kLeftBrace); }
   bool ConsumeRightBrace() { return Consume(LexicalToken::kRightBrace); }
+  bool ConsumeLeftParenthesis() { return Consume(LexicalToken::kLeftParenthesis); }
+  bool ConsumeRightParenthesis() { return Consume(LexicalToken::kRightParenthesis); }
   bool ConsumeDot() { return Consume(LexicalToken::kDot); }
   bool ConsumeEqual() { return Consume(LexicalToken::kEqual); }
   bool ConsumeSemicolon() { return Consume(LexicalToken::kSemicolon); }
@@ -164,9 +186,16 @@ class SemanticParser {
   }
   bool ParseLeftBrace() { return Parse(LexicalToken::kLeftBrace, "{"); }
   bool ParseRightBrace() { return Parse(LexicalToken::kRightBrace, "}"); }
+  bool ParseLeftParenthesis() { return Parse(LexicalToken::kLeftParenthesis, "("); }
+  bool ParseRightParenthesis() { return Parse(LexicalToken::kRightParenthesis, ")"); }
   bool ParseColonColon() { return Parse(LexicalToken::kColonColon, "::"); }
+  bool ParseComma() { return Parse(LexicalToken::kComma, ","); }
   bool ParseEqual() { return Parse(LexicalToken::kEqual, "="); }
   bool ParseSemicolon() { return Parse(LexicalToken::kSemicolon, ";"); }
+
+  // Returns the current string. Escaped characters are resolved.
+  // Then it advances to the next lexical item.
+  std::string ConsumeString();
 
   // Parses a file which contains handle semantic rules.
   void ParseSemantic();
@@ -182,10 +211,15 @@ class SemanticParser {
   std::unique_ptr<Expression> ParseAccessExpression();
   // Parses terminal expressions.
   std::unique_ptr<Expression> ParseTerminalExpression();
+  // Parses a handle description: HandleDescription(type, path).
+  std::unique_ptr<Expression> ParseHandleDescription();
 
  private:
   // Lexical reduction of an identifier.
   void LexerIdentifier();
+
+  // Lexical reduction of a string.
+  void LexerString();
 
   // The library loader for which we are parsing the semantic rules. The field semantic from
   // protocol methods is assigned when a rule is parsed.
@@ -205,6 +239,22 @@ class SemanticParser {
   // When this field is true, LexerIdentifier accepts dots within the identifiers. This is used to
   // be able to parse library names like "fuchsia.shell".
   bool allow_dots_in_identifiers_ = false;
+  // True when we are doing error recovery to ignore unknown characters.
+  bool ignore_unknown_characters_ = false;
+
+  // Used to define a scope for which unknown characters are ignored.
+  class IgnoreUnknownCharacters {
+   public:
+    IgnoreUnknownCharacters(SemanticParser* parser)
+        : parser_(parser), saved_value_(parser_->ignore_unknown_characters_) {
+      parser->ignore_unknown_characters_ = true;
+    }
+    ~IgnoreUnknownCharacters() { parser_->ignore_unknown_characters_ = saved_value_; }
+
+   private:
+    SemanticParser* const parser_;
+    const bool saved_value_;
+  };
 };
 
 }  // namespace semantic

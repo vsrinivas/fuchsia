@@ -14,6 +14,13 @@
 namespace fidl_codec {
 namespace semantic {
 
+void ExpressionStringLiteral::Dump(std::ostream& os) const { os << '\'' << value_ << '\''; }
+
+bool ExpressionStringLiteral::Execute(SemanticContext* context, ExpressionValue* result) const {
+  result->set(value_);
+  return true;
+}
+
 void ExpressionRequest::Dump(std::ostream& os) const { os << "request"; }
 
 bool ExpressionRequest::Execute(SemanticContext* context, ExpressionValue* result) const {
@@ -31,6 +38,23 @@ bool ExpressionHandle::Execute(SemanticContext* context, ExpressionValue* result
   return true;
 }
 
+void ExpressionHandleDescription::Dump(std::ostream& os) const {
+  os << "HandleDescription(" << *type_ << ", " << *path_ << ')';
+}
+
+bool ExpressionHandleDescription::Execute(SemanticContext* context, ExpressionValue* result) const {
+  ExpressionValue type;
+  ExpressionValue path;
+  if (!type_->Execute(context, &type) || !path_->Execute(context, &path)) {
+    return false;
+  }
+  if (!type.string() || !path.string()) {
+    return false;
+  }
+  result->set(*type.string(), -1, *path.string());
+  return true;
+}
+
 void ExpressionFieldAccess::Dump(std::ostream& os) const { os << *expression_ << '.' << field_; }
 
 bool ExpressionFieldAccess::Execute(SemanticContext* context, ExpressionValue* result) const {
@@ -45,7 +69,12 @@ bool ExpressionFieldAccess::Execute(SemanticContext* context, ExpressionValue* r
       if (field_value == nullptr) {
         return false;
       }
-      result->set(field_value);
+      const StringValue* string = field_value->AsStringValue();
+      if (string == nullptr) {
+        result->set(field_value);
+      } else {
+        result->set(string->string());
+      }
       return true;
     }
   }
@@ -68,31 +97,25 @@ bool ExpressionSlash::Execute(SemanticContext* context, ExpressionValue* result)
   if (description == nullptr) {
     return false;
   }
-  if (right_value.value() != nullptr) {
-    auto string_value = right_value.value()->AsStringValue();
-    if (string_value != nullptr) {
-      if (description->path().empty()) {
-        result->set(description->type(), description->fd(), string_value->string());
-        return true;
-      }
-      if (string_value->string() == ".") {
-        result->set(description->type(), description->fd(), description->path());
-        return true;
-      }
-      const char* data = string_value->string().c_str();
-      size_t length = string_value->string().size();
-      if ((length >= 2) && (strncmp(data, "./", 2) == 0)) {
-        data += 2;
-        length -= 2;
-      }
-      if (description->path() == "/") {
-        result->set(description->type(), description->fd(), "/" + std::string(data, length));
-        return true;
-      }
-      result->set(description->type(), description->fd(),
-                  description->path() + "/" + std::string(data, length));
+  if (right_value.string()) {
+    if (description->path().empty()) {
+      result->set(description->type(), description->fd(), *right_value.string());
       return true;
     }
+    if (*right_value.string() == ".") {
+      result->set(description->type(), description->fd(), description->path());
+      return true;
+    }
+    std::string path(*right_value.string());
+    if (path.find("./") == 0) {
+      path.erase(0, 2);
+    }
+    if (description->path() == "/") {
+      result->set(description->type(), description->fd(), "/" + path);
+      return true;
+    }
+    result->set(description->type(), description->fd(), description->path() + "/" + path);
+    return true;
   }
   return false;
 }
