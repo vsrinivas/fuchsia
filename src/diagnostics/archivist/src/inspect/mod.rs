@@ -132,16 +132,13 @@ impl InspectDataCollector {
                     .buffer
                     .map(|b| b.vmo);
 
-                self.maybe_add(
-                    Path::new(&entry.name).file_name().unwrap().to_string_lossy().to_string(),
-                    Data::Tree(proxy, maybe_vmo),
-                );
+                self.maybe_add(&entry.name, Data::Tree(proxy, maybe_vmo));
+                continue;
             }
+
             if let Some(proxy) = self.maybe_load_service::<InspectMarker>(inspect_proxy, &entry)? {
-                self.maybe_add(
-                    Path::new(&entry.name).file_name().unwrap().to_string_lossy().to_string(),
-                    Data::DeprecatedFidl(proxy),
-                );
+                self.maybe_add(&entry.name, Data::DeprecatedFidl(proxy));
+                continue;
             }
 
             if !entry.name.ends_with(".inspect") || entry.kind != files_async::DirentKind::File {
@@ -173,14 +170,7 @@ impl InspectDataCollector {
             {
                 Ok(nodeinfo) => match nodeinfo {
                     NodeInfo::Vmofile(vmofile) => {
-                        self.maybe_add(
-                            Path::new(&entry.name)
-                                .file_name()
-                                .unwrap()
-                                .to_string_lossy()
-                                .to_string(),
-                            Data::Vmo(vmofile.vmo),
-                        );
+                        self.maybe_add(&entry.name, Data::Vmo(vmofile.vmo));
                     }
                     NodeInfo::File(_) => {
                         let contents = io_util::read_file_bytes(&file_proxy)
@@ -191,14 +181,7 @@ impl InspectDataCollector {
                                 ))
                             })
                             .await?;
-                        self.maybe_add(
-                            Path::new(&entry.name)
-                                .file_name()
-                                .unwrap()
-                                .to_string_lossy()
-                                .to_string(),
-                            Data::File(contents),
-                        );
+                        self.maybe_add(&entry.name, Data::File(contents));
                     }
                     ty @ _ => {
                         eprintln!(
@@ -216,9 +199,9 @@ impl InspectDataCollector {
 
     /// Adds a key value to the contained vector if it hasn't been taken yet. Otherwise, does
     /// nothing.
-    fn maybe_add(&mut self, key: String, value: Data) {
+    fn maybe_add(&mut self, key: impl Into<String>, value: Data) {
         if let Some(map) = self.inspect_data_map.lock().as_mut() {
-            map.insert(key, value);
+            map.insert(key.into(), value);
         };
     }
 
@@ -910,18 +893,26 @@ mod tests {
         futures::StreamExt,
     };
 
+    fn get_vmo(text: &[u8]) -> zx::Vmo {
+        let vmo = zx::Vmo::create(4096).unwrap();
+        vmo.write(text, 0).unwrap();
+        vmo
+    }
+
     #[fasync::run_singlethreaded(test)]
     async fn inspect_data_collector() {
         let path = PathBuf::from("/test-bindings");
         // Make a ServiceFs containing two files.
         // One is an inspect file, and one is not.
         let mut fs = ServiceFs::new();
-        let vmo = zx::Vmo::create(4096).unwrap();
-        vmo.write(b"test", 0).unwrap();
-        let vmo2 = zx::Vmo::create(4096).unwrap();
-        vmo2.write(b"test", 0).unwrap();
+        let vmo = get_vmo(b"test1");
+        let vmo2 = get_vmo(b"test2");
+        let vmo3 = get_vmo(b"test3");
+        let vmo4 = get_vmo(b"test4");
         fs.dir("diagnostics").add_vmo_file_at("root.inspect", vmo, 0, 4096);
         fs.dir("diagnostics").add_vmo_file_at("root_not_inspect", vmo2, 0, 4096);
+        fs.dir("diagnostics").dir("a").add_vmo_file_at("root.inspect", vmo3, 0, 4096);
+        fs.dir("diagnostics").dir("b").add_vmo_file_at("root.inspect", vmo4, 0, 4096);
         // Create a connection to the ServiceFs.
         let (h0, h1) = zx::Channel::create().unwrap();
         fs.serve_connection(h1).unwrap();
@@ -933,7 +924,7 @@ mod tests {
 
         let (done0, done1) = zx::Channel::create().unwrap();
 
-        let thread_path = path.join("out");
+        let thread_path = path.join("out/diagnostics");
 
         // Run the actual test in a separate thread so that it does not block on FS operations.
         // Use signalling on a zx::Channel to indicate that the test is done.
@@ -950,21 +941,27 @@ mod tests {
                 let collector: Box<InspectDataCollector> = Box::new(collector);
 
                 let extra_data = collector.take_data().expect("collector missing data");
-                assert_eq!(1, extra_data.len());
+                assert_eq!(3, extra_data.len());
 
-                let extra = extra_data.get("root.inspect");
-                assert!(extra.is_some());
+                let assert_extra_data = |path: &str, content: &[u8]| {
+                    let extra = extra_data.get(path);
+                    assert!(extra.is_some());
 
-                match extra.unwrap() {
-                    Data::Vmo(vmo) => {
-                        let mut buf = [0u8; 4];
-                        vmo.read(&mut buf, 0).expect("reading vmo");
-                        assert_eq!(b"test", &buf);
+                    match extra.unwrap() {
+                        Data::Vmo(vmo) => {
+                            let mut buf = [0u8; 5];
+                            vmo.read(&mut buf, 0).expect("reading vmo");
+                            assert_eq!(content, &buf);
+                        }
+                        v => {
+                            panic!("Expected Vmo, got {:?}", v);
+                        }
                     }
-                    v => {
-                        panic!("Expected Vmo, got {:?}", v);
-                    }
-                }
+                };
+
+                assert_extra_data("root.inspect", b"test1");
+                assert_extra_data("a/root.inspect", b"test3");
+                assert_extra_data("b/root.inspect", b"test4");
 
                 done.signal_peer(zx::Signals::NONE, zx::Signals::USER_0).expect("signalling peer");
             });
@@ -1002,7 +999,7 @@ mod tests {
         fasync::spawn(fs.collect());
 
         let (done0, done1) = zx::Channel::create().unwrap();
-        let thread_path = path.join("out");
+        let thread_path = path.join("out/diagnostics");
 
         // Run the actual test in a separate thread so that it does not block on FS operations.
         // Use signalling on a zx::Channel to indicate that the test is done.
