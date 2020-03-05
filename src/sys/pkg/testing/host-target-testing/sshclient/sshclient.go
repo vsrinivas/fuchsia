@@ -98,6 +98,7 @@ func (c *Client) makeSession(ctx context.Context, stdout io.Writer, stderr io.Wr
 		session, err := client.NewSession()
 		if err != nil {
 			ch <- result{session: nil, err: err}
+			return
 		}
 
 		session.Stdout = stdout
