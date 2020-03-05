@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    anyhow::Context,
     bt_avdtp::{self as avdtp, ServiceCapability, StreamEndpoint, StreamEndpointId},
     fidl::encoding::Decodable,
     fidl_fuchsia_bluetooth_bredr::{ChannelParameters, ProfileDescriptor, ProfileProxy, PSM_AVDTP},
@@ -175,7 +176,7 @@ impl Peer {
                     ChannelParameters::new_empty(),
                 )
                 .await
-                .expect("FIDL error: {}");
+                .context("FIDL error: {}")?;
             if let Some(e) = status.error {
                 fx_log_warn!("Couldn't connect media transport {}: {:?}", peer_id, e);
                 return Err(avdtp::Error::PeerDisconnected);
@@ -421,6 +422,7 @@ mod tests {
         Channel, ChannelMode, ProfileMarker, ProfileRequest, ServiceClassProfileIdentifier,
     };
     use futures::pin_mut;
+    use matches::assert_matches;
     use std::convert::TryInto;
     use std::task::Poll;
 
@@ -775,7 +777,7 @@ mod tests {
         match res {
             Poll::Pending => panic!("Should be ready after discovery failure"),
             Poll::Ready(Ok(x)) => panic!("Should be an error but returned {:?}", x),
-            Poll::Ready(Err(e)) => assert_eq!(avdtp::Error::RemoteRejected(0x31), e),
+            Poll::Ready(Err(e)) => assert_matches!(e, avdtp::Error::RemoteRejected(0x31)),
         }
     }
 

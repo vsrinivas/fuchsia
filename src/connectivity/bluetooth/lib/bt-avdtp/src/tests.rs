@@ -5,6 +5,7 @@
 use {
     fuchsia_zircon::{self as zx, Status},
     futures::{executor::block_on, future, StreamExt, TryStreamExt},
+    matches::assert_matches,
     std::result,
 };
 
@@ -266,7 +267,7 @@ fn command_timeout() {
     assert!(complete.is_pending());
 
     exec.wake_next_timer();
-    assert_eq!(Poll::Ready(Err(Error::Timeout)), exec.run_until_stalled(&mut response_fut));
+    assert_matches!(exec.run_until_stalled(&mut response_fut), Poll::Ready(Err(Error::Timeout)));
 
     // We should be able to make a new request now.
     let mut another_fut = Box::pin(peer.discover());
@@ -447,7 +448,7 @@ fn discover_command_rejected() {
         x => panic!("Should have a ready Error response: {:?}", x),
     };
 
-    assert_eq!(Error::RemoteRejected(0x31), error);
+    assert_matches!(error, Error::RemoteRejected(0x31));
 }
 
 // GetCapabilities tests
@@ -633,7 +634,7 @@ fn get_capabilities_reject_command() {
         x => panic!("Should have a ready Error response: {:?}", x),
     };
 
-    assert_eq!(Error::RemoteRejected(0x12), error);
+    assert_matches!(error, Error::RemoteRejected(0x12));
 }
 
 //  Get All Capabilities
@@ -819,7 +820,7 @@ fn get_all_capabilities_reject_command() {
         x => panic!("Should have a ready Error response: {:?}", x),
     };
 
-    assert_eq!(Error::RemoteRejected(0x12), error);
+    assert_matches!(error, Error::RemoteRejected(0x12));
 }
 
 // Get Configuration
@@ -1005,7 +1006,7 @@ fn get_configuration_reject_command() {
         x => panic!("Should have a ready Error response: {:?}", x),
     };
 
-    assert_eq!(Error::RemoteRejected(0x12), error);
+    assert_matches!(error, Error::RemoteRejected(0x12));
 }
 
 macro_rules! seid_command_test {
@@ -1035,7 +1036,7 @@ macro_rules! seid_command_test {
 
             let complete = exec.run_until_stalled(&mut response_fut);
 
-            assert_eq!(Poll::Ready(Ok(())), complete);
+            assert_matches!(complete, Poll::Ready(Ok(())));
         }
     };
 }
@@ -1070,7 +1071,7 @@ macro_rules! seids_command_test {
 
             let complete = exec.run_until_stalled(&mut response_fut);
 
-            assert_eq!(Poll::Ready(Ok(())), complete);
+            assert_matches!(complete, Poll::Ready(Ok(())));
         }
     };
 }
@@ -1109,7 +1110,7 @@ macro_rules! seid_command_reject_test {
                 x => panic!("Should have a ready Error response: {:?}", x),
             };
 
-            assert_eq!(Error::RemoteRejected(0x12), error);
+            assert_matches!(error, Error::RemoteRejected(0x12));
         }
     };
 }
@@ -1152,7 +1153,7 @@ macro_rules! seids_command_reject_test {
                 x => panic!("Should have a ready Error response: {:?}", x),
             };
 
-            assert_eq!(Error::RemoteStreamRejected(0x10, 0x12), error);
+            assert_matches!(error, Error::RemoteStreamRejected(0x10, 0x12));
         }
     };
 }
@@ -1381,7 +1382,7 @@ fn abort_sent_no_response() {
     assert!(complete.is_pending());
 
     exec.wake_next_timer();
-    assert_eq!(Poll::Ready(Err(Error::Timeout)), exec.run_until_stalled(&mut response_fut));
+    assert_matches!(exec.run_until_stalled(&mut response_fut), Poll::Ready(Err(Error::Timeout)));
 }
 
 // Set Configuration
@@ -1552,7 +1553,7 @@ fn set_config_command_works() {
     assert!(remote.write(response).is_ok());
 
     let complete = exec.run_until_stalled(&mut response_fut);
-    assert_eq!(Poll::Ready(Ok(())), complete);
+    assert_matches!(complete, Poll::Ready(Ok(())));
 }
 
 #[test]
@@ -1602,7 +1603,7 @@ fn set_config_error_response() {
     assert!(remote.write(response).is_ok());
 
     let complete = exec.run_until_stalled(&mut response_fut);
-    assert_eq!(Poll::Ready(Err(Error::RemoteConfigRejected(0x07, 0x29))), complete);
+    assert_matches!(complete, Poll::Ready(Err(Error::RemoteConfigRejected(0x07, 0x29))));
 }
 
 // Set Config: Reporting
@@ -1939,7 +1940,7 @@ fn reconfigure_command_works() {
     assert!(remote.write(response).is_ok());
 
     let complete = exec.run_until_stalled(&mut response_fut);
-    assert_eq!(Poll::Ready(Ok(())), complete);
+    assert_matches!(complete, Poll::Ready(Ok(())));
 }
 
 #[test]
@@ -1956,7 +1957,7 @@ fn reconfigure_error_response() {
     ];
     let mut response_fut = Box::pin(peer.reconfigure(&StreamEndpointId(1), &caps));
     // This isn't valid, you can't reconfigure Media Transport
-    assert_eq!(Poll::Ready(Err(Error::Encoding)), exec.run_until_stalled(&mut response_fut));
+    assert_matches!(exec.run_until_stalled(&mut response_fut), Poll::Ready(Err(Error::Encoding)));
 
     let caps = vec![ServiceCapability::MediaCodec {
         media_type: MediaType::Audio,
@@ -1994,7 +1995,7 @@ fn reconfigure_error_response() {
     assert!(remote.write(response).is_ok());
 
     let complete = exec.run_until_stalled(&mut response_fut);
-    assert_eq!(Poll::Ready(Err(Error::RemoteConfigRejected(0x00, 0x13))), complete);
+    assert_matches!(complete, Poll::Ready(Err(Error::RemoteConfigRejected(0x00, 0x13))));
 }
 
 /// This test covers the valid decoding of all valid ServiceCapabilities.

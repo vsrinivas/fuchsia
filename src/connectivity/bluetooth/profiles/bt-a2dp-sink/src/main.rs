@@ -421,10 +421,16 @@ async fn initiate_after_timeout(
     }
 
     fx_vlog!(tag: "a2dp-sink", 1, "Remote peer has not established connection. A2DP sink will now assume the INT role.");
-    let (status, channel) = profile_svc
+    let (status, channel) = match profile_svc
         .connect_l2cap(&peer_id.to_string(), PSM_AVDTP as u16, ChannelParameters::new_empty())
         .await
-        .expect("Signaling channel creation should work");
+    {
+        Ok(x) => x,
+        Err(e) => {
+            fx_log_warn!("FIDL error creating channel: {:?}", e);
+            return;
+        }
+    };
 
     if let Some(e) = status.error {
         fx_log_warn!("Couldn't connect to {}: {:?}", peer_id, e);

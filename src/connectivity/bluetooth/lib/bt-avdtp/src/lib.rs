@@ -980,8 +980,8 @@ impl PeerInner {
                     buf = buf.split_off(packet_size);
                     continue;
                 }
-                Ok(x) => Ok(x),
-            }?;
+                Ok(x) => x,
+            };
             // Commands from the remote get translated into requests.
             if header.is_command() {
                 let mut lock = self.incoming_requests.lock();

@@ -18,7 +18,7 @@ use {
 pub type Result<T> = result::Result<T, Error>;
 
 /// The error type of the AVDTP library.
-#[derive(Error, Debug, PartialEq)]
+#[derive(Error, Debug)]
 pub enum Error {
     /// The value that was sent on the wire was out of range.
     #[error("Value was out of range")]
@@ -96,6 +96,10 @@ pub enum Error {
     /// An operation was attempted in an Invalid State
     #[error("Invalid State")]
     InvalidState,
+
+    /// An error from another source
+    #[error(transparent)]
+    Other(#[from] anyhow::Error),
 
     #[doc(hidden)]
     #[error("__Nonexhaustive error should never be created.")]
@@ -845,6 +849,7 @@ impl Encodable for StreamInformation {
 #[cfg(test)]
 mod test {
     use super::*;
+    use matches::assert_matches;
 
     decodable_enum! {
         TestEnum<u16> {
@@ -870,7 +875,7 @@ mod test {
     #[test]
     fn try_from_error() {
         let err = TestEnum::try_from(5);
-        assert_eq!(Some(Error::OutOfRange), err.err());
+        assert_matches!(err.err(), Some(Error::OutOfRange));
     }
 
     #[test]
@@ -889,7 +894,7 @@ mod test {
         assert!(label.is_ok());
         assert_eq!(15, u8::from(&label.unwrap()));
         label = TxLabel::try_from(16);
-        assert_eq!(Err(Error::OutOfRange), label);
+        assert_matches!(label, Err(Error::OutOfRange));
     }
 
     #[test]

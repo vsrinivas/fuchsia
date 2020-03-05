@@ -489,9 +489,12 @@ mod tests {
     }
 
     fn establish_stream(s: &mut StreamEndpoint) -> zx::Socket {
-        assert_eq!(Ok(()), s.establish());
+        assert_matches!(s.establish(), Ok(()));
         let (remote, transport) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
-        assert_eq!(Ok(false), s.receive_channel(fasync::Socket::from_socket(transport).unwrap()));
+        assert_matches!(
+            s.receive_channel(fasync::Socket::from_socket(transport).unwrap()),
+            Ok(false)
+        );
         remote
     }
 
@@ -558,13 +561,12 @@ mod tests {
         .unwrap();
 
         // Can't configure items that aren't in range.
-        assert_eq!(
-            Err(Error::OutOfRange),
-            s.configure(&REMOTE_ID, vec![ServiceCapability::Reporting])
+        assert_matches!(
+            s.configure(&REMOTE_ID, vec![ServiceCapability::Reporting]),
+            Err(Error::OutOfRange)
         );
 
-        assert_eq!(
-            Ok(()),
+        assert_matches!(
             s.configure(
                 &REMOTE_ID,
                 vec![
@@ -576,7 +578,8 @@ mod tests {
                         codec_extra: vec![0x0C, 0x0D, 0x02, 0x51],
                     }
                 ]
-            )
+            ),
+            Ok(())
         );
 
         // Note: we allow endpoints to be configured (and reconfigured) again when they
@@ -585,9 +588,9 @@ mod tests {
         // Can't configure while open
         establish_stream(&mut s);
 
-        assert_eq!(
-            Err(Error::InvalidState),
-            s.configure(&REMOTE_ID, vec![ServiceCapability::MediaTransport])
+        assert_matches!(
+            s.configure(&REMOTE_ID, vec![ServiceCapability::MediaTransport]),
+            Err(Error::InvalidState)
         );
 
         let reconfiguration = vec![ServiceCapability::MediaCodec {
@@ -602,32 +605,38 @@ mod tests {
         let new_configuration = vec![ServiceCapability::MediaTransport, reconfiguration[0].clone()];
 
         // Reconfiguring while open is fine though.
-        assert_eq!(Ok(()), s.reconfigure(reconfiguration.clone()));
+        assert_matches!(s.reconfigure(reconfiguration.clone()), Ok(()));
 
-        assert_eq!(Ok(new_configuration), s.get_configuration());
+        match s.get_configuration() {
+            Ok(config) => assert_eq!(new_configuration, config),
+            x => panic!("Expected get_configuration to be Ok but got {:?}", x),
+        };
 
         // Can't reconfigure non-application types
-        assert_eq!(Err(Error::OutOfRange), s.reconfigure(vec![ServiceCapability::MediaTransport]));
-
-        // Can't configure or reconfigure while streaming
-        assert_eq!(Ok(()), s.start());
-
-        assert_eq!(
-            Err(Error::InvalidState),
-            s.configure(&REMOTE_ID, vec![ServiceCapability::MediaTransport])
+        assert_matches!(
+            s.reconfigure(vec![ServiceCapability::MediaTransport]),
+            Err(Error::OutOfRange)
         );
 
-        assert_eq!(Err(Error::InvalidState), s.reconfigure(reconfiguration.clone()));
+        // Can't configure or reconfigure while streaming
+        assert_matches!(s.start(), Ok(()));
 
-        assert_eq!(Ok(()), s.suspend());
+        assert_matches!(
+            s.configure(&REMOTE_ID, vec![ServiceCapability::MediaTransport]),
+            Err(Error::InvalidState)
+        );
+
+        assert_matches!(s.reconfigure(reconfiguration.clone()), Err(Error::InvalidState));
+
+        assert_matches!(s.suspend(), Ok(()));
 
         // Reconfigure should be fine again in open state.
-        assert_eq!(Ok(()), s.reconfigure(reconfiguration.clone()));
+        assert_matches!(s.reconfigure(reconfiguration.clone()), Ok(()));
 
         // Configure is still not allowed.
-        assert_eq!(
-            Err(Error::InvalidState),
-            s.configure(&REMOTE_ID, vec![ServiceCapability::MediaTransport])
+        assert_matches!(
+            s.configure(&REMOTE_ID, vec![ServiceCapability::MediaTransport]),
+            Err(Error::InvalidState)
         );
     }
 
@@ -645,25 +654,28 @@ mod tests {
         let (remote, transport) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
 
         // Can't establish before configuring
-        assert_eq!(Err(Error::InvalidState), s.establish());
+        assert_matches!(s.establish(), Err(Error::InvalidState));
 
         // Trying to receive a channel in the wrong state closes the channel
-        assert_eq!(
-            Err(Error::InvalidState),
-            s.receive_channel(fasync::Socket::from_socket(transport).unwrap())
+        assert_matches!(
+            s.receive_channel(fasync::Socket::from_socket(transport).unwrap()),
+            Err(Error::InvalidState)
         );
 
         let buf: &mut [u8] = &mut [0; 1];
 
-        assert_eq!(Err(zx::Status::PEER_CLOSED), remote.read(buf));
+        assert_matches!(remote.read(buf), Err(zx::Status::PEER_CLOSED));
 
-        assert_eq!(Ok(()), s.configure(&REMOTE_ID, vec![ServiceCapability::MediaTransport]));
+        assert_matches!(s.configure(&REMOTE_ID, vec![ServiceCapability::MediaTransport]), Ok(()));
 
-        assert_eq!(Ok(()), s.establish());
+        assert_matches!(s.establish(), Ok(()));
 
         // And we should be able to give a channel now.
         let (_remote, transport) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
-        assert_eq!(Ok(false), s.receive_channel(fasync::Socket::from_socket(transport).unwrap()));
+        assert_matches!(
+            s.receive_channel(fasync::Socket::from_socket(transport).unwrap()),
+            Ok(false)
+        );
     }
 
     fn setup_peer_for_release(exec: &mut fasync::Executor) -> (Peer, zx::Socket, SimpleResponder) {
@@ -691,7 +703,7 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(Ok(()), s.configure(&REMOTE_ID, vec![ServiceCapability::MediaTransport]));
+        assert_matches!(s.configure(&REMOTE_ID, vec![ServiceCapability::MediaTransport]), Ok(()));
 
         let remote_transport = establish_stream(&mut s);
 
@@ -710,7 +722,7 @@ mod tests {
         drop(remote_transport);
 
         // After the transport is closed the release future should be complete.
-        assert_eq!(Poll::Ready(Ok(())), exec.run_until_stalled(&mut release_fut));
+        assert_matches!(exec.run_until_stalled(&mut release_fut), Poll::Ready(Ok(())));
     }
 
     #[test]
@@ -724,7 +736,7 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(Ok(()), s.configure(&REMOTE_ID, vec![ServiceCapability::MediaTransport]));
+        assert_matches!(s.configure(&REMOTE_ID, vec![ServiceCapability::MediaTransport]), Ok(()));
 
         // Before the stream is opened, we shouldn't be able to take the transport.
         assert!(s.take_transport().is_err());
@@ -785,7 +797,7 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(Ok(()), s.configure(&REMOTE_ID, vec![ServiceCapability::MediaTransport]));
+        assert_matches!(s.configure(&REMOTE_ID, vec![ServiceCapability::MediaTransport]), Ok(()));
         let _remote_transport = establish_stream(&mut s);
         let (peer, signaling, responder) = setup_peer_for_release(&mut exec);
 
@@ -810,7 +822,7 @@ mod tests {
         // Send a response
         assert!(signaling.write(&[txlabel | 0x02, 0x0A]).is_ok());
 
-        assert_eq!(Poll::Ready(Ok(())), exec.run_until_stalled(&mut release_fut));
+        assert_matches!(exec.run_until_stalled(&mut release_fut), Poll::Ready(Ok(())));
     }
 
     #[test]
@@ -825,33 +837,36 @@ mod tests {
         .unwrap();
 
         // Can't start or suspend until configured and open.
-        assert_eq!(Err(Error::InvalidState), s.start());
-        assert_eq!(Err(Error::InvalidState), s.suspend());
+        assert_matches!(s.start(), Err(Error::InvalidState));
+        assert_matches!(s.suspend(), Err(Error::InvalidState));
 
-        assert_eq!(Ok(()), s.configure(&REMOTE_ID, vec![ServiceCapability::MediaTransport]));
+        assert_matches!(s.configure(&REMOTE_ID, vec![ServiceCapability::MediaTransport]), Ok(()));
 
-        assert_eq!(Err(Error::InvalidState), s.start());
-        assert_eq!(Err(Error::InvalidState), s.suspend());
+        assert_matches!(s.start(), Err(Error::InvalidState));
+        assert_matches!(s.suspend(), Err(Error::InvalidState));
 
-        assert_eq!(Ok(()), s.establish());
+        assert_matches!(s.establish(), Ok(()));
 
-        assert_eq!(Err(Error::InvalidState), s.start());
-        assert_eq!(Err(Error::InvalidState), s.suspend());
+        assert_matches!(s.start(), Err(Error::InvalidState));
+        assert_matches!(s.suspend(), Err(Error::InvalidState));
 
         let (remote, transport) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
-        assert_eq!(Ok(false), s.receive_channel(fasync::Socket::from_socket(transport).unwrap()));
+        assert_matches!(
+            s.receive_channel(fasync::Socket::from_socket(transport).unwrap()),
+            Ok(false)
+        );
 
         // Should be able to start but not suspend now.
-        assert_eq!(Err(Error::InvalidState), s.suspend());
-        assert_eq!(Ok(()), s.start());
+        assert_matches!(s.suspend(), Err(Error::InvalidState));
+        assert_matches!(s.start(), Ok(()));
 
         // Are started, so we should be able to suspend but not start again here.
-        assert_eq!(Err(Error::InvalidState), s.start());
-        assert_eq!(Ok(()), s.suspend());
+        assert_matches!(s.start(), Err(Error::InvalidState));
+        assert_matches!(s.suspend(), Ok(()));
 
         // Now we're suspended, so we can start it again.
-        assert_eq!(Ok(()), s.start());
-        assert_eq!(Ok(()), s.suspend());
+        assert_matches!(s.start(), Ok(()));
+        assert_matches!(s.suspend(), Ok(()));
 
         // After we close, we are back at idle and can't start / stop
         let (peer, signaling, responder) = setup_peer_for_release(&mut exec);
@@ -870,12 +885,12 @@ mod tests {
             drop(remote);
 
             // After the socket is closed we should be done.
-            assert_eq!(Poll::Ready(Ok(())), exec.run_until_stalled(&mut release_fut));
+            assert_matches!(exec.run_until_stalled(&mut release_fut), Poll::Ready(Ok(())));
         }
 
         // Shouldn't be able to start or suspend again.
-        assert_eq!(Err(Error::InvalidState), s.start());
-        assert_eq!(Err(Error::InvalidState), s.suspend());
+        assert_matches!(s.start(), Err(Error::InvalidState));
+        assert_matches!(s.suspend(), Err(Error::InvalidState));
     }
 
     #[test]
@@ -899,7 +914,7 @@ mod tests {
         .unwrap();
 
         // Can't get configuration if we aren't configured.
-        assert_eq!(Err(Error::InvalidState), s.get_configuration());
+        assert_matches!(s.get_configuration(), Err(Error::InvalidState));
 
         let config = vec![
             ServiceCapability::MediaTransport,
@@ -911,18 +926,21 @@ mod tests {
             },
         ];
 
-        assert_eq!(Ok(()), s.configure(&REMOTE_ID, config.clone()));
+        assert_matches!(s.configure(&REMOTE_ID, config.clone()), Ok(()));
 
-        assert_eq!(Ok(config), s.get_configuration());
+        match s.get_configuration() {
+            Ok(c) => assert_eq!(config, c),
+            x => panic!("Expected Ok from get_configuration but got {:?}", x),
+        };
 
         {
             // Abort this stream, putting it back to the idle state.
             let mut abort_fut = Box::pin(s.abort(None));
             let complete = exec.run_until_stalled(&mut abort_fut);
-            assert_eq!(Poll::Ready(Ok(())), complete);
+            assert_matches!(complete, Poll::Ready(Ok(())));
         }
 
-        assert_eq!(Err(Error::InvalidState), s.get_configuration());
+        assert_matches!(s.get_configuration(), Err(Error::InvalidState));
     }
 
     use std::sync::{
