@@ -1193,7 +1193,7 @@ impl InfiniteScroll {
     ) -> Result<(), Error> {
         duration!("gfx", "InfiniteScrollViewAssistant::update");
 
-        let size = &context.size;
+        let size = &context.logical_size;
         let presentation_time = context.presentation_time;
         let elapsed = presentation_time - self.last_presentation_time;
         let scroll_method = self.scroll_method;
@@ -1387,7 +1387,7 @@ impl ViewAssistant for InfiniteScrollViewAssistant {
         ready_event: Event,
         context: &ViewAssistantContext<'_>,
     ) -> Result<(), Error> {
-        if context.size != self.size || self.infinite_scroll.is_none() {
+        if context.logical_size != self.size || self.infinite_scroll.is_none() {
             let infinite_scroll = InfiniteScroll::new(
                 self.args.scale,
                 self.args.scroll_method,
@@ -1397,7 +1397,7 @@ impl ViewAssistant for InfiniteScrollViewAssistant {
                 self.args.disable_text,
             );
 
-            self.size = context.size;
+            self.size = context.logical_size;
             self.infinite_scroll = Some(infinite_scroll);
         }
 

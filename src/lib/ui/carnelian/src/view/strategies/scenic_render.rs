@@ -268,7 +268,7 @@ impl ViewStrategy for RenderViewStrategy {
     }
 
     async fn update(&mut self, view_details: &ViewDetails, view_assistant: &mut ViewAssistantPtr) {
-        let size = view_details.physical_size.floor().to_u32();
+        let size = view_details.logical_size.floor().to_u32();
         if size.width > 0 && size.height > 0 {
             if self.plumber.is_none() {
                 self.create_plumber(size).await.expect("create_plumber");
@@ -286,8 +286,8 @@ impl ViewStrategy for RenderViewStrategy {
             self.content_node.set_translation(center_x, center_y, -0.1);
             let rectangle = Rectangle::new(
                 self.scenic_resources.session.clone(),
-                size.width as f32,
-                size.height as f32,
+                view_details.physical_size.width as f32,
+                view_details.physical_size.height as f32,
             );
             if let Some(available) = plumber.frame_set.get_available_image() {
                 let available_index =

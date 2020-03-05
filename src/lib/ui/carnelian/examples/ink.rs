@@ -953,7 +953,7 @@ impl Ink {
         duration!("gfx", "update");
 
         let time_now = Time::get(ClockId::Monotonic);
-        let size = &context.size;
+        let size = &context.logical_size;
         let mut full_damage = false;
 
         // Process touch device input.
@@ -1215,10 +1215,10 @@ impl ViewAssistant for InkViewAssistant {
         ready_event: Event,
         context: &ViewAssistantContext<'_>,
     ) -> Result<(), Error> {
-        if context.size != self.size || self.ink.is_none() {
-            let ink = Ink::new(render_context, context.size);
+        if context.logical_size != self.size || self.ink.is_none() {
+            let ink = Ink::new(render_context, context.logical_size);
 
-            self.size = context.size;
+            self.size = context.logical_size;
             self.ink = Some(ink);
         }
 
