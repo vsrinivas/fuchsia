@@ -128,6 +128,11 @@ coordinator_target_dir = get_label_info(coordinator_label, "target_out_dir")
 coordinator_target_name = get_label_info(coordinator_label, "name")
 coordinator_manifest = coordinator_target_dir + "/" + coordinator_target_name
 
+installer_label = "//src/sys/installer:installer.bootfs"
+installer_target_dir = get_label_info(installer_label, "target_out_dir")
+installer_target_name = get_label_info(installer_label, "name")
+installer_manifest = installer_target_dir + "/" + installer_target_name
+
 root_manifests_label = "//src/sys/bootstrap:root_manifests.bootfs"
 root_manifests_target_dir =
     get_label_info(root_manifests_label, "target_out_dir")
@@ -144,11 +149,13 @@ zbi("zbi") {
     ":zxcrypt_config.txt",
     component_manager_label,
     coordinator_label,
+    installer_label,
     root_manifests_label,
   ]
   inputs = [
     component_manager_manifest,
     coordinator_manifest,
+    installer_manifest,
     root_manifests_manifest,
     zircon_kernel_zbi,
     manifest_file,
