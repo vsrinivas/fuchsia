@@ -17,6 +17,7 @@
 #include <gpt/gpt.h>
 #include <gpt/guid.h>
 #include <mbr/mbr.h>
+#include <ramdevice-client/ramdisk.h>
 
 namespace gpt {
 namespace {
@@ -173,7 +174,7 @@ class LibGptTest {
   fbl::unique_fd fd_;
 
   // An optional ramdisk structure.
-  struct ramdisk_client* ramdisk_ = nullptr;
+  ramdisk_client_t* ramdisk_ = nullptr;
 
   // usable start block offset.
   uint64_t usable_start_block_ = UINT64_MAX;

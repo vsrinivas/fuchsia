@@ -2,24 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// There are some dependencies that fx format breaks by rearranging order of
-// header files. Turn fx format off till we resolve the issue.
-// clang-format off
+#include "gpt-tests.h"
 
-#include <fbl/auto_call.h>
-#include <memory>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <lib/cksum.h>
 #include <lib/fdio/cpp/caller.h>
-#include <ramdevice-client/ramdisk.h>
 #include <zircon/assert.h>
+
+#include <memory>
+
+#include <fbl/auto_call.h>
+#include <gpt/gpt.h>
+#include <gpt/guid.h>
+#include <ramdevice-client/ramdisk.h>
 #include <zxtest/zxtest.h>
 
-#include <gpt/guid.h>
-#include "gpt-tests.h"
 #include "gpt.h"
-
-// clang-format on
 
 extern bool gUseRamDisk;
 extern char gDevPath[PATH_MAX];
