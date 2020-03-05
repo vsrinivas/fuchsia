@@ -173,6 +173,50 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithRoutingPolicyInsufficientCove
   ASSERT_DEATH(ProcessConfigLoader::LoadProcessConfig(kTestAudioCoreConfigFilename), "");
 }
 
+TEST(ProcessConfigLoaderTest, LoadProcessConfigWithInputDevices) {
+  static const std::string kConfigWithInputDevices =
+      R"JSON({
+    "volume_curve": [
+      {
+          "level": 0.0,
+          "db": -160.0
+      },
+      {
+          "level": 1.0,
+          "db": 0.0
+      }
+    ],
+    "input_devices": [
+      {
+        "device_id" : "34384e7da9d52c8062a9765baeb6053a",
+        "rate": 96000
+      },
+      {
+        "device_id": "*",
+        "rate": 24000
+      }
+    ]
+  })JSON";
+  ASSERT_TRUE(files::WriteFile(kTestAudioCoreConfigFilename, kConfigWithInputDevices.data(),
+                               kConfigWithInputDevices.size()));
+
+  const audio_stream_unique_id_t expected_id = {.data = {0x34, 0x38, 0x4e, 0x7d, 0xa9, 0xd5, 0x2c,
+                                                         0x80, 0x62, 0xa9, 0x76, 0x5b, 0xae, 0xb6,
+                                                         0x05, 0x3a}};
+  const audio_stream_unique_id_t unknown_id = {.data = {0x32, 0x38, 0x4e, 0x7d, 0xa9, 0xd5, 0x2c,
+                                                        0x81, 0x42, 0xa9, 0x76, 0x5b, 0xae, 0xb6,
+                                                        0x22, 0x3a}};
+
+  const auto process_config = ProcessConfigLoader::LoadProcessConfig(kTestAudioCoreConfigFilename);
+  ASSERT_TRUE(process_config);
+
+  using fuchsia::media::AudioRenderUsage;
+  auto& config = process_config->device_config();
+
+  EXPECT_EQ(config.input_device_profile(expected_id).rate(), 96000u);
+  EXPECT_EQ(config.input_device_profile(unknown_id).rate(), 24000u);
+}
+
 TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
   static const std::string kConfigWithEffects =
       R"JSON({
@@ -193,6 +237,7 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
         "eligible_for_loopback": true,
         "pipeline": {
           "streams": ["background", "system_agent", "media", "interruption"],
+          "output_rate": 96000,
           "effects": [
             {
               "lib": "libbar2.so",
@@ -209,6 +254,7 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
             {
               "streams": [],
               "loopback": true,
+              "output_rate": 48000,
               "effects": [
                 {
                   "lib": "libfoo2.so",
@@ -287,6 +333,7 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
     }
     ASSERT_EQ(1u, mix_group.inputs.size());
     ASSERT_FALSE(mix_group.loopback);
+    ASSERT_EQ(96000u, mix_group.output_rate);
   }
 
   const auto& mix = root.inputs[0];
@@ -303,6 +350,7 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
     }
     ASSERT_EQ(2u, mix_group.inputs.size());
     ASSERT_TRUE(mix_group.loopback);
+    ASSERT_EQ(48000u, mix_group.output_rate);
   }
 
   {  // output mix_group 1
@@ -324,6 +372,7 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
       EXPECT_EQ("{\"arg1\":55,\"arg2\":3.14}", effect.effect_config);
     }
     ASSERT_FALSE(mix_group.loopback);
+    ASSERT_EQ(PipelineConfig::kDefaultMixGroupRate, mix_group.output_rate);
   }
 
   {  // output mix_group 2
@@ -339,6 +388,7 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
       EXPECT_EQ("{\"string_param\":\"some string value\"}", effect.effect_config);
     }
     ASSERT_FALSE(mix_group.loopback);
+    ASSERT_EQ(PipelineConfig::kDefaultMixGroupRate, mix_group.output_rate);
   }
 }
 

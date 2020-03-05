@@ -49,7 +49,11 @@
         //
         // Only a single mix group in a pipeline may set this to true; defaults to false if
         // unspecified.
-        "loopback": "bool"
+        "loopback": "bool",
+        // The output rate of this stage. For the root mix group, this will be the target rate that
+        // will be requested from hardware. A different rate may be chosen if the hardware does not
+        // support the rate requested.
+        "output_rate": "integer"
       },
       "additionalProperties": false
     },
@@ -100,6 +104,19 @@
         }
       },
       "required": [ "target_name", "states" ]
+    },
+    "input_device_profile" : {
+      "type": "object",
+      "properties" : {
+        "device_id": {
+          "type" : "string"
+        },
+        // The target rate for this device. A different rate may be chosen if the driver does
+        // not support the rate requested.
+        "rate": "integer"
+      },
+      "required": [ "device_id", "rate" ],
+      "additionalProperties": false
     }
   },
   "type": "object",
@@ -111,6 +128,10 @@
     "output_devices" : {
       "type": "array",
       "items" : { "$ref" : "#/definitions/output_device_profile" }
+    },
+    "input_devices" : {
+      "type": "array",
+      "items" : { "$ref" : "#/definitions/input_device_profile" }
     },
     "thermal_policy": {
       "type" : "array",

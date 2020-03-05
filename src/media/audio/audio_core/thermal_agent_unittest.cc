@@ -125,7 +125,7 @@ const char kConfigTripPoint[] = "config";
 // point.
 TEST_F(ThermalAgentTest, OneConfigEntry) {
   PipelineConfig pipeline_config(
-      {"mixgroup", {}, {{"lib", "effect", kTargetName, kNominalConfig}}, {}, false});
+      {"mixgroup", {}, {{"lib", "effect", kTargetName, kNominalConfig}}, {}, false, 48000});
   std::vector<ThermalConfig::State> states{{kTripPoint, kConfigTripPoint}};
   ProcessConfig process_config =
       ProcessConfigBuilder()
@@ -191,7 +191,8 @@ TEST_F(ThermalAgentTest, MultipleConfigEntries) {
                                    {"lib", "effect", kTargetName1, kNominalConfig1},
                                    {"lib", "effect", kTargetName2, kNominalConfig2}},
                                   {},
-                                  false});
+                                  false,
+                                  48000});
   std::vector<ThermalConfig::State> states0{{kTripPoint0_0, kConfigTripPoint0_0},
                                             {kTripPoint0_1, kConfigTripPoint0_1}};
   std::vector<ThermalConfig::State> states1{{kTripPoint1_0, kConfigTripPoint1_0},

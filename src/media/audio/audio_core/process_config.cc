@@ -28,6 +28,20 @@ ProcessConfigBuilder& ProcessConfigBuilder::AddDeviceProfile(
   output_device_profiles_.push_back({std::move(*device_id), profile});
   return *this;
 }
+ProcessConfigBuilder& ProcessConfigBuilder::AddDeviceProfile(
+    std::pair<std::optional<audio_stream_unique_id_t>, DeviceConfig::InputDeviceProfile>
+        keyed_profile) {
+  auto& [device_id, profile] = keyed_profile;
+  if (!device_id.has_value()) {
+    FX_CHECK(!default_input_device_profile_.has_value())
+        << "Config specifies two default input profiles; must have only one.";
+    default_input_device_profile_ = std::move(profile);
+    return *this;
+  }
+
+  input_device_profiles_.push_back({std::move(*device_id), profile});
+  return *this;
+}
 
 ProcessConfigBuilder& ProcessConfigBuilder::AddThermalPolicyEntry(
     ThermalConfig::Entry thermal_policy_entry) {
@@ -41,7 +55,8 @@ ProcessConfig ProcessConfigBuilder::Build() {
   FX_CHECK(maybe_curve) << "Missing required VolumeCurve member";
   return ProcessConfig(
       std::move(*maybe_curve),
-      DeviceConfig(std::move(output_device_profiles_), std::move(default_output_device_profile_)),
+      DeviceConfig(std::move(output_device_profiles_), std::move(default_output_device_profile_),
+                   std::move(input_device_profiles_), std::move(default_input_device_profile_)),
       ThermalConfig(std::move(thermal_config_entries_)));
 }
 

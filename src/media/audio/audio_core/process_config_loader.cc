@@ -25,6 +25,7 @@ static constexpr char kJsonKeyVolumeCurve[] = "volume_curve";
 static constexpr char kJsonKeyPipeline[] = "pipeline";
 static constexpr char kJsonKeyLib[] = "lib";
 static constexpr char kJsonKeyName[] = "name";
+static constexpr char kJsonKeyRate[] = "rate";
 static constexpr char kJsonKeyEffect[] = "effect";
 static constexpr char kJsonKeyConfig[] = "config";
 static constexpr char kJsonKeyStreams[] = "streams";
@@ -32,6 +33,8 @@ static constexpr char kJsonKeyInputs[] = "inputs";
 static constexpr char kJsonKeyEffects[] = "effects";
 static constexpr char kJsonKeyLoopback[] = "loopback";
 static constexpr char kJsonKeyDeviceId[] = "device_id";
+static constexpr char kJsonKeyOutputRate[] = "output_rate";
+static constexpr char kJsonKeyInputDevices[] = "input_devices";
 static constexpr char kJsonKeyOutputDevices[] = "output_devices";
 static constexpr char kJsonKeySupportedOutputStreamTypes[] = "supported_output_stream_types";
 static constexpr char kJsonKeyEligibleForLoopback[] = "eligible_for_loopback";
@@ -163,19 +166,20 @@ PipelineConfig::MixGroup ParseMixGroupFromJsonObject(const rapidjson::Value& val
   } else {
     mix_group.loopback = false;
   }
+
+  it = value.FindMember(kJsonKeyOutputRate);
+  if (it != value.MemberEnd()) {
+    FX_DCHECK(it->value.IsUint());
+    mix_group.output_rate = it->value.GetUint();
+  } else {
+    mix_group.output_rate = PipelineConfig::kDefaultMixGroupRate;
+  }
   return mix_group;
 }
 
-std::pair<std::optional<audio_stream_unique_id_t>, DeviceConfig::OutputDeviceProfile>
-ParseDeviceRoutingProfileFromJsonObject(const rapidjson::Value& value,
-                                        RenderUsageSet* all_supported_usages) {
-  FX_CHECK(value.IsObject());
-
-  auto device_id_it = value.FindMember(kJsonKeyDeviceId);
-  FX_CHECK(device_id_it != value.MemberEnd());
-  auto& device_id_value = device_id_it->value;
-  FX_CHECK(device_id_value.IsString());
-  const auto* device_id_string = device_id_value.GetString();
+std::optional<audio_stream_unique_id_t> ParseDeviceIdFromJsonValue(const rapidjson::Value& value) {
+  FX_DCHECK(value.IsString());
+  const auto* device_id_string = value.GetString();
 
   std::optional<audio_stream_unique_id_t> device_id;
   if (strcmp(device_id_string, "*") != 0) {
@@ -189,8 +193,21 @@ ParseDeviceRoutingProfileFromJsonObject(const rapidjson::Value& value,
         &device_id->data[4], &device_id->data[5], &device_id->data[6], &device_id->data[7],
         &device_id->data[8], &device_id->data[9], &device_id->data[10], &device_id->data[11],
         &device_id->data[12], &device_id->data[13], &device_id->data[14], &device_id->data[15]);
-    FX_CHECK(captures == 16);
+    FX_DCHECK(captures == 16);
   }
+  return device_id;
+}
+
+std::pair<std::optional<audio_stream_unique_id_t>, DeviceConfig::OutputDeviceProfile>
+ParseOutputDeviceProfileFromJsonObject(const rapidjson::Value& value,
+                                       RenderUsageSet* all_supported_usages) {
+  FX_CHECK(value.IsObject());
+
+  auto device_id_it = value.FindMember(kJsonKeyDeviceId);
+  FX_CHECK(device_id_it != value.MemberEnd());
+
+  std::optional<audio_stream_unique_id_t> device_id =
+      ParseDeviceIdFromJsonValue(device_id_it->value);
 
   auto eligible_for_loopback_it = value.FindMember(kJsonKeyEligibleForLoopback);
   FX_CHECK(eligible_for_loopback_it != value.MemberEnd());
@@ -284,11 +301,38 @@ void ParseOutputDevicePoliciesFromJsonObject(const rapidjson::Value& output_devi
   RenderUsageSet all_supported_usages;
   for (const auto& output_device_profile : output_device_profiles.GetArray()) {
     config_builder->AddDeviceProfile(
-        ParseDeviceRoutingProfileFromJsonObject(output_device_profile, &all_supported_usages));
+        ParseOutputDeviceProfileFromJsonObject(output_device_profile, &all_supported_usages));
   }
 
   FX_CHECK(all_supported_usages.size() == kStreamRenderUsageCount)
       << "Not all output usages are supported in the config";
+}
+
+std::pair<std::optional<audio_stream_unique_id_t>, DeviceConfig::InputDeviceProfile>
+ParseInputDeviceProfileFromJsonObject(const rapidjson::Value& value) {
+  FX_CHECK(value.IsObject());
+
+  auto device_id_it = value.FindMember(kJsonKeyDeviceId);
+  FX_CHECK(device_id_it != value.MemberEnd());
+
+  std::optional<audio_stream_unique_id_t> device_id =
+      ParseDeviceIdFromJsonValue(device_id_it->value);
+
+  auto rate_it = value.FindMember(kJsonKeyRate);
+  FX_DCHECK(rate_it != value.MemberEnd());
+  FX_DCHECK(rate_it->value.IsUint());
+  auto rate = rate_it->value.GetUint();
+
+  return {device_id, DeviceConfig::InputDeviceProfile(rate)};
+}
+
+void ParseInputDevicePoliciesFromJsonObject(const rapidjson::Value& input_device_profiles,
+                                            ProcessConfigBuilder* config_builder) {
+  FX_CHECK(input_device_profiles.IsArray());
+
+  for (const auto& input_device_profile : input_device_profiles.GetArray()) {
+    config_builder->AddDeviceProfile(ParseInputDeviceProfileFromJsonObject(input_device_profile));
+  }
 }
 
 void ParseThermalPolicyFromJsonObject(const rapidjson::Value& value,
@@ -354,6 +398,10 @@ fit::result<ProcessConfig, std::string> ProcessConfigLoader::ParseProcessConfig(
   auto output_devices_it = doc.FindMember(kJsonKeyOutputDevices);
   if (output_devices_it != doc.MemberEnd()) {
     ParseOutputDevicePoliciesFromJsonObject(output_devices_it->value, &config_builder);
+  }
+  auto input_devices_it = doc.FindMember(kJsonKeyInputDevices);
+  if (input_devices_it != doc.MemberEnd()) {
+    ParseInputDevicePoliciesFromJsonObject(input_devices_it->value, &config_builder);
   }
 
   auto thermal_policy_it = doc.FindMember(kJsonKeyThermalPolicy);

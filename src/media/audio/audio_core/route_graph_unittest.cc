@@ -697,8 +697,10 @@ static const DeviceConfig kConfigWithMediaExternalRoutingPolicy = DeviceConfig(
                        /*output_usage_support_set=*/
                        {RenderUsage::BACKGROUND, RenderUsage::MEDIA, RenderUsage::INTERRUPTION,
                         RenderUsage::SYSTEM_AGENT, RenderUsage::COMMUNICATION})}},
-    /*default=*/{DeviceConfig::OutputDeviceProfile(
-        /*eligible_for_loopback=*/true, /*output_usage_support_set=*/{RenderUsage::MEDIA})});
+    /*default=*/
+    {DeviceConfig::OutputDeviceProfile(
+        /*eligible_for_loopback=*/true, /*output_usage_support_set=*/{RenderUsage::MEDIA})},
+    {}, {});
 
 class RouteGraphWithMediaExternalPolicyTest : public RouteGraphTest {
  public:
@@ -757,10 +759,13 @@ static const DeviceConfig kConfigWithExternNonLoopbackDevicePolicy = DeviceConfi
                                                   /*eligible_for_loopback=*/true,
                                                   /*output_usage_support_set=*/
                                                   {RenderUsage::BACKGROUND})}},
-    /*default=*/{DeviceConfig::OutputDeviceProfile(
-        /*eligible_for_loopback=*/false, /*output_usage_support_set=*/{
-            RenderUsage::BACKGROUND, RenderUsage::MEDIA, RenderUsage::INTERRUPTION,
-            RenderUsage::SYSTEM_AGENT, RenderUsage::COMMUNICATION})});
+    /*default=*/
+    {DeviceConfig::OutputDeviceProfile(
+        /*eligible_for_loopback=*/false,
+        /*output_usage_support_set=*/{RenderUsage::BACKGROUND, RenderUsage::MEDIA,
+                                      RenderUsage::INTERRUPTION, RenderUsage::SYSTEM_AGENT,
+                                      RenderUsage::COMMUNICATION})},
+    {}, {});
 
 class RouteGraphWithExternalNonLoopbackDeviceTest : public RouteGraphTest {
  public:

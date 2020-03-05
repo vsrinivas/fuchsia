@@ -23,6 +23,9 @@ class ProcessConfigBuilder {
   ProcessConfigBuilder& AddDeviceProfile(
       std::pair<std::optional<audio_stream_unique_id_t>, DeviceConfig::OutputDeviceProfile>
           keyed_profile);
+  ProcessConfigBuilder& AddDeviceProfile(
+      std::pair<std::optional<audio_stream_unique_id_t>, DeviceConfig::InputDeviceProfile>
+          keyed_profile);
   ProcessConfigBuilder& AddThermalPolicyEntry(ThermalConfig::Entry thermal_policy_entry);
   ProcessConfig Build();
 
@@ -31,6 +34,9 @@ class ProcessConfigBuilder {
   std::vector<std::pair<audio_stream_unique_id_t, DeviceConfig::OutputDeviceProfile>>
       output_device_profiles_;
   std::optional<DeviceConfig::OutputDeviceProfile> default_output_device_profile_;
+  std::vector<std::pair<audio_stream_unique_id_t, DeviceConfig::InputDeviceProfile>>
+      input_device_profiles_;
+  std::optional<DeviceConfig::InputDeviceProfile> default_input_device_profile_;
   std::vector<ThermalConfig::Entry> thermal_config_entries_;
 };
 
