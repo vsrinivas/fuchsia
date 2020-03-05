@@ -8,7 +8,7 @@
 #include <cstdint>
 #include <string>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace shell {
 namespace interpreter {
@@ -44,13 +44,13 @@ class ReferenceCountedBase {
   void Use() {
     // reference_count_ is initalized at one (the reference for the creator). That means it can
     // never be zero.
-    FXL_DCHECK(reference_count_ > 0);
+    FX_DCHECK(reference_count_ > 0);
     ++reference_count_;
   }
 
   // Releases a reference to this value. When the count is zero, the value is destroyed.
   void Release() {
-    FXL_DCHECK(reference_count_ > 0);
+    FX_DCHECK(reference_count_ > 0);
     if (--reference_count_ == 0) {
       delete this;
     }
@@ -145,7 +145,7 @@ class Value {
   ValueType type() const { return type_; }
 
   uint64_t GetUint64() const {
-    FXL_DCHECK(type_ == ValueType::kUint64);
+    FX_DCHECK(type_ == ValueType::kUint64);
     return uint64_value_;
   }
   void SetUint64(uint64_t value) {
@@ -155,7 +155,7 @@ class Value {
   }
 
   String* GetString() const {
-    FXL_DCHECK(type_ == ValueType::kString);
+    FX_DCHECK(type_ == ValueType::kString);
     return string_;
   }
   void SetString(std::string_view value) {

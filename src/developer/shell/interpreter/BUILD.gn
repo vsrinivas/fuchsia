@@ -37,7 +37,6 @@ static_library("shell_server_lib") {
     "//sdk/lib/svc",
     "//sdk/lib/sys/cpp",
     "//src/developer/shell/fidl/fuchsia.shell:shell_llcpp",
-    "//src/lib/fxl",
     "//src/lib/syslog/cpp",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop",
@@ -56,6 +55,7 @@ executable("bin") {
   deps = [
     ":shell_interpreter",
     ":shell_server_lib",
+    "//src/lib/syslog/cpp",
   ]
 }
 
@@ -82,7 +82,8 @@ executable("shell_interpreter_test_bin") {
 
   deps = [
     ":shell_interpreter",
-    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/syslog/cpp",
+    "//src/lib/syslog/test:gtest_main",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
@@ -99,7 +100,7 @@ executable("shell_server_test_bin") {
     ":shell_server",
     "//sdk/lib/sys/cpp",
     "//src/developer/shell/fidl/fuchsia.shell:shell",
-    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/syslog/test:gtest_main",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-default",

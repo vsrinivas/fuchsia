@@ -17,7 +17,7 @@ void ExecutionScope::Execute(ExecutionContext* context, Thread* thread,
                              std::unique_ptr<code::Code> code) {
   size_t pc = 0;
   for (;;) {
-    FXL_DCHECK(pc < code->code().size());
+    FX_DCHECK(pc < code->code().size());
     code::Opcode opcode = static_cast<code::Opcode>(code->code()[pc++]);
     switch (opcode) {
       case code::Opcode::kNop:

@@ -10,7 +10,7 @@
 
 #include "src/developer/shell/interpreter/src/code.h"
 #include "src/developer/shell/interpreter/src/scope.h"
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace shell {
 namespace interpreter {
@@ -27,7 +27,7 @@ class Thread {
 
   // Pops one 64 bit value from the value stack.
   uint64_t Pop() {
-    FXL_DCHECK(!values_.empty());
+    FX_DCHECK(!values_.empty());
     uint64_t returned_value = values_.back();
     values_.pop_back();
     return returned_value;

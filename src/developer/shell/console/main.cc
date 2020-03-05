@@ -7,10 +7,12 @@
 #include "lib/async-loop/default.h"
 #include "src/developer/shell/console/app.h"
 #include "src/developer/shell/console/scoped_interpreter.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace shell::console {
 
 int ConsoleMain(int argc, const char** argv) {
+  syslog::InitLogger({"cliff"});
   ScopedInterpreter interpreter;
 
   async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);

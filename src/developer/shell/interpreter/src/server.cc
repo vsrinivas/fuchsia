@@ -14,7 +14,7 @@
 #include "src/developer/shell/interpreter/src/instructions.h"
 #include "src/developer/shell/interpreter/src/schema.h"
 #include "src/developer/shell/interpreter/src/types.h"
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "zircon/process.h"
 #include "zircon/processargs.h"
 #include "zircon/status.h"
@@ -87,7 +87,7 @@ std::unique_ptr<Expression> ServerInterpreterContext::GetExpression(const NodeId
     return nullptr;
   }
   auto returned_value = std::move(result->second);
-  FXL_DCHECK(returned_value != nullptr);
+  FX_DCHECK(returned_value != nullptr);
   expressions_.erase(result);
   return returned_value;
 }
@@ -99,7 +99,7 @@ std::unique_ptr<Schema> ServerInterpreterContext::GetSchema(const NodeId& node_i
     return nullptr;
   }
   auto returned_value = std::move(result->second);
-  FXL_DCHECK(returned_value != nullptr);
+  FX_DCHECK(returned_value != nullptr);
   return returned_value;
 }
 
@@ -110,7 +110,7 @@ std::unique_ptr<ObjectField> ServerInterpreterContext::GetObjectField(const Node
     return nullptr;
   }
   auto returned_value = std::move(result->second);
-  FXL_DCHECK(returned_value != nullptr);
+  FX_DCHECK(returned_value != nullptr);
   return returned_value;
 }
 
@@ -122,7 +122,7 @@ std::unique_ptr<ObjectFieldSchema> ServerInterpreterContext::GetObjectFieldSchem
     return nullptr;
   }
   auto returned_value = std::move(result->second);
-  FXL_DCHECK(returned_value != nullptr);
+  FX_DCHECK(returned_value != nullptr);
   return returned_value;
 }
 
@@ -135,7 +135,7 @@ void ServerInterpreter::EmitError(ExecutionContext* context, std::string error_m
 
 void ServerInterpreter::EmitError(ExecutionContext* context, NodeId node_id,
                                   std::string error_message) {
-  FXL_DCHECK(context != nullptr);
+  FX_DCHECK(context != nullptr);
   std::vector<llcpp::fuchsia::shell::Location> locations;
   llcpp::fuchsia::shell::NodeId fidl_node_id{.file_id = node_id.file_id,
                                              .node_id = node_id.node_id};
@@ -147,17 +147,17 @@ void ServerInterpreter::EmitError(ExecutionContext* context, NodeId node_id,
 }
 
 void ServerInterpreter::DumpDone(ExecutionContext* context) {
-  FXL_DCHECK(context != nullptr);
+  FX_DCHECK(context != nullptr);
   service_->OnDumpDone(context->id());
 }
 
 void ServerInterpreter::ContextDone(ExecutionContext* context) {
-  FXL_DCHECK(context != nullptr);
+  FX_DCHECK(context != nullptr);
   service_->OnExecutionDone(context->id(), llcpp::fuchsia::shell::ExecuteResult::OK);
 }
 
 void ServerInterpreter::ContextDoneWithAnalysisError(ExecutionContext* context) {
-  FXL_DCHECK(context != nullptr);
+  FX_DCHECK(context != nullptr);
   service_->OnExecutionDone(context->id(), llcpp::fuchsia::shell::ExecuteResult::ANALYSIS_ERROR);
 }
 
@@ -174,7 +174,7 @@ void ServerInterpreter::TextResult(ExecutionContext* context, std::string_view t
 }
 
 void ServerInterpreter::CreateServerContext(ExecutionContext* context) {
-  FXL_DCHECK(contexts_.find(context->id()) == contexts_.end());
+  FX_DCHECK(contexts_.find(context->id()) == contexts_.end());
   contexts_.emplace(context->id(), std::make_unique<ServerInterpreterContext>(context));
 }
 
@@ -491,21 +491,21 @@ Server::Server() : loop_(&kAsyncLoopConfigAttachToCurrentThread) {}
 bool Server::Listen() {
   zx_handle_t directory_request = zx_take_startup_handle(PA_DIRECTORY_REQUEST);
   if (directory_request == ZX_HANDLE_INVALID) {
-    FXL_LOG(ERROR) << "error: directory_request was ZX_HANDLE_INVALID";
+    FX_LOGS(ERROR) << "error: directory_request was ZX_HANDLE_INVALID";
     return false;
   }
 
   svc_dir_t* dir = nullptr;
   zx_status_t status = svc_dir_create(loop_.dispatcher(), directory_request, &dir);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "error: svc_dir_create failed: " << status << " ("
+    FX_LOGS(ERROR) << "error: svc_dir_create failed: " << status << " ("
                    << zx_status_get_string(status) << ")";
     return false;
   }
 
   status = svc_dir_add_service(dir, "svc", "fuchsia.shell.Shell", this, connect);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "error: svc_dir_add_service failed: " << status << " ("
+    FX_LOGS(ERROR) << "error: svc_dir_add_service failed: " << status << " ("
                    << zx_status_get_string(status) << ")" << std::endl;
     return false;
   }

@@ -11,7 +11,7 @@ test("josh_tests_bin") {
     "//sdk/lib/fidl/cpp/test",
     "//src/developer/shell/josh/console:tests",
     "//src/developer/shell/josh/lib:tests",
-    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/syslog/test:gtest_main",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
@@ -42,5 +42,8 @@ executable("bin") {
   ldflags = [ "-Wl,-z,stack-size=0x200000" ]
 
   # TODO(46840): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+  deps += [
+    "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS",
+    "//src/lib/syslog/cpp",
+  ]
 }

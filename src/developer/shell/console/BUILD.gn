@@ -40,6 +40,7 @@ executable("bin") {
 
   deps = [
     ":lib",
+    "//src/lib/syslog/cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }
@@ -55,7 +56,7 @@ executable("console_unittests_bin") {
 
   deps = [
     ":lib",
-    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/syslog/test:gtest_main",
     "//src/lib/testing/loop_fixture",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",

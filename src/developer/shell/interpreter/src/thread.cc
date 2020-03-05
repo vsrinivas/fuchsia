@@ -7,7 +7,7 @@
 
 #include "src/developer/shell/interpreter/src/code.h"
 #include "src/developer/shell/interpreter/src/interpreter.h"
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace shell {
 namespace interpreter {
@@ -16,7 +16,7 @@ void Thread::Execute(ExecutionContext* context, std::unique_ptr<code::Code> code
   ExecutionScope scope;
   scope.Execute(context, this, std::move(code));
   context->interpreter()->ContextDone(context);
-  FXL_DCHECK(values_.empty());
+  FX_DCHECK(values_.empty());
 }
 
 }  // namespace interpreter

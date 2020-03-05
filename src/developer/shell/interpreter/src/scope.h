@@ -15,7 +15,7 @@
 #include "src/developer/shell/interpreter/src/code.h"
 #include "src/developer/shell/interpreter/src/nodes.h"
 #include "src/developer/shell/interpreter/src/value.h"
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace shell {
 namespace interpreter {
@@ -65,7 +65,7 @@ class Scope {
   // Creates a variable.
   Variable* CreateVariable(NodeId id, const std::string& name, std::unique_ptr<Type> type) {
     size_t size = type->Size();
-    FXL_DCHECK(size > 0);
+    FX_DCHECK(size > 0);
     AlignIndex(size);
     auto variable = std::make_unique<Variable>(id, name, current_index_, std::move(type));
     auto returned_value = variable.get();
@@ -92,19 +92,19 @@ class ExecutionScope {
   // Resizes the storage to be able to store the newly created variables.
   void Resize(size_t new_size) {
     // We can only add variables.
-    FXL_DCHECK(new_size >= data_.size());
+    FX_DCHECK(new_size >= data_.size());
     data_.resize(new_size);
   }
 
   // Retrieves a pointer to the storage.
   uint8_t* Data(size_t index, size_t size) {
-    FXL_DCHECK(index + size <= data_.size());
+    FX_DCHECK(index + size <= data_.size());
     return data_.data() + index;
   }
 
   // Retrieves a pointer to the storage.
   const uint8_t* Data(size_t index, size_t size) const {
-    FXL_DCHECK(index + size <= data_.size());
+    FX_DCHECK(index + size <= data_.size());
     return data_.data() + index;
   }
 

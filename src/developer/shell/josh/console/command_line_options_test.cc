@@ -11,7 +11,6 @@
 #include <fstream>
 
 #include "gtest/gtest.h"
-#include "src/lib/fxl/logging.h"
 
 namespace shell {
 

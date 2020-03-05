@@ -114,6 +114,12 @@ FX_LOGS(INFO) << "my message";
 FX_LOGST(INFO, "tag") << "my message";
 ```
 
+### GTest main with Syslog automatically initialized
+
+```gn
+//src/lib/syslog/test:gtest_main
+```
+
 ### Reference
 
 [C++ APIs](/src/lib/syslog/cpp/logger.h)

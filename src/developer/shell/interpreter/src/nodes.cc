@@ -42,7 +42,7 @@ void Type::GenerateStringLiteral(ExecutionContext* context, code::Code* code,
 }
 
 void Type::LoadVariable(const ExecutionScope* scope, size_t index, Value* value) const {
-  FXL_LOG(FATAL) << "Can't load variable of type " << *this;
+  FX_LOGS(FATAL) << "Can't load variable of type " << *this;
 }
 
 Node::Node(Interpreter* interpreter, uint64_t file_id, uint64_t node_id)
