@@ -533,12 +533,6 @@ class TestConnectionWithContext : public TestConnection {
     EXPECT_NE(MAGMA_STATUS_OK, magma_get_error(connection()));
   }
 
-  void ExecuteCommandBufferNoResources() {
-    magma_system_command_buffer command_buffer = {.num_resources = 0};
-    magma_execute_command_buffer_with_resources(connection(), context_id(), &command_buffer,
-                                                nullptr /* resources */, nullptr);
-  }
-
  private:
   uint32_t context_id_;
 };
@@ -673,8 +667,4 @@ TEST(MagmaAbiPerf, ExecuteCommandBufferWithResources) {
 
   printf("ExecuteCommandBufferWithResources: avg duration %lld ns\n",
          duration.count() / kTestIterations);
-}
-
-TEST(MagmaAbi, ExecuteCommandBufferNoResources) {
-  TestConnectionWithContext().ExecuteCommandBufferNoResources();
 }
