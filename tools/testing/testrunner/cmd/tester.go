@@ -6,21 +6,17 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"path"
 	"strings"
-	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/build/lib"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
-	"go.fuchsia.dev/fuchsia/tools/lib/retry"
 	"go.fuchsia.dev/fuchsia/tools/lib/runner"
 	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
-	"golang.org/x/crypto/ssh"
 )
 
 const (
@@ -69,7 +65,6 @@ func (t *subprocessTester) Close() error {
 // fuchsiaSSHTester executes fuchsia tests over an SSH connection.
 type fuchsiaSSHTester struct {
 	r              *runner.SSHRunner
-	client         *ssh.Client
 	copier         *runtests.DataSinkCopier
 	useRuntests    bool
 	localOutputDir string
@@ -98,51 +93,20 @@ func newFuchsiaSSHTester(ctx context.Context, nodename, sshKeyFile, localOutputD
 	}
 	return &fuchsiaSSHTester{
 		r:              r,
-		client:         client,
 		copier:         copier,
 		useRuntests:    useRuntests,
 		localOutputDir: localOutputDir,
 	}, nil
 }
 
-func (t *fuchsiaSSHTester) reconnectIfNecessary(ctx context.Context) error {
-	if client, err := t.r.ReconnectIfNecessary(ctx); err != nil {
-		return fmt.Errorf("failed to restablish SSH connection: %w", err)
-	} else if client != t.client {
-		// Create new DataSinkCopier with new client.
-		t.client = client
-		if err := t.copier.Close(); err != nil {
-			logger.Errorf(ctx, "failed to close data sink copier: %v", err)
-		}
-		t.copier, err = runtests.NewDataSinkCopier(t.client)
-		if err != nil {
-			return fmt.Errorf("failed to create new data sink copier: %w", err)
-		}
-	}
-	return nil
-}
-
 // Test runs a test over SSH.
 func (t *fuchsiaSSHTester) Test(ctx context.Context, test build.Test, stdout io.Writer, stderr io.Writer) (runtests.DataSinkMap, error) {
-	setCommand(&test, t.useRuntests, dataOutputDir)
-
-	testErr := retry.Retry(ctx, retry.WithMaxRetries(retry.NewConstantBackoff(time.Second), 2), func() error {
-		testErr := t.r.Run(ctx, test.Command, stdout, stderr)
-		if !errors.Is(testErr, sshutil.ConnectionError) {
-			return testErr
-		}
-		// If testErr is a sshutil.ConnectionError, then try to reconnect.
-		if err := t.reconnectIfNecessary(ctx); err != nil {
-			return err
-		}
-		// If reconnectIfNecessary() worked, then return testErr as a regular error
-		// (not a sshutil.ConnectionError) so that we can continue testing.
-		return fmt.Errorf("test err: %v", testErr)
-	}, nil)
-
-	if errors.Is(testErr, sshutil.ConnectionError) {
-		return nil, testErr
+	if err := t.r.ReconnectIfNecessary(ctx); err != nil {
+		return nil, fmt.Errorf("failed to restablish SSH connection: %w", err)
 	}
+
+	setCommand(&test, t.useRuntests, dataOutputDir)
+	testErr := t.r.Run(ctx, test.Command, stdout, stderr)
 
 	var copyErr error
 	var sinks runtests.DataSinkMap
