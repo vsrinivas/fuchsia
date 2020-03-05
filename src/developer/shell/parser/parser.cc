@@ -29,8 +29,9 @@ fit::function<ParseResultStream(ParseResultStream)> WSSeq(
 ParseResultStream IdentifierCharacter(ParseResultStream prefixes);
 
 // Parse a keyword.
+template <typename T = ast::Terminal>
 fit::function<ParseResultStream(ParseResultStream)> KW(const std::string& keyword) {
-  return Seq(Token(keyword), Not(IdentifierCharacter));
+  return Seq(Token<T>(keyword), Not(IdentifierCharacter));
 }
 
 // Token Rules -------------------------------------------------------------------------------------
@@ -53,17 +54,8 @@ ParseResultStream HexDigit(ParseResultStream prefixes) {
   return CharGroup("hex digit", "a-fA-F0-9")(std::move(prefixes));
 }
 
-ParseResultStream UnescapedIdentifier(ParseResultStream prefixes);
-fit::function<ParseResultStream(ParseResultStream)> Thingy(int min) {
-  if (min > 0) {
-    return Seq(IdentifierCharacter, Thingy(min - 1));
-  } else {
-    return [](ParseResultStream prefixes) { return Maybe(Thingy(1))(std::move(prefixes)); };
-  }
-}
-
 ParseResultStream UnescapedIdentifier(ParseResultStream prefixes) {
-  return Token(OnePlus(IdentifierCharacter))(std::move(prefixes));
+  return Token<ast::UnescapedIdentifier>(OnePlus(IdentifierCharacter))(std::move(prefixes));
 }
 
 // Grammar Rules -----------------------------------------------------------------------------------
@@ -79,17 +71,18 @@ ParseResultStream Identifier(ParseResultStream prefixes) {
 //     12345
 //     12_345
 ParseResultStream DecimalInteger(ParseResultStream prefixes) {
-  return Alt(Seq(Token("0"), Not(Digit)),
-             Seq(Not(Token("0")), Token(OnePlus(Digit)),
-                 ZeroPlus(Seq(Token("_"), Token(OnePlus(Digit))))))(std::move(prefixes));
+  return Alt(Seq(Token<ast::DecimalGroup>("0"), Not(Digit)),
+             Seq(Not(Token("0")), Token<ast::DecimalGroup>(OnePlus(Digit)),
+                 ZeroPlus(Seq(Token("_"), Token<ast::DecimalGroup>(OnePlus(Digit))))))(
+      std::move(prefixes));
 }
 
 // Parses a hexadecimal integer marked by '0x'
 //     0x1234abcd
 //     0x12_abcd
 ParseResultStream HexInteger(ParseResultStream prefixes) {
-  return Seq(Token("0x"),
-             Seq(Token(OnePlus(HexDigit)), ZeroPlus(Seq(Token("_"), Token(OnePlus(HexDigit))))))(
+  return Seq(Token("0x"), Seq(Token<ast::HexGroup>(OnePlus(HexDigit)),
+                              ZeroPlus(Seq(Token("_"), Token<ast::HexGroup>(OnePlus(HexDigit))))))(
       std::move(prefixes));
 }
 
@@ -113,8 +106,8 @@ ParseResultStream Expression(ParseResultStream prefixes) {
 // Parses a variable declaration:
 //     var foo = 4.5
 ParseResultStream VariableDecl(ParseResultStream prefixes) {
-  return NT<ast::VariableDecl>(
-      WSSeq(Alt(KW("var"), KW("const")), Identifier, Token("="), Expression))(std::move(prefixes));
+  return NT<ast::VariableDecl>(WSSeq(Alt(KW<ast::Var>("var"), KW<ast::Const>("const")), Identifier,
+                                     Token("="), Expression))(std::move(prefixes));
 }
 
 // Parses the body of a program, but doesn't create an AST node. This is useful for parsing blocks

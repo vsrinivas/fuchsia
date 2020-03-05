@@ -22,6 +22,9 @@ class VariableDecl;
 class Identifier;
 class Integer;
 class Expression;
+class DecimalGroup;
+class HexGroup;
+class UnescapedIdentifier;
 
 // A node in our AST.
 class Node {
@@ -63,6 +66,18 @@ class Node {
   const Integer* AsInteger() const { return const_cast<Node*>(this)->AsInteger(); }
   virtual Expression* AsExpression() { return nullptr; }
   const Expression* AsExpression() const { return const_cast<Node*>(this)->AsExpression(); }
+  virtual DecimalGroup* AsDecimalGroup() { return nullptr; }
+  const DecimalGroup* AsDecimalGroup() const { return const_cast<Node*>(this)->AsDecimalGroup(); }
+  virtual HexGroup* AsHexGroup() { return nullptr; }
+  const HexGroup* AsHexGroup() const { return const_cast<Node*>(this)->AsHexGroup(); }
+  virtual UnescapedIdentifier* AsUnescapedIdentifier() { return nullptr; }
+  const UnescapedIdentifier* AsUnescapedIdentifier() const {
+    return const_cast<Node*>(this)->AsUnescapedIdentifier();
+  }
+
+  // ID methods for keywords
+  virtual bool IsConst() const { return false; }
+  virtual bool IsVar() const { return false; }
 
  private:
   // Offset into the original text where the text this node corresponds to starts.
@@ -99,6 +114,66 @@ class Error : public Terminal {
 
  private:
   const std::string message_;
+};
+
+// Terminal representing the "const" keyword.
+class Const : public Terminal {
+ public:
+  Const(size_t start, size_t size, std::string_view content) : Terminal(start, size, content) {}
+
+  bool IsConst() const override { return true; }
+};
+
+// Terminal representing the "var" keyword.
+class Var : public Terminal {
+ public:
+  Var(size_t start, size_t size, std::string_view content) : Terminal(start, size, content) {}
+
+  bool IsVar() const override { return true; }
+};
+
+// Terminal representing a sequence of decimal digits.
+class DecimalGroup : public Terminal {
+ public:
+  DecimalGroup(size_t start, size_t size, std::string_view content);
+
+  size_t digits() const { return digits_; }
+  uint64_t value() const { return value_; }
+
+  DecimalGroup* AsDecimalGroup() override { return this; }
+
+ private:
+  size_t digits_;
+  uint64_t value_ = 0;
+};
+
+// Terminal representing a sequence of hex digits.
+class HexGroup : public Terminal {
+ public:
+  HexGroup(size_t start, size_t size, std::string_view content);
+
+  size_t digits() const { return digits_; }
+  uint64_t value() const { return value_; }
+
+  HexGroup* AsHexGroup() override { return this; }
+
+ private:
+  size_t digits_;
+  uint64_t value_ = 0;
+};
+
+// Terminal representing an unescaped identifier
+class UnescapedIdentifier : public Terminal {
+ public:
+  UnescapedIdentifier(size_t start, size_t size, std::string_view content)
+      : Terminal(start, size, content), identifier_(content) {}
+
+  const std::string& identifier() const { return identifier_; }
+
+  UnescapedIdentifier* AsUnescapedIdentifier() override { return this; }
+
+ private:
+  std::string identifier_ = "";
 };
 
 // Superclass of all non-terminal nodes in our AST.
@@ -170,33 +245,49 @@ class Program : public Nonterminal {
 
 class VariableDecl : public Nonterminal {
  public:
-  VariableDecl(size_t start, std::vector<std::shared_ptr<Node>> children)
-      : Nonterminal(start, std::move(children)) {}
+  VariableDecl(size_t start, std::vector<std::shared_ptr<Node>> children);
+
+  const std::string& identifier() const { return identifier_; }
+  Expression* expression() const { return expression_; }
+  bool is_const() const { return is_const_; }
 
   std::string_view Name() const override { return "VariableDecl"; }
   VariableDecl* AsVariableDecl() override { return this; }
+
+ private:
+  Expression* expression_ = nullptr;
+  bool is_const_ = false;
+  std::string identifier_ = "";
 };
 
 class Integer : public Nonterminal {
  public:
-  Integer(size_t start, std::vector<std::shared_ptr<Node>> children)
-      : Nonterminal(start, std::move(children)) {}
+  Integer(size_t start, std::vector<std::shared_ptr<Node>> children);
+
+  uint64_t value() const { return value_; }
 
   std::string_view Name() const override { return "Integer"; }
 
   std::optional<std::string> GetInteger(std::string_view unit) const;
   Integer* AsInteger() override { return this; }
+
+ public:
+  uint64_t value_ = 0;
 };
 
 class Identifier : public Nonterminal {
  public:
-  Identifier(size_t start, std::vector<std::shared_ptr<Node>> children)
-      : Nonterminal(start, std::move(children)) {}
+  Identifier(size_t start, std::vector<std::shared_ptr<Node>> children);
+
+  const std::string& identifier() const { return identifier_; }
 
   std::string_view Name() const override { return "Identifier"; }
 
   std::optional<std::string> GetIdentifier(std::string_view unit) const;
   Identifier* AsIdentifier() override { return this; }
+
+ private:
+  std::string identifier_;
 };
 
 class Expression : public Nonterminal {
