@@ -6,22 +6,10 @@ toc:
   path: /docs/concepts/modular/overview.md
 - title: "Configuring the Modular framework"
   path: /docs/concepts/modular/guide/config.md
-- title: "Story"
-  path: /docs/concepts/modular/story.md
 - title: "Module"
   path: /docs/concepts/modular/module.md
-- title: "Module facet"
-  path: /docs/concepts/modular/module_facet.md
 - title: "Agent"
   path: /docs/concepts/modular/agent.md
-- title: "Intent"
-  path: /docs/concepts/modular/intent.md
-- title: "Shell"
-  path: /docs/concepts/modular/shell.md
-- title: "Entity"
-  path: /docs/concepts/modular/entity.md
-- title: "Entity provider"
-  path: /docs/concepts/modular/guide/entity_provider.md
 - title: "How to Write a Module (C++)"
   path: /docs/concepts/modular/guide/how_to_write_a_module_cc.md
 - title: "How to Write an Agent (C++)"

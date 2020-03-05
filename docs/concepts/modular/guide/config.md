@@ -1,5 +1,8 @@
 # Guide to Configuring the Modular Framework
 
+> DEPRECATION WARNING: The Modular framework is being deprecated in favor of
+> the [Session Framework](/docs/concepts/session/introduction.md).
+
 ## Requirements
 
 To configure the modular framework, you will need to create a JSON file defining

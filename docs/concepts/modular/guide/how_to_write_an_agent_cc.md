@@ -1,5 +1,8 @@
 # How-To: Write an Agent in C++
 
+> DEPRECATION WARNING: The Modular framework is being deprecated in favor of
+> the [Session Framework](/docs/concepts/session/introduction.md).
+
 ## Overview
 
 An Agent is a component that runs without any direct user interaction. The lifetime of an Agent

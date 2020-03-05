@@ -1,9 +1,7 @@
 # Overview
 
-Warning: Modular was an experimental application framework for Fuchsia. Its
-functionality is being ported to the Session Framework and the [Component
-Framework](/docs/concepts/components). The following is
-the original documentation for Modular.
+> DEPRECATION WARNING: The Modular framework is being deprecated in favor of
+> the [Session Framework](/docs/concepts/session/introduction.md).
 
 Modular manages user experiences by composing UI, data, and users from a
 diverse set of components into logical and visual containers called Stories.
@@ -26,12 +24,9 @@ The framework defines several different classes of components which can be
 implemented by developers to extend the behavior of user experiences:
 
 1.  [Modules](module.md) are components which display UI and are visually
-    composed in a [Story](story.md).
+    composed in a Story.
 1.  [Agents](agent.md) are components which run in the background to provide
     services and data to Modules and other Agents.
-1.  [Shells](shell.md) manage system UI and mediate user interactions.
-1.  [EntityProviders](entity.md) are components which provide access to data
-    object (entities) which are shared between components running in modular.
 
 ## `basemgr` and `sessionmgr`
 
@@ -49,3 +44,5 @@ provide session management, component lifecycle management and state management.
 ## Read More
 
 * [Configuring Modular](guide/config.md)
+* [How-To: Write a Module in C++](guide/how_to_write_a_module_cc.md)
+* [How-To: Write an Agent in C++](guide/how_to_write_an_agent_cc.md)

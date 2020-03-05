@@ -270,9 +270,7 @@ A working example of capability routing can be found at
 ### Facet metadata {#facet-metadata}
 
 *Facets* are metadata that is ignored by the component framework itself, but may
-be interpreted by interested components. For example, a module component might
-contain [module facets][doc-module-facets] declaring intents the module
-subscribes to.
+be interpreted by interested components.
 
 ## Syntax {#syntax}
 

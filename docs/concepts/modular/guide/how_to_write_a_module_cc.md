@@ -1,5 +1,8 @@
 # How-To: Write a Module in C++
 
+> DEPRECATION WARNING: The Modular framework is being deprecated in favor of
+> the [Session Framework](/docs/concepts/session/introduction.md).
+
 ## Overview
 
 A `Module` is a UI component that can participate in a [Story](link to story doc),
