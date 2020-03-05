@@ -94,6 +94,58 @@ static zx_status_t cpustats(zx_handle_t root_resource, zx_duration_t delay) {
   return ZX_OK;
 }
 
+static zx_status_t cpuload(zx_handle_t root_resource, zx_duration_t delay) {
+  static zx_duration_t last_idle_time[MAX_CPUS];
+  zx_info_cpu_stats_t stats[MAX_CPUS];
+
+  // retrieve the system stats
+  size_t actual, avail;
+  zx_status_t err =
+      zx_object_get_info(root_resource, ZX_INFO_CPU_STATS, &stats, sizeof(stats), &actual, &avail);
+  if (err != ZX_OK) {
+    fprintf(stderr, "ZX_INFO_CPU_STATS returns %d (%s)\n", err, zx_status_get_string(err));
+    return err;
+  }
+
+  if (actual < avail) {
+    fprintf(stderr, "WARNING: actual cpus reported %zu less than available cpus %zu\n", actual,
+            avail);
+  }
+
+  for (size_t i = 0; i < actual; i++) {
+    zx_duration_t idle_time = stats[i].idle_time;
+
+    zx_duration_t delta_time = zx_duration_sub_duration(idle_time, last_idle_time[i]);
+    zx_duration_t busy_time;
+    if (delay > delta_time) {
+      busy_time = zx_duration_sub_duration(delay, delta_time);
+    } else {
+      busy_time = 0;
+    }
+    const double busypercent = (double)busy_time / delay;
+
+    static const char kBar[] =   "||||||||||||||||||||";
+    static const int kBarLength = sizeof(kBar);
+
+    static const char* default_color = "\033[0;0m";
+    static const char* cpu_num_color = "\033[1;34m";
+    const char* color = busypercent < .9 ? "\033[1;34m" : "\033[1;31m";
+
+    printf("%s%2zu%s-[%s%-20.*s%s] ",
+           cpu_num_color, i, default_color,
+           color, (int)(busypercent * kBarLength), kBar, default_color);
+    if ((i % 4) == 3) {
+      printf("\n");
+    }
+
+    last_idle_time[i] = idle_time;
+  }
+  if (actual % 4 != 3) {
+    printf("\n");
+  }
+  return ZX_OK;
+}
+
 static zx_status_t memstats(zx_handle_t root_resource) {
   zx_info_kmem_stats_t stats;
   zx_status_t err =
@@ -137,6 +189,7 @@ static void print_help(FILE* f) {
   fprintf(f, "Usage: kstats [options]\n");
   fprintf(f, "Options:\n");
   fprintf(f, " -c              Print system CPU stats\n");
+  fprintf(f, " -l              Print system CPU load as bars\n");
   fprintf(f, " -m              Print system memory stats\n");
   fprintf(f, " -d <delay>      Delay in seconds (default 1 second)\n");
   fprintf(f, " -n <times>      Run this many times and then exit\n");
@@ -164,13 +217,14 @@ static void print_help(FILE* f) {
 
 int main(int argc, char** argv) {
   bool cpu_stats = false;
+  bool cpu_load = false;
   bool mem_stats = false;
   zx_duration_t delay = ZX_SEC(1);
   int num_loops = -1;
   bool timestamp = false;
 
   int c;
-  while ((c = getopt(argc, argv, "cd:n:hmt")) > 0) {
+  while ((c = getopt(argc, argv, "cd:n:hlmt")) > 0) {
     switch (c) {
       case 'c':
         cpu_stats = true;
@@ -182,6 +236,9 @@ int main(int argc, char** argv) {
           print_help(stderr);
           return 1;
         }
+        break;
+      case 'l':
+        cpu_load = true;
         break;
       case 'n':
         num_loops = atoi(optarg);
@@ -207,7 +264,7 @@ int main(int argc, char** argv) {
     }
   }
 
-  if (!cpu_stats && !mem_stats) {
+  if (!cpu_stats && !mem_stats && !cpu_load) {
     fprintf(stderr, "No statistics selected\n");
     print_help(stderr);
     return 1;
@@ -238,12 +295,17 @@ int main(int argc, char** argv) {
       printf("\n--- %s.%03ldZ ---\n", tbuf, now.tv_nsec / (1000 * 1000));
     }
 
+    if (cpu_load) {
+      ret |= cpuload(root_resource, delay);
+    }
     if (cpu_stats) {
       ret |= cpustats(root_resource, delay);
     }
     if (mem_stats) {
       ret |= memstats(root_resource);
     }
+    // Separate multiple runs with a blank line.
+    printf("\n");
 
     if (ret != ZX_OK)
       break;
