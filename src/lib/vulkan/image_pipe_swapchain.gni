@@ -27,7 +27,7 @@
 image_pipe_swapchain = {
   loadable_modules = [
     {
-      name = "libVkLayer_image_pipe_swapchain.so"
+      name = "VkLayer_image_pipe_swapchain.so"
     },
   ]
   resources = [
@@ -37,15 +37,13 @@ image_pipe_swapchain = {
     },
   ]
 
-  public_deps = [
-    "//src/lib/vulkan/swapchain",
-  ]
+  public_deps = [ "//src/lib/vulkan/swapchain" ]
 }
 
 image_pipe_swapchain_fb = {
   loadable_modules = [
     {
-      name = "libVkLayer_image_pipe_swapchain_fb.so"
+      name = "VkLayer_image_pipe_swapchain_fb.so"
     },
   ]
   resources = [
@@ -55,15 +53,13 @@ image_pipe_swapchain_fb = {
     },
   ]
 
-  public_deps = [
-    "//src/lib/vulkan/swapchain:fb",
-  ]
+  public_deps = [ "//src/lib/vulkan/swapchain:fb" ]
 }
 
 image_pipe_swapchain_fb_skip_present = {
   loadable_modules = [
     {
-      name = "libVkLayer_image_pipe_swapchain_fb_skip_present.so"
+      name = "VkLayer_image_pipe_swapchain_fb_skip_present.so"
     },
   ]
   resources = [
@@ -74,7 +70,5 @@ image_pipe_swapchain_fb_skip_present = {
     },
   ]
 
-  public_deps = [
-    "//src/lib/vulkan/swapchain:fb_skip_present",
-  ]
+  public_deps = [ "//src/lib/vulkan/swapchain:fb_skip_present" ]
 }

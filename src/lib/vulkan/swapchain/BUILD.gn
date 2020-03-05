@@ -11,7 +11,7 @@ source_set("surface_header") {
 }
 
 loadable_module("swapchain") {
-  output_name = "libVkLayer_image_pipe_swapchain"
+  output_name = "VkLayer_image_pipe_swapchain"
   sources = [
     "image_pipe_surface_async.cc",
     "image_pipe_surface_async.h",
@@ -52,7 +52,7 @@ source_set("display") {
 }
 
 loadable_module("fb") {
-  output_name = "libVkLayer_image_pipe_swapchain_fb"
+  output_name = "VkLayer_image_pipe_swapchain_fb"
   defines = [
     "USE_IMAGEPIPE_SURFACE_FB",
     "USE_IMAGEPIPE_LAYER_NAME=\"VK_LAYER_FUCHSIA_imagepipe_swapchain_fb\"",
@@ -68,7 +68,7 @@ loadable_module("fb") {
 }
 
 loadable_module("fb_skip_present") {
-  output_name = "libVkLayer_image_pipe_swapchain_fb_skip_present"
+  output_name = "VkLayer_image_pipe_swapchain_fb_skip_present"
   defines = [
     "USE_IMAGEPIPE_SURFACE_FB",
     "USE_IMAGEPIPE_LAYER_NAME=\"VK_LAYER_FUCHSIA_imagepipe_swapchain_fb_skip_present\"",

@@ -3,7 +3,7 @@
     "layer" : {
         "name": "VK_LAYER_FUCHSIA_imagepipe_swapchain_fb_skip_present",
         "type": "GLOBAL",
-        "library_path": "libVkLayer_image_pipe_swapchain_fb_skip_present.so",
+        "library_path": "VkLayer_image_pipe_swapchain_fb_skip_present.so",
         "api_version": "1.0.38",
         "implementation_version": "1",
         "description": "Image Pipe Swapchain",
