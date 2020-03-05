@@ -9,6 +9,8 @@
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/sync/completion.h>
+#include <lib/zx/stream.h>
+#include <lib/zx/vmo.h>
 #include <stdlib.h>
 #include <string.h>
 #include <zircon/device/vfs.h>
@@ -110,12 +112,11 @@ zx_status_t Blob::InitMerkleTreeVerifier(std::unique_ptr<MerkleTreeVerifier>* ve
     fs::ReadTxn txn(blobfs_);
     BlockIterator block_iter = blobfs_->BlockIteratorByNodeIndex(GetMapIndex());
     const uint64_t data_start = DataStartBlock(blobfs_->Info());
-    status = StreamBlocks(&block_iter, merkle_blocks,
-                          [&](uint64_t vmo_offset, uint64_t dev_offset, uint32_t length) {
-                            txn.Enqueue(merkle_vmoid.vmoid(), vmo_offset, dev_offset + data_start,
-                                        length);
-                            return ZX_OK;
-                          });
+    status = StreamBlocks(
+        &block_iter, merkle_blocks, [&](uint64_t vmo_offset, uint64_t dev_offset, uint32_t length) {
+          txn.Enqueue(merkle_vmoid.vmoid(), vmo_offset, dev_offset + data_start, length);
+          return ZX_OK;
+        });
 
     if (status != ZX_OK) {
       FS_TRACE_ERROR("Failed to enqueue read transactions: %s\n", zx_status_get_string(status));
@@ -968,6 +969,38 @@ zx_status_t Blob::GetNodeInfoForProtocol([[maybe_unused]] fs::VnodeProtocol prot
   }
   *info = fs::VnodeRepresentation::File{.observer = std::move(observer)};
   return ZX_OK;
+}
+
+zx_status_t Blob::CreateStream(uint32_t stream_options, zx::stream* out_stream) {
+  if (stream_options != ZX_STREAM_MODE_READ || GetState() != kBlobStateReadable) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  zx_status_t status = InitVmos();
+  if (status != ZX_OK) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  uint64_t blob_size = inode_.blob_size;
+  zx::vmo slice;
+  if (blob_size == 0u) {
+    // The empty blob does not have a backing VMO, so we create an empty VMO to
+    // back the zx::stream.
+    status = zx::vmo::create(0, 0, &slice);
+  } else {
+    status =
+        mapping_.vmo().create_child(ZX_VMO_CHILD_SLICE, GetDataStartOffset(), blob_size, &slice);
+  }
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  status = slice.set_property(ZX_PROP_VMO_CONTENT_SIZE, &blob_size, sizeof(blob_size));
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  return zx::stream::create(stream_options, slice, 0, out_stream);
 }
 
 zx_status_t Blob::Read(void* data, size_t len, size_t off, size_t* out_actual) {
