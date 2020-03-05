@@ -4,6 +4,7 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
+import("//build/test/test_package.gni")
 import("//build/unification/images/migrated_manifest.gni")
 
 source_set("common") {
@@ -61,9 +62,6 @@ driver_module("vim-display") {
 }
 
 test("vim-display-test") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # Remove when converting this file to proper GN build idioms.
-  testonly = false
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "edid.cc",
@@ -92,6 +90,19 @@ migrated_manifest("vim-display-manifest") {
   deps = [ ":vim-display" ]
 }
 
-migrated_manifest("vim-display-test-manifest") {
+group("tests") {
+  testonly = true
+  deps = [ ":vim-display-test-package" ]
+}
+
+unittest_package("vim-display-test-package") {
+  package_name = "vim-display-test"
   deps = [ ":vim-display-test" ]
+
+  tests = [
+    {
+      name = "vim-display-test"
+      environments = basic_envs
+    },
+  ]
 }

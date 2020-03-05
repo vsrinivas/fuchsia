@@ -56,3 +56,8 @@ source_set("shared") {
 migrated_manifest("display-manifest") {
   deps = [ ":display" ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "test:tests" ]
+}
