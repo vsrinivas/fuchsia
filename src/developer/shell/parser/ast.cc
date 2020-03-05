@@ -8,8 +8,22 @@
 #include <sstream>
 
 #include "src/lib/syslog/cpp/logger.h"
+#include "third_party/icu/source/common/unicode/utf8.h"
 
 namespace shell::parser::ast {
+namespace {
+
+uint8_t CharFromHex(char ch) {
+  if (ch - '0' <= 9) {
+    return ch - '0';
+  } else if (ch - 'A' <= 5) {
+    return ch - 'A' + 10;
+  } else {
+    return ch - 'a' + 10;
+  }
+}
+
+}  // namespace
 
 const std::vector<std::shared_ptr<Node>> Terminal::kEmptyChildren = {};
 
@@ -56,14 +70,41 @@ HexGroup::HexGroup(size_t start, size_t size, std::string_view content)
 
   for (const char& ch : content) {
     value_ *= 16;
+    value_ += CharFromHex(ch);
+  }
+}
 
-    if (ch - '0' <= 9) {
-      value_ += ch - '0';
-    } else if (ch - 'A' <= 5) {
-      value_ += ch - 'A' + 10;
-    } else {
-      value_ += ch - 'a' + 10;
-    }
+std::string EscapeSequence::Decode(std::string_view sequence) {
+  if (sequence == "\\n") {
+    return "\n";
+  } else if (sequence == "\\t") {
+    return "\t";
+  } else if (sequence == "\\r") {
+    return "\r";
+  } else if (sequence == "\\\"") {
+    return "\"";
+  } else if (sequence == "\\\\") {
+    return "\\";
+  } else if (sequence == "\\\n") {
+    // TODO: Do something fancy for escaped newlines?
+    return "\n";
+  } else if (sequence.size() == 8 && sequence.substr(0, 2) == "\\u") {
+    uint32_t codepoint = CharFromHex(sequence[2]) << 20;
+    codepoint += CharFromHex(sequence[3]) << 16;
+    codepoint += CharFromHex(sequence[4]) << 12;
+    codepoint += CharFromHex(sequence[5]) << 8;
+    codepoint += CharFromHex(sequence[6]) << 4;
+    codepoint += CharFromHex(sequence[7]);
+
+    // TODO: Figure out how to handle a bad unicode character. U8_APPEND_UNSAFE should just give us
+    // some garbage we can ignore for now.
+    uint8_t bytes[4] = {0, 0, 0, 0};
+    size_t length = 0;
+    U8_APPEND_UNSAFE(bytes, length, codepoint);
+    return std::string(reinterpret_cast<char*>(bytes), length);
+  } else {
+    // We might get odd things if we're in an error path, so fail gently.
+    return "";
   }
 }
 
@@ -80,6 +121,15 @@ Integer::Integer(size_t start, std::vector<std::shared_ptr<Node>> children)
         ;
       FX_DCHECK(value_ >= old_value) << "Insufficient precision to store Integer value.";
       value_ += dec->value();
+    }
+  }
+}
+
+String::String(size_t start, std::vector<std::shared_ptr<Node>> children)
+    : Nonterminal(start, std::move(children)) {
+  for (const auto& child : Children()) {
+    if (auto entity = child->AsStringEntity()) {
+      value_ += entity->content();
     }
   }
 }

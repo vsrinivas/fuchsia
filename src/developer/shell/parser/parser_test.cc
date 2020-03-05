@@ -9,6 +9,7 @@
 
 namespace shell::parser {
 namespace {
+
 void TestVariableDecl(std::shared_ptr<ast::Node> parse, size_t idx, const std::string& ident,
                       bool is_const, uint64_t value) {
   ASSERT_GT(parse->Children().size(), idx);
@@ -27,6 +28,26 @@ void TestVariableDecl(std::shared_ptr<ast::Node> parse, size_t idx, const std::s
 
   EXPECT_EQ(value, integer->value());
 }
+
+void TestVariableDecl(std::shared_ptr<ast::Node> parse, size_t idx, const std::string& ident,
+                      bool is_const, const std::string& value) {
+  ASSERT_GT(parse->Children().size(), idx);
+  auto decl = parse->Children()[idx]->AsVariableDecl();
+  ASSERT_TRUE(decl);
+
+  EXPECT_EQ(ident, decl->identifier());
+  EXPECT_EQ(is_const, decl->is_const());
+
+  auto expr = decl->expression();
+  ASSERT_TRUE(expr);
+
+  ASSERT_GT(expr->Children().size(), 0u);
+  auto string = expr->Children()[0]->AsString();
+  ASSERT_TRUE(string);
+
+  EXPECT_EQ(value, string->value());
+}
+
 }  // namespace
 
 TEST(ParserTest, VariableDecl) {
@@ -192,6 +213,79 @@ TEST(ParserTest, VariableDeclIntegerHexNoMark) {
       "Program(VariableDecl('var' Identifier('s') '=' "
       "Expression(Integer('0'))) E[Unexpected 'abc'])",
       parse->ToString(kTestString));
+}
+
+TEST(ParserTest, VariableDeclString) {
+  const auto kTestString = R"(var s = "bob")";
+
+  auto parse = Parse(kTestString);
+  EXPECT_FALSE(parse->HasErrors());
+
+  EXPECT_EQ(R"(Program(VariableDecl('var' Identifier('s') '=' Expression(String('"' 'bob' '"')))))",
+            parse->ToString(kTestString));
+
+  ASSERT_NO_FATAL_FAILURE(TestVariableDecl(parse, 0, "s", false, "bob"));
+}
+
+TEST(ParserTest, VariableDeclStringEscapes) {
+  const auto kTestString = R"(var s = "bob\"\n\r\t")";
+
+  auto parse = Parse(kTestString);
+  EXPECT_FALSE(parse->HasErrors());
+
+  EXPECT_EQ(R"(Program(VariableDecl('var' Identifier('s') '=' )"
+            R"(Expression(String('"' 'bob' '\"' '\n' '\r' '\t' '"')))))",
+            parse->ToString(kTestString));
+
+  ASSERT_NO_FATAL_FAILURE(TestVariableDecl(parse, 0, "s", false, "bob\"\n\r\t"));
+}
+
+TEST(ParserTest, VariableDeclStringUtf8) {
+  const auto kTestString = R"(var s = "Karkat ♋ \u00264b")";
+
+  auto parse = Parse(kTestString);
+  EXPECT_FALSE(parse->HasErrors());
+
+  EXPECT_EQ(R"(Program(VariableDecl('var' Identifier('s') '=' )"
+            R"(Expression(String('"' 'Karkat ♋ ' '\u00264b' '"')))))",
+            parse->ToString(kTestString));
+
+  ASSERT_NO_FATAL_FAILURE(TestVariableDecl(parse, 0, "s", false, "Karkat ♋ ♋"));
+}
+
+TEST(ParserTest, VariableDeclStringLinebreak) {
+  const auto kTestString =
+      "var s = \"bob\\\n"
+      "smith\"";
+
+  auto parse = Parse(kTestString);
+  EXPECT_FALSE(parse->HasErrors());
+
+  EXPECT_EQ(R"(Program(VariableDecl('var' Identifier('s') '=' )"
+            R"(Expression(String('"' 'bob' )"
+            "'\\\n'"
+            R"( 'smith' '"')))))",
+            parse->ToString(kTestString));
+
+  ASSERT_NO_FATAL_FAILURE(TestVariableDecl(parse, 0, "s", false, "bob\nsmith"));
+}
+
+TEST(ParserTest, VariableDeclStringDangling) {
+  const auto kTestString = "var s = \"bob";
+
+  auto parse = Parse(kTestString);
+  EXPECT_TRUE(parse->HasErrors());
+
+  EXPECT_EQ("Program(E[Unexpected 'var s = \"bob'])", parse->ToString(kTestString));
+}
+
+TEST(ParserTest, VariableDeclStringBadEscape) {
+  const auto kTestString = "var s = \"bob\\qbob\"";
+
+  auto parse = Parse(kTestString);
+  EXPECT_TRUE(parse->HasErrors());
+
+  EXPECT_EQ("Program(E[Unexpected 'var s = \"bob\\qbob\"'])", parse->ToString(kTestString));
 }
 
 }  // namespace shell::parser

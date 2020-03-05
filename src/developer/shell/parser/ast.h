@@ -25,6 +25,9 @@ class Expression;
 class DecimalGroup;
 class HexGroup;
 class UnescapedIdentifier;
+class StringEntity;
+class EscapeSequence;
+class String;
 
 // A node in our AST.
 class Node {
@@ -74,6 +77,14 @@ class Node {
   const UnescapedIdentifier* AsUnescapedIdentifier() const {
     return const_cast<Node*>(this)->AsUnescapedIdentifier();
   }
+  virtual StringEntity* AsStringEntity() { return nullptr; }
+  const StringEntity* AsStringEntity() const { return const_cast<Node*>(this)->AsStringEntity(); }
+  virtual EscapeSequence* AsEscapeSequence() { return nullptr; }
+  const EscapeSequence* AsEscapeSequence() const {
+    return const_cast<Node*>(this)->AsEscapeSequence();
+  }
+  virtual String* AsString() { return nullptr; }
+  const String* AsString() const { return const_cast<Node*>(this)->AsString(); }
 
   // ID methods for keywords
   virtual bool IsConst() const { return false; }
@@ -176,6 +187,32 @@ class UnescapedIdentifier : public Terminal {
   std::string identifier_ = "";
 };
 
+// Terminal representing a piece of a string literal.
+class StringEntity : public Terminal {
+ public:
+  StringEntity(size_t start, size_t size, std::string_view content)
+      : Terminal(start, size, content), content_(content) {}
+
+  const std::string& content() const { return content_; }
+
+  StringEntity* AsStringEntity() override { return this; }
+
+ private:
+  std::string content_ = "";
+};
+
+// Terminal representing a piece of an escape sequence in a string literal.
+class EscapeSequence : public StringEntity {
+ public:
+  EscapeSequence(size_t start, size_t size, std::string_view content)
+      : StringEntity(start, size, Decode(content)) {}
+
+  EscapeSequence* AsEscapeSequence() override { return this; }
+
+ private:
+  static std::string Decode(std::string_view sequence);
+};
+
 // Superclass of all non-terminal nodes in our AST.
 class Nonterminal : public Node {
  public:
@@ -268,11 +305,24 @@ class Integer : public Nonterminal {
 
   std::string_view Name() const override { return "Integer"; }
 
-  std::optional<std::string> GetInteger(std::string_view unit) const;
   Integer* AsInteger() override { return this; }
 
  public:
   uint64_t value_ = 0;
+};
+
+class String : public Nonterminal {
+ public:
+  String(size_t start, std::vector<std::shared_ptr<Node>> children);
+
+  const std::string& value() const { return value_; }
+
+  std::string_view Name() const override { return "String"; }
+
+  String* AsString() override { return this; }
+
+ public:
+  std::string value_;
 };
 
 class Identifier : public Nonterminal {

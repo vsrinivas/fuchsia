@@ -97,10 +97,46 @@ ParseResultStream Integer(ParseResultStream prefixes) {
   return NT<ast::Integer>(Alt(HexInteger, DecimalInteger))(std::move(prefixes));
 }
 
+// Parses an escape sequence.
+//     \n
+//     \r
+//     \xF0
+ParseResultStream EscapeSequence(ParseResultStream prefixes) {
+  return Alt(Token<ast::EscapeSequence>("\\n"), Token<ast::EscapeSequence>("\\t"),
+             Token<ast::EscapeSequence>("\\\n"), Token<ast::EscapeSequence>("\\r"),
+             Token<ast::EscapeSequence>("\\\\"), Token<ast::EscapeSequence>("\\\""),
+             Token<ast::EscapeSequence>(
+                 Seq(Token<ast::EscapeSequence>("\\u"), Multi(6, HexDigit))))(std::move(prefixes));
+}
+
+// Parses a sequence of characters that might be within a string body.
+//     The quick brown fox jumped over the lazy dog.
+ParseResultStream StringEntity(ParseResultStream prefixes) {
+  return Alt(Token<ast::StringEntity>(OnePlus(AnyCharBut("string body character", "\n\\\""))),
+             EscapeSequence)(std::move(prefixes));
+}
+
+// Parses an ordinary string literal.
+//     "The quick brown fox jumped over the lazy dog."
+//     "A newline.\nA tab\tA code point\xF0"
+ParseResultStream NormalString(ParseResultStream prefixes) {
+  return NT<ast::String>(Seq(Token("\""), ZeroPlus(StringEntity), Token("\"")))(
+      std::move(prefixes));
+}
+
+// Parse an ordinary string literal, or a multiline string literal.
+//     "The quick brown fox jumped over the lazy dog."
+//     "A newline.\nA tab\tA code point\xF0"
+// TODO: Decide on a MultiString syntax we like.
+ParseResultStream String(ParseResultStream prefixes) {
+  // return Alt(NormalString, MultiString)(prefixes);
+  return NormalString(std::move(prefixes));
+}
+
 // Parses an expression. This is effectively unimplemented right now.
 ParseResultStream Expression(ParseResultStream prefixes) {
   // Unimplemented
-  return NT<ast::Expression>(Integer)(std::move(prefixes));
+  return NT<ast::Expression>(Alt(Integer, String))(std::move(prefixes));
 }
 
 // Parses a variable declaration:
