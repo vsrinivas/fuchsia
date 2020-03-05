@@ -9,6 +9,8 @@
 
 #include <cinttypes>
 
+#include <trace/event.h>
+
 #include "src/developer/feedback/utils/log_format.h"
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/fxl/strings/string_printf.h"
@@ -42,11 +44,13 @@ void SystemLogRecorder::StartRecording() {
 
 void SystemLogRecorder::LogMany(std::vector<fuchsia::logger::LogMessage> messages) {
   for (const auto& message : messages) {
-    logs_.Write(Format(message));
+    WriteLogMessage(std::move(message));
   }
 }
 
-void SystemLogRecorder::Log(fuchsia::logger::LogMessage message) { logs_.Write(Format(message)); }
+void SystemLogRecorder::Log(fuchsia::logger::LogMessage message) {
+  WriteLogMessage(std::move(message));
+}
 
 void SystemLogRecorder::Done() {
   fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener;
@@ -57,6 +61,13 @@ void SystemLogRecorder::Done() {
   });
 
   logger_->Listen(std::move(log_listener), /*options=*/nullptr);
+}
+
+void SystemLogRecorder::WriteLogMessage(fuchsia::logger::LogMessage message) {
+  TRACE_DURATION("feedback:io", "SystemLogRecorder::WriteLogMessage", "message_size",
+                 message.msg.size());
+
+  logs_.Write(Format(message));
 }
 
 }  // namespace feedback

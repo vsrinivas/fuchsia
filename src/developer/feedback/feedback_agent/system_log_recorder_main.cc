@@ -6,17 +6,20 @@
 #include <lib/async-loop/default.h>
 #include <lib/sys/cpp/component_context.h>
 
+#include <trace-provider/provider.h>
+
 #include "src/developer/feedback/feedback_agent/constants.h"
 #include "src/developer/feedback/feedback_agent/system_log_recorder.h"
 #include "src/lib/syslog/cpp/logger.h"
 
-std::vector<const std::string> LogFilePaths();
 feedback::FileSize MaxLogsSize();
 
 int main(int argc, const char** argv) {
   syslog::InitLogger({"feedback"});
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+  trace::TraceProviderWithFdio trace_provider(loop.dispatcher(), "feedback_agent_trace_provider");
+
   auto context = sys::ComponentContext::Create();
 
   feedback::SystemLogRecorder system_logs(context->svc(), feedback::kCurrentLogsFilePaths,

@@ -19,9 +19,10 @@
             "fuchsia.hwinfo.Board",
             "fuchsia.hwinfo.Product",
             "fuchsia.process.Launcher",
+            "fuchsia.sysinfo.SysInfo",
+            "fuchsia.tracing.provider.Registry",
             "fuchsia.ui.scenic.Scenic",
-            "fuchsia.update.channel.Provider",
-            "fuchsia.sysinfo.SysInfo"
+            "fuchsia.update.channel.Provider"
         ]
     }
 }

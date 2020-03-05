@@ -28,6 +28,8 @@ class SystemLogRecorder : public fuchsia::logger::LogListener {
   void LogMany(std::vector<fuchsia::logger::LogMessage> messages) override;
   void Done() override;
 
+  void WriteLogMessage(fuchsia::logger::LogMessage message);
+
   const std::shared_ptr<sys::ServiceDirectory> services_;
   fidl::Binding<fuchsia::logger::LogListener> binding_;
   fuchsia::logger::LogPtr logger_;

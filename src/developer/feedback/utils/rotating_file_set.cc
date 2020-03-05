@@ -10,6 +10,8 @@
 #include <fstream>
 #include <sstream>
 
+#include <trace/event.h>
+
 namespace feedback {
 
 RotatingFileSetWriter::RotatingFileSetWriter(const std::vector<const std::string>& file_paths,
@@ -28,6 +30,8 @@ RotatingFileSetWriter::RotatingFileSetWriter(const std::vector<const std::string
 }
 
 void RotatingFileSetWriter::Write(const std::string& line) {
+  TRACE_DURATION("feedback:io", "RotatingFileSetWriter::Write", "line_size", line.size());
+
   if (individual_file_size_.to_bytes() < line.size()) {
     return;
   }
@@ -43,12 +47,16 @@ void RotatingFileSetWriter::Write(const std::string& line) {
 }
 
 void RotatingFileSetWriter::PositionNewFile() {
+  TRACE_DURATION("feedback:io", "RotatingFileSetWriter::PositionNewFile");
+
   files_.pop_back();
   files_.emplace_front(individual_file_size_);
   current_file_ = &files_.front();
 }
 
 void RotatingFileSetWriter::RotateFilePaths() {
+  TRACE_DURATION("feedback:io", "RotatingFileSetWriter::RotateFilePaths");
+
   // Assuming we have 4 files file0.txt, file1.txt, file2.txt, and file3.txt, in that order, their
   // names will change as follows:
   // files2.txt -> file3.txt, file1.txt -> file2.txt, file0.txt -> file1.txt.

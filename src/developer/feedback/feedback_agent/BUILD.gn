@@ -72,6 +72,7 @@ executable("system_log_recorder") {
     "//src/lib/syslog/cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/trace-provider-with-fdio",
   ]
 }
 
@@ -203,5 +204,6 @@ source_set("system_log_recorder_src") {
     "//src/developer/feedback/utils:logs",
     "//src/lib/fxl",
     "//src/lib/syslog/cpp",
+    "//zircon/public/lib/trace",
   ]
 }

@@ -75,6 +75,8 @@ source_set("files") {
     "write_only_file.cc",
     "write_only_file.h",
   ]
+
+  deps = [ "//zircon/public/lib/trace" ]
 }
 
 source_set("inspect_node_manager") {
