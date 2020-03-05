@@ -56,15 +56,12 @@ Presentation::Presentation(
     fuchsia::ui::scenic::Scenic* scenic, scenic::Session* session, scenic::ResourceId compositor_id,
     fuchsia::ui::views::ViewHolderToken view_holder_token,
     fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request,
-    fuchsia::ui::shortcut::Manager* shortcut_manager, fuchsia::ui::input::ImeService* ime_service,
     ActivityNotifier* activity_notifier, RendererParams renderer_params,
     int32_t display_startup_rotation_adjustment, YieldCallback yield_callback,
     MediaButtonsHandler* media_buttons_handler)
     : scenic_(scenic),
       session_(session),
       compositor_id_(compositor_id),
-      shortcut_manager_(shortcut_manager),
-      ime_service_(ime_service),
       activity_notifier_(activity_notifier),
       layer_(session_),
       renderer_(session_),
@@ -148,8 +145,6 @@ void Presentation::RegisterWithMagnifier(fuchsia::accessibility::Magnifier* magn
   magnifier->RegisterHandler(a11y_binding_.NewBinding());
   a11y_binding_.set_error_handler([this](auto) { ResetClipSpaceTransform(); });
 }
-
-void Presentation::ResetShortcutManager() { shortcut_manager_ = nullptr; }
 
 void Presentation::OverrideRendererParams(RendererParams renderer_params, bool present_changes) {
   renderer_params_override_ = renderer_params;
@@ -545,75 +540,9 @@ void Presentation::OnEvent(fuchsia::ui::input::InputEvent event) {
       input_cmd.set_send_pointer_input(std::move(pointer_cmd));
 
     } else if (event.is_keyboard()) {
-      const fuchsia::ui::input::KeyboardEvent& kbd = event.keyboard();
-
-      // Keyboard uses alternate dispatch path.
+      // Keyboard dispatch disabled.
       dispatch_event = false;
 
-      auto handled_callback = [this, kbd, input_cmd = std::move(input_cmd),
-                               trace_id](bool was_handled) mutable {
-        // Unconditionally perform legacy shortcuts.
-        // TODO(SCN-1465): deprecate legacy shortcuts.
-        for (size_t i = 0; i < captured_keybindings_.size(); i++) {
-          const auto& event = captured_keybindings_[i].event;
-          if (event.modifiers == kbd.modifiers && event.phase == kbd.phase) {
-            if ((event.code_point > 0 && event.code_point == kbd.code_point) ||
-                // match on hid_usage when there's no codepoint:
-                event.hid_usage == kbd.hid_usage) {
-              fuchsia::ui::input::KeyboardEvent clone;
-              fidl::Clone(kbd, &clone);
-              captured_keybindings_[i].listener->OnEvent(std::move(clone));
-              was_handled = true;
-            }
-          }
-        }
-
-        if (!was_handled) {
-          if (trace_id) {
-            TRACE_FLOW_BEGIN("input", "dispatch_event_to_scenic", trace_id);
-          }
-          fuchsia::ui::input::SendKeyboardInputCmd keyboard_cmd;
-          keyboard_cmd.keyboard_event = std::move(kbd);
-          keyboard_cmd.compositor_id = compositor_id_;
-          input_cmd.set_send_keyboard_input(std::move(keyboard_cmd));
-
-          // TODO(SCN-1455): Remove Scenic from keyboard dispatch path.
-          session_->Enqueue(std::move(input_cmd));
-        }
-      };
-
-      // [Transitional]
-      // Current keyboard input dispatch strategy:
-      // For the user-facing keys (fuchsia::ui::input2::Key), events
-      // are delivered to services in the following order:
-      // 1. ime_service, to provide fuchsia.ui.input2.Keyboard FIDL
-      // 2. shortcuts, to provide fuchsia.ui.shortcut FIDL
-      //
-      // If this flow doesn't handle the event, events are passed to
-      // legacy flow (see handled_callback):
-      // 1. CaptureKeyboardEventHACK FIDL
-      // 2. session->Enqueue
-      if (auto key_event = key_util::into_key_event(kbd)) {
-        fuchsia::ui::input2::KeyEvent clone;
-        fidl::Clone(*key_event, &clone);
-        // Send keyboard event to IME manager for input2.KeyboardService
-        // interface.
-        ime_service_->DispatchKey(
-            std::move(*key_event),
-            [this, key_event = std::move(clone),
-             handled_callback = std::move(handled_callback)](bool was_handled) mutable {
-              if (was_handled || !shortcut_manager_) {
-                handled_callback(false);
-              } else {
-                // Send keyboard event to Shortcut manager for shortcut
-                // detection.
-                shortcut_manager_->HandleKeyEvent(std::move(key_event),
-                                                  std::move(handled_callback));
-              }
-            });
-      } else {
-        handled_callback(false);
-      }
       return;
     }
   }

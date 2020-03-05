@@ -78,13 +78,10 @@ void App::PresentView(
     }
   }
 
-  fuchsia::ui::shortcut::Manager* shortcut_manager =
-      shortcut_manager_ ? shortcut_manager_.get() : nullptr;
-
   auto presentation = std::make_unique<Presentation>(
       scenic_.get(), session_.get(), compositor_->id(), std::move(view_holder_token),
-      std::move(presentation_request), shortcut_manager, ime_service_.get(), &activity_notifier_,
-      renderer_params_, display_startup_rotation_adjustment,
+      std::move(presentation_request), &activity_notifier_, renderer_params_,
+      display_startup_rotation_adjustment,
       [this](bool yield_to_next) {
         if (yield_to_next) {
           SwitchToNextPresentation();
@@ -317,21 +314,6 @@ void App::InitializeServices() {
     // No need to set an error handler here unless we want to attempt a reconnect or something;
     // instead, we add error handlers for cleanup on the a11y presentations when we register them.
 
-    component_context_->svc()->Connect(ime_service_.NewRequest());
-    ime_service_.set_error_handler([this](zx_status_t error) {
-      FXL_LOG(ERROR) << "IME Service died, destroying all presentations.";
-      Reset();
-    });
-
-    component_context_->svc()->Connect(shortcut_manager_.NewRequest());
-    shortcut_manager_.set_error_handler([this](zx_status_t error) {
-      FXL_LOG(ERROR) << "Shortcut manager unavailable: " << zx_status_get_string(error);
-      shortcut_manager_ = nullptr;
-      for (const auto& presentation : presentations_) {
-        presentation->ResetShortcutManager();
-      }
-    });
-
     // Add Color Transform Handler.
     color_transform_handler_ = std::make_unique<ColorTransformHandler>(
         *component_context_.get(), compositor_->id(), session_.get());
@@ -345,7 +327,6 @@ void App::Reset() {
   layer_stack_ = nullptr;
   compositor_ = nullptr;
   session_ = nullptr;
-  shortcut_manager_ = nullptr;
   scenic_.Unbind();
 }
 

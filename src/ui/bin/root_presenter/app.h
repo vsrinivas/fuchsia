@@ -11,7 +11,6 @@
 #include <fuchsia/ui/policy/accessibility/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
-#include <fuchsia/ui/shortcut/cpp/fidl.h>
 #include <fuchsia/ui/views/accessibility/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -123,9 +122,6 @@ class App : public fuchsia::ui::policy::Presenter,
 
   fuchsia::ui::scenic::ScenicPtr scenic_;
   std::unique_ptr<scenic::Session> session_;
-
-  fuchsia::ui::shortcut::ManagerPtr shortcut_manager_;
-  fuchsia::ui::input::ImeServicePtr ime_service_;
 
   ActivityNotifierImpl activity_notifier_;
 

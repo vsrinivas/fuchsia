@@ -4,7 +4,6 @@
             "injected-services": {
                 "fuchsia.fonts.Provider": "fuchsia-pkg://fuchsia.com/fonts#meta/fonts.cmx",
                 "fuchsia.sysmem.Allocator": "fuchsia-pkg://fuchsia.com/sysmem_connector#meta/sysmem_connector.cmx",
-                "fuchsia.ui.input.ImeService": "fuchsia-pkg://fuchsia.com/ime_service#meta/ime_service.cmx",
                 "fuchsia.ui.input.ImeVisibilityService": "fuchsia-pkg://fuchsia.com/ime_service#meta/ime_service.cmx",
                 "fuchsia.ui.input.InputDeviceRegistry": "fuchsia-pkg://fuchsia.com/root_presenter#meta/root_presenter.cmx",
                 "fuchsia.ui.policy.Presenter": "fuchsia-pkg://fuchsia.com/root_presenter#meta/root_presenter.cmx",
@@ -37,7 +36,6 @@
             "fuchsia.sys.Launcher",
             "fuchsia.sysmem.Allocator",
             "fuchsia.tracing.provider.Registry",
-            "fuchsia.ui.input.ImeService",
             "fuchsia.ui.input.ImeVisibilityService",
             "fuchsia.ui.input.InputDeviceRegistry",
             "fuchsia.ui.policy.Presenter",

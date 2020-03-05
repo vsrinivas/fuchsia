@@ -3,16 +3,15 @@
   <head>
     <title>Dynamic test page</title>
     <style>
-      body { background-color: #ff00ff }
-      input { width: 100%; font-size: 25vh }
-    </style>
-    <script type="text/javascript">
-      function handleInput(e) {
-        document.body.style.backgroundColor = e.target.value;
+      html {
+        height: 100%;
       }
-    </script>
+      body {
+        background-color: #ff00ff;
+        height: 100%;
+      }
+    </style>
   </head>
-  <body>
-    <input type="text" oninput="handleInput(event)">
+  <body onclick="document.body.style.backgroundColor='#40e0d0'">
   </body>
 </html>

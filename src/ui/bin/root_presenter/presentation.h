@@ -16,7 +16,6 @@
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/input2/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
-#include <fuchsia/ui/shortcut/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_ptr_set.h>
@@ -66,10 +65,9 @@ class Presentation : fuchsia::ui::policy::Presentation,
                scenic::ResourceId compositor_id,
                fuchsia::ui::views::ViewHolderToken view_holder_token,
                fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request,
-               fuchsia::ui::shortcut::Manager* shortcut_manager,
-               fuchsia::ui::input::ImeService* ime_service, ActivityNotifier* activity_notifier,
-               RendererParams renderer_params, int32_t display_startup_rotation_adjustment,
-               YieldCallback yield_callback, MediaButtonsHandler* media_buttons_handler);
+               ActivityNotifier* activity_notifier, RendererParams renderer_params,
+               int32_t display_startup_rotation_adjustment, YieldCallback yield_callback,
+               MediaButtonsHandler* media_buttons_handler);
   ~Presentation() override;
 
   void RegisterWithMagnifier(fuchsia::accessibility::Magnifier* magnifier);
@@ -80,9 +78,6 @@ class Presentation : fuchsia::ui::policy::Presentation,
 
   // Used internally by Presenter. Allows overriding of renderer params.
   void OverrideRendererParams(RendererParams renderer_params, bool present_changes = true);
-
-  // Used internally by Presenter. Reset shortcut manager in case of error.
-  void ResetShortcutManager();
 
   const scenic::Layer& layer() const { return layer_; }
   const scenic::ViewHolder& view_holder() const { return view_holder_; }
@@ -145,10 +140,7 @@ class Presentation : fuchsia::ui::policy::Presentation,
   fuchsia::ui::scenic::Scenic* const scenic_;
   scenic::Session* const session_;
   scenic::ResourceId compositor_id_;
-  // Today, a DeviceState is owned by each Presentation, and we need to
-  // connect the output of DeviceState to shortcut_manager_.
-  fuchsia::ui::shortcut::Manager* shortcut_manager_;
-  fuchsia::ui::input::ImeService* ime_service_;
+
   ActivityNotifier* activity_notifier_;
 
   scenic::Layer layer_;

@@ -17,10 +17,8 @@
             "fuchsia.sys.Loader",
             "fuchsia.tracing.provider.Registry",
             "fuchsia.ui.activity.Tracker",
-            "fuchsia.ui.input.ImeService",
             "fuchsia.ui.policy.accessibility.PointerEventRegistry",
             "fuchsia.ui.scenic.Scenic",
-            "fuchsia.ui.shortcut.Manager",
             "fuchsia.ui.views.accessibility.FocuserRegistry"
         ]
     }

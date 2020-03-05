@@ -13,16 +13,11 @@ group("tests") {
 
 test_package("e2e_input_tests") {
   deps = [
-    ":base_view_ime_test",
     ":mediabuttons_listener_test",
     ":minimal_input_test",
   ]
 
   tests = [
-    {
-      name = "base_view_ime_test"
-      environments = [ nuc_env ]
-    },
     {
       name = "minimal_input_test"
       environments = [ nuc_env ]
@@ -56,30 +51,6 @@ test("minimal_input_test") {
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
   ]
-}
-
-# Each e2e test must run in its own executable.
-test("base_view_ime_test") {
-  sources = [ "base_view_ime_test.cc" ]
-  output_name = "base_view_ime_test"
-  deps = [
-    "//garnet/public/lib/fostr/fidl/fuchsia.ui.input",
-    "//garnet/public/lib/gtest",
-    "//sdk/fidl/fuchsia.ui.input",
-    "//sdk/fidl/fuchsia.ui.policy",
-    "//sdk/fidl/fuchsia.ui.scenic",
-    "//sdk/lib/ui/scenic/cpp",
-    "//src/lib/fxl",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/lib/ui/base_view",
-    "//third_party/googletest:gtest",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
-    "//zircon/public/lib/fdio",
-    "//zircon/public/lib/fit",
-    "//zircon/public/lib/zx",
-  ]
-  public_configs = [ "//build/config:Wno-reorder-init-list" ]
 }
 
 # Each e2e test must run in its own executable.

@@ -63,7 +63,6 @@ std::map<uint32_t, size_t> Histogram(const fuchsia::ui::scenic::ScreenshotData& 
 // See garnet/bin/ui/input/README.md or `input --help` for usage details.
 // Commands used here:
 //  * tap <x> <y> (scaled out of 1000)
-//  * text <text>
 // TODO(SCN-1262): Expose as a FIDL service.
 void Input(std::vector<const char*> args) {
   // start with proc name, end with nullptr
@@ -302,12 +301,9 @@ TEST_F(WebPixelTest, Static) {
   ExpectSolidColor(kTargetColor);
 }
 
-// Loads a dynamic page that starts with a Fuchsia background and has a large
-// text box, with Javascript to change the background to the color typed in the
-// text box. This test verifies the initial color, taps on the text box (top
-// quarter of the screen), types a new color, and verifies the changed color.
+// Loads a dynamic page that starts with a Fuchsia background. This test verifies the initial color,
+// taps on the view, and verifies that the color changed.
 TEST_F(WebPixelTest, Dynamic) {
-  static constexpr char kInput[] = "#40e0d0";
   static constexpr uint32_t kBeforeColor = 0xffff00ff;
   static constexpr uint32_t kAfterColor = 0xff40e0d0;
 
@@ -323,7 +319,6 @@ TEST_F(WebPixelTest, Dynamic) {
 
   ExpectPrimaryColor(kBeforeColor);
   Input({"tap", "500", "125"});  // centered in top quarter of screen
-  Input({"text", kInput});
   ExpectPrimaryColor(kAfterColor);
 }
 
