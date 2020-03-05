@@ -11,7 +11,8 @@
     "build/component.gni",
     "build/prepare_package_inputs.py",
     "build/pm_tool.gni",
-    "build/test_targets.gni"
+    "build/test_targets.gni",
+    "build/test.gni"
   ],
   "name": "gn-rules",
   "type": "documentation"
