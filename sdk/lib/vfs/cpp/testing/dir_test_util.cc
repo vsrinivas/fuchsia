@@ -84,13 +84,21 @@ void DirConnection::AssertReadDirents(fuchsia::io::DirectorySyncPtr& ptr, uint64
     SCOPED_TRACE(d.String());
     ASSERT_LE(sizeof(vdirent_t), out_dirents.size() - offset);
     vdirent_t* de = reinterpret_cast<vdirent_t*>(data_ptr + offset);
-    EXPECT_EQ(d.ino(), de->ino);
-    EXPECT_EQ(d.size(), de->size);
-    EXPECT_EQ(d.type(), de->type);
-    ASSERT_LE(d.size_in_bytes(), out_dirents.size() - offset);
-    EXPECT_EQ(d.name(), std::string(de->name, de->size));
 
-    offset += sizeof(vdirent_t) + de->size;
+    uint64_t ino;
+    memcpy(&ino, &de->ino, sizeof(ino));
+    EXPECT_EQ(d.ino(), ino);
+
+    uint8_t size, type;
+    memcpy(&size, &de->size, sizeof(size));
+    EXPECT_EQ(d.size(), size);
+
+    memcpy(&type, &de->type, sizeof(type));
+    EXPECT_EQ(d.type(), type);
+    ASSERT_LE(d.size_in_bytes(), out_dirents.size() - offset);
+    EXPECT_EQ(d.name(), std::string(de->name, size));
+
+    offset += sizeof(vdirent_t) + size;
   }
 }
 
