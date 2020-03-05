@@ -14,7 +14,7 @@ TEST(GoSyscallsStubs, Selection) {
   SyscallLibrary library;
   ASSERT_TRUE(SyscallLibraryLoader::FromJson(k_test_selection, &library));
 
-  StringWriter writer;
+  Writer writer;
   ASSERT_TRUE(GoSyscallsStubs(library, &writer));
 
   EXPECT_EQ(writer.Out(),
@@ -59,7 +59,7 @@ TEST(GoSyscallsStubs, ReservedWords) {
   SyscallLibrary library;
   ASSERT_TRUE(SyscallLibraryLoader::FromJson(k_test_go_reserved_words, &library));
 
-  StringWriter writer;
+  Writer writer;
   ASSERT_TRUE(GoSyscallsStubs(library, &writer));
 
   EXPECT_EQ(writer.Out(),
@@ -88,7 +88,7 @@ TEST(GoSyscallsAsm, Selection) {
   SyscallLibrary library;
   ASSERT_TRUE(SyscallLibraryLoader::FromJson(k_test_selection, &library));
 
-  StringWriter writer;
+  Writer writer;
   ASSERT_TRUE(GoSyscallsAsm(library, &writer));
 
   EXPECT_EQ(writer.Out(),

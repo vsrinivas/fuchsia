@@ -13,7 +13,7 @@ TEST(RustOutput, Various) {
   SyscallLibrary library;
   ASSERT_TRUE(SyscallLibraryLoader::FromJson(k_test_rust_selection, &library));
 
-  StringWriter writer;
+  Writer writer;
   ASSERT_TRUE(RustOutput(library, &writer));
 
   EXPECT_EQ(writer.Out(),

@@ -17,7 +17,7 @@ TEST(JsonOutput, KernelCases) {
   SyscallLibrary library;
   ASSERT_TRUE(SyscallLibraryLoader::FromJson(k_test_kernel_cases, &library));
 
-  StringWriter writer;
+  Writer writer;
   ASSERT_TRUE(JsonOutput(library, &writer));
 
   EXPECT_EQ(writer.Out(),
@@ -267,7 +267,7 @@ TEST(JsonOutput, RustCases) {
   SyscallLibrary library;
   ASSERT_TRUE(SyscallLibraryLoader::FromJson(k_test_rust_selection, &library));
 
-  StringWriter writer;
+  Writer writer;
   ASSERT_TRUE(JsonOutput(library, &writer));
 
   EXPECT_EQ(writer.Out(),
@@ -537,7 +537,7 @@ TEST(JsonOutput, SelectionCases) {
   SyscallLibrary library;
   ASSERT_TRUE(SyscallLibraryLoader::FromJson(k_test_selection, &library));
 
-  StringWriter writer;
+  Writer writer;
   ASSERT_TRUE(JsonOutput(library, &writer));
 
   EXPECT_EQ(writer.Out(),
@@ -843,7 +843,7 @@ TEST(JsonOutput, RightsSpecs) {
   SyscallLibrary library;
   ASSERT_TRUE(SyscallLibraryLoader::FromJson(k_test_rights_specs, &library));
 
-  StringWriter writer;
+  Writer writer;
   ASSERT_TRUE(JsonOutput(library, &writer));
 
   EXPECT_EQ(writer.Out(),
@@ -916,7 +916,7 @@ TEST(JsonOutput, OutVoidptr) {
   SyscallLibrary library;
   ASSERT_TRUE(SyscallLibraryLoader::FromJson(k_test_out_voidptr, &library));
 
-  StringWriter writer;
+  Writer writer;
   ASSERT_TRUE(JsonOutput(library, &writer));
 
   EXPECT_EQ(writer.Out(),

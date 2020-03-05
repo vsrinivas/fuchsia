@@ -13,7 +13,7 @@ TEST(CategoryOutput, Simple) {
   SyscallLibrary library;
   ASSERT_TRUE(SyscallLibraryLoader::FromJson(k_test_various_categories, &library));
 
-  StringWriter writer;
+  Writer writer;
   ASSERT_TRUE(CategoryOutput(library, &writer));
 
   EXPECT_EQ(writer.Out(),

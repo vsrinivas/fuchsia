@@ -13,7 +13,7 @@ TEST(KtraceOutput, Simple) {
   SyscallLibrary library;
   ASSERT_TRUE(SyscallLibraryLoader::FromJson(k_test_one_protocol_one_method, &library));
 
-  StringWriter writer;
+  Writer writer;
   ASSERT_TRUE(KtraceOutput(library, &writer));
 
   EXPECT_EQ(writer.Out(),

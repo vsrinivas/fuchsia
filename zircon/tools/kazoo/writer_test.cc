@@ -14,7 +14,7 @@
 namespace {
 
 TEST(Writer, PrintSpacerLine) {
-  StringWriter writer;
+  Writer writer;
   EXPECT_EQ(writer.Out(), "");
 
   // When there is no previous line, PrintSpacerLine() should have no effect.

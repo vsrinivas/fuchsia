@@ -14,7 +14,7 @@ TEST(GoVdsoKeys, Selection) {
   SyscallLibrary library;
   ASSERT_TRUE(SyscallLibraryLoader::FromJson(k_test_selection, &library));
 
-  StringWriter writer;
+  Writer writer;
   ASSERT_TRUE(GoVdsoKeys(library, &writer));
 
   EXPECT_EQ(writer.Out(), R"(// Copyright 2019 The Fuchsia Authors. All rights reserved.
@@ -95,7 +95,7 @@ TEST(GoVdsoX86Calls, Selection) {
   SyscallLibrary library;
   ASSERT_TRUE(SyscallLibraryLoader::FromJson(k_test_selection, &library));
 
-  StringWriter writer;
+  Writer writer;
   ASSERT_TRUE(GoVdsoX86Calls(library, &writer));
 
   EXPECT_EQ(writer.Out(), R"(// Copyright 2019 The Fuchsia Authors. All rights reserved.
@@ -267,7 +267,7 @@ TEST(GoVdsoArm64Calls, Selection) {
   SyscallLibrary library;
   ASSERT_TRUE(SyscallLibraryLoader::FromJson(k_test_selection, &library));
 
-  StringWriter writer;
+  Writer writer;
   ASSERT_TRUE(GoVdsoArm64Calls(library, &writer));
 
   EXPECT_EQ(writer.Out(), R"(// Copyright 2019 The Fuchsia Authors. All rights reserved.
@@ -402,7 +402,7 @@ TEST(GoVdsoX86Calls, SpecialNonBlocking) {
   SyscallLibrary library;
   ASSERT_TRUE(SyscallLibraryLoader::FromJson(k_test_go_nonblocking, &library));
 
-  StringWriter writer;
+  Writer writer;
   ASSERT_TRUE(GoVdsoX86Calls(library, &writer));
 
   EXPECT_EQ(writer.Out(), R"(// Copyright 2019 The Fuchsia Authors. All rights reserved.
@@ -463,7 +463,7 @@ TEST(GoVdsoArm64Calls, SpecialNonBlocking) {
   SyscallLibrary library;
   ASSERT_TRUE(SyscallLibraryLoader::FromJson(k_test_go_nonblocking, &library));
 
-  StringWriter writer;
+  Writer writer;
   ASSERT_TRUE(GoVdsoX86Calls(library, &writer));
 
   EXPECT_EQ(writer.Out(), R"(// Copyright 2019 The Fuchsia Authors. All rights reserved.

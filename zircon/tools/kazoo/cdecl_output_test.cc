@@ -19,7 +19,7 @@ TEST(CDeclOutput, Public) {
   SyscallLibrary library;
   ASSERT_TRUE(SyscallLibraryLoader::FromJson(k_test_selection, &library));
 
-  StringWriter writer;
+  Writer writer;
   ASSERT_TRUE(PublicDeclarationsOutput(library, &writer));
 
   EXPECT_EQ(writer.Out(), R"(// Copyright 2019 The Fuchsia Authors. All rights reserved.
@@ -87,10 +87,10 @@ TEST(CDeclOutput, Testonly) {
   SyscallLibrary library;
   ASSERT_TRUE(SyscallLibraryLoader::FromJson(k_test_kernel_cases, &library));
 
-  StringWriter writer;
+  Writer writer;
   ASSERT_TRUE(PublicDeclarationsOutput(library, &writer));
 
-  StringWriter testonly_writer;
+  Writer testonly_writer;
   ASSERT_TRUE(TestonlyPublicDeclarationsOutput(library, &testonly_writer));
 
   EXPECT_EQ(writer.Out(), R"(// Copyright 2019 The Fuchsia Authors. All rights reserved.
@@ -161,7 +161,7 @@ TEST(CDeclOutput, Private) {
   SyscallLibrary library;
   ASSERT_TRUE(SyscallLibraryLoader::FromJson(k_test_selection, &library));
 
-  StringWriter writer;
+  Writer writer;
   ASSERT_TRUE(PrivateDeclarationsOutput(library, &writer));
 
   EXPECT_EQ(writer.Out(), R"(// Copyright 2019 The Fuchsia Authors. All rights reserved.
@@ -224,7 +224,7 @@ TEST(CDeclOutput, Kernel) {
   SyscallLibrary library;
   ASSERT_TRUE(SyscallLibraryLoader::FromJson(k_test_kernel_cases, &library));
 
-  StringWriter writer;
+  Writer writer;
   ASSERT_TRUE(KernelDeclarationsOutput(library, &writer));
 
   EXPECT_EQ(writer.Out(), R"(// Copyright 2019 The Fuchsia Authors. All rights reserved.
@@ -279,7 +279,7 @@ TEST(CDeclOutput, VdsoWrappers) {
   SyscallLibrary library;
   ASSERT_TRUE(SyscallLibraryLoader::FromJson(k_test_vdsowrappers, &library));
 
-  StringWriter writer;
+  Writer writer;
   ASSERT_TRUE(PrivateDeclarationsOutput(library, &writer));
 
   EXPECT_EQ(writer.Out(), R"(// Copyright 2019 The Fuchsia Authors. All rights reserved.
@@ -308,7 +308,7 @@ TEST(CDeclOutput, HandleOwnership) {
   SyscallLibrary library;
   ASSERT_TRUE(SyscallLibraryLoader::FromJson(k_test_ownership_annotations, &library));
 
-  StringWriter writer;
+  Writer writer;
   ASSERT_TRUE(PrivateDeclarationsOutput(library, &writer));
 
   EXPECT_EQ(writer.Out(), R"(// Copyright 2019 The Fuchsia Authors. All rights reserved.
@@ -367,7 +367,7 @@ TEST(CDeclOutput, Asm) {
   SyscallLibrary library;
   ASSERT_TRUE(SyscallLibraryLoader::FromJson(k_test_one_protocol_two_methods, &library));
 
-  StringWriter writer;
+  Writer writer;
   ASSERT_TRUE(PrivateDeclarationsOutput(library, &writer));
 
   EXPECT_EQ(writer.Out(), R"(// Copyright 2019 The Fuchsia Authors. All rights reserved.
@@ -393,7 +393,7 @@ TEST(CDeclOutput, AsmWithInternal) {
   ASSERT_TRUE(
       SyscallLibraryLoader::FromJson(k_test_one_protocol_two_methods_with_internal, &library));
 
-  StringWriter writer;
+  Writer writer;
   ASSERT_TRUE(PrivateDeclarationsOutput(library, &writer));
 
   EXPECT_EQ(writer.Out(), R"(// Copyright 2019 The Fuchsia Authors. All rights reserved.

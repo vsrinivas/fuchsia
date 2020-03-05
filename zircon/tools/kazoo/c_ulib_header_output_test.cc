@@ -40,7 +40,7 @@ TEST(CUlibHeaderOutput, Bits) {
   SyscallLibrary library;
   ASSERT_TRUE(SyscallLibraryLoader::FromJson(k_test_ulib_bits, &library));
 
-  StringWriter writer;
+  Writer writer;
   ASSERT_TRUE(CUlibHeaderOutput(library, &writer));
 
   EXPECT_EQ(writer.Out(),
@@ -76,7 +76,7 @@ TEST(CUlibHeaderOutput, Enums) {
   SyscallLibrary library;
   ASSERT_TRUE(SyscallLibraryLoader::FromJson(k_test_ulib_enums, &library));
 
-  StringWriter writer;
+  Writer writer;
   ASSERT_TRUE(CUlibHeaderOutput(library, &writer));
 
   EXPECT_EQ(writer.Out(),
@@ -104,7 +104,7 @@ TEST(CUlibHeaderOutput, TypeAliases) {
   SyscallLibrary library;
   ASSERT_TRUE(SyscallLibraryLoader::FromJson(k_test_ulib_type_aliases, &library));
 
-  StringWriter writer;
+  Writer writer;
   ASSERT_TRUE(CUlibHeaderOutput(library, &writer));
 
   EXPECT_EQ(writer.Out(),
@@ -126,7 +126,7 @@ TEST(CUlibHeaderOutput, Tables) {
   SyscallLibrary library;
   ASSERT_TRUE(SyscallLibraryLoader::FromJson(k_test_ulib_tables, &library));
 
-  StringWriter writer;
+  Writer writer;
   ASSERT_TRUE(CUlibHeaderOutput(library, &writer));
 
   EXPECT_EQ(writer.Out(),

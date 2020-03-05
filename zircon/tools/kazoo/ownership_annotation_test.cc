@@ -13,7 +13,7 @@ TEST(OwnershipAnnotationOutput, TrickyCases) {
   SyscallLibrary library;
   ASSERT_TRUE(SyscallLibraryLoader::FromJson(k_test_ownership_annotations, &library));
 
-  StringWriter writer;
+  Writer writer;
   ASSERT_TRUE(UserHeaderOutput(library, &writer));
 
   EXPECT_EQ(writer.Out(),

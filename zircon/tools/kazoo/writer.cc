@@ -18,16 +18,12 @@ bool Writer::Printf(const char* format, ...) {
   return Puts(result);
 }
 
-StringWriter::StringWriter() : Writer() {}
-
-StringWriter::~StringWriter() {}
-
-bool StringWriter::Puts(const std::string& str) {
+bool Writer::Puts(const std::string& str) {
   out_ += str;
   return true;
 }
 
-void StringWriter::PrintSpacerLine() {
+void Writer::PrintSpacerLine() {
   size_t size = out_.size();
   if (size < 2 || (out_[size - 2] == '\n' && out_[size - 1] == '\n')) {
     // The last line was empty.

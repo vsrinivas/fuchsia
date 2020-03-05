@@ -13,7 +13,7 @@ TEST(KernelWrappersOutput, Various) {
   SyscallLibrary library;
   ASSERT_TRUE(SyscallLibraryLoader::FromJson(k_test_kernelwrappers, &library));
 
-  StringWriter writer;
+  Writer writer;
   ASSERT_TRUE(KernelWrappersOutput(library, &writer));
 
   EXPECT_EQ(writer.Out(),
@@ -94,7 +94,7 @@ TEST(KernelWrappersOutput, DebugExcludedInRelease) {
   std::set<std::string> exclude{"testonly"};
   library.FilterSyscalls(exclude);
 
-  StringWriter writer;
+  Writer writer;
   ASSERT_TRUE(KernelWrappersOutput(library, &writer));
 
   // kwrap_compiled_out does not appear in this output vs. above due to

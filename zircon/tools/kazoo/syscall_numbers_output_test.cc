@@ -13,7 +13,7 @@ TEST(SyscallNumbersOutput, Simple) {
   SyscallLibrary library;
   ASSERT_TRUE(SyscallLibraryLoader::FromJson(k_test_one_protocol_two_methods, &library));
 
-  StringWriter writer;
+  Writer writer;
   ASSERT_TRUE(SyscallNumbersOutput(library, &writer));
 
   EXPECT_EQ(writer.Out(),
