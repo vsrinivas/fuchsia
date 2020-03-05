@@ -1,0 +1,15 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// TODO(36191): Move to fuchsia.media.audio
+
+library fuchsia.media;
+
+/// A protocol for monitoring the usage activity of the AudioRenderers.
+[Discoverable]
+protocol ActivityReporter {
+    /// Notifies the client whenever there is a change in the set of active AudioRenderUsages.
+    /// It returns immediately the first time that it is called.
+    WatchRenderActivity() -> (vector<AudioRenderUsage>:RENDER_USAGE_COUNT active_usages);
+};

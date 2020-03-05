@@ -1,4 +1,5 @@
 {
+  "fidl/fuchsia.media/activity_reporter.fidl": "b599c57814e5eb4e3eec31d5fa400dfe",
   "fidl/fuchsia.media/audio.fidl": "bc92a7988481acc880d1fc75bb6d5205",
   "fidl/fuchsia.media/audio_capturer.fidl": "90bb0a1372580b08632a23786b5974e6",
   "fidl/fuchsia.media/audio_consumer.fidl": "86383972eabc95e1d9b59273cbe66113",

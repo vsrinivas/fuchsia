@@ -16,6 +16,7 @@ fidl("fuchsia.media") {
   sdk_category = "partner"
 
   sources = [
+    "activity_reporter.fidl",
     "audio.fidl",
     "audio_capturer.fidl",
     "audio_consumer.fidl",
