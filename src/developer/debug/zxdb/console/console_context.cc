@@ -20,6 +20,7 @@
 #include "src/developer/debug/zxdb/console/command_utils.h"
 #include "src/developer/debug/zxdb/console/console.h"
 #include "src/developer/debug/zxdb/console/format_context.h"
+#include "src/developer/debug/zxdb/console/format_exception.h"
 #include "src/developer/debug/zxdb/console/format_location.h"
 #include "src/developer/debug/zxdb/console/format_target.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
@@ -28,6 +29,23 @@
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
+
+namespace {
+
+// We want to display full information for some exceptions like page faults, but debugger exceptions
+// like single step and debug breakpoint exceptions don't need thhe full treatment to reduce noice
+// when stepping.
+bool ShouldDisplayFullExceptionInfo(const StopInfo& info) {
+  if (info.exception_type == debug_ipc::ExceptionType::kNone ||
+      info.exception_type == debug_ipc::ExceptionType::kHardware ||
+      info.exception_type == debug_ipc::ExceptionType::kSoftware ||
+      info.exception_type == debug_ipc::ExceptionType::kSingleStep ||
+      info.exception_type == debug_ipc::ExceptionType::kSynthetic)
+    return false;
+  return true;
+}
+
+}  // namespace
 
 ConsoleContext::ConsoleContext(Session* session) : session_(session) {
   session->AddObserver(this);
@@ -325,6 +343,11 @@ void ConsoleContext::OutputThreadContext(const Thread* thread, const StopInfo& i
 
   Console* console = Console::get();
   OutputBuffer out;
+
+  if (ShouldDisplayFullExceptionInfo(info)) {
+    out.Append(FormatException(this, thread, info.exception_record));
+    out.Append("\n");
+  }
 
   out.Append("🛑 ");
 
