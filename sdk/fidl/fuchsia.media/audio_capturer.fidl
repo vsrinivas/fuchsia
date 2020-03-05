@@ -27,9 +27,9 @@ union AudioCapturerConfiguration {
 // make changes to theses sets, have their requests vetted by policy (do they
 // have the permission to capture this private stream, do they have the
 // permission to capture at this frame rate, etc...).  Eventually, this
+// functionality will need to be expressed at the AudioPolicy level, not here.
 // TODO(mpuryear): can we come up with better names than these?  Both are
 // really async modes under the hood).
-// functionality will need to be expressed at the AudioPolicy level, not here.
 // TODO(mpuryear): Add a new method to replace `DiscardAllPackets`, which will
 // be removed from `StreamSource`.
 // TODO(mpuryear): Fix obsolete docs.
@@ -72,7 +72,7 @@ union AudioCapturerConfiguration {
 ///    least as large as twice the frames_per_packet size specified during
 ///    StartAsyncCapture.
 /// ++ The handle to the payload buffer supplied by the user must be readable,
-///    writable, and mappable.
+///    writable, mappable and transferable.
 /// ++ Users should always treat the payload buffer as read-only.
 ///
 /// ** Synchronous vs. Asynchronous capture mode **
@@ -144,7 +144,7 @@ union AudioCapturerConfiguration {
 /// synchronize with the stop operation.  Two mechanisms are provided for doing
 /// so.
 ///
-/// The first is to use the StopAsyncCaptureWithCallback method.  When the user's
+/// The first is to use StopAsyncCapture (not the NoReply variant). When the user's
 /// callback has been called, they can be certain that stop operation is complete
 /// and that the AudioCapturer instance has returned to synchronous operation
 /// mode.
@@ -191,8 +191,8 @@ union AudioCapturerConfiguration {
 ///
 /// Even though explicit timestamps are provided on every StreamPacket produced,
 /// users who have very precise timing requirements are encouraged to always
-/// reason about time by counting frames delivered since the last discontinuity
-/// instead of simply using the raw capture timestamps.  This is because the
+/// reason about time by counting frames delivered since the last discontinuity,
+/// rather than simply using the raw capture timestamps. This is because the
 /// explicit timestamps written on continuous packets may have a small amount of
 /// rounding error based on whether or not the units of the capture timeline
 /// (`CLOCK_MONOTONIC`) are divisible by the chosen audio frame rate.
