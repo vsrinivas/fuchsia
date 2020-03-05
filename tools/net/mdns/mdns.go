@@ -1037,7 +1037,7 @@ func connectToAnyAddr(c mDNSConn, iface *net.Interface, addrs []net.Addr, port i
 			continue
 		}
 		if err := c.ConnectTo(port, ip, iface); err != nil {
-			lastConnectErr = fmt.Errorf("creating socket for %#v via %s: %s", iface, ip, err)
+			lastConnectErr = err
 			log.Println(lastConnectErr)
 			continue
 		}
