@@ -12,6 +12,7 @@ static_library("input-report-instance-driver") {
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
+    "//zircon/public/lib/trace-driver",
     "//zircon/public/lib/zx",
   ]
 }

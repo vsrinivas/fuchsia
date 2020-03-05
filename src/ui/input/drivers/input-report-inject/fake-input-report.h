@@ -55,6 +55,7 @@ class FakeInputReport : public FakeInputReportDeviceType,
   virtual zx_status_t SendOutputReport(fuchsia_input_report::OutputReport report) override;
 
  private:
+  uint32_t next_instance_id_ = 0;
   void ConvertDescriptors(const fuchsia_input_report::DeviceDescriptor& descriptor);
 
   fbl::Mutex instance_lock_;

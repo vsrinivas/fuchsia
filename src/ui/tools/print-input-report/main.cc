@@ -4,12 +4,17 @@
 
 #include <fcntl.h>
 #include <fuchsia/input/report/llcpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fdio/fdio.h>
 #include <string.h>
 #include <unistd.h>
 #include <zircon/status.h>
 
 #include <optional>
+
+#include <trace-provider/provider.h>
+#include <trace/event.h>
 
 #include "src/lib/files/unique_fd.h"
 #include "src/lib/fxl/command_line.h"
@@ -63,6 +68,15 @@ std::optional<fuchsia_input_report::InputDevice::SyncClient> GetClientFromPath(
 }  // namespace print_input_report
 
 int main(int argc, const char** argv) {
+  // Register with tracing.
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  zx_status_t status = loop.StartThread();
+  if (status != ZX_OK) {
+    printf("Error setting up tracing: %s\n", zx_status_get_string(status));
+    exit(1);
+  }
+  trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
+
   print_input_report::Printer printer;
   const fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   const auto args = command_line.positional_args();

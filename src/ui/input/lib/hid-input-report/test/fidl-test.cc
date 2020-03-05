@@ -366,3 +366,20 @@ TEST(FidlTest, ConsumerControlInputReport) {
     ASSERT_EQ(new_report.pressed_buttons[i], report.pressed_buttons[i]);
   }
 }
+
+TEST(FidlTest, InputReport) {
+  hid_input_report::InputReport report = {};
+  report.trace_id = 0xabcd;
+  report.time = 0x1234;
+
+  hid_input_report::FidlInputReport fidl_report = {};
+  // This should return an error since we have not set report.report.
+  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, SetFidlInputReport(report, &fidl_report));
+
+  fuchsia_input_report::InputReport built_report = fidl_report.builder.build();
+  ASSERT_TRUE(built_report.has_event_time());
+  ASSERT_EQ(built_report.event_time(), report.time);
+
+  ASSERT_TRUE(built_report.has_trace_id());
+  ASSERT_EQ(built_report.trace_id(), report.trace_id);
+}

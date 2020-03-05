@@ -5,6 +5,9 @@
     "sandbox": {
         "dev": [
             "class/input-report"
+        ],
+        "services": [
+            "fuchsia.tracing.provider.Registry"
         ]
     }
 }

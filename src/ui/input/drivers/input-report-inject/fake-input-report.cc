@@ -9,7 +9,7 @@
 namespace input_report_inject {
 
 zx_status_t FakeInputReport::DdkOpen(zx_device_t** dev_out, uint32_t flags) {
-  auto inst = std::make_unique<InputReportInstance>(zxdev());
+  auto inst = std::make_unique<InputReportInstance>(zxdev(), next_instance_id_++);
   zx_status_t status = inst->Bind(this);
   if (status != ZX_OK) {
     return status;

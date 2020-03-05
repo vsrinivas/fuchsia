@@ -133,8 +133,9 @@ TEST_F(InputInjectTest, MouseTest) {
     std::vector<::fuchsia::input::report::InputReport> returned_reports;
     ASSERT_EQ(ZX_OK, input_client.GetReports(&returned_reports));
     ASSERT_EQ(1U, returned_reports.size());
+    ASSERT_TRUE(returned_reports[0].has_mouse());
 
-    ASSERT_TRUE(fidl::Equals(returned_reports[0], report));
+    ASSERT_TRUE(fidl::Equals(returned_reports[0].mouse(), report.mouse()));
   }
 }
 

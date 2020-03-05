@@ -177,6 +177,7 @@ struct FidlInputReport {
   fuchsia_input_report::InputReport::UnownedBuilder builder;
 
   zx_time_t time;
+  uint64_t trace_id;
   std::variant<FidlMouseInputReport, FidlSensorInputReport, FidlTouchInputReport,
                FidlKeyboardInputReport, FidlConsumerControlInputReport>
       report;

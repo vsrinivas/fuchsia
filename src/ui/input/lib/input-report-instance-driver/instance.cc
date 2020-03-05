@@ -5,6 +5,7 @@
 #include "instance.h"
 
 #include <ddk/debug.h>
+#include <ddk/trace/event.h>
 #include <ddktl/fidl.h>
 #include <fbl/auto_lock.h>
 
@@ -68,7 +69,9 @@ void InputReportInstance::GetReports(GetReportsCompleter::Sync _completer) {
 
   size_t index = 0;
   zx_status_t status = ZX_OK;
+  TRACE_DURATION("input", "InputReportInstance GetReports", "instance_id", instance_id_);
   while (!reports_data_.empty()) {
+    TRACE_FLOW_STEP("input", "input_report", *reports_data_.front().trace_id);
     status =
         hid_input_report::SetFidlInputReport(reports_data_.front(), &reports_fidl_data_[index]);
     reports_data_.pop();
@@ -106,7 +109,10 @@ void InputReportInstance::ReceiveReport(const hid_input_report::InputReport& inp
   if (reports_data_.full()) {
     reports_data_.pop();
   }
+
   reports_data_.push(input_report);
+  reports_data_.back().trace_id = TRACE_NONCE();
+  TRACE_FLOW_BEGIN("input", "input_report", *reports_data_.back().trace_id);
 }
 
 }  // namespace input_report_instance

@@ -255,6 +255,11 @@ zx_status_t SetFidlInputReport(const hid_input_report::InputReport& hid_report,
     report->builder.set_event_time(fidl::unowned(&report->time));
   }
 
+  if (hid_report.trace_id) {
+    report->trace_id = *hid_report.trace_id;
+    report->builder.set_trace_id(fidl::unowned(&report->trace_id));
+  }
+
   if (std::holds_alternative<MouseInputReport>(hid_report.report)) {
     report->report = FidlMouseInputReport();
     FidlMouseInputReport* mouse = &std::get<FidlMouseInputReport>(report->report);

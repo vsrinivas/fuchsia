@@ -54,6 +54,7 @@ class InputReport : public DeviceType,
   ddk::HidDeviceProtocolClient hiddev_;
 
   fbl::Mutex instance_lock_;
+  uint32_t next_instance_id_ = 0;
   // Unmanaged linked-list because the HidInstances free themselves through DdkRelease.
   fbl::DoublyLinkedList<InputReportInstance*> instance_list_ __TA_GUARDED(instance_lock_);
 

@@ -37,7 +37,8 @@ class InputReportInstance : public InstanceDeviceType,
                             fuchsia_input_report::InputDevice::Interface,
                             public fbl::DoublyLinkedListable<InputReportInstance*> {
  public:
-  InputReportInstance(zx_device_t* parent) : InstanceDeviceType(parent) {}
+  InputReportInstance(zx_device_t* parent, uint32_t instance_id)
+      : InstanceDeviceType(parent), instance_id_(instance_id) {}
 
   // The |InputReportBase| is responsible for creating |InputReportInstance| and adding it to
   // the LinkedList of instances that are owned by the base. The Instance is a child driver
@@ -59,6 +60,8 @@ class InputReportInstance : public InstanceDeviceType,
                         SendOutputReportCompleter::Sync completer);
 
  private:
+  uint32_t instance_id_;
+
   fbl::Mutex report_lock_;
   zx::event reports_event_ __TA_GUARDED(report_lock_);
   // The ring buffer stores the hid reports as they are sent to the instance.
