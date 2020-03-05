@@ -1,0 +1,20 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.hardware.usb.hcitest;
+
+using zx;
+
+struct TestResults {
+    uint64 received_bulk_packets;
+    uint64 bulk_packet_size;
+    uint64 received_isoch_packets;
+    uint64 isoch_packet_size;
+    bool got_correct_number_of_bytes_in_short_transfers;
+};
+
+protocol Device {
+    /// Runs the tests
+    Run() -> (TestResults results) error zx.status;
+};

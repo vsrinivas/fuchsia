@@ -155,6 +155,7 @@ DDK_PROTOCOL_DEF(NETWORK_DEVICE_IMPL,     131, "network-impl", PF_NOPUB)
 DDK_PROTOCOL_DEF(MAC_ADDR_IMPL,           132, "network-mac-impl", PF_NOPUB)
 DDK_PROTOCOL_DEF(OT_RADIO,                133, "ot-radio", 0)
 DDK_PROTOCOL_DEF(INPUTREPORT_INJECT,      134, "input-report-inject", 0)
+DDK_PROTOCOL_DEF(USB_HCI_TEST,            135, "usb-hci-test", 0)
 
 #undef DDK_PROTOCOL_DEF
 #endif

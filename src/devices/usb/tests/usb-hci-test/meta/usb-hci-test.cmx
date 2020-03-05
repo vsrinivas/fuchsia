@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/usb-hci-test"
+    },
+    "sandbox": {
+        "dev": [
+            "class/usb-hci-test"
+        ]
+    }
+}

@@ -24,6 +24,7 @@ group("tests") {
     "nand:tests",
     "tests",
     "tools:tests",
+    "usb/tests",
   ]
 }
 
