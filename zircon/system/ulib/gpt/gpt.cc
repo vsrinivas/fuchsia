@@ -27,6 +27,8 @@
 #include <mbr/mbr.h>
 #include <range/range.h>
 
+#include "gpt.h"
+
 namespace gpt {
 
 namespace {
@@ -355,6 +357,23 @@ void SetPartitionVisibility(gpt_partition_t* partition, bool visible) {
   }
 }
 
+mbr::Mbr MakeProtectiveMbr(uint64_t blocks_in_disk) {
+  mbr::Mbr mbr = {};
+  mbr.partitions[0].chs_address_start[1] = 0x1;
+  mbr.partitions[0].type = mbr::kPartitionTypeGptProtective;
+  mbr.partitions[0].chs_address_end[0] = 0xff;
+  mbr.partitions[0].chs_address_end[1] = 0xff;
+  mbr.partitions[0].chs_address_end[2] = 0xff;
+
+  // Protective MBR should start at sector 1, and extend to the end of the disk.
+  // If the number of blocks exceeds 32-bits, we simply make it as large as possible.
+  mbr.partitions[0].start_sector_lba = 1;
+  mbr.partitions[0].num_sectors =
+      static_cast<uint32_t>(std::min(0xffff'ffffUL, blocks_in_disk - 1));
+
+  return mbr;
+}
+
 zx_status_t GptDevice::FinalizeAndSync(bool persist) {
   auto result = InitializePrimaryHeader(blocksize_, blocks_);
 
@@ -408,14 +427,7 @@ zx_status_t GptDevice::FinalizeAndSync(bool persist) {
 
   if (persist) {
     // Write protective MBR.
-    mbr::Mbr mbr = {};
-    mbr.partitions[0].chs_address_start[1] = 0x1;
-    mbr.partitions[0].type = mbr::kPartitionTypeGptProtective;
-    mbr.partitions[0].chs_address_end[0] = 0xff;
-    mbr.partitions[0].chs_address_end[1] = 0xff;
-    mbr.partitions[0].chs_address_end[2] = 0xff;
-    mbr.partitions[0].start_sector_lba = 1;
-    mbr.partitions[0].num_sectors = blocks_ & 0xffffffff;
+    mbr::Mbr mbr = MakeProtectiveMbr(blocks_);
     zx_status_t status =
         write_partial_block(fd_.get(), &mbr, sizeof(mbr), /*offset=*/0, blocksize_);
     if (status != ZX_OK) {

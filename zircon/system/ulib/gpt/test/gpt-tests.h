@@ -41,7 +41,7 @@ class LibGptTest {
 
     // Block size and count for the test. Ignored if a block device is provided.
     uint32_t block_size = kBlockSize;
-    uint32_t block_count = kBlockCount;
+    uint64_t block_count = kBlockCount;
   };
 
   // Create a new test environment using the given options.

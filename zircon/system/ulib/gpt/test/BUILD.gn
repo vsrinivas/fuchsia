@@ -37,6 +37,10 @@ test("gpt-unit") {
     "gpt-tests.cc",
     "main.cc",
   ]
+  include_dirs = [
+    "//zircon/public/lib/gpt",
+    "..",
+  ]
   deps = [
     "//zircon/public/lib/cksum",
     "//zircon/public/lib/fbl",

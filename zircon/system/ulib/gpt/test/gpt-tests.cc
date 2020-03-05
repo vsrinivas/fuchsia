@@ -15,8 +15,9 @@
 #include <zircon/assert.h>
 #include <zxtest/zxtest.h>
 
-#include "gpt-tests.h"
 #include <gpt/guid.h>
+#include "gpt-tests.h"
+#include "gpt.h"
 
 // clang-format on
 
@@ -33,6 +34,22 @@ using gpt::KnownGuid;
 
 constexpr guid_t kGuid = {0x0, 0x1, 0x2, {0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa}};
 constexpr uint64_t kHoleSize = 10;
+
+// Return a copy of the input variable.
+//
+// Useful when the input value is a packed field and needs to be passed to
+// a function taking a const reference. For example, given:
+//
+//    void Bar(const int& b);
+//
+//    struct Foo {
+//      char a;
+//      int b;
+//    } PACKED;
+//
+//  we cannot directly call "Bar(foo->b)", but can call "Bar(Unpack(foo->b))".
+template <typename T>
+inline T Unpack(T val) { return val; }
 
 // generate a random number between [0, max)
 uint64_t random_length(uint64_t max) { return (rand_r(&gRandSeed) % max); }
@@ -945,7 +962,8 @@ TEST_F(GptDeviceTest, FinalizeAndSync) {
       .type = mbr::kPartitionTypeGptProtective,
       .chs_address_end = {0xff, 0xff, 0xff},
       .start_sector_lba = 1,
-      .num_sectors = static_cast<uint32_t>(libGptTest->GetBlockCount() & 0xffffffff),
+      .num_sectors =
+          static_cast<uint32_t>(std::min(0xffff'ffffUL, libGptTest->GetBlockCount() - 1)),
   };
   EXPECT_BYTES_EQ(&expected, &mbr.partitions[0], sizeof(expected), "Invalid protective MBR");
 }
@@ -1265,7 +1283,31 @@ TEST(GptDeviceMbr, LargerSectorSizes) {
   mbr::Mbr mbr;
   zx_status_t status = libGptTest->ReadMbr(&mbr);
   ASSERT_OK(status, "Failed to read MBR");
-  EXPECT_EQ(mbr::kMbrBootSignature, mbr.boot_signature, "Invalid MBR boot signature");
+  EXPECT_EQ(mbr::kMbrBootSignature, Unpack(mbr.boot_signature), "Invalid MBR boot signature");
+}
+
+TEST(GptDeviceMbr, DiskSize) {
+  LibGptTest::Options options{};
+  options.block_count = 0x10'0000;
+  auto libGptTest = LibGptTest::Create(options);
+
+  // Write changes to disk.
+  libGptTest->Sync();
+  EXPECT_TRUE(libGptTest->IsGptValid());
+
+  // Check the protective MBR that was written to disk, and covers the size of the disk,
+  // minus one (the MBR sector is not counted).
+  mbr::Mbr mbr;
+  zx_status_t status = libGptTest->ReadMbr(&mbr);
+  ASSERT_OK(status, "Failed to read MBR");
+  EXPECT_EQ(Unpack(mbr.partitions[0].num_sectors), 0x10'0000 - 1);
+}
+
+TEST(MakeProtectiveMbr, PartitionSize) {
+  // Protective MBR should create a partition of size min(UINT32_MAX, num_sectors - 1).
+  EXPECT_EQ(Unpack(MakeProtectiveMbr(100).partitions[0].num_sectors), 99);
+  EXPECT_EQ(Unpack(MakeProtectiveMbr(0xffff'ffff).partitions[0].num_sectors), 0xffff'fffe);
+  EXPECT_EQ(Unpack(MakeProtectiveMbr(0x10'abcd'1234).partitions[0].num_sectors), 0xffff'ffff);
 }
 
 // KnownGuid is statically built. Verify that there are no double entries for
