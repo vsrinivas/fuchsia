@@ -28,6 +28,13 @@ async fn run_tests() -> Result<(), Error> {
 }
 
 async fn test_scoped_instance(event_source: &EventSource) -> Result<(), Error> {
+    let event = RecordedEvent {
+        event_type: Destroyed::TYPE,
+        target_moniker: "./coll:auto-*".to_string(),
+        capability_id: None,
+    };
+    let expected_events: Vec<_> = (0..3).map(|_| event.clone()).collect();
+    let expectation = event_source.expect_events(Ordering::Unordered, expected_events).await?;
     let mut instances = vec![];
     for _ in 1..=3 {
         let url =
@@ -49,12 +56,6 @@ async fn test_scoped_instance(event_source: &EventSource) -> Result<(), Error> {
 
     // Dropping the scoped instances should cause them to all be destroyed.
     drop(instances);
-    let event = RecordedEvent {
-        event_type: Destroyed::TYPE,
-        target_moniker: "./coll:auto-*".to_string(),
-        capability_id: None,
-    };
-    let expected_events: Vec<_> = (0..3).map(|_| event.clone()).collect();
-    event_source.expect_events(Ordering::Unordered, expected_events).await?;
+    expectation.await?;
     Ok(())
 }
