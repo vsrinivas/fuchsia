@@ -84,8 +84,8 @@ TEST_F(SwipeRecognizerBaseTest, Defeat) {
   EXPECT_FALSE(gesture_won());
 }
 
-// Ensures that the test recognier, which considers all swipe paths valid by default, calls |Accept|
-// on |UP|. The base recognizer still validates swipe distance.
+// Ensures that the test recognizer, which considers all swipe paths valid by default, calls
+// |Accept| on |UP|. The base recognizer still validates swipe distance.
 TEST_F(SwipeRecognizerBaseTest, Accept) {
   MockContestMember member;
   recognizer()->OnContestStarted(member.TakeInterface());
@@ -169,6 +169,16 @@ TEST_F(SwipeRecognizerBaseTest, RejectMultiFinger) {
   EXPECT_EQ(member.status(), a11y::ContestMember::Status::kRejected);
 }
 
+TEST_F(UpSwipeRecognizerTest, MoveEventAtSameLocationAsDown) {
+  MockContestMember member;
+  recognizer()->OnContestStarted(member.TakeInterface());
+
+  SendPointerEvents(DownEvents(1, {}));
+  SendPointerEvent({1, Phase::MOVE, {}});
+  ASSERT_TRUE(member.is_held());
+  EXPECT_EQ(member.status(), a11y::ContestMember::Status::kUndecided);
+}
+
 TEST_F(UpSwipeRecognizerTest, GestureDetected) {
   MockContestMember member;
   recognizer()->OnContestStarted(member.TakeInterface());
@@ -179,6 +189,16 @@ TEST_F(UpSwipeRecognizerTest, GestureDetected) {
   SendPointerEvent({1, Phase::UP, {0, -.7f}});
 
   EXPECT_EQ(member.status(), a11y::ContestMember::Status::kAccepted);
+}
+
+TEST_F(DownSwipeRecognizerTest, MoveEventAtSameLocationAsDown) {
+  MockContestMember member;
+  recognizer()->OnContestStarted(member.TakeInterface());
+
+  SendPointerEvents(DownEvents(1, {}));
+  SendPointerEvent({1, Phase::MOVE, {}});
+  ASSERT_TRUE(member.is_held());
+  EXPECT_EQ(member.status(), a11y::ContestMember::Status::kUndecided);
 }
 
 TEST_F(DownSwipeRecognizerTest, GestureDetected) {
@@ -193,6 +213,16 @@ TEST_F(DownSwipeRecognizerTest, GestureDetected) {
   EXPECT_EQ(member.status(), a11y::ContestMember::Status::kAccepted);
 }
 
+TEST_F(RightSwipeRecognizerTest, MoveEventAtSameLocationAsDown) {
+  MockContestMember member;
+  recognizer()->OnContestStarted(member.TakeInterface());
+
+  SendPointerEvents(DownEvents(1, {}));
+  SendPointerEvent({1, Phase::MOVE, {}});
+  ASSERT_TRUE(member.is_held());
+  EXPECT_EQ(member.status(), a11y::ContestMember::Status::kUndecided);
+}
+
 TEST_F(RightSwipeRecognizerTest, GestureDetected) {
   MockContestMember member;
   recognizer()->OnContestStarted(member.TakeInterface());
@@ -203,6 +233,16 @@ TEST_F(RightSwipeRecognizerTest, GestureDetected) {
   SendPointerEvent({1, Phase::UP, {.7f, 0}});
 
   EXPECT_EQ(member.status(), a11y::ContestMember::Status::kAccepted);
+}
+
+TEST_F(LeftSwipeRecognizerTest, MoveEventAtSameLocationAsDown) {
+  MockContestMember member;
+  recognizer()->OnContestStarted(member.TakeInterface());
+
+  SendPointerEvents(DownEvents(1, {}));
+  SendPointerEvent({1, Phase::MOVE, {}});
+  ASSERT_TRUE(member.is_held());
+  EXPECT_EQ(member.status(), a11y::ContestMember::Status::kUndecided);
 }
 
 TEST_F(LeftSwipeRecognizerTest, GestureDetected) {

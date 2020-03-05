@@ -12,7 +12,7 @@ bool UpSwipeGestureRecognizer::ValidateSwipeSlopeAndDirection(float x_displaceme
                                                               float y_displacement) {
   // RECALL: This recognizer uses NDC, so -y is "up".
   // If y_displacement is positive, then this gesture cannot be "up".
-  if (y_displacement >= 0) {
+  if (y_displacement > 0) {
     return false;
   }
 
@@ -28,7 +28,7 @@ bool DownSwipeGestureRecognizer::ValidateSwipeSlopeAndDirection(float x_displace
                                                                 float y_displacement) {
   // RECALL: This recognizer uses NDC, so +y is "down".
   // If y_displacement is negative, then this gesture cannot be "down".
-  if (y_displacement <= 0) {
+  if (y_displacement < 0) {
     return false;
   }
 
@@ -43,7 +43,7 @@ bool DownSwipeGestureRecognizer::ValidateSwipeSlopeAndDirection(float x_displace
 bool RightSwipeGestureRecognizer::ValidateSwipeSlopeAndDirection(float x_displacement,
                                                                  float y_displacement) {
   // If x_displacement is negative, then this gesture cannot be "right".
-  if (x_displacement <= 0) {
+  if (x_displacement < 0) {
     return false;
   }
 
@@ -55,7 +55,7 @@ bool RightSwipeGestureRecognizer::ValidateSwipeSlopeAndDirection(float x_displac
 bool LeftSwipeGestureRecognizer::ValidateSwipeSlopeAndDirection(float x_displacement,
                                                                 float y_displacement) {
   // If x_displacement is positive, then this gesture cannot be "left".
-  if (x_displacement >= 0) {
+  if (x_displacement > 0) {
     return false;
   }
 
