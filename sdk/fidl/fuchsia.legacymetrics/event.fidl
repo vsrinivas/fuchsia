@@ -18,7 +18,7 @@ union Event {
 table UserActionEvent {
     1: string:MAX name;
 
-    /// Required timestamp of the event occurence. See TimeTicks in
+    /// Required timestamp of the event occurrence. See TimeTicks in
     /// https://cs.chromium.org/chromium/src/base/time/time.h
     2: zx.time time;
 };
@@ -36,7 +36,8 @@ table HistogramInfo {
     /// https://chromium.googlesource.com/chromium/src.git/+/HEAD/tools/metrics/histograms/README.md#naming-your-histogram
     1: string:MAX name;
 
-    /// Describes the structure of the histogram. Defaults to EXPONENTIAL when empty.
+    /// Describes the structure of the histogram. Defaults to EXPONENTIAL when
+    /// empty.
     2: HistogramType type;
 
     /// The (inclusive) minimum and maximum values for the entire histogram,
@@ -70,4 +71,9 @@ table ImplementationDefinedEvent {
     /// implementation. For example, it can represent a custom event protocol
     /// buffer serialized to its wire format.
     1: bytes data;
+
+    /// Event identifier required if it's not already included in binary |data|.
+    /// This field takes precedence over any equivalent name included in binary
+    /// |data|, if both are provided.
+    2: string:MAX name;
 };
