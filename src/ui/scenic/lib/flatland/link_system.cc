@@ -110,25 +110,9 @@ LinkSystem::ParentLink LinkSystem::CreateParentLink(GraphLinkToken token,
   });
 }
 
-void LinkSystem::SetLinkProperties(TransformHandle handle,
-                                   fuchsia::ui::scenic::internal::LinkProperties properties) {
-  // Link properties should never be set on LinkSystem-created handles.
-  FXL_DCHECK(handle.GetInstanceId() != instance_id_);
-
-  std::scoped_lock lock(map_mutex_);
-  link_properties_map_[handle] = std::move(properties);
-}
-
-void LinkSystem::ClearLinkProperties(TransformHandle handle) {
-  // Link properties should never be set on LinkSystem-created handles.
-  FXL_DCHECK(handle.GetInstanceId() != instance_id_);
-
-  std::scoped_lock lock(map_mutex_);
-  link_properties_map_.erase(handle);
-}
-
 void LinkSystem::UpdateLinks(const TransformGraph::TopologyVector& global_topology,
-                             const std::unordered_set<TransformHandle>& live_handles) {
+                             const std::unordered_set<TransformHandle>& live_handles,
+                             const UberStruct::InstanceMap& uber_structs) {
   std::scoped_lock lock(map_mutex_);
 
   for (auto& graph_link_kv : graph_link_map_) {
@@ -148,17 +132,19 @@ void LinkSystem::UpdateLinks(const TransformGraph::TopologyVector& global_topolo
     }
 
     // For a particular Link, the LinkProperties and GraphLinkImpl both live on the ChildLink's
-    // |link_handle|. They can show up in either order (LinkProperties before GraphLinkImpl if the
+    // |graph_handle|. They can show up in either order (LinkProperties before GraphLinkImpl if the
     // parent Flatland calls Present() first, other way around if the link resolves first), so one
     // being present without another is not a bug.
-    auto properties_kv = link_properties_map_.find(entry.handle);
-    if (properties_kv != link_properties_map_.end()) {
-      auto graph_iter = graph_link_map_.find(entry.handle);
-      if (graph_iter != graph_link_map_.end()) {
-        if (properties_kv->second.has_logical_size()) {
+    auto uber_struct_kv = uber_structs.find(entry.handle.GetInstanceId());
+    if (uber_struct_kv != uber_structs.end()) {
+      auto properties_kv = uber_struct_kv->second->link_properties.find(entry.handle);
+      if (properties_kv != uber_struct_kv->second->link_properties.end() &&
+          properties_kv->second.has_logical_size()) {
+        auto graph_kv = graph_link_map_.find(entry.handle);
+        if (graph_kv != graph_link_map_.end()) {
           LayoutInfo info;
           info.set_logical_size(properties_kv->second.logical_size());
-          graph_iter->second->UpdateLayoutInfo(std::move(info));
+          graph_kv->second->UpdateLayoutInfo(std::move(info));
         }
       }
     }

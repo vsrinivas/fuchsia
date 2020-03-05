@@ -60,6 +60,14 @@ void Flatland::Present(PresentCallback callback) {
 
     auto uber_struct = std::make_unique<UberStruct>();
     uber_struct->local_topology = std::move(data.sorted_transforms);
+
+    for (const auto& link_kv : child_links_) {
+      LinkProperties initial_properties;
+      fidl::Clone(link_kv.second.properties, &initial_properties);
+      uber_struct->link_properties[link_kv.second.link.graph_handle] =
+          std::move(initial_properties);
+    }
+
     uber_struct_system_->SetUberStruct(instance_id_, std::move(uber_struct));
     // TODO(36161): Once present operations can be pipelined, this variable will change state based
     // on the number of outstanding Present calls. Until then, this call is synchronous, and we can
@@ -285,8 +293,6 @@ void Flatland::CreateLink(LinkId link_id, ContentLinkToken token, LinkProperties
   FXL_DCHECK(link_system_);
 
   // The LinkProperties and ContentLinkImpl live on a handle from this Flatland instance.
-  // TODO(44334): Make it mandatory for data to live on a handle from the Flatland instance that
-  // authored it.
   auto graph_handle = transform_graph_.CreateTransform();
 
   // We can initialize the link importer immediately, since no state changes actually occur before
@@ -310,17 +316,10 @@ void Flatland::CreateLink(LinkId link_id, ContentLinkToken token, LinkProperties
           return false;
         }
 
-        // The link system expects some parent of a ChildLink TransformHandle to have LinkProperties
-        // attached to it. Even though we've already sent the initial LinkProperties, we set them
-        // here as well to aid in LinkSystem's evaluation of the global topology.
-        //
-        // TODO(44334): Move this data into the UberStruct.
-        link_system_->SetLinkProperties(link.graph_handle, std::move(properties));
-
         bool child_added = transform_graph_.AddChild(link.graph_handle, link.link_handle);
         FXL_DCHECK(child_added);
 
-        child_links_[link_id] = std::move(link);
+        child_links_[link_id] = {.link = std::move(link), .properties = std::move(properties)};
 
         return true;
       });
@@ -352,7 +351,7 @@ void Flatland::SetLinkOnTransform(LinkId link_id, TransformId transform_id) {
       return false;
     }
 
-    transform_graph_.SetPriorityChild(transform_kv->second, link_kv->second.graph_handle);
+    transform_graph_.SetPriorityChild(transform_kv->second, link_kv->second.link.graph_handle);
     return true;
   });
 }
@@ -369,11 +368,10 @@ void Flatland::SetLinkProperties(LinkId id, LinkProperties properties) {
       return false;
     }
 
-    FXL_DCHECK(link_kv->second.importer.valid());
+    FXL_DCHECK(link_kv->second.link.importer.valid());
 
-    // TODO(44334): Replace this function call with a unified structure update for all Flatland
-    // instance-local data (similar to and merged with the local topology update).
-    link_system_->SetLinkProperties(link_kv->second.graph_handle, std::move(properties));
+    link_kv->second.properties = std::move(properties);
+
     return true;
   });
 }
@@ -419,7 +417,7 @@ void Flatland::ReleaseLink(LinkId link_id,
 
     // If the link is still valid, return the original token. If not, create an orphaned
     // zx::eventpair and return it since the ObjectLinker does not retain the orphaned token.
-    auto link_token = link_kv->second.importer.ReleaseToken();
+    auto link_token = link_kv->second.link.importer.ReleaseToken();
     if (link_token.has_value()) {
       return_token.value = zx::eventpair(std::move(link_token.value()));
     } else {
@@ -428,11 +426,11 @@ void Flatland::ReleaseLink(LinkId link_id,
       zx::eventpair::create(0, &return_token.value, &peer_token);
     }
 
-    bool child_removed =
-        transform_graph_.RemoveChild(link_kv->second.graph_handle, link_kv->second.link_handle);
+    bool child_removed = transform_graph_.RemoveChild(link_kv->second.link.graph_handle,
+                                                      link_kv->second.link.link_handle);
     FXL_DCHECK(child_removed);
 
-    bool content_released = transform_graph_.ReleaseTransform(link_kv->second.graph_handle);
+    bool content_released = transform_graph_.ReleaseTransform(link_kv->second.link.graph_handle);
     FXL_DCHECK(content_released);
 
     child_links_.erase(link_id);

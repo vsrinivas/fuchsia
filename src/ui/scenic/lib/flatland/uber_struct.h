@@ -5,6 +5,8 @@
 #ifndef SRC_UI_SCENIC_LIB_FLATLAND_UBER_STRUCT_H_
 #define SRC_UI_SCENIC_LIB_FLATLAND_UBER_STRUCT_H_
 
+#include <fuchsia/ui/scenic/internal/cpp/fidl.h>
+
 #include <memory>
 #include <unordered_map>
 
@@ -21,8 +23,11 @@ namespace flatland {
 // to external resources.
 struct UberStruct {
   using InstanceMap = std::unordered_map<TransformHandle::InstanceId, std::shared_ptr<UberStruct>>;
+  using LinkPropertiesMap =
+      std::unordered_map<TransformHandle, fuchsia::ui::scenic::internal::LinkProperties>;
 
   TransformGraph::TopologyVector local_topology;
+  LinkPropertiesMap link_properties;
 };
 
 }  // namespace flatland

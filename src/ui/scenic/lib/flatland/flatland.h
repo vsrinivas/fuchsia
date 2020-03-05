@@ -95,7 +95,6 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   static constexpr uint32_t kMaxPresents = 1;
 
   using TransformMap = std::map<TransformId, TransformHandle>;
-  using LinkMap = std::unordered_map<LinkId, LinkSystem::ChildLink>;
 
   // A link system shared between Flatland instances, so that links can be made between them.
   std::shared_ptr<LinkSystem> link_system_;
@@ -126,8 +125,14 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   // it a fixed attachment point for cross-instance Links.
   const TransformHandle local_root_;
 
-  // A mapping from user-generated id to ChildLink.
-  LinkMap child_links_;
+  // Wraps a LinkSystem::ChildLink and the LinkProperties currently associated with that link.
+  struct ChildLinkData {
+    LinkSystem::ChildLink link;
+    fuchsia::ui::scenic::internal::LinkProperties properties;
+  };
+
+  // A mapping from user-generated id to ChildLinkData.
+  std::unordered_map<LinkId, ChildLinkData> child_links_;
 
   // The link from this Flatland instance to our parent.
   std::optional<LinkSystem::ParentLink> parent_link_;

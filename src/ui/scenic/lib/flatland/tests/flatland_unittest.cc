@@ -103,7 +103,7 @@ class FlatlandTest : public gtest::TestLoopFixture {
     auto links = link_system_->GetResolvedTopologyLinks();
     auto data = GlobalTopologyData::ComputeGlobalTopologyData(
         snapshot, links, link_system_->GetInstanceId(), root_transform);
-    link_system_->UpdateLinks(data.topology_vector, data.live_handles);
+    link_system_->UpdateLinks(data.topology_vector, data.live_handles, snapshot);
 
     // Run the looper again to process any queued FIDL events (i.e., Link callbacks).
     RunLoopUntilIdle();
