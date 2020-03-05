@@ -73,6 +73,11 @@ static const i2c_channel_t i2c_channels[] = {
         .bus_id = NELSON_I2C_3, .address = I2C_AUDIO_CODEC_ADDR, .vid = 0, .pid = 0, .did = 0,
         // binds as composite device
     },
+    // Audio output
+    {
+        .bus_id = NELSON_I2C_3, .address = I2C_AUDIO_CODEC_ADDR_P2, .vid = 0, .pid = 0, .did = 0,
+        // binds as composite device
+    },
 };
 
 static const pbus_metadata_t i2c_metadata[] = {

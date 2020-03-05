@@ -90,12 +90,6 @@ zx_status_t NelsonAudioStreamOut::InitCodec() {
 zx_status_t NelsonAudioStreamOut::InitHW() {
   lib_->Shutdown();
 
-  auto status = InitCodec();
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not initialize codec - %d\n", __FILE__, status);
-    return status;
-  }
-
   lib_->Initialize();
 
   // Setup TDM.
@@ -107,15 +101,33 @@ zx_status_t NelsonAudioStreamOut::InitHW() {
   lib_->ConfigTdmOutSwaps(0x00000010);
 
   // Lane 0, unmask first 2 slots (0x00000003),
-  lib_->ConfigTdmOutLane(0, 0x00000003);
+  auto status = lib_->ConfigTdmOutLane(0, 0x00000003);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s could not configure TDM out lane %d\n", __FILE__, status);
+    return status;
+  }
 
   // Setup appropriate tdm clock signals. mclk = 1.536GHz/125 = 12.288MHz.
-  lib_->SetMclkDiv(124);
+  status = lib_->SetMclkDiv(124);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s could not configure MCLK %d\n", __FILE__, status);
+    return status;
+  }
 
   // sclk = 12.288MHz/4 = 3.072MHz, 32 every 64 sclks is frame sync (I2S).
-  lib_->SetSclkDiv(3, 31, 63);
+  status = lib_->SetSclkDiv(3, 31, 63, true);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s could not configure SCLK %d\n", __FILE__, status);
+    return status;
+  }
 
   lib_->Sync();
+
+  status = InitCodec();
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s could not initialize codec - %d\n", __FILE__, status);
+    return status;
+  }
 
   zxlogf(INFO, "audio: Nelson audio output initialized\n");
   return ZX_OK;

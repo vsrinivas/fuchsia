@@ -88,7 +88,7 @@ zx_status_t AstroAudioStreamOut::InitHW() {
 
   // 48kHz: sclk=24.576MHz/4= 6.144MHz, 6.144MHz/128=48k frame sync, sdiv=3, lrduty=0, lrdiv=127.
   // 96kHz: sclk=24.576MHz/2=12.288MHz, 12.288MHz/128=96k frame sync, sdiv=1, lrduty=0, lrdiv=127.
-  status = aml_audio_->SetSclkDiv((192'000 / frames_per_second_ - 1), 0, 127);
+  status = aml_audio_->SetSclkDiv((192'000 / frames_per_second_ - 1), 0, 127, false);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s could not configure SCLK %d\n", __FILE__, status);
     return status;

@@ -30,7 +30,7 @@ class AmlTdmDevice {
   // Configure an mclk channel divider
   zx_status_t SetMclkDiv(uint32_t div);
   // Configure an sclk/lclk generator block
-  zx_status_t SetSclkDiv(uint32_t sdiv, uint32_t lrduty, uint32_t lrdiv);
+  zx_status_t SetSclkDiv(uint32_t sdiv, uint32_t lrduty, uint32_t lrdiv, bool sclk_invert_ph0);
   // Configures the mclk pad.
   zx_status_t SetMClkPad(aml_tdm_mclk_pad_t mclk_pad);
 

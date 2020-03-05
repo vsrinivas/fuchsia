@@ -122,7 +122,7 @@ zx_status_t SherlockAudioStreamOut::InitHW() {
 
   // for 48kHz: sclk = 12.288MHz/4 = 3.072MHz, 32L + 32R sclks = 64 sclks.
   // for 96kHz: sclk = 12.288MHz/2 = 6.144MHz, 32L + 32R sclks = 64 sclks.
-  status = aml_audio_->SetSclkDiv((12'288'000 / (frames_per_second_ * 64)) - 1, 31, 63);
+  status = aml_audio_->SetSclkDiv((12'288'000 / (frames_per_second_ * 64)) - 1, 31, 63, false);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s could not configure SCLK %d\n", __FILE__, status);
     return status;

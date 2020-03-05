@@ -146,7 +146,8 @@ uint32_t AmlTdmDevice::GetRingPosition() {
 /* Notes:
     -sdiv is desired divider -1 (Want a divider of 10? write a value of 9)
 */
-zx_status_t AmlTdmDevice::SetSclkDiv(uint32_t sdiv, uint32_t lrduty, uint32_t lrdiv) {
+zx_status_t AmlTdmDevice::SetSclkDiv(uint32_t sdiv, uint32_t lrduty, uint32_t lrdiv,
+                                     bool sclk_invert_ph0) {
   if (sdiv == 0) {
     // sclk needs to be at least 2x mclk.  writing a value of 0 (/1) to sdiv
     // will result in no sclk being generated on the sclk pin.  However, it
@@ -166,6 +167,9 @@ zx_status_t AmlTdmDevice::SetSclkDiv(uint32_t sdiv, uint32_t lrduty, uint32_t lr
                     (lrdiv << 0),     // lrclk = sclk/lrdiv
                 ptr);
   mmio_.Write32(0, ptr + sizeof(uint32_t));  // Clear delay lines for phases
+  // Invert sclk.
+  mmio_.Write32(sclk_invert_ph0 << 0,
+                EE_AUDIO_MST_A_SCLK_CTRL1 + (2 * mclk_ch_ * sizeof(uint32_t)));
   return ZX_OK;
 }
 
