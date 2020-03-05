@@ -72,7 +72,7 @@ class Node {
 // Superclass of all terminal nodes in our AST.
 class Terminal : public Node {
  public:
-  Terminal(size_t start, size_t size) : Node(start), size_(size) {}
+  Terminal(size_t start, size_t size, std::string_view /*content*/) : Node(start), size_(size) {}
 
   const std::vector<std::shared_ptr<Node>>& Children() const override { return kEmptyChildren; }
   size_t Size() const override { return size_; }
@@ -88,7 +88,7 @@ class Terminal : public Node {
 class Error : public Terminal {
  public:
   Error(size_t start, size_t size, const std::string& message)
-      : Terminal(start, size), message_(message) {}
+      : Terminal(start, size, ""), message_(message) {}
 
   const std::string& message() const { return message_; }
 

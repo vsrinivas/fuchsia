@@ -39,7 +39,7 @@ class ParseResult {
   template <typename T = ast::Terminal>
   ParseResult Advance(size_t size) {
     return ParseResult(unit_, offset_ + size, 0, 0, error_score(),
-                       std::make_shared<T>(offset_, size), frame_);
+                       std::make_shared<T>(offset_, size, tail().substr(0, size)), frame_);
   }
 
   // Swap the node in the current frame. Essentially this is a Pop() followed by a Push(). Usually

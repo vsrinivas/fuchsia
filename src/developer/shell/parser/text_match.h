@@ -98,7 +98,9 @@ fit::function<ParseResultStream(ParseResultStream)> Token(
       for (const auto& child : result.node()->Children()) {
         if (child->IsError()) {
           if (start) {
-            children.push_back(std::make_shared<T>(*start, child->start()));
+            children.push_back(
+                std::make_shared<T>(*start, child->start() - *start,
+                                    result.unit().substr(*start, child->start() - *start)));
           }
           children.push_back(child);
           start = std::nullopt;
@@ -112,7 +114,8 @@ fit::function<ParseResultStream(ParseResultStream)> Token(
       }
 
       if (start) {
-        children.push_back(std::make_shared<T>(*start, end - *start));
+        size_t size = end - *start;
+        children.push_back(std::make_shared<T>(*start, size, result.unit().substr(*start, size)));
       }
 
       std::shared_ptr<ast::Node> new_child;
