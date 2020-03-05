@@ -74,6 +74,11 @@ template("fidl") {
     not_needed(invoker, [ "experimental_flags" ])
   }
 
+  # Allow generated targets visibility to their dependant generated targets
+  if (defined(invoker.visibility)) {
+    invoker.visibility += [ ":*" ]
+  }
+
   assert(!defined(invoker.deps),
          "All FIDL dependencies are inherently " +
              "public, use 'public_deps' instead of 'deps'.")
