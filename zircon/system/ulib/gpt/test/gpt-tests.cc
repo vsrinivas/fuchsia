@@ -279,13 +279,13 @@ class LibGptTestFixture : public zxtest::Test {
 
  protected:
   void SetUp() override {
-    lib_gpt_test_.reset(new LibGptTest(gUseRamDisk));
-    lib_gpt_test_->Init();
-  }
-
-  void TearDown() override {
-    lib_gpt_test_->Teardown();
-    lib_gpt_test_.reset(nullptr);
+    LibGptTest::Options options{};
+    if (gUseRamDisk) {
+      lib_gpt_test_ = LibGptTest::Create(options);
+    } else {
+      options.disk_path = std::string(gDevPath);
+      lib_gpt_test_ = LibGptTest::Create(options);
+    }
   }
 
  private:
@@ -348,7 +348,6 @@ void LibGptTest::PrepDisk(bool sync) {
 }
 
 void LibGptTest::InitDisk(const char* disk_path) {
-  use_ramdisk_ = false;
   snprintf(disk_path_, PATH_MAX, "%s", disk_path);
   fbl::unique_fd fd(open(disk_path_, O_RDWR));
   ASSERT_TRUE(fd.is_valid(), "Could not open block device to fetch info");
@@ -366,20 +365,21 @@ void LibGptTest::InitDisk(const char* disk_path) {
   fd_ = std::move(fd);
 }
 
-void LibGptTest::InitRamDisk() {
-  ASSERT_EQ(ramdisk_create(GetBlockSize(), GetBlockCount(), &ramdisk_), ZX_OK,
+void LibGptTest::InitRamDisk(const LibGptTest::Options& options) {
+  ASSERT_EQ(ramdisk_create(options.block_size, options.block_count, &ramdisk_), ZX_OK,
             "Could not create ramdisk");
-  strlcpy(disk_path_, ramdisk_get_path(ramdisk_), sizeof(disk_path_));
-  fd_.reset(open(disk_path_, O_RDWR));
-  ASSERT_TRUE(fd_);
+  InitDisk(ramdisk_get_path(ramdisk_));
 }
 
-void LibGptTest::Init() {
-  auto error = fbl::MakeAutoCall([this]() { Teardown(); });
-  if (use_ramdisk_) {
-    InitRamDisk();
+std::unique_ptr<LibGptTest> LibGptTest::Create(const LibGptTest::Options& options) {
+  // Use "new" to access private constructor.
+  auto result = std::unique_ptr<LibGptTest>(new LibGptTest());
+
+  // Set up disk.
+  if (options.disk_path.empty()) {
+    result->InitRamDisk(options);
   } else {
-    InitDisk(gDevPath);
+    result->InitDisk(options.disk_path.c_str());
   }
 
   // TODO(auradkar): All tests assume that the disks don't have an initialized
@@ -393,21 +393,16 @@ void LibGptTest::Init() {
   // device. We also ignore any backup copies on the device.
   // Once there exists an api in libgpt to get size and location(s) of gpt,
   // we can setup/cleanup before/after running tests in a better way.
-  destroy_gpt(fd_.get(), GetBlockSize(), 0, GptMetadataBlocksCount());
+  destroy_gpt(result->fd_.get(), result->GetBlockSize(), 0, result->GptMetadataBlocksCount());
 
-  Reset();
-  error.cancel();
+  result->Reset();
+
+  return result;
 }
 
-void LibGptTest::TearDownDisk() { ASSERT_FALSE(use_ramdisk_); }
-
-void LibGptTest::TearDownRamDisk() { ASSERT_OK(ramdisk_destroy(ramdisk_)); }
-
-void LibGptTest::Teardown() {
-  if (use_ramdisk_) {
-    TearDownRamDisk();
-  } else {
-    TearDownDisk();
+LibGptTest::~LibGptTest() {
+  if (ramdisk_ != nullptr) {
+    ramdisk_destroy(ramdisk_);
   }
 }
 

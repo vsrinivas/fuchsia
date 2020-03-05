@@ -4,11 +4,13 @@
 
 #ifndef ZIRCON_SYSTEM_ULIB_GPT_TEST_GPT_TESTS_H_
 #define ZIRCON_SYSTEM_ULIB_GPT_TEST_GPT_TESTS_H_
+
 #include <fcntl.h>
 #include <limits.h>
 #include <stdint.h>
 
 #include <memory>
+#include <string>
 #include <utility>
 
 #include <fbl/unique_fd.h>
@@ -29,14 +31,21 @@ static_assert(kGptMetadataSize <= kAccptableMinimumSize,
 
 class LibGptTest {
  public:
-  LibGptTest(bool use_ramdisk) : use_ramdisk_(use_ramdisk) {}
-  ~LibGptTest() {}
+  ~LibGptTest();
 
-  // Creates a ramdisk and initialize GPT on it.
-  void Init();
+  // Test environment options.
+  struct Options {
+    // Path to the block device to use for the test. If empty, an internal ramdisk will
+    // be used for tests.
+    std::string disk_path;
 
-  // Removes the backing ramdisk device.
-  void Teardown();
+    // Block size and count for the test. Ignored if a block device is provided.
+    uint32_t block_size = kBlockSize;
+    uint32_t block_count = kBlockCount;
+  };
+
+  // Create a new test environment using the given options.
+  static std::unique_ptr<LibGptTest> Create(const Options& options);
 
   // Returns total size of the disk under test.
   uint64_t GetDiskSize() const { return blk_size_ * blk_count_; }
@@ -140,17 +149,13 @@ class LibGptTest {
   }
 
  private:
+  LibGptTest() {}
+
   // Initialize a physical media.
   void InitDisk(const char* disk_path);
 
   // Create and initialize and ramdisk.
-  void InitRamDisk();
-
-  // Teardown the disk.
-  void TearDownDisk();
-
-  // Teardown and destroy ram disk.
-  void TearDownRamDisk();
+  void InitRamDisk(const Options& options);
 
   // Block size of the device.
   uint32_t blk_size_ = kBlockSize;
@@ -167,11 +172,7 @@ class LibGptTest {
   // Open file descriptor to block device.
   fbl::unique_fd fd_;
 
-  // Create and use ramdisk instead of a physical disk.
-  bool use_ramdisk_;
-
-  // An optional ramdisk structure, which is only non-nullptr if
-  // |use_ramdisk_| is true.
+  // An optional ramdisk structure.
   struct ramdisk_client* ramdisk_ = nullptr;
 
   // usable start block offset.
