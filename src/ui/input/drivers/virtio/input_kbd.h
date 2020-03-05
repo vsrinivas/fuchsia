@@ -16,10 +16,14 @@ class HidKeyboard : public HidDevice {
   const uint8_t* GetReport(size_t* size) override;
 
  private:
+  struct KeyboardReport {
+    uint8_t usage[6];
+  } __attribute__((packed));
+
   void AddKeypressToReport(uint16_t event_code);
   void RemoveKeypressFromReport(uint16_t event_code);
 
-  hid_boot_kbd_report_t report_ = {};
+  KeyboardReport report_ = {};
 };
 
 }  // namespace virtio

@@ -42,11 +42,13 @@ test("virtio-input-test") {
     }
   }
   sources = [
+    "input_kbd.cc",
     "input_test.cc",
     "input_touch.cc",
   ]
   deps = [
     "//src/devices/bus/lib/virtio",
+    "//src/ui/input/lib/hid-input-report",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fake-bti",
@@ -55,6 +57,7 @@ test("virtio-input-test") {
     "//zircon/public/lib/hid-parser",
     "//zircon/public/lib/unittest",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/fidl/fuchsia-hardware-pty:c",
   ]
 }
 

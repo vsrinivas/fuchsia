@@ -8,7 +8,9 @@
 #include <virtio/input.h>
 #include <zxtest/zxtest.h>
 
+#include "input_kbd.h"
 #include "input_touch.h"
+#include "src/ui/input/lib/hid-input-report/keyboard.h"
 
 namespace virtio {
 
@@ -118,6 +120,51 @@ TEST_F(VirtioInputTest, MultiTouchFingerEvents) {
   ASSERT_EQ(0, paradise_touch->fingers[2].flags);
   ASSERT_EQ(0, paradise_touch->fingers[3].flags);
   ASSERT_EQ(0, paradise_touch->fingers[4].flags);
+}
+
+TEST_F(VirtioInputTest, KeyboardTest) {
+  // Get the HID descriptor.
+  HidKeyboard hid_keyboard;
+  uint8_t report_descriptor[2048] = {};
+  size_t report_descriptor_size = 0;
+  ASSERT_OK(hid_keyboard.GetDescriptor(HID_DESCRIPTION_TYPE_REPORT, report_descriptor,
+                                       sizeof(report_descriptor), &report_descriptor_size));
+
+  // Parse the HID descriptor.
+  hid::DeviceDescriptor* dev_desc = nullptr;
+  auto parse_res = hid::ParseReportDescriptor(report_descriptor, report_descriptor_size, &dev_desc);
+  ASSERT_EQ(parse_res, hid::ParseResult::kParseOk);
+  ASSERT_EQ(1, dev_desc->rep_count);
+
+  hid_input_report::Keyboard keyboard;
+  ASSERT_EQ(hid_input_report::ParseResult::kOk,
+            keyboard.ParseReportDescriptor(dev_desc->report[0]));
+
+  // Send the Virtio keys.
+  virtio_input_event_t event = {};
+  event.type = VIRTIO_INPUT_EV_KEY;
+  event.value = VIRTIO_INPUT_EV_KEY_PRESSED;
+
+  event.code = 42;  // LEFTSHIFT.
+  hid_keyboard.ReceiveEvent(&event);
+
+  event.code = 30;  // KEY_A
+  hid_keyboard.ReceiveEvent(&event);
+
+  // Parse the HID report.
+  size_t report_size;
+  const uint8_t* report = hid_keyboard.GetReport(&report_size);
+  hid_input_report::InputReport input_report;
+  ASSERT_EQ(hid_input_report::ParseResult::kOk,
+            keyboard.ParseInputReport(report, report_size, &input_report));
+
+  // Check the input report.
+  hid_input_report::KeyboardInputReport* keyboard_report =
+      std::get_if<hid_input_report::KeyboardInputReport>(&input_report.report);
+  ASSERT_NOT_NULL(keyboard_report);
+  ASSERT_EQ(keyboard_report->num_pressed_keys, 2U);
+  EXPECT_EQ(keyboard_report->pressed_keys[0], llcpp::fuchsia::ui::input2::Key::LEFT_SHIFT);
+  EXPECT_EQ(keyboard_report->pressed_keys[1], llcpp::fuchsia::ui::input2::Key::A);
 }
 
 }  // namespace virtio
