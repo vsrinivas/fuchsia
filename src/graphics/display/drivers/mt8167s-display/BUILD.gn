@@ -50,6 +50,7 @@ source_set("common") {
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.power",
     "//zircon/system/banjo/ddk.protocol.sysmem",
+    "//zircon/system/dev/lib/device-protocol-display",
     "//zircon/system/dev/lib/device-protocol-pdev",
     "//zircon/system/dev/lib/device-protocol-platform-device",
     "//zircon/system/fidl/fuchsia-sysmem:llcpp",

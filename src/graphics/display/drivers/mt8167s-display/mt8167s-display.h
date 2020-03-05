@@ -5,6 +5,7 @@
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_MT8167S_DISPLAY_MT8167S_DISPLAY_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_MT8167S_DISPLAY_MT8167S_DISPLAY_H_
 
+#include <lib/device-protocol/display-panel.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zircon-internal/thread_annotations.h>
@@ -143,7 +144,7 @@ class Mt8167sDisplay
   uint8_t pending_config_ TA_GUARDED(display_lock_) = 0;
   std::array<OvlConfig, kMaxLayer> ovl_config_ TA_GUARDED(display_lock_);
 
-  uint8_t panel_type_;
+  uint32_t panel_type_;
 
   // Display structure used by various layers of display controller
   display_setting_t disp_setting_;
@@ -158,7 +159,6 @@ class Mt8167sDisplay
   std::unique_ptr<ddk::MmioBuffer> smi_mmio_;
 
   // DSIIMPL Protocol
-  bool hasDsi_ = false;
   ddk::DsiImplProtocolClient dsiimpl_;
 
   ddk::GpioProtocolClient gpio_;

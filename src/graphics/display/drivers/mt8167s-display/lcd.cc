@@ -4,6 +4,7 @@
 
 #include "lcd.h"
 
+#include <lib/device-protocol/display-panel.h>
 #include <lib/mipi-dsi/mipi-dsi.h>
 
 #include <ddk/debug.h>

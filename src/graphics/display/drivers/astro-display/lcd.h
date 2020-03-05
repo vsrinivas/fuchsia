@@ -17,7 +17,7 @@ namespace astro_display {
 
 class Lcd {
  public:
-  Lcd(uint8_t panel_type) : panel_type_(panel_type) {}
+  Lcd(uint32_t panel_type) : panel_type_(panel_type) {}
 
   zx_status_t Init(zx_device_t* dsi_dev, zx_device_t* gpio_dev);
   zx_status_t Enable();
@@ -27,7 +27,7 @@ class Lcd {
   zx_status_t LoadInitTable(const uint8_t* buffer, size_t size);
   zx_status_t GetDisplayId();
 
-  uint8_t panel_type_;
+  uint32_t panel_type_;
   gpio_protocol_t gpio_ = {};
   ddk::DsiImplProtocolClient dsiimpl_;
 

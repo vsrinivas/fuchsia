@@ -60,9 +60,11 @@ driver_module("mt8167s_ref") {
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.powerimpl",
     "//zircon/system/banjo/ddk.protocol.scpi",
+    "//zircon/system/dev/lib/device-protocol-display",
     "//zircon/system/fidl/fuchsia-hardware-thermal:c",
     "//zircon/system/fidl/fuchsia-sysmem:c",
   ]
+
   # TODO(47406): restore some form of data dependency on cleo and mt8167s_ref
   # boot shims.
 }
@@ -120,6 +122,7 @@ test("mt8167s_ref-test") {
     "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.powerimpl",
+    "//zircon/system/dev/lib/device-protocol-display",
     "//zircon/system/fidl/fuchsia-hardware-thermal:c",
     "//zircon/system/fidl/fuchsia-sysmem:c",
   ]

@@ -6,18 +6,25 @@
 #include <fuchsia/sysmem/llcpp/fidl.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/image-format-llcpp/image-format-llcpp.h>
+#include <lib/zx/channel.h>
 #include <threads.h>
 #include <zircon/assert.h>
 #include <zircon/errors.h>
+#include <zircon/pixelformat.h>
 #include <zircon/threads.h>
 #include <zircon/types.h>
 
+#include <cstddef>
+
 #include <ddk/binding.h>
 #include <ddk/device.h>
+#include <ddk/metadata.h>
+#include <ddk/metadata/display.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/amlogiccanvas.h>
 #include <ddk/protocol/composite.h>
 #include <ddk/protocol/display/controller.h>
+#include <ddk/protocol/dsiimpl.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/protocol/display/capture.h>
 #include <fbl/algorithm.h>
@@ -26,8 +33,6 @@
 #include <fbl/vector.h>
 
 #include "common.h"
-#include "lib/zx/channel.h"
-#include "zircon/pixelformat.h"
 
 namespace sysmem = llcpp::fuchsia::sysmem;
 
@@ -39,73 +44,6 @@ namespace {
 zx_pixel_format_t kSupportedPixelFormats[] = {ZX_PIXEL_FORMAT_RGB_x888};
 
 constexpr uint64_t kDisplayId = PANEL_DISPLAY_ID;
-
-// Astro/Sherlock Display Configuration. These configuration comes directly from
-// from LCD vendor and hardware team.
-constexpr display_setting_t kDisplaySettingTV070WSM_FT = {
-    .lane_num = 4,
-    .bit_rate_max = 360,
-    .clock_factor = 8,
-    .lcd_clock = 44250000,
-    .h_active = 600,
-    .v_active = 1024,
-    .h_period = 700,
-    .v_period = 1053,
-    .hsync_width = 24,
-    .hsync_bp = 36,
-    .hsync_pol = 0,
-    .vsync_width = 2,
-    .vsync_bp = 8,
-    .vsync_pol = 0,
-};
-constexpr display_setting_t kDisplaySettingP070ACB_FT = {
-    .lane_num = 4,
-    .bit_rate_max = 400,
-    .clock_factor = 8,
-    .lcd_clock = 49434000,
-    .h_active = 600,
-    .v_active = 1024,
-    .h_period = 770,
-    .v_period = 1070,
-    .hsync_width = 10,
-    .hsync_bp = 80,
-    .hsync_pol = 0,
-    .vsync_width = 6,
-    .vsync_bp = 20,
-    .vsync_pol = 0,
-};
-constexpr display_setting_t kDisplaySettingG101B158_FT = {
-    .lane_num = 4,
-    .bit_rate_max = 566,
-    .clock_factor = 8,
-    .lcd_clock = 70701600,
-    .h_active = 800,
-    .v_active = 1280,
-    .h_period = 890,
-    .v_period = 1324,
-    .hsync_width = 24,
-    .hsync_bp = 20,
-    .hsync_pol = 0,
-    .vsync_width = 4,
-    .vsync_bp = 20,
-    .vsync_pol = 0,
-};
-constexpr display_setting_t kDisplaySettingTV101WXM_FT = {
-    .lane_num = 4,
-    .bit_rate_max = 566,
-    .clock_factor = 8,
-    .lcd_clock = 70701600,
-    .h_active = 800,
-    .v_active = 1280,
-    .h_period = 890,
-    .v_period = 1324,
-    .hsync_width = 20,
-    .hsync_bp = 50,
-    .hsync_pol = 0,
-    .vsync_width = 4,
-    .vsync_bp = 20,
-    .vsync_pol = 0,
-};
 
 constexpr uint32_t kCanvasLittleEndian64Bit = 7;
 constexpr uint32_t kBufferAlignment = 64;
@@ -168,7 +106,6 @@ zx_status_t AstroDisplay::DisplayInit() {
   }
 
   // Detect panel type
-  PopulatePanelType();
   if (panel_type_ == PANEL_TV070WSM_FT) {
     init_disp_table_ = &kDisplaySettingTV070WSM_FT;
   } else if (panel_type_ == PANEL_P070ACB_FT) {
@@ -504,36 +441,8 @@ zx_status_t AstroDisplay::DdkGetProtocol(uint32_t proto_id, void* out_protocol) 
   }
 }
 
-// This function detect the panel type based.
-void AstroDisplay::PopulatePanelType() {
-  uint8_t pt;
-  if ((gpio_config_in(&gpio_, GPIO_NO_PULL) == ZX_OK) && (gpio_read(&gpio_, &pt) == ZX_OK)) {
-    panel_type_ = pt;
-    if ((board_info_.pid == PDEV_PID_ASTRO) || (board_info_.pid == PDEV_PID_NELSON)) {
-      DISP_INFO("Detected panel type = %s (%d)\n", panel_type_ ? "P070ACB_FT" : "TV070WSM_FT",
-                panel_type_);
-    } else if (board_info_.pid == PDEV_PID_SHERLOCK) {
-      DISP_INFO("Detected panel type = %s (%d)\n", panel_type_ ? "G101B158_FT" : "TV101WXM_FT",
-                panel_type_);
-      panel_type_ = static_cast<uint8_t>(pt + PANEL_TV101WXM_FT);
-    } else {
-      DISP_ERROR("Panel detection attempted on Unsupported hardware\n");
-      ZX_ASSERT(0);
-    }
-  } else {
-    panel_type_ = PANEL_UNKNOWN;
-    DISP_ERROR("Failed to detect a valid panel\n");
-  }
-}
-
 zx_status_t AstroDisplay::SetupDisplayInterface() {
   fbl::AutoLock lock(&display_lock_);
-
-  // Support Astro, Sherlock and Nelson at the moment
-  if ((board_info_.pid != PDEV_PID_ASTRO) && (board_info_.pid != PDEV_PID_SHERLOCK) &&
-      (board_info_.pid != PDEV_PID_NELSON)) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
 
   format_ = ZX_PIXEL_FORMAT_RGB_x888;
   stride_ = ComputeLinearStride(width_, format_);
@@ -794,7 +703,24 @@ zx_status_t AstroDisplay::Bind() {
     return status;
   }
 
+  display_panel_t display_info;
   size_t actual;
+  status = device_get_metadata(parent_, DEVICE_METADATA_DISPLAY_CONFIG, &display_info,
+                               sizeof(display_info), &actual);
+  if (status != ZX_OK || actual != sizeof(display_panel_t)) {
+    DISP_ERROR("Could not get display panel metadata %d\n", status);
+    return status;
+  }
+
+  DISP_INFO("Provided Display Info: %d x %d with panel type %d\n", display_info.width,
+            display_info.height, display_info.panel_type);
+  {
+    fbl::AutoLock lock(&display_lock_);
+    panel_type_ = display_info.panel_type;
+  }
+  width_ = display_info.width;
+  height_ = display_info.height;
+
   composite_get_components(&composite, components_, fbl::count_of(components_), &actual);
   if (actual != fbl::count_of(components_)) {
     DISP_ERROR("could not get components\n");
@@ -819,23 +745,6 @@ zx_status_t AstroDisplay::Bind() {
   status = pdev_get_board_info(&pdev_, &board_info_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not obtain board info\n");
-    return status;
-  }
-
-  if ((board_info_.pid == PDEV_PID_ASTRO) || (board_info_.pid == PDEV_PID_NELSON)) {
-    width_ = ASTRO_DISPLAY_WIDTH;
-    height_ = ASTRO_DISPLAY_HEIGHT;
-  } else if (board_info_.pid == PDEV_PID_SHERLOCK) {
-    width_ = SHERLOCK_DISPLAY_WIDTH;
-    height_ = SHERLOCK_DISPLAY_HEIGHT;
-  } else {
-    DISP_ERROR("Running on Unsupported hardware. Use at your own risk\n");
-  }
-
-  // Obtain GPIO Protocol for Panel reset
-  status = device_get_protocol(components_[COMPONENT_PANEL_GPIO], ZX_PROTOCOL_GPIO, &gpio_);
-  if (status != ZX_OK) {
-    DISP_ERROR("Could not obtain GPIO protocol.\n");
     return status;
   }
 

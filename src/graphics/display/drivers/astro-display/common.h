@@ -43,7 +43,6 @@ enum {
 enum {
   GPIO_BL,
   GPIO_LCD,
-  GPIO_PANEL_DETECT,
   GPIO_HW_ID0,
   GPIO_HW_ID1,
   GPIO_HW_ID2,
@@ -66,30 +65,6 @@ enum CaptureState {
 
 constexpr uint8_t PANEL_DISPLAY_ID = 1;
 
-// Astro/Nelson Display dimension
-constexpr uint32_t ASTRO_DISPLAY_WIDTH = 600;
-constexpr uint32_t ASTRO_DISPLAY_HEIGHT = 1024;
-
-// Sherlock Display dimension
-constexpr uint32_t SHERLOCK_DISPLAY_WIDTH = 800;
-constexpr uint32_t SHERLOCK_DISPLAY_HEIGHT = 1280;
-
 constexpr bool kBootloaderDisplayEnabled = true;
-
-// Supported panel types
-constexpr uint8_t PANEL_TV070WSM_FT = 0x00;
-constexpr uint8_t PANEL_P070ACB_FT = 0x01;
-constexpr uint8_t PANEL_TV101WXM_FT = 0x02;
-constexpr uint8_t PANEL_G101B158_FT = 0x03;
-constexpr uint8_t PANEL_UNKNOWN = 0xff;
-
-// This display driver supports EVT hardware and onwards. For pre-EVT boards,
-// it will simply configure the framebuffer and canvas and assume U-Boot has
-// already done all display initializations
-constexpr uint8_t BOARD_REV_P1 = 0;
-constexpr uint8_t BOARD_REV_P2 = 1;
-constexpr uint8_t BOARD_REV_EVT_1 = 2;
-constexpr uint8_t BOARD_REV_EVT_2 = 3;
-constexpr uint8_t BOARD_REV_UNKNOWN = 0xff;
 
 #endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_ASTRO_DISPLAY_COMMON_H_

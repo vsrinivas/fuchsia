@@ -5,6 +5,7 @@
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_ASTRO_DISPLAY_ASTRO_DISPLAY_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_ASTRO_DISPLAY_ASTRO_DISPLAY_H_
 
+#include <lib/device-protocol/display-panel.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/interrupt.h>
@@ -106,7 +107,6 @@ class AstroDisplay : public DeviceType,
   enum {
     COMPONENT_PDEV,
     COMPONENT_DSI,
-    COMPONENT_PANEL_GPIO,
     COMPONENT_LCD_GPIO,
     COMPONENT_SYSMEM,
     COMPONENT_CANVAS,
@@ -135,7 +135,6 @@ class AstroDisplay : public DeviceType,
 
   // Protocol handles used in by this driver
   pdev_protocol_t pdev_ = {};
-  gpio_protocol_t gpio_ = {};
   amlogic_canvas_protocol_t canvas_ = {};
   sysmem_protocol_t sysmem_ = {};
 
@@ -167,7 +166,7 @@ class AstroDisplay : public DeviceType,
   bool full_init_done_ = false;
 
   // board revision and panel type detected by the display driver
-  uint8_t panel_type_ TA_GUARDED(display_lock_) = PANEL_UNKNOWN;
+  uint32_t panel_type_ TA_GUARDED(display_lock_) = PANEL_UNKNOWN;
 
   // Display structure used by various layers of display controller
   display_setting_t disp_setting_;

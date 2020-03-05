@@ -17,7 +17,7 @@ namespace mt8167s_display {
 class Lcd {
  public:
   Lcd(const ddk::DsiImplProtocolClient* dsi, const ddk::GpioProtocolClient* gpio,
-      uint8_t panel_type)
+      uint32_t panel_type)
       : dsiimpl_(*dsi), gpio_(*gpio), panel_type_(panel_type) {}
 
   zx_status_t Init();
@@ -32,7 +32,7 @@ class Lcd {
 
   const ddk::DsiImplProtocolClient dsiimpl_;
   const ddk::GpioProtocolClient gpio_;
-  uint8_t panel_type_;
+  uint32_t panel_type_;
   bool enabled_ = false;
 };
 

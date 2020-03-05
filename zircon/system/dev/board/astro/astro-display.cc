@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/device-protocol/display-panel.h>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
@@ -82,6 +84,14 @@ constexpr pbus_metadata_t display_metadata[] = {
     },
 };
 
+pbus_metadata_t display_panel_metadata[] = {
+    {
+        .type = DEVICE_METADATA_DISPLAY_CONFIG,
+        .data_buffer = nullptr,
+        .data_size = 0,
+    },
+};
+
 static const pbus_bti_t display_btis[] = {
     {
         .iommu_index = 0,
@@ -103,6 +113,8 @@ static pbus_dev_t display_dev = []() {
   dev.vid = PDEV_VID_AMLOGIC;
   dev.pid = PDEV_PID_AMLOGIC_S905D2;
   dev.did = PDEV_DID_AMLOGIC_DISPLAY;
+  dev.metadata_list = display_panel_metadata;
+  dev.metadata_count = countof(display_panel_metadata);
   dev.mmio_list = display_mmios;
   dev.mmio_count = countof(display_mmios);
   dev.irq_list = display_irqs;
@@ -137,11 +149,6 @@ static const zx_bind_inst_t dsi_match[] = {
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_DISPLAY),
 };
 
-static const zx_bind_inst_t panel_gpio_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
-    BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_PANEL_DETECT),
-};
-
 static const zx_bind_inst_t lcd_gpio_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_LCD_RESET),
@@ -158,11 +165,6 @@ static const zx_bind_inst_t canvas_match[] = {
 static const device_component_part_t dsi_component[] = {
     {countof(root_match), root_match},
     {countof(dsi_match), dsi_match},
-};
-
-static const device_component_part_t panel_gpio_component[] = {
-    {countof(root_match), root_match},
-    {countof(panel_gpio_match), panel_gpio_match},
 };
 
 static const device_component_part_t lcd_gpio_component[] = {
@@ -182,7 +184,6 @@ static const device_component_part_t canvas_component[] = {
 
 static const device_component_t components[] = {
     {countof(dsi_component), dsi_component},
-    {countof(panel_gpio_component), panel_gpio_component},
     {countof(lcd_gpio_component), lcd_gpio_component},
     {countof(sysmem_component), sysmem_component},
     {countof(canvas_component), canvas_component},
@@ -194,6 +195,24 @@ zx_status_t Astro::DisplayInit() {
     zxlogf(ERROR, "%s: DeviceAdd dsi failed: %d\n", __func__, status);
     return status;
   }
+
+  display_panel_t display_panel_info[] = {
+      {
+          .width = 600,
+          .height = 1024,
+      },
+  };
+
+  uint8_t pt;
+  gpio_impl_.ConfigIn(GPIO_PANEL_DETECT, GPIO_NO_PULL);
+  gpio_impl_.Read(GPIO_PANEL_DETECT, &pt);
+  if (pt) {
+    display_panel_info[0].panel_type = PANEL_P070ACB_FT;
+  } else {
+    display_panel_info[0].panel_type = PANEL_TV070WSM_FT;
+  }
+  display_panel_metadata[0].data_size = sizeof(display_panel_info);
+  display_panel_metadata[0].data_buffer = &display_panel_info;
 
   status = pbus_.CompositeDeviceAdd(&display_dev, components, countof(components), 1);
   if (status != ZX_OK) {

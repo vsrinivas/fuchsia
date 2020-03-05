@@ -109,6 +109,9 @@ static_assert(DEVICE_METADATA_BOARD_PRIVATE == ZBI_TYPE_DRV_BOARD_PRIVATE, "");
 // type: display_driver_t
 #define DEVICE_METADATA_DISPLAY_DEVICE 0x4C505344  // DSPL
 
+// type: display_config_t
+#define DEVICE_METADATA_DISPLAY_CONFIG 0x43505344  // DSPC
+
 // Maximum screen brightness in nits. Used by the backlight driver.
 // type: double
 #define DEVICE_METADATA_BACKLIGHT_MAX_BRIGHTNESS_NITS 0x4C4B4342  // BCKL

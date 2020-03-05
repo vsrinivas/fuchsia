@@ -31,21 +31,9 @@ enum {
 
 constexpr uint8_t PANEL_DISPLAY_ID = 1;
 
-// mt8167s_ref Display dimension
-constexpr uint32_t MTKREF_DISPLAY_WIDTH = 720;
-constexpr uint32_t MTKREF_DISPLAY_HEIGHT = 1280;
-
-// cleo display dimension
-constexpr uint32_t CLEO_DISPLAY_WIDTH = 480;
-constexpr uint32_t CLEO_DISPLAY_HEIGHT = 800;
-
 // This is the absolute maximum height and width supported by the Display Subsystem
 constexpr uint16_t kMaxWidth = 4095;
 constexpr uint16_t kMaxHeight = 4095;
-
-// Supported panel types
-constexpr uint8_t PANEL_ILI9881C = 0x00;
-constexpr uint8_t PANEL_ST7701S = 0x01;
 
 struct OvlConfig {
   zx_pixel_format_t format;

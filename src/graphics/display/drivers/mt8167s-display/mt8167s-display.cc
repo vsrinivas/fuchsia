@@ -9,6 +9,8 @@
 #include <zircon/pixelformat.h>
 
 #include <ddk/binding.h>
+#include <ddk/metadata.h>
+#include <ddk/metadata/display.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/composite.h>
 #include <fbl/auto_call.h>
@@ -37,40 +39,6 @@ enum {
 
 constexpr uint64_t kDisplayId = PANEL_DISPLAY_ID;
 constexpr uint32_t kLarbMmuEnOffset = 0x0FC0;
-
-constexpr display_setting_t kDisplaySettingIli9881c = {
-    .lane_num = 4,
-    .bit_rate_max = 0,  // unused
-    .clock_factor = 0,  // unused
-    .lcd_clock = 270,
-    .h_active = 720,
-    .v_active = 1280,
-    .h_period = 900,   // Vendor provides front porch of 80. calculate period manually
-    .v_period = 1340,  // Vendor provides front porch of 40. calculate period manually
-    .hsync_width = 20,
-    .hsync_bp = 80,
-    .hsync_pol = 0,  // unused
-    .vsync_width = 4,
-    .vsync_bp = 16,
-    .vsync_pol = 0,  // unused
-};
-
-constexpr display_setting_t kDisplaySettingSt7701s = {
-    .lane_num = 2,
-    .bit_rate_max = 0,  // unused
-    .clock_factor = 0,  // unused
-    .lcd_clock = 228,
-    .h_active = 480,
-    .v_active = 800,
-    .h_period = 740,  // Vendor provides front porch of 100. calculate period manually
-    .v_period = 848,  // Vendor provides front porch of 20. calculate period manually
-    .hsync_width = 60,
-    .hsync_bp = 100,
-    .hsync_pol = 0,  // unused
-    .vsync_width = 8,
-    .vsync_bp = 20,
-    .vsync_pol = 0,  // unused
-};
 
 }  // namespace
 
@@ -573,12 +541,9 @@ zx_status_t Mt8167sDisplay::DisplaySubsystemInit() {
   zx_status_t status;
 
   // Select the appropriate display table.
-  // TODO(payamm): This should really be done via display ID GPIO pins
-  if (board_info_.vid == PDEV_VID_MEDIATEK && board_info_.pid == PDEV_PID_MEDIATEK_8167S_REF) {
-    panel_type_ = PANEL_ILI9881C;
+  if (panel_type_ == PANEL_ILI9881C) {
     init_disp_table_ = &kDisplaySettingIli9881c;
-  } else if (board_info_.vid == PDEV_VID_GOOGLE && board_info_.pid == PDEV_PID_CLEO) {
-    panel_type_ = PANEL_ST7701S;
+  } else if (panel_type_ == PANEL_ST7701S) {
     init_disp_table_ = &kDisplaySettingSt7701s;
   } else {
     DISP_ERROR("Unsupport Hardware Detected\n");
@@ -665,8 +630,22 @@ zx_status_t Mt8167sDisplay::Bind() {
     return status;
   }
 
-  zx_device_t* components[COMPONENT_COUNT];
+  display_panel_t display_info;
   size_t actual;
+  status = device_get_metadata(parent_, DEVICE_METADATA_DISPLAY_CONFIG, &display_info,
+                               sizeof(display_info), &actual);
+  if (status != ZX_OK || actual != sizeof(display_panel_t)) {
+    DISP_ERROR("Could not get display panel metadata %d\n", status);
+    return status;
+  }
+
+  DISP_INFO("Provided Display Info: %d x %d with panel type %d\n", display_info.width,
+            display_info.height, display_info.panel_type);
+  panel_type_ = display_info.panel_type;
+  width_ = display_info.width;
+  height_ = display_info.height;
+
+  zx_device_t* components[COMPONENT_COUNT];
   composite_get_components(&composite, components, COMPONENT_COUNT, &actual);
   if (actual < COMPONENT_DSI_IMPL) {
     DISP_ERROR("could not get components\n");
@@ -698,25 +677,9 @@ zx_status_t Mt8167sDisplay::Bind() {
     return status;
   }
 
-  if (board_info_.vid == PDEV_VID_MEDIATEK && board_info_.pid == PDEV_PID_MEDIATEK_8167S_REF) {
-    width_ = MTKREF_DISPLAY_WIDTH;
-    height_ = MTKREF_DISPLAY_HEIGHT;
-    hasDsi_ = true;
-  } else if (board_info_.vid == PDEV_VID_GOOGLE && board_info_.pid == PDEV_PID_CLEO) {
-    width_ = CLEO_DISPLAY_WIDTH;
-    height_ = CLEO_DISPLAY_HEIGHT;
-    hasDsi_ = true;
-  } else {
-    DISP_ERROR("Unsupport Hardware Detected\n");
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  // Make sure DSI IMPL is valid
-  if (hasDsi_) {
-    if (!dsiimpl_.is_valid()) {
-      DISP_ERROR("DSI Protocol Not implemented\n");
-      return ZX_ERR_NO_RESOURCES;
-    }
+  if (!dsiimpl_.is_valid()) {
+    DISP_ERROR("DSI Protocol Not implemented\n");
+    return ZX_ERR_NO_RESOURCES;
   }
 
   gpio_protocol_t gpio;

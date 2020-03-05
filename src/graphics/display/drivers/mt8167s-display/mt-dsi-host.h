@@ -37,7 +37,7 @@ namespace mt8167s_display {
 
 class MtDsiHost {
  public:
-  MtDsiHost(const pdev_protocol_t* pdev, uint32_t height, uint32_t width, uint8_t panel_type)
+  MtDsiHost(const pdev_protocol_t* pdev, uint32_t height, uint32_t width, uint32_t panel_type)
       : pdev_(*pdev), height_(height), width_(width), panel_type_(panel_type) {
     ZX_ASSERT(height_ < kMaxHeight);
     ZX_ASSERT(width_ < kMaxWidth);
@@ -80,7 +80,7 @@ class MtDsiHost {
   const pdev_protocol_t pdev_;
   uint32_t height_;  // display height
   uint32_t width_;   // display width
-  uint8_t panel_type_;
+  uint32_t panel_type_;
   std::unique_ptr<ddk::MmioBuffer> mipi_tx_mmio_;
   zx::bti bti_;
   ddk::DsiImplProtocolClient dsiimpl_;

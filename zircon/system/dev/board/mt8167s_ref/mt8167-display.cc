@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/device-protocol/display-panel.h>
+#include <lib/mmio/mmio.h>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
@@ -10,7 +13,6 @@
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
 #include <hwreg/bitfields.h>
-#include <lib/mmio/mmio.h>
 #include <soc/mt8167/mt8167-gpio.h>
 #include <soc/mt8167/mt8167-hw.h>
 
@@ -101,6 +103,14 @@ constexpr pbus_metadata_t display_metadata[] = {
     },
 };
 
+pbus_metadata_t display_panel_metadata[] = {
+    {
+        .type = DEVICE_METADATA_DISPLAY_CONFIG,
+        .data_buffer = nullptr,
+        .data_size = 0,
+    },
+};
+
 constexpr pbus_bti_t display_btis[] = {
     {
         .iommu_index = 0,
@@ -119,6 +129,8 @@ static pbus_dev_t display_dev = []() {
   dev.name = "display";
   dev.vid = PDEV_VID_MEDIATEK;
   dev.did = PDEV_DID_MEDIATEK_DISPLAY;
+  dev.metadata_list = display_panel_metadata;
+  dev.metadata_count = countof(display_panel_metadata);
   dev.mmio_list = display_mmios;
   dev.mmio_count = countof(display_mmios);
   dev.bti_list = display_btis;
@@ -255,6 +267,22 @@ zx_status_t Mt8167::DisplayInit() {
     zxlogf(ERROR, "%s: DeviceAdd failed %d\n", __FUNCTION__, status);
     return status;
   }
+
+  display_panel_t display_panel_info[] = {
+      {},
+  };
+
+  if (board_info_.pid == PDEV_PID_CLEO) {
+    display_panel_info[0].width = 480;
+    display_panel_info[0].height = 800;
+    display_panel_info[0].panel_type = PANEL_ST7701S;
+  } else {
+    display_panel_info[0].width = 720;
+    display_panel_info[0].height = 1280;
+    display_panel_info[0].panel_type = PANEL_ILI9881C;
+  }
+  display_panel_metadata[0].data_size = sizeof(display_panel_info);
+  display_panel_metadata[0].data_buffer = &display_panel_info;
 
   // Load display driver in same devhost as DSI driver.
   status = pbus_.CompositeDeviceAdd(&display_dev, components, fbl::count_of(components), 3);
