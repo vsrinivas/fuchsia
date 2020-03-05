@@ -23,11 +23,8 @@ class TestProcessConfig {
                     {std::nullopt,
                      DeviceConfig::OutputDeviceProfile(
                          /* eligible_for_loopback */ true,
-                         {fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::BACKGROUND),
-                          fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::MEDIA),
-                          fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::INTERRUPTION),
-                          fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT),
-                          fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::COMMUNICATION)})})
+                         {RenderUsage::BACKGROUND, RenderUsage::MEDIA, RenderUsage::INTERRUPTION,
+                          RenderUsage::SYSTEM_AGENT, RenderUsage::COMMUNICATION})})
                 .SetDefaultVolumeCurve(
                     VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume))
                 .Build()) {}

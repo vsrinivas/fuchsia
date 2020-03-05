@@ -8,24 +8,22 @@
 #include <fuchsia/media/cpp/fidl.h>
 #include <zircon/device/audio.h>
 
-#include <unordered_set>
 #include <vector>
 
 #include "src/media/audio/audio_core/loudness_transform.h"
 #include "src/media/audio/audio_core/pipeline_config.h"
+#include "src/media/audio/audio_core/stream_usage.h"
 
 namespace media::audio {
 
 class DeviceConfig {
  public:
-  using UsageSupportSet = std::unordered_set<uint32_t>;
-
   // A routing profile for a device.
   class OutputDeviceProfile {
    public:
     OutputDeviceProfile() = default;
 
-    OutputDeviceProfile(bool eligible_for_loopback, UsageSupportSet output_usage_support_set,
+    OutputDeviceProfile(bool eligible_for_loopback, RenderUsageSet output_usage_support_set,
                         bool independent_volume_control = false,
                         PipelineConfig pipeline_config = PipelineConfig::Default())
         : eligible_for_loopback_(eligible_for_loopback),
@@ -33,10 +31,9 @@ class DeviceConfig {
           pipeline_config_(std::move(pipeline_config)),
           output_usage_support_set_(std::move(output_usage_support_set)) {}
 
-    bool supports_usage(fuchsia::media::AudioRenderUsage usage) const {
+    bool supports_usage(RenderUsage usage) const {
       return !output_usage_support_set_ ||
-             output_usage_support_set_->find(fidl::ToUnderlying(usage)) !=
-                 output_usage_support_set_->end();
+             output_usage_support_set_->find(usage) != output_usage_support_set_->end();
     }
 
     // Whether this device is eligible to be looped back to loopback capturers.
@@ -58,7 +55,7 @@ class DeviceConfig {
     PipelineConfig pipeline_config_ = PipelineConfig::Default();
 
     // The set of output usages supported by the device.
-    std::optional<UsageSupportSet> output_usage_support_set_;
+    std::optional<RenderUsageSet> output_usage_support_set_;
   };
 
   DeviceConfig() {}

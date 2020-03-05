@@ -20,8 +20,7 @@ TEST(OutputDeviceProfileTest, TransformForDependentVolumeControl) {
   const auto default_tf = kConfig.default_loudness_transform();
 
   const auto eligible_for_loopback = false;
-  const auto usage_support_set = DeviceConfig::UsageSupportSet{};
-  EXPECT_EQ(DeviceConfig::OutputDeviceProfile(eligible_for_loopback, usage_support_set,
+  EXPECT_EQ(DeviceConfig::OutputDeviceProfile(eligible_for_loopback, /* usage_support_set */ {},
                                               /*independent_volume_control=*/false)
                 .loudness_transform(),
             default_tf);
@@ -33,10 +32,8 @@ TEST(OutputDeviceProfileTest, TransformForIndependentVolumeControl) {
   const auto default_tf = kConfig.default_loudness_transform();
 
   const auto eligible_for_loopback = false;
-  const auto usage_support_set = DeviceConfig::UsageSupportSet{};
-
   const auto independent_volume_tf =
-      DeviceConfig::OutputDeviceProfile(eligible_for_loopback, usage_support_set,
+      DeviceConfig::OutputDeviceProfile(eligible_for_loopback, /* usage_support_set */ {},
                                         /*independent_volume_control=*/true)
           .loudness_transform();
 

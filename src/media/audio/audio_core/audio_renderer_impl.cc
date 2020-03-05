@@ -233,8 +233,8 @@ void AudioRendererImpl::SetPcmStreamType(fuchsia::media::AudioStreamType stream_
 
   REP(SettingRendererStreamType(*this, stream_type));
 
-  context_.route_graph().SetRendererRoutingProfile(*this,
-                                                   {.routable = true, .usage = GetStreamUsage()});
+  context_.route_graph().SetRendererRoutingProfile(
+      *this, {.routable = true, .usage = StreamUsage::WithRenderUsage(usage_)});
   context_.volume_manager().NotifyStreamChanged(this);
 
   // Things went well, cancel the cleanup hook. If our config had been validated previously, it will

@@ -156,8 +156,8 @@ class AudioCapturerImpl : public AudioObject,
       const AudioObject& source, std::shared_ptr<Stream> stream) override;
   void CleanupSourceLink(const AudioObject& source, std::shared_ptr<Stream> stream) override;
   void OnLinkAdded() override;
-  std::optional<fuchsia::media::Usage> usage() const override {
-    return {fuchsia::media::Usage::WithCaptureUsage(fidl::Clone(usage_))};
+  std::optional<StreamUsage> usage() const override {
+    return {StreamUsage::WithCaptureUsage(usage_)};
   }
 
   // |media::audio::StreamVolume|

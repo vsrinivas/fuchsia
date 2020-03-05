@@ -75,20 +75,20 @@ fit::result<VolumeCurve, VolumeCurve::Error> ParseVolumeCurveFromJsonObject(
   return VolumeCurve::FromMappings(std::move(mappings));
 }
 
-fuchsia::media::AudioRenderUsage UsageFromString(std::string_view string) {
+RenderUsage UsageFromString(std::string_view string) {
   if (string == "media") {
-    return fuchsia::media::AudioRenderUsage::MEDIA;
+    return RenderUsage::MEDIA;
   } else if (string == "background") {
-    return fuchsia::media::AudioRenderUsage::BACKGROUND;
+    return RenderUsage::BACKGROUND;
   } else if (string == "communications") {
-    return fuchsia::media::AudioRenderUsage::COMMUNICATION;
+    return RenderUsage::COMMUNICATION;
   } else if (string == "interruption") {
-    return fuchsia::media::AudioRenderUsage::INTERRUPTION;
+    return RenderUsage::INTERRUPTION;
   } else if (string == "system_agent") {
-    return fuchsia::media::AudioRenderUsage::SYSTEM_AGENT;
+    return RenderUsage::SYSTEM_AGENT;
   }
   FX_CHECK(false);
-  return fuchsia::media::AudioRenderUsage::MEDIA;
+  return RenderUsage::MEDIA;
 }
 
 PipelineConfig::Effect ParseEffectFromJsonObject(const rapidjson::Value& value) {
@@ -168,7 +168,7 @@ PipelineConfig::MixGroup ParseMixGroupFromJsonObject(const rapidjson::Value& val
 
 std::pair<std::optional<audio_stream_unique_id_t>, DeviceConfig::OutputDeviceProfile>
 ParseDeviceRoutingProfileFromJsonObject(const rapidjson::Value& value,
-                                        std::unordered_set<uint32_t>* all_supported_usages) {
+                                        RenderUsageSet* all_supported_usages) {
   FX_CHECK(value.IsObject());
 
   auto device_id_it = value.FindMember(kJsonKeyDeviceId);
@@ -209,10 +209,10 @@ ParseDeviceRoutingProfileFromJsonObject(const rapidjson::Value& value,
   auto& supported_output_stream_types_value = supported_output_stream_types_it->value;
   FX_CHECK(supported_output_stream_types_value.IsArray());
 
-  DeviceConfig::UsageSupportSet supported_output_stream_types;
+  RenderUsageSet supported_output_stream_types;
   for (const auto& stream_type : supported_output_stream_types_value.GetArray()) {
     FX_CHECK(stream_type.IsString());
-    const auto supported_usage = fidl::ToUnderlying(UsageFromString(stream_type.GetString()));
+    const auto supported_usage = UsageFromString(stream_type.GetString());
     all_supported_usages->insert(supported_usage);
     supported_output_stream_types.insert(supported_usage);
   }
@@ -281,13 +281,13 @@ void ParseOutputDevicePoliciesFromJsonObject(const rapidjson::Value& output_devi
                                              ProcessConfigBuilder* config_builder) {
   FX_CHECK(output_device_profiles.IsArray());
 
-  std::unordered_set<uint32_t> all_supported_usages;
+  RenderUsageSet all_supported_usages;
   for (const auto& output_device_profile : output_device_profiles.GetArray()) {
     config_builder->AddDeviceProfile(
         ParseDeviceRoutingProfileFromJsonObject(output_device_profile, &all_supported_usages));
   }
 
-  FX_CHECK(all_supported_usages.size() == fuchsia::media::RENDER_USAGE_COUNT)
+  FX_CHECK(all_supported_usages.size() == kStreamRenderUsageCount)
       << "Not all output usages are supported in the config";
 }
 

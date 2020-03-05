@@ -36,36 +36,35 @@ class OutputPipelineTest : public testing::ThreadingModelFixture {
  protected:
   std::shared_ptr<OutputPipeline> CreateOutputPipeline() {
     ProcessConfig::Builder builder;
-    PipelineConfig::MixGroup root{
-        .name = "linearize",
-        .input_streams =
-            {
-                fuchsia::media::AudioRenderUsage::BACKGROUND,
-            },
-        .effects = {},
-        .inputs = {{.name = "mix",
-                    .input_streams =
-                        {
-                            fuchsia::media::AudioRenderUsage::INTERRUPTION,
-                        },
-                    .effects = {},
-                    .inputs = {{
-                                   .name = "default",
-                                   .input_streams =
-                                       {
-                                           fuchsia::media::AudioRenderUsage::MEDIA,
-                                           fuchsia::media::AudioRenderUsage::SYSTEM_AGENT,
-                                       },
-                                   .effects = {},
-                               },
-                               {
-                                   .name = "communications",
-                                   .input_streams =
-                                       {
-                                           fuchsia::media::AudioRenderUsage::COMMUNICATION,
-                                       },
-                                   .effects = {},
-                               }}}}};
+    PipelineConfig::MixGroup root{.name = "linearize",
+                                  .input_streams =
+                                      {
+                                          RenderUsage::BACKGROUND,
+                                      },
+                                  .effects = {},
+                                  .inputs = {{.name = "mix",
+                                              .input_streams =
+                                                  {
+                                                      RenderUsage::INTERRUPTION,
+                                                  },
+                                              .effects = {},
+                                              .inputs = {{
+                                                             .name = "default",
+                                                             .input_streams =
+                                                                 {
+                                                                     RenderUsage::MEDIA,
+                                                                     RenderUsage::SYSTEM_AGENT,
+                                                                 },
+                                                             .effects = {},
+                                                         },
+                                                         {
+                                                             .name = "communications",
+                                                             .input_streams =
+                                                                 {
+                                                                     RenderUsage::COMMUNICATION,
+                                                                 },
+                                                             .effects = {},
+                                                         }}}}};
 
     auto pipeline_config = PipelineConfig(root);
     return std::make_shared<OutputPipeline>(pipeline_config, kDefaultFormat, 128,
@@ -89,14 +88,10 @@ TEST_F(OutputPipelineTest, Trim) {
 
   // Add some streams so that one is routed to each mix stage in our pipeline.
   auto pipeline = CreateOutputPipeline();
-  pipeline->AddInput(stream1, fuchsia::media::Usage::WithRenderUsage(
-                                  fuchsia::media::AudioRenderUsage::BACKGROUND));
-  pipeline->AddInput(stream2, fuchsia::media::Usage::WithRenderUsage(
-                                  fuchsia::media::AudioRenderUsage::INTERRUPTION));
-  pipeline->AddInput(
-      stream3, fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::MEDIA));
-  pipeline->AddInput(stream4, fuchsia::media::Usage::WithRenderUsage(
-                                  fuchsia::media::AudioRenderUsage::COMMUNICATION));
+  pipeline->AddInput(stream1, StreamUsage::WithRenderUsage(RenderUsage::BACKGROUND));
+  pipeline->AddInput(stream2, StreamUsage::WithRenderUsage(RenderUsage::INTERRUPTION));
+  pipeline->AddInput(stream3, StreamUsage::WithRenderUsage(RenderUsage::MEDIA));
+  pipeline->AddInput(stream4, StreamUsage::WithRenderUsage(RenderUsage::COMMUNICATION));
 
   bool packet_released[8] = {};
   testing::PacketFactory packet_factory1(dispatcher(), kDefaultFormat, PAGE_SIZE);
@@ -151,7 +146,7 @@ TEST_F(OutputPipelineTest, Loopback) {
   PipelineConfig::MixGroup root{.name = "linearize",
                                 .input_streams =
                                     {
-                                        fuchsia::media::AudioRenderUsage::BACKGROUND,
+                                        RenderUsage::BACKGROUND,
                                     },
                                 .effects =
                                     {
@@ -166,10 +161,10 @@ TEST_F(OutputPipelineTest, Loopback) {
                                     .name = "mix",
                                     .input_streams =
                                         {
-                                            fuchsia::media::AudioRenderUsage::MEDIA,
-                                            fuchsia::media::AudioRenderUsage::SYSTEM_AGENT,
-                                            fuchsia::media::AudioRenderUsage::INTERRUPTION,
-                                            fuchsia::media::AudioRenderUsage::COMMUNICATION,
+                                            RenderUsage::MEDIA,
+                                            RenderUsage::SYSTEM_AGENT,
+                                            RenderUsage::INTERRUPTION,
+                                            RenderUsage::COMMUNICATION,
                                         },
                                     .effects = {},
                                     .loopback = true,
@@ -206,7 +201,7 @@ TEST_F(OutputPipelineTest, SetEffectConfig) {
   PipelineConfig::MixGroup root{.name = "linearize",
                                 .input_streams =
                                     {
-                                        fuchsia::media::AudioRenderUsage::BACKGROUND,
+                                        RenderUsage::BACKGROUND,
                                     },
                                 .effects =
                                     {
@@ -221,10 +216,10 @@ TEST_F(OutputPipelineTest, SetEffectConfig) {
                                     .name = "mix",
                                     .input_streams =
                                         {
-                                            fuchsia::media::AudioRenderUsage::MEDIA,
-                                            fuchsia::media::AudioRenderUsage::SYSTEM_AGENT,
-                                            fuchsia::media::AudioRenderUsage::INTERRUPTION,
-                                            fuchsia::media::AudioRenderUsage::COMMUNICATION,
+                                            RenderUsage::MEDIA,
+                                            RenderUsage::SYSTEM_AGENT,
+                                            RenderUsage::INTERRUPTION,
+                                            RenderUsage::COMMUNICATION,
                                         },
                                     .effects = {},
                                 }}};

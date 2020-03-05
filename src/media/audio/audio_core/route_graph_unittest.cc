@@ -23,22 +23,20 @@ namespace {
 
 class FakeAudioObject : public AudioObject {
  public:
-  static std::unique_ptr<FakeAudioObject> FakeRenderer(
-      bool valid_format = true,
-      fuchsia::media::AudioRenderUsage usage = fuchsia::media::AudioRenderUsage::MEDIA) {
-    return std::make_unique<FakeAudioObject>(
-        AudioObject::Type::AudioRenderer, valid_format,
-        fuchsia::media::Usage::WithRenderUsage(std::move(usage)));
+  static std::unique_ptr<FakeAudioObject> FakeRenderer(bool valid_format = true,
+                                                       RenderUsage usage = RenderUsage::MEDIA) {
+    return std::make_unique<FakeAudioObject>(AudioObject::Type::AudioRenderer, valid_format,
+                                             StreamUsage::WithRenderUsage(std::move(usage)));
   }
 
   static std::unique_ptr<FakeAudioObject> FakeCapturer(
-      fuchsia::media::AudioCaptureUsage usage = fuchsia::media::AudioCaptureUsage::FOREGROUND) {
-    return std::make_unique<FakeAudioObject>(
-        AudioObject::Type::AudioCapturer,
-        /*valid_format=*/true, fuchsia::media::Usage::WithCaptureUsage(std::move(usage)));
+      CaptureUsage usage = CaptureUsage::FOREGROUND) {
+    return std::make_unique<FakeAudioObject>(AudioObject::Type::AudioCapturer,
+                                             /*valid_format=*/true,
+                                             StreamUsage::WithCaptureUsage(std::move(usage)));
   }
 
-  FakeAudioObject(AudioObject::Type object_type, bool valid_format, fuchsia::media::Usage usage)
+  FakeAudioObject(AudioObject::Type object_type, bool valid_format, StreamUsage usage)
       : AudioObject(object_type) {
     if (valid_format) {
       auto format_result = Format::Create({
@@ -55,11 +53,11 @@ class FakeAudioObject : public AudioObject {
 
   const std::shared_ptr<Format>& format() const override { return format_; }
 
-  std::optional<fuchsia::media::Usage> usage() const override { return {fidl::Clone(usage_)}; }
+  std::optional<StreamUsage> usage() const override { return {usage_}; }
 
  private:
   std::shared_ptr<Format> format_ = nullptr;
-  fuchsia::media::Usage usage_;
+  StreamUsage usage_;
 };
 
 // TODO(39532): Remove; use a real output class with fake hardware.
@@ -161,9 +159,7 @@ TEST_F(RouteGraphTest, RenderersRouteToLastPluggedOutput) {
 
   under_test_.AddRenderer(std::move(renderer));
   under_test_.SetRendererRoutingProfile(
-      *renderer_raw,
-      {.routable = true,
-       .usage = fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::MEDIA)});
+      *renderer_raw, {.routable = true, .usage = StreamUsage::WithRenderUsage(RenderUsage::MEDIA)});
 
   auto first_output = FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
                                               &context().link_matrix());
@@ -182,9 +178,7 @@ TEST_F(RouteGraphTest, RenderersFallbackWhenOutputRemoved) {
 
   under_test_.AddRenderer(std::move(renderer));
   under_test_.SetRendererRoutingProfile(
-      *renderer_raw,
-      {.routable = true,
-       .usage = fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::MEDIA)});
+      *renderer_raw, {.routable = true, .usage = StreamUsage::WithRenderUsage(RenderUsage::MEDIA)});
 
   auto first_output = FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
                                               &context().link_matrix());
@@ -209,9 +203,7 @@ TEST_F(RouteGraphTest, RemovingNonLastOutputDoesNotRerouteRenderers) {
 
   under_test_.AddRenderer(std::move(renderer));
   under_test_.SetRendererRoutingProfile(
-      *renderer_raw,
-      {.routable = true,
-       .usage = fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::MEDIA)});
+      *renderer_raw, {.routable = true, .usage = StreamUsage::WithRenderUsage(RenderUsage::MEDIA)});
 
   auto first_output = FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
                                               &context().link_matrix());
@@ -243,9 +235,7 @@ TEST_F(RouteGraphTest, RenderersPickUpLastPluggedOutputWhenRoutable) {
   EXPECT_THAT(DestLinks(*renderer_raw), IsEmpty());
 
   under_test_.SetRendererRoutingProfile(
-      *renderer_raw,
-      {.routable = true,
-       .usage = fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::MEDIA)});
+      *renderer_raw, {.routable = true, .usage = StreamUsage::WithRenderUsage(RenderUsage::MEDIA)});
   EXPECT_THAT(DestLinks(*renderer_raw), UnorderedElementsAreArray({first_output.get()}));
 }
 
@@ -255,9 +245,7 @@ TEST_F(RouteGraphTest, RenderersAreRemoved) {
 
   under_test_.AddRenderer(std::move(renderer));
   under_test_.SetRendererRoutingProfile(
-      *renderer_raw,
-      {.routable = true,
-       .usage = fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::MEDIA)});
+      *renderer_raw, {.routable = true, .usage = StreamUsage::WithRenderUsage(RenderUsage::MEDIA)});
 
   // Now the renderer should have 3 references:
   //   1. Ours in this test.
@@ -285,10 +273,9 @@ TEST_F(RouteGraphTest, CapturersRouteToLastPluggedInput) {
   auto* capturer_raw = capturer.get();
 
   under_test_.AddCapturer(std::move(capturer));
-  under_test_.SetCapturerRoutingProfile(*capturer_raw,
-                                        {.routable = true,
-                                         .usage = fuchsia::media::Usage::WithCaptureUsage(
-                                             fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT)});
+  under_test_.SetCapturerRoutingProfile(
+      *capturer_raw,
+      {.routable = true, .usage = StreamUsage::WithCaptureUsage(CaptureUsage::SYSTEM_AGENT)});
 
   auto first_input = AudioInput::Create(zx::channel(), &threading_model(),
                                         &context().device_manager(), &context().link_matrix());
@@ -306,10 +293,9 @@ TEST_F(RouteGraphTest, CapturersFallbackWhenInputRemoved) {
   auto* capturer_raw = capturer.get();
 
   under_test_.AddCapturer(std::move(capturer));
-  under_test_.SetCapturerRoutingProfile(*capturer_raw,
-                                        {.routable = true,
-                                         .usage = fuchsia::media::Usage::WithCaptureUsage(
-                                             fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT)});
+  under_test_.SetCapturerRoutingProfile(
+      *capturer_raw,
+      {.routable = true, .usage = StreamUsage::WithCaptureUsage(CaptureUsage::SYSTEM_AGENT)});
 
   auto first_input = AudioInput::Create(zx::channel(), &threading_model(),
                                         &context().device_manager(), &context().link_matrix());
@@ -331,10 +317,9 @@ TEST_F(RouteGraphTest, RemovingNonLastInputDoesNotRerouteCapturers) {
   auto* capturer_raw = capturer.get();
 
   under_test_.AddCapturer(std::move(capturer));
-  under_test_.SetCapturerRoutingProfile(*capturer_raw,
-                                        {.routable = true,
-                                         .usage = fuchsia::media::Usage::WithCaptureUsage(
-                                             fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT)});
+  under_test_.SetCapturerRoutingProfile(
+      *capturer_raw,
+      {.routable = true, .usage = StreamUsage::WithCaptureUsage(CaptureUsage::SYSTEM_AGENT)});
 
   auto first_input = AudioInput::Create(zx::channel(), &threading_model(),
                                         &context().device_manager(), &context().link_matrix());
@@ -369,10 +354,9 @@ TEST_F(RouteGraphTest, CapturersPickUpLastPluggedInputWhenRoutable) {
   under_test_.AddCapturer(std::move(capturer));
   EXPECT_THAT(SourceLinks(*capturer_raw), IsEmpty());
 
-  under_test_.SetCapturerRoutingProfile(*capturer_raw,
-                                        {.routable = true,
-                                         .usage = fuchsia::media::Usage::WithCaptureUsage(
-                                             fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT)});
+  under_test_.SetCapturerRoutingProfile(
+      *capturer_raw,
+      {.routable = true, .usage = StreamUsage::WithCaptureUsage(CaptureUsage::SYSTEM_AGENT)});
   EXPECT_THAT(SourceLinks(*capturer_raw), UnorderedElementsAreArray({later_input.get()}));
 }
 
@@ -381,10 +365,9 @@ TEST_F(RouteGraphTest, CapturersAreRemoved) {
   auto* capturer_raw = capturer.get();
 
   under_test_.AddCapturer(std::move(capturer));
-  under_test_.SetCapturerRoutingProfile(*capturer_raw,
-                                        {.routable = true,
-                                         .usage = fuchsia::media::Usage::WithCaptureUsage(
-                                             fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT)});
+  under_test_.SetCapturerRoutingProfile(
+      *capturer_raw,
+      {.routable = true, .usage = StreamUsage::WithCaptureUsage(CaptureUsage::SYSTEM_AGENT)});
 
   auto input = FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
                                        &context().link_matrix());
@@ -408,9 +391,8 @@ TEST_F(RouteGraphTest, LoopbackCapturersRouteToLastPluggedOutput) {
 
   under_test_.AddLoopbackCapturer(std::move(capturer));
   under_test_.SetLoopbackCapturerRoutingProfile(
-      *capturer_raw, {.routable = true,
-                      .usage = fuchsia::media::Usage::WithCaptureUsage(
-                          fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT)});
+      *capturer_raw,
+      {.routable = true, .usage = StreamUsage::WithCaptureUsage(CaptureUsage::SYSTEM_AGENT)});
 
   auto first_output = FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
                                               &context().link_matrix());
@@ -429,9 +411,8 @@ TEST_F(RouteGraphTest, LoopbackCapturersFallbackWhenOutputRemoved) {
 
   under_test_.AddLoopbackCapturer(std::move(capturer));
   under_test_.SetLoopbackCapturerRoutingProfile(
-      *capturer_raw, {.routable = true,
-                      .usage = fuchsia::media::Usage::WithCaptureUsage(
-                          fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT)});
+      *capturer_raw,
+      {.routable = true, .usage = StreamUsage::WithCaptureUsage(CaptureUsage::SYSTEM_AGENT)});
 
   auto first_output = FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
                                               &context().link_matrix());
@@ -454,9 +435,8 @@ TEST_F(RouteGraphTest, RemovingNonLastOutputDoesNotRerouteLoopbackCapturers) {
 
   under_test_.AddLoopbackCapturer(std::move(capturer));
   under_test_.SetLoopbackCapturerRoutingProfile(
-      *capturer_raw, {.routable = true,
-                      .usage = fuchsia::media::Usage::WithCaptureUsage(
-                          fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT)});
+      *capturer_raw,
+      {.routable = true, .usage = StreamUsage::WithCaptureUsage(CaptureUsage::SYSTEM_AGENT)});
 
   auto first_output = FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
                                               &context().link_matrix());
@@ -492,9 +472,8 @@ TEST_F(RouteGraphTest, LoopbackCapturersPickUpLastPluggedOutputWhenRoutable) {
   EXPECT_THAT(SourceLinks(*capturer_raw), IsEmpty());
 
   under_test_.SetLoopbackCapturerRoutingProfile(
-      *capturer_raw, {.routable = true,
-                      .usage = fuchsia::media::Usage::WithCaptureUsage(
-                          fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT)});
+      *capturer_raw,
+      {.routable = true, .usage = StreamUsage::WithCaptureUsage(CaptureUsage::SYSTEM_AGENT)});
   EXPECT_THAT(SourceLinks(*capturer_raw), UnorderedElementsAreArray({later_output.get()}));
 }
 
@@ -504,9 +483,8 @@ TEST_F(RouteGraphTest, LoopbackCapturersAreRemoved) {
 
   under_test_.AddLoopbackCapturer(std::move(capturer));
   under_test_.SetLoopbackCapturerRoutingProfile(
-      *capturer_raw, {.routable = true,
-                      .usage = fuchsia::media::Usage::WithCaptureUsage(
-                          fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT)});
+      *capturer_raw,
+      {.routable = true, .usage = StreamUsage::WithCaptureUsage(CaptureUsage::SYSTEM_AGENT)});
 
   auto output = FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
                                         &context().link_matrix());
@@ -533,17 +511,14 @@ TEST_F(RouteGraphTest, OutputRouteCategoriesDoNotAffectEachOther) {
 
   under_test_.AddRenderer(std::move(renderer));
   under_test_.SetRendererRoutingProfile(
-      *renderer_raw,
-      {.routable = true,
-       .usage = fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::MEDIA)});
+      *renderer_raw, {.routable = true, .usage = StreamUsage::WithRenderUsage(RenderUsage::MEDIA)});
   EXPECT_THAT(SourceLinks(*capturer_raw), IsEmpty());
   EXPECT_THAT(DestLinks(*renderer_raw),
               UnorderedElementsAreArray(std::vector<AudioObject*>{output.get()}));
 
   under_test_.SetLoopbackCapturerRoutingProfile(
-      *capturer_raw, {.routable = true,
-                      .usage = fuchsia::media::Usage::WithCaptureUsage(
-                          fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT)});
+      *capturer_raw,
+      {.routable = true, .usage = StreamUsage::WithCaptureUsage(CaptureUsage::SYSTEM_AGENT)});
   EXPECT_THAT(SourceLinks(*capturer_raw), UnorderedElementsAreArray({output.get()}));
   EXPECT_THAT(DestLinks(*renderer_raw),
               UnorderedElementsAreArray(std::vector<AudioObject*>{output.get()}));
@@ -562,10 +537,9 @@ TEST_F(RouteGraphTest, InputRouteCategoriesDoNotAffectOutputs) {
   auto* capturer_raw = capturer.get();
 
   under_test_.AddCapturer(std::move(capturer));
-  under_test_.SetCapturerRoutingProfile(*capturer_raw,
-                                        {.routable = true,
-                                         .usage = fuchsia::media::Usage::WithCaptureUsage(
-                                             fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT)});
+  under_test_.SetCapturerRoutingProfile(
+      *capturer_raw,
+      {.routable = true, .usage = StreamUsage::WithCaptureUsage(CaptureUsage::SYSTEM_AGENT)});
   EXPECT_THAT(SourceLinks(*capturer_raw), UnorderedElementsAreArray({first_input.get()}));
 
   auto renderer = FakeAudioObject::FakeRenderer();
@@ -573,9 +547,7 @@ TEST_F(RouteGraphTest, InputRouteCategoriesDoNotAffectOutputs) {
 
   under_test_.AddRenderer(std::move(renderer));
   under_test_.SetRendererRoutingProfile(
-      *renderer_raw,
-      {.routable = true,
-       .usage = fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::MEDIA)});
+      *renderer_raw, {.routable = true, .usage = StreamUsage::WithRenderUsage(RenderUsage::MEDIA)});
   EXPECT_THAT(DestLinks(*renderer_raw),
               UnorderedElementsAreArray(std::vector<AudioObject*>{output.get()}));
   EXPECT_THAT(SourceLinks(*capturer_raw), UnorderedElementsAreArray({first_input.get()}));
@@ -594,8 +566,7 @@ TEST_F(RouteGraphTest, DoesNotRouteUnroutableRenderer) {
 
   under_test_.SetRendererRoutingProfile(
       *renderer_raw,
-      {.routable = false,
-       .usage = fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::MEDIA)});
+      {.routable = false, .usage = StreamUsage::WithRenderUsage(RenderUsage::MEDIA)});
 
   auto second_output = FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
                                                &context().link_matrix());
@@ -614,10 +585,9 @@ TEST_F(RouteGraphTest, DoesNotRouteUnroutableCapturer) {
   under_test_.AddCapturer(std::move(capturer));
   EXPECT_THAT(SourceLinks(*capturer_raw), IsEmpty());
 
-  under_test_.SetCapturerRoutingProfile(*capturer_raw,
-                                        {.routable = false,
-                                         .usage = fuchsia::media::Usage::WithCaptureUsage(
-                                             fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT)});
+  under_test_.SetCapturerRoutingProfile(
+      *capturer_raw,
+      {.routable = false, .usage = StreamUsage::WithCaptureUsage(CaptureUsage::SYSTEM_AGENT)});
 
   auto second_input = AudioInput::Create(zx::channel(), &threading_model(),
                                          &context().device_manager(), &context().link_matrix());
@@ -637,9 +607,8 @@ TEST_F(RouteGraphTest, DoesNotRouteUnroutableLoopbackCapturer) {
   EXPECT_THAT(SourceLinks(*loopback_capturer_raw), IsEmpty());
 
   under_test_.SetLoopbackCapturerRoutingProfile(
-      *loopback_capturer_raw, {.routable = false,
-                               .usage = fuchsia::media::Usage::WithCaptureUsage(
-                                   fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT)});
+      *loopback_capturer_raw,
+      {.routable = false, .usage = StreamUsage::WithCaptureUsage(CaptureUsage::SYSTEM_AGENT)});
 
   auto second_output = FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
                                                &context().link_matrix());
@@ -654,8 +623,7 @@ TEST_F(RouteGraphTest, AcceptsUnroutableRendererWithInvalidFormat) {
   under_test_.AddRenderer(std::move(renderer));
   under_test_.SetRendererRoutingProfile(
       *renderer_raw,
-      {.routable = false,
-       .usage = fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::MEDIA)});
+      {.routable = false, .usage = StreamUsage::WithRenderUsage(RenderUsage::MEDIA)});
 
   // Passes by not crashing.
 }
@@ -672,13 +640,10 @@ TEST_F(RouteGraphTest, UnroutesNewlyUnRoutableRenderer) {
   EXPECT_THAT(DestLinks(*renderer_raw), IsEmpty());
 
   under_test_.SetRendererRoutingProfile(
-      *renderer_raw,
-      {.routable = true,
-       .usage = fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::MEDIA)});
+      *renderer_raw, {.routable = true, .usage = StreamUsage::WithRenderUsage(RenderUsage::MEDIA)});
   under_test_.SetRendererRoutingProfile(
       *renderer_raw,
-      {.routable = false,
-       .usage = fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::MEDIA)});
+      {.routable = false, .usage = StreamUsage::WithRenderUsage(RenderUsage::MEDIA)});
   EXPECT_THAT(DestLinks(*renderer_raw), IsEmpty());
 }
 
@@ -693,14 +658,12 @@ TEST_F(RouteGraphTest, UnroutesNewlyUnRoutableCapturer) {
   under_test_.AddCapturer(std::move(capturer));
   EXPECT_THAT(SourceLinks(*capturer_raw), IsEmpty());
 
-  under_test_.SetCapturerRoutingProfile(*capturer_raw,
-                                        {.routable = true,
-                                         .usage = fuchsia::media::Usage::WithCaptureUsage(
-                                             fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT)});
-  under_test_.SetCapturerRoutingProfile(*capturer_raw,
-                                        {.routable = false,
-                                         .usage = fuchsia::media::Usage::WithCaptureUsage(
-                                             fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT)});
+  under_test_.SetCapturerRoutingProfile(
+      *capturer_raw,
+      {.routable = true, .usage = StreamUsage::WithCaptureUsage(CaptureUsage::SYSTEM_AGENT)});
+  under_test_.SetCapturerRoutingProfile(
+      *capturer_raw,
+      {.routable = false, .usage = StreamUsage::WithCaptureUsage(CaptureUsage::SYSTEM_AGENT)});
   EXPECT_THAT(SourceLinks(*capturer_raw), IsEmpty());
 }
 
@@ -716,13 +679,11 @@ TEST_F(RouteGraphTest, UnroutesNewlyUnRoutableLoopbackCapturer) {
   EXPECT_THAT(SourceLinks(*loopback_capturer_raw), IsEmpty());
 
   under_test_.SetLoopbackCapturerRoutingProfile(
-      *loopback_capturer_raw, {.routable = true,
-                               .usage = fuchsia::media::Usage::WithCaptureUsage(
-                                   fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT)});
+      *loopback_capturer_raw,
+      {.routable = true, .usage = StreamUsage::WithCaptureUsage(CaptureUsage::SYSTEM_AGENT)});
   under_test_.SetLoopbackCapturerRoutingProfile(
-      *loopback_capturer_raw, {.routable = false,
-                               .usage = fuchsia::media::Usage::WithCaptureUsage(
-                                   fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT)});
+      *loopback_capturer_raw,
+      {.routable = false, .usage = StreamUsage::WithCaptureUsage(CaptureUsage::SYSTEM_AGENT)});
   EXPECT_THAT(SourceLinks(*loopback_capturer_raw), IsEmpty());
 }
 
@@ -734,14 +695,10 @@ static const DeviceConfig kConfigWithMediaExternalRoutingPolicy = DeviceConfig(
                    DeviceConfig::OutputDeviceProfile(
                        /*eligible_for_loopback=*/true,
                        /*output_usage_support_set=*/
-                       {fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::BACKGROUND),
-                        fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::MEDIA),
-                        fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::INTERRUPTION),
-                        fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT),
-                        fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::COMMUNICATION)})}},
+                       {RenderUsage::BACKGROUND, RenderUsage::MEDIA, RenderUsage::INTERRUPTION,
+                        RenderUsage::SYSTEM_AGENT, RenderUsage::COMMUNICATION})}},
     /*default=*/{DeviceConfig::OutputDeviceProfile(
-        /*eligible_for_loopback=*/true, /*output_usage_support_set=*/{
-            fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::MEDIA)})});
+        /*eligible_for_loopback=*/true, /*output_usage_support_set=*/{RenderUsage::MEDIA})});
 
 class RouteGraphWithMediaExternalPolicyTest : public RouteGraphTest {
  public:
@@ -758,9 +715,7 @@ TEST_F(RouteGraphWithMediaExternalPolicyTest, MediaRoutesToLastPluggedSupportedD
 
   under_test_.AddRenderer(std::move(renderer));
   under_test_.SetRendererRoutingProfile(
-      *renderer_raw,
-      {.routable = true,
-       .usage = fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::MEDIA)});
+      *renderer_raw, {.routable = true, .usage = StreamUsage::WithRenderUsage(RenderUsage::MEDIA)});
   EXPECT_THAT(DestLinks(*renderer_raw), UnorderedElementsAreArray({output}));
 
   auto unconfigured_output_and_driver = OutputWithDeviceId(kUnconfiguredDeviceId);
@@ -778,10 +733,9 @@ TEST_F(RouteGraphWithMediaExternalPolicyTest, InterruptionDoesNotRouteToUnsuppor
   auto* renderer_raw = renderer.get();
 
   under_test_.AddRenderer(std::move(renderer));
-  under_test_.SetRendererRoutingProfile(*renderer_raw,
-                                        {.routable = true,
-                                         .usage = fuchsia::media::Usage::WithRenderUsage(
-                                             fuchsia::media::AudioRenderUsage::INTERRUPTION)});
+  under_test_.SetRendererRoutingProfile(
+      *renderer_raw,
+      {.routable = true, .usage = StreamUsage::WithRenderUsage(RenderUsage::INTERRUPTION)});
   EXPECT_THAT(DestLinks(*renderer_raw), UnorderedElementsAreArray({output}));
 
   auto unconfigured_output_and_driver = OutputWithDeviceId(kUnconfiguredDeviceId);
@@ -797,23 +751,16 @@ static const DeviceConfig kConfigWithExternNonLoopbackDevicePolicy = DeviceConfi
                    DeviceConfig::OutputDeviceProfile(
                        /*eligible_for_loopback=*/true,
                        /*output_usage_support_set=*/
-                       {fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::BACKGROUND),
-                        fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::MEDIA),
-                        fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::INTERRUPTION),
-                        fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT),
-                        fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::COMMUNICATION)})},
-                  {kSupportsLoopbackDeviceId,
-                   DeviceConfig::OutputDeviceProfile(
-                       /*eligible_for_loopback=*/true,
-                       /*output_usage_support_set=*/
-                       {fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::BACKGROUND)})}},
+                       {RenderUsage::BACKGROUND, RenderUsage::MEDIA, RenderUsage::INTERRUPTION,
+                        RenderUsage::SYSTEM_AGENT, RenderUsage::COMMUNICATION})},
+                  {kSupportsLoopbackDeviceId, DeviceConfig::OutputDeviceProfile(
+                                                  /*eligible_for_loopback=*/true,
+                                                  /*output_usage_support_set=*/
+                                                  {RenderUsage::BACKGROUND})}},
     /*default=*/{DeviceConfig::OutputDeviceProfile(
         /*eligible_for_loopback=*/false, /*output_usage_support_set=*/{
-            fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::BACKGROUND),
-            fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::MEDIA),
-            fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::INTERRUPTION),
-            fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT),
-            fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::COMMUNICATION)})});
+            RenderUsage::BACKGROUND, RenderUsage::MEDIA, RenderUsage::INTERRUPTION,
+            RenderUsage::SYSTEM_AGENT, RenderUsage::COMMUNICATION})});
 
 class RouteGraphWithExternalNonLoopbackDeviceTest : public RouteGraphTest {
  public:
@@ -831,9 +778,8 @@ TEST_F(RouteGraphWithExternalNonLoopbackDeviceTest, LoopbackRoutesToLastPluggedS
 
   under_test_.AddLoopbackCapturer(std::move(capturer));
   under_test_.SetLoopbackCapturerRoutingProfile(
-      *capturer_raw, {.routable = true,
-                      .usage = fuchsia::media::Usage::WithCaptureUsage(
-                          fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT)});
+      *capturer_raw,
+      {.routable = true, .usage = StreamUsage::WithCaptureUsage(CaptureUsage::SYSTEM_AGENT)});
   EXPECT_THAT(SourceLinks(*capturer_raw), UnorderedElementsAreArray({output}));
 
   auto second_output_and_driver = OutputWithDeviceId(kSupportsLoopbackDeviceId);
@@ -852,9 +798,8 @@ TEST_F(RouteGraphWithExternalNonLoopbackDeviceTest, LoopbackDoesNotRouteToUnsupp
 
   under_test_.AddLoopbackCapturer(std::move(capturer));
   under_test_.SetLoopbackCapturerRoutingProfile(
-      *capturer_raw, {.routable = true,
-                      .usage = fuchsia::media::Usage::WithCaptureUsage(
-                          fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT)});
+      *capturer_raw,
+      {.routable = true, .usage = StreamUsage::WithCaptureUsage(CaptureUsage::SYSTEM_AGENT)});
   EXPECT_THAT(SourceLinks(*capturer_raw), UnorderedElementsAreArray({output}));
 
   auto second_output_and_driver = OutputWithDeviceId(kUnconfiguredDeviceId);

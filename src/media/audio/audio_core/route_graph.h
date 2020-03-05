@@ -26,7 +26,7 @@ namespace media::audio {
 // particular input or output to the mixer.
 struct RoutingProfile {
   bool routable = false;
-  fuchsia::media::Usage usage = {};
+  StreamUsage usage = {};
 };
 
 // |RouteGraph| is responsible for managing connections between inputs and outputs of the mixer.
@@ -120,7 +120,7 @@ class RouteGraph {
 
   // Cached targets for linking renderers and capturers.
   struct Targets {
-    std::array<Target, fuchsia::media::RENDER_USAGE_COUNT> render = {};
+    std::array<Target, kStreamRenderUsageCount> render = {};
     Target loopback;
     Target capture;
   };
@@ -128,7 +128,7 @@ class RouteGraph {
   // A command to unlink components of the graph.
   struct UnlinkCommand {
     // Iff renderers[usage] is true, renderers of that usage should be unlinked.
-    std::array<bool, fuchsia::media::RENDER_USAGE_COUNT> renderers = {};
+    std::array<bool, kStreamRenderUsageCount> renderers = {};
     // Iff true, loopback capturers should be unlinked.
     bool loopback_capturers = false;
     /// Iff true, capturers, should be unlinked.
@@ -146,7 +146,7 @@ class RouteGraph {
 
   void Unlink(UnlinkCommand unlink_command);
 
-  Target OutputForUsage(const fuchsia::media::Usage& usage) const;
+  Target OutputForUsage(const StreamUsage& usage) const;
 
   LinkMatrix& link_matrix_;
 

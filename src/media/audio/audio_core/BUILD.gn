@@ -125,6 +125,7 @@ source_set("audio_core_lib") {
     "route_graph.cc",
     "route_graph.h",
     "stream.h",
+    "stream_usage.h",
     "stream_volume_manager.cc",
     "stream_volume_manager.h",
     "tap_stage.cc",

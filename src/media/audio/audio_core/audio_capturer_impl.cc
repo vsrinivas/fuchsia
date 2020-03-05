@@ -181,7 +181,8 @@ void AudioCapturerImpl::BeginShutdown() {
 }
 
 void AudioCapturerImpl::SetRoutingProfile() {
-  auto profile = RoutingProfile{.routable = StateIsRoutable(state_), .usage = GetStreamUsage()};
+  auto profile = RoutingProfile{.routable = StateIsRoutable(state_),
+                                .usage = StreamUsage::WithCaptureUsage(usage_)};
   if (loopback_) {
     context_.route_graph().SetLoopbackCapturerRoutingProfile(*this, std::move(profile));
   } else {

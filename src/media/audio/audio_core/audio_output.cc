@@ -82,7 +82,7 @@ fit::result<std::shared_ptr<Mixer>, zx_status_t> AudioOutput::InitializeSourceLi
   auto usage = source.usage();
   FX_DCHECK(usage) << "Source has no assigned usage";
   if (!usage) {
-    usage = {fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::MEDIA)};
+    usage = {StreamUsage::WithRenderUsage(RenderUsage::MEDIA)};
   }
 
   if (stream) {

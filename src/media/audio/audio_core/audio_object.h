@@ -14,6 +14,7 @@
 #include "src/media/audio/audio_core/format.h"
 #include "src/media/audio/audio_core/mixer/no_op.h"
 #include "src/media/audio/audio_core/stream.h"
+#include "src/media/audio/audio_core/stream_usage.h"
 #include "src/media/audio/audio_core/volume_curve.h"
 
 namespace media::audio {
@@ -78,7 +79,7 @@ class AudioObject {
     return null_info;
   }
 
-  virtual std::optional<fuchsia::media::Usage> usage() const { return std::nullopt; }
+  virtual std::optional<StreamUsage> usage() const { return std::nullopt; }
 
   bool format_valid() const { return format() != nullptr; }
 

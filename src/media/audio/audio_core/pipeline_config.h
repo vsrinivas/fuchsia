@@ -5,10 +5,10 @@
 #ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_PIPELINE_CONFIG_H_
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_PIPELINE_CONFIG_H_
 
-#include <fuchsia/media/cpp/fidl.h>
-
 #include <string>
 #include <vector>
+
+#include "src/media/audio/audio_core/stream_usage.h"
 
 namespace media::audio {
 
@@ -31,7 +31,7 @@ class PipelineConfig {
 
   struct MixGroup {
     std::string name;
-    std::vector<fuchsia::media::AudioRenderUsage> input_streams;
+    std::vector<RenderUsage> input_streams;
     std::vector<Effect> effects;
     std::vector<MixGroup> inputs;
     bool loopback;
@@ -41,11 +41,8 @@ class PipelineConfig {
     PipelineConfig config;
     config.root_.name = "default";
     config.root_.input_streams = {
-        fuchsia::media::AudioRenderUsage::BACKGROUND,
-        fuchsia::media::AudioRenderUsage::MEDIA,
-        fuchsia::media::AudioRenderUsage::INTERRUPTION,
-        fuchsia::media::AudioRenderUsage::SYSTEM_AGENT,
-        fuchsia::media::AudioRenderUsage::COMMUNICATION,
+        RenderUsage::BACKGROUND,   RenderUsage::MEDIA,         RenderUsage::INTERRUPTION,
+        RenderUsage::SYSTEM_AGENT, RenderUsage::COMMUNICATION,
     };
     config.root_.loopback = true;
     return config;

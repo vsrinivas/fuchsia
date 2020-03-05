@@ -13,10 +13,9 @@ namespace media::audio {
 
 namespace {
 
-std::array<fuchsia::media::AudioRenderUsage, fuchsia::media::RENDER_USAGE_COUNT> kRenderUsages = {
-    fuchsia::media::AudioRenderUsage::BACKGROUND, fuchsia::media::AudioRenderUsage::MEDIA,
-    fuchsia::media::AudioRenderUsage::INTERRUPTION, fuchsia::media::AudioRenderUsage::SYSTEM_AGENT,
-    fuchsia::media::AudioRenderUsage::COMMUNICATION};
+std::array<RenderUsage, kStreamRenderUsageCount> kRenderUsages = {
+    RenderUsage::BACKGROUND, RenderUsage::MEDIA, RenderUsage::INTERRUPTION,
+    RenderUsage::SYSTEM_AGENT, RenderUsage::COMMUNICATION};
 
 }  // namespace
 
@@ -24,18 +23,19 @@ RouteGraph::RouteGraph(const DeviceConfig& device_config, LinkMatrix* link_matri
     : link_matrix_(*link_matrix), device_config_(device_config) {
   FX_DCHECK(link_matrix);
 
-  static_assert(fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::BACKGROUND) == 0);
-  static_assert(fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::MEDIA) == 1);
-  static_assert(fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::INTERRUPTION) == 2);
-  static_assert(fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT) == 3);
-  static_assert(fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::COMMUNICATION) == 4);
-  static_assert(fuchsia::media::RENDER_USAGE_COUNT == 5);
+  static_assert(static_cast<std::underlying_type_t<RenderUsage>>(RenderUsage::BACKGROUND) == 0);
+  static_assert(static_cast<std::underlying_type_t<RenderUsage>>(RenderUsage::MEDIA) == 1);
+  static_assert(static_cast<std::underlying_type_t<RenderUsage>>(RenderUsage::INTERRUPTION) == 2);
+  static_assert(static_cast<std::underlying_type_t<RenderUsage>>(RenderUsage::SYSTEM_AGENT) == 3);
+  static_assert(static_cast<std::underlying_type_t<RenderUsage>>(RenderUsage::COMMUNICATION) == 4);
+  static_assert(kStreamRenderUsageCount == 5);
 
-  static_assert(fidl::ToUnderlying(fuchsia::media::AudioCaptureUsage::BACKGROUND) == 0);
-  static_assert(fidl::ToUnderlying(fuchsia::media::AudioCaptureUsage::FOREGROUND) == 1);
-  static_assert(fidl::ToUnderlying(fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT) == 2);
-  static_assert(fidl::ToUnderlying(fuchsia::media::AudioCaptureUsage::COMMUNICATION) == 3);
-  static_assert(fuchsia::media::CAPTURE_USAGE_COUNT == 4);
+  static_assert(static_cast<std::underlying_type_t<CaptureUsage>>(CaptureUsage::BACKGROUND) == 0);
+  static_assert(static_cast<std::underlying_type_t<CaptureUsage>>(CaptureUsage::FOREGROUND) == 1);
+  static_assert(static_cast<std::underlying_type_t<CaptureUsage>>(CaptureUsage::SYSTEM_AGENT) == 2);
+  static_assert(static_cast<std::underlying_type_t<CaptureUsage>>(CaptureUsage::COMMUNICATION) ==
+                3);
+  static_assert(kStreamCaptureUsageCount == 4);
 }
 
 RouteGraph::~RouteGraph() {
@@ -342,10 +342,10 @@ std::pair<RouteGraph::Targets, RouteGraph::UnlinkCommand> RouteGraph::CalculateT
   // We generate a new set of targets.
   // We generate an unlink command to unlink anything linked to a target which has changed.
 
-  std::array<Target, fuchsia::media::RENDER_USAGE_COUNT> new_render_targets = {};
-  std::array<bool, fuchsia::media::RENDER_USAGE_COUNT> unlink_renderers = {};
+  std::array<Target, kStreamRenderUsageCount> new_render_targets = {};
+  std::array<bool, kStreamRenderUsageCount> unlink_renderers = {};
   for (const auto& usage : kRenderUsages) {
-    const auto idx = fidl::ToUnderlying(usage);
+    const auto idx = static_cast<std::underlying_type_t<RenderUsage>>(usage);
     new_render_targets[idx] = [this, usage]() {
       for (auto output : outputs_) {
         if (output == throttle_output_.get()) {
@@ -416,12 +416,12 @@ void RouteGraph::Unlink(UnlinkCommand unlink_command) {
   }
 }
 
-RouteGraph::Target RouteGraph::OutputForUsage(const fuchsia::media::Usage& usage) const {
+RouteGraph::Target RouteGraph::OutputForUsage(const StreamUsage& usage) const {
   if (!usage.is_render_usage()) {
     return Target();
   }
 
-  auto idx = fidl::ToUnderlying(usage.render_usage());
+  auto idx = static_cast<std::underlying_type_t<RenderUsage>>(usage.render_usage());
   return targets_.render[idx];
 }
 

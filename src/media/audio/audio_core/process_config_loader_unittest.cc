@@ -81,18 +81,14 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithRoutingPolicy) {
   const auto process_config = ProcessConfigLoader::LoadProcessConfig(kTestAudioCoreConfigFilename);
   ASSERT_TRUE(process_config);
 
-  using fuchsia::media::AudioRenderUsage;
   auto& config = process_config->device_config();
 
-  EXPECT_TRUE(config.output_device_profile(expected_id).supports_usage(AudioRenderUsage::MEDIA));
-  EXPECT_TRUE(
-      config.output_device_profile(expected_id).supports_usage(AudioRenderUsage::INTERRUPTION));
-  EXPECT_FALSE(
-      config.output_device_profile(expected_id).supports_usage(AudioRenderUsage::SYSTEM_AGENT));
+  EXPECT_TRUE(config.output_device_profile(expected_id).supports_usage(RenderUsage::MEDIA));
+  EXPECT_TRUE(config.output_device_profile(expected_id).supports_usage(RenderUsage::INTERRUPTION));
+  EXPECT_FALSE(config.output_device_profile(expected_id).supports_usage(RenderUsage::SYSTEM_AGENT));
 
-  EXPECT_FALSE(
-      config.output_device_profile(unknown_id).supports_usage(AudioRenderUsage::INTERRUPTION));
-  EXPECT_TRUE(config.output_device_profile(unknown_id).supports_usage(AudioRenderUsage::MEDIA));
+  EXPECT_FALSE(config.output_device_profile(unknown_id).supports_usage(RenderUsage::INTERRUPTION));
+  EXPECT_TRUE(config.output_device_profile(unknown_id).supports_usage(RenderUsage::MEDIA));
 
   EXPECT_TRUE(config.output_device_profile(expected_id).eligible_for_loopback());
   EXPECT_FALSE(config.output_device_profile(unknown_id).eligible_for_loopback());
@@ -138,12 +134,10 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithRoutingPolicyNoDefault) {
   const auto process_config = ProcessConfigLoader::LoadProcessConfig(kTestAudioCoreConfigFilename);
   ASSERT_TRUE(process_config);
 
-  using fuchsia::media::AudioRenderUsage;
   auto& config = process_config->device_config();
 
-  EXPECT_TRUE(
-      config.output_device_profile(unknown_id).supports_usage(AudioRenderUsage::INTERRUPTION));
-  EXPECT_TRUE(config.output_device_profile(unknown_id).supports_usage(AudioRenderUsage::MEDIA));
+  EXPECT_TRUE(config.output_device_profile(unknown_id).supports_usage(RenderUsage::INTERRUPTION));
+  EXPECT_TRUE(config.output_device_profile(unknown_id).supports_usage(RenderUsage::MEDIA));
 
   EXPECT_TRUE(config.output_device_profile(unknown_id).eligible_for_loopback());
 }
@@ -279,10 +273,10 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
     const auto& mix_group = root;
     EXPECT_EQ("", mix_group.name);
     EXPECT_EQ(4u, mix_group.input_streams.size());
-    EXPECT_EQ(fuchsia::media::AudioRenderUsage::BACKGROUND, mix_group.input_streams[0]);
-    EXPECT_EQ(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT, mix_group.input_streams[1]);
-    EXPECT_EQ(fuchsia::media::AudioRenderUsage::MEDIA, mix_group.input_streams[2]);
-    EXPECT_EQ(fuchsia::media::AudioRenderUsage::INTERRUPTION, mix_group.input_streams[3]);
+    EXPECT_EQ(RenderUsage::BACKGROUND, mix_group.input_streams[0]);
+    EXPECT_EQ(RenderUsage::SYSTEM_AGENT, mix_group.input_streams[1]);
+    EXPECT_EQ(RenderUsage::MEDIA, mix_group.input_streams[2]);
+    EXPECT_EQ(RenderUsage::INTERRUPTION, mix_group.input_streams[3]);
     ASSERT_EQ(1u, mix_group.effects.size());
     {
       const auto& effect = mix_group.effects[0];
@@ -315,7 +309,7 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
     const auto& mix_group = mix.inputs[0];
     EXPECT_EQ("media", mix_group.name);
     EXPECT_EQ(1u, mix_group.input_streams.size());
-    EXPECT_EQ(fuchsia::media::AudioRenderUsage::MEDIA, mix_group.input_streams[0]);
+    EXPECT_EQ(RenderUsage::MEDIA, mix_group.input_streams[0]);
     ASSERT_EQ(2u, mix_group.effects.size());
     {
       const auto& effect = mix_group.effects[0];
@@ -336,7 +330,7 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
     const auto& mix_group = mix.inputs[1];
     EXPECT_EQ("communications", mix_group.name);
     EXPECT_EQ(1u, mix_group.input_streams.size());
-    EXPECT_EQ(fuchsia::media::AudioRenderUsage::COMMUNICATION, mix_group.input_streams[0]);
+    EXPECT_EQ(RenderUsage::COMMUNICATION, mix_group.input_streams[0]);
     ASSERT_EQ(1u, mix_group.effects.size());
     {
       const auto& effect = mix_group.effects[0];
