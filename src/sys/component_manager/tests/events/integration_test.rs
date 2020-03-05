@@ -103,7 +103,7 @@ async fn scoped_events_test() -> Result<(), Error> {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn nested_breakpoint_test() -> Result<(), Error> {
+async fn nested_event_source_test() -> Result<(), Error> {
     let test = BlackBoxTest::default(
         "fuchsia-pkg://fuchsia.com/events_integration_test#meta/nested_reporter.cm",
     )
@@ -131,7 +131,7 @@ async fn nested_breakpoint_test() -> Result<(), Error> {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn chained_interpose_breakpoint_test() -> Result<(), Error> {
+async fn chained_interposer_test() -> Result<(), Error> {
     let test = BlackBoxTest::default(
         "fuchsia-pkg://fuchsia.com/events_integration_test#meta/chained_interpose_echo_realm.cm",
     )
