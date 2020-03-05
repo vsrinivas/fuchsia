@@ -12,4 +12,20 @@ fidl("fuchsia.devicesettings") {
   ]
 
   sources = [ "devicesettings.fidl" ]
+
+  sdk_category = "internal"
+
+  visibility = [
+    # fxb/47602 audit the below
+    "//garnet/bin/setui/*",
+    "//garnet/bin/setui_client/*",
+    "//garnet/go/src/device_settings/*",
+    "//src/connectivity/network/testing/netemul/*",
+    "//src/modular/bin/basemgr/*",
+    "//src/modular/bin/basemgr_launcher/*",
+    "//src/modular/lib/modular_test_harness/*",
+    "//src/modular/tests/*",
+    "//src/sys/device_settings/*",
+    "//topaz/lib/settings/*",
+  ]
 }

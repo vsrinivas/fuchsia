@@ -8,4 +8,21 @@ fidl("fuchsia.stash") {
   sources = [ "stash.fidl" ]
 
   public_deps = [ "//zircon/system/fidl/fuchsia-mem" ]
+
+  sdk_category = "internal"
+
+  visibility = [
+    # fxb/47602 audit the below
+    "//garnet/bin/setui/*",
+    "//src/connectivity/bluetooth/core/bt-gap/*",
+    "//src/connectivity/network/*",
+    "//src/connectivity/network/dhcpd-cli/*",
+    "//src/connectivity/wlan/*",
+    "//src/identity/*",
+    "//src/modular/lib/modular_test_harness/*",
+    "//src/modular/tests/*",
+    "//src/sys/pkg/bin/omaha-client/*",
+    "//src/sys/stash/*",
+    "//src/sys/tools/stash_ctl/*",
+  ]
 }
