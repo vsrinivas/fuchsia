@@ -12,6 +12,7 @@
 assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
+import("//build/fuzzing/fuzzer.gni")
 import("//build/test.gni")
 import("//build/unification/images/migrated_manifest.gni")
 
@@ -85,4 +86,28 @@ test("paver-test") {
 
 migrated_manifest("paver-test-manifest") {
   deps = [ ":paver-test" ]
+}
+
+fuzzer("paver-validation-fuzzer") {
+  sources = [ "validation-fuzzer.cc" ]
+
+  deps = [
+    "//zircon/public/lib/block-client",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio-caller",
+    "//zircon/public/lib/gpt",
+    "//zircon/public/lib/paver",
+    "//zircon/public/lib/svc",
+    "//zircon/public/lib/sysconfig-sync-client",
+    "//zircon/system/fidl/fuchsia-boot:llcpp.headers",
+    "//zircon/system/fidl/fuchsia-device:llcpp.headers",
+    "//zircon/system/fidl/fuchsia-hardware-block:llcpp.headers",
+    "//zircon/system/fidl/fuchsia-hardware-skipblock:llcpp.headers",
+    "//zircon/system/fidl/fuchsia-paver:llcpp.headers",
+  ]
+
+  include_dirs = [
+    "//zircon/public/lib/paver",
+    "..",
+  ]
 }
