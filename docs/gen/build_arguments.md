@@ -109,7 +109,7 @@ of an OTA. These pacakages are updated as an atomic unit during an OTA
 process and are immutable and are a superset of the TCB (Trusted Computing
 Base) for a product. These packages are never evicted by the system.
 
-**Current value for `target_cpu = "arm64"`:** `["//build/info:build-info", "//garnet/bin/http", "//src/connectivity/network/http_client", "//garnet/bin/log_listener:log_listener", "//garnet/bin/log_listener:log_listener_shell", "//garnet/bin/network_time_service", "//garnet/bin/scpi", "//garnet/bin/setui:setui_service", "//garnet/bin/sshd-host", "//garnet/bin/sshd-host:config", "//garnet/bin/stash:stash", "//garnet/bin/stash_ctl:stash_ctl", "//garnet/bin/sysmgr", "//garnet/bin/sysmgr:network_config", "//garnet/bin/sysmgr:services_config", "//garnet/bin/timezone", "//src/cobalt/bin/app:cobalt", "//src/cobalt/bin/app:cobalt_registry", "//src/cobalt/bin/app:config", "//src/cobalt/bin/system-metrics:cobalt_system_metrics", "//src/connectivity/bluetooth:core", "//src/connectivity/lowpan/service", "//src/connectivity/management/reachability", "//src/connectivity/management/reachability:reachability_sysmgr_config", "//src/connectivity/network/mdns/bundles:config", "//src/connectivity/network/mdns/bundles:services", "//src/connectivity/network/net-cli", "//src/connectivity/network/netcfg", "//src/connectivity/network/netcfg:config", "//src/connectivity/network/netcfg:filter_config", "//src/connectivity/network:config", "//src/connectivity/wlan:service", "//src/developer/exception_broker", "//src/developer/feedback/boot_log_checker", "//src/developer/feedback/boot_log_checker:config", "//src/developer/feedback/bugreport", "//src/developer/feedback/crashpad_agent", "//src/developer/feedback/feedback_agent", "//src/diagnostics/archivist", "//src/diagnostics/archivist:with_default_config", "//src/hwinfo:hwinfo", "//src/identity/bin:core", "//src/media/audio/bundles:audio_config", "//src/recovery/factory_reset", "//src/security/policy:appmgr_package_resolver_allowlist_userdebug", "//src/security/policy:appmgr_package_cache_allowlist_userdebug", "//src/security/policy:appmgr_pkgfs_versions_allowlist_userdebug", "//src/security/root_ssl_certificates", "//src/sys/appmgr", "//src/sys/appmgr:appmgr_component_event_provider_allowlist", "//src/sys/appmgr:appmgr_deprecated_shell_allowlist", "//src/sys/appmgr:appmgr_global_data_allowlist", "//src/sys/appmgr:appmgr_scheme_config", "//src/sys/core", "//src/sys/device_settings:device_settings_manager", "//src/sys/pkg:core", "//src/sys/pkg:system-update-checker", "//src/sys/timekeeper", "//third_party/openssh-portable/fuchsia/developer-keys:ssh_config", "//build/rust:cargo_toml_gen", "//src/sys/pkg:tools", "//bundles:kitchen_sink"]`
+**Current value for `target_cpu = "arm64"`:** `["//build/info:build-info", "//garnet/bin/http", "//src/connectivity/network/http_client", "//garnet/bin/log_listener:log_listener", "//garnet/bin/log_listener:log_listener_shell", "//garnet/bin/network_time_service", "//garnet/bin/scpi", "//garnet/bin/setui:setui_service", "//garnet/bin/sshd-host", "//garnet/bin/sshd-host:config", "//garnet/bin/stash:stash", "//garnet/bin/stash_ctl:stash_ctl", "//garnet/bin/sysmgr", "//garnet/bin/sysmgr:network_config", "//garnet/bin/sysmgr:services_config", "//garnet/bin/timezone", "//src/cobalt/bin/app:cobalt", "//src/cobalt/bin/app:cobalt_registry", "//src/cobalt/bin/app:config", "//src/cobalt/bin/system-metrics:cobalt_system_metrics", "//src/connectivity/bluetooth:core", "//src/connectivity/lowpan/service", "//src/connectivity/management/reachability", "//src/connectivity/management/reachability:reachability_sysmgr_config", "//src/connectivity/network/mdns/bundles:config", "//src/connectivity/network/mdns/bundles:services", "//src/connectivity/network/net-cli", "//src/connectivity/network/netcfg", "//src/connectivity/network/netcfg:config", "//src/connectivity/network/netcfg:filter_config", "//src/connectivity/network:config", "//src/connectivity/wlan:service", "//src/developer/exception_broker", "//src/developer/feedback/boot_log_checker", "//src/developer/feedback/boot_log_checker:config", "//src/developer/feedback/bugreport", "//src/developer/feedback/crashpad_agent", "//src/developer/feedback/feedback_agent", "//src/diagnostics/archivist", "//src/diagnostics/archivist:with_default_config", "//src/hwinfo:hwinfo", "//src/identity/bin:core", "//src/media/audio/bundles:audio_config", "//src/recovery/factory_reset", "//src/security/policy:appmgr_component_event_provider_allowlist", "//src/security/policy:appmgr_deprecated_shell_allowlist", "//src/security/policy:appmgr_global_data_allowlist", "//src/security/policy:appmgr_package_cache_allowlist_userdebug", "//src/security/policy:appmgr_package_resolver_allowlist_userdebug", "//src/security/policy:appmgr_pkgfs_versions_allowlist_userdebug", "//src/security/root_ssl_certificates", "//src/sys/appmgr", "//src/sys/appmgr:appmgr_scheme_config", "//src/sys/core", "//src/sys/device_settings:device_settings_manager", "//src/sys/pkg:core", "//src/sys/pkg:system-update-checker", "//src/sys/timekeeper", "//third_party/openssh-portable/fuchsia/developer-keys:ssh_config", "//build/rust:cargo_toml_gen", "//src/sys/pkg:tools", "//bundles:kitchen_sink"]`
 
 From //root_build_dir/args.gn:3
 
@@ -117,7 +117,7 @@ From //root_build_dir/args.gn:3
 
 From //BUILD.gn:20
 
-**Current value for `target_cpu = "x64"`:** `["//build/info:build-info", "//garnet/bin/http", "//src/connectivity/network/http_client", "//garnet/bin/log_listener:log_listener", "//garnet/bin/log_listener:log_listener_shell", "//garnet/bin/network_time_service", "//garnet/bin/scpi", "//garnet/bin/setui:setui_service", "//garnet/bin/sshd-host", "//garnet/bin/sshd-host:config", "//garnet/bin/stash:stash", "//garnet/bin/stash_ctl:stash_ctl", "//garnet/bin/sysmgr", "//garnet/bin/sysmgr:network_config", "//garnet/bin/sysmgr:services_config", "//garnet/bin/timezone", "//src/cobalt/bin/app:cobalt", "//src/cobalt/bin/app:cobalt_registry", "//src/cobalt/bin/app:config", "//src/cobalt/bin/system-metrics:cobalt_system_metrics", "//src/connectivity/bluetooth:core", "//src/connectivity/lowpan/service", "//src/connectivity/management/reachability", "//src/connectivity/management/reachability:reachability_sysmgr_config", "//src/connectivity/network/mdns/bundles:config", "//src/connectivity/network/mdns/bundles:services", "//src/connectivity/network/net-cli", "//src/connectivity/network/netcfg", "//src/connectivity/network/netcfg:config", "//src/connectivity/network/netcfg:filter_config", "//src/connectivity/network:config", "//src/connectivity/wlan:service", "//src/developer/exception_broker", "//src/developer/feedback/boot_log_checker", "//src/developer/feedback/boot_log_checker:config", "//src/developer/feedback/bugreport", "//src/developer/feedback/crashpad_agent", "//src/developer/feedback/feedback_agent", "//src/diagnostics/archivist", "//src/diagnostics/archivist:with_default_config", "//src/hwinfo:hwinfo", "//src/identity/bin:core", "//src/media/audio/bundles:audio_config", "//src/recovery/factory_reset", "//src/security/policy:appmgr_package_resolver_allowlist_userdebug", "//src/security/policy:appmgr_package_cache_allowlist_userdebug", "//src/security/policy:appmgr_pkgfs_versions_allowlist_userdebug", "//src/security/root_ssl_certificates", "//src/sys/appmgr", "//src/sys/appmgr:appmgr_component_event_provider_allowlist", "//src/sys/appmgr:appmgr_deprecated_shell_allowlist", "//src/sys/appmgr:appmgr_global_data_allowlist", "//src/sys/appmgr:appmgr_scheme_config", "//src/sys/core", "//src/sys/device_settings:device_settings_manager", "//src/sys/pkg:core", "//src/sys/pkg:system-update-checker", "//src/sys/timekeeper", "//third_party/openssh-portable/fuchsia/developer-keys:ssh_config", "//build/rust:cargo_toml_gen", "//src/sys/pkg:tools", "//bundles:kitchen_sink"]`
+**Current value for `target_cpu = "x64"`:** `["//build/info:build-info", "//garnet/bin/http", "//src/connectivity/network/http_client", "//garnet/bin/log_listener:log_listener", "//garnet/bin/log_listener:log_listener_shell", "//garnet/bin/network_time_service", "//garnet/bin/scpi", "//garnet/bin/setui:setui_service", "//garnet/bin/sshd-host", "//garnet/bin/sshd-host:config", "//garnet/bin/stash:stash", "//garnet/bin/stash_ctl:stash_ctl", "//garnet/bin/sysmgr", "//garnet/bin/sysmgr:network_config", "//garnet/bin/sysmgr:services_config", "//garnet/bin/timezone", "//src/cobalt/bin/app:cobalt", "//src/cobalt/bin/app:cobalt_registry", "//src/cobalt/bin/app:config", "//src/cobalt/bin/system-metrics:cobalt_system_metrics", "//src/connectivity/bluetooth:core", "//src/connectivity/lowpan/service", "//src/connectivity/management/reachability", "//src/connectivity/management/reachability:reachability_sysmgr_config", "//src/connectivity/network/mdns/bundles:config", "//src/connectivity/network/mdns/bundles:services", "//src/connectivity/network/net-cli", "//src/connectivity/network/netcfg", "//src/connectivity/network/netcfg:config", "//src/connectivity/network/netcfg:filter_config", "//src/connectivity/network:config", "//src/connectivity/wlan:service", "//src/developer/exception_broker", "//src/developer/feedback/boot_log_checker", "//src/developer/feedback/boot_log_checker:config", "//src/developer/feedback/bugreport", "//src/developer/feedback/crashpad_agent", "//src/developer/feedback/feedback_agent", "//src/diagnostics/archivist", "//src/diagnostics/archivist:with_default_config", "//src/hwinfo:hwinfo", "//src/identity/bin:core", "//src/media/audio/bundles:audio_config", "//src/recovery/factory_reset", "//src/security/policy:appmgr_component_event_provider_allowlist", "//src/security/policy:appmgr_deprecated_shell_allowlist", "//src/security/policy:appmgr_global_data_allowlist", "//src/security/policy:appmgr_package_cache_allowlist_userdebug", "//src/security/policy:appmgr_package_resolver_allowlist_userdebug", "//src/security/policy:appmgr_pkgfs_versions_allowlist_userdebug", "//src/security/root_ssl_certificates", "//src/sys/appmgr", "//src/sys/appmgr:appmgr_scheme_config", "//src/sys/core", "//src/sys/device_settings:device_settings_manager", "//src/sys/pkg:core", "//src/sys/pkg:system-update-checker", "//src/sys/timekeeper", "//third_party/openssh-portable/fuchsia/developer-keys:ssh_config", "//build/rust:cargo_toml_gen", "//src/sys/pkg:tools", "//bundles:kitchen_sink"]`
 
 From //root_build_dir/args.gn:3
 
@@ -508,13 +508,13 @@ From //build/config/BUILD.gn:13
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/11b8eb10d4ad6ed50ee43d3bb50d13967d638dfa/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/42da41d24a21acf469e7a3a1759f551733fb403c/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/11b8eb10d4ad6ed50ee43d3bb50d13967d638dfa/util/net/tls.gni#22)
+From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/42da41d24a21acf469e7a3a1759f551733fb403c/util/net/tls.gni#22)
 
 ### create_kernel_service_snapshot
 
@@ -596,7 +596,7 @@ This defaults to JIT, use `fx set <ARCH> --args
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/7acd710fb1dc18f9911ff60aec18ca2d91b92e3d/runtime/dart/dart_component.gni#19)
+From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/fa8c845be980e705fdedfe14fc31d4be25ab94ba/runtime/dart/dart_component.gni#19)
 
 ### dart_enable_wasm
 Whether dart:wasm should be enabled.
@@ -611,7 +611,7 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/7acd710fb1dc18f9911ff60aec18ca2d91b92e3d/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/fa8c845be980e705fdedfe14fc31d4be25ab94ba/runtime/dart/config.gni#10)
 
 ### dart_lib_export_symbols
 Whether libdart should export the symbols of the Dart API.
@@ -661,7 +661,7 @@ Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/7acd710fb1dc18f9911ff60aec18ca2d91b92e3d/runtime/dart/dart_component.gni#35)
+From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/fa8c845be980e705fdedfe14fc31d4be25ab94ba/runtime/dart/dart_component.gni#35)
 
 ### dart_target_arch
 Explicitly set the target architecture to use a simulator.
@@ -908,7 +908,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:658
+From //build/config/BUILDCONFIG.gn:664
 
 ### fastboot_product
 
@@ -943,7 +943,7 @@ From //build/unification/images/BUILD.gn:14
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/7acd710fb1dc18f9911ff60aec18ca2d91b92e3d/runtime/dart/dart_component.gni#12)
+From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/fa8c845be980e705fdedfe14fc31d4be25ab94ba/runtime/dart/dart_component.gni#12)
 
 ### flutter_driver_enabled
 Enable flutter_driver builds. This is effective only on debug builds.
@@ -956,14 +956,14 @@ From //src/experiences/session_shells/ermine/shell/BUILD.gn:21
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/7acd710fb1dc18f9911ff60aec18ca2d91b92e3d/runtime/dart/dart_component.gni#26)
+From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/fa8c845be980e705fdedfe14fc31d4be25ab94ba/runtime/dart/dart_component.gni#26)
 
 ### flutter_space_dart
 Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/7acd710fb1dc18f9911ff60aec18ca2d91b92e3d/runtime/dart/dart_component.gni#32)
+From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/fa8c845be980e705fdedfe14fc31d4be25ab94ba/runtime/dart/dart_component.gni#32)
 
 ### font_catalog_paths
 
@@ -1337,17 +1337,21 @@ Each element of the list is one variant, which is a scope defining:
   configs = ["//build/config/lto:thinlto"]
 }, {
   configs = ["//build/config/profile"]
+  instrumented = true
 }, {
   configs = ["//build/config/scudo"]
 }, {
   configs = ["//build/config/sanitizers:ubsan"]
+  instrumented = true
 }, {
   configs = ["//build/config/sanitizers:ubsan", "//build/config/sanitizers:sancov"]
+  instrumented = true
 }, {
   configs = ["//build/config/sanitizers:asan"]
   host_only = {
   remove_shared_configs = ["//build/config:symbol_no_undefined"]
 }
+  instrumented = true
   toolchain_args = {
   use_scudo = false
 }
@@ -1356,6 +1360,7 @@ Each element of the list is one variant, which is a scope defining:
   host_only = {
   remove_shared_configs = ["//build/config:symbol_no_undefined"]
 }
+  instrumented = true
   toolchain_args = {
   use_scudo = false
 }
@@ -1364,6 +1369,7 @@ Each element of the list is one variant, which is a scope defining:
   host_only = {
   remove_shared_configs = ["//build/config:symbol_no_undefined"]
 }
+  instrumented = true
   toolchain_args = {
   use_scudo = false
 }
@@ -1372,6 +1378,7 @@ Each element of the list is one variant, which is a scope defining:
   host_only = {
   remove_shared_configs = ["//build/config:symbol_no_undefined"]
 }
+  instrumented = true
   name = "asan_no_detect_leaks"
   toolchain_args = {
   asan_default_options = "detect_leaks=0"
@@ -1382,6 +1389,7 @@ Each element of the list is one variant, which is a scope defining:
   host_only = {
   remove_shared_configs = ["//build/config:symbol_no_undefined"]
 }
+  instrumented = true
   name = "asan-fuzzer"
   remove_common_configs = ["//build/config/fuchsia:icf"]
   remove_shared_configs = ["//build/config:symbol_no_undefined"]
@@ -1394,6 +1402,7 @@ Each element of the list is one variant, which is a scope defining:
   host_only = {
   remove_shared_configs = ["//build/config:symbol_no_undefined"]
 }
+  instrumented = true
   name = "rust-asan-fuzzer"
   remove_common_configs = ["//build/config/fuchsia:icf"]
   remove_shared_configs = ["//build/config:symbol_no_undefined"]
@@ -1403,13 +1412,14 @@ Each element of the list is one variant, which is a scope defining:
 }
 }, {
   configs = ["//build/config/sanitizers:ubsan", "//build/config/sanitizers:fuzzer", "//build/config/fuchsia:icf"]
+  instrumented = true
   name = "ubsan-fuzzer"
   remove_common_configs = ["//build/config/fuchsia:icf"]
   remove_shared_configs = ["//build/config:symbol_no_undefined"]
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:576
+From //build/config/BUILDCONFIG.gn:578
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -1951,7 +1961,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:863
+From //build/config/BUILDCONFIG.gn:869
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -1960,7 +1970,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:868
+From //build/config/BUILDCONFIG.gn:874
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -1984,7 +1994,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:704
+From //build/config/BUILDCONFIG.gn:710
 
 ### signed_image
 
@@ -2222,7 +2232,7 @@ From //build/config/sanitizers/BUILD.gn:35
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:678
+From //build/config/BUILDCONFIG.gn:684
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
@@ -2232,7 +2242,7 @@ the build. The build system ensures that the universe package set includes
 the base and cache package sets, which means you do not need to redundantly
 include those labels in this variable.
 
-**Current value for `target_cpu = "arm64"`:** `["//garnet/tools/vboot_reference:cgpt_host", "//garnet/tools/vboot_reference:futility_host", "//bundles:tools"]`
+**Current value for `target_cpu = "arm64"`:** `["//garnet/tools/vboot_reference:cgpt_host", "//garnet/tools/vboot_reference:futility_host", "//tools/net/dev_finder:host", "//bundles:tools"]`
 
 From //products/core.gni:98
 
@@ -2240,7 +2250,7 @@ From //products/core.gni:98
 
 From //BUILD.gn:42
 
-**Current value for `target_cpu = "x64"`:** `["//garnet/tools/vboot_reference:cgpt_host", "//garnet/tools/vboot_reference:futility_host", "//bundles:tools"]`
+**Current value for `target_cpu = "x64"`:** `["//garnet/tools/vboot_reference:cgpt_host", "//garnet/tools/vboot_reference:futility_host", "//tools/net/dev_finder:host", "//bundles:tools"]`
 
 From //products/core.gni:98
 
