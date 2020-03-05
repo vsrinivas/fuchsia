@@ -46,7 +46,8 @@ final _log = Logger('Performance');
 class Performance {
   // Environment variable names used by the catapult converter to tag the test results.
   static const String _builderNameVarName = 'BUILDER_NAME';
-  static const String _buildBucketIdVarName = 'BUILDBUCKET_ID';
+  static const String _buildbucketBucketVarName = 'BUILDBUCKET_BUCKET';
+  static const String _buildbucketIdVarName = 'BUILDBUCKET_ID';
   static const String _buildCreateTimeVarName = 'BUILD_CREATE_TIME';
   static const String _inputCommitHostVarName = 'INPUT_COMMIT_HOST';
   static const String _inputCommitProjectVarName = 'INPUT_COMMIT_PROJECT';
@@ -333,9 +334,9 @@ class Performance {
     _log.info('Converting the results into the catapult format');
 
     var bot = '', logurl = '', master = '', timestamp = 0;
-    if (!environment.containsKey(_buildBucketIdVarName)) {
+    if (!environment.containsKey(_buildbucketIdVarName)) {
       _log.info(
-          'convertResults: No $_buildBucketIdVarName, treating as a local run.');
+          'convertResults: No $_buildbucketIdVarName, treating as a local run.');
       bot = 'local-bot';
       master = 'local-master';
       logurl = 'http://ci.example.com/build/300';
@@ -343,12 +344,14 @@ class Performance {
     } else {
       // Verify that all required environment variables are available.
       final builderName = environment[_builderNameVarName];
-      final buildbucketId = environment[_buildBucketIdVarName];
+      final buildbucketBucket = environment[_buildbucketBucketVarName];
+      final buildbucketId = environment[_buildbucketIdVarName];
       final buildCreateTime = environment[_buildCreateTimeVarName];
       final inputCommitRef = environment[_inputCommitRefVarName];
       final inputCommitHost = environment[_inputCommitHostVarName];
       final inputCommitProject = environment[_inputCommitProjectVarName];
       if (buildbucketId == null ||
+          buildbucketBucket == null ||
           builderName == null ||
           buildCreateTime == null ||
           inputCommitRef == null ||
@@ -363,8 +366,7 @@ class Performance {
       bot = builderName;
       timestamp = int.parse(buildCreateTime);
       master =
-          '${inputCommitHost.replaceFirst('.googlesource.com', '')}.$inputCommitProject';
-
+          '${inputCommitHost.replaceFirst('.googlesource.com', '')}.$inputCommitProject.$buildbucketBucket';
       const releasesRefPrefix = 'refs/heads/releases/';
       if (inputCommitRef.startsWith(releasesRefPrefix)) {
         master += '.${inputCommitRef.substring(releasesRefPrefix.length)}';

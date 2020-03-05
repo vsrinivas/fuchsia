@@ -187,10 +187,17 @@ void main(List<String> args) {
     expect(capturedArgs[11], 'local-bot');
 
     // Otherwise, it should do a bot run.
+    //
+    // The following environment variables are what we would get for a build:
+    //  * with this log URL:
+    //    https://ci.chromium.org/p/overallproject/builders/tree.ci/fuchsia-builder/b8abc123
+    //  * built from this Git repository:
+    //    https://myhost.googlesource.com/project1/
     var environment = {
       'FUCHSIA_BUILD_DIR': 'out/default',
       'BUILDER_NAME': 'fuchsia-builder',
       'BUILDBUCKET_ID': '8abc123',
+      'BUILDBUCKET_BUCKET': 'tree.ci',
       'BUILD_CREATE_TIME': '1561234567890',
       'INPUT_COMMIT_HOST': 'myhost.googlesource.com',
       'INPUT_COMMIT_PROJECT': 'project1',
@@ -211,7 +218,7 @@ void main(List<String> args) {
     expect(capturedArgs[4], '--execution-timestamp-ms');
     expect(capturedArgs[5], '1561234567890');
     expect(capturedArgs[6], '--masters');
-    expect(capturedArgs[7], 'myhost.project1');
+    expect(capturedArgs[7], 'myhost.project1.tree.ci');
     expect(capturedArgs[8], '--log-url');
     expect(capturedArgs[9], 'https://ci.chromium.org/b/8abc123');
     expect(capturedArgs[10], '--bots');
@@ -233,7 +240,7 @@ void main(List<String> args) {
     expect(capturedArgs[4], '--execution-timestamp-ms');
     expect(capturedArgs[5], '1561234567890');
     expect(capturedArgs[6], '--masters');
-    expect(capturedArgs[7], 'myhost.project1.rc1');
+    expect(capturedArgs[7], 'myhost.project1.tree.ci.rc1');
     expect(capturedArgs[8], '--log-url');
     expect(capturedArgs[9], 'https://ci.chromium.org/b/8abc123');
     expect(capturedArgs[10], '--bots');
