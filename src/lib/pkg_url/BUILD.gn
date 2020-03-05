@@ -44,23 +44,19 @@ test_package("pkg_url_unittests") {
   ]
 }
 
-fuzz_package("pkg_url_fuzzers") {
-  targets = [
+fuzzers_package("pkg_url_fuzzers") {
+  fuzzers = [
     ":fuchsia_pkg_url_fuzzer",
     ":url_resolver_fuzzer",
   ]
-  sanitizers = [
-    "asan",
-    "ubsan",
-  ]
 }
 
-fuzz_target("fuchsia_pkg_url_fuzzer") {
+fuzzer("fuchsia_pkg_url_fuzzer") {
   sources = [ "fuchsia_pkg_url_fuzztest.cc" ]
   deps = [ ":pkg_url" ]
 }
 
-fuzz_target("url_resolver_fuzzer") {
+fuzzer("url_resolver_fuzzer") {
   sources = [ "url_resolver_fuzztest.cc" ]
   deps = [ ":pkg_url" ]
 }
