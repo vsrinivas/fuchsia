@@ -182,30 +182,6 @@ config_data("appmgr_scheme_config") {
   outputs = [ "scheme_map/default.config" ]
 }
 
-config_data("appmgr_global_data_allowlist") {
-  for_pkg = "appmgr"
-  sources = [ "global_data_allowlist.txt" ]
-  outputs = [ "allowlist/global_data.txt" ]
-}
-
-config_data("appmgr_deprecated_shell_allowlist") {
-  for_pkg = "appmgr"
-  sources = [ "deprecated_shell_allowlist.txt" ]
-  outputs = [ "allowlist/deprecated_shell.txt" ]
-}
-
-config_data("appmgr_deprecated_ambient_replace_as_executable_allowlist") {
-  for_pkg = "appmgr"
-  sources = [ "deprecated_ambient_replace_as_executable_allowlist.txt" ]
-  outputs = [ "allowlist/deprecated_ambient_replace_as_executable.txt" ]
-}
-
-config_data("appmgr_component_event_provider_allowlist") {
-  for_pkg = "appmgr"
-  sources = [ "component_event_provider_allowlist.txt" ]
-  outputs = [ "allowlist/component_event_provider.txt" ]
-}
-
 group("unittests") {
   testonly = true
   public_deps = [
