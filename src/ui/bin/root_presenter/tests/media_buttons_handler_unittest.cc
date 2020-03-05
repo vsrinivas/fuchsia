@@ -190,5 +190,30 @@ TEST_F(MediaButtonsHandlerTest, MultipleListeners) {
   EXPECT_TRUE(activity_notifier.GetLastEvent()->volume() == 1);
 }
 
+// This test checks that pause is wired up correctly.
+TEST_F(MediaButtonsHandlerTest, PauseButton) {
+  auto listener = CreateListener();
+
+  fuchsia::ui::input::MediaButtonsReport media_buttons = {};
+  media_buttons.pause = true;
+
+  DispatchReport(media_buttons);
+
+  EXPECT_TRUE(listener->GetMediaButtonEventCount() == 1);
+  EXPECT_TRUE(listener->GetLastEvent()->pause());
+
+  EXPECT_TRUE(activity_notifier.GetMediaButtonEventCount() == 1);
+  EXPECT_TRUE(activity_notifier.GetLastEvent()->pause());
+
+  media_buttons.pause = false;
+  DispatchReport(media_buttons);
+
+  EXPECT_TRUE(listener->GetMediaButtonEventCount() == 2);
+  EXPECT_FALSE(listener->GetLastEvent()->pause());
+
+  EXPECT_TRUE(activity_notifier.GetMediaButtonEventCount() == 2);
+  EXPECT_FALSE(activity_notifier.GetLastEvent()->pause());
+}
+
 }  // namespace
 }  // namespace root_presenter

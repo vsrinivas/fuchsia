@@ -17,7 +17,8 @@ async fn test_input() {
     let service_registry = ServiceRegistry::create();
     let input_device_registry_service = Arc::new(Mutex::new(InputDeviceRegistryService::new()));
 
-    let initial_event = MediaButtonsEvent { volume: Some(1), mic_mute: Some(true) };
+    let initial_event =
+        MediaButtonsEvent { volume: Some(1), mic_mute: Some(true), pause: Some(false) };
     input_device_registry_service.lock().await.send_media_button_event(initial_event.clone());
 
     service_registry.lock().await.register_service(input_device_registry_service.clone());
@@ -32,7 +33,8 @@ async fn test_input() {
         assert_eq!(initial_event, event);
     }
 
-    let second_event = MediaButtonsEvent { volume: Some(0), mic_mute: Some(false) };
+    let second_event =
+        MediaButtonsEvent { volume: Some(0), mic_mute: Some(false), pause: Some(false) };
     input_device_registry_service.lock().await.send_media_button_event(second_event.clone());
 
     if let Some(event) = input_rx.next().await {
@@ -46,7 +48,8 @@ async fn test_device_listener_failure() {
     let input_device_registry_service = Arc::new(Mutex::new(InputDeviceRegistryService::new()));
     input_device_registry_service.lock().await.set_fail(true);
 
-    let initial_event = MediaButtonsEvent { volume: Some(1), mic_mute: Some(true) };
+    let initial_event =
+        MediaButtonsEvent { volume: Some(1), mic_mute: Some(true), pause: Some(false) };
     input_device_registry_service.lock().await.send_media_button_event(initial_event.clone());
 
     service_registry.lock().await.register_service(input_device_registry_service.clone());

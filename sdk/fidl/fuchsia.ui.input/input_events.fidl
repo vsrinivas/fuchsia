@@ -156,6 +156,7 @@ struct FocusEvent {
 table MediaButtonsEvent {
     1: int8 volume;
     2: bool mic_mute;
+    3: bool pause;
 };
 
 /// This union does not include MediaButtonsEvent because it's processed differently.

@@ -268,7 +268,8 @@ async fn test_audio_input() {
 
     let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
 
-    let buttons_event = MediaButtonsEvent { volume: Some(1), mic_mute: Some(true) };
+    let buttons_event =
+        MediaButtonsEvent { volume: Some(1), mic_mute: Some(true), pause: Some(false) };
     fake_services.input_device_registry.lock().await.send_media_button_event(buttons_event.clone());
 
     let updated_settings =
@@ -325,7 +326,8 @@ async fn test_max_volume_sound_on_press() {
 
     // Try to increase volume. Only serves to set the "last volume button press" event
     // to 1 (volume up).
-    let buttons_event = MediaButtonsEvent { volume: Some(1), mic_mute: Some(false) };
+    let buttons_event =
+        MediaButtonsEvent { volume: Some(1), mic_mute: Some(false), pause: Some(false) };
     fake_services.input_device_registry.lock().await.send_media_button_event(buttons_event.clone());
 
     // Sets volume max again.

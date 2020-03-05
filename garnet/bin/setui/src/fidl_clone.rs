@@ -149,6 +149,6 @@ impl FIDLClone for CaptionFontStyle {
 
 impl FIDLClone for MediaButtonsEvent {
     fn clone(&self) -> Self {
-        MediaButtonsEvent { volume: self.volume, mic_mute: self.mic_mute }
+        MediaButtonsEvent { volume: self.volume, mic_mute: self.mic_mute, pause: self.pause }
     }
 }
