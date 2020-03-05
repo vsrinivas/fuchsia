@@ -206,9 +206,11 @@ class EfiDevicePartitioner : public DevicePartitioner {
                               fbl::Span<const uint8_t> data) const override;
 
  private:
-  EfiDevicePartitioner(std::unique_ptr<GptDevicePartitioner> gpt) : gpt_(std::move(gpt)) {}
+  EfiDevicePartitioner(Arch arch, std::unique_ptr<GptDevicePartitioner> gpt)
+      : gpt_(std::move(gpt)), arch_(arch) {}
 
   std::unique_ptr<GptDevicePartitioner> gpt_;
+  Arch arch_;
 };
 
 // DevicePartitioner implementation for ChromeOS devices.

@@ -41,6 +41,7 @@
 
 #include "partition-client.h"
 #include "pave-logging.h"
+#include "validation.h"
 
 namespace paver {
 
@@ -910,7 +911,7 @@ zx_status_t EfiDevicePartitioner::Initialize(fbl::unique_fd devfs_root, Arch arc
   }
 
   LOG("Successfully initialized EFI Device Partitioner\n");
-  *partitioner = WrapUnique(new EfiDevicePartitioner(std::move(gpt)));
+  *partitioner = WrapUnique(new EfiDevicePartitioner(arch, std::move(gpt)));
   return ZX_OK;
 }
 
@@ -1046,7 +1047,14 @@ zx_status_t EfiDevicePartitioner::WipePartitionTables() const {
 
 zx_status_t EfiDevicePartitioner::ValidatePayload(Partition type,
                                                   fbl::Span<const uint8_t> data) const {
-  return ZX_OK;
+  switch (type) {
+    case Partition::kZirconA:
+    case Partition::kZirconB:
+    case Partition::kZirconR:
+      return IsValidKernelZbi(arch_, data) ? ZX_OK : ZX_ERR_BAD_STATE;
+    default:
+      return ZX_OK;
+  }
 }
 
 /*====================================================*
