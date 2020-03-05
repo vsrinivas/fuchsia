@@ -131,3 +131,95 @@ void InterpreterTest::SetUp() {
   // Creates a new connection to the server.
   shell_provider_->Connect(shell_.NewRequest());
 }
+
+fuchsia::shell::NodeId NullNode{0, 0};
+
+fuchsia::shell::ShellType TypeUndef() {
+  fuchsia::shell::ShellType type;
+  type.set_undef(true);
+  return type;
+}
+
+fuchsia::shell::ShellType TypeBool() {
+  fuchsia::shell::ShellType type;
+  type.set_builtin_type(fuchsia::shell::BuiltinType::BOOL);
+  return type;
+}
+
+fuchsia::shell::ShellType TypeChar() {
+  fuchsia::shell::ShellType type;
+  type.set_builtin_type(fuchsia::shell::BuiltinType::CHAR);
+  return type;
+}
+
+fuchsia::shell::ShellType TypeString() {
+  fuchsia::shell::ShellType type;
+  type.set_builtin_type(fuchsia::shell::BuiltinType::STRING);
+  return type;
+}
+
+fuchsia::shell::ShellType TypeInt8() {
+  fuchsia::shell::ShellType type;
+  type.set_builtin_type(fuchsia::shell::BuiltinType::INT8);
+  return type;
+}
+
+fuchsia::shell::ShellType TypeUint8() {
+  fuchsia::shell::ShellType type;
+  type.set_builtin_type(fuchsia::shell::BuiltinType::UINT8);
+  return type;
+}
+
+fuchsia::shell::ShellType TypeInt16() {
+  fuchsia::shell::ShellType type;
+  type.set_builtin_type(fuchsia::shell::BuiltinType::INT16);
+  return type;
+}
+
+fuchsia::shell::ShellType TypeUint16() {
+  fuchsia::shell::ShellType type;
+  type.set_builtin_type(fuchsia::shell::BuiltinType::UINT16);
+  return type;
+}
+
+fuchsia::shell::ShellType TypeInt32() {
+  fuchsia::shell::ShellType type;
+  type.set_builtin_type(fuchsia::shell::BuiltinType::INT32);
+  return type;
+}
+
+fuchsia::shell::ShellType TypeUint32() {
+  fuchsia::shell::ShellType type;
+  type.set_builtin_type(fuchsia::shell::BuiltinType::UINT32);
+  return type;
+}
+
+fuchsia::shell::ShellType TypeInt64() {
+  fuchsia::shell::ShellType type;
+  type.set_builtin_type(fuchsia::shell::BuiltinType::INT64);
+  return type;
+}
+
+fuchsia::shell::ShellType TypeUint64() {
+  fuchsia::shell::ShellType type;
+  type.set_builtin_type(fuchsia::shell::BuiltinType::UINT64);
+  return type;
+}
+
+fuchsia::shell::ShellType TypeInteger() {
+  fuchsia::shell::ShellType type;
+  type.set_builtin_type(fuchsia::shell::BuiltinType::INTEGER);
+  return type;
+}
+
+fuchsia::shell::ShellType TypeFloat32() {
+  fuchsia::shell::ShellType type;
+  type.set_builtin_type(fuchsia::shell::BuiltinType::FLOAT32);
+  return type;
+}
+
+fuchsia::shell::ShellType TypeFloat64() {
+  fuchsia::shell::ShellType type;
+  type.set_builtin_type(fuchsia::shell::BuiltinType::FLOAT64);
+  return type;
+}

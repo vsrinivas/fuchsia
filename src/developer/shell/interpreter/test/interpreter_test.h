@@ -84,4 +84,82 @@ class InterpreterTest : public ::testing::Test {
   int pending_globals_ = 0;
 };
 
+extern fuchsia::shell::NodeId NullNode;
+
+fuchsia::shell::ShellType TypeUndef();
+fuchsia::shell::ShellType TypeBool();
+fuchsia::shell::ShellType TypeChar();
+fuchsia::shell::ShellType TypeString();
+fuchsia::shell::ShellType TypeInt8();
+fuchsia::shell::ShellType TypeUint8();
+fuchsia::shell::ShellType TypeInt16();
+fuchsia::shell::ShellType TypeUint16();
+fuchsia::shell::ShellType TypeInt32();
+fuchsia::shell::ShellType TypeUint32();
+fuchsia::shell::ShellType TypeInt64();
+fuchsia::shell::ShellType TypeUint64();
+fuchsia::shell::ShellType TypeInteger();
+fuchsia::shell::ShellType TypeFloat32();
+fuchsia::shell::ShellType TypeFloat64();
+
+// Helper class to create nodes.
+class NodeBuilder {
+ public:
+  explicit NodeBuilder(uint64_t file_id) : file_id_(file_id) {}
+
+  std::vector<fuchsia::shell::NodeDefinition>* nodes() { return &nodes_; }
+
+  // Adds a node definition to the list of nodes.
+  fuchsia::shell::NodeId AddNode(fuchsia::shell::Node* node, bool root_node) {
+    fuchsia::shell::NodeDefinition node_definition;
+    fuchsia::shell::NodeId node_id{file_id_, ++last_node_id_};
+    node_definition.node_id = node_id;
+    node_definition.node = std::move(*node);
+    node_definition.root_node = root_node;
+    nodes_.emplace_back(std::move(node_definition));
+    return node_id;
+  }
+
+  /// Adds an integer literal to the list of nodes.
+  fuchsia::shell::NodeId IntegerLiteral(uint64_t absolute_value, bool negative) {
+    fuchsia::shell::Node node;
+    std::vector<uint64_t> values;
+    values.push_back(absolute_value);
+    node.set_integer_literal({std::move(values), negative});
+    return AddNode(&node, /*root_node=*/false);
+  }
+
+  /// Adds an integer literal to the list of nodes.
+  fuchsia::shell::NodeId StringLiteral(std::string value) {
+    fuchsia::shell::Node node;
+    node.set_string_literal(std::move(value));
+    return AddNode(&node, /*root_node=*/false);
+  }
+
+  // Adds a variable definition to the list of nodes.
+  fuchsia::shell::NodeId VariableDefinition(const char* name, fuchsia::shell::ShellType type,
+                                            bool mutable_value,
+                                            fuchsia::shell::NodeId initial_value,
+                                            bool root_node = true) {
+    fuchsia::shell::Node node;
+    node.set_variable_definition({name, std::move(type), mutable_value, initial_value});
+    return AddNode(&node, root_node);
+  }
+
+  // Adds a previously defined variable.
+  fuchsia::shell::NodeId Variable(fuchsia::shell::NodeId variable) {
+    fuchsia::shell::Node node;
+    node.set_variable({variable});
+    return AddNode(&node, /*root_node=*/false);
+  }
+
+ private:
+  // The file id for all the nodes built by this builder.
+  const uint64_t file_id_;
+  // Last value used for a node id.
+  uint64_t last_node_id_ = 0;
+  // All the nodes which will be sent to the server.
+  std::vector<fuchsia::shell::NodeDefinition> nodes_;
+};
+
 #endif  // SRC_DEVELOPER_SHELL_INTERPRETER_TEST_INTERPRETER_TEST_H_

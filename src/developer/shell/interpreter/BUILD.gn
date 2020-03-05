@@ -94,6 +94,7 @@ executable("shell_server_test_bin") {
   sources = [
     "test/interpreter.cc",
     "test/interpreter_test.cc",
+    "test/load.cc",
   ]
 
   deps = [
