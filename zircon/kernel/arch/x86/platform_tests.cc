@@ -22,6 +22,8 @@
 #include "../../lib/syscalls/system_priv.h"
 
 extern void x86_amd_set_lfence_serializing(const cpu_id::CpuId*, MsrAccess*);
+extern "C" void _x86_usercopy_quad(void*, void*, size_t);
+extern "C" void _x86_usercopy_erms(void*, void*, size_t);
 
 namespace {
 
@@ -747,6 +749,38 @@ static bool test_spectre_v2_mitigations() {
   END_TEST;
 }
 
+static bool test_usercopy_variants() {
+  BEGIN_TEST;
+
+  // kSize must be greater than 8 and not a multiple of 8 to fully test _x86_usercopy_quad.
+  constexpr size_t kSize = 37;
+  unsigned char src[kSize];
+  unsigned char dst[kSize];  // Copy buffer a -> b and check the copy worked.
+
+  // Prefill test pattern
+  for (uint i = 0; i < kSize; i++) {
+    src[i] = static_cast<unsigned char>(i);
+  }
+
+  // Vary size; test both quad and erms versions.
+  for (uint i = 1; i < kSize; i++) {
+    memset(dst, 0, kSize);
+    _x86_usercopy_quad(dst, src, i);
+    for (uint j = 0; j < i; j++) {
+      EXPECT_EQ(src[j], dst[j]);
+    }
+    memset(dst, 0, kSize);
+    _x86_usercopy_erms(dst, src, i);
+    for (uint j = 0; j < i; j++) {
+      EXPECT_EQ(src[j], dst[j]);
+    }
+  }
+  for (uint i = 0; i < kSize; i++) {
+    EXPECT_EQ(src[i], i);
+  }
+  END_TEST;
+}
+
 }  // anonymous namespace
 
 UNITTEST_START_TESTCASE(x64_platform_tests)
@@ -766,4 +800,5 @@ UNITTEST("test pkg power limit change", test_x64_power_limits)
 UNITTEST("test amd_platform_init", test_amd_platform_init)
 UNITTEST("test HWP init", test_hwp_init)
 UNITTEST("test spectre v2 mitigation building blocks", test_spectre_v2_mitigations)
+UNITTEST("test usercopy variants", test_usercopy_variants)
 UNITTEST_END_TESTCASE(x64_platform_tests, "x64_platform_tests", "")

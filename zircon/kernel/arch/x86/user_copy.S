@@ -11,6 +11,29 @@
 #define STAC APPLY_CODE_PATCH_FUNC(fill_out_stac_instruction, 3)
 #define CLAC APPLY_CODE_PATCH_FUNC(fill_out_clac_instruction, 3)
 
+/* void _x86_usercopy_erms(void* dst, void* src, size_t size) */
+FUNCTION(_x86_usercopy_erms)
+    movq %rdx, %rcx
+    rep movsb
+.global _x86_usercopy_erms_end
+_x86_usercopy_erms_end:
+    ret
+END_FUNCTION(_x86_usercopy_erms)
+
+/* void _x86_usercopy_quad(void* dst, void* src, size_t size) */
+FUNCTION(_x86_usercopy_quad)
+    movq %rdx, %rcx
+    shrq $3, %rcx
+    rep movsq
+    andl $7, %edx
+    je 1f
+    movl %edx, %ecx
+    rep movsb
+.global _x86_usercopy_quad_end
+_x86_usercopy_quad_end:
+1:  ret
+END_FUNCTION(_x86_usercopy_quad)
+
 /* Register use in this code:
  * %rdi = argument 1, void* dst
  * %rsi = argument 2, const void* src
@@ -41,9 +64,7 @@ FUNCTION(_x86_copy_to_or_from_user)
     // registers, without any knowledge of where between these two points we
     // faulted.
 
-    movq %rdx, %rcx
-.align 16
-    APPLY_CODE_PATCH_FUNC(x86_usercopy_select, 16)
+    APPLY_CODE_PATCH_FUNC(x86_usercopy_select, 19)
     // Set eax to ZX_OK. In this case since we do not set rdx the value of the fault address in the
     // return struct is undefined.
     xorl %eax, %eax
