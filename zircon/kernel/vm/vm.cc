@@ -23,6 +23,7 @@
 #include <vm/init.h>
 #include <vm/physmap.h>
 #include <vm/pmm.h>
+#include <vm/vm_address_region.h>
 #include <vm/vm_aspace.h>
 #include <vm/vm_object_paged.h>
 

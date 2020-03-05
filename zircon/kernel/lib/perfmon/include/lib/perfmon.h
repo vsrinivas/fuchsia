@@ -12,6 +12,7 @@
 #include <kernel/mp.h>
 #include <kernel/mutex.h>
 #include <vm/vm.h>
+#include <vm/vm_address_region.h>
 #include <vm/vm_aspace.h>
 #include <vm/vm_object.h>
 

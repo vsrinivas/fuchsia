@@ -18,6 +18,7 @@
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
+#include <vm/vm_aspace.h>
 #include <vm/vm_object.h>
 #include <vm/vm_page_list.h>
 
@@ -52,8 +53,6 @@
 
 #define VMAR_CAN_RWX_FLAGS \
   (VMAR_FLAG_CAN_MAP_READ | VMAR_FLAG_CAN_MAP_WRITE | VMAR_FLAG_CAN_MAP_EXECUTE)
-
-class VmAspace;
 
 // forward declarations
 class VmAddressRegion;

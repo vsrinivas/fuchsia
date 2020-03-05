@@ -13,6 +13,7 @@
 #include <vm/scanner.h>
 #include <vm/vm.h>
 #include <vm/vm_aspace.h>
+#include <vm/vm_object.h>
 
 namespace {
 

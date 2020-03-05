@@ -23,7 +23,11 @@
 #include <kernel/mutex.h>
 #include <vm/arch_vm_aspace.h>
 #include <vm/vm.h>
-#include <vm/vm_address_region.h>
+
+class VmAddressRegion;
+class VmEnumerator;
+class VmMapping;
+class VmAddressRegionOrMapping;
 
 namespace hypervisor {
 class GuestPhysicalAddressSpace;

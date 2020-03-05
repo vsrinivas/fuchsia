@@ -23,6 +23,7 @@
 #include <ktl/move.h>
 #include <vm/fault.h>
 #include <vm/pmm.h>
+#include <vm/vm_address_region.h>
 #include <vm/vm_aspace.h>
 #include <vm/vm_object_paged.h>
 #include <vm/vm_object_physical.h>

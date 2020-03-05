@@ -10,6 +10,7 @@
 #include <fbl/auto_call.h>
 #include <fbl/confine_array_index.h>
 #include <fbl/mutex.h>
+#include <vm/vm_address_region.h>
 #include <vm/vm_aspace.h>
 #include <vm/vm_object_paged.h>
 

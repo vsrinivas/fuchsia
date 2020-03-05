@@ -13,6 +13,7 @@
 #include <ktl/unique_ptr.h>
 #include <vm/pmm.h>
 #include <vm/vm.h>
+#include <vm/vm_address_region.h>
 #include <vm/vm_aspace.h>
 #include <vm/vm_object_paged.h>
 
