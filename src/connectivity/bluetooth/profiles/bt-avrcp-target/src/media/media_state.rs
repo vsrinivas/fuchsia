@@ -19,7 +19,7 @@ use crate::media::media_types::{
 ///
 /// The address is fixed because we currently only support one MediaSession. This
 /// addressed ID is used for AVRCP notifications.
-const MEDIA_SESSION_ADDRESSED_PLAYER_ID: u16 = 1;
+pub const MEDIA_SESSION_ADDRESSED_PLAYER_ID: u16 = 1;
 
 #[derive(Clone, Debug)]
 pub(crate) struct MediaState {

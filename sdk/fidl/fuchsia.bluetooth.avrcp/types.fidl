@@ -43,6 +43,15 @@ enum TargetAvcError : uint32 {
     REJECTED_ADDRESSED_PLAYER_CHANGED = 0x16;
 };
 
+/// The `AddressedPlayerId` is a unique identifier, assigned by AVRCP, for a media player.
+/// This ID is only used for AVRCP purposes, and should not be interpreted as an
+/// identification created, assigned, or used by MediaSession or any other API surfaces.
+///
+/// Defined in AVRCP 1.6, Section 6.10.2.1.
+struct AddressedPlayerId {
+    uint16 id;
+};
+
 /// The maximum number of Notification Event IDs that can be supported by the TG.
 /// 0x0E to 0xFF are reserved for future use.
 /// Defined by AVRCP 1.6.2 Appendix H.

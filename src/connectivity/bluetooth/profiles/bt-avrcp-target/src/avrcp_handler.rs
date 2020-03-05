@@ -113,6 +113,10 @@ async fn handle_target_request(
                 responder,
             );
         }
+        TargetHandlerRequest::SetAddressedPlayer { player_id, responder } => {
+            let mut response = media_sessions.set_addressed_player(player_id);
+            responder.send(&mut response)?;
+        }
     }
 
     Ok(())

@@ -899,6 +899,9 @@ mod test {
                         status: Some(fidl_fuchsia_bluetooth_avrcp::PlaybackStatus::Stopped),
                         ..Notification::empty()
                     })),
+                    TargetHandlerRequest::SetAddressedPlayer { responder, .. } => {
+                        responder.send(&mut Err(TargetAvcError::RejectedInvalidPlayerId))
+                    }
                 };
             }
         });

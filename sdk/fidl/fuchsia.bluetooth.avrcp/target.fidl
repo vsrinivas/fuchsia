@@ -26,8 +26,8 @@ protocol TargetHandler {
 
     /// Request the target device to provide all the target supported player application
     /// setting attributes.
-    ListPlayerApplicationSettingAttributes() ->
-        (vector<PlayerApplicationSettingAttributeId>:MAX_ATTRIBUTES attributes) error TargetAvcError;
+    ListPlayerApplicationSettingAttributes()
+        -> (vector<PlayerApplicationSettingAttributeId>:MAX_ATTRIBUTES attributes) error TargetAvcError;
 
     /// Returns currently set player application setting values for the `attribute_ids`.
     /// If no `attribute_ids` are provided, this method will query the TG for all valid
@@ -55,4 +55,7 @@ protocol TargetHandler {
     /// with `event_id` has changed from the `current` Notification.
     WatchNotification(NotificationEvent event_id, Notification current, uint32 pos_change_interval)
         -> (Notification new_value) error TargetAvcError;
+
+    /// Changes the addressed `player_id` on the target when multiple are supported.
+    SetAddressedPlayer(AddressedPlayerId player_id) -> () error TargetAvcError;
 };

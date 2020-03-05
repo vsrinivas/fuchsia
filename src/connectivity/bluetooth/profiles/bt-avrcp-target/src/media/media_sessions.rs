@@ -21,8 +21,10 @@ use {
     std::sync::Arc,
 };
 
-use crate::media::media_state::MediaState;
-use crate::media::media_types::Notification;
+use crate::media::{
+    media_state::{MediaState, MEDIA_SESSION_ADDRESSED_PLAYER_ID},
+    media_types::Notification,
+};
 use crate::types::{
     bounded_queue::BoundedQueue, NotificationData, MAX_NOTIFICATION_EVENT_QUEUE_SIZE,
 };
@@ -77,6 +79,13 @@ impl MediaSessions {
 
     pub fn get_supported_notification_events(&self) -> Vec<fidl_avrcp::NotificationEvent> {
         self.inner.read().get_supported_notification_events()
+    }
+
+    pub fn set_addressed_player(
+        &self,
+        player_id: fidl_avrcp::AddressedPlayerId,
+    ) -> Result<(), fidl_avrcp::TargetAvcError> {
+        self.inner.write().set_addressed_player(player_id)
     }
 
     /// Registers the notification and spawns a timeout task if needed.
@@ -378,6 +387,30 @@ impl MediaSessionsInner {
         self.update_notification_responders();
 
         Ok(response_deadline)
+    }
+
+    /// Currently, setting the addressed player is a no-op because there is only
+    /// one addressable player.
+    ///
+    /// Therefore, `set_addressed_player` checks that the requested `player_id` is
+    /// the available player ID. If not, returns `RejectedInvalidPlayerId`.
+    ///
+    /// If there is no active session, then `set_addressed_player` is not valid. Returns
+    /// RejectedNoAvailablePlayers in this case.
+    fn set_addressed_player(
+        &self,
+        player_id: fidl_avrcp::AddressedPlayerId,
+    ) -> Result<(), fidl_avrcp::TargetAvcError> {
+        self.get_active_session().map_or(
+            Err(fidl_avrcp::TargetAvcError::RejectedNoAvailablePlayers),
+            |_| {
+                if player_id.id == MEDIA_SESSION_ADDRESSED_PLAYER_ID {
+                    Ok(())
+                } else {
+                    Err(fidl_avrcp::TargetAvcError::RejectedInvalidPlayerId)
+                }
+            },
+        )
     }
 }
 
@@ -987,6 +1020,39 @@ pub(crate) mod tests {
         let active_state = sessions.clear_session(&id);
         assert_eq!(None, sessions.active_session_id);
         assert!(active_state.is_some());
+
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded]
+    #[test]
+    /// We only support one player id: `MEDIA_SESSION_ADDRESSED_PLAYER_ID`, so any
+    /// calls to `set_addressed_player` with a different ID should result in an error.
+    async fn test_set_addressed_player() -> Result<(), Error> {
+        let (discovery, _stream) = create_proxy::<DiscoveryMarker>()?;
+
+        // Create a new active session with default state.
+        let id = MediaSessionId(1234);
+        let mut sessions = create_session(discovery.clone(), id, true);
+
+        let requested_player_id = fidl_avrcp::AddressedPlayerId { id: 10 };
+        let res = sessions.set_addressed_player(requested_player_id);
+        assert_eq!(res.map_err(|e| format!("{:?}", e)), Err("RejectedInvalidPlayerId".to_string()));
+
+        let requested_player_id =
+            fidl_avrcp::AddressedPlayerId { id: MEDIA_SESSION_ADDRESSED_PLAYER_ID };
+        let res = sessions.set_addressed_player(requested_player_id);
+        assert_eq!(res, Ok(()));
+
+        // No active session.
+        sessions = create_session(discovery.clone(), id, false);
+        let requested_player_id =
+            fidl_avrcp::AddressedPlayerId { id: MEDIA_SESSION_ADDRESSED_PLAYER_ID };
+        let res = sessions.set_addressed_player(requested_player_id);
+        assert_eq!(
+            res.map_err(|e| format!("{:?}", e)),
+            Err("RejectedNoAvailablePlayers".to_string())
+        );
 
         Ok(())
     }

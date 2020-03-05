@@ -626,6 +626,9 @@ mod tests {
                     device_connected: None,
                 }))?;
             }
+            TargetHandlerRequest::SetAddressedPlayer { responder, .. } => {
+                responder.send(&mut Ok(()))?;
+            }
         };
         Ok(())
     }
