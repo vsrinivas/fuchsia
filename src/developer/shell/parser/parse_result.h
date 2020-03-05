@@ -31,13 +31,14 @@ class ParseResult {
 
   size_t offset() const { return offset_; }
   size_t error_score() const { return error_internal_ + std::max(error_insert_, error_delete_); }
-  std::string_view tail() const { return tail_; }
+  std::string_view unit() const { return unit_; }
+  std::string_view tail() const { return unit_.substr(offset_); }
   std::shared_ptr<ast::Node> node() const { return frame_ ? frame_->node : nullptr; }
 
   // Move parsing ahead by len bytes, and push a token of that length.
   template <typename T = ast::Terminal>
   ParseResult Advance(size_t size) {
-    return ParseResult(tail_.substr(size), offset_ + size, 0, 0, error_score(),
+    return ParseResult(unit_, offset_ + size, 0, 0, error_score(),
                        std::make_shared<T>(offset_, size), frame_);
   }
 
@@ -49,21 +50,21 @@ class ParseResult {
   // An example use case would be the parser-modifying version of Token(), which parses a new
   // non-terminal on the stack, then concatenates its children to create a new terminal instead.
   ParseResult SetNode(std::shared_ptr<ast::Node> node) {
-    return ParseResult(tail_, offset_, error_insert_, error_delete_, error_internal_, node,
+    return ParseResult(unit_, offset_, error_insert_, error_delete_, error_internal_, node,
                        frame_->prev);
   }
 
   // Insert an error indicating a token of the given size was expected. ident names the token in the
   // error message. The parse position does not change.
   ParseResult Expected(size_t size, const std::string &ident) {
-    return ParseResult(tail_, offset_, error_insert_ + size, error_delete_, error_internal_,
+    return ParseResult(unit_, offset_, error_insert_ + size, error_delete_, error_internal_,
                        std::make_unique<ast::Error>(offset_, 0, "Expected " + ident), frame_);
   }
 
   // Skip the given number of bytes and push an error token indicating they were skipped.
   ParseResult Skip(size_t size) {
     return ParseResult(
-        tail_.substr(size), offset_ + size, error_insert_, error_delete_ + size, error_internal_,
+        unit_, offset_ + size, error_insert_, error_delete_ + size, error_internal_,
         std::make_unique<ast::Error>(offset_, size,
                                      "Unexpected '" + std::string(tail().substr(0, size)) + "'"),
         frame_);
@@ -71,18 +72,18 @@ class ParseResult {
 
   // Push an error on to the stack and add internal error to this state.
   ParseResult InjectError(size_t error_amount, std::shared_ptr<ast::Node> error_node) {
-    return ParseResult(tail_, offset_, error_insert_, error_delete_, error_internal_ + error_amount,
+    return ParseResult(unit_, offset_, error_insert_, error_delete_, error_internal_ + error_amount,
                        error_node, frame_);
   }
 
   // A null parse result for this position indicating no further error alternatives.
   ParseResult End() {
-    return ParseResult(tail_, offset_, error_insert_, error_delete_, error_internal_);
+    return ParseResult(unit_, offset_, error_insert_, error_delete_, error_internal_);
   }
 
   // Push a marker frame onto the stack. The next Reduce() call will reduce up to here.
   ParseResult Mark() {
-    return ParseResult(tail_, offset_, error_insert_, error_delete_, error_internal_, nullptr,
+    return ParseResult(unit_, offset_, error_insert_, error_delete_, error_internal_, nullptr,
                        frame_);
   }
 
@@ -102,18 +103,18 @@ class ParseResult {
  private:
   friend class ParseResultStream;
 
-  ParseResult(std::string_view tail, size_t offset, size_t error_insert, size_t error_delete,
+  ParseResult(std::string_view unit, size_t offset, size_t error_insert, size_t error_delete,
               size_t error_internal)
       : offset_(offset),
         error_insert_(error_insert),
         error_delete_(error_delete),
         error_internal_(error_internal),
-        tail_(tail),
+        unit_(unit),
         frame_(nullptr) {}
 
-  ParseResult(std::string_view tail, size_t offset, size_t error_insert, size_t error_delete,
+  ParseResult(std::string_view unit, size_t offset, size_t error_insert, size_t error_delete,
               size_t error_internal, std::shared_ptr<ast::Node> node, std::shared_ptr<Frame> prev)
-      : ParseResult(tail, offset, error_insert, error_delete, error_internal) {
+      : ParseResult(unit, offset, error_insert, error_delete, error_internal) {
     frame_ = std::make_shared<Frame>(Frame{.node = std::move(node), .prev = std::move(prev)});
   }
 
@@ -135,8 +136,8 @@ class ParseResult {
   size_t error_delete_;
   size_t error_internal_;
 
-  // Text remaining to parse.
-  std::string_view tail_;
+  // Text being parsed.
+  std::string_view unit_;
 
   // Last node that was parsed at this position.
   std::shared_ptr<Frame> frame_;
@@ -234,7 +235,7 @@ ParseResult ParseResult::Reduce(bool pop_marker) {
 
   auto node = std::make_shared<T>(start, std::move(children));
 
-  return ParseResult(tail_, offset_, error_insert_, error_delete_, error_internal_, node, cur);
+  return ParseResult(unit_, offset_, error_insert_, error_delete_, error_internal_, node, cur);
 }
 
 }  // namespace shell::parser
