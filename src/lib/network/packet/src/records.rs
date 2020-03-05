@@ -275,12 +275,33 @@ pub trait RecordsRawImpl<'a>: RecordsImplLayout {
 /// to a certain number of records. Unlike [`Records`], which accepts a
 /// [`RecordsImpl`], `LimitedRecords` accepts a type that implements
 /// [`LimitedRecordsImpl`].
-pub type LimitedRecords<B, O> = Records<B, LimitedRecordsImplBridge<O>>;
+pub type LimitedRecords<B, R> = Records<B, LimitedRecordsImplBridge<R>>;
 
-/// Create a bridge to `RecordsImplLayout` and `RecordsImpl` from an `O` that
-/// implements `LimitedRecordsImplLayout`. This is required so we can have a
-/// single implementation of `parse_with_context` and definition of `Context`
-/// that all implementers of `LimitedRecordsImpl` will get for free.
+/// Create a bridge to `RecordsImplLayout` and `RecordsImpl` from an `R` that
+/// implements `LimitedRecordsImplLayout`.
+///
+/// The obvious solution to this problem would be to define `LimitedRecords` as
+/// follows, along with the following blanket impls:
+///
+/// ```rust,ignore
+/// pub type LimitedRecords<B, R> = Records<B, R>;
+///
+/// impl<R: LimitedRecordsImplLayout> RecordsImplLayout for R { ... }
+///
+/// impl<'a, R: LimitedRecordsImpl<'a>> RecordsImpl<'a> for R { ... }
+/// ```
+///
+/// Unfortunately, we also provide a similar type alias in the `options` module,
+/// defining options parsing in terms of records parsing. If we were to provide
+/// both these blanket impls and the similar blanket impls in terms of
+/// `OptionsImplLayout` and `OptionsImpl`, we would have conflicting blanket
+/// impls. Instead, we wrap the `LimitedRecordsImpl` type in a
+/// `LimitedRecordsImplBridge` in order to make it a distinct concrete type and
+/// avoid the conflicting blanket impls problem.
+///
+/// Note that we could theoretically provide the blanket impl here and only use
+/// the newtype trick in the `options` module (or vice-versa), but that would
+/// just result in more patterns to keep track of.
 ///
 /// `LimitedRecordsImplBridge` is `#[doc(hidden)]`; it is only `pub` because it
 /// appears in the type alias `LimitedRecords`.
@@ -288,20 +309,14 @@ pub type LimitedRecords<B, O> = Records<B, LimitedRecordsImplBridge<O>>;
 #[doc(hidden)]
 pub struct LimitedRecordsImplBridge<O>(PhantomData<O>);
 
-impl<O> RecordsImplLayout for LimitedRecordsImplBridge<O>
-where
-    O: LimitedRecordsImplLayout,
-{
+impl<R: LimitedRecordsImplLayout> RecordsImplLayout for LimitedRecordsImplBridge<R> {
     /// All `LimitedRecords` get a context type of usize.
     type Context = usize;
-    type Error = O::Error;
+    type Error = R::Error;
 }
 
-impl<'a, O> RecordsImpl<'a> for LimitedRecordsImplBridge<O>
-where
-    O: LimitedRecordsImpl<'a>,
-{
-    type Record = O::Record;
+impl<'a, R: LimitedRecordsImpl<'a>> RecordsImpl<'a> for LimitedRecordsImplBridge<R> {
+    type Record = R::Record;
 
     /// Parse some bytes with a given `context` as a limit.
     ///
@@ -320,15 +335,15 @@ where
         let limit_hit = *context == 0;
 
         if bytes.is_empty() || limit_hit {
-            return match O::EXACT_LIMIT_ERROR {
-                Some(_) if bytes.is_empty() ^ limit_hit => Err(O::EXACT_LIMIT_ERROR.unwrap()),
+            return match R::EXACT_LIMIT_ERROR {
+                Some(_) if bytes.is_empty() ^ limit_hit => Err(R::EXACT_LIMIT_ERROR.unwrap()),
                 _ => Ok(None),
             };
         }
 
         *context = context.checked_sub(1).expect("Can't decrement counter below 0");
 
-        O::parse(bytes)
+        R::parse(bytes)
     }
 }
 
@@ -1364,9 +1379,35 @@ pub mod options {
     pub type OptionsSerializer<'a, S, O, I> = RecordsSerializer<'a, S, O, I>;
 
     /// Create a bridge to `RecordsImplLayout` and `RecordsImpl` from an `O`
-    /// that implements `OptionsImpl`. This is required so we can have a single
-    /// implementation of `parse_with_context` and definition of `Context` that
-    /// all implementers of `OptionsImpl` will get for free.
+    /// that implements `OptionsImpl`.
+    ///
+    /// (Note that this doc comment is written in terms of the `Options` type
+    /// alias, but the same explanations apply to the `OptionsRaw` type alias as
+    /// well).
+    ///
+    /// The obvious solution to this problem would be to define `Options` as
+    /// follows, along with the following blanket impls:
+    ///
+    /// ```rust,ignore
+    /// pub type Options<B, O> = Records<B, O>;
+    ///
+    /// impl<O: OptionsImplLayout> RecordsImplLayout for O { ... }
+    ///
+    /// impl<'a, O: OptionsImpl<'a>> RecordsImpl<'a> for O { ... }
+    /// ```
+    ///
+    /// Unfortunately, we also provide a similar type alias in the parent
+    /// `records` module, defining limited records parsing in terms of general
+    /// records parsing. If we were to provide both these blanket impls and the
+    /// similar blanket impls in terms of `LimitedRecordsImplLayout` and
+    /// `LimitedRecordsImpl`, we would have conflicting blanket impls. Instead,
+    /// we wrap the `OptionsImpl` type in an `OptionsImplBridge` in order to
+    /// make it a distinct concrete type and avoid the conflicting blanket impls
+    /// problem.
+    ///
+    /// Note that we could theoretically provide the blanket impl here and only
+    /// use the newtype trick in the `records` module (or vice-versa), but that
+    /// would just result in more patterns to keep track of.
     ///
     /// `OptionsImplBridge` is `#[doc(hidden)]`; it is only `pub` because it
     /// appears in the type aliases `Options` and `OptionsRaw`.
