@@ -4,7 +4,20 @@
 
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_test.gni")
 import("//build/test/test_package.gni")
+
+group("all") {
+  deps = [ ":session_control" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":session_control",
+    ":session_control_tests",
+  ]
+}
 
 rustc_binary("bin") {
   name = "session_control"
@@ -16,6 +29,9 @@ rustc_binary("bin") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/session/bin/session_manager:lib",
+    "//src/sys/component_manager/tests:test_utils_lib",
+    "//src/sys/component_manager/tests/fidl:components-rustc",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
     "//third_party/rust_crates:futures",
@@ -41,14 +57,33 @@ package("session_control") {
   ]
 }
 
-unittest_package("session_control_tests") {
-  deps = [ ":bin_test" ]
-
+package("session_control_tests") {
+  testonly = true
+  deps = [
+    ":bin",
+    ":bin_test",
+    "//src/session/bin/session_manager:lib",
+    "//src/sys/test_adapters/rust",
+    "//third_party/rust_crates:async-trait",
+  ]
+  binaries = [
+    {
+      name = "session_control"
+      shell = true
+    },
+    {
+      name = "rust_test_adapter"
+    },
+  ]
   tests = [
     {
       name = "session_control_bin_test"
-      dest = "session_control_tests"
-      environments = basic_envs
+    },
+  ]
+  meta = [
+    {
+      path = "meta/session_control_bin_test.cml"
+      dest = "session_control_bin_test.cm"
     },
   ]
 }

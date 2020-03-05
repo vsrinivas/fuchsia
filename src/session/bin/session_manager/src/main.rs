@@ -12,12 +12,15 @@ use {
 async fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["session_manager"]).expect("Failed to initialize logger.");
 
-    if let Some(session_url) = startup::get_session_url() {
+    let mut session_url = String::new();
+
+    if let Some(startup_url) = startup::get_session_url() {
         // Launch the session which was provided to the session manager at startup.
-        startup::launch_session(&session_url).await?;
+        startup::launch_session(&startup_url).await?;
+        session_url = startup_url;
     }
 
     // Start serving the services exposed by session manager.
-    service_management::expose_services().await?;
+    service_management::expose_services(&mut session_url).await?;
     Ok(())
 }

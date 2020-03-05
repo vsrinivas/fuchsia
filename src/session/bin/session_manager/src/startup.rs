@@ -86,7 +86,7 @@ pub fn get_session_url() -> Option<String> {
 /// # Parameters
 /// - `session_url`: The URL of the session to launch.
 ///
-/// # Erorrs
+/// # Errors
 /// If there was a problem creating or binding to the session component instance.
 pub async fn launch_session(session_url: &str) -> Result<(), StartupError> {
     let realm =

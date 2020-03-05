@@ -14,9 +14,14 @@ protocol Launcher {
     /// If a session is currently running, the component associated with the running session will
     /// be destroyed.
     LaunchSession(SessionConfiguration configuration) -> () error LaunchSessionError;
+
+    /// Restarts the current session.
+    ///
+    /// An error is returned if there is no current session or the session failed to restart.
+    RestartSession() -> () error LaunchSessionError;
 };
 
-/// Errors returned when a session fails to launch.
+/// Errors returned when a session fails to launch or restart.
 enum LaunchSessionError {
     /// There was an error resolving the session's component url.
     NOT_FOUND = 1;

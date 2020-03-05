@@ -1,0 +1,48 @@
+{
+    program: {
+        binary: "bin/rust_test_adapter",
+        args: ["/pkg/test/session_control_bin_test",],
+    },
+    use: [
+        {
+            runner: "elf"
+        },
+        {
+            protocol: [
+                "/svc/fuchsia.test.events.EventSourceSync",
+                "/svc/fuchsia.sys2.Realm",
+            ],
+            from: "framework"
+        },
+        {
+            protocol: [
+                "/svc/fuchsia.process.Launcher",
+                "/svc/fuchsia.cobalt.LoggerFactory",
+                "/svc/fuchsia.logger.LogSink",
+            ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "/svc/fuchsia.test.Suite",
+            from: "self",
+        },
+    ],
+    offer: [        {
+            protocol: "/svc/fuchsia.session.Launcher",
+            from: "realm",
+            to: [ "#session" ],
+        },
+        {
+            runner: "elf",
+            from: "realm",
+            to: [ "#session" ],
+        },
+    ],
+    collections: [
+        {
+            name: "session",
+            durability: "transient",
+        },
+    ],
+}
