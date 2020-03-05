@@ -64,8 +64,11 @@ bool zxio_is_valid(const zxio_t* io) {
   return zio->ops != nullptr && !zio->interrupted.load();
 }
 
-void zxio_init(zxio_t* io, const zxio_ops_t* ops) {
-  new (io) zxio_internal_t(ops);
+void zxio_init(zxio_t* io, const zxio_ops_t* ops) { new (io) zxio_internal_t(ops); }
+
+const zxio_ops_t* zxio_get_ops(zxio_t* io) {
+  const zxio_internal_t* zio = to_internal(io);
+  return zio->ops;
 }
 
 uintptr_t zxio_extensions_get_init_function(const zxio_t* io) {

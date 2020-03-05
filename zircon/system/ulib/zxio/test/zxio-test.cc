@@ -14,7 +14,11 @@ TEST(OpsTest, Close) {
   ops.close = [](zxio_t*) { return ZX_OK; };
 
   zxio_t io = {};
+  ASSERT_EQ(nullptr, zxio_get_ops(&io));
+
   zxio_init(&io, &ops);
+
+  ASSERT_EQ(&ops, zxio_get_ops(&io));
   ASSERT_OK(zxio_close(&io));
   ASSERT_OK(zxio_destroy(&io));
 }

@@ -139,6 +139,9 @@ symlinkat
 sync
 syncfs
 telldir
+timerfd_create
+timerfd_gettime
+timerfd_settime
 truncate
 ttyname_r
 umask

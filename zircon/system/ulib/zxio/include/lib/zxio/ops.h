@@ -92,6 +92,9 @@ typedef struct zxio_ops {
 // Initialize a |zxio_t| object with the given |ops| table.
 void zxio_init(zxio_t* io, const zxio_ops_t* ops);
 
+// Get the ops table used by the given |zxio_t| object.
+const zxio_ops_t* zxio_get_ops(zxio_t* io);
+
 __END_CDECLS
 
 #endif  // LIB_ZXIO_OPS_H_

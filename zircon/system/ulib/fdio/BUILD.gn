@@ -62,6 +62,7 @@ if (get_path_info(toolchain.environment, "extension") == "fuzzer") {
       "socket.cc",
       "spawn.cc",
       "stubs.cc",
+      "timer.cc",
       "uname.cc",
       "unistd.cc",
       "waitable.cc",

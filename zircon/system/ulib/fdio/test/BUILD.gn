@@ -26,6 +26,7 @@ zx_test("fdio") {
     "fdio_socketpair.cc",
     "fdio_startup.cc",
     "fdio_stubs.cc",
+    "fdio_timerfd.cc",
     "fdio_unsafe.cc",
     "fdio_watcher.cc",
   ]
