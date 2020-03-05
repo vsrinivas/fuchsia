@@ -5,16 +5,17 @@
 use super::*;
 
 use fidl_fuchsia_bluetooth_avrcp::{Notification, TargetPassthroughError};
+use fuchsia_async::Time;
+use fuchsia_zircon::Duration;
+
+use futures::future::Either;
+use parking_lot::Mutex;
+use std::collections::VecDeque;
 
 mod decoders;
 
 use decoders::*;
-
-use fuchsia_async::Time;
-use fuchsia_zircon::Duration;
-use futures::future::Either;
-
-use bt_avctp;
+use std::collections::hash_map::Entry::{Occupied, Vacant};
 
 // Abstraction to assist with unit testing with mocks.
 trait IncomingTargetCommand: std::fmt::Debug {
@@ -63,6 +64,57 @@ pub struct ControlChannelHandler {
 struct ControlChannelHandlerInner {
     peer_id: PeerId,
     target_delegate: Arc<TargetDelegate>,
+
+    // Remaining continuations are stored as list of packet buffs keyed off the PduId that was
+    // requested
+    continuations: Arc<Continuations>,
+}
+
+/// Stores remaining packet continuations for the target
+#[derive(Debug)]
+struct Continuations {
+    /// Renaming packets given a pdu_id
+    remaining_packets: Mutex<HashMap<PduId, VecDeque<Vec<u8>>>>,
+}
+
+impl Continuations {
+    fn new() -> Self {
+        Self { remaining_packets: Mutex::new(HashMap::new()) }
+    }
+
+    fn pop_packet(&self, pdu_id: &PduId) -> Option<Vec<u8>> {
+        match self.remaining_packets.lock().entry(pdu_id.clone()) {
+            Vacant(_) => None,
+            Occupied(mut entry) => {
+                let packet = entry.get_mut().pop_front();
+                if entry.get().is_empty() {
+                    entry.remove();
+                }
+                packet
+            }
+        }
+    }
+
+    // Caches continuation packets given a pdu id.
+    // If `packets` is empty, the continuation is cleared.
+    // If an existing continuation exists, it's replaced.
+    fn insert_remaining_packets(&self, pdu_id: &PduId, packets: Vec<Vec<u8>>) {
+        if packets.is_empty() {
+            self.remaining_packets.lock().remove_entry(pdu_id);
+        } else {
+            self.remaining_packets.lock().insert(pdu_id.clone(), VecDeque::from(packets));
+        }
+    }
+
+    // Removes remaining packets given a pdu_id
+    fn clear_continuation(&self, pdu_id: &PduId) {
+        self.remaining_packets.lock().remove_entry(pdu_id);
+    }
+
+    // remove all continuations
+    fn clear_all(&self) {
+        self.remaining_packets.lock().clear();
+    }
 }
 
 impl ControlChannelHandler {
@@ -71,6 +123,7 @@ impl ControlChannelHandler {
             inner: Arc::new(ControlChannelHandlerInner {
                 peer_id: peer_id.clone(),
                 target_delegate,
+                continuations: Arc::new(Continuations::new()),
             }),
         }
     }
@@ -97,6 +150,8 @@ impl ControlChannelHandler {
             };
 
             let delegate = inner.target_delegate.clone();
+            let continuations = inner.continuations.clone();
+
             // Step 3. Handle our current message depending on the type.
             match decoded_command {
                 Command::Passthrough { command: avc_cmd, pressed } => {
@@ -107,10 +162,10 @@ impl ControlChannelHandler {
                         handle_notify_command(delegate, command, cmd).await
                     }
                     VendorSpecificCommand::Status(cmd) => {
-                        handle_status_command(delegate, command, cmd).await
+                        handle_status_command(delegate, continuations, command, cmd).await
                     }
                     VendorSpecificCommand::Control(cmd) => {
-                        handle_control_command(delegate, command, cmd).await
+                        handle_control_command(delegate, continuations, command, cmd).await
                     }
                 },
             }
@@ -127,8 +182,9 @@ impl ControlChannelHandler {
 
     /// Clears any continuations and state. Should be called after connection with the peer has
     /// closed.
-    // TODO(41699): add continuations for get_element_attributes and wire up reset logic here
-    pub fn reset(&self) {}
+    pub fn reset(&self) {
+        self.inner.continuations.clear_all();
+    }
 }
 
 fn send_decode_error_response(
@@ -524,27 +580,25 @@ async fn handle_get_player_application_setting_value_text(
 
 /// Sends status command response. Send's Implemented/Stable on response code on success.
 fn send_status_response(
+    continuations: Arc<Continuations>,
     command: impl IncomingTargetCommand,
     result: Result<Box<dyn PacketEncodable>, StatusCode>,
     pdu_id: PduId,
 ) -> Result<(), Error> {
     match result {
-        Ok(encodable) => {
-            match encodable.encode_packets() {
-                Ok(mut packets) => {
-                    let first_packet = packets.remove(0);
-                    // TODO(41699): send the first packet and push the other packets in this list,
-                    //   if any, into a continuation on the inner.
-                    command
-                        .send_response(AvcResponseType::ImplementedStable, &first_packet[..])
-                        .map_err(|e| Error::AvctpError(e))
-                }
-                Err(e) => {
-                    fx_log_err!("Error trying to encode response packet. Sending internal_error rejection to peer {:?}", e);
-                    send_avc_reject(&command, u8::from(&pdu_id), StatusCode::InternalError)
-                }
+        Ok(encodable) => match encodable.encode_packets() {
+            Ok(mut packets) => {
+                let first_packet = packets.remove(0);
+                continuations.insert_remaining_packets(&pdu_id, packets);
+                command
+                    .send_response(AvcResponseType::ImplementedStable, &first_packet[..])
+                    .map_err(|e| Error::AvctpError(e))
             }
-        }
+            Err(e) => {
+                fx_log_err!("Error trying to encode response packet. Sending internal_error rejection to peer {:?}", e);
+                send_avc_reject(&command, u8::from(&pdu_id), StatusCode::InternalError)
+            }
+        },
         Err(status_code) => {
             fx_log_err!(
                 "Error trying to encode response packet. Sending rejection to peer {:?}",
@@ -557,6 +611,7 @@ fn send_status_response(
 
 async fn handle_status_command(
     delegate: Arc<TargetDelegate>,
+    continuations: Arc<Continuations>,
     command: impl IncomingTargetCommand,
     status_command: StatusCommand,
 ) -> Result<(), Error> {
@@ -604,7 +659,7 @@ async fn handle_status_command(
                 }
             }
             result = status_fut => {
-                return send_status_response(command, result, pdu_id);
+                return send_status_response(continuations, command, result, pdu_id);
             }
         }
     }
@@ -666,29 +721,69 @@ async fn handle_set_absolute_volume(
     Ok(Box::new(response))
 }
 
+fn handle_request_continuing_response(
+    continuations: Arc<Continuations>,
+    command: impl IncomingTargetCommand,
+    cmd: RequestContinuingResponseCommand,
+) -> Result<(), Error> {
+    let pdu_id = match PduId::try_from(cmd.pdu_id_response()) {
+        Err(_) => return send_avc_reject(&command, cmd.raw_pdu_id(), StatusCode::InvalidParameter),
+        Ok(x) => x,
+    };
+    return match continuations.pop_packet(&pdu_id) {
+        Some(packet) => command
+            .send_response(AvcResponseType::ImplementedStable, &packet[..])
+            .map_err(|e| Error::AvctpError(e)),
+        None => send_avc_reject(&command, cmd.raw_pdu_id(), StatusCode::InvalidParameter),
+    };
+}
+
+fn handle_abort_continuing_response(
+    continuations: Arc<Continuations>,
+    command: impl IncomingTargetCommand,
+    cmd: AbortContinuingResponseCommand,
+) -> Result<(), Error> {
+    let pdu_id = match PduId::try_from(cmd.pdu_id_response()) {
+        Err(_) => return send_avc_reject(&command, cmd.raw_pdu_id(), StatusCode::InvalidParameter),
+        Ok(x) => x,
+    };
+    continuations.clear_continuation(&pdu_id);
+    let response = AbortContinuingResponseResponse::new();
+    let packet = response.encode_packet().map_err(|e| Error::PacketError(e))?;
+    return command
+        .send_response(AvcResponseType::Accepted, &packet[..])
+        .map_err(|e| Error::AvctpError(e));
+}
+
 async fn handle_control_command(
     delegate: Arc<TargetDelegate>,
+    continuations: Arc<Continuations>,
     command: impl IncomingTargetCommand,
     control_command: ControlCommand,
 ) -> Result<(), Error> {
+    // Handle continuations.
+    // continuations are handled immediately and not asynchronously
+    let control_command = match control_command {
+        ControlCommand::RequestContinuingResponse(cmd) => {
+            return handle_request_continuing_response(continuations, command, cmd);
+        }
+        ControlCommand::AbortContinuingResponse(cmd) => {
+            return handle_abort_continuing_response(continuations, command, cmd);
+        }
+        _ => control_command,
+    };
+
     let pdu_id = control_command.pdu_id();
 
     let control_fut = async {
         match control_command {
-            /* TODO: Implement
-            ControlCommand::RequestContinuingResponse(_) => {},
-            ControlCommand::AbortContinuingResponse(_) => {},
-            */
             ControlCommand::SetPlayerApplicationSettingValue(cmd) => {
                 handle_set_player_application_setting_value(cmd, delegate).await
             }
             ControlCommand::SetAbsoluteVolume(cmd) => {
                 handle_set_absolute_volume(cmd, delegate).await
             }
-            _ => {
-                // TODO: remove when we have finish implementing the rest of this enum
-                Err(StatusCode::InvalidParameter)
-            }
+            _ => Err(StatusCode::InvalidCommand),
         }
     };
 
@@ -725,7 +820,12 @@ mod test {
         AbsoluteVolumeHandlerRequest, TargetAvcError, TargetHandlerMarker, TargetHandlerProxy,
         TargetHandlerRequest,
     };
-    use std::sync::atomic::{AtomicBool, Ordering};
+
+    #[derive(Debug)]
+    struct MockAvcCommandResponse {
+        send_called: bool,
+        data: Option<Vec<u8>>,
+    }
 
     #[derive(Debug)]
     struct MockAvcCommand {
@@ -736,7 +836,7 @@ mod test {
         expect_response_type: Option<AvcResponseType>,
         expect_body: Option<Vec<u8>>,
         expect_send: bool,
-        send_called: AtomicBool,
+        response: Arc<Mutex<MockAvcCommandResponse>>,
     }
 
     impl MockAvcCommand {
@@ -749,7 +849,10 @@ mod test {
                 expect_response_type: None,
                 expect_body: None,
                 expect_send: false,
-                send_called: AtomicBool::new(false),
+                response: Arc::new(Mutex::new(MockAvcCommandResponse {
+                    send_called: false,
+                    data: None,
+                })),
             }
         }
 
@@ -791,6 +894,10 @@ mod test {
             self.expect_response_interim_first = true;
             self
         }
+
+        fn response(&self) -> Arc<Mutex<MockAvcCommandResponse>> {
+            self.response.clone()
+        }
     }
 
     impl IncomingTargetCommand for MockAvcCommand {
@@ -811,7 +918,8 @@ mod test {
             response_type: AvcResponseType,
             body: &[u8],
         ) -> Result<(), bt_avctp::Error> {
-            if !self.send_called.load(Ordering::SeqCst) && self.expect_response_interim_first {
+            let mut response_guard = self.response.lock();
+            if !response_guard.send_called && self.expect_response_interim_first {
                 assert_eq!(&response_type, &AvcResponseType::Interim);
             } else if let Some(expect_response_type) = &self.expect_response_type {
                 assert_eq!(&response_type, expect_response_type);
@@ -821,7 +929,8 @@ mod test {
                 assert_eq!(body, &expect_body[..]);
             }
 
-            self.send_called.store(true, Ordering::SeqCst);
+            response_guard.send_called = true;
+            response_guard.data = Some(body.to_vec());
 
             Ok(())
         }
@@ -829,7 +938,8 @@ mod test {
 
     impl Drop for MockAvcCommand {
         fn drop(&mut self) {
-            if self.expect_send && !self.send_called.load(Ordering::SeqCst) {
+            let send_called = self.response.lock().send_called;
+            if self.expect_send && !send_called {
                 assert!(false, "AvcCommand::send_response not called");
             }
         }
@@ -953,6 +1063,254 @@ mod test {
         .expect_stable();
 
         cmd_handler.handle_command_internal(command).await
+    }
+
+    #[test]
+    fn test_continuation_pop_empty() {
+        let continuations = Continuations::new();
+        assert!(continuations.pop_packet(&PduId::GetElementAttributes).is_none());
+    }
+
+    #[test]
+    fn test_continuation_pop_empty_after_insert_empty() {
+        let continuations = Continuations::new();
+        continuations.insert_remaining_packets(&PduId::GetElementAttributes, vec![]);
+        assert!(continuations.pop_packet(&PduId::GetElementAttributes).is_none());
+    }
+
+    #[test]
+    fn test_continuation_pop_one() {
+        let continuations = Continuations::new();
+        continuations.insert_remaining_packets(&PduId::GetElementAttributes, vec![vec![1 as u8]]);
+        assert_eq!(continuations.pop_packet(&PduId::GetElementAttributes), Some(vec![1 as u8]));
+        assert!(continuations.pop_packet(&PduId::GetElementAttributes).is_none());
+    }
+
+    #[test]
+    fn test_continuation_clear() {
+        let continuations = Continuations::new();
+        continuations.insert_remaining_packets(&PduId::GetElementAttributes, vec![vec![1 as u8]]);
+        continuations.clear_continuation(&PduId::GetElementAttributes);
+        assert!(continuations.pop_packet(&PduId::GetElementAttributes).is_none());
+    }
+
+    #[test]
+    fn test_continuation_reset() {
+        let continuations = Continuations::new();
+        continuations.insert_remaining_packets(&PduId::GetElementAttributes, vec![vec![1 as u8]]);
+        continuations.clear_all();
+        assert!(continuations.pop_packet(&PduId::GetElementAttributes).is_none());
+    }
+
+    #[test]
+    fn test_continuation_pop_many() {
+        let continuations = Continuations::new();
+        continuations.insert_remaining_packets(
+            &PduId::GetElementAttributes,
+            vec![vec![1 as u8], vec![1 as u8]],
+        );
+        assert_eq!(continuations.pop_packet(&PduId::GetElementAttributes), Some(vec![1 as u8]));
+        assert_eq!(continuations.pop_packet(&PduId::GetElementAttributes), Some(vec![1 as u8]));
+        assert!(continuations.pop_packet(&PduId::GetElementAttributes).is_none());
+    }
+
+    #[test]
+    fn test_continuation_replace() {
+        let continuations = Continuations::new();
+        continuations.insert_remaining_packets(
+            &PduId::GetElementAttributes,
+            vec![vec![1 as u8], vec![1 as u8]],
+        );
+        continuations.insert_remaining_packets(&PduId::GetElementAttributes, vec![]);
+        assert!(continuations.pop_packet(&PduId::GetElementAttributes).is_none());
+    }
+
+    /// Test continuations work
+    /// 1. Crafts a get_element_attribute response that spans 3 AVC packets.
+    /// 2. Fetches the first packet and validate it's the first packet and the length
+    /// 3. Fetches the second and validate it's a middle packet and the length
+    /// 4. Sends an abort for the rest of the continuation, dropping the third
+    /// 5. Attempts to fetch the last packet after aborting, expecting an error to validate abort
+    ///    works.
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_continuations() -> Result<(), Error> {
+        let (target_proxy, mut target_stream) = create_proxy_and_stream::<TargetHandlerMarker>()
+            .expect("Error creating TargetHandler endpoint");
+
+        // spawn a target handler that responds with a large element response
+        fasync::spawn(async move {
+            while let Some(Ok(event)) = target_stream.next().await {
+                let _result = match event {
+                    TargetHandlerRequest::GetMediaAttributes { responder } => {
+                        responder.send(&mut Ok(MediaAttributes {
+                            title: Some(String::from(
+                                "Lorem ipsum dolor sit amet,\
+                 consectetur adipiscing elit. Nunc eget elit cursus ipsum \
+                 fermentum viverra id vitae lorem. Cras luctus elementum \
+                 metus vel volutpat. Vestibulum ante ipsum primis in \
+                 faucibus orci luctus et ultrices posuere cubilia \
+                 metus vel volutpat. Vestibulum ante ipsum primis in \
+                 faucibus orci luctus et ultrices posuere cubilia \
+                 metus vel volutpat. Vestibulum ante ipsum primis in \
+                 faucibus orci luctus et ultrices posuere cubilia \
+                 metus vel volutpat. Vestibulum ante ipsum primis in \
+                 faucibus orci luctus et ultrices posuere cubilia \
+                 metus vel volutpat. Vestibulum ante ipsum primis in \
+                 faucibus orci luctus et ultrices posuere cubilia \
+                 metus vel volutpat. Vestibulum ante ipsum primis in \
+                 faucibus orci luctus et ultrices posuere cubilia \
+                 Curae; Praesent efficitur velit sed metus luctus",
+                            )),
+                            artist_name: Some(String::from(
+                                "elit euismod. \
+                 Sed ex mauris, convallis a augue ac, hendrerit \
+                 blandit mauris. Integer porttitor velit et posuere pharetra. \
+                 Nullam ultricies justo sit amet lorem laoreet, id porta elit \
+                 gravida. Suspendisse sed lectus eu lacus efficitur finibus. \
+                 Sed egestas pretium urna eu pellentesque. In fringilla nisl dolor, \
+                 sit amet luctus purus sagittis et. Mauris diam turpis, luctus et pretium nec, \
+                 aliquam sed odio. Nulla finibus, orci a lacinia sagittis,\
+                 urna elit ultricies dolor, et condimentum magna mi vitae sapien. \
+                 Suspendisse potenti. Vestibulum ante ipsum primis in faucibus orci \
+                 luctus et ultrices posuere cubilia Curae",
+                            )),
+                            album_name: Some(String::from(
+                                "Mauris in ante ultrices, vehicula lorem non, sagittis metus.\
+                 Nam facilisis volutpat quam. Suspendisse sem ipsum, blandit ut faucibus vitae,\
+                 facilisis quis massa. Aliquam sagittis, orci sed dignissim vulputate, odio neque \
+                 tempor dui, vel feugiat metus massa id urna. Nam at risus sem.\
+                 Duis commodo suscipit metus, at placerat elit suscipit eget. Suspendisse interdum \
+                 id metus vitae porta. Ut cursus viverra imperdiet. Aliquam erat volutpat. \
+                 Curabitur vehicula mauris nec ex sollicitudin rhoncus. Integer ipsum libero, \
+                 porta id velit et, egestas facilisis tellus.",
+                            )),
+                            genre: Some(String::from(
+                                "Mauris in ante ultrices, vehicula lorem non, sagittis metus.\
+                 Nam facilisis volutpat quam. Suspendisse sem ipsum, blandit ut faucibus vitae,\
+                 facilisis quis massa. Aliquam sagittis, orci sed dignissim vulputate, odio neque \
+                 tempor dui, vel feugiat metus massa id urna. Nam at risus sem.\
+                 Duis commodo suscipit metus, at placerat elit suscipit eget. Suspendisse interdum \
+                 id metus vitae porta. Ut cursus viverra imperdiet. Aliquam erat volutpat. \
+                 Curabitur vehicula mauris nec ex sollicitudin rhoncus. Integer ipsum libero, \
+                 porta id velit et, egestas facilisis tellus.",
+                            )),
+                            ..MediaAttributes::new_empty()
+                        }))
+                    }
+                    _ => {
+                        assert!(false, "unexpected event");
+                        Ok(())
+                    }
+                };
+            }
+        });
+
+        let cmd_handler = create_command_handler(Some(target_proxy), None);
+
+        // send first packet
+        {
+            // GetElementAttributes
+            let packet_body: Vec<u8> = [
+                0x20, // GetElementAttributes pdu id
+                0x00, // single packet
+                0x00, 0x11, // param len, 17 bytes
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // NOW_PLAYING identifier
+                0x02, // 4 attributes
+                0x00, 0x00, 0x00, 0x01, // Title
+                0x00, 0x00, 0x00, 0x02, // ArtistName
+                0x00, 0x00, 0x00, 0x03, // AlbumName
+                0x00, 0x00, 0x00, 0x06, // Genre
+            ]
+            .to_vec();
+
+            let command = MockAvcCommand::new(
+                AvcPacketType::Command(AvcCommandType::Status),
+                AvcOpCode::VendorDependent,
+                packet_body,
+            )
+            .expect_stable();
+
+            let response = command.response();
+
+            let _ = cmd_handler.handle_command_internal(command).await?;
+
+            let response_guard = response.lock();
+            let response_data = response_guard.data.as_ref().expect("data");
+            assert_eq!(response_data.len(), 512); // The AVC packet should be 512
+            assert_eq!(response_data[1], 0x01); // packet should be marked as the first packet in the preamble.
+        }
+
+        // send continuation packet
+        {
+            // RequestContinuingResponse
+            let packet_body: Vec<u8> = [
+                0x40, // RequestContinuingResponse pdu id
+                0x00, // single packet
+                0x00, 0x01, // param len, 1 byte
+                0x20, // GetElementAttributes pdu id
+            ]
+            .to_vec();
+
+            let command = MockAvcCommand::new(
+                AvcPacketType::Command(AvcCommandType::Control),
+                AvcOpCode::VendorDependent,
+                packet_body,
+            )
+            .expect_stable();
+
+            let response = command.response();
+
+            let _ = cmd_handler.handle_command_internal(command).await?;
+
+            let response_guard = response.lock();
+            let response_data = response_guard.data.as_ref().expect("data");
+            assert_eq!(response_data.len(), 512); // The AVC packet should be 512
+            assert_eq!(response_data[2], 0x01); // packet should be marked as a middle packet in the preamble.
+        }
+
+        // send abort packet
+        {
+            // AbortContinuingResponse
+            let packet_body: Vec<u8> = [
+                0x41, // AbortContinuingResponse pdu id
+                0x00, // single packet
+                0x00, 0x01, // param len, 1 byte
+                0x20, // GetElementAttributes pdu id
+            ]
+            .to_vec();
+
+            let command = MockAvcCommand::new(
+                AvcPacketType::Command(AvcCommandType::Control),
+                AvcOpCode::VendorDependent,
+                packet_body,
+            )
+            .expect_accept();
+
+            let _ = cmd_handler.handle_command_internal(command).await?;
+        }
+
+        // send another continuation packet to test abort worked
+        {
+            // RequestContinuingResponse
+            let packet_body: Vec<u8> = [
+                0x40, // RequestContinuingResponse pdu id
+                0x00, // single packet
+                0x00, 0x01, // param len, 17 bytes
+                0x20, // GetElementAttributes pdu id
+            ]
+            .to_vec();
+
+            let command = MockAvcCommand::new(
+                AvcPacketType::Command(AvcCommandType::Control),
+                AvcOpCode::VendorDependent,
+                packet_body,
+            )
+            .expect_reject();
+
+            let _ = cmd_handler.handle_command_internal(command).await?;
+        }
+
+        Ok(())
     }
 
     /// send get_capabilities

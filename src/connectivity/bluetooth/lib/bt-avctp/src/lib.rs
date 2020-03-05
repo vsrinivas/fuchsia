@@ -100,7 +100,7 @@ macro_rules! pub_decodable_enum {
         $($(#[$variant_meta:meta])* $variant:ident => $val:expr),*,
     }) => {
         $(#[$meta])*
-        #[derive(Debug, PartialEq, Copy, Clone)]
+        #[derive(Debug, Eq, Hash, PartialEq, Copy, Clone)]
         pub enum $name {
             $($(#[$variant_meta])* $variant = $val),*
         }
