@@ -63,6 +63,7 @@ fuchsia::sysmem::ImageFormatConstraints GetDefaultSysmemImageFormatConstraints()
 
 class VulkanTest {
  public:
+  ~VulkanTest();
   bool Initialize();
   bool Exec(VkFormat format, uint32_t width, bool direct, bool linear,
             bool repeat_constraints_as_non_protected,
@@ -80,19 +81,44 @@ class VulkanTest {
   bool is_initialized_ = false;
   bool use_protected_memory_ = false;
   bool device_supports_protected_memory_ = false;
-  VkPhysicalDevice vk_physical_device_;
-  VkDevice vk_device_;
-  VkQueue vk_queue_;
-  VkImage vk_image_;
-  VkDeviceMemory vk_device_memory_;
-  VkCommandPool vk_command_pool_;
-  VkCommandBuffer vk_command_buffer_;
+  VkInstance vk_instance_{};
+  VkPhysicalDevice vk_physical_device_{};
+  VkDevice vk_device_{};
+  VkQueue vk_queue_{};
+  VkImage vk_image_{};
+  VkDeviceMemory vk_device_memory_{};
+  VkCommandPool vk_command_pool_{};
+  VkCommandBuffer vk_command_buffer_{};
   PFN_vkCreateBufferCollectionFUCHSIA vkCreateBufferCollectionFUCHSIA_;
   PFN_vkSetBufferCollectionConstraintsFUCHSIA vkSetBufferCollectionConstraintsFUCHSIA_;
   PFN_vkSetBufferCollectionBufferConstraintsFUCHSIA vkSetBufferCollectionBufferConstraintsFUCHSIA_;
   PFN_vkDestroyBufferCollectionFUCHSIA vkDestroyBufferCollectionFUCHSIA_;
   PFN_vkGetBufferCollectionPropertiesFUCHSIA vkGetBufferCollectionPropertiesFUCHSIA_;
 };
+
+VulkanTest::~VulkanTest() {
+  if (vk_command_pool_) {
+    vkDestroyCommandPool(vk_device_, vk_command_pool_, nullptr);
+    vk_command_pool_ = VK_NULL_HANDLE;
+    vk_command_buffer_ = VK_NULL_HANDLE;
+  }
+  if (vk_image_) {
+    vkDestroyImage(vk_device_, vk_image_, nullptr);
+    vk_image_ = VK_NULL_HANDLE;
+  }
+  if (vk_device_memory_) {
+    vkFreeMemory(vk_device_, vk_device_memory_, nullptr);
+    vk_device_memory_ = VK_NULL_HANDLE;
+  }
+  if (vk_device_) {
+    vkDestroyDevice(vk_device_, nullptr);
+    vk_device_ = VK_NULL_HANDLE;
+  }
+  if (vk_instance_) {
+    vkDestroyInstance(vk_instance_, nullptr);
+    vk_instance_ = VK_NULL_HANDLE;
+  }
+}
 
 bool VulkanTest::Initialize() {
   if (is_initialized_)
@@ -131,16 +157,16 @@ bool VulkanTest::InitVulkan() {
       enabled_extensions.data(),
   };
   VkAllocationCallbacks* allocation_callbacks = nullptr;
-  VkInstance instance;
   VkResult result;
 
-  if ((result = vkCreateInstance(&create_info, allocation_callbacks, &instance)) != VK_SUCCESS) {
+  if ((result = vkCreateInstance(&create_info, allocation_callbacks, &vk_instance_)) !=
+      VK_SUCCESS) {
     PRINT_STDERR("vkCreateInstance failed %d", result);
     return false;
   }
 
   uint32_t physical_device_count;
-  if ((result = vkEnumeratePhysicalDevices(instance, &physical_device_count, nullptr)) !=
+  if ((result = vkEnumeratePhysicalDevices(vk_instance_, &physical_device_count, nullptr)) !=
       VK_SUCCESS) {
     PRINT_STDERR("vkEnumeratePhysicalDevices failed %d", result);
     return false;
@@ -152,7 +178,7 @@ bool VulkanTest::InitVulkan() {
   }
 
   std::vector<VkPhysicalDevice> physical_devices(physical_device_count);
-  if ((result = vkEnumeratePhysicalDevices(instance, &physical_device_count,
+  if ((result = vkEnumeratePhysicalDevices(vk_instance_, &physical_device_count,
                                            physical_devices.data())) != VK_SUCCESS) {
     PRINT_STDERR("vkEnumeratePhysicalDevices failed %d", result);
     return false;
@@ -585,10 +611,6 @@ bool VulkanTest::Exec(
     }
   }
 
-  vkDestroyImage(vk_device_, vk_image_, nullptr);
-
-  vkFreeMemory(vk_device_, vk_device_memory_, nullptr);
-
   vkDestroyBufferCollectionFUCHSIA_(vk_device_, collection, nullptr);
 
   return true;
@@ -763,8 +785,6 @@ bool VulkanTest::ExecBuffer(uint32_t size) {
   }
 
   vkDestroyBuffer(vk_device_, buffer, nullptr);
-
-  vkFreeMemory(vk_device_, vk_device_memory_, nullptr);
 
   vkDestroyBufferCollectionFUCHSIA_(vk_device_, collection, nullptr);
 
