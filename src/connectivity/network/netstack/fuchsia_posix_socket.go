@@ -618,8 +618,10 @@ func (eps *endpointWithSocket) loopWrite() {
 					panic(err)
 				}
 				return
-			case tcpip.ErrConnectionReset:
-				// We got a TCP RST.
+			case tcpip.ErrConnectionReset, tcpip.ErrTimeout:
+				// We got a TCP RST, or the maximum duration of missing ACKs was
+				// reached, or the maximum number of unacknowledged keepalives was
+				// reached.
 				closeFn()
 				return
 			default:
