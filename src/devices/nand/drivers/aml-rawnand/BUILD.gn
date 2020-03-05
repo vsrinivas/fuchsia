@@ -43,3 +43,7 @@ source_set("common") {
 migrated_manifest("aml-rawnand-manifest") {
   deps = [ ":aml-rawnand" ]
 }
+group("tests") {
+  testonly = true
+  deps = [ "test:tests" ]
+}

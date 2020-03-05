@@ -2823,7 +2823,6 @@ aggregate_manifest("migrated-aux") {
 #------------------
     "//src/connectivity/bluetooth/hci/vendor/broadcom:bt-hci-broadcom-test-manifest",
     "//src/connectivity/bluetooth/hci/vendor/mediatek:bt-hci-mediatek-test-manifest",
-    "//src/devices/nand/drivers/cadence-hpnfc:cadence-hpnfc-test-manifest",
 #------------------
     #":test.sys.channel-fatal-test",
 #------------------
@@ -3026,12 +3025,8 @@ aggregate_manifest("migrated-aux") {
     "//src/devices/block/drivers/mtk-sdmmc:mtk-sdmmc-test-manifest",
     "//src/devices/thermal/drivers/mtk-thermal:mtk-thermal-test-manifest",
     "//zircon/system/utest/namespace:namespace-manifest",
-    "//src/devices/nand/drivers/aml-rawnand/test:aml-rawnand-unittest-manifest",
     "//src/devices/nand/drivers/broker/test:nand-broker-manifest",
-    "//src/devices/nand/drivers/nand/test:nand-unittest-manifest",
-    "//src/devices/nand/bin/nand-util:nand-util-test-manifest",
     "//src/devices/nand/drivers/broker/test:nandpart-broker-manifest",
-    "//src/devices/nand/drivers/nandpart:nandpart-test-manifest",
 #------------------
     #":test.sys.netsvc-stress-test",
 #------------------
@@ -3117,7 +3112,6 @@ aggregate_manifest("migrated-aux") {
 #------------------
     "//src/ui/backlight/drivers/sg-micro:sgm37603a-test-manifest",
     "//zircon/system/ulib/simplehid/test:simplehid-manifest",
-    "//src/devices/nand/drivers/skip-block:skip-block-test-manifest",
     "//zircon/system/ulib/smbios/test:smbios-test-manifest",
     "//src/devices/spi/drivers/spi:spi-test-manifest",
     "//zircon/system/utest/status:status-manifest",
@@ -3537,7 +3531,6 @@ aggregate_manifest("migrated-tests") {
 #------------------
     "//src/connectivity/bluetooth/hci/vendor/broadcom:bt-hci-broadcom-test-manifest",
     "//src/connectivity/bluetooth/hci/vendor/mediatek:bt-hci-mediatek-test-manifest",
-    "//src/devices/nand/drivers/cadence-hpnfc:cadence-hpnfc-test-manifest",
 #------------------
     #":test.sys.channel-fatal-test",
 #------------------
@@ -3742,12 +3735,8 @@ aggregate_manifest("migrated-tests") {
     "//src/devices/block/drivers/mtk-sdmmc:mtk-sdmmc-test-manifest",
     "//src/devices/thermal/drivers/mtk-thermal:mtk-thermal-test-manifest",
     "//zircon/system/utest/namespace:namespace-manifest",
-    "//src/devices/nand/drivers/aml-rawnand/test:aml-rawnand-unittest-manifest",
     "//src/devices/nand/drivers/broker/test:nand-broker-manifest",
-    "//src/devices/nand/drivers/nand/test:nand-unittest-manifest",
-    "//src/devices/nand/bin/nand-util:nand-util-test-manifest",
     "//src/devices/nand/drivers/broker/test:nandpart-broker-manifest",
-    "//src/devices/nand/drivers/nandpart:nandpart-test-manifest",
 #------------------
     #":test.sys.netsvc-stress-test",
 #------------------
@@ -3833,7 +3822,6 @@ aggregate_manifest("migrated-tests") {
 #------------------
     "//src/ui/backlight/drivers/sg-micro:sgm37603a-test-manifest",
     "//zircon/system/ulib/simplehid/test:simplehid-manifest",
-    "//src/devices/nand/drivers/skip-block:skip-block-test-manifest",
     "//zircon/system/ulib/smbios/test:smbios-test-manifest",
     "//src/devices/spi/drivers/spi:spi-test-manifest",
     "//zircon/system/utest/status:status-manifest",

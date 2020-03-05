@@ -32,3 +32,7 @@ driver_module("nand") {
 migrated_manifest("nand-manifest") {
   deps = [ ":nand" ]
 }
+group("tests") {
+  testonly = true
+  deps = [ "test:tests" ]
+}

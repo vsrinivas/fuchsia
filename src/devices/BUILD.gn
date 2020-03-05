@@ -21,6 +21,7 @@ group("tests") {
     "block:tests",
     "clock:tests",
     "lib:tests",
+    "nand:tests",
     "tests",
     "tools:tests",
   ]
