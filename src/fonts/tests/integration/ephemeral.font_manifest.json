@@ -21,5 +21,11 @@
         }
       ]
     }
+  ],
+  "fallback_chain": [
+    {
+      "file_name": "Ephemeral.ttf",
+      "index": 0
+    }
   ]
 }

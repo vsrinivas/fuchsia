@@ -1,0 +1,13 @@
+{
+  "version": "1",
+  "fallback_chain": [
+    "BetaSans-Regular.ttf",
+    "BetaSans-Italic.ttf",
+    "BetaSans-BoldItalic.ttf",
+    {
+      "file_name": "AlphaAndBeta-Thin.ttc",
+      "index": 1
+    },
+    "GammaCJK-Regular.ttc"
+  ]
+}

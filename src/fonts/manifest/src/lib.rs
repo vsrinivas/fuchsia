@@ -324,7 +324,8 @@ mod tests {
         let json = r#"
         {
             "version": "2",
-            "families": []
+            "families": [],
+            "fallback_chain": []
         }
         "#;
 

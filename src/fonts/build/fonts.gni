@@ -60,6 +60,11 @@ foreach(font_pkgs_path, font_pkgs_paths) {
 #     `local_asset_names` will simply be added on as another bundle.
 #     Type: list(file)
 #
+#   product_config_path:
+#     Optional: Path to a JSON file containing product-specific font
+#     configuration, including a fallback chain.
+#     Type: file
+#
 #   manifest_prefix
 #     Optional: Prefix for the generated manifest file name.
 #     Default: "all"
@@ -81,6 +86,7 @@ template("font_collection") {
                            "font_packages",
                            "local_font_bundles",
                            "local_asset_names",
+                           "product_config_path",
                            "manifest_prefix",
                          ])
 

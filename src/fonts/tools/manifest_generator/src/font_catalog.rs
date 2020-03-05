@@ -4,6 +4,8 @@
 
 //! Deserialization for `.font_catalog.json` files.
 
+#![allow(deprecated)]
+
 use {
     crate::{
         merge::{MergeError, TryMerge, TryMergeGroups},
@@ -36,22 +38,22 @@ enum FontCatalogWrapper {
 
 /// A human-defined catalog of fonts that exist in a particular CIPD repo.
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
-pub(crate) struct FontCatalog {
+pub struct FontCatalog {
     pub families: Vec<Family>,
 }
 
 /// Index into the `families` table.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub(crate) struct FamilyIndex(pub usize);
+pub struct FamilyIndex(pub usize);
 
 /// Index into a [Family]'s `assets` field.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub(crate) struct AssetInFamilyIndex(pub usize);
+pub struct AssetInFamilyIndex(pub usize);
 
 /// A [Typeface]'s index inside an [Asset]. Note that an [Asset]'s `typefaces`'s indices might not
 /// start at zero and can have discontinuities.
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub(crate) struct TypefaceInAssetIndex(pub u32);
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Deserialize)]
+pub struct TypefaceInAssetIndex(pub u32);
 
 impl FontCatalog {
     /// Loads and merges multiple catalogs.
@@ -88,12 +90,13 @@ impl FontCatalog {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash, Deserialize)]
-pub(crate) struct Family {
+pub struct Family {
     pub name: String,
     #[serde(default)]
     pub aliases: Vec<FontFamilyAliasSet>,
     #[serde(with = "OptGenericFontFamily", default)] // Default to `None`
     pub generic_family: Option<GenericFontFamily>,
+    #[deprecated(note = "Use per-product fallback chain instead")]
     pub fallback: bool,
     pub assets: Vec<Asset>,
 }
@@ -179,7 +182,7 @@ impl TryMerge for FontFamilyAliasSet {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash, Deserialize)]
-pub(crate) struct Asset {
+pub struct Asset {
     pub file_name: String,
     #[serde(deserialize_with = "Asset::deserialize_typefaces")]
     pub typefaces: BTreeMap<TypefaceInAssetIndex, Typeface>,
@@ -223,7 +226,7 @@ impl TryMerge for Asset {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash, Deserialize)]
-pub(crate) struct Typeface {
+pub struct Typeface {
     #[serde(default)]
     pub index: u32,
     #[serde(default)]

@@ -9,6 +9,11 @@ import("//src/fonts/build/font_args.gni")
 #
 # Parameters
 #
+#   product_config_path:
+#     Optional: Path to a JSON file containing product-specific font
+#     configuration, including a fallback chain.
+#     Type: file
+#
 #   all_fonts_path
 #     Required: Path to a JSON file containing an array of all the font file
 #     names in the target product.
@@ -59,6 +64,7 @@ import("//src/fonts/build/font_args.gni")
 template("font_manifest") {
   forward_variables_from(invoker,
                          [
+                           "product_config_path",
                            "all_fonts_path",
                            "local_fonts_path",
                            "font_files",
@@ -88,6 +94,9 @@ template("font_manifest") {
                 all_fonts_path,
                 local_fonts_path,
               ] + font_pkgs_paths + font_catalog_paths + font_files
+    if (defined(product_config_path)) {
+      sources += [ product_config_path ]
+    }
     outputs = [ output ]
     deps = invoker.deps
 
@@ -119,6 +128,13 @@ template("font_manifest") {
       args += [ "--font-catalog" ]
       foreach(font_catalog_path, font_catalog_paths) {
         args += [ rebase_path(font_catalog_path) ]
+      }
+
+      if (defined(product_config_path)) {
+        args += [
+          "--product-config",
+          rebase_path(product_config_path),
+        ]
       }
     } else {
       args += [ "--empty" ]

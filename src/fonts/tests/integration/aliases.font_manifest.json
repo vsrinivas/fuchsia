@@ -86,5 +86,19 @@
         }
       ]
     }
+  ],
+  "fallback_chain": [
+    {
+      "file_name": "AlphaSans-Regular.ttf",
+      "index": 0
+    },
+    {
+      "file_name": "AlphaSansHebrew-Regular.ttf",
+      "index": 0
+    },
+    {
+      "file_name": "AlphaSans-Condensed.ttf",
+      "index": 0
+    }
   ]
 }

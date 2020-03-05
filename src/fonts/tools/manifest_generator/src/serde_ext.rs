@@ -5,45 +5,37 @@
 //! Useful utilities for Serde JSON deserialization.
 
 use {
+    json5,
     serde::de::DeserializeOwned,
-    serde_json,
     std::{
-        fs, io,
+        fs,
         path::{Path, PathBuf},
     },
     thiserror::Error,
 };
 
 /// Loads and deserializes a JSON-serialized value of type `T` from a file path.
-pub(crate) fn load_from_path<T: DeserializeOwned, P: AsRef<Path>>(path: P) -> Result<T, LoadError> {
+pub fn load_from_path<T: DeserializeOwned, P: AsRef<Path>>(path: P) -> Result<T, LoadError> {
     let path = path.as_ref();
-    match fs::File::open(&path) {
-        Ok(file) => {
-            let reader = io::BufReader::new(file);
-            load_from_reader(reader, path)
-        }
-        Err(err) => Err(LoadError::Io { path: path.into(), error: err }),
-    }
-}
-
-/// Loads and deserializes a JSON-serialized value of type `T` from a `Read` implementer. The file
-/// path is passed in for error context.
-pub(crate) fn load_from_reader<T: DeserializeOwned, R: io::Read, P: AsRef<Path>>(
-    reader: R,
-    path: P,
-) -> Result<T, LoadError> {
-    match serde_json::from_reader(reader) {
-        Ok(parsed) => Ok(parsed),
-        Err(err) => Err(LoadError::Parse { path: path.as_ref().into(), error: err }),
-    }
+    let contents = fs::read_to_string(path)
+        .map_err(|e| LoadError::Io { path: path.into(), error: e.into() })?;
+    json5::from_str(&contents).map_err(|e| LoadError::Parse { path: path.into(), error: e.into() })
 }
 
 /// Serde JSON load/deserialization errors.
 #[derive(Debug, Error)]
-pub(crate) enum LoadError {
+pub enum LoadError {
     #[error("File {:?} failed to load: {:?}", path, error)]
-    Io { path: PathBuf, error: io::Error },
+    Io {
+        path: PathBuf,
+        #[source]
+        error: anyhow::Error,
+    },
 
     #[error("File {:?} failed to parse: {:?}", path, error)]
-    Parse { path: PathBuf, error: serde_json::Error },
+    Parse {
+        path: PathBuf,
+        #[source]
+        error: anyhow::Error,
+    },
 }

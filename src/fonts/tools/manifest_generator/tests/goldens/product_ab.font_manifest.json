@@ -12,7 +12,6 @@
         }
       ],
       "generic_family": "sans-serif",
-      "fallback": true,
       "assets": [
         {
           "file_name": "AlphaAndBeta-Thin.ttc",
@@ -131,7 +130,6 @@
         }
       ],
       "generic_family": "sans-serif",
-      "fallback": true,
       "assets": [
         {
           "file_name": "AlphaAndBeta-Thin.ttc",
@@ -285,7 +283,6 @@
         }
       ],
       "generic_family": "sans-serif",
-      "fallback": true,
       "assets": [
         {
           "file_name": "GammaCJK-Regular.ttc",
@@ -318,6 +315,64 @@
           ]
         }
       ]
+    }
+  ],
+  "fallback_chain": [
+    {
+      "file_name": "BetaSans-Regular.ttf",
+      "index": 0
+    },
+    {
+      "file_name": "BetaSans-Italic.ttf",
+      "index": 0
+    },
+    {
+      "file_name": "BetaSans-BoldItalic.ttf",
+      "index": 0
+    },
+    {
+      "file_name": "AlphaAndBeta-Thin.ttc",
+      "index": 1
+    },
+    {
+      "file_name": "GammaCJK-Regular.ttc",
+      "index": 0
+    },
+    {
+      "file_name": "GammaCJK-Regular.ttc",
+      "index": 1
+    },
+    {
+      "file_name": "AlphaAndBeta-Thin.ttc",
+      "index": 0
+    },
+    {
+      "file_name": "AlphaSans-Bold.ttf",
+      "index": 0
+    },
+    {
+      "file_name": "AlphaSans-BoldItalic.ttf",
+      "index": 0
+    },
+    {
+      "file_name": "AlphaSans-Italic.ttf",
+      "index": 0
+    },
+    {
+      "file_name": "AlphaSans-Regular.ttf",
+      "index": 0
+    },
+    {
+      "file_name": "BetaSans-Bold.ttf",
+      "index": 0
+    },
+    {
+      "file_name": "BetaSans-Condensed.ttf",
+      "index": 0
+    },
+    {
+      "file_name": "BetaSans-Condensed.ttf",
+      "index": 1
     }
   ]
 }

@@ -7,14 +7,14 @@ Updated 2019-12-12
 ## Test groups
 
 There are three groups of tests:
-* [`reviewed_api`](reviewed_api)\
+* [`reviewed_api`](src/reviewed_api)\
   Tests for the API-reviewed `fuchsia.fonts.Provider` protocol in the SDK.
 
-* [`old_api`](old_api.rs)\
+* [`old_api`](src/old_api)\
   Tests for the initial version of that protocol. This is deprecated and will be
   removed as soon as we're confident we've removed all remaining clients.
 
-* [`experimental_api`](experimental_api)\
+* [`experimental_api`](src/experimental_api)\
   Tests for not-yet-reviewed experimental APIs, which are not in the SDK.
 
 ## Where are the manifests coming from?
@@ -31,7 +31,6 @@ namespace under `/config/data/`.
 ## Omitted fields
 Any omitted fields in the manifests are assumed to have the following values:
 
-- Fallback: false
 - Generic family: None
 - Index: 0
 - Styles (Slant, Weight, Width)

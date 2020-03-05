@@ -15,9 +15,7 @@ use {
 /// same key.
 ///
 /// See [crate::font_catalog::Family] for example.
-pub(crate) trait TryMerge:
-    Clone + Debug + Eq + Hash + Sync + Send + Sized + 'static
-{
+pub trait TryMerge: Clone + Debug + Eq + Hash + Sync + Send + Sized + 'static {
     type Key: Clone + Hash + Eq + PartialEq + Ord + PartialOrd + 'static;
 
     /// The key by which to group the items.
@@ -78,7 +76,7 @@ where
 }
 
 /// Import this trait to allow the use of [`TryMergeGroups::try_merge_groups`] on an `Iterator`.
-pub(crate) trait TryMergeGroups
+pub trait TryMergeGroups
 where
     Self: Iterator + Sized,
     Self::Item: TryMerge,
@@ -110,7 +108,7 @@ where
 
 /// Errors while merging a group of items.
 #[derive(Debug, Error)]
-pub(crate) enum MergeError<V>
+pub enum MergeError<V>
 where
     V: Debug + Send + Sync + 'static,
 {

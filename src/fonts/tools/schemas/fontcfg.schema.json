@@ -1,0 +1,57 @@
+{
+  "$id": "http://fuchsia.com/src/fonts/tools/schemas/fontcfg.schema.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "A manually written, product-specific font configuration.\nRecommended extension: .fontcfg.json",
+  "type": "object",
+  "definitions": {
+    "typeface_reference": {
+      "oneOf": [
+        {
+          "$ref": "#/definitions/file_name"
+        },
+        {
+          "type": "object",
+          "required": [
+            "file_name"
+          ],
+          "properties": {
+            "file_name": {
+              "$ref": "#/definitions/file_name"
+            },
+            "index": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Index of the typeface within the font file"
+            }
+          }
+        }
+      ]
+    },
+    "file_name": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9_\\-.]+\\.[a-zA-Z0-9_\\-]+$",
+      "description": "The name of the font file",
+      "examples": [
+        "Roboto-Regular.ttf",
+        "NotoSans-CJK.ttc"
+      ]
+    }
+  },
+  "required": [
+    "version"
+  ],
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "Schema version",
+      "pattern": "^[0-9]+$"
+    },
+    "fallback_chain": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/typeface_reference"
+      },
+      "description": "Sequence of fallback typefaces for the target product"
+    }
+  }
+}

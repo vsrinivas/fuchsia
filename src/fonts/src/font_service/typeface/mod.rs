@@ -10,6 +10,6 @@ mod test_util;
 mod typeface;
 
 pub use {
-    collection::Collection,
-    typeface::{Typeface, TypefaceInfoAndCharSet},
+    collection::{Collection, TypefaceCollectionBuilder},
+    typeface::{Typeface, TypefaceId, TypefaceInfoAndCharSet},
 };

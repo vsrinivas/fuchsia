@@ -19,7 +19,7 @@ use {
 /// Describes which set a font belongs to, local or downloadable.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Hash)]
 #[serde(rename_all = "lowercase")]
-pub(crate) enum FontSet {
+pub enum FontSet {
     /// Font files in the local set. Bundled directly in the font server's `/config/data`.
     Local,
     /// Available to download as a Fuchsia package (`fuchsia-pkg://fuchsia.com/font-package-...`).
@@ -27,7 +27,7 @@ pub(crate) enum FontSet {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
-pub(crate) struct FontSets {
+pub struct FontSets {
     map: BTreeMap<String, FontSet>,
 }
 

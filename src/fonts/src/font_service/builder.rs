@@ -5,9 +5,9 @@
 use {
     super::{
         asset::{AssetCollection, AssetCollectionBuilder},
-        family::{FamilyOrAlias, FontFamily},
-        typeface::{Collection as TypefaceCollection, Typeface},
-        AssetId, FontService,
+        family::{FamilyOrAliasBuilder, FontFamilyBuilder},
+        typeface::{Typeface, TypefaceCollectionBuilder, TypefaceId},
+        FontService,
     },
     anyhow::{format_err, Error},
     clonable_error::ClonableError,
@@ -31,18 +31,14 @@ use {
 /// Create a new builder with [`new()`](FontServiceBuilder::new), then populate using
 /// [`load_manifest()`](FontServiceBuilder::load_manifest), and finally construct a `FontService`
 /// using [`build()`](FontServiceBuilder::build).
+#[derive(Debug)]
 pub struct FontServiceBuilder {
     manifests: Vec<ManifestOrPath>,
     assets: AssetCollectionBuilder,
     /// Maps the font family name from the manifest (`families.family`) to a FamilyOrAlias.
-    families: BTreeMap<UniCase<String>, FamilyOrAlias>,
-    fallback_collection: TypefaceCollection,
-
-    typefaces: BTreeMap<TypefaceId, Arc<Typeface>>,
+    families: BTreeMap<UniCase<String>, FamilyOrAliasBuilder>,
+    fallback_collection: TypefaceCollectionBuilder,
 }
-
-/// Asset ID and font index.
-type TypefaceId = (AssetId, u32);
 
 impl FontServiceBuilder {
     /// Creates a new, empty builder.
@@ -51,8 +47,7 @@ impl FontServiceBuilder {
             manifests: vec![],
             assets: AssetCollectionBuilder::new(),
             families: BTreeMap::new(),
-            fallback_collection: TypefaceCollection::new(),
-            typefaces: BTreeMap::new(),
+            fallback_collection: TypefaceCollectionBuilder::new(),
         }
     }
 
@@ -70,7 +65,8 @@ impl FontServiceBuilder {
         self
     }
 
-    /// Tries to build a [`FontService`] from the provided manifests, with some additional error checking.
+    /// Tries to build a [`FontService`] from the provided manifests, with some additional error
+    /// checking.
     pub async fn build(mut self) -> Result<FontService, Error> {
         let manifests: Result<Vec<(FontManifestWrapper, Option<PathBuf>)>, Error> = self
             .manifests
@@ -102,8 +98,8 @@ impl FontServiceBuilder {
 
         Ok(FontService {
             assets: self.assets.build(),
-            families: self.families,
-            fallback_collection: self.fallback_collection,
+            families: self.families.into_iter().map(|(key, value)| (key, value.build())).collect(),
+            fallback_collection: self.fallback_collection.build(),
         })
     }
 
@@ -112,26 +108,21 @@ impl FontServiceBuilder {
         manifest: v2::FontsManifest,
         manifest_path: Option<PathBuf>,
     ) -> Result<(), Error> {
-        let path_string: String = manifest_path
-            .as_ref()
-            .map(|path| path.to_string_lossy().to_string())
-            .unwrap_or_default();
-        trace::duration!(
-                "fonts",
-                "font_service:builder:add_fonts_from_manifest_v2",
-                "path" => &path_string[..]);
+        // Hold on to the typefaces defined in this manifest so that they can be referenced when
+        // building the fallback chain.
+        let mut manifest_typefaces: BTreeMap<TypefaceId, Arc<Typeface>> = BTreeMap::new();
 
         for mut manifest_family in manifest.families {
             // Register the family itself
             let family_name = UniCase::new(manifest_family.name.clone());
             let family = match self.families.entry(family_name.clone()).or_insert_with(|| {
-                FamilyOrAlias::Family(FontFamily::new(
+                FamilyOrAliasBuilder::Family(FontFamilyBuilder::new(
                     family_name.to_string(),
                     manifest_family.generic_family,
                 ))
             }) {
-                FamilyOrAlias::Family(f) => f,
-                FamilyOrAlias::Alias(_, _) => {
+                FamilyOrAliasBuilder::Family(f) => f,
+                FamilyOrAliasBuilder::Alias(_, _) => {
                     return Err(FontServiceBuilderError::AliasFamilyConflict {
                         conflicting_name: family_name.to_string(),
                         manifest_path: manifest_path.clone(),
@@ -142,8 +133,8 @@ impl FontServiceBuilder {
 
             // Register the family's assets and their typefaces.
 
-            // We have to use `.drain()` here in order to leave `manifest_family` in a valid state
-            // to be able to keep using it further down.
+            // We have to use `.drain()` here (instead of moving `assets` out) in order to leave
+            // `manifest_family` in a valid state to be able to keep using it further down.
             for manifest_asset in manifest_family.assets.drain(..) {
                 let asset_id = self.assets.add_or_get_asset_id(&manifest_asset);
                 for manifest_typeface in manifest_asset.typefaces {
@@ -155,45 +146,39 @@ impl FontServiceBuilder {
                         }
                         .into());
                     }
+                    let generic_family = manifest_family.generic_family;
+                    let typeface_id = TypefaceId { asset_id, index: manifest_typeface.index };
                     // Deduplicate typefaces across multiple manifests
-                    let typeface_id = (asset_id, manifest_typeface.index);
-                    if !self.typefaces.contains_key(&typeface_id) {
+                    if !family.has_typeface_id(&typeface_id) {
+                        // .unwrap() because we already checked for missing code points above
                         let typeface = Arc::new(
-                            Typeface::new(
-                                asset_id,
-                                manifest_typeface,
-                                manifest_family.generic_family,
-                            )
-                            // We already checked for missing code points above
-                            .unwrap(),
+                            Typeface::new(asset_id, manifest_typeface, generic_family).unwrap(),
                         );
-                        self.typefaces.insert(typeface_id, typeface.clone());
-                        family.faces.add_typeface(typeface.clone());
-                        if manifest_family.fallback {
-                            self.fallback_collection.add_typeface(typeface);
-                        }
+                        manifest_typefaces.insert(typeface_id, typeface.clone());
+                        family.add_typeface_once(typeface);
                     }
                 }
             }
+
             // Above, we're working with `family` mutably borrowed from `self.families`. We have to
             // finish using any mutable references to `self.families` before we can create further
             // references to `self.families` below.
 
             // Register aliases
-            let aliases = FamilyOrAlias::aliases_from_family(&manifest_family);
+            let aliases = FamilyOrAliasBuilder::aliases_from_family(&manifest_family);
             for (key, value) in aliases {
                 match self.families.get(&key) {
                     None => {
                         self.families.insert(key, value);
                     }
-                    Some(FamilyOrAlias::Family(_)) => {
+                    Some(FamilyOrAliasBuilder::Family(_)) => {
                         return Err(FontServiceBuilderError::AliasFamilyConflict {
                             conflicting_name: key.to_string(),
                             manifest_path: manifest_path.clone(),
                         }
                         .into());
                     }
-                    Some(FamilyOrAlias::Alias(other_family_name, _)) => {
+                    Some(FamilyOrAliasBuilder::Alias(other_family_name, _)) => {
                         // If the alias exists then it must be for the same font family.
                         if *other_family_name != family_name {
                             return Err(FontServiceBuilderError::AmbiguousAlias {
@@ -206,6 +191,32 @@ impl FontServiceBuilder {
                         }
                     }
                 }
+            }
+        }
+
+        // We add all the fallback typefaces, preserving their order from the product font
+        // configuration file.
+        //
+        // Unfortunately, when there are multiple manifests with fallback chains, the best we can
+        // do is concatenate the fallback chains (with de-duplication). Multiple manifests are not
+        // expected in production use cases, so this isn't as awful as it sounds.
+        for fallback_typeface in &manifest.fallback_chain {
+            let asset_id = self
+                .assets
+                .get_asset_id_by_name(&fallback_typeface.file_name)
+                .ok_or_else(|| FontServiceBuilderError::UnknownFallbackEntry {
+                    file_name: fallback_typeface.file_name.clone(),
+                    index: fallback_typeface.index,
+                    manifest_path: manifest_path.clone(),
+                })?;
+
+            let typeface_id = TypefaceId { asset_id, index: fallback_typeface.index };
+            if !self.fallback_collection.has_typeface_id(&typeface_id) {
+                let typeface = manifest_typefaces
+                    .get(&typeface_id)
+                    .expect("Invalid state in FontServiceBuilder")
+                    .clone();
+                self.fallback_collection.add_typeface_once(typeface);
             }
         }
 
@@ -275,6 +286,7 @@ impl FontServiceBuilder {
 }
 
 #[allow(dead_code)]
+#[derive(Debug)]
 enum ManifestOrPath {
     Manifest(FontManifestWrapper),
     Path(PathBuf),
@@ -314,7 +326,16 @@ pub enum FontServiceBuilderError {
         cause: ClonableError,
     },
 
-    /// None of the loaded manifests contained any families designated as `fallback: true`.
+    /// The font manifest's fallback chain referenced an undeclared typeface.
+    #[error(
+        "Unknown typeface in fallback chain in {:?}: file name \'{}\', index {}",
+        manifest_path,
+        file_name,
+        index
+    )]
+    UnknownFallbackEntry { file_name: String, index: u32, manifest_path: Option<PathBuf> },
+
+    /// None of the loaded manifests contained a non-empty fallback chain.
     #[error("Need at least one fallback font family")]
     NoFallbackCollection,
 
@@ -327,9 +348,13 @@ pub enum FontServiceBuilderError {
 mod tests {
     use {
         super::*,
-        crate::font_service::AssetId,
+        crate::font_service::{
+            family::{FamilyOrAlias, FontFamily},
+            typeface::Collection as TypefaceCollection,
+            AssetId,
+        },
         char_set::CharSet,
-        fidl_fuchsia_fonts::{GenericFontFamily, Slant, Width, WEIGHT_NORMAL},
+        fidl_fuchsia_fonts::{GenericFontFamily, Slant, Width, WEIGHT_BOLD, WEIGHT_NORMAL},
         manifest::{serde_ext::StyleOptions, v2},
         maplit::{btreemap, btreeset},
         pretty_assertions::assert_eq,
@@ -348,24 +373,45 @@ mod tests {
                         "A", "Aleph", "Alif",
                     ])?],
                     generic_family: Some(GenericFontFamily::SansSerif),
-                    fallback: true,
-                    assets: vec![v2::Asset {
-                        file_name: "Alpha-Regular.ttf".to_string(),
-                        location: v2::AssetLocation::LocalFile(v2::LocalFileLocator {
-                            directory: PathBuf::from("/pkg/config/data/assets"),
-                        }),
-                        typefaces: vec![v2::Typeface {
-                            index: 0,
-                            languages: vec!["en".to_string()],
-                            style: v2::Style {
-                                slant: Slant::Upright,
-                                weight: WEIGHT_NORMAL,
-                                width: Width::Normal,
-                            },
-                            code_points: CharSet::new(vec![0x1, 0x2, 0x3]),
-                        }],
-                    }],
+                    assets: vec![
+                        v2::Asset {
+                            file_name: "Alpha-Regular.ttf".to_string(),
+                            location: v2::AssetLocation::LocalFile(v2::LocalFileLocator {
+                                directory: PathBuf::from("/pkg/config/data/assets"),
+                            }),
+                            typefaces: vec![v2::Typeface {
+                                index: 0,
+                                languages: vec!["en".to_string()],
+                                style: v2::Style {
+                                    slant: Slant::Upright,
+                                    weight: WEIGHT_NORMAL,
+                                    width: Width::Normal,
+                                },
+                                code_points: CharSet::new(vec![0x1, 0x2, 0x3]),
+                            }],
+                        },
+                        v2::Asset {
+                            file_name: "Alpha-Bold.ttf".to_string(),
+                            location: v2::AssetLocation::LocalFile(v2::LocalFileLocator {
+                                directory: PathBuf::from("/pkg/config/data/assets"),
+                            }),
+                            typefaces: vec![v2::Typeface {
+                                index: 0,
+                                languages: vec!["en".to_string()],
+                                style: v2::Style {
+                                    slant: Slant::Upright,
+                                    weight: WEIGHT_BOLD,
+                                    width: Width::Normal,
+                                },
+                                code_points: CharSet::new(vec![0x1, 0x2, 0x3]),
+                            }],
+                        },
+                    ],
                 }],
+                fallback_chain: vec![
+                    v2::TypefaceId { file_name: "Alpha-Bold.ttf".to_string(), index: 0 },
+                    v2::TypefaceId { file_name: "Alpha-Regular.ttf".to_string(), index: 0 },
+                ],
             }))
             .add_manifest(FontManifestWrapper::Version2(v2::FontsManifest {
                 families: vec![v2::Family {
@@ -384,7 +430,6 @@ mod tests {
                         )?,
                     ],
                     generic_family: Some(GenericFontFamily::SansSerif),
-                    fallback: true,
                     assets: vec![v2::Asset {
                         file_name: "Alpha-Regular.ttf".to_string(),
                         location: v2::AssetLocation::LocalFile(v2::LocalFileLocator {
@@ -402,16 +447,31 @@ mod tests {
                         }],
                     }],
                 }],
+                fallback_chain: vec![v2::TypefaceId {
+                    file_name: "Alpha-Regular.ttf".to_string(),
+                    index: 0,
+                }],
             }));
 
         let service = builder.build().await?;
 
-        let expected_typeface = Arc::new(Typeface {
+        let expected_typeface_regular = Arc::new(Typeface {
             asset_id: AssetId(0),
             font_index: 0,
             slant: Slant::Upright,
             weight: WEIGHT_NORMAL,
             width: Width::Normal, // First version wins
+            languages: btreeset!["en".to_string()],
+            char_set: CharSet::new(vec![0x1, 0x2, 0x3]),
+            generic_family: Some(GenericFontFamily::SansSerif),
+        });
+
+        let expected_typeface_bold = Arc::new(Typeface {
+            asset_id: AssetId(1),
+            font_index: 0,
+            slant: Slant::Upright,
+            weight: WEIGHT_BOLD,
+            width: Width::Normal,
             languages: btreeset!["en".to_string()],
             char_set: CharSet::new(vec![0x1, 0x2, 0x3]),
             generic_family: Some(GenericFontFamily::SansSerif),
@@ -424,7 +484,10 @@ mod tests {
                 FamilyOrAlias::Family(FontFamily {
                     name: "Alpha".to_string(),
                     faces: TypefaceCollection {
-                        faces: vec![expected_typeface.clone()]
+                        faces: vec![
+                            expected_typeface_regular.clone(),
+                            expected_typeface_bold.clone()
+                        ]
                     },
                     generic_family: Some(GenericFontFamily::SansSerif)
             }),
@@ -441,11 +504,13 @@ mod tests {
                 FamilyOrAlias::Alias(UniCase::new("Alpha".to_string()), None),)
         );
 
-        assert_eq!(service.assets.len(), 1);
+        assert_eq!(service.assets.len(), 2);
 
         assert_eq!(
             service.fallback_collection,
-            TypefaceCollection { faces: vec![expected_typeface.clone()] }
+            TypefaceCollection {
+                faces: vec![expected_typeface_bold.clone(), expected_typeface_regular.clone()]
+            }
         );
 
         Ok(())
@@ -453,7 +518,10 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_empty_manifest() -> Result<(), Error> {
-        let manifest = FontManifestWrapper::Version2(v2::FontsManifest { families: vec![] });
+        let manifest = FontManifestWrapper::Version2(v2::FontsManifest {
+            families: vec![],
+            fallback_chain: vec![],
+        });
         let mut builder = FontServiceBuilder::new();
         builder.add_manifest(manifest);
         builder.build().await?; // Should succeed

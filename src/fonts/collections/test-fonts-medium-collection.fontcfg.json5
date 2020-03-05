@@ -1,0 +1,53 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// Font configuration for products that use //src/fonts/collections:test-fonts-medium-collection
+//
+// The fallback chain must be maintained by hand.
+// See //src/fonts/tools/manifest_generator/README.md.
+{
+  $schema: "http://fuchsia.com/src/fonts/tools/schemas/fontcfg.schema.json",
+  version: "1",
+  // Note that "MaterialIcons-Regular.ttf" isn't a fallback font because it provides non-Unicode
+  // characters.
+  fallback_chain: [
+    ///
+    ///
+    /// SANS SERIF LATIN
+    "Roboto-Regular.ttf",
+    "Roboto-Light.ttf",
+    "Roboto-Medium.ttf",
+    ///
+    ///
+    /// SANS SERIF CJK,
+    {
+      file_name: "NotoSansCJK-Regular.ttc",
+      index: 0
+    },
+    {
+      file_name: "NotoSansCJK-Regular.ttc",
+      index: 1
+    },
+    {
+      file_name: "NotoSansCJK-Regular.ttc",
+      index: 2
+    },
+    {
+      file_name: "NotoSansCJK-Regular.ttc",
+      index: 3
+    },
+    {
+      file_name: "NotoSansCJK-Regular.ttc",
+      index: 4
+    },
+    ///
+    ///
+    /// SERIF LATIN
+    "RobotoSlab-Regular.ttf",
+    ///
+    ///
+    /// SERIF CJK
+    "NotoSerifCJK-Regular.ttc"
+  ]
+}

@@ -7,7 +7,7 @@
 //! Utility methods for tests in `font_service::typeface`.
 
 use {
-    super::{Collection as TypefaceCollection, Typeface},
+    super::Typeface,
     crate::font_service::AssetId,
     char_set::CharSet,
     fidl_fuchsia_fonts::{
@@ -16,21 +16,7 @@ use {
     },
     fidl_fuchsia_intl::LocaleId,
     manifest::{self, v2},
-    std::sync::Arc,
 };
-
-/// Creates a collection consisting of all of the given `Typeface`s, assigning them sequential
-/// `AssetId`s.
-pub fn make_fake_typeface_collection(mut faces: Vec<Typeface>) -> TypefaceCollection {
-    let mut result = TypefaceCollection::new();
-    for (i, mut typeface) in faces.drain(..).enumerate() {
-        // Assign fake asset_id to each font
-        typeface.asset_id = AssetId(i as u32);
-        result.add_typeface(Arc::new(typeface));
-    }
-
-    result
-}
 
 /// Creates a typeface with the given properties (with an `AssetId` of `0` and font index of `0`).
 pub fn make_fake_typeface(

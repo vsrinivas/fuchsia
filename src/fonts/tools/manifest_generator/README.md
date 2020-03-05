@@ -42,7 +42,37 @@ one pair per product target.
 
 [1]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=8892
 
-### 4. Font directory
+### 4. `*.fontcfg.json`
+
+Contains a human-written set of product-specific font settings. See
+[schema](../schemas/fontcfg.schema.json).
+
+Currently, the main purpose of this file is to define a specific fallback chain,
+i.e. a preferred sequence of typefaces to use when an exact match for the
+client's typeface request is not available.
+
+The fallback chain is defined manually. Some guidelines to follow:
+
+- Include at least one font for every supported script. (The set of supported
+  scripts varies by product.)
+- Try to cover at least the `sans-serif`, `serif`, and `monospace` font
+  families.
+- When there is overlapping coverage, put more specific assets higher in the
+  list. For example, all of the _Noto Sans_ script-specific fonts have glyphs
+  for the ASCII range, but the Noto Sans Latin variant should go first.
+- When there is overlapping coverage, put smaller font files higher in the list.
+  This reduces UI jank when loading fallback fonts.
+
+> #### Tip
+> To check which typefaces in a `font_collection` are not yet included in the
+> fallback chain, run the manifest generator with `-v` (or `--verbose`). You can
+> do this by temporarily changing the arguments in 
+> [font_manifest.gni](../../build/font_manifest.gni). 
+
+One `.fontcfg.json` (or `.fontcfg.json5`) file should be checked in for every
+GN `font_collection()` invocation.
+
+### 5. Font directory
 
 This is usually a directory in `//prebuilt/third_party`, and it is where the
 CIPD checkout places all of the font asset files and the `*.font_pkgs.json`

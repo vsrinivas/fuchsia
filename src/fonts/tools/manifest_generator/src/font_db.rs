@@ -2,12 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![allow(deprecated)]
+
 use {
     crate::{
         constants::{LOCAL_ASSET_DIRECTORY, PKG_URL_PREFIX},
-        font_catalog as fi,
-        font_catalog::{AssetInFamilyIndex, FamilyIndex, TypefaceInAssetIndex},
-        FontCatalog, FontPackageListing, FontSet, FontSets,
+        font_catalog as fc,
+        font_catalog::{AssetInFamilyIndex, FamilyIndex},
+        product_config, FontCatalog, FontPackageListing, FontSet, FontSets, ProductConfig,
+        TypefaceInAssetIndex,
     },
     anyhow::{format_err, Error},
     char_set::CharSet,
@@ -17,6 +20,7 @@ use {
     manifest::v2,
     std::{
         collections::{BTreeMap, BTreeSet},
+        fmt,
         path::{Path, PathBuf},
     },
     thiserror::Error,
@@ -31,9 +35,10 @@ type AssetKey = (FamilyIndex, AssetInFamilyIndex);
 /// the target product.)
 ///
 /// For test coverage, please see the integration tests.
-pub(crate) struct FontDb {
+pub struct FontDb {
     font_catalog: FontCatalog,
     font_sets: FontSets,
+    product_config: ProductConfig,
 
     family_name_to_family: BTreeMap<String, FamilyIndex>,
     asset_name_to_assets: BTreeMap<String, BTreeSet<AssetKey>>,
@@ -47,6 +52,7 @@ impl FontDb {
         font_catalog: FontCatalog,
         font_pkgs: FontPackageListing,
         font_sets: FontSets,
+        product_config: ProductConfig,
         font_info_loader: impl FontInfoLoader,
         font_dir: P,
     ) -> Result<FontDb, FontDbErrors> {
@@ -101,11 +107,28 @@ impl FontDb {
         let mut db = FontDb {
             font_catalog,
             font_sets,
+            product_config,
             family_name_to_family,
             asset_name_to_assets,
             asset_name_to_pkg_url,
             typeface_to_char_set,
         };
+
+        let mut fallback_typeface_counts: BTreeMap<v2::TypefaceId, usize> = BTreeMap::new();
+        // TODO(fxb/46156): Switch to iter_fallback_chain() when legacy fallbacks are removed.
+        for typeface_id in db.iter_explicit_fallback_chain() {
+            *fallback_typeface_counts.entry(typeface_id.clone()).or_insert(0) += 1;
+            if db.get_assets_by_name(&typeface_id.file_name).is_empty() {
+                errors.push(FontDbError::UnknownFallbackChainEntry {
+                    asset_name: typeface_id.file_name.clone(),
+                })
+            }
+        }
+        for (typeface_id, count) in fallback_typeface_counts.into_iter() {
+            if count > 1 {
+                errors.push(FontDbError::DuplicateFallbackChainEntry { typeface_id })
+            }
+        }
 
         let font_infos = Self::load_font_infos(&db, &font_pkgs, font_info_loader, font_dir);
 
@@ -126,18 +149,18 @@ impl FontDb {
         if errors.is_empty() {
             Ok(db)
         } else {
-            Err(FontDbErrors(errors))
+            Err(FontDbErrors(errors.into()))
         }
     }
 
-    pub fn get_family_by_name(&self, family_name: impl AsRef<str>) -> Option<&fi::Family> {
+    pub fn get_family_by_name(&self, family_name: impl AsRef<str>) -> Option<&fc::Family> {
         let family_idx = self.family_name_to_family.get(family_name.as_ref())?;
         self.font_catalog.families.get(family_idx.0)
     }
 
     /// Get all [`Asset`]s with the given file name. There may be more than one instance if the
     /// asset appears in multiple font families.
-    pub fn get_assets_by_name(&self, asset_name: impl AsRef<str>) -> Vec<&fi::Asset> {
+    pub fn get_assets_by_name(&self, asset_name: impl AsRef<str>) -> Vec<&fc::Asset> {
         self.asset_name_to_assets
             .get(asset_name.as_ref())
             // Iterate over the 0 or 1 values inside Option
@@ -153,7 +176,7 @@ impl FontDb {
     }
 
     /// The asset must be in the `FontDb` or this method will panic.
-    pub fn get_code_points(&self, asset: &fi::Asset, index: TypefaceInAssetIndex) -> &CharSet {
+    pub fn get_code_points(&self, asset: &fc::Asset, index: TypefaceInAssetIndex) -> &CharSet {
         // Alas, no sane way to transpose between `(&str, &x)` and `&(String, x)`.
         let key = (asset.file_name.to_owned(), index);
         self.typeface_to_char_set
@@ -163,7 +186,7 @@ impl FontDb {
     }
 
     /// The asset must be in the `FontDb` or this method will panic.
-    pub fn get_asset_location(&self, asset: &fi::Asset) -> v2::AssetLocation {
+    pub fn get_asset_location(&self, asset: &fc::Asset) -> v2::AssetLocation {
         match self.font_sets.get_font_set(&*asset.file_name).unwrap() {
             FontSet::Local => v2::AssetLocation::LocalFile(v2::LocalFileLocator {
                 directory: PathBuf::from(LOCAL_ASSET_DIRECTORY),
@@ -175,7 +198,7 @@ impl FontDb {
     }
 
     /// Iterates over all the _included_ font families in the `FontDb`.
-    pub fn iter_families(&self) -> impl Iterator<Item = &'_ fi::Family> + '_ {
+    pub fn iter_families(&self) -> impl Iterator<Item = &'_ fc::Family> + '_ {
         self.font_catalog
             .families
             .iter()
@@ -186,12 +209,83 @@ impl FontDb {
     /// same as iterating over `Family::assets`.
     pub fn iter_assets<'a>(
         &'a self,
-        family: &'a fi::Family,
-    ) -> impl Iterator<Item = &'a fi::Asset> + 'a {
+        family: &'a fc::Family,
+    ) -> impl Iterator<Item = &'a fc::Asset> + 'a {
         family
             .assets
             .iter()
             .filter(move |asset| !self.get_assets_by_name(&*asset.file_name).is_empty())
+    }
+
+    /// Iterates over the `TypefaceId`s in the target product's fallback chain, plus those marked as
+    /// `"fallback": true` in font catalog files.
+    pub fn iter_fallback_chain<'a>(&'a self) -> impl Iterator<Item = v2::TypefaceId> + 'a {
+        // .unique() eliminates any duplicates from the legacy chain that are already in the
+        // explicit one.
+        itertools::chain(self.iter_explicit_fallback_chain(), self.iter_legacy_fallback_chain())
+            .unique()
+    }
+
+    /// Gets a list of `TypefaceId`s that are not used in the _explicit_ fallback chain, for debugging.
+    pub fn iter_non_fallback_typefaces<'a>(&'a self) -> impl Iterator<Item = v2::TypefaceId> + 'a {
+        let fallback_typefaces: BTreeSet<v2::TypefaceId> =
+            self.iter_explicit_fallback_chain().collect();
+        self.iter_families()
+            .flat_map(move |family| self.family_to_typeface_ids(family))
+            .filter(move |typeface_id| !fallback_typefaces.contains(typeface_id))
+    }
+
+    /// Iterates over the `TypefaceId`s in the target product's fallback chain.
+    fn iter_explicit_fallback_chain<'a>(&'a self) -> impl Iterator<Item = v2::TypefaceId> + 'a {
+        /// Converts a product config TypefaceId into one or more manifest typeface IDs
+        /// (an omitted font index expands to multiple indices).
+        fn get_manifest_typeface_ids<'b>(
+            font_db: &'b FontDb,
+            id: &product_config::TypefaceId,
+        ) -> impl Iterator<Item = v2::TypefaceId> + 'b {
+            // TODO: Dynamic type acrobatics instead of collecting into `Vec`s.
+            match id.index {
+                Some(index) => vec![v2::TypefaceId::new(&id.file_name, index.0)],
+                None => font_db
+                    .get_assets_by_name(&id.file_name)
+                    .iter()
+                    .flat_map(|asset| FontDb::asset_to_typeface_ids(asset))
+                    .collect_vec(),
+            }
+            .into_iter()
+        }
+
+        self.product_config
+            .iter_fallback_chain()
+            .flat_map(move |id| get_manifest_typeface_ids(self, id))
+            .into_iter()
+    }
+
+    /// Iterates over legacy fallbacks specified by `"fallback": true` in the font catalog.
+    // TODO(fxb/46156): Remove this code after all product font collections and font catalogs
+    // are updated.
+    fn iter_legacy_fallback_chain<'a>(&'a self) -> impl Iterator<Item = v2::TypefaceId> + 'a {
+        self.iter_families()
+            .filter(|family| family.fallback)
+            .flat_map(move |family| self.family_to_typeface_ids(family))
+            .into_iter()
+    }
+
+    fn family_to_typeface_ids<'a>(
+        &'a self,
+        family: &'a fc::Family,
+    ) -> impl Iterator<Item = v2::TypefaceId> + 'a {
+        self.iter_assets(family).flat_map(FontDb::asset_to_typeface_ids)
+    }
+
+    fn asset_to_typeface_ids<'a>(
+        asset: &'a fc::Asset,
+    ) -> impl Iterator<Item = v2::TypefaceId> + 'a {
+        let file_name = asset.file_name.clone();
+        asset
+            .typefaces
+            .keys()
+            .map(move |key| v2::TypefaceId { file_name: file_name.clone(), index: key.0 })
     }
 
     fn make_pkg_url(safe_name: impl AsRef<str>) -> Result<PkgUrl, FontDbError> {
@@ -281,12 +375,28 @@ impl FontDb {
 
 /// Collection of errors from loading / building `FontDb`.
 #[derive(Debug, Error)]
-#[error("Errors occurred while building FontDb: {:#?}", _0)]
-pub(crate) struct FontDbErrors(Vec<FontDbError>);
+#[error("Errors occurred while building FontDb: {}", _0)]
+pub struct FontDbErrors(FontDbErrorVec);
+
+#[derive(Debug)]
+pub struct FontDbErrorVec(Vec<FontDbError>);
+
+impl From<Vec<FontDbError>> for FontDbErrorVec {
+    fn from(errors: Vec<FontDbError>) -> Self {
+        FontDbErrorVec(errors)
+    }
+}
+
+impl fmt::Display for FontDbErrorVec {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let descriptions = self.0.iter().map(|e| format!("{}", e)).collect_vec();
+        write!(f, "{:#?}", descriptions)
+    }
+}
 
 /// An error in a single `FontDb` operation.
 #[derive(Debug, Error)]
-pub(crate) enum FontDbError {
+pub enum FontDbError {
     #[error("Asset {} has no typefaces", asset_name)]
     FontCatalogNoTypeFaces { asset_name: String },
 
@@ -295,6 +405,12 @@ pub(crate) enum FontDbError {
 
     #[error("Asset {} is not listed in *.font_catalog.json", asset_name)]
     FontCatalogMissingEntry { asset_name: String },
+
+    #[error("Fallback asset {} is unknown", asset_name)]
+    UnknownFallbackChainEntry { asset_name: String },
+
+    #[error("Multiple entries in fallback chain for {}, index {}", typeface_id.file_name, typeface_id.index)]
+    DuplicateFallbackChainEntry { typeface_id: v2::TypefaceId },
 
     #[error("PkgUrl error: {:?}", error)]
     PkgUrl { error: Error },
@@ -305,7 +421,7 @@ pub(crate) enum FontDbError {
 
 /// Metadata needed for [`FontInfoLoader::load_font_info`].
 #[derive(Debug, Clone)]
-pub(crate) struct FontInfoRequest {
+pub struct FontInfoRequest {
     /// Path to the file
     path: PathBuf,
     /// Index of the font in the file

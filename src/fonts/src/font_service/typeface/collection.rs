@@ -5,19 +5,20 @@
 use {
     super::{
         matcher::select_best_match,
-        typeface::{Typeface, TypefaceAndLangScore},
+        typeface::{Typeface, TypefaceAndLangScore, TypefaceId},
     },
     anyhow::{format_err, Error},
     char_set::CharSet,
     fidl_fuchsia_fonts::{Style2, TypefaceQuery, TypefaceRequest},
     fidl_fuchsia_fonts_ext::TypefaceRequestExt,
-    std::sync::Arc,
+    std::{collections::HashSet, sync::Arc},
 };
 
 fn unwrap_query<'a>(query: &'a Option<TypefaceQuery>) -> Result<&'a TypefaceQuery, Error> {
     query.as_ref().ok_or(format_err!("Missing query"))
 }
 
+/// Ordered collection of `Typeface`s. Construct using [`TypefaceCollectionBuilder`].
 #[derive(Debug, Eq, PartialEq, Hash)]
 pub struct Collection {
     /// Some typefaces may be in more than one collection. In particular, fallback typefaces are
@@ -26,10 +27,6 @@ pub struct Collection {
 }
 
 impl Collection {
-    pub fn new() -> Collection {
-        Collection { faces: vec![] }
-    }
-
     pub fn match_request<'a, 'b>(
         &'a self,
         request: &'b TypefaceRequest,
@@ -87,20 +84,56 @@ impl Collection {
             .map(|a| a.typeface))
     }
 
-    pub fn is_empty(&self) -> bool {
-        self.faces.is_empty()
-    }
-
-    pub fn add_typeface(&mut self, typeface: Arc<Typeface>) {
-        self.faces.push(typeface);
-    }
-
     pub fn get_styles<'a>(&'a self) -> impl Iterator<Item = Style2> + 'a {
         self.faces.iter().map(|f| Style2 {
             width: Some(f.width),
             slant: Some(f.slant),
             weight: Some(f.weight),
         })
+    }
+}
+
+/// Builder for [typeface `Collection`](crate::font_service::typeface::Collection).
+#[derive(Debug)]
+pub struct TypefaceCollectionBuilder {
+    faces: Vec<Arc<Typeface>>,
+    /// Bookkeeping for deduplication
+    seen_ids: HashSet<TypefaceId>,
+}
+
+impl TypefaceCollectionBuilder {
+    /// Creates a new collection builder with no typefaces.
+    pub fn new() -> Self {
+        TypefaceCollectionBuilder { faces: vec![], seen_ids: HashSet::new() }
+    }
+
+    /// Returns true if the collection already has a typeface with the given ID.
+    pub fn has_typeface_id(&self, typeface_id: &TypefaceId) -> bool {
+        self.seen_ids.contains(typeface_id)
+    }
+
+    /// If there's no existing typeface with the same typeface ID already in the builder, adds the
+    /// given typeface and and returns `true`. Otherwise, returns `false`.
+    pub fn add_typeface_once(&mut self, typeface: Arc<Typeface>) -> bool {
+        let typeface_id = TypefaceId { asset_id: typeface.asset_id, index: typeface.font_index };
+        if self.seen_ids.contains(&typeface_id) {
+            false
+        } else {
+            self.seen_ids.insert(typeface_id);
+            self.faces.push(typeface);
+            true
+        }
+    }
+
+    /// Returns true if there are no typefaces currently in the collection.
+    pub fn is_empty(&self) -> bool {
+        self.faces.is_empty()
+    }
+
+    /// Creates a `Collection` from the builder's current state. Call this method last, once you are
+    /// satisfied with how the collection is configured.
+    pub fn build(self) -> Collection {
+        Collection { faces: self.faces }
     }
 }
 
@@ -113,7 +146,42 @@ mod tests {
             GenericFontFamily, Slant, TypefaceRequestFlags, Width, WEIGHT_LIGHT, WEIGHT_NORMAL,
             WEIGHT_SEMI_BOLD, WEIGHT_THIN,
         },
+        manifest::v2,
     };
+
+    fn make_fake_typeface_collection(mut faces: Vec<Typeface>) -> Collection {
+        let mut builder = TypefaceCollectionBuilder::new();
+        for (i, mut typeface) in faces.drain(..).enumerate() {
+            // Assign fake asset_id to each font
+            typeface.asset_id = AssetId(i as u32);
+            builder.add_typeface_once(Arc::new(typeface));
+        }
+
+        builder.build()
+    }
+
+    fn make_fake_typeface(
+        width: Width,
+        slant: Slant,
+        weight: u16,
+        languages: &[&str],
+        char_set: &[u32],
+        generic_family: Option<GenericFontFamily>,
+    ) -> Typeface {
+        // Prevent error if char_set is empty
+        let char_set = if char_set.is_empty() { &[0] } else { char_set };
+        Typeface::new(
+            AssetId(0),
+            v2::Typeface {
+                index: 0,
+                style: v2::Style { slant, weight, width },
+                languages: languages.iter().map(|s| s.to_string()).collect(),
+                code_points: CharSet::new(char_set.to_vec()),
+            },
+            generic_family,
+        )
+        .unwrap() // Safe because char_set is not empty
+    }
 
     fn request_typeface<'a, 'b>(
         collection: &'a Collection,
@@ -165,7 +233,7 @@ mod tests {
             &collection,
             Width::SemiCondensed,
             Slant::Italic,
-            WEIGHT_THIN
+            WEIGHT_THIN,
         )?
         .is_none());
         assert!(request_style_exact(&collection, Width::Condensed, Slant::Upright, WEIGHT_THIN)?

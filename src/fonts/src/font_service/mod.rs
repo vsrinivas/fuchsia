@@ -57,6 +57,7 @@ struct FontFamilyMatch<'a> {
 }
 
 /// Maintains state and handles request streams for the font server.
+#[derive(Debug)]
 pub struct FontService {
     assets: AssetCollection,
     /// Maps the font family name from the manifest (`families[x].name`) to a FamilyOrAlias.

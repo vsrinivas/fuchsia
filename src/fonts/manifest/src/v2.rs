@@ -29,6 +29,10 @@ use {
 pub struct FontsManifest {
     /// List of families in the manifest.
     pub families: Vec<Family>,
+
+    /// Sequence in which to consider typefaces when selecting a fallback, whether within a
+    /// requested generic family or as a last resort.
+    pub fallback_chain: Vec<TypefaceId>,
 }
 
 /// Represents a font family, its metadata, and its font files.
@@ -44,9 +48,6 @@ pub struct Family {
     /// custom icons), this should be set to `None`.
     #[serde(with = "OptGenericFontFamily", default)]
     pub generic_family: Option<GenericFontFamily>,
-    /// Whether this family can be used as a fallback for other fonts (within the same generic
-    /// family, or as a last resort).
-    pub fallback: bool,
     /// Collection of font files that make up the font family.
     pub assets: Vec<Asset>,
 }
@@ -320,6 +321,26 @@ mod code_points_serde {
     {
         let offset_string: OffsetString = code_points.into();
         offset_string.serialize(serializer)
+    }
+}
+
+/// Reference to a typeface, for use in specifying a fallback order.
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq, Hash, Ord, PartialOrd)]
+pub struct TypefaceId {
+    /// File name of the asset.
+    pub file_name: String,
+    /// Index of the typeface in the file.
+    ///
+    /// It is important to allow selecting specific indices rather than including all of the file's
+    /// indices in order because some files can contain typefaces from multiple font families, and a
+    /// product owner may wish to assign them different priorities in the fallback chain.
+    #[serde(default = "Typeface::default_index")]
+    pub index: u32,
+}
+
+impl TypefaceId {
+    pub fn new(file_name: impl Into<String>, index: u32) -> Self {
+        TypefaceId { file_name: file_name.into(), index }
     }
 }
 

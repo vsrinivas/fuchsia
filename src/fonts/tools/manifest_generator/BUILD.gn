@@ -22,6 +22,7 @@ rustc_binary("font_manifest_generator") {
     "//src/lib/fuchsia-url",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:itertools",
+    "//third_party/rust_crates:json5",
     "//third_party/rust_crates:rayon",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_derive",
@@ -62,6 +63,7 @@ copy("copy_test_data") {
     "tests/data/b.font_catalog.json",
     "tests/data/b.font_pkgs.json",
     "tests/data/product_ab.all_fonts.json",
+    "tests/data/product_ab.fontcfg.json",
     "tests/data/product_ab.local_fonts.json",
     "tests/goldens/product_ab.font_manifest.json",
   ]

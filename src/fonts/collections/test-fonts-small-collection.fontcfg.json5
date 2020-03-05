@@ -1,0 +1,19 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// Font configuration for products that use //src/fonts/collections:test-fonts-small-collection
+//
+// The fallback chain must be maintained by hand.
+// See //src/fonts/tools/manifest_generator/README.md.
+{
+  $schema: "http://fuchsia.com/src/fonts/tools/schemas/fontcfg.schema.json",
+  version: "1",
+  fallback_chain: [
+    "Roboto-Regular.ttf",
+    "Roboto-Light.ttf",
+    "Roboto-Medium.ttf",
+    "RobotoMono-Regular.ttf",
+    "RobotoSlab-Regular.ttf"
+  ]
+}

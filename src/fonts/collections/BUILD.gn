@@ -35,6 +35,7 @@ font_collection("open-fonts-collection") {
   # Chromium/Cast tests (fxb/43327).
 
   # font_packages = [ ":open-fonts" ]
+  product_config_path = "open-fonts-collection.fontcfg.json5"
   local_font_bundles = [ ":open-fonts-local" ]
 }
 
@@ -73,6 +74,7 @@ local_font_bundle("test-fonts-downstream-local") {
 # to use a fixed set of fonts.
 font_collection("downstream-test-fonts-collection") {
   testonly = true
+  product_config_path = "downstream-test-fonts-collection.fontcfg.json5"
   manifest_prefix = "downstream_test_fonts"
   local_font_bundles = [ ":test-fonts-downstream-local" ]
 }
@@ -81,6 +83,7 @@ font_collection("downstream-test-fonts-collection") {
 # See out/default/obj/src/fonts/test_fonts_small.font_manifest.json
 font_collection("test-fonts-small-collection") {
   testonly = true
+  product_config_path = "test-fonts-small-collection.fontcfg.json5"
   manifest_prefix = "test_fonts_small"
   local_font_bundles = [ ":test-fonts-small-local" ]
 }
@@ -89,6 +92,7 @@ font_collection("test-fonts-small-collection") {
 # See out/default/obj/src/fonts/test_fonts.font_manifest.json
 font_collection("test-fonts-medium-collection") {
   testonly = true
+  product_config_path = "test-fonts-medium-collection.fontcfg.json5"
   manifest_prefix = "test_fonts_medium"
   local_font_bundles = [
     ":test-fonts-small-local",
@@ -100,6 +104,7 @@ font_collection("test-fonts-medium-collection") {
 # See out/default/obj/src/fonts/test_fonts_large.font_manifest.json
 font_collection("test-fonts-large-collection") {
   testonly = true
+  product_config_path = "test-fonts-large-collection.fontcfg.json5"
   manifest_prefix = "test_fonts_large"
   font_packages = [ ":open-fonts" ]
   local_font_bundles = [ ":open-fonts-local" ]

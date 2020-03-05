@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    super::typeface::{Collection as TypefaceCollection, TypefaceInfoAndCharSet},
+    super::typeface::{
+        Collection as TypefaceCollection, Typeface, TypefaceCollectionBuilder, TypefaceId,
+        TypefaceInfoAndCharSet,
+    },
     fidl_fuchsia_fonts::GenericFontFamily,
     itertools::Itertools,
     manifest::{serde_ext::StyleOptions, v2},
@@ -23,19 +26,36 @@ pub enum FamilyOrAlias {
     Alias(UniCase<String>, Option<Arc<TypefaceQueryOverrides>>),
 }
 
-impl FamilyOrAlias {
+/// Builder for [FamilyOrAlias].
+#[derive(Debug)]
+pub enum FamilyOrAliasBuilder {
+    Family(FontFamilyBuilder),
+    Alias(UniCase<String>, Option<Arc<TypefaceQueryOverrides>>),
+}
+
+impl FamilyOrAliasBuilder {
+    /// Finalizes and builds a `FamilyOrAlias`.
+    pub fn build(self) -> FamilyOrAlias {
+        match self {
+            FamilyOrAliasBuilder::Family(family_builder) => {
+                FamilyOrAlias::Family(family_builder.build())
+            }
+            FamilyOrAliasBuilder::Alias(name, overrides) => FamilyOrAlias::Alias(name, overrides),
+        }
+    }
+
     /// Generates a full set of aliases from a given manifest v2 `Family`, including alias variants
     /// without spaces.
     pub fn aliases_from_family(
         manifest_family: &v2::Family,
-    ) -> BTreeMap<UniCase<String>, FamilyOrAlias> {
-        let mut output: BTreeMap<UniCase<String>, FamilyOrAlias> = BTreeMap::new();
+    ) -> BTreeMap<UniCase<String>, FamilyOrAliasBuilder> {
+        let mut output: BTreeMap<UniCase<String>, FamilyOrAliasBuilder> = BTreeMap::new();
         let family_name = UniCase::new(manifest_family.name.clone());
         let family_name_without_spaces = UniCase::new(manifest_family.name.replace(" ", ""));
         if family_name_without_spaces != family_name {
             output.insert(
                 family_name_without_spaces,
-                FamilyOrAlias::Alias(family_name.clone(), None),
+                FamilyOrAliasBuilder::Alias(family_name.clone(), None),
             );
         }
 
@@ -53,14 +73,14 @@ impl FamilyOrAlias {
                 let alias_name = UniCase::new(alias_name.clone());
                 output.insert(
                     alias_name.clone(),
-                    FamilyOrAlias::Alias(family_name.clone(), overrides.clone()),
+                    FamilyOrAliasBuilder::Alias(family_name.clone(), overrides.clone()),
                 );
 
                 let alias_name_without_spaces = UniCase::new((*alias_name).replace(" ", ""));
                 if alias_name != alias_name_without_spaces {
                     output.insert(
                         alias_name_without_spaces,
-                        FamilyOrAlias::Alias(family_name.clone(), overrides.clone()),
+                        FamilyOrAliasBuilder::Alias(family_name.clone(), overrides.clone()),
                     );
                 }
             }
@@ -105,10 +125,6 @@ pub struct FontFamily {
 }
 
 impl FontFamily {
-    pub fn new(name: String, generic_family: Option<GenericFontFamily>) -> FontFamily {
-        FontFamily { name, faces: TypefaceCollection::new(), generic_family }
-    }
-
     /// Get owned copies of the family's typefaces as `TypefaceInfo`
     pub fn extract_faces<'a>(&'a self) -> impl Iterator<Item = TypefaceInfoAndCharSet> + 'a {
         // Convert Vec<Arc<Typeface>> to Vec<TypefaceInfo>
@@ -117,6 +133,51 @@ impl FontFamily {
             .iter()
             // Copy most fields from `Typeface` and use the canonical family name
             .map(move |face| TypefaceInfoAndCharSet::from_typeface(face, self.name.clone()))
+    }
+}
+
+/// Builder for [FontFamily].
+#[derive(Debug)]
+pub struct FontFamilyBuilder {
+    /// The family's canonical name
+    name: String,
+    /// Generic font family that this family belongs to, if applicable
+    generic_family: Option<GenericFontFamily>,
+    /// Collection of typefaces in the family
+    faces: TypefaceCollectionBuilder,
+}
+
+impl FontFamilyBuilder {
+    /// Creates a new builder without any typefaces defined.
+    pub fn new(
+        name: impl Into<String>,
+        generic_family: Option<GenericFontFamily>,
+    ) -> FontFamilyBuilder {
+        FontFamilyBuilder {
+            name: name.into(),
+            generic_family,
+            faces: TypefaceCollectionBuilder::new(),
+        }
+    }
+
+    /// Returns true if the family's typeface collection already has a typeface with the given ID.
+    pub fn has_typeface_id(&self, typeface_id: &TypefaceId) -> bool {
+        self.faces.has_typeface_id(typeface_id)
+    }
+
+    /// If there's no existing typeface with the same typeface ID already in the builder, adds the
+    /// given typeface and and returns `true`. Otherwise, returns `false`.
+    pub fn add_typeface_once(&mut self, typeface: Arc<Typeface>) -> bool {
+        self.faces.add_typeface_once(typeface)
+    }
+
+    /// Finalizes and builds a `FontFamily`.
+    pub fn build(self) -> FontFamily {
+        FontFamily {
+            name: self.name,
+            faces: self.faces.build(),
+            generic_family: self.generic_family,
+        }
     }
 }
 
@@ -140,7 +201,6 @@ mod tests {
                 )?,
             ],
             generic_family: None,
-            fallback: false,
             assets: vec![],
         };
 
@@ -209,7 +269,11 @@ mod tests {
                 FamilyOrAlias::Alias(UniCase::new("Family A".to_string()), None),
         };
 
-        let actual = FamilyOrAlias::aliases_from_family(&family);
+        let actual: BTreeMap<UniCase<String>, FamilyOrAlias> =
+            FamilyOrAliasBuilder::aliases_from_family(&family)
+                .into_iter()
+                .map(|(key, val)| (key, val.build()))
+                .collect();
 
         assert_eq!(expected, actual);
 

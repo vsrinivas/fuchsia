@@ -21,9 +21,33 @@ impl TryFrom<FontsManifestV1> for v2::FontsManifest {
     ///
     /// This is purely an in-memory conversion, and does not load character sets for local files.
     fn try_from(old: FontsManifestV1) -> Result<v2::FontsManifest, Error> {
-        let families: Result<Vec<v2::Family>, _> =
-            old.families.iter().map(v2::Family::try_from).collect();
-        Ok(v2::FontsManifest { families: families? })
+        // In v2, whether a font is a `fallback` is specified not per font family, but in an
+        // explicit ordered list.
+        // We capture each v1 family's `fallback` property for later use.
+        let families_and_fallbacks: Result<Vec<(v2::Family, bool)>, _> = old
+            .families
+            .iter()
+            .map(|v1_family| {
+                v2::Family::try_from(v1_family).map(|v2_family| (v2_family, v1_family.fallback))
+            })
+            .collect();
+        let families_and_fallbacks = families_and_fallbacks?;
+        // For every v1 family that's `fallback: true`, for every asset, for every typeface, add the
+        // typeface to the v2 `fallback_chain`.
+        let fallback_chain: Vec<v2::TypefaceId> = families_and_fallbacks
+            .iter()
+            .filter(|(_, is_fallback)| *is_fallback)
+            .flat_map(|(family, _)| {
+                family.assets.iter().flat_map(|asset| {
+                    asset.typefaces.iter().map(move |typeface| v2::TypefaceId {
+                        file_name: asset.file_name.clone(),
+                        index: typeface.index,
+                    })
+                })
+            })
+            .collect();
+        let families = families_and_fallbacks.into_iter().map(|(family, _)| family).collect();
+        Ok(v2::FontsManifest { families, fallback_chain })
     }
 }
 
@@ -52,7 +76,6 @@ impl TryFrom<&FamilyV1> for v2::Family {
             name: old.family.clone(),
             aliases,
             generic_family: old.generic_family.clone(),
-            fallback: old.fallback,
             assets: assets?,
         })
     }
@@ -180,7 +203,6 @@ mod tests {
                         "Family A", "A Family",
                     ])?],
                     generic_family: Some(GenericFontFamily::SansSerif),
-                    fallback: true,
                     assets: vec![
                         v2::Asset {
                             file_name: "FamilyA-ExtraBold-Condensed.ttf".to_string(),
@@ -226,7 +248,6 @@ mod tests {
                         "Family B", "B Family",
                     ])?],
                     generic_family: None,
-                    fallback: false,
                     assets: vec![v2::Asset {
                         file_name: "FamilyB.ttc".to_string(),
                         location: v2::AssetLocation::LocalFile(v2::LocalFileLocator {
@@ -260,6 +281,13 @@ mod tests {
                         ],
                     }],
                 },
+            ],
+            fallback_chain: vec![
+                v2::TypefaceId {
+                    file_name: "FamilyA-ExtraBold-Condensed.ttf".to_string(),
+                    index: 0,
+                },
+                v2::TypefaceId { file_name: "FamilyA-ExtraLight.ttf".to_string(), index: 0 },
             ],
         };
 

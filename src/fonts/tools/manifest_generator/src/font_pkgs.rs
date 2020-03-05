@@ -69,7 +69,7 @@ impl FontPackageListingInternal {
 }
 
 /// An in-memory representation of a ".font_pkgs.json" file, with some indexing niceties.
-pub(crate) struct FontPackageListing {
+pub struct FontPackageListing {
     by_name: BTreeMap<String, FontPackageEntry>,
 }
 

@@ -1,0 +1,252 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// Font configuration for products that use //src/fonts/collections:test-fonts-large-collection
+//
+// The fallback chain must be maintained by hand.
+// See //src/fonts/tools/manifest_generator/README.md.
+{
+  $schema: "http://fuchsia.com/src/fonts/tools/schemas/fontcfg.schema.json",
+  version: "1",
+  // Note that "MaterialIcons-Regular.ttf" isn't a fallback font because it provides non-Unicode
+  // characters.
+  fallback_chain: [
+    ///
+    ///
+    /// SANS SERIF LATIN
+    "Roboto-Regular.ttf",
+    "Roboto-Black.ttf",
+    "Roboto-BlackItalic.ttf",
+    "Roboto-Bold.ttf",
+    "Roboto-BoldItalic.ttf",
+    "Roboto-Italic.ttf",
+    "Roboto-Light.ttf",
+    "Roboto-LightItalic.ttf",
+    "Roboto-Medium.ttf",
+    "Roboto-MediumItalic.ttf",
+    "Roboto-Thin.ttf",
+    "RobotoCondensed-Bold.ttf",
+    "RobotoCondensed-BoldItalic.ttf",
+    "RobotoCondensed-Italic.ttf",
+    "RobotoCondensed-Light.ttf",
+    "RobotoCondensed-LightItalic.ttf",
+    "RobotoCondensed-Regular.ttf",
+    ///
+    ///
+    /// SANS SERIF CJK
+    // Listing NotoSansCJK-*.ttc indices explicitly because these files also contain monospace fonts
+    {
+      file_name: "NotoSansCJK-Regular.ttc",
+      index: 0
+    },
+    {
+      file_name: "NotoSansCJK-Regular.ttc",
+      index: 1
+    },
+    {
+      file_name: "NotoSansCJK-Regular.ttc",
+      index: 2
+    },
+    {
+      file_name: "NotoSansCJK-Regular.ttc",
+      index: 3
+    },
+    {
+      file_name: "NotoSansCJK-Regular.ttc",
+      index: 4
+    },
+    {
+      file_name: "NotoSansCJK-Black.ttc",
+      index: 0
+    },
+    {
+      file_name: "NotoSansCJK-Black.ttc",
+      index: 1
+    },
+    {
+      file_name: "NotoSansCJK-Black.ttc",
+      index: 2
+    },
+    {
+      file_name: "NotoSansCJK-Black.ttc",
+      index: 3
+    },
+    {
+      file_name: "NotoSansCJK-Black.ttc",
+      index: 4
+    },
+    {
+      file_name: "NotoSansCJK-Bold.ttc",
+      index: 0
+    },
+    {
+      file_name: "NotoSansCJK-Bold.ttc",
+      index: 1
+    },
+    {
+      file_name: "NotoSansCJK-Bold.ttc",
+      index: 2
+    },
+    {
+      file_name: "NotoSansCJK-Bold.ttc",
+      index: 3
+    },
+    {
+      file_name: "NotoSansCJK-Bold.ttc",
+      index: 4
+    },
+    {
+      file_name: "NotoSansCJK-DemiLight.ttc",
+      index: 0
+    },
+    {
+      file_name: "NotoSansCJK-DemiLight.ttc",
+      index: 1
+    },
+    {
+      file_name: "NotoSansCJK-DemiLight.ttc",
+      index: 2
+    },
+    {
+      file_name: "NotoSansCJK-DemiLight.ttc",
+      index: 3
+    },
+    {
+      file_name: "NotoSansCJK-DemiLight.ttc",
+      index: 4
+    },
+    {
+      file_name: "NotoSansCJK-Light.ttc",
+      index: 0
+    },
+    {
+      file_name: "NotoSansCJK-Light.ttc",
+      index: 1
+    },
+    {
+      file_name: "NotoSansCJK-Light.ttc",
+      index: 2
+    },
+    {
+      file_name: "NotoSansCJK-Light.ttc",
+      index: 3
+    },
+    {
+      file_name: "NotoSansCJK-Light.ttc",
+      index: 4
+    },
+    {
+      file_name: "NotoSansCJK-Medium.ttc",
+      index: 0
+    },
+    {
+      file_name: "NotoSansCJK-Medium.ttc",
+      index: 1
+    },
+    {
+      file_name: "NotoSansCJK-Medium.ttc",
+      index: 2
+    },
+    {
+      file_name: "NotoSansCJK-Medium.ttc",
+      index: 3
+    },
+    {
+      file_name: "NotoSansCJK-Medium.ttc",
+      index: 4
+    },
+    {
+      file_name: "NotoSansCJK-Thin.ttc",
+      index: 0
+    },
+    {
+      file_name: "NotoSansCJK-Thin.ttc",
+      index: 1
+    },
+    {
+      file_name: "NotoSansCJK-Thin.ttc",
+      index: 2
+    },
+    {
+      file_name: "NotoSansCJK-Thin.ttc",
+      index: 3
+    },
+    {
+      file_name: "NotoSansCJK-Thin.ttc",
+      index: 4
+    },
+    ///
+    ///
+    /// SERIF LATIN
+    "RobotoSlab-Regular.ttf",
+    "RobotoSlab-Bold.ttf",
+    "RobotoSlab-Light.ttf",
+    "RobotoSlab-Thin.ttf",
+    ///
+    ///
+    /// SERIF CJK
+    "NotoSerifCJK-Regular.ttc",
+    "NotoSerifCJK-Black.ttc",
+    "NotoSerifCJK-Bold.ttc",
+    "NotoSerifCJK-ExtraLight.ttc",
+    "NotoSerifCJK-Light.ttc",
+    "NotoSerifCJK-Medium.ttc",
+    "NotoSerifCJK-SemiBold.ttc",
+    ///
+    ///
+    /// MONOSPACE LATIN
+    "RobotoMono-Bold.ttf",
+    "RobotoMono-BoldItalic.ttf",
+    "RobotoMono-Italic.ttf",
+    "RobotoMono-Light.ttf",
+    "RobotoMono-LightItalic.ttf",
+    "RobotoMono-MediumItalic.ttf",
+    "RobotoMono-Regular.ttf",
+    "RobotoMono-Thin.ttf",
+    "RobotoMono-ThinItalic.ttf",
+    ///
+    ///
+    /// MONOSPACE CJK
+    {
+      file_name: "NotoSansCJK-Bold.ttc",
+      index: 5
+    },
+    {
+      file_name: "NotoSansCJK-Bold.ttc",
+      index: 6
+    },
+    {
+      file_name: "NotoSansCJK-Bold.ttc",
+      index: 7
+    },
+    {
+      file_name: "NotoSansCJK-Bold.ttc",
+      index: 8
+    },
+    {
+      file_name: "NotoSansCJK-Bold.ttc",
+      index: 9
+    },
+    {
+      file_name: "NotoSansCJK-Regular.ttc",
+      index: 5
+    },
+    {
+      file_name: "NotoSansCJK-Regular.ttc",
+      index: 6
+    },
+    {
+      file_name: "NotoSansCJK-Regular.ttc",
+      index: 7
+    },
+    {
+      file_name: "NotoSansCJK-Regular.ttc",
+      index: 8
+    },
+    {
+      file_name: "NotoSansCJK-Regular.ttc",
+      index: 9
+    }
+  ]
+}

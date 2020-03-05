@@ -5,10 +5,11 @@
 use {
     crate::{
         font_catalog::TypefaceInAssetIndex, font_db::FontDb, FontCatalog, FontPackageListing,
-        FontSets,
+        FontSets, ProductConfig,
     },
     anyhow::Error,
     font_info::FontInfoLoader,
+    itertools::Itertools,
     manifest::{v2, FontManifestWrapper},
     std::path::Path,
 };
@@ -17,44 +18,52 @@ use {
 /// loaded.
 ///
 /// For test coverage, see integration tests.
-pub(crate) fn generate_manifest(
+pub fn generate_manifest(
     font_catalog: FontCatalog,
     font_pkgs: FontPackageListing,
     font_sets: FontSets,
+    product_config: ProductConfig,
     font_info_loader: impl FontInfoLoader,
     font_dir: impl AsRef<Path>,
+    verbose: bool,
 ) -> Result<FontManifestWrapper, Error> {
-    let db = FontDb::new(font_catalog, font_pkgs, font_sets, font_info_loader, font_dir)?;
+    let db = FontDb::new(
+        font_catalog,
+        font_pkgs,
+        font_sets,
+        product_config,
+        font_info_loader,
+        font_dir,
+    )?;
 
     let manifest = v2::FontsManifest {
         families: db
             .iter_families()
-            .map(|fi_family| v2::Family {
-                name: fi_family.name.clone(),
-                aliases: fi_family
+            .map(|catalog_family| v2::Family {
+                name: catalog_family.name.clone(),
+                aliases: catalog_family
                     .aliases
                     .iter()
                     .cloned()
                     .map(|string_or_alias_set| string_or_alias_set.into())
                     .collect(),
-                generic_family: fi_family.generic_family,
-                fallback: fi_family.fallback,
+                generic_family: catalog_family.generic_family,
                 assets: db
-                    .iter_assets(fi_family)
-                    .map(|fi_asset| v2::Asset {
-                        file_name: fi_asset.file_name.clone(),
-                        location: db.get_asset_location(fi_asset),
-                        typefaces: fi_asset
+                    .iter_assets(catalog_family)
+                    .map(|catalog_asset| v2::Asset {
+                        file_name: catalog_asset.file_name.clone(),
+                        location: db.get_asset_location(catalog_asset),
+                        typefaces: catalog_asset
                             .typefaces
                             .values()
-                            .map(|fi_typeface| v2::Typeface {
-                                index: fi_typeface.index,
-                                languages: fi_typeface.languages.clone(),
-                                style: fi_typeface.style.clone(),
+                            .map(|catalog_typeface| v2::Typeface {
+                                index: catalog_typeface.index,
+                                languages: catalog_typeface.languages.clone(),
+                                style: catalog_typeface.style.clone(),
                                 code_points: db
                                     .get_code_points(
-                                        fi_asset,
-                                        TypefaceInAssetIndex(fi_typeface.index),
+                                        catalog_asset,
+                                        TypefaceInAssetIndex(catalog_typeface.index),
                                     )
                                     .clone(),
                             })
@@ -63,7 +72,14 @@ pub(crate) fn generate_manifest(
                     .collect(),
             })
             .collect(),
+        fallback_chain: db.iter_fallback_chain().collect(),
     };
+
+    if verbose {
+        let non_fallback_typefaces: Vec<v2::TypefaceId> =
+            db.iter_non_fallback_typefaces().sorted().collect();
+        eprintln!("Non-fallback typefaces:\n{:#?}", &non_fallback_typefaces);
+    }
 
     Ok(FontManifestWrapper::Version2(manifest))
 }

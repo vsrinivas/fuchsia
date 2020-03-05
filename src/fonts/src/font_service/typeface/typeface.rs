@@ -13,6 +13,15 @@ use {
     std::collections::BTreeSet,
 };
 
+/// Asset ID and font index.
+#[derive(Debug, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
+pub struct TypefaceId {
+    /// In-memory ID of the font asset.
+    pub asset_id: AssetId,
+    /// Index of the typeface within the asset.
+    pub index: u32,
+}
+
 /// In-memory representation of a single typeface's metadata, slightly denormalized.
 #[derive(Debug, Eq, PartialEq, Hash)]
 pub struct Typeface {

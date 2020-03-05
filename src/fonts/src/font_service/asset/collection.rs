@@ -56,10 +56,13 @@ impl FullAssetLocation {
 /// Create an instance with [`new()`](AssetCollectionBuilder::new), then populate using
 /// [`add_or_get_asset_id()`](AssetCollectionBuilder::add_or_get_asset_id), and finally construct
 /// an `AssetCollection` using [`build()`](AssetCollectionBuilder::build).
+#[derive(Debug)]
 pub struct AssetCollectionBuilder {
     id_to_location_map: BTreeMap<AssetId, FullAssetLocation>,
     /// Used for quickly looking up assets that have already been added.
     location_to_id_map: BTreeMap<FullAssetLocation, AssetId>,
+    /// Used for looking up assets for the fallback chain.
+    file_name_to_id_map: BTreeMap<String, AssetId>,
     next_id: u32,
 }
 
@@ -71,6 +74,7 @@ impl AssetCollectionBuilder {
         AssetCollectionBuilder {
             id_to_location_map: BTreeMap::new(),
             location_to_id_map: BTreeMap::new(),
+            file_name_to_id_map: BTreeMap::new(),
             next_id: 0,
         }
     }
@@ -88,8 +92,14 @@ impl AssetCollectionBuilder {
         let id = AssetId(self.next_id);
         self.id_to_location_map.insert(id, full_location.clone());
         self.location_to_id_map.insert(full_location.clone(), id);
+        self.file_name_to_id_map.insert(manifest_asset.file_name.clone(), id);
         self.next_id += 1;
         id
+    }
+
+    /// Looks up the existing `AssetId` for a given asset file name.
+    pub fn get_asset_id_by_name(&self, file_name: &String) -> Option<AssetId> {
+        self.file_name_to_id_map.get(file_name).map(|asset_id| *asset_id)
     }
 
     /// Build an [`AssetCollection`].
@@ -106,6 +116,7 @@ impl AssetCollectionBuilder {
 ///
 /// Assets can be retrieved by [`AssetId`] (which are assigned at service startup). The collection
 /// knows the location (local file or Fuchsia package) of every `AssetId`.
+#[derive(Debug)]
 pub struct AssetCollection {
     /// Maps asset ID to its location. Immutable over the lifetime of the collection.
     id_to_location_map: BTreeMap<AssetId, FullAssetLocation>,
