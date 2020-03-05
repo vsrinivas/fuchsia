@@ -6,7 +6,6 @@
 
 #include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/ui/lib/escher/resources/resource_recycler.h"
-#include "src/ui/lib/escher/util/image_utils.h"
 
 namespace escher {
 
@@ -18,31 +17,36 @@ Sampler::Sampler(ResourceRecycler* resource_recycler, vk::Format format, vk::Fil
     : Resource(resource_recycler), is_immutable_(false) {
   auto device = resource_recycler->vulkan_context().device;
 
-  // TODO(SCN-1403): eG8B8R82Plane420Unorm/eG8B8G8R8422Unorm is not enough to assume NV12, but
-  // they're currently the only formats we support at the sampler level.
-  if (image_utils::IsYuvFormat(format)) {
-    FXL_DCHECK(resource_recycler->caps().allow_ycbcr);
+  switch (format) {
+    // TODO(SCN-1403): eG8B8R82Plane420Unorm/eG8B8G8R8422Unorm is not enough to assume NV12, but
+    // they're currently the only formats we support at the sampler level.
+    case vk::Format::eG8B8G8R8422Unorm:
+    case vk::Format::eG8B8R82Plane420Unorm: {
+      FXL_DCHECK(resource_recycler->caps().allow_ycbcr);
 
-    vk::SamplerYcbcrConversionCreateInfo ycbcr_create_info;
-    ycbcr_create_info.pNext = nullptr;
-    ycbcr_create_info.format = format;
-    ycbcr_create_info.ycbcrModel = vk::SamplerYcbcrModelConversion::eYcbcr709;
-    ycbcr_create_info.ycbcrRange = vk::SamplerYcbcrRange::eItuNarrow;
-    ycbcr_create_info.components = {
-        VK_COMPONENT_SWIZZLE_IDENTITY,  // R
-        VK_COMPONENT_SWIZZLE_IDENTITY,  // G
-        VK_COMPONENT_SWIZZLE_IDENTITY,  // B
-        VK_COMPONENT_SWIZZLE_IDENTITY,  // A
-    };
-    ycbcr_create_info.xChromaOffset = vk::ChromaLocation::eCositedEven;
-    ycbcr_create_info.yChromaOffset = vk::ChromaLocation::eCositedEven;
-    ycbcr_create_info.chromaFilter = filter;
-    ycbcr_create_info.forceExplicitReconstruction = VK_FALSE;
+      vk::SamplerYcbcrConversionCreateInfo ycbcr_create_info;
+      ycbcr_create_info.pNext = nullptr;
+      ycbcr_create_info.format = format;
+      ycbcr_create_info.ycbcrModel = vk::SamplerYcbcrModelConversion::eYcbcr709;
+      ycbcr_create_info.ycbcrRange = vk::SamplerYcbcrRange::eItuNarrow;
+      ycbcr_create_info.components = {
+          VK_COMPONENT_SWIZZLE_IDENTITY,  // R
+          VK_COMPONENT_SWIZZLE_IDENTITY,  // G
+          VK_COMPONENT_SWIZZLE_IDENTITY,  // B
+          VK_COMPONENT_SWIZZLE_IDENTITY,  // A
+      };
+      ycbcr_create_info.xChromaOffset = vk::ChromaLocation::eCositedEven;
+      ycbcr_create_info.yChromaOffset = vk::ChromaLocation::eCositedEven;
+      ycbcr_create_info.chromaFilter = filter;
+      ycbcr_create_info.forceExplicitReconstruction = VK_FALSE;
 
-    ycbcr_conversion_ = ESCHER_CHECKED_VK_RESULT(device.createSamplerYcbcrConversionKHR(
-        ycbcr_create_info, nullptr, resource_recycler->vulkan_context().loader));
+      ycbcr_conversion_ = ESCHER_CHECKED_VK_RESULT(device.createSamplerYcbcrConversionKHR(
+          ycbcr_create_info, nullptr, resource_recycler->vulkan_context().loader));
 
-    is_immutable_ = true;
+      is_immutable_ = true;
+    } break;
+    default:
+      break;
   }
 
   vk::SamplerCreateInfo sampler_info;

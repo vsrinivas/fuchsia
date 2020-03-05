@@ -51,9 +51,7 @@ Session::Session(SessionId id, SessionContext session_context,
                                               : vk::DispatchLoaderDynamic(),
            session_context_.escher != nullptr ? session_context_.escher->device()->caps()
                                               : escher::VulkanDeviceQueues::Caps(),
-           session_context_.escher_resource_recycler, session_context_.escher_image_factory,
-           session_context_.escher != nullptr ? session_context_.escher->sampler_cache()
-                                              : nullptr}),
+           session_context_.escher_resource_recycler, session_context_.escher_image_factory}),
       resources_(error_reporter_),
       view_tree_updater_(id),
       inspect_node_(std::move(inspect_node)),

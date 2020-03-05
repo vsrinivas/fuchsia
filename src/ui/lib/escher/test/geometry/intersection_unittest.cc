@@ -147,7 +147,7 @@ TEST(Intersection, TriangleOffToTheSide) {
   EXPECT_FALSE(hit);
 }
 
-TEST(Intersection, UniformGridBasicMesh) {
+VK_TEST(Intersection, UniformGridBasicMesh) {
   IndexedTriangleMesh3d<vec2> standard_mesh = GetStandardTestMesh3d();
   MeshSpec mesh_spec{{MeshAttribute::kPosition3D, MeshAttribute::kUV}};
   standard_mesh.bounding_box = BoundingBox(vec3(-2, -1, 10), vec3(2, 1, 12));
@@ -181,7 +181,7 @@ TEST(Intersection, UniformGridBasicMesh) {
   EXPECT_FALSE(hit) << hit;
 }
 
-TEST(Intersection, UniformGridBoxMeshTest) {
+VK_TEST(Intersection, UniformGridBoxMeshTest) {
   MeshSpec mesh_spec{{MeshAttribute::kPosition3D, MeshAttribute::kUV}};
   IndexedTriangleMesh3d<vec2> cube_mesh = NewCubeIndexedTriangleMesh(mesh_spec);
   cube_mesh.bounding_box = BoundingBox(vec3(0, 0, 0), vec3(1, 1, 1));

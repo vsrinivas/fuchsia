@@ -32,14 +32,6 @@ bool IsDepthFormat(vk::Format format);
 // Return true if |format| can be used as a stencil buffer.
 bool IsStencilFormat(vk::Format format);
 
-// Return true is |format| is one of the formats that Escher can treat as a YUV format.
-// Currently these include:
-//   - eG8B8G8R8422Unorm
-//   - eG8B8R82Plane420Unorm
-// TODO(SCN-1403): use of these formats is not enough to assume NV12, but they're currently the
-// only formats we support at the sampler level.
-bool IsYuvFormat(vk::Format format);
-
 // Return a pair of booleans, each of which is true if |format| can be used as
 // a depth or stencil buffer, respectively.
 std::pair<bool, bool> IsDepthStencilFormat(vk::Format format);

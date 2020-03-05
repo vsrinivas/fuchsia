@@ -17,7 +17,6 @@
 #include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
 #include "src/ui/lib/escher/renderer/buffer_cache.h"
 #include "src/ui/lib/escher/renderer/frame.h"
-#include "src/ui/lib/escher/renderer/sampler_cache.h"
 #include "src/ui/lib/escher/resources/resource_recycler.h"
 #include "src/ui/lib/escher/util/hasher.h"
 #include "src/ui/lib/escher/util/image_utils.h"
@@ -91,10 +90,9 @@ Escher::Escher(VulkanDeviceQueuesPtr device, HackFilesystemPtr filesystem)
 
   // Initialize instance variables that require |weak_factory_| to already have
   // been initialized.
-  resource_recycler_ = std::make_unique<ResourceRecycler>(GetWeakPtr());
   image_cache_ = std::make_unique<impl::ImageCache>(GetWeakPtr(), gpu_allocator());
   buffer_cache_ = std::make_unique<BufferCache>(GetWeakPtr());
-  sampler_cache_ = std::make_unique<SamplerCache>(resource_recycler_->GetWeakPtr());
+  resource_recycler_ = std::make_unique<ResourceRecycler>(GetWeakPtr());
   mesh_manager_ = NewMeshManager(command_buffer_pool(), transfer_command_buffer_pool(),
                                  gpu_allocator(), resource_recycler());
   pipeline_layout_cache_ = std::make_unique<impl::PipelineLayoutCache>(resource_recycler());
@@ -130,7 +128,6 @@ Escher::~Escher() {
   pipeline_layout_cache_.reset();
   mesh_manager_.reset();
   descriptor_set_allocators_.clear();
-  sampler_cache_.reset();
 
   // ResourceRecyclers must be released before the CommandBufferSequencer is,
   // since they register themselves with it.

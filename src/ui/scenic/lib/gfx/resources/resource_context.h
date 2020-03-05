@@ -26,7 +26,6 @@ struct ResourceContext {
   escher::VulkanDeviceQueues::Caps vk_device_queues_capabilities;
   escher::ResourceRecycler* escher_resource_recycler;
   escher::ImageFactory* escher_image_factory;
-  escher::SamplerCache* escher_sampler_cache;
 };
 
 }  // namespace gfx
