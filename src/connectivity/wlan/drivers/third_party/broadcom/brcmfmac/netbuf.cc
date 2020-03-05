@@ -123,7 +123,7 @@ struct brcmf_netbuf* brcmf_netbuf_allocate(uint32_t size) {
   // Align the allocation size to a multiple of 4.  SDIO transactions require 4-byte alignment,
   // so to avoid having to reallocate and copy data for odd-size transactions we make sure the
   // underlying buffer is already aligned and directly usable.
-  uint32_t aligned_size = (size + 3) & ~3;
+  uint32_t aligned_size = ROUNDUP(size, SDIOD_SIZE_ALIGNMENT);
   netbuf->data = netbuf->allocated_buffer =
       static_cast<decltype(netbuf->allocated_buffer)>(malloc(aligned_size));
   if (netbuf->data == NULL) {

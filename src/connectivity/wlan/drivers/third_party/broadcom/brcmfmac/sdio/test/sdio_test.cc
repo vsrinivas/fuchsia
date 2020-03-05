@@ -34,6 +34,10 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/common.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/device.h"
 
+// These numbers come from real bugs.
+#define NOT_ALIGNED_SIZE 1541
+#define ALIGNED_SIZE 1544
+
 // This is required to use ddk::MockSdio.
 bool operator==(const sdio_rw_txn_t& lhs, const sdio_rw_txn_t& rhs) {
   return (lhs.addr == rhs.addr && lhs.data_size == rhs.data_size && lhs.incr == rhs.incr &&
@@ -267,10 +271,30 @@ TEST(Sdio, AlignSize) {
 
   // 4-byte-aligned size should succeed.
   EXPECT_OK(brcmf_sdiod_ramrw(&sdio_dev, true, 0x00000000, nullptr, 0x00000020));
-  // non-4-byte-aligned size should fail and return ZX_ERR_INVALID_ARGS.
+  // non-4-byte-aligned size for sending should fail and return ZX_ERR_INVALID_ARGS.
   EXPECT_EQ(brcmf_sdiod_ramrw(&sdio_dev, true, 0x00000000, nullptr, 0x00000021),
             ZX_ERR_INVALID_ARGS);
+  // non-4-byte-aligned size for receiving should fail and return ZX_ERR_INVALID_ARGS.
+  EXPECT_EQ(brcmf_sdiod_ramrw(&sdio_dev, false, 0x00000000, nullptr, 0x00000021),
+            ZX_ERR_INVALID_ARGS);
   sdio1.VerifyAndClear();
+}
+
+// This test case verifies the alignment functionality of pkt_align() defined in sdio.cc is correct.
+
+TEST(Sdio, PktAlignTest) {
+  for (size_t pkt_size = NOT_ALIGNED_SIZE; pkt_size <= ALIGNED_SIZE; pkt_size++) {
+    struct brcmf_netbuf* buf = brcmf_netbuf_allocate(pkt_size);
+    brcmf_netbuf_grow_tail(buf, pkt_size);
+    // The third parameter is not used to do alignment for buf->len.
+    pkt_align(buf, NOT_ALIGNED_SIZE, DMA_ALIGNMENT);
+    // Check whether the memory position of data pointer is aligned.
+    EXPECT_EQ((unsigned long)buf->data % DMA_ALIGNMENT, 0);
+    // Check whether the "len" field in buf is aligned for SDIO transfer.
+    EXPECT_EQ(buf->len, ALIGNED_SIZE);
+
+    brcmf_netbuf_free(buf);
+  }
 }
 
 }  // namespace

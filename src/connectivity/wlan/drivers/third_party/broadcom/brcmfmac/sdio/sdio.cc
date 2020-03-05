@@ -550,8 +550,6 @@ static int qcount[NUMPRIO];
 /* Limit on rounding up frames */
 static const uint16_t max_roundup = 512;
 
-#define DMA_ALIGNMENT 4
-
 enum brcmf_sdio_frmtype {
   BRCMF_SDIO_FT_NORMAL,
   BRCMF_SDIO_FT_SUPER,
@@ -582,14 +580,14 @@ static const struct sdiod_drive_str sdiod_drvstr_tab6_1v8[] = {
 static const struct sdiod_drive_str sdiod_drvstr_tab2_3v3[] = {
     {16, 0x7}, {12, 0x5}, {8, 0x3}, {4, 0x1}};
 
-static void pkt_align(struct brcmf_netbuf* p, int len, int align) {
+void pkt_align(struct brcmf_netbuf* p, int len, int align) {
   uint datalign;
   datalign = (unsigned long)(p->data);
   datalign = roundup(datalign, (align)) - datalign;
   if (datalign) {
     brcmf_netbuf_shrink_head(p, datalign);
   }
-  brcmf_netbuf_set_length_to(p, len);
+  brcmf_netbuf_set_length_to(p, ROUNDUP(len, SDIOD_SIZE_ALIGNMENT));
 }
 
 /* To check if there's window offered */
@@ -2038,8 +2036,8 @@ static uint brcmf_sdio_sendfromq(struct brcmf_sdio* bus, uint maxframes) {
   // TODO(42151): Remove once bug resolved
   if (unlikely(brcmf_sdio_txq_full_debug_log)) {
     int available = brcmu_pktq_mlen(&bus->txq, ~bus->flowcontrol);
-    BRCMF_INFO("%s called, maxframes = %u, available in queue = %d\n",
-               __func__, maxframes, available);
+    BRCMF_INFO("%s called, maxframes = %u, available in queue = %d\n", __func__, maxframes,
+               available);
   }
 
   /* Send frames until the limit or some other event */
@@ -2092,10 +2090,9 @@ static uint brcmf_sdio_sendfromq(struct brcmf_sdio* bus, uint maxframes) {
   // TODO(42151): Remove once bug resolved
   if (unlikely(brcmf_sdio_txq_full_debug_log)) {
     int available = brcmu_pktq_mlen(&bus->txq, ~bus->flowcontrol);
-    BRCMF_INFO("%s finished, maxframes = %u, transmitted = %u, available in queue = %d\n",
-               __func__, maxframes, cnt, available);
+    BRCMF_INFO("%s finished, maxframes = %u, transmitted = %u, available in queue = %d\n", __func__,
+               maxframes, cnt, available);
   }
-
 
   return cnt;
 }
@@ -2392,10 +2389,10 @@ static void brcmf_sdio_dpc(struct brcmf_sdio* bus) {
     // TODO(42151): Remove once bug resolved
     int len = brcmu_pktq_mlen(&bus->txq, ~bus->flowcontrol);
     if (len > 0) {
-      BRCMF_INFO("Not able to transmit queued frames right now, clkstate = %u, "
-                 "fcstate = %d, queue len = %d, txlimit = %u, data_ok = %s\n",
-                 bus->clkstate, bus->fcstate.load(), len, txlimit,
-                 data_ok(bus) ? "true" : "false");
+      BRCMF_INFO(
+          "Not able to transmit queued frames right now, clkstate = %u, "
+          "fcstate = %d, queue len = %d, txlimit = %u, data_ok = %s\n",
+          bus->clkstate, bus->fcstate.load(), len, txlimit, data_ok(bus) ? "true" : "false");
     }
   }
 
@@ -2452,8 +2449,7 @@ static bool brcmf_sdio_prec_enq(struct pktq* q, struct brcmf_netbuf* pkt, int pr
     p = brcmu_pktq_peek_tail(q, &eprec);
     if (eprec > prec) {
       // TODO(42151): Remove once bug resolved
-      BRCMF_ERR("Eviction precedence (%d) greater than enqueue precedence (%d)",
-                eprec, prec);
+      BRCMF_ERR("Eviction precedence (%d) greater than enqueue precedence (%d)", eprec, prec);
       return false;
     }
   }

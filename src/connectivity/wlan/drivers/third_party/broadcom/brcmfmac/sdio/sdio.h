@@ -162,6 +162,8 @@
   addr &= SBSDIO_SB_OFT_ADDR_MASK; \
   addr |= SBSDIO_SB_ACCESS_2_4B_FLAG;
 
+#define DMA_ALIGNMENT 4
+
 /*
  * enum brcmf_sdiod_state - the state of the bus.
  *
@@ -407,5 +409,7 @@ int brcmf_sdio_oob_irqhandler(void* cookie);
 
 zx_status_t brcmf_sdio_register(brcmf_pub* drvr, std::unique_ptr<brcmf_bus>* out_bus);
 void brcmf_sdio_exit(struct brcmf_bus* bus);
+
+void pkt_align(struct brcmf_netbuf* p, int len, int align);
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_SDIO_SDIO_H_

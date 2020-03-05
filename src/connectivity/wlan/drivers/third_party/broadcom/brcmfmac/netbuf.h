@@ -16,6 +16,7 @@
 
 #include <memory>
 
+#include <ddk/driver.h>
 #include <ddk/protocol/ethernet.h>
 
 // Additional includes for brcmf_netbuf.
@@ -28,6 +29,8 @@
 #include <zircon/assert.h>
 #include <zircon/errors.h>
 #include <zircon/listnode.h>
+
+#define SDIOD_SIZE_ALIGNMENT 4
 
 namespace wlan {
 namespace brcmfmac {
