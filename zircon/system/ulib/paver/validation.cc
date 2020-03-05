@@ -36,50 +36,92 @@ bool ZbiHeaderCrcValid(const zbi_header_t* hdr) {
   return hdr->crc32 == crc32(0, reinterpret_cast<const uint8_t*>(hdr + 1), hdr->length);
 }
 
+// Extract the payload out of the given ZBI image.
+//
+// Return "true" on success, or "false" if the input data is invalid.
+//
+// On success, sets "header" to the header of the ZBI image, and
+// "payload" to the payload of the ZBI. Both are guaranteed to be
+// completed contained in "data".
+bool ExtractZbiPayload(fbl::Span<const uint8_t> data, const zbi_header_t** header,
+                       fbl::Span<const uint8_t>* payload) {
+  // Validate data header.
+  if (data.size() < sizeof(zbi_header_t)) {
+    ERROR("Data too short: expected at least %ld byte(s), got %ld byte(s).\n", sizeof(zbi_header_t),
+          data.size());
+    return false;
+  }
+
+  // Validate the header.
+  const auto zbi_header = reinterpret_cast<const zbi_header_t*>(data.data());
+  if (zbi_header->magic != ZBI_ITEM_MAGIC) {
+    ERROR("ZBI header has incorrect magic value.\n");
+    return false;
+  }
+  if ((zbi_header->flags & ZBI_FLAG_VERSION) != ZBI_FLAG_VERSION) {
+    ERROR("ZBI header has invalid version.\n");
+    return false;
+  }
+
+  // Ensure the data length is valid. We are okay with additional bytes
+  // at the end of the data, but not having too few bytes available.
+  if (zbi_header->length > data.size() - sizeof(zbi_header_t)) {
+    ERROR("Header length length of %u byte(s) exceeds data available of %ld byte(s).\n",
+          zbi_header->length, data.size() - sizeof(zbi_header_t));
+    return false;
+  }
+
+  // Verify CRC.
+  if (!ZbiHeaderCrcValid(zbi_header)) {
+    ERROR("ZBI payload CRC invalid.\n");
+    return false;
+  }
+
+  // All good.
+  *header = zbi_header;
+  *payload = data.subspan(sizeof(zbi_header_t), zbi_header->length);
+  return true;
+}
+
 }  // namespace
 
-// Checks first few bytes of buffer to ensure it is a valid ZBI containing a kernel image.
-//
-// Also validates architecture in kernel header matches the target.
 bool IsValidKernelZbi(Arch arch, fbl::Span<const uint8_t> data) {
-  // Validate data header.
-  if (data.size() < sizeof(zircon_kernel_t)) {
-    ERROR("Data too short: expected at least %ld byte(s), got %ld byte(s).\n",
-          sizeof(zircon_kernel_t), data.size());
+  // Get container header.
+  const zbi_header_t* container_header;
+  fbl::Span<const uint8_t> container_data;
+  if (!ExtractZbiPayload(data, &container_header, &container_data)) {
     return false;
   }
 
-  // Validate the container header.
-  const auto payload = reinterpret_cast<const zircon_kernel_t*>(data.data());
-  if (payload->hdr_file.type != ZBI_TYPE_CONTAINER ||
-      payload->hdr_file.extra != ZBI_CONTAINER_MAGIC || payload->hdr_file.magic != ZBI_ITEM_MAGIC ||
-      payload->hdr_file.flags != ZBI_FLAG_VERSION || payload->hdr_file.crc32 != ZBI_ITEM_NO_CRC32) {
-    ERROR("Payload header has incorrect magic values, types, or flag.\n");
+  // Ensure it is of the correct type.
+  if (container_header->type != ZBI_TYPE_CONTAINER) {
+    ERROR("ZBI container not a container type, or has invalid magic value.\n");
     return false;
   }
-  if (payload->hdr_file.length > data.size() - offsetof(zircon_kernel_t, hdr_kernel)) {
-    ERROR("Payload header length of %u byte(s) exceeds data available of %ld byte(s).\n",
-          payload->hdr_file.length, data.size() - offsetof(zircon_kernel_t, hdr_kernel));
+  if (container_header->extra != ZBI_CONTAINER_MAGIC) {
+    ERROR("ZBI container has invalid magic value.\n");
     return false;
   }
 
-  // Validate the kernel header
-  const uint32_t expected_kernel =
+  // Extract kernel.
+  const zbi_header_t* kernel_header;
+  fbl::Span<const uint8_t> kernel_data;
+  if (!ExtractZbiPayload(container_data, &kernel_header, &kernel_data)) {
+    return false;
+  }
+
+  // Ensure it is of the correct type.
+  const uint32_t expected_kernel_type =
       (arch == Arch::kX64) ? ZBI_TYPE_KERNEL_X64 : ZBI_TYPE_KERNEL_ARM64;
-  if (payload->hdr_kernel.type != expected_kernel || payload->hdr_kernel.magic != ZBI_ITEM_MAGIC ||
-      (payload->hdr_kernel.flags & ZBI_FLAG_VERSION) != ZBI_FLAG_VERSION) {
-    ERROR("Kernel header has invalid magic, architecture, or version.\n");
-    return false;
-  }
-  if (payload->hdr_kernel.length > data.size() - offsetof(zircon_kernel_t, data_kernel)) {
-    ERROR("Kernel header length of %u byte(s) exceeds data available of %ld byte(s).\n",
-          payload->hdr_kernel.length, data.size() - offsetof(zircon_kernel_t, data_kernel));
+  if (kernel_header->type != expected_kernel_type) {
+    ERROR("ZBI kernel payload has incorrect type or architecture. Expected %#08x, got %#08x.\n",
+          expected_kernel_type, kernel_header->type);
     return false;
   }
 
-  // Validate checksum if available.
-  if (!ZbiHeaderCrcValid(&payload->hdr_kernel)) {
-    ERROR("Kernel payload CRC invalid.\n");
+  // Ensure payload contains enough data for the kernel header.
+  if (kernel_header->length < sizeof(zbi_kernel_t)) {
+    ERROR("ZBI kernel payload too small.\n");
     return false;
   }
 
