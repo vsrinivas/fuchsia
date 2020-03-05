@@ -50,6 +50,7 @@ test_package("shell_tests") {
   deps = [
     ":generate_fidl_json",
     "//src/developer/shell/console:console_unittests_bin",
+    "//src/developer/shell/josh:bin",
     "//src/developer/shell/josh:josh_tests_bin",
     "//src/developer/shell/josh/lib:js_libs",
     "//src/developer/shell/josh/lib:spawn_child_test_util",
@@ -60,6 +61,9 @@ test_package("shell_tests") {
   binaries = [
     {
       name = "spawn_child_test_util"
+    },
+    {
+      name = "josh"
     },
   ]
 

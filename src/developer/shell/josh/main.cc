@@ -6,7 +6,7 @@
 #include "src/lib/syslog/cpp/logger.h"
 
 int main(int argc, char* argv[]) {
-  syslog::InitLogger({GetProcessName()});
+  syslog::InitLogger({"josh"});
 
   return shell::ConsoleMain(argc, const_cast<const char**>(argv));
 }
