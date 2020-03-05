@@ -2,5 +2,6 @@
   "fidl/fuchsia.feedback/annotation.fidl": "4806f048170d7d6f772054840e7b676a",
   "fidl/fuchsia.feedback/attachment.fidl": "027cee5e6d6ae90532e8bdc76268e1bf",
   "fidl/fuchsia.feedback/crash_reporter.fidl": "bdcf3216a1c04c6bdc14e17137b88394",
-  "fidl/fuchsia.feedback/data_provider.fidl": "1fe5a56bc85123b25820605bad47fe9a"
+  "fidl/fuchsia.feedback/data_provider.fidl": "1fe5a56bc85123b25820605bad47fe9a",
+  "fidl/fuchsia.feedback/device_id_provider.fidl": "c81fab3df1b512f0fee6d0f49a80679e"
 }

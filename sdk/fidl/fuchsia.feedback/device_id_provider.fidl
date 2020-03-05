@@ -1,0 +1,22 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.feedback;
+
+/// Provides the device's feedback ID.
+///
+/// The feedback ID is a persisted UUID used to group feedback reports. The ID
+/// is not intended to be used for any reporting purposes other than feedback,
+/// e.g., not intended to be used for telemetry.
+[Discoverable]
+protocol DeviceIdProvider {
+    /// Returns the device's feedback ID.
+    GetId() -> (string:64 feedback_id) error DeviceIdError;
+};
+
+/// The DeviceIdError values are returned in the following circumstances:
+/// * NOT_FOUND - a valid feedback id was not found by the server.
+enum DeviceIdError {
+    NOT_FOUND = 1;
+};
