@@ -1,0 +1,70 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("$zx/public/gn/host_tool_action.gni")
+
+# Generate a header file for assembly files to #include from hwreg types.
+#
+# This defines a target that provides a generated header file.
+# The generator program is expected to be defined using <hwreg/asm.h>.
+#
+# Parameters
+#
+#   * output_name
+#     - Required: The include file name as it appears in `#include "name"`.
+#     - Type: string
+#
+#   * sources
+#     - Required: Source files for the generator program.
+#     - Type: list(file)
+#
+template("hwreg_asm_header") {
+  main_target = target_name
+  tool_target = "_hwreg_header.tool.$target_name"
+  gen_target = "_hwreg_header.gen.$target_name"
+  config_target = "_hwreg_header.config.$target_name"
+  header_dir = get_label_info(":$main_target($default_toolchain)",
+                              "target_gen_dir") + "/$target_name.include"
+  not_needed([ "tool_target" ])
+
+  if (is_host) {
+    host_tool(tool_target) {
+      visibility = [ ":*" ]
+      forward_variables_from(invoker,
+                             [
+                               "sources",
+                               "testonly",
+                             ])
+      deps = [ "$zx/system/ulib/hwreg" ]
+    }
+  } else {
+    not_needed(invoker, [ "sources" ])
+  }
+
+  if (current_toolchain == default_toolchain) {
+    host_tool_action(gen_target) {
+      forward_variables_from(invoker, [ "testonly" ])
+      tool = ":$tool_target"
+      outputs = [ "$header_dir/${invoker.output_name}" ]
+      args = rebase_path(outputs, root_build_dir) + [ invoker.output_name ]
+    }
+  } else {
+    not_needed(invoker, [ "output_name" ])
+  }
+
+  config(config_target) {
+    visibility = [ ":$main_target" ]
+    include_dirs = [ header_dir ]
+  }
+
+  group(main_target) {
+    forward_variables_from(invoker,
+                           [
+                             "visibility",
+                             "testonly",
+                           ])
+    public_deps = [ ":$gen_target($default_toolchain)" ]
+    public_configs = [ ":$config_target" ]
+  }
+}

@@ -29,6 +29,7 @@ test("libhwreg") {
   testonly = false
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
+    "asm-test.cc",
     "bitfields-test.cc",
     "indirect-test.cc",
   ]

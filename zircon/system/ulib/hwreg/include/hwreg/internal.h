@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef HWREG_INTERNAL_H_
+#define HWREG_INTERNAL_H_
 
 #include <inttypes.h>
 #include <limits.h>
@@ -50,6 +51,10 @@ class FieldPrinter {
   // hex (with a left-padding of zeroes to a length matching the maximum number of
   // nibbles needed to represent any value the field could take).
   void Print(uint64_t value, char* buf, size_t len) const;
+
+  constexpr auto name() const { return name_; }
+  constexpr auto bit_high_incl() const { return bit_high_incl_; }
+  constexpr auto bit_low() const { return bit_low_; }
 
  private:
   const char* name_;
@@ -158,3 +163,5 @@ void PrintRegisterPrintf(FieldPrinter fields[], size_t num_fields, uint64_t reg_
 }  // namespace internal
 
 }  // namespace hwreg
+
+#endif  // HWREG_INTERNAL_H_

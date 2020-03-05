@@ -5,6 +5,7 @@
 zx_library("hwreg") {
   sdk = "source"
   sdk_headers = [
+    "hwreg/asm.h",
     "hwreg/bitfields.h",
     "hwreg/indirect.h",
     "hwreg/internal.h",
@@ -12,7 +13,11 @@ zx_library("hwreg") {
   ]
   kernel = true
   static = true
+  host = true
   sources = [ "printers.cc" ]
+  if (!is_kernel) {
+    sources += [ "asm.cc" ]
+  }
 
   public_deps = [
     # <hwreg/internal.h> has #include <fbl/algorithm.h>.

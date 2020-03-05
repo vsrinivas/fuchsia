@@ -636,7 +636,7 @@ template("library") {
               target_type = "zircon_header_library"
               target_name = "$_library_name"
               include_dirs = [ "//zircon/" + rebase_path("include", "$zx/") ]
-            }
+            },
           ]
         }
       }
@@ -1641,7 +1641,7 @@ template("host_tool") {
       # the installation copies.
       install_file = rebase_path(
               get_path_info(tool_executable, "dir") + "/" +
-                  get_path_info(tool_executable, "name") + tool_extension,
+                  get_path_info(tool_executable, "file") + tool_extension,
               root_build_dir)
 
       # The unstripped file is what we actually run, so that compiled-in

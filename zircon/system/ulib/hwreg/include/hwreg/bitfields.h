@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef HWREG_BITFIELDS_H_
+#define HWREG_BITFIELDS_H_
 
 #include <limits.h>
 #include <stdint.h>
@@ -168,6 +169,21 @@ class RegisterBase {
     internal::PrintRegisterPrintf(params_.printer.fields, params_.printer.num_fields, reg_value_,
                                   params_.fields_mask, sizeof(ValueType));
   }
+
+  template <typename F>
+  constexpr void ForEachField(F callback) const {
+    static_assert(PrinterEnabled::value, "Pass hwreg::EnablePrinter to RegisterBase to enable");
+    for (unsigned i = 0; i < params_.printer.num_fields; ++i) {
+      IntType mask = internal::ComputeMask<IntType>(params_.printer.fields[i].bit_high_incl() -
+                                                    params_.printer.fields[i].bit_low() + 1)
+                     << params_.printer.fields[i].bit_low();
+      callback((mask & rsvdz_mask()) == mask ? nullptr : params_.printer.fields[i].name(),
+               params_.printer.fields[i].bit_high_incl(), params_.printer.fields[i].bit_low());
+    }
+  }
+
+  constexpr IntType fields_mask() const { return params_.fields_mask; }
+  constexpr IntType rsvdz_mask() const { return params_.rsvdz_mask; }
 
  protected:
   internal::FieldParameters<PrinterEnabled::value, ValueType> params_;
@@ -371,3 +387,5 @@ class BitfieldRef {
   static_assert(true)  // eat a ;
 
 }  // namespace hwreg
+
+#endif  // HWREG_BITFIELDS_H_
