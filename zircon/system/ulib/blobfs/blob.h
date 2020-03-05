@@ -148,7 +148,6 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
                                      fs::VnodeRepresentation* info) final;
   fs::VnodeProtocolSet GetProtocols() const final;
   bool ValidateRights(fs::Rights rights) final;
-  zx_status_t CreateStream(uint32_t stream_options, zx::stream* out_stream) final;
   zx_status_t Read(void* data, size_t len, size_t off, size_t* out_actual) final;
   zx_status_t Write(const void* data, size_t len, size_t offset, size_t* out_actual) final;
   zx_status_t Append(const void* data, size_t len, size_t* out_end, size_t* out_actual) final;
