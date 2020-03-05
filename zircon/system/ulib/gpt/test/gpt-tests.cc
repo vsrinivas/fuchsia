@@ -333,8 +333,18 @@ void LibGptTest::ReadRange() {
 }
 
 zx_status_t LibGptTest::ReadMbr(mbr::Mbr* mbr) const {
-  ssize_t ret = pread(fd_.get(), mbr, sizeof(*mbr), 0);
-  return ret < 0 ? ZX_ERR_IO : ZX_OK;
+  ZX_ASSERT(sizeof(*mbr) <= blk_size_);
+
+  // Read the block containing the MBR.
+  char buff[blk_size_];
+  ssize_t ret = pread(fd_.get(), buff, blk_size_, 0);
+  if (ret < 0) {
+    return ZX_ERR_IO;
+  }
+
+  // Copy the result to "mbr".
+  memcpy(mbr, buff, sizeof(*mbr));
+  return ZX_OK;
 }
 
 void LibGptTest::PrepDisk(bool sync) {
@@ -1236,6 +1246,26 @@ TEST(GptDeviceEntryCountTest, FewerEntries) {
   EXPECT_OK(GptDevice::Load(blocks, MinimumBytesPerCopy(kBlockSize).value(), kBlockSize,
                             kBlockCount, &gpt));
   ASSERT_EQ(gpt->EntryCount(), entry_count);
+}
+
+TEST(GptDeviceMbr, LargerSectorSizes) {
+  LibGptTest::Options options{};
+  options.block_size = 4096;
+  auto libGptTest = LibGptTest::Create(options);
+
+  // Disk starts off uninitialized.
+  EXPECT_FALSE(libGptTest->IsGptValid());
+
+  // Sync should write changes to disk. Resetting should bring valid gpt back.
+  libGptTest->Sync();
+  libGptTest->Reset();
+  EXPECT_TRUE(libGptTest->IsGptValid());
+
+  // Check the protective MBR that was written to disk.
+  mbr::Mbr mbr;
+  zx_status_t status = libGptTest->ReadMbr(&mbr);
+  ASSERT_OK(status, "Failed to read MBR");
+  EXPECT_EQ(mbr::kMbrBootSignature, mbr.boot_signature, "Invalid MBR boot signature");
 }
 
 // KnownGuid is statically built. Verify that there are no double entries for

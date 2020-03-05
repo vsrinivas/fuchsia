@@ -20,6 +20,7 @@
 
 #include <memory>
 
+#include <fbl/algorithm.h>
 #include <fbl/vector.h>
 #include <gpt/gpt.h>
 #include <gpt/guid.h>
@@ -53,6 +54,30 @@ void print_array(const gpt_partition_t* const partitions[kPartitionCount], int c
   }
 }
 
+// Write a block to device "fd", writing "size" bytes followed by zero-byte padding to the next
+// block size.
+zx_status_t write_partial_block(int fd, void* data, size_t size, size_t offset, size_t blocksize) {
+  // If input block is already rounded to blocksize, just directly write from our buffer.
+  if (size % blocksize == 0) {
+    ssize_t ret = pwrite(fd, data, size, offset);
+    if (ret < 0 || static_cast<size_t>(ret) != size) {
+      return ZX_ERR_IO;
+    }
+    return ZX_OK;
+  }
+
+  // Otherwise, pad out data to blocksize.
+  size_t new_size = fbl::round_up(size, blocksize);
+  std::unique_ptr<uint8_t[]> block(new uint8_t[new_size]);
+  memcpy(block.get(), data, size);
+  memset(block.get() + size, 0, new_size - size);
+  ssize_t ret = pwrite(fd, block.get(), new_size, offset);
+  if (ret != static_cast<ssize_t>(new_size)) {
+    return ZX_ERR_IO;
+  }
+  return ZX_OK;
+}
+
 void partition_init(gpt_partition_t* part, const char* name, const uint8_t* type,
                     const uint8_t* guid, uint64_t first, uint64_t last, uint64_t flags) {
   memcpy(part->type, type, sizeof(part->type));
@@ -68,26 +93,16 @@ void partition_init(gpt_partition_t* part, const char* name, const uint8_t* type
 zx_status_t gpt_sync_current(int fd, uint64_t blocksize, gpt_header_t* header,
                              gpt_partition_t* ptable) {
   // write partition table first
-  ssize_t ret;
-  off_t offset;
-  offset = header->entries * blocksize;
+  off_t offset = header->entries * blocksize;
   size_t ptable_size = header->entries_count * header->entries_size;
-  ret = pwrite(fd, ptable, ptable_size, offset);
-  if (ret != static_cast<ssize_t>(ptable_size)) {
-    return ZX_ERR_IO;
+  zx_status_t status = write_partial_block(fd, ptable, ptable_size, offset, blocksize);
+  if (status != ZX_OK) {
+    return status;
   }
 
   // then write the header
   offset = header->current * blocksize;
-
-  uint8_t block[blocksize];
-  memset(block, 0, sizeof(blocksize));
-  memcpy(block, header, sizeof(*header));
-  ret = pwrite(fd, block, blocksize, offset);
-  if (ret != static_cast<ssize_t>(blocksize)) {
-    return ZX_ERR_IO;
-  }
-  return ZX_OK;
+  return write_partial_block(fd, header, sizeof(*header), offset, blocksize);
 }
 
 int compare(const void* ls, const void* rs) {
@@ -401,13 +416,14 @@ zx_status_t GptDevice::FinalizeAndSync(bool persist) {
     mbr.partitions[0].chs_address_end[2] = 0xff;
     mbr.partitions[0].start_sector_lba = 1;
     mbr.partitions[0].num_sectors = blocks_ & 0xffffffff;
-    ssize_t ret = pwrite(fd_.get(), &mbr, sizeof(mbr), /*offset*/ 0);
-    if (ret != static_cast<ssize_t>(blocksize_)) {
-      return ZX_ERR_IO;
+    zx_status_t status =
+        write_partial_block(fd_.get(), &mbr, sizeof(mbr), /*offset=*/0, blocksize_);
+    if (status != ZX_OK) {
+      return status;
     }
 
     // write backup to disk
-    zx_status_t status = gpt_sync_current(fd_.get(), blocksize_, &header, buf.get());
+    status = gpt_sync_current(fd_.get(), blocksize_, &header, buf.get());
     if (status != ZX_OK) {
       return status;
     }
