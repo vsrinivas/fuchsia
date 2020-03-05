@@ -62,3 +62,5 @@ toc:
     path: /docs/concepts/kernel/kernel_invariants.md
   - title: "Avoiding a problem with the SYSRET"
     path: /docs/concepts/kernel/sysret_problem.md
+  - title: "Hardware watchdog timers"
+    path: /docs/concepts/kernel/watchdog.md
