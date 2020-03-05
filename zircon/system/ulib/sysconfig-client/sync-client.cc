@@ -96,20 +96,21 @@ zx_status_t FindSysconfigPartition(const fbl::unique_fd& devfs_root,
 }
 
 zx_status_t CheckIfAstro(const fbl::unique_fd& devfs_root) {
-  fdio_cpp::UnownedFdioCaller caller(devfs_root.get());
-  zx::channel local, remote;
-  zx_status_t status = zx::channel::create(0, &local, &remote);
-  if (status != ZX_OK) {
-    return status;
+  // NOTE(brunodalbo): An older version of this routine used
+  // fdio_connect_at(borrowed_channel_from_devfs_root, ...). The problem is that borrowing a channel
+  // from a file descriptor to /dev created from a sandbox component is invalid, since /dev is not
+  // part of its flat namespace. Here we use `openat` and only borrow the channel later, when it's
+  // guaranteed to be backed by a remote service.
+  fbl::unique_fd platform_fd(openat(devfs_root.get(), "sys/platform", O_RDWR));
+  if (!platform_fd) {
+    return ZX_ERR_IO;
   }
-
-  status = fdio_service_connect_at(caller.borrow_channel(), "sys/platform", remote.release());
-  if (status != ZX_OK) {
-    return ZX_OK;
+  fdio_cpp::FdioCaller caller(std::move(platform_fd));
+  if (!caller) {
+    return ZX_ERR_IO;
   }
-
-  auto result = ::llcpp::fuchsia::sysinfo::SysInfo::Call::GetBoardName(zx::unowned(local));
-  status = result.ok() ? result->status : result.status();
+  auto result = ::llcpp::fuchsia::sysinfo::SysInfo::Call::GetBoardName(caller.channel());
+  zx_status_t status = result.ok() ? result->status : result.status();
   if (status != ZX_OK) {
     return status;
   }
