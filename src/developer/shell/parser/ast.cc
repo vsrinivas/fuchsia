@@ -2,9 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/developer/shell/parser/ast.h"
+
+#include <limits>
 #include <sstream>
 
-#include <src/developer/shell/parser/ast.h>
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace shell::parser::ast {
 
@@ -38,8 +41,9 @@ DecimalGroup::DecimalGroup(size_t start, size_t size, std::string_view content)
   digits_ = content.size();
 
   for (const char& ch : content) {
-    // TODO: DCHECK on overflow
+    uint64_t old_value = value_;
     value_ *= 10;
+    FX_DCHECK(value_ >= old_value) << "Insufficient precision to store DecimalGroup value.";
     value_ += ch - '0';
   }
 }
@@ -48,8 +52,9 @@ HexGroup::HexGroup(size_t start, size_t size, std::string_view content)
     : Terminal(start, size, content), digits_(content.size()) {
   digits_ = content.size();
 
+  FX_DCHECK(digits_ <= 16) << "Insufficient precision to store HexGroup value.";
+
   for (const char& ch : content) {
-    // TODO: DCHECK on overflow
     value_ *= 16;
 
     if (ch - '0' <= 9) {
@@ -62,29 +67,18 @@ HexGroup::HexGroup(size_t start, size_t size, std::string_view content)
   }
 }
 
-std::optional<std::string> Identifier::GetIdentifier(std::string_view unit) const {
-  for (const auto& child : Children()) {
-    if (child->HasErrors()) {
-      continue;
-    }
-
-    return child->ToString(unit);
-  }
-
-  // TODO: DCHECK(HasErrors()) // We should only get here if the parse failed.
-  return std::nullopt;
-}
-
 Integer::Integer(size_t start, std::vector<std::shared_ptr<Node>> children)
     : Nonterminal(start, std::move(children)) {
   for (const auto& child : Children()) {
-    // TODO: DCHECK on overflow
     if (auto hex = child->AsHexGroup()) {
-      value_ <<= hex->digits() * 4;
-      value_ += hex->value();
+      auto next = value_ << hex->digits() * 4;
+      FX_DCHECK(next >= value_) << "Insufficient precision to store Integer value.";
+      value_ = next + hex->value();
     } else if (auto dec = child->AsDecimalGroup()) {
+      auto old_value = value_;
       for (size_t i = 0; i < dec->digits(); i++, value_ *= 10)
         ;
+      FX_DCHECK(value_ >= old_value) << "Insufficient precision to store Integer value.";
       value_ += dec->value();
     }
   }

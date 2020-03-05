@@ -283,7 +283,6 @@ class Identifier : public Nonterminal {
 
   std::string_view Name() const override { return "Identifier"; }
 
-  std::optional<std::string> GetIdentifier(std::string_view unit) const;
   Identifier* AsIdentifier() override { return this; }
 
  private:

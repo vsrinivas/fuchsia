@@ -19,7 +19,10 @@ static_library("parser") {
     "text_match.h",
   ]
 
-  deps = [ "//zircon/public/lib/fit" ]
+  deps = [
+    "//src/lib/syslog/cpp",
+    "//zircon/public/lib/fit",
+  ]
 }
 
 test("parser_tests_bin") {
