@@ -18,6 +18,7 @@ using fuchsia.ui.views;
 /// For example, a session component that manages the lifecycle of elements may delegate
 /// presentation of element views to a different child component that implements
 /// `GraphicalPresenter`.
+[Discoverable]
 protocol GraphicalPresenter {
     /// Presents the view described by `view_spec`.
     ///
