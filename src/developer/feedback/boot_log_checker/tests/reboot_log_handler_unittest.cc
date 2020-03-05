@@ -86,8 +86,7 @@ class RebootLogHandlerTest : public UnitTestFixture,
     EXPECT_EQ(result.state(), kPending);
 
     network_reachability_provider_->TriggerOnNetworkReachable(true);
-    // TODO(fxb/46216): remove delay.
-    RunLoopFor(zx::sec(30));
+    RunLoopUntilIdle();
     return result;
   }
 
