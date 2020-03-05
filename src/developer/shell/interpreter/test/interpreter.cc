@@ -144,6 +144,13 @@ class NodeBuilder {
     return AddNode(&node, root_node);
   }
 
+  // Adds a previously defined variable.
+  fuchsia::shell::NodeId Variable(fuchsia::shell::NodeId variable) {
+    fuchsia::shell::Node node;
+    node.set_variable({variable});
+    return AddNode(&node, /*root_node=*/false);
+  }
+
  private:
   // The file id for all the nodes built by this builder.
   const uint64_t file_id_;
@@ -226,7 +233,7 @@ TEST_F(InterpreterTest, VariableDefinition) {
 
   NodeBuilder builder(kFileId);
   builder.VariableDefinition("foo", TypeUint64(), true, NullNode);
-  builder.VariableDefinition("bar", TypeUndef(), false, builder.IntegerLiteral(1, true));
+  builder.VariableDefinition("bar", TypeInt64(), false, builder.IntegerLiteral(1, true));
   builder.VariableDefinition("x", TypeUint64(), false, builder.IntegerLiteral(10, false));
 
   shell()->AddNodes(context->id, std::move(*builder.nodes()));
@@ -236,7 +243,7 @@ TEST_F(InterpreterTest, VariableDefinition) {
   ASSERT_FALSE(last_result_partial());
   ASSERT_EQ(results().size(), static_cast<size_t>(3));
   ASSERT_EQ(results()[0], "var foo: uint64\n");
-  ASSERT_EQ(results()[1], "const bar = -1\n");
+  ASSERT_EQ(results()[1], "const bar: int64 = -1\n");
   ASSERT_EQ(results()[2], "const x: uint64 = 10\n");
 }
 
@@ -291,7 +298,7 @@ TEST_F(InterpreterTest, VariableOk) {
   NodeBuilder builder(kFileId);
   builder.VariableDefinition("foo", TypeUint64(), false, builder.IntegerLiteral(1, false));
   builder.VariableDefinition("bar", TypeUint64(), false, builder.IntegerLiteral(10, false));
-  builder.VariableDefinition("groucho", TypeUndef(), false,
+  builder.VariableDefinition("groucho", TypeString(), false,
                              builder.StringLiteral("A Marx brother"));
 
   shell()->AddNodes(context->id, std::move(*builder.nodes()));
@@ -302,7 +309,7 @@ TEST_F(InterpreterTest, VariableOk) {
   LoadGlobal("x");
   Run();
 
-  ASSERT_EQ(fuchsia::shell::ExecuteResult::OK, context->result);
+  ASSERT_EQ(fuchsia::shell::ExecuteResult::OK, context->GetResult());
 
   fuchsia::shell::Node* foo = GetGlobal("foo");
   ASSERT_TRUE(foo->is_integer_literal());
@@ -325,13 +332,14 @@ TEST_F(InterpreterTest, VariableOk) {
   ASSERT_EQ(x, nullptr);
 }
 
-TEST_F(InterpreterTest, VariableNoTypeNorValue) {
+TEST_F(InterpreterTest, VariableNoType) {
   constexpr uint64_t kFileId = 1;
   InterpreterTestContext* context = CreateContext();
   shell()->CreateExecutionContext(context->id);
 
   NodeBuilder builder(kFileId);
   builder.VariableDefinition("bar", TypeUndef(), false, NullNode);
+  builder.VariableDefinition("foo", TypeUndef(), false, builder.IntegerLiteral(1, false));
 
   shell()->AddNodes(context->id, std::move(*builder.nodes()));
   shell()->ExecuteExecutionContext(context->id);
@@ -340,8 +348,10 @@ TEST_F(InterpreterTest, VariableNoTypeNorValue) {
   ASSERT_EQ(fuchsia::shell::ExecuteResult::ANALYSIS_ERROR, context->result);
 
   std::string error_result = context->error_stream.str();
-  ASSERT_EQ("node 1:1 At least the type or the initial value must defined for a variable.\n",
-            error_result);
+  ASSERT_EQ(
+      "node 1:1 Type not defined.\n"
+      "node 1:3 Type not defined.\n",
+      error_result);
 }
 
 TEST_F(InterpreterTest, VariableTypeNotImplemented) {
@@ -383,4 +393,339 @@ TEST_F(InterpreterTest, VariableDefinedTwice) {
       "node 1:2 Variable 'bar' already defined.\n"
       "node 1:1 First definition.\n",
       error_result);
+}
+
+TEST_F(InterpreterTest, BadIntegerLiterals) {
+  constexpr uint64_t kFileId = 1;
+  InterpreterTestContext* context = CreateContext();
+  shell()->CreateExecutionContext(context->id);
+
+  NodeBuilder builder(kFileId);
+  builder.VariableDefinition("i8p", TypeInt8(), false, builder.IntegerLiteral(0x80, false));
+  builder.VariableDefinition("i8n", TypeInt8(), false, builder.IntegerLiteral(0x81, true));
+  builder.VariableDefinition("u8p", TypeUint8(), false, builder.IntegerLiteral(0x100, false));
+  builder.VariableDefinition("u8n", TypeUint8(), false, builder.IntegerLiteral(1, true));
+
+  builder.VariableDefinition("i16p", TypeInt16(), false, builder.IntegerLiteral(0x8000, false));
+  builder.VariableDefinition("i16n", TypeInt16(), false, builder.IntegerLiteral(0x8001, true));
+  builder.VariableDefinition("u16p", TypeUint16(), false, builder.IntegerLiteral(0x10000, false));
+  builder.VariableDefinition("u16n", TypeUint16(), false, builder.IntegerLiteral(1, true));
+
+  builder.VariableDefinition("i32p", TypeInt32(), false, builder.IntegerLiteral(0x80000000, false));
+  builder.VariableDefinition("i32n", TypeInt32(), false, builder.IntegerLiteral(0x80000001, true));
+  builder.VariableDefinition("u32p", TypeUint32(), false,
+                             builder.IntegerLiteral(0x100000000L, false));
+  builder.VariableDefinition("u32n", TypeUint32(), false, builder.IntegerLiteral(1, true));
+
+  builder.VariableDefinition("i64p", TypeInt64(), false,
+                             builder.IntegerLiteral(0x8000000000000000UL, false));
+  builder.VariableDefinition("i64n", TypeInt64(), false,
+                             builder.IntegerLiteral(0x8000000000000001UL, true));
+  builder.VariableDefinition("u64n", TypeUint64(), false, builder.IntegerLiteral(1, true));
+
+  shell()->AddNodes(context->id, std::move(*builder.nodes()));
+  shell()->ExecuteExecutionContext(context->id);
+  Run();
+
+  ASSERT_EQ(fuchsia::shell::ExecuteResult::ANALYSIS_ERROR, context->result);
+
+  std::string error_result = context->error_stream.str();
+  ASSERT_EQ(
+      "node 1:1 Can't create an integer literal of type int8 with 128.\n"
+      "node 1:3 Can't create an integer literal of type int8 with -129.\n"
+      "node 1:5 Can't create an integer literal of type uint8 with 256.\n"
+      "node 1:7 Can't create an integer literal of type uint8 with -1.\n"
+      "node 1:9 Can't create an integer literal of type int16 with 32768.\n"
+      "node 1:11 Can't create an integer literal of type int16 with -32769.\n"
+      "node 1:13 Can't create an integer literal of type uint16 with 65536.\n"
+      "node 1:15 Can't create an integer literal of type uint16 with -1.\n"
+      "node 1:17 Can't create an integer literal of type int32 with 2147483648.\n"
+      "node 1:19 Can't create an integer literal of type int32 with -2147483649.\n"
+      "node 1:21 Can't create an integer literal of type uint32 with 4294967296.\n"
+      "node 1:23 Can't create an integer literal of type uint32 with -1.\n"
+      "node 1:25 Can't create an integer literal of type int64 with 9223372036854775808.\n"
+      "node 1:27 Can't create an integer literal of type int64 with -9223372036854775809.\n"
+      "node 1:29 Can't create an integer literal of type uint64 with -1.\n",
+      error_result);
+}
+
+TEST_F(InterpreterTest, GoodIntegerLiterals) {
+  constexpr uint64_t kFileId = 1;
+  InterpreterTestContext* context = CreateContext();
+  shell()->CreateExecutionContext(context->id);
+
+  NodeBuilder builder(kFileId);
+  builder.VariableDefinition("i8p", TypeInt8(), false, builder.IntegerLiteral(0x7f, false));
+  builder.VariableDefinition("i8n", TypeInt8(), false, builder.IntegerLiteral(0x80, true));
+  builder.VariableDefinition("u8p", TypeUint8(), false, builder.IntegerLiteral(0xff, false));
+  builder.VariableDefinition("u8n", TypeUint8(), false, builder.IntegerLiteral(0, false));
+
+  builder.VariableDefinition("i16p", TypeInt16(), false, builder.IntegerLiteral(0x7fff, false));
+  builder.VariableDefinition("i16n", TypeInt16(), false, builder.IntegerLiteral(0x8000, true));
+  builder.VariableDefinition("u16p", TypeUint16(), false, builder.IntegerLiteral(0xffff, false));
+  builder.VariableDefinition("u16n", TypeUint16(), false, builder.IntegerLiteral(0, false));
+
+  builder.VariableDefinition("i32p", TypeInt32(), false, builder.IntegerLiteral(0x7fffffff, false));
+  builder.VariableDefinition("i32n", TypeInt32(), false, builder.IntegerLiteral(0x80000000, true));
+  builder.VariableDefinition("u32p", TypeUint32(), false,
+                             builder.IntegerLiteral(0xffffffffL, false));
+  builder.VariableDefinition("u32n", TypeUint32(), false, builder.IntegerLiteral(0, false));
+
+  builder.VariableDefinition("i64p", TypeInt64(), false,
+                             builder.IntegerLiteral(0x7fffffffffffffffUL, false));
+  builder.VariableDefinition("i64n", TypeInt64(), false,
+                             builder.IntegerLiteral(0x8000000000000000UL, true));
+  builder.VariableDefinition("u64p", TypeUint64(), false,
+                             builder.IntegerLiteral(0xffffffffffffffffUL, false));
+  builder.VariableDefinition("u64n", TypeUint64(), false, builder.IntegerLiteral(0, false));
+
+  shell()->AddNodes(context->id, std::move(*builder.nodes()));
+  shell()->ExecuteExecutionContext(context->id);
+  Run();
+
+  ASSERT_EQ(fuchsia::shell::ExecuteResult::OK, context->GetResult());
+}
+
+TEST_F(InterpreterTest, LoadStringVariableOk) {
+  constexpr uint64_t kFileId = 1;
+  InterpreterTestContext* context = CreateContext();
+  shell()->CreateExecutionContext(context->id);
+
+  NodeBuilder builder(kFileId);
+  auto a_marx_brother = builder.VariableDefinition("a_marx_brother", TypeString(), false,
+                                                   builder.StringLiteral("A Marx brother"));
+  builder.VariableDefinition("groucho", TypeString(), false, builder.Variable(a_marx_brother));
+
+  shell()->AddNodes(context->id, std::move(*builder.nodes()));
+  shell()->ExecuteExecutionContext(context->id);
+  LoadGlobal("groucho");
+  Run();
+
+  ASSERT_EQ(fuchsia::shell::ExecuteResult::OK, context->GetResult());
+
+  fuchsia::shell::Node* groucho = GetGlobal("groucho");
+  ASSERT_TRUE(groucho->is_string_literal());
+  ASSERT_EQ("A Marx brother",
+            std::string(groucho->string_literal().data(), groucho->string_literal().size()));
+}
+
+TEST_F(InterpreterTest, LoadStringVariableFromAnotherContext) {
+  constexpr uint64_t kFileId = 1;
+
+  // First context.
+  InterpreterTestContext* context_1 = CreateContext();
+  shell()->CreateExecutionContext(context_1->id);
+
+  NodeBuilder builder(kFileId);
+  auto a_marx_brother = builder.VariableDefinition("a_marx_brother", TypeString(), false,
+                                                   builder.StringLiteral("A Marx brother"));
+
+  shell()->AddNodes(context_1->id, std::move(*builder.nodes()));
+  shell()->ExecuteExecutionContext(context_1->id);
+
+  // Second context.
+  InterpreterTestContext* context_2 = CreateContext();
+  shell()->CreateExecutionContext(context_2->id);
+
+  builder.VariableDefinition("groucho", TypeString(), false, builder.Variable(a_marx_brother));
+
+  shell()->AddNodes(context_2->id, std::move(*builder.nodes()));
+  shell()->ExecuteExecutionContext(context_2->id);
+
+  // Check execution.
+  LoadGlobal("groucho");
+  Run();
+
+  ASSERT_EQ(fuchsia::shell::ExecuteResult::OK, context_1->GetResult());
+
+  ASSERT_EQ(fuchsia::shell::ExecuteResult::OK, context_2->GetResult());
+
+  fuchsia::shell::Node* groucho = GetGlobal("groucho");
+  ASSERT_TRUE(groucho->is_string_literal());
+  ASSERT_EQ("A Marx brother",
+            std::string(groucho->string_literal().data(), groucho->string_literal().size()));
+}
+
+TEST_F(InterpreterTest, LoadInt8VariableOk) {
+  constexpr uint64_t kFileId = 1;
+  InterpreterTestContext* context = CreateContext();
+  shell()->CreateExecutionContext(context->id);
+
+  NodeBuilder builder(kFileId);
+  auto x = builder.VariableDefinition("x", TypeInt8(), false, builder.IntegerLiteral(1, true));
+  builder.VariableDefinition("y", TypeInt8(), false, builder.Variable(x));
+
+  shell()->AddNodes(context->id, std::move(*builder.nodes()));
+  shell()->ExecuteExecutionContext(context->id);
+  LoadGlobal("y");
+  Run();
+
+  ASSERT_EQ(fuchsia::shell::ExecuteResult::OK, context->GetResult());
+
+  fuchsia::shell::Node* y = GetGlobal("y");
+  ASSERT_TRUE(y->is_integer_literal());
+  ASSERT_TRUE(y->integer_literal().negative);
+  ASSERT_EQ(y->integer_literal().absolute_value.size(), static_cast<size_t>(1));
+  ASSERT_EQ(y->integer_literal().absolute_value[0], 1U);
+}
+
+TEST_F(InterpreterTest, LoadUint8VariableOk) {
+  constexpr uint64_t kFileId = 1;
+  InterpreterTestContext* context = CreateContext();
+  shell()->CreateExecutionContext(context->id);
+
+  NodeBuilder builder(kFileId);
+  auto x = builder.VariableDefinition("x", TypeUint8(), false, builder.IntegerLiteral(1, false));
+  builder.VariableDefinition("y", TypeUint8(), false, builder.Variable(x));
+
+  shell()->AddNodes(context->id, std::move(*builder.nodes()));
+  shell()->ExecuteExecutionContext(context->id);
+  LoadGlobal("y");
+  Run();
+
+  ASSERT_EQ(fuchsia::shell::ExecuteResult::OK, context->GetResult());
+
+  fuchsia::shell::Node* y = GetGlobal("y");
+  ASSERT_TRUE(y->is_integer_literal());
+  ASSERT_FALSE(y->integer_literal().negative);
+  ASSERT_EQ(y->integer_literal().absolute_value.size(), static_cast<size_t>(1));
+  ASSERT_EQ(y->integer_literal().absolute_value[0], 1U);
+}
+
+TEST_F(InterpreterTest, LoadInt16VariableOk) {
+  constexpr uint64_t kFileId = 1;
+  InterpreterTestContext* context = CreateContext();
+  shell()->CreateExecutionContext(context->id);
+
+  NodeBuilder builder(kFileId);
+  auto x = builder.VariableDefinition("x", TypeInt16(), false, builder.IntegerLiteral(1, true));
+  builder.VariableDefinition("y", TypeInt16(), false, builder.Variable(x));
+
+  shell()->AddNodes(context->id, std::move(*builder.nodes()));
+  shell()->ExecuteExecutionContext(context->id);
+  LoadGlobal("y");
+  Run();
+
+  ASSERT_EQ(fuchsia::shell::ExecuteResult::OK, context->GetResult());
+
+  fuchsia::shell::Node* y = GetGlobal("y");
+  ASSERT_TRUE(y->is_integer_literal());
+  ASSERT_TRUE(y->integer_literal().negative);
+  ASSERT_EQ(y->integer_literal().absolute_value.size(), static_cast<size_t>(1));
+  ASSERT_EQ(y->integer_literal().absolute_value[0], 1U);
+}
+
+TEST_F(InterpreterTest, LoadUint16VariableOk) {
+  constexpr uint64_t kFileId = 1;
+  InterpreterTestContext* context = CreateContext();
+  shell()->CreateExecutionContext(context->id);
+
+  NodeBuilder builder(kFileId);
+  auto x = builder.VariableDefinition("x", TypeUint16(), false, builder.IntegerLiteral(1, false));
+  builder.VariableDefinition("y", TypeUint16(), false, builder.Variable(x));
+
+  shell()->AddNodes(context->id, std::move(*builder.nodes()));
+  shell()->ExecuteExecutionContext(context->id);
+  LoadGlobal("y");
+  Run();
+
+  ASSERT_EQ(fuchsia::shell::ExecuteResult::OK, context->GetResult());
+
+  fuchsia::shell::Node* y = GetGlobal("y");
+  ASSERT_TRUE(y->is_integer_literal());
+  ASSERT_FALSE(y->integer_literal().negative);
+  ASSERT_EQ(y->integer_literal().absolute_value.size(), static_cast<size_t>(1));
+  ASSERT_EQ(y->integer_literal().absolute_value[0], 1U);
+}
+
+TEST_F(InterpreterTest, LoadInt32VariableOk) {
+  constexpr uint64_t kFileId = 1;
+  InterpreterTestContext* context = CreateContext();
+  shell()->CreateExecutionContext(context->id);
+
+  NodeBuilder builder(kFileId);
+  auto x = builder.VariableDefinition("x", TypeInt32(), false, builder.IntegerLiteral(1, true));
+  builder.VariableDefinition("y", TypeInt32(), false, builder.Variable(x));
+
+  shell()->AddNodes(context->id, std::move(*builder.nodes()));
+  shell()->ExecuteExecutionContext(context->id);
+  LoadGlobal("y");
+  Run();
+
+  ASSERT_EQ(fuchsia::shell::ExecuteResult::OK, context->GetResult());
+
+  fuchsia::shell::Node* y = GetGlobal("y");
+  ASSERT_TRUE(y->is_integer_literal());
+  ASSERT_TRUE(y->integer_literal().negative);
+  ASSERT_EQ(y->integer_literal().absolute_value.size(), static_cast<size_t>(1));
+  ASSERT_EQ(y->integer_literal().absolute_value[0], 1U);
+}
+
+TEST_F(InterpreterTest, LoadUint32VariableOk) {
+  constexpr uint64_t kFileId = 1;
+  InterpreterTestContext* context = CreateContext();
+  shell()->CreateExecutionContext(context->id);
+
+  NodeBuilder builder(kFileId);
+  auto x = builder.VariableDefinition("x", TypeUint32(), false, builder.IntegerLiteral(1, false));
+  builder.VariableDefinition("y", TypeUint32(), false, builder.Variable(x));
+
+  shell()->AddNodes(context->id, std::move(*builder.nodes()));
+  shell()->ExecuteExecutionContext(context->id);
+  LoadGlobal("y");
+  Run();
+
+  ASSERT_EQ(fuchsia::shell::ExecuteResult::OK, context->GetResult());
+
+  fuchsia::shell::Node* y = GetGlobal("y");
+  ASSERT_TRUE(y->is_integer_literal());
+  ASSERT_FALSE(y->integer_literal().negative);
+  ASSERT_EQ(y->integer_literal().absolute_value.size(), static_cast<size_t>(1));
+  ASSERT_EQ(y->integer_literal().absolute_value[0], 1U);
+}
+
+TEST_F(InterpreterTest, LoadInt64VariableOk) {
+  constexpr uint64_t kFileId = 1;
+  InterpreterTestContext* context = CreateContext();
+  shell()->CreateExecutionContext(context->id);
+
+  NodeBuilder builder(kFileId);
+  auto x = builder.VariableDefinition("x", TypeInt64(), false, builder.IntegerLiteral(1, true));
+  builder.VariableDefinition("y", TypeInt64(), false, builder.Variable(x));
+
+  shell()->AddNodes(context->id, std::move(*builder.nodes()));
+  shell()->ExecuteExecutionContext(context->id);
+  LoadGlobal("y");
+  Run();
+
+  ASSERT_EQ(fuchsia::shell::ExecuteResult::OK, context->GetResult());
+
+  fuchsia::shell::Node* y = GetGlobal("y");
+  ASSERT_TRUE(y->is_integer_literal());
+  ASSERT_TRUE(y->integer_literal().negative);
+  ASSERT_EQ(y->integer_literal().absolute_value.size(), static_cast<size_t>(1));
+  ASSERT_EQ(y->integer_literal().absolute_value[0], 1U);
+}
+
+TEST_F(InterpreterTest, LoadUint64VariableOk) {
+  constexpr uint64_t kFileId = 1;
+  InterpreterTestContext* context = CreateContext();
+  shell()->CreateExecutionContext(context->id);
+
+  NodeBuilder builder(kFileId);
+  auto x = builder.VariableDefinition("x", TypeUint64(), false, builder.IntegerLiteral(1, false));
+  builder.VariableDefinition("y", TypeUint64(), false, builder.Variable(x));
+
+  shell()->AddNodes(context->id, std::move(*builder.nodes()));
+  shell()->ExecuteExecutionContext(context->id);
+  LoadGlobal("y");
+  Run();
+
+  ASSERT_EQ(fuchsia::shell::ExecuteResult::OK, context->GetResult());
+
+  fuchsia::shell::Node* y = GetGlobal("y");
+  ASSERT_TRUE(y->is_integer_literal());
+  ASSERT_FALSE(y->integer_literal().negative);
+  ASSERT_EQ(y->integer_literal().absolute_value.size(), static_cast<size_t>(1));
+  ASSERT_EQ(y->integer_literal().absolute_value[0], 1U);
 }

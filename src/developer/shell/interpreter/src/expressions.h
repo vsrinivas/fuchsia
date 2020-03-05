@@ -9,6 +9,7 @@
 #include <map>
 #include <memory>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include "src/developer/shell/interpreter/src/nodes.h"
@@ -30,10 +31,9 @@ class IntegerLiteral : public Expression {
   uint64_t absolute_value() const { return absolute_value_; }
   bool negative() const { return negative_; }
 
-  std::unique_ptr<Type> GetType() const override;
   void Dump(std::ostream& os) const override;
 
-  void Compile(ExecutionContext* context, code::Code* code, const Type* for_type) const override;
+  bool Compile(ExecutionContext* context, code::Code* code, const Type* for_type) const override;
 
  private:
   // The absolute value for the integer.
@@ -52,8 +52,6 @@ class ObjectField : public Node {
 
   // Prints the field.
   void Dump(std::ostream& os) const;
-
-  std::unique_ptr<Type> GetType() { return type_->Duplicate(); }
 
  private:
   std::unique_ptr<Type> type_;
@@ -74,11 +72,11 @@ class Object : public Expression {
         type_(std::move(type)),
         fields_(std::move(fields)) {}
 
-  // Prints the instruction.
+  // Prints the object.
   virtual void Dump(std::ostream& os) const override;
 
   // Compiles the instruction (performs the semantic checks and generates code).
-  virtual void Compile(ExecutionContext* context, code::Code* code,
+  virtual bool Compile(ExecutionContext* context, code::Code* code,
                        const Type* for_type) const override;
 
  private:
@@ -95,14 +93,27 @@ class StringLiteral : public Expression {
 
   String* string() const { return string_.data(); }
 
-  std::unique_ptr<Type> GetType() const override;
   void Dump(std::ostream& os) const override;
 
-  void Compile(ExecutionContext* context, code::Code* code, const Type* for_type) const override;
+  bool Compile(ExecutionContext* context, code::Code* code, const Type* for_type) const override;
 
  private:
   // The value for the string.
   StringContainer string_;
+};
+
+class ExpressionVariable : public Expression {
+ public:
+  ExpressionVariable(Interpreter* interpreter, uint64_t file_id, uint64_t node_id,
+                     NodeId variable_definition)
+      : Expression(interpreter, file_id, node_id), variable_definition_(variable_definition) {}
+
+  void Dump(std::ostream& os) const override;
+
+  bool Compile(ExecutionContext* context, code::Code* code, const Type* for_type) const override;
+
+ private:
+  const NodeId variable_definition_;
 };
 
 }  // namespace interpreter

@@ -20,6 +20,20 @@ enum class ValueType {
   // Value is not defined. This is, for example, the case when we try to load a global which doesn't
   // exist.
   kUndef,
+  // The value is a 8 bit signed integer.
+  kInt8,
+  // The value is a 8 bit unsigned integer.
+  kUint8,
+  // The value is a 16 bit signed integer.
+  kInt16,
+  // The value is a 16 bit unsigned integer.
+  kUint16,
+  // The value is a 32 bit signed integer.
+  kInt32,
+  // The value is a 32 bit unsigned integer.
+  kUint32,
+  // The value is a 64 bit signed integer.
+  kInt64,
   // The value is a 64 bit unsigned integer.
   kUint64,
   // The value is a string.
@@ -62,7 +76,7 @@ class ReferenceCountedBase {
 
 // Base class for all reference counted objects.
 template <typename Type>
-class ReferenceCounted : private ReferenceCountedBase {
+class ReferenceCounted : public ReferenceCountedBase {
   template <typename ObjectType, typename ContainerType>
   friend class Container;
 
@@ -82,9 +96,6 @@ class ReferenceCounted : private ReferenceCountedBase {
     ReferenceCountedBase::Use();
     return reinterpret_cast<Type*>(this);
   }
-
-  // Releases a reference to this value. When the count is zero, the value is destroyed.
-  void Release() { ReferenceCountedBase::Release(); }
 
   // Reference count for the value. When the count reaches zero, the value is destroyed.
   size_t reference_count_ = 1;
@@ -118,8 +129,10 @@ class Container {
 class String : public ReferenceCounted<String> {
  public:
   explicit String(std::string_view value) : value_(value) {}
+  explicit String(std::string&& value) : value_(std::move(value)) {}
 
   const std::string& value() const { return value_; }
+  size_t size() const { return value_.size(); }
 
  private:
   const std::string value_;
@@ -143,6 +156,76 @@ class Value {
   ~Value() { Release(); }
 
   ValueType type() const { return type_; }
+
+  int64_t GetInt8() const {
+    FX_DCHECK(type_ == ValueType::kInt8);
+    return int8_value_;
+  }
+  void SetInt8(int8_t value) {
+    Release();
+    type_ = ValueType::kInt8;
+    int8_value_ = value;
+  }
+
+  uint8_t GetUint8() const {
+    FX_DCHECK(type_ == ValueType::kUint8);
+    return uint8_value_;
+  }
+  void SetUint8(uint8_t value) {
+    Release();
+    type_ = ValueType::kUint8;
+    uint8_value_ = value;
+  }
+
+  int16_t GetInt16() const {
+    FX_DCHECK(type_ == ValueType::kInt16);
+    return int16_value_;
+  }
+  void SetInt16(int16_t value) {
+    Release();
+    type_ = ValueType::kInt16;
+    int16_value_ = value;
+  }
+
+  uint16_t GetUint16() const {
+    FX_DCHECK(type_ == ValueType::kUint16);
+    return uint16_value_;
+  }
+  void SetUint16(uint16_t value) {
+    Release();
+    type_ = ValueType::kUint16;
+    uint16_value_ = value;
+  }
+
+  int32_t GetInt32() const {
+    FX_DCHECK(type_ == ValueType::kInt32);
+    return int32_value_;
+  }
+  void SetInt32(int32_t value) {
+    Release();
+    type_ = ValueType::kInt32;
+    int32_value_ = value;
+  }
+
+  uint32_t GetUint32() const {
+    FX_DCHECK(type_ == ValueType::kUint32);
+    return uint32_value_;
+  }
+  void SetUint32(uint32_t value) {
+    Release();
+    type_ = ValueType::kUint32;
+    uint32_value_ = value;
+  }
+
+  int64_t GetInt64() const {
+    FX_DCHECK(type_ == ValueType::kInt64);
+    return int64_value_;
+  }
+  void SetInt64(int64_t value) {
+    Release();
+    type_ = ValueType::kInt64;
+    int64_value_ = value;
+  }
 
   uint64_t GetUint64() const {
     FX_DCHECK(type_ == ValueType::kUint64);
@@ -184,6 +267,20 @@ class Value {
   // Current type for the value.
   ValueType type_ = ValueType::kUndef;
   union {
+    // Integer value when type is kInt8.
+    int8_t int8_value_;
+    // Integer value when type is kUint8.
+    uint8_t uint8_value_;
+    // Integer value when type is kInt16.
+    int16_t int16_value_;
+    // Integer value when type is kUint16.
+    uint16_t uint16_value_;
+    // Integer value when type is kInt32.
+    int32_t int32_value_;
+    // Integer value when type is kUint32.
+    uint32_t uint32_value_;
+    // Integer value when type is kInt64.
+    int64_t int64_value_;
     // Integer value when type is kUint64.
     uint64_t uint64_value_;
     // String value when type is kString.

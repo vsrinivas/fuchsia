@@ -62,6 +62,15 @@ class Scope {
     return result->second.get();
   }
 
+  const Variable* SearchVariable(const NodeId& node_id) const {
+    for (const auto& variable : variables_) {
+      if (variable.second->id() == node_id) {
+        return variable.second.get();
+      }
+    }
+    return nullptr;
+  }
+
   // Creates a variable.
   Variable* CreateVariable(NodeId id, const std::string& name, std::unique_ptr<Type> type) {
     size_t size = type->Size();
@@ -101,11 +110,19 @@ class ExecutionScope {
     FX_DCHECK(index + size <= data_.size());
     return data_.data() + index;
   }
+  template <typename T>
+  T* Data(size_t index) {
+    return reinterpret_cast<T*>(Data(index, sizeof(T)));
+  }
 
   // Retrieves a pointer to the storage.
   const uint8_t* Data(size_t index, size_t size) const {
     FX_DCHECK(index + size <= data_.size());
     return data_.data() + index;
+  }
+  template <typename T>
+  const T* Data(size_t index) const {
+    return reinterpret_cast<const T*>(Data(index, sizeof(T)));
   }
 
   // Loads the current content of |variable| for this storage into |value|.

@@ -18,6 +18,34 @@ void Value::Set(const Value& value) {
     case ValueType::kUndef:
       Release();
       break;
+    case ValueType::kInt8:
+      Release();
+      int8_value_ = value.int8_value_;
+      break;
+    case ValueType::kUint8:
+      Release();
+      uint8_value_ = value.uint8_value_;
+      break;
+    case ValueType::kInt16:
+      Release();
+      int16_value_ = value.int16_value_;
+      break;
+    case ValueType::kUint16:
+      Release();
+      uint16_value_ = value.uint16_value_;
+      break;
+    case ValueType::kInt32:
+      Release();
+      int32_value_ = value.int32_value_;
+      break;
+    case ValueType::kUint32:
+      Release();
+      uint32_value_ = value.uint32_value_;
+      break;
+    case ValueType::kInt64:
+      Release();
+      int64_value_ = value.int64_value_;
+      break;
     case ValueType::kUint64:
       Release();
       uint64_value_ = value.uint64_value_;
@@ -34,7 +62,13 @@ void Value::Set(const Value& value) {
 void Value::Release() {
   switch (type_) {
     case ValueType::kUndef:
-      break;
+    case ValueType::kInt8:
+    case ValueType::kUint8:
+    case ValueType::kInt16:
+    case ValueType::kUint16:
+    case ValueType::kInt32:
+    case ValueType::kUint32:
+    case ValueType::kInt64:
     case ValueType::kUint64:
       break;
     case ValueType::kString:

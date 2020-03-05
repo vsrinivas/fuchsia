@@ -33,9 +33,12 @@ class VariableDefinition : public Instruction {
   const Type* type() const { return type_.get(); }
   bool is_mutable() const { return is_mutable_; }
   const Expression* initial_value() const { return initial_value_.get(); }
+  size_t index() const { return index_; }
+
+  const VariableDefinition* AsVariableDefinition() const override { return this; }
 
   void Dump(std::ostream& os) const override;
-  void Compile(ExecutionContext* context, code::Code* code) const override;
+  void Compile(ExecutionContext* context, code::Code* code) override;
 
  private:
   // Name of the variable.
@@ -48,6 +51,8 @@ class VariableDefinition : public Instruction {
   // The initial value for the variable. If the variable is not mutable or if the type is
   // undefined then the initial value must be specified.
   std::unique_ptr<Expression> initial_value_;
+  // Index (in bytes) of the variable relative to the execution scope which defines it.
+  size_t index_ = 0;
 };
 
 }  // namespace interpreter

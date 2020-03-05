@@ -19,6 +19,7 @@ namespace interpreter {
 class ExecutionContext;
 class ExecutionScope;
 class Expression;
+class ExpressionVariable;
 class Instruction;
 class IntegerLiteral;
 class Interpreter;
@@ -28,6 +29,7 @@ class Scope;
 class StringLiteral;
 class TypeObject;
 class Variable;
+class VariableDefinition;
 
 struct NodeId {
   NodeId(uint64_t file_id, uint64_t node_id) : file_id(file_id), node_id(node_id) {}
@@ -36,6 +38,10 @@ struct NodeId {
   uint64_t file_id;
   // The node id.
   uint64_t node_id;
+
+  bool operator==(const NodeId& ref) const {
+    return (node_id == ref.node_id) && (file_id == ref.file_id);
+  }
 
   bool operator<(const NodeId& ref) const {
     return (node_id < ref.node_id) || (file_id < ref.file_id);
@@ -47,6 +53,26 @@ struct NodeId {
 
 // Base class for a type.
 class Type {
+ protected:
+  enum class TypeKind {
+    kUndefined,
+    kBool,
+    kChar,
+    kString,
+    kInt8,
+    kUint8,
+    kInt16,
+    kUint16,
+    kInt32,
+    kUint32,
+    kInt64,
+    kUint64,
+    kInteger,
+    kFloat32,
+    kFloat64,
+    kObject
+  };
+
  public:
   Type() = default;
   virtual ~Type() = default;
@@ -54,8 +80,14 @@ class Type {
   // The size for the type in bytes.
   virtual size_t Size() const = 0;
 
+  // Returns the type kind.
+  virtual TypeKind Kind() const = 0;
+
   // Returns true if the type is the undefined type.
-  virtual bool IsUndefined() const { return false; }
+  bool IsUndefined() const { return Kind() == TypeKind::kUndefined; }
+
+  // Returns true if the type is the string type.
+  bool IsString() const { return Kind() == TypeKind::kString; }
 
   // Creates an exact copy of the type.
   virtual std::unique_ptr<Type> Duplicate() const = 0;
@@ -74,14 +106,18 @@ class Type {
   // Generates an integer literal for this type. When the generated code is executed, it pushes the
   // value to the thread's stack value. The generation can generate an error if the literal is not
   // compatible with the type.
-  virtual void GenerateIntegerLiteral(ExecutionContext* context, code::Code* code,
+  virtual bool GenerateIntegerLiteral(ExecutionContext* context, code::Code* code,
                                       const IntegerLiteral* literal) const;
 
   // Generates a string literal for this type. When the generated code is executed, it pushes the
   // value to the thread's stack value. The generation can generate an error if the literal is not
   // compatible with the type.
-  virtual void GenerateStringLiteral(ExecutionContext* context, code::Code* code,
+  virtual bool GenerateStringLiteral(ExecutionContext* context, code::Code* code,
                                      const StringLiteral* literal) const;
+
+  // Generates a variable load. It pushes the variable value to the stack.
+  virtual bool GenerateVariable(ExecutionContext* context, code::Code* code, const NodeId& id,
+                                const Variable* variable) const;
 
   // Loads the current value of the variable stored at |index| in |scope| into |value|.
   virtual void LoadVariable(const ExecutionScope* scope, size_t index, Value* value) const;
@@ -109,6 +145,9 @@ class Node {
   // Returns a text representation of the node id.
   std::string StringId() const { return id_.StringId(); }
 
+  // Downcast to a VariableDefinition.
+  virtual const VariableDefinition* AsVariableDefinition() const { return nullptr; }
+
   virtual ObjectSchema* AsObjectSchema() { return nullptr; }
   virtual ObjectFieldSchema* AsObjectFieldSchema() { return nullptr; }
 
@@ -126,14 +165,11 @@ class Expression : public Node {
   Expression(Interpreter* interpreter, uint64_t file_id, uint64_t node_id)
       : Node(interpreter, file_id, node_id) {}
 
-  // Returns the type of the expression. The pointer is always valid (but it can be TypeUndefined).
-  virtual std::unique_ptr<Type> GetType() const;
-
   // Prints the expression.
   virtual void Dump(std::ostream& os) const = 0;
 
   // Compiles the expression (perform the semantic checks and generates code).
-  virtual void Compile(ExecutionContext* context, code::Code* code, const Type* for_type) const = 0;
+  virtual bool Compile(ExecutionContext* context, code::Code* code, const Type* for_type) const = 0;
 };
 
 inline std::ostream& operator<<(std::ostream& os, const Expression& expression) {
@@ -151,7 +187,7 @@ class Instruction : public Node {
   virtual void Dump(std::ostream& os) const = 0;
 
   // Compiles the instruction (performs the semantic checks and generates code).
-  virtual void Compile(ExecutionContext* context, code::Code* code) const = 0;
+  virtual void Compile(ExecutionContext* context, code::Code* code) = 0;
 };
 
 // Base class for schemas described by the client (for definining objects).

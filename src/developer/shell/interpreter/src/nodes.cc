@@ -13,6 +13,8 @@
 namespace shell {
 namespace interpreter {
 
+// - Type ------------------------------------------------------------------------------------------
+
 Variable* Type::CreateVariable(ExecutionContext* context, Scope* scope, NodeId id,
                                const std::string& name) const {
   std::stringstream ss;
@@ -27,23 +29,35 @@ void Type::GenerateDefaultValue(ExecutionContext* context, code::Code* code) con
   context->EmitError(ss.str());
 }
 
-void Type::GenerateIntegerLiteral(ExecutionContext* context, code::Code* code,
+bool Type::GenerateIntegerLiteral(ExecutionContext* context, code::Code* code,
                                   const IntegerLiteral* literal) const {
   std::stringstream ss;
   ss << "Can't create an integer literal of type " << *this << '.';
   context->EmitError(literal->id(), ss.str());
+  return false;
 }
 
-void Type::GenerateStringLiteral(ExecutionContext* context, code::Code* code,
+bool Type::GenerateStringLiteral(ExecutionContext* context, code::Code* code,
                                  const StringLiteral* literal) const {
   std::stringstream ss;
   ss << "Can't create a string literal of type " << *this << '.';
   context->EmitError(literal->id(), ss.str());
+  return false;
+}
+
+bool Type::GenerateVariable(ExecutionContext* context, code::Code* code, const NodeId& id,
+                            const Variable* variable) const {
+  std::stringstream ss;
+  ss << "Can't use variable of type " << *this << ".";
+  context->EmitError(id, ss.str());
+  return false;
 }
 
 void Type::LoadVariable(const ExecutionScope* scope, size_t index, Value* value) const {
   FX_LOGS(FATAL) << "Can't load variable of type " << *this;
 }
+
+// - Node ------------------------------------------------------------------------------------------
 
 Node::Node(Interpreter* interpreter, uint64_t file_id, uint64_t node_id)
     : interpreter_(interpreter), id_(file_id, node_id) {

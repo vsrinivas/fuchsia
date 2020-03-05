@@ -27,6 +27,10 @@ class Isolate {
     return global_scope_.GetVariable(name);
   }
 
+  const Variable* SearchGlobal(const NodeId& node_id) const {
+    return global_scope_.SearchVariable(node_id);
+  }
+
   void LoadGlobal(const Variable* variable, Value* value) const {
     return global_execution_scope_.Load(variable, value);
   }

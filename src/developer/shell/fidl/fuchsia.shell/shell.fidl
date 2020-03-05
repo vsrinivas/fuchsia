@@ -84,7 +84,7 @@ union ShellType {
     3: NodeId object_schema;
 };
 
-/// Define an integer value.
+/// Defines an integer value.
 struct IntegerLiteral {
     /// The absolute value of the value. The first value in the vector is the less significant 64
     /// bits.
@@ -110,7 +110,7 @@ struct ObjectDefinition {
     NodeId object_schema;
 };
 
-/// Define a variable.
+/// Defines a variable.
 struct VariableDefinition {
     /// The name of the variable.
     string:MAX name;
@@ -122,7 +122,7 @@ struct VariableDefinition {
     NodeId initial_value;
 };
 
-/// Define a node (expression, instruction, ...).
+/// Defines a node (expression, instruction, ...).
 union Node {
     /// An integer value.
     1: IntegerLiteral integer_literal;
@@ -138,9 +138,11 @@ union Node {
     6: ObjectFieldDefinition object_field;
     /// A string value.
     7: string:MAX string_literal;
+    /// The value of a previously defined variable;
+    8: NodeId variable;
 };
 
-/// Define a node which has to be inserted in the AST. The node will stay pending until it is used
+/// Defines a node which has to be inserted in the AST. The node will stay pending until it is used
 /// by another node.
 struct NodeDefinition {
     /// Id of the node.

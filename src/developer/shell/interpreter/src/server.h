@@ -140,9 +140,15 @@ class ServerInterpreter : public Interpreter {
   void AddObjectField(ServerInterpreterContext* context, std::unique_ptr<ObjectField> definition,
                       bool root_node);
 
-  // Retrieves the expression for the given context/node id. If the expression is not found, it
-  // emits an error.
+  // Retrives the expression for the given context/node id. If the expression is not found, it emits
+  // an error.
+  std::unique_ptr<Expression> GetNullableExpression(ServerInterpreterContext* context,
+                                                    const NodeId& node_id);
+
+  // Retrives the expression for the given context/node id. If the expression is not found, or if
+  // the expression is null, it emits an error.
   std::unique_ptr<Expression> GetExpression(ServerInterpreterContext* context,
+                                            const NodeId& container_id, const std::string& member,
                                             const NodeId& node_id);
 
   // Retrieves the schema definition for the given context/node id. If the definition is not found,
@@ -235,6 +241,9 @@ class Service final : public llcpp::fuchsia::shell::Shell::Interface {
 
   void AddStringLiteral(ServerInterpreterContext* context, uint64_t node_file_id,
                         uint64_t node_node_id, const ::fidl::StringView& node, bool root_node);
+
+  void AddVariable(ServerInterpreterContext* context, uint64_t node_file_id, uint64_t node_node_id,
+                   const llcpp::fuchsia::shell::NodeId& node, bool root_node);
 
   // The handle to communicate with the client.
   zx_handle_t handle_;

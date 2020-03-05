@@ -6,16 +6,17 @@
 
 #include <ostream>
 
+#include "src/developer/shell/interpreter/src/instructions.h"
+#include "src/developer/shell/interpreter/src/interpreter.h"
 #include "src/developer/shell/interpreter/src/nodes.h"
 #include "src/developer/shell/interpreter/src/schema.h"
+#include "src/developer/shell/interpreter/src/scope.h"
 #include "src/developer/shell/interpreter/src/types.h"
 
 namespace shell {
 namespace interpreter {
 
-std::unique_ptr<Type> Expression::GetType() const { return std::make_unique<TypeUndefined>(); }
-
-std::unique_ptr<Type> IntegerLiteral::GetType() const { return std::make_unique<TypeInteger>(); }
+// - IntegerLiteral --------------------------------------------------------------------------------
 
 void IntegerLiteral::Dump(std::ostream& os) const {
   if (negative_) {
@@ -24,12 +25,16 @@ void IntegerLiteral::Dump(std::ostream& os) const {
   os << absolute_value_;
 }
 
-void IntegerLiteral::Compile(ExecutionContext* context, code::Code* code,
+bool IntegerLiteral::Compile(ExecutionContext* context, code::Code* code,
                              const Type* for_type) const {
-  for_type->GenerateIntegerLiteral(context, code, this);
+  return for_type->GenerateIntegerLiteral(context, code, this);
 }
 
+// - ObjectField -----------------------------------------------------------------------------------
+
 void ObjectField::Dump(std::ostream& os) const { os << *type_ << " : " << *expression_; }
+
+// - Object ----------------------------------------------------------------------------------------
 
 void Object::Dump(std::ostream& os) const {
   os << "{";
@@ -41,20 +46,35 @@ void Object::Dump(std::ostream& os) const {
   os << "}";
 }
 
-void Object::Compile(ExecutionContext* context, code::Code* code, const Type* for_type) const {
+bool Object::Compile(ExecutionContext* context, code::Code* code, const Type* for_type) const {
   // TODO: Actually do something when we encounter a object
+  return false;
 }
 
-std::unique_ptr<Type> StringLiteral::GetType() const { return std::make_unique<TypeString>(); }
+// - StringLiteral ---------------------------------------------------------------------------------
 
 void StringLiteral::Dump(std::ostream& os) const {
   // TODO(vbelliard): escape special characters.
   os << '"' << string()->value() << '"';
 }
 
-void StringLiteral::Compile(ExecutionContext* context, code::Code* code,
+bool StringLiteral::Compile(ExecutionContext* context, code::Code* code,
                             const Type* for_type) const {
-  for_type->GenerateStringLiteral(context, code, this);
+  return for_type->GenerateStringLiteral(context, code, this);
+}
+
+// - ExpressionVariable ----------------------------------------------------------------------------
+
+void ExpressionVariable::Dump(std::ostream& os) const { os << variable_definition_.StringId(); }
+
+bool ExpressionVariable::Compile(ExecutionContext* context, code::Code* code,
+                                 const Type* for_type) const {
+  const Variable* definition = context->interpreter()->SearchGlobal(variable_definition_);
+  if (definition == nullptr) {
+    context->EmitError(id(), "Can't find variable " + variable_definition_.StringId() + ".");
+    return false;
+  }
+  return for_type->GenerateVariable(context, code, id(), definition);
 }
 
 }  // namespace interpreter

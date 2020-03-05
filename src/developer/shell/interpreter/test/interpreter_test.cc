@@ -4,6 +4,7 @@
 
 #include "src/developer/shell/interpreter/test/interpreter_test.h"
 
+#include <iostream>
 #include <sstream>
 #include <string>
 
@@ -11,6 +12,14 @@
 #include "fuchsia/sys/cpp/fidl.h"
 #include "lib/async-loop/default.h"
 #include "zircon/status.h"
+
+fuchsia::shell::ExecuteResult InterpreterTestContext::GetResult() const {
+  std::string string = error_stream.str();
+  if (!string.empty()) {
+    std::cout << string;
+  }
+  return result;
+}
 
 InterpreterTest::InterpreterTest()
     : loop_(&kAsyncLoopConfigAttachToCurrentThread), context_(sys::ComponentContext::Create()) {

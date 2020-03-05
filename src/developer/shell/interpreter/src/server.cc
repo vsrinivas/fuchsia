@@ -81,6 +81,8 @@ std::unique_ptr<Type> GetType(ServerInterpreterContext* context, uint64_t node_f
   return std::make_unique<TypeUndefined>();
 }
 
+// - ServerInterpreterContext ----------------------------------------------------------------------
+
 std::unique_ptr<Expression> ServerInterpreterContext::GetExpression(const NodeId& node_id) {
   auto result = expressions_.find(node_id);
   if (result == expressions_.end()) {
@@ -125,6 +127,8 @@ std::unique_ptr<ObjectFieldSchema> ServerInterpreterContext::GetObjectFieldSchem
   FX_DCHECK(returned_value != nullptr);
   return returned_value;
 }
+
+// - ServerInterpreter -----------------------------------------------------------------------------
 
 void ServerInterpreter::EmitError(ExecutionContext* context, std::string error_message) {
   service_->OnError((context == nullptr) ? 0 : context->id(), std::move(error_message));
@@ -188,6 +192,15 @@ void ServerInterpreter::AddExpression(ServerInterpreterContext* context,
   context->AddExpression(std::move(expression));
 }
 
+void ServerInterpreter::AddInstruction(ServerInterpreterContext* context,
+                                       std::unique_ptr<Instruction> instruction, bool root_node) {
+  if (root_node) {
+    context->execution_context()->AddPendingInstruction(std::move(instruction));
+  } else {
+    context->AddInstruction(std::move(instruction));
+  }
+}
+
 void ServerInterpreter::AddSchema(ServerInterpreterContext* context,
                                   std::unique_ptr<Schema> definition, bool root_node) {
   context->AddSchema(std::move(definition));
@@ -214,23 +227,31 @@ void ServerInterpreter::AddObjectField(ServerInterpreterContext* context,
   context->AddObjectField(std::move(definition));
 }
 
-void ServerInterpreter::AddInstruction(ServerInterpreterContext* context,
-                                       std::unique_ptr<Instruction> instruction, bool root_node) {
-  if (root_node) {
-    context->execution_context()->AddPendingInstruction(std::move(instruction));
-  } else {
-    context->AddInstruction(std::move(instruction));
-  }
-}
-
-std::unique_ptr<Expression> ServerInterpreter::GetExpression(ServerInterpreterContext* context,
-                                                             const NodeId& node_id) {
+std::unique_ptr<Expression> ServerInterpreter::GetNullableExpression(
+    ServerInterpreterContext* context, const NodeId& node_id) {
   if (node_id.node_id == 0) {
     return nullptr;
   }
   auto result = context->GetExpression(node_id);
   if (result == nullptr) {
     EmitError(context->execution_context(), "Can't find node " + node_id.StringId());
+    return nullptr;
+  }
+  return result;
+}
+
+std::unique_ptr<Expression> ServerInterpreter::GetExpression(ServerInterpreterContext* context,
+                                                             const NodeId& container_id,
+                                                             const std::string& member,
+                                                             const NodeId& node_id) {
+  if (node_id.node_id == 0) {
+    EmitError(context->execution_context(), container_id, member + " can't be null.");
+    return nullptr;
+  }
+  auto result = context->GetExpression(node_id);
+  if (result == nullptr) {
+    EmitError(context->execution_context(), container_id,
+              "Can't find node " + node_id.StringId() + " for " + member + ".");
     return nullptr;
   }
   return result;
@@ -262,10 +283,14 @@ std::unique_ptr<ObjectFieldSchema> ServerInterpreter::GetObjectFieldSchema(
   return result;
 }
 
+// - connect ---------------------------------------------------------------------------------------
+
 void connect(void* untyped_context, const char* service_name, zx_handle_t service_request) {
   auto server = static_cast<Server*>(untyped_context);
   server->IncomingConnection(service_request);
 }
+
+// - Service ---------------------------------------------------------------------------------------
 
 void Service::CreateExecutionContext(uint64_t context_id,
                                      CreateExecutionContextCompleter::Sync completer) {
@@ -305,6 +330,9 @@ void Service::AddNodes(uint64_t context_id,
       } else if (node.node.is_string_literal()) {
         AddStringLiteral(context, node.node_id.file_id, node.node_id.node_id,
                          node.node.string_literal(), node.root_node);
+      } else if (node.node.is_variable()) {
+        AddVariable(context, node.node_id.file_id, node.node_id.node_id, node.node.variable(),
+                    node.root_node);
       } else {
         interpreter_->EmitError(context->execution_context(),
                                 "Can't create node " + std::to_string(node.node_id.file_id) + ":" +
@@ -342,39 +370,90 @@ void Service::ExecuteExecutionContext(uint64_t context_id,
   }
 }
 
+class LoadGlobalHelper {
+ public:
+  LoadGlobalHelper() = default;
+
+  std::vector<llcpp::fuchsia::shell::Node>& nodes() { return nodes_; }
+
+  void SetSignedInteger(int64_t value) {
+    uint64_t tmp = value;
+    if (value < 0) {
+      tmp = -tmp;
+    }
+    absolute_value_.emplace_back(tmp);
+    integer_literal_.negative = value < 0;
+    integer_literal_.absolute_value = fidl::VectorView(absolute_value_);
+    llcpp::fuchsia::shell::Node shell_value;
+    shell_value.set_integer_literal(
+        fidl::unowned_ptr<llcpp::fuchsia::shell::IntegerLiteral>(&integer_literal_));
+    nodes_.emplace_back(std::move(shell_value));
+  }
+
+  void SetUnsignedInteger(uint64_t value) {
+    absolute_value_.emplace_back(value);
+    integer_literal_.negative = false;
+    integer_literal_.absolute_value = fidl::VectorView(absolute_value_);
+    llcpp::fuchsia::shell::Node shell_value;
+    shell_value.set_integer_literal(
+        fidl::unowned_ptr<llcpp::fuchsia::shell::IntegerLiteral>(&integer_literal_));
+    nodes_.emplace_back(std::move(shell_value));
+  }
+
+  void SetString(String* value) {
+    string_.set_data(value->value().data());
+    string_.set_size(value->value().size());
+    llcpp::fuchsia::shell::Node shell_value;
+    shell_value.set_string_literal(fidl::unowned_ptr<fidl::StringView>(&string_));
+    nodes_.emplace_back(std::move(shell_value));
+  }
+
+ private:
+  std::vector<llcpp::fuchsia::shell::Node> nodes_;
+  llcpp::fuchsia::shell::IntegerLiteral integer_literal_;
+  std::vector<uint64_t> absolute_value_;
+  fidl::StringView string_;
+};
+
 void Service::LoadGlobal(::fidl::StringView name, LoadGlobalCompleter::Sync completer) {
+  LoadGlobalHelper helper;
   const Variable* variable = interpreter_->SearchGlobal(std::string(name.data(), name.size()));
-  Value value;
-  std::vector<llcpp::fuchsia::shell::Node> nodes;
-  llcpp::fuchsia::shell::IntegerLiteral integer_literal;
-  std::vector<uint64_t> absolute_value;
-  fidl::StringView string;
   if (variable != nullptr) {
+    Value value;
     interpreter_->LoadGlobal(variable, &value);
     switch (value.type()) {
       case ValueType::kUndef:
         break;
-      case ValueType::kUint64: {
-        absolute_value.emplace_back(value.GetUint64());
-        integer_literal.absolute_value = fidl::VectorView(absolute_value);
-        llcpp::fuchsia::shell::Node shell_value;
-        shell_value.set_integer_literal(
-            fidl::unowned_ptr<llcpp::fuchsia::shell::IntegerLiteral>(&integer_literal));
-        nodes.emplace_back(std::move(shell_value));
+      case ValueType::kInt8:
+        helper.SetSignedInteger(value.GetInt8());
         break;
-      }
-      case ValueType::kString: {
-        String* string_value = value.GetString();
-        string.set_data(string_value->value().data());
-        string.set_size(string_value->value().size());
-        llcpp::fuchsia::shell::Node shell_value;
-        shell_value.set_string_literal(fidl::unowned_ptr<fidl::StringView>(&string));
-        nodes.emplace_back(std::move(shell_value));
+      case ValueType::kUint8:
+        helper.SetUnsignedInteger(value.GetUint8());
         break;
-      }
+      case ValueType::kInt16:
+        helper.SetSignedInteger(value.GetInt16());
+        break;
+      case ValueType::kUint16:
+        helper.SetUnsignedInteger(value.GetUint16());
+        break;
+      case ValueType::kInt32:
+        helper.SetSignedInteger(value.GetInt32());
+        break;
+      case ValueType::kUint32:
+        helper.SetUnsignedInteger(value.GetUint32());
+        break;
+      case ValueType::kInt64:
+        helper.SetSignedInteger(value.GetInt64());
+        break;
+      case ValueType::kUint64:
+        helper.SetUnsignedInteger(value.GetUint64());
+        break;
+      case ValueType::kString:
+        helper.SetString(value.GetString());
+        break;
     }
   }
-  completer.Reply(fidl::VectorView(nodes));
+  completer.Reply(fidl::VectorView(helper.nodes()));
 }
 
 void Service::AddIntegerLiteral(ServerInterpreterContext* context, uint64_t node_file_id,
@@ -459,7 +538,8 @@ void Service::AddObjectField(ServerInterpreterContext* context, uint64_t node_fi
     return;
   }
   NodeId value_id(node.value.file_id, node.value.node_id);
-  std::unique_ptr<Expression> value = interpreter_->GetExpression(context, value_id);
+  std::unique_ptr<Expression> value = interpreter_->GetExpression(
+      context, NodeId(node_file_id, node_node_id), "expression", value_id);
   auto definition =
       std::make_unique<ObjectField>(interpreter(), node_file_id, node_node_id, std::move(value));
   interpreter_->AddObjectField(context, std::move(definition), root_node);
@@ -469,12 +549,17 @@ void Service::AddVariableDefinition(ServerInterpreterContext* context, uint64_t 
                                     uint64_t node_node_id,
                                     const llcpp::fuchsia::shell::VariableDefinition& node,
                                     bool root_node) {
-  std::unique_ptr<Expression> initial_value = interpreter_->GetExpression(
+  std::unique_ptr<Expression> initial_value = interpreter_->GetNullableExpression(
       context, NodeId(node.initial_value.file_id, node.initial_value.node_id));
-  auto result = std::make_unique<VariableDefinition>(
-      interpreter(), node_file_id, node_node_id, GetView(node.name),
-      GetType(context, node_file_id, node_node_id, node.type), node.mutable_value,
-      std::move(initial_value));
+  std::unique_ptr<Type> type = GetType(context, node_file_id, node_node_id, node.type);
+  if (type->IsUndefined()) {
+    interpreter_->EmitError(context->execution_context(), NodeId(node_file_id, node_node_id),
+                            "Type not defined.");
+    return;
+  }
+  auto result = std::make_unique<VariableDefinition>(interpreter(), node_file_id, node_node_id,
+                                                     GetView(node.name), std::move(type),
+                                                     node.mutable_value, std::move(initial_value));
   interpreter_->AddInstruction(context, std::move(result), root_node);
 }
 
@@ -485,6 +570,16 @@ void Service::AddStringLiteral(ServerInterpreterContext* context, uint64_t node_
                                                 std::string_view(node.data(), node.size()));
   interpreter_->AddExpression(context, std::move(result), root_node);
 }
+
+void Service::AddVariable(ServerInterpreterContext* context, uint64_t node_file_id,
+                          uint64_t node_node_id, const llcpp::fuchsia::shell::NodeId& node,
+                          bool root_node) {
+  auto result = std::make_unique<ExpressionVariable>(interpreter(), node_file_id, node_node_id,
+                                                     NodeId(node.file_id, node.node_id));
+  interpreter_->AddExpression(context, std::move(result), root_node);
+}
+
+// - Server ----------------------------------------------------------------------------------------
 
 Server::Server() : loop_(&kAsyncLoopConfigAttachToCurrentThread) {}
 

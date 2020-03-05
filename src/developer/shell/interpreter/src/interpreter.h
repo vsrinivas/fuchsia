@@ -137,6 +137,10 @@ class Interpreter {
     return isolate_->SearchGlobal(name);
   }
 
+  const Variable* SearchGlobal(const NodeId& node_id) const {
+    return isolate_->SearchGlobal(node_id);
+  }
+
   void LoadGlobal(const Variable* variable, Value* value) const {
     return isolate_->LoadGlobal(variable, value);
   }

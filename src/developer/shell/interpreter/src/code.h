@@ -21,14 +21,31 @@ enum class Opcode : uint64_t {
   kNop,
   // Pushes a 64 bit literal to the thread's value stack.
   kLiteral64,
+  // Loads a 8 bit global variable and pushes it to the stack.
+  kLoadRaw8,
+  // Loads a 16 bit global variable and pushes it to the stack.
+  kLoadRaw16,
+  // Loads a 32 bit global variable and pushes it to the stack.
+  kLoadRaw32,
+  // Loads a 64 bit global variable and pushes it to the stack.
+  kLoadRaw64,
+  // Loads a referenced counted value from a global variable and pushes it to the thread's value
+  // stack.
+  kLoadReferenceCounted,
   // Pushes a reference counted literal to the thread's value stack. Increment the reference count
   // for the object.
   kReferenceCountedLiteral,
-  // Stores a 64 bit value popped from the thread's value stack into a global variable.
-  kStore64,
   // Return from code execution. The execution goes back to the calling scope or stops if it was
   // the last execution scope.
-  kRet
+  kRet,
+  // Pops a value from the thread's value stack and stores it into a 8 bit global variable.
+  kStoreRaw8,
+  // Pops a value from the thread's value stack and stores it into a 16 bit global variable.
+  kStoreRaw16,
+  // Pops a value from the thread's value stack and stores it into a 32 bit global variable.
+  kStoreRaw32,
+  // Pops a value from the thread's value stack and stores it into a 64 bit global variable.
+  kStoreRaw64,
 };
 
 // Defines some code. This can represent the code for one function or the code for the pending
@@ -45,21 +62,63 @@ class Code {
     code_.emplace_back(value);
   }
 
+  // Adds a 64 bit literal operation.
+  void LoadReferenceCounted(size_t index) {
+    emplace_back_opcode(Opcode::kLoadReferenceCounted);
+    code_.emplace_back(index);
+  }
+
+  // Adds a global variable load operation.
+  void LoadRaw(size_t index, size_t size) {
+    switch (size) {
+      case 1:
+        emplace_back_opcode(Opcode::kLoadRaw8);
+        break;
+      case 2:
+        emplace_back_opcode(Opcode::kLoadRaw16);
+        break;
+      case 4:
+        emplace_back_opcode(Opcode::kLoadRaw32);
+        break;
+      case 8:
+        emplace_back_opcode(Opcode::kLoadRaw64);
+        break;
+      default:
+        FX_LOGS(FATAL) << "Bad builtin size " << size;
+    }
+    code_.emplace_back(index);
+  }
+
+  // Adds a ret operation.
+  void Ret() { emplace_back_opcode(Opcode::kRet); }
+
+  // Adds a global variable store operation.
+  void StoreRaw(uint64_t index, uint64_t size) {
+    switch (size) {
+      case 1:
+        emplace_back_opcode(Opcode::kStoreRaw8);
+        break;
+      case 2:
+        emplace_back_opcode(Opcode::kStoreRaw16);
+        break;
+      case 4:
+        emplace_back_opcode(Opcode::kStoreRaw32);
+        break;
+      case 8:
+        emplace_back_opcode(Opcode::kStoreRaw64);
+        break;
+      default:
+        FX_LOGS(FATAL) << "Bad builtin size " << size;
+    }
+    code_.emplace_back(index);
+  }
+
   // Adds a string literal operation.
   void StringLiteral(String* value) {
     strings_.emplace_back(value);
     emplace_back_opcode(Opcode::kReferenceCountedLiteral);
     code_.emplace_back(reinterpret_cast<uint64_t>(value));
   }
-
-  // Adds a 64 bit store within the global scope.
-  void Store64(uint64_t index) {
-    emplace_back_opcode(Opcode::kStore64);
-    code_.emplace_back(index);
-  }
-
-  // Adds a ret operation.
-  void Ret() { emplace_back_opcode(Opcode::kRet); }
 
  private:
   void emplace_back_opcode(Opcode opcode) { code_.emplace_back(static_cast<uint64_t>(opcode)); }

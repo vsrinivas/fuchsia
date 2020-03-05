@@ -23,40 +23,28 @@ void VariableDefinition::Dump(std::ostream& os) const {
   os << '\n';
 }
 
-void VariableDefinition::Compile(ExecutionContext* context, code::Code* code) const {
+void VariableDefinition::Compile(ExecutionContext* context, code::Code* code) {
+  // The sever only creates a VariableDefinition if the type is defined.
+  FX_DCHECK(!type_->IsUndefined());
   // Currently, we only create the variable within the global scope.
-  const Type* inferred_type = type_.get();
-  std::unique_ptr<Type> new_type;
-  if (type_->IsUndefined()) {
-    if (initial_value_ == nullptr) {
-      context->EmitError(id(),
-                         "At least the type or the initial value must defined for a variable.");
-      return;
-    }
-    new_type = initial_value_->GetType();
-    if (new_type->IsUndefined()) {
-      context->EmitError(id(), "Can't infer type for this variable.");
-      return;
-    }
-    inferred_type = new_type.get();
-  }
   const Variable* existing = context->interpreter()->isolate()->global_scope()->GetVariable(name_);
   if (existing != nullptr) {
     context->EmitError(id(), "Variable '" + name_ + "' already defined.");
     context->EmitError(existing->id(), "First definition.");
     return;
   }
-  Variable* variable = inferred_type->CreateVariable(
+  Variable* variable = type_->CreateVariable(
       context, context->interpreter()->isolate()->global_scope(), id(), name_);
   if (variable == nullptr) {
     return;
   }
   if (initial_value_ == nullptr) {
-    inferred_type->GenerateDefaultValue(context, code);
+    type_->GenerateDefaultValue(context, code);
   } else {
-    initial_value_->Compile(context, code, inferred_type);
+    initial_value_->Compile(context, code, type_.get());
   }
-  code->Store64(variable->index());
+  index_ = variable->index();
+  code->StoreRaw(index_, type_->Size());
 }
 
 }  // namespace interpreter
