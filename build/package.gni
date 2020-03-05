@@ -167,17 +167,6 @@ template("pm_build_package") {
 
     deps += [ invoker.manifest ]
 
-    if (string_replace(package_name, "_", "-") != package_name) {
-      # TODO(22679): packages ending up in this allowlist should be updated to
-      # use hyphens in their names. New entries should not be added to the
-      # allowlist or excluded by logic here.
-      deps += [ "//build:deprecated_package_underscore" ]
-    }
-
-    # if (string_replace(package_name, "_", "-") != package_name) {
-    #   print(get_label_info(":" + target_name, "label_no_toolchain"))
-    # }
-
     inputs = [ pkg_manifest_file ]
 
     depfile = "$pkg_out_dir/meta.far.d"
