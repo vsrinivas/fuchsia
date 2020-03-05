@@ -71,9 +71,7 @@ template("go_library") {
 
     library_file = "$target_gen_dir/$target_name.go_deps"
 
-    outputs = [
-      library_file,
-    ]
+    outputs = [ library_file ]
 
     deps = []
     dependent_libraries = []
@@ -108,6 +106,10 @@ template("go_library") {
       metadata = invoker.metadata
     }
 
-    forward_variables_from(invoker, [ "testonly" ])
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
   }
 }

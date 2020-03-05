@@ -30,7 +30,11 @@ template("fidl_rust_library") {
     name = underscore_name
     version = "0.1.0"
     edition = "2018"
-    forward_variables_from(invoker, [ "testonly" ])
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
     deps = [
       "//src/lib/fidl/rust/fidl",
       "//src/lib/zircon/rust:fuchsia-zircon-status",

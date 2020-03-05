@@ -77,6 +77,10 @@ template("fidl_go") {
       deps += invoker.public_deps
     }
 
-    forward_variables_from(invoker, [ "testonly" ])
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
   }
 }
