@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/component-device.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 
@@ -58,14 +57,6 @@ __EXPORT zx_status_t device_get_protocol(const zx_device_t* dev, uint32_t proto_
   __builtin_abort();
 }
 
-__EXPORT zx_status_t device_open_protocol_session_multibindable(const zx_device_t* dev,
-                                                                uint32_t proto_id, void* protocol) {
-  __builtin_abort();
-}
-__EXPORT zx_status_t device_close_protocol_session_multibindable(const zx_device_t* dev,
-                                                                 void* protocol_ctx) {
-  __builtin_abort();
-}
 __EXPORT void device_state_clr_set(zx_device_t* dev, zx_signals_t clearflag, zx_signals_t setflag) {
   __builtin_abort();
 }

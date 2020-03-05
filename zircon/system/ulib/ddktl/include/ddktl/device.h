@@ -377,24 +377,6 @@ class ChildPreReleaseable : public base_mixin {
   }
 };
 
-template <typename D>
-class Multibindable : public base_mixin {
- protected:
-  static constexpr void InitOp(zx_protocol_device_t* proto) {
-    internal::CheckMultibindable<D>();
-    proto->open_protocol_session_multibindable = OpenProtocolSessionMultibindable;
-    proto->close_protocol_session_multibindable = CloseProtocolSessionMultibindable;
-  }
-
- private:
-  static zx_status_t OpenProtocolSessionMultibindable(void* ctx, uint32_t proto_id, void* out) {
-    return static_cast<D*>(ctx)->DdkOpenProtocolSessionMultibindable(proto_id, out);
-  }
-  static zx_status_t CloseProtocolSessionMultibindable(void* ctx, void* out) {
-    return static_cast<D*>(ctx)->DdkCloseProtocolSessionMultibindable(out);
-  }
-};
-
 // Device is templated on the list of mixins that define which DDK device
 // methods are implemented. Note that internal::base_device *must* be the
 // left-most base class in order to ensure that its constructor runs before the

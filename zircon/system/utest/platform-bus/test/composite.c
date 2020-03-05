@@ -485,8 +485,8 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
 
   if (metadata.composite_device_id == PDEV_DID_TEST_COMPOSITE_1) {
     if (count != COMPONENT_COUNT_1) {
-      zxlogf(ERROR, "%s: got the wrong number of components (%u, %d)\n", DRIVER_NAME, count,
-             COMPONENT_COUNT_1);
+      zxlogf(ERROR, "%s: got the wrong number of components (%u, %zu)\n", DRIVER_NAME, count,
+             actual);
       return ZX_ERR_BAD_STATE;
     }
 
@@ -520,6 +520,7 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
       zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_CODEC\n", DRIVER_NAME);
       return status;
     }
+
     if ((status = test_clock(&clock)) != ZX_OK) {
       zxlogf(ERROR, "%s: test_clock failed: %d\n", DRIVER_NAME, status);
       return status;
@@ -542,8 +543,8 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
     }
   } else if (metadata.composite_device_id == PDEV_DID_TEST_COMPOSITE_2) {
     if (count != COMPONENT_COUNT_2) {
-      zxlogf(ERROR, "%s: got the wrong number of components (%u, %d)\n", DRIVER_NAME, count,
-             COMPONENT_COUNT_2);
+      zxlogf(ERROR, "%s: got the wrong number of components (%u, %zu)\n", DRIVER_NAME, count,
+             actual);
       return ZX_ERR_BAD_STATE;
     }
 

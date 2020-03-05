@@ -4,7 +4,6 @@
 
 #include "power.h"
 
-#include <zircon/errors.h>
 #include <zircon/types.h>
 
 #include <memory>
@@ -20,126 +19,38 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 
-#include "fbl/auto_lock.h"
-
 namespace power {
 
-zx_status_t PowerDeviceComponentChild::PowerEnablePowerDomain() {
-  return parent_->EnablePowerDomain(component_device_id_);
-}
+zx_status_t PowerDevice::PowerEnablePowerDomain() { return power_.EnablePowerDomain(index_); }
 
-zx_status_t PowerDeviceComponentChild::PowerDisablePowerDomain() {
-  return parent_->DisablePowerDomain(component_device_id_);
-}
+zx_status_t PowerDevice::PowerDisablePowerDomain() { return power_.DisablePowerDomain(index_); }
 
-zx_status_t PowerDeviceComponentChild::PowerGetPowerDomainStatus(
-    power_domain_status_t* out_status) {
-  return parent_->GetPowerDomainStatus(component_device_id_, out_status);
-}
-
-zx_status_t PowerDeviceComponentChild::PowerGetSupportedVoltageRange(uint32_t* min_voltage,
-                                                                     uint32_t* max_voltage) {
-  return parent_->GetSupportedVoltageRange(component_device_id_, min_voltage, max_voltage);
-}
-
-zx_status_t PowerDeviceComponentChild::PowerRequestVoltage(uint32_t voltage,
-                                                           uint32_t* actual_voltage) {
-  return parent_->RequestVoltage(component_device_id_, voltage, actual_voltage);
-}
-
-zx_status_t PowerDeviceComponentChild::PowerGetCurrentVoltage(uint32_t index,
-                                                              uint32_t* current_voltage) {
-  return parent_->GetCurrentVoltage(component_device_id_, index, current_voltage);
-}
-
-zx_status_t PowerDeviceComponentChild::PowerWritePmicCtrlReg(uint32_t reg_addr, uint32_t value) {
-  return parent_->WritePmicCtrlReg(component_device_id_, reg_addr, value);
-}
-
-zx_status_t PowerDeviceComponentChild::PowerReadPmicCtrlReg(uint32_t reg_addr,
-                                                            uint32_t* out_value) {
-  return parent_->ReadPmicCtrlReg(component_device_id_, reg_addr, out_value);
-}
-
-PowerDeviceComponentChild* PowerDevice::GetComponentChild(uint64_t component_device_id) {
-  fbl::AutoLock al(&children_lock_);
-  for (auto& child : children_) {
-    if (child->component_device_id() == component_device_id) {
-      return child.get();
-    }
-  }
-  return nullptr;
-}
-
-zx_status_t PowerDevice::EnablePowerDomain(uint64_t component_device_id) {
-  return power_.EnablePowerDomain(index_);
-}
-
-zx_status_t PowerDevice::DisablePowerDomain(uint64_t component_device_id) {
-  return power_.DisablePowerDomain(index_);
-}
-
-zx_status_t PowerDevice::GetPowerDomainStatus(uint64_t component_device_id,
-                                              power_domain_status_t* out_status) {
+zx_status_t PowerDevice::PowerGetPowerDomainStatus(power_domain_status_t* out_status) {
   return power_.GetPowerDomainStatus(index_, out_status);
 }
 
-zx_status_t PowerDevice::GetSupportedVoltageRange(uint64_t component_device_id,
-                                                  uint32_t* min_voltage, uint32_t* max_voltage) {
+zx_status_t PowerDevice::PowerGetSupportedVoltageRange(uint32_t* min_voltage,
+                                                       uint32_t* max_voltage) {
   return power_.GetSupportedVoltageRange(index_, min_voltage, max_voltage);
 }
 
-zx_status_t PowerDevice::RequestVoltage(uint64_t component_device_id, uint32_t voltage,
-                                        uint32_t* actual_voltage) {
+zx_status_t PowerDevice::PowerRequestVoltage(uint32_t voltage, uint32_t* actual_voltage) {
   return power_.RequestVoltage(index_, voltage, actual_voltage);
 }
 
-zx_status_t PowerDevice::GetCurrentVoltage(uint64_t component_device_id, uint32_t index,
-                                           uint32_t* current_voltage) {
+zx_status_t PowerDevice::PowerGetCurrentVoltage(uint32_t index, uint32_t* current_voltage) {
   return power_.GetCurrentVoltage(index_, current_voltage);
 }
 
-zx_status_t PowerDevice::WritePmicCtrlReg(uint64_t component_device_id, uint32_t reg_addr,
-                                          uint32_t value) {
+zx_status_t PowerDevice::PowerWritePmicCtrlReg(uint32_t reg_addr, uint32_t value) {
   return power_.WritePmicCtrlReg(index_, reg_addr, value);
 }
 
-zx_status_t PowerDevice::ReadPmicCtrlReg(uint64_t component_device_id, uint32_t reg_addr,
-                                         uint32_t* out_value) {
+zx_status_t PowerDevice::PowerReadPmicCtrlReg(uint32_t reg_addr, uint32_t* out_value) {
   return power_.ReadPmicCtrlReg(index_, reg_addr, out_value);
 }
 
 void PowerDevice::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
-
-zx_status_t PowerDevice::DdkOpenProtocolSessionMultibindable(uint32_t proto_id, void* out) {
-  if (proto_id != ZX_PROTOCOL_POWER) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-  auto* proto = static_cast<ddk::AnyProtocol*>(out);
-  fbl::AutoLock al(&children_lock_);
-  fbl::AllocChecker ac;
-  std::unique_ptr<PowerDeviceComponentChild> child(
-      new (&ac) PowerDeviceComponentChild(children_.size(), this));
-  if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
-  }
-  children_.push_back(std::move(child));
-  PowerDeviceComponentChild* child_ptr = children_.back().get();
-
-  proto->ctx = child_ptr;
-  proto->ops = child_ptr->ops();
-  return ZX_OK;
-}
-
-zx_status_t PowerDevice::DdkCloseProtocolSessionMultibindable(void* child_ctx) {
-  auto child = reinterpret_cast<PowerDeviceComponentChild*>(child_ctx);
-  fbl::AutoLock al(&children_lock_);
-  if (child->component_device_id() > children_.size()) {
-    return ZX_ERR_INTERNAL;
-  }
-  children_.erase(children_.begin() + child->component_device_id());
-  return ZX_OK;
-}
 
 void PowerDevice::DdkRelease() { delete this; }
 

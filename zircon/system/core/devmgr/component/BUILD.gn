@@ -15,7 +15,6 @@ zx_driver("component") {
     "$zx/system/banjo/ddk.protocol.i2c",
     "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/banjo/ddk.protocol.power",
-    "$zx/system/banjo/ddk.protocol.powerimpl",
     "$zx/system/banjo/ddk.protocol.pwm",
     "$zx/system/banjo/ddk.protocol.spi",
     "$zx/system/banjo/ddk.protocol.sysmem",
