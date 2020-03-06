@@ -569,22 +569,3 @@ template("fidl_protocol_fuzzer") {
     deps = fuzzer_deps
   }
 }
-
-# TODO(44458): Complete soft transition and remove.
-# These templates are the old names for `fuzzer` and `fuzzers_package`. They
-# are included to allow third_party projects to transition softly.
-template("fuzz_target") {
-  source_set(target_name) {
-  }
-  not_needed(invoker, "*")
-}
-
-set_defaults("fuzz_target") {
-  configs = []
-}
-
-template("fuzz_package") {
-  group(target_name) {
-  }
-  not_needed(invoker, "*")
-}
