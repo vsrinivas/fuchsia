@@ -141,6 +141,7 @@ ParseResultStream Expression(ParseResultStream prefixes) {
 
 // Parses a variable declaration:
 //     var foo = 4.5
+//     const foo = "Ham sandwich"
 ParseResultStream VariableDecl(ParseResultStream prefixes) {
   return NT<ast::VariableDecl>(WSSeq(Alt(KW<ast::Var>("var"), KW<ast::Const>("const")), Identifier,
                                      Token("="), Expression))(std::move(prefixes));
