@@ -16,5 +16,6 @@ source_set("focus") {
     "//sdk/lib/sys/cpp",
     "//src/lib/fsl",
     "//src/lib/syslog/cpp",
+    "//src/ui/a11y/lib/focus_chain",
   ]
 }

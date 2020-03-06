@@ -18,12 +18,16 @@ class MockAccessibilityFocusChainRequester : public a11y::AccessibilityFocusChai
 
   // For testing only:
   void set_will_change_focus(bool result);
+  zx_koid_t ReceivedKoid() const;
+
   // |AccessibilityFocusChainRequester|
   void ChangeFocusToView(zx_koid_t view_ref_koid, ChangeFocusToViewCallback callback) override;
 
  private:
   // Weather calls to ChangeFocusToView() will succeed or not.
   bool will_change_focus = true;
+  // The ViewRef Koid received in the request.
+  zx_koid_t received_koid_ = ZX_KOID_INVALID;
 };
 
 }  // namespace accessibility_test

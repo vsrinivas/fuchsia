@@ -10,8 +10,11 @@ void MockAccessibilityFocusChainRequester::set_will_change_focus(bool result) {
   will_change_focus = result;
 }
 
+zx_koid_t MockAccessibilityFocusChainRequester::ReceivedKoid() const { return received_koid_; }
+
 void MockAccessibilityFocusChainRequester::ChangeFocusToView(zx_koid_t view_ref_koid,
                                                              ChangeFocusToViewCallback callback) {
+  received_koid_ = view_ref_koid;
   callback(will_change_focus);
 }
 
