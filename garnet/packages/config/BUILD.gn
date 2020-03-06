@@ -14,7 +14,6 @@ group("thermd") {
 }
 
 group("network") {
-  testonly = true
   public_deps = [
     "//garnet/bin/sysmgr:network_config",
     "//garnet/packages/config:services",
@@ -57,7 +56,6 @@ group("terminal") {
 }
 
 group("services") {
-  testonly = true
   public_deps = [ "//garnet/bin/sysmgr:services_config" ]
 }
 

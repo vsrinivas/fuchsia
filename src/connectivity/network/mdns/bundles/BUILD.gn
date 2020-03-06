@@ -3,12 +3,10 @@
 # found in the LICENSE file.
 
 group("services") {
-  testonly = true
   public_deps = [ "//src/connectivity/network/mdns/service:mdns" ]
 }
 
 group("config") {
-  testonly = true
   public_deps = [
     "//garnet/packages/config:network",
     "//src/connectivity/network/mdns/service:mdns_config",
