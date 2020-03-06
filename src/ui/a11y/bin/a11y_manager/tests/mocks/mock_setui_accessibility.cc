@@ -31,6 +31,7 @@ void MockSetUIAccessibility::Set(fuchsia::settings::AccessibilitySettings settin
     watchCallback_(fit::ok(std::move(settings)));
   } else {
     settings_ = std::move(settings);
+    first_watch_ = true;
   }
   callback({});
 }

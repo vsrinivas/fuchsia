@@ -15,8 +15,14 @@ int main(int argc, const char** argv) {
   syslog::InitLogger();
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
+
   auto context = sys::ComponentContext::Create();
-  a11y_manager::App app(std::move(context));
+  a11y::ViewManager view_manager(std::make_unique<a11y::SemanticTreeServiceFactory>(),
+                                 context->outgoing()->debug_dir());
+  a11y::TtsManager tts_manager(context.get());
+  a11y::ColorTransformManager color_transform_manager(context.get());
+
+  a11y_manager::App app(context.get(), &view_manager, &tts_manager, &color_transform_manager);
   loop.Run();
   return 0;
 }

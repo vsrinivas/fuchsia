@@ -76,7 +76,8 @@ class A11yManagerState {
 // A11y manager application entry point.
 class App {
  public:
-  explicit App(std::unique_ptr<sys::ComponentContext> context);
+  explicit App(sys::ComponentContext* context, a11y::ViewManager* view_manager,
+               a11y::TtsManager* tts_manager, a11y::ColorTransformManager* color_transform_manager);
   ~App();
 
   // Sets the a11y manager to the given configuration. Visible for testing.
@@ -109,12 +110,10 @@ class App {
   // Current state of the a11y manager
   A11yManagerState state_;
 
-  std::unique_ptr<sys::ComponentContext> startup_context_;
-
   std::unique_ptr<a11y::ScreenReader> screen_reader_;
-  a11y::ViewManager view_manager_;
-  a11y::TtsManager tts_manager_;
-  a11y::ColorTransformManager color_transform_manager_;
+  a11y::ViewManager* view_manager_;
+  a11y::TtsManager* tts_manager_;
+  a11y::ColorTransformManager* color_transform_manager_;
   // The gesture manager is instantiated whenever a11y manager starts listening
   // for pointer events, and destroyed when the listener disconnects.
   std::unique_ptr<a11y::GestureManager> gesture_manager_;

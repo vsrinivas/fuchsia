@@ -12,26 +12,29 @@ namespace a11y_manager {
 
 const float kDefaultMagnificationZoomFactor = 1.0;
 
-App::App(std::unique_ptr<sys::ComponentContext> context)
-    : startup_context_(std::move(context)),
-      view_manager_(std::make_unique<a11y::SemanticTreeServiceFactory>(),
-                    startup_context_->outgoing()->debug_dir()),
-      tts_manager_(startup_context_.get()),
-      color_transform_manager_(startup_context_.get()) {
-  startup_context_->outgoing()->AddPublicService(
-      semantics_manager_bindings_.GetHandler(&view_manager_));
-  startup_context_->outgoing()->AddPublicService(magnifier_bindings_.GetHandler(&magnifier_));
+App::App(sys::ComponentContext* context, a11y::ViewManager* view_manager,
+         a11y::TtsManager* tts_manager, a11y::ColorTransformManager* color_transform_manager)
+    : view_manager_(view_manager),
+      tts_manager_(tts_manager),
+      color_transform_manager_(color_transform_manager) {
+  FX_DCHECK(context);
+  FX_DCHECK(view_manager);
+  FX_DCHECK(tts_manager);
+  FX_DCHECK(color_transform_manager);
+
+  context->outgoing()->AddPublicService(semantics_manager_bindings_.GetHandler(view_manager_));
+  context->outgoing()->AddPublicService(magnifier_bindings_.GetHandler(&magnifier_));
 
   // Connect to Root presenter service.
   pointer_event_registry_ =
-      startup_context_->svc()->Connect<fuchsia::ui::input::accessibility::PointerEventRegistry>();
+      context->svc()->Connect<fuchsia::ui::input::accessibility::PointerEventRegistry>();
   pointer_event_registry_.set_error_handler([](zx_status_t status) {
     FX_LOGS(ERROR) << "Error from fuchsia::ui::input::accessibility::PointerEventRegistry"
                    << zx_status_get_string(status);
   });
 
   // Connect to setui.
-  setui_settings_ = startup_context_->svc()->Connect<fuchsia::settings::Accessibility>();
+  setui_settings_ = context->svc()->Connect<fuchsia::settings::Accessibility>();
   setui_settings_.set_error_handler([](zx_status_t status) {
     FX_LOGS(ERROR) << "Error from fuchsia::settings::Accessibility" << zx_status_get_string(status);
   });
@@ -54,11 +57,11 @@ void App::SetState(A11yManagerState state) {
 
 void App::UpdateScreenReaderState() {
   // If this is used elsewhere, it should be moved into its own function.
-  view_manager_.SetSemanticsEnabled(state_.screen_reader_enabled());
+  view_manager_->SetSemanticsEnabled(state_.screen_reader_enabled());
 
   if (state_.screen_reader_enabled()) {
     if (!screen_reader_) {
-      screen_reader_ = std::make_unique<a11y::ScreenReader>(&view_manager_, &tts_manager_);
+      screen_reader_ = std::make_unique<a11y::ScreenReader>(view_manager_, tts_manager_);
     }
   } else {
     screen_reader_.reset();
@@ -74,7 +77,7 @@ void App::UpdateMagnifierState() {
 void App::UpdateColorTransformState() {
   bool color_inversion = state_.color_inversion_enabled();
   fuchsia::accessibility::ColorCorrectionMode color_blindness_type = state_.color_correction_mode();
-  color_transform_manager_.ChangeColorTransform(color_inversion, color_blindness_type);
+  color_transform_manager_->ChangeColorTransform(color_inversion, color_blindness_type);
 }
 
 void App::UpdateGestureManagerState() {
