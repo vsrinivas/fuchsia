@@ -49,3 +49,8 @@ class MissingFxException implements Exception {
   @override
   String toString() => _missingFxMessage;
 }
+
+class OutputClosedException implements Exception {
+  final int exitCode;
+  OutputClosedException([this.exitCode = 0]);
+}

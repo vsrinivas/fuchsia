@@ -3,6 +3,9 @@
 # found in the LICENSE file.
 name: fxtest
 
+environment:
+  sdk: '>=2.8.0 <3.0.0'
+
 # NOTE: This is used only when actively developing `fx test`, or when
 # manually running its unit tests by navigating to this directory and
 # executing `pub run test`. These values have NOTHING to do with what

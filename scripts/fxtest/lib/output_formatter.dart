@@ -43,6 +43,14 @@ abstract class OutputFormatter {
   bool get hasStartedTests => _hasStartedTests;
   int get numFailures => _testResultEvents.where((ev) => !ev.isSuccess).length;
 
+  /// Future that resolves when the stdout closes for any reason
+  Future get stdOutClosedFuture => _buffer.stdOutClosedFuture();
+
+  /// Pass-thru to the actual buffer's close method
+  void close() => _buffer.close();
+
+  void forcefullyClose() => _buffer.forcefullyClose();
+
   String colorize(String content, Iterable<AnsiCode> args) {
     return shouldColorizeOutput ? wrapWith(content, args) : content;
   }
@@ -319,11 +327,16 @@ class CondensedOutputFormatter extends OutputFormatter {
 /// execution, and as such, ignores all events except `TestStarted`, which it
 /// uses to print a fully hydrated test invocation pattern.
 class InfoFormatter extends OutputFormatter {
+  InfoFormatter() : super(buffer: OutputBuffer(cursorStartsOnNewLine: true));
+
   @override
   void _handleTestInfo(TestInfo event) {}
   @override
   void _handleTestStarted(TestStarted event) {
-    _buffer.addLines(infoPrint(event.testDefinition));
+    _buffer.addLines([
+      ...infoPrint(event.testDefinition),
+      '',
+    ]);
   }
 
   @override
@@ -348,7 +361,6 @@ List<String> infoPrint(TestDefinition testDefinition) {
         : null,
     _isTruthy(testDefinition.label) ? 'label: ${testDefinition.label}' : null,
     _isTruthy(testDefinition.path) ? 'path: ${testDefinition.path}' : null,
-    '',
   ].where((_val) => _val != null).toList()
     ..sort();
 }

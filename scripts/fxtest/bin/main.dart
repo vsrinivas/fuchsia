@@ -73,17 +73,19 @@ Future<void> main(List<String> args) async {
       FuchsiaLocator.shared.fx,
       stdout.write,
     );
-    if (!shouldRun) {
-      return;
+    if (shouldRun) {
+      // Finally, run the command
+      await cmdCli.run();
     }
-
-    // Finally, run the command
-    await cmdCli.run();
   } on BuildException catch (err) {
     stderr.write('${wrapWith("Error:", [red])} ${err.toString()}');
     exitCode = err.exitCode;
   } on Exception catch (err) {
-    stdout.writeln(wrapWith(err.toString(), [red]));
+    if (err is OutputClosedException) {
+      exitCode = err.exitCode;
+    } else {
+      stderr.writeln(wrapWith(err.toString(), [red]));
+    }
   }
   await closeSigIntListener();
   await cmdCli.cleanUp();

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:args/args.dart';
 import 'package:async/async.dart';
@@ -8,6 +9,44 @@ import 'package:test/test.dart';
 
 // Mock this because it checks environment variables
 class MockEnvReader extends Mock implements EnvReader {}
+
+class StdOutClosingFormatter extends OutputFormatter {
+  @override
+  void update(TestEvent event) {
+    forcefullyClose();
+  }
+}
+
+class FuchsiaTestCommandFake extends FuchsiaTestCommand {
+  FuchsiaTestCommandFake({outputFormatter, testsConfig})
+      : super(
+          analyticsReporter: AnalyticsFaker(),
+          fuchsiaLocator: FuchsiaLocator.shared,
+          outputFormatter: outputFormatter,
+          testsConfig: testsConfig,
+        );
+  @override
+  Future<void> runTestSuite(TestsManifestReader manifestReader) async {
+    stream.listen(outputFormatter.update);
+    emitEvent(BeginningTests());
+  }
+}
+
+class FuchsiaTestCommandCliFake extends FuchsiaTestCommandCli {
+  FuchsiaTestCommandCliFake()
+      : super(
+          ['--no-build'],
+          usage: (parser) => null,
+        );
+
+  @override
+  FuchsiaTestCommand buildCommand(TestsConfig testsConfig) {
+    return FuchsiaTestCommandFake(
+      testsConfig: testsConfig,
+      outputFormatter: StdOutClosingFormatter(),
+    );
+  }
+}
 
 class AnalyticsFaker extends AnalyticsReporter {
   List<List<String>> reportHistory = [];
@@ -885,6 +924,16 @@ void main() {
       // Passing `--printtests` does its thing and exits before `/fake/fx` is
       // validated, which would otherwise throw an exception
       expect(logged, true);
+    });
+  });
+
+  group('command cli-wrapper', () {
+    test('throws OutputClosedException exception stdout is closed', () async {
+      var cmdCli = FuchsiaTestCommandCliFake();
+      expect(
+        cmdCli.run(),
+        throwsA(TypeMatcher<OutputClosedException>()),
+      );
     });
   });
 }

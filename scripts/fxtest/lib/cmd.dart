@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 import 'dart:async';
+import 'dart:io';
 
 import 'package:fxtest/fxtest.dart';
 import 'package:meta/meta.dart';
@@ -60,14 +61,16 @@ class FuchsiaTestCommand {
   Stream<TestEvent> get stream => _eventStreamController.stream;
 
   void emitEvent(TestEvent event) {
-    _eventStreamController.sink.add(event);
+    if (!_eventStreamController.isClosed) {
+      _eventStreamController.sink.add(event);
+    }
   }
 
   void dispose() {
-    _eventStreamController.sink.close();
+    _eventStreamController.close();
   }
 
-  Future<int> runTestSuite(TestsManifestReader manifestReader) async {
+  Future<void> runTestSuite(TestsManifestReader manifestReader) async {
     stream.listen(outputFormatter.update);
     var parsedManifest = await readManifest(manifestReader);
 
@@ -77,8 +80,6 @@ class FuchsiaTestCommand {
       parsedManifest: parsedManifest,
       testsConfig: testsConfig,
     );
-    var exitCode = 0;
-
     try {
       // Let the output formatter know that we're done parsing and
       // emitting preliminary events
@@ -93,7 +94,6 @@ class FuchsiaTestCommand {
       exitCode = 2;
     }
     emitEvent(AllTestsCompleted());
-    return exitCode;
   }
 
   Future<ParsedManifest> readManifest(
@@ -142,7 +142,7 @@ class FuchsiaTestCommand {
   }
 
   Future<void> _reportAnalytics() async {
-    final _actuallyRanTests = _numberOfTests != null && _numberOfTests > 0;
+    final bool _actuallyRanTests = _numberOfTests != null && _numberOfTests > 0;
     if (!testsConfig.flags.dryRun && _actuallyRanTests) {
       await analyticsReporter.report(
         subcommand: 'test',

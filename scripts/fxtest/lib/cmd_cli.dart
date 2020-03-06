@@ -8,6 +8,7 @@ import 'package:args/args.dart';
 import 'package:fxtest/fxtest.dart';
 import 'package:io/ansi.dart';
 import 'package:meta/meta.dart';
+import 'package:pedantic/pedantic.dart';
 
 /// Translator for command line arguments into [FuchsiaTestCommand] primitives.
 class FuchsiaTestCommandCli {
@@ -102,8 +103,42 @@ class FuchsiaTestCommandCli {
       testNames: testNamesCollector.collect(),
     );
 
-    var formatter = _getFormatter(testsConfig);
-    _cmd = FuchsiaTestCommand(
+    var _cmd = buildCommand(testsConfig);
+
+    if (testsConfig.flags.shouldRebuild) {
+      _cmd.outputFormatter.update(
+        TestInfo(wrapWith('> fx build', [green, styleBold])),
+      );
+      await rebuildFuchsia();
+    }
+
+    // Without waiting, start the command.
+    unawaited(
+      // But register a listener for when it completes, which resolves the
+      // stdout future.
+      _cmd.runTestSuite(TestsManifestReader()).then((_) {
+        // Once the actual command finishes without problems, close the stdout.
+        _cmd.outputFormatter.close();
+      }),
+    );
+
+    // Register a listener for when the `stdout` closes.
+    await _cmd.outputFormatter.stdOutClosedFuture.catchError((err) {
+      // If we have not yet determined a failing error code, then go with
+      // whatever is baked into this error.
+      if (exitCode == 0) {
+        throw err;
+      } else {
+        // However, if we do already have an `exitCode` (from a failing test),
+        // use that
+        throw OutputClosedException(exitCode);
+      }
+    });
+  }
+
+  FuchsiaTestCommand buildCommand(TestsConfig testsConfig) {
+    var formatter = getFormatter(testsConfig);
+    return FuchsiaTestCommand(
       analyticsReporter: testsConfig.flags.dryRun
           ? AnalyticsReporter.noop()
           : AnalyticsReporter(
@@ -113,15 +148,9 @@ class FuchsiaTestCommandCli {
       outputFormatter: formatter,
       testsConfig: testsConfig,
     );
-
-    if (testsConfig.flags.shouldRebuild) {
-      formatter.update(TestInfo(wrapWith('> fx build', [green, styleBold])));
-      await rebuildFuchsia();
-    }
-    exitCode = await _cmd.runTestSuite(TestsManifestReader());
   }
 
-  OutputFormatter _getFormatter(TestsConfig testsConfig) {
+  OutputFormatter getFormatter(TestsConfig testsConfig) {
     if (testsConfig.flags.infoOnly) {
       return InfoFormatter();
     }
