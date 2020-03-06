@@ -49,6 +49,9 @@ test("fs-transaction") {
   } else {
     sources = [ "buffered_operations_builder_host_test.cc" ]
   }
+
+  # TODO(47873): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 migrated_manifest("fs-transaction-manifest") {
