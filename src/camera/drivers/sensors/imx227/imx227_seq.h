@@ -65,6 +65,9 @@ constexpr std::array<InitSeqFmt, kArraySize> setting_2200_2720_2lane_996mbps_30f
     {0x020E, 0x01, 0xFF, 1}, {0x020F, 0x00, 0xFF, 1}, {0x0000, 0x0000, 0x0000, 0x0000},
 }};
 
+// Test Pattern with following setup:
+// Fade to grey Color Bar.
+// Rest values are default.
 constexpr std::array<InitSeqFmt, kArraySize> setting_2200_2720_2lane_996mbps_30fps_test_pattern = {{
     {0x0136, 0x18, 0xFF, 1}, {0x0137, 0x00, 0xFF, 1}, {0xAE20, 0x00, 0xFF, 1},
     {0x463B, 0x30, 0xFF, 1}, {0x463E, 0x05, 0xFF, 1}, {0x4612, 0x66, 0xFF, 1},
@@ -245,7 +248,7 @@ const std::array<const InitSeqFmt*, 6> kSEQUENCE_TABLE = {
     setting_2400_2720_2lane_996mbps_28fps.data(),
 };
 
-constexpr std::array<camera_sensor_mode_t, 3> supported_modes = {{
+constexpr std::array<camera_sensor_mode_t, 4> supported_modes = {{
     {
         // NOTE: SW reference consumes this as (30fps * 256)
         //       We are representing this as fpms.
@@ -298,6 +301,24 @@ constexpr std::array<camera_sensor_mode_t, 3> supported_modes = {{
         .lanes = 2,
         .mbps = 1000,
         .idx = kSENSOR_IMX227_SEQUENCE_DEFAULT_FULLSENSOR_PREVIEW,
+        .bayer = BAYER_RGGB,
+    },
+    {
+        // NOTE: SW reference consumes this as (30fps * 256)
+        //       We are representing this as fpms.
+        //       Take account of the multiplier when needed.
+        .fpms = 30000,
+        .resolution =
+            {
+                .width = 2200,
+                .height = 2720,
+            },
+        .exposures = 1,
+        .wdr_mode = CAMERASENSOR_WDR_MODE_LINEAR,
+        .bits = 10,
+        .lanes = 2,
+        .mbps = 1000,
+        .idx = kSENSOR_IMX227_SEQUENCE_TESTPATTERN,
         .bayer = BAYER_RGGB,
     },
 }};
