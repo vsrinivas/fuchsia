@@ -221,7 +221,7 @@
       ],
       "members": [
         {
-          "xunion_ordinal": 1,
+          "ordinal": 1,
           "reserved": false,
           "name": "response",
           "type": {
@@ -236,7 +236,7 @@
           }
         },
         {
-          "xunion_ordinal": 2,
+          "ordinal": 2,
           "reserved": false,
           "name": "err",
           "type": {
@@ -263,7 +263,6 @@
       }
     }
   ],
-  "xunion_declarations": [],
   "type_alias_declarations": [],
   "declaration_order": [
     "fidl.test.json/Example_foo_Response",

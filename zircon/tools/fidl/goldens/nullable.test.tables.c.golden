@@ -53,7 +53,7 @@ static const fidl_type_t Request33fidl_test_nullable_SimpleProtocolnullableTable
 
 static const fidl_type_t Protocol33fidl_test_nullable_SimpleProtocolnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_CHANNEL, .nullable=kFidlNullability_Nullable}}};
 
-static const fidl_type_t HandlevmonullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_VMO, .nullable=kFidlNullability_Nullable}}};
+static const fidl_type_t HandlevmonullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_VMO, .handle_rights=2147483648u, .nullable=kFidlNullability_Nullable}}};
 
 extern const fidl_type_t fidl_test_nullable_SimpleProtocolAddRequestTable;
 static const struct FidlStructField Fields43fidl_test_nullable_SimpleProtocolAddRequest[] = {
@@ -138,7 +138,7 @@ static const fidl_type_t v1_Request36v1_fidl_test_nullable_SimpleProtocolnullabl
 
 static const fidl_type_t v1_Protocol36v1_fidl_test_nullable_SimpleProtocolnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_CHANNEL, .nullable=kFidlNullability_Nullable}}};
 
-static const fidl_type_t v1_HandlevmonullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_VMO, .nullable=kFidlNullability_Nullable}}};
+static const fidl_type_t v1_HandlevmonullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_VMO, .handle_rights=2147483648u, .nullable=kFidlNullability_Nullable}}};
 
 extern const fidl_type_t v1_fidl_test_nullable_SimpleProtocolAddRequestTable;
 static const struct FidlStructField Fields46v1_fidl_test_nullable_SimpleProtocolAddRequest[] = {

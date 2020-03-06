@@ -785,21 +785,6 @@ Linter::Linter()
       //
       (const raw::UnionDeclaration& element) { linter.ExitContext(); });
 
-  callbacks_.OnXUnionDeclaration(
-      [&linter = *this, context_check = name_repeats_enclosing_type_name]
-      //
-      (const raw::XUnionDeclaration& element) {
-        linter.CheckCase("xunions", element.identifier, linter.invalid_case_for_decl_name(),
-                         linter.decl_case_type_for_style());
-        linter.CheckRepeatedName("xunion", element.identifier);
-        linter.EnterContext("xunion", to_string(element.identifier), context_check);
-      });
-
-  callbacks_.OnExitXUnionDeclaration(
-      [&linter = *this]
-      //
-      (const raw::XUnionDeclaration& element) { linter.ExitContext(); });
-
   auto invalid_case_for_decl_member =
       DefineCheck("invalid-case-for-decl-member", "${TYPE} must be named in lower_snake_case");
 
@@ -833,15 +818,6 @@ Linter::Linter()
           return;
         linter.CheckCase("union members", element.maybe_used->identifier, case_check, case_type);
         linter.CheckRepeatedName("union member", element.maybe_used->identifier);
-      });
-  callbacks_.OnXUnionMember(
-      [&linter = *this, case_check = invalid_case_for_decl_member, &case_type = lower_snake_]
-      //
-      (const raw::XUnionMember& element) {
-        if (element.maybe_used == nullptr)
-          return;
-        linter.CheckCase("xunion members", element.maybe_used->identifier, case_check, case_type);
-        linter.CheckRepeatedName("xunion member", element.maybe_used->identifier);
       });
   // clang-format off
   callbacks_.OnTypeConstructor(

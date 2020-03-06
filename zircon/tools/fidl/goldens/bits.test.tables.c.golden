@@ -4,32 +4,40 @@
 
 // Forward declarations for old <-> V1 mappings
 
+extern const fidl_type_t top_TopGetFooRequestTable;
+extern const fidl_type_t top_TopGetFooResponseTable;
+extern const fidl_type_t v1_top_TopGetFooRequestTable;
+extern const fidl_type_t v1_top_TopGetFooResponseTable;
 
 // Coding tables for old wire format.
 
-extern const fidl_type_t fidl_test_json_StrictBitsTable;
-extern const fidl_type_t fidl_test_json_MyBitsTable;
-extern const fidl_type_t fidl_test_json_FlexibleBitsTable;
+extern const fidl_type_t bottom_FooTable;
 
 
+extern const fidl_type_t top_TopGetFooRequestTable;
+static const struct FidlStructField Fields20top_TopGetFooRequest[] = {};
+const fidl_type_t top_TopGetFooRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields20top_TopGetFooRequest, .field_count=0u, .size=16u, .max_out_of_line=0u, .contains_union=false, .name="top/TopGetFooRequest", .alt_type=&v1_top_TopGetFooRequestTable}}};
 
-const fidl_type_t fidl_test_json_StrictBitsTable = {.type_tag=kFidlTypeBits, {.coded_bits={.underlying_type=kFidlCodedPrimitive_Uint64, .mask=9223372036854775809ul, .name="fidl.test.json/StrictBits"}}};
+extern const fidl_type_t top_TopGetFooResponseTable;
+static const struct FidlStructField Fields21top_TopGetFooResponse[] = {
+    /*FidlStructField*/{.type=&bottom_FooTable, .offset=16u, .padding=4u}
+};
+const fidl_type_t top_TopGetFooResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields21top_TopGetFooResponse, .field_count=1u, .size=24u, .max_out_of_line=0u, .contains_union=false, .name="top/TopGetFooResponse", .alt_type=&v1_top_TopGetFooResponseTable}}};
 
-const fidl_type_t fidl_test_json_MyBitsTable = {.type_tag=kFidlTypeBits, {.coded_bits={.underlying_type=kFidlCodedPrimitive_Uint32, .mask=3ul, .name="fidl.test.json/MyBits"}}};
-
-const fidl_type_t fidl_test_json_FlexibleBitsTable = {.type_tag=kFidlTypeBits, {.coded_bits={.underlying_type=kFidlCodedPrimitive_Uint64, .mask=9223372036854775809ul, .name="fidl.test.json/FlexibleBits"}}};
 
 // Coding tables for v1 wire format.
 
-extern const fidl_type_t v1_fidl_test_json_StrictBitsTable;
-extern const fidl_type_t v1_fidl_test_json_MyBitsTable;
-extern const fidl_type_t v1_fidl_test_json_FlexibleBitsTable;
+extern const fidl_type_t v1_bottom_FooTable;
 
 
+extern const fidl_type_t v1_top_TopGetFooRequestTable;
+static const struct FidlStructField Fields23v1_top_TopGetFooRequest[] = {};
+const fidl_type_t v1_top_TopGetFooRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields23v1_top_TopGetFooRequest, .field_count=0u, .size=16u, .max_out_of_line=0u, .contains_union=false, .name="top/TopGetFooRequest", .alt_type=&top_TopGetFooRequestTable}}};
 
-const fidl_type_t v1_fidl_test_json_StrictBitsTable = {.type_tag=kFidlTypeBits, {.coded_bits={.underlying_type=kFidlCodedPrimitive_Uint64, .mask=9223372036854775809ul, .name="fidl.test.json/StrictBits"}}};
+extern const fidl_type_t v1_top_TopGetFooResponseTable;
+static const struct FidlStructField Fields24v1_top_TopGetFooResponse[] = {
+    /*FidlStructField*/{.type=&v1_bottom_FooTable, .offset=16u, .padding=4u}
+};
+const fidl_type_t v1_top_TopGetFooResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields24v1_top_TopGetFooResponse, .field_count=1u, .size=24u, .max_out_of_line=0u, .contains_union=false, .name="top/TopGetFooResponse", .alt_type=&top_TopGetFooResponseTable}}};
 
-const fidl_type_t v1_fidl_test_json_MyBitsTable = {.type_tag=kFidlTypeBits, {.coded_bits={.underlying_type=kFidlCodedPrimitive_Uint32, .mask=3ul, .name="fidl.test.json/MyBits"}}};
-
-const fidl_type_t v1_fidl_test_json_FlexibleBitsTable = {.type_tag=kFidlTypeBits, {.coded_bits={.underlying_type=kFidlCodedPrimitive_Uint64, .mask=9223372036854775809ul, .name="fidl.test.json/FlexibleBits"}}};
 

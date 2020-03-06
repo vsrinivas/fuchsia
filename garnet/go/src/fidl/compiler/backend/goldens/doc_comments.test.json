@@ -397,7 +397,7 @@
       ],
       "members": [
         {
-          "xunion_ordinal": 1,
+          "ordinal": 1,
           "reserved": false,
           "name": "Field",
           "type": {
@@ -430,7 +430,6 @@
       }
     }
   ],
-  "xunion_declarations": [],
   "type_alias_declarations": [],
   "declaration_order": [
     "test.name/Union",

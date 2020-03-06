@@ -353,7 +353,7 @@
       ],
       "members": [
         {
-          "xunion_ordinal": 1,
+          "ordinal": 1,
           "reserved": false,
           "name": "variant",
           "type": {
@@ -384,9 +384,7 @@
         "has_flexible_envelope": false,
         "contains_union": true
       }
-    }
-  ],
-  "xunion_declarations": [
+    },
     {
       "name": "example/ExampleXUnion",
       "location": {
@@ -431,7 +429,7 @@
         "max_out_of_line": 8,
         "has_padding": true,
         "has_flexible_envelope": true,
-        "contains_union": false
+        "contains_union": true
       }
     }
   ],
@@ -476,7 +474,7 @@
     "example/ExampleStruct": "struct",
     "example/ExampleTable": "table",
     "example/ExampleUnion": "union",
-    "example/ExampleXUnion": "xunion",
+    "example/ExampleXUnion": "union",
     "example/TypeAlias": "type_alias"
   }
 }

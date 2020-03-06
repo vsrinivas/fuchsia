@@ -111,7 +111,9 @@ xunion ExampleXUnion {
   EXPECT_TRUE(example_protocol->attributes->HasAttribute("OnProtocol"));
   EXPECT_TRUE(example_protocol->methods.front().attributes->HasAttribute("OnMethod"));
   ASSERT_NONNULL(example_protocol->methods.front().maybe_request);
-  EXPECT_TRUE(example_protocol->methods.front().maybe_request->members.front().attributes->HasAttribute("OnParameter"));
+  EXPECT_TRUE(
+      example_protocol->methods.front().maybe_request->members.front().attributes->HasAttribute(
+          "OnParameter"));
 
   auto example_service = library.LookupService("ExampleService");
   ASSERT_NONNULL(example_service);
@@ -137,7 +139,7 @@ xunion ExampleXUnion {
   EXPECT_TRUE(example_union->attributes->HasAttribute("OnUnion"));
   EXPECT_TRUE(example_union->members.front().maybe_used->attributes->HasAttribute("OnUnionMember"));
 
-  auto example_xunion = library.LookupXUnion("ExampleXUnion");
+  auto example_xunion = library.LookupUnion("ExampleXUnion");
   ASSERT_NONNULL(example_xunion);
   EXPECT_TRUE(example_xunion->attributes->HasAttribute("OnXUnion"));
   EXPECT_TRUE(
@@ -629,8 +631,7 @@ union Foo {
 )FIDL");
   ASSERT_FALSE(on_union.Compile());
   ASSERT_EQ(on_union.errors().size(), 1);
-  ASSERT_STR_STR(on_union.errors()[0].c_str(),
-                 "Cannot attach attributes to reserved ordinals");
+  ASSERT_STR_STR(on_union.errors()[0].c_str(), "Cannot attach attributes to reserved ordinals");
 
   TestLibrary on_xunion(R"FIDL(
 library fidl.test;
@@ -642,8 +643,7 @@ xunion Foo {
 )FIDL");
   ASSERT_FALSE(on_xunion.Compile());
   ASSERT_EQ(on_xunion.errors().size(), 1);
-  ASSERT_STR_STR(on_xunion.errors()[0].c_str(),
-                 "Cannot attach attributes to reserved ordinals");
+  ASSERT_STR_STR(on_xunion.errors()[0].c_str(), "Cannot attach attributes to reserved ordinals");
 
   TestLibrary on_table(R"FIDL(
 library fidl.test;
@@ -655,8 +655,7 @@ table Foo {
 )FIDL");
   ASSERT_FALSE(on_table.Compile());
   ASSERT_EQ(on_table.errors().size(), 1);
-  ASSERT_STR_STR(on_table.errors()[0].c_str(),
-                 "Cannot attach attributes to reserved ordinals");
+  ASSERT_STR_STR(on_table.errors()[0].c_str(), "Cannot attach attributes to reserved ordinals");
 
   END_TEST;
 }

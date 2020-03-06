@@ -24,6 +24,15 @@ example_ExampleUnionOutOfLine [
 example_ExampleUnionHandles [
        void void
 ][varlen]
+example_ExampleXUnionInLine [
+       variant fidl_union_member[example_ExampleXUnionTag_variant, int32]
+]
+example_ExampleXUnionOutOfLine [
+       void void
+][varlen]
+example_ExampleXUnionHandles [
+       void void
+][varlen]
 
 
 example_ExampleProtocolMethodRequest {

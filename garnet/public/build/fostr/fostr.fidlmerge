@@ -111,13 +111,6 @@ std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value);
 
 
 {{- define "UnionWriterDecls" }}
-    {{- range .Unions }}
-std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value);
-    {{- end }}
-{{- end }}
-
-
-{{- define "XUnionWriterDecls" }}
     {{- range .XUnions }}
 std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value);
     {{- end }}
@@ -244,33 +237,6 @@ std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value) 
 
 
 {{- define "UnionWriterDefs" }}
-    {{- range .Unions }}
-
-std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value) {
-  using fidl::operator<<;
-  switch (value.Which()) {
-        {{- $type_name := .Name.Parts.Name }}
-        {{- range .Members }}
-          {{- if not .Reserved }}
-    case {{ $type_name }}::Tag::k{{ toUpperCamelCase .Name }}:
-            {{- if and (not .Type.Nullable) (eq .Type.Kind "vector") }}
-      return os << "{{ .Name }} " << ::fostr::PrintVector(value.{{ .Name }}());
-            {{- else }}
-      return os << "{{ .Name }} " << value.{{ .Name }}();
-            {{- end }}
-          {{- end }}
-        {{- end }}
-    case {{ $type_name }}::Tag::Invalid:
-      return os << "<invalid union>";
-  }
-
-  return os;
-}
-    {{- end }}
-{{- end }}
-
-
-{{- define "XUnionWriterDefs" }}
     {{- range .XUnions }}
 
 std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value) {
@@ -288,10 +254,10 @@ std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value) 
           {{- end }}
         {{- end }}
     case static_cast<fidl_xunion_tag_t>({{ $type_name }}::Tag::Invalid):
-      return os << "<empty xunion>";
+      return os << "<empty union>";
         {{- if .IsFlexible }}
     default:
-      return os << "<unknown xunion>";
+      return os << "<unknown union>";
         {{- end }}
   }
 
@@ -308,7 +274,6 @@ std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value) 
     {{- template "StructWriterDecls" . }}
     {{- template "TableWriterDecls" . }}
     {{- template "UnionWriterDecls" . }}
-    {{- template "XUnionWriterDecls" . }}
     {{- template "NamespaceClose" . }}
 {{- end }}
 
@@ -320,7 +285,6 @@ std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value) 
     {{- template "StructWriterDefs" . }}
     {{- template "TableWriterDefs" . }}
     {{- template "UnionWriterDefs" . }}
-    {{- template "XUnionWriterDefs" . }}
     {{- template "NamespaceClose" . }}
 {{- end }}
 

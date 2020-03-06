@@ -41,7 +41,7 @@ using {{ .Name }} = {{ .Namespace }}::{{ .Name }};
 {{- if Eq .Kind Kinds.Enum }}{{ template "EnumSizeAndAlloc" . }}{{- end }}
 {{- if Eq .Kind Kinds.Struct }}{{ template "StructSizeAndAlloc" . }}{{- end }}
 {{- if Eq .Kind Kinds.Table }}{{ template "TableSizeAndAlloc" . }}{{- end }}
-{{- if Eq .Kind Kinds.XUnion }}{{ template "XUnionSizeAndAlloc" . }}{{- end }}
+{{- if Eq .Kind Kinds.Union }}{{ template "UnionSizeAndAlloc" . }}{{- end }}
 {{- end }}
 
 }  // namespace fuzzing

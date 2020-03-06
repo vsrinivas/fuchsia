@@ -85,7 +85,7 @@ class Linter {
   // a nested entity. The outer-most context is the FIDL file itself
   // (including the file's declared library name). Contexts nested in a
   // file's context include type definitions with nested entities, such as
-  // enum, bits, struct, table, union, and xunion.
+  // enum, bits, struct, table, and union.
   class Context {
    public:
     struct RepeatsContextNames;
@@ -270,13 +270,11 @@ class Linter {
   CaseType upper_camel_{utils::is_upper_camel_case, utils::to_upper_camel_case};
 
   // In IpcStyle, bits, protocols, protocol methods, structs, tables, unions,
-  // xunions, and enums use UpperCamelCase. In CStyle used for syscalls, they
+  // and enums use UpperCamelCase. In CStyle used for syscalls, they
   // use lower_camel_case. This member is set in NewFile once the style that's
   // being used has been determined.
   CheckDef invalid_case_for_decl_name_{"", TemplateString()};
-  const CheckDef& invalid_case_for_decl_name() const {
-    return invalid_case_for_decl_name_;
-  }
+  const CheckDef& invalid_case_for_decl_name() const { return invalid_case_for_decl_name_; }
 
   const CaseType& decl_case_type_for_style() const {
     switch (lint_style_) {

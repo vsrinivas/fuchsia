@@ -514,7 +514,7 @@
       },
       "members": [
         {
-          "xunion_ordinal": 1,
+          "ordinal": 1,
           "reserved": false,
           "name": "a",
           "type": {
@@ -528,7 +528,7 @@
           }
         },
         {
-          "xunion_ordinal": 2,
+          "ordinal": 2,
           "reserved": false,
           "name": "b",
           "type": {
@@ -555,7 +555,6 @@
       }
     }
   ],
-  "xunion_declarations": [],
   "type_alias_declarations": [],
   "declaration_order": [
     "fidl.test.nullable/StructWithNullableVector",

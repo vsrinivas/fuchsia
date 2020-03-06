@@ -619,6 +619,7 @@ class UnionMember final : public SourceElement {
   void Accept(TreeVisitor* visitor) const;
 
   std::unique_ptr<Ordinal32> ordinal;
+
   // A used member is not 'reserved'
   struct Used {
     Used(std::unique_ptr<TypeConstructor> type_ctor, std::unique_ptr<Identifier> identifier,
@@ -652,57 +653,6 @@ class UnionDeclaration final : public SourceElement {
   const types::Strictness strictness;
 };
 
-class XUnionMember final : public SourceElement {
- public:
-  XUnionMember(SourceElement const& element, std::unique_ptr<Ordinal32> ordinal,
-               std::unique_ptr<TypeConstructor> type_ctor, std::unique_ptr<Identifier> identifier,
-               std::unique_ptr<AttributeList> attributes)
-      : SourceElement(element),
-        ordinal(std::move(ordinal)),
-        maybe_used(std::make_unique<Used>(std::move(type_ctor), std::move(identifier),
-                                          std::move(attributes))) {}
-
-  XUnionMember(SourceElement const& element, std::unique_ptr<Ordinal32> ordinal)
-      : SourceElement(element), ordinal(std::move(ordinal)) {}
-
-  void Accept(TreeVisitor* visitor) const;
-
-  std::unique_ptr<Ordinal32> ordinal;
-
-  // A used member is not 'reserved'
-  struct Used {
-    Used(std::unique_ptr<TypeConstructor> type_ctor, std::unique_ptr<Identifier> identifier,
-         std::unique_ptr<AttributeList> attributes)
-        : type_ctor(std::move(type_ctor)),
-          identifier(std::move(identifier)),
-          attributes(std::move(attributes)) {}
-    std::unique_ptr<TypeConstructor> type_ctor;
-    std::unique_ptr<Identifier> identifier;
-    std::unique_ptr<AttributeList> attributes;
-  };
-  std::unique_ptr<Used> maybe_used;
-};
-
-class XUnionDeclaration final : public SourceElement {
- public:
-  XUnionDeclaration(SourceElement const& element, std::unique_ptr<AttributeList> attributes,
-                    std::unique_ptr<Identifier> identifier,
-                    std::vector<std::unique_ptr<XUnionMember>> members,
-                    types::Strictness strictness)
-      : SourceElement(element),
-        attributes(std::move(attributes)),
-        identifier(std::move(identifier)),
-        members(std::move(members)),
-        strictness(strictness) {}
-
-  void Accept(TreeVisitor* visitor) const;
-
-  std::unique_ptr<AttributeList> attributes;
-  std::unique_ptr<Identifier> identifier;
-  std::vector<std::unique_ptr<XUnionMember>> members;
-  const types::Strictness strictness;
-};
-
 class File final : public SourceElement {
  public:
   File(SourceElement const& element, Token end, std::unique_ptr<AttributeList> attributes,
@@ -715,8 +665,7 @@ class File final : public SourceElement {
        std::vector<std::unique_ptr<ServiceDeclaration>> service_declaration_list,
        std::vector<std::unique_ptr<StructDeclaration>> struct_declaration_list,
        std::vector<std::unique_ptr<TableDeclaration>> table_declaration_list,
-       std::vector<std::unique_ptr<UnionDeclaration>> union_declaration_list,
-       std::vector<std::unique_ptr<XUnionDeclaration>> xunion_declaration_list)
+       std::vector<std::unique_ptr<UnionDeclaration>> union_declaration_list)
       : SourceElement(element),
         attributes(std::move(attributes)),
         library_name(std::move(library_name)),
@@ -729,7 +678,6 @@ class File final : public SourceElement {
         struct_declaration_list(std::move(struct_declaration_list)),
         table_declaration_list(std::move(table_declaration_list)),
         union_declaration_list(std::move(union_declaration_list)),
-        xunion_declaration_list(std::move(xunion_declaration_list)),
         end_(end) {}
 
   void Accept(TreeVisitor* visitor) const;
@@ -745,7 +693,6 @@ class File final : public SourceElement {
   std::vector<std::unique_ptr<StructDeclaration>> struct_declaration_list;
   std::vector<std::unique_ptr<TableDeclaration>> table_declaration_list;
   std::vector<std::unique_ptr<UnionDeclaration>> union_declaration_list;
-  std::vector<std::unique_ptr<XUnionDeclaration>> xunion_declaration_list;
   Token end_;
 };
 

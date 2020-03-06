@@ -24,14 +24,6 @@ namespace flat {
 
 namespace {
 
-// This value is defined such that all explicit xunion ordinals must be <= than
-// the cutoff, and all hashed xunion ordinals must be > than the cutoff. This
-// ensures that explicit/hashed ordinals are unique and allows the bindings to
-// accept both sets of ordinals, and will be removed after the explicit xunion
-// ordinal migration is complete.
-// TODO(fxb/42311) remove this check
-constexpr uint32_t kXunionOrdinalCutoff = 512;
-
 constexpr uint32_t kHandleSameRights = 0x80000000;  // ZX_HANDLE_SAME_RIGHTS
 
 class ScopeInsertResult {
@@ -230,22 +222,13 @@ FieldShape Union::Member::Used::fieldshape(WireFormat wire_format) const {
   return FieldShape(*this, wire_format);
 }
 
-FieldShape XUnion::Member::Used::fieldshape(WireFormat wire_format) const {
-  return FieldShape(*this, wire_format);
-}
-
-uint32_t Union::DataOffset(WireFormat wire_format) const {
-  assert(wire_format == WireFormat::kOld && "no union data offset concept for other formats");
-  return TypeShape(*this, wire_format).Alignment();
-}
-
 std::vector<std::reference_wrapper<const Union::Member>> Union::MembersSortedByXUnionOrdinal()
     const {
   std::vector<std::reference_wrapper<const Member>> sorted_members(members.cbegin(),
                                                                    members.cend());
   std::sort(sorted_members.begin(), sorted_members.end(),
             [](const auto& member1, const auto& member2) {
-              return member1.get().xunion_ordinal->value < member2.get().xunion_ordinal->value;
+              return member1.get().ordinal->value < member2.get().ordinal->value;
             });
   return sorted_members;
 }
@@ -529,9 +512,9 @@ class TypeDeclTypeTemplate final : public TypeTemplate {
       case Decl::Kind::kProtocol:
         break;
 
-      case Decl::Kind::kXUnion:
-        // Do nothing here: nullable XUnions have the same encoding
-        // representation as non-optional XUnions (i.e. nullable XUnions are
+      case Decl::Kind::kUnion:
+        // Do nothing here: nullable Unions have the same encoding
+        // representation as non-optional Unions (i.e. nullable Unions are
         // inlined).
         break;
 
@@ -765,7 +748,6 @@ bool ParseBound(ErrorReporter* error_reporter, const SourceSpan& span, const std
   }
 }
 
-// TODO(fxb/38601): Move to new format once migraiton is done.
 bool MaxBytesConstraint(ErrorReporter* error_reporter, const raw::Attribute& attribute,
                         const Decl* decl) {
   uint32_t bound;
@@ -775,26 +757,20 @@ bool MaxBytesConstraint(ErrorReporter* error_reporter, const raw::Attribute& att
   switch (decl->kind) {
     case Decl::Kind::kStruct: {
       auto struct_decl = static_cast<const Struct*>(decl);
-      max_bytes = struct_decl->typeshape(WireFormat::kOld).InlineSize() +
-                  struct_decl->typeshape(WireFormat::kOld).MaxOutOfLine();
+      max_bytes = struct_decl->typeshape(WireFormat::kV1NoEe).InlineSize() +
+                  struct_decl->typeshape(WireFormat::kV1NoEe).MaxOutOfLine();
       break;
     }
     case Decl::Kind::kTable: {
       auto table_decl = static_cast<const Table*>(decl);
-      max_bytes = table_decl->typeshape(WireFormat::kOld).InlineSize() +
-                  table_decl->typeshape(WireFormat::kOld).MaxOutOfLine();
+      max_bytes = table_decl->typeshape(WireFormat::kV1NoEe).InlineSize() +
+                  table_decl->typeshape(WireFormat::kV1NoEe).MaxOutOfLine();
       break;
     }
     case Decl::Kind::kUnion: {
       auto union_decl = static_cast<const Union*>(decl);
-      max_bytes = union_decl->typeshape(WireFormat::kOld).InlineSize() +
-                  union_decl->typeshape(WireFormat::kOld).MaxOutOfLine();
-      break;
-    }
-    case Decl::Kind::kXUnion: {
-      auto xunion_decl = static_cast<const XUnion*>(decl);
-      max_bytes = xunion_decl->typeshape(WireFormat::kOld).InlineSize() +
-                  xunion_decl->typeshape(WireFormat::kOld).MaxOutOfLine();
+      max_bytes = union_decl->typeshape(WireFormat::kV1NoEe).InlineSize() +
+                  union_decl->typeshape(WireFormat::kV1NoEe).MaxOutOfLine();
       break;
     }
     default:
@@ -814,7 +790,6 @@ bool MaxBytesConstraint(ErrorReporter* error_reporter, const raw::Attribute& att
   return true;
 }
 
-// TODO(fxb/38601): Move to new format once migraiton is done.
 bool MaxHandlesConstraint(ErrorReporter* error_reporter, const raw::Attribute& attribute,
                           const Decl* decl) {
   uint32_t bound;
@@ -824,22 +799,17 @@ bool MaxHandlesConstraint(ErrorReporter* error_reporter, const raw::Attribute& a
   switch (decl->kind) {
     case Decl::Kind::kStruct: {
       auto struct_decl = static_cast<const Struct*>(decl);
-      max_handles = struct_decl->typeshape(WireFormat::kOld).MaxHandles();
+      max_handles = struct_decl->typeshape(WireFormat::kV1NoEe).MaxHandles();
       break;
     }
     case Decl::Kind::kTable: {
       auto table_decl = static_cast<const Table*>(decl);
-      max_handles = table_decl->typeshape(WireFormat::kOld).MaxHandles();
+      max_handles = table_decl->typeshape(WireFormat::kV1NoEe).MaxHandles();
       break;
     }
     case Decl::Kind::kUnion: {
       auto union_decl = static_cast<const Union*>(decl);
-      max_handles = union_decl->typeshape(WireFormat::kOld).MaxHandles();
-      break;
-    }
-    case Decl::Kind::kXUnion: {
-      auto xunion_decl = static_cast<const XUnion*>(decl);
-      max_handles = xunion_decl->typeshape(WireFormat::kOld).MaxHandles();
+      max_handles = union_decl->typeshape(WireFormat::kV1NoEe).MaxHandles();
       break;
     }
     default:
@@ -970,7 +940,6 @@ Libraries::Libraries() {
     AttributeSchema::Placement::kStructDecl,
     AttributeSchema::Placement::kTableDecl,
     AttributeSchema::Placement::kUnionDecl,
-    AttributeSchema::Placement::kXUnionDecl,
   }, {
       /* any value */
   },
@@ -981,7 +950,6 @@ Libraries::Libraries() {
     AttributeSchema::Placement::kStructDecl,
     AttributeSchema::Placement::kTableDecl,
     AttributeSchema::Placement::kUnionDecl,
-    AttributeSchema::Placement::kXUnionDecl,
   }, {
     /* any value */
   },
@@ -994,7 +962,6 @@ Libraries::Libraries() {
   ResultShapeConstraint));
   AddAttributeSchema("Selector", AttributeSchema({
     AttributeSchema::Placement::kMethod,
-    AttributeSchema::Placement::kXUnionMember,
   }, {
       /* any value */
   }));
@@ -1337,9 +1304,6 @@ bool Library::RegisterDecl(std::unique_ptr<Decl> decl) {
     case Decl::Kind::kUnion:
       StoreDecl(decl_ptr, &union_declarations_);
       break;
-    case Decl::Kind::kXUnion:
-      StoreDecl(decl_ptr, &xunion_declarations_);
-      break;
   }  // switch
 
   const Name& name = decl_ptr->name;
@@ -1367,7 +1331,6 @@ bool Library::RegisterDecl(std::unique_ptr<Decl> decl) {
     case Decl::Kind::kStruct:
     case Decl::Kind::kTable:
     case Decl::Kind::kUnion:
-    case Decl::Kind::kXUnion:
     case Decl::Kind::kProtocol: {
       auto type_decl = static_cast<TypeDecl*>(decl_ptr);
       auto type_template = std::make_unique<TypeDeclTypeTemplate>(name, typespace_, error_reporter_,
@@ -1822,50 +1785,11 @@ bool Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> uni
   auto name = Name::CreateSourced(this, union_declaration->identifier->span());
 
   assert(!union_declaration->members.empty() && "unions must have at least one member");
+  auto union_name =
+      std::pair<std::string, std::string_view>(LibraryName(this, "."), name.decl_name());
   std::vector<Union::Member> members;
   for (auto& member : union_declaration->members) {
-    auto xunion_ordinal = std::move(member->ordinal);
-    if (xunion_ordinal->value > kXunionOrdinalCutoff) {
-      return Fail(member->span(), "explicit union ordinal must be <= 512");
-    }
-
-    if (member->maybe_used) {
-      auto span = member->maybe_used->identifier->span();
-      std::unique_ptr<TypeConstructor> type_ctor;
-      if (!ConsumeTypeConstructor(std::move(member->maybe_used->type_ctor), span, &type_ctor))
-        return false;
-
-      if (type_ctor->nullability != types::Nullability::kNonnullable) {
-        return Fail(member->span(), "Union members cannot be nullable");
-      }
-
-      auto attributes = std::move(member->maybe_used->attributes);
-      members.emplace_back(std::move(xunion_ordinal), std::move(type_ctor), span,
-                           std::move(attributes));
-    } else {
-      assert(xunion_ordinal && "Reserved union members must have an ordinal specified");
-      members.emplace_back(std::move(xunion_ordinal), member->span());
-    }
-  }
-
-  auto attributes = std::move(union_declaration->attributes);
-
-  return RegisterDecl(std::make_unique<Union>(std::move(attributes), std::move(name),
-                                              std::move(members), union_declaration->strictness));
-}
-
-bool Library::ConsumeXUnionDeclaration(std::unique_ptr<raw::XUnionDeclaration> xunion_declaration) {
-  auto name = Name::CreateSourced(this, xunion_declaration->identifier->span());
-
-  assert(!xunion_declaration->members.empty() && "unions must have at least one member");
-  auto xunion_name =
-      std::pair<std::string, std::string_view>(LibraryName(this, "."), name.decl_name());
-  std::vector<XUnion::Member> members;
-  for (auto& member : xunion_declaration->members) {
     auto explicit_ordinal = std::move(member->ordinal);
-    if (explicit_ordinal->value > kXunionOrdinalCutoff) {
-      return Fail(member->span(), "xunion ordinal must be <= 512");
-    }
 
     if (member->maybe_used) {
       auto span = member->maybe_used->identifier->span();
@@ -1874,7 +1798,7 @@ bool Library::ConsumeXUnionDeclaration(std::unique_ptr<raw::XUnionDeclaration> x
         return false;
 
       if (type_ctor->nullability != types::Nullability::kNonnullable) {
-        return Fail(member->span(), "Extensible union members cannot be nullable");
+        return Fail(member->span(), "union members cannot be nullable");
       }
 
       members.emplace_back(std::move(explicit_ordinal), std::move(type_ctor), span,
@@ -1884,9 +1808,9 @@ bool Library::ConsumeXUnionDeclaration(std::unique_ptr<raw::XUnionDeclaration> x
     }
   }
 
-  return RegisterDecl(std::make_unique<XUnion>(std::move(xunion_declaration->attributes),
-                                               std::move(name), std::move(members),
-                                               xunion_declaration->strictness));
+  return RegisterDecl(std::make_unique<Union>(std::move(union_declaration->attributes),
+                                              std::move(name), std::move(members),
+                                              union_declaration->strictness));
 }
 
 bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
@@ -1979,13 +1903,6 @@ bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
   auto union_declaration_list = std::move(file->union_declaration_list);
   for (auto& union_declaration : union_declaration_list) {
     if (!ConsumeUnionDeclaration(std::move(union_declaration))) {
-      return false;
-    }
-  }
-
-  auto xunion_declaration_list = std::move(file->xunion_declaration_list);
-  for (auto& xunion_declaration : xunion_declaration_list) {
-    if (!ConsumeXUnionDeclaration(std::move(xunion_declaration))) {
       return false;
     }
   }
@@ -2641,15 +2558,6 @@ bool Library::DeclDependencies(Decl* decl, std::set<Decl*>* out_edges) {
       }
       break;
     }
-    case Decl::Kind::kXUnion: {
-      auto xunion_decl = static_cast<const XUnion*>(decl);
-      for (const auto& member : xunion_decl->members) {
-        if (!member.maybe_used)
-          continue;
-        maybe_add_decl(member.maybe_used->type_ctor.get());
-      }
-      break;
-    }
     case Decl::Kind::kTypeAlias: {
       auto type_alias_decl = static_cast<const TypeAlias*>(decl);
       maybe_add_decl(type_alias_decl->partial_type_ctor.get());
@@ -2780,12 +2688,6 @@ bool Library::CompileDecl(Decl* decl) {
     case Decl::Kind::kUnion: {
       auto union_decl = static_cast<Union*>(decl);
       if (!CompileUnion(union_decl))
-        return false;
-      break;
-    }
-    case Decl::Kind::kXUnion: {
-      auto xunion_decl = static_cast<XUnion*>(decl);
-      if (!CompileXUnion(xunion_decl))
         return false;
       break;
     }
@@ -2928,23 +2830,6 @@ bool Library::VerifyDeclAttributes(Decl* decl) {
       if (placement_ok.NoNewErrors()) {
         // Attributes: check constraint.
         ValidateAttributesConstraints(union_declaration, union_declaration->attributes.get());
-      }
-      break;
-    }
-    case Decl::Kind::kXUnion: {
-      auto xunion_declaration = static_cast<XUnion*>(decl);
-      // Attributes: check placement.
-      ValidateAttributesPlacement(AttributeSchema::Placement::kXUnionDecl,
-                                  xunion_declaration->attributes.get());
-      for (const auto& member : xunion_declaration->members) {
-        if (!member.maybe_used)
-          continue;
-        ValidateAttributesPlacement(AttributeSchema::Placement::kXUnionMember,
-                                    member.maybe_used->attributes.get());
-      }
-      if (placement_ok.NoNewErrors()) {
-        // Attributes: check constraint.
-        ValidateAttributesConstraints(xunion_declaration, xunion_declaration->attributes.get());
       }
       break;
     }
@@ -3267,10 +3152,9 @@ bool Library::CompileUnion(Union* union_declaration) {
   Ordinal32Scope ordinal_scope;
 
   for (auto& member : union_declaration->members) {
-    auto ordinal_result =
-        ordinal_scope.Insert(member.xunion_ordinal->value, member.xunion_ordinal->span());
+    auto ordinal_result = ordinal_scope.Insert(member.ordinal->value, member.ordinal->span());
     if (!ordinal_result.ok())
-      return Fail(member.xunion_ordinal->span(),
+      return Fail(member.ordinal->span(),
                   "Multiple union fields with the same ordinal; previous was at " +
                       ordinal_result.previous_occurrence().position_str());
     if (member.maybe_used) {
@@ -3278,38 +3162,6 @@ bool Library::CompileUnion(Union* union_declaration) {
       if (!name_result.ok())
         return Fail(member.maybe_used->name,
                     "Multiple union members with the same name; previous was at " +
-                        name_result.previous_occurrence().position_str());
-      if (!CompileTypeConstructor(member.maybe_used->type_ctor.get()))
-        return false;
-    }
-  }
-
-  if (auto ordinal_and_loc = FindFirstNonDenseOrdinal(ordinal_scope)) {
-    auto [ordinal, span] = *ordinal_and_loc;
-    std::ostringstream msg_stream;
-    msg_stream << "missing ordinal " << ordinal;
-    msg_stream << " (ordinals must be dense); consider marking it reserved";
-    return Fail(span, msg_stream.str());
-  }
-
-  return true;
-}
-
-bool Library::CompileXUnion(XUnion* xunion_declaration) {
-  Scope<std::string_view> scope;
-  Ordinal32Scope ordinal_scope;
-
-  for (auto& member : xunion_declaration->members) {
-    auto ordinal_result = ordinal_scope.Insert(member.ordinal->value, member.ordinal->span());
-    if (!ordinal_result.ok())
-      return Fail(member.ordinal->span(),
-                  "Multiple xunion fields with the same ordinal; previous was at " +
-                      ordinal_result.previous_occurrence().position_str());
-    if (member.maybe_used) {
-      auto name_result = scope.Insert(member.maybe_used->name.data(), member.maybe_used->name);
-      if (!name_result.ok())
-        return Fail(member.maybe_used->name,
-                    "Multiple xunion members with the same name; previous was at " +
                         name_result.previous_occurrence().position_str());
 
       if (!CompileTypeConstructor(member.maybe_used->type_ctor.get()))

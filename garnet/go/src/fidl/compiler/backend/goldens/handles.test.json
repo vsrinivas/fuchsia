@@ -649,7 +649,6 @@
   ],
   "table_declarations": [],
   "union_declarations": [],
-  "xunion_declarations": [],
   "type_alias_declarations": [
     {
       "name": "fidl.test.handles/aliased_plain_handle",

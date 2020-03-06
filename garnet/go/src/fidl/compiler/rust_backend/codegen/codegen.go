@@ -28,7 +28,7 @@ func NewGenerator() *Generator {
 	template.Must(tmpls.Parse(templates.Interface))
 	template.Must(tmpls.Parse(templates.Service))
 	template.Must(tmpls.Parse(templates.Struct))
-	template.Must(tmpls.Parse(templates.XUnion))
+	template.Must(tmpls.Parse(templates.Union))
 	template.Must(tmpls.Parse(templates.Table))
 	template.Must(tmpls.Parse(templates.Result))
 	template.Must(tmpls.Parse(templates.Bits))
