@@ -8,19 +8,11 @@
 #include <optional>
 
 #include "src/developer/feedback/feedback_agent/annotations/aliases.h"
-#include "src/developer/feedback/feedback_agent/annotations/single_sync_annotation_provider.h"
 
 namespace feedback {
 
-// Collect the name of the device's board.
-class BoardNameProvider : public SingleSyncAnnotationProvider {
- public:
-  BoardNameProvider();
-
-  static AnnotationKeys GetSupportedAnnotations();
-
-  std::optional<AnnotationValue> GetAnnotation() override;
-};
+// Synchronously fetches the name of the device's board.
+std::optional<AnnotationValue> GetBoardName();
 
 }  // namespace feedback
 

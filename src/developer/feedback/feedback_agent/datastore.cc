@@ -10,6 +10,7 @@
 
 #include "src/developer/feedback/feedback_agent/annotations/aliases.h"
 #include "src/developer/feedback/feedback_agent/annotations/annotation_provider_factory.h"
+#include "src/developer/feedback/feedback_agent/annotations/static_annotations.h"
 #include "src/developer/feedback/feedback_agent/attachments/aliases.h"
 #include "src/developer/feedback/feedback_agent/attachments/inspect_ptr.h"
 #include "src/developer/feedback/feedback_agent/attachments/kernel_log_ptr.h"
@@ -30,7 +31,8 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
       cobalt_(cobalt),
       timeout_(timeout),
       annotation_allowlist_(annotation_allowlist),
-      attachment_allowlist_(attachment_allowlist) {
+      attachment_allowlist_(attachment_allowlist),
+      static_annotations_(GetStaticAnnotations(annotation_allowlist_)) {
   if (annotation_allowlist_.empty()) {
     FX_LOGS(WARNING)
         << "Annotation allowlist is empty, no annotations will be collected or returned";
@@ -53,22 +55,26 @@ fit::promise<Annotations> Datastore::GetAnnotations() {
   }
 
   return fit::join_promise_vector(std::move(annotations))
-      .and_then([](std::vector<fit::result<Annotations>>& annotations) -> fit::result<Annotations> {
-        Annotations ok_annotations;
-        for (auto& result : annotations) {
-          if (result.is_ok()) {
-            for (const auto& [key, value] : result.take_value()) {
-              ok_annotations[key] = value;
+      .and_then(
+          [this](std::vector<fit::result<Annotations>>& annotations) -> fit::result<Annotations> {
+            // We seed the returned annotations with the static ones.
+            Annotations ok_annotations(static_annotations_.begin(), static_annotations_.end());
+
+            // We then augment them with the dynamic ones.
+            for (auto& result : annotations) {
+              if (result.is_ok()) {
+                for (const auto& [key, value] : result.take_value()) {
+                  ok_annotations[key] = value;
+                }
+              }
             }
-          }
-        }
 
-        if (ok_annotations.empty()) {
-          return fit::error();
-        }
+            if (ok_annotations.empty()) {
+              return fit::error();
+            }
 
-        return fit::ok(ok_annotations);
-      });
+            return fit::ok(ok_annotations);
+          });
 }
 
 fit::promise<Attachments> Datastore::GetAttachments() {

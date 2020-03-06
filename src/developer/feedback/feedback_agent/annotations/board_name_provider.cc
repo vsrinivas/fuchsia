@@ -13,45 +13,36 @@
 #include <zircon/errors.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
+#include <zircon/types.h>
 
-#include "src/developer/feedback/feedback_agent/annotations/aliases.h"
-#include "src/developer/feedback/feedback_agent/constants.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 
-BoardNameProvider::BoardNameProvider() : SingleSyncAnnotationProvider(kAnnotationDeviceBoardName) {}
-
-AnnotationKeys BoardNameProvider::GetSupportedAnnotations() {
-  return {
-      kAnnotationDeviceBoardName,
-  };
-}
-
-std::optional<AnnotationValue> BoardNameProvider::GetAnnotation() {
+std::optional<AnnotationValue> GetBoardName() {
   fuchsia::sysinfo::SysInfoSyncPtr sysinfo;
 
-  zx_status_t out_status = fdio_service_connect("/svc/fuchsia.sysinfo.SysInfo",
-                                                sysinfo.NewRequest().TakeChannel().release());
-  if (out_status != ZX_OK) {
-    FXL_LOG(ERROR) << "Error connecting to sysinfo: " << out_status;
+  if (const zx_status_t status = fdio_service_connect("/svc/fuchsia.sysinfo.SysInfo",
+                                                      sysinfo.NewRequest().TakeChannel().release());
+      status != ZX_OK) {
+    FX_PLOGS(ERROR, status) << "Error connecting to sysinfo";
     return std::nullopt;
   }
 
   fidl::StringPtr out_board_name;
-  const zx_status_t fidl_status = sysinfo->GetBoardName(&out_status, &out_board_name);
-  if (fidl_status != ZX_OK) {
-    FX_PLOGS(ERROR, fidl_status) << "failed to get board name";
+  zx_status_t out_status;
+  if (const zx_status_t status = sysinfo->GetBoardName(&out_status, &out_board_name);
+      status != ZX_OK) {
+    FX_PLOGS(ERROR, status) << "Failed to get device board name";
     return std::nullopt;
   }
   if (out_status != ZX_OK) {
-    FX_PLOGS(ERROR, out_status) << "failed to get device board name";
+    FX_PLOGS(ERROR, out_status) << "Failed to get device board name";
     return std::nullopt;
   }
-
   if (!out_board_name) {
-    FX_PLOGS(ERROR, out_status) << "failed to get device board name";
+    FX_PLOGS(ERROR, out_status) << "Failed to get device board name";
     return std::nullopt;
   }
 

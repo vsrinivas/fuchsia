@@ -117,6 +117,7 @@ source_set("data_provider") {
     "//sdk/fidl/fuchsia.ui.scenic",
     "//src/developer/feedback/feedback_agent/annotations:aliases",
     "//src/developer/feedback/feedback_agent/annotations:annotation_providers",
+    "//src/developer/feedback/feedback_agent/annotations:static_annotations",
     "//src/developer/feedback/feedback_agent/attachments:aliases",
     "//src/developer/feedback/feedback_agent/attachments:attachment_providers",
     "//src/developer/feedback/feedback_agent/attachments:util",

@@ -9,10 +9,7 @@
 
 #include "src/developer/feedback/feedback_agent/annotations/aliases.h"
 #include "src/developer/feedback/feedback_agent/annotations/board_info_provider.h"
-#include "src/developer/feedback/feedback_agent/annotations/board_name_provider.h"
-#include "src/developer/feedback/feedback_agent/annotations/build_info_provider.h"
 #include "src/developer/feedback/feedback_agent/annotations/channel_provider.h"
-#include "src/developer/feedback/feedback_agent/annotations/device_id_provider.h"
 #include "src/developer/feedback/feedback_agent/annotations/product_info_provider.h"
 #include "src/developer/feedback/feedback_agent/annotations/time_provider.h"
 #include "src/developer/feedback/feedback_agent/constants.h"
@@ -34,28 +31,19 @@ std::vector<Enum> AllEnumValues() {
 
 // The type of annotations.
 enum class AnnotationType {
-  BoardName = 0,
-  BuildInfo,
-  Channel,
-  DeviceId,
+  Channel = 0,
   HardwareBoardInfo,
   HardwareProductInfo,
   Time,
 };
 
 const auto GetAnnotationTypes =
-    AllEnumValues<AnnotationType, AnnotationType::BoardName, AnnotationType::Time>;
+    AllEnumValues<AnnotationType, AnnotationType::Channel, AnnotationType::Time>;
 
 AnnotationKeys GetSupportedAnnotations(const AnnotationType type) {
   switch (type) {
-    case AnnotationType::BoardName:
-      return BoardNameProvider::GetSupportedAnnotations();
-    case AnnotationType::BuildInfo:
-      return BuildInfoProvider::GetSupportedAnnotations();
     case AnnotationType::Channel:
       return ChannelProvider::GetSupportedAnnotations();
-    case AnnotationType::DeviceId:
-      return DeviceIdProvider::GetSupportedAnnotations();
     case AnnotationType::HardwareBoardInfo:
       return BoardInfoProvider::GetSupportedAnnotations();
     case AnnotationType::HardwareProductInfo:
@@ -80,14 +68,8 @@ std::unique_ptr<AnnotationProvider> GetProvider(const AnnotationType type,
                                                 std::shared_ptr<sys::ServiceDirectory> services,
                                                 const zx::duration timeout, Cobalt* cobalt) {
   switch (type) {
-    case AnnotationType::BoardName:
-      return std::make_unique<BoardNameProvider>();
-    case AnnotationType::BuildInfo:
-      return std::make_unique<BuildInfoProvider>(annotations);
     case AnnotationType::Channel:
       return std::make_unique<ChannelProvider>(dispatcher, services, timeout, std::move(cobalt));
-    case AnnotationType::DeviceId:
-      return std::make_unique<DeviceIdProvider>();
     case AnnotationType::HardwareBoardInfo:
       return std::make_unique<BoardInfoProvider>(annotations, dispatcher, services, timeout,
                                                  cobalt);
@@ -100,16 +82,15 @@ std::unique_ptr<AnnotationProvider> GetProvider(const AnnotationType type,
   }
 }
 
-AnnotationKeys AddIfAnnotationsIntersect(
-    const AnnotationType type, const AnnotationKeys& allowlist, async_dispatcher_t* dispatcher,
-    std::shared_ptr<sys::ServiceDirectory> services, const zx::duration timeout, Cobalt* cobalt,
-    std::vector<std::unique_ptr<AnnotationProvider>>* providers) {
+void AddIfAnnotationsIntersect(const AnnotationType type, const AnnotationKeys& allowlist,
+                               async_dispatcher_t* dispatcher,
+                               std::shared_ptr<sys::ServiceDirectory> services,
+                               const zx::duration timeout, Cobalt* cobalt,
+                               std::vector<std::unique_ptr<AnnotationProvider>>* providers) {
   auto annotations = AnnotationsToCollect(type, allowlist);
   if (!annotations.empty()) {
     providers->push_back(GetProvider(type, annotations, dispatcher, services, timeout, cobalt));
   }
-
-  return annotations;
 }
 
 }  // namespace
@@ -119,21 +100,13 @@ std::vector<std::unique_ptr<AnnotationProvider>> GetProviders(
     std::shared_ptr<sys::ServiceDirectory> services, const zx::duration timeout, Cobalt* cobalt) {
   static auto annotation_types = GetAnnotationTypes();
 
-  AnnotationKeys ignored_annotations = allowlist;
   std::vector<std::unique_ptr<AnnotationProvider>> providers;
   for (const auto& type : annotation_types) {
-    const auto annotations = AddIfAnnotationsIntersect(type, allowlist, dispatcher, services,
-                                                       timeout, cobalt, &providers);
-
-    for (const auto& annotation : annotations) {
-      ignored_annotations.erase(annotation);
-    }
+    AddIfAnnotationsIntersect(type, allowlist, dispatcher, services, timeout, cobalt, &providers);
   }
 
-  for (const auto& annotation : ignored_annotations) {
-    FX_LOGS(WARNING) << "Annotation " << annotation
-                     << " is not supported and will not be collected";
-  }
+  // We don't warn on annotations present in the allowlist that were not collected as there could
+  // be static annotations.
 
   return providers;
 }
