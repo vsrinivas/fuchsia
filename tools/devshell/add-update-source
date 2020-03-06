@@ -6,17 +6,26 @@
 #### CATEGORY=Software delivery
 ### register dev host as target's update source
 
-## usage: fx add-update-source [--type=TYPE] [--name=NAME]
+## usage: fx add-update-source [--addr ADDR] [--port PORT] [--name NAME]
 ##
 ## Configure target device to use a new update source.
 ##
-## When --type is devhost (the default), configure the target to use the dev
-## host's address as seen from the target fuchsia device.
+##   --name NAME      Name the generated update source config NAME.
+##   --addr ADDR      Specify the package server address explicitly.
+##   --port PORT      The port at ADDR on which the package server is running (default: 8083).
 ##
-## When --type is localhost, configure the target to use 127.0.0.1 as its
-## update source.
+## ADDR:
+## Any IPv4 / IPv6 address or publicly reachable DNS name.
+## Note: ADDR must be the address as-routable by the target device.
+## If an link-local IPv6 address is provided, it must include a
+## valid scope for the target (e.g. %ethp0014).
+## If no ADDR is provided, the default address is assumed to be the
+## address of the host machine as seen by the target from an SSH
+## connection to the target device.
 ##
-## --name=NAME           Name the generated update source config NAME. Defaults to the config type.
+## NAME:
+## If no name is supplied, the name defaults to "devhost", otherwise
+## it contains the address given.
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 fx-config-read
@@ -29,17 +38,20 @@ function main {
   fx-standard-switches "$@"
   set -- "${FX_ARGV[@]}"
 
-  config_type="devhost"
+  addr=""
   port="8083"
-  source_name=""
+  source_name="devhost"
   while [[ $# -ne 0 ]]; do
     case "$1" in
-      --port)
-        port="$2"
+      --addr)
+        addr="$2"
+        if [[ "${source_name}" == "devhost" ]]; then
+          source_name="${addr}"
+        fi
         shift
         ;;
-      --type)
-        config_type="$2"
+      --port)
+        port="$2"
         shift
         ;;
       --name)
@@ -47,39 +59,39 @@ function main {
         shift
         ;;
       *)
-        echo >&2 "Unrecognized option: $1"
+        fx-error "Unrecognized option: $1"
         usage
         exit 1
     esac
     shift
   done
 
-  if [[ -z "${source_name}" ]]; then
-    source_name="${config_type}"
+  # If the user specified a custom address, then it may not be on localhost.
+  if [[ -z "${addr}" ]]; then
+    repository_dir="${FUCHSIA_BUILD_DIR}/amber-files/repository"
+    if [[ ! -d "${repository_dir}" ]]; then
+      fx-error "local repository does not exist.  Please build first."
+      exit 1
+    fi
   fi
 
-  local local_addr="$(fx-command-run shell 'echo $SSH_CONNECTION' | cut -d ' ' -f 1 | sed 's/%/%25/g')"
-  if [[ $? -ne 0 || -z "${local_addr}" ]]; then
-    echo >&2 "Unable to determine target's view of amber address.  Is the target up?"
-    exit 1
+  if [[ -z "${addr}" ]]; then
+    addr=$(fx-command-run shell 'echo $SSH_CONNECTION' | cut -d ' ' -f 1)
+    if [[ $? -ne 0 || -z "${addr}" ]]; then
+      fx-error "unable to determine host address as seen from the target.  Is the target up?"
+      exit 1
+    fi
   fi
 
-  repository_dir="${FUCHSIA_BUILD_DIR}/amber-files/repository"
-  if [[ ! -d "${repository_dir}" ]]; then
-    echo >&2 "Amber repository does not exist.  Please build first."
-    exit 1
+  addr="$(echo "${addr}" | sed 's/%/%25/g')"
+
+  # A poor mans heuristic for "is an ipv6 address", URL encase escape
+  # the address.
+  if [[ "${addr}" =~ : ]]; then
+    addr="[${addr}]"
   fi
 
-  config_url="http://[${local_addr}]:${port}/config.json"
-
-  if [[ "${config_type}" == "devhost" ]]; then
-    repo_url="http://[${local_addr}]:${port}"
-  elif [[ "${config_type}" == "localhost" ]]; then
-    repo_url="http://127.0.0.1:${port}"
-  else
-    echo >&2 "Unknown config type. Valid options: devhost, localhost"
-    exit 1
-  fi
+  config_url="http://${addr}:${port}/config.json"
 
   fx-command-run shell amberctl add_src \
     -n "${source_name}" \
@@ -87,11 +99,11 @@ function main {
   err=$?
 
   if [[ $err -ne 0 ]]; then
-    echo >&2 "Unable to register update source."
+    fx-error "Unable to register update source."
     if [[ $err -eq 2 ]]; then
       # The GET request failed.
-      echo >&2 " - Is 'fx serve' or 'fx serve-updates' running?"
-      echo >&2 " - Can the target reach the development host on tcp port 8083?"
+      fx-error " - Is 'fx serve' or 'fx serve-updates' running?"
+      fx-error " - Can the target reach ${config_url} ?"
     fi
     return "$err"
   fi
