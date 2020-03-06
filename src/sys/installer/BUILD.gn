@@ -25,6 +25,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:structopt",
     "//zircon/system/fidl/fuchsia-device:fuchsia-device-rustc",
     "//zircon/system/fidl/fuchsia-hardware-block:fuchsia-hardware-block-rustc",
+    "//zircon/system/fidl/fuchsia-hardware-block-partition:fuchsia-hardware-block-partition-rustc",
     "//zircon/system/fidl/fuchsia-paver:fuchsia-paver-rustc",
   ]
 }

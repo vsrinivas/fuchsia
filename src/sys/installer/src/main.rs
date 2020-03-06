@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+pub mod partition;
+
 use {
+    crate::partition::Partition,
     anyhow::{anyhow, Context, Error},
     fdio,
     fidl::endpoints::{Proxy, ServerEnd},
@@ -112,6 +115,27 @@ fn select_block_device(devices: &Vec<(String, u64)>) -> Result<&String, Error> {
     get_user_selection(devices.iter().map(|(path, _)| path).collect())
 }
 
+async fn find_install_source(block_devices: Vec<&String>) -> Result<&String, Error> {
+    let mut candidate = Err(anyhow!("Could not find the installer disk. Is it plugged in?"));
+    for device in block_devices.iter() {
+        // get_partitions returns an empty vector if it doesn't find any partitions
+        // with the workstation-installer GUID on the disk.
+        let partitions = Partition::get_partitions(&device).await?;
+        if !partitions.is_empty() {
+            if candidate.is_err() {
+                candidate = Ok(*device);
+            } else {
+                return Err(anyhow!(
+                    "Found more than one possible installation source. Please check you only \
+                        have one installation disk plugged in!"
+                ));
+            }
+        }
+    }
+
+    candidate
+}
+
 fn paver_connect(path: &str) -> Result<(PaverProxy, DynamicDataSinkProxy), Error> {
     let (block_device_chan, block_remote) = zx::Channel::create()?;
     fdio::service_connect(&path, block_remote)?;
@@ -160,6 +184,8 @@ struct Opt {
 async fn main() -> Result<(), Error> {
     let opt = Opt::from_args();
     let block_devices = get_block_devices().await?;
+    let install_source =
+        find_install_source(block_devices.iter().map(|(part, _)| part).collect()).await?;
     let block_device_path = opt.block_device.as_ref().unwrap_or_else(|| {
         select_block_device(&block_devices)
             .unwrap_or_else(|e| panic!("Couldn't select a block device: {}", e))
@@ -190,6 +216,13 @@ async fn main() -> Result<(), Error> {
     println!("Initializing Fuchsia partition tables...");
     data_sink.initialize_partition_tables().await?;
     println!("Success.");
+
+    let to_install =
+        Partition::get_partitions(&install_source).await.context("Getting source partitions")?;
+
+    for part in to_install {
+        println!("{:?}", part);
+    }
 
     println!("TODO(44595): actually install something");
     Ok(())
@@ -228,8 +261,11 @@ mod tests {
 
         let inner = stream.into_inner();
         let mut stream = BlockRequestStream::from_inner(inner.0, inner.1);
-        let req = stream.try_next().await?.unwrap();
-        if let BlockRequest::GetInfo { responder } = req {
+        let req = stream.try_next().await?;
+        if !expect_get_info {
+            return Ok(());
+        }
+        if let BlockRequest::GetInfo { responder } = req.unwrap() {
             responder.send(
                 0,
                 Some(&mut BlockInfo {
