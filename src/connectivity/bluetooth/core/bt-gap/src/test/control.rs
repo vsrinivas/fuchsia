@@ -42,9 +42,9 @@ async fn close_channel_when_client_dropped() -> Result<(), Error> {
         placeholder_node(),
         gas_channel_sender,
         watch_peers_broker.new_publisher(),
-        watch_peers_broker.new_handle(),
+        watch_peers_broker.new_registrar(),
         watch_hosts_broker.new_publisher(),
-        watch_hosts_broker.new_handle(),
+        watch_hosts_broker.new_registrar(),
     );
     let serve_until_done = start_control_service(hd, server);
 

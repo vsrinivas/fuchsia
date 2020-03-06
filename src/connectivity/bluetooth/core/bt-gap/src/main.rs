@@ -83,7 +83,7 @@ async fn run() -> Result<(), Error> {
         hanging_get::DEFAULT_CHANNEL_SIZE,
     );
     let watch_peers_publisher = watch_peers_broker.new_publisher();
-    let watch_peers_handle = watch_peers_broker.new_handle();
+    let watch_peers_registrar = watch_peers_broker.new_registrar();
 
     // Initialize a HangingGetBroker to process watch_hosts requests
     let watch_hosts_broker = hanging_get::HangingGetBroker::new(
@@ -92,7 +92,7 @@ async fn run() -> Result<(), Error> {
         hanging_get::DEFAULT_CHANNEL_SIZE,
     );
     let watch_hosts_publisher = watch_hosts_broker.new_publisher();
-    let watch_hosts_handle = watch_hosts_broker.new_handle();
+    let watch_hosts_registrar = watch_hosts_broker.new_registrar();
 
     // Process the watch_peers broker in the background
     let run_watch_peers = watch_peers_broker
@@ -110,9 +110,9 @@ async fn run() -> Result<(), Error> {
         inspect.root().create_child("system"),
         gas_channel_sender,
         watch_peers_publisher,
-        watch_peers_handle,
+        watch_peers_registrar,
         watch_hosts_publisher,
-        watch_hosts_handle,
+        watch_hosts_registrar,
     );
     let watch_hd = hd.clone();
     let central_hd = hd.clone();

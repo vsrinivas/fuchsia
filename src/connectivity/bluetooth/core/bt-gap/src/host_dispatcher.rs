@@ -183,10 +183,10 @@ struct HostDispatcherState {
     pub event_listeners: Vec<Weak<ControlControlHandle>>,
 
     watch_peers_publisher: hanging_get::Publisher<HashMap<PeerId, Peer>>,
-    watch_peers_handle: hanging_get::Handle<PeerWatcher>,
+    watch_peers_registrar: hanging_get::SubscriptionRegistrar<PeerWatcher>,
 
     watch_hosts_publisher: hanging_get::Publisher<Vec<HostInfo>>,
-    watch_hosts_handle: hanging_get::Handle<sys::HostWatcherWatchResponder>,
+    watch_hosts_registrar: hanging_get::SubscriptionRegistrar<sys::HostWatcherWatchResponder>,
 
     // Pending requests to obtain a Host.
     host_requests: Slab<Waker>,
@@ -370,9 +370,9 @@ impl HostDispatcher {
         inspect: inspect::Node,
         gas_channel_sender: mpsc::Sender<LocalServiceDelegateRequest>,
         watch_peers_publisher: hanging_get::Publisher<HashMap<PeerId, Peer>>,
-        watch_peers_handle: hanging_get::Handle<PeerWatcher>,
+        watch_peers_registrar: hanging_get::SubscriptionRegistrar<PeerWatcher>,
         watch_hosts_publisher: hanging_get::Publisher<Vec<HostInfo>>,
-        watch_hosts_handle: hanging_get::Handle<sys::HostWatcherWatchResponder>,
+        watch_hosts_registrar: hanging_get::SubscriptionRegistrar<sys::HostWatcherWatchResponder>,
     ) -> HostDispatcher {
         let hd = HostDispatcherState {
             active_id: None,
@@ -389,9 +389,9 @@ impl HostDispatcher {
             pairing_delegate: None,
             event_listeners: vec![],
             watch_peers_publisher,
-            watch_peers_handle,
+            watch_peers_registrar,
             watch_hosts_publisher,
-            watch_hosts_handle,
+            watch_hosts_registrar,
             host_requests: Slab::new(),
             inspect: HostDispatcherInspect::new(inspect),
         };
@@ -706,13 +706,13 @@ impl HostDispatcher {
     }
 
     pub async fn watch_peers(&self) -> hanging_get::Subscriber<PeerWatcher> {
-        let mut handle = self.state.write().watch_peers_handle.clone();
-        handle.new_subscriber().await.expect("Fatal error: Peer Watcher HangingGet unreachable")
+        let mut registrar = self.state.write().watch_peers_registrar.clone();
+        registrar.new_subscriber().await.expect("Fatal error: Peer Watcher HangingGet unreachable")
     }
 
     pub async fn watch_hosts(&self) -> hanging_get::Subscriber<sys::HostWatcherWatchResponder> {
-        let mut handle = self.state.write().watch_hosts_handle.clone();
-        handle.new_subscriber().await.expect("Fatal error: Host Watcher HangingGet unreachable")
+        let mut registrar = self.state.write().watch_hosts_registrar.clone();
+        registrar.new_subscriber().await.expect("Fatal error: Host Watcher HangingGet unreachable")
     }
 
     async fn spawn_gas_proxy(&self, gatt_server_proxy: Server_Proxy) -> Result<(), Error> {
@@ -1092,9 +1092,9 @@ mod tests {
             system_inspect,
             gas_channel_sender,
             watch_peers_broker.new_publisher(),
-            watch_peers_broker.new_handle(),
+            watch_peers_broker.new_registrar(),
             watch_hosts_broker.new_publisher(),
-            watch_hosts_broker.new_handle(),
+            watch_hosts_broker.new_registrar(),
         );
         let peer_id = PeerId(1);
 
@@ -1155,9 +1155,9 @@ mod tests {
             system_inspect,
             gas_channel_sender,
             watch_peers_broker.new_publisher(),
-            watch_peers_broker.new_handle(),
+            watch_peers_broker.new_registrar(),
             watch_hosts_broker.new_publisher(),
-            watch_hosts_broker.new_handle(),
+            watch_hosts_broker.new_registrar(),
         );
         // Call a function that used to use the self.state.write().gas_channel_sender.send().await
         // pattern, which caused a deadlock by yielding to the executor while holding onto a write

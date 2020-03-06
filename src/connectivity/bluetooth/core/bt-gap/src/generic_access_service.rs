@@ -245,9 +245,9 @@ mod tests {
             system_inspect,
             gas_task_channel,
             watch_peers_broker.new_publisher(),
-            watch_peers_broker.new_handle(),
+            watch_peers_broker.new_registrar(),
             watch_hosts_broker.new_publisher(),
-            watch_hosts_broker.new_handle(),
+            watch_hosts_broker.new_registrar(),
         );
 
         let service = GenericAccessService { hd: dispatcher.clone(), generic_access_req_stream };
