@@ -414,7 +414,9 @@ async fn start_streaming(
     );
 
     while let Some(encoded) = encoded_stream.try_next().await? {
-        if let Some(packet) = builder.push_frame(encoded, PCM_FRAMES_PER_SBC_FRAME)? {
+        if let Some(packet) =
+            builder.push_frame(encoded, selected_stream.pcm_frames_per_encoded_frame)?
+        {
             if let Err(e) = media_stream.write(&packet).await {
                 fx_log_info!("Failed sending packet to peer: {}", e);
                 return Ok(());
