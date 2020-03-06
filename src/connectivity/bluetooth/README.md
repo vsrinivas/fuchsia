@@ -73,7 +73,7 @@ Bluetooth tests are built and installed when paving or OTA'ing with [`fx set`](d
 #### Tests
 
 Bluetooth test packages are listed in
-[tests/bluetooth](/garnet/packages/tests/bluetooth) and each contains at least one
+[bluetooth/tests](/src/connectivity/bluetooth/tests/) and each contains at least one
 test binary. Refer to package definitions for each package's binaries.
 
 Each test binary is a [component](/docs/glossary.md#component)
@@ -110,14 +110,10 @@ the [`bluetooth-tests`](tests/BUILD.gn) package.
 from your development shell:
 
   ```
-  $ fx run-test bluetooth-tests -t bt-host-unittests -- --gtest_filter=L2CAP_\*
+  $ fx test bt-host-unittests -- --gtest_filter="L2CAP_*"
   ```
 
-Note the use of the package name `bluetooth-tests` and the extra `--` used to
-separate arguments passed to the test binary.
-
-See [Developing with Fuchsia packages](/docs/development/workflows/package_update.md)
-for more details on the package-based workflow.
+Note the extra `--` used to separate arguments passed to the test binary.
 
 ##### Running on QEMU
 
