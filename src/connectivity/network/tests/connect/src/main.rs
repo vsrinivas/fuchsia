@@ -7,6 +7,7 @@ use std::os::unix::io::AsRawFd;
 
 use anyhow::Context as _;
 use fuchsia_zircon as zx;
+use futures::future::FutureExt;
 use futures::io::{AsyncReadExt, AsyncWriteExt};
 use futures::stream::{StreamExt, TryStreamExt};
 use net2::TcpStreamExt;
@@ -50,6 +51,14 @@ fn bus_subscribe(
     Ok(client)
 }
 
+async fn measure<T>(
+    fut: impl std::future::Future<Output = Result<(), T>>,
+) -> Result<std::time::Duration, T> {
+    let start = std::time::Instant::now();
+    let () = fut.await?;
+    Ok(start.elapsed())
+}
+
 async fn verify_broken_pipe(
     mut stream: fuchsia_async::net::TcpStream,
 ) -> Result<(), anyhow::Error> {
@@ -68,6 +77,30 @@ async fn verify_broken_pipe(
             }
         }
     }
+}
+
+// TODO(tamird): use upstream's setters when
+// https://github.com/rust-lang-nursery/net2-rs/issues/90 is fixed.
+fn set_opt<T: Copy>(
+    sock: &fuchsia_async::net::TcpStream,
+    opt: libc::c_int,
+    val: libc::c_int,
+    payload: T,
+) -> Result<(), anyhow::Error> {
+    // This is safe because `setsockopt` does not retain memory passed to it.
+    if unsafe {
+        libc::setsockopt(
+            sock.std().as_raw_fd(),
+            opt,
+            val,
+            &payload as *const _ as *const libc::c_void,
+            std::mem::size_of::<T>().try_into()?,
+        )
+    } != 0
+    {
+        let () = Err(std::io::Error::last_os_error())?;
+    }
+    Ok(())
 }
 
 #[fuchsia_async::run_singlethreaded]
@@ -100,11 +133,19 @@ async fn main() -> Result<(), anyhow::Error> {
 
             let sockaddr = std::net::SocketAddr::from((remote, PORT));
 
-            println!("Connecting keepalive and retransmit sockets...");
+            println!("Connecting sockets...");
+
             let keepalive_timeout = fuchsia_async::net::TcpStream::connect(sockaddr)?.await?;
             println!("Connected keepalive.");
+            let keepalive_usertimeout = fuchsia_async::net::TcpStream::connect(sockaddr)?.await?;
+            println!("Connected keepalive_user.");
             let mut retransmit_timeout = fuchsia_async::net::TcpStream::connect(sockaddr)?.await?;
             println!("Connected retransmit.");
+            let mut retransmit_usertimeout =
+                fuchsia_async::net::TcpStream::connect(sockaddr)?.await?;
+            println!("Connected retransmit_user.");
+
+            println!("Connected all sockets.");
 
             // Now that we have our connections, partition the network.
             {
@@ -152,68 +193,79 @@ async fn main() -> Result<(), anyhow::Error> {
                 }
             };
 
+            let usertimeout = zx::Duration::from_seconds(1);
+            for socket in [&keepalive_usertimeout, &retransmit_usertimeout].iter() {
+                let () = set_opt(
+                    socket,
+                    libc::IPPROTO_TCP,
+                    libc::TCP_USER_TIMEOUT,
+                    TryInto::<u32>::try_into(usertimeout.into_millis())?,
+                )?;
+            }
+
             // Start the keepalive machinery.
             //
             // set_keepalive sets TCP_KEEPIDLE, which requires a minimum of 1 second.
-            let () =
-                keepalive_timeout.std().set_keepalive(Some(std::time::Duration::from_secs(1)))?;
-            // TODO(tamird): use upstream's setters when
-            // https://github.com/rust-lang-nursery/net2-rs/issues/90 is fixed.
-            //
-            // TODO(tamird): use into_iter after
-            // https://github.com/rust-lang/rust/issues/25725.
-            println!("Setting keepalive options.");
-            for name in [libc::TCP_KEEPCNT, libc::TCP_KEEPINTVL].iter().cloned() {
-                let value = 1u32;
-                // This is safe because `setsockopt` does not retain memory passed to it.
-                if unsafe {
-                    libc::setsockopt(
-                        keepalive_timeout.std().as_raw_fd(),
-                        libc::IPPROTO_TCP,
-                        name,
-                        &value as *const _ as *const libc::c_void,
-                        std::mem::size_of_val(&value).try_into().unwrap(),
-                    )
-                } != 0
-                {
-                    let () = Err(std::io::Error::last_os_error())?;
-                }
+            let keepalive_idle = std::time::Duration::from_secs(1);
+            for socket in [&keepalive_timeout, &keepalive_usertimeout].iter() {
+                let () = socket.std().set_keepalive(Some(keepalive_idle))?;
             }
+            let keepalive_count: u32 = 1;
+            let () =
+                set_opt(&keepalive_timeout, libc::IPPROTO_TCP, libc::TCP_KEEPCNT, keepalive_count)?;
+            let keepalive_interval = zx::Duration::from_seconds(1);
+            let () = set_opt(
+                &keepalive_timeout,
+                libc::IPPROTO_TCP,
+                libc::TCP_KEEPINTVL,
+                TryInto::<u32>::try_into(keepalive_interval.into_seconds())?,
+            )?;
 
             // Start the retransmit machinery.
-            let payload = [0xde; 1];
-            let n = retransmit_timeout.write(&payload).await?;
-            if n != payload.len() {
-                let () = Err(anyhow::format_err!("wrote {}/{} bytes", n, payload.len()))?;
+            for socket in [&mut retransmit_timeout, &mut retransmit_usertimeout].iter_mut() {
+                let () = socket.write_all(&[0xde]).await?;
             }
 
-            let keepalive_timeout = verify_broken_pipe(keepalive_timeout);
-            let retransmit_timeout = verify_broken_pipe(retransmit_timeout);
+            let connect_timeout = measure(connect_timeout).fuse();
+            futures::pin_mut!(connect_timeout);
+            let keepalive_timeout = measure(verify_broken_pipe(keepalive_timeout)).fuse();
+            futures::pin_mut!(keepalive_timeout);
+            let keepalive_usertimeout = measure(verify_broken_pipe(keepalive_usertimeout)).fuse();
+            futures::pin_mut!(keepalive_usertimeout);
+            let retransmit_timeout = measure(verify_broken_pipe(retransmit_timeout)).fuse();
+            futures::pin_mut!(retransmit_timeout);
+            let retransmit_usertimeout = measure(verify_broken_pipe(retransmit_usertimeout)).fuse();
+            futures::pin_mut!(retransmit_usertimeout);
 
-            // TODO(tamird): revert this to futures::try_join!(...) when the timeouts can be
-            // configured.
-            let interval = std::time::Duration::from_secs(5);
-            let timeout = std::time::Duration::from_secs(600);
-            let periodically_emit = fuchsia_async::Interval::new(interval.into())
-                .take((timeout.as_secs() / interval.as_secs()).try_into().unwrap())
-                .for_each(|()| {
-                    futures::future::ready(println!(
-                        "still waiting for TCP timeouts! don't terminate me please"
-                    ))
-                });
+            macro_rules! try_print_elapsed {
+                ($val:expr) => {
+                    let v = $val.context(stringify!($val))?;
+                    println!("{} timed out after {:?}", stringify!($val), v);
+                };
+            }
 
-            println!("Waiting for all three timeouts...");
-            let timeouts =
-                futures::future::try_join3(connect_timeout, keepalive_timeout, retransmit_timeout);
-            futures::pin_mut!(timeouts);
-            match futures::future::select(timeouts, periodically_emit).await {
-                futures::future::Either::Left((timeouts, _logger)) => {
-                    let ((), (), ()) = timeouts?;
+            println!("Waiting for all timeouts...");
+            loop {
+                futures::select! {
+                  connect = connect_timeout => {
+                    try_print_elapsed!(connect);
+                  },
+                  keepalive = keepalive_timeout => {
+                    try_print_elapsed!(keepalive);
+                  },
+                  keepalive_user = keepalive_usertimeout => {
+                    try_print_elapsed!(keepalive_user);
+                  },
+                  retransmit = retransmit_timeout => {
+                    try_print_elapsed!(retransmit);
+                  },
+                  retransmit_user = retransmit_usertimeout => {
+                    try_print_elapsed!(retransmit_user);
+                  },
+                  complete => break,
                 }
-                futures::future::Either::Right(((), _timeouts)) => {
-                    let () = Err(anyhow::format_err!("periodic logger completed unexpectedly"))?;
-                }
-            };
+            }
+            println!("All timeouts complete.");
 
             Ok(())
         }
