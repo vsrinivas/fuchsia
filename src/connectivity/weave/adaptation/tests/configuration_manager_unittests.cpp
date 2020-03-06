@@ -84,6 +84,9 @@ class ConfigurationManagerTest : public ::gtest::TestLoopFixture {
         fake_wlan_stack_.GetHandler(loop_.dispatcher()));
     loop_.StartThread();
   }
+  ~ConfigurationManagerTest() {
+    loop_.Quit();
+  }
   void SetUp() override { TestLoopFixture::SetUp(); }
 
  private:
@@ -104,7 +107,7 @@ TEST_F(ConfigurationManagerTest, SetAndGetFabricId) {
   EXPECT_EQ(stored_fabric_id, fabric_id);
 }
 
-TEST_F(ConfigurationManagerTest, DISABLED_GetPrimaryWiFiMacAddress) {
+TEST_F(ConfigurationManagerTest, GetPrimaryWiFiMacAddress) {
   uint8_t mac[ETH_ALEN];
   RunLoopUntilIdle();
   EXPECT_EQ(cfg_mgr_.GetPrimaryWiFiMACAddress(mac), WEAVE_NO_ERROR);
