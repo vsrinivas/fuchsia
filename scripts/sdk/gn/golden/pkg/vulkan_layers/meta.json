@@ -2,11 +2,11 @@
   "binaries": {
     "arm64": [
       "arch/arm64/dist/VkLayer_core_validation.so",
-      "arch/arm64/dist/libVkLayer_image_pipe_swapchain.so"
+      "arch/arm64/dist/VkLayer_image_pipe_swapchain.so"
     ],
     "x64": [
       "arch/x64/dist/VkLayer_core_validation.so",
-      "arch/x64/dist/libVkLayer_image_pipe_swapchain.so"
+      "arch/x64/dist/VkLayer_image_pipe_swapchain.so"
     ]
   },
   "name": "vulkan_layers",

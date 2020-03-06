@@ -314,12 +314,7 @@ class GNBuilder(Frontend):
             self.copy_files(binaries[arch])
 
         def _filename_no_ext(name):
-            # TODO(fxb/45508): Clean up this workaround once the binaries have
-            # been fixed to have the correct names.
-            basename = os.path.basename(name)
-            if basename[:3] == 'lib':
-                basename = basename[3:]
-            return os.path.splitext(basename)[0]
+            return os.path.splitext(os.path.basename(name))[0]
 
         data = model.VulkanLibrary()
         # Pair each json resource with its corresponding binary. Each such pair
