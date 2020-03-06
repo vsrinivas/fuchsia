@@ -4,18 +4,16 @@
 
 library fuchsia.hardware.light;
 
-using zx;
-
 const uint8 LIGHT_NAME_LEN = 32;
 
 enum Capability {
     /// This capability indicates that the light supports setting brightness to a uint8_t value.
     /// If this capability is not supported, the light only supports off and on state.
-    BRIGHTNESS = 0;
+    BRIGHTNESS = 1;
     /// This capability indicates that the light supports setting an RGB value.
-    RGB = 1;
+    RGB = 2;
     /// No capabilities
-    SIMPLE = 2;
+    SIMPLE = 3;
 };
 
 struct Rgb {
@@ -24,79 +22,125 @@ struct Rgb {
     uint8 blue;
 };
 
+struct Info {
+    string:LIGHT_NAME_LEN name;
+    Capability capability;
+};
+
 struct GroupInfo {
     string:LIGHT_NAME_LEN name;
     uint32 count;
     Capability capability;
 };
 
+enum LightError {
+    OK = 0;
+    NOT_SUPPORTED = 1;
+    INVALID_INDEX = 2;
+    FAILED = 3;
+};
+
+[Discoverable]
 protocol Light {
-    /// Returns a board specific name for the light.
-    /// For example, "mute" for a microphone mute indicator light, "bluetooth" for
-    /// Bluetooth pairing light, etc.
-    GetName(uint32 index) -> (zx.status status, string:LIGHT_NAME_LEN? name);
-
     /// Returns the total number of physical lights.
-    /// This will typically be 1 for a simple LED, but may be greater than one for an array of LEDs
-    /// or a more complicated lighting device.
+    /// This will typically be 1 for a simple LED light, but may be greater than one for an array of
+    /// lights or a more complicated lighting device.
     /// The multiple lights are addressed using "index" parameter in the calls below.
-    GetCount() -> (uint32 count);
+    GetNumLights() -> (uint32 count);
 
-    /// Returns true if the light with given index
-    HasCapability(uint32 index, Capability capability) -> (zx.status status, bool has);
+    /// Returns the total number of light groups (does not count single lights).
+    /// The light groups are addressed using "group_id" parameter in the calls below.
+    GetNumLightGroups() -> (uint32 count);
 
-    /// Returns the current value (zero or non-zero for simple lights, or 0 - 255 for lights
-    /// that support brightness). Returns error for RGB lights.
-    GetSimpleValue(uint32 index) -> (zx.status status, uint8 value);
+    /// Returns info for the single light.
+    /// index: Index of the light defined by board. Must be less than value returned by GetNumLights.
+    GetInfo(uint32 index) -> (Info info) error LightError;
 
-    /// Sets the current value (zero or non-zero for simple lights, or 0 - 255 for lights
-    /// that support brightness). Returns error for RGB lights.
-    SetSimpleValue(uint32 index, uint8 value) -> (zx.status status);
+    /// Returns the current value. If the light is ON, the value is True. If the light is OFF,
+    /// the value is False.
+    /// If the capability 'SIMPLE' is not supported by this light, returns NOT_SUPPORTED.
+    /// Use GetInfo to check if light supports this operation.
+    /// index: a number between 0 inclusive and the count received from GetNumLights.
+    GetCurrentSimpleValue(uint32 index) -> (bool value) error LightError;
 
-    /// Returns the current RGB value for the light. Returns error for non-RGB lights.
-    GetRgbValue(uint32 index) -> (zx.status status, Rgb value);
+    /// Sets the current value. Value should be set to 'TRUE' to turn on the light. Value should be
+    /// set to 'FALSE' to turn off the light.
+    /// If the capability 'SIMPLE' is not supported by this light, returns NOT_SUPPORTED.
+    /// Use GetInfo to check if light supports this operation.
+    /// index: a number between 0 inclusive and the count received from GetNumLights.
+    SetSimpleValue(uint32 index, bool value) -> () error LightError;
 
-    /// Sets the current RGB value for the light. Returns error for non-RGB lights.
-    SetRgbValue(uint32 index, Rgb value) -> (zx.status status);
+    /// Returns the current brightness value (0 - 255) of the light indicated by index.
+    /// If the capability 'BRIGHTNESS' is not supported by this light, returns NOT_SUPPORTED.
+    /// Use GetInfo to check if light supports this operation.
+    /// index: a number between 0 inclusive and the count received from GetNumLights.
+    GetCurrentBrightnessValue(uint32 index) -> (uint8 value) error LightError;
+
+    /// Sets the current brightness value (0 - 255).
+    /// If the capability 'BRIGHTNESS' is not supported by this light, returns NOT_SUPPORTED.
+    /// Use GetInfo to check if light supports this operation.
+    /// index: a number between 0 inclusive and the count received from GetNumLights.
+    SetBrightnessValue(uint32 index, uint8 value) -> () error LightError;
+
+    /// Returns the current RGB value for the single light.
+    /// If the capability 'RGB' is not supported by this light, returns NOT_SUPPORTED.
+    /// Use GetInfo to check if light supports this operation.
+    /// index: a number between 0 inclusive and the count received from GetNumLights.
+    GetCurrentRgbValue(uint32 index) -> (Rgb value) error LightError;
+
+    /// Sets the current RGB value.
+    /// If the capability 'RGB' is not supported by this light, returns NOT_SUPPORTED.
+    /// Use GetInfo to check if light supports this operation.
+    /// index: a number between 0 inclusive and the count received from GetNumLights.
+    SetRgbValue(uint32 index, Rgb value) -> () error LightError;
 
     /// Returns group info for the light group.
-    GetGroupInfo(uint32 group_id) -> (zx.status status, GroupInfo? info);
+    /// group_id: a number between 0 inclusive and the count received from GetNumLightGroups.
+    GetGroupInfo(uint32 group_id) -> (GroupInfo info) error LightError;
 
-    /// Returns an array of the current values (bool for on/off).
-    /// If group_id is invalid, ZX_ERR_INVALID_ARGS will be returned.
-    /// If the capability 'SIMPLE' is not supported by this group, returns ZX_ERR_NOT_SUPPORTED.
+    /// Returns an array of the current values.If the light is ON, the value is True. If the light
+    /// is OFF, the value is False.
+    /// If group_id is invalid, INVALID_INDEX will be returned.
+    /// If the capability 'SIMPLE' is not supported by this group, returns NOT_SUPPORTED.
     /// Use GetGroupInfo to check if group supports this operation.
-    GetGroupCurrentSimpleValue(uint32 group_id) -> (zx.status status, vector<bool>:MAX? values);
+    /// group_id: a number between 0 inclusive and the count received from GetNumLightGroups.
+    GetGroupCurrentSimpleValue(uint32 group_id) -> (vector<bool>:MAX? values) error LightError;
 
-    /// Sets the current values (bool for on/off) through the values array.
-    /// If group_id is invalid, ZX_ERR_INVALID_ARGS will be returned.
-    /// If the capability 'SIMPLE' is not supported by this group, returns ZX_ERR_NOT_SUPPORTED.
+    /// Sets the current values through the values array. Value should be set to 'TRUE' to turn on 
+    /// the light. Value should be set to 'FALSE' to turn off the light.
+    /// If group_id is invalid, INVALID_INDEX will be returned.
+    /// If the capability 'SIMPLE' is not supported by this group, returns NOT_SUPPORTED.
     /// Use GetGroupInfo to check if group supports this operation.
-    SetGroupSimpleValue(uint32 group_id, vector<bool>:MAX values) -> (zx.status status);
+    /// group_id: a number between 0 inclusive and the count received from GetNumLightGroups.
+    SetGroupSimpleValue(uint32 group_id, vector<bool>:MAX values) -> () error LightError;
 
-    /// Returns an array of the current values (0 - 255).
-    /// If group_id is invalid, ZX_ERR_INVALID_ARGS will be returned.
-    /// If the capability 'BRIGHTNESS' is not supported by this group, returns ZX_ERR_NOT_SUPPORTED.
+    /// Returns an array of the current brightness values (0 - 255) for the light group.
+    /// If group_id is invalid, INVALID_INDEX will be returned.
+    /// If the capability 'BRIGHTNESS' is not supported by this group, returns NOT_SUPPORTED.
     /// Use GetGroupInfo to check if group supports this operation.
-    GetGroupCurrentBrightnessValue(uint32 group_id) -> (zx.status status, vector<uint8>:MAX? values);
+    /// group_id: a number between 0 inclusive and the count received from GetNumLightGroups.
+    GetGroupCurrentBrightnessValue(uint32 group_id) -> (vector<uint8>:MAX? values) error LightError;
 
-    /// Sets the current values (0 - 255) through the values array.
-    /// If group_id is invalid, ZX_ERR_INVALID_ARGS will be returned.
-    /// If the capability 'BRIGHTNESS' is not supported by this group, returns ZX_ERR_NOT_SUPPORTED.
+    /// Sets the current brightness values (0 - 255) for the light group through the values array.
+    /// If group_id is invalid, INVALID_INDEX will be returned.
+    /// If the capability 'BRIGHTNESS' is not supported by this group, returns NOT_SUPPORTED.
     /// Use GetGroupInfo to check if group supports this operation.
-    SetGroupBrightnessValue(uint32 group_id, vector<uint8>:MAX values) -> (zx.status status);
+    /// group_id: a number between 0 inclusive and the count received from GetNumLightGroups.
+    SetGroupBrightnessValue(uint32 group_id, vector<uint8>:MAX values) -> () error LightError;
 
     /// Returns an array of the current RGB values for the light group.
-    /// If group_id is invalid, ZX_ERR_INVALID_ARGS will be returned.
-    /// If the capability 'RGB' is not supported by this group, returns ZX_ERR_NOT_SUPPORTED.
+    /// If group_id is invalid, INVALID_INDEX will be returned.
+    /// If the capability 'RGB' is not supported by this group, returns NOT_SUPPORTED.
     /// Use GetGroupInfo to check if group supports this operation.
-    GetGroupCurrentRgbValue(uint32 group_id) -> (zx.status status, vector<Rgb>:MAX? values);
+    /// group_id: a number between 0 inclusive and the count received from GetNumLightGroups.
+    GetGroupCurrentRgbValue(uint32 group_id) -> (vector<Rgb>:MAX? values) error LightError;
 
     /// Sets the current RGB value for the light group.
-    /// If group_id is invalid, ZX_ERR_INVALID_ARGS will be returned.
-    /// If the capability 'RGB' is not supported by this group, returns ZX_ERR_NOT_SUPPORTED.
+    /// If group_id is invalid, INVALID_INDEX will be returned.
+    /// If the capability 'RGB' is not supported by this group, returns NOT_SUPPORTED.
     /// Use GetGroupInfo to check if group supports this operation.
-    SetGroupRgbValue(uint32 group_id, vector<Rgb>:MAX values) -> (zx.status status);
+    /// group_id: a number between 0 inclusive and the count received from GetNumLightGroups.
+    SetGroupRgbValue(uint32 group_id, vector<Rgb>:MAX values) -> () error LightError;
 
     // TODO: Ideas for future expansion
     // - Hardware blinking configuration, for lights that have hardware or MCU support for blinking.

@@ -42,14 +42,17 @@ class Lp50xxLight : public Lp50xxLightType,
   void DdkRelease();
 
   // FIDL messages.
-  void GetName(uint32_t index, GetNameCompleter::Sync completer) override;
-  void GetCount(GetCountCompleter::Sync completer) override;
-  void HasCapability(uint32_t index, llcpp::fuchsia::hardware::light::Capability capability,
-                     HasCapabilityCompleter::Sync completer) override;
-  void GetSimpleValue(uint32_t index, GetSimpleValueCompleter::Sync completer) override;
-  void SetSimpleValue(uint32_t index, uint8_t value,
-                      SetSimpleValueCompleter::Sync completer) override;
-  void GetRgbValue(uint32_t index, GetRgbValueCompleter::Sync completer) override;
+  void GetNumLights(GetNumLightsCompleter::Sync completer) override;
+  void GetNumLightGroups(GetNumLightGroupsCompleter::Sync completer) override;
+  void GetInfo(uint32_t index, GetInfoCompleter::Sync completer) override;
+  void GetCurrentSimpleValue(uint32_t index,
+                             GetCurrentSimpleValueCompleter::Sync completer) override;
+  void SetSimpleValue(uint32_t index, bool value, SetSimpleValueCompleter::Sync completer) override;
+  void GetCurrentBrightnessValue(uint32_t index,
+                                 GetCurrentBrightnessValueCompleter::Sync completer) override;
+  void SetBrightnessValue(uint32_t index, uint8_t value,
+                          SetBrightnessValueCompleter::Sync completer) override;
+  void GetCurrentRgbValue(uint32_t index, GetCurrentRgbValueCompleter::Sync completer) override;
   void SetRgbValue(uint32_t index, llcpp::fuchsia::hardware::light::Rgb value,
                    SetRgbValueCompleter::Sync completer) override;
 

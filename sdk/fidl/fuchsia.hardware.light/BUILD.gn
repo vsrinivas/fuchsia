@@ -5,5 +5,7 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.hardware.light") {
+  sdk_category = "partner"
+
   sources = [ "light.fidl" ]
 }

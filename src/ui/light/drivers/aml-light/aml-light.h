@@ -26,6 +26,7 @@ class AmlLight;
 using AmlLightType = ddk::Device<AmlLight, ddk::Messageable>;
 using ::llcpp::fuchsia::hardware::light::Capability;
 using ::llcpp::fuchsia::hardware::light::Light;
+using ::llcpp::fuchsia::hardware::light::LightError;
 using ::llcpp::fuchsia::hardware::light::Rgb;
 
 class LightDevice {
@@ -37,9 +38,13 @@ class LightDevice {
   zx_status_t Init(bool init_on);
 
   const std::string GetName() const { return name_; }
-  bool HasCapability(Capability capability) const;
-  uint8_t GetSimpleValue() const { return value_; }
-  zx_status_t SetSimpleValue(uint8_t value);
+  Capability GetCapability() const {
+    return pwm_.has_value() ? Capability::BRIGHTNESS : Capability::SIMPLE;
+  }
+  uint8_t GetCurrentSimpleValue() const { return value_; }
+  zx_status_t SetSimpleValue(bool value);
+  uint8_t GetCurrentBrightnessValue() const { return value_; }
+  zx_status_t SetBrightnessValue(uint8_t value);
 
  private:
   std::string name_;
@@ -62,42 +67,44 @@ class AmlLight : public AmlLightType,
   void DdkRelease();
 
   // FIDL messages.
-  void GetName(uint32_t index, GetNameCompleter::Sync completer);
-  void GetCount(GetCountCompleter::Sync completer);
-  void HasCapability(uint32_t index, Capability capability, HasCapabilityCompleter::Sync completer);
-  void GetSimpleValue(uint32_t index, GetSimpleValueCompleter::Sync completer);
-  void SetSimpleValue(uint32_t index, uint8_t value, SetSimpleValueCompleter::Sync completer);
-  void GetRgbValue(uint32_t index, GetRgbValueCompleter::Sync completer);
+  void GetNumLights(GetNumLightsCompleter::Sync completer);
+  void GetNumLightGroups(GetNumLightGroupsCompleter::Sync completer);
+  void GetInfo(uint32_t index, GetInfoCompleter::Sync completer);
+  void GetCurrentSimpleValue(uint32_t index, GetCurrentSimpleValueCompleter::Sync completer);
+  void SetSimpleValue(uint32_t index, bool value, SetSimpleValueCompleter::Sync completer);
+  void GetCurrentBrightnessValue(uint32_t index,
+                                 GetCurrentBrightnessValueCompleter::Sync completer);
+  void SetBrightnessValue(uint32_t index, uint8_t value,
+                          SetBrightnessValueCompleter::Sync completer);
+  void GetCurrentRgbValue(uint32_t index, GetCurrentRgbValueCompleter::Sync completer);
   void SetRgbValue(uint32_t index, Rgb value, SetRgbValueCompleter::Sync completer);
 
   void GetGroupInfo(uint32_t group_id, GetGroupInfoCompleter::Sync completer) {
-    completer.Reply(ZX_ERR_NOT_SUPPORTED, nullptr);
+    completer.ReplyError(LightError::NOT_SUPPORTED);
   }
   void GetGroupCurrentSimpleValue(uint32_t group_id,
                                   GetGroupCurrentSimpleValueCompleter::Sync completer) {
-    completer.Reply(ZX_ERR_NOT_SUPPORTED, ::fidl::VectorView<bool>(nullptr, 0));
+    completer.ReplyError(LightError::NOT_SUPPORTED);
   }
   void SetGroupSimpleValue(uint32_t group_id, ::fidl::VectorView<bool> values,
                            SetGroupSimpleValueCompleter::Sync completer) {
-    completer.Reply(ZX_ERR_NOT_SUPPORTED);
+    completer.ReplyError(LightError::NOT_SUPPORTED);
   }
   void GetGroupCurrentBrightnessValue(uint32_t group_id,
                                       GetGroupCurrentBrightnessValueCompleter::Sync completer) {
-    completer.Reply(ZX_ERR_NOT_SUPPORTED, ::fidl::VectorView<uint8_t>(nullptr, 0));
+    completer.ReplyError(LightError::NOT_SUPPORTED);
   }
   void SetGroupBrightnessValue(uint32_t group_id, ::fidl::VectorView<uint8_t> values,
                                SetGroupBrightnessValueCompleter::Sync completer) {
-    completer.Reply(ZX_ERR_NOT_SUPPORTED);
+    completer.ReplyError(LightError::NOT_SUPPORTED);
   }
   void GetGroupCurrentRgbValue(uint32_t group_id,
                                GetGroupCurrentRgbValueCompleter::Sync completer) {
-    completer.Reply(ZX_ERR_NOT_SUPPORTED,
-                    ::fidl::VectorView<::llcpp::fuchsia::hardware::light::Rgb>(nullptr, 0));
+    completer.ReplyError(LightError::NOT_SUPPORTED);
   }
-  void SetGroupRgbValue(uint32_t group_id,
-                        ::fidl::VectorView<::llcpp::fuchsia::hardware::light::Rgb> values,
+  void SetGroupRgbValue(uint32_t group_id, ::fidl::VectorView<Rgb> values,
                         SetGroupRgbValueCompleter::Sync completer) {
-    completer.Reply(ZX_ERR_NOT_SUPPORTED);
+    completer.ReplyError(LightError::NOT_SUPPORTED);
   }
 
  private:
