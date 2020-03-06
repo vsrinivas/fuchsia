@@ -14,14 +14,19 @@ assert(!defined(zx) || zx != "/",
 
 import("//build/unification/images/migrated_manifest.gni")
 
+static_library("lib") {
+  output_name = "ping"
+  sources = [
+    "ping.cc",
+    "ping.h",
+  ]
+  deps = [ "//zircon/public/lib/zx" ]
+}
+
 executable("ping") {
   configs += [ "//build/unification/config:zircon-migrated" ]
-  sources = [ "ping.cc" ]
-  deps = [
-    "//zircon/public/lib/fdio",
-    "//zircon/public/lib/inet6",
-    "//zircon/public/lib/pretty",
-  ]
+  sources = [ "main.cc" ]
+  deps = [ ":lib" ]
 }
 
 migrated_manifest("ping-manifest") {
