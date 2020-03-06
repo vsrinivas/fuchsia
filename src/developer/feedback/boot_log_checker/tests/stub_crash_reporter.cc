@@ -50,4 +50,9 @@ void StubCrashReporterAlwaysReturnsError::File(fuchsia::feedback::CrashReport re
   callback(fit::error(ZX_ERR_INTERNAL));
 }
 
+void StubCrashReporterNoFileExpected::File(fuchsia::feedback::CrashReport report,
+                                           FileCallback callback) {
+  FX_CHECK(false) << "No call to File() expected";
+}
+
 }  // namespace feedback

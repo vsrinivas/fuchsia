@@ -192,7 +192,7 @@ fit::promise<void> RebootLogHandler::Handle(const std::string& filepath) {
 
   cobalt_.LogOccurrence(info.reboot_reason);
 
-  return WaitForNetworkToBeReachable().and_then(FileCrashReport(info));
+  return WaitForNetworkToBeReachable().and_then([this, info]() { return FileCrashReport(info); });
 }
 
 fit::promise<void> RebootLogHandler::WaitForNetworkToBeReachable() {

@@ -72,7 +72,6 @@ class RebootLogHandler {
   fxl::CancelableClosure delayed_crash_reporting_;
 
   Cobalt cobalt_;
-  fit::bridge<void> cobalt_logging_done_;
 };
 
 }  // namespace internal

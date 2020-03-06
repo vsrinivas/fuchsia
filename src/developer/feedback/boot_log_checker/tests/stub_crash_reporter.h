@@ -52,6 +52,11 @@ class StubCrashReporterAlwaysReturnsError : public StubCrashReporter {
   void File(fuchsia::feedback::CrashReport report, FileCallback callback) override;
 };
 
+class StubCrashReporterNoFileExpected : public StubCrashReporter {
+ public:
+  void File(fuchsia::feedback::CrashReport report, FileCallback callback) override;
+};
+
 }  // namespace feedback
 
 #endif  // SRC_DEVELOPER_FEEDBACK_BOOT_LOG_CHECKER_TESTS_STUB_CRASH_REPORTER_H_

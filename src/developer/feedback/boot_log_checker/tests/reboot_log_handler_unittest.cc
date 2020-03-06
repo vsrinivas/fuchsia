@@ -198,6 +198,7 @@ TEST_P(RebootLogHandlerTest, Succeed) {
 TEST_F(RebootLogHandlerTest, Pending_NetworkNotReachable) {
   WriteRebootLogContents();
   SetUpNetworkReachabilityProvider(std::make_unique<StubConnectivity>());
+  SetUpCrashReporter(std::make_unique<StubCrashReporterNoFileExpected>());
   SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
 
   fit::result<void> result = HandleRebootLog();
@@ -225,6 +226,7 @@ TEST_F(RebootLogHandlerTest, Fail_EmptyRebootLog) {
 TEST_F(RebootLogHandlerTest, Fail_NetworkReachabilityProviderNotAvailable) {
   WriteRebootLogContents();
   SetUpNetworkReachabilityProvider(nullptr);
+  SetUpCrashReporter(std::make_unique<StubCrashReporterNoFileExpected>());
   SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
 
   EXPECT_EQ(HandleRebootLog().state(), kError);
@@ -235,6 +237,7 @@ TEST_F(RebootLogHandlerTest, Fail_NetworkReachabilityProviderNotAvailable) {
 TEST_F(RebootLogHandlerTest, Fail_NetworkReachabilityProviderClosesConnection) {
   WriteRebootLogContents();
   SetUpNetworkReachabilityProvider(std::make_unique<StubConnectivity>());
+  SetUpCrashReporter(std::make_unique<StubCrashReporterNoFileExpected>());
   SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
 
   fit::result<void> result = HandleRebootLog();
@@ -250,6 +253,7 @@ TEST_F(RebootLogHandlerTest, Fail_NetworkReachabilityProviderClosesConnection) {
 TEST_F(RebootLogHandlerTest, Fail_CrashReporterNotAvailable) {
   WriteRebootLogContents();
   SetUpNetworkReachabilityProvider(std::make_unique<StubConnectivity>());
+  SetUpCrashReporter(nullptr);
   SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
 
   fit::result<void> result = HandleRebootLogTriggerOnNetworkReachable();
