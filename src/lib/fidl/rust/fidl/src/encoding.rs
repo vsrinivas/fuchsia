@@ -1533,6 +1533,7 @@ mod zx_encoding {
     type ZxInterrupt = zx::Interrupt;
     type ZxJob = zx::Job;
     type ZxProcess = zx::Process;
+    type ZxProfile = zx::Profile;
     type ZxResource = zx::Resource;
     type ZxSocket = zx::Socket;
     type ZxStream = zx::Stream;
@@ -1552,6 +1553,7 @@ mod zx_encoding {
         ZxInterrupt,
         ZxJob,
         ZxProcess,
+        ZxProfile,
         ZxResource,
         ZxSocket,
         ZxStream,

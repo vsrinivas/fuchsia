@@ -33,6 +33,7 @@ pub mod fuchsia_handles {
     pub use zx::Job;
     pub use zx::Port;
     pub use zx::Process;
+    pub use zx::Profile;
     pub use zx::Resource;
     pub use zx::Socket;
     pub use zx::Stream;
@@ -231,6 +232,7 @@ pub mod non_fuchsia_handles {
     declare_unsupported_fidl_handle!(DebugLog);
     declare_unsupported_fidl_handle!(Event);
     declare_unsupported_fidl_handle!(EventPair);
+    declare_unsupported_fidl_handle!(Profile);
     declare_unsupported_fidl_handle!(Stream);
     declare_unsupported_fidl_handle!(Vmo);
 

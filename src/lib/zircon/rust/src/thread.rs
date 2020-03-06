@@ -5,7 +5,7 @@
 //! Type-safe bindings for Zircon threads.
 
 use crate::ok;
-use crate::{AsHandleRef, Handle, HandleBased, HandleRef, Status};
+use crate::{AsHandleRef, Handle, HandleBased, HandleRef, Profile, Status};
 
 use fuchsia_zircon_sys as sys;
 
@@ -35,6 +35,17 @@ impl Thread {
         ok(status)
     }
 
+    /// Apply a scheduling profile to a thread.
+    ///
+    /// Wraps the
+    /// [zx_object_set_profile](https://fuchsia.dev/fuchsia-src/reference/syscalls/object_set_profile) syscall.
+    pub fn set_profile(&self, profile: Profile, options: u32) -> Result<(), Status> {
+        let thread_raw = self.raw_handle();
+        let profile_raw = profile.raw_handle();
+        let status = unsafe { sys::zx_object_set_profile(thread_raw, profile_raw, options) };
+        ok(status)
+    }
+
     /// Terminate the current running thread.
     ///
     /// Extreme caution should be used-- this is basically always UB in Rust.
@@ -45,5 +56,17 @@ impl Thread {
     /// in order for safety.
     pub unsafe fn exit() {
         sys::zx_thread_exit()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use fuchsia_zircon::{Handle, Profile, Status};
+
+    #[test]
+    fn set_profile_invalid() {
+        let thread = fuchsia_runtime::thread_self();
+        let profile = Profile::from(Handle::invalid());
+        assert_eq!(thread.set_profile(profile, 0), Err(Status::BAD_HANDLE));
     }
 }
