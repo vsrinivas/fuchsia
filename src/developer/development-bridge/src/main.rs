@@ -94,6 +94,23 @@ impl Cli {
         }
     }
 
+    pub async fn list_targets(&self, text: Option<String>) -> Result<String, Error> {
+        match self
+            .daemon_proxy
+            .list_targets(match text {
+                Some(ref t) => t,
+                None => "",
+            })
+            .await
+        {
+            Ok(r) => {
+                log::info!("SUCCESS: received {:?}", r);
+                return Ok(r);
+            }
+            Err(e) => panic!("ERROR: {:?}", e),
+        }
+    }
+
     pub async fn run_component<'a>(&'a self, url: String, args: &Vec<String>) -> Result<(), Error> {
         let (proxy, server_end) = create_proxy::<ComponentControllerMarker>()?;
         let (sout, cout) =
@@ -151,21 +168,6 @@ impl Cli {
     }
 }
 
-async fn exec_list() -> Result<(), Error> {
-    let svc = hoist::connect_as_service_consumer()?;
-    let peers = svc.list_peers().await?;
-    for peer in peers {
-        if peer.description.services.is_none() {
-            continue;
-        }
-        if peer.is_self {
-            continue;
-        }
-        println!("Connected peer: {:?}", peer);
-    }
-    Ok(())
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 // main
 
@@ -183,7 +185,17 @@ async fn async_main() -> Result<(), Error> {
             }
             Ok(())
         }
-        Subcommand::List(_) => exec_list().await,
+        Subcommand::List(c) => {
+            match Cli::new().await?.list_targets(c.nodename).await {
+                Ok(r) => {
+                    println!("SUCCESS: received {:?}", r);
+                }
+                Err(e) => {
+                    println!("ERROR: {:?}", e);
+                }
+            }
+            Ok(())
+        }
         Subcommand::RunComponent(c) => {
             match Cli::new().await?.run_component(c.url, &c.args).await {
                 Ok(r) => {}

@@ -843,6 +843,11 @@
             "package_name": "memchr"
         },
         {
+            "crate_name": "net2",
+            "crate_type": "lib",
+            "package_name": "net2"
+        },
+        {
             "crate_name": "nom",
             "crate_type": "lib",
             "package_name": "nom"

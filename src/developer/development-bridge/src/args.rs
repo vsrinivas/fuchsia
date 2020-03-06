@@ -25,7 +25,10 @@ pub struct EchoCommand {
 
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand, name = "list", description = "list connected devices")]
-pub struct ListCommand {}
+pub struct ListCommand {
+    #[argh(positional)]
+    pub nodename: Option<String>,
+}
 
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand, name = "run-component", description = "run component")]
@@ -85,14 +88,15 @@ mod tests {
 
     #[test]
     fn test_list() {
-        fn check(args: &[&str]) {
+        fn check(args: &[&str], nodename: String) {
             assert_eq!(
                 Ffx::from_args(CMD_NAME, args),
-                Ok(Ffx { subcommand: Subcommand::List(ListCommand {}) })
+                Ok(Ffx { subcommand: Subcommand::List(ListCommand { nodename: Some(nodename) }) })
             )
         }
 
-        check(&["list"]);
+        let nodename = String::from("thumb-set-human-neon");
+        check(&["list", &nodename], nodename.clone());
     }
 
     #[test]

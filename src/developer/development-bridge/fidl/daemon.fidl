@@ -10,4 +10,8 @@ protocol Daemon {
     compose rc.RemoteControl;
     /// Returns the input.
     EchoString(string:256 value) -> (string:256 response);
+
+    /// Lists targets by nodename. TODO(awdavies) respond with an actual
+    /// structure here.
+    ListTargets(string:256 value) -> (string:1024 response);
 };

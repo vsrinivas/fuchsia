@@ -4,6 +4,9 @@
 
 use {
     crate::constants::{LOCAL_SOCAT, MAX_RETRY_COUNT, SOCAT, SOCKET, TARGET_SOCAT},
+    crate::discovery::{TargetFinder, TargetFinderConfig},
+    crate::mdns::MdnsTargetFinder,
+    crate::target::{Target, TargetCollection},
     anyhow::{Context, Error},
     ascendd_lib::run_ascendd,
     fidl::endpoints::{ClientEnd, RequestStream, ServiceMarker},
@@ -16,9 +19,16 @@ use {
     futures::prelude::*,
     hoist::spawn,
     std::process::Command,
+    std::sync::{mpsc, Arc, Mutex},
+    std::thread,
+    std::time::Duration,
 };
 
 mod constants;
+mod discovery;
+mod mdns;
+mod net;
+mod target;
 
 async fn start_ascendd() {
     log::info!("Starting ascendd");
@@ -35,17 +45,37 @@ async fn start_ascendd() {
 #[derive(Clone)]
 pub struct Daemon {
     remote_control_proxy: RemoteControlProxy,
+    target_collection: Arc<Mutex<TargetCollection>>,
 }
 
 impl Daemon {
     pub async fn new() -> Result<Daemon, Error> {
+        let (tx, rx) = mpsc::channel::<Target>();
+        let target_collection = Arc::new(Mutex::new(TargetCollection::new()));
+        Daemon::spawn_receiver_loop(rx, Arc::clone(&target_collection));
+        let config =
+            TargetFinderConfig { broadcast_interval: Duration::from_secs(120), mdns_ttl: 255 };
+        let mdns = MdnsTargetFinder::new(&config)?;
+        mdns.start(&tx)?;
+
         let mut peer_id = Daemon::find_remote_control().await?;
         let remote_control_proxy = Daemon::create_remote_control_proxy(&mut peer_id).await?;
-        Ok(Daemon { remote_control_proxy })
+        Ok(Daemon { remote_control_proxy, target_collection })
+    }
+
+    pub fn spawn_receiver_loop(rx: mpsc::Receiver<Target>, tc: Arc<Mutex<TargetCollection>>) {
+        thread::spawn(move || loop {
+            let target = rx.recv().unwrap();
+            let mut targets = tc.lock().unwrap();
+            targets.merge_insert(target);
+        });
     }
 
     pub fn new_with_proxy(remote_control_proxy: RemoteControlProxy) -> Daemon {
-        Daemon { remote_control_proxy }
+        Daemon {
+            remote_control_proxy,
+            target_collection: Arc::new(Mutex::new(TargetCollection::new())),
+        }
     }
 
     pub async fn handle_requests_from_stream(
@@ -73,7 +103,6 @@ impl Daemon {
         // but don't loop indefinitely.
         for _ in 0..MAX_RETRY_COUNT {
             let peers = svc.list_peers().await?;
-            log::trace!("Got peers: {:?}", peers);
             for peer in peers {
                 if peer.description.services.is_none() {
                     continue;
@@ -132,6 +161,19 @@ impl Daemon {
                     )
                     .await?;
                 responder.send(&mut response).context("error sending response")?;
+            }
+            DaemonRequest::ListTargets { value, responder } => {
+                if !quiet {
+                    log::info!("Received list target request for '{:?}'", value);
+                }
+                // TODO(awdavies): Make this into a common format for easy
+                // parsing.
+                let targets = self.target_collection.lock().unwrap();
+                let response = match value.as_ref() {
+                    "" => format!("{:?}", targets),
+                    _ => format!("{:?}", targets.target_by_nodename(&value)),
+                };
+                responder.send(response.as_ref()).context("error sending response")?;
             }
             _ => {
                 log::info!("Unsupported method");
