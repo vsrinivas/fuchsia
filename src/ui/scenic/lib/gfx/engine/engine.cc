@@ -127,7 +127,7 @@ scheduling::RenderFrameResult Engine::RenderFrame(fxl::WeakPtr<scheduling::Frame
   TRACE_DURATION("gfx", "RenderFrame", "frame_number", frame_number, "time",
                  presentation_time.get());
 
-  TRACE_FLOW_BEGIN("gfx", "scenic_frame", frame_number);
+  TRACE_FLOW_STEP("gfx", "scenic_frame", frame_number);
 
   UpdateAndDeliverMetrics(presentation_time);
 

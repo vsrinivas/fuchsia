@@ -124,16 +124,11 @@ void Session::Present(uint64_t presentation_time, std::vector<zx::event> acquire
 }
 
 void Session::Present2(fuchsia::ui::scenic::Present2Args args, Present2Callback callback) {
-  TRACE_DURATION("gfx", "scenic_impl::Session::Present2");
-
   if (!VerifyPresentType(PresentType::PRESENT2)) {
     reporter_->ERROR() << "Client cannot use Present() and Present2() in the same Session";
     destroy_session_func_();
     return;
   }
-
-  TRACE_FLOW_END("gfx", "Session::Present", next_present_trace_id_);
-  next_present_trace_id_++;
 
   // Kill the Session if they have not set any of the Present2Args fields.
   if (!args.has_requested_presentation_time() || !args.has_release_fences() ||
@@ -150,6 +145,12 @@ void Session::Present2(fuchsia::ui::scenic::Present2Args args, Present2Callback 
     destroy_session_func_();
     return;
   }
+
+  // Output requested presentation time in milliseconds.
+  TRACE_DURATION("gfx", "scenic_impl::Session::Present2", "requested_presentation_time",
+                 args.requested_presentation_time() / 1'000'000);
+  TRACE_FLOW_END("gfx", "Session::Present", next_present_trace_id_);
+  next_present_trace_id_++;
 
   // After decrementing |num_presents_allowed_|, fire the immediate callback.
   InvokeFuturePresentationTimesCallback(args.requested_prediction_span(), std::move(callback));

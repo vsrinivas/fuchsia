@@ -129,7 +129,9 @@ std::pair<zx::time, zx::time> DefaultFrameScheduler::ComputePresentationAndWakeu
 void DefaultFrameScheduler::RequestFrame(zx::time requested_presentation_time) {
   FXL_DCHECK(HaveUpdatableSessions() || render_continuously_ || render_pending_);
 
-  TRACE_DURATION("gfx", "DefaultFrameScheduler::RequestFrame");
+  // Output requested presentation time in milliseconds.
+  TRACE_DURATION("gfx", "DefaultFrameScheduler::RequestFrame", "requested presentation time",
+                 requested_presentation_time.get() / 1'000'000);
   TRACE_FLOW_BEGIN("gfx", "request_to_render", request_trace_id_begin_);
   ++request_trace_id_begin_;
 
@@ -184,10 +186,6 @@ void DefaultFrameScheduler::MaybeRenderFrame(async_dispatcher_t*, async::TaskBas
   const auto target_presentation_time = next_target_presentation_time_;
   TRACE_DURATION("gfx", "FrameScheduler::MaybeRenderFrame", "target_presentation_time",
                  target_presentation_time.get());
-  while (request_trace_id_end_ < request_trace_id_begin_) {
-    TRACE_FLOW_END("gfx", "request_to_render", request_trace_id_end_);
-    ++request_trace_id_end_;
-  }
 
   // Logging the first few frames to find common startup bugs.
   if (frame_number < 3) {
@@ -560,6 +558,12 @@ bool DefaultFrameScheduler::ApplyUpdates(zx::time target_presentation_time, zx::
   // NOTE: this name is used by scenic_processing_helpers.go
   TRACE_DURATION("gfx", "ApplyScheduledSessionUpdates", "time", target_presentation_time.get(),
                  "frame_number", frame_number);
+
+  while (request_trace_id_end_ < request_trace_id_begin_) {
+    TRACE_FLOW_END("gfx", "request_to_render", request_trace_id_end_);
+    ++request_trace_id_end_;
+  }
+  TRACE_FLOW_BEGIN("gfx", "scenic_frame", frame_number);
 
   const auto update_map = CollectUpdatesForThisFrame(target_presentation_time);
   const bool have_updates = !update_map.empty();
