@@ -1,0 +1,11 @@
+{
+    "program": {
+        "data": "data/clockface_flutter"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.ui.policy.Presenter",
+            "fuchsia.ui.scenic.Scenic"
+        ]
+    }
+}
