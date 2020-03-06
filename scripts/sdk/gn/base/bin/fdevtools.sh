@@ -88,6 +88,10 @@ if [[ ! "$(wc -l < "${AUTH_KEYS_FILE}")" -ge 1 ]]; then
   exit 2
 fi
 
+# Do not create directory names with : otherwise LD_PRELOAD or PATH usage will fail.
+# Avoid / to prevent extra sub-directories being created.
+LABEL_DEVTOOLS="$(echo "${VER_DEVTOOLS}" | tr ':/' '_')"
+
 # Can download Fuchsia DevTools from CIPD with either "latest" or a CIPD hash
 echo "Downloading Fuchsia DevTools ${VER_DEVTOOLS} with CIPD"
 TEMP_ENSURE=$(mktemp /tmp/fuchsia_devtools_cipd_XXXXXX.ensure)
@@ -96,7 +100,7 @@ cat << end > "${TEMP_ENSURE}"
 fuchsia_internal/gui_tools/fuchsia_devtools/\${platform} $VER_DEVTOOLS
 end
 
-FDT_DIR="${FUCHSIA_IMAGE_WORK_DIR}/fuchsia_devtools-${VER_DEVTOOLS}"
+FDT_DIR="${FUCHSIA_IMAGE_WORK_DIR}/fuchsia_devtools-${LABEL_DEVTOOLS}"
 if ! $(run-cipd ensure -ensure-file "${TEMP_ENSURE}" -root "${FDT_DIR}"); then
   rm "$TEMP_ENSURE"
   echo "Failed to download Fuchsia DevTools ${VER_DEVTOOLS}."
