@@ -8,6 +8,7 @@ source_set("mocks") {
   public = [
     "mock_semantic_listener.h",
     "mock_semantic_provider.h",
+    "mock_semantics_source.h",
   ]
 
   sources = [
@@ -15,6 +16,8 @@ source_set("mocks") {
     "mock_semantic_listener.h",
     "mock_semantic_provider.cc",
     "mock_semantic_provider.h",
+    "mock_semantics_source.cc",
+    "mock_semantics_source.h",
   ]
 
   public_deps = [
@@ -28,5 +31,7 @@ source_set("mocks") {
   deps = [
     "//sdk/lib/sys/cpp",
     "//src/lib/syslog/cpp",
+    "//src/ui/a11y/lib/semantics",
+    "//src/ui/a11y/lib/util",
   ]
 }
