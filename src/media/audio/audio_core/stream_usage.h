@@ -14,16 +14,6 @@
 #include "src/lib/syslog/cpp/logger.h"
 
 namespace media::audio {
-namespace internal {
-
-struct EnumHash {
-  template <typename T>
-  size_t operator()(T t) const {
-    return static_cast<size_t>(t);
-  }
-};
-
-}  // namespace internal
 
 static_assert(fuchsia::media::RENDER_USAGE_COUNT == 5);
 #define EXPAND_EACH_FIDL_RENDER_USAGE \
@@ -36,6 +26,10 @@ static_assert(fuchsia::media::RENDER_USAGE_COUNT == 5);
 static constexpr uint32_t kStreamInternalRenderUsageCount = 1;
 #define EXPAND_EACH_INTERNAL_RENDER_USAGE EXPAND_RENDER_USAGE(ULTRASOUND)
 
+#define EXPAND_EACH_RENDER_USAGE \
+  EXPAND_EACH_FIDL_RENDER_USAGE  \
+  EXPAND_EACH_INTERNAL_RENDER_USAGE
+
 static_assert(fuchsia::media::CAPTURE_USAGE_COUNT == 4);
 #define EXPAND_EACH_FIDL_CAPTURE_USAGE \
   EXPAND_CAPTURE_USAGE(BACKGROUND)     \
@@ -45,6 +39,10 @@ static_assert(fuchsia::media::CAPTURE_USAGE_COUNT == 4);
 
 static constexpr uint32_t kStreamInternalCaptureUsageCount = 1;
 #define EXPAND_EACH_INTERNAL_CAPTURE_USAGE EXPAND_CAPTURE_USAGE(ULTRASOUND)
+
+#define EXPAND_EACH_CAPTURE_USAGE \
+  EXPAND_EACH_FIDL_CAPTURE_USAGE  \
+  EXPAND_EACH_INTERNAL_CAPTURE_USAGE
 
 static constexpr uint32_t kStreamRenderUsageCount =
     fuchsia::media::RENDER_USAGE_COUNT + kStreamInternalRenderUsageCount;
@@ -56,6 +54,18 @@ enum class RenderUsage : std::underlying_type_t<fuchsia::media::AudioRenderUsage
       EXPAND_EACH_INTERNAL_RENDER_USAGE
 #undef EXPAND_RENDER_USAGE
 };
+
+constexpr std::array<RenderUsage, fuchsia::media::RENDER_USAGE_COUNT> kFidlRenderUsages = {{
+#define EXPAND_RENDER_USAGE(U) RenderUsage::U,
+    EXPAND_EACH_FIDL_RENDER_USAGE
+#undef EXPAND_RENDER_USAGE
+}};
+
+constexpr std::array<RenderUsage, kStreamRenderUsageCount> kRenderUsages = {{
+#define EXPAND_RENDER_USAGE(U) RenderUsage::U,
+    EXPAND_EACH_RENDER_USAGE
+#undef EXPAND_RENDER_USAGE
+}};
 
 static constexpr uint32_t kStreamCaptureUsageCount =
     fuchsia::media::CAPTURE_USAGE_COUNT + kStreamInternalCaptureUsageCount;
@@ -93,9 +103,6 @@ FidlCaptureUsageFromCaptureUsage(CaptureUsage u) {
   }
   return {};
 }
-
-using RenderUsageSet = std::unordered_set<RenderUsage, internal::EnumHash>;
-using CaptureUsageSet = std::unordered_set<CaptureUsage, internal::EnumHash>;
 
 class StreamUsage {
  public:
@@ -144,8 +151,55 @@ class StreamUsage {
   Usage usage_;
 };
 
+namespace internal {
+
+struct EnumHash {
+  template <typename T>
+  size_t operator()(T t) const {
+    return static_cast<size_t>(t);
+  }
+};
+
+struct StreamUsageHash {
+  size_t operator()(StreamUsage u) const {
+    if (u.is_render_usage()) {
+      return static_cast<size_t>(u.render_usage());
+    }
+    if (u.is_capture_usage()) {
+      return static_cast<size_t>(u.capture_usage()) + kStreamRenderUsageCount;
+    }
+    return std::numeric_limits<size_t>::max();
+  }
+};
+
+}  // namespace internal
+
+using RenderUsageSet = std::unordered_set<RenderUsage, internal::EnumHash>;
+using CaptureUsageSet = std::unordered_set<CaptureUsage, internal::EnumHash>;
+using StreamUsageSet = std::unordered_set<StreamUsage, internal::StreamUsageHash>;
+
+template <typename Container>
+static StreamUsageSet StreamUsageSetFromRenderUsages(const Container& container) {
+  static_assert(std::is_same<typename Container::value_type, RenderUsage>::value);
+  StreamUsageSet result;
+  std::transform(container.cbegin(), container.cend(), std::inserter(result, result.begin()),
+                 [](const auto& u) { return StreamUsage::WithRenderUsage(u); });
+  return result;
+}
+
+template <typename Container>
+static StreamUsageSet StreamUsageSetFromCaptureUsages(const Container& container) {
+  static_assert(std::is_same<typename Container::value_type, CaptureUsage>::value);
+  StreamUsageSet result;
+  std::transform(container.cbegin(), container.cend(), std::inserter(result, result.begin()),
+                 [](const auto& u) { return StreamUsage::WithCaptureUsage(u); });
+  return result;
+}
+
 }  // namespace media::audio
 
+#undef EXPAND_EACH_CAPTURE_USAGE
+#undef EXPAND_EACH_RENDER_USAGE
 #undef EXPAND_EACH_FIDL_CAPTURE_USAGE
 #undef EXPAND_EACH_FIDL_RENDER_USAGE
 #undef EXPAND_EACH_INTERNAL_CAPTURE_USAGE

@@ -11,14 +11,6 @@
 
 namespace media::audio {
 
-namespace {
-
-std::array<RenderUsage, kStreamRenderUsageCount> kRenderUsages = {
-    RenderUsage::BACKGROUND, RenderUsage::MEDIA, RenderUsage::INTERRUPTION,
-    RenderUsage::SYSTEM_AGENT, RenderUsage::COMMUNICATION};
-
-}  // namespace
-
 RouteGraph::RouteGraph(const DeviceConfig& device_config, LinkMatrix* link_matrix)
     : link_matrix_(*link_matrix), device_config_(device_config) {
   FX_DCHECK(link_matrix);

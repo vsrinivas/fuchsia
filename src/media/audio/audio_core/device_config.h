@@ -21,19 +21,20 @@ class DeviceConfig {
   // A routing profile for a device.
   class OutputDeviceProfile {
    public:
-    OutputDeviceProfile() = default;
+    OutputDeviceProfile()
+        : OutputDeviceProfile(true, StreamUsageSetFromRenderUsages(kFidlRenderUsages)) {}
 
-    OutputDeviceProfile(bool eligible_for_loopback, RenderUsageSet output_usage_support_set,
+    OutputDeviceProfile(bool eligible_for_loopback, StreamUsageSet supported_usages,
                         bool independent_volume_control = false,
                         PipelineConfig pipeline_config = PipelineConfig::Default())
         : eligible_for_loopback_(eligible_for_loopback),
           independent_volume_control_(independent_volume_control),
           pipeline_config_(std::move(pipeline_config)),
-          output_usage_support_set_(std::move(output_usage_support_set)) {}
+          usage_support_set_(std::move(supported_usages)) {}
 
     bool supports_usage(RenderUsage usage) const {
-      return !output_usage_support_set_ ||
-             output_usage_support_set_->find(usage) != output_usage_support_set_->end();
+      return usage_support_set_.find(StreamUsage::WithRenderUsage(usage)) !=
+             usage_support_set_.end();
     }
 
     // Whether this device is eligible to be looped back to loopback capturers.
@@ -53,9 +54,7 @@ class DeviceConfig {
     bool eligible_for_loopback_ = true;
     bool independent_volume_control_ = false;
     PipelineConfig pipeline_config_ = PipelineConfig::Default();
-
-    // The set of output usages supported by the device.
-    std::optional<RenderUsageSet> output_usage_support_set_;
+    StreamUsageSet usage_support_set_;
   };
 
   class InputDeviceProfile {

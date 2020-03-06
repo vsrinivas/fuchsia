@@ -78,22 +78,48 @@ fit::result<VolumeCurve, VolumeCurve::Error> ParseVolumeCurveFromJsonObject(
   return VolumeCurve::FromMappings(std::move(mappings));
 }
 
-RenderUsage UsageFromString(std::string_view string) {
-  if (string == "media") {
+std::optional<RenderUsage> RenderUsageFromString(std::string_view string) {
+  if (string == "media" || string == "render:media") {
     return RenderUsage::MEDIA;
-  } else if (string == "background") {
+  } else if (string == "background" || string == "render:background") {
     return RenderUsage::BACKGROUND;
-  } else if (string == "communications") {
+  } else if (string == "communications" || string == "render:communications") {
     return RenderUsage::COMMUNICATION;
-  } else if (string == "interruption") {
+  } else if (string == "interruption" || string == "render:interruption") {
     return RenderUsage::INTERRUPTION;
-  } else if (string == "system_agent") {
+  } else if (string == "system_agent" || string == "render:system_agent") {
     return RenderUsage::SYSTEM_AGENT;
-  } else if (string == "ultrasound") {
+  } else if (string == "ultrasound" || string == "render:ultrasound") {
     return RenderUsage::ULTRASOUND;
   }
-  FX_CHECK(false);
-  return RenderUsage::MEDIA;
+  return std::nullopt;
+}
+
+std::optional<CaptureUsage> CaptureUsageFromString(std::string_view string) {
+  if (string == "background" || string == "capture:background") {
+    return CaptureUsage::BACKGROUND;
+  } else if (string == "foreground" || string == "capture:foreground") {
+    return CaptureUsage::FOREGROUND;
+  } else if (string == "system_agent" || string == "capture:system_agent") {
+    return CaptureUsage::SYSTEM_AGENT;
+  } else if (string == "communications" || string == "capture:communications") {
+    return CaptureUsage::COMMUNICATION;
+  } else if (string == "ultrasound" || string == "capture:ultrasound") {
+    return CaptureUsage::ULTRASOUND;
+  }
+  return std::nullopt;
+}
+
+std::optional<StreamUsage> StreamUsageFromString(std::string_view string) {
+  auto render_usage = RenderUsageFromString(string);
+  if (render_usage) {
+    return StreamUsage::WithRenderUsage(*render_usage);
+  }
+  auto capture_usage = CaptureUsageFromString(string);
+  if (capture_usage) {
+    return StreamUsage::WithCaptureUsage(*capture_usage);
+  }
+  return std::nullopt;
 }
 
 PipelineConfig::Effect ParseEffectFromJsonObject(const rapidjson::Value& value) {
@@ -141,7 +167,9 @@ PipelineConfig::MixGroup ParseMixGroupFromJsonObject(const rapidjson::Value& val
     FX_CHECK(it->value.IsArray());
     for (const auto& stream_type : it->value.GetArray()) {
       FX_CHECK(stream_type.IsString());
-      mix_group.input_streams.push_back(UsageFromString(stream_type.GetString()));
+      auto render_usage = RenderUsageFromString(stream_type.GetString());
+      FX_DCHECK(render_usage);
+      mix_group.input_streams.push_back(*render_usage);
     }
   }
 
@@ -227,7 +255,7 @@ std::optional<std::vector<audio_stream_unique_id_t>> ParseDeviceIdFromJsonValue(
 
 std::pair<std::optional<std::vector<audio_stream_unique_id_t>>, DeviceConfig::OutputDeviceProfile>
 ParseOutputDeviceProfileFromJsonObject(const rapidjson::Value& value,
-                                       RenderUsageSet* all_supported_usages) {
+                                       StreamUsageSet* all_supported_usages) {
   FX_CHECK(value.IsObject());
 
   auto device_id_it = value.FindMember(kJsonKeyDeviceId);
@@ -247,17 +275,18 @@ ParseOutputDeviceProfileFromJsonObject(const rapidjson::Value& value,
     independent_volume_control = independent_volume_control_it->value.GetBool();
   }
 
-  auto supported_output_stream_types_it = value.FindMember(kJsonKeySupportedOutputStreamTypes);
-  FX_CHECK(supported_output_stream_types_it != value.MemberEnd());
-  auto& supported_output_stream_types_value = supported_output_stream_types_it->value;
-  FX_CHECK(supported_output_stream_types_value.IsArray());
+  auto supported_stream_types_it = value.FindMember(kJsonKeySupportedOutputStreamTypes);
+  FX_CHECK(supported_stream_types_it != value.MemberEnd());
+  auto& supported_stream_types_value = supported_stream_types_it->value;
+  FX_CHECK(supported_stream_types_value.IsArray());
 
-  RenderUsageSet supported_output_stream_types;
-  for (const auto& stream_type : supported_output_stream_types_value.GetArray()) {
+  StreamUsageSet supported_stream_types;
+  for (const auto& stream_type : supported_stream_types_value.GetArray()) {
     FX_CHECK(stream_type.IsString());
-    const auto supported_usage = UsageFromString(stream_type.GetString());
-    all_supported_usages->insert(supported_usage);
-    supported_output_stream_types.insert(supported_usage);
+    const auto supported_usage = StreamUsageFromString(stream_type.GetString());
+    FX_DCHECK(supported_usage);
+    all_supported_usages->insert(*supported_usage);
+    supported_stream_types.insert(*supported_usage);
   }
 
   auto pipeline_it = value.FindMember(kJsonKeyPipeline);
@@ -276,7 +305,7 @@ ParseOutputDeviceProfileFromJsonObject(const rapidjson::Value& value,
   }
 
   return {device_id, DeviceConfig::OutputDeviceProfile(
-                         eligible_for_loopback, std::move(supported_output_stream_types),
+                         eligible_for_loopback, std::move(supported_stream_types),
                          independent_volume_control, std::move(pipeline_config))};
 }
 
@@ -324,21 +353,20 @@ void ParseOutputDevicePoliciesFromJsonObject(const rapidjson::Value& output_devi
                                              ProcessConfigBuilder* config_builder) {
   FX_CHECK(output_device_profiles.IsArray());
 
-  RenderUsageSet all_supported_usages;
+  StreamUsageSet all_supported_usages;
   for (const auto& output_device_profile : output_device_profiles.GetArray()) {
     config_builder->AddDeviceProfile(
         ParseOutputDeviceProfileFromJsonObject(output_device_profile, &all_supported_usages));
   }
 
   // We expect all the usages that clients can select are supported.
-  FX_CHECK(all_supported_usages.find(RenderUsage::BACKGROUND) != all_supported_usages.end());
-  FX_CHECK(all_supported_usages.find(RenderUsage::MEDIA) != all_supported_usages.end());
-  FX_CHECK(all_supported_usages.find(RenderUsage::INTERRUPTION) != all_supported_usages.end());
-  FX_CHECK(all_supported_usages.find(RenderUsage::SYSTEM_AGENT) != all_supported_usages.end());
-  FX_CHECK(all_supported_usages.find(RenderUsage::COMMUNICATION) != all_supported_usages.end());
-
+  for (const auto& render_usage : kFidlRenderUsages) {
+    FX_CHECK(all_supported_usages.find(StreamUsage::WithRenderUsage(render_usage)) !=
+             all_supported_usages.end());
+  }
   // Not all devices will support ultrasound.
-  if (all_supported_usages.find(RenderUsage::ULTRASOUND) == all_supported_usages.end()) {
+  if (all_supported_usages.find(StreamUsage::WithRenderUsage(RenderUsage::ULTRASOUND)) ==
+      all_supported_usages.end()) {
     FX_LOGS(INFO) << "Device does not support ultrasound";
   }
 }

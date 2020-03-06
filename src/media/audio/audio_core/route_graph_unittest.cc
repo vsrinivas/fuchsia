@@ -695,11 +695,11 @@ static const DeviceConfig kConfigWithMediaExternalRoutingPolicy = DeviceConfig(
                    DeviceConfig::OutputDeviceProfile(
                        /*eligible_for_loopback=*/true,
                        /*output_usage_support_set=*/
-                       {RenderUsage::BACKGROUND, RenderUsage::MEDIA, RenderUsage::INTERRUPTION,
-                        RenderUsage::SYSTEM_AGENT, RenderUsage::COMMUNICATION})}},
+                       StreamUsageSetFromRenderUsages(kFidlRenderUsages))}},
     /*default=*/
     {DeviceConfig::OutputDeviceProfile(
-        /*eligible_for_loopback=*/true, /*output_usage_support_set=*/{RenderUsage::MEDIA})},
+        /*eligible_for_loopback=*/true,
+        /*output_usage_support_set=*/{StreamUsage::WithRenderUsage(RenderUsage::MEDIA)})},
     {}, {});
 
 class RouteGraphWithMediaExternalPolicyTest : public RouteGraphTest {
@@ -753,19 +753,17 @@ static const DeviceConfig kConfigWithExternNonLoopbackDevicePolicy = DeviceConfi
                    DeviceConfig::OutputDeviceProfile(
                        /*eligible_for_loopback=*/true,
                        /*output_usage_support_set=*/
-                       {RenderUsage::BACKGROUND, RenderUsage::MEDIA, RenderUsage::INTERRUPTION,
-                        RenderUsage::SYSTEM_AGENT, RenderUsage::COMMUNICATION})},
+                       StreamUsageSetFromRenderUsages(kFidlRenderUsages))},
                   {{kSupportsLoopbackDeviceId},
                    DeviceConfig::OutputDeviceProfile(
                        /*eligible_for_loopback=*/true,
                        /*output_usage_support_set=*/
-                       {RenderUsage::BACKGROUND})}},
+                       {StreamUsage::WithRenderUsage(RenderUsage::BACKGROUND)})}},
     /*default=*/
     {DeviceConfig::OutputDeviceProfile(
         /*eligible_for_loopback=*/false,
-        /*output_usage_support_set=*/{RenderUsage::BACKGROUND, RenderUsage::MEDIA,
-                                      RenderUsage::INTERRUPTION, RenderUsage::SYSTEM_AGENT,
-                                      RenderUsage::COMMUNICATION})},
+        /*output_usage_support_set=*/
+        {StreamUsageSetFromRenderUsages(kFidlRenderUsages)})},
     {}, {});
 
 class RouteGraphWithExternalNonLoopbackDeviceTest : public RouteGraphTest {

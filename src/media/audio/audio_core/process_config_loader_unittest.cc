@@ -203,7 +203,7 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithRoutingPolicyNoDefault) {
   EXPECT_TRUE(config.output_device_profile(unknown_id).supports_usage(RenderUsage::BACKGROUND));
   EXPECT_TRUE(config.output_device_profile(unknown_id).supports_usage(RenderUsage::COMMUNICATION));
   EXPECT_TRUE(config.output_device_profile(unknown_id).supports_usage(RenderUsage::SYSTEM_AGENT));
-  EXPECT_TRUE(config.output_device_profile(unknown_id).supports_usage(RenderUsage::ULTRASOUND));
+  EXPECT_FALSE(config.output_device_profile(unknown_id).supports_usage(RenderUsage::ULTRASOUND));
 
   EXPECT_TRUE(config.output_device_profile(unknown_id).eligible_for_loopback());
 }
