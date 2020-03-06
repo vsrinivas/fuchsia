@@ -5,7 +5,8 @@
 use std::{mem, slice, sync::Arc};
 
 use euclid::Rect;
-use fidl_fuchsia_sysmem::BufferCollectionSynchronousProxy;
+use fidl_fuchsia_sysmem::{BufferCollectionSynchronousProxy, CoherencyDomain};
+use fuchsia_trace::duration;
 use fuchsia_zircon::{self as zx, prelude::*};
 use mapped_vmo::Mapping;
 
@@ -42,6 +43,7 @@ pub(crate) struct VmoImage {
     color_buffer: ColorBuffer,
     map: Option<mold::tile::Map>,
     old_layers: Option<u32>,
+    coherency_domain: CoherencyDomain,
 }
 
 impl VmoImage {
@@ -58,6 +60,7 @@ impl VmoImage {
             color_buffer: ColorBuffer { mapping: Arc::new(mapping), stride: width as usize },
             map: None,
             old_layers: None,
+            coherency_domain: CoherencyDomain::Cpu,
         }
     }
 
@@ -109,6 +112,7 @@ impl VmoImage {
             },
             map: None,
             old_layers: None,
+            coherency_domain: buffers.settings.buffer_settings.coherency_domain,
         }
     }
 
@@ -117,9 +121,13 @@ impl VmoImage {
     }
 
     pub fn flush(&mut self) {
-        self.vmo
-            .op_range(zx::VmoOp::CACHE_CLEAN_INVALIDATE, 0, self.len_bytes)
-            .expect("failed to clean VMO cache");
+        // TODO: avoid flush of whole image by making this part of render().
+        if self.coherency_domain != CoherencyDomain::Cpu {
+            duration!("gfx", "VmoImage::flush");
+            self.vmo
+                .op_range(zx::VmoOp::CACHE_CLEAN, 0, self.len_bytes)
+                .expect("failed to clean VMO cache");
+        }
     }
 
     pub fn as_mut_slice(&mut self) -> &mut [u8] {
@@ -128,6 +136,8 @@ impl VmoImage {
     }
 
     pub fn clear(&mut self, clear_color: [u8; 4]) {
+        duration!("gfx", "VmoImage::clear");
+
         let slice = self.as_mut_slice();
         let len = clear_color.len();
 
@@ -145,6 +155,8 @@ impl VmoImage {
         composition: &MoldComposition,
         clip: Rect<u32>,
     ) {
+        duration!("gfx", "VmoImage::render");
+
         self.map = Some(
             self.map
                 .take()
