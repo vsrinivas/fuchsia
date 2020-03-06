@@ -10,6 +10,7 @@ mod hanging_get_tests;
 mod input_tests;
 mod intl_tests;
 mod light_sensor_tests;
+mod message_tests;
 mod night_mode_tests;
 mod privacy_tests;
 mod restore_agent_tests;

@@ -20,6 +20,7 @@ use {
     crate::do_not_disturb::spawn_do_not_disturb_fidl_handler,
     crate::intl::intl_controller::IntlController,
     crate::intl::intl_fidl_handler::spawn_intl_fidl_handler,
+    crate::message::message_hub::MessageHub,
     crate::night_mode::night_mode_controller::NightModeController,
     crate::night_mode::spawn_night_mode_fidl_handler,
     crate::power::spawn_power_controller,
@@ -73,6 +74,7 @@ mod system;
 pub mod agent;
 pub mod conduit;
 pub mod config;
+pub mod message;
 pub mod registry;
 pub mod service_context;
 pub mod switchboard;
@@ -291,6 +293,7 @@ fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>(
     service_context_handle: ServiceContextHandle,
     handler_factory: Arc<Mutex<SettingHandlerFactoryImpl<T>>>,
 ) -> Receiver<Result<(), Error>> {
+    let _ = MessageHub::<SettingType, usize>::create();
     let conduit_handle = ConduitImpl::create();
 
     // Creates switchboard, handed to interface implementations to send messages
