@@ -243,17 +243,20 @@ impl Context {
                     };
 
                     composition.with_inner_layers(|layers| {
+                        let (layers, old_layer_ids) = match layers {
+                            Layers::Mold(layers, old_layer_ids) => (layers, old_layer_ids),
+                            Layers::Empty => (vec![], Rc::new(RefCell::new(vec![]))),
+                            _ => panic!("mismatched backends"),
+                        };
+
                         let composition = MoldComposition {
-                            layers: match layers {
-                                Layers::Mold(layers) => layers,
-                                Layers::Empty => vec![],
-                                _ => panic!("mismatched backends"),
-                            },
+                            layers,
+                            old_layer_ids,
                             background_color: composition.background_color,
                         };
 
                         context.render_with_clip(&composition, clip, image, &ext);
-                        Layers::Mold(composition.layers)
+                        Layers::Mold(composition.layers, composition.old_layer_ids)
                     });
                 } else {
                     panic!("mismatched backends");
@@ -525,9 +528,11 @@ pub struct Composition {
     background_color: Color,
 }
 
+use std::{cell::RefCell, rc::Rc};
+
 #[derive(Clone, Debug)]
 enum Layers {
-    Mold(Vec<generic::Layer<Mold>>),
+    Mold(Vec<generic::Layer<Mold>>, Rc<RefCell<Vec<mold_next::LayerId>>>),
     Spinel(Vec<generic::Layer<Spinel>>),
     Empty,
 }
@@ -554,6 +559,7 @@ impl Composition {
                         style: layer.style,
                     })
                     .collect(),
+                Rc::new(RefCell::new(vec![])),
             ),
             Some(Layer { raster: Raster { inner: RasterInner::Spinel(_) }, .. }) => Layers::Spinel(
                 peekable
@@ -581,7 +587,11 @@ impl Composition {
     /// Resets composition by removing all layers.
     pub fn clear(&mut self) {
         match &mut self.layers {
-            Layers::Mold(layers) => layers.clear(),
+            Layers::Mold(layers, old_layer_ids) => {
+                let mut old_layer_ids = old_layer_ids.borrow_mut();
+                old_layer_ids
+                    .extend(layers.drain(..).filter_map(|layer| layer.raster.layer_id.get()));
+            }
             Layers::Spinel(layers) => layers.clear(),
             Layers::Empty => (),
         }
@@ -599,7 +609,7 @@ impl Composition {
         if let Layers::Empty = self.layers {
             match iter.peek() {
                 Some(Layer { raster: Raster { inner: RasterInner::Mold(_) }, .. }) => {
-                    self.layers = Layers::Mold(vec![]);
+                    self.layers = Layers::Mold(vec![], Rc::new(RefCell::new(vec![])));
                 }
                 Some(Layer { raster: Raster { inner: RasterInner::Spinel(_) }, .. }) => {
                     self.layers = Layers::Spinel(vec![]);
@@ -609,17 +619,22 @@ impl Composition {
         }
 
         match &mut self.layers {
-            Layers::Mold(layers) => {
-                layers.splice(
-                    range,
-                    iter.map(|layer| generic::Layer {
-                        raster: if let RasterInner::Mold(raster) = layer.raster.inner {
-                            raster
-                        } else {
-                            panic!("mismatched backends");
-                        },
-                        style: layer.style,
-                    }),
+            Layers::Mold(layers, old_layer_ids) => {
+                let mut old_layer_ids = old_layer_ids.borrow_mut();
+                old_layer_ids.extend(
+                    layers
+                        .splice(
+                            range,
+                            iter.map(|layer| generic::Layer {
+                                raster: if let RasterInner::Mold(raster) = layer.raster.inner {
+                                    raster
+                                } else {
+                                    panic!("mismatched backends");
+                                },
+                                style: layer.style,
+                            }),
+                        )
+                        .filter_map(|layer| layer.raster.layer_id.get()),
                 );
             }
             Layers::Spinel(layers) => {

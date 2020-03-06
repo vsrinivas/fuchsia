@@ -4,8 +4,6 @@
 
 use std::rc::Rc;
 
-use mold;
-
 use crate::{
     render::generic::{mold::Mold, PathBuilder},
     Point,
@@ -13,7 +11,7 @@ use crate::{
 
 #[derive(Clone, Debug)]
 pub struct MoldPath {
-    pub(crate) path: Rc<mold::Path>,
+    pub(crate) path: Rc<mold_next::Path>,
 }
 
 impl Eq for MoldPath {}
@@ -24,19 +22,19 @@ impl PartialEq for MoldPath {
     }
 }
 
-fn to_mold_point(point: Point) -> mold::Point<f32> {
-    mold::Point::new(point.x, point.y)
+fn to_mold_point(point: Point) -> mold_next::Point<f32> {
+    mold_next::Point::new(point.x, point.y)
 }
 
 #[derive(Debug)]
 pub struct MoldPathBuilder {
-    path: mold::Path,
-    end_point: mold::Point<f32>,
+    path: mold_next::Path,
+    end_point: mold_next::Point<f32>,
 }
 
 impl MoldPathBuilder {
     pub(crate) fn new() -> Self {
-        Self { path: mold::Path::new(), end_point: mold::Point::new(0.0, 0.0) }
+        Self { path: mold_next::Path::new(), end_point: mold_next::Point::new(0.0, 0.0) }
     }
 }
 

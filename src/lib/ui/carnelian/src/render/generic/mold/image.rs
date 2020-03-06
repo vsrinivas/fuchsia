@@ -2,37 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::{mem, slice, sync::Arc};
+use std::{mem, slice, sync::Arc, u16};
 
-use euclid::Rect;
+use euclid::{Rect, Vector2D};
 use fidl_fuchsia_sysmem::{BufferCollectionSynchronousProxy, CoherencyDomain};
 use fuchsia_trace::duration;
 use fuchsia_zircon::{self as zx, prelude::*};
 use mapped_vmo::Mapping;
 
-use crate::render::generic::mold::MoldComposition;
+use crate::render::generic::{mold::MoldComposition, BlendMode, Fill, FillRule};
 
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct MoldImage(pub(crate) usize);
-
-#[derive(Clone, Debug)]
-struct ColorBuffer {
-    mapping: Arc<Mapping>,
-    stride: usize,
-}
-impl mold::ColorBuffer for ColorBuffer {
-    fn pixel_format(&self) -> mold::PixelFormat {
-        mold::PixelFormat::BGRA8888
-    }
-
-    fn stride(&self) -> usize {
-        self.stride
-    }
-
-    unsafe fn write_at(&mut self, offset: usize, src: *const u8, len: usize) {
-        self.mapping.write_at(offset, std::slice::from_raw_parts(src, len));
-    }
-}
 
 #[derive(Debug)]
 pub(crate) struct VmoImage {
@@ -40,8 +21,9 @@ pub(crate) struct VmoImage {
     width: u32,
     height: u32,
     len_bytes: u64,
-    color_buffer: ColorBuffer,
-    map: Option<mold::tile::Map>,
+    mapping: Arc<Mapping>,
+    stride: usize,
+    composition: mold_next::Composition,
     old_layers: Option<u32>,
     coherency_domain: CoherencyDomain,
 }
@@ -57,8 +39,9 @@ impl VmoImage {
             width,
             height,
             len_bytes: len_bytes as u64,
-            color_buffer: ColorBuffer { mapping: Arc::new(mapping), stride: width as usize },
-            map: None,
+            mapping: Arc::new(mapping),
+            stride: width as usize,
+            composition: mold_next::Composition::new(),
             old_layers: None,
             coherency_domain: CoherencyDomain::Cpu,
         }
@@ -106,18 +89,16 @@ impl VmoImage {
             width,
             height,
             len_bytes: len_bytes as u64,
-            color_buffer: ColorBuffer {
-                mapping,
-                stride: bytes_per_row as usize / mem::size_of::<u32>(),
-            },
-            map: None,
+            mapping,
+            stride: bytes_per_row as usize / mem::size_of::<u32>(),
+            composition: mold_next::Composition::new(),
             old_layers: None,
             coherency_domain: buffers.settings.buffer_settings.coherency_domain,
         }
     }
 
     pub fn bytes_per_row(&self) -> usize {
-        self.color_buffer.stride * mem::size_of::<u32>()
+        self.stride * mem::size_of::<u32>()
     }
 
     pub fn flush(&mut self) {
@@ -131,7 +112,7 @@ impl VmoImage {
     }
 
     pub fn as_mut_slice(&mut self) -> &mut [u8] {
-        let (data, len) = Arc::get_mut(&mut self.color_buffer.mapping).unwrap().as_ptr_len();
+        let (data, len) = Arc::get_mut(&mut self.mapping).unwrap().as_ptr_len();
         unsafe { slice::from_raw_parts_mut(data, len) }
     }
 
@@ -148,39 +129,97 @@ impl VmoImage {
         }
     }
 
-    pub fn render(
-        &mut self,
-        width: usize,
-        height: usize,
-        composition: &MoldComposition,
-        clip: Rect<u32>,
-    ) {
+    pub fn render(&mut self, composition: &MoldComposition, _clip: Rect<u32>) {
         duration!("gfx", "VmoImage::render");
 
-        self.map = Some(
-            self.map
-                .take()
-                .filter(|map| map.width() == width && map.height() == height)
-                .unwrap_or_else(|| mold::tile::Map::without_partial_updates(width, height)),
-        );
+        // TODO(dtiselice): Use clip.
 
-        let map = self.map.as_mut().unwrap();
+        let mut current = std::collections::HashSet::new();
 
-        map.set_clip(Some(mold::Clip {
-            x: clip.origin.x as usize,
-            y: clip.origin.y as usize,
-            width: clip.size.width as usize,
-            height: clip.size.height as usize,
-        }));
+        for (order, layer) in composition.layers.iter().rev().enumerate() {
+            let layer_id = layer.raster.layer_id.get().unwrap_or_else(|| {
+                let layer_id = self
+                    .composition
+                    .create_layer()
+                    .expect(&format!("Layer limit reached. ({})", u16::max_value()));
 
-        if let Some(layers) = self.old_layers {
-            for i in 0..layers {
-                map.remove(i);
+                for print in &layer.raster.prints {
+                    let transform: [f32; 9] = [
+                        print.transform.m11,
+                        print.transform.m21,
+                        print.transform.m31,
+                        print.transform.m12,
+                        print.transform.m22,
+                        print.transform.m32,
+                        0.0,
+                        0.0,
+                        1.0,
+                    ];
+                    self.composition.insert_in_layer_transformed(
+                        layer_id,
+                        &*print.path,
+                        &transform,
+                    );
+                }
+
+                layer.raster.layer_id.set(Some(layer_id));
+
+                layer_id
+            });
+
+            current.insert(layer_id);
+
+            let mold_layer =
+                self.composition.get_mut(layer_id).unwrap().set_order(order as u16).set_style(
+                    mold_next::Style {
+                        fill_rule: match layer.style.fill_rule {
+                            FillRule::NonZero => mold_next::FillRule::NonZero,
+                            FillRule::EvenOdd => mold_next::FillRule::EvenOdd,
+                            // TODO(dtiselice): Implement WholeTile.
+                            FillRule::WholeTile => mold_next::FillRule::NonZero,
+                        },
+                        fill: match layer.style.fill {
+                            Fill::Solid(color) => {
+                                mold_next::Fill::Solid([color.b, color.g, color.r, color.a])
+                            }
+                        },
+                        blend_mode: match layer.style.blend_mode {
+                            BlendMode::Over => mold_next::BlendMode::Over,
+                        },
+                    },
+                );
+
+            if layer.raster.translation != Vector2D::zero() {
+                mold_layer.set_transform(&[
+                    1.0,
+                    0.0,
+                    0.0,
+                    1.0,
+                    layer.raster.translation.x,
+                    layer.raster.translation.y,
+                ]);
             }
         }
 
-        self.old_layers = Some(composition.set_up_map(map));
+        for layer_id in composition.old_layer_ids.borrow_mut().drain(..) {
+            self.composition.remove_layer(layer_id);
+        }
 
-        map.render(self.color_buffer.clone());
+        let (data, len) = Arc::get_mut(&mut self.mapping).unwrap().as_ptr_len();
+        let buffer = unsafe { slice::from_raw_parts_mut(data as *mut [u8; 4], len / 4) };
+
+        self.composition.render(
+            mold_next::Buffer {
+                buffer,
+                width: self.width as usize,
+                width_stride: Some(self.stride),
+            },
+            [
+                composition.background_color.b,
+                composition.background_color.g,
+                composition.background_color.r,
+                composition.background_color.a,
+            ],
+        );
     }
 }

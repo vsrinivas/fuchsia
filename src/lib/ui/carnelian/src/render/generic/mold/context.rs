@@ -257,7 +257,7 @@ impl Context<Mold> for MoldContext {
             );
         }
 
-        image.render(width, height, composition, clip);
+        image.render(composition, clip);
 
         // TODO: Motion blur support.
         if let Some(PostCopy { image: dst_image_id, copy_region, .. }) = ext.post_copy {

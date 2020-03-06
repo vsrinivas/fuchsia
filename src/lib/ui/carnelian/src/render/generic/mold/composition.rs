@@ -2,106 +2,36 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::ops::RangeBounds;
+use std::{cell::RefCell, ops::RangeBounds, rc::Rc};
 
 use crate::{
-    render::generic::{mold::Mold, BlendMode, Composition, Fill, FillRule, Layer, Style},
+    render::generic::{mold::Mold, Composition, Layer},
     Color,
 };
-
-fn style_to_ops(style: &Style) -> Vec<mold::tile::Op> {
-    let fill_rule = match style.fill_rule {
-        FillRule::NonZero => vec![mold::tile::Op::CoverWipZero, mold::tile::Op::CoverWipNonZero],
-        FillRule::EvenOdd => vec![mold::tile::Op::CoverWipZero, mold::tile::Op::CoverWipEvenOdd],
-        FillRule::WholeTile => vec![mold::tile::Op::CoverWipZero],
-    };
-    let fill = match style.fill {
-        Fill::Solid(color) => mold::tile::Op::ColorWipFillSolid(u32::from_be_bytes([
-            color.r, color.g, color.b, color.a,
-        ])),
-    };
-    let blend_mode = match style.blend_mode {
-        BlendMode::Over => mold::tile::Op::ColorAccBlendOver,
-    };
-
-    fill_rule.into_iter().chain(std::iter::once(fill)).chain(std::iter::once(blend_mode)).collect()
-}
 
 #[derive(Clone, Debug)]
 pub struct MoldComposition {
     pub(crate) layers: Vec<Layer<Mold>>,
+    pub(crate) old_layer_ids: Rc<RefCell<Vec<mold_next::LayerId>>>,
     pub(crate) background_color: Color,
-}
-
-impl MoldComposition {
-    pub(crate) fn set_up_map(&self, map: &mut mold::tile::Map) -> u32 {
-        map.global(0, vec![mold::tile::Op::ColorAccZero]);
-
-        for (i, layer) in self.layers.iter().enumerate() {
-            let mut rasters = vec![];
-
-            for (paths_and_transforms, txty) in layer.raster.rasters.iter() {
-                let mut paths_transforms = vec![];
-
-                for (path, transform) in paths_and_transforms {
-                    let transform = transform.post_translate(*txty);
-                    let transform: [f32; 9] = [
-                        transform.m11,
-                        transform.m21,
-                        transform.m31,
-                        transform.m12,
-                        transform.m22,
-                        transform.m32,
-                        0.0,
-                        0.0,
-                        1.0,
-                    ];
-                    paths_transforms.push(((**path).clone(), transform));
-                }
-
-                rasters.push(mold::Raster::from_paths_and_transforms(
-                    paths_transforms.iter().map(|(path, transform)| (path, transform)),
-                ));
-            }
-
-            map.print(
-                i as u32 + 1,
-                mold::Layer::new(mold::Raster::union(rasters.iter()), style_to_ops(&layer.style)),
-            );
-        }
-
-        const BACKGROUND_LAYER_ID: u32 = 1 << 31;
-
-        let len = self.layers.len() as u32 + 1;
-        if len > BACKGROUND_LAYER_ID {
-            panic!("too many layers {}", len - 1);
-        }
-
-        map.global(
-            BACKGROUND_LAYER_ID,
-            vec![mold::tile::Op::ColorAccBackground(u32::from_be_bytes([
-                self.background_color.r,
-                self.background_color.g,
-                self.background_color.b,
-                self.background_color.a,
-            ]))],
-        );
-
-        len
-    }
 }
 
 impl Composition<Mold> for MoldComposition {
     fn new(background_color: Color) -> Self {
-        Self { layers: vec![], background_color }
+        Self { layers: vec![], old_layer_ids: Rc::new(RefCell::new(vec![])), background_color }
     }
 
     fn with_layers(layers: impl IntoIterator<Item = Layer<Mold>>, background_color: Color) -> Self {
-        Self { layers: layers.into_iter().collect(), background_color }
+        Self {
+            layers: layers.into_iter().collect(),
+            old_layer_ids: Rc::new(RefCell::new(vec![])),
+            background_color,
+        }
     }
 
     fn clear(&mut self) {
-        self.layers.clear();
+        let mut old_layer_ids = self.old_layer_ids.borrow_mut();
+        old_layer_ids.extend(self.layers.drain(..).filter_map(|layer| layer.raster.layer_id.get()));
     }
 
     fn replace<R, I>(&mut self, range: R, with: I)
@@ -109,6 +39,9 @@ impl Composition<Mold> for MoldComposition {
         R: RangeBounds<usize>,
         I: IntoIterator<Item = Layer<Mold>>,
     {
-        self.layers.splice(range, with);
+        let mut old_layer_ids = self.old_layer_ids.borrow_mut();
+        old_layer_ids.extend(
+            self.layers.splice(range, with).filter_map(|layer| layer.raster.layer_id.get()),
+        );
     }
 }
