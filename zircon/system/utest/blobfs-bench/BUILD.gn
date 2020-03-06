@@ -61,9 +61,6 @@ test("blobfs-bench") {
     "//zircon/system/fidl/fuchsia-io:c",
     "//zircon/system/ulib/fs-test-utils",
   ]
-
-  # TODO(46867): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 migrated_manifest("blobfs-bench-manifest") {
