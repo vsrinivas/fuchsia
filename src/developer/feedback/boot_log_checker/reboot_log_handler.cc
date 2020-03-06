@@ -198,32 +198,7 @@ fit::promise<void> RebootLogHandler::Handle(const std::string& filepath) {
     return fit::make_ok_promise();
   }
 
-  return WaitForNetworkToBeReachable().and_then([this, info]() { return FileCrashReport(info); });
-}
-
-fit::promise<void> RebootLogHandler::WaitForNetworkToBeReachable() {
-  connectivity_ = services_->Connect<fuchsia::net::Connectivity>();
-  connectivity_.set_error_handler([this](zx_status_t status) {
-    if (!network_reachable_.completer) {
-      return;
-    }
-
-    FX_PLOGS(ERROR, status) << "Lost connection to fuchsia.net.Connectivity";
-    network_reachable_.completer.complete_error();
-  });
-  connectivity_.events().OnNetworkReachable = [this](bool reachable) {
-    if (!reachable) {
-      return;
-    }
-    connectivity_.Unbind();
-
-    if (!network_reachable_.completer) {
-      return;
-    }
-    network_reachable_.completer.complete_ok();
-  };
-
-  return network_reachable_.consumer.promise_or(fit::error());
+  return FileCrashReport(info);
 }
 
 fit::promise<void> RebootLogHandler::FileCrashReport(const RebootInfo info) {

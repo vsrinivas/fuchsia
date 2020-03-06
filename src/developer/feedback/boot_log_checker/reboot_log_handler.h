@@ -7,7 +7,6 @@
 
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <fuchsia/feedback/cpp/fidl.h>
-#include <fuchsia/net/cpp/fidl.h>
 #include <lib/fit/bridge.h>
 #include <lib/fit/promise.h>
 #include <lib/sys/cpp/service_directory.h>
@@ -40,7 +39,7 @@ struct RebootInfo {
   std::optional<zx::duration> uptime;
 };
 
-// Wraps around fuchsia.net.Connectivity, fuchsia.feedback.CrashReporter, fuchsia.cobalt.Logger and
+// Wraps around fuchsia.feedback.CrashReporter, fuchsia.cobalt.Logger and
 // fuchsia.cobalt.LoggerFactory to handle establishing the connection, losing the connection,
 // waiting for the callback, etc.
 //
@@ -52,7 +51,6 @@ class RebootLogHandler {
   fit::promise<void> Handle(const std::string& filepath);
 
  private:
-  fit::promise<void> WaitForNetworkToBeReachable();
   fit::promise<void> FileCrashReport(RebootInfo info);
 
   async_dispatcher_t* dispatcher_;
@@ -61,9 +59,6 @@ class RebootLogHandler {
   bool has_called_handle_ = false;
 
   fsl::SizedVmo reboot_log_;
-
-  fuchsia::net::ConnectivityPtr connectivity_;
-  fit::bridge<void> network_reachable_;
 
   fuchsia::feedback::CrashReporterPtr crash_reporter_;
   fit::bridge<void> crash_reporting_done_;

@@ -46,14 +46,12 @@ executable("reboot_log_handler_unittest") {
     "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//src/developer/feedback/testing:unit_test_fixture",
     "//src/developer/feedback/testing/stubs:stub_cobalt_logger_factory",
-    "//src/developer/feedback/testing/stubs:stub_network_reachability_provider",
     "//src/developer/feedback/utils:cobalt",
     "//src/lib/files",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-net",
   ]
 
   # TODO(46538): Fix the leaks and remove this.
