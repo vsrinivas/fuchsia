@@ -249,14 +249,30 @@ where
         loop {
             {
                 let mut state_machine = state_machine_ref.borrow_mut();
+
+                info!("Initial context: {:?}", state_machine.context);
+
                 state_machine.update_next_update_time().await;
+
+                let now = clock::now();
+
                 // Wait if |next_update_time| is in the future.
-                if let Ok(duration) =
-                    state_machine.context.schedule.next_update_time.duration_since(clock::now())
+                if let Ok(mut duration) =
+                    state_machine.context.schedule.next_update_time.duration_since(now)
                 {
-                    let date_time =
-                        DateTime::<Utc>::from(state_machine.context.schedule.next_update_time);
-                    info!("Waiting until {} for the next update check...", date_time.to_rfc3339());
+                    if duration > Duration::from_secs(1 * 60 * 60) {
+                        warn!("update check duration exceeds hard 1 hour limit! The value was {} secs",
+                              duration.as_secs());
+
+                        // Cap the duration at 1 hour.
+                        duration = Duration::from_secs(1 * 60 * 60);
+                    }
+                    let duration = duration; // strip mutability
+
+                    info!("Waiting until {} (or {} seconds) for the next update check (currently: {})",
+                          DateTime::<Utc>::from(state_machine.context.schedule.next_update_time).to_string(),
+                          duration.as_secs(),
+                          DateTime::<Utc>::from(now).to_string());
 
                     let fut = state_machine.timer.wait(duration);
                     // Don't borrow the state machine while waiting for the timer, because update
@@ -1249,14 +1265,64 @@ mod tests {
             make_test_app_set(),
         ));
         let state_machine = Rc::new(RefCell::new(state_machine));
+        let spawn_state_machine = Rc::clone(&state_machine);
 
         let mut pool = LocalPool::new();
         pool.spawner()
             .spawn_local(async move {
-                StateMachine::start(state_machine).await;
+                StateMachine::start(spawn_state_machine).await;
             })
             .unwrap();
         pool.run_until_stalled();
+        state_machine.borrow().timer.assert_durations_waited();
+    }
+
+    /// Test that when the last_update_time is in the future, the StateMachine does not wait more
+    /// than 1 hour for the next update time.
+    #[test]
+    fn test_wait_duration_is_capped() {
+        let config = config_generator();
+        let mut timer = MockTimer::new();
+        // The timer should be capped at 1 hour.  The MockTimer will assert if it's asked to wait
+        // a different amount of time.
+        timer.expect(Duration::from_secs(1 * 60 * 60));
+        let now = clock::now();
+        let policy_engine = MockPolicyEngine {
+            check_schedule: UpdateCheckSchedule {
+                // A day into the future, which triggers the capping logic
+                last_update_time: now + Duration::from_secs(24 * 60 * 60),
+                // By policy, the next update time would be an hour from then
+                next_update_time: now
+                    + Duration::from_secs(24 * 60 * 60)
+                    + Duration::from_secs(1 * 60 * 60),
+                next_update_window_start: now
+                    + Duration::from_secs(24 * 60 * 60)
+                    + Duration::from_secs(1 * 60 * 60),
+            },
+            ..MockPolicyEngine::default()
+        };
+
+        let state_machine = block_on(StateMachine::new(
+            policy_engine,
+            StubHttpRequest,
+            StubInstaller::default(),
+            &config,
+            timer,
+            StubMetricsReporter,
+            Rc::new(Mutex::new(StubStorage)),
+            make_test_app_set(),
+        ));
+        let state_machine = Rc::new(RefCell::new(state_machine));
+        let spawn_state_machine = Rc::clone(&state_machine);
+
+        let mut pool = LocalPool::new();
+        pool.spawner()
+            .spawn_local(async move {
+                StateMachine::start(spawn_state_machine).await;
+            })
+            .unwrap();
+        pool.run_until_stalled();
+        state_machine.borrow().timer.assert_durations_waited();
     }
 
     #[test]

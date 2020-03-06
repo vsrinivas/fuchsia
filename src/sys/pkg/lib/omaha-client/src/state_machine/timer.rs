@@ -35,11 +35,12 @@ mod mock {
     #[derive(Debug)]
     pub struct MockTimer {
         expected_durations: VecDeque<(Duration, Duration)>,
+        wait_durations: Vec<Duration>,
     }
 
     impl MockTimer {
         pub fn new() -> Self {
-            MockTimer { expected_durations: VecDeque::new() }
+            MockTimer { expected_durations: VecDeque::new(), wait_durations: Vec::new() }
         }
 
         /// Add a new duration to the end of the expected durations.
@@ -50,6 +51,15 @@ mod mock {
         /// Add a new duration range to the end of the expected durations.
         pub fn expect_range(&mut self, min_duration: Duration, max_duration: Duration) {
             self.expected_durations.push_back((min_duration, max_duration));
+        }
+
+        /// Assert that the expected durations have all be waited on
+        pub fn assert_durations_waited(&self) {
+            assert_eq!(
+                self.expected_durations.len(),
+                0,
+                "Not all expected durations were waited for"
+            );
         }
     }
 
@@ -63,6 +73,7 @@ mod mock {
                     min_duration,
                     max_duration
                 );
+                self.wait_durations.push(duration);
                 future::ready(()).boxed()
             } else {
                 // No more expected durations left, blocking the Timer forever.

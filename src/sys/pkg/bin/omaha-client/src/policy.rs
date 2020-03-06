@@ -4,6 +4,7 @@
 
 use futures::future::BoxFuture;
 use futures::prelude::*;
+use log::info;
 use omaha_client::{
     clock,
     common::{App, CheckOptions, ProtocolState, UpdateCheckSchedule},
@@ -32,6 +33,10 @@ impl Policy for FuchsiaPolicy {
         scheduling: &UpdateCheckSchedule,
         protocol_state: &ProtocolState,
     ) -> UpdateCheckSchedule {
+        info!(
+            "FuchsiaPolicy::UpdateCheckSchedule last_update_time={:?}, current_time={:?}",
+            scheduling.last_update_time, policy_data.current_time
+        );
         // Use server dictated interval if exists, otherwise default to 5 hours.
         let interval = protocol_state.server_dictated_poll_interval.unwrap_or(PERIODIC_INTERVAL);
         let mut next_update_time = scheduling.last_update_time + interval;
