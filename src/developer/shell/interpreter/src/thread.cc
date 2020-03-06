@@ -15,8 +15,12 @@ namespace interpreter {
 void Thread::Execute(ExecutionContext* context, std::unique_ptr<code::Code> code) {
   ExecutionScope scope;
   scope.Execute(context, this, std::move(code));
-  context->interpreter()->ContextDone(context);
-  FX_DCHECK(values_.empty());
+  if (context->has_errors()) {
+    context->interpreter()->ContextDoneWithExecutionError(context);
+  } else {
+    context->interpreter()->ContextDone(context);
+    FX_DCHECK(values_.empty());
+  }
 }
 
 }  // namespace interpreter

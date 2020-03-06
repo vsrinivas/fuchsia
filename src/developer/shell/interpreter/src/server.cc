@@ -165,6 +165,11 @@ void ServerInterpreter::ContextDoneWithAnalysisError(ExecutionContext* context) 
   service_->OnExecutionDone(context->id(), llcpp::fuchsia::shell::ExecuteResult::ANALYSIS_ERROR);
 }
 
+void ServerInterpreter::ContextDoneWithExecutionError(ExecutionContext* context) {
+  FX_DCHECK(context != nullptr);
+  service_->OnExecutionDone(context->id(), llcpp::fuchsia::shell::ExecuteResult::EXECUTION_ERROR);
+}
+
 void ServerInterpreter::TextResult(ExecutionContext* context, std::string_view text) {
   constexpr size_t kMaxResultSize = 65400;
   size_t offset = 0;
@@ -332,6 +337,9 @@ void Service::AddNodes(uint64_t context_id,
                          node.node.string_literal(), node.root_node);
       } else if (node.node.is_variable()) {
         AddVariable(context, node.node_id.file_id, node.node_id.node_id, node.node.variable(),
+                    node.root_node);
+      } else if (node.node.is_addition()) {
+        AddAddition(context, node.node_id.file_id, node.node_id.node_id, node.node.addition(),
                     node.root_node);
       } else {
         interpreter_->EmitError(context->execution_context(),
@@ -576,6 +584,20 @@ void Service::AddVariable(ServerInterpreterContext* context, uint64_t node_file_
                           bool root_node) {
   auto result = std::make_unique<ExpressionVariable>(interpreter(), node_file_id, node_node_id,
                                                      NodeId(node.file_id, node.node_id));
+  interpreter_->AddExpression(context, std::move(result), root_node);
+}
+
+void Service::AddAddition(ServerInterpreterContext* context, uint64_t node_file_id,
+                          uint64_t node_node_id, const llcpp::fuchsia::shell::Addition& node,
+                          bool root_node) {
+  std::unique_ptr<Expression> left =
+      interpreter_->GetExpression(context, NodeId(node_file_id, node_node_id), "left",
+                                  NodeId(node.left.file_id, node.left.node_id));
+  std::unique_ptr<Expression> right =
+      interpreter_->GetExpression(context, NodeId(node_file_id, node_node_id), "right",
+                                  NodeId(node.right.file_id, node.right.node_id));
+  auto result = std::make_unique<Addition>(interpreter(), node_file_id, node_node_id,
+                                           node.with_exceptions, std::move(left), std::move(right));
   interpreter_->AddExpression(context, std::move(result), root_node);
 }
 

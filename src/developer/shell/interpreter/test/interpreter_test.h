@@ -153,6 +153,14 @@ class NodeBuilder {
     return AddNode(&node, /*root_node=*/false);
   }
 
+  // Adds an addition of two values.
+  fuchsia::shell::NodeId Addition(bool with_exceptions, fuchsia::shell::NodeId left,
+                                  fuchsia::shell::NodeId right) {
+    fuchsia::shell::Node node;
+    node.set_addition({with_exceptions, left, right});
+    return AddNode(&node, /*root_node=*/false);
+  }
+
  private:
   // The file id for all the nodes built by this builder.
   const uint64_t file_id_;

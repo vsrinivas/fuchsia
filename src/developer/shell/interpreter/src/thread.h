@@ -25,6 +25,8 @@ class Thread {
 
   Isolate* isolate() const { return isolate_; }
 
+  size_t stack_size() const { return values_.size(); }
+
   // Pops one 64 bit value from the value stack.
   uint64_t Pop() {
     FX_DCHECK(!values_.empty());
@@ -35,6 +37,18 @@ class Thread {
 
   // Pushes one 64 bit value to the value stack.
   void Push(uint64_t value) { values_.push_back(value); }
+
+  // Returns the value of one stack slot relative to the end: index 0 is the last pushed value.
+  uint64_t Value(size_t index) const {
+    FX_DCHECK(index < values_.size());
+    return values_[values_.size() - index - 1];
+  }
+
+  // Consumes several values at once (equivalent to several calls to Pop).
+  void Consume(size_t count) {
+    FX_DCHECK(count <= values_.size());
+    values_.resize(values_.size() - count);
+  }
 
   // Executes |code| for |context| using this thread.
   void Execute(ExecutionContext* context, std::unique_ptr<code::Code> code);

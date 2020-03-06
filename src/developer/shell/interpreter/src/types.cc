@@ -92,6 +92,14 @@ bool TypeString::GenerateVariable(ExecutionContext* context, code::Code* code, c
   return true;
 }
 
+bool TypeString::GenerateAddition(ExecutionContext* context, code::Code* code,
+                                  const Addition* addition) const {
+  size_t count = addition->left()->GenerateStringTerms(context, code, this) +
+                 addition->right()->GenerateStringTerms(context, code, this);
+  code->StringConcatenation(count);
+  return true;
+}
+
 void TypeString::LoadVariable(const ExecutionScope* scope, size_t index, Value* value) const {
   auto data = reinterpret_cast<String* const*>(scope->Data(index, sizeof(String*)));
   value->SetString(*data);
@@ -116,6 +124,16 @@ bool TypeInt::GenerateIntegerLiteral(ExecutionContext* context, code::Code* code
     value = value & (std::numeric_limits<uint64_t>::max() >> (64 - size * 8));
   }
   code->Literal64(value);
+  return true;
+}
+
+bool TypeInt::GenerateAddition(ExecutionContext* context, code::Code* code,
+                               const Addition* addition) const {
+  if (!addition->left()->Compile(context, code, this) ||
+      !addition->right()->Compile(context, code, this)) {
+    return false;
+  }
+  code->IntegerAddition(addition->with_exceptions(), Size(), Signed());
   return true;
 }
 

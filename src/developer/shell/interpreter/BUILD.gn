@@ -92,6 +92,7 @@ executable("shell_interpreter_test_bin") {
 executable("shell_server_test_bin") {
   testonly = true
   sources = [
+    "test/addition.cc",
     "test/interpreter.cc",
     "test/interpreter_test.cc",
     "test/load.cc",

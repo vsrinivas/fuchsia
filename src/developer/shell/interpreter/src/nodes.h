@@ -16,6 +16,7 @@
 namespace shell {
 namespace interpreter {
 
+class Addition;
 class ExecutionContext;
 class ExecutionScope;
 class Expression;
@@ -119,6 +120,11 @@ class Type {
   virtual bool GenerateVariable(ExecutionContext* context, code::Code* code, const NodeId& id,
                                 const Variable* variable) const;
 
+  // Generates an addition. it pops two values, do an addition and pushes the result. It generates
+  // an error if the type doesn't support the addition or if the operand types are not supported.
+  virtual bool GenerateAddition(ExecutionContext* context, code::Code* code,
+                                const Addition* addition) const;
+
   // Loads the current value of the variable stored at |index| in |scope| into |value|.
   virtual void LoadVariable(const ExecutionScope* scope, size_t index, Value* value) const;
 
@@ -170,6 +176,13 @@ class Expression : public Node {
 
   // Compiles the expression (perform the semantic checks and generates code).
   virtual bool Compile(ExecutionContext* context, code::Code* code, const Type* for_type) const = 0;
+
+  // Used by the string concatenation. It generates the string terms for the expression. It usually
+  // generates one string (which is pushed to the stack). For Addition, it generates the strings for
+  // both terms. This way, we can optimize the string concatenation.
+  // Returns the number of strings generated (pushed to the stack).
+  virtual size_t GenerateStringTerms(ExecutionContext* context, code::Code* code,
+                                     const Type* for_type) const;
 };
 
 inline std::ostream& operator<<(std::ostream& os, const Expression& expression) {

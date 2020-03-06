@@ -53,6 +53,14 @@ bool Type::GenerateVariable(ExecutionContext* context, code::Code* code, const N
   return false;
 }
 
+bool Type::GenerateAddition(ExecutionContext* context, code::Code* code,
+                            const Addition* addition) const {
+  std::stringstream ss;
+  ss << "Type " << *this << " doesn' t support addition.";
+  context->EmitError(addition->id(), ss.str());
+  return false;
+}
+
 void Type::LoadVariable(const ExecutionScope* scope, size_t index, Value* value) const {
   FX_LOGS(FATAL) << "Can't load variable of type " << *this;
 }
@@ -65,6 +73,13 @@ Node::Node(Interpreter* interpreter, uint64_t file_id, uint64_t node_id)
 }
 
 Node::~Node() { interpreter_->RemoveNode(id_.file_id, id_.node_id); }
+
+// - Expression ------------------------------------------------------------------------------------
+
+size_t Expression::GenerateStringTerms(ExecutionContext* context, code::Code* code,
+                                       const Type* for_type) const {
+  return Compile(context, code, for_type) ? 1 : 0;
+}
 
 }  // namespace interpreter
 }  // namespace shell

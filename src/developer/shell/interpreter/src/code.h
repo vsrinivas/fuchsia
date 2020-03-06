@@ -19,6 +19,14 @@ namespace code {
 enum class Opcode : uint64_t {
   // Nop: do nothing.
   kNop,
+  // Pops two 8 bit integers from the stack, adds them and pushes the result to the stack.
+  kInt8Addition,
+  // Pops two 16 bit integers from the stack, adds them and pushes the result to the stack.
+  kInt16Addition,
+  // Pops two 32 bit integers from the stack, adds them and pushes the result to the stack.
+  kInt32Addition,
+  // Pops two 64 bit integers from the stack, adds them and pushes the result to the stack.
+  kInt64Addition,
   // Pushes a 64 bit literal to the thread's value stack.
   kLiteral64,
   // Loads a 8 bit global variable and pushes it to the stack.
@@ -38,6 +46,18 @@ enum class Opcode : uint64_t {
   // Return from code execution. The execution goes back to the calling scope or stops if it was
   // the last execution scope.
   kRet,
+  // Pops two 8 bit signed integers from the stack, adds them and pushes the result to the stack.
+  // If an overflow or and underflow occur, an error is generated and the execution stops.
+  kSint8AdditionWithExceptions,
+  // Pops two 16 bit signed integers from the stack, adds them and pushes the result to the stack.
+  // If an overflow or and underflow occur, an error is generated and the execution stops.
+  kSint16AdditionWithExceptions,
+  // Pops two 32 bit signed integers from the stack, adds them and pushes the result to the stack.
+  // If an overflow or and underflow occur, an error is generated and the execution stops.
+  kSint32AdditionWithExceptions,
+  // Pops two 64 bit signed integers from the stack, adds them and pushes the result to the stack.
+  // If an overflow or and underflow occur, an error is generated and the execution stops.
+  kSint64AdditionWithExceptions,
   // Pops a value from the thread's value stack and stores it into a 8 bit global variable.
   kStoreRaw8,
   // Pops a value from the thread's value stack and stores it into a 16 bit global variable.
@@ -46,6 +66,20 @@ enum class Opcode : uint64_t {
   kStoreRaw32,
   // Pops a value from the thread's value stack and stores it into a 64 bit global variable.
   kStoreRaw64,
+  // Pops several strings from the stack, concatenates them and pushes the result to the stack.
+  kStringConcatenation,
+  // Pops two 8 bit unsigned integers from the stack, adds them and pushes the result to the stack.
+  // If an overflow occurs, an error is generated and the execution stops.
+  kUint8AdditionWithExceptions,
+  // Pops two 16 bit unsigned integers from the stack, adds them and pushes the result to the stack.
+  // If an overflow occurs, an error is generated and the execution stops.
+  kUint16AdditionWithExceptions,
+  // Pops two 32 bit unsigned integers from the stack, adds them and pushes the result to the stack.
+  // If an overflow occurs, an error is generated and the execution stops.
+  kUint32AdditionWithExceptions,
+  // Pops two 64 bit unsigned integers from the stack, adds them and pushes the result to the stack.
+  // If an overflow occurs, an error is generated and the execution stops.
+  kUint64AdditionWithExceptions,
 };
 
 // Defines some code. This can represent the code for one function or the code for the pending
@@ -55,6 +89,34 @@ class Code {
   Code() = default;
 
   const std::vector<uint64_t>& code() const { return code_; }
+
+  // Adds an integer addition.
+  void IntegerAddition(bool with_exceptions, size_t size, bool is_signed) {
+    switch (size) {
+      case 1:
+        emplace_back_opcode(with_exceptions ? (is_signed ? Opcode::kSint8AdditionWithExceptions
+                                                         : Opcode::kUint8AdditionWithExceptions)
+                                            : Opcode::kInt8Addition);
+        break;
+      case 2:
+        emplace_back_opcode(with_exceptions ? (is_signed ? Opcode::kSint16AdditionWithExceptions
+                                                         : Opcode::kUint16AdditionWithExceptions)
+                                            : Opcode::kInt16Addition);
+        break;
+      case 4:
+        emplace_back_opcode(with_exceptions ? (is_signed ? Opcode::kSint32AdditionWithExceptions
+                                                         : Opcode::kUint32AdditionWithExceptions)
+                                            : Opcode::kInt32Addition);
+        break;
+      case 8:
+        emplace_back_opcode(with_exceptions ? (is_signed ? Opcode::kSint64AdditionWithExceptions
+                                                         : Opcode::kUint64AdditionWithExceptions)
+                                            : Opcode::kInt64Addition);
+        break;
+      default:
+        FX_LOGS(FATAL) << "Bad integer size " << size;
+    }
+  }
 
   // Adds a 64 bit literal operation.
   void Literal64(uint64_t value) {
@@ -111,6 +173,12 @@ class Code {
         FX_LOGS(FATAL) << "Bad builtin size " << size;
     }
     code_.emplace_back(index);
+  }
+
+  // Adds a string concatenation operation.
+  void StringConcatenation(size_t string_count) {
+    emplace_back_opcode(Opcode::kStringConcatenation);
+    code_.emplace_back(string_count);
   }
 
   // Adds a string literal operation.

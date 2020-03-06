@@ -90,6 +90,10 @@ class Interpreter {
   // it encountered an analysis/semantic error.
   virtual void ContextDoneWithAnalysisError(ExecutionContext* context) = 0;
 
+  // Called when a context is ready to terminate. Case where the context terminated early because
+  // it encountered an error during execution of the code.
+  virtual void ContextDoneWithExecutionError(ExecutionContext* context) = 0;
+
   // Called when a context emit a text result.
   virtual void TextResult(ExecutionContext* context, std::string_view text) = 0;
 

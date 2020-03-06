@@ -16,6 +16,8 @@ namespace interpreter {
 template <typename Type, typename ContainerType>
 class Container;
 
+class Thread;
+
 enum class ValueType {
   // Value is not defined. This is, for example, the case when we try to load a global which doesn't
   // exist.
@@ -43,6 +45,7 @@ enum class ValueType {
 // Base class for all reference counted objects.
 class ReferenceCountedBase {
   friend class ExecutionScope;
+  friend void StringConcatenation(Thread* thread, uint64_t count);
 
  protected:
   ReferenceCountedBase() = default;

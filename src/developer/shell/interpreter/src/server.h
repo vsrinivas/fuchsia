@@ -99,6 +99,7 @@ class ServerInterpreter : public Interpreter {
   void DumpDone(ExecutionContext* context) override;
   void ContextDone(ExecutionContext* context) override;
   void ContextDoneWithAnalysisError(ExecutionContext* context) override;
+  void ContextDoneWithExecutionError(ExecutionContext* context) override;
   void TextResult(ExecutionContext* context, std::string_view text) override;
 
   // Gets the server context for the given id.
@@ -244,6 +245,9 @@ class Service final : public llcpp::fuchsia::shell::Shell::Interface {
 
   void AddVariable(ServerInterpreterContext* context, uint64_t node_file_id, uint64_t node_node_id,
                    const llcpp::fuchsia::shell::NodeId& node, bool root_node);
+
+  void AddAddition(ServerInterpreterContext* context, uint64_t node_file_id, uint64_t node_node_id,
+                   const llcpp::fuchsia::shell::Addition& node, bool root_node);
 
   // The handle to communicate with the client.
   zx_handle_t handle_;

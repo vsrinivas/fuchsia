@@ -197,3 +197,29 @@ it as if all characters were encoded using code points. They are reference count
 they are only copied on write.
 
 The class **StringContainer** automatically manages a **String** (the reference).
+
+# Basic arithmetic operations
+
+For the basic arithmetic operations (=, \-, \*, /, %) we have the usual implementation which
+truncates values which overflow or underflow. We also have a version which abort when an overflow
+or an underflow are found.
+
+For the addition, we have three variants of the instructions and, for each variant 4 versions.
+
+The variants are:
+
+*   addition with truncation (which works with signed and unsigned integers).
+
+*   addition of signed values with an exception generated in case of overflow/underflow.
+
+*   addition of unsigned values with an exception generated in case of overflow.
+
+The versions are:
+
+*   8 bit integers
+
+*   16 bit integers
+
+*   32 bit integers
+
+*   64 bit integers

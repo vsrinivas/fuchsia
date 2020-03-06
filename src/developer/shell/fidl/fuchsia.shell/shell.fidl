@@ -122,6 +122,16 @@ struct VariableDefinition {
     NodeId initial_value;
 };
 
+// Defines an addition.
+struct Addition {
+    /// Throws an exception if we have an overflow or an underflow.
+    bool with_exceptions;
+    /// Left term.
+    NodeId left;
+    /// Right term.
+    NodeId right;
+};
+
 /// Defines a node (expression, instruction, ...).
 union Node {
     /// An integer value.
@@ -140,6 +150,8 @@ union Node {
     7: string:MAX string_literal;
     /// The value of a previously defined variable;
     8: NodeId variable;
+    /// An addition.
+    9: Addition addition;
 };
 
 /// Defines a node which has to be inserted in the AST. The node will stay pending until it is used

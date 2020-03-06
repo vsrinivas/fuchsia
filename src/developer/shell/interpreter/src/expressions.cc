@@ -77,5 +77,21 @@ bool ExpressionVariable::Compile(ExecutionContext* context, code::Code* code,
   return for_type->GenerateVariable(context, code, id(), definition);
 }
 
+// - Addition --------------------------------------------------------------------------------------
+
+void Addition::Dump(std::ostream& os) const {
+  os << *left() << (with_exceptions_ ? " +? " : " + ") << *right();
+}
+
+bool Addition::Compile(ExecutionContext* context, code::Code* code, const Type* for_type) const {
+  return for_type->GenerateAddition(context, code, this);
+}
+
+size_t Addition::GenerateStringTerms(ExecutionContext* context, code::Code* code,
+                                     const Type* for_type) const {
+  return left()->GenerateStringTerms(context, code, for_type) +
+         right()->GenerateStringTerms(context, code, for_type);
+}
+
 }  // namespace interpreter
 }  // namespace shell

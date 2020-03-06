@@ -116,6 +116,42 @@ class ExpressionVariable : public Expression {
   const NodeId variable_definition_;
 };
 
+class BinaryOperation : public Expression {
+ public:
+  BinaryOperation(Interpreter* interpreter, uint64_t file_id, uint64_t node_id,
+                  std::unique_ptr<Expression> left, std::unique_ptr<Expression> right)
+      : Expression(interpreter, file_id, node_id),
+        left_(std::move(left)),
+        right_(std::move(right)) {}
+
+  const Expression* left() const { return left_.get(); }
+  const Expression* right() const { return right_.get(); }
+
+ private:
+  std::unique_ptr<Expression> left_;
+  std::unique_ptr<Expression> right_;
+};
+
+class Addition : public BinaryOperation {
+ public:
+  Addition(Interpreter* interpreter, uint64_t file_id, uint64_t node_id, bool with_exceptions,
+           std::unique_ptr<Expression> left, std::unique_ptr<Expression> right)
+      : BinaryOperation(interpreter, file_id, node_id, std::move(left), std::move(right)),
+        with_exceptions_(with_exceptions) {}
+
+  bool with_exceptions() const { return with_exceptions_; }
+
+  void Dump(std::ostream& os) const override;
+
+  bool Compile(ExecutionContext* context, code::Code* code, const Type* for_type) const override;
+
+  size_t GenerateStringTerms(ExecutionContext* context, code::Code* code,
+                             const Type* for_type) const override;
+
+ private:
+  bool with_exceptions_;
+};
+
 }  // namespace interpreter
 }  // namespace shell
 

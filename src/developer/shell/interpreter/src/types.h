@@ -100,6 +100,9 @@ class TypeString : public TypeReferenceCounted {
   bool GenerateVariable(ExecutionContext* context, code::Code* code, const NodeId& id,
                         const Variable* variable) const override;
 
+  bool GenerateAddition(ExecutionContext* context, code::Code* code,
+                        const Addition* addition) const override;
+
   void LoadVariable(const ExecutionScope* scope, size_t index, Value* value) const override;
 };
 
@@ -109,11 +112,30 @@ class TypeInt : public TypeRaw {
 
   virtual std::pair<uint64_t, uint64_t> Limits() const = 0;
 
+  virtual bool Signed() const = 0;
+
   bool GenerateIntegerLiteral(ExecutionContext* context, code::Code* code,
                               const IntegerLiteral* literal) const override;
+
+  bool GenerateAddition(ExecutionContext* context, code::Code* code,
+                        const Addition* addition) const override;
 };
 
-class TypeInt8 : public TypeInt {
+class TypeSignedInt : public TypeInt {
+ public:
+  TypeSignedInt() = default;
+
+  bool Signed() const override { return true; }
+};
+
+class TypeUnsignedInt : public TypeInt {
+ public:
+  TypeUnsignedInt() = default;
+
+  bool Signed() const override { return false; }
+};
+
+class TypeInt8 : public TypeSignedInt {
  public:
   TypeInt8() = default;
 
@@ -133,7 +155,7 @@ class TypeInt8 : public TypeInt {
   void LoadVariable(const ExecutionScope* scope, size_t index, Value* value) const override;
 };
 
-class TypeUint8 : public TypeInt {
+class TypeUint8 : public TypeUnsignedInt {
  public:
   TypeUint8() = default;
 
@@ -152,7 +174,7 @@ class TypeUint8 : public TypeInt {
   void LoadVariable(const ExecutionScope* scope, size_t index, Value* value) const override;
 };
 
-class TypeInt16 : public TypeInt {
+class TypeInt16 : public TypeSignedInt {
  public:
   TypeInt16() = default;
 
@@ -172,7 +194,7 @@ class TypeInt16 : public TypeInt {
   void LoadVariable(const ExecutionScope* scope, size_t index, Value* value) const override;
 };
 
-class TypeUint16 : public TypeInt {
+class TypeUint16 : public TypeUnsignedInt {
  public:
   TypeUint16() = default;
 
@@ -191,7 +213,7 @@ class TypeUint16 : public TypeInt {
   void LoadVariable(const ExecutionScope* scope, size_t index, Value* value) const override;
 };
 
-class TypeInt32 : public TypeInt {
+class TypeInt32 : public TypeSignedInt {
  public:
   TypeInt32() = default;
 
@@ -211,7 +233,7 @@ class TypeInt32 : public TypeInt {
   void LoadVariable(const ExecutionScope* scope, size_t index, Value* value) const override;
 };
 
-class TypeUint32 : public TypeInt {
+class TypeUint32 : public TypeUnsignedInt {
  public:
   TypeUint32() = default;
 
@@ -230,7 +252,7 @@ class TypeUint32 : public TypeInt {
   void LoadVariable(const ExecutionScope* scope, size_t index, Value* value) const override;
 };
 
-class TypeInt64 : public TypeInt {
+class TypeInt64 : public TypeSignedInt {
  public:
   TypeInt64() = default;
 
@@ -250,7 +272,7 @@ class TypeInt64 : public TypeInt {
   void LoadVariable(const ExecutionScope* scope, size_t index, Value* value) const override;
 };
 
-class TypeUint64 : public TypeInt {
+class TypeUint64 : public TypeUnsignedInt {
  public:
   TypeUint64() = default;
 
