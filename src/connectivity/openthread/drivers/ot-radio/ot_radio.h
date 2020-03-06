@@ -44,6 +44,9 @@ namespace ot {
 constexpr uint32_t kOutboundAllowanceInit = 4;
 constexpr uint32_t kOutboundAllowanceInc = 2;
 constexpr uint32_t kMaxFrameSize = 2048;
+constexpr uint8_t kGetNcpVersionTID = 0xc;  // 4 bit TID for GetNCP version spinel cmd
+                                            // chosen arbitrarily
+constexpr int kGetNcpVersionMaxRetries = 5;
 
 enum {
   PORT_KEY_RADIO_IRQ,

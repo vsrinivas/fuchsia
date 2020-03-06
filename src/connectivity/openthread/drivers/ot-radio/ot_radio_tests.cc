@@ -74,6 +74,7 @@ TEST(OtRadioTestCase, BootloaderGetVersionTest) {
   ot::OtRadioBlResult result = dev_bl.GetBootloaderVersion(bl_version);
   // Exit the bootloader mode by resetting the device:
   ASSERT_OK(dev->Reset());
+
   // Ensure that command succeeded
   ASSERT_EQ(result, ot::BL_RET_SUCCESS);
   // Ensure that version contains string 'Bootloader'
@@ -82,9 +83,6 @@ TEST(OtRadioTestCase, BootloaderGetVersionTest) {
   ASSERT_OK(dev->ShutDown());
 }
 
-// TODO - Enable this test only after we have correct firmware uploaded on CIPD
-// Look for TODO in OtRadioDevice::CheckFWUpdateRequired for more details
-#if 0
 TEST(OtRadioTestCase, BootloaderUpdateFirmwareTest) {
   std::unique_ptr<ot::OtRadioDevice> dev;
   // Init device
@@ -99,7 +97,6 @@ TEST(OtRadioTestCase, BootloaderUpdateFirmwareTest) {
   // Teardown
   ASSERT_OK(dev->ShutDown());
 }
-#endif
 
 #endif  // INTERNAL_ACCESS
 }  // namespace

@@ -270,10 +270,17 @@ zx_status_t OtRadioDevice::ReadRadioPacket() {
   if ((inbound_allowance_ > 0) && (spinel_framer_->IsPacketPresent())) {
     spinel_framer_->ReceivePacketFromRadio(spi_rx_buffer_, &spi_rx_buffer_len_);
     if (spi_rx_buffer_len_ > 0) {
-      async::PostTask(loop_.dispatcher(), [this, pkt = std::move(spi_rx_buffer_),
-                                           len = std::move(spi_rx_buffer_len_)]() {
-        this->HandleRadioRxFrame(pkt, len);
-      });
+      if (thrd_status_.loop_thrd_running) {
+        async::PostTask(loop_.dispatcher(), [this, pkt = std::move(spi_rx_buffer_),
+                                             len = std::move(spi_rx_buffer_len_)]() {
+          this->HandleRadioRxFrame(pkt, len);
+        });
+      } else {
+        // Loop thread is not running, this is one off case to be handled
+        // Results either when running test or getting NCP version
+        inbound_allowance_ = 0;
+        spinel_framer_->SetInboundAllowanceStatus(false);
+      }
 
       // Signal to driver test, waiting for a response
       sync_completion_signal(&spi_rx_complete_);
@@ -316,14 +323,14 @@ zx_status_t OtRadioDevice::RadioPacketTx(uint8_t* frameBuffer, uint16_t length) 
   return port_.queue(&packet);
 }
 
-zx_status_t OtRadioDevice::DriverUnitTestGetNCPVersion() {
-  spinel_framer_->SetInboundAllowanceStatus(true);
-  inbound_allowance_ = kOutboundAllowanceInit;
-  return GetNCPVersion();
-}
+zx_status_t OtRadioDevice::DriverUnitTestGetNCPVersion() { return GetNCPVersion(); }
 
 zx_status_t OtRadioDevice::GetNCPVersion() {
-  uint8_t get_ncp_version_cmd[] = {0x81, 0x02, 0x02};  // HEADER, CMD ID, PROPERTY ID
+  spinel_framer_->SetInboundAllowanceStatus(true);
+  inbound_allowance_ = kOutboundAllowanceInit;
+  uint8_t get_ncp_version_cmd[] = {0x80, 0x02, 0x02};  // HEADER, CMD ID, PROPERTY ID
+  // populate TID (lower 4 bits in header)
+  get_ncp_version_cmd[0] = (get_ncp_version_cmd[0] & 0xf0) | (kGetNcpVersionTID & 0x0f);
   return RadioPacketTx(get_ncp_version_cmd, sizeof(get_ncp_version_cmd));
 }
 
@@ -500,7 +507,7 @@ zx_status_t OtRadioDevice::Start() {
   bool update_fw = false;
   status = CheckFWUpdateRequired(&update_fw);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "ot-radio: Check FW Update required failed with status: %d\n", status);
+    zxlogf(ERROR, "ot-radio: CheckFWUpdateRequired failed with status: %d\n", status);
     return status;
   }
 
@@ -544,14 +551,7 @@ zx_status_t OtRadioDevice::Start() {
 
 #ifdef INTERNAL_ACCESS
 zx_status_t OtRadioDevice::CheckFWUpdateRequired(bool* update_fw) {
-  // TODO - Early exit is added until License issue on firmware is resolved and
-  // we can upload the actual firmware. Tracked by bug 43881
-  // Once license is available:
-  // 1) Create new CIPD package with firmware and upload it.
-  // 2) Checkin integration change which uses that package
-  // 3) Remove next two lines and also enable corresponding tests
   *update_fw = false;
-  return ZX_OK;
 
   // Get the new firmware version:
   std::string new_fw_version = GetNewFirmwareVersion();
@@ -564,21 +564,43 @@ zx_status_t OtRadioDevice::CheckFWUpdateRequired(bool* update_fw) {
     return ZX_ERR_NO_RESOURCES;
   }
 
-  // Get current firmware version
-  std::string cur_fw_version;
-  auto status = GetNCPVersion();
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "ot-radio: get ncp version failed with status: %d\n", status);
-    return status;
+  int attempts;
+  bool response_received = false;
+
+  for (attempts = 0; attempts < kGetNcpVersionMaxRetries; attempts++) {
+    zxlogf(TRACE, "ot-radio: sending GetNCPVersionCmd, attempt : %d / %d\n", attempts + 1,
+           kGetNcpVersionMaxRetries);
+    // Now get the ncp version
+    auto status = GetNCPVersion();
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "ot-radio: get ncp version failed with status: %d\n", status);
+      return status;
+    }
+
+    // Wait for response to arrive, signaled by spi_rx_complete_
+    status = sync_completion_wait(&spi_rx_complete_, ZX_SEC(10));
+    sync_completion_reset(&spi_rx_complete_);
+    if (status != ZX_OK) {
+      zxlogf(ERROR,
+             "ot-radio: sync_completion_wait failed with status: %d, \
+         this means firmware may be behaving incorrectly\n",
+             status);
+      // We want to update fw in this case
+      *update_fw = true;
+      return ZX_OK;
+    }
+
+    // Check for matching TID in spinel header
+    if ((spi_rx_buffer_[0] & 0xf) == kGetNcpVersionTID) {
+      response_received = true;
+      break;
+    }
   }
 
-  // Wait for response to arrive, signaled by spi_rx_complete_
-  status = sync_completion_wait(&spi_rx_complete_, ZX_SEC(10));
-  if (status != ZX_OK) {
-    zxlogf(ERROR,
-           "ot-radio: sync_completion_wait_deadline failed with status: %d, \
-       this means firmware may be behaving incorrectly\n",
-           status);
+  if (!response_received) {
+    zxlogf(ERROR, "ot-radio: no matching response is received for get ncp version command.\n");
+    zxlogf(ERROR, "ot-radio: updating the the firmware\n");
+    // This can again mean bad firmware, so update the firmware:
     *update_fw = true;
     return ZX_OK;
   }
@@ -589,10 +611,15 @@ zx_status_t OtRadioDevice::CheckFWUpdateRequired(bool* update_fw) {
   spi_rx_buffer_[spi_rx_buffer_len_ - 1] = '\0';
   zxlogf(TRACE, "ot-radio: response received size = %d, value : %s\n", spi_rx_buffer_len_,
          reinterpret_cast<char*>(&(spi_rx_buffer_[3])));
+  std::string cur_fw_version;
   cur_fw_version.assign(reinterpret_cast<char*>(&(spi_rx_buffer_[3])));
 
   // We want to update firmware if the versions don't match
   *update_fw = (cur_fw_version.compare(new_fw_version) != 0);
+  if (*update_fw) {
+    zxlogf(INFO, "ot-radio: cur_fw_version: %s, new_fw_version: %s\n", cur_fw_version.c_str(),
+           new_fw_version.c_str());
+  }
   return ZX_OK;
 }
 #endif
