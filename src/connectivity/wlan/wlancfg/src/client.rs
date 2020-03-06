@@ -5,9 +5,10 @@
 use {
     crate::{
         config_manager::SavedNetworksManager,
-        network_config::{Credential, NetworkIdentifier, SecurityType},
+        network_config::{Credential, NetworkIdentifier},
         policy::client::sme_credential_from_policy,
         state_machine::{self, IntoStateExt},
+        util::security_from_sme_protection,
     },
     anyhow::format_err,
     fidl::endpoints::create_proxy,
@@ -163,10 +164,10 @@ async fn attempt_auto_connect(services: &Services) -> Result<Option<Vec<u8>>, an
         .into_iter()
         .filter_map(|b| {
             if b.compatible {
-                security_from_protection(b.protection).map(|security| {
+                security_from_sme_protection(b.protection).map(|security| {
                     services
                         .saved_networks
-                        .lookup(NetworkIdentifier::new(b.ssid.to_vec(), security))
+                        .lookup(NetworkIdentifier::new(b.ssid.to_vec(), security.into()))
                 })
             } else {
                 Some(vec![])
@@ -189,24 +190,6 @@ async fn attempt_auto_connect(services: &Services) -> Result<Option<Vec<u8>>, an
         }
     }
     Ok(None)
-}
-
-/// Match the protection type we would see on a scan result to the security type we would search
-/// for in our saved networks when auto connecting. Currently it is only used to find the
-/// credential of the network if it has been saved.
-fn security_from_protection(protection: fidl_sme::Protection) -> Option<SecurityType> {
-    use fidl_sme::Protection;
-    match protection {
-        Protection::Wpa3Enterprise | Protection::Wpa3Personal => Some(SecurityType::Wpa3),
-        Protection::Wpa2Enterprise
-        | Protection::Wpa2Personal
-        | Protection::Wpa2Wpa3Personal
-        | Protection::Wpa1Wpa2Personal => Some(SecurityType::Wpa2),
-        Protection::Wpa1 => Some(SecurityType::Wpa),
-        Protection::Wep => Some(SecurityType::Wep),
-        Protection::Open => Some(SecurityType::None),
-        _ => None,
-    }
 }
 
 async fn connect_to_known_network(
@@ -442,7 +425,7 @@ async fn fetch_scan_results(
 mod tests {
     use {
         super::*,
-        crate::network_config::NetworkConfig,
+        crate::network_config::{NetworkConfig, SecurityType},
         fidl::endpoints::RequestStream,
         fidl_fuchsia_wlan_sme::{ClientSmeRequest, ClientSmeRequestStream},
         fuchsia_async as fasync,

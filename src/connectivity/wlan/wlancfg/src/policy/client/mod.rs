@@ -2,19 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-///! Serves Client policy services.
-///! Note: This implementation is still under development.
-///!       Only connect requests will cause the underlying SME to attempt to connect to a given
-///!       network.
-///!       Unfortunately, there is currently no way to send an Epitaph in Rust. Thus, inbound
-///!       controller and listener requests are simply dropped, causing the underlying channel to
-///!       get closed.
-///!
+//! Serves Client policy services.
+//! Note: This implementation is still under development.
+//!       Only connect requests will cause the underlying SME to attempt to connect to a given
+//!       network.
+//!       Unfortunately, there is currently no way to send an Epitaph in Rust. Thus, inbound
+//!       controller and listener requests are simply dropped, causing the underlying channel to
+//!       get closed.
 use {
     crate::{
         config_manager::SavedNetworksManager,
         fuse_pending::FusePending,
         network_config::{Credential, NetworkConfigError, NetworkIdentifier, SaveError},
+        policy::client::scan::handle_scan,
     },
     anyhow::{format_err, Error},
     fidl::epitaph::ChannelEpitaphExt,
@@ -32,9 +32,11 @@ use {
 };
 
 pub mod listener;
+mod scan;
 
 /// Wrapper around a Client interface, granting access to the Client SME.
 /// A Client might not always be available, for example, if no Client interface was created yet.
+#[derive(Debug)]
 pub struct Client {
     proxy: Option<fidl_sme::ClientSmeProxy>,
 }
@@ -44,6 +46,11 @@ impl Client {
     /// no client interface is available.
     pub fn new_empty() -> Self {
         Self { proxy: None }
+    }
+
+    #[cfg(test)]
+    pub fn set_sme(&mut self, proxy: fidl_sme::ClientSmeProxy) {
+        self.proxy = Some(proxy);
     }
 
     /// Accesses the Client interface's SME.
@@ -77,18 +84,6 @@ impl RequestError {
     fn with_cause(self, cause: Error) -> Self {
         RequestError { cause, ..self }
     }
-
-    fn with_status(self, status: fidl_common::RequestStatus) -> Self {
-        RequestError { status, ..self }
-    }
-}
-
-impl From<fidl::Error> for RequestError {
-    fn from(e: fidl::Error) -> RequestError {
-        RequestError::new()
-            .with_cause(format_err!("FIDL error: {}", e))
-            .with_status(fidl_common::RequestStatus::RejectedNotSupported)
-    }
 }
 
 #[derive(Debug)]
@@ -100,6 +95,9 @@ enum InternalMsg {
         Credential,
         fidl_sme::ConnectTransactionProxy,
     ),
+    /// Sent when a new scan request was issued. Holds the output iterator through which the
+    /// scan results will be reported.
+    NewPendingScanRequest(fidl::endpoints::ServerEnd<fidl_policy::ScanResultIteratorMarker>),
 }
 type InternalMsgSink = mpsc::UnboundedSender<InternalMsg>;
 
@@ -108,7 +106,7 @@ const MAX_CONCURRENT_LISTENERS: usize = 1000;
 
 type ClientRequests = fidl::endpoints::ServerEnd<fidl_policy::ClientControllerMarker>;
 type SavedNetworksPtr = Arc<SavedNetworksManager>;
-type ClientPtr = Arc<Mutex<Client>>;
+pub type ClientPtr = Arc<Mutex<Client>>;
 
 pub fn spawn_provider_server(
     client: ClientPtr,
@@ -136,6 +134,7 @@ async fn serve_provider_requests(
     mut requests: fidl_policy::ClientProviderRequestStream,
 ) {
     let (internal_messages_sink, mut internal_messages_stream) = mpsc::unbounded();
+    let mut pending_scans = FuturesUnordered::new();
     let mut controller_reqs = FuturesUnordered::new();
     let mut pending_con_reqs = FusePending(FuturesOrdered::new());
 
@@ -170,11 +169,18 @@ async fn serve_provider_requests(
                         .map(|(first, _next)| (id, cred, first));
                     pending_con_reqs.push(connect_result_fut);
                 }
+                InternalMsg::NewPendingScanRequest(output_iterator) => {
+                    pending_scans.push(handle_scan(
+                        Arc::clone(&client),
+                        output_iterator));
+                }
             },
+            // Progress scans.
+            () = pending_scans.select_next_some() => (),
             // Pending connect request finished.
             resp = pending_con_reqs.select_next_some() => if let (id, cred, Some(Ok(txn))) = resp {
                 handle_sme_connect_response(update_sender.clone(), id.into(), cred, txn, Arc::clone(&saved_networks)).await;
-            }
+            },
         }
     }
 }
@@ -248,7 +254,11 @@ async fn handle_client_requests(
                 responder.send(status)?;
             }
             fidl_policy::ClientControllerRequest::ScanForNetworks { iterator, .. } => {
-                handle_client_request_scan(iterator).await?;
+                if let Err(e) =
+                    internal_msg_sink.unbounded_send(InternalMsg::NewPendingScanRequest(iterator))
+                {
+                    error!("Failed to send internal message: {:?}", e)
+                }
             }
             fidl_policy::ClientControllerRequest::SaveNetwork { config, responder } => {
                 // If there is an error saving the network, log it and convert to a FIDL value.
@@ -333,9 +343,9 @@ async fn handle_client_request_connect(
     // client interface is brought down and not supporting controller requests if no client
     // interface is active.
     let client = client.lock();
-    let client_sme = client.access_sme().ok_or_else(|| {
-        RequestError::new().with_cause(format_err!("error no active client interface"))
-    })?;
+    let client_sme = client
+        .access_sme()
+        .ok_or_else(|| RequestError::new().with_cause(format_err!("no active client interface")))?;
 
     let credential = sme_credential_from_policy(&network_config.credential);
     let mut request = fidl_sme::ConnectRequest {
@@ -351,8 +361,12 @@ async fn handle_client_request_connect(
         },
         scan_type: fidl_common::ScanType::Passive,
     };
-    let (local, remote) = fidl::endpoints::create_proxy()?;
-    client_sme.connect(&mut request, Some(remote))?;
+    let (local, remote) = fidl::endpoints::create_proxy().map_err(|e| {
+        RequestError::new().with_cause(format_err!("failed to create proxy: {:?}", e))
+    })?;
+    client_sme.connect(&mut request, Some(remote)).map_err(|e| {
+        RequestError::new().with_cause(format_err!("failed to connect to sme: {:?}", e))
+    })?;
 
     Ok((network_config.credential, local))
 }
@@ -365,31 +379,6 @@ fn handle_client_request_start_connections() -> fidl_common::RequestStatus {
 /// This is not yet implemented and just returns that the request is not supported
 fn handle_client_request_stop_connections() -> fidl_common::RequestStatus {
     fidl_common::RequestStatus::RejectedNotSupported
-}
-
-/// Respond to a scan request, returning results through the given iterator.
-/// This function is not yet implemented and just sends back that there was an error.
-async fn handle_client_request_scan(
-    iterator: fidl::endpoints::ServerEnd<fidl_policy::ScanResultIteratorMarker>,
-) -> Result<(), fidl::Error> {
-    // for now instead of getting scan results, just return a general error
-    // TODO(44878) implement this method: perform a scan and return the results (networks or error)
-    let scan_results = Err(fidl_policy::ScanErrorCode::GeneralError);
-
-    // wait to get a request for a chunk of scan results, so we can respond to it with an error
-    let mut stream = iterator.into_stream()?;
-
-    if let Some(req) = stream.try_next().await? {
-        let fidl_policy::ScanResultIteratorRequest::GetNext { responder } = req;
-        let mut next_result = scan_results;
-        responder.send(&mut next_result)?;
-    } else {
-        // This will happen if the iterator request stream was closed and we expected to send
-        // another response.
-        // TODO(45113) Test this error path
-        info!("Info: peer closed channel for scan results unexpectedly");
-    }
-    Ok(())
 }
 
 /// This function handles requests to save a network by saving the network and sending back to the
@@ -488,6 +477,7 @@ mod tests {
         crate::{
             config_manager::SavedNetworksManager,
             network_config::{NetworkConfig, SecurityType, PSK_BYTE_LEN},
+            testutils::set_logger_for_test,
         },
         fidl::{
             endpoints::{create_proxy, create_request_stream},
@@ -542,10 +532,9 @@ mod tests {
     fn create_client() -> (ClientPtr, fidl_sme::ClientSmeRequestStream) {
         let (client_sme, remote) =
             create_proxy::<fidl_sme::ClientSmeMarker>().expect("error creating proxy");
-        (
-            Arc::new(Mutex::new(client_sme.into())),
-            remote.into_stream().expect("failed to create stream"),
-        )
+        let client = Arc::new(Mutex::new(Client::new_empty()));
+        client.lock().set_sme(client_sme);
+        (client, remote.into_stream().expect("failed to create stream"))
     }
 
     struct TestValues {
@@ -563,13 +552,12 @@ mod tests {
     // test will have a unique persistent store behind it.
     fn test_setup(stash_id: impl AsRef<str>, exec: &mut fasync::Executor) -> TestValues {
         let saved_networks = exec.run_singlethreaded(create_network_store(stash_id));
-
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
             .expect("failed to create ClientProvider proxy");
         let requests = requests.into_stream().expect("failed to create stream");
-
         let (client, sme_stream) = create_client();
         let (update_sender, listener_updates) = mpsc::unbounded();
+        set_logger_for_test();
         TestValues {
             saved_networks,
             provider,
@@ -946,9 +934,9 @@ mod tests {
     }
 
     #[test]
-    fn scan_for_networks_should_fail() {
+    fn scan_request_sent_to_sme() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let mut test_values = test_setup("scan_for_networks_should_fail", &mut exec);
+        let mut test_values = test_setup("scan_request_sent_to_sme", &mut exec);
         let serve_fut = serve_provider_requests(
             test_values.client,
             test_values.update_sender,
@@ -969,24 +957,417 @@ mod tests {
         );
 
         // Issue request to scan.
-        let (iter, server) =
-            fidl::endpoints::create_proxy::<fidl_policy::ScanResultIteratorMarker>()
-                .expect("failed to create iterator");
+        let (iter, server) = fidl::endpoints::create_proxy().expect("failed to create iterator");
         controller.scan_for_networks(server).expect("Failed to call scan for networks");
 
         // Request a chunk of scan results. Progress until waiting on response from server side of
         // the iterator.
-        let mut scan_fut = iter.get_next();
-        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
+        let mut output_iter_fut = iter.get_next();
+        assert_variant!(exec.run_until_stalled(&mut output_iter_fut), Poll::Pending);
         // Progress sever side forward so that it will respond to the iterator get next request.
-        // It will be waiting on the next client provider request because scan simply returns an
-        // error for now.
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
 
+        // Check that a scan request was sent to the sme
+        assert_variant!(
+            exec.run_until_stalled(&mut test_values.sme_stream.next()),
+            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan {
+                req, ..
+            }))) => {
+                assert_eq!(5, req.timeout);
+                assert_eq!(fidl_common::ScanType::Passive, req.scan_type);
+            }
+        );
+    }
+
+    #[test]
+    fn scan_iterator_never_polled() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut test_values = test_setup("scan_iterator_never_polled", &mut exec);
+        let serve_fut = serve_provider_requests(
+            test_values.client,
+            test_values.update_sender,
+            Arc::clone(&test_values.saved_networks),
+            test_values.requests,
+        );
+        pin_mut!(serve_fut);
+
+        // No request has been sent yet. Future should be idle.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // Request a new controller.
+        let (controller, _update_stream) = request_controller(&test_values.provider);
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+        assert_variant!(
+            exec.run_until_stalled(&mut test_values.listener_updates.next()),
+            Poll::Ready(_)
+        );
+
+        // Issue request to scan.
+        let (_iter_not_called, server) =
+            fidl::endpoints::create_proxy().expect("failed to create iterator");
+        controller.scan_for_networks(server).expect("Failed to call scan for networks");
+
+        // Progress sever side forward without ever calling getNext() on the scan result iterator
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // Check that a scan request was sent to the sme and send back some data
+        assert_variant!(
+            exec.run_until_stalled(&mut test_values.sme_stream.next()),
+            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan {
+                txn, ..
+            }))) => {
+                // Send scan response.
+                let (_stream, ctrl) = txn
+                    .into_stream_and_control_handle().expect("error accessing control handle");
+                ctrl.send_on_result(&mut vec![].into_iter())
+                    .expect("failed to send scan data");
+            }
+        );
+
+        // Progress sever side forward without progressing the scan result iterator
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // Issue a second request to scan, to make sure that everything is still
+        // moving along even though the first scan result iterator was never progressed.
+        let (_iter_not_called2, server2) =
+            fidl::endpoints::create_proxy().expect("failed to create iterator");
+        controller.scan_for_networks(server2).expect("Failed to call scan for networks");
+
+        // Progress sever side forward without progressing the scan result iterator
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // Check that a scan request was sent to the sme and send back some data
+        assert_variant!(
+            exec.run_until_stalled(&mut test_values.sme_stream.next()),
+            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan {
+                txn, ..
+            }))) => {
+                // Send scan response.
+                let (_stream, ctrl) = txn
+                    .into_stream_and_control_handle().expect("error accessing control handle");
+                ctrl.send_on_result(&mut vec![].into_iter())
+                    .expect("failed to send scan data");
+            }
+        );
+
+        // Progress sever side forward without progressing the scan result iterator
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+    }
+
+    #[test]
+    fn scan_error() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut test_values = test_setup("scan_error", &mut exec);
+        let serve_fut = serve_provider_requests(
+            test_values.client,
+            test_values.update_sender,
+            Arc::clone(&test_values.saved_networks),
+            test_values.requests,
+        );
+        pin_mut!(serve_fut);
+
+        // No request has been sent yet. Future should be idle.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // Request a new controller.
+        let (controller, _update_stream) = request_controller(&test_values.provider);
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+        assert_variant!(
+            exec.run_until_stalled(&mut test_values.listener_updates.next()),
+            Poll::Ready(_)
+        );
+
+        // Issue request to scan.
+        let (iter, server) = fidl::endpoints::create_proxy().expect("failed to create iterator");
+        controller.scan_for_networks(server).expect("Failed to call scan for networks");
+
+        // Request a chunk of scan results. Progress until waiting on response from server side of
+        // the iterator.
+        let mut output_iter_fut = iter.get_next();
+        assert_variant!(exec.run_until_stalled(&mut output_iter_fut), Poll::Pending);
+        // Progress sever side forward so that it will respond to the iterator get next request.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // Check that a scan request was sent to the sme and send back an error
+        assert_variant!(
+            exec.run_until_stalled(&mut test_values.sme_stream.next()),
+            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan {
+                txn, ..
+            }))) => {
+                // Send failed scan response.
+                let (_stream, ctrl) = txn
+                    .into_stream_and_control_handle().expect("error accessing control handle");
+                ctrl.send_on_error(&mut fidl_sme::ScanError {
+                    code: fidl_sme::ScanErrorCode::InternalError,
+                    message: "Failed to scan".to_string()
+                })
+                    .expect("failed to send scan error");
+            }
+        );
+
+        // Process SME result.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // Verify status was not updated.
+        assert_variant!(
+            exec.run_until_stalled(&mut test_values.listener_updates.next()),
+            Poll::Pending
+        );
+
         // the iterator should have given an error
-        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Ready(result) => {
+        assert_variant!(exec.run_until_stalled(&mut output_iter_fut), Poll::Ready(result) => {
             let results = result.expect("Failed to get next scan results");
             assert_eq!(results, Err(fidl_policy::ScanErrorCode::GeneralError));
+        });
+    }
+
+    // Creates test data for the scan functions.
+    fn create_scan_ap_data() -> (Vec<fidl_sme::BssInfo>, Vec<fidl_policy::ScanResult>) {
+        let input_aps = vec![
+            fidl_sme::BssInfo {
+                bssid: [0, 0, 0, 0, 0, 0],
+                ssid: "duplicated ssid".as_bytes().to_vec(),
+                rx_dbm: 0,
+                channel: 0,
+                protection: fidl_sme::Protection::Wpa3Enterprise,
+                compatible: true,
+            },
+            fidl_sme::BssInfo {
+                bssid: [1, 2, 3, 4, 5, 6],
+                ssid: "unique ssid".as_bytes().to_vec(),
+                rx_dbm: 7,
+                channel: 8,
+                protection: fidl_sme::Protection::Wpa2Personal,
+                compatible: true,
+            },
+            fidl_sme::BssInfo {
+                bssid: [7, 8, 9, 10, 11, 12],
+                ssid: "duplicated ssid".as_bytes().to_vec(),
+                rx_dbm: 13,
+                channel: 14,
+                protection: fidl_sme::Protection::Wpa3Enterprise,
+                compatible: false,
+            },
+        ];
+        // input_aps contains some duplicate SSIDs, which should be
+        // grouped in the output.
+        let output_aps = vec![
+            fidl_policy::ScanResult {
+                id: Some(fidl_policy::NetworkIdentifier {
+                    ssid: "duplicated ssid".as_bytes().to_vec(),
+                    type_: fidl_policy::SecurityType::Wpa3,
+                }),
+                entries: Some(vec![
+                    fidl_policy::Bss {
+                        bssid: Some([0, 0, 0, 0, 0, 0]),
+                        rssi: Some(0),
+                        frequency: Some(0),
+                        timestamp_nanos: Some(0),
+                    },
+                    fidl_policy::Bss {
+                        bssid: Some([7, 8, 9, 10, 11, 12]),
+                        rssi: Some(13),
+                        frequency: Some(0),
+                        timestamp_nanos: Some(0),
+                    },
+                ]),
+                compatibility: Some(fidl_policy::Compatibility::Supported),
+            },
+            fidl_policy::ScanResult {
+                id: Some(fidl_policy::NetworkIdentifier {
+                    ssid: "unique ssid".as_bytes().to_vec(),
+                    type_: fidl_policy::SecurityType::Wpa2,
+                }),
+                entries: Some(vec![fidl_policy::Bss {
+                    bssid: Some([1, 2, 3, 4, 5, 6]),
+                    rssi: Some(7),
+                    frequency: Some(0),
+                    timestamp_nanos: Some(0),
+                }]),
+                compatibility: Some(fidl_policy::Compatibility::Supported),
+            },
+        ];
+        (input_aps, output_aps)
+    }
+
+    fn send_sme_scan_result(
+        exec: &mut fasync::Executor,
+        sme_stream: &mut fidl_sme::ClientSmeRequestStream,
+        scan_results: &[fidl_sme::BssInfo],
+    ) {
+        // Check that the second scan request was sent to the sme and send back results
+        assert_variant!(
+            exec.run_until_stalled(&mut sme_stream.next()),
+            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan {
+                txn, ..
+            }))) => {
+                // Send all the APs
+                let (_stream, ctrl) = txn
+                    .into_stream_and_control_handle().expect("error accessing control handle");
+                ctrl.send_on_result(&mut scan_results.to_vec().iter_mut())
+                    .expect("failed to send scan data");
+
+                // Send the end of data
+                ctrl.send_on_finished()
+                    .expect("failed to send scan data");
+            }
+        );
+    }
+
+    #[test]
+    fn scan_success() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut test_values = test_setup("scan_success", &mut exec);
+        let serve_fut = serve_provider_requests(
+            test_values.client,
+            test_values.update_sender,
+            Arc::clone(&test_values.saved_networks),
+            test_values.requests,
+        );
+        pin_mut!(serve_fut);
+        let (input_aps, output_aps) = create_scan_ap_data();
+
+        // No request has been sent yet. Future should be idle.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // Request a new controller.
+        let (controller, _update_stream) = request_controller(&test_values.provider);
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+        assert_variant!(
+            exec.run_until_stalled(&mut test_values.listener_updates.next()),
+            Poll::Ready(_)
+        );
+
+        // Create a few sets of endpoints.
+        // This set of endpoints will be used to make the initial scan request.
+        let (iter0, server0) =
+            fidl::endpoints::create_proxy::<fidl_policy::ScanResultIteratorMarker>()
+                .expect("failed to create iterator");
+        let mut output_iter_fut0 = iter0.get_next();
+        // Create a few sets of endpoints.
+        // This set of endpoints will be used simultaneously with the first one.
+        let (iter1, server1) =
+            fidl::endpoints::create_proxy::<fidl_policy::ScanResultIteratorMarker>()
+                .expect("failed to create iterator");
+        let mut output_iter_fut1 = iter1.get_next();
+        // This set of endpoints will be used to make a scan request while the first
+        // request is still pending.
+        let (iter2, server2) =
+            fidl::endpoints::create_proxy::<fidl_policy::ScanResultIteratorMarker>()
+                .expect("failed to create iterator");
+        let mut output_iter_fut2 = iter2.get_next();
+        // This set of endpoints will be used to make a scan request after the
+        // first request is complete.
+        let (iter3, server3) =
+            fidl::endpoints::create_proxy::<fidl_policy::ScanResultIteratorMarker>()
+                .expect("failed to create iterator");
+        let mut output_iter_fut3 = iter3.get_next();
+
+        // Issue request to scan on the first two iterators.
+        controller.scan_for_networks(server0).expect("Failed to call scan for networks");
+        controller.scan_for_networks(server1).expect("Failed to call scan for networks");
+
+        // Request a chunk of scan results. Progress until waiting on response from server side of
+        // the iterator.
+        assert_variant!(exec.run_until_stalled(&mut output_iter_fut0), Poll::Pending);
+        // Progress sever side forward so that it will respond to the iterator get next request.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // Check that a scan request was sent to the sme and send back results
+        assert_variant!(
+            exec.run_until_stalled(&mut test_values.sme_stream.next()),
+            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan {
+                txn, ..
+            }))) => {
+                // Send the first AP
+                let (_stream, ctrl) = txn
+                    .into_stream_and_control_handle().expect("error accessing control handle");
+                let mut aps = [input_aps[0].clone()];
+                ctrl.send_on_result(&mut aps.iter_mut())
+                    .expect("failed to send scan data");
+
+                // Process SME result.
+                assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+                // The iterator should not have any data yet, until the sme is done
+                assert_variant!(exec.run_until_stalled(&mut output_iter_fut0), Poll::Pending);
+                assert_variant!(exec.run_until_stalled(&mut output_iter_fut1), Poll::Pending);
+
+                // Make a request on the third iterator.
+                controller.scan_for_networks(server2).expect("Failed to call scan for networks");
+                assert_variant!(exec.run_until_stalled(&mut output_iter_fut2), Poll::Pending);
+
+                // Send the remaining APs
+                let mut aps = input_aps[1..].to_vec();
+                ctrl.send_on_result(&mut aps.iter_mut())
+                    .expect("failed to send scan data");
+
+                // Process SME result.
+                assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+                // The iterator should not have any data yet, until the sme is done
+                assert_variant!(exec.run_until_stalled(&mut output_iter_fut0), Poll::Pending);
+                assert_variant!(exec.run_until_stalled(&mut output_iter_fut1), Poll::Pending);
+
+                // Send the end of data
+                ctrl.send_on_finished()
+                    .expect("failed to send scan data");
+            }
+        );
+
+        // Check that the second scan request was sent to the sme and send back results
+        send_sme_scan_result(&mut exec, &mut test_values.sme_stream, &input_aps); // for output_iter_fut1
+        send_sme_scan_result(&mut exec, &mut test_values.sme_stream, &input_aps); // for output_iter_fut2
+
+        // Process SME result.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // Now, we should have data in the iterator. There should be an item for
+        // each pair of ssid+security.
+        assert_variant!(exec.run_until_stalled(&mut output_iter_fut0), Poll::Ready(result) => {
+            let results = result.expect("Failed to get next scan results").unwrap();
+            assert_eq!(results.len(), output_aps.len());
+            assert_eq!(results, output_aps);
+        });
+
+        // Now, we should also have the same data in the iterator that was called while
+        // the first scan was processing in the SME.
+        assert_variant!(exec.run_until_stalled(&mut output_iter_fut2), Poll::Ready(result) => {
+            let results = result.expect("Failed to get next scan results").unwrap();
+            assert_eq!(results.len(), output_aps.len());
+            assert_eq!(results, output_aps);
+        });
+
+        // Calling either of those two iterators again should return an empty vec
+        let mut output_iter_fut0 = iter0.get_next();
+        // Progress sever side forward so that it will respond to the iterator get next request.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+        assert_variant!(exec.run_until_stalled(&mut output_iter_fut0), Poll::Ready(result) => {
+            let results = result.expect("Failed to get next scan results").unwrap();
+            assert_eq!(results.len(), 0);
+        });
+
+        // The iterator that was called simultaneously with the first one should also have the full results.
+        assert_variant!(exec.run_until_stalled(&mut output_iter_fut1), Poll::Ready(result) => {
+            let results = result.expect("Failed to get next scan results").unwrap();
+            assert_eq!(results.len(), output_aps.len());
+            assert_eq!(results, output_aps);
+        });
+
+        // Start a new transaction using the third iterator.
+        controller.scan_for_networks(server3).expect("Failed to call scan for networks");
+        // Progress sever side forward so that it will respond to the iterator get next request.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+        // Check that a scan request was sent to the sme and send back results for output_iter_fut3
+        send_sme_scan_result(&mut exec, &mut test_values.sme_stream, &input_aps);
+        // Process SME result.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+        // Now, we should have data in the final iterator. There should be an item for
+        // each pair of ssid+security.
+        assert_variant!(exec.run_until_stalled(&mut output_iter_fut3), Poll::Ready(result) => {
+            let results = result.expect("Failed to get next scan results").unwrap();
+            assert_eq!(results.len(), output_aps.len());
+            assert_eq!(results, output_aps);
         });
     }
 

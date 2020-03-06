@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![recursion_limit = "256"]
+#![recursion_limit = "512"]
 
 mod client;
 mod config;
@@ -15,6 +15,9 @@ mod policy;
 mod shim;
 mod stash;
 mod state_machine;
+#[cfg(test)]
+mod testutils;
+mod util;
 
 use {
     crate::{config::Config, config_manager::SavedNetworksManager},
