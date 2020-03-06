@@ -38,6 +38,14 @@ $ fx scp ./my_test_load.json "[$(fx get-device-addr)]:/tmp/"
 $ fx shell run loadbench --file /tmp/my_test_load.json
 ```
 
+Note: `/tmp/r/sys/fuchsia.com:loadbench:0#meta:loadbench.cmx` will not be present
+until the loadbench package is run for the first time after device boot. To
+explicitly create this directory from the commandline use:
+
+```bash
+$ fx shell mkdir -p /tmp/r/sys/fuchsia.com:loadbench:0\#meta:loadbench.cmx/
+```
+
 Workload specification files can also be built into the package. This is useful
 for workloads intended for automated and regression testing. These files can be
 run manually by referencing them relative to the `/pkg/data/` path prefix:
@@ -105,7 +113,7 @@ each member of this object specifies the interval's name, while the value
 is an object that specifies its duration.
 
 The duration object may have one of the following key/value pairs:
-* *duration*: Sepcifies the numeric duration of the interval.
+* *duration*: Specifies the numeric duration of the interval.
 * *uniform*: A JSON object that specifies the min and max durations to select
   from a random uniform distribution.
 
@@ -296,6 +304,59 @@ Example:
   ],
   // ...
 }
+```
+
+#### tracing - Kernel Tracing Specification (optional)
+
+The *tracing* member is an optional member that provides configuration
+parameters for running kernel tracing on the workload. Tracing defaults to off
+whenever this member is not present.
+
+##### group mask - Kernel Tracing Group Mask (optional)
+
+The *group mask* member may be an unsigned int or a string. It specifies the
+group mask to set up kernel tracing with. If this member is missing, the group
+mask defaults to KTRACE_GRP_ALL.
+
+The following groups are supported:
+* **KTRACE_GRP_ALL:** 0xFFF
+* **KTRACE_GRP_META:** 0x001
+* **KTRACE_GRP_LIFECYCLE:** 0x002
+* **KTRACE_GRP_SCHEDULER:** 0x004
+* **KTRACE_GRP_TASKS:** 0x008
+* **KTRACE_GRP_IPC:** 0x010
+* **KTRACE_GRP_IRQ:** 0x020
+* **KTRACE_GRP_PROBE:** 0x040
+* **KTRACE_GRP_ARCH:** 0x080
+* **KTRACE_GRP_SYSCALL:** 0x100
+
+##### filepath - Human Readable Kernel Tracing Translation Filepath (optional)
+
+The *filepath* member is a string that indicates where a human readable
+translation of the read kernel traces should be saved. If this member is
+missing, no human readable translation is generated.
+
+The loadbench package has permission to write to `/tmp` inside its own namespace.
+If accessing from the shell, this directory will be located at
+
+```
+/tmp/r/sys/fuchsia.com:loadbench:0#meta:loadbench.cmx
+```
+
+##### string ref - Kernel Trace String Reference (optional)
+
+The *string ref* member is a string that indicates a string ref to look for
+when generating trace stats. If this member is missing, no kernel trace stats
+are generated. Similarly, if the provided string ref is not found in the string
+ref table or no events are found that match it, no trace stats are generated.
+
+Example:
+```JSON
+"tracing": {
+  "group mask": "KTRACE_GRP_ALL",
+  "filepath": "/tmp/latest.ktrace",
+  "string ref": "clock_read",
+},
 ```
 
 ## Duration Spec
