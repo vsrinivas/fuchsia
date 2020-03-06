@@ -2,44 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test/test_package.gni")
-import("//src/media/audio/hardware.gni")
-
 group("test") {
   testonly = true
   deps = [
-    ":audio_loopback_tests",
+    "//src/media/audio/audio/test/loopback:audio-loopback-tests",
     "//src/media/audio/virtual_audio_service",
-  ]
-}
-
-test_package("audio_loopback_tests") {
-  deps = [ ":audio_loopback_tests_bin" ]
-
-  tests = [
-    {
-      name = "audio_loopback_tests"
-
-      # This test uses real-time streaming and must be run on real hardware.
-      environments = hardware_envs
-    },
-  ]
-}
-
-executable("audio_loopback_tests_bin") {
-  testonly = true
-  output_name = "audio_loopback_tests"
-
-  sources = [ "audio_loopback_test.cc" ]
-
-  deps = [
-    "//garnet/public/lib/gtest",
-    "//sdk/fidl/fuchsia.media",
-    "//sdk/fidl/fuchsia.virtualaudio",
-    "//sdk/lib/sys/cpp",
-    "//src/lib/fxl/test:gtest_main_with_syslog",
-    "//src/lib/syslog/cpp",
-    "//src/media/audio/lib/test:hermetic_audio_test",
-    "//zircon/public/lib/fzl",
   ]
 }
