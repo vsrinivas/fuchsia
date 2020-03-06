@@ -498,7 +498,7 @@ N+4:   [floor + initial_step * step_multiplier^N, +inf)
 |       |1|1|1|1|1|2|2|2|2|2|3|3|3|3|3|4|4|4|4|4|5|5|5|5|5|6|6|6|
 |2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|
 |---+---+-------+-----------------------------------------------|
-| O | R | Type  | Length    | Reserved                          |
+| O | R | Type  | Parent index          | Name index            |
 |---------------------------------------------------------------|
 | Content index     |                                       | F |
 '---------------------------------------------------------------'
@@ -506,6 +506,8 @@ N+4:   [floor + initial_step * step_multiplier^N, +inf)
 O = Order
 R = Reserved, must be 0
 Type = 12
+Parent index = Index of the parent block
+Name index = Index of the name of this value
 Content index = Index of the content of this link (as a NAME node)
 F = Disposition flags {0,1}
 ```
