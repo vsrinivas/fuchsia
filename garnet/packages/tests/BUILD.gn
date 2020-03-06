@@ -73,7 +73,6 @@ group("all") {
     "//garnet/examples/fidl/echo_server_cpp/fuzzer:echo_fuzzers",
     "//garnet/examples/intl/manager:tests",
     "//garnet/examples/intl/wisdom:tests",
-    "//garnet/examples/profiler:profiler_example",
     "//garnet/go/src/benchmarking:go_benchmarking_tests",
     "//garnet/go/src/device_settings:device_settings_gotests",
     "//garnet/go/src/far:go_far_tests",
