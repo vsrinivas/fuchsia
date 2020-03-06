@@ -83,7 +83,7 @@ function create-git-commit-and-upload {
 
 function read-patches-from-stdin {
   local line host project ref first=true
-  declare -A seen_projects
+  declare -a seen_projects
   while read line; do
     local url=$(echo "$line" | cut -d " " -f 3 | sed 's/"//g')
     host=$(echo "$url" | cut -d / -f 3)
@@ -94,12 +94,14 @@ function read-patches-from-stdin {
       continue
     fi
 
-    if [[ ${seen_projects["$project"]} ]]; then
-      fx-error "You are limited to one patch per project. Project '${project}' saw two patches."
-      fx-error "Please collapse all changes in one project into a single change."
-      return 1
-    fi
-    seen_projects["$project"]=1
+    for seen in "${seen_projects[@]}"; do
+      if [[ "${seen}" == "${project}" ]]; then
+        fx-error "You are limited to one patch per project. Project '${project}' saw two patches."
+        fx-error "Please collapse all changes in one project into a single change."
+        return 1
+      fi
+    done
+    seen_projects+=("${project}")
 
     # The patches.json requires host-review.googlesource.com, while Gerrit's download
     # commands vend host.googlesource.com or just host. For example, some
