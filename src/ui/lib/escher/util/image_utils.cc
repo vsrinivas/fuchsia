@@ -97,6 +97,16 @@ std::pair<bool, bool> IsDepthStencilFormat(vk::Format format) {
   }
 }
 
+bool IsYuvFormat(vk::Format format) {
+  switch (format) {
+    case vk::Format::eG8B8G8R8422Unorm:
+    case vk::Format::eG8B8R82Plane420Unorm:
+      return true;
+    default:
+      return false;
+  }
+}
+
 vk::ImageAspectFlags FormatToColorOrDepthStencilAspectFlags(vk::Format format) {
   const auto is_depth_stencil = IsDepthStencilFormat(format);
   const bool is_depth = is_depth_stencil.first;

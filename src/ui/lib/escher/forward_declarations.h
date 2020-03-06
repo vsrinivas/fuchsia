@@ -49,6 +49,7 @@ class Renderer;
 class RenderPass;
 struct RenderPassInfo;
 struct RenderQueueItem;
+class SamplerCache;
 class Semaphore;
 class ShaderProgram;
 class Shape;
