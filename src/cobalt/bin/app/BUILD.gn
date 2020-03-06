@@ -200,7 +200,7 @@ executable("cobalt_app_unittests") {
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/network_wrapper:fake",
-    "//third_party/cobalt/src/logger:logger_test_utils",
+    "//third_party/cobalt/src/logger:fake_logger",
     "//third_party/cobalt/src/public/testing:fake_cobalt_service",
     "//third_party/googletest:gmock",
     "//zircon/system/fidl/fuchsia-cobalt",
