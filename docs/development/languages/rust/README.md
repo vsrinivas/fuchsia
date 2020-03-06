@@ -88,6 +88,7 @@ validate that your usage of Rust is idiomatic, contact one of the following
 - adamperry@google.com
 - belgum@google.com
 - bwb@google.com
+- jamuraa@google.com
 - nickpollard@google.com
 - tmandry@google.com
 - turnage@google.com
