@@ -109,7 +109,7 @@ std::string EscapeSequence::Decode(std::string_view sequence) {
 }
 
 Integer::Integer(size_t start, std::vector<std::shared_ptr<Node>> children)
-    : Nonterminal(start, std::move(children)) {
+    : SimpleExpression(start, std::move(children)) {
   for (const auto& child : Children()) {
     if (auto hex = child->AsHexGroup()) {
       auto next = value_ << hex->digits() * 4;
@@ -126,7 +126,7 @@ Integer::Integer(size_t start, std::vector<std::shared_ptr<Node>> children)
 }
 
 String::String(size_t start, std::vector<std::shared_ptr<Node>> children)
-    : Nonterminal(start, std::move(children)) {
+    : SimpleExpression(start, std::move(children)) {
   for (const auto& child : Children()) {
     if (auto entity = child->AsStringEntity()) {
       value_ += entity->content();
@@ -153,6 +153,33 @@ Identifier::Identifier(size_t start, std::vector<std::shared_ptr<Node>> children
     if (auto ue = child->AsUnescapedIdentifier()) {
       identifier_ = ue->identifier();
       break;
+    }
+  }
+}
+
+Object::Object(size_t start, std::vector<std::shared_ptr<Node>> children)
+    : SimpleExpression(start, std::move(children)) {
+  for (const auto& child : Children()) {
+    if (auto field = child->AsField()) {
+      fields_.push_back(field);
+    }
+  }
+}
+
+Field::Field(size_t start, std::vector<std::shared_ptr<Node>> children)
+    : Nonterminal(start, std::move(children)) {
+  bool seen_name = false;
+  for (const auto& child : Children()) {
+    if (seen_name == false) {
+      if (auto ident = child->AsIdentifier()) {
+        seen_name = true;
+        name_ = ident->identifier();
+      } else if (auto str = child->AsString()) {
+        seen_name = true;
+        name_ = str->value();
+      }
+    } else if (auto expr = child->AsSimpleExpression()) {
+      value_ = expr;
     }
   }
 }

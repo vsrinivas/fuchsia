@@ -28,6 +28,9 @@ class UnescapedIdentifier;
 class StringEntity;
 class EscapeSequence;
 class String;
+class Object;
+class Field;
+class SimpleExpression;
 
 // A node in our AST.
 class Node {
@@ -85,6 +88,14 @@ class Node {
   }
   virtual String* AsString() { return nullptr; }
   const String* AsString() const { return const_cast<Node*>(this)->AsString(); }
+  virtual Object* AsObject() { return nullptr; }
+  const Object* AsObject() const { return const_cast<Node*>(this)->AsObject(); }
+  virtual Field* AsField() { return nullptr; }
+  const Field* AsField() const { return const_cast<Node*>(this)->AsField(); }
+  virtual SimpleExpression* AsSimpleExpression() { return nullptr; }
+  const SimpleExpression* AsSimpleExpression() const {
+    return const_cast<Node*>(this)->AsSimpleExpression();
+  }
 
   // ID methods for keywords
   virtual bool IsConst() const { return false; }
@@ -247,6 +258,14 @@ class Nonterminal : public Node {
   std::vector<std::shared_ptr<Node>> children_;
 };
 
+class SimpleExpression : public Nonterminal {
+ public:
+  SimpleExpression(size_t start, std::vector<std::shared_ptr<Node>> children)
+      : Nonterminal(start, std::move(children)) {}
+
+  SimpleExpression* AsSimpleExpression() override { return this; }
+};
+
 // Result of an attempt to parse a single token. Usually that will result in a terminal, but if
 // there are errors, we may get one of these instead. Its children will be error nodes and the
 // fragments of the token that parsed correctly.
@@ -297,7 +316,7 @@ class VariableDecl : public Nonterminal {
   std::string identifier_ = "";
 };
 
-class Integer : public Nonterminal {
+class Integer : public SimpleExpression {
  public:
   Integer(size_t start, std::vector<std::shared_ptr<Node>> children);
 
@@ -311,7 +330,7 @@ class Integer : public Nonterminal {
   uint64_t value_ = 0;
 };
 
-class String : public Nonterminal {
+class String : public SimpleExpression {
  public:
   String(size_t start, std::vector<std::shared_ptr<Node>> children);
 
@@ -337,6 +356,36 @@ class Identifier : public Nonterminal {
 
  private:
   std::string identifier_;
+};
+
+class Object : public SimpleExpression {
+ public:
+  Object(size_t start, std::vector<std::shared_ptr<Node>> children);
+
+  const std::vector<Field*> fields() const { return fields_; }
+
+  std::string_view Name() const override { return "Object"; }
+
+  Object* AsObject() override { return this; }
+
+ private:
+  std::vector<Field*> fields_;
+};
+
+class Field : public Nonterminal {
+ public:
+  Field(size_t start, std::vector<std::shared_ptr<Node>> children);
+
+  const std::string& name() const { return name_; }
+  SimpleExpression* value() const { return value_; }
+
+  std::string_view Name() const override { return "Field"; }
+
+  Field* AsField() override { return this; }
+
+ private:
+  std::string name_;
+  SimpleExpression* value_;
 };
 
 class Expression : public Nonterminal {

@@ -133,10 +133,58 @@ ParseResultStream String(ParseResultStream prefixes) {
   return NormalString(std::move(prefixes));
 }
 
+// Parse an Atom (a simple literal value).
+//     "The quick brown fox jumped over the lazy dog."
+//     0x1234abcd
+ParseResultStream Atom(ParseResultStream prefixes) {
+  /* Eventual full version of this rule is:
+  return Alt(Token("true"), Token("false"), Token("null"), Identifier, String, Real, Integer,
+             Path)(prefixes);
+  */
+  return Alt(String, Integer)(std::move(prefixes));
+}
+
+ParseResultStream Value(ParseResultStream prefixes);
+const auto& SimpleExpression = Value;
+
+// Parse a field in an object literal.
+//     foo: 6
+//     "bar & grill": "Open now"
+ParseResultStream Field(ParseResultStream prefixes) {
+  return NT<ast::Field>(WSSeq(Alt(NormalString, Identifier), Token(":"), SimpleExpression))(
+      std::move(prefixes));
+}
+
+// Parse the body of an object literal.
+//     foo: 6
+//     foo: 6, "bar & grill": "Open now",
+ParseResultStream ObjectBody(ParseResultStream prefixes) {
+  return WSSeq(Field, ZeroPlus(WSSeq(Token(","), Field)), Maybe(Token(",")))(std::move(prefixes));
+}
+
+// Parse an object literal.
+//     {}
+//     { foo: 6, "bar & grill": "Open now" }
+//     { foo: { bar: 6 }, "bar & grill": "Open now" }
+ParseResultStream Object(ParseResultStream prefixes) {
+  return NT<ast::Object>(WSSeq(Token("{"), Maybe(ObjectBody), Token("}")))(std::move(prefixes));
+}
+
+// Parse a Value.
+//     "The quick brown fox jumped over the lazy dog."
+//     0x1234abcd
+//     { foo: 3, bar: 6 }
+ParseResultStream Value(ParseResultStream prefixes) {
+  /* Eventual full version of this rule is:
+  return Alt(List, Object, Range, Lambda, Parenthetical, Block, If, Atom)(std::move(prefixes));
+  */
+  return Alt(Object, Atom)(std::move(prefixes));
+}
+
 // Parses an expression. This is effectively unimplemented right now.
 ParseResultStream Expression(ParseResultStream prefixes) {
   // Unimplemented
-  return NT<ast::Expression>(Alt(Integer, String))(std::move(prefixes));
+  return NT<ast::Expression>(SimpleExpression)(std::move(prefixes));
 }
 
 // Parses a variable declaration:

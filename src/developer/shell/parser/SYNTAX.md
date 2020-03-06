@@ -141,6 +141,24 @@ var foo = 4
 const foo = "Ham Sandwich"
 ```
 
+## Object literals
+
+Object literals are defined as follows:
+
+```
+Object ←⊔ '{' ObjectBody? '}'
+ObjectBody ←⊔ Field ( ',' Field  )* ','?
+Field ←⊔ ( NormalString / Identifier  ) ':' SimpleExpression
+```
+
+Valid object literals might include:
+
+```
+{}
+{ foo: 6, "bar & grill": "Open now"  }
+{ foo: { bar: 6  }, "bar & grill": "Open now"  }
+```
+
 ## Programs
 
 A program is defined as:
