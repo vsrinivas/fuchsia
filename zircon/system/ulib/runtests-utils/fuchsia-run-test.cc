@@ -55,20 +55,6 @@ constexpr char kRunTestComponentPath[] = "/bin/run-test-component";
 // component url as its parameter.
 constexpr char kRunTestSuitePath[] = "/bin/run-test-suite";
 
-fbl::String DirectoryName(const fbl::String& path) {
-  char* cpath = strndup(path.data(), path.length());
-  fbl::String ret(dirname(cpath));
-  free(cpath);
-  return ret;
-}
-
-fbl::String BaseName(const fbl::String& path) {
-  char* cpath = strndup(path.data(), path.length());
-  fbl::String ret(basename(cpath));
-  free(cpath);
-  return ret;
-}
-
 fbl::String RootName(const fbl::String& path) {
   const size_t i = strspn(path.c_str(), "/");
   const char* start = &path.c_str()[i];
@@ -161,114 +147,20 @@ std::optional<DumpFile> ProcessDataSinkDump(debugdata::DataSinkDump& data,
 
 }  // namespace
 
-void TestFileComponentInfo(const fbl::String& path, ComponentInfo* v1_info_out,
-                           ComponentInfo* v2_info_out) {
-  if (strncmp(path.c_str(), kPkgPrefix, strlen(kPkgPrefix)) != 0) {
-    return;
-  }
-
-  // Consume suffixes of the form
-  // "test/<test filename>" or "test/disabled/<test filename>"
-  bool is_disabled = (strstr(path.c_str(), "/disabled/") != nullptr);
-  const auto folder_path = is_disabled ? DirectoryName(DirectoryName(DirectoryName(path)))
-                                       : DirectoryName(DirectoryName(path));
-
-  // folder_path should also start with |kPkgPrefix| and should not be equal
-  // to |kPkgPrefix|.
-  if (strncmp(folder_path.c_str(), kPkgPrefix, strlen(kPkgPrefix)) != 0 ||
-      folder_path == fbl::String(kPkgPrefix)) {
-    return;
-  }
-
-  const char* package_name = path.c_str() + strlen(kPkgPrefix);
-  // find occurence of first '/'
-  size_t i = 0;
-  while (package_name[i] != '\0' && package_name[i] != '/') {
-    i++;
-  }
-  const fbl::String package_name_str(package_name, i);
-  const auto test_file_name = BaseName(path);
-  *v1_info_out = {
-      .component_url = fbl::StringPrintf("fuchsia-pkg://fuchsia.com/%s#meta/%s.cmx",
-                                         package_name_str.c_str(), test_file_name.c_str()),
-      .manifest_path =
-          fbl::StringPrintf("%s/meta/%s.cmx", folder_path.c_str(), test_file_name.c_str())};
-  *v2_info_out = {
-      .component_url = fbl::StringPrintf("fuchsia-pkg://fuchsia.com/%s#meta/%s.cm",
-                                         package_name_str.c_str(), test_file_name.c_str()),
-      .manifest_path =
-          fbl::StringPrintf("%s/meta/%s.cm", folder_path.c_str(), test_file_name.c_str())};
-  ;
-}
-
-// If test is a component, this function will find appropriate component executor and modify launch
-// arguments.
-// Retuns:
-// |true|: if test is not a component, or if test is a component and it can find correct component
-// executor.
-// |false|: if setup fails.
-bool SetUpForTestComponent(const char* argv[], size_t argc, fbl::String* out_component_url,
-                           fbl::String* out_component_executor) {
-  const char* test_path = argv[0];
-  struct stat s;
-  const char* component_executor = "";
-  fbl::String component_url;
-
+bool SetUpForTestComponent(const char* test_path, fbl::String* out_component_executor) {
   if (IsFuchsiaPkgURI(test_path)) {
-    component_url = test_path;
     const char* last_three_chars_of_url = &(test_path[strlen(test_path) - 3]);
     if (0 == strncmp(last_three_chars_of_url, "cmx", 3)) {  // v1 component
-      component_executor = kRunTestComponentPath;
+      *out_component_executor = kRunTestComponentPath;
     } else if (0 == strncmp(last_three_chars_of_url, ".cm", 3)) {  // v2
-      component_executor = kRunTestSuitePath;
+      *out_component_executor = kRunTestSuitePath;
     } else {
       fprintf(stderr, "FAILURE: component URL has unexpected format: %s\n", test_path);
       return false;
     }
-  } else {  // TODO(43448): Remove this code path once testrunner always provides URI.
-    ComponentInfo v1_info, v2_info;
-
-    TestFileComponentInfo(test_path, &v1_info, &v2_info);
-    // If we get a non empty |cmx_file_path|, check that it exists, and if
-    // present launch the test as component using generated |component_url|.
-    if (v1_info.manifest_path == "") {
-      // test is not a component.
-      return true;
-    }
-
-    // cmx file is present
-    if (stat(v1_info.manifest_path.c_str(), &s) == 0) {
-      component_executor = kRunTestComponentPath;
-      component_url = v1_info.component_url;
-    } else if (stat(v2_info.manifest_path.c_str(), &s) == 0) {
-      // cm file is present
-      component_executor = kRunTestSuitePath;
-      component_url = v2_info.component_url;
-    } else {
-      // Can't find either cmx or cm file, this test is not a component. Ensure it is not a binary
-      // from /pkgfs/packages.
-      if (strncmp(test_path, kPkgPrefix, fbl::count_of(kPkgPrefix)) == 0) {
-        fprintf(
-            stderr,
-            "FAILURE: Test path '%s' starts with /pkgfs/packages, which is no longer supported.\n",
-            test_path);
-        return false;
-      }
-
-      return true;
-    }
-  }
-
-  // Check whether the executor is present and print a more helpful error, rather than failing later
-  // in the fdio_spawn_etc call
-  if (stat(component_executor, &s) == 0) {
-    *out_component_executor = component_executor;
-    *out_component_url = std::move(component_url);
-  } else {
-    fprintf(stderr,
-            "FAILURE: Cannot find '%s', cannot run %s as component."
-            "binary.\n",
-            component_executor, test_path);
+  } else if (0 == strncmp(test_path, kPkgPrefix, strlen(kPkgPrefix))) {
+    fprintf(stderr, "FAILURE: Test path '%s' starts with %s, which is not supported.\n", test_path,
+            kPkgPrefix);
     return false;
   }
 
@@ -287,17 +179,26 @@ std::unique_ptr<Result> RunTest(const char* argv[], const char* output_dir,
   }
 
   const char* path = argv[0];
-  fbl::String component_url;
   fbl::String component_executor;
 
-  if (!SetUpForTestComponent(argv, argc, &component_url, &component_executor)) {
+  if (!SetUpForTestComponent(path, &component_executor)) {
     return std::make_unique<Result>(path, FAILED_TO_LAUNCH, 0, 0);
   }
 
   const char* component_launch_args[argc + 2];
-  if (component_url.length() > 0) {
+  if (component_executor.length() > 0) {
+    // Check whether the executor is present and print a more helpful error, rather than failing
+    // later in the fdio_spawn_etc call.
+    struct stat s;
+    if (stat(component_executor.c_str(), &s)) {
+      fprintf(stderr,
+              "FAILURE: Cannot find '%s', cannot run %s as component."
+              "binary.\n",
+              component_executor.c_str(), path);
+      return std::make_unique<Result>(path, FAILED_TO_LAUNCH, 0, 0);
+    }
     component_launch_args[0] = component_executor.c_str();
-    component_launch_args[1] = component_url.c_str();
+    component_launch_args[1] = path;
     for (size_t i = 1; i <= argc; i++) {
       component_launch_args[1 + i] = argv[i];
     }

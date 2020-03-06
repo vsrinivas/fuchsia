@@ -25,20 +25,13 @@ struct ComponentInfo {
 // https://fuchsia.dev/fuchsia-src/concepts/storage/package_metadata#component_manifest
 constexpr char kPkgPrefix[] = "/pkgfs/packages/";
 
-// If |path| starts with |kPkgPrefix|, this function will generate corresponding
-// cmx file path and component url.
-//
-// if test binary path is: /pkgfs/packages/my_tests/0/test/test_binary, the cmx path
-// would be: /pkgfs/packages/my_tests/0/meta/test_binary.cmx
-//
-// component_url for above path would be:
-// fuchsia-pkg://fuchsia.com/my_tests#meta/test_binary.cmx
-//
-// Code which uses this url:
-// https://fuchsia.googlesource.com/fuchsia/+/master/src/sys/appmgr/root_loader.cc
-//
-void TestFileComponentInfo(const fbl::String& path, ComponentInfo* v1_info_out,
-                           ComponentInfo* v2_info_out);
+// If test is a component, this function will find the appropriate component executor and modify
+// launch arguments.
+// Returns:
+// |true|: if test is not a component, or if test is a component and it can find the correct
+//   component executor.
+// |false|: if setup fails.
+bool SetUpForTestComponent(const char* test_path, fbl::String* out_component_executor);
 
 // Invokes a Fuchsia test binary and writes its output to a file.
 //
