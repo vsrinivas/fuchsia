@@ -62,7 +62,7 @@ zx_status_t BlobVerifier::CreateWithoutTree(digest::Digest digest, BlobfsMetrics
 }
 
 zx_status_t BlobVerifier::Verify(const void* data, size_t data_size) {
-  TRACE_DURATION("blobfs", "BlobVerifier::Verify");
+  TRACE_DURATION("blobfs", "BlobVerifier::Verify", "data_size", data_size);
   fs::Ticker ticker(metrics_->Collecting());
 
   zx_status_t status = tree_verifier_.Verify(data, data_size, 0);
@@ -75,7 +75,7 @@ zx_status_t BlobVerifier::Verify(const void* data, size_t data_size) {
 }
 
 zx_status_t BlobVerifier::VerifyPartial(const void* data, size_t length, size_t data_offset) {
-  TRACE_DURATION("blobfs", "BlobVerifier::VerifyPartial");
+  TRACE_DURATION("blobfs", "BlobVerifier::VerifyPartial", "length", length, "offset", data_offset);
   fs::Ticker ticker(metrics_->Collecting());
 
   zx_status_t status = tree_verifier_.Verify(data, length, data_offset);

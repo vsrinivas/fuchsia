@@ -29,8 +29,6 @@ BlobLoader::BlobLoader(Blobfs* const blobfs, UserPager* const pager)
 
 zx_status_t BlobLoader::LoadBlob(uint32_t node_index, fzl::OwnedVmoMapper* data_out,
                                  fzl::OwnedVmoMapper* merkle_out) {
-  TRACE_DURATION("blobfs", "BlobLoader::LoadBlob");
-
   const Inode* const inode = blobfs_->GetNode(node_index);
   // LoadBlob should only be called for Inodes. If this doesn't hold, one of two things happened:
   //   - Programmer error
@@ -39,6 +37,8 @@ zx_status_t BlobLoader::LoadBlob(uint32_t node_index, fzl::OwnedVmoMapper* data_
   // should happen only during development and in the second case there may be more corruption and
   // we want to unmount the filesystem before any more damage is done.
   ZX_ASSERT(inode->header.IsInode() && inode->header.IsAllocated());
+
+  TRACE_DURATION("blobfs", "BlobLoader::LoadBlob", "blob_size", inode->blob_size);
 
   const uint64_t num_data_blocks = BlobDataBlocks(*inode);
   if (num_data_blocks == 0) {
@@ -91,8 +91,6 @@ zx_status_t BlobLoader::LoadBlobPaged(uint32_t node_index,
                                       std::unique_ptr<PageWatcher>* page_watcher_out,
                                       fzl::OwnedVmoMapper* data_out,
                                       fzl::OwnedVmoMapper* merkle_out) {
-  TRACE_DURATION("blobfs", "BlobLoader::LoadBlobPaged");
-
   const Inode* const inode = blobfs_->GetNode(node_index);
   // LoadBlobPaged should only be called for Inodes. If this doesn't hold, one of two things
   // happened:
@@ -102,6 +100,8 @@ zx_status_t BlobLoader::LoadBlobPaged(uint32_t node_index,
   // should happen only during development and in the second case there may be more corruption and
   // we want to unmount the filesystem before any more damage is done.
   ZX_ASSERT(inode->header.IsInode() && inode->header.IsAllocated());
+
+  TRACE_DURATION("blobfs", "BlobLoader::LoadBlobPaged", "blob_size", inode->blob_size);
 
   const uint64_t num_data_blocks = BlobDataBlocks(*inode);
   if (num_data_blocks == 0) {
@@ -197,7 +197,6 @@ zx_status_t BlobLoader::InitMerkleVerifier(uint32_t node_index, const Inode& ino
 
 zx_status_t BlobLoader::LoadMerkle(uint32_t node_index, const Inode& inode,
                                    const fzl::OwnedVmoMapper& vmo) const {
-  TRACE_DURATION("blobfs", "BlobLoader::LoadMerkle");
   storage::OwnedVmoid vmoid(blobfs_);
   zx_status_t status;
   if ((status = vmoid.AttachVmo(vmo.vmo())) != ZX_OK) {
@@ -206,11 +205,14 @@ zx_status_t BlobLoader::LoadMerkle(uint32_t node_index, const Inode& inode,
     return status;
   }
 
+  uint32_t merkle_blocks = ComputeNumMerkleTreeBlocks(inode);
+  uint64_t merkle_size = static_cast<uint64_t>(merkle_blocks) * kBlobfsBlockSize;
+
+  TRACE_DURATION("blobfs", "BlobLoader::LoadMerkle", "merkle_size", merkle_size);
   fs::Ticker ticker(blobfs_->Metrics()->Collecting());
   fs::ReadTxn txn(blobfs_);
 
   const uint64_t kDataStart = DataStartBlock(blobfs_->Info());
-  uint32_t merkle_blocks = ComputeNumMerkleTreeBlocks(inode);
   BlockIterator block_iter = blobfs_->BlockIteratorByNodeIndex(node_index);
   status = StreamBlocks(&block_iter, merkle_blocks,
                         [&](uint64_t vmo_offset, uint64_t dev_offset, uint32_t length) {
@@ -227,7 +229,7 @@ zx_status_t BlobLoader::LoadMerkle(uint32_t node_index, const Inode& inode,
     return status;
   }
 
-  blobfs_->Metrics()->UpdateMerkleDiskRead(merkle_blocks * kBlobfsBlockSize, ticker.End());
+  blobfs_->Metrics()->UpdateMerkleDiskRead(merkle_size, ticker.End());
   return ZX_OK;
 }
 
@@ -248,8 +250,6 @@ zx_status_t BlobLoader::LoadData(uint32_t node_index, const Inode& inode,
 zx_status_t BlobLoader::LoadAndDecompressData(uint32_t node_index,
                                               const Inode& inode,
                                               const fzl::OwnedVmoMapper& vmo) const {
-  TRACE_DURATION("blobfs", "BlobLoader::LoadAndDecompressData");
-
   CompressionAlgorithm algorithm;
   if (inode.header.flags & kBlobFlagLZ4Compressed) {
     algorithm = CompressionAlgorithm::LZ4;
@@ -269,6 +269,9 @@ zx_status_t BlobLoader::LoadAndDecompressData(uint32_t node_index,
     FS_TRACE_ERROR("Multiplication overflow\n");
     return ZX_ERR_OUT_OF_RANGE;
   }
+
+  TRACE_DURATION("blobfs", "BlobLoader::LoadAndDecompressData", "compressed_size", compressed_size,
+                 "blob_size", inode.blob_size);
 
   // Create and attach a transfer VMO for fetching the compressed contents from the block FIFO.
   fbl::StringBuffer<ZX_MAX_NAME_LEN> vmo_name;
