@@ -110,6 +110,9 @@ class FuchsiaTestCommand {
       exactMatching: testsConfig.flags.exactMatches,
       testDefinitions: testDefinitions,
       testsConfig: testsConfig,
+      testRunner: SymbolizingTestRunner(
+        fx: '${fuchsiaLocator.fuchsiaDir}/.jiri_root/bin/fx',
+      ),
     );
   }
 

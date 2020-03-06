@@ -36,13 +36,17 @@ class TestBundle {
 
   TestBundle(
     this.testDefinition, {
+    @required this.testRunner,
     @required this.workingDirectory,
     this.runnerFlags = const [],
     this.extraFlags = const [],
     this.raiseOnFailure = false,
     this.isDryRun = false,
-    testRunner,
-  }) : testRunner = testRunner ?? TestRunner.runner;
+  }) {
+    if (testRunner == null) {
+      throw AssertionError('`testRunner` must not equal `null`');
+    }
+  }
 
   /// Invokes the actual test that this class wraps.
   ///
@@ -50,9 +54,11 @@ class TestBundle {
   Stream<TestEvent> run({Function(String) realtimeOutputSink}) async* {
     var testType = testDefinition.executionHandle.testType;
     if (testType == TestType.unsupportedDeviceTest) {
+      var greyTestName =
+          wrapWith(testDefinition.executionHandle.handle, [styleBold]);
       yield TestInfo(
-        'Skipping unrunnable legacy test: '
-        '"${testDefinition.executionHandle.handle}"',
+        'Skipping unrunnable legacy test: "$greyTestName". '
+        'All device tests must be component-tests, but this is a binary',
       );
       return;
     }

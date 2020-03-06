@@ -117,8 +117,8 @@ class TestsManifestReader {
     @required void Function(TestEvent) eventEmitter,
     @required TestsConfig testsConfig,
     @required String buildDir,
+    @required TestRunner testRunner,
     bool exactMatching = false,
-    TestRunner testRunner,
   }) {
     List<TestBundle> testBundles = [];
     Set<String> seenPackages = {};
@@ -229,13 +229,6 @@ class TestsManifestReader {
       duplicates = wrapWith(
           ' (with ${parsedManifest.numDuplicateTests} $duplicateWord)',
           [darkGray]);
-    }
-
-    if (!testsConfig.flags.isVerbose && parsedManifest.numUnparsedTests > 0) {
-      eventEmitter(TestInfo(
-        'Found ${parsedManifest.numUnparsedTests.toString()} tests that '
-        'could not be parsed.',
-      ));
     }
 
     String manifestName = wrapWith('$userFriendlyBuildDir/tests.json', [green]);

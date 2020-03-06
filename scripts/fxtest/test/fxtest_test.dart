@@ -34,12 +34,21 @@ class FakeTestRunner extends Fake implements TestRunner {
   Future<ProcessResult> run(
     String command,
     List<String> args, {
-    String workingDirectory,
+    @required String fx,
+    @required String workingDirectory,
     Function(String) realtimeOutputSink,
     Function(String) realtimeErrorSink,
   }) async {
+    String _stdout = args.join(' ');
+    if (realtimeOutputSink != null) {
+      realtimeOutputSink(_stdout);
+    }
+    String _stderr = workingDirectory.toString();
+    if (realtimeErrorSink != null) {
+      realtimeErrorSink(_stderr);
+    }
     return Future.value(
-      ProcessResult(1, 0, args.join(' '), workingDirectory.toString()),
+      ProcessResult(1, exitCode, _stdout, _stderr),
     );
   }
 }
@@ -198,6 +207,8 @@ void main() {
       ),
     ];
 
+    var testRunner = TestRunner();
+
     // Helper function to parse lots of data for tests
     ParsedManifest parseFromArgs({
       List<String> args = const [],
@@ -219,6 +230,7 @@ void main() {
         exactMatching: testsConfig.flags.exactMatches,
         testsConfig: testsConfig,
         testDefinitions: testDefs ?? testDefinitions,
+        testRunner: testRunner,
       );
     }
 
@@ -320,6 +332,7 @@ void main() {
         buildDir: fuchsiaLocator.buildDir,
         eventEmitter: _ignoreEvents,
         testsConfig: testsConfig,
+        testRunner: testRunner,
       );
       expect(parsedManifest.testBundles, hasLength(1));
       expect(parsedManifest.testBundles[0].testDefinition.name, 'device test');
@@ -334,6 +347,7 @@ void main() {
         buildDir: fuchsiaLocator.buildDir,
         eventEmitter: _ignoreEvents,
         testsConfig: testsConfig,
+        testRunner: testRunner,
       );
       expect(parsedManifest.testBundles, hasLength(0));
     });
@@ -356,6 +370,7 @@ void main() {
         buildDir: fuchsiaLocator.buildDir,
         eventEmitter: _ignoreEvents,
         testsConfig: testsConfig,
+        testRunner: testRunner,
       );
 
       expect(parsedManifest.testBundles, hasLength(1));
@@ -383,6 +398,7 @@ void main() {
         buildDir: fuchsiaLocator.buildDir,
         eventEmitter: _ignoreEvents,
         testsConfig: testsConfig,
+        testRunner: testRunner,
       );
 
       expect(parsedManifest.testBundles, hasLength(0));
@@ -812,22 +828,27 @@ void main() {
         strings.add(s);
       }
 
-      ProcessResult result = await TestRunner.runner.run(
+      var runner = TestRunner();
+      ProcessResult result = await runner.run(
         './test/output_tester.sh',
         [],
+        workingDirectory: '.',
         realtimeOutputSink: addStrings,
       );
+      await Future.delayed(Duration(milliseconds: 1));
 
       expect(strings.length, 2);
       expect(strings[0], 'line 1');
       expect(strings[1], 'line 2');
-      expect(result.stdout, 'line 1line 2');
+      expect(result.stdout, '');
     });
 
     test('when -o is not passed', () async {
-      ProcessResult result = await TestRunner.runner.run(
+      var runner = TestRunner();
+      ProcessResult result = await runner.run(
         './test/output_tester.sh',
         [],
+        workingDirectory: '.',
       );
       expect(result.stdout, 'line 1\nline 2\n');
     });

@@ -4,10 +4,23 @@
 
 import 'package:fxtest/fxtest.dart';
 import 'package:io/ansi.dart';
+import 'package:meta/meta.dart';
+
+class Emoji {
+  final String emoji;
+  final String fallback;
+  Emoji(this.emoji, this.fallback);
+
+  static final Emoji party = Emoji('🎉', '!');
+  static final Emoji thinking = Emoji('🤔', '?');
+  static final Emoji check = Emoji('✅', '√');
+  static final Emoji x = Emoji('❌', 'F');
+}
 
 abstract class OutputFormatter {
   final bool verbose;
   final bool shouldColorizeOutput;
+  final bool hasRealTimeOutput;
   final Duration slowTestThreshold;
   final List<TestInfo> _infoEvents;
   final List<TestStarted> _testStartedEvents;
@@ -16,9 +29,10 @@ abstract class OutputFormatter {
   bool _hasStartedTests;
 
   OutputFormatter({
-    this.verbose,
+    @required this.verbose,
+    @required this.hasRealTimeOutput,
+    @required this.slowTestThreshold,
     this.shouldColorizeOutput = true,
-    this.slowTestThreshold,
     OutputBuffer buffer,
   })  : _testResultEvents = [],
         _infoEvents = [],
@@ -33,8 +47,8 @@ abstract class OutputFormatter {
     return shouldColorizeOutput ? wrapWith(content, args) : content;
   }
 
-  String addEmoji(String emoji, [String fallback]) {
-    return shouldColorizeOutput ? emoji : fallback ?? '';
+  String addEmoji(Emoji emoji) {
+    return shouldColorizeOutput ? emoji.emoji : emoji.fallback;
   }
 
   /// Accepts a [TestEvent] and updates the output buffer.
@@ -78,8 +92,9 @@ abstract class OutputFormatter {
     String summary =
         '$verb ${_testResultEvents.length} tests with $numFailures $failures';
     if (numFailures == 0) {
-      summary =
-          '${addEmoji('🎉')}  ${colorize(summary, [green])} ${addEmoji('🎉')}';
+      summary = '${addEmoji(Emoji.party)}  ${colorize(summary, [
+        green
+      ])} ${addEmoji(Emoji.party)}';
     }
     _buffer.addLines(['', summary]);
   }
@@ -135,11 +150,13 @@ abstract class OutputFormatter {
 /// ```
 class VerboseOutputFormatter extends OutputFormatter {
   VerboseOutputFormatter({
-    shouldColorizeOutput = true,
-    slowTestThreshold,
+    @required bool hasRealTimeOutput,
+    bool shouldColorizeOutput = true,
+    Duration slowTestThreshold,
     OutputBuffer buffer,
   }) : super(
           verbose: true,
+          hasRealTimeOutput: hasRealTimeOutput,
           shouldColorizeOutput: shouldColorizeOutput,
           slowTestThreshold: slowTestThreshold,
           buffer: buffer,
@@ -166,7 +183,7 @@ class VerboseOutputFormatter extends OutputFormatter {
     if (_testStartedEvents.length == 1) {
       _buffer.addLine('');
     }
-    _buffer.addSubstring('${addEmoji('🤔', '?')} $testName');
+    _buffer.addSubstring('${addEmoji(Emoji.thinking)}  $testName');
   }
 
   @override
@@ -175,8 +192,8 @@ class VerboseOutputFormatter extends OutputFormatter {
     String emoji = event.isDryRun
         ? colorize('(dry run)', [darkGray])
         : event.isSuccess
-            ? '${addEmoji('✔️', '√')} '
-            : '${addEmoji('❌', 'F')} ';
+            ? '${addEmoji(Emoji.check)} '
+            : '${addEmoji(Emoji.x)} ';
 
     String runtime =
         slowTestThreshold != null && event.runtime > slowTestThreshold
@@ -186,7 +203,16 @@ class VerboseOutputFormatter extends OutputFormatter {
               )
             : '';
 
-    _buffer.updateLines(['$emoji $testName$runtime']);
+    // When piping realtime output to the user, we don't want to remove the
+    // last line. Usually, the last line is the ":thinking_emoji: <test info>"
+    // line, which we replace in favor of the results line, but in this scenario,
+    // it's likely some output from the test.
+    // _buffer.updateLines(['$emoji $testName$runtime']);
+    if (hasRealTimeOutput) {
+      _buffer.addLines(['$emoji $testName$runtime']);
+    } else {
+      _buffer.updateLines(['$emoji $testName$runtime']);
+    }
   }
 
   @override
@@ -218,6 +244,7 @@ class CondensedOutputFormatter extends OutputFormatter {
   })  : _hiddenInfo = [],
         super(
           verbose: false,
+          hasRealTimeOutput: false,
           shouldColorizeOutput: shouldColorizeOutput,
           slowTestThreshold: slowTestThreshold,
           buffer: buffer,

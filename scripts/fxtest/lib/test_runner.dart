@@ -5,10 +5,18 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'package:meta/meta.dart';
+
+class ProcessArgs {
+  final String command;
+  final List<String> args;
+  ProcessArgs(this.command, this.args);
+
+  @override
+  String toString() => '$command ${args.join(' ')}';
+}
 
 class TestRunner {
-  static final TestRunner runner = TestRunner();
-
   /// Wrapper which runs commands and not only collects all output for a
   /// [ProcessResult], but also optionally emits realtime events from nested
   /// stdout.
@@ -22,65 +30,73 @@ class TestRunner {
   Future<ProcessResult> run(
     String command,
     List<String> args, {
-    String workingDirectory,
+    @required String workingDirectory,
     Function(String) realtimeOutputSink,
     Function(String) realtimeErrorSink,
   }) async {
-    // When no extra listeners are supplied for this process, we can
-    // run it very simply.
-    if (realtimeOutputSink == null && realtimeErrorSink == null) {
-      return Process.run(command, args, workingDirectory: workingDirectory);
-    }
-
+    var processArgs = _buildProcessArgs(command, args);
     Process process = await Process.start(
-      command,
-      args,
+      processArgs.command,
+      processArgs.args,
       workingDirectory: workingDirectory,
     );
 
-    var outputBroadcast = process.stdout
-        .asBroadcastStream()
-        .transform(utf8.decoder)
-        .transform(LineSplitter());
-    var errorBroadcast = process.stderr
-        .asBroadcastStream()
-        .transform(utf8.decoder)
-        .transform(LineSplitter());
-
     var _stdOut = StringBuffer();
-    // Register listeners and hold onto StreamSubscriptions to later cancel.
-    var outputListeners = <StreamSubscription>[
-      outputBroadcast.listen((String val) {
-        _stdOut.write(val);
-      }),
-      outputBroadcast.listen(realtimeOutputSink),
-    ];
+    process.stdout.transform(utf8.decoder).transform(LineSplitter()).listen(
+      (String val) {
+        _stdOut.writeln(val);
+        if (realtimeOutputSink != null) {
+          realtimeOutputSink(val);
+        }
+      },
+    );
 
     var _stdErr = StringBuffer();
-    var errorListeners = <StreamSubscription>[
-      errorBroadcast.listen((String val) {
-        _stdErr.write(val);
-      }),
-      errorBroadcast.listen(realtimeErrorSink),
-    ];
+    process.stderr.transform(utf8.decoder).transform(LineSplitter()).listen(
+      (String val) {
+        _stdErr.writeln(val);
+        if (realtimeErrorSink != null) {
+          realtimeErrorSink(val);
+        }
+      },
+    );
 
-    // Wait for command to actually end.
+    // Wait for test to actually end.
     int _exitCode = await process.exitCode;
-
-    // Fire off all cancels without waiting one at a time, then wait
-    // in one big batch at the end.
-    List<Future> cleanUpFutures = [
-      ...outputListeners.map((var listener) => listener.cancel()),
-      ...errorListeners.map((var listener) => listener.cancel())
-    ];
-    await Future.wait(cleanUpFutures);
 
     // Return the same thing as if we'd used `Process.run`.
     return ProcessResult(
       process.pid,
       _exitCode,
-      _stdOut.toString(),
+      realtimeOutputSink == null ? _stdOut.toString() : '',
       _stdErr.toString(),
     );
+  }
+
+  ProcessArgs _buildProcessArgs(String command, List<String> args) {
+    return ProcessArgs(command, args);
+  }
+}
+
+class SymbolizingTestRunner extends TestRunner {
+  final String fx;
+
+  SymbolizingTestRunner({
+    @required this.fx,
+  }) : assert(fx != null && fx != '');
+
+  @override
+  ProcessArgs _buildProcessArgs(String command, List<String> args) {
+    return ProcessArgs('bash', [
+      // `-o pipefail` forwards the exitcode from `command` (the test itself)
+      // instead of the always-zero exitcode from symbolize
+      '-o',
+      'pipefail',
+      // `-c` keeps the pipe in the domain of `bash`, and not in the domain of
+      // `fx shell ...`, which leads to "can't find fx" errors (since that's)
+      // not on the device
+      '-c',
+      [command, ...args, '|', fx, 'symbolize'].join(' ')
+    ]);
   }
 }

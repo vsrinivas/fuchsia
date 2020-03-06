@@ -130,6 +130,7 @@ class FuchsiaTestCommandCli {
         : null;
     return testsConfig.flags.isVerbose
         ? VerboseOutputFormatter(
+            hasRealTimeOutput: testsConfig.flags.allOutput,
             slowTestThreshold: slowTestThreshold,
             shouldColorizeOutput: testsConfig.flags.simpleOutput,
           )
