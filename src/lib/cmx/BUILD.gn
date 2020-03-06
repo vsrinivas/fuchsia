@@ -72,11 +72,11 @@ test_package("cmx_tests") {
   ]
 }
 
-fuzz_package("cmx_fuzzers") {
-  targets = [ ":cmx_fuzzer" ]
+fuzzers_package("cmx_fuzzers") {
+  fuzzers = [ ":cmx_fuzzer" ]
 }
 
-fuzz_target("cmx_fuzzer") {
+fuzzer("cmx_fuzzer") {
   sources = [ "cmx_fuzztest.cc" ]
   deps = [
     ":cmx",
