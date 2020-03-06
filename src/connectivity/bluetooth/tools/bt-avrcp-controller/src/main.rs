@@ -158,8 +158,7 @@ async fn send_raw_vendor<'a>(
         Ok((pdu_id, buf)) => {
             eprintln!("Sending {:#?}", buf);
 
-            match controller.send_raw_vendor_dependent_command(pdu_id, &mut buf.into_iter()).await?
-            {
+            match controller.send_raw_vendor_dependent_command(pdu_id, &buf).await? {
                 Ok(response) => Ok(format!("response: {:#?}", response)),
                 Err(e) => Ok(format!("Error sending raw dependent command: {:?}", e)),
             }

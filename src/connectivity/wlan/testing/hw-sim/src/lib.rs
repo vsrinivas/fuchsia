@@ -124,7 +124,7 @@ pub fn send_beacon(
             },
         },
     })?;
-    proxy.rx(0, &mut buf.iter().cloned(), &mut create_rx_info(channel, rssi_dbm))?;
+    proxy.rx(0, &buf, &mut create_rx_info(channel, rssi_dbm))?;
     Ok(())
 }
 
@@ -150,7 +150,7 @@ fn send_authentication(
             },
         },
     })?;
-    proxy.rx(0, &mut buf.iter().cloned(), &mut create_rx_info(channel, 0))?;
+    proxy.rx(0, &buf, &mut create_rx_info(channel, 0))?;
     Ok(())
 }
 
@@ -184,7 +184,7 @@ fn send_association_response(
             extended_supported_rates:  &[48, 72, 128 + 96, 108],
         },
     })?;
-    proxy.rx(0, &mut buf.iter().cloned(), &mut create_rx_info(channel, 0))?;
+    proxy.rx(0, &buf, &mut create_rx_info(channel, 0))?;
     Ok(())
 }
 
@@ -401,7 +401,7 @@ pub fn rx_wlan_data_frame(
     })?;
     buf.truncate(bytes_written);
 
-    phy.rx(0, &mut buf.iter().cloned(), &mut create_rx_info(channel, 0))?;
+    phy.rx(0, &buf, &mut create_rx_info(channel, 0))?;
     Ok(())
 }
 

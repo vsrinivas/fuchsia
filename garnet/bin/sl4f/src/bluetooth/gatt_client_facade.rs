@@ -132,7 +132,7 @@ impl GattClientFacade {
         let tag = "GattClientFacade::gattc_write_char_by_id";
 
         let write_characteristic = match &self.inner.read().active_proxy {
-            Some(proxy) => proxy.write_characteristic(id, &mut write_value.into_iter()),
+            Some(proxy) => proxy.write_characteristic(id, &write_value),
             None => fx_err_and_bail!(&with_line!(tag), "Central proxy not available."),
         };
 
@@ -157,9 +157,7 @@ impl GattClientFacade {
         let tag = "GattClientFacade::gattc_write_long_char_by_id";
 
         let write_long_characteristic = match &self.inner.read().active_proxy {
-            Some(proxy) => {
-                proxy.write_long_characteristic(id, offset, &mut write_value.into_iter())
-            }
+            Some(proxy) => proxy.write_long_characteristic(id, offset, &write_value),
             None => fx_err_and_bail!(&with_line!(tag), "Central proxy not available."),
         };
 
@@ -186,7 +184,7 @@ impl GattClientFacade {
 
         match &self.inner.read().active_proxy {
             Some(proxy) => proxy
-                .write_characteristic_without_response(id, &mut write_value.into_iter())
+                .write_characteristic_without_response(id, &write_value)
                 .map_err(|_| Sl4fError::new("Failed to send message").into()),
             None => fx_err_and_bail!(&with_line!(tag), "Central proxy not available."),
         }
@@ -285,7 +283,7 @@ impl GattClientFacade {
         let tag = "GattClientFacade::gattc_write_desc_by_id";
 
         let write_descriptor = match &self.inner.read().active_proxy {
-            Some(proxy) => proxy.write_descriptor(id, &mut write_value.into_iter()),
+            Some(proxy) => proxy.write_descriptor(id, &write_value),
             None => fx_err_and_bail!(&with_line!(tag), "Central proxy not available."),
         };
 
@@ -310,7 +308,7 @@ impl GattClientFacade {
         let tag = "GattClientFacade::gattc_write_long_desc_by_id";
 
         let write_long_descriptor = match &self.inner.read().active_proxy {
-            Some(proxy) => proxy.write_long_descriptor(id, offset, &mut write_value.into_iter()),
+            Some(proxy) => proxy.write_long_descriptor(id, offset, &write_value),
             None => fx_err_and_bail!(&with_line!(tag), "Central proxy not available."),
         };
 

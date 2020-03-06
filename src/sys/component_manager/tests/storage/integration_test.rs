@@ -165,11 +165,10 @@ async fn check_storage(
         OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE,
     )
     .context("failed to open file in storage")?;
-    let (s, _) =
-        file.write(&mut file_contents.as_bytes().to_vec().into_iter()).await.unwrap_or_else(|_| {
-            println!("ERROR! Looping indefinitely");
-            loop {}
-        });
+    let (s, _) = file.write(&file_contents.as_bytes()).await.unwrap_or_else(|_| {
+        println!("ERROR! Looping indefinitely");
+        loop {}
+    });
     assert_eq!(zx::Status::OK, zx::Status::from_raw(s), "writing to the file failed");
 
     println!("successfully wrote to file \"hippo\" in exposed data directory");

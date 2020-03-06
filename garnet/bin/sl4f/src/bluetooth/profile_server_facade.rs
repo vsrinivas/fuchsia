@@ -660,7 +660,7 @@ impl ProfileServerFacade {
         };
 
         match &self.inner.read().profile_server_proxy {
-            Some(server) => server.add_search(profile_id, &mut attribute_list.into_iter())?,
+            Some(server) => server.add_search(profile_id, &attribute_list)?,
             None => fx_err_and_bail!(&with_line!(tag), "No Server Proxy created."),
         };
 

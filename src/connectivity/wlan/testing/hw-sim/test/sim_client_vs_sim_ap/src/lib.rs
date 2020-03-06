@@ -32,8 +32,8 @@ fn packet_forwarder<'a>(
 ) -> impl Fn(WlantapPhyEvent) + 'a {
     move |event| {
         if let WlantapPhyEvent::Tx { args } = event {
-            let mut frame = args.packet.data.into_iter();
-            peer_phy.rx(0, &mut frame, &mut create_rx_info(&CHANNEL, 0)).expect(context);
+            let frame = &args.packet.data;
+            peer_phy.rx(0, frame, &mut create_rx_info(&CHANNEL, 0)).expect(context);
         }
     }
 }

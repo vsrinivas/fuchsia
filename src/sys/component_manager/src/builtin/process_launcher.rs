@@ -480,10 +480,8 @@ mod tests {
         let (mut launch_info, proxy) = setup_test_util(&launcher).await?;
 
         let test_args = vec!["arg0", "arg1", "arg2"];
-        let mut test_args_iters: Vec<_> = test_args.iter().map(|s| s.bytes()).collect();
-        let mut test_args_iters =
-            test_args_iters.iter_mut().map(|iter| iter as &mut dyn ExactSizeIterator<Item = u8>);
-        launcher.add_args(&mut test_args_iters)?;
+        let test_args_bytes: Vec<_> = test_args.iter().map(|s| s.as_bytes()).collect();
+        launcher.add_args(&mut test_args_bytes.into_iter())?;
 
         let (status, process) = launcher.launch(&mut launch_info).await?;
         if expect_access_denied() {
@@ -509,10 +507,8 @@ mod tests {
 
         let test_env = vec![("VAR1", "value2"), ("VAR2", "value2")];
         let test_env_strs: Vec<_> = test_env.iter().map(|v| format!("{}={}", v.0, v.1)).collect();
-        let mut test_env_iters: Vec<_> = test_env_strs.iter().map(|s| s.bytes()).collect();
-        let mut test_env_iters =
-            test_env_iters.iter_mut().map(|iter| iter as &mut dyn ExactSizeIterator<Item = u8>);
-        launcher.add_environs(&mut test_env_iters)?;
+        let test_env_bytes: Vec<_> = test_env_strs.iter().map(|s| s.as_bytes()).collect();
+        launcher.add_environs(&mut test_env_bytes.into_iter())?;
 
         let (status, process) = launcher.launch(&mut launch_info).await?;
         if expect_access_denied() {
@@ -581,10 +577,8 @@ mod tests {
         let (mut launch_info, proxy) = setup_test_util(&launcher).await?;
 
         let test_args = vec!["arg0", "arg1", "arg2"];
-        let mut test_args_iters: Vec<_> = test_args.iter().map(|s| s.bytes()).collect();
-        let mut test_args_iters =
-            test_args_iters.iter_mut().map(|iter| iter as &mut dyn ExactSizeIterator<Item = u8>);
-        launcher.add_args(&mut test_args_iters)?;
+        let test_args_bytes: Vec<_> = test_args.iter().map(|s| s.as_bytes()).collect();
+        launcher.add_args(&mut test_args_bytes.into_iter())?;
 
         let (status, start_data) = launcher.create_without_starting(&mut launch_info).await?;
         if expect_access_denied() {

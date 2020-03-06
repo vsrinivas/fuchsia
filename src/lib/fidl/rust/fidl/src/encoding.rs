@@ -12,6 +12,7 @@ use {
     fuchsia_zircon_status as zx_status,
     static_assertions::{assert_not_impl_any, assert_obj_safe},
     std::{cell::RefCell, cmp, mem, ptr, str, u32, u64},
+    zerocopy::AsBytes,
 };
 
 thread_local!(static CODING_BUF: RefCell<MessageBuf> = RefCell::new(MessageBuf::new()));
@@ -97,6 +98,26 @@ fn take_slice_mut<'a, T>(x: &mut &'a mut [T]) -> &'a mut [T] {
 pub fn take_handle<T: HandleBased>(handle: &mut T) -> Handle {
     let invalid = T::from_handle(Handle::invalid());
     mem::replace(handle, invalid).into_handle()
+}
+
+/// Copies elements from `src_elements` bitwise into `dst`, using a memcpy.
+fn copy_slice_to_bytes<T: AsBytes + Copy>(src_elements: &[T], dst: &mut [u8]) -> Result<()> {
+    let src = src_elements.as_bytes();
+    let src_size = src.len();
+    let dst_size = dst.len();
+    if src_size != dst_size {
+        return Err(Error::OutOfRange);
+    }
+
+    let src_ptr = src.as_ptr();
+    let dst_ptr = dst.as_mut_ptr();
+
+    // Safety: the two slices cannot overlap because the mutable `dst` reference cannot be aliased.
+    unsafe {
+        std::ptr::copy_nonoverlapping(src_ptr, dst_ptr, src_size);
+    }
+
+    Ok(())
 }
 
 /// The maximum recursion depth of encoding and decoding.
@@ -672,6 +693,63 @@ macro_rules! impl_layout_forall_T {
     };
 }
 
+// The FIDL type `vector<T>` becomes `&mut dyn ExactSizeIterator<Item = T>`
+// (borrowed) or `Vec<T>` (owned) for most types `T`. As an optimization, for
+// primitive numeric types `T` we use the borrowed form `&[T]`, allowing us to
+// encode with a straight memcpy. This optimization precludes encoding slices in
+// any other manner (for example, as an ergonomic alternative to using
+// ExactSizeIterator for all types). Once specialization stabilizes (RFC 1210),
+// this problem will go away, and optimizing will be much easier. For example,
+// we could specialize `Decodable` on vectors of primitives, making both
+// encoding and decoding efficient.
+macro_rules! impl_slice_encoding_by_copy {
+    ($prim_ty:ty) => {
+        impl Layout for &[$prim_ty] {
+            fn inline_size(_context: &Context) -> usize {
+                16
+            }
+            fn inline_align(_context: &Context) -> usize {
+                8
+            }
+        }
+
+        impl Encodable for &[$prim_ty] {
+            fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
+                (self.len() as u64).encode(encoder)?;
+                ALLOC_PRESENT_U64.encode(encoder)?;
+                if self.len() == 0 {
+                    return Ok(());
+                }
+                let bytes_len = self.len() * mem::size_of::<$prim_ty>();
+                encoder.write_out_of_line(bytes_len, |encoder| {
+                    encoder.recurse(|encoder| {
+                        let slot = encoder.next_slice(bytes_len)?;
+                        copy_slice_to_bytes(self, slot)
+                    })
+                })
+            }
+        }
+
+        impl Layout for Option<&[$prim_ty]> {
+            fn inline_size(_context: &Context) -> usize {
+                16
+            }
+            fn inline_align(_context: &Context) -> usize {
+                8
+            }
+        }
+
+        impl Encodable for Option<&[$prim_ty]> {
+            fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
+                match self {
+                    None => encode_absent_vector(encoder),
+                    Some(slice) => slice.encode(encoder),
+                }
+            }
+        }
+    };
+}
+
 macro_rules! impl_codable_num { ($($prim_ty:ty => $reader:ident + $writer:ident,)*) => { $(
     impl Layout for $prim_ty {
         fn inline_size(_context: &Context) -> usize { mem::size_of::<$prim_ty>() }
@@ -695,6 +773,8 @@ macro_rules! impl_codable_num { ($($prim_ty:ty => $reader:ident + $writer:ident,
             Ok(())
         }
     }
+
+    impl_slice_encoding_by_copy!($prim_ty);
 )* } }
 
 impl_codable_num!(
@@ -734,6 +814,7 @@ impl Decodable for bool {
 }
 
 impl_layout!(u8, align: 1, size: 1);
+impl_slice_encoding_by_copy!(u8);
 
 impl Encodable for u8 {
     fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
@@ -754,6 +835,7 @@ impl Decodable for u8 {
 }
 
 impl_layout!(i8, align: 1, size: 1);
+impl_slice_encoding_by_copy!(i8);
 
 impl Encodable for i8 {
     fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
@@ -1017,14 +1099,6 @@ impl<T: Encodable> Encodable for &mut dyn ExactSizeIterator<Item = T> {
     }
 }
 
-impl_layout_forall_T!(&mut [T], align: 8, size: 16);
-
-impl<T: Encodable> Encodable for &mut [T] {
-    fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
-        encode_encodable_iter(encoder, Some(self.iter_mut()))
-    }
-}
-
 impl_layout_forall_T!(Vec<T>, align: 8, size: 16);
 
 impl<T: Encodable> Encodable for Vec<T> {
@@ -1052,14 +1126,6 @@ impl_layout_forall_T!(Option<&mut dyn ExactSizeIterator<Item = T>>, align: 8, si
 impl<T: Encodable> Encodable for Option<&mut dyn ExactSizeIterator<Item = T>> {
     fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
         encode_encodable_iter(encoder, self.as_mut().map(|x| &mut **x))
-    }
-}
-
-impl_layout_forall_T!(Option<&mut [T]>, align: 8, size: 16);
-
-impl<T: Encodable> Encodable for Option<&mut [T]> {
-    fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
-        encode_encodable_iter(encoder, self.as_mut().map(|x| x.iter_mut()))
     }
 }
 
@@ -2677,6 +2743,45 @@ mod test {
             Some(vec![None, Some("foo".to_string())]),
             vec!["foo".to_string(), "bar".to_string()],
         ];
+    }
+
+    pub fn assert_identity_slice<'a, T>(ctx: &Context, mut start: &'a [T])
+    where
+        &'a [T]: Encodable,
+        Vec<T>: Decodable,
+        T: PartialEq + fmt::Debug,
+    {
+        let buf = &mut Vec::new();
+        let handle_buf = &mut Vec::new();
+        Encoder::encode_with_context(ctx, buf, handle_buf, &mut start).expect("Encoding failed");
+        let mut out = Vec::<T>::new_empty();
+        Decoder::decode_with_context(ctx, buf, handle_buf, &mut out).expect("Decoding failed");
+        assert_eq!(start, &out[..]);
+    }
+
+    #[test]
+    fn encode_slices_of_primitives() {
+        for ctx in CONTEXTS {
+            assert_identity_slice(ctx, &[] as &[u8]);
+            assert_identity_slice(ctx, &[0u8]);
+            assert_identity_slice(ctx, &[1u8, 2, 3, 4, 5, 255]);
+
+            assert_identity_slice(ctx, &[] as &[i8]);
+            assert_identity_slice(ctx, &[0i8]);
+            assert_identity_slice(ctx, &[1i8, 2, 3, 4, 5, -128, 127]);
+
+            assert_identity_slice(ctx, &[] as &[u64]);
+            assert_identity_slice(ctx, &[0u64]);
+            assert_identity_slice(ctx, &[1u64, 2, 3, 4, 5, u64::MAX]);
+
+            assert_identity_slice(ctx, &[] as &[f32]);
+            assert_identity_slice(ctx, &[0.0f32]);
+            assert_identity_slice(ctx, &[1.0f32, 2.0, 3.0, 4.0, 5.0, f32::MIN, f32::MAX]);
+
+            assert_identity_slice(ctx, &[] as &[f64]);
+            assert_identity_slice(ctx, &[0.0f64]);
+            assert_identity_slice(ctx, &[1.0f64, 2.0, 3.0, 4.0, 5.0, f64::MIN, f64::MAX]);
+        }
     }
 
     #[test]

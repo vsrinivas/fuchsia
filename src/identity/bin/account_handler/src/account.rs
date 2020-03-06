@@ -277,8 +277,8 @@ impl Account {
                 responder.send(&mut response)?;
             }
             AccountRequest::GetPersonaIds { responder } => {
-                let mut response = self.get_persona_ids().into_iter();
-                responder.send(&mut response)?;
+                let response = self.get_persona_ids();
+                responder.send(&response)?;
             }
             AccountRequest::GetDefaultPersona { persona, responder } => {
                 let mut response = self.get_default_persona(context, persona).await;

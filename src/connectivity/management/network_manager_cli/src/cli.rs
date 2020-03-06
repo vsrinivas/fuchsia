@@ -146,11 +146,11 @@ async fn do_add<T: Write>(
         Add::Wan { name, ports, vlan } => {
             let response = match vlan {
                 None => router_admin
-                    .create_wan(&name, 0, &mut ports.into_iter())
+                    .create_wan(&name, 0, &ports)
                     .await
                     .context("error getting response")?,
                 Some(vlan) => router_admin
-                    .create_wan(&name, vlan, &mut ports.into_iter())
+                    .create_wan(&name, vlan, &ports)
                     .await
                     .context("error getting response")?,
             };
@@ -161,11 +161,11 @@ async fn do_add<T: Write>(
         Add::Lan { name, vlan, ports } => {
             let response = match vlan {
                 None => router_admin
-                    .create_lan(&name, 0, &mut ports.into_iter())
+                    .create_lan(&name, 0, &ports)
                     .await
                     .context("error getting response")?,
                 Some(vlan) => router_admin
-                    .create_lan(&name, vlan, &mut ports.into_iter())
+                    .create_lan(&name, vlan, &ports)
                     .await
                     .context("error getting response")?,
             };

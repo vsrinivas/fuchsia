@@ -728,8 +728,8 @@ mod tests {
     async fn test_udp_connect_failure<A: TestSockAddr>() {
         let (_t, proxy) = udp_prepare_test::<A>().await;
         // pass bad SockAddr struct (too small to be parsed):
-        let addr = vec![1_u8, 2, 3, 4];
-        let res = proxy.connect(&mut addr.into_iter()).await.unwrap().expect_err("connect fails");
+        let addr = [1_u8, 2, 3, 4];
+        let res = proxy.connect(&addr).await.unwrap().expect_err("connect fails");
         assert_eq!(res, libc::EFAULT);
 
         // pass a bad family:
@@ -738,7 +738,7 @@ mod tests {
             bad_family: true,
             bad_address: false,
         });
-        let res = proxy.connect(&mut addr.into_iter()).await.unwrap().expect_err("connect fails");
+        let res = proxy.connect(&addr).await.unwrap().expect_err("connect fails");
         assert_eq!(res, libc::EAFNOSUPPORT);
 
         // pass an unspecified remote address:
@@ -747,7 +747,7 @@ mod tests {
             bad_family: false,
             bad_address: true,
         });
-        let res = proxy.connect(&mut addr.into_iter()).await.unwrap().expect_err("connect fails");
+        let res = proxy.connect(&addr).await.unwrap().expect_err("connect fails");
         assert_eq!(res, libc::EINVAL);
 
         // pass a bad port:
@@ -756,12 +756,12 @@ mod tests {
             bad_family: false,
             bad_address: false,
         });
-        let res = proxy.connect(&mut addr.into_iter()).await.unwrap().expect_err("connect fails");
+        let res = proxy.connect(&addr).await.unwrap().expect_err("connect fails");
         assert_eq!(res, libc::ECONNREFUSED);
 
         // pass an unreachable address (tests error forwarding from `udp_connect`):
         let addr = A::create(A::UNREACHABLE_ADDR, 1010);
-        let res = proxy.connect(&mut addr.into_iter()).await.unwrap().expect_err("connect fails");
+        let res = proxy.connect(&addr).await.unwrap().expect_err("connect fails");
         assert_eq!(res, libc::ENETUNREACH);
     }
 
@@ -778,11 +778,11 @@ mod tests {
     async fn test_udp_connect<A: TestSockAddr>() {
         let (_t, proxy) = udp_prepare_test::<A>().await;
         let remote = A::create(A::REMOTE_ADDR, 200);
-        let () = proxy.connect(&mut remote.into_iter()).await.unwrap().expect("connect succeeds");
+        let () = proxy.connect(&remote).await.unwrap().expect("connect succeeds");
 
         // can connect again to a different remote should succeed.
         let remote = A::create(A::REMOTE_ADDR_2, 200);
-        let () = proxy.connect(&mut remote.into_iter()).await.unwrap().expect("connect suceeds");
+        let () = proxy.connect(&remote).await.unwrap().expect("connect suceeds");
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -800,22 +800,22 @@ mod tests {
         let stack = t.get(0);
         // can bind to local address
         let addr = A::create(A::LOCAL_ADDR, 200);
-        let () = socket.bind(&mut addr.into_iter()).await.unwrap().expect("bind succeeds");
+        let () = socket.bind(&addr).await.unwrap().expect("bind succeeds");
 
         // can't bind again (to another port)
         let addr = A::create(A::LOCAL_ADDR, 201);
-        let res = socket.bind(&mut addr.into_iter()).await.unwrap().expect_err("bind fails");
+        let res = socket.bind(&addr).await.unwrap().expect_err("bind fails");
         assert_eq!(res, libc::EALREADY);
 
         // can bind another socket to a different port:
         let socket = get_socket::<A>(stack).await;
         let addr = A::create(A::LOCAL_ADDR, 201);
-        let () = socket.bind(&mut addr.into_iter()).await.unwrap().expect("bind succeeds");
+        let () = socket.bind(&addr).await.unwrap().expect("bind succeeds");
 
         // can bind to unspecified address in a different port:
         let socket = get_socket::<A>(stack).await;
         let addr = A::create(<A::AddrType as IpAddress>::Version::UNSPECIFIED_ADDRESS, 202);
-        let () = socket.bind(&mut addr.into_iter()).await.unwrap().expect("bind succeeds");
+        let () = socket.bind(&addr).await.unwrap().expect("bind succeeds");
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -832,11 +832,10 @@ mod tests {
         let (_t, socket) = udp_prepare_test::<A>().await;
         // can bind to local address
         let bind_addr = A::create(A::LOCAL_ADDR, 200);
-        let () = socket.bind(&mut bind_addr.into_iter()).await.unwrap().expect("bind suceeds");
+        let () = socket.bind(&bind_addr).await.unwrap().expect("bind suceeds");
 
         let remote_addr = A::create(A::REMOTE_ADDR, 1010);
-        let () =
-            socket.connect(&mut remote_addr.into_iter()).await.unwrap().expect("connect succeeds");
+        let () = socket.connect(&remote_addr).await.unwrap().expect("connect succeeds");
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -886,11 +885,7 @@ mod tests {
         // Setup Alice as a server, bound to LOCAL_ADDR:200
         println!("Configuring alice...");
         let sockaddr = A::create(A::LOCAL_ADDR, 200);
-        let () = alice_socket
-            .bind(&mut sockaddr.into_iter())
-            .await
-            .unwrap()
-            .expect("alice bind suceeds");
+        let () = alice_socket.bind(&sockaddr).await.unwrap().expect("alice bind suceeds");
 
         // Verify that Alice is listening on the local socket, but still has no peer socket
         let want_addr = A::new(A::LOCAL_ADDR, 200);
@@ -925,8 +920,7 @@ mod tests {
         let bob = t.get(1);
         let (bob_socket, bob_events) = get_socket_and_event::<A>(bob).await;
         let sockaddr = A::create(A::REMOTE_ADDR, 300);
-        let () =
-            bob_socket.bind(&mut sockaddr.into_iter()).await.unwrap().expect("bob bind suceeds");
+        let () = bob_socket.bind(&sockaddr).await.unwrap().expect("bob bind suceeds");
 
         // Verify that Bob is listening on the local socket, but has no peer socket
         let want_addr = A::new(A::REMOTE_ADDR, 300);
@@ -946,8 +940,7 @@ mod tests {
         // Connect Bob to Alice on LOCAL_ADDR:200
         println!("Connecting bob to alice...");
         let sockaddr = A::create(A::LOCAL_ADDR, 200);
-        let () =
-            bob_socket.connect(&mut sockaddr.into_iter()).await.unwrap().expect("Connect succeeds");
+        let () = bob_socket.connect(&sockaddr).await.unwrap().expect("Connect succeeds");
 
         // Verify that Bob has the peer socket set correctly
         let want_addr = A::new(A::LOCAL_ADDR, 200);
@@ -965,16 +958,9 @@ mod tests {
         // Send datagram from Bob's socket.
         println!("Writing datagram to bob");
         let body = "Hello".as_bytes();
-        let mut body_iter = body.iter().copied();
-        let body_iter: Option<&mut dyn ExactSizeIterator<Item = u8>> = Some(&mut body_iter);
         assert_eq!(
             bob_socket
-                .send_msg(
-                    &mut None.into_iter(),
-                    &mut body_iter.into_iter(),
-                    &mut None.into_iter(),
-                    0
-                )
+                .send_msg(&[], &mut Some(body).into_iter(), &[], 0)
                 .await
                 .unwrap()
                 .expect("sendmsg suceeds"),

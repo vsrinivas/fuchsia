@@ -578,14 +578,14 @@ async fn main() -> Result<(), Error> {
         )
         .await?;
 
-    let attrs: Vec<u16> = vec![
+    const ATTRS: [u16; 4] = [
         ATTR_PROTOCOL_DESCRIPTOR_LIST,
         ATTR_SERVICE_CLASS_ID_LIST,
         ATTR_BLUETOOTH_PROFILE_DESCRIPTOR_LIST,
         ATTR_A2DP_SUPPORTED_FEATURES,
     ];
 
-    profile_svc.add_search(ServiceClassProfileIdentifier::AudioSource, &mut attrs.into_iter())?;
+    profile_svc.add_search(ServiceClassProfileIdentifier::AudioSource, &ATTRS)?;
 
     fx_log_info!("Registered Service ID {}", service_id);
 

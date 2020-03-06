@@ -93,8 +93,7 @@ async fn open_blob(
 }
 
 async fn write_blob(blob: &FileProxy, bytes: &[u8]) -> Result<(), Error> {
-    let mut bytes_iter = bytes.to_owned().into_iter();
-    let (status, n) = blob.write(&mut bytes_iter).await?;
+    let (status, n) = blob.write(bytes).await?;
     Status::ok(status)?;
     assert_eq!(n, bytes.len() as u64);
     Ok(())

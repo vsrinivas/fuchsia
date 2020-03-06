@@ -28,7 +28,7 @@ use {
     std::{
         future::Future,
         io::Write,
-        iter, mem,
+        mem,
         pin::Pin,
         task::{Context, Poll},
     },
@@ -334,7 +334,7 @@ impl FileConnection {
     /// error directly.
     fn handle_read<R>(&mut self, count: u64, responder: R) -> Result<(), fidl::Error>
     where
-        R: FnOnce(Status, &mut dyn ExactSizeIterator<Item = u8>) -> Result<(), fidl::Error>,
+        R: FnOnce(Status, &[u8]) -> Result<(), fidl::Error>,
     {
         let actual = self.handle_read_at(self.seek, count, responder)?;
         self.seek += actual;
@@ -353,10 +353,10 @@ impl FileConnection {
         responder: R,
     ) -> Result<u64, fidl::Error>
     where
-        R: FnOnce(Status, &mut dyn ExactSizeIterator<Item = u8>) -> Result<(), fidl::Error>,
+        R: FnOnce(Status, &[u8]) -> Result<(), fidl::Error>,
     {
         if self.flags & OPEN_RIGHT_READABLE == 0 {
-            responder(Status::ACCESS_DENIED, &mut iter::empty())?;
+            responder(Status::ACCESS_DENIED, &[])?;
             return Ok(0);
         }
 
@@ -366,7 +366,7 @@ impl FileConnection {
 
         if offset >= len {
             // This should return Status::OUT_OF_RANGE but POSIX wants an OK.  See ZX-3633.
-            responder(Status::OK, &mut iter::empty())?;
+            responder(Status::OK, &[])?;
             return Ok(0);
         }
 
@@ -374,8 +374,7 @@ impl FileConnection {
 
         let from = offset as usize;
         let to = (offset + count) as usize;
-        let mut content = self.buffer[from..to].iter().cloned();
-        responder(Status::OK, &mut content)?;
+        responder(Status::OK, &self.buffer[from..to])?;
         Ok(count)
     }
 

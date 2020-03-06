@@ -340,7 +340,9 @@ impl NetCfg {
     pub async fn create_bridge(&mut self, ports: Vec<PortId>) -> error::Result<Interface> {
         let (error, bridge_id) = self
             .netstack
-            .bridge_interfaces(&mut ports.into_iter().map(|id| StackPortId::from(id).to_u32()))
+            .bridge_interfaces(
+                &ports.into_iter().map(|id| StackPortId::from(id).to_u32()).collect::<Vec<_>>(),
+            )
             .await
             .map_err(|e| {
                 error!("Failed creating bridge {:?}", e);

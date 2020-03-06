@@ -472,14 +472,14 @@ async fn main() -> Result<(), Error> {
         return Err(format_err!("Couldn't add A2DP source service: {:?}", e));
     }
 
-    let attrs: Vec<u16> = vec![
+    const ATTRS: [u16; 4] = [
         ATTR_PROTOCOL_DESCRIPTOR_LIST,
         ATTR_SERVICE_CLASS_ID_LIST,
         ATTR_BLUETOOTH_PROFILE_DESCRIPTOR_LIST,
         ATTR_A2DP_SUPPORTED_FEATURES,
     ];
 
-    profile_svc.add_search(ServiceClassProfileIdentifier::AudioSink, &mut attrs.into_iter())?;
+    profile_svc.add_search(ServiceClassProfileIdentifier::AudioSink, &ATTRS)?;
     let mut evt_stream = profile_svc.take_event_stream();
 
     let mut peers = Peers::new(opts.source, profile_svc);

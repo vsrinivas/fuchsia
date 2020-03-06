@@ -49,7 +49,7 @@ async fn test_light_sensor() {
                         TEST_BLUE_VAL,
                         0,
                     ];
-                    responder.send(0, &mut data.iter().cloned()).unwrap();
+                    responder.send(0, &data).unwrap();
                 }
             }
         });

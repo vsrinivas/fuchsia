@@ -234,8 +234,7 @@ impl<'a> LoWPANSpinelDeviceClientImpl {
             return Err(format_err!("no allowance for sending frame"));
         }
 
-        let mut tx_frame_iter = frame.iter().map(|x| *x);
-        self.device_proxy.send_frame(&mut tx_frame_iter).context("sending frame")?;
+        self.device_proxy.send_frame(frame).context("sending frame")?;
 
         self.tx_allowance -= 1;
 

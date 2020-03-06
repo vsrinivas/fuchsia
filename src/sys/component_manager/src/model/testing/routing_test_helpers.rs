@@ -684,7 +684,7 @@ pub mod capability_util {
         dir_proxy
             .open(flags, MODE_TYPE_FILE, "hippos", ServerEnd::new(server_end.into_channel()))
             .expect("failed to open file on storage");
-        let res = file_proxy.write(&mut b"hippos can be stored here".to_vec().drain(..)).await;
+        let res = file_proxy.write(b"hippos can be stored here").await;
         match (res, should_succeed) {
             (Ok((s, _)),true) => assert_eq!(zx::Status::OK, zx::Status::from_raw(s)),
             (Err(_),false) => (),

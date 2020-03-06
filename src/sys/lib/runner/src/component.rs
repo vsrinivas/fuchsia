@@ -253,12 +253,10 @@ pub async fn configure_launcher(
             .ok_or(LaunchError::InvalidBinaryPath(config_args.bin_path.to_string()))?,
     )];
     let args = config_args.args.unwrap_or(vec![]);
-    let mut string_iters: Vec<_> = bin_arg.iter().chain(args.iter()).map(|s| s.bytes()).collect();
+    let string_iters: Vec<_> = bin_arg.iter().chain(args.iter()).map(|s| s.as_bytes()).collect();
     config_args
         .launcher
-        .add_args(
-            &mut string_iters.iter_mut().map(|iter| iter as &mut dyn ExactSizeIterator<Item = u8>),
-        )
+        .add_args(&mut string_iters.into_iter())
         .map_err(|e| LaunchError::AddArgs(e.to_string()))?;
 
     // Get any initial handles to provide to the new process, if any were provided by the caller.
@@ -286,14 +284,10 @@ pub async fn configure_launcher(
     // Send environment variables for the new process, if any, to the launcher.
     let environs: Vec<_> = config_args.environs.unwrap_or(vec![]);
     if environs.len() > 0 {
-        let mut environs_iters: Vec<_> = environs.iter().map(|s| s.bytes()).collect();
+        let environs_iters: Vec<_> = environs.iter().map(|s| s.as_bytes()).collect();
         config_args
             .launcher
-            .add_environs(
-                &mut environs_iters
-                    .iter_mut()
-                    .map(|iter| iter as &mut dyn ExactSizeIterator<Item = u8>),
-            )
+            .add_environs(&mut environs_iters.into_iter())
             .map_err(|e| LaunchError::AddEnvirons(e.to_string()))?;
     }
 

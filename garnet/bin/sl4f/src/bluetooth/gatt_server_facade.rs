@@ -136,20 +136,15 @@ impl GattServerFacade {
             peer_id
         );
         control_handle.shutdown();
-        let value = if indicate {
-            [0x02, 0x00].to_vec()
+        let value: [u8; 2] = if indicate {
+            [0x02, 0x00]
         } else if notify {
-            [0x01, 0x00].to_vec()
+            [0x01, 0x00]
         } else {
-            [0x00, 0x00].to_vec()
+            [0x00, 0x00]
         };
         let confirm = true;
-        let _result = service_proxy.notify_value(
-            characteristic_id,
-            &peer_id,
-            &mut value.to_vec().into_iter(),
-            confirm,
-        );
+        let _result = service_proxy.notify_value(characteristic_id, &peer_id, &value, confirm);
     }
 
     pub fn on_read_value(
@@ -172,10 +167,7 @@ impl GattServerFacade {
                     let _result = responder.send(None, gatt::ErrorCode::InvalidOffset);
                 } else {
                     let value_to_write = value.clone().split_off(offset as usize);
-                    let _result = responder.send(
-                        Some(&mut value_to_write.to_vec().into_iter()),
-                        gatt::ErrorCode::NoError,
-                    );
+                    let _result = responder.send(Some(&value_to_write), gatt::ErrorCode::NoError);
                 }
             }
             None => {

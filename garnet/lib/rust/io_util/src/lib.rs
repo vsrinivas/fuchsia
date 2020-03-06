@@ -156,7 +156,7 @@ pub async fn read_file(file: &FileProxy) -> Result<String, Error> {
 pub async fn write_file_bytes(file: &FileProxy, mut data: &[u8]) -> Result<(), Error> {
     while data.len() > 0 {
         let (status, bytes_written) = file
-            .write(&mut data.iter().take(MAX_BUF as usize).cloned())
+            .write(&data[..std::cmp::min(MAX_BUF as usize, data.len())])
             .await
             .map_err(|e| Error::from(e))?;
         zx::Status::ok(status).map_err(|s| format_err!("failed to write file: {}", s))?;
@@ -342,7 +342,7 @@ mod tests {
                 assert_eq!(file_name, read_file(&file_proxy).await.expect("failed to read file"));
             }
             if flags & OPEN_RIGHT_WRITABLE != 0 {
-                let (s, _) = file_proxy.write(&mut b"write_only".to_vec().into_iter()).await?;
+                let (s, _) = file_proxy.write(b"write_only").await?;
                 assert_eq!(zx::Status::OK, zx::Status::from_raw(s));
             }
             assert_eq!(zx::Status::OK, zx::Status::from_raw(file_proxy.close().await?));

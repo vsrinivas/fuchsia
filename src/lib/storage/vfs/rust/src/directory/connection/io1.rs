@@ -32,7 +32,7 @@ use {
         Status,
     },
     futures::{future::BoxFuture, stream::StreamExt},
-    std::{default::Default, iter, iter::ExactSizeIterator, mem::replace, sync::Arc},
+    std::{default::Default, mem::replace, sync::Arc},
 };
 
 /// Return type for [`BaseConnection::handle_request`] and [`DerivedConnection::handle_request`].
@@ -453,7 +453,7 @@ where
         responder: R,
     ) -> Result<(), fidl::Error>
     where
-        R: FnOnce(Status, &mut dyn ExactSizeIterator<Item = u8>) -> Result<(), fidl::Error>,
+        R: FnOnce(Status, &[u8]) -> Result<(), fidl::Error>,
     {
         let res = {
             let directory = self.directory.clone();
@@ -468,13 +468,13 @@ where
 
         let done_or_err = match res {
             Ok(sealed) => sealed.open().downcast::<read_dirents::Done<TraversalPosition>>(),
-            Err(status) => return responder(status, &mut iter::empty()),
+            Err(status) => return responder(status, &[]),
         };
 
         match done_or_err {
             Ok(done) => {
                 self.seek = done.pos;
-                responder(done.status, &mut done.buf.into_iter())
+                responder(done.status, &done.buf)
             }
             Err(_) => {
                 debug_assert!(
@@ -483,7 +483,7 @@ where
                      an instance of the `read_dirents::Done`.  This is a bug in the \
                      `read_dirents()` implementation."
                 );
-                responder(Status::NOT_SUPPORTED, &mut iter::empty())
+                responder(Status::NOT_SUPPORTED, &[])
             }
         }
     }

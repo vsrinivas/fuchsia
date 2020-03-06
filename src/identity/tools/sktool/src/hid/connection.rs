@@ -153,9 +153,10 @@ pub mod fidl {
         }
 
         async fn write_packet(&self, packet: Packet) -> Result<(), Error> {
+            let packet_bytes: Bytes = packet.into();
             match self
                 .proxy
-                .set_report(ReportType::Output, OUTPUT_REPORT_ID, &mut packet.into_iter())
+                .set_report(ReportType::Output, OUTPUT_REPORT_ID, &packet_bytes)
                 .await
                 .map_err(|err| format_err!("FIDL error writing packet: {:?}", err))
                 .map(|status| zx::Status::from_raw(status))?
@@ -231,10 +232,7 @@ pub mod fidl {
         async fn read_immediate_packet() -> Result<(), Error> {
             let proxy = valid_mock_device_proxy(|req, _| match req {
                 DeviceRequest::ReadReports { responder } => {
-                    let response = TEST_PACKET.to_vec();
-                    responder
-                        .send(zx::sys::ZX_OK, &mut response.into_iter())
-                        .expect("failed to send response");
+                    responder.send(zx::sys::ZX_OK, &TEST_PACKET).expect("failed to send response");
                 }
                 _ => panic!("got unexpected device request."),
             });
@@ -248,7 +246,7 @@ pub mod fidl {
             let proxy = valid_mock_device_proxy(|req, req_num| match (req, req_num) {
                 (DeviceRequest::ReadReports { responder }, 1) => {
                     responder
-                        .send(zx::sys::ZX_ERR_SHOULD_WAIT, &mut vec![].into_iter())
+                        .send(zx::sys::ZX_ERR_SHOULD_WAIT, &[])
                         .expect("failed to send response");
                 }
                 (DeviceRequest::GetReportsEvent { responder }, 2) => {
@@ -257,10 +255,7 @@ pub mod fidl {
                     responder.send(zx::sys::ZX_OK, event).expect("failed to send response");
                 }
                 (DeviceRequest::ReadReports { responder }, 3) => {
-                    let response = TEST_PACKET.to_vec();
-                    responder
-                        .send(zx::sys::ZX_OK, &mut response.into_iter())
-                        .expect("failed to send response");
+                    responder.send(zx::sys::ZX_OK, &TEST_PACKET).expect("failed to send response");
                 }
                 (req, num) => panic!("got unexpected device request {:?} as num {:?}", req, num),
             });
@@ -274,7 +269,7 @@ pub mod fidl {
             let proxy = valid_mock_device_proxy(|req, req_num| match (req, req_num) {
                 (DeviceRequest::ReadReports { responder }, 1) => {
                     responder
-                        .send(zx::sys::ZX_ERR_SHOULD_WAIT, &mut vec![].into_iter())
+                        .send(zx::sys::ZX_ERR_SHOULD_WAIT, &[])
                         .expect("failed to send response");
                 }
                 (DeviceRequest::GetReportsEvent { responder }, 2) => {
@@ -293,16 +288,12 @@ pub mod fidl {
         async fn read_matching_packet_success() -> Result<(), Error> {
             let proxy = valid_mock_device_proxy(|req, req_num| match (req, req_num) {
                 (DeviceRequest::ReadReports { responder }, 1) => {
-                    let response = DIFFERENT_PACKET.to_vec();
                     responder
-                        .send(zx::sys::ZX_OK, &mut response.into_iter())
+                        .send(zx::sys::ZX_OK, &DIFFERENT_PACKET)
                         .expect("failed to send response");
                 }
                 (DeviceRequest::ReadReports { responder }, 2) => {
-                    let response = TEST_PACKET.to_vec();
-                    responder
-                        .send(zx::sys::ZX_OK, &mut response.into_iter())
-                        .expect("failed to send response");
+                    responder.send(zx::sys::ZX_OK, &TEST_PACKET).expect("failed to send response");
                 }
                 _ => panic!("got unexpected device request."),
             });
@@ -318,16 +309,12 @@ pub mod fidl {
         async fn read_matching_packet_fail() -> Result<(), Error> {
             let proxy = valid_mock_device_proxy(|req, req_num| match (req, req_num) {
                 (DeviceRequest::ReadReports { responder }, 1) => {
-                    let response = DIFFERENT_PACKET.to_vec();
                     responder
-                        .send(zx::sys::ZX_OK, &mut response.into_iter())
+                        .send(zx::sys::ZX_OK, &DIFFERENT_PACKET)
                         .expect("failed to send response");
                 }
                 (DeviceRequest::ReadReports { responder }, 2) => {
-                    let response = TEST_PACKET.to_vec();
-                    responder
-                        .send(zx::sys::ZX_OK, &mut response.into_iter())
-                        .expect("failed to send response");
+                    responder.send(zx::sys::ZX_OK, &TEST_PACKET).expect("failed to send response");
                 }
                 _ => panic!("got unexpected device request."),
             });
@@ -369,8 +356,7 @@ pub mod fidl {
         async fn report_descriptor() -> Result<(), Error> {
             let proxy = valid_mock_device_proxy(|req, _| match req {
                 DeviceRequest::GetReportDesc { responder } => {
-                    let response = TEST_REPORT_DESCRIPTOR.to_vec();
-                    responder.send(&mut response.into_iter()).expect("failed to send response");
+                    responder.send(&TEST_REPORT_DESCRIPTOR).expect("failed to send response");
                 }
                 _ => panic!("got unexpected device request."),
             });

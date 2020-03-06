@@ -198,7 +198,7 @@ mod tests {
             while let Some(request) = stream.try_next().await.unwrap() {
                 if let SensorRequest::GetReport { type_: _, id: _, responder } = request {
                     // Taken from actual sensor report
-                    responder.send(0, &mut data_clone.read().iter().cloned()).unwrap();
+                    responder.send(0, &*data_clone.read()).unwrap();
                 }
             }
         });

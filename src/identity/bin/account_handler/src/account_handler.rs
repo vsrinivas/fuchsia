@@ -1243,7 +1243,7 @@ mod tests {
                             lifecycle: "pendingTransfer",
                         }
                     });
-                    proxy.perform_account_transfer(&mut vec![].into_iter()).await??;
+                    proxy.perform_account_transfer(&[]).await??;
                     assert_inspect_tree!(inspector, root: {
                         account_handler: {
                             local_account_id: TEST_ACCOUNT_ID_UINT,
@@ -1282,7 +1282,7 @@ mod tests {
             Arc::new(Inspector::new()),
             |proxy| async move {
                 proxy.prepare_for_account_transfer().await??;
-                proxy.perform_account_transfer(&mut vec![].into_iter()).await??;
+                proxy.perform_account_transfer(&[]).await??;
                 assert_eq!(
                     proxy.prepare_for_account_transfer().await?,
                     Err(ApiError::FailedPrecondition)
@@ -1336,7 +1336,7 @@ mod tests {
             Arc::new(Inspector::new()),
             |proxy| async move {
                 assert_eq!(
-                    proxy.perform_account_transfer(&mut vec![].into_iter()).await?,
+                    proxy.perform_account_transfer(&[]).await?,
                     Err(ApiError::FailedPrecondition)
                 );
                 Ok(())
@@ -1351,9 +1351,9 @@ mod tests {
             Arc::new(Inspector::new()),
             |proxy| async move {
                 proxy.prepare_for_account_transfer().await??;
-                proxy.perform_account_transfer(&mut vec![].into_iter()).await??;
+                proxy.perform_account_transfer(&[]).await??;
                 assert_eq!(
-                    proxy.perform_account_transfer(&mut vec![].into_iter()).await?,
+                    proxy.perform_account_transfer(&[]).await?,
                     Err(ApiError::FailedPrecondition)
                 );
                 Ok(())
@@ -1369,7 +1369,7 @@ mod tests {
             |proxy| async move {
                 proxy.create_account(None).await??;
                 assert_eq!(
-                    proxy.perform_account_transfer(&mut vec![].into_iter()).await?,
+                    proxy.perform_account_transfer(&[]).await?,
                     Err(ApiError::FailedPrecondition)
                 );
                 Ok(())
@@ -1387,7 +1387,7 @@ mod tests {
                 proxy.preload().await??;
                 proxy.lock_account().await??;
                 assert_eq!(
-                    proxy.perform_account_transfer(&mut vec![].into_iter()).await?,
+                    proxy.perform_account_transfer(&[]).await?,
                     Err(ApiError::FailedPrecondition)
                 );
                 Ok(())
@@ -1404,7 +1404,7 @@ mod tests {
             Arc::new(Inspector::new()),
             |proxy| async move {
                 proxy.prepare_for_account_transfer().await??;
-                proxy.perform_account_transfer(&mut vec![].into_iter()).await??;
+                proxy.perform_account_transfer(&[]).await??;
                 assert_eq!(
                     proxy.finalize_account_transfer().await?,
                     Err(ApiError::UnsupportedOperation)

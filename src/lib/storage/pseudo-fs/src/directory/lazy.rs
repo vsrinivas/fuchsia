@@ -534,7 +534,7 @@ where
         responder: R,
     ) -> Result<(), fidl::Error>
     where
-        R: FnOnce(Status, &mut dyn ExactSizeIterator<Item = u8>) -> Result<(), fidl::Error>,
+        R: FnOnce(Status, &[u8]) -> Result<(), fidl::Error>,
     {
         let mut buf = Vec::new();
         let mut fit_one = false;
@@ -561,18 +561,18 @@ where
         connection.seek = new_seek;
 
         if let Err(status) = res {
-            return responder(status, &mut buf.iter().cloned());
+            return responder(status, &buf);
         }
 
         if !called_once {
-            return responder(Status::OK, &mut iter::empty());
+            return responder(Status::OK, &[]);
         }
 
         if !fit_one {
-            return responder(Status::BUFFER_TOO_SMALL, &mut buf.iter().cloned());
+            return responder(Status::BUFFER_TOO_SMALL, &buf);
         }
 
-        return responder(Status::OK, &mut buf.iter().cloned());
+        return responder(Status::OK, &buf);
     }
 
     fn handle_watch<R>(

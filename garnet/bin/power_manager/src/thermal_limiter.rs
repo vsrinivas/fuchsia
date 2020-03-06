@@ -425,7 +425,11 @@ pub mod tests {
         // Subscribe with the ThermalLimiter Controller using the newly created actor proxy object
         // and supplied trip points
         controller_proxy
-            .subscribe(actor_proxy, actor_type, &mut trip_points.iter().map(|tp| tp.0 as u32))
+            .subscribe(
+                actor_proxy,
+                actor_type,
+                &trip_points.iter().map(|tp| tp.0 as u32).collect::<Vec<_>>(),
+            )
             .await
             .unwrap()?;
 

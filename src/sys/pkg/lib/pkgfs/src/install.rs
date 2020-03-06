@@ -222,7 +222,7 @@ impl Blob<NeedsData> {
     /// Returns the number of bytes written (which may be less than the buffer's size) or the error
     /// encountered during the write.
     async fn write_some(&mut self, buf: &[u8]) -> Result<usize, BlobWriteError> {
-        let fut = self.proxy.write(&mut buf.iter().cloned());
+        let fut = self.proxy.write(buf);
 
         let (status, actual) = fut.await.map_err(BlobWriteError::Fidl)?;
 

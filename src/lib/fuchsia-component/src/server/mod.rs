@@ -1170,13 +1170,10 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                     .get_or_insert_with(|| (self.to_dirent_bytes(&children), 0));
                 let (dirents_buf, offset) = (&mut dirents_buf.0, &mut dirents_buf.1);
                 if *offset >= dirents_buf.len() {
-                    responder.send(zx::sys::ZX_OK, &mut std::iter::empty())?;
+                    responder.send(zx::sys::ZX_OK, &[])?;
                 } else {
                     let new_offset = std::cmp::min(dirents_buf.len(), *offset + max_bytes as usize);
-                    responder.send(
-                        zx::sys::ZX_OK,
-                        &mut dirents_buf[*offset..new_offset].iter().cloned(),
-                    )?;
+                    responder.send(zx::sys::ZX_OK, &dirents_buf[*offset..new_offset])?;
                     *offset = new_offset;
                 }
             }
@@ -1232,10 +1229,10 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                     let status = vmo.read(&mut data, offset.saturating_add(connection.seek_offset));
                     match status {
                         Ok(()) => {
-                            responder.send(zx::sys::ZX_OK, &mut data.iter().cloned())?;
+                            responder.send(zx::sys::ZX_OK, &data)?;
                             connection.seek_offset += actual_count;
                         }
-                        Err(s) => responder.send(s.into_raw(), &mut std::iter::empty())?,
+                        Err(s) => responder.send(s.into_raw(), &[])?,
                     }
                 }
             },
@@ -1252,8 +1249,8 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                         let mut data = vec![0; actual_count as usize];
                         let status = vmo.read(&mut data, actual_offset);
                         match status {
-                            Ok(()) => responder.send(zx::sys::ZX_OK, &mut data.iter().cloned())?,
-                            Err(s) => responder.send(s.into_raw(), &mut std::iter::empty())?,
+                            Ok(()) => responder.send(zx::sys::ZX_OK, &data)?,
+                            Err(s) => responder.send(s.into_raw(), &[])?,
                         }
                     }
                 }

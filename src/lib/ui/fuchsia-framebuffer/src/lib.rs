@@ -491,8 +491,7 @@ impl FrameBuffer {
         let mut image_config = Frame::create_image_config(image_type, config);
         proxy.set_layer_primary_config(layer_id, &mut image_config)?;
 
-        let mut layers = std::iter::once(layer_id);
-        proxy.set_display_layers(config.display_id, &mut layers)?;
+        proxy.set_display_layers(config.display_id, &[layer_id])?;
         Ok(layer_id)
     }
 
@@ -756,8 +755,7 @@ impl FrameBuffer {
                 frame.image_vmo.get_size()?,
             )?;
         }
-        let mut layers = std::iter::once(self.layer_id);
-        self.controller.set_display_layers(self.config.display_id, &mut layers)?;
+        self.controller.set_display_layers(self.config.display_id, &[self.layer_id])?;
         self.controller
             .set_layer_image(
                 self.layer_id,

@@ -55,12 +55,7 @@ impl BatteryState {
         if inner.level != level {
             println!("Battery percentage changed ({}%)", level);
             for peer_id in inner.peers.iter() {
-                inner.service.notify_value(
-                    BATTERY_LEVEL_ID,
-                    &peer_id,
-                    &mut vec![level].into_iter(),
-                    false,
-                )?;
+                inner.service.notify_value(BATTERY_LEVEL_ID, &peer_id, &[level], false)?;
             }
         }
         inner.level = level;
@@ -102,8 +97,7 @@ async fn gatt_service_delegate(
                 }
             }
             OnReadValue { responder, .. } => {
-                let mut value_iter = vec![state.get_level()].into_iter();
-                responder.send(Some(&mut value_iter), gatt::ErrorCode::NoError)?;
+                responder.send(Some(&[state.get_level()]), gatt::ErrorCode::NoError)?;
             }
             OnWriteValue { responder, .. } => {
                 // Writing to the battery level characteristic is not permitted.

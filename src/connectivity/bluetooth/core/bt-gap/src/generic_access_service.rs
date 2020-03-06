@@ -149,12 +149,12 @@ impl GenericAccessService {
     ) -> Result<(), fidl::Error> {
         match id {
             GENERIC_ACCESS_DEVICE_NAME_ID => {
-                let mut name_iter = self.hd.get_name().into_bytes().into_iter();
-                responder.send(Some(&mut name_iter), gatt::ErrorCode::NoError)
+                let name = self.hd.get_name();
+                responder.send(Some(name.as_bytes()), gatt::ErrorCode::NoError)
             }
             GENERIC_ACCESS_APPEARANCE_ID => {
-                let appearance_vec = (self.hd.get_appearance() as u16).to_le_bytes().to_vec();
-                responder.send(Some(&mut appearance_vec.into_iter()), gatt::ErrorCode::NoError)
+                let appearance = self.hd.get_appearance() as u16;
+                responder.send(Some(&appearance.to_le_bytes()), gatt::ErrorCode::NoError)
             }
             _ => responder.send(None, gatt::ErrorCode::NotPermitted),
         }
@@ -285,11 +285,7 @@ mod tests {
     async fn test_invalid_request() {
         let (delegate_client, _host_dispatcher) = setup_generic_access_service();
         let error_code = delegate_client
-            .on_write_value(
-                GENERIC_ACCESS_DEVICE_NAME_ID,
-                0,
-                &mut "new-name".to_string().into_bytes().into_iter(),
-            )
+            .on_write_value(GENERIC_ACCESS_DEVICE_NAME_ID, 0, b"new-name")
             .await
             .unwrap();
         assert_eq!(error_code, gatt::ErrorCode::NotPermitted);

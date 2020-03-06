@@ -556,7 +556,15 @@ func (c *compiler) compileType(val types.Type, borrowed bool) Type {
 		t := c.compileType(*val.ElementType, borrowed)
 		var inner string
 		if borrowed {
-			inner = fmt.Sprintf("&mut dyn ExactSizeIterator<Item = %s>", t.Decl)
+			// We use slices for primitive numeric types so that
+			// encoding becomes a memcpy. Rust does not guarantee
+			// the bit patterns for bool values, so we omit them
+			// from the optimization.
+			if val.ElementType.Kind == types.PrimitiveType && val.ElementType.PrimitiveSubtype != types.Bool {
+				inner = fmt.Sprintf("&[%s]", t.Decl)
+			} else {
+				inner = fmt.Sprintf("&mut dyn ExactSizeIterator<Item = %s>", t.Decl)
+			}
 		} else {
 			inner = fmt.Sprintf("Vec<%s>", t.Decl)
 		}

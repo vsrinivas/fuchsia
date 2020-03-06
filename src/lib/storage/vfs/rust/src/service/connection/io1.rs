@@ -22,7 +22,6 @@ use {
         Status,
     },
     futures::stream::StreamExt,
-    std::iter,
 };
 
 /// Represents a FIDL connection to a service.
@@ -169,10 +168,10 @@ impl Connection {
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }
             FileRequest::Read { count: _, responder } => {
-                responder.send(ZX_ERR_ACCESS_DENIED, &mut iter::empty())?;
+                responder.send(ZX_ERR_ACCESS_DENIED, &[])?;
             }
             FileRequest::ReadAt { offset: _, count: _, responder } => {
-                responder.send(ZX_ERR_ACCESS_DENIED, &mut iter::empty())?;
+                responder.send(ZX_ERR_ACCESS_DENIED, &[])?;
             }
             FileRequest::Write { data: _, responder } => {
                 responder.send(ZX_ERR_ACCESS_DENIED, 0)?;

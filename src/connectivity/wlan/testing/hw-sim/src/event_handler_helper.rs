@@ -235,9 +235,8 @@ impl<'a> Rx<'a> {
 
 impl<'a> Action<wlantap::TxArgs> for Rx<'a> {
     fn run(&mut self, args: &wlantap::TxArgs) {
-        let frame = args.packet.data.clone();
-        let mut frame_iter = frame.into_iter();
-        self.proxy.rx(0, &mut frame_iter, &mut create_rx_info(&self.channel, 0)).expect("rx");
+        let frame = &args.packet.data;
+        self.proxy.rx(0, frame, &mut create_rx_info(&self.channel, 0)).expect("rx");
     }
 }
 

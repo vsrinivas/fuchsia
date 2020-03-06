@@ -98,8 +98,8 @@ impl<AHC: AccountHandlerConnection> AccountManager<AHC> {
     pub async fn handle_request(&self, req: AccountManagerRequest) -> Result<(), fidl::Error> {
         match req {
             AccountManagerRequest::GetAccountIds { responder } => {
-                let mut response = self.get_account_ids().await.into_iter();
-                responder.send(&mut response)?;
+                let response = self.get_account_ids().await;
+                responder.send(&response)?;
             }
             AccountManagerRequest::GetAccountAuthStates { scenario, responder } => {
                 let mut response = self.get_account_auth_states(scenario).await;

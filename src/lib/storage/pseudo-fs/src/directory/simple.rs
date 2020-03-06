@@ -37,7 +37,7 @@ use {
     std::{
         collections::BTreeMap,
         future::Future,
-        iter::{self, ExactSizeIterator},
+        iter,
         marker::Unpin,
         ops::Bound,
         pin::Pin,
@@ -322,7 +322,7 @@ impl<'entries> Simple<'entries> {
         responder: R,
     ) -> Result<(), fidl::Error>
     where
-        R: FnOnce(Status, &mut dyn ExactSizeIterator<Item = u8>) -> Result<(), fidl::Error>,
+        R: FnOnce(Status, &[u8]) -> Result<(), fidl::Error>,
     {
         let mut buf = Vec::new();
         let mut fit_one = false;
@@ -335,7 +335,7 @@ impl<'entries> Simple<'entries> {
                     &EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY),
                     ".",
                 ) {
-                    return responder(Status::BUFFER_TOO_SMALL, &mut buf.iter().cloned());
+                    return responder(Status::BUFFER_TOO_SMALL, &buf);
                 }
 
                 fit_one = true;
@@ -366,7 +366,7 @@ impl<'entries> Simple<'entries> {
             ),
 
             AlphabeticalTraversal::End => {
-                return responder(Status::OK, &mut buf.iter().cloned());
+                return responder(Status::OK, &buf);
             }
         };
 
@@ -375,7 +375,7 @@ impl<'entries> Simple<'entries> {
                 connection.seek = last_returned;
                 return responder(
                     if fit_one { Status::OK } else { Status::BUFFER_TOO_SMALL },
-                    &mut buf.iter().cloned(),
+                    &buf,
                 );
             }
             fit_one = true;
@@ -383,7 +383,7 @@ impl<'entries> Simple<'entries> {
         }
 
         connection.seek = AlphabeticalTraversal::End;
-        return responder(Status::OK, &mut buf.iter().cloned());
+        return responder(Status::OK, &buf);
     }
 
     fn poll_entries(&mut self, cx: &mut Context<'_>) {

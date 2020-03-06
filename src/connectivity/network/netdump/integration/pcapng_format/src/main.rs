@@ -292,8 +292,7 @@ fn pcapng_fake_packets_test(env: &mut TestEnvironment) -> Result<(), Error> {
     let fake_ep = env.create_fake_endpoint()?;
     let send_fake_packets = async move {
         for _ in 0..(PACKET_COUNT) {
-            let packet: Vec<u8> = FAKE_DATA.to_string().into_bytes();
-            fake_ep.write(&mut packet.into_iter())?;
+            fake_ep.write(FAKE_DATA.as_bytes())?;
         }
         Ok(())
     };

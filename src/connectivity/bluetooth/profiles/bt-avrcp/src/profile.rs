@@ -171,10 +171,8 @@ impl ProfileServiceImpl {
             SDP_SUPPORTED_FEATURES,
         ];
 
-        profile_svc.add_search(
-            ServiceClassProfileIdentifier::AvRemoteControl,
-            &mut SEARCH_ATTRIBUTES.to_vec().into_iter(),
-        )?;
+        profile_svc
+            .add_search(ServiceClassProfileIdentifier::AvRemoteControl, &SEARCH_ATTRIBUTES)?;
 
         let mut service_def = make_profile_service_definition();
         let (status, service_id) = profile_svc

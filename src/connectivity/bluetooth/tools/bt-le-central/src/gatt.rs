@@ -151,7 +151,7 @@ async fn write_characteristic(
     value: Vec<u8>,
 ) -> Result<(), Error> {
     let status = svc
-        .write_characteristic(id, &mut value.into_iter())
+        .write_characteristic(id, &value)
         .await
         .map_err(|_| BTError::new("Failed to send message"))?;
 
@@ -170,7 +170,7 @@ async fn write_long_characteristic(
     value: Vec<u8>,
 ) -> Result<(), Error> {
     let status = svc
-        .write_long_characteristic(id, offset, &mut value.into_iter())
+        .write_long_characteristic(id, offset, &value)
         .await
         .map_err(|_| BTError::new("Failed to send message"))?;
 
@@ -183,7 +183,7 @@ async fn write_long_characteristic(
 }
 
 fn write_without_response(svc: &RemoteServiceProxy, id: u64, value: Vec<u8>) -> Result<(), Error> {
-    svc.write_characteristic_without_response(id, &mut value.into_iter())
+    svc.write_characteristic_without_response(id, &value)
         .map_err(|_| BTError::new("Failed to send message").into())
 }
 
@@ -220,7 +220,7 @@ async fn read_long_descriptor(
 
 async fn write_descriptor(svc: &RemoteServiceProxy, id: u64, value: Vec<u8>) -> Result<(), Error> {
     let status = svc
-        .write_descriptor(id, &mut value.into_iter())
+        .write_descriptor(id, &value)
         .await
         .map_err(|_| BTError::new("Failed to send message"))?;
 
@@ -239,7 +239,7 @@ async fn write_long_descriptor(
     value: Vec<u8>,
 ) -> Result<(), Error> {
     let status = svc
-        .write_long_descriptor(id, offset, &mut value.into_iter())
+        .write_long_descriptor(id, offset, &value)
         .await
         .map_err(|_| BTError::new("Failed to send message"))?;
 

@@ -80,7 +80,7 @@ async fn run_mock_guest(
     let bus = open_bus(&ep_name)?;
     bus.wait_for_clients(&mut vec![server_name.as_str()].drain(..), 0).await?;
 
-    fake_ep.write(&mut echo_string.clone().into_bytes().drain(0..))?;
+    fake_ep.write(echo_string.as_bytes())?;
 
     println!("To Server: {}", echo_string);
 

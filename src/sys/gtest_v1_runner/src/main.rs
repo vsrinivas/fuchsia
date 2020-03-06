@@ -160,11 +160,9 @@ impl Component {
 
         let child_job_dup = child_job.duplicate_handle(zx::Rights::SAME_RIGHTS)?;
 
-        let mut string_iters: Vec<_> =
-            bin_arg.iter().chain(args.iter()).map(|s| s.bytes()).collect();
-        launcher.add_args(
-            &mut string_iters.iter_mut().map(|iter| iter as &mut dyn ExactSizeIterator<Item = u8>),
-        )?;
+        let string_iters: Vec<_> =
+            bin_arg.iter().chain(args.iter()).map(|s| s.as_bytes()).collect();
+        launcher.add_args(&mut string_iters.into_iter())?;
 
         // TODO(anmittal): capture these fds and read them to implement fuchsia.test.Suite
         // currently implementing stdout so that we can debug till we implement fuchsia.test.Suite

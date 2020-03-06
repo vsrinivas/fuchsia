@@ -416,9 +416,11 @@ impl EventLoop {
                 match lif {
                     None => {
                         warn!("WAN {:?} not found", wan_id);
-                        responder.send(&mut None.into_iter(), not_found!())
+                        responder.send(&[], not_found!())
                     }
-                    Some(l) => responder.send(&mut l.ports().map(|p| p.to_u32()), None),
+                    Some(l) => {
+                        responder.send(&l.ports().map(|p| p.to_u32()).collect::<Vec<_>>(), None)
+                    }
                 }
             }
             RouterStateRequest::GetLanPorts { lan_id, responder } => {
@@ -426,9 +428,11 @@ impl EventLoop {
                 match lif {
                     None => {
                         warn!("LAN {:?} not found", lan_id);
-                        responder.send(&mut None.into_iter(), not_found!())
+                        responder.send(&[], not_found!())
                     }
-                    Some(l) => responder.send(&mut l.ports().map(|p| p.to_u32()), None),
+                    Some(l) => {
+                        responder.send(&l.ports().map(|p| p.to_u32()).collect::<Vec<_>>(), None)
+                    }
                 }
             }
             RouterStateRequest::GetWan { wan_id, responder } => {

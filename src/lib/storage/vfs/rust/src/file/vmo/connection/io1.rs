@@ -33,7 +33,7 @@ use {
     },
     futures::{lock::MutexGuard, stream::StreamExt},
     static_assertions::assert_eq_size,
-    std::{iter, mem, sync::Arc},
+    std::{mem, sync::Arc},
 };
 
 macro_rules! update_initialized_state {
@@ -557,7 +557,7 @@ impl FileConnection {
     /// directly.
     async fn handle_read<R>(&mut self, count: u64, responder: R) -> Result<(), fidl::Error>
     where
-        R: FnOnce(Status, &mut dyn ExactSizeIterator<Item = u8>) -> Result<(), fidl::Error>,
+        R: FnOnce(Status, &[u8]) -> Result<(), fidl::Error>,
     {
         let actual = self.handle_read_at(self.seek, count, responder).await?;
         self.seek += actual;
@@ -575,10 +575,10 @@ impl FileConnection {
         responder: R,
     ) -> Result<u64, fidl::Error>
     where
-        R: FnOnce(Status, &mut dyn ExactSizeIterator<Item = u8>) -> Result<(), fidl::Error>,
+        R: FnOnce(Status, &[u8]) -> Result<(), fidl::Error>,
     {
         if self.flags & OPEN_RIGHT_READABLE == 0 {
-            responder(Status::ACCESS_DENIED, &mut iter::empty())?;
+            responder(Status::ACCESS_DENIED, &[])?;
             return Ok(0);
         }
 
@@ -605,7 +605,7 @@ impl FileConnection {
             }
         };
 
-        responder(status, &mut content.iter().cloned())?;
+        responder(status, &content)?;
         Ok(count)
     }
 
