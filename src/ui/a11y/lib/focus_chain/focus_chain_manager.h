@@ -12,15 +12,24 @@
 #include <vector>
 
 #include "src/ui/a11y/lib/focus_chain/accessibility_focus_chain_listener.h"
+#include "src/ui/a11y/lib/focus_chain/accessibility_focus_chain_requester.h"
+#include "src/ui/a11y/lib/semantics/semantics_source.h"
 
 namespace a11y {
 
 // The Focus Chain manager processes Focus Chain Updates and dispatches to
 // registered a11y services the views that are currently in focus.
+//
+// This manager also can request Focus Chain Updates. It exposes
+// |AccessibilityFocusChainRequester| interface, which accessibility services
+// can use to change the Focus Chain to a different view.
 class FocusChainManager : public fuchsia::ui::focus::FocusChainListener,
-                          public AccessibilityFocusChainRegistry {
+                          public AccessibilityFocusChainRegistry,
+                          public AccessibilityFocusChainRequester {
  public:
-  FocusChainManager() = default;
+  // |focuser| is the client-side channel interface used to request Focus Chain Updates.
+  // |semantics_source| object must outlive FocusChainManager.
+  FocusChainManager(fuchsia::ui::views::FocuserPtr focuser, SemanticsSource* semantics_source);
   ~FocusChainManager() = default;
 
   // |fuchsia.ui.focus|
@@ -29,6 +38,9 @@ class FocusChainManager : public fuchsia::ui::focus::FocusChainListener,
 
   // |AccessibilityFocusChainRegistry|
   void Register(fxl::WeakPtr<AccessibilityFocusChainListener> listener) override;
+
+  // |AccessibilityFocusChainRequester|
+  void ChangeFocusToView(zx_koid_t view_ref_koid, ChangeFocusToViewCallback callback) override;
 
  private:
   // A ViewRefWatcher holds a ViewRef and watches for any signaling on the ViewRef.
@@ -67,6 +79,14 @@ class FocusChainManager : public fuchsia::ui::focus::FocusChainListener,
   // async::WaitMethod. Thus, this object is created only once and later moved
   // via an unique_ptr.
   std::vector<std::unique_ptr<ViewRefWatcher>> focus_chain_;
+
+  // Responsible for requesting Focus Chain updates.
+  fuchsia::ui::views::FocuserPtr focuser_;
+
+  // Right now, this manager only responds to Focus Chain Requests to Views that
+  // are providing semantics. It uses |semantics_source_| to validate if a
+  // view is providing semantics before doing the request.
+  SemanticsSource* const semantics_source_ = nullptr;
 };
 }  // namespace a11y
 

@@ -13,6 +13,12 @@
 
 namespace a11y {
 
+FocusChainManager::FocusChainManager(fuchsia::ui::views::FocuserPtr focuser,
+                                     SemanticsSource* semantics_source)
+    : focuser_(std::move(focuser)), semantics_source_(semantics_source) {
+  FX_DCHECK(semantics_source_);
+}
+
 FocusChainManager::ViewRefWatcher::ViewRefWatcher(fuchsia::ui::views::ViewRef view_ref,
                                                   OnViewRefInvalidatedCallback callback)
     : view_ref_(std::move(view_ref)),
@@ -78,6 +84,23 @@ void FocusChainManager::ViewRefWatcher::OnViewRefSignaled(async_dispatcher_t* di
                                                           const zx_packet_signal* signal) {
   // The only signal we are waiting for is ZX_EVENTPAIR_PEER_CLOSED.
   callback_();
+}
+
+void FocusChainManager::ChangeFocusToView(zx_koid_t view_ref_koid,
+                                          ChangeFocusToViewCallback callback) {
+  if (!semantics_source_->ViewHasSemantics(view_ref_koid)) {
+    callback(false);
+    return;
+  }
+  auto view_ref = semantics_source_->ViewRefClone(view_ref_koid);
+  focuser_->RequestFocus(std::move(*view_ref), [callback = std::move(callback)](auto result) {
+    if (result.is_err()) {
+      callback(false);
+    } else {
+      callback(true);
+    }
+  });
+  return;
 }
 
 }  // namespace a11y
