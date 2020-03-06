@@ -195,6 +195,7 @@ def write_toml_file(fout, metadata, project, target, lookup):
 
 
 def main():
+    # TODO(tmandry): Remove all hardcoded paths and replace with args.
     parser = argparse.ArgumentParser()
     parser.add_argument("json_path")
     args = parser.parse_args()
@@ -247,6 +248,10 @@ def main():
     # step ran successfully.
     with open(os.path.join(gn_cargo_dir, "gn_to_cargo.stamp"), "w") as f:
         f.truncate()
+    # And a depfile so GN knows to run this script again when the json file
+    # changes. Dependencies on the third-party build are tracked within GN.
+    with open(os.path.join(gn_cargo_dir, "gn_to_cargo.stamp.d"), "w") as f:
+        f.write("cargo/gn_to_cargo.stamp: %s\n" % json_path)
 
     for target in project.rust_targets():
         cargo_toml_dir = rebase_gn_path(
