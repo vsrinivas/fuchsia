@@ -4,7 +4,6 @@
 
 #include "src/developer/feedback/feedback_agent/attachments/system_log_ptr.h"
 
-#include <fuchsia/mem/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/fidl/cpp/interface_handle.h>
@@ -19,21 +18,20 @@
 
 #include "src/developer/feedback/utils/cobalt_metrics.h"
 #include "src/developer/feedback/utils/log_format.h"
-#include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 
-fit::promise<fuchsia::mem::Buffer> CollectSystemLog(async_dispatcher_t* dispatcher,
-                                                    std::shared_ptr<sys::ServiceDirectory> services,
-                                                    zx::duration timeout, Cobalt* cobalt) {
+fit::promise<AttachmentValue> CollectSystemLog(async_dispatcher_t* dispatcher,
+                                               std::shared_ptr<sys::ServiceDirectory> services,
+                                               zx::duration timeout, Cobalt* cobalt) {
   std::unique_ptr<LogListener> log_listener =
       std::make_unique<LogListener>(dispatcher, services, cobalt);
 
   return log_listener->CollectLogs(timeout).then(
       [log_listener = std::move(log_listener)](
-          const fit::result<void>& result) -> fit::result<fuchsia::mem::Buffer> {
+          const fit::result<void>& result) -> fit::result<AttachmentValue> {
         if (!result.is_ok()) {
           FX_LOGS(WARNING) << "System log collection was interrupted - "
                               "logs may be partial or missing";
@@ -45,12 +43,7 @@ fit::promise<fuchsia::mem::Buffer> CollectSystemLog(async_dispatcher_t* dispatch
           return fit::error();
         }
 
-        fsl::SizedVmo vmo;
-        if (!fsl::VmoFromString(logs, &vmo)) {
-          FX_LOGS(ERROR) << "Failed to convert system log string to vmo";
-          return fit::error();
-        }
-        return fit::ok(std::move(vmo).ToTransport());
+        return fit::ok(logs);
       });
 }
 

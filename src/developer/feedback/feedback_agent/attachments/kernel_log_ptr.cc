@@ -8,19 +8,16 @@
 
 #include "src/developer/feedback/utils/cobalt_metrics.h"
 #include "src/developer/feedback/utils/promise.h"
-#include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 
-fit::promise<fuchsia::mem::Buffer> CollectKernelLog(async_dispatcher_t* dispatcher,
-                                                    std::shared_ptr<sys::ServiceDirectory> services,
-                                                    zx::duration timeout,
-                                                    Cobalt* cobalt) {
-  std::unique_ptr<BootLog> boot_log =
-      std::make_unique<BootLog>(dispatcher, services, cobalt);
+fit::promise<AttachmentValue> CollectKernelLog(async_dispatcher_t* dispatcher,
+                                               std::shared_ptr<sys::ServiceDirectory> services,
+                                               zx::duration timeout, Cobalt* cobalt) {
+  std::unique_ptr<BootLog> boot_log = std::make_unique<BootLog>(dispatcher, services, cobalt);
 
   // We must store the promise in a variable due to the fact that the order of evaluation of
   // function parameters is undefined.
@@ -32,7 +29,7 @@ BootLog::BootLog(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDir
                  Cobalt* cobalt)
     : dispatcher_(dispatcher), services_(services), cobalt_(cobalt) {}
 
-fit::promise<fuchsia::mem::Buffer> BootLog::GetLog(const zx::duration timeout) {
+fit::promise<AttachmentValue> BootLog::GetLog(const zx::duration timeout) {
   FXL_CHECK(!has_called_get_log_) << "GetLog() is not intended to be called twice";
   has_called_get_log_ = true;
 
@@ -59,7 +56,7 @@ fit::promise<fuchsia::mem::Buffer> BootLog::GetLog(const zx::duration timeout) {
       dispatcher_, [cb = done_after_timeout_.callback()] { cb(); }, timeout);
   if (post_status != ZX_OK) {
     FX_PLOGS(ERROR, post_status) << "Failed to post delayed cancellation task";
-    return fit::make_result_promise<fuchsia::mem::Buffer>(fit::error());
+    return fit::make_result_promise<AttachmentValue>(fit::error());
   }
 
   log_ptr_.set_error_handler([this](zx_status_t status) {
@@ -99,20 +96,13 @@ fit::promise<fuchsia::mem::Buffer> BootLog::GetLog(const zx::duration timeout) {
       return;
     }
 
-    fsl::SizedVmo vmo;
-    if (!fsl::VmoFromString(kernel_log, &vmo)) {
-      FX_LOGS(ERROR) << "Failed to convert kernel log string to vmo";
-      done_.completer.complete_error();
-      return;
-    }
-    done_.completer.complete_ok(std::move(vmo).ToTransport());
+    done_.completer.complete_ok(kernel_log);
   });
 
-  return done_.consumer.promise_or(fit::error())
-      .then([this](fit::result<fuchsia::mem::Buffer>& result) {
-        done_after_timeout_.Cancel();
-        return std::move(result);
-      });
+  return done_.consumer.promise_or(fit::error()).then([this](fit::result<AttachmentValue>& result) {
+    done_after_timeout_.Cancel();
+    return std::move(result);
+  });
 }
 
 }  // namespace feedback

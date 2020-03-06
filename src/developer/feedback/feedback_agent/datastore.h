@@ -11,6 +11,7 @@
 #include <lib/zx/time.h>
 
 #include "src/developer/feedback/feedback_agent/annotations/aliases.h"
+#include "src/developer/feedback/feedback_agent/attachments/aliases.h"
 #include "src/developer/feedback/utils/cobalt.h"
 
 namespace feedback {
@@ -30,9 +31,12 @@ namespace feedback {
 class Datastore {
  public:
   Datastore(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-            Cobalt* cobalt, zx::duration timeout, const AnnotationKeys& annotation_allowlist);
+            Cobalt* cobalt, zx::duration timeout, const AnnotationKeys& annotation_allowlist,
+            const AttachmentKeys& attachment_allowlist);
 
   fit::promise<Annotations> GetAnnotations();
+
+  fit::promise<Attachments> GetAttachments();
 
  private:
   async_dispatcher_t* dispatcher_;
@@ -40,6 +44,10 @@ class Datastore {
   Cobalt* cobalt_;
   const zx::duration timeout_;
   const AnnotationKeys annotation_allowlist_;
+  const AttachmentKeys attachment_allowlist_;
+
+  fit::promise<Attachment> BuildAttachment(const AttachmentKey& key);
+  fit::promise<AttachmentValue> BuildAttachmentValue(const AttachmentKey& key);
 };
 
 }  // namespace feedback

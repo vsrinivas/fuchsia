@@ -6,7 +6,6 @@
 #define SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_ATTACHMENTS_KERNEL_LOG_PTR_H_
 
 #include <fuchsia/boot/cpp/fidl.h>
-#include <fuchsia/mem/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fit/bridge.h>
@@ -15,6 +14,7 @@
 #include <lib/zx/debuglog.h>
 #include <lib/zx/time.h>
 
+#include "src/developer/feedback/feedback_agent/attachments/aliases.h"
 #include "src/developer/feedback/utils/cobalt.h"
 #include "src/lib/fxl/functional/cancelable_callback.h"
 #include "src/lib/fxl/macros.h"
@@ -23,9 +23,9 @@ namespace feedback {
 
 // Retrieves the kernel log. fuchsia.boot.ReadOnlyLog is expected to be in
 // |services|.
-fit::promise<fuchsia::mem::Buffer> CollectKernelLog(async_dispatcher_t* dispatcher,
-                                                    std::shared_ptr<sys::ServiceDirectory> services,
-                                                    zx::duration timeout, Cobalt* cobalt);
+fit::promise<AttachmentValue> CollectKernelLog(async_dispatcher_t* dispatcher,
+                                               std::shared_ptr<sys::ServiceDirectory> services,
+                                               zx::duration timeout, Cobalt* cobalt);
 
 // Wraps around fuchsia::boot::ReadOnlyLogPtr to handle establishing the
 // connection, losing the connection, waiting for the callback, enforcing a
@@ -37,7 +37,7 @@ class BootLog {
   BootLog(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
           Cobalt* cobalt);
 
-  fit::promise<fuchsia::mem::Buffer> GetLog(zx::duration timeout);
+  fit::promise<AttachmentValue> GetLog(zx::duration timeout);
 
  private:
   async_dispatcher_t* dispatcher_;
@@ -47,7 +47,7 @@ class BootLog {
   bool has_called_get_log_ = false;
 
   fuchsia::boot::ReadOnlyLogPtr log_ptr_;
-  fit::bridge<fuchsia::mem::Buffer> done_;
+  fit::bridge<AttachmentValue> done_;
   // We wrap the delayed task we post on the async loop to timeout in a
   // CancelableClosure so we can cancel it if we are done another way.
   fxl::CancelableClosure done_after_timeout_;

@@ -360,11 +360,11 @@ executable("inspect_ptr_unittest") {
   deps = [
     ":stub_inspect",
     "//sdk/lib/sys/cpp/testing:integration",
+    "//src/developer/feedback/feedback_agent/attachments:aliases",
     "//src/developer/feedback/feedback_agent/attachments:attachment_providers",
     "//src/developer/feedback/testing:cobalt_test_fixture",
     "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//src/developer/feedback/testing/stubs:stub_cobalt_logger_factory",
-    "//src/lib/fsl",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
@@ -377,10 +377,10 @@ executable("kernel_log_ptr_integration_test") {
 
   deps = [
     "//sdk/lib/sys/cpp/testing:integration",
+    "//src/developer/feedback/feedback_agent/attachments:aliases",
     "//src/developer/feedback/feedback_agent/attachments:attachment_providers",
     "//src/developer/feedback/testing/:cobalt_test_fixture",
     "//src/developer/feedback/testing/stubs:stub_cobalt_logger_factory",
-    "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
@@ -457,6 +457,7 @@ executable("system_log_ptr_unittest") {
   deps = [
     ":stub_logger",
     "//garnet/public/lib/fostr/fidl/fuchsia.mem",
+    "//src/developer/feedback/feedback_agent/attachments:aliases",
     "//src/developer/feedback/feedback_agent/attachments:attachment_providers",
     "//src/developer/feedback/testing:cobalt_test_fixture",
     "//src/developer/feedback/testing:gmatchers",
@@ -464,13 +465,11 @@ executable("system_log_ptr_unittest") {
     "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//src/developer/feedback/testing:unit_test_fixture",
     "//src/developer/feedback/testing/stubs:stub_cobalt_logger_factory",
-    "//src/lib/fsl",
     "//src/lib/fxl",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-mem",
   ]
 }
 
@@ -482,6 +481,7 @@ executable("system_log_recorder_unittest") {
   deps = [
     ":stub_logger",
     "//src/developer/feedback/feedback_agent:system_log_recorder_src",
+    "//src/developer/feedback/feedback_agent/attachments:aliases",
     "//src/developer/feedback/testing:gmatchers",
     "//src/developer/feedback/testing:gpretty_printers",
     "//src/developer/feedback/testing:gtest_with_syslog_main",

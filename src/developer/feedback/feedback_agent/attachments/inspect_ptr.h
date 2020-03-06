@@ -6,7 +6,6 @@
 #define SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_ATTACHMENTS_INSPECT_PTR_H_
 
 #include <fuchsia/diagnostics/cpp/fidl.h>
-#include <fuchsia/mem/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fit/bridge.h>
 #include <lib/fit/promise.h>
@@ -18,6 +17,7 @@
 #include <string>
 #include <vector>
 
+#include "src/developer/feedback/feedback_agent/attachments/aliases.h"
 #include "src/developer/feedback/utils/cobalt.h"
 #include "src/lib/fxl/functional/cancelable_callback.h"
 #include "src/lib/fxl/macros.h"
@@ -27,9 +27,9 @@ namespace feedback {
 // Collects the Inspect data.
 //
 // fuchsia.diagnostics.Archive is expected to be in |services|.
-fit::promise<fuchsia::mem::Buffer> CollectInspectData(
-    async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-    zx::duration timeout, Cobalt* cobalt);
+fit::promise<AttachmentValue> CollectInspectData(async_dispatcher_t* dispatcher,
+                                                 std::shared_ptr<sys::ServiceDirectory> services,
+                                                 zx::duration timeout, Cobalt* cobalt);
 
 // Wraps around fuchsia::diagnostics::ArchivePtr, fuchsia::diagnostics::ReaderPtr and
 // fuchsia::diagnostics::BatchIteratorPtr to handle establishing the connection, losing the
@@ -41,7 +41,7 @@ class Inspect {
   Inspect(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
           Cobalt* cobalt);
 
-  fit::promise<fuchsia::mem::Buffer> Collect(zx::duration timeout);
+  fit::promise<AttachmentValue> Collect(zx::duration timeout);
 
  private:
   void SetUp();

@@ -7,10 +7,10 @@
 
 #include <zircon/types.h>
 
-#include <set>
 #include <string>
 
 #include "src/developer/feedback/feedback_agent/annotations/aliases.h"
+#include "src/developer/feedback/feedback_agent/attachments/aliases.h"
 
 namespace feedback {
 
@@ -20,7 +20,7 @@ struct Config {
   AnnotationKeys annotation_allowlist;
 
   // Set of attachment keys to return data for in fuchsia.feedback.DataProvider.GetData().
-  std::set<std::string> attachment_allowlist;
+  AttachmentKeys attachment_allowlist;
 };
 
 // Parses the JSON config at |filepath| as |config|.

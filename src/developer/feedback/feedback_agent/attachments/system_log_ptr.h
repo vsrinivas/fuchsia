@@ -6,7 +6,6 @@
 #define SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_ATTACHMENTS_SYSTEM_LOG_PTR_H_
 
 #include <fuchsia/logger/cpp/fidl.h>
-#include <fuchsia/mem/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fit/bridge.h>
@@ -17,6 +16,7 @@
 #include <cinttypes>
 #include <vector>
 
+#include "src/developer/feedback/feedback_agent/attachments/aliases.h"
 #include "src/developer/feedback/utils/cobalt.h"
 #include "src/lib/fxl/functional/cancelable_callback.h"
 
@@ -25,9 +25,9 @@ namespace feedback {
 // Collects system log.
 //
 // fuchsia.logger.Log is expected to be in |services|.
-fit::promise<fuchsia::mem::Buffer> CollectSystemLog(async_dispatcher_t* dispatcher,
-                                                    std::shared_ptr<sys::ServiceDirectory> services,
-                                                    zx::duration timeout, Cobalt* cobalt);
+fit::promise<AttachmentValue> CollectSystemLog(async_dispatcher_t* dispatcher,
+                                               std::shared_ptr<sys::ServiceDirectory> services,
+                                               zx::duration timeout, Cobalt* cobalt);
 
 // Wraps around fuchsia::logger::LogListenerPtr to handle establishing the connection, losing the
 // connection, waiting for the callback, enforcing a timeout, etc.

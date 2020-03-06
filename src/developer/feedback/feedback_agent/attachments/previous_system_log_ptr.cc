@@ -4,23 +4,22 @@
 
 #include "src/developer/feedback/feedback_agent/attachments/previous_system_log_ptr.h"
 
-#include "lib/fit/promise.h"
+#include <lib/fit/promise.h>
+
 #include "src/developer/feedback/feedback_agent/constants.h"
-#include "src/lib/fsl/vmo/file.h"
-#include "src/lib/fsl/vmo/sized_vmo.h"
-#include "src/lib/fsl/vmo/strings.h"
-#include "src/lib/syslog//cpp/logger.h"
+#include "src/lib/files/file.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 
-fit::promise<fuchsia::mem::Buffer> CollectPreviousSystemLog() {
-  fsl::SizedVmo vmo;
-  if (!fsl::VmoFromFilename(kPreviousLogsFilePath, &vmo)) {
-    FX_LOGS(ERROR) << "Unable to convert previous logs to vmo.";
-    return fit::make_result_promise<fuchsia::mem::Buffer>(fit::error());
+fit::promise<AttachmentValue> CollectPreviousSystemLog() {
+  std::string content;
+  if (!files::ReadFileToString(kPreviousLogsFilePath, &content)) {
+    FX_LOGS(ERROR) << "Unable to load previous logs into string";
+    return fit::make_result_promise<AttachmentValue>(fit::error());
   }
 
-  return fit::make_result_promise<fuchsia::mem::Buffer>(fit::ok(std::move(vmo).ToTransport()));
+  return fit::make_result_promise<AttachmentValue>(fit::ok(content));
 }
 
 }  // namespace feedback

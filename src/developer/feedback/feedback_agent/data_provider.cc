@@ -16,17 +16,20 @@
 #include <memory>
 
 #include "src/developer/feedback/feedback_agent/annotations/aliases.h"
-#include "src/developer/feedback/feedback_agent/attachments.h"
+#include "src/developer/feedback/feedback_agent/attachments/aliases.h"
 #include "src/developer/feedback/feedback_agent/attachments/screenshot_ptr.h"
+#include "src/developer/feedback/feedback_agent/attachments/util.h"
 #include "src/developer/feedback/feedback_agent/config.h"
 #include "src/developer/feedback/feedback_agent/image_conversion.h"
+#include "src/lib/fsl/vmo/sized_vmo.h"
+#include "src/lib/fsl/vmo/strings.h"
+#include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/syslog/cpp/logger.h"
 #include "src/lib/timekeeper/system_clock.h"
 
 namespace feedback {
 namespace {
 
-using fuchsia::feedback::Attachment;
 using fuchsia::feedback::Data;
 using fuchsia::feedback::ImageEncoding;
 using fuchsia::feedback::Screenshot;
@@ -62,57 +65,63 @@ DataProvider::DataProvider(async_dispatcher_t* dispatcher,
       config_(config),
       cobalt_(dispatcher_, services_, std::move(clock)),
       executor_(dispatcher),
-      datastore_(dispatcher_, services_, &cobalt_, kDataTimeout, config_.annotation_allowlist) {}
+      datastore_(dispatcher_, services_, &cobalt_, kDataTimeout, config_.annotation_allowlist,
+                 config_.attachment_allowlist) {}
+
+namespace {
+
+std::vector<fuchsia::feedback::Annotation> ToAnnotationVector(const Annotations& annotations) {
+  std::vector<fuchsia::feedback::Annotation> vec;
+  for (const auto& [key, value] : annotations) {
+    fuchsia::feedback::Annotation annotation;
+    annotation.key = key;
+    annotation.value = value;
+    vec.push_back(std::move(annotation));
+  }
+  return vec;
+}
+
+std::vector<fuchsia::feedback::Attachment> ToAttachmentVector(const Attachments& attachments) {
+  std::vector<fuchsia::feedback::Attachment> vec;
+  for (const auto& [key, value] : attachments) {
+    fsl::SizedVmo vmo;
+    if (!fsl::VmoFromString(value, &vmo)) {
+      FX_LOGS(ERROR) << fxl::StringPrintf("Failed to convert attachment %s to VMO", key.c_str());
+      continue;
+    }
+
+    fuchsia::feedback::Attachment attachment;
+    attachment.key = key;
+    attachment.value = std::move(vmo).ToTransport();
+    vec.push_back(std::move(attachment));
+  }
+  return vec;
+}
+
+}  // namespace
 
 void DataProvider::GetData(GetDataCallback callback) {
   FX_CHECK(!shut_down_);
 
   const uint64_t timer_id = cobalt_.StartTimer();
 
-  auto attachments =
-      fit::join_promise_vector(GetAttachments(dispatcher_, services_, config_.attachment_allowlist,
-                                              kDataTimeout, &cobalt_))
-          .and_then([](std::vector<fit::result<Attachment>>& attachments)
-                        -> fit::result<std::vector<Attachment>> {
-            std::vector<Attachment> ok_attachments;
-            for (auto& attachment : attachments) {
-              if (attachment.is_ok()) {
-                ok_attachments.emplace_back(attachment.take_value());
-              }
-            }
-
-            if (ok_attachments.empty()) {
-              return fit::error();
-            }
-
-            return fit::ok(std::move(ok_attachments));
-          });
-
   auto promise =
-      fit::join_promises(datastore_.GetAnnotations(), std::move(attachments))
-          .and_then([](std::tuple<fit::result<Annotations>, fit::result<std::vector<Attachment>>>&
+      fit::join_promises(datastore_.GetAnnotations(), datastore_.GetAttachments())
+          .and_then([](std::tuple<fit::result<Annotations>, fit::result<Attachments>>&
                            annotations_and_attachments) {
             Data data;
+            std::vector<fuchsia::feedback::Attachment> attachments;
 
             auto& annotations_or_error = std::get<0>(annotations_and_attachments);
             if (annotations_or_error.is_ok()) {
-              Annotations annotations = annotations_or_error.take_value();
-              std::vector<fuchsia::feedback::Annotation> vec;
-              for (const auto& [key, value] : annotations) {
-                fuchsia::feedback::Annotation annotation;
-                annotation.key = key;
-                annotation.value = value;
-                vec.push_back(std::move(annotation));
-              }
-              data.set_annotations(std::move(vec));
+              data.set_annotations(ToAnnotationVector(annotations_or_error.take_value()));
             } else {
               FX_LOGS(WARNING) << "Failed to retrieve any annotations";
             }
 
             auto& attachments_or_error = std::get<1>(annotations_and_attachments);
-            std::vector<Attachment> attachments;
             if (attachments_or_error.is_ok()) {
-              attachments = attachments_or_error.take_value();
+              attachments = ToAttachmentVector(attachments_or_error.take_value());
             } else {
               FX_LOGS(WARNING) << "Failed to retrieve any attachments";
             }
@@ -127,7 +136,7 @@ void DataProvider::GetData(GetDataCallback callback) {
             // We bundle the attachments into a single attachment.
             // This is useful for most clients that want to pass around a single bundle.
             if (!attachments.empty()) {
-              Attachment bundle;
+              fuchsia::feedback::Attachment bundle;
               if (BundleAttachments(attachments, &bundle)) {
                 data.set_attachment_bundle(std::move(bundle));
               }

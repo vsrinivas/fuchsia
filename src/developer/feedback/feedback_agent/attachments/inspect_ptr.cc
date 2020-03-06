@@ -16,7 +16,6 @@
 
 #include "src/developer/feedback/utils/cobalt_metrics.h"
 #include "src/developer/feedback/utils/promise.h"
-#include "src/lib/fsl/vmo/sized_vmo.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/join_strings.h"
@@ -24,9 +23,9 @@
 
 namespace feedback {
 
-fit::promise<fuchsia::mem::Buffer> CollectInspectData(
-    async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-    zx::duration timeout, Cobalt* cobalt) {
+fit::promise<AttachmentValue> CollectInspectData(async_dispatcher_t* dispatcher,
+                                                 std::shared_ptr<sys::ServiceDirectory> services,
+                                                 zx::duration timeout, Cobalt* cobalt) {
   std::unique_ptr<Inspect> inspect = std::make_unique<Inspect>(dispatcher, services, cobalt);
 
   // We must store the promise in a variable due to the fact that the order of evaluation of
@@ -40,7 +39,7 @@ Inspect::Inspect(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDir
                  Cobalt* cobalt)
     : dispatcher_(dispatcher), services_(services), cobalt_(cobalt) {}
 
-fit::promise<fuchsia::mem::Buffer> Inspect::Collect(zx::duration timeout) {
+fit::promise<AttachmentValue> Inspect::Collect(zx::duration timeout) {
   FXL_CHECK(!has_called_collect_) << "Collect() is not intended to be called twice";
   has_called_collect_ = true;
 
@@ -53,7 +52,7 @@ fit::promise<fuchsia::mem::Buffer> Inspect::Collect(zx::duration timeout) {
       status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to post delayed task";
     FX_LOGS(ERROR) << "Skipping Inspect data collection as it is not safe without a timeout";
-    return fit::make_result_promise<fuchsia::mem::Buffer>(fit::error());
+    return fit::make_result_promise<AttachmentValue>(fit::error());
   }
 
   // We start the Inspect data collection.
@@ -61,7 +60,7 @@ fit::promise<fuchsia::mem::Buffer> Inspect::Collect(zx::duration timeout) {
 
   // We wait on one way to finish the flow, joining whichever data has been collected.
   return done_.consumer.promise_or(fit::error())
-      .then([this](fit::result<>& result) -> fit::result<fuchsia::mem::Buffer> {
+      .then([this](fit::result<>& result) -> fit::result<AttachmentValue> {
         done_after_timeout_.Cancel();
 
         if (!result.is_ok()) {
@@ -78,12 +77,7 @@ fit::promise<fuchsia::mem::Buffer> Inspect::Collect(zx::duration timeout) {
         joined_data += fxl::JoinStrings(inspect_data_, ",\n");
         joined_data += "\n]";
 
-        fsl::SizedVmo vmo;
-        if (!fsl::VmoFromString(joined_data, &vmo)) {
-          FX_LOGS(ERROR) << "Failed to convert Inspect data JSON string to vmo";
-          return fit::error();
-        }
-        return fit::ok(std::move(vmo).ToTransport());
+        return fit::ok(joined_data);
       });
 }
 

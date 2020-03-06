@@ -5,6 +5,10 @@
 ###############################################################################
 # SOURCES
 ###############################################################################
+source_set("aliases") {
+  sources = [ "aliases.h" ]
+}
+
 source_set("attachment_providers") {
   sources = [
     "inspect_ptr.cc",
@@ -20,8 +24,8 @@ source_set("attachment_providers") {
   ]
 
   public_deps = [
+    ":aliases",
     "//sdk/fidl/fuchsia.diagnostics",
-    "//sdk/fidl/fuchsia.feedback",
     "//sdk/fidl/fuchsia.images",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/lib/fidl/cpp",
@@ -33,7 +37,6 @@ source_set("attachment_providers") {
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-boot",
     "//zircon/system/fidl/fuchsia-logger",
-    "//zircon/system/fidl/fuchsia-mem",
   ]
 
   deps = [
@@ -41,7 +44,25 @@ source_set("attachment_providers") {
     "//src/developer/feedback/feedback_agent:constants",
     "//src/developer/feedback/utils:logs",
     "//src/developer/feedback/utils:promise",
+    "//src/lib/files",
     "//src/lib/fsl",
     "//src/lib/syslog/cpp",
+  ]
+}
+
+source_set("util") {
+  sources = [
+    "util.cc",
+    "util.h",
+  ]
+
+  public_deps = [ "//sdk/fidl/fuchsia.feedback" ]
+
+  deps = [
+    "//src/developer/feedback/feedback_agent:constants",
+    "//src/developer/feedback/utils:archive",
+    "//src/lib/fsl",
+    "//src/lib/syslog/cpp",
+    "//third_party/rapidjson",
   ]
 }

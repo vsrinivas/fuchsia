@@ -4,7 +4,6 @@
 
 #include <fuchsia/boot/c/fidl.h>
 #include <fuchsia/boot/cpp/fidl.h>
-#include <fuchsia/mem/cpp/fidl.h>
 #include <lib/async/cpp/executor.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/cpp/binding_set.h>
@@ -16,10 +15,10 @@
 #include <memory>
 #include <vector>
 
+#include "src/developer/feedback/feedback_agent/attachments/aliases.h"
 #include "src/developer/feedback/feedback_agent/attachments/kernel_log_ptr.h"
 #include "src/developer/feedback/testing/stubs/stub_cobalt_logger_factory.h"
 #include "src/developer/feedback/utils/cobalt_metrics.h"
-#include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
@@ -36,14 +35,14 @@ class CollectKernelLogTest : public sys::testing::TestWithEnvironment {
 
   void SetUp() override { environment_services_ = sys::ServiceDirectory::CreateFromNamespace(); }
 
-  fit::result<fuchsia::mem::Buffer> GetKernelLog() {
+  fit::result<AttachmentValue> GetKernelLog() {
     cobalt_ = std::make_unique<Cobalt>(dispatcher(), environment_services_);
-    fit::result<fuchsia::mem::Buffer> result;
+    fit::result<AttachmentValue> result;
     const zx::duration timeout(zx::sec(10));
     bool done = false;
     executor_.schedule_task(
         CollectKernelLog(dispatcher(), environment_services_, timeout, cobalt_.get())
-            .then([&result, &done](fit::result<fuchsia::mem::Buffer>& res) {
+            .then([&result, &done](fit::result<AttachmentValue>& res) {
               result = std::move(res);
               done = true;
             }));
@@ -74,12 +73,10 @@ TEST_F(CollectKernelLogTest, Succeed_BasicCase) {
       fxl::StringPrintf("<<GetLogTest_Succeed_BasicCase: %zu>>", zx_clock_get_monotonic()));
   SendToKernelLog(output);
 
-  fit::result<fuchsia::mem::Buffer> result = GetKernelLog();
+  fit::result<AttachmentValue> result = GetKernelLog();
   ASSERT_TRUE(result.is_ok());
-  fuchsia::mem::Buffer logs = result.take_value();
-  std::string logs_as_string;
-  ASSERT_TRUE(fsl::StringFromVmo(logs, &logs_as_string));
-  EXPECT_THAT(logs_as_string, testing::HasSubstr(output));
+  AttachmentValue logs = result.take_value();
+  EXPECT_THAT(logs, testing::HasSubstr(output));
 }
 
 TEST_F(CollectKernelLogTest, Succeed_TwoRetrievals) {
@@ -89,19 +86,15 @@ TEST_F(CollectKernelLogTest, Succeed_TwoRetrievals) {
       fxl::StringPrintf("<<GetLogTest_Succeed_TwoRetrievals: %zu>>", zx_clock_get_monotonic()));
   SendToKernelLog(output);
 
-  fit::result<fuchsia::mem::Buffer> result = GetKernelLog();
+  fit::result<AttachmentValue> result = GetKernelLog();
   ASSERT_TRUE(result.is_ok());
-  fuchsia::mem::Buffer logs = result.take_value();
-  std::string logs_as_string;
-  ASSERT_TRUE(fsl::StringFromVmo(logs, &logs_as_string));
-  EXPECT_THAT(logs_as_string, testing::HasSubstr(output));
+  AttachmentValue logs = result.take_value();
+  EXPECT_THAT(logs, testing::HasSubstr(output));
 
-  fit::result<fuchsia::mem::Buffer> second_result = GetKernelLog();
+  fit::result<AttachmentValue> second_result = GetKernelLog();
   ASSERT_TRUE(second_result.is_ok());
-  fuchsia::mem::Buffer second_logs = second_result.take_value();
-  std::string second_logs_as_string;
-  ASSERT_TRUE(fsl::StringFromVmo(second_logs, &second_logs_as_string));
-  EXPECT_THAT(second_logs_as_string, testing::HasSubstr(output));
+  AttachmentValue second_logs = second_result.take_value();
+  EXPECT_THAT(second_logs, testing::HasSubstr(output));
 }
 
 TEST_F(CollectKernelLogTest, Fail_CallGetLogTwice) {

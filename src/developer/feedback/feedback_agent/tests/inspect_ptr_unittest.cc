@@ -4,7 +4,6 @@
 
 #include "src/developer/feedback/feedback_agent/attachments/inspect_ptr.h"
 
-#include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/mem/cpp/fidl.h>
 #include <lib/async/cpp/executor.h>
 #include <lib/fit/result.h>
@@ -15,13 +14,13 @@
 #include <string>
 #include <vector>
 
+#include "src/developer/feedback/feedback_agent/attachments/aliases.h"
 #include "src/developer/feedback/feedback_agent/tests/stub_inspect_archive.h"
 #include "src/developer/feedback/feedback_agent/tests/stub_inspect_batch_iterator.h"
 #include "src/developer/feedback/testing/cobalt_test_fixture.h"
 #include "src/developer/feedback/testing/stubs/stub_cobalt_logger_factory.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/developer/feedback/utils/cobalt_metrics.h"
-#include "src/lib/fsl/vmo/strings.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
 
@@ -44,14 +43,14 @@ class CollectInspectDataTest : public UnitTestFixture, public CobaltTestFixture 
     }
   }
 
-  fit::result<fuchsia::mem::Buffer> CollectInspectData(const zx::duration timeout = zx::sec(1)) {
+  fit::result<AttachmentValue> CollectInspectData(const zx::duration timeout = zx::sec(1)) {
     SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
     Cobalt cobalt(dispatcher(), services());
 
-    fit::result<fuchsia::mem::Buffer> result;
+    fit::result<AttachmentValue> result;
     executor_.schedule_task(
         feedback::CollectInspectData(dispatcher(), services(), timeout, &cobalt)
-            .then([&result](fit::result<fuchsia::mem::Buffer>& res) { result = std::move(res); }));
+            .then([&result](fit::result<AttachmentValue>& res) { result = std::move(res); }));
     RunLoopFor(timeout);
     return result;
   }
@@ -78,13 +77,11 @@ TEST_F(CollectInspectDataTest, Succeed_AllInspectData) {
           {},
       }))));
 
-  fit::result<fuchsia::mem::Buffer> result = CollectInspectData();
+  fit::result<AttachmentValue> result = CollectInspectData();
   ASSERT_TRUE(result.is_ok());
 
-  const fuchsia::mem::Buffer& inspect = result.value();
-  std::string inspect_json;
-  ASSERT_TRUE(fsl::StringFromVmo(inspect, &inspect_json));
-  ASSERT_STREQ(inspect_json.c_str(), R"([
+  const AttachmentValue& inspect = result.value();
+  ASSERT_STREQ(inspect.c_str(), R"([
 foo1,
 foo2,
 bar1
@@ -98,13 +95,11 @@ TEST_F(CollectInspectDataTest, Succeed_PartialInspectData) {
       std::make_unique<StubInspectBatchIteratorNeverRespondsAfterOneBatch>(
           std::vector<std::string>({"foo1", "foo2"}))));
 
-  fit::result<fuchsia::mem::Buffer> result = CollectInspectData();
+  fit::result<AttachmentValue> result = CollectInspectData();
   ASSERT_TRUE(result.is_ok());
 
-  const fuchsia::mem::Buffer& inspect = result.value();
-  std::string inspect_json;
-  ASSERT_TRUE(fsl::StringFromVmo(inspect, &inspect_json));
-  ASSERT_STREQ(inspect_json.c_str(), R"([
+  const AttachmentValue& inspect = result.value();
+  ASSERT_STREQ(inspect.c_str(), R"([
 foo1,
 foo2
 ])");
@@ -116,7 +111,7 @@ TEST_F(CollectInspectDataTest, Fail_NoInspectData) {
   SetUpInspect(std::make_unique<StubInspectArchive>(
       std::make_unique<StubInspectBatchIterator>(std::vector<std::vector<std::string>>({{}}))));
 
-  fit::result<fuchsia::mem::Buffer> result = CollectInspectData();
+  fit::result<AttachmentValue> result = CollectInspectData();
   ASSERT_TRUE(result.is_error());
 
   CheckNoTimeout();
@@ -126,7 +121,7 @@ TEST_F(CollectInspectDataTest, Fail_BatchIteratorReturnsError) {
   SetUpInspect(std::make_unique<StubInspectArchive>(
       std::make_unique<StubInspectBatchIteratorReturnsError>()));
 
-  fit::result<fuchsia::mem::Buffer> result = CollectInspectData();
+  fit::result<AttachmentValue> result = CollectInspectData();
   ASSERT_TRUE(result.is_error());
   CheckNoTimeout();
 }
@@ -135,7 +130,7 @@ TEST_F(CollectInspectDataTest, Fail_BatchIteratorNeverResponds) {
   SetUpInspect(std::make_unique<StubInspectArchive>(
       std::make_unique<StubInspectBatchIteratorNeverResponds>()));
 
-  fit::result<fuchsia::mem::Buffer> result = CollectInspectData();
+  fit::result<AttachmentValue> result = CollectInspectData();
   ASSERT_TRUE(result.is_error());
 
   CheckTimeout();
@@ -144,7 +139,7 @@ TEST_F(CollectInspectDataTest, Fail_BatchIteratorNeverResponds) {
 TEST_F(CollectInspectDataTest, Fail_ArchiveClosesIteratorClosesConnection) {
   SetUpInspect(std::make_unique<StubInspectArchiveClosesIteratorConnection>());
 
-  fit::result<fuchsia::mem::Buffer> result = CollectInspectData();
+  fit::result<AttachmentValue> result = CollectInspectData();
   ASSERT_TRUE(result.is_error());
 
   CheckNoTimeout();
@@ -153,7 +148,7 @@ TEST_F(CollectInspectDataTest, Fail_ArchiveClosesIteratorClosesConnection) {
 TEST_F(CollectInspectDataTest, Fail_ArchiveClosesConnection) {
   SetUpInspect(std::make_unique<StubInspectArchiveClosesArchiveConnection>());
 
-  fit::result<fuchsia::mem::Buffer> result = CollectInspectData();
+  fit::result<AttachmentValue> result = CollectInspectData();
   ASSERT_TRUE(result.is_error());
 
   CheckNoTimeout();

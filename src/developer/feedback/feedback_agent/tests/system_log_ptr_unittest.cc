@@ -4,7 +4,6 @@
 
 #include "src/developer/feedback/feedback_agent/attachments/system_log_ptr.h"
 
-#include <fuchsia/mem/cpp/fidl.h>
 #include <lib/async/cpp/executor.h>
 #include <lib/syslog/logger.h>
 #include <lib/zx/time.h>
@@ -14,9 +13,9 @@
 #include <ostream>
 #include <vector>
 
+#include "src/developer/feedback/feedback_agent/attachments/aliases.h"
 #include "src/developer/feedback/feedback_agent/tests/stub_logger.h"
 #include "src/developer/feedback/testing/cobalt_test_fixture.h"
-#include "src/developer/feedback/testing/gmatchers.h"
 #include "src/developer/feedback/testing/gpretty_printers.h"
 #include "src/developer/feedback/testing/stubs/stub_cobalt_logger_factory.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
@@ -44,14 +43,14 @@ class CollectSystemLogTest : public UnitTestFixture, public CobaltTestFixture {
     }
   }
 
-  fit::result<fuchsia::mem::Buffer> CollectSystemLog(const zx::duration timeout = zx::sec(1)) {
+  fit::result<AttachmentValue> CollectSystemLog(const zx::duration timeout = zx::sec(1)) {
     SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
     Cobalt cobalt(dispatcher(), services());
 
-    fit::result<fuchsia::mem::Buffer> result;
+    fit::result<AttachmentValue> result;
     executor_.schedule_task(
         feedback::CollectSystemLog(dispatcher(), services(), timeout, &cobalt)
-            .then([&result](fit::result<fuchsia::mem::Buffer>& res) { result = std::move(res); }));
+            .then([&result](fit::result<AttachmentValue>& res) { result = std::move(res); }));
     RunLoopFor(timeout);
     return result;
   }
@@ -78,12 +77,12 @@ TEST_F(CollectSystemLogTest, Succeed_BasicCase) {
   });
   SetUpLogger(std::move(logger));
 
-  fit::result<fuchsia::mem::Buffer> result = CollectSystemLog();
+  fit::result<AttachmentValue> result = CollectSystemLog();
 
   ASSERT_TRUE(result.is_ok());
-  fuchsia::mem::Buffer logs = result.take_value();
-  EXPECT_THAT(logs, MatchesStringBuffer(
-                        R"([15604.000][07559][07687][] INFO: line 1
+  AttachmentValue logs = result.take_value();
+  EXPECT_STREQ(logs.c_str(),
+               R"([15604.000][07559][07687][] INFO: line 1
 [15604.001][07559][07687][] WARN: line 2
 [15604.002][07559][07687][] ERROR: line 3
 [15604.003][07559][07687][] FATAL: line 4
@@ -92,7 +91,7 @@ TEST_F(CollectSystemLogTest, Succeed_BasicCase) {
 [15604.006][07559][07687][foo] INFO: line 7
 [15604.007][07559][07687][bar] INFO: line 8
 [15604.008][07559][07687][foo, bar] INFO: line 9
-)"));
+)");
 }
 
 TEST_F(CollectSystemLogTest, Succeed_LoggerUnbindsFromLogListenerAfterOneMessage) {
@@ -104,12 +103,12 @@ TEST_F(CollectSystemLogTest, Succeed_LoggerUnbindsFromLogListenerAfterOneMessage
   });
   SetUpLogger(std::move(logger));
 
-  fit::result<fuchsia::mem::Buffer> result = CollectSystemLog();
+  fit::result<AttachmentValue> result = CollectSystemLog();
 
   ASSERT_TRUE(result.is_ok());
-  fuchsia::mem::Buffer logs = result.take_value();
-  EXPECT_THAT(logs, MatchesStringBuffer("[15604.000][07559][07687][] INFO: this line "
-                                        "should appear in the partial logs\n"));
+  AttachmentValue logs = result.take_value();
+  EXPECT_STREQ(logs.c_str(),
+               "[15604.000][07559][07687][] INFO: this line should appear in the partial logs\n");
 }
 
 TEST_F(CollectSystemLogTest, Succeed_LogCollectionTimesOut) {
@@ -128,14 +127,13 @@ TEST_F(CollectSystemLogTest, Succeed_LogCollectionTimesOut) {
   });
   SetUpLogger(std::move(logger));
 
-  fit::result<fuchsia::mem::Buffer> result = CollectSystemLog(log_collection_timeout);
+  fit::result<AttachmentValue> result = CollectSystemLog(log_collection_timeout);
 
   // First, we check that the log collection terminated with partial logs after the timeout.
   ASSERT_TRUE(result.is_ok());
-  fuchsia::mem::Buffer logs = result.take_value();
-  EXPECT_THAT(
-      logs, MatchesStringBuffer(
-                "[15604.000][07559][07687][] INFO: this line should appear in the partial logs\n"));
+  AttachmentValue logs = result.take_value();
+  EXPECT_STREQ(logs.c_str(),
+               "[15604.000][07559][07687][] INFO: this line should appear in the partial logs\n");
 
   // Then, we check that nothing crashes when the server tries to send the rest of the messages
   // after the connection has been lost.
@@ -148,7 +146,7 @@ TEST_F(CollectSystemLogTest, Succeed_LogCollectionTimesOut) {
 TEST_F(CollectSystemLogTest, Fail_EmptyLog) {
   SetUpLogger(std::make_unique<StubLogger>());
 
-  fit::result<fuchsia::mem::Buffer> result = CollectSystemLog();
+  fit::result<AttachmentValue> result = CollectSystemLog();
 
   ASSERT_TRUE(result.is_error());
 }
@@ -156,7 +154,7 @@ TEST_F(CollectSystemLogTest, Fail_EmptyLog) {
 TEST_F(CollectSystemLogTest, Fail_LoggerNotAvailable) {
   SetUpLogger(nullptr);
 
-  fit::result<fuchsia::mem::Buffer> result = CollectSystemLog();
+  fit::result<AttachmentValue> result = CollectSystemLog();
 
   ASSERT_TRUE(result.is_error());
 }
@@ -164,7 +162,7 @@ TEST_F(CollectSystemLogTest, Fail_LoggerNotAvailable) {
 TEST_F(CollectSystemLogTest, Fail_LoggerClosesConnection) {
   SetUpLogger(std::make_unique<StubLoggerClosesConnection>());
 
-  fit::result<fuchsia::mem::Buffer> result = CollectSystemLog();
+  fit::result<AttachmentValue> result = CollectSystemLog();
 
   ASSERT_TRUE(result.is_error());
 }
@@ -172,7 +170,7 @@ TEST_F(CollectSystemLogTest, Fail_LoggerClosesConnection) {
 TEST_F(CollectSystemLogTest, Fail_LoggerNeverBindsToLogListener) {
   SetUpLogger(std::make_unique<StubLoggerNeverBindsToLogListener>());
 
-  fit::result<fuchsia::mem::Buffer> result = CollectSystemLog();
+  fit::result<AttachmentValue> result = CollectSystemLog();
 
   ASSERT_TRUE(result.is_error());
 }
@@ -180,7 +178,7 @@ TEST_F(CollectSystemLogTest, Fail_LoggerNeverBindsToLogListener) {
 TEST_F(CollectSystemLogTest, Fail_LoggerNeverCallsLogManyBeforeDone) {
   SetUpLogger(std::make_unique<StubLoggerNeverCallsLogManyBeforeDone>());
 
-  fit::result<fuchsia::mem::Buffer> result = CollectSystemLog();
+  fit::result<AttachmentValue> result = CollectSystemLog();
 
   ASSERT_TRUE(result.is_error());
 }
@@ -188,7 +186,7 @@ TEST_F(CollectSystemLogTest, Fail_LoggerNeverCallsLogManyBeforeDone) {
 TEST_F(CollectSystemLogTest, Fail_LogCollectionTimesOut) {
   SetUpLogger(std::make_unique<StubLoggerBindsToLogListenerButNeverCalls>());
 
-  fit::result<fuchsia::mem::Buffer> result = CollectSystemLog();
+  fit::result<AttachmentValue> result = CollectSystemLog();
 
   ASSERT_TRUE(result.is_error());
 }
