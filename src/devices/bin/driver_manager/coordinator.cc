@@ -441,8 +441,9 @@ static zx_status_t dc_launch_devhost(Devhost* host, const LoaderServiceConnector
       devhost_bin,
       nullptr,
   };
-  status = fdio_spawn_etc(devhost_job->get(), FDIO_SPAWN_CLONE_ENVIRON, argv[0], argv, env,
-                          actions_count, actions, proc.reset_and_get_address(), err_msg);
+  const auto flags = FDIO_SPAWN_CLONE_ENVIRON | FDIO_SPAWN_CLONE_STDIO;
+  status = fdio_spawn_etc(devhost_job->get(), flags, argv[0], argv, env, actions_count, actions,
+                          proc.reset_and_get_address(), err_msg);
   if (status != ZX_OK) {
     log(ERROR, "driver_manager: launch devhost '%s': failed: %s: %s\n", name,
         zx_status_get_string(status), err_msg);

@@ -486,42 +486,14 @@ void proxy_ios_destroy(const fbl::RefPtr<zx_device_t>& dev) {
   }
 }
 
-static zxio_t* devhost_zxio_logger = nullptr;
-
 __EXPORT void driver_printf(uint32_t flags, const char* fmt, ...) {
-  if (devhost_zxio_logger == nullptr) {
-    return;
-  }
-  char buffer[512];
   va_list ap;
   va_start(ap, fmt);
-  size_t r = vsnprintf(buffer, sizeof(buffer), fmt, ap);
+  vfprintf(stderr, fmt, ap);
   va_end(ap);
-
-  size_t actual;
-  zxio_write(devhost_zxio_logger, buffer, std::min(r, sizeof(buffer)), 0, &actual);
 }
 
-zx_handle_t root_resource_handle;
-
-static void devhost_io_init() {
-  zx::debuglog handle;
-  if (zx::debuglog::create(*zx::unowned_resource(root_resource_handle), 0, &handle) != ZX_OK) {
-    return;
-  }
-  zxio_storage_t* storage;
-  fdio_t* io = fdio_zxio_create(&storage);
-  if (io == nullptr) {
-    return;
-  }
-  if (zxio_debuglog_init(storage, std::move(handle)) != ZX_OK) {
-    return;
-  }
-  devhost_zxio_logger = &storage->io;
-  close(1);
-  fdio_bind_to_fd(io, 1, 0);
-  dup2(1, 2);
-}
+zx_handle_t root_resource_handle = ZX_HANDLE_INVALID;
 
 static llcpp::fuchsia::device::manager::DeviceProperty convert_device_prop(
     const zx_device_prop_t& prop) {
@@ -1103,8 +1075,6 @@ int device_host_main(int argc, char** argv) {
   if (root_resource_handle == ZX_HANDLE_INVALID) {
     log(TRACE, "driver_host: no root resource handle!\n");
   }
-
-  devhost_io_init();
 
   log(TRACE, "driver_host: main()\n");
 
