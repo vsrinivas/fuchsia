@@ -89,7 +89,7 @@ rustc_binary("nested_reporter_bin") {
   ]
 }
 
-rustc_binary("echo_client_for_breakpoints_bin") {
+rustc_binary("echo_client_for_events_bin") {
   name = "scoped_echo_client"
   edition = "2018"
   source_root = "scoped/echo_client.rs"

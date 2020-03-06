@@ -186,7 +186,7 @@ impl BuiltinEnvironment {
         })
     }
 
-    /// Setup a ServiceFs that contains the Hub and (optionally) the breakpoints service
+    /// Setup a ServiceFs that contains the Hub and (optionally) the `EventSourceSync` service.
     async fn create_service_fs<'a>(
         &self,
         model: &Model,

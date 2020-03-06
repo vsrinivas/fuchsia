@@ -56,7 +56,7 @@ pub static COMPONENT_MANAGER_URL: &str =
 /// for integration tests, where a single component runs multiple tests simultaneously.
 /// There will be multiple component managers and they must all run in isolated environments.
 ///
-/// The hub is required to access the Breakpoints FIDL service exposed by
+/// The hub is required to access the Events FIDL service exposed by
 /// component manager when the "--debug" flag is passed in.
 ///
 /// Usage: /src/sys/component_manager/tests contains multiple tests such as
@@ -138,7 +138,7 @@ impl BlackBoxTest {
         path.join("out/hub")
     }
 
-    /// The breakpoints FIDL service connected to component manager.
+    /// The events FIDL service connected to component manager.
     /// An integration test can use this service to halt tasks of component manager
     /// at various points during its execution.
     pub async fn connect_to_event_source(&self) -> Result<EventSource, Error> {
@@ -278,7 +278,7 @@ async fn launch_component_manager(
     Ok(component_manager_app)
 }
 
-/// Use the path to component manager's hub to find the Breakpoint service
+/// Use the path to component manager's hub to find the events service
 /// and connect to it
 async fn connect_to_event_source(component_manager_path: &PathBuf) -> Result<EventSource, Error> {
     let path_to_svc = component_manager_path.join("out/svc");

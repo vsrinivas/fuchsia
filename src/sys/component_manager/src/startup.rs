@@ -44,12 +44,12 @@ pub struct Arguments {
     /// root realm.
     pub use_builtin_vmex: bool,
 
-    /// If true, component manager will be in debug mode. In this mode, the breakpoints FIDL
+    /// If true, component manager will be in debug mode. In this mode, the EventSourceSync FIDL
     /// service will be exposed via the ServiceFs directory (usually the out dir). ComponentManager
-    /// will not start until it is resumed by the breakpoints FIDL API.
+    /// will not start until it is resumed by the EventSourceSync FIDL API.
     ///
-    /// This is done so that an external component (say an integration test) can register
-    /// breakpoints before ComponentManager has begun.
+    /// This is done so that an external component (say an integration test) can subscribe to
+    /// events before the root component has started.
     pub debug: bool,
 
     /// URL of the root component to launch.

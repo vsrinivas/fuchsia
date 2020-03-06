@@ -14,7 +14,6 @@ use {
 
 /// Notifies when the root instance has been destroyed by ComponentManager.
 /// This is used to terminate ComponentManager when the root component has been destroyed.
-/// TODO(xbhatnag): Consider replacing this with breakpoints.
 pub struct RootRealmStopNotifier {
     rx: Mutex<Option<oneshot::Receiver<()>>>,
     tx: Mutex<Option<oneshot::Sender<()>>>,

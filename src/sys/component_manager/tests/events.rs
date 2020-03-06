@@ -63,7 +63,7 @@ impl EventSource {
         Ok(EventLog::new(event_stream))
     }
 
-    // This is a convenience method that sets a breakpoint on the the `CapabilityRouted`,
+    // This is a convenience method that subscribes to the `CapabilityRouted` event,
     // spawns a new task, and injects the service provided by the injector if requested
     // by the event.
     pub async fn install_injector<I: 'static>(&self, injector: Arc<I>) -> Result<AbortHandle, Error>
@@ -95,7 +95,7 @@ impl EventSource {
         Ok(abort_handle)
     }
 
-    // This is a convenience method that sets a breakpoint on the the `CapabilityRouted`,
+    // This is a convenience method that subscribes to the `CapabilityRouted` event,
     // spawns a new task, and interposes the service provided by the interposer if requested
     // by the event.
     pub async fn install_interposer<I: 'static>(

@@ -63,7 +63,7 @@ test_package("events_integration_test") {
     ":events_integration_test_bin",
     "components:chained_interpose_echo_client_bin",
     "components:chained_interpose_echo_factory_bin",
-    "components:echo_client_for_breakpoints_bin",
+    "components:echo_client_for_events_bin",
     "components:echo_reporter_bin",
     "components:interpose_echo_looper_bin",
     "components:nested_child_bin",
