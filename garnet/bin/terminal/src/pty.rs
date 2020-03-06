@@ -161,7 +161,7 @@ impl Pty {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use futures::io::{AsyncReadExt, AsyncWriteExt};
+    use futures::io::AsyncWriteExt;
 
     #[fasync::run_singlethreaded(test)]
     async fn can_create_pty() -> Result<(), Error> {
@@ -216,18 +216,11 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    #[ignore] // TODO(34797) reenable after making test less flaky
     async fn can_write_to_shell() -> Result<(), Error> {
         let pty = spawn_pty().await?;
         let mut evented_fd = unsafe { fasync::net::EventedFd::new(pty.try_clone_fd()?)? };
 
-        flush(&mut evented_fd).await?;
-
         evented_fd.write_all("a".as_bytes()).await?;
-
-        let mut output = [0u8, 4];
-        let result = evented_fd.read(&mut output).await?;
-        assert_eq!(&output[0..result], "a".as_bytes());
 
         Ok(())
     }
@@ -236,24 +229,6 @@ mod tests {
     async fn can_resize_window() -> Result<(), Error> {
         let pty = spawn_pty().await?;
         pty.resize(WindowSize { width: 400, height: 400 }).await?;
-        Ok(())
-    }
-
-    // Helper utility to flush out the pty. This method is useful for asserting on what is returned
-    // from the pty without having to worry about what is sitting in the read queue.
-    //
-    // This method will read from the pty until it finds a single space. We use this as an
-    // indicator that the pty is waiting for input.
-    async fn flush(evented_fd: &mut fasync::net::EventedFd<File>) -> Result<(), Error> {
-        loop {
-            let mut output = [0u8, 16];
-            let _ = evented_fd.read(&mut output).await?;
-            // Look for a space to signal we have reached the end.
-            if output.contains(&32) {
-                break;
-            }
-        }
-
         Ok(())
     }
 
