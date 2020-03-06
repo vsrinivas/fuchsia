@@ -3,9 +3,15 @@
 // found in the LICENSE file.
 
 use {
-    async_trait::async_trait, fidl_fuchsia_ui_input as fidl_ui_input,
-    fidl_fuchsia_ui_policy::PointerCaptureListenerHackProxy, futures::lock::Mutex,
-    input::input_device, input::input_handler::InputHandler, input::touch, std::sync::Arc, input::{Position, Size}
+    async_trait::async_trait,
+    fidl_fuchsia_ui_input as fidl_ui_input,
+    fidl_fuchsia_ui_policy::PointerCaptureListenerHackProxy,
+    futures::lock::Mutex,
+    input::input_device,
+    input::input_handler::InputHandler,
+    input::touch,
+    input::{Position, Size},
+    std::sync::Arc,
 };
 
 /// A [`TouchPointerHack`] observes touch events and sends them to observers.
@@ -99,7 +105,8 @@ impl TouchPointerHack {
         event_time: input_device::EventTime,
         touch_descriptor: &touch::TouchDeviceDescriptor,
     ) -> fidl_ui_input::PointerEvent {
-        let position = self.device_coordinate_from_contact(&contact, &touch_descriptor) * self.event_scale;
+        let position =
+            self.device_coordinate_from_contact(&contact, &touch_descriptor) * self.event_scale;
 
         fidl_ui_input::PointerEvent {
             event_time: event_time,
@@ -130,14 +137,14 @@ impl TouchPointerHack {
                 y: (contact_descriptor.y_range.max - contact_descriptor.y_range.min) as f32,
             };
 
-            if range.x == 0.0 || range.y == 0.0 {
-                return contact.position();
+            if range == Position::zero() {
+                return contact.position;
             }
 
-            let normalized = contact.position() / range;
+            let normalized = contact.position / range;
             normalized * self.display_size
         } else {
-            return contact.position();
+            return contact.position;
         }
     }
 }

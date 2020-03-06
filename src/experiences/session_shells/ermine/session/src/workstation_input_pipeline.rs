@@ -82,8 +82,8 @@ async fn add_touch_handler(
     scene_manager: &FlatSceneManager,
     handlers: &mut Vec<Box<dyn InputHandler>>,
 ) {
-    let (width_pixels, height_pixels) = scene_manager.display_size().pixels();
-    if let Ok(touch_handler) = TouchHandler::new2(
+    let (width_pixels, height_pixels) = scene_manager.display_size.pixels();
+    if let Ok(touch_handler) = TouchHandler::new(
         scene_manager.session.clone(),
         scene_manager.compositor_id,
         Size { width: width_pixels, height: height_pixels },
@@ -99,8 +99,8 @@ async fn add_mouse_handler(
     handlers: &mut Vec<Box<dyn InputHandler>>,
 ) {
     let (sender, mut receiver) = futures::channel::mpsc::channel(0);
-    let (width_pixels, height_pixels) = scene_manager.display_size().pixels();
-    let mouse_handler = MouseHandler::new2(
+    let (width_pixels, height_pixels) = scene_manager.display_size.pixels();
+    let mouse_handler = MouseHandler::new(
         Position { x: width_pixels, y: height_pixels },
         Some(sender),
         scene_manager.session.clone(),
@@ -110,8 +110,9 @@ async fn add_mouse_handler(
 
     fasync::spawn(async move {
         while let Some(Position { x, y }) = receiver.next().await {
-            let screen_coordinates = ScreenCoordinates::from_pixels(x, y, scene_manager.display_metrics);
-            scene_manager.set_cursor_location2(screen_coordinates);
+            let screen_coordinates =
+                ScreenCoordinates::from_pixels(x, y, scene_manager.display_metrics);
+            scene_manager.set_cursor_location(screen_coordinates);
         }
     });
 }
@@ -122,7 +123,7 @@ async fn add_mouse_hack(
     handlers: &mut Vec<Box<dyn InputHandler>>,
 ) {
     let mouse_hack = MousePointerHack::new(
-        scene_manager.display_size().size(),
+        scene_manager.display_size.size(),
         1.0 / scene_manager.display_metrics.pixels_per_pip(),
         pointer_hack_server.pointer_listeners.clone(),
     );
@@ -135,7 +136,7 @@ async fn add_touch_hack(
     handlers: &mut Vec<Box<dyn InputHandler>>,
 ) {
     let touch_hack = TouchPointerHack::new(
-        scene_manager.display_size().size(),
+        scene_manager.display_size.size(),
         1.0 / scene_manager.display_metrics.pixels_per_pip(),
         pointer_hack_server.pointer_listeners.clone(),
     );

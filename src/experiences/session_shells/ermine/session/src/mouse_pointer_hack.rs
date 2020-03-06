@@ -3,10 +3,16 @@
 // found in the LICENSE file.
 
 use {
-    async_trait::async_trait, fidl_fuchsia_ui_input as fidl_ui_input,
-    fidl_fuchsia_ui_policy::PointerCaptureListenerHackProxy, futures::lock::Mutex,
-    input::input_device, input::input_handler::InputHandler, input::mouse,
-    std::collections::HashSet, std::sync::Arc, input::{Position, Size},
+    async_trait::async_trait,
+    fidl_fuchsia_ui_input as fidl_ui_input,
+    fidl_fuchsia_ui_policy::PointerCaptureListenerHackProxy,
+    futures::lock::Mutex,
+    input::input_device,
+    input::input_handler::InputHandler,
+    input::mouse,
+    input::{Position, Size},
+    std::collections::HashSet,
+    std::sync::Arc,
 };
 
 /// A [`MousePointerHack`] tracks the mouse position and sends it to observers.
@@ -83,25 +89,12 @@ impl MousePointerHack {
     /// # Parameters
     /// - `mouse_event`: The mouse event to use to update the cursor location.
     async fn update_cursor_position(&mut self, mouse_event: &mouse::MouseEvent) {
-        if mouse_event.movement().x == 0.0 && mouse_event.movement().y == 0.0 {
+        if mouse_event.movement == Position::zero() {
             return;
         }
 
-        self.current_position += mouse_event.movement();
-
-        if self.current_position.x > self.screen_size.width {
-            self.current_position.x = self.screen_size.width;
-        }
-        if self.current_position.y > self.screen_size.height {
-            self.current_position.y = self.screen_size.height;
-        }
-
-        if self.current_position.x < 0.0 {
-            self.current_position.x = 0.0;
-        }
-        if self.current_position.y < 0.0 {
-            self.current_position.y = 0.0;
-        }
+        self.current_position += mouse_event.movement;
+        Position::clamp_size(&mut self.current_position, Size::zero(), self.screen_size)
     }
 
     /// Sends a pointer event with the given phase and buttons to listeners.
