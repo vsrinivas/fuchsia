@@ -59,6 +59,19 @@ TEST_F(PayloadStreamerTest, RegisterVmo) {
   EXPECT_OK(result.value().status);
 }
 
+TEST_F(PayloadStreamerTest, RegisterMultipleVmo) {
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
+  auto result = client_->RegisterVmo(std::move(vmo));
+  ASSERT_OK(result.status());
+  EXPECT_OK(result.value().status);
+  ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
+  result = client_->RegisterVmo(std::move(vmo));
+  ASSERT_OK(result.status());
+  EXPECT_EQ(result.value().status, ZX_ERR_ALREADY_BOUND);
+}
+
+
 TEST_F(PayloadStreamerTest, RegisterInvalidVmo) {
   EXPECT_FALSE(client_->RegisterVmo(zx::vmo()).ok());
 }

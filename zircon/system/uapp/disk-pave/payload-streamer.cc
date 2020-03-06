@@ -27,8 +27,8 @@ PayloadStreamer::~PayloadStreamer() {
 
 void PayloadStreamer::RegisterVmo(zx::vmo vmo, RegisterVmoCompleter::Sync completer) {
   if (vmo_) {
-    vmo_.reset();
-    mapper_.Unmap();
+    completer.Reply(ZX_ERR_ALREADY_BOUND);
+    return;
   }
 
   auto status = mapper_.Map(vmo, 0, 0, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
