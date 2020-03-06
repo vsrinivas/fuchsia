@@ -1,0 +1,22 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_binary.gni")
+import("//build/go/go_library.gni")
+import("//build/host.gni")
+
+go_library("lib") {
+  name = "fidlcparsequality"
+}
+
+go_binary("fidlcparsequality") {
+  gopackage = "fidlcparsequality"
+
+  deps = [ ":lib" ]
+}
+
+install_host_tools("host") {
+  deps = [ ":fidlcparsequality" ]
+  outputs = [ "fidlcparsequality" ]
+}
