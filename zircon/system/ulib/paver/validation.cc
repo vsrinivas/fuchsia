@@ -23,6 +23,9 @@ namespace paver {
 
 namespace {
 
+// Magic header of ChromeOS kernel verification block.
+constexpr std::string_view kChromeOsMagicHeader = "CHROMEOS";
+
 // Determine if the CRC of the given zbi_header_t is valid.
 //
 // We require that the "hdr" has "hdr->length" valid bytes after it.
@@ -122,6 +125,23 @@ bool IsValidKernelZbi(Arch arch, fbl::Span<const uint8_t> data) {
   // Ensure payload contains enough data for the kernel header.
   if (kernel_header->length < sizeof(zbi_kernel_t)) {
     ERROR("ZBI kernel payload too small.\n");
+    return false;
+  }
+
+  return true;
+}
+
+bool IsValidChromeOSKernel(fbl::Span<const uint8_t> data) {
+  // Ensure the data contains the ChromeOS verification block magic
+  // signature.
+  //
+  // See https://www.chromium.org/chromium-os/chromiumos-design-docs/disk-format
+  if (data.size() < kChromeOsMagicHeader.size()) {
+    ERROR("ChromeOS kernel payload too small.\n");
+    return false;
+  }
+  if (memcmp(data.data(), kChromeOsMagicHeader.data(), kChromeOsMagicHeader.size()) != 0) {
+    ERROR("ChromeOS kernel magic header invalid.\n");
     return false;
   }
 

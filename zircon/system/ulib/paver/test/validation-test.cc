@@ -140,5 +140,27 @@ TEST(IsValidKernelZbi, InvalidCrc) {
   ASSERT_FALSE(IsValidKernelZbi(Arch::kX64, data));
 }
 
+static fbl::Span<const uint8_t> StringToSpan(const std::string& data) {
+  return fbl::Span<const uint8_t>(reinterpret_cast<const uint8_t*>(data.data()), data.size());
+}
+
+TEST(IsValidChromeOSKernel, TooSmall) {
+  ASSERT_FALSE(IsValidChromeOSKernel(StringToSpan("")));
+  ASSERT_FALSE(IsValidChromeOSKernel(StringToSpan("C")));
+  ASSERT_FALSE(IsValidChromeOSKernel(StringToSpan("CHROMEO")));
+}
+
+TEST(IsValidChromeOSKernel, IncorrectMagic) {
+  ASSERT_FALSE(IsValidChromeOSKernel(StringToSpan("CHROMEOX")));
+}
+
+TEST(IsValidChromeOSKernel, MinimalValid) {
+  ASSERT_TRUE(IsValidChromeOSKernel(StringToSpan("CHROMEOS")));
+}
+
+TEST(IsValidChromeOSKernel, ExcessData) {
+  ASSERT_TRUE(IsValidChromeOSKernel(StringToSpan("CHROMEOS-1234")));
+}
+
 }  // namespace
 }  // namespace paver

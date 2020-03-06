@@ -581,6 +581,36 @@ TEST_F(CrosDevicePartitionerTests, DISABLED_InitPartitionTables) {
   EXPECT_OK(partitioner->FindPartition(paver::Partition::kFuchsiaVolumeManager, nullptr));
 }
 
+TEST_F(CrosDevicePartitionerTests, DISABLED_ValidatePayload) {
+  // Create a 32 GiB disk.
+  constexpr uint64_t kBlockSize = 512;
+  constexpr uint64_t kBlockCount = (32LU << 30) / kBlockSize;
+  std::unique_ptr<BlockDevice> gpt_dev;
+  ASSERT_NO_FATAL_FAILURES(
+      BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, kBlockCount, kBlockSize, &gpt_dev));
+  fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
+
+  std::unique_ptr<paver::DevicePartitioner> partitioner;
+  ASSERT_OK(paver::CrosDevicePartitioner::Initialize(
+      devmgr_.devfs_root().duplicate(), paver::Arch::kX64, std::move(gpt_fd), &partitioner));
+
+  // Test invalid partitions.
+  ASSERT_NOT_OK(partitioner->ValidatePayload(paver::Partition::kZirconA, fbl::Span<uint8_t>()));
+  ASSERT_NOT_OK(partitioner->ValidatePayload(paver::Partition::kZirconB, fbl::Span<uint8_t>()));
+  ASSERT_NOT_OK(partitioner->ValidatePayload(paver::Partition::kZirconR, fbl::Span<uint8_t>()));
+
+  // Test valid partition.
+  constexpr std::string_view kChromeOsMagicHeader = "CHROMEOS";
+  ASSERT_OK(partitioner->ValidatePayload(
+      paver::Partition::kZirconA,
+      fbl::Span<const uint8_t>(reinterpret_cast<const uint8_t*>(kChromeOsMagicHeader.data()),
+                               kChromeOsMagicHeader.size())));
+
+  // Non-kernel partitions are not validated.
+  ASSERT_OK(partitioner->ValidatePayload(paver::Partition::kAbrMeta, fbl::Span<uint8_t>()));
+}
+
+
 class FixedDevicePartitionerTests : public zxtest::Test {
  protected:
   FixedDevicePartitionerTests() {

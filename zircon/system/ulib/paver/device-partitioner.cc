@@ -1282,7 +1282,14 @@ zx_status_t CrosDevicePartitioner::WipePartitionTables() const {
 
 zx_status_t CrosDevicePartitioner::ValidatePayload(Partition type,
                                                    fbl::Span<const uint8_t> data) const {
-  return ZX_OK;
+  switch (type) {
+    case Partition::kZirconA:
+    case Partition::kZirconB:
+    case Partition::kZirconR:
+      return IsValidChromeOSKernel(data) ? ZX_OK : ZX_ERR_BAD_STATE;
+    default:
+      return ZX_OK;
+  }
 }
 
 /*====================================================*

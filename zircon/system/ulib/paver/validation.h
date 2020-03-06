@@ -18,6 +18,10 @@ namespace paver {
 // for the given architecture.
 bool IsValidKernelZbi(Arch arch, fbl::Span<const uint8_t> data);
 
+// Perform some basic safety checks to ensure the given payload is a valid ChromeOS
+// kernel image.
+bool IsValidChromeOSKernel(fbl::Span<const uint8_t> data);
+
 }  // namespace paver
 
 #endif  // ZIRCON_SYSTEM_ULIB_PAVER_VALIDATION_H_
