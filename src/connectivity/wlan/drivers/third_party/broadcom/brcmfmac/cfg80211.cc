@@ -1935,7 +1935,7 @@ static void brcmf_escan_timeout(void* data) {
   cfg->pub->irq_callback_lock.lock();
 
   if (cfg->int_escan_map || cfg->scan_request) {
-    BRCMF_ERR("timer expired\n");
+    BRCMF_ERR("scan timer expired\n");
     WorkQueue::ScheduleDefault(&cfg->escan_timeout_work);
   }
   cfg->pub->irq_callback_lock.unlock();
