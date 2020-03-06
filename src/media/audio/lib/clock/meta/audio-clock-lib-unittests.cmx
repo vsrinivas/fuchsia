@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/audio-clock-lib-unittests"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}
