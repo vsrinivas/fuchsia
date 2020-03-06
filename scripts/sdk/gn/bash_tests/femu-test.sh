@@ -113,7 +113,6 @@ INPUT
 # behavior of generate.py by copying these files into scripts/sdk/gn/base/bin/devshell
 # shellcheck disable=SC2034
 BT_FILE_DEPS=(
-  scripts/sdk/gn/base/bin/aemu.version
   scripts/sdk/gn/base/bin/femu.sh
   scripts/sdk/gn/base/bin/devshell/lib/image_build_vars.sh
   scripts/sdk/gn/base/bin/fuchsia-common.sh
@@ -136,7 +135,7 @@ BT_MOCKED_TOOLS=(
 )
 
 BT_INIT_TEMP_DIR() {
-  # Generate the aemu.version file based on the simulate version string
+  # Generate the aemu.version file based on the simulated version string
   echo "${AEMU_VERSION}" > "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/aemu.version"
 
   # Create a small disk image to avoid downloading, and test if it is doubled in size as expected

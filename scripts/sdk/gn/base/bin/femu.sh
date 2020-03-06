@@ -118,7 +118,7 @@ echo "Checking for system images and packages"
 
 # Do not create directory names with : otherwise LD_PRELOAD usage in aemu will fail.
 # Avoid / to prevent extra sub-directories being created.
-LABEL_AEMU="$(tr ':/' '_' < "${SCRIPT_SRC_DIR}/aemu.version")"
+LABEL_AEMU="$(echo "${VER_AEMU}" | tr ':/' '_')"
 
 # Download aemu binaries for the aemu.version if not already present
 DOWNLOADS_DIR="${FUCHSIA_IMAGE_WORK_DIR}/emulator"

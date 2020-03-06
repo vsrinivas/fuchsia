@@ -1,0 +1,18 @@
+<manifest version="1.1">
+  <!-- Test the XML parser for packages, simulating the Fuchsia .jiri_root/update_history/latest file -->
+  <projects>
+    <!-- No projects used -->
+  </projects>
+  <hooks>
+    <!-- No hooks used -->
+  </hooks>
+  <packages>
+    <package
+      name="fuchsia/third_party/aemu/${platform}"
+      version="git_revision:0123456789abcdef0123456789abcdef01234567"/>
+    <package
+      name="unused/${platform}"
+      version="git_revision:0123456789abcdef0123456789abcdef01234567"/>
+  </packages>
+</manifest>
+

@@ -17,6 +17,7 @@ import shutil
 import stat
 import sys
 import tarfile
+import xml.etree.ElementTree
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 FUCHSIA_ROOT = os.path.dirname(  # $root
@@ -32,11 +33,22 @@ import template_model as model
 EXTRA_COPY = [
     # Copy various files to support femu.sh from implementation of fx emu.
     # See base/bin/femu-meta.json for more detail about the files needed.
-    [ os.path.join(FUCHSIA_ROOT, 'tools', 'devshell', 'emu'),
-      os.path.join('bin', 'devshell', 'emu') ],
-    [ os.path.join(FUCHSIA_ROOT, 'tools', 'devshell', 'lib', 'fvm.sh'),
-      os.path.join('bin', 'devshell', 'lib', 'fvm.sh') ],
+    [
+        os.path.join(FUCHSIA_ROOT, 'tools', 'devshell', 'emu'),
+        os.path.join('bin', 'devshell', 'emu')
+    ],
+    [
+        os.path.join(FUCHSIA_ROOT, 'tools', 'devshell', 'lib', 'fvm.sh'),
+        os.path.join('bin', 'devshell', 'lib', 'fvm.sh')
+    ],
 ]
+
+# Capture the version of required prebuilts from the jiri manifest. Note
+# that ${platform} is actually part of the XML package name, so should
+# not be interpreted.
+EXTRA_PREBUILTS = {
+    'fuchsia/third_party/aemu/${platform}': 'aemu'
+}
 
 
 class GNBuilder(Frontend):
@@ -51,7 +63,9 @@ class GNBuilder(Frontend):
   is added to the SDK is in the base directory.
   """
 
-    def __init__(self, local_dir, output, archive='', directory=''):
+    def __init__(
+            self, local_dir, output, archive='', directory='',
+            jiri_manifest=None):
         """Initializes an instance of the GNBuilder.
 
         Note that only one of archive or directory should be specified.
@@ -65,6 +79,8 @@ class GNBuilder(Frontend):
         directory parameter as input.
       directory: The directory containing an unpackaged IDK. Can be empty
         meaning use the archive parameter as input.
+      jiri_manifest: File containing external references in XML format.
+        This is typically $FUCHSIA_ROOT/.jiri_root/update_history/latest
     """
         super(GNBuilder, self).__init__(
             local_dir=local_dir,
@@ -81,6 +97,11 @@ class GNBuilder(Frontend):
         ]  # List of all loadable module targets generated
         self.sysroot_targets = []  # List of all sysroot targets generated
         self.build_files = []
+        if jiri_manifest:
+            self.jiri_manifest = jiri_manifest
+        else:
+            self.jiri_manifest = os.path.join(
+                FUCHSIA_ROOT, '.jiri_root', 'update_history', 'latest')
 
     def prepare(self, arch, types):
         """Called before elements are processed.
@@ -104,9 +125,15 @@ class GNBuilder(Frontend):
         # Propagate the metadata for the Core SDK into the GN SDK.
         shutil.copytree(self.source('meta'), self.dest('meta'))
 
+        # Capture versions of various prebuilts contained in the jiri manifest
+        prebuilt_results = get_prebuilts(EXTRA_PREBUILTS, self.jiri_manifest)
+        for prebuilt, version in prebuilt_results.items():
+            with open(self.dest('bin', prebuilt + '.version'), 'w') as output:
+                output.write(version)
+
         # Copy any additional files that would normally not be included
         for each in EXTRA_COPY:
-          shutil.copy2(each[0], self.dest(each[1]))
+            shutil.copy2(each[0], self.dest(each[1]))
 
     def finalize(self, arch, types):
         self.write_additional_files()
@@ -388,6 +415,39 @@ def make_executable(path):
     os.chmod(path, st.st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
 
 
+def get_prebuilts(in_extra_prebuilts, jiri_manifest):
+    """ Lookup version strings for a set of prebuilts
+
+    Given a file such as $FUCHSIA_ROOT/.jiri_root/update_history/latest, find matches for each of the name
+    strings, capture the version string, and return back a dictionary with the mappings.
+
+    Args:
+        in_extra_prebuilts: Dictionary of name strings to search, and the corresponding short name
+        jiri_manifest: XML file to read, such as $FUCHSIA_ROOT/.jiri_root/update_history/latest
+
+    Returns:
+        Dictionary of short name to version mappings
+
+    Raises:
+        RuntimeError: If in_extra_prebuilts contains items not found in the prebuilts file
+    """
+
+    # Copy the input list since we modify it in the loop
+    extra_prebuilts = in_extra_prebuilts.copy()
+    prebuilt_results = {}
+    manifest_root = xml.etree.ElementTree.parse(jiri_manifest).getroot()
+    remaining_prebuilts = extra_prebuilts
+    for packages in manifest_root.iter('package'):
+        prebuilt = remaining_prebuilts.pop(packages.attrib['name'], None)
+        if prebuilt:
+            prebuilt_results[prebuilt] = packages.attrib['version']
+    if remaining_prebuilts:
+        raise RuntimeError(
+            'Could not find entries in %s for the remaining EXTRA_PREBUILTS: %s'
+            % (jiri_manifest, remaining_prebuilts))
+    return prebuilt_results
+
+
 def create_test_workspace(output):
     # Remove any existing output.
     shutil.rmtree(output, True)
@@ -431,9 +491,14 @@ def main(args_list=None):
         required=True)
     parser.add_argument(
         '--output-archive',
-        help='Path to add the SDK archive file (e.g. "path/to/gn.tar.gz"')
+        help='Path to add the SDK archive file (e.g. "path/to/gn.tar.gz")')
     parser.add_argument(
         '--tests', help='Path to the directory where to generate tests')
+    parser.add_argument(
+        '--jiri-manifest',
+        help=
+        'File containing external references in XML format (e.g. ".jiri_root/update_history/latest")'
+    )
     if args_list:
         args = parser.parse_args(args_list)
     else:
@@ -444,10 +509,13 @@ def main(args_list=None):
         directory=args.directory,
         output=args.output,
         tests=args.tests,
-        output_archive=args.output_archive)
+        output_archive=args.output_archive,
+        jiri_manifest=args.jiri_manifest)
 
 
-def run_generator(archive, directory, output, tests='', output_archive=''):
+def run_generator(
+        archive, directory, output, tests='', output_archive='',
+        jiri_manifest=None):
     """Run the generator. Returns 0 on success, non-zero otherwise.
 
     Note that only one of archive or directory should be specified.
@@ -467,7 +535,8 @@ def run_generator(archive, directory, output, tests='', output_archive=''):
         archive=archive,
         directory=directory,
         output=output,
-        local_dir=SCRIPT_DIR)
+        local_dir=SCRIPT_DIR,
+        jiri_manifest=jiri_manifest)
     if not builder.run():
         return 1
 
