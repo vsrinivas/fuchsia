@@ -6,7 +6,6 @@
 # will eventually be deleted.
 
 group("broadcom") {
-  testonly = true
   public_deps = [
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac",
     "//src/connectivity/wlan/drivers/wlanif",
@@ -43,7 +42,6 @@ group("bluetooth_intel") {
 
 # WARNING: Known to topaz.
 group("scenic") {
-  testonly = true
   public_deps = [
     "//garnet/packages/prod:sysmem_connector",
     "//garnet/packages/prod:vulkan",
@@ -154,7 +152,6 @@ group("all") {
 }
 
 group("atheros") {
-  testonly = true
   public_deps = [
     "//src/connectivity/wlan/drivers/third_party/atheros/ath10k:ath10k",
     "//src/connectivity/wlan/drivers/wlan",
@@ -163,7 +160,6 @@ group("atheros") {
 }
 
 group("wifi_intel") {
-  testonly = true
   public_deps = [
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:iwlwifi",
     "//src/connectivity/wlan/drivers/wlan",
@@ -172,7 +168,6 @@ group("wifi_intel") {
 }
 
 group("realtek") {
-  testonly = true
   public_deps = [
     "//src/connectivity/wlan/drivers/realtek/rtl88xx",
     "//src/connectivity/wlan/drivers/wlan",
@@ -181,7 +176,6 @@ group("realtek") {
 }
 
 group("memory_monitor") {
-  testonly = true
   public_deps = [
     "//garnet/packages/config:services",
     "//src/developer/memory/monitor",
@@ -259,7 +253,6 @@ group("bluetooth_drivers") {
 }
 
 group("vboot_reference") {
-  testonly = true
   public_deps = [
     "//garnet/tools/vboot_reference:cgpt_host",
     "//garnet/tools/vboot_reference:futility_host",
@@ -313,7 +306,6 @@ group("tiles") {
 }
 
 group("vulkan") {
-  testonly = true
   public_deps = [
     "//garnet/packages/prod:sysmem_connector",
     "//src/graphics/bin/vulkan_loader",
@@ -442,7 +434,6 @@ group("terminal") {
 }
 
 group("wlanif") {
-  testonly = true
   public_deps = [
     "//src/connectivity/wlan/drivers/wlan",
     "//src/connectivity/wlan/drivers/wlanif",
@@ -450,7 +441,6 @@ group("wlanif") {
 }
 
 group("wlanphy") {
-  testonly = true
   public_deps = [
     "//src/connectivity/wlan/drivers/wlan",
     "//src/connectivity/wlan/drivers/wlanphy",
@@ -466,7 +456,6 @@ group("far") {
 }
 
 group("ralink") {
-  testonly = true
   public_deps = [
     "//src/connectivity/wlan/drivers/mediatek/ralink",
     "//src/connectivity/wlan/drivers/wlan",
@@ -480,7 +469,6 @@ group("iquery") {
 }
 
 group("bluetooth_core") {
-  testonly = true
   public_deps = [
     "//src/connectivity/bluetooth/core/bt-gap",
     "//src/connectivity/bluetooth/core/bt-host",
@@ -495,12 +483,10 @@ group("debug_agent") {
 }
 
 group("sysmem_connector") {
-  testonly = true
   public_deps = [ "//garnet/bin/sysmem_connector" ]
 }
 
 group("wlan_drivers") {
-  testonly = true
   public_deps = [
     "//garnet/packages/prod:atheros",
     "//garnet/packages/prod:broadcom",
@@ -524,7 +510,6 @@ group("bluetooth_all") {
 }
 
 group("magma-arm-mali") {
-  testonly = true
   public_deps = [
     "//garnet/packages/prod:sysmem_connector",
     "//src/graphics/lib/magma/gnbuild/magma-arm-mali:magma-vulkan",
@@ -566,7 +551,6 @@ group("setui_client") {
 }
 
 group("tee_manager") {
-  testonly = true
   public_deps = [
     "//src/security/tee_manager",
     "//src/security/tee_manager:config",
