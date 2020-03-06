@@ -27,6 +27,9 @@ test("inspector") {
     "//zircon/public/lib/inspector",
     "//zircon/public/lib/zxtest",
   ]
+
+  # TODO(47869): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 migrated_manifest("inspector-manifest") {
