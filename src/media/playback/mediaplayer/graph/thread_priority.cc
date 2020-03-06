@@ -30,7 +30,7 @@ fit::result<const zx::profile&, zx_status_t> GetHighPriorityProfile() {
 
     status = fdio_service_connect(
         (std::string(kServicePathPrefix) + fuchsia::scheduler::ProfileProvider::Name_).c_str(),
-        server_channel.get());
+        server_channel.release());
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to connect to fuchsia.scheduler.ProfileProvider";
       return status;

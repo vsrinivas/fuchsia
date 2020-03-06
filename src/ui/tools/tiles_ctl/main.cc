@@ -96,7 +96,7 @@ ControllerPtr FindTiles() {
   ControllerPtr tiles;
   zx_status_t st =
       fdio_service_connect_at(svc_channel.release(), fuchsia::developer::tiles::Controller::Name_,
-                              tiles.NewRequest().TakeChannel().get());
+                              tiles.NewRequest().TakeChannel().release());
   if (st != ZX_OK) {
     fprintf(stderr, "Couldn't connect to tile service: %d\n", st);
     return {};

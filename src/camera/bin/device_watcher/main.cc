@@ -22,7 +22,7 @@ constexpr auto kCameraPath = "/dev/class/camera";
 static fit::result<fuchsia::hardware::camera::DeviceHandle, zx_status_t> GetCamera(
     std::string path) {
   fuchsia::hardware::camera::DeviceHandle camera;
-  zx_status_t status = fdio_service_connect(path.c_str(), camera.NewRequest().TakeChannel().get());
+  zx_status_t status = fdio_service_connect(path.c_str(), camera.NewRequest().TakeChannel().release());
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status);
     return fit::error(status);

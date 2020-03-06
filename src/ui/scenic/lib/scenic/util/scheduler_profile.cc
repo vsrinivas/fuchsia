@@ -27,7 +27,7 @@ zx::profile GetSchedulerProfile(zx::duration capacity, zx::duration deadline, zx
   }
 
   status = fdio_service_connect(
-      (std::string("/svc/") + fuchsia::scheduler::ProfileProvider::Name_).c_str(), channel0.get());
+      (std::string("/svc/") + fuchsia::scheduler::ProfileProvider::Name_).c_str(), channel0.release());
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to connect to profile provider: " << status;
     return {};

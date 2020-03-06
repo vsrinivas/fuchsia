@@ -240,7 +240,7 @@ TEST_F(HubTest, SystemObjectsThreadsInUseWhileFreed) {
   fuchsia::inspect::deprecated::InspectPtr inspect;
   auto endpoint = paths[0].AbsoluteFilePath();
   zx_status_t status =
-      fdio_service_connect(endpoint.c_str(), inspect.NewRequest().TakeChannel().get());
+      fdio_service_connect(endpoint.c_str(), inspect.NewRequest().TakeChannel().release());
   ASSERT_EQ(ZX_OK, status);
   auto reader = std::make_unique<inspect_deprecated::ObjectReader>(std::move(inspect));
 

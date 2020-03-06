@@ -21,7 +21,7 @@ OpenInspectAtPath(const std::string& path) {
   fuchsia::inspect::deprecated::InspectPtr inspect;
   auto endpoint = files::AbsolutePath(path);
   zx_status_t status =
-      fdio_service_connect(endpoint.c_str(), inspect.NewRequest().TakeChannel().get());
+      fdio_service_connect(endpoint.c_str(), inspect.NewRequest().TakeChannel().release());
   if (status != ZX_OK) {
     return fit::error(
         fxl::StringPrintf("Failed to connect at %s with %d\n", endpoint.c_str(), status));

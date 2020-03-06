@@ -138,7 +138,7 @@ zx_status_t send_poweroff() {
   }
 
   const char* service = "/svc/" fuchsia_device_manager_Administrator_Name;
-  status = fdio_service_connect(service, channel_remote.get());
+  status = fdio_service_connect(service, channel_remote.release());
   if (status != ZX_OK) {
     fprintf(stderr, "failed to connect to service %s: %d\n", service, status);
     return ZX_ERR_INTERNAL;

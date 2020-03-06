@@ -83,7 +83,7 @@ int main(int argc, char** argv) {
     fprintf(stderr, "could not create channel\n");
     return -1;
   }
-  zx_status_t status = fdio_service_connect(path, device_remote.get());
+  zx_status_t status = fdio_service_connect(path, device_remote.release());
   if (status != ZX_OK) {
     fprintf(stderr, "could not open %s\n", path);
     return -1;

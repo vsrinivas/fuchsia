@@ -250,7 +250,7 @@ zx::unowned_resource GetRootResource() {
   FXL_CHECK(status == ZX_OK);
 
   status = fdio_service_connect((std::string("/svc/") + fuchsia::boot::RootResource::Name_).c_str(),
-                                channel0.get());
+                                channel0.release());
   FXL_CHECK(status == ZX_OK);
 
   fuchsia::boot::RootResource_SyncProxy proxy(std::move(channel1));

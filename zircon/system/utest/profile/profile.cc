@@ -49,8 +49,9 @@ TEST(Profile, CreateDestroy) {
   // Connect to ProfileProvider.
   zx::channel channel1, channel2;
   ASSERT_OK(zx::channel::create(/*flags=*/0u, &channel1, &channel2));
-  ASSERT_OK(fdio_service_connect("/svc/" fuchsia_scheduler_ProfileProvider_Name, channel1.get()),
+  ASSERT_OK(fdio_service_connect("/svc/" fuchsia_scheduler_ProfileProvider_Name, channel1.release()),
             "Could not connect to ProfileProvider.");
+  ASSERT_EQ(channel1.get(), ZX_HANDLE_INVALID);
 
   // Create available profile types.
   zx::profile profile;

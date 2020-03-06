@@ -91,7 +91,7 @@ void describe(const char* domain) {
     return;
   }
 
-  st = fdio_service_connect(path, channel_remote.get());
+  st = fdio_service_connect(path, channel_remote.release());
   if (st != ZX_OK) {
     fprintf(stderr, "Failed to connect to service at '%s', st = %d\n", path, st);
     return;
@@ -160,7 +160,7 @@ void set_performance_state(const char* domain, const char* pstate) {
     return;
   }
 
-  st = fdio_service_connect(path, channel_remote.get());
+  st = fdio_service_connect(path, channel_remote.release());
   if (st != ZX_OK) {
     fprintf(stderr, "Failed to connect to service at '%s', st = %d\n", path, st);
     return;
