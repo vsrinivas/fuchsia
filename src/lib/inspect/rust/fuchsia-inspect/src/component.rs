@@ -90,7 +90,7 @@ pub fn health() -> Health {
 mod tests {
     use {
         super::*,
-        crate::{assert_inspect_tree, health::Reporter},
+        crate::{assert_inspect_tree, health::Reporter, testing::AnyProperty},
     };
 
     #[test]
@@ -104,6 +104,7 @@ mod tests {
         root: contains {
             "fuchsia.inspect.Health": {
                 status: "STARTING_UP",
+                start_timestamp_nanos: AnyProperty,
             }
         });
 
@@ -112,6 +113,7 @@ mod tests {
         root: contains {
             "fuchsia.inspect.Health": {
                 status: "OK",
+                start_timestamp_nanos: AnyProperty,
             }
         });
 
@@ -121,6 +123,7 @@ mod tests {
             "fuchsia.inspect.Health": {
                 status: "UNHEALTHY",
                 message: "Bad state",
+                start_timestamp_nanos: AnyProperty,
             }
         });
 
@@ -131,6 +134,7 @@ mod tests {
             "fuchsia.inspect.Health": {
                 status: "UNHEALTHY",
                 message: "Another bad state",
+                start_timestamp_nanos: AnyProperty,
             }
         });
 
@@ -140,6 +144,7 @@ mod tests {
         root: contains {
             "fuchsia.inspect.Health": {
                 status: "OK",
+                start_timestamp_nanos: AnyProperty,
             }
         });
     }

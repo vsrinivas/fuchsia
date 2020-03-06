@@ -5,6 +5,8 @@
 #ifndef SRC_LIB_INSPECT_DEPRECATED_HEALTH_HEALTH_H_
 #define SRC_LIB_INSPECT_DEPRECATED_HEALTH_HEALTH_H_
 
+#include <abs_clock/clock.h>
+
 #include "src/lib/inspect_deprecated/inspect.h"
 
 namespace inspect_deprecated {
@@ -22,6 +24,10 @@ constexpr char kHealthStartingUp[] = "STARTING_UP";
 // Health status designating that the node is not healthy.
 constexpr char kHealthUnhealthy[] = "UNHEALTHY";
 
+// The metric representing timestamp in nanoseconds, at which this health node
+// has been initialized.
+const char kStartTimestamp[] = "start_timestamp_nanos";
+
 // Represents the health associated with a given inspect_deprecated::Node.
 //
 // This class supports adding a Node with name "fuchsia.inspect.Health" that
@@ -35,6 +41,11 @@ class NodeHealth {
   //
   // The initial status is STARTING_UP.
   explicit NodeHealth(Node* parent_node);
+
+  // Constructs a new NodeHealth object, which uses the passed-in clock to
+  // get the needed timestamps. Useful for testing, for example. Does not
+  // take ownership of the clock.
+  NodeHealth(Node* parent_node, abs_clock::Clock* clock);
 
   // Allow moving, disallow copying.
   NodeHealth(NodeHealth&&) = default;
@@ -63,6 +74,7 @@ class NodeHealth {
   Node health_node_;
   StringProperty health_status_;
   fit::optional<StringProperty> health_message_;
+  IntMetric timestamp_nanos_;
 };
 
 }  // namespace inspect_deprecated

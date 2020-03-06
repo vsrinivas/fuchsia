@@ -68,16 +68,18 @@ pub(crate) fn set_group_stats(stats: &EventFileGroupStatsMap) {
 mod test {
     use {
         super::*, crate::archive::EventFileGroupStats, fuchsia_inspect::assert_inspect_tree,
-        fuchsia_inspect::health::Reporter, std::iter::FromIterator,
+        fuchsia_inspect::health::Reporter, fuchsia_inspect::testing::AnyProperty,
+        std::iter::FromIterator,
     };
 
     #[test]
     fn health() {
         component::health().set_ok();
         assert_inspect_tree!(component::inspector(),
-        root: contains {
+        root: {
             "fuchsia.inspect.Health": {
                 status: "OK",
+                start_timestamp_nanos: AnyProperty,
             }
         });
 
@@ -87,6 +89,7 @@ mod test {
             "fuchsia.inspect.Health": {
                 status: "UNHEALTHY",
                 message: "Bad state",
+                start_timestamp_nanos: AnyProperty,
             }
         });
 
@@ -95,6 +98,7 @@ mod test {
         root: contains {
             "fuchsia.inspect.Health": {
                 status: "OK",
+                start_timestamp_nanos: AnyProperty,
             }
         });
     }

@@ -40,6 +40,7 @@
 
 use {
     super::{Inspector, Property, StringProperty},
+    fuchsia_zircon as zx,
     std::sync::{Arc, Mutex},
 };
 
@@ -124,7 +125,18 @@ impl Node {
     /// Creates a new health checking node as a child of `parent`.  The initial observed state
     /// is `STARTING_UP`, and remains so until the programs call one of `set_ok` or `set_unhealthy`.
     pub fn new(parent: &super::Node) -> Self {
+        Self::new_internal(parent, zx::Time::get(zx::ClockId::Monotonic))
+    }
+
+    // Creates a health node using a specified timestamp. Useful for tests.
+    #[cfg(test)]
+    pub fn new_with_timestamp(parent: &super::Node, timestamp: zx::Time) -> Self {
+        Self::new_internal(parent, timestamp)
+    }
+
+    fn new_internal(parent: &super::Node, timestamp: zx::Time) -> Self {
         let node = parent.create_child(FUCHSIA_INSPECT_HEALTH);
+        node.record_int("start_timestamp_nanos", timestamp.into_nanos());
         let status = node.create_string(STATUS_PROPERTY_KEY, Status::StartingUp.to_string());
         let message = None;
         Node { node, status, message }
@@ -168,11 +180,12 @@ mod tests {
         // In the beginning, the inspector has no stats.
         assert_inspect_tree!(inspector, root: contains {});
 
-        let mut health = Node::new(root);
+        let mut health = Node::new_with_timestamp(root, zx::Time::from_nanos(42));
         assert_inspect_tree!(inspector,
         root: contains {
             "fuchsia.inspect.Health": {
                 status: "STARTING_UP",
+                start_timestamp_nanos: 42i64,
             }
         });
 
@@ -181,6 +194,7 @@ mod tests {
         root: contains {
             "fuchsia.inspect.Health": {
                 status: "OK",
+                start_timestamp_nanos: 42i64,
             }
         });
 
@@ -190,6 +204,7 @@ mod tests {
             "fuchsia.inspect.Health": {
                 status: "UNHEALTHY",
                 message: "Bad state",
+                start_timestamp_nanos: 42i64,
             }
         });
 
@@ -200,6 +215,7 @@ mod tests {
             "fuchsia.inspect.Health": {
                 status: "UNHEALTHY",
                 message: "Another bad state",
+                start_timestamp_nanos: 42i64,
             }
         });
 
@@ -209,6 +225,7 @@ mod tests {
         root: contains {
             "fuchsia.inspect.Health": {
                 status: "OK",
+                start_timestamp_nanos: 42i64,
             }
         });
 
@@ -218,6 +235,7 @@ mod tests {
         root: contains {
             "fuchsia.inspect.Health": {
                 status: "STARTING_UP",
+                start_timestamp_nanos: 42i64,
             }
         });
     }

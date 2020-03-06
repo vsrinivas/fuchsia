@@ -8,7 +8,10 @@ source_set("health") {
     "health.h",
   ]
 
-  public_deps = [ "//src/lib/inspect_deprecated" ]
+  public_deps = [
+    "//src/lib/inspect_deprecated",
+    "//zircon/system/ulib/abs_clock",
+  ]
 
   public_configs = [ "//garnet/public:config" ]
 }

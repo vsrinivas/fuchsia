@@ -61,7 +61,7 @@ async fn check_nested(
     assert_eq!(results.len(), expected_results);
     for result in results {
         assert_inspect_tree!(result, root: contains {
-            "fuchsia.inspect.Health": {
+            "fuchsia.inspect.Health": contains {
                 status: "OK",
             }
         });

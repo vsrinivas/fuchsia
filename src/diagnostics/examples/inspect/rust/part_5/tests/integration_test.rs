@@ -18,7 +18,7 @@ use {
     anyhow::format_err,
     fuchsia_inspect::{
         reader::NodeHierarchy,
-        testing::{self, assert_inspect_tree},
+        testing::{self, assert_inspect_tree, AnyProperty},
     },
 };
 // [END include_test_stuff]
@@ -93,8 +93,11 @@ async fn start_with_fizzbuzz() -> Result<(), Error> {
     let hierarchy = test.get_inspect_hierarchy().await?;
     // [END result_hierarchy]
     assert_inspect_tree!(hierarchy, root: contains {
-        "fuchsia.inspect.Health": {
+        "fuchsia.inspect.Health": contains {
             status: "OK",
+            // The metric with a timestamp has an unpredictable value, so
+            // we only assert that it is present.
+            start_timestamp_nanos: AnyProperty,
         }
     });
 
@@ -110,9 +113,11 @@ async fn start_without_fizzbuzz() -> Result<(), Error> {
 
     let hierarchy = test.get_inspect_hierarchy().await?;
     assert_inspect_tree!(hierarchy, root: contains {
-        "fuchsia.inspect.Health": {
+        "fuchsia.inspect.Health": contains {
             status: "UNHEALTHY",
             message: "FizzBuzz connection closed",
+            // Not inspecting the metric `start_timestamp_nanos` which is also
+            // present here.
         }
     });
     Ok(())

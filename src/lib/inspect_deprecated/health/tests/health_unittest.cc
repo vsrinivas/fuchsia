@@ -4,6 +4,8 @@
 
 #include "src/lib/inspect_deprecated/health/health.h"
 
+#include <abs_clock/clock.h>
+
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/lib/inspect_deprecated/reader.h"
@@ -17,15 +19,20 @@ using testing::UnorderedElementsAre;
 namespace {
 
 TEST(InspectHealth, Default) {
+  abs_clock::FakeClock clock;
+  clock.AdvanceTime(zx::nsec(42));
+
   auto tree = inspect_deprecated::Inspector().CreateTree();
-  auto health = inspect_deprecated::NodeHealth(&tree.GetRoot());
+  auto health = inspect_deprecated::NodeHealth(&tree.GetRoot(), &clock);
 
   auto hierarchy = inspect_deprecated::ReadFromVmo(tree.DuplicateVmo()).take_value();
   auto* node = hierarchy.GetByPath({inspect_deprecated::kHealthNodeName});
   ASSERT_TRUE(node != nullptr);
   EXPECT_THAT(*node, NodeMatches(AllOf(NameMatches(inspect_deprecated::kHealthNodeName),
                                        PropertyList(UnorderedElementsAre(StringPropertyIs(
-                                           "status", inspect_deprecated::kHealthStartingUp))))));
+                                           "status", inspect_deprecated::kHealthStartingUp))),
+                                       MetricList(UnorderedElementsAre(IntMetricIs(
+                                           inspect_deprecated::kStartTimestamp, 42))))));
 }
 
 TEST(InspectHealth, Ok) {
