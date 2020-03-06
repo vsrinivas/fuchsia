@@ -21,6 +21,8 @@ class CountingTask : public Task {
   size_t run_calls() const { return run_calls_; }
   size_t dep_fail_calls() const { return dep_fail_calls_; }
 
+  fbl::String TaskDescription() override { return "CountingTask"; }
+
  protected:
   void Run() override { ++run_calls_; }
 
@@ -39,6 +41,8 @@ class NoDepsTask : public CountingTask {
     task->mock_status_ = status;
     return task;
   }
+
+  fbl::String TaskDescription() override { return "NoDepsTask"; }
 
  private:
   void Run() override {
@@ -62,6 +66,8 @@ class DepsTask : public CountingTask {
     }
     return task;
   }
+
+  fbl::String TaskDescription() override { return "DepsTask"; }
 
  private:
   void Run() override {
@@ -97,6 +103,8 @@ class DepOnParentTask : public CountingTask {
     return task;
   }
 
+  fbl::String TaskDescription() override { return "DepsOnParentTask"; }
+
  private:
   void Run() override {
     CountingTask::Run();
@@ -128,6 +136,8 @@ class SequenceTask : public Task {
     }
     return task;
   }
+
+  fbl::String TaskDescription() override { return "SequenceTask"; }
 
  private:
   void Run() override {

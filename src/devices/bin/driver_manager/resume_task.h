@@ -22,6 +22,10 @@ class ResumeTask final : public Task {
 
   const Device& device() const { return *device_; }
 
+  fbl::String TaskDescription() final {
+    return fbl::String::Concat({"resume(", device_->name(), ")"});
+  }
+
  private:
   void Run() final;
   bool AddParentResumeTask();

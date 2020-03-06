@@ -13,6 +13,7 @@
 
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
+#include <fbl/string.h>
 #include <fbl/vector.h>
 
 // An outstanding operation.  This class is not thread-safe.
@@ -31,6 +32,9 @@ class Task : public fbl::RefCounted<Task> {
 
   // It is an error to destroy a Task before it is completed
   virtual ~Task();
+
+  // Returns a string suitable for debug output
+  virtual fbl::String TaskDescription() = 0;
 
  protected:
   // Run() should never be called manually, instead call PostTask

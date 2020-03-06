@@ -36,6 +36,10 @@ class UnbindTask final : public Task {
 
   bool devhost_requested() const { return devhost_requested_; }
 
+  fbl::String TaskDescription() final {
+    return fbl::String::Concat({"unbind(", device_->name(), ")"});
+  }
+
  private:
   void ScheduleUnbindChildren();
   void Run() final;
@@ -59,6 +63,10 @@ class RemoveTask final : public Task {
   RemoveTask(fbl::RefPtr<Device> device, Completion completion);
 
   ~RemoveTask() final;
+
+  fbl::String TaskDescription() final {
+    return fbl::String::Concat({"remove(", device_->name(), ")"});
+  }
 
  protected:
   friend class UnbindTask;

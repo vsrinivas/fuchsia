@@ -28,7 +28,8 @@ void Task::ExecuteTask(async_dispatcher_t* dispatcher, async::TaskBase* task, zx
 
 // Called to record a new dependency
 void Task::AddDependency(const fbl::RefPtr<Task>& dependency) {
-  ZX_ASSERT(!dependency->is_completed());
+  ZX_ASSERT_MSG(!dependency->is_completed(), "Tried adding already complete task %s as a dep of %s",
+                dependency->TaskDescription().c_str(), TaskDescription().c_str());
 
   dependencies_.push_back(dependency.get());
   dependency->self_ = dependency;

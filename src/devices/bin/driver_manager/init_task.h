@@ -18,6 +18,10 @@ class InitTask final : public Task {
 
   ~InitTask() final;
 
+  fbl::String TaskDescription() final {
+    return fbl::String::Concat({"init(", device_->name(), ")"});
+  }
+
  private:
   void Run() final;
 
