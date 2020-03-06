@@ -20,7 +20,6 @@ import (
 	"syscall"
 	"syscall/zx"
 	"syscall/zx/fdio"
-	"syscall/zx/fidl"
 	zxio "syscall/zx/io"
 	"testing"
 
@@ -93,7 +92,7 @@ func tmain(m *testing.M) int {
 	nc, sc, err := zx.NewChannel(0)
 	panicerr(err)
 
-	pkgfsDir = &fdio.Directory{fdio.Node{(*zxio.NodeInterface)(&fidl.ChannelProxy{Channel: nc})}}
+	pkgfsDir = fdio.NewDirectory(&zxio.DirectoryAdminInterface{Channel: nc})
 
 	go func() {
 		panicerr(pkgfs.Serve(sc))

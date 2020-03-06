@@ -553,7 +553,7 @@ func bufferForFile(f *os.File) (*mem.Buffer, error) {
 		return nil, fmt.Errorf("not fdio file")
 	}
 
-	status, buffer, err := fio.FileInterface().GetBuffer(zxio.VmoFlagRead)
+	status, buffer, err := fio.GetBuffer(zxio.VmoFlagRead)
 	if err != nil {
 		return nil, fmt.Errorf("GetBuffer fidl error: %q", err)
 	}

@@ -75,7 +75,6 @@ import (
 	"runtime"
 	"syscall/zx"
 	"syscall/zx/fdio"
-	"syscall/zx/fidl"
 	zxio "syscall/zx/io"
 
 	"fuchsia.googlesource.com/pmd/iou"
@@ -104,7 +103,7 @@ func (r *Ramdisk) create(blkSz uint64, blkCnt uint64) error {
 
 func (r *Ramdisk) Destroy() error {
 	if r.proc != zx.HandleInvalid {
-		r.dir.DirectoryInterface().Unmount()
+		r.dir.Unmount()
 		zx.Sys_task_kill(r.proc)
 		r.dir.Close()
 	}
@@ -133,7 +132,7 @@ func (r *Ramdisk) StartBlobfs() error {
 		return &zx.Error{Status: zx.Status(status), Text: "ramdisk_blobfs_mount"}
 	}
 
-	r.dir = &fdio.Directory{fdio.Node{(*zxio.NodeInterface)(&fidl.ChannelProxy{Channel: pxy})}}
+	r.dir = fdio.NewDirectory(&zxio.DirectoryAdminInterface{Channel: pxy})
 	return nil
 }
 
