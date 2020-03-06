@@ -48,8 +48,8 @@ executable("main") {
 
   deps = [
     ":constants",
+    ":device_id",
     ":feedback_agent_src",
-    ":feedback_id",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
@@ -156,12 +156,12 @@ source_set("feedback_agent_src") {
   ]
 }
 
-source_set("feedback_id") {
-  public = [ "feedback_id.h" ]
+source_set("device_id") {
+  public = [ "device_id.h" ]
 
   sources = [
-    "feedback_id.cc",
-    "feedback_id.h",
+    "device_id.cc",
+    "device_id.h",
   ]
 
   deps = [

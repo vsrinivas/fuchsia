@@ -40,7 +40,8 @@ constexpr char kAttachmentLogSystemPrevious[] = "log.system.previous_boot.txt";
 
 constexpr char kAttachmentBundle[] = "fuchsia_feedback_data.zip";
 
-constexpr char kFeedbackIdPath[] = "/data/feedback_id.txt";
+constexpr char kDeviceIdPath[] = "/data/device_id.txt";
+constexpr char kLegacyDeviceIdPath[] = "/data/feedback_id.txt";
 
 constexpr char kPreviousLogsFilePath[] = "/tmp/log.system.previous_boot.txt";
 

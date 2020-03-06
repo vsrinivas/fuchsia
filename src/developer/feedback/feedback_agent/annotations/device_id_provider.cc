@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/feedback/feedback_agent/annotations/feedback_id_provider.h"
+#include "src/developer/feedback/feedback_agent/annotations/device_id_provider.h"
 
 #include <string>
 
@@ -15,19 +15,18 @@
 
 namespace feedback {
 
-FeedbackIdProvider::FeedbackIdProvider()
-    : SingleSyncAnnotationProvider(kAnnotationDeviceFeedbackId) {}
+DeviceIdProvider::DeviceIdProvider() : SingleSyncAnnotationProvider(kAnnotationDeviceFeedbackId) {}
 
-AnnotationKeys FeedbackIdProvider::GetSupportedAnnotations() {
+AnnotationKeys DeviceIdProvider::GetSupportedAnnotations() {
   return {
       kAnnotationDeviceFeedbackId,
   };
 }
 
-std::optional<AnnotationValue> FeedbackIdProvider::GetAnnotation() {
-  if (std::string feedback_id = "";
-      files::ReadFileToString(kFeedbackIdPath, &feedback_id) && uuid::IsValid(feedback_id)) {
-    return feedback_id;
+std::optional<AnnotationValue> DeviceIdProvider::GetAnnotation() {
+  if (std::string device_id = "";
+      files::ReadFileToString(kDeviceIdPath, &device_id) && uuid::IsValid(device_id)) {
+    return device_id;
   }
 
   FX_LOGS(ERROR) << "Failed to read feedback id";

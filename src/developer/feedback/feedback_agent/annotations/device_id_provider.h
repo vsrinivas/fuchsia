@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_ANNOTATIONS_FEEDBACK_ID_PROVIDER_H_
-#define SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_ANNOTATIONS_FEEDBACK_ID_PROVIDER_H_
+#ifndef SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_ANNOTATIONS_DEVICE_ID_PROVIDER_H_
+#define SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_ANNOTATIONS_DEVICE_ID_PROVIDER_H_
 
 #include <optional>
 
@@ -13,9 +13,9 @@
 namespace feedback {
 
 // Collect the device's feedback id.
-class FeedbackIdProvider : public SingleSyncAnnotationProvider {
+class DeviceIdProvider : public SingleSyncAnnotationProvider {
  public:
-  FeedbackIdProvider();
+  DeviceIdProvider();
 
   static AnnotationKeys GetSupportedAnnotations();
 
@@ -24,4 +24,4 @@ class FeedbackIdProvider : public SingleSyncAnnotationProvider {
 
 }  // namespace feedback
 
-#endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_ANNOTATIONS_FEEDBACK_ID_PROVIDER_H_
+#endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_ANNOTATIONS_DEVICE_ID_PROVIDER_H_

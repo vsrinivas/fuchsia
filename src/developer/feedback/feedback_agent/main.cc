@@ -10,11 +10,14 @@
 #include <lib/sys/inspect/cpp/component.h>
 #include <lib/syslog/cpp/logger.h>
 
+#include <cstdio>
+#include <filesystem>
 #include <memory>
 
 #include "src/developer/feedback/feedback_agent/constants.h"
+#include "src/developer/feedback/feedback_agent/device_id.h"
 #include "src/developer/feedback/feedback_agent/feedback_agent.h"
-#include "src/developer/feedback/feedback_agent/feedback_id.h"
+#include "src/lib/files/file.h"
 
 int main(int argc, const char** argv) {
   syslog::InitLogger({"feedback"});
@@ -22,8 +25,13 @@ int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::Create();
 
-  if (!feedback::InitializeFeedbackId(feedback::kFeedbackIdPath)) {
-    FX_LOGS(ERROR) << "Error initializing feedback id";
+  // TODO(fxb/42590): stop renaming the old file.
+  if (std::filesystem::exists(feedback::kLegacyDeviceIdPath)) {
+    rename(feedback::kLegacyDeviceIdPath, feedback::kDeviceIdPath);
+  }
+
+  if (!feedback::InitializeDeviceId(feedback::kDeviceIdPath)) {
+    FX_LOGS(ERROR) << "Error initializing Feedback device id";
   }
 
   auto inspector = std::make_unique<sys::ComponentInspector>(context.get());

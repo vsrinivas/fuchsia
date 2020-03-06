@@ -51,16 +51,16 @@ test_package("feedback_agent_tests") {
       dest = "config_unittest"
     },
     {
+      name = "device_id_provider_unittest"
+    },
+    {
+      name = "device_id_unittest"
+    },
+    {
       name = "feedback_agent_integration_test"
 
       # We need to also test on real devices as we talk to a real Scenic service.
       environments = basic_envs
-    },
-    {
-      name = "feedback_id_provider_unittest"
-    },
-    {
-      name = "feedback_id_unittest"
     },
     {
       name = "inspect_ptr_unittest"
@@ -142,9 +142,9 @@ test_package("feedback_agent_tests") {
     ":channel_provider_unittest",
     ":config_unittest",
     ":data_provider_unittest",
+    ":device_id_provider_unittest",
+    ":device_id_unittest",
     ":feedback_agent_integration_test",
-    ":feedback_id_provider_unittest",
-    ":feedback_id_unittest",
     ":inspect_exe",
     ":inspect_ptr_unittest",
     ":kernel_log_ptr_integration_test",
@@ -242,7 +242,7 @@ executable("data_provider_unittest") {
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/developer/feedback/feedback_agent:constants",
     "//src/developer/feedback/feedback_agent:data_provider",
-    "//src/developer/feedback/feedback_agent:feedback_id",
+    "//src/developer/feedback/feedback_agent:device_id",
     "//src/developer/feedback/testing:cobalt_test_fixture",
     "//src/developer/feedback/testing:gmatchers",
     "//src/developer/feedback/testing:gpretty_printers",
@@ -257,6 +257,40 @@ executable("data_provider_unittest") {
     "//third_party/googletest:gtest",
     "//third_party/rapidjson",
     "//zircon/public/lib/zx",
+  ]
+
+  # TODO(46560): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+}
+
+executable("device_id_provider_unittest") {
+  testonly = true
+
+  sources = [ "device_id_provider_unittest.cc" ]
+
+  deps = [
+    "//src/developer/feedback/feedback_agent:constants",
+    "//src/developer/feedback/feedback_agent/annotations:device_id_provider",
+    "//src/developer/feedback/testing:gtest_with_syslog_main",
+    "//src/lib/files:files",
+    "//src/lib/uuid:uuid",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+executable("device_id_unittest") {
+  testonly = true
+
+  sources = [ "device_id_unittest.cc" ]
+
+  deps = [
+    "//src/developer/feedback/feedback_agent:device_id",
+    "//src/developer/feedback/testing:gtest_with_syslog_main",
+    "//src/lib/files:files",
+    "//src/lib/uuid:uuid",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
   ]
 
   # TODO(46560): Fix the leaks and remove this.
@@ -298,40 +332,6 @@ executable("feedback_agent_integration_test") {
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-cobalt",
     "//zircon/system/fidl/fuchsia-logger",
-  ]
-
-  # TODO(46560): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-}
-
-executable("feedback_id_provider_unittest") {
-  testonly = true
-
-  sources = [ "feedback_id_provider_unittest.cc" ]
-
-  deps = [
-    "//src/developer/feedback/feedback_agent:constants",
-    "//src/developer/feedback/feedback_agent/annotations:feedback_id_provider",
-    "//src/developer/feedback/testing:gtest_with_syslog_main",
-    "//src/lib/files:files",
-    "//src/lib/uuid:uuid",
-    "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
-  ]
-}
-
-executable("feedback_id_unittest") {
-  testonly = true
-
-  sources = [ "feedback_id_unittest.cc" ]
-
-  deps = [
-    "//src/developer/feedback/feedback_agent:feedback_id",
-    "//src/developer/feedback/testing:gtest_with_syslog_main",
-    "//src/lib/files:files",
-    "//src/lib/uuid:uuid",
-    "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
   ]
 
   # TODO(46560): Fix the leaks and remove this.

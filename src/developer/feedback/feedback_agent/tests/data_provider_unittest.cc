@@ -23,7 +23,7 @@
 
 #include "src/developer/feedback/feedback_agent/config.h"
 #include "src/developer/feedback/feedback_agent/constants.h"
-#include "src/developer/feedback/feedback_agent/feedback_id.h"
+#include "src/developer/feedback/feedback_agent/device_id.h"
 #include "src/developer/feedback/feedback_agent/tests/stub_board.h"
 #include "src/developer/feedback/feedback_agent/tests/stub_channel_provider.h"
 #include "src/developer/feedback/feedback_agent/tests/stub_inspect_archive.h"
@@ -224,9 +224,9 @@ class DataProviderTest : public UnitTestFixture, public CobaltTestFixture {
  public:
   DataProviderTest() : CobaltTestFixture(/*unit_test_fixture=*/this) {}
 
-  void SetUp() override { ASSERT_TRUE(InitializeFeedbackId(kFeedbackIdPath)); }
+  void SetUp() override { ASSERT_TRUE(InitializeDeviceId(kDeviceIdPath)); }
 
-  void TearDown() override { ASSERT_TRUE(files::DeletePath(kFeedbackIdPath, /*recursive=*/false)); }
+  void TearDown() override { ASSERT_TRUE(files::DeletePath(kDeviceIdPath, /*recursive=*/false)); }
 
  protected:
   void SetUpDataProvider(const Config& config) {
@@ -777,12 +777,12 @@ TEST_F(DataProviderTest, GetData_Time) {
                                   }));
 }
 
-TEST_F(DataProviderTest, GetData_FeedbackId) {
+TEST_F(DataProviderTest, GetData_DeviceId) {
   SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
   SetUpDataProvider(kDefaultConfig);
 
-  std::string feedback_id;
-  ASSERT_TRUE(files::ReadFileToString(kFeedbackIdPath, &feedback_id));
+  std::string device_id;
+  ASSERT_TRUE(files::ReadFileToString(kDeviceIdPath, &device_id));
 
   fit::result<Data, zx_status_t> result = GetData();
   ASSERT_TRUE(result.is_ok());
@@ -790,7 +790,7 @@ TEST_F(DataProviderTest, GetData_FeedbackId) {
   const Data& data = result.value();
   ASSERT_TRUE(data.has_annotations());
   EXPECT_THAT(data.annotations(),
-              testing::Contains(MatchesAnnotation(kAnnotationDeviceFeedbackId, feedback_id)));
+              testing::Contains(MatchesAnnotation(kAnnotationDeviceFeedbackId, device_id)));
 }
 
 TEST_F(DataProviderTest, GetData_EmptyAnnotationAllowlist) {

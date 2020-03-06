@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/feedback/feedback_agent/feedback_id.h"
+#include "src/developer/feedback/feedback_agent/device_id.h"
 
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
@@ -12,7 +12,7 @@
 
 namespace feedback {
 
-bool InitializeFeedbackId(const std::string& path) {
+bool InitializeDeviceId(const std::string& path) {
   if (files::IsDirectory(path)) {
     FX_LOGS(ERROR) << fxl::StringPrintf("Unable to initialize feedback id, '%s' is a directory",
                                         path.c_str());
@@ -26,7 +26,7 @@ bool InitializeFeedbackId(const std::string& path) {
 
   id = uuid::Generate();
   if (!uuid::IsValid(id) || !files::WriteFile(path, id.c_str(), id.size())) {
-    FX_LOGS(ERROR) << fxl::StringPrintf("Cannot write feedback id '%s' to '%s'", id.c_str(),
+    FX_LOGS(ERROR) << fxl::StringPrintf("Cannot write device id '%s' to '%s'", id.c_str(),
                                         path.c_str());
     return false;
   }

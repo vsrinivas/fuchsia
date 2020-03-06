@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/feedback_id_provider_unittest"
+        "binary": "test/device_id_provider_unittest"
     },
     "sandbox": {
         "features": [

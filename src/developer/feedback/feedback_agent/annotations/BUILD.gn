@@ -20,8 +20,8 @@ source_set("annotation_providers") {
     "board_name_provider.h",
     "build_info_provider.cc",
     "build_info_provider.h",
-    "feedback_id_provider.cc",
-    "feedback_id_provider.h",
+    "device_id_provider.cc",
+    "device_id_provider.h",
     "single_sync_annotation_provider.cc",
     "single_sync_annotation_provider.h",
     "time_provider.cc",
@@ -102,12 +102,12 @@ source_set("channel_provider") {
 }
 
 # Exposed separately for unit test purposes.
-source_set("feedback_id_provider") {
-  public = [ "feedback_id_provider.h" ]
+source_set("device_id_provider") {
+  public = [ "device_id_provider.h" ]
 
   sources = [
-    "feedback_id_provider.cc",
-    "feedback_id_provider.h",
+    "device_id_provider.cc",
+    "device_id_provider.h",
   ]
 
   public_deps = [ ":single_sync_annotation_provider" ]
