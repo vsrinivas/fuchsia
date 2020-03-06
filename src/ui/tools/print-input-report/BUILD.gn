@@ -52,6 +52,7 @@ test("print-input-report-test-bin") {
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_llcpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/ui/input/lib/hid-input-report",
+    "//src/ui/input/testing/fake_input_report_device",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/ddk",

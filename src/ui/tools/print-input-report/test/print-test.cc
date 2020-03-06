@@ -18,6 +18,7 @@
 #include <hid/usages.h>
 
 #include "src/ui/input/lib/hid-input-report/fidl.h"
+#include "src/ui/input/testing/fake_input_report_device/fake.h"
 #include "src/ui/tools/print-input-report/devices.h"
 #include "src/ui/tools/print-input-report/printer.h"
 
@@ -61,78 +62,13 @@ class FakePrinter : public print_input_report::Printer {
   std::vector<std::string> expected_strings_;
 };
 
-// This class fakes the InputReport driver by implementing the InputDevice interface.
-// The test client can use |SetReport| and |SetDescriptor| to send reports/descriptors
-// through the interface.
-class FakeDevice final : public fuchsia_input_report::InputDevice::Interface {
- public:
-  FakeDevice() : lock_() { zx::event::create(0, &reports_event_); }
-  virtual void GetReportsEvent(GetReportsEventCompleter::Sync completer) override {
-    fbl::AutoLock lock(&lock_);
-    zx::event new_event;
-    zx_status_t status = reports_event_.duplicate(ZX_RIGHTS_BASIC, &new_event);
-    completer.Reply(status, std::move(new_event));
-  }
-
-  virtual void GetReports(GetReportsCompleter::Sync completer) override {
-    fbl::AutoLock lock(&lock_);
-    hid_input_report::FidlInputReport fidl;
-    zx_status_t status = hid_input_report::SetFidlInputReport(report_, &fidl);
-    if (status != ZX_OK) {
-      completer.Reply(fidl::VectorView<fuchsia_input_report::InputReport>(nullptr, 0));
-      return;
-    }
-
-    fuchsia_input_report::InputReport report = fidl.builder.build();
-    reports_event_.signal(DEV_STATE_READABLE, 0);
-    completer.Reply(fidl::VectorView<fuchsia_input_report::InputReport>(&report, 1));
-  }
-
-  void SendOutputReport(::llcpp::fuchsia::input::report::OutputReport report,
-                        SendOutputReportCompleter::Sync completer) override {
-    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
-  };
-
-  // Sets the fake's report, which will be read with |GetReports|. This also
-  // triggers the |reports_events_| signal which wakes up any clients waiting
-  // for report dta.
-  void SetReport(hid_input_report::InputReport report) {
-    fbl::AutoLock lock(&lock_);
-    report_ = report;
-    reports_event_.signal(0, DEV_STATE_READABLE);
-  }
-
-  void GetDescriptor(GetDescriptorCompleter::Sync completer) override {
-    fbl::AutoLock lock(&lock_);
-    hid_input_report::FidlDescriptor fidl;
-    ASSERT_EQ(hid_input_report::SetFidlDescriptor(descriptor_, &fidl), ZX_OK);
-
-    fuchsia_input_report::DeviceDescriptor descriptor = fidl.builder.build();
-    completer.Reply(std::move(descriptor));
-  }
-
-  // Sets the fake's descriptor, which will be read with |GetDescriptor|.
-  void SetDescriptor(hid_input_report::ReportDescriptor descriptor) {
-    fbl::AutoLock lock(&lock_);
-    descriptor_ = descriptor;
-  }
-
- private:
-  // This lock makes the class thread-safe, which is important because setting the
-  // reports and handling the FIDL calls happen on seperate threads.
-  fbl::Mutex lock_ = {};
-  zx::event reports_event_ __TA_GUARDED(lock_);
-  hid_input_report::InputReport report_ __TA_GUARDED(lock_) = {};
-  hid_input_report::ReportDescriptor descriptor_ __TA_GUARDED(lock_) = {};
-};
-
 class PrintInputReport : public ::testing::Test {
  protected:
   virtual void SetUp() {
     // Make the channels and the fake device.
     zx::channel token_server, token_client;
     ASSERT_EQ(zx::channel::create(0, &token_server, &token_client), ZX_OK);
-    fake_device_ = std::make_unique<FakeDevice>();
+    fake_device_ = std::make_unique<fake_input_report_device::FakeInputDevice>();
 
     // Make and run the thread for the fake device's FIDL interface. This is necessary
     // because the interface is asyncronous and will block the dispatcher.
@@ -152,7 +88,7 @@ class PrintInputReport : public ::testing::Test {
   }
 
   std::unique_ptr<async::Loop> loop_;
-  std::unique_ptr<FakeDevice> fake_device_;
+  std::unique_ptr<fake_input_report_device::FakeInputDevice> fake_device_;
   std::optional<fuchsia_input_report::InputDevice::SyncClient> client_;
 };
 
