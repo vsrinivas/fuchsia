@@ -8,6 +8,7 @@
 #include <lib/zx/time.h>
 
 #include <cinttypes>
+#include <thread>
 
 #include <trace/event.h>
 
@@ -17,13 +18,26 @@
 #include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
+namespace {
+
+constexpr size_t kMaxLogLinesInQueue = 512u;
+
+}  // namespace
 
 SystemLogRecorder::SystemLogRecorder(std::shared_ptr<sys::ServiceDirectory> services,
                                      const std::vector<const std::string>& file_paths,
                                      FileSize total_log_size)
-    : services_(services), binding_(this), logs_(file_paths, total_log_size) {}
+    : services_(services),
+      binding_(this),
+      queue_(kMaxLogLinesInQueue),
+      logs_(file_paths, total_log_size) {}
 
 void SystemLogRecorder::StartRecording() {
+  StartListening();
+  SpawnWriterThread();
+}
+
+void SystemLogRecorder::StartListening() {
   fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener;
 
   binding_.Bind(log_listener.NewRequest());
@@ -42,14 +56,26 @@ void SystemLogRecorder::StartRecording() {
   logger_->DumpLogs(std::move(log_listener), /*options=*/nullptr);
 }
 
+void SystemLogRecorder::SpawnWriterThread() {
+  std::thread([this] {
+    while (true) {
+      TRACE_DURATION("feedback:io", "SystemLogRecorder::write_task");
+      logs_.Write(Format(queue_.Pop()));
+    }
+  }).detach();
+}
+
 void SystemLogRecorder::LogMany(std::vector<fuchsia::logger::LogMessage> messages) {
   for (const auto& message : messages) {
-    WriteLogMessage(std::move(message));
+    TRACE_DURATION("feedback:io", "SystemLogRecorder::LogManyPush", "message_size",
+                   message.msg.size());
+    queue_.Push(std::move(message));
   }
 }
 
 void SystemLogRecorder::Log(fuchsia::logger::LogMessage message) {
-  WriteLogMessage(std::move(message));
+  TRACE_DURATION("feedback:io", "SystemLogRecorder::Log", "message_size", message.msg.size());
+  queue_.Push(std::move(message));
 }
 
 void SystemLogRecorder::Done() {
@@ -61,19 +87,6 @@ void SystemLogRecorder::Done() {
   });
 
   logger_->Listen(std::move(log_listener), /*options=*/nullptr);
-}
-
-void SystemLogRecorder::WriteLogMessage(fuchsia::logger::LogMessage message) {
-  TRACE_DURATION("feedback:io", "SystemLogRecorder::WriteLogMessage", "message_size",
-                 message.msg.size());
-
-  TRACE_DURATION_BEGIN("feedback:io", "SystemLogRecorder::WriteLogMessage::Format");
-  const std::string str = Format(std::move(message));
-  TRACE_DURATION_END("feedback:io", "SystemLogRecorder::WriteLogMessage::Format");
-
-  TRACE_DURATION_BEGIN("feedback:io", "SystemLogRecorder::WriteLogMessage::Write");
-  logs_.Write(str);
-  TRACE_DURATION_END("feedback:io", "SystemLogRecorder::WriteLogMessage::Write");
 }
 
 }  // namespace feedback

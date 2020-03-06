@@ -197,11 +197,11 @@ source_set("system_log_recorder_src") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/developer/feedback/utils:files",
+    "//src/developer/feedback/utils:logs",
     "//zircon/system/fidl/fuchsia-logger",
   ]
 
   deps = [
-    "//src/developer/feedback/utils:logs",
     "//src/lib/fxl",
     "//src/lib/syslog/cpp",
     "//zircon/public/lib/trace",

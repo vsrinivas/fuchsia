@@ -11,6 +11,7 @@
 #include <lib/sys/cpp/service_directory.h>
 
 #include "src/developer/feedback/utils/file_size.h"
+#include "src/developer/feedback/utils/log_message_queue.h"
 #include "src/developer/feedback/utils/rotating_file_set.h"
 
 namespace feedback {
@@ -20,20 +21,23 @@ class SystemLogRecorder : public fuchsia::logger::LogListener {
  public:
   SystemLogRecorder(std::shared_ptr<sys::ServiceDirectory> services,
                     const std::vector<const std::string>& file_paths, FileSize total_log_size);
+
   void StartRecording();
 
  private:
+  void StartListening();
+  void SpawnWriterThread();
+
   // |fuchsia::logger::LogListener|
   void Log(fuchsia::logger::LogMessage message) override;
   void LogMany(std::vector<fuchsia::logger::LogMessage> messages) override;
   void Done() override;
 
-  void WriteLogMessage(fuchsia::logger::LogMessage message);
-
   const std::shared_ptr<sys::ServiceDirectory> services_;
   fidl::Binding<fuchsia::logger::LogListener> binding_;
   fuchsia::logger::LogPtr logger_;
 
+  LogMessageQueue queue_;
   RotatingFileSetWriter logs_;
 };
 

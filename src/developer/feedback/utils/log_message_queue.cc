@@ -18,6 +18,7 @@ void LogMessageQueue::Push(LogMessage log_message) {
 
   // If the queue if full, drop the message
   if (messages_.size() == capacity_) {
+    TRACE_INSTANT("feedback:io", "LogMessageQueue::Push::Drop", TRACE_SCOPE_PROCESS);
     return;
   }
 
@@ -33,6 +34,7 @@ LogMessage LogMessageQueue::Pop() {
   // If there aren't any available messages, wait until a message is available.
   if (messages_.size() == 0) {
     // This releases the lock and re-acquires it when notified (here form notify_all() in Push()).
+    TRACE_DURATION("feedback:io", "LogMessageQueue::Pop::Wait");
     cv_.wait(lk, [this] { return messages_.size() != 0; });
   }
 

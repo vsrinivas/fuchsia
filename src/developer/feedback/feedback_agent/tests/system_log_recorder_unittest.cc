@@ -60,9 +60,9 @@ class SystemLogRecorderTest : public UnitTestFixture {
  private:
   files::ScopedTempDir temp_dir_;
   std::unique_ptr<StubLogger> logger_;
+  std::unique_ptr<SystemLogRecorder> system_log_recorder_;
 
  protected:
-  std::unique_ptr<SystemLogRecorder> system_log_recorder_;
   std::vector<const std::string> log_file_paths_;
 };
 
@@ -111,23 +111,20 @@ TEST_F(SystemLogRecorderTest, Check_RecordsLogsCorrectly) {
   // specified in the constructor.
   RunLoopFor(total_dump_delays + total_message_delays);
 
-  // Delete system log recorder to flush the underlying buffer.
-  system_log_recorder_.reset(nullptr);
-
   const std::string output_path = files::JoinPath(RootDirectory(), "output.txt");
 
   RotatingFileSetReader reader(log_file_paths_);
-  reader.Concatenate(output_path);
 
+  // We can't expect "line 10" to be present because the line won't been flushed to disk until the
+  // underlying file is closed. This won't happen until another line is written into the logs.
   std::string contents;
-  ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
-
-  EXPECT_EQ(contents,
-            R"([15604.000][07559][07687][] INFO: line 7
+  while (contents != R"([15604.000][07559][07687][] INFO: line 7
 [15604.000][07559][07687][] INFO: line 8
 [15604.000][07559][07687][] INFO: line 9
-[15604.000][07559][07687][] INFO: line 10
-)");
+)") {
+    reader.Concatenate(output_path);
+    ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
+  }
 }
 
 }  // namespace
