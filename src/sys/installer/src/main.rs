@@ -221,10 +221,25 @@ async fn main() -> Result<(), Error> {
         Partition::get_partitions(&install_source).await.context("Getting source partitions")?;
 
     for part in to_install {
-        println!("{:?}", part);
+        print!("{:?}... ", part);
+        io::stdout().flush()?;
+        if part.pave(&data_sink).await.is_err() {
+            println!("Failed");
+        } else {
+            println!("OK");
+
+            if part.is_ab() {
+                print!("{:?} [-B]... ", part);
+                io::stdout().flush()?;
+                if part.pave_b(&data_sink).await.is_err() {
+                    println!("Failed");
+                } else {
+                    println!("OK");
+                }
+            }
+        }
     }
 
-    println!("TODO(44595): actually install something");
     Ok(())
 }
 

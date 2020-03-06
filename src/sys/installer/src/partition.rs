@@ -6,9 +6,10 @@ use {
     anyhow::{anyhow, Context, Error},
     fidl::endpoints::Proxy,
     fidl_fuchsia_hardware_block_partition::PartitionProxy,
-    fidl_fuchsia_paver::{Asset, Configuration},
+    fidl_fuchsia_mem::Buffer,
+    fidl_fuchsia_paver::{Asset, Configuration, DynamicDataSinkProxy},
     fuchsia_zircon as zx, fuchsia_zircon_status as zx_status,
-    std::{fmt, fs, path::Path},
+    std::{fmt, fs, io::Read, path::Path},
 };
 
 #[derive(Debug, PartialEq)]
@@ -22,6 +23,8 @@ pub enum PartitionPaveType {
 pub struct Partition {
     pave_type: PartitionPaveType,
     src: String,
+    size: usize,
+    block_size: usize,
 }
 
 /// This GUID is used by the installer to identify partitions that contain
@@ -74,7 +77,16 @@ impl Partition {
             return Ok(None);
         }
 
-        Ok(Some(Partition { pave_type, src }))
+        let (status, info) = part.get_info().await.context("Get info failed")?;
+        let info = info.ok_or(Error::new(zx_status::Status::from_raw(status)))?;
+        let size = info.block_count * info.block_size as u64;
+
+        Ok(Some(Partition {
+            pave_type,
+            src,
+            size: size as usize,
+            block_size: info.block_size as usize,
+        }))
     }
 
     /// Gather all partitions that are children of the given block device,
@@ -104,6 +116,72 @@ impl Partition {
             }
         }
         Ok(partitions)
+    }
+
+    /// Pave this partition to disk, using the given |DynamicDataSinkProxy|.
+    pub async fn pave(&self, data_sink: &DynamicDataSinkProxy) -> Result<(), Error> {
+        match self.pave_type {
+            PartitionPaveType::Asset { r#type: asset, config } => {
+                let mut fidl_buf = self.read_data().await?;
+                data_sink.write_asset(config, asset, &mut fidl_buf).await?;
+            }
+            _ => return Err(Error::from(zx_status::Status::NOT_SUPPORTED)),
+        };
+        Ok(())
+    }
+
+    /// Pave this A/B partition to its 'B' slot.
+    /// Will return an error if the partition is not an A/B partition.
+    pub async fn pave_b(&self, data_sink: &DynamicDataSinkProxy) -> Result<(), Error> {
+        if !self.is_ab() {
+            return Err(Error::from(zx_status::Status::NOT_SUPPORTED));
+        }
+
+        let mut fidl_buf = self.read_data().await?;
+        match self.pave_type {
+            PartitionPaveType::Asset { r#type: asset, config: _ } => {
+                // pave() will always pave to A, so this always paves to B.
+                // The A/B config from the partition is not respected because on a fresh
+                // install we want A/B to be identical, so we install the same thing to both.
+                data_sink.write_asset(Configuration::B, asset, &mut fidl_buf).await?;
+                Ok(())
+            }
+            _ => Err(Error::from(zx_status::Status::NOT_SUPPORTED)),
+        }
+    }
+
+    /// Returns true if this partition has A/B variants when installed.
+    pub fn is_ab(&self) -> bool {
+        if let PartitionPaveType::Asset { r#type: _, config } = self.pave_type {
+            // We only check against the A configuration because |letter_to_configuration|
+            // returns A for 'A' and 'B' configurations.
+            return config == Configuration::A;
+        }
+        return false;
+    }
+
+    /// Read this partition into a FIDL buffer.
+    async fn read_data(&self) -> Result<Buffer, Error> {
+        let mut rounded_size = self.size;
+        let page_size = zx::sys::ZX_PAGE_SIZE as usize;
+        if rounded_size % page_size != 0 {
+            rounded_size += page_size;
+            rounded_size -= rounded_size % page_size;
+        }
+
+        let vmo = zx::Vmo::create_with_opts(zx::VmoOptions::RESIZABLE, rounded_size as u64)?;
+        let mut buf: Vec<u8> = vec![0; 100 * self.block_size];
+        let mut file = fs::File::open(Path::new(&self.src)).context("Opening partition")?;
+        let mut read = 0;
+        while read < self.size {
+            let write_pos = read;
+            read += file.read(&mut buf).context("Reading data from partition")?;
+            vmo.write(&buf, write_pos as u64).context("Writing data to VMO")?;
+            if self.size - read < buf.len() {
+                buf.truncate(self.size - read);
+            }
+        }
+        Ok(Buffer { vmo: fidl::Vmo::from(vmo), size: self.size as u64 })
     }
 
     /// Return the |Configuration| that is represented by the given
@@ -207,7 +285,9 @@ mod tests {
             part.pave_type,
             PartitionPaveType::Asset { r#type: Asset::Kernel, config: Configuration::A }
         );
+        assert_eq!(part.size, 512 * 1000);
         assert_eq!(part.src, "zircon-a");
+        assert!(part.is_ab());
         Ok(())
     }
 
@@ -221,7 +301,9 @@ mod tests {
             part.pave_type,
             PartitionPaveType::Asset { r#type: Asset::Kernel, config: Configuration::A }
         );
+        assert_eq!(part.size, 20 * 1000);
         assert_eq!(part.src, "zircon-b");
+        assert!(part.is_ab());
         Ok(())
     }
 
@@ -235,7 +317,9 @@ mod tests {
             part.pave_type,
             PartitionPaveType::Asset { r#type: Asset::Kernel, config: Configuration::Recovery }
         );
+        assert_eq!(part.size, 40 * 200);
         assert_eq!(part.src, "zircon-r");
+        assert!(!part.is_ab());
         Ok(())
     }
 
@@ -246,7 +330,9 @@ mod tests {
         assert!(part.is_some());
         let part = part.unwrap();
         assert_eq!(part.pave_type, PartitionPaveType::Bootloader);
+        assert_eq!(part.size, 512 * 1000);
         assert_eq!(part.src, "efi");
+        assert!(!part.is_ab());
         Ok(())
     }
 
@@ -257,7 +343,9 @@ mod tests {
         assert!(part.is_some());
         let part = part.unwrap();
         assert_eq!(part.pave_type, PartitionPaveType::Volume);
+        assert_eq!(part.size, 2048 * 4097);
         assert_eq!(part.src, "storage-sparse");
+        assert!(!part.is_ab());
         Ok(())
     }
 
