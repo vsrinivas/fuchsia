@@ -10,6 +10,7 @@
 #include <zircon/types.h>
 
 #include "src/lib/fxl/logging.h"
+#include "src/ui/a11y/lib/util/util.h"
 
 namespace a11y {
 
@@ -91,6 +92,19 @@ void ViewManager::ViewSignalHandler(async_dispatcher_t* dispatcher, async::WaitB
   zx_koid_t koid = fsl::GetKoid(wait->object());
   wait_map_.erase(koid);
   view_wrapper_map_.erase(koid);
+}
+
+bool ViewManager::ViewHasSemantics(zx_koid_t view_ref_koid) {
+  auto it = view_wrapper_map_.find(view_ref_koid);
+  return it != view_wrapper_map_.end();
+}
+
+std::optional<fuchsia::ui::views::ViewRef> ViewManager::ViewRefClone(zx_koid_t view_ref_koid) {
+  auto it = view_wrapper_map_.find(view_ref_koid);
+  if (it != view_wrapper_map_.end()) {
+    return it->second->ViewRefClone();
+  }
+  return std::nullopt;
 }
 
 }  // namespace a11y

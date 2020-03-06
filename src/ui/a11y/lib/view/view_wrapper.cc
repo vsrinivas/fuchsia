@@ -23,4 +23,7 @@ void ViewWrapper::EnableSemanticUpdates(bool enabled) {
 fxl::WeakPtr<::a11y::SemanticTree> ViewWrapper::GetTree() {
   return semantic_tree_binding_.impl()->Get();
 }
+
+fuchsia::ui::views::ViewRef ViewWrapper::ViewRefClone() const { return Clone(view_ref_); }
+
 }  // namespace a11y

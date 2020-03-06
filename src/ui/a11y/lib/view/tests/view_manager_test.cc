@@ -130,4 +130,31 @@ TEST_F(ViewManagerTest, LogFileRemoved) {
   }
 }
 
+TEST_F(ViewManagerTest, SemanticsSourceViewHasSemantics) {
+  view_manager_.SetSemanticsEnabled(true);
+  MockSemanticProvider semantic_provider(&view_manager_);
+  RunLoopUntilIdle();
+  a11y::SemanticsSource* semantics_source = &view_manager_;
+  EXPECT_TRUE(semantics_source->ViewHasSemantics(a11y::GetKoid(semantic_provider.view_ref())));
+  // Forces the client to disconnect.
+  semantic_provider.SendEventPairSignal();
+  RunLoopUntilIdle();
+  EXPECT_FALSE(semantics_source->ViewHasSemantics(a11y::GetKoid(semantic_provider.view_ref())));
+}
+
+TEST_F(ViewManagerTest, SemanticsSourceViewRefClone) {
+  view_manager_.SetSemanticsEnabled(true);
+  MockSemanticProvider semantic_provider(&view_manager_);
+  RunLoopUntilIdle();
+  a11y::SemanticsSource* semantics_source = &view_manager_;
+  auto view_ref_or_null =
+      semantics_source->ViewRefClone(a11y::GetKoid(semantic_provider.view_ref()));
+  EXPECT_EQ(a11y::GetKoid(semantic_provider.view_ref()), a11y::GetKoid(*view_ref_or_null));
+  // Forces the client to disconnect.
+  semantic_provider.SendEventPairSignal();
+  RunLoopUntilIdle();
+  // The view is not providing semantics anymore, so there is no return value.
+  EXPECT_FALSE(semantics_source->ViewRefClone(a11y::GetKoid(semantic_provider.view_ref())));
+}
+
 }  // namespace accessibility_test

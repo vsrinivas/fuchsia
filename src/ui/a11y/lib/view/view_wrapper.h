@@ -34,6 +34,9 @@ class ViewWrapper {
   // may only be used in the same thread as this service is running.
   fxl::WeakPtr<::a11y::SemanticTree> GetTree();
 
+  // Returns a clone of the ViewRef owned by this object.
+  fuchsia::ui::views::ViewRef ViewRefClone() const;
+
  private:
   fuchsia::ui::views::ViewRef view_ref_;
 

@@ -13,6 +13,7 @@
 #include <zircon/types.h>
 
 #include "src/ui/a11y/lib/semantics/semantic_tree_service.h"
+#include "src/ui/a11y/lib/semantics/semantics_source.h"
 #include "src/ui/a11y/lib/view/view_wrapper.h"
 
 namespace a11y {
@@ -33,7 +34,8 @@ class SemanticTreeServiceFactory {
 // Semantic Providers connect to this service to start supplying semantic
 // information for a particular View while Semantic Consumers query available
 // semantic information managed by this service.
-class ViewManager : public fuchsia::accessibility::semantics::SemanticsManager {
+class ViewManager : public fuchsia::accessibility::semantics::SemanticsManager,
+                    public SemanticsSource {
  public:
   explicit ViewManager(std::unique_ptr<SemanticTreeServiceFactory> factory,
                        vfs::PseudoDir* debug_dir);
@@ -64,6 +66,12 @@ class ViewManager : public fuchsia::accessibility::semantics::SemanticsManager {
   // responsible for closing the channel and cleaning up the associated SemanticTree.
   void ViewSignalHandler(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                          const zx_packet_signal* signal);
+
+  // |SemanticsSource|
+  bool ViewHasSemantics(zx_koid_t view_ref_koid) override;
+
+  // |SemanticsSource|
+  std::optional<fuchsia::ui::views::ViewRef> ViewRefClone(zx_koid_t view_ref_koid) override;
 
   std::unordered_map<zx_koid_t, std::unique_ptr<ViewWrapper>> view_wrapper_map_;
 
