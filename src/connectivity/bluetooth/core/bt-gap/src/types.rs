@@ -5,19 +5,23 @@
 use {
     anyhow::format_err, fidl_fuchsia_bluetooth as bt, fidl_fuchsia_bluetooth_sys as sys,
     fuchsia_bluetooth::bt_fidl_status,
+    thiserror::Error,
 };
 
 /// Type representing Possible errors raised in the operation of BT-GAP
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum Error {
     /// Internal bt-gap Error
+    #[error("Internal bt-gap Error: {0}")]
     InternalError(anyhow::Error),
 
     /// Host Error
+    #[error("Host Error: {0:?}")]
     HostError(bt::Error),
 
     /// fuchsia.bluetooth.sys API errors. Used to encapsulate errors that are reported by bt-host
     /// and for the fuchsia.bluetooth.sys.Access API.
+    #[error("fuchsia.bluetooth.sys Error: {0:?}")]
     SysError(sys::Error),
 }
 
@@ -51,12 +55,6 @@ impl Error {
             ),
             Error::SysError(err) => format_err!("Host Error: {:?}", err),
         }
-    }
-}
-
-impl Into<anyhow::Error> for Error {
-    fn into(self) -> anyhow::Error {
-        self.as_failure()
     }
 }
 
