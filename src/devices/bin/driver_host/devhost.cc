@@ -1070,7 +1070,7 @@ zx_status_t devhost_start_connection(fbl::RefPtr<DevfsConnection> conn, zx::chan
   return DevfsConnection::BeginWait(std::move(conn), DevhostAsyncLoop()->dispatcher());
 }
 
-int device_host_main(int argc, char** argv) {
+int driver_host_main(int argc, char** argv) {
   root_resource_handle = zx_take_startup_handle(PA_HND(PA_RESOURCE, 0));
   if (root_resource_handle == ZX_HANDLE_INVALID) {
     log(TRACE, "driver_host: no root resource handle!\n");
@@ -1115,5 +1115,3 @@ int device_host_main(int argc, char** argv) {
 
   return 0;
 }
-
-__EXPORT int devmgr_device_host_main(int argc, char** argv) { return device_host_main(argc, argv); }

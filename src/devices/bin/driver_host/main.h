@@ -5,6 +5,6 @@
 #ifndef SRC_DEVICES_BIN_DRIVER_HOST_MAIN_H_
 #define SRC_DEVICES_BIN_DRIVER_HOST_MAIN_H_
 
-extern "C" int devmgr_device_host_main(int argc, char** argv);
+int driver_host_main(int argc, char** argv);
 
 #endif  // SRC_DEVICES_BIN_DRIVER_HOST_MAIN_H_

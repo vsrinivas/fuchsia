@@ -4,4 +4,4 @@
 
 #include "main.h"
 
-int main(int argc, char** argv) { devmgr_device_host_main(argc, argv); }
+int main(int argc, char** argv) { driver_host_main(argc, argv); }
