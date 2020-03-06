@@ -51,5 +51,4 @@ source_set("tests") {
     "$zx/system/ulib/affine",
     "$zx/system/ulib/zx",
   ]
-  public_configs = [ "$zx/public/gn/config:Wno-unused-function" ]
 }

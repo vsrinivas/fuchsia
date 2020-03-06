@@ -44,6 +44,7 @@ static unsigned get_num_cpus_online() {
 // Unplug all cores (except for Boot core), then hotplug
 // the cores one by one and make sure that we can schedule
 // tasks on that core.
+[[maybe_unused]]
 static bool mp_hotplug_test() {
   BEGIN_TEST;
 

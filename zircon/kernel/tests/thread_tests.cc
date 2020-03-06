@@ -43,13 +43,6 @@ static int sleep_thread(void* arg) {
   return 0;
 }
 
-static int sleep_test(void) {
-  int i;
-  for (i = 0; i < 16; i++)
-    Thread::Create("sleeper", &sleep_thread, NULL, DEFAULT_PRIORITY)->DetachAndResume();
-  return 0;
-}
-
 static int mutex_thread(void* arg) {
   int i;
   const int iterations = 1000000;
@@ -86,7 +79,7 @@ static int mutex_thread(void* arg) {
   return 0;
 }
 
-static int mutex_test(void) {
+static int mutex_test() {
   static Mutex imutex;
   printf("preinitialized mutex:\n");
   hexdump(&imutex, sizeof(imutex));
@@ -214,7 +207,7 @@ static int event_waiter(void* arg) {
   return 0;
 }
 
-static void event_test(void) {
+static void event_test() {
   Thread* threads[5];
 
   static event_t ievent = EVENT_INITIAL_VALUE(ievent, true, 0x1234);
@@ -278,13 +271,6 @@ static int quantum_tester(void* arg) {
   return 0;
 }
 
-static void quantum_test(void) {
-  Thread::Create("quantum tester 0", &quantum_tester, NULL, DEFAULT_PRIORITY)->DetachAndResume();
-  Thread::Create("quantum tester 1", &quantum_tester, NULL, DEFAULT_PRIORITY)->DetachAndResume();
-  Thread::Create("quantum tester 2", &quantum_tester, NULL, DEFAULT_PRIORITY)->DetachAndResume();
-  Thread::Create("quantum tester 3", &quantum_tester, NULL, DEFAULT_PRIORITY)->DetachAndResume();
-}
-
 static event_t context_switch_event;
 static event_t context_switch_done_event;
 
@@ -311,7 +297,7 @@ static int context_switch_tester(void* arg) {
   return 0;
 }
 
-static void context_switch_test(void) {
+static void context_switch_test() {
   event_init(&context_switch_event, false, 0);
   event_init(&context_switch_done_event, false, 0);
 
@@ -410,7 +396,7 @@ static int preempt_tester(void* arg) {
   return 0;
 }
 
-static void preempt_test(void) {
+static void preempt_test() {
   /* create 5 threads, let them run. If the system is properly timer preempting,
    * the threads should interleave each other at a fine enough granularity so
    * that they complete at roughly the same time. */
@@ -505,7 +491,7 @@ static int join_tester_server(void* arg) {
   return 55;
 }
 
-static void join_test(void) {
+static void join_test() {
   int ret;
   zx_status_t err;
   Thread* t;
@@ -538,7 +524,7 @@ static int hold_and_release(void* arg) {
   return 0;
 }
 
-static void spinlock_test(void) {
+static void spinlock_test() {
   spin_lock_saved_state_t state;
   spin_lock_t lock;
 
@@ -623,7 +609,7 @@ static int waiter_kill_thread(void* arg) {
   return 0;
 }
 
-static void kill_tests(void) {
+static void kill_tests() {
   Thread* t;
 
   printf("starting sleeper thread, then killing it while it sleeps.\n");
