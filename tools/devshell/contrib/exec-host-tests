@@ -79,6 +79,9 @@ def main():
       test = entry['test']
       if test['os'] == 'fuchsia':
         continue
+      # some tests have no "path" property
+      if 'path' not in test:
+        continue
       path = test['path']
       name = os.path.basename(path)
       if name not in args.names:
