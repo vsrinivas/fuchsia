@@ -18,6 +18,7 @@ group("compute") {
     "spinel-rs",
     "spinel-rs-sys",
     "spinel/platforms/vk",
+    "surpass",
     "svg",
   ]
 }
@@ -51,6 +52,7 @@ group("tests") {
     "spinel-mold:spinel-mold-tests",
     "spinel-rs:spinel-rs-tests",
     "spinel-rs-sys:spinel-rs-sys-tests",
+    "surpass:surpass-tests",
   ]
 
   # NOTE: All dependencies here are run in continuous integration, but our
