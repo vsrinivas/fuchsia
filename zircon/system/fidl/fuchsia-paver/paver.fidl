@@ -55,6 +55,9 @@ union ReadResult {
 /// Protocol for streaming the FVM payload.
 protocol PayloadStream {
     /// Registers a VMO to stream into.
+    ///
+    /// This can be called once per PayloadStream.
+    /// Any subsequent calls will return ZX_ERR_ALREADY_BOUND.
     RegisterVmo(handle<vmo> vmo) -> (zx.status status);
 
     /// Reads data into the pre-registered vmo.
