@@ -5,6 +5,7 @@
 #include "codec_adapter_h264.h"
 
 #include <lib/fidl/cpp/clone.h>
+#include <lib/trace/event.h>
 #include <lib/zx/bti.h>
 
 #include "device_ctx.h"
@@ -172,6 +173,7 @@ void CodecAdapterH264::CoreCodecSetSecureMemoryMode(
 }
 
 void CodecAdapterH264::OnFrameReady(std::shared_ptr<VideoFrame> frame) {
+  TRACE_DURATION("media", "CodecAdapterH264::OnFrameReady", "index", frame->index);
   // The Codec interface requires that emitted frames are cache clean
   // at least for now.  We invalidate without skipping over stride-width
   // per line, at least partly because stride - width is small (possibly

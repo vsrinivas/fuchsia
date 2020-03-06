@@ -149,6 +149,7 @@ if (target_cpu == "arm64") {
       "//zircon/public/lib/safemath",
       "//zircon/public/lib/sync",
       "//zircon/public/lib/tee-client-api",
+      "//zircon/public/lib/trace-driver",
       "//zircon/public/lib/zx",
       "//zircon/system/banjo/ddk.protocol.amlogiccanvas",
       "//zircon/system/banjo/ddk.protocol.platform.device",

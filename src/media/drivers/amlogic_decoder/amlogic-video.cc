@@ -4,6 +4,7 @@
 
 #include "amlogic-video.h"
 
+#include <lib/trace/event.h>
 #include <lib/zx/channel.h>
 #include <memory.h>
 #include <stdint.h>
@@ -379,6 +380,7 @@ zx_status_t AmlogicVideo::ProcessVideoNoParser(const void* data, uint32_t len,
 zx_status_t AmlogicVideo::ProcessVideoNoParserAtOffset(const void* data, uint32_t len,
                                                        uint32_t write_offset,
                                                        uint32_t* written_out) {
+  TRACE_DURATION("media", "AmlogicVideo::ProcessVideoNoParserAtOffset");
   uint32_t available_space = GetStreamBufferEmptySpaceAfterOffset(write_offset);
   if (!written_out) {
     if (len > available_space) {
@@ -411,6 +413,8 @@ zx_status_t AmlogicVideo::ProcessVideoNoParserAtOffset(const void* data, uint32_
 }
 
 void AmlogicVideo::SwapOutCurrentInstance() {
+  TRACE_DURATION("media", "AmlogicVideo::SwapOutCurrentInstance", "current_instance_",
+                 current_instance_.get());
   ZX_DEBUG_ASSERT(!!current_instance_);
   // FrameWasOutput() is called during handling of kVp9CommandNalDecodeDone on
   // the interrupt thread, which means the decoder HW is currently paused,
@@ -473,6 +477,8 @@ void AmlogicVideo::TryToReschedule() {
 }
 
 void AmlogicVideo::SwapInCurrentInstance() {
+  TRACE_DURATION("media", "AmlogicVideo::SwapInCurrentInstance", "current_instance_",
+                 current_instance_.get());
   ZX_DEBUG_ASSERT(current_instance_);
 
   core_ = current_instance_->core();

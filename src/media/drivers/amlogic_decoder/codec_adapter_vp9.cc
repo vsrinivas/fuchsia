@@ -5,6 +5,7 @@
 #include "codec_adapter_vp9.h"
 
 #include <lib/fidl/cpp/clone.h>
+#include <lib/trace/event.h>
 #include <lib/zx/bti.h>
 
 #include "device_ctx.h"
@@ -378,6 +379,7 @@ void CodecAdapterVp9::CoreCodecSetBufferCollectionInfo(
 }
 
 void CodecAdapterVp9::OnFrameReady(std::shared_ptr<VideoFrame> frame) {
+  TRACE_DURATION("media", "CodecAdapterVp9::OnFrameReady", "index", frame->index);
   // The Codec interface requires that emitted frames are cache clean
   // at least for now.  We invalidate without skipping over stride-width
   // per line, at least partly because stride - width is small (possibly
@@ -422,9 +424,11 @@ void CodecAdapterVp9::OnFrameReady(std::shared_ptr<VideoFrame> frame) {
     output_stride_ = frame->stride;
     output_display_width_ = frame->display_width;
     output_display_height_ = frame->display_height;
-    DLOG("output_coded_width_: %u output_coded_height_: %u output_stride_: %u "
-         "output_display_width_: %u output_display_height_: %u", output_coded_width_,
-         output_coded_height_, output_stride_, output_display_width_, output_display_height_);
+    DLOG(
+        "output_coded_width_: %u output_coded_height_: %u output_stride_: %u "
+        "output_display_width_: %u output_display_height_: %u",
+        output_coded_width_, output_coded_height_, output_stride_, output_display_width_,
+        output_display_height_);
     events_->onCoreCodecOutputFormatChange();
   }
 
@@ -928,7 +932,7 @@ void CodecAdapterVp9::SubmitDataToStreamBuffer(zx_paddr_t paddr_base, uint32_t p
   zx_status_t status;
   if (use_parser_) {
     status = video_->SetProtected(VideoDecoder::Owner::ProtectableHardwareUnit::kParser,
-                                              IsPortSecure(kInputPort));
+                                  IsPortSecure(kInputPort));
     if (status != ZX_OK) {
       LOG(ERROR, "video_->SetProtected(kParser) failed - status: %d", status);
       OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
@@ -1025,11 +1029,12 @@ void CodecAdapterVp9::ReadMoreInputData(Vp9Decoder* decoder) {
     // size of queued_frame_sizes_ by 1, without changing the sum of the values, unless the last
     // item is being removed in which case the last item is removed and the sum becomes 0.
     for (uint32_t i = 0; i < decoder->FramesSinceUpdateDecodeSize() - 1; ++i) {
-      DLOG("decoder->FramesSinceUpdateDecodeSize() > 1 -- "
-            "decoder->FramesSinceUpdateDecodeSize(): %u queued_frame_sizes_.front(): %u "
-            "queued_frame_sizes_.size(): %lu",
-            decoder->FramesSinceUpdateDecodeSize(), queued_frame_sizes_.front(),
-            queued_frame_sizes_.size());
+      DLOG(
+          "decoder->FramesSinceUpdateDecodeSize() > 1 -- "
+          "decoder->FramesSinceUpdateDecodeSize(): %u queued_frame_sizes_.front(): %u "
+          "queued_frame_sizes_.size(): %lu",
+          decoder->FramesSinceUpdateDecodeSize(), queued_frame_sizes_.front(),
+          queued_frame_sizes_.size());
       uint32_t old_front_frame_size = queued_frame_sizes_.front();
       queued_frame_sizes_.erase(queued_frame_sizes_.begin());
       if (queued_frame_sizes_.size() == 0) {
@@ -1175,9 +1180,11 @@ void CodecAdapterVp9::ReadMoreInputData(Vp9Decoder* decoder) {
 bool CodecAdapterVp9::IsCurrentOutputBufferCollectionUsable(
     uint32_t min_frame_count, uint32_t max_frame_count, uint32_t coded_width, uint32_t coded_height,
     uint32_t stride, uint32_t display_width, uint32_t display_height) {
-  DLOG("min_frame_count: %u max_frame_count: %u coded_width: %u coded_height: %u stride: %u "
-       "display_width: %u display_height: %u", min_frame_count, max_frame_count, coded_width,
-       coded_height, stride, display_width, display_height);
+  DLOG(
+      "min_frame_count: %u max_frame_count: %u coded_width: %u coded_height: %u stride: %u "
+      "display_width: %u display_height: %u",
+      min_frame_count, max_frame_count, coded_width, coded_height, stride, display_width,
+      display_height);
   ZX_DEBUG_ASSERT(stride >= coded_width);
   // We don't ask codec_impl about this, because as far as codec_impl is
   // concerned, the output buffer collection might not be used for video
@@ -1209,12 +1216,14 @@ bool CodecAdapterVp9::IsCurrentOutputBufferCollectionUsable(
   }
   if (display_width % info.settings.image_format_constraints.display_width_divisor != 0) {
     // Let it probably fail later when trying to re-negotiate buffers.
-    LOG(TRACE, "display_width %% info.settings.image_format_constraints.display_width_divisor != 0");
+    LOG(TRACE,
+        "display_width %% info.settings.image_format_constraints.display_width_divisor != 0");
     return false;
   }
   if (display_height % info.settings.image_format_constraints.display_height_divisor != 0) {
     // Let it probably fail later when trying to re-negotiate buffers.
-    LOG(TRACE, "display_height %% info.settings.image_format_constraints.display_height_divisor != 0");
+    LOG(TRACE,
+        "display_height %% info.settings.image_format_constraints.display_height_divisor != 0");
     return false;
   }
   if (coded_width * coded_height >
@@ -1225,8 +1234,10 @@ bool CodecAdapterVp9::IsCurrentOutputBufferCollectionUsable(
   }
 
   if (coded_width < info.settings.image_format_constraints.min_coded_width) {
-    LOG(TRACE, "coded_width < info.settings.image_format_constraints.min_coded_width -- "
-        "coded_width: %d min_coded_width: %d", coded_width, info.settings.image_format_constraints.min_coded_width);
+    LOG(TRACE,
+        "coded_width < info.settings.image_format_constraints.min_coded_width -- "
+        "coded_width: %d min_coded_width: %d",
+        coded_width, info.settings.image_format_constraints.min_coded_width);
     return false;
   }
   if (coded_width > info.settings.image_format_constraints.max_coded_width) {
@@ -1252,7 +1263,10 @@ bool CodecAdapterVp9::IsCurrentOutputBufferCollectionUsable(
     return false;
   }
   if (stride < info.settings.image_format_constraints.min_bytes_per_row) {
-    LOG(TRACE, "stride < info.settings.image_format_constraints.min_bytes_per_row -- stride: %d min_bytes_per_row: %d", stride, info.settings.image_format_constraints.min_bytes_per_row);
+    LOG(TRACE,
+        "stride < info.settings.image_format_constraints.min_bytes_per_row -- stride: %d "
+        "min_bytes_per_row: %d",
+        stride, info.settings.image_format_constraints.min_bytes_per_row);
     return false;
   }
   if (stride > info.settings.image_format_constraints.max_bytes_per_row) {

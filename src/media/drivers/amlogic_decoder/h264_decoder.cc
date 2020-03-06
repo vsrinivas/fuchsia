@@ -7,6 +7,7 @@
 #include <lib/media/codec_impl/codec_buffer.h>
 #include <lib/media/codec_impl/codec_frame.h>
 #include <lib/media/codec_impl/codec_packet.h>
+#include <lib/trace/event.h>
 #include <lib/zx/vmo.h>
 
 #include <fbl/algorithm.h>
@@ -787,6 +788,7 @@ void H264Decoder::SwitchStreams() {
 }
 
 void H264Decoder::HandleInterrupt() {
+  TRACE_DURATION("media", "H264Decoder::HandleInterrupt");
   // Stop processing on fatal error.
   if (fatal_error_)
     return;
@@ -803,6 +805,7 @@ void H264Decoder::HandleInterrupt() {
   auto scratch0 = AvScratch0::Get().ReadFrom(owner_->dosbus());
   DLOG("Got command: %x", scratch0.reg_value());
   uint32_t cpu_command = scratch0.reg_value() & 0xff;
+  TRACE_INSTANT("media", "got cpu command", TRACE_SCOPE_THREAD, "cpu_command", cpu_command);
   switch (cpu_command) {
     case kCommandNone:
       // It is possible that the interrupt will fire with no command. This could happen if there is

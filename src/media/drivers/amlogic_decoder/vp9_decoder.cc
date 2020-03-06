@@ -6,6 +6,7 @@
 
 #include <lib/media/codec_impl/codec_buffer.h>
 #include <lib/media/codec_impl/codec_packet.h>
+#include <lib/trace/event.h>
 
 #include <algorithm>
 
@@ -609,6 +610,7 @@ enum Vp9Command {
 };
 
 void Vp9Decoder::UpdateDecodeSize(uint32_t size) {
+  TRACE_DURATION("media", "Vp9Decoder::UpdateDecodeSize", "size", size);
   ZX_DEBUG_ASSERT(state_ == DecoderState::kStoppedWaitingForInput ||
                   state_ == DecoderState::kInitialWaitingForInput);
 
@@ -629,9 +631,7 @@ void Vp9Decoder::UpdateDecodeSize(uint32_t size) {
 
   uint32_t old_decode_size = HevcDecodeSize::Get().ReadFrom(owner_->dosbus()).reg_value();
   DLOG("old_decode_size: 0x%x size: 0x%x", old_decode_size, size);
-  HevcDecodeSize::Get()
-      .FromValue(old_decode_size + size)
-      .WriteTo(owner_->dosbus());
+  HevcDecodeSize::Get().FromValue(old_decode_size + size).WriteTo(owner_->dosbus());
 
   if (state_ == DecoderState::kStoppedWaitingForInput) {
     DLOG("kVp9ActionDone (kStoppedWaitingForInput)");
@@ -698,6 +698,7 @@ void Vp9Decoder::AdaptProbabilityCoefficients(uint32_t adapt_prob_status) {
 }
 
 void Vp9Decoder::HandleInterrupt() {
+  TRACE_DURATION("media", "Vp9Decoder::HandleInterrupt");
   DLOG("%p Got VP9 interrupt", this);
   ZX_DEBUG_ASSERT(state_ == DecoderState::kRunning);
   owner_->watchdog()->Cancel();
@@ -708,6 +709,7 @@ void Vp9Decoder::HandleInterrupt() {
   uint32_t dec_status = HevcDecStatusReg::Get().ReadFrom(owner_->dosbus()).reg_value();
   uint32_t adapt_prob_status = Vp9AdaptProbReg::Get().ReadFrom(owner_->dosbus()).reg_value();
 
+  TRACE_INSTANT("media", "decoder status", TRACE_SCOPE_THREAD, "dec_status", dec_status);
   DLOG("Decoder state: %x %x", dec_status, adapt_prob_status);
   AdaptProbabilityCoefficients(adapt_prob_status);
 
@@ -1011,7 +1013,8 @@ void Vp9Decoder::ShowExistingFrame(HardwareRenderParams* params) {
   uint32_t stream_offset = HevcShiftByteCount::Get().ReadFrom(owner_->dosbus()).reg_value();
 
   PtsManager::LookupResult result = pts_manager_->Lookup(stream_offset);
-  DLOG("stream_offset (show existing): 0x%x has_pts: %u pts: %lu", stream_offset, result.has_pts(), result.pts());
+  DLOG("stream_offset (show existing): 0x%x has_pts: %u pts: %lu", stream_offset, result.has_pts(),
+       result.pts());
   frame->frame->has_pts = result.has_pts();
   frame->frame->pts = result.pts();
   if (result.is_end_of_stream()) {
@@ -1072,7 +1075,8 @@ void Vp9Decoder::PrepareNewFrame(bool params_checked_previously) {
   uint32_t stream_offset = HevcShiftByteCount::Get().ReadFrom(owner_->dosbus()).reg_value();
 
   PtsManager::LookupResult result = pts_manager_->Lookup(stream_offset);
-  DLOG("stream_offset (prepare new): 0x%x has_pts: %u pts: %lu", stream_offset, result.has_pts(), result.pts());
+  DLOG("stream_offset (prepare new): 0x%x has_pts: %u pts: %lu", stream_offset, result.has_pts(),
+       result.pts());
   current_frame_data_.has_pts = result.has_pts();
   current_frame_data_.pts = result.pts();
   if (result.is_end_of_stream()) {

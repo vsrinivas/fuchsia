@@ -4,6 +4,8 @@
 
 #include "parser.h"
 
+#include <lib/trace/event.h>
+
 #include "decoder_core.h"
 #include "decoder_instance.h"
 #include "stream_buffer.h"
@@ -228,6 +230,7 @@ zx_status_t Parser::ParseVideo(const void* data, uint32_t len) {
 // The caller of this method must know that the physical range is entirely
 // within a VMO that's pinned for at least the duration of this call.
 zx_status_t Parser::ParseVideoPhysical(zx_paddr_t paddr, uint32_t len) {
+  TRACE_DURATION("media", "Parser::ParseVideoPhysical");
   assert(!owner_->is_parser_gated());
 #if ZX_DEBUG_ASSERT_IMPLEMENTED
   {
@@ -295,6 +298,7 @@ void Parser::TryStartCancelParsing() {
 }
 
 zx_status_t Parser::WaitForParsingCompleted(zx_duration_t deadline) {
+  TRACE_DURATION("media", "Parser::WaitForParsingCompleted");
   {
     std::lock_guard<std::mutex> lock(parser_running_lock_);
     ZX_DEBUG_ASSERT(parser_running_);
