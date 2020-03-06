@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "bin/network_tun"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

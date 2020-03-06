@@ -39,5 +39,6 @@ group("tests") {
     "testing/netemul:tests",
     "tests",
     "tools:tests",
+    "tun:tests",
   ]
 }

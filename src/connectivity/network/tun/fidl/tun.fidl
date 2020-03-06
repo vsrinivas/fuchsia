@@ -1,0 +1,244 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.net.tun;
+
+using zx;
+using fuchsia.hardware.network;
+using fuchsia.net;
+
+/// Maximum number of multicast filters that a device will hold in `MacState`.
+// NOTE: this number mirrors the number in the low level banjo definition in
+// [`ddk.protocol.network.mac/MAX_MAC_FILTER`] which was chosen, in turn, based on common maximum
+// number of multicast groups supported in established OSes.
+const uint32 MAX_MULTICAST_FILTERS = 64;
+
+/// Maximum number of pending [`fuchsia.net.tun/Device.WriteFrame`] or
+/// [`fuchsia.net.tun/Device.ReadFrame`] that are allowed.
+// NOTE: This number is chosen arbitrarily to maintain a determined upper bound on memory
+// consumption for a `Device` instance.
+const uint32 MAX_PENDING_OPERATIONS = 32;
+
+/// Signals set in the `eventpair` returned by [`fuchsia.net.tun/Device.GetSignals`].
+bits Signals : uint32 {
+    /// Indicates that write buffers are available to be used through
+    /// [`fuchsia.net.tun/Device.WriteFrame`].
+    WRITABLE = 0x01000000; // ZX_USER_SIGNAL_0
+    /// Indicates that read buffers are available to be used through
+    /// [`fuchsia.net.tun/Device.ReadFrame`].
+    READABLE = 0x02000000; // ZX_USER_SIGNAL_1
+};
+
+/// Maximum supported MTU.
+// NOTE: Selected as the smallest power of 2 that will fit conventional jumbo frame sizes of 9KB.
+// Source: https://en.wikipedia.org/wiki/Jumbo_frame. The value is chosen arbitrarily low (while
+// abiding by the conventional jumbo frame sizes) to encourage sensible memory usage for clients of
+// the NetworkDevice interface, as receive buffers must be at least MTU-sized for valid operation.
+const uint32 MAX_MTU = 16384;
+
+/// Common configuration used to create a `Device` or `DevicePair`.
+table BaseConfig {
+    /// Device MTU (maximum transmit unit).
+    ///
+    /// If a value greater than `MAX_MTU` is provided, creating a device will fail.
+    /// Defaults to `MAX_MTU`.
+    1: uint32 mtu;
+    /// Supported Rx frame types for device. Required.
+    ///
+    /// Must be non-empty, otherwise creating the device will fail.
+    2: vector<fuchsia.hardware.network.FrameType>:fuchsia.hardware.network.MAX_FRAME_TYPES rx_types;
+    /// Supported Tx frame types on device. Required.
+    ///
+    /// Must be non-empty, otherwise creating the device will fail.
+    3: vector<fuchsia.hardware.network.FrameTypeSupport>:fuchsia.hardware.network.MAX_FRAME_TYPES tx_types;
+    /// Report frame metadata on receiving frames. Defaults to `false`.
+    4: bool report_metadata;
+};
+
+/// Configuration used to create a [`fuchsia.net.tun/Device`].
+table DeviceConfig {
+    /// Common configuration. Required.
+    1: BaseConfig base;
+    /// Start device with link online. Defaults to `false`.
+    2: bool online;
+    /// If `true`, [`fuchsia.net.tun/Device.WriteFrame`] and [`fuchsia.net.tun/Device.ReadFrame`]
+    /// will block returning until the corresponding buffers are available to complete the call.
+    /// Defaults to `false`.
+    3: bool blocking;
+    /// MAC address to report. If provided, device will support the
+    /// [`fuchsia.hardware.network/MacAddressing`] protocol through `ConnectProtocols`.
+    4: fuchsia.net.MacAddress mac;
+};
+
+/// Configuration used to create a [`fuchsia.net.tun/DevicePair`].
+table DevicePairConfig {
+    /// Common configuration. Required.
+    1: BaseConfig base;
+    /// If `true`, transmit buffers on the left end will be dropped if no receive buffers are
+    /// available on the right end to receive it. Otherwise, transmit buffers will wait until a
+    /// receive buffer is available to copy them to. Defaults to `false`.
+    2: bool fallible_transmit_left;
+    /// Like `fallible_transmit_left` but allows writes to the right end to be fallible.
+    3: bool fallible_transmit_right;
+    /// MAC address to report on the left side of the pair. If provided, the left device will
+    /// support the [`fuchsia.hardware.network/MacAddressing`] protocol through `ConnectProtocols`.
+    4: fuchsia.net.MacAddress mac_left;
+    /// Same as `mac_left`, but for the right side of the pair.
+    5: fuchsia.net.MacAddress mac_right;
+};
+
+/// State associated with Mac Address filtering.
+///
+/// Devices never perform any MAC address filtering, but they implement the
+/// [`fuchsia.hardware.network/MacAddressing`] interface and store the values to be retrieved
+/// through the [`fuchsia.net.tun/InternalState`] structure.
+table MacState {
+    /// The currently configured MAC Address filtering mode.
+    1: fuchsia.hardware.network.MacFilterMode mode;
+    /// The full list of configured multicast address filtering.
+    2: vector<fuchsia.net.MacAddress>:MAX_MULTICAST_FILTERS multicast_filters;
+};
+
+/// Internal device state.
+table InternalState {
+    /// Mac addressing state. Will only be provided if `mac` is provided in the `Config`
+    /// structure upon creation of the device.
+    1: MacState mac;
+    /// `true` if there is a session currently opened and running with the `Device`'s network device
+    /// endpoint.
+    2: bool has_session;
+};
+
+/// Extra frame metadata.
+///
+/// This is an opaque holder for extra information that is associated with Network Device data
+/// frames.
+// NOTE(brunodalbo): NetworkDevice's `InfoType` definition is still in its infancy. This solution
+// allows access to the raw bytes in the sidecar metadata. We expect that this will envolve into a
+// more type-safe solution which will be more transparent.
+struct FrameMetadata {
+    /// Additional frame information type.
+    fuchsia.hardware.network.InfoType info_type;
+    /// Additional frame information value.
+    bytes:4096 info;
+    /// Frame flags. `RxFlags` for `WriteFrame` and `TxFlags` for `ReadFrame`.
+    uint32 flags;
+};
+
+/// Collection of request protocols that tun devices can offer.
+table Protocols {
+    /// Connection request to the [`fuchsia.hardware.network/Device`] protocol.
+    ///
+    /// The request is always fulfilled.
+    1: request<fuchsia.hardware.network.Device> network_device;
+    /// Connection request to the [`fuchsia.hardware.network/MacAddressing`] protocol.
+    ///
+    /// The request will be immediately closed if the device was not created with a MAC address.
+    2: request<fuchsia.hardware.network.MacAddressing> mac_addressing;
+};
+
+/// A frame written to or read from a [`fuchsia.net.tun/Device`].
+///
+/// Required fields must always be provided to [`fuchsia.net.tun/Device.WriteFrame`] and are always
+/// present when returned by [`fuchsia.net.tun/Device.ReadFrame`].
+table Frame {
+    /// The type identifying this frame's payload. Required.
+    1: fuchsia.hardware.network.FrameType frame_type;
+    /// The frame's payload. Required. Must be non-empty.
+    2: bytes:MAX_MTU data;
+    /// Metadata associated with the frame.
+    3: FrameMetadata meta;
+};
+
+/// Provides control over the created device.
+///
+/// The lifetime of the device is tied to the channel over which this protocol is served; closing a
+/// `Device` channel will trigger the destruction and deallocation of the underlying device, as well
+/// as all associated endpoints.
+protocol Device {
+    /// Writes a frame to the device (data coming from network-end).
+    /// Returns `ZX_ERR_BAD_STATE` if the device is offline.
+    ///
+    /// If the device was created with the [`fuchsia.net.tun/DeviceConfig.blocking`] option set to
+    /// `true`, calls to `WriteFrame` will block until there is one buffer available to fulfill the
+    /// request. Up to [`fuchsia.net.tun/MAX_PENDING_OPERATIONS`] calls to `WriteFrame` may be
+    /// enqueued in such a way, after which `ZX_ERR_NO_RESOURCES` is returned.
+    ///
+    /// Alternatively, if `blocking` is set to `false` calls to `WriteFrame` will return
+    /// `ZX_ERR_SHOULD_WAIT` if there are no buffers available to fulfill the request.
+    WriteFrame(Frame frame) -> () error zx.status;
+    /// Gets the next frame from the device (data coming from host-end).
+    ///
+    /// If the device was created with the [`fuchsia.net.tun/DeviceConfig.blocking`] option set to
+    /// `true`, calls to `ReadFrame` will block until there is a frame available to be read. Up to
+    /// [`fuchsia.net.tun/MAX_PENDING_OPERATIONS`] calls to `ReadFrame` may be enqueued in such a
+    /// way, after which `ZX_ERR_NO_RESOURCES` is returned.
+    ///
+    /// Alternatively, if `blocking` is set to `false` calls to `ReadFrame` will return
+    /// `ZX_ERR_SHOULD_WAIT` if there are no frames to be read.
+    ReadFrame() -> (Frame frame) error zx.status;
+    /// Retrieves an eventpair that is signalled with `SIGNAL_READABLE` and `SIGNAL_WRITABLE` when
+    /// read and write buffers are available, respectively.
+    GetSignals() -> (handle<eventpair> signals);
+    /// Gets a snapshot of the device's internal state.
+    GetState() -> (InternalState state);
+    /// Observes changes to internal state.
+    ///
+    /// The first call will always return the current internal state, subsequent calls will block
+    /// until the internal state differs from the last one returned from a `WatchState` call.
+    ///
+    /// `WatchState` does not provide full history of internal state changes. It is possible that
+    /// intermediary internal state changes are missed in between `WatchState` calls.
+    WatchState() -> (InternalState state);
+    /// Sets the device's online status.
+    ///
+    /// The online status is visible through [`fuchsia.hardware.network/Device.GetStatus`]. Once
+    /// `SetOnline` returns, the status reported through `GetStatus` is guaranteed to be the one
+    /// passed to `SetOnline`, no guarantees can be made otherwise due to the asynchronous nature of
+    /// multi-channel operations.
+    SetOnline(bool online) -> ();
+    /// Connects to the requested protocols for this `Device`.
+    ConnectProtocols(Protocols protos);
+};
+
+/// A collection of connection requests to ends of a [`fuchsia.net.tun/DevicePair`].
+///
+/// Used to connect to a `DevicePair` through [`fuchsia.net.tun/DevicePair.ConnectProtocols`].
+table DevicePairEnds {
+    /// Connection request to protocols on the left end.
+    1: Protocols left;
+    /// Connection request to protocols on the right end.
+    2: Protocols right;
+};
+
+/// Provides control over a pair of network devices.
+///
+/// A `DevicePair` is a simpler version of `Device` that "shorts" two network device interfaces,
+/// named its "left" and "right" ends. The internal state of a `DevicePair` is not accessible, like
+/// it is for `Device` and it provides a more streamlined (and considerably faster) pair of
+/// [`fuchsia.hardware.network/Device`]s  (and optionally
+/// [`fuchsia.hardware.network/MacAddressing`]s). The transmit side of the left end is connected to
+/// the receive side of the right end, and vice-versa. A `DevicePair`'s online signal is handled
+/// internally (online if any of the ends has an active data session), and if MAC addresses are
+/// provided on creation, the only supported MAC filtering mode is `PROMISCUOUS`. The lifetime of
+/// the underlying devices is tied to the `DevicePair` channel, closing a `DevicePair` channel will
+/// trigger the destruction and deallocation of the underlying devices.
+protocol DevicePair {
+    /// Connects to the requested protocols of this `DevicePair`.
+    ConnectProtocols(DevicePairEnds requests);
+};
+
+/// Control interface.
+/// `Control` allows creating an arbitrary number of `Device`s and `DevicePair`s.
+[Discoverable]
+protocol Control {
+    /// Creates a `Device` with given `config`.
+    /// If `config` is not valid or the device could not be created, `device` is closed with an
+    /// error epitaph.
+    CreateDevice(DeviceConfig config, request<Device> device);
+    /// Creates a `DevicePair` with given `config`.
+    /// If `config` is not valid or the device could not be created, `device_pair` is closed
+    /// with an error epitaph.
+    CreatePair(DevicePairConfig config, request<DevicePair> device_pair);
+};
