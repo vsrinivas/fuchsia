@@ -27,6 +27,10 @@ int main(int argc, char** argv) {
                          FX_LOGS(ERROR)
                              << "Failed to handle reboot log at " << reboot_log << ". Won't retry.";
                        }
+                       // The delay is used to guarantee that we are not exiting the process before
+                       // Cobalt had time to receive and send its events.
+                       // TODO(fxb/47645): remove delay.
+                       zx::nanosleep(zx::deadline_after(zx::sec(30)));
                        loop.Quit();
                      });
 

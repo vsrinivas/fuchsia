@@ -44,13 +44,9 @@ void default_platform_stow_crashlog(zircon_crash_reason_t reason, const void* lo
 size_t default_platform_recover_crashlog(size_t len, void* cookie,
                                          void (*func)(const void* data, size_t off, size_t len,
                                                       void* cookie)) {
-  // If we failed to recover any crashlog, simply report the size as 0.
-  // Alternatively, if we recovered a log, but it indicated that we rebooted
-  // without a crash, just go ahead and pretend like there was no log.
-  //
-  // TODO(fxb/6647): When higher level code is ready for it, come back and
-  // report clean reboot stats as well.
-  if ((log_recovery_result != ZX_OK) || (recovered_log.reason == ZirconCrashReason::NoCrash)) {
+  // If we failed to recover any crashlog, simply report the size as 0. This is most likely a cold
+  // boot.
+  if (log_recovery_result != ZX_OK) {
     return 0;
   }
 
@@ -97,6 +93,9 @@ size_t default_platform_recover_crashlog(size_t len, void* cookie,
       break;
     case ZirconCrashReason::SoftwareWatchdog:
       str_reason = "SW WATCHDOG";
+      break;
+    case ZirconCrashReason::NoCrash:
+      str_reason = "NO CRASH";
       break;
     default:
       str_reason = nullptr;

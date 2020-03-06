@@ -103,11 +103,6 @@ class RebootLogHandlerTest : public UnitTestFixture,
   files::ScopedTempDir tmp_dir_;
 };
 
-TEST_F(RebootLogHandlerTest, Succeed_NoRebootLog) {
-  // We write nothing in |reboot_log_path_| so no file will exist at that path.
-  EXPECT_EQ(HandleRebootLog().state(), kOk);
-}
-
 INSTANTIATE_TEST_SUITE_P(WithVariousRebootLogs, RebootLogHandlerTest,
                          ::testing::ValuesIn(std::vector<TestParam>({
                              {
@@ -193,6 +188,25 @@ TEST_P(RebootLogHandlerTest, Succeed) {
   EXPECT_EQ(crash_reporter_->uptime(), param.output_uptime);
 
   EXPECT_THAT(ReceivedCobaltEvents(), ElementsAre(CobaltEvent(param.output_cobalt_event_code)));
+}
+
+TEST_F(RebootLogHandlerTest, Succeed_CleanReboot) {
+  WriteRebootLogContents("ZIRCON REBOOT REASON (NO CRASH)\n\nUPTIME (ms)\n74715002");
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+
+  fit::result<void> result = HandleRebootLog();
+  EXPECT_EQ(result.state(), kOk);
+
+  EXPECT_THAT(ReceivedCobaltEvents(), ElementsAre(CobaltEvent(RebootReason::kClean)));
+}
+
+TEST_F(RebootLogHandlerTest, Succeed_ColdBoot) {
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+
+  fit::result<void> result = HandleRebootLog();
+  EXPECT_EQ(result.state(), kOk);
+
+  EXPECT_THAT(ReceivedCobaltEvents(), ElementsAre(CobaltEvent(RebootReason::kCold)));
 }
 
 TEST_F(RebootLogHandlerTest, Pending_NetworkNotReachable) {

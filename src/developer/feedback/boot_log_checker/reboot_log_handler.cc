@@ -22,7 +22,6 @@
 #include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
-
 fit::promise<void> HandleRebootLog(const std::string& filepath, async_dispatcher_t* dispatcher,
                                    std::shared_ptr<sys::ServiceDirectory> services) {
   auto handler = std::make_unique<internal::RebootLogHandler>(dispatcher, services);
@@ -49,6 +48,7 @@ void ExtractRebootReason(const std::string line, RebootReason* reboot_reason) {
   };
 
   constexpr std::array str_to_reason_map{
+      StrToReason{.str = "ZIRCON REBOOT REASON (NO CRASH)", .reason = RebootReason::kClean},
       StrToReason{.str = "ZIRCON REBOOT REASON (KERNEL PANIC)",
                   .reason = RebootReason::kKernelPanic},
       StrToReason{.str = "ZIRCON REBOOT REASON (OOM)", .reason = RebootReason::kOOM},
@@ -169,7 +169,8 @@ fit::promise<void> RebootLogHandler::Handle(const std::string& filepath) {
 
   // We first check for the existence of the reboot log and attempt to parse it.
   if (!files::IsFile(filepath)) {
-    FX_LOGS(INFO) << "No reboot log found";
+    FX_LOGS(INFO) << "No reboot reason found, assuming cold boot";
+    cobalt_.LogOccurrence(RebootReason::kCold);
     return fit::make_ok_promise();
   }
 
@@ -191,6 +192,11 @@ fit::promise<void> RebootLogHandler::Handle(const std::string& filepath) {
   }
 
   cobalt_.LogOccurrence(info.reboot_reason);
+
+  // We don't want to file a crash report on clean reboots.
+  if (info.reboot_reason == RebootReason::kClean) {
+    return fit::make_ok_promise();
+  }
 
   return WaitForNetworkToBeReachable().and_then([this, info]() { return FileCrashReport(info); });
 }
