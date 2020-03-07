@@ -4,8 +4,7 @@
     },
     "sandbox": {
         "features": [
-            "isolated-temp",
-            "deprecated-ambient-replace-as-executable"
+            "isolated-temp"
         ],
         "services": [
             "fuchsia.process.Launcher",

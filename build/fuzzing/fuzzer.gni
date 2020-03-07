@@ -73,7 +73,6 @@ template("fuzzer") {
         forward_variables_from(cmx.sandbox, "*")
         services += [ "fuchsia.process.Launcher" ]
         features += [
-          "deprecated-ambient-replace-as-executable",
           "isolated-persistent-storage",
           "isolated-temp",
         ]
@@ -118,7 +117,6 @@ template("fuzzer") {
       sandbox = {
         services = [ "fuchsia.process.Launcher" ]
         features = [
-          "deprecated-ambient-replace-as-executable",
           "isolated-persistent-storage",
           "isolated-temp",
         ]

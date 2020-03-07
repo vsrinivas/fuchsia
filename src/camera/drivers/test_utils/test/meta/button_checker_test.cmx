@@ -6,9 +6,6 @@
         "dev": [
             "class/input"
         ],
-        "features": [
-            "deprecated-ambient-replace-as-executable"
-        ],
         "services": [
             "fuchsia.hardware.input",
             "fuchsia.logger.LogSink",

@@ -18,12 +18,11 @@ template("driver_test_package") {
         binary = "test/${target_name}"
       }
 
-      # these might not be needed, but a closer env to what they
+      # this might not be needed, but a closer env to what they
       # ran in before moving to GN. re-evaluate
       sandbox = {
         features = [
           "deprecated-shell",
-          "deprecated-ambient-replace-as-executable",
         ]
       }
     }
