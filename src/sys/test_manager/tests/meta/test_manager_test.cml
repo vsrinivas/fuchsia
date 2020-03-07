@@ -1,51 +1,49 @@
 {
-    "program": {
-        "binary": "bin/rust_test_adapter",
-        "args": [ "/pkg/test/test_manager_test" ],
+    program: {
+        binary: "bin/rust_test_adapter",
+        args: ["/pkg/test/test_manager_test"]
     },
-    "use": [
-        { "runner": "elf" },
+    use: [
+        { runner: "elf" },
         {
-            "protocol": "/svc/fuchsia.sys2.Realm",
-            "from": "framework",
+            protocol: "/svc/fuchsia.sys2.Realm",
+            from: "framework"
         },
         {
             protocol: [
                 "/svc/fuchsia.process.Launcher",
-                "/svc/fuchsia.logger.LogSink",
-            ],
-        },
+                "/svc/fuchsia.logger.LogSink"
+            ]
+        }
     ],
-    "expose": [
+    expose: [
         {
-            "protocol": "/svc/fuchsia.test.Suite",
-            "from": "self",
-        },
+            protocol: "/svc/fuchsia.test.Suite",
+            from: "self"
+        }
     ],
-    "offer": [
+    offer: [
         // Offer the ELF runner to children.
         {
-            "runner": "elf",
-            "from": "realm",
-            "to": [
-                "#test_manager",
-            ]
+            runner: "elf",
+            from: "realm",
+            to: ["#test_manager"]
         },
         {
-            "protocol": "/svc/fuchsia.logger.LogSink",
-            "from": "realm",
-            "to": [ "#test_manager" ]
+            protocol: "/svc/fuchsia.logger.LogSink",
+            from: "realm",
+            to: ["#test_manager"]
         },
         {
-            "protocol": "/svc/fuchsia.process.Launcher",
-            "from": "realm",
-            "to": [ "#test_manager" ]
-        },
+            protocol: "/svc/fuchsia.process.Launcher",
+            from: "realm",
+            to: ["#test_manager"]
+        }
     ],
     children: [
         {
             name: "test_manager",
             url: "fuchsia-pkg://fuchsia.com/test_manager#meta/test_manager.cm"
-        },
-    ],
+        }
+    ]
 }

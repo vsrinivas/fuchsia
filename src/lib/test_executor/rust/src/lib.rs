@@ -29,7 +29,7 @@ use {
 };
 
 /// Defines the result of a test case run.
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Eq, Hash)]
 pub enum TestResult {
     /// Test case passed.
     Passed,
@@ -45,12 +45,31 @@ pub enum TestResult {
 /// TestCaseStarted: Whenever a new test case is started.
 /// TestCaseFinished: Whenever a test case finishes.
 /// LogMessage: Whenever a test case produces a log message.
-#[derive(PartialEq, Debug)]
+/// Finish: When test finishes successfully.
+#[derive(PartialEq, Debug, Eq, Hash)]
 pub enum TestEvent {
     TestCaseStarted { test_case_name: String },
     TestCaseFinished { test_case_name: String, result: TestResult },
     LogMessage { test_case_name: String, msg: String },
     Finish,
+}
+
+impl TestEvent {
+    pub fn test_case_started(s: &str) -> TestEvent {
+        TestEvent::TestCaseStarted { test_case_name: s.to_string() }
+    }
+
+    pub fn log_message(name: &str, log: &str) -> TestEvent {
+        TestEvent::LogMessage { test_case_name: name.to_string(), msg: log.to_string() }
+    }
+
+    pub fn test_case_finished(name: &str, result: TestResult) -> TestEvent {
+        TestEvent::TestCaseFinished { test_case_name: name.to_string(), result: result }
+    }
+
+    pub fn test_finished() -> TestEvent {
+        TestEvent::Finish
+    }
 }
 
 #[must_use = "futures/streams"]
@@ -146,9 +165,7 @@ impl TestCaseProcessor {
                         // by the test and it forgets to set the result.
                         None => TestResult::Error,
                     };
-                    sender
-                        .send(TestEvent::TestCaseFinished { test_case_name: name, result: result })
-                        .await?;
+                    sender.send(TestEvent::test_case_finished(&name, result)).await?;
                     return Ok(());
                 }
             }
@@ -185,7 +202,7 @@ impl TestCaseProcessor {
                 .map_err(|e| format_err!("Error while reading log msg: {}", e))?
             {
                 sender
-                    .send(TestEvent::LogMessage { test_case_name: name.clone(), msg: log })
+                    .send(TestEvent::log_message(&name, &log))
                     .map_err(|e| format_err!("Error while sending log msg: {}", e))
                     .await?
             }
@@ -243,7 +260,7 @@ pub async fn run_and_collect_results(
     }
     if successful_completion {
         sender
-            .send(TestEvent::Finish)
+            .send(TestEvent::test_finished())
             .map_err(|e| format_err!("Error while sending TestFinished event: {}", e))
             .await?;
     }
@@ -276,7 +293,7 @@ async fn run_invocations(
         match result_event {
             OnTestCaseStarted { invocation, primary_log, listener, control_handle: _ } => {
                 let name = invocation.name.ok_or(format_err!("cannot find name in invocation"))?;
-                sender.send(TestEvent::TestCaseStarted { test_case_name: name.clone() }).await?;
+                sender.send(TestEvent::test_case_started(&name)).await?;
                 let test_case_processor = TestCaseProcessor::new(
                     name,
                     listener.into_stream()?,
@@ -362,23 +379,14 @@ mod tests {
 
         assert_eq!(
             msg,
-            Some(TestEvent::LogMessage {
-                test_case_name: name.to_string(),
-                msg: "test message 1test message 2test message 3".to_string()
-            })
+            Some(TestEvent::log_message(&name, "test message 1test message 2test message 3"))
         );
 
         // can receive messages multiple times
         sock_server.write(b"test message 4").expect("Can't write msg to socket");
         msg = recv.next().await;
 
-        assert_eq!(
-            msg,
-            Some(TestEvent::LogMessage {
-                test_case_name: name.to_string(),
-                msg: "test message 4".to_string()
-            })
-        );
+        assert_eq!(msg, Some(TestEvent::log_message(&name, "test message 4")));
 
         // messages can be read after socket server is closed.
         sock_server.write(b"test message 5").expect("Can't write msg to socket");
@@ -387,13 +395,7 @@ mod tests {
 
         msg = recv.next().await;
 
-        assert_eq!(
-            msg,
-            Some(TestEvent::LogMessage {
-                test_case_name: name.to_string(),
-                msg: "test message 5".to_string()
-            })
-        );
+        assert_eq!(msg, Some(TestEvent::log_message(&name, "test message 5")));
 
         // socket was closed, this should return None
         msg = recv.next().await;

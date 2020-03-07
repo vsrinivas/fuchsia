@@ -1,0 +1,25 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_binary.gni")
+
+rustc_binary("no_suite_service") {
+  testonly = true
+  name = "no_suite_service"
+  edition = "2018"
+  source_root = "no_suite_service.rs"
+
+  deps = [
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:thiserror",
+  ]
+}
+
+group("test_data") {
+  testonly = true
+  public_deps = [ ":no_suite_service" ]
+}

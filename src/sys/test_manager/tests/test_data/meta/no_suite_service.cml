@@ -1,0 +1,9 @@
+// Test example which doesn't expose suite protocol.
+{
+    "program": {
+        "binary": "bin/no_suite_service",
+    },
+    "use": [
+        { "runner": "elf" },
+    ],
+}

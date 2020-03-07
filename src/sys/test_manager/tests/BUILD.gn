@@ -14,7 +14,7 @@ rustc_test("test_manager_test_bin") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
-    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/lib/test_executor/rust:test_executor",
     "//src/sys/test_manager/fidl:test_manager-rustc",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
@@ -27,6 +27,7 @@ package("test_manager_test") {
 
   deps = [
     ":test_manager_test_bin",
+    "test_data",
     "//src/sys/test_adapters/rust",
   ]
 
@@ -34,6 +35,10 @@ package("test_manager_test") {
     {
       path = rebase_path("meta/test_manager_test.cml")
       dest = "test_manager_test.cm"
+    },
+    {
+      path = rebase_path("test_data/meta/no_suite_service.cml")
+      dest = "no_suite_service.cm"
     },
   ]
 
@@ -46,6 +51,9 @@ package("test_manager_test") {
   binaries = [
     {
       name = "rust_test_adapter"
+    },
+    {
+      name = "no_suite_service"
     },
   ]
 }

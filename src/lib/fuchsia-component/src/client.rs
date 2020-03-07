@@ -121,6 +121,22 @@ pub fn connect_to_protocol_at_dir<S: DiscoverableService>(
     Ok(proxy)
 }
 
+/// Connect to an instance of a FIDL protocol hosted in `directory` to `server_end`, assumed to
+/// live under `/svc`.
+pub fn connect_request_to_protocol_at_dir<S: DiscoverableService>(
+    directory: &DirectoryProxy,
+    server_end: ServerEnd<S>,
+) -> Result<(), Error> {
+    directory
+        .open(
+            fidl_fuchsia_io::OPEN_RIGHT_READABLE,
+            fidl_fuchsia_io::MODE_TYPE_SERVICE,
+            &format!("svc/{}", S::SERVICE_NAME),
+            ServerEnd::new(server_end.into_channel()),
+        )
+        .context("Failed to open protocol in directory")
+}
+
 /// Connect to the "default" instance of a FIDL Unified Service hosted on the directory protocol channel `directory`.
 pub fn connect_to_unified_service_at_dir<US: UnifiedServiceMarker>(
     directory: &zx::Channel,

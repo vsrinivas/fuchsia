@@ -9,5 +9,8 @@ fidl("test_manager") {
 
   sources = [ "test_manager.fidl" ]
 
-  public_deps = [ "//sdk/fidl/fuchsia.url" ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.test",
+    "//sdk/fidl/fuchsia.url",
+  ]
 }
