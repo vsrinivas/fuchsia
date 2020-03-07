@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use crate::{
-    app::MessageInternal,
+    app::{MessageInternal, RenderOptions},
     canvas::{Canvas, MappingPixelSink},
     geometry::UintSize,
     message::Message,
@@ -52,9 +52,9 @@ impl Plumber {
         collection_id: u32,
         first_image_id: u64,
         image_pipe_client: &mut ImagePipe2Proxy,
-        use_mold: bool,
+        render_options: RenderOptions,
     ) -> Result<Plumber, Error> {
-        let usage = if use_mold { FrameUsage::Cpu } else { FrameUsage::Gpu };
+        let usage = if render_options.use_spinel { FrameUsage::Gpu } else { FrameUsage::Cpu };
         let mut buffer_allocator = BufferCollectionAllocator::new(
             size.width,
             size.height,
@@ -66,16 +66,14 @@ impl Plumber {
         image_pipe_client.add_buffer_collection(collection_id, image_pipe_token)?;
         let context_token = buffer_allocator.duplicate_token().await?;
         let mut context = render::Context {
-            inner: if use_mold {
-                ContextInner::Mold(generic::Mold::new_context(context_token, size))
-            } else {
+            inner: if render_options.use_spinel {
                 ContextInner::Spinel(generic::Spinel::new_context(context_token, size))
+            } else {
+                ContextInner::Mold(generic::Mold::new_context(context_token, size))
             },
         };
         let buffers = buffer_allocator.allocate_buffers(true).await.context("allocate_buffers")?;
-        let buffers_pixel_format = if use_mold {
-            pixel_format
-        } else {
+        let buffers_pixel_format = if render_options.use_spinel {
             match context.pixel_format() {
                 fuchsia_framebuffer::PixelFormat::Abgr8888 => {
                     fidl_fuchsia_sysmem::PixelFormatType::R8G8B8A8
@@ -91,6 +89,8 @@ impl Plumber {
                 }
                 _ => fidl_fuchsia_sysmem::PixelFormatType::Invalid,
             }
+        } else {
+            pixel_format
         };
 
         let mut image_ids = BTreeSet::new();
@@ -144,7 +144,7 @@ const RENDER_BUFFER_COUNT: usize = 3;
 
 pub(crate) struct RenderViewStrategy {
     #[allow(unused)]
-    use_mold: bool,
+    render_options: RenderOptions,
     scenic_resources: ScenicResources,
     content_node: ShapeNode,
     content_material: Material,
@@ -159,7 +159,7 @@ pub(crate) struct RenderViewStrategy {
 impl RenderViewStrategy {
     pub(crate) async fn new(
         session: &SessionPtr,
-        use_mold: bool,
+        render_options: RenderOptions,
         view_token: ViewToken,
         app_sender: UnboundedSender<MessageInternal>,
     ) -> Result<ViewStrategyPtr, Error> {
@@ -173,7 +173,7 @@ impl RenderViewStrategy {
         let image_pipe_client = image_pipe_client.into_proxy()?;
         session.lock().flush();
         let strat = RenderViewStrategy {
-            use_mold,
+            render_options,
             scenic_resources,
             image_pipe_client,
             image_pipe,
@@ -222,7 +222,7 @@ impl RenderViewStrategy {
                 buffer_collection_id,
                 next_image_id,
                 &mut self.image_pipe_client,
-                self.use_mold,
+                self.render_options,
             )
             .await
             .expect("VmoPlumber::new"),

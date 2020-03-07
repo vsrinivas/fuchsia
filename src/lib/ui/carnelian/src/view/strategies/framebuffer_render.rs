@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use crate::{
-    app::{FrameBufferPtr, MessageInternal, FRAME_COUNT},
+    app::{FrameBufferPtr, MessageInternal, RenderOptions, FRAME_COUNT},
     geometry::{IntSize, UintSize},
     message::Message,
     render::{
@@ -44,7 +44,7 @@ const RENDER_FRAME_COUNT: usize = FRAME_COUNT;
 impl FrameBufferRenderViewStrategy {
     pub(crate) async fn new(
         key: ViewKey,
-        use_mold: bool,
+        render_options: RenderOptions,
         size: &IntSize,
         pixel_format: fuchsia_framebuffer::PixelFormat,
         app_sender: UnboundedSender<MessageInternal>,
@@ -65,10 +65,10 @@ impl FrameBufferRenderViewStrategy {
             // Ensure that duplicate message has been processed by sysmem.
             fb.local_token.as_ref().expect("local_token").sync().await?;
             Context {
-                inner: if use_mold {
-                    ContextInner::Mold(generic::Mold::new_context(context_token, unsize))
-                } else {
+                inner: if render_options.use_spinel {
                     ContextInner::Spinel(generic::Spinel::new_context(context_token, unsize))
+                } else {
+                    ContextInner::Mold(generic::Mold::new_context(context_token, unsize))
                 },
             }
         };
@@ -82,7 +82,8 @@ impl FrameBufferRenderViewStrategy {
                     .expect("unbounded_send");
             }
         });
-        let fb_pixel_format = if use_mold { pixel_format } else { context.pixel_format() };
+        let fb_pixel_format =
+            if render_options.use_spinel { context.pixel_format() } else { pixel_format };
         fb.allocate_frames(RENDER_FRAME_COUNT, fb_pixel_format).await?;
         let fb_image_ids = fb.get_image_ids();
         let mut image_indexes = BTreeMap::new();

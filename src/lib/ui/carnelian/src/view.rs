@@ -298,8 +298,9 @@ impl ViewController {
                 ScenicCanvasViewStrategy::new(&session, view_token, app_sender.clone()).await?
             }
             ViewMode::Scenic => ScenicViewStrategy::new(&session, view_token, app_sender.clone()),
-            ViewMode::Render { use_mold } => {
-                RenderViewStrategy::new(&session, use_mold, view_token, app_sender.clone()).await?
+            ViewMode::Render(render_options) => {
+                RenderViewStrategy::new(&session, render_options, view_token, app_sender.clone())
+                    .await?
             }
             ViewMode::ImagePipe => bail!("ImagePipe mode is not yet supported with Scenic"),
         };
@@ -338,10 +339,10 @@ impl ViewController {
         signals_wait_event: bool,
     ) -> Result<ViewController, Error> {
         let strategy = match view_mode {
-            ViewMode::Render { use_mold } => {
+            ViewMode::Render(render_options) => {
                 FrameBufferRenderViewStrategy::new(
                     key,
-                    use_mold,
+                    render_options,
                     &size,
                     pixel_format,
                     app_sender.clone(),

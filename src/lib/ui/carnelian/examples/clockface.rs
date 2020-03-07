@@ -6,8 +6,9 @@ use {
     anyhow::Error,
     argh::FromArgs,
     carnelian::{
-        make_app_assistant, render::*, AnimationMode, App, AppAssistant, Color, Point, Size,
-        ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMode,
+        make_app_assistant, render::*, AnimationMode, App, AppAssistant, Color, Point,
+        RenderOptions, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
+        ViewMode,
     },
     chrono::{Local, Timelike},
     euclid::{Angle, Point2D, Rect, Size2D, Transform2D, Vector2D},
@@ -24,19 +25,19 @@ const BACKGROUND_COLOR: Color = Color { r: 235, g: 213, b: 179, a: 255 };
 #[argh(name = "clockface_rs")]
 struct Args {
     /// use mold (software rendering back-end)
-    #[argh(switch, short = 'm')]
-    use_mold: bool,
+    #[argh(switch, short = 's')]
+    use_spinel: bool,
 }
 
 #[derive(Default)]
 struct ClockfaceAppAssistant {
-    use_mold: bool,
+    use_spinel: bool,
 }
 
 impl AppAssistant for ClockfaceAppAssistant {
     fn setup(&mut self) -> Result<(), Error> {
         let args: Args = argh::from_env();
-        self.use_mold = args.use_mold;
+        self.use_spinel = args.use_spinel;
         Ok(())
     }
 
@@ -45,7 +46,7 @@ impl AppAssistant for ClockfaceAppAssistant {
     }
 
     fn get_mode(&self) -> ViewMode {
-        ViewMode::Render { use_mold: self.use_mold }
+        ViewMode::Render(RenderOptions { use_spinel: self.use_spinel })
     }
 }
 

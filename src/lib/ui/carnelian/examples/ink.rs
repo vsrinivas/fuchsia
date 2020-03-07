@@ -6,8 +6,9 @@ use {
     anyhow::Error,
     argh::FromArgs,
     carnelian::{
-        make_app_assistant, render::*, AnimationMode, App, AppAssistant, Color, Point, Size,
-        ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMode,
+        make_app_assistant, render::*, AnimationMode, App, AppAssistant, Color, Point,
+        RenderOptions, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
+        ViewMode,
     },
     euclid::{Angle, Point2D, Rect, Size2D, Transform2D, Vector2D},
     fidl_fuchsia_hardware_input as hid, fidl_fuchsia_input_report as hid_input_report,
@@ -219,19 +220,19 @@ impl Flower {
 #[argh(name = "ink_rs")]
 struct Args {
     /// use mold (software rendering back-end)
-    #[argh(switch, short = 'm')]
-    use_mold: bool,
+    #[argh(switch, short = 's')]
+    use_spinel: bool,
 }
 
 #[derive(Default)]
 struct InkAppAssistant {
-    use_mold: bool,
+    use_spinel: bool,
 }
 
 impl AppAssistant for InkAppAssistant {
     fn setup(&mut self) -> Result<(), Error> {
         let args: Args = argh::from_env();
-        self.use_mold = args.use_mold;
+        self.use_spinel = args.use_spinel;
         Ok(())
     }
 
@@ -240,7 +241,7 @@ impl AppAssistant for InkAppAssistant {
     }
 
     fn get_mode(&self) -> ViewMode {
-        ViewMode::Render { use_mold: self.use_mold }
+        ViewMode::Render(RenderOptions { use_spinel: self.use_spinel })
     }
 }
 

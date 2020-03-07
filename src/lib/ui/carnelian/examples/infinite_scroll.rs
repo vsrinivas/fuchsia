@@ -7,7 +7,8 @@ use {
     argh::FromArgs,
     carnelian::{
         make_app_assistant, render::*, AnimationMode, App, AppAssistant, Color, FontFace, Point,
-        Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMode,
+        RenderOptions, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
+        ViewMode,
     },
     euclid::{Point2D, Rect, Size2D, Vector2D},
     fidl_fuchsia_input_report as hid_input_report, fuchsia_async as fasync,
@@ -72,15 +73,15 @@ lazy_static! {
 #[argh(name = "infinite_scroll_rs")]
 struct Args {
     /// use mold (software rendering back-end)
-    #[argh(switch, short = 'm')]
-    use_mold: bool,
+    #[argh(switch, short = 's')]
+    use_spinel: bool,
 
     /// contents scale (default scale is 3.0)
     #[argh(option, default = "3.0")]
     scale: f32,
 
     /// scrolling method (Redraw|CopyRedraw|SlidingOffset|MotionBlur)
-    #[argh(option, default = "ScrollMethod::MotionBlur")]
+    #[argh(option, default = "ScrollMethod::Redraw")]
     scroll_method: ScrollMethod,
 
     /// motion blur exposure time
@@ -108,7 +109,7 @@ struct InfiniteScrollAppAssistant {
 impl AppAssistant for InfiniteScrollAppAssistant {
     fn setup(&mut self) -> Result<(), Error> {
         let args: Args = argh::from_env();
-        println!("back-end: {}", if args.use_mold { "mold" } else { "spinel" });
+        println!("back-end: {}", if args.use_spinel { "mold" } else { "spinel" });
         println!("scale: {}", args.scale);
         println!("scroll method: {:?}", args.scroll_method);
         match args.scroll_method {
@@ -129,9 +130,9 @@ impl AppAssistant for InfiniteScrollAppAssistant {
     }
 
     fn get_mode(&self) -> ViewMode {
-        ViewMode::Render {
-            use_mold: self.args.as_ref().map(|args| args.use_mold).unwrap_or_default(),
-        }
+        ViewMode::Render(RenderOptions {
+            use_spinel: self.args.as_ref().map(|args| args.use_spinel).unwrap_or_default(),
+        })
     }
 }
 

@@ -28,6 +28,11 @@ use std::{cell::RefCell, collections::BTreeMap, pin::Pin, rc::Rc};
 
 pub type LocalBoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + 'a>>;
 
+#[derive(PartialEq, Debug, Default, Copy, Clone)]
+pub struct RenderOptions {
+    pub use_spinel: bool,
+}
+
 /// Mode for all views created by this application
 #[derive(PartialEq, Debug, Clone, Copy)]
 pub enum ViewMode {
@@ -41,7 +46,7 @@ pub enum ViewMode {
     /// take care of creating a buffer collection for view created by this app.
     ImagePipe,
     /// This apps view use the render module.
-    Render { use_mold: bool },
+    Render(RenderOptions),
 }
 
 #[derive(Clone)]
@@ -234,11 +239,11 @@ async fn create_app_strategy(
 ) -> Result<AppStrategyPtr, Error> {
     let usage = match assistant.get_mode() {
         ViewMode::ImagePipe => FrameUsage::Gpu,
-        ViewMode::Render { use_mold } => {
-            if use_mold {
-                FrameUsage::Cpu
-            } else {
+        ViewMode::Render(render_options) => {
+            if render_options.use_spinel {
                 FrameUsage::Gpu
+            } else {
+                FrameUsage::Cpu
             }
         }
         _ => FrameUsage::Cpu,

@@ -4,20 +4,22 @@
 
 use anyhow::{Context as _, Error};
 use carnelian::{
-    make_app_assistant, make_message, set_node_color, AnimationMode, App, AppAssistant, Color,
-    ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMessages,
+    make_app_assistant, make_message,
+    render::{
+        BlendMode, Composition, Context as RenderContext, Fill, FillRule, Layer, Path, PreClear,
+        Raster, RenderExt, Style,
+    },
+    AnimationMode, App, AppAssistant, Color, Coord, Point, Rect, RenderOptions, Size,
+    ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMessages, ViewMode,
 };
+use euclid::{Angle, Transform2D, Vector2D};
 use fidl::endpoints::{RequestStream, ServiceMarker};
 use fidl_fidl_examples_echo::{EchoMarker, EchoRequest, EchoRequestStream};
 use fidl_fuchsia_ui_input::{KeyboardEvent, KeyboardEventPhase};
 use fuchsia_async as fasync;
-use fuchsia_scenic::{Rectangle, RoundedRectangle, SessionPtr, ShapeNode};
-use fuchsia_zircon::{ClockId, Time};
+use fuchsia_zircon::{AsHandleRef, ClockId, Event, Signals, Time};
 use futures::prelude::*;
 use std::f32::consts::PI;
-
-const BACKGROUND_Z: f32 = 0.0;
-const SQUARE_Z: f32 = BACKGROUND_Z - 8.0;
 
 #[derive(Default)]
 struct SpinningSquareAppAssistant;
@@ -27,17 +29,12 @@ impl AppAssistant for SpinningSquareAppAssistant {
         Ok(())
     }
 
-    fn create_view_assistant(
-        &mut self,
-        _: ViewKey,
-        session: &SessionPtr,
-    ) -> Result<ViewAssistantPtr, Error> {
-        Ok(Box::new(SpinningSquareViewAssistant {
-            background_node: ShapeNode::new(session.clone()),
-            spinning_square_node: ShapeNode::new(session.clone()),
-            rounded: false,
-            start: Time::get(ClockId::Monotonic),
-        }))
+    fn create_view_assistant_render(&mut self, _: ViewKey) -> Result<ViewAssistantPtr, Error> {
+        SpinningSquareViewAssistant::new()
+    }
+
+    fn get_mode(&self) -> ViewMode {
+        ViewMode::Render(RenderOptions::default())
     }
 
     /// Return the list of names of services this app wants to provide
@@ -81,68 +78,172 @@ impl SpinningSquareAppAssistant {
     }
 }
 
+fn path_for_rectangle(bounds: &Rect, render_context: &mut RenderContext) -> Path {
+    let mut path_builder = render_context.path_builder().expect("path_builder");
+    path_builder.move_to(bounds.origin);
+    path_builder.line_to(bounds.top_right());
+    path_builder.line_to(bounds.bottom_right());
+    path_builder.line_to(bounds.bottom_left());
+    path_builder.line_to(bounds.origin);
+    path_builder.build()
+}
+
+fn path_for_rounded_rectangle(
+    bounds: &Rect,
+    corner_radius: Coord,
+    render_context: &mut RenderContext,
+) -> Path {
+    let kappa = 4.0 / 3.0 * (std::f32::consts::PI / 8.0).tan();
+    let control_dist = kappa * corner_radius;
+
+    let mut path_builder = render_context.path_builder().expect("path_builder");
+    let top_left_arc_start = bounds.origin + Vector2D::new(0.0, corner_radius);
+    let top_left_arc_end = bounds.origin + Vector2D::new(corner_radius, 0.0);
+    path_builder.move_to(top_left_arc_start);
+    let top_left_curve_center = bounds.origin + Vector2D::new(corner_radius, corner_radius);
+    let p1 = top_left_curve_center + Vector2D::new(-corner_radius, -control_dist);
+    let p2 = top_left_curve_center + Vector2D::new(-control_dist, -corner_radius);
+    path_builder.cubic_to(p1, p2, top_left_arc_end);
+
+    let top_right = bounds.top_right();
+    let top_right_arc_start = top_right + Vector2D::new(-corner_radius, 0.0);
+    let top_right_arc_end = top_right + Vector2D::new(0.0, corner_radius);
+    path_builder.line_to(top_right_arc_start);
+    let top_right_curve_center = top_right + Vector2D::new(-corner_radius, corner_radius);
+    let p1 = top_right_curve_center + Vector2D::new(control_dist, -corner_radius);
+    let p2 = top_right_curve_center + Vector2D::new(corner_radius, -control_dist);
+    path_builder.cubic_to(p1, p2, top_right_arc_end);
+
+    let bottom_right = bounds.bottom_right();
+    let bottom_right_arc_start = bottom_right + Vector2D::new(0.0, -corner_radius);
+    let bottom_right_arc_end = bottom_right + Vector2D::new(-corner_radius, 0.0);
+    path_builder.line_to(bottom_right_arc_start);
+    let bottom_right_curve_center = bottom_right + Vector2D::new(-corner_radius, -corner_radius);
+    let p1 = bottom_right_curve_center + Vector2D::new(corner_radius, control_dist);
+    let p2 = bottom_right_curve_center + Vector2D::new(control_dist, corner_radius);
+    path_builder.cubic_to(p1, p2, bottom_right_arc_end);
+
+    let bottom_left = bounds.bottom_left();
+    let bottom_left_arc_start = bottom_left + Vector2D::new(corner_radius, 0.0);
+    let bottom_left_arc_end = bottom_left + Vector2D::new(0.0, -corner_radius);
+    path_builder.line_to(bottom_left_arc_start);
+    let bottom_left_curve_center = bottom_left + Vector2D::new(corner_radius, -corner_radius);
+    let p1 = bottom_left_curve_center + Vector2D::new(-control_dist, corner_radius);
+    let p2 = bottom_left_curve_center + Vector2D::new(-corner_radius, control_dist);
+    path_builder.cubic_to(p1, p2, bottom_left_arc_end);
+
+    path_builder.line_to(top_left_arc_start);
+    path_builder.build()
+}
+
 struct SpinningSquareViewAssistant {
-    background_node: ShapeNode,
-    spinning_square_node: ShapeNode,
+    background_color: Color,
+    square_color: Color,
     rounded: bool,
     start: Time,
+    square_raster: Option<Raster>,
+    square_path: Option<Path>,
+    composition: Composition,
+}
+
+impl SpinningSquareViewAssistant {
+    fn new() -> Result<ViewAssistantPtr, Error> {
+        let square_color = Color { r: 0xff, g: 0x00, b: 0xff, a: 0xff };
+        let background_color = Color { r: 0xb7, g: 0x41, b: 0x0e, a: 0xff };
+        let start = Time::get(ClockId::Monotonic);
+        let composition = Composition::new(background_color);
+        Ok(Box::new(SpinningSquareViewAssistant {
+            background_color,
+            square_color,
+            rounded: false,
+            start,
+            square_raster: None,
+            square_path: None,
+            composition,
+        }))
+    }
+
+    fn clone_square_raster(&self) -> Raster {
+        self.square_raster.as_ref().expect("square_raster").clone()
+    }
+
+    fn clone_square_path(&self) -> Path {
+        self.square_path.as_ref().expect("square_path").clone()
+    }
+
+    fn toggle_rounded(&mut self) {
+        self.rounded = !self.rounded;
+        self.square_path = None;
+    }
 }
 
 impl ViewAssistant for SpinningSquareViewAssistant {
-    fn setup(&mut self, context: &ViewAssistantContext<'_>) -> Result<(), Error> {
-        set_node_color(
-            context.session(),
-            &self.background_node,
-            &Color { r: 0xb7, g: 0x41, b: 0x0e, a: 0xff },
-        );
-        set_node_color(
-            context.session(),
-            &self.spinning_square_node,
-            &Color { r: 0xff, g: 0x00, b: 0xff, a: 0xff },
-        );
-        context.root_node().add_child(&self.background_node);
-        context.root_node().add_child(&self.spinning_square_node);
+    fn setup(&mut self, _context: &ViewAssistantContext<'_>) -> Result<(), Error> {
         Ok(())
     }
 
-    fn update(&mut self, context: &ViewAssistantContext<'_>) -> Result<(), Error> {
+    fn update(&mut self, _context: &ViewAssistantContext<'_>) -> Result<(), Error> {
+        Ok(())
+    }
+
+    fn render(
+        &mut self,
+        render_context: &mut RenderContext,
+        ready_event: Event,
+        context: &ViewAssistantContext<'_>,
+    ) -> Result<(), Error> {
         const SPEED: f32 = 0.25;
         const SECONDS_PER_NANOSECOND: f32 = 1e-9;
+        const SQUARE_PATH_SIZE: Coord = 1.0;
+        const SQUARE_PATH_SIZE_2: Coord = SQUARE_PATH_SIZE / 2.0;
+        const CORNER_RADIUS: Coord = SQUARE_PATH_SIZE / 4.0;
 
-        let center_x = context.size.width * 0.5;
-        let center_y = context.size.height * 0.5;
-        self.background_node.set_shape(&Rectangle::new(
-            context.session().clone(),
-            context.size.width,
-            context.size.height,
-        ));
-        self.background_node.set_translation(center_x, center_y, BACKGROUND_Z);
-        let square_size = context.size.width.min(context.size.height) * 0.6;
+        let center_x = context.logical_size.width * 0.5;
+        let center_y = context.logical_size.height * 0.5;
+        let square_size = context.logical_size.width.min(context.logical_size.height) * 0.6;
         let t = ((context.presentation_time.into_nanos() - self.start.into_nanos()) as f32
             * SECONDS_PER_NANOSECOND
             * SPEED)
             % 1.0;
         let angle = t * PI * 2.0;
-        if self.rounded {
-            let corner_radius = (square_size / 4.0).ceil();
-            self.spinning_square_node.set_shape(&RoundedRectangle::new(
-                context.session().clone(),
-                square_size,
-                square_size,
-                corner_radius,
-                corner_radius,
-                corner_radius,
-                corner_radius,
-            ));
-        } else {
-            self.spinning_square_node.set_shape(&Rectangle::new(
-                context.session().clone(),
-                square_size,
-                square_size,
-            ));
+
+        if self.square_path.is_none() {
+            let top_left = Point::new(-SQUARE_PATH_SIZE_2, -SQUARE_PATH_SIZE_2);
+            let square = Rect::new(top_left, Size::new(SQUARE_PATH_SIZE, SQUARE_PATH_SIZE));
+            let square_path = if self.rounded {
+                path_for_rounded_rectangle(&square, CORNER_RADIUS, render_context)
+            } else {
+                path_for_rectangle(&square, render_context)
+            };
+            self.square_path.replace(square_path);
         }
-        self.spinning_square_node.set_translation(center_x, center_y, SQUARE_Z);
-        self.spinning_square_node.set_rotation(0.0, 0.0, (angle * 0.5).sin(), (angle * 0.5).cos());
+
+        let transformation = Transform2D::create_rotation(Angle::radians(angle))
+            .post_scale(square_size, square_size)
+            .post_translate(Vector2D::new(center_x, center_y));
+        let mut raster_builder = render_context.raster_builder().expect("raster_builder");
+        raster_builder.add(&self.clone_square_path(), Some(&transformation));
+        self.square_raster = Some(raster_builder.build());
+
+        let layers = std::iter::once(Layer {
+            raster: self.clone_square_raster(),
+            style: Style {
+                fill_rule: FillRule::NonZero,
+                fill: Fill::Solid(self.square_color),
+                blend_mode: BlendMode::Over,
+            },
+        });
+
+        self.composition.replace(.., layers);
+
+        let image = render_context.get_current_image(context);
+        let ext = RenderExt {
+            pre_clear: Some(PreClear { color: self.background_color }),
+            ..Default::default()
+        };
+        render_context.render(&self.composition, None, image, &ext);
+        render_context.flush_image(image);
+        ready_event.as_handle_ref().signal(Signals::NONE, Signals::EVENT_SIGNALED)?;
         Ok(())
     }
 
@@ -158,7 +259,7 @@ impl ViewAssistant for SpinningSquareViewAssistant {
         if keyboard_event.code_point == ' ' as u32
             && keyboard_event.phase == KeyboardEventPhase::Pressed
         {
-            self.rounded = !self.rounded;
+            self.toggle_rounded();
         }
         context.queue_message(make_message(ViewMessages::Update));
         Ok(())
@@ -166,5 +267,6 @@ impl ViewAssistant for SpinningSquareViewAssistant {
 }
 
 fn main() -> Result<(), Error> {
+    fuchsia_trace_provider::trace_provider_create_with_fdio();
     App::run(make_app_assistant::<SpinningSquareAppAssistant>())
 }

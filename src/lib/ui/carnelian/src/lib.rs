@@ -21,7 +21,7 @@ mod view;
 pub use crate::{
     app::{
         make_app_assistant, App, AppAssistant, AppAssistantPtr, AppContext, AssistantCreator,
-        AssistantCreatorFunc, FrameBufferPtr, LocalBoxFuture, ViewMode,
+        AssistantCreatorFunc, FrameBufferPtr, LocalBoxFuture, RenderOptions, ViewMode,
     },
     canvas::{
         measure_text, Canvas, Color, FontDescription, FontFace, MappingPixelSink, Paint, PixelSink,
