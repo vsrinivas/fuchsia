@@ -65,8 +65,11 @@ AddressRanges GetCodeRanges(const llvm::DWARFDie& die) {
 // returns an empty FileLine.
 FileLine MakeFileLine(llvm::DWARFUnit* unit, const llvm::Optional<std::string>& file,
                       const llvm::Optional<uint64_t>& line) {
+  std::string compilation_dir;
+  if (unit->getCompilationDir())
+    compilation_dir = unit->getCompilationDir();
   if (file && line)
-    return FileLine(*file, unit->getCompilationDir(), static_cast<int>(*line));
+    return FileLine(*file, compilation_dir, static_cast<int>(*line));
   return FileLine();
 }
 
