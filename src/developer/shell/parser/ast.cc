@@ -184,4 +184,25 @@ Field::Field(size_t start, std::vector<std::shared_ptr<Node>> children)
   }
 }
 
+// Visit implementations
+void Node::Visit(NodeVisitor* visitor) const { visitor->VisitNode(*this); }
+void Terminal::Visit(NodeVisitor* visitor) const { visitor->VisitTerminal(*this); }
+void Error::Visit(NodeVisitor* visitor) const { visitor->VisitError(*this); }
+void DecimalGroup::Visit(NodeVisitor* visitor) const { visitor->VisitDecimalGroup(*this); }
+void HexGroup::Visit(NodeVisitor* visitor) const { visitor->VisitHexGroup(*this); }
+void UnescapedIdentifier::Visit(NodeVisitor* visitor) const {
+  visitor->VisitUnescapedIdentifier(*this);
+}
+void StringEntity::Visit(NodeVisitor* visitor) const { visitor->VisitStringEntity(*this); }
+void EscapeSequence::Visit(NodeVisitor* visitor) const { visitor->VisitEscapeSequence(*this); }
+void Nonterminal::Visit(NodeVisitor* visitor) const { visitor->VisitNonterminal(*this); }
+void Program::Visit(NodeVisitor* visitor) const { visitor->VisitProgram(*this); }
+void VariableDecl::Visit(NodeVisitor* visitor) const { visitor->VisitVariableDecl(*this); }
+void Integer::Visit(NodeVisitor* visitor) const { visitor->VisitInteger(*this); }
+void String::Visit(NodeVisitor* visitor) const { visitor->VisitString(*this); }
+void Identifier::Visit(NodeVisitor* visitor) const { visitor->VisitIdentifier(*this); }
+void Object::Visit(NodeVisitor* visitor) const { visitor->VisitObject(*this); }
+void Field::Visit(NodeVisitor* visitor) const { visitor->VisitField(*this); }
+void Expression::Visit(NodeVisitor* visitor) const { visitor->VisitExpression(*this); }
+
 }  // namespace shell::parser::ast

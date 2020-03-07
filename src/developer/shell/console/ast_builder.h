@@ -68,6 +68,9 @@ class AstBuilder {
   // Adds an integer literal node with the value |i|.  Returns the resulting node_id.
   uint64_t AddIntegerLiteral(int64_t i);
 
+  // Adds a string literal node with the value |s|.  Returns the resulting node_id.
+  uint64_t AddStringLiteral(std::string s);
+
   struct NodePair {
     uint64_t value_node;
     uint64_t schema_node;

@@ -4,6 +4,8 @@
 
 #include "src/developer/shell/console/ast_builder.h"
 
+#include <algorithm>
+
 namespace shell::console {
 
 uint64_t AstBuilder::AddNode(llcpp::fuchsia::shell::Node&& node, bool is_root) {
@@ -71,6 +73,14 @@ uint64_t AstBuilder::AddIntegerLiteral(int64_t i) {
   literal->absolute_value = ::fidl::VectorView<uint64_t>(managed_val, 1);
   literal->negative = (i < 0);
   auto node = llcpp::fuchsia::shell::Node::WithIntegerLiteral(fidl::unowned(literal));
+  uint64_t node_id = AddNode(std::move(node));
+
+  return node_id;
+}
+
+uint64_t AstBuilder::AddStringLiteral(std::string s) {
+  fidl::StringView view(s);
+  auto node = llcpp::fuchsia::shell::Node::WithStringLiteral(fidl::unowned(ManageCopyOf(&view)));
   uint64_t node_id = AddNode(std::move(node));
 
   return node_id;
