@@ -96,63 +96,63 @@ func getImages(ctx context.Context) ([]bootserver.Image, func() error, error) {
 	var imgs []bootserver.Image
 	if bootKernel != "" {
 		imgs = append(imgs, bootserver.Image{
-			Name: "netboot",
+			Name: "zbi_netboot",
 			Path: bootKernel,
 			Args: []string{"--boot"},
 		})
 	}
 	if bootloader != "" {
 		imgs = append(imgs, bootserver.Image{
-			Name: "efi",
+			Name: "blk_efi",
 			Path: bootloader,
 			Args: []string{"--bootloader"},
 		})
 	}
 	if fvm != "" {
 		imgs = append(imgs, bootserver.Image{
-			Name: "storage-sparse",
+			Name: "blk_storage-sparse",
 			Path: fvm,
 			Args: []string{"--fvm"},
 		})
 	}
 	if zircona != "" {
 		imgs = append(imgs, bootserver.Image{
-			Name: "zircon-a",
+			Name: "zbi_zircon-a",
 			Path: zircona,
 			Args: []string{"--zircona"},
 		})
 	}
 	if zirconb != "" {
 		imgs = append(imgs, bootserver.Image{
-			Name: "zircon-b",
+			Name: "zbi_zircon-b",
 			Path: zirconb,
 			Args: []string{"--zirconb"},
 		})
 	}
 	if zirconr != "" {
 		imgs = append(imgs, bootserver.Image{
-			Name: "zircon-r",
+			Name: "zbi_zircon-r",
 			Path: zirconr,
 			Args: []string{"--zirconr"},
 		})
 	}
 	if vbmetaa != "" {
 		imgs = append(imgs, bootserver.Image{
-			Name: "zircon-a",
+			Name: "vbmeta_zircon-a",
 			Path: vbmetaa,
 			Args: []string{"--vbmetaa"},
 		})
 	}
 	if vbmetab != "" {
 		imgs = append(imgs, bootserver.Image{
-			Name: "zircon-b",
+			Name: "vbmeta_zircon-b",
 			Path: vbmetab,
 			Args: []string{"--vbmetab"},
 		})
 	}
 	if vbmetar != "" {
 		imgs = append(imgs, bootserver.Image{
-			Name: "zircon-r",
+			Name: "vbmeta_zircon-r",
 			Path: vbmetar,
 			Args: []string{"--vbmetar"},
 		})

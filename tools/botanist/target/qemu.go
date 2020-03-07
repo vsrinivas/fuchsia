@@ -187,19 +187,19 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 	var qemuKernel, zirconA, storageFull bootserver.Image
 	for _, img := range images {
 		switch img.Name {
-		case "qemu-kernel":
+		case "kernel_qemu-kernel":
 			qemuKernel = img
-		case "zircon-a":
+		case "zbi_zircon-a":
 			zirconA = img
-		case "storage-full":
+		case "blk_storage-full":
 			storageFull = img
 		}
 	}
 	if qemuKernel.Reader == nil {
-		return fmt.Errorf("could not find qemu-kernel")
+		return fmt.Errorf("could not find kernel_qemu-kernel")
 	}
 	if zirconA.Reader == nil {
-		return fmt.Errorf("could not find zircon-a")
+		return fmt.Errorf("could not find zbi_zircon-a")
 	}
 	// The QEMU command needs to be invoked within an emptm directory, as QEMU
 	// will attempt to pick up files from its working directory, one notable

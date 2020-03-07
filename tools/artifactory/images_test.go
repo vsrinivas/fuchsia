@@ -36,6 +36,7 @@ func TestImageUploads(t *testing.T) {
 				PaveArgs: []string{"--bootloader"},
 				Name:     "bootloader",
 				Path:     "bootloader",
+				Type:     "blk",
 			},
 			{
 				PaveArgs: []string{"--zirconr"},

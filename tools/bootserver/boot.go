@@ -266,7 +266,7 @@ func transfer(ctx context.Context, t tftp.Client, files []*netsvcFile) error {
 			// Attempt to send a file. If the server tells us we need to wait, then try
 			// again as long as it keeps telling us this. ErrShouldWait implies the server
 			// is still responding and will eventually be able to handle our request.
-			log.Printf("attempting to send %s...\n", f.name)
+			log.Printf("attempting to send %s (%d)...\n", f.name, f.size)
 			for {
 				if ctx.Err() != nil {
 					return nil

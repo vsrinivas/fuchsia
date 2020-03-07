@@ -27,7 +27,8 @@ func TestGetImages(t *testing.T) {
       "--bootloader"
     ],
     "name": "bootloader",
-    "path": "bootloader"
+    "path": "bootloader",
+    "type": "blk"
   },
   {
     "bootserver_pave": [
@@ -64,21 +65,21 @@ func TestGetImages(t *testing.T) {
 		bootMode Mode
 	}
 	bootloaderImage := testImage{
-		name:     "bootloader",
+		name:     "blk_bootloader",
 		args:     []string{"--bootloader"},
 		path:     filepath.Join(tmpDir, "bootloader"),
 		contents: "bootloader contents",
 		bootMode: ModePave,
 	}
 	zedbootImage := testImage{
-		name:     "zircon-r",
+		name:     "zbi_zircon-r",
 		args:     []string{"--zirconr"},
 		path:     filepath.Join(tmpDir, "zedboot.zbi"),
 		contents: "zedboot contents",
 		bootMode: ModePave,
 	}
 	netbootImage := testImage{
-		name:     "netboot",
+		name:     "zbi_netboot",
 		args:     []string{"--boot"},
 		path:     filepath.Join(tmpDir, "netboot.zbi"),
 		contents: "netboot contents",

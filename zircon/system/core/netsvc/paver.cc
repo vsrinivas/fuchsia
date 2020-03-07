@@ -518,7 +518,7 @@ tftp_status Paver::OpenWrite(const char* filename, size_t size) {
 
   auto status = buffer_mapper_.CreateAndMap(size, "paver");
   if (status != ZX_OK) {
-    printf("netsvc: unable to allocate and map buffer\n");
+    printf("netsvc: unable to allocate and map buffer. Size - %lu, Error - %d\n", size, status);
     return status;
   }
   fbl::AutoCall buffer_cleanup([this]() { buffer_mapper_.Reset(); });

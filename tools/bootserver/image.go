@@ -70,7 +70,7 @@ func ConvertFromBuildImages(buildImages []build.Image, bootMode Mode) ([]Image, 
 			return nil, closeFunc, err
 		}
 		imgs = append(imgs, Image{
-			Name:   buildImg.Name,
+			Name:   buildImg.Type + "_" + buildImg.Name,
 			Path:   buildImg.Path,
 			Reader: reader,
 			Size:   fi.Size(),
@@ -202,7 +202,7 @@ func ImagesFromGCS(ctx context.Context, manifest *url.URL, bootMode Mode) ([]Ima
 		}
 
 		imgs = append(imgs, Image{
-			Name:   buildImg.Name,
+			Name:   buildImg.Type + "_" + buildImg.Name,
 			Reader: &gcsReader{obj: obj},
 			Size:   objAttrs.Size,
 			Args:   args,

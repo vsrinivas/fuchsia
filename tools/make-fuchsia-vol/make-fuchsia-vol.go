@@ -63,6 +63,7 @@ const imageManifest = "images.json"
 type imageManifestEntry struct {
 	Name string `json:"name"`
 	Path string `json:"path"`
+	Type string `json:"type"`
 }
 
 // imagePaths contains the default image paths that are produced by a build manifest, populated by tryLoadManifests.
@@ -102,7 +103,7 @@ func tryLoadManifests() {
 	}
 
 	for _, image := range entries {
-		imagePaths[image.Name] = image.Path
+		imagePaths[image.Type+"_"+image.Name] = image.Path
 	}
 }
 
@@ -138,7 +139,7 @@ func main() {
 
 	if *zbi == "" {
 		needZirconBuildDir()
-		*zbi = filepath.Join(*fuchsiaBuildDir, getImage("zircon-a"))
+		*zbi = filepath.Join(*fuchsiaBuildDir, getImage("zbi_zircon-a"))
 	}
 	if _, err := os.Stat(*zbi); err != nil {
 		log.Fatalf("cannot read %q: %s", *zbi, err)
@@ -146,7 +147,7 @@ func main() {
 
 	if *zedboot == "" {
 		needFuchsiaBuildDir()
-		*zedboot = filepath.Join(*fuchsiaBuildDir, getImage("zircon-r"))
+		*zedboot = filepath.Join(*fuchsiaBuildDir, getImage("zbi_zircon-r"))
 	}
 	if _, err := os.Stat(*zedboot); err != nil {
 		log.Fatalf("cannot read %q: %s", *zedboot, err)
@@ -173,18 +174,18 @@ func main() {
 			*zirconB = *zbi
 		}
 		if *zirconR == "" {
-			*zirconR = filepath.Join(*fuchsiaBuildDir, getImage("zircon-r"))
+			*zirconR = filepath.Join(*fuchsiaBuildDir, getImage("zbi_zircon-r"))
 		}
 	}
 
 	if !*ramdiskOnly {
 		if *blob == "" {
 			needFuchsiaBuildDir()
-			*blob = filepath.Join(*fuchsiaBuildDir, getImage("blob"))
+			*blob = filepath.Join(*fuchsiaBuildDir, getImage("blk_blob"))
 		}
 		if *data == "" {
 			needFuchsiaBuildDir()
-			*data = filepath.Join(*fuchsiaBuildDir, getImage("data"))
+			*data = filepath.Join(*fuchsiaBuildDir, getImage("blk_data"))
 		}
 
 		if _, err := os.Stat(*blob); err != nil {
