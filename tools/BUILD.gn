@@ -62,6 +62,7 @@ group("tests") {
     "//tools/debug:tests($host_toolchain)",
     "//tools/fidlcat:fidlcat_host_tests($host_toolchain)",
     "//tools/fidlcat/tests",
+    "//tools/fuzz:tests($host_toolchain)",
     "//tools/integration:tests($host_toolchain)",
     "//tools/lib:tests($host_toolchain)",
     "//tools/net:tests($host_toolchain)",
