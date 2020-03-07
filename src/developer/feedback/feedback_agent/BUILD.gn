@@ -120,6 +120,7 @@ source_set("data_provider") {
     "//src/developer/feedback/feedback_agent/annotations:static_annotations",
     "//src/developer/feedback/feedback_agent/attachments:aliases",
     "//src/developer/feedback/feedback_agent/attachments:attachment_providers",
+    "//src/developer/feedback/feedback_agent/attachments:static_attachments",
     "//src/developer/feedback/feedback_agent/attachments:util",
     "//src/developer/feedback/utils:archive",
     "//src/developer/feedback/utils:promise",

@@ -14,10 +14,9 @@
 #include "src/developer/feedback/feedback_agent/attachments/aliases.h"
 #include "src/developer/feedback/feedback_agent/attachments/inspect_ptr.h"
 #include "src/developer/feedback/feedback_agent/attachments/kernel_log_ptr.h"
-#include "src/developer/feedback/feedback_agent/attachments/previous_system_log_ptr.h"
+#include "src/developer/feedback/feedback_agent/attachments/static_attachments.h"
 #include "src/developer/feedback/feedback_agent/attachments/system_log_ptr.h"
 #include "src/developer/feedback/feedback_agent/constants.h"
-#include "src/lib/files/file.h"
 #include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
@@ -32,7 +31,8 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
       timeout_(timeout),
       annotation_allowlist_(annotation_allowlist),
       attachment_allowlist_(attachment_allowlist),
-      static_annotations_(GetStaticAnnotations(annotation_allowlist_)) {
+      static_annotations_(GetStaticAnnotations(annotation_allowlist_)),
+      static_attachments_(GetStaticAttachments(attachment_allowlist_)) {
   if (annotation_allowlist_.empty()) {
     FX_LOGS(WARNING)
         << "Annotation allowlist is empty, no annotations will be collected or returned";
@@ -88,63 +88,44 @@ fit::promise<Attachments> Datastore::GetAttachments() {
   }
 
   return fit::join_promise_vector(std::move(attachments))
-      .and_then([](std::vector<fit::result<Attachment>>& attachments) -> fit::result<Attachments> {
-        Attachments ok_attachments;
-        for (auto& result : attachments) {
-          if (result.is_ok()) {
-            Attachment attachment = result.take_value();
-            ok_attachments[attachment.first] = attachment.second;
-          }
-        }
+      .and_then(
+          [this](std::vector<fit::result<Attachment>>& attachments) -> fit::result<Attachments> {
+            // We seed the returned attachments with the static ones.
+            Attachments ok_attachments(static_attachments_.begin(), static_attachments_.end());
 
-        if (ok_attachments.empty()) {
-          return fit::error();
-        }
+            // We then augment them with the dynamic ones.
+            for (auto& result : attachments) {
+              if (result.is_ok()) {
+                Attachment attachment = result.take_value();
+                ok_attachments[attachment.first] = attachment.second;
+              }
+            }
 
-        return fit::ok(ok_attachments);
-      });
+            if (ok_attachments.empty()) {
+              return fit::error();
+            }
+
+            return fit::ok(ok_attachments);
+          });
 }
 
 fit::promise<Attachment> Datastore::BuildAttachment(const AttachmentKey& key) {
-  return BuildAttachmentValue(key)
-      .and_then([key](AttachmentValue& value) -> fit::result<Attachment> {
+  return BuildAttachmentValue(key).and_then(
+      [key](AttachmentValue& value) -> fit::result<Attachment> {
         return fit::ok(Attachment(key, value));
-      })
-      .or_else([key]() {
-        FX_LOGS(WARNING) << "Failed to build attachment " << key;
-        return fit::error();
       });
 }
 
-namespace {
-
-fit::promise<std::string> StringFromFilepath(const std::string& filepath) {
-  std::string content;
-  if (!files::ReadFileToString(filepath, &content)) {
-    FX_LOGS(ERROR) << "Failed to read attachment from file " << filepath;
-    return fit::make_result_promise<AttachmentValue>(fit::error());
-  }
-
-  return fit::make_result_promise<AttachmentValue>(fit::ok(content));
-}
-
-}  // namespace
-
 fit::promise<AttachmentValue> Datastore::BuildAttachmentValue(const AttachmentKey& key) {
-  if (key == kAttachmentBuildSnapshot) {
-    return StringFromFilepath("/config/build-info/snapshot");
-  } else if (key == kAttachmentLogKernel) {
+  if (key == kAttachmentLogKernel) {
     return CollectKernelLog(dispatcher_, services_, timeout_, cobalt_);
-  } else if (key == kAttachmentLogSystemPrevious) {
-    return CollectPreviousSystemLog();
   } else if (key == kAttachmentLogSystem) {
     return CollectSystemLog(dispatcher_, services_, timeout_, cobalt_);
   } else if (key == kAttachmentInspect) {
     return CollectInspectData(dispatcher_, services_, timeout_, cobalt_);
-  } else {
-    FX_LOGS(WARNING) << "Unknown attachment " << key;
-    return fit::make_result_promise<AnnotationValue>(fit::error());
   }
+  // There are static attachments in the allowlist that we just skip here.
+  return fit::make_result_promise<AnnotationValue>(fit::error());
 }
 
 }  // namespace feedback

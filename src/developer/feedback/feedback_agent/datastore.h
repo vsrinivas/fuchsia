@@ -47,6 +47,7 @@ class Datastore {
   const AttachmentKeys attachment_allowlist_;
 
   const Annotations static_annotations_;
+  const Attachments static_attachments_;
 
   fit::promise<Attachment> BuildAttachment(const AttachmentKey& key);
   fit::promise<AttachmentValue> BuildAttachmentValue(const AttachmentKey& key);

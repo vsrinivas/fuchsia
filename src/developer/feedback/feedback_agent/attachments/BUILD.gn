@@ -15,8 +15,6 @@ source_set("attachment_providers") {
     "inspect_ptr.h",
     "kernel_log_ptr.cc",
     "kernel_log_ptr.h",
-    "previous_system_log_ptr.cc",
-    "previous_system_log_ptr.h",
     "screenshot_ptr.cc",
     "screenshot_ptr.h",
     "system_log_ptr.cc",
@@ -44,8 +42,22 @@ source_set("attachment_providers") {
     "//src/developer/feedback/feedback_agent:constants",
     "//src/developer/feedback/utils:logs",
     "//src/developer/feedback/utils:promise",
-    "//src/lib/files",
     "//src/lib/fsl",
+    "//src/lib/syslog/cpp",
+  ]
+}
+
+source_set("static_attachments") {
+  sources = [
+    "static_attachments.cc",
+    "static_attachments.h",
+  ]
+
+  public_deps = [ ":aliases" ]
+
+  deps = [
+    "//src/developer/feedback/feedback_agent:constants",
+    "//src/lib/files",
     "//src/lib/syslog/cpp",
   ]
 }
