@@ -28,7 +28,6 @@ namespace netsvc {
 namespace {
 
 size_t NB_IMAGE_PREFIX_LEN() { return strlen(NB_IMAGE_PREFIX); }
-size_t NB_FILENAME_PREFIX_LEN() { return strlen(NB_FILENAME_PREFIX); }
 
 zx_status_t ClearSysconfig(const fbl::unique_fd& devfs_root) {
   std::optional<sysconfig::SyncClient> client;

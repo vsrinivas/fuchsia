@@ -100,7 +100,7 @@ fbl::unique_fd FindGpt() {
   return fbl::unique_fd();
 }  // namespace
 
-static bool IsChromebook(const zx::channel& sysinfo) {
+[[maybe_unused]] static bool IsChromebook(const zx::channel& sysinfo) {
   auto result = ::llcpp::fuchsia::sysinfo::SysInfo::Call::GetBootloaderVendor(zx::unowned(sysinfo));
   zx_status_t status = result.ok() ? result->status : result.status();
   if (status != ZX_OK) {
