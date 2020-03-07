@@ -57,7 +57,7 @@ config("rust_target") {
   rustflags = [
     "--target",
     rust_target,
-    "--cap-lints=$rust_cap_lints"
+    "--cap-lints=$rust_cap_lints",
   ]
 }
 
@@ -310,10 +310,16 @@ config("default_frame_pointers") {
 
 config("frame_pointers") {
   cflags = [ "-fno-omit-frame-pointer" ]
+  ldflags = cflags
+  rustflags = [ "-Cforce-frame-pointers" ]
 }
 
 config("no_frame_pointers") {
   cflags = [ "-fomit-frame-pointer" ]
+  ldflags = cflags
+
+  # rustc automatically does this for release builds, and there's no way to
+  # force it for non-release.
 }
 
 config("default_warnings") {

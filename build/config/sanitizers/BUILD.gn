@@ -5,11 +5,6 @@
 import("//build/config/clang/clang.gni")
 import("//build/toolchain/variant.gni")
 
-config("frame_pointers") {
-  cflags = [ "-fno-omit-frame-pointer" ]
-  ldflags = cflags
-}
-
 declare_args() {
   # Default [AddressSanitizer](https://clang.llvm.org/docs/AddressSanitizer.html)
   # options (before the `ASAN_OPTIONS` environment variable is read at
@@ -93,7 +88,7 @@ variant("asan") {
 
   # ASan wants frame pointers because it captures stack traces
   # on allocations and such, not just on errors.
-  configs = [ ":frame_pointers" ]
+  configs = [ "//build/config:frame_pointers" ]
 
   if (asan_default_options != "") {
     deps = [ ":asan_default_options" ]
