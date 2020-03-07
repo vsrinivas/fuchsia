@@ -215,7 +215,6 @@ The component manifest for our tests is
     },
     "sandbox": {
         "features": [
-            "deprecated-shell",
             "deprecated-ambient-replace-as-executable"
         ],
         "services": [
