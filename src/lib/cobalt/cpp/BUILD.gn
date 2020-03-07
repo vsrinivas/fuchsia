@@ -30,6 +30,7 @@ source_set("unittests") {
   sources = [
     "cobalt_event_builder_unittest.cc",
     "cobalt_logger_unittest.cc",
+    "metric_event_builder_unittest.cc",
   ]
 
   public_deps = [ "//garnet/public/lib/gtest" ]
@@ -37,6 +38,7 @@ source_set("unittests") {
   deps = [
     ":cobalt_event_builder",
     ":cobalt_logger",
+    ":metric_event_builder",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fsl",
     "//third_party/googletest:gtest",
@@ -48,6 +50,15 @@ source_set("cobalt_event_builder") {
   sources = [
     "cobalt_event_builder.cc",
     "cobalt_event_builder.h",
+  ]
+  configs += [ "//third_party/cobalt:cobalt_config" ]
+  public_deps = [ "//zircon/system/fidl/fuchsia-cobalt" ]
+}
+
+source_set("metric_event_builder") {
+  sources = [
+    "metric_event_builder.cc",
+    "metric_event_builder.h",
   ]
   configs += [ "//third_party/cobalt:cobalt_config" ]
   public_deps = [ "//zircon/system/fidl/fuchsia-cobalt" ]
