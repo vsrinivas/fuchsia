@@ -51,7 +51,18 @@ source_set("suppress-lsan.DO-NOT-USE-THIS") {
     defines = [ "ASAN_DEFAULT_OPTIONS=\"detect_leaks=0\"" ]
     configs -= [ "//build/config:symbol_visibility_hidden" ]
     cflags = [ "-fPIE" ]
+
+    # TODO(45130): See below.
+    public_configs = [ ":rust-suppress-lsan.DO-NOT-USE-THIS" ]
   }
+}
+
+# TODO(45130): See below.
+config("rust-suppress-lsan.DO-NOT-USE-THIS") {
+  visibility = [ ":suppress-lsan.DO-NOT-USE-THIS" ]
+  rustflags = [ "-Clink-arg=" + rebase_path(
+                    "$target_out_dir/suppress-lsan.DO-NOT-USE-THIS.asan_default_options.c.o",
+                    root_build_dir) ]
 }
 
 variant("asan") {
