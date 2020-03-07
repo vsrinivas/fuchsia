@@ -8,6 +8,7 @@ zx_executable("kstress") {
   sources = [
     "main.cc",
     "stress_test.cc",
+    "vmstress.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-boot:c",
@@ -16,11 +17,4 @@ zx_executable("kstress") {
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
   ]
-
-  # The vmstress test has starvation issues when run without the fair scheduler.
-  if (select_scheduler != "legacy") {
-    sources += [ "vmstress.cc" ]
-  } else {
-    defines = [ "DISABLE_VMSTRESS" ]
-  }
 }

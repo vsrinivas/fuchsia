@@ -18,21 +18,12 @@ source_set("kernel") {
     "mutex.cc",
     "owned_wait_queue.cc",
     "percpu.cc",
+    "scheduler.cc",
     "semaphore.cc",
     "thread.cc",
     "timer.cc",
     "wait.cc",
   ]
-
-  if (select_scheduler == "legacy") {
-    sources += [ "legacy_scheduler.cc" ]
-  } else if (select_scheduler == "fair") {
-    sources += [ "fair_scheduler.cc" ]
-  } else if (select_scheduler == "unified") {
-    sources += [ "scheduler.cc" ]
-  } else {
-    assert(false, "Invalid scheduler selection!")
-  }
 
   deps = [
     ":tests",

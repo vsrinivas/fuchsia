@@ -131,10 +131,6 @@ static int cmd_threadstats(int argc, const cmd_args* argv, uint32_t flags) {
     printf("\tyields: %lu\n", percpu.stats.yields);
     printf("\ttimer interrupts: %lu\n", percpu.stats.timer_ints);
     printf("\ttimers: %lu\n", percpu.stats.timers);
-#if WITH_FAIR_SCHEDULER
-    printf("\ttotal weight: %" PRIi64 "\n", percpu.scheduler.GetTotalWeight().raw_value());
-    printf("\trunnable tasks: %zu\n", percpu.scheduler.GetRunnableTasks());
-#endif
   }
 
   return 0;
@@ -265,7 +261,6 @@ static int cmd_threadload(int argc, const cmd_args* argv, uint32_t flags) {
   return 0;
 }
 
-#if WITH_FAIR_SCHEDULER || WITH_UNIFIED_SCHEDULER
 static int cmd_threadq(int argc, const cmd_args* argv, uint32_t flags) {
   static RecurringCallback callback([]() {
     printf("----------------------------------------------------\n");
@@ -286,27 +281,3 @@ static int cmd_threadq(int argc, const cmd_args* argv, uint32_t flags) {
 
   return 0;
 }
-#else
-static int cmd_threadq(int argc, const cmd_args* argv, uint32_t flags) {
-  static RecurringCallback cb([]() {
-    for (uint i = 0; i < percpu::processor_count(); i++) {
-      Guard<spin_lock_t, NoIrqSave> thread_lock_guard{ThreadLock::Get()};
-
-      // dont display time for inactive cpus
-      if (!mp_is_cpu_active(i)) {
-        continue;
-      }
-
-      printf("cpu %2u:", i);
-      for (uint p = 0; p < NUM_PRIORITIES; p++) {
-        printf(" %2zu", list_length(&percpu::Get(i).run_queue[p]));
-      }
-      printf("\n");
-    }
-  });
-
-  cb.Toggle();
-
-  return 0;
-}
-#endif

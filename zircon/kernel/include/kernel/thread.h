@@ -421,14 +421,7 @@ struct Thread {
   int priority_boost_;
   int inherited_priority_;
 
-#if WITH_FAIR_SCHEDULER || WITH_UNIFIED_SCHEDULER
-  // state used by the new scheduler.
-  // TODO(eieio): Find a way to abstract the O(1) scheduler state so that code
-  // outside of the sched implementation uses a uniform interface to
-  // manipulate priority. This makes it possible to eliminate redundant state
-  // when one scheduler or another is enabled.
   SchedulerState scheduler_state_;
-#endif
 
   // current cpu the thread is either running on or in the ready queue, undefined otherwise
   cpu_num_t curr_cpu_;

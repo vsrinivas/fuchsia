@@ -364,14 +364,6 @@ zero add increasing details at the cost of increased trace buffer use.
 
 From //kernel/params.gni:41
 
-### select_scheduler
-Select an available scheduler.
-Valid values are: "legacy", "fair", "unified"
-
-**Current value (from the default):** `"unified"`
-
-From //kernel/params.gni:32
-
 ### smp_max_cpus
 
 **Current value (from the default):** `16`

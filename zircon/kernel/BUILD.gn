@@ -266,17 +266,7 @@ if (current_toolchain == default_toolchain) {
 
   config("scheduler") {
     visibility = [ ":*" ]
-    defines = []
-    if (select_scheduler == "legacy") {
-      defines += [ "WITH_LEGACY_SCHEDULER=1" ]
-    } else if (select_scheduler == "fair") {
-      defines += [ "WITH_FAIR_SCHEDULER=1" ]
-    } else if (select_scheduler == "unified") {
-      defines += [ "WITH_UNIFIED_SCHEDULER=1" ]
-    } else {
-      assert(false, "Invalid scheduler selection!")
-    }
-    defines += [ "SCHEDULER_TRACING_LEVEL=$scheduler_tracing_level" ]
+    defines = [ "SCHEDULER_TRACING_LEVEL=$scheduler_tracing_level" ]
   }
 
   # This is the kernel proper, an ELF executable with full symbols.
