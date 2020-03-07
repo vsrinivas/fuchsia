@@ -181,6 +181,7 @@ class VDsoCodeWindow {
 // VDso::CreateVariant (below) to block a category of syscalls for a particular
 // variant vDSO.
 #define SYSCALL_CATEGORY_BEGIN(category) \
+  [[maybe_unused]]                       \
   void block_##category##_syscalls(VDsoDynSymWindow& dynsym_window, VDsoCodeWindow& code_window) {
 #define SYSCALL_IN_CATEGORY(syscall) BLOCK_SYSCALL(dynsym_window, code_window, zx_##syscall);
 #define SYSCALL_CATEGORY_END(category) }
