@@ -26,13 +26,13 @@ rustc_library("core") {
     "//third_party/rust_crates:timebomb",
     "//third_party/rust_crates/transitional/quiche",
   ]
+  test_deps = [ "//src/lib/fidl/rust/fidl_handle_tests" ]
   if (is_fuchsia) {
     deps += [
       "//src/lib/fuchsia-async",
       "//src/lib/zircon/rust:fuchsia-zircon",
     ]
-  }
-  if (!is_fuchsia) {
+  } else {
     deps += [
       "//third_party/rust_crates:tempfile",
       "//third_party/rust_crates:tokio",

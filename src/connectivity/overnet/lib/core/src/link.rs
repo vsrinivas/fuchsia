@@ -180,6 +180,16 @@ impl Link {
         );
         let packet = &mut packet[..packet_length];
 
+        if routing_label.src == self.own_node_id {
+            // Got a packet that was sourced here: break the infinite loop by definitely not
+            // processing it.
+            bail!(
+                "Received looped packet; routing_label={:?} packet_length={}",
+                routing_label,
+                packet_length
+            );
+        }
+
         routing_label.ping.map(|ping| self.ping_tracker.got_ping(ping));
         routing_label.pong.map(|pong| self.ping_tracker.got_pong(pong));
 
@@ -241,7 +251,20 @@ impl Link {
                 .await
                 .context("Routing packet to other client")?;
             if let Some(link) = peer.current_link().await {
+                log::trace!(
+                    "{:?} Forward packet: routing_label={:?}, packet_len={}",
+                    self.own_node_id,
+                    routing_label,
+                    packet.len()
+                );
                 link.forward(routing_label, packet)?;
+            } else {
+                log::trace!(
+                    "{:?} Drop unforwardable packet (no link): routing_label={:?}, packet_len={}",
+                    self.own_node_id,
+                    routing_label,
+                    packet.len()
+                );
             }
         }
 

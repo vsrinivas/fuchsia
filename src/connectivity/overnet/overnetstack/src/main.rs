@@ -91,8 +91,9 @@ async fn register_udp(
         udp_links.insert(addr, link.clone());
         fasync::spawn_local(log_errors(
             async move {
-                let mut buf = [0u8; 2048];
+                let mut buf = [0u8; 1400];
                 while let Some(n) = link.next_send(&mut buf).await? {
+                    println!("UDP_SEND to:{} len:{}", addr, n);
                     udp_socket.sock.clone().send_to(&buf[..n], addr.into()).await?;
                 }
                 Ok(())

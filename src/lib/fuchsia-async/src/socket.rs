@@ -82,6 +82,13 @@ impl Socket {
 }
 
 impl Socket {
+    /// If there is a single instance of this socket, return the underlying object.
+    /// Otherwise, return an error containing the socket.
+    pub fn into_zx_socket(self) -> Result<zx::Socket, Socket> {
+        let receiver = self.receiver;
+        Arc::try_unwrap(self.handle).map_err(move |handle| Self { handle, receiver })
+    }
+
     /// Creates a new `Socket` from a previously-created `zx::Socket`.
     fn from_socket_arc_unchecked(handle: Arc<zx::Socket>) -> Result<Self, zx::Status> {
         let ehandle = EHandle::local();

@@ -24,6 +24,12 @@ impl Default for StatCounter {
     }
 }
 
+impl std::fmt::Debug for StatCounter {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.fetch().fmt(f)
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;

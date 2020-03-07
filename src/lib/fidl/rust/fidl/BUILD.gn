@@ -63,6 +63,7 @@ test_package("rust_fidl_tests") {
     ":fidl.rust.test.compilation-rustc",
     ":fidl.rust.test.compilation-rustc($host_toolchain)",
     ":fidl_test",
+    "//src/lib/fidl/rust/fidl_handle_tests:fidl_handle_tests_test",
     "//src/lib/fidl/rust/fidl_tests:fidl_conformance_tests",
     "//src/lib/fidl/rust/fidl_tests:fidl_external_tests",
   ]
@@ -82,6 +83,11 @@ test_package("rust_fidl_tests") {
       dest = "fidl_conformance_tests"
       environments = basic_envs
     },
+    {
+      name = "fidl_handle_tests_lib_test"
+      dest = "fidl_handle_tests"
+      environments = basic_envs
+    },
   ]
 }
 
@@ -90,5 +96,6 @@ group("tests") {
   public_deps = [
     ":fidl_test($host_toolchain)",
     ":rust_fidl_tests",
+    "//src/lib/fidl/rust/fidl_handle_tests:fidl_handle_tests_test($host_toolchain)",
   ]
 }

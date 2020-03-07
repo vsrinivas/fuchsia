@@ -4,7 +4,8 @@
 
 library fuchsia.overnet.protocol;
 
-/// Identifies a single overnet stream between two processes on the Overnet mesh
+/// Identifies a single overnet stream between two processes on the Overnet
+/// mesh.
 struct StreamId {
     uint64 id;
 };
@@ -14,5 +15,13 @@ struct NodeId {
     uint64 id;
 };
 
-/// Node-local link label
+/// Node-local link label.
 using LinkId = uint64;
+
+/// Length of a transfer key.
+const uint32 TRANSFER_KEY_LENGTH = 16;
+
+/// A transfer key is used when moving a stream endpoint from one node to
+/// another. It identifies a single transfer, should be unique (so, made from
+/// random bytes), and should be discarded at the end of the transfer.
+using TransferKey = array<uint8>:TRANSFER_KEY_LENGTH;

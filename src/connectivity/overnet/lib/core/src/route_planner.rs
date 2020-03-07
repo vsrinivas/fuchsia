@@ -88,7 +88,7 @@ impl NodeTable {
         link_id: NodeLinkId,
         desc: LinkDescription,
     ) -> Result<(), Error> {
-        log::info!(
+        log::trace!(
             "{:?} update_link: from:{:?} to:{:?} link_id:{:?} desc:{:?}",
             self.root_node,
             from,
@@ -212,7 +212,7 @@ pub(crate) fn spawn_route_planner(
                     },
                     _ = maybe_wait_until(next_route_table_update).fuse() => Action::UpdateRoutes
                 };
-                log::info!("{:?} Routing update: {:?}", node_table.root_node, action);
+                log::trace!("{:?} Routing update: {:?}", node_table.root_node, action);
                 match action {
                     Action::ApplyRemote(RemoteRoutingUpdate { from_node_id, status }) => {
                         if from_node_id == node_table.root_node {
@@ -243,7 +243,7 @@ pub(crate) fn spawn_route_planner(
                         }
                     }
                     Action::UpdateRoutes => {
-                        log::info!(
+                        log::trace!(
                             "{:?} Route table: {}",
                             node_table.root_node,
                             node_table.digraph_string()

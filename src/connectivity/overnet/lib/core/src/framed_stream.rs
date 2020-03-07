@@ -13,25 +13,26 @@ use std::convert::TryInto;
 
 /// The type of frame that can be received on a QUIC stream
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum FrameType {
+pub(crate) enum FrameType {
     Hello,
     Data,
+    Control,
 }
 
 /// Header for one frame of data on a QUIC stream
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct FrameHeader {
+struct FrameHeader {
     /// Type of the frame
-    pub frame_type: FrameType,
+    frame_type: FrameType,
     /// Length of the frame (usize here to avoid casts in client code; this is checked to fit in a
     /// u32 before serialization)
-    pub length: usize,
+    length: usize,
 }
 
-pub const FRAME_HEADER_LENGTH: usize = 8;
+const FRAME_HEADER_LENGTH: usize = 8;
 
 impl FrameHeader {
-    pub fn to_bytes(&self) -> Result<[u8; FRAME_HEADER_LENGTH], Error> {
+    fn to_bytes(&self) -> Result<[u8; FRAME_HEADER_LENGTH], Error> {
         let length = self.length;
         if length > std::u32::MAX as usize {
             return Err(anyhow::format_err!("Message too long: {}", length));
@@ -41,24 +42,26 @@ impl FrameHeader {
             | (match self.frame_type {
                 FrameType::Hello => 0,
                 FrameType::Data => 1,
+                FrameType::Control => 2,
             } << 32);
         Ok(hdr.to_le_bytes())
     }
 
-    pub fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
+    fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
         let hdr: &[u8; FRAME_HEADER_LENGTH] = bytes[0..FRAME_HEADER_LENGTH].try_into()?;
         let hdr = u64::from_le_bytes(*hdr);
         let length = (hdr & 0xffff_ffff) as usize;
         let frame_type = match hdr >> 32 {
             0 => FrameType::Hello,
             1 => FrameType::Data,
+            2 => FrameType::Control,
             _ => return Err(anyhow::format_err!("Unknown frame type {}", hdr >> 32)),
         };
         Ok(FrameHeader { frame_type, length })
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct MessageStats {
     sent_bytes: StatCounter,
     sent_messages: StatCounter,
@@ -79,17 +82,38 @@ impl MessageStats {
     }
 }
 
-pub struct FramedStreamWriter {
+#[derive(Debug)]
+pub(crate) struct FramedStreamWriter {
     /// The underlying QUIC stream
     quic: AsyncQuicStreamWriter,
 }
 
-impl FramedStreamWriter {
-    pub fn new(quic: AsyncQuicStreamWriter) -> Self {
+impl From<AsyncQuicStreamWriter> for FramedStreamWriter {
+    fn from(quic: AsyncQuicStreamWriter) -> Self {
         Self { quic }
     }
+}
 
-    pub async fn send(
+impl FramedStreamWriter {
+    pub(crate) fn abandon(&mut self) {
+        self.quic.abandon()
+    }
+
+    pub(crate) async fn send(
+        &mut self,
+        frame_type: FrameType,
+        bytes: &[u8],
+        fin: bool,
+        message_stats: &MessageStats,
+    ) -> Result<(), Error> {
+        let r = self.send_inner(frame_type, bytes, fin, message_stats).await;
+        if r.is_err() {
+            self.abandon();
+        }
+        r
+    }
+
+    async fn send_inner(
         &mut self,
         frame_type: FrameType,
         bytes: &[u8],
@@ -119,17 +143,32 @@ impl StreamProperties for FramedStreamWriter {
     }
 }
 
+#[derive(Debug)]
 pub(crate) struct FramedStreamReader {
     /// The underlying QUIC stream
     quic: AsyncQuicStreamReader,
 }
 
-impl FramedStreamReader {
-    pub(crate) fn new(quic: AsyncQuicStreamReader) -> Self {
+impl From<AsyncQuicStreamReader> for FramedStreamReader {
+    fn from(quic: AsyncQuicStreamReader) -> Self {
         Self { quic }
+    }
+}
+
+impl FramedStreamReader {
+    pub(crate) fn abandon(&mut self) {
+        self.quic.abandon()
     }
 
     pub(crate) async fn next(&mut self) -> Result<(FrameType, Vec<u8>, bool), Error> {
+        let r = self.next_inner().await;
+        if r.is_err() {
+            self.abandon();
+        }
+        r
+    }
+
+    async fn next_inner(&mut self) -> Result<(FrameType, Vec<u8>, bool), Error> {
         let mut hdr = [0u8; FRAME_HEADER_LENGTH];
         let fin = self.quic.read_exact(&mut hdr).await?;
         let hdr = FrameHeader::from_bytes(&hdr)?;
@@ -145,25 +184,6 @@ impl FramedStreamReader {
             Ok((hdr.frame_type, backing, fin))
         }
     }
-
-    pub(crate) async fn expect(
-        &mut self,
-        frame_type: FrameType,
-        fin_expectation: Option<bool>,
-        body: impl Fn(&mut Vec<u8>) -> Result<(), Error>,
-    ) -> Result<(), Error> {
-        let (got_frame_type, mut bytes, fin) = self.next().await?;
-        log::trace!("EXPECT gets {:?} {:?} fin={:?}", frame_type, bytes, fin);
-        match (fin_expectation, fin) {
-            (Some(true), false) => bail!("Expected end of stream"),
-            (Some(false), true) => bail!("Unexpected end of stream"),
-            (_, _) => (),
-        }
-        if got_frame_type != frame_type {
-            bail!("Expected frame type {:?}, got {:?}", frame_type, got_frame_type);
-        }
-        body(&mut bytes)
-    }
 }
 
 impl StreamProperties for FramedStreamReader {
@@ -174,12 +194,6 @@ impl StreamProperties for FramedStreamReader {
     fn conn(&self) -> &AsyncConnection {
         self.quic.conn()
     }
-}
-
-pub(crate) fn framed(
-    wr: (AsyncQuicStreamWriter, AsyncQuicStreamReader),
-) -> (FramedStreamWriter, FramedStreamReader) {
-    (FramedStreamWriter::new(wr.0), FramedStreamReader::new(wr.1))
 }
 
 #[cfg(test)]

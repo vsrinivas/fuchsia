@@ -27,11 +27,14 @@ strict xunion ZirconHandle {
 struct ChannelHandle {
     /// The Overnet proxy stream that was created to carry this channel.
     /// The protocol over said stream will be a `ZirconChannel`.
-    StreamId stream_id;
+    StreamRef stream_ref;
 };
 
+/// The type of socket being communicated via [`fuchsia.overnet.protocol/SocketHandle`].
 enum SocketType {
+    /// A datagram oriented socket.
     DATAGRAM = 0;
+    /// A stream oriented socket.
     STREAM = 1;
 };
 
@@ -39,7 +42,7 @@ enum SocketType {
 struct SocketHandle {
     /// The Overnet proxy stream that was created to carry this socket.
     /// The protocol over said stream will be a `ZirconSocket`.
-    StreamId stream_id;
+    StreamRef stream_ref;
     /// Socket options, per `zx_socket_create`.
     SocketType socket_type;
 };

@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use fidl_fuchsia_overnet_protocol::TRANSFER_KEY_LENGTH;
+use rand::Rng;
+
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
 pub enum Endpoint {
     Client,
@@ -25,7 +28,7 @@ impl Endpoint {
 }
 
 /// Labels a node with a mesh-unique address
-#[derive(PartialEq, PartialOrd, Eq, Ord, Clone, Copy, Debug, Hash)]
+#[derive(PartialEq, PartialOrd, Eq, Ord, Clone, Copy, Hash, Debug)]
 pub struct NodeId(pub u64);
 
 impl From<u64> for NodeId {
@@ -60,4 +63,10 @@ impl From<u64> for NodeLinkId {
     fn from(id: u64) -> Self {
         NodeLinkId(id)
     }
+}
+
+pub(crate) type TransferKey = [u8; TRANSFER_KEY_LENGTH as usize];
+
+pub(crate) fn generate_transfer_key() -> TransferKey {
+    rand::thread_rng().gen::<TransferKey>()
 }

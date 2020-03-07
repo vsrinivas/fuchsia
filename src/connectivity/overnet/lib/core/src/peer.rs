@@ -7,19 +7,19 @@ use crate::{
     coding::{decode_fidl, encode_fidl},
     framed_stream::{FrameType, FramedStreamReader, FramedStreamWriter, MessageStats},
     future_help::{log_errors, Observer},
-    labels::{Endpoint, NodeId},
+    labels::{Endpoint, NodeId, TransferKey},
     link::{Link, LinkStatus},
-    proxy_channel::spawn_channel_proxy,
     route_planner::RemoteRoutingUpdate,
-    router::Router,
+    router::{FoundTransfer, Router},
     runtime::{spawn, wait_until},
 };
 use anyhow::{bail, format_err, Context as _, Error};
-use fidl::Channel;
+use fidl::{Channel, HandleBased};
 use fidl_fuchsia_overnet::ConnectionInfo;
 use fidl_fuchsia_overnet_protocol::{
-    ConfigRequest, ConfigResponse, ConnectToService, ConnectToServiceOptions,
-    PeerConnectionDiagnosticInfo, PeerDescription, PeerMessage, PeerReply, UpdateLinkStatus,
+    ChannelHandle, ConfigRequest, ConfigResponse, ConnectToService, ConnectToServiceOptions,
+    OpenTransfer, PeerConnectionDiagnosticInfo, PeerDescription, PeerMessage, PeerReply, StreamId,
+    UpdateLinkStatus, ZirconHandle,
 };
 use futures::{lock::Mutex, pin_mut, prelude::*, select};
 use std::{
@@ -46,6 +46,7 @@ impl Config {
 enum ClientPeerCommand {
     UpdateLinkStatus(UpdateLinkStatus, futures::channel::oneshot::Sender<()>),
     ConnectToService(ConnectToService),
+    OpenTransfer(u64, TransferKey),
 }
 
 #[derive(Default)]
@@ -55,6 +56,7 @@ pub struct PeerConnStats {
     pub update_node_description: MessageStats,
     pub update_link_status: MessageStats,
     pub update_link_status_ack: MessageStats,
+    pub open_transfer: MessageStats,
 }
 
 pub(crate) struct Peer {
@@ -76,6 +78,7 @@ impl Peer {
 
     // Common parts of new_client, new_server - create the peer object, get it routed
     fn new_instance(
+        own_node_id: NodeId,
         node_id: NodeId,
         conn: Pin<Box<quiche::Connection>>,
         endpoint: Endpoint,
@@ -83,12 +86,13 @@ impl Peer {
         commands: Option<futures::channel::mpsc::Sender<ClientPeerCommand>>,
     ) -> Result<Rc<Self>, Error> {
         log::trace!(
-            "CREATE PEER FOR {:?}/{:?} CURRENT_LINK: {:?}",
+            "{:?} CREATE PEER FOR {:?}/{:?} CURRENT_LINK: {:?}",
+            own_node_id,
             node_id,
             endpoint,
             Weak::upgrade(&current_link)
         );
-        let conn = AsyncConnection::from_connection(conn, endpoint);
+        let conn = AsyncConnection::from_connection(conn, endpoint, node_id);
         let p = Rc::new(Self {
             endpoint,
             node_id,
@@ -107,6 +111,7 @@ impl Peer {
     /// Construct a new client peer - spawns tasks to handle making control stream requests, and
     /// publishing link metadata
     pub fn new_client(
+        own_node_id: NodeId,
         node_id: NodeId,
         conn: Pin<Box<quiche::Connection>>,
         current_link: &Weak<Link>,
@@ -115,6 +120,7 @@ impl Peer {
     ) -> Result<Rc<Self>, Error> {
         let (command_sender, command_receiver) = futures::channel::mpsc::channel(1);
         let p = Self::new_instance(
+            own_node_id,
             node_id,
             conn,
             Endpoint::Client,
@@ -147,7 +153,14 @@ impl Peer {
         current_link: &Weak<Link>,
         router: &Rc<Router>,
     ) -> Result<Rc<Self>, Error> {
-        let p = Self::new_instance(node_id, conn, Endpoint::Server, current_link, None)?;
+        let p = Self::new_instance(
+            router.node_id(),
+            node_id,
+            conn,
+            Endpoint::Server,
+            current_link,
+            None,
+        )?;
         let (conn_stream_writer, conn_stream_reader) = p.conn.bind_id(0);
         spawn(log_errors(
             server_conn_stream(
@@ -210,19 +223,45 @@ impl Peer {
         self.current_link.lock().await.upgrade()
     }
 
-    pub async fn new_stream(&self, service: &str, chan: Channel) -> Result<(), Error> {
-        let stream_io = self.conn.alloc_bidi();
+    pub async fn new_stream(
+        &self,
+        service: &str,
+        chan: Channel,
+        router: &Rc<Router>,
+    ) -> Result<(), Error> {
+        if let ZirconHandle::Channel(ChannelHandle { stream_ref }) = router
+            .clone()
+            .send_proxied(chan.into_handle(), self.conn.clone(), self.channel_proxy_stats.clone())
+            .await?
+        {
+            self.commands
+                .as_ref()
+                .unwrap()
+                .clone()
+                .send(ClientPeerCommand::ConnectToService(ConnectToService {
+                    service_name: service.to_string(),
+                    stream_ref,
+                    options: ConnectToServiceOptions {},
+                }))
+                .await?;
+            Ok(())
+        } else {
+            Err(format_err!("Not a real channel trying to connect to service"))
+        }
+    }
+
+    pub async fn send_open_transfer(
+        &self,
+        transfer_key: TransferKey,
+    ) -> Result<(AsyncQuicStreamWriter, AsyncQuicStreamReader), Error> {
+        let io = self.conn.alloc_bidi();
         self.commands
             .as_ref()
             .unwrap()
             .clone()
-            .send(ClientPeerCommand::ConnectToService(ConnectToService {
-                service_name: service.to_string(),
-                stream_id: stream_io.0.id(),
-                options: ConnectToServiceOptions {},
-            }))
+            .send(ClientPeerCommand::OpenTransfer(io.0.id(), transfer_key))
             .await?;
-        spawn_channel_proxy(chan, stream_io, self.channel_proxy_stats.clone())
+        Ok(io)
     }
 
     pub fn diagnostics(&self, source_node_id: NodeId) -> PeerConnectionDiagnosticInfo {
@@ -272,7 +311,7 @@ async fn client_conn_stream(
     // Send FIDL header
     conn_stream_writer.send(&mut [0, 0, 0, fidl::encoding::MAGIC_NUMBER_INITIAL], false).await?;
     // Send config request
-    let mut conn_stream_writer = FramedStreamWriter::new(conn_stream_writer);
+    let mut conn_stream_writer: FramedStreamWriter = conn_stream_writer.into();
     conn_stream_writer
         .send(FrameType::Data, &encode_fidl(&mut ConfigRequest {})?, false, &conn_stats.config)
         .await?;
@@ -280,7 +319,7 @@ async fn client_conn_stream(
     let mut fidl_hdr = [0u8; 4];
     conn_stream_reader.read_exact(&mut fidl_hdr).await.context("reading FIDL header")?;
     // Await config response
-    let mut conn_stream_reader = FramedStreamReader::new(conn_stream_reader);
+    let mut conn_stream_reader: FramedStreamReader = conn_stream_reader.into();
     let _ = Config::from_response(
         if let (FrameType::Data, mut bytes, false) = conn_stream_reader.next().await? {
             decode_fidl(&mut bytes)?
@@ -333,6 +372,7 @@ async fn client_conn_stream(
             Action::Frame(frame_type, mut bytes, fin) => {
                 match frame_type {
                     FrameType::Hello => bail!("Hello frames disallowed on peer connections"),
+                    FrameType::Control => bail!("Control frames disallowed on peer connections"),
                     FrameType::Data => {
                         client_conn_handle_incoming_frame(
                             peer_node_id,
@@ -393,6 +433,19 @@ async fn client_conn_handle_command(
                 )
                 .await?;
         }
+        ClientPeerCommand::OpenTransfer(stream_id, transfer_key) => {
+            conn_stream_writer
+                .send(
+                    FrameType::Data,
+                    &encode_fidl(&mut PeerMessage::OpenTransfer(OpenTransfer {
+                        stream_id: StreamId { id: stream_id },
+                        transfer_key,
+                    }))?,
+                    false,
+                    &conn_stats.open_transfer,
+                )
+                .await?;
+        }
     }
     Ok(())
 }
@@ -428,10 +481,10 @@ async fn server_conn_stream(
     // Receive FIDL header
     let mut fidl_hdr = [0u8; 4];
     conn_stream_reader.read_exact(&mut fidl_hdr).await.context("reading FIDL header")?;
-    let mut conn_stream_reader = FramedStreamReader::new(conn_stream_reader);
+    let mut conn_stream_reader: FramedStreamReader = conn_stream_reader.into();
     // Send FIDL header
     conn_stream_writer.send(&mut [0, 0, 0, fidl::encoding::MAGIC_NUMBER_INITIAL], false).await?;
-    let mut conn_stream_writer = FramedStreamWriter::new(conn_stream_writer);
+    let mut conn_stream_writer: FramedStreamWriter = conn_stream_writer.into();
     // Await config request
     let (_, mut response) = Config::negotiate(
         if let (FrameType::Data, mut bytes, false) = conn_stream_reader.next().await? {
@@ -452,16 +505,31 @@ async fn server_conn_stream(
             .ok_or_else(|| format_err!("Router gone during connection stream message handling"))?;
         match frame_type {
             FrameType::Hello => bail!("Hello frames disallowed on peer connections"),
+            FrameType::Control => bail!("Control frames disallowed on peer connections"),
             FrameType::Data => {
                 let msg: PeerMessage = decode_fidl(&mut bytes)?;
-                log::trace!("Got peer request from {:?}: {:?}", node_id, msg);
+                log::trace!(
+                    "{:?} Got peer request from {:?}: {:?}",
+                    router.node_id(),
+                    node_id,
+                    msg
+                );
                 match msg {
                     PeerMessage::ConnectToService(ConnectToService {
                         service_name,
-                        stream_id: stream_index,
+                        stream_ref,
                         options: _,
                     }) => {
-                        let (overnet_channel, app_channel) = Channel::create()?;
+                        let app_channel = Channel::from_handle(
+                            router
+                                .clone()
+                                .recv_proxied(
+                                    ZirconHandle::Channel(ChannelHandle { stream_ref }),
+                                    conn_stream_writer.conn().clone(),
+                                    channel_proxy_stats.clone(),
+                                )
+                                .await?,
+                        );
                         router
                             .service_map()
                             .connect(
@@ -470,15 +538,6 @@ async fn server_conn_stream(
                                 ConnectionInfo { peer: Some(node_id.into()) },
                             )
                             .await?;
-                        // Spawn after so that we don't use the local kernel's memory for
-                        // buffering messages (ideally we have flow control in the kernel and so
-                        // this could be prior and we could likely remove a context switch for
-                        // some pipelined operations)
-                        spawn_channel_proxy(
-                            overnet_channel,
-                            conn_stream_writer.conn().bind_id(stream_index),
-                            channel_proxy_stats.clone(),
-                        )?;
                     }
                     PeerMessage::UpdateNodeDescription(PeerDescription { services }) => {
                         router
@@ -526,6 +585,13 @@ async fn server_conn_stream(
                                 status,
                             })
                             .await;
+                    }
+                    PeerMessage::OpenTransfer(OpenTransfer {
+                        stream_id: StreamId { id: stream_id },
+                        transfer_key,
+                    }) => {
+                        let (tx, rx) = conn_stream_writer.conn().bind_id(stream_id);
+                        router.post_transfer(transfer_key, FoundTransfer::Remote(tx, rx))?;
                     }
                 }
             }

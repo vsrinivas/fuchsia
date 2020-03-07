@@ -5,9 +5,10 @@
 //! Async wrapper around QUIC
 
 use crate::future_help::{log_errors, Observable};
-use crate::labels::Endpoint;
+use crate::labels::{Endpoint, NodeId};
 use crate::runtime::{maybe_wait_until, spawn};
 use anyhow::{format_err, Context as _, Error};
+use fidl_fuchsia_overnet_protocol::StreamId;
 use futures::{prelude::*, select};
 use std::cell::RefCell;
 use std::collections::BTreeMap;
@@ -24,6 +25,12 @@ struct IO {
     waiting_for_stream_recv: BTreeMap<u64, Waker>,
     waiting_for_stream_send: BTreeMap<u64, Waker>,
     timeout: Observable<Option<Instant>>,
+}
+
+impl std::fmt::Debug for IO {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}|est={}", self.conn.trace_id(), self.seen_established)
+    }
 }
 
 impl IO {
@@ -85,16 +92,24 @@ impl IO {
     }
 }
 
+#[derive(Debug)]
 struct AsyncConnectionInner {
     next_bidi: AtomicU64,
+    next_uni: AtomicU64,
     endpoint: Endpoint,
     io: RefCell<IO>,
+    peer_node_id: NodeId,
 }
 
+#[derive(Clone, Debug)]
 pub struct AsyncConnection(Rc<AsyncConnectionInner>);
 
 impl AsyncConnection {
-    pub fn from_connection(conn: Pin<Box<quiche::Connection>>, endpoint: Endpoint) -> Self {
+    pub fn from_connection(
+        conn: Pin<Box<quiche::Connection>>,
+        endpoint: Endpoint,
+        peer_node_id: NodeId,
+    ) -> Self {
         let inner = Rc::new(AsyncConnectionInner {
             io: RefCell::new(IO {
                 conn,
@@ -108,14 +123,12 @@ impl AsyncConnection {
                 Endpoint::Client => 1,
                 Endpoint::Server => 0,
             }),
+            next_uni: AtomicU64::new(0),
             endpoint,
+            peer_node_id,
         });
         spawn(log_errors(run_timers(Rc::downgrade(&inner)), "Error checking QUIC timers"));
         Self(inner)
-    }
-
-    fn clone(&self) -> Self {
-        Self(self.0.clone())
     }
 
     pub fn poll_next_send<'a>(
@@ -124,7 +137,8 @@ impl AsyncConnection {
         ctx: &mut Context<'_>,
     ) -> Poll<Result<Option<usize>, Error>> {
         let mut io = self.0.io.borrow_mut();
-        match io.conn.send(frame) {
+        let r = io.conn.send(frame);
+        match r {
             Ok(n) => {
                 io.update_timeout();
                 io.wake_stream_io();
@@ -154,10 +168,20 @@ impl AsyncConnection {
         self.bind_id(id)
     }
 
+    pub fn alloc_uni(&self) -> AsyncQuicStreamWriter {
+        let n = self.0.next_uni.fetch_add(1, Ordering::Relaxed);
+        let id = n * 4 + 2 + self.0.endpoint.quic_id_bit();
+        AsyncQuicStreamWriter { conn: self.clone(), id, sent_fin: false }
+    }
+
+    pub fn bind_uni_id(&self, id: u64) -> AsyncQuicStreamReader {
+        AsyncQuicStreamReader { conn: self.clone(), id, ready: false, abandoned: false }
+    }
+
     pub fn bind_id(&self, id: u64) -> (AsyncQuicStreamWriter, AsyncQuicStreamReader) {
         (
-            AsyncQuicStreamWriter { conn: self.clone(), id },
-            AsyncQuicStreamReader { conn: self.clone(), id, ready: false },
+            AsyncQuicStreamWriter { conn: self.clone(), id, sent_fin: false },
+            AsyncQuicStreamReader { conn: self.clone(), id, ready: false, abandoned: false },
         )
     }
 
@@ -167,6 +191,14 @@ impl AsyncConnection {
 
     pub fn is_established(&self) -> bool {
         self.0.io.borrow().conn.is_established()
+    }
+
+    pub fn peer_node_id(&self) -> NodeId {
+        self.0.peer_node_id
+    }
+
+    pub fn endpoint(&self) -> Endpoint {
+        self.0.endpoint
     }
 }
 
@@ -210,18 +242,58 @@ pub trait StreamProperties {
     fn is_initiator(&self) -> bool {
         // QUIC stream id's use the lower two bits as a stream type designator.
         // Bit 0 of that type is the initiator of the stream: 0 for client, 1 for server.
-        self.id() & 1 == self.conn().0.endpoint.quic_id_bit()
+        self.id() & 1 == self.endpoint().quic_id_bit()
+    }
+
+    fn peer_node_id(&self) -> NodeId {
+        self.conn().peer_node_id()
+    }
+
+    fn endpoint(&self) -> Endpoint {
+        self.conn().endpoint()
+    }
+
+    fn stream_id(&self) -> StreamId {
+        StreamId { id: self.id() }
     }
 }
 
+#[derive(Debug)]
 pub struct AsyncQuicStreamWriter {
     conn: AsyncConnection,
     id: u64,
+    sent_fin: bool,
 }
 
 impl AsyncQuicStreamWriter {
-    pub fn send<'b>(&mut self, bytes: &'b [u8], fin: bool) -> QuicSend<'b> {
-        QuicSend { conn: self.conn.clone(), id: self.id, bytes, fin, n: 0 }
+    pub fn abandon(&mut self) {
+        self.sent_fin = true;
+        if let Err(e) =
+            self.conn.0.io.borrow_mut().conn.stream_shutdown(self.id, quiche::Shutdown::Write, 0)
+        {
+            log::trace!("shutdown stream failed: {:?}", e);
+        }
+    }
+
+    pub fn send<'b>(&'b mut self, bytes: &'b [u8], fin: bool) -> QuicSend<'b> {
+        assert_eq!(self.sent_fin, false);
+        QuicSend {
+            conn: self.conn.clone(),
+            id: self.id,
+            bytes,
+            fin,
+            n: 0,
+            sent_fin: &mut self.sent_fin,
+        }
+    }
+}
+
+impl Drop for AsyncQuicStreamWriter {
+    fn drop(&mut self) {
+        if !self.sent_fin {
+            log::warn!("Stream {} writer dropped before sending fin", self.id);
+            self.abandon();
+        }
     }
 }
 
@@ -241,6 +313,7 @@ pub struct QuicSend<'b> {
     bytes: &'b [u8],
     n: usize,
     fin: bool,
+    sent_fin: &'b mut bool,
 }
 
 impl<'b> Future for QuicSend<'b> {
@@ -252,11 +325,23 @@ impl<'b> Future for QuicSend<'b> {
         if !io.conn.is_established() {
             return io.wait_for_stream_send(this.id, ctx);
         }
-        match io
+        let r = io
             .conn
             .stream_send(this.id, &this.bytes[this.n..], this.fin)
-            .with_context(|| format!("sending on stream {}", this.id))
-        {
+            .with_context(|| format!("sending on stream {}", this.id));
+        match r {
+            Ok(n) => {
+                io.wake_conn_send();
+                this.n += n;
+                if this.n == this.bytes.len() {
+                    if this.fin {
+                        *this.sent_fin = true;
+                    }
+                    Poll::Ready(Ok(()))
+                } else {
+                    io.wait_for_stream_send(this.id, ctx)
+                }
+            }
             Err(e) => Poll::Ready(Err(e).with_context(|| {
                 format_err!(
                     "async quic send: stream_id={:?} endpoint={:?}",
@@ -264,28 +349,29 @@ impl<'b> Future for QuicSend<'b> {
                     this.conn.0.endpoint
                 )
             })),
-            Ok(n) => {
-                io.wake_conn_send();
-                this.n += n;
-                if this.n == this.bytes.len() {
-                    Poll::Ready(Ok(()))
-                } else {
-                    io.wait_for_stream_send(this.id, ctx)
-                }
-            }
         }
     }
 }
 
+#[derive(Debug)]
 pub struct AsyncQuicStreamReader {
     conn: AsyncConnection,
     id: u64,
     ready: bool,
+    abandoned: bool,
+}
+
+impl Drop for AsyncQuicStreamReader {
+    fn drop(&mut self) {
+        if !self.abandoned && !self.conn.0.io.borrow().conn.stream_finished(self.id) {
+            self.abandon()
+        }
+    }
 }
 
 impl AsyncQuicStreamReader {
-    pub fn read<'a, 'b>(&'a mut self, bytes: &'b mut [u8]) -> QuicRead<'a, 'b> {
-        QuicRead { conn: self.conn.clone(), id: self.id, bytes, ready: &mut self.ready }
+    pub async fn read<'a, 'b>(&'a mut self, bytes: &'b mut [u8]) -> Result<(usize, bool), Error> {
+        QuicRead { conn: self.conn.clone(), id: self.id, bytes, ready: &mut self.ready }.await
     }
 
     pub async fn read_exact(&mut self, mut bytes: &mut [u8]) -> Result<bool, Error> {
@@ -298,6 +384,15 @@ impl AsyncQuicStreamReader {
                 anyhow::bail!("End of stream");
             }
             bytes = &mut bytes[n..];
+        }
+    }
+
+    pub fn abandon(&mut self) {
+        self.abandoned = true;
+        if let Err(e) =
+            self.conn.0.io.borrow_mut().conn.stream_shutdown(self.id, quiche::Shutdown::Write, 0)
+        {
+            log::trace!("shutdown stream failed: {:?}", e);
         }
     }
 }
@@ -325,21 +420,26 @@ impl<'a, 'b> Future for QuicRead<'a, 'b> {
     fn poll(self: Pin<&mut Self>, ctx: &mut Context<'_>) -> Poll<Self::Output> {
         let this = Pin::into_inner(self);
         let io = &mut *this.conn.0.io.borrow_mut();
-        match io.conn.stream_recv(this.id, this.bytes) {
-            Ok((n, false)) => {
+        let r = io.conn.stream_recv(this.id, this.bytes);
+        match r {
+            Ok((n, fin)) => {
                 *this.ready = true;
-                Poll::Ready(Ok((n, false)))
-            }
-            Ok((n, true)) => {
-                *this.ready = true;
-                Poll::Ready(Ok((n, true)))
+                Poll::Ready(Ok((n, fin)))
             }
             Err(quiche::Error::Done) => {
                 *this.ready = true;
-                io.wait_for_stream_recv(this.id, ctx)
+                let finished = io.conn.stream_finished(this.id);
+                if finished {
+                    Poll::Ready(Ok((0, true)))
+                } else {
+                    io.wait_for_stream_recv(this.id, ctx)
+                }
             }
             Err(quiche::Error::InvalidStreamState) if !*this.ready => {
                 io.wait_for_stream_recv(this.id, ctx)
+            }
+            Err(quiche::Error::InvalidStreamState) if io.conn.stream_finished(this.id) => {
+                Poll::Ready(Ok((0, true)))
             }
             Err(x) => Poll::Ready(Err(x).with_context(|| {
                 format_err!(
@@ -398,7 +498,7 @@ pub(crate) mod test_util {
         config.set_initial_max_stream_data_bidi_remote(1_000_000);
         config.set_initial_max_stream_data_uni(1_000_000);
         config.set_initial_max_streams_bidi(100);
-        config.set_initial_max_streams_uni(0);
+        config.set_initial_max_streams_uni(100);
         Ok(config)
     }
 
@@ -411,7 +511,7 @@ pub(crate) mod test_util {
         config.set_initial_max_stream_data_bidi_remote(1_000_000);
         config.set_initial_max_stream_data_uni(1_000_000);
         config.set_initial_max_streams_bidi(100);
-        config.set_initial_max_streams_uni(0);
+        config.set_initial_max_streams_uni(100);
         Ok(config)
     }
 
@@ -432,6 +532,7 @@ pub(crate) mod test_util {
         let client = AsyncConnection::from_connection(
             quiche::connect(None, &scid, &mut client_config()?)?,
             Endpoint::Client,
+            crate::router::generate_node_id(),
         );
         let scid: Vec<u8> = rand::thread_rng()
             .sample_iter(&rand::distributions::Standard)
@@ -440,6 +541,7 @@ pub(crate) mod test_util {
         let server = AsyncConnection::from_connection(
             quiche::accept(&scid, None, &mut server_config()?)?,
             Endpoint::Server,
+            crate::router::generate_node_id(),
         );
         spawn(log_errors(
             direct_packets(client.clone(), server.clone()),
@@ -464,49 +566,93 @@ mod test {
 
     #[test]
     fn simple_send() {
-        run(|| async move {
-            let (client, server) = new_client_server().unwrap();
-            let (mut cli_tx, _cli_rx) = client.alloc_bidi();
-            let (_svr_tx, mut svr_rx) = server.bind_id(cli_tx.id());
+        run(|| {
+            async move {
+                let (client, server) = new_client_server().unwrap();
+                let (mut cli_tx, mut cli_rx) = client.alloc_bidi();
+                let (mut svr_tx, mut svr_rx) = server.bind_id(cli_tx.id());
 
-            cli_tx.send(&[1, 2, 3], false).await.unwrap();
-            let mut buf = [0u8; 64];
-            let (n, fin) = svr_rx.read(&mut buf).await.unwrap();
-            assert_eq!(n, 3);
-            assert_eq!(fin, false);
-            assert_eq!(&buf[..n], &[1, 2, 3]);
+                cli_tx.send(&[1, 2, 3], false).await.unwrap();
+                let mut buf = [0u8; 64];
+                let (n, fin) = svr_rx.read(&mut buf).await.unwrap();
+                assert_eq!(n, 3);
+                assert_eq!(fin, false);
+                assert_eq!(&buf[..n], &[1, 2, 3]);
+
+                // Shutdown everything
+                eprintln!("SEND SVR FIN");
+                svr_tx.send(&[], true).await.unwrap();
+                eprintln!("WAIT CLI FIN");
+                cli_rx.read(&mut buf).await.unwrap();
+
+                eprintln!("SEND CLI FIN");
+                cli_tx.send(&[], true).await.unwrap();
+                eprintln!("WAIT SVR FIN");
+                svr_rx.read(&mut buf).await.unwrap();
+            }
         })
     }
 
     #[test]
     fn send_fin() {
-        run(|| async move {
-            let (client, server) = new_client_server().unwrap();
-            let (mut cli_tx, _cli_rx) = client.alloc_bidi();
-            let (_svr_tx, mut svr_rx) = server.bind_id(cli_tx.id());
+        run(|| {
+            async move {
+                let (client, server) = new_client_server().unwrap();
+                let (mut cli_tx, mut cli_rx) = client.alloc_bidi();
+                let (mut svr_tx, mut svr_rx) = server.bind_id(cli_tx.id());
 
-            cli_tx.send(&[1, 2, 3], true).await.unwrap();
-            let mut buf = [0u8; 64];
-            let (n, fin) = svr_rx.read(&mut buf).await.unwrap();
-            assert_eq!(n, 3);
-            assert_eq!(fin, true);
-            assert_eq!(&buf[..n], &[1, 2, 3]);
+                cli_tx.send(&[1, 2, 3], true).await.unwrap();
+                let mut buf = [0u8; 64];
+                let (n, fin) = svr_rx.read(&mut buf).await.unwrap();
+                assert_eq!(n, 3);
+                assert_eq!(fin, true);
+                assert_eq!(&buf[..n], &[1, 2, 3]);
+
+                // Shutdown the direction we don't care about
+                svr_tx.send(&[], true).await.unwrap();
+                cli_rx.read(&mut buf).await.unwrap();
+            }
         })
     }
 
     #[test]
     fn recv_before_send() {
-        run(|| async move {
-            let (client, server) = new_client_server().unwrap();
-            let (mut cli_tx, _cli_rx) = client.alloc_bidi();
-            let (_svr_tx, mut svr_rx) = server.bind_id(cli_tx.id());
+        run(|| {
+            async move {
+                let (client, server) = new_client_server().unwrap();
+                let (mut cli_tx, mut cli_rx) = client.alloc_bidi();
+                let (mut svr_tx, mut svr_rx) = server.bind_id(cli_tx.id());
 
-            spawn(log_errors(cli_tx.send(&[1, 2, 3], false), "send failed"));
-            let mut buf = [0u8; 64];
-            let (n, fin) = svr_rx.read(&mut buf).await.unwrap();
-            assert_eq!(n, 3);
-            assert_eq!(fin, false);
-            assert_eq!(&buf[..n], &[1, 2, 3]);
+                let mut buf = [0u8; 64];
+
+                let (unpause, pause) = futures::channel::oneshot::channel();
+                spawn(log_errors(
+                    async move {
+                        cli_tx.send(&[1, 2, 3], false).await?;
+                        eprintln!("sent first");
+                        pause.await.unwrap();
+                        eprintln!("finished pause");
+                        cli_tx.send(&[], true).await?;
+                        eprintln!("sent second");
+                        Ok(())
+                    },
+                    "send failed",
+                ));
+                let (n, fin) = svr_rx.read(&mut buf).await.unwrap();
+                eprintln!("got: {} {}", n, fin);
+                assert_eq!(n, 3);
+                assert_eq!(fin, false);
+                assert_eq!(&buf[..n], &[1, 2, 3]);
+                unpause.send(()).unwrap();
+                let (n, fin) = svr_rx.read(&mut buf).await.unwrap();
+                eprintln!("got: {} {}", n, fin);
+                assert_eq!(n, 0);
+                assert_eq!(fin, true);
+
+                // Shutdown the direction we don't care about
+                svr_tx.send(&[], true).await.unwrap();
+                cli_rx.read(&mut buf).await.unwrap();
+            }
         })
     }
 }

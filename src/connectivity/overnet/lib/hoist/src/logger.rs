@@ -15,27 +15,25 @@ impl log::Log for Logger {
     }
 
     fn log(&self, record: &Record<'_>) {
-        if self.enabled(record.metadata()) {
-            let msg = format!(
-                "{} {} {:?} {} {}{}",
-                std::process::id(),
-                chrono::Utc::now(),
-                std::thread::current().id(),
-                record.level(),
-                record
-                    .file()
-                    .map(|file| {
-                        if let Some(line) = record.line() {
-                            format!("{}:{}: ", file, line)
-                        } else {
-                            format!("{}: ", file)
-                        }
-                    })
-                    .unwrap_or(String::new()),
-                record.args()
-            );
-            eprintln!("{}", msg);
-        }
+        let msg = format!(
+            "{} {} {:?} {} {}{}",
+            std::process::id(),
+            chrono::Utc::now(),
+            std::thread::current().id(),
+            record.level(),
+            record
+                .file()
+                .map(|file| {
+                    if let Some(line) = record.line() {
+                        format!("{}:{}: ", file, line)
+                    } else {
+                        format!("{}: ", file)
+                    }
+                })
+                .unwrap_or(String::new()),
+            record.args()
+        );
+        println!("{}", msg);
     }
 
     fn flush(&self) {}

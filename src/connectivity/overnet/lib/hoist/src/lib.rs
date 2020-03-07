@@ -16,6 +16,8 @@ pub use not_fuchsia::*;
 #[cfg(target_os = "fuchsia")]
 pub mod logger {
     pub fn init() -> Result<(), anyhow::Error> {
+        use anyhow::Context as _;
+        fuchsia_syslog::init_with_tags(&["overnet_hoist"]).context("initialize logging")?;
         Ok(())
     }
 }

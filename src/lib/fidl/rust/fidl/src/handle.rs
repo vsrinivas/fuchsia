@@ -126,12 +126,64 @@ pub mod non_fuchsia_handles {
     }
 
     /// A borrowed reference to an underlying handle
-    pub struct HandleRef(u32);
+    pub struct HandleRef<'a>(u32, std::marker::PhantomData<&'a u32>);
 
     /// A trait to get a reference to the underlying handle of an object.
     pub trait AsHandleRef {
         /// Get a reference to the handle.
         fn as_handle_ref(&self) -> HandleRef;
+
+        /// Return true if this handle is invalid
+        fn is_invalid(&self) -> bool {
+            self.as_handle_ref().0 == INVALID_HANDLE
+        }
+
+        /// Interpret the reference as a raw handle (an integer type). Two distinct
+        /// handles will have different raw values (so it can perhaps be used as a
+        /// key in a data structure).
+        fn raw_handle(&self) -> u32 {
+            self.as_handle_ref().0
+        }
+
+        /// Non-fuchsia only: return the type of a handle
+        fn handle_type(&self) -> FidlHdlType {
+            if self.is_invalid() {
+                FidlHdlType::Invalid
+            } else {
+                with_handle(self.as_handle_ref().0, |obj| match obj {
+                    FidlHandle::LeftChannel(_, _) => FidlHdlType::Channel,
+                    FidlHandle::RightChannel(_, _) => FidlHdlType::Channel,
+                    FidlHandle::LeftStreamSocket(_, _) => FidlHdlType::Socket,
+                    FidlHandle::RightStreamSocket(_, _) => FidlHdlType::Socket,
+                    FidlHandle::LeftDatagramSocket(_, _) => FidlHdlType::Socket,
+                    FidlHandle::RightDatagramSocket(_, _) => FidlHdlType::Socket,
+                })
+            }
+        }
+
+        /// Non-fuchsia only: return a reference to the other end of a handle
+        fn related(&self) -> HandleRef {
+            if self.is_invalid() {
+                HandleRef(INVALID_HANDLE, std::marker::PhantomData)
+            } else {
+                with_handle(self.as_handle_ref().0, |obj| match obj {
+                    FidlHandle::LeftChannel(_, x) => HandleRef(*x, std::marker::PhantomData),
+                    FidlHandle::RightChannel(_, x) => HandleRef(*x, std::marker::PhantomData),
+                    FidlHandle::LeftStreamSocket(_, x) => HandleRef(*x, std::marker::PhantomData),
+                    FidlHandle::RightStreamSocket(_, x) => HandleRef(*x, std::marker::PhantomData),
+                    FidlHandle::LeftDatagramSocket(_, x) => HandleRef(*x, std::marker::PhantomData),
+                    FidlHandle::RightDatagramSocket(_, x) => {
+                        HandleRef(*x, std::marker::PhantomData)
+                    }
+                })
+            }
+        }
+    }
+
+    impl AsHandleRef for HandleRef<'_> {
+        fn as_handle_ref(&self) -> HandleRef {
+            HandleRef(self.0, std::marker::PhantomData)
+        }
     }
 
     /// A trait implemented by all handle-based types.
@@ -163,37 +215,16 @@ pub mod non_fuchsia_handles {
 
     impl AsHandleRef for Handle {
         fn as_handle_ref(&self) -> HandleRef {
-            HandleRef(self.0)
+            HandleRef(self.0, std::marker::PhantomData)
         }
     }
 
     impl HandleBased for Handle {}
 
     impl Handle {
-        /// Non-fuchsia only: return the type of a handle
-        pub fn handle_type(&self) -> FidlHdlType {
-            if self.is_invalid() {
-                FidlHdlType::Invalid
-            } else {
-                with_handle(self.0, |obj| match obj {
-                    FidlHandle::LeftChannel(_, _) => FidlHdlType::Channel,
-                    FidlHandle::RightChannel(_, _) => FidlHdlType::Channel,
-                    FidlHandle::LeftStreamSocket(_, _) => FidlHdlType::Socket,
-                    FidlHandle::RightStreamSocket(_, _) => FidlHdlType::Socket,
-                    FidlHandle::LeftDatagramSocket(_, _) => FidlHdlType::Socket,
-                    FidlHandle::RightDatagramSocket(_, _) => FidlHdlType::Socket,
-                })
-            }
-        }
-
         /// Return an invalid handle
         pub fn invalid() -> Handle {
             Handle(INVALID_HANDLE)
-        }
-
-        /// Return true if this handle is invalid
-        pub fn is_invalid(&self) -> bool {
-            self.0 == INVALID_HANDLE
         }
 
         /// If a raw handle is obtained from some other source, this method converts
@@ -236,7 +267,7 @@ pub mod non_fuchsia_handles {
             impl HandleBased for $name {}
             impl AsHandleRef for $name {
                 fn as_handle_ref(&self) -> HandleRef {
-                    HandleRef(INVALID_HANDLE)
+                    HandleRef(INVALID_HANDLE, std::marker::PhantomData)
                 }
             }
         };
@@ -265,7 +296,7 @@ pub mod non_fuchsia_handles {
             impl HandleBased for $name {}
             impl AsHandleRef for $name {
                 fn as_handle_ref(&self) -> HandleRef {
-                    HandleRef(self.0)
+                    HandleRef(self.0, std::marker::PhantomData)
                 }
             }
 
@@ -292,10 +323,11 @@ pub mod non_fuchsia_handles {
         /// Create a channel, resulting in a pair of `Channel` objects representing both
         /// sides of the channel. Messages written into one maybe read from the opposite.
         pub fn create() -> Result<(Channel, Channel), zx_status::Status> {
-            let cs = Arc::new(Mutex::new(ChannelState::Open(
-                HalfChannelState::new(),
-                HalfChannelState::new(),
-            )));
+            let cs = Arc::new(Mutex::new(ChannelState {
+                open: true,
+                left: HalfChannelState::new(),
+                right: HalfChannelState::new(),
+            }));
             let mut h = HANDLES.lock();
             let left = h.insert(FidlHandle::LeftChannel(cs.clone(), INVALID_HANDLE)) as u32;
             let right = h.insert(FidlHandle::RightChannel(cs, left)) as u32;
@@ -320,19 +352,20 @@ pub mod non_fuchsia_handles {
             handles: &mut Vec<Handle>,
         ) -> Result<(), zx_status::Status> {
             with_handle(self.0, |obj| match obj {
-                FidlHandle::LeftChannel(cs, _) => match *cs.lock() {
-                    ChannelState::Closed => Err(zx_status::Status::PEER_CLOSED),
-                    ChannelState::Open(ref mut st, _) => Self::dequeue_read(st, bytes, handles),
-                },
-                FidlHandle::RightChannel(cs, _) => match *cs.lock() {
-                    ChannelState::Closed => Err(zx_status::Status::PEER_CLOSED),
-                    ChannelState::Open(_, ref mut st) => Self::dequeue_read(st, bytes, handles),
-                },
+                FidlHandle::LeftChannel(cs, _) => {
+                    let ChannelState { open, left: ref mut st, .. } = *cs.lock();
+                    Self::dequeue_read(open, st, bytes, handles)
+                }
+                FidlHandle::RightChannel(cs, _) => {
+                    let ChannelState { open, right: ref mut st, .. } = *cs.lock();
+                    Self::dequeue_read(open, st, bytes, handles)
+                }
                 _ => panic!("Non channel passed to Channel::read_split"),
             })
         }
 
         fn dequeue_read(
+            open: bool,
             st: &mut HalfChannelState,
             bytes: &mut Vec<u8>,
             handles: &mut Vec<Handle>,
@@ -341,8 +374,10 @@ pub mod non_fuchsia_handles {
                 std::mem::swap(bytes, &mut msg.bytes);
                 std::mem::swap(handles, &mut msg.handles);
                 Ok(())
-            } else {
+            } else if open {
                 Err(zx_status::Status::SHOULD_WAIT)
+            } else {
+                Err(zx_status::Status::PEER_CLOSED)
             }
         }
 
@@ -354,14 +389,14 @@ pub mod non_fuchsia_handles {
         ) -> Result<(), zx_status::Status> {
             let wakeup = with_handle(self.0, |obj| match obj {
                 FidlHandle::LeftChannel(cs, peer) => match *cs.lock() {
-                    ChannelState::Closed => Err(zx_status::Status::PEER_CLOSED),
-                    ChannelState::Open(_, ref mut st) => {
+                    ChannelState { open: false, .. } => Err(zx_status::Status::PEER_CLOSED),
+                    ChannelState { right: ref mut st, .. } => {
                         Self::enqueue_write(st, *peer, bytes, handles)
                     }
                 },
                 FidlHandle::RightChannel(cs, peer) => match *cs.lock() {
-                    ChannelState::Closed => Err(zx_status::Status::PEER_CLOSED),
-                    ChannelState::Open(ref mut st, _) => {
+                    ChannelState { open: false, .. } => Err(zx_status::Status::PEER_CLOSED),
+                    ChannelState { left: ref mut st, .. } => {
                         Self::enqueue_write(st, *peer, bytes, handles)
                     }
                 },
@@ -406,6 +441,12 @@ pub mod non_fuchsia_handles {
             handles: &mut Vec<Handle>,
         ) -> Result<(), zx_status::Status> {
             self.channel.write(bytes, handles)
+        }
+
+        /// Consumes self and returns the underlying Channel (named thusly for compatibility with
+        /// fasync variant)
+        pub fn into_zx_channel(self) -> Channel {
+            self.channel
         }
 
         /// Receives a message on the channel and registers this `Channel` as
@@ -473,6 +514,7 @@ pub mod non_fuchsia_handles {
     }
 
     /// Socket options available portable
+    #[derive(Clone, Copy)]
     pub enum SocketOpts {
         /// A bytestream style socket
         STREAM,
@@ -694,6 +736,11 @@ pub mod non_fuchsia_handles {
             Ok(AsyncSocket { waker: get_or_create_arc_waker(socket.0), socket })
         }
 
+        /// Convert AsyncSocket back into a regular socket
+        pub fn into_zx_socket(self) -> Result<Socket, AsyncSocket> {
+            Ok(self.socket)
+        }
+
         /// Polls for the next data on the socket, appending it to the end of |out| if it has arrived.
         /// Not very useful for a non-datagram socket as it will return all available data
         /// on the socket.
@@ -882,9 +929,10 @@ pub mod non_fuchsia_handles {
         }
     }
 
-    enum ChannelState {
-        Closed,
-        Open(HalfChannelState, HalfChannelState),
+    struct ChannelState {
+        open: bool,
+        left: HalfChannelState,
+        right: HalfChannelState,
     }
 
     struct HalfStreamSocketState {
@@ -947,10 +995,10 @@ pub mod non_fuchsia_handles {
             FidlHandle::LeftChannel(cs, peer) => {
                 let st = &mut *cs.lock();
                 let wakeup = match st {
-                    ChannelState::Closed => false,
-                    ChannelState::Open(_, st) => st.need_read,
+                    ChannelState { open: false, .. } => false,
+                    ChannelState { right: st, .. } => st.need_read,
                 };
-                *st = ChannelState::Closed;
+                st.open = false;
                 if wakeup {
                     peer
                 } else {
@@ -960,10 +1008,10 @@ pub mod non_fuchsia_handles {
             FidlHandle::RightChannel(cs, peer) => {
                 let st = &mut *cs.lock();
                 let wakeup = match st {
-                    ChannelState::Closed => false,
-                    ChannelState::Open(st, _) => st.need_read,
+                    ChannelState { open: false, .. } => false,
+                    ChannelState { left: st, .. } => st.need_read,
                 };
-                *st = ChannelState::Closed;
+                st.open = false;
                 if wakeup {
                     peer
                 } else {
@@ -1032,8 +1080,8 @@ pub mod non_fuchsia_handles {
     fn hdl_need_read(hdl: u32) {
         let wakeup = with_handle(hdl, |obj| match obj {
             FidlHandle::LeftChannel(cs, _) => match *cs.lock() {
-                ChannelState::Closed => true,
-                ChannelState::Open(ref mut st, _) => {
+                ChannelState { open: false, .. } => true,
+                ChannelState { left: ref mut st, .. } => {
                     if st.messages.is_empty() {
                         st.need_read = true;
                         false
@@ -1043,8 +1091,8 @@ pub mod non_fuchsia_handles {
                 }
             },
             FidlHandle::RightChannel(cs, _) => match *cs.lock() {
-                ChannelState::Closed => true,
-                ChannelState::Open(_, ref mut st) => {
+                ChannelState { open: false, .. } => true,
+                ChannelState { right: ref mut st, .. } => {
                     if st.messages.is_empty() {
                         st.need_read = true;
                         false

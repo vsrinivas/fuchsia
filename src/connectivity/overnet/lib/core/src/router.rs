@@ -19,12 +19,17 @@
 // on our behalf).
 
 use crate::{
+    async_quic::{AsyncConnection, AsyncQuicStreamReader, AsyncQuicStreamWriter, StreamProperties},
     diagnostics_service::spawn_diagostic_service_request_handler,
+    framed_stream::MessageStats,
     future_help::{Observable, Observer},
-    labels::{Endpoint, NodeId, NodeLinkId},
+    handle_info::{handle_info, HandleKey, HandleType},
+    labels::{Endpoint, NodeId, NodeLinkId, TransferKey},
     link::{Link, LinkStatus},
     link_status_updater::{spawn_link_status_updater, LinkStatePublisher},
     peer::Peer,
+    proxy::{ProxyTransferInitiationReceiver, RemoveFromProxyTable, StreamRefSender},
+    proxyable_handle::IntoProxied,
     route_planner::{
         routing_update_channel, spawn_route_planner, RemoteRoutingUpdate, RemoteRoutingUpdateSender,
     },
@@ -33,16 +38,21 @@ use crate::{
     socket_link::spawn_socket_link,
 };
 use anyhow::{bail, format_err, Context as _, Error};
-use fidl::{endpoints::ClientEnd, Channel};
+use fidl::{endpoints::ClientEnd, AsHandleRef, Channel, Handle, HandleBased, Socket, SocketOpts};
 use fidl_fuchsia_overnet::{ConnectionInfo, ServiceProviderMarker};
-use fidl_fuchsia_overnet_protocol::{LinkDiagnosticInfo, PeerConnectionDiagnosticInfo};
-use futures::{lock::Mutex, prelude::*};
+use fidl_fuchsia_overnet_protocol::{
+    ChannelHandle, LinkDiagnosticInfo, PeerConnectionDiagnosticInfo, SocketHandle, SocketType,
+    StreamId, StreamRef, ZirconHandle,
+};
+use futures::{future::poll_fn, lock::Mutex, prelude::*};
 use rand::Rng;
 use std::{
+    cell::RefCell,
     collections::{BTreeMap, HashMap},
     path::Path,
     rc::{Rc, Weak},
     sync::atomic::{AtomicU64, Ordering},
+    task::{Context, Poll, Waker},
     time::Duration,
 };
 
@@ -93,6 +103,23 @@ impl RouterOptions {
     }
 }
 
+enum PendingTransfer {
+    Complete(FoundTransfer),
+    Waiting(Waker),
+}
+
+#[derive(Debug)]
+pub(crate) enum FoundTransfer {
+    Fused(Handle),
+    Remote(AsyncQuicStreamWriter, AsyncQuicStreamReader),
+}
+
+#[derive(Debug)]
+pub(crate) enum OpenedTransfer {
+    Fused,
+    Remote(AsyncQuicStreamWriter, AsyncQuicStreamReader, Handle),
+}
+
 /// Router maintains global state for one node_id.
 /// `LinkData` is a token identifying a link for layers above Router.
 /// `Time` is a representation of time for the Router, to assist injecting different platforms
@@ -114,11 +141,29 @@ pub struct Router {
     service_map: ServiceMap,
     routing_update_sender: RemoteRoutingUpdateSender,
     list_peers_observer: Mutex<Option<Observer<Vec<ListablePeer>>>>,
+    proxied_streams: RefCell<HashMap<HandleKey, ProxiedHandle>>,
+    pending_transfers: RefCell<BTreeMap<TransferKey, PendingTransfer>>,
+}
+
+struct ProxiedHandle {
+    remove_sender: futures::channel::oneshot::Sender<RemoveFromProxyTable>,
+    original_paired: HandleKey,
 }
 
 /// Generate a new random node id
 pub fn generate_node_id() -> NodeId {
     rand::thread_rng().gen::<u64>().into()
+}
+
+fn sorted<T: std::cmp::Ord>(mut v: Vec<T>) -> Vec<T> {
+    v.sort();
+    v
+}
+
+impl std::fmt::Debug for Router {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Router({:?})", self.node_id)
+    }
 }
 
 impl Router {
@@ -159,6 +204,8 @@ impl Router {
             links: Mutex::new(HashMap::new()),
             peers: Mutex::new(BTreeMap::new()),
             list_peers_observer,
+            proxied_streams: RefCell::new(HashMap::new()),
+            pending_transfers: RefCell::new(BTreeMap::new()),
         });
 
         spawn_route_planner(
@@ -227,7 +274,7 @@ impl Router {
                         service_name,
                     )
                 })?
-                .new_stream(service_name, chan)
+                .new_stream(service_name, chan, self)
                 .await
         }
     }
@@ -336,7 +383,7 @@ impl Router {
         config.set_initial_max_stream_data_bidi_remote(1_000_000);
         config.set_initial_max_stream_data_uni(1_000_000);
         config.set_initial_max_streams_bidi(100);
-        config.set_initial_max_streams_uni(0);
+        config.set_initial_max_streams_uni(100);
         Ok(config)
     }
 
@@ -349,7 +396,7 @@ impl Router {
         config.set_initial_max_stream_data_bidi_remote(1_000_000);
         config.set_initial_max_stream_data_uni(1_000_000);
         config.set_initial_max_streams_bidi(100);
-        config.set_initial_max_streams_uni(0);
+        config.set_initial_max_streams_uni(100);
         Ok(config)
     }
 
@@ -397,6 +444,7 @@ impl Router {
             .take(quiche::MAX_CONN_ID_LEN)
             .collect();
         let p = Peer::new_client(
+            self.node_id,
             node_id,
             quiche::connect(None, &scid, &mut config).context("creating quic client connection")?,
             link_hint,
@@ -462,6 +510,243 @@ impl Router {
                 .await;
         }
         Ok(())
+    }
+
+    // Prepare a handle to be sent to another machine.
+    // Returns a ZirconHandle describing the established proxy.
+    pub(crate) async fn send_proxied(
+        self: Rc<Self>,
+        handle: Handle,
+        conn: AsyncConnection,
+        stats: Rc<MessageStats>,
+    ) -> Result<ZirconHandle, Error> {
+        let info = handle_info(handle.as_handle_ref())?;
+        let mut proxied_streams = self.proxied_streams.borrow_mut();
+        log::trace!(
+            "{:?} SEND_PROXIED: {:?} all={:?}",
+            self.node_id,
+            info,
+            sorted(proxied_streams.keys().map(|x| *x).collect::<Vec<_>>())
+        );
+        if let Some(pair) = proxied_streams.remove(&info.pair_handle_key) {
+            // This handle is the other end of an already proxied object...
+            // Here we need to inform the existing proxy loop that a transfer is going to be
+            // initiated, and to where.
+            drop(proxied_streams);
+            assert_eq!(info.this_handle_key, pair.original_paired);
+            log::info!("Send paired proxied {:?} orig_pair={:?}", handle, pair.original_paired);
+            // We allocate a drain stream to flush any messages we've buffered locally to the new
+            // endpoint.
+            let drain_stream = conn.alloc_uni().into();
+            let (stream_ref_sender, stream_ref_receiver) = StreamRefSender::new();
+            pair.remove_sender
+                .send(RemoveFromProxyTable::InitiateTransfer {
+                    paired_handle: handle,
+                    drain_stream,
+                    stream_ref_sender,
+                })
+                .map_err(|_| format_err!("Failed to initiate transfer"))?;
+            let stream_ref = stream_ref_receiver.await?;
+            match info.handle_type {
+                HandleType::Channel => Ok(ZirconHandle::Channel(ChannelHandle { stream_ref })),
+                HandleType::Socket(socket_type) => {
+                    Ok(ZirconHandle::Socket(SocketHandle { stream_ref, socket_type }))
+                }
+            }
+        } else {
+            // This handle (and its pair) is previously unseen... establish a proxy stream for it
+            log::trace!("Send proxied {:?}", handle);
+            let (tx, rx) = futures::channel::oneshot::channel();
+            let rx =
+                ProxyTransferInitiationReceiver::new(rx.map_err(move |_| {
+                    format_err!("cancelled transfer via send_proxied {:?}", info)
+                }));
+            let (stream_writer, stream_reader) = conn.alloc_bidi();
+            assert!(proxied_streams
+                .insert(
+                    info.this_handle_key,
+                    ProxiedHandle { remove_sender: tx, original_paired: info.pair_handle_key }
+                )
+                .is_none());
+            drop(proxied_streams);
+            let stream_ref = StreamRef::Creating(StreamId { id: stream_writer.id() });
+            match info.handle_type {
+                HandleType::Channel => {
+                    crate::proxy::spawn::send(
+                        Channel::from_handle(handle).into_proxied()?,
+                        rx,
+                        stream_writer.into(),
+                        stream_reader.into(),
+                        stats,
+                        Rc::downgrade(&self),
+                    )?;
+                    Ok(ZirconHandle::Channel(ChannelHandle { stream_ref }))
+                }
+                HandleType::Socket(socket_type) => {
+                    crate::proxy::spawn::send(
+                        Socket::from_handle(handle).into_proxied()?,
+                        rx,
+                        stream_writer.into(),
+                        stream_reader.into(),
+                        stats,
+                        Rc::downgrade(&self),
+                    )?;
+                    Ok(ZirconHandle::Socket(SocketHandle { stream_ref, socket_type }))
+                }
+            }
+        }
+    }
+
+    // Take a received handle description and construct a fidl::Handle that represents it
+    // whilst establishing proxies as required
+    pub(crate) async fn recv_proxied(
+        self: Rc<Self>,
+        handle: ZirconHandle,
+        conn: AsyncConnection,
+        stats: Rc<MessageStats>,
+    ) -> Result<Handle, Error> {
+        let (tx, rx) = futures::channel::oneshot::channel();
+        let debug_id = generate_node_id().0;
+        let rx = ProxyTransferInitiationReceiver::new(rx.map_err(move |_| {
+            format_err!("cancelled transfer via recv_proxied; debug_id={}", debug_id)
+        }));
+        let (handle, proxying) = match handle {
+            ZirconHandle::Channel(ChannelHandle { stream_ref }) => {
+                crate::proxy::spawn::recv(
+                    || Channel::create().map_err(Into::into),
+                    rx,
+                    stream_ref,
+                    &conn,
+                    stats,
+                    Rc::downgrade(&self),
+                )
+                .await?
+            }
+            ZirconHandle::Socket(SocketHandle { stream_ref, socket_type }) => {
+                let opts = match socket_type {
+                    SocketType::Stream => SocketOpts::STREAM,
+                    SocketType::Datagram => SocketOpts::DATAGRAM,
+                };
+                crate::proxy::spawn::recv(
+                    || Socket::create(opts).map_err(Into::into),
+                    rx,
+                    stream_ref,
+                    &conn,
+                    stats,
+                    Rc::downgrade(&self),
+                )
+                .await?
+            }
+        };
+        if proxying {
+            let mut proxied_streams = self.proxied_streams.borrow_mut();
+            let info = handle_info(handle.as_handle_ref())?;
+            log::trace!(
+                "{:?} RECV_PROXIED: {:?} debug_id={} all={:?}",
+                self.node_id,
+                info,
+                debug_id,
+                sorted(proxied_streams.keys().map(|x| *x).collect::<Vec<_>>())
+            );
+            let prior = proxied_streams.insert(
+                info.pair_handle_key,
+                ProxiedHandle { remove_sender: tx, original_paired: info.this_handle_key },
+            );
+            assert_eq!(prior.map(|p| p.original_paired), None);
+        }
+        Ok(handle)
+    }
+
+    // Remove a proxied handle from our table.
+    // Called by proxy::Proxy::drop.
+    pub(crate) fn remove_proxied(self: &Rc<Self>, handle: Handle) -> Result<(), Error> {
+        let info = handle_info(handle.as_handle_ref())?;
+        log::trace!(
+            "{:?} REMOVE_PROXIED: {:?} all={:?}",
+            self.node_id,
+            info,
+            sorted(self.proxied_streams.borrow().keys().map(|x| *x).collect::<Vec<_>>())
+        );
+        if let Some(removed) = self.proxied_streams.borrow_mut().remove(&info.this_handle_key) {
+            assert_eq!(removed.original_paired, info.pair_handle_key);
+            let _ = removed.remove_sender.send(RemoveFromProxyTable::Dropped);
+        }
+        Ok(())
+    }
+
+    // Note the endpoint of a transfer that we know about (may complete a transfer operation)
+    pub(crate) fn post_transfer(
+        &self,
+        transfer_key: TransferKey,
+        other_end: FoundTransfer,
+    ) -> Result<(), Error> {
+        let mut pending_transfers = self.pending_transfers.borrow_mut();
+        match pending_transfers.insert(transfer_key, PendingTransfer::Complete(other_end)) {
+            Some(PendingTransfer::Complete(_)) => bail!("Duplicate transfer received"),
+            Some(PendingTransfer::Waiting(w)) => w.wake(),
+            None => (),
+        }
+        Ok(())
+    }
+
+    fn poll_find_transfer(
+        &self,
+        cx: &mut Context<'_>,
+        transfer_key: TransferKey,
+    ) -> Poll<Result<FoundTransfer, Error>> {
+        let mut pending_transfers = self.pending_transfers.borrow_mut();
+        if let Some(PendingTransfer::Complete(other_end)) = pending_transfers.remove(&transfer_key)
+        {
+            Poll::Ready(Ok(other_end))
+        } else {
+            pending_transfers.insert(transfer_key, PendingTransfer::Waiting(cx.waker().clone()));
+            Poll::Pending
+        }
+    }
+
+    // Lookup a transfer that we're expected to eventually know about
+    pub(crate) async fn find_transfer(
+        &self,
+        transfer_key: TransferKey,
+    ) -> Result<FoundTransfer, Error> {
+        poll_fn(|cx| self.poll_find_transfer(cx, transfer_key)).await
+    }
+
+    // Begin a transfer operation (opposite of find_transfer), publishing an endpoint on the remote
+    // nodes transfer table.
+    pub(crate) async fn open_transfer(
+        self: &Rc<Router>,
+        target: NodeId,
+        transfer_key: TransferKey,
+        handle: Handle,
+        link_hint: &Weak<Link>,
+    ) -> Result<OpenedTransfer, Error> {
+        if target == self.node_id {
+            // The target is local: we just file away the handle.
+            // Later, find_transfer will find this and we'll collapse away Overnet's involvement and
+            // reunite the channel ends.
+            let info = handle_info(handle.as_handle_ref())?;
+            log::trace!(
+                "{:?} OPEN_TRANSFER_REMOVE_PROXIED: {:?} all={:?}",
+                self.node_id,
+                info,
+                sorted(self.proxied_streams.borrow().keys().map(|x| *x).collect::<Vec<_>>())
+            );
+            if let Some(removed) = self.proxied_streams.borrow_mut().remove(&info.this_handle_key) {
+                assert_eq!(removed.original_paired, info.pair_handle_key);
+                assert!(removed.remove_sender.send(RemoveFromProxyTable::Dropped).is_ok());
+            }
+            if let Some(removed) = self.proxied_streams.borrow_mut().remove(&info.pair_handle_key) {
+                assert_eq!(removed.original_paired, info.this_handle_key);
+                assert!(removed.remove_sender.send(RemoveFromProxyTable::Dropped).is_ok());
+            }
+            self.post_transfer(transfer_key, FoundTransfer::Fused(handle))?;
+            Ok(OpenedTransfer::Fused)
+        } else {
+            let (writer, reader) =
+                self.client_peer(target, link_hint).await?.send_open_transfer(transfer_key).await?;
+            Ok(OpenedTransfer::Remote(writer, reader, handle))
+        }
     }
 }
 

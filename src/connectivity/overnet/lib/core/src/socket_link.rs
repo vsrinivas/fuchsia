@@ -148,7 +148,6 @@ async fn run_socket_link(
     log::trace!("[HS:{}] Running link", handshake_id);
     spawn(async move {
         while let Some(mut frame) = rx_frames.next().await {
-            //log::trace!("RECV LINK FRAME: {:?}", &frame);
             if let Err(err) = link_receiver.received_packet(frame.as_mut()).await {
                 log::warn!("[HS:{}] Error reading packet: {:?}", handshake_id, err);
             }
@@ -157,7 +156,6 @@ async fn run_socket_link(
 
     let mut buf = [0u8; 4096];
     while let Some(n) = link_sender.next_send(&mut buf).await? {
-        // log::trace!("SEND LINK FRAME: {:?}", &buf[..n]);
         framer.queue_send(&buf[..n])?;
         tx_bytes.write_all(framer.take_sends().as_slice()).await?;
     }

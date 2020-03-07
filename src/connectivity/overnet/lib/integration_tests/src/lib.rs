@@ -6,6 +6,7 @@
 //! depend on the surrounding environment (and can thus be run like self contained unit tests)
 
 mod echo;
+mod triangle;
 
 use {
     anyhow::Error,
@@ -15,6 +16,7 @@ use {
     overnet_core::{log_errors, spawn, NodeId, Router, RouterOptions},
     parking_lot::Mutex,
     std::collections::VecDeque,
+    std::rc::Rc,
     std::sync::Arc,
 };
 
@@ -36,15 +38,30 @@ enum OvernetCommand {
 /// Overnet implementation for integration tests
 pub struct Overnet {
     tx: Mutex<futures::channel::mpsc::UnboundedSender<OvernetCommand>>,
+    node_id: NodeId,
 }
 
 impl Overnet {
     /// Create a new instance
     pub fn new() -> Result<Arc<Overnet>, Error> {
+        let options = RouterOptions::new();
+        #[cfg(not(target_os = "fuchsia"))]
+        let options = options
+            .set_quic_server_key_file(hoist::hard_coded_server_key()?)
+            .set_quic_server_cert_file(hoist::hard_coded_server_cert()?);
+        #[cfg(target_os = "fuchsia")]
+        let options = options
+            .set_quic_server_key_file(Box::new("/pkg/data/cert.key".to_string()))
+            .set_quic_server_cert_file(Box::new("/pkg/data/cert.crt".to_string()));
+
+        let node = Router::new(options)?;
+
+        let node_id = node.node_id();
+
         let (tx, rx) = futures::channel::mpsc::unbounded();
-        spawn(log_errors(run_overnet(rx), "Main loop failed"));
+        spawn(log_errors(run_overnet(node, rx), "Main loop failed"));
         let tx = Mutex::new(tx);
-        Ok(Arc::new(Overnet { tx }))
+        Ok(Arc::new(Overnet { tx, node_id }))
     }
 
     fn send(&self, cmd: OvernetCommand) {
@@ -71,23 +88,16 @@ impl Overnet {
     ) -> Result<impl MeshControllerProxyInterface, Error> {
         Ok(MeshController(self.clone()))
     }
+
+    pub fn node_id(&self) -> NodeId {
+        self.node_id
+    }
 }
 
 async fn run_overnet(
+    node: Rc<Router>,
     mut rx: futures::channel::mpsc::UnboundedReceiver<OvernetCommand>,
 ) -> Result<(), Error> {
-    let options = RouterOptions::new();
-    #[cfg(not(target_os = "fuchsia"))]
-    let options = options
-        .set_quic_server_key_file(hoist::hard_coded_server_key()?)
-        .set_quic_server_cert_file(hoist::hard_coded_server_cert()?);
-    #[cfg(target_os = "fuchsia")]
-    let options = options
-        .set_quic_server_key_file(Box::new("/pkg/data/cert.key".to_string()))
-        .set_quic_server_cert_file(Box::new("/pkg/data/cert.crt".to_string()));
-
-    let node = Router::new(options)?;
-
     // Run application loop
     loop {
         let cmd = rx.next().await;
@@ -223,6 +233,7 @@ pub fn connect_with_mutator(
 
 /// Connect two test overnet instances with a stream socket.
 pub fn connect(a: &Arc<Overnet>, b: &Arc<Overnet>) -> Result<(), Error> {
+    log::info!("Connect {:?} and {:?}", a.node_id(), b.node_id());
     let a = a.clone().connect_as_mesh_controller()?;
     let b = b.clone().connect_as_mesh_controller()?;
     let (sa, sb) = fidl::Socket::create(fidl::SocketOpts::STREAM)?;
@@ -305,7 +316,7 @@ pub fn connect_with_interspersed_log_messages(
 // Run an asynchronous test body (portably across host & Fuchsia)
 
 // Max test time: one day by default... but can be tuned down at need.
-const MAX_TEST_TIME_MS: u32 = 24 * 60 * 60 * 1000;
+const MAX_TEST_TIME_MS: u32 = 10000; //24 * 60 * 60 * 1000;
 
 #[cfg(target_os = "fuchsia")]
 pub use fuchsia_runner::*;
