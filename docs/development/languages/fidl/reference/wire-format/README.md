@@ -429,7 +429,7 @@ you can realize significant space savings [[2]](#Footnote-2):
 The structure now takes 40 bytes.
 
 Note: While `fidlc` could automatically pack structs, like Rust, we chose not
-to do that in order to simplify [ABI compatibility changes](../abi-compat.md).
+to do that in order to simplify [ABI compatibility changes][abi-compat].
 
 ### Envelopes
 
@@ -843,4 +843,5 @@ Read [The Lost Art of Structure Packing][lostart] for an in-depth treatise on th
 [channel call]: /docs/reference/syscalls/channel_call.md
 [channel write]: /docs/reference/syscalls/channel_write.md
 [ftp-030]: /docs/development/languages/fidl/reference/ftp/ftp-030.md
+[abi-compat]: /docs/development/languages/fidl/how-to/abi-compat.md
 [lostart]: http://www.catb.org/esr/structure-packing/

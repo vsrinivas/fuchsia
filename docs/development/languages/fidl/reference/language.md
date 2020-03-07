@@ -551,7 +551,7 @@ table Profile {
 *   Record type consisting of an ordinal and an envelope.
 *   Ordinal indicates member selection, envelope holds contents.
 *   Declaration can be modified after deployment, while maintaining ABI
-    compatibility. See the [Compatibility Guide](abi-compat.md#unions) for
+    compatibility. See the [Compatibility Guide](../how-to/abi-compat.md#unions) for
     source-compatibility considerations.
 *   Reference may be nullable.
 *   Unions contain one or more members. A union with no members would have no

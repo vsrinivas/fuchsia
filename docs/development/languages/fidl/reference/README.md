@@ -1,6 +1,5 @@
 # FIDL language reference
 
-* [FIDL ABI and source compatibility guide](abi-compat.md)
 * [FIDL attributes](attributes.md)
 * [FIDL bindings specification](bindings.md)
 * [FIDL compiler](compiler.md)

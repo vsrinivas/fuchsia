@@ -4,8 +4,6 @@
 toc:
 - title: "FIDL reference"
   path: /docs/development/languages/fidl/reference/README.md
-- title: "ABI and source compatibility guide"
-  path: /docs/development/languages/fidl/reference/abi-compat.md
 - title: "Attributes"
   path: /docs/development/languages/fidl/reference/attributes.md
 - title: "Bindings"

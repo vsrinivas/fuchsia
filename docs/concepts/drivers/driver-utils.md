@@ -56,7 +56,7 @@ when their driver performs a `DdkAdd()` (for C++ drivers) operation.
 Existing utilities like `spiutil` make use of currently existing FIDL APIs. To
 extend the functionality exported by an exisiting driver, the FIDL API the
 existing driver exports can be extended/evolved by following
-[Considerations when changing FIDL source](/docs/development/languages/fidl/reference/abi-compat.md#considerations_when_changing_fidl_source).
+[Considerations when changing FIDL source](/docs/development/languages/fidl/how-to/abi-compat.md#considerations_when_changing_fidl_source).
 In cases when there is no existing FIDL API, you need to add new FIDL files to
 a folder within [/sdk/fidl](/sdk/fidl).
 

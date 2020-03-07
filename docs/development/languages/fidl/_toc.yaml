@@ -11,6 +11,9 @@ toc:
 - title: "Reference"
   section:
   - include: /docs/development/languages/fidl/reference/_toc.yaml
+- title: "How To"
+  section:
+  - include: /docs/development/languages/fidl/how-to/_toc.yaml
 - title: "Supported languages"
   section:
   - title: "Comparison of C, Low-Level C++, and High-Level C++ Language Bindings"

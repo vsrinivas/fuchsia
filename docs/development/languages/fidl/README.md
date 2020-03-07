@@ -31,7 +31,6 @@ Please read the [CONTRIBUTING](CONTRIBUTING.md) chapter for more information.
 
 # References
 
-* [ABI and Source Compatibility Guide](reference/abi-compat.md) &mdash; how to evolve FIDL APIs
 * [API Rubric][fidl-api] &mdash; design patterns and best practices
 * [Style Rubric][fidl-style] &mdash; style guide
 * [Attributes](reference/attributes.md) &mdash; describes the available FIDL attributes
@@ -48,6 +47,11 @@ Please read the [CONTRIBUTING](CONTRIBUTING.md) chapter for more information.
 * [`library zx`](reference/library-zx.md) &mdash; the Zircon system library
 * [Wire Format](reference/wire-format/README.md) &mdash; details the byte-by-byte organization
   of data
+
+# How To
+
+* [ABI and Source Compatibility Guide](how-to/abi-compat.md) &mdash; how to evolve FIDL APIs
+* [Max out pagination](how-to/max-out-pagination.md) &mdash; how to max out pagination
 
 <!-- xrefs -->
 [fidl-style]: /docs/development/languages/fidl/style.md
