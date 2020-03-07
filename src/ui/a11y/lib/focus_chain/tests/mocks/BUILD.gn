@@ -5,9 +5,14 @@
 source_set("mocks") {
   testonly = true
 
-  public = [ "mock_focus_chain_requester.h" ]
+  public = [
+    "mock_focus_chain_registry.h",
+    "mock_focus_chain_requester.h",
+  ]
 
   sources = [
+    "mock_focus_chain_registry.cc",
+    "mock_focus_chain_registry.h",
     "mock_focus_chain_requester.cc",
     "mock_focus_chain_requester.h",
   ]

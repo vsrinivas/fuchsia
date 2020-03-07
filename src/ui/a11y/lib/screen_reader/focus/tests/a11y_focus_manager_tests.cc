@@ -8,6 +8,7 @@
 #include <gtest/gtest.h>
 
 #include "src/lib/syslog/cpp/logger.h"
+#include "src/ui/a11y/lib/focus_chain/tests/mocks/mock_focus_chain_registry.h"
 #include "src/ui/a11y/lib/focus_chain/tests/mocks/mock_focus_chain_requester.h"
 #include "src/ui/a11y/lib/screen_reader/focus/a11y_focus_manager.h"
 #include "src/ui/a11y/lib/testing/view_ref_helper.h"
@@ -18,7 +19,8 @@ namespace accessibility_test {
 class A11yFocusManagerTest : public gtest::RealLoopFixture {
  public:
   void SetUp() override {
-    a11y_focus_manager_ = std::make_unique<a11y::A11yFocusManager>(&mock_focus_chain_requester_);
+    a11y_focus_manager_ = std::make_unique<a11y::A11yFocusManager>(&mock_focus_chain_requester_,
+                                                                   &mock_focus_chain_registry_);
     syslog::InitLogger();
   }
 
@@ -31,6 +33,7 @@ class A11yFocusManagerTest : public gtest::RealLoopFixture {
   }
 
   MockAccessibilityFocusChainRequester mock_focus_chain_requester_;
+  MockAccessibilityFocusChainRegistry mock_focus_chain_registry_;
   std::unique_ptr<a11y::A11yFocusManager> a11y_focus_manager_;
 };
 
@@ -87,6 +90,13 @@ TEST_F(A11yFocusManagerTest, ChangingA11yFocusToTheSameView) {
                                     [&success_2](bool result) { success_2 = result; });
   CheckViewInFocus(view_ref_helper, 1u);
   EXPECT_TRUE(success_2);
+}
+
+TEST_F(A11yFocusManagerTest, ListensToFocusChainUpdates) {
+  ViewRefHelper view_ref_helper;
+  // The Focus Chain is updated and the Focus Chain Manager listens to the update.
+  mock_focus_chain_registry_.SendViewRefKoid(view_ref_helper.koid());
+  CheckViewInFocus(view_ref_helper, a11y::A11yFocusManager::kRootNodeId);
 }
 
 }  // namespace accessibility_test

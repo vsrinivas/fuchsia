@@ -10,6 +10,7 @@
 
 #include <unordered_map>
 
+#include "src/ui/a11y/lib/focus_chain/accessibility_focus_chain_listener.h"
 #include "src/ui/a11y/lib/focus_chain/accessibility_focus_chain_requester.h"
 
 namespace a11y {
@@ -25,7 +26,7 @@ namespace a11y {
 //
 // The a11y focus can be changed, which may trigger a Focus Chain Update if the active a11y focus is
 // moving to another view.
-class A11yFocusManager {
+class A11yFocusManager : public AccessibilityFocusChainListener {
  public:
   // Defines which view is currently in a11y focus along with the node_id of the node inside that
   // view.
@@ -41,8 +42,9 @@ class A11yFocusManager {
   // Root node id, which will be used to set the default node_id for a view.
   static constexpr uint32_t kRootNodeId = 0;
 
-  // |focus_chain_requester| must outlive this object.
-  explicit A11yFocusManager(AccessibilityFocusChainRequester* focus_chain_requester);
+  // |focus_chain_requester| and |registry| must outlive this object.
+  explicit A11yFocusManager(AccessibilityFocusChainRequester* focus_chain_requester,
+                            AccessibilityFocusChainRegistry* registry);
   ~A11yFocusManager();
 
   // Returns the current a11y focus if it exists.
@@ -56,6 +58,9 @@ class A11yFocusManager {
   void SetA11yFocus(zx_koid_t koid, uint32_t node_id, SetA11yFocusCallback callback);
 
  private:
+  // |AccessibilityFocusChainListener|
+  void OnViewFocus(zx_koid_t view_ref_koid) override;
+
   // Map for storing node_id which is in a11y focus for every viewref_koid.
   // By default, root-node(node_id = 0) is set for a view in a11y focus.
   std::unordered_map<zx_koid_t /* viewref_koid */, uint32_t /* node_id */>
@@ -66,6 +71,11 @@ class A11yFocusManager {
 
   // Interface used to request Focus Chain Updates.
   AccessibilityFocusChainRequester* const focus_chain_requester_ = nullptr;
+
+  // Used to register this class as a listener of Focus Chain Updates for a11y.
+  AccessibilityFocusChainRegistry* const registry_ = nullptr;
+
+  fxl::WeakPtrFactory<AccessibilityFocusChainListener> weak_ptr_factory_;
 };
 
 }  // namespace a11y

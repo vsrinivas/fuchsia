@@ -7,6 +7,7 @@
 #include <lib/fidl/cpp/binding_set.h>
 
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
+#include "src/ui/a11y/lib/focus_chain/tests/mocks/mock_focus_chain_registry.h"
 #include "src/ui/a11y/lib/focus_chain/tests/mocks/mock_focus_chain_requester.h"
 
 namespace accessibility_test {
@@ -14,7 +15,8 @@ class ScreenReaderContextTest : public gtest::RealLoopFixture {
  public:
   void SetUp() override {
     // Initialize A11yFocusManager.
-    auto a11y_focus_manager = std::make_unique<a11y::A11yFocusManager>(&mock_focus_requester_);
+    auto a11y_focus_manager =
+        std::make_unique<a11y::A11yFocusManager>(&mock_focus_requester_, &mock_focus_registry_);
 
     // Store raw pointer to A11yFocusManager.
     a11y_focus_manager_ptr_ = a11y_focus_manager.get();
@@ -25,6 +27,7 @@ class ScreenReaderContextTest : public gtest::RealLoopFixture {
   }
 
   MockAccessibilityFocusChainRequester mock_focus_requester_;
+  MockAccessibilityFocusChainRegistry mock_focus_registry_;
   a11y::A11yFocusManager* a11y_focus_manager_ptr_ = nullptr;
   std::unique_ptr<a11y::ScreenReaderContext> screen_reader_context_;
 };

@@ -14,8 +14,12 @@
 
 namespace a11y {
 
-A11yFocusManager::A11yFocusManager(AccessibilityFocusChainRequester* focus_chain_requester)
-    : focus_chain_requester_(focus_chain_requester) {}
+A11yFocusManager::A11yFocusManager(AccessibilityFocusChainRequester* focus_chain_requester,
+                                   AccessibilityFocusChainRegistry* registry)
+    : focus_chain_requester_(focus_chain_requester), registry_(registry), weak_ptr_factory_(this) {
+  FX_DCHECK(registry_);
+  registry_->Register(weak_ptr_factory_.GetWeakPtr());
+}
 
 A11yFocusManager::~A11yFocusManager() = default;
 
@@ -51,6 +55,14 @@ void A11yFocusManager::SetA11yFocus(zx_koid_t koid, uint32_t node_id,
           callback(true);
         }
       });
+}
+
+void A11yFocusManager::OnViewFocus(zx_koid_t view_ref_koid) {
+  currently_focused_view_ = view_ref_koid;
+  const auto it = focused_node_in_view_map_.find(currently_focused_view_);
+  if (it == focused_node_in_view_map_.end()) {
+    focused_node_in_view_map_[currently_focused_view_] = kRootNodeId;
+  }
 }
 
 }  // namespace a11y
