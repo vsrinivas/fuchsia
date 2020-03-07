@@ -24,7 +24,7 @@ class ScreenReaderAction {
  public:
   // Struct for holding data which is required to perform any action.
   struct ActionData {
-    zx_koid_t koid;
+    zx_koid_t current_view_koid;
     ::fuchsia::math::PointF local_point;
   };
 

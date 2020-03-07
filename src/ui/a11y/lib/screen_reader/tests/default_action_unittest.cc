@@ -69,7 +69,7 @@ TEST_F(DefaultActionTest, OnAccessibilitActionRequestedCalled) {
 
   a11y::DefaultAction default_action(&action_context_);
   a11y::DefaultAction::ActionData action_data;
-  action_data.koid = semantic_provider_.koid();
+  action_data.current_view_koid = semantic_provider_.koid();
 
   semantic_provider_.SetRequestedAction(fuchsia::accessibility::semantics::Action::SET_FOCUS);
 
@@ -99,7 +99,7 @@ TEST_F(DefaultActionTest, OnAccessibilitActionRequestedNotCalled) {
 
   a11y::DefaultAction default_action(&action_context_);
   a11y::DefaultAction::ActionData action_data;
-  action_data.koid = ZX_KOID_INVALID;
+  action_data.current_view_koid = ZX_KOID_INVALID;
 
   semantic_provider_.SetRequestedAction(fuchsia::accessibility::semantics::Action::SET_FOCUS);
 

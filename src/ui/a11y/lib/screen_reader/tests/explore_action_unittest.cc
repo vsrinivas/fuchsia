@@ -93,7 +93,7 @@ TEST_F(ExploreActionTest, ReadLabel) {
 
   a11y::ExploreAction explore_action(&action_context_);
   a11y::ExploreAction::ActionData action_data;
-  action_data.koid = semantic_provider_.koid();
+  action_data.current_view_koid = semantic_provider_.koid();
 
   semantic_provider_.SetHitTestResult(0);
 

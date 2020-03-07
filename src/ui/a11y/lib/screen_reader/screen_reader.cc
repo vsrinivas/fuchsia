@@ -23,7 +23,7 @@ void ScreenReader::BindGestures(a11y::GestureHandler* gesture_handler) {
   bool gesture_bind_status = gesture_handler->BindOneFingerDoubleTapAction(
       [this](zx_koid_t viewref_koid, fuchsia::math::PointF point) {
         ScreenReaderAction::ActionData action_data;
-        action_data.koid = viewref_koid;
+        action_data.current_view_koid = viewref_koid;
         action_data.local_point = point;
         ExecuteAction("default_action", action_data);
       });
@@ -33,7 +33,7 @@ void ScreenReader::BindGestures(a11y::GestureHandler* gesture_handler) {
   gesture_bind_status = gesture_handler->BindOneFingerSingleTapAction(
       [this](zx_koid_t viewref_koid, fuchsia::math::PointF point) {
         ScreenReaderAction::ActionData action_data;
-        action_data.koid = viewref_koid;
+        action_data.current_view_koid = viewref_koid;
         action_data.local_point = point;
         ExecuteAction("explore_action", action_data);
       });
@@ -43,7 +43,7 @@ void ScreenReader::BindGestures(a11y::GestureHandler* gesture_handler) {
   gesture_bind_status = gesture_handler->BindOneFingerDragAction(
       [this](zx_koid_t viewref_koid, fuchsia::math::PointF point) {
         ScreenReaderAction::ActionData action_data;
-        action_data.koid = viewref_koid;
+        action_data.current_view_koid = viewref_koid;
         action_data.local_point = point;
         ExecuteAction("explore_action", action_data);
       });
