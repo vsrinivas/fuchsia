@@ -59,6 +59,9 @@ test("virtio-input-test") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-hardware-pty:c",
   ]
+
+  # TODO(47498): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 migrated_manifest("virtio_input-manifest") {
