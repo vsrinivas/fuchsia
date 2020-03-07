@@ -6,7 +6,7 @@ use {
     anyhow::format_err,
     bt_a2dp::media_types::*,
     bt_a2dp_sink_metrics as metrics, bt_avdtp as avdtp,
-    fidl_fuchsia_bluetooth_bredr::{ProfileDescriptor, ProfileProxy},
+    fidl_fuchsia_bluetooth_bredr::{Channel, ProfileDescriptor, ProfileProxy},
     fuchsia_async as fasync,
     fuchsia_bluetooth::{
         detachable_map::{DetachableMap, DetachableWeak},
@@ -15,7 +15,6 @@ use {
     fuchsia_cobalt::CobaltSender,
     fuchsia_inspect as inspect,
     fuchsia_syslog::{fx_log_info, fx_log_warn, fx_vlog},
-    fuchsia_zircon as zx,
     parking_lot::RwLock,
     std::{
         collections::hash_map::Entry,
@@ -101,6 +100,8 @@ pub struct ConnectedPeers {
     cobalt_sender: CobaltSender,
     /// Media session domain
     domain: Option<String>,
+    /// The 'peers' node of the inspect tree. All connected peers own a child node of this node.
+    inspect: inspect::Node,
 }
 
 impl ConnectedPeers {
@@ -108,6 +109,7 @@ impl ConnectedPeers {
         streams: Streams,
         profile: ProfileProxy,
         cobalt_sender: CobaltSender,
+        inspect: inspect::Node,
         domain: Option<String>,
     ) -> Self {
         Self {
@@ -115,6 +117,7 @@ impl ConnectedPeers {
             descriptors: HashMap::new(),
             streams,
             profile,
+            inspect,
             cobalt_sender,
             domain,
         }
@@ -182,22 +185,24 @@ impl ConnectedPeers {
         }
     }
 
-    pub fn connected(
-        &mut self,
-        inspect: inspect::Node,
-        id: PeerId,
-        channel: zx::Socket,
-        initiate_streaming: bool,
-    ) {
+    pub fn connected(&mut self, id: PeerId, channel: Channel, initiate_streaming: bool) {
+        let socket = match channel.socket {
+            Some(socket) => socket,
+            None => {
+                fx_log_warn!("Peer {} delivered a channel with no socket", id);
+                return;
+            }
+        };
+
         match self.get(&id) {
             Some(peer) => {
-                if let Err(e) = peer.write().receive_channel(channel) {
+                if let Err(e) = peer.write().receive_channel(socket) {
                     fx_log_warn!("{} failed to connect channel: {}", id, e);
                 }
             }
             None => {
                 fx_log_info!("Adding new peer for {}", id);
-                let avdtp_peer = match avdtp::Peer::new(channel) {
+                let avdtp_peer = match avdtp::Peer::new(socket) {
                     Ok(peer) => peer,
                     Err(e) => {
                         fx_log_warn!("Error adding signaling peer {}: {:?}", id, e);
@@ -210,7 +215,7 @@ impl ConnectedPeers {
                     avdtp_peer,
                     self.streams.clone(),
                     self.profile.clone(),
-                    inspect,
+                    self.inspect.create_child(&format!("peer {}", id)),
                     self.cobalt_sender.clone(),
                 );
 
@@ -267,11 +272,13 @@ mod tests {
     use super::*;
 
     use bt_avdtp::Request;
+    use fidl::encoding::Decodable;
     use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_bluetooth_bredr::{
         ProfileMarker, ProfileRequestStream, ServiceClassProfileIdentifier,
     };
     use fidl_fuchsia_cobalt::CobaltEvent;
+    use fuchsia_zircon as zx;
     use futures::channel::mpsc;
     use futures::{self, task::Poll, StreamExt};
     use std::convert::TryFrom;
@@ -321,28 +328,38 @@ mod tests {
     }
 
     fn setup_connected_peer_test(
-    ) -> (fasync::Executor, PeerId, ConnectedPeers, inspect::Inspector, ProfileRequestStream) {
+    ) -> (fasync::Executor, PeerId, ConnectedPeers, ProfileRequestStream) {
         let exec = fasync::Executor::new_with_fake_time().expect("executor should build");
         let (proxy, stream) =
             create_proxy_and_stream::<ProfileMarker>().expect("Profile proxy should be created");
         let id = PeerId(1);
         let (cobalt_sender, _) = fake_cobalt_sender();
-
-        let peers = ConnectedPeers::new(Streams::new(), proxy, cobalt_sender, None);
-
         let inspect = inspect::Inspector::new();
 
-        (exec, id, peers, inspect, stream)
+        let peers = ConnectedPeers::new(
+            Streams::new(),
+            proxy,
+            cobalt_sender,
+            inspect.root().create_child("connected"),
+            None,
+        );
+
+        (exec, id, peers, stream)
+    }
+
+    fn new_channel() -> (zx::Socket, Channel) {
+        let (remote, signaling) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
+        let chan = Channel { socket: Some(signaling), ..Channel::new_empty() };
+        (remote, chan)
     }
 
     #[test]
     fn connected_peers_connect_creates_peer() {
-        let (mut exec, id, mut peers, inspect, _stream) = setup_connected_peer_test();
+        let (mut exec, id, mut peers, _stream) = setup_connected_peer_test();
 
-        let (remote, signaling) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
+        let (remote, channel) = new_channel();
 
-        let inspect = inspect.root().create_child(format!("peer {}", id));
-        peers.connected(inspect, id, signaling, false);
+        peers.connected(id, channel, false);
 
         let peer = match peers.get(&id) {
             None => panic!("Peer should be in ConnectedPeers after connection"),
@@ -365,12 +382,11 @@ mod tests {
 
     #[test]
     fn connected_peers_found_connected_peer_starts_discovery() {
-        let (mut exec, id, mut peers, inspect, _stream) = setup_connected_peer_test();
+        let (mut exec, id, mut peers, _stream) = setup_connected_peer_test();
 
-        let (remote, signaling) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
+        let (remote, channel) = new_channel();
 
-        let inspect = inspect.root().create_child(format!("peer {}", id));
-        peers.connected(inspect, id, signaling, false);
+        peers.connected(id, channel, false);
 
         let profile_desc = ProfileDescriptor {
             profile_id: ServiceClassProfileIdentifier::AdvancedAudioDistribution,
@@ -385,9 +401,7 @@ mod tests {
 
     #[test]
     fn connected_peers_connected_found_peer_starts_discovery() {
-        let (mut exec, id, mut peers, inspect, _stream) = setup_connected_peer_test();
-
-        let (remote, signaling) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
+        let (mut exec, id, mut peers, _stream) = setup_connected_peer_test();
 
         let profile_desc = ProfileDescriptor {
             profile_id: ServiceClassProfileIdentifier::AdvancedAudioDistribution,
@@ -397,20 +411,19 @@ mod tests {
 
         peers.found(id, profile_desc);
 
-        let inspect = inspect.root().create_child(format!("peer {}", id));
-        peers.connected(inspect, id, signaling, false);
+        let (remote, channel) = new_channel();
+        peers.connected(id, channel, false);
 
         expect_started_discovery(&mut exec, remote);
     }
 
     #[test]
     fn connected_peers_peer_disconnect_removes_peer() {
-        let (mut exec, id, mut peers, inspect, _stream) = setup_connected_peer_test();
+        let (mut exec, id, mut peers, _stream) = setup_connected_peer_test();
 
-        let (remote, signaling) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
+        let (remote, channel) = new_channel();
 
-        let inspect = inspect.root().create_child(format!("peer {}", id));
-        peers.connected(inspect, id, signaling, false);
+        peers.connected(id, channel, false);
         run_to_stalled(&mut exec);
 
         // Disconnect the signaling channel, peer should be gone.
@@ -423,12 +436,10 @@ mod tests {
 
     #[test]
     fn connected_peers_reconnect_works() {
-        let (mut exec, id, mut peers, inspect, _stream) = setup_connected_peer_test();
+        let (mut exec, id, mut peers, _stream) = setup_connected_peer_test();
 
-        let (remote, signaling) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
-
-        let inspect1 = inspect.root().create_child(format!("peer {}", id));
-        peers.connected(inspect1, id, signaling, false);
+        let (remote, channel) = new_channel();
+        peers.connected(id, channel, false);
         run_to_stalled(&mut exec);
 
         // Disconnect the signaling channel, peer should be gone.
@@ -439,10 +450,9 @@ mod tests {
         assert!(peers.get(&id).is_none());
 
         // Connect another peer with the same ID
-        let (_remote, signaling) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
+        let (_remote, channel) = new_channel();
 
-        let inspect2 = inspect.root().create_child(format!("peer {}", id));
-        peers.connected(inspect2, id, signaling, false);
+        peers.connected(id, channel, false);
         run_to_stalled(&mut exec);
 
         // Should be connected.

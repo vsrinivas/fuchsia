@@ -402,14 +402,20 @@ fn report_stream_metrics(
 }
 
 /// Establishes the signaling channel after the delay specified by `timer_expired`.
-async fn initiate_after_timeout(
+async fn connect_after_timeout(
     peer_id: PeerId,
     peers: Arc<Mutex<ConnectedPeers>>,
+    controller_pool: Arc<Mutex<AvdtpControllerPool>>,
     profile_svc: ProfileProxy,
-    inspect: fuchsia_inspect::Node,
-    timer_expired: fasync::Timer,
 ) {
-    timer_expired.await;
+    fx_vlog!(
+        tag: "a2dp-sink",
+        1,
+        "A2DP sink - waiting {:?} before assuming INT role for peer {}.",
+        INITIATOR_DELAY,
+        peer_id,
+    );
+    fuchsia_async::Timer::new(INITIATOR_DELAY.after_now()).await;
     if peers.lock().is_connected(&peer_id) {
         fx_vlog!(
             tag: "a2dp-sink",
@@ -436,10 +442,23 @@ async fn initiate_after_timeout(
         fx_log_warn!("Couldn't connect to {}: {:?}", peer_id, e);
         return;
     }
-    match channel.socket {
-        Some(socket) => peers.lock().connected(inspect, peer_id, socket, true), // Start the streaming task.
-        None => fx_log_warn!("Couldn't connect {}: no socket", peer_id),
-    };
+    handle_connection(&peer_id, channel, true, &mut peers.lock(), &mut controller_pool.lock());
+}
+
+/// Handles incoming peer connections
+fn handle_connection(
+    peer_id: &PeerId,
+    channel: Channel,
+    initiate: bool,
+    peers: &mut ConnectedPeers,
+    controller_pool: &mut AvdtpControllerPool,
+) {
+    fx_log_info!("Connection from {}: {:?}!", peer_id, channel);
+    peers.connected(peer_id.clone(), channel, initiate);
+    if let Some(peer) = peers.get(&peer_id) {
+        // Add the controller to the peers
+        controller_pool.peer_connected(peer_id.clone(), peer.read().avdtp_peer());
+    }
 }
 
 /// Handles incoming profile events.
@@ -451,7 +470,6 @@ fn handle_profile_event(
     evt: ProfileEvent,
     profile_svc: ProfileProxy,
     peers: Arc<Mutex<ConnectedPeers>>,
-    inspect: &fuchsia_inspect::Inspector,
     controller_pool: Arc<Mutex<AvdtpControllerPool>>,
 ) -> Result<(), Error> {
     match evt {
@@ -469,41 +487,24 @@ fn handle_profile_event(
                 return Ok(());
             }
 
-            fx_vlog!(
-                tag: "a2dp-sink",
-                1,
-                "A2DP sink - waiting {:?} before assuming INT role for peer {}.",
-                INITIATOR_DELAY,
-                peer_id,
-            );
-
-            let timer_expired = fuchsia_async::Timer::new(INITIATOR_DELAY.after_now());
-            let inspect = inspect.root().create_child(format!("peer {}", peer_id));
-            fasync::spawn(initiate_after_timeout(
+            fasync::spawn(connect_after_timeout(
                 peer_id,
                 peers.clone(),
+                controller_pool.clone(),
                 profile_svc,
-                inspect,
-                timer_expired,
             ));
         }
         ProfileEvent::OnConnected { device_id, service_id: _, channel, protocol } => {
             fx_log_info!("Connection from {}: {:?} {:?}!", device_id, channel, protocol);
             let peer_id = device_id.parse().expect("peer ids from profile should parse");
-            let socket = match channel.socket {
-                Some(s) => s,
-                None => {
-                    fx_log_warn!("socket in OnConnected event missing");
-                    return Ok(());
-                }
-            };
-            let inspect = inspect.root().create_child(format!("peer {}", device_id));
             // The remote peer connected to us, `initiate_streaming` = false.
-            peers.lock().connected(inspect, peer_id, socket, false);
-            if let Some(peer) = peers.lock().get(&peer_id) {
-                // Add the controller to the peers
-                controller_pool.lock().peer_connected(peer_id, peer.read().avdtp_peer());
-            }
+            handle_connection(
+                &peer_id,
+                channel,
+                false,
+                &mut peers.lock(),
+                &mut controller_pool.lock(),
+            );
         }
     }
 
@@ -565,6 +566,7 @@ async fn main() -> Result<(), Error> {
         streams,
         profile_svc.clone(),
         cobalt_logger.clone(),
+        inspect.root().create_child("connected"),
         opts.domain,
     )));
 
@@ -597,13 +599,7 @@ async fn main() -> Result<(), Error> {
 
     let mut evt_stream = profile_svc.take_event_stream();
     while let Some(evt) = evt_stream.try_next().await? {
-        handle_profile_event(
-            evt,
-            profile_svc.clone(),
-            peers.clone(),
-            &inspect,
-            controller_pool.clone(),
-        )?;
+        handle_profile_event(evt, profile_svc.clone(), peers.clone(), controller_pool.clone())?;
     }
     Ok(())
 }
@@ -636,7 +632,6 @@ mod tests {
         fasync::Executor,
         PeerId,
         Arc<Mutex<ConnectedPeers>>,
-        inspect::Inspector,
         ProfileProxy,
         ProfileRequestStream,
         Arc<Mutex<AvdtpControllerPool>>,
@@ -646,17 +641,18 @@ mod tests {
             create_proxy_and_stream::<ProfileMarker>().expect("Profile proxy should be created");
         let (cobalt_sender, _) = fake_cobalt_sender();
         let id = PeerId(1);
+        let inspect = inspect::Inspector::new();
         let peers = Arc::new(Mutex::new(ConnectedPeers::new(
             Streams::new(),
             proxy.clone(),
             cobalt_sender,
+            inspect.root().create_child("connected"),
             None,
         )));
 
-        let inspect = inspect::Inspector::new();
         let controller_pool = Arc::new(Mutex::new(AvdtpControllerPool::new()));
 
-        (exec, id, peers, inspect, proxy, stream, controller_pool)
+        (exec, id, peers, proxy, stream, controller_pool)
     }
 
     fn send_on_service_found(id: PeerId, control_handle: ProfileControlHandle) {
@@ -862,7 +858,7 @@ mod tests {
     /// Tests that A2DP sink assumes the initiator role when a peer is found, but
     /// not connected, and the timeout completes.
     fn wait_to_initiate_success_with_no_connected_peer() {
-        let (mut exec, id, peers, inspect, proxy, mut prof_stream, controller_pool) =
+        let (mut exec, id, peers, proxy, mut prof_stream, controller_pool) =
             setup_connected_peer_test();
         // Initialize context to a fixed point in time.
         exec.set_fake_time(fasync::Time::from_nanos(1000000000));
@@ -889,7 +885,7 @@ mod tests {
         };
 
         // Propagate the event to the handler.
-        let res = handle_profile_event(evt, proxy, peers.clone(), &inspect, controller_pool);
+        let res = handle_profile_event(evt, proxy, peers.clone(), controller_pool);
         run_to_stalled(&mut exec);
         assert_eq!(Ok(()), res.map_err(|e| format!("{:?}", e)));
 
@@ -931,7 +927,7 @@ mod tests {
     /// Tests that A2DP sink does not assume the initiator role when a peer connects
     /// before `INITIATOR_DELAY` timeout completes.
     fn wait_to_initiate_returns_early_with_connected_peer() {
-        let (mut exec, id, peers, inspect, proxy, mut prof_stream, controller_pool) =
+        let (mut exec, id, peers, proxy, mut prof_stream, controller_pool) =
             setup_connected_peer_test();
         // Initialize context to a fixed point in time.
         exec.set_fake_time(fasync::Time::from_nanos(1000000000));
@@ -958,13 +954,7 @@ mod tests {
         };
 
         // Propagate the event to the handler.
-        let res = handle_profile_event(
-            evt,
-            proxy.clone(),
-            peers.clone(),
-            &inspect,
-            controller_pool.clone(),
-        );
+        let res = handle_profile_event(evt, proxy.clone(), peers.clone(), controller_pool.clone());
         run_to_stalled(&mut exec);
         assert_eq!(Ok(()), res.map_err(|e| format!("{:?}", e)));
 
@@ -988,7 +978,7 @@ mod tests {
         };
 
         // Propagate the event to the handler.
-        let res = handle_profile_event(evt, proxy, peers.clone(), &inspect, controller_pool);
+        let res = handle_profile_event(evt, proxy, peers.clone(), controller_pool);
         run_to_stalled(&mut exec);
         assert_eq!(Ok(()), res.map_err(|e| format!("{:?}", e)));
 
