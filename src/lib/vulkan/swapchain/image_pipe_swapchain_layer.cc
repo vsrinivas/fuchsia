@@ -322,7 +322,7 @@ VkResult ImagePipeSwapchain::AcquireNextImage(uint64_t timeout_ns, VkSemaphore s
       return VK_ERROR_SURFACE_LOST_KHR;
 
     if (status == ZX_ERR_TIMED_OUT)
-      return VK_TIMEOUT;
+      return timeout_ns == 0ul ? VK_NOT_READY : VK_TIMEOUT;
     if (status != ZX_OK) {
       fprintf(stderr, "event::wait_one returned %d", status);
       return VK_ERROR_DEVICE_LOST;

@@ -718,4 +718,90 @@ TEST_P(SwapchainFidlTest, AvoidSemaphoreHang) {
   vkDestroySurfaceKHR(test.vk_instance_, surface, nullptr);
 }
 
+TEST_P(SwapchainFidlTest, AcquireZeroTimeout) {
+  const bool protected_memory = GetParam();
+  TestSwapchain test(protected_memory);
+  if (protected_memory && !test.protected_memory_is_supported_) {
+    GTEST_SKIP();
+  }
+  ASSERT_TRUE(test.init_);
+
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+
+  zx::channel local_endpoint, remote_endpoint;
+  EXPECT_EQ(ZX_OK, zx::channel::create(0, &local_endpoint, &remote_endpoint));
+
+  std::unique_ptr<FakeImagePipe> imagepipe = std::make_unique<FakeImagePipe>(
+      fidl::InterfaceRequest<fuchsia::images::ImagePipe2>(std::move(remote_endpoint)),
+      /*should_present=*/false);
+
+  VkImagePipeSurfaceCreateInfoFUCHSIA create_info = {
+      .sType = VK_STRUCTURE_TYPE_IMAGEPIPE_SURFACE_CREATE_INFO_FUCHSIA,
+      .imagePipeHandle = local_endpoint.release(),
+      .pNext = nullptr,
+  };
+
+  VkSurfaceKHR surface;
+  EXPECT_EQ(VK_SUCCESS,
+            vkCreateImagePipeSurfaceFUCHSIA(test.vk_instance_, &create_info, nullptr, &surface));
+
+  VkSwapchainKHR swapchain;
+  ASSERT_EQ(VK_SUCCESS,
+            test.CreateSwapchainHelper(surface, VK_FORMAT_B8G8R8A8_UNORM,
+                                       VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, &swapchain));
+
+  VkQueue queue;
+  if (protected_memory) {
+    VkDeviceQueueInfo2 queue_info2 = {.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_INFO_2,
+                                      .pNext = nullptr,
+                                      .flags = VK_DEVICE_QUEUE_CREATE_PROTECTED_BIT,
+                                      .queueFamilyIndex = 0,
+                                      .queueIndex = 0};
+    test.get_device_queue2_(test.vk_device_, &queue_info2, &queue);
+  } else {
+    vkGetDeviceQueue(test.vk_device_, 0, 0, &queue);
+  }
+
+  uint32_t image_index;
+  // Acquire all initial images.
+  for (uint32_t i = 0; i < 3; i++) {
+    EXPECT_EQ(VK_SUCCESS,
+              test.acquire_next_image_khr_(test.vk_device_, swapchain, 0, VK_NULL_HANDLE,
+                                           VK_NULL_HANDLE, &image_index));
+    EXPECT_EQ(i, image_index);
+  }
+
+  // Timeout of zero with no pending presents
+  EXPECT_EQ(VK_NOT_READY,
+            test.acquire_next_image_khr_(test.vk_device_, swapchain, 0, VK_NULL_HANDLE,
+                                         VK_NULL_HANDLE, &image_index));
+
+  uint32_t present_index = 0;
+  VkResult present_result;
+  VkPresentInfoKHR present_info = {
+      .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+      .pNext = nullptr,
+      .waitSemaphoreCount = 0,
+      .pWaitSemaphores = nullptr,
+      .swapchainCount = 1,
+      .pSwapchains = &swapchain,
+      .pImageIndices = &present_index,
+      .pResults = &present_result,
+  };
+
+  ASSERT_EQ(VK_SUCCESS, test.queue_present_khr_(queue, &present_info));
+
+  // Timeout of zero with pending presents
+  EXPECT_EQ(VK_NOT_READY,
+            test.acquire_next_image_khr_(test.vk_device_, swapchain, 0, VK_NULL_HANDLE,
+                                         VK_NULL_HANDLE, &image_index));
+
+  // Close the remote end because we've configured it to not-present, and the swapchain
+  // teardown hangs otherwise.
+  imagepipe.reset();
+
+  test.destroy_swapchain_khr_(test.vk_device_, swapchain, nullptr);
+  vkDestroySurfaceKHR(test.vk_instance_, surface, nullptr);
+}
+
 INSTANTIATE_TEST_SUITE_P(SwapchainFidlTestSuite, SwapchainFidlTest, ::testing::Bool());
