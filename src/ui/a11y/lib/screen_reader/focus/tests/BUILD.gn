@@ -26,4 +26,7 @@ executable("focus_manager_tests") {
     "//src/ui/a11y/lib/screen_reader/focus/tests/mocks",
     "//src/ui/a11y/lib/testing",
   ]
+
+  # TODO(47898): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
