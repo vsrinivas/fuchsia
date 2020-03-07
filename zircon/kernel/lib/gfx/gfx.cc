@@ -662,6 +662,7 @@ void gfx_draw_pattern(void) {
 /**
  * @brief  Fill default display with white
  */
+[[maybe_unused]]
 static void gfx_draw_pattern_white(void) {
   struct display_info info;
   if (display_get_info(&info) < 0)
