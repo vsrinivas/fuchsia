@@ -3,7 +3,7 @@
 # in the LICENSE file.
 
 import("//build/config/fuchsia/rules.gni")
-import("//build/package.gni")
+import("//build/driver_package.gni")
 
 driver_module("rtl88xx_driver") {
   output_name = "rtl88xx"
@@ -43,9 +43,8 @@ driver_module("rtl88xx_driver") {
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }
 
-package("rtl88xx") {
+driver_package("rtl88xx") {
   # Fuchsia does not yet support loading drivers out of packages.
-  deprecated_system_image = true
 
   deps = [ ":rtl88xx_driver" ]
 

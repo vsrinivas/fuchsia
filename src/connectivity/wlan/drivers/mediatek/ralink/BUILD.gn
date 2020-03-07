@@ -4,7 +4,7 @@
 
 import("//build/cipd.gni")
 import("//build/config/fuchsia/rules.gni")
-import("//build/package.gni")
+import("//build/driver_package.gni")
 
 driver_module("ralink_driver") {
   output_name = "ralink"
@@ -49,9 +49,7 @@ if (internal_access) {
   }
 }
 
-package("ralink") {
-  deprecated_system_image = true
-
+driver_package("ralink") {
   deps = [ ":ralink_driver" ]
 
   drivers = [

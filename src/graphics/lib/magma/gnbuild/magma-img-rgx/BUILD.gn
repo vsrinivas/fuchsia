@@ -4,7 +4,7 @@
 
 import("//build/cipd.gni")
 import("//build/config.gni")
-import("//build/package.gni")
+import("//build/driver_package.gni")
 import("//src/graphics/lib/magma/gnbuild/magma.gni")
 
 # Only including packages built inside this file.
@@ -37,9 +37,7 @@ group("magma-vulkan-no-hardware") {
   }
 }
 
-package("magma-img-rgx-mt8167-firmware") {
-  deprecated_system_image = true
-
+driver_package("magma-img-rgx-mt8167-firmware") {
   # internal access is needed to get the firmware.
   if (internal_access) {
     # The firmware is treated as a library, so the copy needs to go into the
@@ -53,8 +51,7 @@ package("magma-img-rgx-mt8167-firmware") {
   }
 }
 
-package("magma-img-rgx-mt8167") {
-  deprecated_system_image = true
+driver_package("magma-img-rgx-mt8167") {
   deps = [ "//src/graphics/drivers/msd-img-rgx/mtk:msd_img_rgx_mt8167" ]
 
   if (magma_enable_developer_build) {
@@ -83,8 +80,7 @@ package("magma-img-rgx-mt8167") {
   ]
 }
 
-package("magma-img-rgx-no-hardware") {
-  deprecated_system_image = true
+driver_package("magma-img-rgx-no-hardware") {
   deps = [
     "//src/graphics/drivers/msd-img-rgx/no_hardware:msd_img_rgx_no_hardware",
   ]

@@ -4,7 +4,7 @@
 
 import("//build/cipd.gni")
 import("//build/config/fuchsia/rules.gni")
-import("//build/package.gni")
+import("//build/driver_package.gni")
 import("//build/test/test_package.gni")
 
 # These targets only compile for arm64.
@@ -61,9 +61,7 @@ if (target_cpu == "arm64") {
     configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
   }
 
-  package("amlogic_encoder") {
-    deprecated_system_image = true
-
+  driver_package("amlogic_encoder") {
     # internal access is needed to get firmware from prebuilt path
     if (internal_access && target_cpu == "arm64") {
       libraries = [

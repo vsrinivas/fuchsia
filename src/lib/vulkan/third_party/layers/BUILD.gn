@@ -19,12 +19,10 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-import("//build/package.gni")
+import("//build/driver_package.gni")
 import("//src/graphics/lib/magma/gnbuild/magma.gni")
 
-package("screenshot_layer") {
-  deprecated_system_image = true
-
+driver_package("screenshot_layer") {
   deps = [ ":VkLayer_screenshot" ]
 
   libraries = [
@@ -41,9 +39,7 @@ package("screenshot_layer") {
   ]
 }
 
-package("rfb_layer") {
-  deprecated_system_image = true
-
+driver_package("rfb_layer") {
   deps = [ ":VkLayer_rfb" ]
 
   libraries = [

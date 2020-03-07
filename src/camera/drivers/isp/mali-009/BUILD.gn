@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/rules.gni")
-import("//build/package.gni")
+import("//build/driver_package.gni")
 
 source_set("stream_server") {
   sources = [
@@ -85,9 +85,7 @@ driver_module("mali-009-driver") {
   defines = [ "_ALL_SOURCE=1" ]
 }
 
-package("mali-009") {
-  deprecated_system_image = true
-
+driver_package("mali-009") {
   deps = [ ":mali-009-driver" ]
 
   drivers = [

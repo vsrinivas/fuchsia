@@ -201,7 +201,7 @@ test_package("appmgr_unittests") {
 }
 
 package("system_data_file") {
-  deprecated_system_image = true
+  __deprecated_system_image = true
   resources = [
     {
       path = "test_file.txt"

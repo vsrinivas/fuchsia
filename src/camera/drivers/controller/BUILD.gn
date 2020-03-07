@@ -4,7 +4,7 @@
 
 import("//build/cipd.gni")
 import("//build/config/fuchsia/rules.gni")
-import("//build/package.gni")
+import("//build/driver_package.gni")
 
 # The following config files are currently gated behind internal
 # access to the CIPD repository.
@@ -94,9 +94,7 @@ source_set("source") {
   public_configs = [ "//build/config:Wno-reorder-init-list" ]
 }
 
-package("controller") {
-  deprecated_system_image = true
-
+driver_package("controller") {
   deps = [ ":driver" ]
 
   drivers = [

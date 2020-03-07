@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/rules.gni")
-import("//build/package.gni")
+import("//build/driver_package.gni")
 
 driver_module("imx227_driver") {
   output_name = "imx227"
@@ -41,9 +41,7 @@ driver_module("imx227_driver") {
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }
 
-package("imx227") {
-  deprecated_system_image = true
-
+driver_package("imx227") {
   deps = [ ":imx227_driver" ]
 
   drivers = [

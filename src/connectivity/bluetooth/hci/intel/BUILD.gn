@@ -5,7 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/cipd.gni")
 import("//build/config/fuchsia/rules.gni")
-import("//build/package.gni")
+import("//build/driver_package.gni")
 
 bind_rules("bind") {
   rules = "bt_hci_intel.bind"
@@ -64,9 +64,7 @@ if (internal_access) {
   }
 }
 
-package("intel") {
-  deprecated_system_image = true
-
+driver_package("intel") {
   deps = [ ":driver" ]
 
   drivers = [

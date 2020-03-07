@@ -1,0 +1,12 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+template("driver_package") {
+  package(target_name) {
+    __deprecated_system_image = true
+    forward_variables_from(invoker, "*")
+  }
+}

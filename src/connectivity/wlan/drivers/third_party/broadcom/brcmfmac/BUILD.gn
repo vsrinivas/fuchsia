@@ -13,7 +13,7 @@
 
 import("//build/cipd.gni")
 import("//build/config/fuchsia/rules.gni")
-import("//build/package.gni")
+import("//build/driver_package.gni")
 
 # By default, targets are only visible here and to subdirectories.
 visibility = [ "./*" ]
@@ -240,9 +240,9 @@ driver_module("test_driver_module") {
 # * brcmfmac-clm-copy
 #
 # which copy the firmware, NVRAM definition, and CLM blob respectively.  They are either copy()
-# targets, or empty group() targets, for use in the package() targets below.
+# targets, or empty group() targets, for use in the driver_driver_package() targets below.
 #
-# All files that must be included as libraries in the package() target are added to the
+# All files that must be included as libraries in the driver_driver_package() target are added to the
 # driver_library_files list.
 
 driver_library_files = []
@@ -375,8 +375,7 @@ group("brcmfmac_tests") {
 # runtime tests in the driver or not.
 
 # Driver package for the brcmfmac driver.
-package("brcmfmac") {
-  deprecated_system_image = true
+driver_package("brcmfmac") {
   deps = [
     # The copy step has to be in the shared-library toolchain to use the
     # expected output directory, since we treat firmware blobs as if they
@@ -403,8 +402,7 @@ package("brcmfmac") {
 }
 
 # Driver package for the test version of the brcmfmac driver.
-package("brcmfmac_test_driver") {
-  deprecated_system_image = true
+driver_package("brcmfmac_test_driver") {
   deps = [
     # The copy step has to be in the shared-library toolchain to use the
     # expected output directory, since we treat firmware blobs as if they

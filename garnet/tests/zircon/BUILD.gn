@@ -12,7 +12,7 @@ zircon_extras_manifest("zircon_test_manifest") {
 }
 
 package("zircon_tests") {
-  deprecated_system_image = true
+  __deprecated_system_image = true
   deps = [
     ":zircon_test_manifest",
     ":zircon_test_metadata",

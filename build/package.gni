@@ -264,22 +264,10 @@ template("pm_build_package") {
 #
 # Parameters
 #
-#   deprecated_system_image (optional, default `false`)
-#     [bool] If true, the package is stored in the /system filesystem image
-#     rather than in a Fuchsia package.
-#
-#     TODO(PKG-46): Will be removed entirely eventually.
-#
-#     If this package uses the `drivers` parameter,
-#     `deprecated_system_image` must be set to `true` because we are not
-#     yet sophisticated enough to load drivers out of packages.
-#
 #   meta (optional)
 #     [list of scopes] Defines the metadata entries in the package. A metadata
 #     entry is typically a source file and is placed in the `meta/` directory of
 #     the assembled package.
-#
-#     Requires `deprecated_system_image` to be `false`.
 #
 #     Entries in a scope in the meta list:
 #
@@ -297,8 +285,6 @@ template("pm_build_package") {
 #     [string] The path to the primary binary for the package, relative to
 #     `$root_out_dir`. The binary will be placed in the assembled package at
 #     `bin/app` and will be executed by default when running the package.
-#
-#     Requires `deprecated_system_image` to be `false`.
 #
 #   binaries (optional)
 #     [list of scopes] Defines the binaries in the package. A binary is
@@ -324,8 +310,6 @@ template("pm_build_package") {
 #   components (optional)
 #     [list of fuchsia_component targets] Defines all the components this
 #     package should include in assembled package.
-#
-#     Requires `deprecated_system_image` to be `false`.
 #
 #   tests (optional)
 #     [list of scopes] Defines the test binaries in the package. A test is
@@ -366,8 +350,6 @@ template("pm_build_package") {
 #     [list of scopes] Defines the drivers in the package. A driver is
 #     typically produced by the build system and is placed in the `driver/`
 #     directory of the assembled package.
-#
-#     Requires `deprecated_system_image` to be `true`.
 #
 #     Entries in a scope in the drivers list:
 #
@@ -442,35 +424,41 @@ template("package") {
     pkg_target_name = target_name
     pkg = {
       package_version = "0"  # placeholder
-      forward_variables_from(invoker,
-                             [
-                               "binaries",
-                               "binary",
-                               "components",
-                               "data_deps",
-                               "deprecated_misc_storage",
-                               "deprecated_shell",
-                               "deprecated_system_image",
-                               "deps",
-                               "global_data",
-                               "public_deps",
-                               "drivers",
-                               "extra",
-                               "libraries",
-                               "loadable_modules",
-                               "meta",
-                               "package_name",
-                               "resources",
-                               "rootjob_svc",
-                               "rootresource_svc",
-                               "visibility",
-                               "tests",
-                             ])
+      forward_variables_from(
+          invoker,
+          [
+            "binaries",
+            "binary",
+            "components",
+            "data_deps",
+            "deprecated_misc_storage",
+            "deprecated_shell",
+            "deprecated_system_image",  # TODO(bwb) remove after soft-transition
+            "__deprecated_system_image",
+            "deps",
+            "global_data",
+            "public_deps",
+            "drivers",
+            "extra",
+            "libraries",
+            "loadable_modules",
+            "meta",
+            "package_name",
+            "resources",
+            "rootjob_svc",
+            "rootresource_svc",
+            "visibility",
+            "tests",
+          ])
       if (!defined(binaries)) {
         binaries = []
       }
-      if (!defined(deprecated_system_image)) {
-        deprecated_system_image = false
+      if (!defined(__deprecated_system_image) &&
+          !defined(deprecated_system_image)) {
+        __deprecated_system_image = false
+      }
+      if (defined(deprecated_system_image)) {
+        __deprecated_system_image = deprecated_system_image
       }
       if (!defined(deps)) {
         deps = []
@@ -522,13 +510,16 @@ template("package") {
 
     pkg_label = get_label_info(":$pkg_target_name", "label_no_toolchain")
     pkg_desc = "Package ${pkg_label} (${pkg.package_name}):"
-    if (pkg.deprecated_system_image) {
-      assert(pkg.meta == [],
-             "$pkg_desc deprecated_system_image incompatible with meta")
-      assert(pkg.components == [],
-             "$pkg_desc deprecated_system_image incompatible with components")
-      assert(!defined(pkg.binary),
-             "$pkg_desc deprecated_system_image incompatible with binary")
+    if (pkg.__deprecated_system_image) {
+      assert(
+          pkg.meta == [],
+          "$pkg_desc __deprecated_system_image (likely from driver_package) incompatible with meta")
+      assert(
+          pkg.components == [],
+          "$pkg_desc __deprecated_system_image (likely from driver_package) incompatible with components")
+      assert(
+          !defined(pkg.binary),
+          "$pkg_desc __deprecated_system_image (likely from driver_package) incompatible with binary")
 
       # Only appmgr can contribute binaries to /system/bin.
       assert(pkg.binaries == [] || pkg.package_name == "appmgr",
@@ -537,9 +528,9 @@ template("package") {
       assert(pkg.tests == [], "tests are not allowed in /system")
     } else {
       assert(pkg.drivers == [],
-             "$pkg_desc drivers requires deprecated_system_image")
+             "$pkg_desc drivers requires __deprecated_system_image")
       assert(pkg.libraries == [],
-             "$pkg_desc libraries requires deprecated_system_image")
+             "$pkg_desc libraries requires __deprecated_system_image")
       if (defined(pkg.binary)) {
         pkg.binaries += [
           {
@@ -795,7 +786,7 @@ template("package") {
       } else {
         url_scheme_and_host = "fuchsia-pkg://fuchsia.com"
         dest = "test/$dest"
-        if (pkg.deprecated_system_image) {
+        if (pkg.__deprecated_system_image) {
           url_pkg_name = "system"
           path = "/system/$dest"
         } else {
@@ -810,7 +801,7 @@ template("package") {
       not_needed([ "dest_name" ])
 
       # Check that all tests are components with cmx/cm files at the expected path.
-      if (!pkg.deprecated_system_image && !bootfs_only && !is_disabled &&
+      if (!pkg.__deprecated_system_image && !bootfs_only && !is_disabled &&
           (!defined(require_bare_tests_allowlist) ||
            !require_bare_tests_allowlist)) {
         require_bare_tests_allowlist = true
@@ -957,10 +948,10 @@ template("package") {
     # An empty package() target doesn't actually generate a package at all.
     # Conveniently, an empty system_image package has exactly that effect.
     if (manifest_sources == [] && pkg.components == []) {
-      pkg.deprecated_system_image = true
+      pkg.__deprecated_system_image = true
     }
 
-    if (pkg.deprecated_system_image || bootfs_only) {
+    if (pkg.__deprecated_system_image || bootfs_only) {
       system_rsp_label = pkg_target_name + ".system.rsp"
 
       # System image packages just donate manifest arguments
@@ -1049,7 +1040,7 @@ template("package") {
       data_deps = pkg.data_deps
       public_deps = pkg.public_deps
 
-      if (pkg.deprecated_system_image || bootfs_only) {
+      if (pkg.__deprecated_system_image || bootfs_only) {
         public_deps += [ ":" + system_rsp_label ]
       }
 

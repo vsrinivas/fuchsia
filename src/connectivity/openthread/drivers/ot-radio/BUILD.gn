@@ -4,7 +4,7 @@
 
 import("//build/cipd.gni")
 import("//build/config/fuchsia/rules.gni")
-import("//build/package.gni")
+import("//build/driver_package.gni")
 
 driver_module("ot-radio") {
   output_name = "ot-radio-driver"
@@ -70,9 +70,8 @@ if (internal_access) {
   }
 }
 
-package("openthread") {
+driver_package("openthread") {
   # Fuchsia does not yet support loading drivers out of packages.
-  deprecated_system_image = true
 
   deps = [ ":ot-radio" ]
 

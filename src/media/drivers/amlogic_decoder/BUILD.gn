@@ -4,7 +4,7 @@
 
 import("//build/cipd.gni")
 import("//build/config/fuchsia/rules.gni")
-import("//build/package.gni")
+import("//build/driver_package.gni")
 import("//build/test/test_package.gni")
 
 declare_args() {
@@ -206,9 +206,7 @@ if (target_cpu == "arm64") {
     outputs = [ "$root_out_dir/firmware/video_test_data/{{source_file_part}}" ]
   }
 
-  package("amlogic_decoder_firmware") {
-    deprecated_system_image = true
-
+  driver_package("amlogic_decoder_firmware") {
     # internal access is needed to get the firmware from the default path
     if (target_cpu == "arm64" &&
         (internal_access || amlogic_decoder_firmware_path != "")) {
@@ -225,9 +223,7 @@ if (target_cpu == "arm64") {
     }
   }
 
-  package("amlogic_decoder_package") {
-    deprecated_system_image = true
-
+  driver_package("amlogic_decoder_package") {
     # internal access is needed to get the firmware from the default path
     if (target_cpu == "arm64" &&
         (internal_access || amlogic_decoder_firmware_path != "")) {
@@ -240,9 +236,7 @@ if (target_cpu == "arm64") {
     }
   }
 
-  package("amlogic_decoder_test_package") {
-    deprecated_system_image = true
-
+  driver_package("amlogic_decoder_test_package") {
     # internal access is needed to get the firmware from the default path
     if (target_cpu == "arm64" &&
         (internal_access || amlogic_decoder_firmware_path != "")) {

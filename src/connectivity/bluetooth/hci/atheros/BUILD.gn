@@ -4,7 +4,7 @@
 
 import("//build/cipd.gni")
 import("//build/config/fuchsia/rules.gni")
-import("//build/package.gni")
+import("//build/driver_package.gni")
 
 driver_module("driver") {
   output_name = "bt-hci-atheros"
@@ -57,9 +57,7 @@ if (internal_access) {
   }
 }
 
-package("atheros") {
-  deprecated_system_image = true
-
+driver_package("atheros") {
   deps = [ ":driver" ]
 
   drivers = [

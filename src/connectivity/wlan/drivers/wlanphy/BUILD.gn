@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/rules.gni")
-import("//build/package.gni")
+import("//build/driver_package.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
@@ -42,9 +42,7 @@ driver_module("wlanphy_driver") {
   ]
 }
 
-package("wlanphy") {
-  deprecated_system_image = true
-
+driver_package("wlanphy") {
   deps = [ ":wlanphy_driver" ]
 
   drivers = [
