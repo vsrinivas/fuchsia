@@ -206,7 +206,8 @@ template("test_spec") {
       "QEMU",
       "Intel NUC Kit NUC7i5DNHE",
     ]
-  } else if (board_name == "qemu-arm64" || board_name == "qemu-x64") {  # arm64.gni and qemu-x64.gni
+  } else if (board_name == "qemu-arm64" ||
+             board_name == "qemu-x64") {  # arm64.gni and qemu-x64.gni
     allowed_device_types = [ "QEMU" ]
   } else if (board_name == "vim2") {
     allowed_device_types = [ "Khadas Vim2 Max" ]
@@ -214,6 +215,8 @@ template("test_spec") {
     allowed_device_types = [ "Astro" ]
   } else if (board_name == "sherlock") {
     allowed_device_types = [ "Sherlock" ]
+  } else if (board_name == "nelson") {
+    allowed_device_types = [ "Nelson" ]
   }
 
   _environments = []

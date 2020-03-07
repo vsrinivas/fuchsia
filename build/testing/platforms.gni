@@ -89,4 +89,10 @@ test_platforms = [
     cpu = "x64"
     pool = "fuchsia.tests.connectivity"
   },
+
+  # Experimental/FYI. fxb/43946
+  {
+    device_type = "Nelson"
+    cpu = "arm64"
+  },
 ]

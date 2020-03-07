@@ -24,6 +24,12 @@ sherlock_env = {
   }
 }
 
+nelson_env = {
+  dimensions = {
+    device_type = "Nelson"
+  }
+}
+
 nuc_env = {
   dimensions = {
     device_type = "Intel NUC Kit NUC7i5DNHE"
