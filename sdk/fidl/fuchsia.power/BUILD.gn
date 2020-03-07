@@ -7,3 +7,8 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.power") {
   sources = [ "battery.fidl" ]
 }
+
+fidl("fuchsia.power.test") {
+  sources = [ "simulator.fidl" ]
+  public_deps = [ "//sdk/fidl/fuchsia.power" ]
+}

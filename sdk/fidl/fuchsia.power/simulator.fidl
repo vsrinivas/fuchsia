@@ -1,0 +1,55 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.power.test;
+
+using fuchsia.power;
+using zx;
+
+/// Controller interface to allow modification of battery state.
+[FragileBase]
+protocol BatterySimulatorController {
+
+    /// Gets battery info. This should be called after
+    /// DisconnectRealBattery
+    GetBatteryInfo() -> (fuchsia.power.BatteryInfo info);
+
+    /// Sets Battery Status. This should be called after
+    /// DisconnectRealBattery
+    SetBatteryStatus(fuchsia.power.BatteryStatus battery_status);
+
+    /// Sets Charge Status. This should be called after
+    /// DisconnectRealBattery
+    SetChargeStatus(fuchsia.power.ChargeStatus charge_status);
+
+    /// Sets Charge Source. This should be called after
+    /// DisconnectRealBattery
+    SetChargeSource(fuchsia.power.ChargeSource charge_source);
+
+    /// Sets Battery Percentage. This should be called after
+    /// DisconnectRealBattery
+    SetBatteryPercentage(float32 percent);
+
+    /// Sets Level Status. This should be called after
+    /// DisconnectRealBattery
+    SetLevelStatus(fuchsia.power.LevelStatus level_status);
+
+    /// Sets Time Remaining to full charge / depletion
+    /// This should be called after DisconnectRealBattery
+    SetTimeRemaining(zx.duration duration);
+
+    /// Disconnect the real battery connection
+    DisconnectRealBattery();
+
+    /// Reconnect to the real battery
+    /// This should be called after DisconnectRealBattery
+    ReconnectRealBattery();
+};
+
+/// Simulator interface for battery simulation
+[Discoverable]
+protocol BatterySimulator {
+    // Provides commands to modify battery state
+    compose BatterySimulatorController;
+};

@@ -17,6 +17,7 @@ rustc_binary("bin") {
     "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.hardware.power:fuchsia.hardware.power-rustc",
     "//sdk/fidl/fuchsia.power:fuchsia.power-rustc",
+    "//sdk/fidl/fuchsia.power:fuchsia.power.test-rustc",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",

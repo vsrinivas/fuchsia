@@ -13,19 +13,46 @@ use {
     futures::{lock::Mutex, TryStreamExt},
     std::sync::{Arc, RwLock},
 };
+
 #[derive(Debug, PartialEq)]
 enum StatusUpdateResult {
     Notify,
     DoNotNotify,
 }
 
+pub(crate) trait BatterySimulationStateObserver {
+    fn update_simulation(&self, new_state: bool);
+    fn update_simulated_battery_info(&self, battery_info: fpower::BatteryInfo);
+}
+
+impl BatterySimulationStateObserver for BatteryManager {
+    fn update_simulation(&self, is_simulating: bool) {
+        let mut sim_state = self.simulation_state.write().unwrap();
+        *sim_state = is_simulating;
+        drop(sim_state);
+        if !is_simulating {
+            self.update_watchers();
+        }
+    }
+    fn update_simulated_battery_info(&self, battery_info: fpower::BatteryInfo) {
+        let mut simulated_battery_info = self.simulated_battery_info.write().unwrap();
+        *simulated_battery_info = battery_info.clone();
+        drop(simulated_battery_info);
+        self.update_watchers();
+    }
+}
+
 /// Core component for the battery manager system.
 ///
 /// BatteryManager maintains the current state info for the battery system
 /// as well as the watchers that share this information with subscribed clients.
+///
+/// simulation_state: true when the simulator is running
 pub struct BatteryManager {
     battery_info: RwLock<fpower::BatteryInfo>,
     watchers: Arc<Mutex<Vec<fpower::BatteryInfoWatcherProxy>>>,
+    simulation_state: RwLock<bool>,
+    simulated_battery_info: RwLock<fpower::BatteryInfo>,
 }
 
 #[inline]
@@ -48,6 +75,17 @@ impl BatteryManager {
                 timestamp: Some(get_current_time()),
             }),
             watchers: Arc::new(Mutex::new(Vec::new())),
+            simulation_state: RwLock::new(false),
+            simulated_battery_info: RwLock::new(fpower::BatteryInfo {
+                status: Some(fpower::BatteryStatus::NotAvailable),
+                charge_status: Some(fpower::ChargeStatus::Unknown),
+                charge_source: Some(fpower::ChargeSource::Unknown),
+                level_percent: None,
+                level_status: Some(fpower::LevelStatus::Unknown),
+                health: Some(fpower::HealthStatus::Unknown),
+                time_remaining: Some(fpower::TimeRemaining::Indeterminate(0)),
+                timestamp: Some(get_current_time()),
+            }),
         }
     }
 
@@ -226,6 +264,10 @@ impl BatteryManager {
             new_battery_info.charge_source = Some(fpower::ChargeSource::None);
         }
 
+        if *self.simulation_state.read().unwrap() {
+            return Ok(StatusUpdateResult::DoNotNotify);
+        }
+
         match old_battery_info == (*new_battery_info) {
             true => Ok(StatusUpdateResult::DoNotNotify),
             false => {
@@ -236,8 +278,19 @@ impl BatteryManager {
     }
 
     pub fn get_battery_info_copy(&self) -> fpower::BatteryInfo {
-        let info_lock = self.battery_info.read().unwrap();
-        (*info_lock).clone()
+        if *self.simulation_state.read().unwrap() {
+            let info_lock = self.simulated_battery_info.read().unwrap();
+            (*info_lock).clone()
+        } else {
+            let info_lock = self.battery_info.read().unwrap();
+            (*info_lock).clone()
+        }
+    }
+
+    fn update_watchers(&self) {
+        let info = self.get_battery_info_copy();
+        let watchers = self.watchers.clone();
+        BatteryManager::run_watchers(watchers.clone(), info.clone());
     }
 
     pub(crate) async fn serve(
