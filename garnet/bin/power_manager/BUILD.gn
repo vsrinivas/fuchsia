@@ -41,6 +41,9 @@ rustc_binary("bin") {
     "//src/lib/test_util",
     "//third_party/rust_crates:matches",
   ]
+
+  # TODO(47946): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 package("power_manager") {
