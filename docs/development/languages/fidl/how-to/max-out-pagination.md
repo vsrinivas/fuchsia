@@ -1,11 +1,11 @@
-# FIDL How To: Max out pagination
+# Max out pagination
 
 Author: pascallouis@google.com
 
-_How to best calculate the size (both in terms of bytes and handles) of elements
-as they are added to a vector, in order to maximize the number of elements which
-can be batched at once, all the while satisfying the kernel caps on channel
-writes._
+This document describes the best ways to calculate the size both in terms of
+bytes and handles of elements as they are added to a vector. This should be
+done in order to maximize the number of elements which can be batched at once
+while satisfying the kernel caps on channel writes.
 
 ## Summary
 
@@ -19,9 +19,12 @@ byte size and handle count thresholds).
 The key reference document for the following is the [FIDL wire
 format][fidl-wire-format] specification.
 
-To explain how to best max out pagination, we look at various examples.
+There are various examples that explain the best ways to max out pagination:
 
-## Bluetooth `WatchPeers` method
+* [Bluetooth `WatchPeers` method](#bluetooth-watchpeers-method)
+* [Scenic `Enqueue` method](#scenic-enqueue-method)
+
+## Bluetooth `WatchPeers` method {#bluetooth-watchpeers-method}
 
 Consider the [WatchPeers][bts-watch-peers] method of the
 `fuchsia.bluetooth.sys.Access` protocol, defined as:
@@ -57,7 +60,7 @@ is also 8 bytes since it’s definition reduces to `struct{uint8;
 array<uint8>:6}`. The `string` field is a vector of bytes, i.e.
 `sizeof(fidl_vector_t) + len(name)`, and padded to the nearest 8 bytes boundary.
 
-## Scenic `Enqueue` method
+## Scenic `Enqueue` method {#scenic-enqueue-method}
 
 Consider the [Enqueue][scenic-enqueue] method of the
 `fuchsia.scenic.Session` protocol, defined as:
@@ -66,22 +69,23 @@ Consider the [Enqueue][scenic-enqueue] method of the
 Enqueue(vector<Command> cmds);
 ```
 
-First, a request or response is preceded by a header, i.e. a fixed 16 bytes or
-`sizeof(fidl_message_header_t)` as [defined here][fidl-message-header-t]. Then,
-vector has a 16 bytes header `sizeof(fidl_vector_t)`, followed by the content
-(the commands themselves). As a result, before we account for the size of each
-individual command, we have a fixed 32 bytes.
+A request or response is preceded by a header, i.e. a fixed 16 bytes or
+`sizeof(fidl_message_header_t)` from [zircon/fidl.h][fidl-message-header-t].
+Then, the vector has a 16 bytes header `sizeof(fidl_vector_t)`, followed by the
+content of the vector which are the actual commands. As a result, before you
+account for the size of each individual command, there is a fixed size of 32
+bytes.
 
-Let's now consider how to size [commmands][scenic-command]. Since a command is
-a [union][fidl-wire-format-union] we have a 24 bytes header -- i.e.
-`sizeof(fidl_xunion_t)` -- followed by the content which is 8 bytes aligned.
+A [command][scenic-command] is a [union][fidl-wire-format-union] that has a 24
+bytes header (i.e. `sizeof(fidl_xunion_t)`) followed by the content which is 8
+bytes aligned.
 
-The size of a `Command` union content depends on the variant selected. For this
-example, we will choose the `input` variant of type
+The size of a `Command` union content depends on the variant selected. This
+example uses the `input` variant of type
 [`fuchsia.ui.input.Command`][input-command].
 
-The `input` variant (of the scenic command) is itself a union, we therefore have
-another 24 bytes header, followed by the content of that union, e.g. a
+The `input` variant (of the scenic command) is itself a union, which adds
+another 24 bytes header, followed by the content of that union, such as a
 `send_pointer_input` of type
 [`SendPointerInputCmd`][input-send-pointer-input-cmd].
 
@@ -117,8 +121,8 @@ enum PointerEventPhase {
 ```
 
 Both enums `PointerEventType` and `PointerEventPhase`
-[default][fidl-language-enums] to an underlying representation of `uint32`. We
-can therefore reduce the sizing of `SendPointerInputCmd` to the struct:
+[default][fidl-language-enums] to an underlying representation of `uint32`. You
+can reduce the sizing of `SendPointerInputCmd` to the struct:
 
 ```fidl
 struct {
@@ -137,21 +141,20 @@ struct {
 };
 ```
 
-Therefore, we see that the size of the `SendPointerInputCmd` struct is 52 bytes.
-(For details on struct sizing calculation, a good reference is [The Lost Art of
-Structure Packing][lostart].)
+Therefore, the size of the `SendPointerInputCmd` struct is 52 bytes. For more
+information on struct sizing calculation, see [The Lost Art of Structure
+Packing][lostart].
 
-Now that we have sized all pieces of one command, we can put things back
-together:
+Now that you have sized all the pieces of a command, you add the total size:
 
-* header of `fuchsia.ui.scenic.Command`: 24 bytes, i.e `sizeof(fidl_xunion_t)`
-* content with variant `input`:
-  * header of `fuchsia.ui.input.Command`: 24 bytes, i.e `sizeof(fidl_xunion_t)`
-  * content with variant `set_hard_keyboard_delivery`:
-    * struct `SendPointerInputCmd`: 52 bytes
-    * padding to align to 8 bytes: 4 bytes
+* Header of `fuchsia.ui.scenic.Command`: 24 bytes, i.e `sizeof(fidl_xunion_t)`
+* Content with variant `input`:
+  * Header of `fuchsia.ui.input.Command`: 24 bytes, i.e `sizeof(fidl_xunion_t)`
+  * Content with variant `set_hard_keyboard_delivery`:
+    * Struct `SendPointerInputCmd`: 52 bytes
+    * Padding to align to 8 bytes: 4 bytes
 
-Which results in a total size of 84 bytes.
+This results in a total size of 84 bytes.
 
 <!-- xrefs -->
 [lostart]: http://www.catb.org/esr/structure-packing/
