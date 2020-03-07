@@ -18,7 +18,7 @@ class InitTask final : public Task {
 
   ~InitTask() final;
 
-  fbl::String TaskDescription() final {
+  fbl::String TaskDescription() const final {
     return fbl::String::Concat({"init(", device_->name(), ")"});
   }
 

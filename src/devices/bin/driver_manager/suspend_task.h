@@ -22,7 +22,7 @@ class SuspendTask final : public Task {
 
   const Device& device() const { return *device_; }
 
-  fbl::String TaskDescription() final {
+  fbl::String TaskDescription() const final {
     return fbl::String::Concat({"suspend(", device_->name(), ")"});
   }
 

@@ -34,7 +34,7 @@ class Task : public fbl::RefCounted<Task> {
   virtual ~Task();
 
   // Returns a string suitable for debug output
-  virtual fbl::String TaskDescription() = 0;
+  virtual fbl::String TaskDescription() const = 0;
 
  protected:
   // Run() should never be called manually, instead call PostTask

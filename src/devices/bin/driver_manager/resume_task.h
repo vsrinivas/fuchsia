@@ -22,7 +22,7 @@ class ResumeTask final : public Task {
 
   const Device& device() const { return *device_; }
 
-  fbl::String TaskDescription() final {
+  fbl::String TaskDescription() const final {
     return fbl::String::Concat({"resume(", device_->name(), ")"});
   }
 

@@ -4,8 +4,6 @@
 
 #include "task.h"
 
-#include "log.h"
-
 Task::Task(async_dispatcher_t* dispatcher, Completion completion, bool post_on_create)
     : completion_(std::move(completion)), dispatcher_(dispatcher) {
   if (post_on_create) {
@@ -65,7 +63,12 @@ void Task::DependencyComplete(const Task* dependency, zx_status_t status) {
       return;
     }
   }
-  log(ERROR, "driver_manager: dependency %p not found, already removed?\n", dependency);
+  // The task may have been completed as part of |DependencyFailed|,
+  // in which case the list of dependencies would have already been cleared.
+  if (!is_completed()) {
+    ZX_PANIC("driver_manager: %s could not find dependency %s, already removed?\n",
+             TaskDescription().c_str(), dependency->TaskDescription().c_str());
+  }
 }
 
 void Task::Complete(zx_status_t status) {

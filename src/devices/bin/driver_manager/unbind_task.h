@@ -36,7 +36,7 @@ class UnbindTask final : public Task {
 
   bool devhost_requested() const { return devhost_requested_; }
 
-  fbl::String TaskDescription() final {
+  fbl::String TaskDescription() const final {
     return fbl::String::Concat({"unbind(", device_->name(), ")"});
   }
 
@@ -64,7 +64,7 @@ class RemoveTask final : public Task {
 
   ~RemoveTask() final;
 
-  fbl::String TaskDescription() final {
+  fbl::String TaskDescription() const final {
     return fbl::String::Concat({"remove(", device_->name(), ")"});
   }
 
