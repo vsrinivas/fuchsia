@@ -23,10 +23,10 @@ namespace input {
 // Tracks input APIs.
 class InputSystem : public System,
                     public fuchsia::ui::policy::accessibility::PointerEventRegistry,
-                    public fuchsia::ui::scenic::PointerCaptureListenerRegistry {
+                    public fuchsia::ui::input::PointerCaptureListenerRegistry {
  public:
   struct PointerCaptureListener {
-    fuchsia::ui::scenic::PointerCaptureListenerPtr listener_ptr;
+    fuchsia::ui::input::PointerCaptureListenerPtr listener_ptr;
     fuchsia::ui::views::ViewRef view_ref;
   };
 
@@ -68,7 +68,7 @@ class InputSystem : public System,
 
   // |fuchsia.ui.pointercapture.ListenerRegistry|
   void RegisterListener(
-      fidl::InterfaceHandle<fuchsia::ui::scenic::PointerCaptureListener> listener_handle,
+      fidl::InterfaceHandle<fuchsia::ui::input::PointerCaptureListener> listener_handle,
       fuchsia::ui::views::ViewRef view_ref, RegisterListenerCallback success_callback) override;
 
   // Send a copy of the event to the singleton listener of the pointer capture API if there is one.
@@ -95,7 +95,7 @@ class InputSystem : public System,
   // above will fail if there is already a registered listener.
   fuchsia::ui::input::accessibility::PointerEventListenerPtr accessibility_pointer_event_listener_;
 
-  fidl::BindingSet<fuchsia::ui::scenic::PointerCaptureListenerRegistry> pointer_capture_registry_;
+  fidl::BindingSet<fuchsia::ui::input::PointerCaptureListenerRegistry> pointer_capture_registry_;
   // A singleton listener who wants to be notified when pointer events happen.
   // We honor the first pointer capture listener to register. A call to RegisterListener()
   // above will fail if there is already a registered listener.

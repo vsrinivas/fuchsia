@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/ui/scenic/cpp/fidl.h>
+#include <fuchsia/ui/input/cpp/fidl.h>
 #include <lib/ui/scenic/cpp/session.h>
 #include <lib/ui/scenic/cpp/view_ref_pair.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
@@ -33,17 +33,17 @@ using fuchsia::ui::views::ViewRef;
 // Class fixture for TEST_F. Sets up a 5x5 "display" for GfxSystem.
 class PointerCaptureTest : public InputSystemTest {
  public:
-  struct Listener : public fuchsia::ui::scenic::PointerCaptureListener {
+  struct Listener : public fuchsia::ui::input::PointerCaptureListener {
     Listener() : binding_(this) {}
     ~Listener() { binding_.Close(ZX_OK); }
-    // |fuchsia::ui::scenic::PointerCaptureListener|
+    // |fuchsia::ui::input::PointerCaptureListener|
     void OnPointerEvent(fuchsia::ui::input::PointerEvent event,
                         OnPointerEventCallback callback) override {
       events_.push_back(std::move(event));
       callback();
     }
 
-    fidl::Binding<fuchsia::ui::scenic::PointerCaptureListener> binding_;
+    fidl::Binding<fuchsia::ui::input::PointerCaptureListener> binding_;
     std::vector<fuchsia::ui::input::PointerEvent> events_;
   };
 

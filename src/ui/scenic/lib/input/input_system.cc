@@ -4,6 +4,7 @@
 
 #include "src/ui/scenic/lib/input/input_system.h"
 
+#include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <zircon/status.h>
 
@@ -64,7 +65,7 @@ std::optional<glm::mat4> InputSystem::GetGlobalTransformByViewRef(
 }
 
 void InputSystem::RegisterListener(
-    fidl::InterfaceHandle<fuchsia::ui::scenic::PointerCaptureListener> listener_handle,
+    fidl::InterfaceHandle<fuchsia::ui::input::PointerCaptureListener> listener_handle,
     fuchsia::ui::views::ViewRef view_ref, RegisterListenerCallback success_callback) {
   if (pointer_capture_listener_) {
     // Already have a listener, decline registration.
@@ -72,7 +73,7 @@ void InputSystem::RegisterListener(
     return;
   }
 
-  fuchsia::ui::scenic::PointerCaptureListenerPtr new_listener;
+  fuchsia::ui::input::PointerCaptureListenerPtr new_listener;
   new_listener.Bind(std::move(listener_handle));
 
   // Remove listener if the interface closes.

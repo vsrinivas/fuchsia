@@ -22,10 +22,14 @@ fidl("fuchsia.ui.input") {
     "input_event_constants.fidl",
     "input_events.fidl",
     "input_reports.fidl",
+    "pointer_capture.fidl",
     "text_editing.fidl",
     "text_input.fidl",
     "usages.fidl",
   ]
 
-  public_deps = [ "//sdk/fidl/fuchsia.ui.input2" ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.ui.input2",
+    "//sdk/fidl/fuchsia.ui.views",
+  ]
 }
