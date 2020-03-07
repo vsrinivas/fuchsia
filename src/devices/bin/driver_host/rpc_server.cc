@@ -37,7 +37,7 @@
 #include <src/storage/deprecated-fs-fidl-handler/fidl-handler.h>
 
 #include "devfs_connection.h"
-#include "devhost.h"
+#include "driver_host.h"
 #include "zx_device.h"
 
 namespace {
@@ -97,8 +97,9 @@ static zx_status_t create_description(const fbl::RefPtr<zx_device_t>& dev, OnOpe
   return ZX_OK;
 }
 
-zx_status_t devhost_device_connect(const fbl::RefPtr<zx_device_t>& dev, uint32_t flags,
-                                   zx::channel rh) {
+namespace internal {
+
+zx_status_t device_connect(const fbl::RefPtr<zx_device_t>& dev, uint32_t flags, zx::channel rh) {
   zx_status_t r;
   // detect response directives and discard all other
   // protocol flags
@@ -117,7 +118,7 @@ zx_status_t devhost_device_connect(const fbl::RefPtr<zx_device_t>& dev, uint32_t
   newconn->flags = flags;
 
   fbl::RefPtr<zx_device_t> new_dev;
-  r = device_open(dev, &new_dev, flags);
+  r = ::device_open(dev, &new_dev, flags);
   if (r != ZX_OK) {
     goto fail;
   }
@@ -142,20 +143,22 @@ zx_status_t devhost_device_connect(const fbl::RefPtr<zx_device_t>& dev, uint32_t
 
   // If we can't add the new conn and handle to the dispatcher our only option
   // is to give up and tear down.  In practice, this should never happen.
-  if ((r = devhost_start_connection(std::move(newconn), std::move(rh))) != ZX_OK) {
+  if ((r = start_connection(std::move(newconn), std::move(rh))) != ZX_OK) {
     // TODO(teisenbe/kulakowski): Should this be goto fail_open?
     goto fail;
   }
   return ZX_OK;
 
 fail_open:
-  device_close(std::move(new_dev), flags);
+  ::device_close(std::move(new_dev), flags);
 fail:
   if (describe) {
     describe_error(std::move(rh), r);
   }
   return r;
 }
+
+}  // namespace internal
 
 #define DO_READ 0
 #define DO_WRITE 1
@@ -180,7 +183,7 @@ static zx_status_t fidl_node_clone(void* ctx, uint32_t flags, zx_handle_t object
   auto conn = static_cast<DevfsConnection*>(ctx);
   zx::channel c(object);
   flags = conn->flags | (flags & ZX_FS_FLAG_DESCRIBE);
-  devhost_device_connect(conn->dev, flags, std::move(c));
+  internal::device_connect(conn->dev, flags, std::move(c));
   return ZX_OK;
 }
 
@@ -188,7 +191,7 @@ static zx_status_t fidl_node_close(void* ctx, fidl_txn_t* txn) {
   auto conn = static_cast<DevfsConnection*>(ctx);
   // Call device_close to let the driver execute its close hook.  This may
   // be the last reference to the device, causing it to be destroyed.
-  device_close(conn->dev, conn->flags);
+  ::device_close(conn->dev, conn->flags);
 
   fuchsia_io_NodeClose_reply(txn, ZX_OK);
   return ERR_DISPATCHER_DONE;
@@ -261,7 +264,7 @@ static zx_status_t fidl_directory_watch(void* ctx, uint32_t mask, uint32_t optio
     return fuchsia_io_DirectoryWatch_reply(txn, ZX_ERR_INTERNAL);
   }
 
-  auto response = fuchsia::device::manager::Coordinator::Call::DirectoryWatch(
+  auto response = internal::fuchsia::device::manager::Coordinator::Call::DirectoryWatch(
       zx::unowned_channel(rpc.get()), mask, options, std::move(watcher));
   zx_status_t status = response.status();
   zx_status_t call_status = ZX_OK;
@@ -308,8 +311,8 @@ static zx_status_t fidl_directory_admin_unmount_node(void* ctx, fidl_txn_t* txn)
 static zx_status_t fidl_directory_admin_query_filesystem(void* ctx, fidl_txn_t* txn) {
   fuchsia_io_FilesystemInfo info;
   memset(&info, 0, sizeof(info));
-  const char* devhost_name = "devfs:host";
-  strlcpy((char*)info.name, devhost_name, fuchsia_io_MAX_FS_NAME_BUFFER);
+  const char* driver_host_name = "devfs:host";
+  strlcpy((char*)info.name, driver_host_name, fuchsia_io_MAX_FS_NAME_BUFFER);
   return fuchsia_io_DirectoryAdminQueryFilesystem_reply(txn, ZX_OK, &info);
 }
 
@@ -532,7 +535,9 @@ static const fuchsia_io_Node_ops_t kNodeOps = {
     .NodeSetFlags = fidl_node_setflags,
 };
 
-zx_status_t devhost_fidl_handler(fidl_msg_t* msg, fidl_txn_t* txn, void* cookie) {
+namespace internal {
+
+zx_status_t fidl_handler(fidl_msg_t* msg, fidl_txn_t* txn, void* cookie) {
   zx_status_t status = fuchsia_io_Node_try_dispatch(cookie, txn, msg, &kNodeOps);
   if (status != ZX_ERR_NOT_SUPPORTED) {
     return status;
@@ -562,3 +567,5 @@ zx_status_t devhost_fidl_handler(fidl_msg_t* msg, fidl_txn_t* txn, void* cookie)
   auto ddk_connection = Connection::FromTxn(txn)->ToDdkConnection();
   return conn->dev->MessageOp(msg, ddk_connection.Txn());
 }
+
+}  // namespace internal

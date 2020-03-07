@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "devhost.h"
+#include "driver_host.h"
 
 #include <dlfcn.h>
 #include <fuchsia/device/manager/c/fidl.h>
@@ -64,6 +64,8 @@ zx_status_t zx_driver::Create(fbl::RefPtr<zx_driver>* out_driver) {
 
 uint32_t log_flags = LOG_ERROR | LOG_INFO;
 
+namespace internal {
+
 static fbl::DoublyLinkedList<fbl::RefPtr<zx_driver>> dh_drivers;
 
 DevhostContext& DevhostCtx() {
@@ -71,7 +73,7 @@ DevhostContext& DevhostCtx() {
   return ctx;
 }
 
-// Access the devhost's async event loop
+// Access the driver_host's async event loop
 async::Loop* DevhostAsyncLoop() { return &DevhostCtx().loop(); }
 
 static zx_status_t SetupRootDevcoordinatorConnection(zx::channel ch) {
@@ -149,7 +151,7 @@ static void logflag(char* flag, uint32_t* flags) {
   }
 }
 
-zx_status_t dh_find_driver(fbl::StringPiece libname, zx::vmo vmo, fbl::RefPtr<zx_driver_t>* out) {
+zx_status_t find_driver(fbl::StringPiece libname, zx::vmo vmo, fbl::RefPtr<zx_driver_t>* out) {
   // check for already-loaded driver first
   for (auto& drv : dh_drivers) {
     if (!libname.compare(drv.libname())) {
@@ -255,7 +257,7 @@ void DevhostControllerConnection::CreateDevice(zx::channel coordinator_rpc,
                                                uint64_t local_device_id,
                                                CreateDeviceCompleter::Sync completer) {
   fbl::StringPiece driver_path(driver_path_view.data(), driver_path_view.size());
-  // This does not operate under the devhost api lock,
+  // This does not operate under the driver_host api lock,
   // since the newly created device is not visible to
   // any API surface until a driver is bound to it.
   // (which can only happen via another message on this thread)
@@ -265,7 +267,7 @@ void DevhostControllerConnection::CreateDevice(zx::channel coordinator_rpc,
 
   // named driver -- ask it to create the device
   fbl::RefPtr<zx_driver_t> drv;
-  zx_status_t r = dh_find_driver(driver_path, std::move(driver_vmo), &drv);
+  zx_status_t r = find_driver(driver_path, std::move(driver_vmo), &drv);
   if (r != ZX_OK) {
     log(ERROR, "driver_host: driver load failed: %d\n", r);
     return;
@@ -486,13 +488,6 @@ void proxy_ios_destroy(const fbl::RefPtr<zx_device_t>& dev) {
   }
 }
 
-__EXPORT void driver_printf(uint32_t flags, const char* fmt, ...) {
-  va_list ap;
-  va_start(ap, fmt);
-  vfprintf(stderr, fmt, ap);
-  va_end(ap);
-}
-
 zx_handle_t root_resource_handle = ZX_HANDLE_INVALID;
 
 static llcpp::fuchsia::device::manager::DeviceProperty convert_device_prop(
@@ -505,11 +500,10 @@ static llcpp::fuchsia::device::manager::DeviceProperty convert_device_prop(
 }
 
 // Send message to devcoordinator asking to add child device to
-// parent device.  Called under devhost api lock.
-zx_status_t devhost_add(const fbl::RefPtr<zx_device_t>& parent,
-                        const fbl::RefPtr<zx_device_t>& child, const char* proxy_args,
-                        const zx_device_prop_t* props, uint32_t prop_count,
-                        zx::channel client_remote) {
+// parent device.  Called under driver_host api lock.
+zx_status_t add(const fbl::RefPtr<zx_device_t>& parent, const fbl::RefPtr<zx_device_t>& child,
+                const char* proxy_args, const zx_device_prop_t* props, uint32_t prop_count,
+                zx::channel client_remote) {
   char buffer[512];
   const char* path = mkdevpath(parent, buffer, sizeof(buffer));
 
@@ -587,10 +581,10 @@ zx_status_t devhost_add(const fbl::RefPtr<zx_device_t>& parent,
     }
   }
   if (status != ZX_OK) {
-    log(ERROR, "devhost[%s] add '%s': rpc sending failed: %d\n", path, child->name, status);
+    log(ERROR, "driver_host[%s] add '%s': rpc sending failed: %d\n", path, child->name, status);
     return status;
   } else if (call_status != ZX_OK) {
-    log(ERROR, "devhost[%s] add '%s': rpc failed: %d\n", path, child->name, call_status);
+    log(ERROR, "driver_host[%s] add '%s': rpc failed: %d\n", path, child->name, call_status);
     return call_status;
   }
 
@@ -606,7 +600,7 @@ zx_status_t devhost_add(const fbl::RefPtr<zx_device_t>& parent,
 static void log_rpc(const fbl::RefPtr<zx_device_t>& dev, const char* opname) {
   char buffer[512];
   const char* path = mkdevpath(dev, buffer, sizeof(buffer));
-  log(RPC_OUT, "devhost[%s] %s'\n", path, opname);
+  log(RPC_OUT, "driver_host[%s] %s'\n", path, opname);
 }
 
 static void log_rpc_result(const char* opname, zx_status_t status,
@@ -618,8 +612,7 @@ static void log_rpc_result(const char* opname, zx_status_t status,
   }
 }
 
-void devhost_make_visible(const fbl::RefPtr<zx_device_t>& dev,
-                          const device_make_visible_args_t* args) {
+void make_visible(const fbl::RefPtr<zx_device_t>& dev, const device_make_visible_args_t* args) {
   ZX_ASSERT_MSG(!dev->ops->init,
                 "Cannot call device_make_visible if init hook is implemented."
                 "The device will automatically be made visible once the init hook is replied to.");
@@ -670,8 +663,8 @@ void devhost_make_visible(const fbl::RefPtr<zx_device_t>& dev,
 }
 
 // Send message to devcoordinator informing it that this device
-// is being removed.  Called under devhost api lock.
-zx_status_t devhost_remove(fbl::RefPtr<zx_device_t> dev) {
+// is being removed.  Called under driver_host api lock.
+zx_status_t remove(fbl::RefPtr<zx_device_t> dev) {
   DeviceControllerConnection* conn = dev->conn.load();
   if (conn == nullptr) {
     log(ERROR, "removing device %p, conn is nullptr\n", dev.get());
@@ -703,12 +696,12 @@ zx_status_t devhost_remove(fbl::RefPtr<zx_device_t> dev) {
                                                               conn);
 
   // shut down our proxy rpc channel if it exists
-  proxy_ios_destroy(dev);
+  internal::proxy_ios_destroy(dev);
 
   return ZX_OK;
 }
 
-zx_status_t devhost_schedule_remove(const fbl::RefPtr<zx_device_t>& dev, bool unbind_self) {
+zx_status_t schedule_remove(const fbl::RefPtr<zx_device_t>& dev, bool unbind_self) {
   const zx::channel& rpc = *dev->coordinator_rpc;
   ZX_ASSERT(rpc.is_valid());
   log_rpc(dev, "schedule-remove");
@@ -718,7 +711,7 @@ zx_status_t devhost_schedule_remove(const fbl::RefPtr<zx_device_t>& dev, bool un
   return resp.status();
 }
 
-zx_status_t devhost_schedule_unbind_children(const fbl::RefPtr<zx_device_t>& dev) {
+zx_status_t schedule_unbind_children(const fbl::RefPtr<zx_device_t>& dev) {
   const zx::channel& rpc = *dev->coordinator_rpc;
   ZX_ASSERT(rpc.is_valid());
   log_rpc(dev, "schedule-unbind-children");
@@ -728,8 +721,8 @@ zx_status_t devhost_schedule_unbind_children(const fbl::RefPtr<zx_device_t>& dev
   return resp.status();
 }
 
-zx_status_t devhost_get_topo_path(const fbl::RefPtr<zx_device_t>& dev, char* path, size_t max,
-                                  size_t* actual) {
+zx_status_t get_topo_path(const fbl::RefPtr<zx_device_t>& dev, char* path, size_t max,
+                          size_t* actual) {
   fbl::RefPtr<zx_device_t> remote_dev = dev;
   if (dev->flags & DEV_FLAG_INSTANCE) {
     // Instances cannot be opened a second time. If dev represents an instance, return the path
@@ -781,7 +774,7 @@ zx_status_t devhost_get_topo_path(const fbl::RefPtr<zx_device_t>& dev, char* pat
   return ZX_OK;
 }
 
-zx_status_t devhost_device_bind(const fbl::RefPtr<zx_device_t>& dev, const char* drv_libname) {
+zx_status_t device_bind(const fbl::RefPtr<zx_device_t>& dev, const char* drv_libname) {
   const zx::channel& rpc = *dev->coordinator_rpc;
   if (!rpc.is_valid()) {
     log_rpc(dev, "bind failed");
@@ -804,8 +797,8 @@ zx_status_t devhost_device_bind(const fbl::RefPtr<zx_device_t>& dev, const char*
   return call_status;
 }
 
-zx_status_t devhost_device_run_compatibility_tests(const fbl::RefPtr<zx_device_t>& dev,
-                                                   int64_t hook_wait_time) {
+zx_status_t device_run_compatibility_tests(const fbl::RefPtr<zx_device_t>& dev,
+                                           int64_t hook_wait_time) {
   const zx::channel& rpc = *dev->coordinator_rpc;
   if (!rpc.is_valid()) {
     return ZX_ERR_IO_REFUSED;
@@ -825,8 +818,8 @@ zx_status_t devhost_device_run_compatibility_tests(const fbl::RefPtr<zx_device_t
   return call_status;
 }
 
-zx_status_t devhost_load_firmware(const fbl::RefPtr<zx_device_t>& dev, const char* path,
-                                  zx_handle_t* vmo_handle, size_t* size) {
+zx_status_t load_firmware(const fbl::RefPtr<zx_device_t>& dev, const char* path,
+                          zx_handle_t* vmo_handle, size_t* size) {
   if ((vmo_handle == nullptr) || (size == nullptr)) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -861,8 +854,8 @@ zx_status_t devhost_load_firmware(const fbl::RefPtr<zx_device_t>& dev, const cha
   return call_status;
 }
 
-zx_status_t devhost_get_metadata(const fbl::RefPtr<zx_device_t>& dev, uint32_t type, void* buf,
-                                 size_t buflen, size_t* actual) {
+zx_status_t get_metadata(const fbl::RefPtr<zx_device_t>& dev, uint32_t type, void* buf,
+                         size_t buflen, size_t* actual) {
   if (!buf) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -902,8 +895,8 @@ zx_status_t devhost_get_metadata(const fbl::RefPtr<zx_device_t>& dev, uint32_t t
   return ZX_OK;
 }
 
-zx_status_t devhost_get_metadata_size(const fbl::RefPtr<zx_device_t>& dev, uint32_t type,
-                                      size_t* out_length) {
+zx_status_t get_metadata_size(const fbl::RefPtr<zx_device_t>& dev, uint32_t type,
+                              size_t* out_length) {
   const zx::channel& rpc = *dev->coordinator_rpc;
   if (!rpc.is_valid()) {
     return ZX_ERR_IO_REFUSED;
@@ -930,8 +923,8 @@ zx_status_t devhost_get_metadata_size(const fbl::RefPtr<zx_device_t>& dev, uint3
   return ZX_OK;
 }
 
-zx_status_t devhost_add_metadata(const fbl::RefPtr<zx_device_t>& dev, uint32_t type,
-                                 const void* data, size_t length) {
+zx_status_t add_metadata(const fbl::RefPtr<zx_device_t>& dev, uint32_t type, const void* data,
+                         size_t length) {
   if (!data && length) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -954,8 +947,8 @@ zx_status_t devhost_add_metadata(const fbl::RefPtr<zx_device_t>& dev, uint32_t t
   return call_status;
 }
 
-zx_status_t devhost_publish_metadata(const fbl::RefPtr<zx_device_t>& dev, const char* path,
-                                     uint32_t type, const void* data, size_t length) {
+zx_status_t publish_metadata(const fbl::RefPtr<zx_device_t>& dev, const char* path, uint32_t type,
+                             const void* data, size_t length) {
   if (!path || (!data && length)) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -979,8 +972,8 @@ zx_status_t devhost_publish_metadata(const fbl::RefPtr<zx_device_t>& dev, const 
   return call_status;
 }
 
-zx_status_t devhost_device_add_composite(const fbl::RefPtr<zx_device_t>& dev, const char* name,
-                                         const composite_device_desc_t* comp_desc) {
+zx_status_t device_add_composite(const fbl::RefPtr<zx_device_t>& dev, const char* name,
+                                 const composite_device_desc_t* comp_desc) {
   if (comp_desc == nullptr || (comp_desc->props == nullptr && comp_desc->props_count > 0) ||
       comp_desc->components == nullptr || name == nullptr) {
     return ZX_ERR_INVALID_ARGS;
@@ -1056,8 +1049,8 @@ zx_status_t devhost_device_add_composite(const fbl::RefPtr<zx_device_t>& dev, co
   return call_status;
 }
 
-zx_status_t devhost_schedule_work(const fbl::RefPtr<zx_device_t>& dev, void (*callback)(void*),
-                                  void* cookie) {
+zx_status_t schedule_work(const fbl::RefPtr<zx_device_t>& dev, void (*callback)(void*),
+                          void* cookie) {
   if (!callback) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -1065,12 +1058,12 @@ zx_status_t devhost_schedule_work(const fbl::RefPtr<zx_device_t>& dev, void (*ca
   return ZX_OK;
 }
 
-zx_status_t devhost_start_connection(fbl::RefPtr<DevfsConnection> conn, zx::channel h) {
+zx_status_t start_connection(fbl::RefPtr<DevfsConnection> conn, zx::channel h) {
   conn->set_channel(std::move(h));
   return DevfsConnection::BeginWait(std::move(conn), DevhostAsyncLoop()->dispatcher());
 }
 
-int driver_host_main(int argc, char** argv) {
+int main(int argc, char** argv) {
   root_resource_handle = zx_take_startup_handle(PA_HND(PA_RESOURCE, 0));
   if (root_resource_handle == ZX_HANDLE_INVALID) {
     log(TRACE, "driver_host: no root resource handle!\n");
@@ -1087,14 +1080,14 @@ int driver_host_main(int argc, char** argv) {
   zx_status_t r;
 
   if (getenv_bool("driver.tracing.enable", true)) {
-    r = devhost_start_trace_provider();
+    r = start_trace_provider();
     if (r != ZX_OK) {
       log(INFO, "driver_host: error registering as trace provider: %d\n", r);
       // This is not a fatal error.
     }
   }
 
-  r = devhost_connect_scheduler_profile_provider();
+  r = connect_scheduler_profile_provider();
   if (r != ZX_OK) {
     log(INFO, "driver_host: error connecting to profile provider: %d\n", r);
     return -1;
@@ -1115,3 +1108,5 @@ int driver_host_main(int argc, char** argv) {
 
   return 0;
 }
+
+}  // namespace internal

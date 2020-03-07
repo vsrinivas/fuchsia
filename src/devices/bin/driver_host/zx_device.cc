@@ -12,7 +12,7 @@
 
 #include "composite_device.h"
 #include "devfs_connection.h"
-#include "devhost.h"
+#include "driver_host.h"
 
 zx_status_t zx_device::Create(fbl::RefPtr<zx_device>* out_dev) {
   *out_dev = fbl::AdoptRef(new zx_device());
@@ -200,11 +200,11 @@ void zx_device::fbl_recycle() TA_NO_THREAD_SAFETY_ANALYSIS {
   this->local_event.reset();
 
   // Put on the defered work list for finalization
-  defer_device_list.push_back(this);
+  internal::defer_device_list.push_back(this);
 
   // Immediately finalize if there's not an active enumerator
-  if (devhost_enumerators == 0) {
-    devhost_finalize();
+  if (internal::enumerators == 0) {
+    internal::finalize();
   }
 }
 

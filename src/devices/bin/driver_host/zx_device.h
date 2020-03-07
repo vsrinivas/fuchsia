@@ -195,7 +195,7 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
   void PushTestCompatibilityConn(fit::callback<void(zx_status_t)>);
   fit::callback<void(zx_status_t)> PopTestCompatibilityConn();
 
-  // Check if this devhost has a device with the given ID, and if so returns a
+  // Check if this driver_host has a device with the given ID, and if so returns a
   // reference to it.
   static fbl::RefPtr<zx_device> GetDeviceFromLocalId(uint64_t local_id);
 
@@ -267,7 +267,7 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
 
   // This is an atomic so that the connection's async loop can inspect this
   // value to determine if an expected shutdown is happening.  See comments in
-  // devhost_remove().
+  // internal::remove().
   std::atomic<DeviceControllerConnection*> conn = nullptr;
 
   fbl::Mutex proxy_ios_lock;

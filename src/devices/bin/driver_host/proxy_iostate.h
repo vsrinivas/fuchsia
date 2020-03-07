@@ -40,6 +40,9 @@ struct ProxyIostate : AsyncLoopOwnedRpcHandler<ProxyIostate> {
 
   const fbl::RefPtr<zx_device> dev;
 };
+
+namespace internal {
 void proxy_ios_destroy(const fbl::RefPtr<zx_device>& dev);
+}
 
 #endif  // SRC_DEVICES_BIN_DRIVER_HOST_PROXY_IOSTATE_H_

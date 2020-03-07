@@ -12,9 +12,13 @@
 #include <string.h>
 #include <zircon/types.h>
 
-zx_handle_t scheduler_profile_provider;
+namespace internal {
 
-zx_status_t devhost_connect_scheduler_profile_provider() {
+namespace {
+zx_handle_t scheduler_profile_provider;
+}
+
+zx_status_t connect_scheduler_profile_provider() {
   zx::channel registry_client;
   zx::channel registry_service;
   zx_status_t status = zx::channel::create(0u, &registry_client, &registry_service);
@@ -30,8 +34,7 @@ zx_status_t devhost_connect_scheduler_profile_provider() {
   return ZX_OK;
 }
 
-zx_status_t devhost_get_scheduler_profile(uint32_t priority, const char* name,
-                                          zx_handle_t* profile) {
+zx_status_t get_scheduler_profile(uint32_t priority, const char* name, zx_handle_t* profile) {
   zx_status_t fidl_status = ZX_ERR_INTERNAL;
   zx_status_t status = fuchsia_scheduler_ProfileProviderGetProfile(
       scheduler_profile_provider, priority, name, strlen(name), &fidl_status, profile);
@@ -44,9 +47,8 @@ zx_status_t devhost_get_scheduler_profile(uint32_t priority, const char* name,
   return ZX_OK;
 }
 
-zx_status_t devhost_get_scheduler_deadline_profile(uint64_t capacity, uint64_t deadline,
-                                                   uint64_t period, const char* name,
-                                                   zx_handle_t* profile) {
+zx_status_t get_scheduler_deadline_profile(uint64_t capacity, uint64_t deadline, uint64_t period,
+                                           const char* name, zx_handle_t* profile) {
   zx_status_t fidl_status = ZX_ERR_INTERNAL;
   zx_status_t status = fuchsia_scheduler_ProfileProviderGetDeadlineProfile(
       scheduler_profile_provider, capacity, deadline, period, name, strlen(name), &fidl_status,
@@ -59,3 +61,5 @@ zx_status_t devhost_get_scheduler_deadline_profile(uint64_t capacity, uint64_t d
   }
   return ZX_OK;
 }
+
+}  // namespace internal

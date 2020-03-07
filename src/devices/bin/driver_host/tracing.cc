@@ -12,7 +12,9 @@
 
 #include "log.h"
 
-zx_status_t devhost_start_trace_provider() {
+namespace internal {
+
+zx_status_t start_trace_provider() {
   async_loop_t* loop;
   zx_status_t status = async_loop_create(&kAsyncLoopConfigNoAttachToCurrentThread, &loop);
   if (status != ZX_OK) {
@@ -20,7 +22,7 @@ zx_status_t devhost_start_trace_provider() {
     return status;
   }
 
-  status = async_loop_start_thread(loop, "devhost-tracer", nullptr);
+  status = async_loop_start_thread(loop, "driver_host-tracer", nullptr);
   if (status != ZX_OK) {
     async_loop_destroy(loop);
     log(ERROR, "driver_host: error starting async loop thread: %d\n", status);
@@ -46,3 +48,5 @@ zx_status_t devhost_start_trace_provider() {
   log(SPEW, "driver_host: trace provider registry begun\n");
   return ZX_OK;
 }
+
+}  // namespace internal

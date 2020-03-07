@@ -13,37 +13,37 @@
 // locking and lock debugging
 
 namespace internal {
-extern mtx_t devhost_api_lock;
-extern std::atomic<thrd_t> devhost_api_lock_owner;
+extern mtx_t api_lock;
+extern std::atomic<thrd_t> api_lock_owner;
 }  // namespace internal
 
-#define REQ_DM_LOCK TA_REQ(&::internal::devhost_api_lock)
-#define USE_DM_LOCK TA_GUARDED(&::internal::devhost_api_lock)
+#define REQ_DM_LOCK TA_REQ(&::internal::api_lock)
+#define USE_DM_LOCK TA_GUARDED(&::internal::api_lock)
 
-static inline void DM_LOCK() TA_ACQ(&::internal::devhost_api_lock) {
-  mtx_lock(&internal::devhost_api_lock);
-  internal::devhost_api_lock_owner.store(thrd_current());
+static inline void DM_LOCK() TA_ACQ(&::internal::api_lock) {
+  mtx_lock(&internal::api_lock);
+  internal::api_lock_owner.store(thrd_current());
 }
 
-static inline void DM_UNLOCK() TA_REL(&::internal::devhost_api_lock) {
-  internal::devhost_api_lock_owner.store(0);
-  mtx_unlock(&internal::devhost_api_lock);
+static inline void DM_UNLOCK() TA_REL(&::internal::api_lock) {
+  internal::api_lock_owner.store(0);
+  mtx_unlock(&internal::api_lock);
 }
 
 static inline bool DM_LOCK_HELD() {
-  return thrd_equal(internal::devhost_api_lock_owner.load(), thrd_current());
+  return thrd_equal(internal::api_lock_owner.load(), thrd_current());
 }
 
 class ApiAutoLock {
  public:
-  ApiAutoLock() TA_ACQ(&::internal::devhost_api_lock) { DM_LOCK(); }
-  ~ApiAutoLock() TA_REL(&::internal::devhost_api_lock) { DM_UNLOCK(); }
+  ApiAutoLock() TA_ACQ(&::internal::api_lock) { DM_LOCK(); }
+  ~ApiAutoLock() TA_REL(&::internal::api_lock) { DM_UNLOCK(); }
 };
 
 class ApiAutoRelock {
  public:
-  ApiAutoRelock() TA_REL(&::internal::devhost_api_lock) { DM_UNLOCK(); }
-  ~ApiAutoRelock() TA_ACQ(&::internal::devhost_api_lock) { DM_LOCK(); }
+  ApiAutoRelock() TA_REL(&::internal::api_lock) { DM_UNLOCK(); }
+  ~ApiAutoRelock() TA_ACQ(&::internal::api_lock) { DM_LOCK(); }
 };
 
 #endif  // SRC_DEVICES_BIN_DRIVER_HOST_LOCK_H_

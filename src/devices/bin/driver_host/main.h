@@ -5,6 +5,8 @@
 #ifndef SRC_DEVICES_BIN_DRIVER_HOST_MAIN_H_
 #define SRC_DEVICES_BIN_DRIVER_HOST_MAIN_H_
 
-int driver_host_main(int argc, char** argv);
+namespace internal {
+int main(int argc, char** argv);
+}
 
 #endif  // SRC_DEVICES_BIN_DRIVER_HOST_MAIN_H_

@@ -29,7 +29,7 @@
 #include <fbl/auto_lock.h>
 
 #include "composite_device.h"
-#include "devhost.h"
+#include "driver_host.h"
 #include "log.h"
 
 #define TRACE 0
@@ -45,25 +45,26 @@
 #define TRACE_ADD_REMOVE 0
 
 namespace internal {
-__LOCAL mtx_t devhost_api_lock = MTX_INIT;
-__LOCAL std::atomic<thrd_t> devhost_api_lock_owner(0);
-}  // namespace internal
+__LOCAL mtx_t api_lock = MTX_INIT;
+__LOCAL std::atomic<thrd_t> api_lock_owner(0);
 
 using llcpp::fuchsia::device::DevicePowerState;
 
-static thread_local BindContext* g_bind_context;
+static thread_local internal::BindContext* g_bind_context;
 static thread_local CreationContext* g_creation_context;
 
 // The bind and creation contexts is setup before the bind() or
 // create() ops are invoked to provide the ability to sanity check the
 // required device_add() operations these hooks should be making.
-void devhost_set_bind_context(BindContext* ctx) { g_bind_context = ctx; }
+void set_bind_context(internal::BindContext* ctx) { g_bind_context = ctx; }
 
-void devhost_set_creation_context(CreationContext* ctx) {
+void set_creation_context(CreationContext* ctx) {
   ZX_DEBUG_ASSERT(!ctx || ctx->device_controller_rpc->is_valid() ||
                   ctx->coordinator_rpc->is_valid());
   g_creation_context = ctx;
 }
+
+}  // namespace internal
 
 static zx_status_t default_open(void* ctx, zx_device_t** out, uint32_t flags) { return ZX_OK; }
 
@@ -153,7 +154,9 @@ static zx_protocol_device_t device_invalid_ops = []() {
 // before we start free'ing the oldest when adding a new one.
 #define DEAD_DEVICE_MAX 7
 
-void devhost_device_destroy(zx_device_t* dev) REQ_DM_LOCK {
+namespace internal {
+
+void device_destroy(zx_device_t* dev) REQ_DM_LOCK {
   // Wrap the deferred-deletion list in a struct, so we can give it a proper
   // dtor.  Otherwise, this causes the binary to crash on exit due to an
   // is_empty assert in fbl::DoublyLinkedList.  This was particularly a
@@ -204,9 +207,9 @@ void devhost_device_destroy(zx_device_t* dev) REQ_DM_LOCK {
 
 // defered work list
 fbl::DoublyLinkedList<zx_device*, zx_device::DeferNode> defer_device_list;
-int devhost_enumerators = 0;
+int enumerators = 0;
 
-void devhost_finalize() {
+void finalize() {
   // Early exit if there's no work
   if (defer_device_list.is_empty()) {
     return;
@@ -252,7 +255,7 @@ void devhost_finalize() {
         // Clear the wants rebind flag and request the rebind
         dev->parent->flags &= (~DEV_FLAG_WANTS_REBIND);
         std::string drv = dev->parent->get_rebind_drv_name().value_or("");
-        zx_status_t status = devhost_device_bind(dev->parent, drv.c_str());
+        zx_status_t status = internal::device_bind(dev->parent, drv.c_str());
         if (status != ZX_OK) {
           if (auto rebind = dev->parent->take_rebind_conn(); rebind) {
             rebind(status);
@@ -264,9 +267,11 @@ void devhost_finalize() {
     }
 
     // destroy/deallocate the device
-    devhost_device_destroy(dev);
+    device_destroy(dev);
   }
 }
+
+namespace {
 
 // enum_lock_{acquire,release}() are used whenever we're iterating
 // on the device tree.  When "enum locked" it is legal to add a new
@@ -274,17 +279,19 @@ void devhost_finalize() {
 // legal to remove a child.  This avoids badness when we have to
 // drop the DM lock to call into device ops while enumerating.
 
-static void enum_lock_acquire() REQ_DM_LOCK { devhost_enumerators++; }
+void enum_lock_acquire() REQ_DM_LOCK { internal::enumerators++; }
 
-static void enum_lock_release() REQ_DM_LOCK {
-  if (--devhost_enumerators == 0) {
-    devhost_finalize();
+void enum_lock_release() REQ_DM_LOCK {
+  if (--internal::enumerators == 0) {
+    internal::finalize();
   }
 }
 
-zx_status_t devhost_device_create(zx_driver_t* drv, const char* name, void* ctx,
-                                  const zx_protocol_device_t* ops,
-                                  fbl::RefPtr<zx_device_t>* out) REQ_DM_LOCK {
+}  // namespace
+
+zx_status_t device_create(zx_driver_t* drv, const char* name, void* ctx,
+                          const zx_protocol_device_t* ops,
+                          fbl::RefPtr<zx_device_t>* out) REQ_DM_LOCK {
   if (!drv) {
     printf("driver_host: device_add could not find driver!\n");
     return ZX_ERR_INVALID_ARGS;
@@ -323,7 +330,9 @@ zx_status_t devhost_device_create(zx_driver_t* drv, const char* name, void* ctx,
   return ZX_OK;
 }
 
-static zx_status_t device_validate(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK {
+namespace {
+
+zx_status_t device_validate(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK {
   if (dev == nullptr) {
     printf("INVAL: nullptr!\n");
     return ZX_ERR_INVALID_ARGS;
@@ -353,10 +362,11 @@ static zx_status_t device_validate(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_L
   return ZX_OK;
 }
 
-zx_status_t devhost_device_add(const fbl::RefPtr<zx_device_t>& dev,
-                               const fbl::RefPtr<zx_device_t>& parent,
-                               const zx_device_prop_t* props, uint32_t prop_count,
-                               const char* proxy_args, zx::channel client_remote) REQ_DM_LOCK {
+}  // namespace
+
+zx_status_t device_add(const fbl::RefPtr<zx_device_t>& dev, const fbl::RefPtr<zx_device_t>& parent,
+                       const zx_device_prop_t* props, uint32_t prop_count, const char* proxy_args,
+                       zx::channel client_remote) REQ_DM_LOCK {
   auto mark_dead = fbl::MakeAutoCall([&dev]() {
     if (dev) {
       dev->flags |= DEV_FLAG_DEAD;
@@ -376,7 +386,7 @@ zx_status_t devhost_device_add(const fbl::RefPtr<zx_device_t>& dev,
     return ZX_ERR_BAD_STATE;
   }
 
-  BindContext* bind_ctx = nullptr;
+  internal::BindContext* bind_ctx = nullptr;
   CreationContext* creation_ctx = nullptr;
 
   // If the bind or creation ctx (thread locals) are set, we are in
@@ -430,8 +440,8 @@ zx_status_t devhost_device_add(const fbl::RefPtr<zx_device_t>& dev,
   parent->children.push_back(dev.get());
 
   if (!(dev->flags & DEV_FLAG_INSTANCE)) {
-    // devhost_add always consumes the handle
-    status = devhost_add(parent, dev, proxy_args, props, prop_count, std::move(client_remote));
+    // internal::add always consumes the handle
+    status = internal::add(parent, dev, proxy_args, props, prop_count, std::move(client_remote));
     if (status < 0) {
       printf("driver_host: %p(%s): remote add failed %d\n", dev.get(), dev->name, status);
       dev->parent->children.erase(*dev);
@@ -455,7 +465,7 @@ zx_status_t devhost_device_add(const fbl::RefPtr<zx_device_t>& dev,
   return ZX_OK;
 }
 
-zx_status_t devhost_device_init(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK {
+zx_status_t device_init(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK {
   if (dev->flags & DEV_FLAG_INITIALIZING) {
     return ZX_ERR_BAD_STATE;
   }
@@ -470,8 +480,8 @@ zx_status_t devhost_device_init(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK
   return ZX_OK;
 }
 
-void devhost_device_init_reply(const fbl::RefPtr<zx_device_t>& dev, zx_status_t status,
-                               const device_init_reply_args_t* args) REQ_DM_LOCK {
+void device_init_reply(const fbl::RefPtr<zx_device_t>& dev, zx_status_t status,
+                       const device_init_reply_args_t* args) REQ_DM_LOCK {
   if (!(dev->flags & DEV_FLAG_INITIALIZING)) {
     ZX_PANIC("device: %p(%s): cannot reply to init, flags are: (%x)\n", dev.get(), dev->name,
              dev->flags);
@@ -510,9 +520,11 @@ void devhost_device_init_reply(const fbl::RefPtr<zx_device_t>& dev, zx_status_t 
   }
 }
 
+namespace {
+
 #define REMOVAL_BAD_FLAGS (DEV_FLAG_DEAD | DEV_FLAG_BUSY | DEV_FLAG_INSTANCE | DEV_FLAG_MULTI_BIND)
 
-static const char* removal_problem(uint32_t flags) {
+const char* removal_problem(uint32_t flags) {
   if (flags & DEV_FLAG_DEAD) {
     return "already dead";
   }
@@ -528,8 +540,9 @@ static const char* removal_problem(uint32_t flags) {
   return "?";
 }
 
-zx_status_t devhost_device_remove(const fbl::RefPtr<zx_device_t>& dev,
-                                  bool unbind_self) REQ_DM_LOCK {
+}  // namespace
+
+zx_status_t device_remove(const fbl::RefPtr<zx_device_t>& dev, bool unbind_self) REQ_DM_LOCK {
   if (dev->flags & REMOVAL_BAD_FLAGS) {
     printf("device: %p(%s): cannot be removed (%s)\n", dev.get(), dev->name,
            removal_problem(dev->flags));
@@ -549,12 +562,12 @@ zx_status_t devhost_device_remove(const fbl::RefPtr<zx_device_t>& dev,
   printf("device: %p(%s): is being scheduled for removal\n", dev.get(), dev->name);
 #endif
   // Ask the devcoordinator to schedule the removal of this device and its children.
-  devhost_schedule_remove(dev, unbind_self);
+  schedule_remove(dev, unbind_self);
   return ZX_OK;
 }
 
-void devhost_device_suspend_reply(const fbl::RefPtr<zx_device_t>& dev, zx_status_t status,
-                                  uint8_t out_state) REQ_DM_LOCK {
+void device_suspend_reply(const fbl::RefPtr<zx_device_t>& dev, zx_status_t status,
+                          uint8_t out_state) REQ_DM_LOCK {
   // There are 3 references when this function gets called in repsonse to
   // selective suspend on a device. 1. When we create a connection in ReadMessage
   // 2. When we wrap the txn in Transaction.
@@ -571,8 +584,8 @@ void devhost_device_suspend_reply(const fbl::RefPtr<zx_device_t>& dev, zx_status
   }
 }
 
-void devhost_device_resume_reply(const fbl::RefPtr<zx_device_t>& dev, zx_status_t status,
-                                 uint8_t out_power_state, uint32_t out_perf_state) REQ_DM_LOCK {
+void device_resume_reply(const fbl::RefPtr<zx_device_t>& dev, zx_status_t status,
+                         uint8_t out_power_state, uint32_t out_perf_state) REQ_DM_LOCK {
   if (dev->resume_cb) {
     if (out_power_state == static_cast<uint8_t>(DevicePowerState::DEVICE_POWER_STATE_D0)) {
       // Update the current performance state.
@@ -584,7 +597,7 @@ void devhost_device_resume_reply(const fbl::RefPtr<zx_device_t>& dev, zx_status_
   }
 }
 
-void devhost_device_unbind_reply(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK {
+void device_unbind_reply(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK {
   if (dev->flags & REMOVAL_BAD_FLAGS) {
     ZX_PANIC("device: %p(%s): cannot reply to unbind, bad flags: (%s)\n", dev.get(), dev->name,
              removal_problem(dev->flags));
@@ -609,29 +622,29 @@ void devhost_device_unbind_reply(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOC
   }
 }
 
-zx_status_t devhost_device_remove_deprecated(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK {
+zx_status_t device_remove_deprecated(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK {
   // This removal is in response to the unbind hook.
   if (dev->flags & DEV_FLAG_UNBOUND) {
-    devhost_device_unbind_reply(dev);
+    internal::device_unbind_reply(dev);
     return ZX_OK;
   }
-  return devhost_device_remove(dev, false /* unbind_self */);
+  return internal::device_remove(dev, false /* unbind_self */);
 }
 
-zx_status_t devhost_device_rebind(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK {
+zx_status_t device_rebind(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK {
   if (!dev->children.is_empty() || dev->has_composite()) {
     // note that we want to be rebound when our children are all gone
     dev->flags |= DEV_FLAG_WANTS_REBIND;
     // request that any existing children go away
-    devhost_schedule_unbind_children(dev);
+    internal::schedule_unbind_children(dev);
   } else {
     std::string drv = dev->get_rebind_drv_name().value_or("");
-    return devhost_device_bind(dev, drv.c_str());
+    return internal::device_bind(dev, drv.c_str());
   }
   return ZX_OK;
 }
 
-zx_status_t devhost_device_unbind(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK {
+zx_status_t device_unbind(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK {
   enum_lock_acquire();
 
   if (!(dev->flags & DEV_FLAG_UNBOUND)) {
@@ -653,21 +666,21 @@ zx_status_t devhost_device_unbind(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LO
   return ZX_OK;
 }
 
-zx_status_t devhost_device_complete_removal(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK {
+zx_status_t device_complete_removal(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK {
 #if TRACE_ADD_REMOVE
   printf("device: %p(%s): is being removed (removal requested)\n", dev.get(), dev->name);
 #endif
 
   // This recovers the leaked reference that happened in device_add_from_driver().
   auto dev_add_ref = fbl::ImportFromRawPtr(dev.get());
-  devhost_remove(std::move(dev_add_ref));
+  internal::remove(std::move(dev_add_ref));
 
   dev->flags |= DEV_FLAG_DEAD;
   return ZX_OK;
 }
 
-zx_status_t devhost_device_open(const fbl::RefPtr<zx_device_t>& dev, fbl::RefPtr<zx_device_t>* out,
-                                uint32_t flags) REQ_DM_LOCK {
+zx_status_t device_open(const fbl::RefPtr<zx_device_t>& dev, fbl::RefPtr<zx_device_t>* out,
+                        uint32_t flags) REQ_DM_LOCK {
   if (dev->flags & DEV_FLAG_DEAD) {
     printf("device open: %p(%s) is dead!\n", dev.get(), dev->name);
     return ZX_ERR_BAD_STATE;
@@ -695,12 +708,12 @@ zx_status_t devhost_device_open(const fbl::RefPtr<zx_device_t>& dev, fbl::RefPtr
   return r;
 }
 
-zx_status_t devhost_device_close(fbl::RefPtr<zx_device_t> dev, uint32_t flags) REQ_DM_LOCK {
+zx_status_t device_close(fbl::RefPtr<zx_device_t> dev, uint32_t flags) REQ_DM_LOCK {
   ApiAutoRelock relock;
   return dev->CloseOp(flags);
 }
 
-uint8_t devhost_device_get_suspend_reason(fuchsia_device_manager_SystemPowerState power_state) {
+uint8_t device_get_suspend_reason(fuchsia_device_manager_SystemPowerState power_state) {
   switch (power_state) {
     case fuchsia_device_manager_SystemPowerState_SYSTEM_POWER_STATE_REBOOT:
       return DEVICE_SUSPEND_REASON_REBOOT;
@@ -719,7 +732,7 @@ uint8_t devhost_device_get_suspend_reason(fuchsia_device_manager_SystemPowerStat
   }
 }
 
-zx_status_t devhost_device_get_dev_power_state_from_mapping(
+zx_status_t device_get_dev_power_state_from_mapping(
     const fbl::RefPtr<zx_device>& dev, uint32_t flags,
     llcpp::fuchsia::device::SystemPowerStateInfo* info, uint8_t* suspend_reason) {
   // TODO(ravoorir) : When the usage of suspend flags is replaced with
@@ -749,11 +762,11 @@ zx_status_t devhost_device_get_dev_power_state_from_mapping(
   }
   auto& sys_power_states = dev->GetSystemPowerStateMapping();
   *info = sys_power_states[sys_state];
-  *suspend_reason = devhost_device_get_suspend_reason(sys_state);
+  *suspend_reason = internal::device_get_suspend_reason(sys_state);
   return ZX_OK;
 }
 
-void devhost_device_system_suspend(const fbl::RefPtr<zx_device>& dev, uint32_t flags) REQ_DM_LOCK {
+void device_system_suspend(const fbl::RefPtr<zx_device>& dev, uint32_t flags) REQ_DM_LOCK {
   if (dev->auto_suspend_configured()) {
     dev->ops->configure_auto_suspend(dev->ctx, false,
                                      fuchsia_device_DevicePowerState_DEVICE_POWER_STATE_D0);
@@ -765,8 +778,8 @@ void devhost_device_system_suspend(const fbl::RefPtr<zx_device>& dev, uint32_t f
     llcpp::fuchsia::device::SystemPowerStateInfo new_state_info;
     uint8_t suspend_reason = DEVICE_SUSPEND_REASON_SELECTIVE_SUSPEND;
 
-    status = devhost_device_get_dev_power_state_from_mapping(dev, flags, &new_state_info,
-                                                             &suspend_reason);
+    status = internal::device_get_dev_power_state_from_mapping(dev, flags, &new_state_info,
+                                                               &suspend_reason);
     if (status == ZX_OK) {
       enum_lock_acquire();
       {
@@ -787,7 +800,7 @@ void devhost_device_system_suspend(const fbl::RefPtr<zx_device>& dev, uint32_t f
   dev->suspend_cb(status, 0);
 }
 
-uint32_t devhost_get_perf_state(const fbl::RefPtr<zx_device>& dev, uint32_t requested_perf_state) {
+uint32_t get_perf_state(const fbl::RefPtr<zx_device>& dev, uint32_t requested_perf_state) {
   // Give preference to the performance state that is explicitly for this device.
   if (dev->current_performance_state() != ::llcpp::fuchsia::device::DEVICE_PERFORMANCE_STATE_P0) {
     return dev->current_performance_state();
@@ -795,8 +808,8 @@ uint32_t devhost_get_perf_state(const fbl::RefPtr<zx_device>& dev, uint32_t requ
   return requested_perf_state;
 }
 
-void devhost_device_system_resume(const fbl::RefPtr<zx_device>& dev,
-                                  uint32_t target_system_state) REQ_DM_LOCK {
+void device_system_resume(const fbl::RefPtr<zx_device>& dev,
+                          uint32_t target_system_state) REQ_DM_LOCK {
   if (dev->auto_suspend_configured()) {
     dev->ops->configure_auto_suspend(dev->ctx, false,
                                      fuchsia_device_DevicePowerState_DEVICE_POWER_STATE_D0);
@@ -811,7 +824,7 @@ void devhost_device_system_resume(const fbl::RefPtr<zx_device>& dev,
       ApiAutoRelock relock;
       auto& sys_power_states = dev->GetSystemPowerStateMapping();
       uint32_t requested_perf_state =
-          devhost_get_perf_state(dev, sys_power_states[target_system_state].performance_state);
+          internal::get_perf_state(dev, sys_power_states[target_system_state].performance_state);
       dev->ops->resume_new(dev->ctx, requested_perf_state);
     }
     enum_lock_release();
@@ -826,8 +839,7 @@ void devhost_device_system_resume(const fbl::RefPtr<zx_device>& dev,
                  llcpp::fuchsia::device::DEVICE_PERFORMANCE_STATE_P0);
 }
 
-void devhost_device_suspend_new(const fbl::RefPtr<zx_device>& dev,
-                                DevicePowerState requested_state) {
+void device_suspend_new(const fbl::RefPtr<zx_device>& dev, DevicePowerState requested_state) {
   if (dev->auto_suspend_configured()) {
     log(INFO, "Devhost: Suspending %s failed: AutoSuspend is enabled\n", dev->name);
     dev->suspend_cb(ZX_ERR_NOT_SUPPORTED,
@@ -849,8 +861,8 @@ void devhost_device_suspend_new(const fbl::RefPtr<zx_device>& dev,
                   static_cast<uint8_t>(DevicePowerState::DEVICE_POWER_STATE_D0));
 }
 
-zx_status_t devhost_device_set_performance_state(const fbl::RefPtr<zx_device>& dev,
-                                                 uint32_t requested_state, uint32_t* out_state) {
+zx_status_t device_set_performance_state(const fbl::RefPtr<zx_device>& dev,
+                                         uint32_t requested_state, uint32_t* out_state) {
   if (!(dev->IsPerformanceStateSupported(requested_state))) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -867,7 +879,7 @@ zx_status_t devhost_device_set_performance_state(const fbl::RefPtr<zx_device>& d
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-void devhost_device_resume_new(const fbl::RefPtr<zx_device>& dev) {
+void device_resume_new(const fbl::RefPtr<zx_device>& dev) {
   if (dev->auto_suspend_configured()) {
     log(INFO, "Devhost: Resuming %s failed: AutoSuspend/Resume is enabled for the driver\n",
         dev->name);
@@ -879,7 +891,7 @@ void devhost_device_resume_new(const fbl::RefPtr<zx_device>& dev) {
   // If new resume hook is implemented, prefer that.
   if (dev->ops->resume_new) {
     uint32_t requested_perf_state =
-        devhost_get_perf_state(dev, llcpp::fuchsia::device::DEVICE_PERFORMANCE_STATE_P0);
+        internal::get_perf_state(dev, llcpp::fuchsia::device::DEVICE_PERFORMANCE_STATE_P0);
     dev->ops->resume_new(dev->ctx, requested_perf_state);
     return;
   }
@@ -888,8 +900,8 @@ void devhost_device_resume_new(const fbl::RefPtr<zx_device>& dev) {
                  llcpp::fuchsia::device::DEVICE_PERFORMANCE_STATE_P0);
 }
 
-zx_status_t devhost_device_configure_auto_suspend(const fbl::RefPtr<zx_device>& dev, bool enable,
-                                                  DevicePowerState requested_state) {
+zx_status_t device_configure_auto_suspend(const fbl::RefPtr<zx_device>& dev, bool enable,
+                                          DevicePowerState requested_state) {
   if (enable && !(dev->IsPowerStateSupported(requested_state))) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -904,3 +916,5 @@ zx_status_t devhost_device_configure_auto_suspend(const fbl::RefPtr<zx_device>& 
   }
   return ZX_ERR_NOT_SUPPORTED;
 }
+
+}  // namespace internal

@@ -17,7 +17,7 @@
 #include <zxtest/zxtest.h>
 
 // Should be same as the one in devhost-test/metadata.h
-struct devhost_test_metadata {
+struct driver_host_test_metadata {
   bool make_device_visible_success = true;
   bool init_reply_success = true;
 };
@@ -147,7 +147,7 @@ TEST(DeviceControllerIntegrationTest, TestRebindChildrenAutoBind) {
   driver_integration_test::IsolatedDevmgr devmgr;
 
   board_test::DeviceEntry dev = {};
-  struct devhost_test_metadata test_metadata = {
+  struct driver_host_test_metadata test_metadata = {
       .make_device_visible_success = true,
       .init_reply_success = true,
   };
@@ -194,7 +194,7 @@ TEST(DeviceControllerIntegrationTest, TestRebindChildrenManualBind) {
   driver_integration_test::IsolatedDevmgr devmgr;
 
   board_test::DeviceEntry dev = {};
-  struct devhost_test_metadata test_metadata = {
+  struct driver_host_test_metadata test_metadata = {
       .make_device_visible_success = true,
       .init_reply_success = true,
   };
@@ -240,7 +240,7 @@ TEST(DeviceControllerIntegrationTest, TestUnbindChildrenSuccess) {
   driver_integration_test::IsolatedDevmgr devmgr;
 
   board_test::DeviceEntry dev = {};
-  struct devhost_test_metadata test_metadata = {
+  struct driver_host_test_metadata test_metadata = {
       .make_device_visible_success = true,
       .init_reply_success = true,
   };
@@ -462,7 +462,7 @@ TEST(DeviceControllerIntegrationTest, TestRebindWithMakeVisible_Success) {
   driver_integration_test::IsolatedDevmgr devmgr;
 
   board_test::DeviceEntry dev = {};
-  struct devhost_test_metadata test_metadata = {
+  struct driver_host_test_metadata test_metadata = {
       .make_device_visible_success = true,
       .init_reply_success = true,
   };
@@ -508,7 +508,7 @@ TEST(DeviceControllerIntegrationTest, TestRebindWithMakeVisible_Failure) {
   driver_integration_test::IsolatedDevmgr devmgr;
 
   board_test::DeviceEntry dev = {};
-  struct devhost_test_metadata test_metadata = {
+  struct driver_host_test_metadata test_metadata = {
       .make_device_visible_success = false,
       .init_reply_success = true,
   };
@@ -550,7 +550,7 @@ TEST(DeviceControllerIntegrationTest, TestRebindWithInit_Success) {
   driver_integration_test::IsolatedDevmgr devmgr;
 
   board_test::DeviceEntry dev = {};
-  struct devhost_test_metadata test_metadata = {
+  struct driver_host_test_metadata test_metadata = {
       .make_device_visible_success = true,
       .init_reply_success = true,
   };
@@ -594,7 +594,7 @@ TEST(DeviceControllerIntegrationTest, TestRebindWithInit_Failure) {
   driver_integration_test::IsolatedDevmgr devmgr;
 
   board_test::DeviceEntry dev = {};
-  struct devhost_test_metadata test_metadata = {
+  struct driver_host_test_metadata test_metadata = {
       .make_device_visible_success = true,
       .init_reply_success = false,
   };

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "devhost_context.h"
+#include "driver_host_context.h"
 
 #include <stdio.h>
 
@@ -16,7 +16,7 @@ void DevhostContext::PushWorkItem(const fbl::RefPtr<zx_device_t>& dev, Callback 
   fbl::AutoLock al(&lock_);
   work_items_.push_back(std::move(work_item));
 
-  // TODO(surajmalhotra): Only signal if not being run in main devhost thread as a slight
+  // TODO(surajmalhotra): Only signal if not being run in main driver_host thread as a slight
   // optimization (assuming we will run work items before going back to waiting on the port).
   if (!event_waiter_->signaled()) {
     event_waiter_->signal();

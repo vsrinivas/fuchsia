@@ -13,7 +13,7 @@
 
 #include <src/storage/deprecated-fs-fidl-handler/fidl-handler.h>
 
-#include "devhost.h"
+#include "driver_host.h"
 #include "log.h"
 #include "zircon/system/ulib/fbl/include/fbl/ref_ptr.h"
 
@@ -188,7 +188,7 @@ void DevfsConnection::GetDeviceName(GetDeviceNameCompleter::Sync completer) {
 void DevfsConnection::GetTopologicalPath(GetTopologicalPathCompleter::Sync completer) {
   char buf[fuchsia_device_MAX_DEVICE_PATH_LEN + 1];
   size_t actual;
-  zx_status_t status = devhost_get_topo_path(this->dev, buf, sizeof(buf), &actual);
+  zx_status_t status = internal::get_topo_path(this->dev, buf, sizeof(buf), &actual);
   if (status != ZX_OK) {
     return completer.ReplyError(status);
   }
@@ -261,14 +261,14 @@ void DevfsConnection::GetDevicePowerCaps(GetDevicePowerCapsCompleter::Sync compl
 void DevfsConnection::SetPerformanceState(uint32_t requested_state,
                                           SetPerformanceStateCompleter::Sync completer) {
   uint32_t out_state;
-  zx_status_t status = devhost_device_set_performance_state(dev, requested_state, &out_state);
+  zx_status_t status = internal::device_set_performance_state(dev, requested_state, &out_state);
   return completer.Reply(status, out_state);
 }
 
 void DevfsConnection::ConfigureAutoSuspend(
     bool enable, ::llcpp::fuchsia::device::DevicePowerState requested_state,
     ConfigureAutoSuspendCompleter::Sync completer) {
-  zx_status_t status = devhost_device_configure_auto_suspend(dev, enable, requested_state);
+  zx_status_t status = internal::device_configure_auto_suspend(dev, enable, requested_state);
   return completer.Reply(status);
 }
 
@@ -315,7 +315,7 @@ void DevfsConnection::Suspend(::llcpp::fuchsia::device::DevicePowerState request
                                                       uint8_t out_state) mutable {
     completer.Reply(status, static_cast<::llcpp::fuchsia::device::DevicePowerState>(out_state));
   };
-  devhost_device_suspend_new(dev, requested_state);
+  internal::device_suspend_new(dev, requested_state);
 }
 
 void DevfsConnection::Resume(ResumeCompleter::Sync completer) {
@@ -325,7 +325,7 @@ void DevfsConnection::Resume(ResumeCompleter::Sync completer) {
                     static_cast<::llcpp::fuchsia::device::DevicePowerState>(out_power_state),
                     out_perf_state);
   };
-  devhost_device_resume_new(dev);
+  internal::device_resume_new(dev);
 }
 
 void DevfsConnection::HandleRpc(fbl::RefPtr<DevfsConnection>&& conn, async_dispatcher_t* dispatcher,
@@ -338,7 +338,7 @@ void DevfsConnection::HandleRpc(fbl::RefPtr<DevfsConnection>&& conn, async_dispa
 
   if (signal->observed & ZX_CHANNEL_READABLE) {
     status = conn->ReadMessage([&conn](fidl_msg_t* msg, Connection* txn) {
-      zx_status_t s = devhost_fidl_handler(msg, txn->Txn(), conn.get());
+      zx_status_t s = internal::fidl_handler(msg, txn->Txn(), conn.get());
       return s;
     });
     if (status == ZX_OK) {
@@ -350,14 +350,14 @@ void DevfsConnection::HandleRpc(fbl::RefPtr<DevfsConnection>&& conn, async_dispa
     }
   } else if (signal->observed & ZX_CHANNEL_PEER_CLOSED) {
     conn->CloseMessage([&conn](fidl_msg_t* msg, Connection* txn) {
-      return devhost_fidl_handler(msg, txn->Txn(), conn.get());
+      return internal::fidl_handler(msg, txn->Txn(), conn.get());
     });
   } else {
     printf("dh_handle_fidl_rpc: invalid signals %x\n", signal->observed);
     abort();
   }
 
-  // We arrive here if devhost_fidl_handler was a clean close (ERR_DISPATCHER_DONE),
+  // We arrive here if internal::fidl_handler was a clean close (ERR_DISPATCHER_DONE),
   // or close-due-to-error (non-ZX_OK), or if the channel was closed
   // out from under us.  In all cases, we are done with this connection, so we
   // will destroy it by letting it leave scope.

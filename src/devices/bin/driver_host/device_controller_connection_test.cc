@@ -146,7 +146,7 @@ TEST(DeviceControllerConnectionTestCase, PeerClosed) {
   ASSERT_OK(DeviceControllerConnection::BeginWait(std::move(conn), loop.dispatcher()));
   ASSERT_OK(loop.RunUntilIdle());
 
-  // Perform the device shutdown protocol, since otherwise the devhost code
+  // Perform the device shutdown protocol, since otherwise the driver_host code
   // will assert, since it is unable to handle unexpected connection closures.
   auto dev_conn = dev->conn.exchange(nullptr);
   ConnectionDestroyer::Get()->QueueDeviceControllerConnection(loop.dispatcher(), dev_conn);

@@ -12,7 +12,7 @@
 #include <fbl/auto_lock.h>
 
 #include "connection_destroyer.h"
-#include "devhost.h"
+#include "driver_host.h"
 #include "env.h"
 #include "fidl_txn.h"
 #include "fuchsia/device/llcpp/fidl.h"
@@ -67,7 +67,7 @@ void DeviceControllerConnection::Init(InitCompleter::Sync completer) {
   this->dev()->init_cb = [completer = completer.ToAsync(), trace = std::move(trace)](
                              zx_status_t status) mutable { completer.Reply(status); };
   ApiAutoLock lock;
-  devhost_device_init(this->dev());
+  internal::device_init(this->dev());
 }
 
 void DeviceControllerConnection::Suspend(uint32_t flags, SuspendCompleter::Sync completer) {
@@ -82,7 +82,7 @@ void DeviceControllerConnection::Suspend(uint32_t flags, SuspendCompleter::Sync 
     completer.Reply(status);
   };
   ApiAutoLock lock;
-  devhost_device_system_suspend(this->dev(), flags);
+  internal::device_system_suspend(this->dev(), flags);
 }
 
 void DeviceControllerConnection::Resume(uint32_t target_system_state,
@@ -106,16 +106,16 @@ void DeviceControllerConnection::Resume(uint32_t target_system_state,
     completer.Reply(status);
   };
   ApiAutoLock lock;
-  devhost_device_system_resume(this->dev(), target_system_state);
+  internal::device_system_resume(this->dev(), target_system_state);
 }
 
 void DeviceControllerConnection::ConnectProxy(::zx::channel shadow,
                                               ConnectProxyCompleter::Sync _completer) {
-  log(RPC_SDW, "devhost connect proxy rpc\n");
+  log(RPC_SDW, "driver_host connect proxy rpc\n");
   this->dev()->ops->rxrpc(this->dev()->ctx, ZX_HANDLE_INVALID);
   // Ignore any errors in the creation for now?
   // TODO(teisenbe): Investigate if this is the right thing
-  ProxyIostate::Create(this->dev(), std::move(shadow), DevhostAsyncLoop()->dispatcher());
+  ProxyIostate::Create(this->dev(), std::move(shadow), internal::DevhostAsyncLoop()->dispatcher());
 }
 
 void DeviceControllerConnection::BindDriver(::fidl::StringView driver_path_view, zx::vmo driver,
@@ -125,7 +125,7 @@ void DeviceControllerConnection::BindDriver(::fidl::StringView driver_path_view,
 
   // get path
   char buffer[512];
-  const char* path = mkdevpath(dev, buffer, sizeof(buffer));
+  const char* path = internal::mkdevpath(dev, buffer, sizeof(buffer));
 
   // TODO: api lock integration
   log(ERROR, "driver_host[%s] bind driver '%.*s'\n", path, static_cast<int>(driver_path.size()),
@@ -138,7 +138,7 @@ void DeviceControllerConnection::BindDriver(::fidl::StringView driver_path_view,
   }
 
   zx_status_t r;
-  if ((r = dh_find_driver(driver_path, std::move(driver), &drv)) < 0) {
+  if ((r = internal::find_driver(driver_path, std::move(driver), &drv)) < 0) {
     log(ERROR, "driver_host[%s] driver load failed: %d\n", path, r);
     BindReply(dev, std::move(completer), r);
     return;
@@ -163,7 +163,7 @@ void DeviceControllerConnection::BindDriver(::fidl::StringView driver_path_view,
   }
 
   if (drv->has_bind_op()) {
-    BindContext bind_ctx = {
+    internal::BindContext bind_ctx = {
         .parent = dev,
         .child = nullptr,
     };
@@ -209,7 +209,7 @@ void DeviceControllerConnection::Unbind(UnbindCompleter::Sync completer) {
     completer.Reply(std::move(result));
   };
   ApiAutoLock lock;
-  devhost_device_unbind(this->dev());
+  internal::device_unbind(this->dev());
 }
 
 void DeviceControllerConnection::CompleteRemoval(CompleteRemovalCompleter::Sync completer) {
@@ -222,7 +222,7 @@ void DeviceControllerConnection::CompleteRemoval(CompleteRemovalCompleter::Sync 
     completer.Reply(std::move(result));
   };
   ApiAutoLock lock;
-  devhost_device_complete_removal(this->dev());
+  internal::device_complete_removal(this->dev());
 }
 
 DeviceControllerConnection::DeviceControllerConnection(fbl::RefPtr<zx_device> dev, zx::channel rpc,
@@ -262,7 +262,7 @@ void DeviceControllerConnection::Open(uint32_t flags, uint32_t mode, ::fidl::Str
     log(ERROR, "driver_host: Tried to open path '%.*s'\n", static_cast<int>(path.size()),
         path.data());
   }
-  devhost_device_connect(this->dev(), flags, std::move(object));
+  internal::device_connect(this->dev(), flags, std::move(object));
 }
 
 void DeviceControllerConnection::HandleRpc(std::unique_ptr<DeviceControllerConnection> conn,
@@ -333,7 +333,7 @@ zx_status_t DeviceControllerConnection::HandleRead() {
   }
 
   char buffer[512];
-  const char* path = mkdevpath(dev_, buffer, sizeof(buffer));
+  const char* path = internal::mkdevpath(dev_, buffer, sizeof(buffer));
 
   auto hdr = static_cast<fidl_message_header_t*>(fidl_msg.bytes);
   // Depending on the state of the migration, GenOrdinal and Ordinal may be the

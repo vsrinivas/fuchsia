@@ -10,7 +10,7 @@
 #include <ddk/driver.h>
 #include <zxtest/zxtest.h>
 
-#include "devhost.h"
+#include "driver_host.h"
 #include "zx_device.h"
 
 namespace {
@@ -127,7 +127,7 @@ class FakeCoordinator : public ::llcpp::fuchsia::device::manager::Coordinator::I
 class CoreTest : public zxtest::Test {
  protected:
   CoreTest() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
-    loop_.StartThread("devhost-test-loop");
+    loop_.StartThread("driver_host-test-loop");
   }
 
   void Connect(zx::channel* out) {
@@ -140,12 +140,12 @@ class CoreTest : public zxtest::Test {
   // This simulates receiving an unbind and remove request from the devcoordinator.
   void UnbindDevice(fbl::RefPtr<zx_device> dev) {
     ApiAutoLock lock;
-    devhost_device_unbind(dev);
-    // devhost_device_complete_removal() will drop the device reference added by device_add().
+    internal::device_unbind(dev);
+    // internal::device_complete_removal() will drop the device reference added by device_add().
     // Since we never called device_add(), we should increment the reference count here.
     fbl::RefPtr<zx_device_t> dev_add_ref(dev.get());
     __UNUSED auto ptr = fbl::ExportToRawPtr(&dev_add_ref);
-    devhost_device_complete_removal(dev);
+    internal::device_complete_removal(dev);
   }
 
   async::Loop loop_;

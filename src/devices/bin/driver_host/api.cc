@@ -12,13 +12,13 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 
-#include "devhost.h"
+#include "driver_host.h"
 #include "scheduler_profile.h"
 
 // These are the API entry-points from drivers
-// They must take the devhost_api_lock before calling devhost_* internals
+// They must take the internal::api_lock before calling internal::* internals
 //
-// Driver code MUST NOT directly call devhost_* APIs
+// Driver code MUST NOT directly call internal::* APIs
 
 // LibDriver Device Interface
 
@@ -51,14 +51,14 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
     return ZX_ERR_INVALID_ARGS;
   }
 
-  // If the device will be added in the same devhost and visible,
+  // If the device will be added in the same driver_host and visible,
   // we can connect the client immediately after adding the device.
-  // Otherwise we will pass this channel to the devcoordinator via devhost_device_add.
+  // Otherwise we will pass this channel to the devcoordinator via internal::device_add.
   zx::channel client_remote(args->client_remote);
 
   {
     ApiAutoLock lock;
-    r = devhost_device_create(drv, args->name, args->ctx, args->ops, &dev);
+    r = internal::device_create(drv, args->name, args->ctx, args->ops, &dev);
     if (r != ZX_OK) {
       return r;
     }
@@ -114,8 +114,8 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
       return r;
     }
 
-    // out must be set before calling devhost_device_add().
-    // devhost_device_add() may result in child devices being created before it returns,
+    // out must be set before calling internal::device_add().
+    // internal::device_add() may result in child devices being created before it returns,
     // and those children may call ops on the device before device_add() returns.
     // This leaked-ref will be accounted below.
     if (out) {
@@ -123,16 +123,16 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
     }
 
     if (args->flags & DEVICE_ADD_MUST_ISOLATE) {
-      r = devhost_device_add(dev, parent_ref, args->props, args->prop_count, args->proxy_args,
-                             std::move(client_remote));
+      r = internal::device_add(dev, parent_ref, args->props, args->prop_count, args->proxy_args,
+                               std::move(client_remote));
     } else if (args->flags & DEVICE_ADD_INSTANCE) {
       dev->flags |= DEV_FLAG_INSTANCE | DEV_FLAG_UNBINDABLE;
-      r = devhost_device_add(dev, parent_ref, nullptr, 0, nullptr,
-                             zx::channel() /* client_remote */);
+      r = internal::device_add(dev, parent_ref, nullptr, 0, nullptr,
+                               zx::channel() /* client_remote */);
     } else {
       bool pass_client_remote = args->flags & DEVICE_ADD_INVISIBLE;
-      r = devhost_device_add(dev, parent_ref, args->props, args->prop_count, nullptr,
-                             pass_client_remote ? std::move(client_remote) : zx::channel());
+      r = internal::device_add(dev, parent_ref, args->props, args->prop_count, nullptr,
+                               pass_client_remote ? std::move(client_remote) : zx::channel());
     }
     if (r != ZX_OK) {
       if (out) {
@@ -144,8 +144,8 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
 
   if (dev && client_remote.is_valid()) {
     // This needs to be called outside the ApiAutoLock, as device_open will be called
-    devhost_device_connect(dev, ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE,
-                           std::move(client_remote));
+    internal::device_connect(dev, ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE,
+                             std::move(client_remote));
 
     // Leak the reference that was written to |out|, it will be recovered in device_remove().
     // For device instances we mimic the behavior of |open| by not leaking the reference,
@@ -165,16 +165,16 @@ __EXPORT void device_init_reply(zx_device_t* dev, zx_status_t status,
                                 const device_init_reply_args_t* args) {
   ApiAutoLock lock;
   fbl::RefPtr<zx_device_t> dev_ref(dev);
-  devhost_device_init_reply(dev_ref, status, args);
+  internal::device_init_reply(dev_ref, status, args);
 }
 
 __EXPORT zx_status_t device_remove_deprecated(zx_device_t* dev) {
   ApiAutoLock lock;
   // The leaked reference in device_add_from_driver() will be recovered when
-  // devhost_remove() completes. We can't drop it here as we may just be
+  // internal::remove() completes. We can't drop it here as we may just be
   // scheduling a removal, and do not know when that will happen.
   fbl::RefPtr<zx_device_t> dev_ref(dev);
-  return devhost_device_remove_deprecated(dev_ref);
+  return internal::device_remove_deprecated(dev_ref);
 }
 
 __EXPORT zx_status_t device_remove(zx_device_t* dev) { return device_remove_deprecated(dev); }
@@ -182,52 +182,52 @@ __EXPORT zx_status_t device_remove(zx_device_t* dev) { return device_remove_depr
 __EXPORT zx_status_t device_rebind(zx_device_t* dev) {
   ApiAutoLock lock;
   fbl::RefPtr<zx_device_t> dev_ref(dev);
-  return devhost_device_rebind(dev_ref);
+  return internal::device_rebind(dev_ref);
 }
 
 __EXPORT void device_make_visible(zx_device_t* dev, const device_make_visible_args_t* args) {
   ApiAutoLock lock;
   fbl::RefPtr<zx_device_t> dev_ref(dev);
-  devhost_make_visible(dev_ref, args);
+  internal::make_visible(dev_ref, args);
 }
 
 __EXPORT void device_async_remove(zx_device_t* dev) {
   ApiAutoLock lock;
   // The leaked reference in device_add_from_driver() will be recovered when
-  // devhost_remove() completes. We can't drop it here as we are just
+  // internal::remove() completes. We can't drop it here as we are just
   // scheduling the removal, and do not know when that will happen.
   fbl::RefPtr<zx_device_t> dev_ref(dev);
-  devhost_device_remove(dev_ref, true /* unbind_self */);
+  internal::device_remove(dev_ref, true /* unbind_self */);
 }
 
 __EXPORT void device_unbind_reply(zx_device_t* dev) {
   ApiAutoLock lock;
   fbl::RefPtr<zx_device_t> dev_ref(dev);
-  devhost_device_unbind_reply(dev_ref);
+  internal::device_unbind_reply(dev_ref);
 }
 
 __EXPORT void device_suspend_reply(zx_device_t* dev, zx_status_t status, uint8_t out_state) {
   ApiAutoLock lock;
   fbl::RefPtr<zx_device_t> dev_ref(dev);
-  devhost_device_suspend_reply(dev_ref, status, out_state);
+  internal::device_suspend_reply(dev_ref, status, out_state);
 }
 
 __EXPORT void device_resume_reply(zx_device_t* dev, zx_status_t status, uint8_t out_power_state,
                                   uint32_t out_perf_state) {
   ApiAutoLock lock;
   fbl::RefPtr<zx_device_t> dev_ref(dev);
-  devhost_device_resume_reply(dev_ref, status, out_power_state, out_perf_state);
+  internal::device_resume_reply(dev_ref, status, out_power_state, out_perf_state);
 }
 
 __EXPORT zx_status_t device_get_profile(zx_device_t* dev, uint32_t priority, const char* name,
                                         zx_handle_t* out_profile) {
-  return devhost_get_scheduler_profile(priority, name, out_profile);
+  return internal::get_scheduler_profile(priority, name, out_profile);
 }
 
 __EXPORT zx_status_t device_get_deadline_profile(zx_device_t* device, uint64_t capacity,
                                                  uint64_t deadline, uint64_t period,
                                                  const char* name, zx_handle_t* out_profile) {
-  return devhost_get_scheduler_deadline_profile(capacity, deadline, period, name, out_profile);
+  return internal::get_scheduler_deadline_profile(capacity, deadline, period, name, out_profile);
 }
 
 __EXPORT const char* device_get_name(zx_device_t* dev) { return dev->name; }
@@ -263,95 +263,105 @@ __EXPORT zx_off_t device_get_size(zx_device_t* dev) { return dev->GetSizeOp(); }
 
 // LibDriver Misc Interfaces
 
+namespace internal {
 extern zx_handle_t root_resource_handle;
+}
 
 // Please do not use get_root_resource() in new code. See ZX-1467.
-__EXPORT zx_handle_t get_root_resource() { return root_resource_handle; }
+__EXPORT zx_handle_t get_root_resource() { return internal::root_resource_handle; }
 
 __EXPORT zx_status_t load_firmware(zx_device_t* dev, const char* path, zx_handle_t* fw,
                                    size_t* size) {
   ApiAutoLock lock;
   fbl::RefPtr<zx_device_t> dev_ref(dev);
   // TODO(bwb): Can we propogate zx::vmo further up?
-  return devhost_load_firmware(dev_ref, path, fw, size);
+  return internal::load_firmware(dev_ref, path, fw, size);
 }
 
 // Interface Used by DevHost RPC Layer
 
 zx_status_t device_bind(const fbl::RefPtr<zx_device_t>& dev, const char* drv_libname) {
   ApiAutoLock lock;
-  return devhost_device_bind(dev, drv_libname);
+  return internal::device_bind(dev, drv_libname);
 }
 
 zx_status_t device_unbind(const fbl::RefPtr<zx_device_t>& dev) {
   ApiAutoLock lock;
-  return devhost_device_unbind(dev);
+  return internal::device_unbind(dev);
 }
 
 zx_status_t device_schedule_remove(const fbl::RefPtr<zx_device_t>& dev, bool unbind_self) {
   ApiAutoLock lock;
-  return devhost_schedule_remove(dev, unbind_self);
+  return internal::schedule_remove(dev, unbind_self);
 }
 
 zx_status_t device_schedule_unbind_children(const fbl::RefPtr<zx_device_t>& dev) {
   ApiAutoLock lock;
-  return devhost_schedule_unbind_children(dev);
+  return internal::schedule_unbind_children(dev);
 }
 
 zx_status_t device_run_compatibility_tests(const fbl::RefPtr<zx_device_t>& dev,
                                            int64_t hook_wait_time) {
   ApiAutoLock lock;
-  return devhost_device_run_compatibility_tests(dev, hook_wait_time);
+  return internal::device_run_compatibility_tests(dev, hook_wait_time);
 }
 
 zx_status_t device_open(const fbl::RefPtr<zx_device_t>& dev, fbl::RefPtr<zx_device_t>* out,
                         uint32_t flags) {
   ApiAutoLock lock;
-  return devhost_device_open(dev, out, flags);
+  return internal::device_open(dev, out, flags);
 }
 
 // This function is intended to consume the reference produced by device_open()
 zx_status_t device_close(fbl::RefPtr<zx_device_t> dev, uint32_t flags) {
   ApiAutoLock lock;
-  return devhost_device_close(std::move(dev), flags);
+  return internal::device_close(std::move(dev), flags);
 }
 
 __EXPORT zx_status_t device_get_metadata(zx_device_t* dev, uint32_t type, void* buf, size_t buflen,
                                          size_t* actual) {
   ApiAutoLock lock;
   auto dev_ref = fbl::RefPtr(dev);
-  return devhost_get_metadata(dev_ref, type, buf, buflen, actual);
+  return internal::get_metadata(dev_ref, type, buf, buflen, actual);
 }
 
 __EXPORT zx_status_t device_get_metadata_size(zx_device_t* dev, uint32_t type, size_t* out_size) {
   ApiAutoLock lock;
   auto dev_ref = fbl::RefPtr(dev);
-  return devhost_get_metadata_size(dev_ref, type, out_size);
+  return internal::get_metadata_size(dev_ref, type, out_size);
 }
 
 __EXPORT zx_status_t device_add_metadata(zx_device_t* dev, uint32_t type, const void* data,
                                          size_t length) {
   ApiAutoLock lock;
   auto dev_ref = fbl::RefPtr(dev);
-  return devhost_add_metadata(dev_ref, type, data, length);
+  return internal::add_metadata(dev_ref, type, data, length);
 }
 
 __EXPORT zx_status_t device_publish_metadata(zx_device_t* dev, const char* path, uint32_t type,
                                              const void* data, size_t length) {
   ApiAutoLock lock;
   auto dev_ref = fbl::RefPtr(dev);
-  return devhost_publish_metadata(dev_ref, path, type, data, length);
+  return internal::publish_metadata(dev_ref, path, type, data, length);
 }
 
 __EXPORT zx_status_t device_add_composite(zx_device_t* dev, const char* name,
                                           const composite_device_desc_t* comp_desc) {
   ApiAutoLock lock;
   auto dev_ref = fbl::RefPtr(dev);
-  return devhost_device_add_composite(dev_ref, name, comp_desc);
+  return internal::device_add_composite(dev_ref, name, comp_desc);
 }
 
 __EXPORT zx_status_t device_schedule_work(zx_device_t* dev, void (*callback)(void*), void* cookie) {
   ApiAutoLock lock;
   auto dev_ref = fbl::RefPtr(dev);
-  return devhost_schedule_work(dev_ref, callback, cookie);
+  return internal::schedule_work(dev_ref, callback, cookie);
 }
+
+__EXPORT void driver_printf(uint32_t flags, const char* fmt, ...) {
+  va_list ap;
+  va_start(ap, fmt);
+  vfprintf(stderr, fmt, ap);
+  va_end(ap);
+}
+

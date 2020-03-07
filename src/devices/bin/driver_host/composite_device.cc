@@ -10,7 +10,7 @@
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 
-#include "devhost.h"
+#include "driver_host.h"
 #include "zx_device.h"
 
 namespace {
