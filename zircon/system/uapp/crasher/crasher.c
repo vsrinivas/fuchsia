@@ -176,6 +176,34 @@ int blind_write_multithreaded(volatile unsigned int* addr) {
   return 0;
 }
 
+int channel_overflow(volatile unsigned int* arg) {
+  zx_handle_t ch[2];
+  zx_status_t status = zx_channel_create(0u, &ch[0], &ch[1]);
+  if (status != ZX_OK) {
+    printf("channel creation failed. error: %d\n", status);
+    return 1;
+  }
+
+  char message[256] = {0x55};
+
+  int count = 0;
+  for (;;) {
+    status = zx_channel_write(ch[1], 0u, message, sizeof(message), NULL, 0);
+    if (status != ZX_OK) {
+      printf("channel write failed. error: %d after %d writes\n", status, count);
+      break;
+    }
+    ++count;
+    if ((count % 100) == 0) {
+      write(1, ".", 1);
+    }
+  }
+
+  zx_handle_close(ch[0]);
+  zx_handle_close(ch[1]);
+  return 0;
+}
+
 command_t commands[] = {
     {"write0", blind_write, "write to address 0x0"},
     {"read0", blind_read, "read address 0x0"},
@@ -187,6 +215,7 @@ command_t commands[] = {
     {"nx_run", nx_run, "run in no-execute memory"},
     {"oom", oom, "out of memory c++ death"},
     {"mem", mem, "out of memory"},
+    {"channelw", channel_overflow, "overflow a channel with writes"},
     {"use_after_free", use_after_free, "use memory after freeing it"},
     {"write0_mt", blind_write_multithreaded,
      "write to address 0x0 in one thread, sleeping in 5 others"},
