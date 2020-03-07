@@ -51,7 +51,7 @@ nonempty may conflict with programs that define their own
 
 **Current value (from the default):** `""`
 
-From //build/config/sanitizers/BUILD.gn:21
+From //build/config/sanitizers/BUILD.gn:16
 
 ### audio_core_trace_enabled
 Set to |true| to enable collecting execution traces of audio_core, or |false| to remove all
@@ -2219,7 +2219,7 @@ nonempty may conflict with programs that define their own
 
 **Current value (from the default):** `"print_stacktrace=1:halt_on_error=1"`
 
-From //build/config/sanitizers/BUILD.gn:35
+From //build/config/sanitizers/BUILD.gn:30
 
 ### universal_variants
 

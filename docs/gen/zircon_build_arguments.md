@@ -112,7 +112,7 @@ disabled.
 
 **Current value (from the default):** `false`
 
-From //kernel/params.gni:64
+From //kernel/params.gni:60
 
 ### enable_netsvc_debugging_features
 Whether to include various features (non-shipping, insecure, etc.) in the
@@ -131,7 +131,7 @@ Enable userspace PCI and disable kernel PCI.
 
 **Current value (from the default):** `false`
 
-From //kernel/params.gni:44
+From //kernel/params.gni:40
 
 ### environment_args
 List of clauses to apply other GN build arguments to specific compilation
@@ -309,7 +309,7 @@ the two and set kernel_debug_level independently.
 
 **Current value (from the default):** `2`
 
-From //kernel/params.gni:56
+From //kernel/params.gni:52
 
 ### kernel_extra_defines
 Extra macro definitions for kernel code, e.g. "DISABLE_KASLR",
@@ -317,7 +317,7 @@ Extra macro definitions for kernel code, e.g. "DISABLE_KASLR",
 
 **Current value (from the default):** `[]`
 
-From //kernel/params.gni:48
+From //kernel/params.gni:44
 
 ### kernel_version_string
 Version string embedded in the kernel for `zx_system_get_version_string`.
@@ -362,7 +362,7 @@ zero add increasing details at the cost of increased trace buffer use.
 
 **Current value (from the default):** `0`
 
-From //kernel/params.gni:41
+From //kernel/params.gni:37
 
 ### smp_max_cpus
 
