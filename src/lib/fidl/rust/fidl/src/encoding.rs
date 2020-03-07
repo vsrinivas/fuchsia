@@ -4,6 +4,7 @@
 
 //! Encoding contains functions and traits for FIDL2 encoding and decoding.
 
+use crate::invoke_for_handle_types;
 use {
     crate::handle::{Handle, HandleBased, MessageBuf},
     crate::{Error, Result},
@@ -1519,91 +1520,13 @@ impl Decodable for EpitaphBody {
     }
 }
 
-#[cfg(target_os = "fuchsia")]
-mod zx_encoding {
-    use fuchsia_zircon as zx;
-
-    type ZxChannel = zx::Channel;
-    type ZxClock = zx::Clock;
-    type ZxDebugLog = zx::DebugLog;
-    type ZxEvent = zx::Event;
-    type ZxEventPair = zx::EventPair;
-    type ZxFifo = zx::Fifo;
-    type ZxGuest = zx::Guest;
-    type ZxInterrupt = zx::Interrupt;
-    type ZxJob = zx::Job;
-    type ZxProcess = zx::Process;
-    type ZxProfile = zx::Profile;
-    type ZxResource = zx::Resource;
-    type ZxSocket = zx::Socket;
-    type ZxStream = zx::Stream;
-    type ZxThread = zx::Thread;
-    type ZxTimer = zx::Timer;
-    type ZxPort = zx::Port;
-    type ZxVmar = zx::Vmar;
-    type ZxVmo = zx::Vmo;
-    handle_based_codable![
-        ZxChannel,
-        ZxClock,
-        ZxDebugLog,
-        ZxEvent,
-        ZxEventPair,
-        ZxFifo,
-        ZxGuest,
-        ZxInterrupt,
-        ZxJob,
-        ZxProcess,
-        ZxProfile,
-        ZxResource,
-        ZxSocket,
-        ZxStream,
-        ZxThread,
-        ZxTimer,
-        ZxPort,
-        ZxVmar,
-        ZxVmo,
-    ];
+macro_rules! handle_encoding {
+    ($x:tt, $availability:ident) => {
+        type $x = crate::handle::$x;
+        handle_based_codable![$x,];
+    };
 }
-
-#[cfg(target_os = "fuchsia")]
-pub use zx_encoding::*;
-
-#[cfg(not(target_os = "fuchsia"))]
-mod fidl_handle_encoding {
-    use super::*;
-
-    type FidlChannel = crate::handle::Channel;
-    type FidlDebugLog = crate::handle::DebugLog;
-    type FidlEvent = crate::handle::Event;
-    type FidlEventPair = crate::handle::EventPair;
-    type FidlSocket = crate::handle::Socket;
-    type FidlStream = crate::handle::Stream;
-    type FidlVmo = crate::handle::Vmo;
-
-    handle_based_codable![FidlChannel, FidlEvent, FidlEventPair, FidlSocket, FidlStream, FidlVmo,];
-
-    // Stub host serialization of the FidlDebugLog.
-    impl_layout!(FidlDebugLog, align: 1, size: 1);
-
-    impl Encodable for FidlDebugLog {
-        fn encode(&mut self, _: &mut Encoder<'_>) -> Result<()> {
-            Err(Error::InvalidHostHandle)
-        }
-    }
-
-    impl Decodable for FidlDebugLog {
-        fn new_empty() -> Self {
-            FidlDebugLog::from(Handle::invalid())
-        }
-
-        fn decode(&mut self, _: &mut Decoder<'_>) -> Result<()> {
-            Err(Error::InvalidHostHandle)
-        }
-    }
-}
-
-#[cfg(not(target_os = "fuchsia"))]
-pub use fidl_handle_encoding::*;
+invoke_for_handle_types!(handle_encoding);
 
 /// A trait that provides automatic support for nullable types.
 ///

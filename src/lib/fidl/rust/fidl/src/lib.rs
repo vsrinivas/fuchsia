@@ -25,3 +25,46 @@ pub use server::ServeInner;
 pub use handle::*;
 
 pub mod epitaph;
+
+/// invoke_for_handle_types!{mmm} calls the macro `mmm!` with two arguments: one is the name of a
+/// Zircon handle, the second is one of:
+///   * Everywhere for handle types that are supported everywhere FIDL is
+///   * FuchsiaOnly for handle types that are supported only on Fuchsia
+///   * Stub for handle types that have not yet had a Fuchsia API implemented in the zircon crate
+///
+/// To make a handle available everywhere, a polyfill must be implemented in
+/// crate::handle::non_fuchsia_handles.
+#[macro_export]
+macro_rules! invoke_for_handle_types {
+    ($x:ident) => {
+        $x! {Process, FuchsiaOnly}
+        $x! {Thread, FuchsiaOnly}
+        $x! {Vmo, FuchsiaOnly}
+        $x! {Channel, Everywhere}
+        $x! {Event, FuchsiaOnly}
+        $x! {Port, FuchsiaOnly}
+        $x! {Interrupt, FuchsiaOnly}
+        $x! {PciDevice, Stub}
+        $x! {DebugLog, FuchsiaOnly}
+        $x! {Socket, Everywhere}
+        $x! {Resource, FuchsiaOnly}
+        $x! {EventPair, FuchsiaOnly}
+        $x! {Job, FuchsiaOnly}
+        $x! {Vmar, FuchsiaOnly}
+        $x! {Fifo, FuchsiaOnly}
+        $x! {Guest, FuchsiaOnly}
+        $x! {Vcpu, Stub}
+        $x! {Timer, FuchsiaOnly}
+        $x! {Iommu, Stub}
+        $x! {Bti, Stub}
+        $x! {Profile, FuchsiaOnly}
+        $x! {Pmt, Stub}
+        $x! {SuspendToken, Stub}
+        $x! {Pager, Stub}
+        $x! {Exception, Stub}
+        $x! {Clock, FuchsiaOnly}
+        $x! {Stream, FuchsiaOnly}
+        $x! {MsiAllocation, Stub}
+        $x! {MsiInterrupt, Stub}
+    };
+}

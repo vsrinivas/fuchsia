@@ -13,6 +13,7 @@ pub use non_fuchsia_handles::*;
 /// Fuchsia implementation of handles just aliases the zircon library
 #[cfg(target_os = "fuchsia")]
 pub mod fuchsia_handles {
+    use crate::invoke_for_handle_types;
 
     use fuchsia_async as fasync;
     use fuchsia_zircon as zx;
@@ -23,24 +24,36 @@ pub mod fuchsia_handles {
     pub use zx::HandleRef;
     pub use zx::MessageBuf;
 
-    pub use zx::Channel;
-    pub use zx::Clock;
-    pub use zx::DebugLog;
-    pub use zx::Event;
-    pub use zx::EventPair;
-    pub use zx::Fifo;
-    pub use zx::Interrupt;
-    pub use zx::Job;
-    pub use zx::Port;
-    pub use zx::Process;
-    pub use zx::Profile;
-    pub use zx::Resource;
-    pub use zx::Socket;
-    pub use zx::Stream;
-    pub use zx::Thread;
-    pub use zx::Timer;
-    pub use zx::Vmar;
-    pub use zx::Vmo;
+    macro_rules! fuchsia_handle {
+        ($x:tt, Stub) => {
+            /// Stub implementation of Zircon handle type $x.
+            #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+            #[repr(transparent)]
+            pub struct $x(zx::Handle);
+
+            impl zx::AsHandleRef for $x {
+                fn as_handle_ref(&self) -> HandleRef<'_> {
+                    self.0.as_handle_ref()
+                }
+            }
+            impl From<Handle> for $x {
+                fn from(handle: Handle) -> Self {
+                    $x(handle)
+                }
+            }
+            impl From<$x> for Handle {
+                fn from(x: $x) -> Handle {
+                    x.0
+                }
+            }
+            impl zx::HandleBased for $x {}
+        };
+        ($x:tt, $availability:tt) => {
+            pub use zx::$x;
+        };
+    }
+
+    invoke_for_handle_types!(fuchsia_handle);
 
     pub use fasync::Channel as AsyncChannel;
     pub use fasync::Socket as AsyncSocket;
@@ -51,6 +64,7 @@ pub mod fuchsia_handles {
 /// Non-Fuchsia implementation of handles
 #[cfg(not(target_os = "fuchsia"))]
 pub mod non_fuchsia_handles {
+    use crate::invoke_for_handle_types;
 
     use fuchsia_zircon_status as zx_status;
     use futures::{
@@ -228,14 +242,6 @@ pub mod non_fuchsia_handles {
         };
     }
 
-    declare_unsupported_fidl_handle!(Clock);
-    declare_unsupported_fidl_handle!(DebugLog);
-    declare_unsupported_fidl_handle!(Event);
-    declare_unsupported_fidl_handle!(EventPair);
-    declare_unsupported_fidl_handle!(Profile);
-    declare_unsupported_fidl_handle!(Stream);
-    declare_unsupported_fidl_handle!(Vmo);
-
     macro_rules! declare_fidl_handle {
         ($name:ident) => {
             /// A Zircon-like $name
@@ -271,7 +277,16 @@ pub mod non_fuchsia_handles {
         };
     }
 
-    declare_fidl_handle!(Channel);
+    macro_rules! host_handle {
+        ($x:tt, Everywhere) => {
+            declare_fidl_handle! {$x}
+        };
+        ($x:tt, $availability:ident) => {
+            declare_unsupported_fidl_handle! {$x}
+        };
+    }
+
+    invoke_for_handle_types!(host_handle);
 
     impl Channel {
         /// Create a channel, resulting in a pair of `Channel` objects representing both
@@ -464,8 +479,6 @@ pub mod non_fuchsia_handles {
         /// A datagram style socket
         DATAGRAM,
     }
-
-    declare_fidl_handle!(Socket);
 
     impl Socket {
         /// Create a pair of sockets
