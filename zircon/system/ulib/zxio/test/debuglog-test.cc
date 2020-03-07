@@ -12,8 +12,8 @@
 
 #include <zxtest/zxtest.h>
 
-TEST(DebugLogTest, TheadSafety) {
-  // Sets up multiple thread and write to debuglog, ASAN or TSAN builders will
+TEST(DebugLogTest, ThreadSafety) {
+  // Sets up multiple threads that write to debuglog concurrently, ASAN or TSAN builders will
   // be responsible for catching bugs.
   constexpr size_t kNumThreads = 256;
 
@@ -33,7 +33,7 @@ TEST(DebugLogTest, TheadSafety) {
 
   for (size_t i = 0; i < kNumThreads; ++i) {
     threads[i] = std::thread([i, logger]() {
-      std::string log_str = "output from " + std::to_string(i);
+      std::string log_str = "output from " + std::to_string(i) + "\n";
       size_t actual;
       ASSERT_OK(zxio_write(logger, log_str.c_str(), log_str.size(), 0, &actual));
       ASSERT_EQ(actual, log_str.size());
@@ -43,4 +43,6 @@ TEST(DebugLogTest, TheadSafety) {
   for (auto t = threads.rbegin(); t != threads.rend(); ++t) {
     t->join();
   }
+  ASSERT_OK(zxio_close(logger));
+  ASSERT_OK(zxio_destroy(logger));
 }
