@@ -58,12 +58,45 @@ ParseResultStream UnescapedIdentifier(ParseResultStream prefixes) {
   return Token<ast::UnescapedIdentifier>(OnePlus(IdentifierCharacter))(std::move(prefixes));
 }
 
+ParseResultStream PathCharacter(ParseResultStream prefixes) {
+  return Seq(Not(Whitespace), AnyCharBut("path character", "`&;|/\\()[]{}"))(std::move(prefixes));
+}
+
+ParseResultStream PathElement(ParseResultStream prefixes) {
+  return Alt(Token<ast::PathEscape>(Seq(Token("\\"), AnyChar)),
+             Token<ast::PathElement>(OnePlus(PathCharacter)),
+             Seq(Token<ast::PathEscape>("`"),
+                 Token<ast::PathElement>(ZeroPlus(AnyCharBut("character other than '`'", "`"))),
+                 Token<ast::PathEscape>("`")))(std::move(prefixes));
+}
+
 // Grammar Rules -----------------------------------------------------------------------------------
 
 // Parses an identifier
 //     myVariable
 ParseResultStream Identifier(ParseResultStream prefixes) {
   return NT<ast::Identifier>(Seq(Not(Digit), UnescapedIdentifier))(std::move(prefixes));
+}
+
+// Parses a root path with at least one element and no trailing slash
+//     /foo
+//     /foo/bar
+ParseResultStream RootPath(ParseResultStream prefixes) {
+  return OnePlus(Seq(Token<ast::PathSeparator>("/"), OnePlus(PathElement)))(std::move(prefixes));
+}
+
+// Parses a path
+//     /foo
+//     /foo/bar
+//     /foo/bar/
+//     ./foo/bar/
+//     ./
+//     /
+//     .
+ParseResultStream Path(ParseResultStream prefixes) {
+  return NT<ast::Path>(Alt(Seq(Maybe(Token<ast::PathElement>(".")), RootPath, Maybe(Token("/"))),
+                           Seq(Maybe(Token<ast::PathElement>(".")), Token<ast::PathSeparator>("/")),
+                           Token<ast::PathElement>(".")))(std::move(prefixes));
 }
 
 // Parses an unadorned decimal Integer
@@ -96,6 +129,9 @@ ParseResultStream Integer(ParseResultStream prefixes) {
   // TODO: Binary integers, once we ask the FIDL team about them.
   return NT<ast::Integer>(Alt(HexInteger, DecimalInteger))(std::move(prefixes));
 }
+
+// Parse a Real (unimplemented).
+ParseResultStream Real(ParseResultStream prefixes) { return std::move(prefixes).Fail(); }
 
 // Parses an escape sequence.
 //     \n
@@ -136,12 +172,11 @@ ParseResultStream String(ParseResultStream prefixes) {
 // Parse an Atom (a simple literal value).
 //     "The quick brown fox jumped over the lazy dog."
 //     0x1234abcd
+//     my_variable
+//     3.2156
+//     ./some/path
 ParseResultStream Atom(ParseResultStream prefixes) {
-  /* Eventual full version of this rule is:
-  return Alt(Token("true"), Token("false"), Token("null"), Identifier, String, Real, Integer,
-             Path)(prefixes);
-  */
-  return Alt(String, Integer)(std::move(prefixes));
+  return Alt(Identifier, String, Real, Integer, Path)(std::move(prefixes));
 }
 
 ParseResultStream Value(ParseResultStream prefixes);
@@ -151,8 +186,8 @@ const auto& SimpleExpression = Value;
 //     foo: 6
 //     "bar & grill": "Open now"
 ParseResultStream Field(ParseResultStream prefixes) {
-  return NT<ast::Field>(WSSeq(Alt(NormalString, Identifier), Token(":"), SimpleExpression))(
-      std::move(prefixes));
+  return NT<ast::Field>(WSSeq(Alt(NormalString, Identifier), Token<ast::FieldSeparator>(":"),
+                              SimpleExpression))(std::move(prefixes));
 }
 
 // Parse the body of an object literal.
@@ -195,8 +230,8 @@ ParseResultStream VariableDecl(ParseResultStream prefixes) {
                                      Token("="), Expression))(std::move(prefixes));
 }
 
-// Parses the body of a program, but doesn't create an AST node. This is useful for parsing blocks
-// where we might want to include the braces in the node's children.
+// Parses the body of a program, but doesn't create an AST node. This is useful because the rule is
+// recursive, but we want to flatten its structure.
 ParseResultStream ProgramContent(ParseResultStream prefixes) {
   /* Eventual full version of this rule is:
   return Alt(WSSeq(VariableDecl, Maybe(WSSeq(AnyChar(";&", "; or &"), ProgramMeta))),

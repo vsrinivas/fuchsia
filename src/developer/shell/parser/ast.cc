@@ -109,7 +109,7 @@ std::string EscapeSequence::Decode(std::string_view sequence) {
 }
 
 Integer::Integer(size_t start, std::vector<std::shared_ptr<Node>> children)
-    : SimpleExpression(start, std::move(children)) {
+    : Nonterminal(start, std::move(children)) {
   for (const auto& child : Children()) {
     if (auto hex = child->AsHexGroup()) {
       auto next = value_ << hex->digits() * 4;
@@ -126,7 +126,7 @@ Integer::Integer(size_t start, std::vector<std::shared_ptr<Node>> children)
 }
 
 String::String(size_t start, std::vector<std::shared_ptr<Node>> children)
-    : SimpleExpression(start, std::move(children)) {
+    : Nonterminal(start, std::move(children)) {
   for (const auto& child : Children()) {
     if (auto entity = child->AsStringEntity()) {
       value_ += entity->content();
@@ -158,7 +158,7 @@ Identifier::Identifier(size_t start, std::vector<std::shared_ptr<Node>> children
 }
 
 Object::Object(size_t start, std::vector<std::shared_ptr<Node>> children)
-    : SimpleExpression(start, std::move(children)) {
+    : Nonterminal(start, std::move(children)) {
   for (const auto& child : Children()) {
     if (auto field = child->AsField()) {
       fields_.push_back(field);
@@ -172,22 +172,56 @@ Field::Field(size_t start, std::vector<std::shared_ptr<Node>> children)
   for (const auto& child : Children()) {
     if (seen_name == false) {
       if (auto ident = child->AsIdentifier()) {
-        seen_name = true;
         name_ = ident->identifier();
-      } else if (auto str = child->AsString()) {
         seen_name = true;
+      } else if (auto str = child->AsString()) {
         name_ = str->value();
+        seen_name = true;
       }
-    } else if (auto expr = child->AsSimpleExpression()) {
-      value_ = expr;
+    } else if (!child->IsError() && !child->IsFieldSeparator()) {
+      value_ = child.get();
     }
   }
 }
 
+Path::Path(size_t start, std::vector<std::shared_ptr<Node>> children)
+    : Nonterminal(start, std::move(children)) {
+  std::stringstream element;
+
+  is_local_ = true;
+  bool seen_element = false;
+  for (const auto& child : Children()) {
+    if (auto el = child->AsPathElement()) {
+      element << el->content();
+    } else if (child->IsPathSeparator()) {
+      if (element.tellp() > 0) {
+        seen_element = true;
+
+        if (element.str() != ".") {
+          elements_.push_back(element.str());
+        }
+
+        element.str("");
+        element.clear();
+      }
+
+      if (!seen_element) {
+        is_local_ = false;
+      }
+    }
+  }
+
+  if (element.tellp() > 0 && element.str() != ".") {
+    elements_.push_back(element.str());
+  }
+}
+
 // Visit implementations
-void Node::Visit(NodeVisitor* visitor) const { visitor->VisitNode(*this); }
 void Terminal::Visit(NodeVisitor* visitor) const { visitor->VisitTerminal(*this); }
 void Error::Visit(NodeVisitor* visitor) const { visitor->VisitError(*this); }
+void Const::Visit(NodeVisitor* visitor) const { visitor->VisitConst(*this); }
+void Var::Visit(NodeVisitor* visitor) const { visitor->VisitVar(*this); }
+void FieldSeparator::Visit(NodeVisitor* visitor) const { visitor->VisitFieldSeparator(*this); }
 void DecimalGroup::Visit(NodeVisitor* visitor) const { visitor->VisitDecimalGroup(*this); }
 void HexGroup::Visit(NodeVisitor* visitor) const { visitor->VisitHexGroup(*this); }
 void UnescapedIdentifier::Visit(NodeVisitor* visitor) const {
@@ -195,6 +229,9 @@ void UnescapedIdentifier::Visit(NodeVisitor* visitor) const {
 }
 void StringEntity::Visit(NodeVisitor* visitor) const { visitor->VisitStringEntity(*this); }
 void EscapeSequence::Visit(NodeVisitor* visitor) const { visitor->VisitEscapeSequence(*this); }
+void PathElement::Visit(NodeVisitor* visitor) const { visitor->VisitPathElement(*this); }
+void PathEscape::Visit(NodeVisitor* visitor) const { visitor->VisitPathEscape(*this); }
+void PathSeparator::Visit(NodeVisitor* visitor) const { visitor->VisitPathSeparator(*this); }
 void Nonterminal::Visit(NodeVisitor* visitor) const { visitor->VisitNonterminal(*this); }
 void Program::Visit(NodeVisitor* visitor) const { visitor->VisitProgram(*this); }
 void VariableDecl::Visit(NodeVisitor* visitor) const { visitor->VisitVariableDecl(*this); }
@@ -203,6 +240,7 @@ void String::Visit(NodeVisitor* visitor) const { visitor->VisitString(*this); }
 void Identifier::Visit(NodeVisitor* visitor) const { visitor->VisitIdentifier(*this); }
 void Object::Visit(NodeVisitor* visitor) const { visitor->VisitObject(*this); }
 void Field::Visit(NodeVisitor* visitor) const { visitor->VisitField(*this); }
+void Path::Visit(NodeVisitor* visitor) const { visitor->VisitPath(*this); }
 void Expression::Visit(NodeVisitor* visitor) const { visitor->VisitExpression(*this); }
 
 }  // namespace shell::parser::ast

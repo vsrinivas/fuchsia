@@ -78,6 +78,14 @@ class NodeASTVisitor : public parser::ast::NodeVisitor {
     type_ = llcpp::fuchsia::shell::ShellType::WithBuiltinType(fidl::unowned(type_ptr));
   }
 
+  void VisitIdentifier(const parser::ast::Identifier& node) override {
+    FX_NOTREACHED() << "Variable fetches are unimplemented." << node.identifier();
+  }
+
+  void VisitPath(const parser::ast::Path& node) override {
+    FX_NOTREACHED() << "Paths are unimplemented.";
+  }
+
   void VisitExpression(const parser::ast::Expression& node) override {
     FX_DCHECK(node.Children().size() > 0);
     node.Children()[0]->Visit(this);

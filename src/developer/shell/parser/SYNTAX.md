@@ -116,12 +116,27 @@ Valid strings might include:
 and keeps on going"
 ```
 
-## Expressions
+## Paths
 
-Expressions are defined as follows:
+Paths are defined as follows:
 
 ```
-Expression ← String / Integer
+PathCharacter ← ![`&;|/\()[]{}] .
+PathElement ← PathCharacter+ / '\' . / '`' ( !'`' . )* '`'
+RootPath ← ( '/' PathElement+ )+
+Path ← '.'? RootPath '/'? / '.'? '/' / '.'
+```
+
+Valid paths might include:
+
+```
+/foo
+/foo/bar
+/foo/bar/
+./foo/bar/
+./
+/
+.
 ```
 
 ## Variable Declarations
@@ -157,6 +172,17 @@ Valid object literals might include:
 {}
 { foo: 6, "bar & grill": "Open now"  }
 { foo: { bar: 6  }, "bar & grill": "Open now"  }
+```
+
+## Expressions
+
+Expressions are defined as follows:
+
+```
+Expression ← Value
+Value ← Object / Atom
+Atom ← Identifer / String / Real / Integer / Path
+
 ```
 
 ## Programs

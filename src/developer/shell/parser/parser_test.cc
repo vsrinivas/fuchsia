@@ -61,6 +61,20 @@ class String {
   std::string value_;
 };
 
+class Identifier {
+ public:
+  Identifier(std::string identifier) : identifier_(identifier) {}
+  void Check(ast::Node* node) const {
+    auto ident = node->AsIdentifier();
+    ASSERT_TRUE(ident);
+
+    EXPECT_EQ(identifier_, ident->identifier());
+  }
+
+ private:
+  std::string identifier_;
+};
+
 template <typename T>
 class VariableDecl {
  public:
@@ -92,6 +106,7 @@ class Object {
 
   void Check(ast::Node* node) const {
     auto obj = node->AsObject();
+    ASSERT_TRUE(obj);
     ASSERT_EQ(obj->fields().size(), std::tuple_size<std::tuple<Args...>>::value);
     if constexpr (std::tuple_size<std::tuple<Args...>>::value > 0) {
       DoCheck(obj);
@@ -129,6 +144,32 @@ class Field {
   T value_check_;
 };
 
+class Path {
+ public:
+  Path(bool is_local, std::initializer_list<std::string> elements)
+      : is_local_(is_local), elements_(elements) {}
+
+  void Check(ast::Node* node) const {
+    auto path = node->AsPath();
+    ASSERT_TRUE(path);
+    if (is_local_) {
+      EXPECT_TRUE(path->is_local());
+    } else {
+      EXPECT_FALSE(path->is_local());
+    }
+
+    EXPECT_EQ(elements_.size(), path->elements().size());
+
+    for (size_t i = 0; i < std::min(elements_.size(), path->elements().size()); i++) {
+      EXPECT_EQ(elements_[i], path->elements()[i]);
+    }
+  }
+
+ private:
+  bool is_local_;
+  std::vector<std::string> elements_;
+};
+
 template <typename... Args>
 class Program {
  public:
@@ -158,6 +199,7 @@ class Program {
 
 #define CHECK_NODE(node, check) \
   do {                          \
+    SCOPED_TRACE("CHECK_NODE"); \
     using namespace checks;     \
     check.Check(node.get());    \
     if (HasFatalFailure())      \
@@ -303,9 +345,12 @@ TEST(ParserTest, VariableDeclIntegerBadGroup) {
   const auto kTestString = "var s = _0912";
 
   auto parse = Parse(kTestString);
-  EXPECT_TRUE(parse->HasErrors());
+  EXPECT_FALSE(parse->HasErrors());
 
-  EXPECT_EQ("Program(E[Unexpected 'var s = _0912'])", parse->ToString(kTestString));
+  EXPECT_EQ("Program(VariableDecl('var' Identifier('s') '=' Expression(Identifier('_0912'))))",
+            parse->ToString(kTestString));
+
+  CHECK_NODE(parse, Program(VariableDecl("s", false, Expression(Identifier("_0912")))));
 }
 
 TEST(ParserTest, VariableDeclIntegerZeroFirst) {
@@ -523,6 +568,179 @@ TEST(ParserTest, VariableDeclStringBadEscape) {
   EXPECT_TRUE(parse->HasErrors());
 
   EXPECT_EQ("Program(E[Unexpected 'var s = \"bob\\qbob\"'])", parse->ToString(kTestString));
+}
+
+TEST(ParserTest, VariableDeclPath) {
+  const auto kTestString = "var x = ./somewhere/else";
+
+  auto parse = Parse(kTestString);
+  EXPECT_FALSE(parse->HasErrors());
+
+  EXPECT_EQ(
+      "Program(VariableDecl('var' Identifier('x') '=' "
+      "Expression(Path('.' '/' 'somewhere' '/' 'else'))))",
+      parse->ToString(kTestString));
+
+  CHECK_NODE(parse,
+             Program(VariableDecl("x", false, Expression(Path(true, {"somewhere", "else"})))));
+}
+
+TEST(ParserTest, VariableDeclRootPath) {
+  const auto kTestString = "var x = /somewhere/else";
+
+  auto parse = Parse(kTestString);
+  EXPECT_FALSE(parse->HasErrors());
+
+  EXPECT_EQ(
+      "Program(VariableDecl('var' Identifier('x') '=' "
+      "Expression(Path('/' 'somewhere' '/' 'else'))))",
+      parse->ToString(kTestString));
+
+  CHECK_NODE(parse,
+             Program(VariableDecl("x", false, Expression(Path(false, {"somewhere", "else"})))));
+}
+
+TEST(ParserTest, VariableDeclRootOnlyPath) {
+  const auto kTestString = "var x = /";
+
+  auto parse = Parse(kTestString);
+  EXPECT_FALSE(parse->HasErrors());
+
+  EXPECT_EQ(
+      "Program(VariableDecl('var' Identifier('x') '=' "
+      "Expression(Path('/'))))",
+      parse->ToString(kTestString));
+
+  CHECK_NODE(parse, Program(VariableDecl("x", false, Expression(Path(false, {})))));
+}
+
+TEST(ParserTest, VariableDeclDotOnlyPath) {
+  const auto kTestString = "var x = .";
+
+  auto parse = Parse(kTestString);
+  EXPECT_FALSE(parse->HasErrors());
+
+  EXPECT_EQ(
+      "Program(VariableDecl('var' Identifier('x') '=' "
+      "Expression(Path('.'))))",
+      parse->ToString(kTestString));
+
+  CHECK_NODE(parse, Program(VariableDecl("x", false, Expression(Path(true, {})))));
+}
+
+TEST(ParserTest, VariableDeclDotSlashPath) {
+  const auto kTestString = "var x = ./";
+
+  auto parse = Parse(kTestString);
+  EXPECT_FALSE(parse->HasErrors());
+
+  EXPECT_EQ(
+      "Program(VariableDecl('var' Identifier('x') '=' "
+      "Expression(Path('.' '/'))))",
+      parse->ToString(kTestString));
+
+  CHECK_NODE(parse, Program(VariableDecl("x", false, Expression(Path(true, {})))));
+}
+
+TEST(ParserTest, VariableDeclTrailingSlashPath) {
+  const auto kTestString = "var x = ./somewhere/else/";
+
+  auto parse = Parse(kTestString);
+  EXPECT_FALSE(parse->HasErrors());
+
+  EXPECT_EQ(
+      "Program(VariableDecl('var' Identifier('x') '=' "
+      "Expression(Path('.' '/' 'somewhere' '/' 'else' '/'))))",
+      parse->ToString(kTestString));
+
+  CHECK_NODE(parse,
+             Program(VariableDecl("x", false, Expression(Path(true, {"somewhere", "else"})))));
+}
+
+TEST(ParserTest, VariableDeclPathEscape) {
+  const auto kTestString = "var x = ./somew\\ here/else";
+
+  auto parse = Parse(kTestString);
+  EXPECT_FALSE(parse->HasErrors());
+
+  EXPECT_EQ(
+      "Program(VariableDecl('var' Identifier('x') '=' "
+      "Expression(Path('.' '/' 'somew' '\\ ' 'here' '/' 'else'))))",
+      parse->ToString(kTestString));
+
+  CHECK_NODE(parse,
+             Program(VariableDecl("x", false, Expression(Path(true, {"somew here", "else"})))));
+}
+
+TEST(ParserTest, VariableDeclPathQuote) {
+  const auto kTestString = "var x = ./somew` oo oo `here/else";
+
+  auto parse = Parse(kTestString);
+  EXPECT_FALSE(parse->HasErrors());
+
+  EXPECT_EQ(
+      "Program(VariableDecl('var' Identifier('x') '=' "
+      "Expression(Path('.' '/' 'somew' '`' ' oo oo ' '`' 'here' '/' 'else'))))",
+      parse->ToString(kTestString));
+
+  CHECK_NODE(parse, Program(VariableDecl("x", false,
+                                         Expression(Path(true, {"somew oo oo here", "else"})))));
+}
+
+TEST(ParserTest, VariableDeclPathDanglingQuote) {
+  const auto kTestString = "var x = ./somew` oo oo ";
+
+  auto parse = Parse(kTestString);
+  EXPECT_TRUE(parse->HasErrors());
+
+  EXPECT_EQ(
+      "Program(VariableDecl('var' Identifier('x') '=' "
+      "Expression(Path('.' '/' 'somew'))) E[Unexpected '` oo oo '])",
+      parse->ToString(kTestString));
+}
+
+TEST(ParserTest, VariableDeclPathInObject) {
+  const auto kTestString = "var x = { foo: ./somewhere/else }";
+
+  auto parse = Parse(kTestString);
+  EXPECT_FALSE(parse->HasErrors());
+
+  EXPECT_EQ(
+      "Program(VariableDecl('var' Identifier('x') '=' "
+      "Expression(Object('{' Field(Identifier('foo') ':' "
+      "Path('.' '/' 'somewhere' '/' 'else')) '}'))))",
+      parse->ToString(kTestString));
+
+  CHECK_NODE(parse,
+             Program(VariableDecl(
+                 "x", false, Expression(Object(Field("foo", Path(true, {"somewhere", "else"})))))));
+}
+
+TEST(ParserTest, VariableDeclIdentifier) {
+  const auto kTestString = "var s = bob";
+
+  auto parse = Parse(kTestString);
+  EXPECT_FALSE(parse->HasErrors());
+
+  EXPECT_EQ("Program(VariableDecl('var' Identifier('s') '=' Expression(Identifier('bob'))))",
+            parse->ToString(kTestString));
+
+  CHECK_NODE(parse, Program(VariableDecl("s", false, Expression(Identifier("bob")))));
+}
+
+TEST(ParserTest, VariableDeclIdentifierInObject) {
+  const auto kTestString = "var s = { foo: bob }";
+
+  auto parse = Parse(kTestString);
+  EXPECT_FALSE(parse->HasErrors());
+
+  EXPECT_EQ(
+      "Program(VariableDecl('var' Identifier('s') '=' "
+      "Expression(Object('{' Field(Identifier('foo') ':' Identifier('bob')) '}'))))",
+      parse->ToString(kTestString));
+
+  CHECK_NODE(parse, Program(VariableDecl("s", false,
+                                         Expression(Object(Field("foo", Identifier("bob")))))));
 }
 
 }  // namespace shell::parser

@@ -28,10 +28,13 @@ class HexGroup;
 class UnescapedIdentifier;
 class StringEntity;
 class EscapeSequence;
+class PathElement;
+class PathEscape;
+class PathSeparator;
 class String;
 class Object;
 class Field;
-class SimpleExpression;
+class Path;
 
 class NodeVisitor;
 
@@ -65,7 +68,7 @@ class Node {
   virtual bool HasErrors() const { return IsError(); }
 
   // Visit this node with a visitor.
-  virtual void Visit(NodeVisitor* visitor) const;
+  virtual void Visit(NodeVisitor* visitor) const = 0;
 
   // Downcasting methods
   virtual Error* AsError() { return nullptr; }
@@ -94,20 +97,28 @@ class Node {
   const EscapeSequence* AsEscapeSequence() const {
     return const_cast<Node*>(this)->AsEscapeSequence();
   }
+  virtual PathElement* AsPathElement() { return nullptr; }
+  const PathElement* AsPathElement() const { return const_cast<Node*>(this)->AsPathElement(); }
+  virtual PathEscape* AsPathEscape() { return nullptr; }
+  const PathEscape* AsPathEscape() const { return const_cast<Node*>(this)->AsPathEscape(); }
+  virtual PathSeparator* AsPathSeparator() { return nullptr; }
+  const PathSeparator* AsPathSeparator() const {
+    return const_cast<Node*>(this)->AsPathSeparator();
+  }
   virtual String* AsString() { return nullptr; }
   const String* AsString() const { return const_cast<Node*>(this)->AsString(); }
   virtual Object* AsObject() { return nullptr; }
   const Object* AsObject() const { return const_cast<Node*>(this)->AsObject(); }
   virtual Field* AsField() { return nullptr; }
   const Field* AsField() const { return const_cast<Node*>(this)->AsField(); }
-  virtual SimpleExpression* AsSimpleExpression() { return nullptr; }
-  const SimpleExpression* AsSimpleExpression() const {
-    return const_cast<Node*>(this)->AsSimpleExpression();
-  }
+  virtual Path* AsPath() { return nullptr; }
+  const Path* AsPath() const { return const_cast<Node*>(this)->AsPath(); }
 
   // ID methods for keywords
   virtual bool IsConst() const { return false; }
   virtual bool IsVar() const { return false; }
+  virtual bool IsFieldSeparator() const { return false; }
+  virtual bool IsPathSeparator() const { return false; }
 
  private:
   // Offset into the original text where the text this node corresponds to starts.
@@ -148,12 +159,23 @@ class Error : public Terminal {
   const std::string message_;
 };
 
+// Terminal representing a ":".
+class FieldSeparator : public Terminal {
+ public:
+  FieldSeparator(size_t start, size_t size, std::string_view content)
+      : Terminal(start, size, content) {}
+
+  bool IsFieldSeparator() const override { return true; }
+  void Visit(NodeVisitor* visitor) const override;
+};
+
 // Terminal representing the "const" keyword.
 class Const : public Terminal {
  public:
   Const(size_t start, size_t size, std::string_view content) : Terminal(start, size, content) {}
 
   bool IsConst() const override { return true; }
+  void Visit(NodeVisitor* visitor) const override;
 };
 
 // Terminal representing the "var" keyword.
@@ -162,6 +184,7 @@ class Var : public Terminal {
   Var(size_t start, size_t size, std::string_view content) : Terminal(start, size, content) {}
 
   bool IsVar() const override { return true; }
+  void Visit(NodeVisitor* visitor) const override;
 };
 
 // Terminal representing a sequence of decimal digits.
@@ -239,6 +262,41 @@ class EscapeSequence : public StringEntity {
   static std::string Decode(std::string_view sequence);
 };
 
+// Terminal representing a continuous piece of a path.
+class PathElement : public Terminal {
+ public:
+  PathElement(size_t start, size_t size, std::string_view content)
+      : Terminal(start, size, content), content_(content) {}
+
+  const std::string& content() const { return content_; }
+
+  PathElement* AsPathElement() override { return this; }
+  void Visit(NodeVisitor* visitor) const override;
+
+ private:
+  std::string content_ = "";
+};
+
+// Terminal representing a piece of an escape sequence in a path.
+class PathEscape : public PathElement {
+ public:
+  PathEscape(size_t start, size_t size, std::string_view content)
+      : PathElement(start, size, content.substr(1)) {}
+
+  PathEscape* AsPathEscape() override { return this; }
+  void Visit(NodeVisitor* visitor) const override;
+};
+
+// Terminal representing a path separator.
+class PathSeparator : public Terminal {
+ public:
+  PathSeparator(size_t start, size_t size, std::string_view content)
+      : Terminal(start, size, content) {}
+
+  bool IsPathSeparator() const override { return true; }
+  void Visit(NodeVisitor* visitor) const override;
+};
+
 // Superclass of all non-terminal nodes in our AST.
 class Nonterminal : public Node {
  public:
@@ -273,14 +331,6 @@ class Nonterminal : public Node {
  private:
   bool has_errors_ = false;
   std::vector<std::shared_ptr<Node>> children_;
-};
-
-class SimpleExpression : public Nonterminal {
- public:
-  SimpleExpression(size_t start, std::vector<std::shared_ptr<Node>> children)
-      : Nonterminal(start, std::move(children)) {}
-
-  SimpleExpression* AsSimpleExpression() override { return this; }
 };
 
 // Result of an attempt to parse a single token. Usually that will result in a terminal, but if
@@ -335,7 +385,7 @@ class VariableDecl : public Nonterminal {
   std::string identifier_ = "";
 };
 
-class Integer : public SimpleExpression {
+class Integer : public Nonterminal {
  public:
   Integer(size_t start, std::vector<std::shared_ptr<Node>> children);
 
@@ -350,7 +400,7 @@ class Integer : public SimpleExpression {
   uint64_t value_ = 0;
 };
 
-class String : public SimpleExpression {
+class String : public Nonterminal {
  public:
   String(size_t start, std::vector<std::shared_ptr<Node>> children);
 
@@ -380,7 +430,7 @@ class Identifier : public Nonterminal {
   std::string identifier_;
 };
 
-class Object : public SimpleExpression {
+class Object : public Nonterminal {
  public:
   Object(size_t start, std::vector<std::shared_ptr<Node>> children);
 
@@ -400,7 +450,7 @@ class Field : public Nonterminal {
   Field(size_t start, std::vector<std::shared_ptr<Node>> children);
 
   const std::string& name() const { return name_; }
-  SimpleExpression* value() const { return value_; }
+  Node* value() const { return value_; }
 
   std::string_view Name() const override { return "Field"; }
 
@@ -409,7 +459,24 @@ class Field : public Nonterminal {
 
  private:
   std::string name_;
-  SimpleExpression* value_;
+  Node* value_ = nullptr;
+};
+
+class Path : public Nonterminal {
+ public:
+  Path(size_t start, std::vector<std::shared_ptr<Node>> children);
+
+  bool is_local() const { return is_local_; }
+  const std::vector<std::string>& elements() const { return elements_; }
+
+  std::string_view Name() const override { return "Path"; }
+
+  Path* AsPath() override { return this; }
+  void Visit(NodeVisitor* visitor) const override;
+
+ private:
+  bool is_local_;
+  std::vector<std::string> elements_;
 };
 
 class Expression : public Nonterminal {
@@ -430,6 +497,7 @@ class NodeVisitor {
   friend class Error;
   friend class Var;
   friend class Const;
+  friend class FieldSeparator;
   friend class Program;
   friend class VariableDecl;
   friend class Identifier;
@@ -440,32 +508,39 @@ class NodeVisitor {
   friend class UnescapedIdentifier;
   friend class StringEntity;
   friend class EscapeSequence;
+  friend class PathElement;
+  friend class PathEscape;
+  friend class PathSeparator;
   friend class String;
   friend class Object;
   friend class Field;
-  friend class SimpleExpression;
+  friend class Path;
 
  protected:
   virtual void VisitNode(const Node& node){};
   virtual void VisitTerminal(const Terminal& node) { VisitNode(node); };
   virtual void VisitNonterminal(const Nonterminal& node) { VisitNode(node); };
   virtual void VisitError(const Error& node) { VisitTerminal(node); };
-  virtual void VisitVar(const Var& node) { VisitTerminal(node); };
   virtual void VisitConst(const Const& node) { VisitTerminal(node); };
+  virtual void VisitVar(const Var& node) { VisitTerminal(node); };
+  virtual void VisitFieldSeparator(const FieldSeparator& node) { VisitTerminal(node); };
   virtual void VisitProgram(const Program& node) { VisitNonterminal(node); };
   virtual void VisitVariableDecl(const VariableDecl& node) { VisitNonterminal(node); };
   virtual void VisitIdentifier(const Identifier& node) { VisitNonterminal(node); };
-  virtual void VisitInteger(const Integer& node) { VisitSimpleExpression(node); };
+  virtual void VisitInteger(const Integer& node) { VisitNonterminal(node); };
   virtual void VisitExpression(const Expression& node) { VisitNonterminal(node); };
   virtual void VisitDecimalGroup(const DecimalGroup& node) { VisitTerminal(node); };
   virtual void VisitHexGroup(const HexGroup& node) { VisitTerminal(node); };
   virtual void VisitUnescapedIdentifier(const UnescapedIdentifier& node) { VisitTerminal(node); };
   virtual void VisitStringEntity(const StringEntity& node) { VisitTerminal(node); };
   virtual void VisitEscapeSequence(const EscapeSequence& node) { VisitStringEntity(node); };
-  virtual void VisitString(const String& node) { VisitSimpleExpression(node); };
-  virtual void VisitObject(const Object& node) { VisitSimpleExpression(node); };
+  virtual void VisitString(const String& node) { VisitNonterminal(node); };
+  virtual void VisitObject(const Object& node) { VisitNonterminal(node); };
   virtual void VisitField(const Field& node) { VisitNonterminal(node); };
-  virtual void VisitSimpleExpression(const SimpleExpression& node) { VisitNonterminal(node); };
+  virtual void VisitPathElement(const PathElement& node) { VisitTerminal(node); };
+  virtual void VisitPathEscape(const PathEscape& node) { VisitTerminal(node); };
+  virtual void VisitPathSeparator(const PathSeparator& node) { VisitTerminal(node); };
+  virtual void VisitPath(const Path& node) { VisitNonterminal(node); };
 };
 
 }  // namespace shell::parser::ast

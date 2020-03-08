@@ -22,7 +22,7 @@ std::unique_ptr<shell::console::Command> MakeCommand(std::string line) {
 TEST_F(Executor, ExecuteVariableDecl) {
   shell::console::ScopedInterpreter interpreter;
   shell::console::Executor exec(interpreter.client());
-  shell::console::Err e = exec.Execute(MakeCommand("var a = i"), nullptr);
+  shell::console::Err e = exec.Execute(MakeCommand("var a = 2"), nullptr);
   EXPECT_EQ(ZX_ERR_NEXT, e.code);
 }
 
