@@ -109,7 +109,7 @@ struct InfiniteScrollAppAssistant {
 impl AppAssistant for InfiniteScrollAppAssistant {
     fn setup(&mut self) -> Result<(), Error> {
         let args: Args = argh::from_env();
-        println!("back-end: {}", if args.use_spinel { "mold" } else { "spinel" });
+        println!("back-end: {}", if args.use_spinel { "spinel" } else { "mold" });
         println!("scale: {}", args.scale);
         println!("scroll method: {:?}", args.scroll_method);
         match args.scroll_method {
