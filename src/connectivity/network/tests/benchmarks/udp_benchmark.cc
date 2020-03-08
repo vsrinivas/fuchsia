@@ -6,6 +6,8 @@
 #include <lib/async-loop/default.h>
 #include <zircon/syscalls.h>
 
+#include <array>
+
 #include <trace-provider/provider.h>
 
 #include "util.h"
@@ -32,19 +34,30 @@ void UDPSendRecv() {
   FXL_CHECK(setsockopt(recvfd.get(), SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) == 0)
       << strerror(errno);
 
-  static const uint sizes[] = {64, 1024, 2048, 4096};
+  struct SizeAndTraceEventNames {
+    ssize_t size;
+    const char* send_event_name;
+    const char* recv_event_name;
+  };
+
+#define CREATE_SIZE_AND_TRACE_EVENT_NAMES(size) \
+  { size, "send_" #size "bytes", "recv_" #size "bytes" }
+  constexpr std::array<SizeAndTraceEventNames, 4> kSizeAndTraceEventNames = {{
+      CREATE_SIZE_AND_TRACE_EVENT_NAMES(64),
+      CREATE_SIZE_AND_TRACE_EVENT_NAMES(1024),
+      CREATE_SIZE_AND_TRACE_EVENT_NAMES(2048),
+      CREATE_SIZE_AND_TRACE_EVENT_NAMES(4096),
+  }};
+
   fbl::unique_fd sendfd;
   FXL_CHECK(sendfd = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM, 0))) << strerror(errno);
+
   constexpr uint32_t kIterationCount = 1000;
-  for (const auto& size : sizes) {
+  for (const auto& [size, send_event_name, recv_event_name] : kSizeAndTraceEventNames) {
     auto buf = std::make_unique<uint8_t[]>(size);
-    // We do not free the strings that we allocate below because the current
-    // TRACE infrastructure assumes they are not freed.
-    fbl::String* send_event_name = new fbl::String(fbl::StringPrintf("send_%ubytes", size));
-    fbl::String* recv_event_name = new fbl::String(fbl::StringPrintf("recv_%ubytes", size));
     for (uint32_t i = 0; i < kIterationCount; i++) {
-      TraceSend(sendfd.get(), buf.get(), size, send_event_name->c_str(), &addr, addrlen);
-      TraceRecv(recvfd.get(), buf.get(), size, recv_event_name->c_str(), &addr, addrlen);
+      TraceSend(sendfd.get(), buf.get(), size, send_event_name, &addr, addrlen);
+      TraceRecv(recvfd.get(), buf.get(), size, recv_event_name, &addr, addrlen);
     }
   }
 }
