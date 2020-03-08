@@ -11,6 +11,9 @@
         "binary": "test/image-pipe-swapchain-tests"
     },
     "sandbox": {
+        "dev": [
+            "class/display-controller"
+        ],
         "features": [
             "vulkan"
         ],

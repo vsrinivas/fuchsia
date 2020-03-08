@@ -4,16 +4,18 @@
 
 #include "image_pipe_surface_display.h"
 
+#include <dirent.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <fuchsia/hardware/display/c/fidl.h>
 #include <lib/async/cpp/task.h>
-#include <lib/fdio/directory.h>
 #include <lib/fdio/cpp/caller.h>
+#include <lib/fdio/directory.h>
 #include <limits.h>
+#include <stdio.h>
+#include <string.h>
 #include <zircon/pixelformat.h>
 #include <zircon/status.h>
-
-#include <cstdio>
 
 #include <fbl/unique_fd.h>
 
@@ -34,9 +36,48 @@ bool ImagePipeSurfaceDisplay::Init() {
     return false;
   }
 
-  fbl::unique_fd fd(open("/dev/class/display-controller/000", O_RDWR));
+  // Probe /dev/class/display-controller/ for a display controller name.
+  // When the display driver restarts it comes up with a new one (e.g. '001'
+  // instead of '000'). For now, simply take the first file found in the
+  // directory.
+  const char kDir[] = "/dev/class/display-controller";
+  std::string filename;
+
+  {
+    DIR* dir = opendir("/dev/class/display-controller");
+    if (!dir) {
+      fprintf(stderr, "Can't open directory: %s: %s\n", kDir, strerror(errno));
+      return false;
+    }
+
+    errno = 0;
+    for (;;) {
+      dirent* entry = readdir(dir);
+      if (!entry) {
+        if (errno != 0) {
+          // An error occured while reading the directory.
+          fprintf(stderr, "Warning: error while reading %s: %s\n", kDir, strerror(errno));
+        }
+        break;
+      }
+      // Skip over '.' and '..' if present.
+      if (entry->d_name[0] == '.' && (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, "..")))
+        continue;
+
+      filename = std::string(kDir) + "/" + entry->d_name;
+      break;
+    }
+    closedir(dir);
+  }
+
+  if (filename.empty()) {
+    fprintf(stderr, "No display controller.\n");
+    return false;
+  }
+
+  fbl::unique_fd fd(open(filename.c_str(), O_RDWR));
   if (!fd) {
-    fprintf(stderr, "No display controller\n");
+    fprintf(stderr, "Could not open display controller: %s\n", strerror(errno));
     return false;
   }
 

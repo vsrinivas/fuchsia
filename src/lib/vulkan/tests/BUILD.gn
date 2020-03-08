@@ -18,11 +18,15 @@ test_package("image-pipe-swapchain-tests") {
     },
   ]
   public_deps =
-      vulkan_validation_layers.public_deps + image_pipe_swapchain.public_deps
+      vulkan_validation_layers.public_deps + image_pipe_swapchain.public_deps +
+      image_pipe_swapchain_fb.public_deps
+
   loadable_modules = vulkan_validation_layers.loadable_modules +
-                     image_pipe_swapchain.loadable_modules
-  resources =
-      vulkan_validation_layers.resources + image_pipe_swapchain.resources
+                     image_pipe_swapchain.loadable_modules +
+                     image_pipe_swapchain_fb.loadable_modules
+
+  resources = vulkan_validation_layers.resources +
+              image_pipe_swapchain.resources + image_pipe_swapchain_fb.resources
 }
 
 executable("test_image_pipe_swapchain") {
@@ -30,6 +34,7 @@ executable("test_image_pipe_swapchain") {
   sources = [
     "test_extensions.cc",
     "test_imagepipe_view.cc",
+    "test_surface.cc",
     "test_swapchain.cc",
   ]
   deps = [
