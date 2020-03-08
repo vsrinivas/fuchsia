@@ -387,4 +387,16 @@ TEST(VmoSliceTestCase, RoundUpSize) {
   EXPECT_EQ(val, 42);
 }
 
+TEST(VmoSliceTestCase, NotCoWType) {
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
+  zx::vmo slice_vmo;
+  ASSERT_OK(vmo.create_child(ZX_VMO_CHILD_SLICE, 0, PAGE_SIZE, &slice_vmo));
+
+  zx_info_vmo info;
+  EXPECT_OK(slice_vmo.get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
+
+  EXPECT_EQ(0, info.flags & ZX_INFO_VMO_IS_COW_CLONE);
+}
+
 }  // namespace

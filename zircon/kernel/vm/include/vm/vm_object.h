@@ -208,8 +208,7 @@ class VmObject : public fbl::RefCounted<VmObject>,
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  // Returns true if this VMO is a child VMO.
-  enum ChildType { kNotChild, kCowClone };
+  enum ChildType { kNotChild, kCowClone, kSlice };
   virtual ChildType child_type() const = 0;
 
   // Get a pointer to the page structure and/or physical address at the specified offset.

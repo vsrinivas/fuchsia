@@ -87,6 +87,9 @@ class VmObjectPaged final : public VmObject {
   }
   bool is_hidden() const override { return (options_ & kHidden); }
   ChildType child_type() const override {
+    if (is_slice()) {
+      return ChildType::kSlice;
+    }
     Guard<fbl::Mutex> guard{&lock_};
     return (original_parent_user_id_ != 0) ? ChildType::kCowClone : ChildType::kNotChild;
   }

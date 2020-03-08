@@ -150,12 +150,8 @@ zx_info_vmo_t VmoToInfoEntry(const VmObject* vmo, bool is_handle, zx_rights_t ha
   } else {
     entry.flags |= ZX_INFO_VMO_VIA_MAPPING;
   }
-  switch (vmo->child_type()) {
-    case VmObject::ChildType::kCowClone:
-      entry.flags |= ZX_INFO_VMO_IS_COW_CLONE;
-      break;
-    case VmObject::ChildType::kNotChild:
-      break;
+  if (vmo->child_type() == VmObject::ChildType::kCowClone) {
+    entry.flags |= ZX_INFO_VMO_IS_COW_CLONE;
   }
   return entry;
 }
