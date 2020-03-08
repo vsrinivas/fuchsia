@@ -3,11 +3,11 @@
 # found in the LICENSE file.
 import("../vulkan_testing.gni")
 
-vulkan_test_app("vk_transfer_test") {
+vulkan_test_app("vk-triangle-test") {
   sources = [ "main.c" ]
   glsl_shaders = [
-    "../vk_triangle_test/shaders/triangle.vert.glsl",
-    "../vk_triangle_test/shaders/triangle.frag.glsl",
+    "shaders/triangle.vert.glsl",
+    "shaders/triangle.frag.glsl",
   ]
   glsl_shaders_c_header_name = "triangle_shaders.h"
 }

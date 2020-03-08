@@ -108,19 +108,19 @@ template("graphics_compute_spinel_demo_executable") {
 # This makes it easy to share common demo code between several backends.
 #
 template("graphics_compute_spinel_demo") {
-  graphics_compute_spinel_demo_executable("spinel_${target_name}") {
+  graphics_compute_spinel_demo_executable("spinel-${target_name}") {
     forward_variables_from(invoker, "*", [ "target_name" ])
     spinel_backend = "spinel"
   }
-  graphics_compute_spinel_demo_executable("mold_${target_name}") {
+  graphics_compute_spinel_demo_executable("mold-${target_name}") {
     forward_variables_from(invoker, "*", [ "target_name" ])
     spinel_backend = "mold"
   }
 
   group(target_name) {
     deps = [
-      ":mold_${target_name}",
-      ":spinel_${target_name}",
+      ":mold-${target_name}",
+      ":spinel-${target_name}",
     ]
   }
 }
@@ -128,7 +128,7 @@ template("graphics_compute_spinel_demo") {
 #
 # Demo programs that display an input SVG file
 #
-graphics_compute_spinel_demo("svg_demo") {
+graphics_compute_spinel_demo("svg-demo") {
   sources = [ "main_svg_demo.cc" ]
   deps = [ "${graphics_compute_dir}/tests/common/svg" ]
 }
@@ -137,5 +137,5 @@ graphics_compute_spinel_demo("svg_demo") {
 #  All examples in this group.
 #
 group("examples") {
-  deps = [ ":svg_demo" ]
+  deps = [ ":svg-demo" ]
 }

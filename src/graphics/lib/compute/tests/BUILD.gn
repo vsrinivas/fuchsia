@@ -137,9 +137,9 @@ graphics_compute_unittests("common_vk_unittests") {
 group("tests") {
   testonly = true
   deps = [
-    "vk_app_state_test",
-    "vk_swapchain_test",
-    "vk_transfer_test",
-    "vk_triangle_test",
+    "vk-app-state-test",
+    "vk-swapchain-test",
+    "vk-transfer-test",
+    "vk-triangle-test",
   ]
 }

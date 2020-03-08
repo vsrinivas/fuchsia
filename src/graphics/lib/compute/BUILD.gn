@@ -47,7 +47,7 @@ group("compute") {
 group("tests") {
   testonly = true
   public_deps = [
-    ":graphics_compute_unittests",
+    ":graphics-compute-unittests",
     "mold:mold-tests",
     "mold-next:mold-next-tests",
     "spinel-mold:spinel-mold-static-tests",
@@ -61,7 +61,7 @@ group("tests") {
   # host bots currently lack a proper Vulkan loader + ICD. Thus only add
   # the device-specific Vulkan-based unit-tests for now.
   if (is_fuchsia) {
-    public_deps += [ ":graphics_compute_vk_unittests" ]
+    public_deps += [ ":graphics-compute-vk-unittests" ]
   }
 
   if (_build_host_tests) {
@@ -75,8 +75,8 @@ group("tests") {
 group("all_tests") {
   testonly = true
   public_deps = [
-    ":graphics_compute_mold_c_unittests",
-    ":graphics_compute_vk_unittests",
+    ":graphics-compute-mold-c-unittests",
+    ":graphics-compute-vk-unittests",
     ":tests",
     "examples",
     "hotsort:tests",
@@ -91,7 +91,7 @@ group("all_tests") {
 # A target used to group all simple graphics compute unit-tests
 # (i.e. those that do not depend on Vulkan for now). Unlike Vulkan-based
 # tests, these can run anywhere on the CQ.
-graphics_compute_unittests_package("graphics_compute_unittests") {
+graphics_compute_unittests_package("graphics-compute-unittests") {
   deps = [
     "common:common_unittests",
     "spinel:spinel_ext_unittests",
@@ -105,7 +105,7 @@ graphics_compute_unittests_package("graphics_compute_unittests") {
 
 # A target used to group all graphics compute unit-tests that depend
 # on a working Vulkan environment and that link against the Spinel library.
-graphics_compute_unittests_package("graphics_compute_vk_unittests") {
+graphics_compute_unittests_package("graphics-compute-vk-unittests") {
   deps = [
     "spinel:vk_unittests",
     "tests:common_vk_unittests",
@@ -116,6 +116,6 @@ graphics_compute_unittests_package("graphics_compute_vk_unittests") {
 
 # A target used to group all graphics compute unit-tests that depend on
 # spinel-mold instead of Spinel and have no Vulkan dependencies.
-graphics_compute_unittests_package("graphics_compute_mold_c_unittests") {
+graphics_compute_unittests_package("graphics-compute-mold-c-unittests") {
   deps = [ "spinel-mold:mold_c_unittests" ]
 }

@@ -3,6 +3,6 @@
 # found in the LICENSE file.
 import("../vulkan_testing.gni")
 
-vulkan_test_app("vk_swapchain_test") {
+vulkan_test_app("vk-app-state-test") {
   sources = [ "main.c" ]
 }
