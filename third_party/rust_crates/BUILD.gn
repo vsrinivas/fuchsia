@@ -145,6 +145,11 @@ action("build-third-party") {
     rebase_path(out_dir),
     "--out-deps-data",
     rebase_path(out_deps_data),
+    # The cannonical location for this flag is:
+    #   https://fuchsia.googlesource.com/fuchsia/+/883c4b5668a31a39d1df3bbdfe3505f06fe5fa76/build/config/BUILD.gn#192
+    # Once we stop using Cargo to build third party crates, this won't be needed.
+    "--remap-path-prefix",
+    rebase_path("//") + "=" + rebase_path("//", root_build_dir),
   ]
 
   args += rust_build_args

@@ -54,6 +54,11 @@ def configure_triple(triple, args, clang_c_compiler, env):
             "-Cpanic=abort",
             "-Zpanic_abort_tests",
         ]
+    if args.remap_path_prefix:
+        rustflags += [
+            "--remap-path-prefix",
+            args.remap_path_prefix,
+        ]
 
     if triple.endswith("fuchsia"):
         if triple.startswith("aarch64"):
@@ -155,6 +160,8 @@ def main():
     # This forces a recompile when the CIPD version changes. The value is unused.
     parser.add_argument(
         "--cipd-version", help="CIPD version of Rust toolchain", required=False)
+    parser.add_argument(
+        "--remap-path-prefix", help="Remap source names in output")
     parser.add_argument
     args = parser.parse_args()
 
