@@ -173,7 +173,6 @@ fn render_composition(
     buffer: mold_next::Buffer<'_>,
     _clip: Rect<u32>,
 ) {
-    let redo = ::std::time::Instant::now();
     duration!("gfx", "render_composition");
 
     // TODO(dtiselice): Use clip.
@@ -256,8 +255,6 @@ fn render_composition(
             composition.background_color.a,
         ],
     );
-
-    println!("time: {}ms", (std::time::Instant::now() - redo).as_micros() as f64 / 1000.0);
 }
 
 impl Context<Mold> for MoldContext {
