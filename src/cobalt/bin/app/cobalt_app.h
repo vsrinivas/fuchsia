@@ -23,7 +23,7 @@
 #include "src/cobalt/bin/app/timer_manager.h"
 #include "src/cobalt/bin/app/user_consent_watcher.h"
 #include "src/cobalt/bin/utils/clock.h"
-#include "src/lib/network_wrapper/network_wrapper.h"
+#include "src/cobalt/bin/utils/fuchsia_http_client.h"
 #include "third_party/cobalt/src/logger/project_context_factory.h"
 #include "third_party/cobalt/src/public/cobalt_config.h"
 #include "third_party/cobalt/src/public/cobalt_service_interface.h"
@@ -97,16 +97,15 @@ class CobaltApp {
       async_dispatcher_t* dispatcher,
       cobalt::logger::ProjectContextFactory* global_project_context_factory,
       const FuchsiaConfigurationData& configuration_data, FuchsiaSystemClockInterface* system_clock,
-      network_wrapper::NetworkWrapper* network_wrapper, std::chrono::seconds target_interval,
-      std::chrono::seconds min_interval, std::chrono::seconds initial_interval,
-      size_t event_aggregator_backfill_days, bool use_memory_observation_store,
-      size_t max_bytes_per_observation_store, const std::string& product_name,
-      const std::string& board_name, const std::string& version);
+      utils::FuchsiaHTTPClient::LoaderFactory http_loader_factory,
+      std::chrono::seconds target_interval, std::chrono::seconds min_interval,
+      std::chrono::seconds initial_interval, size_t event_aggregator_backfill_days,
+      bool use_memory_observation_store, size_t max_bytes_per_observation_store,
+      const std::string& product_name, const std::string& board_name, const std::string& version);
 
   CobaltApp(std::unique_ptr<sys::ComponentContext> context, async_dispatcher_t* dispatcher,
             std::unique_ptr<CobaltServiceInterface> cobalt_service,
             std::unique_ptr<FuchsiaSystemClockInterface> system_clock,
-            std::unique_ptr<network_wrapper::NetworkWrapper> network_wrapper,
             std::shared_ptr<cobalt::logger::ProjectContextFactory> global_project_context_factory,
             bool start_event_aggregator_worker, bool watch_for_user_consent);
 
@@ -118,7 +117,6 @@ class CobaltApp {
 
   std::unique_ptr<FuchsiaSystemClockInterface> system_clock_;
 
-  std::unique_ptr<network_wrapper::NetworkWrapper> network_wrapper_;
   TimerManager timer_manager_;
 
   std::unique_ptr<fuchsia::cobalt::Controller> controller_impl_;

@@ -7,12 +7,13 @@
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 
+#include "sdk/lib/sys/cpp/testing/service_directory_provider.h"
 #include "src/cobalt/bin/app/testapp_metrics_registry.cb.h"
 #include "src/cobalt/bin/testapp/fake_timekeeper.h"
+#include "src/cobalt/bin/testing/fake_http_loader.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
-#include "src/lib/network_wrapper/fake_network_wrapper.h"
 #include "third_party/abseil-cpp/absl/strings/match.h"
 #include "third_party/cobalt/src/logger/project_context_factory.h"
 #include "third_party/cobalt/src/public/testing/fake_cobalt_service.h"
@@ -31,13 +32,15 @@ class CreateCobaltConfigTest : public gtest::TestLoopFixture {
   CreateCobaltConfigTest()
       : ::gtest::TestLoopFixture(),
         context_provider_(),
-        clock_(context_provider_.public_service_directory()),
-        network_wrapper_(dispatcher()) {}
+        clock_(context_provider_.public_service_directory()) {}
 
  protected:
   void SetUp() override {
     ASSERT_TRUE(files::DeletePath(kTestDir, true));
     ASSERT_TRUE(files::CreateDirectory(kTestDir));
+
+    loader_ = std::make_unique<FakeHTTPLoader>(dispatcher());
+    service_directory_provider_.AddService(loader_->GetHandler());
   }
 
   CobaltConfig CreateCobaltConfig(
@@ -51,14 +54,20 @@ class CreateCobaltConfigTest : public gtest::TestLoopFixture {
 
     return CobaltApp::CreateCobaltConfig(
         dispatcher(), global_project_context_factory.get(), configuration_data, &clock_,
-        &network_wrapper_, target_interval, min_interval, initial_interval,
-        event_aggregator_backfill_days, use_memory_observation_store,
-        max_bytes_per_observation_store, product_name, board_name, version);
+        [this] {
+          return service_directory_provider_.service_directory()
+              ->Connect<fuchsia::net::http::Loader>();
+        },
+        target_interval, min_interval, initial_interval, event_aggregator_backfill_days,
+        use_memory_observation_store, max_bytes_per_observation_store, product_name, board_name,
+        version);
   }
+
+  sys::testing::ServiceDirectoryProvider service_directory_provider_;
+  std::unique_ptr<FakeHTTPLoader> loader_;
 
   sys::testing::ComponentContextProvider context_provider_;
   FuchsiaSystemClock clock_;
-  network_wrapper::FakeNetworkWrapper network_wrapper_;
 };
 
 TEST_F(CreateCobaltConfigTest, Devel) {
@@ -128,9 +137,8 @@ class CobaltAppTest : public gtest::TestLoopFixture {
         fake_service_(new testing::FakeCobaltService()),
         cobalt_app_(context_provider_.TakeContext(), dispatcher(),
                     std::unique_ptr<testing::FakeCobaltService>(fake_service_),
-                    std::unique_ptr<FuchsiaSystemClock>(clock_),
-                    std::make_unique<network_wrapper::FakeNetworkWrapper>(dispatcher()),
-                    testapp_project_context_factory_, true, false) {}
+                    std::unique_ptr<FuchsiaSystemClock>(clock_), testapp_project_context_factory_,
+                    true, false) {}
 
  protected:
   void SetUp() override {

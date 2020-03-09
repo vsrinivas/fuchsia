@@ -9,7 +9,6 @@
 #include <fstream>
 #include <future>
 
-#include "fuchsia/net/oldhttp/cpp/fidl.h"
 #include "lib/async/default.h"
 #include "lib/sys/cpp/component_context.h"
 #include "src/cobalt/bin/app/logger_factory_impl.h"

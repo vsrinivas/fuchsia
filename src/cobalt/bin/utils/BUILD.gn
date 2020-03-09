@@ -20,7 +20,8 @@ source_set("fuchsia_http_client") {
   deps = [ "//src/lib/fsl" ]
 
   public_deps = [
-    "//src/lib/network_wrapper:network_wrapper",
+    "//sdk/fidl/fuchsia.net.http",
+    "//src/lib/callback",
     "//third_party/cobalt/src/lib/clearcut",
     "//third_party/cobalt/src/lib/statusor",
   ]
@@ -62,8 +63,8 @@ executable("cobalt_utils_unittests") {
     ":fuchsia_http_client",
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp/testing:unit",
+    "//src/cobalt/bin/testing:fake_http_loader",
     "//src/lib/fsl",
-    "//src/lib/network_wrapper:fake",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-testing",

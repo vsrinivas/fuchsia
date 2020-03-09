@@ -37,3 +37,9 @@ source_set("log_method") {
   testonly = true
   sources = [ "log_method.h" ]
 }
+
+source_set("fake_http_loader") {
+  testonly = true
+  sources = [ "fake_http_loader.h" ]
+  deps = [ "//src/lib/callback" ]
+}

@@ -8,13 +8,11 @@
 #include <chrono>
 #include <future>
 
-#include "fuchsia/net/oldhttp/cpp/fidl.h"
 #include "lib/async/default.h"
 #include "lib/sys/cpp/component_context.h"
 #include "src/cobalt/bin/app/logger_impl.h"
 #include "src/cobalt/bin/app/timer_manager.h"
 #include "src/cobalt/bin/utils/base64.h"
-#include "src/cobalt/bin/utils/fuchsia_http_client.h"
 #include "third_party/cobalt/src/lib/util/posix_file_system.h"
 #include "third_party/cobalt/src/logger/project_context_factory.h"
 #include "third_party/cobalt/src/public/cobalt_service.h"

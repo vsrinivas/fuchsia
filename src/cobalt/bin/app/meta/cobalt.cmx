@@ -12,7 +12,7 @@
         "services": [
             "fuchsia.logger.LogSink",
             "fuchsia.net.NameLookup",
-            "fuchsia.net.oldhttp.HttpService",
+            "fuchsia.net.http.Loader",
             "fuchsia.posix.socket.Provider",
             "fuchsia.scheduler.ProfileProvider",
             "fuchsia.settings.Privacy",

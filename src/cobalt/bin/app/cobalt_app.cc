@@ -9,16 +9,12 @@
 #include "lib/sys/cpp/component_context.h"
 #include "src/cobalt/bin/app/utils.h"
 #include "src/cobalt/bin/utils/fuchsia_http_client.h"
-#include "src/lib/backoff/exponential_backoff.h"
-#include "src/lib/network_wrapper/network_wrapper_impl.h"
 #include "third_party/cobalt/src/lib/util/posix_file_system.h"
 #include "third_party/cobalt/src/logger/project_context_factory.h"
 #include "third_party/cobalt/src/public/cobalt_config.h"
 #include "third_party/cobalt/src/public/cobalt_service.h"
 
 namespace cobalt {
-
-namespace http = ::fuchsia::net::oldhttp;
 
 using encoder::ClientSecret;
 using logger::ProjectContextFactory;
@@ -54,7 +50,7 @@ CobaltConfig CobaltApp::CreateCobaltConfig(
     async_dispatcher_t* dispatcher,
     cobalt::logger::ProjectContextFactory* global_project_context_factory,
     const FuchsiaConfigurationData& configuration_data, FuchsiaSystemClockInterface* system_clock,
-    network_wrapper::NetworkWrapper* network_wrapper, std::chrono::seconds target_interval,
+    FuchsiaHTTPClient::LoaderFactory http_loader_factory, std::chrono::seconds target_interval,
     std::chrono::seconds min_interval, std::chrono::seconds initial_interval,
     size_t event_aggregator_backfill_days, bool use_memory_observation_store,
     size_t max_bytes_per_observation_store, const std::string& product_name,
@@ -70,7 +66,8 @@ CobaltConfig CobaltApp::CreateCobaltConfig(
     target_pipeline = std::make_unique<TargetPipeline>(
         backend_environment, ReadPublicKeyPem(configuration_data.ShufflerPublicKeyPath()),
         ReadPublicKeyPem(configuration_data.AnalyzerPublicKeyPath()),
-        std::make_unique<FuchsiaHTTPClient>(network_wrapper, dispatcher), kClearcutMaxRetries);
+        std::make_unique<FuchsiaHTTPClient>(dispatcher, std::move(http_loader_factory)),
+        kClearcutMaxRetries);
   }
 
   auto internal_project_context =
@@ -130,37 +127,32 @@ CobaltApp CobaltApp::CreateCobaltApp(
   FuchsiaConfigurationData configuration_data;
 
   sys::ComponentContext* context_ptr = context.get();
-  auto network_wrapper = std::make_unique<network_wrapper::NetworkWrapperImpl>(
-      dispatcher, std::make_unique<backoff::ExponentialBackoff>(),
-      [context_ptr] { return context_ptr->svc()->Connect<http::HttpService>(); });
 
   auto system_clock = std::make_unique<FuchsiaSystemClock>(context_ptr->svc());
 
   auto cobalt_service = std::make_unique<CobaltService>(CreateCobaltConfig(
       dispatcher, global_project_context_factory.get(), configuration_data, system_clock.get(),
-      network_wrapper.get(), target_interval, min_interval, initial_interval,
-      event_aggregator_backfill_days, use_memory_observation_store, max_bytes_per_observation_store,
-      product_name, board_name, version));
+      [context_ptr]() { return context_ptr->svc()->Connect<fuchsia::net::http::Loader>(); },
+      target_interval, min_interval, initial_interval, event_aggregator_backfill_days,
+      use_memory_observation_store, max_bytes_per_observation_store, product_name, board_name,
+      version));
 
   cobalt_service->SetDataCollectionPolicy(configuration_data.GetDataCollectionPolicy());
 
   return CobaltApp(std::move(context), dispatcher, std::move(cobalt_service),
-                   std::move(system_clock), std::move(network_wrapper),
-                   std::move(global_project_context_factory), start_event_aggregator_worker,
-                   configuration_data.GetWatchForUserConsent());
+                   std::move(system_clock), std::move(global_project_context_factory),
+                   start_event_aggregator_worker, configuration_data.GetWatchForUserConsent());
 }
 
 CobaltApp::CobaltApp(
     std::unique_ptr<sys::ComponentContext> context, async_dispatcher_t* dispatcher,
     std::unique_ptr<CobaltServiceInterface> cobalt_service,
     std::unique_ptr<FuchsiaSystemClockInterface> system_clock,
-    std::unique_ptr<network_wrapper::NetworkWrapper> network_wrapper,
     std::shared_ptr<cobalt::logger::ProjectContextFactory> global_project_context_factory,
     bool start_event_aggregator_worker, bool watch_for_user_consent)
     : context_(std::move(context)),
       cobalt_service_(std::move(cobalt_service)),
       system_clock_(std::move(system_clock)),
-      network_wrapper_(std::move(network_wrapper)),
       timer_manager_(dispatcher) {
   auto current_time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
   FX_LOGS(INFO) << "Waiting for the system clock to become accurate at: "
