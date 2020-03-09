@@ -41,7 +41,7 @@ class EntityProviderRunnerTest : public gtest::RealLoopFixture, modular::EntityP
 
     entity_provider_runner_ = std::make_unique<modular::EntityProviderRunner>(
         static_cast<modular::EntityProviderLauncher*>(this));
-    agent_runner_ = std::make_unique<modular::AgentRunner>(&launcher_, token_manager_.get(),
+    agent_runner_ = std::make_unique<modular::AgentRunner>(&launcher_,
                                                            /*agent_services_factory=*/nullptr,
                                                            entity_provider_runner_.get(), &node_);
   }
@@ -82,8 +82,6 @@ class EntityProviderRunnerTest : public gtest::RealLoopFixture, modular::EntityP
   files::ScopedTempDir mq_data_dir_;
   std::unique_ptr<modular::EntityProviderRunner> entity_provider_runner_;
   std::unique_ptr<modular::AgentRunner> agent_runner_;
-
-  fuchsia::auth::TokenManagerPtr token_manager_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(EntityProviderRunnerTest);
 };

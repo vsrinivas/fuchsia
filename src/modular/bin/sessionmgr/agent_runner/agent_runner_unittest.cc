@@ -150,8 +150,8 @@ class AgentRunnerTest : public gtest::RealLoopFixture {
   modular::AgentRunner* agent_runner() {
     if (agent_runner_ == nullptr) {
       agent_runner_ = std::make_unique<modular::AgentRunner>(
-          &launcher_, token_manager_.get(), /*agent_services_factory=*/nullptr,
-          entity_provider_runner_.get(), &node_, std::move(agent_service_index_));
+          &launcher_, /*agent_services_factory=*/nullptr, entity_provider_runner_.get(), &node_,
+          std::move(agent_service_index_));
     }
     return agent_runner_.get();
   }
@@ -248,8 +248,6 @@ class AgentRunnerTest : public gtest::RealLoopFixture {
   std::unique_ptr<modular::EntityProviderRunner> entity_provider_runner_;
   std::unique_ptr<modular::AgentRunner> agent_runner_;
   std::map<std::string, std::string> agent_service_index_;
-
-  fuchsia::auth::TokenManagerPtr token_manager_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(AgentRunnerTest);
 };

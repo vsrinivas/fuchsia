@@ -72,9 +72,7 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
                         SwapSessionShellCallback callback) override;
 
   // Sequence of Initialize() broken up into steps for clarity.
-  // TODO(MF-279): Remove |agent_token_manager| once sessions start receiving persona handles.
   void InitializeSessionEnvironment(std::string session_id);
-  void InitializeUser(fidl::InterfaceHandle<fuchsia::auth::TokenManager> agent_token_manager);
   void InitializeLedger();
   void InitializeAgentRunner();
   void InitializeIntlPropertyProvider();
@@ -175,7 +173,6 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
 
   fidl::BindingSet<fuchsia::modular::SessionShellContext> session_shell_context_bindings_;
 
-  fuchsia::auth::TokenManagerPtr agent_token_manager_;
   fuchsia::modular::internal::SessionContextPtr session_context_;
   std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> cloud_provider_app_;
   std::unique_ptr<AppClient<fuchsia::ledger::internal::LedgerController>> ledger_app_;

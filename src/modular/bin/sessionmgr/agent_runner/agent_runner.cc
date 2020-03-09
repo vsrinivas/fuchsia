@@ -25,14 +25,12 @@ namespace modular {
 constexpr zx::duration kTeardownTimeout = zx::sec(3);
 
 AgentRunner::AgentRunner(fuchsia::sys::Launcher* const launcher,
-                         fuchsia::auth::TokenManager* const token_manager,
                          AgentServicesFactory* const agent_services_factory,
                          EntityProviderRunner* const entity_provider_runner,
                          inspect::Node* session_inspect_node,
                          std::map<std::string, std::string> agent_service_index,
                          sys::ComponentContext* const sessionmgr_context)
     : launcher_(launcher),
-      token_manager_(token_manager),
       agent_services_factory_(agent_services_factory),
       entity_provider_runner_(entity_provider_runner),
       terminating_(std::make_shared<bool>(false)),
@@ -145,8 +143,7 @@ void AgentRunner::EnsureAgentIsRunning(const std::string& agent_url, fit::functi
 void AgentRunner::RunAgent(const std::string& agent_url) {
   // Start the agent and issue all callbacks.
   ComponentContextInfo component_info = {this, entity_provider_runner_};
-  AgentContextInfo info = {component_info, launcher_, token_manager_, agent_services_factory_,
-                           sessionmgr_context_};
+  AgentContextInfo info = {component_info, launcher_, agent_services_factory_, sessionmgr_context_};
   fuchsia::modular::AppConfig agent_config;
   agent_config.url = agent_url;
 

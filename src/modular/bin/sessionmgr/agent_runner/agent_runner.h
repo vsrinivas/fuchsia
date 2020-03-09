@@ -43,8 +43,7 @@ class EntityProviderRunner;
 // for some test environments that construct AgentRunner outside of a Sessionmgr.
 class AgentRunner {
  public:
-  AgentRunner(fuchsia::sys::Launcher* launcher, fuchsia::auth::TokenManager* token_manager,
-              AgentServicesFactory* agent_services_factory,
+  AgentRunner(fuchsia::sys::Launcher* launcher, AgentServicesFactory* agent_services_factory,
               EntityProviderRunner* entity_provider_runner, inspect::Node* session_inspect_node,
               std::map<std::string, std::string> agent_service_index = {},
               sys::ComponentContext* const sessionmgr_context = nullptr);
@@ -134,7 +133,6 @@ class AgentRunner {
   std::map<std::string, std::unique_ptr<AgentContextImpl>> running_agents_;
 
   fuchsia::sys::Launcher* const launcher_;
-  fuchsia::auth::TokenManager* const token_manager_;
   AgentServicesFactory* const agent_services_factory_;
   EntityProviderRunner* const entity_provider_runner_;
 

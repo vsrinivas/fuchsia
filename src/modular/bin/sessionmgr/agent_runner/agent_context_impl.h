@@ -30,7 +30,6 @@ class AgentRunner;
 struct AgentContextInfo {
   const ComponentContextInfo component_context_info;
   fuchsia::sys::Launcher* const launcher;
-  fuchsia::auth::TokenManager* const token_manager;
   AgentServicesFactory* const agent_services_factory;
   // If sessionmgr_context is nullptr, ignore (do not attempt to forward services).
   sys::ComponentContext* const sessionmgr_context;
