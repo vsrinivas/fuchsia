@@ -196,7 +196,7 @@ def main():
     if args.is_test:
         cmd += ['test', '-c']
     else:
-        cmd += ['build']
+        cmd += ['build', '-trimpath']
     if args.verbose:
         cmd += ['-x']
     if args.tag:
