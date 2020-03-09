@@ -60,10 +60,6 @@ bool CobaltTestApp::RunTests() {
   // in response to RequestSendSoon().
   Connect(kInfiniteTime, 0, kEventAggregatorBackfillDays, true, 0);
 
-  if (test_for_prober_) {
-    TRY_TEST(CheckMetricIds());
-  }
-
   // TODO(zmbush): Create tests for all logger methods.
   TRY_TEST(TestLogEvent(&logger_));
   TRY_TEST(TestLogEventCount(&logger_));

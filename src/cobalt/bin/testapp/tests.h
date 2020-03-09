@@ -22,8 +22,6 @@
 namespace cobalt {
 namespace testapp {
 
-bool CheckMetricIds();
-
 bool TestLogEvent(CobaltTestAppLogger* logger);
 
 bool TestLogEventCount(CobaltTestAppLogger* logger);
