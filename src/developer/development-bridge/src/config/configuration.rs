@@ -5,6 +5,7 @@
 use {
     anyhow::{anyhow, Error},
     serde_json::Value,
+    std::collections::HashMap,
     std::fs::{File, OpenOptions},
     std::io::{BufReader, BufWriter, Read, Write},
 };
@@ -18,7 +19,7 @@ pub enum ConfigLevel {
 }
 
 pub trait Config {
-    fn get(&self, key: &str) -> Option<&Value>;
+    fn get(&self, key: &str) -> Option<Value>;
     fn set(&mut self, level: &ConfigLevel, key: &str, value: Value) -> Result<(), Error>;
     fn remove(&mut self, level: &ConfigLevel, key: &str) -> Result<(), Error>;
 }
@@ -70,11 +71,11 @@ impl ConfigData {
 }
 
 impl Config for ConfigData {
-    fn get(&self, key: &str) -> Option<&Value> {
+    fn get(&self, key: &str) -> Option<Value> {
         self.iter()
             .filter(|c| c.is_some())
             .filter_map(|c| c.as_ref().unwrap().as_object())
-            .find_map(|c| c.get(key))
+            .find_map(|c| c.get(key).cloned())
     }
 
     fn set(&mut self, level: &ConfigLevel, key: &str, value: Value) -> Result<(), Error> {
@@ -198,7 +199,7 @@ impl PersistentConfig {
 }
 
 impl Config for PersistentConfig {
-    fn get(&self, key: &str) -> Option<&Value> {
+    fn get(&self, key: &str) -> Option<Value> {
         self.data.get(key)
     }
 
@@ -217,8 +218,55 @@ impl Config for PersistentConfig {
     }
 }
 
-pub struct FileBackedConfig {
+type Heuristic = fn(key: &str) -> Option<Value>;
+
+pub struct HeuristicConfig {
     data: PersistentConfig,
+    pub heuristics: HashMap<&'static str, Heuristic>,
+}
+
+impl HeuristicConfig {
+    fn load<R: Read>(
+        defaults: Option<R>,
+        global: Option<R>,
+        build: Option<R>,
+        user: Option<R>,
+    ) -> Result<Self, Error> {
+        Ok(Self {
+            data: PersistentConfig::load(defaults, global, build, user)?,
+            heuristics: HashMap::new(),
+        })
+    }
+
+    fn save<W: Write>(
+        &self,
+        global: Option<W>,
+        build: Option<W>,
+        user: Option<W>,
+    ) -> Result<(), Error> {
+        self.data.save(global, build, user)
+    }
+}
+
+impl Config for HeuristicConfig {
+    fn get(&self, key: &str) -> Option<Value> {
+        self.data.get(key).or_else(|| match self.heuristics.get(key) {
+            Some(r) => r(key),
+            None => None,
+        })
+    }
+
+    fn set(&mut self, level: &ConfigLevel, key: &str, value: Value) -> Result<(), Error> {
+        self.data.set(level, key, value)
+    }
+
+    fn remove(&mut self, level: &ConfigLevel, key: &str) -> Result<(), Error> {
+        self.data.remove(level, key)
+    }
+}
+
+pub struct FileBackedConfig {
+    pub data: HeuristicConfig,
 }
 
 impl FileBackedConfig {
@@ -228,7 +276,7 @@ impl FileBackedConfig {
         build: &Option<&String>,
         user: &Option<String>,
     ) -> Result<Self, Error> {
-        let data = PersistentConfig::load(
+        let data = HeuristicConfig::load(
             FileBackedConfig::reader(defaults)?,
             FileBackedConfig::reader(global)?,
             FileBackedConfig::reader_from_ref(build)?,
@@ -298,7 +346,7 @@ impl FileBackedConfig {
 }
 
 impl Config for FileBackedConfig {
-    fn get(&self, key: &str) -> Option<&Value> {
+    fn get(&self, key: &str) -> Option<Value> {
         self.data.get(key)
     }
 
@@ -387,7 +435,7 @@ mod test {
 
         let value = test.get("name");
         assert!(value.is_some());
-        assert_eq!(value.unwrap(), &Value::String(String::from("User")));
+        assert_eq!(value.unwrap(), Value::String(String::from("User")));
 
         let test_build = ConfigData {
             user: None,
@@ -398,7 +446,7 @@ mod test {
 
         let value_build = test_build.get("name");
         assert!(value_build.is_some());
-        assert_eq!(value_build.unwrap(), &Value::String(String::from("Build")));
+        assert_eq!(value_build.unwrap(), Value::String(String::from("Build")));
 
         let test_global = ConfigData {
             user: None,
@@ -409,7 +457,7 @@ mod test {
 
         let value_global = test_global.get("name");
         assert!(value_global.is_some());
-        assert_eq!(value_global.unwrap(), &Value::String(String::from("Global")));
+        assert_eq!(value_global.unwrap(), Value::String(String::from("Global")));
 
         let test_defaults = ConfigData {
             user: None,
@@ -420,7 +468,7 @@ mod test {
 
         let value_defaults = test_defaults.get("name");
         assert!(value_defaults.is_some());
-        assert_eq!(value_defaults.unwrap(), &Value::String(String::from("Defaults")));
+        assert_eq!(value_defaults.unwrap(), Value::String(String::from("Defaults")));
 
         let test_none = ConfigData { user: None, build: None, global: None, defaults: None };
 
@@ -466,7 +514,7 @@ mod test {
         test.set(&ConfigLevel::User, "name", Value::String(String::from("user-test")));
         let value = test.get("name");
         assert!(value.is_some());
-        assert_eq!(value.unwrap(), &Value::String(String::from("user-test")));
+        assert_eq!(value.unwrap(), Value::String(String::from("user-test")));
         Ok(())
     }
 
@@ -478,19 +526,19 @@ mod test {
         test.set(&ConfigLevel::Defaults, "name", Value::String(String::from("defaults")));
         let value_defaults = test.get("name");
         assert!(value_defaults.is_some());
-        assert_eq!(value_defaults.unwrap(), &Value::String(String::from("defaults")));
+        assert_eq!(value_defaults.unwrap(), Value::String(String::from("defaults")));
         test.set(&ConfigLevel::Global, "name", Value::String(String::from("global")));
         let value_global = test.get("name");
         assert!(value_global.is_some());
-        assert_eq!(value_global.unwrap(), &Value::String(String::from("global")));
+        assert_eq!(value_global.unwrap(), Value::String(String::from("global")));
         test.set(&ConfigLevel::Build, "name", Value::String(String::from("build")));
         let value_build = test.get("name");
         assert!(value_build.is_some());
-        assert_eq!(value_build.unwrap(), &Value::String(String::from("build")));
+        assert_eq!(value_build.unwrap(), Value::String(String::from("build")));
         test.set(&ConfigLevel::User, "name", Value::String(String::from("user")));
         let value_user = test.get("name");
         assert!(value_user.is_some());
-        assert_eq!(value_user.unwrap(), &Value::String(String::from("user")));
+        assert_eq!(value_user.unwrap(), Value::String(String::from("user")));
         Ok(())
     }
 
@@ -505,15 +553,15 @@ mod test {
         test.remove(&ConfigLevel::User, "name")?;
         let user_value = test.get("name");
         assert!(user_value.is_some());
-        assert_eq!(user_value.unwrap(), &Value::String(String::from("Build")));
+        assert_eq!(user_value.unwrap(), Value::String(String::from("Build")));
         test.remove(&ConfigLevel::Build, "name")?;
         let global_value = test.get("name");
         assert!(global_value.is_some());
-        assert_eq!(global_value.unwrap(), &Value::String(String::from("Global")));
+        assert_eq!(global_value.unwrap(), Value::String(String::from("Global")));
         test.remove(&ConfigLevel::Global, "name")?;
         let default_value = test.get("name");
         assert!(default_value.is_some());
-        assert_eq!(default_value.unwrap(), &Value::String(String::from("Defaults")));
+        assert_eq!(default_value.unwrap(), Value::String(String::from("Defaults")));
         test.remove(&ConfigLevel::Defaults, "name")?;
         let none_value = test.get("name");
         assert!(none_value.is_none());
@@ -536,7 +584,7 @@ mod test {
 
         let value = persistent_config.get("name");
         assert!(value.is_some());
-        assert_eq!(value.unwrap(), &Value::String(String::from("User")));
+        assert_eq!(value.unwrap(), Value::String(String::from("User")));
 
         let mut user_file_out = String::new();
         let mut build_file_out = String::new();
@@ -544,6 +592,62 @@ mod test {
 
         unsafe {
             persistent_config.save(
+                Some(BufWriter::new(global_file_out.as_mut_vec())),
+                Some(BufWriter::new(build_file_out.as_mut_vec())),
+                Some(BufWriter::new(user_file_out.as_mut_vec())),
+            )?;
+        }
+
+        // Remove whitespace
+        user_file.retain(|c| !c.is_whitespace());
+        build_file.retain(|c| !c.is_whitespace());
+        global_file.retain(|c| !c.is_whitespace());
+        user_file_out.retain(|c| !c.is_whitespace());
+        build_file_out.retain(|c| !c.is_whitespace());
+        global_file_out.retain(|c| !c.is_whitespace());
+
+        assert_eq!(user_file, user_file_out);
+        assert_eq!(build_file, build_file_out);
+        assert_eq!(global_file, global_file_out);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_heuristic_build() -> Result<(), Error> {
+        let mut user_file = String::from(USER);
+        let mut build_file = String::from(BUILD);
+        let mut global_file = String::from(GLOBAL);
+        let defaults_file = String::from(DEFAULTS);
+
+        let mut heuristic_config = HeuristicConfig::load(
+            Some(BufReader::new(defaults_file.as_bytes())),
+            Some(BufReader::new(global_file.as_bytes())),
+            Some(BufReader::new(build_file.as_bytes())),
+            Some(BufReader::new(user_file.as_bytes())),
+        )?;
+
+        let value = heuristic_config.get("name");
+        assert!(value.is_some());
+        assert_eq!(value.unwrap(), Value::String(String::from("User")));
+
+        let missing_value = heuristic_config.get("ssh-keys");
+        assert!(missing_value.is_none());
+
+        heuristic_config
+            .heuristics
+            .insert("ssh-keys", |_| Some(Value::String(String::from("test ssh keys"))));
+
+        let not_missing_value = heuristic_config.get("ssh-keys");
+        assert!(not_missing_value.is_some());
+        assert_eq!(not_missing_value.unwrap(), Value::String(String::from("test ssh keys")));
+
+        let mut user_file_out = String::new();
+        let mut build_file_out = String::new();
+        let mut global_file_out = String::new();
+
+        unsafe {
+            heuristic_config.save(
                 Some(BufWriter::new(global_file_out.as_mut_vec())),
                 Some(BufWriter::new(build_file_out.as_mut_vec())),
                 Some(BufWriter::new(user_file_out.as_mut_vec())),

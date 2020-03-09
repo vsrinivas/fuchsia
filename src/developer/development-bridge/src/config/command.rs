@@ -43,19 +43,30 @@ fn save_config_from_environment(
     }
 }
 
-fn load_config_from_environment(
+fn find_ssh_keys(key: &str) -> Option<Value> {
+    let k = if key == "ssh-pub" { "authorized-keys" } else { "pkey" };
+    std::env::var("FUCHSIA_DIR")
+        .ok()
+        .map(|s| Value::String(String::from(format!("{}/.ssh/{}", s, k))))
+}
+
+pub fn load_config_from_environment(
     env: &Environment,
     build_dir: &Option<String>,
 ) -> Result<Box<FileBackedConfig>, Error> {
-    match build_dir {
-        Some(b) => Ok(Box::new(FileBackedConfig::load(
+    let mut config = match build_dir {
+        Some(b) => Box::new(FileBackedConfig::load(
             &env.defaults,
             &env.global,
             &env.build.as_ref().and_then(|c| c.get(b)),
             &env.user,
-        )?)),
-        None => Ok(Box::new(FileBackedConfig::load(&env.defaults, &env.global, &None, &env.user)?)),
-    }
+        )?),
+        None => Box::new(FileBackedConfig::load(&env.defaults, &env.global, &None, &env.user)?),
+    };
+
+    config.data.heuristics.insert("ssh-pub", find_ssh_keys);
+    config.data.heuristics.insert("ssh-priv", find_ssh_keys);
+    Ok(config)
 }
 
 fn exec_get(get: GetCommand) -> Result<(), Error> {
@@ -101,7 +112,7 @@ fn find_env_dir() -> Result<String, Error> {
     }
 }
 
-fn find_env_file() -> Result<String, Error> {
+pub fn find_env_file() -> Result<String, Error> {
     let mut env_path = PathBuf::from(find_env_dir()?);
     env_path.push(ENV_FILE);
 
