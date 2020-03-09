@@ -54,7 +54,7 @@ impl<P: Payload + 'static, A: Address + 'static> MessageClient<P, A> {
     }
 
     /// Creates a MessageBuilder for the reply to this message.
-    pub fn reply(&mut self, payload: P) -> MessageBuilder<P, A> {
+    pub fn reply(&self, payload: P) -> MessageBuilder<P, A> {
         // Return a MessageBuilder for a reply. Note that the auto-forwarder is
         // handed off so the automatic forwarding behavior follows the
         // MessageBuilder rather than this MessageClient.

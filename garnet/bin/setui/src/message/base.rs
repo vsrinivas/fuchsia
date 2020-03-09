@@ -23,7 +23,7 @@ pub enum MessageEvent<P: Payload + 'static, A: Address + 'static> {
     /// A message that has been delivered, either as a new message directed at to
     /// the recipient's address or a reply to a previously sent message
     /// (dependent on the receptor's context).
-    Message(MessageClient<P, A>),
+    Message(P, MessageClient<P, A>),
     /// A status update for the message that spawned the receptor delivering this
     /// update.
     Status(DeliveryStatus),

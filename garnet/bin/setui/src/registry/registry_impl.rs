@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::conduit::base::{ConduitData, ConduitHandle, ConduitSender};
+use crate::internal::core::{Address, MessageClient, MessageHubHandle, Messenger, Payload};
+use crate::message::base::{Audience, MessageEvent, MessengerType};
 use crate::registry::base::{Command, SettingHandler, SettingHandlerFactory, State};
 use crate::switchboard::base::{
     SettingAction, SettingActionData, SettingEvent, SettingRequest, SettingResponseResult,
@@ -23,7 +24,7 @@ use std::sync::Arc;
 pub struct RegistryImpl {
     /// A mapping of setting types to senders, used to relay new commands.
     command_sender_map: HashMap<SettingType, UnboundedSender<Command>>,
-    conduit_sender: ConduitSender,
+    messenger: Messenger,
     /// A sender handed as part of State::Listen to allow entities to provide
     /// back updates.
     /// TODO(SU-334): Investigate restricting the setting type a sender may
@@ -40,38 +41,36 @@ impl RegistryImpl {
     /// provided receiver and will send responses/updates on the given sender.
     pub fn create(
         handler_factory: Arc<Mutex<dyn SettingHandlerFactory + Send + Sync>>,
-        conduit: ConduitHandle,
+        message_hub: MessageHubHandle,
     ) -> Arc<Mutex<RegistryImpl>> {
         let (notification_tx, mut notification_rx) =
             futures::channel::mpsc::unbounded::<SettingType>();
-
-        let (conduit_tx, mut conduit_rx) = block_on(conduit.lock()).create_waypoint();
+        let (messenger, mut receptor) = block_on(message_hub.lock())
+            .create_messenger(MessengerType::Addressable(Address::Registry));
 
         // We must create handle here rather than return back the value as we
         // reference the registry in the async tasks below.
         let registry = Arc::new(Mutex::new(Self {
             command_sender_map: HashMap::new(),
-            conduit_sender: conduit_tx,
             notification_sender: notification_tx,
             active_listeners: vec![],
             handler_factory: handler_factory,
+            messenger: messenger,
         }));
 
-        // An async task is spawned here to listen to the SettingAction for new
-        // directives. Note that the receiver is the one provided in the arguments.
+        // Async task for handling messages from the receptor.
         {
             let registry_clone = registry.clone();
-            fasync::spawn(
-                async move {
-                    while let Some(conduit_data) = conduit_rx.next().await {
-                        if let ConduitData::Action(action) = conduit_data {
-                            registry_clone.lock().await.process_action(action).await;
+            fasync::spawn(async move {
+                while let Ok(event) = receptor.watch().await {
+                    match event {
+                        MessageEvent::Message(Payload::Action(action), client) => {
+                            registry_clone.lock().await.process_action(action, client).await;
                         }
+                        _ => {}
                     }
-                    Ok(())
                 }
-                .unwrap_or_else(|_e: anyhow::Error| {}),
-            );
+            });
         }
 
         // An async task is spawned here to listen for notifications. The receiver
@@ -93,10 +92,10 @@ impl RegistryImpl {
     }
 
     /// Interpret action from switchboard into registry actions.
-    async fn process_action(&mut self, action: SettingAction) {
+    async fn process_action(&mut self, action: SettingAction, message_client: MessageClient) {
         match action.data {
             SettingActionData::Request(request) => {
-                self.process_request(action.id, action.setting_type, request).await;
+                self.process_request(action.id, action.setting_type, request, message_client).await;
             }
             SettingActionData::Listen(size) => {
                 self.process_listen(action.setting_type, size).await;
@@ -160,7 +159,12 @@ impl RegistryImpl {
     fn notify(&self, setting_type: SettingType) {
         // Only return updates for types actively listened on.
         if self.active_listeners.contains(&setting_type) {
-            self.conduit_sender.send(ConduitData::Event(SettingEvent::Changed(setting_type)));
+            self.messenger
+                .message(
+                    Payload::Event(SettingEvent::Changed(setting_type)),
+                    Audience::Address(Address::Switchboard),
+                )
+                .send();
         }
     }
 
@@ -172,34 +176,40 @@ impl RegistryImpl {
         id: u64,
         setting_type: SettingType,
         request: SettingRequest,
+        client: MessageClient,
     ) {
         let candidate = self.get_handler(setting_type).await;
         match candidate {
             None => {
-                self.conduit_sender.send(ConduitData::Event(SettingEvent::Response(
-                    id,
-                    Err(SwitchboardError::UnhandledType { setting_type: setting_type }),
-                )));
+                client
+                    .reply(Payload::Event(SettingEvent::Response(
+                        id,
+                        Err(SwitchboardError::UnhandledType { setting_type: setting_type }),
+                    )))
+                    .send();
             }
             Some(command_sender) => {
                 let (responder, receiver) =
                     futures::channel::oneshot::channel::<SettingResponseResult>();
-                let sender_clone = self.conduit_sender.clone();
                 fasync::spawn(async move {
                     let response_result =
                         receiver.await.context("getting response from controller");
 
                     if response_result.is_err() {
-                        sender_clone.send(ConduitData::Event(SettingEvent::Response(
-                            id,
-                            Err(SwitchboardError::UnexpectedError {
-                                description: "channel closed prematurely".to_string(),
-                            }),
-                        )));
+                        client
+                            .reply(Payload::Event(SettingEvent::Response(
+                                id,
+                                Err(SwitchboardError::UnexpectedError {
+                                    description: "channel closed prematurely".to_string(),
+                                }),
+                            )))
+                            .send();
                         return;
                     }
-                    let response = response_result.unwrap();
-                    sender_clone.send(ConduitData::Event(SettingEvent::Response(id, response)));
+
+                    client
+                        .reply(Payload::Event(SettingEvent::Response(id, response_result.unwrap())))
+                        .send();
                 });
 
                 command_sender.unbounded_send(Command::HandleRequest(request, responder)).ok();
@@ -211,8 +221,8 @@ impl RegistryImpl {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::conduit::base::Conduit;
-    use crate::conduit::conduit_impl::ConduitImpl;
+    use crate::internal::core::{create_message_hub, Address, Payload};
+    use crate::message::base::MessengerType;
     use crate::registry::base::SettingHandler;
 
     struct FakeFactory {
@@ -253,22 +263,31 @@ mod tests {
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_notify() {
-        let conduit_handle = ConduitImpl::create();
-        let (conduit_sender, mut conduit_receiver) = conduit_handle.lock().await.create_waypoint();
+        let message_hub = create_message_hub();
         let handler_factory = Arc::new(Mutex::new(FakeFactory::new()));
-        let _registry = RegistryImpl::create(handler_factory.clone(), conduit_handle.clone());
+        let _registry = RegistryImpl::create(handler_factory.clone(), message_hub.clone());
         let setting_type = SettingType::Unknown;
+
+        let (messenger, mut receptor) = message_hub
+            .lock()
+            .await
+            .create_messenger(MessengerType::Addressable(Address::Switchboard));
 
         let (handler_tx, mut handler_rx) = futures::channel::mpsc::unbounded::<Command>();
         handler_factory.lock().await.register(setting_type, handler_tx);
 
         // Send a listen state and make sure sink is notified.
         {
-            conduit_sender.send(ConduitData::Action(SettingAction {
-                id: 1,
-                setting_type: setting_type,
-                data: SettingActionData::Listen(1),
-            }));
+            let _ = messenger
+                .message(
+                    Payload::Action(SettingAction {
+                        id: 1,
+                        setting_type: setting_type,
+                        data: SettingActionData::Listen(1),
+                    }),
+                    Audience::Address(Address::Registry),
+                )
+                .send();
 
             let command = handler_rx.next().await.unwrap();
 
@@ -276,12 +295,15 @@ mod tests {
                 Command::ChangeState(State::Listen(notifier)) => {
                     // Send back notification and make sure it is received.
                     assert!(notifier.unbounded_send(setting_type).is_ok());
-                    match conduit_receiver.next().await.unwrap() {
-                        ConduitData::Event(SettingEvent::Changed(changed_type)) => {
+
+                    while let Ok(event) = receptor.watch().await {
+                        if let MessageEvent::Message(
+                            Payload::Event(SettingEvent::Changed(changed_type)),
+                            _,
+                        ) = event
+                        {
                             assert_eq!(changed_type, setting_type);
-                        }
-                        _ => {
-                            panic!("wrong response received");
+                            break;
                         }
                     }
                 }
@@ -293,11 +315,16 @@ mod tests {
 
         // Send an end listen state and make sure sink is notified.
         {
-            conduit_sender.send(ConduitData::Action(SettingAction {
-                id: 1,
-                setting_type: setting_type,
-                data: SettingActionData::Listen(0),
-            }));
+            let _ = messenger
+                .message(
+                    Payload::Action(SettingAction {
+                        id: 1,
+                        setting_type: setting_type,
+                        data: SettingActionData::Listen(0),
+                    }),
+                    Audience::Address(Address::Registry),
+                )
+                .send();
 
             match handler_rx.next().await.unwrap() {
                 Command::ChangeState(State::EndListen) => {
@@ -312,10 +339,14 @@ mod tests {
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_request() {
+        let message_hub = create_message_hub();
         let handler_factory = Arc::new(Mutex::new(FakeFactory::new()));
-        let conduit_handle = ConduitImpl::create();
-        let (conduit_sender, mut conduit_receiver) = conduit_handle.lock().await.create_waypoint();
-        let _registry = RegistryImpl::create(handler_factory.clone(), conduit_handle.clone());
+        let (messenger, _) = message_hub
+            .lock()
+            .await
+            .create_messenger(MessengerType::Addressable(Address::Switchboard));
+
+        let _registry = RegistryImpl::create(handler_factory.clone(), message_hub.clone());
         let setting_type = SettingType::Unknown;
         let request_id = 42;
 
@@ -324,11 +355,16 @@ mod tests {
         handler_factory.lock().await.register(setting_type, handler_tx);
 
         // Send initial request.
-        conduit_sender.send(ConduitData::Action(SettingAction {
-            id: request_id,
-            setting_type: setting_type,
-            data: SettingActionData::Request(SettingRequest::Get),
-        }));
+        let mut receptor = messenger
+            .message(
+                Payload::Action(SettingAction {
+                    id: request_id,
+                    setting_type: setting_type,
+                    data: SettingActionData::Request(SettingRequest::Get),
+                }),
+                Audience::Address(Address::Registry),
+            )
+            .send();
 
         let command = handler_rx.next().await.unwrap();
 
@@ -338,17 +374,20 @@ mod tests {
                 // Send back response
                 assert!(responder.send(Ok(None)).is_ok());
 
-                // verify response matches
-                match conduit_receiver.next().await.unwrap() {
-                    ConduitData::Event(SettingEvent::Response(response_id, response)) => {
+                while let Ok(event) = receptor.watch().await {
+                    if let MessageEvent::Message(
+                        Payload::Event(SettingEvent::Response(response_id, response)),
+                        _,
+                    ) = event
+                    {
                         assert_eq!(request_id, response_id);
                         assert!(response.is_ok());
                         assert_eq!(None, response.unwrap());
-                    }
-                    _ => {
-                        panic!("unexpected response");
+                        return;
                     }
                 }
+
+                panic!("should have received response and returned");
             }
             _ => {
                 panic!("incorrect command received");
@@ -359,10 +398,13 @@ mod tests {
     /// Ensures setting handler is only generated once.
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_generation() {
+        let message_hub = create_message_hub();
         let handler_factory = Arc::new(Mutex::new(FakeFactory::new()));
-        let conduit_handle = ConduitImpl::create();
-        let (conduit_sender, _conduit_receiver) = conduit_handle.lock().await.create_waypoint();
-        let _registry = RegistryImpl::create(handler_factory.clone(), conduit_handle.clone());
+        let (messenger, _) = message_hub
+            .lock()
+            .await
+            .create_messenger(MessengerType::Addressable(Address::Switchboard));
+        let _registry = RegistryImpl::create(handler_factory.clone(), message_hub.clone());
         let setting_type = SettingType::Unknown;
         let request_id = 42;
 
@@ -371,11 +413,16 @@ mod tests {
         handler_factory.lock().await.register(setting_type, handler_tx);
 
         // Send initial request.
-        conduit_sender.send(ConduitData::Action(SettingAction {
-            id: request_id,
-            setting_type: setting_type,
-            data: SettingActionData::Request(SettingRequest::Get),
-        }));
+        let _ = messenger
+            .message(
+                Payload::Action(SettingAction {
+                    id: request_id,
+                    setting_type: setting_type,
+                    data: SettingActionData::Request(SettingRequest::Get),
+                }),
+                Audience::Address(Address::Registry),
+            )
+            .send();
 
         // Capture request.
         let _ = handler_rx.next().await.unwrap();
@@ -384,11 +431,16 @@ mod tests {
         assert_eq!(1, handler_factory.lock().await.get_request_count(setting_type));
 
         // Send followup request.
-        conduit_sender.send(ConduitData::Action(SettingAction {
-            id: request_id,
-            setting_type: setting_type,
-            data: SettingActionData::Request(SettingRequest::Get),
-        }));
+        let _ = messenger
+            .message(
+                Payload::Action(SettingAction {
+                    id: request_id,
+                    setting_type: setting_type,
+                    data: SettingActionData::Request(SettingRequest::Get),
+                }),
+                Audience::Address(Address::Registry),
+            )
+            .send();
 
         // Capture request.
         let _ = handler_rx.next().await.unwrap();

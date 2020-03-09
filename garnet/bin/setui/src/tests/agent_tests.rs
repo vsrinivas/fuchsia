@@ -4,7 +4,7 @@
 #[cfg(test)]
 use crate::agent::authority_impl::AuthorityImpl;
 use crate::agent::base::*;
-use crate::conduit::conduit_impl::ConduitImpl;
+use crate::internal::core::create_message_hub as create_registry_hub;
 use crate::registry::device_storage::testing::*;
 use crate::service_context::ServiceContext;
 use crate::switchboard::base::SettingType;
@@ -155,8 +155,8 @@ async fn test_environment_startup() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_sequential() {
     let (tx, mut rx) = futures::channel::mpsc::unbounded::<(u32, Invocation)>();
-    let conduit = ConduitImpl::create();
-    let switchboard = SwitchboardImpl::create(conduit);
+    let message_hub = create_registry_hub();
+    let switchboard = SwitchboardImpl::create(message_hub);
     let mut authority = AuthorityImpl::new();
     let service_context = ServiceContext::create(None);
 
@@ -204,8 +204,8 @@ async fn test_sequential() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_simultaneous() {
     let (tx, mut rx) = futures::channel::mpsc::unbounded::<(u32, Invocation)>();
-    let conduit = ConduitImpl::create();
-    let switchboard = SwitchboardImpl::create(conduit);
+    let message_hub = create_registry_hub();
+    let switchboard = SwitchboardImpl::create(message_hub);
     let mut authority = AuthorityImpl::new();
     let service_context = ServiceContext::create(None);
     let agent_ids = create_agents(12, Lifespan::Initialization, &mut authority, tx.clone());
@@ -250,8 +250,8 @@ async fn test_simultaneous() {
 async fn test_err_handling() {
     let (tx, mut rx) = futures::channel::mpsc::unbounded::<(u32, Invocation)>();
 
-    let conduit = ConduitImpl::create();
-    let switchboard = SwitchboardImpl::create(conduit);
+    let message_hub = create_registry_hub();
+    let switchboard = SwitchboardImpl::create(message_hub);
     let mut authority = AuthorityImpl::new();
     let service_context = ServiceContext::create(None);
     let mut rng = rand::thread_rng();
@@ -304,8 +304,8 @@ async fn test_err_handling() {
 async fn test_available_components() {
     let (tx, mut rx) = futures::channel::mpsc::unbounded::<(u32, Invocation)>();
 
-    let conduit = ConduitImpl::create();
-    let switchboard = SwitchboardImpl::create(conduit);
+    let message_hub = create_registry_hub();
+    let switchboard = SwitchboardImpl::create(message_hub);
     let mut authority = AuthorityImpl::new();
     let service_context = ServiceContext::create(None);
     let mut rng = rand::thread_rng();

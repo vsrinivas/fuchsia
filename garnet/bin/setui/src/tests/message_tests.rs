@@ -33,8 +33,8 @@ async fn verify_payload<
     client_fn: Option<Box<dyn Fn(&mut MessageClient<P, A>) + Send + Sync + 'static>>,
 ) {
     while let Ok(message_event) = receptor.watch().await {
-        if let MessageEvent::Message(mut client) = message_event {
-            assert_eq!(payload, client.get_payload());
+        if let MessageEvent::Message(incoming_payload, mut client) = message_event {
+            assert_eq!(payload, incoming_payload);
             if let Some(func) = client_fn {
                 (func)(&mut client);
             }
@@ -74,9 +74,9 @@ async fn test_end_to_end_messaging() {
     let hub = MessageHub::<TestMessage, TestAddress>::create();
 
     let (messenger_1, _) =
-        hub.lock().await.create_messenger(MessengerType::Addressable(TestAddress::Foo(1))).await;
+        hub.lock().await.create_messenger(MessengerType::Addressable(TestAddress::Foo(1)));
     let (_, mut receptor_2) =
-        hub.lock().await.create_messenger(MessengerType::Addressable(TestAddress::Foo(2))).await;
+        hub.lock().await.create_messenger(MessengerType::Addressable(TestAddress::Foo(2)));
 
     let mut reply_receptor =
         messenger_1.message(ORIGINAL, Audience::Address(TestAddress::Foo(2))).send();
@@ -100,10 +100,10 @@ async fn test_implicit_forward() {
     let hub = MessageHub::<TestMessage, TestAddress>::create();
 
     let (messenger_1, _) =
-        hub.lock().await.create_messenger(MessengerType::Addressable(TestAddress::Foo(1))).await;
-    let (_, mut receiver_2) = hub.lock().await.create_messenger(MessengerType::Broker).await;
+        hub.lock().await.create_messenger(MessengerType::Addressable(TestAddress::Foo(1)));
+    let (_, mut receiver_2) = hub.lock().await.create_messenger(MessengerType::Broker);
     let (_, mut receiver_3) =
-        hub.lock().await.create_messenger(MessengerType::Addressable(TestAddress::Foo(3))).await;
+        hub.lock().await.create_messenger(MessengerType::Addressable(TestAddress::Foo(3)));
 
     let mut reply_receptor =
         messenger_1.message(ORIGINAL, Audience::Address(TestAddress::Foo(3))).send();
@@ -131,10 +131,10 @@ async fn test_observe_addressable() {
     let hub = MessageHub::<TestMessage, TestAddress>::create();
 
     let (messenger_1, _) =
-        hub.lock().await.create_messenger(MessengerType::Addressable(TestAddress::Foo(1))).await;
-    let (_, mut receptor_2) = hub.lock().await.create_messenger(MessengerType::Broker).await;
+        hub.lock().await.create_messenger(MessengerType::Addressable(TestAddress::Foo(1)));
+    let (_, mut receptor_2) = hub.lock().await.create_messenger(MessengerType::Broker);
     let (_, mut receptor_3) =
-        hub.lock().await.create_messenger(MessengerType::Addressable(TestAddress::Foo(3))).await;
+        hub.lock().await.create_messenger(MessengerType::Addressable(TestAddress::Foo(3)));
 
     let mut reply_receptor =
         messenger_1.message(ORIGINAL, Audience::Address(TestAddress::Foo(3))).send();
@@ -176,11 +176,11 @@ async fn test_broadcast() {
     let hub = MessageHub::<TestMessage, TestAddress>::create();
 
     let (messenger_1, _) =
-        hub.lock().await.create_messenger(MessengerType::Addressable(TestAddress::Foo(1))).await;
+        hub.lock().await.create_messenger(MessengerType::Addressable(TestAddress::Foo(1)));
     let (_, mut receptor_2) =
-        hub.lock().await.create_messenger(MessengerType::Addressable(TestAddress::Foo(2))).await;
+        hub.lock().await.create_messenger(MessengerType::Addressable(TestAddress::Foo(2)));
     let (_, mut receptor_3) =
-        hub.lock().await.create_messenger(MessengerType::Addressable(TestAddress::Foo(3))).await;
+        hub.lock().await.create_messenger(MessengerType::Addressable(TestAddress::Foo(3)));
 
     messenger_1.message(ORIGINAL, Audience::Broadcast).send();
 
@@ -195,9 +195,9 @@ async fn test_delivery_status() {
     let known_receiver_address = TestAddress::Foo(2);
     let unknown_address = TestAddress::Foo(3);
     let (messenger_1, _) =
-        hub.lock().await.create_messenger(MessengerType::Addressable(TestAddress::Foo(1))).await;
+        hub.lock().await.create_messenger(MessengerType::Addressable(TestAddress::Foo(1)));
     let (_, mut receptor_2) =
-        hub.lock().await.create_messenger(MessengerType::Addressable(known_receiver_address)).await;
+        hub.lock().await.create_messenger(MessengerType::Addressable(known_receiver_address));
 
     {
         let mut receptor =

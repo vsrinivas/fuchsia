@@ -1,7 +1,10 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use crate::conduit::base::{ConduitData, ConduitHandle, ConduitSender};
+use crate::internal::core::{
+    Address, MessageHubHandle as RegistryMessageHubHandle, Messenger as RegistryMessenger, Payload,
+};
+use crate::message::base::{Audience, MessageEvent, MessengerType};
 use crate::switchboard::base::*;
 
 use anyhow::{format_err, Error};
@@ -15,7 +18,6 @@ use std::sync::Arc;
 use fuchsia_async as fasync;
 use futures::stream::StreamExt;
 
-type ResponderMap = HashMap<u64, SettingRequestResponder>;
 type ListenerMap = HashMap<SettingType, Vec<ListenSessionInfo>>;
 
 /// Minimal data necessary to uniquely identify and interact with a listen
@@ -81,40 +83,39 @@ pub struct SwitchboardImpl {
     next_session_id: u64,
     /// Next available action id.
     next_action_id: u64,
-    /// Acquired during construction and used internally to send input.
-    conduit_sender: ConduitSender,
     /// Acquired during construction - passed during listen to allow callback
     /// for canceling listen.
     listen_cancellation_sender: UnboundedSender<ListenSessionInfo>,
-    /// mapping of request output ids to responders.
-    request_responders: ResponderMap,
     /// mapping of listeners for changes
     listeners: ListenerMap,
+    /// registry messenger
+    registry_messenger: RegistryMessenger,
 }
 
 impl SwitchboardImpl {
     /// Creates a new SwitchboardImpl, which will return the instance along with
     /// a sender to provide events in response to the actions sent.
-    pub fn create(conduit: ConduitHandle) -> Arc<Mutex<SwitchboardImpl>> {
+    pub fn create(registry_message_hub: RegistryMessageHubHandle) -> Arc<Mutex<SwitchboardImpl>> {
         let (cancel_listen_tx, mut cancel_listen_rx) =
             futures::channel::mpsc::unbounded::<ListenSessionInfo>();
 
-        let (conduit_sender, mut conduit_receiver) = block_on(conduit.lock()).create_waypoint();
+        let (registry_messenger, mut receptor) = block_on(registry_message_hub.lock())
+            .create_messenger(MessengerType::Addressable(Address::Switchboard));
 
         let switchboard = Arc::new(Mutex::new(Self {
             next_session_id: 0,
             next_action_id: 0,
-            conduit_sender: conduit_sender,
             listen_cancellation_sender: cancel_listen_tx,
-            request_responders: HashMap::new(),
             listeners: HashMap::new(),
+            registry_messenger: registry_messenger,
         }));
 
         {
             let switchboard_clone = switchboard.clone();
             fasync::spawn(async move {
-                while let Some(conduit_data) = conduit_receiver.next().await {
-                    if let ConduitData::Event(event) = conduit_data {
+                while let Ok(message_event) = receptor.watch().await {
+                    // Wait for response
+                    if let MessageEvent::Message(Payload::Event(event), _) = message_event {
                         switchboard_clone.lock().await.process_event(event);
                     }
                 }
@@ -144,9 +145,7 @@ impl SwitchboardImpl {
             SettingEvent::Changed(setting_type) => {
                 self.notify_listeners(setting_type);
             }
-            SettingEvent::Response(action_id, response) => {
-                self.handle_response(action_id, response);
-            }
+            _ => {}
         }
     }
 
@@ -160,12 +159,17 @@ impl SwitchboardImpl {
             if let Some((i, _elem)) = listener_to_remove {
                 session_infos.remove(i);
 
-                // Send updated listening size.
-                self.conduit_sender.send(ConduitData::Action(SettingAction {
-                    id: action_id,
-                    setting_type: session_info.setting_type,
-                    data: SettingActionData::Listen(session_infos.len() as u64),
-                }));
+                let _ = self
+                    .registry_messenger
+                    .message(
+                        Payload::Action(SettingAction {
+                            id: action_id,
+                            setting_type: session_info.setting_type,
+                            data: SettingActionData::Listen(session_infos.len() as u64),
+                        }),
+                        Audience::Address(Address::Registry),
+                    )
+                    .send();
             }
         }
     }
@@ -177,12 +181,6 @@ impl SwitchboardImpl {
             }
         }
     }
-
-    fn handle_response(&mut self, origin_id: u64, response: SettingResponseResult) {
-        if let Some(responder) = self.request_responders.remove(&origin_id) {
-            responder.send(response).ok();
-        }
-    }
 }
 
 impl Switchboard for SwitchboardImpl {
@@ -192,15 +190,33 @@ impl Switchboard for SwitchboardImpl {
         request: SettingRequest,
         callback: SettingRequestResponder,
     ) -> Result<(), Error> {
-        // Associate request
+        let messenger = self.registry_messenger.clone();
         let action_id = self.get_next_action_id();
-        self.request_responders.insert(action_id, callback);
 
-        self.conduit_sender.send(ConduitData::Action(SettingAction {
-            id: action_id,
-            setting_type,
-            data: SettingActionData::Request(request),
-        }));
+        fasync::spawn(async move {
+            let mut receptor = messenger
+                .message(
+                    Payload::Action(SettingAction {
+                        id: action_id,
+                        setting_type,
+                        data: SettingActionData::Request(request),
+                    }),
+                    Audience::Address(Address::Registry),
+                )
+                .send();
+
+            while let Ok(message_event) = receptor.watch().await {
+                // Wait for response
+                if let MessageEvent::Message(
+                    Payload::Event(SettingEvent::Response(_id, response)),
+                    _,
+                ) = message_event
+                {
+                    callback.send(response).ok();
+                    return;
+                }
+            }
+        });
 
         return Ok(());
     }
@@ -226,11 +242,18 @@ impl Switchboard for SwitchboardImpl {
             self.next_session_id += 1;
 
             listeners.push(info.clone());
-            self.conduit_sender.send(ConduitData::Action(SettingAction {
-                id: action_id,
-                setting_type,
-                data: SettingActionData::Listen(listeners.len() as u64),
-            }));
+
+            let _ = self
+                .registry_messenger
+                .message(
+                    Payload::Action(SettingAction {
+                        id: action_id,
+                        setting_type,
+                        data: SettingActionData::Listen(listeners.len() as u64),
+                    }),
+                    Audience::Address(Address::Registry),
+                )
+                .send();
 
             return Ok(Box::new(ListenSessionImpl::new(
                 info,
@@ -245,31 +268,43 @@ impl Switchboard for SwitchboardImpl {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::conduit::base::{Conduit, ConduitReceiver};
-    use crate::conduit::conduit_impl::ConduitImpl;
+    use crate::internal::core::{
+        create_message_hub as create_registry_hub, Address, MessageClient, Payload,
+    };
+    use crate::message::base::Audience;
+    use crate::message::receptor::Receptor;
 
     async fn retrieve_and_verify_action(
-        receiver: &mut ConduitReceiver,
+        receptor: &mut Receptor<Payload, Address>,
         setting_type: SettingType,
         setting_data: SettingActionData,
-    ) -> SettingAction {
-        let action_data = receiver.next().await.unwrap();
-
-        if let ConduitData::Action(received_action) = action_data {
-            assert_eq!(setting_type, received_action.setting_type);
-            assert_eq!(setting_data, received_action.data);
-            return received_action;
-        } else {
-            panic!("expected ConduitData::Action");
+    ) -> (MessageClient, SettingAction) {
+        while let Ok(event) = receptor.watch().await {
+            match event {
+                MessageEvent::Message(Payload::Action(action), client) => {
+                    assert_eq!(setting_type, action.setting_type);
+                    assert_eq!(setting_data, action.data);
+                    return (client, action);
+                }
+                _ => {
+                    // ignore other messages
+                }
+            }
         }
+
+        panic!("expected Payload::Action");
     }
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_request() {
-        let conduit_handle = ConduitImpl::create();
-        let switchboard = SwitchboardImpl::create(conduit_handle.clone());
-        // Downstream waypoint
-        let (conduit_sender, mut conduit_receiver) = conduit_handle.lock().await.create_waypoint();
+        let message_hub = create_registry_hub();
+        let switchboard = SwitchboardImpl::create(message_hub.clone());
+        // Create registry endpoint
+        let (_, mut receptor) = message_hub
+            .lock()
+            .await
+            .create_messenger(MessengerType::Addressable(Address::Registry));
+
         let (response_tx, response_rx) =
             futures::channel::oneshot::channel::<SettingResponseResult>();
 
@@ -281,14 +316,14 @@ mod tests {
             .is_ok());
 
         // Ensure request is received.
-        let action = retrieve_and_verify_action(
-            &mut conduit_receiver,
+        let (client, action) = retrieve_and_verify_action(
+            &mut receptor,
             SettingType::Unknown,
             SettingActionData::Request(SettingRequest::Get),
         )
         .await;
 
-        conduit_sender.send(ConduitData::Event(SettingEvent::Response(action.id, Ok(None))));
+        client.reply(Payload::Event(SettingEvent::Response(action.id, Ok(None)))).send();
 
         // Ensure response is received.
         let response = response_rx.await.unwrap();
@@ -297,10 +332,15 @@ mod tests {
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_listen() {
-        let conduit_handle = ConduitImpl::create();
-        let switchboard = SwitchboardImpl::create(conduit_handle.clone());
-        let (_, mut conduit_receiver) = conduit_handle.lock().await.create_waypoint();
+        let message_hub = create_registry_hub();
+        let switchboard = SwitchboardImpl::create(message_hub.clone());
         let setting_type = SettingType::Unknown;
+
+        // Create registry endpoint
+        let (_, mut receptor) = message_hub
+            .lock()
+            .await
+            .create_messenger(MessengerType::Addressable(Address::Registry));
 
         // Register first listener and verify count.
         let (notify_tx1, _notify_rx1) = futures::channel::mpsc::unbounded::<SettingType>();
@@ -312,12 +352,9 @@ mod tests {
         );
 
         assert!(listen_result.is_ok());
-        let _ = retrieve_and_verify_action(
-            &mut conduit_receiver,
-            setting_type,
-            SettingActionData::Listen(1),
-        )
-        .await;
+        let _ =
+            retrieve_and_verify_action(&mut receptor, setting_type, SettingActionData::Listen(1))
+                .await;
 
         // Unregister and verify count.
         if let Ok(mut listen_session) = listen_result {
@@ -326,20 +363,22 @@ mod tests {
             panic!("should have a session");
         }
 
-        let _ = retrieve_and_verify_action(
-            &mut conduit_receiver,
-            setting_type,
-            SettingActionData::Listen(0),
-        )
-        .await;
+        let _ =
+            retrieve_and_verify_action(&mut receptor, setting_type, SettingActionData::Listen(0))
+                .await;
     }
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_notify() {
-        let conduit_handle = ConduitImpl::create();
-        let switchboard = SwitchboardImpl::create(conduit_handle.clone());
-        let (conduit_sender, mut conduit_receiver) = conduit_handle.lock().await.create_waypoint();
+        let message_hub = create_registry_hub();
+        let switchboard = SwitchboardImpl::create(message_hub.clone());
         let setting_type = SettingType::Unknown;
+
+        // Create registry endpoint
+        let (messenger, mut receptor) = message_hub
+            .lock()
+            .await
+            .create_messenger(MessengerType::Addressable(Address::Registry));
 
         // Register first listener and verify count.
         let (notify_tx1, mut notify_rx1) = futures::channel::mpsc::unbounded::<SettingType>();
@@ -351,12 +390,9 @@ mod tests {
         );
         assert!(result_1.is_ok());
 
-        let _ = retrieve_and_verify_action(
-            &mut conduit_receiver,
-            setting_type,
-            SettingActionData::Listen(1),
-        )
-        .await;
+        let _ =
+            retrieve_and_verify_action(&mut receptor, setting_type, SettingActionData::Listen(1))
+                .await;
 
         // Register second listener and verify count
         let (notify_tx2, mut notify_rx2) = futures::channel::mpsc::unbounded::<SettingType>();
@@ -368,15 +404,16 @@ mod tests {
         );
         assert!(result_2.is_ok());
 
-        let _ = retrieve_and_verify_action(
-            &mut conduit_receiver,
-            setting_type,
-            SettingActionData::Listen(2),
-        )
-        .await;
+        let _ =
+            retrieve_and_verify_action(&mut receptor, setting_type, SettingActionData::Listen(2))
+                .await;
 
-        // Send notification
-        conduit_sender.send(ConduitData::Event(SettingEvent::Changed(setting_type)));
+        messenger
+            .message(
+                Payload::Event(SettingEvent::Changed(setting_type)),
+                Audience::Address(Address::Switchboard),
+            )
+            .send();
 
         // Ensure both listeners receive notifications.
         {

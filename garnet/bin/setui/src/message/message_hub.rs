@@ -233,7 +233,7 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
     /// Returns a new messenger that can be used by a client to author new
     /// messages. Messengers are limited to participation within the ecosystem of
     /// the MessageHub that created them.
-    pub async fn create_messenger(
+    pub fn create_messenger(
         &mut self,
         messenger_type: MessengerType<A>,
     ) -> (Messenger<P, A>, Receptor<P, A>) {

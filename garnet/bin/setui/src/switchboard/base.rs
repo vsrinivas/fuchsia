@@ -305,6 +305,7 @@ pub enum SettingActionData {
 }
 
 /// The events generated in response to SettingAction.
+#[derive(Clone)]
 pub enum SettingEvent {
     /// The backing data for the specified setting type has changed. Interested
     /// parties can query through request to get the updated values.

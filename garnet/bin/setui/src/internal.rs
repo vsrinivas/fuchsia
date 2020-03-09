@@ -2,8 +2,4 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-/// Common conduit-related definitions.
-pub mod base;
-
-/// Concrete implementation of Conduit.
-pub mod conduit_impl;
+pub mod core;

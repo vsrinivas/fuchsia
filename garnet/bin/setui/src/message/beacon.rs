@@ -77,10 +77,10 @@ impl<P: Payload + 'static, A: Address + 'static> Beacon<P, A> {
         }
 
         self.event_sender
-            .unbounded_send(MessageEvent::Message(MessageClient::new(
-                message,
-                self.messenger.clone(),
-            )))
+            .unbounded_send(MessageEvent::Message(
+                message.payload(),
+                MessageClient::new(message, self.messenger.clone()),
+            ))
             .ok();
 
         Ok(())
