@@ -60,8 +60,6 @@ class UsbFunction : public UsbFunctionType,
 
   inline uint8_t GetNumInterfaces() const { return num_interfaces_; }
 
-  zx_status_t UsbFunctionCancelAll(uint8_t ep_address);
-
  private:
   DISALLOW_COPY_ASSIGN_AND_MOVE(UsbFunction);
 

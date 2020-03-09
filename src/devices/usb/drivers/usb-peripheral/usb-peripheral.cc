@@ -52,10 +52,6 @@ zx_status_t UsbPeripheral::Create(void* ctx, zx_device_t* parent) {
   return ZX_OK;
 }
 
-zx_status_t UsbPeripheral::UsbDciCancelAll(uint8_t ep_address) {
-  return dci_.CancelAll(ep_address);
-}
-
 void UsbPeripheral::RequestComplete(usb_request_t* req) {
   fbl::AutoLock l(&pending_requests_lock_);
   usb::BorrowedRequest<void> request(req, dci_.GetRequestSize());

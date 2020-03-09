@@ -56,10 +56,6 @@ zx_status_t UsbFunction::UsbFunctionSetInterface(
   return peripheral_->FunctionRegistered();
 }
 
-zx_status_t UsbFunction::UsbFunctionCancelAll(uint8_t ep_address) {
-  return peripheral_->UsbDciCancelAll(ep_address);
-}
-
 zx_status_t UsbFunction::UsbFunctionAllocInterface(uint8_t* out_intf_num) {
   return peripheral_->AllocInterface(fbl::RefPtr<UsbFunction>(this), out_intf_num);
 }
