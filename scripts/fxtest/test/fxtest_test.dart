@@ -234,7 +234,7 @@ void main() {
         buildDir: fuchsiaLocator.buildDir,
         os: 'fuchsia',
         fx: fuchsiaLocator.fx,
-        packageUrl: 'fuchsia-pkg://fuchsia.com/fancy#superBigTest.cmx',
+        packageUrl: 'fuchsia-pkg://fuchsia.com/fancy#meta/superBigTest.cmx',
         name: 'device test',
       ),
       TestDefinition(
@@ -299,7 +299,7 @@ void main() {
     test('when the --exact flag is passed for a test packageUrl', () {
       // --exact correctly catches exact packageUrl matches
       ParsedManifest parsedManifest = parseFromArgs(args: [
-        'fuchsia-pkg://fuchsia.com/fancy#superBigTest.cmx',
+        'fuchsia-pkg://fuchsia.com/fancy#meta/superBigTest.cmx',
         '--exact'
       ]);
       expect(parsedManifest.testBundles, hasLength(1));
@@ -319,7 +319,10 @@ void main() {
 
     test('when the -d flag is passed', () {
       ParsedManifest parsedManifest = parseFromArgs(
-        args: ['fuchsia-pkg://fuchsia.com/fancy#superBigTest.cmx', '--device'],
+        args: [
+          'fuchsia-pkg://fuchsia.com/fancy#meta/superBigTest.cmx',
+          '--device'
+        ],
       );
       expect(parsedManifest.testBundles, hasLength(1));
       expect(parsedManifest.testBundles[0].testDefinition.name, 'device test');

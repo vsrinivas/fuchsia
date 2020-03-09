@@ -327,7 +327,13 @@ class CondensedOutputFormatter extends OutputFormatter {
 /// execution, and as such, ignores all events except `TestStarted`, which it
 /// uses to print a fully hydrated test invocation pattern.
 class InfoFormatter extends OutputFormatter {
-  InfoFormatter() : super(buffer: OutputBuffer(cursorStartsOnNewLine: true));
+  InfoFormatter()
+      : super(
+          buffer: OutputBuffer(cursorStartsOnNewLine: true),
+          hasRealTimeOutput: false,
+          slowTestThreshold: Duration(seconds: 0),
+          verbose: false,
+        );
 
   @override
   void _handleTestInfo(TestInfo event) {}

@@ -3,22 +3,94 @@
 // found in the LICENSE file.
 
 import 'package:fxtest/fxtest.dart';
+import 'package:meta/meta.dart';
 
 /// Deconstructed Fuchsia Package Url used to precisely target URL components.
 class PackageUrl {
+  /// Root chunk of the Package URL.
+  ///
+  /// ```
+  /// fuchsia.com
+  /// ```
+  ///
+  /// from
+  ///
+  /// ```
+  /// fuchsia-pkg://fuchsia.com/pkg-name/variant?hash=1234#meta/component-name.cmx
+  /// ```
   final String host;
+
+  /// First chunk from the URI.
+  ///
+  /// ```
+  /// pkg-name
+  /// ```
+  ///
+  /// from
+  ///
+  /// ```
+  /// fuchsia-pkg://fuchsia.com/pkg-name/variant?hash=1234#meta/component-name.cmx
+  /// ```
   final String packageName;
+
+  /// Optional. Second chunk in the URI.
+  ///
+  /// ```
+  /// variant
+  /// ```
+  ///
+  /// from
+  ///
+  /// ```
+  /// fuchsia-pkg://fuchsia.com/pkg-name/variant?hash=1234#meta/component-name.cmx
+  /// ```
   final String packageVariant;
+
+  /// Optional. Value for "hash" querystring value.
+  ///
+  /// ```
+  /// 1234
+  /// ```
+  ///
+  /// from
+  ///
+  /// ```
+  /// fuchsia-pkg://fuchsia.com/pkg-name/variant?hash=1234#meta/component-name.cmx
+  /// ```
   final String hash;
+
+  /// Component name with the extension.
+  ///
+  /// ```
+  /// component-name.cmx
+  /// ```
+  ///
+  /// from
+  ///
+  /// ```
+  /// fuchsia-pkg://fuchsia.com/pkg-name/variant?hash=1234#meta/component-name.cmx
+  /// ```
   final String resourcePath;
+
+  /// Component name without the extension.
+  ///
+  /// ```
+  /// component-name
+  /// ```
+  ///
+  /// from
+  ///
+  /// ```
+  /// fuchsia-pkg://fuchsia.com/pkg-name/variant?hash=1234#meta/component-name.cmx
+  /// ```
   final String rawResource;
   PackageUrl({
-    this.host,
-    this.packageName,
-    this.packageVariant,
-    this.hash,
-    this.resourcePath,
-    this.rawResource,
+    @required this.host,
+    @required this.packageName,
+    @required this.packageVariant,
+    @required this.hash,
+    @required this.resourcePath,
+    @required this.rawResource,
   });
 
   PackageUrl.none()
@@ -58,9 +130,18 @@ class PackageUrl {
       packageVariant:
           parsedUri.pathSegments.length > 1 ? parsedUri.pathSegments[1] : null,
       hash: parsedUri.queryParameters['hash'],
-      resourcePath: parsedUri.fragment,
-      rawResource: PackageUrl._removeExtension(parsedUri.fragment),
+      resourcePath: PackageUrl._removeMetaPrefix(parsedUri.fragment),
+      rawResource: PackageUrl._removeMetaPrefix(
+        PackageUrl._removeExtension(parsedUri.fragment),
+      ),
     );
+  }
+
+  static String _removeMetaPrefix(String resourcePath) {
+    const token = 'meta/';
+    return resourcePath.startsWith(token)
+        ? resourcePath.substring(token.length)
+        : resourcePath;
   }
 
   static String _removeExtension(String resourcePath) {
