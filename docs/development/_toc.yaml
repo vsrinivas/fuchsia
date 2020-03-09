@@ -70,8 +70,6 @@ toc:
 - title: "Languages"
   section:
   - include: /docs/development/languages/_toc.yaml
-- title: "Installer"
-  path: /docs/development/installer/README.md
 - title: "Internationalization"
   section:
   - include: /docs/development/internationalization/_toc.yaml

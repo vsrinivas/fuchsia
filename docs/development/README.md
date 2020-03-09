@@ -101,7 +101,7 @@ This section covers Fuchsia-wide conventions and best practices.
  - [Component Inspection](inspect/README.md)
  - [Packet capture](debugging/packet_capture.md)
  - [Editor configurations](/docs/development/editors/README.md)
- - [Using the Fuchsia Installer](/docs/development/installer/README.md)
+ - [Using the Fuchsia Installer](/docs/development/hardware/installer.md)
 
 
 [acer_12]: /docs/development/hardware/acer12.md "Acer 12"

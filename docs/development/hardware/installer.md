@@ -1,4 +1,4 @@
-# Installer
+# Create a bootable Fuchsia image
 
 ## Overview
 
