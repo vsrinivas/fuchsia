@@ -9,9 +9,10 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
+#include <src/lib/fsl/tasks/fd_waiter.h>
+#include <sys/select.h>
+#include <vector>
 #include <Weave/Core/WeaveError.h>
-
-#include <thread>
 
 namespace weavestack {
 
@@ -20,18 +21,29 @@ class App {
   App();
   ~App();
 
-  void Quit();
-  WEAVE_ERROR Start();
-  WEAVE_ERROR Init();
-  void RunLoop();
-  void Join();
+  void Quit(void);
+  zx_status_t Init(void);
+  zx_status_t Run(zx::time deadline = zx::time::infinite(), bool once = false);
+  async::Loop* loop() { return &loop_; }
+
  private:
   App(const App&) = delete;
   App& operator=(const App&) = delete;
 
-  WEAVE_ERROR HandlePackets(void);
-  std::thread thread_;
-  std::atomic_flag running_ = ATOMIC_FLAG_INIT;
+  zx_status_t WaitForFd(int fd, uint32_t events);
+  zx_status_t StartFdWaiters(void);
+  void ClearWaiters();
+  void FdHandler(zx_status_t status, uint32_t zero);
+  struct {
+    fd_set read_fds;
+    fd_set write_fds;
+    fd_set except_fds;
+    int num_fds;
+  } fds_;
+  std::vector<std::unique_ptr<fsl::FDWaiter>> waiters_;
+  async::Loop loop_{&kAsyncLoopConfigAttachToCurrentThread};
+  bool initialized_ = false;
+  std::unique_ptr<async::TaskClosure> sleep_task_;
 };
 
 }  // namespace weavestack
