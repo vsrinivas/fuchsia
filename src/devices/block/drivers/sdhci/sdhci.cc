@@ -825,6 +825,18 @@ zx_status_t Sdhci::SdmmcRegisterInBandInterrupt(const in_band_interrupt_protocol
   return ZX_OK;
 }
 
+zx_status_t Sdhci::SdmmcRegisterVmo(uint32_t vmo_id, zx::vmo vmo, uint64_t offset, uint64_t size) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t Sdhci::SdmmcUnregisterVmo(uint32_t vmo_id, zx::vmo* out_vmo) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t Sdhci::SdmmcRequestNew(const sdmmc_req_new_t* req, uint32_t out_response[4]) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
 void Sdhci::DdkUnbindNew(ddk::UnbindTxn txn) {
   // stop irq thread
   irq_.destroy();

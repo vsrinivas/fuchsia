@@ -43,6 +43,7 @@ bool operator==(const sdio_rw_txn_t& lhs, const sdio_rw_txn_t& rhs) {
   return (lhs.addr == rhs.addr && lhs.data_size == rhs.data_size && lhs.incr == rhs.incr &&
           lhs.write == rhs.write && lhs.buf_offset == rhs.buf_offset);
 }
+bool operator==(const sdio_rw_txn_new_t& lhs, const sdio_rw_txn_new_t& rhs) { return false; }
 
 zx_status_t get_wifi_metadata(struct brcmf_bus* bus, void* data, size_t exp_size, size_t* actual) {
   return device_get_metadata(bus->bus_priv.sdio->drvr->zxdev, DEVICE_METADATA_WIFI_CONFIG, data,

@@ -4,6 +4,7 @@
 
 library ddk.protocol.sdio;
 
+using ddk.protocol.sdmmc;
 using zx;
 
 const uint8 SDIO_FN_1 = 1;
@@ -53,6 +54,15 @@ struct SdioHwInfo {
     uint32 host_max_transfer_size;
 };
 
+struct SdioRwTxnNew {
+    uint32 addr;
+    uint32 data_size;
+    bool incr;
+    bool write;
+
+    vector<ddk.protocol.sdmmc.SdmmcBufferRegion> buffers;
+};
+
 struct SdioRwTxn {
     uint32 addr;
     uint32 data_size;
@@ -86,4 +96,10 @@ protocol Sdio {
     IntrPending() -> (zx.status s, bool pending);
     /// Reads or writes to a vendor CCCR register. addr must be in [0xF0, 0xFF].
     DoVendorControlRwByte(bool write, uint8 addr, uint8 write_byte) -> (zx.status s, uint8 read_byte);
+
+    // See ddk.protocol.sdmmc.
+    RegisterVmo(uint32 vmo_id, handle<vmo> vmo, uint64 offset, uint64 size) -> (zx.status status);
+    UnregisterVmo(uint32 vmo_id) -> (zx.status status, handle<vmo> vmo);
+
+    DoRwTxnNew(SdioRwTxnNew txn) -> (zx.status status);
 };

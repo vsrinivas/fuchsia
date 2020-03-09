@@ -809,6 +809,19 @@ zx_status_t MtkSdmmc::SdmmcRegisterInBandInterrupt(
   return ZX_OK;
 }
 
+zx_status_t MtkSdmmc::SdmmcRegisterVmo(uint32_t vmo_id, zx::vmo vmo, uint64_t offset,
+                                       uint64_t size) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t MtkSdmmc::SdmmcUnregisterVmo(uint32_t vmo_id, zx::vmo* out_vmo) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t MtkSdmmc::SdmmcRequestNew(const sdmmc_req_new_t* req, uint32_t out_response[4]) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
 bool MtkSdmmc::CmdDone(const MsdcInt& msdc_int) {
   if (req_->cmd_flags & SDMMC_RESP_LEN_136) {
     req_->response[0] = SdcResponse::Get(0).ReadFrom(&mmio_).response();

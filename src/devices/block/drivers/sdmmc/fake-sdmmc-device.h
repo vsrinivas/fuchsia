@@ -134,6 +134,13 @@ class FakeSdmmcDevice : public ddk::SdmmcProtocol<FakeSdmmcDevice> {
 
   zx_status_t SdmmcRequest(sdmmc_req_t* req);
   zx_status_t SdmmcRegisterInBandInterrupt(const in_band_interrupt_protocol_t* interrupt_cb);
+  zx_status_t SdmmcRegisterVmo(uint32_t vmo_id, zx::vmo vmo, uint64_t offset, uint64_t size) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  zx_status_t SdmmcUnregisterVmo(uint32_t vmo_id, zx::vmo* out_vmo) { return ZX_ERR_NOT_SUPPORTED; }
+  zx_status_t SdmmcRequestNew(const sdmmc_req_new_t* req, uint32_t out_response[4]) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
 
   std::vector<uint8_t> Read(size_t address, size_t size, uint8_t func = 0);
   void Write(size_t address, fbl::Span<const uint8_t> data, uint8_t func = 0);

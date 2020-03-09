@@ -65,6 +65,9 @@ class MtkSdmmc : public DeviceType, public ddk::SdmmcProtocol<MtkSdmmc, ddk::bas
   zx_status_t SdmmcPerformTuning(uint32_t cmd_idx);
   zx_status_t SdmmcRequest(sdmmc_req_t* req);
   zx_status_t SdmmcRegisterInBandInterrupt(const in_band_interrupt_protocol_t* interrupt_cb);
+  zx_status_t SdmmcRegisterVmo(uint32_t vmo_id, zx::vmo vmo, uint64_t offset, uint64_t size);
+  zx_status_t SdmmcUnregisterVmo(uint32_t vmo_id, zx::vmo* out_vmo);
+  zx_status_t SdmmcRequestNew(const sdmmc_req_new_t* req, uint32_t out_response[4]);
 
   // Visible for testing.
   MtkSdmmc(zx_device_t* parent, ddk::MmioBuffer mmio, zx::bti bti, const sdmmc_host_info_t& info,

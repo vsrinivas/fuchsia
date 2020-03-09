@@ -33,6 +33,44 @@ enum SdmmcTiming : uint8 {
     MAX = 10;
 };
 
+/// The number of VMOs that may be registered at one time. This is an arbitrary limit set to
+/// simplify VMO management by implementers of the protocol.
+const uint64 MAX_REGISTERED_VMOS = 16;
+
+union SdmmcBuffer {
+    /// The ID of a VMO that was previously registered.
+    uint32 vmo_id;
+    /// An unregistered VMO of which the protocol implementation does not take ownership. The VMO is
+    /// pinned upon entering Request and is unpinned before returning.
+    handle<vmo> vmo;
+};
+
+enum SdmmcBufferType : uint32 {
+    VMO_ID = 1;
+    VMO_HANDLE = 2;
+};
+
+struct SdmmcBufferRegion {
+    SdmmcBuffer buffer;
+    SdmmcBufferType type;
+    /// Offset into the VMO to start reading or writing. This is relative to the offset passed to
+    /// RegisterVmo if type is VMO_ID.
+    uint64 offset;
+    /// Number of bytes to read from or write to this buffer region.
+    uint64 size;
+};
+
+struct SdmmcReqNew {
+    uint32 cmd_idx;
+    uint32 cmd_flags;
+    uint32 arg;
+
+    uint32 blockcount;
+    uint32 blocksize;
+
+    vector<SdmmcBufferRegion> buffers;
+};
+
 /// number of pages per request - 2M per request
 /// matches DMA_DESC_COUNT in dev/block/sdhci
 /// (PAGE_SIZE / sizeof(zx_paddr_t))
@@ -87,6 +125,8 @@ struct SdmmcHostInfo {
     /// Maximum data request size
     uint64 max_transfer_size;
     uint64 max_transfer_size_non_dma;
+    /// The number of buffer regions that may be used in a single request.
+    uint64 max_buffer_regions;
     /// Host specific preferences
     uint64 prefs;
 };
@@ -115,4 +155,20 @@ protocol Sdmmc {
     /// Issue a request.
     Request(SdmmcReq? req) -> (zx.status s);
     RegisterInBandInterrupt(InBandInterrupt? interrupt_cb) -> (zx.status s);
+
+    /// In the methods below, vmo_id is used to uniquely identify a VMO that will be passed to
+    /// Request in an SdmmcBufferRegion. VMO IDs are chosen by the caller, and may be any uint32
+    /// value.
+
+    /// Registers a VMO and transfers ownership to the protocol implementation. The implementation
+    /// may map vmo with ZX_VM_PERM_READ and ZX_VM_PERM_WRITE and/or pin it with ZX_BTI_PERM_READ
+    /// and ZX_BTI_PERM_WRITE. The implementation may pin vmo during this call or any time it is
+    /// used in a request, and may keep it pinned until the VMO is unregistered.
+    RegisterVmo(uint32 vmo_id, handle<vmo> vmo, uint64 offset, uint64 size) -> (zx.status status);
+    /// The callee unmaps/unpins the VMO and returns ownership to the caller.
+    UnregisterVmo(uint32 vmo_id) -> (zx.status status, handle<vmo> vmo);
+
+    /// Perform the request. The protocol implementation chooses whether or not to use DMA depending
+    /// on the properties of the request and the capabilities of the controller.
+    RequestNew(SdmmcReqNew req) -> (zx.status status, array<uint32>:4 response);
 };

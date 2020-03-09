@@ -243,4 +243,17 @@ void SdioFunctionDevice::DoVendorControlRwByte(bool write, uint8_t addr, uint8_t
   completer.ReplySuccess(write_byte);
 }
 
+zx_status_t SdioFunctionDevice::SdioRegisterVmo(uint32_t vmo_id, zx::vmo vmo, uint64_t offset,
+                                                uint64_t size) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t SdioFunctionDevice::SdioUnregisterVmo(uint32_t vmo_id, zx::vmo* out_vmo) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t SdioFunctionDevice::SdioDoRwTxnNew(const sdio_rw_txn_new_t* txn) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
 }  // namespace sdmmc

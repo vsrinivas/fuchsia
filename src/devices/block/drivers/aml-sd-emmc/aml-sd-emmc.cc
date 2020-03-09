@@ -917,6 +917,19 @@ zx_status_t AmlSdEmmc::SdmmcPerformTuning(uint32_t tuning_cmd_idx) {
   return ZX_OK;
 }
 
+zx_status_t AmlSdEmmc::SdmmcRegisterVmo(uint32_t vmo_id, zx::vmo vmo, uint64_t offset,
+                                        uint64_t size) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t AmlSdEmmc::SdmmcUnregisterVmo(uint32_t vmo_id, zx::vmo* out_vmo) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t AmlSdEmmc::SdmmcRequestNew(const sdmmc_req_new_t* req, uint32_t out_response[4]) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
 zx_status_t AmlSdEmmc::Init() {
   dev_info_.caps = SDMMC_HOST_CAP_BUS_WIDTH_8 | SDMMC_HOST_CAP_VOLTAGE_330 | SDMMC_HOST_CAP_SDR104 |
                    SDMMC_HOST_CAP_SDR50 | SDMMC_HOST_CAP_DDR50;
