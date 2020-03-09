@@ -17,6 +17,7 @@
             "fuchsia.factory.PlayReadyFactoryStoreProvider",
             "fuchsia.factory.WeaveFactoryStoreProvider",
             "fuchsia.factory.WidevineFactoryStoreProvider",
+            "fuchsia.hardware.power.statecontrol.Admin",
             "fuchsia.hwinfo.Device",
             "fuchsia.hwinfo.Product",
             "fuchsia.hwinfo.Board",

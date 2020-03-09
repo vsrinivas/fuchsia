@@ -90,6 +90,7 @@ rustc_library("lib") {
     "//third_party/rust_crates:uuid",
     "//third_party/rust_crates:void",
     "//zircon/system/fidl/fuchsia-hardware-ethernet:fuchsia-hardware-ethernet-rustc",
+    "//zircon/system/fidl/fuchsia-hardware-power-statecontrol:fuchsia-hardware-power-statecontrol-rustc",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
     "//zircon/system/fidl/fuchsia-mem:fuchsia-mem-rustc",
     "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",

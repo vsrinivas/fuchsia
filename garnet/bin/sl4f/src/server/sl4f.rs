@@ -43,6 +43,9 @@ use crate::factory_store::facade::FactoryStoreFacade;
 // File related includes
 use crate::file::facade::FileFacade;
 
+// Device Manager related includes
+use crate::hardware_power_statecontrol::facade::HardwarePowerStatecontrolFacade;
+
 // Hwinfo related includes
 use crate::hwinfo::facade::HwinfoFacade;
 
@@ -117,6 +120,7 @@ impl Sl4f {
                 "file_facade" => FileFacade::new(),
                 "gatt_client_facade" => GattClientFacade::new(),
                 "gatt_server_facade" => GattServerFacade::new(),
+                "hardware_power_statecontrol_facade" => HardwarePowerStatecontrolFacade::new(),
                 "hwinfo_facade" => HwinfoFacade::new(),
                 "location_regulatory_region_facade" => RegulatoryRegionFacade::new()?,
                 "logging_facade" => LoggingFacade::new(),
