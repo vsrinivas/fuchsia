@@ -30,13 +30,6 @@ OutputPipeline::OutputPipeline(const PipelineConfig& config, const Format& outpu
   stream_ = CreateMixStage(
       config.root(), output_format, max_block_size_frames,
       fbl::MakeRefCounted<VersionedTimelineFunction>(ref_clock_to_fractional_frame), &usage_mask);
-  static constexpr uint32_t kAllUsages = 1 << static_cast<uint32_t>(RenderUsage::BACKGROUND) |
-                                         1 << static_cast<uint32_t>(RenderUsage::MEDIA) |
-                                         1 << static_cast<uint32_t>(RenderUsage::INTERRUPTION) |
-                                         1 << static_cast<uint32_t>(RenderUsage::SYSTEM_AGENT) |
-                                         1 << static_cast<uint32_t>(RenderUsage::COMMUNICATION);
-  FX_CHECK(usage_mask == kAllUsages)
-      << "Pipeline does not cover all usages (" << usage_mask << " vs " << kAllUsages << ")";
 }
 
 std::shared_ptr<Mixer> OutputPipeline::AddInput(std::shared_ptr<Stream> stream,
@@ -69,7 +62,7 @@ std::shared_ptr<Stream> OutputPipeline::CreateMixStage(
                                           ref_clock_to_fractional_frame);
   for (const auto& usage : spec.input_streams) {
     auto mask = 1 << static_cast<uint32_t>(usage);
-    FX_CHECK((*usage_mask & mask) == 0);
+    FX_DCHECK((*usage_mask & mask) == 0);
     *usage_mask |= mask;
   }
 
