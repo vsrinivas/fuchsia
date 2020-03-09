@@ -132,6 +132,10 @@ TEST_F(MbrDeviceTest, DdkLifecycle) {
   device1->DdkAsyncRemove();
 
   EXPECT_TRUE(ddk_.Ok());
+
+  // Delete the object, which means this test should not leak.
+  device0->DdkRelease();
+  device1->DdkRelease();
 }
 
 }  // namespace mbr
