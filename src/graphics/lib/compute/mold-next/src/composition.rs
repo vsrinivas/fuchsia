@@ -29,12 +29,10 @@ macro_rules! take_builder {
 pub struct Composition {
     builder: Option<LinesBuilder>,
     rasterizer: Rasterizer,
-    actual_len: usize,
     layers: FxHashMap<u16, Layer>,
     layer_ids: LayerIdSet,
     orders_to_layers: FxHashMap<u16, u16>,
-    lengths: FxHashMap<u16, usize>,
-    layout: Option<BufferLayout>,
+    layouts: FxHashMap<(*mut [u8; 4], usize), BufferLayout>,
 }
 
 impl Composition {
@@ -43,30 +41,15 @@ impl Composition {
         Self {
             builder: Some(LinesBuilder::new()),
             rasterizer: Rasterizer::new(),
-            actual_len: 0,
             layers: FxHashMap::default(),
             layer_ids: LayerIdSet::new(),
             orders_to_layers: FxHashMap::default(),
-            lengths: FxHashMap::default(),
-            layout: None,
+            layouts: FxHashMap::default(),
         }
     }
 
     fn builder(&mut self) -> &mut LinesBuilder {
         self.builder.as_mut().expect("Composition::builder should not be None")
-    }
-
-    fn try_compact(&mut self) {
-        if self.builder().len() >= self.actual_len * LINES_GARBAGE_THRESHOLD {
-            take_builder!(self, |mut builder: LinesBuilder| {
-                builder.retain(|layer| {
-                    self.layers.get(&layer).map(|layer| layer.inner.is_enabled).unwrap_or_default()
-                });
-                builder
-            });
-
-            self.layers.retain(|_, layer| layer.inner.is_enabled);
-        }
     }
 
     pub fn create_layer(&mut self) -> Option<LayerId> {
@@ -87,11 +70,12 @@ impl Composition {
             len += 1;
         }
 
-        self.actual_len += len;
-        self.lengths.entry(layer_id.0).and_modify(|current_len| *current_len += len).or_insert(len);
-
         let layer = self.layers.entry(layer_id.0).or_default();
+
         layer.inner.order = Some(layer_id.0);
+        layer.inner.is_enabled = true;
+        layer.len += len;
+
         layer
     }
 
@@ -108,20 +92,6 @@ impl Composition {
         transform: &[f32; 9],
     ) -> &mut Layer {
         self.insert_segments(layer_id, path.transformed(transform))
-    }
-
-    #[inline]
-    pub fn remove_layer(&mut self, layer_id: LayerId) {
-        self.layer_ids.remove(layer_id);
-
-        if let Some(layer) = self.layers.get_mut(&layer_id.0) {
-            layer.inner.is_enabled = false;
-        }
-
-        if let Some(len) = self.lengths.remove(&layer_id.0) {
-            self.actual_len -= len;
-            self.try_compact();
-        }
     }
 
     #[inline]
@@ -144,7 +114,37 @@ impl Composition {
         self.layers.values_mut()
     }
 
+    fn actual_len(&self) -> usize {
+        self.layers
+            .values()
+            .filter_map(|layer| if layer.inner.is_enabled { Some(layer.len) } else { None })
+            .sum()
+    }
+
+    #[inline]
+    pub fn remove_disabled(&mut self) {
+        if self.builder().len() >= self.actual_len() * LINES_GARBAGE_THRESHOLD {
+            take_builder!(self, |mut builder: LinesBuilder| {
+                builder.retain(|layer| {
+                    self.layers.get(&layer).map(|layer| layer.inner.is_enabled).unwrap_or_default()
+                });
+                builder
+            });
+
+            let layer_ids = &mut self.layer_ids;
+            self.layers.retain(|&layer_id, layer| {
+                if !layer.inner.is_enabled {
+                    layer_ids.remove(LayerId(layer_id));
+                }
+
+                layer.inner.is_enabled
+            });
+        }
+    }
+
     pub fn render(&mut self, mut buffer: Buffer<'_>, background_color: [u8; 4]) {
+        self.remove_disabled();
+
         for (layer_id, layer) in &self.layers {
             if layer.inner.is_enabled {
                 self.orders_to_layers.insert(
@@ -154,10 +154,10 @@ impl Composition {
             }
         }
 
-        let layout = self.layout.get_or_insert_with(|| buffer.generate_layout());
-        if !layout.same_buffer(buffer.buffer) {
-            *layout = buffer.generate_layout();
-        }
+        let layout = self
+            .layouts
+            .entry((buffer.buffer.as_mut_ptr(), buffer.buffer.len()))
+            .or_insert_with(|| buffer.generate_layout());
 
         let layers = &self.layers;
         let orders_to_layers = &self.orders_to_layers;
@@ -312,27 +312,27 @@ mod tests {
 
         assert_eq!(buffer, [RED, RED, RED, RED]);
         assert_eq!(composition.builder().len(), 16);
-        assert_eq!(composition.actual_len, 16);
+        assert_eq!(composition.actual_len(), 16);
 
         buffer = [GREEN; 4];
 
-        composition.remove_layer(layer_id0);
+        composition.get_mut(layer_id0).unwrap().disable();
 
         composition.render(Buffer { buffer: &mut buffer, width: 3, width_stride: None }, GREEN);
 
         assert_eq!(buffer, [GREEN, RED, RED, RED]);
         assert_eq!(composition.builder().len(), 16);
-        assert_eq!(composition.actual_len, 12);
+        assert_eq!(composition.actual_len(), 12);
 
         buffer = [GREEN; 4];
 
-        composition.remove_layer(layer_id2);
+        composition.get_mut(layer_id2).unwrap().disable();
 
         composition.render(Buffer { buffer: &mut buffer, width: 3, width_stride: None }, GREEN);
 
         assert_eq!(buffer, [GREEN, RED, GREEN, GREEN]);
         assert_eq!(composition.builder().len(), 4);
-        assert_eq!(composition.actual_len, 4);
+        assert_eq!(composition.actual_len(), 4);
     }
 
     #[test]
@@ -344,14 +344,14 @@ mod tests {
             .insert_in_layer(layer_id, &pixel_path(0, 0))
             .set_style(Style { fill: Fill::Solid(RED), ..Default::default() });
 
-        assert_eq!(composition.actual_len, 4);
+        assert_eq!(composition.actual_len(), 4);
 
-        composition.remove_layer(layer_id);
+        composition.get_mut(layer_id).unwrap().disable();
 
-        assert_eq!(composition.actual_len, 0);
+        assert_eq!(composition.actual_len(), 0);
 
-        composition.remove_layer(layer_id);
+        composition.get_mut(layer_id).unwrap().disable();
 
-        assert_eq!(composition.actual_len, 0);
+        assert_eq!(composition.actual_len(), 0);
     }
 }

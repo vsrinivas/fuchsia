@@ -1,33 +1,27 @@
-use std::{
-    iter, mem,
-    ops::{Add, RangeBounds},
-    u32,
-};
-
-use euclid::{Point2D, Rect, Size2D, Transform2D, Vector2D};
-use fuchsia_framebuffer::PixelFormat;
-
+pub use crate::render::generic::{BlendMode, Fill, FillRule, Style};
 use crate::{
     render::generic::{
         self, mold::*, spinel::*, Context as _, PathBuilder as _, Raster as _, RasterBuilder as _,
     },
     Color, Point, ViewAssistantContext,
 };
-
-pub use crate::render::generic::{BlendMode, Fill, FillRule, Style};
-
+use euclid::{Point2D, Rect, Size2D, Transform2D, Vector2D};
+use fuchsia_framebuffer::PixelFormat;
+use std::{
+    iter, mem,
+    ops::{Add, RangeBounds},
+    u32,
+};
 /// Rendering context and API start point.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Image {
     inner: ImageInner,
 }
-
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 enum ImageInner {
     Mold(MoldImage),
     Spinel(SpinelImage),
 }
-
 /// Rectangular copy region.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct CopyRegion {
@@ -38,7 +32,6 @@ pub struct CopyRegion {
     /// Size of both source and destination rectangles.
     pub extent: Size2D<u32>,
 }
-
 /// Rendering extensions.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct RenderExt {
@@ -49,14 +42,12 @@ pub struct RenderExt {
     /// Copies from render image to destination image after rendering.
     pub post_copy: Option<PostCopy>,
 }
-
 /// Pre-render image clear.
 #[derive(Clone, Debug, PartialEq)]
 pub struct PreClear {
     /// Clear color.
     pub color: Color,
 }
-
 /// Pre-render image copy.
 #[derive(Clone, Debug, PartialEq)]
 pub struct PreCopy {
@@ -65,7 +56,6 @@ pub struct PreCopy {
     /// Copy region properties.
     pub copy_region: CopyRegion,
 }
-
 /// Post-render image copy.
 #[derive(Clone, Debug, PartialEq)]
 pub struct PostCopy {
@@ -78,19 +68,16 @@ pub struct PostCopy {
     /// Copy region properties.
     pub copy_region: CopyRegion,
 }
-
 /// Rendering context and API start point.
 #[derive(Debug)]
 pub struct Context {
     pub(crate) inner: ContextInner,
 }
-
 #[derive(Debug)]
 pub(crate) enum ContextInner {
     Mold(MoldContext),
     Spinel(SpinelContext),
 }
-
 impl Context {
     /// Returns the context's pixel format.
     pub fn pixel_format(&self) -> PixelFormat {
@@ -99,7 +86,6 @@ impl Context {
             ContextInner::Spinel(context) => context.pixel_format(),
         }
     }
-
     /// Optionally returns a `PathBuilder`. May return `None` of old builder is still alive.
     pub fn path_builder(&self) -> Option<PathBuilder> {
         match &self.inner {
@@ -111,7 +97,6 @@ impl Context {
                 .map(|path_builder| PathBuilder { inner: PathBuilderInner::Spinel(path_builder) }),
         }
     }
-
     /// Optionally returns a `RasterBuilder`. May return `None` of old builder is still alive.
     pub fn raster_builder(&self) -> Option<RasterBuilder> {
         match &self.inner {
@@ -123,7 +108,6 @@ impl Context {
             }),
         }
     }
-
     /// Creates a new image with `size`.
     pub fn new_image(&mut self, size: Size2D<u32>) -> Image {
         match &mut self.inner {
@@ -135,7 +119,6 @@ impl Context {
             }
         }
     }
-
     /// Returns the image at `image_index`.
     pub fn get_image(&mut self, image_index: u32) -> Image {
         match &mut self.inner {
@@ -147,7 +130,6 @@ impl Context {
             }
         }
     }
-
     /// Returns the `context`'s current image.
     pub fn get_current_image(&mut self, context: &ViewAssistantContext<'_>) -> Image {
         match &mut self.inner {
@@ -159,7 +141,6 @@ impl Context {
             }
         }
     }
-
     /// Flushes the buffering backing the `image`.
     pub fn flush_image(&mut self, image: Image) {
         match &mut self.inner {
@@ -179,7 +160,6 @@ impl Context {
             }
         }
     }
-
     /// Renders the composition with an optional clip to the image.
     pub fn render(
         &mut self,
@@ -197,7 +177,6 @@ impl Context {
             ext,
         );
     }
-
     /// Renders the composition with a clip to the image.
     pub fn render_with_clip(
         &mut self,
@@ -241,22 +220,17 @@ impl Context {
                             },
                         }),
                     };
-
                     composition.with_inner_layers(|layers| {
-                        let (layers, old_layer_ids) = match layers {
-                            Layers::Mold(layers, old_layer_ids) => (layers, old_layer_ids),
-                            Layers::Empty => (vec![], Rc::new(RefCell::new(vec![]))),
-                            _ => panic!("mismatched backends"),
-                        };
-
                         let composition = MoldComposition {
-                            layers,
-                            old_layer_ids,
+                            layers: match layers {
+                                Layers::Mold(layers) => layers,
+                                Layers::Empty => vec![],
+                                _ => panic!("mismatched backends"),
+                            },
                             background_color: composition.background_color,
                         };
-
                         context.render_with_clip(&composition, clip, image, &ext);
-                        Layers::Mold(composition.layers, composition.old_layer_ids)
+                        Layers::Mold(composition.layers)
                     });
                 } else {
                     panic!("mismatched backends");
@@ -296,7 +270,6 @@ impl Context {
                             },
                         }),
                     };
-
                     composition.with_inner_layers(|layers| {
                         let composition = SpinelComposition {
                             layers: match layers {
@@ -306,7 +279,6 @@ impl Context {
                             },
                             background_color: composition.background_color.to_f32(),
                         };
-
                         context.render_with_clip(&composition, clip, image, &ext);
                         Layers::Spinel(composition.layers)
                     });
@@ -317,31 +289,26 @@ impl Context {
         }
     }
 }
-
 /// Closed path built by a `PathBuilder`.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Path {
     inner: PathInner,
 }
-
 #[derive(Clone, Debug, Eq, PartialEq)]
 enum PathInner {
     Mold(MoldPath),
     Spinel(SpinelPath),
 }
-
 /// Builds one closed path.
 #[derive(Debug)]
 pub struct PathBuilder {
     inner: PathBuilderInner,
 }
-
 #[derive(Debug)]
 enum PathBuilderInner {
     Mold(MoldPathBuilder),
     Spinel(SpinelPathBuilder),
 }
-
 impl PathBuilder {
     /// Move end-point to.
     pub fn move_to(&mut self, point: Point) -> &mut Self {
@@ -355,7 +322,6 @@ impl PathBuilder {
         }
         self
     }
-
     /// Create line from end-point to point and update end-point.
     pub fn line_to(&mut self, point: Point) -> &mut Self {
         match &mut self.inner {
@@ -368,7 +334,6 @@ impl PathBuilder {
         }
         self
     }
-
     /// Create quadratic Bézier from end-point to `p2` with `p1` as control point.
     pub fn quad_to(&mut self, p1: Point, p2: Point) -> &mut Self {
         match &mut self.inner {
@@ -381,7 +346,6 @@ impl PathBuilder {
         }
         self
     }
-
     /// Create cubic Bézier from end-point to `p3` with `p1` and `p2` as control points.
     pub fn cubic_to(&mut self, p1: Point, p2: Point, p3: Point) -> &mut Self {
         match &mut self.inner {
@@ -394,7 +358,6 @@ impl PathBuilder {
         }
         self
     }
-
     /// Closes the path with a line if not yet closed and builds the path.
     ///
     /// Consumes the builder; another one can be requested from the `Context`.
@@ -409,19 +372,16 @@ impl PathBuilder {
         }
     }
 }
-
 /// Raster built by a `RasterBuilder`.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Raster {
     inner: RasterInner,
 }
-
 #[derive(Clone, Debug, Eq, PartialEq)]
 enum RasterInner {
     Mold(MoldRaster),
     Spinel(SpinelRaster),
 }
-
 impl Raster {
     /// Translate raster.
     pub fn translate(self, translation: Vector2D<i32>) -> Self {
@@ -435,10 +395,8 @@ impl Raster {
         }
     }
 }
-
 impl Add for Raster {
     type Output = Self;
-
     fn add(self, other: Self) -> Self::Output {
         match self.inner {
             RasterInner::Mold(raster) => Raster {
@@ -458,25 +416,21 @@ impl Add for Raster {
         }
     }
 }
-
 /// Builds one Raster.
 #[derive(Debug)]
 pub struct RasterBuilder {
     inner: RasterBuilderInner,
 }
-
 #[derive(Debug)]
 enum RasterBuilderInner {
     Mold(MoldRasterBuilder),
     Spinel(SpinelRasterBuilder),
 }
-
 impl RasterBuilder {
     /// Add a path to the raster with optional transform.
     pub fn add(&mut self, path: &Path, transform: Option<&Transform2D<f32>>) -> &mut Self {
         self.add_with_transform(path, transform.unwrap_or(&Transform2D::identity()))
     }
-
     /// Add a path to the raster with transform.
     pub fn add_with_transform(&mut self, path: &Path, transform: &Transform2D<f32>) -> &mut Self {
         match &mut self.inner {
@@ -497,7 +451,6 @@ impl RasterBuilder {
         }
         self
     }
-
     /// Builds the raster.
     ///
     /// Consumes the builder; another one can be requested from the `Context`.
@@ -512,7 +465,6 @@ impl RasterBuilder {
         }
     }
 }
-
 #[derive(Clone, Debug)]
 pub struct Layer {
     /// Layer raster.
@@ -520,33 +472,26 @@ pub struct Layer {
     /// Layer style.
     pub style: Style, // Will also contain txty when available.
 }
-
 #[derive(Clone, Debug)]
 /// A group of ordered layers.
 pub struct Composition {
     layers: Layers,
     background_color: Color,
 }
-
-use std::{cell::RefCell, rc::Rc};
-
 #[derive(Clone, Debug)]
 enum Layers {
-    Mold(Vec<generic::Layer<Mold>>, Rc<RefCell<Vec<mold_next::LayerId>>>),
+    Mold(Vec<generic::Layer<Mold>>),
     Spinel(Vec<generic::Layer<Spinel>>),
     Empty,
 }
-
 impl Composition {
     /// Creates a composition of ordered layers where the layers with lower index appear on top.
     pub fn new(background_color: Color) -> Self {
         Self::with_layers(iter::empty(), background_color)
     }
-
     /// Creates a composition using an initial set of layers.
     pub fn with_layers(layers: impl IntoIterator<Item = Layer>, background_color: Color) -> Self {
         let mut peekable = layers.into_iter().peekable();
-
         let layers = match peekable.peek() {
             Some(Layer { raster: Raster { inner: RasterInner::Mold(_) }, .. }) => Layers::Mold(
                 peekable
@@ -559,7 +504,6 @@ impl Composition {
                         style: layer.style,
                     })
                     .collect(),
-                Rc::new(RefCell::new(vec![])),
             ),
             Some(Layer { raster: Raster { inner: RasterInner::Spinel(_) }, .. }) => Layers::Spinel(
                 peekable
@@ -575,28 +519,20 @@ impl Composition {
             ),
             None => Layers::Empty,
         };
-
         Self { layers, background_color }
     }
-
     fn with_inner_layers(&self, mut f: impl FnMut(Layers) -> Layers) {
         let layers = unsafe { mem::transmute_copy(&self.layers) };
         mem::forget(f(layers))
     }
-
     /// Resets composition by removing all layers.
     pub fn clear(&mut self) {
         match &mut self.layers {
-            Layers::Mold(layers, old_layer_ids) => {
-                let mut old_layer_ids = old_layer_ids.borrow_mut();
-                old_layer_ids
-                    .extend(layers.drain(..).filter_map(|layer| layer.raster.layer_id.get()));
-            }
+            Layers::Mold(layers) => layers.clear(),
             Layers::Spinel(layers) => layers.clear(),
             Layers::Empty => (),
         }
     }
-
     /// Replaces the specified range in the composition with the given `with` iterator.
     /// `replace_with` does not need to be the same length as `range`.
     pub fn replace<R, I>(&mut self, range: R, with: I)
@@ -605,11 +541,10 @@ impl Composition {
         I: IntoIterator<Item = Layer>,
     {
         let mut iter = with.into_iter().peekable();
-
         if let Layers::Empty = self.layers {
             match iter.peek() {
                 Some(Layer { raster: Raster { inner: RasterInner::Mold(_) }, .. }) => {
-                    self.layers = Layers::Mold(vec![], Rc::new(RefCell::new(vec![])));
+                    self.layers = Layers::Mold(vec![]);
                 }
                 Some(Layer { raster: Raster { inner: RasterInner::Spinel(_) }, .. }) => {
                     self.layers = Layers::Spinel(vec![]);
@@ -617,24 +552,18 @@ impl Composition {
                 None => return,
             }
         }
-
         match &mut self.layers {
-            Layers::Mold(layers, old_layer_ids) => {
-                let mut old_layer_ids = old_layer_ids.borrow_mut();
-                old_layer_ids.extend(
-                    layers
-                        .splice(
-                            range,
-                            iter.map(|layer| generic::Layer {
-                                raster: if let RasterInner::Mold(raster) = layer.raster.inner {
-                                    raster
-                                } else {
-                                    panic!("mismatched backends");
-                                },
-                                style: layer.style,
-                            }),
-                        )
-                        .filter_map(|layer| layer.raster.layer_id.get()),
+            Layers::Mold(layers) => {
+                layers.splice(
+                    range,
+                    iter.map(|layer| generic::Layer {
+                        raster: if let RasterInner::Mold(raster) = layer.raster.inner {
+                            raster
+                        } else {
+                            panic!("mismatched backends");
+                        },
+                        style: layer.style,
+                    }),
                 );
             }
             Layers::Spinel(layers) => {

@@ -4,7 +4,7 @@
 
 use std::{cell::RefCell, collections::HashMap, mem, ptr, u32};
 
-use euclid::{Rect, Size2D};
+use euclid::{Rect, Size2D, Vector2D};
 use fidl::endpoints::{ClientEnd, ServerEnd};
 use fidl_fuchsia_sysmem::{
     AllocatorMarker, BufferCollectionConstraints, BufferCollectionSynchronousProxy,
@@ -14,6 +14,7 @@ use fidl_fuchsia_sysmem::{
 };
 use fuchsia_component::client::connect_to_service;
 use fuchsia_framebuffer::PixelFormat;
+use fuchsia_trace::duration;
 use fuchsia_zircon as zx;
 
 use crate::{
@@ -21,7 +22,7 @@ use crate::{
         mold::{
             image::VmoImage, Mold, MoldComposition, MoldImage, MoldPathBuilder, MoldRasterBuilder,
         },
-        Context, CopyRegion, PostCopy, PreClear, PreCopy, RenderExt,
+        BlendMode, Context, CopyRegion, Fill, FillRule, PostCopy, PreClear, PreCopy, RenderExt,
     },
     ViewAssistantContext,
 };
@@ -132,6 +133,7 @@ fn copy_region_to_image(
 
 #[derive(Debug)]
 pub struct MoldContext {
+    composition: mold_next::Composition,
     buffer_collection: BufferCollectionSynchronousProxy,
     size: Size2D<u32>,
     images: Vec<RefCell<VmoImage>>,
@@ -155,8 +157,107 @@ impl MoldContext {
             .set_constraints(true, &mut constraints)
             .expect("failed to set constraints on sysmem buffer");
 
-        Self { buffer_collection, size, images: vec![], index_map: HashMap::new() }
+        Self {
+            composition: mold_next::Composition::new(),
+            buffer_collection,
+            size,
+            images: vec![],
+            index_map: HashMap::new(),
+        }
     }
+}
+
+fn render_composition(
+    mold_composition: &mut mold_next::Composition,
+    composition: &MoldComposition,
+    buffer: mold_next::Buffer<'_>,
+    _clip: Rect<u32>,
+) {
+    let redo = ::std::time::Instant::now();
+    duration!("gfx", "render_composition");
+
+    // TODO(dtiselice): Use clip.
+
+    for layer in mold_composition.layers_mut() {
+        layer.disable();
+    }
+
+    for (order, layer) in composition.layers.iter().rev().enumerate() {
+        let mut option = layer.raster.layer_id.borrow_mut();
+        let layer_id = option
+            .filter(|&layer_id| mold_composition.get(layer_id).is_some())
+            .unwrap_or_else(|| {
+                let layer_id = mold_composition
+                    .create_layer()
+                    .expect(&format!("Layer limit reached. ({})", u16::max_value()));
+
+                for print in &layer.raster.prints {
+                    let transform: [f32; 9] = [
+                        print.transform.m11,
+                        print.transform.m21,
+                        print.transform.m31,
+                        print.transform.m12,
+                        print.transform.m22,
+                        print.transform.m32,
+                        0.0,
+                        0.0,
+                        1.0,
+                    ];
+                    mold_composition.insert_in_layer_transformed(
+                        layer_id,
+                        &*print.path,
+                        &transform,
+                    );
+                }
+
+                layer_id
+            });
+
+        *option = Some(layer_id);
+
+        let mold_layer =
+            mold_composition.get_mut(layer_id).unwrap().enable().set_order(order as u16).set_style(
+                mold_next::Style {
+                    fill_rule: match layer.style.fill_rule {
+                        FillRule::NonZero => mold_next::FillRule::NonZero,
+                        FillRule::EvenOdd => mold_next::FillRule::EvenOdd,
+                        // TODO(dtiselice): Implement WholeTile.
+                        FillRule::WholeTile => mold_next::FillRule::NonZero,
+                    },
+                    fill: match layer.style.fill {
+                        Fill::Solid(color) => {
+                            mold_next::Fill::Solid([color.b, color.g, color.r, color.a])
+                        }
+                    },
+                    blend_mode: match layer.style.blend_mode {
+                        BlendMode::Over => mold_next::BlendMode::Over,
+                    },
+                },
+            );
+
+        if layer.raster.translation != Vector2D::zero() {
+            mold_layer.set_transform(&[
+                1.0,
+                0.0,
+                0.0,
+                1.0,
+                layer.raster.translation.x,
+                layer.raster.translation.y,
+            ]);
+        }
+    }
+
+    mold_composition.render(
+        buffer,
+        [
+            composition.background_color.b,
+            composition.background_color.g,
+            composition.background_color.r,
+            composition.background_color.a,
+        ],
+    );
+
+    println!("time: {}ms", (std::time::Instant::now() - redo).as_micros() as f64 / 1000.0);
 }
 
 impl Context<Mold> for MoldContext {
@@ -257,7 +358,7 @@ impl Context<Mold> for MoldContext {
             );
         }
 
-        image.render(composition, clip);
+        render_composition(&mut self.composition, composition, image.as_buffer(), clip);
 
         // TODO: Motion blur support.
         if let Some(PostCopy { image: dst_image_id, copy_region, .. }) = ext.post_copy {

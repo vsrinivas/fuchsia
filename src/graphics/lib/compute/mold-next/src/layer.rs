@@ -97,13 +97,37 @@ impl LayerIdSet {
     }
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Debug, Default)]
 pub struct Layer {
     pub(crate) inner: surpass::Layer,
     style: Style,
+    pub(crate) len: usize,
 }
 
 impl Layer {
+    #[inline]
+    pub fn is_enabled(&self) -> bool {
+        self.inner.is_enabled
+    }
+
+    #[inline]
+    pub fn set_is_enabled(&mut self, is_enabled: bool) -> &mut Self {
+        self.inner.is_enabled = is_enabled;
+        self
+    }
+
+    #[inline]
+    pub fn disable(&mut self) -> &mut Self {
+        self.inner.is_enabled = false;
+        self
+    }
+
+    #[inline]
+    pub fn enable(&mut self) -> &mut Self {
+        self.inner.is_enabled = true;
+        self
+    }
+
     #[inline]
     pub fn transform(&self) -> &[f32; 6] {
         self.inner.affine_transform.as_ref().unwrap_or(IDENTITY)

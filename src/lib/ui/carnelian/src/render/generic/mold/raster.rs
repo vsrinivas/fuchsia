@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::{cell::Cell, ops::Add, rc::Rc};
+use std::{cell::RefCell, ops::Add, rc::Rc};
 
 use euclid::{Transform2D, Vector2D};
 use smallvec::{smallvec, SmallVec};
@@ -21,7 +21,7 @@ pub(crate) struct Print {
 #[derive(Clone, Debug)]
 pub struct MoldRaster {
     pub(crate) prints: SmallVec<[Print; 1]>,
-    pub(crate) layer_id: Cell<Option<mold_next::LayerId>>,
+    pub(crate) layer_id: Rc<RefCell<Option<mold_next::LayerId>>>,
     pub(crate) translation: Vector2D<f32>,
 }
 
@@ -53,7 +53,7 @@ impl Add for MoldRaster {
         }
 
         self.prints.extend(other.prints);
-        self.layer_id = Cell::new(None);
+        self.layer_id = Rc::new(RefCell::new(None));
         self
     }
 }
@@ -84,6 +84,10 @@ impl RasterBuilder<Mold> for MoldRasterBuilder {
     }
 
     fn build(self) -> MoldRaster {
-        MoldRaster { prints: self.prints, layer_id: Cell::new(None), translation: Vector2D::zero() }
+        MoldRaster {
+            prints: self.prints,
+            layer_id: Rc::new(RefCell::new(None)),
+            translation: Vector2D::zero(),
+        }
     }
 }
