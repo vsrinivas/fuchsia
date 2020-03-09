@@ -26,6 +26,9 @@ $ ./out/default/host_x64/cmc --help
 
 ## Testing
 
+Make sure the tests are added to your build by adding
+`--with //src/sys/cmc:tests` to your `fx set` invocation.
+
 Unit tests for cmc are available in the `cmc_bin_tests` binary, which can be
 invoked with the `fx run-host-tests` command:
 
