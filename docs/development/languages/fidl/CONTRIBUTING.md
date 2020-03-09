@@ -61,14 +61,15 @@ really well for doing remote work from your laptop.
 
   ```json
   "files.associations": {
-      "*.test.fidl.json.rs.golden": "rust",
-      "*.test.fidl.json.cc.golden": "cpp",
-      "*.test.fidl.json.h.golden": "cpp",
-      "*.test.fidl.json.llcpp.cc.golden": "cpp",
-      "*.test.fidl.json.llcpp.h.golden": "cpp",
-      "*.test.fidl.json.h.go.golden": "go",
-      "*.test.fidl.json_async.dart.golden": "dart",
-      "*.test.fidl.json_test.dart.golden": "dart"
+        "*.test.json.golden": "json",
+        "*.test.json.rs.golden": "rust",
+        "*.test.json.cc.golden": "cpp",
+        "*.test.json.h.golden": "cpp",
+        "*.test.json.llcpp.cc.golden": "cpp",
+        "*.test.json.llcpp.h.golden": "cpp",
+        "*.test.json.go.golden": "go",
+        "*.test.json_async.dart.golden": "dart",
+        "*.test.json_test.dart.golden": "dart"
   },
   ```
 
@@ -241,6 +242,18 @@ fx exec garnet/go/src/fidl/compiler/backend/typestest/regen.sh
 ```
 
 ### fidlgen_dart
+
+Build:
+
+```sh
+fx ninja -C out/default host_x64/fidlgen_dart
+```
+
+Run:
+
+```sh
+$FUCHSIA_DIR/out/default/host_x64/fidlgen_dart
+```
 
 Some example tests you can run:
 
@@ -454,6 +467,23 @@ The following requires: fx set bringup.x64 --with-base //garnet/packages/tests:z
 | dart fidlgen goldens                 | fx exec $FUCHSIA_DIR/topaz/bin/fidlgen_dart/regen.sh                        | garnet/go/src/fidl/compiler/backend/goldens                       | topaz/bin/fidlgen_dart/goldens                                                                                                                                                                                                                                                               |
 | dangerous identifiers                | garnet/tests/fidl-dangerous-identifiers/generate.py                         | garnet/tests/fidl-dangerous-identifiers/dangerous_identifiers.txt | garnet/tests/fidl-dangerous-identifiers/cpp/ garnet/tests/fidl-dangerous-identifiers/fidl/                                                                                                                                                                                                   |
 | regen third party go                 | fx exec $FUCHSIA_DIR/third_party/go/regen-fidl                              |                                                                   |                                                                                                                                                                                                                                                                                              |
+
+### Compiling with `ninja`
+
+In some cases, GN can build many unneeded targets. You can build a specific target with `ninja` instead of GN. In most cases, you can `grep` for the binary name to determine the `ninja` invocation.
+
+For example, you can `grep` for `fidlgen_dart`:
+
+```sh
+fx ninja -C out/default -t targets all | grep -e 'fidlgen_dart:'
+```
+
+This example outputs a list of ninja targets which includes `host_x64/fidlgen_dart`. Therefore, to
+build `fidlgen_dart` run the following ninja command:
+
+```sh
+fx ninja -C out/default host_x64/fidlgen_dart
+```
 
 ## Debugging (host)
 
