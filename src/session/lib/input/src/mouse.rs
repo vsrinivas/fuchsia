@@ -26,11 +26,11 @@ pub type MouseButton = u8;
 ///
 /// ```
 /// let mouse_device_event = input_device::InputDeviceEvent::Mouse({
-///     MouseEvent::new (
+///     MouseEvent {
 ///         movement: Position { x: 40.0, y: 20.0 },
 ///         phase: fidl_fuchsia_ui_input::PointerEventPhase::Move,
 ///         buttons: 1,
-///     )
+///     }
 /// });
 /// ```
 #[derive(Clone, Debug, PartialEq)]
@@ -43,20 +43,6 @@ pub struct MouseEvent {
 
     /// The buttons relevant to this event.
     pub buttons: HashSet<MouseButton>,
-}
-
-impl MouseEvent {
-    pub fn new(
-        movement: Position,
-        phase: fidl_fuchsia_ui_input::PointerEventPhase,
-        buttons: HashSet<MouseButton>,
-    ) -> Self {
-        Self { movement, phase, buttons }
-    }
-
-    pub fn movement(&self) -> Position {
-        self.movement
-    }
 }
 
 /// A [`MouseBinding`] represents a connection to a mouse input device.

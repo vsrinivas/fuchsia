@@ -61,25 +61,6 @@ pub struct TouchContact {
     pub contact_size: Option<Size>,
 }
 
-impl TouchContact {
-    pub fn new(
-        id: u32,
-        position: Position,
-        pressure: Option<i64>,
-        contact_size: Option<Size>,
-    ) -> Self {
-        Self { id, position, pressure, contact_size }
-    }
-
-    pub fn position(&self) -> Position {
-        self.position
-    }
-
-    pub fn contact_size(&self) -> Option<Size> {
-        self.contact_size
-    }
-}
-
 impl Eq for TouchContact {}
 
 impl From<&fidl_fuchsia_input_report::ContactInputReport> for TouchContact {

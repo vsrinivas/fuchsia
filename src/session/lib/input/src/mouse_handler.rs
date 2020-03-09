@@ -86,23 +86,6 @@ impl MouseHandler {
         }
     }
 
-    /// Creates a new [`MouseHandler `] that sends pointer events to Scenic and tracks cursor
-    /// position.
-    ///
-    /// # Parameters
-    /// - `max_position`: The maximum position, used to bound events sent to clients.
-    /// - `position_sender`: A [`Sender`] used to communicate the current position.
-    /// - `scenic_session`: The Scenic session to send pointer events to.
-    /// - `scenic_compositor_id`: The Scenic compositor id to tag pointer events with.
-    pub fn new2(
-        max_position: Position,
-        position_sender: Option<Sender<Position>>,
-        scenic_session: scenic::SessionPtr,
-        scenic_compositor_id: u32,
-    ) -> MouseHandler {
-        Self::new(max_position, position_sender, scenic_session, scenic_compositor_id)
-    }
-
     /// Updates the current cursor position according to the received mouse event.
     ///
     /// The updated position is sent to a client via either `self.position_sender` or
@@ -113,7 +96,7 @@ impl MouseHandler {
     /// # Parameters
     /// - `mouse_event`: The mouse event to use to update the cursor location.
     async fn update_cursor_position(&mut self, mouse_event: &mouse::MouseEvent) {
-        if mouse_event.movement.x == 0.0 && mouse_event.movement.y == 0.0 {
+        if mouse_event.movement == Position::zero() {
             return;
         }
 

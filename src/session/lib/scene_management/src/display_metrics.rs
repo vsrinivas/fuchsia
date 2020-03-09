@@ -104,8 +104,7 @@ impl DisplayMetrics {
     /// pixels, but it's unlikely to match the actual density of the display.
     ///
     /// # Parameters
-    /// - `width_in_pixels`: The width of the display, in pixels.
-    /// - `height_in_pixels`: The height of the display, in pixels.
+    /// - `size_in_pixels`: The size of the display, in pixels.
     /// - `density_in_pixels_per_mm`: The density of the display, in pixels per mm. If no density is
     /// provided, a best guess is made based on the width and height of the display.
     /// - `viewing_distance`: The expected viewing distance for the display (i.e., how far away the
@@ -151,15 +150,6 @@ impl DisplayMetrics {
             scale_in_pixels_per_pip,
             density_in_pips_per_mm,
         }
-    }
-
-    pub fn new2(
-        size_in_pixels: Size,
-        density_in_pixels_per_mm: Option<f32>,
-        viewing_distance: Option<ViewingDistance>,
-        display_rotation: Option<DisplayRotation>,
-    ) -> DisplayMetrics {
-        Self::new(size_in_pixels, density_in_pixels_per_mm, viewing_distance, display_rotation)
     }
 
     /// Computes and returns `scale_in_pixels_per_pip`.
@@ -305,6 +295,11 @@ impl DisplayMetrics {
     /// a 27 inch, 2K monitor. Used to set a default display pixel density.
     const MONITOR_27_IN_2K_DIMENSIONS: (u32, u32) = (2560, 1440);
 
+    /// Display densities are calculated by taking the pixels per inch and dividing that by 25.4
+    /// in order to convert that to pixels per millimeter. For example the Google Pixelbook Go is
+    /// 166 ppi. The result of converting that to millimeters is 6.53543307087. Rounding that to 4
+    /// decimal places is how the value of 6.5354 is calculated.
+
     /// The display pixel density used for an Acer Switch 12 Alpha.
     const ACER_SWITCH_12_ALPHA_DENSITY: f32 = 8.5;
 
@@ -312,7 +307,7 @@ impl DisplayMetrics {
     const GOOGLE_PIXELBOOK_DENSITY: f32 = 9.252;
 
     /// The display pixel density used for a Google Pixelbook Go with a 2K display.
-    const GOOGLE_PIXELBOOK_GO_2K_DENSITY: f32 = 6.5;
+    const GOOGLE_PIXELBOOK_GO_2K_DENSITY: f32 = 6.5354;
 
     /// The display pixel density used for a 24 inch 4K monitor.
     const MONITOR_24_IN_4K_DENSITY: f32 = 7.323761;

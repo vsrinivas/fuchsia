@@ -155,10 +155,6 @@ impl SceneManager for FlatSceneManager {
         self.cursor_node().set_translation(x, y, FlatSceneManager::CURSOR_DEPTH);
     }
 
-    fn set_cursor_location2(&mut self, location: ScreenCoordinates) {
-        self.set_cursor_location(location);
-    }
-
     fn set_cursor_shape(&mut self, shape: scenic::ShapeNode) {
         if !self.cursor_shape.is_none() {
             let current_shape = self.cursor_shape.as_ref().unwrap();
@@ -326,10 +322,5 @@ impl FlatSceneManager {
         }
 
         self.cursor_node.as_ref().unwrap()
-    }
-
-    /// Get the display size
-    pub fn display_size(&self) -> ScreenSize {
-        self.display_size
     }
 }

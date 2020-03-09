@@ -86,17 +86,6 @@ pub trait SceneManager: Sized {
     /// cursor will be created and added to the scene.
     fn set_cursor_location(&mut self, location: ScreenCoordinates);
 
-    /// Sets the location of the cursor in the current scene. If no cursor has been created it will
-    /// create one using default settings.
-    ///
-    /// # Parameters
-    /// - `location`: A [`ScreenCoordinates`] struct representing the cursor location.
-    ///
-    /// # Notes
-    /// If a custom cursor has not been set using `set_cursor_image` or `set_cursor_shape` a default
-    /// cursor will be created and added to the scene.
-    fn set_cursor_location2(&mut self, location: ScreenCoordinates);
-
     /// Sets the image to use for the scene's cursor.
     ///
     /// # Parameters

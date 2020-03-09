@@ -66,29 +66,7 @@ impl TouchHandler {
         scenic_compositor_id: u32,
         display_size: Size,
     ) -> Result<Self, Error> {
-        if display_size.width == 0.0 || display_size.height == 0.0 {
-            Err(format_err!("Display height: {} and width: {} are required to be non-zero."))
-        } else {
-            Ok(TouchHandler { scenic_session, scenic_compositor_id, display_size })
-        }
-    }
-
-    /// Creates a new touch handler that sends events to the given Scenic session.
-    ///
-    /// # Parameters
-    /// - `scenic_session`: The Scenic session to send events to.
-    /// - `scenic_compositor_id`: The compositor id to tag input events with.
-    /// - `display_size`: The size of the associated touch display,
-    /// used to convert coordinates into device coordinates. Width and Height must be non-zero.
-    ///
-    /// # Errors
-    /// If the display height or width is 0.
-    pub async fn new2(
-        scenic_session: scenic::SessionPtr,
-        scenic_compositor_id: u32,
-        display_size: Size,
-    ) -> Result<Self, Error> {
-        if display_size.width == 0.0 || display_size.height == 0.0 {
+        if display_size == Size::zero() {
             Err(format_err!("Display height: {} and width: {} are required to be non-zero."))
         } else {
             Ok(TouchHandler { scenic_session, scenic_compositor_id, display_size })
