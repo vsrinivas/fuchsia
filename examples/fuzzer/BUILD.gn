@@ -38,7 +38,11 @@ fuzzers_package("example_fuzzers") {
       fuzz_host = true
     },
     {
-      fuzzers = [ "rust:rust_fuzzer" ]
+      fuzzers = [
+        "rust:toy_example_arbitrary",
+        "rust:toy_example_raw_bytes",
+        "rust:toy_example_with_main",
+      ]
       sanitizers = [ "rust-asan" ]
     },
   ]

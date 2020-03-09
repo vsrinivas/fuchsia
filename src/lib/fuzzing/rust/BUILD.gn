@@ -2,9 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/rust/rustc_library.gni")
+import("//build/rust/rustc_macro.gni")
 
-rustc_library("fuchsia-fuzzing") {
-  version = "0.1.0"
-  edition = "2018"
+rustc_macro("fuzz") {
+  deps = [
+    "//third_party/rust_crates:arbitrary",
+    "//third_party/rust_crates:proc-macro2",
+    "//third_party/rust_crates:quote",
+    "//third_party/rust_crates:syn",
+  ]
 }

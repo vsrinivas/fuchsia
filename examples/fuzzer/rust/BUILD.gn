@@ -1,9 +1,61 @@
-# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_fuzzer.gni")
+import("//build/rust/rustc_library.gni")
 
-rustc_fuzzer("rust_fuzzer") {
-  edition = "2018"
+# Defaults should generally work if the fuzz target function name matches the
+# fuzzer name.
+rustc_fuzzer("toy_example_arbitrary") {
+}
+
+# If the fuzz target function name differs from the fuzzer name, provide it via
+# the `rustfunction` parameter.
+rustc_fuzzer("toy_example_raw_bytes") {
+  rustfunction = "toy_example_u8"
+}
+
+# If it is infeasible to refactor a Rust binary into a library, set the
+# `source_root` explicitly and conditionally exclude symbols like `main` from
+# compilation using `#[cfg(not(fuzz))]`.
+rustc_fuzzer("toy_example_with_main") {
+  source_root = "src/main.rs"
+  deps = [ ":helper" ]
+}
+
+# TODO
+rustc_library("helper") {
+  source_root = "helper/lib.rs"
+  deps = [ "//src/lib/fuzzing/rust:fuzz" ]
+}
+
+rustc_fuzzer("toy_example_same_name") {
+  deps = [ ":helper" ]
+}
+
+# Fake tool to demostrate that fuzzers can exist alongside Rust binaries.
+rustc_binary("toy_example_bin") {
+  name = "toy_example"
+  deps = [
+    ":helper",
+    "//src/lib/fuzzing/rust:fuzz",
+  ]
+}
+
+package("toy-example") {
+  deps = [ ":toy_example_bin" ]
+  meta = [
+    {
+      path = "meta/toy_example.cmx"
+      dest = "toy_example.cmx"
+    },
+  ]
+  binaries = [
+    {
+      name = "toy_example"
+    },
+  ]
 }

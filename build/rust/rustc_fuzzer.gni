@@ -10,14 +10,21 @@ import("//build/rust/rustc_staticlib.gni")
 # The template creates a Rust static library with fuzz target functions enabled
 # and provides it to the usual `fuzzer` template. This can create three
 # different outputs based on the toolchain variant applied to the target:
+#
 #   - If the toolchain variant is "rust-*san-fuzzer", this will build a fuzzer
 #     which instruments the Rust code of the target and its dependencies.
+#
 #   - If the toolchain variant is "*san-fuzzer", this will build a fuzzer which
 #     instruments the C/C++ code of the target and its dependencies.
+#
 #   - Otherwise, it will build an uninstrumented unit test that ensures the
 #     fuzzer code can build and link.
 #
 # Parameters:
+#
+#   rustfunction (optional)
+#     Name of the fuzz target function. Defaults to the GN target name.
+#     See also https://llvm.org/docs/LibFuzzer.html#fuzz-target.
 #
 #   version
 #   edition
@@ -35,38 +42,47 @@ import("//build/rust/rustc_staticlib.gni")
 # Example:
 #
 # In src/lib.rs:
-#   #[cfg(fuzz)]
-#   fn my_fuzz_target(data: &[u8]) { ... }
-#
-#   #[cfg(fuzz)]
-#   mod fuzz {
-#     use super::*;
-#     use fuchsia-fuzzing::declare_fuzzers;
-#     declare_fuzzers!(my_fuzz_target, ...);
-#   }
+#   fuzz!("my_fuzzer", (input: ArbitraryType), { ... });
 #
 # In BUILD.gn:
-#   rust_fuzzer("my_fuzzer") {
-#     edition = "2018"
-#   }
+#   rust_fuzzer("my_fuzzer") {}
 #
 template("rustc_fuzzer") {
   fuzzer_name = target_name
   fuzzer_lib = "${fuzzer_name}_lib"
+  fuzzer_cfg = "${fuzzer_name}_cfg"
+
+  rustfunction = target_name
+  if (defined(invoker.rustfunction)) {
+    rustfunction = invoker.rustfunction
+  }
+
+  config(fuzzer_cfg) {
+    visibility = [ ":*" ]
+    rustflags = [
+      "--cfg=fuzz",
+      "--cfg=fuzz_target=\"$rustfunction\"",
+    ]
+  }
+
   rustc_staticlib(fuzzer_lib) {
-    deps = []
     forward_variables_from(invoker,
                            [
                              "version",
                              "edition",
-                             "deps",
                              "source_root",
                              "features",
                            ])
     visibility = [ ":*" ]
     testonly = true
-    configs += [ "//build/fuzzing:rust" ]
-    deps += [ "//src/lib/fuzzing/rust:fuchsia-fuzzing" ]
+    configs += [ ":$fuzzer_cfg" ]
+    deps = [
+      "//src/lib/fuzzing/rust:fuzz",
+      "//third_party/rust_crates:arbitrary",
+    ]
+    if (defined(invoker.deps)) {
+      deps += invoker.deps
+    }
   }
 
   fuzzer(fuzzer_name) {
