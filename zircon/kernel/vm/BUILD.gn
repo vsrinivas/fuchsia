@@ -11,6 +11,7 @@ zx_library("vm") {
     "bootreserve.cc",
     "kstack.cc",
     "page.cc",
+    "page_queues.cc",
     "page_source.cc",
     "pinned_vm_object.cc",
     "pmm.cc",

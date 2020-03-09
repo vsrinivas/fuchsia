@@ -21,18 +21,25 @@ typedef struct vm_page {
   paddr_t paddr_priv;  // use paddr() accessor
   // offset 0x18
 
-  struct {
-    uint32_t flags : 8;
-    // logically private; use |state()| and |set_state()|
-    uint32_t state_priv : VM_PAGE_STATE_BITS;
-  };
-  // offset: 0x1c
-
   union {
     struct {
+      // This is an optional back pointer to the vm object this page is currently contained in. It
+      // is implicitly valid when the page is in the pager_backed page queue, and not valid
+      // otherwise. Consequently, to prevent data races, this should not be modified (except under
+      // the page queue lock) whilst a page is in a page queue.
+      // Field should be modified by the setters and getters to allow for future encoding changes.
+      void* object_priv;
+      // When object is valid, this is the offset in the vmo that contains this page.
+      // Field should be modified by the setters and getters to allow for future encoding changes.
+      uint64_t page_offset_priv;
+
+      void* get_object() { return object_priv; }
+      void set_object(void* object) { object_priv = object; }
+      uint64_t get_page_offset() { return page_offset_priv; }
+      void set_page_offset(uint64_t page_offset) { page_offset_priv = page_offset; }
+
 #define VM_PAGE_OBJECT_PIN_COUNT_BITS 5
 #define VM_PAGE_OBJECT_MAX_PIN_COUNT ((1ul << VM_PAGE_OBJECT_PIN_COUNT_BITS) - 1)
-
       uint8_t pin_count : VM_PAGE_OBJECT_PIN_COUNT_BITS;
 
       // Bits used by VmObjectPaged implementation of COW clones.
@@ -47,8 +54,25 @@ typedef struct vm_page {
       // be moved into the child instead of setting the second bit.
       uint8_t cow_left_split : 1;
       uint8_t cow_right_split : 1;
-    } object;  // attached to a vm object
+      // This struct has no type name and exists inside an unpacked parent and so it really doesn't
+      // need to have any padding. By making it packed we allow the next outer variables, to use
+      // space we would have otherwise wasted in padding, without breaking alignment rules.
+    } __PACKED object;  // attached to a vm object
   };
+
+  // offset 0x29
+
+  struct {
+    uint8_t flags;
+    // logically private; use |state()| and |set_state()|
+    uint8_t state_priv : VM_PAGE_STATE_BITS;
+  };
+
+  // offset 0x2b
+
+  // five bytes of padding would be inserted here to make sizeof(vm_page) a multiple of 8
+  // explicit padding is added to validate all commented offsets were indeed correct.
+  char padding[5];
 
   // helper routines
   bool is_free() const { return state_priv == VM_PAGE_STATE_FREE; }
@@ -76,7 +100,7 @@ typedef struct vm_page {
 } vm_page_t;
 
 // assert that the page structure isn't growing uncontrollably
-static_assert(sizeof(vm_page) == 0x20, "");
+static_assert(sizeof(vm_page) == 0x30, "");
 
 // helpers
 const char* page_state_to_string(unsigned int state);

@@ -38,6 +38,8 @@ uint32_t scanner_disable_count TA_GUARDED(scanner_disabled_lock::Get()) = 0;
 void scanner_print_stats() {
   uint64_t zero_pages = VmObject::ScanAllForZeroPages(false);
   printf("[SCAN]: Found %lu zero pages that could be de-duped\n", zero_pages);
+  PageQueues::Counts queue_counts = pmm_page_queues()->DebugQueueCounts();
+  printf("[SCAN]: Found %lu user-paged backed pages\n", queue_counts.pager_backed);
 }
 
 void scanner_do_reclaim(bool print) {
@@ -124,7 +126,7 @@ void scanner_pop_disable_count() {
 
 static void scanner_init_func(uint level) {
   Thread *thread =
-    Thread::Create("scanner-request-thread", scanner_request_thread, nullptr, LOW_PRIORITY);
+      Thread::Create("scanner-request-thread", scanner_request_thread, nullptr, LOW_PRIORITY);
   DEBUG_ASSERT(thread);
   if (!gCmdline.GetBool("kernel.page-scanner.start-at-boot", false)) {
     Guard<Mutex> guard{scanner_disabled_lock::Get()};

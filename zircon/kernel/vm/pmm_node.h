@@ -64,6 +64,8 @@ class PmmNode {
   // add new pages to the free queue. used when boostrapping a PmmArena
   void AddFreePages(list_node* list);
 
+  PageQueues* GetPageQueues() { return &page_queues_; }
+
   // Fill all free pages with a pattern.  See all |PmmChecker|.
   //
   // Should be done only once early in boot.
@@ -143,6 +145,8 @@ class PmmNode {
 
   Thread* request_thread_ = nullptr;
   ktl::atomic<bool> request_thread_live_ = true;
+
+  PageQueues page_queues_;
 
   bool free_fill_enabled_ TA_GUARDED(lock_) = false;
   PmmChecker checker_ TA_GUARDED(lock_);

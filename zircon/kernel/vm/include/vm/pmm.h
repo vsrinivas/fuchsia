@@ -13,6 +13,7 @@
 #include <zircon/types.h>
 
 #include <vm/page.h>
+#include <vm/page_queues.h>
 #include <vm/page_request.h>
 
 // physical allocator
@@ -87,6 +88,9 @@ uint64_t pmm_count_free_pages();
 
 // Return amount of physical memory in system, in bytes.
 uint64_t pmm_count_total_bytes();
+
+// Return the PageQueues.
+PageQueues* pmm_page_queues();
 
 // virtual to physical
 paddr_t vaddr_to_paddr(const void* va);

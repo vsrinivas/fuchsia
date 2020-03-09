@@ -104,6 +104,8 @@ uint64_t pmm_count_free_pages() { return pmm_node.CountFreePages(); }
 
 uint64_t pmm_count_total_bytes() { return pmm_node.CountTotalBytes(); }
 
+PageQueues* pmm_page_queues() { return pmm_node.GetPageQueues(); }
+
 zx_status_t pmm_init_reclamation(const uint64_t* watermarks, uint8_t watermark_count,
                                  uint64_t debounce, mem_avail_state_updated_callback_t callback) {
   return pmm_node.InitReclamation(watermarks, watermark_count, debounce, callback);
