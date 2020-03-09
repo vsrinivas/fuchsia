@@ -8,10 +8,7 @@ import("//src/lib/vulkan/image_pipe_swapchain.gni")
 import("//src/lib/vulkan/layers.gni")
 
 test_package("test-vk-validation") {
-  deps = [
-    ":test_vk_validation",
-    "//src/lib/vulkan:validation_layers",
-  ]
+  deps = [ ":test_vk_validation" ]
 
   tests = [
     {

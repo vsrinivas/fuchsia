@@ -22,14 +22,6 @@ group("headers") {
   public_deps = [ "//third_party/Vulkan-Headers:vulkan_headers" ]
 }
 
-# Vulkan validation layers are a set of loadable modules.
-group("validation_layers") {
-  public_deps = [
-    "//third_party/Vulkan-ValidationLayers:vulkan_gen_json_files",
-    "//third_party/Vulkan-ValidationLayers:vulkan_validation_layers",
-  ]
-}
-
 # Support code for building layers without bloat.
 group("micro_layer_common") {
   public_deps = [ "//third_party/Vulkan-ValidationLayers:micro_layer_common" ]

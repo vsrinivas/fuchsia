@@ -26,8 +26,6 @@ package("vkprimer") {
   ]
 
   if (is_fuchsia) {
-    deps += [ "//src/lib/vulkan:validation_layers" ]
-
     meta = [
       {
         path = rebase_path("meta/vkprimer.cmx")

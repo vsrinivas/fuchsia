@@ -18,10 +18,7 @@ group("escher") {
 }
 
 package("escher_waterfall") {
-  deps = [
-    "waterfall",
-    "//src/lib/vulkan:validation_layers",
-  ]
+  deps = [ "waterfall" ]
 
   binary = "waterfall"
 
@@ -43,10 +40,7 @@ package("escher_waterfall") {
 }
 
 package("escher_rainfall") {
-  deps = [
-    "rainfall",
-    "//src/lib/vulkan:validation_layers",
-  ]
+  deps = [ "rainfall" ]
 
   binary = "rainfall"
 

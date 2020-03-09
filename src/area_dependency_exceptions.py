@@ -96,8 +96,6 @@ exceptions = {
     ],
     '//src/ui/examples/escher': [
         '//garnet/bin/ui',
-        '//garnet/lib/vulkan',
-        '//src/graphics/lib/vulkan',
     ],
     '//src/virtualization': [
         '//src/graphics/lib/magma',

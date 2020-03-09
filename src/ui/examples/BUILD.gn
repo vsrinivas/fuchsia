@@ -91,10 +91,7 @@ package("direct_input_child") {
 }
 
 package("pose_buffer_presenter") {
-  deps = [
-    "lab/pose_buffer_presenter",
-    "//src/lib/vulkan:validation_layers",
-  ]
+  deps = [ "lab/pose_buffer_presenter" ]
 
   binary = "pose_buffer_presenter"
 
@@ -137,10 +134,7 @@ package("shadertoy_client") {
 }
 
 package("shadertoy_service") {
-  deps = [
-    "shadertoy/service",
-    "//src/lib/vulkan:validation_layers",
-  ]
+  deps = [ "shadertoy/service" ]
 
   binary = "shadertoy_service"
 
