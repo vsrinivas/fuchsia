@@ -25,26 +25,42 @@ template("fidl_library") {
   # the corresponding GN names.
 
   group("c") {
-    public_deps = [
-      ":${main_target_name}_c",
-    ]
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+
+    public_deps = [ ":${main_target_name}_c" ]
   }
 
   group("c.headers") {
-    public_deps = [
-      ":${main_target_name}_c",
-    ]
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+
+    public_deps = [ ":${main_target_name}_c" ]
   }
 
   group("llcpp") {
-    public_deps = [
-      ":${main_target_name}_llcpp",
-    ]
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+
+    public_deps = [ ":${main_target_name}_llcpp" ]
   }
 
   group("llcpp.headers") {
-    public_deps = [
-      ":${main_target_name}_llcpp",
-    ]
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+
+    public_deps = [ ":${main_target_name}_llcpp" ]
   }
 }
