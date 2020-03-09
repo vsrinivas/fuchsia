@@ -11,14 +11,15 @@ the core platform that underpins Fuchsia. To work on Zircon, see
 
 ## Get the source code
 
-To set up your build environment and download Fuchsia source code, follow the instructions in [Get Fuchsia source code](/docs/development/source_code/README.md).
+To download the Fuchsia source code and set up your build environment,
+follow the instructions in [Get Fuchsia source code](/docs/development/source_code/README.md).
 
 ## Configure and build Fuchsia {#configure-and-build-fuchsia}
 
 To build Fuchsia, you need to be able to run the `fx` command in your terminal.
 
-Note: If you haven't set up your environment variable, see [Set up environment
-variables](/docs/development/source_code#set_up_environment_variables).
+Note: If you haven't set up your build environment,
+see [Set up environment variables](/docs/development/source_code#set_up_environment_variables).
 
 ### Set build configuration
 
@@ -128,14 +129,16 @@ See [Serve a build](/docs/development/build/fx.md#serve-a-build)  for more infor
 
 ## Explore Fuchsia {#explore-fuchsia}
 
-When Fuchsia is booted and displays the `$` shell prompt, you can now run programs,
-or [components](/docs/concepts/components/). In Fuchsia, components are
+When Fuchsia is booted and displays the `$` prompt in the shell, you can now run
+[components](/docs/concepts/components/). In Fuchsia, components are
 the basic unit of executable software.
 
 To run components on your Fuchsia device, see
 [Run an example component](/docs/development/run/run-examples.md).
 
-To shutdown or reboot Fuchsia, use the following `dm` commands in the shell prompt:
+### Run shell commands
+
+To shutdown or reboot Fuchsia, use the following `dm` commands in the shell:
 
 ```sh
 dm shutdown
@@ -145,38 +148,10 @@ dm reboot
 See [Connect to a target shell](/docs/development/build/fx.md#connect-to-a-target-shell)
 for more information.
 
-## Run tests
+### Select a tab {#select-a-tab}
 
-To run tests on your Fuchsia device, see
-[Running tests as components](/docs/development/testing/running_tests_as_components.md).
-
-## Launch a graphical component
-
-Warning: QEMU doesn't support Vulkan and therefore cannot run the graphics stack.
-Commands in this section don't work on QEMU.
-
-Most graphical components in Fuchsia use the [Scenic](/docs/concepts/graphics/scenic/scenic.md)
-system compositor. You can launch such components, commonly found in `/system/apps`,
-like this:
-
-```sh
-present_view fuchsia-pkg://fuchsia.com/spinning_square_view#meta/spinning_square_view.cmx
-```
-
-Source code for Scenic example apps is [here](/src/ui/examples).
-
-When you launch something that uses Scenic, uses hardware-accelerated graphics, or if you build
-the [default](https://fuchsia.googlesource.com/topaz/+/master/packages) package (which will
-boot into the Fuchsia System UI), Fuchsia will enter "graphics mode", which will not display any
-of the text shells. In order to use the text shell, you will need to enter "console mode" by
-pressing Alt-Escape. In console mode, Alt-Tab will have the behavior described in the previous
-section, and pressing Alt-Escape again will take you back to the graphical shell.
-
-### Select a tab
-
-Fuchsia shows multiple tabs after booting with graphics
-enabled. The currently selected tab is highlighted in
-yellow at the top of the screen.
+Fuchsia shows multiple tabs in the shell.
+At the top of the screen, the currently selected tab is highlighted in yellow.
 
 The following keyboard shortcuts help you navigate the terminal:
 
@@ -188,6 +163,33 @@ The following keyboard shortcuts help you navigate the terminal:
 - Alt+Up/Down scrolls up and down by lines.
 - Shift+PgUp/PgDown scrolls up and down by half page.
 - Ctrl+Alt+Delete reboots.
+
+## Run tests
+
+To test Fuchsia on your device, see
+[Running tests as components](/docs/development/testing/running_tests_as_components.md).
+
+## Launch a graphical component
+
+Warning: QEMU doesn't support Vulkan and therefore cannot run the graphics stack.
+Commands in this section don't work on QEMU.
+
+Most graphical components in Fuchsia use the [Scenic](/docs/concepts/graphics/scenic/scenic.md)
+system compositor. You can launch such components (commonly found in `/system/apps`)
+using the `present_view` command, for example:
+
+```sh
+present_view fuchsia-pkg://fuchsia.com/spinning_square_view#meta/spinning_square_view.cmx
+```
+
+See [Scenic example apps](/src/ui/examples).
+
+If you launch a component that uses Scenic or hardware-accelerated graphics,
+Fuchsia enters the graphics mode, which doesn't display the shell.
+To use the shell, press `Alt+Escape` to enter the console mode.
+In the console mode, `Alt+Tab` has the same behavior described in [Select a tab](#select-a-tab).
+Press `Alt+Escape` again to return to the graphics mode.
+
 
 ## Contribute changes
 
