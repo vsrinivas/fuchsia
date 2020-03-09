@@ -33,6 +33,20 @@ typedef struct pmm_arena_info {
 // The arena data will be copied.
 zx_status_t pmm_add_arena(const pmm_arena_info_t* arena) __NONNULL((1));
 
+// Returns the number of arenas.
+size_t pmm_num_arenas();
+
+// Copies |count| pmm_arena_info_t objects into |buffer| starting with the |i|-th arena ordered by
+// base address.  For example, passing an |i| of 1 would skip the 1st arena.
+//
+// The objects will be sorted in ascending order by arena base address.
+//
+// Returns ZX_ERR_OUT_OF_RANGE if |count| is 0 or |i| and |count| specificy an invalid range.
+//
+// Returns ZX_ERR_BUFFER_TOO_SMALL if the buffer is too small.
+zx_status_t pmm_get_arena_info(size_t count, uint64_t i, pmm_arena_info_t* buffer,
+                               size_t buffer_size);
+
 // flags for allocation routines below
 #define PMM_ALLOC_FLAG_ANY (0 << 0)     // no restrictions on which arena to allocate from
 #define PMM_ALLOC_FLAG_LO_MEM (1 << 0)  // allocate only from arenas marked LO_MEM

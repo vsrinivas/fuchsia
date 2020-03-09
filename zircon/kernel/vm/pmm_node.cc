@@ -94,6 +94,38 @@ done_add:
   return ZX_OK;
 }
 
+size_t PmmNode::NumArenas() const {
+  Guard<fbl::Mutex> guard{&lock_};
+  return arena_list_.size();
+}
+
+zx_status_t PmmNode::GetArenaInfo(size_t count, uint64_t i, pmm_arena_info_t* buffer,
+                                  size_t buffer_size) {
+  Guard<fbl::Mutex> guard{&lock_};
+
+  if ((count == 0) || (count + i > arena_list_.size()) || (i >= arena_list_.size())) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+  const size_t size_required = count * sizeof(pmm_arena_info_t);
+  if (buffer_size < size_required) {
+    return ZX_ERR_BUFFER_TOO_SMALL;
+  }
+
+  // Skip the first |i| elements.
+  auto iter = arena_list_.begin();
+  for (uint64_t j = 0; j < i; j++) {
+    iter++;
+  }
+
+  // Copy the next |count| elements.
+  for (uint64_t j = 0; j < count; j++) {
+    buffer[j] = iter->info();
+    iter++;
+  }
+
+  return ZX_OK;
+}
+
 // called at boot time as arenas are brought online, no locks are acquired
 void PmmNode::AddFreePages(list_node* list) TA_NO_THREAD_SAFETY_ANALYSIS {
   LTRACEF("list %p\n", list);

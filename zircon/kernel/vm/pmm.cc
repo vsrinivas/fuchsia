@@ -50,6 +50,13 @@ vm_page_t* paddr_to_vm_page(paddr_t addr) { return pmm_node.PaddrToPage(addr); }
 
 zx_status_t pmm_add_arena(const pmm_arena_info_t* info) { return pmm_node.AddArena(info); }
 
+size_t pmm_num_arenas() { return pmm_node.NumArenas(); }
+
+zx_status_t pmm_get_arena_info(size_t count, uint64_t i, pmm_arena_info_t* buffer,
+                               size_t buffer_size) {
+  return pmm_node.GetArenaInfo(count, i, buffer, buffer_size);
+}
+
 zx_status_t pmm_alloc_page(uint alloc_flags, paddr_t* pa) {
   return pmm_node.AllocPage(alloc_flags, nullptr, pa);
 }

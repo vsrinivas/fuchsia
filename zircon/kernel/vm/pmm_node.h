@@ -61,6 +61,19 @@ class PmmNode {
 
   zx_status_t AddArena(const pmm_arena_info_t* info);
 
+  // Returns the number of arenas.
+  size_t NumArenas() const;
+
+  // Copies |count| pmm_arena_info_t objects into |buffer| starting with the |i|-th arena ordered by
+  // base address.  For example, passing an |i| of 1 would skip the 1st arena.
+  //
+  // The objects will be sorted in ascending order by arena base address.
+  //
+  // Returns ZX_ERR_OUT_OF_RANGE if |count| is 0 or |i| and |count| specificy an invalid range.
+  //
+  // Returns ZX_ERR_BUFFER_TOO_SMALL if the buffer is too small.
+  zx_status_t GetArenaInfo(size_t count, uint64_t i, pmm_arena_info_t* buffer, size_t buffer_size);
+
   // add new pages to the free queue. used when boostrapping a PmmArena
   void AddFreePages(list_node* list);
 
@@ -122,7 +135,7 @@ class PmmNode {
   uint64_t arena_cumulative_size_ TA_GUARDED(lock_) = 0;
   uint64_t free_count_ TA_GUARDED(lock_) = 0;
 
-  fbl::DoublyLinkedList<PmmArena*> arena_list_ TA_GUARDED(lock_);
+  fbl::SizedDoublyLinkedList<PmmArena*> arena_list_ TA_GUARDED(lock_);
 
   list_node free_list_ TA_GUARDED(lock_) = LIST_INITIAL_VALUE(free_list_);
 

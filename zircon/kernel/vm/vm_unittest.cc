@@ -624,6 +624,56 @@ static bool pmm_checker_test() {
   END_TEST;
 }
 
+static bool pmm_get_arena_info_test() {
+  BEGIN_TEST;
+
+  const size_t num_arenas = pmm_num_arenas();
+  ASSERT_GT(num_arenas, 0u);
+
+  fbl::AllocChecker ac;
+  auto buffer = ktl::unique_ptr<pmm_arena_info_t[]>(new (&ac) pmm_arena_info_t[num_arenas]);
+  ASSERT(ac.check());
+  const size_t buffer_size = num_arenas * sizeof(pmm_arena_info_t);
+
+  // Not enough room for one.
+  zx_status_t status = pmm_get_arena_info(1, 0, buffer.get(), sizeof(pmm_arena_info_t) - 1);
+  ASSERT_EQ(status, ZX_ERR_BUFFER_TOO_SMALL);
+
+  // Asking for none.
+  status = pmm_get_arena_info(0, 0, buffer.get(), buffer_size);
+  ASSERT_EQ(status, ZX_ERR_OUT_OF_RANGE);
+
+  // Asking for more than exist.
+  status = pmm_get_arena_info(num_arenas + 1, 0, buffer.get(), buffer_size);
+  ASSERT_EQ(status, ZX_ERR_OUT_OF_RANGE);
+
+  // Attempting to skip them all.
+  status = pmm_get_arena_info(1, num_arenas, buffer.get(), buffer_size);
+  ASSERT_EQ(status, ZX_ERR_OUT_OF_RANGE);
+
+  // Asking for one.
+  status = pmm_get_arena_info(1, 0, buffer.get(), buffer_size);
+  ASSERT_EQ(status, ZX_OK);
+
+  // Asking for them all.
+  status = pmm_get_arena_info(num_arenas, 0, buffer.get(), buffer_size);
+  ASSERT_EQ(status, ZX_OK);
+
+  // See they are in ascending order by base.
+  paddr_t prev = 0;
+  for (unsigned i = 0; i < num_arenas; ++i){
+    if (i == 0) {
+      ASSERT_GE(buffer[i].base, prev);
+    } else {
+      ASSERT_GT(buffer[i].base, prev);
+    }
+    prev = buffer[i].base;
+    ASSERT_GT(buffer[i].size, 0u);
+  }
+
+  END_TEST;
+}
+
 static uint32_t test_rand(uint32_t seed) { return (seed = seed * 1664525 + 1013904223); }
 
 // fill a region of memory with a pattern based on the address of the region
@@ -2745,6 +2795,7 @@ VM_UNITTEST(pmm_node_delayed_alloc_swap_late_test)
 VM_UNITTEST(pmm_node_delayed_alloc_clear_early_test)
 VM_UNITTEST(pmm_node_delayed_alloc_clear_late_test)
 VM_UNITTEST(pmm_checker_test)
+VM_UNITTEST(pmm_get_arena_info_test)
 UNITTEST_END_TESTCASE(pmm_tests, "pmm", "Physical memory manager tests")
 
 UNITTEST_START_TESTCASE(vm_page_list_tests)
