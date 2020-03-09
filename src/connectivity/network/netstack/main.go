@@ -384,8 +384,6 @@ func Main() {
 	}
 	ns.filter = f
 
-	go pprofListen()
-
 	var wg sync.WaitGroup
 	for i := 0; i < runtime.NumCPU(); i++ {
 		wg.Add(1)

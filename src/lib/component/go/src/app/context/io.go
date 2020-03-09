@@ -9,7 +9,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
-	"runtime"
+	"runtime/pprof"
 	"strings"
 	"syscall"
 	"syscall/zx"
@@ -125,6 +125,31 @@ func (md mapDirectory) Get(name string) (Node, bool) {
 func (md mapDirectory) ForEach(fn func(string, Node)) {
 	for name, node := range md {
 		fn(name, node)
+	}
+}
+
+var _ Directory = (*pprofDirectory)(nil)
+
+type pprofDirectory struct{}
+
+func (*pprofDirectory) Get(name string) (Node, bool) {
+	if p := pprof.Lookup(name); p != nil {
+		return &FileWrapper{
+			File: &pprofFile{
+				p: p,
+			},
+		}, true
+	}
+	return nil, false
+}
+
+func (*pprofDirectory) ForEach(fn func(string, Node)) {
+	for _, p := range pprof.Profiles() {
+		fn(p.Name(), &FileWrapper{
+			File: &pprofFile{
+				p: p,
+			},
+		})
 	}
 }
 
@@ -304,16 +329,18 @@ type File interface {
 	GetBytes() []byte
 }
 
-type goroutineFile struct{}
+var _ File = (*pprofFile)(nil)
 
-func (*goroutineFile) GetBytes() []byte {
-	buf := make([]byte, 1024)
-	for {
-		if n := runtime.Stack(buf, true); n < len(buf) {
-			return buf[:n]
-		}
-		buf = make([]byte, 2*len(buf))
+type pprofFile struct {
+	p *pprof.Profile
+}
+
+func (p *pprofFile) GetBytes() []byte {
+	var b bytes.Buffer
+	if err := p.p.WriteTo(&b, 0); err != nil {
+		panic(err)
 	}
+	return b.Bytes()
 }
 
 var _ Node = (*FileWrapper)(nil)

@@ -16,19 +16,8 @@ go_library("lib") {
   ]
 }
 
-declare_args() {
-  netstack_pprof = false
-}
-
 go_binary("grand_unified_binary") {
   gopackage = "fuchsia.googlesource.com/grand_unified_binary"
 
   deps = [ ":lib" ]
-
-  if (netstack_pprof) {
-    # tags is not defined at this point in the build - GN will error out for us
-    # if we attempt to replace a nonempty list with another nonempty list.
-    # https://gn.googlesource.com/gn/+/master/docs/reference.md#lists
-    tags = [ "pprof" ]
-  }
 }

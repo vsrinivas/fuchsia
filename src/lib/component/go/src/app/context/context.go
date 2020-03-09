@@ -105,7 +105,7 @@ func CreateFromStartupInfo() *Context {
 		OutgoingService: make(OutDirectory),
 	}
 
-	c.OutgoingService.AddDebug("goroutines", &FileWrapper{File: &goroutineFile{}})
+	c.OutgoingService.AddDebug("pprof", &DirectoryWrapper{Directory: &pprofDirectory{}})
 
 	if directoryRequest := GetStartupHandle(HandleInfo{
 		Type: HandleDirectoryRequest,
