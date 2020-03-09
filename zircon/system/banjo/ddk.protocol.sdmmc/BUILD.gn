@@ -1,0 +1,14 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# TODO(fxb/47934): This file can be removed when component driver moves to GN.
+import("$zx_build/public/gn/banjo.gni")
+banjo_library("ddk.protocol.sdmmc") {
+  sources = [ "../../../../sdk/banjo/ddk.protocol.sdmmc/sdmmc.banjo" ]
+  visibility = [
+    ":*",
+    "$zx/system/core/devmgr/component:*",
+    "$zx/system/banjo/ddk.protocol.sdio:*",
+  ]
+}
