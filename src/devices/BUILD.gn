@@ -23,6 +23,7 @@ group("tests") {
     "lib:tests",
     "nand:tests",
     "tests",
+    "thermal:tests",
     "tools:tests",
     "usb/tests",
   ]
