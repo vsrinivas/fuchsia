@@ -173,6 +173,30 @@ macro_rules! assert_near {
 ///        assert_eq!(CALL_COUNT.get(), 2);
 ///    }
 /// ```
+///
+/// *Important:* Since inc() and get() obtain separate Mutex lock()s to access the underlying
+/// counter value, it is very possible that a separate thread, if also mutating the same counter,
+/// may increment the value between the first thread's calls to inc() and get(), in which case,
+/// the two threads could get() the same value (the result after both calls to inc()). If get()
+/// is used to, for example, print the values after each call to inc(), the resulting values might
+/// include duplicate intermediate counter values, with some numbers skipped, but the final value
+/// after all threads complete will be the exact number of all calls to inc() (offset by the
+/// initial value).
+///
+/// To provide slightly more consistent results, inc() returns the new value after incrementing
+/// the counter, obtaining the value while the lock is held. This way, each incremental value will
+/// be returned to the calling threads; *however* the threads could still receive the values out of
+/// order.
+///
+/// Consider, thread 1 calls inc() starting at count 0. A value of 1 is returned, but before thread
+/// 1 receives the new value, it might be interrupted by thread 2. Thread 2 increments the counter
+/// from 1 to 2, return the new value 2, and (let's say, for example) prints the value "2". Thread 1
+/// then resumes, and prints "1".
+///
+/// Specifically, the Counter guarantees that each invocation of inc() will return a value that is
+/// 1 greater than the previous value returned by inc() (or 1 greater than the `initial` value, if
+/// it is the first invocation). Call get() after completing all invocations of inc() to get the
+/// total number of times inc() was called (offset by the initial value).
 pub struct Counter {
     count: Mutex<usize>,
 }
@@ -183,9 +207,11 @@ impl Counter {
         Counter { count: Mutex::new(initial) }
     }
 
-    /// Increments the counter by one.
-    pub fn inc(&self) {
-        *self.count.lock().unwrap() += 1;
+    /// Increments the counter by one and returns the new value.
+    pub fn inc(&self) -> usize {
+        let mut count = self.count.lock().unwrap();
+        *count += 1;
+        *count
     }
 
     /// Returns the current value of the counter.
@@ -449,21 +475,24 @@ mod tests {
         let (tx, rx): (Sender<usize>, Receiver<usize>) = mpsc::channel();
         let mut children = Vec::new();
 
-        static NTHREADS: usize = 3;
+        static NTHREADS: usize = 10;
 
         for _ in 0..NTHREADS {
             let thread_tx = tx.clone();
             let child = thread::spawn(move || {
-                CALL_COUNT.inc();
-                thread_tx.send(CALL_COUNT.get()).unwrap();
+                let new_value = CALL_COUNT.inc();
+                thread_tx.send(new_value).unwrap();
+                println!("Sent: {} (OK if out of order)", new_value);
             });
 
             children.push(child);
         }
 
-        let mut ordered_ids = BTreeSet::new();
+        let mut ordered_ids: BTreeSet<usize> = BTreeSet::new();
         for _ in 0..NTHREADS {
-            ordered_ids.insert(rx.recv().unwrap());
+            let received_id = rx.recv().unwrap();
+            println!("Received: {} (OK if in yet a different order)", received_id);
+            ordered_ids.insert(received_id);
         }
 
         // Wait for the threads to complete any remaining work
@@ -471,12 +500,15 @@ mod tests {
             child.join().expect("child thread panicked");
         }
 
+        // All threads should have incremented the count by 1 each.
+        assert_eq!(CALL_COUNT.get(), NTHREADS);
+
+        // All contiguous incremental values should have been received, though possibly not in
+        // order. The BTreeSet will return them in order so the complete set can be verified.
         let mut expected_id: usize = 1;
         for id in ordered_ids.iter() {
-            assert!(*id == expected_id);
+            assert_eq!(*id, expected_id);
             expected_id += 1;
         }
-
-        assert_eq!(CALL_COUNT.get(), NTHREADS);
     }
 }
