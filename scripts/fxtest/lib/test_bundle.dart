@@ -92,6 +92,7 @@ class TestBundle {
       commandTokens.command,
       commandTokens.args..addAll(extraFlags),
       workingDirectory: workingDirectory,
+      realtimeErrorSink: realtimeOutputSink,
       realtimeOutputSink: realtimeOutputSink,
     );
 

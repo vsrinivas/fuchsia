@@ -873,12 +873,14 @@ void main() {
         [],
         workingDirectory: '.',
         realtimeOutputSink: addStrings,
+        realtimeErrorSink: addStrings,
       );
       await Future.delayed(Duration(milliseconds: 1));
 
-      expect(strings.length, 2);
+      expect(strings.length, 3);
       expect(strings[0], 'line 1');
       expect(strings[1], 'line 2');
+      expect(strings[2], 'stderr');
       expect(result.stdout, '');
     });
 

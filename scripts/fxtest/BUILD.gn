@@ -44,8 +44,20 @@ dart_tool("fxtest") {
   ]
 }
 
+copy("helpers") {
+  sources = [ "//scripts/fxtest/test/output_tester.sh" ]
+  outputs = [ "$target_out_dir/test/output_tester.sh" ]
+  metadata = {
+    test_runtime_deps = [ "/test/output_tester.sh" ]
+  }
+}
+
 dart_test("fxtest_tests") {
-  sources = [ "fxtest_test.dart" ]
+  sources = [
+    "fxtest_test.dart",
+  ]
+
+  non_dart_deps = [ ":helpers" ]
 
   deps = [
     ":fxtest_dart_library",
