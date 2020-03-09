@@ -16,6 +16,7 @@ namespace board_luis {
 // BTI IDs for our devices
 enum {
   BTI_BOARD,
+  BTI_EMMC,
 };
 
 class Luis : public ddk::Device<Luis> {
@@ -32,6 +33,7 @@ class Luis : public ddk::Device<Luis> {
   zx_status_t Start();
   int Thread();
 
+  zx_status_t EmmcInit();
   zx_status_t GpioInit();
 
   const ddk::PBusProtocolClient pbus_;
