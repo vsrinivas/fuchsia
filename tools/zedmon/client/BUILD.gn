@@ -1,0 +1,52 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dart/test.gni")
+import("//build/rust/rustc_binary.gni")
+
+rustc_binary("bin") {
+  name = "zedmon"
+  edition = "2018"
+  with_unit_tests = true
+
+  deps = [
+    "//src/lib/usb_bulk/rust:lib",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:clap",
+    "//third_party/rust_crates:lazy_static",
+  ]
+}
+
+dart_test("zedmon_client_manual_test") {
+  sources = [ "zedmon_client_manual_test.dart" ]
+  deps = [ "//third_party/dart-pkg/pub/test" ]
+  non_dart_deps = [ ":runtime_deps" ]
+
+  # This test should only be run manually for now.
+  environments = []
+}
+
+copy("runtime_deps") {
+  _data_dir = "$target_gen_dir/runtime_deps"
+  sources = [ "$root_out_dir/zedmon" ]
+  outputs = [ "$_data_dir/{{source_file_part}}" ]
+
+  metadata = {
+    test_runtime_deps = [ "$_data_dir/zedmon" ]
+  }
+
+  deps = [ ":bin" ]
+}
+
+group("zedmon_client") {
+  public_deps = [ ":bin($host_toolchain)" ]
+}
+
+group("tests") {
+  public_deps = [
+    ":bin_test($host_toolchain)",
+    ":zedmon_client_manual_test($host_toolchain)",
+  ]
+  testonly = true
+}

@@ -23,6 +23,16 @@ mod usb;
 /// Used for matching interfaces to open.
 pub type InterfaceInfo = usb::usb_ifc_info;
 
+/// Opens a USB interface.
+///
+/// `matcher` will be called on every discovered interface.  When `matcher` returns true, that
+/// interface will be opened.
+pub trait Open<T> {
+    fn open<F>(matcher: &mut F) -> Result<T, Error>
+    where
+        F: FnMut(&InterfaceInfo) -> bool;
+}
+
 /// A USB Interface.
 ///
 /// See top-level crate docs for an example.
@@ -31,12 +41,8 @@ pub struct Interface {
     interface: *mut usb::UsbInterface,
 }
 
-impl Interface {
-    /// Opens a USB interface.
-    ///
-    /// `matcher` will be called on every discovered interface.  When `matcher` returns true, that
-    /// interface will be opened.
-    pub fn open<F>(matcher: &mut F) -> Result<Interface, Error>
+impl Open<Interface> for Interface {
+    fn open<F>(matcher: &mut F) -> Result<Interface, Error>
     where
         F: FnMut(&InterfaceInfo) -> bool,
     {

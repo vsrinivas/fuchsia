@@ -69,5 +69,6 @@ group("tests") {
     "//tools/serial:tests($host_toolchain)",
     "//tools/size_checker/cmd:tests",
     "//tools/testing:tests($host_toolchain)",
+    "//tools/zedmon:tests",
   ]
 }

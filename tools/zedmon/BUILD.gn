@@ -16,3 +16,8 @@ go_binary("fake_zedmon_bin") {
   gopackage = "fake_zedmon"
   deps = [ ":fake_zedmon_lib" ]
 }
+
+group("tests") {
+  public_deps = [ "//tools/zedmon/client:tests" ]
+  testonly = true
+}
