@@ -22,6 +22,7 @@ group("tests") {
     "clock:tests",
     "lib:tests",
     "nand:tests",
+    "pwm:tests",
     "tests",
     "thermal:tests",
     "tools:tests",

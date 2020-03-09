@@ -4,6 +4,7 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
+import("//build/test/test_package.gni")
 import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("pwm") {
@@ -20,9 +21,6 @@ driver_module("pwm") {
 }
 
 test("pwm-test") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # Remove when converting this file to proper GN build idioms.
-  testonly = false
   configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "pwm-test"
   sources = [
@@ -52,6 +50,19 @@ migrated_manifest("pwm-manifest") {
   deps = [ ":pwm" ]
 }
 
-migrated_manifest("pwm-test-manifest") {
+unittest_package("pwm-test-package") {
+  package_name = "pwm-test"
   deps = [ ":pwm-test" ]
+
+  tests = [
+    {
+      name = "pwm-test"
+      environments = basic_envs
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":pwm-test-package" ]
 }

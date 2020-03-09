@@ -11,3 +11,12 @@ group("pwm") {
     "pwm",
   ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [
+    "aml-pwm:tests",
+    "aml-pwm-init:tests",
+    "pwm:tests",
+  ]
+}

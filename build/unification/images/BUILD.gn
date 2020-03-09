@@ -2789,8 +2789,6 @@ aggregate_manifest("migrated-aux") {
     "//src/devices/gpio/drivers/aml-axg-gpio:aml-axg-gpio-test-manifest",
     "//src/devices/cpu/drivers/aml-cpu:aml-cpu-test-manifest",
     "//src/ui/light/drivers/aml-light:aml-light-test-manifest",
-    "//src/devices/pwm/drivers/aml-pwm-init:aml-pwm-init-test-manifest",
-    "//src/devices/pwm/drivers/aml-pwm:aml-pwm-test-manifest",
     "//src/devices/block/drivers/aml-sd-emmc:aml-sd-emmc-test-manifest",
     "//src/devices/securemem/drivers/aml-securemem:aml-securemem-test-manifest",
     "//src/devices/serial/drivers/aml-uart:aml-uart-test-manifest",
@@ -3080,7 +3078,6 @@ aggregate_manifest("migrated-aux") {
 #------------------
     #":test.sys.ptysvc-test-test",
 #------------------
-    "//src/devices/pwm/drivers/pwm:pwm-test-manifest",
     "//src/devices/gpio/drivers/qcom-gpio:qcom-gpio-test-manifest",
     "//zircon/system/utest/qsort:qsort-manifest",
     "//zircon/system/utest/race-tests:race-tests-manifest",
@@ -3485,8 +3482,6 @@ aggregate_manifest("migrated-tests") {
     "//src/devices/gpio/drivers/aml-axg-gpio:aml-axg-gpio-test-manifest",
     "//src/devices/cpu/drivers/aml-cpu:aml-cpu-test-manifest",
     "//src/ui/light/drivers/aml-light:aml-light-test-manifest",
-    "//src/devices/pwm/drivers/aml-pwm-init:aml-pwm-init-test-manifest",
-    "//src/devices/pwm/drivers/aml-pwm:aml-pwm-test-manifest",
     "//src/devices/block/drivers/aml-sd-emmc:aml-sd-emmc-test-manifest",
     "//src/devices/securemem/drivers/aml-securemem:aml-securemem-test-manifest",
     "//src/devices/serial/drivers/aml-uart:aml-uart-test-manifest",
@@ -3778,7 +3773,6 @@ aggregate_manifest("migrated-tests") {
 #------------------
     #":test.sys.ptysvc-test-test",
 #------------------
-    "//src/devices/pwm/drivers/pwm:pwm-test-manifest",
     "//src/devices/gpio/drivers/qcom-gpio:qcom-gpio-test-manifest",
     "//zircon/system/utest/qsort:qsort-manifest",
     "//zircon/system/utest/race-tests:race-tests-manifest",
