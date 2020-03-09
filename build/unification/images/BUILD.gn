@@ -1371,6 +1371,7 @@ aggregate_manifest("migrated-image") {
     "//src/devices/block/drivers/aml-sd-emmc:aml-sd-emmc-manifest",
     "//src/devices/securemem/drivers/aml-securemem:aml-securemem-manifest",
     "//src/devices/spi/drivers/aml-spi:aml-spi-manifest",
+    "//src/devices/spi/drivers/mtk-spi:mtk-spi-manifest",
     "//src/devices/thermal/drivers/aml-thermal-s905d2g:aml-thermal-s905d2g-manifest",
     "//src/devices/thermal/drivers/aml-thermal-s912:aml-thermal-s912-manifest",
     "//src/devices/serial/drivers/aml-uart:aml-uart-manifest",
