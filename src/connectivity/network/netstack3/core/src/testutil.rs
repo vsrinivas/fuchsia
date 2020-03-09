@@ -461,7 +461,7 @@ pub(crate) fn parse_icmp_packet<
     I: wire_icmp::IcmpIpExt,
     C,
     M: for<'a> IcmpMessage<I, &'a [u8], Code = C>,
-    F: for<'a> Fn(&IcmpPacket<I, &'a [u8], M>),
+    F: for<'a> FnOnce(&IcmpPacket<I, &'a [u8], M>),
 >(
     mut buf: &[u8],
     src_ip: I::Addr,
@@ -511,7 +511,7 @@ pub(crate) fn parse_icmp_packet_in_ip_packet_in_ethernet_frame<
     I: wire_icmp::IcmpIpExt,
     C,
     M: for<'a> IcmpMessage<I, &'a [u8], Code = C>,
-    F: for<'a> Fn(&IcmpPacket<I, &'a [u8], M>),
+    F: for<'a> FnOnce(&IcmpPacket<I, &'a [u8], M>),
 >(
     buf: &[u8],
     f: F,
@@ -712,6 +712,19 @@ impl DummyEventDispatcherBuilder {
     /// Build a `Context` from the present configuration with a default dispatcher,
     /// and stack state set to disable NDP's Duplicate Address Detection by default.
     pub(crate) fn build<D: EventDispatcher + Default>(self) -> Context<D> {
+        self.build_with_modifications(|_| {})
+    }
+
+    /// `build_with_modifications` is equivalent to `build`, except that after
+    /// the `StackStateBuilder` is initialized, it is passed to `f` for further
+    /// modification before the `Context` is constructed.
+    pub(crate) fn build_with_modifications<
+        D: EventDispatcher + Default,
+        F: FnOnce(&mut StackStateBuilder),
+    >(
+        self,
+        f: F,
+    ) -> Context<D> {
         let mut stack_builder = StackStateBuilder::default();
 
         // Most tests do not need NDP's DAD or router solicitation so disable it here.
@@ -720,6 +733,7 @@ impl DummyEventDispatcherBuilder {
         ndp_configs.set_max_router_solicitations(None);
         stack_builder.device_builder().set_default_ndp_configs(ndp_configs);
 
+        f(&mut stack_builder);
         self.build_with(stack_builder, D::default())
     }
 

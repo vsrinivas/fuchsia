@@ -29,12 +29,61 @@ use crate::wire::ipv6::{Ipv6Header, Ipv6PacketRaw};
 use crate::wire::udp::{UdpPacket, UdpPacketBuilder, UdpPacketRaw, UdpParseArgs};
 use crate::{BufferDispatcher, Context, EventDispatcher};
 
+/// A builder for UDP layer state.
+#[derive(Clone)]
+pub struct UdpStateBuilder {
+    send_port_unreachable: bool,
+}
+
+impl Default for UdpStateBuilder {
+    fn default() -> UdpStateBuilder {
+        UdpStateBuilder { send_port_unreachable: false }
+    }
+}
+
+impl UdpStateBuilder {
+    /// Enable or disable sending ICMP Port Unreachable messages in response to
+    /// inbound UDP packets for which a corresponding local socket does not
+    /// exist (default: disabled).
+    ///
+    /// Responding with an ICMP Port Unreachable error is a vector for reflected
+    /// Denial-of-Service (DoS) attacks. The attacker can send a UDP packet to a
+    /// closed port with the source address set to the address of the victim,
+    /// and ICMP response will be sent there.
+    ///
+    /// According to [RFC 1122 Section 4.1.3.1], "\[i\]f a datagram arrives
+    /// addressed to a UDP port for which there is no pending LISTEN call, UDP
+    /// SHOULD send an ICMP Port Unreachable message." Since an ICMP response is
+    /// not mandatory, and due to the security risks described, responses are
+    /// disabled by default.
+    ///
+    /// [RFC 1122 Section 4.1.3.1]: https://tools.ietf.org/html/rfc1122#section-4.1.3.1
+    pub fn send_port_unreachable(&mut self, send_port_unreachable: bool) -> &mut Self {
+        self.send_port_unreachable = send_port_unreachable;
+        self
+    }
+
+    pub(crate) fn build<I: Ip>(self) -> UdpState<I> {
+        UdpState {
+            conn_state: UdpConnectionState::default(),
+            lazy_port_alloc: None,
+            send_port_unreachable: self.send_port_unreachable,
+        }
+    }
+}
+
 /// The state associated with the UDP protocol.
-#[derive(Default)]
 pub struct UdpState<I: Ip> {
     conn_state: UdpConnectionState<I>,
     /// port_aloc is lazy-initialized when it's used
     lazy_port_alloc: Option<PortAlloc<UdpConnectionState<I>>>,
+    send_port_unreachable: bool,
+}
+
+impl<I: Ip> Default for UdpState<I> {
+    fn default() -> UdpState<I> {
+        UdpStateBuilder::default().build()
+    }
 }
 
 /// Holder structure that keeps all the connection maps for UDP connections.
@@ -570,21 +619,7 @@ pub(crate) fn receive_ip_packet<I: IcmpIpExt, B: BufferMut, C: BufferUdpContext<
                 ),
         }
         Ok(())
-    } else if cfg!(feature = "udp-icmp-port-unreachable") {
-        // NOTE: We currently have no way of enabling this feature from our
-        // build system, so it is always disabled.
-        //
-        // TODO(joshlf): Support enabling this feature.
-
-        // Responding with an ICMP Port Unreachable error is a vector for
-        // reflected DoS attacks - the attacker can send a UDP packet to a
-        // closed port with the source address set to the address of the victim,
-        // and we will send the ICMP response there. Luckily, according to RFC
-        // 1122, "if a datagram arrives addressed to a UDP port for which there
-        // is no pending LISTEN call, UDP SHOULD send an ICMP Port Unreachable
-        // message." Since it is not mandatory, we choose to disable it by
-        // default.
-
+    } else if state.send_port_unreachable {
         // Unfortunately, type inference isn't smart enough for us to just do
         // packet.parse_metadata().
         let meta =

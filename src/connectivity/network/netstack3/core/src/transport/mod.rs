@@ -66,22 +66,30 @@ use net_types::ip::{Ipv4, Ipv6};
 
 use crate::data_structures::IdMap;
 use crate::ip::icmp::IcmpIpExt;
-use crate::transport::udp::UdpEventDispatcher;
+use crate::transport::udp::{UdpEventDispatcher, UdpStateBuilder};
 use crate::{Context, EventDispatcher};
+
+/// A builder for transport layer state.
+#[derive(Default, Clone)]
+pub struct TransportStateBuilder {
+    udp: UdpStateBuilder,
+}
+
+impl TransportStateBuilder {
+    /// Get the builder for the UDP state.
+    pub fn udp_builder(&mut self) -> &mut UdpStateBuilder {
+        &mut self.udp
+    }
+
+    pub(crate) fn build(self) -> TransportLayerState {
+        TransportLayerState { udpv4: self.udp.clone().build(), udpv6: self.udp.build() }
+    }
+}
 
 /// The state associated with the transport layer.
 pub(crate) struct TransportLayerState {
     udpv4: self::udp::UdpState<Ipv4>,
     udpv6: self::udp::UdpState<Ipv6>,
-}
-
-impl Default for TransportLayerState {
-    fn default() -> TransportLayerState {
-        TransportLayerState {
-            udpv4: self::udp::UdpState::default(),
-            udpv6: self::udp::UdpState::default(),
-        }
-    }
 }
 
 /// The identifier for timer events in the transport layer.

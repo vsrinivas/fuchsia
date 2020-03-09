@@ -61,7 +61,7 @@ pub use crate::transport::udp::{
     remove_udp_listener, send_udp, send_udp_conn, send_udp_listener, SendError as UdpSendError,
     UdpConnId, UdpEventDispatcher, UdpListenerId,
 };
-pub use crate::transport::TransportLayerEventDispatcher;
+pub use crate::transport::{TransportLayerEventDispatcher, TransportStateBuilder};
 
 use alloc::vec::Vec;
 use core::fmt::Debug;
@@ -135,12 +135,18 @@ macro_rules! map_addr_version {
 /// A builder for [`StackState`].
 #[derive(Default, Clone)]
 pub struct StackStateBuilder {
+    transport: TransportStateBuilder,
     ipv4: Ipv4StateBuilder,
     ipv6: Ipv6StateBuilder,
     device: DeviceStateBuilder,
 }
 
 impl StackStateBuilder {
+    /// Get the builder for the transport layer state.
+    pub fn transport_builder(&mut self) -> &mut TransportStateBuilder {
+        &mut self.transport
+    }
+
     /// Get the builder for the IPv4 state.
     pub fn ipv4_builder(&mut self) -> &mut Ipv4StateBuilder {
         &mut self.ipv4
@@ -151,7 +157,7 @@ impl StackStateBuilder {
         &mut self.ipv6
     }
 
-    /// Get the builder for the device state.
+    /// Get the builder for the device layer state.
     pub fn device_builder(&mut self) -> &mut DeviceStateBuilder {
         &mut self.device
     }
@@ -159,7 +165,7 @@ impl StackStateBuilder {
     /// Consume this builder and produce a `StackState`.
     pub fn build<D: EventDispatcher>(self) -> StackState<D> {
         StackState {
-            transport: TransportLayerState::default(),
+            transport: self.transport.build(),
             ipv4: self.ipv4.build(),
             ipv6: self.ipv6.build(),
             device: self.device.build(),
