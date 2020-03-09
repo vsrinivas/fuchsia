@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_RENDERER_IMPL_H_
-#define SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_RENDERER_IMPL_H_
+#ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_BASE_RENDERER_H_
+#define SRC_MEDIA_AUDIO_AUDIO_CORE_BASE_RENDERER_H_
 
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
@@ -34,16 +34,16 @@ constexpr bool kEnableRendererWavWriters = false;
 class AudioAdmin;
 class StreamRegistry;
 
-class AudioRendererImpl : public AudioObject,
-                          public fuchsia::media::AudioRenderer,
-                          public fuchsia::media::audio::GainControl,
-                          public StreamVolume {
+class BaseRenderer : public AudioObject,
+                     public fuchsia::media::AudioRenderer,
+                     public fuchsia::media::audio::GainControl,
+                     public StreamVolume {
  public:
-  static std::unique_ptr<AudioRendererImpl> Create(
+  static std::unique_ptr<BaseRenderer> Create(
       fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request,
       Context* context);
 
-  ~AudioRendererImpl() override;
+  ~BaseRenderer() override;
 
   void Shutdown();
   void OnRenderRange(int64_t presentation_time, uint32_t duration){};
@@ -95,7 +95,7 @@ class AudioRendererImpl : public AudioObject,
  private:
   class GainControlBinding : public fuchsia::media::audio::GainControl {
    public:
-    static std::unique_ptr<GainControlBinding> Create(AudioRendererImpl* owner) {
+    static std::unique_ptr<GainControlBinding> Create(BaseRenderer* owner) {
       return std::unique_ptr<GainControlBinding>(new GainControlBinding(owner));
     }
 
@@ -108,16 +108,16 @@ class AudioRendererImpl : public AudioObject,
    private:
     friend class std::default_delete<GainControlBinding>;
 
-    GainControlBinding(AudioRendererImpl* owner) : owner_(owner) {}
+    GainControlBinding(BaseRenderer* owner) : owner_(owner) {}
     ~GainControlBinding() override {}
 
-    AudioRendererImpl* owner_;
+    BaseRenderer* owner_;
   };
 
   friend class GainControlBinding;
 
-  AudioRendererImpl(fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request,
-                    Context* context);
+  BaseRenderer(fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request,
+               Context* context);
 
   // Recompute the minimum clock lead time based on the current set of outputs
   // we are linked to.  If this requirement is different from the previous
@@ -182,4 +182,4 @@ class AudioRendererImpl : public AudioObject,
 
 }  // namespace media::audio
 
-#endif  // SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_RENDERER_IMPL_H_
+#endif  // SRC_MEDIA_AUDIO_AUDIO_CORE_BASE_RENDERER_H_

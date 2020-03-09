@@ -11,7 +11,7 @@
 
 #include <trace/event.h>
 
-#include "src/media/audio/audio_core/audio_renderer_impl.h"
+#include "src/media/audio/audio_core/base_renderer.h"
 #include "src/media/audio/audio_core/intermediate_buffer.h"
 #include "src/media/audio/audio_core/mixer/mixer.h"
 #include "src/media/audio/audio_core/mixer/no_op.h"

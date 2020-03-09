@@ -20,7 +20,7 @@
 #include "src/media/audio/audio_core/audio_device.h"
 #include "src/media/audio/audio_core/audio_input.h"
 #include "src/media/audio/audio_core/audio_output.h"
-#include "src/media/audio/audio_core/audio_renderer_impl.h"
+#include "src/media/audio/audio_core/base_renderer.h"
 #include "src/media/audio/audio_core/device_registry.h"
 #include "src/media/audio/audio_core/plug_detector.h"
 #include "src/media/audio/audio_core/route_graph.h"
@@ -28,7 +28,7 @@
 
 namespace media::audio {
 
-class AudioCapturerImpl;
+class BaseCapturer;
 class SystemGainMuteProvider;
 
 class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator, public DeviceRegistry {

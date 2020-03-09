@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_CAPTURER_IMPL_H_
-#define SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_CAPTURER_IMPL_H_
+#ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_BASE_CAPTURER_H_
+#define SRC_MEDIA_AUDIO_AUDIO_CORE_BASE_CAPTURER_H_
 
 #include <fuchsia/media/audio/cpp/fidl.h>
 #include <fuchsia/media/cpp/fidl.h>
@@ -33,25 +33,25 @@ namespace media::audio {
 class AudioAdmin;
 class AudioCoreImpl;
 
-class AudioCapturerImpl : public AudioObject,
-                          public fuchsia::media::AudioCapturer,
-                          public fuchsia::media::audio::GainControl,
-                          public StreamVolume {
+class BaseCapturer : public AudioObject,
+                     public fuchsia::media::AudioCapturer,
+                     public fuchsia::media::audio::GainControl,
+                     public StreamVolume {
  public:
-  static std::unique_ptr<AudioCapturerImpl> Create(
+  static std::unique_ptr<BaseCapturer> Create(
       fuchsia::media::AudioCapturerConfiguration configuration, std::optional<Format> format,
       std::optional<fuchsia::media::AudioCaptureUsage> usage,
       fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
       Context* context);
 
-  ~AudioCapturerImpl() override;
+  ~BaseCapturer() override;
 
  private:
   void OverflowOccurred(FractionalFrames<int64_t> source_start, FractionalFrames<int64_t> mix_point,
                         zx::duration overflow_duration);
   void PartialOverflowOccurred(FractionalFrames<int64_t> source_offset, int64_t mix_offset);
 
-  // Notes about the AudioCapturerImpl state machine.
+  // Notes about the BaseCapturer state machine.
   // TODO(mpuryear): Update this comment block.
   //
   // :: WaitingForVmo ::
@@ -110,16 +110,14 @@ class AudioCapturerImpl : public AudioObject,
     Shutdown,
   };
 
-  static bool StateIsRoutable(AudioCapturerImpl::State state) {
-    return state != AudioCapturerImpl::State::WaitingForVmo &&
-           state != AudioCapturerImpl::State::Shutdown;
+  static bool StateIsRoutable(BaseCapturer::State state) {
+    return state != BaseCapturer::State::WaitingForVmo && state != BaseCapturer::State::Shutdown;
   }
 
-  AudioCapturerImpl(fuchsia::media::AudioCapturerConfiguration configuration,
-                    std::optional<Format> format,
-                    std::optional<fuchsia::media::AudioCaptureUsage> usage,
-                    fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
-                    Context* context);
+  BaseCapturer(fuchsia::media::AudioCapturerConfiguration configuration,
+               std::optional<Format> format, std::optional<fuchsia::media::AudioCaptureUsage> usage,
+               fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
+               Context* context);
 
   using PcbList = ::fbl::DoublyLinkedList<std::unique_ptr<PendingCaptureBuffer>>;
 
@@ -197,7 +195,7 @@ class AudioCapturerImpl : public AudioObject,
 
   void RecomputeMinFenceTime();
 
-  void Shutdown(std::unique_ptr<AudioCapturerImpl> self)
+  void Shutdown(std::unique_ptr<BaseCapturer> self)
       FXL_LOCKS_EXCLUDED(context_.threading_model().FidlDomain().token());
 
   TimelineRate dest_frames_to_clock_mono_rate() {
@@ -228,7 +226,7 @@ class AudioCapturerImpl : public AudioObject,
   uint32_t payload_buf_frames_ = 0;
 
   WakeupEvent mix_wakeup_;
-  async::TaskClosureMethod<AudioCapturerImpl, &AudioCapturerImpl::MixTimerThunk> mix_timer_
+  async::TaskClosureMethod<BaseCapturer, &BaseCapturer::MixTimerThunk> mix_timer_
       FXL_GUARDED_BY(mix_domain_->token()){this};
 
   // Queues of capture buffers from the client: waiting to be filled, or waiting to be returned.
@@ -260,4 +258,4 @@ class AudioCapturerImpl : public AudioObject,
 
 }  // namespace media::audio
 
-#endif  // SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_CAPTURER_IMPL_H_
+#endif  // SRC_MEDIA_AUDIO_AUDIO_CORE_BASE_CAPTURER_H_

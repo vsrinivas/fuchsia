@@ -1,7 +1,7 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-#include "src/media/audio/audio_core/audio_renderer_impl.h"
+#include "src/media/audio/audio_core/base_renderer.h"
 
 #include <lib/fzl/vmar-manager.h>
 #include <lib/zx/vmo.h>
@@ -23,9 +23,9 @@ namespace {
 constexpr uint32_t kAudioRendererUnittestFrameRate = 48000;
 constexpr size_t kAudioRendererUnittestVmoSize = 16ull * 1024;
 
-class AudioRendererImplTest : public testing::ThreadingModelFixture {
+class BaseRendererTest : public testing::ThreadingModelFixture {
  public:
-  AudioRendererImplTest() {
+  BaseRendererTest() {
     FX_CHECK(vmo_mapper_.CreateAndMap(kAudioRendererUnittestVmoSize,
                                       /*flags=*/0, nullptr, &vmo_) == ZX_OK);
   }
@@ -35,7 +35,7 @@ class AudioRendererImplTest : public testing::ThreadingModelFixture {
     Logging::Init(-media::audio::SPEW, {"audio_core"});
     testing::ThreadingModelFixture::SetUp();
 
-    renderer_ = AudioRendererImpl::Create(fidl_renderer_.NewRequest(), &context());
+    renderer_ = BaseRenderer::Create(fidl_renderer_.NewRequest(), &context());
     EXPECT_NE(renderer_.get(), nullptr);
   }
 
@@ -50,7 +50,7 @@ class AudioRendererImplTest : public testing::ThreadingModelFixture {
   // Creates a new payload buffer of |size| bytes and registers it with the renderer with |id|.
   //
   // A handle to the new VMO is returned.
-  zx::vmo AddPayloadBuffer(uint32_t id, size_t size, AudioRendererImpl* renderer) {
+  zx::vmo AddPayloadBuffer(uint32_t id, size_t size, BaseRenderer* renderer) {
     zx::vmo vmo;
     EXPECT_EQ(ZX_OK, zx::vmo::create(size, 0, &vmo));
 
@@ -73,7 +73,7 @@ class AudioRendererImplTest : public testing::ThreadingModelFixture {
 
  protected:
   fuchsia::media::AudioRendererPtr fidl_renderer_;
-  std::unique_ptr<AudioRendererImpl> renderer_;
+  std::unique_ptr<BaseRenderer> renderer_;
 
   fzl::VmoMapper vmo_mapper_;
   zx::vmo vmo_;
@@ -89,7 +89,7 @@ constexpr zx::duration kMinLeadTime = zx::nsec(123456789);
 constexpr int64_t kInvalidLeadTimeNs = -1;
 
 // Validate that MinLeadTime is provided to AudioRenderer clients accurately
-TEST_F(AudioRendererImplTest, MinLeadTimePadding) {
+TEST_F(BaseRendererTest, MinLeadTimePadding) {
   auto fake_output = testing::FakeAudioOutput::Create(
       &threading_model(), &context().device_manager(), &context().link_matrix());
 
@@ -115,7 +115,7 @@ TEST_F(AudioRendererImplTest, MinLeadTimePadding) {
   EXPECT_EQ(lead_time_ns, kMinLeadTime.to_nsecs()) << "Incorrect GetMinLeadTime received";
 }
 
-TEST_F(AudioRendererImplTest, AllocatePacketQueueForLinks) {
+TEST_F(BaseRendererTest, AllocatePacketQueueForLinks) {
   auto fake_output = testing::FakeAudioOutput::Create(
       &threading_model(), &context().device_manager(), &context().link_matrix());
 
@@ -152,7 +152,7 @@ TEST_F(AudioRendererImplTest, AllocatePacketQueueForLinks) {
   }
 }
 
-TEST_F(AudioRendererImplTest, RegistersWithRouteGraphIfHasUsageStreamTypeAndBuffers) {
+TEST_F(BaseRendererTest, RegistersWithRouteGraphIfHasUsageStreamTypeAndBuffers) {
   EXPECT_EQ(context().link_matrix().DestLinkCount(*renderer_), 0u);
 
   zx::vmo duplicate;
@@ -175,7 +175,7 @@ TEST_F(AudioRendererImplTest, RegistersWithRouteGraphIfHasUsageStreamTypeAndBuff
   EXPECT_EQ(context().link_matrix().DestLinkCount(*renderer_raw), 1u);
 }
 
-TEST_F(AudioRendererImplTest, ReportsPlayAndPauseToPolicy) {
+TEST_F(BaseRendererTest, ReportsPlayAndPauseToPolicy) {
   auto output = testing::FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
                                                  &context().link_matrix());
   context().route_graph().AddOutput(output.get());

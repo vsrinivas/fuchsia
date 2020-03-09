@@ -59,7 +59,7 @@ void FakeAudioRenderer::EnqueueAudioPacket(float sample, zx::duration duration,
 }
 
 zx::duration FakeAudioRenderer::FindMinLeadTime() {
-  TRACE_DURATION("audio", "AudioRendererImpl::RecomputeMinLeadTime");
+  TRACE_DURATION("audio", "BaseRenderer::RecomputeMinLeadTime");
   zx::duration cur_lead_time;
 
   link_matrix_.ForEachDestLink(*this, [&cur_lead_time](LinkMatrix::LinkHandle link) {

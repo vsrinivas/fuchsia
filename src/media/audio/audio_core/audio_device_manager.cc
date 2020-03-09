@@ -11,9 +11,9 @@
 
 #include <trace/event.h>
 
-#include "src/media/audio/audio_core/audio_capturer_impl.h"
 #include "src/media/audio/audio_core/audio_core_impl.h"
-#include "src/media/audio/audio_core/audio_renderer_impl.h"
+#include "src/media/audio/audio_core/base_capturer.h"
+#include "src/media/audio/audio_core/base_renderer.h"
 #include "src/media/audio/audio_core/driver_output.h"
 #include "src/media/audio/audio_core/plug_detector.h"
 #include "src/media/audio/audio_core/reporter.h"
