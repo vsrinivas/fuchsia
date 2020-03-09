@@ -381,6 +381,11 @@ static inline bool x86_cpu_has_enhanced_ibrs(void) {
   return g_has_enhanced_ibrs;
 }
 
+enum Turbostate {
+  ENABLED,
+  DISABLED
+};
+
 // Vendor-specific per-cpu init functions, in amd.cpp/intel.cpp
 void x86_amd_init_percpu(void);
 void x86_intel_init_percpu(void);
@@ -396,6 +401,8 @@ bool x86_intel_cpu_has_ssbd(const cpu_id::CpuId* cpuid, MsrAccess* msr);
 bool x86_amd_cpu_has_ssbd(const cpu_id::CpuId* cpuid, MsrAccess* msr);
 void x86_intel_cpu_set_ssbd(const cpu_id::CpuId* cpuid, MsrAccess* msr);
 void x86_amd_cpu_set_ssbd(const cpu_id::CpuId* cpuid, MsrAccess* msr);
+void x86_amd_cpus_set_turbo(const cpu_id::CpuId* cpu, MsrAccess* msr, Turbostate state);
+void x86_intel_cpus_set_turbo(const cpu_id::CpuId* cpu, MsrAccess* msr, Turbostate state);
 void x86_cpu_ibpb(MsrAccess* msr);
 void x86_cpu_ibrs(MsrAccess* msr);
 bool x86_intel_cpu_has_enhanced_ibrs(const cpu_id::CpuId* cpuid, MsrAccess* msr);

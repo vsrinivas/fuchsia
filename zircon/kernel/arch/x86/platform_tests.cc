@@ -778,6 +778,31 @@ static bool test_usercopy_variants() {
   for (uint i = 0; i < kSize; i++) {
     EXPECT_EQ(src[i], i);
   }
+
+  END_TEST;
+}
+
+static bool test_turbo_enable_disable() {
+  BEGIN_TEST;
+
+  // Test turbo enable/disable on an Intel Skylake-U processor w/ Turbo.
+  {
+    FakeMsrAccess fake_msrs = {};
+    fake_msrs.msrs_[0] = {X86_MSR_IA32_MISC_ENABLE, 0x850089};
+    x86_intel_cpus_set_turbo(&cpu_id::kCpuIdCorei5_6260U, &fake_msrs, Turbostate::DISABLED);
+    EXPECT_TRUE(fake_msrs.read_msr(X86_MSR_IA32_MISC_ENABLE) &
+                X86_MSR_IA32_MISC_ENABLE_TURBO_DISABLE);
+    x86_intel_cpus_set_turbo(&cpu_id::kCpuIdCorei5_6260U, &fake_msrs, Turbostate::ENABLED);
+    EXPECT_FALSE(fake_msrs.read_msr(X86_MSR_IA32_MISC_ENABLE) &
+                 X86_MSR_IA32_MISC_ENABLE_TURBO_DISABLE);
+  }
+
+  // Test turbo enable/disable on a processor without turbo
+  {
+    FakeMsrAccess fake_msrs = {};  // Access to unimplemented MSRs will crash.
+    x86_intel_cpus_set_turbo(&cpu_id::kCpuIdCeleronJ3455, &fake_msrs, Turbostate::ENABLED);
+  }
+
   END_TEST;
 }
 
@@ -801,4 +826,5 @@ UNITTEST("test amd_platform_init", test_amd_platform_init)
 UNITTEST("test HWP init", test_hwp_init)
 UNITTEST("test spectre v2 mitigation building blocks", test_spectre_v2_mitigations)
 UNITTEST("test usercopy variants", test_usercopy_variants)
+UNITTEST("test enable/disable turbo/core performance boost", test_turbo_enable_disable)
 UNITTEST_END_TESTCASE(x64_platform_tests, "x64_platform_tests", "")

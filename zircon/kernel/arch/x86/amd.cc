@@ -8,6 +8,7 @@
 #include <arch/x86/cpuid.h>
 #include <arch/x86/feature.h>
 #include <arch/x86/platform_access.h>
+#include <kernel/mp.h>
 
 uint32_t x86_amd_get_patch_level(void) {
   uint32_t patch_level = 0;
@@ -133,6 +134,10 @@ void x86_amd_init_percpu_17h_zen1_quirks(cpu_id::CpuId* cpuid, MsrAccess* msr) {
   value = msr->read_msr(0xc001'1020);
   value |= (1ull << 57);
   msr->write_msr(0xC001'1020, value);
+}
+
+void x86_amd_cpus_set_turbo(const cpu_id::CpuId* cpu, MsrAccess* msr, Turbostate state) {
+  // TODO(fxr/369679): Implement; see Patch 1 for the implementation.
 }
 
 void x86_amd_init_percpu(void) {

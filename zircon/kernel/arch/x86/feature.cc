@@ -983,6 +983,19 @@ const x86_microarch_config_t* get_microarch_config(const cpu_id::CpuId* cpuid) {
   return &unknown_vendor_config;
 }
 
+void x86_cpu_set_turbo(const cpu_id::CpuId* cpu, MsrAccess* msr, Turbostate state) {
+  auto vendor = cpu->ReadManufacturerInfo().manufacturer();
+  switch (vendor) {
+    case cpu_id::ManufacturerInfo::AMD:
+      x86_amd_cpus_set_turbo(cpu, msr, state);
+      break;
+    case cpu_id::ManufacturerInfo::INTEL:
+      x86_intel_cpus_set_turbo(cpu, msr, state);
+    default:
+      break;
+  }
+}
+
 extern "C" {
 
 void x86_cpu_ibpb(MsrAccess* msr) {
