@@ -9,7 +9,7 @@ import("//build/testing/environments.gni")
 rustc_binary("bin") {
   testonly = true
   edition = "2018"
-  name = "io_conformance_harness_rust_pseudo_fs_mt"
+  name = "io_conformance_harness_rust_vfs"
   deps = [
     "//sdk/fidl/fuchsia.io.test:fuchsia.io.test-rustc",
     "//src/lib/fuchsia-async",
@@ -20,14 +20,14 @@ rustc_binary("bin") {
   ]
 }
 
-package("io_conformance_harness_rust_pseudo_fs_mt") {
+package("io_conformance_harness_rustvfs") {
   deps = [ ":bin" ]
   meta = [
     {
-      path = rebase_path("meta/io_conformance_harness_rust_pseudo_fs_mt.cmx")
-      dest = "io_conformance_harness_rust_pseudo_fs_mt.cmx"
+      path = rebase_path("meta/io_conformance_harness_rustvfs.cmx")
+      dest = "io_conformance_harness_rustvfs.cmx"
     },
   ]
   testonly = true
-  binary = "io_conformance_harness_rust_pseudo_fs_mt"
+  binary = "io_conformance_harness_rustvfs"
 }
