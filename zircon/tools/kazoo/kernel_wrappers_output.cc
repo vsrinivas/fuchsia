@@ -6,9 +6,7 @@
 #include "tools/kazoo/outputs.h"
 
 bool KernelWrappersOutput(const SyscallLibrary& library, Writer* writer) {
-  if (!CopyrightHeaderWithCppComments(writer)) {
-    return false;
-  }
+  CopyrightHeaderWithCppComments(writer);
 
   writer->Puts("extern \"C\" {\n");
 

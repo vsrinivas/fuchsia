@@ -6,9 +6,7 @@
 #include "tools/kazoo/outputs.h"
 
 bool SyscallNumbersOutput(const SyscallLibrary& library, Writer* writer) {
-  if (!CopyrightHeaderWithCppComments(writer)) {
-    return false;
-  }
+  CopyrightHeaderWithCppComments(writer);
 
   size_t i = 0;
   for (const auto& syscall : library.syscalls()) {

@@ -10,7 +10,7 @@ namespace {
 
 TEST(OutputUtil, CppCopyrightHeader) {
   Writer writer;
-  EXPECT_EQ(CopyrightHeaderWithCppComments(&writer), true);
+  CopyrightHeaderWithCppComments(&writer);
   ASSERT_TRUE(writer.Out().size() > 2);
   EXPECT_EQ(writer.Out()[0], '/');
   EXPECT_EQ(writer.Out()[1], '/');
@@ -19,7 +19,7 @@ TEST(OutputUtil, CppCopyrightHeader) {
 
 TEST(OutputUtil, HashCopyrightHeader) {
   Writer writer;
-  EXPECT_EQ(CopyrightHeaderWithHashComments(&writer), true);
+  CopyrightHeaderWithHashComments(&writer);
   ASSERT_TRUE(writer.Out().size() > 1);
   EXPECT_EQ(writer.Out()[0], '#');
   EXPECT_EQ(writer.Out().back(), '\n');

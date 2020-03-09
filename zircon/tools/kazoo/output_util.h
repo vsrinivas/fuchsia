@@ -9,12 +9,10 @@
 #include "tools/kazoo/writer.h"
 
 // Outputs a copyright header like the one at the top of this file to |writer|.
-// true on success, or false with an error logged.
-bool CopyrightHeaderWithCppComments(Writer* writer);
+void CopyrightHeaderWithCppComments(Writer* writer);
 
-// Outputs a copyright header using '#' as the comment marker. Returns true on
-// success, or false with an error logged.
-bool CopyrightHeaderWithHashComments(Writer* writer);
+// Outputs a copyright header using '#' as the comment marker.
+void CopyrightHeaderWithHashComments(Writer* writer);
 
 // Converts |input| to lowercase, assuming it's entirely ASCII.
 std::string ToLowerAscii(const std::string& input);

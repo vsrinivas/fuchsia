@@ -107,9 +107,7 @@ std::string mangle_identifier(std::string type) {
 }
 
 bool RustOutput(const SyscallLibrary& library, Writer* writer) {
-  if (!CopyrightHeaderWithCppComments(writer)) {
-    return false;
-  }
+  CopyrightHeaderWithCppComments(writer);
 
   Formatter formatter;
   constexpr const char indent[] = "    ";

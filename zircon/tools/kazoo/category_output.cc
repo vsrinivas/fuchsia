@@ -6,9 +6,7 @@
 #include "tools/kazoo/outputs.h"
 
 bool CategoryOutput(const SyscallLibrary& library, Writer* writer) {
-  if (!CopyrightHeaderWithCppComments(writer)){
-    return false;
-  }
+  CopyrightHeaderWithCppComments(writer);
 
   const char* kCategories[] = {
       "blocking", "const", "noreturn", "test_category1", "test_category2", "vdsocall",

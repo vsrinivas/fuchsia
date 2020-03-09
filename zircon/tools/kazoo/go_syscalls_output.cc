@@ -28,9 +28,7 @@ void PrintStub(Writer* writer, Syscall* syscall) {
 
 // This currrently handles both x86 and arm as they're identical.
 bool GoSyscallsAsm(const SyscallLibrary& library, Writer* writer) {
-  if (!CopyrightHeaderWithCppComments(writer)){
-    return false;
-  }
+  CopyrightHeaderWithCppComments(writer);
 
   writer->Printf("#include \"textflag.h\"\n\n");
 
@@ -46,9 +44,7 @@ bool GoSyscallsAsm(const SyscallLibrary& library, Writer* writer) {
 }
 
 bool GoSyscallsStubs(const SyscallLibrary& library, Writer* writer) {
-  if (!CopyrightHeaderWithCppComments(writer)){
-    return false;
-  }
+  CopyrightHeaderWithCppComments(writer);
 
   writer->Puts("package zx\n\n");
   writer->Puts("import \"unsafe\"\n\n");

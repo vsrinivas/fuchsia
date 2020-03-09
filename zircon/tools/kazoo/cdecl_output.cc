@@ -153,9 +153,7 @@ constexpr std::string_view PrivateMacro(const Syscall& syscall) {
 }  // namespace
 
 bool PublicDeclarationsOutput(const SyscallLibrary& library, Writer* writer) {
-  if (!CopyrightHeaderWithCppComments(writer)) {
-    return false;
-  }
+  CopyrightHeaderWithCppComments(writer);
 
   writer->Puts(R"(#ifndef _ZX_SYSCALL_DECL
 #error "<zircon/syscalls.h> is the public API header"
@@ -173,9 +171,7 @@ bool PublicDeclarationsOutput(const SyscallLibrary& library, Writer* writer) {
 }
 
 bool TestonlyPublicDeclarationsOutput(const SyscallLibrary& library, Writer* writer) {
-  if (!CopyrightHeaderWithCppComments(writer)) {
-    return false;
-  }
+  CopyrightHeaderWithCppComments(writer);
 
   writer->Puts(R"(#ifndef _ZX_SYSCALL_DECL
 #error "<zircon/testonly-syscalls.h> is the public API header"
@@ -193,9 +189,7 @@ bool TestonlyPublicDeclarationsOutput(const SyscallLibrary& library, Writer* wri
 }
 
 bool PrivateDeclarationsOutput(const SyscallLibrary& library, Writer* writer) {
-  if (!CopyrightHeaderWithCppComments(writer)) {
-    return false;
-  }
+  CopyrightHeaderWithCppComments(writer);
 
   for (const auto& syscall : library.syscalls()) {
     CDeclarationMacro(*syscall, PrivateMacro(*syscall), GetCUserModeName, writer);
@@ -205,9 +199,7 @@ bool PrivateDeclarationsOutput(const SyscallLibrary& library, Writer* writer) {
 }
 
 bool KernelDeclarationsOutput(const SyscallLibrary& library, Writer* writer) {
-  if (!CopyrightHeaderWithCppComments(writer)) {
-    return false;
-  }
+  CopyrightHeaderWithCppComments(writer);
 
   for (const auto& syscall : library.syscalls()) {
     CDeclarationMacro(*syscall, PrivateMacro(*syscall), GetCKernelModeName, writer);

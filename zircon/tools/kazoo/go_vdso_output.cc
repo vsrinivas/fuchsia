@@ -211,9 +211,7 @@ void PrintAsm(Writer* writer, Syscall* syscall, Arch arch) {
 }
 
 bool VdsoCalls(const SyscallLibrary& library, Writer* writer, Arch arch) {
-  if (!CopyrightHeaderWithCppComments(writer)) {
-    return false;
-  }
+  CopyrightHeaderWithCppComments(writer);
 
   writer->Puts("#include \"go_asm.h\"\n");
   writer->Puts("#include \"go_tls.h\"\n");
@@ -233,9 +231,7 @@ bool VdsoCalls(const SyscallLibrary& library, Writer* writer, Arch arch) {
 }  // namespace
 
 bool GoVdsoKeys(const SyscallLibrary& library, Writer* writer) {
-  if (!CopyrightHeaderWithCppComments(writer)) {
-    return false;
-  }
+  CopyrightHeaderWithCppComments(writer);
 
   writer->Puts("package runtime\n\n");
   writer->Puts("import \"unsafe\"\n\n");

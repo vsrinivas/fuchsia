@@ -193,9 +193,7 @@ void PrintDocComments(const std::vector<std::string>& lines, Writer* writer,
 }  // namespace
 
 bool CUlibHeaderOutput(const SyscallLibrary& library, Writer* writer) {
-  if (!CopyrightHeaderWithCppComments(writer)) {
-    return false;
-  }
+  CopyrightHeaderWithCppComments(writer);
 
   std::string prelude = R"(
 #ifndef LIB_ZXIO_TYPES_H_
