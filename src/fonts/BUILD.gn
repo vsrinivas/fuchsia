@@ -11,7 +11,6 @@ import("//build/testing/environments.gni")
 import("//src/fonts/build/fonts.gni")
 
 group("fonts") {
-  testonly = true
   public_deps = [
     ":pkg",
     # XXX: external dependencies on //src/fonts are intending just to get the
@@ -125,6 +124,7 @@ package("pkg") {
 test_package("font_provider_unit_tests") {
   deps = [
     ":font_provider_test",
+
     # TODO: Remove once tests use a test runner
     "//src/sys/test_adapters/rust",
   ]
