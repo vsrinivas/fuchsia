@@ -1,0 +1,49 @@
+#!/bin/bash
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+#### CATEGORY=Run, inspect and debug
+### Provides a shortcut to the prebuilt LLVM binutils tools
+
+## usage: fx binutils [tool name]
+##
+##    -h|--help     Shows this help and lists all available llvm tools
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
+readonly clang_prefix="${PREBUILT_CLANG_DIR}/bin/llvm-"
+
+function binutils {
+  fx-config-read
+
+  if [[ $# -lt 1 ]]; then
+    fx-command-help
+    exit 1
+  fi
+
+  if [[ "$1" == -h || "$1" == "--help" ]]; then
+    fx-print-command-help "$0"
+    echo -e "\nThe list of LLVM tools accessible is:"
+
+    for f in ${clang_prefix}*; do
+      if [[ -x "$f" ]]; then
+        t="$(basename "$f")"
+        echo "   ${t#llvm-}"
+      fi
+    done
+    exit 0
+  fi
+
+  readonly tool="${1}"
+  shift
+  readonly tool_path="${clang_prefix}${tool}"
+
+  if [[ ! -x "${tool_path}" ]]; then
+    fx-error "Prebuilt binutils tool doesn't exist or is not executable: '${tool_path}'"
+    exit 1
+  fi
+
+  "${tool_path}" "$@"
+}
+
+binutils "$@"
