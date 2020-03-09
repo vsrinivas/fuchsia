@@ -938,6 +938,16 @@
             "package_name": "quote"
         },
         {
+            "crate_name": "proptest",
+            "crate_type": "lib",
+            "package_name": "proptest"
+        },
+        {
+            "crate_name": "proptest_derive",
+            "crate_type": "proc-macro",
+            "package_name": "proptest-derive"
+        },
+        {
             "crate_name": "rand",
             "crate_type": "lib",
             "package_name": "rand"
