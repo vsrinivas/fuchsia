@@ -168,7 +168,6 @@ class ParseState {
     size_t fields_sz = fields_.size() * sizeof(ReportField);
     size_t collect_sz = coll_.size() * sizeof(Collection);
 
-    fbl::AllocChecker ac;
     auto mem = Alloc(device_sz + fields_sz + collect_sz);
     if (mem == nullptr)
       return kParseNoMemory;
