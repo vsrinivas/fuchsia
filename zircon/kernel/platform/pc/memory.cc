@@ -123,7 +123,6 @@ static zx_status_t mem_arena_init(boot_addr_range_t* range) {
   // Set up a base arena template to use
   pmm_arena_info_t base_arena;
   snprintf(base_arena.name, sizeof(base_arena.name), "%s", "memory");
-  base_arena.priority = 1;
   base_arena.flags = 0;
 
   zx_status_t status;

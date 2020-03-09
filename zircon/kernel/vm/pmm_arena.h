@@ -31,7 +31,6 @@ class PmmArena : public fbl::DoublyLinkedListable<PmmArena*> {
   paddr_t base() const { return info_.base; }
   size_t size() const { return info_.size; }
   unsigned int flags() const { return info_.flags; }
-  unsigned int priority() const { return info_.priority; }
 
   // Counts the number of pages in every state. For each page in the arena,
   // increments the corresponding VM_PAGE_STATE_*-indexed entry of

@@ -77,9 +77,9 @@ zx_status_t PmmNode::AddArena(const pmm_arena_info_t* info) TA_NO_THREAD_SAFETY_
     return status;
   }
 
-  // walk the arena list and add arena based on priority order
+  // walk the arena list, inserting in ascending order of arena base address
   for (auto& a : arena_list_) {
-    if (a.priority() > arena->priority()) {
+    if (a.base() > arena->base()) {
       arena_list_.insert(a, arena);
       goto done_add;
     }

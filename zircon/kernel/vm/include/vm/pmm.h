@@ -21,7 +21,6 @@ typedef struct pmm_arena_info {
   char name[16];
 
   uint flags;
-  uint priority;
 
   paddr_t base;
   size_t size;
