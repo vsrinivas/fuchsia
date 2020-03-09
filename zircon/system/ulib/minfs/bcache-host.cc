@@ -29,14 +29,24 @@ zx_status_t Bcache::RunOperation(const storage::Operation& operation,
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  blk_t block_num = static_cast<blk_t>(operation.dev_offset);
   void* data = buffer->Data(operation.vmo_offset);
-
+  ssize_t result;
   if (operation.type == storage::OperationType::kRead) {
-    return Readblk(block_num, data);
+    result = pread(fd_.get(), data, operation.length * kMinfsBlockSize,
+                   operation.dev_offset * kMinfsBlockSize);
+  } else {
+    result = pwrite(fd_.get(), data, operation.length * kMinfsBlockSize,
+                    operation.dev_offset * kMinfsBlockSize);
   }
 
-  return Writeblk(block_num, data);
+  if (result != static_cast<ssize_t>(operation.length * kMinfsBlockSize)) {
+    // Linux and Mac don't agree on the number of "longs" on uint64_t.
+    FS_TRACE_ERROR("minfs: RunOperation %s failure at block 0x%lx (%zd)\n",
+                   operation.type == storage::OperationType::kRead ? "read" : "write",
+                   static_cast<unsigned long>(operation.dev_offset), result);
+    return ZX_ERR_IO;
+  }
+  return ZX_OK;
 }
 
 zx_status_t Bcache::Readblk(blk_t bno, void* data) {

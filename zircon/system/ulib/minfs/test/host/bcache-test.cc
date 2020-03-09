@@ -27,7 +27,7 @@ class DataBuffer final : public storage::BlockBuffer {
   uint32_t BlockSize() const final { return kMinfsBlockSize; }
   vmoid_t vmoid() const final { return 0; }
   void* Data(size_t index) final { return &data_[index * kMinfsBlockSize]; }
-  const void* Data(size_t index) const final { return &data_[index]; }
+  const void* Data(size_t index) const final { return &data_[index * kMinfsBlockSize]; }
 
  private:
   std::vector<char> data_;
@@ -54,16 +54,17 @@ class BcacheTest : public zxtest::Test {
 TEST_F(BcacheTest, BlockNumberToDevice) { ASSERT_EQ(42, bcache_->BlockNumberToDevice(42)); }
 
 TEST_F(BcacheTest, RunOperation) {
-  DataBuffer buffer(2);
+  DataBuffer buffer(4);
 
-  // Prepare to write '2' from the second block.
-  memset(buffer.Data(1), '2', buffer.BlockSize());
+  // Prepare to write from the end of the buffer.
+  memset(buffer.Data(2), '2', buffer.BlockSize());
+  memset(buffer.Data(3), '3', buffer.BlockSize());
 
   storage::Operation operation = {};
   operation.type = storage::OperationType::kWrite;
-  operation.vmo_offset = 1;
-  operation.dev_offset = 2;
-  operation.length = 1;
+  operation.vmo_offset = 2;
+  operation.dev_offset = 1;
+  operation.length = 2;
 
   ASSERT_OK(bcache_->RunOperation(operation, &buffer));
 
@@ -72,7 +73,7 @@ TEST_F(BcacheTest, RunOperation) {
   operation.vmo_offset = 0;
 
   ASSERT_OK(bcache_->RunOperation(operation, &buffer));
-  EXPECT_BYTES_EQ(buffer.Data(1), buffer.Data(0), buffer.BlockSize());
+  EXPECT_BYTES_EQ(buffer.Data(2), buffer.Data(0), buffer.BlockSize() * 2);
 }
 
 }  // namespace
