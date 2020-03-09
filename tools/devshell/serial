@@ -32,8 +32,13 @@ fi
 
 DEVICE="$1"
 if [[ -z "$DEVICE" ]]; then
+  options=($(find /dev -maxdepth 1 -name ttyUSB\* -or -name tty.SLAB_USBtoUART\* -or -name tty.usbserial\*))
+  if [[ "${#options}" = 0 ]]; then
+    fx-error "No known serial devices found, specify one exactly."
+    exit 1
+  fi
   echo >&2 "Select a serial device from the following list:"
-  select device in /dev/ttyUSB*; do
+  select device in "${options[@]}"; do
     DEVICE="$device"
     break
   done
@@ -63,4 +68,12 @@ echo >&2 "SERIAL: Connecting to $DEVICE..."
 echo >&2 "SERIAL: Use CTRL-o to exit"
 echo >&2 "SERIAL: Run: \`export TERM=xterm; /boot/bin/sh\` for improved key bindings"
 
-socat -,sane,raw,echo=0,icanon=0,escape=0x0f "file:${DEVICE}",b115200,ospeed=115200,ispeed=115200,cs8,clocal=0,cstopb=0,parenb=0,nonblock=1,raw,echo=0
+# This is the method recommended in the socat manual to detect the presence /
+# omission of this feature.
+if $(socat -hh |grep ' b[1-9]' > /dev/null); then
+  speed="b115200"
+else
+  speed="ospeed=115200,ispeed=115200"
+fi
+
+exec socat -,sane,cfmakeraw,escape=0x0f "file:${DEVICE}",sane,cfmakeraw,"${speed}",cs8,parenb=0,cstopb=1,ixoff=0,ixon=0,crtscts=0,clocal=1,nonblock=1
