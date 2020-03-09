@@ -485,15 +485,28 @@ pub trait IpAddress:
 
     /// Invokes one function on this address if it is an [`Ipv4Addr`] and
     /// another if it is an [`Ipv6Addr`].
-    fn with<O, F4: Fn(&Ipv4Addr) -> O, F6: Fn(&Ipv6Addr) -> O>(&self, v4: F4, v6: F6) -> O;
+    ///
+    /// Watch out for the common pitfall that, if `v4` and `v6` are closures,
+    /// even though only one will be invoked in practice, the Rust borrow
+    /// checker will still not allow them to both borrow the same mutable state
+    /// simultaneously. If this becomes a problem, consider separate calls to
+    /// [`with_v4`] and [`with_v6`] instead.
+    ///
+    /// [`with_v4`]: crate::ip::IpAddress::with_v4
+    /// [`with_v6`]: crate::ip::IpAddress::with_v6
+    fn with<O, F4: FnOnce(Ipv4Addr) -> O, F6: FnOnce(Ipv6Addr) -> O>(self, v4: F4, v6: F6) -> O;
 
     /// Invokes a function on this address if it is an [`Ipv4Addr`] or return
     /// `default` if it is an [`Ipv6Addr`].
-    fn with_v4<O, F: Fn(&Ipv4Addr) -> O>(&self, f: F, default: O) -> O;
+    fn with_v4<O, F: FnOnce(Ipv4Addr) -> O>(self, f: F, default: O) -> O {
+        self.with(f, |_| default)
+    }
 
     /// Invokes a function on this address if it is an [`Ipv6Addr`] or return
     /// `default` if it is an [`Ipv4Addr`].
-    fn with_v6<O, F: Fn(&Ipv6Addr) -> O>(&self, f: F, default: O) -> O;
+    fn with_v6<O, F: FnOnce(Ipv6Addr) -> O>(self, f: F, default: O) -> O {
+        self.with(|_| default, f)
+    }
 
     // Functions used to implement internal types. These functions aren't
     // particularly useful to users, but allow us to implement certain
@@ -777,18 +790,8 @@ impl IpAddress for Ipv4Addr {
     }
 
     #[inline]
-    fn with<O, F4: Fn(&Ipv4Addr) -> O, F6: Fn(&Ipv6Addr) -> O>(&self, v4: F4, _v6: F6) -> O {
+    fn with<O, F4: FnOnce(Ipv4Addr) -> O, F6: FnOnce(Ipv6Addr) -> O>(self, v4: F4, _v6: F6) -> O {
         v4(self)
-    }
-
-    #[inline]
-    fn with_v4<O, F: Fn(&Ipv4Addr) -> O>(&self, f: F, _default: O) -> O {
-        f(self)
-    }
-
-    #[inline]
-    fn with_v6<O, F: Fn(&Ipv6Addr) -> O>(&self, _f: F, default: O) -> O {
-        default
     }
 
     fn into_subnet_either(subnet: Subnet<Ipv4Addr>) -> SubnetEither {
@@ -917,18 +920,8 @@ impl IpAddress for Ipv6Addr {
     }
 
     #[inline]
-    fn with<O, F4: Fn(&Ipv4Addr) -> O, F6: Fn(&Ipv6Addr) -> O>(&self, _v4: F4, v6: F6) -> O {
+    fn with<O, F4: FnOnce(Ipv4Addr) -> O, F6: FnOnce(Ipv6Addr) -> O>(self, _v4: F4, v6: F6) -> O {
         v6(self)
-    }
-
-    #[inline]
-    fn with_v4<O, F: Fn(&Ipv4Addr) -> O>(&self, _f: F, default: O) -> O {
-        default
-    }
-
-    #[inline]
-    fn with_v6<O, F: Fn(&Ipv6Addr) -> O>(&self, f: F, _default: O) -> O {
-        f(self)
     }
 
     fn into_subnet_either(subnet: Subnet<Ipv6Addr>) -> SubnetEither {
