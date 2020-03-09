@@ -25,7 +25,6 @@ async fn update_method_to_fidl(
     facade: &UpdateFacade,
 ) -> Result<Value, Error> {
     Ok(match method_name.parse()? {
-        UpdateMethod::GetState => to_value(facade.get_state().await?),
         UpdateMethod::CheckNow => to_value(facade.check_now(args).await?),
         UpdateMethod::GetCurrentChannel => to_value(facade.get_current_channel().await?),
         UpdateMethod::GetTargetChannel => to_value(facade.get_target_channel().await?),

@@ -541,24 +541,35 @@ func do(services Services) int {
 		return 1
 	case "system_update":
 		result, err := services.updateManager.CheckNow(
-			update.Options{
-				Initiator: update.InitiatorUser, InitiatorPresent: true},
-			update.MonitorInterfaceRequest{zx.Channel(zx.HandleInvalid)})
+			update.CheckOptions{
+				Initiator:                                  update.InitiatorUser,
+				InitiatorPresent:                           true,
+				AllowAttachingToExistingUpdateCheck:        false,
+				AllowAttachingToExistingUpdateCheckPresent: true,
+			},
+			update.MonitorInterface{Channel: zx.Channel(zx.HandleInvalid)})
 		if err != nil {
 			log.Printf("error checking for system update: %s", err)
 			return 1
 		}
 
-		switch result {
-		case update.CheckStartedResultStarted:
+		switch result.Which() {
+		case update.ManagerCheckNowResultResponse:
 			fmt.Printf("triggered a system update check\n")
 			return 0
-		case update.CheckStartedResultInProgress:
-			fmt.Printf("system update check already in progress\n")
-			return 0
-		default:
-			fmt.Printf("system update check failed: %s", result)
-			return 1
+		case update.ManagerCheckNowResultErr:
+			switch result.Err {
+			case update.CheckNotStartedReasonAlreadyInProgress:
+				fmt.Printf("system update check already in progress\n")
+				return 0
+			case update.CheckNotStartedReasonInternal:
+				fallthrough
+			case update.CheckNotStartedReasonInvalidOptions:
+				fallthrough
+			case update.CheckNotStartedReasonThrottled:
+				fmt.Printf("system update check failed: %s\n", result.Err)
+				return 1
+			}
 		}
 	case "enable_src":
 		if *name == "" {

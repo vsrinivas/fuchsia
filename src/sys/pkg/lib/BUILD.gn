@@ -7,6 +7,7 @@ group("lib") {
   deps = [
     "event-queue",
     "fidl-fuchsia-amber-ext",
+    "fidl-fuchsia-update-ext",
     "forced-fdr",
     "fuchsia-archive",
     "fuchsia-merkle",
@@ -26,6 +27,7 @@ group("tests") {
   deps = [
     "event-queue:tests",
     "fidl-fuchsia-amber-ext:tests",
+    "fidl-fuchsia-update-ext:tests",
     "forced-fdr:tests",
     "fuchsia-archive:tests",
     "fuchsia-merkle:tests",

@@ -11,19 +11,8 @@ class Update {
 
   Update(this._sl4f);
 
-  /// Get the current state of the update manager.
-  Future<State> getState() async {
-    final result = await _sl4f.request('update_facade.GetState');
-    final String enumString = 'ManagerState.${result['state']}'.toLowerCase();
-    final managerState = ManagerState.values
-        .firstWhere((e) => e.toString().toLowerCase() == enumString);
-    return State()
-      ..state = managerState
-      ..versionAvailable = result['version_available'];
-  }
-
   /// Immediately check for an update.
-  Future<CheckStartedResult> checkNow({bool serviceInitiated}) async {
+  Future<CheckStartedResult> checkNow({bool serviceInitiated = false}) async {
     final result = await _sl4f.request(
         'update_facade.CheckNow',
         serviceInitiated != null
@@ -51,23 +40,10 @@ class Update {
   }
 }
 
-class State {
-  ManagerState state;
-  String versionAvailable;
-}
-
-enum ManagerState {
-  idle,
-  checkingForUpdates,
-  updateAvailable,
-  performingUpdate,
-  waitingForReboot,
-  finalizingUpdate,
-  encounteredError,
-}
-
 enum CheckStartedResult {
   started,
-  inProgress,
+  internal,
+  invalidOptions,
+  alreadyInProgress,
   throttled,
 }
