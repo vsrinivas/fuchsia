@@ -68,6 +68,12 @@ int C18::Thread() {
     return -1;
   }
 
+  status = SpiInit();
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s:%d SpiInit() failed.\n", __PRETTY_FUNCTION__, __LINE__);
+    return -1;
+  }
+
   status = pbus_.DeviceAdd(&rtc_dev);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DeviceAdd failed for RTC - error %d\n", __func__, status);
@@ -87,9 +93,7 @@ zx_status_t C18::Start() {
   return ZX_OK;
 }
 
-void C18::DdkRelease() {
-  delete this;
-}
+void C18::DdkRelease() { delete this; }
 
 static constexpr zx_driver_ops_t driver_ops = []() {
   zx_driver_ops_t ops = {};
@@ -101,7 +105,6 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 }  // namespace board_c18
 
 ZIRCON_DRIVER_BEGIN(c18, board_c18::driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PBUS),
+BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PBUS),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GOOGLE),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_C18),
-ZIRCON_DRIVER_END(c18)
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_C18), ZIRCON_DRIVER_END(c18)

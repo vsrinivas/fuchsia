@@ -7,8 +7,8 @@
 
 #include <threads.h>
 
-#include <ddk/protocol/gpioimpl.h>
 #include <ddktl/device.h>
+#include <ddktl/protocol/gpioimpl.h>
 #include <ddktl/protocol/platform/bus.h>
 
 namespace board_c18 {
@@ -18,6 +18,8 @@ enum {
   BTI_MSDC0,
 };
 
+// These should match the mmio table defined in c18-spi.c
+enum { C18_SPI0, C18_SPI1, C18_SPI2, C18_SPI3, C18_SPI4, C18_SPI5 };
 
 class C18;
 using C18Type = ddk::Device<C18>;
@@ -37,11 +39,12 @@ class C18 : public C18Type {
   static zx_status_t SocInit();
   zx_status_t GpioInit();
   zx_status_t Msdc0Init();
+  zx_status_t SpiInit();
 
   int Thread();
 
   ddk::PBusProtocolClient pbus_;
-  gpio_impl_protocol_t gpio_impl_;
+  ddk::GpioImplProtocolClient gpio_impl_;
   thrd_t thread_;
 };
 

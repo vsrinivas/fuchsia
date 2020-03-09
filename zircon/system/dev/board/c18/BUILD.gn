@@ -27,6 +27,7 @@ driver_module("c18") {
     "c18-gpio.cc",
     "c18-msdc0.cc",
     "c18-soc.cc",
+    "c18-spi.cc",
     "c18.cc",
   ]
   deps = [

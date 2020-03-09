@@ -572,6 +572,7 @@ TEST_F(DeviceEnumerationTest, C18Test) {
       "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-009/block",
       "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-010/block",
       "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-011/block",
+      "sys/platform/0d:00:e",  // SPI
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));

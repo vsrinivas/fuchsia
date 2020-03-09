@@ -194,6 +194,7 @@ __BEGIN_CDECLS
 #define PDEV_DID_MEDIATEK_AUDIO_IN  11
 #define PDEV_DID_MEDIATEK_DSI       12
 #define PDEV_DID_MEDIATEK_POWER     13
+#define PDEV_DID_MEDIATEK_SPI       14
 
 // Sony
 #define PDEV_VID_SONY               14
