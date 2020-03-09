@@ -2,7 +2,9 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
-- title: "Fidlcat overview"
-  path: /docs/development/tools/fidl_inspecting
-- title: "Fidlcat guide"
-  path: /docs/development/tools/fidl_inspecting/fidlcat_usage.md
+- title: "Use fidlcat"
+  section:
+  - include: /docs/development/monitor/fidlcat/_toc.yaml
+- title: "Use the system monitor"
+  section:
+  - include: /docs/development/monitor/system_monitor/_toc.yaml

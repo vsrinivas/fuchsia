@@ -90,7 +90,7 @@ To get Fuchsia running on hardware, see
 ### Set up the emulator
 
 If you don't have supported hardware, you can run Fuchsia in an emulator
-using [QEMU](/docs/development/emulator/qemu.md).
+using [QEMU](/docs/development/run/qemu.md).
 
 #### Configure network
 
@@ -103,7 +103,7 @@ sudo ip tuntap add dev qemu mode tap user $USER
 sudo ip link set qemu up
 ```
 
-On macOS, see [Enabling networking under QEMU](/docs/development/emulator/qemu.md#enabling_networking_under_qemu).
+On macOS, see [Enabling networking under QEMU](/docs/development/run/qemu.md#enabling_networking_under_qemu).
 
 #### Start the emulator
 

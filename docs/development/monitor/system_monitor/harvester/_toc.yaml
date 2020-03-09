@@ -1,0 +1,14 @@
+# Please, read https://fuchsia.dev/fuchsia-src/contribute/best-practices/documentation_navigation_toc
+# before making changes to this file, and add a member of the fuchsia.dev
+# team as reviewer.
+toc:
+- title: "Overview"
+  path: /docs/development/monitor/system_monitor/harvester/README.md
+- title: "Task samples"
+  path: /docs/development/monitor/system_monitor/harvester/task_samples.md
+- title: "Component introspection"
+  path: /docs/development/monitor/system_monitor/harvester/component_introspection.md
+- title: "CPU samples"
+  path: /docs/development/monitor/system_monitor/harvester/cpu_samples.md
+- title: "Memory samples"
+  path: /docs/development/monitor/system_monitor/harvester/memory_samples.md

@@ -25,7 +25,7 @@ it. For instance for I2C, from
 [i2c.fidl](/sdk/fidl/fuchsia.hardware.i2c/i2c.fidl), there is a
 `Transfer()` FIDL method that allows for writes and reads from I2C devices.
 
-Note: [Banjo](/docs/development/tools/banjo-tutorial.md) should not be used for
+Note: [Banjo](/docs/development/drivers/banjo-tutorial.md) should not be used for
 driver utilities application to driver communication.
 
 TODO(45662): Add inspect usage description.

@@ -1,0 +1,12 @@
+# Please, read https://fuchsia.dev/fuchsia-src/contribute/best-practices/documentation_navigation_toc
+# before making changes to this file, and add a member of the fuchsia.dev
+# team as reviewer.
+toc:
+- title: "Overview"
+  path: /docs/development/monitor/system_monitor/README.md
+- title: "Dockyard"
+  section:
+  - include: /docs/development/monitor/system_monitor/dockyard/_toc.yaml
+- title: "Harvester"
+  section:
+  - include: /docs/development/monitor/system_monitor/harvester/_toc.yaml

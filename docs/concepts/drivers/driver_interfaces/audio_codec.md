@@ -52,7 +52,7 @@ may use multiple codecs at once.
 
 ## Protocol definition
 
-The codec protocol is defined in [Banjo](/docs/development/tools/banjo-tutorial.md) at
+The codec protocol is defined in [Banjo](/docs/development/drivers/banjo-tutorial.md) at
 [ddk.protocol.codec](/zircon/system/banjo/ddk.protocol.codec/codec.banjo).
 
 Many codec protocol operations are "fire-and-forget", i.e. they do not expect a

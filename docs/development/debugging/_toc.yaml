@@ -2,6 +2,9 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
+- title: "Use the debugger"
+  section:
+  - include: /docs/development/debugger/_toc.yaml
 - title: "ACPI debugging"
   path: /docs/development/debugging/acpi.md
 - title: "Debugging tips"

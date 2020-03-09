@@ -2,7 +2,7 @@
 
 ## Launching fidlcat
 
-For information about launching fidlcat: [fidlcat](../fidl_inspecting).
+For information about launching fidlcat: [fidlcat](/docs/development/monitor/fidlcat).
 
 {% dynamic if request.tld != "dev" %}
 

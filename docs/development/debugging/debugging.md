@@ -91,5 +91,5 @@ void my_function() {
 ### Inspecting FIDL messages
 
 Fuchsia has a tool for viewing FIDL messages as they are sent and received. See
-details at [the doc page for fidl inspection](/docs/development/tools/fidl_inspecting/README.md).
+details at [the doc page for fidl inspection](/docs/development/monitor/fidlcat/README.md).
 

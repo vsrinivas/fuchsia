@@ -2,7 +2,7 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
-- title: "Run the emulator"
-  path: /docs/development/run/qemu.md
-- title: "Run an example component"
-  path: /docs/development/run/run-examples.md
+- title: "Overview"
+  path: /docs/development/monitor/system_monitor/dockyard/README.md
+- title: "Terms"
+  path: /docs/development/monitor/system_monitor/dockyard/terms.md

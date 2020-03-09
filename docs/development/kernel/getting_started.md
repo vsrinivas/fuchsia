@@ -70,7 +70,7 @@ on all architectures.
 You can skip this if you're only testing on actual hardware, but the emulator
 is handy for quick local tests and generally worth having around.
 
-See [QEMU](/docs/development/emulator/qemu.md) for information on building and using QEMU with zircon.
+See [QEMU](/docs/development/run/qemu.md) for information on building and using QEMU with zircon.
 
 
 ## Build Toolchains (Optional)

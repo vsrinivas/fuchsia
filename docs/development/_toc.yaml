@@ -12,10 +12,10 @@ toc:
   section:
   - include: /docs/development/hardware/_toc.yaml
 - heading: "Build and run"
-- title: "Build Fuchsia"
+- title: "Build"
   section:
   - include: /docs/development/build/_toc.yaml
-- title: "Run components"
+- title: "Run"
   section:
   - include: /docs/development/run/_toc.yaml
 - heading: "Write code"
@@ -59,6 +59,9 @@ toc:
 - title: "Debug"
   section:
   - include: /docs/development/debugging/_toc.yaml
+- title: "Monitor"
+  section:
+  - include: /docs/development/monitor/_toc.yaml
 - title: "Trace"
   section:
   - include: /docs/development/tracing/_toc.yaml
@@ -73,6 +76,3 @@ toc:
 - title: "Internationalization"
   section:
   - include: /docs/development/internationalization/_toc.yaml
-- title: "Tools"
-  section:
-  - include: /docs/development/tools/_toc.yaml

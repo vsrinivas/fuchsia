@@ -2,5 +2,7 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
-- title: "QEMU"
-  path: /docs/development/emulator/qemu.md
+- title: "Overview"
+  path: /docs/development/monitor/fidlcat
+- title: "Guide"
+  path: /docs/development/monitor/fidlcat/fidlcat_usage.md

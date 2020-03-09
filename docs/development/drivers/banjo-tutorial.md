@@ -1,8 +1,6 @@
-# The Banjo Tutorial
+# Banjo tutorial
 
 This document is part of the [Zircon Driver Development Kit](/docs/concepts/drivers/overview.md) documentation.
-
-[TOC]
 
 Banjo is a "transpiler" (like [FIDL's
 `fidlc`](/docs/development/languages/fidl/README.md))
@@ -19,12 +17,12 @@ There's also a reference section that includes:
 
 * a list of builtin keywords and primitive types.
 
-# Overview
+## Overview
 
 Banjo generates C and C++ code that can be used by both the protocol implementer
 and the protocol user.
 
-# A simple example
+## A simple example
 
 As a first step, let's take a look at a relatively simple Banjo specification.
 This is the file [`//zircon/system/banjo/ddk.protocol.i2c/i2c.banjo`](/zircon/system/banjo/ddk.protocol.i2c/i2c.banjo):

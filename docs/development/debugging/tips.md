@@ -49,7 +49,7 @@ is passed.
 
 ## Debugging the kernel with QEMU+GDB.
 
-See "Debugging the kernel with GDB" in [QEMU](/docs/development/emulator/qemu.md) for
+See "Debugging the kernel with GDB" in [QEMU](/docs/development/run/qemu.md) for
 documentation on debugging zircon with QEMU+GDB.
 
 [fuchsia-debugging-doc]: /docs/development/debugging/debugging.md
