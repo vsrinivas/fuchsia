@@ -415,17 +415,7 @@ func (n *Client) StartDiscover(t chan<- *Target, nodename string, fuchsia bool) 
 	return q.close, nil
 }
 
-// Beacon receives the beacon packet, returning the address of the sender.
-func (n *Client) Beacon() (*net.UDPAddr, error) {
-	conn, err := net.ListenUDP("udp6", &net.UDPAddr{
-		IP:   net.IPv6zero,
-		Port: n.AdvertPort,
-	})
-	if err != nil {
-		return nil, err
-	}
-	defer conn.Close()
-
+func (n *Client) beacon(conn *net.UDPConn) (*net.UDPAddr, error) {
 	conn.SetReadDeadline(time.Now().Add(n.Timeout))
 
 	b := make([]byte, 4096)
@@ -455,6 +445,33 @@ func (n *Client) Beacon() (*net.UDPAddr, error) {
 	}
 
 	return nil, errors.New("no valid beacon")
+}
+
+// BeaconOnInterface receives the beacon packet on a particular interface.
+func (n *Client) BeaconOnInterface(networkInterface string) (*net.UDPAddr, error) {
+	conn, err := net.ListenUDP("udp6", &net.UDPAddr{
+		IP:   net.IPv6zero,
+		Port: n.AdvertPort,
+		Zone: networkInterface,
+	})
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+	return n.beacon(conn)
+}
+
+// Beacon receives the beacon packet, returning the address of the sender.
+func (n *Client) Beacon() (*net.UDPAddr, error) {
+	conn, err := net.ListenUDP("udp6", &net.UDPAddr{
+		IP:   net.IPv6zero,
+		Port: n.AdvertPort,
+	})
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+	return n.beacon(conn)
 }
 
 // Boot sends a boot packet to the address.
