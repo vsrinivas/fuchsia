@@ -11,10 +11,7 @@ use {
             addable_directory::AddableDirectoryWithResult,
             dir_tree::{CapabilityUsageTree, DirTree},
             error::ModelError,
-            hooks::{
-                ComponentDescriptor, Event, EventPayload, EventType, Hook, HooksRegistration,
-                RuntimeInfo,
-            },
+            hooks::{Event, EventPayload, EventType, Hook, HooksRegistration, RuntimeInfo},
             model::Model,
             moniker::AbsoluteMoniker,
             realm::Realm,
@@ -137,8 +134,8 @@ impl Hub {
             "Hub",
             vec![
                 EventType::CapabilityRouted,
+                EventType::Discovered,
                 EventType::Destroyed,
-                EventType::DynamicChildAdded,
                 EventType::MarkedForDestruction,
                 EventType::Started,
                 EventType::Stopped,
@@ -345,7 +342,6 @@ impl Hub {
         component_url: String,
         runtime: &RuntimeInfo,
         component_decl: &'a ComponentDecl,
-        live_children: &'a Vec<ComponentDescriptor>,
         routing_facade: RoutingFacade,
     ) -> Result<(), ModelError> {
         trace::duration!("component_manager", "hub:on_start_instance_async");
@@ -419,28 +415,15 @@ impl Hub {
             instance.directory.add_node("exec", execution_directory, &target_moniker)?;
         }
 
-        // TODO: Loop over deleting realms also?
-        for child_descriptor in live_children {
-            let abs_moniker = child_descriptor.abs_moniker.to_string();
-            trace::duration!("component_manager", "hub:add_live_child",
-                             "child_moniker" => abs_moniker.as_ref());
-            Self::add_instance_to_parent_if_necessary(
-                &child_descriptor.abs_moniker,
-                child_descriptor.url.clone(),
-                &mut instances_map,
-            )
-            .await?;
-        }
-
         Ok(())
     }
 
-    async fn on_dynamic_child_added_async(
+    async fn on_discovered_async(
         &self,
         target_moniker: &AbsoluteMoniker,
         component_url: String,
     ) -> Result<(), ModelError> {
-        trace::duration!("component_manager", "hub:on_dynamic_child_added_async");
+        trace::duration!("component_manager", "hub:on_discovered_async");
         let mut instances_map = self.instances.lock().await;
         Self::add_instance_to_parent_if_necessary(
             target_moniker,
@@ -613,26 +596,18 @@ impl Hook for Hub {
             EventPayload::Destroyed => {
                 self.on_destroyed_async(&event.target_moniker).await?;
             }
-            EventPayload::DynamicChildAdded { component_url } => {
-                self.on_dynamic_child_added_async(&event.target_moniker, component_url.to_string())
-                    .await?;
+            EventPayload::Discovered { component_url } => {
+                self.on_discovered_async(&event.target_moniker, component_url.to_string()).await?;
             }
             EventPayload::MarkedForDestruction => {
                 self.on_marked_for_destruction_async(&event.target_moniker).await?;
             }
-            EventPayload::Started {
-                component_url,
-                runtime,
-                component_decl,
-                live_children,
-                routing_facade,
-            } => {
+            EventPayload::Started { component_url, runtime, component_decl, routing_facade } => {
                 self.on_started_async(
                     &event.target_moniker,
                     component_url.clone(),
                     &runtime,
                     &component_decl,
-                    &live_children,
                     routing_facade.clone(),
                 )
                 .await?;

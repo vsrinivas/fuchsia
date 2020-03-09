@@ -6,7 +6,7 @@ use {
     crate::model::{
         error::ModelError,
         exposed_dir::ExposedDir,
-        hooks::{ComponentDescriptor, Event, EventPayload, RuntimeInfo},
+        hooks::{Event, EventPayload, RuntimeInfo},
         moniker::AbsoluteMoniker,
         namespace::IncomingNamespace,
         realm::{ExecutionState, Realm, Runtime, WeakRealm},
@@ -41,19 +41,11 @@ pub(super) async fn do_start(realm: Arc<Realm>) -> Result<(), ModelError> {
     let resolved_url = component.resolved_url.ok_or(ModelError::ComponentInvalid)?;
     let package = component.package;
 
-    let (decl, live_child_descriptors) = {
+    let decl = {
         realm.populate_decl(component.decl.ok_or(ModelError::ComponentInvalid)?).await?;
         let state = realm.lock_state().await;
         let state = state.as_ref().unwrap();
-        let decl = state.decl().clone();
-        let live_child_descriptors: Vec<_> = state
-            .live_child_realms()
-            .map(|(_, r)| ComponentDescriptor {
-                abs_moniker: r.abs_moniker.clone(),
-                url: r.component_url.clone(),
-            })
-            .collect();
-        (decl, live_child_descriptors)
+        state.decl().clone()
     };
 
     // Find the runner to use.
@@ -75,7 +67,6 @@ pub(super) async fn do_start(realm: Arc<Realm>) -> Result<(), ModelError> {
                 component_url: realm.component_url.clone(),
                 runtime: RuntimeInfo::from_runtime(&pending_runtime),
                 component_decl: decl.clone(),
-                live_children: live_child_descriptors,
                 routing_facade,
             },
         );

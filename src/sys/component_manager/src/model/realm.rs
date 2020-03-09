@@ -179,11 +179,30 @@ impl Realm {
                 false
             }
         };
-        // Only dispatch the `Resolved` event if a `RealmState` was installed
-        // in this call.
+        // If a `RealmState` was installed in this call, first dispatch
+        // `Resolved` for the component itself and then dispatch
+        // `Discovered` for every static child that was discovered in the
+        // manifest.
         if new_realm_state {
-            let event = Event::new(self.abs_moniker.clone(), EventPayload::Resolved { decl });
+            if self.parent.is_none() {
+                let event = Event::new(
+                    self.abs_moniker.clone(),
+                    EventPayload::Discovered { component_url: self.component_url.clone() },
+                );
+                self.hooks.dispatch(&event).await?;
+            }
+            let event =
+                Event::new(self.abs_moniker.clone(), EventPayload::Resolved { decl: decl.clone() });
             self.hooks.dispatch(&event).await?;
+            for child in decl.children.iter() {
+                let child_moniker = ChildMoniker::new(child.name.clone(), None, 0);
+                let child_abs_moniker = self.abs_moniker.child(child_moniker);
+                let event = Event::new(
+                    child_abs_moniker,
+                    EventPayload::Discovered { component_url: child.url.clone() },
+                );
+                self.hooks.dispatch(&event).await?;
+            }
         }
         Ok(())
     }
@@ -321,7 +340,7 @@ impl Realm {
         // Call hooks outside of lock
         let event = Event::new(
             child_realm.abs_moniker.clone(),
-            EventPayload::DynamicChildAdded { component_url: child_realm.component_url.clone() },
+            EventPayload::Discovered { component_url: child_realm.component_url.clone() },
         );
         self.hooks.dispatch(&event).await?;
         Ok(())

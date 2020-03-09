@@ -104,3 +104,10 @@ rustc_binary("echo_client_for_events_bin") {
     "//third_party/rust_crates:futures",
   ]
 }
+
+rustc_binary("event_dispatch_order_stub_component_bin") {
+  name = "event_dispatch_order_stub_component"
+  edition = "2018"
+  source_root = "event_dispatch_order/stub_component.rs"
+  deps = [ "//third_party/rust_crates:anyhow" ]
+}

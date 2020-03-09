@@ -781,7 +781,7 @@ macro_rules! create_event {
 
 // To create a class for an event, use the above macro here.
 create_event!(Destroyed);
-create_event!(DynamicChildAdded);
+create_event!(Discovered);
 create_event!(MarkedForDestruction);
 create_event!(Resolved);
 create_event!(Started);

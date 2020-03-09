@@ -1,0 +1,8 @@
+{
+    "program": {
+        "binary": "bin/stub_component",
+    },
+    "use": [
+        { "runner": "elf" }
+    ],
+}

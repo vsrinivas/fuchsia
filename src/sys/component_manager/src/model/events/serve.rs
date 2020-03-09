@@ -270,7 +270,7 @@ fn convert_fidl_event_type_to_std(event_type: fevents::EventType) -> EventType {
     match event_type {
         fevents::EventType::CapabilityRouted => EventType::CapabilityRouted,
         fevents::EventType::Destroyed => EventType::Destroyed,
-        fevents::EventType::DynamicChildAdded => EventType::DynamicChildAdded,
+        fevents::EventType::Discovered => EventType::Discovered,
         fevents::EventType::MarkedForDestruction => EventType::MarkedForDestruction,
         fevents::EventType::Resolved => EventType::Resolved,
         fevents::EventType::Started => EventType::Started,
@@ -282,7 +282,7 @@ fn convert_std_event_type_to_fidl(event_type: EventType) -> fevents::EventType {
     match event_type {
         EventType::CapabilityRouted => fevents::EventType::CapabilityRouted,
         EventType::Destroyed => fevents::EventType::Destroyed,
-        EventType::DynamicChildAdded => fevents::EventType::DynamicChildAdded,
+        EventType::Discovered => fevents::EventType::Discovered,
         EventType::MarkedForDestruction => fevents::EventType::MarkedForDestruction,
         EventType::Resolved => fevents::EventType::Resolved,
         EventType::Started => fevents::EventType::Started,

@@ -141,7 +141,7 @@ impl EventRegistry {
                 vec![
                     EventType::CapabilityRouted,
                     EventType::Destroyed,
-                    EventType::DynamicChildAdded,
+                    EventType::Discovered,
                     EventType::MarkedForDestruction,
                     EventType::Resolved,
                     EventType::Started,

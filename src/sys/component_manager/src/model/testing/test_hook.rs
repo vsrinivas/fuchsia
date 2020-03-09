@@ -8,7 +8,7 @@ use {
         model::addable_directory::AddableDirectoryWithResult,
         model::{
             error::ModelError,
-            hooks::{ComponentDescriptor, Event, EventPayload, EventType, Hook, HooksRegistration},
+            hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
             moniker::AbsoluteMoniker,
         },
         path::PathBufExt,
@@ -129,12 +129,7 @@ impl fmt::Display for TestHook {
 
 impl TestHook {
     pub fn new() -> TestHook {
-        let abs_moniker = AbsoluteMoniker::root();
-        let instance =
-            ComponentInstance { abs_moniker: abs_moniker.clone(), children: Mutex::new(vec![]) };
-        let mut instances = HashMap::new();
-        instances.insert(abs_moniker, Arc::new(instance));
-        Self { instances: Mutex::new(instances), lifecycle_events: Mutex::new(vec![]) }
+        Self { instances: Mutex::new(HashMap::new()), lifecycle_events: Mutex::new(vec![]) }
     }
 
     /// Returns the set of hooks into the component manager that TestHook is interested in.
@@ -142,8 +137,8 @@ impl TestHook {
         vec![HooksRegistration::new(
             "TestHook",
             vec![
+                EventType::Discovered,
                 EventType::Destroyed,
-                EventType::DynamicChildAdded,
                 EventType::MarkedForDestruction,
                 EventType::Started,
                 EventType::Stopped,
@@ -170,12 +165,8 @@ impl TestHook {
     pub async fn on_started_async<'a>(
         &'a self,
         target_moniker: &AbsoluteMoniker,
-        live_children: &'a Vec<ComponentDescriptor>,
     ) -> Result<(), ModelError> {
         self.create_instance_if_necessary(target_moniker).await?;
-        for child_descriptor in live_children {
-            self.create_instance_if_necessary(&child_descriptor.abs_moniker).await?;
-        }
         let mut events = self.lifecycle_events.lock().await;
         events.push(Lifecycle::Bind(target_moniker.clone()));
         Ok(())
@@ -221,18 +212,18 @@ impl TestHook {
         abs_moniker: &AbsoluteMoniker,
     ) -> Result<(), ModelError> {
         let mut instances = self.instances.lock().await;
+        let new_instance = match instances.get(abs_moniker) {
+            Some(old_instance) => Arc::new((old_instance.deref()).clone()),
+            None => Arc::new(ComponentInstance {
+                abs_moniker: abs_moniker.clone(),
+                children: Mutex::new(vec![]),
+            }),
+        };
+        instances.insert(abs_moniker.clone(), new_instance.clone());
         if let Some(parent_moniker) = abs_moniker.parent() {
             // If the parent isn't available yet then opt_parent_instance will have a value
             // of None.
             let opt_parent_instance = instances.get(&parent_moniker).map(|x| x.clone());
-            let new_instance = match instances.get(abs_moniker) {
-                Some(old_instance) => Arc::new((old_instance.deref()).clone()),
-                None => Arc::new(ComponentInstance {
-                    abs_moniker: abs_moniker.clone(),
-                    children: Mutex::new(vec![]),
-                }),
-            };
-            instances.insert(abs_moniker.clone(), new_instance.clone());
             // If the parent is available then add this instance as a child to it.
             if let Some(parent_instance) = opt_parent_instance {
                 let mut children = parent_instance.children.lock().await;
@@ -271,14 +262,14 @@ impl Hook for TestHook {
             EventPayload::Destroyed => {
                 self.on_destroyed_async(&event.target_moniker).await?;
             }
-            EventPayload::DynamicChildAdded { .. } => {
+            EventPayload::Discovered { .. } => {
                 self.create_instance_if_necessary(&event.target_moniker).await?;
             }
             EventPayload::MarkedForDestruction => {
                 self.on_marked_for_destruction_async(&event.target_moniker).await?;
             }
-            EventPayload::Started { live_children, .. } => {
-                self.on_started_async(&event.target_moniker, &live_children).await?;
+            EventPayload::Started { .. } => {
+                self.on_started_async(&event.target_moniker).await?;
             }
             EventPayload::Stopped => {
                 self.on_stopped_async(&event.target_moniker).await?;
@@ -412,6 +403,7 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_hook_test() {
+        let root = AbsoluteMoniker::root();
         let a: AbsoluteMoniker = vec!["a:0"].into();
         let ab: AbsoluteMoniker = vec!["a:0", "b:0"].into();
         let ac: AbsoluteMoniker = vec!["a:0", "c:0"].into();
@@ -423,6 +415,7 @@ mod tests {
         // is correct.
         {
             let test_hook = TestHook::new();
+            assert!(test_hook.create_instance_if_necessary(&root).await.is_ok());
             assert!(test_hook.create_instance_if_necessary(&a).await.is_ok());
             assert!(test_hook.create_instance_if_necessary(&ab).await.is_ok());
             assert!(test_hook.create_instance_if_necessary(&ac).await.is_ok());
@@ -435,6 +428,7 @@ mod tests {
         // Changing the order of monikers should not affect the output string.
         {
             let test_hook = TestHook::new();
+            assert!(test_hook.create_instance_if_necessary(&root).await.is_ok());
             assert!(test_hook.create_instance_if_necessary(&a).await.is_ok());
             assert!(test_hook.create_instance_if_necessary(&ac).await.is_ok());
             assert!(test_hook.create_instance_if_necessary(&ab).await.is_ok());
@@ -447,6 +441,7 @@ mod tests {
         // Submitting children before parents should still succeed.
         {
             let test_hook = TestHook::new();
+            assert!(test_hook.create_instance_if_necessary(&root).await.is_ok());
             assert!(test_hook.create_instance_if_necessary(&acf).await.is_ok());
             assert!(test_hook.create_instance_if_necessary(&abe).await.is_ok());
             assert!(test_hook.create_instance_if_necessary(&abd).await.is_ok());

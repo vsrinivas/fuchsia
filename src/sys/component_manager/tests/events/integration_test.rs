@@ -155,3 +155,26 @@ async fn chained_interposer_test() -> Result<(), Error> {
 
     Ok(())
 }
+
+#[fasync::run_singlethreaded(test)]
+async fn event_dispatch_order_test() -> Result<(), Error> {
+    let test = BlackBoxTest::default(
+        "fuchsia-pkg://fuchsia.com/events_integration_test#meta/event_dispatch_order_root.cm",
+    )
+    .await?;
+
+    let event_source = test.connect_to_event_source().await?;
+    let mut event_stream = event_source.subscribe(vec![Discovered::TYPE, Resolved::TYPE]).await?;
+
+    event_source.start_component_tree().await?;
+
+    // "Discovered" is the first stage of a component's lifecycle so it must
+    // be dispatched before "Resolved". Also, a child is not discovered until
+    // the parent is resolved and its manifest is processed.
+    event_stream.expect_exact::<Discovered>(".").await?.resume().await?;
+    event_stream.expect_exact::<Resolved>(".").await?.resume().await?;
+    event_stream.expect_exact::<Discovered>("./child:0").await?.resume().await?;
+    event_stream.expect_exact::<Resolved>("./child:0").await?.resume().await?;
+
+    Ok(())
+}

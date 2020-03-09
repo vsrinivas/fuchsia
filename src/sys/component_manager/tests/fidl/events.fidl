@@ -27,8 +27,11 @@ enum EventType {
     /// exists in the parent's realm.
     DESTROYED = 2;
 
-    /// A dynamic child was added to the parent instance.
-    DYNAMIC_CHILD_ADDED = 3;
+    /// A component instance was discovered. This is the first stage in the lifecycle
+    /// of components. Dispatched for dynamic children when they're created, for static
+    /// children when their parent is resolved, and for the root when the component manager
+    /// starts.
+    DISCOVERED = 3;
 
     /// Destruction of an instance has begun. The instance may/may not be stopped by this point.
     /// The instance still exists in the parent's realm but will soon be removed.

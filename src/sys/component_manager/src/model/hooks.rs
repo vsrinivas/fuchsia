@@ -36,9 +36,8 @@ pub enum EventType {
     /// exists in the parent's realm.
     Destroyed,
 
-    /// A dynamic child was added to the parent instance.
-    /// Depending on its eagerness, this child may/may not be started yet.
-    DynamicChildAdded,
+    /// A component instance was discovered.
+    Discovered,
 
     /// Destruction of an instance has begun. The instance may/may not be stopped by this point.
     /// The instance still exists in the parent's realm but will soon be removed.
@@ -96,7 +95,7 @@ pub enum EventPayload {
         capability_provider: Arc<Mutex<Option<Box<dyn CapabilityProvider>>>>,
     },
     Destroyed,
-    DynamicChildAdded {
+    Discovered {
         component_url: String,
     },
     MarkedForDestruction,
@@ -107,7 +106,6 @@ pub enum EventPayload {
         component_url: String,
         runtime: RuntimeInfo,
         component_decl: ComponentDecl,
-        live_children: Vec<ComponentDescriptor>,
         routing_facade: RoutingFacade,
     },
     Stopped,
@@ -144,7 +142,7 @@ impl EventPayload {
         match self {
             EventPayload::CapabilityRouted { .. } => EventType::CapabilityRouted,
             EventPayload::Destroyed => EventType::Destroyed,
-            EventPayload::DynamicChildAdded { .. } => EventType::DynamicChildAdded,
+            EventPayload::Discovered { .. } => EventType::Discovered,
             EventPayload::MarkedForDestruction => EventType::MarkedForDestruction,
             EventPayload::Resolved { .. } => EventType::Resolved,
             EventPayload::Started { .. } => EventType::Started,
@@ -161,7 +159,7 @@ impl fmt::Debug for EventPayload {
             EventPayload::CapabilityRouted { source: capability, .. } => {
                 formatter.field("capability", &capability).finish()
             }
-            EventPayload::DynamicChildAdded { component_url } => {
+            EventPayload::Discovered { component_url } => {
                 formatter.field("component_url", component_url).finish()
             }
             EventPayload::Started { component_decl, .. } => {
@@ -173,12 +171,6 @@ impl fmt::Debug for EventPayload {
             | EventPayload::Stopped => formatter.finish(),
         }
     }
-}
-
-#[derive(Clone)]
-pub struct ComponentDescriptor {
-    pub abs_moniker: AbsoluteMoniker,
-    pub url: String,
 }
 
 #[derive(Clone, Debug)]
@@ -345,11 +337,11 @@ mod tests {
             *self.call_count.lock().await
         }
 
-        async fn on_dynamic_child_added_async(&self) -> Result<(), ModelError> {
+        async fn on_discovered_async(&self) -> Result<(), ModelError> {
             let mut call_count = self.call_count.lock().await;
             *call_count += 1;
             if let Some(logger) = &self.logger {
-                let fut = logger.append(format!("{}::OnDynamicChildAdded", self.name));
+                let fut = logger.append(format!("{}::OnDiscovered", self.name));
                 fut.await;
             }
             Ok(())
@@ -359,8 +351,8 @@ mod tests {
     #[async_trait]
     impl Hook for CallCounter {
         async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
-            if let EventPayload::DynamicChildAdded { .. } = event.payload {
-                self.on_dynamic_child_added_async().await?;
+            if let EventPayload::Discovered { .. } = event.payload {
+                self.on_discovered_async().await?;
             }
             Ok(())
         }
@@ -382,14 +374,14 @@ mod tests {
         hooks
             .install(vec![HooksRegistration::new(
                 "FirstInstall",
-                vec![EventType::DynamicChildAdded],
+                vec![EventType::Discovered],
                 Arc::downgrade(&call_counter) as Weak<dyn Hook>,
             )])
             .await;
         hooks
             .install(vec![HooksRegistration::new(
                 "SecondInstall",
-                vec![EventType::DynamicChildAdded],
+                vec![EventType::Discovered],
                 Arc::downgrade(&call_counter) as Weak<dyn Hook>,
             )])
             .await;
@@ -397,7 +389,7 @@ mod tests {
         let root_component_url = "test:///root".to_string();
         let event = Event::new(
             AbsoluteMoniker::root(),
-            EventPayload::DynamicChildAdded { component_url: root_component_url },
+            EventPayload::Discovered { component_url: root_component_url },
         );
         hooks.dispatch(&event).await.expect("Unable to call hooks.");
         assert_eq!(1, call_counter.count().await);
@@ -414,7 +406,7 @@ mod tests {
         parent_hooks
             .install(vec![HooksRegistration::new(
                 "ParentHook",
-                vec![EventType::DynamicChildAdded],
+                vec![EventType::Discovered],
                 Arc::downgrade(&parent_call_counter) as Weak<dyn Hook>,
             )])
             .await;
@@ -423,7 +415,7 @@ mod tests {
         child_hooks
             .install(vec![HooksRegistration::new(
                 "ChildHook",
-                vec![EventType::DynamicChildAdded],
+                vec![EventType::Discovered],
                 Arc::downgrade(&child_call_counter) as Weak<dyn Hook>,
             )])
             .await;
@@ -434,7 +426,7 @@ mod tests {
         let root_component_url = "test:///root".to_string();
         let event = Event::new(
             AbsoluteMoniker::root(),
-            EventPayload::DynamicChildAdded { component_url: root_component_url },
+            EventPayload::Discovered { component_url: root_component_url },
         );
         child_hooks.dispatch(&event).await.expect("Unable to call hooks.");
         // parent_call_counter gets informed of the event on child_hooks even though it has
@@ -454,9 +446,9 @@ mod tests {
         // ChildCallCounter should be called before ParentCallCounter.
         assert_eq!(
             log(vec![
-                "ChildCallCounter::OnDynamicChildAdded",
-                "ParentCallCounter::OnDynamicChildAdded",
-                "ParentCallCounter::OnDynamicChildAdded",
+                "ChildCallCounter::OnDiscovered",
+                "ParentCallCounter::OnDiscovered",
+                "ParentCallCounter::OnDiscovered",
             ]),
             event_log.get().await
         );

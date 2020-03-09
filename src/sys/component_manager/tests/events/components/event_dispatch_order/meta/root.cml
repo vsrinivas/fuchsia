@@ -1,0 +1,24 @@
+{
+    "program": {
+        "binary": "bin/stub_component"
+    },
+    "use": [
+      { "runner": "elf" },
+    ],
+    "offer": [
+        {
+            "runner": "elf",
+            "from": "realm",
+            "to": [
+                "#child",
+            ]
+        },
+    ],
+    "children": [
+        {
+            "name": "child",
+            "url": "fuchsia-pkg://fuchsia.com/events_integration_test#meta/event_dispatch_order_child.cm",
+            "startup": "eager",
+        },
+    ],
+}
