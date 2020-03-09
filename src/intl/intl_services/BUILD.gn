@@ -38,10 +38,7 @@ executable("bin") {
 
 package("pkg") {
   package_name = "intl_services"
-  deps = [
-    ":bin",
-    "config:sysmgr",
-  ]
+  deps = [ ":bin" ]
 
   binaries = [
     {
