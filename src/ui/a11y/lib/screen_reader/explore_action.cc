@@ -14,7 +14,7 @@ ExploreAction::~ExploreAction() = default;
 void ExploreAction::ProcessHitTestResult(::fuchsia::accessibility::semantics::Hit hit,
                                          ActionData process_data) {
   if (hit.has_node_id()) {
-    const auto tree_weak_ptr = GetTreePointer(action_context_, process_data);
+    const auto tree_weak_ptr = GetTreePointer(action_context_, process_data.current_view_koid);
     if (!tree_weak_ptr) {
       FX_LOGS(INFO) << "The semantic tree of the View with View Ref Koid = "
                     << process_data.current_view_koid << " is no longer valid.";

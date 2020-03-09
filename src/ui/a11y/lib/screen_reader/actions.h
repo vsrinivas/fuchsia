@@ -42,8 +42,8 @@ class ScreenReaderAction {
   // that action.
   virtual void Run(ActionData process_data) = 0;
 
-  // Helper function to get the tree pointer based on ActionContext and ActionData.
-  fxl::WeakPtr<::a11y::SemanticTree> GetTreePointer(ActionContext* context, ActionData data);
+  // Helper function to get the tree pointer based on ActionContext and view koid.
+  fxl::WeakPtr<::a11y::SemanticTree> GetTreePointer(ActionContext* context, zx_koid_t koid);
 
   // Helper function to call hit testing based on ActionContext and ActionData.
   void ExecuteHitTesting(

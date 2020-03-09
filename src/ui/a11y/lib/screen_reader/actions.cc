@@ -10,16 +10,17 @@ ScreenReaderAction::ScreenReaderAction() = default;
 ScreenReaderAction::~ScreenReaderAction() = default;
 
 fxl::WeakPtr<::a11y::SemanticTree> ScreenReaderAction::GetTreePointer(ActionContext* context,
-                                                                      ActionData data) {
+                                                                      zx_koid_t koid) {
   FXL_DCHECK(context);
-  return context->view_manager->GetTreeByKoid(data.current_view_koid);
+
+  return context->view_manager->GetTreeByKoid(koid);
 }
 
 void ScreenReaderAction::ExecuteHitTesting(
     ActionContext* context, ActionData process_data,
     fuchsia::accessibility::semantics::SemanticListener::HitTestCallback callback) {
   FXL_DCHECK(context);
-  const auto tree_weak_ptr = GetTreePointer(context, process_data);
+  const auto tree_weak_ptr = GetTreePointer(context, process_data.current_view_koid);
   if (!tree_weak_ptr) {
     return;
   }

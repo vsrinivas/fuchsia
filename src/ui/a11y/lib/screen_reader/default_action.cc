@@ -15,7 +15,8 @@ void DefaultAction::Run(ActionData process_data) {
   ExecuteHitTesting(action_context_, process_data,
                     [this, process_data](::fuchsia::accessibility::semantics::Hit hit) {
                       if (hit.has_node_id()) {
-                        const auto tree_weak_ptr = GetTreePointer(action_context_, process_data);
+                        const auto tree_weak_ptr =
+                            GetTreePointer(action_context_, process_data.current_view_koid);
                         if (!tree_weak_ptr) {
                           return;
                         }
