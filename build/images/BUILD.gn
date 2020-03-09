@@ -1977,6 +1977,7 @@ group("default-images") {
 
   deps = [
     ":bootserver",
+    ":flash_script",
     ":paver-script",
     ":qemu-kernel",
     ":zedboot-script",
