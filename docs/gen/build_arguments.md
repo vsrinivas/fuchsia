@@ -1698,12 +1698,6 @@ From //src/graphics/lib/magma/gnbuild/magma.gni:16
 
 From //src/connectivity/network/netcfg/BUILD.gn:12
 
-### netstack_pprof
-
-**Current value (from the default):** `false`
-
-From //garnet/go/src/grand_unified_binary/BUILD.gn:20
-
 ### omaha_app_id
 Default app id will always return no update.
 
@@ -2431,7 +2425,7 @@ From //src/graphics/lib/magma/include/virtio/virtmagma_debug.gni:7
 
 **Current value (from the default):** `""`
 
-From //src/graphics/examples/vkprimer/BUILD.gn:48
+From //src/graphics/examples/vkprimer/BUILD.gn:46
 
 ### warn_on_sdk_changes
 Whether to only warn when an SDK has been modified.
