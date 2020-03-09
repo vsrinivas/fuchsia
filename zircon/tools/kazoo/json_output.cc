@@ -41,9 +41,7 @@ std::vector<std::string> BreakAsAbigenParser(const std::string& docstr) {
 bool JsonOutput(const SyscallLibrary& library, Writer* writer) {
   // Note, no comments allowed in plain json, so no copyright or "is generated" note.
 
-  if (!writer->Puts("{\n")) {
-    return false;
-  }
+  writer->Puts("{\n");
 
   writer->Puts("  \"syscalls\": [\n");
   for (size_t j = 0; j < library.syscalls().size(); ++j) {

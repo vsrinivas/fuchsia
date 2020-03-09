@@ -10,17 +10,16 @@
 
 Writer::Writer() {}
 
-bool Writer::Printf(const char* format, ...) {
+void Writer::Printf(const char* format, ...) {
   va_list ap;
   va_start(ap, format);
   std::string result = StringVPrintf(format, ap);
   va_end(ap);
-  return Puts(result);
+  Puts(result);
 }
 
-bool Writer::Puts(const std::string& str) {
+void Writer::Puts(const std::string& str) {
   out_ += str;
-  return true;
 }
 
 void Writer::PrintSpacerLine() {

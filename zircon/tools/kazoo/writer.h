@@ -16,13 +16,11 @@ class Writer {
  public:
   Writer();
 
-  // Unformatted string output. Returns true on success, or false with a
-  // message logged.
-  bool Puts(const std::string& str);
+  // Unformatted string output.
+  void Puts(const std::string& str);
 
-  // Formatted string output. Returns true on success, or false with a
-  // message logged.
-  __PRINTFLIKE(2, 3) bool Printf(const char* format, ...);
+  // Formatted string output.
+  __PRINTFLIKE(2, 3) void Printf(const char* format, ...);
 
   // Prints a newline character if (and only if) the last line was not empty.
   void PrintSpacerLine();
