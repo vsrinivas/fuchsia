@@ -58,6 +58,8 @@ if (host_toolchain == current_toolchain) {
       "//src/developer/remote-control/service:remote-control-rustc",
       "//src/lib/fidl/rust/fidl",
       "//src/lib/mdns/rust:mdns",
+      "//src/lib/network/packet",
+      "//src/lib/zerocopy",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:chrono",
       "//third_party/rust_crates:futures",

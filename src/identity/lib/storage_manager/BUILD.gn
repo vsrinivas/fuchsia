@@ -11,6 +11,7 @@ rustc_library("storage_manager") {
   deps = [
     "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
+    "//sdk/fidl/fuchsia.identity.account:fuchsia.identity.account-rustc",
     "//src/identity/lib/account_common",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -23,5 +24,6 @@ rustc_library("storage_manager") {
     "//third_party/rust_crates:serde_derive",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:tempfile",
+    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }

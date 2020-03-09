@@ -10,6 +10,7 @@ rustc_library("test-code") {
   deps = [
     "//sdk/fidl/fuchsia.lowpan.spinel:fuchsia.lowpan.spinel-rustc",
     "//src/connectivity/openthread/tests/lib",
+    "//src/lib/syslog/rust:syslog",
   ]
   non_rust_deps = [ "//zircon/public/lib/syslog" ]
 }
