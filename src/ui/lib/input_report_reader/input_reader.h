@@ -1,9 +1,9 @@
-// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_LIB_INPUT_READER_INPUT_READER_H_
-#define SRC_UI_LIB_INPUT_READER_INPUT_READER_H_
+#ifndef SRC_UI_LIB_INPUT_REPORT_READER_INPUT_READER_H_
+#define SRC_UI_LIB_INPUT_REPORT_READER_INPUT_READER_H_
 
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
@@ -11,19 +11,18 @@
 #include <map>
 
 #include "src/lib/fxl/macros.h"
-#include "src/ui/lib/input_reader/device_watcher.h"
+#include "src/ui/lib/input_report_reader/device_watcher.h"
 
 namespace ui_input {
 
 class InputInterpreter;
 
-// NOTE: This library is deprecated in favor of input_report_reader which
-// reads structured InputReports instead of raw HID reports. Please
-// migrate to the new library.
-//
+// This InputReader is different from the one in //src/ui/lib/input_reader/
+// because this one reads structured InputReport data where the old one
+// reads raw HID reports. This one is the preferred library.
 // InputReader does four things:
 // 1- Watches who owns the display, which can be us, or the console.
-// 2- Watches new devices that are added to dev/class/input and then
+// 2- Watches new devices that are added to dev/class/input-report and then
 //    create an InputInterpreter for each one.
 // 3- When the device is ready for read call InputInterpreter::Read()
 // 4- When devices are removed, undo #2 and #3.
@@ -56,6 +55,7 @@ class InputReader {
 
   fuchsia::ui::input::InputDeviceRegistry* const registry_;
   const bool ignore_console_;
+  size_t next_interpreter_id_ = 0;
 
   std::map<zx_handle_t, std::unique_ptr<DeviceInfo>> devices_;
   std::unique_ptr<DeviceWatcher> device_watcher_;
@@ -69,4 +69,4 @@ class InputReader {
 
 }  // namespace ui_input
 
-#endif  // SRC_UI_LIB_INPUT_READER_INPUT_READER_H_
+#endif  // SRC_UI_LIB_INPUT_REPORT_READER_INPUT_READER_H_

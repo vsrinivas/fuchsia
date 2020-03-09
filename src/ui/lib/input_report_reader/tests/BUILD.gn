@@ -1,0 +1,58 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+group("tests") {
+  testonly = true
+
+  public_deps = [ ":input-report-reader-test" ]
+}
+
+unittest_package("input-report-reader-test") {
+  deps = [ ":integration_tests" ]
+
+  tests = [
+    {
+      name = "integration_tests"
+      environments = basic_envs
+    },
+  ]
+}
+
+executable("integration_tests") {
+  testonly = true
+
+  sources = [ "integration_tests.cc" ]
+
+  deps = [
+    ":mock_device_watcher",
+    "//garnet/public/lib/gtest",
+    "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_llcpp",
+    "//sdk/fidl/fuchsia.ui.input",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/ui/input/lib/hid-input-report",
+    "//src/ui/input/testing/fake_input_report_device",
+    "//src/ui/lib/input_report_reader",
+    "//src/ui/testing:mock_input_device",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/fidl-async-cpp",
+    "//zircon/public/lib/hid",
+    "//zircon/public/lib/hid-parser",
+  ]
+}
+
+source_set("mock_device_watcher") {
+  sources = [
+    "mock_device_watcher.cc",
+    "mock_device_watcher.h",
+  ]
+
+  deps = [
+    "//src/lib/fxl",
+    "//zircon/public/lib/hid-parser",
+    "//zircon/public/lib/zx",
+  ]
+}
