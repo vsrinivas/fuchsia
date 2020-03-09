@@ -19,8 +19,26 @@ void main(List<String> args) {
   });
 
   group(Update, () {
+    test('GetState Idle', () async {
+      when(sl4f.request('update_facade.GetState'))
+          .thenAnswer((_) async => {'state': 'Idle'});
+
+      final state = await update.getState();
+      expect(state.state, ManagerState.idle);
+      expect(state.versionAvailable, null);
+    });
+
+    test('GetState PerformingUpdate', () async {
+      when(sl4f.request('update_facade.GetState')).thenAnswer((_) async =>
+          {'state': 'PerformingUpdate', 'version_available': '1.0'});
+
+      final state = await update.getState();
+      expect(state.state, ManagerState.performingUpdate);
+      expect(state.versionAvailable, '1.0');
+    });
+
     test('CheckNow', () async {
-      when(sl4f.request('update_facade.CheckNow', {'service-initiated': false}))
+      when(sl4f.request('update_facade.CheckNow'))
           .thenAnswer((_) async => {'check_started': 'Started'});
 
       expect(await update.checkNow(), CheckStartedResult.started);
@@ -28,10 +46,10 @@ void main(List<String> args) {
 
     test('CheckNow service initiated', () async {
       when(sl4f.request('update_facade.CheckNow', {'service-initiated': true}))
-          .thenAnswer((_) async => {'check_started': 'AlreadyInProgress'});
+          .thenAnswer((_) async => {'check_started': 'InProgress'});
 
       expect(await update.checkNow(serviceInitiated: true),
-          CheckStartedResult.alreadyInProgress);
+          CheckStartedResult.inProgress);
     });
 
     test('GetCurrentChannel', () async {

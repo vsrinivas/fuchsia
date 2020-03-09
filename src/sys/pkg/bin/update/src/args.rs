@@ -18,7 +18,9 @@ pub enum Command {
     Channel(Channel),
 
     // fuchsia.update Manager protocol:
+    State(State),
     CheckNow(CheckNow),
+    Monitor(Monitor),
 }
 
 #[derive(Debug, Eq, FromArgs, PartialEq)]
@@ -66,6 +68,11 @@ pub mod channel {
 }
 
 #[derive(Debug, Eq, FromArgs, PartialEq)]
+#[argh(subcommand, name = "state")]
+/// Print the current update state.
+pub struct State {}
+
+#[derive(Debug, Eq, FromArgs, PartialEq)]
 #[argh(subcommand, name = "check-now")]
 /// Start an update.
 pub struct CheckNow {
@@ -77,6 +84,11 @@ pub struct CheckNow {
     #[argh(switch)]
     pub monitor: bool,
 }
+
+#[derive(Debug, Eq, FromArgs, PartialEq)]
+#[argh(subcommand, name = "monitor")]
+/// Monitor an in-progress update.
+pub struct Monitor {}
 
 #[cfg(test)]
 mod tests {
@@ -141,6 +153,15 @@ mod tests {
     }
 
     #[test]
+    fn test_state() {
+        let update = Update::from_args(&["update"], &["state"]).unwrap();
+        assert_eq!(
+            update,
+            Update { cmd: Command::State(State {}) }
+        );
+    }
+
+    #[test]
     fn test_check_now() {
         let update = Update::from_args(&["update"], &["check-now"]).unwrap();
         assert_eq!(
@@ -155,7 +176,9 @@ mod tests {
         let update = Update::from_args(&["update"], &["check-now", "--monitor"]).unwrap();
         assert_eq!(
             update,
-            Update { cmd: Command::CheckNow(CheckNow { service_initiated: false, monitor: true }) }
+            Update {
+                cmd: Command::CheckNow(CheckNow { service_initiated: false, monitor: true })
+            }
         );
     }
     #[test]
@@ -163,7 +186,17 @@ mod tests {
         let update = Update::from_args(&["update"], &["check-now", "--service-initiated"]).unwrap();
         assert_eq!(
             update,
-            Update { cmd: Command::CheckNow(CheckNow { service_initiated: true, monitor: false }) }
+            Update {
+                cmd: Command::CheckNow(CheckNow { service_initiated: true, monitor: false })
+            }
+        );
+    }
+    #[test]
+    fn test_monitor() {
+        let update = Update::from_args(&["update"], &["monitor"]).unwrap();
+        assert_eq!(
+            update,
+            Update { cmd: Command::Monitor(Monitor {}) }
         );
     }
 }

@@ -3,114 +3,80 @@
 // found in the LICENSE file.
 
 use {
-    event_queue::{ControlHandle, Event, EventQueue, Notify},
-    fidl_fuchsia_update_ext as ext,
-    fuchsia_inspect_contrib::inspectable::InspectableDebugString,
-    fuchsia_syslog::{fx_log_err, fx_log_warn},
-    futures::prelude::*,
+    anyhow::Error,
+    fidl_fuchsia_update::ManagerState,
+    fuchsia_inspect_contrib::inspectable::{InspectableDebugString, InspectableLen},
 };
 
-pub trait StateNotifier: Notify<State> + Send + Sync + 'static {}
-
-impl<T> StateNotifier for T where T: Notify<State> + Send + Sync + 'static {}
-
-// TODO(fxb/47875) remove this wrapper struct. Instead, have update_state member
-// variable be Option<ext::State> and have event queue only send ext::State
-#[derive(Debug, Clone, PartialEq)]
-pub struct State(pub Option<ext::State>);
-
-impl From<Option<ext::State>> for State {
-    fn from(option: Option<ext::State>) -> Self {
-        Self(option)
-    }
+pub trait StateChangeCallback: Clone + Send + Sync + 'static {
+    fn on_state_change(&self, new_state: State) -> Result<(), Error>;
 }
 
-impl From<ext::State> for State {
-    fn from(state: ext::State) -> Self {
-        Self(Some(state))
-    }
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct State {
+    pub manager_state: ManagerState,
+    pub version_available: Option<String>,
 }
 
 impl Default for State {
     fn default() -> Self {
-        Self(None)
-    }
-}
-
-impl Event for State {
-    fn can_merge(&self, other: &State) -> bool {
-        if self == other {
-            return true;
-        }
-        // Disregard states that have the same update info but different installation progress
-        if let State(Some(ext::State::InstallingUpdate(ext::InstallingData {
-            update: update0,
-            ..
-        }))) = self
-        {
-            if let State(Some(ext::State::InstallingUpdate(ext::InstallingData {
-                update: update1,
-                ..
-            }))) = other
-            {
-                return update0 == update1;
-            }
-        }
-        false
+        Self { manager_state: ManagerState::Idle, version_available: None }
     }
 }
 
 #[derive(Debug)]
-pub struct UpdateMonitor<N>
+pub struct UpdateMonitor<S>
 where
-    N: StateNotifier,
+    S: StateChangeCallback,
 {
-    temporary_queue: ControlHandle<N, State>,
-    update_state: InspectableDebugString<State>,
+    permanent_callbacks: InspectableLen<Vec<S>>,
+    temporary_callbacks: InspectableLen<Vec<S>>,
+    manager_state: InspectableDebugString<ManagerState>,
     version_available: InspectableDebugString<Option<String>>,
     inspect_node: fuchsia_inspect::Node,
 }
 
-impl<N> UpdateMonitor<N>
+impl<S> UpdateMonitor<S>
 where
-    N: StateNotifier,
+    S: StateChangeCallback,
 {
-    pub fn from_inspect_node(node: fuchsia_inspect::Node) -> (impl Future<Output = ()>, Self) {
-        let (temporary_fut, temporary_queue) = EventQueue::new();
-        (
-            temporary_fut,
-            UpdateMonitor {
-                temporary_queue,
-                update_state: InspectableDebugString::new(State(None), &node, "update-state"),
-                version_available: InspectableDebugString::new(None, &node, "version-available"),
-                inspect_node: node,
-            },
-        )
+    pub fn from_inspect_node(node: fuchsia_inspect::Node) -> Self {
+        UpdateMonitor {
+            permanent_callbacks: InspectableLen::new(vec![], &node, "permanent-callbacks-count"),
+            temporary_callbacks: InspectableLen::new(vec![], &node, "temporary-callbacks-count"),
+            manager_state: InspectableDebugString::new(ManagerState::Idle, &node, "manager-state"),
+            version_available: InspectableDebugString::new(None, &node, "version-available"),
+            inspect_node: node,
+        }
     }
 
     #[cfg(test)]
-    pub fn new() -> (impl Future<Output = ()>, Self) {
+    pub fn new() -> Self {
         Self::from_inspect_node(
             fuchsia_inspect::Inspector::new().root().create_child("test-update-monitor-root-node"),
         )
     }
 
-    pub async fn add_temporary_callback(&mut self, callback: N) {
-        if let Err(e) = self.temporary_queue.add_client(callback).await {
-            fx_log_err!("error adding client to temporary queue: {:?}", e)
+    pub fn add_temporary_callback(&mut self, callback: S) {
+        if callback.on_state_change(self.state()).is_ok() {
+            self.temporary_callbacks.get_mut().push(callback);
         }
     }
 
-    pub async fn advance_update_state(&mut self, next_update_state: impl Into<State>) {
-        *self.update_state.get_mut() = next_update_state.into();
-        if *self.update_state == State(None) {
+    pub fn add_permanent_callback(&mut self, callback: S) {
+        if callback.on_state_change(self.state()).is_ok() {
+            self.permanent_callbacks.get_mut().push(callback);
+        }
+    }
+
+    pub fn advance_manager_state(&mut self, next_manager_state: ManagerState) {
+        *self.manager_state.get_mut() = next_manager_state;
+        if *self.manager_state == ManagerState::Idle {
             *self.version_available.get_mut() = None;
         }
-        self.send_on_state().await;
-        if *self.update_state == State(None) {
-            if let Err(e) = self.temporary_queue.clear().await {
-                fx_log_warn!("error clearing clients of temporary queue: {:?}", e)
-            }
+        self.send_on_state();
+        if *self.manager_state == ManagerState::Idle {
+            self.temporary_callbacks.get_mut().clear();
         }
     }
 
@@ -118,30 +84,27 @@ where
         *self.version_available.get_mut() = Some(version_available);
     }
 
-    #[cfg(test)]
-    pub fn get_version_available(&self) -> Option<String> {
-        self.version_available.clone()
-    }
-
-    pub fn update_state(&self) -> State {
-        self.update_state.clone()
-    }
-
-    pub async fn send_on_state(&mut self) {
-        let state = self.update_state();
-        if let Err(e) = self.temporary_queue.queue_event(state).await {
-            fx_log_warn!("error sending state to temporary queue: {:?}", e)
+    pub fn state(&self) -> State {
+        State {
+            manager_state: *self.manager_state,
+            version_available: self.version_available.clone(),
         }
+    }
+
+    pub fn manager_state(&self) -> ManagerState {
+        *self.manager_state
+    }
+
+    fn send_on_state(&mut self) {
+        let state = self.state();
+        self.permanent_callbacks.get_mut().retain(|cb| cb.on_state_change(state.clone()).is_ok());
+        self.temporary_callbacks.get_mut().retain(|cb| cb.on_state_change(state.clone()).is_ok());
     }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
-    use event_queue::{ClosedClient, Notify};
-    use fuchsia_async as fasync;
-    use fuchsia_zircon as zx;
-    use futures::future::BoxFuture;
     use parking_lot::Mutex;
     use proptest::prelude::*;
     use std::sync::Arc;
@@ -149,182 +112,160 @@ mod test {
     const VERSION_AVAILABLE: &str = "fake-version-available";
 
     #[derive(Clone, Debug)]
-    struct FakeStateNotifier {
+    struct FakeStateChangeCallback {
         states: Arc<Mutex<Vec<State>>>,
     }
-    impl FakeStateNotifier {
+    impl FakeStateChangeCallback {
         fn new() -> Self {
             Self { states: Arc::new(Mutex::new(vec![])) }
         }
     }
-    impl Notify<State> for FakeStateNotifier {
-        fn notify(&self, state: State) -> BoxFuture<'static, Result<(), ClosedClient>> {
-            self.states.lock().push(state);
-            future::ready(Ok(())).boxed()
+    impl StateChangeCallback for FakeStateChangeCallback {
+        fn on_state_change(&self, new_state: State) -> Result<(), Error> {
+            self.states.lock().push(new_state);
+            Ok(())
         }
     }
 
     prop_compose! {
-        fn random_update_state()
-        (
-            installation_deferred_data in ext::random_installation_deferred_data(),
-            installing_data in ext::random_installing_data(),
-            installation_error_data in ext::random_installation_error_data()
-        )
-        (
-            state in prop_oneof![
-                Just(Some(ext::State::CheckingForUpdates)),
-                Just(Some(ext::State::ErrorCheckingForUpdate)),
-                Just(Some(ext::State::NoUpdateAvailable)),
-                Just(Some(ext::State::InstallationDeferredByPolicy(installation_deferred_data))),
-                Just(Some(ext::State::InstallingUpdate(installing_data.clone()))),
-                Just(Some(ext::State::WaitingForReboot(installing_data))),
-                Just(Some(ext::State::InstallationError(installation_error_data))),
-                Just(None),
-            ]) -> State
+        fn random_manager_state() (
+            manager_state in prop_oneof![
+                Just(ManagerState::Idle),
+                Just(ManagerState::CheckingForUpdates),
+                Just(ManagerState::UpdateAvailable),
+                Just(ManagerState::PerformingUpdate),
+                Just(ManagerState::WaitingForReboot),
+                Just(ManagerState::FinalizingUpdate),
+                Just(ManagerState::EncounteredError),
+            ]) -> ManagerState
         {
-            State(state)
-        }
-    }
-
-    async fn random_update_monitor(
-        update_state: State,
-        version_available: Option<String>,
-    ) -> UpdateMonitor<FakeStateNotifier> {
-        let (fut, mut mms) = UpdateMonitor::<FakeStateNotifier>::new();
-        fasync::spawn(fut);
-        version_available.map(|s| mms.set_version_available(s));
-        mms.advance_update_state(update_state).await;
-        mms
-    }
-
-    async fn wait_for_states(callback: &FakeStateNotifier, len: usize) {
-        while callback.states.lock().len() != len {
-            fasync::Timer::new(fasync::Time::after(zx::Duration::from_millis(10))).await;
+            manager_state
         }
     }
 
     prop_compose! {
-        fn random_update_info()(
-            update_info in ext::random_update_info()
-        )(
-            update_info in prop_oneof![Just(Some(update_info)), Just(None)],
-        ) -> Option<ext::UpdateInfo> {
-            update_info
+        fn random_version_available() (
+            version_available in prop_oneof![
+                Just(Some(VERSION_AVAILABLE.to_string())),
+                Just(None),]
+        ) -> Option<String> {
+            version_available
         }
     }
 
     prop_compose! {
-        fn random_installation_progress()(
-            progress in ext::random_installation_progress()
-        )(
-            progress in prop_oneof![Just(Some(progress)), Just(None)],
-        ) -> Option<ext::InstallationProgress> {
-            progress
+        fn random_update_monitor()(
+            manager_state in random_manager_state(),
+            version_available in random_version_available(),
+        ) -> UpdateMonitor<FakeStateChangeCallback> {
+            let mut mms = UpdateMonitor::<FakeStateChangeCallback>::new();
+            mms.advance_manager_state(manager_state);
+            version_available.map(|s| mms.set_version_available(s));
+            mms
         }
     }
 
     proptest! {
-        // states with the same update info but different progress should merge
-        #[test]
-        fn test_can_merge(
-            update_info in random_update_info(),
-            progress0 in random_installation_progress(),
-            progress1 in random_installation_progress(),
-        ) {
-            let event0 = State(Some(ext::State::InstallingUpdate(
-                ext::InstallingData {
-                    update: update_info.clone(),
-                    installation_progress: progress0,
-                }
-            )));
-            let event1 = State(Some(ext::State::InstallingUpdate(
-                ext::InstallingData {
-                    update: update_info,
-                    installation_progress: progress1,
-                }
-            )));
-            prop_assert!(event0.can_merge(&event1));
-        }
-
         #[test]
         fn test_adding_callback_sends_current_state(
-                update_state in random_update_state(),
-                version_available in ext::random_version_available(),
+            mut update_monitor in random_update_monitor()
         ) {
-            fasync::Executor::new().unwrap().run_singlethreaded(async {
-                let mut update_monitor = random_update_monitor(update_state.clone(), version_available).await;
-                let expected_states = vec![update_state];
-                let temporary_callback = FakeStateNotifier::new();
-                update_monitor.add_temporary_callback(temporary_callback.clone()).await;
-                wait_for_states(&temporary_callback, expected_states.len()).await;
-                prop_assert_eq!(
-                    &temporary_callback.states.lock().clone(),
-                    &expected_states
-                );
-                Ok(())
-            }).unwrap();
+            let expected_states = vec![update_monitor.state()];
+            let temporary_callback = FakeStateChangeCallback::new();
+            let permanent_callback = FakeStateChangeCallback::new();
+
+            update_monitor.add_temporary_callback(temporary_callback.clone());
+            update_monitor.add_permanent_callback(permanent_callback.clone());
+
+            prop_assert_eq!(
+                &temporary_callback.states.lock().clone(),
+                &expected_states
+            );
+            prop_assert_eq!(
+                &permanent_callback.states.lock().clone(),
+                &expected_states
+            );
         }
 
         #[test]
-        fn test_advance_update_state_calls_callbacks(
-                initial_state in random_update_state(),
-                version_available in ext::random_version_available(),
-                next_state in random_update_state(),
+        fn test_advance_manager_state_calls_callbacks(
+            mut update_monitor in random_update_monitor(),
+            next_state in random_manager_state(),
         ) {
-            fasync::Executor::new().unwrap().run_singlethreaded(async {
-                let mut update_monitor = random_update_monitor(initial_state.clone(), version_available).await;
-                let temporary_callback = FakeStateNotifier::new();
+            let expected_initial_state = update_monitor.state();
+            let temporary_callback = FakeStateChangeCallback::new();
+            let permanent_callback = FakeStateChangeCallback::new();
 
-                update_monitor.add_temporary_callback(temporary_callback.clone()).await;
-                update_monitor.advance_update_state(next_state.clone()).await;
+            update_monitor.add_temporary_callback(temporary_callback.clone());
+            update_monitor.add_permanent_callback(permanent_callback.clone());
+            update_monitor.advance_manager_state(next_state);
 
-                let expected_states = vec![initial_state, next_state];
-                wait_for_states(&temporary_callback, expected_states.len()).await;
-                prop_assert_eq!(
-                    &temporary_callback.states.lock().clone(),
-                    &expected_states
-                );
-                Ok(())
-            }).unwrap();
+            let expected_final_state = State {
+                manager_state: next_state,
+                version_available: match next_state {
+                    ManagerState::Idle => None,
+                    _ => expected_initial_state.version_available.clone()
+                }
+            };
+            let expected_states = vec![expected_initial_state, expected_final_state];
+            prop_assert_eq!(
+                &temporary_callback.states.lock().clone(),
+                &expected_states
+            );
+            prop_assert_eq!(
+                &permanent_callback.states.lock().clone(),
+                &expected_states
+            );
         }
 
         #[test]
-        fn test_advance_updater_state_to_none_clears_version_available(
-            update_state in random_update_state(),
-            version_available in ext::random_version_available(),
+        fn test_advance_manager_state_to_idle_clears_version_available(
+            mut update_monitor in random_update_monitor()
         ) {
-            fasync::Executor::new().unwrap().run_singlethreaded(async {
-                let mut update_monitor = random_update_monitor(update_state, version_available).await;
-                update_monitor.set_version_available(VERSION_AVAILABLE.to_string());
+            update_monitor.set_version_available(VERSION_AVAILABLE.to_string());
 
-                update_monitor.advance_update_state(State(None)).await;
+            update_monitor.advance_manager_state(ManagerState::Idle);
 
-                prop_assert_eq!(
-                    update_monitor.get_version_available(),
-                    None
-                );
-                Ok(())
-            }).unwrap();
+            prop_assert_eq!(
+                update_monitor.state().version_available,
+                None
+            );
         }
 
         #[test]
-        fn test_advance_update_state_to_idle_clears_temporary_callbacks(
-            update_state in random_update_state(),
-            version_available in ext::random_version_available(),
+        fn test_advance_manager_state_to_idle_clears_temporary_callbacks(
+            mut update_monitor in random_update_monitor()
         ) {
-            fasync::Executor::new().unwrap().run_singlethreaded(async {
-                let mut update_monitor = random_update_monitor(update_state, version_available).await;
-                let temporary_callback = FakeStateNotifier::new();
+            let temporary_callback = FakeStateChangeCallback::new();
 
-                update_monitor.add_temporary_callback(temporary_callback.clone()).await;
-                update_monitor.advance_update_state(State(None)).await;
-                temporary_callback.states.lock().clear();
-                update_monitor.advance_update_state(ext::State::CheckingForUpdates).await;
+            update_monitor.add_temporary_callback(temporary_callback.clone());
+            update_monitor.advance_manager_state(ManagerState::Idle);
+            temporary_callback.states.lock().clear();
+            update_monitor.advance_manager_state(ManagerState::CheckingForUpdates);
 
-                prop_assert_eq!(temporary_callback.states.lock().clone(), vec![]);
-                Ok(())
-            }).unwrap();
+            prop_assert_eq!(temporary_callback.states.lock().clone(), vec![]);
+        }
+
+        #[test]
+        fn test_advance_manager_state_to_idle_retains_permanent_callbacks(
+            mut update_monitor in random_update_monitor()
+        ) {
+            let permanent_callback = FakeStateChangeCallback::new();
+
+            update_monitor.add_permanent_callback(permanent_callback.clone());
+            update_monitor.advance_manager_state(ManagerState::Idle);
+            permanent_callback.states.lock().clear();
+            update_monitor.advance_manager_state(ManagerState::CheckingForUpdates);
+
+            prop_assert_eq!(
+                permanent_callback.states.lock().clone(),
+                vec![
+                    State {
+                        manager_state: ManagerState::CheckingForUpdates,
+                        version_available: None
+                    }
+                ]
+            );
         }
     }
 }
@@ -332,23 +273,20 @@ mod test {
 #[cfg(test)]
 mod test_inspect {
     use super::*;
-    use event_queue::{ClosedClient, Notify};
-    use fuchsia_async as fasync;
     use fuchsia_inspect::assert_inspect_tree;
-    use futures::future::BoxFuture;
 
     #[derive(Clone, Debug)]
-    struct FakeStateNotifier;
-    impl Notify<State> for FakeStateNotifier {
-        fn notify(&self, _state: State) -> BoxFuture<'static, Result<(), ClosedClient>> {
-            future::ready(Ok(())).boxed()
+    struct FakeStateChangeCallback;
+    impl StateChangeCallback for FakeStateChangeCallback {
+        fn on_state_change(&self, _new_state: State) -> Result<(), Error> {
+            Ok(())
         }
     }
 
     #[test]
     fn test_inspect_initial_state() {
         let inspector = fuchsia_inspect::Inspector::new();
-        let _update_monitor = UpdateMonitor::<FakeStateNotifier>::from_inspect_node(
+        let _update_monitor = UpdateMonitor::<FakeStateChangeCallback>::from_inspect_node(
             inspector.root().create_child("update-monitor"),
         );
 
@@ -356,28 +294,53 @@ mod test_inspect {
             inspector,
             root: {
                 "update-monitor": {
-                    "update-state": format!("{:?}", State(None)),
+                    "permanent-callbacks-count": 0u64,
+                    "temporary-callbacks-count": 0u64,
+                    "manager-state": "Idle",
                     "version-available": "None",
                 }
             }
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
-    async fn test_inspect_update_state() {
+    #[test]
+    fn test_inspect_callback_counts() {
         let inspector = fuchsia_inspect::Inspector::new();
-        let (fut, mut update_monitor) = UpdateMonitor::<FakeStateNotifier>::from_inspect_node(
-            inspector.root().create_child("update-monitor"),
-        );
-        fasync::spawn(fut);
+        let mut update_monitor =
+            UpdateMonitor::from_inspect_node(inspector.root().create_child("update-monitor"));
 
-        update_monitor.advance_update_state(ext::State::CheckingForUpdates).await;
+        update_monitor.add_permanent_callback(FakeStateChangeCallback);
+        update_monitor.add_temporary_callback(FakeStateChangeCallback);
 
         assert_inspect_tree!(
             inspector,
             root: {
                 "update-monitor": {
-                    "update-state": format!("{:?}", State(Some(ext::State::CheckingForUpdates))),
+                    "permanent-callbacks-count": 1u64,
+                    "temporary-callbacks-count": 1u64,
+                    "manager-state": "Idle",
+                    "version-available": "None",
+                }
+            }
+        );
+    }
+
+    #[test]
+    fn test_inspect_manager_state() {
+        let inspector = fuchsia_inspect::Inspector::new();
+        let mut update_monitor = UpdateMonitor::<FakeStateChangeCallback>::from_inspect_node(
+            inspector.root().create_child("update-monitor"),
+        );
+
+        update_monitor.advance_manager_state(ManagerState::CheckingForUpdates);
+
+        assert_inspect_tree!(
+            inspector,
+            root: {
+                "update-monitor": {
+                    "permanent-callbacks-count": 0u64,
+                    "temporary-callbacks-count": 0u64,
+                    "manager-state": "CheckingForUpdates",
                     "version-available": "None",
                 }
             }
@@ -387,7 +350,7 @@ mod test_inspect {
     #[test]
     fn test_inspect_version_available() {
         let inspector = fuchsia_inspect::Inspector::new();
-        let (_fut, mut update_monitor) = UpdateMonitor::<FakeStateNotifier>::from_inspect_node(
+        let mut update_monitor = UpdateMonitor::<FakeStateChangeCallback>::from_inspect_node(
             inspector.root().create_child("update-monitor"),
         );
         let version_available = "fake-version-available";
@@ -398,7 +361,9 @@ mod test_inspect {
             inspector,
             root: {
                 "update-monitor": {
-                    "update-state": format!("{:?}", State(None)),
+                    "permanent-callbacks-count": 0u64,
+                    "temporary-callbacks-count": 0u64,
+                    "manager-state": "Idle",
                     "version-available": format!("{:?}", Some(version_available)),
                 }
             }

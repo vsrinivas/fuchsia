@@ -25,13 +25,8 @@ void main() {
 
   group(sl4f.Update, () {
     test('update sanity test', () async {
-      // Trigger an update check without initiator set so we get invalid options.
-      // We're not interested in _actually_ starting an update in this test, just wanting to make
-      // sure everything is wired up.
-      expect(await update.checkNow(serviceInitiated: null),
-          sl4f.CheckStartedResult.invalidOptions);
-
       // If anything throws an exception then we've failed.
+      await update.getState();
       await update.getCurrentChannel();
       await update.getTargetChannel();
       await update.getChannelList();

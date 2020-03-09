@@ -4,12 +4,12 @@
 
 use crate::common_utils::common::{get_proxy_or_connect, macros::parse_arg};
 use anyhow::Error;
-use fidl_fuchsia_update::{CheckOptions, Initiator, ManagerMarker, ManagerProxy};
+use fidl_fuchsia_update::{Initiator, ManagerMarker, ManagerProxy, Options};
 use fidl_fuchsia_update_channelcontrol::{ChannelControlMarker, ChannelControlProxy};
 use parking_lot::RwLock;
 use serde_json::Value;
 
-use super::types::CheckNowResult;
+use super::types::{CheckNowResult, StateHelper};
 
 /// Facade providing access to fuchsia.update FIDL interface.
 #[derive(Debug)]
@@ -31,23 +31,17 @@ impl UpdateFacade {
         get_proxy_or_connect::<ChannelControlMarker>(&self.channel_control)
     }
 
-    pub(super) async fn check_now(&self, args: Value) -> Result<CheckNowResult, Error> {
-        let service_initiated = match args.get("service-initiated") {
-            Some(value) => Some(value.as_bool().ok_or_else(|| {
-                crate::common_utils::error::Sl4fError::new(
-                    format!("malformed arg \"service-initiated\"; expected bool, got {:?}", value)
-                        .as_str(),
-                )
-            })?),
-            None => None,
-        };
-        let options = CheckOptions {
-            initiator: service_initiated
-                .map(|b| if b { Initiator::Service } else { Initiator::User }),
-            allow_attaching_to_existing_update_check: Some(true),
+    pub async fn get_state(&self) -> Result<StateHelper, Error> {
+        Ok(StateHelper(self.manager()?.get_state().await?))
+    }
+
+    pub async fn check_now(&self, args: Value) -> Result<CheckNowResult, Error> {
+        let service_initiated = parse_arg!(args, as_bool, "service-initiated").unwrap_or(false);
+        let options = Options {
+            initiator: Some(if service_initiated { Initiator::Service } else { Initiator::User }),
         };
         let check_started = self.manager()?.check_now(options, None).await?;
-        Ok(check_started.into())
+        Ok(CheckNowResult { check_started })
     }
 
     pub async fn get_current_channel(&self) -> Result<String, Error> {
@@ -71,13 +65,42 @@ impl UpdateFacade {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::update::types::CheckStartedResultDef;
     use fidl::endpoints::create_proxy_and_stream;
-    use fidl_fuchsia_update::ManagerRequest;
+    use fidl_fuchsia_update::{CheckStartedResult, ManagerRequest, ManagerState, State};
     use fidl_fuchsia_update_channelcontrol::ChannelControlRequest;
     use fuchsia_async as fasync;
     use futures::prelude::*;
     use serde_json::json;
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_get_state() {
+        let (proxy, mut stream) = create_proxy_and_stream::<ManagerMarker>().unwrap();
+        let facade =
+            UpdateFacade { manager: RwLock::new(Some(proxy)), channel_control: RwLock::new(None) };
+        let facade_fut = async move {
+            assert_eq!(
+                facade.get_state().await.unwrap(),
+                StateHelper(State {
+                    state: Some(ManagerState::PerformingUpdate),
+                    version_available: Some("1.0".to_string())
+                })
+            );
+        };
+        let stream_fut = async move {
+            match stream.try_next().await {
+                Ok(Some(ManagerRequest::GetState { responder })) => {
+                    responder
+                        .send(State {
+                            state: Some(ManagerState::PerformingUpdate),
+                            version_available: Some("1.0".to_string()),
+                        })
+                        .unwrap();
+                }
+                err => panic!("Err in request handler: {:?}", err),
+            }
+        };
+        future::join(facade_fut, stream_fut).await;
+    }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_check_now() {
@@ -88,7 +111,7 @@ mod tests {
             let args = json!({"service-initiated":true});
             assert_eq!(
                 facade.check_now(args).await.unwrap(),
-                CheckNowResult { check_started: CheckStartedResultDef::Started }
+                CheckNowResult { check_started: CheckStartedResult::Started }
             );
         };
         let stream_fut = async move {
@@ -96,7 +119,7 @@ mod tests {
                 Ok(Some(ManagerRequest::CheckNow { options, monitor, responder })) => {
                     assert_eq!(options.initiator, Some(Initiator::Service));
                     assert_eq!(monitor, None);
-                    responder.send(&mut Ok(())).unwrap();
+                    responder.send(CheckStartedResult::Started).unwrap();
                 }
                 err => panic!("Err in request handler: {:?}", err),
             }

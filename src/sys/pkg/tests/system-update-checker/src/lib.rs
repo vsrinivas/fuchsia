@@ -7,7 +7,7 @@ use {
     fidl_fuchsia_paver::{
         BootManagerRequest, BootManagerRequestStream, PaverRequest, PaverRequestStream,
     },
-    fidl_fuchsia_update::{ManagerMarker, ManagerProxy, MonitorRequest, State},
+    fidl_fuchsia_update::{ManagerMarker, ManagerProxy, ManagerState},
     fidl_fuchsia_update_channel::{ProviderMarker, ProviderProxy},
     fuchsia_async as fasync,
     fuchsia_component::{
@@ -166,40 +166,14 @@ async fn test_channel_provider_get_current_works_after_paver_service_fails() {
 
 #[fasync::run_singlethreaded(test)]
 // Test will hang if system-update-checker does not call paver service
-async fn test_update_manager_check_now_works_after_paver_service_fails() {
+async fn test_update_manager_get_state_works_after_paver_service_fails() {
     let env = TestEnv::new(MockPaver::new(Status::INTERNAL));
 
     let mut set_active_configuration_healthy_was_called =
         env.proxies.paver.set_active_configuration_healthy_was_called.lock();
     set_active_configuration_healthy_was_called.next().await;
 
-    let (client_end, request_stream) =
-        fidl::endpoints::create_request_stream().expect("create_request_stream");
-
-    assert!(env
-        .proxies
-        .update_manager
-        .check_now(
-            fidl_fuchsia_update::CheckOptions {
-                initiator: Some(fidl_fuchsia_update::Initiator::User),
-                allow_attaching_to_existing_update_check: Some(true),
-            },
-            Some(client_end),
-        )
-        .await
-        .is_ok());
-    assert_eq!(
-        request_stream
-            .map(|r| {
-                let MonitorRequest::OnState { state, responder } = r.unwrap();
-                responder.send().unwrap();
-                state
-            })
-            .collect::<Vec<State>>()
-            .await,
-        vec![
-            State::CheckingForUpdates(fidl_fuchsia_update::CheckingForUpdatesData {}),
-            State::ErrorCheckingForUpdate(fidl_fuchsia_update::ErrorCheckingForUpdateData {}),
-        ]
-    );
+    let state = env.proxies.update_manager.get_state().await.expect("get_state");
+    assert_eq!(state.state, Some(ManagerState::Idle));
+    assert_eq!(state.version_available, None);
 }

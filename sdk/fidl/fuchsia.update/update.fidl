@@ -1,257 +1,146 @@
-// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 library fuchsia.update;
 
-/// The Manager protocol is used by a client that wishes to either check for an
-/// update, or follow the status of ongoing updates.
-///
-/// The Manager provides a mechanism for checking for updates via the
-/// [fuchisa.update2/Manager.CheckNow] message.
 [Discoverable]
 protocol Manager {
-    /// Immediately check for an update, and optionally track the state and
-    /// progress of that update check.
+    /// Immediately check for an update.
+    ///  `options`:  Did a user initiate this request? (`USER_INITIATED`) This changes
+    ///              some parameters about aggressiveness of retries and throttling.
+    ///  `monitor`:  An interface on which to receive the status events for this update check.
+    ///               It's only valid for a single update check, after that it won't receive any
+    ///               more events.
     ///
-    /// + request `options`:  Options for how this request should be performed.
-    ///                       E.g. What kind of entity initiated this request?
-    ///                       E.g. Is monitoring an existing update check that
-    ///                            is already in process an acceptable
-    ///                            alternative?
-    ///
-    /// + request `monitor`:  An interface on which to receive the status events
-    ///                       for this update check.  The monitor is only valid
-    ///                       for this single update check, after that it will
-    ///                       not receive any more notifications and will be
-    ///                       closed.
-    ///
-    /// * error If an update check cannot be started, an error will be returned.
-    ///         The Monitor, if provided, will not receive any notifications.
-    CheckNow(CheckOptions options, Monitor? monitor)
-        -> () error CheckNotStartedReason;
+    ///  -> Was the update check successfully started (state machine in a proper state
+    ///     to do so).
+    CheckNow(Options options, request<Monitor>? monitor)
+        -> (CheckStartedResult result);
+
+    /// Get the current state of the Manager (is an update available, is it currently
+    /// checking for an update, etc).
+    GetState() -> (State state);
+
+    /// Get all status events, for all update checks (interactive and background).
+    AddMonitor(request<Monitor> monitor);
 };
 
-/// These are configuration options for an update check.
-table CheckOptions {
+/// Receiver of updates for either an individual update check, or to continuously
+/// receive updates for all checks.
+protocol Monitor {
+    /// Receive the current state as it changes.
+    -> OnState(State state);
 
-    /// Who or what initiated this update attempt.  This is taken as input to
-    /// Policy, and may influence how the update check is performed.
-    ///
-    /// **This is a required field.**
+    // TODO: support progress reporting.
+};
+
+/// Configuration options for an update attempt (this is common with the Fuchsia
+///  OTA Interface v2)
+table Options {
+    /// What initiated this update attempt.
     1: Initiator initiator;
-
-    /// If an update check is already in progress, it's acceptable to instead
-    /// attach a Monitor to that in-progress update instead of failing this
-    /// request to check for updates.  This may convert situations that would
-    /// have resulted in the ALREADY_IN_PROGRESS to be treated as non-error
-    /// cases.
-    2: bool allow_attaching_to_existing_update_check;
 };
 
 /// Who or what initiated the update check.
 enum Initiator {
-
     /// The update check was initiated by an interactive user, or the user is
-    /// otherwise blocked and waiting for the result of this update check.  This
-    /// SHOULD only be used when there is a UI element or flow that a user has
-    /// interacted with which has initiated this update check.
-    USER = 1;
+    /// otherwise blocked and waiting for the result of this update check.
+    USER = 0;
 
-    /// The update check was initiated by a service, not a user-facing aspect
-    /// of the system.
-    SERVICE = 2;
-};
-
-/// This is a protocol that clients which wish to receive of updates for an
-/// individual update check should implement.  This will not receive the events
-/// for more than one update check attempt.
-protocol Monitor {
-    /// This method is used to receive the current state as it changes.  This
-    /// receive all state changes, skipping none.  However, message delivery is
-    /// throttled by the rate at which the implementation acknowledges the
-    /// messages.
-    ///
-    /// The throttled delivery doesn't impact the underlying state of the
-    /// Manager.  It does not wait for any acknowledgements before it moves on
-    /// to the next state in its state machine.  The Manager will simply queue
-    /// up the states for the Monitor implementor to receive.
-    ///
-    /// During the installing_update state, the Manager implementation may, at
-    /// its discretion, collapse redundant information like the fraction
-    /// completed, in the event that the Monitor implementor is not
-    /// acknowledging the OnState() messages in a timely manner.
-    ///
-    /// 'state': The new state from the Manager.
-    ///
-    /// -> The implementor is ready to receive the next State from the Manager.
-    OnState(State state) -> ();
+    /// The update check was initiated by a service, in the background.
+    SERVICE = 1;
 };
 
 /// ```
-/// The set of states that a Monitor can receive as part of an update check are
-/// as follows.  There are a number of terminal states for a single update
-/// check.  They are the ones on the right-hand side of the diagram (and have no
-/// arrows leading out of them).
+/// The various states that the manager can be in.
 ///
-///     +----------------------+     +---------------------------------+
-///     | checking_for_updates |---->|    error_checking_for_update    |
-///     +----------------------+     +---------------------------------+
-///                |
-///                |                 +---------------------------------+
-///                +---------------->|       no_update_available       |
-///                |                 +---------------------------------+
-///                |
-///                |                 +---------------------------------+
-///                +---------------->| installation_deferred_by_policy |
-///                |                 +---------------------------------+
-///                v
-///     +----------------------+     +---------------------------------+
-///     |  installing_update   |---->|       installation_error        |
-///     +----------------------+     +---------------------------------+
-///                |
-///                |                 +---------------------------------+
-///                +---------------->|       waiting_for_reboot        |
-///                                  +---------------------------------+
+///     +----------------------+
+/// --->|         IDLE         |<--------------------------------+
+/// |   +----------------------+                                 |
+/// |              |               +----------------------+      |
+/// |              |<--------------|   UPDATE_AVAILABLE   |      |
+/// |              |               +----------------------+      |
+/// |              v                       ^                     |
+/// |   +----------------------+           |                     |
+/// |<--| CHECKING_FOR_UPDATES |-----------------+               |
+/// |   +----------------------+                 |               |
+/// |              v                             |               |
+/// |   +----------------------+                 |               |
+/// |   |  PERFORMING_UPDATE   |---------------->|               |
+/// |   +----------------------+                 |               |
+/// |              v                             |               |
+/// |   +----------------------+                 |               |
+/// |   |  WAITING_FOR_REBOOT  |---------------->|               |
+/// |   +----------------------+                 |               |
+/// |              v                             v               |
+/// |   +----------------------+     +----------------------+    |
+/// +---|  FINALIZING_UPDATE   |---->|  ENCOUNTERED_ERROR   |----+
+///     +----------------------+     +----------------------+
 ///
 /// ```
-union State {
-
+enum ManagerState {
+    /// The Manager is currently idle (in between updates).
+    ///
+    /// Next states:
+    /// * `CHECKING_FOR_UPDATES`
+    IDLE = 0;
     /// The Manager is currently checking for an update.
     ///
     /// Next states:
-    /// * `installing_update` update is available and allowed by policy
-    /// * `error_checking_for_update` on error
-    /// * `update_deferred_by_policy` update is available but deferred by policy
-    1: CheckingForUpdatesData checking_for_updates;
-
-    /// The Manager encountered an error while checking for the existence of a
-    /// a new update.
-    ///
-    /// **This is a terminal state**
-    ///
-    2: ErrorCheckingForUpdateData error_checking_for_update;
-
-    /// There is not update available at this time.
-    ///
-    /// **This is a terminal state**
-    ///
-    3: NoUpdateAvailableData no_update_available;
-
-    /// The Manager has found an available update but is not acting on it at
-    /// this time due to policy restrictions.
-    ///
-    /// **This is a terminal state**
-    ///
-    4: InstallationDeferredData installation_deferred_by_policy;
-
-    /// The Manager is installing the available update.
+    /// * `IDLE` update is not available
+    /// * `UPDATE_AVAILABLE` update is available but not allowed by policy
+    /// * `PERFORMING_UPDATE` update is available and allowed by policy
+    /// * `ENCOUNTERED_ERROR` on error
+    CHECKING_FOR_UPDATES = 1;
+    /// The Manager has found an available update but is not allowed to update
+    /// due to policy.
     ///
     /// Next states:
-    /// * `waiting_for_reboot` on success
-    /// * `installation_error` on error
-    5: InstallingData installing_update;
-
-    /// The update has been installed, and the device is waiting to be rebooted.
+    /// * `CHECKING_FOR_UPDATES` when CheckNow() is called or a background update starts
+    UPDATE_AVAILABLE = 2;
+    /// The Manager has started the available update.
     ///
     /// Next states:
-    /// * (none, the device reboots)
+    /// * `WAITING_FOR_REBOOT` on success
+    /// * `ENCOUNTERED_ERROR` on error
+    PERFORMING_UPDATE = 3;
+    /// The update has been performed, and the device is waiting to be rebooted.
     ///
-    /// **This is a terminal state**
+    /// Next states:
+    /// * `FINALIZING_UPDATE` after device reboot
+    /// * `ENCOUNTERED_ERROR` on error
+    WAITING_FOR_REBOOT = 4;
+    /// The update is being finalized after reboot.
     ///
-    6: InstallingData waiting_for_reboot;
-
-    /// The Manager encountered an update in the installation of the update.
+    /// Next states:
+    /// * `IDLE` on success
+    /// * `ENCOUNTERED_ERROR` on error
+    FINALIZING_UPDATE = 5;
+    /// The Manager is reporting to Omaha that an error has occurred during the
+    /// update.
     ///
-    /// **This is a terminal state**
-    ///
-    7: InstallationErrorData installation_error;
+    /// Next states:
+    /// * `IDLE`
+    ENCOUNTERED_ERROR = 6;
 };
 
-/// This is the set of data associated with `checking_for_updates`.
-/// (currently none)
-table CheckingForUpdatesData {
+enum CheckStartedResult {
+    /// The update check has been started.
+    STARTED = 0;
+    /// The update check was not started, as an update is already in progress, `monitor` is
+    /// attached to that update and will immediately get a OnState() call on current state.
+    IN_PROGRESS = 1;
+    /// The update check was not started, because too many requests to check have
+    /// been made in a short period of time.
+    THROTTLED = 2;
 };
 
-/// This is the set of data associated with the `error_checking_for_update`
-/// state.
-/// (currently none)
-table ErrorCheckingForUpdateData {
-};
+table State {
+    /// The current state of the Manager. Always present.
+    1: ManagerState state;
 
-/// This is the set of data associated with the `no_update_available` state.
-/// (currently none)
-table NoUpdateAvailableData {
-};
-
-/// This is the set of data associated with the
-/// `installation_deferred_by_policy` state.
-table InstallationDeferredData {
-    1: UpdateInfo update;
-};
-
-/// This is the set of data associated with the states involved with installing
-/// an update:
-/// * `installing_update`
-/// * `waiting_for_reboot`
-table InstallingData {
-    1: UpdateInfo update;
-    2: InstallationProgress installation_progress;
-};
-
-/// This is the set of data associated with the `installation_error` state.
-/// (currently none)
-table InstallationErrorData {
-    1: UpdateInfo update;
-    2: InstallationProgress installation_progress;
-};
-
-/// This describes the update that is available to be installed.
-table UpdateInfo {
-    /// A string that describes the version that is available.  This may be
-    /// either a semantic version (A.B.C.D) or an opaque hash.  Clients MUST
-    /// not attempt to inspect this value, it is for display purposes only.
-    1: string:MAX_VERSION_STRING_SIZE version_available;
-
-    /// The total number of bytes that may be downloaded to apply this update.
-    2: uint64 download_size;
-};
-
-/// This is the maximum length of a version string that will be returned by the
-/// protocol
-const uint32 MAX_VERSION_STRING_SIZE = 128;
-
-/// This describes the progress installing the update that has been made so far.
-table InstallationProgress {
-    /// The fraction [0-1.0f] of the installation that has been completed.
-    1: float32 fraction_completed;
-};
-
-/// This is the set of values that are returned by an request to immediately
-/// check for an update.
-enum CheckNotStartedReason {
-
-    /// There was an internal error in starting the update check.  The client
-    /// is not expected to be able to do something meaningful about this error,
-    /// except to try again later (after an appropriate delay and back-off in
-    /// the event of multiple errors.
-    INTERNAL = 1;
-
-    /// If there are required options (or option values in conflict), provided
-    /// via the CheckOptions table to CheckNow, this error will be returned.
-    INVALID_OPTIONS = 2;
-
-    /// There was already another update check in progress when this request was
-    /// made.  A new update check will not be started.
-    ALREADY_IN_PROGRESS = 3;
-
-    /// The update check was not started, because too many requests to check for
-    /// updates have been made by clients in a short period of time.
-    ///
-    /// **NOTE:** Clients MUST NOT attempt to cause background update checks to
-    /// happen at a more frequent rate than the fuchsia.update.Manager will do
-    /// them.
-    ///
-    /// If a client attempts to abuse this, it will be throttled.
-    THROTTLED = 4;
+    /// The version available from Omaha. Will be present in `UPDATE_AVAILABLE` or starting
+    /// from `PERFORMING_UPDATE`.
+    2: string version_available;
 };

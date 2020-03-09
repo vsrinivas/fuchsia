@@ -4,7 +4,7 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.update.Manager"
+            "fuchsia.sys.Launcher"
         ]
     }
 }

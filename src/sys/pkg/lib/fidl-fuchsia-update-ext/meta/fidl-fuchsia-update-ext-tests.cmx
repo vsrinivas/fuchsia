@@ -1,5 +1,0 @@
-{
-    "program": {
-        "binary": "test/fidl-fuchsia-update-ext-tests"
-    }
-}

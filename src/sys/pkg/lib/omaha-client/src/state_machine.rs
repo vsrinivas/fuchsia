@@ -94,12 +94,11 @@ where
 pub enum State {
     Idle,
     CheckingForUpdates,
-    ErrorCheckingForUpdate,
-    NoUpdateAvailable,
-    InstallationDeferredByPolicy,
-    InstallingUpdate,
+    UpdateAvailable,
+    PerformingUpdate,
     WaitingForReboot,
-    InstallationError,
+    FinalizingUpdate,
+    EncounteredError,
 }
 
 /// This is the set of errors that can occur when making a request to Omaha.  This is an internal
@@ -483,12 +482,12 @@ where
                 }
                 Err(OmahaRequestError::Json(e)) => {
                     error!("Unable to construct request body! {:?}", e);
-                    self.set_state(State::ErrorCheckingForUpdate).await;
+                    self.set_state(State::EncounteredError).await;
                     return Err(UpdateCheckError::OmahaRequest(e.into()));
                 }
                 Err(OmahaRequestError::HttpBuilder(e)) => {
                     error!("Unable to construct HTTP request! {:?}", e);
-                    self.set_state(State::ErrorCheckingForUpdate).await;
+                    self.set_state(State::EncounteredError).await;
                     return Err(UpdateCheckError::OmahaRequest(e.into()));
                 }
                 Err(OmahaRequestError::Hyper(e)) => {
@@ -496,14 +495,14 @@ where
                     // Don't retry if the error was caused by user code, which means we weren't
                     // using the library correctly.
                     if omaha_request_attempt >= max_omaha_request_attempts || e.is_user() {
-                        self.set_state(State::ErrorCheckingForUpdate).await;
+                        self.set_state(State::EncounteredError).await;
                         return Err(UpdateCheckError::OmahaRequest(e.into()));
                     }
                 }
                 Err(OmahaRequestError::HttpStatus(e)) => {
                     warn!("Unable to contact Omaha: {:?}", e);
                     if omaha_request_attempt >= max_omaha_request_attempts {
-                        self.set_state(State::ErrorCheckingForUpdate).await;
+                        self.set_state(State::EncounteredError).await;
                         return Err(UpdateCheckError::OmahaRequest(e.into()));
                     }
                 }
@@ -526,13 +525,7 @@ where
             Ok(res) => res,
             Err(err) => {
                 warn!("Unable to parse Omaha response: {:?}", err);
-                self.set_state(State::ErrorCheckingForUpdate).await;
-                let event = Event {
-                    event_type: EventType::UpdateComplete,
-                    errorcode: Some(EventErrorCode::ParseResponse),
-                    ..Event::default()
-                };
-                self.report_omaha_event(&request_params, event, &apps).await;
+                self.report_error(&request_params, EventErrorCode::ParseResponse, &apps).await;
                 return Err(UpdateCheckError::ResponseParser(err));
             }
         };
@@ -549,12 +542,14 @@ where
         if !some_app_has_update {
             // A succesfull, no-update, check
 
-            self.set_state(State::NoUpdateAvailable).await;
+            // TODO: Report progress status (done)
             Ok(Self::make_response(response, update_check::Action::NoUpdate))
         } else {
             info!(
                 "At least one app has an update, proceeding to build and process an Install Plan"
             );
+            self.set_state(State::UpdateAvailable).await;
+
             let install_plan = match IN::InstallPlan::try_create_from(&request_params, &response) {
                 Ok(plan) => plan,
                 Err(e) => {
@@ -582,7 +577,7 @@ where
                     };
                     self.report_omaha_event(&request_params, event, &apps).await;
 
-                    self.set_state(State::InstallationDeferredByPolicy).await;
+                    // TODO: Report progress status (Deferred)
                     return Ok(Self::make_response(
                         response,
                         update_check::Action::DeferredByPolicy,
@@ -595,7 +590,7 @@ where
                 }
             }
 
-            self.set_state(State::InstallingUpdate).await;
+            self.set_state(State::PerformingUpdate).await;
             self.report_success_event(&request_params, EventType::UpdateDownloadStarted, &apps)
                 .await;
 
@@ -643,14 +638,14 @@ where
         }
     }
 
-    /// Set the current state to |InstallationError| and report the error event to Omaha.
+    /// Set the current state to |EncounteredError| and report the error event to Omaha.
     async fn report_error<'a>(
         &'a mut self,
         request_params: &'a RequestParams,
         errorcode: EventErrorCode,
         apps: &'a Vec<App>,
     ) {
-        self.set_state(State::InstallationError).await;
+        self.set_state(State::EncounteredError).await;
 
         let event = Event {
             event_type: EventType::UpdateComplete,
@@ -1513,7 +1508,7 @@ mod tests {
             drop(state_machine);
             let actual_states = actual_states.borrow();
             let expected_states =
-                vec![State::CheckingForUpdates, State::ErrorCheckingForUpdate, State::Idle];
+                vec![State::CheckingForUpdates, State::EncounteredError, State::Idle];
             assert_eq!(*actual_states, expected_states);
         });
     }

@@ -17,7 +17,7 @@ use {
     fidl_fuchsia_pkg_rewrite_ext::Rule,
     fuchsia_async as fasync,
     fuchsia_component::{
-        client::{App, AppBuilder, Output},
+        client::{App, AppBuilder},
         server::{NestedEnvironment, ServiceFs},
     },
     fuchsia_url::pkg_url::RepoUrl,
@@ -56,11 +56,10 @@ struct Proxies {
 
 struct MockUpdateManager {
     called: Mutex<u32>,
-    check_now_result: Mutex<fidl_fuchsia_update::ManagerCheckNowResult>,
 }
 impl MockUpdateManager {
-    fn new_with_check_now_result(res: fidl_fuchsia_update::ManagerCheckNowResult) -> Self {
-        Self { called: Mutex::new(0), check_now_result: Mutex::new(res) }
+    fn new() -> Self {
+        Self { called: Mutex::new(0) }
     }
 
     async fn run(
@@ -73,15 +72,15 @@ impl MockUpdateManager {
                     eprintln!("TEST: Got update check request with options {:?}", options);
                     assert_eq!(
                         options,
-                        fidl_fuchsia_update::CheckOptions {
-                            initiator: Some(fidl_fuchsia_update::Initiator::User),
-                            allow_attaching_to_existing_update_check: Some(false),
+                        fidl_fuchsia_update::Options {
+                            initiator: Some(fidl_fuchsia_update::Initiator::User)
                         }
                     );
                     assert_eq!(monitor, None);
                     *self.called.lock() += 1;
-                    responder.send(&mut *self.check_now_result.lock())?;
+                    responder.send(fidl_fuchsia_update::CheckStartedResult::Started)?;
                 }
+                _ => panic!("unhandled method {:?}", event),
             }
         }
 
@@ -600,13 +599,12 @@ async fn test_disable_src_disables_all_sources() {
     assert_eq!(env.rewrite_engine_list_rules().await, vec![]);
 }
 
-async fn test_system_update_impl(
-    check_now_result: fidl_fuchsia_update::ManagerCheckNowResult,
-) -> Output {
+#[fasync::run_singlethreaded(test)]
+async fn test_system_update() {
     // skip using TestEnv because we don't need to start pkg_resolver here.
     let mut fs = ServiceFs::new();
 
-    let update_manager = Arc::new(MockUpdateManager::new_with_check_now_result(check_now_result));
+    let update_manager = Arc::new(MockUpdateManager::new());
     let update_manager_clone = update_manager.clone();
     fs.add_fidl_service(move |stream| {
         let update_manager_clone = update_manager_clone.clone();
@@ -622,43 +620,16 @@ async fn test_system_update_impl(
         .expect("nested environment to create successfully");
     fasync::spawn(fs.collect());
 
-    let output = amberctl()
+    amberctl()
         .arg("system_update")
         .output(env.launcher())
         .expect("amberctl to launch")
         .await
-        .expect("amberctl to run");
+        .expect("amberctl to run")
+        .ok()
+        .expect("amberctl to succeed");
+
     assert_eq!(*update_manager.called.lock(), 1);
-    output
-}
-
-fn assert_stdout(output: &Output, stdout: &str, exit_code: i64) {
-    assert_eq!(output.exit_status.reason(), fidl_fuchsia_sys::TerminationReason::Exited);
-    assert_eq!(output.exit_status.code(), exit_code);
-    assert_eq!(std::str::from_utf8(&output.stdout).unwrap(), stdout);
-    assert_eq!(std::str::from_utf8(&output.stderr).unwrap(), "");
-}
-
-#[fasync::run_singlethreaded(test)]
-async fn test_system_update_start_update() {
-    let output = test_system_update_impl(Ok(())).await;
-    assert_stdout(&output, "triggered a system update check\n", 0);
-}
-
-#[fasync::run_singlethreaded(test)]
-async fn test_system_update_already_in_progress() {
-    let output = test_system_update_impl(Err(
-        fidl_fuchsia_update::CheckNotStartedReason::AlreadyInProgress,
-    ))
-    .await;
-    assert_stdout(&output, "system update check already in progress\n", 0);
-}
-
-#[fasync::run_singlethreaded(test)]
-async fn test_system_update_throttled() {
-    let output =
-        test_system_update_impl(Err(fidl_fuchsia_update::CheckNotStartedReason::Throttled)).await;
-    assert_stdout(&output, "system update check failed: Throttled\n", 1);
 }
 
 #[fasync::run_singlethreaded(test)]

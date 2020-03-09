@@ -13,6 +13,5 @@ group("tests") {
     "system-tests:tests",
     "system-update-checker:tests",
     "system-updater:tests",
-    "update:tests",
   ]
 }

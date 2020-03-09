@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_fuchsia_update::CheckNotStartedReason;
+use fidl_fuchsia_update::{CheckStartedResult, ManagerState, State};
 use serde_derive::{Deserialize, Serialize};
 
 /// Enum for supported update related commands.
 pub enum UpdateMethod {
+    GetState,
     CheckNow,
     GetCurrentChannel,
     GetTargetChannel,
@@ -19,6 +20,7 @@ impl std::str::FromStr for UpdateMethod {
 
     fn from_str(method: &str) -> Result<Self, Self::Err> {
         match method {
+            "GetState" => Ok(UpdateMethod::GetState),
             "CheckNow" => Ok(UpdateMethod::CheckNow),
             "GetCurrentChannel" => Ok(UpdateMethod::GetCurrentChannel),
             "GetTargetChannel" => Ok(UpdateMethod::GetTargetChannel),
@@ -29,33 +31,67 @@ impl std::str::FromStr for UpdateMethod {
     }
 }
 
-#[derive(Serialize, Debug, Deserialize, PartialEq, Eq)]
-pub(super) enum CheckStartedResultDef {
-    Started,
-    Internal,
-    InvalidOptions,
-    AlreadyInProgress,
-    Throttled,
+#[derive(Serialize, Deserialize)]
+#[serde(remote = "ManagerState")]
+enum ManagerStateDef {
+    Idle = 0,
+    CheckingForUpdates = 1,
+    UpdateAvailable = 2,
+    PerformingUpdate = 3,
+    WaitingForReboot = 4,
+    FinalizingUpdate = 5,
+    EncounteredError = 6,
 }
 
-#[derive(Serialize, Debug, Deserialize, PartialEq, Eq)]
-pub(super) struct CheckNowResult {
-    pub check_started: CheckStartedResultDef,
-}
+mod manager_state_wrapper {
+    use super::*;
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-impl From<Result<(), CheckNotStartedReason>> for CheckNowResult {
-    fn from(other: Result<(), CheckNotStartedReason>) -> Self {
-        let check_started = match other {
-            Ok(()) => CheckStartedResultDef::Started,
-            Err(CheckNotStartedReason::Internal) => CheckStartedResultDef::Internal,
-            Err(CheckNotStartedReason::InvalidOptions) => CheckStartedResultDef::InvalidOptions,
-            Err(CheckNotStartedReason::AlreadyInProgress) => {
-                CheckStartedResultDef::AlreadyInProgress
-            }
-            Err(CheckNotStartedReason::Throttled) => CheckStartedResultDef::Throttled,
-        };
-        Self { check_started }
+    pub fn serialize<S: Serializer>(
+        value: &Option<ManagerState>,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
+        #[derive(Serialize)]
+        struct Helper<'a>(#[serde(with = "ManagerStateDef")] &'a ManagerState);
+
+        value.as_ref().map(Helper).serialize(serializer)
     }
+
+    pub fn deserialize<'de, D: Deserializer<'de>>(
+        deserializer: D,
+    ) -> Result<Option<ManagerState>, D::Error> {
+        #[derive(Deserialize)]
+        struct Helper(#[serde(with = "ManagerStateDef")] ManagerState);
+
+        let helper = Option::deserialize(deserializer)?;
+        Ok(helper.map(|Helper(external)| external))
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(remote = "State")]
+struct StateDef {
+    #[serde(with = "manager_state_wrapper")]
+    state: Option<ManagerState>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    version_available: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
+pub struct StateHelper(#[serde(with = "StateDef")] pub State);
+
+#[derive(Serialize, Deserialize)]
+#[serde(remote = "CheckStartedResult")]
+enum CheckStartedResultDef {
+    Started = 0,
+    InProgress = 1,
+    Throttled = 2,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
+pub struct CheckNowResult {
+    #[serde(with = "CheckStartedResultDef")]
+    pub check_started: CheckStartedResult,
 }
 
 #[cfg(test)]
@@ -64,22 +100,34 @@ mod tests {
     use serde_json::{json, to_value};
 
     #[test]
-    fn serialize_check_started_result() {
+    fn serialize_state_idle() {
         assert_eq!(
-            to_value(CheckNowResult { check_started: CheckStartedResultDef::Started }).unwrap(),
-            json!({"check_started": "Started"})
+            to_value(StateHelper(State {
+                state: Some(ManagerState::Idle),
+                version_available: None
+            }))
+            .unwrap(),
+            json!({"state":"Idle"})
         );
     }
 
     #[test]
-    fn convert_check_now_result() {
+    fn serialize_state_performing_update() {
         assert_eq!(
-            CheckNowResult::from(Ok(())),
-            CheckNowResult { check_started: CheckStartedResultDef::Started }
+            to_value(StateHelper(State {
+                state: Some(ManagerState::PerformingUpdate),
+                version_available: Some("1.0".to_string())
+            }))
+            .unwrap(),
+            json!({"state":"PerformingUpdate","version_available":"1.0"})
         );
+    }
+
+    #[test]
+    fn serialize_check_started_result() {
         assert_eq!(
-            CheckNowResult::from(Err(CheckNotStartedReason::InvalidOptions)),
-            CheckNowResult { check_started: CheckStartedResultDef::InvalidOptions }
+            to_value(CheckNowResult { check_started: CheckStartedResult::Started }).unwrap(),
+            json!({"check_started": "Started"})
         );
     }
 }

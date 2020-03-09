@@ -7,12 +7,10 @@ use crate::channel::{CurrentChannelManager, TargetChannelManager};
 use crate::check::{check_for_system_update, SystemUpdateStatus};
 use crate::connect::ServiceConnect;
 use crate::last_update_storage::{LastUpdateStorage, LastUpdateStorageFile};
-use crate::update_monitor::{State, StateNotifier, UpdateMonitor};
-use crate::update_service::RealStateNotifier;
+use crate::update_monitor::{State, StateChangeCallback, UpdateMonitor};
 use anyhow::{Context as _, Error};
 use fidl_fuchsia_pkg::{PackageResolverMarker, PackageResolverProxyInterface};
-use fidl_fuchsia_update::CheckNotStartedReason;
-use fidl_fuchsia_update_ext as ext;
+use fidl_fuchsia_update::{CheckStartedResult, ManagerState};
 use fuchsia_async as fasync;
 use fuchsia_component::client::connect_to_service;
 use fuchsia_inspect as finspect;
@@ -21,6 +19,7 @@ use fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn};
 use futures::future::BoxFuture;
 use futures::lock::Mutex as AsyncMutex;
 use futures::prelude::*;
+use parking_lot::Mutex;
 use std::fs;
 use std::path::Path;
 use std::sync::Arc;
@@ -33,15 +32,15 @@ use std::sync::Arc;
 // periodically lock `monitor` to send status updates. Before an async task or thread can lock
 // `updater`, it must release any locks on `monitor`.
 //
-pub struct UpdateManager<T, Ch, C, A, N>
+pub struct UpdateManager<T, Ch, C, A, S>
 where
     T: TargetChannelUpdater,
     Ch: CurrentChannelUpdater,
     C: UpdateChecker,
     A: UpdateApplier,
-    N: StateNotifier,
+    S: StateChangeCallback,
 {
-    monitor: Arc<AsyncMutex<UpdateMonitor<N>>>,
+    monitor: Arc<Mutex<UpdateMonitor<S>>>,
     updater: Arc<AsyncMutex<SystemInterface<T, Ch, C, A>>>,
 }
 
@@ -60,20 +59,19 @@ where
     last_known_update_package: Option<Hash>,
 }
 
-impl<T, Ch> UpdateManager<T, Ch, RealUpdateChecker, RealUpdateApplier, RealStateNotifier>
+impl<T, Ch, S> UpdateManager<T, Ch, RealUpdateChecker, RealUpdateApplier, S>
 where
     T: TargetChannelUpdater,
     Ch: CurrentChannelUpdater,
+    S: StateChangeCallback,
 {
     pub async fn new(
         target_channel_updater: T,
         current_channel_updater: Ch,
         node: finspect::Node,
     ) -> Self {
-        let (fut, update_monitor) = UpdateMonitor::from_inspect_node(node);
-        fasync::spawn(fut);
         Self {
-            monitor: Arc::new(AsyncMutex::new(update_monitor)),
+            monitor: Arc::new(Mutex::new(UpdateMonitor::from_inspect_node(node))),
             updater: Arc::new(AsyncMutex::new(
                 SystemInterface::load(
                     target_channel_updater,
@@ -88,26 +86,24 @@ where
     }
 }
 
-impl<T, Ch, C, A, N> UpdateManager<T, Ch, C, A, N>
+impl<T, Ch, C, A, S> UpdateManager<T, Ch, C, A, S>
 where
     T: TargetChannelUpdater,
     Ch: CurrentChannelUpdater,
     C: UpdateChecker,
     A: UpdateApplier,
-    N: StateNotifier,
+    S: StateChangeCallback,
 {
     #[cfg(test)]
-    pub async fn from_checker_and_applier(
+    pub fn from_checker_and_applier(
         target_channel_updater: T,
         current_channel_updater: Ch,
         update_checker: C,
         update_applier: A,
         last_update_storage: Arc<impl LastUpdateStorage + Send + Sync + 'static>,
     ) -> Self {
-        let (fut, update_monitor) = UpdateMonitor::new();
-        fasync::spawn(fut);
         Self {
-            monitor: Arc::new(AsyncMutex::new(update_monitor)),
+            monitor: Arc::new(Mutex::new(UpdateMonitor::new())),
             updater: Arc::new(AsyncMutex::new(SystemInterface::new(
                 target_channel_updater,
                 current_channel_updater,
@@ -120,7 +116,7 @@ where
     }
 
     #[cfg(test)]
-    pub async fn from_checker_and_applier_and_last_known_update_package(
+    pub fn from_checker_and_applier_and_last_known_update_package(
         target_channel_updater: T,
         current_channel_updater: Ch,
         update_checker: C,
@@ -128,10 +124,8 @@ where
         last_update_storage: Arc<impl LastUpdateStorage + Send + Sync + 'static>,
         last_known_update_package: Option<Hash>,
     ) -> Self {
-        let (fut, update_monitor) = UpdateMonitor::new();
-        fasync::spawn(fut);
         Self {
-            monitor: Arc::new(AsyncMutex::new(update_monitor)),
+            monitor: Arc::new(Mutex::new(UpdateMonitor::new())),
             updater: Arc::new(AsyncMutex::new(SystemInterface::new(
                 target_channel_updater,
                 current_channel_updater,
@@ -144,21 +138,16 @@ where
     }
 
     /// A Fuchsia Executor must be active when this method is called, b/c it uses fuchsia_async::spawn
-    pub async fn try_start_update(
+    pub fn try_start_update(
         &self,
         initiator: Initiator,
-        callback: Option<N>,
-        allow_attaching_to_existing_update_check: Option<bool>,
-    ) -> Result<(), CheckNotStartedReason> {
-        let mut monitor = self.monitor.lock().await;
-
-        match monitor.update_state() {
-            State(None) => {
-                if let Some(cb) = callback {
-                    monitor.add_temporary_callback(cb).await;
-                }
-                monitor.advance_update_state(ext::State::CheckingForUpdates).await;
-                drop(monitor);
+        callback: Option<S>,
+    ) -> CheckStartedResult {
+        let mut monitor = self.monitor.lock();
+        callback.map(|cb| monitor.add_temporary_callback(cb));
+        match monitor.manager_state() {
+            ManagerState::Idle => {
+                monitor.advance_manager_state(ManagerState::CheckingForUpdates);
                 let updater = Arc::clone(&self.updater);
                 let monitor = Arc::clone(&self.monitor);
 
@@ -166,33 +155,23 @@ where
                 fasync::spawn(async move {
                     // Lock the updater for the duration of the update attempt. Contention is not
                     // expected except in the case that a previous update attempt failed, has set
-                    // update_state back to None, but has not yet returned.
+                    // manager_state back to Idle, but has not yet returned.
                     let mut updater = updater.lock().await;
                     updater.do_system_update_check_and_return_to_idle(monitor, initiator).await
                 });
-                Ok(())
+                CheckStartedResult::Started
             }
-            _ => {
-                if allow_attaching_to_existing_update_check == Some(true) {
-                    if let Some(cb) = callback {
-                        monitor.add_temporary_callback(cb).await;
-                    }
-                    Ok(())
-                } else {
-                    Err(CheckNotStartedReason::AlreadyInProgress)
-                }
-            }
+            _ => CheckStartedResult::InProgress,
         }
     }
 
-    pub async fn get_state(&self) -> State {
-        let monitor = self.monitor.lock().await;
-        monitor.update_state()
+    pub fn get_state(&self) -> State {
+        let monitor = self.monitor.lock();
+        monitor.state()
     }
 
-    #[cfg(test)]
-    pub async fn add_temporary_callback(&self, callback: N) {
-        self.monitor.lock().await.add_temporary_callback(callback).await;
+    pub fn add_permanent_callback(&self, callback: S) {
+        self.monitor.lock().add_permanent_callback(callback);
     }
 }
 
@@ -289,30 +268,31 @@ where
         )
     }
 
-    async fn do_system_update_check_and_return_to_idle<N: StateNotifier>(
+    async fn do_system_update_check_and_return_to_idle<S: StateChangeCallback>(
         &mut self,
-        monitor: Arc<AsyncMutex<UpdateMonitor<N>>>,
+        monitor: Arc<Mutex<UpdateMonitor<S>>>,
         initiator: Initiator,
     ) {
         if let Err(e) = self.do_system_update_check(monitor.clone(), initiator).await {
             fx_log_err!("update attempt failed: {:?}", e);
+            monitor.lock().advance_manager_state(ManagerState::EncounteredError);
         }
-        let mut monitor = monitor.lock().await;
-        match monitor.update_state() {
-            State(Some(ext::State::WaitingForReboot(_))) => fx_log_err!(
+        let mut monitor = monitor.lock();
+        match monitor.manager_state() {
+            ManagerState::WaitingForReboot => fx_log_err!(
                 "system-update-checker is in the WaitingForReboot state. \
                  This should not have happened, because the sytem-updater should \
                  have rebooted the device before it returned."
             ),
             _ => {
-                monitor.advance_update_state(State(None)).await;
+                monitor.advance_manager_state(ManagerState::Idle);
             }
         }
     }
 
-    async fn do_system_update_check<N: StateNotifier>(
+    async fn do_system_update_check<S: StateChangeCallback>(
         &mut self,
-        monitor: Arc<AsyncMutex<UpdateMonitor<N>>>,
+        monitor: Arc<Mutex<UpdateMonitor<S>>>,
         initiator: Initiator,
     ) -> Result<(), Error> {
         fx_log_info!(
@@ -329,13 +309,9 @@ where
             .update_checker
             .check(self.last_known_update_package.as_ref())
             .await
-            .context("check_for_system_update failed")
+            .context("check_for_system_update failed")?
         {
-            Err(e) => {
-                monitor.lock().await.advance_update_state(ext::State::ErrorCheckingForUpdate).await;
-                return Err(e);
-            }
-            Ok(SystemUpdateStatus::UpToDate { system_image, update_package }) => {
+            SystemUpdateStatus::UpToDate { system_image, update_package } => {
                 fx_log_info!("current system_image merkle: {}", system_image);
                 fx_log_info!("system_image is already up-to-date");
 
@@ -345,68 +321,32 @@ where
                 }
 
                 self.current_channel_updater.update().await;
-                monitor.lock().await.advance_update_state(ext::State::NoUpdateAvailable).await;
 
                 return Ok(());
             }
-            Ok(SystemUpdateStatus::UpdateAvailable {
+            SystemUpdateStatus::UpdateAvailable {
                 current_system_image,
                 latest_system_image,
                 latest_update_package,
-            }) => {
+            } => {
                 fx_log_info!("current system_image merkle: {}", current_system_image);
                 fx_log_info!("new system_image available: {}", latest_system_image);
                 {
-                    let mut monitor = monitor.lock().await;
+                    let mut monitor = monitor.lock();
                     monitor.set_version_available(latest_system_image.to_string());
-                    monitor
-                        .advance_update_state(ext::State::InstallingUpdate(ext::InstallingData {
-                            update: Some(ext::UpdateInfo {
-                                version_available: Some(latest_system_image.to_string()),
-                                download_size: None,
-                            }),
-                            installation_progress: None,
-                        }))
-                        .await;
+                    monitor.advance_manager_state(ManagerState::PerformingUpdate);
                 }
 
                 self.last_update_storage.store(&latest_update_package);
 
-                if let Err(e) = self
-                    .update_applier
+                self.update_applier
                     .apply(current_system_image, latest_system_image, initiator)
                     .await
-                    .context("apply_system_update failed")
-                {
-                    monitor
-                        .lock()
-                        .await
-                        .advance_update_state(ext::State::InstallationError(
-                            ext::InstallationErrorData {
-                                update: Some(ext::UpdateInfo {
-                                    version_available: Some(latest_system_image.to_string()),
-                                    download_size: None,
-                                }),
-                                installation_progress: None,
-                            },
-                        ))
-                        .await;
-                    return Err(e);
-                };
+                    .context("apply_system_update failed")?;
                 // On success, system-updater reboots the system before returning, so this code
                 // should never run. The only way to leave WaitingForReboot state is to restart
                 // the component
-                monitor
-                    .lock()
-                    .await
-                    .advance_update_state(ext::State::WaitingForReboot(ext::InstallingData {
-                        update: Some(ext::UpdateInfo {
-                            version_available: Some(latest_system_image.to_string()),
-                            download_size: None,
-                        }),
-                        installation_progress: None,
-                    }))
-                    .await;
+                monitor.lock().advance_manager_state(ManagerState::WaitingForReboot);
             }
         }
         Ok(())
@@ -484,12 +424,9 @@ impl UpdateApplier for RealUpdateApplier {
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
-    use event_queue::{ClosedClient, Notify};
     use futures::channel::mpsc::{channel, Receiver, Sender};
     use futures::channel::oneshot;
-    use futures::future::BoxFuture;
     use matches::assert_matches;
-    use parking_lot::Mutex;
     use std::sync::atomic::{AtomicU64, Ordering};
 
     pub const CALLBACK_CHANNEL_SIZE: usize = 20;
@@ -645,9 +582,9 @@ pub(crate) mod tests {
     }
 
     #[derive(Clone)]
-    pub struct UnreachableNotifier;
-    impl Notify<State> for UnreachableNotifier {
-        fn notify(&self, _state: State) -> BoxFuture<'static, Result<(), ClosedClient>> {
+    pub struct UnreachableStateChangeCallback;
+    impl StateChangeCallback for UnreachableStateChangeCallback {
+        fn on_state_change(&self, _new_state: State) -> Result<(), Error> {
             unreachable!();
         }
     }
@@ -664,27 +601,30 @@ pub(crate) mod tests {
             std::mem::replace(&mut self.states.lock(), vec![])
         }
     }
-    impl Notify<State> for StateChangeCollector {
-        fn notify(&self, state: State) -> BoxFuture<'static, Result<(), ClosedClient>> {
-            self.states.lock().push(state);
-            future::ready(Ok(())).boxed()
+    impl StateChangeCallback for StateChangeCollector {
+        fn on_state_change(&self, new_state: State) -> Result<(), Error> {
+            self.states.lock().push(new_state);
+            Ok(())
         }
     }
 
     #[derive(Clone)]
-    struct FakeStateNotifier {
+    struct FakeStateChangeCallback {
         sender: Arc<Mutex<Sender<State>>>,
     }
-    impl FakeStateNotifier {
+    impl FakeStateChangeCallback {
         fn new_callback_and_receiver() -> (Self, Receiver<State>) {
             let (sender, receiver) = channel(CALLBACK_CHANNEL_SIZE);
             (Self { sender: Arc::new(Mutex::new(sender)) }, receiver)
         }
     }
-    impl Notify<State> for FakeStateNotifier {
-        fn notify(&self, state: State) -> BoxFuture<'static, Result<(), ClosedClient>> {
-            self.sender.lock().try_send(state).expect("FakeStateNotifier failed to send state");
-            future::ready(Ok(())).boxed()
+    impl StateChangeCallback for FakeStateChangeCallback {
+        fn on_state_change(&self, new_state: State) -> Result<(), Error> {
+            self.sender
+                .lock()
+                .try_send(new_state)
+                .expect("FakeStateChangeCallback failed to send state");
+            Ok(())
         }
     }
 
@@ -711,7 +651,7 @@ pub(crate) mod tests {
         FakeCurrentChannelUpdater,
         FakeUpdateChecker,
         FakeUpdateApplier,
-        FakeStateNotifier,
+        FakeStateChangeCallback,
     >;
 
     type BlockingManagerManager = UpdateManager<
@@ -719,7 +659,7 @@ pub(crate) mod tests {
         FakeCurrentChannelUpdater,
         BlockingUpdateChecker,
         FakeUpdateApplier,
-        FakeStateNotifier,
+        FakeStateChangeCallback,
     >;
 
     async fn next_n_states(receiver: &mut Receiver<State>, n: usize) -> Vec<State> {
@@ -730,16 +670,16 @@ pub(crate) mod tests {
         v
     }
 
-    async fn wait_until_update_state_n(
+    async fn wait_until_manager_state_n(
         receiver: &mut Receiver<State>,
-        update_state: State,
+        manager_state: ManagerState,
         mut seen_count: u64,
     ) {
         if seen_count == 0 {
             return;
         }
         while let Some(new_state) = receiver.next().await {
-            if new_state == update_state {
+            if new_state.manager_state == manager_state {
                 seen_count -= 1;
                 if seen_count == 0 {
                     return;
@@ -749,32 +689,45 @@ pub(crate) mod tests {
         panic!("wait_until_state_n emptied stream: {}", seen_count);
     }
 
-    #[fasync::run_singlethreaded(test)]
-    async fn test_correct_initial_state() {
-        let manager = FakeUpdateManager::from_checker_and_applier(
-            FakeTargetChannelUpdater::new(),
-            FakeCurrentChannelUpdater::new(),
-            FakeUpdateChecker::new_up_to_date(),
-            FakeUpdateApplier::new_success(),
-            FakeLastUpdateStorage::new(),
-        )
-        .await;
-
-        assert_eq!(manager.get_state().await, Default::default());
+    impl From<ManagerState> for State {
+        fn from(manager_state: ManagerState) -> Self {
+            match manager_state {
+                ManagerState::Idle | ManagerState::CheckingForUpdates => {
+                    State { manager_state, version_available: None }
+                }
+                manager_state => State {
+                    manager_state,
+                    version_available: Some(LATEST_SYSTEM_IMAGE.to_string()),
+                },
+            }
+        }
     }
 
-    #[fasync::run_singlethreaded(test)]
-    async fn test_try_start_update_returns_started() {
+    #[test]
+    fn test_correct_initial_state() {
         let manager = FakeUpdateManager::from_checker_and_applier(
             FakeTargetChannelUpdater::new(),
             FakeCurrentChannelUpdater::new(),
             FakeUpdateChecker::new_up_to_date(),
             FakeUpdateApplier::new_success(),
             FakeLastUpdateStorage::new(),
-        )
-        .await;
+        );
 
-        assert_eq!(manager.try_start_update(Initiator::Manual, None, None).await, Ok(()));
+        assert_eq!(manager.get_state(), Default::default());
+    }
+
+    #[test]
+    fn test_try_start_update_returns_started() {
+        let _executor = fasync::Executor::new().expect("create test executor");
+        let manager = FakeUpdateManager::from_checker_and_applier(
+            FakeTargetChannelUpdater::new(),
+            FakeCurrentChannelUpdater::new(),
+            FakeUpdateChecker::new_up_to_date(),
+            FakeUpdateApplier::new_success(),
+            FakeLastUpdateStorage::new(),
+        );
+
+        assert_eq!(manager.try_start_update(Initiator::Manual, None), CheckStartedResult::Started);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -785,26 +738,25 @@ pub(crate) mod tests {
             FakeUpdateChecker::new_up_to_date(),
             FakeUpdateApplier::new_success(),
             FakeLastUpdateStorage::new(),
-        )
-        .await;
-        let (callback0, mut receiver0) = FakeStateNotifier::new_callback_and_receiver();
-        let (callback1, mut receiver1) = FakeStateNotifier::new_callback_and_receiver();
+        );
+        let (callback0, mut receiver0) = FakeStateChangeCallback::new_callback_and_receiver();
+        let (callback1, mut receiver1) = FakeStateChangeCallback::new_callback_and_receiver();
 
-        manager.try_start_update(Initiator::Manual, Some(callback0), None).await.unwrap();
+        manager.try_start_update(Initiator::Manual, Some(callback0));
 
         // Wait for first update attempt to complete, to guarantee that the second
         // try_start_update() call starts a new attempt (and generates more callback calls).
-        wait_until_update_state_n(&mut receiver0, State(None), 1).await;
+        wait_until_manager_state_n(&mut receiver0, ManagerState::Idle, 2).await;
 
-        manager.try_start_update(Initiator::Manual, Some(callback1), None).await.unwrap();
+        manager.try_start_update(Initiator::Manual, Some(callback1));
 
         // Wait for the second update attempt to complete, to guarantee the callbacks
         // have been called with more states.
-        wait_until_update_state_n(&mut receiver1, State(None), 1).await;
+        wait_until_manager_state_n(&mut receiver1, ManagerState::Idle, 2).await;
 
         // The first callback should have been dropped after the first attempt completed,
         // so it should still be empty.
-        assert_matches!(receiver0.next().await, None);
+        assert_matches!(receiver0.try_next(), Ok(None));
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -815,18 +767,17 @@ pub(crate) mod tests {
             FakeUpdateChecker::new_up_to_date(),
             FakeUpdateApplier::new_success(),
             FakeLastUpdateStorage::new(),
-        )
-        .await;
-        let (callback, receiver) = FakeStateNotifier::new_callback_and_receiver();
+        );
+        let (callback, receiver) = FakeStateChangeCallback::new_callback_and_receiver();
 
-        manager.try_start_update(Initiator::Manual, Some(callback), None).await.unwrap();
+        manager.try_start_update(Initiator::Manual, Some(callback));
 
         assert_eq!(
             receiver.collect::<Vec<State>>().await,
             vec![
-                ext::State::CheckingForUpdates.into(),
-                ext::State::NoUpdateAvailable.into(),
-                State(None)
+                ManagerState::Idle.into(),
+                ManagerState::CheckingForUpdates.into(),
+                ManagerState::Idle.into()
             ]
         );
     }
@@ -839,31 +790,19 @@ pub(crate) mod tests {
             FakeUpdateChecker::new_update_available(),
             FakeUpdateApplier::new_error(),
             FakeLastUpdateStorage::new(),
-        )
-        .await;
-        let (callback, receiver) = FakeStateNotifier::new_callback_and_receiver();
-        let expected_update_info = Some(ext::UpdateInfo {
-            version_available: Some(LATEST_SYSTEM_IMAGE.to_string()),
-            download_size: None,
-        });
+        );
+        let (callback, receiver) = FakeStateChangeCallback::new_callback_and_receiver();
 
-        manager.try_start_update(Initiator::Manual, Some(callback), None).await.unwrap();
+        manager.try_start_update(Initiator::Manual, Some(callback));
 
         assert_eq!(
             receiver.collect::<Vec<State>>().await,
             vec![
-                ext::State::CheckingForUpdates.into(),
-                ext::State::InstallingUpdate(ext::InstallingData {
-                    update: expected_update_info.clone(),
-                    installation_progress: None,
-                })
-                .into(),
-                ext::State::InstallationError(ext::InstallationErrorData {
-                    update: expected_update_info,
-                    installation_progress: None,
-                })
-                .into(),
-                State(None),
+                ManagerState::Idle.into(),
+                ManagerState::CheckingForUpdates.into(),
+                ManagerState::PerformingUpdate.into(),
+                ManagerState::EncounteredError.into(),
+                ManagerState::Idle.into()
             ]
         );
     }
@@ -876,25 +815,84 @@ pub(crate) mod tests {
             FakeUpdateChecker::new_update_available(),
             FakeUpdateApplier::new_success(),
             FakeLastUpdateStorage::new(),
-        )
-        .await;
-        let (callback, mut receiver) = FakeStateNotifier::new_callback_and_receiver();
-        let expected_installing_data = ext::InstallingData {
-            update: Some(ext::UpdateInfo {
-                version_available: Some(LATEST_SYSTEM_IMAGE.to_string()),
-                download_size: None,
-            }),
-            installation_progress: None,
-        };
+        );
+        let (callback, mut receiver) = FakeStateChangeCallback::new_callback_and_receiver();
 
-        manager.try_start_update(Initiator::Manual, Some(callback), None).await.unwrap();
+        manager.try_start_update(Initiator::Manual, Some(callback));
 
         assert_eq!(
-            next_n_states(&mut receiver, 3).await,
+            next_n_states(&mut receiver, 4).await,
             vec![
-                ext::State::CheckingForUpdates.into(),
-                ext::State::InstallingUpdate(expected_installing_data.clone()).into(),
-                ext::State::WaitingForReboot(expected_installing_data).into(),
+                ManagerState::Idle.into(),
+                ManagerState::CheckingForUpdates.into(),
+                ManagerState::PerformingUpdate.into(),
+                ManagerState::WaitingForReboot.into(),
+            ]
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_permanent_callback_is_called() {
+        let manager = FakeUpdateManager::from_checker_and_applier(
+            FakeTargetChannelUpdater::new(),
+            FakeCurrentChannelUpdater::new(),
+            FakeUpdateChecker::new_update_available(),
+            FakeUpdateApplier::new_error(),
+            FakeLastUpdateStorage::new(),
+        );
+        let (callback, mut receiver) = FakeStateChangeCallback::new_callback_and_receiver();
+
+        manager.add_permanent_callback(callback);
+        manager.try_start_update(Initiator::Manual, None);
+
+        assert_eq!(
+            next_n_states(&mut receiver, 5).await,
+            vec![
+                ManagerState::Idle.into(),
+                ManagerState::CheckingForUpdates.into(),
+                ManagerState::PerformingUpdate.into(),
+                ManagerState::EncounteredError.into(),
+                ManagerState::Idle.into(),
+            ]
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_permanent_callback_persists_across_attempts() {
+        let manager = FakeUpdateManager::from_checker_and_applier(
+            FakeTargetChannelUpdater::new(),
+            FakeCurrentChannelUpdater::new(),
+            FakeUpdateChecker::new_update_available(),
+            FakeUpdateApplier::new_error(),
+            FakeLastUpdateStorage::new(),
+        );
+        let (callback, mut receiver) = FakeStateChangeCallback::new_callback_and_receiver();
+
+        manager.add_permanent_callback(callback);
+        manager.try_start_update(Initiator::Manual, None);
+
+        // waiting for Idle state guarantees second try_start_update call
+        // starts a new attempt
+        assert_eq!(
+            next_n_states(&mut receiver, 5).await,
+            vec![
+                ManagerState::Idle.into(),
+                ManagerState::CheckingForUpdates.into(),
+                ManagerState::PerformingUpdate.into(),
+                ManagerState::EncounteredError.into(),
+                ManagerState::Idle.into(),
+            ]
+        );
+
+        manager.try_start_update(Initiator::Manual, None);
+
+        assert_eq!(
+            next_n_states(&mut receiver, 4).await,
+            vec![
+                ManagerState::CheckingForUpdates.into(),
+                ManagerState::PerformingUpdate.into(),
+                ManagerState::EncounteredError.into(),
+                ManagerState::Idle.into(),
             ]
         );
     }
@@ -908,11 +906,10 @@ pub(crate) mod tests {
             FakeUpdateChecker::new_up_to_date(),
             UnreachableUpdateApplier,
             FakeLastUpdateStorage::new(),
-        )
-        .await;
-        let (callback, receiver) = FakeStateNotifier::new_callback_and_receiver();
+        );
+        let (callback, receiver) = FakeStateChangeCallback::new_callback_and_receiver();
 
-        manager.try_start_update(Initiator::Manual, Some(callback), None).await.unwrap();
+        manager.try_start_update(Initiator::Manual, Some(callback));
         receiver.collect::<Vec<State>>().await;
 
         assert_eq!(channel_updater.call_count(), 1);
@@ -927,11 +924,10 @@ pub(crate) mod tests {
             FakeUpdateChecker::new_update_available(),
             update_applier.clone(),
             FakeLastUpdateStorage::new(),
-        )
-        .await;
-        let (callback, receiver) = FakeStateNotifier::new_callback_and_receiver();
+        );
+        let (callback, receiver) = FakeStateChangeCallback::new_callback_and_receiver();
 
-        manager.try_start_update(Initiator::Manual, Some(callback), None).await.unwrap();
+        manager.try_start_update(Initiator::Manual, Some(callback));
         receiver.collect::<Vec<State>>().await;
 
         assert_eq!(update_applier.call_count(), 1);
@@ -948,11 +944,10 @@ pub(crate) mod tests {
             FakeUpdateApplier::new_error(),
             last_update_storage.clone(),
             Some(CURRENT_UPDATE_PACKAGE.parse().expect("valid merkle")),
-        )
-        .await;
-        let (callback, receiver) = FakeStateNotifier::new_callback_and_receiver();
+        );
+        let (callback, receiver) = FakeStateChangeCallback::new_callback_and_receiver();
 
-        manager.try_start_update(Initiator::Manual, Some(callback), None).await.unwrap();
+        manager.try_start_update(Initiator::Manual, Some(callback));
         receiver.collect::<Vec<State>>().await;
 
         assert_eq!(
@@ -971,11 +966,10 @@ pub(crate) mod tests {
             FakeUpdateChecker::new_up_to_date(),
             update_applier.clone(),
             FakeLastUpdateStorage::new(),
-        )
-        .await;
-        let (callback, receiver) = FakeStateNotifier::new_callback_and_receiver();
+        );
+        let (callback, receiver) = FakeStateChangeCallback::new_callback_and_receiver();
 
-        manager.try_start_update(Initiator::Manual, Some(callback), None).await.unwrap();
+        manager.try_start_update(Initiator::Manual, Some(callback));
         receiver.collect::<Vec<State>>().await;
 
         assert_eq!(update_applier.call_count(), 0);
@@ -993,11 +987,10 @@ pub(crate) mod tests {
             FakeUpdateApplier::new_error(),
             last_update_storage.clone(),
             None,
-        )
-        .await;
-        let (callback, receiver) = FakeStateNotifier::new_callback_and_receiver();
+        );
+        let (callback, receiver) = FakeStateChangeCallback::new_callback_and_receiver();
 
-        manager.try_start_update(Initiator::Manual, Some(callback), None).await.unwrap();
+        manager.try_start_update(Initiator::Manual, Some(callback));
         receiver.collect::<Vec<State>>().await;
 
         assert_eq!(
@@ -1017,11 +1010,10 @@ pub(crate) mod tests {
             FakeUpdateApplier::new_error(),
             last_update_storage.clone(),
             Some(CURRENT_UPDATE_PACKAGE.parse().expect("valid merkle")),
-        )
-        .await;
-        let (callback, receiver) = FakeStateNotifier::new_callback_and_receiver();
+        );
+        let (callback, receiver) = FakeStateChangeCallback::new_callback_and_receiver();
 
-        manager.try_start_update(Initiator::Manual, Some(callback), None).await.unwrap();
+        manager.try_start_update(Initiator::Manual, Some(callback));
         receiver.collect::<Vec<State>>().await;
 
         assert_eq!(last_update_storage.load(), None);
@@ -1035,14 +1027,13 @@ pub(crate) mod tests {
             FakeUpdateChecker::new_error(),
             FakeUpdateApplier::new_error(),
             FakeLastUpdateStorage::new(),
-        )
-        .await;
-        let (callback, receiver) = FakeStateNotifier::new_callback_and_receiver();
+        );
+        let (callback, receiver) = FakeStateChangeCallback::new_callback_and_receiver();
 
-        manager.try_start_update(Initiator::Manual, Some(callback), None).await.unwrap();
+        manager.try_start_update(Initiator::Manual, Some(callback));
         receiver.collect::<Vec<State>>().await;
 
-        assert_eq!(manager.get_state().await, Default::default());
+        assert_eq!(manager.get_state(), Default::default());
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -1053,14 +1044,13 @@ pub(crate) mod tests {
             FakeUpdateChecker::new_update_available(),
             FakeUpdateApplier::new_error(),
             FakeLastUpdateStorage::new(),
-        )
-        .await;
-        let (callback, receiver) = FakeStateNotifier::new_callback_and_receiver();
+        );
+        let (callback, receiver) = FakeStateChangeCallback::new_callback_and_receiver();
 
-        manager.try_start_update(Initiator::Manual, Some(callback), None).await.unwrap();
+        manager.try_start_update(Initiator::Manual, Some(callback));
         receiver.collect::<Vec<State>>().await;
 
-        assert_eq!(manager.get_state().await, Default::default());
+        assert_eq!(manager.get_state(), Default::default());
     }
 
     #[derive(Clone)]
@@ -1101,12 +1091,11 @@ pub(crate) mod tests {
             blocking_update_checker,
             FakeUpdateApplier::new_error(),
             FakeLastUpdateStorage::new(),
-        )
-        .await;
+        );
 
-        manager.try_start_update(Initiator::Manual, None, None).await.unwrap();
+        manager.try_start_update(Initiator::Manual, None);
 
-        assert_eq!(manager.get_state().await, ext::State::CheckingForUpdates.into());
+        assert_eq!(manager.get_state().manager_state, ManagerState::CheckingForUpdates);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -1119,19 +1108,18 @@ pub(crate) mod tests {
             blocking_update_checker,
             update_applier.clone(),
             FakeLastUpdateStorage::new(),
-        )
-        .await;
-        let (callback, receiver) = FakeStateNotifier::new_callback_and_receiver();
+        );
+        let (callback, receiver) = FakeStateChangeCallback::new_callback_and_receiver();
 
-        let res0 = manager.try_start_update(Initiator::Manual, Some(callback), None).await;
+        let res0 = manager.try_start_update(Initiator::Manual, Some(callback));
         // try_start_update advances state to CheckingForUpdates before returning
         // and the blocking_update_checker keeps it there
-        let res1 = manager.try_start_update(Initiator::Manual, None, None).await;
+        let res1 = manager.try_start_update(Initiator::Manual, None);
         assert_matches!(sender.send(()), Ok(()));
         receiver.collect::<Vec<State>>().await;
 
-        assert_eq!(res0, Ok(()));
-        assert_eq!(res1, Err(CheckNotStartedReason::AlreadyInProgress));
+        assert_eq!(res0, CheckStartedResult::Started);
+        assert_eq!(res1, CheckStartedResult::InProgress);
         assert_eq!(update_applier.call_count(), 1);
     }
 

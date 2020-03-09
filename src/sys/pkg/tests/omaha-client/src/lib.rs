@@ -12,10 +12,8 @@ use {
     },
     fidl_fuchsia_pkg::{PackageResolverRequestStream, PackageResolverResolveResponder},
     fidl_fuchsia_update::{
-        CheckOptions, CheckingForUpdatesData, ErrorCheckingForUpdateData, Initiator,
-        InstallationErrorData, InstallationProgress, InstallingData, ManagerMarker, ManagerProxy,
-        MonitorMarker, MonitorRequest, MonitorRequestStream, NoUpdateAvailableData, State,
-        UpdateInfo,
+        CheckStartedResult, Initiator, ManagerMarker, ManagerProxy, ManagerState, MonitorEvent,
+        MonitorEventStream, MonitorMarker, Options,
     },
     fuchsia_async as fasync,
     fuchsia_component::{
@@ -151,22 +149,18 @@ impl TestEnv {
         TestPackage { root }.add_file("meta", merkle)
     }
 
-    async fn check_now(&self) -> MonitorRequestStream {
-        let options = CheckOptions {
-            initiator: Some(Initiator::User),
-            allow_attaching_to_existing_update_check: Some(true),
-        };
-        let (client_end, stream) =
-            fidl::endpoints::create_request_stream::<MonitorMarker>().unwrap();
-        assert_matches!(
+    async fn check_now(&self) -> MonitorEventStream {
+        let options = Options { initiator: Some(Initiator::User) };
+        let (client_proxy, server_end) = fidl::endpoints::create_proxy::<MonitorMarker>().unwrap();
+        assert_eq!(
             self.proxies
                 .update_manager
-                .check_now(options, Some(client_end))
+                .check_now(options, Some(server_end))
                 .await
                 .expect("check_now"),
-            Ok(())
+            CheckStartedResult::Started
         );
-        stream
+        client_proxy.take_event_stream()
     }
 }
 
@@ -322,34 +316,23 @@ async fn test_calls_paver_service() {
 
 #[fasync::run_singlethreaded(test)]
 // Test will hang if omaha-client does not call paver service
-async fn test_update_manager_checknow_works_after_paver_service_fails() {
+async fn test_update_manager_get_state_works_after_paver_service_fails() {
     let env = TestEnv::new(MockPaver::new(Status::INTERNAL), OmahaReponse::NoUpdate);
 
     let mut set_active_configuration_healthy_was_called =
         env.proxies.paver.set_active_configuration_healthy_was_called.lock();
     set_active_configuration_healthy_was_called.next().await;
 
-    let mut stream = env.check_now().await;
-    assert_matches!(stream.next().await, Some(_));
+    let state = env.proxies.update_manager.get_state().await.expect("get_state");
+    assert_eq!(state.state, Some(ManagerState::Idle));
+    assert_eq!(state.version_available, None);
 }
 
-async fn expect_states(stream: &mut MonitorRequestStream, expected_states: &[State]) {
-    for expected_state in expected_states {
-        let MonitorRequest::OnState { state, responder } =
-            stream.try_next().await.unwrap().unwrap();
-        assert_eq!(&state, expected_state);
-        responder.send().unwrap();
+async fn expect_states(stream: &mut MonitorEventStream, expected_states: &[ManagerState]) {
+    for &expected_state in expected_states {
+        let MonitorEvent::OnState { state } = stream.try_next().await.unwrap().unwrap();
+        assert_eq!(state.state, Some(expected_state));
     }
-}
-
-fn update_info() -> Option<UpdateInfo> {
-    // TODO(fxb/47469): version_available should be `Some("0.1.2.3".to_string())` once omaha-client
-    // returns version_available.
-    Some(UpdateInfo { version_available: None, download_size: None })
-}
-
-fn progress() -> Option<InstallationProgress> {
-    Some(InstallationProgress { fraction_completed: None })
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -370,15 +353,11 @@ async fn test_omaha_client_update() {
     expect_states(
         &mut stream,
         &[
-            State::CheckingForUpdates(CheckingForUpdatesData {}),
-            State::InstallingUpdate(InstallingData {
-                update: update_info(),
-                installation_progress: progress(),
-            }),
-            State::WaitingForReboot(InstallingData {
-                update: update_info(),
-                installation_progress: progress(),
-            }),
+            ManagerState::Idle,
+            ManagerState::CheckingForUpdates,
+            ManagerState::UpdateAvailable,
+            ManagerState::PerformingUpdate,
+            ManagerState::WaitingForReboot,
         ],
     )
     .await;
@@ -392,15 +371,12 @@ async fn test_omaha_client_update_error() {
     expect_states(
         &mut stream,
         &[
-            State::CheckingForUpdates(CheckingForUpdatesData {}),
-            State::InstallingUpdate(InstallingData {
-                update: update_info(),
-                installation_progress: progress(),
-            }),
-            State::InstallationError(InstallationErrorData {
-                update: update_info(),
-                installation_progress: progress(),
-            }),
+            ManagerState::Idle,
+            ManagerState::CheckingForUpdates,
+            ManagerState::UpdateAvailable,
+            ManagerState::PerformingUpdate,
+            ManagerState::EncounteredError,
+            ManagerState::Idle,
         ],
     )
     .await;
@@ -414,10 +390,7 @@ async fn test_omaha_client_no_update() {
     let mut stream = env.check_now().await;
     expect_states(
         &mut stream,
-        &[
-            State::CheckingForUpdates(CheckingForUpdatesData {}),
-            State::NoUpdateAvailable(NoUpdateAvailableData {}),
-        ],
+        &[ManagerState::Idle, ManagerState::CheckingForUpdates, ManagerState::Idle],
     )
     .await;
     assert_matches!(stream.next().await, None);
@@ -431,8 +404,10 @@ async fn test_omaha_client_invalid_response() {
     expect_states(
         &mut stream,
         &[
-            State::CheckingForUpdates(CheckingForUpdatesData {}),
-            State::ErrorCheckingForUpdate(ErrorCheckingForUpdateData {}),
+            ManagerState::Idle,
+            ManagerState::CheckingForUpdates,
+            ManagerState::EncounteredError,
+            ManagerState::Idle,
         ],
     )
     .await;
@@ -447,11 +422,11 @@ async fn test_omaha_client_invalid_url() {
     expect_states(
         &mut stream,
         &[
-            State::CheckingForUpdates(CheckingForUpdatesData {}),
-            State::InstallationError(InstallationErrorData {
-                update: update_info(),
-                installation_progress: progress(),
-            }),
+            ManagerState::Idle,
+            ManagerState::CheckingForUpdates,
+            ManagerState::UpdateAvailable,
+            ManagerState::EncounteredError,
+            ManagerState::Idle,
         ],
     )
     .await;
