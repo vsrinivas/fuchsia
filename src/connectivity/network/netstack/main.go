@@ -307,7 +307,22 @@ func Main() {
 				interfaces := interfaces2ListToInterfacesList(interfaces2)
 
 				if err := p.OnInterfacesChanged(interfaces); err != nil {
-					syslog.Warnf("OnInterfacesChanged failed: %v", err)
+					warn := true
+					if err, ok := err.(*zx.Error); ok {
+						switch err.Status {
+						// TODO(fxb/47328): Suppress warning for ErrBadHandle until
+						// the likely bug with Go bindings is addressed.
+						case zx.ErrBadHandle:
+							fallthrough
+						// ErrPeerClosed would mean that the peer closed its side
+						// of the channel.
+						case zx.ErrPeerClosed:
+							warn = false
+						}
+					}
+					if warn {
+						syslog.Warnf("OnInterfacesChanged failed: %v", err)
+					}
 				}
 			}
 			return nil
