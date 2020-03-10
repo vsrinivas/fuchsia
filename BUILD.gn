@@ -68,6 +68,11 @@ declare_args() {
 
   # Compilation database filter. Gets passed to --export-compile-commands=<filter>.
   zircon_compdb_filter = "legacy-$target_cpu"
+
+  # Whether to allow testonly=true targets in base/cache pacakges. Default to
+  # true to allow testonly=true targets. It is preferrable to set to false for
+  # production builds to avoid accidental inclusion of testing targets.
+  base_cache_packages_allow_testonly = true
 }
 
 zircon_variants = []
@@ -505,13 +510,17 @@ group("default") {
 # These groups exist at the root of the build so relative labels specified
 # through GN args are interpreted as if they were absolute.
 group("additional_base_packages") {
-  testonly = true
+  if (base_cache_packages_allow_testonly) {
+    testonly = true
+  }
   visibility = [ "//build/images:base_packages" ]
   public_deps = base_package_labels + board_package_labels
 }
 
 group("additional_cache_packages") {
-  testonly = true
+  if (base_cache_packages_allow_testonly) {
+    testonly = true
+  }
   visibility = [ "//build/images:cache_packages" ]
   public_deps = cache_package_labels
 }
