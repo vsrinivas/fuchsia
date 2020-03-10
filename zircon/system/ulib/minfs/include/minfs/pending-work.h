@@ -5,19 +5,18 @@
 #ifndef MINFS_PENDING_WORK_H_
 #define MINFS_PENDING_WORK_H_
 
-#include <storage/operation/operation.h>
 #include <zircon/device/block.h>
 #include <zircon/types.h>
 
 #include <minfs/format.h>
+#include <storage/buffer/block_buffer.h>
+#include <storage/operation/operation.h>
 
 namespace minfs {
 // Types of data to use with read and write transactions.
 #ifdef __Fuchsia__
-using ReadData = vmoid_t;
 using WriteData = zx_handle_t;
 #else
-using ReadData = const void*;
 using WriteData = const void*;
 #endif
 
@@ -27,9 +26,16 @@ class PendingWork {
  public:
   virtual ~PendingWork() = default;
 
+#ifdef __Fuchsia__
   // Identifies that an extent of metadata blocks should be written to disk at a later point in
   // time.
+  // TODO(rvargas): Remove this version.
   virtual void EnqueueMetadata(WriteData source, storage::Operation operation) = 0;
+#else
+  // Identifies that an extent of metadata blocks should be written to disk at a later point in
+  // time.
+  virtual void EnqueueMetadata(storage::Operation operation, storage::BlockBuffer* buffer) = 0;
+#endif
 
   // Identifies that an extent of data blocks should be written to disk at a later point in time.
   // Write to data blocks must be done in a separate transaction from metadata updates to ensure

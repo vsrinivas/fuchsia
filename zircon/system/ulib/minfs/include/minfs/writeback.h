@@ -24,6 +24,7 @@
 #include <fbl/macros.h>
 #include <fbl/ref_ptr.h>
 #include <fs/queue.h>
+#include <fs/transaction/buffered_operations_builder.h>
 #include <fs/vfs.h>
 #include <minfs/allocator-reservation.h>
 #include <minfs/bcache.h>
@@ -59,7 +60,11 @@ class Transaction final : public PendingWork {
   ////////////////
   // PendingWork interface.
 
+#ifdef __Fuchsia__
   void EnqueueMetadata(WriteData source, storage::Operation operation) final;
+#else
+  void EnqueueMetadata(storage::Operation operation, storage::BlockBuffer* buffer) final;
+#endif
 
   void EnqueueData(WriteData source, storage::Operation operation) final;
 
@@ -122,6 +127,7 @@ class Transaction final : public PendingWork {
   std::vector<fbl::RefPtr<VnodeMinfs>> pinned_vnodes_;
 #else
   fs::WriteTxn transaction_;
+  fs::BufferedOperationsBuilder builder_;
 #endif
 
   AllocatorReservation inode_reservation_;

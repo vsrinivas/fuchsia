@@ -4,6 +4,8 @@
 
 #include <utility>
 
+#include <storage/buffer/block_buffer.h>
+
 #include "allocator.h"
 #include "storage.h"
 
@@ -14,6 +16,26 @@ namespace {
 blk_t BitmapBlocksForSizeImpl(size_t size) {
   return (static_cast<blk_t>(size) + kMinfsBlockBits - 1) / kMinfsBlockBits;
 }
+
+// TODO(46781): This should not be needed after making PersistRange receive a
+// buffer instead of an ambiguous WriteData.
+class UnownedBuffer : public storage::BlockBuffer {
+ public:
+  UnownedBuffer(const void* data) : data_(reinterpret_cast<const char*>(data)) {}
+  ~UnownedBuffer() {}
+
+  // BlockBuffer interface:
+  size_t capacity() const final { return 0; }
+  uint32_t BlockSize() const final { return 0; }
+  vmoid_t vmoid() const final { return 0; }
+  void* Data(size_t index) final {
+    return const_cast<void*>(const_cast<const UnownedBuffer*>(this)->Data(index));
+  }
+  const void* Data(size_t index) const final { return data_ + index * kMinfsBlockSize; }
+
+ private:
+  const char* data_;
+};
 
 }  // namespace
 
@@ -47,7 +69,12 @@ void PersistentStorage::PersistRange(PendingWork* transaction, WriteData data, s
       .length = block_count,
   };
 
-  transaction->EnqueueMetadata(data, std::move(op));
+#ifdef __Fuchsia__
+  transaction->EnqueueMetadata(data, op);
+#else
+  UnownedBuffer buffer(data);
+  transaction->EnqueueMetadata(op, &buffer);
+#endif
 }
 
 void PersistentStorage::PersistAllocate(PendingWork* write_transaction, size_t count) {

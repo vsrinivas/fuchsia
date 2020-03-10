@@ -62,7 +62,8 @@ Transaction::Transaction(TransactionalFs* minfs)
 #ifdef __Fuchsia__
       lock_(minfs->GetLock())
 #else
-      transaction_(minfs->GetMutableBcache())
+      transaction_(minfs->GetMutableBcache()),
+      builder_(minfs->GetMutableBcache())
 #endif
 {
 }
@@ -101,8 +102,8 @@ std::vector<fbl::RefPtr<VnodeMinfs>> Transaction::RemovePinnedVnodes() {
   return std::move(pinned_vnodes_);
 }
 #else
-void Transaction::EnqueueMetadata(WriteData source, storage::Operation operation) {
-  transaction_.Enqueue(source, operation.vmo_offset, operation.dev_offset, operation.length);
+void Transaction::EnqueueMetadata(storage::Operation operation, storage::BlockBuffer* buffer) {
+  builder_.Add(operation, buffer);
 }
 
 void Transaction::EnqueueData(WriteData source, storage::Operation operation) {
