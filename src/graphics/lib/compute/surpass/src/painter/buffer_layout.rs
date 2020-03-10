@@ -102,6 +102,14 @@ impl BufferLayoutBuilder {
     }
 }
 
+#[derive(Clone, Copy, Debug)]
+pub struct Clip {
+    pub x: usize,
+    pub y: usize,
+    pub width: usize,
+    pub height: usize,
+}
+
 pub struct BufferLayout {
     ptr: *mut [u8; 4],
     len: usize,
@@ -125,14 +133,25 @@ impl fmt::Debug for BufferLayout {
 impl BufferLayout {
     fn par_tile_rows(
         &mut self,
+        clip: Option<Clip>,
         f: impl Fn(usize, ChunksExactMut<'_, TileSlice>, Option<&Box<dyn Flusher>>) + Send + Sync,
     ) {
         let row_len = self.row_len;
         let flusher = self.flusher.as_ref();
-        self.layout
-            .par_chunks_mut(row_len * TILE_SIZE)
-            .enumerate()
-            .for_each(|(j, row)| f(j, row.chunks_exact_mut(row.len() / row_len), flusher));
+
+        if let Some(clip) = clip {
+            self.layout
+                .par_chunks_mut(row_len * TILE_SIZE)
+                .enumerate()
+                .skip(clip.y >> TILE_SHIFT)
+                .take((clip.height + TILE_MASK) >> TILE_SHIFT)
+                .for_each(|(j, row)| f(j, row.chunks_exact_mut(row.len() / row_len), flusher));
+        } else {
+            self.layout
+                .par_chunks_mut(row_len * TILE_SIZE)
+                .enumerate()
+                .for_each(|(j, row)| f(j, row.chunks_exact_mut(row.len() / row_len), flusher));
+        }
     }
 
     #[inline]
@@ -143,6 +162,7 @@ impl BufferLayout {
     pub fn print<F>(
         &mut self,
         buffer: &mut [[u8; 4]],
+        clip: Option<Clip>,
         mut segments: &[CompactSegment],
         clear_color: [u8; 4],
         styles: F,
@@ -162,7 +182,7 @@ impl BufferLayout {
             segments = &segments[..=end];
         }
 
-        self.par_tile_rows(|j, row, flusher| {
+        self.par_tile_rows(clip, |j, row, flusher| {
             if let Ok(end) = search_last_by_key(segments, j as i16, |segment| segment.tile_j()) {
                 let result = search_last_by_key(segments, j as i16 - 1, |segment| segment.tile_j());
                 let start = match result {
@@ -172,11 +192,12 @@ impl BufferLayout {
 
                 PAINTER.with(|painter| {
                     painter.borrow_mut().paint_tile_row(
+                        row,
+                        clip,
+                        flusher,
                         &segments[start..=end],
                         &styles,
                         clear_color,
-                        flusher,
-                        row,
                     );
                     painter.borrow_mut().reset();
                 });

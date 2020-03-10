@@ -5,7 +5,7 @@
 use rustc_hash::FxHashMap;
 use surpass::{
     self,
-    painter::BufferLayout,
+    painter::{BufferLayout, Clip},
     rasterizer::{self, Rasterizer},
     LinesBuilder,
 };
@@ -142,7 +142,12 @@ impl Composition {
         }
     }
 
-    pub fn render(&mut self, mut buffer: Buffer<'_>, background_color: [u8; 4]) {
+    pub fn render(
+        &mut self,
+        mut buffer: Buffer<'_>,
+        clip: Option<Clip>,
+        background_color: [u8; 4],
+    ) {
         self.remove_disabled();
 
         for (layer_id, layer) in &self.layers {
@@ -177,7 +182,7 @@ impl Composition {
                 .unwrap_or(0);
             let segments = rasterizer.segments().get(0..=last_segment).unwrap_or(&[]);
 
-            layout.print(&mut buffer.buffer, segments, background_color, |order| {
+            layout.print(&mut buffer.buffer, clip, segments, background_color, |order| {
                 let layer_id = orders_to_layers
                     .get(&order)
                     .expect("orders_to_layers was not populated in Composition::render");
@@ -218,7 +223,11 @@ mod tests {
         let mut buffer = [GREEN];
         let mut composition = Composition::new();
 
-        composition.render(Buffer { buffer: &mut buffer, width: 1, ..Default::default() }, RED);
+        composition.render(
+            Buffer { buffer: &mut buffer, width: 1, ..Default::default() },
+            None,
+            RED,
+        );
 
         assert_eq!(buffer, [GREEN]);
     }
@@ -233,7 +242,11 @@ mod tests {
             .insert_in_layer(layer_id, &pixel_path(1, 0))
             .set_style(Style { fill: Fill::Solid(RED), ..Default::default() });
 
-        composition.render(Buffer { buffer: &mut buffer, width: 3, ..Default::default() }, GREEN);
+        composition.render(
+            Buffer { buffer: &mut buffer, width: 3, ..Default::default() },
+            None,
+            GREEN,
+        );
 
         assert_eq!(buffer, [GREEN, RED, GREEN]);
     }
@@ -249,7 +262,11 @@ mod tests {
             .set_style(Style { fill: Fill::Solid(RED), ..Default::default() });
         composition.insert_in_layer(layer_id, &pixel_path(2, 0));
 
-        composition.render(Buffer { buffer: &mut buffer, width: 3, ..Default::default() }, GREEN);
+        composition.render(
+            Buffer { buffer: &mut buffer, width: 3, ..Default::default() },
+            None,
+            GREEN,
+        );
 
         assert_eq!(buffer, [GREEN, RED, RED]);
     }
@@ -265,7 +282,11 @@ mod tests {
             .set_style(Style { fill: Fill::Solid(RED), ..Default::default() })
             .set_transform(&[1.0, 0.0, 0.0, 1.0, 0.5, 0.0]);
 
-        composition.render(Buffer { buffer: &mut buffer, width: 3, ..Default::default() }, GREEN);
+        composition.render(
+            Buffer { buffer: &mut buffer, width: 3, ..Default::default() },
+            None,
+            GREEN,
+        );
 
         assert_eq!(buffer, [GREEN, RED_GREEN_50, RED_GREEN_50]);
     }
@@ -282,7 +303,11 @@ mod tests {
             .set_style(Style { fill: Fill::Solid(RED), ..Default::default() })
             .set_transform(&[angle.cos(), -angle.sin(), angle.sin(), angle.cos(), 0.0, 0.0]);
 
-        composition.render(Buffer { buffer: &mut buffer, width: 3, ..Default::default() }, GREEN);
+        composition.render(
+            Buffer { buffer: &mut buffer, width: 3, ..Default::default() },
+            None,
+            GREEN,
+        );
 
         assert_eq!(buffer, [GREEN, RED, GREEN]);
     }
@@ -308,7 +333,11 @@ mod tests {
             .insert_in_layer(layer_id2, &pixel_path(3, 0))
             .set_style(Style { fill: Fill::Solid(RED), ..Default::default() });
 
-        composition.render(Buffer { buffer: &mut buffer, width: 4, ..Default::default() }, GREEN);
+        composition.render(
+            Buffer { buffer: &mut buffer, width: 4, ..Default::default() },
+            None,
+            GREEN,
+        );
 
         assert_eq!(buffer, [RED, RED, RED, RED]);
         assert_eq!(composition.builder().len(), 16);
@@ -318,7 +347,11 @@ mod tests {
 
         composition.get_mut(layer_id0).unwrap().disable();
 
-        composition.render(Buffer { buffer: &mut buffer, width: 3, ..Default::default() }, GREEN);
+        composition.render(
+            Buffer { buffer: &mut buffer, width: 3, ..Default::default() },
+            None,
+            GREEN,
+        );
 
         assert_eq!(buffer, [GREEN, RED, RED, RED]);
         assert_eq!(composition.builder().len(), 16);
@@ -328,7 +361,11 @@ mod tests {
 
         composition.get_mut(layer_id2).unwrap().disable();
 
-        composition.render(Buffer { buffer: &mut buffer, width: 3, ..Default::default() }, GREEN);
+        composition.render(
+            Buffer { buffer: &mut buffer, width: 3, ..Default::default() },
+            None,
+            GREEN,
+        );
 
         assert_eq!(buffer, [GREEN, RED, GREEN, GREEN]);
         assert_eq!(composition.builder().len(), 4);
@@ -353,5 +390,51 @@ mod tests {
         composition.get_mut(layer_id).unwrap().disable();
 
         assert_eq!(composition.actual_len(), 0);
+    }
+
+    #[test]
+    fn clip() {
+        const WIDTH: usize = surpass::TILE_SIZE * 4;
+        const HEIGHT: usize = surpass::TILE_SIZE * 4;
+        let mut buffer = [GREEN; WIDTH * HEIGHT];
+        let mut composition = Composition::new();
+        let tile = surpass::TILE_SIZE as i32;
+
+        let layer_id = composition.create_layer().unwrap();
+        composition
+            .insert_in_layer(layer_id, &pixel_path(0, 0))
+            .set_style(Style { fill: Fill::Solid(RED), ..Default::default() });
+        let layer_id = composition.create_layer().unwrap();
+        composition
+            .insert_in_layer(layer_id, &pixel_path(tile, tile))
+            .set_style(Style { fill: Fill::Solid(RED), ..Default::default() });
+        let layer_id = composition.create_layer().unwrap();
+        composition
+            .insert_in_layer(layer_id, &pixel_path(tile * 3 - 1, tile * 3 - 1))
+            .set_style(Style { fill: Fill::Solid(RED), ..Default::default() });
+        let layer_id = composition.create_layer().unwrap();
+        composition
+            .insert_in_layer(layer_id, &pixel_path(tile * 3, tile * 3))
+            .set_style(Style { fill: Fill::Solid(RED), ..Default::default() });
+
+        let clip = Clip {
+            x: surpass::TILE_SIZE + 1,
+            y: surpass::TILE_SIZE + 1,
+            width: surpass::TILE_SIZE * 2 - 2,
+            height: surpass::TILE_SIZE * 2 - 2,
+        };
+
+        composition.render(
+            Buffer { buffer: &mut buffer, width: WIDTH, ..Default::default() },
+            Some(clip),
+            GREEN,
+        );
+
+        let tile = surpass::TILE_SIZE;
+
+        assert_eq!(buffer[0], GREEN);
+        assert_eq!(buffer[tile + HEIGHT * tile], RED);
+        assert_eq!(buffer[(tile * 3 - 1) + HEIGHT * (tile * 3 - 1)], RED);
+        assert_eq!(buffer[tile * 3 + HEIGHT * tile * 3], GREEN);
     }
 }

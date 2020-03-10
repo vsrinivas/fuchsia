@@ -17,4 +17,4 @@ pub use layer::{Layer, LayerId};
 pub use path::Path;
 pub use point::Point;
 
-pub use surpass::painter::{BlendMode, Fill, FillRule, Style};
+pub use surpass::painter::{BlendMode, Clip, Fill, FillRule, Style};
