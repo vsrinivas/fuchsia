@@ -7,7 +7,6 @@
 
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
-#include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
 #include <lib/media/cpp/timeline_function.h>
 
@@ -22,7 +21,6 @@
 #include "src/media/audio/audio_core/link_matrix.h"
 #include "src/media/audio/audio_core/packet_queue.h"
 #include "src/media/audio/audio_core/route_graph.h"
-#include "src/media/audio/audio_core/stream_volume_manager.h"
 #include "src/media/audio/audio_core/usage_settings.h"
 #include "src/media/audio/audio_core/utils.h"
 #include "src/media/audio/lib/wav_writer/wav_writer.h"
@@ -34,22 +32,13 @@ constexpr bool kEnableRendererWavWriters = false;
 class AudioAdmin;
 class StreamRegistry;
 
-class BaseRenderer : public AudioObject,
-                     public fuchsia::media::AudioRenderer,
-                     public fuchsia::media::audio::GainControl,
-                     public StreamVolume {
+class BaseRenderer : public AudioObject, public fuchsia::media::AudioRenderer {
  public:
-  static std::unique_ptr<BaseRenderer> Create(
-      fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request,
-      Context* context);
-
   ~BaseRenderer() override;
 
-  void Shutdown();
   void OnRenderRange(int64_t presentation_time, uint32_t duration){};
 
   // |fuchsia::media::AudioRenderer|
-  void SetPcmStreamType(fuchsia::media::AudioStreamType format) final;
   void AddPayloadBuffer(uint32_t id, zx::vmo payload_buffer) final;
   void RemovePayloadBuffer(uint32_t id) final;
   void SetPtsUnits(uint32_t tick_per_second_numerator, uint32_t tick_per_second_denominator) final;
@@ -64,93 +53,49 @@ class BaseRenderer : public AudioObject,
   void PlayNoReply(int64_t reference_time, int64_t media_time) final;
   void Pause(PauseCallback callback) final;
   void PauseNoReply() final;
-  void BindGainControl(fidl::InterfaceRequest<fuchsia::media::audio::GainControl> request) final;
   void EnableMinLeadTimeEvents(bool enabled) final;
   void GetMinLeadTime(GetMinLeadTimeCallback callback) final;
-  void SetUsage(fuchsia::media::AudioRenderUsage usage) override;
-
-  // |fuchsia::media::audio::GainControl|
-  void SetGain(float gain_db) final;
-  void SetGainWithRamp(float gain_db, int64_t duration_ns,
-                       fuchsia::media::audio::RampType ramp_type) final;
-  void SetMute(bool muted) final;
-  void NotifyGainMuteChanged();
-  // TODO(mpuryear): Notify on SetGainWithRamp.
-  // TODO(mpuryear): consider EnableGainChangeEvents(bool), like MinLeadTime.
 
  protected:
+  BaseRenderer(fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request,
+               Context* context);
+
+  Context& context() const { return context_; }
+
+  // |media::audio::AudioObject|
+  void OnLinkAdded() override;
+  fit::result<std::shared_ptr<Stream>, zx_status_t> InitializeDestLink(
+      const AudioObject& dest) override;
+  void CleanupDestLink(const AudioObject& dest) override;
+
+  virtual void ReportStart() {}
+  virtual void ReportStop() {}
+  virtual void Shutdown();
+
   // Hook called when the minimum clock lead time requirement changes.
   void ReportNewMinLeadTime();
 
-  std::shared_ptr<Format> format_;
+  bool IsOperating();
 
-  fuchsia::media::AudioRenderUsage usage_ = fuchsia::media::AudioRenderUsage::MEDIA;
+  void InvalidateConfiguration() { config_validated_ = false; }
 
   float stream_gain_db_ = 0.0;
-  bool mute_ = false;
 
   // Minimum Lead Time state
   zx::duration min_lead_time_;
 
  private:
-  class GainControlBinding : public fuchsia::media::audio::GainControl {
-   public:
-    static std::unique_ptr<GainControlBinding> Create(BaseRenderer* owner) {
-      return std::unique_ptr<GainControlBinding>(new GainControlBinding(owner));
-    }
-
-    // |fuchsia::media::audio::GainControl|
-    void SetGain(float gain_db) final;
-    void SetGainWithRamp(float gain_db, int64_t duration_ns,
-                         fuchsia::media::audio::RampType ramp_type) final;
-    void SetMute(bool muted) final;
-
-   private:
-    friend class std::default_delete<GainControlBinding>;
-
-    GainControlBinding(BaseRenderer* owner) : owner_(owner) {}
-    ~GainControlBinding() override {}
-
-    BaseRenderer* owner_;
-  };
-
-  friend class GainControlBinding;
-
-  BaseRenderer(fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request,
-               Context* context);
-
   // Recompute the minimum clock lead time based on the current set of outputs
   // we are linked to.  If this requirement is different from the previous
   // requirement, report it to our users (if they care).
   void RecomputeMinLeadTime();
 
-  bool IsOperating();
   bool ValidateConfig();
   void ComputePtsToFracFrames(int64_t first_pts);
 
-  void ReportStart();
-  void ReportStop();
-
-  // |media::audio::AudioObject|
-  void OnLinkAdded() override;
-  const std::shared_ptr<Format>& format() const final { return format_; }
-  std::optional<StreamUsage> usage() const override {
-    return {StreamUsage::WithRenderUsage(usage_)};
-  }
-  fit::result<std::shared_ptr<Stream>, zx_status_t> InitializeDestLink(
-      const AudioObject& dest) override;
-  void CleanupDestLink(const AudioObject& dest) override;
-
-  // |media::audio::StreamVolume|
-  bool GetStreamMute() const final;
-  fuchsia::media::Usage GetStreamUsage() const final;
-  void RealizeVolume(VolumeCommand volume_command) final;
-
   Context& context_;
-
   fidl::Binding<fuchsia::media::AudioRenderer> audio_renderer_binding_;
-  fidl::BindingSet<fuchsia::media::audio::GainControl, std::unique_ptr<GainControlBinding>>
-      gain_control_bindings_;
+
   std::unordered_map<uint32_t, fbl::RefPtr<RefCountedVmoMapper>> payload_buffers_;
   bool config_validated_ = false;
 

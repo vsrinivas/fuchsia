@@ -1,7 +1,7 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-#include "src/media/audio/audio_core/base_renderer.h"
+#include "src/media/audio/audio_core/audio_renderer.h"
 
 #include <lib/fzl/vmar-manager.h>
 #include <lib/zx/vmo.h>
@@ -23,9 +23,9 @@ namespace {
 constexpr uint32_t kAudioRendererUnittestFrameRate = 48000;
 constexpr size_t kAudioRendererUnittestVmoSize = 16ull * 1024;
 
-class BaseRendererTest : public testing::ThreadingModelFixture {
+class AudioRendererTest : public testing::ThreadingModelFixture {
  public:
-  BaseRendererTest() {
+  AudioRendererTest() {
     FX_CHECK(vmo_mapper_.CreateAndMap(kAudioRendererUnittestVmoSize,
                                       /*flags=*/0, nullptr, &vmo_) == ZX_OK);
   }
@@ -35,7 +35,7 @@ class BaseRendererTest : public testing::ThreadingModelFixture {
     Logging::Init(-media::audio::SPEW, {"audio_core"});
     testing::ThreadingModelFixture::SetUp();
 
-    renderer_ = BaseRenderer::Create(fidl_renderer_.NewRequest(), &context());
+    renderer_ = std::make_unique<AudioRenderer>(fidl_renderer_.NewRequest(), &context());
     EXPECT_NE(renderer_.get(), nullptr);
   }
 
@@ -50,13 +50,14 @@ class BaseRendererTest : public testing::ThreadingModelFixture {
   // Creates a new payload buffer of |size| bytes and registers it with the renderer with |id|.
   //
   // A handle to the new VMO is returned.
-  zx::vmo AddPayloadBuffer(uint32_t id, size_t size, BaseRenderer* renderer) {
+  zx::vmo AddPayloadBuffer(uint32_t id, size_t size, fuchsia::media::AudioRenderer* renderer) {
     zx::vmo vmo;
     EXPECT_EQ(ZX_OK, zx::vmo::create(size, 0, &vmo));
 
     zx::vmo duplicate;
     EXPECT_EQ(ZX_OK, vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicate));
     renderer->AddPayloadBuffer(id, std::move(duplicate));
+    RunLoopUntilIdle();
     return vmo;
   }
 
@@ -73,7 +74,7 @@ class BaseRendererTest : public testing::ThreadingModelFixture {
 
  protected:
   fuchsia::media::AudioRendererPtr fidl_renderer_;
-  std::unique_ptr<BaseRenderer> renderer_;
+  std::unique_ptr<AudioRenderer> renderer_;
 
   fzl::VmoMapper vmo_mapper_;
   zx::vmo vmo_;
@@ -89,7 +90,7 @@ constexpr zx::duration kMinLeadTime = zx::nsec(123456789);
 constexpr int64_t kInvalidLeadTimeNs = -1;
 
 // Validate that MinLeadTime is provided to AudioRenderer clients accurately
-TEST_F(BaseRendererTest, MinLeadTimePadding) {
+TEST_F(AudioRendererTest, MinLeadTimePadding) {
   auto fake_output = testing::FakeAudioOutput::Create(
       &threading_model(), &context().device_manager(), &context().link_matrix());
 
@@ -98,16 +99,16 @@ TEST_F(BaseRendererTest, MinLeadTimePadding) {
 
   // Our RouteGraph links one FakeAudioOutput to the Renderer-under-test. Thus we can set our
   // output's MinLeadTime, fully expecting this value to be reflected as-is to renderer+clients.
-  auto* renderer_raw = renderer_.get();
   context().route_graph().AddRenderer(std::move(renderer_));
   context().route_graph().AddOutput(fake_output.get());
 
   // SetPcmStreamType triggers the routing preparation completion, which connects output(s) to
   // renderer. Renderers react to new outputs in `OnLinkAdded` by recalculating minimum lead time.
-  renderer_raw->SetPcmStreamType(PcmStreamType());
+  fidl_renderer_->SetPcmStreamType(PcmStreamType());
+  RunLoopUntilIdle();
 
   auto lead_time_ns = kInvalidLeadTimeNs;
-  renderer_raw->GetMinLeadTime(
+  fidl_renderer_->GetMinLeadTime(
       [&lead_time_ns](int64_t received_lead_time_ns) { lead_time_ns = received_lead_time_ns; });
 
   RunLoopUntilIdle();
@@ -115,21 +116,21 @@ TEST_F(BaseRendererTest, MinLeadTimePadding) {
   EXPECT_EQ(lead_time_ns, kMinLeadTime.to_nsecs()) << "Incorrect GetMinLeadTime received";
 }
 
-TEST_F(BaseRendererTest, AllocatePacketQueueForLinks) {
+TEST_F(AudioRendererTest, AllocatePacketQueueForLinks) {
   auto fake_output = testing::FakeAudioOutput::Create(
       &threading_model(), &context().device_manager(), &context().link_matrix());
 
-  auto* renderer_raw = renderer_.get();
   context().route_graph().AddRenderer(std::move(renderer_));
   context().route_graph().AddOutput(fake_output.get());
 
-  renderer_raw->SetPcmStreamType(PcmStreamType());
-  AddPayloadBuffer(0, PAGE_SIZE, renderer_raw);
+  fidl_renderer_->SetPcmStreamType(PcmStreamType());
+  AddPayloadBuffer(0, PAGE_SIZE, fidl_renderer_.get());
   fuchsia::media::StreamPacket packet;
   packet.payload_buffer_id = 0;
   packet.payload_offset = 0;
   packet.payload_offset = 128;
-  renderer_raw->SendPacketNoReply(std::move(packet));
+  fidl_renderer_->SendPacketNoReply(std::move(packet));
+  RunLoopUntilIdle();
 
   std::vector<LinkMatrix::LinkHandle> links;
   context().link_matrix().SourceLinks(*fake_output, &links);
@@ -152,7 +153,7 @@ TEST_F(BaseRendererTest, AllocatePacketQueueForLinks) {
   }
 }
 
-TEST_F(BaseRendererTest, RegistersWithRouteGraphIfHasUsageStreamTypeAndBuffers) {
+TEST_F(AudioRendererTest, RegistersWithRouteGraphIfHasUsageStreamTypeAndBuffers) {
   EXPECT_EQ(context().link_matrix().DestLinkCount(*renderer_), 0u);
 
   zx::vmo duplicate;
@@ -175,7 +176,7 @@ TEST_F(BaseRendererTest, RegistersWithRouteGraphIfHasUsageStreamTypeAndBuffers) 
   EXPECT_EQ(context().link_matrix().DestLinkCount(*renderer_raw), 1u);
 }
 
-TEST_F(BaseRendererTest, ReportsPlayAndPauseToPolicy) {
+TEST_F(AudioRendererTest, ReportsPlayAndPauseToPolicy) {
   auto output = testing::FakeAudioOutput::Create(&threading_model(), &context().device_manager(),
                                                  &context().link_matrix());
   context().route_graph().AddOutput(output.get());

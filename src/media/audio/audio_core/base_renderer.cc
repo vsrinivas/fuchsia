@@ -6,7 +6,6 @@
 #include <lib/fit/defer.h>
 
 #include "src/lib/fxl/arraysize.h"
-#include "src/media/audio/audio_core/audio_admin.h"
 #include "src/media/audio/audio_core/audio_core_impl.h"
 #include "src/media/audio/audio_core/audio_output.h"
 #include "src/media/audio/audio_core/reporter.h"
@@ -29,13 +28,6 @@ constexpr size_t kMaxPacketAllocatorSlabs = 4;
 
 }  // namespace
 
-std::unique_ptr<BaseRenderer> BaseRenderer::Create(
-    fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request,
-    Context* context) {
-  return std::unique_ptr<BaseRenderer>(
-      new BaseRenderer(std::move(audio_renderer_request), context));
-}
-
 BaseRenderer::BaseRenderer(
     fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request, Context* context)
     : AudioObject(Type::AudioRenderer),
@@ -49,8 +41,6 @@ BaseRenderer::BaseRenderer(
   REP(AddingRenderer(*this));
   AUD_VLOG_OBJ(TRACE, this);
 
-  context_.volume_manager().AddStream(this);
-
   audio_renderer_binding_.set_error_handler([this](zx_status_t status) {
     TRACE_DURATION("audio", "BaseRenderer::audio_renderer_binding_.error_handler", "zx_status",
                    status);
@@ -62,15 +52,10 @@ BaseRenderer::BaseRenderer(
 BaseRenderer::~BaseRenderer() {
   AUD_VLOG_OBJ(TRACE, this);
 
-  Shutdown();
-
-  context_.volume_manager().RemoveStream(this);
+  wav_writer_.Close();
+  payload_buffers_.clear();
   REP(RemovingRenderer(*this));
 }
-
-void BaseRenderer::ReportStart() { context_.audio_admin().UpdateRendererState(usage_, true, this); }
-
-void BaseRenderer::ReportStop() { context_.audio_admin().UpdateRendererState(usage_, false, this); }
 
 void BaseRenderer::Shutdown() {
   TRACE_DURATION("audio", "BaseRenderer::Shutdown");
@@ -79,7 +64,6 @@ void BaseRenderer::Shutdown() {
   ReportStop();
 
   wav_writer_.Close();
-  gain_control_bindings_.CloseAll();
   payload_buffers_.clear();
 }
 
@@ -113,16 +97,6 @@ void BaseRenderer::RecomputeMinLeadTime() {
     min_lead_time_ = cur_lead_time;
     ReportNewMinLeadTime();
   }
-}
-
-void BaseRenderer::SetUsage(fuchsia::media::AudioRenderUsage usage) {
-  TRACE_DURATION("audio", "BaseRenderer::SetUsage");
-  if (format_) {
-    FX_LOGS(ERROR) << "SetUsage called after SetPcmStreamType.";
-    context_.route_graph().RemoveRenderer(*this);
-    return;
-  }
-  usage_ = usage;
 }
 
 // IsOperating is true any time we have any packets in flight. Configuration functions cannot be
@@ -204,41 +178,6 @@ void BaseRenderer::ComputePtsToFracFrames(int64_t first_pts) {
                             << ", rdelta:" << pts_to_frac_frames_.reference_delta();
 }
 
-////////////////////////////////////////////////////////////////////////////////
-//
-// AudioRenderer Interface
-//
-void BaseRenderer::SetPcmStreamType(fuchsia::media::AudioStreamType stream_type) {
-  TRACE_DURATION("audio", "BaseRenderer::SetPcmStreamType");
-  auto cleanup = fit::defer([this]() { context_.route_graph().RemoveRenderer(*this); });
-
-  AUD_VLOG_OBJ(TRACE, this);
-
-  // We cannot change the format while we are currently operational
-  if (IsOperating()) {
-    FX_LOGS(ERROR) << "Attempted to set format while in operational mode.";
-    return;
-  }
-
-  auto format_result = Format::Create(stream_type);
-  if (format_result.is_error()) {
-    FX_LOGS(ERROR) << "AudioRenderer: PcmStreamType is invalid";
-    return;
-  }
-  format_ = std::make_shared<Format>(format_result.take_value());
-
-  REP(SettingRendererStreamType(*this, stream_type));
-
-  context_.route_graph().SetRendererRoutingProfile(
-      *this, {.routable = true, .usage = StreamUsage::WithRenderUsage(usage_)});
-  context_.volume_manager().NotifyStreamChanged(this);
-
-  // Things went well, cancel the cleanup hook. If our config had been validated previously, it will
-  // have to be revalidated as we move into the operational phase of our life.
-  config_validated_ = false;
-  cleanup.cancel();
-}
-
 void BaseRenderer::AddPayloadBuffer(uint32_t id, zx::vmo payload_buffer) {
   TRACE_DURATION("audio", "BaseRenderer::AddPayloadBuffer");
   auto cleanup = fit::defer([this]() { context_.route_graph().RemoveRenderer(*this); });
@@ -266,7 +205,7 @@ void BaseRenderer::AddPayloadBuffer(uint32_t id, zx::vmo payload_buffer) {
 
   // Things went well, cancel the cleanup hook. If our config had been validated previously, it will
   // have to be revalidated as we move into the operational phase of our life.
-  config_validated_ = false;
+  InvalidateConfiguration();
   cleanup.cancel();
 }
 
@@ -314,7 +253,7 @@ void BaseRenderer::SetPtsUnits(uint32_t tick_per_second_numerator,
 
   // Things went well, cancel the cleanup hook. If our config had been validated previously, it will
   // have to be revalidated as we move into the operational phase of our life.
-  config_validated_ = false;
+  InvalidateConfiguration();
   cleanup.cancel();
 }
 
@@ -341,7 +280,7 @@ void BaseRenderer::SetPtsContinuityThreshold(float threshold_seconds) {
 
   // Things went well, cancel the cleanup hook. If our config had been validated previously, it will
   // have to be revalidated as we move into the operational phase of our life.
-  config_validated_ = false;
+  InvalidateConfiguration();
   cleanup.cancel();
 }
 
@@ -671,115 +610,7 @@ void BaseRenderer::PauseNoReply() {
   Pause(nullptr);
 }
 
-void BaseRenderer::OnLinkAdded() {
-  context_.volume_manager().NotifyStreamChanged(this);
-  RecomputeMinLeadTime();
-}
-
-bool BaseRenderer::GetStreamMute() const { return mute_; }
-
-fuchsia::media::Usage BaseRenderer::GetStreamUsage() const {
-  fuchsia::media::Usage usage;
-  usage.set_render_usage(usage_);
-  return usage;
-}
-
-void BaseRenderer::RealizeVolume(VolumeCommand volume_command) {
-  context_.link_matrix().ForEachDestLink(
-      *this, [this, &volume_command](LinkMatrix::LinkHandle link) {
-        float gain_db = link.loudness_transform->Evaluate<3>({
-            VolumeValue{volume_command.volume},
-            GainDbFsValue{volume_command.gain_db_adjustment},
-            GainDbFsValue{stream_gain_db_},
-        });
-
-        auto& gain = link.mixer->bookkeeping().gain;
-
-        REP(SettingRendererFinalGain(*this, gain_db));
-
-        if (volume_command.ramp.has_value()) {
-          gain.SetSourceGainWithRamp(gain_db, volume_command.ramp->duration,
-                                     volume_command.ramp->ramp_type);
-        } else {
-          gain.SetSourceGain(gain_db);
-        }
-      });
-}
-
-// Set the stream gain, in each Renderer -> Output audio path. The Gain object contains multiple
-// stages. In playback, renderer gain is pre-mix and hence is "source" gain; the Output device (or
-// master) gain is "dest" gain.
-void BaseRenderer::SetGain(float gain_db) {
-  TRACE_DURATION("audio", "BaseRenderer::SetGain");
-  AUD_VLOG_OBJ(TRACE, this) << " (" << gain_db << " dB)";
-
-  // Anywhere we set stream_gain_db_, we should perform this range check.
-  if (gain_db > fuchsia::media::audio::MAX_GAIN_DB ||
-      gain_db < fuchsia::media::audio::MUTED_GAIN_DB || isnan(gain_db)) {
-    FX_LOGS(ERROR) << "SetGain(" << gain_db << " dB) out of range.";
-    context_.route_graph().RemoveRenderer(*this);
-    return;
-  }
-
-  if (stream_gain_db_ == gain_db) {
-    return;
-  }
-
-  REP(SettingRendererGain(*this, gain_db));
-
-  stream_gain_db_ = gain_db;
-  context_.volume_manager().NotifyStreamChanged(this);
-
-  NotifyGainMuteChanged();
-}
-
-// Set a stream gain ramp, in each Renderer -> Output audio path. Renderer gain is pre-mix and hence
-// is the Source component in the Gain object.
-void BaseRenderer::SetGainWithRamp(float gain_db, int64_t duration_ns,
-                                   fuchsia::media::audio::RampType ramp_type) {
-  TRACE_DURATION("audio", "BaseRenderer::SetGainWithRamp");
-  zx::duration duration = zx::nsec(duration_ns);
-  AUD_VLOG_OBJ(TRACE, this) << " (" << gain_db << " dB, " << duration.to_usecs() << " usec)";
-
-  if (gain_db > fuchsia::media::audio::MAX_GAIN_DB ||
-      gain_db < fuchsia::media::audio::MUTED_GAIN_DB || isnan(gain_db)) {
-    FX_LOGS(ERROR) << "SetGainWithRamp(" << gain_db << " dB) out of range.";
-    context_.route_graph().RemoveRenderer(*this);
-    return;
-  }
-
-  REP(SettingRendererGainWithRamp(*this, gain_db, duration, ramp_type));
-
-  context_.volume_manager().NotifyStreamChanged(this, Ramp{duration, ramp_type});
-
-  // TODO(mpuryear): implement GainControl notifications for gain ramps.
-}
-
-// Set a stream mute, in each Renderer -> Output audio path. For now, mute is handled by setting
-// gain to a value guaranteed to be silent, but going forward we may pass this thru to the Gain
-// object. Renderer gain/mute is pre-mix and hence is the Source component in the Gain object.
-void BaseRenderer::SetMute(bool mute) {
-  TRACE_DURATION("audio", "BaseRenderer::SetMute");
-  // Only do the work if the request represents a change in state.
-  if (mute_ == mute) {
-    return;
-  }
-  AUD_VLOG_OBJ(TRACE, this) << " (mute: " << mute << ")";
-
-  REP(SettingRendererMute(*this, mute));
-  mute_ = mute;
-
-  context_.volume_manager().NotifyStreamChanged(this);
-  NotifyGainMuteChanged();
-}
-
-void BaseRenderer::BindGainControl(
-    fidl::InterfaceRequest<fuchsia::media::audio::GainControl> request) {
-  TRACE_DURATION("audio", "BaseRenderer::BindGainControl");
-  AUD_VLOG_OBJ(TRACE, this);
-
-  gain_control_bindings_.AddBinding(GainControlBinding::Create(this), std::move(request));
-}
+void BaseRenderer::OnLinkAdded() { RecomputeMinLeadTime(); }
 
 void BaseRenderer::EnableMinLeadTimeEvents(bool enabled) {
   TRACE_DURATION("audio", "BaseRenderer::EnableMinLeadTimeEvents");
@@ -806,32 +637,6 @@ void BaseRenderer::ReportNewMinLeadTime() {
     auto& lead_time_event = audio_renderer_binding_.events();
     lead_time_event.OnMinLeadTimeChanged(min_lead_time_.to_nsecs());
   }
-}
-
-void BaseRenderer::NotifyGainMuteChanged() {
-  TRACE_DURATION("audio", "BaseRenderer::NotifyGainMuteChanged");
-  // TODO(mpuryear): consider whether GainControl events should be disable-able, like MinLeadTime.
-  AUD_VLOG_OBJ(TRACE, this) << " (" << stream_gain_db_ << " dB, mute: " << mute_ << ")";
-
-  for (auto& gain_binding : gain_control_bindings_.bindings()) {
-    gain_binding->events().OnGainMuteChanged(stream_gain_db_, mute_);
-  }
-}
-
-void BaseRenderer::GainControlBinding::SetGain(float gain_db) {
-  TRACE_DURATION("audio", "BaseRenderer::SetGain");
-  owner_->SetGain(gain_db);
-}
-
-void BaseRenderer::GainControlBinding::SetGainWithRamp(float gain_db, int64_t duration_ns,
-                                                       fuchsia::media::audio::RampType ramp_type) {
-  TRACE_DURATION("audio", "BaseRenderer::SetSourceGainWithRamp");
-  owner_->SetGainWithRamp(gain_db, duration_ns, ramp_type);
-}
-
-void BaseRenderer::GainControlBinding::SetMute(bool mute) {
-  TRACE_DURATION("audio", "BaseRenderer::SetMute");
-  owner_->SetMute(mute);
 }
 
 }  // namespace media::audio

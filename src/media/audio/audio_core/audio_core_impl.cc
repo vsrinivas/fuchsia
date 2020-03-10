@@ -8,8 +8,8 @@
 
 #include "src/media/audio/audio_core/audio_admin.h"
 #include "src/media/audio/audio_core/audio_device_manager.h"
+#include "src/media/audio/audio_core/audio_renderer.h"
 #include "src/media/audio/audio_core/base_capturer.h"
-#include "src/media/audio/audio_core/base_renderer.h"
 #include "src/media/audio/audio_core/process_config.h"
 #include "src/media/audio/audio_core/throttle_output.h"
 #include "src/media/audio/lib/logging/logging.h"
@@ -49,7 +49,7 @@ void AudioCoreImpl::CreateAudioRenderer(
   AUD_VLOG(TRACE);
 
   context_.route_graph().AddRenderer(
-      BaseRenderer::Create(std::move(audio_renderer_request), &context_));
+      std::make_unique<AudioRenderer>(std::move(audio_renderer_request), &context_));
 }
 
 void AudioCoreImpl::CreateAudioCapturerWithConfiguration(
