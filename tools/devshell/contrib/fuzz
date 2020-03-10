@@ -13,6 +13,7 @@
 ##   -d, --device   <name>   Connect to device using Fuchsia link-local name.
 ##                           Must be specified if multiple devices are present.
 ##   -f, --foreground        Run in the foreground (default is background).
+##   -g, --debug             Disable libFuzzer exception handling.
 ##   -n, --no-cipd           Skip steps involving CIPD.
 ##   -o, --output   <dir>    Use the given directory for saving output files.
 ##                           Defaults to the current directory.
@@ -73,6 +74,10 @@ for arg in "$@"; do
     -d|--device)
       arg="--device"
       add=2
+      ;;
+    -g|--debug)
+      arg="--debug"
+      add=1
       ;;
     -o|--output)
       arg="--output"

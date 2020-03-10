@@ -98,9 +98,9 @@ class Fuzzer(object):
             fuzzer_name = matches[0]
 
         return cls(device, fuzzer_name[0], fuzzer_name[1], args.output,
-                   args.foreground)
+                   args.foreground, args.debug)
 
-    def __init__(self, device, pkg, tgt, output=None, foreground=False):
+    def __init__(self, device, pkg, tgt, output=None, foreground=False, debug=False):
         self.device = device
         self.host = device.host
         self.pkg = pkg
@@ -111,6 +111,7 @@ class Fuzzer(object):
             self._output = self.host.join(
                 'test_data', 'fuzzing', self.pkg, self.tgt)
         self._foreground = foreground
+        self._debug = debug
 
     def __str__(self):
         return self.pkg + '/' + self.tgt
@@ -162,7 +163,13 @@ class Fuzzer(object):
         return 'fuchsia-pkg://fuchsia.com/%s#meta/%s.cmx' % (self.pkg, self.tgt)
 
     def _create(self, fuzzer_args, logfile=None):
+        # Disable exception handling in debug mode
+        if self._debug:
+            for signal in ['segv', 'bus', 'ill', 'fpe', 'abrt']:
+                fuzzer_args.append("-handle_{}=0".format(signal))
+
         fuzz_cmd = ['run', self.url(), '-artifact_prefix=data/'] + fuzzer_args
+
         print('+ ' + ' '.join(fuzz_cmd))
         return self.device.ssh(fuzz_cmd)
 

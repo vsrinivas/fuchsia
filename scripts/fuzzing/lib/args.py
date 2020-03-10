@@ -22,6 +22,10 @@ class Args:
             action='store_true',
             help='If true, display fuzzer output.')
         parser.add_argument(
+            '--debug',
+            action='store_true',
+            help='If true, disable exception handling in libFuzzer.')
+        parser.add_argument(
             '--no-cipd',
             action='store_true',
             help='Skip steps which involve transferring packages to or from CIPD'

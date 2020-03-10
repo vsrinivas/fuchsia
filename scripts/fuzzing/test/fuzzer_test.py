@@ -88,6 +88,17 @@ class TestFuzzer(unittest.TestCase):
         finally:
             shutil.rmtree(base_dir)
 
+        self.assertIn(
+            ' '.join(
+                mock_device.get_ssh_cmd(
+                    [
+                        'ssh', '::1', 'run',
+                        fuzzer.url(), '-artifact_prefix=data/',
+                        '-some-lf-arg=value',
+                        '-jobs=1',
+                        'data/corpus/',
+                    ])), mock_device.host.history)
+
     def test_symbolize_log_no_mutation_sequence(self):
         mock_device = MockDevice()
         base_dir = tempfile.mkdtemp()
@@ -278,6 +289,31 @@ artifact_prefix='data/'; Test unit written to data/crash-cccc
                         '-some-lf-arg=value data/corpus/', 'data/corpus.prev/'
                     ])), mock_device.host.history)
 
+    def test_debug(self):
+        mock_device = MockDevice()
+        base_dir = tempfile.mkdtemp()
+        try:
+            fuzzer = Fuzzer(
+                mock_device, u'mock-package1', u'mock-target2', output=base_dir, debug=True)
+            fuzzer.start(['-some-lf-arg=value'])
+        finally:
+            shutil.rmtree(base_dir)
+
+        self.assertIn(
+            ' '.join(
+                mock_device.get_ssh_cmd(
+                    [
+                        'ssh', '::1', 'run',
+                        fuzzer.url(), '-artifact_prefix=data/',
+                        '-some-lf-arg=value',
+                        '-jobs=1',
+                        'data/corpus/',
+                        '-handle_segv=0',
+                        '-handle_bus=0',
+                        '-handle_ill=0',
+                        '-handle_fpe=0',
+                        '-handle_abrt=0',
+                    ])), mock_device.host.history)
 
 if __name__ == '__main__':
     unittest.main()

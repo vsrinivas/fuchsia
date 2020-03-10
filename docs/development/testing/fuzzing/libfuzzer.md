@@ -361,6 +361,40 @@ The test artifact are also copied to `//test_data/fuzzing/<package>/<fuzzer>/<ti
 As with `fx fuzz start`, the fuzzer will echo the command it is invoking, prefixed by `+`.  This can
 be useful if you need to manually reproduce the bug with modified parameters.
 
+## Q: How can I debug a fuzzer? {#q-how-can-i-debug-a-fuzzer}
+
+A: By default, `libfuzzer` on Fuchsia creates a debug exception channel
+attached to the fuzzing thread so that it can detect and handle crashes during
+fuzzing. However, only one process can do this at a time, so debuggers are
+prevented from attaching.
+
+To prevent `libfuzzer` from creating a debug exception channel, use the `--debug` option with `fx fuzz`.
+
+For example, to start a fuzzer in the background and attach with `zxdb`:
+
+```
+$ fx fuzz start --debug zircon_fuzzers/noop-fuzzer
+$ fx debug
+...
+[zxdb] attach noop-fuzzer
+```
+
+Alternatively, if you want to debug while reproducing a specific test case:
+
+```
+$ fx debug
+...
+[zxdb] attach noop-fuzzer
+...
+[zxdb] break LLVMFuzzerTestOneInput
+```
+
+Now, in a separate terminal, start the fuzzer with your test case:
+
+```
+$ fx fuzz repro --debug zircon_fuzzers/noop-fuzzer testcase_input_file
+```
+
 ## Q: What should I do with these bugs? {#q-what-should-i-do-with-these-bugs}
 
 A: File them, then fix them!
