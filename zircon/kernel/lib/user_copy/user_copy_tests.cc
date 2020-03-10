@@ -11,6 +11,8 @@
 #include <lib/user_copy/user_ptr.h>
 #include <zircon/syscalls/port.h>
 
+#include <ktl/move.h>
+#include <ktl/unique_ptr.h>
 #include <vm/fault.h>
 #include <vm/vm_aspace.h>
 #include <vm/vm_object_paged.h>
@@ -174,6 +176,53 @@ bool test_get_total_capacity() {
   END_TEST;
 }
 
+// This class exists to have an overloaded operator(). In particular, the two overloads (by constant
+// reference, and by rvalue reference) help detect whether this callable object is forwarded
+// multiple times.
+class Multiply {
+ public:
+  explicit Multiply(size_t* value) : value_(value) {}
+
+  // Call this not via an rvalue reference.
+  zx_status_t operator()(user_in_ptr<const char> unused, size_t value) const& {
+    *value_ *= value;
+    return ZX_ERR_NEXT;
+  }
+
+  // Call this via an rvalue reference.
+  zx_status_t operator()(user_in_ptr<const char> unused, size_t value) && {
+    return ZX_ERR_BAD_STATE;
+  }
+
+ private:
+  mutable size_t* value_;
+};
+
+bool test_iovec_foreach() {
+  BEGIN_TEST;
+
+  auto user = UserMemory::Create(PAGE_SIZE);
+
+  zx_iovec_t vec[3] = {};
+  vec[0].capacity = 7u;
+  vec[1].capacity = 11u;
+  vec[2].capacity = 13u;
+
+  ASSERT_EQ(user->VmoWrite(vec, 0, sizeof(vec)), ZX_OK, "");
+
+  user_in_iovec_t user_iovec = make_user_in_iovec(user->user_in<zx_iovec_t>(), 3);
+
+  size_t product = 2u;
+  Multiply multiply{&product};
+  // It is important that this Multiply object is moved into the ForEach call. By doing so, combined
+  // with the operator() overload set, we can determine whether ForEach invokes us by rvalue or
+  // not. In particular, ktl::forward()ing a ktl::move()d Multiply would fail.
+  ASSERT_EQ(user_iovec.ForEach(ktl::move(multiply)), ZX_OK, "");
+  ASSERT_EQ(product, 2002u);
+
+  END_TEST;
+}
+
 }  // namespace
 
 #define USER_COPY_UNITTEST(fname) UNITTEST(#fname, fname)
@@ -187,4 +236,5 @@ USER_COPY_UNITTEST(capture_faults_copy_out_success)
 USER_COPY_UNITTEST(capture_faults_copy_in_success)
 USER_COPY_UNITTEST(capture_faults_test_capture)
 USER_COPY_UNITTEST(test_get_total_capacity)
+USER_COPY_UNITTEST(test_iovec_foreach)
 UNITTEST_END_TESTCASE(user_copy_tests, "user_copy_tests", "User Copy test")

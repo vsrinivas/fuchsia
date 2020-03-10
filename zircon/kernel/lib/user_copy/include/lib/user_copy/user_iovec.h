@@ -55,7 +55,7 @@ class user_iovec {
   // also stop the iteration but will cause ForEach to retun that error instead
   // of ZX_OK.
   template <typename Callback>
-  zx_status_t ForEach(Callback&& callback) const {
+  zx_status_t ForEach(Callback callback) const {
     user_in_ptr<const zx_iovec_t> base(vector_);
     for (size_t i = 0; i < count_; ++i) {
       user_in_ptr<const zx_iovec_t> user_current = base.element_offset(i);
@@ -64,8 +64,7 @@ class user_iovec {
       if (status != ZX_OK) {
         return status;
       }
-      status = ktl::forward<Callback>(callback)(PtrType(static_cast<DataType*>(current.buffer)),
-                                                current.capacity);
+      status = callback(PtrType(static_cast<DataType*>(current.buffer)), current.capacity);
       if (status == ZX_ERR_NEXT) {
         continue;
       }
@@ -100,4 +99,4 @@ inline user_inout_iovec_t make_user_inout_iovec(user_inout_ptr<zx_iovec_t> vecto
   return user_inout_iovec_t(vector.get(), count);
 }
 
-#endif  // ZIRCON_KERNEL_LIB_USER_COPY_INCLUDE_LIB_USER_COPY_USER_PTR_H_
+#endif  // ZIRCON_KERNEL_LIB_USER_COPY_INCLUDE_LIB_USER_COPY_USER_IOVEC_H_
