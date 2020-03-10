@@ -54,7 +54,7 @@ async fn main() -> Result<(), Error> {
         &vec![("elf".into(), runner as _)].into_iter().collect(),
     )
     .await?;
-    let hub_proxy = builtin_environment.bind_service_fs_for_hub(&model).await?;
+    let hub_proxy = builtin_environment.bind_service_fs_for_hub().await?;
 
     let root_moniker = AbsoluteMoniker::root();
     match model.bind(&root_moniker).await {

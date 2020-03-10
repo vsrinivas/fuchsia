@@ -151,8 +151,6 @@ impl BuiltinEnvironment {
         let realm_capability_host = Arc::new(RealmCapabilityHost::new(model.clone(), config));
         model.root_realm.hooks.install(realm_capability_host.hooks()).await;
 
-        let hub = Arc::new(Hub::new(model, args.root_component_url.clone())?);
-
         // Set up the builtin runners.
         let mut builtin_runner_hooks = HashMap::new();
         for (name, runner) in builtin_runners.iter() {
@@ -165,9 +163,14 @@ impl BuiltinEnvironment {
         let stop_notifier = Arc::new(RootRealmStopNotifier::new());
         model.root_realm.hooks.install(stop_notifier.hooks()).await;
 
+        let hub = Arc::new(Hub::new(model, args.root_component_url.clone())?);
+        model.root_realm.hooks.install(hub.hooks()).await;
+
         let event_source_factory = {
             if args.debug {
-                Some(Arc::new(EventSourceFactory::new()))
+                let event_source_factory = Arc::new(EventSourceFactory::new());
+                model.root_realm.hooks.install(event_source_factory.hooks()).await;
+                Some(event_source_factory.clone())
             } else {
                 None
             }
@@ -194,10 +197,7 @@ impl BuiltinEnvironment {
     }
 
     /// Setup a ServiceFs that contains the Hub and (optionally) the `EventSourceSync` service.
-    async fn create_service_fs<'a>(
-        &self,
-        model: &Model,
-    ) -> Result<ServiceFs<ServiceObj<'a, ()>>, ModelError> {
+    async fn create_service_fs<'a>(&self) -> Result<ServiceFs<ServiceObj<'a, ()>>, ModelError> {
         // Create the ServiceFs
         let mut service_fs = ServiceFs::new();
 
@@ -206,14 +206,11 @@ impl BuiltinEnvironment {
         self.hub
             .open_root(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, hub_server_end.into_channel())
             .await?;
-        model.root_realm.hooks.install(self.hub.hooks()).await;
         service_fs.add_remote("hub", hub_proxy);
 
         // If component manager is in debug mode, create an event source scoped at the
         // root and offer it via ServiceFs to the outside world.
         if let Some(event_source_factory) = &self.event_source_factory {
-            model.root_realm.hooks.install(event_source_factory.hooks()).await;
-
             let event_source = event_source_factory.create(None).await;
 
             service_fs.dir("svc").add_fidl_service(move |stream| {
@@ -226,8 +223,8 @@ impl BuiltinEnvironment {
     }
 
     /// Bind ServiceFs to a provided channel
-    async fn bind_service_fs(&self, model: &Model, channel: zx::Channel) -> Result<(), ModelError> {
-        let mut service_fs = self.create_service_fs(model).await?;
+    async fn bind_service_fs(&self, channel: zx::Channel) -> Result<(), ModelError> {
+        let mut service_fs = self.create_service_fs().await?;
 
         // Bind to the channel
         service_fs
@@ -242,25 +239,22 @@ impl BuiltinEnvironment {
     }
 
     /// Bind ServiceFs to the outgoing directory of this component, if it exists.
-    pub async fn bind_service_fs_to_out(&self, model: &Model) -> Result<(), ModelError> {
+    pub async fn bind_service_fs_to_out(&self) -> Result<(), ModelError> {
         if let Some(handle) = fuchsia_runtime::take_startup_handle(
             fuchsia_runtime::HandleType::DirectoryRequest.into(),
         ) {
-            self.bind_service_fs(model, zx::Channel::from(handle)).await?;
+            self.bind_service_fs(zx::Channel::from(handle)).await?;
         }
         Ok(())
     }
 
     /// Bind ServiceFs to a new channel and return the Hub directory.
     /// Used mainly by integration tests.
-    pub async fn bind_service_fs_for_hub(
-        &self,
-        model: &Model,
-    ) -> Result<DirectoryProxy, ModelError> {
+    pub async fn bind_service_fs_for_hub(&self) -> Result<DirectoryProxy, ModelError> {
         // Create a channel that ServiceFs will operate on
         let (service_fs_proxy, service_fs_server_end) = create_proxy::<DirectoryMarker>().unwrap();
 
-        self.bind_service_fs(model, service_fs_server_end.into_channel()).await?;
+        self.bind_service_fs(service_fs_server_end.into_channel()).await?;
 
         // Open the Hub from within ServiceFs
         let (hub_client_end, hub_server_end) = create_endpoints::<DirectoryMarker>().unwrap();

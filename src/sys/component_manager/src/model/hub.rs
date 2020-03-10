@@ -495,7 +495,7 @@ impl Hub {
     /// hub capability. If so, update the given `capability_provider` to
     /// provide a hub directory.
     async fn try_provide_hub_capability<'a>(
-        self: Arc<Self>,
+        self: &Arc<Self>,
         source: &'a CapabilitySource,
         capability_provider: Arc<Mutex<Option<Box<dyn CapabilityProvider>>>>,
     ) {
@@ -518,7 +518,7 @@ impl Hub {
                 *capability_provider = Some(Box::new(HubCapabilityProvider::new(
                     scope_moniker.clone(),
                     relative_path,
-                    self,
+                    self.clone(),
                 )))
             }
         }
@@ -531,7 +531,7 @@ impl Hub {
         capability_provider: Arc<Mutex<Option<Box<dyn CapabilityProvider>>>>,
     ) -> Result<(), ModelError> {
         trace::duration!("component_manager", "hub:on_capability_routed_async");
-        self.clone().try_provide_hub_capability(&source, capability_provider).await;
+        self.try_provide_hub_capability(&source, capability_provider).await;
 
         // Track used capabilities.
         if Self::is_capability_visible_in_namespace(&source) {
@@ -754,10 +754,8 @@ mod tests {
         )
         .await
         .expect("failed to set up builtin environment");
-        let hub_proxy = builtin_environment
-            .bind_service_fs_for_hub(&model)
-            .await
-            .expect("unable to bind service_fs");
+        let hub_proxy =
+            builtin_environment.bind_service_fs_for_hub().await.expect("unable to bind service_fs");
 
         model.root_realm.hooks.install(additional_hooks).await;
 
