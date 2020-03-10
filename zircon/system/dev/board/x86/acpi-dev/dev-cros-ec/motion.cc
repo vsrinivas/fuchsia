@@ -27,13 +27,25 @@
 #include <ddk/debug.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
+#include <fbl/array.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_ptr.h>
+#include <fbl/span.h>
 #include <hid/descriptor.h>
 
 #include "../../include/errors.h"
 #include "dev.h"
+
+namespace {
+// Convert a sensor index into a HID report ID.
+//
+// Report ID is 0, so we need to offset all sensors by 1.
+uint8_t SensorIdToReportId(uint8_t sensor_id) {
+  ZX_DEBUG_ASSERT(sensor_id < UINT8_MAX);
+  return sensor_id + 1;
+}
+}  // namespace
 
 AcpiCrOsEcMotionDevice::AcpiCrOsEcMotionDevice(fbl::RefPtr<AcpiCrOsEc> ec, zx_device_t* parent,
                                                ACPI_HANDLE acpi_handle)
@@ -67,7 +79,7 @@ zx_status_t AcpiCrOsEcMotionDevice::ConsumeFifoLocked() {
       continue;
     }
 
-    uint8_t report[8] = {data.sensor_num};
+    uint8_t report[8] = {SensorIdToReportId(data.sensor_num)};
     size_t report_len = 1;
     switch (sensors_[data.sensor_num].type) {
       // 3-axis sensors
@@ -196,12 +208,12 @@ zx_status_t AcpiCrOsEcMotionDevice::HidbusGetDescriptor(hid_description_type_t d
     return ZX_ERR_NOT_FOUND;
   }
 
-  if (data_size < hid_descriptor_len_) {
+  if (data_size < hid_descriptor_.size()) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
 
-  memcpy(out_data_buffer, hid_descriptor_.get(), hid_descriptor_len_);
-  *out_data_actual = hid_descriptor_len_;
+  memcpy(out_data_buffer, hid_descriptor_.get(), hid_descriptor_.size());
+  *out_data_actual = hid_descriptor_.size();
   return ZX_OK;
 }
 
@@ -482,7 +494,9 @@ zx_status_t AcpiCrOsEcMotionDevice::Create(fbl::RefPtr<AcpiCrOsEc> ec, zx_device
     return status;
   }
 
-  status = dev->BuildHidDescriptor();
+  // Populate hid_descriptor_ based on available sensors.
+  status = BuildHidDescriptor(fbl::Span(dev->sensors_.begin(), dev->sensors_.end()),
+                              &dev->hid_descriptor_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "acpi-cros-ec-motion: failed to construct hid desc: %d\n", status);
     return status;
@@ -591,6 +605,7 @@ constexpr uint8_t kHidDescriptorGroupEpilogue[] = {
 // Patch a descriptor that begins with SENSOR_PREAMBLE
 void PatchDescriptor(uint8_t* desc, size_t len, uint8_t report_id, int32_t phys_min,
                      int32_t phys_max) {
+  ZX_DEBUG_ASSERT_MSG(report_id >= 1, "Report ID 0 is reserved by HID spec");
   const uint8_t data[] = {
       HID_REPORT_ID(report_id),
       HID_PHYSICAL_MIN32(phys_min),
@@ -711,14 +726,13 @@ static_assert(fbl::count_of(kHidDescSensorBlock) == MOTIONSENSE_TYPE_MAX, "");
 
 }  // namespace
 
-zx_status_t AcpiCrOsEcMotionDevice::BuildHidDescriptor() {
+zx_status_t BuildHidDescriptor(fbl::Span<const SensorInfo> sensors, fbl::Array<uint8_t>* result) {
   // We build out a descriptor with one top-level Application Collection for
   // each sensor location, and within each of these collections we have one
   // Physical Collection per sensor.
-
   size_t total_size = 0;
   bool loc_group_present[MOTIONSENSE_LOC_MAX] = {};
-  for (const SensorInfo& sensor : sensors_) {
+  for (const SensorInfo& sensor : sensors) {
     if (!sensor.valid) {
       continue;
     }
@@ -753,8 +767,8 @@ zx_status_t AcpiCrOsEcMotionDevice::BuildHidDescriptor() {
     p += sizeof(kHidDescriptorGroupPrologue);
     len -= sizeof(kHidDescriptorGroupPrologue);
 
-    for (uint8_t i = 0; i < sensors_.size(); ++i) {
-      const SensorInfo& sensor = sensors_[i];
+    for (uint8_t i = 0; i < sensors.size(); ++i) {
+      const SensorInfo& sensor = sensors[i];
       if (!sensor.valid || sensor.loc != loc) {
         continue;
       }
@@ -763,7 +777,7 @@ zx_status_t AcpiCrOsEcMotionDevice::BuildHidDescriptor() {
 
       if (ref_block.len > 0) {
         memcpy(p, ref_block.block, ref_block.len);
-        PatchDescriptor(p, len, i, static_cast<int32_t>(sensor.phys_min),
+        PatchDescriptor(p, len, SensorIdToReportId(i), static_cast<int32_t>(sensor.phys_min),
                         static_cast<int32_t>(sensor.phys_max));
 
         p += ref_block.len;
@@ -780,7 +794,6 @@ zx_status_t AcpiCrOsEcMotionDevice::BuildHidDescriptor() {
     return ZX_ERR_INTERNAL;
   }
 
-  hid_descriptor_len_ = total_size;
-  hid_descriptor_ = std::move(desc);
+  *result = fbl::Array<uint8_t>(desc.release(), total_size);
   return ZX_OK;
 }

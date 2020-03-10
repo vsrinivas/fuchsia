@@ -3210,6 +3210,7 @@ aggregate_manifest("migrated-aux") {
     deps += [
       "//zircon/system/dev/board/x86:x86-battery-test-manifest",
       "//zircon/system/dev/board/x86:x86-board-test-manifest",
+      "//zircon/system/dev/board/x86:x86-cros-ec-test-manifest",
       "//zircon/system/dev/board/x86:x86-lid-test-manifest",
       "//zircon/system/dev/board/x86:x86-pwrsrc-test-manifest",
       "//zircon/system/dev/board/x86:x86-thermal-test-manifest",
@@ -3902,6 +3903,7 @@ aggregate_manifest("migrated-tests") {
     deps += [
       "//zircon/system/dev/board/x86:x86-battery-test-manifest",
       "//zircon/system/dev/board/x86:x86-board-test-manifest",
+      "//zircon/system/dev/board/x86:x86-cros-ec-test-manifest",
       "//zircon/system/dev/board/x86:x86-lid-test-manifest",
       "//zircon/system/dev/board/x86:x86-pwrsrc-test-manifest",
       "//zircon/system/dev/board/x86:x86-thermal-test-manifest",

@@ -14,10 +14,12 @@
 #include <chromiumos-platform-ec/ec_commands.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/hidbus.h>
+#include <fbl/array.h>
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
+#include <fbl/span.h>
 #include <fbl/vector.h>
 
 class AcpiCrOsEc : public fbl::RefCounted<AcpiCrOsEc> {
@@ -49,6 +51,24 @@ class AcpiCrOsEc : public fbl::RefCounted<AcpiCrOsEc> {
 class AcpiCrOsEcMotionDevice;
 using DeviceType = ddk::Device<AcpiCrOsEcMotionDevice>;
 
+// Properties for a single MotionSense sensor.
+struct SensorInfo {
+  bool valid;
+
+  enum motionsensor_type type;
+  enum motionsensor_location loc;
+  uint32_t min_sampling_freq;
+  uint32_t max_sampling_freq;
+  uint32_t fifo_max_event_count;
+
+  // For MOTIONSENSE_TYPE_ACCEL, value is in Gs
+  //     MOTIONSENSE_TYPE_GYRO, value is in deg/s
+  //     MOTIONSENSE_TYPE_MAG, value is in multiples of 1/16 uT
+  //     MOTIONSENSE_TYPE_LIGHT, value is in lux?
+  int32_t phys_min;
+  int32_t phys_max;
+};
+
 // CrOS EC protocol to HID protocol translator for device motion sensors
 class AcpiCrOsEcMotionDevice
     : public DeviceType,
@@ -78,23 +98,6 @@ class AcpiCrOsEcMotionDevice
   AcpiCrOsEcMotionDevice(fbl::RefPtr<AcpiCrOsEc> ec, zx_device_t* parent, ACPI_HANDLE acpi_handle);
   DISALLOW_COPY_ASSIGN_AND_MOVE(AcpiCrOsEcMotionDevice);
 
-  struct SensorInfo {
-    bool valid;
-
-    enum motionsensor_type type;
-    enum motionsensor_location loc;
-    uint32_t min_sampling_freq;
-    uint32_t max_sampling_freq;
-    uint32_t fifo_max_event_count;
-
-    // For MOTIONSENSE_TYPE_ACCEL, value is in Gs
-    //     MOTIONSENSE_TYPE_GYRO, value is in deg/s
-    //     MOTIONSENSE_TYPE_MAG, value is in multiples of 1/16 uT
-    //     MOTIONSENSE_TYPE_LIGHT, value is in lux?
-    int32_t phys_min;
-    int32_t phys_max;
-  };
-
   static void NotifyHandler(ACPI_HANDLE handle, UINT32 value, void* ctx);
 
   // Hardware commands
@@ -116,9 +119,6 @@ class AcpiCrOsEcMotionDevice
   // Chat with hardware to build up |sensors_|
   zx_status_t ProbeSensors();
 
-  // Populate |hid_descriptor_| based on the contents of |sensors_|
-  zx_status_t BuildHidDescriptor();
-
   fbl::RefPtr<AcpiCrOsEc> ec_;
 
   const ACPI_HANDLE acpi_handle_;
@@ -128,8 +128,10 @@ class AcpiCrOsEcMotionDevice
 
   fbl::Vector<SensorInfo> sensors_;
 
-  std::unique_ptr<uint8_t[]> hid_descriptor_ = nullptr;
-  size_t hid_descriptor_len_ = 0;
+  fbl::Array<uint8_t> hid_descriptor_ = fbl::Array<uint8_t>();
 };
+
+// Build a HID descriptor reporting information about the given set of sensors.
+zx_status_t BuildHidDescriptor(fbl::Span<const SensorInfo> sensors, fbl::Array<uint8_t>* result);
 
 #endif  // ZIRCON_SYSTEM_DEV_BOARD_X86_ACPI_DEV_DEV_CROS_EC_DEV_H_

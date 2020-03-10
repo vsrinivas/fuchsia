@@ -344,6 +344,48 @@ test("x86-thermal-test") {
   ]
 }
 
+test("x86-cros-ec-test") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  if (is_fuchsia) {
+    testonly = false
+  }
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
+  output_name = "x86-cros-ec-test"
+  test_group = "ddk"
+  sources = [
+    "acpi-dev/dev-cros-ec/dev.cc",
+    "acpi-dev/dev-cros-ec/dev.h",
+    "acpi-dev/dev-cros-ec/motion-test.cc",
+    "acpi-dev/dev-cros-ec/motion.cc",
+  ]
+  configs += [ ":config" ]
+  deps = [
+    "//sdk/banjo/ddk.protocol.acpi",
+    "//third_party/acpica",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/fake_ddk",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/hid",
+    "//zircon/public/lib/hid-parser",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/banjo/ddk.protocol.hidbus",
+    "//zircon/system/dev/lib/mock-hidbus-ifc",
+    "//zircon/third_party/ulib/chromiumos-platform-ec",
+  ]
+}
+
 migrated_manifest("platform-bus-x86-manifest") {
   deps = [ ":platform-bus-x86" ]
 }
@@ -366,4 +408,8 @@ migrated_manifest("x86-board-test-manifest") {
 
 migrated_manifest("x86-thermal-test-manifest") {
   deps = [ ":x86-thermal-test" ]
+}
+
+migrated_manifest("x86-cros-ec-test-manifest") {
+  deps = [ ":x86-cros-ec-test" ]
 }
