@@ -27,6 +27,7 @@ FTP                   | Submitted  | Reviewed   | Title
 [FTP-029](ftp-029.md) | 2019-02-14 | 2019-02-28 | Increasing Method Ordinals
 [FTP-033](ftp-033.md) | 2019-02-07 | 2019-03-07 | Handling of Unknown Fields &amp; Strictness
 [FTP-004](ftp-004.md) | 2018-07-19 | 2019-03-14 | Safer Structs for C++
+[FTP-037](ftp-037.md) | 2019-03-07 | 2019-03-14 | Transactional Message Header v3
 [FTP-024](ftp-024.md) | 2019-04-02 | 2019-04-11 | Mandatory Source Compatibility
 [FTP-041](ftp-041.md) | 2019-04-08 | 2019-04-23 | Support for Unifying Services and Devices
 [FTP-043](ftp-043.md) | 2019-05-06 | 2019-05-30 | Documentation Comment Format &mdash; Mark me up, mark me down
