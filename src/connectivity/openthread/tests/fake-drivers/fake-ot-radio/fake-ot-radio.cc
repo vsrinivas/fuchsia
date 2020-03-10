@@ -35,12 +35,16 @@ enum {
 };
 
 constexpr uint8_t kNcpResetEvent[] = {0x80, 0x06, 0x0, 0x70};
-constexpr uint8_t kNcpVerRequest[] = {0x81, 0x02, 0x02};
+constexpr uint8_t kNcpVerRequest[] = {0x02, 0x02};
+constexpr uint8_t kNcpSoftResetRequest[] = {0x01};
 constexpr uint8_t kNcpVerReply[] = {
-    0x81, 0x06, 0x02, 0x4F, 0x50, 0x45, 0x4E, 0x54, 0x48, 0x52, 0x45, 0x41, 0x44, 0x2F, 0x31,
+    0x80, 0x06, 0x02, 0x4F, 0x50, 0x45, 0x4E, 0x54, 0x48, 0x52, 0x45, 0x41, 0x44, 0x2F, 0x31,
     0x2E, 0x30, 0x64, 0x37, 0x32, 0x35, 0x3B, 0x20, 0x52, 0x43, 0x50, 0x2D, 0x4E, 0x65, 0x77,
     0x6D, 0x61, 0x6E, 0x31, 0x3B, 0x20, 0x46, 0x65, 0x62, 0x20, 0x32, 0x34, 0x20, 0x32, 0x30,
     0x31, 0x39, 0x20, 0x31, 0x33, 0x3A, 0x33, 0x38, 0x3A, 0x32, 0x32, 0x00};
+
+constexpr uint8_t kSpinelFrameHeader = 0x80;
+constexpr uint8_t kSpinelHeaderInvalid = 0xFF;
 
 FakeOtRadioDevice::LowpanSpinelDeviceFidlImpl::LowpanSpinelDeviceFidlImpl(
     FakeOtRadioDevice& ot_radio)
@@ -172,7 +176,7 @@ zx_status_t FakeOtRadioDevice::StartLoopThread() {
 
 zx_status_t FakeOtRadioDevice::Reset() {
   zx_status_t status = ZX_OK;
-  zxlogf(TRACE, "fake-ot-radio: reset\n");
+  zxlogf(INFO, "fake-ot-radio: reset\n");
 
   fbl::AutoLock lock_in(&inbound_lock_);
   std::queue<std::vector<uint8_t>> empty_inbound_queue;
@@ -184,7 +188,7 @@ zx_status_t FakeOtRadioDevice::Reset() {
   std::swap(outbound_queue_, empty_outbound_queue);
   lock_out.release();
 
-  zx::nanosleep(zx::deadline_after(zx::msec(500)));
+  zx::nanosleep(zx::deadline_after(zx::msec(kResetMsDelay)));
 
   std::vector<uint8_t> event;
   event.assign(std::begin(kNcpResetEvent), std::end(kNcpResetEvent));
@@ -203,17 +207,35 @@ void FakeOtRadioDevice::TryHandleOutboundFrame() {
   }
 }
 
+uint8_t FakeOtRadioDevice::ValidateSpinelHeaderAndGetTid(const uint8_t* data, uint32_t len) {
+  if ((len == 0) || ((data[0] & kBitMaskHigherFourBits) != kSpinelFrameHeader)) {
+    return false;
+  }
+
+  return data[0] & kBitMaskLowerFourBits;
+}
+
 void FakeOtRadioDevice::FrameHandler(::fidl::VectorView<uint8_t> data) {
   if (power_status_ != OT_SPINEL_DEVICE_ON) {
     zxlogf(ERROR, "fake-ot-radio: failed to handle frame due to device off\n");
     return;
   }
-  if (memcmp(data.cbegin(), kNcpVerRequest, sizeof(kNcpVerRequest)) == 0) {
+
+  uint8_t tid = ValidateSpinelHeaderAndGetTid(data.data(), data.count());
+  if (tid == kSpinelHeaderInvalid) {
+    return;
+  }
+
+  if (memcmp(data.cbegin() + 1, kNcpSoftResetRequest, sizeof(kNcpSoftResetRequest)) == 0) {
+    async::PostTask(loop_.dispatcher(), [this]() { this->Reset(); });
+  } else if (memcmp(data.cbegin() + 1, kNcpVerRequest, sizeof(kNcpVerRequest)) == 0) {
     std::vector<uint8_t> reply;
     reply.assign(std::begin(kNcpVerReply), std::end(kNcpVerReply));
+    reply.data()[0] |= tid;
     PostSendInboundFrameTask(std::move(reply));
   } else {
     // TODO (jiamingw): Send back response for invalid request.
+    zxlogf(ERROR, "fake-ot-radio: received invalid spinel frame\n");
   }
 }
 

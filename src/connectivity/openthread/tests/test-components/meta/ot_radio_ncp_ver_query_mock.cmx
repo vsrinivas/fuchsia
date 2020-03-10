@@ -2,11 +2,6 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fuchsia.lowpan.spinel.Device": [
-                    "fuchsia-pkg://fuchsia.com/ot-stack#meta/ot-stack.cmx",
-                    "-t",
-                    "class/ot-radio/000"
-                ],
                 "fuchsia.openthread.devmgr.IsolatedDevmgr": [
                     "fuchsia-pkg://fuchsia.com/ot_devmgr_component_integration#meta/ot_devmgr_component_integration.cmx"
                 ]
@@ -14,7 +9,7 @@
         }
     },
     "program": {
-        "binary": "test/ot_stack_device_open_mock"
+        "binary": "test/ot_radio_ncp_ver_query_mock"
     },
     "sandbox": {
         "boot": [

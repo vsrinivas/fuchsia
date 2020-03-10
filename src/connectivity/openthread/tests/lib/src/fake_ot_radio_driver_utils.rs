@@ -3,8 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    crate::isolated_devmgr_utils::*,
+    crate::{isolated_devmgr_utils::*, ot_radio_driver_utils::ot_radio_set_channel},
     anyhow::{format_err, Context as _, Error},
+    fidl_fuchsia_lowpan_spinel::DeviceProxy,
     fuchsia_syslog::macros::*,
     std::fs::File,
     std::path::Path,
@@ -28,6 +29,16 @@ pub async fn get_ot_device_in_isolated_devmgr(dir_path_str: &str) -> Result<File
     let file =
         open_file_in_isolated_devmgr(found_device_path).context("err opening ot radio device")?;
     Ok(file)
+}
+
+/// Get the DeviceProxy from isolated devmgr
+pub async fn get_device_proxy_from_isolated_devmgr(
+    dir_path_str: &str,
+) -> Result<DeviceProxy, Error> {
+    let ot_device_file = get_ot_device_in_isolated_devmgr(dir_path_str).await?;
+    let ot_device_client_ep = ot_radio_set_channel(&ot_device_file).await?;
+    let ot_device_proxy = ot_device_client_ep.into_proxy()?;
+    Ok(ot_device_proxy)
 }
 
 /// Validate 0 device is presented in path `dir_path_str` in isolated_devmgr

@@ -5,3 +5,4 @@
 mod constants;
 
 pub mod spinel_device_ncp_ver_query;
+pub mod spinel_device_soft_reset;

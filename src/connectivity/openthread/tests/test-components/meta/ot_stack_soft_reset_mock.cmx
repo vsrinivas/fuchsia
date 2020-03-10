@@ -1,0 +1,39 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.lowpan.spinel.Device": [
+                    "fuchsia-pkg://fuchsia.com/ot-stack#meta/ot-stack.cmx",
+                    "-t",
+                    "class/ot-radio/000"
+                ],
+                "fuchsia.openthread.devmgr.IsolatedDevmgr": [
+                    "fuchsia-pkg://fuchsia.com/ot_devmgr_component_integration#meta/ot_devmgr_component_integration.cmx"
+                ]
+            }
+        }
+    },
+    "program": {
+        "binary": "test/ot_stack_soft_reset_mock"
+    },
+    "sandbox": {
+        "boot": [
+            "bin",
+            "driver",
+            "lib"
+        ],
+        "dev": [
+            "class/ot-radio",
+            "test/test"
+        ],
+        "services": [
+            "fuchsia.openthread.devmgr.IsolatedDevmgr",
+            "fuchsia.lowpan.spinel.Device",
+            "fuchsia.logger.LogSink",
+            "fuchsia.sys.Launcher"
+        ],
+        "system": [
+            "driver/fake-ot-radio.so"
+        ]
+    }
+}

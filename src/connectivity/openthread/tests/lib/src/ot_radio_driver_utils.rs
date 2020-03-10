@@ -6,7 +6,7 @@ use {
     anyhow::{format_err, Context as _, Error},
     fidl::endpoints::{create_endpoints, ClientEnd},
     fidl_fuchsia_device::ControllerSynchronousProxy,
-    fidl_fuchsia_lowpan_spinel::{DeviceMarker, DeviceSetupProxy},
+    fidl_fuchsia_lowpan_spinel::{DeviceMarker, DeviceProxy, DeviceSetupProxy},
     fuchsia_async as fasync,
     fuchsia_syslog::macros::*,
     fuchsia_zircon as zx,
@@ -41,6 +41,14 @@ pub async fn get_ot_device_in_devmgr(dir_path_str: &str) -> Result<File, Error> 
     fx_log_info!("device path {} got", found_device_path.to_str().unwrap());
     let file = File::open(found_device_path).context("err opening ot radio device")?;
     Ok(file)
+}
+
+/// Get the DeviceProxy from devmgr
+pub async fn get_device_proxy_from_devmgr(dir_path_str: &str) -> Result<DeviceProxy, Error> {
+    let ot_device_file = get_ot_device_in_devmgr(dir_path_str).await?;
+    let ot_device_client_ep = ot_radio_set_channel(&ot_device_file).await?;
+    let ot_device_proxy = ot_device_client_ep.into_proxy()?;
+    Ok(ot_device_proxy)
 }
 
 /// Schedule unbind of a device

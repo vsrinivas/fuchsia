@@ -30,6 +30,9 @@ constexpr uint32_t kOutboundAllowanceInit = 4;
 constexpr uint32_t kOutboundAllowanceInc = 2;
 constexpr uint32_t kMaxFrameSize = 2048;
 constexpr uint32_t kLoopTimeOutMsOneDay = 1000 * 60 * 60 * 24;  // 24 hours
+constexpr uint32_t kResetMsDelay = 100;
+constexpr uint32_t kBitMaskHigherFourBits = 0xF0;
+constexpr uint32_t kBitMaskLowerFourBits = 0x0F;
 
 class FakeOtRadioDevice
     : public ddk::Device<FakeOtRadioDevice, ddk::UnbindableNew, ddk::Messageable>,
@@ -60,6 +63,8 @@ class FakeOtRadioDevice
   void TryHandleOutboundFrame();
   void FrameHandler(::fidl::VectorView<uint8_t> data);
   void PostSendInboundFrameTask(std::vector<uint8_t> packet);
+
+  uint8_t ValidateSpinelHeaderAndGetTid(const uint8_t* data, uint32_t len);
 
   // Nested class for FIDL implementation
   class LowpanSpinelDeviceFidlImpl : public llcpp::fuchsia::lowpan::spinel::Device::Interface {

@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/ot_radio_tx_rx_test"
+        "binary": "test/ot_radio_ncp_ver_query"
     },
     "sandbox": {
         "dev": [

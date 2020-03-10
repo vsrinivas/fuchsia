@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/ot_radio_soft_reset_test"
+        "binary": "test/ot_stack_soft_reset"
     },
     "sandbox": {
         "dev": [
@@ -10,6 +10,7 @@
             "packages"
         ],
         "services": [
+            "fuchsia.lowpan.spinel.Device",
             "fuchsia.logger.LogSink",
             "fuchsia.sys.Launcher"
         ]

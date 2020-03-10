@@ -13,57 +13,33 @@ devmgr_manifest("devmgr-manifest") {
 test_package("ot-radio-tests") {
   package_name = "ot-radio-tests"
   public_deps = [
-    ":ot-radio-soft-reset-test",
-    ":ot-radio-tx-rx-test",
-    ":ot-stack-device-open",
+    ":ot-radio-ncp-ver-query",
     ":ot-stack-ncp-ver-query",
+    ":ot-stack-soft-reset",
   ]
   tests = [
     {
-      name = "ot_radio_tx_rx_test"
-      environments = basic_envs
-    },
-    {
-      name = "ot_radio_soft_reset_test"
-      environments = basic_envs
-    },
-    {
-      name = "ot_stack_device_open"
+      name = "ot_radio_ncp_ver_query"
       environments = basic_envs
     },
     {
       name = "ot_stack_ncp_ver_query"
       environments = basic_envs
     },
+    {
+      name = "ot_stack_soft_reset"
+      environments = basic_envs
+    },
   ]
 }
 
-rustc_test("ot-radio-tx-rx-test") {
-  name = "ot_radio_tx_rx_test"
-  source_root = "real-device/ot_radio_tx_rx_test.rs"
+rustc_test("ot-radio-ncp-ver-query") {
+  name = "ot_radio_ncp_ver_query"
+  source_root = "real-device/ot_radio_ncp_ver_query.rs"
   edition = "2018"
   deps = [
     "//src/connectivity/openthread/tests/lib",
-    "//src/lib/fuchsia-async",
-    "//src/lib/syslog/rust:syslog",
-  ]
-  non_rust_deps = [ "//zircon/public/lib/syslog" ]
-}
-
-rustc_test("ot-radio-soft-reset-test") {
-  name = "ot_radio_soft_reset_test"
-  source_root = "real-device/ot_radio_soft_reset_test.rs"
-  edition = "2018"
-  deps = [ "//src/connectivity/openthread/tests/lib" ]
-  non_rust_deps = [ "//zircon/public/lib/syslog" ]
-}
-
-rustc_test("ot-stack-device-open") {
-  name = "ot_stack_device_open"
-  source_root = "real-device/ot_stack_device_open.rs"
-  edition = "2018"
-  deps = [
-    "//src/connectivity/openthread/tests/lib",
+    "//src/connectivity/openthread/tests/test-code",
     "//src/lib/fuchsia-async",
     "//src/lib/syslog/rust:syslog",
   ]
@@ -81,39 +57,44 @@ rustc_test("ot-stack-ncp-ver-query") {
   non_rust_deps = [ "//zircon/public/lib/syslog" ]
 }
 
-test_package("ot-radio-component-tests") {
-  package_name = "ot-radio-component-tests"
-
-  public_deps = [
-    ":devmgr-manifest",
-    ":ot-stack-device-open-mock",
-    ":ot-stack-ncp-ver-query-mock",
-  ]
-
-  tests = [
-    {
-      name = "ot_stack_device_open_mock"
-      environments = basic_envs
-    },
-    {
-      name = "ot_stack_ncp_ver_query_mock"
-      environments = basic_envs
-    },
-  ]
-}
-
-rustc_test("ot-stack-device-open-mock") {
-  name = "ot_stack_device_open_mock"
-  source_root = "mock-device/ot_stack_device_open_mock.rs"
+rustc_test("ot-stack-soft-reset") {
+  name = "ot_stack_soft_reset"
+  source_root = "real-device/ot_stack_soft_reset.rs"
   edition = "2018"
   deps = [
-    "//sdk/fidl/fuchsia.lowpan.spinel:fuchsia.lowpan.spinel-rustc",
     "//src/connectivity/openthread/tests/lib",
+    "//src/connectivity/openthread/tests/test-code",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",
   ]
   non_rust_deps = [ "//zircon/public/lib/syslog" ]
+}
+
+test_package("ot-radio-component-tests") {
+  package_name = "ot-radio-component-tests"
+
+  public_deps = [
+    ":devmgr-manifest",
+    ":ot-radio-ncp-ver-query-mock",
+    ":ot-stack-ncp-ver-query-mock",
+    ":ot-stack-soft-reset-mock",
+  ]
+
+  tests = [
+    {
+      name = "ot_stack_ncp_ver_query_mock"
+      environments = basic_envs
+    },
+    {
+      name = "ot_stack_soft_reset_mock"
+      environments = basic_envs
+    },
+    {
+      name = "ot_radio_ncp_ver_query_mock"
+      environments = basic_envs
+    },
+  ]
 }
 
 rustc_test("ot-stack-ncp-ver-query-mock") {
@@ -126,6 +107,30 @@ rustc_test("ot-stack-ncp-ver-query-mock") {
     "//src/connectivity/openthread/tests/test-code",
     "//src/lib/fuchsia-async",
     "//src/lib/syslog/rust:syslog",
+  ]
+  non_rust_deps = [ "//zircon/public/lib/syslog" ]
+}
+
+rustc_test("ot-stack-soft-reset-mock") {
+  name = "ot_stack_soft_reset_mock"
+  source_root = "mock-device/ot_stack_soft_reset_mock.rs"
+  edition = "2018"
+  deps = [
+    "//sdk/fidl/fuchsia.lowpan.spinel:fuchsia.lowpan.spinel-rustc",
+    "//src/connectivity/openthread/tests/lib",
+    "//src/connectivity/openthread/tests/test-code",
+  ]
+  non_rust_deps = [ "//zircon/public/lib/syslog" ]
+}
+
+rustc_test("ot-radio-ncp-ver-query-mock") {
+  name = "ot_radio_ncp_ver_query_mock"
+  source_root = "mock-device/ot_radio_ncp_ver_query_mock.rs"
+  edition = "2018"
+  deps = [
+    "//sdk/fidl/fuchsia.lowpan.spinel:fuchsia.lowpan.spinel-rustc",
+    "//src/connectivity/openthread/tests/lib",
+    "//src/connectivity/openthread/tests/test-code",
   ]
   non_rust_deps = [ "//zircon/public/lib/syslog" ]
 }
