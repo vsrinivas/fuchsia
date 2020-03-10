@@ -7,7 +7,7 @@
 #include <ddk/debug.h>
 #include <fbl/alloc_checker.h>
 
-namespace astro_display {
+namespace amlogic_display {
 
 #define READ32_MIPI_DSI_REG(a) mipi_dsi_mmio_->Read32(a)
 #define WRITE32_MIPI_DSI_REG(a, v) mipi_dsi_mmio_->Write32(v, a)
@@ -94,7 +94,7 @@ zx_status_t AmlDsiHost::HostOn(const display_setting_t& disp_setting) {
 
   // Create MIPI PHY object
   fbl::AllocChecker ac;
-  phy_ = fbl::make_unique_checked<astro_display::AmlMipiPhy>(&ac);
+  phy_ = fbl::make_unique_checked<amlogic_display::AmlMipiPhy>(&ac);
   if (!ac.check()) {
     DISP_ERROR("Could not create AmlMipiPhy object\n");
     return ZX_ERR_NO_MEMORY;
@@ -138,7 +138,7 @@ zx_status_t AmlDsiHost::HostOn(const display_setting_t& disp_setting) {
   }
 
   // Load LCD Init values while in command mode
-  lcd_ = fbl::make_unique_checked<astro_display::Lcd>(&ac, panel_type_);
+  lcd_ = fbl::make_unique_checked<amlogic_display::Lcd>(&ac, panel_type_);
   if (!ac.check()) {
     DISP_ERROR("Failed to create LCD object\n");
     return ZX_ERR_NO_MEMORY;
@@ -220,4 +220,4 @@ void AmlDsiHost::Dump() {
   DISP_INFO("MIPI_DSI_TOP_MEM_PD = 0x%x\n", READ32_REG(MIPI_DSI, MIPI_DSI_TOP_MEM_PD));
 }
 
-}  // namespace astro_display
+}  // namespace amlogic_display

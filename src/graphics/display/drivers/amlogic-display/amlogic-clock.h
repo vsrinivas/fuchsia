@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_ASTRO_DISPLAY_ASTRO_CLOCK_H_
-#define SRC_GRAPHICS_DISPLAY_DRIVERS_ASTRO_DISPLAY_ASTRO_CLOCK_H_
+#ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_AMLOGIC_CLOCK_H_
+#define SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_AMLOGIC_CLOCK_H_
 
 #include <lib/device-protocol/platform-device.h>
 #include <lib/mmio/mmio.h>
@@ -23,11 +23,11 @@
 #include "hhi-regs.h"
 #include "vpu-regs.h"
 
-namespace astro_display {
+namespace amlogic_display {
 
-class AstroDisplayClock {
+class AmlogicDisplayClock {
  public:
-  AstroDisplayClock() {}
+  AmlogicDisplayClock() {}
   zx_status_t Init(zx_device_t* parent);
   zx_status_t Enable(const display_setting_t& d);
   void Disable();
@@ -57,6 +57,6 @@ class AstroDisplayClock {
   bool clock_enabled_ = false;
 };
 
-}  // namespace astro_display
+}  // namespace amlogic_display
 
-#endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_ASTRO_DISPLAY_ASTRO_CLOCK_H_
+#endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_AMLOGIC_CLOCK_H_

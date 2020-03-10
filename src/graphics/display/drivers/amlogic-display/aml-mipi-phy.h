@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_ASTRO_DISPLAY_AML_MIPI_PHY_H_
-#define SRC_GRAPHICS_DISPLAY_DRIVERS_ASTRO_DISPLAY_AML_MIPI_PHY_H_
+#ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_AML_MIPI_PHY_H_
+#define SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_AML_MIPI_PHY_H_
 
 #include <lib/device-protocol/platform-device.h>
 #include <lib/mmio/mmio.h>
@@ -19,7 +19,7 @@
 #include "aml-dsi.h"
 #include "common.h"
 
-namespace astro_display {
+namespace amlogic_display {
 
 class AmlMipiPhy {
  public:
@@ -68,6 +68,6 @@ class AmlMipiPhy {
   bool phy_enabled_ = false;
 };
 
-}  // namespace astro_display
+}  // namespace amlogic_display
 
-#endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_ASTRO_DISPLAY_AML_MIPI_PHY_H_
+#endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_AML_MIPI_PHY_H_

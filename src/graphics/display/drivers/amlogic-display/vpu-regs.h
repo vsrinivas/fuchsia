@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_ASTRO_DISPLAY_VPU_REGS_H_
-#define SRC_GRAPHICS_DISPLAY_DRIVERS_ASTRO_DISPLAY_VPU_REGS_H_
+#ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_VPU_REGS_H_
+#define SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_VPU_REGS_H_
 #include <hwreg/bitfields.h>
 #include <hwreg/mmio.h>
 
@@ -99,7 +99,7 @@
 #define VPU_VDIN1_MISC_CTRL (0x2782 << 2)
 #define VPU_VIU_VDIN_IF_MUX_CTRL (0x2783 << 2)  // undocumented ¯\_(ツ)_/¯
 
-namespace astro_display {
+namespace amlogic_display {
 
 class WrBackMiscCtrlReg : public hwreg::RegisterBase<WrBackMiscCtrlReg, uint32_t> {
  public:
@@ -261,6 +261,6 @@ class VdInIfMuxCtrlReg : public hwreg::RegisterBase<VdInIfMuxCtrlReg, uint32_t> 
   static auto Get() { return hwreg::RegisterAddr<VdInIfMuxCtrlReg>(VPU_VIU_VDIN_IF_MUX_CTRL); }
 };
 
-}  // namespace astro_display
+}  // namespace amlogic_display
 
-#endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_ASTRO_DISPLAY_VPU_REGS_H_
+#endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_VPU_REGS_H_

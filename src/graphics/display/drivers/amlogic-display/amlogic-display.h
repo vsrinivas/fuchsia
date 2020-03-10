@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_ASTRO_DISPLAY_ASTRO_DISPLAY_H_
-#define SRC_GRAPHICS_DISPLAY_DRIVERS_ASTRO_DISPLAY_ASTRO_DISPLAY_H_
+#ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_AMLOGIC_DISPLAY_H_
+#define SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_AMLOGIC_DISPLAY_H_
 
 #include <lib/device-protocol/display-panel.h>
 #include <lib/zircon-internal/thread_annotations.h>
@@ -31,13 +31,13 @@
 #include <fbl/mutex.h>
 
 #include "aml-dsi-host.h"
-#include "astro-clock.h"
+#include "amlogic-clock.h"
 #include "common.h"
 #include "osd.h"
 #include "vpu.h"
 #include "zircon/errors.h"
 
-namespace astro_display {
+namespace amlogic_display {
 
 struct ImageInfo : public fbl::DoublyLinkedListable<std::unique_ptr<ImageInfo>> {
   ~ImageInfo() {
@@ -52,16 +52,17 @@ struct ImageInfo : public fbl::DoublyLinkedListable<std::unique_ptr<ImageInfo>> 
   uint32_t image_stride;
 };
 
-class AstroDisplay;
+class AmlogicDisplay;
 
-// AstroDisplay will implement only a few subset of Device.
-using DeviceType = ddk::Device<AstroDisplay, ddk::GetProtocolable, ddk::UnbindableNew>;
+// AmlogicDisplay will implement only a few subset of Device.
+using DeviceType = ddk::Device<AmlogicDisplay, ddk::GetProtocolable, ddk::UnbindableNew>;
 
-class AstroDisplay : public DeviceType,
-                     public ddk::DisplayControllerImplProtocol<AstroDisplay, ddk::base_protocol>,
-                     public ddk::DisplayCaptureImplProtocol<AstroDisplay> {
+class AmlogicDisplay
+    : public DeviceType,
+      public ddk::DisplayControllerImplProtocol<AmlogicDisplay, ddk::base_protocol>,
+      public ddk::DisplayCaptureImplProtocol<AmlogicDisplay> {
  public:
-  AstroDisplay(zx_device_t* parent) : DeviceType(parent) {}
+  AmlogicDisplay(zx_device_t* parent) : DeviceType(parent) {}
 
   // This function is called from the c-bind function upon driver matching
   zx_status_t Bind();
@@ -188,12 +189,12 @@ class AstroDisplay : public DeviceType,
   ddk::DsiImplProtocolClient dsiimpl_ = {};
 
   // Objects
-  std::unique_ptr<astro_display::Vpu> vpu_;
-  std::unique_ptr<astro_display::Osd> osd_;
-  std::unique_ptr<astro_display::AstroDisplayClock> clock_;
-  std::unique_ptr<astro_display::AmlDsiHost> dsi_host_;
+  std::unique_ptr<amlogic_display::Vpu> vpu_;
+  std::unique_ptr<amlogic_display::Osd> osd_;
+  std::unique_ptr<amlogic_display::AmlogicDisplayClock> clock_;
+  std::unique_ptr<amlogic_display::AmlDsiHost> dsi_host_;
 };
 
-}  // namespace astro_display
+}  // namespace amlogic_display
 
-#endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_ASTRO_DISPLAY_ASTRO_DISPLAY_H_
+#endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_AMLOGIC_DISPLAY_H_

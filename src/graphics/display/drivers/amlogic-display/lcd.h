@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_ASTRO_DISPLAY_LCD_H_
-#define SRC_GRAPHICS_DISPLAY_DRIVERS_ASTRO_DISPLAY_LCD_H_
+#ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_LCD_H_
+#define SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_LCD_H_
 
 #include <unistd.h>
 #include <zircon/compiler.h>
@@ -13,7 +13,7 @@
 #include <ddktl/protocol/dsiimpl.h>
 #include <hwreg/mmio.h>
 
-namespace astro_display {
+namespace amlogic_display {
 
 class Lcd {
  public:
@@ -35,6 +35,6 @@ class Lcd {
   bool enabled_ = false;
 };
 
-}  // namespace astro_display
+}  // namespace amlogic_display
 
-#endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_ASTRO_DISPLAY_LCD_H_
+#endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_LCD_H_
