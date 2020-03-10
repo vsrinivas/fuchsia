@@ -41,7 +41,6 @@ namespace fio = ::llcpp::fuchsia::io;
 
 static fbl::Vector<fbl::String> arguments;
 
-constexpr char kArgumentsPath[] = "/svc/" fuchsia_boot_Arguments_Name;
 constexpr char kFactoryItemsPath[] = "/svc/" fuchsia_boot_FactoryItems_Name;
 constexpr char kItemsPath[] = "/svc/" fuchsia_boot_Items_Name;
 
@@ -185,32 +184,6 @@ TEST(BootsvcIntegrationTest, Arguments) {
   EXPECT_STR_EQ(arguments[1].c_str(), "testargument");
 }
 
-// Make sure the fuchsia.boot.Arguments service works
-TEST(BootsvcIntegrationTest, BootArguments) {
-  zx::channel local, remote;
-  zx_status_t status = zx::channel::create(0, &local, &remote);
-  ASSERT_EQ(ZX_OK, status);
-
-  // Check that we can open the fuchsia.boot.Arguments service.
-  status = fdio_service_connect(kArgumentsPath, remote.release());
-  ASSERT_EQ(ZX_OK, status);
-
-  // Check that we received a VMO from the service, each time we call it.
-  for (size_t i = 0; i < 8; i++) {
-    zx::vmo vmo;
-    size_t size;
-    status = fuchsia_boot_ArgumentsGet(local.get(), vmo.reset_and_get_address(), &size);
-    ASSERT_EQ(ZX_OK, status);
-    ASSERT_TRUE(vmo.is_valid());
-
-    // Check that the VMO is read-only.
-    zx_info_handle_basic_t info;
-    status = vmo.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
-    ASSERT_EQ(ZX_OK, status);
-    ASSERT_EQ(ZX_DEFAULT_VMO_RIGHTS & ~ZX_RIGHT_WRITE, info.rights);
-  }
-}
-
 // Make sure the fuchsia.boot.FactoryItems service works
 TEST(BootsvcIntegrationTest, FactoryItems) {
   zx::channel local_items, remote_items;
@@ -252,34 +225,6 @@ TEST(BootsvcIntegrationTest, FactoryItems) {
     ASSERT_EQ(ZX_OK, payload.read(buf, 0, sizeof(buf)));
     ASSERT_BYTES_EQ(reinterpret_cast<const uint8_t*>(kExpected), buf, sizeof(buf), "");
   }
-}
-
-// Make sure that bootsvc parsed and passed boot args from ZBI_ITEM_IMAGE_ARGS
-// correctly.
-TEST(BootsvcIntegrationTest, BootArgsFromImage) {
-  zx::channel local, remote;
-  zx_status_t status = zx::channel::create(0, &local, &remote);
-  ASSERT_EQ(ZX_OK, status);
-
-  // Check that we can open the fuchsia.boot.Arguments service.
-  status = fdio_service_connect(kArgumentsPath, remote.release());
-  ASSERT_EQ(ZX_OK, status);
-
-  // Check that we received a VMO from the service, each time we call it.
-  zx::vmo vmo;
-  size_t size;
-  status = fuchsia_boot_ArgumentsGet(local.get(), vmo.reset_and_get_address(), &size);
-  ASSERT_EQ(ZX_OK, status);
-  ASSERT_TRUE(vmo.is_valid());
-
-  auto buf = std::make_unique<char[]>(size);
-  status = vmo.read(buf.get(), 0, size);
-  ASSERT_EQ(ZX_OK, status);
-
-  /* Boot args from Image are at the beginning of Arguments VMO */
-  static constexpr char kExpected[] = "testkey=testvalue";
-  auto actual = reinterpret_cast<const uint8_t*>(buf.get());
-  ASSERT_BYTES_EQ(reinterpret_cast<const uint8_t*>(kExpected), actual, sizeof(kExpected) - 1, "");
 }
 
 // Make sure the fuchsia.boot.Items service works

@@ -5,9 +5,9 @@
 #ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_COORDINATOR_H_
 #define SRC_DEVICES_BIN_DRIVER_MANAGER_COORDINATOR_H_
 
+#include <fuchsia/boot/llcpp/fidl.h>
 #include <fuchsia/fshost/llcpp/fidl.h>
 #include <lib/async/cpp/wait.h>
-#include <lib/boot-args/boot-args.h>
 #include <lib/svc/outgoing.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/channel.h>
@@ -161,8 +161,8 @@ struct CoordinatorConfig {
   zx::event oom_event;
   // Async dispatcher for the coordinator.
   async_dispatcher_t* dispatcher;
-  // Boot arguments from the Arguments service.
-  const devmgr::BootArgs* boot_args;
+  // Client for the Arguments service.
+  llcpp::fuchsia::boot::Arguments::SyncClient* boot_args;
   // If true, netsvc is disabled and will not start.
   bool disable_netsvc;
   // Whether we require /system.
@@ -279,7 +279,7 @@ class Coordinator : public llcpp::fuchsia::hardware::power::statecontrol::Admin:
 
   const zx::resource& root_resource() const { return config_.root_resource; }
   async_dispatcher_t* dispatcher() const { return config_.dispatcher; }
-  const devmgr::BootArgs& boot_args() const { return *config_.boot_args; }
+  llcpp::fuchsia::boot::Arguments::SyncClient* boot_args() const { return config_.boot_args; }
   bool disable_netsvc() const { return config_.disable_netsvc; }
   bool require_system() const { return config_.require_system; }
   bool suspend_fallback() const { return config_.suspend_fallback; }

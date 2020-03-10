@@ -1,13 +1,42 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 library fuchsia.boot;
 
+const uint8 MAX_ARGS_NAME_LENGTH = 64;
+const uint8 MAX_ARGS_VALUE_LENGTH = 128;
+// MAX_ARGS_NAME_LENGTH + MAX_ARGS_VALUE_LENGTH + 1 (for '=')
+const uint8 MAX_ARGS_COLLECT_LENGTH = 193;
+const uint8 MAX_ARGS_VECTOR_LENGTH = 32;
+
+struct BoolPair {
+    string:MAX_ARGS_NAME_LENGTH key;
+    bool defaultval;
+};
+
 /// Protocol for retrieving boot arguments.
-[Discoverable, Layout = "Simple"]
+[Discoverable]
 protocol Arguments {
-    /// Get a `vmo` containing boot arguments, along with the `size` of the boot
-    /// arguments contained within.
-    Get() -> (handle<vmo> vmo, uint64 size);
+    /// Get the value of a boot argument `key`.
+    GetString(string:MAX_ARGS_NAME_LENGTH key) -> (string:MAX_ARGS_VALUE_LENGTH? value);
+
+    /// Get the values of a list of arguments specified in `keys`.
+    GetStrings(vector<string:MAX_ARGS_NAME_LENGTH>:MAX_ARGS_VECTOR_LENGTH keys) -> (vector<string:MAX_ARGS_VALUE_LENGTH?>:MAX_ARGS_COLLECT_LENGTH values);
+
+    /// Get the boolean value of a boot argument `keys`,
+    /// or return `defaultval` if the argument is not present.
+    /// A key is considered to be false if its string value is exactly
+    /// "off", "0", or "false". Any other value (including empty) is returned
+    /// as true.
+    GetBool(string:MAX_ARGS_NAME_LENGTH key, bool defaultval) -> (bool value);
+
+    /// Get the boolean values of a list of boot arguments `keys.key`,
+    /// or return `keys.defaultval` for each if not present.
+    GetBools(vector<BoolPair>:MAX_ARGS_VECTOR_LENGTH keys) -> (vector<bool>:MAX_ARGS_VECTOR_LENGTH values);
+
+    /// Get all boot arguments with keys starting with
+    /// `prefix`. Returns a vector with strings of the form 'key=value'.
+    /// TODO(fxb/33460) - remove Collect once boot arguments have been componentised.
+    Collect(string:MAX_ARGS_NAME_LENGTH prefix) -> (vector<string:MAX_ARGS_COLLECT_LENGTH>:MAX_ARGS_VECTOR_LENGTH results);
 };

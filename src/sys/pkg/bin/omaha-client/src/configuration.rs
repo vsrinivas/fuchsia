@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::channel::ChannelConfigs;
-use anyhow::Error;
+use anyhow::{anyhow, Error};
 use fidl_fuchsia_boot::{ArgumentsMarker, ArgumentsProxy};
 use log::{error, info, warn};
 use omaha_client::{
@@ -122,28 +122,16 @@ async fn get_appid_and_channel_from_vbmeta() -> Result<(Option<String>, Option<S
     get_appid_and_channel_from_vbmeta_impl(proxy).await
 }
 
-// TODO(fxb/45976) - use fuchsia.boot.Arguments.GetStrings instead of Get
 async fn get_appid_and_channel_from_vbmeta_impl(
     proxy: ArgumentsProxy,
 ) -> Result<(Option<String>, Option<String>), Error> {
-    let mut appid = None;
-    let mut channel = None;
-    let (vmo, size) = proxy.get().await?;
-    let mut buf = vec![0u8; size as usize];
-    vmo.read(&mut buf, 0)?;
-    for arg in buf.split(|&byte| byte == 0) {
-        let arg = String::from_utf8_lossy(arg);
-        let appid_prefix = "omaha_app_id=";
-        if arg.starts_with(appid_prefix) {
-            appid = Some(arg[appid_prefix.len()..].to_string());
-            continue;
-        }
-        let channel_prefix = "ota_channel=";
-        if arg.starts_with(channel_prefix) {
-            channel = Some(arg[channel_prefix.len()..].to_string());
-        }
+    let vec = vec!["omaha_app_id", "ota_channel"];
+    let res = proxy.get_strings(&mut vec.into_iter()).await?;
+    if res.len() != 2 {
+        Err(anyhow!("Remote endpoint returned {} values, expected 2", res.len()))
+    } else {
+        Ok((res[0].clone(), res[1].clone()))
     }
-    Ok((appid, channel))
 }
 
 #[cfg(test)]
@@ -174,7 +162,6 @@ mod tests {
     use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_boot::ArgumentsRequest;
     use fuchsia_async as fasync;
-    use fuchsia_zircon::Vmo;
     use futures::prelude::*;
     use sysconfig_client::channel::OtaUpdateChannelConfig;
 
@@ -289,12 +276,10 @@ mod tests {
         };
         let stream_fut = async move {
             match stream.next().await.unwrap() {
-                Ok(ArgumentsRequest::Get { responder }) => {
-                    let args = b"foo=bar\0omaha_app_id=test-appid\0ota_channel=test-channel\0";
-                    let size = args.len() as u64;
-                    let vmo = Vmo::create(size).unwrap();
-                    vmo.write(args, 0).unwrap();
-                    responder.send(vmo, size).unwrap();
+                Ok(ArgumentsRequest::GetStrings { keys, responder }) => {
+                    assert_eq!(keys, vec!["omaha_app_id", "ota_channel"]);
+                    let vec: Vec<Option<&str>> = vec![Some("test-appid"), Some("test-channel")];
+                    responder.send(&mut vec.into_iter()).expect("send failed");
                 }
                 request => panic!("Unexpected request: {:?}", request),
             }
@@ -312,12 +297,10 @@ mod tests {
         };
         let stream_fut = async move {
             match stream.next().await.unwrap() {
-                Ok(ArgumentsRequest::Get { responder }) => {
-                    let args = b"foo=bar\0";
-                    let size = args.len() as u64;
-                    let vmo = Vmo::create(size).unwrap();
-                    vmo.write(args, 0).unwrap();
-                    responder.send(vmo, size).unwrap();
+                Ok(ArgumentsRequest::GetStrings { keys, responder }) => {
+                    assert_eq!(keys.len(), 2);
+                    let ret: Vec<Option<&str>> = vec![None, None];
+                    responder.send(&mut ret.into_iter()).expect("send failed");
                 }
                 request => panic!("Unexpected request: {:?}", request),
             }
@@ -333,7 +316,7 @@ mod tests {
         };
         let stream_fut = async move {
             match stream.next().await.unwrap() {
-                Ok(ArgumentsRequest::Get { .. }) => {
+                Ok(ArgumentsRequest::GetStrings { .. }) => {
                     // Don't respond.
                 }
                 request => panic!("Unexpected request: {:?}", request),

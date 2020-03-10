@@ -7,7 +7,7 @@ use {
     fidl_fuchsia_pkg_rewrite_ext::Rule,
     fuchsia_component::client::connect_to_service,
     fuchsia_inspect::{self as inspect, Property as _, StringProperty},
-    fuchsia_syslog::{self, fx_log_err, fx_log_info},
+    fuchsia_syslog::{self, fx_log_info},
     fuchsia_url::pkg_url::RepoUrl,
     futures::{future::BoxFuture, prelude::*},
 };
@@ -122,36 +122,14 @@ fn get_tuf_config_name_from_vbmeta() -> BoxFuture<'static, Result<String, Error>
     .boxed()
 }
 
-// TODO(fxb/45976) - delete
-fn get_string_from_boot_args(buf: &[u8], key: &str) -> Option<String> {
-    let target_prefix = format!("{}=", key);
-    let mut val = None;
-    for arg in buf.split(|&byte| byte == 0) {
-        let arg = String::from_utf8_lossy(arg);
-        if arg.starts_with(&target_prefix) {
-            val = match val {
-                Some(hostname) => {
-                    fx_log_err!("duplicate boot argument for key {} found: {}", key, arg);
-                    Some(hostname)
-                }
-                None => Some(arg[target_prefix.len()..].to_string()),
-            }
-        }
-    }
-    val
-}
-
-// TODO(fxb/45976) - use fuchsia.boot.Arguments.GetString instead of Get
 async fn get_tuf_config_name_from_vbmeta_impl(
     proxy: fidl_fuchsia_boot::ArgumentsProxy,
 ) -> Result<String, Error> {
-    let (vmo, size) = proxy.get().await?;
-    let mut buf = vec![0u8; size as usize];
-    vmo.read(&mut buf, 0)?;
-
-    match get_string_from_boot_args(&buf, "tuf_repo_config") {
-        Some(hostname) => Ok(hostname.to_string()),
-        None => Err(format_err!("Could not find tuf_repo_config in vbmeta")),
+    let repo_config = proxy.get_string("tuf_repo_config").await?;
+    if let Some(hostname) = repo_config {
+        Ok(hostname.to_string())
+    } else {
+        Err(format_err!("Could not find tuf_repo_config in vbmeta"))
     }
 }
 
@@ -196,7 +174,6 @@ mod test {
         fidl_fuchsia_pkg_ext::{RepositoryConfigBuilder, RepositoryConfigs, RepositoryKey},
         fuchsia_async as fasync,
         fuchsia_inspect::assert_inspect_tree,
-        fuchsia_zircon::Vmo,
         sysconfig_client::channel::OtaUpdateChannelConfig,
     };
 
@@ -206,13 +183,9 @@ mod test {
         let (proxy, mut stream) = create_proxy_and_stream::<ArgumentsMarker>().unwrap();
         fasync::spawn(async move {
             match stream.next().await.unwrap() {
-                Ok(ArgumentsRequest::Get { responder }) => {
-                    let args =
-                        b"foo=bar\0ota_channel=test-channel\0tuf_repo_config=test-repo-config";
-                    let size = args.len() as u64;
-                    let vmo = Vmo::create(size).unwrap();
-                    vmo.write(args, 0).unwrap();
-                    responder.send(vmo, size).unwrap();
+                Ok(ArgumentsRequest::GetString { key, responder }) => {
+                    assert_eq!(key, "tuf_repo_config", "Unexpected GetString request: {}", key);
+                    responder.send(Some("test-repo-config")).unwrap();
                 }
                 request => panic!("Unexpected request: {:?}", request),
             }
@@ -349,27 +322,5 @@ mod test {
               }
             }
         );
-    }
-
-    #[test]
-    fn test_get_string_from_boot_args_success() {
-        let args = b"foo=bar\0ben=crushing=it\0finn=dog";
-
-        let foo_val = get_string_from_boot_args(args, "foo");
-        let ben_val = get_string_from_boot_args(args, "ben");
-
-        assert_eq!(foo_val, Some("bar".to_string()));
-        assert_eq!(ben_val, Some("crushing=it".to_string()));
-    }
-
-    #[test]
-    fn test_get_string_from_boot_args_failure() {
-        let args = b"foo=bar\0ben=crushing=it\0finn=dog";
-
-        let unicorn_val = get_string_from_boot_args(args, "unicorn");
-        let dog_val = get_string_from_boot_args(args, "dog");
-
-        assert_eq!(unicorn_val, None);
-        assert_eq!(dog_val, None);
     }
 }

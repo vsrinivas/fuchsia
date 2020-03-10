@@ -28,6 +28,7 @@ zx_library("devmgr-integration-test") {
   ]
   deps = [
     "$zx/system/fidl/fuchsia-boot:c",
+    "$zx/system/fidl/fuchsia-boot:llcpp",
     "$zx/system/fidl/fuchsia-process:c",
     "$zx/system/fidl/fuchsia-scheduler:c",
     "$zx/system/ulib/async-loop:async-loop-cpp",
@@ -37,8 +38,10 @@ zx_library("devmgr-integration-test") {
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fdio-caller",
     "$zx/system/ulib/fidl-async",
+    "$zx/system/ulib/fidl-async:fidl-async-cpp",
     "$zx/system/ulib/fs",
     "$zx/system/ulib/fzl",
+    "$zx/system/ulib/mock-boot-arguments",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
   ]

@@ -14,6 +14,7 @@
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl-async/cpp/bind.h>
+#include <lib/fidl/llcpp/string_view.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/paver/provider.h>
 #include <lib/zx/vmo.h>
@@ -162,15 +163,18 @@ class FakeBootArgs : public ::llcpp::fuchsia::boot::Arguments::Interface {
     return fidl::Bind(dispatcher, std::move(request), this);
   }
 
-  void Get(GetCompleter::Sync completer) {
-    zx::vmo vmo;
-    zx::vmo::create(fbl::round_up(sizeof(kArgs), ZX_PAGE_SIZE), 0, &vmo);
-    vmo.write(kArgs, 0, sizeof(kArgs));
-    completer.Reply(std::move(vmo), sizeof(kArgs));
+  void GetString(::fidl::StringView arg, GetStringCompleter::Sync completer) override {
+    completer.Reply(::fidl::StringView{"-a"});
   }
 
- private:
-  static constexpr char kArgs[] = "zvb.current_slot=-a";
+  // Stubs
+  void GetStrings(::fidl::VectorView<::fidl::StringView> names,
+                  GetStringsCompleter::Sync completer) override {}
+  void GetBool(::fidl::StringView name, bool defaultval,
+               GetBoolCompleter::Sync completer) override {}
+  void GetBools(::fidl::VectorView<::llcpp::fuchsia::boot::BoolPair> name,
+                GetBoolsCompleter::Sync completer) override {}
+  void Collect(::fidl::StringView name, CollectCompleter::Sync completer) override {}
 };
 
 class FakeSvc {

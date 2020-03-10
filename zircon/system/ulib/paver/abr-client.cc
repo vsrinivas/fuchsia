@@ -23,24 +23,6 @@ namespace {
 using ::llcpp::fuchsia::paver::Asset;
 using ::llcpp::fuchsia::paver::Configuration;
 
-// Extracts value from "zvb.current_slot" argument in boot arguments.
-std::optional<std::string_view> GetBootSlot(std::string_view boot_args) {
-  for (size_t begin = 0, end;
-       (end = boot_args.find_first_of('\0', begin)) != std::string_view::npos; begin = end + 1) {
-    const size_t sep = boot_args.find_first_of('=', begin);
-    if (sep + 1 < end) {
-      std::string_view key(&boot_args[begin], sep - begin);
-      if (key.compare("zvb.current_slot") == 0) {
-        std::string_view slot(&boot_args[sep + 1], end - (sep + 1));
-        // Some bootloaders prefix slot with dash or underscore. We strip them for consistency.
-        slot.remove_prefix(std::min(slot.find_first_not_of("_-"), slot.size()));
-        return slot;
-      }
-    }
-  }
-  return std::nullopt;
-}
-
 zx_status_t QueryBootConfig(const zx::channel& svc_root, Configuration* out) {
   zx::channel local, remote;
   if (zx_status_t status = zx::channel::create(0, &local, &remote); status != ZX_OK) {
@@ -52,36 +34,29 @@ zx_status_t QueryBootConfig(const zx::channel& svc_root, Configuration* out) {
     return status;
   }
   ::llcpp::fuchsia::boot::Arguments::SyncClient client(std::move(local));
-  auto result = client.Get();
+  auto result = client.GetString(::fidl::StringView{"zvb.current_slot"});
   if (!result.ok()) {
     return result.status();
   }
-  const size_t size = result->size;
-  if (size == 0) {
+
+  const auto response = result.Unwrap();
+  if (response->value.is_null()) {
     ERROR("Kernel cmdline param zvb.current_slot not found!\n");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  const auto args_buf = std::make_unique<char[]>(size);
-  if (zx_status_t status = result->vmo.read(args_buf.get(), 0, size); status != ZX_OK) {
-    return status;
-  }
-
-  const auto slot = GetBootSlot(std::string_view(args_buf.get(), size));
-  if (!slot.has_value()) {
-    ERROR("Kernel cmdline param zvb.current_slot not found!\n");
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  if (slot->compare("a") == 0) {
+  auto slot = std::string_view{response->value.data(), response->value.size()};
+  // Some bootloaders prefix slot with dash or underscore. We strip them for consistency.
+  slot.remove_prefix(std::min(slot.find_first_not_of("_-"), slot.size()));
+  if (slot.compare("a") == 0) {
     *out = Configuration::A;
-  } else if (slot->compare("b") == 0) {
+  } else if (slot.compare("b") == 0) {
     *out = Configuration::B;
-  } else if (slot->compare("r") == 0) {
+  } else if (slot.compare("r") == 0) {
     *out = Configuration::RECOVERY;
   } else {
-    ERROR("Invalid value `%.*s` found in zvb.current_slot!\n", static_cast<int>(slot->size()),
-          slot->data());
+    ERROR("Invalid value `%.*s` found in zvb.current_slot!\n", static_cast<int>(slot.size()),
+          slot.data());
     return ZX_ERR_NOT_SUPPORTED;
   }
 

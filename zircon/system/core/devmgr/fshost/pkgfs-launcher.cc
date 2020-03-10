@@ -7,7 +7,6 @@
 #include <fcntl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <inttypes.h>
-#include <lib/boot-args/boot-args.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -95,11 +94,12 @@ void pkgfs_finish(FilesystemMounter* filesystems, zx::process proc, zx::channel 
 zx_status_t pkgfs_ldsvc_load_blob(void* ctx, const char* prefix, const char* name,
                                   zx_handle_t* vmo) {
   const ldsvc_ctx_t* ldsvc_ctx = static_cast<ldsvc_ctx_t*>(ctx);
-  const char* blob = ldsvc_ctx->boot_args->pkgfs_file_with_prefix_and_name(prefix, name);
-  if (blob == nullptr) {
+  auto blobp = ldsvc_ctx->boot_args->pkgfs_file_with_prefix_and_name(prefix, name);
+  if (blobp == nullptr) {
     printf("fshost: failed to find pkgfs file ID in boot arguments \"%s%s\"\n", prefix, name);
     return ZX_ERR_NOT_FOUND;
   }
+  const char* blob = blobp->data();
 
   int fd;
   zx_status_t status = fdio_open_fd_at(ldsvc_ctx->blobfs_root_fd.get(), blob,
@@ -182,11 +182,12 @@ zx_status_t pkgfs_ldsvc_start(std::unique_ptr<ldsvc_ctx_t> ldsvc_ctx, zx::channe
 
 bool pkgfs_launch(FilesystemMounter* filesystems) {
   // Get the pkgfs.cmd boot argument
-  const char* cmd = filesystems->boot_args()->pkgfs_cmd();
-  if (cmd == nullptr) {
+  auto cmdp = filesystems->boot_args()->pkgfs_cmd();
+  if (cmdp == nullptr) {
     printf("fshost: unable to launch pkgfs, missing \"zircon.system.pkgfs.cmd\" boot argument\n");
     return false;
   }
+  const char* cmd = cmdp->data();
 
   fbl::unique_fd fs_blob_fd(open("/fs/blob", O_RDONLY | O_DIRECTORY));
   if (!fs_blob_fd) {

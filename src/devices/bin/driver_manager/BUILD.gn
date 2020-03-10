@@ -54,7 +54,6 @@ source_set("lib") {
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
-    "//zircon/public/lib/boot-args",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/devmgr-launcher",
     "//zircon/public/lib/fbl",
@@ -73,6 +72,7 @@ source_set("lib") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-boot:c",
+    "//zircon/system/fidl/fuchsia-boot:llcpp",
     "//zircon/system/fidl/fuchsia-device-manager",
     "//zircon/system/fidl/fuchsia-device-manager:c",
     "//zircon/system/fidl/fuchsia-device-manager:llcpp",
@@ -120,6 +120,7 @@ test("driver_manager_test") {
 
   deps = [
     ":lib",
+    "//zircon/public/lib/mock-boot-arguments",
     "//zircon/public/lib/zxtest",
   ]
 

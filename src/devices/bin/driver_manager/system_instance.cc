@@ -6,6 +6,7 @@
 
 #include <dirent.h>
 #include <fcntl.h>
+#include <fuchsia/boot/llcpp/fidl.h>
 #include <fuchsia/hardware/virtioconsole/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/spawn.h>
@@ -16,6 +17,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <zircon/boot/image.h>
+#include <zircon/errors.h>
 #include <zircon/status.h>
 #include <zircon/syscalls/log.h>
 #include <zircon/syscalls/policy.h>
@@ -30,8 +32,85 @@
 
 struct ConsoleStarterArgs {
   SystemInstance* instance;
-  devmgr::BootArgs* boot_args;
+  llcpp::fuchsia::boot::Arguments::SyncClient* boot_args;
 };
+
+struct ServiceStarterParams {
+  std::string netsvc_interface;
+  std::string zircon_nodename;
+  std::string clock_backstop;
+  std::string autorun_boot;
+  bool netsvc_disable = true;
+  bool netsvc_netboot = false;
+  bool netsvc_advertise = true;
+  bool netsvc_all_features = false;
+  bool virtcon_disable = false;
+};
+
+struct ConsoleParams {
+  std::string term = "TERM=";
+  std::string device = "/svc/console";
+  bool valid = false;
+};
+
+ServiceStarterParams GetServiceStarterParams(llcpp::fuchsia::boot::Arguments::SyncClient* client) {
+  std::vector<fidl::StringView> string_keys{
+      fidl::StringView{"netsvc.interface"},
+      fidl::StringView{"zircon.nodename"},
+      fidl::StringView{"clock.backstop"},
+      fidl::StringView{"zircon.autorun.boot"},
+  };
+
+  auto string_resp = client->GetStrings(fidl::VectorView{string_keys});
+  ServiceStarterParams ret;
+  if (string_resp.ok()) {
+    auto values = string_resp->values;
+    ret.netsvc_interface = std::string{values[0].data(), values[0].size()};
+    ret.zircon_nodename = std::string{values[1].data(), values[1].size()};
+    ret.clock_backstop = std::string{values[2].data(), values[2].size()};
+    ret.autorun_boot = std::string{values[3].data(), values[3].size()};
+  }
+
+  std::vector<llcpp::fuchsia::boot::BoolPair> bool_keys{
+      {fidl::StringView{"netsvc.disable"}, true},
+      {fidl::StringView{"netsvc.netboot"}, false},
+      {fidl::StringView{"netsvc.advertise"}, true},
+      {fidl::StringView{"netsvc.all-features"}, false},
+      {fidl::StringView{"virtcon.disable"}, false},
+  };
+
+  auto bool_resp = client->GetBools(fidl::VectorView{bool_keys});
+  if (bool_resp.ok()) {
+    ret.netsvc_disable = bool_resp->values[0];
+    ret.netsvc_netboot = bool_resp->values[1];
+    ret.netsvc_advertise = bool_resp->values[2];
+    ret.netsvc_all_features = bool_resp->values[3];
+    ret.virtcon_disable = bool_resp->values[4];
+  }
+
+  return ret;
+}
+
+ConsoleParams GetConsoleParams(llcpp::fuchsia::boot::Arguments::SyncClient* client) {
+  std::vector<fidl::StringView> vars{fidl::StringView{"TERM"}, fidl::StringView{"console.path"}};
+  auto resp = client->GetStrings(fidl::VectorView{vars});
+  ConsoleParams ret;
+  if (!resp.ok()) {
+    return ret;
+  }
+
+  if (resp->values[0].is_null()) {
+    ret.term += "uart";
+  } else {
+    ret.term += std::string{resp->values[0].data(), resp->values[0].size()};
+  }
+  if (!resp->values[1].is_null()) {
+    ret.device = std::string{resp->values[1].data(), resp->values[1].size()};
+  }
+
+  ret.valid = true;
+  return ret;
+}
 
 // Wait for the requested file.  Its parent directory must exist.
 zx_status_t wait_for_file(const char* path, zx::time deadline) {
@@ -267,7 +346,8 @@ zx_status_t SystemInstance::StartSvchost(const zx::job& root_job, const zx::chan
       .h = {.id = PA_HND(PA_USER0, 3), .handle = coordinator_client.release()},
   });
 
-  if (!coordinator->boot_args().GetBool("virtcon.disable", false)) {
+  auto resp = coordinator->boot_args()->GetBool(fidl::StringView{"virtcon.disable"}, false);
+  if (resp.ok() && !resp->value) {
     // Add handle to channel to allow svchost to proxy fidl services to
     // virtcon.
     actions.push_back((fdio_spawn_action_t){
@@ -429,14 +509,15 @@ int console_starter(void* arg) {
   return args->instance->ConsoleStarter(args->boot_args);
 }
 
-void SystemInstance::start_console_shell(const devmgr::BootArgs& boot_args) {
+void SystemInstance::start_console_shell(llcpp::fuchsia::boot::Arguments::SyncClient& boot_args) {
   // Only start a shell on the kernel console if it isn't already running a shell.
-  if (boot_args.GetBool("kernel.shell", false)) {
+  auto resp = boot_args.GetBool(fidl::StringView{"kernel.shell"}, false);
+  if (resp.ok() && resp->value) {
     return;
   }
   auto args = std::make_unique<ConsoleStarterArgs>();
   args->instance = this;
-  args->boot_args = const_cast<devmgr::BootArgs*>(&boot_args);
+  args->boot_args = &boot_args;
   thrd_t t;
   int ret = thrd_create_with_name(&t, console_starter, args.release(), "console-starter");
   if (ret == thrd_success) {
@@ -444,60 +525,51 @@ void SystemInstance::start_console_shell(const devmgr::BootArgs& boot_args) {
   }
 }
 
-int SystemInstance::ConsoleStarter(const devmgr::BootArgs* arg) {
+int SystemInstance::ConsoleStarter(llcpp::fuchsia::boot::Arguments::SyncClient* arg) {
   auto& boot_args = *arg;
-
-  // If we got a TERM environment variable (aka a TERM=... argument on
-  // the kernel command line), pass this down; otherwise pass TERM=uart.
-  const char* term = boot_args.Get("TERM");
-  if (term == nullptr) {
-    term = "TERM=uart";
-  } else {
-    term -= sizeof("TERM=") - 1;
+  auto console_params = GetConsoleParams(arg);
+  if (!console_params.valid) {
+    return ZX_ERR_INVALID_ARGS;
   }
-
-  const char* device = boot_args.Get("console.path");
-  if (device == nullptr) {
-    device = "/svc/console";
-  }
-
   const char* envp[] = {
-      term,
+      console_params.term.data(),
       nullptr,
   };
 
   // Run thread forever, relaunching console shell on exit.
   for (;;) {
-    zx_status_t status = wait_for_file(device, zx::time::infinite());
+    zx_status_t status = wait_for_file(console_params.device.data(), zx::time::infinite());
     if (status != ZX_OK) {
-      printf("driver_manager: failed to wait for console '%s' (%s)\n", device,
+      printf("driver_manager: failed to wait for console '%s' (%s)\n", console_params.device.data(),
              zx_status_get_string(status));
       return 1;
     }
-    fbl::unique_fd fd(open(device, O_RDWR));
+    fbl::unique_fd fd(open(console_params.device.data(), O_RDWR));
     if (!fd.is_valid()) {
-      printf("driver_manager: failed to open console '%s'\n", device);
+      printf("driver_manager: failed to open console '%s'\n", console_params.device.data());
       return 1;
     }
 
     // TODO(ZX-3385): Clean this up once devhost stops speaking fuchsia.io.File
     // on behalf of drivers.  Once that happens, the virtio-console driver
     // should just speak that instead of this shim interface.
-    if (boot_args.GetBool("console.is_virtio", false)) {
+    auto boolresp = boot_args.GetBool(fidl::StringView{"console.is_virtio"}, false);
+    if (boolresp.ok() && boolresp->value) {
       // If the console is a virtio connection, then speak the
       // fuchsia.hardware.virtioconsole.Device interface to get the real
       // fuchsia.io.File connection
       zx::channel virtio_channel;
       status = fdio_get_service_handle(fd.release(), virtio_channel.reset_and_get_address());
       if (status != ZX_OK) {
-        printf("driver_manager: failed to get console handle '%s'\n", device);
+        printf("driver_manager: failed to get console handle '%s'\n", console_params.device.data());
         return 1;
       }
 
       zx::channel local, remote;
       status = zx::channel::create(0, &local, &remote);
       if (status != ZX_OK) {
-        printf("driver_manager: failed to create channel for console '%s'\n", device);
+        printf("driver_manager: failed to create channel for console '%s'\n",
+               console_params.device.data());
         return 1;
       }
 
@@ -508,14 +580,16 @@ int SystemInstance::ConsoleStarter(const devmgr::BootArgs* arg) {
       fdio_t* fdio;
       status = fdio_create(local.release(), &fdio);
       if (status != ZX_OK) {
-        printf("driver_manager: failed to setup fdio for console '%s'\n", device);
+        printf("driver_manager: failed to setup fdio for console '%s'\n",
+               console_params.device.data());
         return 1;
       }
 
       fd.reset(fdio_bind_to_fd(fdio, -1, 3));
       if (!fd.is_valid()) {
         fdio_unsafe_release(fdio);
-        printf("driver_manager: failed to transfer fdio for console '%s'\n", device);
+        printf("driver_manager: failed to transfer fdio for console '%s'\n",
+               console_params.device.data());
         return 1;
       }
     }
@@ -600,23 +674,27 @@ int SystemInstance::ServiceStarter(Coordinator* coordinator) {
   bool netboot = false;
   bool vruncmd = false;
   fbl::String vcmd;
-  const char* interface = coordinator->boot_args().Get("netsvc.interface");
-  if (!(coordinator->boot_args().GetBool("netsvc.disable", true) ||
-        coordinator->disable_netsvc())) {
+
+  auto params = GetServiceStarterParams(coordinator->boot_args());
+
+  const char* interface =
+      params.netsvc_interface.empty() ? nullptr : params.netsvc_interface.data();
+
+  if (!params.netsvc_disable && !coordinator->disable_netsvc()) {
     const char* args[] = {"/boot/bin/netsvc", nullptr, nullptr, nullptr, nullptr, nullptr};
     int argc = 1;
 
-    if (coordinator->boot_args().GetBool("netsvc.netboot", false)) {
+    if (params.netsvc_netboot) {
       args[argc++] = "--netboot";
       netboot = true;
       vruncmd = true;
     }
 
-    if (coordinator->boot_args().GetBool("netsvc.advertise", true)) {
+    if (params.netsvc_advertise) {
       args[argc++] = "--advertise";
     }
 
-    if (coordinator->boot_args().GetBool("netsvc.all-features", false)) {
+    if (params.netsvc_all_features) {
       args[argc++] = "--all-features";
     }
 
@@ -646,7 +724,7 @@ int SystemInstance::ServiceStarter(Coordinator* coordinator) {
     // Launch device-name-provider with access to /dev, to discover network interfaces.
     const zx_handle_t handles[] = {device_name_provider_server_.release()};
     const uint32_t types[] = {PA_DIRECTORY_REQUEST};
-    const char* nodename = coordinator->boot_args().Get("zircon.nodename");
+    const char* nodename = params.zircon_nodename.empty() ? nullptr : params.zircon_nodename.data();
     const char* args[] = {
         "/boot/bin/device-name-provider", nullptr, nullptr, nullptr, nullptr, nullptr};
     int argc = 1;
@@ -666,10 +744,18 @@ int SystemInstance::ServiceStarter(Coordinator* coordinator) {
                      FS_DEV);
   }
 
-  if (!coordinator->boot_args().GetBool("virtcon.disable", false)) {
+  if (!params.virtcon_disable) {
     // pass virtcon.* options along
     fbl::Vector<const char*> env;
-    coordinator->boot_args().Collect("virtcon.", &env);
+    std::vector<std::string> strings;
+    auto resp = coordinator->boot_args()->Collect(fidl::StringView{"virtcon."});
+    if (!resp.ok()) {
+      return resp.status();
+    }
+    for (auto& v : resp->results) {
+      strings.emplace_back(v.data(), v.size());
+      env.push_back(strings.back().data());
+    }
     env.push_back(nullptr);
 
     const char* num_shells = coordinator->require_system() && !netboot ? "0" : "3";
@@ -700,14 +786,13 @@ int SystemInstance::ServiceStarter(Coordinator* coordinator) {
                      coordinator->root_resource(), handles, types, handle_count, nullptr, FS_ALL);
   }
 
-  const char* backstop = coordinator->boot_args().Get("clock.backstop");
-  if (backstop) {
-    zx_time_t offset = ZX_SEC(atoi(backstop));
-    printf("driver_manager: setting UTC backstop: %ld\n", offset);
-    zx_clock_adjust(coordinator->root_resource().get(), ZX_CLOCK_UTC, offset);
+  if (!params.clock_backstop.empty()) {
+    auto offset = zx::sec(atoi(params.clock_backstop.data()));
+    printf("driver_manager: setting UTC backstop: %ld\n", offset.get());
+    zx_clock_adjust(coordinator->root_resource().get(), ZX_CLOCK_UTC, offset.get());
   }
 
-  do_autorun("autorun:boot", coordinator->boot_args().Get("zircon.autorun.boot"),
+  do_autorun("autorun:boot", params.autorun_boot.empty() ? nullptr : params.autorun_boot.data(),
              coordinator->root_resource());
 
   auto starter_args = std::make_unique<ServiceStarterArgs>();
@@ -743,7 +828,12 @@ int SystemInstance::WaitForSystemAvailable(Coordinator* coordinator) {
   coordinator->set_system_available(true);
   coordinator->ScanSystemDrivers();
 
-  do_autorun("autorun:system", coordinator->boot_args().Get("zircon.autorun.system"),
+  auto resp = coordinator->boot_args()->GetString(fidl::StringView{"zircon.autorun.system"});
+  std::string autorun;
+  if (resp.ok() && !resp->value.is_null()) {
+    autorun = std::string{resp->value.data(), resp->value.size()};
+  }
+  do_autorun("autorun:system", autorun.empty() ? nullptr : autorun.data(),
              coordinator->root_resource());
 
   return 0;

@@ -204,14 +204,14 @@ class TestDriverTestReporter : public DriverTestReporter {
 };
 
 TEST(MiscTestCase, InitCoreDevices) {
-  Coordinator coordinator(DefaultConfig(nullptr, nullptr));
+  Coordinator coordinator(DefaultConfig(nullptr, nullptr, nullptr, nullptr));
 
   zx_status_t status = coordinator.InitCoreDevices(kSystemDriverPath);
   ASSERT_OK(status);
 }
 
 TEST(MiscTestCase, DumpState) {
-  Coordinator coordinator(DefaultConfig(nullptr, nullptr));
+  Coordinator coordinator(DefaultConfig(nullptr, nullptr, nullptr, nullptr));
 
   zx_status_t status = coordinator.InitCoreDevices(kSystemDriverPath);
   ASSERT_OK(status);
@@ -245,7 +245,7 @@ TEST(MiscTestCase, LoadDriver) {
 
 TEST(MiscTestCase, BindDrivers) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  Coordinator coordinator(DefaultConfig(loop.dispatcher(), nullptr));
+  Coordinator coordinator(DefaultConfig(loop.dispatcher(), nullptr, nullptr, nullptr));
 
   zx_status_t status = coordinator.InitCoreDevices(kSystemDriverPath);
   ASSERT_OK(status);
@@ -265,7 +265,7 @@ TEST(MiscTestCase, BindDrivers) {
 // Test binding drivers against the root/test/misc devices
 TEST(MiscTestCase, BindDriversForBuiltins) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  Coordinator coordinator(DefaultConfig(loop.dispatcher(), nullptr));
+  Coordinator coordinator(DefaultConfig(loop.dispatcher(), nullptr, nullptr, nullptr));
 
   zx_status_t status = coordinator.InitCoreDevices(kSystemDriverPath);
   ASSERT_OK(status);
@@ -363,7 +363,7 @@ TEST(MiscTestCase, BindDriversForBuiltins) {
 
 TEST(MiscTestCase, BindDevices) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  Coordinator coordinator(DefaultConfig(loop.dispatcher(), nullptr));
+  Coordinator coordinator(DefaultConfig(loop.dispatcher(), nullptr, nullptr, nullptr));
 
   ASSERT_NO_FATAL_FAILURES(InitializeCoordinator(&coordinator));
 
@@ -415,7 +415,7 @@ TEST(MiscTestCase, BindDevices) {
 
 TEST(MiscTestCase, TestOutput) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  Coordinator coordinator(DefaultConfig(loop.dispatcher(), nullptr));
+  Coordinator coordinator(DefaultConfig(loop.dispatcher(), nullptr, nullptr, nullptr));
 
   ASSERT_NO_FATAL_FAILURES(InitializeCoordinator(&coordinator));
 
@@ -496,7 +496,7 @@ TEST(MiscTestCase, TestOutput) {
 void AddDeviceWithProperties(const llcpp::fuchsia::device::manager::DeviceProperty* props_data,
                              size_t props_count) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  Coordinator coordinator(DefaultConfig(loop.dispatcher(), nullptr));
+  Coordinator coordinator(DefaultConfig(loop.dispatcher(), nullptr, nullptr, nullptr));
 
   ASSERT_NO_FATAL_FAILURES(InitializeCoordinator(&coordinator));
 

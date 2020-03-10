@@ -9,6 +9,8 @@
 #include <lib/zx/channel.h>
 #include <lib/zx/job.h>
 
+#include <map>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -19,8 +21,6 @@ namespace devmgr_launcher {
 
 using GetBootItemFunction = fit::inline_function<zx_status_t(uint32_t type, uint32_t extra,
                                                              zx::vmo* vmo, uint32_t* length)>;
-
-using GetArgumentsFunction = fit::inline_function<zx_status_t(zx::vmo* vmo, uint32_t* length)>;
 
 struct Args {
   // A list of absolute paths (in devmgr's view of the filesystem) to search
@@ -54,8 +54,9 @@ struct Args {
 
   // Function to handle requests for boot items.
   GetBootItemFunction get_boot_item;
-  // Function to handle requests for boot arguments.
-  GetArgumentsFunction get_arguments;
+
+  // Map of boot arguments
+  std::map<std::string, std::string> boot_args;
 };
 
 // Launches an isolated devmgr, passing the given |args| to it and providing the given |svc_client|

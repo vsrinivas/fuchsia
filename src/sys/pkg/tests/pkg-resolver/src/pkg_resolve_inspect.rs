@@ -195,9 +195,7 @@ async fn test_channel_in_vbmeta_appears_in_inspect_state() {
     let mounts = lib::Mounts::new();
     mounts.add_static_repository(config.clone());
     let env = TestEnvBuilder::new()
-        .boot_arguments_service(lib::BootArgumentsService::new(
-            b"foo=bar\0ota_channel=test-channel\0tuf_repo_config=test-repo",
-        ))
+        .boot_arguments_service(lib::BootArgumentsService::new("test-repo"))
         .mounts(mounts)
         .build();
     env.wait_for_pkg_resolver_to_start().await;

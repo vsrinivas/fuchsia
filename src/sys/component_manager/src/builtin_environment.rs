@@ -5,6 +5,7 @@
 use {
     crate::{
         builtin::{
+            arguments::Arguments as BootArguments,
             capability::BuiltinCapability,
             log::{ReadOnlyLog, WriteOnlyLog},
             process_launcher::ProcessLauncher,
@@ -49,6 +50,7 @@ use {
 ///   available.
 pub struct BuiltinEnvironment {
     // Framework capabilities.
+    pub boot_args: Arc<BootArguments>,
     pub process_launcher: Option<Arc<ProcessLauncher>>,
     pub root_job: Arc<RootJob>,
     pub root_job_for_inspect: Arc<RootJob>,
@@ -100,6 +102,10 @@ impl BuiltinEnvironment {
 
         let root_resource_handle =
             take_startup_handle(HandleType::Resource.into()).map(zx::Resource::from);
+
+        // Set up BootArguments service.
+        let boot_args = BootArguments::new();
+        model.root_realm.hooks.install(boot_args.hooks()).await;
 
         // Set up ReadOnlyLog service.
         let read_only_log = root_resource_handle.as_ref().map(|handle| {
@@ -168,6 +174,7 @@ impl BuiltinEnvironment {
         };
 
         Ok(BuiltinEnvironment {
+            boot_args,
             process_launcher,
             root_job,
             root_job_for_inspect,

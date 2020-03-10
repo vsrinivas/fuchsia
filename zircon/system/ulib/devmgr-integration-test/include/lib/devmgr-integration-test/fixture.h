@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_DEVMGR_INTEGRATION_TEST_FIXTURE_H_
+#define LIB_DEVMGR_INTEGRATION_TEST_FIXTURE_H_
 
 #include <lib/devmgr-launcher/launch.h>
 #include <lib/zx/job.h>
@@ -50,12 +51,12 @@ class IsolatedDevmgr {
 
  private:
   using GetBootItemFunction = devmgr_launcher::GetBootItemFunction;
-  using GetArgumentsFunction = devmgr_launcher::GetArgumentsFunction;
 
   // Opaque structure for the internal state used for serving /svc
   struct SvcLoopState;
   zx_status_t SetupSvcLoop(zx::channel bootsvc_server, zx::channel fshost_outgoing_client,
-                           GetBootItemFunction get_boot_item, GetArgumentsFunction get_arguments);
+                           GetBootItemFunction get_boot_item,
+                           std::map<std::string, std::string>&& boot_args);
 
   // If |job_| exists, terminate it.
   void Terminate();
@@ -106,3 +107,5 @@ class DirWatcher {
 };
 
 }  // namespace devmgr_integration_test
+
+#endif  // LIB_DEVMGR_INTEGRATION_TEST_FIXTURE_H_

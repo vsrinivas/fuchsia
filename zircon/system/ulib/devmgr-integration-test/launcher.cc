@@ -3,36 +3,40 @@
 // found in the LICENSE file.
 
 #include <fuchsia/boot/c/fidl.h>
+#include <fuchsia/boot/llcpp/fidl.h>
 #include <fuchsia/process/c/fidl.h>
 #include <fuchsia/scheduler/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/wait.h>
+#include <lib/async/dispatcher.h>
 #include <lib/devmgr-integration-test/fixture.h>
 #include <lib/devmgr-launcher/launch.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fidl-async/bind.h>
+#include <lib/fidl-async/cpp/bind.h>
 #include <stdint.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 
+#include <map>
 #include <thread>
 #include <utility>
 
 #include <fbl/algorithm.h>
+#include <fbl/ref_ptr.h>
+#include <fbl/string_printf.h>
 #include <fs/pseudo_dir.h>
 #include <fs/service.h>
 #include <fs/synchronous_vfs.h>
 #include <fs/vfs_types.h>
-
-#include "fbl/ref_ptr.h"
+#include <mock-boot-arguments/server.h>
 
 namespace {
 
 using GetBootItemFunction = devmgr_launcher::GetBootItemFunction;
-using GetArgumentsFunction = devmgr_launcher::GetArgumentsFunction;
 
 zx_status_t ItemsGet(void* ctx, uint32_t type, uint32_t extra, fidl_txn_t* txn) {
   const auto& get_boot_item = *static_cast<GetBootItemFunction*>(ctx);
@@ -51,23 +55,6 @@ constexpr fuchsia_boot_Items_ops kItemsOps = {
     .Get = ItemsGet,
 };
 
-zx_status_t ArgumentsGet(void* ctx, fidl_txn_t* txn) {
-  const auto& get_arguments = *static_cast<GetArgumentsFunction*>(ctx);
-  zx::vmo vmo;
-  uint32_t length = 0;
-  if (get_arguments) {
-    zx_status_t status = get_arguments(&vmo, &length);
-    if (status != ZX_OK) {
-      return status;
-    }
-  }
-  return fuchsia_boot_ArgumentsGet_reply(txn, vmo.release(), length);
-}
-
-constexpr fuchsia_boot_Arguments_ops kArgumentsOps = {
-    .Get = ArgumentsGet,
-};
-
 zx_status_t RootJobGet(void* ctx, fidl_txn_t* txn) {
   const auto& root_job = *static_cast<zx::unowned_job*>(ctx);
   zx::job job;
@@ -81,6 +68,16 @@ zx_status_t RootJobGet(void* ctx, fidl_txn_t* txn) {
 constexpr fuchsia_boot_RootJob_ops kRootJobOps = {
     .Get = RootJobGet,
 };
+
+void CreateFakeCppService(fbl::RefPtr<fs::PseudoDir> root, const char* name,
+                          async_dispatcher_t* dispatcher,
+                          std::unique_ptr<llcpp::fuchsia::boot::Arguments::Interface> server) {
+  auto node = fbl::MakeRefCounted<fs::Service>(
+      [dispatcher, server{std::move(server)}](zx::channel channel) {
+        return fidl::Bind(dispatcher, std::move(channel), server.get());
+      });
+  root->AddEntry(name, node);
+}
 
 void CreateFakeService(fbl::RefPtr<fs::PseudoDir> root, const char* name,
                        async_dispatcher_t* dispatcher, fidl_dispatch_t* dispatch, void* ctx,
@@ -113,7 +110,6 @@ struct IsolatedDevmgr::SvcLoopState {
   }
 
   GetBootItemFunction get_boot_item;
-  GetArgumentsFunction get_arguments;
 
   async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
   fbl::RefPtr<fs::PseudoDir> root{fbl::MakeRefCounted<fs::PseudoDir>()};
@@ -129,10 +125,9 @@ struct IsolatedDevmgr::SvcLoopState {
 zx_status_t IsolatedDevmgr::SetupSvcLoop(zx::channel bootsvc_server,
                                          zx::channel fshost_outgoing_client,
                                          GetBootItemFunction get_boot_item,
-                                         GetArgumentsFunction get_arguments) {
+                                         std::map<std::string, std::string>&& boot_args) {
   svc_loop_state_ = std::make_unique<SvcLoopState>();
   svc_loop_state_->get_boot_item = std::move(get_boot_item);
-  svc_loop_state_->get_arguments = std::move(get_arguments);
 
   // Quit the loop when the channel is closed.
   svc_loop_state_->bootsvc_wait.set_object(bootsvc_server.get());
@@ -149,6 +144,7 @@ zx_status_t IsolatedDevmgr::SetupSvcLoop(zx::channel bootsvc_server,
       return status;
     }
     status = fdio_service_connect("/svc", svc_server.release());
+
     if (status != ZX_OK) {
       return status;
     }
@@ -184,14 +180,13 @@ zx_status_t IsolatedDevmgr::SetupSvcLoop(zx::channel bootsvc_server,
                     svc_loop_state_->loop.dispatcher(), items_dispatch,
                     &svc_loop_state_->get_boot_item, &kItemsOps);
 
-  auto arguments_dispatch = reinterpret_cast<fidl_dispatch_t*>(fuchsia_boot_Arguments_dispatch);
-  CreateFakeService(svc_loop_state_->root, fuchsia_boot_Arguments_Name,
-                    svc_loop_state_->loop.dispatcher(), arguments_dispatch,
-                    &svc_loop_state_->get_arguments, &kArgumentsOps);
-
   auto root_job_dispatch = reinterpret_cast<fidl_dispatch_t*>(fuchsia_boot_RootJob_dispatch);
   CreateFakeService(svc_loop_state_->root, fuchsia_boot_RootJob_Name,
                     svc_loop_state_->loop.dispatcher(), root_job_dispatch, &job_, &kRootJobOps);
+
+  CreateFakeCppService(svc_loop_state_->root, llcpp::fuchsia::boot::Arguments::Name,
+                       svc_loop_state_->loop.dispatcher(),
+                       std::make_unique<mock_boot_arguments::Server>(std::move(boot_args)));
 
   // Serve VFS on channel.
   svc_loop_state_->vfs.ServeDirectory(svc_loop_state_->root, std::move(bootsvc_server),
@@ -259,11 +254,11 @@ zx_status_t IsolatedDevmgr::Create(devmgr_launcher::Args args, IsolatedDevmgr* o
   }
 
   GetBootItemFunction get_boot_item = std::move(args.get_boot_item);
-  GetArgumentsFunction get_arguments = std::move(args.get_arguments);
 
   IsolatedDevmgr devmgr;
   zx::channel devfs;
   zx::channel outgoing_svc_root;
+  std::map<std::string, std::string> boot_args = std::move(args.boot_args);
   status = devmgr_launcher::Launch(std::move(args), std::move(svc_client),
                                    std::move(fshost_outgoing_server), &devmgr.job_, &devfs,
                                    &outgoing_svc_root);
@@ -272,7 +267,7 @@ zx_status_t IsolatedDevmgr::Create(devmgr_launcher::Args args, IsolatedDevmgr* o
   }
 
   status = devmgr.SetupSvcLoop(std::move(svc_server), std::move(fshost_outgoing_client),
-                               std::move(get_boot_item), std::move(get_arguments));
+                               std::move(get_boot_item), std::move(boot_args));
   if (status != ZX_OK) {
     return status;
   }

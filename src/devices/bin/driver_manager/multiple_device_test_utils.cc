@@ -112,6 +112,9 @@ void MultipleDeviceTestCase::SetUp() {
     devhost_.set_hrpc(local.release());
   }
 
+  // Start the mock server thread.
+  ASSERT_OK(mock_server_loop_.StartThread("mock-admin-server"));
+
   // Set up the sys device proxy, inside of the devhost
   ASSERT_OK(coordinator_.PrepareProxy(coordinator_.sys_device(), &devhost_));
   coordinator_loop_.RunUntilIdle();
@@ -143,8 +146,7 @@ void MultipleDeviceTestCase::SetUp() {
   }
 
   coordinator_.SetFshostAdminClient(
-      coordinator_.admin_server_.CreateClient(admin_server_loop_.dispatcher()));
-  ASSERT_OK(admin_server_loop_.StartThread("mock-admin-server"));
+      coordinator_.admin_server_.CreateClient(mock_server_loop_.dispatcher()));
 }
 
 void MultipleDeviceTestCase::TearDown() {

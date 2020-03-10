@@ -12,6 +12,8 @@
 #include <lib/zx/vmo.h>
 #include <limits.h>
 
+#include <map>
+
 #include <ddk/metadata/test.h>
 #include <ddk/platform-defs.h>
 #include <zxtest/zxtest.h>
@@ -31,32 +33,6 @@ static constexpr const char kManualChildDriverName[] = "devhost-test-manual.so";
 static constexpr const char kDriverTestDir[] = "/boot/driver/test";
 static constexpr const char kPassDriverName[] = "unit-test-pass.so";
 static constexpr const char kFailDriverName[] = "unit-test-fail.so";
-
-zx_status_t GetArguments(const fbl::Vector<const char*>& arguments, zx::vmo* out,
-                         uint32_t* length) {
-  size_t size = 0;
-  for (const char* arg : arguments) {
-    // Add 1 for the null byte.
-    size += strlen(arg) + 1;
-  }
-
-  zx::vmo vmo;
-  zx_status_t status = zx::vmo::create(size, 0, &vmo);
-  size_t offset = 0;
-  for (const char* arg : arguments) {
-    // Add 1 for the null byte.
-    size_t length = strlen(arg) + 1;
-    status = vmo.write(arg, offset, length);
-    if (status != ZX_OK) {
-      return status;
-    }
-    offset += length;
-  }
-
-  *length = static_cast<uint32_t>(size);
-  *out = std::move(vmo);
-  return status;
-}
 
 void CreateTestDevice(const IsolatedDevmgr& devmgr, const char* driver_name,
                       zx::channel* dev_channel) {
@@ -314,11 +290,7 @@ TEST(DeviceControllerIntegrationTest, AllTestsEnabledBind) {
   IsolatedDevmgr devmgr;
   auto args = IsolatedDevmgr::DefaultArgs();
 
-  fbl::Vector<const char*> arguments;
-  arguments.push_back("driver.tests.enable=true");
-  args.get_arguments = [&arguments](zx::vmo* out, uint32_t* length) {
-    return GetArguments(arguments, out, length);
-  };
+  args.boot_args.emplace("driver.tests.enable", "true");
 
   zx_status_t status = IsolatedDevmgr::Create(std::move(args), &devmgr);
   ASSERT_OK(status);
@@ -344,11 +316,7 @@ TEST(DeviceControllerIntegrationTest, AllTestsEnabledBindFail) {
   IsolatedDevmgr devmgr;
   auto args = IsolatedDevmgr::DefaultArgs();
 
-  fbl::Vector<const char*> arguments;
-  arguments.push_back("driver.tests.enable=true");
-  args.get_arguments = [&arguments](zx::vmo* out, uint32_t* length) {
-    return GetArguments(arguments, out, length);
-  };
+  args.boot_args.emplace("driver.tests.enable", "true");
 
   zx_status_t status = IsolatedDevmgr::Create(std::move(args), &devmgr);
   ASSERT_OK(status);
@@ -375,11 +343,7 @@ TEST(DeviceControllerIntegrationTest, SpecificTestEnabledBindFail) {
   IsolatedDevmgr devmgr;
   auto args = IsolatedDevmgr::DefaultArgs();
 
-  fbl::Vector<const char*> arguments;
-  arguments.push_back("driver.unit_test_fail.tests.enable=true");
-  args.get_arguments = [&arguments](zx::vmo* out, uint32_t* length) {
-    return GetArguments(arguments, out, length);
-  };
+  args.boot_args.emplace("driver.unit_test_fail.tests.enable", "true");
 
   zx_status_t status = IsolatedDevmgr::Create(std::move(args), &devmgr);
   ASSERT_OK(status);
@@ -430,12 +394,8 @@ TEST(DeviceControllerIntegrationTest, SpecificTestDisabledBind) {
   IsolatedDevmgr devmgr;
   auto args = IsolatedDevmgr::DefaultArgs();
 
-  fbl::Vector<const char*> arguments;
-  arguments.push_back("driver.tests.enable=true");
-  arguments.push_back("driver.unit_test_fail.tests.enable=false");
-  args.get_arguments = [&arguments](zx::vmo* out, uint32_t* length) {
-    return GetArguments(arguments, out, length);
-  };
+  args.boot_args.emplace("driver.tests.enable", "true");
+  args.boot_args.emplace("driver.unit_test_fail.tests.enable", "false");
 
   zx_status_t status = IsolatedDevmgr::Create(std::move(args), &devmgr);
   ASSERT_OK(status);

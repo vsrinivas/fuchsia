@@ -4,35 +4,29 @@
 
 #include "coordinator_test_utils.h"
 
+#include <fuchsia/boot/llcpp/fidl.h>
+
+#include <mock-boot-arguments/server.h>
 #include <zxtest/zxtest.h>
 
-CoordinatorConfig DefaultConfig(async_dispatcher_t* dispatcher, devmgr::BootArgs* boot_args) {
+CoordinatorConfig DefaultConfig(async_dispatcher_t* dispatcher,
+                                async_dispatcher_t* bootargs_dispatcher,
+                                mock_boot_arguments::Server* boot_args,
+                                llcpp::fuchsia::boot::Arguments::SyncClient* client) {
   CoordinatorConfig config{};
-  const char config1[] = "key1=old-value\0key2=value2\0key1=new-value";
-  if (boot_args != nullptr) {
-    CreateBootArgs(config1, sizeof(config1), boot_args);
+  if (boot_args != nullptr && client != nullptr) {
+    *boot_args = mock_boot_arguments::Server{{{"key1", "new-value"}, {"key2", "value2"}}};
+    boot_args->CreateClient(bootargs_dispatcher, client);
   }
   config.dispatcher = dispatcher;
   config.require_system = false;
   config.asan_drivers = false;
-  config.boot_args = boot_args;
+  config.boot_args = client;
   config.fs_provider = new DummyFsProvider();
   config.suspend_fallback = true;
   config.suspend_timeout = zx::sec(2);
   config.resume_timeout = zx::sec(2);
   return config;
-}
-
-void CreateBootArgs(const char* config, size_t size, devmgr::BootArgs* boot_args) {
-  zx::vmo vmo;
-  zx_status_t status = zx::vmo::create(size, 0, &vmo);
-  ASSERT_OK(status);
-
-  status = vmo.write(config, 0, size);
-  ASSERT_OK(status);
-
-  status = devmgr::BootArgs::Create(std::move(vmo), size, boot_args);
-  ASSERT_OK(status);
 }
 
 void InitializeCoordinator(Coordinator* coordinator) {

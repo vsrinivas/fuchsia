@@ -22,6 +22,7 @@
 #include <zircon/syscalls/resource.h>
 #include <zircon/syscalls/system.h>
 
+#include <memory>
 #include <sstream>
 #include <thread>
 #include <utility>
@@ -174,7 +175,8 @@ zx_status_t LoadBootArgs(const fbl::RefPtr<bootsvc::BootfsService>& bootfs,
 void LaunchNextProcess(fbl::RefPtr<bootsvc::BootfsService> bootfs,
                        fbl::RefPtr<bootsvc::SvcfsService> svcfs,
                        fbl::RefPtr<bootsvc::BootfsLoaderService> loader_svc,
-                       const zx::resource& root_rsrc, const zx::debuglog& log, async::Loop& loop) {
+                       const zx::resource& root_rsrc, const zx::debuglog& log, async::Loop& loop,
+                       const zx::vmo& bootargs_vmo, const uint64_t bootargs_size) {
   const char* bootsvc_next = getenv("bootsvc.next");
   if (bootsvc_next == nullptr) {
     bootsvc_next =
@@ -244,6 +246,28 @@ void LaunchNextProcess(fbl::RefPtr<bootsvc::BootfsService> bootfs,
 
   ZX_ASSERT(count <= fbl::count_of(nametable));
   launchpad_set_nametable(lp, count, nametable);
+
+  // Set up the environment table for launchpad.
+  std::vector<char> env(bootargs_size);
+  std::vector<char*> envp;
+  status = bootargs_vmo.read(env.data(), 0, bootargs_size);
+  ZX_ASSERT_MSG(status == ZX_OK, "failed to read bootargs from vmo: %s",
+                zx_status_get_string(status));
+
+  uint64_t last_env_start = 0;
+  uint64_t i;
+  for (i = 0; i < bootargs_size; i++) {
+    if (env[i] == 0) {
+      envp.push_back(&env[last_env_start]);
+      last_env_start = i + 1;
+    }
+  }
+  envp.push_back(nullptr);
+
+  status = launchpad_set_environ(lp, envp.data());
+  if (status != ZX_OK) {
+    launchpad_abort(lp, status, "bootsvc: cannot set up environment");
+  }
 
   zx::debuglog log_dup;
   status = log.duplicate(ZX_RIGHT_SAME_RIGHTS, &log_dup);
@@ -344,9 +368,6 @@ int main(int argc, char** argv) {
   printf("bootsvc: Creating svcfs service...\n");
   fbl::RefPtr<bootsvc::SvcfsService> svcfs_svc = bootsvc::SvcfsService::Create(loop.dispatcher());
   svcfs_svc->AddService(
-      fuchsia_boot_Arguments_Name,
-      bootsvc::CreateArgumentsService(loop.dispatcher(), std::move(args_vmo), args_size));
-  svcfs_svc->AddService(
       fuchsia_boot_Items_Name,
       bootsvc::CreateItemsService(loop.dispatcher(), std::move(image_vmo), std::move(item_map)));
   svcfs_svc->AddService(
@@ -373,7 +394,7 @@ int main(int argc, char** argv) {
   // starts running after this.
   printf("bootsvc: Launching next process...\n");
   std::thread(LaunchNextProcess, bootfs_svc, svcfs_svc, loader_svc, std::cref(root_resource),
-              std::cref(log), std::ref(loop))
+              std::cref(log), std::ref(loop), std::cref(args_vmo), args_size)
       .detach();
 
   // Begin serving the bootfs fileystem and loader

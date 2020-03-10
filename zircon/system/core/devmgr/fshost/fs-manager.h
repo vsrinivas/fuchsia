@@ -8,7 +8,6 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/wait.h>
-#include <lib/boot-args/boot-args.h>
 #include <lib/memfs/cpp/vnode.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/channel.h>

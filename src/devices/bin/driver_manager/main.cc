@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 #include <fuchsia/boot/c/fidl.h>
+#include <fuchsia/boot/llcpp/fidl.h>
 #include <fuchsia/ldsvc/llcpp/fidl.h>
 #include <getopt.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/boot-args/boot-args.h>
 #include <lib/devmgr-launcher/processargs.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
@@ -25,12 +25,14 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
 #include <zircon/syscalls/policy.h>
+#include <zircon/types.h>
 
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <memory>
 
+#include <fbl/string_printf.h>
 #include <fs/managed_vfs.h>
 #include <fs/pseudo_dir.h>
 #include <fs/remote_dir.h>
@@ -45,6 +47,35 @@
 #include "system_instance.h"
 
 namespace {
+
+// These are helpers for getting sets of parameters over FIDL
+struct DriverManagerParams {
+  bool verbose;
+  bool require_system;
+  bool devhost_asan;
+  bool devhost_strict_linking;
+  bool suspend_timeout_fallback;
+};
+
+DriverManagerParams GetDriverManagerParams(llcpp::fuchsia::boot::Arguments::SyncClient& client) {
+  std::vector<llcpp::fuchsia::boot::BoolPair> bool_req{
+      {fidl::StringView{"devmgr.verbose"}, false},
+      {fidl::StringView{"devmgr.require-system"}, false},
+      // TODO(bwb): remove this or figure out how to make it work
+      {fidl::StringView{"devmgr.devhost.asan"}, false},
+      {fidl::StringView{"devmgr.devhost.strict-linking"}, false},
+      // Turn it on by default. See fxb/34577
+      {fidl::StringView{"devmgr.suspend-timeout-fallback"}, true},
+  };
+  auto bool_resp = client.GetBools(fidl::VectorView{bool_req});
+  DriverManagerParams params{false, false, false, false, true};
+
+  if (bool_resp.ok()) {
+    params = {bool_resp->values[0], bool_resp->values[1], bool_resp->values[2],
+              bool_resp->values[3], bool_resp->values[4]};
+  }
+  return params;
+}
 
 constexpr char kRootJobPath[] = "/svc/" fuchsia_boot_RootJob_Name;
 constexpr char kRootResourcePath[] = "/svc/" fuchsia_boot_RootResource_Name;
@@ -172,15 +203,24 @@ zx_status_t CreateDevhostJob(const zx::job& root_job, zx::job* devhost_job_out) 
 }  // namespace
 
 int main(int argc, char** argv) {
-  devmgr::BootArgs boot_args;
-  zx_status_t status = devmgr::BootArgs::CreateFromArgumentsService(&boot_args);
+  zx::channel local, remote;
+  zx_status_t status = zx::channel::create(0, &local, &remote);
   if (status != ZX_OK) {
-    fprintf(stderr,
-            "driver_manager: failed to get boot arguments, assuming test "
-            "environment and continuing\n");
+    log(ERROR, "driver_manager: failed to create channel for boot args: '%s'",
+        zx_status_get_string(status));
+    return status;
+  }
+  auto path = fbl::StringPrintf("/svc/%s", llcpp::fuchsia::boot::Arguments::Name);
+  status = fdio_service_connect(path.data(), remote.release());
+  if (status != ZX_OK) {
+    log(ERROR, "driver_manager: failed to get boot arguments service handle: '%s'",
+        zx_status_get_string(status));
+    return status;
   }
 
-  if (boot_args.GetBool("devmgr.verbose", false)) {
+  auto boot_args = llcpp::fuchsia::boot::Arguments::SyncClient{std::move(local)};
+  auto driver_manager_params = GetDriverManagerParams(boot_args);
+  if (driver_manager_params.verbose) {
     log_flags |= LOG_ALL;
   }
 
@@ -194,18 +234,14 @@ int main(int argc, char** argv) {
     devmgr_args.sys_device_driver = "/boot/driver/platform-bus.so";
   }
 
-  bool require_system = boot_args.GetBool("devmgr.require-system", false);
-
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   CoordinatorConfig config{};
   SystemInstance system_instance;
   config.dispatcher = loop.dispatcher();
   config.boot_args = &boot_args;
-  config.require_system = require_system;
-  // TODO(bwb): remove this or figure out how to make it work
-  config.asan_drivers = boot_args.GetBool("devmgr.devhost.asan", false);
-  // Turn it on by default. See fxb/34577
-  config.suspend_fallback = boot_args.GetBool("devmgr.suspend-timeout-fallback", true);
+  config.require_system = driver_manager_params.require_system;
+  config.asan_drivers = driver_manager_params.devhost_asan;
+  config.suspend_fallback = driver_manager_params.suspend_timeout_fallback;
   config.disable_netsvc = devmgr_args.disable_netsvc;
   config.fs_provider = &system_instance;
 
@@ -303,7 +339,8 @@ int main(int argc, char** argv) {
       fprintf(stderr, "driver_manager: failed to bind outgoing services\n");
       return 1;
     }
-    status = system_instance.StartSvchost(root_job, root_client, require_system, &coordinator);
+    status = system_instance.StartSvchost(root_job, root_client,
+                                          driver_manager_params.require_system, &coordinator);
     if (status != ZX_OK) {
       fprintf(stderr, "driver_manager: failed to start svchost: %s\n",
               zx_status_get_string(status));
@@ -347,7 +384,7 @@ int main(int argc, char** argv) {
   thrd_detach(t);
 
   std::unique_ptr<DevhostLoaderService> loader_service;
-  if (boot_args.GetBool("devmgr.devhost.strict-linking", false)) {
+  if (driver_manager_params.devhost_strict_linking) {
     status = DevhostLoaderService::Create(loop.dispatcher(), &system_instance, &loader_service);
     if (status != ZX_OK) {
       log(ERROR, "driver_manager: failed to create loader service\n");

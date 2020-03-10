@@ -17,26 +17,6 @@
 
 namespace {
 
-struct ArgumentsData {
-  zx::vmo vmo;
-  size_t size;
-};
-
-zx_status_t ArgumentsGet(void* ctx, fidl_txn_t* txn) {
-  auto data = static_cast<const ArgumentsData*>(ctx);
-  zx::vmo dup;
-  zx_status_t status = data->vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup);
-  if (status != ZX_OK) {
-    printf("bootsvc: Failed to duplicate boot arguments VMO: %s\n", zx_status_get_string(status));
-    return status;
-  }
-  return fuchsia_boot_ArgumentsGet_reply(txn, dup.release(), data->size);
-}
-
-constexpr fuchsia_boot_Arguments_ops kArgumentsOps = {
-    .Get = ArgumentsGet,
-};
-
 zx_status_t FactoryItemsGet(void* ctx, uint32_t extra, fidl_txn_t* txn) {
   auto map = static_cast<bootsvc::FactoryItemMap*>(ctx);
   auto it = map->find(extra);
@@ -115,16 +95,6 @@ void SvcfsService::AddService(const char* service_name, fbl::RefPtr<fs::Service>
 
 zx_status_t SvcfsService::CreateRootConnection(zx::channel* out) {
   return CreateVnodeConnection(&vfs_, root_, fs::Rights::ReadWrite(), out);
-}
-
-fbl::RefPtr<fs::Service> CreateArgumentsService(async_dispatcher_t* dispatcher, zx::vmo vmo,
-                                                uint64_t size) {
-  ArgumentsData data{std::move(vmo), size};
-  return fbl::MakeRefCounted<fs::Service>(
-      [dispatcher, data = std::move(data)](zx::channel channel) mutable {
-        auto dispatch = reinterpret_cast<fidl_dispatch_t*>(fuchsia_boot_Arguments_dispatch);
-        return fidl_bind(dispatcher, channel.release(), dispatch, &data, &kArgumentsOps);
-      });
 }
 
 fbl::RefPtr<fs::Service> CreateFactoryItemsService(async_dispatcher_t* dispatcher,

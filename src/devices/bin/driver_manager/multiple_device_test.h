@@ -5,9 +5,11 @@
 #ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_MULTIPLE_DEVICE_TEST_H_
 #define SRC_DEVICES_BIN_DRIVER_MANAGER_MULTIPLE_DEVICE_TEST_H_
 
+#include <fuchsia/boot/llcpp/fidl.h>
 #include <fuchsia/fshost/llcpp/fidl.h>
 #include <lib/fidl-async/cpp/bind.h>
 
+#include <mock-boot-arguments/server.h>
 #include <zxtest/zxtest.h>
 
 #include "coordinator_test_utils.h"
@@ -152,14 +154,17 @@ class MultipleDeviceTestCase : public zxtest::Test {
   // destroyed before them.
   async::Loop coordinator_loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
   bool coordinator_loop_thread_running_ = false;
-  devmgr::BootArgs boot_args_;
 
-  // The admin server needs its own loop/thread, because if we schedule the
-  // admin server on coordinator_loop then coordinator will deadlock waiting
-  // for itself to respond to its shutdown request.
-  async::Loop admin_server_loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
+  mock_boot_arguments::Server boot_args_{{}};
+  llcpp::fuchsia::boot::Arguments::SyncClient args_client_{zx::channel()};
 
-  CoordinatorForTest coordinator_{DefaultConfig(coordinator_loop_.dispatcher(), &boot_args_)};
+  // The admin/bootargs servers need their own loop/thread, because if we schedule them
+  // on coordinator_loop then coordinator will deadlock waiting
+  // for itself to respond to its requests.
+  async::Loop mock_server_loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
+
+  CoordinatorForTest coordinator_{DefaultConfig(
+      coordinator_loop_.dispatcher(), mock_server_loop_.dispatcher(), &boot_args_, &args_client_)};
 
   // A list of all devices that were added during this test, and their
   // channels.  These exist to keep them alive until the test is over.

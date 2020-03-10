@@ -7,12 +7,12 @@
 
 #include <fuchsia/boot/c/fidl.h>
 #include <fuchsia/ldsvc/llcpp/fidl.h>
-#include <lib/boot-args/boot-args.h>
 #include <lib/fdio/namespace.h>
 #include <lib/zx/vmo.h>
 
 #include "coordinator.h"
 #include "fdio.h"
+#include "fuchsia/boot/llcpp/fidl.h"
 
 constexpr char kItemsPath[] = "/svc/" fuchsia_boot_Items_Name;
 
@@ -45,8 +45,8 @@ class SystemInstance : public FsProvider {
   static int pwrbtn_monitor_starter(void* arg);
   int PwrbtnMonitorStarter(Coordinator* coordinator);
 
-  void start_console_shell(const devmgr::BootArgs& boot_args);
-  int ConsoleStarter(const devmgr::BootArgs* arg);
+  void start_console_shell(llcpp::fuchsia::boot::Arguments::SyncClient& boot_args);
+  int ConsoleStarter(llcpp::fuchsia::boot::Arguments::SyncClient* boot_args);
 
   // Thread entry point
   static int service_starter(void* arg);

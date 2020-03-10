@@ -327,22 +327,21 @@ impl TestEnv<PkgfsRamdisk> {
 }
 
 pub struct BootArgumentsService<'a> {
-    args: &'a [u8],
+    tuf_repo_config: &'a str,
 }
 impl BootArgumentsService<'_> {
-    pub fn new(args: &'static [u8]) -> Self {
-        Self { args }
+    pub fn new(tuf_repo_config: &'static str) -> Self {
+        Self { tuf_repo_config }
     }
     async fn run_service(self: Arc<Self>, mut stream: ArgumentsRequestStream) {
         while let Some(req) = stream.try_next().await.unwrap() {
             match req {
-                ArgumentsRequest::Get { responder } => {
-                    let size = self.args.len() as u64;
-                    let vmo = fuchsia_zircon::Vmo::create(size).unwrap();
-                    vmo.write(self.args, 0).unwrap();
-                    responder.send(vmo, size).unwrap();
+                ArgumentsRequest::GetString { key, responder } => {
+                    assert_eq!(key, "tuf_repo_config", "Unexpected GetString key: {}", key);
+                    responder.send(Some(self.tuf_repo_config)).unwrap();
                 }
-            }
+                _ => panic!("Unexpected request to mock BootArgumentsService!"),
+            };
         }
     }
 }

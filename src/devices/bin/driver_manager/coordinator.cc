@@ -44,6 +44,7 @@
 #include <ddk/driver.h>
 #include <driver-info/driver-info.h>
 #include <fbl/auto_call.h>
+#include <fbl/string_printf.h>
 #include <inspector/inspector.h>
 #include <libzbi/zbi-cpp.h>
 
@@ -473,9 +474,10 @@ zx_status_t Coordinator::NewDevhost(const char* name, Devhost* parent, Devhost**
     return status;
   }
   dh->set_hrpc(dh_hrpc.release());
+  auto defer = fit::defer([&dh] { zx_handle_close(dh->hrpc()); });
 
   const char* program = kDriverHostPath;
-  fbl::Vector<const char*> env;
+  std::vector<const char*> env;
   if (config_.asan_drivers) {
     // If there are any ASan drivers, use the ASan-supporting driver_host for
     // all drivers because even a devhost launched initially with just a
@@ -491,13 +493,26 @@ zx_status_t Coordinator::NewDevhost(const char* name, Devhost* parent, Devhost**
     // program = kDriverHostAsanPath;
     env.push_back(kAsanEnvironment);
   }
-  boot_args().Collect("driver.", &env);
+
+  auto devhost_env = boot_args()->Collect(fidl::StringView{"driver."});
+  if (!devhost_env.ok()) {
+    return devhost_env.status();
+  }
+
+  std::vector<std::string> strings;
+  for (auto& entry : devhost_env->results) {
+    strings.emplace_back(entry.data(), entry.size());
+  }
+
+  for (auto& entry : strings) {
+    env.push_back(entry.data());
+  }
+
   env.push_back(nullptr);
   status = dc_launch_devhost(dh.get(), loader_service_connector_, program, name, env.data(),
                              hrpc.release(), root_resource(), zx::unowned_job(config_.devhost_job),
                              config_.fs_provider);
   if (status != ZX_OK) {
-    zx_handle_close(dh->hrpc());
     return status;
   }
   launched_first_devhost_ = true;
@@ -512,6 +527,7 @@ zx_status_t Coordinator::NewDevhost(const char* name, Devhost* parent, Devhost**
   log(DEVLC, "driver_manager: new host %p\n", dh.get());
 
   *out = dh.release();
+  defer.cancel();
   return ZX_OK;
 }
 
@@ -1118,18 +1134,23 @@ static zx_status_t dh_bind_driver(const fbl::RefPtr<Device>& dev, const char* li
           real_parent = dev;
         }
         for (auto& child : real_parent->children()) {
-          char bootarg[256] = {0};
           const char* drivername =
               dev->coordinator->LibnameToDriver(child.libname().data())->name.data();
-          snprintf(bootarg, sizeof(bootarg), "driver.%s.compatibility-tests-enable", drivername);
+          auto bootarg = fbl::StringPrintf("driver.%s.compatibility-tests-enable", drivername);
 
-          if (dev->coordinator->boot_args().GetBool(bootarg, false) &&
+          auto compat_test_enabled =
+              dev->coordinator->boot_args()->GetBool(fidl::StringView{bootarg}, false);
+          if (compat_test_enabled.ok() && compat_test_enabled->value &&
               (real_parent->test_state() == Device::TestStateMachine::kTestNotStarted)) {
-            snprintf(bootarg, sizeof(bootarg), "driver.%s.compatibility-tests-wait-time",
-                     drivername);
-            const char* test_timeout = dev->coordinator->boot_args().Get(bootarg);
-            zx::duration test_time =
-                (test_timeout != nullptr ? zx::msec(atoi(test_timeout)) : kDefaultTestTimeout);
+            bootarg = fbl::StringPrintf("driver.%s.compatibility-tests-wait-time", drivername);
+            auto test_wait_time =
+                dev->coordinator->boot_args()->GetString(fidl::StringView{bootarg});
+            zx::duration test_time = kDefaultTestTimeout;
+            if (test_wait_time.ok() && !test_wait_time->value.is_null()) {
+              auto test_timeout =
+                  std::string{test_wait_time->value.data(), test_wait_time->value.size()};
+              test_time = zx::msec(atoi(test_timeout.data()));
+            }
             real_parent->set_test_time(test_time);
             real_parent->DriverCompatibiltyTest();
             break;
