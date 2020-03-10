@@ -4,6 +4,7 @@
 
 use std::{
     cell::RefCell,
+    fmt,
     slice::{self, ChunksExactMut},
 };
 
@@ -31,28 +32,46 @@ impl TileSlice {
 
 unsafe impl Send for TileSlice {}
 
-#[derive(Debug)]
-pub struct BufferLayout {
-    ptr: *mut [u8; 4],
-    len: usize,
-    layout: Vec<TileSlice>,
-    row_len: usize,
+pub trait Flusher: Send + Sync {
+    fn flush(&self, slice: &mut [[u8; 4]]);
 }
 
-impl BufferLayout {
+pub struct BufferLayoutBuilder {
+    width: usize,
+    width_stride: usize,
+    flusher: Option<Box<dyn Flusher>>,
+}
+
+impl BufferLayoutBuilder {
     #[inline]
-    pub fn new(buffer: &mut [[u8; 4]], width: usize) -> Self {
-        Self::with_stride(buffer, width, width)
+    pub fn new(width: usize) -> Self {
+        BufferLayoutBuilder { width, width_stride: width, flusher: None }
     }
 
     #[inline]
-    pub fn with_stride(buffer: &mut [[u8; 4]], width: usize, width_stride: usize) -> Self {
+    pub fn set_width_stride(mut self, width_stride: usize) -> Self {
+        self.width_stride = width_stride;
+        self
+    }
+
+    #[inline]
+    pub fn set_flusher(mut self, flusher: Box<dyn Flusher>) -> Self {
+        self.flusher = Some(flusher);
+        self
+    }
+
+    #[inline]
+    pub fn build(self, buffer: &mut [[u8; 4]]) -> BufferLayout {
+        let width = self.width;
+        let width_stride = self.width_stride;
+        let flusher = self.flusher;
+
         assert!(width <= buffer.len(), "width exceeds buffer length: {} > {}", width, buffer.len());
         assert!(
             width_stride <= buffer.len(),
             "width_stride exceeds buffer length: {} > {}",
             width_stride,
-            buffer.len()
+            buffer.len(),
         );
 
         let mut row_len = width >> TILE_SHIFT;
@@ -73,20 +92,47 @@ impl BufferLayout {
             .collect();
         layout.sort_by_key(|&(i, j, _)| (j, i));
 
-        Self {
+        BufferLayout {
             ptr: buffer.as_mut_ptr(),
             len: buffer.len(),
             layout: layout.into_iter().map(|(_, _, slice)| slice).collect(),
             row_len,
+            flusher,
         }
     }
+}
 
-    fn par_tile_rows(&mut self, f: impl Fn(usize, ChunksExactMut<'_, TileSlice>) + Send + Sync) {
+pub struct BufferLayout {
+    ptr: *mut [u8; 4],
+    len: usize,
+    layout: Vec<TileSlice>,
+    row_len: usize,
+    flusher: Option<Box<dyn Flusher>>,
+}
+
+impl fmt::Debug for BufferLayout {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt.debug_struct("BufferLayout")
+            .field("ptr", &self.ptr)
+            .field("len", &self.len)
+            .field("layout", &self.layout)
+            .field("row_len", &self.row_len)
+            .field("flusher", &format_args!("{}", self.flusher.is_some()))
+            .finish()
+    }
+}
+
+impl BufferLayout {
+    fn par_tile_rows(
+        &mut self,
+        f: impl Fn(usize, ChunksExactMut<'_, TileSlice>, Option<&Box<dyn Flusher>>) + Send + Sync,
+    ) {
         let row_len = self.row_len;
+        let flusher = self.flusher.as_ref();
         self.layout
             .par_chunks_mut(row_len * TILE_SIZE)
             .enumerate()
-            .for_each(|(j, row)| f(j, row.chunks_exact_mut(row.len() / row_len)));
+            .for_each(|(j, row)| f(j, row.chunks_exact_mut(row.len() / row_len), flusher));
     }
 
     #[inline]
@@ -116,7 +162,7 @@ impl BufferLayout {
             segments = &segments[..=end];
         }
 
-        self.par_tile_rows(|j, row| {
+        self.par_tile_rows(|j, row, flusher| {
             if let Ok(end) = search_last_by_key(segments, j as i16, |segment| segment.tile_j()) {
                 let result = search_last_by_key(segments, j as i16 - 1, |segment| segment.tile_j());
                 let start = match result {
@@ -129,6 +175,7 @@ impl BufferLayout {
                         &segments[start..=end],
                         &styles,
                         clear_color,
+                        flusher,
                         row,
                     );
                     painter.borrow_mut().reset();

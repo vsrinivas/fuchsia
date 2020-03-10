@@ -218,7 +218,7 @@ mod tests {
         let mut buffer = [GREEN];
         let mut composition = Composition::new();
 
-        composition.render(Buffer { buffer: &mut buffer, width: 1, width_stride: None }, RED);
+        composition.render(Buffer { buffer: &mut buffer, width: 1, ..Default::default() }, RED);
 
         assert_eq!(buffer, [GREEN]);
     }
@@ -233,7 +233,7 @@ mod tests {
             .insert_in_layer(layer_id, &pixel_path(1, 0))
             .set_style(Style { fill: Fill::Solid(RED), ..Default::default() });
 
-        composition.render(Buffer { buffer: &mut buffer, width: 3, width_stride: None }, GREEN);
+        composition.render(Buffer { buffer: &mut buffer, width: 3, ..Default::default() }, GREEN);
 
         assert_eq!(buffer, [GREEN, RED, GREEN]);
     }
@@ -249,7 +249,7 @@ mod tests {
             .set_style(Style { fill: Fill::Solid(RED), ..Default::default() });
         composition.insert_in_layer(layer_id, &pixel_path(2, 0));
 
-        composition.render(Buffer { buffer: &mut buffer, width: 3, width_stride: None }, GREEN);
+        composition.render(Buffer { buffer: &mut buffer, width: 3, ..Default::default() }, GREEN);
 
         assert_eq!(buffer, [GREEN, RED, RED]);
     }
@@ -265,7 +265,7 @@ mod tests {
             .set_style(Style { fill: Fill::Solid(RED), ..Default::default() })
             .set_transform(&[1.0, 0.0, 0.0, 1.0, 0.5, 0.0]);
 
-        composition.render(Buffer { buffer: &mut buffer, width: 3, width_stride: None }, GREEN);
+        composition.render(Buffer { buffer: &mut buffer, width: 3, ..Default::default() }, GREEN);
 
         assert_eq!(buffer, [GREEN, RED_GREEN_50, RED_GREEN_50]);
     }
@@ -282,7 +282,7 @@ mod tests {
             .set_style(Style { fill: Fill::Solid(RED), ..Default::default() })
             .set_transform(&[angle.cos(), -angle.sin(), angle.sin(), angle.cos(), 0.0, 0.0]);
 
-        composition.render(Buffer { buffer: &mut buffer, width: 3, width_stride: None }, GREEN);
+        composition.render(Buffer { buffer: &mut buffer, width: 3, ..Default::default() }, GREEN);
 
         assert_eq!(buffer, [GREEN, RED, GREEN]);
     }
@@ -308,7 +308,7 @@ mod tests {
             .insert_in_layer(layer_id2, &pixel_path(3, 0))
             .set_style(Style { fill: Fill::Solid(RED), ..Default::default() });
 
-        composition.render(Buffer { buffer: &mut buffer, width: 4, width_stride: None }, GREEN);
+        composition.render(Buffer { buffer: &mut buffer, width: 4, ..Default::default() }, GREEN);
 
         assert_eq!(buffer, [RED, RED, RED, RED]);
         assert_eq!(composition.builder().len(), 16);
@@ -318,7 +318,7 @@ mod tests {
 
         composition.get_mut(layer_id0).unwrap().disable();
 
-        composition.render(Buffer { buffer: &mut buffer, width: 3, width_stride: None }, GREEN);
+        composition.render(Buffer { buffer: &mut buffer, width: 3, ..Default::default() }, GREEN);
 
         assert_eq!(buffer, [GREEN, RED, RED, RED]);
         assert_eq!(composition.builder().len(), 16);
@@ -328,7 +328,7 @@ mod tests {
 
         composition.get_mut(layer_id2).unwrap().disable();
 
-        composition.render(Buffer { buffer: &mut buffer, width: 3, width_stride: None }, GREEN);
+        composition.render(Buffer { buffer: &mut buffer, width: 3, ..Default::default() }, GREEN);
 
         assert_eq!(buffer, [GREEN, RED, GREEN, GREEN]);
         assert_eq!(composition.builder().len(), 4);

@@ -11,7 +11,7 @@ mod segment;
 
 const PIXEL_WIDTH: i32 = 16;
 
-pub use buffer::Buffer;
+pub use buffer::{Buffer, Flusher};
 pub use composition::Composition;
 pub use layer::{Layer, LayerId};
 pub use path::Path;

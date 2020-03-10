@@ -141,25 +141,7 @@ impl Context {
             }
         }
     }
-    /// Flushes the buffering backing the `image`.
-    pub fn flush_image(&mut self, image: Image) {
-        match &mut self.inner {
-            ContextInner::Mold(ref mut context) => {
-                if let ImageInner::Mold(image) = image.inner {
-                    context.flush_image(image);
-                } else {
-                    panic!("mismatched backends");
-                }
-            }
-            ContextInner::Spinel(ref mut context) => {
-                if let ImageInner::Spinel(image) = image.inner {
-                    context.flush_image(image);
-                } else {
-                    panic!("mismatched backends");
-                }
-            }
-        }
-    }
+
     /// Renders the composition with an optional clip to the image.
     pub fn render(
         &mut self,

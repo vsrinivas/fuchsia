@@ -850,7 +850,6 @@ impl Contents {
         }
 
         context.render(&self.composition, Some(clip), self.image, &ext);
-        context.flush_image(self.image);
     }
 
     fn add_tool_damage(&mut self, range: &Range<usize>) {

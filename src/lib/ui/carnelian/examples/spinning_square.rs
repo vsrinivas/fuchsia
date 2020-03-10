@@ -242,7 +242,6 @@ impl ViewAssistant for SpinningSquareViewAssistant {
             ..Default::default()
         };
         render_context.render(&self.composition, None, image, &ext);
-        render_context.flush_image(image);
         ready_event.as_handle_ref().signal(Signals::NONE, Signals::EVENT_SIGNALED)?;
         Ok(())
     }

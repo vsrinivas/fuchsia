@@ -740,8 +740,6 @@ impl Context<Spinel> for SpinelContext {
         self.get_image(context.image_index)
     }
 
-    fn flush_image(&mut self, _image: SpinelImage) {}
-
     fn render_with_clip(
         &mut self,
         composition: &SpinelComposition,

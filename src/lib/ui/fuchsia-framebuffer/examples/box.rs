@@ -76,6 +76,7 @@ impl FrameManager {
         sender: Option<futures::channel::mpsc::UnboundedSender<ImageId>>,
     ) -> Result<bool, Error> {
         if let Some(prepared) = self.frame_set.prepared {
+            fb.flush_frame(prepared)?;
             fb.present_frame(prepared, sender, true)?;
             self.frame_set.mark_presented(prepared);
             Ok(true)

@@ -8,14 +8,16 @@ use euclid::{Rect, Size2D, Vector2D};
 use fidl::endpoints::{ClientEnd, ServerEnd};
 use fidl_fuchsia_sysmem::{
     AllocatorMarker, BufferCollectionConstraints, BufferCollectionSynchronousProxy,
-    BufferCollectionTokenMarker, BufferMemoryConstraints, BufferUsage, ColorSpace, ColorSpaceType,
-    FormatModifier, HeapType, ImageFormatConstraints, PixelFormat as SysmemPixelFormat,
-    PixelFormatType, CPU_USAGE_WRITE_OFTEN, FORMAT_MODIFIER_LINEAR,
+    BufferCollectionTokenMarker, BufferMemoryConstraints, BufferUsage, CoherencyDomain, ColorSpace,
+    ColorSpaceType, FormatModifier, HeapType, ImageFormatConstraints,
+    PixelFormat as SysmemPixelFormat, PixelFormatType, CPU_USAGE_WRITE_OFTEN,
+    FORMAT_MODIFIER_LINEAR,
 };
 use fuchsia_component::client::connect_to_service;
 use fuchsia_framebuffer::PixelFormat;
 use fuchsia_trace::duration;
 use fuchsia_zircon as zx;
+use fuchsia_zircon_sys as sys;
 
 use crate::{
     render::generic::{
@@ -46,8 +48,8 @@ fn buffer_collection_constraints(width: u32, height: u32) -> BufferCollectionCon
         layers: 1,
         coded_width_divisor: 1,
         coded_height_divisor: 1,
-        bytes_per_row_divisor: mem::size_of::<u32>() as u32,
-        start_offset_divisor: 1,
+        bytes_per_row_divisor: unsafe { sys::zx_system_get_dcache_line_size() },
+        start_offset_divisor: unsafe { sys::zx_system_get_dcache_line_size() },
         display_width_divisor: 1,
         display_height_divisor: 1,
         required_min_coded_width: 0,
@@ -90,6 +92,7 @@ fn copy_region_to_image(
     dst_ptr: *mut u8,
     dst_len: usize,
     dst_bytes_per_row: usize,
+    dst_coherency_domain: CoherencyDomain,
     region: &CopyRegion,
 ) {
     let (mut y, dy) = if region.dst_offset.y < region.src_offset.y {
@@ -119,6 +122,9 @@ fn copy_region_to_image(
             let dst = (dst_ptr as usize).checked_add(dst_offset).unwrap() as *mut u8;
             unsafe {
                 ptr::copy(src, dst, (columns * 4) as usize);
+                if dst_coherency_domain == CoherencyDomain::Ram {
+                    sys::zx_cache_flush(dst, columns * 4, sys::ZX_CACHE_FLUSH_DATA);
+                }
             }
 
             width -= columns;
@@ -302,10 +308,6 @@ impl Context<Mold> for MoldContext {
         self.get_image(context.image_index)
     }
 
-    fn flush_image(&mut self, image: MoldImage) {
-        self.images[image.0 as usize].borrow_mut().flush();
-    }
-
     fn render_with_clip(
         &mut self,
         composition: &MoldComposition,
@@ -327,6 +329,7 @@ impl Context<Mold> for MoldContext {
         }
 
         if let Some(PreCopy { image: src_image_id, copy_region }) = ext.pre_copy {
+            let dst_coherency_domain = image.coherency_domain();
             let dst_slice = image.as_mut_slice();
             let dst_ptr = dst_slice.as_mut_ptr();
             let dst_len = dst_slice.len();
@@ -351,6 +354,7 @@ impl Context<Mold> for MoldContext {
                 dst_ptr,
                 dst_len,
                 dst_bytes_per_row,
+                dst_coherency_domain,
                 &copy_region,
             );
         }
@@ -369,6 +373,7 @@ impl Context<Mold> for MoldContext {
             let src_bytes_per_row = image.bytes_per_row();
             let dst_bytes_per_row = dst_image.bytes_per_row();
             let src_slice = image.as_mut_slice();
+            let dst_coherency_domain = dst_image.coherency_domain();
             let dst_slice = dst_image.as_mut_slice();
 
             copy_region_to_image(
@@ -379,6 +384,7 @@ impl Context<Mold> for MoldContext {
                 dst_slice.as_mut_ptr(),
                 dst_slice.len(),
                 dst_bytes_per_row,
+                dst_coherency_domain,
                 &copy_region,
             );
         }

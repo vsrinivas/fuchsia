@@ -321,7 +321,6 @@ impl Contents {
         self.composition.replace(.., layers);
 
         context.render(&self.composition, Some(clip), self.image, &ext);
-        context.flush_image(self.image);
 
         // Keep reference to rasters for clearing.
         self.previous_rasters.extend(

@@ -7,6 +7,7 @@ use std::{mem, slice, sync::Arc};
 use fidl_fuchsia_sysmem::{BufferCollectionSynchronousProxy, CoherencyDomain};
 use fuchsia_trace::duration;
 use fuchsia_zircon::{self as zx, prelude::*};
+use fuchsia_zircon_sys as sys;
 use mapped_vmo::Mapping;
 
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -98,14 +99,8 @@ impl VmoImage {
         self.stride * mem::size_of::<u32>()
     }
 
-    pub fn flush(&mut self) {
-        // TODO: avoid flush of whole image by making this part of render().
-        if self.coherency_domain != CoherencyDomain::Cpu {
-            duration!("gfx", "VmoImage::flush");
-            self.vmo
-                .op_range(zx::VmoOp::CACHE_CLEAN, 0, self.len_bytes)
-                .expect("failed to clean VMO cache");
-        }
+    pub fn coherency_domain(&self) -> CoherencyDomain {
+        self.coherency_domain
     }
 
     pub fn as_mut_slice(&mut self) -> &mut [u8] {
@@ -114,15 +109,39 @@ impl VmoImage {
     }
 
     pub fn as_buffer(&mut self) -> mold_next::Buffer<'_> {
+        struct SliceFlusher;
+
+        impl mold_next::Flusher for SliceFlusher {
+            fn flush(&self, slice: &mut [[u8; 4]]) {
+                unsafe {
+                    sys::zx_cache_flush(
+                        slice.as_ptr() as *const u8,
+                        slice.len() * 4,
+                        sys::ZX_CACHE_FLUSH_DATA,
+                    );
+                }
+            }
+        }
+
         let (data, len) = Arc::get_mut(&mut self.mapping).unwrap().as_ptr_len();
         let buffer = unsafe { slice::from_raw_parts_mut(data as *mut [u8; 4], len / 4) };
 
-        mold_next::Buffer { buffer, width: self.width as usize, width_stride: Some(self.stride) }
+        mold_next::Buffer {
+            buffer,
+            width: self.width as usize,
+            width_stride: Some(self.stride),
+            flusher: if self.coherency_domain == CoherencyDomain::Ram {
+                Some(Box::new(SliceFlusher))
+            } else {
+                None
+            },
+        }
     }
 
     pub fn clear(&mut self, clear_color: [u8; 4]) {
         duration!("gfx", "VmoImage::clear");
 
+        let coherency_domain = self.coherency_domain;
         let slice = self.as_mut_slice();
         let len = clear_color.len();
 
@@ -130,6 +149,16 @@ impl VmoImage {
 
         for i in 0..slice.len() / len {
             slice[i * len..(i + 1) * len].copy_from_slice(&clear_color);
+        }
+
+        if coherency_domain == CoherencyDomain::Ram {
+            unsafe {
+                sys::zx_cache_flush(
+                    slice.as_ptr() as *const u8,
+                    slice.len(),
+                    sys::ZX_CACHE_FLUSH_DATA,
+                );
+            }
         }
     }
 }

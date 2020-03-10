@@ -57,6 +57,7 @@ fn test_main() -> Result<(), Error> {
             frame.fill_rectangle(0, 0, config.width, config.height, &to_565(&grey));
         }
 
+        fb.flush_frame(image_id_1)?;
         fb.present_frame(image_id_1, Some(image_sender), true)?;
 
         let image_id_2 = image_ids[1];
@@ -74,6 +75,7 @@ fn test_main() -> Result<(), Error> {
             } else {
                 frame2.fill_rectangle(0, 0, config.width, config.height, &to_565(&white));
             }
+            fb.flush_frame(image_id_2)?;
             fb.present_frame(image_id_2, None, true).expect("frame2 present to succeed");
             image_receiver.next().await;
             test_sender.unbounded_send(TestResult::TestPassed).unwrap();

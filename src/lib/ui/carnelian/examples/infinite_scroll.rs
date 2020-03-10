@@ -978,8 +978,6 @@ impl Contents {
             }
         }
 
-        context.flush_image(self.image);
-
         self.size = *size;
         self.scroll_offset_y = scene.scroll_offset_y;
     }

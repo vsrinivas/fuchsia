@@ -748,13 +748,6 @@ impl FrameBuffer {
         signal_wait_event: bool,
     ) -> Result<(), Error> {
         let frame = self.get_frame(image_id);
-        if self.usage == FrameUsage::Cpu {
-            frame.image_vmo.op_range(
-                VmoOp::CACHE_CLEAN_INVALIDATE,
-                0,
-                frame.image_vmo.get_size()?,
-            )?;
-        }
         self.controller.set_display_layers(self.config.display_id, &[self.layer_id])?;
         self.controller
             .set_layer_image(

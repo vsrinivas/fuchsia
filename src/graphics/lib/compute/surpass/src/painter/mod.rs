@@ -16,8 +16,8 @@ use crate::{
 
 mod buffer_layout;
 
-pub use buffer_layout::BufferLayout;
 use buffer_layout::TileSlice;
+pub use buffer_layout::{BufferLayout, BufferLayoutBuilder, Flusher};
 
 const LAST_BYTE_MASK: i32 = 0b1111_1111;
 const LAST_BIT_MASK: i32 = 0b1;
@@ -327,6 +327,7 @@ impl Painter {
         mut segments: &[CompactSegment],
         styles: F,
         clear_color: [u8; 4],
+        flusher: Option<&Box<dyn Flusher>>,
         row: ChunksExactMut<'_, TileSlice>,
     ) where
         F: Fn(u16) -> Style + Send + Sync,
@@ -356,6 +357,12 @@ impl Painter {
                     let slice = slice.as_mut_slice();
                     for (x, color) in slice.iter_mut().enumerate() {
                         *color = self.colors[entry(x, y)];
+                    }
+                }
+
+                if let Some(flusher) = flusher {
+                    for slice in tile.iter_mut().take(len) {
+                        flusher.flush(&mut slice.as_mut_slice()[0..TILE_SIZE]);
                     }
                 }
             }

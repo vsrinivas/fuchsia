@@ -111,8 +111,6 @@ pub trait Context<B: Backend> {
     fn get_image(&mut self, image_index: u32) -> B::Image;
     /// Returns the `context`'s current image.
     fn get_current_image(&mut self, context: &ViewAssistantContext<'_>) -> B::Image;
-    /// Flushes the buffering backing the `image`.
-    fn flush_image(&mut self, image: B::Image);
     /// Renders the composition with an optional clip to the image.
     fn render(
         &mut self,

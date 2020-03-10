@@ -162,6 +162,7 @@ impl ViewStrategy for FrameBufferViewStrategy {
     fn present(&mut self, _view_details: &ViewDetails) {
         if let Some(prepared) = self.frame_set.prepared {
             let mut fb = self.frame_buffer.borrow_mut();
+            fb.flush_frame(prepared).unwrap_or_else(|e| panic!("Flush error: {:?}", e));
             fb.present_frame(prepared, Some(self.image_sender.clone()), !self.signals_wait_event)
                 .unwrap_or_else(|e| panic!("Present error: {:?}", e));
             self.frame_set.mark_presented(prepared);
