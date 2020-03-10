@@ -19,7 +19,9 @@ executable("disk-inspect") {
   sources = [ "main.cc" ]
   deps = [
     "//zircon/public/lib/disk_inspector",
+    "//zircon/public/lib/fdio",
     "//zircon/public/lib/minfs",
+    "//zircon/system/fidl/fuchsia-hardware-block-partition:llcpp",
   ]
 }
 
