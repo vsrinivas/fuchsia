@@ -38,6 +38,7 @@ const (
 	metadataDirName = "repository"
 	keyDirName      = "keys"
 	blobDirName     = "blobs"
+	buildsDirName   = "builds"
 	imageDirName    = "images"
 	debugDirName    = "debug"
 	targetDirName   = "targets"
@@ -69,15 +70,18 @@ Uploads artifacts from a build to $GCS_BUCKET with the following structure:
 ├── $GCS_BUCKET
 │   │   ├── blobs
 │   │   │   └── <blob names>
-│   │   ├── $UUID
-│   │   │   ├── repository
-│   │   │   │   ├── targets
-│   │   │   │   │   └── <package repo target files>
-│   │   │   │   └── <package repo metadata files>
-│   │   │   ├── keys
-│   │   │   │   └── <package repo keys>
-│   │   │   ├── images
-│   │   │   │   └── <images>
+│   │   ├── debug
+│   │   │   └── <debug binaries>
+│   │   ├── builds
+│   │   │   ├── $UUID
+│   │   │   │   ├── repository
+│   │   │   │   │   ├── targets
+│   │   │   │   │   │   └── <package repo target files>
+│   │   │   │   │   └── <package repo metadata files>
+│   │   │   │   ├── keys
+│   │   │   │   │   └── <package repo keys>
+│   │   │   │   ├── images
+│   │   │   │   │   └── <images>
 
 flags:
 
@@ -110,6 +114,8 @@ func (cmd upCommand) execute(ctx context.Context, buildDir string) error {
 	} else if cmd.uuid == "" {
 		return fmt.Errorf("-uuid is required")
 	}
+	// TODO(fxb/47901): Remove this line once clients stop passing the builds/ prefix.
+	cmd.uuid = strings.TrimPrefix(cmd.uuid, "builds/")
 
 	m, err := build.NewModules(buildDir)
 	if err != nil {
@@ -127,6 +133,7 @@ func (cmd upCommand) execute(ctx context.Context, buildDir string) error {
 	keyDir := path.Join(repo, keyDirName)
 	blobDir := path.Join(metadataDir, blobDirName)
 	targetDir := path.Join(metadataDir, targetDirName)
+	buildsUUIDDir := path.Join(buildsDirName, cmd.uuid)
 
 	dirs := []artifactory.Upload{
 		{
@@ -136,17 +143,17 @@ func (cmd upCommand) execute(ctx context.Context, buildDir string) error {
 		},
 		{
 			Source:      metadataDir,
-			Destination: path.Join(cmd.uuid, metadataDirName),
+			Destination: path.Join(buildsUUIDDir, metadataDirName),
 			Deduplicate: false,
 		},
 		{
 			Source:      keyDir,
-			Destination: path.Join(cmd.uuid, keyDirName),
+			Destination: path.Join(buildsUUIDDir, keyDirName),
 			Deduplicate: false,
 		},
 		{
 			Source:      targetDir,
-			Destination: path.Join(cmd.uuid, metadataDirName, targetDirName),
+			Destination: path.Join(buildsUUIDDir, metadataDirName, targetDirName),
 			Deduplicate: false,
 			Recursive:   true,
 		},
@@ -154,7 +161,7 @@ func (cmd upCommand) execute(ctx context.Context, buildDir string) error {
 
 	var files []artifactory.Upload
 
-	images := artifactory.ImageUploads(m, path.Join(cmd.uuid, imageDirName))
+	images := artifactory.ImageUploads(m, path.Join(buildsUUIDDir, imageDirName))
 	files = append(files, images...)
 
 	debugBinaries, buildIDs, err := artifactory.DebugBinaryUploads(m, debugDirName)
@@ -169,7 +176,7 @@ func (cmd upCommand) execute(ctx context.Context, buildDir string) error {
 	defer os.Remove(buildIDManifest)
 	files = append(files, artifactory.Upload{
 		Source:      buildIDManifest,
-		Destination: path.Join(cmd.uuid, buildIDsTxt),
+		Destination: path.Join(buildsUUIDDir, buildIDsTxt),
 	})
 
 	for _, dir := range dirs {
