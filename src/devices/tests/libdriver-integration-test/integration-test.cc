@@ -276,19 +276,32 @@ void AsyncWatcher::WatcherChanged(async_dispatcher_t* dispatcher, async::Wait* w
     return error("watcher error");
   }
   if (signal->observed & ZX_CHANNEL_READABLE) {
-    char buf[fuchsia::io::MAX_FILENAME + 2 + 1];
+    char buf[fuchsia::io::MAX_BUF + 1];
     uint32_t bytes_read;
     status = watcher_.read(0, buf, nullptr, sizeof(buf) - 1, 0, &bytes_read, nullptr);
     if (status != ZX_OK) {
       return error("watcher read error");
     }
-    buf[bytes_read] = 0;
-    const char* filename = buf + 2;
 
-    if (!strcmp(path_.c_str(), filename)) {
-      completer_.complete_ok();
-      delete this;
-      return;
+    size_t bytes_processed = 0;
+    while (bytes_processed + 2 < bytes_read) {
+      char* msg = &buf[bytes_processed];
+      uint8_t name_length = msg[1];
+
+      if (bytes_processed + 2 + name_length > bytes_read) {
+        return error("watcher read error");
+      }
+
+      char* filename = &msg[2];
+      uint8_t tmp = filename[name_length];
+      filename[name_length] = 0;
+      if (!strcmp(path_.c_str(), filename)) {
+        completer_.complete_ok();
+        delete this;
+        return;
+      }
+      filename[name_length] = tmp;
+      bytes_processed += 2 + name_length;
     }
 
     wait->Begin(dispatcher);
