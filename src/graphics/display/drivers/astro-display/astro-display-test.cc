@@ -1,7 +1,7 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#include "amlogic-display.h"
+#include "astro-display.h"
 
 #include <fuchsia/sysmem/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -29,8 +29,8 @@ class MockBufferCollection : public mock_sysmem::MockBufferCollection {
   bool set_constraints_called_ = false;
 };
 
-TEST(AmlogicDisplay, SysmemRequirements) {
-  amlogic_display::AmlogicDisplay display(nullptr);
+TEST(AstroDisplay, SysmemRequirements) {
+  astro_display::AstroDisplay display(nullptr);
   zx::channel server_channel, client_channel;
   ASSERT_OK(zx::channel::create(0u, &server_channel, &client_channel));
 

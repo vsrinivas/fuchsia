@@ -20,7 +20,7 @@
 #define READ_DISPLAY_ID_CMD (0x04)
 #define READ_DISPLAY_ID_LEN (0x03)
 
-namespace amlogic_display {
+namespace astro_display {
 
 namespace {
 // Based on Vendor datasheet
@@ -576,4 +576,4 @@ zx_status_t Lcd::Init(zx_device_t* dsi_dev, zx_device_t* gpio_dev) {
   return ZX_OK;
 }
 
-}  // namespace amlogic_display
+}  // namespace astro_display

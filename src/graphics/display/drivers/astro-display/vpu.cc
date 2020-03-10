@@ -13,7 +13,7 @@
 #include "vpu-regs.h"
 #include "zircon/errors.h"
 
-namespace amlogic_display {
+namespace astro_display {
 
 namespace {
 constexpr uint32_t kFirstTimeLoadMagicNumber = 0x304e65;  // 0Ne
@@ -563,4 +563,4 @@ void Vpu::CapturePrintRegisters() {
   }
 }
 
-}  // namespace amlogic_display
+}  // namespace astro_display

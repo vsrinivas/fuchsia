@@ -1,7 +1,7 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#include "amlogic-display.h"
+#include "astro-display.h"
 
 #include <fuchsia/sysmem/llcpp/fidl.h>
 #include <lib/fzl/vmo-mapper.h>
@@ -36,7 +36,7 @@
 
 namespace sysmem = llcpp::fuchsia::sysmem;
 
-namespace amlogic_display {
+namespace astro_display {
 
 namespace {
 
@@ -50,7 +50,7 @@ constexpr uint32_t kBufferAlignment = 64;
 }  // namespace
 
 // This function copies the display settings into our internal structure
-void AmlogicDisplay::CopyDisplaySettings() {
+void AstroDisplay::CopyDisplaySettings() {
   ZX_DEBUG_ASSERT(init_disp_table_);
 
   disp_setting_.h_active = init_disp_table_->h_active;
@@ -69,7 +69,7 @@ void AmlogicDisplay::CopyDisplaySettings() {
   disp_setting_.bit_rate_max = init_disp_table_->bit_rate_max;
 }
 
-void AmlogicDisplay::PopulateAddedDisplayArgs(added_display_args_t* args) {
+void AstroDisplay::PopulateAddedDisplayArgs(added_display_args_t* args) {
   args->display_id = kDisplayId;
   args->edid_present = false;
   args->panel.params.height = height_;
@@ -80,12 +80,12 @@ void AmlogicDisplay::PopulateAddedDisplayArgs(added_display_args_t* args) {
   args->cursor_info_count = 0;
 }
 
-zx_status_t AmlogicDisplay::DisplayInit() {
+zx_status_t AstroDisplay::DisplayInit() {
   zx_status_t status;
   fbl::AllocChecker ac;
 
   // Setup VPU and VPP units first
-  vpu_ = fbl::make_unique_checked<amlogic_display::Vpu>(&ac);
+  vpu_ = fbl::make_unique_checked<astro_display::Vpu>(&ac);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -124,7 +124,7 @@ zx_status_t AmlogicDisplay::DisplayInit() {
   CopyDisplaySettings();
 
   // Ensure Max Bit Rate / pixel clock ~= 8 (8.xxx). This is because the clock calculation
-  // part of code assumes a clock factor of 1. All the LCD tables from Amlogic have this
+  // part of code assumes a clock factor of 1. All the LCD tables from Astro have this
   // relationship established. We'll have to revisit the calculation if this ratio cannot
   // be met.
   if (init_disp_table_->bit_rate_max / (init_disp_table_->lcd_clock / 1000 / 1000) != 8) {
@@ -139,7 +139,7 @@ zx_status_t AmlogicDisplay::DisplayInit() {
     vpu_->VppInit();
     // Need to call this function since VPU/VPP registers were reset
     vpu_->SetFirstTimeDriverLoad();
-    clock_ = fbl::make_unique_checked<amlogic_display::AmlogicDisplayClock>(&ac);
+    clock_ = fbl::make_unique_checked<astro_display::AstroDisplayClock>(&ac);
     if (!ac.check()) {
       return ZX_ERR_NO_MEMORY;
     }
@@ -157,7 +157,7 @@ zx_status_t AmlogicDisplay::DisplayInit() {
     }
 
     // Program and Enable DSI Host Interface
-    dsi_host_ = fbl::make_unique_checked<amlogic_display::AmlDsiHost>(
+    dsi_host_ = fbl::make_unique_checked<astro_display::AmlDsiHost>(
         &ac, components_[COMPONENT_PDEV], components_[COMPONENT_DSI],
         components_[COMPONENT_LCD_GPIO], clock_->GetBitrate(), panel_type_);
     if (!ac.check()) {
@@ -175,8 +175,8 @@ zx_status_t AmlogicDisplay::DisplayInit() {
       return status;
     }
   }
-  osd_ = fbl::make_unique_checked<amlogic_display::Osd>(
-      &ac, width_, height_, disp_setting_.h_active, disp_setting_.v_active);
+  osd_ = fbl::make_unique_checked<astro_display::Osd>(&ac, width_, height_, disp_setting_.h_active,
+                                                      disp_setting_.v_active);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -202,13 +202,13 @@ zx_status_t AmlogicDisplay::DisplayInit() {
 }
 
 static uint32_t ComputeLinearStride(uint32_t width, zx_pixel_format_t format) {
-  // The amlogic display controller needs buffers with a stride that is an even
+  // The astro display controller needs buffers with a stride that is an even
   // multiple of 32.
   return ROUNDUP(width, 32 / ZX_PIXEL_FORMAT_BYTES(format));
 }
 
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
-void AmlogicDisplay::DisplayControllerImplSetDisplayControllerInterface(
+void AstroDisplay::DisplayControllerImplSetDisplayControllerInterface(
     const display_controller_interface_protocol_t* intf) {
   fbl::AutoLock lock(&display_lock_);
   dc_intf_ = ddk::DisplayControllerInterfaceProtocolClient(intf);
@@ -218,15 +218,15 @@ void AmlogicDisplay::DisplayControllerImplSetDisplayControllerInterface(
 }
 
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
-zx_status_t AmlogicDisplay::DisplayControllerImplImportVmoImage(image_t* image, zx::vmo vmo,
-                                                                size_t offset) {
+zx_status_t AstroDisplay::DisplayControllerImplImportVmoImage(image_t* image, zx::vmo vmo,
+                                                              size_t offset) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
-zx_status_t AmlogicDisplay::DisplayControllerImplImportImage(image_t* image,
-                                                             zx_unowned_handle_t handle,
-                                                             uint32_t index) {
+zx_status_t AstroDisplay::DisplayControllerImplImportImage(image_t* image,
+                                                           zx_unowned_handle_t handle,
+                                                           uint32_t index) {
   zx_status_t status = ZX_OK;
   auto import_info = std::make_unique<ImageInfo>();
   if (import_info == nullptr) {
@@ -298,14 +298,14 @@ zx_status_t AmlogicDisplay::DisplayControllerImplImportImage(image_t* image,
 }
 
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
-void AmlogicDisplay::DisplayControllerImplReleaseImage(image_t* image) {
+void AstroDisplay::DisplayControllerImplReleaseImage(image_t* image) {
   fbl::AutoLock lock(&image_lock_);
   auto info = reinterpret_cast<ImageInfo*>(image->handle);
   imported_images_.erase(*info);
 }
 
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
-uint32_t AmlogicDisplay::DisplayControllerImplCheckConfiguration(
+uint32_t AstroDisplay::DisplayControllerImplCheckConfiguration(
     const display_config_t** display_configs, size_t display_count, uint32_t** layer_cfg_results,
     size_t* layer_cfg_result_count) {
   if (display_count != 1) {
@@ -364,8 +364,8 @@ uint32_t AmlogicDisplay::DisplayControllerImplCheckConfiguration(
 }
 
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
-void AmlogicDisplay::DisplayControllerImplApplyConfiguration(
-    const display_config_t** display_configs, size_t display_count) {
+void AstroDisplay::DisplayControllerImplApplyConfiguration(const display_config_t** display_configs,
+                                                           size_t display_count) {
   ZX_DEBUG_ASSERT(display_configs);
 
   fbl::AutoLock lock(&display_lock_);
@@ -380,7 +380,7 @@ void AmlogicDisplay::DisplayControllerImplApplyConfiguration(
       full_init_done_ = true;
     }
 
-    // Since Amlogic does not support plug'n play (fixed display), there is no way
+    // Since Astro does not support plug'n play (fixed display), there is no way
     // a checked configuration could be invalid at this point.
     auto info =
         reinterpret_cast<ImageInfo*>(display_configs[0]->layer_list[0]->cfg.primary.image.handle);
@@ -413,9 +413,9 @@ void AmlogicDisplay::DisplayControllerImplApplyConfiguration(
   }
 }
 
-void AmlogicDisplay::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+void AstroDisplay::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
 
-void AmlogicDisplay::DdkRelease() {
+void AstroDisplay::DdkRelease() {
   if (osd_) {
     osd_->Release();
   }
@@ -426,7 +426,7 @@ void AmlogicDisplay::DdkRelease() {
   delete this;
 }
 
-zx_status_t AmlogicDisplay::DdkGetProtocol(uint32_t proto_id, void* out_protocol) {
+zx_status_t AstroDisplay::DdkGetProtocol(uint32_t proto_id, void* out_protocol) {
   auto* proto = static_cast<ddk::AnyProtocol*>(out_protocol);
   proto->ctx = this;
   switch (proto_id) {
@@ -441,7 +441,7 @@ zx_status_t AmlogicDisplay::DdkGetProtocol(uint32_t proto_id, void* out_protocol
   }
 }
 
-zx_status_t AmlogicDisplay::SetupDisplayInterface() {
+zx_status_t AstroDisplay::SetupDisplayInterface() {
   fbl::AutoLock lock(&display_lock_);
 
   format_ = ZX_PIXEL_FORMAT_RGB_x888;
@@ -456,7 +456,7 @@ zx_status_t AmlogicDisplay::SetupDisplayInterface() {
   return ZX_OK;
 }
 
-zx_status_t AmlogicDisplay::DisplayControllerImplGetSysmemConnection(zx::channel connection) {
+zx_status_t AstroDisplay::DisplayControllerImplGetSysmemConnection(zx::channel connection) {
   zx_status_t status = sysmem_connect(&sysmem_, connection.release());
   if (status != ZX_OK) {
     DISP_ERROR("Could not connect to sysmem\n");
@@ -466,7 +466,7 @@ zx_status_t AmlogicDisplay::DisplayControllerImplGetSysmemConnection(zx::channel
   return ZX_OK;
 }
 
-zx_status_t AmlogicDisplay::DisplayControllerImplSetBufferCollectionConstraints(
+zx_status_t AstroDisplay::DisplayControllerImplSetBufferCollectionConstraints(
     const image_t* config, zx_unowned_handle_t collection) {
   sysmem::BufferCollectionConstraints constraints = {};
   if (config->type == IMAGE_TYPE_CAPTURE) {
@@ -518,16 +518,16 @@ zx_status_t AmlogicDisplay::DisplayControllerImplSetBufferCollectionConstraints(
   return ZX_OK;
 }
 
-void AmlogicDisplay::DisplayCaptureImplSetDisplayCaptureInterface(
+void AstroDisplay::DisplayCaptureImplSetDisplayCaptureInterface(
     const display_capture_interface_protocol_t* intf) {
   fbl::AutoLock lock(&capture_lock_);
   capture_intf_ = ddk::DisplayCaptureInterfaceProtocolClient(intf);
   capture_active_id_ = INVALID_ID;
 }
 
-zx_status_t AmlogicDisplay::DisplayCaptureImplImportImageForCapture(zx_unowned_handle_t collection,
-                                                                    uint32_t index,
-                                                                    uint64_t* out_capture_handle) {
+zx_status_t AstroDisplay::DisplayCaptureImplImportImageForCapture(zx_unowned_handle_t collection,
+                                                                  uint32_t index,
+                                                                  uint64_t* out_capture_handle) {
   auto import_capture = std::make_unique<ImageInfo>();
   if (import_capture == nullptr) {
     return ZX_ERR_NO_MEMORY;
@@ -586,7 +586,7 @@ zx_status_t AmlogicDisplay::DisplayCaptureImplImportImageForCapture(zx_unowned_h
   return ZX_OK;
 }
 
-zx_status_t AmlogicDisplay::DisplayCaptureImplStartCapture(uint64_t capture_handle) {
+zx_status_t AstroDisplay::DisplayCaptureImplStartCapture(uint64_t capture_handle) {
   fbl::AutoLock lock(&capture_lock_);
   if (capture_active_id_ != INVALID_ID) {
     DISP_ERROR("Cannot start capture while another capture is in progress\n");
@@ -633,7 +633,7 @@ zx_status_t AmlogicDisplay::DisplayCaptureImplStartCapture(uint64_t capture_hand
   return ZX_OK;
 }
 
-zx_status_t AmlogicDisplay::DisplayCaptureImplReleaseCapture(uint64_t capture_handle) {
+zx_status_t AstroDisplay::DisplayCaptureImplReleaseCapture(uint64_t capture_handle) {
   fbl::AutoLock lock(&capture_lock_);
   if (capture_handle == capture_active_id_) {
     return ZX_ERR_SHOULD_WAIT;
@@ -649,12 +649,12 @@ zx_status_t AmlogicDisplay::DisplayCaptureImplReleaseCapture(uint64_t capture_ha
   return ZX_OK;
 }
 
-bool AmlogicDisplay::DisplayCaptureImplIsCaptureCompleted() {
+bool AstroDisplay::DisplayCaptureImplIsCaptureCompleted() {
   fbl::AutoLock lock(&capture_lock_);
   return (capture_active_id_ == INVALID_ID);
 }
 
-int AmlogicDisplay::CaptureThread() {
+int AstroDisplay::CaptureThread() {
   zx_status_t status;
   while (true) {
     zx::time timestamp;
@@ -673,7 +673,7 @@ int AmlogicDisplay::CaptureThread() {
   return status;
 }
 
-int AmlogicDisplay::VSyncThread() {
+int AstroDisplay::VSyncThread() {
   zx_status_t status;
   while (true) {
     zx::time timestamp;
@@ -694,7 +694,7 @@ int AmlogicDisplay::VSyncThread() {
 }
 
 // TODO(payamm): make sure unbind/release are called if we return error
-zx_status_t AmlogicDisplay::Bind() {
+zx_status_t AstroDisplay::Bind() {
   composite_protocol_t composite;
 
   auto status = device_get_protocol(parent_, ZX_PROTOCOL_COMPOSITE, &composite);
@@ -769,7 +769,7 @@ zx_status_t AmlogicDisplay::Bind() {
   // Setup Display Interface
   status = SetupDisplayInterface();
   if (status != ZX_OK) {
-    DISP_ERROR("Amlogic display setup failed! %d\n", status);
+    DISP_ERROR("Astro display setup failed! %d\n", status);
     return status;
   }
 
@@ -787,14 +787,14 @@ zx_status_t AmlogicDisplay::Bind() {
     return status;
   }
 
-  auto start_thread = [](void* arg) { return static_cast<AmlogicDisplay*>(arg)->VSyncThread(); };
+  auto start_thread = [](void* arg) { return static_cast<AstroDisplay*>(arg)->VSyncThread(); };
   status = thrd_create_with_name(&vsync_thread_, start_thread, this, "vsync_thread");
   if (status != ZX_OK) {
     DISP_ERROR("Could not create vsync_thread\n");
     return status;
   }
 
-  auto vd_thread = [](void* arg) { return static_cast<AmlogicDisplay*>(arg)->CaptureThread(); };
+  auto vd_thread = [](void* arg) { return static_cast<AstroDisplay*>(arg)->CaptureThread(); };
   status = thrd_create_with_name(&capture_thread_, vd_thread, this, "capture_thread");
   if (status != ZX_OK) {
     DISP_ERROR("Could not create capture_thread\n");
@@ -811,7 +811,7 @@ zx_status_t AmlogicDisplay::Bind() {
 
     zx_handle_t profile = ZX_HANDLE_INVALID;
     if ((status = device_get_deadline_profile(this->zxdev(), capacity, deadline, period,
-                                              "dev/display/amlogic-display/vsync_thread",
+                                              "dev/display/astro-display/vsync_thread",
                                               &profile)) != ZX_OK) {
       DISP_ERROR("Failed to get deadline profile: %d\n", status);
     } else {
@@ -826,7 +826,7 @@ zx_status_t AmlogicDisplay::Bind() {
 
   auto cleanup = fbl::MakeAutoCall([&]() { DdkRelease(); });
 
-  status = DdkAdd("amlogic-display");
+  status = DdkAdd("astro-display");
   if (status != ZX_OK) {
     DISP_ERROR("Could not add device\n");
     return status;
@@ -836,7 +836,7 @@ zx_status_t AmlogicDisplay::Bind() {
   return ZX_OK;
 }
 
-void AmlogicDisplay::Dump() {
+void AstroDisplay::Dump() {
   DISP_INFO("#############################\n");
   DISP_INFO("Dumping disp_setting structure:\n");
   DISP_INFO("#############################\n");
@@ -857,9 +857,9 @@ void AmlogicDisplay::Dump() {
 }
 
 // main bind function called from dev manager
-zx_status_t amlogic_display_bind(void* ctx, zx_device_t* parent) {
+zx_status_t astro_display_bind(void* ctx, zx_device_t* parent) {
   fbl::AllocChecker ac;
-  auto dev = fbl::make_unique_checked<amlogic_display::AmlogicDisplay>(&ac, parent);
+  auto dev = fbl::make_unique_checked<astro_display::AstroDisplay>(&ac, parent);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -871,19 +871,19 @@ zx_status_t amlogic_display_bind(void* ctx, zx_device_t* parent) {
   return status;
 }
 
-static constexpr zx_driver_ops_t amlogic_display_ops = []() {
+static constexpr zx_driver_ops_t astro_display_ops = []() {
   zx_driver_ops_t ops = {};
   ops.version = DRIVER_OPS_VERSION;
-  ops.bind = amlogic_display_bind;
+  ops.bind = astro_display_bind;
   return ops;
 }();
 
-}  // namespace amlogic_display
+}  // namespace astro_display
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(amlogic_display, amlogic_display::amlogic_display_ops, "zircon", "0.1", 4)
+ZIRCON_DRIVER_BEGIN(astro_display, astro_display::astro_display_ops, "zircon", "0.1", 4)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_S905D2),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_DISPLAY),
-ZIRCON_DRIVER_END(amlogic_display)
+ZIRCON_DRIVER_END(astro_display)

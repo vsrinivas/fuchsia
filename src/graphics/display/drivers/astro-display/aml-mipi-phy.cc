@@ -6,7 +6,7 @@
 
 #include <ddk/debug.h>
 
-namespace amlogic_display {
+namespace astro_display {
 
 #define READ32_DSI_PHY_REG(a) dsi_phy_mmio_->Read32(a)
 #define WRITE32_DSI_PHY_REG(a, v) dsi_phy_mmio_->Write32(v, a)
@@ -269,4 +269,4 @@ void AmlMipiPhy::Dump() {
   DISP_INFO("wakeup = 0x%x (%u)\n", dsi_phy_cfg_.wakeup, dsi_phy_cfg_.wakeup);
 }
 
-}  // namespace amlogic_display
+}  // namespace astro_display
