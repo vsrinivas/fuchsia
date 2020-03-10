@@ -74,11 +74,12 @@ class DeviceConfig {
 
   DeviceConfig() {}
 
-  DeviceConfig(
-      std::vector<std::pair<audio_stream_unique_id_t, OutputDeviceProfile>> output_device_profiles,
-      std::optional<OutputDeviceProfile> default_output_device_profile,
-      std::vector<std::pair<audio_stream_unique_id_t, InputDeviceProfile>> input_device_profiles,
-      std::optional<InputDeviceProfile> default_input_device_profile)
+  DeviceConfig(std::vector<std::pair<std::vector<audio_stream_unique_id_t>, OutputDeviceProfile>>
+                   output_device_profiles,
+               std::optional<OutputDeviceProfile> default_output_device_profile,
+               std::vector<std::pair<std::vector<audio_stream_unique_id_t>, InputDeviceProfile>>
+                   input_device_profiles,
+               std::optional<InputDeviceProfile> default_input_device_profile)
       : output_device_profiles_(std::move(output_device_profiles)),
         default_output_device_profile_(
             default_output_device_profile.value_or(OutputDeviceProfile())),
@@ -110,22 +111,29 @@ class DeviceConfig {
   template <typename Profile>
   static const Profile& DeviceProfile(
       const audio_stream_unique_id_t& id,
-      const std::vector<std::pair<audio_stream_unique_id_t, Profile>>& profiles,
+      const std::vector<std::pair<std::vector<audio_stream_unique_id_t>, Profile>>& profiles,
       const Profile& default_profile) {
     auto it = std::find_if(profiles.begin(), profiles.end(), [id](auto set) {
-      return std::memcmp(id.data, set.first.data, sizeof(id.data)) == 0;
+      for (const auto& other_id : set.first) {
+        if (std::memcmp(id.data, other_id.data, sizeof(id.data)) == 0) {
+          return true;
+        }
+      }
+      return false;
     });
 
     return it != profiles.end() ? it->second : default_profile;
   }
 
   // Profiles for explicitly configured devices.
-  std::vector<std::pair<audio_stream_unique_id_t, OutputDeviceProfile>> output_device_profiles_;
+  std::vector<std::pair<std::vector<audio_stream_unique_id_t>, OutputDeviceProfile>>
+      output_device_profiles_;
 
   // The device profile to apply to devices without an explicit profile.
   OutputDeviceProfile default_output_device_profile_;
 
-  std::vector<std::pair<audio_stream_unique_id_t, InputDeviceProfile>> input_device_profiles_;
+  std::vector<std::pair<std::vector<audio_stream_unique_id_t>, InputDeviceProfile>>
+      input_device_profiles_;
   InputDeviceProfile default_input_device_profile_;
 };
 

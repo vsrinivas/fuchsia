@@ -97,6 +97,67 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithRoutingPolicy) {
   EXPECT_TRUE(config.output_device_profile(unknown_id).independent_volume_control());
 }
 
+TEST(ProcessConfigLoaderTest, LoadProcessConfigWithRoutingMultipleDeviceIds) {
+  static const std::string kConfigWithRoutingPolicy =
+      R"JSON({
+    "volume_curve": [
+      {
+          "level": 0.0,
+          "db": -160.0
+      },
+      {
+          "level": 1.0,
+          "db": 0.0
+      }
+    ],
+    "output_devices": [
+      {
+        "device_id" : ["34384e7da9d52c8062a9765baeb6053a", "34384e7da9d52c8062a9765baeb6053b" ],
+        "supported_output_stream_types": [
+          "media"
+        ],
+        "eligible_for_loopback": false
+      },
+      {
+        "device_id" : "*",
+        "supported_output_stream_types": [
+          "media",
+          "interruption",
+          "background",
+          "communications",
+          "system_agent"
+        ],
+        "eligible_for_loopback": true
+      }
+    ]
+  })JSON";
+  ASSERT_TRUE(files::WriteFile(kTestAudioCoreConfigFilename, kConfigWithRoutingPolicy.data(),
+                               kConfigWithRoutingPolicy.size()));
+
+  const audio_stream_unique_id_t expected_id1 = {.data = {0x34, 0x38, 0x4e, 0x7d, 0xa9, 0xd5, 0x2c,
+                                                          0x80, 0x62, 0xa9, 0x76, 0x5b, 0xae, 0xb6,
+                                                          0x05, 0x3a}};
+  const audio_stream_unique_id_t expected_id2 = {.data = {0x34, 0x38, 0x4e, 0x7d, 0xa9, 0xd5, 0x2c,
+                                                          0x80, 0x62, 0xa9, 0x76, 0x5b, 0xae, 0xb6,
+                                                          0x05, 0x3b}};
+
+  const auto process_config = ProcessConfigLoader::LoadProcessConfig(kTestAudioCoreConfigFilename);
+  ASSERT_TRUE(process_config);
+
+  auto& config = process_config->device_config();
+  for (const auto& device_id : {expected_id1, expected_id2}) {
+    EXPECT_TRUE(config.output_device_profile(device_id).supports_usage(RenderUsage::MEDIA));
+    EXPECT_FALSE(config.output_device_profile(device_id).supports_usage(RenderUsage::INTERRUPTION));
+    EXPECT_FALSE(config.output_device_profile(device_id).supports_usage(RenderUsage::BACKGROUND));
+    EXPECT_FALSE(
+        config.output_device_profile(device_id).supports_usage(RenderUsage::COMMUNICATION));
+    EXPECT_FALSE(config.output_device_profile(device_id).supports_usage(RenderUsage::SYSTEM_AGENT));
+
+    EXPECT_FALSE(config.output_device_profile(device_id).eligible_for_loopback());
+    EXPECT_FALSE(config.output_device_profile(device_id).independent_volume_control());
+  }
+}
+
 TEST(ProcessConfigLoaderTest, LoadProcessConfigWithRoutingPolicyNoDefault) {
   static const std::string kConfigWithRoutingPolicy =
       R"JSON({

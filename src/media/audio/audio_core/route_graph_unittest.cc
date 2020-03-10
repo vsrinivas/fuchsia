@@ -691,7 +691,7 @@ const audio_stream_unique_id_t kSupportsAllDeviceId = audio_stream_unique_id_t{.
 const audio_stream_unique_id_t kUnconfiguredDeviceId = audio_stream_unique_id_t{.data = {0x45}};
 
 static const DeviceConfig kConfigWithMediaExternalRoutingPolicy = DeviceConfig(
-    /*profiles=*/{{kSupportsAllDeviceId,
+    /*profiles=*/{{{kSupportsAllDeviceId},
                    DeviceConfig::OutputDeviceProfile(
                        /*eligible_for_loopback=*/true,
                        /*output_usage_support_set=*/
@@ -749,16 +749,17 @@ TEST_F(RouteGraphWithMediaExternalPolicyTest, InterruptionDoesNotRouteToUnsuppor
 const audio_stream_unique_id_t kSupportsLoopbackDeviceId = audio_stream_unique_id_t{.data = {0x7a}};
 
 static const DeviceConfig kConfigWithExternNonLoopbackDevicePolicy = DeviceConfig(
-    /*profiles=*/{{kSupportsAllDeviceId,
+    /*profiles=*/{{{kSupportsAllDeviceId},
                    DeviceConfig::OutputDeviceProfile(
                        /*eligible_for_loopback=*/true,
                        /*output_usage_support_set=*/
                        {RenderUsage::BACKGROUND, RenderUsage::MEDIA, RenderUsage::INTERRUPTION,
                         RenderUsage::SYSTEM_AGENT, RenderUsage::COMMUNICATION})},
-                  {kSupportsLoopbackDeviceId, DeviceConfig::OutputDeviceProfile(
-                                                  /*eligible_for_loopback=*/true,
-                                                  /*output_usage_support_set=*/
-                                                  {RenderUsage::BACKGROUND})}},
+                  {{kSupportsLoopbackDeviceId},
+                   DeviceConfig::OutputDeviceProfile(
+                       /*eligible_for_loopback=*/true,
+                       /*output_usage_support_set=*/
+                       {RenderUsage::BACKGROUND})}},
     /*default=*/
     {DeviceConfig::OutputDeviceProfile(
         /*eligible_for_loopback=*/false,

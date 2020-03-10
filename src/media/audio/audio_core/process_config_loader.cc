@@ -177,7 +177,7 @@ PipelineConfig::MixGroup ParseMixGroupFromJsonObject(const rapidjson::Value& val
   return mix_group;
 }
 
-std::optional<audio_stream_unique_id_t> ParseDeviceIdFromJsonValue(const rapidjson::Value& value) {
+std::optional<audio_stream_unique_id_t> ParseDeviceIdFromJsonString(const rapidjson::Value& value) {
   FX_DCHECK(value.IsString());
   const auto* device_id_string = value.GetString();
 
@@ -198,7 +198,32 @@ std::optional<audio_stream_unique_id_t> ParseDeviceIdFromJsonValue(const rapidjs
   return device_id;
 }
 
-std::pair<std::optional<audio_stream_unique_id_t>, DeviceConfig::OutputDeviceProfile>
+// Returns Some(vector) if there is a list of concrete device id's. Returns nullopt for the default
+// configuration.
+std::optional<std::vector<audio_stream_unique_id_t>> ParseDeviceIdFromJsonValue(
+    const rapidjson::Value& value) {
+  std::vector<audio_stream_unique_id_t> result;
+  if (value.IsString()) {
+    auto device_id = ParseDeviceIdFromJsonString(value);
+    if (device_id) {
+      result.push_back(*device_id);
+    } else {
+      return std::nullopt;
+    }
+  } else if (value.IsArray()) {
+    for (const auto& device_id_value : value.GetArray()) {
+      auto device_id = ParseDeviceIdFromJsonString(device_id_value);
+      if (device_id) {
+        result.push_back(*device_id);
+      } else {
+        return std::nullopt;
+      }
+    }
+  }
+  return {result};
+}
+
+std::pair<std::optional<std::vector<audio_stream_unique_id_t>>, DeviceConfig::OutputDeviceProfile>
 ParseOutputDeviceProfileFromJsonObject(const rapidjson::Value& value,
                                        RenderUsageSet* all_supported_usages) {
   FX_CHECK(value.IsObject());
@@ -206,8 +231,7 @@ ParseOutputDeviceProfileFromJsonObject(const rapidjson::Value& value,
   auto device_id_it = value.FindMember(kJsonKeyDeviceId);
   FX_CHECK(device_id_it != value.MemberEnd());
 
-  std::optional<audio_stream_unique_id_t> device_id =
-      ParseDeviceIdFromJsonValue(device_id_it->value);
+  auto device_id = ParseDeviceIdFromJsonValue(device_id_it->value);
 
   auto eligible_for_loopback_it = value.FindMember(kJsonKeyEligibleForLoopback);
   FX_CHECK(eligible_for_loopback_it != value.MemberEnd());
@@ -308,15 +332,14 @@ void ParseOutputDevicePoliciesFromJsonObject(const rapidjson::Value& output_devi
       << "Not all output usages are supported in the config";
 }
 
-std::pair<std::optional<audio_stream_unique_id_t>, DeviceConfig::InputDeviceProfile>
+std::pair<std::optional<std::vector<audio_stream_unique_id_t>>, DeviceConfig::InputDeviceProfile>
 ParseInputDeviceProfileFromJsonObject(const rapidjson::Value& value) {
   FX_CHECK(value.IsObject());
 
   auto device_id_it = value.FindMember(kJsonKeyDeviceId);
   FX_CHECK(device_id_it != value.MemberEnd());
 
-  std::optional<audio_stream_unique_id_t> device_id =
-      ParseDeviceIdFromJsonValue(device_id_it->value);
+  auto device_id = ParseDeviceIdFromJsonValue(device_id_it->value);
 
   auto rate_it = value.FindMember(kJsonKeyRate);
   FX_DCHECK(rate_it != value.MemberEnd());

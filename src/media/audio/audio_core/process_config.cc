@@ -15,7 +15,8 @@ ProcessConfigBuilder& ProcessConfigBuilder::SetDefaultVolumeCurve(VolumeCurve cu
 }
 
 ProcessConfigBuilder& ProcessConfigBuilder::AddDeviceProfile(
-    std::pair<std::optional<audio_stream_unique_id_t>, DeviceConfig::OutputDeviceProfile>
+    std::pair<std::optional<std::vector<audio_stream_unique_id_t>>,
+              DeviceConfig::OutputDeviceProfile>
         keyed_profile) {
   auto& [device_id, profile] = keyed_profile;
   if (!device_id.has_value()) {
@@ -28,8 +29,10 @@ ProcessConfigBuilder& ProcessConfigBuilder::AddDeviceProfile(
   output_device_profiles_.push_back({std::move(*device_id), profile});
   return *this;
 }
+
 ProcessConfigBuilder& ProcessConfigBuilder::AddDeviceProfile(
-    std::pair<std::optional<audio_stream_unique_id_t>, DeviceConfig::InputDeviceProfile>
+    std::pair<std::optional<std::vector<audio_stream_unique_id_t>>,
+              DeviceConfig::InputDeviceProfile>
         keyed_profile) {
   auto& [device_id, profile] = keyed_profile;
   if (!device_id.has_value()) {

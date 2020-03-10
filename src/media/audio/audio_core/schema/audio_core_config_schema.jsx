@@ -1,5 +1,19 @@
 {
   "definitions": {
+    "device_id": {
+      "type": "string",
+      "oneOf": [
+        {
+          "pattern": "^[A-Fa-f0-9]{32}$"
+        }, {
+          "enum": ["*"]
+        }
+      ]
+    },
+    "device_id_list": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/device_id" }
+    },
     "volume_mapping": {
       "type": "object",
       "properties": {
@@ -61,7 +75,10 @@
       "type": "object",
       "properties" : {
         "device_id": {
-          "type" : "string"
+          "oneOf": [
+            {"$ref": "#/definitions/device_id"},
+            {"$ref": "#/definitions/device_id_list"}
+          ]
         },
         "supported_output_stream_types": {
           "type": "array",
@@ -109,8 +126,12 @@
       "type": "object",
       "properties" : {
         "device_id": {
-          "type" : "string"
+          "oneOf": [
+            {"$ref": "#/definitions/device_id"},
+            {"$ref": "#/definitions/device_id_list"}
+          ]
         },
+
         // The target rate for this device. A different rate may be chosen if the driver does
         // not support the rate requested.
         "rate": "integer"
