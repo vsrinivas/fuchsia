@@ -37,6 +37,21 @@ enum PressureLevel : uint8_t {
   kNumLevels,
 };
 
+static const char* PressureLevelToString(PressureLevel level) {
+  switch (level) {
+    case PressureLevel::kOutOfMemory:
+      return "OutOfMemory";
+    case PressureLevel::kCritical:
+      return "Critical";
+    case PressureLevel::kWarning:
+      return "Warning";
+    case PressureLevel::kNormal:
+      return "Normal";
+    default:
+      return "Unknown";
+  }
+}
+
 // Kernel-owned events used to signal userspace at different levels of memory pressure.
 static ktl::array<fbl::RefPtr<EventDispatcher>, PressureLevel::kNumLevels> mem_pressure_events;
 
@@ -44,8 +59,8 @@ static ktl::array<fbl::RefPtr<EventDispatcher>, PressureLevel::kNumLevels> mem_p
 // oom thread.
 static Event mem_state_signal(EVENT_FLAG_AUTOUNSIGNAL);
 
-static ktl::atomic<uint8_t> mem_event_idx = PressureLevel::kNormal;
-static uint8_t prev_mem_event_idx = mem_event_idx;
+static ktl::atomic<PressureLevel> mem_event_idx = PressureLevel::kNormal;
+static PressureLevel prev_mem_event_idx = mem_event_idx;
 
 fbl::RefPtr<EventDispatcher> GetMemPressureEvent(uint32_t kind) {
   switch (kind) {
@@ -66,7 +81,7 @@ fbl::RefPtr<EventDispatcher> GetMemPressureEvent(uint32_t kind) {
 // This is a very minimal save idx and signal an event as we are called under the pmm lock and must
 // avoid causing any additional allocations.
 static void mem_avail_state_updated_cb(uint8_t idx) {
-  mem_event_idx = idx;
+  mem_event_idx = PressureLevel(idx);
   mem_state_signal.Signal();
 }
 
@@ -121,20 +136,21 @@ static int oom_thread(void* unused) {
     // Get a local copy of the atomic. It's possible by the time we read this that we've already
     // exited the last observed state, but that's fine as we don't necessarily need to signal every
     // transient state.
-    uint8_t idx = mem_event_idx;
-    printf("OOM: memory availability state %u\n", idx);
+    PressureLevel idx = mem_event_idx;
+    printf("OOM: memory availability state %s\n", PressureLevelToString(idx));
 
     // Unsignal the last event that was signaled.
     zx_status_t status =
         mem_pressure_events[prev_mem_event_idx]->user_signal_self(ZX_EVENT_SIGNALED, 0);
     if (status != ZX_OK) {
-      panic("OOM: unsignal memory event %d failed: %d\n", prev_mem_event_idx, status);
+      panic("OOM: unsignal memory event %s failed: %d\n", PressureLevelToString(prev_mem_event_idx),
+            status);
     }
 
     // Signal event corresponding to the new memory state.
     status = mem_pressure_events[idx]->user_signal_self(0, ZX_EVENT_SIGNALED);
     if (status != ZX_OK) {
-      panic("OOM: signal memory event %d failed: %d\n", idx, status);
+      panic("OOM: signal memory event %s failed: %d\n", PressureLevelToString(idx), status);
     }
     prev_mem_event_idx = idx;
 
@@ -150,11 +166,12 @@ static int oom_thread(void* unused) {
 
 static void memory_pressure_init() {
   for (uint8_t i = 0; i < PressureLevel::kNumLevels; i++) {
+    auto level = PressureLevel(i);
     KernelHandle<EventDispatcher> event;
     zx_rights_t rights;
     zx_status_t status = EventDispatcher::Create(0, &event, &rights);
     if (status != ZX_OK) {
-      panic("mem pressure event %d create: %d\n", i, status);
+      panic("mem pressure event %s create: %d\n", PressureLevelToString(level), status);
     }
     mem_pressure_events[i] = event.release();
   }
