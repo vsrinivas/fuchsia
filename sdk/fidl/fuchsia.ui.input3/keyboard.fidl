@@ -27,11 +27,11 @@ protocol KeyboardListener {
     /// Notification is only dispatched when the View is focused (ViewRef is on FocusChain).
     /// Parent Views receive the notification first, child Views last.
     /// Returning `HANDLED` will stop event propagation to other clients and listeners.
-    OnKeyEvent(KeyEvent event) -> (Status result);
+    OnKeyEvent(KeyEvent event) -> (KeyEventStatus status);
 };
 
 /// Return type for clients key events listener.
-enum Status {
+enum KeyEventStatus {
     /// The key event was handled and its further propagation should be stopped.
     HANDLED = 1;
 
