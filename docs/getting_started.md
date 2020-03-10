@@ -41,13 +41,18 @@ more options.
 
 Note: This step is optional.
 
-To accelerate Fuchsia builds, [`ccache`](https://ccache.dev/){:.external} caches artifacts
-from previous builds.
+To accelerate Fuchsia builds, use [`ccache`](https://ccache.dev/){:.external}
+to cache artifacts from previous builds.
 
-`ccache` is enabled automatically if the `CCACHE_DIR` environment
+To use `ccache` on Linux, install the following package:
+```posix-terminal
+sudo apt-get install ccache
+```
+
+`ccache` is enabled automatically if your `CCACHE_DIR` environment
 variable refers to an existing directory.
 
-To override the default behaviors, pass the following flags to `fx set`:
+To override the default behavior, pass the following flags to `fx set`:
 
 *   Force use of ccache even if other accelerators are available:
 
