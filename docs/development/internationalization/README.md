@@ -10,3 +10,4 @@ Topics of interest (with details to be filled in over time):
 - [ICU timezone data use](icu_data.md).
 - [Internationalization and localization of mods in Fuchsia](localizing_mods.md).
 - [International profile preferences](fuchsia_intl.md).
+- [Fonts](fonts).
