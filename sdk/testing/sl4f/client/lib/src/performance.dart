@@ -404,8 +404,7 @@ class Performance {
     final converter = Platform.script.resolve(converterPath).toFilePath();
 
     if (!await runProcess(converter, args)) {
-      _log.warning('Running the results converter failed.');
-      return null;
+      throw AssertionError('Running catapult_converter failed');
     }
     _log.info('Conversion to catapult results format completed.');
     return Future.value(File(outputFileName));
