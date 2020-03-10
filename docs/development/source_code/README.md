@@ -13,13 +13,14 @@ following tools to be up-to-date:
  * Python
  * Unzip
  * Git
+ * ccache (Optional) for faster builds.
 
 ### Linux
 
 Install or update the following packages:
 
 ```posix-terminal
-sudo apt-get install build-essential curl git python unzip
+sudo apt-get install build-essential curl git python unzip ccache
 ```
 
 ### macOS
