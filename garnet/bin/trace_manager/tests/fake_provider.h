@@ -2,14 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_TRACE_MANAGER_TEST_FAKE_PROVIDER_H_
-#define GARNET_BIN_TRACE_MANAGER_TEST_FAKE_PROVIDER_H_
+#ifndef GARNET_BIN_TRACE_MANAGER_TESTS_FAKE_PROVIDER_H_
+#define GARNET_BIN_TRACE_MANAGER_TESTS_FAKE_PROVIDER_H_
 
-#include <fuchsia/tracing/provider/cpp/fidl.h>
 #include <fuchsia/tracing/controller/cpp/fidl.h>
-#include <gtest/gtest.h>
+#include <fuchsia/tracing/provider/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
+#include <lib/trace-engine/buffer_internal.h>
 #include <lib/zx/fifo.h>
+
+#include <gtest/gtest.h>
 #include <trace-provider/provider.h>
 #include <trace-reader/reader.h>
 
@@ -123,4 +125,4 @@ using FakeProviderBinding = fidl::Binding<provider::Provider, std::unique_ptr<Fa
 }  // namespace test
 }  // namespace tracing
 
-#endif  // GARNET_BIN_TRACE_MANAGER_TEST_FAKE_PROVIDER_H_
+#endif  // GARNET_BIN_TRACE_MANAGER_TESTS_FAKE_PROVIDER_H_

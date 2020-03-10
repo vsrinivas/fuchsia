@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <trace-engine/fields.h>
-
 #include <unittest/unittest.h>
 
 namespace {

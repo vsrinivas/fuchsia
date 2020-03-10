@@ -2,19 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "garnet/bin/trace_manager/tests/fake_provider.h"
+
 #include <trace-engine/buffer_internal.h>
 #include <trace-engine/fields.h>
 
-#include "garnet/bin/trace_manager/tests/fake_provider.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace tracing {
 namespace test {
 
-FakeProvider::FakeProvider(zx_koid_t pid, const std::string& name)
-    : pid_(pid), name_(name) {
-}
+FakeProvider::FakeProvider(zx_koid_t pid, const std::string& name) : pid_(pid), name_(name) {}
 
 std::string FakeProvider::PrettyName() const {
   return fxl::StringPrintf("{%lu:%s}", pid_, name_.c_str());
@@ -83,14 +82,14 @@ void FakeProvider::Stop() {
   ++stop_count_;
 
   switch (state_) {
-  case State::kInitialized:
-  case State::kStarting:
-  case State::kStarted:
-    AdvanceToState(State::kStopping);
-    break;
-  default:
-    FXL_VLOG(2) << "Can't stop, state is " << state_;
-    break;
+    case State::kInitialized:
+    case State::kStarting:
+    case State::kStarted:
+      AdvanceToState(State::kStopping);
+      break;
+    default:
+      FXL_VLOG(2) << "Can't stop, state is " << state_;
+      break;
   }
 }
 
@@ -100,15 +99,15 @@ void FakeProvider::Terminate() {
   ++terminate_count_;
 
   switch (state_) {
-  case State::kReady:
-  case State::kTerminating:
-  case State::kTerminated:
-    // Nothing to do.
-    FXL_VLOG(2) << "Won't advance state, state is " << state_;
-    break;
-  default:
-    AdvanceToState(State::kTerminating);
-    break;
+    case State::kReady:
+    case State::kTerminating:
+    case State::kTerminated:
+      // Nothing to do.
+      FXL_VLOG(2) << "Won't advance state, state is " << state_;
+      break;
+    default:
+      AdvanceToState(State::kTerminating);
+      break;
   }
 }
 
@@ -131,44 +130,44 @@ void FakeProvider::AdvanceToState(State state) {
   FXL_VLOG(2) << PrettyName() << ": Advancing to state " << state;
 
   switch (state) {
-  case State::kReady:
-    // We start out in the ready state, tests should never transition us back.
-    FXL_NOTREACHED();
-    break;
-  case State::kInitialized:
-  case State::kStarting:
-  case State::kStopping:
-  case State::kTerminating:
-    // Nothing to do.
-    break;
-  case State::kStarted: {
-    trace_provider_packet_t packet{};
-    packet.request = TRACE_PROVIDER_STARTED;
-    packet.data32 = TRACE_PROVIDER_FIFO_PROTOCOL_VERSION;
-    SendFifoPacket(&packet);
-    break;
-  }
-  case State::kStopped: {
-    UpdateBufferHeaderAfterStopped();
-    trace_provider_packet_t packet{};
-    packet.request = TRACE_PROVIDER_STOPPED;
-    SendFifoPacket(&packet);
-    break;
-  }
-  case State::kTerminated:
-    UpdateBufferHeaderAfterStopped();
-    // Tell trace-manager we've finished terminating.
-    buffer_vmo_.reset();
-    fifo_.reset();
-    break;
+    case State::kReady:
+      // We start out in the ready state, tests should never transition us back.
+      FXL_NOTREACHED();
+      break;
+    case State::kInitialized:
+    case State::kStarting:
+    case State::kStopping:
+    case State::kTerminating:
+      // Nothing to do.
+      break;
+    case State::kStarted: {
+      trace_provider_packet_t packet{};
+      packet.request = TRACE_PROVIDER_STARTED;
+      packet.data32 = TRACE_PROVIDER_FIFO_PROTOCOL_VERSION;
+      SendFifoPacket(&packet);
+      break;
+    }
+    case State::kStopped: {
+      UpdateBufferHeaderAfterStopped();
+      trace_provider_packet_t packet{};
+      packet.request = TRACE_PROVIDER_STOPPED;
+      SendFifoPacket(&packet);
+      break;
+    }
+    case State::kTerminated:
+      UpdateBufferHeaderAfterStopped();
+      // Tell trace-manager we've finished terminating.
+      buffer_vmo_.reset();
+      fifo_.reset();
+      break;
   }
 
   state_ = state;
 }
 
 bool FakeProvider::SendFifoPacket(const trace_provider_packet_t* packet) {
-    zx_status_t status = fifo_.write(sizeof(*packet), packet, 1, nullptr);
-    return status == ZX_OK || status == ZX_ERR_PEER_CLOSED;
+  zx_status_t status = fifo_.write(sizeof(*packet), packet, 1, nullptr);
+  return status == ZX_OK || status == ZX_ERR_PEER_CLOSED;
 }
 
 void FakeProvider::InitializeBuffer() {
@@ -200,24 +199,24 @@ void FakeProvider::ComputeBufferSizes() {
 
   // See trace-engine's |trace_context::ComputeBufferSizes()|.
   switch (buffering_mode_) {
-  case provider::BufferingMode::ONESHOT:
-    durable_buffer_size_ = 0;
-    rolling_buffer_size_ = total_buffer_size_ - header_size;
-    break;
-  case provider::BufferingMode::CIRCULAR:
-  case provider::BufferingMode::STREAMING: {
-    size_t avail = total_buffer_size_ - header_size;
-    durable_buffer_size_ = kDurableBufferSize;
-    uint64_t off_by = (avail - durable_buffer_size_) & 15;
-    durable_buffer_size_ += off_by;
-    rolling_buffer_size_ = (avail - durable_buffer_size_) / 2;
-    // Ensure entire buffer is used.
-    FXL_DCHECK(durable_buffer_size_ + 2 * rolling_buffer_size_ == avail);
-    break;
-  }
-  default:
-    FXL_NOTREACHED();
-    break;
+    case provider::BufferingMode::ONESHOT:
+      durable_buffer_size_ = 0;
+      rolling_buffer_size_ = total_buffer_size_ - header_size;
+      break;
+    case provider::BufferingMode::CIRCULAR:
+    case provider::BufferingMode::STREAMING: {
+      size_t avail = total_buffer_size_ - header_size;
+      durable_buffer_size_ = kDurableBufferSize;
+      uint64_t off_by = (avail - durable_buffer_size_) & 15;
+      durable_buffer_size_ += off_by;
+      rolling_buffer_size_ = (avail - durable_buffer_size_) / 2;
+      // Ensure entire buffer is used.
+      FXL_DCHECK(durable_buffer_size_ + 2 * rolling_buffer_size_ == avail);
+      break;
+    }
+    default:
+      FXL_NOTREACHED();
+      break;
   }
 }
 
@@ -236,15 +235,15 @@ void FakeProvider::InitBufferHeader() {
   header.version = TRACE_BUFFER_HEADER_V0;
 
   switch (buffering_mode_) {
-  case provider::BufferingMode::ONESHOT:
-    header.buffering_mode = static_cast<uint8_t>(TRACE_BUFFERING_MODE_ONESHOT);
-    break;
-  case provider::BufferingMode::CIRCULAR:
-    header.buffering_mode = static_cast<uint8_t>(TRACE_BUFFERING_MODE_CIRCULAR);
-    break;
-  case provider::BufferingMode::STREAMING:
-    header.buffering_mode = static_cast<uint8_t>(TRACE_BUFFERING_MODE_STREAMING);
-    break;
+    case provider::BufferingMode::ONESHOT:
+      header.buffering_mode = static_cast<uint8_t>(TRACE_BUFFERING_MODE_ONESHOT);
+      break;
+    case provider::BufferingMode::CIRCULAR:
+      header.buffering_mode = static_cast<uint8_t>(TRACE_BUFFERING_MODE_CIRCULAR);
+      break;
+    case provider::BufferingMode::STREAMING:
+      header.buffering_mode = static_cast<uint8_t>(TRACE_BUFFERING_MODE_STREAMING);
+      break;
   }
 
   header.total_size = total_buffer_size_;
@@ -258,8 +257,8 @@ void FakeProvider::InitBufferHeader() {
 void FakeProvider::UpdateBufferHeaderAfterStopped() {
   FXL_VLOG(2) << PrettyName() << ": Updating buffer header, buffer pointer=" << buffer_next_;
   size_t offset = offsetof(trace::internal::trace_buffer_header, rolling_data_end[0]);
-  zx_status_t status = buffer_vmo_.write(
-      reinterpret_cast<uint8_t*>(&buffer_next_), offset, sizeof(uint64_t));
+  zx_status_t status =
+      buffer_vmo_.write(reinterpret_cast<uint8_t*>(&buffer_next_), offset, sizeof(uint64_t));
   FXL_DCHECK(status == ZX_OK) << "status=" << status;
 }
 
@@ -270,12 +269,10 @@ void FakeProvider::WriteInitRecord() {
   size_t num_words = 2u;
   std::vector<uint64_t> record(num_words);
   record[0] =
-      trace::RecordFields::Type::Make(
-          ToUnderlyingType(trace::RecordType::kInitialization)) |
+      trace::RecordFields::Type::Make(ToUnderlyingType(trace::RecordType::kInitialization)) |
       trace::RecordFields::RecordSize::Make(num_words);
   record[1] = 42;  // #ticks/second
-  WriteRecordToBuffer(reinterpret_cast<uint8_t*>(record.data()),
-                      trace::WordsToBytes(num_words));
+  WriteRecordToBuffer(reinterpret_cast<uint8_t*>(record.data()), trace::WordsToBytes(num_words));
 }
 
 void FakeProvider::WriteBlobRecord() {
@@ -283,15 +280,11 @@ void FakeProvider::WriteBlobRecord() {
   size_t num_words = 1u;
   std::vector<uint64_t> record(num_words);
   record[0] =
-      trace::BlobRecordFields::Type::Make(
-          trace::ToUnderlyingType(trace::RecordType::kBlob)) |
+      trace::BlobRecordFields::Type::Make(trace::ToUnderlyingType(trace::RecordType::kBlob)) |
       trace::BlobRecordFields::RecordSize::Make(num_words) |
-      trace::BlobRecordFields::NameStringRef::Make(
-          TRACE_ENCODED_STRING_REF_EMPTY) |
-      trace::BlobRecordFields::BlobSize::Make(0) |
-      trace::BlobRecordFields::BlobType::Make(0);
-  WriteRecordToBuffer(reinterpret_cast<uint8_t*>(record.data()),
-                      trace::WordsToBytes(num_words));
+      trace::BlobRecordFields::NameStringRef::Make(TRACE_ENCODED_STRING_REF_EMPTY) |
+      trace::BlobRecordFields::BlobSize::Make(0) | trace::BlobRecordFields::BlobType::Make(0);
+  WriteRecordToBuffer(reinterpret_cast<uint8_t*>(record.data()), trace::WordsToBytes(num_words));
 }
 
 void FakeProvider::WriteRecordToBuffer(const uint8_t* data, size_t size) {
@@ -299,13 +292,13 @@ void FakeProvider::WriteRecordToBuffer(const uint8_t* data, size_t size) {
               << buffer_next_;
   size_t offset;
   switch (buffering_mode_) {
-  case provider::BufferingMode::ONESHOT:
-    offset = kHeaderSize + buffer_next_;
-    break;
-  case provider::BufferingMode::CIRCULAR:
-  case provider::BufferingMode::STREAMING:
-    offset = kHeaderSize + durable_buffer_size_ + buffer_next_;
-    break;
+    case provider::BufferingMode::ONESHOT:
+      offset = kHeaderSize + buffer_next_;
+      break;
+    case provider::BufferingMode::CIRCULAR:
+    case provider::BufferingMode::STREAMING:
+      offset = kHeaderSize + durable_buffer_size_ + buffer_next_;
+      break;
   }
   WriteBytes(data, offset, size);
   buffer_next_ += size;

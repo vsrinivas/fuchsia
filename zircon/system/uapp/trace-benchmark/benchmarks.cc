@@ -5,11 +5,11 @@
 #include "benchmarks.h"
 
 #include <inttypes.h>
+#include <lib/async/cpp/task.h>
 #include <stdarg.h>
 #include <stdio.h>
 
 #include <fbl/function.h>
-#include <lib/async/cpp/task.h>
 #include <trace-engine/buffer_internal.h>
 #include <trace-engine/instrumentation.h>
 #include <trace-vthread/event_vthread.h>

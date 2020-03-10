@@ -2,13 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_UAPP_MUTEX_PI_EXERCISER_TRACER_H_
+#define ZIRCON_SYSTEM_UAPP_MUTEX_PI_EXERCISER_TRACER_H_
 
-#include <fbl/macros.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <memory>
 #include <stdio.h>
+
+#include <memory>
+
+#include <fbl/macros.h>
 #include <trace-engine/types.h>
 #include <trace-provider/provider.h>
 
@@ -26,3 +29,5 @@ class Tracer {
   std::unique_ptr<async::Loop> loop_;
   std::unique_ptr<trace::TraceProviderWithFdio> trace_provider_;
 };
+
+#endif  // ZIRCON_SYSTEM_UAPP_MUTEX_PI_EXERCISER_TRACER_H_

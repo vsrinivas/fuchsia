@@ -6,6 +6,7 @@
 #define GARNET_BIN_TRACE2JSON_TRACE_PARSER_H_
 
 #include <stdint.h>
+
 #include <array>
 #include <ostream>
 #include <vector>

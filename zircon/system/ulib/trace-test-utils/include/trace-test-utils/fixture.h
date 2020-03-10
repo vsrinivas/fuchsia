@@ -7,7 +7,8 @@
 // manages the trace engine on behalf of a test.
 //
 
-#pragma once
+#ifndef TRACE_TEST_UTILS_FIXTURE_H_
+#define TRACE_TEST_UTILS_FIXTURE_H_
 
 #include <stddef.h>
 
@@ -21,8 +22,9 @@
 
 #include <lib/async-loop/default.h>
 #include <lib/async-loop/loop.h>
-#include <trace-engine/types.h>
 #include <zircon/compiler.h>
+
+#include <trace-engine/types.h>
 
 // Specifies whether the trace engine async loop uses the same thread as the
 // app or a different thread.
@@ -94,3 +96,5 @@ bool fixture_compare_records(const char* expected);
 static inline void fixture_scope_cleanup(bool* scope) { fixture_tear_down(); }
 
 __END_CDECLS
+
+#endif  // TRACE_TEST_UTILS_FIXTURE_H_

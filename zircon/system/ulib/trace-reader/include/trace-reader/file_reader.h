@@ -5,9 +5,10 @@
 #ifndef TRACE_READER_FILE_READER_H_
 #define TRACE_READER_FILE_READER_H_
 
+#include <stdio.h>
+
 #include <array>
 #include <memory>
-#include <stdio.h>
 
 #include <trace-engine/fields.h>
 #include <trace-reader/reader.h>

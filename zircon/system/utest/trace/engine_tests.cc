@@ -26,7 +26,7 @@ using trace_site_atomic_state_t = std::atomic<trace_site_state_t>;
 // These are internal values to the trace engine. They are not exported to any
 // user-visible header, so we define our own copies here.
 constexpr trace_site_state_t kSiteStateDisabled = 1u;
-//constexpr trace_site_state_t kSiteStateEnabled = 2u;  // Only used by disabled test.
+// constexpr trace_site_state_t kSiteStateEnabled = 2u;  // Only used by disabled test.
 constexpr trace_site_state_t kSiteStateFlagsMask = 3u;
 
 trace_site_state_t get_site_state(trace_site_t& site) {

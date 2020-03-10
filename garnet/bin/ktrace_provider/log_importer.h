@@ -7,6 +7,7 @@
 
 #include <lib/async/cpp/wait.h>
 #include <lib/zx/debuglog.h>
+
 #include <trace-engine/types.h>
 
 namespace ktrace_provider {

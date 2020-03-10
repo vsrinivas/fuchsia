@@ -147,7 +147,8 @@ bool large_blob_event_macro_args_test() {
       "Thread(index: 1, <>)\n"
       "String(index: 3, \"%s\")\n"
       "String(index: 4, \"arg1\")\n"
-      "LargeRecord(Blob(format: blob_event, category: \"%s\", name: \"%s\", ts: <>, pt: <>, {arg1: int32(234234)}, "
+      "LargeRecord(Blob(format: blob_event, category: \"%s\", name: \"%s\", ts: <>, pt: <>, {arg1: "
+      "int32(234234)}, "
       "size: %zu, preview: %s))\n",
       category, name, category, name, length, preview);
   EXPECT_TRUE(fixture_compare_records(expected.c_str()), "record mismatch");

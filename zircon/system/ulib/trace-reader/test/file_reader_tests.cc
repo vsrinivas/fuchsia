@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <trace-reader/file_reader.h>
-
-#include <memory>
 #include <stdint.h>
 #include <stdio.h>
+
+#include <memory>
 #include <utility>
 
 #include <fbl/algorithm.h>
 #include <fbl/vector.h>
 #include <trace-engine/fields.h>
 #include <trace-engine/types.h>
+#include <trace-reader/file_reader.h>
 #include <zxtest/zxtest.h>
 
 #include "reader_tests.h"
