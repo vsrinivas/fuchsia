@@ -4,7 +4,8 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.sys.Launcher"
+	    "fuchsia.update.Manager",
+	    "fuchsia.update.channelcontrol.ChannelControl"
         ]
     }
 }
