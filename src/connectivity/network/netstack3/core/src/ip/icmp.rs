@@ -1950,7 +1950,8 @@ mod tests {
     use crate::ip::socket::testutil::{DummyIpSocket, DummyIpSocketContext};
     use crate::ip::{receive_ipv4_packet, DummyDeviceId, IpExt};
     use crate::testutil::{
-        DummyEventDispatcher, DummyEventDispatcherBuilder, DUMMY_CONFIG_V4, DUMMY_CONFIG_V6,
+        DummyEventDispatcher, DummyEventDispatcherBuilder, TestIpExt, DUMMY_CONFIG_V4,
+        DUMMY_CONFIG_V6,
     };
     use crate::wire::icmp::{
         IcmpEchoRequest, IcmpMessage, IcmpPacket, IcmpUnusedCode, Icmpv4TimestampRequest,
@@ -2307,7 +2308,7 @@ mod tests {
         #[ipv6]
         let recv_icmp_packet_name = "receive_icmpv6_packet";
 
-        let config = crate::testutil::get_dummy_config::<I::Addr>();
+        let config = I::DUMMY_CONFIG;
         let mut net =
             crate::testutil::new_dummy_network_from_config("alice", "bob", config.clone());
 

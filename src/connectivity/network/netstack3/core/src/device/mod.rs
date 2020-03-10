@@ -17,10 +17,10 @@ use core::num::NonZeroU8;
 
 use log::{debug, trace};
 use net_types::ethernet::Mac;
-use net_types::ip::{AddrSubnet, Ip, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
+use net_types::ip::{AddrSubnet, Ip, IpAddress, IpVersion, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
 use net_types::{LinkLocalAddr, MulticastAddr, SpecifiedAddr, Witness};
 use packet::{Buf, BufferMut, EmptyBuf, Serializer};
-use specialize_ip_macro::{specialize_ip, specialize_ip_address};
+use specialize_ip_macro::specialize_ip_address;
 use zerocopy::ByteSlice;
 
 use crate::context::{
@@ -1124,6 +1124,8 @@ pub(crate) fn join_ip_multicast<D: EventDispatcher, A: IpAddress>(
 /// # Panics
 ///
 /// Panics if `device` is not initialized or `device` is not currently in the multicast group.
+// TODO(joshlf): remove `allow(dead_code)` when this is used.
+#[cfg_attr(not(test), allow(dead_code))]
 pub(crate) fn leave_ip_multicast<D: EventDispatcher, A: IpAddress>(
     ctx: &mut Context<D>,
     device: DeviceId,
@@ -1252,31 +1254,26 @@ pub(crate) fn is_routing_enabled<D: EventDispatcher, I: Ip>(
 /// packets. It only means that `device` is allowed to route packets. To route packets, this
 /// netstack must be configured to allow IP packets to be routed if it was not destined for this
 /// node.
-#[specialize_ip]
+// TODO(joshlf): remove `allow(dead_code)` when this is used.
+#[cfg_attr(not(test), allow(dead_code))]
 pub(crate) fn set_routing_enabled<D: EventDispatcher, I: Ip>(
     ctx: &mut Context<D>,
     device: DeviceId,
     enabled: bool,
 ) {
-    // TODO(ghanan): We cannot directly do `I::VERSION` in the `trace!` calls because of a bug in
-    //               specialize_ip_macro where it does not properly replace `I` with `Self`. Once
-    //               this is fixed, change this.
-    let version = I::VERSION;
-
     if crate::device::is_routing_enabled::<_, I>(ctx, device) == enabled {
         trace!(
             "set_routing_enabled: {:?} routing status unchanged for device {:?}",
-            version,
+            I::VERSION,
             device
         );
         return;
     }
 
-    #[ipv4]
-    set_ipv4_routing_enabled(ctx, device, enabled);
-
-    #[ipv6]
-    set_ipv6_routing_enabled(ctx, device, enabled);
+    match I::VERSION {
+        IpVersion::V4 => set_ipv4_routing_enabled(ctx, device, enabled),
+        IpVersion::V6 => set_ipv6_routing_enabled(ctx, device, enabled),
+    }
 }
 
 /// Sets IPv4 routing on `device`.

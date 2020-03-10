@@ -39,8 +39,6 @@ use crate::wire::tcp::TcpSegment;
 use crate::wire::udp::UdpPacket;
 use crate::{handle_timeout, Context, EventDispatcher, Instant, StackStateBuilder, TimerId};
 
-use specialize_ip_macro::specialize_ip_address;
-
 /// Utilities to allow running benchmarks as tests.
 ///
 /// Our benchmarks rely on the unstable `test` feature, which is disallowed in
@@ -530,41 +528,40 @@ where
     Ok((src_mac, dst_mac, src_ip, dst_ip, ttl, message, code))
 }
 
-/// Get a DummyEventDispatcherConfig depending on the `IpAddress`
-/// `get_dummy_config` is specialized with.
-#[specialize_ip_address]
-pub(crate) fn get_dummy_config<A: IpAddress>() -> DummyEventDispatcherConfig<A> {
-    #[ipv4addr]
-    {
-        DUMMY_CONFIG_V4
-    }
-
-    #[ipv6addr]
-    {
-        DUMMY_CONFIG_V6
-    }
-}
-
 /// Get the counter value for a `key`.
 pub(crate) fn get_counter_val(ctx: &mut Context<DummyEventDispatcher>, key: &str) -> usize {
     *ctx.state.test_counters.get(key)
 }
 
-/// Get a IP address in the same subnet as [`DUMMY_CONFIG_V4`] (for IPv4 addresses) or
-/// [`DUMMY_CONFIG_V6`] (for IPv6 addresses).
-///
-/// `last` is the value to be put in the last octet of the IP address.
-#[specialize_ip_address]
-pub(crate) fn get_other_ip_address<A: IpAddress>(last: u8) -> SpecifiedAddr<A> {
-    #[ipv4addr]
-    let ret = SpecifiedAddr::new(Ipv4Addr::new([192, 168, 0, last])).unwrap();
+/// An extension trait for `Ip` providing test-related functionality.
+pub(crate) trait TestIpExt: Ip {
+    /// Either [`DUMMY_CONFIG_V4`] or [`DUMMY_CONFIG_V6`].
+    const DUMMY_CONFIG: DummyEventDispatcherConfig<Self::Addr>;
 
-    #[ipv6addr]
-    let ret =
-        SpecifiedAddr::new(Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, last]))
-            .unwrap();
+    /// Get an IP address in the same subnet as `Self::DUMMY_CONFIG`.
+    ///
+    /// `last` is the value to be put in the last octet of the IP address.
+    fn get_other_ip_address(last: u8) -> SpecifiedAddr<Self::Addr>;
+}
 
-    ret
+impl TestIpExt for Ipv4 {
+    const DUMMY_CONFIG: DummyEventDispatcherConfig<Ipv4Addr> = DUMMY_CONFIG_V4;
+
+    fn get_other_ip_address(last: u8) -> SpecifiedAddr<Ipv4Addr> {
+        let mut bytes = Self::DUMMY_CONFIG.local_ip.get().ipv4_bytes();
+        bytes[bytes.len() - 1] = last;
+        SpecifiedAddr::new(Ipv4Addr::new(bytes)).unwrap()
+    }
+}
+
+impl TestIpExt for Ipv6 {
+    const DUMMY_CONFIG: DummyEventDispatcherConfig<Ipv6Addr> = DUMMY_CONFIG_V6;
+
+    fn get_other_ip_address(last: u8) -> SpecifiedAddr<Ipv6Addr> {
+        let mut bytes = Self::DUMMY_CONFIG.local_ip.get().ipv6_bytes();
+        bytes[bytes.len() - 1] = last;
+        SpecifiedAddr::new(Ipv6Addr::new(bytes)).unwrap()
+    }
 }
 
 /// A configuration for a simple network.
@@ -647,7 +644,6 @@ pub(crate) struct DummyEventDispatcherBuilder {
 
 impl DummyEventDispatcherBuilder {
     /// Construct a `DummyEventDispatcherBuilder` from a `DummyEventDispatcherConfig`.
-    #[specialize_ip_address]
     pub(crate) fn from_config<A: IpAddress>(
         cfg: DummyEventDispatcherConfig<A>,
     ) -> DummyEventDispatcherBuilder {
@@ -657,10 +653,16 @@ impl DummyEventDispatcherBuilder {
         let mut builder = DummyEventDispatcherBuilder::default();
         builder.devices.push((cfg.local_mac, Some((cfg.local_ip.get().into(), cfg.subnet.into()))));
 
-        #[ipv4addr]
-        builder.arp_table_entries.push((0, cfg.remote_ip.get(), cfg.remote_mac));
-        #[ipv6addr]
-        builder.ndp_table_entries.push((0, cfg.remote_ip.get(), cfg.remote_mac));
+        // NOTE: We use two separate calls here rather than a single call to
+        // `.with` because both closures mutably borrow `builder`, and so they
+        // can't exist at the same time, which would be required in order to
+        // pass them both to `.with`.
+        cfg.remote_ip
+            .get()
+            .with_v4(|ip| builder.arp_table_entries.push((0, ip, cfg.remote_mac)), ());
+        cfg.remote_ip
+            .get()
+            .with_v6(|ip| builder.ndp_table_entries.push((0, ip, cfg.remote_mac)), ());
 
         // even with fixed ipv4 address we can have ipv6 link local addresses
         // pre-cached.
@@ -808,18 +810,18 @@ impl DummyEventDispatcherBuilder {
 }
 
 /// Add either an NDP entry (if IPv6) or ARP entry (if IPv4) to a `DummyEventDispatcherBuilder`.
-#[specialize_ip_address]
 pub(crate) fn add_arp_or_ndp_table_entry<A: IpAddress>(
     builder: &mut DummyEventDispatcherBuilder,
     device: usize,
     ip: A,
     mac: Mac,
 ) {
-    #[ipv4addr]
-    builder.add_arp_table_entry(device, ip, mac);
-
-    #[ipv6addr]
-    builder.add_ndp_table_entry(device, ip, mac);
+    // NOTE: We use two separate calls here rather than a single call to `.with`
+    // because both closures mutably borrow `builder`, and so they can't exist
+    // at the same time, which would be required in order to pass them both to
+    // `.with`.
+    ip.with_v4(|ip| builder.add_arp_table_entry(device, ip, mac), ());
+    ip.with_v6(|ip| builder.add_ndp_table_entry(device, ip, mac), ());
 }
 
 impl Instant for std::time::Instant {
@@ -1480,10 +1482,11 @@ where
 
 #[cfg(test)]
 mod tests {
+    use std::time::Duration;
+
     use net_types::ip::{Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
     use packet::{Buf, Serializer};
     use specialize_ip_macro::ip_test;
-    use std::time::Duration;
 
     use super::*;
     use crate::ip;
@@ -1797,7 +1800,7 @@ mod tests {
     }
 
     #[ip_test]
-    fn test_send_to_many<I: Ip>() {
+    fn test_send_to_many<I: Ip + TestIpExt>() {
         fn send_packet<A: IpAddress>(
             ctx: &mut Context<DummyEventDispatcher>,
             src_ip: SpecifiedAddr<A>,
@@ -1824,11 +1827,10 @@ mod tests {
         let mac_a = Mac::new([1, 2, 3, 4, 5, 6]);
         let mac_b = Mac::new([1, 2, 3, 4, 5, 7]);
         let mac_c = Mac::new([1, 2, 3, 4, 5, 8]);
-        let ip_a = get_other_ip_address::<I::Addr>(1);
-        let ip_b = get_other_ip_address::<I::Addr>(2);
-        let ip_c = get_other_ip_address::<I::Addr>(3);
-        let subnet =
-            Subnet::new(get_other_ip_address::<I::Addr>(0).get(), I::Addr::BYTES * 8 - 8).unwrap();
+        let ip_a = I::get_other_ip_address(1);
+        let ip_b = I::get_other_ip_address(2);
+        let ip_c = I::get_other_ip_address(3);
+        let subnet = Subnet::new(I::get_other_ip_address(0).get(), I::Addr::BYTES * 8 - 8).unwrap();
         let mut alice = DummyEventDispatcherBuilder::default();
         alice.add_device_with_ip(mac_a, ip_a.get(), subnet);
         let mut bob = DummyEventDispatcherBuilder::default();

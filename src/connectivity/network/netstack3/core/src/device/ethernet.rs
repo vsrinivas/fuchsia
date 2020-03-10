@@ -14,13 +14,13 @@ use core::slice::Iter;
 
 use log::{debug, trace};
 use net_types::ethernet::Mac;
-use net_types::ip::{AddrSubnet, Ip, IpAddr, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
+use net_types::ip::{AddrSubnet, Ip, IpAddr, IpAddress, IpVersion, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
 use net_types::{
     BroadcastAddress, LinkLocalAddr, LinkLocalAddress, MulticastAddr, MulticastAddress,
     SpecifiedAddr, UnicastAddress, Witness,
 };
 use packet::{Buf, BufferMut, EmptyBuf, Nested, Serializer};
-use specialize_ip_macro::{specialize_ip, specialize_ip_address};
+use specialize_ip_macro::specialize_ip_address;
 
 use crate::context::{FrameContext, InstantContext, StateContext};
 use crate::device::arp::{
@@ -574,30 +574,33 @@ pub(super) fn get_ip_addr_state<C: EthernetIpDeviceContext, A: IpAddress>(
 ///
 /// Returns `None` if `addr` is not associated with `device_id`.
 // TODO(ghanan): Use `SpecializedAddr` for `addr`.
-#[specialize_ip_address]
 fn get_ip_addr_state_inner<C: EthernetIpDeviceContext, A: IpAddress>(
     ctx: &C,
     device_id: C::DeviceId,
     addr: &A,
     configuration_type: Option<AddressConfigurationType>,
 ) -> Option<AddressState> {
+    fn inner<A: IpAddress, I: Instant>(
+        addr_sub: &Vec<AddressEntry<A, I>>,
+        addr: A,
+        configuration_type: Option<AddressConfigurationType>,
+    ) -> Option<AddressState> {
+        addr_sub.iter().find_map(|a| {
+            if a.addr_sub().addr().get() == addr
+                && configuration_type.map_or(true, |x| x == a.configuration_type())
+            {
+                Some(a.state())
+            } else {
+                None
+            }
+        })
+    }
+
     let state = ctx.get_state_with(device_id).ip();
-
-    #[ipv4addr]
-    let addr_sub = &state.ipv4_addr_sub;
-
-    #[ipv6addr]
-    let addr_sub = &state.ipv6_addr_sub;
-
-    addr_sub.iter().find_map(|a| {
-        if a.addr_sub().addr().get() == *addr
-            && configuration_type.map_or(true, |x| x == a.configuration_type())
-        {
-            Some(a.state())
-        } else {
-            None
-        }
-    })
+    addr.clone().with(
+        |addr| inner(&state.ipv4_addr_sub, addr, configuration_type),
+        |addr| inner(&state.ipv6_addr_sub, addr, configuration_type),
+    )
 }
 
 /// Adds an IP address and associated subnet to this device.
@@ -683,72 +686,79 @@ pub(super) fn del_ip_addr<C: EthernetIpDeviceContext, A: IpAddress>(
 ///
 /// If `configuration_type` is provided, then only an address of that
 /// configuration type will be removed.
-#[specialize_ip_address]
 fn del_ip_addr_inner<C: EthernetIpDeviceContext, A: IpAddress>(
     ctx: &mut C,
     device_id: C::DeviceId,
     addr: &A,
     configuration_type: Option<AddressConfigurationType>,
 ) -> Result<(), AddressError> {
-    #[ipv4addr]
-    {
-        let state = ctx.get_state_mut_with(device_id).ip_mut();
+    // NOTE: We use two separate calls here rather than a single call to `.with`
+    // because both closures mutably borrow `builder`, and so they can't exist
+    // at the same time, which would be required in order to pass them both to
+    // `.with`.
+    addr.clone().with_v4(
+        |addr| {
+            let state = ctx.get_state_mut_with(device_id).ip_mut();
 
-        let original_size = state.ipv4_addr_sub.len();
-        if let Some(configuration_type) = configuration_type {
-            state.ipv4_addr_sub.retain(|x| {
-                (x.addr_sub().addr().get() != *addr)
-                    && (x.configuration_type() == configuration_type)
-            });
-        } else {
-            state.ipv4_addr_sub.retain(|x| x.addr_sub().addr().get() != *addr);
-        }
-
-        let new_size = state.ipv4_addr_sub.len();
-
-        if new_size == original_size {
-            return Err(AddressError::NotFound);
-        }
-
-        assert_eq!(original_size - new_size, 1);
-
-        Ok(())
-    }
-
-    #[ipv6addr]
-    {
-        if let Some(state) = get_ip_addr_state_inner(ctx, device_id, addr, configuration_type) {
-            if state.is_tentative() {
-                // Cancel current duplicate address detection for `addr` as we are
-                // removing this IP.
-                //
-                // `cancel_duplicate_address_detection` may panic if we are not
-                // performing DAD on `addr`. However, we will only reach here
-                // if `addr` is marked as tentative. If `addr` is marked as
-                // tentative, then we know that we are performing DAD on it.
-                // Given this, we know `cancel_duplicate_address_detection` will
-                // not panic.
-                ctx.cancel_duplicate_address_detection(device_id, *addr);
+            let original_size = state.ipv4_addr_sub.len();
+            if let Some(configuration_type) = configuration_type {
+                state.ipv4_addr_sub.retain(|x| {
+                    (x.addr_sub().addr().get() != addr)
+                        && (x.configuration_type() == configuration_type)
+                });
+            } else {
+                state.ipv4_addr_sub.retain(|x| x.addr_sub().addr().get() != addr);
             }
-        } else {
-            return Err(AddressError::NotFound);
-        }
 
-        let state = ctx.get_state_mut_with(device_id).ip_mut();
+            let new_size = state.ipv4_addr_sub.len();
 
-        let original_size = state.ipv6_addr_sub.len();
-        state.ipv6_addr_sub.retain(|x| x.addr_sub().addr().get() != *addr);
-        let new_size = state.ipv6_addr_sub.len();
+            if new_size == original_size {
+                return Err(AddressError::NotFound);
+            }
 
-        // Since we just checked earlier if we had the address, we must have removed it
-        // now.
-        assert_eq!(original_size - new_size, 1);
+            assert_eq!(original_size - new_size, 1);
 
-        // Leave the the solicited-node multicast group.
-        leave_ip_multicast(ctx, device_id, addr.to_solicited_node_address());
+            Ok(())
+        },
+        Ok(()),
+    )?;
+    addr.clone().with_v6(
+        |addr| {
+            if let Some(state) = get_ip_addr_state_inner(ctx, device_id, &addr, configuration_type)
+            {
+                if state.is_tentative() {
+                    // Cancel current duplicate address detection for `addr` as we are
+                    // removing this IP.
+                    //
+                    // `cancel_duplicate_address_detection` may panic if we are not
+                    // performing DAD on `addr`. However, we will only reach here
+                    // if `addr` is marked as tentative. If `addr` is marked as
+                    // tentative, then we know that we are performing DAD on it.
+                    // Given this, we know `cancel_duplicate_address_detection` will
+                    // not panic.
+                    ctx.cancel_duplicate_address_detection(device_id, addr);
+                }
+            } else {
+                return Err(AddressError::NotFound);
+            }
 
-        Ok(())
-    }
+            let state = ctx.get_state_mut_with(device_id).ip_mut();
+
+            let original_size = state.ipv6_addr_sub.len();
+            state.ipv6_addr_sub.retain(|x| x.addr_sub().addr().get() != addr);
+            let new_size = state.ipv6_addr_sub.len();
+
+            // Since we just checked earlier if we had the address, we must have removed it
+            // now.
+            assert_eq!(original_size - new_size, 1);
+
+            // Leave the the solicited-node multicast group.
+            leave_ip_multicast(ctx, device_id, addr.to_solicited_node_address());
+
+            Ok(())
+        },
+        Ok(()),
+    )
 }
 
 /// Get a (non-tentative) IPv6 link-local address associated with this device.
@@ -988,16 +998,15 @@ pub(super) fn get_ipv6_hop_limit<C: EthernetIpDeviceContext>(
 /// Note, `true` does not necessarily mean that `device` is currently routing IP packets. It
 /// only means that `device` is allowed to route packets. To route packets, this netstack must
 /// be configured to allow IP packets to be routed if it was not destined for this node.
-#[specialize_ip]
 pub(super) fn is_routing_enabled<C: EthernetIpDeviceContext, I: Ip>(
     ctx: &C,
     device_id: C::DeviceId,
 ) -> bool {
-    #[ipv4]
-    return ctx.get_state_with(device_id).ip().route_ipv4;
-
-    #[ipv6]
-    return ctx.get_state_with(device_id).ip().route_ipv6;
+    let state = &ctx.get_state_with(device_id).ip();
+    match I::VERSION {
+        IpVersion::V4 => state.route_ipv4,
+        IpVersion::V6 => state.route_ipv6,
+    }
 }
 
 /// Sets the IP packet routing flag on `device_id`.
@@ -1006,19 +1015,16 @@ pub(super) fn is_routing_enabled<C: EthernetIpDeviceContext, I: Ip>(
 /// [`crate::device::set_routing_enabled`].
 ///
 /// See [`crate::device::set_routing_enabled`] for more information.
-#[specialize_ip]
 pub(super) fn set_routing_enabled_inner<C: EthernetIpDeviceContext, I: Ip>(
     ctx: &mut C,
     device_id: C::DeviceId,
     enabled: bool,
 ) {
     let state = ctx.get_state_mut_with(device_id).ip_mut();
-
-    #[ipv4]
-    state.route_ipv4 = enabled;
-
-    #[ipv6]
-    state.route_ipv6 = enabled;
+    match I::VERSION {
+        IpVersion::V4 => state.route_ipv4 = enabled,
+        IpVersion::V6 => state.route_ipv6 = enabled,
+    }
 }
 
 /// Insert a static entry into this device's ARP table.
@@ -1506,10 +1512,10 @@ mod tests {
         IPV6_MIN_MTU,
     };
     use crate::testutil::{
-        add_arp_or_ndp_table_entry, get_counter_val, get_dummy_config, get_other_ip_address,
-        new_rng, parse_icmp_packet_in_ip_packet_in_ethernet_frame,
-        parse_ip_packet_in_ethernet_frame, DummyEventDispatcher, DummyEventDispatcherBuilder,
-        DummyInstant, DUMMY_CONFIG_V4,
+        add_arp_or_ndp_table_entry, get_counter_val, new_rng,
+        parse_icmp_packet_in_ip_packet_in_ethernet_frame, parse_ip_packet_in_ethernet_frame,
+        DummyEventDispatcher, DummyEventDispatcherBuilder, DummyInstant, TestIpExt,
+        DUMMY_CONFIG_V4,
     };
     use crate::wire::icmp::{IcmpDestUnreachable, IcmpIpExt};
     use crate::wire::testdata::{dns_request_v4, dns_request_v6};
@@ -1567,7 +1573,7 @@ mod tests {
         // Should only receive a frame if the device is initialized
         //
 
-        let config = get_dummy_config::<I::Addr>();
+        let config = I::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
         let device = ctx.state_mut().add_ethernet_device(config.local_mac, crate::ip::IPV6_MIN_MTU);
 
@@ -1612,7 +1618,7 @@ mod tests {
         // Should only send a frame if the device is initialized
         //
 
-        let config = get_dummy_config::<I::Addr>();
+        let config = I::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
         let device = ctx.state_mut().add_ethernet_device(config.local_mac, crate::ip::IPV6_MIN_MTU);
 
@@ -1666,42 +1672,46 @@ mod tests {
     }
 
     #[ip_test]
-    fn test_set_ip_routing<I: Ip + IcmpIpExt + IpExt>() {
-        #[specialize_ip]
+    fn test_set_ip_routing<I: Ip + TestIpExt + IcmpIpExt + IpExt>() {
         fn check_other_is_routing_enabled<I: Ip>(
             ctx: &Context<DummyEventDispatcher>,
             device: DeviceId,
             expected: bool,
         ) {
-            #[ipv4]
-            assert_eq!(is_routing_enabled::<_, Ipv6>(ctx, device), expected);
+            let enabled = match I::VERSION {
+                IpVersion::V4 => is_routing_enabled::<_, Ipv6>(ctx, device),
+                IpVersion::V6 => is_routing_enabled::<_, Ipv4>(ctx, device),
+            };
 
-            #[ipv6]
-            assert_eq!(is_routing_enabled::<_, Ipv4>(ctx, device), expected);
+            assert_eq!(enabled, expected);
         }
 
-        #[specialize_ip]
         fn check_icmp<I: Ip>(buf: &[u8]) {
-            #[ipv4]
-            let (src_mac, dst_mac, src_ip, dst_ip, ttl, message, code) =
-                parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv4, _, IcmpDestUnreachable, _>(
-                    buf,
-                    |_| {},
-                )
-                .unwrap();
-
-            #[ipv6]
-            let (src_mac, dst_mac, src_ip, dst_ip, ttl, message, code) =
-                parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv6, _, IcmpDestUnreachable, _>(
-                    buf,
-                    |_| {},
-                )
-                .unwrap();
+            match I::VERSION {
+                IpVersion::V4 => {
+                    let _ = parse_icmp_packet_in_ip_packet_in_ethernet_frame::<
+                        Ipv4,
+                        _,
+                        IcmpDestUnreachable,
+                        _,
+                    >(buf, |_| {})
+                    .unwrap();
+                }
+                IpVersion::V6 => {
+                    let _ = parse_icmp_packet_in_ip_packet_in_ethernet_frame::<
+                        Ipv6,
+                        _,
+                        IcmpDestUnreachable,
+                        _,
+                    >(buf, |_| {})
+                    .unwrap();
+                }
+            }
         }
 
-        let src_ip = get_other_ip_address::<I::Addr>(3);
+        let src_ip = I::get_other_ip_address(3);
         let src_mac = Mac::new([10, 11, 12, 13, 14, 15]);
-        let config = get_dummy_config::<I::Addr>();
+        let config = I::DUMMY_CONFIG;
         let device = DeviceId::new_ethernet(0);
         let frame_dst = FrameDestination::Unicast;
         let mut rng = new_rng(70812476915813);
@@ -1802,14 +1812,14 @@ mod tests {
     }
 
     #[ip_test]
-    fn test_promiscuous_mode<I: Ip + IpExt>() {
+    fn test_promiscuous_mode<I: Ip + TestIpExt + IpExt>() {
         //
         // Test that frames not destined for a device will still be accepted when
         // the device is put into promiscuous mode. In all cases, frames that are
         // destined for a device must always be accepted.
         //
 
-        let config = get_dummy_config::<I::Addr>();
+        let config = I::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::from_config(config.clone())
             .build::<DummyEventDispatcher>();
         let device = DeviceId::new_ethernet(0);
@@ -1867,15 +1877,15 @@ mod tests {
     }
 
     #[ip_test]
-    fn test_add_remove_ip_addresses<I: Ip>() {
-        let config = get_dummy_config::<I::Addr>();
+    fn test_add_remove_ip_addresses<I: Ip + TestIpExt>() {
+        let config = I::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
         let device = ctx.state_mut().add_ethernet_device(config.local_mac, crate::ip::IPV6_MIN_MTU);
         crate::device::initialize_device(&mut ctx, device);
 
-        let ip1 = get_other_ip_address::<I::Addr>(1);
-        let ip2 = get_other_ip_address::<I::Addr>(2);
-        let ip3 = get_other_ip_address::<I::Addr>(3);
+        let ip1 = I::get_other_ip_address(1);
+        let ip2 = I::get_other_ip_address(2);
+        let ip3 = I::get_other_ip_address(3);
 
         let prefix = I::Addr::BYTES * 8;
         let as1 = AddrSubnet::new(ip1.get(), prefix).unwrap();
@@ -1960,15 +1970,15 @@ mod tests {
     }
 
     #[ip_test]
-    fn test_multiple_ip_addresses<I: Ip>() {
-        let config = get_dummy_config::<I::Addr>();
+    fn test_multiple_ip_addresses<I: Ip + TestIpExt>() {
+        let config = I::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
         let device = ctx.state_mut().add_ethernet_device(config.local_mac, crate::ip::IPV6_MIN_MTU);
         crate::device::initialize_device(&mut ctx, device);
 
-        let ip1 = get_other_ip_address::<I::Addr>(1);
-        let ip2 = get_other_ip_address::<I::Addr>(2);
-        let from_ip = get_other_ip_address::<I::Addr>(3).get();
+        let ip1 = I::get_other_ip_address(1);
+        let ip2 = I::get_other_ip_address(2);
+        let from_ip = I::get_other_ip_address(3).get();
 
         assert!(crate::device::get_ip_addr_state(&ctx, device, &ip1).is_none());
         assert!(crate::device::get_ip_addr_state(&ctx, device, &ip2).is_none());
@@ -2031,8 +2041,8 @@ mod tests {
     /// Test that we can join and leave a multicast group, but we only truly leave it after
     /// calling `leave_ip_multicast` the same number of times as `join_ip_multicast`.
     #[ip_test]
-    fn test_ip_join_leave_multicast_addr_ref_count<I: Ip>() {
-        let config = get_dummy_config::<I::Addr>();
+    fn test_ip_join_leave_multicast_addr_ref_count<I: Ip + TestIpExt>() {
+        let config = I::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
         let device = ctx.state_mut().add_ethernet_device(config.local_mac, crate::ip::IPV6_MIN_MTU);
         crate::device::initialize_device(&mut ctx, device);
@@ -2075,8 +2085,8 @@ mod tests {
     /// condition.
     #[ip_test]
     #[should_panic(expected = "cannot leave not-yet-joined multicast group")]
-    fn test_ip_leave_unjoined_multicast<I: Ip>() {
-        let config = get_dummy_config::<I::Addr>();
+    fn test_ip_leave_unjoined_multicast<I: Ip + TestIpExt>() {
+        let config = I::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
         let device = ctx.state_mut().add_ethernet_device(config.local_mac, crate::ip::IPV6_MIN_MTU);
         crate::device::initialize_device(&mut ctx, device);
@@ -2098,7 +2108,7 @@ mod tests {
         // the same solicited-node multicast address.
         //
 
-        let config = get_dummy_config::<Ipv6Addr>();
+        let config = Ipv6::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
         let device = ctx.state_mut().add_ethernet_device(config.local_mac, crate::ip::IPV6_MIN_MTU);
         crate::device::initialize_device(&mut ctx, device);
@@ -2152,7 +2162,7 @@ mod tests {
         // Test that `get_ip_addr_subnet` only returns non-local IPv6 addresses.
         //
 
-        let config = get_dummy_config::<Ipv6Addr>();
+        let config = Ipv6::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
         let device = ctx.state_mut().add_ethernet_device(config.local_mac, crate::ip::IPV6_MIN_MTU);
         assert_eq!(device.id, 0);
@@ -2178,7 +2188,7 @@ mod tests {
         // Test that `add_ip_addr_subnet` allows link-local addresses.
         //
 
-        let config = get_dummy_config::<Ipv6Addr>();
+        let config = Ipv6::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
         let device = ctx.state_mut().add_ethernet_device(config.local_mac, crate::ip::IPV6_MIN_MTU);
         assert_eq!(device.id, 0);

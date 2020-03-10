@@ -1063,7 +1063,7 @@ mod tests {
 
     use super::*;
     use crate::ip::{IpExt, IpPacketBuilder, IpProto};
-    use crate::testutil::{get_other_ip_address, set_logger_for_test};
+    use crate::testutil::{set_logger_for_test, TestIpExt};
     use crate::wire::icmp::{Icmpv4DestUnreachableCode, Icmpv6DestUnreachableCode};
 
     /// The listener data sent through a [`DummyUdpContext`].
@@ -1116,7 +1116,7 @@ mod tests {
         IpPacketFromArgs<<I as Ip>::Addr>,
     >;
 
-    impl<I: IcmpIpExt> TransportIpContext<I> for DummyContext<I> {
+    impl<I: TestIpExt + IcmpIpExt> TransportIpContext<I> for DummyContext<I> {
         fn is_local_addr(&self, addr: <I as Ip>::Addr) -> bool {
             local_ip::<I>().into_addr() == addr || self.get_ref().extra_local_addrs.contains(&addr)
         }
@@ -1144,7 +1144,7 @@ mod tests {
         }
     }
 
-    impl<I: IcmpIpExt> UdpContext<I> for DummyContext<I> {
+    impl<I: TestIpExt + IcmpIpExt> UdpContext<I> for DummyContext<I> {
         fn receive_icmp_error(
             &mut self,
             id: Result<UdpConnId<I>, UdpListenerId<I>>,
@@ -1153,7 +1153,7 @@ mod tests {
             self.get_mut().icmp_errors.push(IcmpError { id, err })
         }
     }
-    impl<I: IcmpIpExt, B: BufferMut> BufferUdpContext<I, B> for DummyContext<I> {
+    impl<I: TestIpExt + IcmpIpExt, B: BufferMut> BufferUdpContext<I, B> for DummyContext<I> {
         fn receive_udp_from_conn(
             &mut self,
             conn: UdpConnId<I>,
@@ -1182,16 +1182,16 @@ mod tests {
         }
     }
 
-    fn local_ip<I: Ip>() -> SpecifiedAddr<I::Addr> {
-        get_other_ip_address::<I::Addr>(1)
+    fn local_ip<I: TestIpExt>() -> SpecifiedAddr<I::Addr> {
+        I::get_other_ip_address(1)
     }
 
-    fn remote_ip<I: Ip>() -> SpecifiedAddr<I::Addr> {
-        get_other_ip_address::<I::Addr>(2)
+    fn remote_ip<I: TestIpExt>() -> SpecifiedAddr<I::Addr> {
+        I::get_other_ip_address(2)
     }
 
     /// Helper function to inject an UDP packet with the provided parameters.
-    fn receive_udp_packet<I: IcmpIpExt>(
+    fn receive_udp_packet<I: TestIpExt + IcmpIpExt>(
         ctx: &mut DummyContext<I>,
         src_ip: I::Addr,
         dst_ip: I::Addr,
@@ -1212,7 +1212,7 @@ mod tests {
     /// packet notifications for that listener, and that we can send data using
     /// that listener.
     #[ip_test]
-    fn test_listen_udp<I: Ip + IcmpIpExt>() {
+    fn test_listen_udp<I: Ip + TestIpExt + IcmpIpExt>() {
         set_logger_for_test();
         let mut ctx = DummyContext::<I>::default();
         let local_ip = local_ip::<I>();
@@ -1287,7 +1287,7 @@ mod tests {
     /// Tests that receiving a UDP packet on a port over which there isn't a
     /// listener causes the packet to be dropped correctly.
     #[ip_test]
-    fn test_udp_drop<I: Ip + IcmpIpExt>() {
+    fn test_udp_drop<I: Ip + TestIpExt + IcmpIpExt>() {
         set_logger_for_test();
         let mut ctx = DummyContext::<I>::default();
         let local_ip = local_ip::<I>();
@@ -1310,7 +1310,7 @@ mod tests {
     ///
     /// Only tests with specified local port and address bounds.
     #[ip_test]
-    fn test_udp_conn_basic<I: Ip + IcmpIpExt>() {
+    fn test_udp_conn_basic<I: Ip + TestIpExt + IcmpIpExt>() {
         set_logger_for_test();
         let mut ctx = DummyContext::<I>::default();
         let local_ip = local_ip::<I>();
@@ -1368,7 +1368,7 @@ mod tests {
     /// Tests that UDP connections fail with an appropriate error for non-routable remote
     /// addresses.
     #[ip_test]
-    fn test_udp_conn_unroutable<I: Ip + IcmpIpExt>() {
+    fn test_udp_conn_unroutable<I: Ip + TestIpExt + IcmpIpExt>() {
         set_logger_for_test();
         let mut ctx = DummyContext::<I>::default();
         // set dummy context callback to treat all addresses as unroutable.
@@ -1390,7 +1390,7 @@ mod tests {
 
     /// Tests that UDP connections fail with an appropriate error when local address is non-local.
     #[ip_test]
-    fn test_udp_conn_cannot_bind<I: Ip + IcmpIpExt>() {
+    fn test_udp_conn_cannot_bind<I: Ip + TestIpExt + IcmpIpExt>() {
         set_logger_for_test();
         let mut ctx = DummyContext::<I>::default();
 
@@ -1412,7 +1412,7 @@ mod tests {
 
     /// Tests that UDP connections fail with an appropriate error when local ports are exhausted.
     #[ip_test]
-    fn test_udp_conn_exhausted<I: Ip + IcmpIpExt>() {
+    fn test_udp_conn_exhausted<I: Ip + TestIpExt + IcmpIpExt>() {
         set_logger_for_test();
         let mut ctx = DummyContext::<I>::default();
 
@@ -1440,7 +1440,7 @@ mod tests {
 
     /// Tests that UDP connections fail with an appropriate error when the connection is in use.
     #[ip_test]
-    fn test_udp_conn_in_use<I: Ip + IcmpIpExt>() {
+    fn test_udp_conn_in_use<I: Ip + TestIpExt + IcmpIpExt>() {
         set_logger_for_test();
         let mut ctx = DummyContext::<I>::default();
 
@@ -1474,7 +1474,7 @@ mod tests {
     }
 
     #[ip_test]
-    fn test_send_udp<I: Ip + IcmpIpExt>() {
+    fn test_send_udp<I: Ip + TestIpExt + IcmpIpExt>() {
         set_logger_for_test();
 
         let mut ctx = DummyContext::<I>::default();
@@ -1519,7 +1519,7 @@ mod tests {
 
     /// Tests that `send_udp` propogates errors.
     #[ip_test]
-    fn test_send_udp_errors<I: Ip + IcmpIpExt>() {
+    fn test_send_udp_errors<I: Ip + TestIpExt + IcmpIpExt>() {
         set_logger_for_test();
 
         let mut ctx = DummyContext::<I>::default();
@@ -1548,7 +1548,7 @@ mod tests {
 
     /// Tests that `send_udp` cleans up after errors.
     #[ip_test]
-    fn test_send_udp_errors_cleanup<I: Ip + IcmpIpExt>() {
+    fn test_send_udp_errors_cleanup<I: Ip + TestIpExt + IcmpIpExt>() {
         set_logger_for_test();
 
         let mut ctx = DummyContext::<I>::default();
@@ -1587,7 +1587,7 @@ mod tests {
     ///
     /// Only tests with specified local port and address bounds.
     #[ip_test]
-    fn test_send_udp_conn_failure<I: Ip + IcmpIpExt>() {
+    fn test_send_udp_conn_failure<I: Ip + TestIpExt + IcmpIpExt>() {
         set_logger_for_test();
         let mut ctx = DummyContext::<I>::default();
         let local_ip = local_ip::<I>();
@@ -1615,12 +1615,12 @@ mod tests {
     /// Tests that if we have multiple listeners and connections, demuxing the
     /// flows is performed correctly.
     #[ip_test]
-    fn test_udp_demux<I: Ip + IcmpIpExt>() {
+    fn test_udp_demux<I: Ip + TestIpExt + IcmpIpExt>() {
         set_logger_for_test();
         let mut ctx = DummyContext::<I>::default();
         let local_ip = local_ip::<I>();
-        let remote_ip_a = get_other_ip_address::<I::Addr>(70);
-        let remote_ip_b = get_other_ip_address::<I::Addr>(72);
+        let remote_ip_a = I::get_other_ip_address(70);
+        let remote_ip_b = I::get_other_ip_address(72);
         let local_port_a = NonZeroU16::new(100).unwrap();
         let local_port_b = NonZeroU16::new(101).unwrap();
         let local_port_c = NonZeroU16::new(102).unwrap();
@@ -1734,13 +1734,13 @@ mod tests {
 
     /// Tests UDP wildcard listeners for different IP versions.
     #[ip_test]
-    fn test_wildcard_listeners<I: Ip + IcmpIpExt>() {
+    fn test_wildcard_listeners<I: Ip + TestIpExt + IcmpIpExt>() {
         set_logger_for_test();
         let mut ctx = DummyContext::<I>::default();
-        let local_ip_a = get_other_ip_address::<I::Addr>(1);
-        let local_ip_b = get_other_ip_address::<I::Addr>(2);
-        let remote_ip_a = get_other_ip_address::<I::Addr>(70);
-        let remote_ip_b = get_other_ip_address::<I::Addr>(72);
+        let local_ip_a = I::get_other_ip_address(1);
+        let local_ip_b = I::get_other_ip_address(2);
+        let remote_ip_a = I::get_other_ip_address(70);
+        let remote_ip_b = I::get_other_ip_address(72);
         let listener_port = NonZeroU16::new(100).unwrap();
         let remote_port = NonZeroU16::new(200).unwrap();
         let listener =
@@ -1785,7 +1785,7 @@ mod tests {
 
     /// Tests establishing a UDP connection without providing a local IP
     #[ip_test]
-    fn test_conn_unspecified_local_ip<I: Ip + IcmpIpExt>() {
+    fn test_conn_unspecified_local_ip<I: Ip + TestIpExt + IcmpIpExt>() {
         set_logger_for_test();
         let mut ctx = DummyContext::<I>::default();
         let local_port = NonZeroU16::new(100).unwrap();
@@ -1806,11 +1806,11 @@ mod tests {
     /// Tests that calling [`connect_udp`] causes a valid local port to be
     /// allocated when no local port is passed.
     #[ip_test]
-    fn test_udp_local_port_alloc<I: Ip + IcmpIpExt>() {
+    fn test_udp_local_port_alloc<I: Ip + TestIpExt + IcmpIpExt>() {
         let mut ctx = DummyContext::<I>::default();
         let local_ip = local_ip::<I>();
-        let ip_a = get_other_ip_address::<I::Addr>(100);
-        let ip_b = get_other_ip_address::<I::Addr>(200);
+        let ip_a = I::get_other_ip_address(100);
+        let ip_b = I::get_other_ip_address(200);
 
         let conn_a = connect_udp::<I, _>(
             &mut ctx,
@@ -1861,10 +1861,10 @@ mod tests {
 
     /// Tests [`UdpConnectionState::collect_used_local_ports`]
     #[ip_test]
-    fn test_udp_collect_local_ports<I: Ip + IcmpIpExt>() {
+    fn test_udp_collect_local_ports<I: Ip + TestIpExt + IcmpIpExt>() {
         let mut ctx = DummyContext::<I>::default();
         let local_ip = local_ip::<I>();
-        let local_ip_2 = get_other_ip_address::<I::Addr>(10);
+        let local_ip_2 = I::get_other_ip_address(10);
         let remote_ip = remote_ip::<I>();
         ctx.get_mut().extra_local_addrs.push(local_ip_2.get());
 
@@ -1918,7 +1918,7 @@ mod tests {
     /// Tests that calling [`listen_udp`] causes a valid local port to be
     /// allocated when no local port is passed.
     #[ip_test]
-    fn test_udp_listen_port_alloc<I: Ip + IcmpIpExt>() {
+    fn test_udp_listen_port_alloc<I: Ip + TestIpExt + IcmpIpExt>() {
         let mut ctx = DummyContext::<I>::default();
         let local_ip = local_ip::<I>();
 
@@ -1951,7 +1951,7 @@ mod tests {
 
     /// Tests [`remove_udp_conn`]
     #[ip_test]
-    fn test_remove_udp_conn<I: Ip + IcmpIpExt>() {
+    fn test_remove_udp_conn<I: Ip + TestIpExt + IcmpIpExt>() {
         let mut ctx = DummyContext::<I>::default();
         let local_ip = local_ip::<I>();
         let remote_ip = remote_ip::<I>();
@@ -1974,7 +1974,7 @@ mod tests {
 
     /// Tests [`remove_udp_listener`]
     #[ip_test]
-    fn test_remove_udp_listener<I: Ip + IcmpIpExt>() {
+    fn test_remove_udp_listener<I: Ip + TestIpExt + IcmpIpExt>() {
         let mut ctx = DummyContext::<I>::default();
         let local_ip = local_ip::<I>();
         let local_port = NonZeroU16::new(100).unwrap();
@@ -1996,7 +1996,7 @@ mod tests {
     }
 
     #[ip_test]
-    fn test_get_conn_info<I: Ip + IcmpIpExt>() {
+    fn test_get_conn_info<I: Ip + TestIpExt + IcmpIpExt>() {
         let mut ctx = DummyContext::<I>::default();
         let local_ip = local_ip::<I>();
         let remote_ip = remote_ip::<I>();
@@ -2017,7 +2017,7 @@ mod tests {
     }
 
     #[ip_test]
-    fn test_get_listener_info<I: Ip + IcmpIpExt>() {
+    fn test_get_listener_info<I: Ip + TestIpExt + IcmpIpExt>() {
         let mut ctx = DummyContext::<I>::default();
         let local_ip = local_ip::<I>();
 
@@ -2037,7 +2037,7 @@ mod tests {
     }
 
     #[ip_test]
-    fn test_listen_udp_forwards_errors<I: Ip + IcmpIpExt>() {
+    fn test_listen_udp_forwards_errors<I: Ip + TestIpExt + IcmpIpExt>() {
         let mut ctx = DummyContext::<I>::default();
         let remote_ip = remote_ip::<I>();
 
@@ -2061,7 +2061,7 @@ mod tests {
         // - A wildcard listener on port 1
         // - A listener on the local IP and port 2
         // - A connection from the local IP to the remote IP on local port 2 and remote port 3
-        fn initialize_context<I: IcmpIpExt>() -> DummyContext<I> {
+        fn initialize_context<I: TestIpExt + IcmpIpExt>() -> DummyContext<I> {
             let mut ctx = DummyContext::default();
             assert_eq!(
                 listen_udp(&mut ctx, None, Some(NonZeroU16::new(1).unwrap())).unwrap(),
@@ -2117,7 +2117,7 @@ mod tests {
         }
 
         fn test<
-            I: IpExt + IcmpIpExt + PartialEq,
+            I: IpExt + TestIpExt + IcmpIpExt + PartialEq,
             F: Copy + Fn(&mut DummyContext<I>, &[u8], I::ErrorCode),
         >(
             err: I::ErrorCode,

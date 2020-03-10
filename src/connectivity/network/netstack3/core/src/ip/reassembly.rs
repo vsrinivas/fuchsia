@@ -40,7 +40,7 @@ use core::time::Duration;
 
 use byteorder::{ByteOrder, NetworkEndian};
 use internet_checksum::Checksum;
-use net_types::ip::{Ip, IpAddress};
+use net_types::ip::{Ip, IpAddress, IpVersion};
 use never::Never;
 use packet::{BufferViewMut, ParsablePacket};
 use specialize_ip_macro::specialize_ip;
@@ -619,7 +619,6 @@ fn find_gap(
 // TODO(rheacock): the compiler thinks that `body_fragments` doesn't have to be
 // mutable, but it does. Thus we `allow(unused)` here.
 #[allow(unused)]
-#[specialize_ip]
 fn reassemble_packet_helper<B: ByteSliceMut, BV: BufferViewMut<B>, I: Ip>(
     mut buffer: BV,
     header: Vec<u8>,
@@ -642,56 +641,58 @@ fn reassemble_packet_helper<B: ByteSliceMut, BV: BufferViewMut<B>, I: Ip>(
         byte_count += p.len();
     }
 
-    #[ipv4]
-    {
-        //
-        // Fix up the IPv4 header
-        //
+    match I::VERSION {
+        IpVersion::V4 => {
+            //
+            // Fix up the IPv4 header
+            //
 
-        // Make sure that the packet length is not more than the maximum
-        // possible IPv4 packet length.
-        if byte_count > (core::u16::MAX as usize) {
-            return Err(FragmentReassemblyError::PacketParsingError);
+            // Make sure that the packet length is not more than the maximum
+            // possible IPv4 packet length.
+            if byte_count > (core::u16::MAX as usize) {
+                return Err(FragmentReassemblyError::PacketParsingError);
+            }
+
+            // Update the total length field.
+            NetworkEndian::write_u16(&mut bytes[IPV4_TOTAL_LENGTH_BYTE_RANGE], byte_count as u16);
+
+            // Zero out fragment related data since we will now have a
+            // reassembled packet that does not need reassembly.
+            NetworkEndian::write_u32(&mut bytes[IPV4_FRAGMENT_DATA_BYTE_RANGE], 0);
+
+            // Update header checksum. The header checksum field is at bytes 10
+            // and 11 so do not include them in the checksum calculation.
+            let mut c = Checksum::new();
+            c.add_bytes(&bytes[..IPV4_CHECKSUM_BYTE_RANGE.start]);
+            c.add_bytes(&bytes[IPV4_CHECKSUM_BYTE_RANGE.end..header.len()]);
+            bytes[IPV4_CHECKSUM_BYTE_RANGE].copy_from_slice(&c.checksum()[..]);
         }
+        IpVersion::V6 => {
+            //
+            // Fix up the IPv6 header
+            //
 
-        // Update the total length field.
-        NetworkEndian::write_u16(&mut bytes[IPV4_TOTAL_LENGTH_BYTE_RANGE], byte_count as u16);
+            // For IPv6, the payload length is the sum of the length of the
+            // extension headers and the packet body. The header as it is stored
+            // includes the IPv6 fixed header and all extension headers, so
+            // `bytes_count` is the sum of the size of the fixed header,
+            // extension headers and packet body. To calculate the payload
+            // length we subtract the size of the fixed header from the total
+            // byte count of a reassembled packet.
+            let payload_length = byte_count - IPV6_FIXED_HDR_LEN;
 
-        // Zero out fragment related data since we will now have a reassembled
-        // packet that does not need reassembly.
-        NetworkEndian::write_u32(&mut bytes[IPV4_FRAGMENT_DATA_BYTE_RANGE], 0);
+            // Make sure that the payload length is not more than the maximum
+            // possible IPv4 packet length.
+            if payload_length > (core::u16::MAX as usize) {
+                return Err(FragmentReassemblyError::PacketParsingError);
+            }
 
-        // Update header checksum. The header checksum field is at bytes 10 and
-        // 11 so do not include them in the checksum calculation.
-        let mut c = Checksum::new();
-        c.add_bytes(&bytes[..IPV4_CHECKSUM_BYTE_RANGE.start]);
-        c.add_bytes(&bytes[IPV4_CHECKSUM_BYTE_RANGE.end..header.len()]);
-        bytes[IPV4_CHECKSUM_BYTE_RANGE].copy_from_slice(&c.checksum()[..]);
-    }
-
-    #[ipv6]
-    {
-        //
-        // Fix up the IPv6 header
-        //
-
-        // For IPv6, the payload length is the sum of the length of the
-        // extension headers and the packet body. The header as it is stored
-        // includes the IPv6 fixed header and all extension headers, so
-        // `bytes_count` is the sum of the size of the fixed header, extension
-        // headers and packet body. To calculate the payload length we subtract
-        // the size of the fixed header from the total byte count of a
-        // reassembled packet.
-        let payload_length = byte_count - IPV6_FIXED_HDR_LEN;
-
-        // Make sure that the payload length is not more than the maximum
-        // possible IPv4 packet length.
-        if payload_length > (core::u16::MAX as usize) {
-            return Err(FragmentReassemblyError::PacketParsingError);
+            // Update the payload length field.
+            NetworkEndian::write_u16(
+                &mut bytes[IPV6_PAYLOAD_LEN_BYTE_RANGE],
+                payload_length as u16,
+            );
         }
-
-        // Update the payload length field.
-        NetworkEndian::write_u16(&mut bytes[IPV6_PAYLOAD_LEN_BYTE_RANGE], payload_length as u16);
     }
 
     // Parse the packet.
@@ -759,7 +760,7 @@ mod tests {
     use super::*;
     use crate::context::testutil::DummyTimerContextExt;
     use crate::ip::{IpProto, Ipv6ExtHdrType};
-    use crate::testutil::{get_dummy_config, DUMMY_CONFIG_V4, DUMMY_CONFIG_V6};
+    use crate::testutil::{TestIpExt, DUMMY_CONFIG_V4, DUMMY_CONFIG_V6};
     use crate::wire::ipv4::{Ipv4Packet, Ipv4PacketBuilder};
     use crate::wire::ipv6::{Ipv6Packet, Ipv6PacketBuilder};
 
@@ -1083,8 +1084,8 @@ mod tests {
     }
 
     #[ip_test]
-    fn test_ip_reassemble_with_missing_blocks<I: Ip>() {
-        let dummy_config = get_dummy_config::<I::Addr>();
+    fn test_ip_reassemble_with_missing_blocks<I: Ip + TestIpExt>() {
+        let dummy_config = I::DUMMY_CONFIG;
         let mut ctx = DummyContext::default();
         let fragment_id = 5;
 
@@ -1113,8 +1114,8 @@ mod tests {
     }
 
     #[ip_test]
-    fn test_ip_reassemble_after_timer<I: Ip>() {
-        let dummy_config = get_dummy_config::<I::Addr>();
+    fn test_ip_reassemble_after_timer<I: Ip + TestIpExt>() {
+        let dummy_config = I::DUMMY_CONFIG;
         let mut ctx = DummyContext::default();
         let fragment_id = 5;
 

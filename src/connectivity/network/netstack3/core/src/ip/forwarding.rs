@@ -426,7 +426,7 @@ mod tests {
     use super::*;
 
     use crate::device::DeviceId;
-    use crate::testutil::get_dummy_config;
+    use crate::testutil::TestIpExt;
 
     impl<I: Ip, D: Clone + Debug + PartialEq> ForwardingTable<I, D> {
         /// Print the active and installed forwarding table.
@@ -515,10 +515,10 @@ mod tests {
     }
 
     #[ip_test]
-    fn test_add_del_lookup_simple_ip<I: Ip>() {
+    fn test_add_del_lookup_simple_ip<I: Ip + TestIpExt>() {
         let mut table = ForwardingTable::<I, DeviceId>::default();
 
-        let config = get_dummy_config::<I::Addr>();
+        let config = I::DUMMY_CONFIG;
         let subnet = config.subnet;
         let device = DeviceId::new_ethernet(0);
         let next_hop = next_hop_addr::<I>();

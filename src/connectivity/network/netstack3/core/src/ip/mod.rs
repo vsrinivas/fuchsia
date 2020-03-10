@@ -818,17 +818,16 @@ macro_rules! try_parse_ip_packet {
 /// `receive_ip_packet` calls [`receive_ipv4_packet`] or [`receive_ipv6_packet`]
 /// depending on the type parameter, `I`. It is used only in testing.
 #[cfg(test)]
-#[specialize_ip]
 pub(crate) fn receive_ip_packet<B: BufferMut, D: BufferDispatcher<B>, I: Ip>(
     ctx: &mut Context<D>,
     device: DeviceId,
     frame_dst: FrameDestination,
     buffer: B,
 ) {
-    #[ipv4]
-    receive_ipv4_packet(ctx, device, frame_dst, buffer);
-    #[ipv6]
-    receive_ipv6_packet(ctx, device, frame_dst, buffer);
+    match I::VERSION {
+        IpVersion::V4 => receive_ipv4_packet(ctx, device, frame_dst, buffer),
+        IpVersion::V6 => receive_ipv6_packet(ctx, device, frame_dst, buffer),
+    }
 }
 
 /// Receive an IPv4 packet from a device.
@@ -1903,13 +1902,11 @@ fn get_icmp_error_message_destination<D: EventDispatcher, A: IpAddress>(
 }
 
 /// Is `ctx` configured to route packets?
-#[specialize_ip]
 pub(crate) fn is_routing_enabled<D: EventDispatcher, I: Ip>(ctx: &Context<D>) -> bool {
     get_state_inner::<I, _>(ctx.state()).forward
 }
 
 /// Get the hop limit for new IP packets that will be sent out from `device`.
-#[specialize_ip]
 fn get_hop_limit<D: EventDispatcher, I: Ip>(ctx: &Context<D>, device: DeviceId) -> u8 {
     // TODO(ghanan): Should IPv4 packets use the same TTL value
     //               as IPv6 packets? Currently for the IPv6 case,
@@ -1917,22 +1914,20 @@ fn get_hop_limit<D: EventDispatcher, I: Ip>(ctx: &Context<D>, device: DeviceId) 
     //               state which can be updated by NDP's Router
     //               Advertisement.
 
-    #[ipv4]
-    return DEFAULT_TTL;
-
-    // This value can be updated by NDP's Router Advertisements.
-    #[ipv6]
-    return crate::device::get_ipv6_hop_limit(ctx, device).get();
+    match I::VERSION {
+        IpVersion::V4 => DEFAULT_TTL,
+        // This value can be updated by NDP's Router Advertisements.
+        IpVersion::V6 => crate::device::get_ipv6_hop_limit(ctx, device).get(),
+    }
 }
 
 // Used in testing in other modules.
-#[cfg(test)]
 #[specialize_ip]
 pub(crate) fn dispatch_receive_ip_packet_name<I: Ip>() -> &'static str {
-    #[ipv4]
-    return "dispatch_receive_ipv4_packet";
-    #[ipv6]
-    return "dispatch_receive_ipv6_packet";
+    match I::VERSION {
+        IpVersion::V4 => "dispatch_receive_ipv4_packet",
+        IpVersion::V6 => "dispatch_receive_ipv6_packet",
+    }
 }
 
 #[cfg(test)]
@@ -2061,7 +2056,6 @@ mod tests {
 
     /// Process an IP fragment depending on the `Ip` `process_ip_fragment` is
     /// specialized with.
-    #[specialize_ip]
     fn process_ip_fragment<I: Ip, D: EventDispatcher>(
         ctx: &mut Context<D>,
         device: DeviceId,
@@ -2069,11 +2063,14 @@ mod tests {
         fragment_offset: u8,
         fragment_count: u8,
     ) {
-        #[ipv4]
-        process_ipv4_fragment(ctx, device, fragment_id, fragment_offset, fragment_count);
-
-        #[ipv6]
-        process_ipv6_fragment(ctx, device, fragment_id, fragment_offset, fragment_count);
+        match I::VERSION {
+            IpVersion::V4 => {
+                process_ipv4_fragment(ctx, device, fragment_id, fragment_offset, fragment_count)
+            }
+            IpVersion::V6 => {
+                process_ipv6_fragment(ctx, device, fragment_id, fragment_offset, fragment_count)
+            }
+        }
     }
 
     /// Generate and 'receive' an IPv4 fragment packet.
@@ -2358,8 +2355,8 @@ mod tests {
     }
 
     #[ip_test]
-    fn test_ip_packet_reassembly_not_needed<I: Ip>() {
-        let mut ctx = DummyEventDispatcherBuilder::from_config(get_dummy_config::<I::Addr>())
+    fn test_ip_packet_reassembly_not_needed<I: Ip + TestIpExt>() {
+        let mut ctx = DummyEventDispatcherBuilder::from_config(I::DUMMY_CONFIG)
             .build::<DummyEventDispatcher>();
         let device = DeviceId::new_ethernet(0);
         let fragment_id = 5;
@@ -2377,8 +2374,8 @@ mod tests {
     }
 
     #[ip_test]
-    fn test_ip_packet_reassembly<I: Ip>() {
-        let mut ctx = DummyEventDispatcherBuilder::from_config(get_dummy_config::<I::Addr>())
+    fn test_ip_packet_reassembly<I: Ip + TestIpExt>() {
+        let mut ctx = DummyEventDispatcherBuilder::from_config(I::DUMMY_CONFIG)
             .build::<DummyEventDispatcher>();
         let device = DeviceId::new_ethernet(0);
         let fragment_id = 5;
@@ -2406,8 +2403,8 @@ mod tests {
     }
 
     #[ip_test]
-    fn test_ip_packet_reassembly_with_packets_arriving_out_of_order<I: Ip>() {
-        let mut ctx = DummyEventDispatcherBuilder::from_config(get_dummy_config::<I::Addr>())
+    fn test_ip_packet_reassembly_with_packets_arriving_out_of_order<I: Ip + TestIpExt>() {
+        let mut ctx = DummyEventDispatcherBuilder::from_config(I::DUMMY_CONFIG)
             .build::<DummyEventDispatcher>();
         let device = DeviceId::new_ethernet(0);
         let fragment_id_0 = 5;
@@ -2460,8 +2457,8 @@ mod tests {
     }
 
     #[ip_test]
-    fn test_ip_packet_reassembly_timeout<I: Ip>() {
-        let mut ctx = DummyEventDispatcherBuilder::from_config(get_dummy_config::<I::Addr>())
+    fn test_ip_packet_reassembly_timeout<I: Ip + TestIpExt>() {
+        let mut ctx = DummyEventDispatcherBuilder::from_config(I::DUMMY_CONFIG)
             .build::<DummyEventDispatcher>();
         let device = DeviceId::new_ethernet(0);
         let fragment_id = 5;
@@ -2497,12 +2494,12 @@ mod tests {
     }
 
     #[ip_test]
-    fn test_ip_reassembly_only_at_destination_host<I: Ip>() {
+    fn test_ip_reassembly_only_at_destination_host<I: Ip + TestIpExt>() {
         // Create a new network with two parties (alice & bob) and
         // enable IP packet routing for alice.
         let a = "alice";
         let b = "bob";
-        let dummy_config = get_dummy_config::<I::Addr>();
+        let dummy_config = I::DUMMY_CONFIG;
         let mut state_builder = StackStateBuilder::default();
         state_builder.ipv4_builder().forward(true);
         state_builder.ipv6_builder().forward(true);
@@ -2577,7 +2574,7 @@ mod tests {
         // too big to be forwarded when it isn't destined for the node it arrived at.
         //
 
-        let dummy_config = get_dummy_config::<Ipv6Addr>();
+        let dummy_config = Ipv6::DUMMY_CONFIG;
         let mut state_builder = StackStateBuilder::default();
         state_builder.ipv6_builder().forward(true);
         let mut ndp_configs = crate::device::ndp::NdpConfigurations::default();
@@ -2686,13 +2683,13 @@ mod tests {
     }
 
     #[ip_test]
-    fn test_ip_update_pmtu<I: Ip>() {
+    fn test_ip_update_pmtu<I: Ip + TestIpExt>() {
         //
         // Test receiving a Packet Too Big (IPv6) or Dest Unreachable Fragmentation
         // Required (IPv4) which should update the PMTU if it is less than the current value.
         //
 
-        let dummy_config = get_dummy_config::<I::Addr>();
+        let dummy_config = I::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::from_config(dummy_config.clone())
             .build::<DummyEventDispatcher>();
         let device = DeviceId::new_ethernet(0);
@@ -2777,13 +2774,13 @@ mod tests {
     }
 
     #[ip_test]
-    fn test_ip_update_pmtu_too_low<I: Ip>() {
+    fn test_ip_update_pmtu_too_low<I: Ip + TestIpExt>() {
         //
         // Test receiving a Packet Too Big (IPv6) or Dest Unreachable Fragmentation
         // Required (IPv4) which should not update the PMTU if it is less than the min mtu.
         //
 
-        let dummy_config = get_dummy_config::<I::Addr>();
+        let dummy_config = I::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::from_config(dummy_config.clone())
             .build::<DummyEventDispatcher>();
         let device = DeviceId::new_ethernet(0);
@@ -2831,7 +2828,7 @@ mod tests {
         // Required from a node that does not implement RFC 1191.
         //
 
-        let dummy_config = get_dummy_config::<Ipv4Addr>();
+        let dummy_config = Ipv4::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::from_config(dummy_config.clone())
             .build::<DummyEventDispatcher>();
         let device = DeviceId::new_ethernet(0);
@@ -2946,13 +2943,13 @@ mod tests {
 
     #[test]
     fn test_invalid_icmpv4_in_ipv6() {
-        let ip_config = get_dummy_config::<Ipv6Addr>();
+        let ip_config = Ipv6::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::from_config(ip_config.clone())
             .build::<DummyEventDispatcher>();
         let device = DeviceId::new_ethernet(1);
         let frame_dst = FrameDestination::Unicast;
 
-        let ic_config = get_dummy_config::<Ipv4Addr>();
+        let ic_config = Ipv4::DUMMY_CONFIG;
         let icmp_builder = IcmpPacketBuilder::<Ipv4, &[u8], _>::new(
             ic_config.remote_ip,
             ic_config.local_ip,
@@ -2983,14 +2980,14 @@ mod tests {
 
     #[test]
     fn test_invalid_icmpv6_in_ipv4() {
-        let ip_config = get_dummy_config::<Ipv4Addr>();
+        let ip_config = Ipv4::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::from_config(ip_config.clone())
             .build::<DummyEventDispatcher>();
         // First possible device id.
         let device = DeviceId::new_ethernet(0);
         let frame_dst = FrameDestination::Unicast;
 
-        let ic_config = get_dummy_config::<Ipv6Addr>();
+        let ic_config = Ipv6::DUMMY_CONFIG;
         let icmp_builder = IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
             ic_config.remote_ip,
             ic_config.local_ip,
@@ -3024,7 +3021,7 @@ mod tests {
     }
 
     #[ip_test]
-    fn test_joining_leaving_ip_multicast_group<I: Ip + IpExt>() {
+    fn test_joining_leaving_ip_multicast_group<I: Ip + TestIpExt + IpExt>() {
         #[specialize_ip_address]
         fn get_multicast_addr<A: IpAddress>() -> A {
             #[ipv4addr]
@@ -3038,7 +3035,7 @@ mod tests {
         // Test receiving a packet destined to a multicast IP (and corresponding multicast MAC).
         //
 
-        let config = get_dummy_config::<I::Addr>();
+        let config = I::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::from_config(config.clone())
             .build::<DummyEventDispatcher>();
         let device = DeviceId::new_ethernet(0);
@@ -3081,8 +3078,8 @@ mod tests {
     #[should_panic(
         expected = "loopback addresses should be handled before consulting the forwarding table"
     )]
-    fn test_lookup_table_address<I: Ip>() {
-        let cfg = get_dummy_config::<I::Addr>();
+    fn test_lookup_table_address<I: Ip + TestIpExt>() {
+        let cfg = I::DUMMY_CONFIG;
         let ip_address = I::LOOPBACK_ADDRESS;
         let ctx =
             DummyEventDispatcherBuilder::from_config(cfg.clone()).build::<DummyEventDispatcher>();
@@ -3098,7 +3095,7 @@ mod tests {
         // set the default NDP parameter DUP_ADDR_DETECT_TRANSMITS to 0 (effectively disabling
         // DAD) so we use our own custom `StackStateBuilder` to set it to the default value
         // of `1` (see `DUP_ADDR_DETECT_TRANSMITS`).
-        let config = get_dummy_config::<Ipv6Addr>();
+        let config = Ipv6::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default()
             .build_with(StackStateBuilder::default(), DummyEventDispatcher::default());
         let device = ctx.state_mut().add_ethernet_device(config.local_mac, IPV6_MIN_MTU);

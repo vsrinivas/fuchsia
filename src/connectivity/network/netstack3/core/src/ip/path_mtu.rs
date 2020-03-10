@@ -10,9 +10,8 @@ use core::marker::PhantomData;
 use core::time::Duration;
 
 use log::trace;
-use net_types::ip::{Ip, IpAddress};
+use net_types::ip::{Ip, IpAddress, IpVersion};
 use never::Never;
-use specialize_ip_macro::specialize_ip;
 
 use crate::context::{InstantContext, StateContext, TimerContext, TimerHandler};
 use crate::Instant;
@@ -90,15 +89,11 @@ impl<
 }
 
 /// Get the minimum MTU size for a specific IP version, identified by `I`.
-#[specialize_ip]
 pub(crate) fn min_mtu<I: Ip>() -> u32 {
-    #[ipv4]
-    let ret = IPV4_MIN_MTU;
-
-    #[ipv6]
-    let ret = IPV6_MIN_MTU;
-
-    ret
+    match I::VERSION {
+        IpVersion::V4 => IPV4_MIN_MTU,
+        IpVersion::V6 => IPV6_MIN_MTU,
+    }
 }
 
 /// Get the PMTU between `src_ip` and `dst_ip`.
@@ -514,7 +509,7 @@ mod tests {
     use specialize_ip_macro::ip_test;
 
     use crate::context::testutil::{DummyInstant, DummyTimerContextExt};
-    use crate::testutil::get_dummy_config;
+    use crate::testutil::TestIpExt;
 
     /// A dummy [`PmtuContext`] that stores an [`IpLayerPathMtuCache`].
     struct DummyPmtuContext<I: Ip> {
@@ -544,8 +539,8 @@ mod tests {
 
     /// Get an IPv4 or IPv6 address within the same subnet as that of `DUMMY_CONFIG_*`,
     /// but with the last octet set to `3`.
-    fn get_other_ip_address<A: IpAddress>() -> SpecifiedAddr<A> {
-        crate::testutil::get_other_ip_address::<A>(3)
+    fn get_other_ip_address<I: TestIpExt>() -> SpecifiedAddr<I::Addr> {
+        I::get_other_ip_address(3)
     }
 
     #[test]
@@ -565,8 +560,8 @@ mod tests {
     }
 
     #[ip_test]
-    fn test_ip_path_mtu_cache_ctx<I: Ip>() {
-        let dummy_config = get_dummy_config::<I::Addr>();
+    fn test_ip_path_mtu_cache_ctx<I: Ip + TestIpExt>() {
+        let dummy_config = I::DUMMY_CONFIG;
         let mut ctx = DummyContext::<I>::default();
 
         // Nothing in the cache yet
@@ -766,8 +761,8 @@ mod tests {
     }
 
     #[ip_test]
-    fn test_ip_pmtu_task<I: Ip>() {
-        let dummy_config = get_dummy_config::<I::Addr>();
+    fn test_ip_pmtu_task<I: Ip + TestIpExt>() {
+        let dummy_config = I::DUMMY_CONFIG;
         let mut ctx = DummyContext::<I>::default();
 
         // Make sure there are no timers.
@@ -821,7 +816,7 @@ mod tests {
         // Update pmtu from local to another remote.
         // PMTU should be updated to `new_mtu1` and last updated instant
         // should be updated to the start of the test + 1s.
-        let other_ip = get_other_ip_address::<I::Addr>();
+        let other_ip = get_other_ip_address::<I>();
         let new_mtu2 = min_mtu::<I>() + 100;
         assert_eq!(
             update_pmtu(&mut ctx, dummy_config.local_ip.get(), other_ip.get(), new_mtu2).unwrap(),

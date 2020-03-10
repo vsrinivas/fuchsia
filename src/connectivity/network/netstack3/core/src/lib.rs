@@ -560,19 +560,17 @@ pub fn get_all_routes<'a, D: EventDispatcher>(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::testutil::{
-        get_dummy_config, get_other_ip_address, DummyEventDispatcher, DummyEventDispatcherBuilder,
-    };
+    use crate::testutil::{DummyEventDispatcher, DummyEventDispatcherBuilder, TestIpExt};
     use net_types::ip::{Ip, Ipv4, Ipv6};
     use net_types::Witness;
 
-    fn test_add_remove_ip_addresses<I: Ip>() {
-        let config = get_dummy_config::<I::Addr>();
+    fn test_add_remove_ip_addresses<I: Ip + TestIpExt>() {
+        let config = I::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
         let device = ctx.state_mut().add_ethernet_device(config.local_mac, crate::ip::IPV6_MIN_MTU);
         crate::device::initialize_device(&mut ctx, device);
 
-        let ip: IpAddr = get_other_ip_address::<I::Addr>(1).get().into();
+        let ip: IpAddr = I::get_other_ip_address(1).get().into();
         let prefix = config.subnet.prefix();
         let addr_subnet = AddrSubnetEither::new(ip, prefix).unwrap();
 

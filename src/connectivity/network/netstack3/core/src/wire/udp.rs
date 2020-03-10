@@ -15,7 +15,6 @@ use packet::{
     BufferView, BufferViewMut, FromRaw, MaybeParsed, PacketBuilder, PacketConstraints,
     ParsablePacket, ParseMetadata, SerializeBuffer,
 };
-use specialize_ip_macro::specialize_ip;
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
 use crate::error::{ParseError, ParseResult};
@@ -238,21 +237,19 @@ where
         };
         let buffer_len = buffer.len();
 
-        #[specialize_ip]
         fn get_udp_body_length<I: Ip>(header: &Header, remaining_buff_len: usize) -> Option<usize> {
-            #[ipv6]
+            // IPv6 supports jumbograms, so a UDP packet may be greater than
+            // 2^16 bytes in size. In this case, the size doesn't fit in the
+            // 16-bit length field in the header, and so the length field is set
+            // to zero to indicate this.
+            //
+            // Per RFC 2675 Section 4, we only do that if the UDP header plus
+            // data is actually more than 65535.
+            if I::VERSION.is_v6()
+                && header.length.get() == 0
+                && remaining_buff_len.saturating_add(HEADER_BYTES) >= (core::u16::MAX as usize)
             {
-                // IPv6 supports jumbograms, so a UDP packet may be greater than
-                // 2^16 bytes in size. In this case, the size doesn't fit in the
-                // 16-bit length field in the header, and so the length field is set
-                // to zero to indicate this.
-                // Per RFC 2675 Section 4, we only do that if the UDP header
-                // plus data is actually more than 65535.
-                if header.length.get() == 0
-                    && remaining_buff_len.saturating_add(HEADER_BYTES) >= (core::u16::MAX as usize)
-                {
-                    return Some(remaining_buff_len);
-                }
+                return Some(remaining_buff_len);
             }
 
             usize::from(header.length.get()).checked_sub(HEADER_BYTES)
