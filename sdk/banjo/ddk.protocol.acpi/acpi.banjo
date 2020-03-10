@@ -23,3 +23,14 @@ protocol Acpi {
     ConnectSysmem(handle<channel> connection) -> (zx.status s);
     RegisterSysmemHeap(uint64 heap, handle<channel> connection) -> (zx.status s);
 };
+
+/// A generic ACPI device. This will allow devices to query information directly
+/// from ACPI, removing the need for them to be implemented directly in the
+/// board driver.
+[Layout = "ddk-protocol"]
+protocol AcpiDevice {
+    /// For now, this has a single stub method, since banjo protocols require
+    /// at least one method, but we will add methods as the requirements become
+    /// clearer.
+    Stub() -> ();
+};
