@@ -121,9 +121,9 @@ driver_module("platform-bus-x86") {
   deps = [
     ":iommu",
     ":smbios",
-    "//sdk/fidl/fuchsia.hardware.power:fuchsia.hardware.power_c",
     "//sdk/banjo/ddk.protocol.acpi",
     "//sdk/banjo/ddk.protocol.pciroot",
+    "//sdk/fidl/fuchsia.hardware.power:fuchsia.hardware.power_c",
     "//src/devices/lib/driver",
     "//third_party/acpica",
     "//zircon/public/lib/ddk",
@@ -173,9 +173,9 @@ test("x86-battery-test") {
   ]
   configs += [ ":config" ]
   deps = [
-    "//sdk/fidl/fuchsia.hardware.power:fuchsia.hardware.power_c",
     "//sdk/banjo/ddk.protocol.acpi",
     "//sdk/banjo/ddk.protocol.pciroot",
+    "//sdk/fidl/fuchsia.hardware.power:fuchsia.hardware.power_c",
     "//src/devices/lib/driver",
     "//third_party/acpica",
     "//zircon/public/lib/ddk",
@@ -258,8 +258,8 @@ test("x86-pwrsrc-test") {
   ]
   configs += [ ":config" ]
   deps = [
-    "//sdk/fidl/fuchsia.hardware.power:fuchsia.hardware.power_c",
     "//sdk/banjo/ddk.protocol.acpi",
+    "//sdk/fidl/fuchsia.hardware.power:fuchsia.hardware.power_c",
     "//third_party/acpica",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
