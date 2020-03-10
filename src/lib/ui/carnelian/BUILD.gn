@@ -27,7 +27,6 @@ rustc_library("carnelian") {
     "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic-rustc",
     "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views-rustc",
     "//src/graphics/lib/compute/mold-next",
-    "//src/graphics/lib/compute/spinel-mold",
     "//src/graphics/lib/compute/spinel-rs-sys",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
