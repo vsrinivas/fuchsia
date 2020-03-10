@@ -10,6 +10,7 @@ copy("${layer.name}_config") {
   ]
 }
 
+% if layer.binary:
 copy("${layer.name}_lib") {
   sources = [
     % if 'MISSING' in layer.binary:
@@ -22,13 +23,16 @@ copy("${layer.name}_lib") {
     <%text>"${root_out_dir}/lib/{{source_file_part}}",</%text>
   ]
 }
+% endif
 
 group("${layer.name}") {
   data_deps = [
     ":${layer.name}_config",
+    % if layer.binary:
     ":${layer.name}_lib",
+    % endif
     % for dep in layer.data_deps:
-    "../${dep}",
+    "${dep}",
     % endfor
   ]
 }

@@ -354,29 +354,41 @@ class GNBuilder(Frontend):
 
         for res in resources:
             layer_name = _filename_no_ext(res)
-            # Filter binaries for a matching name.
-            filtered = [
-                n for n in binary_names if _filename_no_ext(n) == layer_name
-            ]
 
-            if not filtered:
-                # If the binary could not be found then do not generate a target
-                # for this layer. The missing targets will cause a mismatch with
-                # the "golden" outputs.
-                continue
+            # Special case: VkLayer_standard_validation does not have a binary
+            # and also depends on VkLayer_khronos_validation. Currently atom
+            # metadata does not contain this information (fxb/46250).
+            if layer_name == 'VkLayer_standard_validation':
+                layer = model.VulkanLayer(
+                    name=layer_name,
+                    config=os.path.relpath(res, start=local_pkg),
+                    binary='',
+                    data_deps=[':VkLayer_khronos_validation'])
 
-            # Replace harcoded arch in the found binary filename.
-            binary = filtered[0].replace('/' + arch + '/', "/${target_cpu}/")
+            else:
+                # Filter binaries for a matching name.
+                filtered = [
+                    n for n in binary_names if _filename_no_ext(n) == layer_name
+                ]
 
-            layer = model.VulkanLayer(
-                name=layer_name,
-                config=os.path.relpath(res, start=local_pkg),
-                binary=os.path.relpath(binary, start=local_pkg))
-            # Special case: VkLayer_image_pipe_swapchain has an undocumented
-            # data_dep on trace-engine. There currently is no way to recognize
-            # these exceptions through atom metadata alone (fxb/46250).
-            if layer_name == 'VkLayer_image_pipe_swapchain':
-                layer.data_deps.append('trace-engine')
+                if not filtered:
+                    # If the binary could not be found then do not generate a
+                    # target for this layer. The missing targets will cause a
+                    # mismatch with the "golden" outputs.
+                    continue
+
+                # Replace harcoded arch in the found binary filename.
+                binary = filtered[0].replace('/' + arch + '/', "/${target_cpu}/")
+
+                layer = model.VulkanLayer(
+                    name=layer_name,
+                    config=os.path.relpath(res, start=local_pkg),
+                    binary=os.path.relpath(binary, start=local_pkg))
+                # Special case: VkLayer_image_pipe_swapchain has an undocumented
+                # data_dep on trace-engine. Currently atom metadata does not
+                # contain this information (fxb/46250).
+                if layer_name == 'VkLayer_image_pipe_swapchain':
+                    layer.data_deps.append('../trace-engine')
 
             data.layers.append(layer)
 

@@ -57,9 +57,53 @@ group("VkLayer_image_pipe_swapchain") {
   ]
 }
 
+copy("VkLayer_khronos_validation_config") {
+  sources = [
+    "data/vulkan/explicit_layer.d/VkLayer_khronos_validation.json",
+  ]
+  outputs = [
+    "${root_gen_dir}/data/vulkan/explicit_layer.d/VkLayer_khronos_validation.json",
+  ]
+}
+
+copy("VkLayer_khronos_validation_lib") {
+  sources = [
+    "../../arch/${target_cpu}/dist/VkLayer_khronos_validation.so",
+  ]
+  outputs = [
+    "${root_out_dir}/lib/{{source_file_part}}",
+  ]
+}
+
+group("VkLayer_khronos_validation") {
+  data_deps = [
+    ":VkLayer_khronos_validation_config",
+    ":VkLayer_khronos_validation_lib",
+  ]
+}
+
+copy("VkLayer_standard_validation_config") {
+  sources = [
+    "data/vulkan/explicit_layer.d/VkLayer_standard_validation.json",
+  ]
+  outputs = [
+    "${root_gen_dir}/data/vulkan/explicit_layer.d/VkLayer_standard_validation.json",
+  ]
+}
+
+
+group("VkLayer_standard_validation") {
+  data_deps = [
+    ":VkLayer_standard_validation_config",
+    ":VkLayer_khronos_validation",
+  ]
+}
+
 group("all"){
   data_deps = [
     ":VkLayer_core_validation",
     ":VkLayer_image_pipe_swapchain",
+    ":VkLayer_khronos_validation",
+    ":VkLayer_standard_validation",
   ]
 }
