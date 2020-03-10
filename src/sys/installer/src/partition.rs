@@ -127,6 +127,10 @@ impl Partition {
                 let mut fidl_buf = self.read_data().await?;
                 data_sink.write_asset(config, asset, &mut fidl_buf).await?;
             }
+            PartitionPaveType::Bootloader => {
+                let mut fidl_buf = self.read_data().await?;
+                data_sink.write_bootloader(&mut fidl_buf).await?;
+            }
             PartitionPaveType::Volume => {
                 // Set up a PayloadStream to serve the data sink.
                 let file =
@@ -147,7 +151,6 @@ impl Partition {
                 // Tell the data sink to use our PayloadStream.
                 data_sink.write_volumes(client_end).await?;
             }
-            _ => return Err(Error::from(zx_status::Status::NOT_SUPPORTED)),
         };
         Ok(())
     }
