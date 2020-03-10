@@ -16,6 +16,7 @@ search for inputs that cause panics or other errors.
 The function should use its inputs to exercise an API to be tested. There are
 two ways to write the inputs to the function. For each of the examples below,
 assume you want to test code like the following:
+
 ```
 struct ToyStruct {
     n: u8,
@@ -32,11 +33,13 @@ You can create a fuzz target function that takes one or more inputs with the
 recommended approach.
 
 To write a fuzz target function that automatically transforms arbitrary inputs:
+
 1. If needed, implement the `Arbitrary` trait for the types used by your
    test code. This can be done "by hand" following the crate's
    [instructions][arbitrary], but the recommended way is to automatically derive the trait.
 
    For example, in your `src/lib.rs`:
+
    ```
    use arbitrary:Arbitrary;
 
@@ -48,6 +51,7 @@ To write a fuzz target function that automatically transforms arbitrary inputs:
    the necessary parameters to the code you wish to test.
 
    For example, in your `src/lib.rs`:
+
    ```
    use fuchsia_fuzzing::fuzz;
 
@@ -66,6 +70,7 @@ this function needs the [`#[fuzz]`][fuchsia-fuzzing] attribute. It should take a
 reference to byte slice as its single parameter, i.e. `&[u8]`.
 
 For example, in your `src/lib.rs`:
+
 ```
 use fuchsia_fuzzing::fuzz;
 
@@ -87,6 +92,7 @@ The `rustc_fuzzer` GN template generates a GN target that compiles the Rust fuzz
 target function into a C object file that it then links with libFuzzer.
 
 To build a Rust fuzzer:
+
 1. Add a [`rustc_fuzzer`][rustc_fuzzer] GN target to the crate's BUILD.gn.
 
    When choosing where and how to add this target, consider the following:
@@ -98,6 +104,7 @@ To build a Rust fuzzer:
      For example, using the `toy_example_arbitrary` example
      [above](#automatic-transform), you would add the following to your
      `BUILD.gn`:
+
      ```
      import("//build/rust/rustc_fuzzer.gni")
 
@@ -110,6 +117,7 @@ To build a Rust fuzzer:
 
      For example, using the `toy_example_u8` example [above](#manual-transform),
      you would add the following to your `BUILD.gn`:
+
      ```
      import("//build/rust/rustc_fuzzer.gni")
 
@@ -120,10 +128,12 @@ To build a Rust fuzzer:
 
    * If the [code to be tested](#write-a-rust-fuzzer) cannot be easily factored
      into a library, a Rust binary can be used with two implications:
+
      * You must exclude the `main` function from compilation, along with any
        items not used when fuzzing, e.g. imports only used in `main`.
 
        For example:
+
        ```
        #[cfg(not(fuzz))]
        use only::used::in::main;
@@ -136,6 +146,7 @@ To build a Rust fuzzer:
        `rustc_fuzzer` with the `source_root` parameter.
 
        For example, in your `BUILD.gn`:
+
        ```
        import("//build/rust/rustc_fuzzer.gni")
 
@@ -149,6 +160,7 @@ To build a Rust fuzzer:
    `fuzzer_profile` that tells the build to add Rust instrumentation.
 
    For example:
+
    ```
    fuzzers_package("example_fuzzers") {
      fuzzer_profiles = [
@@ -174,6 +186,7 @@ those with the prefix of "rust-" in the list of [known_variants], e.g.
 
 To use the `rust-asan-fuzzer` variant, [configure your build][fx_set] with the
 following:
+
 ```
 fx set [other-args...] --fuzz-with rust-asan`
 ```
