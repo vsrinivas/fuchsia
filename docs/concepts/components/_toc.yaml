@@ -51,3 +51,5 @@ toc:
     path: /docs/concepts/components/life_of_a_protocol_open.md
   - title: "Inspect file format"
     path: /docs/concepts/components/inspect/vmo_format.md
+  - title: "Inspect discovery and hosting"
+    path: /docs/concepts/components/inspect/tree.md
