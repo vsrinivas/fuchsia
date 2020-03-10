@@ -177,6 +177,8 @@ TEST(LaunchpadTest, Limits) {
   ASSERT_NO_FAILURES(RunWithArgsEnvHandles(1, 1, 58));
   ASSERT_NO_FAILURES(RunWithArgsEnvHandles(5000, 10000, 0));
   ASSERT_NO_FAILURES(RunWithArgsEnvHandles(5000, 10000, 58));
+  // This will allocate a stack that takes up almost a full page.
+  ASSERT_NO_FAILURES(RunWithArgsEnvHandles(1, 160, 0));
 }
 
 TEST(LaunchpadTest, ProcessCreateFailure) {

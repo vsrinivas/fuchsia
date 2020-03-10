@@ -12,7 +12,9 @@ struct EnvVar {
 [Discoverable]
 protocol Util {
     GetArguments() -> (vector<string> args);
+    GetArgumentCount() -> (uint64 count);
     GetEnvironment() -> (vector<EnvVar> vars);
+    GetEnvironmentCount() -> (uint64 count);
     DumpNamespace() -> (string contents);
     ReadFile(string path) -> (string contents);
     GetLifecycleKoid() -> (uint64 koid);

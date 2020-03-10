@@ -71,6 +71,13 @@ static launchpad_t invalid_launchpad = {
     .error = ZX_ERR_NO_MEMORY,
 };
 
+// Returned by extract_ld_envvars to indicate the number of environment variables, and the total
+// length of envp.
+struct envvars_size {
+  size_t count;
+  size_t length;
+};
+
 static zx_status_t lp_error(launchpad_t* lp, zx_status_t error, const char* msg) {
   if (lp->error == ZX_OK) {
     lp->error = error;
@@ -655,13 +662,41 @@ zx_handle_t launchpad_use_loader_service(launchpad_t* lp, zx_handle_t svc) {
   return result;
 }
 
+// Returns the number of envvars extracted.
+//
+static struct envvars_size extract_ld_envvars(uint8_t* buffer, launchpad_t* lp) {
+  // The only variables the loader cares about are these two.
+#define LD_DEBUG "LD_DEBUG="
+#define LD_TRACE "LD_TRACE="
+
+  size_t count = 0;
+  size_t length = 0;
+  const char* current_envvar = lp->env;
+  for (size_t i = 0; i < lp->env_len; ++i) {
+    size_t len = strlen(current_envvar) + 1;
+    if ((!strncmp(LD_DEBUG, current_envvar, strlen(LD_DEBUG))) ||
+        (!strncmp(LD_TRACE, current_envvar, strlen(LD_TRACE)))) {
+      memcpy(buffer, current_envvar, len);
+      buffer += len;
+      count += 1;
+      length += len;
+    }
+  }
+  return ((struct envvars_size){.count = count, .length = length});
+}
+
 // Construct a load message. Fill in the header, args, and environment
 // fields, and leave space for the handles, which should be filled in
 // by the caller.
+// |is_loader| is used to determine whether to send a message with limited
+// args and envvars, and no names, as the loader does not need them.
+//
 // TODO(mcgrathr): One day we'll have a gather variant of message_write
 // and then we can send this without copying into a temporary buffer.
 static zx_status_t build_message(launchpad_t* lp, size_t num_handles, void** msg_buf,
-                                 size_t* buf_size, bool with_names) {
+                                 size_t* buf_size, bool is_loader) {
+  // Compute a conservative message size. In particular, when |is_loader| is true the message may be
+  // considerably smaller as names and most arguments and envvars are discarded.
   size_t msg_size = sizeof(zx_proc_args_t);
   static_assert(sizeof(zx_proc_args_t) % sizeof(uint32_t) == 0,
                 "handles misaligned in load message");
@@ -680,33 +715,63 @@ static zx_status_t build_message(launchpad_t* lp, size_t num_handles, void** msg
   header->version = ZX_PROCARGS_VERSION;
   header->handle_info_off = sizeof(*header);
 
+  // We want to compute an accurate message size. In particular, a loader message is decoded in a
+  // constrained environment, and the conservative message size may be far too large when lots of
+  // argument or environment data is sent.
+  size_t actual_message_size = 0;
+
   // Include the argument strings so the dynamic linker can use argv[0]
-  // in messages it prints.
-  header->args_off = header->handle_info_off + sizeof(uint32_t) * num_handles;
-  header->args_num = lp->argc;
-  if (header->args_num > 0) {
-    uint8_t* args_start = (uint8_t*)msg + header->args_off;
-    memcpy(args_start, lp->args, lp->args_len);
-  }
-
-  // Include the environment strings so the dynamic linker can
+  // in messages it prints, and the environment strings so the dynamic linker can
   // see options like LD_DEBUG or whatnot.
-  if (lp->envc > 0) {
-    header->environ_off = header->args_off + lp->args_len;
-    header->environ_num = lp->envc;
-    uint8_t* env_start = (uint8_t*)msg + header->environ_off;
-    memcpy(env_start, lp->env, lp->env_len);
-  }
+  header->args_off = header->handle_info_off + sizeof(uint32_t) * num_handles;
+  if (is_loader) {
+    size_t env_off = header->args_off;
 
-  if (with_names && (lp->namec > 0)) {
-    header->names_off = header->args_off + lp->args_len + lp->env_len;
-    header->names_num = lp->namec;
-    uint8_t* names_start = (uint8_t*)msg + header->names_off;
-    memcpy(names_start, lp->names, lp->names_len);
+    // The loader message only needs argv[0], if present.
+    header->args_num = lp->argc ? 1 : 0;
+    if (header->args_num > 0) {
+      uint8_t* args_start = (uint8_t*)msg + header->args_off;
+      size_t len = strlen(lp->args) + 1;
+      memcpy(args_start, lp->args, len);
+      env_off += len;
+    }
+
+    // The loader only needs the values of LD_TRACE and LD_DEBUG.
+    struct envvars_size env_info = extract_ld_envvars(msg + env_off, lp);
+    if (env_info.count > 0) {
+      header->environ_off = env_off;
+      header->environ_num = env_info.count;
+    }
+
+    // The loader does not need any names, so the actual message size computation stops here.
+    actual_message_size = env_off + env_info.length;
+  } else {
+    header->args_num = lp->argc;
+    if (header->args_num > 0) {
+      uint8_t* args_start = (uint8_t*)msg + header->args_off;
+      memcpy(args_start, lp->args, lp->args_len);
+    }
+
+    if (lp->envc > 0) {
+      header->environ_off = header->args_off + lp->args_len;
+      header->environ_num = lp->envc;
+      uint8_t* env_start = (uint8_t*)msg + header->environ_off;
+      memcpy(env_start, lp->env, lp->env_len);
+    }
+
+    if (lp->namec > 0) {
+      header->names_off = header->args_off + lp->args_len + lp->env_len;
+      header->names_num = lp->namec;
+      uint8_t* names_start = (uint8_t*)msg + header->names_off;
+      memcpy(names_start, lp->names, lp->names_len);
+    }
+
+    // The conservative size is fine for non-loader messages.
+    actual_message_size = msg_size;
   }
 
   *msg_buf = msg;
-  *buf_size = msg_size;
+  *buf_size = actual_message_size;
   return ZX_OK;
 }
 
@@ -716,7 +781,7 @@ static zx_status_t send_loader_message(launchpad_t* lp, zx_handle_t first_thread
   size_t msg_size;
   size_t num_handles = HND_SPECIAL_COUNT + HND_LOADER_COUNT;
 
-  zx_status_t status = build_message(lp, num_handles, &msg, &msg_size, false);
+  zx_status_t status = build_message(lp, num_handles, &msg, &msg_size, /*is_loader*/ true);
   if (status != ZX_OK)
     return status;
 
@@ -865,7 +930,8 @@ static zx_status_t prepare_start(launchpad_t* lp, launchpad_start_data_t* result
   bool allocate_stack = !lp->set_stack_size || lp->stack_size > 0;
 
   size_t size;
-  if (build_message(lp, lp->handle_count + (allocate_stack ? 1 : 0), &msg, &size, true) != ZX_OK) {
+  if (build_message(lp, lp->handle_count + (allocate_stack ? 1 : 0), &msg, &size,
+                    /*is_loader*/ false) != ZX_OK) {
     lp_error(lp, ZX_ERR_NO_MEMORY, "out of memory assembling procargs message");
     goto cleanup;
   }

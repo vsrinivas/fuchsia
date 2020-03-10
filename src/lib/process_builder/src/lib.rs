@@ -554,6 +554,36 @@ fn calculate_initial_linker_stack_size(
     Ok(util::page_end(msg_stack_size + PTHREAD_STACK_MIN))
 }
 
+/// Extract only the arguments that are needed for a linker message.
+fn extract_ld_arguments(arguments: &[CString]) -> Vec<CString> {
+    let mut extracted = vec![];
+
+    if let Some(argument) = arguments.get(0) {
+        extracted.push(argument.clone())
+    }
+
+    extracted
+}
+
+/// Extract only the environment variables that are needed for a linker message.
+fn extract_ld_environment_variables(envvars: &[CString]) -> Vec<CString> {
+    let prefixes = ["LD_DEBUG=", "LD_TRACE="];
+
+    let mut extracted = vec![];
+    for envvar in envvars {
+        for prefix in &prefixes {
+            let envvar_bytes: &[u8] = envvar.to_bytes();
+            let prefix_bytes: &[u8] = prefix.as_bytes();
+            if envvar_bytes.starts_with(prefix_bytes) {
+                extracted.push(envvar.clone());
+                continue;
+            }
+        }
+    }
+
+    extracted
+}
+
 impl BuilderInner {
     /// Build the bootstrap message for the dynamic linker, which uses the same processargs
     /// protocol as the message for the main process but somewhat different contents.
@@ -574,12 +604,17 @@ impl BuilderInner {
         let ldsvc_hnd =
             ldsvc.into_channel().expect("Failed to get channel from LoaderProxy").into_zx_channel();
 
+        // The linker message only needs a subset of argv and envvars.
+        let args = extract_ld_arguments(&self.msg_contents.args);
+        let environment_vars =
+            extract_ld_environment_variables(&self.msg_contents.environment_vars);
+
         let mut linker_msg_contents = processargs::MessageContents {
             // Argument strings are sent to the linker so that it can use argv[0] in messages it
             // prints.
-            args: self.msg_contents.args.clone(),
+            args,
             // Environment variables are sent to the linker so that it can see vars like LD_DEBUG.
-            environment_vars: self.msg_contents.environment_vars.clone(),
+            environment_vars,
             // Process namespace is not set up or used in the linker.
             namespace_paths: vec![],
             // Loader message includes a few special handles needed to do its job, plus a set of
@@ -1040,6 +1075,42 @@ mod tests {
         Ok(())
     }
 
+    #[fasync::run_singlethreaded(test)]
+    async fn start_util_with_huge_args() -> Result<(), Error> {
+        // This test is partially designed to probe the stack usage of
+        // code processing the initial loader message. Such processing
+        // is on a stack of limited size, a few pages, and well
+        // smaller than a maximally large channel packet. Each
+        // instance of "arg" takes 4 bytes (counting the separating
+        // '\0' byte), so let's send 10k of them to be well larger
+        // than the initial stack but well within the 64k channel size.
+        let test_args = vec!["arg"; 10 * 1000];
+        let test_args_cstr =
+            test_args.iter().map(|s| CString::new(s.clone())).collect::<Result<_, _>>()?;
+
+        let (mut builder, proxy) = setup_test_util_builder(true)?;
+        builder.add_arguments(test_args_cstr);
+        let process = builder.build().await?.start()?;
+        check_process_running(&process)?;
+
+        // Use the util protocol to confirm that the new process was set up correctly. A successful
+        // connection to the util validates that handles are passed correctly to the new process,
+        // since the DirectoryRequest handle made it.
+        // We can't use get_arguments() here because the FIDL response will be bigger than the
+        // maximum message size[1] and cause the process to crash. Instead, we just check the number
+        // of environment variables and assume that if that's correct we're good to go.
+        // Size of each vector entry: (length = 8, pointer = 8) = 16 + (string size = 8) = 24
+        // Message size = (10k * vector entry size) = 240,000 > 65,536
+        let proc_args =
+            proxy.get_argument_count().await.context("failed to get arg count from util")?;
+
+        assert_eq!(proc_args, test_args.len() as u64);
+
+        mem::drop(proxy);
+        check_process_exited_ok(&process).await?;
+        Ok(())
+    }
+
     // Verify that the lifecycle channel can be passed through the bootstrap
     // channel. This test checks by creating a channel, passing it through,
     // asking the remote process for the lifecycle channel's koid, and then
@@ -1211,6 +1282,36 @@ mod tests {
         let proc_env_tuple: Vec<(&str, &str)> =
             proc_env.iter().map(|v| (&*v.key, &*v.value)).collect();
         assert_eq!(proc_env_tuple, test_env);
+
+        mem::drop(proxy);
+        check_process_exited_ok(&process).await?;
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn start_util_with_huge_env() -> Result<(), Error> {
+        // This test is partially designed to probe the stack usage of
+        // code processing the initial loader message. Such processing
+        // is on a stack of limited size, a few pages, and well
+        // smaller than a maximally large channel packet. Each
+        // instance of "a=b" takes 4 bytes (counting the separating
+        // '\0' byte), so let's send 10k of them to be well larger
+        // than the initial stack but well within the 64k channel size.
+        let test_env = vec!["a=b"; 10 * 1000];
+        let test_env_cstr =
+            test_env.iter().map(|s| CString::new(s.clone())).collect::<Result<_, _>>()?;
+
+        let (mut builder, proxy) = setup_test_util_builder(true)?;
+        builder.add_environment_variables(test_env_cstr);
+        let process = builder.build().await?.start()?;
+        check_process_running(&process)?;
+
+        // We can't use get_environment() here because the FIDL response will be bigger than the
+        // maximum message size and cause the process to crash. Instead, we just check the number
+        // of environment variables and assume that if that's correct we're good to go.
+        let proc_env =
+            proxy.get_environment_count().await.context("failed to get env from util")?;
+        assert_eq!(proc_env, test_env.len() as u64);
 
         mem::drop(proxy);
         check_process_exited_ok(&process).await?;

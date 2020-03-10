@@ -32,12 +32,18 @@ async fn run_util_server(mut stream: UtilRequestStream) -> Result<(), Error> {
                 let args: Vec<String> = env::args().collect();
                 responder
                     .send(&mut args.iter().map(String::as_ref))
-                    .context("error sending response")?;
+                    .context("error sending response")?
+            }
+            UtilRequest::GetArgumentCount { responder } => {
+                responder.send(env::args().len() as u64).context("error sending response")?
             }
             UtilRequest::GetEnvironment { responder } => {
                 let mut vars: Vec<EnvVar> =
                     env::vars().map(|v| EnvVar { key: v.0, value: v.1 }).collect();
                 responder.send(&mut vars.iter_mut()).context("error sending response")?;
+            }
+            UtilRequest::GetEnvironmentCount { responder } => {
+                responder.send(env::vars().count() as u64).context("error sending response")?;
             }
             UtilRequest::DumpNamespace { responder } => {
                 let mut contents = Vec::new();
