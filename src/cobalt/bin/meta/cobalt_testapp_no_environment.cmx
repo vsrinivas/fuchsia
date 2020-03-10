@@ -2,7 +2,7 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fuchsia.net.oldhttp.HttpService": "fuchsia-pkg://fuchsia.com/http#meta/http.cmx",
+                "fuchsia.net.http.Loader": "fuchsia-pkg://fuchsia.com/http_client#meta/http_client.cmx",
                 "fuchsia.time.Utc": "fuchsia-pkg://fuchsia.com/cobalt_fake_timekeeper#meta/cobalt_fake_timekeeper.cmx"
             },
             "system-services": [
@@ -22,7 +22,7 @@
             "fuchsia.logger.LogSink",
             "fuchsia.net.NameLookup",
             "fuchsia.posix.socket.Provider",
-            "fuchsia.net.oldhttp",
+            "fuchsia.net.http",
             "fuchsia.sys.Launcher"
         ]
     }
