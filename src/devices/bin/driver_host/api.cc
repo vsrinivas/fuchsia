@@ -9,6 +9,7 @@
 
 #include <utility>
 
+#include <ddk/component-device.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 
@@ -251,6 +252,22 @@ __EXPORT zx_status_t device_get_protocol(const zx_device_t* dev, uint32_t proto_
     proto->ops = dev->protocol_ops;
     proto->ctx = dev->ctx;
     return ZX_OK;
+  }
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+__EXPORT zx_status_t device_open_protocol_session_multibindable(const zx_device_t* dev,
+                                                                uint32_t proto_id, void* out) {
+  if (dev->ops->open_protocol_session_multibindable) {
+    return dev->ops->open_protocol_session_multibindable(dev->ctx, proto_id, out);
+  }
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+__EXPORT zx_status_t device_close_protocol_session_multibindable(const zx_device_t* dev,
+                                                                 void* proto) {
+  if (dev->ops->close_protocol_session_multibindable) {
+    return dev->ops->close_protocol_session_multibindable(dev->ctx, proto);
   }
   return ZX_ERR_NOT_SUPPORTED;
 }

@@ -154,11 +154,10 @@ zx_status_t CompositeDevice::TryAssemble() {
       bound_dev = bound_dev->proxy();
     }
 
-    // Check if we need to use the proxy.  If not, share a reference straight
-    // to the target device rather than the instance of the component device
-    // that bound to it.
+    // Check if we need to use the proxy.  If not, share a reference to
+    // the instance of the component device.
     if (bound_dev->host() == devhost) {
-      component_local_ids[component.index()] = bound_dev->local_id();
+      component_local_ids[component.index()] = component_dev->local_id();
       continue;
     }
 
