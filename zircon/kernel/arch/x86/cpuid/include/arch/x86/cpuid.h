@@ -106,6 +106,7 @@ class Features {
     LEAF6,  // Thermal and Power Management Leaf
     LEAF7,  // Structured Extended Feature Flags
     LEAF8_01,
+    LEAF8_07,
     LEAF8_08,
     INVALID_SET = 254,
   };
@@ -245,6 +246,8 @@ class Features {
   static constexpr Feature XD = {.leaf = LEAF8_01, .reg = Registers::EDX, .bit = 20};
   static constexpr Feature SYSCALL = {.leaf = LEAF8_01, .reg = Registers::EDX, .bit = 11};
 
+  static constexpr Feature CPB = {.leaf = LEAF8_07, .reg = Registers::EDX, .bit=9};
+
   static constexpr Feature CLZERO = {.leaf = LEAF8_08, .reg = Registers::EBX, .bit = 0};
   static constexpr Feature AMD_IBPB = {.leaf = LEAF8_08, .reg = Registers::EBX, .bit = 12};
   static constexpr Feature AMD_IBRS_ALWAYS_ON = {.leaf = LEAF8_08, .reg = Registers::EBX, .bit = 16};
@@ -255,7 +258,7 @@ class Features {
   static constexpr Feature AMD_SSB_NO = {.leaf = LEAF8_08, .reg = Registers::EBX, .bit = 26};
 
   Features(Registers leaf1, Registers leaf6, Registers leaf7, Registers leaf8_01,
-           Registers leaf8_08);
+           Registers leaf8_07, Registers leaf8_08);
 
   inline bool HasFeature(Feature feature) const {
     DEBUG_ASSERT_MSG(
@@ -269,7 +272,7 @@ class Features {
   uint8_t max_logical_processors_in_package() const;
 
  private:
-  static constexpr size_t kLeafCount = 5;
+  static constexpr size_t kLeafCount = 6;
 
   const Registers leaves_[kLeafCount];
 };
@@ -329,7 +332,7 @@ class Topology {
 
  protected:
   // Used for testing.
-  Topology() : info_({}, {}), features_({}, {}, {}, {}, {}) {}
+  Topology() : info_({}, {}), features_({}, {}, {}, {}, {}, {}) {}
 
  private:
   std::optional<Levels> IntelLevels() const;
