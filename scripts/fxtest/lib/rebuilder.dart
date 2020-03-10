@@ -6,8 +6,9 @@ import 'dart:io';
 
 import 'package:fxtest/fxtest.dart';
 
-Future<void> rebuildFuchsia() async {
-  await Process.start('fx', ['build'], mode: ProcessStartMode.inheritStdio)
+Future<void> rebuildFuchsia(String fxLocation) async {
+  await Process.start(fxLocation, ['build'],
+          mode: ProcessStartMode.inheritStdio)
       .then((Process process) async {
     final _exitCode = await process.exitCode;
     if (_exitCode != 0) {

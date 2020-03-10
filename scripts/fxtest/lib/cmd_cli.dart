@@ -109,7 +109,7 @@ class FuchsiaTestCommandCli {
       _cmd.outputFormatter.update(
         TestInfo(wrapWith('> fx build', [green, styleBold])),
       );
-      await rebuildFuchsia();
+      await rebuildFuchsia(FuchsiaLocator.shared.fx);
     }
 
     // Without waiting, start the command.
