@@ -11,7 +11,6 @@ mod testing_utils;
 use {
     anyhow::{Context as _, Error},
     element_management::{Element, ElementManager, ElementManagerError},
-    event_handler::{ElementEventHandler, EventHandler},
     fidl_fuchsia_session::{
         ElementControllerMarker, ElementControllerRequestStream, ElementSpec, ProposeElementError,
     },
@@ -23,7 +22,10 @@ use {
     std::rc::Rc,
 };
 
-pub use element_manager_server::ElementManagerServer;
+pub use {
+    element_manager_server::ElementManagerServer,
+    event_handler::{ElementEventHandler, EventHandler},
+};
 
 /// The child collection to add elements to. This must match a collection name declared in
 /// this session's CML file.
@@ -56,17 +58,14 @@ impl<T: ElementManager> ElementRepository<T> {
         ElementRepository { element_manager, sender, receiver }
     }
 
-    /// Starts the event loop which handles incoming events that are handled by the servers
-    pub async fn run(&mut self) -> Result<(), Error> {
-        self.run_with_handler(&mut ElementEventHandler::new()).await;
-        Ok(())
-    }
-
     /// Runs the repository with a given handler.
     ///
     /// The handler is responsible for responding to incoming events and processing them.
     /// A single handler is used for one repository allowing it to be safely mutated.
-    async fn run_with_handler<'a>(&mut self, handler: &'a mut impl EventHandler) {
+    pub async fn run_with_handler<'a>(
+        &mut self,
+        handler: &'a mut impl EventHandler,
+    ) -> Result<(), Error> {
         while let Some(event) = self.receiver.next().await {
             match event {
                 ElementEvent::ElementAdded { element, element_controller_stream } => {
@@ -78,6 +77,7 @@ impl<T: ElementManager> ElementRepository<T> {
                 }
             }
         }
+        Ok(())
     }
 
     /// Creates a new ElementManagerServer suitable for handling incoming connections.
@@ -182,7 +182,7 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn shutdown_event_forwards_to_handler_and_ends_loop() {
+    async fn shutdown_event_forwards_to_handler_and_ends_loop() -> Result<(), Error> {
         init_logger();
         let mut repo = ElementRepository::new_for_test();
         let mut handler = CallCountEventHandler::default();
@@ -192,12 +192,13 @@ mod tests {
             sender.unbounded_send(ElementEvent::Shutdown).expect("failed to send event");
         });
 
-        repo.run_with_handler(&mut handler).await;
+        repo.run_with_handler(&mut handler).await?;
         assert_eq!(handler.shutdown_call_count, 1);
+        Ok(())
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn element_added_event_forwards_to_handler() {
+    async fn element_added_event_forwards_to_handler() -> Result<(), Error> {
         init_logger();
         let mut repo = ElementRepository::new_for_test();
         let mut handler = CallCountEventHandler::default();
@@ -216,8 +217,9 @@ mod tests {
             sender.unbounded_send(ElementEvent::Shutdown).expect("failed to send event");
         });
 
-        repo.run_with_handler(&mut handler).await;
+        repo.run_with_handler(&mut handler).await?;
         assert_eq!(handler.add_call_count, 1);
+        Ok(())
     }
 
     #[fasync::run_singlethreaded(test)]

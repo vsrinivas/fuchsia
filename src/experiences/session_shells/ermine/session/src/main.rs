@@ -10,13 +10,15 @@ mod workstation_input_pipeline;
 
 use {
     crate::{
-        element_repository::{ElementManagerServer, ElementRepository},
+        element_repository::{ElementEventHandler, ElementManagerServer, ElementRepository},
         pointer_hack_server::PointerHackServer,
     },
     anyhow::{Context as _, Error},
     element_management::SimpleElementManager,
     fidl::endpoints::DiscoverableService,
-    fidl_fuchsia_session::{ElementManagerMarker, ElementManagerRequestStream},
+    fidl_fuchsia_session::{
+        ElementManagerMarker, ElementManagerRequestStream, GraphicalPresenterMarker,
+    },
     fidl_fuchsia_sys::LauncherMarker,
     fidl_fuchsia_sys2 as fsys,
     fidl_fuchsia_ui_app::ViewProviderMarker,
@@ -111,6 +113,9 @@ async fn main() -> Result<(), Error> {
     let (app, pointer_hack_server) = launch_ermine(element_repository.make_server()).await?;
     let view_provider = app.connect_to_service::<ViewProviderMarker>()?;
 
+    let presenter = app.connect_to_service::<GraphicalPresenterMarker>()?;
+    let mut handler = ElementEventHandler::new(presenter);
+
     let scenic = connect_to_service::<ScenicMarker>()?;
     let mut scene_manager = scene_management::FlatSceneManager::new(scenic, None, None).await?;
 
@@ -119,7 +124,7 @@ async fn main() -> Result<(), Error> {
 
     let services_fut = expose_services(element_repository.make_server());
     let input_fut = workstation_input_pipeline::handle_input(scene_manager, &pointer_hack_server);
-    let element_manager_fut = element_repository.run();
+    let element_manager_fut = element_repository.run_with_handler(&mut handler);
 
     //TODO(47080) monitor the futures to see if they complete in an error.
     let _ = try_join!(services_fut, input_fut, element_manager_fut);

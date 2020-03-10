@@ -10,3 +10,5 @@ class Suggestion {
 
   const Suggestion({this.id, this.url, this.title});
 }
+
+const String ermineSuggestionIdKey = 'ermine:suggestion:id';

@@ -4,9 +4,10 @@
 
 import 'package:flutter/material.dart';
 
-import 'package:fidl_fuchsia_sys/fidl_async.dart';
+import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
 import 'package:tiler/tiler.dart' show TilerModel, TileModel;
 
+import '../utils/presenter.dart';
 import '../utils/suggestion.dart';
 import 'ermine_shell.dart';
 import 'ermine_story.dart';
@@ -52,10 +53,6 @@ class ClustersModel extends ChangeNotifier implements ErmineShell {
   /// Returns a iterable of all [Story] objects.
   Iterable<ErmineStory> get stories => _storyToCluster.keys.map(getStory);
 
-  final LauncherProxy _launcher;
-
-  ClustersModel(Launcher launcher) : _launcher = launcher;
-
   /// Maximize the story to fullscreen: it's visual state to IMMERSIVE.
   void maximize(String id) {
     if (fullscreenStoryNotifier.value?.id == id) {
@@ -78,18 +75,42 @@ class ClustersModel extends ChangeNotifier implements ErmineShell {
   /// Returns the story given it's id.
   ErmineStory getStory(String id) => _storyToCluster[id]?.getStory(id);
 
+  @override
+  void presentStory(
+    ViewHolderToken token,
+    ViewControllerImpl viewController,
+    String id,
+  ) {
+    // Check to see if a story already exists on screen.
+    ErmineStory story = getStory(id);
+
+    if (story == null) {
+      // This view was created by some external source.
+      // create a new story and present it.
+      story = ErmineStory.fromExternalSource(
+        onDelete: storyDeleted,
+        onChange: storyChanged,
+      );
+      _addErmineStory(story);
+    }
+
+    story.presentView(token, viewController);
+  }
+
   /// Creates and adds a [Story] to the current cluster given it's [StoryInfo],
   /// [SessionShell] and [StoryController]. Returns the created instance.
   @override
-  void storyStarted(Suggestion suggestion) {
+  void storySuggested(Suggestion suggestion) {
     assert(!_storyToCluster.containsKey(suggestion.id));
-    final story = ErmineStory(
+    final story = ErmineStory.fromSuggestion(
       suggestion: suggestion,
-      launcher: _launcher,
       onDelete: storyDeleted,
       onChange: storyChanged,
     );
+    _addErmineStory(story);
+  }
 
+  void _addErmineStory(ErmineStory story) {
     // Add the story to the current cluster
     currentCluster.value ??= clusters.first;
     _storyToCluster[story.id] = currentCluster.value..add(story);

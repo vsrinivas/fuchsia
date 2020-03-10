@@ -2,40 +2,78 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:fidl_fuchsia_sys/fidl_async.dart';
-import 'package:fidl_fuchsia_ui_app/fidl_async.dart';
+import 'package:fidl_fuchsia_session/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
 import 'package:flutter/material.dart';
+import 'package:fuchsia_logger/logger.dart';
 import 'package:fuchsia_scenic_flutter/child_view_connection.dart';
 import 'package:fuchsia_services/services.dart';
-import 'package:zircon/zircon.dart';
+import 'package:uuid/uuid.dart';
 
+import '../utils/presenter.dart';
 import '../utils/suggestion.dart';
+
+/// A function which can be used to launch the suggestion.
+@visibleForTesting
+typedef LaunchFunction = Future<void> Function(
+    Suggestion, ElementControllerProxy);
 
 /// Defines a class to represent a story in ermine.
 class ErmineStory {
-  final Suggestion suggestion;
   final ValueChanged<ErmineStory> onDelete;
   final ValueChanged<ErmineStory> onChange;
-  final LauncherProxy _launcher;
-  final ComponentControllerProxy _componentController;
+  final String id;
 
+  // An optional view controller which allows the story to communicate with the
+  // process.
+  @visibleForTesting
+  ViewControllerImpl viewController;
+
+  // An optional element controller which allows the story to communicate with
+  // the element. This will only be available if ermine launched this process.
+  ElementControllerProxy _elementController;
+
+  /// Creates a launches an ermine story.
+  @visibleForTesting
   ErmineStory({
-    this.suggestion,
-    Launcher launcher,
+    this.id,
     this.onDelete,
     this.onChange,
-    ComponentControllerProxy componentController,
-  })  : _launcher = launcher,
-        _componentController =
-            componentController ?? ComponentControllerProxy(),
-        nameNotifier = ValueNotifier(suggestion.title),
-        childViewConnectionNotifier = ValueNotifier(null) {
-    launchSuggestion();
-    _componentController.onTerminated.listen((_) => delete());
+    String title = '',
+  })  : nameNotifier = ValueNotifier(title),
+        childViewConnectionNotifier = ValueNotifier(null);
+
+  factory ErmineStory.fromSuggestion({
+    Suggestion suggestion,
+    ValueChanged<ErmineStory> onDelete,
+    ValueChanged<ErmineStory> onChange,
+    LaunchFunction launchFunction = ErmineStory.launchSuggestion,
+  }) {
+    final elementController = ElementControllerProxy();
+    launchFunction(suggestion, elementController);
+    return ErmineStory(
+      id: suggestion.id,
+      title: suggestion.title,
+      onDelete: onDelete,
+      onChange: onChange,
+    ).._elementController = elementController;
   }
 
-  String get id => suggestion.id;
+  /// Creates an ermine story which was proposed from an external source.
+  ///
+  /// This method will not attempt to launch a story but will generate
+  /// a random suggestion
+  factory ErmineStory.fromExternalSource({
+    ValueChanged<ErmineStory> onDelete,
+    ValueChanged<ErmineStory> onChange,
+  }) {
+    final id = Uuid().v4();
+    return ErmineStory(
+      id: 'external:$id',
+      onDelete: onDelete,
+      onChange: onChange,
+    );
+  }
 
   final ValueNotifier<String> nameNotifier;
   String get name => nameNotifier.value ?? id;
@@ -55,9 +93,9 @@ class ErmineStory {
   bool get isImmersive => fullscreenNotifier.value == true;
 
   void delete() {
-    _componentController.kill();
-    _componentController.ctrl.close();
+    viewController?.close();
     onDelete?.call(this);
+    _elementController?.ctrl?.close();
   }
 
   void focus() => onChange?.call(this..focused = true);
@@ -69,34 +107,38 @@ class ErmineStory {
   ValueNotifier<bool> editStateNotifier = ValueNotifier(false);
   void edit() => editStateNotifier.value = !editStateNotifier.value;
 
-  @visibleForTesting
-  Future<void> launchSuggestion() async {
-    final incoming = Incoming();
+  static Future<void> launchSuggestion(
+      Suggestion suggestion, ElementControllerProxy elementController) async {
+    final proxy = ElementManagerProxy();
 
-    await _launcher.createComponent(
-      LaunchInfo(
-        url: suggestion.url,
-        directoryRequest: incoming.request().passChannel(),
+    StartupContext.fromStartupInfo().incoming.connectToService(proxy);
+
+    final annotations = Annotations(customAnnotations: [
+      Annotation(
+        key: ermineSuggestionIdKey,
+        value: Value.withText(suggestion.id),
       ),
-      _componentController.ctrl.request(),
-    );
+    ]);
 
-    ViewProviderProxy viewProvider = ViewProviderProxy();
-    incoming.connectToService(viewProvider);
-    await incoming.close();
+    final spec =
+        ElementSpec(componentUrl: suggestion.url, annotations: annotations);
 
-    final viewTokens = EventPairPair();
-    assert(viewTokens.status == ZX.OK);
-    final viewHolderToken = ViewHolderToken(value: viewTokens.first);
-    final viewToken = ViewToken(value: viewTokens.second);
+    await proxy
+        .proposeElement(spec, elementController.ctrl.request())
+        .catchError((err) {
+      log.shout('$err: Failed to propose elememnt <${suggestion.url}>');
+    });
 
-    await viewProvider.createView(viewToken.value, null, null);
-    viewProvider.ctrl.close();
+    proxy.ctrl.close();
+  }
 
+  void presentView(ViewHolderToken viewHolderToken, ViewControllerImpl vc) {
     childViewConnectionNotifier.value = ChildViewConnection(
       viewHolderToken,
       onAvailable: (_) {},
       onUnavailable: (_) {},
     );
+    viewController = vc;
+    viewController?.didPresent();
   }
 }

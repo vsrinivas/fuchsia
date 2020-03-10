@@ -53,35 +53,35 @@ class Cluster extends StatelessWidget {
     return AnimatedBuilder(
       animation: story.childViewConnectionNotifier,
       builder: (context, child) {
-        return story.childViewConnection != null
-            ? AnimatedBuilder(
-                animation: Listenable.merge([
-                  story.nameNotifier,
-                  story.focusedNotifier,
-                  story.editStateNotifier,
-                ]),
-                builder: (context, child) => TileChrome(
-                  name: story.name,
-                  showTitle: !custom,
-                  titleFieldController: titleFieldController,
-                  editing: story.editStateNotifier.value,
-                  focused: story.focused,
-                  child: AnimatedBuilder(
-                    animation: story.fullscreenNotifier,
-                    builder: (context, child) => story.isImmersive
-                        ? Offstage()
-                        : ChildView(connection: story.childViewConnection),
-                  ),
-                  onTap: story.focus,
-                  onDelete: story.delete,
-                  onFullscreen: story.maximize,
-                  onMinimize: story.restore,
-                  onEdit: story.edit,
-                  onCancelEdit: () => confirmEditNotifier.value = false,
-                  onConfirmEdit: () => confirmEditNotifier.value = true,
-                ),
-              )
-            : Offstage();
+        return AnimatedBuilder(
+          animation: Listenable.merge([
+            story.nameNotifier,
+            story.focusedNotifier,
+            story.editStateNotifier,
+          ]),
+          builder: (context, child) => TileChrome(
+            name: story.name,
+            showTitle: !custom,
+            titleFieldController: titleFieldController,
+            editing: story.editStateNotifier.value,
+            focused: story.focused,
+            child: AnimatedBuilder(
+              animation: story.fullscreenNotifier,
+              builder: (context, child) => story.isImmersive
+                  ? Offstage()
+                  : story.childViewConnection != null
+                      ? ChildView(connection: story.childViewConnection)
+                      : Offstage(), //TODO(47796) show a placeholder until the view loads
+            ),
+            onTap: story.focus,
+            onDelete: story.delete,
+            onFullscreen: story.maximize,
+            onMinimize: story.restore,
+            onEdit: story.edit,
+            onCancelEdit: () => confirmEditNotifier.value = false,
+            onConfirmEdit: () => confirmEditNotifier.value = true,
+          ),
+        );
       },
     );
   }

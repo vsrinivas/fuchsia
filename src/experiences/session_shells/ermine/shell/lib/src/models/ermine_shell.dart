@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
+
+import '../utils/presenter.dart';
 import '../utils/suggestion.dart';
 import 'ermine_story.dart';
 
@@ -14,11 +17,27 @@ import 'ermine_story.dart';
 /// - programmatically through scripting
 abstract class ErmineShell {
   /// Creates a new [ErmineStory] with a given [Suggestion].
-  void storyStarted(Suggestion suggestion);
+  void storySuggested(Suggestion suggestion);
 
   /// Handles a story removed from the shell.
   void storyDeleted(ErmineStory story);
 
   /// Handles story attributes changing and updating its UX in the shell.
   void storyChanged(ErmineStory story);
+
+  /// Called when a story should be presented. A story is presented after
+  /// it has been launched. The story may have been proposed by ermine or
+  /// an external source.
+  void presentStory(
+    /// The view holder token used to connect the view to the process
+    ViewHolderToken token,
+
+    /// A view controller which can be used to communicate with the running process
+    /// This value may be null
+    ViewControllerImpl viewController,
+
+    /// A string identifying the launched story. This id is only valid if the
+    /// story was launched from ermine.
+    String id,
+  );
 }

@@ -6,7 +6,6 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:fidl_fuchsia_intl/fidl_async.dart';
-import 'package:fidl_fuchsia_sys/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_input/fidl_async.dart' as input;
 import 'package:fidl_fuchsia_ui_shortcut/fidl_async.dart' as ui_shortcut
     show RegistryProxy;
@@ -20,6 +19,7 @@ import 'package:keyboard_shortcuts/keyboard_shortcuts.dart'
     show KeyboardShortcuts;
 import 'package:lib.widgets/utils.dart' show PointerEventsListener;
 
+import '../utils/presenter.dart';
 import '../utils/suggestions.dart';
 import '../widgets/ask/ask.dart';
 import 'cluster_model.dart';
@@ -32,9 +32,9 @@ class AppModel {
   final _pointerEventsListener = PointerEventsListener();
   final _shortcutRegistry = ui_shortcut.RegistryProxy();
   final _intl = PropertyProviderProxy();
-  final _launcher = LauncherProxy();
 
   SuggestionService _suggestionService;
+  PresenterService _presenterService;
 
   /// The [GlobalKey] associated with [Ask] widget.
   final GlobalKey<AskState> askKey = GlobalKey(debugLabel: 'ask');
@@ -62,20 +62,24 @@ class AppModel {
     _startupContext.incoming.connectToService(_shortcutRegistry);
     _startupContext.incoming.connectToService(_intl);
     _startupContext.incoming.connectToService(_presentation);
-    _startupContext.incoming.connectToService(_launcher);
 
     _localeStream = LocaleSource(_intl).stream().asBroadcastStream();
 
-    clustersModel = ClustersModel(_launcher);
+    clustersModel = ClustersModel();
 
     _suggestionService = SuggestionService.fromStartupContext(
       startupContext: _startupContext,
-      onSuggestion: clustersModel.storyStarted,
+      onSuggestion: clustersModel.storySuggested,
     );
 
     topbarModel = TopbarModel(appModel: this);
 
     status = StatusModel.fromStartupContext(_startupContext, onLogout);
+
+    // Expose the presenter service to the environment.
+    _presenterService = PresenterService(clustersModel.presentStory);
+    _startupContext.outgoing
+        .addPublicService(_presenterService.bind, PresenterService.serviceName);
   }
 
   SuggestionService get suggestions => _suggestionService;
@@ -236,7 +240,6 @@ class AppModel {
     _keyboardShortcuts.dispose();
     _shortcutRegistry.ctrl.close();
     _presentation.ctrl.close();
-    _launcher.ctrl.close();
   }
 
   void injectTap(Offset offset) {
