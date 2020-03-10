@@ -8,13 +8,13 @@
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/partition/c/fidl.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/limits.h>
 #include <lib/fdio/vfs.h>
 #include <lib/fdio/watcher.h>
-#include <lib/fdio/cpp/caller.h>
 #include <string.h>
 #include <unistd.h>
 #include <zircon/compiler.h>
@@ -276,7 +276,7 @@ __EXPORT
 zx_status_t fvm_destroy(const char* path) {
   fbl::String driver_path = fbl::StringPrintf("%s/fvm", path);
 
-  fbl::unique_fd parent_fd(open(path, O_RDWR));
+  fbl::unique_fd parent_fd(open(path, O_RDONLY | O_DIRECTORY));
   if (!parent_fd) {
     return ZX_ERR_NOT_FOUND;
   }
@@ -291,7 +291,7 @@ __EXPORT
 zx_status_t fvm_destroy_with_devfs(int devfs_root_fd, const char* relative_path) {
   fbl::String driver_path = fbl::StringPrintf("%s/fvm", relative_path);
 
-  fbl::unique_fd parent_fd(openat(devfs_root_fd, relative_path, O_RDWR));
+  fbl::unique_fd parent_fd(openat(devfs_root_fd, relative_path, O_RDONLY | O_DIRECTORY));
   if (!parent_fd) {
     return ZX_ERR_NOT_FOUND;
   }

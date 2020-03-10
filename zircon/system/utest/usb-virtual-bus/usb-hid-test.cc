@@ -82,7 +82,7 @@ void USBVirtualBus::Unbind(fbl::String devpath) {
 
   ASSERT_OK(fdio_get_service_handle(fd_usb_hid.release(), usbhid_channel.reset_and_get_address()));
   std::string ifc_path = usb_hid_path.substr(0, usb_hid_path.find_last_of('/'));
-  fbl::unique_fd fd_usb_hid_parent(openat(GetRootFd(), ifc_path.c_str(), O_RDONLY));
+  fbl::unique_fd fd_usb_hid_parent(openat(GetRootFd(), ifc_path.c_str(), O_DIRECTORY | O_RDONLY));
   ASSERT_GE(fd_usb_hid_parent.get(), 0);
   std::unique_ptr<devmgr_integration_test::DirWatcher> watcher;
   ASSERT_OK(devmgr_integration_test::DirWatcher::Create(std::move(fd_usb_hid_parent), &watcher));

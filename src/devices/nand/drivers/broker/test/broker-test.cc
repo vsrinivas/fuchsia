@@ -51,7 +51,7 @@ fbl::unique_fd OpenBroker(const char* path, fbl::String* out_filename) {
     return ZX_ERR_STOP;
   };
 
-  fbl::unique_fd dir(open(path, O_DIRECTORY));
+  fbl::unique_fd dir(open(path, O_RDONLY | O_DIRECTORY));
   if (dir) {
     zx_time_t deadline = zx_deadline_after(ZX_SEC(5));
     fdio_watch_directory(dir.get(), callback, deadline, &broker_data);
@@ -70,7 +70,7 @@ class NandDevice {
       // we need to make sure the (device) file has been completely removed before returning.
       std::unique_ptr<devmgr_integration_test::DirWatcher> watcher;
 
-      fbl::unique_fd dir_fd(open(parent_->Path(), O_RDONLY));
+      fbl::unique_fd dir_fd(open(parent_->Path(), O_RDONLY | O_DIRECTORY));
       ASSERT_TRUE(dir_fd);
       ASSERT_EQ(devmgr_integration_test::DirWatcher::Create(std::move(dir_fd), &watcher), ZX_OK);
 

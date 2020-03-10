@@ -51,7 +51,7 @@ class NandDevice {
 
 TEST(RamNandCtlTest, TrivialLifetime) {
   std::unique_ptr<devmgr_integration_test::DirWatcher> watcher;
-  fbl::unique_fd dir_fd(open(ramdevice_client::RamNand::kBasePath, O_RDONLY));
+  fbl::unique_fd dir_fd(open(ramdevice_client::RamNand::kBasePath, O_RDONLY | O_DIRECTORY));
   ASSERT_TRUE(dir_fd);
   ASSERT_EQ(devmgr_integration_test::DirWatcher::Create(std::move(dir_fd), &watcher), ZX_OK);
 
