@@ -224,7 +224,9 @@ IntegrationTest::Promise<void> IntegrationTest::DoOpen(
     completer.complete_ok();
     client->events().OnOpen = nullptr;
   };
-  devfs_->Open(fuchsia::io::OPEN_FLAG_DESCRIBE, 0, path, std::move(server));
+  devfs_->Open(fuchsia::io::OPEN_FLAG_DESCRIBE | fuchsia::io::OPEN_RIGHT_READABLE |
+                   fuchsia::io::OPEN_RIGHT_WRITABLE,
+               0, path, std::move(server));
   return bridge.consumer.promise_or(::fit::error("devfs open abandoned"));
 }
 
