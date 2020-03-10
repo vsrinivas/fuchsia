@@ -11,13 +11,7 @@ import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 fidl("fuchsia.time") {
-  # TODO(fxb/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
-  excluded_checks = [ "event-names-must-start-with-on" ]
-
-  sources = [
-    "deprecated_network_sync.fidl",
-    "utc.fidl",
-  ]
+  sources = [ "utc.fidl" ]
 }
 
 package("timekeeper") {
