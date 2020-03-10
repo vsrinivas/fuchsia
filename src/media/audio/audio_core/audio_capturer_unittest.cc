@@ -1,7 +1,7 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-#include "src/media/audio/audio_core/base_capturer.h"
+#include "src/media/audio/audio_core/audio_capturer.h"
 
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/vmo.h>
@@ -23,9 +23,9 @@ namespace {
 constexpr uint32_t kAudioCapturerUnittestFrameRate = 48000;
 constexpr size_t kAudioCapturerUnittestVmarSize = 16ull * 1024;
 
-class BaseCapturerTest : public testing::ThreadingModelFixture {
+class AudioCapturerTest : public testing::ThreadingModelFixture {
  public:
-  BaseCapturerTest() {
+  AudioCapturerTest() {
     FX_CHECK(vmo_mapper_.CreateAndMap(kAudioCapturerUnittestVmarSize,
                                       /*flags=*/0, nullptr, &vmo_) == ZX_OK);
   }
@@ -36,10 +36,11 @@ class BaseCapturerTest : public testing::ThreadingModelFixture {
     testing::ThreadingModelFixture::SetUp();
 
     auto format = Format::Create(stream_type_).take_value();
-    auto capturer = BaseCapturer::Create(fuchsia::media::AudioCapturerConfiguration::WithInput(
-                                             fuchsia::media::InputAudioCapturerConfiguration()),
-                                         {format}, {fuchsia::media::AudioCaptureUsage::BACKGROUND},
-                                         fidl_capturer_.NewRequest(), &context());
+    auto capturer = std::unique_ptr<AudioCapturer>(
+        new AudioCapturer(fuchsia::media::AudioCapturerConfiguration::WithInput(
+                              fuchsia::media::InputAudioCapturerConfiguration()),
+                          {format}, {fuchsia::media::AudioCaptureUsage::BACKGROUND},
+                          fidl_capturer_.NewRequest(), &context()));
     capturer_ = capturer.get();
     EXPECT_NE(capturer_, nullptr);
 
@@ -58,7 +59,7 @@ class BaseCapturerTest : public testing::ThreadingModelFixture {
   }
 
  protected:
-  BaseCapturer* capturer_;
+  AudioCapturer* capturer_;
   fuchsia::media::AudioCapturerPtr fidl_capturer_;
 
   fzl::VmoMapper vmo_mapper_;
@@ -71,7 +72,7 @@ class BaseCapturerTest : public testing::ThreadingModelFixture {
   };
 };
 
-TEST_F(BaseCapturerTest, CanShutdownWithUnusedBuffer) {
+TEST_F(AudioCapturerTest, CanShutdownWithUnusedBuffer) {
   zx::vmo duplicate;
   ASSERT_EQ(
       vmo_.duplicate(ZX_RIGHT_TRANSFER | ZX_RIGHT_WRITE | ZX_RIGHT_READ | ZX_RIGHT_MAP, &duplicate),
@@ -80,7 +81,7 @@ TEST_F(BaseCapturerTest, CanShutdownWithUnusedBuffer) {
   RunLoopUntilIdle();
 }
 
-TEST_F(BaseCapturerTest, RegistersWithRouteGraphIfHasUsageStreamTypeAndBuffers) {
+TEST_F(AudioCapturerTest, RegistersWithRouteGraphIfHasUsageStreamTypeAndBuffers) {
   EXPECT_EQ(context().link_matrix().SourceLinkCount(*capturer_), 0u);
 
   zx::vmo duplicate;
@@ -120,7 +121,7 @@ TEST_F(BaseCapturerTest, RegistersWithRouteGraphIfHasUsageStreamTypeAndBuffers) 
   EXPECT_EQ(context().link_matrix().SourceLinkCount(*capturer_), 1u);
 }
 
-TEST_F(BaseCapturerTest, CanReleasePacketWithoutDroppingConnection) {
+TEST_F(AudioCapturerTest, CanReleasePacketWithoutDroppingConnection) {
   bool channel_dropped = false;
   fidl_capturer_.set_error_handler([&channel_dropped](auto _) { channel_dropped = true; });
   fidl_capturer_->ReleasePacket(fuchsia::media::StreamPacket{});

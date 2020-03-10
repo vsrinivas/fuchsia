@@ -8,7 +8,6 @@
 #include <fuchsia/media/audio/cpp/fidl.h>
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
-#include <lib/fidl/cpp/binding_set.h>
 #include <lib/media/cpp/timeline_function.h>
 #include <lib/media/cpp/timeline_rate.h>
 
@@ -30,29 +29,21 @@
 
 namespace media::audio {
 
-class AudioAdmin;
-class AudioCoreImpl;
-
-class BaseCapturer : public AudioObject,
-                     public fuchsia::media::AudioCapturer,
-                     public fuchsia::media::audio::GainControl,
-                     public StreamVolume {
- public:
-  static std::unique_ptr<BaseCapturer> Create(
-      fuchsia::media::AudioCapturerConfiguration configuration, std::optional<Format> format,
-      std::optional<fuchsia::media::AudioCaptureUsage> usage,
-      fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
-      Context* context);
+class BaseCapturer : public AudioObject, public fuchsia::media::AudioCapturer {
+ protected:
+  using RouteGraphRemover = void (RouteGraph::*)(const AudioObject&);
+  BaseCapturer(fuchsia::media::AudioCapturerConfiguration configuration,
+               std::optional<Format> format,
+               fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
+               Context* context, RouteGraphRemover remover = &RouteGraph::RemoveCapturer);
 
   ~BaseCapturer() override;
 
- private:
-  void OverflowOccurred(FractionalFrames<int64_t> source_start, FractionalFrames<int64_t> mix_point,
-                        zx::duration overflow_duration);
-  void PartialOverflowOccurred(FractionalFrames<int64_t> source_offset, int64_t mix_offset);
+  Context& context() const { return context_; }
+
+  ExecutionDomain& mix_domain() const { return *mix_domain_; }
 
   // Notes about the BaseCapturer state machine.
-  // TODO(mpuryear): Update this comment block.
   //
   // :: WaitingForVmo ::
   // AudioCapturers start in this mode. They should have a default capture mode
@@ -109,21 +100,44 @@ class BaseCapturer : public AudioObject,
     AsyncStoppingCallbackPending,
     Shutdown,
   };
+  State capture_state() const { return state_.load(); }
+
+  bool has_pending_capture_buffers() {
+    std::lock_guard<std::mutex> pending_lock(pending_lock_);
+    return !pending_capture_buffers_.is_empty();
+  }
+
+  void UpdateFormat(Format format) FXL_LOCKS_EXCLUDED(mix_domain_->token());
+
+  // Removes the capturer from its owner, the route graph, triggering shutdown and drop.
+  void BeginShutdown();
+
+  virtual void ReportStart() {}
+  virtual void ReportStop() {}
+  virtual void OnStateChanged(State old_state, State new_stage);
+  virtual void SetRoutingProfile(bool routable) = 0;
 
   static bool StateIsRoutable(BaseCapturer::State state) {
     return state != BaseCapturer::State::WaitingForVmo && state != BaseCapturer::State::Shutdown;
   }
 
-  BaseCapturer(fuchsia::media::AudioCapturerConfiguration configuration,
-               std::optional<Format> format, std::optional<fuchsia::media::AudioCaptureUsage> usage,
-               fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
-               Context* context);
+  // |media::audio::AudioObject|
+  fit::result<std::shared_ptr<Mixer>, zx_status_t> InitializeSourceLink(
+      const AudioObject& source, std::shared_ptr<Stream> stream) override;
+  void CleanupSourceLink(const AudioObject& source, std::shared_ptr<Stream> stream) override;
+  void OnLinkAdded() override;
+
+ private:
+  void UpdateState(State new_state);
+
+  void OverflowOccurred(FractionalFrames<int64_t> source_start, FractionalFrames<int64_t> mix_point,
+                        zx::duration overflow_duration);
+  void PartialOverflowOccurred(FractionalFrames<int64_t> source_offset, int64_t mix_offset);
 
   using PcbList = ::fbl::DoublyLinkedList<std::unique_ptr<PendingCaptureBuffer>>;
 
   // |fuchsia::media::AudioCapturer|
   void GetStreamType(GetStreamTypeCallback cbk) final;
-  void SetPcmStreamType(fuchsia::media::AudioStreamType stream_type) final;
   void AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) final;
   void RemovePayloadBuffer(uint32_t id) final;
   void CaptureAt(uint32_t payload_buffer_id, uint32_t offset_frames, uint32_t num_frames,
@@ -134,34 +148,6 @@ class BaseCapturer : public AudioObject,
   void StartAsyncCapture(uint32_t frames_per_packet) final;
   void StopAsyncCapture(StopAsyncCaptureCallback cbk) final;
   void StopAsyncCaptureNoReply() final;
-  void BindGainControl(fidl::InterfaceRequest<fuchsia::media::audio::GainControl> request) final;
-  void SetUsage(fuchsia::media::AudioCaptureUsage usage) final;
-
-  // |fuchsia::media::audio::GainControl|
-  void SetGain(float gain_db) final;
-  void SetGainWithRamp(float gain_db, int64_t duration_ns,
-                       fuchsia::media::audio::RampType ramp_type) final {
-    FX_NOTIMPLEMENTED();
-  }
-  void SetMute(bool mute) final;
-  void NotifyGainMuteChanged();
-
-  void ReportStart();
-  void ReportStop();
-
-  // |media::audio::AudioObject|
-  fit::result<std::shared_ptr<Mixer>, zx_status_t> InitializeSourceLink(
-      const AudioObject& source, std::shared_ptr<Stream> stream) override;
-  void CleanupSourceLink(const AudioObject& source, std::shared_ptr<Stream> stream) override;
-  void OnLinkAdded() override;
-  std::optional<StreamUsage> usage() const override {
-    return {StreamUsage::WithCaptureUsage(usage_)};
-  }
-
-  // |media::audio::StreamVolume|
-  bool GetStreamMute() const final;
-  fuchsia::media::Usage GetStreamUsage() const final;
-  void RealizeVolume(VolumeCommand volume_command) final;
 
   // Methods used by capture/mixer thread(s). Must be called from mix_domain.
   zx_status_t Process() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
@@ -178,20 +164,12 @@ class BaseCapturer : public AudioObject,
   // Helper function used to return a set of pending capture buffers to a user.
   void FinishBuffers(const PcbList& finished_buffers) FXL_LOCKS_EXCLUDED(mix_domain_->token());
 
-  // Mixer helper.
-  void UpdateFormat(Format format) FXL_LOCKS_EXCLUDED(mix_domain_->token());
-
   fit::promise<> Cleanup() FXL_LOCKS_EXCLUDED(mix_domain_->token());
   void CleanupFromMixThread() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
   void MixTimerThunk() {
     OBTAIN_EXECUTION_DOMAIN_TOKEN(token, mix_domain_);
     Process();
   }
-
-  // Removes the capturer from its owner, the route graph, triggering shutdown and drop.
-  void BeginShutdown();
-
-  void SetRoutingProfile();
 
   void RecomputeMinFenceTime();
 
@@ -206,20 +184,15 @@ class BaseCapturer : public AudioObject,
                         FractionalFrames<int64_t>(format_.frames_per_second()).raw_value());
   }
 
-  fuchsia::media::AudioCaptureUsage usage_ = fuchsia::media::AudioCaptureUsage::FOREGROUND;
   fidl::Binding<fuchsia::media::AudioCapturer> binding_;
-  fidl::BindingSet<fuchsia::media::audio::GainControl> gain_control_bindings_;
   Context& context_;
   ThreadingModel::OwnedDomainPtr mix_domain_;
   std::atomic<State> state_;
-  const bool loopback_;
   zx::duration min_fence_time_;
 
   // Capture format and gain state.
   Format format_;
   uint32_t max_frames_per_capture_;
-  std::atomic<float> stream_gain_db_;
-  bool mute_;
 
   // Shared buffer state
   fzl::VmoMapper payload_buf_;
@@ -254,6 +227,8 @@ class BaseCapturer : public AudioObject,
   std::atomic<uint16_t> partial_overflow_count_;
 
   std::shared_ptr<MixStage> mix_stage_;
+
+  RouteGraphRemover route_graph_remover_;
 };
 
 }  // namespace media::audio

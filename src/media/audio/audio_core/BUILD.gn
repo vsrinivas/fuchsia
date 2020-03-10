@@ -58,6 +58,8 @@ source_set("audio_core_lib") {
   sources = [
     "audio_admin.cc",
     "audio_admin.h",
+    "audio_capturer.cc",
+    "audio_capturer.h",
     "audio_core_impl.cc",
     "audio_core_impl.h",
     "audio_device.cc",
@@ -212,11 +214,11 @@ executable("unittest_bin") {
 
   sources = [
     "audio_admin_unittest.cc",
+    "audio_capturer_unittest.cc",
     "audio_device_settings_unittest.cc",
     "audio_driver_unittest.cc",
     "audio_output_unittest.cc",
     "audio_renderer_unittest.cc",
-    "base_capturer_unittest.cc",
     "device_config_unittest.cc",
     "driver_output_unittest.cc",
     "effects_stage_unittest.cc",

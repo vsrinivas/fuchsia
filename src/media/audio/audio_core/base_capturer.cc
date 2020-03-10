@@ -43,7 +43,6 @@ static constexpr uint16_t kCaptureOverflowErrorInterval = 100;
 // accounts for this, with additional padding for safety.
 const zx::duration kFenceTimePadding = zx::msec(3);
 
-constexpr float kInitialCaptureGainDb = Gain::kUnityGainDb;
 constexpr int64_t kMaxTimePerCapture = ZX_MSEC(50);
 
 const Format kInitialFormat =
@@ -54,43 +53,26 @@ const Format kInitialFormat =
 
 }  // namespace
 
-std::unique_ptr<BaseCapturer> BaseCapturer::Create(
-    fuchsia::media::AudioCapturerConfiguration configuration, std::optional<Format> format,
-    std::optional<fuchsia::media::AudioCaptureUsage> usage,
-    fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
-    Context* context) {
-  return std::unique_ptr<BaseCapturer>(new BaseCapturer(
-      std::move(configuration), format, usage, std::move(audio_capturer_request), context));
-}
-
 BaseCapturer::BaseCapturer(
     fuchsia::media::AudioCapturerConfiguration configuration, std::optional<Format> format,
-    std::optional<fuchsia::media::AudioCaptureUsage> usage,
-    fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request, Context* context)
+    fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request, Context* context,
+    RouteGraphRemover remover)
     : AudioObject(Type::AudioCapturer),
       binding_(this, std::move(audio_capturer_request)),
       context_(*context),
       mix_domain_(context_.threading_model().AcquireMixDomain()),
       state_(State::WaitingForVmo),
-      loopback_(configuration.is_loopback()),
       min_fence_time_(zx::nsec(0)),
       // Ideally, initialize this to the native configuration of our initially-bound source.
       format_(kInitialFormat),
-      stream_gain_db_(kInitialCaptureGainDb),
-      mute_(false),
       overflow_count_(0u),
-      partial_overflow_count_(0u) {
+      partial_overflow_count_(0u),
+      route_graph_remover_(remover) {
   FX_DCHECK(mix_domain_);
   REP(AddingCapturer(*this));
 
-  context_.volume_manager().AddStream(this);
-
   binding_.set_error_handler([this](zx_status_t status) { BeginShutdown(); });
   source_links_.reserve(16u);
-
-  if (usage) {
-    usage_ = *usage;
-  }
 
   if (format) {
     UpdateFormat(*format);
@@ -99,44 +81,14 @@ BaseCapturer::BaseCapturer(
 
 BaseCapturer::~BaseCapturer() {
   TRACE_DURATION("audio.debug", "BaseCapturer::~BaseCapturer");
-
-  context_.volume_manager().RemoveStream(this);
   REP(RemovingCapturer(*this));
 }
 
-void BaseCapturer::ReportStart() { context_.audio_admin().UpdateCapturerState(usage_, true, this); }
+void BaseCapturer::OnLinkAdded() { RecomputeMinFenceTime(); }
 
-void BaseCapturer::ReportStop() { context_.audio_admin().UpdateCapturerState(usage_, false, this); }
-
-void BaseCapturer::OnLinkAdded() {
-  context_.volume_manager().NotifyStreamChanged(this);
-  RecomputeMinFenceTime();
-}
-
-bool BaseCapturer::GetStreamMute() const { return mute_; }
-
-fuchsia::media::Usage BaseCapturer::GetStreamUsage() const {
-  fuchsia::media::Usage usage;
-  usage.set_capture_usage(usage_);
-  return usage;
-}
-
-void BaseCapturer::RealizeVolume(VolumeCommand volume_command) {
-  if (volume_command.ramp.has_value()) {
-    FX_LOGS(WARNING)
-        << "Requested ramp of capturer; ramping for destination gains is unimplemented.";
-  }
-
-  context_.link_matrix().ForEachSourceLink(*this,
-                                           [this, &volume_command](LinkMatrix::LinkHandle link) {
-                                             float gain_db = link.loudness_transform->Evaluate<3>({
-                                                 VolumeValue{volume_command.volume},
-                                                 GainDbFsValue{volume_command.gain_db_adjustment},
-                                                 GainDbFsValue{stream_gain_db_.load()},
-                                             });
-
-                                             link.mixer->bookkeeping().gain.SetDestGain(gain_db);
-                                           });
+void BaseCapturer::UpdateState(State new_state) {
+  State old_state = state_.exchange(new_state);
+  OnStateChanged(old_state, new_state);
 }
 
 fit::promise<> BaseCapturer::Cleanup() {
@@ -163,26 +115,19 @@ void BaseCapturer::CleanupFromMixThread() {
   mix_wakeup_.Deactivate();
   mix_timer_.Cancel();
   mix_domain_ = nullptr;
-  state_.store(State::Shutdown);
+  UpdateState(State::Shutdown);
 }
 
 void BaseCapturer::BeginShutdown() {
-  context_.threading_model().FidlDomain().ScheduleTask(Cleanup().then([this](fit::result<>&) {
-    if (loopback_) {
-      context_.route_graph().RemoveLoopbackCapturer(*this);
-    } else {
-      context_.route_graph().RemoveCapturer(*this);
-    }
-  }));
+  context_.threading_model().FidlDomain().ScheduleTask(Cleanup().then(
+      [this](fit::result<>&) { (context_.route_graph().*route_graph_remover_)(*this); }));
 }
 
-void BaseCapturer::SetRoutingProfile() {
-  auto profile = RoutingProfile{.routable = StateIsRoutable(state_),
-                                .usage = StreamUsage::WithCaptureUsage(usage_)};
-  if (loopback_) {
-    context_.route_graph().SetLoopbackCapturerRoutingProfile(*this, std::move(profile));
-  } else {
-    context_.route_graph().SetCapturerRoutingProfile(*this, std::move(profile));
+void BaseCapturer::OnStateChanged(State old_state, State new_state) {
+  bool was_routable = StateIsRoutable(old_state);
+  bool is_routable = StateIsRoutable(new_state);
+  if (was_routable != is_routable) {
+    SetRoutingProfile(is_routable);
   }
 }
 
@@ -219,33 +164,6 @@ void BaseCapturer::GetStreamType(GetStreamTypeCallback cbk) {
   ret.encoding = fuchsia::media::AUDIO_ENCODING_LPCM;
   ret.medium_specific.set_audio(format_.stream_type());
   cbk(std::move(ret));
-}
-
-void BaseCapturer::SetPcmStreamType(fuchsia::media::AudioStreamType stream_type) {
-  TRACE_DURATION("audio", "BaseCapturer::SetPcmStreamType");
-  // If something goes wrong, hang up the phone and shutdown.
-  auto cleanup = fit::defer([this]() { BeginShutdown(); });
-
-  // If our shared buffer has been assigned, we are operating and our mode can no longer be changed.
-  State state = state_.load();
-  if (state != State::WaitingForVmo) {
-    FX_LOGS(ERROR) << "Cannot change capture mode while operating!"
-                   << "(state = " << static_cast<uint32_t>(state) << ")";
-    return;
-  }
-
-  auto format_result = Format::Create(stream_type);
-  if (format_result.is_error()) {
-    FX_LOGS(ERROR) << "AudioCapturer: PcmStreamType is invalid";
-    return;
-  }
-
-  REP(SettingCapturerStreamType(*this, stream_type));
-
-  // Success, record our new format.
-  UpdateFormat(format_result.take_value());
-
-  cleanup.cancel();
 }
 
 void BaseCapturer::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
@@ -337,16 +255,14 @@ void BaseCapturer::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
     FX_LOGS(ERROR) << "Failed to select output producer";
     return;
   }
-
-  // Success. Although we might still fail to create links to audio sources, we have successfully
-  // configured this capturer's mode, so we are now in the OperatingSync state.
-  state_.store(State::OperatingSync);
-
-  // Mark ourselves as routable now that we're fully configured.
   FX_DCHECK(context_.link_matrix().SourceLinkCount(*this) == 0u)
       << "No links should be established before a capturer has a payload buffer";
-  context_.volume_manager().NotifyStreamChanged(this);
-  SetRoutingProfile();
+
+  // Mark ourselves as routable now that we're fully configured. Although we might still fail to
+  // create links to audio sources, we have successfully configured this capturer's mode, so we are
+  // now in the OperatingSync state.
+  UpdateState(State::OperatingSync);
+
   cleanup.cancel();
 }
 
@@ -506,7 +422,7 @@ void BaseCapturer::StartAsyncCapture(uint32_t frames_per_packet) {
   // 2) Transition to the OperatingAsync state
   // 3) Kick the work thread to get the ball rolling.
   async_frames_per_packet_ = frames_per_packet;
-  state_.store(State::OperatingAsync);
+  UpdateState(State::OperatingAsync);
   ReportStart();
   mix_wakeup_.Signal();
   cleanup.cancel();
@@ -540,7 +456,7 @@ void BaseCapturer::StopAsyncCapture(StopAsyncCaptureCallback cbk) {
   FX_DCHECK(pending_async_stop_cbk_ == nullptr);
   pending_async_stop_cbk_ = std::move(cbk);
   ReportStop();
-  state_.store(State::AsyncStopping);
+  UpdateState(State::AsyncStopping);
   mix_wakeup_.Signal();
 }
 
@@ -786,28 +702,6 @@ zx_status_t BaseCapturer::Process() {
   }  // while (true)
 }
 
-void BaseCapturer::SetUsage(fuchsia::media::AudioCaptureUsage usage) {
-  TRACE_DURATION("audio", "BaseCapturer::SetUsage");
-  if (usage == usage_) {
-    return;
-  }
-
-  ReportStop();
-  usage_ = usage;
-  context_.volume_manager().NotifyStreamChanged(this);
-  State state = state_.load();
-  SetRoutingProfile();
-  if (state == State::OperatingAsync) {
-    ReportStart();
-  }
-  if (state == State::OperatingSync) {
-    std::lock_guard<std::mutex> pending_lock(pending_lock_);
-    if (!pending_capture_buffers_.is_empty()) {
-      ReportStart();
-    }
-  }
-}
-
 void BaseCapturer::OverflowOccurred(FractionalFrames<int64_t> frac_source_start,
                                     FractionalFrames<int64_t> frac_source_mix_point,
                                     zx::duration overflow_duration) {
@@ -909,7 +803,7 @@ void BaseCapturer::DoStopAsyncCapture() {
 
   // Transition to the AsyncStoppingCallbackPending state, and signal the
   // service thread so it can complete the stop operation.
-  state_.store(State::AsyncStoppingCallbackPending);
+  UpdateState(State::AsyncStoppingCallbackPending);
   async::PostTask(context_.threading_model().FidlDomain().dispatcher(),
                   [this]() { FinishAsyncStopThunk(); });
 }
@@ -989,7 +883,7 @@ void BaseCapturer::FinishAsyncStopThunk() {
 
   // All done!  Transition back to the OperatingSync state.
   ReportStop();
-  state_.store(State::OperatingSync);
+  UpdateState(State::OperatingSync);
 }
 
 void BaseCapturer::FinishBuffersThunk() {
@@ -1065,59 +959,6 @@ void BaseCapturer::UpdateFormat(Format format) {
 
   FX_DCHECK(tmp <= std::numeric_limits<uint32_t>::max());
   FX_DCHECK(max_frames_per_capture_ > 0);
-}
-
-void BaseCapturer::BindGainControl(
-    fidl::InterfaceRequest<fuchsia::media::audio::GainControl> request) {
-  TRACE_DURATION("audio", "BaseCapturer::BindGainControl");
-  gain_control_bindings_.AddBinding(this, std::move(request));
-}
-
-void BaseCapturer::SetGain(float gain_db) {
-  TRACE_DURATION("audio", "BaseCapturer::SetGain");
-  // Before setting stream_gain_db_, we should always perform this range check.
-  if ((gain_db < fuchsia::media::audio::MUTED_GAIN_DB) ||
-      (gain_db > fuchsia::media::audio::MAX_GAIN_DB) || isnan(gain_db)) {
-    FX_LOGS(ERROR) << "SetGain(" << gain_db << " dB) out of range.";
-    BeginShutdown();
-    return;
-  }
-
-  // If the incoming SetGain request represents no change, we're done
-  // (once we add gain ramping, this type of check isn't workable).
-  if (stream_gain_db_ == gain_db) {
-    return;
-  }
-
-  REP(SettingCapturerGain(*this, gain_db));
-
-  stream_gain_db_.store(gain_db);
-  context_.volume_manager().NotifyStreamChanged(this);
-
-  NotifyGainMuteChanged();
-}
-
-void BaseCapturer::SetMute(bool mute) {
-  TRACE_DURATION("audio", "BaseCapturer::SetMute");
-  // If the incoming SetMute request represents no change, we're done.
-  if (mute_ == mute) {
-    return;
-  }
-
-  REP(SettingCapturerMute(*this, mute));
-
-  mute_ = mute;
-
-  context_.volume_manager().NotifyStreamChanged(this);
-  NotifyGainMuteChanged();
-}
-
-void BaseCapturer::NotifyGainMuteChanged() {
-  TRACE_DURATION("audio", "BaseCapturer::NotifyGainMuteChanged");
-  // Consider making these events disable-able like MinLeadTime.
-  for (auto& gain_binding : gain_control_bindings_.bindings()) {
-    gain_binding->events().OnGainMuteChanged(stream_gain_db_, mute_);
-  }
 }
 
 }  // namespace media::audio

@@ -7,9 +7,9 @@
 #include <lib/async/cpp/task.h>
 
 #include "src/media/audio/audio_core/audio_admin.h"
+#include "src/media/audio/audio_core/audio_capturer.h"
 #include "src/media/audio/audio_core/audio_device_manager.h"
 #include "src/media/audio/audio_core/audio_renderer.h"
-#include "src/media/audio/audio_core/base_capturer.h"
 #include "src/media/audio/audio_core/process_config.h"
 #include "src/media/audio/audio_core/throttle_output.h"
 #include "src/media/audio/lib/logging/logging.h"
@@ -62,9 +62,9 @@ void AudioCoreImpl::CreateAudioCapturerWithConfiguration(
     return;
   }
 
-  context_.route_graph().AddLoopbackCapturer(
-      BaseCapturer::Create(std::move(configuration), {format.take_value()}, {usage},
-                           std::move(audio_capturer_request), &context_));
+  context_.route_graph().AddLoopbackCapturer(std::unique_ptr<AudioCapturer>(
+      new AudioCapturer(std::move(configuration), {format.take_value()}, {usage},
+                        std::move(audio_capturer_request), &context_)));
 }
 
 void AudioCoreImpl::CreateAudioCapturer(
@@ -73,7 +73,7 @@ void AudioCoreImpl::CreateAudioCapturer(
   AUD_VLOG(TRACE);
 
   if (loopback) {
-    context_.route_graph().AddLoopbackCapturer(BaseCapturer::Create(
+    context_.route_graph().AddLoopbackCapturer(std::make_unique<AudioCapturer>(
         fuchsia::media::AudioCapturerConfiguration::WithLoopback(
             fuchsia::media::LoopbackAudioCapturerConfiguration()),
         /*format= */ std::nullopt,
@@ -81,11 +81,11 @@ void AudioCoreImpl::CreateAudioCapturer(
     return;
   }
 
-  context_.route_graph().AddCapturer(
-      BaseCapturer::Create(fuchsia::media::AudioCapturerConfiguration::WithInput(
-                               fuchsia::media::InputAudioCapturerConfiguration()),
-                           /*format= */ std::nullopt,
-                           /*usage= */ std::nullopt, std::move(audio_capturer_request), &context_));
+  context_.route_graph().AddCapturer(std::make_unique<AudioCapturer>(
+      fuchsia::media::AudioCapturerConfiguration::WithInput(
+          fuchsia::media::InputAudioCapturerConfiguration()),
+      /*format= */ std::nullopt,
+      /*usage= */ std::nullopt, std::move(audio_capturer_request), &context_));
 }
 
 void AudioCoreImpl::SetRenderUsageGain(fuchsia::media::AudioRenderUsage render_usage,
