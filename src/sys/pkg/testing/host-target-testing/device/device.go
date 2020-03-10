@@ -163,13 +163,44 @@ func (c *Client) RebootToRecovery(ctx context.Context) error {
 	return nil
 }
 
+func (c *Client) ReadBasePackages(ctx context.Context) (map[string]string, error) {
+	b, err := c.ReadRemotePath(ctx, "/pkgfs/system/data/static_packages")
+	if err != nil {
+		return nil, err
+	}
+
+	pkgs := make(map[string]string)
+	for _, line := range strings.Split(string(b), "\n") {
+		if line == "" {
+			break
+		}
+		parts := strings.SplitN(line, "=", 2)
+		pkgs[parts[0]] = parts[1]
+	}
+
+	return pkgs, nil
+}
+
 // TriggerSystemOTA gets the device to perform a system update, ensuring it
 // reboots as expected. rpcClient, if provided, will be used and re-connected
 func (c *Client) TriggerSystemOTA(ctx context.Context, repo *packages.Repository, rpcClient **sl4f.Client) error {
 	log.Printf("triggering OTA")
 
+	basePackages, err := c.ReadBasePackages(ctx)
+	if err != nil {
+		return err
+	}
+
+	updateBinMerkle, ok := basePackages["update-bin/0"]
+	if !ok {
+		return fmt.Errorf("base packages doesn't include update-bin/0 package")
+	}
+
 	return c.ExpectReboot(ctx, repo, rpcClient, func() error {
-		if err := c.Run(ctx, "update check-now", os.Stdout, os.Stderr); err != nil {
+		// FIXME: running this out of /pkgfs/versions is unsound WRT using the correct loader service
+		// Adding this as a short-term hack to unblock http://fxb/47213
+		cmd := fmt.Sprintf("/pkgfs/versions/%s/bin/update check-now", updateBinMerkle)
+		if err := c.Run(ctx, cmd, os.Stdout, os.Stderr); err != nil {
 			// If the device rebooted before ssh was able to tell
 			// us the command ran, it will tell us the session
 			// exited without passing along an exit code. So,
