@@ -21,7 +21,7 @@ std::unique_ptr<SystemCallTest> ZxDebuglogCreate(int64_t result, std::string_vie
 
 #define DEBUGLOG_CREATE_DISPLAY_TEST_CONTENT(result, expected) \
   zx_handle_t out = kHandleOut;                                \
-  PerformDisplayTest("zx_debuglog_create@plt",                 \
+  PerformDisplayTest("$plt(zx_debuglog_create)",               \
                      ZxDebuglogCreate(result, #result, kHandle, 0, &out), expected);
 
 #define DEBUGLOG_CREATE_DISPLAY_TEST(name, errno, expected) \
@@ -56,7 +56,7 @@ std::unique_ptr<SystemCallTest> ZxDebuglogWrite(int64_t result, std::string_view
 
 #define DEBUGLOG_WRITE_DISPLAY_TEST_CONTENT(result, expected)                                     \
   std::string buffer = "My buffer data";                                                          \
-  PerformDisplayTest("zx_debuglog_write@plt",                                                     \
+  PerformDisplayTest("$plt(zx_debuglog_write)",                                                   \
                      ZxDebuglogWrite(result, #result, kHandle, 0, buffer.c_str(), buffer.size()), \
                      expected);
 
@@ -92,7 +92,7 @@ std::unique_ptr<SystemCallTest> ZxDebuglogRead(int64_t result, std::string_view 
 
 #define DEBUGLOG_READ_DISPLAY_TEST_CONTENT(result, expected)                                    \
   std::string buffer = "My buffer data";                                                        \
-  PerformDisplayTest("zx_debuglog_read@plt",                                                    \
+  PerformDisplayTest("$plt(zx_debuglog_read)",                                                  \
                      ZxDebuglogRead(result, #result, kHandle, 0, buffer.data(), buffer.size()), \
                      expected);
 
@@ -131,7 +131,7 @@ std::unique_ptr<SystemCallTest> ZxKtraceRead(int64_t result, std::string_view re
   std::string my_data = "My data";                                                                 \
   size_t actual = my_data.size();                                                                  \
   memcpy(data.data(), my_data.c_str(), my_data.size());                                            \
-  PerformDisplayTest("zx_ktrace_read@plt",                                                         \
+  PerformDisplayTest("$plt(zx_ktrace_read)",                                                       \
                      ZxKtraceRead(result, #result, kHandle, data.data(), 0, data.size(), &actual), \
                      expected);
 
@@ -166,7 +166,7 @@ std::unique_ptr<SystemCallTest> ZxKtraceControl(int64_t result, std::string_view
   std::array<char, ZX_MAX_NAME_LEN> buffer;                                               \
   std::string data = "My_name";                                                           \
   memcpy(buffer.data(), data.c_str(), data.size() + 1);                                   \
-  PerformDisplayTest("zx_ktrace_control@plt",                                             \
+  PerformDisplayTest("$plt(zx_ktrace_control)",                                           \
                      ZxKtraceControl(result, #result, kHandle, action, 0, buffer.data()), \
                      expected);
 
@@ -212,8 +212,8 @@ std::unique_ptr<SystemCallTest> ZxKtraceWrite(int64_t result, std::string_view r
   return value;
 }
 
-#define KTRACE_WRITE_DISPLAY_TEST_CONTENT(result, expected)                                   \
-  PerformDisplayTest("zx_ktrace_write@plt", ZxKtraceWrite(result, #result, kHandle, 0, 1, 2), \
+#define KTRACE_WRITE_DISPLAY_TEST_CONTENT(result, expected)                                     \
+  PerformDisplayTest("$plt(zx_ktrace_write)", ZxKtraceWrite(result, #result, kHandle, 0, 1, 2), \
                      expected);
 
 #define KTRACE_WRITE_DISPLAY_TEST(name, errno, expected) \
@@ -251,7 +251,7 @@ std::unique_ptr<SystemCallTest> ZxMtraceControl(int64_t result, std::string_view
 #define MTRACE_CONTROL_DISPLAY_TEST_CONTENT(result, expected) \
   std::string data = "My data";                               \
   PerformDisplayTest(                                         \
-      "zx_mtrace_control@plt",                                \
+      "$plt(zx_mtrace_control)",                              \
       ZxMtraceControl(result, #result, kHandle, 1, 2, 3, data.c_str(), data.size()), expected);
 
 #define MTRACE_CONTROL_DISPLAY_TEST(name, errno, expected) \
@@ -291,7 +291,7 @@ std::unique_ptr<SystemCallTest> ZxDebugRead(int64_t result, std::string_view res
   std::string data = "My data";                                                                    \
   memcpy(buffer.data(), data.c_str(), data.size());                                                \
   size_t actual = data.size();                                                                     \
-  PerformDisplayTest("zx_debug_read@plt",                                                          \
+  PerformDisplayTest("$plt(zx_debug_read)",                                                        \
                      ZxDebugRead(result, #result, kHandle, buffer.data(), buffer.size(), &actual), \
                      expected);
 
@@ -319,7 +319,7 @@ std::unique_ptr<SystemCallTest> ZxDebugWrite(int64_t result, std::string_view re
 
 #define DEBUG_WRITE_DISPLAY_TEST_CONTENT(result, expected) \
   std::string buffer = "My data";                          \
-  PerformDisplayTest("zx_debug_write@plt",                 \
+  PerformDisplayTest("$plt(zx_debug_write)",               \
                      ZxDebugWrite(result, #result, buffer.data(), buffer.size()), expected);
 
 #define DEBUG_WRITE_DISPLAY_TEST(name, errno, expected)                                            \
@@ -347,7 +347,7 @@ std::unique_ptr<SystemCallTest> ZxDebugSendCommand(int64_t result, std::string_v
 
 #define DEBUG_SEND_COMMAND_DISPLAY_TEST_CONTENT(result, expected)                                \
   std::string buffer = "My data";                                                                \
-  PerformDisplayTest("zx_debug_send_command@plt",                                                \
+  PerformDisplayTest("$plt(zx_debug_send_command)",                                              \
                      ZxDebugSendCommand(result, #result, kHandle, buffer.data(), buffer.size()), \
                      expected);
 

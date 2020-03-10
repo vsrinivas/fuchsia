@@ -22,7 +22,7 @@ std::unique_ptr<SystemCallTest> ZxFutexWait(int64_t result, std::string_view res
 
 #define FUTEX_WAIT_DISPLAY_TEST_CONTENT(result, expected)                                    \
   zx_futex_t value = kFutex;                                                                 \
-  PerformDisplayTest("zx_futex_wait@plt",                                                    \
+  PerformDisplayTest("$plt(zx_futex_wait)",                                                  \
                      ZxFutexWait(result, #result, &value, value, kHandle, ZX_TIME_INFINITE), \
                      expected);
 
@@ -52,7 +52,7 @@ std::unique_ptr<SystemCallTest> ZxFutexWake(int64_t result, std::string_view res
 
 #define FUTEX_WAKE_DISPLAY_TEST_CONTENT(result, expected) \
   zx_futex_t value = kFutex;                              \
-  PerformDisplayTest("zx_futex_wake@plt", ZxFutexWake(result, #result, &value, 3), expected);
+  PerformDisplayTest("$plt(zx_futex_wake)", ZxFutexWake(result, #result, &value, 3), expected);
 
 #define FUTEX_WAKE_DISPLAY_TEST(name, errno, expected)                                            \
   TEST_F(InterceptionWorkflowTestX64, name) { FUTEX_WAKE_DISPLAY_TEST_CONTENT(errno, expected); } \
@@ -87,7 +87,7 @@ std::unique_ptr<SystemCallTest> ZxFutexRequeue(int64_t result, std::string_view 
 #define FUTEX_REQUEUE_DISPLAY_TEST_CONTENT(result, expected)                                  \
   zx_futex_t value = kFutex;                                                                  \
   zx_futex_t requeue = kFutex2;                                                               \
-  PerformDisplayTest("zx_futex_requeue@plt",                                                  \
+  PerformDisplayTest("$plt(zx_futex_requeue)",                                                \
                      ZxFutexRequeue(result, #result, &value, 2, value, &requeue, 3, kHandle), \
                      expected);
 
@@ -120,7 +120,7 @@ std::unique_ptr<SystemCallTest> ZxFutexWakeSingleOwner(int64_t result, std::stri
 
 #define FUTEX_WAKE_SINGLE_OWNER_DISPLAY_TEST_CONTENT(result, expected) \
   zx_futex_t value = kFutex;                                           \
-  PerformDisplayTest("zx_futex_wake_single_owner@plt",                 \
+  PerformDisplayTest("$plt(zx_futex_wake_single_owner)",               \
                      ZxFutexWakeSingleOwner(result, #result, &value), expected);
 
 #define FUTEX_WAKE_SINGLE_OWNER_DISPLAY_TEST(name, errno, expected) \
@@ -158,7 +158,7 @@ std::unique_ptr<SystemCallTest> ZxFutexRequeueSingleOwner(
   zx_futex_t value = kFutex;                                              \
   zx_futex_t requeue = kFutex2;                                           \
   PerformDisplayTest(                                                     \
-      "zx_futex_requeue_single_owner@plt",                                \
+      "$plt(zx_futex_requeue_single_owner)",                              \
       ZxFutexRequeueSingleOwner(result, #result, &value, value, &requeue, 3, kHandle), expected);
 
 #define FUTEX_REQUEUE_SINGLE_OWNER_DISPLAY_TEST(name, errno, expected) \
@@ -191,10 +191,10 @@ std::unique_ptr<SystemCallTest> ZxFutexGetOwner(int64_t result, std::string_view
   return value;
 }
 
-#define FUTEX_GET_OWNER_DISPLAY_TEST_CONTENT(result, expected)                                  \
-  zx_futex_t value = kFutex;                                                                    \
-  zx_koid_t koid = kKoid;                                                                       \
-  PerformDisplayTest("zx_futex_get_owner@plt", ZxFutexGetOwner(result, #result, &value, &koid), \
+#define FUTEX_GET_OWNER_DISPLAY_TEST_CONTENT(result, expected)                                    \
+  zx_futex_t value = kFutex;                                                                      \
+  zx_koid_t koid = kKoid;                                                                         \
+  PerformDisplayTest("$plt(zx_futex_get_owner)", ZxFutexGetOwner(result, #result, &value, &koid), \
                      expected);
 
 #define FUTEX_GET_OWNER_DISPLAY_TEST(name, errno, expected) \
@@ -229,7 +229,7 @@ std::unique_ptr<SystemCallTest> ZxFutexWakeHandleCloseThreadExit(
 #define FUTEX_WAKE_HANDLE_CLOSE_THREAD_EXIT_DISPLAY_TEST_CONTENT(result, expected) \
   zx_futex_t value = kFutex;                                                       \
   PerformNoReturnDisplayTest(                                                      \
-      "zx_futex_wake_handle_close_thread_exit@plt",                                \
+      "$plt(zx_futex_wake_handle_close_thread_exit)",                              \
       ZxFutexWakeHandleCloseThreadExit(result, #result, &value, 2, -1, kHandle), expected);
 
 #define FUTEX_WAKE_HANDLE_CLOSE_THREAD_EXIT_DISPLAY_TEST(name, errno, expected) \

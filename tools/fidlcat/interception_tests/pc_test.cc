@@ -22,7 +22,7 @@ std::unique_ptr<SystemCallTest> ZxPcFirmwareTables(int64_t result, std::string_v
 #define PC_FIRMWARE_TABLES_DISPLAY_TEST_CONTENT(result, expected) \
   zx_paddr_t acpi_rsdp = 0x12340000;                              \
   zx_paddr_t smbios = 0x12350000;                                 \
-  PerformDisplayTest("zx_pc_firmware_tables@plt",                 \
+  PerformDisplayTest("$plt(zx_pc_firmware_tables)",               \
                      ZxPcFirmwareTables(result, #result, kHandle, &acpi_rsdp, &smbios), expected);
 
 #define PC_FIRMWARE_TABLES_DISPLAY_TEST(name, errno, expected) \

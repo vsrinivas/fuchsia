@@ -14,7 +14,7 @@ std::unique_ptr<SystemCallTest> ZxThreadExit() {
 }
 
 #define THREAD_EXIT_DISPLAY_TEST_CONTENT(expected) \
-  PerformNoReturnDisplayTest("zx_thread_exit@plt", ZxThreadExit(), expected);
+  PerformNoReturnDisplayTest("$plt(zx_thread_exit)", ZxThreadExit(), expected);
 
 #define THREAD_EXIT_DISPLAY_TEST(name, expected)                                            \
   TEST_F(InterceptionWorkflowTestX64, name) { THREAD_EXIT_DISPLAY_TEST_CONTENT(expected); } \
@@ -43,7 +43,7 @@ std::unique_ptr<SystemCallTest> ZxThreadCreate(int64_t result, std::string_view 
 #define THREAD_CREATE_DISPLAY_TEST_CONTENT(result, expected)                                \
   const char* name = "my_thread";                                                           \
   zx_handle_t out = kHandleOut;                                                             \
-  PerformDisplayTest("zx_thread_create@plt",                                                \
+  PerformDisplayTest("$plt(zx_thread_create)",                                              \
                      ZxThreadCreate(result, #result, kHandle, name, strlen(name), 0, &out), \
                      expected);
 
@@ -82,7 +82,7 @@ std::unique_ptr<SystemCallTest> ZxThreadStart(int64_t result, std::string_view r
   zx_vaddr_t stack = 0xaaaa;                                                                   \
   uintptr_t arg1 = 0x1111;                                                                     \
   uintptr_t arg2 = 0x2222;                                                                     \
-  PerformDisplayTest("zx_thread_start@plt",                                                    \
+  PerformDisplayTest("$plt(zx_thread_start)",                                                  \
                      ZxThreadStart(result, #result, kHandle, thread_entry, stack, arg1, arg2), \
                      expected);
 
@@ -117,7 +117,7 @@ std::unique_ptr<SystemCallTest> ZxThreadReadState(int64_t result, std::string_vi
 }
 
 #define THREAD_READ_STATE_DISPLAY_TEST_CONTENT(result, kind, buffer, expected)                   \
-  PerformDisplayTest("zx_thread_read_state@plt",                                                 \
+  PerformDisplayTest("$plt(zx_thread_read_state)",                                               \
                      ZxThreadReadState(result, #result, kHandle, kind, &buffer, sizeof(buffer)), \
                      expected);
 
@@ -865,7 +865,7 @@ std::unique_ptr<SystemCallTest> ZxThreadWriteState(int64_t result, std::string_v
 }
 
 #define THREAD_WRITE_STATE_DISPLAY_TEST_CONTENT(result, kind, buffer, expected)                   \
-  PerformDisplayTest("zx_thread_write_state@plt",                                                 \
+  PerformDisplayTest("$plt(zx_thread_write_state)",                                               \
                      ZxThreadWriteState(result, #result, kHandle, kind, &buffer, sizeof(buffer)), \
                      expected);
 

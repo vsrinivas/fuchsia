@@ -25,7 +25,7 @@ std::unique_ptr<SystemCallTest> ZxChannelCreate(int64_t result, std::string_view
   zx_handle_t out0 = 0x12345678;                                                             \
   zx_handle_t out1 = 0x87654321;                                                             \
   ProcessController controller(this, session(), loop());                                     \
-  PerformDisplayTest(&controller, "zx_channel_create@plt",                                   \
+  PerformDisplayTest(&controller, "$plt(zx_channel_create)",                                 \
                      ZxChannelCreate(errno, #errno, 0, &out0, &out1), expected);             \
   SyscallDecoderDispatcher* dispatcher = controller.workflow().syscall_decoder_dispatcher(); \
   const fidl_codec::semantic::HandleDescription* description0 =                              \
@@ -71,7 +71,7 @@ CREATE_DISPLAY_TEST(
   zx_handle_t out0 = 0x12345678;                                                             \
   zx_handle_t out1 = 0x87654321;                                                             \
   ProcessController controller(this, session(), loop());                                     \
-  PerformInterleavedDisplayTest(&controller, "zx_channel_create@plt",                        \
+  PerformInterleavedDisplayTest(&controller, "$plt(zx_channel_create)",                      \
                                 ZxChannelCreate(errno, #errno, 0, &out0, &out1), expected);  \
   SyscallDecoderDispatcher* dispatcher = controller.workflow().syscall_decoder_dispatcher(); \
   const fidl_codec::semantic::HandleDescription* description0 =                              \
@@ -143,7 +143,7 @@ std::unique_ptr<SystemCallTest> ZxChannelWrite(int64_t result, std::string_view 
 #define WRITE_CHECK_TEST_CONTENT(errno)                                                          \
   data().set_check_bytes();                                                                      \
   data().set_check_handles();                                                                    \
-  PerformCheckTest("zx_channel_write@plt",                                                       \
+  PerformCheckTest("$plt(zx_channel_write)",                                                     \
                    ZxChannelWrite(errno, #errno, kHandle, 0, data().bytes(), data().num_bytes(), \
                                   data().handles(), data().num_handles()),                       \
                    nullptr)
@@ -157,7 +157,7 @@ WRITE_CHECK_TEST(ZxChannelWriteCheck, ZX_OK);
 #define WRITE_DISPLAY_TEST_CONTENT(errno, expected)                                                \
   data().set_check_bytes();                                                                        \
   data().set_check_handles();                                                                      \
-  PerformDisplayTest("zx_channel_write@plt",                                                       \
+  PerformDisplayTest("$plt(zx_channel_write)",                                                     \
                      ZxChannelWrite(errno, #errno, kHandle, 0, data().bytes(), data().num_bytes(), \
                                     data().handles(), data().num_handles()),                       \
                      expected)
@@ -198,7 +198,7 @@ WRITE_DISPLAY_TEST(ZxChannelWritePeerClosed, ZX_ERR_PEER_CLOSED,
 
 #define LARGE_WRITE_DISPLAY_TEST_CONTENT(errno, expected)                                       \
   PerformDisplayTest(                                                                           \
-      "zx_channel_write@plt",                                                                   \
+      "$plt(zx_channel_write)",                                                                 \
       ZxChannelWrite(errno, #errno, kHandle, 0, data().large_bytes(), data().num_large_bytes(), \
                      data().handles(), data().num_handles()),                                   \
       expected)
@@ -234,7 +234,7 @@ LARGE_WRITE_DISPLAY_TEST(ZxChannelWriteLarge, ZX_OK,
                          "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 #define WRITE_ABORTED_TEST_CONTENT(errno, expected)                                                \
-  PerformAbortedTest("zx_channel_write@plt",                                                       \
+  PerformAbortedTest("$plt(zx_channel_write)",                                                     \
                      ZxChannelWrite(errno, #errno, kHandle, 0, data().bytes(), data().num_bytes(), \
                                     data().handles(), data().num_handles()),                       \
                      expected)
@@ -276,7 +276,7 @@ std::unique_ptr<SystemCallTest> ZxChannelRead(int64_t result, std::string_view r
   }                                                                                             \
   uint32_t actual_bytes = data().num_bytes();                                                   \
   uint32_t actual_handles = data().num_handles();                                               \
-  PerformDisplayTest("zx_channel_read@plt",                                                     \
+  PerformDisplayTest("$plt(zx_channel_read)",                                                   \
                      ZxChannelRead(errno, #errno, kHandle, 0, data().bytes(), data().handles(), \
                                    100, 64, (check_bytes) ? &actual_bytes : nullptr,            \
                                    (check_handles) ? &actual_handles : nullptr),                \
@@ -383,7 +383,7 @@ std::unique_ptr<SystemCallTest> ZxChannelReadEtc(int64_t result, std::string_vie
   uint32_t actual_bytes = data().num_bytes();                                                     \
   uint32_t actual_handles = data().num_handle_infos();                                            \
   PerformDisplayTest(                                                                             \
-      "zx_channel_read_etc@plt",                                                                  \
+      "$plt(zx_channel_read_etc)",                                                                \
       ZxChannelReadEtc(errno, #errno, kHandle, 0, data().bytes(), data().handle_infos(), 100, 64, \
                        (check_bytes) ? &actual_bytes : nullptr,                                   \
                        (check_handles) ? &actual_handles : nullptr),                              \
@@ -504,7 +504,7 @@ std::unique_ptr<SystemCallTest> ZxChannelCall(int64_t result, std::string_view r
   args2.rd_num_handles = 64;                                                          \
   uint32_t actual_bytes2 = data().num_bytes2();                                       \
   uint32_t actual_handles2 = data().num_handles2();                                   \
-  PerformCheckTest("zx_channel_call@plt",                                             \
+  PerformCheckTest("$plt(zx_channel_call)",                                           \
                    ZxChannelCall(errno, #errno, kHandle, 0, ZX_TIME_INFINITE, &args,  \
                                  &actual_bytes, &actual_handles),                     \
                    ZxChannelCall(errno, #errno, kHandle, 0, ZX_TIME_INFINITE, &args2, \
@@ -534,7 +534,7 @@ CALL_CHECK_TEST(ZxChannelCallCheck, ZX_OK);
   args.rd_num_handles = 64;                                                            \
   uint32_t actual_bytes = data().num_bytes();                                          \
   uint32_t actual_handles = data().num_handles();                                      \
-  PerformDisplayTest("zx_channel_call@plt",                                            \
+  PerformDisplayTest("$plt(zx_channel_call)",                                          \
                      ZxChannelCall(errno, #errno, kHandle, 0, ZX_TIME_INFINITE, &args, \
                                    (check_bytes) ? &actual_bytes : nullptr,            \
                                    (check_handles) ? &actual_handles : nullptr),       \

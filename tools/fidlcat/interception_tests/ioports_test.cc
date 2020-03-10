@@ -20,7 +20,7 @@ std::unique_ptr<SystemCallTest> ZxIoportsRequest(int64_t result, std::string_vie
 }
 
 #define IOPORTS_REQUEST_DISPLAY_TEST_CONTENT(result, expected) \
-  PerformDisplayTest("zx_ioports_request@plt",                 \
+  PerformDisplayTest("$plt(zx_ioports_request)",               \
                      ZxIoportsRequest(result, #result, kHandle, 0x1230, 16), expected);
 
 #define IOPORTS_REQUEST_DISPLAY_TEST(name, errno, expected) \
@@ -53,7 +53,7 @@ std::unique_ptr<SystemCallTest> ZxIoportsRelease(int64_t result, std::string_vie
 }
 
 #define IOPORTS_RELEASE_DISPLAY_TEST_CONTENT(result, expected) \
-  PerformDisplayTest("zx_ioports_release@plt",                 \
+  PerformDisplayTest("$plt(zx_ioports_release)",               \
                      ZxIoportsRelease(result, #result, kHandle, 0x1230, 16), expected);
 
 #define IOPORTS_RELEASE_DISPLAY_TEST(name, errno, expected) \

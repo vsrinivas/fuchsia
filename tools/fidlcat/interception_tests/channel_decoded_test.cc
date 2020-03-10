@@ -23,7 +23,7 @@ std::unique_ptr<SystemCallTest> ZxChannelWrite(int64_t result, std::string_view 
 #define WRITE_DISPLAY_TEST_CONTENT(errno, dump_messages, expected)                 \
   set_dump_messages(dump_messages);                                                \
   auto loader = GetTestLibraryLoader();                                            \
-  PerformDisplayTest("zx_channel_write@plt",                                       \
+  PerformDisplayTest("$plt(zx_channel_write)",                                     \
                      ZxChannelWrite(errno, #errno, kHandle, 0, hello_world.data(), \
                                     hello_world.size(), nullptr, 0),               \
                      expected, loader)

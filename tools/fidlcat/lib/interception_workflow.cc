@@ -16,6 +16,7 @@
 #include "src/developer/debug/zxdb/client/remote_api.h"
 #include "src/developer/debug/zxdb/client/setting_schema_definition.h"
 #include "src/developer/debug/zxdb/client/thread.h"
+#include "src/developer/debug/zxdb/expr/expr_parser.h"
 
 // TODO(fidlcat): Look into this.  Removing the hack that led to this (in
 // debug_ipc/helper/message_loop.h) seems to work, except it breaks SDK builds
@@ -77,10 +78,14 @@ void InterceptingThreadObserver::OnThreadStopped(zxdb::Thread* thread, const zxd
     zxdb::BreakpointSettings settings = bp_ptr->GetSettings();
     if (settings.locations.size() == 1u &&
         settings.locations[0].type == zxdb::InputLocation::Type::kName &&
-        settings.locations[0].name.components().size() == 1u) {
+        settings.locations[0].name.components().size() == 1u &&
+        settings.locations[0].name.components()[0].special() == zxdb::SpecialIdentifier::kPlt) {
       threads_in_error_.erase(thread->GetKoid());
       for (auto& syscall : workflow_->syscall_decoder_dispatcher()->syscalls()) {
-        if (settings.locations[0].name.components()[0].name() == syscall->breakpoint_name()) {
+        // Compare against the syscall->name() which is the syscall name not including the $plt
+        // prefix. The Identifier component's name won't include this annotation without running
+        // GetFullName() which is slower. We already checked that it's a $plt annotation above.
+        if (settings.locations[0].name.components()[0].name() == syscall->name()) {
           workflow_->syscall_decoder_dispatcher()->DecodeSyscall(this, thread, syscall.get());
           return;
         }
@@ -416,8 +421,12 @@ void InterceptionWorkflow::SetBreakpoints(zxdb::Process* process) {
       settings.name = syscall->name();
       settings.stop_mode = zxdb::BreakpointSettings::StopMode::kThread;
       settings.type = debug_ipc::BreakpointType::kSoftware;
-      settings.locations.emplace_back(zxdb::Identifier(syscall->breakpoint_name()));
       settings.scope = zxdb::ExecutionScope(process->GetTarget());
+
+      zxdb::Identifier identifier;
+      zxdb::Err err = zxdb::ExprParser::ParseIdentifier(syscall->breakpoint_name(), &identifier);
+      FXL_CHECK(err.ok());
+      settings.locations.emplace_back(std::move(identifier));
 
       zxdb::Breakpoint* breakpoint = session_->system().CreateNewBreakpoint();
       breakpoint->SetSettings(settings);

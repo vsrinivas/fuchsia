@@ -14,7 +14,7 @@ std::unique_ptr<SystemCallTest> ZxTicksGet(int64_t result, std::string_view resu
 }
 
 #define TICKS_GET_DISPLAY_TEST_CONTENT(result, expected) \
-  PerformDisplayTest("zx_ticks_get@plt", ZxTicksGet(result, #result), expected);
+  PerformDisplayTest("$plt(zx_ticks_get)", ZxTicksGet(result, #result), expected);
 
 #define TICKS_GET_DISPLAY_TEST(name, errno, expected)                                            \
   TEST_F(InterceptionWorkflowTestX64, name) { TICKS_GET_DISPLAY_TEST_CONTENT(errno, expected); } \
@@ -32,7 +32,7 @@ std::unique_ptr<SystemCallTest> ZxTicksPerSecond(int64_t result, std::string_vie
 }
 
 #define TICKS_PER_SECOND_DISPLAY_TEST_CONTENT(result, expected) \
-  PerformDisplayTest("zx_ticks_per_second@plt", ZxTicksPerSecond(result, #result), expected);
+  PerformDisplayTest("$plt(zx_ticks_per_second)", ZxTicksPerSecond(result, #result), expected);
 
 #define TICKS_PER_SECOND_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                \

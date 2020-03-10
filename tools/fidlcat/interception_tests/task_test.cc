@@ -17,9 +17,9 @@ std::unique_ptr<SystemCallTest> ZxTaskSuspend(int64_t result, std::string_view r
   return value;
 }
 
-#define TASK_SUSPEND_DISPLAY_TEST_CONTENT(result, expected)                                  \
-  zx_handle_t token = kHandleOut;                                                            \
-  PerformDisplayTest("zx_task_suspend@plt", ZxTaskSuspend(result, #result, kHandle, &token), \
+#define TASK_SUSPEND_DISPLAY_TEST_CONTENT(result, expected)                                    \
+  zx_handle_t token = kHandleOut;                                                              \
+  PerformDisplayTest("$plt(zx_task_suspend)", ZxTaskSuspend(result, #result, kHandle, &token), \
                      expected);
 
 #define TASK_SUSPEND_DISPLAY_TEST(name, errno, expected) \
@@ -47,7 +47,7 @@ std::unique_ptr<SystemCallTest> ZxTaskSuspendToken(int64_t result, std::string_v
 
 #define TASK_SUSPEND_TOKEN_DISPLAY_TEST_CONTENT(result, expected) \
   zx_handle_t token = kHandleOut;                                 \
-  PerformDisplayTest("zx_task_suspend_token@plt",                 \
+  PerformDisplayTest("$plt(zx_task_suspend_token)",               \
                      ZxTaskSuspendToken(result, #result, kHandle, &token), expected);
 
 #define TASK_SUSPEND_TOKEN_DISPLAY_TEST(name, errno, expected) \
@@ -81,7 +81,7 @@ std::unique_ptr<SystemCallTest> ZxTaskCreateExceptionChannel(int64_t result,
 
 #define TASK_CREATE_EXCEPTION_CHANNEL_DISPLAY_TEST_CONTENT(result, expected) \
   zx_handle_t out = kHandleOut;                                              \
-  PerformDisplayTest("zx_task_create_exception_channel@plt",                 \
+  PerformDisplayTest("$plt(zx_task_create_exception_channel)",               \
                      ZxTaskCreateExceptionChannel(result, #result, kHandle, 0, &out), expected);
 
 #define TASK_CREATE_EXCEPTION_CHANNEL_DISPLAY_TEST(name, errno, expected) \
@@ -111,7 +111,7 @@ std::unique_ptr<SystemCallTest> ZxTaskKill(int64_t result, std::string_view resu
 }
 
 #define TASK_KILL_DISPLAY_TEST_CONTENT(result, expected) \
-  PerformDisplayTest("zx_task_kill@plt", ZxTaskKill(result, #result, kHandle), expected);
+  PerformDisplayTest("$plt(zx_task_kill)", ZxTaskKill(result, #result, kHandle), expected);
 
 #define TASK_KILL_DISPLAY_TEST(name, errno, expected)                                            \
   TEST_F(InterceptionWorkflowTestX64, name) { TASK_KILL_DISPLAY_TEST_CONTENT(errno, expected); } \

@@ -25,7 +25,7 @@ std::unique_ptr<SystemCallTest> ZxSystemGetDcacheLineSize(int64_t result,
 }
 
 #define SYSTEM_GET_DCACHE_LINE_SIZE_DISPLAY_TEST_CONTENT(result, expected) \
-  PerformDisplayTest("zx_system_get_dcache_line_size@plt",                 \
+  PerformDisplayTest("$plt(zx_system_get_dcache_line_size)",               \
                      ZxSystemGetDcacheLineSize(result, #result), expected);
 
 #define SYSTEM_GET_DCACHE_LINE_SIZE_DISPLAY_TEST(name, result, expected) \
@@ -50,7 +50,7 @@ std::unique_ptr<SystemCallTest> ZxSystemGetNumCpus(int64_t result, std::string_v
 }
 
 #define SYSTEM_GET_NUM_CPUS_DISPLAY_TEST_CONTENT(result, expected) \
-  PerformDisplayTest("zx_system_get_num_cpus@plt", ZxSystemGetNumCpus(result, #result), expected);
+  PerformDisplayTest("$plt(zx_system_get_num_cpus)", ZxSystemGetNumCpus(result, #result), expected);
 
 #define SYSTEM_GET_NUM_CPUS_DISPLAY_TEST(name, result, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                    \
@@ -78,7 +78,7 @@ std::unique_ptr<SystemCallTest> ZxSystemGetVersion(int64_t result, std::string_v
 
 #define SYSTEM_GET_VERSION_DISPLAY_TEST_CONTENT(result, expected)                              \
   std::string version("git-8a07d52603404521038d8866b297f99de36f9162");                         \
-  PerformDisplayTest("zx_system_get_version@plt",                                              \
+  PerformDisplayTest("$plt(zx_system_get_version)",                                            \
                      ZxSystemGetVersion(result, #result, version.c_str(), version.size() + 1), \
                      expected);
 
@@ -106,7 +106,7 @@ std::unique_ptr<SystemCallTest> ZxSystemGetPhysmem(int64_t result, std::string_v
 }
 
 #define SYSTEM_GET_PHYSMEM_DISPLAY_TEST_CONTENT(result, expected) \
-  PerformDisplayTest("zx_system_get_physmem@plt", ZxSystemGetPhysmem(result, #result), expected);
+  PerformDisplayTest("$plt(zx_system_get_physmem)", ZxSystemGetPhysmem(result, #result), expected);
 
 #define SYSTEM_GET_PHYSMEM_DISPLAY_TEST(name, result, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                   \
@@ -137,7 +137,7 @@ std::unique_ptr<SystemCallTest> ZxSystemGetEvent(int64_t result, std::string_vie
 #define SYSTEM_GET_EVENT_DISPLAY_TEST_CONTENT(result, expected)                          \
   zx_handle_t event = kHandleOut;                                                        \
   PerformDisplayTest(                                                                    \
-      "zx_system_get_event@plt",                                                         \
+      "$plt(zx_system_get_event)",                                                       \
       ZxSystemGetEvent(result, #result, kHandle, ZX_SYSTEM_EVENT_OUT_OF_MEMORY, &event), \
       expected);
 
@@ -171,7 +171,7 @@ std::unique_ptr<SystemCallTest> ZxSystemGetFeatures(int64_t result, std::string_
 #define SYSTEM_GET_FEATURES_DISPLAY_TEST_CONTENT(result, expected)                          \
   uint32_t features = 8;                                                                    \
   PerformDisplayTest(                                                                       \
-      "zx_system_get_features@plt",                                                         \
+      "$plt(zx_system_get_features)",                                                       \
       ZxSystemGetFeatures(result, #result, ZX_FEATURE_KIND_HW_BREAKPOINT_COUNT, &features), \
       expected);
 
@@ -203,7 +203,7 @@ std::unique_ptr<SystemCallTest> ZxSystemMexec(int64_t result, std::string_view r
 }
 
 #define SYSTEM_MEXEC_DISPLAY_TEST_CONTENT(result, expected) \
-  PerformDisplayTest("zx_system_mexec@plt",                 \
+  PerformDisplayTest("$plt(zx_system_mexec)",               \
                      ZxSystemMexec(result, #result, kHandle, kHandle2, kHandle3), expected);
 
 #define SYSTEM_MEXEC_DISPLAY_TEST(name, result, expected) \
@@ -237,7 +237,7 @@ std::unique_ptr<SystemCallTest> ZxSystemMexecPayloadGet(int64_t result,
 #define SYSTEM_MEXEC_PAYLOAD_GET_DISPLAY_TEST_CONTENT(result, expected)           \
   std::vector<uint8_t> buffer = {0x10, 0x01, 0x20, 0x02, 0x30, 0x03, 0x40, 0x04}; \
   PerformDisplayTest(                                                             \
-      "zx_system_mexec_payload_get@plt",                                          \
+      "$plt(zx_system_mexec_payload_get)",                                        \
       ZxSystemMexecPayloadGet(result, #result, kHandle, buffer.data(), buffer.size()), expected);
 
 #define SYSTEM_MEXEC_PAYLOAD_GET_DISPLAY_TEST(name, result, expected) \
@@ -273,7 +273,7 @@ std::unique_ptr<SystemCallTest> ZxSystemPowerctl(int64_t result, std::string_vie
 
 #define SYSTEM_POWERCTL_DISPLAY_TEST_CONTENT(result, expected)                                 \
   PerformDisplayTest(                                                                          \
-      "zx_system_powerctl@plt",                                                                \
+      "$plt(zx_system_powerctl)",                                                              \
       ZxSystemPowerctl(result, #result, kHandle, ZX_SYSTEM_POWERCTL_ENABLE_ALL_CPUS, nullptr), \
       expected);
 
@@ -297,7 +297,7 @@ SYSTEM_POWERCTL_DISPLAY_TEST(
 #define SYSTEM_POWERCTL_ACPI_DISPLAY_TEST_CONTENT(result, expected)                            \
   zx_system_powerctl_arg_t arg = {                                                             \
       .acpi_transition_s_state = {.target_s_state = 1, .sleep_type_a = 2, .sleep_type_b = 3}}; \
-  PerformDisplayTest("zx_system_powerctl@plt",                                                 \
+  PerformDisplayTest("$plt(zx_system_powerctl)",                                               \
                      ZxSystemPowerctl(result, #result, kHandle,                                \
                                       ZX_SYSTEM_POWERCTL_ACPI_TRANSITION_S_STATE, &arg),       \
                      expected);
@@ -329,7 +329,7 @@ SYSTEM_POWERCTL_ACPI_DISPLAY_TEST(ZxSystemPowerctlAcpi, ZX_OK,
       .x86_power_limit = {                                                                  \
           .power_limit = 200, .time_window = 300, .clamp = false, .enable = true}};         \
   PerformDisplayTest(                                                                       \
-      "zx_system_powerctl@plt",                                                             \
+      "$plt(zx_system_powerctl)",                                                           \
       ZxSystemPowerctl(result, #result, kHandle, ZX_SYSTEM_POWERCTL_X86_SET_PKG_PL1, &arg), \
       expected);
 

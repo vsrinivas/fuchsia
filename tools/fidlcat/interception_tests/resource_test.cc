@@ -27,7 +27,7 @@ std::unique_ptr<SystemCallTest> ZxResourceCreate(int64_t result, std::string_vie
 #define RESOURCE_CREATE_DISPLAY_TEST_CONTENT(result, expected)                                 \
   std::string name = "My resource";                                                            \
   zx_handle_t resource_out = kHandleOut;                                                       \
-  PerformDisplayTest("zx_resource_create@plt",                                                 \
+  PerformDisplayTest("$plt(zx_resource_create)",                                               \
                      ZxResourceCreate(result, #result, kHandle, ZX_RSRC_KIND_ROOT, 1000, 1024, \
                                       name.c_str(), name.size(), &resource_out),               \
                      expected);

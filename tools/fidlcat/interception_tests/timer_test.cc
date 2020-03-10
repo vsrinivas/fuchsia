@@ -24,7 +24,7 @@ std::unique_ptr<SystemCallTest> ZxTimerCreate(int64_t result, std::string_view r
 #define TIMER_CREATE_DISPLAY_TEST_CONTENT(result, expected)                                  \
   zx_handle_t out = kHandleOut;                                                              \
   ProcessController controller(this, session(), loop());                                     \
-  PerformDisplayTest(&controller, "zx_timer_create@plt",                                     \
+  PerformDisplayTest(&controller, "$plt(zx_timer_create)",                                   \
                      ZxTimerCreate(result, #result, 0, ZX_CLOCK_MONOTONIC, &out), expected); \
   SyscallDecoderDispatcher* dispatcher = controller.workflow().syscall_decoder_dispatcher(); \
   const fidl_codec::semantic::HandleDescription* description0 =                              \
@@ -66,7 +66,7 @@ std::unique_ptr<SystemCallTest> ZxTimerSet(int64_t result, std::string_view resu
 }
 
 #define TIMER_SET_DISPLAY_TEST_CONTENT(result, expected) \
-  PerformDisplayTest("zx_timer_set@plt",                 \
+  PerformDisplayTest("$plt(zx_timer_set)",               \
                      ZxTimerSet(result, #result, kHandle, ZX_MSEC(123), ZX_USEC(1)), expected);
 
 #define TIMER_SET_DISPLAY_TEST(name, errno, expected)                                            \
@@ -92,7 +92,7 @@ std::unique_ptr<SystemCallTest> ZxTimerCancel(int64_t result, std::string_view r
 }
 
 #define TIMER_CANCEL_DISPLAY_TEST_CONTENT(result, expected) \
-  PerformDisplayTest("zx_timer_cancel@plt", ZxTimerCancel(result, #result, kHandle), expected);
+  PerformDisplayTest("$plt(zx_timer_cancel)", ZxTimerCancel(result, #result, kHandle), expected);
 
 #define TIMER_CANCEL_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {            \

@@ -35,7 +35,7 @@ std::unique_ptr<SystemCallTest> ZxProfileCreate(int64_t result, std::string_view
   memset(&profile.cpu_affinity_mask, 0, sizeof(profile.cpu_affinity_mask));      \
   profile.cpu_affinity_mask.mask[0] = 0xe;                                       \
   zx_handle_t out = kHandleOut;                                                  \
-  PerformDisplayTest("zx_profile_create@plt",                                    \
+  PerformDisplayTest("$plt(zx_profile_create)",                                  \
                      ZxProfileCreate(result, #result, kHandle, 0, &profile, &out), expected);
 
 #define PROFILE_CREATE_DISPLAY_TEST(name, errno, expected) \

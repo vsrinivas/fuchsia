@@ -23,7 +23,7 @@ std::unique_ptr<SystemCallTest> ZxGuestCreate(int64_t result, std::string_view r
 #define GUEST_CREATE_DISPLAY_TEST_CONTENT(result, expected)                                   \
   zx_handle_t guest_handle = kHandleOut;                                                      \
   zx_handle_t vmar_handle = kHandleOut2;                                                      \
-  PerformDisplayTest("zx_guest_create@plt",                                                   \
+  PerformDisplayTest("$plt(zx_guest_create)",                                                 \
                      ZxGuestCreate(result, #result, kHandle, 0, &guest_handle, &vmar_handle), \
                      expected);
 
@@ -60,7 +60,7 @@ std::unique_ptr<SystemCallTest> ZxGuestSetTrap(int64_t result, std::string_view 
 
 #define GUEST_SET_TRAP_DISPLAY_TEST_CONTENT(result, expected)                                 \
   PerformDisplayTest(                                                                         \
-      "zx_guest_set_trap@plt",                                                                \
+      "$plt(zx_guest_set_trap)",                                                              \
       ZxGuestSetTrap(result, #result, kHandle, ZX_GUEST_TRAP_IO, 0x1234, 16, kHandle2, kKey), \
       expected);
 

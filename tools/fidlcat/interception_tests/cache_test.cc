@@ -18,10 +18,11 @@ std::unique_ptr<SystemCallTest> ZxCacheFlush(int64_t result, std::string_view re
   return value;
 }
 
-#define CACHE_FLUSH_DISPLAY_TEST_CONTENT(result, expected)        \
-  const void* addr = reinterpret_cast<const void*>(0x1234567890); \
-  size_t size = 4096;                                             \
-  PerformDisplayTest("zx_cache_flush@plt", ZxCacheFlush(result, #result, addr, size, 0), expected);
+#define CACHE_FLUSH_DISPLAY_TEST_CONTENT(result, expected)                                 \
+  const void* addr = reinterpret_cast<const void*>(0x1234567890);                          \
+  size_t size = 4096;                                                                      \
+  PerformDisplayTest("$plt(zx_cache_flush)", ZxCacheFlush(result, #result, addr, size, 0), \
+                     expected);
 
 #define CACHE_FLUSH_DISPLAY_TEST(name, errno, expected)                                            \
   TEST_F(InterceptionWorkflowTestX64, name) { CACHE_FLUSH_DISPLAY_TEST_CONTENT(errno, expected); } \

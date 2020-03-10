@@ -26,9 +26,10 @@ std::unique_ptr<SystemCallTest> ZxJobCreate(int64_t result, std::string_view res
   return value;
 }
 
-#define JOB_CREATE_DISPLAY_TEST_CONTENT(result, expected) \
-  zx_handle_t out = kHandleOut;                           \
-  PerformDisplayTest("zx_job_create@plt", ZxJobCreate(result, #result, kHandle, 0, &out), expected);
+#define JOB_CREATE_DISPLAY_TEST_CONTENT(result, expected)                                   \
+  zx_handle_t out = kHandleOut;                                                             \
+  PerformDisplayTest("$plt(zx_job_create)", ZxJobCreate(result, #result, kHandle, 0, &out), \
+                     expected);
 
 #define JOB_CREATE_DISPLAY_TEST(name, errno, expected)                                            \
   TEST_F(InterceptionWorkflowTestX64, name) { JOB_CREATE_DISPLAY_TEST_CONTENT(errno, expected); } \
@@ -62,7 +63,7 @@ std::unique_ptr<SystemCallTest> ZxJobSetPolicy(int64_t result, std::string_view 
   policy[0] = {.condition = ZX_POL_VMAR_WX, .policy = ZX_POL_ACTION_ALLOW};                        \
   policy[1] = {.condition = ZX_POL_NEW_VMO, .policy = ZX_POL_ACTION_DENY};                         \
   PerformDisplayTest(                                                                              \
-      "zx_job_set_policy@plt",                                                                     \
+      "$plt(zx_job_set_policy)",                                                                   \
       ZxJobSetPolicy(result, #result, kHandle, 0, ZX_JOB_POL_BASIC, policy.data(), policy.size()), \
       expected);
 
@@ -97,7 +98,7 @@ JOB_SET_POLICY_BASIC_DISPLAY_TEST(
 #define JOB_SET_POLICY_TIMER_SLACK_DISPLAY_TEST_CONTENT(result, expected)                     \
   zx_policy_timer_slack_t policy = {.min_slack = 100, .default_mode = ZX_TIMER_SLACK_CENTER}; \
   PerformDisplayTest(                                                                         \
-      "zx_job_set_policy@plt",                                                                \
+      "$plt(zx_job_set_policy)",                                                              \
       ZxJobSetPolicy(result, #result, kHandle, 0, ZX_JOB_POL_TIMER_SLACK, &policy, 1), expected);
 
 #define JOB_SET_POLICY_TIMER_SLACK_DISPLAY_TEST(name, errno, expected) \

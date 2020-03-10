@@ -39,7 +39,7 @@ std::unique_ptr<SystemCallTest> ZxPciGetNthDevice(int64_t result, std::string_vi
                                     .dev_id = 8,                                                \
                                     .func_id = 9};                                              \
   zx_handle_t out_handle = kHandleOut;                                                          \
-  PerformDisplayTest("zx_pci_get_nth_device@plt",                                               \
+  PerformDisplayTest("$plt(zx_pci_get_nth_device)",                                             \
                      ZxPciGetNthDevice(result, #result, kHandle, 1234, &out_info, &out_handle), \
                      expected);
 
@@ -82,7 +82,7 @@ std::unique_ptr<SystemCallTest> ZxPciEnableBusMaster(int64_t result, std::string
 }
 
 #define PCI_ENABLE_BUS_MASTER_DISPLAY_TEST_CONTENT(result, expected) \
-  PerformDisplayTest("zx_pci_enable_bus_master@plt",                 \
+  PerformDisplayTest("$plt(zx_pci_enable_bus_master)",               \
                      ZxPciEnableBusMaster(result, #result, kHandle, true), expected);
 
 #define PCI_ENABLE_BUS_MASTER_DISPLAY_TEST(name, errno, expected) \
@@ -110,8 +110,8 @@ std::unique_ptr<SystemCallTest> ZxPciResetDevice(int64_t result, std::string_vie
   return value;
 }
 
-#define PCI_RESET_DEVICE_DISPLAY_TEST_CONTENT(result, expected)                             \
-  PerformDisplayTest("zx_pci_reset_device@plt", ZxPciResetDevice(result, #result, kHandle), \
+#define PCI_RESET_DEVICE_DISPLAY_TEST_CONTENT(result, expected)                               \
+  PerformDisplayTest("$plt(zx_pci_reset_device)", ZxPciResetDevice(result, #result, kHandle), \
                      expected);
 
 #define PCI_RESET_DEVICE_DISPLAY_TEST(name, errno, expected) \
@@ -144,7 +144,7 @@ std::unique_ptr<SystemCallTest> ZxPciConfigRead(int64_t result, std::string_view
 
 #define PCI_CONFIG_READ_DISPLAY_TEST_CONTENT(result, expected) \
   uint32_t out_val = 1234;                                     \
-  PerformDisplayTest("zx_pci_config_read@plt",                 \
+  PerformDisplayTest("$plt(zx_pci_config_read)",               \
                      ZxPciConfigRead(result, #result, kHandle, 1000, 4, &out_val), expected);
 
 #define PCI_CONFIG_READ_DISPLAY_TEST(name, errno, expected) \
@@ -179,7 +179,7 @@ std::unique_ptr<SystemCallTest> ZxPciConfigWrite(int64_t result, std::string_vie
 }
 
 #define PCI_CONFIG_WRITE_DISPLAY_TEST_CONTENT(result, expected) \
-  PerformDisplayTest("zx_pci_config_write@plt",                 \
+  PerformDisplayTest("$plt(zx_pci_config_write)",               \
                      ZxPciConfigWrite(result, #result, kHandle, 1000, 4, 1234), expected);
 
 #define PCI_CONFIG_WRITE_DISPLAY_TEST(name, errno, expected) \
@@ -220,7 +220,7 @@ std::unique_ptr<SystemCallTest> ZxPciCfgPioRw(int64_t result, std::string_view r
 
 #define PCI_CFG_PIO_RW_DISPLAY_TEST_CONTENT(result, write, expected)                        \
   uint32_t val = 1234;                                                                      \
-  PerformDisplayTest("zx_pci_cfg_pio_rw@plt",                                               \
+  PerformDisplayTest("$plt(zx_pci_cfg_pio_rw)",                                             \
                      ZxPciCfgPioRw(result, #result, kHandle, 1, 2, 3, 100, &val, 4, write), \
                      expected);
 
@@ -276,7 +276,7 @@ std::unique_ptr<SystemCallTest> ZxPciGetBar(int64_t result, std::string_view res
 #define PCI_GET_BAR_UNUSED_DISPLAY_TEST_CONTENT(result, expected)      \
   zx_pci_bar_t out_bar = {.id = 1000, .type = ZX_PCI_BAR_TYPE_UNUSED}; \
   zx_handle_t out_handle = kHandleOut;                                 \
-  PerformDisplayTest("zx_pci_get_bar@plt",                             \
+  PerformDisplayTest("$plt(zx_pci_get_bar)",                           \
                      ZxPciGetBar(result, #result, kHandle, 1, &out_bar, &out_handle), expected);
 
 #define PCI_GET_BAR_UNUSED_DISPLAY_TEST(name, errno, expected) \
@@ -303,7 +303,7 @@ PCI_GET_BAR_UNUSED_DISPLAY_TEST(
 #define PCI_GET_BAR_MMIO_DISPLAY_TEST_CONTENT(result, expected)                          \
   zx_pci_bar_t out_bar = {.id = 1000, .type = ZX_PCI_BAR_TYPE_MMIO, .handle = kHandle2}; \
   zx_handle_t out_handle = kHandleOut;                                                   \
-  PerformDisplayTest("zx_pci_get_bar@plt",                                               \
+  PerformDisplayTest("$plt(zx_pci_get_bar)",                                             \
                      ZxPciGetBar(result, #result, kHandle, 2, &out_bar, &out_handle), expected);
 
 #define PCI_GET_BAR_MMIO_DISPLAY_TEST(name, errno, expected) \
@@ -331,7 +331,7 @@ PCI_GET_BAR_MMIO_DISPLAY_TEST(
 #define PCI_GET_BAR_PIO_DISPLAY_TEST_CONTENT(result, expected)                                     \
   zx_pci_bar_t out_bar = {.id = 1000, .type = ZX_PCI_BAR_TYPE_PIO, .size = 1024, .addr = 0x45678}; \
   zx_handle_t out_handle = kHandleOut;                                                             \
-  PerformDisplayTest("zx_pci_get_bar@plt",                                                         \
+  PerformDisplayTest("$plt(zx_pci_get_bar)",                                                       \
                      ZxPciGetBar(result, #result, kHandle, 3, &out_bar, &out_handle), expected);
 
 #define PCI_GET_BAR_PIO_DISPLAY_TEST(name, errno, expected) \
@@ -371,7 +371,7 @@ std::unique_ptr<SystemCallTest> ZxPciMapInterrupt(int64_t result, std::string_vi
 
 #define PCI_MAP_INTERRUPT_DISPLAY_TEST_CONTENT(result, expected) \
   zx_handle_t out_handle = kHandleOut;                           \
-  PerformDisplayTest("zx_pci_map_interrupt@plt",                 \
+  PerformDisplayTest("$plt(zx_pci_map_interrupt)",               \
                      ZxPciMapInterrupt(result, #result, kHandle, 5, &out_handle), expected);
 
 #define PCI_MAP_INTERRUPT_DISPLAY_TEST(name, errno, expected) \
@@ -405,7 +405,7 @@ std::unique_ptr<SystemCallTest> ZxPciQueryIrqMode(int64_t result, std::string_vi
 
 #define PCI_QUERY_IRQ_MODE_DISPLAY_TEST_CONTENT(result, expected) \
   uint32_t out_max_irqs = 12;                                     \
-  PerformDisplayTest("zx_pci_query_irq_mode@plt",                 \
+  PerformDisplayTest("$plt(zx_pci_query_irq_mode)",               \
                      ZxPciQueryIrqMode(result, #result, kHandle, 0, &out_max_irqs), expected);
 
 #define PCI_QUERY_IRQ_MODE_DISPLAY_TEST(name, errno, expected) \
@@ -437,8 +437,8 @@ std::unique_ptr<SystemCallTest> ZxPciSetIrqMode(int64_t result, std::string_view
   return value;
 }
 
-#define PCI_SET_IRQ_MODE_DISPLAY_TEST_CONTENT(result, expected)                                  \
-  PerformDisplayTest("zx_pci_set_irq_mode@plt", ZxPciSetIrqMode(result, #result, kHandle, 0, 5), \
+#define PCI_SET_IRQ_MODE_DISPLAY_TEST_CONTENT(result, expected)                                    \
+  PerformDisplayTest("$plt(zx_pci_set_irq_mode)", ZxPciSetIrqMode(result, #result, kHandle, 0, 5), \
                      expected);
 
 #define PCI_SET_IRQ_MODE_DISPLAY_TEST(name, errno, expected) \
@@ -504,7 +504,7 @@ std::unique_ptr<SystemCallTest> ZxPciInit(int64_t result, std::string_view resul
                                .bus_end = 32,                                             \
                                .cfg_space_type = 33,                                      \
                                .has_ecam = false};                                        \
-  PerformDisplayTest("zx_pci_init@plt",                                                   \
+  PerformDisplayTest("$plt(zx_pci_init)",                                                 \
                      ZxPciInit(result, #result, kHandle, init_buf, buffer.size()), expected);
 
 #define PCI_INIT_DISPLAY_TEST(name, errno, expected)                                            \
@@ -599,7 +599,7 @@ std::unique_ptr<SystemCallTest> ZxPciAddSubtractIoRange(int64_t result,
 }
 
 #define PCI_ADD_SUBTRACT_IO_RANGE_DISPLAY_TEST_CONTENT(result, expected)                         \
-  PerformDisplayTest("zx_pci_add_subtract_io_range@plt",                                         \
+  PerformDisplayTest("$plt(zx_pci_add_subtract_io_range)",                                       \
                      ZxPciAddSubtractIoRange(result, #result, kHandle, true, 1000, 1024, false), \
                      expected);
 

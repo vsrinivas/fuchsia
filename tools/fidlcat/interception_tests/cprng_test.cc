@@ -22,7 +22,7 @@ std::unique_ptr<SystemCallTest> ZxCprngDraw(int64_t result, std::string_view res
   for (int i = 0; i < 20; ++i) {                          \
     buffer.emplace_back(i);                               \
   }                                                       \
-  PerformDisplayTest("zx_cprng_draw@plt",                 \
+  PerformDisplayTest("$plt(zx_cprng_draw)",               \
                      ZxCprngDraw(result, #result, buffer.data(), buffer.size()), expected);
 
 #define CPRNG_DRAW_DISPLAY_TEST(name, errno, expected)                                            \
@@ -56,7 +56,7 @@ std::unique_ptr<SystemCallTest> ZxCprngAddEntropy(int64_t result, std::string_vi
   for (int i = 0; i < 20; ++i) {                                 \
     buffer.emplace_back(i);                                      \
   }                                                              \
-  PerformDisplayTest("zx_cprng_add_entropy@plt",                 \
+  PerformDisplayTest("$plt(zx_cprng_add_entropy)",               \
                      ZxCprngAddEntropy(result, #result, buffer.data(), buffer.size()), expected);
 
 #define CPRNG_ADD_ENTROPY_DISPLAY_TEST(name, errno, expected) \

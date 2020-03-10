@@ -31,7 +31,7 @@ std::unique_ptr<SystemCallTest> ZxIommuCreate(int64_t result, std::string_view r
 #define IOMMU_CREATE_DUMMY_DISPLAY_TEST_CONTENT(result, expected)                            \
   zx_handle_t handle_out = kHandleOut;                                                       \
   PerformDisplayTest(                                                                        \
-      "zx_iommu_create@plt",                                                                 \
+      "$plt(zx_iommu_create)",                                                               \
       ZxIommuCreate(result, #result, kHandle, ZX_IOMMU_TYPE_DUMMY, nullptr, 0, &handle_out), \
       expected);
 
@@ -59,7 +59,7 @@ IOMMU_CREATE_DUMMY_DISPLAY_TEST(
                                 .scope_bytes = 8,                                        \
                                 .reserved_memory_bytes = 1024};                          \
   zx_handle_t handle_out = kHandleOut;                                                   \
-  PerformDisplayTest("zx_iommu_create@plt",                                              \
+  PerformDisplayTest("$plt(zx_iommu_create)",                                            \
                      ZxIommuCreate(result, #result, kHandle, ZX_IOMMU_TYPE_INTEL, &desc, \
                                    sizeof(desc), &handle_out),                           \
                      expected);

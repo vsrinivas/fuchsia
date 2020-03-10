@@ -32,7 +32,7 @@ std::unique_ptr<SystemCallTest> ZxClockAdjust(int64_t result, std::string_view r
 
 #define CLOCK_ADJUST_DISPLAY_TEST_CONTENT(result, expected) \
   zx_handle_t handle = 0x12345678;                          \
-  PerformDisplayTest("zx_clock_adjust@plt",                 \
+  PerformDisplayTest("$plt(zx_clock_adjust)",               \
                      ZxClockAdjust(result, #result, handle, ZX_CLOCK_UTC, 10), expected);
 
 #define CLOCK_ADJUST_DISPLAY_TEST(name, errno, expected) \
@@ -61,9 +61,10 @@ std::unique_ptr<SystemCallTest> ZxClockGet(int64_t result, std::string_view resu
   return value;
 }
 
-#define CLOCK_GET_DISPLAY_TEST_CONTENT(errno, expected) \
-  zx_time_t date = 1564175607533042989;                 \
-  PerformDisplayTest("zx_clock_get@plt", ZxClockGet(errno, #errno, ZX_CLOCK_UTC, &date), expected);
+#define CLOCK_GET_DISPLAY_TEST_CONTENT(errno, expected)                                    \
+  zx_time_t date = 1564175607533042989;                                                    \
+  PerformDisplayTest("$plt(zx_clock_get)", ZxClockGet(errno, #errno, ZX_CLOCK_UTC, &date), \
+                     expected);
 
 #define CLOCK_GET_DISPLAY_TEST(name, errno, expected)                                            \
   TEST_F(InterceptionWorkflowTestX64, name) { CLOCK_GET_DISPLAY_TEST_CONTENT(errno, expected); } \
@@ -85,8 +86,9 @@ std::unique_ptr<SystemCallTest> ZxClockGetMonotonic(int64_t result, std::string_
   return std::make_unique<SystemCallTest>("zx_clock_get_monotonic", result, result_name);
 }
 
-#define CLOCK_GET_MONOTONIC_DISPLAY_TEST_CONTENT(result, expected) \
-  PerformDisplayTest("zx_clock_get_monotonic@plt", ZxClockGetMonotonic(result, #result), expected);
+#define CLOCK_GET_MONOTONIC_DISPLAY_TEST_CONTENT(result, expected)                         \
+  PerformDisplayTest("$plt(zx_clock_get_monotonic)", ZxClockGetMonotonic(result, #result), \
+                     expected);
 
 #define CLOCK_GET_MONOTONIC_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                   \
@@ -118,8 +120,8 @@ std::unique_ptr<SystemCallTest> ZxDeadlineAfter(int64_t result, std::string_view
   return value;
 }
 
-#define DEADLINE_AFTER_DISPLAY_TEST_CONTENT(result, nanoseconds, expected)                   \
-  PerformDisplayTest("zx_deadline_after@plt", ZxDeadlineAfter(result, #result, nanoseconds), \
+#define DEADLINE_AFTER_DISPLAY_TEST_CONTENT(result, nanoseconds, expected)                     \
+  PerformDisplayTest("$plt(zx_deadline_after)", ZxDeadlineAfter(result, #result, nanoseconds), \
                      expected);
 
 #define DEADLINE_AFTER_DISPLAY_TEST(name, errno, nanoseconds, expected) \

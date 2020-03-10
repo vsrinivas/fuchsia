@@ -28,7 +28,7 @@ std::unique_ptr<SystemCallTest> ZxFramebufferGetInfo(int64_t result, std::string
   uint32_t height = 64;                                                                  \
   uint32_t stride = 0;                                                                   \
   PerformDisplayTest(                                                                    \
-      "zx_framebuffer_get_info@plt",                                                     \
+      "$plt(zx_framebuffer_get_info)",                                                   \
       ZxFramebufferGetInfo(result, #result, kHandle, &format, &width, &height, &stride), \
       expected);
 
@@ -70,7 +70,7 @@ std::unique_ptr<SystemCallTest> ZxFramebufferSetRange(int64_t result, std::strin
 
 #define FRAMEBUFFER_SET_RANGE_DISPLAY_TEST_CONTENT(result, expected) \
   PerformDisplayTest(                                                \
-      "zx_framebuffer_set_range@plt",                                \
+      "$plt(zx_framebuffer_set_range)",                              \
       ZxFramebufferSetRange(result, #result, kHandle, kHandle2, 2000, 1, 1080, 64, 0), expected);
 
 #define FRAMEBUFFER_SET_RANGE_DISPLAY_TEST(name, errno, expected) \

@@ -21,10 +21,10 @@ std::unique_ptr<SystemCallTest> ZxFifoCreate(int64_t result, std::string_view re
   return value;
 }
 
-#define FIFO_CREATE_DISPLAY_TEST_CONTENT(result, expected)                                       \
-  zx_handle_t out0 = kHandleOut;                                                                 \
-  zx_handle_t out1 = kHandleOut2;                                                                \
-  PerformDisplayTest("zx_fifo_create@plt", ZxFifoCreate(result, #result, 4, 3, 0, &out0, &out1), \
+#define FIFO_CREATE_DISPLAY_TEST_CONTENT(result, expected)                                         \
+  zx_handle_t out0 = kHandleOut;                                                                   \
+  zx_handle_t out1 = kHandleOut2;                                                                  \
+  PerformDisplayTest("$plt(zx_fifo_create)", ZxFifoCreate(result, #result, 4, 3, 0, &out0, &out1), \
                      expected);
 
 #define FIFO_CREATE_DISPLAY_TEST(name, errno, expected)                                            \
@@ -64,7 +64,7 @@ std::unique_ptr<SystemCallTest> ZxFifoRead(int64_t result, std::string_view resu
   }                                                                                      \
   size_t actual_count = buffer.size() / kElemSize;                                       \
   PerformDisplayTest(                                                                    \
-      "zx_fifo_read@plt",                                                                \
+      "$plt(zx_fifo_read)",                                                              \
       ZxFifoRead(result, #result, kHandle, kElemSize, buffer.data(), 10, &actual_count), \
       expected);
 
@@ -109,7 +109,7 @@ std::unique_ptr<SystemCallTest> ZxFifoWrite(int64_t result, std::string_view res
     buffer.emplace_back(i);                                                          \
   }                                                                                  \
   size_t actual_count = 2;                                                           \
-  PerformDisplayTest("zx_fifo_write@plt",                                            \
+  PerformDisplayTest("$plt(zx_fifo_write)",                                          \
                      ZxFifoWrite(result, #result, kHandle, kElemSize, buffer.data(), \
                                  buffer.size() / kElemSize, &actual_count),          \
                      expected);

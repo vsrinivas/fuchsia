@@ -17,7 +17,7 @@ std::unique_ptr<SystemCallTest> ZxHandleClose(int64_t result, std::string_view r
 }
 
 #define HANDLE_CLOSE_DISPLAY_TEST_CONTENT(result, expected) \
-  PerformDisplayTest("zx_handle_close@plt", ZxHandleClose(result, #result, kHandle), expected);
+  PerformDisplayTest("$plt(zx_handle_close)", ZxHandleClose(result, #result, kHandle), expected);
 
 #define HANDLE_CLOSE_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {            \
@@ -44,7 +44,7 @@ std::unique_ptr<SystemCallTest> ZxHandleCloseMany(int64_t result, std::string_vi
 
 #define HANDLE_CLOSE_MANY_DISPLAY_TEST_CONTENT(result, expected)                         \
   std::vector<zx_handle_t> handles = {kHandle, kHandle2, kHandle3};                      \
-  PerformDisplayTest("zx_handle_close_many@plt",                                         \
+  PerformDisplayTest("$plt(zx_handle_close_many)",                                       \
                      ZxHandleCloseMany(result, #result, handles.data(), handles.size()), \
                      expected);
 
@@ -79,7 +79,7 @@ std::unique_ptr<SystemCallTest> ZxHandleDuplicate(int64_t result, std::string_vi
 
 #define HANDLE_DUPLICATE_DISPLAY_TEST_CONTENT(result, expected)                               \
   zx_handle_t out = kHandleOut;                                                               \
-  PerformDisplayTest("zx_handle_duplicate@plt",                                               \
+  PerformDisplayTest("$plt(zx_handle_duplicate)",                                             \
                      ZxHandleDuplicate(result, #result, kHandle, ZX_RIGHT_SAME_RIGHTS, &out), \
                      expected);
 
@@ -114,7 +114,7 @@ std::unique_ptr<SystemCallTest> ZxHandleReplace(int64_t result, std::string_view
 
 #define HANDLE_REPLACE_DISPLAY_TEST_CONTENT(result, expected)                               \
   zx_handle_t out = kHandleOut;                                                             \
-  PerformDisplayTest("zx_handle_replace@plt",                                               \
+  PerformDisplayTest("$plt(zx_handle_replace)",                                             \
                      ZxHandleReplace(result, #result, kHandle, ZX_RIGHT_SAME_RIGHTS, &out), \
                      expected);
 

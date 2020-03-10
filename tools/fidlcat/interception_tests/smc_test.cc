@@ -37,7 +37,7 @@ std::unique_ptr<SystemCallTest> ZxSmcCall(int64_t result, std::string_view resul
                                     .client_id = 8,                                         \
                                     .secure_os_id = 9};                                     \
   zx_smc_result_t out_smc_result = {.arg0 = 1, .arg1 = 2, .arg2 = 3, .arg3 = 3, .arg6 = 4}; \
-  PerformDisplayTest("zx_smc_call@plt",                                                     \
+  PerformDisplayTest("$plt(zx_smc_call)",                                                   \
                      ZxSmcCall(result, #result, kHandle, &parameters, &out_smc_result), expected);
 
 #define SMC_CALL_DISPLAY_TEST(name, errno, expected)                                            \

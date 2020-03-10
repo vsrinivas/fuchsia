@@ -11,11 +11,11 @@ std::unique_ptr<SystemCallTest> ZxChannelCreate(int64_t result, std::string_view
                                                 uint32_t options, zx_handle_t* out0,
                                                 zx_handle_t* out1);
 
-#define DISPLAY_STACK_TEST_CONTENT(errno, level, expected)                                     \
-  decode_options_.stack_level = level;                                                         \
-  zx_handle_t out0 = 0x12345678;                                                               \
-  zx_handle_t out1 = 0x87654321;                                                               \
-  PerformDisplayTest("zx_channel_create@plt", ZxChannelCreate(errno, #errno, 0, &out0, &out1), \
+#define DISPLAY_STACK_TEST_CONTENT(errno, level, expected)                                       \
+  decode_options_.stack_level = level;                                                           \
+  zx_handle_t out0 = 0x12345678;                                                                 \
+  zx_handle_t out1 = 0x87654321;                                                                 \
+  PerformDisplayTest("$plt(zx_channel_create)", ZxChannelCreate(errno, #errno, 0, &out0, &out1), \
                      expected);
 
 #define DISPLAY_STACK_TEST(name, errno, level, expected) \
@@ -44,11 +44,11 @@ DISPLAY_STACK_TEST(
     "  -> \x1B[32mZX_OK\x1B[0m (out0:\x1B[32mhandle\x1B[0m: \x1B[31m12345678\x1B[0m, "
     "out1:\x1B[32mhandle\x1B[0m: \x1B[31m87654321\x1B[0m)\n");
 
-#define BAD_STACK_TEST_CONTENT(errno, expected)                                                \
-  set_bad_stack();                                                                             \
-  zx_handle_t out0 = 0x12345678;                                                               \
-  zx_handle_t out1 = 0x87654321;                                                               \
-  PerformAbortedTest("zx_channel_create@plt", ZxChannelCreate(errno, #errno, 0, &out0, &out1), \
+#define BAD_STACK_TEST_CONTENT(errno, expected)                                                  \
+  set_bad_stack();                                                                               \
+  zx_handle_t out0 = 0x12345678;                                                                 \
+  zx_handle_t out1 = 0x87654321;                                                                 \
+  PerformAbortedTest("$plt(zx_channel_create)", ZxChannelCreate(errno, #errno, 0, &out0, &out1), \
                      expected);
 
 #define BAD_STACK_TEST(name, errno, expected)                                            \

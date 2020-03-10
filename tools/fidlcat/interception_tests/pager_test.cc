@@ -19,7 +19,7 @@ std::unique_ptr<SystemCallTest> ZxPagerCreate(int64_t result, std::string_view r
 
 #define PAGER_CREATE_DISPLAY_TEST_CONTENT(result, expected) \
   zx_handle_t out = kHandleOut;                             \
-  PerformDisplayTest("zx_pager_create@plt", ZxPagerCreate(result, #result, 0, &out), expected);
+  PerformDisplayTest("$plt(zx_pager_create)", ZxPagerCreate(result, #result, 0, &out), expected);
 
 #define PAGER_CREATE_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {            \
@@ -52,7 +52,7 @@ std::unique_ptr<SystemCallTest> ZxPagerCreateVmo(int64_t result, std::string_vie
 
 #define PAGER_CREATE_VMO_DISPLAY_TEST_CONTENT(result, expected)                              \
   zx_handle_t out = kHandleOut;                                                              \
-  PerformDisplayTest("zx_pager_create_vmo@plt",                                              \
+  PerformDisplayTest("$plt(zx_pager_create_vmo)",                                            \
                      ZxPagerCreateVmo(result, #result, kHandle, 0, kPort, kKey, 1024, &out), \
                      expected);
 
@@ -87,7 +87,7 @@ std::unique_ptr<SystemCallTest> ZxPagerDetachVmo(int64_t result, std::string_vie
 }
 
 #define PAGER_DETACH_VMO_DISPLAY_TEST_CONTENT(result, expected) \
-  PerformDisplayTest("zx_pager_detach_vmo@plt",                 \
+  PerformDisplayTest("$plt(zx_pager_detach_vmo)",               \
                      ZxPagerDetachVmo(result, #result, kHandle, kHandle2), expected);
 
 #define PAGER_DETACH_VMO_DISPLAY_TEST(name, errno, expected) \
@@ -124,7 +124,7 @@ std::unique_ptr<SystemCallTest> ZxPagerSupplyPages(int64_t result, std::string_v
 
 #define PAGER_SUPPLY_PAGES_DISPLAY_TEST_CONTENT(result, expected)                         \
   PerformDisplayTest(                                                                     \
-      "zx_pager_supply_pages@plt",                                                        \
+      "$plt(zx_pager_supply_pages)",                                                      \
       ZxPagerSupplyPages(result, #result, kHandle, kHandle2, 1000, 1024, kHandle3, 2000), \
       expected);
 

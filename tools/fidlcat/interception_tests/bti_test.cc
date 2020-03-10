@@ -20,9 +20,9 @@ std::unique_ptr<SystemCallTest> ZxBtiCreate(int64_t result, std::string_view res
   return value;
 }
 
-#define BTI_CREATE_DISPLAY_TEST_CONTENT(result, expected)                                     \
-  zx_handle_t out = kHandleOut;                                                               \
-  PerformDisplayTest("zx_bti_create@plt", ZxBtiCreate(result, #result, kHandle, 0, 10, &out), \
+#define BTI_CREATE_DISPLAY_TEST_CONTENT(result, expected)                                       \
+  zx_handle_t out = kHandleOut;                                                                 \
+  PerformDisplayTest("$plt(zx_bti_create)", ZxBtiCreate(result, #result, kHandle, 0, 10, &out), \
                      expected);
 
 #define BTI_CREATE_DISPLAY_TEST(name, errno, expected)                                            \
@@ -60,7 +60,7 @@ std::unique_ptr<SystemCallTest> ZxBtiPin(int64_t result, std::string_view result
 #define BTI_PIN_DISPLAY_TEST_CONTENT(result, expected)                                          \
   std::vector<zx_paddr_t> addrs = {0x1234, 0x2345, 0x3456};                                     \
   zx_handle_t pmt = kHandleOut;                                                                 \
-  PerformDisplayTest("zx_bti_pin@plt",                                                          \
+  PerformDisplayTest("$plt(zx_bti_pin)",                                                        \
                      ZxBtiPin(result, #result, kHandle, ZX_BTI_PERM_READ | ZX_BTI_PERM_EXECUTE, \
                               kHandle2, 1000, 1024, addrs.data(), addrs.size(), &pmt),          \
                      expected);
@@ -94,7 +94,7 @@ std::unique_ptr<SystemCallTest> ZxBtiReleaseQuarantine(int64_t result, std::stri
 }
 
 #define BTI_RELEASE_QUARANTINE_DISPLAY_TEST_CONTENT(result, expected) \
-  PerformDisplayTest("zx_bti_release_quarantine@plt",                 \
+  PerformDisplayTest("$plt(zx_bti_release_quarantine)",               \
                      ZxBtiReleaseQuarantine(result, #result, kHandle), expected);
 
 #define BTI_RELEASE_QUARANTINE_DISPLAY_TEST(name, errno, expected) \

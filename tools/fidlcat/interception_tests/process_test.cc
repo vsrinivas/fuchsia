@@ -16,8 +16,8 @@ std::unique_ptr<SystemCallTest> ZxProcessExit(int64_t result, std::string_view r
   return value;
 }
 
-#define PROCESS_EXIT_DISPLAY_TEST_CONTENT(result, retcode, expected)                         \
-  PerformNoReturnDisplayTest("zx_process_exit@plt", ZxProcessExit(result, #result, retcode), \
+#define PROCESS_EXIT_DISPLAY_TEST_CONTENT(result, retcode, expected)                           \
+  PerformNoReturnDisplayTest("$plt(zx_process_exit)", ZxProcessExit(result, #result, retcode), \
                              expected);
 
 #define PROCESS_EXIT_DISPLAY_TEST(name, errno, retcode, expected) \
@@ -58,7 +58,7 @@ std::unique_ptr<SystemCallTest> ZxProcessCreate(int64_t result, std::string_view
   std::string name("my_process");                                                            \
   zx_handle_t proc_handle = kHandleOut;                                                      \
   zx_handle_t vmar_handle = kHandleOut2;                                                     \
-  PerformDisplayTest("zx_process_create@plt",                                                \
+  PerformDisplayTest("$plt(zx_process_create)",                                              \
                      ZxProcessCreate(result, #result, kHandle, name.c_str(), name.size(), 0, \
                                      &proc_handle, &vmar_handle),                            \
                      expected);
@@ -103,7 +103,7 @@ std::unique_ptr<SystemCallTest> ZxProcessStart(int64_t result, std::string_view 
   zx_vaddr_t stack = 0x100001234;                            \
   uintptr_t arg2 = 0x789abcdef;                              \
   PerformDisplayTest(                                        \
-      "zx_process_start@plt",                                \
+      "$plt(zx_process_start)",                              \
       ZxProcessStart(result, #result, kHandle, kHandle2, entry, stack, kHandle3, arg2), expected);
 
 #define PROCESS_START_DISPLAY_TEST(name, errno, expected) \
@@ -147,7 +147,7 @@ std::unique_ptr<SystemCallTest> ZxProcessReadMemory(int64_t result, std::string_
   }                                                                                                \
   size_t actual = buffer.size();                                                                   \
   PerformDisplayTest(                                                                              \
-      "zx_process_read_memory@plt",                                                                \
+      "$plt(zx_process_read_memory)",                                                              \
       ZxProcessReadMemory(result, #result, kHandle, vaddr, buffer.data(), buffer.size(), &actual), \
       expected);
 
@@ -194,7 +194,7 @@ std::unique_ptr<SystemCallTest> ZxProcessWriteMemory(int64_t result, std::string
     buffer.push_back(i);                                                                  \
   }                                                                                       \
   size_t actual = buffer.size();                                                          \
-  PerformDisplayTest("zx_process_write_memory@plt",                                       \
+  PerformDisplayTest("$plt(zx_process_write_memory)",                                     \
                      ZxProcessWriteMemory(result, #result, kHandle, vaddr, buffer.data(), \
                                           buffer.size(), &actual),                        \
                      expected);

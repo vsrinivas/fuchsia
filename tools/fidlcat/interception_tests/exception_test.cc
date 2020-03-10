@@ -49,7 +49,7 @@ std::unique_ptr<SystemCallTest> ZxExceptionGetThread(int64_t result, std::string
 
 #define ZX_EXCEPTION_GET_THREAD_DISPLAY_TEST_CONTENT(result, expected) \
   zx_handle_t out = kHandleOut;                                        \
-  PerformDisplayTest("zx_exception_get_thread@plt",                    \
+  PerformDisplayTest("$plt(zx_exception_get_thread)",                  \
                      ZxExceptionGetThread(result, #result, kHandle, &out), expected);
 
 #define ZX_EXCEPTION_GET_THREAD_DISPLAY_TEST(name, errno, expected) \
@@ -79,7 +79,7 @@ std::unique_ptr<SystemCallTest> ZxExceptionGetProcess(int64_t result, std::strin
 
 #define ZX_EXCEPTION_GET_PROCESS_DISPLAY_TEST_CONTENT(result, expected) \
   zx_handle_t out = kHandleOut;                                         \
-  PerformDisplayTest("zx_exception_get_process@plt",                    \
+  PerformDisplayTest("$plt(zx_exception_get_process)",                  \
                      ZxExceptionGetProcess(result, #result, kHandle, &out), expected);
 
 #define ZX_EXCEPTION_GET_PROCESS_DISPLAY_TEST(name, errno, expected) \

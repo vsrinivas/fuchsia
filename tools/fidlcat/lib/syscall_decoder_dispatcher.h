@@ -1185,7 +1185,7 @@ class Syscall {
       : name_(name),
         return_type_(return_type),
         is_function_(is_function),
-        breakpoint_name_(is_function_ ? name_ : name_ + "@plt") {}
+        breakpoint_name_(is_function_ ? name_ : "$plt(" + name_ + ")") {}
 
   // Name of the syscall.
   [[nodiscard]] const std::string& name() const { return name_; }

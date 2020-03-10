@@ -19,7 +19,7 @@ std::unique_ptr<SystemCallTest> ZxEventCreate(int64_t result, std::string_view r
 
 #define EVENT_CREATE_DISPLAY_TEST_CONTENT(result, expected) \
   zx_handle_t out = kHandleOut;                             \
-  PerformDisplayTest("zx_event_create@plt", ZxEventCreate(result, #result, 0, &out), expected);
+  PerformDisplayTest("$plt(zx_event_create)", ZxEventCreate(result, #result, 0, &out), expected);
 
 #define EVENT_CREATE_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {            \
@@ -49,7 +49,7 @@ std::unique_ptr<SystemCallTest> ZxEventPairCreate(int64_t result, std::string_vi
 #define EVENTPAIR_CREATE_DISPLAY_TEST_CONTENT(result, expected) \
   zx_handle_t out0 = kHandleOut;                                \
   zx_handle_t out1 = kHandleOut2;                               \
-  PerformDisplayTest("zx_eventpair_create@plt",                 \
+  PerformDisplayTest("$plt(zx_eventpair_create)",               \
                      ZxEventPairCreate(result, #result, 0, &out0, &out1), expected);
 
 #define EVENTPAIR_CREATE_DISPLAY_TEST(name, errno, expected) \

@@ -22,7 +22,7 @@ std::unique_ptr<SystemCallTest> ZxSocketCreate(int64_t result, std::string_view 
 #define SOCKET_CREATE_DISPLAY_TEST_CONTENT(result, expected) \
   zx_handle_t out0 = kHandleOut;                             \
   zx_handle_t out1 = kHandleOut2;                            \
-  PerformDisplayTest("zx_socket_create@plt",                 \
+  PerformDisplayTest("$plt(zx_socket_create)",               \
                      ZxSocketCreate(result, #result, ZX_SOCKET_STREAM, &out0, &out1), expected);
 
 #define SOCKET_CREATE_DISPLAY_TEST(name, errno, expected) \
@@ -60,7 +60,7 @@ std::unique_ptr<SystemCallTest> ZxSocketWrite(int64_t result, std::string_view r
   std::vector<uint8_t> buffer = {0x10, 0x01, 0x20, 0x02, 0x30, 0x03, 0x40, 0x04};        \
   size_t actual = buffer.size();                                                         \
   PerformDisplayTest(                                                                    \
-      "zx_socket_write@plt",                                                             \
+      "$plt(zx_socket_write)",                                                           \
       ZxSocketWrite(result, #result, kHandle, 0, buffer.data(), buffer.size(), &actual), \
       expected);
 
@@ -87,7 +87,7 @@ SOCKET_WRITE_DISPLAY_TEST(
   std::vector<uint8_t> buffer = {'h', 'e', 'l', 'l', 'o'};                               \
   size_t actual = buffer.size();                                                         \
   PerformDisplayTest(                                                                    \
-      "zx_socket_write@plt",                                                             \
+      "$plt(zx_socket_write)",                                                           \
       ZxSocketWrite(result, #result, kHandle, 0, buffer.data(), buffer.size(), &actual), \
       expected);
 
@@ -129,7 +129,7 @@ std::unique_ptr<SystemCallTest> ZxSocketRead(int64_t result, std::string_view re
   std::vector<uint8_t> buffer = {0x10, 0x01, 0x20, 0x02, 0x30, 0x03, 0x40, 0x04}; \
   size_t actual = buffer.size();                                                  \
   PerformDisplayTest(                                                             \
-      "zx_socket_read@plt",                                                       \
+      "$plt(zx_socket_read)",                                                     \
       ZxSocketRead(result, #result, kHandle, options, buffer.data(), 1024, &actual), expected);
 
 #define SOCKET_READ_DISPLAY_TEST(name, errno, options, expected) \
@@ -171,7 +171,7 @@ SOCKET_READ_DISPLAY_TEST(
 #define SOCKET_READ_STRING_DISPLAY_TEST_CONTENT(result, expected)                             \
   std::vector<uint8_t> buffer = {'h', 'e', 'l', 'l', 'o'};                                    \
   size_t actual = buffer.size();                                                              \
-  PerformDisplayTest("zx_socket_read@plt",                                                    \
+  PerformDisplayTest("$plt(zx_socket_read)",                                                  \
                      ZxSocketRead(result, #result, kHandle, 0, buffer.data(), 1024, &actual), \
                      expected);
 
@@ -206,7 +206,7 @@ std::unique_ptr<SystemCallTest> ZxSocketShutdown(int64_t result, std::string_vie
 }
 
 #define SOCKET_SHUTDOWN_DISPLAY_TEST_CONTENT(result, options, expected) \
-  PerformDisplayTest("zx_socket_shutdown@plt",                          \
+  PerformDisplayTest("$plt(zx_socket_shutdown)",                        \
                      ZxSocketShutdown(result, #result, kHandle, options), expected);
 
 #define SOCKET_SHUTDOWN_DISPLAY_TEST(name, errno, options, expected) \

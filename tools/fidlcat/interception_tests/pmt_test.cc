@@ -17,7 +17,7 @@ std::unique_ptr<SystemCallTest> ZxPmtUnpin(int64_t result, std::string_view resu
 }
 
 #define PMT_UNPIN_DISPLAY_TEST_CONTENT(result, expected) \
-  PerformDisplayTest("zx_pmt_unpin@plt", ZxPmtUnpin(result, #result, kHandle), expected);
+  PerformDisplayTest("$plt(zx_pmt_unpin)", ZxPmtUnpin(result, #result, kHandle), expected);
 
 #define PMT_UNPIN_DISPLAY_TEST(name, errno, expected)                                            \
   TEST_F(InterceptionWorkflowTestX64, name) { PMT_UNPIN_DISPLAY_TEST_CONTENT(errno, expected); } \

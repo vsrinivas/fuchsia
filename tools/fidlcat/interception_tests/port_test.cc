@@ -31,21 +31,21 @@ std::unique_ptr<SystemCallTest> ZxPortCreate(int64_t status, std::string_view st
 
 // Checks that we can decode a zx_port_create syscall.
 // Also checks that we create the right semantic for the ports.
-#define PORT_CREATE_DISPLAY_TEST_CONTENT(status, expected)                                         \
-  zx_handle_t handle = kHandle;                                                                    \
-  ProcessController controller(this, session(), loop());                                           \
-  PerformDisplayTest(&controller, "zx_port_create@plt", ZxPortCreate(status, #status, 0, &handle), \
-                     expected);                                                                    \
-  SyscallDecoderDispatcher* dispatcher = controller.workflow().syscall_decoder_dispatcher();       \
-  const fidl_codec::semantic::HandleDescription* description0 =                                    \
-      dispatcher->inference().GetHandleDescription(kFirstPid, handle);                             \
-  ASSERT_NE(description0, nullptr);                                                                \
-  ASSERT_EQ(description0->type(), "port");                                                         \
-  ASSERT_EQ(description0->fd(), 0);                                                                \
-  const fidl_codec::semantic::HandleDescription* description1 =                                    \
-      dispatcher->inference().GetHandleDescription(kSecondPid, handle);                            \
-  ASSERT_NE(description1, nullptr);                                                                \
-  ASSERT_EQ(description1->type(), "port");                                                         \
+#define PORT_CREATE_DISPLAY_TEST_CONTENT(status, expected)                                   \
+  zx_handle_t handle = kHandle;                                                              \
+  ProcessController controller(this, session(), loop());                                     \
+  PerformDisplayTest(&controller, "$plt(zx_port_create)",                                    \
+                     ZxPortCreate(status, #status, 0, &handle), expected);                   \
+  SyscallDecoderDispatcher* dispatcher = controller.workflow().syscall_decoder_dispatcher(); \
+  const fidl_codec::semantic::HandleDescription* description0 =                              \
+      dispatcher->inference().GetHandleDescription(kFirstPid, handle);                       \
+  ASSERT_NE(description0, nullptr);                                                          \
+  ASSERT_EQ(description0->type(), "port");                                                   \
+  ASSERT_EQ(description0->fd(), 0);                                                          \
+  const fidl_codec::semantic::HandleDescription* description1 =                              \
+      dispatcher->inference().GetHandleDescription(kSecondPid, handle);                      \
+  ASSERT_NE(description1, nullptr);                                                          \
+  ASSERT_EQ(description1->type(), "port");                                                   \
   ASSERT_EQ(description1->fd(), 1);
 
 #define PORT_CREATE_DISPLAY_TEST(name, status, expected) \
@@ -70,10 +70,11 @@ std::unique_ptr<SystemCallTest> ZxPortQueue(int64_t status, std::string_view sta
   return value;
 }
 
-#define PORT_QUEUE_DISPLAY_TEST_CONTENT(status, handle, init_packet, expected) \
-  zx_port_packet_t packet;                                                     \
-  init_packet(&packet);                                                        \
-  PerformDisplayTest("zx_port_queue@plt", ZxPortQueue(status, #status, handle, &packet), expected);
+#define PORT_QUEUE_DISPLAY_TEST_CONTENT(status, handle, init_packet, expected)             \
+  zx_port_packet_t packet;                                                                 \
+  init_packet(&packet);                                                                    \
+  PerformDisplayTest("$plt(zx_port_queue)", ZxPortQueue(status, #status, handle, &packet), \
+                     expected);
 
 #define PORT_QUEUE_DISPLAY_TEST(name, status, handle, init_packet, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                                \
@@ -144,10 +145,10 @@ std::unique_ptr<SystemCallTest> ZxPortWait(int64_t status, std::string_view stat
   return value;
 }
 
-#define PORT_WAIT_DISPLAY_TEST_CONTENT(status, handle, deadline, init_packet, expected)          \
-  zx_port_packet_t packet;                                                                       \
-  init_packet(&packet);                                                                          \
-  PerformDisplayTest("zx_port_wait@plt", ZxPortWait(status, #status, handle, deadline, &packet), \
+#define PORT_WAIT_DISPLAY_TEST_CONTENT(status, handle, deadline, init_packet, expected)            \
+  zx_port_packet_t packet;                                                                         \
+  init_packet(&packet);                                                                            \
+  PerformDisplayTest("$plt(zx_port_wait)", ZxPortWait(status, #status, handle, deadline, &packet), \
                      expected);
 
 #define PORT_WAIT_DISPLAY_TEST(name, status, handle, deadline, init_packet, expected) \
@@ -576,9 +577,9 @@ std::unique_ptr<SystemCallTest> ZxPortCancel(int64_t status, std::string_view st
   return value;
 }
 
-#define PORT_CANCEL_DISPLAY_TEST_CONTENT(status, expected)                                        \
-  PerformDisplayTest("zx_port_cancel@plt", ZxPortCancel(status, #status, kHandle, kSource, kKey), \
-                     expected);
+#define PORT_CANCEL_DISPLAY_TEST_CONTENT(status, expected) \
+  PerformDisplayTest("$plt(zx_port_cancel)",               \
+                     ZxPortCancel(status, #status, kHandle, kSource, kKey), expected);
 
 #define PORT_CANCEL_DISPLAY_TEST(name, status, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {            \
