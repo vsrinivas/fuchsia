@@ -16,7 +16,8 @@
 namespace minfs {
 
 // Static.
-zx_status_t Allocator::Create(fs::ReadTxn* txn, std::unique_ptr<AllocatorStorage> storage,
+zx_status_t Allocator::Create(fs::BufferedOperationsBuilder* builder,
+                              std::unique_ptr<AllocatorStorage> storage,
                               std::unique_ptr<Allocator>* out) FS_TA_NO_THREAD_SAFETY_ANALYSIS {
   // Ignore thread-safety analysis on the |allocator| object; no one has an
   // external reference to it yet.
@@ -32,7 +33,7 @@ zx_status_t Allocator::Create(fs::ReadTxn* txn, std::unique_ptr<AllocatorStorage
     return status;
   }
 
-  status = allocator->LoadStorage(txn);
+  status = allocator->LoadStorage(builder);
   if (status != ZX_OK) {
     return status;
   }

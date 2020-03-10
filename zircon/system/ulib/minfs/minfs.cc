@@ -1036,7 +1036,7 @@ zx_status_t Minfs::ReadInitialBlocks(const Superblock& info, std::unique_ptr<Bca
   const blk_t ino_start_block = offsets.InoStartBlock();
 #endif
 
-  fs::ReadTxn transaction(bc.get());
+  fs::BufferedOperationsBuilder builder(bc.get());
 
   // Block Bitmap allocator initialization.
   AllocatorFvmMetadata block_allocator_fvm = AllocatorFvmMetadata(
@@ -1055,7 +1055,7 @@ zx_status_t Minfs::ReadInitialBlocks(const Superblock& info, std::unique_ptr<Bca
 #endif
 
   std::unique_ptr<Allocator> block_allocator;
-  zx_status_t status = Allocator::Create(&transaction, std::move(storage), &block_allocator);
+  zx_status_t status = Allocator::Create(&builder, std::move(storage), &block_allocator);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("Minfs::Create failed to initialize block allocator: %d\n", status);
     return status;
@@ -1072,10 +1072,10 @@ zx_status_t Minfs::ReadInitialBlocks(const Superblock& info, std::unique_ptr<Bca
   std::unique_ptr<InodeManager> inodes;
 #ifdef __Fuchsia__
   status =
-      InodeManager::Create(bc->device(), sb.get(), &transaction, std::move(inode_allocator_meta),
+      InodeManager::Create(bc->device(), sb.get(), &builder, std::move(inode_allocator_meta),
                            ino_start_block, info.inode_count, &inodes);
 #else
-  status = InodeManager::Create(bc.get(), sb.get(), &transaction, std::move(inode_allocator_meta),
+  status = InodeManager::Create(bc.get(), sb.get(), &builder, std::move(inode_allocator_meta),
                                 ino_start_block, info.inode_count, &inodes);
 #endif
   if (status != ZX_OK) {
@@ -1083,7 +1083,7 @@ zx_status_t Minfs::ReadInitialBlocks(const Superblock& info, std::unique_ptr<Bca
     return status;
   }
 
-  status = transaction.Transact();
+  status = bc->RunRequests(builder.TakeOperations());
   if (status != ZX_OK) {
     FS_TRACE_ERROR("Minfs::Create failed to read initial blocks: %d\n", status);
     return status;

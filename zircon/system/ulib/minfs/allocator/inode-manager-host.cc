@@ -12,8 +12,9 @@ namespace minfs {
 
 InodeManager::InodeManager(Bcache* bc, blk_t start_block) : start_block_(start_block), bc_(bc) {}
 
-zx_status_t InodeManager::Create(Bcache* bc, SuperblockManager* sb, fs::ReadTxn* txn,
-                                 AllocatorMetadata metadata, blk_t start_block, size_t inodes,
+zx_status_t InodeManager::Create(Bcache* bc, SuperblockManager* sb,
+                                 fs::BufferedOperationsBuilder* builder, AllocatorMetadata metadata,
+                                 blk_t start_block, size_t inodes,
                                  std::unique_ptr<InodeManager>* out) {
   auto mgr = std::unique_ptr<InodeManager>(new InodeManager(bc, start_block));
   InodeManager* mgr_raw = mgr.get();
@@ -23,7 +24,7 @@ zx_status_t InodeManager::Create(Bcache* bc, SuperblockManager* sb, fs::ReadTxn*
   zx_status_t status;
   std::unique_ptr<PersistentStorage> storage(
       new PersistentStorage(sb, kMinfsInodeSize, std::move(grow_cb), std::move(metadata)));
-  if ((status = Allocator::Create(txn, std::move(storage), &mgr->inode_allocator_)) != ZX_OK) {
+  if ((status = Allocator::Create(builder, std::move(storage), &mgr->inode_allocator_)) != ZX_OK) {
     return status;
   }
 

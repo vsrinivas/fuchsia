@@ -80,7 +80,7 @@ class FakeStorage : public AllocatorStorage {
     return ZX_OK;
   }
 
-  void Load(fs::ReadTxn* txn, ReadData data) final {}
+  void Load(fs::BufferedOperationsBuilder* builder, storage::BlockBuffer* data) final {}
 
   zx_status_t Extend(PendingWork* transaction, WriteData data, GrowMapCallback grow_map) final {
     return ZX_ERR_NO_SPACE;
@@ -145,11 +145,11 @@ class TransactionTest : public zxtest::Test {
     info_.alloc_inode_count = 0;
     info_.inode_count = kTotalElements;
     MockTransactionHandler handler;
-    fs::ReadTxn transaction(&handler);
+    fs::BufferedOperationsBuilder builder(&handler);
 
     // Create block allocator.
     std::unique_ptr<FakeStorage> storage(new FakeStorage(kTotalElements));
-    ASSERT_OK(Allocator::Create(&transaction, std::move(storage), &block_allocator_));
+    ASSERT_OK(Allocator::Create(&builder, std::move(storage), &block_allocator_));
 
     // Create superblock manager.
     ASSERT_OK(SuperblockManager::Create(&block_device_, &info_, kDefaultStartBlock,
@@ -160,7 +160,7 @@ class TransactionTest : public zxtest::Test {
     AllocatorMetadata metadata(kDefaultStartBlock, kDefaultStartBlock, false,
                                std::move(fvm_metadata), &info_.alloc_inode_count,
                                &info_.inode_count);
-    ASSERT_OK(InodeManager::Create(&block_device_, superblock_manager_.get(), &transaction,
+    ASSERT_OK(InodeManager::Create(&block_device_, superblock_manager_.get(), &builder,
                                    std::move(metadata), kDefaultStartBlock, kTotalElements,
                                    &inode_manager_));
   }

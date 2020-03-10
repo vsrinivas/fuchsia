@@ -49,12 +49,12 @@ class InodeManager : public InspectableInodeManager {
 
 #ifdef __Fuchsia__
   static zx_status_t Create(block_client::BlockDevice* device, SuperblockManager* sb,
-                            fs::ReadTxn* txn, AllocatorMetadata metadata, blk_t start_block,
-                            size_t inodes, std::unique_ptr<InodeManager>* out);
+                            fs::BufferedOperationsBuilder* builder, AllocatorMetadata metadata,
+                            blk_t start_block, size_t inodes, std::unique_ptr<InodeManager>* out);
 #else
-  static zx_status_t Create(Bcache* bc, SuperblockManager* sb, fs::ReadTxn* txn,
-                            AllocatorMetadata metadata, blk_t start_block, size_t inodes,
-                            std::unique_ptr<InodeManager>* out);
+  static zx_status_t Create(Bcache* bc, SuperblockManager* sb,
+                            fs::BufferedOperationsBuilder* builder, AllocatorMetadata metadata,
+                            blk_t start_block, size_t inodes, std::unique_ptr<InodeManager>* out);
 #endif
 
   // Reserve |inodes| inodes in the allocator.

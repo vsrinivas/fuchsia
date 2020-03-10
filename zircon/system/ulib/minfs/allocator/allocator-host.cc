@@ -9,15 +9,41 @@
 #include <utility>
 
 #include <bitmap/raw-bitmap.h>
+#include <storage/buffer/block_buffer.h>
 
 #include "allocator.h"
 
 namespace minfs {
 
+namespace {
+
+// Trivial BlockBuffer that doesn't own the underlying buffer.
+// TODO(47947): Remove this.
+class UnownedBuffer : public storage::BlockBuffer {
+ public:
+  UnownedBuffer(const void* data) : data_(reinterpret_cast<const char*>(data)) {}
+  ~UnownedBuffer() {}
+
+  // BlockBuffer interface:
+  size_t capacity() const final { return 0; }
+  uint32_t BlockSize() const final { return 0; }
+  vmoid_t vmoid() const final { return 0; }
+  void* Data(size_t index) final {
+    return const_cast<void*>(const_cast<const UnownedBuffer*>(this)->Data(index));
+  }
+  const void* Data(size_t index) const final { return data_ + index * kMinfsBlockSize; }
+
+ private:
+  const char* data_;
+};
+
+}  // namespace
+
 Allocator::~Allocator() {}
 
-zx_status_t Allocator::LoadStorage(fs::ReadTxn* txn) {
-  storage_->Load(txn, GetMapDataLocked());
+zx_status_t Allocator::LoadStorage(fs::BufferedOperationsBuilder* builder) {
+  UnownedBuffer buffer(GetMapDataLocked());
+  storage_->Load(builder, &buffer);
   return ZX_OK;
 }
 

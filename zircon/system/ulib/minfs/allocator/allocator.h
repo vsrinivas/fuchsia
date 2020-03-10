@@ -16,6 +16,7 @@
 #include <fbl/function.h>
 #include <fbl/macros.h>
 #include <fs/transaction/block_transaction.h>
+#include <fs/transaction/buffered_operations_builder.h>
 #include <minfs/allocator-reservation.h>
 #include <minfs/format.h>
 #include <minfs/mutex.h>
@@ -68,7 +69,8 @@ class Allocator {
   Allocator(const Allocator&) = delete;
   Allocator& operator=(const Allocator&) = delete;
 
-  static zx_status_t Create(fs::ReadTxn* txn, std::unique_ptr<AllocatorStorage> storage,
+  static zx_status_t Create(fs::BufferedOperationsBuilder* builder,
+                            std::unique_ptr<AllocatorStorage> storage,
                             std::unique_ptr<Allocator>* out);
 
   // Return the number of total available elements, after taking reservations into account.
@@ -127,7 +129,7 @@ class Allocator {
   Allocator(std::unique_ptr<AllocatorStorage> storage)
       : reserved_(0), first_free_(0), storage_(std::move(storage)) {}
 
-  zx_status_t LoadStorage(fs::ReadTxn* txn) FS_TA_EXCLUDES(lock_);
+  zx_status_t LoadStorage(fs::BufferedOperationsBuilder* builder) FS_TA_EXCLUDES(lock_);
 
   // See |GetAvailable()|.
   size_t GetAvailableLocked() const FS_TA_REQUIRES(lock_);

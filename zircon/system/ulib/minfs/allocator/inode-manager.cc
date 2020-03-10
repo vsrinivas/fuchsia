@@ -8,13 +8,38 @@
 
 #include <memory>
 
+#include <storage/buffer/block_buffer.h>
+
 namespace minfs {
+
+namespace {
+
+// Trivial BlockBuffer that doesn't own the underlying buffer.
+// TODO(47947): Remove this.
+class UnownedBuffer : public storage::BlockBuffer {
+ public:
+  UnownedBuffer(vmoid_t vmoid) : vmoid_(vmoid) {}
+  ~UnownedBuffer() {}
+
+  // BlockBuffer interface:
+  size_t capacity() const final { return 0; }
+  uint32_t BlockSize() const final { return 0; }
+  vmoid_t vmoid() const final { return vmoid_; }
+  void* Data(size_t index) final { return nullptr; }
+  const void* Data(size_t index) const final { return nullptr; }
+
+ private:
+  vmoid_t vmoid_;
+};
+
+}  // namespace
 
 InodeManager::InodeManager(blk_t start_block) : start_block_(start_block) {}
 
 zx_status_t InodeManager::Create(block_client::BlockDevice* device, SuperblockManager* sb,
-                                 fs::ReadTxn* txn, AllocatorMetadata metadata, blk_t start_block,
-                                 size_t inodes, std::unique_ptr<InodeManager>* out) {
+                                 fs::BufferedOperationsBuilder* builder, AllocatorMetadata metadata,
+                                 blk_t start_block, size_t inodes,
+                                 std::unique_ptr<InodeManager>* out) {
   auto mgr = std::unique_ptr<InodeManager>(new InodeManager(start_block));
   InodeManager* mgr_raw = mgr.get();
 
@@ -24,7 +49,7 @@ zx_status_t InodeManager::Create(block_client::BlockDevice* device, SuperblockMa
   std::unique_ptr<PersistentStorage> storage(
       new PersistentStorage(device, sb, kMinfsInodeSize, std::move(grow_cb), std::move(metadata)));
 
-  if ((status = Allocator::Create(txn, std::move(storage), &mgr->inode_allocator_)) != ZX_OK) {
+  if ((status = Allocator::Create(builder, std::move(storage), &mgr->inode_allocator_)) != ZX_OK) {
     return status;
   }
 
@@ -40,7 +65,16 @@ zx_status_t InodeManager::Create(block_client::BlockDevice* device, SuperblockMa
   if (status != ZX_OK) {
     return status;
   }
-  txn->Enqueue(vmoid.id, 0, start_block, inoblks);
+
+  storage::Operation operation {
+      .type = storage::OperationType::kRead,
+      .vmo_offset = 0,
+      .dev_offset = start_block,
+      .length = inoblks,
+  };
+
+  UnownedBuffer buffer(vmoid.id);
+  builder->Add(operation, &buffer);
 
   *out = std::move(mgr);
   return ZX_OK;

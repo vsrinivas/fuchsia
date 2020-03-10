@@ -32,7 +32,7 @@ class FakeStorage : public AllocatorStorage {
   }
 #endif
 
-  void Load(fs::ReadTxn* txn, ReadData data) final {}
+  void Load(fs::BufferedOperationsBuilder* builder, storage::BlockBuffer* data) final {}
 
   zx_status_t Extend(PendingWork* transaction, WriteData data, GrowMapCallback grow_map) final {
     return ZX_ERR_NO_SPACE;

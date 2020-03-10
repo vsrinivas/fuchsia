@@ -10,7 +10,9 @@
 
 #include <fbl/function.h>
 #include <fbl/macros.h>
+#include <fs/transaction/buffered_operations_builder.h>
 #include <minfs/superblock.h>
+#include <storage/operation/operation.h>
 
 #ifdef __Fuchsia__
 #include <block-client/cpp/block-device.h>
@@ -34,8 +36,14 @@ class AllocatorStorage {
   virtual zx_status_t AttachVmo(const zx::vmo& vmo, fuchsia_hardware_block_VmoId* vmoid) = 0;
 #endif
 
-  // Loads data from disk into |data| using |txn|.
-  virtual void Load(fs::ReadTxn* txn, ReadData data) = 0;
+  // Loads data from disk into |data| using |builder|.
+  // The implementation of this class is expected to use the builder to complete
+  // the  request, which means that it should provide the type of data expected
+  // by the builder. Specifically, all that should be needed from |data| on host
+  // code is access to a raw pointer, and all that should be needed on Fuchsia
+  // code is the vmoid that identifies the buffer.
+  // For more details consult the BufferedOperationsBuilder documentation.
+  virtual void Load(fs::BufferedOperationsBuilder* builder, storage::BlockBuffer* data) = 0;
 
   // Extend the on-disk extent containing map_.
   virtual zx_status_t Extend(PendingWork* transaction, WriteData data,
@@ -86,7 +94,7 @@ class PersistentStorage : public AllocatorStorage {
   zx_status_t AttachVmo(const zx::vmo& vmo, fuchsia_hardware_block_VmoId* vmoid);
 #endif
 
-  void Load(fs::ReadTxn* txn, ReadData data);
+  void Load(fs::BufferedOperationsBuilder* builder, storage::BlockBuffer* data) final;
 
   zx_status_t Extend(PendingWork* transaction, WriteData data, GrowMapCallback grow_map) final;
 

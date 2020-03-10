@@ -19,8 +19,14 @@ blk_t BitmapBlocksForSizeImpl(size_t size) {
 
 uint32_t AllocatorStorage::PoolBlocks() const { return BitmapBlocksForSizeImpl(PoolTotal()); }
 
-void PersistentStorage::Load(fs::ReadTxn* read_transaction, ReadData data) {
-  read_transaction->Enqueue(data, 0, metadata_.MetadataStartBlock(), PoolBlocks());
+void PersistentStorage::Load(fs::BufferedOperationsBuilder* builder, storage::BlockBuffer* data) {
+  storage::Operation operation {
+      .type = storage::OperationType::kRead,
+      .vmo_offset = 0,
+      .dev_offset = metadata_.MetadataStartBlock(),
+      .length = PoolBlocks(),
+  };
+  builder->Add(operation, data);
 }
 
 void PersistentStorage::PersistRange(PendingWork* transaction, WriteData data, size_t index,

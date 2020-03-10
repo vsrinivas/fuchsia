@@ -11,8 +11,31 @@
 #include <utility>
 
 #include <bitmap/raw-bitmap.h>
+#include <storage/buffer/block_buffer.h>
 
 namespace minfs {
+
+namespace {
+
+// Trivial BlockBuffer that doesn't own the underlying buffer.
+// TODO(47947): Remove this.
+class UnownedBuffer : public storage::BlockBuffer {
+ public:
+  UnownedBuffer(vmoid_t vmoid) : vmoid_(vmoid) {}
+  ~UnownedBuffer() {}
+
+  // BlockBuffer interface:
+  size_t capacity() const final { return 0; }
+  uint32_t BlockSize() const final { return 0; }
+  vmoid_t vmoid() const final { return vmoid_; }
+  void* Data(size_t index) final { return nullptr; }
+  const void* Data(size_t index) const final { return nullptr; }
+
+ private:
+  vmoid_t vmoid_;
+};
+
+}  // namespace
 
 Allocator::~Allocator() {
   AutoLock lock(&lock_);
@@ -20,14 +43,15 @@ Allocator::~Allocator() {
   ZX_DEBUG_ASSERT(swap_out_.num_bits() == 0);
 }
 
-zx_status_t Allocator::LoadStorage(fs::ReadTxn* txn) {
+zx_status_t Allocator::LoadStorage(fs::BufferedOperationsBuilder* builder) {
   AutoLock lock(&lock_);
-  fuchsia_hardware_block_VmoId map_vmoid;
-  zx_status_t status = storage_->AttachVmo(map_.StorageUnsafe()->GetVmo(), &map_vmoid);
+  fuchsia_hardware_block_VmoId vmoid;
+  zx_status_t status = storage_->AttachVmo(map_.StorageUnsafe()->GetVmo(), &vmoid);
   if (status != ZX_OK) {
     return status;
   }
-  storage_->Load(txn, map_vmoid.id);
+  UnownedBuffer buffer(vmoid.id);
+  storage_->Load(builder, &buffer);
   return ZX_OK;
 }
 
