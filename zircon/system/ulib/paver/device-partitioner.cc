@@ -34,6 +34,7 @@
 #include <fbl/function.h>
 #include <fbl/span.h>
 #include <fbl/string_buffer.h>
+#include <fbl/string_printf.h>
 #include <fs-management/fvm.h>
 #include <gpt/cros.h>
 #include <soc/aml-common/aml-guid.h>
@@ -79,6 +80,12 @@ bool IsFvmPartition(const gpt_partition_t& part) {
 bool IsGigabootPartition(const gpt_partition_t& part) {
   const uint8_t efi_type[GPT_GUID_LEN] = GUID_EFI_VALUE;
   return memcmp(part.type, efi_type, GPT_GUID_LEN) == 0;
+}
+
+// Returns true if the spec partition is Zircon A/B/R.
+bool IsZirconPartitionSpec(const PartitionSpec& spec) {
+  return spec.partition == Partition::kZirconA || spec.partition == Partition::kZirconB ||
+         spec.partition == Partition::kZirconR;
 }
 
 constexpr size_t ReservedHeaderBlocks(size_t blk_size) {
@@ -437,6 +444,10 @@ zx_status_t CrosPartitionType(Partition type, uint8_t guid[GPT_GUID_LEN]) {
   }
 }
 
+bool SpecMatches(const PartitionSpec& a, const PartitionSpec& b) {
+  return a.partition == b.partition && a.content_type == b.content_type;
+}
+
 }  // namespace
 
 const char* PartitionName(Partition type) {
@@ -462,6 +473,14 @@ const char* PartitionName(Partition type) {
     default:
       return "Unknown";
   }
+}
+
+fbl::String PartitionSpec::ToString() const {
+  if (content_type.data() == nullptr) {
+    return PartitionName(partition);
+  }
+  return fbl::StringPrintf("%s (%.*s)", PartitionName(partition),
+                           static_cast<int>(content_type.size()), content_type.data());
 }
 
 std::unique_ptr<DevicePartitioner> DevicePartitioner::Create(fbl::unique_fd devfs_root,
@@ -915,12 +934,37 @@ zx_status_t EfiDevicePartitioner::Initialize(fbl::unique_fd devfs_root, Arch arc
   return ZX_OK;
 }
 
+bool EfiDevicePartitioner::SupportsPartition(const PartitionSpec& spec) const {
+  const PartitionSpec supported_specs[] = {PartitionSpec(paver::Partition::kBootloader),
+                                           PartitionSpec(paver::Partition::kZirconA),
+                                           PartitionSpec(paver::Partition::kZirconB),
+                                           PartitionSpec(paver::Partition::kZirconR),
+                                           PartitionSpec(paver::Partition::kVbMetaA),
+                                           PartitionSpec(paver::Partition::kVbMetaB),
+                                           PartitionSpec(paver::Partition::kVbMetaR),
+                                           PartitionSpec(paver::Partition::kAbrMeta),
+                                           PartitionSpec(paver::Partition::kFuchsiaVolumeManager)};
+
+  for (const auto& supported : supported_specs) {
+    if (SpecMatches(spec, supported)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 zx_status_t EfiDevicePartitioner::AddPartition(
-    Partition partition_type, std::unique_ptr<PartitionClient>* out_partition) const {
+    const PartitionSpec& spec, std::unique_ptr<PartitionClient>* out_partition) const {
+  if (!SupportsPartition(spec)) {
+    ERROR("Unsupported partition %s\n", spec.ToString().c_str());
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   // NOTE: If you update the minimum sizes of partitions, please update the
   // EfiDevicePartitionerTests.InitPartitionTables test.
   size_t minimum_size_bytes = 0;
-  switch (partition_type) {
+  switch (spec.partition) {
     case Partition::kBootloader:
       minimum_size_bytes = 16 * kMebibyte;
       break;
@@ -953,9 +997,9 @@ zx_status_t EfiDevicePartitioner::AddPartition(
       return ZX_ERR_NOT_SUPPORTED;
   }
 
-  const char* name = PartitionName(partition_type);
+  const char* name = PartitionName(spec.partition);
   uint8_t type[GPT_GUID_LEN];
-  zx_status_t status = GptPartitionType(partition_type, type);
+  zx_status_t status = GptPartitionType(spec.partition, type);
   if (status != ZX_OK) {
     return status;
   }
@@ -964,8 +1008,13 @@ zx_status_t EfiDevicePartitioner::AddPartition(
 }
 
 zx_status_t EfiDevicePartitioner::FindPartition(
-    Partition partition_type, std::unique_ptr<PartitionClient>* out_partition) const {
-  switch (partition_type) {
+    const PartitionSpec& spec, std::unique_ptr<PartitionClient>* out_partition) const {
+  if (!SupportsPartition(spec)) {
+    ERROR("Unsupported partition %s\n", spec.ToString().c_str());
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  switch (spec.partition) {
     case Partition::kBootloader: {
       return gpt_->FindPartition(IsGigabootPartition, out_partition);
     }
@@ -976,9 +1025,9 @@ zx_status_t EfiDevicePartitioner::FindPartition(
     case Partition::kVbMetaB:
     case Partition::kVbMetaR:
     case Partition::kAbrMeta: {
-      const auto filter = [partition_type](const gpt_partition_t& part) {
+      const auto filter = [&spec](const gpt_partition_t& part) {
         uint8_t type[GPT_GUID_LEN];
-        return GptPartitionType(partition_type, type) == ZX_OK && FilterByType(part, type);
+        return GptPartitionType(spec.partition, type) == ZX_OK && FilterByType(part, type);
       };
       return gpt_->FindPartition(filter, out_partition);
     }
@@ -990,7 +1039,12 @@ zx_status_t EfiDevicePartitioner::FindPartition(
   }
 }
 
-zx_status_t EfiDevicePartitioner::FinalizePartition(Partition partition_type) const {
+zx_status_t EfiDevicePartitioner::FinalizePartition(const PartitionSpec& spec) const {
+  if (!SupportsPartition(spec)) {
+    ERROR("Unsupported partition %s\n", spec.ToString().c_str());
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   return gpt_->GetGpt()->Sync();
 }
 
@@ -1027,9 +1081,9 @@ zx_status_t EfiDevicePartitioner::InitPartitionTables() const {
     return status;
   }
 
-  // Add partitions.
+  // Add partitions with default content_type.
   for (auto type : partitions_to_add) {
-    status = AddPartition(type, nullptr);
+    status = AddPartition(PartitionSpec(type), nullptr);
     if (status != ZX_OK) {
       ERROR("Failed to create partition \"%s\": %s\n", PartitionName(type),
             zx_status_get_string(status));
@@ -1045,16 +1099,18 @@ zx_status_t EfiDevicePartitioner::WipePartitionTables() const {
   return gpt_->WipePartitionTables();
 }
 
-zx_status_t EfiDevicePartitioner::ValidatePayload(Partition type,
+zx_status_t EfiDevicePartitioner::ValidatePayload(const PartitionSpec& spec,
                                                   fbl::Span<const uint8_t> data) const {
-  switch (type) {
-    case Partition::kZirconA:
-    case Partition::kZirconB:
-    case Partition::kZirconR:
-      return IsValidKernelZbi(arch_, data) ? ZX_OK : ZX_ERR_BAD_STATE;
-    default:
-      return ZX_OK;
+  if (!SupportsPartition(spec)) {
+    ERROR("Unsupported partition %s\n", spec.ToString().c_str());
+    return ZX_ERR_NOT_SUPPORTED;
   }
+
+  if (IsZirconPartitionSpec(spec)) {
+    return IsValidKernelZbi(arch_, data) ? ZX_OK : ZX_ERR_BAD_STATE;
+  }
+
+  return ZX_OK;
 }
 
 /*====================================================*
@@ -1105,12 +1161,32 @@ zx_status_t CrosDevicePartitioner::Initialize(fbl::unique_fd devfs_root, Arch ar
   return ZX_OK;
 }
 
+bool CrosDevicePartitioner::SupportsPartition(const PartitionSpec& spec) const {
+  const PartitionSpec supported_specs[] = {PartitionSpec(paver::Partition::kZirconA),
+                                           PartitionSpec(paver::Partition::kZirconB),
+                                           PartitionSpec(paver::Partition::kZirconR),
+                                           PartitionSpec(paver::Partition::kFuchsiaVolumeManager)};
+
+  for (const auto& supported : supported_specs) {
+    if (SpecMatches(spec, supported)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 zx_status_t CrosDevicePartitioner::AddPartition(
-    Partition partition_type, std::unique_ptr<PartitionClient>* out_partition) const {
+    const PartitionSpec& spec, std::unique_ptr<PartitionClient>* out_partition) const {
+  if (!SupportsPartition(spec)) {
+    ERROR("Unsupported partition %s\n", spec.ToString().c_str());
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   // NOTE: If you update the minimum sizes of partitions, please update the
   // CrosDevicePartitionerTests.InitPartitionTables test.
   size_t minimum_size_bytes = 0;
-  switch (partition_type) {
+  switch (spec.partition) {
     case Partition::kZirconA:
       minimum_size_bytes = 64 * kMebibyte;
       break;
@@ -1130,9 +1206,9 @@ zx_status_t CrosDevicePartitioner::AddPartition(
       return ZX_ERR_NOT_SUPPORTED;
   }
 
-  const char* name = PartitionName(partition_type);
+  const char* name = PartitionName(spec.partition);
   uint8_t type[GPT_GUID_LEN];
-  zx_status_t status = CrosPartitionType(partition_type, type);
+  zx_status_t status = CrosPartitionType(spec.partition, type);
   if (status != ZX_OK) {
     return status;
   }
@@ -1141,15 +1217,20 @@ zx_status_t CrosDevicePartitioner::AddPartition(
 }
 
 zx_status_t CrosDevicePartitioner::FindPartition(
-    Partition partition_type, std::unique_ptr<PartitionClient>* out_partition) const {
-  switch (partition_type) {
+    const PartitionSpec& spec, std::unique_ptr<PartitionClient>* out_partition) const {
+  if (!SupportsPartition(spec)) {
+    ERROR("Unsupported partition %s\n", spec.ToString().c_str());
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  switch (spec.partition) {
     case Partition::kZirconA:
     case Partition::kZirconB:
     case Partition::kZirconR: {
-      const auto filter = [partition_type](const gpt_partition_t& part) {
-        const char* name = PartitionName(partition_type);
+      const auto filter = [&spec](const gpt_partition_t& part) {
+        const char* name = PartitionName(spec.partition);
         uint8_t type[GPT_GUID_LEN];
-        return CrosPartitionType(partition_type, type) == ZX_OK &&
+        return CrosPartitionType(spec.partition, type) == ZX_OK &&
                FilterByTypeAndName(part, type, name);
       };
       return gpt_->FindPartition(filter, out_partition);
@@ -1162,9 +1243,14 @@ zx_status_t CrosDevicePartitioner::FindPartition(
   }
 }
 
-zx_status_t CrosDevicePartitioner::FinalizePartition(Partition partition_type) const {
+zx_status_t CrosDevicePartitioner::FinalizePartition(const PartitionSpec& spec) const {
+  if (!SupportsPartition(spec)) {
+    ERROR("Unsupported partition %s\n", spec.ToString().c_str());
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   // Special partition finalization is only necessary for Zircon partitions.
-  if (partition_type != Partition::kZirconA) {
+  if (spec.partition != Partition::kZirconA) {
     return ZX_OK;
   }
 
@@ -1256,17 +1342,17 @@ zx_status_t CrosDevicePartitioner::InitPartitionTables() const {
     return status;
   }
 
-  // Add partitions.
-  const std::array<Partition, 4> partitions_to_add = {
-      Partition::kZirconA,
-      Partition::kZirconB,
-      Partition::kZirconR,
-      Partition::kFuchsiaVolumeManager,
+  // Add partitions with default content type.
+  const std::array<PartitionSpec, 4> partitions_to_add = {
+      PartitionSpec(Partition::kZirconA),
+      PartitionSpec(Partition::kZirconB),
+      PartitionSpec(Partition::kZirconR),
+      PartitionSpec(Partition::kFuchsiaVolumeManager),
   };
-  for (auto type : partitions_to_add) {
-    status = AddPartition(type, nullptr);
+  for (auto spec : partitions_to_add) {
+    status = AddPartition(spec, nullptr);
     if (status != ZX_OK) {
-      ERROR("Failed to create partition \"%s\": %s\n", PartitionName(type),
+      ERROR("Failed to create partition \"%s\": %s\n", spec.ToString().c_str(),
             zx_status_get_string(status));
       return status;
     }
@@ -1280,16 +1366,18 @@ zx_status_t CrosDevicePartitioner::WipePartitionTables() const {
   return gpt_->WipePartitionTables();
 }
 
-zx_status_t CrosDevicePartitioner::ValidatePayload(Partition type,
+zx_status_t CrosDevicePartitioner::ValidatePayload(const PartitionSpec& spec,
                                                    fbl::Span<const uint8_t> data) const {
-  switch (type) {
-    case Partition::kZirconA:
-    case Partition::kZirconB:
-    case Partition::kZirconR:
-      return IsValidChromeOSKernel(data) ? ZX_OK : ZX_ERR_BAD_STATE;
-    default:
-      return ZX_OK;
+  if (!SupportsPartition(spec)) {
+    ERROR("Unsupported partition %s\n", spec.ToString().c_str());
+    return ZX_ERR_NOT_SUPPORTED;
   }
+
+  if (IsZirconPartitionSpec(spec)) {
+    return IsValidChromeOSKernel(data) ? ZX_OK : ZX_ERR_BAD_STATE;
+  }
+
+  return ZX_OK;
 }
 
 /*====================================================*
@@ -1306,17 +1394,42 @@ zx_status_t FixedDevicePartitioner::Initialize(fbl::unique_fd devfs_root,
   return ZX_OK;
 }
 
+bool FixedDevicePartitioner::SupportsPartition(const PartitionSpec& spec) const {
+  const PartitionSpec supported_specs[] = {PartitionSpec(paver::Partition::kBootloader),
+                                           PartitionSpec(paver::Partition::kZirconA),
+                                           PartitionSpec(paver::Partition::kZirconB),
+                                           PartitionSpec(paver::Partition::kZirconR),
+                                           PartitionSpec(paver::Partition::kVbMetaA),
+                                           PartitionSpec(paver::Partition::kVbMetaB),
+                                           PartitionSpec(paver::Partition::kVbMetaR),
+                                           PartitionSpec(paver::Partition::kAbrMeta),
+                                           PartitionSpec(paver::Partition::kFuchsiaVolumeManager)};
+
+  for (const auto& supported : supported_specs) {
+    if (SpecMatches(spec, supported)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 zx_status_t FixedDevicePartitioner::AddPartition(
-    Partition partition_type, std::unique_ptr<PartitionClient>* out_partition) const {
+    const PartitionSpec& spec, std::unique_ptr<PartitionClient>* out_partition) const {
   ERROR("Cannot add partitions to a fixed-map partition device\n");
   return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t FixedDevicePartitioner::FindPartition(
-    Partition partition_type, std::unique_ptr<PartitionClient>* out_partition) const {
+    const PartitionSpec& spec, std::unique_ptr<PartitionClient>* out_partition) const {
+  if (!SupportsPartition(spec)) {
+    ERROR("Unsupported partition %s\n", spec.ToString().c_str());
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   uint8_t type[GPT_GUID_LEN];
 
-  switch (partition_type) {
+  switch (spec.partition) {
     case Partition::kBootloader: {
       const uint8_t bootloader_type[GPT_GUID_LEN] = GUID_BOOTLOADER_VALUE;
       memcpy(type, bootloader_type, GPT_GUID_LEN);
@@ -1393,8 +1506,13 @@ zx_status_t FixedDevicePartitioner::InitPartitionTables() const { return ZX_ERR_
 
 zx_status_t FixedDevicePartitioner::WipePartitionTables() const { return ZX_ERR_NOT_SUPPORTED; }
 
-zx_status_t FixedDevicePartitioner::ValidatePayload(Partition type,
+zx_status_t FixedDevicePartitioner::ValidatePayload(const PartitionSpec& spec,
                                                     fbl::Span<const uint8_t> data) const {
+  if (!SupportsPartition(spec)) {
+    ERROR("Unsupported partition %s\n", spec.ToString().c_str());
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   return ZX_OK;
 }
 
@@ -1422,17 +1540,44 @@ zx_status_t SherlockPartitioner::Initialize(fbl::unique_fd devfs_root,
   return ZX_OK;
 }
 
+bool SherlockPartitioner::SupportsPartition(const PartitionSpec& spec) const {
+  // TODO(40854): add support for new bootloader content_type which will be
+  // written to the proper offset.
+  const PartitionSpec supported_specs[] = {PartitionSpec(paver::Partition::kBootloader),
+                                           PartitionSpec(paver::Partition::kZirconA),
+                                           PartitionSpec(paver::Partition::kZirconB),
+                                           PartitionSpec(paver::Partition::kZirconR),
+                                           PartitionSpec(paver::Partition::kVbMetaA),
+                                           PartitionSpec(paver::Partition::kVbMetaB),
+                                           PartitionSpec(paver::Partition::kVbMetaR),
+                                           PartitionSpec(paver::Partition::kAbrMeta),
+                                           PartitionSpec(paver::Partition::kFuchsiaVolumeManager)};
+
+  for (const auto& supported : supported_specs) {
+    if (SpecMatches(spec, supported)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 zx_status_t SherlockPartitioner::AddPartition(
-    Partition partition_type, std::unique_ptr<PartitionClient>* out_partition) const {
+    const PartitionSpec& spec, std::unique_ptr<PartitionClient>* out_partition) const {
   ERROR("Cannot add partitions to a sherlock device\n");
   return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t SherlockPartitioner::FindPartition(
-    Partition partition_type, std::unique_ptr<PartitionClient>* out_partition) const {
+    const PartitionSpec& spec, std::unique_ptr<PartitionClient>* out_partition) const {
+  if (!SupportsPartition(spec)) {
+    ERROR("Unsupported partition %s\n", spec.ToString().c_str());
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   uint8_t type[GPT_GUID_LEN];
 
-  switch (partition_type) {
+  switch (spec.partition) {
     case Partition::kBootloader: {
       const uint8_t boot0_type[GPT_GUID_LEN] = GUID_EMMC_BOOT1_VALUE;
       zx::channel chan;
@@ -1633,8 +1778,13 @@ zx_status_t SherlockPartitioner::InitPartitionTables() const {
 
 zx_status_t SherlockPartitioner::WipePartitionTables() const { return ZX_ERR_NOT_SUPPORTED; }
 
-zx_status_t SherlockPartitioner::ValidatePayload(Partition type,
+zx_status_t SherlockPartitioner::ValidatePayload(const PartitionSpec& spec,
                                                  fbl::Span<const uint8_t> data) const {
+  if (!SupportsPartition(spec)) {
+    ERROR("Unsupported partition %s\n", spec.ToString().c_str());
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   return ZX_OK;
 }
 
@@ -1744,15 +1894,42 @@ zx_status_t AstroPartitioner::Initialize(fbl::unique_fd devfs_root,
   return ZX_OK;
 }
 
-zx_status_t AstroPartitioner::AddPartition(Partition partition_type,
+bool AstroPartitioner::SupportsPartition(const PartitionSpec& spec) const {
+  // TODO(35747): add support for new bootloader content_type to differentiate
+  // between BL2 and TPL images.
+  const PartitionSpec supported_specs[] = {PartitionSpec(paver::Partition::kBootloader),
+                                           PartitionSpec(paver::Partition::kZirconA),
+                                           PartitionSpec(paver::Partition::kZirconB),
+                                           PartitionSpec(paver::Partition::kZirconR),
+                                           PartitionSpec(paver::Partition::kVbMetaA),
+                                           PartitionSpec(paver::Partition::kVbMetaB),
+                                           PartitionSpec(paver::Partition::kVbMetaR),
+                                           PartitionSpec(paver::Partition::kAbrMeta),
+                                           PartitionSpec(paver::Partition::kFuchsiaVolumeManager)};
+
+  for (const auto& supported : supported_specs) {
+    if (SpecMatches(spec, supported)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+zx_status_t AstroPartitioner::AddPartition(const PartitionSpec& spec,
                                            std::unique_ptr<PartitionClient>* out_partition) const {
   ERROR("Cannot add partitions to an astro.\n");
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t AstroPartitioner::FindPartition(Partition partition_type,
+zx_status_t AstroPartitioner::FindPartition(const PartitionSpec& spec,
                                             std::unique_ptr<PartitionClient>* out_partition) const {
-  switch (partition_type) {
+  if (!SupportsPartition(spec)) {
+    ERROR("Unsupported partition %s\n", spec.ToString().c_str());
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  switch (spec.partition) {
     case Partition::kBootloader: {
       const uint8_t bl2_type[GPT_GUID_LEN] = GUID_BL2_VALUE;
       std::unique_ptr<PartitionClient> bl2_skip_block;
@@ -1789,7 +1966,7 @@ zx_status_t AstroPartitioner::FindPartition(Partition partition_type,
     case Partition::kVbMetaR:
     case Partition::kAbrMeta: {
       const auto type = [&]() {
-        switch (partition_type) {
+        switch (spec.partition) {
           case Partition::kVbMetaA:
             return sysconfig::SyncClient::PartitionType::kVerifiedBootMetadataA;
           case Partition::kVbMetaB:
@@ -1826,7 +2003,13 @@ zx_status_t AstroPartitioner::InitPartitionTables() const { return ZX_ERR_NOT_SU
 
 zx_status_t AstroPartitioner::WipePartitionTables() const { return ZX_ERR_NOT_SUPPORTED; }
 
-zx_status_t AstroPartitioner::ValidatePayload(Partition type, fbl::Span<const uint8_t> data) const {
+zx_status_t AstroPartitioner::ValidatePayload(const PartitionSpec& spec,
+                                              fbl::Span<const uint8_t> data) const {
+  if (!SupportsPartition(spec)) {
+    ERROR("Unsupported partition %s\n", spec.ToString().c_str());
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   return ZX_OK;
 }
 
@@ -1844,15 +2027,35 @@ zx_status_t As370Partitioner::Initialize(fbl::unique_fd devfs_root,
   return ZX_OK;
 }
 
-zx_status_t As370Partitioner::AddPartition(Partition partition_type,
+bool As370Partitioner::SupportsPartition(const PartitionSpec& spec) const {
+  const PartitionSpec supported_specs[] = {
+      PartitionSpec(paver::Partition::kBootloader), PartitionSpec(paver::Partition::kZirconA),
+      PartitionSpec(paver::Partition::kZirconB), PartitionSpec(paver::Partition::kZirconR),
+      PartitionSpec(paver::Partition::kFuchsiaVolumeManager)};
+
+  for (const auto& supported : supported_specs) {
+    if (SpecMatches(spec, supported)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+zx_status_t As370Partitioner::AddPartition(const PartitionSpec& spec,
                                            std::unique_ptr<PartitionClient>* out_partition) const {
   ERROR("Cannot add partitions to an as370.\n");
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t As370Partitioner::FindPartition(Partition partition_type,
+zx_status_t As370Partitioner::FindPartition(const PartitionSpec& spec,
                                             std::unique_ptr<PartitionClient>* out_partition) const {
-  switch (partition_type) {
+  if (!SupportsPartition(spec)) {
+    ERROR("Unsupported partition %s\n", spec.ToString().c_str());
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  switch (spec.partition) {
     case Partition::kBootloader: {
       const uint8_t bootloader_type[GPT_GUID_LEN] = GUID_BOOTLOADER_VALUE;
       return skip_block_->FindPartition(bootloader_type, out_partition);
@@ -1884,7 +2087,13 @@ zx_status_t As370Partitioner::InitPartitionTables() const { return ZX_ERR_NOT_SU
 
 zx_status_t As370Partitioner::WipePartitionTables() const { return ZX_ERR_NOT_SUPPORTED; }
 
-zx_status_t As370Partitioner::ValidatePayload(Partition type, fbl::Span<const uint8_t> data) const {
+zx_status_t As370Partitioner::ValidatePayload(const PartitionSpec& spec,
+                                              fbl::Span<const uint8_t> data) const {
+  if (!SupportsPartition(spec)) {
+    ERROR("Unsupported partition %s\n", spec.ToString().c_str());
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   return ZX_OK;
 }
 

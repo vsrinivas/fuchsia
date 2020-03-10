@@ -11,6 +11,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <string_view>
+
 #include "device-partitioner.h"
 #include "partition-client.h"
 #include "pave-logging.h"
@@ -178,8 +180,11 @@ zx_status_t AstroClient::Create(fbl::unique_fd devfs_root, std::unique_ptr<abr::
     return status;
   }
 
+  // ABR metadata has no need of a content type since it's always local rather
+  // than provided in an update package, so just use the default content type.
   std::unique_ptr<paver::PartitionClient> partition;
-  if (zx_status_t status = partitioner->FindPartition(paver::Partition::kAbrMeta, &partition);
+  if (zx_status_t status =
+          partitioner->FindPartition(paver::PartitionSpec(paver::Partition::kAbrMeta), &partition);
       status != ZX_OK) {
     return status;
   }
@@ -195,8 +200,11 @@ zx_status_t SherlockClient::Create(fbl::unique_fd devfs_root, std::unique_ptr<ab
     return status;
   }
 
+  // ABR metadata has no need of a content type since it's always local rather
+  // than provided in an update package, so just use the default content type.
   std::unique_ptr<paver::PartitionClient> partition;
-  if (zx_status_t status = partitioner->FindPartition(paver::Partition::kAbrMeta, &partition);
+  if (zx_status_t status =
+          partitioner->FindPartition(paver::PartitionSpec(paver::Partition::kAbrMeta), &partition);
       status != ZX_OK) {
     return status;
   }

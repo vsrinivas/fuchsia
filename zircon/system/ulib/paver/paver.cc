@@ -22,6 +22,7 @@
 #include <zircon/syscalls.h>
 
 #include <memory>
+#include <string_view>
 #include <utility>
 
 #include <fbl/algorithm.h>
@@ -122,8 +123,9 @@ bool CheckIfSame(PartitionClient* partition, const zx::vmo& vmo, size_t payload_
 // volume will be created, without any associated children partitions.
 zx_status_t GetFvmPartition(const DevicePartitioner& partitioner,
                             std::unique_ptr<PartitionClient>* client) {
-  constexpr Partition partition = Partition::kFuchsiaVolumeManager;
-  zx_status_t status = partitioner.FindPartition(partition, client);
+  // FVM doesn't need content type support, use the default.
+  const PartitionSpec spec(Partition::kFuchsiaVolumeManager);
+  zx_status_t status = partitioner.FindPartition(spec, client);
   if (status != ZX_OK) {
     if (status != ZX_ERR_NOT_FOUND) {
       ERROR("Failure looking for FVM partition: %s\n", zx_status_get_string(status));
@@ -132,7 +134,7 @@ zx_status_t GetFvmPartition(const DevicePartitioner& partitioner,
 
     LOG("Could not find FVM Partition on device. Attemping to add new partition\n");
 
-    if ((status = partitioner.AddPartition(partition, client)) != ZX_OK) {
+    if ((status = partitioner.AddPartition(spec, client)) != ZX_OK) {
       ERROR("Failure creating FVM partition: %s\n", zx_status_get_string(status));
       return status;
     }
@@ -206,20 +208,20 @@ zx_status_t FormatFvm(const fbl::unique_fd& devfs_root, const DevicePartitioner&
 }
 
 // Reads an image from disk into a vmo.
-zx_status_t PartitionRead(const DevicePartitioner& partitioner, Partition partition_type,
+zx_status_t PartitionRead(const DevicePartitioner& partitioner, const PartitionSpec& spec,
                           zx::vmo* out_vmo, size_t* out_vmo_size) {
-  LOG("Reading partition \"%s\".\n", PartitionName(partition_type));
+  LOG("Reading partition \"%s\".\n", spec.ToString().c_str());
 
   std::unique_ptr<PartitionClient> partition;
-  if (zx_status_t status = partitioner.FindPartition(partition_type, &partition); status != ZX_OK) {
-    ERROR("Could not find \"%s\" Partition on device: %s\n", PartitionName(partition_type),
+  if (zx_status_t status = partitioner.FindPartition(spec, &partition); status != ZX_OK) {
+    ERROR("Could not find \"%s\" Partition on device: %s\n", spec.ToString().c_str(),
           zx_status_get_string(status));
     return status;
   }
 
   uint64_t partition_size;
   if (zx_status_t status = partition->GetPartitionSize(&partition_size); status != ZX_OK) {
-    ERROR("Error getting partition \"%s\" size: %s\n", PartitionName(partition_type),
+    ERROR("Error getting partition \"%s\" size: %s\n", spec.ToString().c_str(),
           zx_status_get_string(status));
     return status;
   }
@@ -227,14 +229,14 @@ zx_status_t PartitionRead(const DevicePartitioner& partitioner, Partition partit
   zx::vmo vmo;
   if (zx_status_t status = zx::vmo::create(fbl::round_up(partition_size, ZX_PAGE_SIZE), 0, &vmo);
       status != ZX_OK) {
-    ERROR("Error creating vmo for \"%s\": %s\n", PartitionName(partition_type),
+    ERROR("Error creating vmo for \"%s\": %s\n", spec.ToString().c_str(),
           zx_status_get_string(status));
     return status;
   }
 
   if (zx_status_t status = partition->Read(vmo, static_cast<size_t>(partition_size));
       status != ZX_OK) {
-    ERROR("Error writing partition data for \"%s\": %s\n", PartitionName(partition_type),
+    ERROR("Error writing partition data for \"%s\": %s\n", spec.ToString().c_str(),
           zx_status_get_string(status));
     return status;
   }
@@ -247,7 +249,7 @@ zx_status_t PartitionRead(const DevicePartitioner& partitioner, Partition partit
 
 zx_status_t ValidatePartitionPayload(const DevicePartitioner& partitioner,
                                      const zx::vmo& payload_vmo, size_t payload_size,
-                                     Partition partition_type) {
+                                     const PartitionSpec& spec) {
   fzl::VmoMapper payload_mapper;
   zx_status_t status = payload_mapper.Map(payload_vmo, 0, 0, ZX_VM_PERM_READ);
   if (status != ZX_OK) {
@@ -258,60 +260,58 @@ zx_status_t ValidatePartitionPayload(const DevicePartitioner& partitioner,
 
   auto payload =
       fbl::Span<const uint8_t>(static_cast<const uint8_t*>(payload_mapper.start()), payload_size);
-  return partitioner.ValidatePayload(partition_type, payload);
+  return partitioner.ValidatePayload(spec, payload);
 }
 
 // Paves an image onto the disk.
 zx_status_t PartitionPave(const DevicePartitioner& partitioner, zx::vmo payload_vmo,
-                          size_t payload_size, Partition partition_type) {
-  LOG("Paving partition \"%s\".\n", PartitionName(partition_type));
+                          size_t payload_size, const PartitionSpec& spec) {
+  LOG("Paving partition \"%s\".\n", spec.ToString().c_str());
 
   // Perform basic safety checking on the partition before we attempt to write it.
-  zx_status_t status =
-      ValidatePartitionPayload(partitioner, payload_vmo, payload_size, partition_type);
+  zx_status_t status = ValidatePartitionPayload(partitioner, payload_vmo, payload_size, spec);
   if (status != ZX_OK) {
-    ERROR("Failed to validate partition \"%s\": %s\n", PartitionName(partition_type),
+    ERROR("Failed to validate partition \"%s\": %s\n", spec.ToString().c_str(),
           zx_status_get_string(status));
     return status;
   }
 
   // Find or create the appropriate partition.
   std::unique_ptr<PartitionClient> partition;
-  if ((status = partitioner.FindPartition(partition_type, &partition)) != ZX_OK) {
+  if ((status = partitioner.FindPartition(spec, &partition)) != ZX_OK) {
     if (status != ZX_ERR_NOT_FOUND) {
-      ERROR("Failure looking for partition \"%s\": %s\n", PartitionName(partition_type),
+      ERROR("Failure looking for partition \"%s\": %s\n", spec.ToString().c_str(),
             zx_status_get_string(status));
       return status;
     }
 
     LOG("Could not find \"%s\" Partition on device. Attemping to add new partition\n",
-        PartitionName(partition_type));
+        spec.ToString().c_str());
 
-    if ((status = partitioner.AddPartition(partition_type, &partition)) != ZX_OK) {
-      ERROR("Failure creating partition \"%s\": %s\n", PartitionName(partition_type),
+    if ((status = partitioner.AddPartition(spec, &partition)) != ZX_OK) {
+      ERROR("Failure creating partition \"%s\": %s\n", spec.ToString().c_str(),
             zx_status_get_string(status));
       return status;
     }
   } else {
-    LOG("Partition \"%s\" already exists\n", PartitionName(partition_type));
+    LOG("Partition \"%s\" already exists\n", spec.ToString().c_str());
   }
 
   size_t block_size_bytes;
   if ((status = partition->GetBlockSize(&block_size_bytes)) != ZX_OK) {
-    ERROR("Couldn't get partition \"%s\" block size\n", PartitionName(partition_type));
+    ERROR("Couldn't get partition \"%s\" block size\n", spec.ToString().c_str());
     return status;
   }
 
   if (CheckIfSame(partition.get(), payload_vmo, payload_size, block_size_bytes)) {
-    LOG("Skipping write as partition \"%s\" contents match payload.\n",
-        PartitionName(partition_type));
+    LOG("Skipping write as partition \"%s\" contents match payload.\n", spec.ToString().c_str());
   } else {
     // Pad payload with 0s to make it block size aligned.
     if (payload_size % block_size_bytes != 0) {
       const size_t remaining_bytes = block_size_bytes - (payload_size % block_size_bytes);
       size_t vmo_size;
       if ((status = payload_vmo.get_size(&vmo_size)) != ZX_OK) {
-        ERROR("Couldn't get vmo size for \"%s\"\n", PartitionName(partition_type));
+        ERROR("Couldn't get vmo size for \"%s\"\n", spec.ToString().c_str());
         return status;
       }
       // Grow VMO if it's too small.
@@ -319,7 +319,7 @@ zx_status_t PartitionPave(const DevicePartitioner& partitioner, zx::vmo payload_
         const auto new_size = fbl::round_up(payload_size + remaining_bytes, ZX_PAGE_SIZE);
         status = payload_vmo.set_size(new_size);
         if (status != ZX_OK) {
-          ERROR("Couldn't grow vmo for \"%s\"\n", PartitionName(partition_type));
+          ERROR("Couldn't grow vmo for \"%s\"\n", spec.ToString().c_str());
           return status;
         }
       }
@@ -327,24 +327,24 @@ zx_status_t PartitionPave(const DevicePartitioner& partitioner, zx::vmo payload_
       memset(buffer.get(), 0, remaining_bytes);
       status = payload_vmo.write(buffer.get(), payload_size, remaining_bytes);
       if (status != ZX_OK) {
-        ERROR("Failed to write padding to vmo for \"%s\"\n", PartitionName(partition_type));
+        ERROR("Failed to write padding to vmo for \"%s\"\n", spec.ToString().c_str());
         return status;
       }
       payload_size += remaining_bytes;
     }
     if ((status = partition->Write(payload_vmo, payload_size)) != ZX_OK) {
-      ERROR("Error writing partition \"%s\" data: %s\n", PartitionName(partition_type),
+      ERROR("Error writing partition \"%s\" data: %s\n", spec.ToString().c_str(),
             zx_status_get_string(status));
       return status;
     }
   }
 
-  if ((status = partitioner.FinalizePartition(partition_type)) != ZX_OK) {
-    ERROR("Failed to finalize partition \"%s\"\n", PartitionName(partition_type));
+  if ((status = partitioner.FinalizePartition(spec)) != ZX_OK) {
+    ERROR("Failed to finalize partition \"%s\"\n", spec.ToString().c_str());
     return status;
   }
 
-  LOG("Completed paving partition \"%s\" successfully\n", PartitionName(partition_type));
+  LOG("Completed paving partition \"%s\" successfully\n", spec.ToString().c_str());
   return ZX_OK;
 }
 
@@ -444,13 +444,34 @@ void DataSink::WipeVolume(WipeVolumeCompleter::Sync completer) {
 
 zx_status_t DataSinkImpl::ReadAsset(Configuration configuration, Asset asset,
                                     ::llcpp::fuchsia::mem::Buffer* buf) {
-  return PartitionRead(*partitioner_, PartitionType(configuration, asset), &buf->vmo, &buf->size);
+  // No assets support content types yet, use the PartitionSpec default.
+  PartitionSpec spec = PartitionSpec(PartitionType(configuration, asset));
+
+  // Important: if we ever do pass a content type here, do NOT just return
+  // ZX_ERR_NOT_SUPPORTED directly - the caller needs to be able to distinguish
+  // between unknown asset types (which should be ignored) and actual errors
+  // that happen to return this same status code.
+  if (!partitioner_->SupportsPartition(spec)) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  return PartitionRead(*partitioner_, spec, &buf->vmo, &buf->size);
 }
 
 zx_status_t DataSinkImpl::WriteAsset(Configuration configuration, Asset asset,
                                      ::llcpp::fuchsia::mem::Buffer payload) {
-  return PartitionPave(*partitioner_, std::move(payload.vmo), payload.size,
-                       PartitionType(configuration, asset));
+  // No assets support content types yet, use the PartitionSpec default.
+  PartitionSpec spec = PartitionSpec(PartitionType(configuration, asset));
+
+  // Important: if we ever do pass a content type here, do NOT just return
+  // ZX_ERR_NOT_SUPPORTED directly - the caller needs to be able to distinguish
+  // between unknown asset types (which should be ignored) and actual errors
+  // that happen to return this same status code.
+  if (!partitioner_->SupportsPartition(spec)) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  return PartitionPave(*partitioner_, std::move(payload.vmo), payload.size, spec);
 }
 
 zx_status_t DataSinkImpl::WriteVolumes(zx::channel payload_stream) {
@@ -464,7 +485,18 @@ zx_status_t DataSinkImpl::WriteVolumes(zx::channel payload_stream) {
 }
 
 zx_status_t DataSinkImpl::WriteBootloader(::llcpp::fuchsia::mem::Buffer payload) {
-  return PartitionPave(*partitioner_, std::move(payload.vmo), payload.size, Partition::kBootloader);
+  // TODO(45606): add a contents_type parameter and pass it to PartitionSpec.
+  PartitionSpec spec = PartitionSpec(Partition::kBootloader);
+
+  // Important: if we ever do pass a content type here, do NOT just return
+  // ZX_ERR_NOT_SUPPORTED directly - the caller needs to be able to distinguish
+  // between unknown asset types (which should be ignored) and actual errors
+  // that happen to return this same status code.
+  if (!partitioner_->SupportsPartition(spec)) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  return PartitionPave(*partitioner_, std::move(payload.vmo), payload.size, spec);
 }
 
 zx_status_t DataSinkImpl::WriteDataFile(fidl::StringView filename,

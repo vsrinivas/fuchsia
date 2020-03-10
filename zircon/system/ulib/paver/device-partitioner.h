@@ -14,6 +14,7 @@
 
 #include <memory>
 #include <optional>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -50,6 +51,34 @@ enum class Arch {
   kArm64,
 };
 
+// Operations on a specific partition take two identifiers, a partition type
+// and a content type.
+//
+// The first is the conceptual partition type. This may not necessarily map 1:1
+// with on-disk partitions. For example, some devices have multiple bootloader
+// stages which live in different partitions on-disk but which would both have
+// type kBootloader.
+//
+// The second is a device-specific string identifying the contents the caller
+// wants to read/write. The backend uses this to decide which on-disk partitions
+// to use and where the content lives in them. The default content type is
+// null or empty.
+struct PartitionSpec {
+ public:
+  // Creates a spec with the given partition and default (null) content type.
+  explicit PartitionSpec(Partition partition) : PartitionSpec(partition, std::string_view()) {}
+
+  // Creates a spec with the given partition and content type.
+  PartitionSpec(Partition partition, std::string_view content_type)
+      : partition(partition), content_type(content_type) {}
+
+  // Returns a descriptive string for logging.
+  fbl::String ToString() const;
+
+  Partition partition;
+  std::string_view content_type;
+};
+
 // Abstract device partitioner definition.
 // This class defines common APIs for interacting with a device partitioner.
 class DevicePartitioner {
@@ -67,18 +96,26 @@ class DevicePartitioner {
   // Whether or not the Fuchsia Volume Manager exists within an FTL.
   virtual bool IsFvmWithinFtl() const = 0;
 
-  // Returns a partition of type |partition_type|, creating it.
+  // Checks if the device supports the given partition spec.
+  //
+  // This is the only function that will definitively say whether a spec is
+  // supported or not. Other partition functions may return ZX_ERR_NOT_SUPPORTED
+  // on unsupported spec, but they may also return it for other reasons such as
+  // a lower-level driver error. They also may return other errors even if given
+  // an unsupported spec if something else goes wong.
+  virtual bool SupportsPartition(const PartitionSpec& spec) const = 0;
+
+  // Returns a PartitionClient matching |spec|, creating the partition.
   // Assumes that the partition does not already exist.
-  virtual zx_status_t AddPartition(Partition partition_type,
+  virtual zx_status_t AddPartition(const PartitionSpec& spec,
                                    std::unique_ptr<PartitionClient>* out_partition) const = 0;
 
-  // Returns a partition of type |partition_type| if one exists.
-  virtual zx_status_t FindPartition(Partition partition_type,
+  // Returns a PartitionClient matching |spec| if one exists.
+  virtual zx_status_t FindPartition(const PartitionSpec& spec,
                                     std::unique_ptr<PartitionClient>* out_partition) const = 0;
 
-  // Finalizes the partition of type |partition_type| after it has been
-  // written.
-  virtual zx_status_t FinalizePartition(Partition partition_type) const = 0;
+  // Finalizes the PartitionClient matching |spec| after it has been written.
+  virtual zx_status_t FinalizePartition(const PartitionSpec& spec) const = 0;
 
   // Wipes Fuchsia Volume Manager partition.
   virtual zx_status_t WipeFvm() const = 0;
@@ -92,7 +129,7 @@ class DevicePartitioner {
   // Determine if the given data file is a valid image for this device.
   //
   // This analysis is best-effort only, providing only basic safety checks.
-  virtual zx_status_t ValidatePayload(Partition partition_type,
+  virtual zx_status_t ValidatePayload(const PartitionSpec& spec,
                                       fbl::Span<const uint8_t> data) const = 0;
 };
 
@@ -188,13 +225,15 @@ class EfiDevicePartitioner : public DevicePartitioner {
 
   bool IsFvmWithinFtl() const override { return false; }
 
-  zx_status_t AddPartition(Partition partition_type,
+  bool SupportsPartition(const PartitionSpec& spec) const override;
+
+  zx_status_t AddPartition(const PartitionSpec& spec,
                            std::unique_ptr<PartitionClient>* out_partition) const override;
 
-  zx_status_t FindPartition(Partition partition_type,
+  zx_status_t FindPartition(const PartitionSpec& spec,
                             std::unique_ptr<PartitionClient>* out_partition) const override;
 
-  zx_status_t FinalizePartition(Partition unused) const override;
+  zx_status_t FinalizePartition(const PartitionSpec& spec) const override;
 
   zx_status_t WipeFvm() const override;
 
@@ -202,7 +241,7 @@ class EfiDevicePartitioner : public DevicePartitioner {
 
   zx_status_t WipePartitionTables() const override;
 
-  zx_status_t ValidatePayload(Partition partition_type,
+  zx_status_t ValidatePayload(const PartitionSpec& spec,
                               fbl::Span<const uint8_t> data) const override;
 
  private:
@@ -222,13 +261,15 @@ class CrosDevicePartitioner : public DevicePartitioner {
 
   bool IsFvmWithinFtl() const override { return false; }
 
-  zx_status_t AddPartition(Partition partition_type,
+  bool SupportsPartition(const PartitionSpec& spec) const override;
+
+  zx_status_t AddPartition(const PartitionSpec& spec,
                            std::unique_ptr<PartitionClient>* out_partition) const override;
 
-  zx_status_t FindPartition(Partition partition_type,
+  zx_status_t FindPartition(const PartitionSpec& spec,
                             std::unique_ptr<PartitionClient>* out_partition) const override;
 
-  zx_status_t FinalizePartition(Partition unused) const override;
+  zx_status_t FinalizePartition(const PartitionSpec& spec) const override;
 
   zx_status_t WipeFvm() const override;
 
@@ -236,7 +277,7 @@ class CrosDevicePartitioner : public DevicePartitioner {
 
   zx_status_t WipePartitionTables() const override;
 
-  zx_status_t ValidatePayload(Partition partition_type,
+  zx_status_t ValidatePayload(const PartitionSpec& spec,
                               fbl::Span<const uint8_t> data) const override;
 
  private:
@@ -256,13 +297,15 @@ class FixedDevicePartitioner : public DevicePartitioner {
 
   bool IsFvmWithinFtl() const override { return false; }
 
-  zx_status_t AddPartition(Partition partition_type,
+  bool SupportsPartition(const PartitionSpec& spec) const override;
+
+  zx_status_t AddPartition(const PartitionSpec& spec,
                            std::unique_ptr<PartitionClient>* out_partition) const override;
 
-  zx_status_t FindPartition(Partition partition_type,
+  zx_status_t FindPartition(const PartitionSpec& spec,
                             std::unique_ptr<PartitionClient>* out_partition) const override;
 
-  zx_status_t FinalizePartition(Partition unused) const override { return ZX_OK; }
+  zx_status_t FinalizePartition(const PartitionSpec& spec) const override { return ZX_OK; }
 
   zx_status_t WipeFvm() const override;
 
@@ -270,7 +313,7 @@ class FixedDevicePartitioner : public DevicePartitioner {
 
   zx_status_t WipePartitionTables() const override;
 
-  zx_status_t ValidatePayload(Partition partition_type,
+  zx_status_t ValidatePayload(const PartitionSpec& spec,
                               fbl::Span<const uint8_t> data) const override;
 
  private:
@@ -308,13 +351,15 @@ class AstroPartitioner : public DevicePartitioner {
 
   bool IsFvmWithinFtl() const override { return true; }
 
-  zx_status_t AddPartition(Partition partition_type,
+  bool SupportsPartition(const PartitionSpec& spec) const override;
+
+  zx_status_t AddPartition(const PartitionSpec& spec,
                            std::unique_ptr<PartitionClient>* out_partition) const override;
 
-  zx_status_t FindPartition(Partition partition_type,
+  zx_status_t FindPartition(const PartitionSpec& spec,
                             std::unique_ptr<PartitionClient>* out_partition) const override;
 
-  zx_status_t FinalizePartition(Partition unused) const override { return ZX_OK; }
+  zx_status_t FinalizePartition(const PartitionSpec& spec) const override { return ZX_OK; }
 
   zx_status_t WipeFvm() const override;
 
@@ -322,7 +367,7 @@ class AstroPartitioner : public DevicePartitioner {
 
   zx_status_t WipePartitionTables() const override;
 
-  zx_status_t ValidatePayload(Partition partition_type,
+  zx_status_t ValidatePayload(const PartitionSpec& spec,
                               fbl::Span<const uint8_t> data) const override;
 
  private:
@@ -339,13 +384,15 @@ class As370Partitioner : public DevicePartitioner {
 
   bool IsFvmWithinFtl() const override { return true; }
 
-  zx_status_t AddPartition(Partition partition_type,
+  bool SupportsPartition(const PartitionSpec& spec) const override;
+
+  zx_status_t AddPartition(const PartitionSpec& spec,
                            std::unique_ptr<PartitionClient>* out_partition) const override;
 
-  zx_status_t FindPartition(Partition partition_type,
+  zx_status_t FindPartition(const PartitionSpec& spec,
                             std::unique_ptr<PartitionClient>* out_partition) const override;
 
-  zx_status_t FinalizePartition(Partition unused) const override { return ZX_OK; }
+  zx_status_t FinalizePartition(const PartitionSpec& spec) const override { return ZX_OK; }
 
   zx_status_t WipeFvm() const override;
 
@@ -353,7 +400,7 @@ class As370Partitioner : public DevicePartitioner {
 
   zx_status_t WipePartitionTables() const override;
 
-  zx_status_t ValidatePayload(Partition partition_type,
+  zx_status_t ValidatePayload(const PartitionSpec& spec,
                               fbl::Span<const uint8_t> data) const override;
 
  private:
@@ -371,13 +418,15 @@ class SherlockPartitioner : public DevicePartitioner {
 
   bool IsFvmWithinFtl() const override { return false; }
 
-  zx_status_t AddPartition(Partition partition_type,
+  bool SupportsPartition(const PartitionSpec& spec) const override;
+
+  zx_status_t AddPartition(const PartitionSpec& spec,
                            std::unique_ptr<PartitionClient>* out_partition) const override;
 
-  zx_status_t FindPartition(Partition partition_type,
+  zx_status_t FindPartition(const PartitionSpec& spec,
                             std::unique_ptr<PartitionClient>* out_partition) const override;
 
-  zx_status_t FinalizePartition(Partition unused) const override { return ZX_OK; }
+  zx_status_t FinalizePartition(const PartitionSpec& spec) const override { return ZX_OK; }
 
   zx_status_t WipeFvm() const override;
 
@@ -385,7 +434,7 @@ class SherlockPartitioner : public DevicePartitioner {
 
   zx_status_t WipePartitionTables() const override;
 
-  zx_status_t ValidatePayload(Partition partition_type,
+  zx_status_t ValidatePayload(const PartitionSpec& spec,
                               fbl::Span<const uint8_t> data) const override;
 
  private:
