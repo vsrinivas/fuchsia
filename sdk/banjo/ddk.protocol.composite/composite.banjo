@@ -10,9 +10,18 @@ using zx;
 [Layout = "ddk-protocol"]
 protocol Composite {
     /// Returns the number of components that can be returned by GetComponents().
+    /// TODO(fxb/47926): Remove this once its unused
     GetComponentCount() -> (uint32 count);
     /// Returns a list of all of the components of this device, in the order
     /// in which they were provided to device_add_composite().  The returned
     /// devices must not be used after the composite device is unbound.
+    /// TODO(fxb/47926): Remove this once its unused
     GetComponents() -> (vector<ddk.driver.ZxDevice?> components);
+
+    /// Returns the number of fragments that can be returned by GetFragments().
+    GetFragmentCount() -> (uint32 count);
+    /// Returns a list of all of the fragments of this device, in the order
+    /// in which they were provided to device_add_composite().  The returned
+    /// devices must not be used after the composite device is unbound.
+    GetFragments() -> (vector<ddk.driver.ZxDevice?> fragment);
 };
