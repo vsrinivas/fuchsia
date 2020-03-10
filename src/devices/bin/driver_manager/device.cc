@@ -970,7 +970,8 @@ void Device::GetMetadata(uint32_t key, GetMetadataCompleter::Sync completer) {
     return;
   }
   auto data_view = ::fidl::VectorView<uint8_t>(data, actual);
-  llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Response resp{.data = data_view};
+  llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Response resp{.data =
+                                                                             std::move(data_view)};
   response.set_response(fidl::unowned(&resp));
   completer.Reply(std::move(response));
 }
@@ -1055,7 +1056,7 @@ void Device::AddCompositeDevice(
     AddCompositeDeviceCompleter::Sync completer) {
   auto dev = fbl::RefPtr(this);
   fbl::StringPiece name(name_view.data(), name_view.size());
-  zx_status_t status = this->coordinator->AddCompositeDevice(dev, name, comp_desc);
+  zx_status_t status = this->coordinator->AddCompositeDevice(dev, name, std::move(comp_desc));
   llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Result response;
   if (status != ZX_OK) {
     response.set_err(fidl::unowned(&status));

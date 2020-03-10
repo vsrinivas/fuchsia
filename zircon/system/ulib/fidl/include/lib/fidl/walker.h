@@ -21,6 +21,8 @@ namespace fidl {
 
 namespace internal {
 
+constexpr uint64_t kVectorViewOwnershipMask = uint64_t(1) << 63;
+
 // Some assumptions about data type layout.
 static_assert(offsetof(fidl_string_t, size) == 0u, "fidl_string_t layout");
 static_assert(offsetof(fidl_string_t, data) == 8u, "fidl_string_t layout");
@@ -834,13 +836,17 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
       }
       case Frame::kStateVector: {
         auto vector_ptr = PtrTo<fidl_vector_t>(frame->position);
+        // The MSB of the count is reserved for an ownership bit used by fidl::VectorView.
+        // fidl::VectorView's count would be ideally used in place of the direct bit masking
+        // here, but because of build dependencies this is currently not possible.
+        const uint64_t count = vector_ptr->count & ~kVectorViewOwnershipMask;
         if (vector_ptr->data == nullptr) {
           if (!frame->vector_state.nullable &&
               !VisitorImpl::kAllowNonNullableCollectionsToBeAbsent) {
             visitor.OnError("non-nullable vector is absent");
             FIDL_STATUS_GUARD(Status::kConstraintViolationError);
           }
-          if (vector_ptr->count == 0) {
+          if (count == 0) {
             if (frame->vector_state.nullable ||
                 !VisitorImpl::kAllowNonNullableCollectionsToBeAbsent) {
               Pop();
@@ -851,12 +857,12 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
             FIDL_STATUS_GUARD(Status::kConstraintViolationError);
           }
         }
-        if (vector_ptr->count > frame->vector_state.max_count) {
+        if (count > frame->vector_state.max_count) {
           visitor.OnError("message tried to access too large of a bounded vector");
           FIDL_STATUS_GUARD(Status::kConstraintViolationError);
         }
         uint32_t size;
-        if (mul_overflow(vector_ptr->count, frame->vector_state.element_size, &size)) {
+        if (mul_overflow(count, frame->vector_state.element_size, &size)) {
           visitor.OnError("integer overflow calculating vector size");
           return;
         }

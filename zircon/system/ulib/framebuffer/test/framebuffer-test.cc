@@ -268,8 +268,8 @@ void SendInitialDisplay(const zx::channel& server_channel, fhd::Mode* mode, uint
   fidl::VectorView<fhd::Info> added(&info, 1);
   fidl::VectorView<uint64_t> removed;
 
-  ASSERT_OK(fhd::Controller::SendOnDisplaysChangedEvent(zx::unowned_channel(server_channel), added,
-                                                        removed));
+  ASSERT_OK(fhd::Controller::SendOnDisplaysChangedEvent(zx::unowned_channel(server_channel),
+                                                        std::move(added), std::move(removed)));
 }
 
 void TestDisplayStride(bool ram_domain) {

@@ -28,7 +28,7 @@ void InputReportInjectInstance::SendInputReports(
     return;
   }
 
-  child_->ReceiveInput(reports);
+  child_->ReceiveInput(std::move(reports));
   completer.ReplySuccess();
 }
 

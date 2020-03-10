@@ -70,7 +70,7 @@ static_assert(sizeof(fidl::unowned_ptr<void>) == sizeof(void*),
 // The unowned helper avoids this in certain cases, making user code
 // more concise.
 template <typename T>
-unowned_ptr<T> unowned(T* ptr) {
+unowned_ptr<typename std::remove_extent_t<T>> unowned(T* ptr) {
   return unowned_ptr<T>(ptr);
 }
 

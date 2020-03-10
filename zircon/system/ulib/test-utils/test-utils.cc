@@ -259,7 +259,7 @@ springboard_t* tu_launch_init(zx_handle_t job, const char* name, int argc, const
                                           strlen(argv[i]));
     }
     fidl::VectorView<fidl::VectorView<uint8_t>> args(data, argc);
-    fprocess::Launcher::ResultOf::AddArgs result = launcher.AddArgs(args);
+    fprocess::Launcher::ResultOf::AddArgs result = launcher.AddArgs(std::move(args));
     tu_check("sending arguments", result.status());
   }
 
@@ -272,7 +272,7 @@ springboard_t* tu_launch_init(zx_handle_t job, const char* name, int argc, const
                                           strlen(envp[i]));
     }
     fidl::VectorView<fidl::VectorView<uint8_t>> env(data, envc);
-    fprocess::Launcher::ResultOf::AddEnvirons result = launcher.AddEnvirons(env);
+    fprocess::Launcher::ResultOf::AddEnvirons result = launcher.AddEnvirons(std::move(env));
     tu_check("sending environment", result.status());
   }
 
@@ -290,7 +290,7 @@ springboard_t* tu_launch_init(zx_handle_t job, const char* name, int argc, const
       data[i].directory.reset(flat->handle[i]);
     }
     fidl::VectorView<fprocess::NameInfo> names(data, count);
-    fprocess::Launcher::ResultOf::AddNames result = launcher.AddNames(names);
+    fprocess::Launcher::ResultOf::AddNames result = launcher.AddNames(std::move(names));
     tu_check("sending names", result.status());
     free(flat);
   }
@@ -317,7 +317,7 @@ springboard_t* tu_launch_init(zx_handle_t job, const char* name, int argc, const
     handle_infos[index++].id = PA_LDSVC_LOADER;
 
     fidl::VectorView<fprocess::HandleInfo> handle_vector(handle_infos, handle_count);
-    fprocess::Launcher::ResultOf::AddHandles result = launcher.AddHandles(handle_vector);
+    fprocess::Launcher::ResultOf::AddHandles result = launcher.AddHandles(std::move(handle_vector));
     tu_check("sending handles", result.status());
   }
 

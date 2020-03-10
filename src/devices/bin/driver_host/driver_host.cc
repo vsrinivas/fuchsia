@@ -883,7 +883,7 @@ zx_status_t get_metadata(const fbl::RefPtr<zx_device_t>& dev, uint32_t type, voi
     }
     return call_status;
   }
-  auto r = response.Unwrap()->result.response();
+  auto r = std::move(response.Unwrap()->result.mutable_response());
   if (r.data.count() > buflen) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
@@ -1019,7 +1019,7 @@ zx_status_t device_add_composite(const fbl::RefPtr<zx_device_t>& dev, const char
         .data = ::fidl::VectorView(
             reinterpret_cast<uint8_t*>(const_cast<void*>(comp_desc->metadata_list[i].data)),
             comp_desc->metadata_list[i].length)};
-    metadata.push_back(meta);
+    metadata.emplace_back(std::move(meta));
   }
 
   std::vector<llcpp::fuchsia::device::manager::DeviceProperty> props = {};
@@ -1036,7 +1036,7 @@ zx_status_t device_add_composite(const fbl::RefPtr<zx_device_t>& dev, const char
   log_rpc(dev, "create-composite");
   static_assert(sizeof(comp_desc->props[0]) == sizeof(uint64_t));
   auto response = fuchsia::device::manager::Coordinator::Call::AddCompositeDevice(
-      zx::unowned_channel(rpc.get()), ::fidl::StringView(name, strlen(name)), comp_dev);
+      zx::unowned_channel(rpc.get()), ::fidl::StringView(name, strlen(name)), std::move(comp_dev));
   zx_status_t status = response.status();
   zx_status_t call_status = ZX_OK;
   if (status == ZX_OK && response.Unwrap()->result.is_err()) {

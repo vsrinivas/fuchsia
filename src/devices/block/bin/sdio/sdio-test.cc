@@ -4,11 +4,12 @@
 
 #include "sdio.h"
 
-#include <vector>
-
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl-async/cpp/bind.h>
+
+#include <vector>
+
 #include <zxtest/zxtest.h>
 
 namespace sdio {

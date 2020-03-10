@@ -21,7 +21,7 @@ void SpiChild::Receive(uint32_t size, ReceiveCompleter::Sync completer) {
   size_t actual;
   spi_.Exchange(cs_, nullptr, 0, rxdata.begin(), size, &actual);
   fidl::VectorView<uint8_t> rx_vector(rxdata.data(), size);
-  completer.Reply(ZX_OK, rx_vector);
+  completer.Reply(ZX_OK, std::move(rx_vector));
 }
 
 void SpiChild::Exchange(fidl::VectorView<uint8_t> txdata, ExchangeCompleter::Sync completer) {
@@ -31,7 +31,7 @@ void SpiChild::Exchange(fidl::VectorView<uint8_t> txdata, ExchangeCompleter::Syn
   size_t actual;
   spi_.Exchange(cs_, txdata.data(), size, rxdata.begin(), size, &actual);
   fidl::VectorView<uint8_t> rx_vector(rxdata.data(), size);
-  completer.Reply(ZX_OK, rx_vector);
+  completer.Reply(ZX_OK, std::move(rx_vector));
 }
 
 zx_status_t SpiChild::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {

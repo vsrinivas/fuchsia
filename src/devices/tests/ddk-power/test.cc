@@ -67,7 +67,8 @@ class PowerTestCase : public zxtest::Test {
     auto power_states = ::fidl::VectorView(states, sleep_state_count);
     auto perf_power_states = ::fidl::VectorView(perf_states, perf_state_count);
     auto response = TestDevice::Call::AddDeviceWithPowerArgs(
-        zx::unowned(child_device_handle), power_states, perf_power_states, add_invisible);
+        zx::unowned(child_device_handle), std::move(power_states), std::move(perf_power_states),
+        add_invisible);
     ASSERT_OK(response.status());
     zx_status_t call_status = ZX_OK;
     if (response->result.is_err()) {
@@ -95,7 +96,7 @@ TEST_F(PowerTestCase, InvalidDevicePowerCaps_Less) {
   states[0].is_supported = true;
   auto power_states = ::fidl::VectorView(states);
   auto response = TestDevice::Call::AddDeviceWithPowerArgs(
-      zx::unowned(child_device_handle), power_states,
+      zx::unowned(child_device_handle), std::move(power_states),
       ::fidl::VectorView<DevicePerformanceStateInfo>(), false);
   ASSERT_OK(response.status());
   zx_status_t call_status = ZX_OK;
@@ -113,7 +114,7 @@ TEST_F(PowerTestCase, InvalidDevicePowerCaps_More) {
   }
   auto power_states = ::fidl::VectorView(states);
   auto response = TestDevice::Call::AddDeviceWithPowerArgs(
-      zx::unowned(child_device_handle), power_states,
+      zx::unowned(child_device_handle), std::move(power_states),
       ::fidl::VectorView<DevicePerformanceStateInfo>(), false);
   ASSERT_OK(response.status());
   zx_status_t call_status = ZX_OK;
@@ -133,7 +134,7 @@ TEST_F(PowerTestCase, InvalidDevicePowerCaps_MissingRequired) {
   }
   auto power_states = ::fidl::VectorView(states);
   auto response = TestDevice::Call::AddDeviceWithPowerArgs(
-      zx::unowned(child_device_handle), power_states,
+      zx::unowned(child_device_handle), std::move(power_states),
       ::fidl::VectorView<DevicePerformanceStateInfo>(), false);
   ASSERT_OK(response.status());
   zx_status_t call_status = ZX_OK;
@@ -155,7 +156,7 @@ TEST_F(PowerTestCase, InvalidDevicePowerCaps_DuplicateCaps) {
   states[2].is_supported = true;
   auto power_states = ::fidl::VectorView(states);
   auto response = TestDevice::Call::AddDeviceWithPowerArgs(
-      zx::unowned(child_device_handle), power_states,
+      zx::unowned(child_device_handle), std::move(power_states),
       ::fidl::VectorView<DevicePerformanceStateInfo>(), false);
   ASSERT_OK(response.status());
   zx_status_t call_status = ZX_OK;
@@ -174,7 +175,7 @@ TEST_F(PowerTestCase, AddDevicePowerCaps_Success) {
   states[1].is_supported = true;
   auto power_states = ::fidl::VectorView(states);
   auto response = TestDevice::Call::AddDeviceWithPowerArgs(
-      zx::unowned(child_device_handle), power_states,
+      zx::unowned(child_device_handle), std::move(power_states),
       ::fidl::VectorView<DevicePerformanceStateInfo>(), false);
   ASSERT_OK(response.status());
   zx_status_t call_status = ZX_OK;
@@ -262,7 +263,8 @@ TEST_F(PowerTestCase, InvalidDevicePerformanceCaps_MissingRequired) {
   auto performance_states = ::fidl::VectorView(perf_states);
 
   auto response = TestDevice::Call::AddDeviceWithPowerArgs(zx::unowned(child_device_handle),
-                                                           power_states, performance_states, false);
+                                                           std::move(power_states),
+                                                           std::move(performance_states), false);
   ASSERT_OK(response.status());
   zx_status_t call_status = ZX_OK;
   if (response->result.is_err()) {
@@ -290,7 +292,8 @@ TEST_F(PowerTestCase, InvalidDevicePerformanceCaps_Duplicate) {
   auto performance_states = ::fidl::VectorView(perf_states);
 
   auto response = TestDevice::Call::AddDeviceWithPowerArgs(zx::unowned(child_device_handle),
-                                                           power_states, performance_states, false);
+                                                           std::move(power_states),
+                                                           std::move(performance_states), false);
   ASSERT_OK(response.status());
   zx_status_t call_status = ZX_OK;
   if (response->result.is_err()) {
@@ -315,7 +318,8 @@ TEST_F(PowerTestCase, InvalidDevicePerformanceCaps_More) {
   }
   auto performance_states = ::fidl::VectorView(perf_states);
   auto response = TestDevice::Call::AddDeviceWithPowerArgs(zx::unowned(child_device_handle),
-                                                           power_states, performance_states, false);
+                                                           std::move(power_states),
+                                                           std::move(performance_states), false);
   ASSERT_OK(response.status());
   zx_status_t call_status = ZX_OK;
   if (response->result.is_err()) {
@@ -335,7 +339,7 @@ TEST_F(PowerTestCase, AddDevicePerformanceCaps_NoCaps) {
 
   // This is the default case. By default, the devhost fills in the fully performance state.
   auto response = TestDevice::Call::AddDeviceWithPowerArgs(
-      zx::unowned(child_device_handle), power_states,
+      zx::unowned(child_device_handle), std::move(power_states),
       ::fidl::VectorView<DevicePerformanceStateInfo>(), false);
   ASSERT_OK(response.status());
   zx_status_t call_status = ZX_OK;
@@ -362,7 +366,8 @@ TEST_F(PowerTestCase, AddDevicePerformanceCaps_Success) {
   auto performance_states = ::fidl::VectorView(perf_states);
 
   auto response = TestDevice::Call::AddDeviceWithPowerArgs(zx::unowned(child_device_handle),
-                                                           power_states, performance_states, false);
+                                                           std::move(power_states),
+                                                           std::move(performance_states), false);
   ASSERT_OK(response.status());
   zx_status_t call_status = ZX_OK;
   if (response->result.is_err()) {

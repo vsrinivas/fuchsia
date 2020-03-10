@@ -874,7 +874,7 @@ zx_status_t Coordinator::AddCompositeDevice(
   }
 
   std::unique_ptr<CompositeDevice> new_device;
-  zx_status_t status = CompositeDevice::Create(name, comp_desc, &new_device);
+  zx_status_t status = CompositeDevice::Create(name, std::move(comp_desc), &new_device);
   if (status != ZX_OK) {
     return status;
   }

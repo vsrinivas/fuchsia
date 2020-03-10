@@ -202,7 +202,7 @@ void FakeOtRadioDevice::TryHandleOutboundFrame() {
   if (outbound_queue_.size() > 0) {
     zxlogf(TRACE, "fake-ot-stack: TryHandleOutboundFrame() outbound_queue_.size():%lu\n",
            outbound_queue_.size());
-    FrameHandler(outbound_queue_.front());
+    FrameHandler(std::move(outbound_queue_.front()));
     outbound_queue_.pop();
   }
 }

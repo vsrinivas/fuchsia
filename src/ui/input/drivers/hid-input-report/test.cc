@@ -275,7 +275,7 @@ TEST_F(HidDevTest, GetReportTest) {
   ASSERT_EQ(0x70, mouse.movement_y());
 
   ASSERT_TRUE(mouse.has_pressed_buttons());
-  fidl::VectorView<uint8_t> pressed_buttons = mouse.pressed_buttons();
+  fidl::VectorView<uint8_t> pressed_buttons = std::move(mouse.pressed_buttons());
   for (size_t i = 0; i < pressed_buttons.count(); i++) {
     ASSERT_EQ(i + 1, pressed_buttons[i]);
   }

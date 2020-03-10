@@ -78,7 +78,7 @@ void I2cChild::Transfer(fidl::VectorView<bool> segments_is_write,
         reads[i].set_count(op_list[i].data_size);
       }
       fidl::VectorView<fidl::VectorView<uint8_t>> all_reads(reads.get(), op_count);
-      ctx2->completer->ReplySuccess(all_reads);
+      ctx2->completer->ReplySuccess(std::move(all_reads));
     } else {
       ctx2->completer->ReplyError(status);
     }

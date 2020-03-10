@@ -111,7 +111,7 @@ void BindCompositeDefineComposite(const fbl::RefPtr<Device>& platform_bus,
         .key = metadata[i].type,
         .data = ::fidl::VectorView(reinterpret_cast<uint8_t*>(const_cast<void*>(metadata[i].data)),
                                    metadata[i].length)};
-    metadata_list.push_back(meta);
+    metadata_list.emplace_back(std::move(meta));
   }
 
   llcpp::fuchsia::device::manager::CompositeDeviceDescriptor comp_desc = {
@@ -122,7 +122,8 @@ void BindCompositeDefineComposite(const fbl::RefPtr<Device>& platform_bus,
   };
 
   Coordinator* coordinator = platform_bus->coordinator;
-  ASSERT_EQ(coordinator->AddCompositeDevice(platform_bus, name, comp_desc), expected_status);
+  ASSERT_EQ(coordinator->AddCompositeDevice(platform_bus, name, std::move(comp_desc)),
+            expected_status);
 }
 
 class CompositeTestCase : public MultipleDeviceTestCase {

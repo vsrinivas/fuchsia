@@ -97,7 +97,7 @@ void OtStackApp::LowpanSpinelDeviceFidlImpl::SendFrame(::fidl::VectorView<uint8_
     FX_LOGS(ERROR) << "ot-radio not connected";
     return;
   }
-  auto fidl_result = app_.device_client_ptr_->SendFrame(data);
+  auto fidl_result = app_.device_client_ptr_->SendFrame(std::move(data));
   if (fidl_result.status() != ZX_OK) {
     FX_LOGS(ERROR) << "FIDL error while sending req to ot-radio";
     return;
@@ -337,7 +337,7 @@ void OtStackApp::EventThread() {
             .on_receive_frame =
                 [this](::fidl::VectorView<uint8_t> data) {
                   return fidl_spinel::Device::SendOnReceiveFrameEvent(
-                      this->fidl_request_handle_.borrow(), data);
+                      this->fidl_request_handle_.borrow(), std::move(data));
                 },
             .on_error =
                 [this](fidl_spinel::Error error, bool did_close) {

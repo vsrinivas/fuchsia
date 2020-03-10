@@ -296,6 +296,7 @@ void Lp50xxLight::GetGroupCurrentRgbValue(uint32_t group_id,
     }
     out.emplace_back(rgb);
   }
+
   if (status != ZX_OK) {
     completer.ReplyError(::llcpp::fuchsia::hardware::light::LightError::FAILED);
   } else {

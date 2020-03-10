@@ -239,7 +239,7 @@ zx_status_t TestSession::Open(zx::unowned_channel netdevice, const char* name,
     // default to just ethernet
     info.rx_frames = fidl::VectorView<netdev::FrameType>(supported_frames, 1);
   } else {
-    info.rx_frames = frame_types;
+    info.rx_frames = std::move(frame_types);
   }
   info.options = flags;
   zx_status_t status;

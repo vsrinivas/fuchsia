@@ -8,11 +8,11 @@
 #include <fuchsia/hardware/display/llcpp/fidl.h>
 #include <fuchsia/io/c/fidl.h>
 #include <fuchsia/sysmem/llcpp/fidl.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/io.h>
 #include <lib/fidl/coding.h>
-#include <lib/fdio/cpp/caller.h>
 #include <lib/image-format-llcpp/image-format-llcpp.h>
 #include <lib/statusor/endpoint-or-error.h>
 #include <lib/statusor/status-macros.h>
@@ -533,7 +533,7 @@ zx_status_t dc_callback_handler(port_handler_t* ph, zx_signals_t signals, uint32
   return dc_client->HandleEvents(fhd::Controller::EventHandlers{
       .on_displays_changed =
           [](fidl::VectorView<fhd::Info> added, fidl::VectorView<uint64_t> removed) {
-            handle_displays_changed(added, removed);
+            handle_displays_changed(std::move(added), std::move(removed));
             return ZX_OK;
           },
       .on_vsync = [](uint64_t display_id, uint64_t timestamp,

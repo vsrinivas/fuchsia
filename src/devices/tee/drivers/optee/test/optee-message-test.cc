@@ -50,7 +50,8 @@ class MockMessage : public Message {
     // Don't care about the values in the fixed parameters before start_index
 
     // Initialize the message params (starting from start_index) with the ParameterSet
-    status = message.TryInitializeParameters(start_index, parameter_set, temp_memory_pool);
+    status =
+        message.TryInitializeParameters(start_index, std::move(parameter_set), temp_memory_pool);
     if (status != ZX_OK) {
       return fit::error(status);
     }
@@ -127,7 +128,8 @@ TEST_F(MessageTest, ParameterSetInvertabilityTest) {
 
   fidl::VectorView<fuchsia_tee::Parameter> llcpp_parameter_set_in = parameter_set_in.to_llcpp();
 
-  auto result = MockMessage::TryCreate(dpool_.get(), cpool_.get(), 0, llcpp_parameter_set_in);
+  auto result =
+      MockMessage::TryCreate(dpool_.get(), cpool_.get(), 0, std::move(llcpp_parameter_set_in));
   ASSERT_TRUE(result.is_ok(), "Creating a MockMessage with has failed with error %d\n",
               result.error());
 
@@ -135,6 +137,7 @@ TEST_F(MessageTest, ParameterSetInvertabilityTest) {
 
   fidl::VectorView<fuchsia_tee::Parameter> llcpp_parameter_set_out = parameter_set_out.to_llcpp();
 
+  llcpp_parameter_set_in = parameter_set_in.to_llcpp();
   ASSERT_EQ(llcpp_parameter_set_in.count(), llcpp_parameter_set_out.count());
 
   for (size_t i = 0; i < llcpp_parameter_set_in.count(); i++) {

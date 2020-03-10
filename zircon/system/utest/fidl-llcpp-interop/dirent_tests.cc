@@ -54,7 +54,7 @@ gen::DirEnt golden_dirents_array[gen::SMALL_DIR_VECTOR_SIZE] = {
     },
 };
 
-fidl::VectorView golden_dirents = fidl::VectorView{golden_dirents_array, 3};
+auto golden_dirents() { return fidl::VectorView{golden_dirents_array, 3}; }
 
 }  // namespace
 
@@ -127,7 +127,7 @@ class Server {
     read_dir_num_calls_.fetch_add(1);
     gen::DirEntTestInterface::ReadDirResponse response = {};
     response._hdr.txid = decoded.message()->_hdr.txid;
-    response.dirents = golden_dirents;
+    response.dirents = golden_dirents();
     fidl::Buffer<gen::DirEntTestInterface::ReadDirResponse> buffer;
     auto result = fidl::Linearize(&response, buffer.view());
     if (result.status != ZX_OK) {
@@ -282,7 +282,7 @@ class CFlavorServer : public ServerBase {
 
   void ReadDir(ReadDirCompleter::Sync txn) override {
     read_dir_num_calls_.fetch_add(1);
-    txn.Reply(golden_dirents);
+    txn.Reply(golden_dirents());
   }
 
   // |ConsumeDirectories| has zero number of arguments in its return value, hence only the
@@ -324,7 +324,7 @@ class CallerAllocateServer : public ServerBase {
   void ReadDir(ReadDirCompleter::Sync txn) override {
     read_dir_num_calls_.fetch_add(1);
     fidl::Buffer<gen::DirEntTestInterface::ReadDirResponse> buffer;
-    txn.Reply(buffer.view(), golden_dirents);
+    txn.Reply(buffer.view(), golden_dirents());
   }
 
   // |ConsumeDirectories| has zero number of arguments in its return value, hence only the
@@ -365,7 +365,7 @@ class InPlaceServer : public ServerBase {
   void ReadDir(ReadDirCompleter::Sync txn) override {
     read_dir_num_calls_.fetch_add(1);
     gen::DirEntTestInterface::ReadDirResponse response = {};
-    response.dirents = golden_dirents;
+    response.dirents = golden_dirents();
     fidl::Buffer<gen::DirEntTestInterface::ReadDirResponse> buffer;
     auto result = fidl::Linearize(&response, buffer.view());
     if (result.status != ZX_OK) {
@@ -408,7 +408,7 @@ class AsyncReplyServer : public ServerBase {
 
   void ReadDir(ReadDirCompleter::Sync txn) override {
     read_dir_num_calls_.fetch_add(1);
-    async::PostTask(dispatcher(), [txn = txn.ToAsync()]() mutable { txn.Reply(golden_dirents); });
+    async::PostTask(dispatcher(), [txn = txn.ToAsync()]() mutable { txn.Reply(golden_dirents()); });
   }
 
   void ConsumeDirectories(fidl::VectorView<gen::DirEnt> dirents,
@@ -546,10 +546,10 @@ void CallerAllocateReadDir() {
     ASSERT_OK(result.status());
     ASSERT_NULL(result.error(), "%s", result.error());
     const auto& dirents = result.Unwrap()->dirents;
-    ASSERT_EQ(dirents.count(), golden_dirents.count());
+    ASSERT_EQ(dirents.count(), golden_dirents().count());
     for (uint64_t i = 0; i < dirents.count(); i++) {
       auto actual = dirents[i];
-      auto expected = golden_dirents[i];
+      auto expected = golden_dirents()[i];
       EXPECT_EQ(actual.is_dir, expected.is_dir);
       EXPECT_EQ(actual.some_flags, expected.some_flags);
       ASSERT_EQ(actual.name.size(), expected.name.size());
@@ -578,10 +578,10 @@ void InPlaceReadDir() {
                                                              buffer.view());
     ASSERT_OK(result.status);
     const auto& dirents = result.message.message()->dirents;
-    ASSERT_EQ(dirents.count(), golden_dirents.count());
+    ASSERT_EQ(dirents.count(), golden_dirents().count());
     for (uint64_t i = 0; i < dirents.count(); i++) {
       auto actual = dirents[i];
-      auto expected = golden_dirents[i];
+      auto expected = golden_dirents()[i];
       EXPECT_EQ(actual.is_dir, expected.is_dir);
       EXPECT_EQ(actual.some_flags, expected.some_flags);
       ASSERT_EQ(actual.name.size(), expected.name.size());
@@ -602,7 +602,7 @@ void SimpleConsumeDirectories() {
   gen::DirEntTestInterface::SyncClient client(std::move(client_chan));
 
   ASSERT_EQ(server.ConsumeDirectoriesNumCalls(), 0);
-  ASSERT_OK(client.ConsumeDirectories(golden_dirents).status());
+  ASSERT_OK(client.ConsumeDirectories(golden_dirents()).status());
   ASSERT_EQ(server.ConsumeDirectoriesNumCalls(), 1);
 }
 
@@ -618,7 +618,7 @@ void CallerAllocateConsumeDirectories() {
   fidl::Buffer<gen::DirEntTestInterface::ConsumeDirectoriesRequest> request_buffer;
   fidl::Buffer<gen::DirEntTestInterface::ConsumeDirectoriesResponse> response_buffer;
   auto result =
-      client.ConsumeDirectories(request_buffer.view(), golden_dirents, response_buffer.view());
+      client.ConsumeDirectories(request_buffer.view(), golden_dirents(), response_buffer.view());
   ASSERT_OK(result.status());
   ASSERT_NULL(result.error(), "%s", result.error());
   ASSERT_EQ(server.ConsumeDirectoriesNumCalls(), 1);
@@ -636,7 +636,7 @@ void InPlaceConsumeDirectories() {
   fidl::Buffer<gen::DirEntTestInterface::ConsumeDirectoriesRequest> request_buffer;
   fidl::Buffer<gen::DirEntTestInterface::ConsumeDirectoriesResponse> response_buffer;
   gen::DirEntTestInterface::ConsumeDirectoriesRequest request = {};
-  request.dirents = golden_dirents;
+  request.dirents = golden_dirents();
   auto linearize_result = fidl::Linearize(&request, request_buffer.view());
   ASSERT_OK(linearize_result.status);
   ASSERT_OK(gen::DirEntTestInterface::InPlace::ConsumeDirectories(
@@ -657,7 +657,7 @@ void SimpleOneWayDirents() {
   zx::eventpair client_ep, server_ep;
   ASSERT_OK(zx::eventpair::create(0, &client_ep, &server_ep));
   ASSERT_EQ(server.OneWayDirentsNumCalls(), 0);
-  ASSERT_OK(client.OneWayDirents(golden_dirents, std::move(server_ep)).status());
+  ASSERT_OK(client.OneWayDirents(golden_dirents(), std::move(server_ep)).status());
   zx_signals_t signals = 0;
   client_ep.wait_one(ZX_EVENTPAIR_SIGNALED, zx::time::infinite(), &signals);
   ASSERT_EQ(signals & ZX_EVENTPAIR_SIGNALED, ZX_EVENTPAIR_SIGNALED);
@@ -676,7 +676,7 @@ void CallerAllocateOneWayDirents() {
   ASSERT_OK(zx::eventpair::create(0, &client_ep, &server_ep));
   ASSERT_EQ(server.OneWayDirentsNumCalls(), 0);
   fidl::Buffer<gen::DirEntTestInterface::OneWayDirentsRequest> buffer;
-  ASSERT_OK(client.OneWayDirents(buffer.view(), golden_dirents, std::move(server_ep)).status());
+  ASSERT_OK(client.OneWayDirents(buffer.view(), golden_dirents(), std::move(server_ep)).status());
   zx_signals_t signals = 0;
   client_ep.wait_one(ZX_EVENTPAIR_SIGNALED, zx::time::infinite(), &signals);
   ASSERT_EQ(signals & ZX_EVENTPAIR_SIGNALED, ZX_EVENTPAIR_SIGNALED);
@@ -698,7 +698,7 @@ void InPlaceOneWayDirents() {
     ASSERT_EQ(server.OneWayDirentsNumCalls(), iter);
     fidl::Buffer<gen::DirEntTestInterface::OneWayDirentsRequest> buffer;
     gen::DirEntTestInterface::OneWayDirentsRequest request = {};
-    request.dirents = golden_dirents;
+    request.dirents = golden_dirents();
     request.ep = std::move(server_ep);
     auto linearize_result = fidl::Linearize(&request, buffer.view());
     ASSERT_OK(linearize_result.status);
@@ -797,7 +797,6 @@ TEST(DirentServerTest, InPlaceSendOnDirents) {
 }
 
 // Parameterized tests
-
 TEST(DirentClientTest, SimpleCountNumDirectories) {
   SimpleCountNumDirectories<manual_server::Server>();
 }

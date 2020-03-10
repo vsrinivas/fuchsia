@@ -101,8 +101,8 @@ class DirentIteratorImpl {
     if (result->result.is_err()) {
       return result->result.err();
     }
-    const auto& response = result->result.response();
-    entries_ = response.entries;
+    auto& response = result->result.mutable_response();
+    entries_ = std::move(response.entries);
     return ZX_OK;
   }
 

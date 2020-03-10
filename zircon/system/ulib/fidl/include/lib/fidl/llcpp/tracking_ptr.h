@@ -35,7 +35,10 @@ namespace fidl {
 //
 // Arrays are special cased, similar to unique_ptr. tracking_ptr<int[]> does not act like a
 // int[]* but rather it acts like a int* with features specific to arrays, such as indexing
-// and deletion via the delete[] operator.
+// and deletion via the delete[] operator. The array specializations of tracking_ptr --
+// e.g. tracking_ptr<int[]> -- has an internal memory layout that is a pointer + bool, so it
+// is NOT the same width as a raw pointer.  The LSB is not used for ownership for arrays
+// because it is common to read from a buffer starting at arbitrary offset.
 //
 // tracking_ptr<void> is also a special case and generally should only be used when it is
 // necessary to store values in an untyped representation (for instance if a pointer can be
@@ -54,9 +57,9 @@ namespace fidl {
 // Note: despite Fuchsia disabling exceptions, some methods are marked noexcept to allow
 // for optimizations. For instance, vector has an optimization where it will move rather
 // than copy if certain methods are marked with noexcept.
-template <typename T, typename ArraylessT = std::remove_extent_t<T>>
+template <typename T>
 class tracking_ptr final {
-  template <typename, typename>
+  template <typename>
   friend class tracking_ptr;
 
   // A marked_ptr is a pointer with the LSB reserved for the ownership bit.
@@ -73,14 +76,14 @@ class tracking_ptr final {
   // Use templating to only trigger the static assert when the constructor is used.
   template <bool U = true, typename = std::enable_if_t<U>>
   tracking_ptr(T* raw_ptr) {
-    static_assert(
-        !U,
-        "fidl::tracking_ptr cannot be constructed directly from a raw pointer. "
-        "If FIDL does not own the memory, indicate this by constructing a fidl::unowned_ptr "
-        "using the fidl::unowned(&val) helper. "
-        "As an alternative, consider using a fidl::Allocator."
+    static_assert(!U,
+                  "fidl::tracking_ptr cannot be constructed directly from a raw pointer. "
+                  "If tracking_ptr should not own the memory, indicate this by constructing a "
+                  "fidl::unowned_ptr "
+                  "using the fidl::unowned(&val) helper. "
+                  "As an alternative, consider using a fidl::Allocator."
 #if TRACKING_PTR_ENABLE_UNIQUE_PTR_CONSTRUCTOR
-        " For heap allocator values, construct with unique_ptr<T>."
+                  " For heap allocator values, construct with unique_ptr<T>."
 #endif
     );
   }
@@ -99,23 +102,14 @@ class tracking_ptr final {
   tracking_ptr(std::unique_ptr<U>&& other) {
     set_owned(other.release());
   }
-  tracking_ptr(unowned_ptr<ArraylessT> other) {
+  tracking_ptr(unowned_ptr<T> other) {
     static_assert(std::alignment_of<T>::value >= kMinAlignment,
                   "unowned_ptr must point to an aligned value. "
                   "An insufficiently aligned value can be aligned with fidl::aligned");
     set_unowned(other.get());
   }
   // This constructor exists to strip off 'aligned' from the type (aligned<bool> -> bool).
-  tracking_ptr(unowned_ptr<aligned<ArraylessT>> other) { set_unowned(&other->value); }
-  // This constructor exists to strip off 'aligned' from the type (aligned<bool[2]> -> bool).
-  template <typename ArraylessU = ArraylessT, size_t N>
-  tracking_ptr(unowned_ptr<aligned<ArraylessU[N]>> other) {
-    set_unowned(other->value);
-  }
-  template <typename ArraylessU = ArraylessT, size_t N>
-  tracking_ptr(unowned_ptr<aligned<Array<ArraylessU, N>>> other) {
-    set_unowned(other->value.data());
-  }
+  tracking_ptr(unowned_ptr<aligned<T>> other) { set_unowned(&other->value); }
   tracking_ptr(const tracking_ptr&) = delete;
 
   ~tracking_ptr() { reset_marked(kNullMarkedPtr); }
@@ -126,66 +120,50 @@ class tracking_ptr final {
   }
   tracking_ptr& operator=(const tracking_ptr&) = delete;
 
-  template <typename U = T, typename ArraylessU = ArraylessT,
-            typename = std::enable_if_t<!std::is_array<U>::value && !std::is_void<U>::value>>
-  ArraylessU& operator*() const {
+  template <typename U = T, typename = std::enable_if_t<!std::is_void<U>::value>>
+  U& operator*() const {
     return *get();
   }
-  template <typename U = T, typename ArraylessU = ArraylessT,
-            typename = std::enable_if_t<!std::is_array<U>::value && !std::is_void<U>::value>>
-  ArraylessU* operator->() const noexcept {
+  template <typename U = T, typename = std::enable_if_t<!std::is_void<U>::value>>
+  U* operator->() const noexcept {
     return get();
   }
-  template <typename U = T, typename ArraylessU = ArraylessT>
-  ArraylessU& operator[](size_t index) const {
-    return get()[index];
-  }
-  ArraylessT* get() const noexcept {
-    return reinterpret_cast<ArraylessT*>(mptr_ & ~kOwnershipMask);
-  }
+  T* get() const noexcept { return reinterpret_cast<T*>(mptr_ & ~kOwnershipMask); }
   explicit operator bool() const noexcept { return get() != nullptr; }
 
  private:
-  // Deleter deletes a pointer of a given type.
-  // This class exists to avoid partial specialization of the tracking_ptr class.
-  template <typename, typename Enabled = void>
+  template <typename U, typename = void>
   struct Deleter {
-    static void delete_ptr(ArraylessT* p) { delete p; }
+    static void delete_ptr(U* ptr) { delete ptr; }
   };
   template <typename U>
-  struct Deleter<U, typename std::enable_if_t<std::is_array<U>::value>> {
-    static void delete_ptr(ArraylessT* p) { delete[] p; }
+  struct Deleter<U, std::enable_if_t<std::is_void<U>::value>> {
+    static void delete_ptr(U*) {
+      assert(false &&
+             "Cannot delete void* in tracking_ptr<void>. "
+             "First std::move contained value to appropriate typed pointer.");
+    }
   };
-  template <typename ArraylessU = ArraylessT,
-            typename Enabled = std::enable_if_t<!std::is_void<ArraylessU>::value>>
-  static void delete_ptr(ArraylessU* p) {
-    Deleter<T>::delete_ptr(p);
-  }
-  static void delete_ptr(void* p) {
-    assert(false &&
-           "Cannot delete void* in tracking_ptr<void>. "
-           "First std::move contained value to appropriate typed pointer.");
-  }
 
   void reset_marked(marked_ptr new_ptr) {
     if (is_owned()) {
-      delete_ptr(get());
+      Deleter<T>::delete_ptr(get());
     }
     set_marked(new_ptr);
   }
   bool is_owned() const noexcept { return (mptr_ & kOwnershipMask) != 0; }
 
   void set_marked(marked_ptr new_ptr) noexcept { mptr_ = new_ptr; }
-  void set_unowned(ArraylessT* new_ptr) {
+  void set_unowned(T* new_ptr) {
     assert_lsb_not_set(new_ptr);
     set_marked(reinterpret_cast<marked_ptr>(new_ptr));
   }
-  void set_owned(ArraylessT* new_ptr) {
+  void set_owned(T* new_ptr) {
     assert_lsb_not_set(new_ptr);
     marked_ptr ptr_marked_owned = reinterpret_cast<marked_ptr>(new_ptr) | kOwnershipMask;
     set_marked(ptr_marked_owned);
   }
-  static void assert_lsb_not_set(ArraylessT* p) {
+  static void assert_lsb_not_set(T* p) {
     if (reinterpret_cast<marked_ptr>(p) & kOwnershipMask) {
       abort();
     }
@@ -200,12 +178,88 @@ class tracking_ptr final {
   marked_ptr mptr_;
 };
 
+template <typename T>
+class tracking_ptr<T[]> final {
+  template <typename>
+  friend class tracking_ptr;
+
+ public:
+  constexpr tracking_ptr() noexcept {}
+  constexpr tracking_ptr(std::nullptr_t) noexcept {}
+  // Disabled constructor that exists to produce helpful error messages for the user.
+  // Use templating to only trigger the static assert when the constructor is used.
+  template <bool U = true, typename = std::enable_if_t<U>>
+  tracking_ptr(T* raw_ptr) {
+    static_assert(!U,
+                  "fidl::tracking_ptr cannot be constructed directly from a raw pointer. "
+                  "If tracking_ptr should not own the memory, indicate this by constructing a "
+                  "fidl::unowned_ptr "
+                  "using the fidl::unowned(&val) helper. "
+                  "As an alternative, consider using a fidl::Allocator."
+#if TRACKING_PTR_ENABLE_UNIQUE_PTR_CONSTRUCTOR
+                  " For heap allocator values, construct with unique_ptr<T>."
+#endif
+    );
+  }
+  template <typename U>
+  tracking_ptr(tracking_ptr<U[]>&& other) noexcept {
+    // Force a static cast to restrict the types of assignments that can be made.
+    // Ideally this would be implemented with a type trait, but none exist now.
+    reset(other.is_owned_, static_cast<T*>(reinterpret_cast<U*>(other.ptr_)));
+    other.is_owned_ = false;
+    other.ptr_ = nullptr;
+  }
+#if TRACKING_PTR_ENABLE_UNIQUE_PTR_CONSTRUCTOR
+  tracking_ptr(std::unique_ptr<U>&& other) { reset(true, other.release()); }
+#endif
+  tracking_ptr(unowned_ptr<T> other) { reset(false, other.get()); }
+  tracking_ptr(const tracking_ptr&) = delete;
+
+  ~tracking_ptr() { reset(false, nullptr); }
+
+  tracking_ptr& operator=(tracking_ptr&& other) noexcept {
+    reset(other.is_owned_, other.ptr_);
+    other.is_owned_ = false;
+    other.ptr_ = nullptr;
+    return *this;
+  }
+  tracking_ptr& operator=(const tracking_ptr&) = delete;
+
+  T& operator[](size_t index) const { return get()[index]; }
+  T* get() const noexcept { return ptr_; }
+  explicit operator bool() const noexcept { return get() != nullptr; }
+
+  bool is_owned() { return is_owned_; }
+
+  // Hand off responsibility of ownership to the caller.
+  // The internal data can be retrieved through get() and is_owned() before calling release().
+  void release() {
+    ptr_ = nullptr;
+    is_owned_ = false;
+  }
+
+ private:
+  void reset(bool is_owned, T* ptr) {
+    if (is_owned_) {
+      delete[] ptr_;
+    }
+    is_owned_ = is_owned;
+    ptr_ = ptr;
+  }
+
+  T* ptr_ = nullptr;
+  bool is_owned_ = false;
+};
+
+// Non-array tracking_ptr (and only non-array tracking_ptr) should match the layout of raw pointers.
 static_assert(sizeof(fidl::tracking_ptr<void>) == sizeof(void*),
               "tracking_ptr must have the same size as a raw pointer");
 static_assert(sizeof(fidl::tracking_ptr<uint8_t>) == sizeof(uint8_t*),
               "tracking_ptr must have the same size as a raw pointer");
-static_assert(sizeof(fidl::tracking_ptr<uint8_t[]>) == sizeof(uint8_t*),
-              "tracking_ptr must have the same size as a raw pointer");
+
+// Array tracking_ptr is wider.
+static_assert(sizeof(fidl::tracking_ptr<uint8_t[]>) >= sizeof(uint8_t*),
+              "tracking_ptr for arrays is bigger than a raw pointer");
 
 #define TRACKING_PTR_OPERATOR_COMPARISONS(func_name, op)                 \
   template <typename T, typename U>                                      \

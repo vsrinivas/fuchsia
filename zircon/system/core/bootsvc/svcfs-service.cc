@@ -181,7 +181,7 @@ void KernelStatsImpl::GetCpuStats(GetCpuStatsCompleter::Sync completer) {
     builder->set_generic_ipis(fidl::unowned(&cpu_stat.generic_ipis));
     per_cpu_stats[cpu_num] = builder->build();
   }
-  completer.Reply(stats);
+  completer.Reply(std::move(stats));
 }
 
 }  // namespace bootsvc

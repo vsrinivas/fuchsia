@@ -64,7 +64,7 @@ ServiceStarterParams GetServiceStarterParams(llcpp::fuchsia::boot::Arguments::Sy
   auto string_resp = client->GetStrings(fidl::VectorView{string_keys});
   ServiceStarterParams ret;
   if (string_resp.ok()) {
-    auto values = string_resp->values;
+    auto& values = string_resp->values;
     ret.netsvc_interface = std::string{values[0].data(), values[0].size()};
     ret.zircon_nodename = std::string{values[1].data(), values[1].size()};
     ret.clock_backstop = std::string{values[2].data(), values[2].size()};

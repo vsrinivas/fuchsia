@@ -341,7 +341,7 @@ bool linearize_struct_with_many_handles() {
   StructWithManyHandles message = {
       .h1 = dummy_handles[0],
       .h2 = dummy_handles[1],
-      .hs = hs,
+      .hs = std::move(hs),
   };
   uint8_t buffer[buf_size];
 
@@ -518,7 +518,7 @@ bool linearize_table_field_2() {
   OrdinalTwoStructWithManyHandles ordinal2 = {
       .h1 = dummy_handles[0],
       .h2 = dummy_handles[1],
-      .hs = hs,
+      .hs = std::move(hs),
   };
   envelopes.b.data = &ordinal2;
 
@@ -549,8 +549,12 @@ bool linearize_table_field_2() {
   // Verify auto-filling envelope header
   EXPECT_EQ(linearized[0].num_bytes, 0);
   EXPECT_EQ(linearized[0].num_handles, 0);
+  EXPECT_EQ(2, ordinal2.hs.count());
+  static_assert(sizeof(ordinal2) == 24);
+  EXPECT_EQ(32, sizeof(ordinal2) + sizeof(zx_handle_t) * ordinal2.hs.count());
+  EXPECT_EQ(32, FIDL_ALIGN(sizeof(ordinal2)) + sizeof(zx_handle_t) * ordinal2.hs.count());
   EXPECT_EQ(linearized[1].num_bytes,
-            FIDL_ALIGN(sizeof(ordinal2)) + sizeof(zx_handle_t) * hs.count());
+            FIDL_ALIGN(sizeof(ordinal2)) + sizeof(zx_handle_t) * ordinal2.hs.count());
   EXPECT_EQ(linearized[1].num_handles, 4);
 
   END_TEST;

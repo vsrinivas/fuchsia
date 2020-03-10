@@ -114,7 +114,7 @@ void CoreDisplayTest::SetUp() {
             [&displays_tmp, &has_display](fidl::VectorView<fhd::Info> added,
                                           fidl::VectorView<uint64_t> removed) {
               for (unsigned i = 0; i < added.count(); i++) {
-                displays_tmp.push_back(added[i]);
+                displays_tmp.push_back(std::move(added[i]));
               }
               has_display = true;
               return ZX_OK;

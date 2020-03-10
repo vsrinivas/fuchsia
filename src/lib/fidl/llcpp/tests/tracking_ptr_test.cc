@@ -160,6 +160,11 @@ TEST(TrackingPtr, ArrayIndexing) {
   EXPECT_EQ(ptr[1], 2);
   ptr[0] = 4;
   EXPECT_EQ(ptr[0], 4);
+
+  const fidl::tracking_ptr<int32_t[]> const_ptr = fidl::unowned_ptr<int32_t>(arr);
+  EXPECT_EQ(const_ptr[0], 4);
+  fidl::tracking_ptr<const int32_t[]> ptr_const = fidl::unowned_ptr<const int32_t>(arr);
+  EXPECT_EQ(const_ptr[0], 4);
 }
 
 TEST(TrackingPtr, Swap) {
@@ -237,37 +242,23 @@ TEST(TrackingPtr, Casting) {
   fidl::tracking_ptr<Derived> d_ptr2 = fidl::unowned_ptr<Derived>(&d);
   auto vptr = static_cast<fidl::tracking_ptr<void>>(std::move(d_ptr2));
   EXPECT_EQ(vptr.get(), &d);
-
-  auto d_arr_ptr = static_cast<fidl::tracking_ptr<Derived[]>>(std::move(vptr));
-  EXPECT_EQ(d_arr_ptr.get(), &d);
 }
 
 TEST(TrackingPtr, FidlAligned) {
   fidl::aligned<uint8_t> byte = 1;
   fidl::tracking_ptr<uint8_t> ptr = fidl::unowned_ptr<fidl::aligned<uint8_t>>(&byte);
   EXPECT_EQ(ptr.get(), &byte.value);
-  fidl::tracking_ptr<uint8_t[]> arr_ptr = fidl::unowned_ptr<fidl::aligned<uint8_t>>(&byte);
-  EXPECT_EQ(ptr.get(), &byte.value);
 }
 
-TEST(TrackingPtr, FidlAlignedArray) {
-  fidl::aligned<uint8_t[8]> byteArray;
-  byteArray.value[0] = 0;
-  byteArray.value[1] = 1;
-  fidl::tracking_ptr<uint8_t[]> ptr = fidl::unowned(&byteArray);
+TEST(TrackingPtr, UnownedArray) {
+  uint8_t byteArray[8];
+  byteArray[0] = 0;
+  byteArray[1] = 1;
+  fidl::tracking_ptr<uint8_t[]> ptr = fidl::unowned(byteArray);
   EXPECT_EQ(ptr[0], 0);
   EXPECT_EQ(ptr[1], 1);
-
-  fidl::aligned<fidl::Array<uint8_t, 8>> fidlArray;
-  fidlArray.value[0] = 1;
-  fidlArray.value[1] = 2;
-  fidl::tracking_ptr<uint8_t[]> fidlArrayPtr = fidl::unowned(&fidlArray);
-  EXPECT_EQ(fidlArrayPtr[0], 1);
-  EXPECT_EQ(fidlArrayPtr[1], 2);
-
-  // Each fidl_aligned<uint8_t> is 8 bytes while fidl::aligned<uint8_t[8]> contains 1 byte values.
-  fidl::aligned<uint8_t> alignedByteArray[8] = {2, 3};
-  fidl::tracking_ptr<fidl::aligned<uint8_t>[]> alignedArrayPtr = fidl::unowned(alignedByteArray);
-  EXPECT_EQ(alignedArrayPtr[0], 2);
-  EXPECT_EQ(alignedArrayPtr[1], 3);
+  // It should be possible to build a tracking_ptr for an array ptr with
+  // arbitrary offset (alignment not needed).
+  fidl::tracking_ptr<uint8_t[]> ptr2 = fidl::unowned(&byteArray[1]);
+  EXPECT_EQ(ptr2[0], 1);
 }

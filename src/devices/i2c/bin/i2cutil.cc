@@ -4,8 +4,6 @@
 
 #include <dirent.h>
 #include <fcntl.h>
-#include <fbl/span.h>
-#include <fbl/unique_fd.h>
 #include <fuchsia/hardware/i2c/llcpp/fidl.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/unsafe.h>
@@ -15,14 +13,20 @@
 #include <filesystem>
 
 #include <fbl/auto_call.h>
+#include <fbl/span.h>
+#include <fbl/unique_fd.h>
 #include <pretty/hexdump.h>
 
 static void usage(char* prog) {
   printf("Usage:\n");
-  printf(" %s w[rite]    DEVICE DATA...                                          Write bytes\n", prog);
-  printf(" %s r[ead]     DEVICE ADDRESS                                          Reads one byte\n", prog);
-  printf(" %s t[ransact] DEVICE [w|r] [DATA...|LENGTH] [w|r] [DATA...|LENGTH]... Transaction\n", prog);
-  printf(" %s p[ing]                                                             Ping devices\n", prog);
+  printf(" %s w[rite]    DEVICE DATA...                                          Write bytes\n",
+         prog);
+  printf(" %s r[ead]     DEVICE ADDRESS                                          Reads one byte\n",
+         prog);
+  printf(" %s t[ransact] DEVICE [w|r] [DATA...|LENGTH] [w|r] [DATA...|LENGTH]... Transaction\n",
+         prog);
+  printf(" %s p[ing]                                                             Ping devices\n",
+         prog);
 }
 
 static void convert_args(char** argv, size_t length, uint8_t* buffer) {
@@ -38,10 +42,10 @@ static zx_status_t write_bytes(llcpp::fuchsia::hardware::i2c::Device2::SyncClien
 
   fidl::VectorView<uint8_t> write_segment(write_buffer.data(), write_buffer.size());
 
-  auto read = client.Transfer(
-    segments_is_write,
-    fidl::VectorView<fidl::VectorView<uint8_t>>(&write_segment, 1),  // One write.
-    fidl::VectorView<uint8_t>(nullptr, 0));                          // No reads.
+  auto read =
+      client.Transfer(std::move(segments_is_write),
+                      fidl::VectorView<fidl::VectorView<uint8_t>>(&write_segment, 1),  // One write.
+                      fidl::VectorView<uint8_t>(nullptr, 0));                          // No reads.
   auto status = read.status();
   if (status == ZX_OK && read->result.is_err()) {
     status = ZX_ERR_INTERNAL;
@@ -56,10 +60,10 @@ static zx_status_t read_byte(llcpp::fuchsia::hardware::i2c::Device2::SyncClient 
   fidl::VectorView<uint8_t> write_segment(address.data(), address.size());
   uint8_t read_length = 1;
 
-  auto read = client.Transfer(
-    segments_is_write,
-    fidl::VectorView<fidl::VectorView<uint8_t>>(&write_segment, 1),  // One write.
-    fidl::VectorView<uint8_t>(&read_length, 1));                     // One read.
+  auto read =
+      client.Transfer(std::move(segments_is_write),
+                      fidl::VectorView<fidl::VectorView<uint8_t>>(&write_segment, 1),  // One write.
+                      fidl::VectorView<uint8_t>(&read_length, 1));                     // One read.
   auto status = read.status();
   if (status == ZX_OK) {
     if (read->result.is_err()) {
@@ -71,8 +75,8 @@ static zx_status_t read_byte(llcpp::fuchsia::hardware::i2c::Device2::SyncClient 
   return status;
 }
 
-static zx_status_t transact(llcpp::fuchsia::hardware::i2c::Device2::SyncClient client,
-                            int argc, char** argv) {
+static zx_status_t transact(llcpp::fuchsia::hardware::i2c::Device2::SyncClient client, int argc,
+                            char** argv) {
   size_t n_elements = argc - 3;
   size_t n_segments = 0;
   size_t n_writes = 0;
@@ -97,8 +101,7 @@ static zx_status_t transact(llcpp::fuchsia::hardware::i2c::Device2::SyncClient c
     return -1;
   }
   if (n_segments > llcpp::fuchsia::hardware::i2c::MAX_COUNT_SEGMENTS) {
-    printf("No more than %u segments allowed\n",
-           llcpp::fuchsia::hardware::i2c::MAX_COUNT_SEGMENTS);
+    printf("No more than %u segments allowed\n", llcpp::fuchsia::hardware::i2c::MAX_COUNT_SEGMENTS);
     return -1;
   }
 
@@ -144,15 +147,15 @@ static zx_status_t transact(llcpp::fuchsia::hardware::i2c::Device2::SyncClient c
   ZX_ASSERT(read_cnt + write_cnt == segment_cnt);
 
   auto read =
-    client.Transfer(segments_is_write,
-                    fidl::VectorView<fidl::VectorView<uint8_t>>(write_data.get(), n_writes),
-                    fidl::VectorView<uint8_t>(read_lengths.get(), n_segments - n_writes));
+      client.Transfer(std::move(segments_is_write),
+                      fidl::VectorView<fidl::VectorView<uint8_t>>(write_data.get(), n_writes),
+                      fidl::VectorView<uint8_t>(read_lengths.get(), n_segments - n_writes));
   auto status = read.status();
   if (status == ZX_OK) {
     if (read->result.is_err()) {
       status = ZX_ERR_INTERNAL;
     } else {
-      auto read_data = read->result.response().read_segments_data;
+      auto& read_data = read->result.response().read_segments_data;
       for (auto& i : read_data) {
         hexdump8_ex(i.data(), i.count(), 0);
       }
@@ -197,8 +200,8 @@ static int device_cmd(int argc, char** argv, bool print_out) {
       auto write_buffer = std::make_unique<uint8_t[]>(n_write_bytes);
       convert_args(&argv[3], n_write_bytes, write_buffer.get());
 
-      status = write_bytes(std::move(client),
-                           fbl::Span<uint8_t>(write_buffer.get(), n_write_bytes));
+      status =
+          write_bytes(std::move(client), fbl::Span<uint8_t>(write_buffer.get(), n_write_bytes));
       break;
     }
 
@@ -213,8 +216,7 @@ static int device_cmd(int argc, char** argv, bool print_out) {
       convert_args(&argv[3], n_write_bytes, write_buffer.get());
 
       uint8_t out_byte = 0;
-      status = read_byte(std::move(client),
-                         fbl::Span<uint8_t>(write_buffer.get(), n_write_bytes),
+      status = read_byte(std::move(client), fbl::Span<uint8_t>(write_buffer.get(), n_write_bytes),
                          &out_byte);
       if (status == ZX_OK && print_out) {
         hexdump8_ex(&out_byte, 1, 0);
@@ -283,7 +285,7 @@ int main(int argc, char** argv) {
       return ping_cmd();
       break;
 
-  default:
+    default:
       usage(argv[0]);
       return -1;
   }

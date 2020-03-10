@@ -125,6 +125,7 @@ executable("fidl_llcpp_builder_test_bin") {
     "buffer_allocator_test.cc",
     "tracking_ptr_test.cc",
     "unowned_ptr_test.cc",
+    "vector_view_test.cc",
   ]
 
   deps = [

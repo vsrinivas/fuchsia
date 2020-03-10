@@ -84,7 +84,7 @@ int modifiers_from_keycode(uint8_t keycode) {
 bool keycode_is_modifier(uint8_t keycode) { return modifiers_from_keycode(keycode) != 0; }
 
 bool is_key_in_set(llcpp::fuchsia::ui::input2::Key key,
-                   fidl::VectorView<llcpp::fuchsia::ui::input2::Key> set) {
+                   const fidl::VectorView<llcpp::fuchsia::ui::input2::Key>& set) {
   for (auto s : set) {
     if (key == s) {
       return true;

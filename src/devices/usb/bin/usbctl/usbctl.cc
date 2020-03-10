@@ -164,7 +164,7 @@ static zx_status_t device_init(zx_handle_t svc, const usb_config_t* config) {
   fidl::VectorView<peripheral::FunctionDescriptor> function_descs(func_descs, config->descs_count);
 
   auto resp = peripheral::Device::Call::SetConfiguration(zx::unowned_channel(svc), device_desc,
-                                                         function_descs);
+                                                         std::move(function_descs));
   if (resp.status() != ZX_OK) {
     return resp.status();
   }

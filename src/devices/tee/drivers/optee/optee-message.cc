@@ -397,8 +397,8 @@ fit::result<OpenSessionMessage, zx_status_t> OpenSessionMessage::TryCreate(
   client_app_param.payload.value.generic.b = 0;
   client_app_param.payload.value.generic.c = TEEC_LOGIN_PUBLIC;
 
-  status =
-      message.TryInitializeParameters(kNumFixedOpenSessionParams, parameter_set, temp_memory_pool);
+  status = message.TryInitializeParameters(kNumFixedOpenSessionParams, std::move(parameter_set),
+                                           temp_memory_pool);
   if (status != ZX_OK) {
     return fit::error(status);
   }
@@ -446,7 +446,7 @@ fit::result<InvokeCommandMessage, zx_status_t> InvokeCommandMessage::TryCreate(
   message.header()->cancel_id = 0;
   message.header()->num_params = static_cast<uint32_t>(num_params);
 
-  status = message.TryInitializeParameters(0, parameter_set, temp_memory_pool);
+  status = message.TryInitializeParameters(0, std::move(parameter_set), temp_memory_pool);
   if (status != ZX_OK) {
     return fit::error(status);
   }

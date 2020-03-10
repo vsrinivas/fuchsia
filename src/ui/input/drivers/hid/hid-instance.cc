@@ -101,7 +101,7 @@ void HidInstance::ReadReport(ReadReportCompleter::Sync completer) {
   }
 
   ::fidl::VectorView<uint8_t> buf_view(buf.data(), report_size);
-  completer.Reply(status, buf_view, time);
+  completer.Reply(status, std::move(buf_view), time);
 }
 
 void HidInstance::ReadReports(ReadReportsCompleter::Sync completer) {
@@ -135,12 +135,12 @@ void HidInstance::ReadReports(ReadReportsCompleter::Sync completer) {
 
   if (status != ZX_OK) {
     ::fidl::VectorView<uint8_t> buf_view(nullptr, 0);
-    completer.Reply(status, buf_view);
+    completer.Reply(status, std::move(buf_view));
     return;
   }
 
   ::fidl::VectorView<uint8_t> buf_view(buf.data(), buf_index);
-  completer.Reply(status, buf_view);
+  completer.Reply(status, std::move(buf_view));
 }
 
 void HidInstance::GetReportsEvent(GetReportsEventCompleter::Sync completer) {
@@ -201,7 +201,7 @@ void HidInstance::GetReportIds(GetReportIdsCompleter::Sync completer) {
 
   fidl::VectorView id_view(report_ids, base_->GetNumReports());
 
-  completer.Reply(id_view);
+  completer.Reply(std::move(id_view));
 }
 
 void HidInstance::GetReportSize(ReportType type, uint8_t id,
@@ -227,7 +227,7 @@ void HidInstance::GetReport(ReportType type, uint8_t id, GetReportCompleter::Syn
                                                              needed, &actual);
 
   fidl::VectorView<uint8_t> report_view(report, actual);
-  completer.Reply(status, report_view);
+  completer.Reply(status, std::move(report_view));
 }
 
 void HidInstance::SetReport(ReportType type, uint8_t id, ::fidl::VectorView<uint8_t> report,

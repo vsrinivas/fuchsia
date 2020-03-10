@@ -321,14 +321,14 @@ void OpteeClient::GetOsInfo(
 void OpteeClient::OpenSession(
     fuchsia_tee::Uuid trusted_app, fidl::VectorView<fuchsia_tee::Parameter> parameter_set,
     fuchsia_tee::Device::Interface::OpenSessionCompleter::Sync completer) {
-  auto [session_id, op_result] = OpenSessionInternal(Uuid(trusted_app), parameter_set);
+  auto [session_id, op_result] = OpenSessionInternal(Uuid(trusted_app), std::move(parameter_set));
   completer.Reply(session_id, op_result.to_llcpp());
 }
 
 void OpteeClient::OpenSession(
     fuchsia_tee::Uuid trusted_app, fidl::VectorView<fuchsia_tee::Parameter> parameter_set,
     fuchsia_tee::Application::Interface::OpenSessionCompleter::Sync completer) {
-  auto [session_id, op_result] = OpenSessionInternal(Uuid(trusted_app), parameter_set);
+  auto [session_id, op_result] = OpenSessionInternal(Uuid(trusted_app), std::move(parameter_set));
   completer.Reply(session_id, op_result.to_llcpp());
 }
 
@@ -339,7 +339,8 @@ void OpteeClient::OpenSession2(
   // optional.
   ZX_DEBUG_ASSERT(application_uuid_.has_value());
 
-  auto [session_id, op_result] = OpenSessionInternal(application_uuid_.value(), parameter_set);
+  auto [session_id, op_result] =
+      OpenSessionInternal(application_uuid_.value(), std::move(parameter_set));
   completer.Reply(session_id, op_result.to_llcpp());
 }
 
@@ -350,7 +351,7 @@ std::pair<uint32_t, OpResult> OpteeClient::OpenSessionInternal(
   OpResult result;
 
   auto create_result = OpenSessionMessage::TryCreate(
-      controller_->driver_pool(), controller_->client_pool(), ta_uuid, parameter_set);
+      controller_->driver_pool(), controller_->client_pool(), ta_uuid, std::move(parameter_set));
   if (!create_result.is_ok()) {
     LOG(ERROR, "failed to create OpenSessionMessage (status: %d)", create_result.error());
     result.set_return_code(TEEC_ERROR_COMMUNICATION);
@@ -394,7 +395,7 @@ void OpteeClient::InvokeCommand(
     uint32_t session_id, uint32_t command_id,
     fidl::VectorView<fuchsia_tee::Parameter> parameter_set,
     fuchsia_tee::Device::Interface::InvokeCommandCompleter::Sync completer) {
-  auto result = InvokeCommandInternal(session_id, command_id, parameter_set);
+  auto result = InvokeCommandInternal(session_id, command_id, std::move(parameter_set));
   completer.Reply(result.to_llcpp());
 }
 
@@ -402,7 +403,7 @@ void OpteeClient::InvokeCommand(
     uint32_t session_id, uint32_t command_id,
     fidl::VectorView<fuchsia_tee::Parameter> parameter_set,
     fuchsia_tee::Application::Interface::InvokeCommandCompleter::Sync completer) {
-  auto result = InvokeCommandInternal(session_id, command_id, parameter_set);
+  auto result = InvokeCommandInternal(session_id, command_id, std::move(parameter_set));
   completer.Reply(result.to_llcpp());
 }
 
@@ -419,7 +420,7 @@ OpResult OpteeClient::InvokeCommandInternal(
 
   auto create_result =
       InvokeCommandMessage::TryCreate(controller_->driver_pool(), controller_->client_pool(),
-                                      session_id, command_id, parameter_set);
+                                      session_id, command_id, std::move(parameter_set));
   if (!create_result.is_ok()) {
     LOG(ERROR, "failed to create InvokeCommandMessage (status: %d)", create_result.error());
     result.set_return_code(TEEC_ERROR_COMMUNICATION);

@@ -107,7 +107,7 @@ class NetworkDeviceTest : public zxtest::Test {
 
     auto connection = OpenConnection();
     session->Open(zx::unowned(connection), session_name, flags, num_descriptors, buffer_size,
-                  frame_types);
+                  std::move(frame_types));
 
     return ZX_OK;
   }

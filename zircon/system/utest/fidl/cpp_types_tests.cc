@@ -5,6 +5,7 @@
 #include <lib/fidl/cpp/builder.h>
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fidl/llcpp/vector_view.h>
+
 #include <unittest/unittest.h>
 
 namespace {
@@ -40,7 +41,7 @@ bool vector_view_test() {
 
   fidl::VectorView<int>* view = builder.New<fidl::VectorView<int>>();
   EXPECT_TRUE(view->empty());
-  EXPECT_TRUE(view->is_null());
+  EXPECT_TRUE(view->data() == nullptr);
 
   int* data = builder.NewArray<int>(3);
   view->set_data(data);

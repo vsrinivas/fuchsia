@@ -37,22 +37,20 @@ class AstBuilder {
 
   template <class T>
   T* ManageCopyOf(const T* value, size_t size = sizeof(T)) {
-    auto buf = bufs_.emplace_back(new char[size]()).get();
-    T* def = reinterpret_cast<T*>(buf);
-    memcpy(buf, value, size);
-    return def;
+    auto buf = bufs_.emplace_back(new char[size]).get();
+    return new (buf) T(*value);
   }
 
   template <class T>
   T* ManageNew() {
-    auto buf = bufs_.emplace_back(new char[sizeof(T)]()).get();
-    return reinterpret_cast<T*>(buf);
+    auto buf = bufs_.emplace_back(new char[sizeof(T)]).get();
+    return new (buf) T();
   }
 
   template <class T>
   T* ManageNewArray(size_t size) {
-    auto buf = bufs_.emplace_back(new char[sizeof(T) * size]()).get();
-    return reinterpret_cast<T*>(buf);
+    auto buf = bufs_.emplace_back(new char[sizeof(T) * size]).get();
+    return new (buf) T[size]();
   }
 
   // Sets the given node to be the root node for remote computation.
