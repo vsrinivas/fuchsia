@@ -44,10 +44,8 @@ async fn main() -> Result<(), Error> {
         notifier.handle_request_stream(requests);
     });
 
-    info!("added notifier, serving servicefs");
     fs.take_and_serve_directory_handle()?;
-    let () = fs.collect().await;
-    Ok(())
+    Ok(fs.collect().await)
 }
 
 fn backstop_time(path: &Path) -> Result<DateTime<Utc>, Error> {
@@ -82,7 +80,7 @@ async fn maintain_utc(
     time_service: ftz::TimeServiceProxy,
     connectivity: fnet::ConnectivityProxy,
 ) {
-    // wait for the network to come up before we start checking for time
+    info!("waiting for network connectivity before attempting network time sync...");
     let mut conn_events = connectivity.take_event_stream();
     loop {
         if let Ok(Some(fnet::ConnectivityEvent::OnNetworkReachable { reachable: true })) =
@@ -93,6 +91,8 @@ async fn maintain_utc(
     }
 
     for i in 0.. {
+        let sleep_duration = zx::Duration::from_seconds(2i64.pow(i)); // exponential backoff
+        info!("requesting roughtime service update the system time...");
         match time_service.update(1).await {
             Ok(true) => {
                 let monotonic_before = zx::Time::get(zx::ClockId::Monotonic).into_nanos();
@@ -106,13 +106,15 @@ async fn maintain_utc(
                 break;
             }
             Ok(false) => {
-                debug!("failed to update time, probably a network error. retrying.");
+                debug!(
+                    "failed to update time, probably a network error. retrying in {}s.",
+                    sleep_duration.into_seconds()
+                );
             }
             Err(why) => {
                 error!("couldn't make request to update time: {:?}", why);
             }
         }
-        let sleep_duration = zx::Duration::from_seconds(2i64.pow(i)); // exponential backoff
         fasync::Timer::new(sleep_duration.after_now()).await;
     }
 }
@@ -131,7 +133,6 @@ impl Notifier {
     fn handle_request_stream(&self, requests: ftime::UtcRequestStream) {
         let notifier = self.clone();
         fasync::spawn(async move {
-            info!("listening for UTC requests");
             let mut counted_requests = requests.enumerate();
             let mut last_seen_state = notifier.0.lock().source;
             while let Some((request_count, Ok(ftime::UtcRequest::WatchState { responder }))) =
