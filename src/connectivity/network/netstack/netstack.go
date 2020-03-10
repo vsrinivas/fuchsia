@@ -407,7 +407,7 @@ func (ns *Netstack) AddRoutes(rs []tcpip.Route, metric routes.Metric, dynamic bo
 func (ns *Netstack) DelRoute(r tcpip.Route) error {
 	syslog.Infof("deleting route %+v", r)
 	if err := ns.routeTable.DelRoute(r); err != nil {
-		return fmt.Errorf("error deleting route, %s", err)
+		return err
 	}
 
 	ns.stack.SetRouteTable(ns.routeTable.GetNetstackTable())
@@ -629,8 +629,8 @@ func (ifs *ifState) stateChange(s link.State) {
 			ifs.ns.UpdateRoutesByInterface(ifs.nicid, routes.ActionDisableStatic)
 		}
 
-		if err := ifs.ns.DelRoute(ipv6LinkLocalOnLinkRoute(ifs.nicid)); err != nil {
-			syslog.Infof("error deleting link-local on-link route for nicID (%d): %s", ifs.nicid, err)
+		if err := ifs.ns.DelRoute(ipv6LinkLocalOnLinkRoute(ifs.nicid)); err != nil && err != routes.ErrNoSuchRoute {
+			syslog.Errorf("error deleting link-local on-link route for nicID (%d): %s", ifs.nicid, err)
 		}
 
 		if err := ifs.ns.stack.DisableNIC(ifs.nicid); err != nil {

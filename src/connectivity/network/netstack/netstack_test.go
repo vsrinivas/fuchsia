@@ -47,6 +47,39 @@ const (
 	dadResolutionTimeout               = dadRetransmitTimer*dadTransmits + time.Second
 )
 
+func TestDelRouteErrors(t *testing.T) {
+	ns := newNetstack(t)
+
+	eth := deviceForAddEth(ethernet.Info{}, t)
+	ifs, err := ns.addEth(testTopoPath, netstack.InterfaceConfig{Name: testDeviceName}, &eth)
+	if err != nil {
+		t.Fatalf("addEth(%q, _): %s", testTopoPath, err)
+	}
+
+	rt := tcpip.Route{
+		Destination: header.IPv4EmptySubnet,
+		Gateway:     "\x01\x02\x03\x04",
+		NIC:         ifs.nicid,
+	}
+
+	// Deleting a route we never added should result in an error.
+	if err := ns.DelRoute(rt); err != routes.ErrNoSuchRoute {
+		t.Errorf("got DelRoute(%s) = %v, want = %s", rt, err, routes.ErrNoSuchRoute)
+	}
+
+	if err := ns.AddRoute(rt, metricNotSet, false); err != nil {
+		t.Fatalf("AddRoute(%s, metricNotSet, false): %s", rt, err)
+	}
+	// Deleting a route we added should not result in an error.
+	if err := ns.DelRoute(rt); err != nil {
+		t.Fatalf("got DelRoute(%s) = %s, want = nil", rt, err)
+	}
+	// Deleting a route we just deleted should result in an error.
+	if err := ns.DelRoute(rt); err != routes.ErrNoSuchRoute {
+		t.Errorf("got DelRoute(%s) = %v, want = %s", rt, err, routes.ErrNoSuchRoute)
+	}
+}
+
 // TestStackNICEnableDisable tests that the NIC in stack.Stack is enabled or
 // disabled when the underlying link is brought up or down, respectively.
 func TestStackNICEnableDisable(t *testing.T) {
