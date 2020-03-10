@@ -37,6 +37,15 @@ constexpr uint8_t kExpectedMac[] = {124, 46, 119, 21, 27, 102};
 constexpr uint16_t kExpectedPhyId = 0;
 constexpr char kExpectedPath[] = "/dev/wifi/wlanphy";
 
+// Below expected values are from test/weave_device_config_test.json and shall be
+// consistent with the file for the related tests to pass
+constexpr uint16_t kExpectedVendorId = 5050;
+constexpr uint16_t kExpectedProductId = 60209;
+constexpr char kExpectedFirmwareRevision[] = "prerelease-1";
+
+constexpr uint16_t kMaxFirmwareRevisionSize =
+    nl::Weave::DeviceLayer::ConfigurationManager::kMaxFirmwareRevisionLength + 1;
+
 }  // namespace
 
 class FakeWlanStack : public fuchsia::wlan::device::service::testing::DeviceService_TestBase {
@@ -101,7 +110,6 @@ class ConfigurationManagerTest : public ::gtest::TestLoopFixture {
 TEST_F(ConfigurationManagerTest, SetAndGetFabricId) {
   const uint64_t fabric_id = 123456789U;
   uint64_t stored_fabric_id = 0U;
-  RunLoopUntilIdle();
   EXPECT_EQ(cfg_mgr_.StoreFabricId(fabric_id), WEAVE_NO_ERROR);
   EXPECT_EQ(cfg_mgr_.GetFabricId(stored_fabric_id), WEAVE_NO_ERROR);
   EXPECT_EQ(stored_fabric_id, fabric_id);
@@ -112,6 +120,26 @@ TEST_F(ConfigurationManagerTest, GetPrimaryWiFiMacAddress) {
   RunLoopUntilIdle();
   EXPECT_EQ(cfg_mgr_.GetPrimaryWiFiMACAddress(mac), WEAVE_NO_ERROR);
   EXPECT_TRUE(std::equal(std::begin(kExpectedMac), std::end(kExpectedMac), std::begin(mac)));
+}
+
+TEST_F(ConfigurationManagerTest, GetVendorId) {
+  uint16_t vendor_id;
+  EXPECT_EQ(cfg_mgr_.GetVendorId(vendor_id), WEAVE_NO_ERROR);
+  EXPECT_EQ(vendor_id, kExpectedVendorId);
+}
+
+TEST_F(ConfigurationManagerTest, GetProductId) {
+  uint16_t product_id;
+  EXPECT_EQ(cfg_mgr_.GetProductId(product_id), WEAVE_NO_ERROR);
+  EXPECT_EQ(product_id, kExpectedProductId);
+}
+
+TEST_F(ConfigurationManagerTest, GetFirmwareRevision) {
+  char firmware_revision[kMaxFirmwareRevisionSize];
+  size_t outlen;
+  EXPECT_EQ(cfg_mgr_.GetFirmwareRevision(firmware_revision, sizeof(firmware_revision), outlen),
+            WEAVE_NO_ERROR);
+  EXPECT_EQ(strncmp(firmware_revision, kExpectedFirmwareRevision, outlen), 0);
 }
 
 }  // namespace testing

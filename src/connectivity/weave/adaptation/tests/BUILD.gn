@@ -27,6 +27,7 @@ test_package("adaptation_tests") {
     },
   ]
   deps = [
+    ":config_test",
     ":configuration_manager_unittests",
     ":group_key_store_unittests",
     ":platform_manager_unittests",
@@ -91,4 +92,10 @@ executable("weave_config_manager_unittests") {
     "//src/lib/testing/loop_fixture",
     "//third_party/googletest:gtest",
   ]
+}
+
+config_data("config_test") {
+  for_pkg = "adaptation_tests"
+  sources = [ "config/device_info_test.json" ]
+  outputs = [ "device_info.json" ]
 }

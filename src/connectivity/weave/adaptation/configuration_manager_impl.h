@@ -8,9 +8,12 @@
 #include <Weave/DeviceLayer/WeaveDeviceConfig.h>
 #include <Weave/DeviceLayer/internal/GenericConfigurationManagerImpl.h>
 // clang-format on
-#include "fuchsia_config.h"
+
 #include <fuchsia/wlan/device/service/cpp/fidl.h>
 #include <lib/sys/cpp/component_context.h>
+
+#include "fuchsia_config.h"
+#include "src/connectivity/weave/adaptation/weave_config_manager.h"
 
 namespace nl {
 namespace Weave {
@@ -18,7 +21,8 @@ namespace DeviceLayer {
 
 namespace Internal {
 class NetworkProvisioningServerImpl;
-}
+class WeaveConfigReader;
+}  // namespace Internal
 
 /**
  * Concrete implementation of the ConfigurationManager singleton object for the Fuchsia platform.
@@ -35,12 +39,15 @@ class ConfigurationManagerImpl final
   // defined on this class.
   friend class Internal::GenericConfigurationManagerImpl<ConfigurationManagerImpl>;
 
-  ConfigurationManagerImpl() = default;
+  ConfigurationManagerImpl();
 
  private:
   // ===== Members that implement the ConfigurationManager public interface.
 
   WEAVE_ERROR _Init(void);
+  WEAVE_ERROR _GetVendorId(uint16_t& vendorId);
+  WEAVE_ERROR _GetProductId(uint16_t& productId);
+  WEAVE_ERROR _GetFirmwareRevision(char* buf, size_t bufSize, size_t& outLen);
   WEAVE_ERROR _GetPrimaryWiFiMACAddress(uint8_t* buf);
   WEAVE_ERROR _GetDeviceDescriptor(
       ::nl::Weave::Profiles::DeviceDescription::WeaveDeviceDescriptor& deviceDesc);
@@ -69,6 +76,7 @@ class ConfigurationManagerImpl final
 
   std::unique_ptr<sys::ComponentContext> context_;
   fuchsia::wlan::device::service::DeviceServiceSyncPtr wlan_device_service_;
+  std::unique_ptr<Internal::WeaveConfigReader> config_data_reader_;
 
  public:
   ConfigurationManagerImpl(std::unique_ptr<sys::ComponentContext> context);

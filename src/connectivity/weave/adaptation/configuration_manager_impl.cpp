@@ -41,12 +41,21 @@ namespace {
 //
 GroupKeyStoreImpl gGroupKeyStore;
 
+constexpr char kDeviceConfigKey_VendorId[] = "vendor-id";
+constexpr char kDeviceConfigKey_ProductId[] = "product-id";
+constexpr char kDeviceConfigKey_FirmwareRevision[] = "firmware-revision";
+constexpr char kWeaveDeviceConfigPath[] = "/config/data/device_info.json";
+
 }  // unnamed namespace
 
 /* Singleton instance of the ConfigurationManager implementation object for the Fuchsia. */
 ConfigurationManagerImpl ConfigurationManagerImpl::sInstance;
 
-ConfigurationManagerImpl::ConfigurationManagerImpl(std::unique_ptr<sys::ComponentContext> context) {
+ConfigurationManagerImpl::ConfigurationManagerImpl()
+    : config_data_reader_(WeaveConfigManager::CreateReadOnlyInstance(kWeaveDeviceConfigPath)) {}
+
+ConfigurationManagerImpl::ConfigurationManagerImpl(std::unique_ptr<sys::ComponentContext> context)
+    : config_data_reader_(WeaveConfigManager::CreateReadOnlyInstance(kWeaveDeviceConfigPath)) {
   context_ = std::move(context);
   _Init();
 }
@@ -58,6 +67,36 @@ WEAVE_ERROR ConfigurationManagerImpl::_Init() {
   zx_status_t status = context_->svc()->Connect(wlan_device_service_.NewRequest());
   FXL_CHECK(status == ZX_OK) << "Failed to connect to wlan service.";
   return WEAVE_NO_ERROR;
+}
+
+WEAVE_ERROR ConfigurationManagerImpl::_GetVendorId(uint16_t& vendorId) {
+  uint32_t val;
+  WEAVE_ERROR err = config_data_reader_->ReadConfigValue(kDeviceConfigKey_VendorId, &val);
+  if (WEAVE_NO_ERROR == err) {
+    if (val > UINT16_MAX) {
+      return WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND;
+    }
+    vendorId = (uint16_t)val;
+  }
+  return err;
+}
+
+WEAVE_ERROR ConfigurationManagerImpl::_GetProductId(uint16_t& productId) {
+  uint32_t val;
+  WEAVE_ERROR err = config_data_reader_->ReadConfigValue(kDeviceConfigKey_ProductId, &val);
+  if (WEAVE_NO_ERROR == err) {
+    if (val > UINT16_MAX) {
+      return WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND;
+    }
+    productId = (uint16_t)val;
+  }
+  return err;
+}
+
+WEAVE_ERROR ConfigurationManagerImpl::_GetFirmwareRevision(char* buf, size_t bufSize,
+                                                           size_t& outLen) {
+  return config_data_reader_->ReadConfigValueStr(kDeviceConfigKey_FirmwareRevision, buf, bufSize,
+                                                 &outLen);
 }
 
 WEAVE_ERROR ConfigurationManagerImpl::_GetPrimaryWiFiMACAddress(uint8_t* buf) {

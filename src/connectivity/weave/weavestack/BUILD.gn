@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/package.gni")
 import("//build/test/test_package.gni")
@@ -14,9 +15,10 @@ source_set("lib") {
 
   public_deps = [
     "//sdk/lib/sys/cpp",
+    "//src/connectivity/weave/adaptation",
     "//src/lib/fsl",
     "//src/lib/syslog/cpp",
-    "//src/connectivity/weave/adaptation",
+    "//src/lib/syslog/cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/zx",
@@ -33,9 +35,7 @@ executable("bin") {
 
 group("weavestack") {
   testonly = true
-  public_deps = [
-    ":pkg",
-  ]
+  public_deps = [ ":pkg" ]
 }
 
 package("pkg") {
@@ -56,3 +56,8 @@ package("pkg") {
   ]
 }
 
+config_data("config") {
+  for_pkg = "weavestack"
+  sources = [ "config/device_info.json" ]
+  outputs = [ "device_info.json" ]
+}

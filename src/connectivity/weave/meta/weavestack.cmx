@@ -3,6 +3,9 @@
         "binary": "bin/weavestack"
     },
     "sandbox": {
+        "features": [
+            "config-data"
+        ],
         "services": [
             "fuchsia.logger.LogSink",
             "fuchsia.posix.socket.Provider"
