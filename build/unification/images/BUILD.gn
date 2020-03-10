@@ -323,6 +323,7 @@ aggregate_manifest("legacy-aux") {
 #------------------
 #------------------
 #------------------
+    ":test.c.atexit-test",
 #------------------
 #------------------
     ":test.c.debugdata-test",
@@ -887,6 +888,7 @@ aggregate_manifest("legacy-tests") {
 #------------------
 #------------------
 #------------------
+    ":test.c.atexit-test",
 #------------------
 #------------------
     ":test.c.debugdata-test",
@@ -2613,6 +2615,9 @@ aggregate_manifest("migrated-aux") {
     #":lib.zxcrypt-fdio.ubsan-sancov-full",
 #------------------
 #------------------
+    #":test.c.atexit-test",
+#------------------
+#------------------
     #":test.c.debugdata-test",
 #------------------
 #------------------
@@ -3306,6 +3311,9 @@ aggregate_manifest("migrated-tests") {
     "//src/devices/tests/devhost-test:devhost-test-manifest",
     "//src/devices/tests/sysdev:sysdev-manifest",
     "//src/devices/tests/mock-device:mock-device-manifest",
+#------------------
+    #":test.c.atexit-test",
+#------------------
 #------------------
     #":test.c.debugdata-test",
 #------------------

@@ -20,18 +20,30 @@ static mtx_t lock = MTX_INIT;
 // Phantom unlock to satisfy analysis when actually we leave it locked forever.
 __TA_RELEASE(&lock) __TA_NO_THREAD_SAFETY_ANALYSIS static void synchronize_exit(void) {}
 
-void __funcs_on_exit(void) {
-  void (*func)(void*), *arg;
-  mtx_lock(&lock);
-  for (; head; head = head->next, slot = COUNT) {
-    while (slot-- > 0) {
-      func = head->f[slot];
-      arg = head->a[slot];
-      mtx_unlock(&lock);
-      func(arg);
-      mtx_lock(&lock);
-    }
+__TA_REQUIRES(&lock) static void funcs_chunk_locked(struct fl* chunk) {
+  while (slot-- > 0) {
+    void (*func)(void*) = chunk->f[slot];
+    void* arg = chunk->a[slot];
+    mtx_unlock(&lock);
+    func(arg);
+    mtx_lock(&lock);
   }
+}
+
+void __funcs_on_exit(void) {
+  mtx_lock(&lock);
+
+  // First do the dynamically-allocated chunk, freeing them when finished.
+  while (head) {
+    funcs_chunk_locked(head);
+    struct fl* dead = head;
+    head = head->next;
+    slot = COUNT;  // Restart at the top of the next chunk, which is full.
+    free(dead);
+  }
+
+  // Now do the static chunk.
+  funcs_chunk_locked(&builtin);
 
   // Leaving this lock held effectively synchronizes the rest of exit after
   // we return to it.  It's technically undefined behavior for the program
@@ -52,9 +64,7 @@ void __cxa_finalize(void* dso) {}
 int __cxa_atexit(void (*func)(void*), void* arg, void* dso) {
   mtx_lock(&lock);
 
-  /* Defer initialization of head so it can be in BSS */
-  if (!head)
-    head = &builtin;
+  struct fl* growing;
 
   /* If the current function list is full, add a new one */
   if (slot == COUNT) {
@@ -66,11 +76,14 @@ int __cxa_atexit(void (*func)(void*), void* arg, void* dso) {
     new_fl->next = head;
     head = new_fl;
     slot = 0;
+    growing = head;
+  } else {
+    growing = head == NULL ? &builtin : head;
   }
 
   /* Append function to the list. */
-  head->f[slot] = func;
-  head->a[slot] = arg;
+  growing->f[slot] = func;
+  growing->a[slot] = arg;
   slot++;
 
   mtx_unlock(&lock);

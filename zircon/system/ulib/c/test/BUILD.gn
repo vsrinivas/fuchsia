@@ -119,9 +119,19 @@ zx_test("posix-clocks") {
   ]
 }
 
+zx_test("atexit") {
+  test_group = "c"
+  sources = [ "atexit.cc" ]
+  deps = [
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/zxtest",
+  ]
+}
+
 group("test") {
   testonly = true
   deps = [
+    ":atexit",
     ":debugdata",
     ":noop-tests.instrumented",
     ":posix-clocks",
