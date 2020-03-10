@@ -7,6 +7,7 @@
 #include <memory>
 
 #include "lib/sys/cpp/component_context.h"
+#include "src/cobalt/bin/app/metric_event_logger_factory_impl.h"
 #include "src/cobalt/bin/app/utils.h"
 #include "src/cobalt/bin/utils/fuchsia_http_client.h"
 #include "third_party/cobalt/src/lib/util/posix_file_system.h"
@@ -169,10 +170,16 @@ CobaltApp::CobaltApp(
   });
 
   // Create LoggerFactory protocol implementation and start serving it.
-  logger_factory_impl_.reset(new LoggerFactoryImpl(std::move(global_project_context_factory),
-                                                   &timer_manager_, cobalt_service_.get()));
+  logger_factory_impl_.reset(new LoggerFactoryImpl(global_project_context_factory, &timer_manager_,
+                                                   cobalt_service_.get()));
   context_->outgoing()->AddPublicService(
       logger_factory_bindings_.GetHandler(logger_factory_impl_.get()));
+
+  // Create MetricEventLoggerFactory protocol implementation and start serving it.
+  metric_event_logger_factory_impl_ = std::make_unique<MetricEventLoggerFactoryImpl>(
+      std::move(global_project_context_factory), cobalt_service_.get());
+  context_->outgoing()->AddPublicService(
+      metric_event_logger_factory_bindings_.GetHandler(metric_event_logger_factory_impl_.get()));
 
   // Create SystemDataUpdater protocol implementation and start serving it.
   system_data_updater_impl_.reset(
