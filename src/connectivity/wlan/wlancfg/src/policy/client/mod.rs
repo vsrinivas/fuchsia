@@ -48,7 +48,6 @@ impl Client {
         Self { proxy: None }
     }
 
-    #[cfg(test)]
     pub fn set_sme(&mut self, proxy: fidl_sme::ClientSmeProxy) {
         self.proxy = Some(proxy);
     }

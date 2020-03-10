@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{client, config::Config, config_manager::SavedNetworksManager, shim};
+use crate::{client, config::Config, config_manager::SavedNetworksManager, policy, shim};
 
 use anyhow::format_err;
 use fidl::endpoints::create_proxy;
@@ -19,6 +19,7 @@ pub struct Listener {
     proxy: DeviceServiceProxy,
     config: Config,
     legacy_client: shim::ClientRef,
+    client: policy::client::ClientPtr,
 }
 
 pub async fn handle_event(
@@ -98,6 +99,7 @@ async fn on_iface_added(
 ) -> Result<(), anyhow::Error> {
     let service = listener.proxy.clone();
     let legacy_client = listener.legacy_client.clone();
+    let client = listener.client.clone();
     let (sme, remote) =
         create_proxy().map_err(|e| format_err!("Failed to create a FIDL channel: {}", e))?;
 
@@ -110,14 +112,20 @@ async fn on_iface_added(
 
     let (c, fut) = client::new_client(iface_id, sme.clone(), saved_networks);
     fasync::spawn(fut);
-    let lc = shim::Client { service, client: c, sme, iface_id };
+    let lc = shim::Client { service, client: c, sme: sme.clone(), iface_id };
     legacy_client.set_if_empty(lc);
+    client.lock().set_sme(sme);
     println!("wlancfg: new iface {} added successfully", iface_id);
     Ok(())
 }
 
 impl Listener {
-    pub fn new(proxy: DeviceServiceProxy, config: Config, legacy_client: shim::ClientRef) -> Self {
-        Listener { proxy, config, legacy_client }
+    pub fn new(
+        proxy: DeviceServiceProxy,
+        config: Config,
+        legacy_client: shim::ClientRef,
+        client: policy::client::ClientPtr,
+    ) -> Self {
+        Listener { proxy, config, legacy_client, client }
     }
 }
