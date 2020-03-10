@@ -45,6 +45,7 @@ To accelerate Fuchsia builds, use [`ccache`](https://ccache.dev/){:.external}
 to cache artifacts from previous builds.
 
 To use `ccache` on Linux, install the following package:
+
 ```posix-terminal
 sudo apt-get install ccache
 ```

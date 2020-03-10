@@ -6,21 +6,15 @@ set up environment variables for working on Fuchsia.
 ## Prerequisites
 
 Fuchsia provides a bootstrap script that sets up your development environment
-and syncs with the Fuchsia source repository. The script requires the
-following tools to be up-to-date:
-
- * Curl
- * Python
- * Unzip
- * Git
- * ccache (Optional) for faster builds.
+and syncs with the Fuchsia source repository. The script requires
+Python, cURL, unzip, and Git to be up-to-date.
 
 ### Linux
 
 Install or update the following packages:
 
 ```posix-terminal
-sudo apt-get install build-essential curl git python unzip ccache
+sudo apt-get install build-essential curl git python unzip
 ```
 
 ### macOS
