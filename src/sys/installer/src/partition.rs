@@ -3,12 +3,14 @@
 // found in the LICENSE file.
 
 use {
+    crate::payload_streamer::PayloadStreamer,
     anyhow::{anyhow, Context, Error},
     fidl::endpoints::Proxy,
     fidl_fuchsia_hardware_block_partition::PartitionProxy,
     fidl_fuchsia_mem::Buffer,
-    fidl_fuchsia_paver::{Asset, Configuration, DynamicDataSinkProxy},
-    fuchsia_zircon as zx, fuchsia_zircon_status as zx_status,
+    fidl_fuchsia_paver::{Asset, Configuration, DynamicDataSinkProxy, PayloadStreamMarker},
+    fuchsia_async as fasync, fuchsia_zircon as zx, fuchsia_zircon_status as zx_status,
+    futures::prelude::*,
     std::{fmt, fs, io::Read, path::Path},
 };
 
@@ -125,6 +127,26 @@ impl Partition {
                 let mut fidl_buf = self.read_data().await?;
                 data_sink.write_asset(config, asset, &mut fidl_buf).await?;
             }
+            PartitionPaveType::Volume => {
+                // Set up a PayloadStream to serve the data sink.
+                let file =
+                    Box::new(fs::File::open(Path::new(&self.src)).context("Opening partition")?);
+                let payload_stream = PayloadStreamer::new(file, self.size);
+                let (client_end, server_end) =
+                    fidl::endpoints::create_endpoints::<PayloadStreamMarker>()?;
+                let mut stream = server_end.into_stream()?;
+
+                fasync::spawn(async move {
+                    while let Some(req) = stream.try_next().await.expect("Failed to get request!") {
+                        payload_stream
+                            .handle_request(req)
+                            .await
+                            .expect("Failed to handle request!");
+                    }
+                });
+                // Tell the data sink to use our PayloadStream.
+                data_sink.write_volumes(client_end).await?;
+            }
             _ => return Err(Error::from(zx_status::Status::NOT_SUPPORTED)),
         };
         Ok(())
@@ -221,7 +243,6 @@ mod tests {
             Guid, PartitionMarker, PartitionRequest, PartitionRequestStream,
         },
         fuchsia_async as fasync,
-        futures::prelude::*,
     };
 
     async fn serve_partition(

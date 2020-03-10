@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 pub mod partition;
+pub mod payload_streamer;
 
 use {
     crate::partition::Partition,
