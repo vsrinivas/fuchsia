@@ -9,13 +9,13 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"math/rand"
 	"net"
 	"sync/atomic"
 	"time"
 
 	"syslog"
 
-	"gvisor.dev/gvisor/pkg/rand"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
@@ -49,6 +49,8 @@ type Client struct {
 	sem chan struct{}
 
 	stats Stats
+
+	rand *rand.Rand
 }
 
 type dhcpClientState uint8
@@ -118,6 +120,7 @@ func NewClient(s *stack.Stack, nicid tcpip.NICID, linkAddr tcpip.LinkAddress, ac
 		stack:        s,
 		acquiredFunc: acquiredFunc,
 		sem:          make(chan struct{}, 1),
+		rand:         rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
 	c.info.Store(Info{
 		NICID:          nicid,
@@ -287,10 +290,43 @@ func (c *Client) cleanup(info *Info) {
 	info.OldAddr = tcpip.AddressWithPrefix{}
 }
 
+const maxBackoff = 64 * time.Second
+
+// Exponential backoff calculates the backoff delay for this iteration (0-indexed) of retransmission.
+//
+// RFC 2131 section 4.1
+// https://tools.ietf.org/html/rfc2131#section-4.1
+//
+//   The delay between retransmissions SHOULD be
+//   chosen to allow sufficient time for replies from the server to be
+//   delivered based on the characteristics of the internetwork between
+//   the client and the server.  For example, in a 10Mb/sec Ethernet
+//   internetwork, the delay before the first retransmission SHOULD be 4
+//   seconds randomized by the value of a uniform random number chosen
+//   from the range -1 to +1.  Clients with clocks that provide resolution
+//   granularity of less than one second may choose a non-integer
+//   randomization value.  The delay before the next retransmission SHOULD
+//   be 8 seconds randomized by the value of a uniform number chosen from
+//   the range -1 to +1.  The retransmission delay SHOULD be doubled with
+//   subsequent retransmissions up to a maximum of 64 seconds.
+func (c *Client) exponentialBackoff(iteration uint) time.Duration {
+	jitter := time.Duration(c.rand.Int63n(int64(2*time.Second+1))) - time.Second // [-1s, +1s]
+	backoff := maxBackoff
+	// Guards against overflow.
+	if retransmission := c.Info().Retransmission; (maxBackoff/retransmission)>>iteration != 0 {
+		backoff = retransmission * (1 << iteration)
+	}
+	backoff += jitter
+	if backoff < 0 {
+		return 0
+	}
+	return backoff
+}
+
 func (c *Client) acquire(ctx context.Context, info *Info) (Config, error) {
 	// https://tools.ietf.org/html/rfc2131#section-4.3.6 Client messages:
 	//
-	//  ---------------------------------------------------------------------
+	// ---------------------------------------------------------------------
 	// |              |INIT-REBOOT  |SELECTING    |RENEWING     |REBINDING |
 	// ---------------------------------------------------------------------
 	// |broad/unicast |broadcast    |broadcast    |unicast      |broadcast |
@@ -323,8 +359,7 @@ func (c *Client) acquire(ctx context.Context, info *Info) (Config, error) {
 				PrefixLen: 0,
 			},
 		}
-		// The IPv4 unspecified/any address should never be used as a primary
-		// endpoint.
+		// The IPv4 unspecified/any address should never be used as a primary endpoint.
 		if err := c.stack.AddProtocolAddressWithOptions(info.NICID, protocolAddress, stack.NeverPrimaryEndpoint); err != nil {
 			panic(fmt.Sprintf("AddProtocolAddressWithOptions(%d, %+v, NeverPrimaryEndpoint): %s", info.NICID, protocolAddress, err))
 		}
@@ -392,8 +427,8 @@ func (c *Client) acquire(ctx context.Context, info *Info) (Config, error) {
 	defer c.wq.EventUnregister(&we)
 
 	var xid [4]byte
-	if _, err := rand.Read(xid[:]); err != nil {
-		return Config{}, fmt.Errorf("rand.Read(): %w", err)
+	if _, err := c.rand.Read(xid[:]); err != nil {
+		return Config{}, fmt.Errorf("c.rand.Read(): %w", err)
 	}
 
 	commonOpts := options{
@@ -413,8 +448,9 @@ func (c *Client) acquire(ctx context.Context, info *Info) (Config, error) {
 			discOpts = append(discOpts, option{optReqIPAddr, []byte(requestedAddr.Address)})
 		}
 		// TODO(38166): Refactor retransmitDiscover and retransmitRequest
+
 	retransmitDiscover:
-		for {
+		for i := uint(0); ; i++ {
 			if err := c.send(
 				ctx,
 				info,
@@ -434,7 +470,7 @@ func (c *Client) acquire(ctx context.Context, info *Info) (Config, error) {
 			c.stats.SendDiscovers.Increment()
 
 			// Receive a DHCPOFFER message from a responding DHCP server.
-			timeoutCh := time.After(info.Retransmission)
+			timeoutCh := time.After(c.exponentialBackoff(i))
 			for {
 				srcAddr, addr, opts, typ, timedOut, err := c.recv(ctx, ep, ch, xid[:], timeoutCh)
 				if err != nil {
@@ -500,7 +536,7 @@ func (c *Client) acquire(ctx context.Context, info *Info) (Config, error) {
 	}
 
 retransmitRequest:
-	for {
+	for i := uint(0); ; i++ {
 		if err := c.send(
 			ctx,
 			info,
@@ -517,7 +553,7 @@ retransmitRequest:
 		c.stats.SendRequests.Increment()
 
 		// Receive a DHCPACK/DHCPNAK from the server.
-		timeoutCh := time.After(info.Retransmission)
+		timeoutCh := time.After(c.exponentialBackoff(i))
 		for {
 			fromAddr, addr, opts, typ, timedOut, err := c.recv(ctx, ep, ch, xid[:], timeoutCh)
 			if err != nil {

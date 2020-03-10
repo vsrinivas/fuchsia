@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"math/rand"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -279,6 +280,16 @@ func (c *Client) verifyClientStats(t *testing.T, want uint64) {
 	}
 }
 
+type randSourceStub struct {
+	rand.Source
+	src int64
+}
+
+func (s *randSourceStub) Int63() int64 { return s.src }
+
+// When used to add jitter to backoff, 1s is substracted from random number to map [0s, +2s] -> [-1s, +1s].
+var zeroJitterSource = &randSourceStub{src: int64(time.Second)}
+
 func TestDHCP(t *testing.T) {
 	s := createTestStack()
 	addEndpointToStack(t, []tcpip.Address{serverAddr}, testNICID, s, loopback.New())
@@ -301,6 +312,8 @@ func TestDHCP(t *testing.T) {
 	}
 
 	c0 := NewClient(s, testNICID, linkAddr1, defaultAcquireTimeout, defaultBackoffTime, defaultResendTime, nil)
+	// Stub out random generator to remove random jitter added to backoff time.
+	c0.rand = rand.New(zeroJitterSource)
 	info := c0.Info()
 	{
 		{
@@ -333,6 +346,8 @@ func TestDHCP(t *testing.T) {
 
 	{
 		c1 := NewClient(s, testNICID, linkAddr2, defaultAcquireTimeout, defaultBackoffTime, defaultResendTime, nil)
+		// Stub out random generator to remove random jitter added to backoff time.
+		c1.rand = rand.New(zeroJitterSource)
 		info := c1.Info()
 		cfg, err := c1.acquire(ctx, &info)
 		if err != nil {
@@ -477,9 +492,9 @@ func TestDelayRetransmission(t *testing.T) {
 				}
 			}
 
-			c0 := NewClient(clientStack, testNICID, linkAddr1, 0, 0, math.MaxInt64, nil)
-			info := c0.Info()
-			cfg, err := c0.acquire(ctx, &info)
+			c := NewClient(clientStack, testNICID, linkAddr1, 0, 0, math.MaxInt64, nil)
+			info := c.Info()
+			cfg, err := c.acquire(ctx, &info)
 			if tc.success {
 				if err != nil {
 					t.Fatal(err)
@@ -494,6 +509,125 @@ func TestDelayRetransmission(t *testing.T) {
 				if !errors.Is(err, ctx.Err()) {
 					t.Errorf("got err=%v, want=%s", err, ctx.Err())
 				}
+			}
+		})
+	}
+}
+
+func TestExponentialBackoff(t *testing.T) {
+	for _, v := range []struct {
+		retran    time.Duration
+		iteration uint
+		jitter    time.Duration
+		want      time.Duration
+	}{
+		{retran: time.Millisecond, iteration: 0, jitter: -100 * time.Second, want: 0},
+		{retran: 50 * time.Millisecond, iteration: 1, want: 100 * time.Millisecond},
+		{retran: 100 * time.Millisecond, iteration: 2, want: 400 * time.Millisecond},
+		{retran: time.Second, iteration: 0, want: time.Second},
+		{retran: time.Second, iteration: 0, jitter: -400 * time.Millisecond, want: 600 * time.Millisecond},
+		{retran: time.Second, iteration: 1, want: 2 * time.Second},
+		{retran: time.Second, iteration: 2, want: 4 * time.Second},
+		{retran: time.Second, iteration: 3, want: 8 * time.Second},
+		{retran: time.Second, iteration: 6, want: 64 * time.Second},
+		{retran: time.Second, iteration: 7, want: 64 * time.Second},
+		{retran: time.Second, iteration: 10, want: 64 * time.Second},
+	} {
+		t.Run(fmt.Sprintf("baseRetransmission=%s,jitter=%s,iteration=%d", v.retran, v.jitter, v.iteration), func(t *testing.T) {
+			c := NewClient(nil, 0, "", 0, 0, v.retran, nil)
+			c.rand = rand.New(&randSourceStub{src: zeroJitterSource.src + int64(v.jitter)})
+			if got := c.exponentialBackoff(v.iteration); got != v.want {
+				t.Errorf("c.exponentialBackoff(%d) = %s, want: %s", v.iteration, got, v.want)
+			}
+		})
+	}
+}
+
+func TestRetransmissionExponentialBackoff(t *testing.T) {
+	for _, v := range []struct {
+		serverDelay, baseRetran time.Duration
+		wantTimeouts            uint64
+	}{
+		{
+			serverDelay:  10 * time.Millisecond,
+			baseRetran:   100 * time.Millisecond,
+			wantTimeouts: 0,
+		},
+		{
+			serverDelay:  11 * time.Millisecond,
+			baseRetran:   10 * time.Millisecond,
+			wantTimeouts: 1,
+		},
+		{
+			serverDelay:  80 * time.Millisecond,
+			baseRetran:   10 * time.Millisecond,
+			wantTimeouts: 3,
+		},
+	} {
+		t.Run(fmt.Sprintf("serverDelay=%s,baseRetransmission=%s", v.serverDelay, v.baseRetran), func(t *testing.T) {
+			var serverLinkEP, clientLinkEP endpoint
+			serverLinkEP.remote = append(serverLinkEP.remote, &clientLinkEP)
+			clientLinkEP.remote = append(clientLinkEP.remote, &serverLinkEP)
+			var offerSent bool
+			serverLinkEP.onWritePacket = func(b tcpip.PacketBuffer) ([]tcpip.PacketBuffer, time.Duration) {
+				switch typ := mustMsgType(t, b); typ {
+				case dhcpOFFER:
+					// Only respond to the first DHCPDISCOVER to avoid unwanted delays on responses to DHCPREQUEST.
+					if offerSent {
+						return nil, 0
+					}
+					offerSent = true
+					return []tcpip.PacketBuffer{b}, v.serverDelay
+				case dhcpACK:
+					return []tcpip.PacketBuffer{b}, v.serverDelay
+				default:
+					t.Fatalf("test server is sending packet with unexpected type: %s", typ)
+					return nil, 0
+				}
+			}
+
+			serverStack := createTestStack()
+			addEndpointToStack(t, []tcpip.Address{serverAddr}, testNICID, serverStack, &serverLinkEP)
+
+			clientStack := createTestStack()
+			addEndpointToStack(t, nil, testNICID, clientStack, &clientLinkEP)
+
+			clientAddrs := []tcpip.Address{"\xc0\xa8\x03\x02", "\xc0\xa8\x03\x03"}
+
+			serverCfg := Config{
+				ServerAddress: serverAddr,
+				SubnetMask:    "\xff\xff\xff\x00",
+				Gateway:       "\xc0\xa8\x03\xF0",
+				DNS: []tcpip.Address{
+					"\x08\x08\x08\x08", "\x08\x08\x04\x04",
+				},
+				LeaseLength: 24 * time.Hour,
+			}
+
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			if _, err := newEPConnServer(ctx, serverStack, clientAddrs, serverCfg); err != nil {
+				t.Fatal(err)
+			}
+
+			c := NewClient(clientStack, testNICID, linkAddr1, 0, 0, v.baseRetran, nil)
+			// Stub out random generator to remove random jitter added to backoff time.
+			c.rand = rand.New(zeroJitterSource)
+			info := c.Info()
+			if _, err := c.acquire(ctx, &info); err != nil {
+				t.Fatalf("c.acquire(ctx, &c.Info()) failed: %s", err)
+			}
+			if got := c.stats.RecvOfferTimeout.Value(); got != v.wantTimeouts {
+				t.Errorf("c.acquire(ctx, &c.Info()) got RecvOfferTimeout count: %d, want: %d", got, v.wantTimeouts)
+			}
+			if got := c.stats.RecvOffers.Value(); got != 1 {
+				t.Errorf("c.acquire(ctx, &c.Info()) got RecvOffers count: %d, want: 1", got)
+			}
+			if got := c.stats.RecvAckTimeout.Value(); got != v.wantTimeouts {
+				t.Errorf("c.acquire(ctx, &c.Info()) got RecvAckTimeout count: %d, want: %d", got, v.wantTimeouts)
+			}
+			if got := c.stats.RecvAcks.Value(); got != 1 {
+				t.Errorf("c.acquire(ctx, &c.Info()) got RecvAcks count: %d, want: 1", got)
 			}
 		})
 	}
@@ -599,6 +733,8 @@ func TestRetransmissionTimeoutWithUnexpectedPackets(t *testing.T) {
 	}
 
 	c := NewClient(clientStack, testNICID, linkAddr1, 0, 0, retransmissionDelay, nil)
+	// Stub out random generator to remove random jitter added to backoff time.
+	c.rand = rand.New(zeroJitterSource)
 	info := c.Info()
 	if _, err := c.acquire(ctx, &info); err != nil {
 		t.Fatalf("c.acquire(ctx, &c.Info()) failed: %s", err)
@@ -631,18 +767,11 @@ func TestStateTransition(t *testing.T) {
 		testLeaseExpire
 	)
 
-	for _, typ := range []testType{testRenew, testRebind, testLeaseExpire} {
-		var name string
-		switch typ {
-		case testRenew:
-			name = "Renew"
-		case testRebind:
-			name = "Rebind"
-		case testLeaseExpire:
-			name = "LeaseExpire"
-		default:
-			t.Fatalf("unknown test type %d", typ)
-		}
+	for name, typ := range map[string]testType{
+		"Renew":       testRenew,
+		"Rebind":      testRebind,
+		"LeaseExpire": testLeaseExpire,
+	} {
 		t.Run(name, func(t *testing.T) {
 			var serverLinkEP, clientLinkEP endpoint
 			serverLinkEP.remote = append(serverLinkEP.remote, &clientLinkEP)
