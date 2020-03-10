@@ -476,7 +476,7 @@ mod tests {
         crate::{
             config_manager::SavedNetworksManager,
             network_config::{NetworkConfig, SecurityType, PSK_BYTE_LEN},
-            testutils::set_logger_for_test,
+            util::logger::set_logger_for_test,
         },
         fidl::{
             endpoints::{create_proxy, create_request_stream},

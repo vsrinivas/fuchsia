@@ -15,8 +15,6 @@ mod policy;
 mod shim;
 mod stash;
 mod state_machine;
-#[cfg(test)]
-mod testutils;
 mod util;
 
 use {
@@ -25,7 +23,6 @@ use {
     fidl_fuchsia_wlan_device_service::DeviceServiceMarker,
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
-    fuchsia_syslog::{self as syslog},
     futures::{channel::mpsc, future::try_join, prelude::*, select},
     parking_lot::Mutex,
     pin_utils::pin_mut,
@@ -77,7 +74,7 @@ async fn serve_fidl(
 }
 
 fn main() -> Result<(), Error> {
-    syslog::init_with_tags(&["wlan-policy"]).expect("Should not fail");
+    util::logger::init();
     let cfg = Config::load_from_file()?;
 
     let mut executor = fasync::Executor::new().context("error create event loop")?;
