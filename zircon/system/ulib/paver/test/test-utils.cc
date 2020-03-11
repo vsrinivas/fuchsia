@@ -48,7 +48,7 @@ void BlockDevice::Create(const fbl::unique_fd& devfs_root, const uint8_t* guid,
   ramdisk_client_t* client;
   ASSERT_OK(ramdisk_create_at_with_guid(devfs_root.get(), kBlockSize, kBlockCount, guid,
                                         ZBI_PARTITION_GUID_LEN, &client));
-  device->reset(new BlockDevice(client));
+  device->reset(new BlockDevice(client, kBlockCount, kBlockSize));
 }
 
 void BlockDevice::Create(const fbl::unique_fd& devfs_root, const uint8_t* guid,
@@ -56,16 +56,16 @@ void BlockDevice::Create(const fbl::unique_fd& devfs_root, const uint8_t* guid,
   ramdisk_client_t* client;
   ASSERT_OK(ramdisk_create_at_with_guid(devfs_root.get(), kBlockSize, block_count, guid,
                                         ZBI_PARTITION_GUID_LEN, &client));
-  device->reset(new BlockDevice(client));
+  device->reset(new BlockDevice(client, block_count, kBlockSize));
 }
 
 void BlockDevice::Create(const fbl::unique_fd& devfs_root, const uint8_t* guid,
-                         uint64_t block_count, uint64_t block_size,
+                         uint64_t block_count, uint32_t block_size,
                          std::unique_ptr<BlockDevice>* device) {
   ramdisk_client_t* client;
   ASSERT_OK(ramdisk_create_at_with_guid(devfs_root.get(), block_size, block_count, guid,
                                         ZBI_PARTITION_GUID_LEN, &client));
-  device->reset(new BlockDevice(client));
+  device->reset(new BlockDevice(client, block_count, block_size));
 }
 
 void SkipBlockDevice::Create(const fuchsia_hardware_nand_RamNandInfo& nand_info,

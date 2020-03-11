@@ -15,7 +15,7 @@
 #include <zxtest/zxtest.h>
 
 constexpr uint64_t kBlockSize = 0x1000;
-constexpr uint64_t kBlockCount = 0x100;
+constexpr uint32_t kBlockCount = 0x100;
 
 constexpr uint32_t kOobSize = 8;
 constexpr uint32_t kPageSize = 2048;
@@ -32,17 +32,24 @@ class BlockDevice {
                      std::unique_ptr<BlockDevice>* device);
 
   static void Create(const fbl::unique_fd& devfs_root, const uint8_t* guid, uint64_t block_count,
-                     uint64_t block_size, std::unique_ptr<BlockDevice>* device);
+                     uint32_t block_size, std::unique_ptr<BlockDevice>* device);
 
   ~BlockDevice() { ramdisk_destroy(client_); }
 
   // Does not transfer ownership of the file descriptor.
   int fd() const { return ramdisk_get_block_fd(client_); }
 
+  // Block count and block size of this device.
+  uint64_t block_count() const { return block_count_; }
+  uint32_t block_size() const { return block_size_; }
+
  private:
-  BlockDevice(ramdisk_client_t* client) : client_(client) {}
+  BlockDevice(ramdisk_client_t* client, uint64_t block_count, uint32_t block_size)
+      : client_(client), block_count_(block_count), block_size_(block_size) {}
 
   ramdisk_client_t* client_;
+  const uint64_t block_count_;
+  const uint32_t block_size_;
 };
 
 class SkipBlockDevice {
