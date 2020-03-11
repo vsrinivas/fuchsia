@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::message::action_fuse::ActionFuseHandle;
 use crate::message::base::{Address, MessageEvent, Payload};
 use anyhow::{format_err, Error};
 use futures::channel::mpsc::UnboundedReceiver;
@@ -24,12 +23,11 @@ type EventReceiver<P, A> = UnboundedReceiver<MessageEvent<P, A>>;
 #[derive(Clone)]
 pub struct Receptor<P: Payload + 'static, A: Address + 'static> {
     event_rx: Arc<Mutex<EventReceiver<P, A>>>,
-    fuse: ActionFuseHandle,
 }
 
 impl<P: Payload + 'static, A: Address + 'static> Receptor<P, A> {
-    pub(super) fn new(fuse: ActionFuseHandle, event_rx: EventReceiver<P, A>) -> Receptor<P, A> {
-        Receptor { event_rx: Arc::new(Mutex::new(event_rx)), fuse: fuse }
+    pub(super) fn new(event_rx: EventReceiver<P, A>) -> Receptor<P, A> {
+        Receptor { event_rx: Arc::new(Mutex::new(event_rx)) }
     }
 
     pub async fn watch(&mut self) -> Result<MessageEvent<P, A>, Error> {

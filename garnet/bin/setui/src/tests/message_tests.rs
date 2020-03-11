@@ -215,3 +215,29 @@ async fn test_delivery_status() {
         verify_result(DeliveryStatus::Undeliverable, &mut receptor).await;
     }
 }
+
+/// Verifies beacon returns error when receptor goes out of scope.
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_beacon_error() {
+    let hub = MessageHub::<TestMessage, TestAddress>::create();
+
+    let (messenger, _) =
+        hub.lock().await.create_messenger(MessengerType::Addressable(TestAddress::Foo(1)));
+    {
+        let (_, mut receptor) =
+            hub.lock().await.create_messenger(MessengerType::Addressable(TestAddress::Foo(2)));
+
+        verify_result(
+            DeliveryStatus::Received,
+            &mut messenger.message(ORIGINAL, Audience::Address(TestAddress::Foo(2))).send(),
+        )
+        .await;
+        verify_payload(ORIGINAL, &mut receptor, None).await;
+    }
+
+    verify_result(
+        DeliveryStatus::Undeliverable,
+        &mut messenger.message(ORIGINAL, Audience::Address(TestAddress::Foo(2))).send(),
+    )
+    .await;
+}

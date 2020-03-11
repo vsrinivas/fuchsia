@@ -80,6 +80,8 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
 
         let message_type = message.get_message_type();
 
+        let mut require_delivery = false;
+
         // Replies have a predetermined return path.
         if let MessageType::Reply(mut source) = message_type {
             // The original author of the reply will be the first participant in
@@ -138,9 +140,7 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
                         Audience::Address(address) => {
                             if let Some(messenger_id) = self.addresses.get(&address) {
                                 target_messengers.push(messenger_id.clone());
-
-                                // Will be delivering to recipient. Acknowledge
-                                message.report_status(DeliveryStatus::Received).await;
+                                require_delivery = true;
                             } else {
                                 // This error will occur if the sender specifies a non-existent
                                 // address.
@@ -170,9 +170,26 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
             }
         }
 
+        let mut successful_delivery = None;
         // Send message to each specified recipient.
         for recipient in recipients {
-            recipient.deliver(message.clone()).await.ok();
+            if recipient.deliver(message.clone()).await.is_ok() {
+                if successful_delivery.is_none() {
+                    successful_delivery = Some(true);
+                }
+            } else {
+                successful_delivery = Some(false);
+            }
+        }
+
+        if require_delivery {
+            message
+                .report_status(if let Some(true) = successful_delivery {
+                    DeliveryStatus::Received
+                } else {
+                    DeliveryStatus::Undeliverable
+                })
+                .await;
         }
     }
 
