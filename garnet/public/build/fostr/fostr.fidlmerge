@@ -111,7 +111,7 @@ std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value);
 
 
 {{- define "UnionWriterDecls" }}
-    {{- range .XUnions }}
+    {{- range .Unions }}
 std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value);
     {{- end }}
 {{- end }}
@@ -237,7 +237,7 @@ std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value) 
 
 
 {{- define "UnionWriterDefs" }}
-    {{- range .XUnions }}
+    {{- range .Unions }}
 
 std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value) {
   using fidl::operator<<;

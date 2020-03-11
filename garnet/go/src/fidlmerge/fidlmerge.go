@@ -61,7 +61,6 @@ func main() {
 	for _, v := range r.Unions {
 		r.XUnions = append(r.XUnions, types.ConvertUnionToXUnion(v))
 	}
-	r.Unions = []types.Union{}
 
 	results := GenerateFidl(*cmdlineflags.templatePath,
 		cmdlineflags.FidlAmendments().Amend(r),
@@ -139,14 +138,23 @@ func (a Amendments) ApplyExclusions(root types.Root) types.Root {
 	}
 	root.Tables = newTables
 
-	newUnions := root.XUnions[:0]
+	newXUnions := root.XUnions[:0]
 	for _, element := range root.XUnions {
+		_, found := excludeMap[element.Name]
+		if !found {
+			newXUnions = append(newXUnions, element)
+		}
+	}
+	root.XUnions = newXUnions
+
+	newUnions := root.Unions[:0]
+	for _, element := range root.Unions {
 		_, found := excludeMap[element.Name]
 		if !found {
 			newUnions = append(newUnions, element)
 		}
 	}
-	root.XUnions = newUnions
+	root.Unions = newUnions
 
 	newDeclOrder := root.DeclOrder[:0]
 	for _, element := range root.DeclOrder {
@@ -380,10 +388,6 @@ func GenerateFidl(templatePath string, fidl types.Root, outputBase *string, opti
 	}
 
 	template.Must(tmpls.Funcs(funcMap).Parse(string(returnBytes[:])))
-
-	if len(root.Unions) > 0 {
-		panic("should not have any unions, see <https://fuchsia-review.googlesource.com/c/fuchsia/+/365937/7/garnet/go/src/fidlmerge/fidlmerge.go#59> for context")
-	}
 
 	err = tmpls.ExecuteTemplate(os.Stdout, "Main", root)
 	if err != nil {
