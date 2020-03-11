@@ -791,8 +791,7 @@ template("package") {
           path = "/system/$dest"
         } else {
           url_pkg_name = pkg.package_name
-          path =
-              "/pkgfs/packages/${pkg.package_name}/${pkg.package_version}/$dest"
+          path = ""
         }
       }
 

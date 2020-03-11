@@ -30,7 +30,7 @@ func TestValidation(t *testing.T) {
 			CPU:        "x64",
 		},
 		{
-			OS:  "Linux",
+			OS:  "Fuchsia",
 			CPU: "x64",
 		},
 	}
@@ -45,12 +45,13 @@ func TestValidation(t *testing.T) {
 		Test: build.Test{
 			Name: "//src/foo:tests",
 			Path: "path/to/test",
-			OS:   "linux",
+			OS:   "fuchsia",
+			PackageURL: "URL",
 		},
 		Envs: []build.Environment{
 			{
 				Dimensions: build.DimensionSet{
-					OS: "Linux",
+					OS: "Fuchsia",
 				},
 			},
 		},
@@ -70,9 +71,10 @@ func TestValidation(t *testing.T) {
 		spec.Name = ""
 		validate(t, []build.TestSpec{spec}, false)
 	})
-	t.Run("test with no install path nor command is invalid", func(t *testing.T) {
+	t.Run("test with no install path nor command nor URL is invalid", func(t *testing.T) {
 		spec := getSpec(t)
 		spec.Path = ""
+		spec.PackageURL = ""
 		validate(t, []build.TestSpec{spec}, false)
 	})
 	t.Run("test with no OS is invalid", func(t *testing.T) {
