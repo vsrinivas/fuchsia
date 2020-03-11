@@ -144,11 +144,12 @@ spn_vk_context_create(struct spn_vk_environment * const               environmen
 //
 
 spn_result_t
-spn_vk_context_wait(spn_context_t   context,
-                    uint32_t const  imports_count,
-                    VkFence * const imports,
-                    bool const      wait_all,
-                    uint64_t const  timeout_ns);
+spn_vk_context_wait(spn_context_t    context,
+                    uint32_t const   imports_count,
+                    VkFence * const  imports,
+                    bool const       wait_all,
+                    uint64_t const   timeout_ns,
+                    uint32_t * const executing_count);
 
 //
 //

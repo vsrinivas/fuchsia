@@ -385,6 +385,7 @@ extern "C" {
         imports: *mut vk::Fence,
         wait_all: bool,
         timeout_ns: u64,
+        executing_count: *mut u32,
     ) -> SpnResult;
 
     pub fn spn_context_retain(context: SpnContext) -> SpnResult;

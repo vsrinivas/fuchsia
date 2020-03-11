@@ -381,7 +381,7 @@ fxt_spinel_vk_render::SetUp()
   //
   // wait for asynchronous path/raster releases to complete
   //
-  spn(vk_context_wait(context, 0, NULL, true, UINT64_MAX));
+  spn(vk_context_wait(context, 0, NULL, true, UINT64_MAX, NULL));
 
   //
   // checksum?

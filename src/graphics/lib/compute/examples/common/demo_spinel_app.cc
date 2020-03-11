@@ -101,7 +101,7 @@ DemoSpinelApp::teardown()
   }
   // Force spinel to complete rendering operations, to trigger swapchain
   // presentation of the last acquired swapchain image.
-  spn_vk_context_wait(spinel_context_, 0, NULL, true, UINT64_MAX);
+  spn_vk_context_wait(spinel_context_, 0, NULL, true, UINT64_MAX, NULL);
 
   spinel_submits_.clear();
   image_provider_->teardown();

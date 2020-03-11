@@ -269,8 +269,8 @@ TEST_F(spinel_vk, dispatch_implicit_rasters_flush)
   //
   // drain everything
   //
-  spn(vk_context_wait(context, 0, NULL, true, 10L * 1000L * 1000L * 1000L));
-  spn(vk_context_wait(context, 0, NULL, true, 10L * 1000L * 1000L * 1000L));
+  spn(vk_context_wait(context, 0, NULL, true, 10L * 1000L * 1000L * 1000L, NULL));
+  spn(vk_context_wait(context, 0, NULL, true, 10L * 1000L * 1000L * 1000L, NULL));
 
   //
   // release everything
@@ -278,7 +278,7 @@ TEST_F(spinel_vk, dispatch_implicit_rasters_flush)
   spn(raster_release(context, rasters, count));
   spn(path_release(context, paths, count));
 
-  spn(vk_context_wait(context, 0, NULL, true, 10L * 1000L * 1000L * 1000L));
+  spn(vk_context_wait(context, 0, NULL, true, 10L * 1000L * 1000L * 1000L, NULL));
 
   //
   // release the builders
@@ -339,14 +339,14 @@ TEST_F(spinel_vk, wip_path_is_lost)
   //
   // drain everything
   //
-  spn(vk_context_wait(context, 0, NULL, true, 10L * 1000L * 1000L * 1000L));
+  spn(vk_context_wait(context, 0, NULL, true, 10L * 1000L * 1000L * 1000L, NULL));
 
   //
   // release paths
   //
   spn(path_release(context, paths, 2));
 
-  spn(vk_context_wait(context, 0, NULL, true, 10L * 1000L * 1000L * 1000L));
+  spn(vk_context_wait(context, 0, NULL, true, 10L * 1000L * 1000L * 1000L, NULL));
 
   //
   // release the builders

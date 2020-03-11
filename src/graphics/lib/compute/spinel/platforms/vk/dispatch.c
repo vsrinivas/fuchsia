@@ -503,25 +503,31 @@ spn_device_dispatch_process_executing(struct spn_device * const   device,
 
       case VK_TIMEOUT:
 #ifndef NDEBUG
-        fprintf(stderr,
-                "VK_TIMEOUT counts:\n"
-                "  available: %u\n"
-                "  executing: %u\n"
-                "  complete : %u\n"
+        if (timeout_ns > 0ul)
+          {
+            fprintf(stderr,
+                    "VK_TIMEOUT counts:\n"
+                    "  available: %u\n"
+                    "  executing: %u\n"
+                    "  complete : %u\n"
 #ifdef SPN_DISPATCH_TRACK_WAITING
-                "  waiting  : %u\n"
+                    "  waiting  : %u\n"
 #endif
-                ,
-                dispatch->counts.available,
-                dispatch->counts.executing,
-                dispatch->counts.complete,
+                    ,
+                    dispatch->counts.available,
+                    dispatch->counts.executing,
+                    dispatch->counts.complete,
 #ifdef SPN_DISPATCH_TRACK_WAITING
-                dispatch->counts.waiting
+                    dispatch->counts.waiting
 #endif
-        );
+            );
+          }
 #endif
         return SPN_TIMEOUT;
 
+      case VK_ERROR_OUT_OF_HOST_MEMORY:
+      case VK_ERROR_OUT_OF_DEVICE_MEMORY:
+      case VK_ERROR_DEVICE_LOST:
       default:
         spn_device_lost(device);
         return SPN_ERROR_CONTEXT_LOST;
@@ -569,7 +575,8 @@ spn_device_wait_for_fences(struct spn_device * const device,
                            uint32_t const            imports_count,
                            VkFence * const           imports,
                            bool const                wait_all,
-                           uint64_t const            timeout_ns)
+                           uint64_t const            timeout_ns,
+                           uint32_t * const          executing_count)
 {
   struct spn_dispatch * const dispatch = device->dispatch;
 
@@ -582,10 +589,24 @@ spn_device_wait_for_fences(struct spn_device * const device,
 
   // return timeout or worse...
   if (result != SPN_SUCCESS)
-    return result;
+    {
+      // return count of executing dispatches
+      if (executing_count != NULL)
+        {
+          *executing_count = dispatch->counts.executing;
+        }
+
+      return result;
+    }
 
   // otherwise, process completed dispatches...
   spn_device_dispatch_process_complete(device, dispatch);
+
+  // return count of executing dispatches
+  if (executing_count != NULL)
+    {
+      *executing_count = dispatch->counts.executing;
+    }
 
   return SPN_SUCCESS;
 }
@@ -597,7 +618,12 @@ spn_device_wait_for_fences(struct spn_device * const device,
 spn_result_t
 spn_device_wait_all(struct spn_device * const device, bool const wait_all)
 {
-  return spn_device_wait_for_fences(device, 0, NULL, wait_all, spn_device_get_timeout_ns(device));
+  return spn_device_wait_for_fences(device,
+                                    0,
+                                    NULL,
+                                    wait_all,
+                                    spn_device_get_timeout_ns(device),
+                                    NULL);
 }
 
 spn_result_t

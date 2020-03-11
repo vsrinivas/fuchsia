@@ -240,13 +240,19 @@ spn_vk_context_create(struct spn_vk_environment * const               environmen
 //
 
 spn_result_t
-spn_vk_context_wait(spn_context_t   context,
-                    uint32_t const  imports_count,
-                    VkFence * const imports,
-                    bool const      wait_all,
-                    uint64_t const  timeout_ns)
+spn_vk_context_wait(spn_context_t    context,
+                    uint32_t const   imports_count,
+                    VkFence * const  imports,
+                    bool const       wait_all,
+                    uint64_t const   timeout_ns,
+                    uint32_t * const executing_count)
 {
-  return spn_device_wait_for_fences(context->device, imports_count, imports, wait_all, timeout_ns);
+  return spn_device_wait_for_fences(context->device,
+                                    imports_count,
+                                    imports,
+                                    wait_all,
+                                    timeout_ns,
+                                    executing_count);
 }
 
 //

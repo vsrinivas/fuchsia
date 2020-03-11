@@ -80,7 +80,8 @@ spn_device_wait_for_fences(struct spn_device * const device,
                            uint32_t const            imports_count,
                            VkFence * const           imports,
                            bool const                wait_all,
-                           uint64_t const            timeout_ns);
+                           uint64_t const            timeout_ns,
+                           uint32_t *                executing_count);
 
 spn_result_t
 spn_device_wait_all(struct spn_device * const device, bool const wait_all);
