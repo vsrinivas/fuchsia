@@ -1,10 +1,5 @@
 {
     "program": {
         "binary": "test/cobalt_utils_unittests"
-    },
-    "sandbox": {
-        "services": [
-            "fuchsia.logger.LogSink"
-        ]
     }
 }
