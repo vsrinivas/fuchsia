@@ -199,7 +199,7 @@ func (c *Client) TriggerSystemOTA(ctx context.Context, repo *packages.Repository
 	return c.ExpectReboot(ctx, repo, rpcClient, func() error {
 		// FIXME: running this out of /pkgfs/versions is unsound WRT using the correct loader service
 		// Adding this as a short-term hack to unblock http://fxb/47213
-		cmd := fmt.Sprintf("/pkgfs/versions/%s/bin/update check-now", updateBinMerkle)
+		cmd := fmt.Sprintf("/pkgfs/versions/%s/bin/update check-now --monitor", updateBinMerkle)
 		if err := c.Run(ctx, cmd, os.Stdout, os.Stderr); err != nil {
 			// If the device rebooted before ssh was able to tell
 			// us the command ran, it will tell us the session
