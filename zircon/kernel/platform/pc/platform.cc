@@ -639,17 +639,6 @@ void platform_mexec(mexec_asm_func mexec_assembly, memmov_ops_t* ops, uintptr_t 
                  0);
 }
 
-void platform_halt_secondary_cpus(void) {
-  // Ensure the current thread is pinned to the boot CPU.
-  DEBUG_ASSERT(Thread::Current::Get()->hard_affinity_ == cpu_num_to_mask(BOOT_CPU_ID));
-
-  // "Unplug" online secondary CPUs before halting them.
-  cpu_mask_t primary = cpu_num_to_mask(BOOT_CPU_ID);
-  cpu_mask_t mask = mp_get_online_mask() & ~primary;
-  zx_status_t result = mp_unplug_cpu_mask(mask);
-  DEBUG_ASSERT(result == ZX_OK);
-}
-
 void platform_early_init(void) {
   /* extract bootloader data while still accessible */
   /* this includes debug uart config, etc. */

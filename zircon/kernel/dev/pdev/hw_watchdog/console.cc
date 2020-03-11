@@ -11,6 +11,7 @@
 #include <platform.h>
 
 #include <dev/hw_watchdog.h>
+#include <platform/halt_helper.h>
 
 static void usage(const char* cmd_name) {
   printf("Usage:\n");
@@ -116,7 +117,9 @@ static int cmd_watchdog(int argc, const cmd_args* argv, uint32_t flags) {
       // 4) Spin forever.
       //
       Thread::Current::MigrateToCpu(BOOT_CPU_ID);
-      platform_halt_secondary_cpus();
+      [[maybe_unused]] zx_status_t status = platform_halt_secondary_cpus();
+      DEBUG_ASSERT(status == ZX_OK);
+
       arch_disable_ints();
 
       // Make sure that our printf goes directly to the UART, bypassing any

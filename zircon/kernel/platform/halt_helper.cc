@@ -7,6 +7,7 @@
 #include <lib/debuglog.h>
 #include <zircon/boot/crash-reason.h>
 
+#include <kernel/mp.h>
 #include <platform/halt_helper.h>
 
 void platform_graceful_halt_helper(platform_halt_action action, zircon_crash_reason_t reason) {
@@ -17,7 +18,8 @@ void platform_graceful_halt_helper(platform_halt_action action, zircon_crash_rea
   Thread::Current::MigrateToCpu(BOOT_CPU_ID);
 
   printf("platform_graceful_halt_helper: Halting secondary CPUs.\n");
-  platform_halt_secondary_cpus();
+  [[maybe_unused]] zx_status_t status = platform_halt_secondary_cpus();
+  DEBUG_ASSERT(status == ZX_OK);
 
   // Delay shutdown of debuglog to ensure log messages emitted by above calls will be written.
   printf("platform_graceful_halt_helper: Shutting down dlog.\n");
@@ -27,4 +29,14 @@ void platform_graceful_halt_helper(platform_halt_action action, zircon_crash_rea
   printf("platform_graceful_halt_helper: Calling platform_halt.\n");
   platform_halt(action, reason);
   panic("ERROR: failed to halt the platform\n");
+}
+
+zx_status_t platform_halt_secondary_cpus() {
+  // Ensure the current thread is pinned to the boot CPU.
+  DEBUG_ASSERT(Thread::Current::Get()->hard_affinity_ == cpu_num_to_mask(BOOT_CPU_ID));
+
+  // "Unplug" online secondary CPUs before halting them.
+  cpu_mask_t primary = cpu_num_to_mask(BOOT_CPU_ID);
+  cpu_mask_t mask = mp_get_online_mask() & ~primary;
+  return mp_unplug_cpu_mask(mask);
 }

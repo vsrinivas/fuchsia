@@ -78,15 +78,6 @@ void platform_specific_halt(platform_halt_action suggested_action, zircon_crash_
 /* optionally stop the current cpu in a way the platform finds appropriate */
 void platform_halt_cpu(void);
 
-/* platform_halt_secondary_cpus halts secondary (non-boot) CPUs.
- *
- * While the mechanism used is platform dependent, this function attempts to shut them down
- * gracefully so that secondary CPUs aren't holding any spinlocks.
- *
- * This function must be called from the primary (boot) CPU.
- */
-void platform_halt_secondary_cpus(void);
-
 /* called during chain loading to make sure drivers and platform is put into a stopped state */
 void platform_quiesce(void);
 
