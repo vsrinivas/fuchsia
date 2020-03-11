@@ -1652,13 +1652,16 @@ fn receive_icmp_echo_reply<
             trace!("receive_icmp_echo_reply: Received echo reply for local socket");
             ctx.receive_icmp_echo_reply(IcmpConnId::new(conn), seq, body);
         } else {
-            // NOTE(brunodalbo): Neither the ICMPv4 or ICMPv6 RFCs explicitly
+            // TODO(fxb/47952): Neither the ICMPv4 or ICMPv6 RFCs explicitly
             // state what to do in case we receive an "unsolicited" echo reply.
             // We only expose the replies if we have a registered connection for
             // the IcmpAddr of the incoming reply for now. Given that a reply
             // should only be sent in response to a request, an ICMP
             // unreachable-type message is probably not appropriate for
-            // unsolicited replies.
+            // unsolicited replies. However, it's also possible that we sent a
+            // request and then closed the socket before receiving the reply, so
+            // this doesn't necessarily indicate a buggy or malicious remote
+            // host. We should figure this out definitively.
             trace!("receive_icmp_echo_reply: Received echo reply with no local socket");
         }
     } else {

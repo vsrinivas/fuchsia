@@ -91,6 +91,105 @@ impl<A: IpAddress> IpPacketFromArgs<A> {
     }
 }
 
+/// An error encountered when receiving a transport-layer packet.
+#[derive(Debug)]
+pub(crate) struct TransportReceiveError {
+    inner: TransportReceiveErrorInner,
+}
+
+impl TransportReceiveError {
+    // NOTE: We don't expose a constructor for the "protocol unsupported" case.
+    // This ensures that the only way that we send a "protocol unsupported"
+    // error is if the implementation of `IpTransportContext` provided for a
+    // given protocol number is `()`. That's because `()` is the only type whose
+    // `receive_ip_packet` function is implemented in this module, and thus it's
+    // the only type that is able to construct a "protocol unsupported"
+    // `TransportReceiveError`.
+
+    /// Constructs a new `TransportReceiveError` to indicate an unreachable
+    /// port.
+    pub(crate) fn new_port_unreachable() -> TransportReceiveError {
+        TransportReceiveError { inner: TransportReceiveErrorInner::PortUnreachable }
+    }
+}
+
+#[derive(Debug)]
+enum TransportReceiveErrorInner {
+    ProtocolUnsupported,
+    PortUnreachable,
+}
+
+/// The execution context provided by a transport layer protocol to the IP
+/// layer.
+///
+/// An implementation for `()` is provided which indicates that a particular
+/// transport layer protocol is unsupported.
+pub(crate) trait IpTransportContext<I: Ip, B: BufferMut, C: ?Sized> {
+    /// Receive a transport layer packet in an IP packet.
+    ///
+    /// In the event of an unreachable port, `receive_ip_packet` returns the
+    /// buffer in its original state (with the transport packet un-parsed) in
+    /// the `Err` variant.
+    fn receive_ip_packet(
+        ctx: &mut C,
+        src_ip: I::Addr,
+        dst_ip: SpecifiedAddr<I::Addr>,
+        buffer: B,
+    ) -> Result<(), (B, TransportReceiveError)>;
+}
+
+impl<I: Ip, B: BufferMut, C: ?Sized> IpTransportContext<I, B, C> for () {
+    fn receive_ip_packet(
+        _ctx: &mut C,
+        _src_ip: I::Addr,
+        _dst_ip: SpecifiedAddr<I::Addr>,
+        buffer: B,
+    ) -> Result<(), (B, TransportReceiveError)> {
+        Err((
+            buffer,
+            TransportReceiveError { inner: TransportReceiveErrorInner::ProtocolUnsupported },
+        ))
+    }
+}
+
+// TODO(joshlf): With all 256 protocol numbers (minus reserved ones) given their
+// own associated type in both traits, running `cargo check` on a 2018 MacBook
+// Pro takes over a minute. Eventually - and before we formally publish this as
+// a library - we should identify the bottleneck in the compiler and optimize
+// it. For the time being, however, we only support protocol numbers that we
+// actually use (TCP and UDP).
+
+/// The execution context for IPv6's transport layer.
+///
+/// `Ipv6TransportLayerContext` defines the [`IpTransportContext`] for each IPv6
+/// protocol number. The procol numbers 1 (ICMP) and 2 (IGMP) are used by the
+/// stack itself, and cannot be overriddedn.
+pub(crate) trait Ipv4TransportLayerContext<B: BufferMut> {
+    type Proto6: IpTransportContext<Ipv4, B, Self>;
+    type Proto17: IpTransportContext<Ipv4, B, Self>;
+}
+
+/// The execution context for IPv6's transport layer.
+///
+/// `Ipv6TransportLayerContext` defines the [`IpTransportContext`] for each IPv6
+/// protocol number. The procol numbers 0 (Hop-by-Hop Options), 58 (ICMPv6), 59
+/// (No Next Header), and 60 (Destination Options) are used by the stack itself,
+/// and cannot be overriddedn.
+pub(crate) trait Ipv6TransportLayerContext<B: BufferMut> {
+    type Proto6: IpTransportContext<Ipv6, B, Self>;
+    type Proto17: IpTransportContext<Ipv6, B, Self>;
+}
+
+impl<B: BufferMut, D: BufferDispatcher<B>> Ipv4TransportLayerContext<B> for Context<D> {
+    type Proto6 = ();
+    type Proto17 = crate::transport::udp::UdpIpTransportContext;
+}
+
+impl<B: BufferMut, D: BufferDispatcher<B>> Ipv6TransportLayerContext<B> for Context<D> {
+    type Proto6 = ();
+    type Proto17 = crate::transport::udp::UdpIpTransportContext;
+}
+
 /// The execution context provided by the IP layer to transport layer protocols.
 pub trait TransportIpContext<I: Ip> {
     /// Is this one of our local addresses?
@@ -560,70 +659,80 @@ fn dispatch_receive_ipv4_packet<B: BufferMut, D: BufferDispatcher<B>>(
     src_ip: Ipv4Addr,
     dst_ip: SpecifiedAddr<Ipv4Addr>,
     proto: IpProto,
-    mut buffer: B,
+    buffer: B,
     parse_metadata: Option<ParseMetadata>,
 ) {
     increment_counter!(ctx, "dispatch_receive_ipv4_packet");
 
-    let res = match proto {
-        IpProto::Icmp => {
-            icmp::receive_icmpv4_packet(ctx, device, src_ip, dst_ip, buffer);
-            Ok(())
-        }
-        IpProto::Igmp => {
-            igmp::receive_igmp_packet(
-                ctx,
-                device.expect("IGMP messages should come from a device"),
-                src_ip,
-                dst_ip,
-                buffer,
-            );
-            Ok(())
-        }
-        IpProto::Udp => {
-            crate::transport::udp::receive_ip_packet::<Ipv4, _, _>(ctx, src_ip, dst_ip, buffer)
-        }
+    macro_rules! mtch {
+        ($($cond:pat => $ty:ident),*) => {
+            match proto {
+                IpProto::Icmp => {
+                    icmp::receive_icmpv4_packet(ctx, device, src_ip, dst_ip, buffer);
+                    Ok(())
+                }
+                IpProto::Igmp => {
+                    igmp::receive_igmp_packet(
+                        ctx,
+                        device.expect("IGMP messages should come from a device"),
+                        src_ip,
+                        dst_ip,
+                        buffer,
+                    );
+                    Ok(())
+                }
+                $($cond => <<Context<D> as Ipv4TransportLayerContext<_>>::$ty as IpTransportContext<Ipv4, _, _>>
+                            ::receive_ip_packet(ctx, src_ip, dst_ip, buffer),)*
+                // TODO(joshlf): Once all IP protocol numbers are covered,
+                // remove this default case.
+                _ => Err((
+                    buffer,
+                    TransportReceiveError { inner: TransportReceiveErrorInner::ProtocolUnsupported },
+                )),
+            }
+        };
+    }
 
-        _ => {
-            // Undo the parsing of the IP packet header so that the buffer
-            // contains the entire original IP packet.
-            let meta = parse_metadata.unwrap();
-            buffer.undo_parse(meta);
-            icmp::send_icmpv4_protocol_unreachable(
-                ctx,
-                device.unwrap(),
-                frame_dst,
-                src_ip,
-                dst_ip,
-                buffer,
-                meta.header_len(),
-            );
-            Ok(())
-        }
-    };
+    #[rustfmt::skip]
+    let res = mtch!(IpProto::Tcp => Proto6, IpProto::Udp => Proto17);
 
-    if let Err(mut buffer) = res {
-        // TODO(joshlf): What if we're called from a loopback handler, and
-        // device and parse_metadata are None? In other words, what happens if
-        // we attempt to send to a loopback port which is unreachable? We will
-        // eventually need to restructure the control flow here to handle that
-        // case.
-
-        // udp::receive_ip_packet promises to return the buffer in the same
-        // state it was in when they were called. Thus, all we have to do is
-        // undo the parsing of the IP packet header, and the buffer will be back
-        // to containing the entire original IP packet.
+    if let Err((mut buffer, err)) = res {
+        // All branches promise to return the buffer in the same state it was in
+        // when they were executed. Thus, all we have to do is undo the parsing
+        // of the IP packet header, and the buffer will be back to containing
+        // the entire original IP packet.
         let meta = parse_metadata.unwrap();
         buffer.undo_parse(meta);
-        icmp::send_icmpv4_port_unreachable(
-            ctx,
-            device.unwrap(),
-            frame_dst,
-            src_ip,
-            dst_ip,
-            buffer,
-            meta.header_len(),
-        );
+
+        match err.inner {
+            TransportReceiveErrorInner::ProtocolUnsupported => {
+                icmp::send_icmpv4_protocol_unreachable(
+                    ctx,
+                    device.unwrap(),
+                    frame_dst,
+                    src_ip,
+                    dst_ip,
+                    buffer,
+                    meta.header_len(),
+                );
+            }
+            TransportReceiveErrorInner::PortUnreachable => {
+                // TODO(joshlf): What if we're called from a loopback handler,
+                // and device and parse_metadata are None? In other words, what
+                // happens if we attempt to send to a loopback port which is
+                // unreachable? We will eventually need to restructure the
+                // control flow here to handle that case.
+                icmp::send_icmpv4_port_unreachable(
+                    ctx,
+                    device.unwrap(),
+                    frame_dst,
+                    src_ip,
+                    dst_ip,
+                    buffer,
+                    meta.header_len(),
+                );
+            }
+        }
     }
 }
 
@@ -638,54 +747,73 @@ fn dispatch_receive_ipv6_packet<B: BufferMut, D: BufferDispatcher<B>>(
     src_ip: Ipv6Addr,
     dst_ip: SpecifiedAddr<Ipv6Addr>,
     proto: IpProto,
-    mut buffer: B,
+    buffer: B,
     parse_metadata: Option<ParseMetadata>,
 ) {
     increment_counter!(ctx, "dispatch_receive_ipv6_packet");
 
-    let res = match proto {
-        IpProto::Icmpv6 => {
-            icmp::receive_icmpv6_packet(ctx, device, src_ip, dst_ip, buffer);
-            Ok(())
-        }
-        // A value of `IpProto::NoNextHeader` tells us that there is no header whatsoever
-        // following the last lower-level header so we stop processing here.
-        IpProto::NoNextHeader => Ok(()),
-        IpProto::Udp => {
-            crate::transport::udp::receive_ip_packet::<Ipv6, _, _>(ctx, src_ip, dst_ip, buffer)
-        }
-        _ => {
-            // Undo the parsing of the IP packet header so that the buffer
-            // contains the entire original IP packet.
-            let meta = parse_metadata.unwrap();
-            buffer.undo_parse(meta);
-            icmp::send_icmpv6_protocol_unreachable(
-                ctx,
-                device.unwrap(),
-                frame_dst,
-                src_ip,
-                dst_ip,
-                buffer,
-                meta.header_len(),
-            );
-            Ok(())
-        }
-    };
+    macro_rules! mtch {
+        ($($cond:pat => $ty:ident),*) => {
+            match proto {
+                IpProto::Icmpv6 => {
+                    icmp::receive_icmpv6_packet(ctx, device, src_ip, dst_ip, buffer);
+                    Ok(())
+                }
+                // A value of `IpProto::NoNextHeader` tells us that there is no
+                // header whatsoever following the last lower-level header so we
+                // stop processing here.
+                IpProto::NoNextHeader => Ok(()),
+                $($cond => <<Context<D> as Ipv4TransportLayerContext<_>>::$ty as IpTransportContext<Ipv6, _, _>>
+                            ::receive_ip_packet(ctx, src_ip, dst_ip, buffer),)*
+                // TODO(joshlf): Once all IP Next Header numbers are covered,
+                // remove this default case.
+                _ => Err((
+                    buffer,
+                    TransportReceiveError { inner: TransportReceiveErrorInner::ProtocolUnsupported },
+                )),
+            }
+        };
+    }
 
-    if let Err(mut buffer) = res {
-        // TODO(joshlf): What if we're called from a loopback handler, and
-        // device and parse_metadata are None? In other words, what happens if
-        // we attempt to send to a loopback port which is unreachable? We will
-        // eventually need to restructure the control flow here to handle that
-        // case.
+    #[rustfmt::skip]
+    let res = mtch!(IpProto::Tcp => Proto6, IpProto::Udp => Proto17);
 
-        // udp::receive_ip_packet promises to return the buffer in the same
-        // state it was in when they were called. Thus, all we have to do is
-        // undo the parsing of the IP packet header, and the buffer will be back
-        // to containing the entire original IP packet.
+    if let Err((mut buffer, err)) = res {
+        // All branches promise to return the buffer in the same state it was in
+        // when they were executed. Thus, all we have to do is undo the parsing
+        // of the IP packet header, and the buffer will be back to containing
+        // the entire original IP packet.
         let meta = parse_metadata.unwrap();
         buffer.undo_parse(meta);
-        icmp::send_icmpv6_port_unreachable(ctx, device.unwrap(), frame_dst, src_ip, dst_ip, buffer);
+
+        match err.inner {
+            TransportReceiveErrorInner::ProtocolUnsupported => {
+                icmp::send_icmpv6_protocol_unreachable(
+                    ctx,
+                    device.unwrap(),
+                    frame_dst,
+                    src_ip,
+                    dst_ip,
+                    buffer,
+                    meta.header_len(),
+                );
+            }
+            TransportReceiveErrorInner::PortUnreachable => {
+                // TODO(joshlf): What if we're called from a loopback handler,
+                // and device and parse_metadata are None? In other words, what
+                // happens if we attempt to send to a loopback port which is
+                // unreachable? We will eventually need to restructure the
+                // control flow here to handle that case.
+                icmp::send_icmpv6_port_unreachable(
+                    ctx,
+                    device.unwrap(),
+                    frame_dst,
+                    src_ip,
+                    dst_ip,
+                    buffer,
+                );
+            }
+        }
     }
 }
 

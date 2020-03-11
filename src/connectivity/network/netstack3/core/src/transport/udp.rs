@@ -21,7 +21,8 @@ use crate::data_structures::IdMapCollectionKey;
 use crate::error::{LocalAddressError, NetstackError, RemoteAddressError, SocketError};
 use crate::ip::{
     icmp::{IcmpIpExt, Icmpv4ErrorCode, Icmpv6ErrorCode},
-    BufferTransportIpContext, IpPacketFromArgs, IpProto, IpVersionMarker, TransportIpContext,
+    BufferTransportIpContext, IpPacketFromArgs, IpProto, IpTransportContext, IpVersionMarker,
+    TransportIpContext, TransportReceiveError,
 };
 use crate::transport::{ConnAddrMap, ListenerAddrMap};
 use crate::wire::ipv4::{Ipv4Header, Ipv4PacketRaw};
@@ -577,58 +578,65 @@ pub trait UdpEventDispatcher<I: IcmpIpExt> {
     }
 }
 
-/// Receive a UDP packet in an IP packet.
-///
-/// In the event of an unreachable port, `receive_ip_packet` returns the buffer
-/// in its original state (with the UDP packet un-parsed) in the `Err` variant.
-pub(crate) fn receive_ip_packet<I: IcmpIpExt, B: BufferMut, C: BufferUdpContext<I, B>>(
-    ctx: &mut C,
-    src_ip: I::Addr,
-    dst_ip: SpecifiedAddr<I::Addr>,
-    mut buffer: B,
-) -> Result<(), B> {
-    trace!("received UDP packet: {:x?}", buffer.as_mut());
-    let packet = if let Ok(packet) =
-        buffer.parse_with::<_, UdpPacket<_>>(UdpParseArgs::new(src_ip, dst_ip.get()))
-    {
-        packet
-    } else {
-        // TODO(joshlf): Do something with ICMP here?
-        return Ok(());
-    };
+/// An implementation of [`IpTransportContext`] for UDP.
+pub(crate) enum UdpIpTransportContext {}
 
-    let state = ctx.get_state();
+impl<I: IcmpIpExt, B: BufferMut, C: BufferUdpContext<I, B>> IpTransportContext<I, B, C>
+    for UdpIpTransportContext
+{
+    fn receive_ip_packet(
+        ctx: &mut C,
+        src_ip: I::Addr,
+        dst_ip: SpecifiedAddr<I::Addr>,
+        mut buffer: B,
+    ) -> Result<(), (B, TransportReceiveError)> {
+        trace!("received UDP packet: {:x?}", buffer.as_mut());
+        let packet = if let Ok(packet) =
+            buffer.parse_with::<_, UdpPacket<_>>(UdpParseArgs::new(src_ip, dst_ip.get()))
+        {
+            packet
+        } else {
+            // TODO(joshlf): Do something with ICMP here?
+            return Ok(());
+        };
 
-    if let Some(socket) = SpecifiedAddr::new(src_ip)
-        .and_then(|src_ip| packet.src_port().map(|src_port| (src_ip, src_port)))
-        .and_then(|(src_ip, src_port)| {
-            state.conn_state.lookup(dst_ip, src_ip, packet.dst_port(), src_port)
-        })
-    {
-        match socket {
-            LookupResult::Conn(id, conn) => {
-                ctx.receive_udp_from_conn(id, conn.remote_ip.get(), conn.remote_port, packet.body())
-            }
-            LookupResult::Listener(id, _) | LookupResult::WildcardListener(id, _) => ctx
-                .receive_udp_from_listen(
+        let state = ctx.get_state();
+
+        if let Some(socket) = SpecifiedAddr::new(src_ip)
+            .and_then(|src_ip| packet.src_port().map(|src_port| (src_ip, src_port)))
+            .and_then(|(src_ip, src_port)| {
+                state.conn_state.lookup(dst_ip, src_ip, packet.dst_port(), src_port)
+            })
+        {
+            match socket {
+                LookupResult::Conn(id, conn) => ctx.receive_udp_from_conn(
                     id,
-                    src_ip,
-                    dst_ip.get(),
-                    packet.src_port(),
+                    conn.remote_ip.get(),
+                    conn.remote_port,
                     packet.body(),
                 ),
+                LookupResult::Listener(id, _) | LookupResult::WildcardListener(id, _) => ctx
+                    .receive_udp_from_listen(
+                        id,
+                        src_ip,
+                        dst_ip.get(),
+                        packet.src_port(),
+                        packet.body(),
+                    ),
+            }
+            Ok(())
+        } else if state.send_port_unreachable {
+            // Unfortunately, type inference isn't smart enough for us to just
+            // do packet.parse_metadata().
+            let meta = ParsablePacket::<_, crate::wire::udp::UdpParseArgs<I::Addr>>::parse_metadata(
+                &packet,
+            );
+            core::mem::drop(packet);
+            buffer.undo_parse(meta);
+            Err((buffer, TransportReceiveError::new_port_unreachable()))
+        } else {
+            Ok(())
         }
-        Ok(())
-    } else if state.send_port_unreachable {
-        // Unfortunately, type inference isn't smart enough for us to just do
-        // packet.parse_metadata().
-        let meta =
-            ParsablePacket::<_, crate::wire::udp::UdpParseArgs<I::Addr>>::parse_metadata(&packet);
-        core::mem::drop(packet);
-        buffer.undo_parse(meta);
-        Err(buffer)
-    } else {
-        Ok(())
     }
 }
 
@@ -1202,8 +1210,13 @@ mod tests {
         let builder = UdpPacketBuilder::new(src_ip, dst_ip, Some(src_port), dst_port);
         let buffer =
             Buf::new(body.to_owned(), ..).encapsulate(builder).serialize_vec_outer().unwrap();
-        receive_ip_packet(ctx, src_ip, SpecifiedAddr::new(dst_ip).unwrap(), buffer)
-            .expect("Receive IP packet succeeds");
+        UdpIpTransportContext::receive_ip_packet(
+            ctx,
+            src_ip,
+            SpecifiedAddr::new(dst_ip).unwrap(),
+            buffer,
+        )
+        .expect("Receive IP packet succeeds");
     }
 
     /// Tests UDP listeners over different IP versions.
