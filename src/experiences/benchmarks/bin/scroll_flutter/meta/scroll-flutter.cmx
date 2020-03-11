@@ -1,6 +1,6 @@
 {
     "program": {
-        "data": "data/scroll_flutter"
+        "data": "data/scroll-flutter"
     },
     "sandbox": {
         "services": [

@@ -4,13 +4,13 @@
 
 import("//topaz/runtime/flutter_runner/flutter_app.gni")
 
-flutter_app("clockface_flutter") {
+flutter_app("clockface-flutter") {
   main_dart = "lib/main.dart"
 
   meta = [
     {
-      path = rebase_path("meta/clockface_flutter.cmx")
-      dest = "clockface_flutter.cmx"
+      path = rebase_path("meta/clockface-flutter.cmx")
+      dest = "clockface-flutter.cmx"
     },
   ]
 

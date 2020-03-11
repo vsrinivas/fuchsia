@@ -1,6 +1,6 @@
 {
     "program": {
-        "data": "data/clockface_flutter"
+        "data": "data/clockface-flutter"
     },
     "sandbox": {
         "services": [

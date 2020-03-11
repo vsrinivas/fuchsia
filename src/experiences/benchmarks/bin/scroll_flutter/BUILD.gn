@@ -4,13 +4,13 @@
 
 import("//topaz/runtime/flutter_runner/flutter_app.gni")
 
-flutter_app("scroll_flutter") {
+flutter_app("scroll-flutter") {
   main_dart = "lib/main.dart"
 
   meta = [
     {
-      path = rebase_path("meta/scroll_flutter.cmx")
-      dest = "scroll_flutter.cmx"
+      path = rebase_path("meta/scroll-flutter.cmx")
+      dest = "scroll-flutter.cmx"
     },
   ]
 
