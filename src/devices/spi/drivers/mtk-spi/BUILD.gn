@@ -13,6 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/config/fuchsia/rules.gni")
+import("//build/test.gni")
 import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("mtk-spi") {
@@ -32,10 +33,42 @@ driver_module("mtk-spi") {
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/sync",
+    "//zircon/system/dev/lib/device-protocol-pdev",
+    "//zircon/system/dev/lib/device-protocol-platform-device",
+  ]
+}
+
+test("mtk-spi-test") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # Remove when converting this file to proper GN build idioms.
+  testonly = false
+  configs += [ "//build/unification/config:zircon-migrated" ]
+  output_name = "mtk-spi-test"
+  sources = [
+    "mtk-spi-test.cc",
+    "mtk-spi.cc",
+  ]
+  deps = [
+    "//sdk/banjo/ddk.protocol.spiimpl",
+    "//src/devices/lib/driver",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/fake_ddk",
+    "//zircon/public/lib/hwreg",
+    "//zircon/public/lib/mmio",
+    "//zircon/public/lib/mock-mmio-reg",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/dev/lib/device-protocol-pdev",
     "//zircon/system/dev/lib/device-protocol-platform-device",
   ]
 }
 
 migrated_manifest("mtk-spi-manifest") {
   deps = [ ":mtk-spi" ]
+}
+
+migrated_manifest("mtk-spi-test-manifest") {
+  deps = [ ":mtk-spi-test" ]
 }

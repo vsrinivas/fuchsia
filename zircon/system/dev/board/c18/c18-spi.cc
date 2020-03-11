@@ -17,58 +17,28 @@
 
 namespace board_c18 {
 
+constexpr uint32_t kTopCkGenRegBase = 0x10000000;
+constexpr uint32_t kTopCkGenRegSize = 0x1000;
+constexpr uint32_t kClkCfg3SetOffset = 0x74;
+constexpr uint32_t kClkCfg3ClrOffset = 0x78;
+constexpr uint32_t kClkCfgUpdateOffset = 0x04;
+constexpr uint32_t kSpiCkUpdateShift = 15;
+constexpr uint32_t kSpiClockOffShift = 31;
+constexpr uint32_t kClkSpiSelShift = 24;
+constexpr uint32_t kMainPllD5D2 = 1;
+
 static const pbus_mmio_t spi_mmios[] = {
-    /*     {
-            .base = MT8183_SPI0_BASE,
-            .length = MT8183_SPI_SIZE,
-        },
-        {
-            .base = MT8183_SPI1_BASE,
-            .length = MT8183_SPI_SIZE,
-        }, */
     {
         .base = MT8183_SPI2_BASE,
         .length = MT8183_SPI_SIZE,
     },
-    /*     {
-            .base = MT8183_SPI3_BASE,
-            .length = MT8183_SPI_SIZE,
-        },
-        {
-            .base = MT8183_SPI4_BASE,
-            .length = MT8183_SPI_SIZE,
-        },
-        {
-            .base = MT8183_SPI5_BASE,
-            .length = MT8183_SPI_SIZE,
-        }, */
 };
 
 static const spi_channel_t spi_channels[] = {
-    /*     {
-            .bus_id = C18_SPI0,
-            .cs = 0,  // index into matching chip-select map
-        },
-        {
-            .bus_id = C18_SPI1,
-            .cs = 0,  // index into matching chip-select map
-        }, */
     {
         .bus_id = C18_SPI2,
         .cs = 0,  // index into matching chip-select map
     },
-    /*     {
-            .bus_id = C18_SPI3,
-            .cs = 0,  // index into matching chip-select map
-        },
-        {
-            .bus_id = C18_SPI4,
-            .cs = 0,  // index into matching chip-select map
-        },
-        {
-            .bus_id = C18_SPI5,
-            .cs = 0,  // index into matching chip-select map
-        }, */
 };
 
 static const pbus_metadata_t spi_metadata[] = {
@@ -92,6 +62,30 @@ static pbus_dev_t spi_dev = []() {
 }();
 
 zx_status_t C18::SpiInit() {
+  // 1. Configure GPIOs
+  gpio_impl_.SetAltFunction(MT8183_GPIO_SPI2_MI, 7);
+  gpio_impl_.ConfigOut(MT8183_GPIO_SPI2_CSB, 1);
+  gpio_impl_.SetAltFunction(MT8183_GPIO_SPI2_MO, 7);
+  gpio_impl_.SetAltFunction(MT8183_GPIO_SPI2_CLK, 7);
+
+  {
+    // Enable Clock
+    std::optional<ddk::MmioBuffer> mmio2;
+    auto status = ddk::MmioBuffer::Create(
+        kTopCkGenRegBase, kTopCkGenRegSize,
+        // Please do not use get_root_resource() in new code (ZX-1467).
+        zx::resource(get_root_resource()), ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio2);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "%s: MmioBuffer Create failed %d \n", __PRETTY_FUNCTION__, status);
+      return status;
+    }
+
+    mmio2->SetBits32(1 << kSpiClockOffShift, kClkCfg3ClrOffset);
+    mmio2->SetBits32(1 << kSpiCkUpdateShift, kClkCfgUpdateOffset);
+    mmio2->SetBits32(kMainPllD5D2 << kClkSpiSelShift, kClkCfg3SetOffset);
+    mmio2->SetBits32(1 << kSpiCkUpdateShift, kClkCfgUpdateOffset);
+  }
+
   zx_status_t status = pbus_.DeviceAdd(&spi_dev);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DeviceAdd failed %d\n", __func__, status);

@@ -3106,6 +3106,7 @@ aggregate_manifest("migrated-aux") {
     "//src/ui/backlight/drivers/sg-micro:sgm37603a-test-manifest",
     "//zircon/system/ulib/simplehid/test:simplehid-manifest",
     "//zircon/system/ulib/smbios/test:smbios-test-manifest",
+    "//src/devices/spi/drivers/mtk-spi:mtk-spi-test-manifest",
     "//src/devices/spi/drivers/spi:spi-test-manifest",
     "//zircon/system/utest/status:status-manifest",
 #------------------
@@ -3304,6 +3305,7 @@ aggregate_manifest("migrated-tests") {
 #------------------
 #------------------
 #------------------
+    "//src/devices/spi/drivers/mtk-spi:mtk-spi-test-manifest",
 #------------------
 #------------------
     "//src/media/audio/drivers/alc5663:alc5663-manifest",
