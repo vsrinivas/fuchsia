@@ -2,14 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/devmgr-integration-test/fixture.h>
-
 #include <errno.h>
 #include <fcntl.h>
-
-#include <fbl/unique_fd.h>
+#include <lib/devmgr-integration-test/fixture.h>
 #include <lib/fdio/watcher.h>
 #include <lib/zx/clock.h>
+
+#include <fbl/unique_fd.h>
 
 namespace devmgr_integration_test {
 
@@ -46,7 +45,7 @@ namespace {
 // using the full_path. This is a workaround to deal with the fact that devhosts
 // do not implement open_at.
 zx_status_t WaitForFile2(const fbl::unique_fd& rootdir, const fbl::unique_fd& dir,
-                         const char* full_path, const char* file, fbl::unique_fd* out) {
+                         const char* full_path, const char* file, bool last, fbl::unique_fd* out) {
   auto watch_func = [](int dirfd, int event, const char* fn, void* cookie) -> zx_status_t {
     auto file = reinterpret_cast<const char*>(cookie);
     if (event != WATCH_EVENT_ADD_FILE) {
@@ -63,7 +62,11 @@ zx_status_t WaitForFile2(const fbl::unique_fd& rootdir, const fbl::unique_fd& di
   if (status != ZX_ERR_STOP) {
     return status;
   }
-  out->reset(openat(rootdir.get(), full_path, O_RDWR));
+  int flags = O_RDWR;
+  if (!last) {
+    flags = O_RDONLY | O_DIRECTORY;
+  }
+  out->reset(openat(rootdir.get(), full_path, flags));
   if (!out->is_valid()) {
     return ZX_ERR_IO;
   }
@@ -77,12 +80,12 @@ zx_status_t RecursiveWaitForFileHelper(const fbl::unique_fd& rootdir, const fbl:
   if (first_slash == nullptr) {
     // If there's no first slash, then we're just waiting for the file
     // itself to appear.
-    return WaitForFile2(rootdir, dir, full_path, path, out);
+    return WaitForFile2(rootdir, dir, full_path, path, true, out);
   }
   *first_slash = 0;
 
   fbl::unique_fd next_dir;
-  zx_status_t status = WaitForFile2(rootdir, dir, full_path, path, &next_dir);
+  zx_status_t status = WaitForFile2(rootdir, dir, full_path, path, false, &next_dir);
   if (status != ZX_OK) {
     return status;
   }
