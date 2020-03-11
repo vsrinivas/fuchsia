@@ -12,7 +12,6 @@
 #include <string>
 #include <thread>
 
-#include <rapidjson/pointer.h>
 #include <src/lib/fsl/vmo/strings.h>
 #include <src/lib/fxl/strings/join_strings.h>
 
@@ -106,17 +105,21 @@ const rapidjson::Value& DiagnosticsData::content() const {
 const rapidjson::Value& DiagnosticsData::GetByPath(const std::vector<std::string>& path) const {
   static rapidjson::Value default_ret;
 
-  std::string pointer("/");
-  pointer.append(fxl::JoinStrings(path, "/"));
+  const rapidjson::Value* cur = &content();
+  for (size_t i = 0; i < path.size(); i++) {
+    if (!cur->IsObject()) {
+      return default_ret;
+    }
 
-  rapidjson::Pointer ptr(pointer.c_str());
+    auto it = cur->FindMember(path[i]);
+    if (it == cur->MemberEnd()) {
+      return default_ret;
+    }
 
-  const rapidjson::Value* val = ptr.Get(content());
-  if (val == nullptr) {
-    return default_ret;
-  } else {
-    return *val;
+    cur = &it->value;
   }
+
+  return *cur;
 }
 
 ArchiveReader::ArchiveReader(fuchsia::diagnostics::ArchivePtr archive,

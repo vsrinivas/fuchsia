@@ -43,6 +43,12 @@ TEST(DiagnosticsDataTest, ContentExtraction) {
     EXPECT_EQ(rapidjson::Value(), data.GetByPath({"value", "1234"}));
   }
   {
+    rapidjson::Document doc;
+    doc.Parse(R"({"contents": {"name/with/slashes": "hello"}})");
+    DiagnosticsData data(std::move(doc));
+    EXPECT_EQ(rapidjson::Value("hello"), data.GetByPath({"name/with/slashes"}));
+  }
+  {
     // Content is missing, return nullptr.
     rapidjson::Document doc;
     doc.Parse(R"({"path": "root/hub/my_component.cmx"})");
