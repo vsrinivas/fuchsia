@@ -46,13 +46,15 @@ elements *  8 bytes.
 Next, we need to estimate the size of `Peer` which is [defined as a
 table][bts-peer]. Tables are essentially a [vector of envelopes][fidl-table-t],
 where each envelope then points to the field content. Estimating the size must
-be done in two steps: 1. Determine the largest field ordinal used (a.k.a.
-`max_ordinal`); 2. Determine the size of each present field.
+be done in two steps:
 
-The size of `Peer` is then the table header -- i.e. `sizeof(fidl_table_t)` --
-plus largest ordinal * envelope header -- i.e. `max_ordinal *
-sizeof(fidl_envelope_t)` -- plus the total size of the content, that is, each
-present field’s content added.
+1. Determine the largest field ordinal used (a.k.a. `max_set_ordinal`)
+2. Determine the size of each present field
+
+The size of `Peer` is then the table header -- i.e. `sizeof(fidl_table_t)`, 16
+bytes -- plus the largest set ordinal * envelope header (16 bytes) -- i.e.
+`max_set_ordinal * sizeof(fidl_envelope_t)` -- plus the total size of the
+content, that is, each present field’s content added.
 
 Fields are relatively easy to size, many are primitives or wrappers thereof,
 hence result in 8 bytes (due to padding). The `bt.Address` [field][bt-address]
