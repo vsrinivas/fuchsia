@@ -185,7 +185,7 @@ TEST_F(IntegrationTest, SendVsyncsAfterEmptyConfig) {
       [count, p = primary_client.get()]() { return p->vsync_count() > count; }, zx::sec(1)));
 }
 
-TEST_F(IntegrationTest, DISABLED_SendVsyncsAfterClientsBail) {
+TEST_F(IntegrationTest, SendVsyncsAfterClientsBail) {
   TestFidlClient vc_client(sysmem_.get());
   ASSERT_TRUE(vc_client.CreateChannel(display_fidl()->get(), /*is_vc=*/true));
   {
