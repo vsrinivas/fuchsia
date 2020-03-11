@@ -79,12 +79,22 @@ func getFreePort() (int, error) {
 
 // Configure QEMU appropriately
 func getQemuInvocation(binary, kernel, initrd, blk string, port int) ([]string, error) {
-	drive := qemu.Drive{
+	qemuCmd := &qemu.QEMUCommandBuilder{}
+
+	qemuCmd.SetBinary(binary)
+	qemuCmd.SetTarget(qemu.TargetEnum.X86_64, true /* KVM */)
+	qemuCmd.SetKernel(kernel)
+	qemuCmd.SetInitrd(initrd)
+
+	qemuCmd.SetCPUCount(4)
+	qemuCmd.SetMemory(3072 /* MiB */)
+
+	qemuCmd.AddVirtioBlkPciDrive(qemu.Drive{
 		ID:   "d0",
 		File: blk,
-	}
+	})
 
-	netdev := qemu.Netdev{
+	qemuCmd.AddNetwork(qemu.Netdev{
 		ID:  "net0",
 		MAC: "52:54:00:63:5e:7b",
 		User: &qemu.NetdevUser{
@@ -93,32 +103,21 @@ func getQemuInvocation(binary, kernel, initrd, blk string, port int) ([]string, 
 			Host:      "192.168.3.2",
 			Forwards:  []qemu.Forward{{HostPort: port, GuestPort: 22}},
 		},
-	}
+	})
 
-	config := qemu.Config{
-		Binary:   binary,
-		Target:   "x86_64",
-		CPU:      4,
-		Memory:   3072,
-		KVM:      true,
-		Kernel:   kernel,
-		Initrd:   initrd,
-		Drives:   []qemu.Drive{drive},
-		Networks: []qemu.Netdev{netdev},
-	}
-
-	cmdline := []string{
-		"TERM=dumb",
-		"kernel.serial=legacy",
-		"kernel.halt-on-panic=true",
-	}
+	// The system will halt on a kernel panic instead of rebooting.
+	qemuCmd.AddKernelArg("kernel.halt-on-panic=true")
+	// Do not print colors.
+	qemuCmd.AddKernelArg("TERM=dumb")
+	// Necessary to redirect serial to stdout for x86.
+	qemuCmd.AddKernelArg("kernel.serial=legacy")
 
 	entropy := make([]byte, 32)
 	if _, err := rand.Read(entropy); err == nil {
-		cmdline = append(cmdline, "kernel.entropy-mixin="+hex.EncodeToString(entropy))
+		qemuCmd.AddKernelArg("kernel.entropy-mixin=" + hex.EncodeToString(entropy))
 	}
 
-	return qemu.CreateInvocation(config, cmdline)
+	return qemuCmd.Build()
 }
 
 func fileExists(path string) bool {

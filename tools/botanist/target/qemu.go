@@ -45,9 +45,9 @@ const (
 )
 
 // qemuTargetMapping maps the Fuchsia target name to the name recognized by QEMU.
-var qemuTargetMapping = map[string]string{
-	"x64":   qemu.TargetX86_64,
-	"arm64": qemu.TargetAArch64,
+var qemuTargetMapping = map[string]qemu.Target{
+	"x64":   qemu.TargetEnum.X86_64,
+	"arm64": qemu.TargetEnum.AArch64,
 }
 
 // MinFS is the configuration for the MinFS filesystem image.
@@ -170,19 +170,23 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 	if t.process != nil {
 		return fmt.Errorf("a process has already been started with PID %d", t.process.Pid)
 	}
+	qemuCmd := &qemu.QEMUCommandBuilder{}
 
 	qemuTarget, ok := qemuTargetMapping[t.config.Target]
 	if !ok {
 		return fmt.Errorf("invalid target %q", t.config.Target)
 	}
+	qemuCmd.SetTarget(qemuTarget, t.config.KVM)
 
 	if t.config.Path == "" {
 		return fmt.Errorf("directory must be set")
 	}
 	qemuSystem := filepath.Join(t.config.Path, fmt.Sprintf("%s-%s", qemuSystemPrefix, qemuTarget))
-	if _, err := os.Stat(qemuSystem); err != nil {
-		return fmt.Errorf("could not find qemu-system binary %q: %v", qemuSystem, err)
+	absQEMUSystemPath, err := normalizeFile(qemuSystem)
+	if err != nil {
+		return fmt.Errorf("could not find qemu binary %q: %v", qemuSystem, err)
 	}
+	qemuCmd.SetBinary(absQEMUSystemPath)
 
 	var qemuKernel, zirconA, storageFull bootserver.Image
 	for _, img := range images {
@@ -213,30 +217,30 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 		return err
 	}
 
-	var drives []qemu.Drive
+	qemuCmd.SetKernel(filepath.Join(workdir, qemuKernel.Name))
+	qemuCmd.SetInitrd(filepath.Join(workdir, zirconA.Name))
+
 	if storageFull.Reader != nil {
-		drives = append(drives, qemu.Drive{
+		qemuCmd.AddVirtioBlkPciDrive(qemu.Drive{
 			ID:   "maindisk",
 			File: filepath.Join(workdir, storageFull.Name),
 		})
 	}
+
 	if t.config.MinFS != nil {
-		if _, err = os.Stat(t.config.MinFS.Image); err != nil {
-			return fmt.Errorf("could not find minfs image %q: %v", t.config.MinFS.Image, err)
-		}
-		minfsPath, err := filepath.Abs(t.config.MinFS.Image)
+		absMinFsPath, err := normalizeFile(t.config.MinFS.Image)
 		if err != nil {
-			return err
+			return fmt.Errorf("could not find minfs image %q: %v", t.config.MinFS.Image, err)
 		}
 		// Swarming hard-links Isolate downloads with a cache and the very same
 		// cached minfs image will be used across multiple tasks. To ensure
 		// that it remains blank, we must break its link.
-		if err := overwriteFileWithCopy(minfsPath); err != nil {
+		if err := overwriteFileWithCopy(absMinFsPath); err != nil {
 			return err
 		}
-		drives = append(drives, qemu.Drive{
+		qemuCmd.AddVirtioBlkPciDrive(qemu.Drive{
 			ID:   "testdisk",
-			File: minfsPath,
+			File: absMinFsPath,
 			Addr: t.config.MinFS.PCIAddress,
 		})
 	}
@@ -252,32 +256,29 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 			Name: defaultInterfaceName,
 		}
 	}
-	networks := []qemu.Netdev{netdev}
-
-	config := qemu.Config{
-		Binary:   qemuSystem,
-		Target:   qemuTarget,
-		CPU:      t.config.CPU,
-		Memory:   t.config.Memory,
-		KVM:      t.config.KVM,
-		Kernel:   filepath.Join(workdir, qemuKernel.Name),
-		Initrd:   filepath.Join(workdir, zirconA.Name),
-		Drives:   drives,
-		Networks: networks,
-	}
+	qemuCmd.AddNetwork(netdev)
 
 	// The system will halt on a kernel panic instead of rebooting.
-	args = append(args, "kernel.halt-on-panic=true")
+	qemuCmd.AddKernelArg("kernel.halt-on-panic=true")
 	// Print a message if `dm poweroff` times out.
-	args = append(args, "devmgr.suspend-timeout-debug=true")
+	qemuCmd.AddKernelArg("devmgr.suspend-timeout-debug=true")
 	// Do not print colors.
-	args = append(args, "TERM=dumb")
+	qemuCmd.AddKernelArg("TERM=dumb")
 	if t.config.Target == "x64" {
 		// Necessary to redirect to stdout.
-		args = append(args, "kernel.serial=legacy")
+		qemuCmd.AddKernelArg("kernel.serial=legacy")
+	}
+	for _, arg := range args {
+		qemuCmd.AddKernelArg(arg)
 	}
 
-	invocation, err := qemu.CreateInvocation(config, args)
+	qemuCmd.SetCPUCount(t.config.CPU)
+	qemuCmd.SetMemory(t.config.Memory)
+	qemuCmd.SetFlag("-nographic")
+	qemuCmd.SetFlag("-serial", "stdio")
+	qemuCmd.SetFlag("-monitor", "none")
+
+	invocation, err := qemuCmd.Build()
 	if err != nil {
 		return err
 	}
@@ -384,6 +385,17 @@ func copyImageToDir(dir string, img *bootserver.Image) error {
 		return fmt.Errorf("failed to copy image %q to %q: %v", img.Name, dest, err)
 	}
 	return nil
+}
+
+func normalizeFile(path string) (string, error) {
+	if _, err := os.Stat(path); err != nil {
+		return "", err
+	}
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return "", err
+	}
+	return absPath, nil
 }
 
 func overwriteFileWithCopy(path string) error {

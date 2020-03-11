@@ -3,7 +3,19 @@
 # found in the LICENSE file.
 
 import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
 
 go_library("qemu") {
   name = "go.fuchsia.dev/fuchsia/tools/qemu"
+}
+
+go_test("qemu_tests") {
+  gopackages = [ "go.fuchsia.dev/fuchsia/tools/qemu" ]
+  deps = [ ":qemu" ]
+}
+
+group("tests") {
+  testonly = true
+
+  deps = [ ":qemu_tests" ]
 }
