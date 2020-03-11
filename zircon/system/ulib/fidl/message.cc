@@ -138,51 +138,14 @@ zx_status_t Message::Encode(const fidl_type_t* type, const char** error_msg_out)
 }
 
 zx_status_t Message::Decode(const fidl_type_t* type, const char** error_msg_out) {
-  auto contains_union = [](const fidl_type_t* type) {
-    // We only expect struct containers to be decoded, uses with other
-    // containers (e.g. table) are specialized use cases which we need to curb
-    // and forbid.
-    // While it would be safer to err on the side of returning `true` (since it
-    // maybe contains a union), we return `false` since the transformer only
-    // works on struct containers.
-    // This means that specialized uses cases must be v1, or they will fail.
-    if (type->type_tag != kFidlTypeStruct)
-      return false;
-
-    return type->coded_struct.contains_union;
-  };
-
-  const bool needs_transform = !is_v1_message() && contains_union(type);
-  if (!needs_transform) {
-    zx_status_t status = fidl_decode(type, bytes_.data(), bytes_.actual(), handles_.data(),
-                                     handles_.actual(), error_msg_out);
-    ClearHandlesUnsafe();
-    return status;
-  }
-
-  const fidl_type_t* old_type = get_alt_type(type);
-
-  allocated_buffer.resize(ZX_CHANNEL_MAX_MSG_BYTES);
-  uint32_t size;
-  zx_status_t transform_status =
-      fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, old_type, bytes_.data(), bytes_.actual(),
-                     allocated_buffer.data(), static_cast<uint32_t>(allocated_buffer.capacity()),
-                     &size, error_msg_out);
-  if (transform_status != ZX_OK) {
-    return transform_status;
-  }
-
-  zx_status_t status = fidl_decode(type, allocated_buffer.data(), size, handles_.data(),
+  zx_status_t status = fidl_decode(type, bytes_.data(), bytes_.actual(), handles_.data(),
                                    handles_.actual(), error_msg_out);
-  bytes_ = BytePart(allocated_buffer.data(), size, size);
-
   ClearHandlesUnsafe();
   return status;
 }
 
 zx_status_t Message::Validate(const fidl_type_t* v1_type, const char** error_msg_out) const {
-  const fidl_type_t* type = is_v1_message() ? v1_type : get_alt_type(v1_type);
-  return fidl_validate(type, bytes_.data(), bytes_.actual(), handles_.actual(), error_msg_out);
+  return fidl_validate(v1_type, bytes_.data(), bytes_.actual(), handles_.actual(), error_msg_out);
 }
 
 #ifdef __Fuchsia__

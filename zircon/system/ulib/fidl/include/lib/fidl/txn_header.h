@@ -17,8 +17,6 @@ void fidl_init_txn_header(fidl_message_header_t* out_hdr, zx_txid_t txid, uint64
 
 zx_status_t fidl_validate_txn_header(const fidl_message_header_t* hdr);
 
-bool fidl_should_decode_union_from_xunion(const fidl_message_header_t* hdr);
-
 __END_CDECLS
 
 #endif  // LIB_FIDL_TXN_HEADER_H_

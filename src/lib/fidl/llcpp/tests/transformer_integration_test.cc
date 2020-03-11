@@ -90,13 +90,10 @@ TEST_F(TransformerIntegrationTest, ReadPathUnionEvent) {
 
   // Send the event from the server end
   std::vector<uint8_t> response(sizeof(fidl_message_header_t) + sizeof(sandwich4_case1_v1));
-  auto response_hdr = reinterpret_cast<fidl_message_header_t*>(&response[0]);
   fidl::DecodedMessage<test::ReceiveXunionsForUnions::UnionEventResponse> msg(
       fidl::BytePart(&response[0], response.size(), response.size()));
   test::ReceiveXunionsForUnions::SetTransactionHeaderFor::UnionEventResponse(msg);
   msg.Release();
-  // Set the flag indicating unions are encoded as xunions.
-  response_hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
   memcpy(&response[sizeof(fidl_message_header_t)], sandwich4_case1_v1, sizeof(sandwich4_case1_v1));
   ASSERT_EQ(ZX_OK, server_end().write(0, &response[0], response.size(), nullptr, 0));
 
@@ -157,8 +154,6 @@ TEST_F(TransformerIntegrationTest, ReadPathSendUnion) {
       fidl::BytePart(&fake_request[0], fake_request.size(), fake_request.size()));
   test::ReceiveXunionsForUnions::SetTransactionHeaderFor::SendUnionRequest(decoded_msg);
   decoded_msg.Release();
-  // Set the flag indicating unions are encoded as xunions.
-  fake_request_hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
   fake_request_hdr->txid = 1;
   memcpy(&fake_request[sizeof(fidl_message_header_t)], sandwich4_case1_v1,
          sizeof(sandwich4_case1_v1));
@@ -204,8 +199,6 @@ TEST_F(TransformerIntegrationTest, ReadPathReceiveUnion) {
         fidl::BytePart(&response[0], response.size(), response.size()));
     test::ReceiveXunionsForUnions::SetTransactionHeaderFor::ReceiveUnionResponse(msg);
     msg.Release();
-    // Set the flag indicating unions are encoded as xunions.
-    response_hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
     response_hdr->txid = request_hdr->txid;
     memcpy(&response[sizeof(fidl_message_header_t)], sandwich4_case1_v1,
            sizeof(sandwich4_case1_v1));

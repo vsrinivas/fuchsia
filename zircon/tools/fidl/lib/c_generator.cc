@@ -1285,23 +1285,19 @@ void CGenerator::ProduceProtocolClientImplementation(const NamedProtocol& named_
       // Perform xunion -> union transformation if necessary.
       if (method_info.response->typeshape.ContainsUnion()) {
         file_ << kIndent << "uint8_t* _transformer_dest = NULL;\n";
-        file_ << kIndent << "if (fidl_should_decode_union_from_xunion(&_response->hdr)) {\n";
-        file_ << kIndent << kIndent << "_transformer_dest = alloca(_rd_num_bytes);\n";
-        file_ << kIndent << kIndent << "_status = fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD, &"
+        file_ << kIndent << "_transformer_dest = alloca(_rd_num_bytes);\n";
+        file_ << kIndent << "_status = fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD, &"
               << method_info.response->alt_coded_name << ", _rd_bytes, _actual_num_bytes"
               << ", _transformer_dest, _rd_num_bytes, &_actual_num_bytes"
               << ", NULL);\n";
-        file_ << kIndent << kIndent << "if (_status != ZX_OK) {\n";
+        file_ << kIndent << "if (_status != ZX_OK) {\n";
         if (max_hcount > 0) {
-          file_ << kIndent << kIndent << kIndent
-                << "zx_handle_close_many(_handles, _actual_num_handles);\n";
+          file_ << kIndent << kIndent << "zx_handle_close_many(_handles, _actual_num_handles);\n";
         }
-        file_ << kIndent << kIndent << kIndent << "return _status;\n";
-        file_ << kIndent << kIndent << "}\n";
-        file_ << kIndent << kIndent << "_rd_bytes = _transformer_dest;\n";
-        file_ << kIndent << kIndent << "_response = (" << method_info.response->c_name
-              << "*)_rd_bytes;\n";
+        file_ << kIndent << kIndent << "return _status;\n";
         file_ << kIndent << "}\n";
+        file_ << kIndent << "_rd_bytes = _transformer_dest;\n";
+        file_ << kIndent << "_response = (" << method_info.response->c_name << "*)_rd_bytes;\n";
       }
 
       if (decode_response) {

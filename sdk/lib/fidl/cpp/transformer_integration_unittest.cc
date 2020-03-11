@@ -89,7 +89,6 @@ TEST_F(TransformerIntegrationTest, ReadPathUnionEvent) {
   auto response_hdr = reinterpret_cast<fidl_message_header_t*>(&response[0]);
   fidl_init_txn_header(response_hdr, 0,
                        test::internal::kReceiveXunionsForUnions_UnionEvent_Ordinal);
-  response_hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
   memcpy(&response[sizeof(fidl_message_header_t)], sandwich4_case1_v1, sizeof(sandwich4_case1_v1));
   ASSERT_EQ(ZX_OK, server_end().write(0, &response[0], response.size(), nullptr, 0));
 
@@ -127,7 +126,6 @@ TEST_F(TransformerIntegrationTest, ReadPathSendUnion) {
   std::vector<uint8_t> request(sizeof(fidl_message_header_t) + sizeof(sandwich4_case1_v1));
   auto request_hdr = reinterpret_cast<fidl_message_header_t*>(&request[0]);
   fidl_init_txn_header(request_hdr, 1, test::internal::kReceiveXunionsForUnions_SendUnion_Ordinal);
-  request_hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
   memcpy(&request[sizeof(fidl_message_header_t)], sandwich4_case1_v1, sizeof(sandwich4_case1_v1));
   ASSERT_EQ(ZX_OK, client_end().write(0, &request[0], request.size(), nullptr, 0));
 
@@ -167,8 +165,6 @@ TEST_F(TransformerIntegrationTest, ReadPathReceiveUnion) {
     auto response_hdr = reinterpret_cast<fidl_message_header_t*>(&response[0]);
     fidl_init_txn_header(response_hdr, 1,
                          test::internal::kReceiveXunionsForUnions_ReceiveUnion_Ordinal);
-    // Set the flag indicating unions are encoded as xunions.
-    response_hdr->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
     response_hdr->txid = request_hdr->txid;
     memcpy(&response[sizeof(fidl_message_header_t)], sandwich4_case1_v1,
            sizeof(sandwich4_case1_v1));

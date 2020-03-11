@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fidl/cpp/message.h>
 #include <lib/fidl/transformer.h>
+#include <lib/fidl/txn_header.h>
 #include <zircon/fidl.h>
 #include <zircon/types.h>
 
@@ -265,23 +267,19 @@ void MultipleDeviceTestCase::CheckUnbindReceived(const zx::channel& remote, zx_t
 // Sends a response with the given return_status. This can be used to reply to a
 // request received by |CheckUnbindReceived|.
 void MultipleDeviceTestCase::SendUnbindReply(const zx::channel& remote, zx_txid_t txid) {
-  FIDL_ALIGNDECL uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
-  zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
-  uint32_t actual_handles;
-  memset(bytes, 0, sizeof(bytes));
-  auto resp = reinterpret_cast<fuchsia_device_manager_DeviceControllerUnbindResponse*>(bytes);
-  fidl_init_txn_header(&resp->hdr, txid, fuchsia_device_manager_DeviceControllerUnbindGenOrdinal);
-  resp->result = fuchsia_device_manager_DeviceController_Unbind_Result{
+  fuchsia_device_manager_DeviceControllerUnbindResponse resp;
+  memset(&resp, 0, sizeof(resp));
+  fidl_init_txn_header(&resp.hdr, txid, fuchsia_device_manager_DeviceControllerUnbindGenOrdinal);
+  resp.hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
+  resp.result = fuchsia_device_manager_DeviceController_Unbind_Result{
       .tag = 0,
       .response = {},
   };
-  auto status =
-      fidl_encode(&fuchsia_device_manager_DeviceControllerUnbindResponseTable, bytes, sizeof(*resp),
-                  handles, fbl::count_of(handles), &actual_handles, nullptr);
-  ASSERT_OK(status);
-  ASSERT_EQ(0, actual_handles);
-  status = remote.write(0, bytes, sizeof(*resp), nullptr, 0);
-  ASSERT_OK(status);
+  uint32_t resp_size = sizeof(resp);
+  fidl::Message msg(fidl::BytePart(reinterpret_cast<uint8_t*>(&resp), resp_size, resp_size),
+                    fidl::HandlePart(nullptr, 0));
+  ASSERT_OK(msg.WriteTransformV1(remote.get(), 0,
+                                 &fuchsia_device_manager_DeviceControllerUnbindResponseTable));
 }
 
 void MultipleDeviceTestCase::CheckUnbindReceivedAndReply(const zx::channel& remote) {
@@ -317,25 +315,20 @@ void MultipleDeviceTestCase::CheckRemoveReceived(const zx::channel& remote, zx_t
 // Sends a response with the given return_status. This can be used to reply to a
 // request received by |CheckRemoveReceived|.
 void MultipleDeviceTestCase::SendRemoveReply(const zx::channel& remote, zx_txid_t txid) {
-  FIDL_ALIGNDECL uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
-  zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
-  uint32_t actual_handles;
-  memset(bytes, 0, sizeof(bytes));
-  auto resp =
-      reinterpret_cast<fuchsia_device_manager_DeviceControllerCompleteRemovalResponse*>(bytes);
-  fidl_init_txn_header(&resp->hdr, txid,
+  fuchsia_device_manager_DeviceControllerCompleteRemovalResponse resp;
+  memset(&resp, 0, sizeof(resp));
+  fidl_init_txn_header(&resp.hdr, txid,
                        fuchsia_device_manager_DeviceControllerCompleteRemovalGenOrdinal);
-  resp->result = fuchsia_device_manager_DeviceController_CompleteRemoval_Result{
+  resp.hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
+  resp.result = fuchsia_device_manager_DeviceController_CompleteRemoval_Result{
       .tag = 0,
       .response = {},
   };
-  auto status =
-      fidl_encode(&fuchsia_device_manager_DeviceControllerCompleteRemovalResponseTable, bytes,
-                  sizeof(*resp), handles, fbl::count_of(handles), &actual_handles, nullptr);
-  ASSERT_OK(status);
-  ASSERT_EQ(0, actual_handles);
-  status = remote.write(0, bytes, sizeof(*resp), nullptr, 0);
-  ASSERT_OK(status);
+  auto resp_size = sizeof(resp);
+  fidl::Message msg(fidl::BytePart(reinterpret_cast<uint8_t*>(&resp), resp_size, resp_size),
+                    fidl::HandlePart(nullptr, 0));
+  ASSERT_OK(msg.WriteTransformV1(
+      remote.get(), 0, &fuchsia_device_manager_DeviceControllerCompleteRemovalResponseTable));
 }
 
 void MultipleDeviceTestCase::CheckRemoveReceivedAndReply(const zx::channel& remote) {
