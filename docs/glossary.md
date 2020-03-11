@@ -326,6 +326,40 @@ into a [DevHost](#devhost) and that enables, and controls one or more devices.
 -   [Reference](/docs/concepts/drivers/driver-development.md)
 -   [Driver Sources](/zircon/system/dev)
 
+### **Element** {#element}
+
+A [component](#component) added to a [session](#session) dynamically through the [FIDL](#fidl) protocol [`ElementManager`](#element-manager). In addition to the properties common to all components, Elements are also annotated by Element Proposers. Those annotations are shared with other components within the session.
+
+It is the session's responsibility to manage the lifecycle of elements.
+
+Elements are a [Session Framework](#session-framework) concept.
+
+### **Element Annotation** {#element-annotation}
+
+This is a [FIDL](#fidl) struct. For more information, see [`fuchsia.session.Annotation`].
+
+A collection of named attributes associated with an [element](#element). Annotations are specified at element creation time by [element proposers](#element-proposer) and remain mutable for the lifetime of the element.
+
+Element annotations are a [Session Framework](#session-framework) concept.
+
+[`fuchsia.session.Annotation`]: /sdk/fidl/fuchsia.session/annotation.fidl
+
+### **Element Manager** {#element-manager}
+
+This is a [FIDL](#fidl) protocol. For more information, see [`fuchsia.session.ElementManager`].
+
+A protocol used to grant [session](#session) sub-components the capability to ask for [elements](#element) to be added to the product experience at runtime.
+
+Element manager is a [Session Framework](#session-framework) concept.
+
+[`fuchsia.session.ElementManager`]: /sdk/fidl/fuchsia.session/element_manager.fidl
+
+### **Element Proposer** {#element-proposer}
+
+A way to refer to any [component](#component) that invokes the ProposeElement() method on [`ElementManager`](#element-manager) to launch a specific [element](#element) in a [session](#session).
+
+Element Proposer is a [Session Framework](#session-framework) concept.
+
 ### **Environment** {#environment}
 
 A container for a set of components, which provides a way to manage their
@@ -434,6 +468,18 @@ repository.
 -   [Reference](https://gn.googlesource.com/gn/+/master/docs/reference.md)
 -   [Fuchsia build overview](/docs/concepts/build_system/fuchsia_build_system_overview.md)
 
+### **GraphicalPresenter** {#graphical-presenter}
+
+This is a [FIDL](#fidl) protocol. For more information, see [`GraphicalPresenter`].
+
+A `GraphicalPresenter` organizes and presents graphical views.
+
+The presented views can be annotated with [Element Annotations](#element-annotation) to communicate presentation properties to the `GraphicalPresenter`. This protocol is used, for example, when a [session component](#session) written in Rust wants to delegate presentation logic to a child [component](#component) written in Flutter, or when a session component that manages the lifecycle of elements delegates the presentation of element views to a child component that implements `GraphicalPresenter`.
+
+`GraphicalPresenter` is a [Session Framework](#session-framework) concept.
+
+[`GraphicalPresenter`]: /sdk/fidl/fuchsia.session/graphical_presenter.fidl
+
 ### **Handle** {#handle}
 
 A Handle is how a userspace process refers to a [kernel object](#kernel-object).
@@ -459,6 +505,69 @@ component instances at runtime, such as their names, job and process ids, and
 exposed capabilities.
 
 -   [Hub](/docs/concepts/components/hub.md)
+
+### **Input pipeline client library** {#input-pipeline-client-library}
+
+A client library available to [session](#session) authors to simplify
+the consumption and routing of input events from physical hardware.
+
+* [Input client library](/docs/concepts/session/input.md)
+
+Input pipeline is a [Session Framework](#session-framework) concept.
+
+### **Input pipeline InputDeviceBinding** {#input-pipeline-input-device-binding}
+
+A Rust trait in the [input pipeline client library](#input-pipeline-client-library).
+
+An `InputDeviceBinding` represents a connection to a physical input device (e.g. mouse, keyboard) in an input pipeline. An `InputDeviceBinding` does the following:
+
+1. Connects to an [`InputReport`](#input-report) file located at `/dev/class/input-report/XXX`.
+1. Generates [`InputEvents`](#input-pipeline-input-event) from the `DeviceDescriptor` and incoming [`InputReports`](#input-report).
+
+The input pipeline creates and owns `InputDeviceBindings` as new input peripherals are connected to a device.
+
+`InputDeviceBinding` is a [Session Framework](#session-framework) concept.
+
+### **Input pipeline InputDeviceDescriptor** {#input-pipeline-input-device-descriptor}
+
+A property of the Rust struct [`InputEvent`](#input-pipeline-input-event).
+
+An `InputDeviceDescriptor` describes the ranges of values a particular input device can generate. For example, a `InputDeviceDescriptor::Keyboard` contains the keys available on the keyboard, and a `InputDeviceDescriptor::Touch` contains the maximum number of touch contacts and the range of `x-` and `y-`values each contact can take on.
+
+`InputDeviceDescriptor` is a [Session Framework](#session-framework) concept.
+
+### **Input pipeline InputDeviceEvent** {#input-pipeline-input-device-event}
+
+A property of the Rust struct [`InputEvent`](#input-pipeline-input-event).
+
+An `InputDeviceEvent` represents an input event from an input device. `InputDeviceEvents` contain more context than the raw [`InputReports`](#input-report) they are parsed from. For example, `InputDeviceEvent::Keyboard` contains all the pressed keys, as well as the key's phase (pressed, released, etc.).
+
+`InputDeviceEvent` is a [Session Framework](#session-framework) concept.
+
+### **Input pipeline InputEvent** {#input-pipeline-input-event}
+
+A Rust struct in the [input pipeline client library](#input-pipeline-client-library).
+
+An event from an input device containing context (a `InputDeviceDescriptor`) and state (e.g. phase and location of a button press). The input pipeline generates `InputEvents` from hardware signals.
+
+`InputEvent` is a [Session Framework](#session-framework) concept.
+
+### **Input pipeline InputHandler** {#input-pipeline-input-handler}
+
+A Rust trait in the [input pipeline client library](#input-pipeline-client-library).
+
+An `InputHandler` represents a client of [`InputEvents`](#input-pipeline-input-event) in an input pipeline. When an `InputHandler` receives an [`InputEvent`](#input-pipeline-input-event), it does at least one of the following:
+
+1) Forwards the [`InputEvent`](#input-pipeline-input-event) to the relevant client component.
+1) Outputs a vector of [`InputEvents`](#input-pipeline-input-event) for the next `InputHandler` to process.
+
+`InputHandler` is a [Session Framework](#session-framework) concept.
+
+### **InputReport** {#input-report}
+
+This is a [FIDL](#fidl) struct. For more information, see [`InputReport`](https://fuchsia.dev/reference/fidl/fuchsia.ui.input#InputReport).
+
+A stateless representation of an event from a physical input device. Zircon generates `InputReports` from HID Reports.
 
 ### **Jiri** {#jiri}
 
@@ -652,6 +761,34 @@ client end of the channel is given to the
 -   [Capability routing](#capability-routing)
 
 Service capability is a [components v2](#components-v2) concept.
+
+### **Session** {#session}
+
+A session is a [component](#component) that encapsulates a product’s user experience. It is the first product-specific component started on boot after the [Session Manager](#session-manager). Sessions typically utilize aspects of the [Session Framework](#session-framework) during their development, in automated testing, and at runtime. At runtime, there is only one session component, but it can be composed of many sub-components. For example, the session for a graphical product instantiates Scenic (graphics) as a child component.
+
+Session is a [Session Framework](#session-framework) concept.
+
+### **Session Framework** {#session-framework}
+
+The session framework is a framework for building products on Fuchsia. The framework provides software libraries, FIDL protocols, developer tools, and standards that are composed to create a particular product’s user experience.
+
+See the session framework [conceptual documentation](/docs/concepts/session/introduction.md).
+
+### **Session Launcher** {#session-launcher}
+
+This is a [FIDL](#fidl) protocol. For more information, see [`fuchsia.session.Launcher`].
+
+A protocol, exposed by the [Session Manager](#session-manager), used to start or restart [sessions](#session). It is available to developer tools such as `session_control` to control session components at runtime.
+
+Session Launcher is a [Session Framework](#session-framework) concept.
+
+[`fuchsia.session.Launcher`]: /sdk/fidl/fuchsia.session/launcher.fidl
+
+### **Session Manager** {#session-manager}
+
+The platform component, started late in the Fuchsia boot sequence, that manages the lifecycle of the [session](#session). The session manager  defines the set of system capabilities provided to sessions at runtime.
+
+Session Manager is a [Session Framework](#session-framework) concept.
 
 ### **Protocol capability** {#protocol-capability}
 
