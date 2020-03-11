@@ -22,7 +22,7 @@ test("test_magma_vsi_exec_bin") {
   ]
 }
 
-test_package("test_magma_vsi_exec") {
+test_package("test-magma-vsi-exec") {
   deps = [ ":test_magma_vsi_exec_bin" ]
 
   tests = [
@@ -31,9 +31,4 @@ test_package("test_magma_vsi_exec") {
       manifest = "meta/test_magma_vsi_exec.cmx"
     },
   ]
-}
-
-group("magma_vsi_exec") {
-  testonly = true
-  deps = [ ":test_magma_vsi_exec" ]
 }
