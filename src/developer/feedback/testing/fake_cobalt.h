@@ -13,6 +13,7 @@
 
 #include "src/developer/feedback/utils/cobalt_metrics.h"
 #include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 
@@ -39,15 +40,26 @@ FakeCobalt::FakeCobalt(std::shared_ptr<sys::ServiceDirectory> environment_servic
 }
 
 FakeCobalt::~FakeCobalt() {
+  using fuchsia::cobalt::test::LogMethod;
+  FX_CHECK(logger_querier_) << "logger_querier_ disconnected. Cannot reset mock_cobalt, aborting";
+
   // Reset the logger so tests can be run repeatedly.
-  logger_querier_->ResetLogger(kProjectId, fuchsia::cobalt::test::LogMethod::LOG_EVENT);
-  logger_querier_->ResetLogger(kProjectId, fuchsia::cobalt::test::LogMethod::LOG_EVENT_COUNT);
-  logger_querier_->ResetLogger(kProjectId, fuchsia::cobalt::test::LogMethod::LOG_ELAPSED_TIME);
-  logger_querier_->ResetLogger(kProjectId, fuchsia::cobalt::test::LogMethod::LOG_FRAME_RATE);
-  logger_querier_->ResetLogger(kProjectId, fuchsia::cobalt::test::LogMethod::LOG_MEMORY_USAGE);
-  logger_querier_->ResetLogger(kProjectId, fuchsia::cobalt::test::LogMethod::LOG_INT_HISTOGRAM);
-  logger_querier_->ResetLogger(kProjectId, fuchsia::cobalt::test::LogMethod::LOG_COBALT_EVENT);
-  logger_querier_->ResetLogger(kProjectId, fuchsia::cobalt::test::LogMethod::LOG_COBALT_EVENTS);
+  FX_CHECK(logger_querier_->ResetLogger(kProjectId, LogMethod::LOG_EVENT) == ZX_OK)
+      << "Failed to reset EVENT events, aborting";
+  FX_CHECK(logger_querier_->ResetLogger(kProjectId, LogMethod::LOG_EVENT_COUNT) == ZX_OK)
+      << "Failed to reset EVENT_COUNT events, aborting";
+  FX_CHECK(logger_querier_->ResetLogger(kProjectId, LogMethod::LOG_ELAPSED_TIME) == ZX_OK)
+      << "Failed to reset ELAPSED_TIME events, aborting";
+  FX_CHECK(logger_querier_->ResetLogger(kProjectId, LogMethod::LOG_FRAME_RATE) == ZX_OK)
+      << "Failed to reset FRAME_RATE events, aborting";
+  FX_CHECK(logger_querier_->ResetLogger(kProjectId, LogMethod::LOG_MEMORY_USAGE) == ZX_OK)
+      << "Failed to reset MEMORY_USAGE events, aborting";
+  FX_CHECK(logger_querier_->ResetLogger(kProjectId, LogMethod::LOG_INT_HISTOGRAM) == ZX_OK)
+      << "Failed to reset INT_HISTOGRAM events, aborting";
+  FX_CHECK(logger_querier_->ResetLogger(kProjectId, LogMethod::LOG_COBALT_EVENT) == ZX_OK)
+      << "Failed to reset COBALT_EVENT events, aborting";
+  FX_CHECK(logger_querier_->ResetLogger(kProjectId, LogMethod::LOG_COBALT_EVENTS) == ZX_OK)
+      << "Failed to reset COBALT_EVENTS events, aborting";
 }
 
 template <typename EventCodeType>

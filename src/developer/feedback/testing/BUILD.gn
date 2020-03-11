@@ -28,6 +28,7 @@ source_set("fake_cobalt") {
     "//sdk/lib/sys/cpp",
     "//src/developer/feedback/utils:cobalt",
     "//src/lib/fxl",
+    "//src/lib/syslog/cpp",
     "//zircon/system/fidl/fuchsia-cobalt",
   ]
 }

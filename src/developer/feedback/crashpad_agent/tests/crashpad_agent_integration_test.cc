@@ -54,8 +54,6 @@ class CrashpadAgentIntegrationTest : public testing::Test {
 TEST_F(CrashpadAgentIntegrationTest, CrashReporter_SmokeTest) {
   FileCrashReport();
 
-  // TODO(pankhurst): remove early return once flakes related to mock_cobalt are fixed.
-  return;
   EXPECT_THAT(fake_cobalt_->GetAllEventsOfType<CrashState>(
                   /*num_expected=*/2, fuchsia::cobalt::test::LogMethod::LOG_EVENT),
               UnorderedElementsAreArray({
