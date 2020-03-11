@@ -1,6 +1,6 @@
 {
     "docs": [
-        "README.md",
+        "README.GN.md",
         ".gitignore"
     ],
     "name": "readme",

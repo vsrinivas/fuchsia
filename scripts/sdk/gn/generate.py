@@ -26,21 +26,34 @@ FUCHSIA_ROOT = os.path.dirname(  # $root
             SCRIPT_DIR)))  # gn
 
 sys.path += [os.path.join(FUCHSIA_ROOT, 'scripts', 'sdk', 'common')]
+from files import copy_tree
 from frontend import Frontend
 import template_model as model
 
-# Any extra files which need to be added manually to the SDK can be specified here
+from collections import namedtuple
+# Arguments for self.copy_file. Using the 'src' path, a relative path will be
+# calculated from 'base', then the file is copied to that path under 'dest'.
+# E.g. to copy {in}/foo/bar/baz to {out}/blam/baz, use
+#   CopyArgs(src = 'foo/bar/baz', base = 'foo/bar', dest = 'blam')
+CopyArgs = namedtuple('CopyArgs', ['src', 'base', 'dest'])
+
+# Any extra files which need to be added manually to the SDK can be specified
+# here. Entries are structured as args for self.copy_file.
 EXTRA_COPY = [
     # Copy various files to support femu.sh from implementation of fx emu.
     # See base/bin/femu-meta.json for more detail about the files needed.
-    [
-        os.path.join(FUCHSIA_ROOT, 'tools', 'devshell', 'emu'),
-        os.path.join('bin', 'devshell', 'emu')
-    ],
-    [
-        os.path.join(FUCHSIA_ROOT, 'tools', 'devshell', 'lib', 'fvm.sh'),
-        os.path.join('bin', 'devshell', 'lib', 'fvm.sh')
-    ],
+    # {fuchsia}/tools/devshell/emu -> {out}/bin/devshell/emu
+    CopyArgs(
+        src = os.path.join(FUCHSIA_ROOT, 'tools', 'devshell', 'emu'),
+        base = os.path.join(FUCHSIA_ROOT, 'tools'),
+        dest = 'bin'
+    ),
+    # {fuchsia}/tools/devshell/lib/fvm.sh -> {out}/bin/devshell/lib/fvm.sh
+    CopyArgs(
+        src = os.path.join(FUCHSIA_ROOT, 'tools', 'devshell', 'lib', 'fvm.sh'),
+        base = os.path.join(FUCHSIA_ROOT, 'tools'),
+        dest = 'bin'
+    )
 ]
 
 # Capture the version of required prebuilts from the jiri manifest. Note
@@ -118,24 +131,24 @@ class GNBuilder(Frontend):
         del types  # types is not used.
         self.target_arches = arch['target']
 
-        # Copy the common files. The destination of these files is relative to the
-        # root of the fuchsia_sdk.
-        shutil.copytree(self.local('base'), self.output)
-
-        # Propagate the metadata for the Core SDK into the GN SDK.
-        shutil.copytree(self.source('meta'), self.dest('meta'))
-
         # Capture versions of various prebuilts contained in the jiri manifest
         prebuilt_results = get_prebuilts(EXTRA_PREBUILTS, self.jiri_manifest)
         for prebuilt, version in prebuilt_results.items():
             with open(self.dest('bin', prebuilt + '.version'), 'w') as output:
                 output.write(version)
 
-        # Copy any additional files that would normally not be included
-        for each in EXTRA_COPY:
-            shutil.copy2(each[0], self.dest(each[1]))
+        # Propagate the manifest for the Core SDK into the GN SDK. Metadata
+        # schemas are copied by the metadata_schemas documentation atom.
+        self.copy_file(os.path.join('meta', 'manifest.json'))
 
     def finalize(self, arch, types):
+        # Copy the common files. The destination of these files is relative to
+        # the root of the fuchsia_sdk.
+        copy_tree(self.local('base'), self.output, allow_overwrite=False)
+        # Copy any additional files that would normally not be included
+        for each in EXTRA_COPY:
+            self.copy_file(each.src, each.base, each.dest)
+
         self.write_additional_files()
 
     def write_additional_files(self):
@@ -144,6 +157,8 @@ class GNBuilder(Frontend):
             self.dest("build", "test_targets.gni"), 'test_targets', self)
         self.write_build_file_metadata(
             'gn-build-files', 'build/gn-build-files-meta.json')
+
+        # Propagate the Core SDK manifest, incorporating our changes.
         self.update_metadata(
             [
                 'build/gn-rules-meta.json', 'build/gn-build-files-meta.json',
@@ -157,15 +172,14 @@ class GNBuilder(Frontend):
         with open(self.dest(metafile), 'r') as input:
             metadata = json.load(input)
 
-            # Documentation metadata descriptions are named inconsistently, so in order to copy
-            # them we need to read the manifest and copy them explicitly.
+            # Documentation and host_tool metadata descriptions are named
+            # inconsistently, so read the manifest and copy them explicitly.
             for atom in metadata['parts']:
                 if atom['type'] in ['documentation', 'host_tool']:
                     self.copy_file(atom['meta'])
 
             # There are dart components and device_profile in the Core SDK which
-            #  are not part of the GN SDK if these are encountered,
-            # remove them from the manifest.
+            # are not part of the GN SDK. Remove them from the manifest.
             metadata['parts'] = [
                 atom for atom in metadata['parts']
                 if not atom['type'] in ['dart_library', 'device_profile']
@@ -185,7 +199,7 @@ class GNBuilder(Frontend):
 
             metadata['parts'].sort(key=meta_type_key)
 
-            with open(os.path.join(self.output, metafile), 'w') as output:
+            with open(self.dest(metafile), 'w') as output:
                 json.dump(
                     metadata,
                     output,
@@ -237,24 +251,14 @@ class GNBuilder(Frontend):
         self.copy_files(atom['headers'], atom['root'], base, library.hdrs)
 
         for arch in self.target_arches:
-
-            def _copy_prebuilt(path, category):
-                relative_dest = os.path.join(
-                    'arch',
-                    arch,  # pylint: disable=cell-var-from-loop
-                    category,
-                    os.path.basename(path))
-                dest = self.dest(relative_dest)
-                shutil.copy2(self.source(path), dest)
-                return relative_dest
-
             binaries = atom['binaries'][arch]
-            prebuilt_set = model.CppPrebuiltSet(
-                _copy_prebuilt(binaries['link'], 'lib'))
+            prebuilt_set = model.CppPrebuiltSet(binaries['link'])
+            self.copy_file(binaries['link'])
+
             if 'dist' in binaries:
-                dist = binaries['dist']
-                prebuilt_set.dist_lib = _copy_prebuilt(dist, 'dist')
+                prebuilt_set.dist_lib = binaries['dist']
                 prebuilt_set.dist_path = binaries['dist_path']
+                self.copy_file(binaries['dist'])
 
             if 'debug' in binaries:
                 self.copy_file(binaries['debug'])
@@ -464,7 +468,7 @@ def create_test_workspace(output):
     # Remove any existing output.
     shutil.rmtree(output, True)
     # Copy the base tests.
-    shutil.copytree(os.path.join(SCRIPT_DIR, 'test_project'), output)
+    copy_tree(os.path.join(SCRIPT_DIR, 'test_project'), output)
     # run.py file
     builder = Frontend(local_dir=SCRIPT_DIR)
     run_py_path = os.path.join(output, 'run.py')
@@ -558,7 +562,7 @@ def run_generator(
             return 1
         # Copy the GN SDK to the test workspace
         wrkspc_sdk_dir = os.path.join(tests, 'third_party', 'fuchsia-sdk')
-        shutil.copytree(output, wrkspc_sdk_dir)
+        copy_tree(output, wrkspc_sdk_dir)
 
     if output_archive:
         if not create_archive(output_archive, output):

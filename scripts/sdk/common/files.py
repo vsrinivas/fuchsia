@@ -23,22 +23,39 @@ def make_dir(file_path):
     return file_path
 
 
-def copy_tree(src, dst):
+def copy_tree(src, dst, allow_overwrite=True):
     '''Recursively copies a directory into another.
+
     Differs with shutil.copytree in that it won't fail if the destination
     directory already exists.
+
+    Args:
+        src: The source directory.
+        dst: The destination directory.
+        allow_overwrite: True to allow files to be overwritten, otherwise raise
+            an exception.
+
+    Raises:
+        Exception: If allow_overwrite is False and a destination file already
+            exists.
+
     '''
     if not os.path.isdir(dst):
-        os.mkdir(dst)
+        os.makedirs(dst)
     for path, directories, files in os.walk(src):
+
         def get_path(name):
             source_path = os.path.join(path, name)
             dest_path = os.path.join(dst, os.path.relpath(source_path, src))
             return (source_path, dest_path)
+
         for dir in directories:
             source, dest = get_path(dir)
             if not os.path.isdir(dest):
-                os.mkdir(dest)
+                os.makedirs(dest)
         for file in files:
             source, dest = get_path(file)
+            if not allow_overwrite and os.path.exists(dest):
+                raise Exception(
+                    "cannot copy file: file '%s': File exists" % dest)
             shutil.copy2(source, dest)

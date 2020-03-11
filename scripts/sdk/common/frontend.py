@@ -110,7 +110,13 @@ class Frontend(object):
     """
         return os.path.join(self._local_dir, *args)
 
-    def copy_file(self, filename, root='', destination='', result=[]):
+    def copy_file(
+            self,
+            filename,
+            root='',
+            destination='',
+            result=[],
+            allow_overwrite=True):
         """Copies a file from a given root directory with a collector.
 
        Copies the file from the root directory into the same path in the
@@ -124,18 +130,29 @@ class Frontend(object):
       destination: The destination root directory.
       result: A collector list if not None, has the relative path of the file
         appended to the list.
+      allow_overwrite: Whether to allow the destination file to be overwritten.
 
     Raises:
       Exception: If the path in file is not within the root directory.
+      Exception: If allow_overwrite is False and the destination file exists.
     """
         if os.path.commonprefix([root, filename]) != root:
             raise Exception('%s is not within %s' % (filename, root))
         relative_path = os.path.relpath(filename, root)
         dest = self.dest(destination, relative_path)
+        if not allow_overwrite and os.path.exists(dest):
+            raise Exception(
+                'Attempt to overwrite file: %s -> %s' % (filename, dest))
         shutil.copy2(self.source(filename), dest)
         result.append(relative_path)
 
-    def copy_files(self, files, root='', destination='', result=[]):
+    def copy_files(
+            self,
+            files,
+            root='',
+            destination='',
+            result=[],
+            allow_overwrite=True):
         """Copies files from a given root directory with a collector.
 
        This is done by calling copy_file() iteratively.
@@ -148,9 +165,10 @@ class Frontend(object):
       destination: The destination root directory.
       result: A collector list if not None, has the relative path of the file
         appended to the list.
+      allow_overwrite: Whether to allow destination files to be overwritten.
     """
         for f in files:
-            self.copy_file(f, root, destination, result)
+            self.copy_file(f, root, destination, result, allow_overwrite)
 
     def write_file(self, path, template_name, data):
         """Writes a file based on a Mako template.

@@ -1,7 +1,8 @@
 {
   "docs": [
     "root_level_doc.md",
-    "docs/first_level_doc.md"
+    "docs/first_level_doc.md",
+    "README.md"
   ],
   "name": "test_docs",
   "type": "documentation"

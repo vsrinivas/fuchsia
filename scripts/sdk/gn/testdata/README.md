@@ -1,11 +1,8 @@
 # Static data for tests
 
-## Contents of this package
+This mocks the README.md of the Core SDK.
 
-* `empty.tar.gz`: A gzipped tarball containing no files. Checking in this file
-  is preferable to creating it at test time for the following reasons:
-  * Creating an empty tarball in a cross-platform way is not straightforward.
-  * Controlling the empty tarball ensures that this file always hashes to the
-    same value.
+## Contents of this directory
 
-* `meta/manifest.json`: A simplified core SDK manifest.
+A simplified core SDK manifest ([`meta/manifest.json`](meta/manifest.json)),
+and SDK parts matching the manifest contents.

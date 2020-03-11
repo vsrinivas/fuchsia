@@ -1,5 +1,8 @@
-# GN SDK for Fuchsia
+# Static data for tests
 
-See https://fuchsia.dev/fuchsia-src/development/sdk/gn for information on using
-this SDK.
+This mocks the README.md of the Core SDK.
 
+## Contents of this directory
+
+A simplified core SDK manifest ([`meta/manifest.json`](meta/manifest.json)),
+and SDK parts matching the manifest contents.
