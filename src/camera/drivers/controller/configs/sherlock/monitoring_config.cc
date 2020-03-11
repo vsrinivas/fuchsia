@@ -126,8 +126,12 @@ static InternalConfigNode OutputStreamMLFR() {
       .output_frame_rate.frames_per_sec_denominator = 1,
       .supported_streams =
           {
-              fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
-                  fuchsia::camera2::CameraStreamType::MACHINE_LEARNING,
+              {
+                  .type = fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
+                          fuchsia::camera2::CameraStreamType::MACHINE_LEARNING,
+                  .supports_dynamic_resolution = false,
+                  .supports_crop_region = false,
+              },
           },
       .image_formats = OutputStreamMLFRImageFormats(),
   };
@@ -140,8 +144,12 @@ static InternalConfigNode OutputStreamMLDS() {
       .output_frame_rate.frames_per_sec_denominator = 1,
       .supported_streams =
           {
-              fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION |
-                  fuchsia::camera2::CameraStreamType::MACHINE_LEARNING,
+              {
+                  .type = fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION |
+                          fuchsia::camera2::CameraStreamType::MACHINE_LEARNING,
+                  .supports_dynamic_resolution = false,
+                  .supports_crop_region = false,
+              },
           },
       .image_formats = OutputStreamMLDSImageFormats(),
   };
@@ -164,8 +172,12 @@ static InternalConfigNode Gdc1() {
       .output_frame_rate.frames_per_sec_denominator = 1,
       .supported_streams =
           {
-              fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION |
-                  fuchsia::camera2::CameraStreamType::MACHINE_LEARNING,
+              {
+                  .type = fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION |
+                          fuchsia::camera2::CameraStreamType::MACHINE_LEARNING,
+                  .supports_dynamic_resolution = false,
+                  .supports_crop_region = false,
+              },
           },
       .child_nodes =
           {
@@ -203,10 +215,18 @@ InternalConfigNode MonitorConfigFullRes() {
       .input_stream_type = fuchsia::camera2::CameraStreamType::FULL_RESOLUTION,
       .supported_streams =
           {
-              fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
-                  fuchsia::camera2::CameraStreamType::MACHINE_LEARNING,
-              fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION |
-                  fuchsia::camera2::CameraStreamType::MACHINE_LEARNING,
+              {
+                  .type = fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
+                          fuchsia::camera2::CameraStreamType::MACHINE_LEARNING,
+                  .supports_dynamic_resolution = false,
+                  .supports_crop_region = false,
+              },
+              {
+                  .type = fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION |
+                          fuchsia::camera2::CameraStreamType::MACHINE_LEARNING,
+                  .supports_dynamic_resolution = false,
+                  .supports_crop_region = false,
+              },
           },
       .child_nodes =
           {
@@ -233,7 +253,11 @@ static InternalConfigNode OutputStreamMonitoring() {
       .output_frame_rate.frames_per_sec_denominator = 1,
       .supported_streams =
           {
-              fuchsia::camera2::CameraStreamType::MONITORING,
+              {
+                  .type = fuchsia::camera2::CameraStreamType::MONITORING,
+                  .supports_dynamic_resolution = false,
+                  .supports_crop_region = false,
+              },
           },
       .image_formats = OutputStreamMonitoringImageFormats(),
   };
@@ -270,7 +294,11 @@ static InternalConfigNode Ge2dMonitoring() {
       .output_frame_rate.frames_per_sec_denominator = 1,
       .supported_streams =
           {
-              fuchsia::camera2::CameraStreamType::MONITORING,
+              {
+                  .type = fuchsia::camera2::CameraStreamType::MONITORING,
+                  .supports_dynamic_resolution = false,
+                  .supports_crop_region = false,
+              },
           },
       .child_nodes =
           {
@@ -333,11 +361,11 @@ static InternalConfigNode Gdc2() {
       .output_frame_rate.frames_per_sec_denominator = 1,
       .supported_streams =
           {
-              fuchsia::camera2::CameraStreamType::MONITORING,
-          },
-      .dynamic_resolution_supported =
-          {
-              fuchsia::camera2::CameraStreamType::MONITORING,
+              {
+                  .type = fuchsia::camera2::CameraStreamType::MONITORING,
+                  .supports_dynamic_resolution = true,
+                  .supports_crop_region = false,
+              },
           },
       .child_nodes =
           {
@@ -375,7 +403,11 @@ InternalConfigNode MonitorConfigDownScaledRes() {
       .input_stream_type = fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION,
       .supported_streams =
           {
-              fuchsia::camera2::CameraStreamType::MONITORING,
+              {
+                  .type = fuchsia::camera2::CameraStreamType::MONITORING,
+                  .supports_dynamic_resolution = false,
+                  .supports_crop_region = false,
+              },
           },
       .child_nodes =
           {

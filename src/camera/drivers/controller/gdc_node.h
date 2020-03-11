@@ -37,8 +37,7 @@ class GdcNode : public ProcessNode {
           fuchsia::camera2::CameraStreamType current_stream_type)
       : ProcessNode(NodeType::kGdc, parent_node, current_stream_type,
                     internal_gdc_node.image_formats, std::move(output_buffer_collection),
-                    internal_gdc_node.supported_streams,
-                    internal_gdc_node.dynamic_resolution_supported, dispatcher,
+                    internal_gdc_node.supported_streams, dispatcher,
                     internal_gdc_node.output_frame_rate),
         gdc_(gdc),
         frame_callback_{OnGdcFrameAvailable, this},

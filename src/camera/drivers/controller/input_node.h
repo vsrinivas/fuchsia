@@ -28,8 +28,7 @@ class InputNode : public ProcessNode {
             async_dispatcher_t* dispatcher, const ddk::IspProtocolClient& isp)
       : ProcessNode(NodeType::kInputStream, nullptr, info->stream_config->properties.stream_type(),
                     info->node.image_formats, std::move(output_buffer_collection),
-                    info->node.supported_streams, info->node.dynamic_resolution_supported,
-                    dispatcher, info->node.output_frame_rate),
+                    info->node.supported_streams, dispatcher, info->node.output_frame_rate),
         isp_stream_type_(info->node.input_stream_type),
         isp_frame_callback_{OnIspFrameAvailable, this},
         isp_(isp) {}

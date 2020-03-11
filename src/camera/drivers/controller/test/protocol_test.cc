@@ -88,8 +88,10 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
 
     for (auto& stream_info : config_info.streams_info) {
       auto supported_streams = stream_info.supported_streams;
-      if (std::find(supported_streams.begin(), supported_streams.end(), stream_type) !=
-          supported_streams.end()) {
+      if (std::any_of(supported_streams.begin(), supported_streams.end(),
+                      [stream_type](auto& supported_stream) {
+                        return supported_stream.type == stream_type;
+                      })) {
         return &stream_info;
       }
     }
@@ -240,12 +242,13 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     auto fr_head_node = pipeline_manager_->full_resolution_stream();
     EXPECT_EQ(fr_head_node->type(), NodeType::kInputStream);
     EXPECT_TRUE(HasAllStreams(fr_head_node->configured_streams(), {stream_type}));
-    EXPECT_TRUE(HasAllStreams(fr_head_node->supported_streams(), {stream_type}));
+    EXPECT_TRUE(fr_head_node->is_stream_supported(stream_type));
 
     auto output_node = static_cast<OutputNode*>(fr_head_node->child_nodes().at(0).get());
     EXPECT_EQ(output_node->type(), NodeType::kOutputStream);
     EXPECT_TRUE(HasAllStreams(output_node->configured_streams(), {stream_type}));
-    EXPECT_TRUE(HasAllStreams(output_node->supported_streams(), {stream_type}));
+    EXPECT_TRUE(output_node->is_stream_supported(stream_type));
+
     EXPECT_NE(nullptr, output_node->client_stream());
 
     auto output_formats = GetOutputFormats(stream);
@@ -269,7 +272,8 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     EXPECT_TRUE(HasAllStreams(fr_head_node->configured_streams(), {stream_type2}));
     EXPECT_TRUE(HasAllStreams(output_node->configured_streams(), {stream_type2}));
 
-    EXPECT_TRUE(HasAllStreams(fr_head_node->supported_streams(), {stream_type1, stream_type2}));
+    EXPECT_TRUE(fr_head_node->is_stream_supported(stream_type1));
+    EXPECT_TRUE(fr_head_node->is_stream_supported(stream_type2));
 
     // Check if client_stream is valid.
     EXPECT_NE(nullptr, output_node->client_stream());
@@ -298,9 +302,10 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     EXPECT_TRUE(HasAllStreams(gdc_node->configured_streams(), {stream_type1}));
     EXPECT_TRUE(HasAllStreams(output_node->configured_streams(), {stream_type1}));
 
-    EXPECT_TRUE(HasAllStreams(fr_head_node->supported_streams(), {stream_type1, stream_type2}));
-    EXPECT_TRUE(HasAllStreams(gdc_node->supported_streams(), {stream_type1}));
-    EXPECT_TRUE(HasAllStreams(output_node->supported_streams(), {stream_type1}));
+    EXPECT_TRUE(fr_head_node->is_stream_supported(stream_type1));
+    EXPECT_TRUE(fr_head_node->is_stream_supported(stream_type2));
+    EXPECT_TRUE(gdc_node->is_stream_supported(stream_type1));
+    EXPECT_TRUE(output_node->is_stream_supported(stream_type1));
 
     // Check if client_stream is valid.
     EXPECT_NE(nullptr, output_node->client_stream());
@@ -326,7 +331,8 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
 
     // Validate input node.
     EXPECT_TRUE(HasAllStreams(fr_head_node->configured_streams(), {stream_type1, stream_type2}));
-    EXPECT_TRUE(HasAllStreams(fr_head_node->supported_streams(), {stream_type1, stream_type2}));
+    EXPECT_TRUE(fr_head_node->is_stream_supported(stream_type1));
+    EXPECT_TRUE(fr_head_node->is_stream_supported(stream_type2));
 
     // Check if client_stream is valid.
     ASSERT_NE(nullptr, fr_ml_output_node->client_stream());
@@ -412,12 +418,14 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     EXPECT_TRUE(HasAllStreams(output_node->configured_streams(), {stream_type}));
     EXPECT_TRUE(HasAllStreams(output_node_video->configured_streams(), {kStreamTypeVideo}));
 
-    EXPECT_TRUE(HasAllStreams(fr_head_node->supported_streams(), {stream_type, kStreamTypeVideo}));
-    EXPECT_TRUE(HasAllStreams(gdc1_node->supported_streams(), {stream_type, kStreamTypeVideo}));
-    EXPECT_TRUE(HasAllStreams(gdc2_node->supported_streams(), {stream_type}));
-    EXPECT_TRUE(HasAllStreams(ge2d_node->supported_streams(), {kStreamTypeVideo}));
-    EXPECT_TRUE(HasAllStreams(output_node->supported_streams(), {stream_type}));
-    EXPECT_TRUE(HasAllStreams(output_node_video->supported_streams(), {kStreamTypeVideo}));
+    EXPECT_TRUE(fr_head_node->is_stream_supported(stream_type));
+    EXPECT_TRUE(fr_head_node->is_stream_supported(kStreamTypeVideo));
+    EXPECT_TRUE(gdc1_node->is_stream_supported(stream_type));
+    EXPECT_TRUE(gdc1_node->is_stream_supported(kStreamTypeVideo));
+    EXPECT_TRUE(gdc2_node->is_stream_supported(stream_type));
+    EXPECT_TRUE(ge2d_node->is_stream_supported(kStreamTypeVideo));
+    EXPECT_TRUE(output_node->is_stream_supported(stream_type));
+    EXPECT_TRUE(output_node_video->is_stream_supported(kStreamTypeVideo));
 
     // Check if client_stream is valid.
     EXPECT_NE(nullptr, output_node->client_stream());

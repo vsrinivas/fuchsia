@@ -24,8 +24,7 @@ class OutputNode : public ProcessNode {
              fuchsia::camera2::CameraStreamType current_stream_type)
       : ProcessNode(NodeType::kOutputStream, parent_node, current_stream_type,
                     internal_output_node.image_formats, std::move(output_buffer_collection),
-                    internal_output_node.supported_streams,
-                    internal_output_node.dynamic_resolution_supported, dispatcher,
+                    internal_output_node.supported_streams, dispatcher,
                     internal_output_node.output_frame_rate) {}
 
   // Creates an |OutputNode| object.

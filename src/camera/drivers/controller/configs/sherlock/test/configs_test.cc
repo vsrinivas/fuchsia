@@ -41,7 +41,7 @@ TEST(ConfigTest, InternalDebugConfiguration) {
   EXPECT_EQ(debug_config.streams_info.at(1).input_stream_type, kStreamTypeDS);
   // FR supported streams.
   EXPECT_EQ(debug_config.streams_info.at(0).supported_streams.size(), 1u);
-  EXPECT_EQ(debug_config.streams_info.at(0).supported_streams[0], kStreamTypeFR);
+  EXPECT_EQ(debug_config.streams_info.at(0).supported_streams[0].type, kStreamTypeFR);
 }
 
 TEST(ConfigTest, InternalMonitorConfiguration) {
@@ -58,11 +58,11 @@ TEST(ConfigTest, InternalMonitorConfiguration) {
 
   // FR Supported streams.
   EXPECT_EQ(fr.supported_streams.size(), 2u);
-  EXPECT_EQ(fr.supported_streams[0], kStreamTypeFR | kStreamTypeML);
-  EXPECT_EQ(fr.supported_streams[1], kStreamTypeDS | kStreamTypeML);
+  EXPECT_EQ(fr.supported_streams[0].type, kStreamTypeFR | kStreamTypeML);
+  EXPECT_EQ(fr.supported_streams[1].type, kStreamTypeDS | kStreamTypeML);
   // DS supported streams
   EXPECT_EQ(ds.supported_streams.size(), 1u);
-  EXPECT_EQ(ds.supported_streams[0], kStreamTypeMonitoring);
+  EXPECT_EQ(ds.supported_streams[0].type, kStreamTypeMonitoring);
 
   // DS graph validation.
   ASSERT_EQ(ds.child_nodes.size(), 1u);
@@ -83,13 +83,12 @@ TEST(ConfigTest, InternalMonitorConfiguration) {
   ASSERT_EQ(ge2d_ds_node.supported_streams.size(), 1u);
   ASSERT_EQ(output_ds_node.supported_streams.size(), 1u);
 
-  ASSERT_EQ(gdc_ds_node.dynamic_resolution_supported.size(), 1u);
-  EXPECT_EQ(gdc_ds_node.dynamic_resolution_supported.at(0), kStreamTypeMonitoring);
+  EXPECT_TRUE(gdc_ds_node.supported_streams.at(0).supports_dynamic_resolution);
 
-  EXPECT_EQ(gdc_ds_node.supported_streams.at(0), kStreamTypeMonitoring);
-  EXPECT_EQ(input_node.supported_streams.at(0), kStreamTypeMonitoring);
-  EXPECT_EQ(ge2d_ds_node.supported_streams.at(0), kStreamTypeMonitoring);
-  EXPECT_EQ(output_ds_node.supported_streams.at(0), kStreamTypeMonitoring);
+  EXPECT_EQ(gdc_ds_node.supported_streams.at(0).type, kStreamTypeMonitoring);
+  EXPECT_EQ(input_node.supported_streams.at(0).type, kStreamTypeMonitoring);
+  EXPECT_EQ(ge2d_ds_node.supported_streams.at(0).type, kStreamTypeMonitoring);
+  EXPECT_EQ(output_ds_node.supported_streams.at(0).type, kStreamTypeMonitoring);
 
   ASSERT_EQ(gdc_ds_node.gdc_info.config_type.size(), 3u);
 
@@ -119,11 +118,11 @@ TEST(ConfigTest, InternalMonitorConfiguration) {
   ASSERT_EQ(output_fr_node.supported_streams.size(), 1u);
   ASSERT_EQ(output_ds_node.supported_streams.size(), 1u);
 
-  EXPECT_EQ(input_node.supported_streams.at(0), kStreamTypeFR | kStreamTypeML);
-  EXPECT_EQ(input_node.supported_streams.at(1), kStreamTypeML | kStreamTypeDS);
-  EXPECT_EQ(gdc_ds_node.supported_streams.at(0), kStreamTypeML | kStreamTypeDS);
-  EXPECT_EQ(output_ds_node.supported_streams.at(0), kStreamTypeML | kStreamTypeDS);
-  EXPECT_EQ(output_fr_node.supported_streams.at(0), kStreamTypeML | kStreamTypeFR);
+  EXPECT_EQ(input_node.supported_streams.at(0).type, kStreamTypeFR | kStreamTypeML);
+  EXPECT_EQ(input_node.supported_streams.at(1).type, kStreamTypeML | kStreamTypeDS);
+  EXPECT_EQ(gdc_ds_node.supported_streams.at(0).type, kStreamTypeML | kStreamTypeDS);
+  EXPECT_EQ(output_ds_node.supported_streams.at(0).type, kStreamTypeML | kStreamTypeDS);
+  EXPECT_EQ(output_fr_node.supported_streams.at(0).type, kStreamTypeML | kStreamTypeFR);
 
   EXPECT_EQ(output_ds_node.image_formats.size(), 1u);
   EXPECT_EQ(output_fr_node.image_formats.size(), 1u);
@@ -139,9 +138,9 @@ TEST(ConfigTest, InternalVideoConferenceConfiguration) {
 
   // FR supported streams.
   EXPECT_EQ(video_config.streams_info.at(0).supported_streams.size(), 2u);
-  EXPECT_EQ(video_config.streams_info.at(0).supported_streams[0],
+  EXPECT_EQ(video_config.streams_info.at(0).supported_streams[0].type,
             kStreamTypeVideo | kStreamTypeFR | kStreamTypeML);
-  EXPECT_EQ(video_config.streams_info.at(0).supported_streams[1], kStreamTypeVideo);
+  EXPECT_EQ(video_config.streams_info.at(0).supported_streams[1].type, kStreamTypeVideo);
 
   // FR graph validation.
   auto input_node = video_config.streams_info.at(0);
@@ -164,8 +163,8 @@ TEST(ConfigTest, InternalVideoConferenceConfiguration) {
   EXPECT_EQ(output_ml_node.image_formats.size(), 1u);
   EXPECT_EQ(output_video_node.image_formats.size(), 3u);
 
-  ASSERT_EQ(ge2d_node.dynamic_resolution_supported.size(), 1u);
-  EXPECT_EQ(ge2d_node.dynamic_resolution_supported.at(0), kStreamTypeVideo);
+  EXPECT_TRUE(ge2d_node.supported_streams.at(0).supports_dynamic_resolution);
+  EXPECT_TRUE(ge2d_node.supported_streams.at(0).supports_crop_region);
 }
 
 }  // namespace

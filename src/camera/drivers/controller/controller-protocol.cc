@@ -50,8 +50,10 @@ static InternalConfigNode* GetStreamConfigNode(
   // Internal API, assuming the pointer will be valid always.
   for (auto& stream_info : internal_config->streams_info) {
     auto supported_streams = stream_info.supported_streams;
-    if (std::find(supported_streams.begin(), supported_streams.end(), stream_config_type) !=
-        supported_streams.end()) {
+    if (std::any_of(supported_streams.begin(), supported_streams.end(),
+                    [stream_config_type](auto& supported_stream) {
+                      return supported_stream.type == stream_config_type;
+                    })) {
       return &stream_info;
     }
   }

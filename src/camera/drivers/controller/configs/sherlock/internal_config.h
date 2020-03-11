@@ -41,6 +41,12 @@ struct WatermarkInfo {
   uint32_t loc_y;
 };
 
+struct StreamInfo {
+  fuchsia::camera2::CameraStreamType type;
+  bool supports_dynamic_resolution;
+  bool supports_crop_region;
+};
+
 struct Ge2DInfo {
   Ge2DConfig config_type;
   std::vector<WatermarkInfo> watermark;
@@ -62,9 +68,7 @@ struct InternalConfigNode {
   // between ISP FR/DS/Scalar streams.
   fuchsia::camera2::CameraStreamType input_stream_type;
   // Types of |stream_types| supported by this node.
-  std::vector<fuchsia::camera2::CameraStreamType> supported_streams;
-  // This node support dynamic resolution for all streams part of this list.
-  std::vector<fuchsia::camera2::CameraStreamType> dynamic_resolution_supported;
+  std::vector<StreamInfo> supported_streams;
   // Child nodes
   std::vector<InternalConfigNode> child_nodes;
   // HWAccelerator Info if applicable.

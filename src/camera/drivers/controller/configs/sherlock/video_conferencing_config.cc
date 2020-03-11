@@ -83,9 +83,13 @@ static InternalConfigNode OutputMLFR() {
       .output_frame_rate.frames_per_sec_denominator = 1,
       .supported_streams =
           {
-              fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
-                  fuchsia::camera2::CameraStreamType::MACHINE_LEARNING |
-                  fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE,
+              {
+                  .type = fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
+                          fuchsia::camera2::CameraStreamType::MACHINE_LEARNING |
+                          fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE,
+                  .supports_dynamic_resolution = false,
+                  .supports_crop_region = false,
+              },
           },
       .image_formats = MLFRImageFormats(),
   };
@@ -98,8 +102,11 @@ static InternalConfigNode OutputVideoConferencing() {
       .output_frame_rate.frames_per_sec_denominator = 1,
       .supported_streams =
           {
-
-              fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE,
+              {
+                  .type = fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE,
+                  .supports_dynamic_resolution = false,
+                  .supports_crop_region = false,
+              },
           },
       .image_formats = VideoImageFormats(),
   };
@@ -121,9 +128,13 @@ static InternalConfigNode GdcVideo2() {
       .output_frame_rate.frames_per_sec_denominator = 1,
       .supported_streams =
           {
-              fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
-                  fuchsia::camera2::CameraStreamType::MACHINE_LEARNING |
-                  fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE,
+              {
+                  .type = fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
+                          fuchsia::camera2::CameraStreamType::MACHINE_LEARNING |
+                          fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE,
+                  .supports_dynamic_resolution = false,
+                  .supports_crop_region = false,
+              },
           },
       .child_nodes =
           {
@@ -159,11 +170,11 @@ static InternalConfigNode Ge2d() {
       .output_frame_rate.frames_per_sec_denominator = 1,
       .supported_streams =
           {
-              fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE,
-          },
-      .dynamic_resolution_supported =
-          {
-              fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE,
+              {
+                  .type = fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE,
+                  .supports_dynamic_resolution = true,
+                  .supports_crop_region = true,
+              },
           },
       .child_nodes =
           {
@@ -222,10 +233,19 @@ static InternalConfigNode GdcVideo1() {
       .output_frame_rate.frames_per_sec_denominator = 1,
       .supported_streams =
           {
-              fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
-                  fuchsia::camera2::CameraStreamType::MACHINE_LEARNING |
-                  fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE,
-              fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE,
+              {
+                  .type = fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
+                          fuchsia::camera2::CameraStreamType::MACHINE_LEARNING |
+                          fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE,
+                  .supports_dynamic_resolution = false,
+                  .supports_crop_region = false,
+
+              },
+              {
+                  .type = fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE,
+                  .supports_dynamic_resolution = false,
+                  .supports_crop_region = false,
+              },
           },
       .child_nodes =
           {
@@ -269,10 +289,19 @@ InternalConfigNode VideoConfigFullRes() {
       .input_stream_type = fuchsia::camera2::CameraStreamType::FULL_RESOLUTION,
       .supported_streams =
           {
-              fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
-                  fuchsia::camera2::CameraStreamType::MACHINE_LEARNING |
-                  fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE,
-              fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE,
+              {
+                  .type = fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
+                          fuchsia::camera2::CameraStreamType::MACHINE_LEARNING |
+                          fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE,
+                  .supports_dynamic_resolution = false,
+                  .supports_crop_region = false,
+
+              },
+              {
+                  .type = fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE,
+                  .supports_dynamic_resolution = false,
+                  .supports_crop_region = false,
+              },
           },
       .child_nodes =
           {

@@ -73,7 +73,11 @@ static InternalConfigNode OutputFRStream() {
       .output_frame_rate.frames_per_sec_denominator = 1,
       .supported_streams =
           {
-              fuchsia::camera2::CameraStreamType::FULL_RESOLUTION,
+              {
+                  .type = fuchsia::camera2::CameraStreamType::FULL_RESOLUTION,
+                  .supports_dynamic_resolution = false,
+                  .supports_crop_region = false,
+              },
           },
       .image_formats = FRDebugStreamImageFormats(),
   };
@@ -89,7 +93,11 @@ InternalConfigNode DebugConfigFullRes() {
       .input_stream_type = fuchsia::camera2::CameraStreamType::FULL_RESOLUTION,
       .supported_streams =
           {
-              fuchsia::camera2::CameraStreamType::FULL_RESOLUTION,
+              {
+                  .type = fuchsia::camera2::CameraStreamType::FULL_RESOLUTION,
+                  .supports_dynamic_resolution = false,
+                  .supports_crop_region = false,
+              },
           },
       .child_nodes =
           {
@@ -108,7 +116,11 @@ static InternalConfigNode OutputDSStream() {
       .output_frame_rate.frames_per_sec_denominator = 1,
       .supported_streams =
           {
-              fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION,
+              {
+                  .type = fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION,
+                  .supports_dynamic_resolution = false,
+                  .supports_crop_region = false,
+              },
           },
       .image_formats = DSDebugStreamImageFormats(),
   };
@@ -124,7 +136,11 @@ InternalConfigNode DebugConfigDownScaledRes() {
       .input_stream_type = fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION,
       .supported_streams =
           {
-              fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION,
+              {
+                  .type = fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION,
+                  .supports_dynamic_resolution = false,
+                  .supports_crop_region = false,
+              },
           },
       .child_nodes =
           {

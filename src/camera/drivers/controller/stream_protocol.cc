@@ -114,7 +114,7 @@ void StreamImpl::SetImageFormat(uint32_t image_format_index, SetImageFormatCallb
   auto* parent_node = output_node_.parent_node();
   if (output_image_format_index_ != image_format_index) {
     while (parent_node) {
-      if (HasStreamType(parent_node->dynamic_resolution_supported(), stream_type)) {
+      if (parent_node->is_dynamic_resolution_supported(stream_type)) {
         parent_node->OnResolutionChangeRequest(image_format_index);
         break;
       }

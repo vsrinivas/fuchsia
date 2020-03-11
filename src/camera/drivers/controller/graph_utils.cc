@@ -17,7 +17,7 @@ const InternalConfigNode* GetNextNodeInPipeline(const fuchsia::camera2::CameraSt
                                                 const InternalConfigNode& node) {
   for (const auto& child_node : node.child_nodes) {
     for (uint32_t i = 0; i < child_node.supported_streams.size(); i++) {
-      if (child_node.supported_streams[i] == stream) {
+      if (child_node.supported_streams[i].type == stream) {
         return &child_node;
       }
     }
