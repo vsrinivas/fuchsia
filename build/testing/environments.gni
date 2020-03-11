@@ -4,6 +4,13 @@
 
 import("//build/board.gni")
 
+declare_args() {
+  # Whether to include tests that are known to fail on NUC with ASan.
+  # Should be set to false in the infra builders that have board == "x64" and
+  # "asan" in variants.
+  include_tests_that_fail_on_nuc_asan = true
+}
+
 ### Individual test environments ###
 
 qemu_env = {
@@ -67,6 +74,13 @@ if (host_os == "linux") {
 }
 
 ### Select environment lists ###
+
+# Tests that fail on a NUC in ASan but otherwise want to run on a NUC should
+# use this.
+nuc_env_fails_on_asan = []
+if (include_tests_that_fail_on_nuc_asan) {
+  nuc_env_fails_on_asan += [ nuc_env ]
+}
 
 # The basic, freely usable test environments supported by the infrastructure.
 basic_envs = []

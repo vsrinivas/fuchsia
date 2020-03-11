@@ -236,15 +236,21 @@ test_package("netemul_guest_test") {
     {
       # Running guests is resource intensive.  Limit this test to only run on NUCs.
       name = "guest_test"
-      environments = [ nuc_env ]
+
+      # TODO(48129): test hangs w/ ASan. Fix and switch to [ nuc_env ].
+      environments = nuc_env_fails_on_asan
     },
     {
       name = "grpc_client_stress_test"
-      environments = [ nuc_env ]
+
+      # TODO(47487): test hangs w/ ASan. Fix and switch to [ nuc_env ].
+      environments = nuc_env_fails_on_asan
     },
     {
       name = "multiple_guests_test"
-      environments = [ nuc_env ]
+
+      # TODO(48129): test hangs w/ ASan. Fix and switch to [ nuc_env ].
+      environments = nuc_env_fails_on_asan
     },
   ]
 }
