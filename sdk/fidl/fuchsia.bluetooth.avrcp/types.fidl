@@ -300,6 +300,50 @@ table PlayStatus {
     3: PlaybackStatus playback_status;
 };
 
+/// The maximum number of MediaPlayerItems that can be returned from a call to
+/// GetMediaPlayerItems.
+/// This value is arbitrary and is meant to limit the number of items that can be returned.
+/// AVRCP 1.6.2, Section 6.10.4.2.2 defines the `Number of Items` parameter as a uint16.
+const uint16 MAX_MEDIA_PLAYER_ITEMS = 16;
+
+/// The Major Player Type associated with a media player.
+/// Defined by AVRCP 1.6.2 section 6.10.2.1.
+bits MajorPlayerType : uint8 {
+    AUDIO = 0x01;
+
+    VIDEO = 0x02;
+
+    BROADCASTING_AUDIO = 0x04;
+
+    BROADCASTING_VIDEO = 0x08;
+
+    // Bits 4 - 7 are reserved.
+};
+
+/// The Player Sub Type associated with a media player.
+/// Defined by AVRCP 1.6.2 section 6.10.2.1.
+bits PlayerSubType : uint32 {
+    AUDIO_BOOK = 0x01;
+
+    PODCAST = 0x02;
+
+    // Bits 2 - 31 are reserved.
+};
+
+/// Response data for the browseable items associated with a media player.
+/// Defined by AVRCP 1.6.2 section 6.10.2.1.
+table MediaPlayerItem {
+    1: uint16 player_id;
+
+    2: MajorPlayerType major_type;
+
+    3: PlayerSubType sub_type;
+
+    4: PlaybackStatus playback_status;
+
+    5: string:255 displayable_name;
+};
+
 /// Defined by AV\C Panel specification.
 enum AvcPanelCommand : uint8 {
     SELECT = 0x00;

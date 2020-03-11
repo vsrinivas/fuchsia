@@ -1012,6 +1012,9 @@ mod test {
                     TargetHandlerRequest::SetAddressedPlayer { responder, .. } => {
                         responder.send(&mut Err(TargetAvcError::RejectedInvalidPlayerId))
                     }
+                    TargetHandlerRequest::GetMediaPlayerItems { responder, .. } => {
+                        responder.send(&mut Err(TargetAvcError::RejectedNoAvailablePlayers))
+                    }
                 };
             }
         });

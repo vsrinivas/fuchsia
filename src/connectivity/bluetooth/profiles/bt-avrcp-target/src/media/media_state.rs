@@ -19,7 +19,13 @@ use crate::media::media_types::{
 ///
 /// The address is fixed because we currently only support one MediaSession. This
 /// addressed ID is used for AVRCP notifications.
-pub const MEDIA_SESSION_ADDRESSED_PLAYER_ID: u16 = 1;
+pub(crate) const MEDIA_SESSION_ADDRESSED_PLAYER_ID: u16 = 1;
+
+/// A fixed displayable name for a MediaSession.
+///
+/// The displayable name is fixed because we currently do not support multiple MediaSessions.
+/// This name is used for AVRCP Browse channel related identification.
+pub(crate) const MEDIA_SESSION_DISPLAYABLE_NAME: &str = "Fuchsia Media Player";
 
 #[derive(Clone, Debug)]
 pub(crate) struct MediaState {

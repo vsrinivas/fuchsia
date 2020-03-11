@@ -117,6 +117,10 @@ async fn handle_target_request(
             let mut response = media_sessions.set_addressed_player(player_id);
             responder.send(&mut response)?;
         }
+        TargetHandlerRequest::GetMediaPlayerItems { responder } => {
+            let mut response = media_sessions.get_media_player_items();
+            responder.send(&mut response)?;
+        }
     }
 
     Ok(())

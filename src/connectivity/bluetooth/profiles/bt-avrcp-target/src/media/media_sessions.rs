@@ -22,7 +22,7 @@ use {
 };
 
 use crate::media::{
-    media_state::{MediaState, MEDIA_SESSION_ADDRESSED_PLAYER_ID},
+    media_state::{MediaState, MEDIA_SESSION_ADDRESSED_PLAYER_ID, MEDIA_SESSION_DISPLAYABLE_NAME},
     media_types::Notification,
 };
 use crate::types::{
@@ -79,6 +79,12 @@ impl MediaSessions {
 
     pub fn get_supported_notification_events(&self) -> Vec<fidl_avrcp::NotificationEvent> {
         self.inner.read().get_supported_notification_events()
+    }
+
+    pub fn get_media_player_items(
+        &self,
+    ) -> Result<Vec<fidl_avrcp::MediaPlayerItem>, fidl_avrcp::TargetAvcError> {
+        self.inner.read().get_media_player_items()
     }
 
     pub fn set_addressed_player(
@@ -202,6 +208,28 @@ impl MediaSessionsInner {
             fidl_avrcp::NotificationEvent::TrackChanged,
             fidl_avrcp::NotificationEvent::TrackPosChanged,
         ]
+    }
+
+    /// Sends back a static declaration of one MediaPlayerItem, since we currently
+    /// do not support multiple MediaSessions.
+    pub fn get_media_player_items(
+        &self,
+    ) -> Result<Vec<fidl_avrcp::MediaPlayerItem>, fidl_avrcp::TargetAvcError> {
+        self.get_active_session().map_or(
+            Err(fidl_avrcp::TargetAvcError::RejectedNoAvailablePlayers),
+            |state| {
+                Ok(vec![fidl_avrcp::MediaPlayerItem {
+                    player_id: Some(MEDIA_SESSION_ADDRESSED_PLAYER_ID),
+                    major_type: Some(fidl_avrcp::MajorPlayerType::Audio),
+                    sub_type: Some(fidl_avrcp::PlayerSubType::empty()),
+                    playback_status: Some(
+                        state.session_info().get_play_status().get_playback_status(),
+                    ),
+                    displayable_name: Some(MEDIA_SESSION_DISPLAYABLE_NAME.to_string()),
+                    ..fidl_avrcp::MediaPlayerItem::new_empty()
+                }])
+            },
+        )
     }
 
     /// Removes the MediaState specified by `id` from the map, should it exist.
@@ -1053,6 +1081,30 @@ pub(crate) mod tests {
             res.map_err(|e| format!("{:?}", e)),
             Err("RejectedNoAvailablePlayers".to_string())
         );
+
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded]
+    #[test]
+    /// Getting the media items should return the same static response.
+    async fn test_get_media_player_items() -> Result<(), Error> {
+        let (discovery, _stream) = create_proxy::<DiscoveryMarker>()?;
+
+        // Create a new active session with default state.
+        let id = MediaSessionId(1234);
+        let sessions = create_session(discovery.clone(), id, true);
+
+        let res = sessions.get_media_player_items();
+        let expected = vec![fidl_avrcp::MediaPlayerItem {
+            player_id: Some(MEDIA_SESSION_ADDRESSED_PLAYER_ID),
+            major_type: Some(fidl_avrcp::MajorPlayerType::Audio),
+            sub_type: Some(fidl_avrcp::PlayerSubType::empty()),
+            playback_status: Some(fidl_avrcp::PlaybackStatus::Stopped),
+            displayable_name: Some(MEDIA_SESSION_DISPLAYABLE_NAME.to_string()),
+            ..fidl_avrcp::MediaPlayerItem::new_empty()
+        }];
+        assert_eq!(res, Ok(expected));
 
         Ok(())
     }

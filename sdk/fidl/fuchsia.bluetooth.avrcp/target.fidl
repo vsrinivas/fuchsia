@@ -58,4 +58,7 @@ protocol TargetHandler {
 
     /// Changes the addressed `player_id` on the target when multiple are supported.
     SetAddressedPlayer(AddressedPlayerId player_id) -> () error TargetAvcError;
+
+    /// Returns a list of media player information about the players on the target.
+    GetMediaPlayerItems() -> (vector<MediaPlayerItem>:MAX_MEDIA_PLAYER_ITEMS items) error TargetAvcError;
 };

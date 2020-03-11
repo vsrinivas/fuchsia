@@ -629,6 +629,9 @@ mod tests {
             TargetHandlerRequest::SetAddressedPlayer { responder, .. } => {
                 responder.send(&mut Ok(()))?;
             }
+            TargetHandlerRequest::GetMediaPlayerItems { responder, .. } => {
+                let _ = responder.send(&mut Ok(vec![]))?;
+            }
         };
         Ok(())
     }
