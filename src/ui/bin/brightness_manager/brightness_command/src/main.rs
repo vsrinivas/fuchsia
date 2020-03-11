@@ -27,11 +27,11 @@ async fn get_max_brightness() -> Result<f32, Error> {
     let proxy = open_backlight()?;
     let connection_result = proxy.get_max_absolute_brightness().await;
     let max_brightness = connection_result.unwrap_or_else(|e| {
-        println!("Didn't connect correctly, got err {}", e);
+        fx_log_info!("Didn't connect correctly, got err {}", e);
         Ok(ASSUMED_MAX_BRIGHTNESS)
     });
     Ok(max_brightness.unwrap_or_else(|e| {
-        println!("Didn't get the max_brightness back, got err {}", e);
+        fx_log_info!("Didn't get the max_brightness back, got err {}", e);
         ASSUMED_MAX_BRIGHTNESS
     }) as f32)
 }
