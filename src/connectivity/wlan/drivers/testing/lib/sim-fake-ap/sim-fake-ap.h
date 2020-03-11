@@ -60,7 +60,7 @@ class FakeAp : public StationIfc {
     beacon_state_.beacon_frame_.ssid_ = ssid;
   }
 
-  ~FakeAp() = default;
+  ~FakeAp() { environment_->RemoveStation(this); }
 
   void SetChannel(const wlan_channel_t& channel);
   void SetBssid(const common::MacAddr& bssid);

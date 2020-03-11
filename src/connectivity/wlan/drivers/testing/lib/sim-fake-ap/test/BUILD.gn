@@ -18,9 +18,6 @@ executable("assoc_unittests") {
     "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap",
     "//src/lib/fxl/test:gtest_main",
   ]
-
-  # TODO(47463): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 executable("auth_unittests") {
@@ -35,9 +32,6 @@ executable("auth_unittests") {
     "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap",
     "//src/lib/fxl/test:gtest_main",
   ]
-
-  # TODO(47463): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 executable("beacon_unittests") {
@@ -52,9 +46,6 @@ executable("beacon_unittests") {
     "//src/lib/fxl/test:gtest_main",
   ]
   public_configs = [ "//build/config:Wno-reorder-init-list" ]
-
-  # TODO(46855): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 executable("probe_unittests") {
@@ -69,9 +60,6 @@ executable("probe_unittests") {
     "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap",
     "//src/lib/fxl/test:gtest_main",
   ]
-
-  # TODO(47463): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 unittest_package("wlan-sim-fake-ap-test") {
