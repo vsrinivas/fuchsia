@@ -11,7 +11,6 @@ use crate::switchboard::base::{
 use crate::tests::fakes::base::create_setting_handler;
 use crate::EnvironmentBuilder;
 use crate::Runtime;
-use futures::executor::block_on;
 use futures::lock::Mutex;
 use std::sync::Arc;
 
@@ -31,10 +30,17 @@ async fn verify_restore_handling(
             .handler(
                 SettingType::Unknown,
                 create_setting_handler(Box::new(move |command| {
+                    let counter = counter_clone.clone();
                     if let Command::HandleRequest(SettingRequest::Restore, responder) = command {
-                        let mut counter_lock = block_on(counter_clone.lock());
-                        *counter_lock += 1;
-                        responder.send((response_generate)()).ok();
+                        let result = (response_generate)();
+                        return Box::pin(async move {
+                            let mut counter_lock = counter.lock().await;
+                            *counter_lock += 1;
+                            responder.send(result).ok();
+                            return ();
+                        });
+                    } else {
+                        return Box::pin(async move {});
                     }
                 })),
             )
