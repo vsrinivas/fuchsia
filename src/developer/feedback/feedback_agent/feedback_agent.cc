@@ -13,6 +13,7 @@
 
 #include <cinttypes>
 
+#include "fuchsia/feedback/cpp/fidl.h"
 #include "src/developer/feedback/feedback_agent/constants.h"
 #include "src/developer/feedback/utils/rotating_file_set.h"
 #include "src/lib/files/path.h"
@@ -24,7 +25,9 @@ std::unique_ptr<FeedbackAgent> FeedbackAgent::TryCreate(
     async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
     inspect::Node* root_node) {
   // We need to create a DeviceIdProvider before a DataProvider because the DeviceIdProvider will
-  // initialize the device id the DataProvider uses.
+  // initialize the device id the DataProvider's Datastore uses.
+  // TODO(fxb/47734): pass a reference to the DeviceIdProvider to the Datastore to make that
+  // dependency explicit.
   DeviceIdProvider device_id_provider(kDeviceIdPath);
 
   std::unique_ptr<feedback::DataProvider> data_provider =
@@ -34,8 +37,11 @@ std::unique_ptr<FeedbackAgent> FeedbackAgent::TryCreate(
     return nullptr;
   }
 
+  // TODO(fxb/47368): pass a reference to the Datastore to be able to upsert extra annotations.
+  DataRegister data_register;
+
   return std::make_unique<FeedbackAgent>(dispatcher, root_node, device_id_provider,
-                                         std::move(data_provider));
+                                         std::move(data_provider), data_register);
 }
 
 namespace {
@@ -60,11 +66,13 @@ void MovePreviousLogs() {
 
 FeedbackAgent::FeedbackAgent(async_dispatcher_t* dispatcher, inspect::Node* root_node,
                              DeviceIdProvider device_id_provider,
-                             std::unique_ptr<DataProvider> data_provider)
+                             std::unique_ptr<DataProvider> data_provider,
+                             DataRegister data_register)
     : dispatcher_(dispatcher),
       inspect_manager_(root_node),
       device_id_provider_(device_id_provider),
-      data_provider_(std::move(data_provider)) {
+      data_provider_(std::move(data_provider)),
+      data_register_(data_register) {
   // We need to move the logs from the previous boot before spawning the system log recorder process
   // so that the new process doesn't overwrite the old logs. Additionally, to guarantee the data
   // providers see the complete previous logs, this needs to be done before spawning any data
@@ -80,6 +88,13 @@ void FeedbackAgent::SpawnSystemLogRecorder() {
       status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to spawn system log recorder, logs will not be persisted";
   }
+}
+
+void FeedbackAgent::HandleComponentDataRegisterRequest(
+    fidl::InterfaceRequest<fuchsia::feedback::ComponentDataRegister> request) {
+  data_register_connections_.AddBinding(&data_register_, std::move(request), dispatcher_);
+  // TODO(fxb/47368): track the number of connections to fuchsia.feeedback.ComponentDataRegister in
+  // Inspect.
 }
 
 void FeedbackAgent::HandleDataProviderRequest(

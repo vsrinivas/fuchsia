@@ -51,6 +51,9 @@ test_package("feedback_agent_tests") {
       dest = "config_unittest"
     },
     {
+      name = "data_register_unittest"
+    },
+    {
       name = "datastore_unittest"
     },
     {
@@ -139,6 +142,7 @@ test_package("feedback_agent_tests") {
     ":channel_provider_unittest",
     ":config_unittest",
     ":data_provider_unittest",
+    ":data_register_unittest",
     ":datastore_unittest",
     ":device_id_provider_unittest",
     ":feedback_agent_integration_test",
@@ -257,6 +261,20 @@ executable("data_provider_unittest") {
 
   # TODO(46560): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+}
+
+executable("data_register_unittest") {
+  testonly = true
+
+  sources = [ "data_register_unittest.cc" ]
+
+  deps = [
+    "//garnet/public/lib/gtest",
+    "//src/developer/feedback/feedback_agent:data_register",
+    "//src/developer/feedback/testing:gtest_with_syslog_main",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
 }
 
 executable("datastore_unittest") {

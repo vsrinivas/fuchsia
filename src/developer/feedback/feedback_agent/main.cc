@@ -41,12 +41,21 @@ int main(int argc, const char** argv) {
   //  TODO(fxb/47000): re-enable once OOM issues are resolved.
   //  agent->SpawnSystemLogRecorder();
 
+  // fuchsia.feedback.ComponentDataRegister
+  context->outgoing()->AddPublicService(
+      fidl::InterfaceRequestHandler<fuchsia::feedback::ComponentDataRegister>(
+          [&agent](fidl::InterfaceRequest<fuchsia::feedback::ComponentDataRegister> request) {
+            agent->HandleComponentDataRegisterRequest(std::move(request));
+          }));
+
+  // fuchsia.feedback.DataProvider
   context->outgoing()->AddPublicService(
       fidl::InterfaceRequestHandler<fuchsia::feedback::DataProvider>(
           [&agent](fidl::InterfaceRequest<fuchsia::feedback::DataProvider> request) {
             agent->HandleDataProviderRequest(std::move(request));
           }));
 
+  // fuchsia.feedback.DevideIdProvider
   context->outgoing()->AddPublicService(
       fidl::InterfaceRequestHandler<fuchsia::feedback::DeviceIdProvider>(
           [&agent](fidl::InterfaceRequest<fuchsia::feedback::DeviceIdProvider> request) {

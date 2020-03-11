@@ -286,10 +286,17 @@ class FeedbackAgentIntegrationTest : public sys::testing::TestWithEnvironment {
   std::unique_ptr<FakeCobalt> fake_cobalt_;
 };
 
+TEST_F(FeedbackAgentIntegrationTest, ComponentDataRegister_Upsert_SmokeTest) {
+  fuchsia::feedback::ComponentDataRegisterSyncPtr data_register;
+  environment_services_->Connect(data_register.NewRequest());
+
+  ASSERT_EQ(data_register->Upsert({}), ZX_OK);
+}
+
 // We use VK_TEST instead of the regular TEST macro because Scenic needs Vulkan to operate properly
 // and take a screenshot. Note that calls to Scenic hang indefinitely for headless devices so this
 // test assumes the device has a display like the other Scenic tests, see SCN-1281.
-VK_TEST_F(FeedbackAgentIntegrationTest, GetScreenshot_SmokeTest) {
+VK_TEST_F(FeedbackAgentIntegrationTest, DataProvider_GetScreenshot_SmokeTest) {
   DataProviderSyncPtr data_provider;
   environment_services_->Connect(data_provider.NewRequest());
 
@@ -320,18 +327,7 @@ constexpr char kInspectJsonSchema[] = R"({
   "uniqueItems": true
 })";
 
-TEST_F(FeedbackAgentIntegrationTest, GetId_CheckValue) {
-  DeviceIdProviderSyncPtr device_id_provider;
-  environment_services_->Connect(device_id_provider.NewRequest());
-
-  DeviceIdProvider_GetId_Result out_result;
-  ASSERT_EQ(device_id_provider->GetId(&out_result), ZX_OK);
-
-  ASSERT_TRUE(out_result.is_response());
-  EXPECT_TRUE(uuid::IsValid(out_result.response().ResultValue_()));
-}
-
-TEST_F(FeedbackAgentIntegrationTest, GetData_CheckKeys) {
+TEST_F(FeedbackAgentIntegrationTest, DataProvider_GetData_CheckKeys) {
   // We make sure the components serving the services GetData() connects to are up and running.
   WaitForLogger();
   WaitForChannelProvider();
@@ -434,7 +430,7 @@ TEST_F(FeedbackAgentIntegrationTest, GetData_CheckKeys) {
   EXPECT_TRUE(has_entry_for_test_app);
 }
 
-TEST_F(FeedbackAgentIntegrationTest, GetData_CheckCobalt) {
+TEST_F(FeedbackAgentIntegrationTest, DataProvider_GetData_CheckCobalt) {
   // We make sure the components serving the services GetData() connects to are up and running.
   WaitForLogger();
   WaitForChannelProvider();
@@ -487,6 +483,17 @@ TEST_F(FeedbackAgentIntegrationTest, DataProvider_CheckNumConnections) {
 
   CheckFeedbackAgentInspectTree(/*expected_total_num_connections=*/3u,
                                 /*expected_current_num_connections=*/0u);
+}
+
+TEST_F(FeedbackAgentIntegrationTest, DeviceIdProvider_GetId_CheckValue) {
+  DeviceIdProviderSyncPtr device_id_provider;
+  environment_services_->Connect(device_id_provider.NewRequest());
+
+  DeviceIdProvider_GetId_Result out_result;
+  ASSERT_EQ(device_id_provider->GetId(&out_result), ZX_OK);
+
+  ASSERT_TRUE(out_result.is_response());
+  EXPECT_TRUE(uuid::IsValid(out_result.response().ResultValue_()));
 }
 
 }  // namespace

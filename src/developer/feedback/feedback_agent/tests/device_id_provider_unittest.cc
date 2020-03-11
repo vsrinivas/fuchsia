@@ -22,12 +22,13 @@ namespace {
 constexpr char kDefaultDeviceId[] = "00000000-0000-4000-a000-000000000001";
 
 class DeviceIdTest : public testing::Test {
- protected:
+ public:
   void SetUp() override {
     ASSERT_TRUE(uuid::IsValid(kDefaultDeviceId));
     SetDeviceIdFileContentsTo(kDefaultDeviceId);
   }
 
+ protected:
   void SetDeviceIdFileContentsTo(const std::string& contents) {
     ASSERT_TRUE(tmp_dir_.NewTempFileWithData(contents, &device_id_path_));
   }
@@ -50,7 +51,7 @@ class DeviceIdTest : public testing::Test {
 
   std::optional<std::string> GetDeviceId() {
     // Because the constructor of DeviceIdProvider does work to read/initialize the device id, we
-    // don't set up a |device_id_provider| until the file is in the state want .
+    // don't set up a DeviceIdProvider until the file is in the state we want.
     DeviceIdProvider device_id_provider(device_id_path_);
     return device_id_provider.GetId();
   }

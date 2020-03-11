@@ -9,6 +9,7 @@
                     "fuchsia-pkg://fuchsia.com/fake_factory_store_providers#meta/misc.cmx",
                     "--config=/config/data/fuchsia.factory.MiscFactoryStoreProvider.config"
                 ],
+                "fuchsia.feedback.ComponentDataRegister": "fuchsia-pkg://fuchsia.com/feedback_agent#meta/feedback_agent.cmx",
                 "fuchsia.feedback.DataProvider": "fuchsia-pkg://fuchsia.com/feedback_agent#meta/feedback_agent.cmx",
                 "fuchsia.feedback.DeviceIdProvider": "fuchsia-pkg://fuchsia.com/feedback_agent#meta/feedback_agent.cmx",
                 "fuchsia.hwinfo.Board": "fuchsia-pkg://fuchsia.com/fake_hwinfo#meta/hwinfo.cmx",
@@ -41,6 +42,7 @@
             "fuchsia.cobalt.test.LoggerQuerier",
             "fuchsia.diagnostics.Archive",
             "fuchsia.factory.MiscFactoryStoreProvider",
+            "fuchsia.feedback.ComponentDataRegister",
             "fuchsia.feedback.DataProvider",
             "fuchsia.feedback.DeviceIdProvider",
             "fuchsia.hwinfo.Board",

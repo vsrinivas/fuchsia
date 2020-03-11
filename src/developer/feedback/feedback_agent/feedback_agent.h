@@ -14,6 +14,7 @@
 #include <memory>
 
 #include "src/developer/feedback/feedback_agent/data_provider.h"
+#include "src/developer/feedback/feedback_agent/data_register.h"
 #include "src/developer/feedback/feedback_agent/device_id_provider.h"
 #include "src/developer/feedback/feedback_agent/inspect_manager.h"
 #include "src/lib/fxl/macros.h"
@@ -33,10 +34,19 @@ class FeedbackAgent {
                                                   inspect::Node* root_node);
 
   FeedbackAgent(async_dispatcher_t* dispatcher, inspect::Node* root_node,
-                DeviceIdProvider device_id_provider, std::unique_ptr<DataProvider> data_provider);
+                DeviceIdProvider device_id_provider, std::unique_ptr<DataProvider> data_provider,
+                DataRegister data_register);
 
   void SpawnSystemLogRecorder();
+
+  // FIDL protocol handlers.
+  //
+  // fuchsia.feedback.ComponentDataRegister
+  void HandleComponentDataRegisterRequest(
+      fidl::InterfaceRequest<fuchsia::feedback::ComponentDataRegister> request);
+  // fuchsia.feedback.DataProvider
   void HandleDataProviderRequest(fidl::InterfaceRequest<fuchsia::feedback::DataProvider> request);
+  // fuchsia.feedback.DeviceIdProvider
   void HandleDeviceIdProviderRequest(
       fidl::InterfaceRequest<fuchsia::feedback::DeviceIdProvider> request);
 
@@ -50,6 +60,9 @@ class FeedbackAgent {
   std::unique_ptr<DataProvider> data_provider_;
   fidl::BindingSet<fuchsia::feedback::DataProvider> data_provider_connections_;
   uint64_t next_data_provider_connection_id_ = 1;
+
+  DataRegister data_register_;
+  fidl::BindingSet<fuchsia::feedback::ComponentDataRegister> data_register_connections_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FeedbackAgent);
 };

@@ -156,6 +156,15 @@ source_set("datastore") {
   ]
 }
 
+source_set("data_register") {
+  sources = [
+    "data_register.cc",
+    "data_register.h",
+  ]
+
+  public_deps = [ "//sdk/fidl/fuchsia.feedback" ]
+}
+
 source_set("device_id_provider") {
   sources = [
     "device_id_provider.cc",
@@ -189,6 +198,7 @@ source_set("feedback_agent_src") {
 
   public_deps = [
     ":data_provider",
+    ":data_register",
     ":device_id_provider",
     ":inspect_manager",
     "//sdk/fidl/fuchsia.feedback",

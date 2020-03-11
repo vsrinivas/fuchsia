@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/data_register_unittest"
+    }
+}
