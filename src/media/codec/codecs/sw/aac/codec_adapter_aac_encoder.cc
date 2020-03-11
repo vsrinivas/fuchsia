@@ -6,6 +6,8 @@
 
 #include <lib/async/cpp/task.h>
 
+#include <trace/event.h>
+
 #include "chunk_input_stream.h"
 #include "output_sink.h"
 
@@ -49,6 +51,7 @@ void CodecAdapterAacEncoder::CoreCodecInit(
 
   output_sink_.emplace(/*sender=*/
                        [this](CodecPacket* output_packet) {
+                         TRACE_INSTANT("codec_runner", "Media:PacketSent", TRACE_SCOPE_THREAD);
                          events_->onCoreCodecOutputPacket(output_packet,
                                                           /*error_detected_before=*/false,
                                                           /*error_detected_during=*/false);
@@ -95,6 +98,8 @@ void CodecAdapterAacEncoder::CoreCodecStartStream() {
     std::lock_guard<std::mutex> lock(lock_);
     stream_active_ = true;
   }
+
+  TRACE_INSTANT("codec_runner", "Media:Start", TRACE_SCOPE_THREAD);
 }
 
 void CodecAdapterAacEncoder::CoreCodecQueueInputFormatDetails(
@@ -107,6 +112,7 @@ void CodecAdapterAacEncoder::CoreCodecQueueInputFormatDetails(
 }
 
 void CodecAdapterAacEncoder::CoreCodecQueueInputPacket(CodecPacket* packet) {
+  TRACE_INSTANT("codec_runner", "Media:PacketReceived", TRACE_SCOPE_THREAD);
   PostTask(input_processing_loop_.dispatcher(),
            [this, packet]() { ProcessInput(CodecInputItem::Packet(packet)); });
 }
@@ -136,6 +142,8 @@ void CodecAdapterAacEncoder::CoreCodecStopStream() {
   });
 
   stream_stopped.wait_one(ZX_EVENT_SIGNALED, zx::time::infinite(), nullptr);
+
+  TRACE_INSTANT("codec_runner", "Media:Stop", TRACE_SCOPE_THREAD);
 }
 
 void CodecAdapterAacEncoder::CoreCodecAddBuffer(CodecPort port, const CodecBuffer* buffer) {

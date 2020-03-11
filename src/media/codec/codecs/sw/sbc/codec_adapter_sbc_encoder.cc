@@ -6,6 +6,8 @@
 
 #include <lib/media/codec_impl/codec_buffer.h>
 
+#include <trace/event.h>
+
 namespace {
 
 // A client using the min shouldn't necessarily expect performance to be
@@ -319,6 +321,8 @@ CodecAdapterSbcEncoder::InputLoopStatus CodecAdapterSbcEncoder::EncodeInput(
 
 void CodecAdapterSbcEncoder::SendOutputPacket(CodecPacket* output_packet) {
   {
+    TRACE_INSTANT("codec_runner", "Media:PacketSent", TRACE_SCOPE_THREAD);
+
     fit::closure free_buffer = [this, base = output_packet->buffer()->base()] {
       output_buffer_pool_.FreeBuffer(base);
     };

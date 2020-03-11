@@ -8,6 +8,8 @@
 
 #include <iomanip>
 
+#include <trace/event.h>
+
 #include "fuchsia/media/cpp/fidl.h"
 #include "oi_codec_sbc.h"
 
@@ -297,6 +299,8 @@ void CodecAdapterSbcDecoder::SendQueuedOutput() {
   if (!output_buffer_ || !output_packet_ || !output_offset_) {
     return;
   }
+
+  TRACE_INSTANT("codec_runner", "Media:PacketSent", TRACE_SCOPE_THREAD);
 
   output_packet_->SetBuffer(output_buffer_);
   output_packet_->SetValidLengthBytes(output_offset_);

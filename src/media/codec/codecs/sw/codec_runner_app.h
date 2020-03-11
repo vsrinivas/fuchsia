@@ -13,6 +13,8 @@
 
 #include <memory>
 
+#include <trace-provider/provider.h>
+
 #include "local_single_codec_factory.h"
 #include "src/lib/syslog/cpp/logger.h"
 
@@ -30,6 +32,8 @@ class CodecRunnerApp {
   void Run() {
     zx_status_t status = syslog::InitLogger({"codec_runner"});
     ZX_ASSERT_MSG(status == ZX_OK, "Failed to init syslog: %d", status);
+
+    trace::TraceProviderWithFdio trace_provider(loop_.dispatcher(), "codec_runner");
 
     component_context_->outgoing()->AddPublicService(
         fidl::InterfaceRequestHandler<fuchsia::mediacodec::CodecFactory>(

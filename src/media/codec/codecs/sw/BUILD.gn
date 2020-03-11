@@ -29,6 +29,7 @@ source_set("codec_runner_sw") {
   public_deps = [
     "//sdk/lib/sys/cpp",
     "//src/lib/syslog/cpp",
+    "//zircon/public/lib/trace-provider-with-fdio",
   ]
 }
 
@@ -53,5 +54,6 @@ source_set("codec_adapter_sw") {
     "//src/media/lib/mpsc_queue",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/trace",
   ]
 }

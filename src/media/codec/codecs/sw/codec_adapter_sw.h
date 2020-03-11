@@ -12,6 +12,7 @@
 #include <lib/media/codec_impl/codec_buffer.h>
 #include <lib/media/codec_impl/codec_input_item.h>
 #include <lib/media/codec_impl/codec_packet.h>
+#include <lib/trace/event.h>
 #include <threads.h>
 
 #include <optional>
@@ -121,6 +122,8 @@ class CodecAdapterSW : public CodecAdapter {
     ZX_ASSERT_MSG(post_result == ZX_OK,
                   "async::PostTask() failed to post input processing loop - result: %d\n",
                   post_result);
+
+    TRACE_INSTANT("codec_runner", "Media:Start", TRACE_SCOPE_THREAD);
   }
 
   void CoreCodecQueueInputFormatDetails(
@@ -135,6 +138,7 @@ class CodecAdapterSW : public CodecAdapter {
   }
 
   void CoreCodecQueueInputPacket(CodecPacket* packet) override {
+    TRACE_INSTANT("codec_runner", "Media:PacketReceived", TRACE_SCOPE_THREAD);
     input_queue_.Push(CodecInputItem::Packet(packet));
   }
 
@@ -158,6 +162,8 @@ class CodecAdapterSW : public CodecAdapter {
         events_->onCoreCodecInputPacketDone(input_item.packet());
       }
     }
+
+    TRACE_INSTANT("codec_runner", "Media:Stop", TRACE_SCOPE_THREAD);
   }
 
   void CoreCodecRecycleOutputPacket(CodecPacket* packet) override {
