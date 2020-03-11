@@ -1294,13 +1294,16 @@ void Coordinator::HandleNewDevice(const fbl::RefPtr<Device>& dev) {
   BindDevice(dev, fbl::StringPiece("") /* autobind */, true /* new device */);
 }
 
-static void dump_suspend_task_dependencies(const SuspendTask& task, int depth = 0) {
+static void dump_suspend_task_dependencies(const SuspendTask* task, int depth = 0) {
+  if (!task) {
+    return;
+  }
   const char* task_status = "";
-  if (task.is_completed()) {
-    task_status = zx_status_get_string(task.status());
+  if (task->is_completed()) {
+    task_status = zx_status_get_string(task->status());
   } else {
     bool dependence = false;
-    for (const auto* dependency : task.Dependencies()) {
+    for (const auto* dependency : task->Dependencies()) {
       if (!dependency->is_completed()) {
         dependence = true;
         break;
@@ -1308,14 +1311,14 @@ static void dump_suspend_task_dependencies(const SuspendTask& task, int depth = 
     }
     task_status = dependence ? "<dependence>" : "Stuck <suspending>";
   }
-  log(INFO, "%sSuspend %s: %s\n", fbl::String(2 * depth, ' ').data(), task.device().name().data(),
+  log(INFO, "%sSuspend %s: %s\n", fbl::String(2 * depth, ' ').data(), task->device().name().data(),
       task_status);
   if (!strcmp(task_status, "Stuck <suspending>")) {
-    zx_koid_t pid = task.device().host()->koid();
+    zx_koid_t pid = task->device().host()->koid();
     if (!pid) {
       return;
     }
-    zx::unowned_process process = task.device().host()->proc();
+    zx::unowned_process process = task->device().host()->proc();
     char process_name[ZX_MAX_NAME_LEN];
     zx_status_t status = process->get_property(ZX_PROP_NAME, process_name, sizeof(process_name));
     if (status != ZX_OK) {
@@ -1324,8 +1327,8 @@ static void dump_suspend_task_dependencies(const SuspendTask& task, int depth = 
     printf("Backtrace of threads of process %lu:%s\n", pid, process_name);
     inspector_print_debug_info_for_all_threads(stdout, process->get());
   }
-  for (const auto* dependency : task.Dependencies()) {
-    dump_suspend_task_dependencies(*reinterpret_cast<const SuspendTask*>(dependency), depth + 1);
+  for (const auto* dependency : task->Dependencies()) {
+    dump_suspend_task_dependencies(reinterpret_cast<const SuspendTask*>(dependency), depth + 1);
   }
   fflush(stdout);
 }
@@ -1336,25 +1339,59 @@ void Coordinator::Suspend(SuspendContext ctx, fit::function<void(zx_status_t)> c
   // in queue, and another suspend request comes in, we should nullify the resume that
   // is in queue.
   if (InResume()) {
+    log(ERROR, "driver_manager: Aborting system-suspend. A system resume is in progresss.\n");
     return;
   }
 
-  if ((ctx.sflags() & DEVICE_SUSPEND_REASON_MASK) != DEVICE_SUSPEND_FLAG_SUSPEND_RAM) {
-    this->ShutdownFilesystems();
+  // A suspend is already in progress.
+  if (InSuspend()) {
+    log(ERROR,
+        "driver_manager: Aborting system-suspend. A system suspend is already in progress\n");
+    return;
   }
 
   // The sys device should have a proxy. If not, the system hasn't fully initialized yet and
   // cannot go to suspend.
   if (!sys_device_->proxy()) {
+    log(ERROR, "driver_manager: Aborting system-suspend. System is not fully initialized yet.\n");
     return;
   }
-  if (InSuspend()) {
-    return;
+
+  if ((ctx.sflags() & DEVICE_SUSPEND_REASON_MASK) != DEVICE_SUSPEND_FLAG_SUSPEND_RAM) {
+    log(ERROR, "driver_manager: Shutting down filesystems to prepare for system-suspend\n");
+    ShutdownFilesystems();
   }
+  log(INFO, "driver_manager: Filesystem shutdown complete, creating a suspend timeout-watchdog\n");
+
   suspend_context() = std::move(ctx);
   auto callback_info = fbl::MakeRefCounted<SuspendCallbackInfo>(std::move(callback));
+  auto status = async::PostDelayedTask(
+      dispatcher(),
+      [this, callback_info] {
+        if (!InSuspend()) {
+          return;  // Suspend failed to complete.
+        }
+        auto& ctx = suspend_context();
+        log(ERROR, "driver_manager: DEVICE SUSPEND TIMED OUT\n");
+        log(ERROR, "  sflags: 0x%08x\n", ctx.sflags());
+        if (ctx.task() != nullptr) {
+          dump_suspend_task_dependencies(ctx.task());
+        }
+        if (suspend_fallback()) {
+          ::suspend_fallback(root_resource(), ctx.sflags());
+          // Unless in test env, we should not reach here.
+          if (callback_info->callback) {
+            callback_info->callback(ZX_ERR_TIMED_OUT);
+            callback_info->callback = nullptr;
+          }
+        }
+      },
+      config_.suspend_timeout);
+  if (status != ZX_OK) {
+    log(ERROR, "driver_manager: Failed to create suspend timeout watchdog\n");
+  }
 
-  auto completion = [this, callback_info](zx_status_t status) {
+  auto completion = [this, callback_info = std::move(callback_info)](zx_status_t status) {
     auto& ctx = suspend_context();
     if (status != ZX_OK) {
       // TODO: unroll suspend
@@ -1384,32 +1421,10 @@ void Coordinator::Suspend(SuspendContext ctx, fit::function<void(zx_status_t)> c
   };
   // We don't need to suspend anything except sys_device and it's children,
   // since we do not run suspend hooks for children of test or misc
+
   auto task = SuspendTask::Create(sys_device(), ctx.sflags(), std::move(completion));
   suspend_context().set_task(std::move(task));
-
-  auto status = async::PostDelayedTask(
-      dispatcher(),
-      [this, callback_info = std::move(callback_info)] {
-        if (!InSuspend()) {
-          return;  // Suspend failed to complete.
-        }
-        auto& ctx = suspend_context();
-        log(ERROR, "driver_manager: DEVICE SUSPEND TIMED OUT\n");
-        log(ERROR, "  sflags: 0x%08x\n", ctx.sflags());
-        dump_suspend_task_dependencies(ctx.task());
-        if (suspend_fallback()) {
-          ::suspend_fallback(root_resource(), ctx.sflags());
-          // Unless in test env, we should not reach here.
-          if (callback_info->callback) {
-            callback_info->callback(ZX_ERR_TIMED_OUT);
-            callback_info->callback = nullptr;
-          }
-        }
-      },
-      config_.suspend_timeout);
-  if (status != ZX_OK) {
-    log(ERROR, "driver_manager: Failed to create suspend timeout watchdog\n");
-  }
+  log(INFO, "driver_manager: Successfully created suspend task on sys-device\n");
 }
 
 void Coordinator::Resume(ResumeContext ctx, std::function<void(zx_status_t)> callback) {
