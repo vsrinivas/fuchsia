@@ -88,7 +88,8 @@ impl Discovery {
         }
     }
 
-    fn sessions_info_stream(
+    /// Returns a stream of all `PlayerProxyEvent`s for all media sessions.
+    pub fn sessions_info_stream(
         &self,
         filter: Filter,
     ) -> impl Stream<Item = (SessionId, PlayerProxyEvent)> + Unpin + Send + 'static {

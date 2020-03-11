@@ -11,7 +11,9 @@ mod services;
 #[cfg(test)]
 mod test;
 
-use anyhow::Error;
+use self::services::discovery::filter::Filter;
+use anyhow::{Context, Error};
+use fidl::endpoints::{create_endpoints, create_request_stream};
 use fidl_fuchsia_media::UsageReporterMarker;
 use fuchsia_async as fasync;
 use fuchsia_component::{client, server::ServiceFs};
@@ -50,7 +52,27 @@ async fn main() {
     let usage_reporter_proxy =
         client::connect_to_service::<UsageReporterMarker>().expect("Connecting to UsageReporter");
     let discovery = self::services::discovery::Discovery::new(player_stream, usage_reporter_proxy);
+    let sessions_info_stream = discovery.sessions_info_stream(Filter::default());
     spawn_log_error(discovery.serve(discovery_request_stream, observer_request_stream));
+
+    let internal_discovery_request_sink = discovery_request_sink.clone();
+    let connect_to_session = move |session_id| {
+        let (discovery, request_stream) =
+            create_request_stream::<fidl_fuchsia_media_sessions2::DiscoveryMarker>()?;
+        let discovery = discovery.into_proxy()?;
+        let (session, session_request) = create_endpoints()?;
+        discovery.connect_to_session(session_id, session_request)?;
+
+        let discovery_request_sink = internal_discovery_request_sink.clone().sink_err_into();
+        spawn_log_error(request_stream.err_into().forward(discovery_request_sink));
+
+        Ok(session)
+    };
+
+    let (active_session_service, active_session_client_sink) =
+        services::active_session::ActiveSession::new(sessions_info_stream, connect_to_session)
+            .expect("Creating active session service");
+    spawn_log_error(active_session_service.serve());
 
     server
         .dir("svc")
@@ -70,6 +92,17 @@ async fn main() {
             move |request_stream: fidl_fuchsia_media_sessions2::ObserverDiscoveryRequestStream| {
                 let observer_request_sink = observer_request_sink.clone().sink_err_into();
                 spawn_log_error(request_stream.err_into().forward(observer_request_sink));
+            },
+        )
+        .add_fidl_service(
+            move |request_stream: fidl_fuchsia_media_sessions2::ActiveSessionRequestStream| {
+                let mut active_session_client_sink = active_session_client_sink.clone();
+                spawn_log_error(async move {
+                    Ok(active_session_client_sink
+                        .send(request_stream)
+                        .await
+                        .context("Sending new client to Active Session service")?)
+                });
             },
         );
     inspector.serve(&mut server).expect("Serving inspect");

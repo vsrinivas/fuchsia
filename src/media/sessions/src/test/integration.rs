@@ -34,7 +34,6 @@ lazy_static! {
 
 struct TestService {
     // This needs to stay alive to keep the service running.
-    #[allow(unused)]
     app: comp::client::App,
     // This needs to stay alive to keep the service running.
     #[allow(unused)]
@@ -854,6 +853,128 @@ test!(player_paused_during_interruption_is_not_resumed_by_its_end, || async {
     drop(service);
     let next = player.requests.try_next().await?;
     assert!(next.is_none());
+
+    Ok(())
+});
+
+test!(active_session_initializes_clients_without_player, || async {
+    let service = TestService::new()?;
+    let active_session_discovery = service
+        .app
+        .connect_to_service::<ActiveSessionMarker>()
+        .context("Connecting to Active Session service")?;
+
+    let session = active_session_discovery
+        .watch_active_session()
+        .await
+        .context("Watching the active session")?;
+    assert_matches!(session, None);
+
+    Ok(())
+});
+
+test!(active_session_initializes_clients_with_idle_player, || async {
+    let service = TestService::new()?;
+    let mut player = TestPlayer::new(&service).await?;
+    let mut watcher = service.new_watcher(Decodable::new_empty())?;
+    let active_session_discovery = service
+        .app
+        .connect_to_service::<ActiveSessionMarker>()
+        .context("Connecting to Active Session service")?;
+
+    player.emit_delta(delta_with_state(PlayerState::Idle)).await?;
+    let _ = watcher.wait_for_n_updates(1).await?;
+
+    let session = active_session_discovery
+        .watch_active_session()
+        .await
+        .context("Watching the active session")?;
+    assert_matches!(session, None);
+
+    Ok(())
+});
+
+test!(active_session_initializes_clients_with_active_player, || async {
+    let service = TestService::new()?;
+    let mut player = TestPlayer::new(&service).await?;
+    let mut watcher = service.new_watcher(Decodable::new_empty())?;
+    let active_session_discovery = service
+        .app
+        .connect_to_service::<ActiveSessionMarker>()
+        .context("Connecting to Active Session service")?;
+
+    player.emit_delta(delta_with_state(PlayerState::Playing)).await?;
+    let _ = watcher.wait_for_n_updates(1).await?;
+
+    // We take the watch request from the player's queue and don't answer it, so that
+    // the stream of requests coming in that we match on down below doesn't contain it.
+    let _watch_request = player.requests.try_next().await?;
+
+    let session = active_session_discovery
+        .watch_active_session()
+        .await
+        .context("Watching the active session")?;
+    let session = session.expect("Unwrapping active session channel");
+    let session = session.into_proxy().expect("Creating session proxy");
+    session.play().context("Sending play command to session")?;
+
+    player
+        .wait_for_request(|request| matches!(request, PlayerRequest::Play {..}))
+        .await
+        .expect("Waiting for player to receive play command");
+
+    Ok(())
+});
+
+test!(active_session_falls_back_when_session_removed, || async {
+    let service = TestService::new()?;
+    let mut watcher = service.new_watcher(Decodable::new_empty())?;
+    let active_session_discovery = service
+        .app
+        .connect_to_service::<ActiveSessionMarker>()
+        .context("Connecting to Active Session service")?;
+
+    let mut player1 = TestPlayer::new(&service).await?;
+    let mut player2 = TestPlayer::new(&service).await?;
+
+    let session =
+        active_session_discovery.watch_active_session().await.context("Syncing active session")?;
+    assert!(session.is_none());
+
+    player1.emit_delta(delta_with_state(PlayerState::Playing)).await?;
+    let _ = watcher.wait_for_n_updates(1).await?;
+
+    player2.emit_delta(delta_with_state(PlayerState::Playing)).await?;
+    let _ = watcher.wait_for_n_updates(1).await?;
+
+    player1.emit_delta(delta_with_state(PlayerState::Paused)).await?;
+    let _ = watcher.wait_for_n_updates(1).await?;
+
+    let session = active_session_discovery
+        .watch_active_session()
+        .await
+        .context("Watching active session 1st time")?;
+    let _session = session.expect("Unwrapping active session channel");
+
+    drop(player2);
+    let _ = watcher.wait_for_removal().await?;
+
+    let session = active_session_discovery
+        .watch_active_session()
+        .await
+        .context("Watching the active session 2nd time")?;
+    let session = session.expect("Unwrapping active session channel 2nd time");
+    let session = session.into_proxy().expect("Creating session proxy 2nd time");
+
+    let info_delta = session.watch_status().await.expect("Watching session status");
+    assert_eq!(
+        info_delta.player_status.and_then(|status| status.player_state),
+        Some(PlayerState::Paused)
+    );
+
+    drop(player1);
+    let _ = watcher.wait_for_removal().await?;
+    assert!(session.watch_status().await.is_err());
 
     Ok(())
 });
