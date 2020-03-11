@@ -69,10 +69,14 @@ group("tests") {
     "//src/connectivity/wlan/testing/wlantap-driver:wlantap",
     "//src/connectivity/wlan/tools/wlantool:wlantool-tests",
     "//src/connectivity/wlan/wlancfg:wlancfg-tests",
+    "//src/connectivity/wlan/wlancfg/tool:donut-tests",
     "//src/connectivity/wlan/wlanstack:wlanstack-tests",
   ]
 }
 
 group("tools") {
-  public_deps = [ "//src/connectivity/wlan/tools/wlantool:wlan" ]
+  public_deps = [
+    "//src/connectivity/wlan/tools/wlantool:wlan",
+    "//src/connectivity/wlan/wlancfg/tool:donut",
+  ]
 }

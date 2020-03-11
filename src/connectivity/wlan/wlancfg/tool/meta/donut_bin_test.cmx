@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/donut_bin_test"
+    }
+}

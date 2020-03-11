@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "bin/wlancfg_tool"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.wlan.policy.ClientListener",
+            "fuchsia.wlan.policy.ClientProvider"
+        ]
+    }
+}

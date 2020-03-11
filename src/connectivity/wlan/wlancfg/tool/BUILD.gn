@@ -1,0 +1,60 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/test/test_package.gni")
+
+rustc_binary("bin") {
+  name = "donut"
+  with_unit_tests = true
+  edition = "2018"
+
+  deps = [
+    "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common-rustc",
+    "//sdk/fidl/fuchsia.wlan.device:fuchsia.wlan.device-rustc",
+    "//sdk/fidl/fuchsia.wlan.policy:fuchsia.wlan.policy-rustc",
+    "//src/connectivity/wlan/lib/common/rust/:wlan-common",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:clap",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:hex",
+    "//third_party/rust_crates:pin-utils",
+    "//third_party/rust_crates:structopt",
+  ]
+}
+
+package("donut") {
+  deps = [ ":bin" ]
+
+  binaries = [
+    {
+      path = "donut"
+      name = "donut"
+      shell = true
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/donut.cmx")
+      dest = "donut.cmx"
+    },
+  ]
+}
+
+test_package("donut-tests") {
+  deps = [ ":bin_test" ]
+
+  tests = [
+    {
+      name = "donut_bin_test"
+      environments = basic_envs
+    },
+  ]
+}
