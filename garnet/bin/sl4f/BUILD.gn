@@ -25,6 +25,7 @@ rustc_library("lib") {
     "//garnet/lib/rust/fidl_fuchsia_hardware_ethernet_ext",
     "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
+    "//src/sys/test_manager/fidl:test_manager-rustc",
     "//sdk/fidl/fuchsia.auth:fuchsia.auth-rustc",
     "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc",
     "//sdk/fidl/fuchsia.bluetooth.avdtp:fuchsia.bluetooth.avdtp-rustc",
