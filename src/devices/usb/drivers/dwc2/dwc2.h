@@ -94,6 +94,8 @@ class Dwc2 : public Dwc2Type, public ddk::UsbDciProtocol<Dwc2, ddk::base_protoco
 
   void FlushTxFifo(uint32_t fifo_num);
   void FlushRxFifo();
+  void FlushTxFifoRetryIndefinite(uint32_t fifo_num);
+  void FlushRxFifoRetryIndefinite();
   zx_status_t InitController();
   void SetConnected(bool connected);
   void StartEp0();

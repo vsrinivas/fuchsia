@@ -18,6 +18,8 @@
 
 #include <atomic>
 #include <memory>
+#include <optional>
+#include <thread>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
@@ -75,6 +77,7 @@ typedef struct {
   cnd_t pending_requests_completed = {};
   std::atomic_int32_t pending_request_count;
   size_t usb_request_offset = 0;
+  std::optional<std::thread> suspend_thread;
 } usb_cdc_t;
 
 typedef struct txn_info {
@@ -684,7 +687,40 @@ static void usb_cdc_release(void* ctx) {
   mtx_destroy(&cdc->tx_mutex);
   mtx_destroy(&cdc->rx_mutex);
   mtx_destroy(&cdc->intr_mutex);
+  if (cdc->suspend_thread.has_value()) {
+    cdc->suspend_thread->join();
+  }
   delete cdc;
+}
+
+static void usb_cdc_suspend(void* ctx, uint8_t requested_state, bool enable_wake,
+                            uint8_t suspend_reason) {
+  auto* cdc = static_cast<usb_cdc_t*>(ctx);
+  cdc->suspend_thread.emplace([cdc]() {
+    {
+      fbl::AutoLock l(&cdc->tx_mutex);
+      cdc->unbound = true;
+    }
+    usb_function_cancel_all(&cdc->function, cdc->intr_addr);
+    usb_function_cancel_all(&cdc->function, cdc->bulk_out_addr);
+    usb_function_cancel_all(&cdc->function, cdc->bulk_in_addr);
+    {
+      fbl::AutoLock l(&cdc->pending_request_lock);
+      while (cdc->pending_request_count) {
+        cnd_wait(&cdc->pending_requests_completed, &cdc->pending_request_lock);
+      }
+    }
+    list_node_t list;
+    {
+      fbl::AutoLock l(&cdc->tx_mutex);
+      list_move(&cdc->tx_pending_infos, &list);
+    }
+    txn_info_t* txn;
+    while ((txn = list_remove_head_type(&list, txn_info_t, node)) != NULL) {
+      complete_txn(txn, ZX_ERR_PEER_CLOSED);
+    }
+    device_suspend_reply(cdc->zxdev, ZX_OK, 0);
+  });
 }
 
 static zx_protocol_device_t usb_cdc_proto = []() {
@@ -692,6 +728,7 @@ static zx_protocol_device_t usb_cdc_proto = []() {
   dev.version = DEVICE_OPS_VERSION;
   dev.unbind = usb_cdc_unbind;
   dev.release = usb_cdc_release;
+  dev.suspend_new = usb_cdc_suspend;
   return dev;
 }();
 

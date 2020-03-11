@@ -431,6 +431,29 @@ void Dwc2::FlushRxFifo() {
   zx::nanosleep(zx::deadline_after(zx::usec(1)));
 }
 
+void Dwc2::FlushTxFifoRetryIndefinite(uint32_t fifo_num) {
+  auto* mmio = get_mmio();
+
+  auto grstctl = GRSTCTL::Get().FromValue(0).set_txfflsh(1).set_txfnum(fifo_num).WriteTo(mmio);
+
+  do {
+    grstctl.ReadFrom(mmio);
+  } while (grstctl.txfflsh() == 1);
+
+  zx::nanosleep(zx::deadline_after(zx::usec(1)));
+}
+
+void Dwc2::FlushRxFifoRetryIndefinite() {
+  auto* mmio = get_mmio();
+  auto grstctl = GRSTCTL::Get().FromValue(0).set_rxfflsh(1).WriteTo(mmio);
+
+  do {
+    grstctl.ReadFrom(mmio);
+  } while (grstctl.rxfflsh() == 1);
+
+  zx::nanosleep(zx::deadline_after(zx::usec(1)));
+}
+
 void Dwc2::StartEndpoints() {
   for (uint8_t ep_num = 1; ep_num < fbl::count_of(endpoints_); ep_num++) {
     auto* ep = &endpoints_[ep_num];
@@ -1059,7 +1082,25 @@ zx_status_t Dwc2::UsbDciEpClearStall(uint8_t ep_address) {
 
 size_t Dwc2::UsbDciGetRequestSize() { return Request::RequestSize(sizeof(usb_request_t)); }
 
-zx_status_t Dwc2::UsbDciCancelAll(uint8_t ep) { return ZX_ERR_NOT_SUPPORTED; }
+zx_status_t Dwc2::UsbDciCancelAll(uint8_t epid) {
+  uint8_t ep_num = DWC_ADDR_TO_INDEX(epid);
+  auto* ep = &endpoints_[ep_num];
+
+  fbl::AutoLock lock(&ep->lock);
+  if (DWC_EP_IS_OUT(ep_num)) {
+    FlushRxFifoRetryIndefinite();
+  } else {
+    FlushTxFifoRetryIndefinite(ep_num);
+  }
+  RequestQueue queue = std::move(ep->queued_reqs);
+  if (ep->current_req) {
+    queue.push(Request(ep->current_req, sizeof(usb_request_t)));
+    ep->current_req = nullptr;
+  }
+  lock.release();
+  queue.CompleteAll(ZX_ERR_IO_NOT_PRESENT, 0);
+  return ZX_OK;
+}
 
 static constexpr zx_driver_ops_t driver_ops = []() {
   zx_driver_ops_t ops = {};
