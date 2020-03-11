@@ -188,8 +188,11 @@ zx_status_t ChannelDispatcher::Read(zx_koid_t owner, uint32_t* msg_size, uint32_
   if (owner != owner_)
     return ZX_ERR_BAD_HANDLE;
 
-  if (messages_.is_empty())
+  if (messages_.is_empty()) {
     return peer_ ? ZX_ERR_SHOULD_WAIT : ZX_ERR_PEER_CLOSED;
+  } else if (messages_.size() == kMaxPendingMessageCount / 2) {
+    printf("KERN: warning! channel (%zu) has %zu messages (read).\n", get_koid(), messages_.size());
+  }
 
   *msg_size = messages_.front().data_size();
   *msg_handle_count = messages_.front().num_handles();
@@ -355,12 +358,16 @@ void ChannelDispatcher::WriteSelf(MessagePacketPtr msg) {
     max_message_count_ = messages_.size();
   }
 
-  if (messages_.size() > kMaxPendingMessageCount) {
+  if (messages_.size() == kMaxPendingMessageCount / 2) {
     // TODO(cpu): Remove this hack. See comment in kMaxPendingMessageCount definition.
+    printf("KERN: warning! channel (%zu) has %zu messages (write).\n", get_koid(),
+           messages_.size());
+  } else if (messages_.size() > kMaxPendingMessageCount) {
     auto process = ProcessDispatcher::GetCurrent();
     char pname[ZX_MAX_NAME_LEN];
     process->get_name(pname);
-    printf("KERN: channel has %zu messages (%s). Raising exception\n", messages_.size(), pname);
+    printf("KERN: channel (%zu) has %zu messages (%s). Raising exception\n", get_koid(),
+           messages_.size(), pname);
     Thread::Current::SignalPolicyException();
   }
 
