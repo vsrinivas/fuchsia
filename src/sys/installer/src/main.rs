@@ -104,7 +104,7 @@ async fn get_block_devices() -> Result<Vec<(String, u64)>, Error> {
     Ok(devices)
 }
 
-fn select_block_device(devices: &Vec<(String, u64)>) -> Result<&String, Error> {
+fn select_block_device(devices: Vec<&(String, u64)>) -> Result<&String, Error> {
     if devices.is_empty() {
         return Err(anyhow!("Found no block devices."));
     }
@@ -188,8 +188,10 @@ async fn main() -> Result<(), Error> {
     let install_source =
         find_install_source(block_devices.iter().map(|(part, _)| part).collect()).await?;
     let block_device_path = opt.block_device.as_ref().unwrap_or_else(|| {
-        select_block_device(&block_devices)
-            .unwrap_or_else(|e| panic!("Couldn't select a block device: {}", e))
+        select_block_device(
+            block_devices.iter().filter(|(part, _)| part != install_source).collect(),
+        )
+        .expect("Couldn't select a block device!")
     });
     println!("Using {} as installation target.", block_device_path);
     println!();
