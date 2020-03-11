@@ -527,7 +527,7 @@ func fvm(disk string, offset, size int64, command string, args ...string) {
 	szs := strconv.FormatInt(size, 10)
 	argv := []string{disk, command, "--offset", offs, "--length", szs}
 	argv = append(argv, args...)
-	cmd := exec.Command(zirconTool("fvm"), argv...)
+	cmd := exec.Command(fuchsiaTool("fvm"), argv...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
@@ -629,6 +629,19 @@ func zirconTool(name string) string {
 	if tool == "" {
 		needZirconToolsDir()
 		tool, _ = exec.LookPath(filepath.Join(*zirconToolsDir, name))
+	}
+	if tool == "" {
+		log.Fatalf("Could not find %q, you might need to build zircon", name)
+	}
+	return tool
+}
+
+func fuchsiaTool(name string) string {
+	var tool string
+	tool, _ = exec.LookPath(tool)
+	if tool == "" {
+		needFuchsiaBuildDir()
+		tool, _ = exec.LookPath(filepath.Join(*fuchsiaBuildDir, "host_x64", name))
 	}
 	if tool == "" {
 		log.Fatalf("Could not find %q, you might need to build zircon", name)
