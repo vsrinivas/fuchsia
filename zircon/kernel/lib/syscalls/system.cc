@@ -377,7 +377,8 @@ zx_status_t sys_system_mexec(zx_handle_t resource, zx_handle_t kernel_vmo,
   // this as the boot CPU.
   // We want to make sure that this is the CPU that eventually branches into
   // the new kernel so we attempt to migrate this thread to that cpu.
-  platform_halt_secondary_cpus();
+  result = platform_halt_secondary_cpus();
+  DEBUG_ASSERT(result == ZX_OK);
 
   platform_mexec_prep(final_bootimage_addr, bootimage_len);
 

@@ -82,5 +82,3 @@ __WEAK void platform_specific_halt(platform_halt_action suggested_action,
 }
 
 __WEAK void platform_halt_cpu() {}
-
-__WEAK void platform_halt_secondary_cpus() { PANIC_UNIMPLEMENTED; }

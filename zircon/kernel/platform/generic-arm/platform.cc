@@ -144,17 +144,6 @@ void platform_halt_cpu(void) {
   panic("psci_cpu_off returned %u\n", result);
 }
 
-void platform_halt_secondary_cpus(void) {
-  // Ensure the current thread is pinned to the boot CPU.
-  DEBUG_ASSERT(Thread::Current::Get()->hard_affinity_ == cpu_num_to_mask(BOOT_CPU_ID));
-
-  // "Unplug" online secondary CPUs before halting them.
-  cpu_mask_t primary = cpu_num_to_mask(BOOT_CPU_ID);
-  cpu_mask_t mask = mp_get_online_mask() & ~primary;
-  zx_status_t result = mp_unplug_cpu_mask(mask);
-  DEBUG_ASSERT(result == ZX_OK);
-}
-
 static zx_status_t platform_start_cpu(uint cpu_id, uint64_t mpid) {
   // Issue memory barrier before starting to ensure previous stores will be visible to new CPU.
   smp_mb();
