@@ -6,6 +6,8 @@ source_set("mocks") {
   sources = [
     "mock_color_transform_handler.cc",
     "mock_color_transform_handler.h",
+    "mock_focus_chain.cc",
+    "mock_focus_chain.h",
     "mock_pointer_event_registry.cc",
     "mock_pointer_event_registry.h",
     "mock_semantic_listener.cc",
@@ -18,9 +20,11 @@ source_set("mocks") {
     "//sdk/fidl/fuchsia.accessibility",
     "//sdk/fidl/fuchsia.accessibility.semantics",
     "//sdk/fidl/fuchsia.settings",
+    "//sdk/fidl/fuchsia.ui.focus",
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.input.accessibility",
     "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/fidl/fuchsia.ui.views.accessibility",
   ]
 
   deps = [

@@ -55,6 +55,7 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.math",
     "//sdk/fidl/fuchsia.settings",
     "//sdk/fidl/fuchsia.ui.input.accessibility",
+    "//sdk/fidl/fuchsia.ui.views.accessibility",
     "//src/ui/a11y/lib",
   ]
 

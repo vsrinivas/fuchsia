@@ -7,6 +7,8 @@
 #include <zircon/status.h>
 
 #include "src/lib/syslog/cpp/logger.h"
+#include "src/ui/a11y/lib/screen_reader/focus/a11y_focus_manager.h"
+#include "src/ui/a11y/lib/screen_reader/screen_reader_context.h"
 
 namespace a11y_manager {
 
@@ -32,6 +34,29 @@ App::App(sys::ComponentContext* context, a11y::ViewManager* view_manager,
     FX_LOGS(ERROR) << "Error from fuchsia::ui::input::accessibility::PointerEventRegistry"
                    << zx_status_get_string(status);
   });
+
+  // Inits Focus Chain focuser support / listening Focus Chain updates.
+  focuser_registry_ = context->svc()->Connect<fuchsia::ui::views::accessibility::FocuserRegistry>();
+  focuser_registry_.set_error_handler([](zx_status_t status) {
+    FX_LOGS(ERROR) << "Error from fuchsia::ui::views::accessibility::FocuserRegistry"
+                   << zx_status_get_string(status);
+  });
+  fuchsia::ui::views::FocuserPtr focuser;
+  focuser_registry_->RegisterFocuser(focuser.NewRequest());
+  focus_chain_manager_ =
+      std::make_unique<a11y::FocusChainManager>(std::move(focuser), view_manager_);
+
+  // |focus_chain_manager_| listens for Focus Chain updates. Connects to the listener registry and
+  // start listening.
+  focus_chain_listener_registry_ =
+      context->svc()->Connect<fuchsia::ui::focus::FocusChainListenerRegistry>();
+  focus_chain_listener_registry_.set_error_handler([](zx_status_t status) {
+    FX_LOGS(ERROR) << "Error from fuchsia::ui::focus::FocusChainListenerRegistry"
+                   << zx_status_get_string(status);
+  });
+  auto focus_chain_listener_handle =
+      focus_chain_listener_bindings_.AddBinding(focus_chain_manager_.get());
+  focus_chain_listener_registry_->Register(focus_chain_listener_handle.Bind());
 
   // Connect to setui.
   setui_settings_ = context->svc()->Connect<fuchsia::settings::Accessibility>();
@@ -61,7 +86,7 @@ void App::UpdateScreenReaderState() {
 
   if (state_.screen_reader_enabled()) {
     if (!screen_reader_) {
-      screen_reader_ = std::make_unique<a11y::ScreenReader>(view_manager_, tts_manager_);
+      screen_reader_ = InitializeScreenReader();
     }
   } else {
     screen_reader_.reset();
@@ -167,6 +192,15 @@ A11yManagerState A11yManagerState::withSettings(
   }
 
   return state;
+}
+
+std::unique_ptr<a11y::ScreenReader> App::InitializeScreenReader() {
+  auto a11y_focus_manager = std::make_unique<a11y::A11yFocusManager>(focus_chain_manager_.get(),
+                                                                     focus_chain_manager_.get());
+  auto screen_reader_context =
+      std::make_unique<a11y::ScreenReaderContext>(std::move(a11y_focus_manager));
+  return std::make_unique<a11y::ScreenReader>(std::move(screen_reader_context), view_manager_,
+                                              tts_manager_);
 }
 
 }  // namespace a11y_manager

@@ -12,6 +12,7 @@ group("lib") {
     "gesture_manager",
     "magnifier",
     "screen_reader",
+    "screen_reader/focus",
     "semantics",
     "tts",
     "view",

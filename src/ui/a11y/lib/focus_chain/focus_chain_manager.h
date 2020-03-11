@@ -32,7 +32,7 @@ class FocusChainManager : public fuchsia::ui::focus::FocusChainListener,
   FocusChainManager(fuchsia::ui::views::FocuserPtr focuser, SemanticsSource* semantics_source);
   ~FocusChainManager() = default;
 
-  // |fuchsia.ui.focus|
+  // |fuchsia.ui.focus.FocusChainListener|
   void OnFocusChange(fuchsia::ui::focus::FocusChain focus_chain,
                      OnFocusChangeCallback callback) override;
 

@@ -14,6 +14,7 @@
 #include "gtest/gtest.h"
 #include "src/lib/syslog/cpp/logger.h"
 #include "src/ui/a11y/bin/a11y_manager/tests/mocks/mock_color_transform_handler.h"
+#include "src/ui/a11y/bin/a11y_manager/tests/mocks/mock_focus_chain.h"
 #include "src/ui/a11y/bin/a11y_manager/tests/mocks/mock_pointer_event_registry.h"
 #include "src/ui/a11y/bin/a11y_manager/tests/mocks/mock_semantic_listener.h"
 #include "src/ui/a11y/bin/a11y_manager/tests/mocks/mock_setui_accessibility.h"
@@ -41,6 +42,7 @@ class AppUnitTest : public gtest::TestLoopFixture {
         mock_pointer_event_registry_(&context_provider_),
         mock_color_transform_handler_(&context_provider_),
         mock_setui_(&context_provider_),
+        mock_focus_chain_(&context_provider_),
         view_manager_(std::make_unique<a11y::SemanticTreeServiceFactory>(),
                       context_->outgoing()->debug_dir()),
         tts_manager_(context_),
@@ -94,6 +96,7 @@ class AppUnitTest : public gtest::TestLoopFixture {
   MockPointerEventRegistry mock_pointer_event_registry_;
   MockColorTransformHandler mock_color_transform_handler_;
   MockSetUIAccessibility mock_setui_;
+  MockFocusChain mock_focus_chain_;
 
   a11y::ViewManager view_manager_;
   a11y::TtsManager tts_manager_;
@@ -195,7 +198,8 @@ TEST_F(AppUnitTest, ListenerForScreenReader) {
   EXPECT_TRUE(app_.state().screen_reader_enabled());
 
   ASSERT_TRUE(mock_pointer_event_registry_.listener());
-  EXPECT_EQ(SendUnrecognizedGesture(&mock_pointer_event_registry_.listener()), EventHandling::CONSUMED);
+  EXPECT_EQ(SendUnrecognizedGesture(&mock_pointer_event_registry_.listener()),
+            EventHandling::CONSUMED);
 }
 
 TEST_F(AppUnitTest, ListenerForMagnifier) {
@@ -207,7 +211,8 @@ TEST_F(AppUnitTest, ListenerForMagnifier) {
   EXPECT_TRUE(app_.state().magnifier_enabled());
 
   ASSERT_TRUE(mock_pointer_event_registry_.listener());
-  EXPECT_EQ(SendUnrecognizedGesture(&mock_pointer_event_registry_.listener()), EventHandling::REJECTED);
+  EXPECT_EQ(SendUnrecognizedGesture(&mock_pointer_event_registry_.listener()),
+            EventHandling::REJECTED);
 }
 
 TEST_F(AppUnitTest, ListenerForAll) {
@@ -218,7 +223,8 @@ TEST_F(AppUnitTest, ListenerForAll) {
 
   RunLoopUntilIdle();
   ASSERT_TRUE(mock_pointer_event_registry_.listener());
-  EXPECT_EQ(SendUnrecognizedGesture(&mock_pointer_event_registry_.listener()), EventHandling::CONSUMED);
+  EXPECT_EQ(SendUnrecognizedGesture(&mock_pointer_event_registry_.listener()),
+            EventHandling::CONSUMED);
 }
 
 TEST_F(AppUnitTest, NoListenerAfterAllRemoved) {
@@ -253,7 +259,8 @@ TEST_F(AppUnitTest, ListenerRemoveOneByOne) {
   EXPECT_EQ(app_.state().magnifier_enabled(), true);
 
   ASSERT_TRUE(mock_pointer_event_registry_.listener());
-  EXPECT_EQ(SendUnrecognizedGesture(&mock_pointer_event_registry_.listener()), EventHandling::REJECTED);
+  EXPECT_EQ(SendUnrecognizedGesture(&mock_pointer_event_registry_.listener()),
+            EventHandling::REJECTED);
 
   settings.set_enable_magnification(false);
   mock_setui_.Set(std::move(settings), [](auto) {});
@@ -332,7 +339,7 @@ TEST_F(AppUnitTest, ColorInversionApplied) {
   EXPECT_TRUE(mock_color_transform_handler_.GetColorInversionEnabled());
 }
 
-TEST_F(AppUnitTest, ScreenReaderOnAtStartup) {  
+TEST_F(AppUnitTest, ScreenReaderOnAtStartup) {
   fuchsia::settings::AccessibilitySettings accessibilitySettings;
   accessibilitySettings.set_screen_reader(true);
   accessibilitySettings.set_color_inversion(false);
@@ -344,8 +351,20 @@ TEST_F(AppUnitTest, ScreenReaderOnAtStartup) {
   // Verify that screen reader is on and the pointer event registry is wired up.
   EXPECT_TRUE(app_.state().screen_reader_enabled());
   ASSERT_TRUE(mock_pointer_event_registry_.listener());
-  EXPECT_EQ(SendUnrecognizedGesture(&mock_pointer_event_registry_.listener()), EventHandling::CONSUMED);
+  EXPECT_EQ(SendUnrecognizedGesture(&mock_pointer_event_registry_.listener()),
+            EventHandling::CONSUMED);
 }
+
+TEST_F(AppUnitTest, InitializesFocusChain) {
+  // Ensures that when App is initialized, it connects to the Focus Chain different services.
+  RunLoopUntilIdle();
+
+  ASSERT_TRUE(mock_focus_chain_.listener());
+  ASSERT_TRUE(mock_focus_chain_.HasRegisteredFocuser());
+}
+
+// TODO(fxb/48064): Write a test to verify that screen reader is wired up with the Focus Chain when
+// it initializes.
 
 }  // namespace
 }  // namespace accessibility_test

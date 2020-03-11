@@ -8,7 +8,9 @@
 #include <fuchsia/accessibility/cpp/fidl.h>
 #include <fuchsia/settings/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
+#include <fuchsia/ui/focus/cpp/fidl.h>
 #include <fuchsia/ui/input/accessibility/cpp/fidl.h>
+#include <fuchsia/ui/views/accessibility/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
@@ -17,6 +19,7 @@
 
 #include "src/lib/fxl/macros.h"
 #include "src/ui/a11y/lib/configuration/color_transform_manager.h"
+#include "src/ui/a11y/lib/focus_chain/focus_chain_manager.h"
 #include "src/ui/a11y/lib/gesture_manager/gesture_manager.h"
 #include "src/ui/a11y/lib/magnifier/magnifier.h"
 #include "src/ui/a11y/lib/screen_reader/screen_reader.h"
@@ -107,6 +110,9 @@ class App {
   void UpdateColorTransformState();
   void UpdateGestureManagerState();
 
+  // Initializes the Screen Reader, instantiating its context and related services.
+  std::unique_ptr<a11y::ScreenReader> InitializeScreenReader();
+
   // Current state of the a11y manager
   A11yManagerState state_;
 
@@ -114,6 +120,8 @@ class App {
   a11y::ViewManager* view_manager_;
   a11y::TtsManager* tts_manager_;
   a11y::ColorTransformManager* color_transform_manager_;
+
+  std::unique_ptr<a11y::FocusChainManager> focus_chain_manager_;
   // The gesture manager is instantiated whenever a11y manager starts listening
   // for pointer events, and destroyed when the listener disconnects.
   std::unique_ptr<a11y::GestureManager> gesture_manager_;
@@ -123,12 +131,21 @@ class App {
   fidl::BindingSet<fuchsia::accessibility::semantics::SemanticsManager> semantics_manager_bindings_;
 
   fidl::BindingSet<fuchsia::ui::input::accessibility::PointerEventListener> listener_bindings_;
+  fidl::BindingSet<fuchsia::ui::focus::FocusChainListener> focus_chain_listener_bindings_;
 
   fidl::BindingSet<fuchsia::accessibility::Magnifier> magnifier_bindings_;
 
   // Interface between a11y manager and Root presenter to register a
   // accessibility pointer event listener.
   fuchsia::ui::input::accessibility::PointerEventRegistryPtr pointer_event_registry_;
+
+  // Interface between a11y manager and Root presenter to register a
+  // Focuser.
+  fuchsia::ui::views::accessibility::FocuserRegistryPtr focuser_registry_;
+
+  // Interface between a11y manager and Scenic to register a
+  // Focus Chain Listener.
+  fuchsia::ui::focus::FocusChainListenerRegistryPtr focus_chain_listener_registry_;
 
   // Interface between Setui and a11y manager to get updates when user settings change.
   fuchsia::settings::AccessibilityPtr setui_settings_;

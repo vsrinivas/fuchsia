@@ -9,8 +9,9 @@
 
 namespace a11y {
 
-ScreenReader::ScreenReader(a11y::ViewManager* view_manager, a11y::TtsManager* tts_manager)
-    : tts_manager_(tts_manager) {
+ScreenReader::ScreenReader(std::unique_ptr<ScreenReaderContext> context,
+                           a11y::ViewManager* view_manager, a11y::TtsManager* tts_manager)
+    : context_(std::move(context)), tts_manager_(tts_manager) {
   action_context_ = std::make_unique<ScreenReaderAction::ActionContext>();
   action_context_->view_manager = view_manager;
 

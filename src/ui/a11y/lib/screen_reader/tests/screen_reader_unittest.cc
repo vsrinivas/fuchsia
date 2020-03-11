@@ -8,6 +8,8 @@
 #include <lib/sys/cpp/testing/component_context_provider.h>
 
 #include "src/ui/a11y/bin/a11y_manager/tests/util/util.h"
+#include "src/ui/a11y/lib/focus_chain/tests/mocks/mock_focus_chain_registry.h"
+#include "src/ui/a11y/lib/focus_chain/tests/mocks/mock_focus_chain_requester.h"
 #include "src/ui/a11y/lib/gesture_manager/gesture_manager.h"
 #include "src/ui/a11y/lib/gesture_manager/recognizers/one_finger_drag_recognizer.h"
 #include "src/ui/a11y/lib/gesture_manager/recognizers/one_finger_n_tap_recognizer.h"
@@ -36,7 +38,10 @@ class ScreenReaderTest : public gtest::TestLoopFixture {
       : tts_manager_(context_provider_.context()),
         view_manager_(std::make_unique<a11y::SemanticTreeServiceFactory>(),
                       context_provider_.context()->outgoing()->debug_dir()),
-        screen_reader_(&view_manager_, &tts_manager_),
+        a11y_focus_manager_(std::make_unique<a11y::A11yFocusManager>(&mock_focus_chain_requester_,
+                                                                     &mock_focus_chain_registry_)),
+        context_(std::make_unique<a11y::ScreenReaderContext>(std::move(a11y_focus_manager_))),
+        screen_reader_(std::move(context_), &view_manager_, &tts_manager_),
         semantic_provider_(&view_manager_) {
     screen_reader_.BindGestures(gesture_manager_.gesture_handler());
   }
@@ -57,6 +62,10 @@ class ScreenReaderTest : public gtest::TestLoopFixture {
   a11y::TtsManager tts_manager_;
   a11y::ViewManager view_manager_;
   a11y::GestureManager gesture_manager_;
+  MockAccessibilityFocusChainRequester mock_focus_chain_requester_;
+  MockAccessibilityFocusChainRegistry mock_focus_chain_registry_;
+  std::unique_ptr<a11y::A11yFocusManager> a11y_focus_manager_;
+  std::unique_ptr<a11y::ScreenReaderContext> context_;
   a11y::ScreenReader screen_reader_;
   accessibility_test::MockSemanticProvider semantic_provider_;
 };
