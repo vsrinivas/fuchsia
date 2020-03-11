@@ -50,10 +50,20 @@ class DeviceIdTest : public testing::Test {
   }
 
   std::optional<std::string> GetDeviceId() {
+    using Result = fuchsia::feedback::DeviceIdProvider_GetId_Result;
+
     // Because the constructor of DeviceIdProvider does work to read/initialize the device id, we
     // don't set up a DeviceIdProvider until the file is in the state we want.
     DeviceIdProvider device_id_provider(device_id_path_);
-    return device_id_provider.GetId();
+
+    std::optional<std::string> device_id = std::nullopt;
+    device_id_provider.GetId([&](Result result) {
+      if (result.is_response()) {
+        device_id = result.response().ResultValue_();
+      }
+    });
+
+    return device_id;
   }
 
   std::string device_id_path_;
