@@ -34,8 +34,8 @@ template("fuchsia_package") {
   _depfile = "${target_gen_dir}/${target_name}_stamp.d"
 
   # target names
-  _write_manifest_target = "${package_name}_write_manifest"
-  _package_target = "${package_name}_pkg"
+  _manifest_target = "${target_name}__archive-manifest"
+  _metadata_target = "${target_name}__archive-metadata"
 
   # output values
   _pkg_out_dir = "${target_gen_dir}/${package_name}"
@@ -64,7 +64,7 @@ template("fuchsia_package") {
     deps = _package_deps
   }
 
-  action(_write_manifest_target) {
+  action(_manifest_target) {
     forward_variables_from(invoker,
                            [
                              "deps",
@@ -120,12 +120,12 @@ template("fuchsia_package") {
   }
 
   # Creates a Fuchsia metadata package.
-  fuchsia_pm_tool(_package_target) {
+  fuchsia_pm_tool(_metadata_target) {
     forward_variables_from(invoker, [ "testonly" ])
     package_name = package_name
     command = "build"
     archive_manifest = _archive_manifest
-    public_deps = [ ":$_write_manifest_target" ]
+    public_deps = [ ":$_manifest_target" ]
   }
 
   fuchsia_pm_tool(target_name) {
@@ -133,6 +133,6 @@ template("fuchsia_package") {
     package_name = package_name
     command = "archive"
     archive_manifest = _archive_manifest
-    deps = [ ":$_package_target" ]
+    deps = [ ":$_metadata_target" ]
   }
 }
