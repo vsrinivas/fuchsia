@@ -54,7 +54,7 @@ WRITE_DISPLAY_TEST(
     "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m)\n"
     "  \x1B[45m\x1B[37msent request\x1B[0m \x1B[32mfidl.examples.echo/Echo.EchoString\x1B[0m = { "
     "value: \x1B[32mstring\x1B[0m = \x1B[31m\"hello world\"\x1B[0m }\n"
-    "  Message: num_bytes=48 num_handles=0 "
+    "  Message: num_bytes=48 num_handles=0 txid=1 "
     "ordinal=28c1e5829ef25b91(fidl.examples.echo/Echo.EchoString)\x1B[0m\n"
     "    data=\n"
     "      0000: \x1B[31m01, 00, 00, 00\x1B[0m, 01, 00, 00, 01\x1B[31m, "

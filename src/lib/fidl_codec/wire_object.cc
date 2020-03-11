@@ -536,6 +536,9 @@ void FidlMessageValue::DumpMessage(PrettyPrinter& printer) const {
     return;
   }
   printer << "num_bytes=" << bytes_.size() << " num_handles=" << handles_.size();
+  if (txid_ != 0) {
+    printer << " txid=" << std::hex << txid_ << std::dec;
+  }
   if (ordinal_ != 0) {
     printer << " ordinal=" << std::hex << ordinal_ << std::dec;
     if (method_ != nullptr) {
