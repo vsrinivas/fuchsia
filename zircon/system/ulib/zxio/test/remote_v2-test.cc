@@ -113,7 +113,7 @@ TEST_F(RemoteV2, GetAttributes) {
       EXPECT_EQ(query, fio2::NodeAttributesQuery::mask);
       uint64_t content_size = kContentSize;
       uint64_t id = kId;
-      fio2::NodeProtocolSet protocols = fio2::NodeProtocolSet::FILE;
+      fio2::NodeProtocols protocols = fio2::NodeProtocols::FILE;
       auto builder = fio2::NodeAttributes::UnownedBuilder()
                          .set_content_size(fidl::unowned(&content_size))
                          .set_protocols(fidl::unowned(&protocols))

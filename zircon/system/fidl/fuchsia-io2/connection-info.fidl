@@ -53,27 +53,27 @@ bits ConnectionInfoQuery : uint64 {
 /// additionally the result of the connection-time negotiation via its tag.
 ///
 /// The elements have one-to-one correspondence with the members of
-/// [`NodeProtocolSet`].
+/// [`NodeProtocols`].
 xunion Representation {
-    /// See [`NodeProtocolSet.CONNECTOR`].
+    /// See [`NodeProtocols.CONNECTOR`].
     1: ConnectorInfo connector;
 
-    /// See [`NodeProtocolSet.DIRECTORY`].
+    /// See [`NodeProtocols.DIRECTORY`].
     2: DirectoryInfo directory;
 
-    /// See [`NodeProtocolSet.FILE`].
+    /// See [`NodeProtocols.FILE`].
     3: FileInfo file;
 
-    /// See [`NodeProtocolSet.MEMORY`].
+    /// See [`NodeProtocols.MEMORY`].
     4: MemoryInfo memory;
 
-    /// See [`NodeProtocolSet.POSIX_SOCKET`].
+    /// See [`NodeProtocols.POSIX_SOCKET`].
     5: PosixSocketInfo posix_socket;
 
-    /// See [`NodeProtocolSet.PIPE`].
+    /// See [`NodeProtocols.PIPE`].
     6: PipeInfo pipe;
 
-    /// See [`NodeProtocolSet.DEBUGLOG`].
+    /// See [`NodeProtocols.DEBUGLOG`].
     7: DebuglogInfo debuglog;
 
     [Deprecated = "devices will be services in the future"]
@@ -91,15 +91,15 @@ xunion Representation {
 /// in the future we might introduce a more sophisticated `FileV2` protocol, or
 /// a more efficient `SuperFastFile` backed by a specialized kernel object.
 /// New clients can request the more advanced representations by specifying
-/// the corresponding bits in [`NodeProtocolSet`], whereas existing clients
+/// the corresponding bits in [`NodeProtocols`], whereas existing clients
 /// would continue to talk to the node via the old representation.
 ///
-/// [`NodeProtocolSet`] enables forward-compatibility through a form of protocol
+/// [`NodeProtocols`] enables forward-compatibility through a form of protocol
 /// negotiation.
 ///
 /// The elements have one-to-one correspondence with the members of
 /// [`Representation`].
-bits NodeProtocolSet : uint64 {
+bits NodeProtocols : uint64 {
     /// The connector representation of a node.
     /// The connection will speak either [`fuchsia.io2/Node`], or some custom
     /// protocol, depending on the flags used during opening and reopening.

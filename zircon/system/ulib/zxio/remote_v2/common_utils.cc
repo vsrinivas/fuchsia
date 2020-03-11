@@ -6,66 +6,66 @@
 
 namespace fio2 = llcpp::fuchsia::io2;
 
-zxio_node_protocols_t ToZxioNodeProtocols(fio2::NodeProtocolSet protocols) {
+zxio_node_protocols_t ToZxioNodeProtocols(fio2::NodeProtocols protocols) {
   zxio_node_protocols_t zxio_protocols = ZXIO_NODE_PROTOCOL_NONE;
-  if (protocols & fio2::NodeProtocolSet::CONNECTOR) {
+  if (protocols & fio2::NodeProtocols::CONNECTOR) {
     zxio_protocols |= ZXIO_NODE_PROTOCOL_CONNECTOR;
   }
-  if (protocols & fio2::NodeProtocolSet::DIRECTORY) {
+  if (protocols & fio2::NodeProtocols::DIRECTORY) {
     zxio_protocols |= ZXIO_NODE_PROTOCOL_DIRECTORY;
   }
-  if (protocols & fio2::NodeProtocolSet::FILE) {
+  if (protocols & fio2::NodeProtocols::FILE) {
     zxio_protocols |= ZXIO_NODE_PROTOCOL_FILE;
   }
-  if (protocols & fio2::NodeProtocolSet::MEMORY) {
+  if (protocols & fio2::NodeProtocols::MEMORY) {
     zxio_protocols |= ZXIO_NODE_PROTOCOL_MEMORY;
   }
-  if (protocols & fio2::NodeProtocolSet::POSIX_SOCKET) {
+  if (protocols & fio2::NodeProtocols::POSIX_SOCKET) {
     zxio_protocols |= ZXIO_NODE_PROTOCOL_POSIX_SOCKET;
   }
-  if (protocols & fio2::NodeProtocolSet::PIPE) {
+  if (protocols & fio2::NodeProtocols::PIPE) {
     zxio_protocols |= ZXIO_NODE_PROTOCOL_PIPE;
   }
-  if (protocols & fio2::NodeProtocolSet::DEBUGLOG) {
+  if (protocols & fio2::NodeProtocols::DEBUGLOG) {
     zxio_protocols |= ZXIO_NODE_PROTOCOL_DEBUGLOG;
   }
-  if (protocols & fio2::NodeProtocolSet::DEVICE) {
+  if (protocols & fio2::NodeProtocols::DEVICE) {
     zxio_protocols |= ZXIO_NODE_PROTOCOL_DEVICE;
   }
-  if (protocols & fio2::NodeProtocolSet::TTY) {
+  if (protocols & fio2::NodeProtocols::TTY) {
     zxio_protocols |= ZXIO_NODE_PROTOCOL_TTY;
   }
   return zxio_protocols;
 }
 
-fio2::NodeProtocolSet ToIo2NodeProtocols(zxio_node_protocols_t zxio_protocols) {
-  fio2::NodeProtocolSet protocols = fio2::NodeProtocolSet();
+fio2::NodeProtocols ToIo2NodeProtocols(zxio_node_protocols_t zxio_protocols) {
+  fio2::NodeProtocols protocols = fio2::NodeProtocols();
   if (zxio_protocols & ZXIO_NODE_PROTOCOL_CONNECTOR) {
-    protocols |= fio2::NodeProtocolSet::CONNECTOR;
+    protocols |= fio2::NodeProtocols::CONNECTOR;
   }
   if (zxio_protocols & ZXIO_NODE_PROTOCOL_DIRECTORY) {
-    protocols |= fio2::NodeProtocolSet::DIRECTORY;
+    protocols |= fio2::NodeProtocols::DIRECTORY;
   }
   if (zxio_protocols & ZXIO_NODE_PROTOCOL_FILE) {
-    protocols |= fio2::NodeProtocolSet::FILE;
+    protocols |= fio2::NodeProtocols::FILE;
   }
   if (zxio_protocols & ZXIO_NODE_PROTOCOL_MEMORY) {
-    protocols |= fio2::NodeProtocolSet::MEMORY;
+    protocols |= fio2::NodeProtocols::MEMORY;
   }
   if (zxio_protocols & ZXIO_NODE_PROTOCOL_POSIX_SOCKET) {
-    protocols |= fio2::NodeProtocolSet::POSIX_SOCKET;
+    protocols |= fio2::NodeProtocols::POSIX_SOCKET;
   }
   if (zxio_protocols & ZXIO_NODE_PROTOCOL_PIPE) {
-    protocols |= fio2::NodeProtocolSet::PIPE;
+    protocols |= fio2::NodeProtocols::PIPE;
   }
   if (zxio_protocols & ZXIO_NODE_PROTOCOL_DEBUGLOG) {
-    protocols |= fio2::NodeProtocolSet::DEBUGLOG;
+    protocols |= fio2::NodeProtocols::DEBUGLOG;
   }
   if (zxio_protocols & ZXIO_NODE_PROTOCOL_DEVICE) {
-    protocols |= fio2::NodeProtocolSet::DEVICE;
+    protocols |= fio2::NodeProtocols::DEVICE;
   }
   if (zxio_protocols & ZXIO_NODE_PROTOCOL_TTY) {
-    protocols |= fio2::NodeProtocolSet::TTY;
+    protocols |= fio2::NodeProtocols::TTY;
   }
   return protocols;
 }

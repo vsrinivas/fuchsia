@@ -54,7 +54,7 @@ fio2::NodeAttributes ToIo2NodeAttributes(fidl::Allocator& allocator, const zxio_
   fio2::NodeAttributes::Builder builder(allocator.make<fio2::NodeAttributes::Frame>());
   if (attr.has.protocols) {
     builder.set_protocols(
-        allocator.make<fio2::NodeProtocolSet>(ToIo2NodeProtocols(attr.protocols)));
+        allocator.make<fio2::NodeProtocols>(ToIo2NodeProtocols(attr.protocols)));
   }
   if (attr.has.abilities) {
     builder.set_abilities(allocator.make<fio2::Operations>(ToIo2Abilities(attr.abilities)));

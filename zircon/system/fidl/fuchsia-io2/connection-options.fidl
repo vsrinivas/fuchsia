@@ -12,7 +12,7 @@ table ConnectionOptions {
 
     /// Specifies the set of representations accepted by the client, to support
     /// a form of protocol negotiation on the node being opened.
-    /// Refer to the definition of [`NodeProtocolSet`] for more details.
+    /// Refer to the definition of [`NodeProtocols`] for more details.
     /// It cannot be zero.
     ///
     /// In addition, clients may assert the type of the object by setting
@@ -39,7 +39,7 @@ table ConnectionOptions {
     ///
     /// If absent, indicates that the caller accepts any type of node, and
     /// the resulting protocol is unspecified.
-    2: NodeProtocolSet protocols;
+    2: NodeProtocols protocols;
 
     /// Requests rights on the new connection according to the specified rules.
     /// See [`fuchsia.io2/RightsRequest`].
@@ -224,7 +224,7 @@ bits ConnectionFlags : uint64 {
     ///
     /// If the node does not support appending, it should result in a
     /// `ZX_ERR_NOT_SUPPORTED` epitaph.
-    /// Currently, only [`fuchsia.io2/NodeProtocolSet.FILE`] connections
+    /// Currently, only [`fuchsia.io2/NodeProtocols.FILE`] connections
     /// may be configured for appending.
     APPEND = 0x04;
 

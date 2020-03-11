@@ -72,7 +72,7 @@ typedef uint32_t zxio_signals_t;
 // File and directory access ---------------------------------------------------
 
 // The set of supported representations of a node.
-// Refer to |fuchsia.io2/NodeProtocolSet| for the documentation of each item.
+// Refer to |fuchsia.io2/NodeProtocols| for the documentation of each item.
 typedef uint64_t zxio_node_protocols_t;
 
 #define ZXIO_NODE_PROTOCOL_NONE ((zxio_node_protocols_t)0ul)

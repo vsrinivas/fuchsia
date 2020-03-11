@@ -142,14 +142,14 @@ TEST_F(DirV2, Enumerate) {
         void GetNext(GetNextCompleter::Sync completer) override {
           auto builder = fio2::DirectoryEntry::UnownedBuilder();
           fidl::StringView name;
-          fio2::NodeProtocolSet protocols;
+          fio2::NodeProtocols protocols;
           fio2::Operations abilities;
           uint64_t id;
           switch (count_) {
             case 0:
               name = fidl::StringView("zero");
               builder.set_name(fidl::unowned(&name));
-              protocols = fio2::NodeProtocolSet::DIRECTORY;
+              protocols = fio2::NodeProtocols::DIRECTORY;
               builder.set_protocols(fidl::unowned(&protocols));
               abilities = fio2::Operations::ENUMERATE;
               builder.set_abilities(fidl::unowned(&abilities));
@@ -159,7 +159,7 @@ TEST_F(DirV2, Enumerate) {
             case 1:
               name = fidl::StringView("one");
               builder.set_name(fidl::unowned(&name));
-              protocols = fio2::NodeProtocolSet::FILE;
+              protocols = fio2::NodeProtocols::FILE;
               builder.set_protocols(fidl::unowned(&protocols));
               abilities = fio2::Operations::READ_BYTES;
               builder.set_abilities(fidl::unowned(&abilities));

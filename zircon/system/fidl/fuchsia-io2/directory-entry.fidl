@@ -13,7 +13,7 @@ table DirectoryEntry {
     1: Name name;
 
     /// Describes the kinds of representations supported by the node.
-    2: NodeProtocolSet protocols;
+    2: NodeProtocols protocols;
 
     /// Describes the kinds of operations supported by the node.
     3: Abilities abilities;

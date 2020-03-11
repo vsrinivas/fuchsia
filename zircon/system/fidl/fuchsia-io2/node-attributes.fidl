@@ -18,7 +18,7 @@ table NodeAttributes {
     /// which is conveyed via `representation`.
     ///
     /// This attribute is read-only.
-    1: NodeProtocolSet protocols;
+    1: NodeProtocols protocols;
 
     /// Describes the kinds of operations supported by the node.
     /// Note: This is distinct from the rights used at connection time.
