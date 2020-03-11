@@ -1,11 +1,19 @@
 {
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.test.manager.Harness": "fuchsia-pkg://fuchsia.com/component_manager_for_test#meta/component_manager_for_test.cmx"
+            }
+        }
+    },
     "program": {
         "binary": "test/run_test_suite_integration_tests"
     },
     "sandbox": {
         "services": [
             "fuchsia.sys.Launcher",
-            "fuchsia.logger.LogSink"
+            "fuchsia.logger.LogSink",
+            "fuchsia.test.manager.Harness"
         ]
     }
 }

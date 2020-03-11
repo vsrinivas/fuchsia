@@ -24,7 +24,6 @@
         {
             protocol: [
                 "/svc/fuchsia.process.Launcher",
-                "/svc/fuchsia.cobalt.LoggerFactory",
                 "/svc/fuchsia.logger.LogSink",
             ],
         },

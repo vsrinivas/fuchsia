@@ -92,6 +92,11 @@
       "to": [ "#font_provider" ],
     },
     {
+      "directory": "/config/data",
+      "from": "realm",
+      "to": [ "#test_manager" ],
+    },
+    {
       "protocol": "/svc/fuchsia.fonts.Provider",
       "from": "#font_provider",
       "to": [ "#appmgr" ],

@@ -4,6 +4,7 @@
 
 use {
     anyhow::{format_err, Error},
+    fidl_fuchsia_test_manager::HarnessMarker,
     fuchsia_async as fasync,
     futures::{channel::mpsc, prelude::*},
     std::collections::HashSet,
@@ -48,16 +49,12 @@ pub struct RunResult {
 
 /// Runs test defined by `url`, and writes logs to writer.
 pub async fn run_test<W: Write>(url: String, writer: &mut W) -> Result<RunResult, Error> {
-    let launcher =
-        match fuchsia_component::client::connect_to_service::<fidl_fuchsia_sys::LauncherMarker>() {
-            Ok(l) => l,
-            Err(e) => return Err(e),
-        };
+    let harness = fuchsia_component::client::connect_to_service::<HarnessMarker>()?;
 
     let (sender, mut recv) = mpsc::channel(1);
 
     let (remote, test_fut) =
-        test_executor::run_test_component(launcher, url, sender).remote_handle();
+        test_executor::run_v2_test_component(harness, url, sender).remote_handle();
 
     fasync::spawn(remote);
 

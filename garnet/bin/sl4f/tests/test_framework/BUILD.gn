@@ -32,20 +32,20 @@ test_package("sl4f_test_integration_tests") {
       dest = "passing-test-example.cmx"
     },
     {
-      path = rebase_path("//examples/tests/meta/failing-test-example.cmx")
-      dest = "failing-test-example.cmx"
+      path = rebase_path("//examples/tests/meta/failing-test-example.cml")
+      dest = "failing-test-example.cm"
     },
     {
-      path = rebase_path("//examples/tests/meta/incomplete-test-example.cmx")
-      dest = "incomplete-test-example.cmx"
+      path = rebase_path("//examples/tests/meta/incomplete-test-example.cml")
+      dest = "incomplete-test-example.cm"
     },
     {
-      path = rebase_path("//examples/tests/meta/invalid-test-example.cmx")
-      dest = "invalid-test-example.cmx"
+      path = rebase_path("//examples/tests/meta/invalid-test-example.cml")
+      dest = "invalid-test-example.cm"
     },
     {
-      path = rebase_path("//examples/tests/meta/passing-test-example_v2.cml")
-      dest = "passing-test-example_v2.cm"
+      path = rebase_path("//examples/tests/meta/passing-test-example.cml")
+      dest = "passing-test-example.cm"
     },
   ]
 
@@ -76,5 +76,6 @@ group("tests") {
   deps = [
     ":sl4f_test_integration_tests",
     "//examples/tests",
+    "//src/sys/component_manager_for_test",
   ]
 }

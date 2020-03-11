@@ -41,8 +41,9 @@ rustc_binary("bin") {
   ]
 }
 
-package("run_test_suite") {
+package("run_test_suite_pkg") {
   testonly = true
+  package_name = "run_test_suite"
   deps = [ ":bin" ]
 
   binaries = [
@@ -51,6 +52,15 @@ package("run_test_suite") {
       source = "run_test_suite_bin"
       shell = true
     },
+  ]
+}
+
+# fxb/44251: Packages cannot include other packages, so making a group here for dependency.
+group("run_test_suite") {
+  testonly = true
+  deps = [
+    ":run_test_suite_pkg",
+    "//src/sys/component_manager_for_test",
   ]
 }
 

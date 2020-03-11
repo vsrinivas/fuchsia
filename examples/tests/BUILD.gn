@@ -202,32 +202,28 @@ package("example-tests") {
       dest = "passing-test-example.cmx"
     },
     {
-      path = "meta/no-onfinished-after-test-example.cmx"
-      dest = "no-onfinished-after-test-example.cmx"
-    },
-    {
       path = "meta/no-onfinished-after-test-example.cml"
       dest = "no-onfinished-after-test-example.cm"
     },
     {
-      path = "meta/passing-test-example_v2.cml"
-      dest = "passing-test-example_v2.cm"
+      path = "meta/passing-test-example.cml"
+      dest = "passing-test-example.cm"
     },
     {
-      path = "meta/no-test-example.cmx"
-      dest = "no-test-example.cmx"
+      path = "meta/no-test-example.cml"
+      dest = "no-test-example.cm"
     },
     {
-      path = "meta/huge-test-example.cmx"
-      dest = "huge-test-example.cmx"
+      path = "meta/huge-test-example.cml"
+      dest = "huge-test-example.cm"
     },
     {
-      path = "meta/failing-test-example.cmx"
-      dest = "failing-test-example.cmx"
+      path = "meta/failing-test-example.cml"
+      dest = "failing-test-example.cm"
     },
     {
-      path = "meta/incomplete-test-example.cmx"
-      dest = "incomplete-test-example.cmx"
+      path = "meta/incomplete-test-example.cml"
+      dest = "incomplete-test-example.cm"
     },
     {
       path = "meta/get-tests-hangs-example.cmx"
@@ -246,8 +242,8 @@ package("example-tests") {
       dest = "run-hangs-example.cmx"
     },
     {
-      path = "meta/invalid-test-example.cmx"
-      dest = "invalid-test-example.cmx"
+      path = "meta/invalid-test-example.cml"
+      dest = "invalid-test-example.cm"
     },
     {
       path = "meta/echo_test_realm.cml"

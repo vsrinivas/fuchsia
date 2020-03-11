@@ -12,7 +12,6 @@ rustc_binary("bin") {
   deps = [
     "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
-    "//sdk/fidl/fuchsia.test:fuchsia.test-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
@@ -21,6 +20,7 @@ rustc_binary("bin") {
     "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/component_manager:lib",
+    "//src/sys/test_manager/fidl:test_manager-rustc",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
@@ -38,8 +38,9 @@ rustc_binary("bin") {
   ]
 }
 
-package("component_manager_for_test") {
+package("component_manager_for_test_pkg") {
   deps = [ ":bin" ]
+  package_name = "component_manager_for_test"
 
   binaries = [
     {
@@ -52,11 +53,22 @@ package("component_manager_for_test") {
       path = rebase_path("meta/component_manager_for_test.cmx")
       dest = "component_manager_for_test.cmx"
     },
+    {
+      path = rebase_path("meta/test_manager_envelope.cml")
+      dest = "test_manager_envelope.cm"
+    },
   ]
 }
 
 group("tests") {
   testonly = true
-
   deps = [ "tests" ]
+}
+
+group("component_manager_for_test") {
+  testonly = true
+  deps = [
+    ":component_manager_for_test_pkg",
+    "//src/sys/test_manager",
+  ]
 }

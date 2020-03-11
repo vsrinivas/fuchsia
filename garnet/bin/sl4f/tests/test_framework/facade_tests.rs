@@ -41,7 +41,7 @@ async fn launch_and_test_passing_v2_test() {
     let test_facade = TestFacade::new();
     let test_result = test_facade
         .run_test(
-            "fuchsia-pkg://fuchsia.com/sl4f_test_integration_tests#meta/passing-test-example_v2.cm"
+            "fuchsia-pkg://fuchsia.com/sl4f_test_integration_tests#meta/passing-test-example.cm"
                 .to_string(),
         )
         .await
@@ -60,7 +60,7 @@ async fn launch_and_test_failing_test() {
     let test_facade = TestFacade::new();
     let test_result = test_facade
         .run_test(
-            "fuchsia-pkg://fuchsia.com/sl4f_test_integration_tests#meta/failing-test-example.cmx"
+            "fuchsia-pkg://fuchsia.com/sl4f_test_integration_tests#meta/failing-test-example.cm"
                 .to_string(),
         )
         .await
@@ -78,7 +78,7 @@ async fn launch_and_test_incomplete_test() {
     let test_facade = TestFacade::new();
     let test_result = test_facade
         .run_test(
-            "fuchsia-pkg://fuchsia.com/sl4f_test_integration_tests#meta/incomplete-test-example.cmx"
+            "fuchsia-pkg://fuchsia.com/sl4f_test_integration_tests#meta/incomplete-test-example.cm"
                 .to_string(),
         )
         .await
@@ -96,7 +96,7 @@ async fn launch_and_test_invalid_test() {
     let test_facade = TestFacade::new();
     let test_result = test_facade
         .run_test(
-            "fuchsia-pkg://fuchsia.com/sl4f_test_integration_tests#meta/invalid-test-example.cmx"
+            "fuchsia-pkg://fuchsia.com/sl4f_test_integration_tests#meta/invalid-test-example.cm"
                 .to_string(),
         )
         .await
@@ -122,7 +122,7 @@ async fn run_a_test_plan() {
                 "fuchsia-pkg://fuchsia.com/sl4f_test_integration_tests#meta/passing-test-example.cmx".to_string()
             ),
             TestPlanTest::ComponentUrl(
-                "fuchsia-pkg://fuchsia.com/sl4f_test_integration_tests#meta/failing-test-example.cmx".to_string()
+                "fuchsia-pkg://fuchsia.com/sl4f_test_integration_tests#meta/failing-test-example.cm".to_string()
             )
         ]
     }).await.expect("Running test should not fail");

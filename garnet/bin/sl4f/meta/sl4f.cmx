@@ -43,7 +43,8 @@
             "fuchsia.virtualaudio.Input",
             "fuchsia.virtualaudio.Output",
             "fuchsia.web.ContextProvider",
-            "fuchsia.wlan.device.service.DeviceService"
+            "fuchsia.wlan.device.service.DeviceService",
+            "fuchsia.test.manager.Harness"
         ]
     }
 }

@@ -26,37 +26,33 @@ test_package("run_test_suite_integration_tests") {
 
   meta = [
     {
-      path = rebase_path("//examples/tests/meta/passing-test-example.cmx")
-      dest = "passing-test-example.cmx"
+      path = rebase_path("//examples/tests/meta/failing-test-example.cml")
+      dest = "failing-test-example.cm"
     },
     {
-      path = rebase_path("//examples/tests/meta/failing-test-example.cmx")
-      dest = "failing-test-example.cmx"
+      path = rebase_path("//examples/tests/meta/incomplete-test-example.cml")
+      dest = "incomplete-test-example.cm"
     },
     {
-      path = rebase_path("//examples/tests/meta/incomplete-test-example.cmx")
-      dest = "incomplete-test-example.cmx"
+      path = rebase_path("//examples/tests/meta/invalid-test-example.cml")
+      dest = "invalid-test-example.cm"
     },
     {
-      path = rebase_path("//examples/tests/meta/invalid-test-example.cmx")
-      dest = "invalid-test-example.cmx"
+      path = rebase_path("//examples/tests/meta/no-test-example.cml")
+      dest = "no-test-example.cm"
     },
     {
-      path = rebase_path("//examples/tests/meta/no-test-example.cmx")
-      dest = "no-test-example.cmx"
-    },
-    {
-      path = rebase_path("//examples/tests/meta/huge-test-example.cmx")
-      dest = "huge-test-example.cmx"
+      path = rebase_path("//examples/tests/meta/huge-test-example.cml")
+      dest = "huge-test-example.cm"
     },
 
     {
       path = rebase_path(
-              "//examples/tests/meta/no-onfinished-after-test-example.cmx")
-      dest = "no-onfinished-after-test-example.cmx"
+              "//examples/tests/meta/no-onfinished-after-test-example.cml")
+      dest = "no-onfinished-after-test-example.cm"
     },
     {
-      path = rebase_path("//examples/tests/meta/passing-test-example_v2.cml")
+      path = rebase_path("//examples/tests/meta/passing-test-example.cml")
       dest = "passing-test-example_v2.cm"
     },
     {
@@ -112,5 +108,8 @@ test_package("run_test_suite_integration_tests") {
 
 group("tests") {
   testonly = true
-  deps = [ ":run_test_suite_integration_tests" ]
+  deps = [
+    ":run_test_suite_integration_tests",
+    "//src/sys/component_manager_for_test",
+  ]
 }

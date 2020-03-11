@@ -1,0 +1,15 @@
+{
+    "program": {
+        "binary": "bin/no-test-example",
+    },
+    "use": [
+        { "runner": "elf" }
+    ],
+    "expose": [
+        {
+            "protocol": "/svc/fuchsia.test.Suite",
+            "from": "self",
+        },
+    ]
+}
+

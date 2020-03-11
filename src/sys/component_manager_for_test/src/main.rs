@@ -15,7 +15,7 @@ use {
     },
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_io::{OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
-    fidl_fuchsia_test::SuiteMarker,
+    fidl_fuchsia_test_manager::HarnessMarker,
     fuchsia_component::server::{ServiceFs, ServiceObj},
     fuchsia_syslog as syslog,
     futures::prelude::*,
@@ -23,18 +23,34 @@ use {
     std::{path::PathBuf, process, sync::Arc},
 };
 
+/// Returns a usage message for the supported arguments.
+pub fn usage() -> String {
+    format!(
+        "Usage: {} ",
+        std::env::args().next().unwrap_or("component_manager_for_test".to_string())
+    )
+}
+
 /// This is a prototype used with ftf to launch v2 tests.
 /// This is a temporary workaround till we get around using actual component manager.
 /// We will start test as root component and using hub v2 attach its "expose/svc" directory to this
 /// managers out/svc(v1 version) directory.
-
 #[fuchsia_async::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     syslog::init_with_tags(&["component_manager_for_test"])?;
-    let args = match startup::Arguments::from_args() {
+    let args = std::env::args();
+    // replace first argument(binary name) with test manager envelope so that it
+    // can be launched as root component.
+    let args =
+        vec!["fuchsia-pkg://fuchsia.com/component_manager_for_test#meta/test_manager_envelope.cm"
+            .to_owned()]
+        .into_iter()
+        .chain(args.skip(1));
+
+    let args = match startup::Arguments::new(args) {
         Ok(args) => args,
         Err(err) => {
-            error!("{}\n{}", err, startup::Arguments::usage());
+            error!("{}\n{}", err, usage());
             return Err(err);
         }
     };
@@ -77,7 +93,7 @@ async fn main() -> Result<(), Error> {
     .expect("Failed to open directory");
 
     assert_eq!(
-        vec![SuiteMarker::DEBUG_NAME],
+        vec![HarnessMarker::DEBUG_NAME],
         test_helpers::list_directory(&expose_dir_proxy).await
     );
 

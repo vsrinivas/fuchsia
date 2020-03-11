@@ -66,19 +66,30 @@ impl TestFacade {
     }
 
     async fn run_test_component(&self, url: String) -> Result<TestResult, anyhow::Error> {
-        let launcher = match fuchsia_component::client::connect_to_service::<
-            fidl_fuchsia_sys::LauncherMarker,
-        >() {
-            Ok(l) => l,
-            Err(e) => return Err(e),
-        };
-
         let (sender, mut recv) = mpsc::channel(1);
 
-        let (remote, test_fut) =
-            test_executor::run_test_component(launcher, url.clone(), sender).remote_handle();
-
-        fasync::spawn(remote);
+        let test_fut = match url.ends_with("cm") {
+            true => {
+                let harness = fuchsia_component::client::connect_to_service::<
+                    fidl_fuchsia_test_manager::HarnessMarker,
+                >()?;
+                let (remote, test_fut) =
+                    test_executor::run_v2_test_component(harness, url.clone(), sender)
+                        .remote_handle();
+                fasync::spawn(remote);
+                test_fut
+            }
+            false => {
+                let launcher = fuchsia_component::client::connect_to_service::<
+                    fidl_fuchsia_sys::LauncherMarker,
+                >()?;
+                let (remote, test_fut) =
+                    test_executor::run_v1_test_component(launcher, url.clone(), sender)
+                        .remote_handle();
+                fasync::spawn(remote);
+                test_fut
+            }
+        };
 
         #[derive(PartialEq)]
         enum Status {

@@ -12,6 +12,7 @@ use {
         CaseListenerRequestStream, Invocation,
         RunListenerRequest::{OnFinished, OnTestCaseStarted},
     },
+    fidl_fuchsia_test_manager::{HarnessProxy, LaunchOptions},
     fuchsia_async as fasync,
     fuchsia_syslog::{fx_vlog, macros::*},
     fuchsia_zircon as zx,
@@ -317,36 +318,55 @@ async fn run_invocations(
     Ok(successful_completion)
 }
 
-/// Runs the test component defined by `test_url` and reports `TestEvent` to sender for each test case.
-pub async fn run_test_component(
+/// Runs v1 test component defined by `test_url` and reports `TestEvent` to sender for each test case.
+pub async fn run_v1_test_component(
     launcher: LauncherProxy,
     test_url: String,
     sender: mpsc::Sender<TestEvent>,
 ) -> Result<(), anyhow::Error> {
-    let component_manager_for_test = "fuchsia-pkg://fuchsia.com/component_manager_for_test#\
-                                      meta/component_manager_for_test.cmx";
-
-    fx_vlog!(1, "connecting to test component {}", test_url);
-    let is_v2_component = test_url.ends_with(".cm");
-    let app;
-    if is_v2_component {
-        app = fuchsia_component::client::launch(
-            &launcher,
-            component_manager_for_test.to_string(),
-            Some(vec![test_url.clone()]),
-        )
-        .map_err(|e| format_err!("Not able to launch v2 test:{}: {}", test_url, e))?;
-    } else {
-        app = fuchsia_component::client::launch(&launcher, test_url.clone(), None)
-            .map_err(|e| format_err!("Not able to launch v1 test:{}: {}", test_url, e))?;
+    if !test_url.ends_with(".cmx") {
+        return Err(format_err!(
+            "Tried to run a component as a v1 test that doesn't have a .cmx extension"
+        ));
     }
+
+    fx_vlog!(1, "launching test component {}", test_url);
+    let app = fuchsia_component::client::launch(&launcher, test_url.clone(), None)
+        .map_err(|e| format_err!("Not able to launch v1 test:{}: {}", test_url, e))?;
 
     fx_vlog!(1, "connecting to test service");
     let suite = app
         .connect_to_service::<fidl_fuchsia_test::SuiteMarker>()
         .map_err(|e| format_err!("Error connecting to test service: {}", e))?;
 
-    run_and_collect_results(suite, sender, test_url.clone()).await?;
+    run_and_collect_results(suite, sender, test_url).await?;
+
+    Ok(())
+}
+
+/// Runs v2 test component defined by `test_url` and reports `TestEvent` to sender for each test case.
+pub async fn run_v2_test_component(
+    harness: HarnessProxy,
+    test_url: String,
+    sender: mpsc::Sender<TestEvent>,
+) -> Result<(), anyhow::Error> {
+    if !test_url.ends_with(".cm") {
+        return Err(format_err!(
+            "Tried to run a component as a v2 test that doesn't have a .cm extension"
+        ));
+    }
+
+    let (suite_proxy, suite_server_end) = fidl::endpoints::create_proxy().unwrap();
+    let (_controller_proxy, controller_server_end) = fidl::endpoints::create_proxy().unwrap();
+
+    fx_vlog!(1, "launching test component {}", test_url);
+    harness
+        .launch_suite(&test_url, LaunchOptions {}, suite_server_end, controller_server_end)
+        .await
+        .context("launch_test call failed")?
+        .map_err(|e| format_err!("error launching test: {:?}", e))?;
+
+    run_and_collect_results(suite_proxy, sender, test_url).await?;
 
     Ok(())
 }

@@ -1,0 +1,47 @@
+// We need this cml so that we can transform paths from appmgr's namespace like
+//  "/pkgfs/packages/config-data/0/data" to "/config/data" and present them to test_manager.
+{
+    expose: [
+        {
+            protocol: "/svc/fuchsia.test.manager.Harness",
+            from: "#test_manager"
+        }
+    ],
+    offer: [
+        // Offer the ELF runner to test_manager.
+        {
+            runner: "elf",
+            from: "realm",
+            to: ["#test_manager"]
+        },
+        {
+            protocol: [
+                "/svc/fuchsia.logger.LogSink",
+                "/svc/fuchsia.process.Launcher",
+            ],
+            from: "realm",
+            to: ["#test_manager"]
+        },
+        // Some components run under test need access to /config/data.
+        {
+            "directory": "/pkgfs/packages/config-data/0/data",
+            "from": "realm",
+            "to": [ "#test_manager" ],
+            "as": "/config/data",
+        },
+        // Some tests access dev/class. We should provide those till we can mock it.
+        {
+            directory: "/dev/class/input-report",
+            from: "realm",
+            rights: [ "r*" ],
+            "to": [ "#test_manager" ],
+        },
+    ],
+    children: [
+        {
+            startup: "eager",
+            name: "test_manager",
+            url: "fuchsia-pkg://fuchsia.com/test_manager#meta/test_manager.cm"
+        }
+    ]
+}

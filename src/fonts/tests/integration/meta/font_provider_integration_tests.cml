@@ -28,7 +28,7 @@
         },
         // Some components run under test get fonts from /config/data.
         {
-            "directory": "/pkgfs/packages/config-data/0/data",
+            "directory": "/config/data",
             "subdir": "fonts",
             "from": "realm",
             "to": [ "#driver" ],

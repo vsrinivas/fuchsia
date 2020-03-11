@@ -23,48 +23,10 @@ macro_rules! assert_output {
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
-async fn launch_and_test_passing_test() {
-    let mut output: Vec<u8> = vec![];
-    let run_result = run_test(
-        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cmx"
-            .to_string(),
-        &mut output,
-    )
-    .await
-    .expect("Running test should not fail");
-
-    let expected_output = "[RUNNING]	Example.Test1
-[Example.Test1]	log1 for Example.Test1
-[Example.Test1]	log2 for Example.Test1
-[Example.Test1]	log3 for Example.Test1
-[PASSED]	Example.Test1
-[RUNNING]	Example.Test2
-[Example.Test2]	log1 for Example.Test2
-[Example.Test2]	log2 for Example.Test2
-[Example.Test2]	log3 for Example.Test2
-[PASSED]	Example.Test2
-[RUNNING]	Example.Test3
-[Example.Test3]	log1 for Example.Test3
-[Example.Test3]	log2 for Example.Test3
-[Example.Test3]	log3 for Example.Test3
-[PASSED]	Example.Test3
-";
-    assert_output!(output, expected_output);
-
-    assert_eq!(run_result.outcome, Outcome::Passed);
-    assert_eq!(run_result.executed, run_result.passed);
-
-    let expected = vec!["Example.Test1", "Example.Test2", "Example.Test3"];
-
-    assert_eq!(run_result.executed, expected);
-    assert!(run_result.successful_completion);
-}
-
-#[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_no_clean_exit() {
     let mut output: Vec<u8> = vec![];
     let run_result = run_test(
-        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/no-onfinished-after-test-example.cmx"
+        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/no-onfinished-after-test-example.cm"
             .to_string(),
         &mut output,
     )
@@ -139,7 +101,7 @@ async fn launch_and_test_passing_v2_test() {
 async fn launch_and_test_empty_test() {
     let mut output: Vec<u8> = vec![];
     let run_result = run_test(
-        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/no-test-example.cmx"
+        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/no-test-example.cm"
             .to_string(),
         &mut output,
     )
@@ -156,7 +118,7 @@ async fn launch_and_test_empty_test() {
 async fn launch_and_test_huge_test() {
     let mut output: Vec<u8> = vec![];
     let run_result = run_test(
-        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/huge-test-example.cmx"
+        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/huge-test-example.cm"
             .to_string(),
         &mut output,
     )
@@ -172,7 +134,7 @@ async fn launch_and_test_huge_test() {
 async fn launch_and_test_failing_test() {
     let mut output: Vec<u8> = vec![];
     let run_result = run_test(
-        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/failing-test-example.cmx"
+        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/failing-test-example.cm"
             .to_string(),
         &mut output,
     )
@@ -209,7 +171,7 @@ async fn launch_and_test_failing_test() {
 async fn launch_and_test_incomplete_test() {
     let mut output: Vec<u8> = vec![];
     let run_result = run_test(
-        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/incomplete-test-example.cmx"
+        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/incomplete-test-example.cm"
             .to_string(),
             &mut output,
     )
@@ -248,7 +210,7 @@ Example.Test3
 async fn launch_and_test_invalid_test() {
     let mut output: Vec<u8> = vec![];
     let run_result = run_test(
-        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/invalid-test-example.cmx"
+        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/invalid-test-example.cm"
             .to_string(),
         &mut output,
     )

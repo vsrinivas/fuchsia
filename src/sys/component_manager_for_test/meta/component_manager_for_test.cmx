@@ -13,7 +13,6 @@
             "isolated-temp"
         ],
         "services": [
-            "fuchsia.cobalt.LoggerFactory",
             "fuchsia.logger.LogSink",
             "fuchsia.process.Launcher",
             "fuchsia.sys.Launcher",
