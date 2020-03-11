@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <unittest/unittest.h>
-
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -12,18 +10,18 @@
 #include <sys/time.h>
 
 #include <pretty/hexdump.h>
+#include <unittest/unittest.h>
 
 #ifdef UNITTEST_DEATH_TEST_SUPPORTED
-
-#include <zircon/assert.h>
-#include <zircon/status.h>
-#include <zircon/syscalls/port.h>
-#include <thread>
 
 #include <lib/zx/channel.h>
 #include <lib/zx/exception.h>
 #include <lib/zx/port.h>
 #include <lib/zx/thread.h>
+#include <threads.h>
+#include <zircon/assert.h>
+#include <zircon/status.h>
+#include <zircon/syscalls/port.h>
 
 #endif  // UNITTEST_DEATH_TEST_SUPPORTED
 
@@ -190,29 +188,74 @@ int unittest_set_verbosity_level(int new_level) {
 
 namespace {
 
-// Sets up an exception channel and calls |fn_to_run|.
+enum { kPortKeyThreadException, kPortKeyThreadCompleted };
+
+// All the state that's necessary to share between the main unittest thread
+// and the death thread.
+struct RunDeathFunctionState {
+  // The death function to call and argument to pass it.
+  void (*fn_to_run)(void*);
+  void* arg;
+
+  // The port to register the exception channel on.
+  zx::port port;
+
+  // Thread and channel are filled in by RunDeathFunction().
+  zx::thread zx_thread;
+  zx::channel exception_channel;
+};
+
+// Sets up the necessary state and calls |fn_to_run|.
 //
-// If setup fails, returns !ZX_OK.
-// If |fn_to_run| returns without crashing, returns ZX_OK.
-// If |fn_to_run| hits an exception, does not return but an exception
-// will be generated on |exception_channel| and signaled on |port|.
-zx_status_t RunDeathFunction(void (*fn_to_run)(void*), void* arg, const zx::port& port,
-                             zx::channel* exception_channel) {
-  zx_status_t status = zx::thread::self()->create_exception_channel(0, exception_channel);
-  if (status != ZX_OK) {
+// Basic flow is:
+//  1. Creates the exception channel.
+//  2. Registers the port for exceptions or thread completion.
+//  3. Calls the death function
+//
+// Returns:
+//  ZX_OK if the death function did not hit an exception.
+//  Non-OK if setup failed.
+//  Does not return if the death function hit an exception.
+int RunDeathFunction(void* arg) {
+  RunDeathFunctionState* state = reinterpret_cast<RunDeathFunctionState*>(arg);
+
+  // The caller needs a thread handle to kill if it hits an exception. This has
+  // to be a full handle (i.e. not unowned_thread) or else it might be destroyed
+  // and unregistered from the port wait before we get the signal.
+  if (zx_status_t status = zx::thread::self()->duplicate(ZX_RIGHT_SAME_RIGHTS, &state->zx_thread);
+      status != ZX_OK) {
+    unittest_printf_critical("failed to duplicate thread handle: %s\n",
+                             zx_status_get_string(status));
+    return status;
+  }
+
+  // Register for thread completion signal on the port.
+  if (zx_status_t status = state->zx_thread.wait_async(state->port, kPortKeyThreadCompleted,
+                                                       ZX_THREAD_TERMINATED, 0);
+      status != ZX_OK) {
+    unittest_printf_critical("failed to wait_async on thread: %s\n", zx_status_get_string(status));
+    return status;
+  }
+
+  // We have to create the exception channel here, since we don't have access
+  // to the thread handle until we're in the thread.
+  if (zx_status_t status = state->zx_thread.create_exception_channel(0, &state->exception_channel);
+      status != ZX_OK) {
     unittest_printf_critical("failed to create exception channel: %s\n",
                              zx_status_get_string(status));
     return status;
   }
 
-  status = exception_channel->wait_async(port, 0, ZX_CHANNEL_READABLE, 0);
-  if (status != ZX_OK) {
+  // Register for exception signal on the port.
+  if (zx_status_t status = state->exception_channel.wait_async(state->port, kPortKeyThreadException,
+                                                               ZX_CHANNEL_READABLE, 0);
+      status != ZX_OK) {
     unittest_printf_critical("failed to wait_async on exception channel: %s\n",
                              zx_status_get_string(status));
     return status;
   }
 
-  fn_to_run(arg);
+  state->fn_to_run(state->arg);
   return ZX_OK;
 }
 
@@ -220,52 +263,66 @@ zx_status_t RunDeathFunction(void (*fn_to_run)(void*), void* arg, const zx::port
 
 __EXPORT
 death_test_result_t unittest_run_death_fn(void (*fn_to_run)(void*), void* arg) {
-  zx::port port;
-  zx_status_t status = zx::port::create(0, &port);
-  if (status != ZX_OK) {
+  RunDeathFunctionState state;
+  state.fn_to_run = fn_to_run;
+  state.arg = arg;
+
+  if (zx_status_t status = zx::port::create(0, &state.port); status != ZX_OK) {
     unittest_printf_critical("failed to create port: %s\n", zx_status_get_string(status));
     return DEATH_TEST_RESULT_INTERNAL_ERROR;
   }
 
-  zx::unowned_thread zx_thread;
-  zx::channel exception_channel;
-  std::thread thread([&]() {
-    zx_thread = zx::thread::self();
-    zx_status_t status = RunDeathFunction(fn_to_run, arg, port, &exception_channel);
+  // We intentionally use C thread APIs rather than std::thread to avoid
+  // leaking memory. The thread still doesn't get fully cleaned up (see notes
+  // below) but the C APIs at least allow us to pass on the LSAN build.
+  thrd_t thread;
+  if (int result = thrd_create(&thread, RunDeathFunction, &state); result != thrd_success) {
+    unittest_printf_critical("failed to create thread: thrd code %d\n", result);
+    return DEATH_TEST_RESULT_INTERNAL_ERROR;
+  }
 
-    // If we get here there was either a setup failure (status != ZX_OK) or
-    // |fn_to_run| did not crash (status == ZX_OK).
-    //
-    // If we fail to queue this packet there's no way to wake the main
-    // thread back up, we just have to die.
-    zx_port_packet_t packet = {.key = 0, .type = ZX_PKT_TYPE_USER, .status = status, .user = {}};
-    status = port.queue(&packet);
-    ZX_ASSERT_MSG(status == ZX_OK, "failed to queue death test packet: %s",
-                  zx_status_get_string(status));
-  });
-
+  // Wait for either thread exception or normal completion.
   zx_port_packet_t packet;
-  status = port.wait(zx::time::infinite(), &packet);
-  if (status != ZX_OK) {
+  if (zx_status_t status = state.port.wait(zx::time::infinite(), &packet); status != ZX_OK) {
     unittest_printf_critical("failed to wait on port: %s\n", zx_status_get_string(status));
     return DEATH_TEST_RESULT_INTERNAL_ERROR;
   }
 
-  death_test_result_t result;
-  if (packet.type == ZX_PKT_TYPE_USER) {
-    thread.join();
-    result = (packet.status == ZX_OK) ? DEATH_TEST_RESULT_LIVED : DEATH_TEST_RESULT_INTERNAL_ERROR;
-  } else {
-    thread.detach();
-    result = DEATH_TEST_RESULT_DIED;
-    status = zx_thread->kill();
-    if (status != ZX_OK) {
-      unittest_printf_critical("failed to kill thread: %s\n", zx_status_get_string(status));
-      result = DEATH_TEST_RESULT_INTERNAL_ERROR;
+  if (packet.key == kPortKeyThreadCompleted) {
+    // The thread returned, either due to setup failure or no death.
+    int thread_exit_code;
+    if (int result = thrd_join(thread, &thread_exit_code); result != thrd_success) {
+      unittest_printf_critical("failed to join thread: thrd code %d\n", result);
+      return DEATH_TEST_RESULT_INTERNAL_ERROR;
     }
+    return thread_exit_code == ZX_OK ? DEATH_TEST_RESULT_LIVED : DEATH_TEST_RESULT_INTERNAL_ERROR;
   }
 
-  return result;
+  // If we got here, the thread hit an exception.
+  //
+  // It's impossible to fully clean up here using standard C/C++ thread APIs.
+  // The best we can do is detach and kill the thread but this likely leaks
+  // some stack VMO/VMAR mapping and other internal bookkeeping, since the
+  // thread never returns from its entry point function.
+  //
+  // If we really need to clean up properly we'll have to use the zxr_thread_*
+  // APIs, in which case we'll need to replicate or somehow expose all the
+  // complicated stack setup and mapping that comes with the C/C++ APIs.
+  // See zircon/third_party/ulib/musl/src/thread/allocate.c for details.
+  //
+  // Alternately, we could try to adjust the thread registers to jump it to a
+  // call to thrd_exit() and then resume, but this seems equally complicated.
+  if (int result = thrd_detach(thread); result != thrd_success) {
+    unittest_printf_critical("failed to detach thread: thrd code %d\n", result);
+    return DEATH_TEST_RESULT_INTERNAL_ERROR;
+  }
+
+  if (zx_status_t status = state.zx_thread.kill(); status != ZX_OK) {
+    unittest_printf_critical("failed to kill thread: %s\n", zx_status_get_string(status));
+    return DEATH_TEST_RESULT_INTERNAL_ERROR;
+  }
+
+  return DEATH_TEST_RESULT_DIED;
 }
 
 #endif  // UNITTEST_DEATH_TEST_SUPPORTED
