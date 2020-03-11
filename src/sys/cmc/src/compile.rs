@@ -80,6 +80,7 @@ fn compile_cml(document: cml::Document) -> Result<cm::Document, Error> {
     out.storage = document.storage.as_ref().map(translate_storage).transpose()?;
     out.facets = document.facets.as_ref().cloned();
     out.runners = document.runners.as_ref().map(translate_runners).transpose()?;
+    out.resolvers = document.resolvers.as_ref().map(translate_resolvers).transpose()?;
     Ok(out)
 }
 
@@ -422,6 +423,18 @@ fn translate_runners(runners_in: &Vec<cml::Runner>) -> Result<Vec<cm::Runner>, E
         .collect()
 }
 
+fn translate_resolvers(resolvers_in: &Vec<cml::Resolver>) -> Result<Vec<cm::Resolver>, Error> {
+    resolvers_in
+        .iter()
+        .map(|resolver| {
+            Ok(cm::Resolver {
+                name: cm::Name::new(resolver.name.to_string())?,
+                source_path: cm::Path::new(resolver.path.clone())?,
+            })
+        })
+        .collect()
+}
+
 fn translate_environments(envs_in: &Vec<cml::Environment>) -> Result<Vec<cm::Environment>, Error> {
     envs_in
         .iter()
@@ -433,9 +446,33 @@ fn translate_environments(envs_in: &Vec<cml::Environment>) -> Result<Vec<cm::Env
                     Some(cml::EnvironmentExtends::None) => cm::EnvironmentExtends::None,
                     None => cm::EnvironmentExtends::None,
                 },
+                resolvers: env
+                    .resolvers
+                    .as_ref()
+                    .map(|resolvers| {
+                        resolvers
+                            .iter()
+                            .map(translate_resolver_registration)
+                            .collect::<Result<Vec<_>, Error>>()
+                    })
+                    .transpose()?,
             })
         })
         .collect()
+}
+
+fn translate_resolver_registration(
+    reg: &cml::ResolverRegistration,
+) -> Result<cm::ResolverRegistration, Error> {
+    Ok(cm::ResolverRegistration {
+        resolver: cm::Name::new(reg.resolver.to_string())?,
+        source: extract_single_offer_source(reg)?,
+        scheme: reg
+            .scheme
+            .as_str()
+            .parse()
+            .map_err(|e| Error::internal(format!("invalid URL scheme: {}", e)))?,
+    })
 }
 
 fn extract_use_source(in_obj: &cml::Use) -> Result<cm::Ref, Error> {
@@ -935,7 +972,8 @@ mod tests {
                     },
                     { "directory": "/hub", "from": "framework" },
                     { "runner": "web", "from": "self" },
-                    { "runner": "web", "from": "#logger", "to": "realm", "as": "web-rename" }
+                    { "runner": "web", "from": "#logger", "to": "realm", "as": "web-rename" },
+                    { "resolver": "my_resolver", "from": "#logger", "to": "realm", "as": "pkg_resolver" }
                 ],
                 "children": [
                     {
@@ -1061,6 +1099,18 @@ mod tests {
                 "target": "realm",
                 "target_name": "web-rename"
             }
+        },
+        {
+            "resolver": {
+                "source": {
+                    "child": {
+                        "name": "logger"
+                    }
+                },
+                "source_name": "my_resolver",
+                "target": "realm",
+                "target_name": "pkg_resolver"
+            }
         }
     ],
     "children": [
@@ -1162,6 +1212,12 @@ mod tests {
                         "from": "realm",
                         "to": [ "#netstack" ],
                         "as": "started-modular",
+                    },
+                    {
+                        "resolver": "my_resolver",
+                        "from": "realm",
+                        "to": [ "#modular" ],
+                        "as": "pkg_resolver",
                     },
                 ],
                 "children": [
@@ -1447,6 +1503,20 @@ mod tests {
                 },
                 "target_name": "started-modular"
             }
+        },
+        {
+            "resolver": {
+                "source": {
+                    "realm": {}
+                },
+                "source_name": "my_resolver",
+                "target": {
+                    "collection": {
+                        "name": "modular"
+                    }
+                },
+                "target_name": "pkg_resolver"
+            }
         }
     ],
     "children": [
@@ -1656,6 +1726,39 @@ mod tests {
     ]
 }"#,
         },
+        test_compile_environment_with_resolver => {
+            input = json!({
+                "environments": [
+                    {
+                        "name": "myenv",
+                        "resolvers": [
+                            {
+                                "resolver": "pkg_resolver",
+                                "from": "realm",
+                                "scheme": "fuchsia-pkg",
+                            }
+                        ]
+                    },
+                ],
+            }),
+            output = r#"{
+    "environments": [
+        {
+            "name": "myenv",
+            "extends": "none",
+            "resolvers": [
+                {
+                    "resolver": "pkg_resolver",
+                    "source": {
+                        "realm": {}
+                    },
+                    "scheme": "fuchsia-pkg"
+                }
+            ]
+        }
+    ]
+}"#,
+        },
 
         test_compile_all_sections => {
             input = json!({
@@ -1709,6 +1812,12 @@ mod tests {
                         "name": "myrunner",
                         "path": "/runner",
                         "from": "self",
+                    }
+                ],
+                "resolvers": [
+                    {
+                        "name": "myresolver",
+                        "path": "/myresolver",
                     }
                 ],
                 "environments": [
@@ -1881,6 +1990,12 @@ mod tests {
                 "self": {}
             },
             "source_path": "/runner"
+        }
+    ],
+    "resolvers": [
+        {
+            "name": "myresolver",
+            "source_path": "/myresolver"
         }
     ],
     "environments": [

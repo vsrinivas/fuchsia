@@ -352,6 +352,7 @@ impl EnvironmentDeclBuilder {
         EnvironmentDeclBuilder(cm_rust::EnvironmentDecl {
             name: String::new(),
             extends: fsys::EnvironmentExtends::None,
+            resolvers: vec![],
         })
     }
 
@@ -364,6 +365,12 @@ impl EnvironmentDeclBuilder {
     /// Sets whether the environment extends from its realm.
     pub fn extends(mut self, extends: fsys::EnvironmentExtends) -> Self {
         self.0.extends = extends;
+        self
+    }
+
+    /// Registers a resolver with the environment.
+    pub fn add_resolver(mut self, resolver: cm_rust::ResolverRegistration) -> Self {
+        self.0.resolvers.push(resolver);
         self
     }
 

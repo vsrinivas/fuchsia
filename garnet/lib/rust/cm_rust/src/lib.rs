@@ -586,6 +586,14 @@ fidl_into_struct!(EnvironmentDecl, EnvironmentDecl, fsys::EnvironmentDecl, fsys:
 {
     name: String,
     extends: fsys::EnvironmentExtends,
+    resolvers: Vec<ResolverRegistration>,
+});
+fidl_into_struct!(ResolverRegistration, ResolverRegistration, fsys::ResolverRegistration,
+fsys::ResolverRegistration,
+{
+    resolver: String,
+    source: ResolverSource,
+    scheme: String,
 });
 
 fidl_into_vec!(UseDecl, fsys::UseDecl);
@@ -595,6 +603,7 @@ fidl_into_vec!(StorageDecl, fsys::StorageDecl);
 fidl_into_vec!(ResolverDecl, fsys::ResolverDecl);
 fidl_into_vec!(RunnerDecl, fsys::RunnerDecl);
 fidl_into_vec!(EnvironmentDecl, fsys::EnvironmentDecl);
+fidl_into_vec!(ResolverRegistration, fsys::ResolverRegistration);
 fidl_translations_opt_type!(String);
 fidl_translations_opt_type!(fsys::StartupMode);
 fidl_translations_opt_type!(fsys::Durability);
@@ -1190,6 +1199,36 @@ impl NativeIntoFidl<Option<fsys::Ref>> for RunnerSource {
             RunnerSource::Realm => fsys::Ref::Realm(fsys::RealmRef {}),
             RunnerSource::Self_ => fsys::Ref::Self_(fsys::SelfRef {}),
             RunnerSource::Child(child_name) => {
+                fsys::Ref::Child(fsys::ChildRef { name: child_name, collection: None })
+            }
+        })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum ResolverSource {
+    Realm,
+    Self_,
+    Child(String),
+}
+
+impl FidlIntoNative<ResolverSource> for Option<fsys::Ref> {
+    fn fidl_into_native(self) -> ResolverSource {
+        match self.unwrap() {
+            fsys::Ref::Realm(_) => ResolverSource::Realm,
+            fsys::Ref::Self_(_) => ResolverSource::Self_,
+            fsys::Ref::Child(c) => ResolverSource::Child(c.name),
+            _ => panic!("invalid ResolverSource variant"),
+        }
+    }
+}
+
+impl NativeIntoFidl<Option<fsys::Ref>> for ResolverSource {
+    fn native_into_fidl(self) -> Option<fsys::Ref> {
+        Some(match self {
+            ResolverSource::Realm => fsys::Ref::Realm(fsys::RealmRef {}),
+            ResolverSource::Self_ => fsys::Ref::Self_(fsys::SelfRef {}),
+            ResolverSource::Child(child_name) => {
                 fsys::Ref::Child(fsys::ChildRef { name: child_name, collection: None })
             }
         })
@@ -1798,6 +1837,13 @@ mod tests {
                    fsys::EnvironmentDecl {
                        name: Some("test_env".to_string()),
                        extends: Some(fsys::EnvironmentExtends::Realm),
+                       resolvers: Some(vec![
+                           fsys::ResolverRegistration {
+                               resolver: Some("pkg_resolver".to_string()),
+                               source: Some(fsys::Ref::Realm(fsys::RealmRef{})),
+                               scheme: Some("fuchsia-pkg".to_string()),
+                           }
+                       ])
                    }
                ]),
             },
@@ -1993,6 +2039,13 @@ mod tests {
                         EnvironmentDecl {
                             name: "test_env".to_string(),
                             extends: fsys::EnvironmentExtends::Realm,
+                            resolvers: vec![
+                                ResolverRegistration {
+                                    resolver: "pkg_resolver".to_string(),
+                                    source: ResolverSource::Realm,
+                                    scheme: "fuchsia-pkg".to_string(),
+                                }
+                            ]
                         }
                     ]
                 }

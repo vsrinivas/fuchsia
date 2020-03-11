@@ -1,5 +1,5 @@
 {
-  "fidl/fuchsia.component/constants.fidl": "6ee5300cced1a4a46ce1cd089739c683",
+  "fidl/fuchsia.component/constants.fidl": "5e3dd6e7d2b8f9c90c4da62c401d8796",
   "fidl/fuchsia.component/error.fidl": "55d115f4217afb503ca35dce887ef0f2",
-  "fidl/fuchsia.component/types.fidl": "2e4319048475c4e5cb71944c9cd5407d"
+  "fidl/fuchsia.component/types.fidl": "754adbd0733f15d5bbe43c2939545d20"
 }

@@ -9,7 +9,9 @@ rustc_library("cm_fidl_validator") {
   with_unit_tests = true
   edition = "2018"
   deps = [
+    "//garnet/lib/rust/cm_types",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-io2:fuchsia-io2-rustc",
   ]
   test_deps = [

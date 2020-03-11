@@ -258,6 +258,14 @@ pub struct Environment {
     // Whether the environment state should extend its realm, or start with empty property set.
     // When not set, its value is assumed to be EnvironmentExtends::None.
     pub extends: Option<EnvironmentExtends>,
+    pub resolvers: Option<Vec<ResolverRegistration>>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct ResolverRegistration {
+    pub resolver: Name,
+    pub from: Ref,
+    pub scheme: cm_types::UrlScheme,
 }
 
 #[derive(Deserialize, Debug)]
@@ -521,6 +529,12 @@ impl FromClause for Storage {
 }
 
 impl FromClause for Runner {
+    fn from(&self) -> OneOrManyBorrow<Ref> {
+        OneOrManyBorrow::One(&self.from)
+    }
+}
+
+impl FromClause for ResolverRegistration {
     fn from(&self) -> OneOrManyBorrow<Ref> {
         OneOrManyBorrow::One(&self.from)
     }

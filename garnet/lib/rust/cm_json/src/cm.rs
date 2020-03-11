@@ -9,7 +9,8 @@ use thiserror::Error;
 
 // Re-export symbols.
 pub use cm_types::{
-    Name, NameValidationError, Path, PathValidationError, RelativePath, Url, UrlValidationError,
+    Name, NameValidationError, Path, PathValidationError, RelativePath, Url, UrlScheme,
+    UrlSchemeValidationError, UrlValidationError,
 };
 
 /// The in-memory representation of a binary Component Manifest JSON file.
@@ -162,6 +163,18 @@ pub enum EnvironmentExtends {
 pub struct Environment {
     pub name: Name,
     pub extends: EnvironmentExtends,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub resolvers: Option<Vec<ResolverRegistration>>,
+}
+
+/// A registration of a resolver capability to a particular URL scheme. See [`ResolverRegistration`].
+///
+/// [`ResolverRegistration`]: ../../fidl_fuchsia_sys2/struct.ResolverRegistration.html
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ResolverRegistration {
+    pub resolver: Name,
+    pub source: Ref,
+    pub scheme: UrlScheme,
 }
 
 /// Used capability. See [`UseDecl`].

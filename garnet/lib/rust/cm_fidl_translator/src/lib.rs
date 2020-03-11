@@ -381,6 +381,7 @@ impl CmInto<fsys::EnvironmentDecl> for cm::Environment {
         Ok(fsys::EnvironmentDecl {
             name: Some(self.name.into()),
             extends: Some(self.extends.cm_into()?),
+            resolvers: self.resolvers.cm_into()?,
         })
     }
 }
@@ -390,6 +391,16 @@ impl CmInto<fsys::EnvironmentExtends> for cm::EnvironmentExtends {
         Ok(match self {
             cm::EnvironmentExtends::None => fsys::EnvironmentExtends::None,
             cm::EnvironmentExtends::Realm => fsys::EnvironmentExtends::Realm,
+        })
+    }
+}
+
+impl CmInto<fsys::ResolverRegistration> for cm::ResolverRegistration {
+    fn cm_into(self) -> Result<fsys::ResolverRegistration, Error> {
+        Ok(fsys::ResolverRegistration {
+            resolver: Some(self.resolver.into()),
+            source: Some(self.source.cm_into()?),
+            scheme: Some(self.scheme.into()),
         })
     }
 }
@@ -1455,6 +1466,15 @@ mod tests {
                     {
                         "name": "test_env",
                         "extends": "none",
+                        "resolvers": [
+                            {
+                                "resolver": "pkg_resolver",
+                                "source": {
+                                    "realm": {},
+                                },
+                                "scheme": "fuchsia-pkg",
+                            }
+                        ]
                     },
                     {
                         "name": "env",
@@ -1475,10 +1495,18 @@ mod tests {
                     fsys::EnvironmentDecl {
                         name: Some("test_env".to_string()),
                         extends: Some(fsys::EnvironmentExtends::None),
+                        resolvers: Some(vec![
+                            fsys::ResolverRegistration {
+                                resolver: Some("pkg_resolver".to_string()),
+                                source: Some(fsys::Ref::Realm(fsys::RealmRef{})),
+                                scheme: Some("fuchsia-pkg".to_string()),
+                            }
+                        ])
                     },
                     fsys::EnvironmentDecl {
                         name: Some("env".to_string()),
                         extends: Some(fsys::EnvironmentExtends::Realm),
+                        resolvers: None,
                     },
                 ];
                 let mut decl = new_component_decl();
@@ -1749,6 +1777,15 @@ mod tests {
                     {
                         "name": "test_env",
                         "extends": "realm",
+                        "resolvers": [
+                            {
+                                "resolver": "pkg_resolver",
+                                "source": {
+                                    "realm": {},
+                                },
+                                "scheme": "fuchsia-pkg",
+                            }
+                        ]
                     }
                 ],
                 "resolvers": [
@@ -1846,6 +1883,13 @@ mod tests {
                     fsys::EnvironmentDecl {
                         name: Some("test_env".to_string()),
                         extends: Some(fsys::EnvironmentExtends::Realm),
+                        resolvers: Some(vec![
+                            fsys::ResolverRegistration {
+                                resolver: Some("pkg_resolver".to_string()),
+                                source: Some(fsys::Ref::Realm(fsys::RealmRef{})),
+                                scheme: Some("fuchsia-pkg".to_string()),
+                            }
+                        ])
                     }
                 ];
                 let resolvers = vec![

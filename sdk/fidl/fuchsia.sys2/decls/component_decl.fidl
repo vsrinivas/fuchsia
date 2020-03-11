@@ -4,7 +4,6 @@
 
 library fuchsia.sys2;
 
-using fuchsia.component;
 using fuchsia.data;
 
 /// A component declaration.
@@ -76,17 +75,18 @@ table ComponentDecl {
     /// List of environments created by this component.
     /// Environments are assigned to children and control aspects of a child component's
     /// runtime.
-    10: vector<EnvironmentDecl>:fuchsia.component.MAX_NUM_ENVIRONMENTS environments;
+    10: vector<EnvironmentDecl> environments;
 
     /// List of resolver capabilities created by this component.
     ///
     /// A component can:
     ///
     /// - "expose" a resolver capability to its realm,
-    /// - "offer" a resolver capability to its children.
+    /// - "offer" a resolver capability to its children,
+    /// - register a resolver in an environment.
     ///
     /// A component cannot "use" a resolver capability directly. Component manager uses
     /// a resolver capability on behalf of a component when that component's environment
     /// contains the resolver capability.
-    11: vector<ResolverDecl>:fuchsia.component.MAX_NUM_RESOLVERS resolvers;
+    11: vector<ResolverDecl> resolvers;
 };

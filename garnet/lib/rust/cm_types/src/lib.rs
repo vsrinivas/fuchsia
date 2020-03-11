@@ -383,6 +383,109 @@ impl<'de> de::Deserialize<'de> for Url {
     }
 }
 
+/// A URL scheme.
+#[derive(Clone, Debug, Eq, Hash, PartialEq, Serialize)]
+pub struct UrlScheme(String);
+
+/// The error representing a failed validation of a `UrlScheme` string.
+#[derive(Debug, Error)]
+pub enum UrlSchemeValidationError {
+    /// The URL scheme is empty or greater than 100 characters in length.
+    #[error("URL scheme must be non-empty and no more than 100 characters, got {} characters", 0)]
+    InvalidLength(usize),
+    /// The URL scheme is not valid. See [`UrlScheme::new`].
+    #[error("Invalid character in URL scheme: '{}'", 0)]
+    MalformedUrlScheme(char),
+}
+
+impl UrlScheme {
+    /// Creates a `UrlScheme` from a `String`, returning an `Err` if the string fails
+    /// validation. The string must be non-empty and no more than 100 characters
+    /// in length. It must start with a lowercase ASCII letter (a-z),
+    /// and contain only lowercase ASCII letters, digits, `+`, `-`, and `.`.
+    pub fn new(url_scheme: String) -> Result<Self, UrlSchemeValidationError> {
+        Self::validate(&url_scheme)?;
+        Ok(UrlScheme(url_scheme))
+    }
+
+    /// Validates `url_scheme` but does not construct a new `UrlScheme` object.
+    /// See [`UrlScheme::new`] for validation details.
+    pub fn validate(url_scheme: &str) -> Result<(), UrlSchemeValidationError> {
+        if url_scheme.is_empty() || url_scheme.len() > 100 {
+            return Err(UrlSchemeValidationError::InvalidLength(url_scheme.len()));
+        }
+        let mut iter = url_scheme.chars();
+        let first_char = iter.next().unwrap();
+        if !first_char.is_ascii_lowercase() {
+            return Err(UrlSchemeValidationError::MalformedUrlScheme(first_char));
+        }
+        if let Some(c) = iter.find(|&c| {
+            !c.is_ascii_lowercase() && !c.is_ascii_digit() && c != '.' && c != '+' && c != '-'
+        }) {
+            return Err(UrlSchemeValidationError::MalformedUrlScheme(c));
+        }
+        Ok(())
+    }
+
+    pub fn as_str(&self) -> &str {
+        self.0.as_str()
+    }
+}
+
+impl fmt::Display for UrlScheme {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(&self.0, f)
+    }
+}
+
+impl FromStr for UrlScheme {
+    type Err = UrlSchemeValidationError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::validate(s)?;
+        Ok(UrlScheme(s.to_string()))
+    }
+}
+
+impl From<UrlScheme> for String {
+    fn from(u: UrlScheme) -> String {
+        u.0
+    }
+}
+
+impl<'de> de::Deserialize<'de> for UrlScheme {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        struct Visitor;
+
+        impl<'de> de::Visitor<'de> for Visitor {
+            type Value = UrlScheme;
+
+            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                f.write_str("a non-empty URL scheme no more than 100 characters in length")
+            }
+
+            fn visit_str<E>(self, s: &str) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                s.parse().map_err(|err| match err {
+                    UrlSchemeValidationError::InvalidLength(l) => E::invalid_length(
+                        l,
+                        &"a non-empty URL scheme no more than 100 characters in length",
+                    ),
+                    UrlSchemeValidationError::MalformedUrlScheme(_) => {
+                        E::invalid_value(de::Unexpected::Str(s), &"a valid URL scheme")
+                    }
+                })
+            }
+        }
+        deserializer.deserialize_string(Visitor)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use {
@@ -467,6 +570,21 @@ mod tests {
     }
 
     #[test]
+    fn test_valid_url_scheme() {
+        expect_ok!(UrlScheme, "fuch.sia-pkg+0");
+        expect_ok!(UrlScheme, &format!("{}", repeat("f").take(100).collect::<String>()));
+    }
+
+    #[test]
+    fn test_invalid_url_scheme() {
+        expect_err!(UrlScheme, "");
+        expect_err!(UrlScheme, "0fuch.sia-pkg+0");
+        expect_err!(UrlScheme, "fuchsia_pkg");
+        expect_err!(UrlScheme, "FUCHSIA-PKG");
+        expect_err!(UrlScheme, &format!("{}", repeat("f").take(101).collect::<String>()));
+    }
+
+    #[test]
     fn test_name_error_message() {
         let input = r#"
             "foo$"
@@ -510,5 +628,19 @@ mod tests {
         );
         assert_eq!(err.line(), 2);
         assert_eq!(err.column(), 17);
+    }
+
+    #[test]
+    fn test_url_scheme_error_message() {
+        let input = r#"
+            "9fuchsia_pkg"
+        "#;
+        let err = serde_json::from_str::<UrlScheme>(input).expect_err("must fail");
+        assert_eq!(
+            err.to_string(),
+            "invalid value: string \"9fuchsia_pkg\", expected a valid URL scheme at line 2 column 26"
+        );
+        assert_eq!(err.line(), 2);
+        assert_eq!(err.column(), 26);
     }
 }

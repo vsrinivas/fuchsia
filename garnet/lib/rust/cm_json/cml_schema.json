@@ -29,9 +29,15 @@
     },
     "url-clause": {
       "type": "string",
-      "pattern": "^[0-9a-z+\\-\\.]+://.+$",
+      "pattern": "^[a-z][0-9a-z+\\-\\.]+://.+$",
       "minLength": 1,
       "maxLength": 4096
+    },
+    "url-scheme-clause": {
+      "type": "string",
+      "pattern": "^[a-z][0-9a-z+\\-\\.]+$",
+      "minLength": 1,
+      "maxLength": 100
     },
     "startup-clause": {
       "type": "string",
@@ -840,6 +846,61 @@
               "realm",
               "none"
             ]
+          },
+          "resolvers": {
+            "type": "array",
+            "title": "The resolvers registered with this environment",
+            "description": "The resolvers that will handle component URL resolution for components with this environment.",
+            "items": {
+              "type": "object",
+              "required": [
+                "scheme",
+                "resolver",
+                "from"
+              ],
+              "properties": {
+                "scheme": {
+                  "title": "URL scheme",
+                  "description": "The URL scheme this resolver handles",
+                  "allOf": [
+                    {
+                      "$ref": "#/definitions/url-scheme-clause"
+                    }
+                  ],
+                  "examples": [
+                    "fuchsia-pkg",
+                    "https"
+                  ]
+                },
+                "resolver": {
+                  "title": "Resolver name",
+                  "description": "The name of the resolver to use. The resolver must be offered to this realm.",
+                  "allOf": [
+                    {
+                      "$ref": "#/definitions/name-clause"
+                    }
+                  ],
+                  "examples": [
+                    "pkg_resolver"
+                  ]
+                },
+                "from": {
+                  "title": "The resolver source component",
+                  "description": "The component which offers or exposes this resolver capability.",
+                  "pattern": "^(realm|self|#[0-9a-z_\\-\\.]+)$",
+                  "allOf": [
+                    {
+                      "$ref": "#/definitions/relative-ref-clause"
+                    }
+                  ],
+                  "examples": [
+                    "realm",
+                    "self",
+                    "#packagefs"
+                  ]
+                }
+              }
+            }
           }
         }
       }

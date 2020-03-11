@@ -7,6 +7,7 @@ use {
     std::collections::{HashMap, HashSet},
     std::error,
     std::fmt,
+    thiserror::Error,
 };
 
 const MAX_PATH_LENGTH: usize = 1024;
@@ -14,35 +15,51 @@ const MAX_NAME_LENGTH: usize = 100;
 const MAX_URL_LENGTH: usize = 4096;
 
 /// Enum type that can represent any error encountered durlng validation.
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum Error {
-    MissingField(String, String),
-    EmptyField(String, String),
-    ExtraneousField(String, String),
-    DuplicateField(String, String, String),
-    InvalidField(String, String),
-    InvalidCharacterInField(String, String, char),
-    FieldTooLong(String, String),
+    #[error("{} missing {}", .0.decl, .0.field)]
+    MissingField(DeclField),
+    #[error("{} has empty {}", .0.decl, .0.field)]
+    EmptyField(DeclField),
+    #[error("{} has extraneous {}", .0.decl, .0.field)]
+    ExtraneousField(DeclField),
+    #[error("\"{1}\" is a duplicate {} {}", .0.decl, .0.field)]
+    DuplicateField(DeclField, String),
+    #[error("{} has invalid {}", .0.decl, .0.field)]
+    InvalidField(DeclField),
+    #[error("{} has invalid {}, unexpected character '{1}'", .0.decl, .0.field)]
+    InvalidCharacterInField(DeclField, char),
+    #[error("{}'s {} is too long", .0.decl, .0.field)]
+    FieldTooLong(DeclField),
+    #[error("\"{0}\" target \"{1}\" is same as source")]
     OfferTargetEqualsSource(String, String),
-    InvalidChild(String, String, String),
-    InvalidCollection(String, String, String),
-    InvalidStorage(String, String, String),
-    InvalidEnvironment(String, String, String),
-    InvalidResolver(String, String, String),
+    #[error("\"{1}\" is referenced in {0} but it does not appear in children")]
+    InvalidChild(DeclField, String),
+    #[error("\"{1}\" is referenced in {0} but it does not appear in collections")]
+    InvalidCollection(DeclField, String),
+    #[error("\"{1}\" is referenced in {0} but it does not appear in storage")]
+    InvalidStorage(DeclField, String),
+    #[error("\"{1}\" is referenced in {0} but it does not appear in environments")]
+    InvalidEnvironment(DeclField, String),
+    #[error("\"{1}\" is referenced in {0} but it does not appear in resolvers")]
+    InvalidResolver(DeclField, String),
+    #[error("{0} specifies multiple runners")]
     MultipleRunnersSpecified(String),
+    #[error("cycle detected between {0} (\"{1}\") and {2} (\"{3}\")")]
+    CycleDetected(DeclField, String, DeclField, String),
 }
 
 impl Error {
     pub fn missing_field(decl_type: impl Into<String>, keyword: impl Into<String>) -> Self {
-        Error::MissingField(decl_type.into(), keyword.into())
+        Error::MissingField(DeclField { decl: decl_type.into(), field: keyword.into() })
     }
 
     pub fn empty_field(decl_type: impl Into<String>, keyword: impl Into<String>) -> Self {
-        Error::EmptyField(decl_type.into(), keyword.into())
+        Error::EmptyField(DeclField { decl: decl_type.into(), field: keyword.into() })
     }
 
     pub fn extraneous_field(decl_type: impl Into<String>, keyword: impl Into<String>) -> Self {
-        Error::ExtraneousField(decl_type.into(), keyword.into())
+        Error::ExtraneousField(DeclField { decl: decl_type.into(), field: keyword.into() })
     }
 
     pub fn duplicate_field(
@@ -50,11 +67,14 @@ impl Error {
         keyword: impl Into<String>,
         value: impl Into<String>,
     ) -> Self {
-        Error::DuplicateField(decl_type.into(), keyword.into(), value.into())
+        Error::DuplicateField(
+            DeclField { decl: decl_type.into(), field: keyword.into() },
+            value.into(),
+        )
     }
 
     pub fn invalid_field(decl_type: impl Into<String>, keyword: impl Into<String>) -> Self {
-        Error::InvalidField(decl_type.into(), keyword.into())
+        Error::InvalidField(DeclField { decl: decl_type.into(), field: keyword.into() })
     }
 
     pub fn invalid_character_in_field(
@@ -62,11 +82,14 @@ impl Error {
         keyword: impl Into<String>,
         character: char,
     ) -> Self {
-        Error::InvalidCharacterInField(decl_type.into(), keyword.into(), character)
+        Error::InvalidCharacterInField(
+            DeclField { decl: decl_type.into(), field: keyword.into() },
+            character,
+        )
     }
 
     pub fn field_too_long(decl_type: impl Into<String>, keyword: impl Into<String>) -> Self {
-        Error::FieldTooLong(decl_type.into(), keyword.into())
+        Error::FieldTooLong(DeclField { decl: decl_type.into(), field: keyword.into() })
     }
 
     pub fn offer_target_equals_source(decl: impl Into<String>, target: impl Into<String>) -> Self {
@@ -78,7 +101,10 @@ impl Error {
         keyword: impl Into<String>,
         child: impl Into<String>,
     ) -> Self {
-        Error::InvalidChild(decl_type.into(), keyword.into(), child.into())
+        Error::InvalidChild(
+            DeclField { decl: decl_type.into(), field: keyword.into() },
+            child.into(),
+        )
     }
 
     pub fn invalid_collection(
@@ -86,7 +112,10 @@ impl Error {
         keyword: impl Into<String>,
         collection: impl Into<String>,
     ) -> Self {
-        Error::InvalidCollection(decl_type.into(), keyword.into(), collection.into())
+        Error::InvalidCollection(
+            DeclField { decl: decl_type.into(), field: keyword.into() },
+            collection.into(),
+        )
     }
 
     pub fn invalid_storage(
@@ -94,7 +123,10 @@ impl Error {
         keyword: impl Into<String>,
         storage: impl Into<String>,
     ) -> Self {
-        Error::InvalidStorage(decl_type.into(), keyword.into(), storage.into())
+        Error::InvalidStorage(
+            DeclField { decl: decl_type.into(), field: keyword.into() },
+            storage.into(),
+        )
     }
 
     pub fn invalid_environment(
@@ -102,7 +134,10 @@ impl Error {
         keyword: impl Into<String>,
         environment: impl Into<String>,
     ) -> Self {
-        Error::InvalidEnvironment(decl_type.into(), keyword.into(), environment.into())
+        Error::InvalidEnvironment(
+            DeclField { decl: decl_type.into(), field: keyword.into() },
+            environment.into(),
+        )
     }
 
     pub fn invalid_resolver(
@@ -110,58 +145,42 @@ impl Error {
         keyword: impl Into<String>,
         resolver: impl Into<String>,
     ) -> Self {
-        Error::InvalidResolver(decl_type.into(), keyword.into(), resolver.into())
+        Error::InvalidResolver(
+            DeclField { decl: decl_type.into(), field: keyword.into() },
+            resolver.into(),
+        )
     }
 
     pub fn multiple_runners_specified(decl_type: impl Into<String>) -> Self {
         Error::MultipleRunnersSpecified(decl_type.into())
     }
+
+    pub fn cycle_detected(
+        decl_type1: impl Into<String>,
+        keyword1: impl Into<String>,
+        value1: impl Into<String>,
+        decl_type2: impl Into<String>,
+        keyword2: impl Into<String>,
+        value2: impl Into<String>,
+    ) -> Self {
+        Error::CycleDetected(
+            DeclField { decl: decl_type1.into(), field: keyword1.into() },
+            value1.into(),
+            DeclField { decl: decl_type2.into(), field: keyword2.into() },
+            value2.into(),
+        )
+    }
 }
 
-impl error::Error for Error {}
+#[derive(Debug)]
+pub struct DeclField {
+    pub decl: String,
+    pub field: String,
+}
 
-impl fmt::Display for Error {
+impl fmt::Display for DeclField {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match &self {
-            Error::MissingField(d, k) => write!(f, "{} missing {}", d, k),
-            Error::EmptyField(d, k) => write!(f, "{} has empty {}", d, k),
-            Error::ExtraneousField(d, k) => write!(f, "{} has extraneous {}", d, k),
-            Error::DuplicateField(d, k, v) => write!(f, "\"{}\" is a duplicate {} {}", v, d, k),
-            Error::InvalidField(d, k) => write!(f, "{} has invalid {}", d, k),
-            Error::InvalidCharacterInField(d, k, c) => {
-                write!(f, "{} has invalid {}, unexpected character '{}'", d, k, c)
-            }
-            Error::FieldTooLong(d, k) => write!(f, "{}'s {} is too long", d, k),
-            Error::OfferTargetEqualsSource(d, t) => {
-                write!(f, "\"{}\" target \"{}\" is same as source", d, t)
-            }
-            Error::InvalidChild(d, k, c) => write!(
-                f,
-                "\"{}\" is referenced in {}.{} but it does not appear in children",
-                c, d, k
-            ),
-            Error::InvalidCollection(d, k, c) => write!(
-                f,
-                "\"{}\" is referenced in {}.{} but it does not appear in collections",
-                c, d, k
-            ),
-            Error::InvalidStorage(d, k, s) => write!(
-                f,
-                "\"{}\" is referenced in {}.{} but it does not appear in storage",
-                s, d, k
-            ),
-            Error::InvalidEnvironment(d, k, e) => write!(
-                f,
-                "\"{}\" is referenced in {}.{} but it does not appear in environments",
-                e, d, k,
-            ),
-            Error::InvalidResolver(d, k, r) => write!(
-                f,
-                "\"{}\" is referenced in {}.{} but it does not appear in resolvers",
-                r, d, k,
-            ),
-            Error::MultipleRunnersSpecified(d) => write!(f, "{} specifies multiple runners", d),
-        }
+        write!(f, "{}.{}", &self.decl, &self.field)
     }
 }
 
@@ -201,7 +220,7 @@ impl fmt::Display for ErrorList {
 pub fn validate(decl: &fsys::ComponentDecl) -> Result<(), ErrorList> {
     let ctx = ValidationContext {
         decl,
-        all_children: HashSet::new(),
+        all_children: HashMap::new(),
         all_collections: HashSet::new(),
         all_storage_and_sources: HashMap::new(),
         all_runners_and_sources: HashMap::new(),
@@ -236,7 +255,7 @@ pub fn validate_child(child: &fsys::ChildDecl) -> Result<(), ErrorList> {
 
 struct ValidationContext<'a> {
     decl: &'a fsys::ComponentDecl,
-    all_children: HashSet<&'a str>,
+    all_children: HashMap<&'a str, &'a fsys::ChildDecl>,
     all_collections: HashSet<&'a str>,
     all_storage_and_sources: HashMap<&'a str, Option<&'a str>>,
     all_runners_and_sources: HashMap<&'a str, Option<&'a str>>,
@@ -266,12 +285,9 @@ type NameMap<'a> = HashMap<TargetId<'a>, HashSet<&'a str>>;
 
 impl<'a> ValidationContext<'a> {
     fn validate(mut self) -> Result<(), Vec<Error>> {
-        // Validate "environments" and build the set of all environment names.
-        // This must run before "children", as ChildDecls can reference environment names.
-        if let Some(environment) = self.decl.environments.as_ref() {
-            for environment in environment {
-                self.validate_environment_decl(&environment);
-            }
+        // Collect all environment names first, so that references to them can be checked.
+        if let Some(envs) = &self.decl.environments {
+            self.collect_environment_names(&envs);
         }
 
         // Validate "children" and build the set of all children.
@@ -336,10 +352,28 @@ impl<'a> ValidationContext<'a> {
             }
         }
 
+        // Validate "environments" after all other declarations are processed.
+        if let Some(environment) = self.decl.environments.as_ref() {
+            for environment in environment {
+                self.validate_environment_decl(&environment);
+            }
+        }
+
         if self.errors.is_empty() {
             Ok(())
         } else {
             Err(self.errors)
+        }
+    }
+
+    // Collects all the environment names, watching for duplicates.
+    fn collect_environment_names(&mut self, envs: &'a [fsys::EnvironmentDecl]) {
+        for env in envs {
+            if let Some(name) = env.name.as_ref() {
+                if !self.all_environment_names.insert(name) {
+                    self.errors.push(Error::duplicate_field("EnvironmentDecl", "name", name));
+                }
+            }
         }
     }
 
@@ -459,7 +493,7 @@ impl<'a> ValidationContext<'a> {
         }
         if let Some(name) = child.name.as_ref() {
             let name: &str = name;
-            if !self.all_children.insert(name) {
+            if self.all_children.insert(name, child).is_some() {
                 self.errors.push(Error::duplicate_field("ChildDecl", "name", name));
             }
         }
@@ -489,14 +523,80 @@ impl<'a> ValidationContext<'a> {
 
     fn validate_environment_decl(&mut self, environment: &'a fsys::EnvironmentDecl) {
         let name = environment.name.as_ref();
-        if check_name(name, "EnvironmentDecl", "name", &mut self.errors) {
-            let name: &str = name.unwrap();
-            if !self.all_environment_names.insert(name) {
-                self.errors.push(Error::duplicate_field("EnvironmentDecl", "name", name));
-            }
-        }
+        check_name(name, "EnvironmentDecl", "name", &mut self.errors);
         if environment.extends.is_none() {
             self.errors.push(Error::missing_field("EnvironmentDecl", "extends"));
+        }
+        if let Some(resolvers) = environment.resolvers.as_ref() {
+            let mut registered_schemes = HashSet::new();
+            for resolver in resolvers {
+                self.validate_resolver_registration(
+                    resolver,
+                    name.clone(),
+                    &mut registered_schemes,
+                );
+            }
+        }
+    }
+
+    fn validate_resolver_registration(
+        &mut self,
+        resolver_registration: &'a fsys::ResolverRegistration,
+        environment_name: Option<&'a String>,
+        schemes: &mut HashSet<&'a str>,
+    ) {
+        check_name(
+            resolver_registration.resolver.as_ref(),
+            "ResolverRegistration",
+            "resolver",
+            &mut self.errors,
+        );
+        match &resolver_registration.source {
+            Some(fsys::Ref::Realm(_)) => {}
+            Some(fsys::Ref::Child(child_ref)) => {
+                // Make sure the child is valid.
+                if self.validate_child_ref("ResolverRegistration", "source", &child_ref) {
+                    // Ensure there are no cycles, eg:
+                    // environment is assigned to a child, but the environment contains a resolver
+                    // provided by the same child.
+                    // TODO(fxb/48128): Replace with cycle detection algorithm using //src/lib/directed_graph.
+                    let child_name = child_ref.name.as_str();
+                    if let Some(child_decl) = self.all_children.get(child_name) {
+                        match (environment_name, child_decl.environment.as_ref()) {
+                            (Some(environment_name), Some(child_environment_name))
+                                if environment_name == child_environment_name =>
+                            {
+                                self.errors.push(Error::cycle_detected(
+                                    "ResolverRegistration",
+                                    "source",
+                                    child_name,
+                                    "ChildDecl",
+                                    "environment",
+                                    child_environment_name,
+                                ));
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+            }
+            Some(_) => {
+                self.errors.push(Error::invalid_field("ResolverRegistration", "source"));
+            }
+            None => {
+                self.errors.push(Error::missing_field("ResolverRegistration", "source"));
+            }
+        };
+        check_url_scheme(
+            resolver_registration.scheme.as_ref(),
+            "ResolverRegistration",
+            "scheme",
+            &mut self.errors,
+        );
+        if let Some(scheme) = resolver_registration.scheme.as_ref() {
+            if !schemes.insert(scheme.as_str()) {
+                self.errors.push(Error::duplicate_field("ResolverRegistration", "scheme", scheme));
+            }
         }
     }
 
@@ -573,7 +673,7 @@ impl<'a> ValidationContext<'a> {
         if !valid {
             return;
         }
-        if !self.all_children.contains(&child.name as &str) {
+        if !self.all_children.contains_key(&child.name as &str) {
             self.errors.push(Error::invalid_child(decl_type, "source", &child.name as &str));
         }
     }
@@ -1106,7 +1206,7 @@ impl<'a> ValidationContext<'a> {
 
         // Ensure the child exists.
         let name: &str = &child.name;
-        if !self.all_children.contains(name) {
+        if !self.all_children.contains_key(name) {
             self.errors.push(Error::invalid_child(decl, field_name, name));
             return false;
         }
@@ -1377,6 +1477,34 @@ fn check_url(
     start_err_len == errors.len()
 }
 
+fn check_url_scheme(
+    prop: Option<&String>,
+    decl_type: &str,
+    keyword: &str,
+    errors: &mut Vec<Error>,
+) -> bool {
+    if let Some(scheme) = prop {
+        if let Err(err) = cm_types::UrlScheme::validate(scheme) {
+            errors.push(match err {
+                cm_types::UrlSchemeValidationError::InvalidLength(0) => {
+                    Error::empty_field(decl_type, keyword)
+                }
+                cm_types::UrlSchemeValidationError::InvalidLength(_) => {
+                    Error::field_too_long(decl_type, keyword)
+                }
+                cm_types::UrlSchemeValidationError::MalformedUrlScheme(c) => {
+                    Error::invalid_character_in_field(decl_type, keyword, c)
+                }
+            });
+            return false;
+        }
+    } else {
+        errors.push(Error::missing_field(decl_type, keyword));
+        return false;
+    }
+    true
+}
+
 /// Checks that the offer target is not the same as the offer source.
 fn check_offer_target_is_not_source(
     target: &Option<fsys::Ref>,
@@ -1407,9 +1535,9 @@ mod tests {
             ExposeProtocolDecl, ExposeResolverDecl, ExposeRunnerDecl, ExposeServiceDecl,
             FrameworkRef, OfferDecl, OfferDirectoryDecl, OfferEventDecl, OfferProtocolDecl,
             OfferResolverDecl, OfferRunnerDecl, OfferServiceDecl, OfferStorageDecl, RealmRef, Ref,
-            ResolverDecl, RunnerDecl, SelfRef, StartupMode, StorageDecl, StorageRef, StorageType,
-            UseDecl, UseDirectoryDecl, UseEventDecl, UseProtocolDecl, UseRunnerDecl,
-            UseServiceDecl, UseStorageDecl,
+            ResolverDecl, ResolverRegistration, RunnerDecl, SelfRef, StartupMode, StorageDecl,
+            StorageRef, StorageType, UseDecl, UseDirectoryDecl, UseEventDecl, UseProtocolDecl,
+            UseRunnerDecl, UseServiceDecl, UseStorageDecl,
         },
         lazy_static::lazy_static,
         proptest::prelude::*,
@@ -3401,6 +3529,7 @@ mod tests {
                 decl.environments = Some(vec![EnvironmentDecl {
                     name: None,
                     extends: None,
+                    resolvers: None,
                 }]);
                 decl
             },
@@ -3415,11 +3544,154 @@ mod tests {
                 decl.environments = Some(vec![EnvironmentDecl {
                     name: Some("a".repeat(1025)),
                     extends: Some(EnvironmentExtends::None),
+                    resolvers: None,
                 }]);
                 decl
             },
             result = Err(ErrorList::new(vec![
                 Error::field_too_long("EnvironmentDecl", "name"),
+            ])),
+        },
+        test_validate_environment_empty_resolver_fields => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.environments = Some(vec![EnvironmentDecl {
+                    name: Some("a".to_string()),
+                    extends: Some(EnvironmentExtends::None),
+                    resolvers: Some(vec![
+                        ResolverRegistration {
+                            resolver: None,
+                            source: None,
+                            scheme: None,
+                        },
+                    ]),
+                }]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::missing_field("ResolverRegistration", "resolver"),
+                Error::missing_field("ResolverRegistration", "source"),
+                Error::missing_field("ResolverRegistration", "scheme"),
+            ])),
+        },
+        test_validate_environment_long_resolver_fields => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.environments = Some(vec![EnvironmentDecl {
+                    name: Some("a".to_string()),
+                    extends: Some(EnvironmentExtends::None),
+                    resolvers: Some(vec![
+                        ResolverRegistration {
+                            resolver: Some("a".repeat(101)),
+                            source: Some(Ref::Realm(RealmRef{})),
+                            scheme: Some("a".repeat(101)),
+                        },
+                    ]),
+                }]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::field_too_long("ResolverRegistration", "resolver"),
+                Error::field_too_long("ResolverRegistration", "scheme"),
+            ])),
+        },
+        test_validate_environment_invalid_resolver_fields => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.environments = Some(vec![EnvironmentDecl {
+                    name: Some("a".to_string()),
+                    extends: Some(EnvironmentExtends::None),
+                    resolvers: Some(vec![
+                        ResolverRegistration {
+                            resolver: Some("^a".to_string()),
+                            source: Some(Ref::Framework(fsys::FrameworkRef{})),
+                            scheme: Some("9scheme".to_string()),
+                        },
+                    ]),
+                }]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::invalid_character_in_field("ResolverRegistration", "resolver", '^'),
+                Error::invalid_field("ResolverRegistration", "source"),
+                Error::invalid_character_in_field("ResolverRegistration", "scheme", '9'),
+            ])),
+        },
+        test_validate_environment_duplicate_resolver_schemes => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.environments = Some(vec![EnvironmentDecl {
+                    name: Some("a".to_string()),
+                    extends: Some(EnvironmentExtends::None),
+                    resolvers: Some(vec![
+                        ResolverRegistration {
+                            resolver: Some("pkg_resolver".to_string()),
+                            source: Some(Ref::Realm(RealmRef{})),
+                            scheme: Some("fuchsia-pkg".to_string()),
+                        },
+                        ResolverRegistration {
+                            resolver: Some("base_resolver".to_string()),
+                            source: Some(Ref::Realm(RealmRef{})),
+                            scheme: Some("fuchsia-pkg".to_string()),
+                        },
+                    ]),
+                }]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::duplicate_field("ResolverRegistration", "scheme", "fuchsia-pkg"),
+            ])),
+        },
+        test_validate_environment_resolver_from_missing_child => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.environments = Some(vec![EnvironmentDecl {
+                    name: Some("a".to_string()),
+                    extends: Some(EnvironmentExtends::None),
+                    resolvers: Some(vec![
+                        ResolverRegistration {
+                            resolver: Some("pkg_resolver".to_string()),
+                            source: Some(Ref::Child(ChildRef{
+                                name: "missing".to_string(),
+                                collection: None,
+                            })),
+                            scheme: Some("fuchsia-pkg".to_string()),
+                        },
+                    ]),
+                }]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::invalid_child("ResolverRegistration", "source", "missing"),
+            ])),
+        },
+        test_validate_environment_resolver_child_cycle => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.environments = Some(vec![EnvironmentDecl {
+                    name: Some("env".to_string()),
+                    extends: Some(EnvironmentExtends::None),
+                    resolvers: Some(vec![
+                        ResolverRegistration {
+                            resolver: Some("pkg_resolver".to_string()),
+                            source: Some(Ref::Child(ChildRef{
+                                name: "child".to_string(),
+                                collection: None,
+                            })),
+                            scheme: Some("fuchsia-pkg".to_string()),
+                        },
+                    ]),
+                }]);
+                decl.children = Some(vec![ChildDecl {
+                    name: Some("child".to_string()),
+                    startup: Some(StartupMode::Lazy),
+                    url: Some("fuchsia-pkg://child".to_string()),
+                    environment: Some("env".to_string()),
+                }]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::cycle_detected("ResolverRegistration", "source", "child", "ChildDecl", "environment", "env"),
             ])),
         },
 

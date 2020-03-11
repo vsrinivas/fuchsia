@@ -6,6 +6,21 @@ library fuchsia.sys2;
 
 using fuchsia.component;
 
+/// Declares an environment which configures a realm.
+table EnvironmentDecl {
+    /// The name of this environment.
+    1: fuchsia.component.environment_name name;
+
+    /// Specifies how the initial state of this environment is constructed.
+    2: EnvironmentExtends extends;
+
+    /// List of component resolvers and the URL schemes they are registered to resolve.
+    /// These registrations determine how components are resolved in the realm.
+    /// If the component URL scheme does not match any of these resolvers, URL resolution
+    /// is delegated to the parent environment, if this environment `extends` from `REALM`.
+    3: vector<ResolverRegistration> resolvers;
+};
+
 /// Specifies how a declared environment's initial set of properties are assigned.
 enum EnvironmentExtends {
     /// The environment has no initial set of properties.
@@ -15,11 +30,18 @@ enum EnvironmentExtends {
     REALM = 1;
 };
 
-/// Declares an environment which specifies intrinsic properties of a component.
-table EnvironmentDecl {
-    /// The name of this environment.
-    1: fuchsia.component.environment_name name;
+/// A mapping of URL scheme to resolver name.
+table ResolverRegistration {
+    /// The name of the resolver.
+    1: fuchsia.component.resolver_name resolver;
 
-    /// Specifies how the initial state of this environment is constructed.
-    2: EnvironmentExtends extends;
+    /// The provider of the capability relative to the component itself. Must be
+    /// `realm`, `self`, or `child`.
+    2: Ref source;
+
+    /// The URL scheme the resolver is registered to handle.
+    /// Only one resolver may be registered to a particular URL scheme.
+    /// The URL scheme must start with a lowercase ASCII letter (a-z), and may contain
+    /// lowercase ASCII letters, digits, `+`, `-`, and `.`.
+    3: fuchsia.component.url_scheme scheme;
 };

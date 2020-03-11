@@ -41,7 +41,7 @@ pub fn parse_cml(value: Value) -> Result<cml::Document, Error> {
         .map_err(|e| Error::parse(format!("Couldn't read input as struct: {}", e)))?;
     let mut ctx = ValidationContext {
         document: &document,
-        all_children: HashSet::new(),
+        all_children: HashMap::new(),
         all_collections: HashSet::new(),
         all_storage_and_sources: HashMap::new(),
         all_resolvers: HashSet::new(),
@@ -131,7 +131,7 @@ pub fn validate_json(json: &Value, schema: &JsonSchema<'_>) -> Result<(), Error>
 
 struct ValidationContext<'a> {
     document: &'a cml::Document,
-    all_children: HashSet<&'a cml::Name>,
+    all_children: HashMap<&'a cml::Name, &'a cml::Child>,
     all_collections: HashSet<&'a cml::Name>,
     all_storage_and_sources: HashMap<&'a cml::Name, &'a cml::Ref>,
     all_resolvers: HashSet<&'a cml::Name>,
@@ -279,14 +279,16 @@ impl<'a> ValidationContext<'a> {
         )?;
 
         // Populate the sets of children and collections.
-        self.all_children = self.document.all_children_names().into_iter().collect();
+        if let Some(children) = &self.document.children {
+            self.all_children = children.iter().map(|c| (&c.name, c)).collect();
+        }
         self.all_collections = self.document.all_collection_names().into_iter().collect();
         self.all_storage_and_sources = self.document.all_storage_and_sources();
         self.all_resolvers = self.document.all_resolver_names().into_iter().collect();
         self.all_environment_names = self.document.all_environment_names().into_iter().collect();
 
         // Validate "children".
-        if let Some(children) = self.document.children.as_ref() {
+        if let Some(children) = &self.document.children {
             for child in children {
                 self.validate_child(&child)?;
             }
@@ -336,6 +338,13 @@ impl<'a> ValidationContext<'a> {
             self.document.program.as_ref(),
             self.document.r#use.as_ref(),
         )?;
+
+        // Validate "environments".
+        if let Some(environments) = &self.document.environments {
+            for env in environments {
+                self.validate_environment(&env)?;
+            }
+        }
 
         Ok(())
     }
@@ -551,7 +560,9 @@ impl<'a> ValidationContext<'a> {
             };
 
             // Check that any referenced child actually exists.
-            if !self.all_children.contains(to_target) && !self.all_collections.contains(to_target) {
+            if !self.all_children.contains_key(to_target)
+                && !self.all_collections.contains(to_target)
+            {
                 return Err(Error::validate(format!(
                     "\"{}\" is an \"offer\" target but it does not appear in \"children\" \
                      or \"collections\"",
@@ -665,7 +676,7 @@ impl<'a> ValidationContext<'a> {
         match component_ref {
             cml::Ref::Named(name) => {
                 // Ensure we have a child defined by that name.
-                if !self.all_children.contains(name) {
+                if !self.all_children.contains_key(name) {
                     return Err(Error::validate(format!(
                         "{} \"{}\" does not appear in \"children\"",
                         reference_description, component_ref
@@ -755,6 +766,51 @@ impl<'a> ValidationContext<'a> {
             )));
         }
 
+        Ok(())
+    }
+
+    fn validate_environment(&self, environment: &cml::Environment) -> Result<(), Error> {
+        if let Some(resolvers) = &environment.resolvers {
+            let mut used_schemes = HashMap::new();
+            for registration in resolvers {
+                // Validate that the scheme is not already used.
+                if let Some(previous_resolver) =
+                    used_schemes.insert(&registration.scheme, &registration.resolver)
+                {
+                    return Err(Error::validate(format!(
+                        "scheme \"{}\" for resolver \"{}\" is already registered; \
+                        previously registered to resolver \"{}\".",
+                        &registration.scheme, &registration.resolver, previous_resolver
+                    )));
+                }
+
+                self.validate_component_ref(
+                    &format!("\"{}\" resolver source", &registration.resolver),
+                    &registration.from,
+                )?;
+                match &registration.from {
+                    cml::Ref::Named(child_name) => {
+                        // Ensure there are no cycles between environments and resolvers.
+                        // Eg: an environment, assigned to a child, contains a resolver provided
+                        // by the same child.
+                        if let Some(child) = self.all_children.get(&child_name) {
+                            match &child.environment {
+                                Some(cml::Ref::Named(env_name))
+                                    if *env_name == environment.name =>
+                                {
+                                    return Err(Error::validate(format!(
+                                        "cycle detected between environment \"{}\" and child \"{}\"; \
+                                        environment is assigned to and depends on child for resolver \"{}\".",
+                                        &environment.name, &child.name, &registration.resolver)));
+                                }
+                                _ => {}
+                            }
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
         Ok(())
     }
 }
@@ -2094,6 +2150,118 @@ mod tests {
             }),
             result = Err(Error::validate_schema(CML_SCHEMA, concat!(
                 "This property is required at /environments/0/name",
+            ))),
+        },
+        test_cml_environment_with_resolvers => {
+            input = json!({
+                "environments": [
+                    {
+                        "name": "my_env",
+                        "extends": "realm",
+                        "resolvers": [
+                            {
+                                "resolver": "pkg_resolver",
+                                "from": "realm",
+                                "scheme": "fuchsia-pkg",
+                            }
+                        ]
+                    }
+                ],
+            }),
+            result = Ok(()),
+        },
+        test_cml_environment_with_resolvers_bad_scheme => {
+            input = json!({
+                "environments": [
+                    {
+                        "name": "my_env",
+                        "extends": "realm",
+                        "resolvers": [
+                            {
+                                "resolver": "pkg_resolver",
+                                "from": "realm",
+                                "scheme": "9scheme",
+                            }
+                        ]
+                    }
+                ],
+            }),
+            result = Err(Error::validate_schema(
+                CML_SCHEMA, "Pattern condition is not met at /environments/0/resolvers/0/scheme",
+            )),
+        },
+        test_cml_environment_with_resolvers_duplicate_scheme => {
+            input = json!({
+                "environments": [
+                    {
+                        "name": "my_env",
+                        "extends": "realm",
+                        "resolvers": [
+                            {
+                                "resolver": "pkg_resolver",
+                                "from": "realm",
+                                "scheme": "fuchsia-pkg",
+                            },
+                            {
+                                "resolver": "base_resolver",
+                                "from": "realm",
+                                "scheme": "fuchsia-pkg",
+                            }
+                        ]
+                    }
+                ],
+            }),
+            result = Err(Error::validate(concat!(
+                "scheme \"fuchsia-pkg\" for resolver \"base_resolver\" is already registered; ",
+                "previously registered to resolver \"pkg_resolver\"."
+            ))),
+        },
+        test_cml_environment_with_resolver_from_missing_child => {
+            input = json!({
+                "environments": [
+                    {
+                        "name": "my_env",
+                        "extends": "realm",
+                        "resolvers": [
+                            {
+                                "resolver": "pkg_resolver",
+                                "from": "#missing_child",
+                                "scheme": "fuchsia-pkg",
+                            }
+                        ]
+                    }
+                ]
+            }),
+            result = Err(Error::validate(
+                "\"pkg_resolver\" resolver source \"#missing_child\" does not appear in \"children\""
+            )),
+        },
+        test_cml_environment_with_resolver_cycle => {
+            input = json!({
+                "environments": [
+                    {
+                        "name": "my_env",
+                        "extends": "realm",
+                        "resolvers": [
+                            {
+                                "resolver": "pkg_resolver",
+                                "from": "#child",
+                                "scheme": "fuchsia-pkg",
+                            }
+                        ]
+                    }
+                ],
+                "children": [
+                    {
+                        "name": "child",
+                        "url": "fuchsia-pkg://child",
+                        "environment": "#my_env",
+                    }
+                ]
+            }),
+            result = Err(Error::validate(concat!(
+                "cycle detected between environment \"my_env\" and child \"child\"; ",
+                "environment is assigned to and depends on child for resolver \"pkg_resolver\"."
             ))),
         },
 
