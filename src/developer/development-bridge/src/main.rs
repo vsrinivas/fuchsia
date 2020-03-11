@@ -15,8 +15,10 @@ use {
     fidl_fuchsia_overnet::ServiceConsumerProxyInterface,
     fidl_fuchsia_overnet_protocol::NodeId,
     futures::{StreamExt, TryStreamExt},
+    signal_hook,
     std::env,
     std::process::Command,
+    std::sync::{Arc, Mutex},
 };
 
 mod args;
@@ -138,8 +140,9 @@ impl Cli {
             }
         });
 
+        let event_stream = proxy.take_event_stream();
         let term_thread = std::thread::spawn(move || {
-            let mut e = proxy.take_event_stream().take(1usize);
+            let mut e = event_stream.take(1usize);
             while let Some(result) = futures::executor::block_on(e.next()) {
                 match result {
                     Ok(ComponentControllerEvent::OnTerminated { exit_code }) => {
@@ -152,6 +155,24 @@ impl Cli {
                 }
             }
         });
+
+        let kill_arc = Arc::new(Mutex::new(false));
+        let arc_mut = kill_arc.clone();
+        unsafe {
+            signal_hook::register(signal_hook::SIGINT, move || {
+                let mut kill_started = arc_mut.lock().unwrap();
+                if !*kill_started {
+                    println!("\nCaught interrupt, killing remote component.");
+                    proxy.kill();
+                    *kill_started = true;
+                } else {
+                    // If for some reason the kill signal hangs, we want to give the user
+                    // a way to exit ffx.
+                    println!("Received second interrupt. Forcing exit...");
+                    std::process::exit(0);
+                }
+            });
+        }
 
         let _result = self
             .daemon_proxy
