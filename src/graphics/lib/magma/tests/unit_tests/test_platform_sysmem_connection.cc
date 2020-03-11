@@ -65,6 +65,9 @@ class TestPlatformSysmemConnection {
     uint32_t handle;
     uint32_t offset;
     EXPECT_EQ(MAGMA_STATUS_OK, collection->GetBufferHandle(0u, &handle, &offset).get());
+    magma_sysmem::PlatformBufferDescription::ColorSpace color_space;
+    EXPECT_TRUE(description->GetColorSpace(&color_space));
+    EXPECT_EQ(magma_sysmem::PlatformBufferDescription::kColorSpaceSrgb, color_space);
 
     auto platform_handle = magma::PlatformHandle::Create(handle);
     EXPECT_NE(nullptr, platform_handle);
@@ -119,6 +122,11 @@ class TestPlatformSysmemConnection {
 
     auto platform_handle = magma::PlatformHandle::Create(handle);
     EXPECT_NE(nullptr, platform_handle);
+
+    magma_sysmem::PlatformBufferDescription::ColorSpace color_space;
+    EXPECT_TRUE(description->GetColorSpace(&color_space));
+    // Could be one of a variety of color spaces.
+    EXPECT_NE(magma_sysmem::PlatformBufferDescription::kColorSpaceSrgb, color_space);
   }
 
   static void TestIntelTiling() {

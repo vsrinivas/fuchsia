@@ -64,6 +64,41 @@ class ZirconPlatformBufferDescription : public PlatformBufferDescription {
         return MAGMA_COHERENCY_DOMAIN_CPU;
     }
   }
+
+  bool GetColorSpace(ColorSpace* color_space_out) override {
+    if (!settings_.has_image_format_constraints) {
+      return false;
+    }
+    // Only report first colorspace for now.
+    if (settings_.image_format_constraints.color_spaces_count < 1)
+      return false;
+    switch (settings_.image_format_constraints.color_space[0].type) {
+      case llcpp::fuchsia::sysmem::ColorSpaceType::REC601_NTSC:
+        *color_space_out = kColorSpaceRec601Ntsc;
+        return true;
+      case llcpp::fuchsia::sysmem::ColorSpaceType::REC601_NTSC_FULL_RANGE:
+        *color_space_out = kColorSpaceRec601NtscFullRange;
+        return true;
+      case llcpp::fuchsia::sysmem::ColorSpaceType::REC601_PAL:
+        *color_space_out = kColorSpaceRec601Pal;
+        return true;
+      case llcpp::fuchsia::sysmem::ColorSpaceType::REC601_PAL_FULL_RANGE:
+        *color_space_out = kColorSpaceRec601PalFullRange;
+        return true;
+      case llcpp::fuchsia::sysmem::ColorSpaceType::REC709:
+        *color_space_out = kColorSpaceRec709;
+        return true;
+      case llcpp::fuchsia::sysmem::ColorSpaceType::REC2020:
+        *color_space_out = kColorSpaceRec2020;
+        return true;
+      case llcpp::fuchsia::sysmem::ColorSpaceType::SRGB:
+        *color_space_out = kColorSpaceSrgb;
+        return true;
+      default:
+        return false;
+    }
+  }
+
   bool GetPlanes(uint64_t width, uint64_t height, magma_image_plane_t* planes_out) const override {
     if (!settings_.has_image_format_constraints) {
       return false;
@@ -181,7 +216,6 @@ class ZirconPlatformBufferConstraints : public PlatformBufferConstraints {
     // Initialize to default, since the array constructor initializes to 0
     // normally.
     constraints = llcpp::fuchsia::sysmem::ImageFormatConstraints();
-    constraints.color_spaces_count = 1;
     constraints.min_coded_width = 0u;
     constraints.max_coded_width = 16384;
     constraints.min_coded_height = 0u;
@@ -192,27 +226,49 @@ class ZirconPlatformBufferConstraints : public PlatformBufferConstraints {
     constraints.max_bytes_per_row =
         std::numeric_limits<decltype(constraints.max_bytes_per_row)>::max();
 
+    bool is_yuv = false;
     switch (format_constraints->image_format) {
       case MAGMA_FORMAT_R8G8B8A8:
         constraints.pixel_format.type = llcpp::fuchsia::sysmem::PixelFormatType::R8G8B8A8;
-        constraints.color_space[0].type = llcpp::fuchsia::sysmem::ColorSpaceType::SRGB;
         break;
       case MAGMA_FORMAT_BGRA32:
         constraints.pixel_format.type = llcpp::fuchsia::sysmem::PixelFormatType::BGRA32;
-        constraints.color_space[0].type = llcpp::fuchsia::sysmem::ColorSpaceType::SRGB;
         break;
       case MAGMA_FORMAT_NV12:
         constraints.pixel_format.type = llcpp::fuchsia::sysmem::PixelFormatType::NV12;
-        constraints.color_space[0].type = llcpp::fuchsia::sysmem::ColorSpaceType::REC709;
+        is_yuv = true;
         break;
       case MAGMA_FORMAT_I420:
         constraints.pixel_format.type = llcpp::fuchsia::sysmem::PixelFormatType::I420;
-        constraints.color_space[0].type = llcpp::fuchsia::sysmem::ColorSpaceType::REC709;
+        is_yuv = true;
         break;
       default:
         return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Invalid format: %d",
                         format_constraints->image_format);
     }
+    if (is_yuv) {
+      uint32_t color_space_count = 0;
+      // This is the full list of formats currently supported by
+      // VkSamplerYcbcrModelConversion and VkSamplerYcbcrRange as of vulkan 1.1,
+      // restricted to 8-bit-per-component formats.
+      constraints.color_space[color_space_count++].type =
+          llcpp::fuchsia::sysmem::ColorSpaceType::REC601_NTSC;
+      constraints.color_space[color_space_count++].type =
+          llcpp::fuchsia::sysmem::ColorSpaceType::REC601_NTSC_FULL_RANGE;
+      constraints.color_space[color_space_count++].type =
+          llcpp::fuchsia::sysmem::ColorSpaceType::REC601_PAL;
+      constraints.color_space[color_space_count++].type =
+          llcpp::fuchsia::sysmem::ColorSpaceType::REC601_PAL_FULL_RANGE;
+      constraints.color_space[color_space_count++].type =
+          llcpp::fuchsia::sysmem::ColorSpaceType::REC709;
+      constraints.color_spaces_count = color_space_count;
+    } else {
+      uint32_t color_space_count = 0;
+      constraints.color_space[color_space_count++].type =
+          llcpp::fuchsia::sysmem::ColorSpaceType::SRGB;
+      constraints.color_spaces_count = color_space_count;
+    }
+
     constraints.pixel_format.has_format_modifier = true;
     if (!format_constraints->has_format_modifier) {
       constraints.pixel_format.format_modifier.value =
