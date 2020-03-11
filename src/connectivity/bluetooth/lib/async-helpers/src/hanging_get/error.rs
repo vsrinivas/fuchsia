@@ -1,6 +1,9 @@
-use {futures::channel::mpsc, thiserror::Error};
+use {
+    futures::channel::{mpsc, oneshot},
+    thiserror::Error,
+};
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, PartialEq)]
 pub enum HangingGetServerError {
     #[error("The HangingGetBroker associated with this handle has been dropped.")]
     NoBroker,
@@ -8,6 +11,8 @@ pub enum HangingGetServerError {
     RateLimit,
     #[error("An unknown error condition was encountered.")]
     Unknown,
+    #[error("Cannot have multiple concurrent observers for a single client")]
+    MultipleObservers,
 }
 
 impl From<mpsc::SendError> for HangingGetServerError {
@@ -19,5 +24,11 @@ impl From<mpsc::SendError> for HangingGetServerError {
         } else {
             HangingGetServerError::Unknown
         }
+    }
+}
+
+impl From<oneshot::Canceled> for HangingGetServerError {
+    fn from(_: oneshot::Canceled) -> Self {
+        HangingGetServerError::Unknown
     }
 }

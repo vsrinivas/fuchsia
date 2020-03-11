@@ -166,8 +166,8 @@ where
                 // An observation request has been made by a `Subscriber`.
                 observer = subscriptions.next() => {
                     match observer {
-                        Some(StreamItem::Item((key, observer))) => {
-                            self.inner.subscribe(key, observer);
+                        Some(StreamItem::Item((key, (observer, responder)))) => {
+                            let _ = responder.send(self.inner.subscribe(key, observer));
                         },
                         Some(StreamItem::Epitaph(key)) => {
                             self.inner.unsubscribe(key);
@@ -212,11 +212,13 @@ type NewSubscriberRequest<O> = oneshot::Sender<Subscriber<O>>;
 /// These observations will be fulfilled when the state changes or immediately the first time
 /// a `Subscriber` registers an observation.
 pub struct Subscriber<O> {
-    sender: mpsc::Sender<O>,
+    sender: mpsc::Sender<(O, oneshot::Sender<Result<(), HangingGetServerError>>)>,
 }
 
-impl<O> From<mpsc::Sender<O>> for Subscriber<O> {
-    fn from(sender: mpsc::Sender<O>) -> Self {
+impl<O> From<mpsc::Sender<(O, oneshot::Sender<Result<(), HangingGetServerError>>)>>
+    for Subscriber<O>
+{
+    fn from(sender: mpsc::Sender<(O, oneshot::Sender<Result<(), HangingGetServerError>>)>) -> Self {
         Self { sender }
     }
 }
@@ -227,7 +229,9 @@ impl<O> Subscriber<O> {
     /// * A `Subscriber` is sending observation requests at too high a rate.
     /// * The `HangingGetBroker` has been dropped by the server.
     pub async fn register(&mut self, observation: O) -> Result<(), HangingGetServerError> {
-        Ok(self.sender.send(observation).await?)
+        let (responder, response) = oneshot::channel();
+        self.sender.send((observation, responder)).await?;
+        Ok(response.await??)
     }
 }
 
@@ -331,7 +335,7 @@ where
     /// notified when the state is updated since last sent to an observer with the same
     /// key. All unresolved observers will be resolved to the same value immediately after the state
     /// is updated.
-    pub fn subscribe(&mut self, key: K, observer: O) {
+    pub fn subscribe(&mut self, key: K, observer: O) -> Result<(), HangingGetServerError> {
         self.observers.entry(key).or_insert_with(Window::new).observe(
             observer,
             &self.notify,
@@ -350,40 +354,45 @@ where
 /// `dirty` or not.
 struct Window<O> {
     dirty: bool,
-    observers: Vec<O>,
+    observer: Option<O>,
 }
 
 impl<O> Window<O> {
-    /// Create a new `Window` without any `observers` and an initial `dirty` value of `true`.
+    /// Create a new `Window` without an `observer` and an initial `dirty` value of `true`.
     pub fn new() -> Self {
-        Window { dirty: true, observers: vec![] }
+        Window { dirty: true, observer: None }
     }
 
     /// Register a new observer. The observer will be notified immediately if the `Window`
     /// has a dirty view of the state. The observer will be stored for future notification
     /// if the `Window` does not have a dirty view.
-    pub fn observe<S>(&mut self, observer: O, f: impl Fn(&S, O) -> bool, current_state: &S) {
-        self.observers.push(observer);
+    pub fn observe<S>(
+        &mut self,
+        observer: O,
+        f: impl Fn(&S, O) -> bool,
+        current_state: &S,
+    ) -> Result<(), HangingGetServerError> {
+        if self.observer.is_some() {
+            return Err(HangingGetServerError::MultipleObservers);
+        }
+        self.observer = Some(observer);
         if self.dirty {
             self.notify(f, current_state);
         }
+        Ok(())
     }
 
-    /// Notify observers _if and only if_ the `Window` has a dirty view of `state`.
-    /// If any observers were present and notified, the `Window` no longer has a dirty view
+    /// Notify the observer _if and only if_ the `Window` has a dirty view of `state`.
+    /// If an observer was present and notified, the `Window` no longer has a dirty view
     /// after this method returns.
     pub fn notify<S>(&mut self, f: impl Fn(&S, O) -> bool, state: &S) {
-        if self.observers.is_empty() {
-            self.dirty = true;
-        } else {
-            // `consumed` is false if _any_ observer returns false.
-            let consumed = self
-                .observers
-                .drain(..)
-                .fold(true, |consumed, observer| f(state, observer) && consumed);
-            if consumed {
-                self.dirty = false;
+        match self.observer.take() {
+            Some(observer) => {
+                if f(state, observer) {
+                    self.dirty = false;
+                }
             }
+            None => self.dirty = true,
         }
     }
 }
@@ -441,45 +450,45 @@ mod tests {
     fn window_add_first_observer_notifies() {
         let state = 0;
         let mut window = Window::new();
-        window.observe(TestObserver::expect_value(state), TestObserver::observe, &state);
+        window.observe(TestObserver::expect_value(state), TestObserver::observe, &state).unwrap();
     }
 
     #[test]
     fn window_add_second_observer_does_not_notify() {
         let state = 0;
         let mut window = Window::new();
-        window.observe(TestObserver::expect_value(state), TestObserver::observe, &state);
+        window.observe(TestObserver::expect_value(state), TestObserver::observe, &state).unwrap();
 
         // Second observer added without updating the value
-        window.observe(TestObserver::expect_no_value(), TestObserver::observe, &state);
+        window.observe(TestObserver::expect_no_value(), TestObserver::observe, &state).unwrap();
     }
 
     #[test]
     fn window_add_second_observer_notifies_after_notify_call() {
         let mut state = 0;
         let mut window = Window::new();
-        window.observe(TestObserver::expect_value(state), TestObserver::observe, &state);
+        window.observe(TestObserver::expect_value(state), TestObserver::observe, &state).unwrap();
 
         state = 1;
         window.notify(TestObserver::observe, &state);
 
         // Second observer added without updating the value
-        window.observe(TestObserver::expect_value(state), TestObserver::observe, &state);
+        window.observe(TestObserver::expect_value(state), TestObserver::observe, &state).unwrap();
     }
 
     #[test]
     fn window_add_multiple_observers_are_notified() {
         let mut state = 0;
         let mut window = Window::new();
-        window.observe(TestObserver::expect_value(state), TestObserver::observe, &state);
+        window.observe(TestObserver::expect_value(state), TestObserver::observe, &state).unwrap();
 
         // Second observer added without updating the value
         let o1 = TestObserver::expect_value(1);
-        let o2 = TestObserver::expect_value(1);
-        window.observe(o1.clone(), TestObserver::observe, &state);
-        window.observe(o2.clone(), TestObserver::observe, &state);
+        let o2 = TestObserver::expect_no_value();
+        window.observe(o1.clone(), TestObserver::observe, &state).unwrap();
+        let result = window.observe(o2.clone(), TestObserver::observe, &state);
+        assert_eq!(result.unwrap_err(), HangingGetServerError::MultipleObservers);
         assert!(!o1.has_value());
-        assert!(!o2.has_value());
         state = 1;
         window.notify(TestObserver::observe, &state);
     }
@@ -489,13 +498,13 @@ mod tests {
         let state = 0;
         let mut window = Window::new();
         let o = TestObserver::expect_value(state);
-        window.observe(o, TestObserver::observe, &state);
-        assert!(window.observers.is_empty());
+        window.observe(o, TestObserver::observe, &state).unwrap();
+        assert!(window.observer.is_none());
         assert!(!window.dirty);
         window.notify(TestObserver::observe, &state);
         assert!(window.dirty);
         let o = TestObserver::expect_value(state);
-        window.observe(o, TestObserver::observe, &state);
+        window.observe(o, TestObserver::observe, &state).unwrap();
         assert!(!window.dirty);
     }
 
@@ -505,7 +514,7 @@ mod tests {
         let mut window = Window::new();
 
         let o = TestObserver::expect_value(state);
-        window.observe(o, TestObserver::observe_incomplete, &state);
+        window.observe(o, TestObserver::observe_incomplete, &state).unwrap();
         assert!(window.dirty);
     }
 
@@ -514,14 +523,14 @@ mod tests {
         let mut hanging = HangingGet::new(0, TestObserver::observe);
         let o = TestObserver::expect_value(0);
         assert!(!o.has_value());
-        hanging.subscribe(0, o.clone());
+        hanging.subscribe(0, o.clone()).unwrap();
     }
 
     #[test]
     fn hanging_get_subscribe_then_set() {
         let mut hanging = HangingGet::new(0, TestObserver::observe);
         let o = TestObserver::expect_value(0);
-        hanging.subscribe(0, o.clone());
+        hanging.subscribe(0, o.clone()).unwrap();
 
         // No change without a new subscription
         hanging.set(1);
@@ -530,24 +539,24 @@ mod tests {
     #[test]
     fn hanging_get_subscribe_twice_then_set() {
         let mut hanging = HangingGet::new(0, TestObserver::observe);
-        hanging.subscribe(0, TestObserver::expect_value(0));
+        hanging.subscribe(0, TestObserver::expect_value(0)).unwrap();
 
-        hanging.subscribe(0, TestObserver::expect_value(1));
+        hanging.subscribe(0, TestObserver::expect_value(1)).unwrap();
         hanging.set(1);
     }
 
     #[test]
     fn hanging_get_subscribe_multiple_then_set() {
         let mut hanging = HangingGet::new(0, TestObserver::observe);
-        hanging.subscribe(0, TestObserver::expect_value(0));
+        hanging.subscribe(0, TestObserver::expect_value(0)).unwrap();
 
         // A second subscription with the same client key should not be notified
         let o2 = TestObserver::expect_value(1);
-        hanging.subscribe(0, o2.clone());
+        hanging.subscribe(0, o2.clone()).unwrap();
         assert!(!o2.has_value());
 
         // A third subscription will queue up along the other waiting observer
-        hanging.subscribe(0, TestObserver::expect_value(1));
+        hanging.subscribe(0, TestObserver::expect_no_value()).unwrap_err();
 
         // Set should notify all observers to the change
         hanging.set(1);
@@ -556,19 +565,18 @@ mod tests {
     #[test]
     fn hanging_get_subscribe_with_two_clients_then_set() {
         let mut hanging = HangingGet::new(0, TestObserver::observe);
-        hanging.subscribe(0, TestObserver::expect_value(0));
-        hanging.subscribe(0, TestObserver::expect_value(1));
-        hanging.subscribe(1, TestObserver::expect_value(0));
-        hanging.subscribe(1, TestObserver::expect_value(1));
+        hanging.subscribe(0, TestObserver::expect_value(0)).unwrap();
+        hanging.subscribe(0, TestObserver::expect_value(1)).unwrap();
+        hanging.subscribe(1, TestObserver::expect_value(0)).unwrap();
+        hanging.subscribe(1, TestObserver::expect_value(1)).unwrap();
         hanging.set(1);
     }
 
     #[test]
     fn hanging_get_unsubscribe() {
         let mut hanging = HangingGet::new(0, TestObserver::observe);
-        hanging.subscribe(0, TestObserver::expect_value(0));
-        hanging.subscribe(0, TestObserver::expect_no_value());
-        hanging.subscribe(0, TestObserver::expect_no_value());
+        hanging.subscribe(0, TestObserver::expect_value(0)).unwrap();
+        hanging.subscribe(0, TestObserver::expect_no_value()).unwrap();
         hanging.unsubscribe(0);
         hanging.set(1);
     }
@@ -577,14 +585,10 @@ mod tests {
     fn hanging_get_unsubscribe_one_of_many() {
         let mut hanging = HangingGet::new(0, TestObserver::observe);
 
-        hanging.subscribe(0, TestObserver::expect_value(0));
-        hanging.subscribe(0, TestObserver::expect_no_value());
-        hanging.subscribe(0, TestObserver::expect_no_value());
-        hanging.subscribe(1, TestObserver::expect_value(0));
-        hanging.subscribe(1, TestObserver::expect_no_value());
-
-        assert_eq!(hanging.observers.get(&0).unwrap().observers.len(), 2);
-        assert_eq!(hanging.observers.get(&1).unwrap().observers.len(), 1);
+        hanging.subscribe(0, TestObserver::expect_value(0)).unwrap();
+        hanging.subscribe(0, TestObserver::expect_no_value()).unwrap();
+        hanging.subscribe(1, TestObserver::expect_value(0)).unwrap();
+        hanging.subscribe(1, TestObserver::expect_no_value()).unwrap();
 
         // Unsubscribe one of the two observers
         hanging.unsubscribe(0);
