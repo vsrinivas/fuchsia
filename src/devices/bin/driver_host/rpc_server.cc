@@ -255,24 +255,8 @@ static zx_status_t fidl_directory_link(void* ctx, const char* src_data, size_t s
 
 static zx_status_t fidl_directory_watch(void* ctx, uint32_t mask, uint32_t options,
                                         zx_handle_t raw_watcher, fidl_txn_t* txn) {
-  auto conn = static_cast<DevfsConnection*>(ctx);
-  auto dev = conn->dev;
   zx::channel watcher(raw_watcher);
-
-  const zx::channel& rpc = *dev->coordinator_rpc;
-  if (!rpc.is_valid()) {
-    return fuchsia_io_DirectoryWatch_reply(txn, ZX_ERR_INTERNAL);
-  }
-
-  auto response = internal::fuchsia::device::manager::Coordinator::Call::DirectoryWatch(
-      zx::unowned_channel(rpc.get()), mask, options, std::move(watcher));
-  zx_status_t status = response.status();
-  zx_status_t call_status = ZX_OK;
-  if (status == ZX_OK && response.Unwrap()->result.is_err()) {
-    call_status = response.Unwrap()->result.err();
-  }
-
-  return fuchsia_io_DirectoryWatch_reply(txn, status != ZX_OK ? status : call_status);
+  return fuchsia_io_DirectoryWatch_reply(txn, ZX_ERR_NOT_SUPPORTED);
 }
 
 static const fuchsia_io_Directory_ops_t kDirectoryOps = []() {
