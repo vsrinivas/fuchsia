@@ -15,6 +15,7 @@
 
 #include "src/developer/feedback/feedback_agent/data_provider.h"
 #include "src/developer/feedback/feedback_agent/datastore.h"
+#include "src/developer/feedback/feedback_agent/device_id_provider.h"
 #include "src/developer/feedback/feedback_agent/inspect_manager.h"
 #include "src/lib/fxl/macros.h"
 
@@ -33,15 +34,20 @@ class FeedbackAgent {
                                                   inspect::Node* root_node);
 
   FeedbackAgent(async_dispatcher_t* dispatcher, inspect::Node* root_node,
-                std::unique_ptr<DataProvider> data_provider);
+                DeviceIdProvider device_id_provider, std::unique_ptr<DataProvider> data_provider);
 
   void SpawnSystemLogRecorder();
   void HandleDataProviderRequest(fidl::InterfaceRequest<fuchsia::feedback::DataProvider> request);
+  void HandleDeviceIdProviderRequest(
+      fidl::InterfaceRequest<fuchsia::feedback::DeviceIdProvider> request);
 
  private:
   async_dispatcher_t* dispatcher_;
   InspectManager inspect_manager_;
   std::unique_ptr<Datastore> datastore_;
+
+  DeviceIdProvider device_id_provider_;
+  fidl::BindingSet<fuchsia::feedback::DeviceIdProvider> device_id_provider_connections_;
 
   std::unique_ptr<DataProvider> data_provider_;
   fidl::BindingSet<fuchsia::feedback::DataProvider> data_provider_connections_;

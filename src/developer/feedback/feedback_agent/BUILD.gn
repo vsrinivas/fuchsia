@@ -48,7 +48,6 @@ executable("main") {
 
   deps = [
     ":constants",
-    ":device_id",
     ":feedback_agent_src",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/fidl/cpp",
@@ -134,6 +133,23 @@ source_set("data_provider") {
   ]
 }
 
+source_set("device_id_provider") {
+  sources = [
+    "device_id_provider.cc",
+    "device_id_provider.h",
+  ]
+
+  public_deps = [ "//sdk/fidl/fuchsia.feedback" ]
+
+  deps = [
+    ":constants",
+    "//src/lib/files",
+    "//src/lib/fxl",
+    "//src/lib/syslog/cpp",
+    "//src/lib/uuid",
+  ]
+}
+
 source_set("feedback_agent_src") {
   sources = [
     "feedback_agent.cc",
@@ -150,27 +166,12 @@ source_set("feedback_agent_src") {
 
   public_deps = [
     ":data_provider",
+    ":device_id_provider",
     ":inspect_manager",
     "//sdk/fidl/fuchsia.feedback",
     "//src/developer/feedback/utils:files",
     "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
-  ]
-}
-
-source_set("device_id") {
-  public = [ "device_id.h" ]
-
-  sources = [
-    "device_id.cc",
-    "device_id.h",
-  ]
-
-  deps = [
-    "//src/lib/files",
-    "//src/lib/fxl",
-    "//src/lib/syslog/cpp",
-    "//src/lib/uuid",
   ]
 }
 

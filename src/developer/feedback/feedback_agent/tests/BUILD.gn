@@ -51,7 +51,7 @@ test_package("feedback_agent_tests") {
       dest = "config_unittest"
     },
     {
-      name = "device_id_unittest"
+      name = "device_id_provider_unittest"
     },
     {
       name = "feedback_agent_integration_test"
@@ -136,7 +136,7 @@ test_package("feedback_agent_tests") {
     ":channel_provider_unittest",
     ":config_unittest",
     ":data_provider_unittest",
-    ":device_id_unittest",
+    ":device_id_provider_unittest",
     ":feedback_agent_integration_test",
     ":inspect_exe",
     ":inspect_ptr_unittest",
@@ -234,7 +234,7 @@ executable("data_provider_unittest") {
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/developer/feedback/feedback_agent:constants",
     "//src/developer/feedback/feedback_agent:data_provider",
-    "//src/developer/feedback/feedback_agent:device_id",
+    "//src/developer/feedback/feedback_agent:device_id_provider",
     "//src/developer/feedback/testing:cobalt_test_fixture",
     "//src/developer/feedback/testing:gmatchers",
     "//src/developer/feedback/testing:gpretty_printers",
@@ -255,13 +255,13 @@ executable("data_provider_unittest") {
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
-executable("device_id_unittest") {
+executable("device_id_provider_unittest") {
   testonly = true
 
-  sources = [ "device_id_unittest.cc" ]
+  sources = [ "device_id_provider_unittest.cc" ]
 
   deps = [
-    "//src/developer/feedback/feedback_agent:device_id",
+    "//src/developer/feedback/feedback_agent:device_id_provider",
     "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//src/lib/files:files",
     "//src/lib/uuid:uuid",
@@ -300,6 +300,7 @@ executable("feedback_agent_integration_test") {
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/syslog/cpp",
+    "//src/lib/uuid:uuid",
     "//src/ui/lib/escher/test:gtest_vulkan",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",

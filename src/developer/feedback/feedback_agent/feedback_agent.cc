@@ -23,6 +23,10 @@ namespace feedback {
 std::unique_ptr<FeedbackAgent> FeedbackAgent::TryCreate(
     async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
     inspect::Node* root_node) {
+  // We need to create a DeviceIdProvider before a DataProvider because the DeviceIdProvider will
+  // initialize the device id the DataProvider uses.
+  DeviceIdProvider device_id_provider(kDeviceIdPath);
+
   std::unique_ptr<feedback::DataProvider> data_provider =
       feedback::DataProvider::TryCreate(dispatcher, services);
   if (!data_provider) {
@@ -30,7 +34,8 @@ std::unique_ptr<FeedbackAgent> FeedbackAgent::TryCreate(
     return nullptr;
   }
 
-  return std::make_unique<FeedbackAgent>(dispatcher, root_node, std::move(data_provider));
+  return std::make_unique<FeedbackAgent>(dispatcher, root_node, device_id_provider,
+                                         std::move(data_provider));
 }
 
 namespace {
@@ -54,9 +59,11 @@ void MovePreviousLogs() {
 }  // namespace
 
 FeedbackAgent::FeedbackAgent(async_dispatcher_t* dispatcher, inspect::Node* root_node,
+                             DeviceIdProvider device_id_provider,
                              std::unique_ptr<DataProvider> data_provider)
     : dispatcher_(dispatcher),
       inspect_manager_(root_node),
+      device_id_provider_(device_id_provider),
       data_provider_(std::move(data_provider)) {
   // We need to move the logs from the previous boot before spawning the system log recorder process
   // so that the new process doesn't overwrite the old logs. Additionally, to guarantee the data
@@ -92,4 +99,12 @@ void FeedbackAgent::HandleDataProviderRequest(
       });
   inspect_manager_.IncrementNumDataProviderConnections();
 }
+
+void FeedbackAgent::HandleDeviceIdProviderRequest(
+    fidl::InterfaceRequest<fuchsia::feedback::DeviceIdProvider> request) {
+  device_id_provider_connections_.AddBinding(&device_id_provider_, std::move(request), dispatcher_);
+  // TODO(fxb/42590): track the number of connections to fuchsia.feeedback.DeviceIdProvider in
+  // Inspect.
+}
+
 }  // namespace feedback

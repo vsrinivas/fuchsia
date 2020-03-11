@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/feedback/feedback_agent/device_id.h"
+#include "src/developer/feedback/feedback_agent/device_id_provider.h"
 
 #include <memory>
+#include <optional>
+#include <string>
 
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
@@ -46,33 +48,51 @@ class DeviceIdTest : public testing::Test {
     ASSERT_TRUE(files::DeletePath(device_id_path_, /*recursive=*/false));
   }
 
+  std::optional<std::string> GetDeviceId() {
+    // Because the constructor of DeviceIdProvider does work to read/initialize the device id, we
+    // don't set up a |device_id_provider| until the file is in the state want .
+    DeviceIdProvider device_id_provider(device_id_path_);
+    return device_id_provider.GetId();
+  }
+
   std::string device_id_path_;
 
  private:
   files::ScopedTempDir tmp_dir_;
 };
 
-TEST_F(DeviceIdTest, LeaveFileUntouchedIfPresent) {
-  EXPECT_TRUE(InitializeDeviceId(device_id_path_));
+TEST_F(DeviceIdTest, Check_ValidDeviceIdPresent) {
+  SetDeviceIdFileContentsTo(kDefaultDeviceId);
+
+  const std::optional<std::string> device_id = GetDeviceId();
+
+  ASSERT_TRUE(device_id.has_value());
+  EXPECT_EQ(device_id.value(), kDefaultDeviceId);
   CheckDeviceIdFileContentsAre(kDefaultDeviceId);
 }
 
-TEST_F(DeviceIdTest, CheckFileIfNotPresent) {
-  DeleteDeviceIdFile();
-  EXPECT_TRUE(InitializeDeviceId(device_id_path_));
-  CheckDeviceIdFileContentsAreValid();
-}
-
-TEST_F(DeviceIdTest, OverwriteFileIfInvalid) {
+TEST_F(DeviceIdTest, Check_InvalidDeviceIdPresent) {
   SetDeviceIdFileContentsTo("INVALID ID");
-  EXPECT_TRUE(InitializeDeviceId(device_id_path_));
-  CheckDeviceIdFileContentsAreValid();
+
+  const std::optional<std::string> device_id = GetDeviceId();
+
+  ASSERT_TRUE(device_id.has_value());
+  CheckDeviceIdFileContentsAre(device_id.value());
 }
 
-TEST_F(DeviceIdTest, FailsIfPathIsADirectory) {
+TEST_F(DeviceIdTest, Check_FileNotPresent) {
+  DeleteDeviceIdFile();
+
+  const std::optional<std::string> device_id = GetDeviceId();
+
+  ASSERT_TRUE(device_id.has_value());
+  CheckDeviceIdFileContentsAre(device_id.value());
+}
+
+TEST_F(DeviceIdTest, Fail_IfPathIsADirectory) {
   DeleteDeviceIdFile();
   ASSERT_TRUE(files::CreateDirectory(device_id_path_));
-  EXPECT_FALSE(InitializeDeviceId(device_id_path_));
+  EXPECT_FALSE(GetDeviceId().has_value());
 }
 
 }  // namespace

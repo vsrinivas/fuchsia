@@ -23,7 +23,7 @@
 
 #include "src/developer/feedback/feedback_agent/config.h"
 #include "src/developer/feedback/feedback_agent/constants.h"
-#include "src/developer/feedback/feedback_agent/device_id.h"
+#include "src/developer/feedback/feedback_agent/device_id_provider.h"
 #include "src/developer/feedback/feedback_agent/tests/stub_board.h"
 #include "src/developer/feedback/feedback_agent/tests/stub_channel_provider.h"
 #include "src/developer/feedback/feedback_agent/tests/stub_inspect_archive.h"
@@ -224,7 +224,10 @@ class DataProviderTest : public UnitTestFixture, public CobaltTestFixture {
  public:
   DataProviderTest() : CobaltTestFixture(/*unit_test_fixture=*/this) {}
 
-  void SetUp() override { ASSERT_TRUE(InitializeDeviceId(kDeviceIdPath)); }
+  void SetUp() override {
+    // Initialize the device id before any DataProvider.
+    ASSERT_TRUE(DeviceIdProvider(kDeviceIdPath).GetId().has_value());
+  }
 
   void TearDown() override { ASSERT_TRUE(files::DeletePath(kDeviceIdPath, /*recursive=*/false)); }
 

@@ -40,6 +40,7 @@
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/substitute.h"
 #include "src/lib/syslog/cpp/logger.h"
+#include "src/lib/uuid/uuid.h"
 #include "src/ui/lib/escher/test/gtest_vulkan.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
@@ -54,6 +55,8 @@ using fuchsia::feedback::Data;
 using fuchsia::feedback::DataProvider_GetData_Result;
 using fuchsia::feedback::DataProviderPtr;
 using fuchsia::feedback::DataProviderSyncPtr;
+using fuchsia::feedback::DeviceIdProvider_GetId_Result;
+using fuchsia::feedback::DeviceIdProviderSyncPtr;
 using fuchsia::feedback::ImageEncoding;
 using fuchsia::feedback::Screenshot;
 using fuchsia::hwinfo::BoardInfo;
@@ -316,6 +319,17 @@ constexpr char kInspectJsonSchema[] = R"({
   },
   "uniqueItems": true
 })";
+
+TEST_F(FeedbackAgentIntegrationTest, GetId_CheckValue) {
+  DeviceIdProviderSyncPtr device_id_provider;
+  environment_services_->Connect(device_id_provider.NewRequest());
+
+  DeviceIdProvider_GetId_Result out_result;
+  ASSERT_EQ(device_id_provider->GetId(&out_result), ZX_OK);
+
+  ASSERT_TRUE(out_result.is_response());
+  EXPECT_TRUE(uuid::IsValid(out_result.response().ResultValue_()));
+}
 
 TEST_F(FeedbackAgentIntegrationTest, GetData_CheckKeys) {
   // We make sure the components serving the services GetData() connects to are up and running.
