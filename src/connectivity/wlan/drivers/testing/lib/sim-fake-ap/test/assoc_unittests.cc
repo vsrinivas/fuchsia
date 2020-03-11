@@ -23,6 +23,7 @@ class AssocTest : public ::testing::Test, public simulation::StationIfc {
  public:
   AssocTest() : ap_(&env_, kApBssid, kApSsid, kDefaultTxInfo.channel) { env_.AddStation(this); };
   void DisassocFromAp(const common::MacAddr& sta, uint16_t reason);
+  void FinishAuth();
   simulation::Environment env_;
   simulation::FakeAp ap_;
 
@@ -54,7 +55,10 @@ void AssocTest::Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& in
   validateChannel(info.channel);
   auto mgmt_frame = static_cast<const simulation::SimManagementFrame*>(frame);
 
-  if (mgmt_frame->MgmtFrameType() == simulation::SimManagementFrame::FRAME_TYPE_ASSOC_RESP) {
+  // Ignore the authentication responses.
+  if (mgmt_frame->MgmtFrameType() == simulation::SimManagementFrame::FRAME_TYPE_AUTH) {
+    return;
+  } else if (mgmt_frame->MgmtFrameType() == simulation::SimManagementFrame::FRAME_TYPE_ASSOC_RESP) {
     auto assoc_resp_frame = static_cast<const simulation::SimAssocRespFrame*>(mgmt_frame);
 
     EXPECT_EQ(assoc_resp_frame->src_addr_, kApBssid);
@@ -81,6 +85,14 @@ void AssocTest::ReceiveNotification(void* payload) {
   delete handler;
 }
 
+// Send a authentication request frame at the beginning to make the status for kClientMacAddr is
+// AUTHENTICATED in AP.
+void AssocTest::FinishAuth() {
+  simulation::SimAuthFrame auth_req_frame(kClientMacAddr, kApBssid, 1, simulation::AUTH_TYPE_OPEN,
+                                          WLAN_STATUS_CODE_SUCCESS);
+  env_.Tx(&auth_req_frame, kDefaultTxInfo, this);
+}
+
 /* Verify that association requests that are not properly addressed are ignored.
 
    Timeline for this test:
@@ -89,8 +101,6 @@ void AssocTest::ReceiveNotification(void* payload) {
  */
 
 TEST_F(AssocTest, RefuseIfNotAuthenticated) {
-  ap_.SetAuthType(simulation::AUTH_TYPE_OPEN);
-
   auto handler = new std::function<void()>;
   simulation::SimAssocReqFrame assoc_req_frame(kClientMacAddr, kApBssid);
   *handler = std::bind(&simulation::Environment::Tx, &env_, &assoc_req_frame, kDefaultTxInfo, this);
@@ -138,6 +148,7 @@ TEST_F(AssocTest, IgnoredRequests) {
    150 usec: send assoc request
  */
 TEST_F(AssocTest, BasicUse) {
+  FinishAuth();
   // Schedule first request
   auto handler = new std::function<void()>;
   simulation::SimAssocReqFrame assoc_req_frame(kClientMacAddr, kApBssid);
@@ -173,6 +184,7 @@ TEST_F(AssocTest, BasicUse) {
    1s: send assoc request
  */
 TEST_F(AssocTest, IgnoreAssociations) {
+  FinishAuth();
   // Schedule assoc req
   auto handler = new std::function<void()>;
   simulation::SimAssocReqFrame assoc_req_frame(kClientMacAddr, kApBssid);
@@ -218,6 +230,7 @@ TEST_F(AssocTest, RejectAssociations) {
    2s: send disassoc request
  */
 TEST_F(AssocTest, DisassocFromSta) {
+  FinishAuth();
   // Schedule assoc req
   auto handler = new std::function<void()>;
   simulation::SimAssocReqFrame assoc_req_frame(kClientMacAddr, kApBssid);
@@ -250,6 +263,7 @@ TEST_F(AssocTest, DisassocFromSta) {
    2s: send disassoc request from AP
  */
 TEST_F(AssocTest, DisassocFromAp) {
+  FinishAuth();
   // Schedule assoc req
   auto handler = new std::function<void()>;
   simulation::SimAssocReqFrame assoc_req_frame(kClientMacAddr, kApBssid);

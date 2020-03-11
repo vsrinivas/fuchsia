@@ -29,7 +29,7 @@ class FakeAp : public StationIfc {
   enum AssocHandling { ASSOC_ALLOWED, ASSOC_IGNORED, ASSOC_REJECTED };
 
   struct Security {
-    enum SimAuthType auth_handling_mode_ = AUTH_TYPE_DISABLED;
+    enum SimAuthType auth_handling_mode_ = AUTH_TYPE_OPEN;
     enum ieee80211_cipher_suite cipher_suite;
 
     static constexpr size_t kMaxKeyLen = 32;
@@ -77,9 +77,6 @@ class FakeAp : public StationIfc {
 
   // When this is not called, the default is open network.
   zx_status_t SetSecurity(struct Security sec);
-
-  // Set AP authentication type
-  zx_status_t SetAuthType(SimAuthType auth_type);
 
   // Start beaconing. Sends first beacon immediately and schedules beacons to occur every
   // beacon_period until disabled.

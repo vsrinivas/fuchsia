@@ -139,7 +139,6 @@ class SimFirmware {
     uint16_t auth_type;
 
     uint64_t auth_timer_id;
-    wlan::CapabilityInfo bss_capability;
   };
 
   struct PacketBuf {

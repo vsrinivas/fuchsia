@@ -185,7 +185,7 @@ class SimDisassocReqFrame : public SimManagementFrame {
 };
 
 // AUTH_TYPE used by AP and authentication frame
-enum SimAuthType { AUTH_TYPE_DISABLED, AUTH_TYPE_OPEN, AUTH_TYPE_SHARED_KEY };
+enum SimAuthType { AUTH_TYPE_OPEN, AUTH_TYPE_SHARED_KEY };
 
 // Only one type of authentication frame for request and response
 class SimAuthFrame : public SimManagementFrame {

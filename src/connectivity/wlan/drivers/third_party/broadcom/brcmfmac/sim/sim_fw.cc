@@ -532,7 +532,6 @@ void SimFirmware::AssocScanDone() {
   // For now, just pick the first AP. The real firmware can select based on signal strength and
   // band, but since wlanstack makes its own decision, we won't bother to model that here for now.
   ScanResult& ap = assoc_state_.scan_results.front();
-  auth_state_.bss_capability.set_val(ap.bss_capability.val());
 
   assoc_opts->channel = ap.channel;
   assoc_opts->bssid = ap.bssid;
@@ -554,42 +553,26 @@ void SimFirmware::AssocScanDone() {
   hw_.SetChannel(assoc_state_.opts->channel);
   hw_.EnableRx();
 
-  // Check the privacy bit to see whether AP is using OPEN mode for authentication
-  if (auth_state_.bss_capability.privacy()) {
-    AuthStart();
-  } else {
-    AssocStart();
-  }
+  AuthStart();
 }
 
 void SimFirmware::AssocClearContext() {
-  auth_state_.bss_capability.clear();
+  assoc_state_.state = AssocState::NOT_ASSOCIATED;
+  auth_state_.state = AuthState::NOT_AUTHENTICATED;
   assoc_state_.opts = nullptr;
   assoc_state_.scan_results.clear();
   // Clear out the channel setting
   iface_tbl_[assoc_state_.ifidx].chanspec = 0;
 }
 
-void SimFirmware::AuthHandleFailure() {
-  auth_state_.state = AuthState::NOT_AUTHENTICATED;
-  SendSimpleEventToDriver(BRCMF_E_SET_SSID, BRCMF_E_STATUS_FAIL, assoc_state_.ifidx);
-  AssocClearContext();
-}
-
 void SimFirmware::AssocHandleFailure() {
   if (assoc_state_.num_attempts >= assoc_max_retries_) {
     SendSimpleEventToDriver(BRCMF_E_SET_SSID, BRCMF_E_STATUS_FAIL, assoc_state_.ifidx);
     AssocClearContext();
-    assoc_state_.state = AssocState::NOT_ASSOCIATED;
-    auth_state_.state = AuthState::NOT_AUTHENTICATED;
   } else {
     assoc_state_.num_attempts++;
-    if (auth_state_.bss_capability.privacy()) {
-      auth_state_.state = AuthState::NOT_AUTHENTICATED;
-      AuthStart();
-    } else {
-      AssocStart();
-    }
+    auth_state_.state = AuthState::NOT_AUTHENTICATED;
+    AuthStart();
   }
 }
 
@@ -598,7 +581,7 @@ void SimFirmware::AuthStart() {
   common::MacAddr bssid(assoc_state_.opts->bssid);
 
   auto callback = new std::function<void()>;
-  *callback = std::bind(&SimFirmware::AuthHandleFailure, this);
+  *callback = std::bind(&SimFirmware::AssocHandleFailure, this);
   hw_.RequestCallback(callback, kAuthTimeout, &auth_state_.auth_timer_id);
 
   ZX_ASSERT(auth_state_.state == AuthState::NOT_AUTHENTICATED);
@@ -612,8 +595,8 @@ void SimFirmware::AuthStart() {
   }
 
   simulation::SimAuthFrame auth_req_frame(srcAddr, bssid, 1, auth_type, WLAN_AUTH_RESULT_SUCCESS);
-  hw_.Tx(&auth_req_frame);
   auth_state_.state = AuthState::EXPECTING_SECOND;
+  hw_.Tx(&auth_req_frame);
 }
 
 void SimFirmware::RxAuthResp(const simulation::SimAuthFrame* frame) {
@@ -622,31 +605,29 @@ void SimFirmware::RxAuthResp(const simulation::SimAuthFrame* frame) {
       auth_state_.state == AuthState::AUTHENTICATED) {
     return;
   }
-
   // Ignore if this is not intended for us
   common::MacAddr mac_addr(mac_addr_);
   if (frame->dst_addr_ != mac_addr) {
     return;
   }
-
   // Ignore if this is not from the bssid with which we were trying to authenticate
   if (frame->src_addr_ != assoc_state_.opts->bssid) {
     return;
   }
-
-  // Response received, cancel timer
-  hw_.CancelCallback(auth_state_.auth_timer_id);
 
   // It should not be an auth req frame if its dst addr is a client
   if (frame->seq_num_ != 2 && frame->seq_num_ != 4) {
     return;
   }
 
+  // Response received, cancel timer
+  hw_.CancelCallback(auth_state_.auth_timer_id);
+
   if (auth_state_.auth_type == BRCMF_AUTH_MODE_OPEN) {
     ZX_ASSERT(auth_state_.state == AuthState::EXPECTING_SECOND);
     ZX_ASSERT(frame->seq_num_ == 2);
     if (frame->status_ == WLAN_AUTH_RESULT_REFUSED) {
-      AuthHandleFailure();
+      AssocHandleFailure();
       return;
     }
     auth_state_.state = AuthState::AUTHENTICATED;
@@ -664,7 +645,7 @@ void SimFirmware::RxAuthResp(const simulation::SimAuthFrame* frame) {
       // If we receive the second auth frame when we are expecting it, we send out the third one and
       // set another timer for it.
       auto callback = new std::function<void()>;
-      *callback = std::bind(&SimFirmware::AuthHandleFailure, this);
+      *callback = std::bind(&SimFirmware::AssocHandleFailure, this);
       hw_.RequestCallback(callback, kAuthTimeout, &auth_state_.auth_timer_id);
 
       auth_state_.state = AuthState::EXPECTING_FOURTH;
@@ -718,6 +699,7 @@ int16_t SimFirmware::GetSoftAPIfidx() {
   }
   return -1;
 }
+
 // This routine for now only handles Disassoc Request meant for the SoftAP IF.
 void SimFirmware::RxDisassocReq(const simulation::SimDisassocReqFrame* frame) {
   BRCMF_DBG(SIM, "Disassoc from %s for %s reason: %d\n", MACSTR(frame->src_addr_),

@@ -72,25 +72,11 @@ zx_status_t FakeAp::SetSecurity(struct Security sec) {
     return ZX_ERR_BAD_STATE;
 
   security_ = sec;
+  if (sec.cipher_suite != IEEE80211_CIPHER_SUITE_NONE)
+    beacon_state_.beacon_frame_.capability_info_.set_privacy(1);
   if (sec.cipher_suite == IEEE80211_CIPHER_SUITE_WEP_40 ||
       sec.cipher_suite == IEEE80211_CIPHER_SUITE_TKIP ||
       sec.cipher_suite == IEEE80211_CIPHER_SUITE_WEP_104) {
-    // Here we set auth_type to AUTH_TYPE_OPEN as default, this can be manually changed by calling
-    // SetAuthType().
-    SetAuthType(AUTH_TYPE_OPEN);
-  }
-
-  return ZX_OK;
-}
-
-zx_status_t FakeAp::SetAuthType(SimAuthType auth_type) {
-  if (!clients_.empty())
-    return ZX_ERR_BAD_STATE;
-  security_.auth_handling_mode_ = auth_type;
-  if (auth_type == AUTH_TYPE_DISABLED) {
-    beacon_state_.beacon_frame_.capability_info_.set_privacy(0);
-  } else {
-    beacon_state_.beacon_frame_.capability_info_.set_privacy(1);
   }
 
   return ZX_OK;
@@ -243,26 +229,25 @@ void FakeAp::RxMgmtFrame(const SimManagementFrame* mgmt_frame) {
       }
 
       auto client = FindClient(assoc_req_frame->src_addr_);
+
+      if (!client) {
+        ScheduleAssocResp(WLAN_STATUS_CODE_REFUSED, assoc_req_frame->src_addr_);
+        return;
+      }
+
       // Make sure the client is not associated.
-      if (client && client->status_ == Client::ASSOCIATED) {
+      if (client->status_ == Client::ASSOCIATED) {
         ScheduleAssocResp(WLAN_STATUS_CODE_REFUSED_TEMPORARILY, assoc_req_frame->src_addr_);
         return;
       }
 
-      // If authentication is needed, we do one more check below
-      if (security_.auth_handling_mode_ != AUTH_TYPE_DISABLED) {
-        // if client exist, we remove if from the list, no matter it's AUTHENTICATED OR NOT
-        if (!client || client->status_ != Client::AUTHENTICATED) {
-          // If the status of this client is AUTHENTICATING, we also remove it from the list.
-          if (client)
-            RemoveClient(assoc_req_frame->src_addr_);
-          ScheduleAssocResp(WLAN_STATUS_CODE_REFUSED, assoc_req_frame->src_addr_);
-          return;
-        }
+      if (client->status_ != Client::AUTHENTICATED) {
+        // If the status of this client is AUTHENTICATING, we also remove it from the list.
+        RemoveClient(assoc_req_frame->src_addr_);
+        ScheduleAssocResp(WLAN_STATUS_CODE_REFUSED, assoc_req_frame->src_addr_);
+        return;
       }
 
-      if (!client)
-        client = AddClient(assoc_req_frame->src_addr_);
       client->status_ = Client::ASSOCIATED;
       ScheduleAssocResp(WLAN_STATUS_CODE_SUCCESS, assoc_req_frame->src_addr_);
       break;
@@ -288,12 +273,6 @@ void FakeAp::RxMgmtFrame(const SimManagementFrame* mgmt_frame) {
     }
 
     case SimManagementFrame::FRAME_TYPE_AUTH: {
-      // If AP is open, ignore any authentication, clients should get this information from beacon
-      // or probe request.
-      if (security_.auth_handling_mode_ == AUTH_TYPE_DISABLED) {
-        return;
-      }
-
       auto auth_req_frame = static_cast<const SimAuthFrame*>(mgmt_frame);
       if (auth_req_frame->dst_addr_ != bssid_) {
         return;

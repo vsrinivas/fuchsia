@@ -285,7 +285,7 @@ void AuthTest::OnAssocConf(const wlanif_assoc_confirm_t* resp) {
 TEST_F(AuthTest, WEP104) {
   Init();
   sec_type_ = SEC_TYPE_WEP_SHARED104;
-  ap_.SetAuthType(simulation::AUTH_TYPE_OPEN);
+  ap_.SetSecurity({.auth_handling_mode_ = simulation::AUTH_TYPE_OPEN});
   ScheduleEvent(&AuthTest::StartAuth, zx::msec(10));
 
   env_->Run();
@@ -301,7 +301,7 @@ TEST_F(AuthTest, WEP104) {
 TEST_F(AuthTest, WEP40) {
   Init();
   sec_type_ = SEC_TYPE_WEP_SHARED40;
-  ap_.SetAuthType(simulation::AUTH_TYPE_SHARED_KEY);
+  ap_.SetSecurity({.auth_handling_mode_ = simulation::AUTH_TYPE_SHARED_KEY});
   ScheduleEvent(&AuthTest::StartAuth, zx::msec(10));
 
   env_->Run();
@@ -316,7 +316,7 @@ TEST_F(AuthTest, WEP40) {
 TEST_F(AuthTest, WEPOPEN) {
   Init();
   sec_type_ = SEC_TYPE_WEP_OPEN;
-  ap_.SetAuthType(simulation::AUTH_TYPE_OPEN);
+  ap_.SetSecurity({.auth_handling_mode_ = simulation::AUTH_TYPE_OPEN});
   ScheduleEvent(&AuthTest::StartAuth, zx::msec(10));
 
   env_->Run();
@@ -329,16 +329,25 @@ TEST_F(AuthTest, WEPOPEN) {
 TEST_F(AuthTest, IgnoreTest) {
   Init();
   sec_type_ = SEC_TYPE_WEP_OPEN;
-  ap_.SetAuthType(simulation::AUTH_TYPE_OPEN);
+  ap_.SetSecurity({.auth_handling_mode_ = simulation::AUTH_TYPE_OPEN});
   ap_.SetAssocHandling(simulation::FakeAp::ASSOC_IGNORED);
 
   ScheduleEvent(&AuthTest::StartAuth, zx::msec(10));
 
   env_->Run();
 
-  // The auth request frames should be ignored and the timeout in sim-fw will be triggered
-  // AuthHandleFailure() which will send an BRCMF_E_SET_SSID event with status BRCMF_E_STATUS_FAIL.
-  expect_auth_frames_.emplace_back(1, simulation::AUTH_TYPE_OPEN, WLAN_AUTH_RESULT_SUCCESS);
+  // The auth request frames should be ignored and the auth timeout in sim-fw will be triggered,
+  // AuthHandleFailure() will retry for "max_retries" times and will send an BRCMF_E_SET_SSID event
+  // with status BRCMF_E_STATUS_FAIL finally.
+  uint32_t max_retries = 0;
+
+  brcmf_simdev* sim = device_->GetSim();
+  EXPECT_EQ(ZX_OK, sim->sim_fw->IovarsGet(client_ifc_->iface_id_, "assoc_retry_max", &max_retries,
+                                          sizeof(max_retries)));
+
+  for (uint32_t i = 0; i < max_retries + 1; i++) {
+    expect_auth_frames_.emplace_back(1, simulation::AUTH_TYPE_OPEN, WLAN_AUTH_RESULT_SUCCESS);
+  }
   VerifyAuthFrames();
   EXPECT_EQ(assoc_status_, WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
 }

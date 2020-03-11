@@ -42,8 +42,12 @@ class AssocTest : public SimTest {
   // Send repeated association responses
   void SendMultipleResp();
 
+  // Send one authentication response to help client passing through authentication process
+  void SendOpenAuthResp();
+
   // Send Disassociate request to SIM FW
   void DisassocClient(const common::MacAddr& mac_addr);
+
   // Pretend to transmit Disassoc from AP
   void TxFakeDisassocReq();
 
@@ -60,6 +64,8 @@ class AssocTest : public SimTest {
 
     // An optional function to call when we see the association request go out
     std::optional<std::function<void()>> on_assoc_req_callback;
+    // An optional function to call when we see the authentication request go out
+    std::optional<std::function<void()>> on_auth_req_callback;
 
     // Track number of association responses
     size_t assoc_resp_count;
@@ -87,6 +93,7 @@ class AssocTest : public SimTest {
 
   // All of the association responses seen in the environment
   std::list<AssocRespInfo> assoc_responses_;
+  std::list<uint16_t> auth_resp_status_list_;
 
   // Trigger to start disassociation. If set to true, disassociation is started
   // soon after association completes.
@@ -170,6 +177,20 @@ void AssocTest::Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& in
                                .dst = assoc_resp->dst_addr_,
                                .status = assoc_resp->status_};
     assoc_responses_.push_back(resp_info);
+  }
+
+  if (mgmt_frame->MgmtFrameType() == simulation::SimManagementFrame::FRAME_TYPE_AUTH) {
+    auto auth_frame = static_cast<const simulation::SimAuthFrame*>(mgmt_frame);
+    // When we receive a authentication request, try to call the callback.
+    if (auth_frame->seq_num_ == 1) {
+      if (context_.on_auth_req_callback) {
+        (*context_.on_auth_req_callback)();
+      }
+      return;
+    }
+
+    if (auth_frame->seq_num_ == 2 || auth_frame->seq_num_ == 4)
+      auth_resp_status_list_.push_back(auth_frame->status_);
   }
 }
 
@@ -463,8 +484,9 @@ TEST_F(AssocTest, ApRejectedRequest) {
                          sizeof(max_assoc_retries));
   ASSERT_NE(max_assoc_retries, 0U);
   // We should have gotten a rejection from the fake AP
-  EXPECT_EQ(assoc_responses_.size(), max_assoc_retries + 1);
-  EXPECT_EQ(assoc_responses_.front().status, WLAN_STATUS_CODE_REFUSED);
+  EXPECT_EQ(auth_resp_status_list_.size(), max_assoc_retries + 1);
+  EXPECT_EQ(auth_resp_status_list_.front(), WLAN_STATUS_CODE_REFUSED);
+  EXPECT_EQ(assoc_responses_.size(), 0U);
 
   // Make sure we got our response from the driver
   EXPECT_EQ(context_.assoc_resp_count, 1U);
@@ -533,6 +555,16 @@ void AssocTest::SendMultipleResp() {
   }
 }
 
+void AssocTest::SendOpenAuthResp() {
+  uint8_t mac_buf[ETH_ALEN];
+  brcmf_simdev* sim = device_->GetSim();
+  sim->sim_fw->IovarsGet(client_ifc_->iface_id_, "cur_etheraddr", mac_buf, ETH_ALEN);
+  common::MacAddr my_mac(mac_buf);
+  simulation::SimAuthFrame auth_resp(context_.bssid, my_mac, 2, simulation::AUTH_TYPE_OPEN,
+                                     WLAN_AUTH_RESULT_SUCCESS);
+  env_->Tx(&auth_resp, context_.tx_info, this);
+}
+
 // Verify that responses after association are ignored
 TEST_F(AssocTest, IgnoreExtraResp) {
   // Create our device instance
@@ -550,6 +582,7 @@ TEST_F(AssocTest, IgnoreExtraResp) {
 
   context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
   context_.on_assoc_req_callback = std::bind(&AssocTest::SendMultipleResp, this);
+  context_.on_auth_req_callback = std::bind(&AssocTest::SendOpenAuthResp, this);
 
   ScheduleCall(&AssocTest::StartAssoc, zx::msec(10));
 
@@ -702,8 +735,9 @@ TEST_F(AssocTest, AssocMaxRetries) {
                          sizeof(max_assoc_retries));
   ASSERT_EQ(max_assoc_retries, assoc_retries);
   // Should have received as many rejections as the configured # of retries.
-  EXPECT_EQ(assoc_responses_.size(), max_assoc_retries + 1);
-  EXPECT_EQ(assoc_responses_.front().status, WLAN_STATUS_CODE_REFUSED);
+  EXPECT_EQ(auth_resp_status_list_.size(), max_assoc_retries + 1);
+  EXPECT_EQ(auth_resp_status_list_.front(), WLAN_STATUS_CODE_REFUSED);
+  EXPECT_EQ(assoc_responses_.size(), 0U);
 
   // Make sure we got our response from the driver
   EXPECT_EQ(context_.assoc_resp_count, 1U);
@@ -762,8 +796,8 @@ TEST_F(AssocTest, AssocNoRetries) {
                          sizeof(max_assoc_retries));
   ASSERT_EQ(max_assoc_retries, assoc_retries);
   // We should have gotten a rejection from the fake AP
-  EXPECT_EQ(assoc_responses_.size(), 1U);
-  EXPECT_EQ(assoc_responses_.front().status, WLAN_STATUS_CODE_REFUSED);
+  EXPECT_EQ(auth_resp_status_list_.size(), 1U);
+  EXPECT_EQ(auth_resp_status_list_.front(), WLAN_STATUS_CODE_REFUSED);
 
   // Make sure we got our response from the driver
   EXPECT_EQ(context_.assoc_resp_count, 1U);

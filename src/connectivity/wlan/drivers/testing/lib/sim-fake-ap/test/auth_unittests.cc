@@ -84,7 +84,7 @@ void AuthTest::ReceiveNotification(void* payload) {
 }
 
 TEST_F(AuthTest, OpenSystemBasicUse) {
-  ap_.SetAuthType(simulation::AUTH_TYPE_OPEN);
+  ap_.SetSecurity({.auth_handling_mode_ = simulation::AUTH_TYPE_OPEN});
 
   auto handler = new std::function<void()>;
   simulation::SimAuthFrame auth_req_frame(kClientMacAddr, kApBssid, 1, simulation::AUTH_TYPE_OPEN,
@@ -100,7 +100,7 @@ TEST_F(AuthTest, OpenSystemBasicUse) {
 }
 
 TEST_F(AuthTest, SharedKeyBasicUse) {
-  ap_.SetAuthType(simulation::AUTH_TYPE_SHARED_KEY);
+  ap_.SetSecurity({.auth_handling_mode_ = simulation::AUTH_TYPE_SHARED_KEY});
 
   auto handler = new std::function<void()>;
   simulation::SimAuthFrame auth_req_frame1(
@@ -123,7 +123,7 @@ TEST_F(AuthTest, SharedKeyBasicUse) {
 }
 
 TEST_F(AuthTest, OpenSystemIgnoreTest) {
-  ap_.SetAuthType(simulation::AUTH_TYPE_OPEN);
+  ap_.SetSecurity({.auth_handling_mode_ = simulation::AUTH_TYPE_OPEN});
 
   auto handler = new std::function<void()>;
   simulation::SimAuthFrame auth_req_frame1(kClientMacAddr, kApBssid, 3, simulation::AUTH_TYPE_OPEN,
@@ -156,7 +156,7 @@ TEST_F(AuthTest, OpenSystemIgnoreTest) {
 }
 
 TEST_F(AuthTest, SharedKeyIgnoreTest) {
-  ap_.SetAuthType(simulation::AUTH_TYPE_SHARED_KEY);
+  ap_.SetSecurity({.auth_handling_mode_ = simulation::AUTH_TYPE_SHARED_KEY});
   // Wrong bssid frame should be ignore
   auto handler = new std::function<void()>;
   simulation::SimAuthFrame wrong_bssid_frame(
@@ -201,7 +201,7 @@ TEST_F(AuthTest, SharedKeyIgnoreTest) {
 }
 
 TEST_F(AuthTest, OpenSystemRefuseTest) {
-  ap_.SetAuthType(simulation::AUTH_TYPE_OPEN);
+  ap_.SetSecurity({.auth_handling_mode_ = simulation::AUTH_TYPE_OPEN});
 
   auto handler = new std::function<void()>;
   simulation::SimAuthFrame wrong_type_frame(
@@ -218,7 +218,7 @@ TEST_F(AuthTest, OpenSystemRefuseTest) {
 }
 
 TEST_F(AuthTest, SharedKeyRefuseTest) {
-  ap_.SetAuthType(simulation::AUTH_TYPE_SHARED_KEY);
+  ap_.SetSecurity({.auth_handling_mode_ = simulation::AUTH_TYPE_SHARED_KEY});
 
   auto handler = new std::function<void()>;
   simulation::SimAuthFrame wrong_type_frame(kClientMacAddr, kApBssid, 1, simulation::AUTH_TYPE_OPEN,
