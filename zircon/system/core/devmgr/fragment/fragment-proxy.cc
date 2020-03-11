@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "component-proxy.h"
+#include "fragment-proxy.h"
 
 #include <lib/sync/completion.h>
 
@@ -10,13 +10,13 @@
 
 #include <ddk/debug.h>
 
-namespace component {
+namespace fragment {
 
-zx_status_t ComponentProxy::Create(void* ctx, zx_device_t* parent, const char* name,
-                                   const char* args, zx_handle_t raw_rpc) {
+zx_status_t FragmentProxy::Create(void* ctx, zx_device_t* parent, const char* name,
+                                  const char* args, zx_handle_t raw_rpc) {
   zx::channel rpc(raw_rpc);
-  auto dev = std::make_unique<ComponentProxy>(parent, std::move(rpc));
-  auto status = dev->DdkAdd("component-proxy", DEVICE_ADD_NON_BINDABLE);
+  auto dev = std::make_unique<FragmentProxy>(parent, std::move(rpc));
+  auto status = dev->DdkAdd("fragment-proxy", DEVICE_ADD_NON_BINDABLE);
   if (status == ZX_OK) {
     // devmgr owns the memory now
     __UNUSED auto ptr = dev.release();
@@ -24,7 +24,7 @@ zx_status_t ComponentProxy::Create(void* ctx, zx_device_t* parent, const char* n
   return status;
 }
 
-zx_status_t ComponentProxy::DdkGetProtocol(uint32_t proto_id, void* out) {
+zx_status_t FragmentProxy::DdkGetProtocol(uint32_t proto_id, void* out) {
   auto* proto = static_cast<ddk::AnyProtocol*>(out);
   proto->ctx = this;
 
@@ -77,14 +77,14 @@ zx_status_t ComponentProxy::DdkGetProtocol(uint32_t proto_id, void* out) {
   }
 }
 
-void ComponentProxy::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+void FragmentProxy::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
 
-void ComponentProxy::DdkRelease() { delete this; }
+void FragmentProxy::DdkRelease() { delete this; }
 
-zx_status_t ComponentProxy::Rpc(const ProxyRequest* req, size_t req_length, ProxyResponse* resp,
-                                size_t resp_length, const zx_handle_t* in_handles,
-                                size_t in_handle_count, zx_handle_t* out_handles,
-                                size_t out_handle_count, size_t* out_actual) {
+zx_status_t FragmentProxy::Rpc(const ProxyRequest* req, size_t req_length, ProxyResponse* resp,
+                               size_t resp_length, const zx_handle_t* in_handles,
+                               size_t in_handle_count, zx_handle_t* out_handles,
+                               size_t out_handle_count, size_t* out_actual) {
   uint32_t resp_size, handle_count;
 
   zx_channel_call_args_t args = {
@@ -128,9 +128,8 @@ fail:
   return status;
 }
 
-zx_status_t ComponentProxy::AmlogicCanvasConfig(zx::vmo vmo, size_t offset,
-                                                const canvas_info_t* info,
-                                                uint8_t* out_canvas_idx) {
+zx_status_t FragmentProxy::AmlogicCanvasConfig(zx::vmo vmo, size_t offset,
+                                               const canvas_info_t* info, uint8_t* out_canvas_idx) {
   AmlogicCanvasProxyRequest req = {};
   AmlogicCanvasProxyResponse resp = {};
   req.header.proto_id = ZX_PROTOCOL_AMLOGIC_CANVAS;
@@ -148,7 +147,7 @@ zx_status_t ComponentProxy::AmlogicCanvasConfig(zx::vmo vmo, size_t offset,
   return ZX_OK;
 }
 
-zx_status_t ComponentProxy::AmlogicCanvasFree(uint8_t canvas_idx) {
+zx_status_t FragmentProxy::AmlogicCanvasFree(uint8_t canvas_idx) {
   AmlogicCanvasProxyRequest req = {};
   AmlogicCanvasProxyResponse resp = {};
   req.header.proto_id = ZX_PROTOCOL_AMLOGIC_CANVAS;
@@ -158,7 +157,7 @@ zx_status_t ComponentProxy::AmlogicCanvasFree(uint8_t canvas_idx) {
   return Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
 }
 
-zx_status_t ComponentProxy::ButtonsGetChannel(zx::channel chan) {
+zx_status_t FragmentProxy::ButtonsGetChannel(zx::channel chan) {
   ButtonsProxyRequest req = {};
   ButtonsProxyResponse resp = {};
   req.header.proto_id = ZX_PROTOCOL_BUTTONS;
@@ -173,7 +172,7 @@ zx_status_t ComponentProxy::ButtonsGetChannel(zx::channel chan) {
   return ZX_OK;
 }
 
-zx_status_t ComponentProxy::ClockEnable() {
+zx_status_t FragmentProxy::ClockEnable() {
   ClockProxyRequest req = {};
   ClockProxyResponse resp = {};
   req.header.proto_id = ZX_PROTOCOL_CLOCK;
@@ -182,7 +181,7 @@ zx_status_t ComponentProxy::ClockEnable() {
   return Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
 }
 
-zx_status_t ComponentProxy::ClockDisable() {
+zx_status_t FragmentProxy::ClockDisable() {
   ClockProxyRequest req = {};
   ClockProxyResponse resp = {};
   req.header.proto_id = ZX_PROTOCOL_CLOCK;
@@ -191,7 +190,7 @@ zx_status_t ComponentProxy::ClockDisable() {
   return Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
 }
 
-zx_status_t ComponentProxy::ClockIsEnabled(bool* out_enabled) {
+zx_status_t FragmentProxy::ClockIsEnabled(bool* out_enabled) {
   ClockProxyRequest req = {};
   ClockProxyResponse resp = {};
   req.header.proto_id = ZX_PROTOCOL_CLOCK;
@@ -204,7 +203,7 @@ zx_status_t ComponentProxy::ClockIsEnabled(bool* out_enabled) {
   return status;
 }
 
-zx_status_t ComponentProxy::ClockSetRate(uint64_t hz) {
+zx_status_t FragmentProxy::ClockSetRate(uint64_t hz) {
   ClockProxyRequest req = {};
   ClockProxyResponse resp = {};
   req.header.proto_id = ZX_PROTOCOL_CLOCK;
@@ -214,8 +213,8 @@ zx_status_t ComponentProxy::ClockSetRate(uint64_t hz) {
   return Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
 }
 
-zx_status_t ComponentProxy::ClockQuerySupportedRate(uint64_t max_rate,
-                                                    uint64_t* out_max_supported_rate) {
+zx_status_t FragmentProxy::ClockQuerySupportedRate(uint64_t max_rate,
+                                                   uint64_t* out_max_supported_rate) {
   ClockProxyRequest req = {};
   ClockProxyResponse resp = {};
   req.header.proto_id = ZX_PROTOCOL_CLOCK;
@@ -229,7 +228,7 @@ zx_status_t ComponentProxy::ClockQuerySupportedRate(uint64_t max_rate,
   return status;
 }
 
-zx_status_t ComponentProxy::ClockGetRate(uint64_t* out_current_rate) {
+zx_status_t FragmentProxy::ClockGetRate(uint64_t* out_current_rate) {
   ClockProxyRequest req = {};
   ClockProxyResponse resp = {};
   req.header.proto_id = ZX_PROTOCOL_CLOCK;
@@ -242,7 +241,7 @@ zx_status_t ComponentProxy::ClockGetRate(uint64_t* out_current_rate) {
   return status;
 }
 
-zx_status_t ComponentProxy::ClockSetInput(uint32_t idx) {
+zx_status_t FragmentProxy::ClockSetInput(uint32_t idx) {
   ClockProxyRequest req = {};
   ClockProxyResponse resp = {};
 
@@ -253,7 +252,7 @@ zx_status_t ComponentProxy::ClockSetInput(uint32_t idx) {
   return Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
 }
 
-zx_status_t ComponentProxy::ClockGetNumInputs(uint32_t* out_num_inputs) {
+zx_status_t FragmentProxy::ClockGetNumInputs(uint32_t* out_num_inputs) {
   ClockProxyRequest req = {};
   ClockProxyResponse resp = {};
   req.header.proto_id = ZX_PROTOCOL_CLOCK;
@@ -268,7 +267,7 @@ zx_status_t ComponentProxy::ClockGetNumInputs(uint32_t* out_num_inputs) {
   return status;
 }
 
-zx_status_t ComponentProxy::ClockGetInput(uint32_t* out_current_input) {
+zx_status_t FragmentProxy::ClockGetInput(uint32_t* out_current_input) {
   ClockProxyRequest req = {};
   ClockProxyResponse resp = {};
   req.header.proto_id = ZX_PROTOCOL_CLOCK;
@@ -283,7 +282,7 @@ zx_status_t ComponentProxy::ClockGetInput(uint32_t* out_current_input) {
   return status;
 }
 
-zx_status_t ComponentProxy::EthBoardResetPhy() {
+zx_status_t FragmentProxy::EthBoardResetPhy() {
   EthBoardProxyRequest req = {};
   ProxyResponse resp = {};
   req.header.proto_id = ZX_PROTOCOL_ETH_BOARD;
@@ -292,7 +291,7 @@ zx_status_t ComponentProxy::EthBoardResetPhy() {
   return Rpc(&req.header, sizeof(req), &resp, sizeof(resp));
 }
 
-void ComponentProxy::CodecReset(codec_reset_callback callback, void* cookie) {
+void FragmentProxy::CodecReset(codec_reset_callback callback, void* cookie) {
   CodecProxyRequest req = {};
   ProxyResponse resp = {};
   req.header.proto_id = ZX_PROTOCOL_CODEC;
@@ -302,7 +301,7 @@ void ComponentProxy::CodecReset(codec_reset_callback callback, void* cookie) {
   callback(cookie, status);
 }
 
-void ComponentProxy::CodecGetInfo(codec_get_info_callback callback, void* cookie) {
+void FragmentProxy::CodecGetInfo(codec_get_info_callback callback, void* cookie) {
   CodecProxyRequest req = {};
   CodecInfoProxyResponse resp = {};
   info_t info = {};
@@ -316,7 +315,7 @@ void ComponentProxy::CodecGetInfo(codec_get_info_callback callback, void* cookie
   callback(cookie, &info);
 }
 
-void ComponentProxy::CodecIsBridgeable(codec_is_bridgeable_callback callback, void* cookie) {
+void FragmentProxy::CodecIsBridgeable(codec_is_bridgeable_callback callback, void* cookie) {
   CodecProxyRequest req = {};
   CodecIsBridgeableProxyResponse resp = {};
   req.header.proto_id = ZX_PROTOCOL_CODEC;
@@ -326,8 +325,8 @@ void ComponentProxy::CodecIsBridgeable(codec_is_bridgeable_callback callback, vo
   callback(cookie, resp.supports_bridged_mode);
 }
 
-void ComponentProxy::CodecSetBridgedMode(bool enable_bridged_mode,
-                                         codec_set_bridged_mode_callback callback, void* cookie) {
+void FragmentProxy::CodecSetBridgedMode(bool enable_bridged_mode,
+                                        codec_set_bridged_mode_callback callback, void* cookie) {
   CodecSetBridgedProxyRequest req = {};
   ProxyResponse resp = {};
   req.header.proto_id = ZX_PROTOCOL_CODEC;
@@ -338,7 +337,7 @@ void ComponentProxy::CodecSetBridgedMode(bool enable_bridged_mode,
   callback(cookie);
 }
 
-void ComponentProxy::CodecGetDaiFormats(codec_get_dai_formats_callback callback, void* cookie) {
+void FragmentProxy::CodecGetDaiFormats(codec_get_dai_formats_callback callback, void* cookie) {
   CodecProxyRequest req = {};
   uint8_t resp_buffer[kProxyMaxTransferSize];
   auto* resp = reinterpret_cast<ProxyResponse*>(resp_buffer);
@@ -380,8 +379,8 @@ void ComponentProxy::CodecGetDaiFormats(codec_get_dai_formats_callback callback,
   callback(cookie, status, formats, n_formats);
 }
 
-void ComponentProxy::CodecSetDaiFormat(const dai_format_t* format,
-                                       codec_set_dai_format_callback callback, void* cookie) {
+void FragmentProxy::CodecSetDaiFormat(const dai_format_t* format,
+                                      codec_set_dai_format_callback callback, void* cookie) {
   CodecDaiFormatProxyRequest req = {};
   ProxyResponse resp = {};
   req.header.proto_id = ZX_PROTOCOL_CODEC;
@@ -401,7 +400,7 @@ void ComponentProxy::CodecSetDaiFormat(const dai_format_t* format,
   callback(cookie, status);
 }
 
-void ComponentProxy::CodecGetGainFormat(codec_get_gain_format_callback callback, void* cookie) {
+void FragmentProxy::CodecGetGainFormat(codec_get_gain_format_callback callback, void* cookie) {
   CodecProxyRequest req = {};
   CodecGainFormatProxyResponse resp = {};
   req.header.proto_id = ZX_PROTOCOL_CODEC;
@@ -411,7 +410,7 @@ void ComponentProxy::CodecGetGainFormat(codec_get_gain_format_callback callback,
   callback(cookie, &resp.format);
 }
 
-void ComponentProxy::CodecGetGainState(codec_get_gain_state_callback callback, void* cookie) {
+void FragmentProxy::CodecGetGainState(codec_get_gain_state_callback callback, void* cookie) {
   CodecProxyRequest req = {};
   CodecGainStateProxyResponse resp = {};
   req.header.proto_id = ZX_PROTOCOL_CODEC;
@@ -421,8 +420,8 @@ void ComponentProxy::CodecGetGainState(codec_get_gain_state_callback callback, v
   callback(cookie, &resp.state);
 }
 
-void ComponentProxy::CodecSetGainState(const gain_state_t* gain_state,
-                                       codec_set_gain_state_callback callback, void* cookie) {
+void FragmentProxy::CodecSetGainState(const gain_state_t* gain_state,
+                                      codec_set_gain_state_callback callback, void* cookie) {
   CodecGainStateProxyRequest req = {};
   ProxyResponse resp = {};
   req.header.proto_id = ZX_PROTOCOL_CODEC;
@@ -433,7 +432,7 @@ void ComponentProxy::CodecSetGainState(const gain_state_t* gain_state,
   callback(cookie);
 }
 
-void ComponentProxy::CodecGetPlugState(codec_get_plug_state_callback callback, void* cookie) {
+void FragmentProxy::CodecGetPlugState(codec_get_plug_state_callback callback, void* cookie) {
   CodecProxyRequest req = {};
   CodecPlugStateProxyResponse resp = {};
   req.header.proto_id = ZX_PROTOCOL_CODEC;
@@ -443,7 +442,7 @@ void ComponentProxy::CodecGetPlugState(codec_get_plug_state_callback callback, v
   callback(cookie, &resp.plug_state);
 }
 
-zx_status_t ComponentProxy::GpioConfigIn(uint32_t flags) {
+zx_status_t FragmentProxy::GpioConfigIn(uint32_t flags) {
   GpioProxyRequest req = {};
   GpioProxyResponse resp = {};
   req.header.proto_id = ZX_PROTOCOL_GPIO;
@@ -453,7 +452,7 @@ zx_status_t ComponentProxy::GpioConfigIn(uint32_t flags) {
   return Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
 }
 
-zx_status_t ComponentProxy::GpioConfigOut(uint8_t initial_value) {
+zx_status_t FragmentProxy::GpioConfigOut(uint8_t initial_value) {
   GpioProxyRequest req = {};
   GpioProxyResponse resp = {};
   req.header.proto_id = ZX_PROTOCOL_GPIO;
@@ -463,7 +462,7 @@ zx_status_t ComponentProxy::GpioConfigOut(uint8_t initial_value) {
   return Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
 }
 
-zx_status_t ComponentProxy::GpioSetAltFunction(uint64_t function) {
+zx_status_t FragmentProxy::GpioSetAltFunction(uint64_t function) {
   GpioProxyRequest req = {};
   GpioProxyResponse resp = {};
   req.header.proto_id = ZX_PROTOCOL_GPIO;
@@ -473,7 +472,7 @@ zx_status_t ComponentProxy::GpioSetAltFunction(uint64_t function) {
   return Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
 }
 
-zx_status_t ComponentProxy::GpioGetInterrupt(uint32_t flags, zx::interrupt* out_irq) {
+zx_status_t FragmentProxy::GpioGetInterrupt(uint32_t flags, zx::interrupt* out_irq) {
   GpioProxyRequest req = {};
   GpioProxyResponse resp = {};
   req.header.proto_id = ZX_PROTOCOL_GPIO;
@@ -484,7 +483,7 @@ zx_status_t ComponentProxy::GpioGetInterrupt(uint32_t flags, zx::interrupt* out_
              out_irq->reset_and_get_address(), 1, nullptr);
 }
 
-zx_status_t ComponentProxy::GpioSetPolarity(uint32_t polarity) {
+zx_status_t FragmentProxy::GpioSetPolarity(uint32_t polarity) {
   GpioProxyRequest req = {};
   GpioProxyResponse resp = {};
   req.header.proto_id = ZX_PROTOCOL_GPIO;
@@ -494,7 +493,7 @@ zx_status_t ComponentProxy::GpioSetPolarity(uint32_t polarity) {
   return Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
 }
 
-zx_status_t ComponentProxy::GpioReleaseInterrupt() {
+zx_status_t FragmentProxy::GpioReleaseInterrupt() {
   GpioProxyRequest req = {};
   GpioProxyResponse resp = {};
   req.header.proto_id = ZX_PROTOCOL_GPIO;
@@ -503,7 +502,7 @@ zx_status_t ComponentProxy::GpioReleaseInterrupt() {
   return Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
 }
 
-zx_status_t ComponentProxy::GpioRead(uint8_t* out_value) {
+zx_status_t FragmentProxy::GpioRead(uint8_t* out_value) {
   GpioProxyRequest req = {};
   GpioProxyResponse resp = {};
   req.header.proto_id = ZX_PROTOCOL_GPIO;
@@ -518,7 +517,7 @@ zx_status_t ComponentProxy::GpioRead(uint8_t* out_value) {
   return ZX_OK;
 }
 
-zx_status_t ComponentProxy::GpioWrite(uint8_t value) {
+zx_status_t FragmentProxy::GpioWrite(uint8_t value) {
   GpioProxyRequest req = {};
   GpioProxyResponse resp = {};
   req.header.proto_id = ZX_PROTOCOL_GPIO;
@@ -528,8 +527,8 @@ zx_status_t ComponentProxy::GpioWrite(uint8_t value) {
   return Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
 }
 
-void ComponentProxy::I2cTransact(const i2c_op_t* op_list, size_t op_count,
-                                 i2c_transact_callback callback, void* cookie) {
+void FragmentProxy::I2cTransact(const i2c_op_t* op_list, size_t op_count,
+                                i2c_transact_callback callback, void* cookie) {
   size_t writes_length = 0;
   size_t reads_length = 0;
   for (size_t i = 0; i < op_count; ++i) {
@@ -608,7 +607,7 @@ void ComponentProxy::I2cTransact(const i2c_op_t* op_list, size_t op_count,
   callback(cookie, status, read_ops, read_ops_cnt);
 }
 
-zx_status_t ComponentProxy::I2cGetMaxTransferSize(size_t* out_size) {
+zx_status_t FragmentProxy::I2cGetMaxTransferSize(size_t* out_size) {
   I2cProxyRequest req = {};
   I2cProxyResponse resp = {};
   req.header.proto_id = ZX_PROTOCOL_I2C;
@@ -622,7 +621,7 @@ zx_status_t ComponentProxy::I2cGetMaxTransferSize(size_t* out_size) {
   return ZX_OK;
 }
 
-zx_status_t ComponentProxy::I2cGetInterrupt(uint32_t flags, zx::interrupt* out_irq) {
+zx_status_t FragmentProxy::I2cGetInterrupt(uint32_t flags, zx::interrupt* out_irq) {
   I2cProxyRequest req = {};
   I2cProxyResponse resp = {};
   req.header.proto_id = ZX_PROTOCOL_I2C;
@@ -633,7 +632,7 @@ zx_status_t ComponentProxy::I2cGetInterrupt(uint32_t flags, zx::interrupt* out_i
              out_irq->reset_and_get_address(), 1, nullptr);
 }
 
-zx_status_t ComponentProxy::PDevGetMmio(uint32_t index, pdev_mmio_t* out_mmio) {
+zx_status_t FragmentProxy::PDevGetMmio(uint32_t index, pdev_mmio_t* out_mmio) {
   PdevProxyRequest req = {};
   PdevProxyResponse resp = {};
   req.header.proto_id = ZX_PROTOCOL_PDEV;
@@ -649,8 +648,8 @@ zx_status_t ComponentProxy::PDevGetMmio(uint32_t index, pdev_mmio_t* out_mmio) {
   return status;
 }
 
-zx_status_t ComponentProxy::PDevGetInterrupt(uint32_t index, uint32_t flags,
-                                             zx::interrupt* out_irq) {
+zx_status_t FragmentProxy::PDevGetInterrupt(uint32_t index, uint32_t flags,
+                                            zx::interrupt* out_irq) {
   PdevProxyRequest req = {};
   PdevProxyResponse resp = {};
   req.header.proto_id = ZX_PROTOCOL_PDEV;
@@ -662,7 +661,7 @@ zx_status_t ComponentProxy::PDevGetInterrupt(uint32_t index, uint32_t flags,
              out_irq->reset_and_get_address(), 1, nullptr);
 }
 
-zx_status_t ComponentProxy::PDevGetBti(uint32_t index, zx::bti* out_bti) {
+zx_status_t FragmentProxy::PDevGetBti(uint32_t index, zx::bti* out_bti) {
   PdevProxyRequest req = {};
   PdevProxyResponse resp = {};
   req.header.proto_id = ZX_PROTOCOL_PDEV;
@@ -673,7 +672,7 @@ zx_status_t ComponentProxy::PDevGetBti(uint32_t index, zx::bti* out_bti) {
              out_bti->reset_and_get_address(), 1, nullptr);
 }
 
-zx_status_t ComponentProxy::PDevGetSmc(uint32_t index, zx::resource* out_resource) {
+zx_status_t FragmentProxy::PDevGetSmc(uint32_t index, zx::resource* out_resource) {
   PdevProxyRequest req = {};
   PdevProxyResponse resp = {};
   req.header.proto_id = ZX_PROTOCOL_PDEV;
@@ -684,7 +683,7 @@ zx_status_t ComponentProxy::PDevGetSmc(uint32_t index, zx::resource* out_resourc
              out_resource->reset_and_get_address(), 1, nullptr);
 }
 
-zx_status_t ComponentProxy::PDevGetDeviceInfo(pdev_device_info_t* out_info) {
+zx_status_t FragmentProxy::PDevGetDeviceInfo(pdev_device_info_t* out_info) {
   PdevProxyRequest req = {};
   PdevProxyResponse resp = {};
   req.header.proto_id = ZX_PROTOCOL_PDEV;
@@ -698,7 +697,7 @@ zx_status_t ComponentProxy::PDevGetDeviceInfo(pdev_device_info_t* out_info) {
   return ZX_OK;
 }
 
-zx_status_t ComponentProxy::PDevGetBoardInfo(pdev_board_info_t* out_info) {
+zx_status_t FragmentProxy::PDevGetBoardInfo(pdev_board_info_t* out_info) {
   PdevProxyRequest req = {};
   PdevProxyResponse resp = {};
   req.header.proto_id = ZX_PROTOCOL_PDEV;
@@ -712,17 +711,17 @@ zx_status_t ComponentProxy::PDevGetBoardInfo(pdev_board_info_t* out_info) {
   return ZX_OK;
 }
 
-zx_status_t ComponentProxy::PDevDeviceAdd(uint32_t index, const device_add_args_t* args,
-                                          zx_device_t** device) {
+zx_status_t FragmentProxy::PDevDeviceAdd(uint32_t index, const device_add_args_t* args,
+                                         zx_device_t** device) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t ComponentProxy::PDevGetProtocol(uint32_t proto_id, uint32_t index, void* out_protocol,
-                                            size_t protocol_size, size_t* protocol_actual) {
+zx_status_t FragmentProxy::PDevGetProtocol(uint32_t proto_id, uint32_t index, void* out_protocol,
+                                           size_t protocol_size, size_t* protocol_actual) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t ComponentProxy::PowerEnablePowerDomain() {
+zx_status_t FragmentProxy::PowerEnablePowerDomain() {
   PowerProxyRequest req = {};
   PowerProxyResponse resp = {};
   req.header.proto_id = ZX_PROTOCOL_POWER;
@@ -731,7 +730,7 @@ zx_status_t ComponentProxy::PowerEnablePowerDomain() {
   return Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
 }
 
-zx_status_t ComponentProxy::PowerDisablePowerDomain() {
+zx_status_t FragmentProxy::PowerDisablePowerDomain() {
   PowerProxyRequest req = {};
   PowerProxyResponse resp = {};
   req.header.proto_id = ZX_PROTOCOL_POWER;
@@ -740,7 +739,7 @@ zx_status_t ComponentProxy::PowerDisablePowerDomain() {
   return Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
 }
 
-zx_status_t ComponentProxy::PowerGetPowerDomainStatus(power_domain_status_t* out_status) {
+zx_status_t FragmentProxy::PowerGetPowerDomainStatus(power_domain_status_t* out_status) {
   PowerProxyRequest req = {};
   PowerProxyResponse resp = {};
   req.header.proto_id = ZX_PROTOCOL_POWER;
@@ -754,8 +753,8 @@ zx_status_t ComponentProxy::PowerGetPowerDomainStatus(power_domain_status_t* out
   return status;
 }
 
-zx_status_t ComponentProxy::PowerGetSupportedVoltageRange(uint32_t* min_voltage,
-                                                          uint32_t* max_voltage) {
+zx_status_t FragmentProxy::PowerGetSupportedVoltageRange(uint32_t* min_voltage,
+                                                         uint32_t* max_voltage) {
   PowerProxyRequest req = {};
   PowerProxyResponse resp = {};
   req.header.proto_id = ZX_PROTOCOL_POWER;
@@ -770,7 +769,7 @@ zx_status_t ComponentProxy::PowerGetSupportedVoltageRange(uint32_t* min_voltage,
   return status;
 }
 
-zx_status_t ComponentProxy::PowerRequestVoltage(uint32_t voltage, uint32_t* actual_voltage) {
+zx_status_t FragmentProxy::PowerRequestVoltage(uint32_t voltage, uint32_t* actual_voltage) {
   PowerProxyRequest req = {};
   PowerProxyResponse resp = {};
   req.header.proto_id = ZX_PROTOCOL_POWER;
@@ -785,7 +784,7 @@ zx_status_t ComponentProxy::PowerRequestVoltage(uint32_t voltage, uint32_t* actu
   return status;
 }
 
-zx_status_t ComponentProxy::PowerGetCurrentVoltage(uint32_t index, uint32_t* current_voltage) {
+zx_status_t FragmentProxy::PowerGetCurrentVoltage(uint32_t index, uint32_t* current_voltage) {
   PowerProxyRequest req = {};
   PowerProxyResponse resp = {};
   req.header.proto_id = ZX_PROTOCOL_POWER;
@@ -799,7 +798,7 @@ zx_status_t ComponentProxy::PowerGetCurrentVoltage(uint32_t index, uint32_t* cur
   return status;
 }
 
-zx_status_t ComponentProxy::PowerWritePmicCtrlReg(uint32_t reg_addr, uint32_t value) {
+zx_status_t FragmentProxy::PowerWritePmicCtrlReg(uint32_t reg_addr, uint32_t value) {
   PowerProxyRequest req = {};
   PowerProxyResponse resp = {};
   req.header.proto_id = ZX_PROTOCOL_POWER;
@@ -814,7 +813,7 @@ zx_status_t ComponentProxy::PowerWritePmicCtrlReg(uint32_t reg_addr, uint32_t va
   return status;
 }
 
-zx_status_t ComponentProxy::PowerReadPmicCtrlReg(uint32_t reg_addr, uint32_t* out_value) {
+zx_status_t FragmentProxy::PowerReadPmicCtrlReg(uint32_t reg_addr, uint32_t* out_value) {
   PowerProxyRequest req = {};
   PowerProxyResponse resp = {};
   req.header.proto_id = ZX_PROTOCOL_POWER;
@@ -829,7 +828,7 @@ zx_status_t ComponentProxy::PowerReadPmicCtrlReg(uint32_t reg_addr, uint32_t* ou
   return status;
 }
 
-zx_status_t ComponentProxy::PwmGetConfig(pwm_config_t* out_config) {
+zx_status_t FragmentProxy::PwmGetConfig(pwm_config_t* out_config) {
   PwmProxyRequest req = {};
   PwmProxyResponse resp = {};
   req.header.proto_id = ZX_PROTOCOL_PWM;
@@ -848,7 +847,7 @@ zx_status_t ComponentProxy::PwmGetConfig(pwm_config_t* out_config) {
   return status;
 }
 
-zx_status_t ComponentProxy::PwmSetConfig(const pwm_config_t* config) {
+zx_status_t FragmentProxy::PwmSetConfig(const pwm_config_t* config) {
   PwmProxyRequest req = {};
   PwmProxyResponse resp = {};
   req.header.proto_id = ZX_PROTOCOL_PWM;
@@ -859,7 +858,7 @@ zx_status_t ComponentProxy::PwmSetConfig(const pwm_config_t* config) {
   return Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
 }
 
-zx_status_t ComponentProxy::PwmEnable() {
+zx_status_t FragmentProxy::PwmEnable() {
   PwmProxyRequest req = {};
   PwmProxyResponse resp = {};
   req.header.proto_id = ZX_PROTOCOL_PWM;
@@ -868,7 +867,7 @@ zx_status_t ComponentProxy::PwmEnable() {
   return Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
 }
 
-zx_status_t ComponentProxy::PwmDisable() {
+zx_status_t FragmentProxy::PwmDisable() {
   PwmProxyRequest req = {};
   PwmProxyResponse resp = {};
   req.header.proto_id = ZX_PROTOCOL_PWM;
@@ -877,17 +876,17 @@ zx_status_t ComponentProxy::PwmDisable() {
   return Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
 }
 
-zx_status_t ComponentProxy::SpiTransmit(const uint8_t* txdata_list, size_t txdata_count) {
+zx_status_t FragmentProxy::SpiTransmit(const uint8_t* txdata_list, size_t txdata_count) {
   return SpiExchange(txdata_list, txdata_count, NULL, 0, NULL);
 }
 
-zx_status_t ComponentProxy::SpiReceive(uint32_t size, uint8_t* out_rxdata_list, size_t rxdata_count,
-                                       size_t* out_rxdata_actual) {
+zx_status_t FragmentProxy::SpiReceive(uint32_t size, uint8_t* out_rxdata_list, size_t rxdata_count,
+                                      size_t* out_rxdata_actual) {
   return SpiExchange(NULL, 0, out_rxdata_list, size, out_rxdata_actual);
 }
-zx_status_t ComponentProxy::SpiExchange(const uint8_t* txdata_list, size_t txdata_count,
-                                        uint8_t* out_rxdata_list, size_t rxdata_count,
-                                        size_t* out_rxdata_actual) {
+zx_status_t FragmentProxy::SpiExchange(const uint8_t* txdata_list, size_t txdata_count,
+                                       uint8_t* out_rxdata_list, size_t rxdata_count,
+                                       size_t* out_rxdata_actual) {
   uint8_t req_buffer[kProxyMaxTransferSize];
   auto req = reinterpret_cast<SpiProxyRequest*>(req_buffer);
   req->header.proto_id = ZX_PROTOCOL_SPI;
@@ -941,7 +940,7 @@ zx_status_t ComponentProxy::SpiExchange(const uint8_t* txdata_list, size_t txdat
   return ZX_OK;
 }
 
-zx_status_t ComponentProxy::SysmemConnect(zx::channel allocator2_request) {
+zx_status_t FragmentProxy::SysmemConnect(zx::channel allocator2_request) {
   SysmemProxyRequest req = {};
   ProxyResponse resp = {};
   req.header.proto_id = ZX_PROTOCOL_SYSMEM;
@@ -951,7 +950,7 @@ zx_status_t ComponentProxy::SysmemConnect(zx::channel allocator2_request) {
   return Rpc(&req.header, sizeof(req), &resp, sizeof(resp), &handle, 1, nullptr, 0, nullptr);
 }
 
-zx_status_t ComponentProxy::SysmemRegisterHeap(uint64_t heap, zx::channel heap_connection) {
+zx_status_t FragmentProxy::SysmemRegisterHeap(uint64_t heap, zx::channel heap_connection) {
   SysmemProxyRequest req = {};
   ProxyResponse resp = {};
   req.header.proto_id = ZX_PROTOCOL_SYSMEM;
@@ -962,7 +961,7 @@ zx_status_t ComponentProxy::SysmemRegisterHeap(uint64_t heap, zx::channel heap_c
   return Rpc(&req.header, sizeof(req), &resp, sizeof(resp), &handle, 1, nullptr, 0, nullptr);
 }
 
-zx_status_t ComponentProxy::SysmemRegisterSecureMem(zx::channel secure_mem_connection) {
+zx_status_t FragmentProxy::SysmemRegisterSecureMem(zx::channel secure_mem_connection) {
   SysmemProxyRequest req = {};
   ProxyResponse resp = {};
   req.header.proto_id = ZX_PROTOCOL_SYSMEM;
@@ -972,7 +971,7 @@ zx_status_t ComponentProxy::SysmemRegisterSecureMem(zx::channel secure_mem_conne
   return Rpc(&req.header, sizeof(req), &resp, sizeof(resp), &handle, 1, nullptr, 0, nullptr);
 }
 
-zx_status_t ComponentProxy::SysmemUnregisterSecureMem() {
+zx_status_t FragmentProxy::SysmemUnregisterSecureMem() {
   SysmemProxyRequest req = {};
   ProxyResponse resp = {};
   req.header.proto_id = ZX_PROTOCOL_SYSMEM;
@@ -981,8 +980,8 @@ zx_status_t ComponentProxy::SysmemUnregisterSecureMem() {
   return Rpc(&req.header, sizeof(req), &resp, sizeof(resp), nullptr, 0, nullptr, 0, nullptr);
 }
 
-zx_status_t ComponentProxy::TeeConnect(zx::channel tee_device_request,
-                                       zx::channel service_provider) {
+zx_status_t FragmentProxy::TeeConnect(zx::channel tee_device_request,
+                                      zx::channel service_provider) {
   TeeProxyRequest req = {};
   ProxyResponse resp = {};
   req.header.proto_id = ZX_PROTOCOL_TEE;
@@ -999,7 +998,7 @@ zx_status_t ComponentProxy::TeeConnect(zx::channel tee_device_request,
              nullptr);
 }
 
-zx_status_t ComponentProxy::UsbModeSwitchSetMode(usb_mode_t mode) {
+zx_status_t FragmentProxy::UsbModeSwitchSetMode(usb_mode_t mode) {
   UsbModeSwitchProxyRequest req = {};
   ProxyResponse resp = {};
   req.header.proto_id = ZX_PROTOCOL_USB_MODE_SWITCH;
@@ -1012,13 +1011,13 @@ zx_status_t ComponentProxy::UsbModeSwitchSetMode(usb_mode_t mode) {
 const zx_driver_ops_t driver_ops = []() {
   zx_driver_ops_t ops = {};
   ops.version = DRIVER_OPS_VERSION;
-  ops.create = ComponentProxy::Create;
+  ops.create = FragmentProxy::Create;
   return ops;
 }();
 
-}  // namespace component
+}  // namespace fragment
 
-ZIRCON_DRIVER_BEGIN(component_proxy, component::driver_ops, "zircon", "0.1", 1)
+ZIRCON_DRIVER_BEGIN(fragment_proxy, fragment::driver_ops, "zircon", "0.1", 1)
 // Unmatchable.  This is loaded via the proxy driver mechanism instead of the binding process
 BI_ABORT()
-ZIRCON_DRIVER_END(component_proxy)
+ZIRCON_DRIVER_END(fragment_proxy)

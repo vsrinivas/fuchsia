@@ -8,6 +8,6 @@ banjo_library("ddk.protocol.dsiimpl") {
   sources = [ "../../../../sdk/banjo/ddk.protocol.dsiimpl/dsiimpl.banjo" ]
   visibility = [
     ":*",
-    "$zx/system/core/devmgr/component:*",
+    "$zx/system/core/devmgr/fragment:*",
   ]
 }

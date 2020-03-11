@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef DDK_COMPONENT_DEVICE_H_
-#define DDK_COMPONENT_DEVICE_H_
+#ifndef DDK_FRAGMENT_DEVICE_H_
+#define DDK_FRAGMENT_DEVICE_H_
 
 #include <zircon/types.h>
 
 #include <ddk/device.h>
 
-// This header is only meant to be used in component driver which can maintain the protocol
+// This header is only meant to be used in fragment driver which can maintain the protocol
 // contexts. It is not needed/not intended to be used elsewhere.
 // protocols look like: typedef struct
 // {

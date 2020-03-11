@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_CORE_DEVMGR_COMPONENT_COMPONENT_H_
-#define ZIRCON_SYSTEM_CORE_DEVMGR_COMPONENT_COMPONENT_H_
+#ifndef ZIRCON_SYSTEM_CORE_DEVMGR_FRAGMENT_FRAGMENT_H_
+#define ZIRCON_SYSTEM_CORE_DEVMGR_FRAGMENT_FRAGMENT_H_
 
 #include <lib/sync/completion.h>
 #include <lib/zx/channel.h>
@@ -38,7 +38,7 @@
 #include <ddktl/protocol/usb/modeswitch.h>
 #include <ddktl/protocol/usb/phy.h>
 
-namespace component {
+namespace fragment {
 
 template <typename ProtoClientType, typename ProtoType>
 class ProtocolClient {
@@ -59,14 +59,14 @@ class ProtocolClient {
   zx_device_t* parent_;
 };
 
-class Component;
-using ComponentBase =
-    ddk::Device<Component, ddk::Rxrpcable, ddk::UnbindableNew, ddk::GetProtocolable>;
+class Fragment;
+using FragmentBase =
+    ddk::Device<Fragment, ddk::Rxrpcable, ddk::UnbindableNew, ddk::GetProtocolable>;
 
-class Component : public ComponentBase {
+class Fragment : public FragmentBase {
  public:
-  explicit Component(zx_device_t* parent)
-      : ComponentBase(parent),
+  explicit Fragment(zx_device_t* parent)
+      : FragmentBase(parent),
         canvas_client_(parent, ZX_PROTOCOL_AMLOGIC_CANVAS),
         buttons_client_(parent, ZX_PROTOCOL_BUTTONS),
         clock_client_(parent, ZX_PROTOCOL_CLOCK),
@@ -191,6 +191,6 @@ class Component : public ComponentBase {
   ProtocolClient<ddk::Ge2dProtocolClient, ge2d_protocol_t> ge2d_client_;
 };
 
-}  // namespace component
+}  // namespace fragment
 
-#endif  // ZIRCON_SYSTEM_CORE_DEVMGR_COMPONENT_COMPONENT_H_
+#endif  // ZIRCON_SYSTEM_CORE_DEVMGR_FRAGMENT_FRAGMENT_H_

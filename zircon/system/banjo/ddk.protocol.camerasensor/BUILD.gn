@@ -9,7 +9,7 @@ banjo_library("ddk.protocol.camerasensor") {
       [ "../../../../sdk/banjo/ddk.protocol.camerasensor/camerasensor.banjo" ]
   visibility = [
     ":*",
-    "$zx/system/core/devmgr/component:*",
+    "$zx/system/core/devmgr/fragment:*",
     "$zx/system/banjo/ddk.protocol.mipicsi:ddk.protocol.mipicsi",
   ]
 }

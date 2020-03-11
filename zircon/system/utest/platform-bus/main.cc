@@ -103,7 +103,7 @@ TEST(PbusTest, Enumeration) {
 
   EXPECT_EQ(fstatat(dirfd, "composite-dev/composite", &st, 0), 0);
 
-  // Check that we see multiple entries that begin with "component-" for a device that is a
+  // Check that we see multiple entries that begin with "fragment-" for a device that is a
   // component of multiple composites
   fbl::unique_fd clock_dir(
       openat(dirfd, "sys/platform/11:01:7/test-clock/clock-1", O_DIRECTORY | O_RDONLY));
@@ -113,7 +113,7 @@ TEST(PbusTest, Enumeration) {
           clock_dir.get(),
           [](int dirfd, int event, const char* fn, void* cookie) {
             auto devices_seen = static_cast<size_t*>(cookie);
-            if (event == WATCH_EVENT_ADD_FILE && !strncmp(fn, "component-", strlen("component-"))) {
+            if (event == WATCH_EVENT_ADD_FILE && !strncmp(fn, "fragment-", strlen("fragment-"))) {
               *devices_seen += 1;
             }
             if (event == WATCH_EVENT_WAITING) {

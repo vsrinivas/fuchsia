@@ -124,7 +124,7 @@ void suspend_fallback(const zx::resource& root_resource, uint32_t flags) {
 
 namespace power_fidl = llcpp::fuchsia::hardware::power;
 
-const char* kComponentDriverPath = "/boot/driver/component.so";
+const char* kComponentDriverPath = "/boot/driver/fragment.so";
 
 uint32_t log_flags = LOG_ERROR | LOG_INFO;
 

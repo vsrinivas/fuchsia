@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "component.h"
+#include "fragment.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -12,19 +12,19 @@
 #include <atomic>
 #include <memory>
 
-#include <ddk/component-device.h>
 #include <ddk/debug.h>
+#include <ddk/fragment-device.h>
 #include <fbl/algorithm.h>
 
 #include "proxy-protocol.h"
 
-namespace component {
+namespace fragment {
 
 namespace {
 
 void MakeUniqueName(char name[ZX_DEVICE_NAME_MAX + 1]) {
   static std::atomic<size_t> unique_id = 0;
-  snprintf(name, ZX_DEVICE_NAME_MAX + 1, "component-%zu", unique_id.fetch_add(1));
+  snprintf(name, ZX_DEVICE_NAME_MAX + 1, "fragment-%zu", unique_id.fetch_add(1));
 }
 
 }  // namespace
@@ -42,10 +42,10 @@ ProtocolClient<ProtoClientType, ProtoType>::ProtocolClient(zx_device_t* parent, 
   *protoptr = ProtoClientType(&proto_);
 }
 
-zx_status_t Component::Bind(void* ctx, zx_device_t* parent) {
+zx_status_t Fragment::Bind(void* ctx, zx_device_t* parent) {
   char name[ZX_DEVICE_NAME_MAX + 1];
   MakeUniqueName(name);
-  auto dev = std::make_unique<Component>(parent);
+  auto dev = std::make_unique<Fragment>(parent);
   // The thing before the comma will become the process name, if a new process
   // is created
   const char* proxy_args = "composite-device,";
@@ -58,10 +58,10 @@ zx_status_t Component::Bind(void* ctx, zx_device_t* parent) {
   return status;
 }
 
-zx_status_t Component::RpcCanvas(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
-                                 uint32_t* out_resp_size, zx::handle* req_handles,
-                                 uint32_t req_handle_count, zx::handle* resp_handles,
-                                 uint32_t* resp_handle_count) {
+zx_status_t Fragment::RpcCanvas(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
+                                uint32_t* out_resp_size, zx::handle* req_handles,
+                                uint32_t req_handle_count, zx::handle* resp_handles,
+                                uint32_t* resp_handle_count) {
   if (!canvas_client_.proto_client().is_valid()) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -93,10 +93,10 @@ zx_status_t Component::RpcCanvas(const uint8_t* req_buf, uint32_t req_size, uint
   }
 }
 
-zx_status_t Component::RpcButtons(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
-                                  uint32_t* out_resp_size, zx::handle* req_handles,
-                                  uint32_t req_handle_count, zx::handle* resp_handles,
-                                  uint32_t* resp_handle_count) {
+zx_status_t Fragment::RpcButtons(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
+                                 uint32_t* out_resp_size, zx::handle* req_handles,
+                                 uint32_t req_handle_count, zx::handle* resp_handles,
+                                 uint32_t* resp_handle_count) {
   if (!buttons_client_.proto_client().is_valid()) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -121,10 +121,10 @@ zx_status_t Component::RpcButtons(const uint8_t* req_buf, uint32_t req_size, uin
   }
 }
 
-zx_status_t Component::RpcClock(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
-                                uint32_t* out_resp_size, zx::handle* req_handles,
-                                uint32_t req_handle_count, zx::handle* resp_handles,
-                                uint32_t* resp_handle_count) {
+zx_status_t Fragment::RpcClock(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
+                               uint32_t* out_resp_size, zx::handle* req_handles,
+                               uint32_t req_handle_count, zx::handle* resp_handles,
+                               uint32_t* resp_handle_count) {
   if (!clock_client_.proto_client().is_valid()) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -161,10 +161,10 @@ zx_status_t Component::RpcClock(const uint8_t* req_buf, uint32_t req_size, uint8
   }
 }
 
-zx_status_t Component::RpcEthBoard(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
-                                   uint32_t* out_resp_size, zx::handle* req_handles,
-                                   uint32_t req_handle_count, zx::handle* resp_handles,
-                                   uint32_t* resp_handle_count) {
+zx_status_t Fragment::RpcEthBoard(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
+                                  uint32_t* out_resp_size, zx::handle* req_handles,
+                                  uint32_t req_handle_count, zx::handle* resp_handles,
+                                  uint32_t* resp_handle_count) {
   if (!eth_board_client_.proto_client().is_valid()) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -185,10 +185,10 @@ zx_status_t Component::RpcEthBoard(const uint8_t* req_buf, uint32_t req_size, ui
   }
 }
 
-zx_status_t Component::RpcGpio(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
-                               uint32_t* out_resp_size, zx::handle* req_handles,
-                               uint32_t req_handle_count, zx::handle* resp_handles,
-                               uint32_t* resp_handle_count) {
+zx_status_t Fragment::RpcGpio(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
+                              uint32_t* out_resp_size, zx::handle* req_handles,
+                              uint32_t req_handle_count, zx::handle* resp_handles,
+                              uint32_t* resp_handle_count) {
   if (!gpio_client_.proto_client().is_valid()) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -230,8 +230,8 @@ zx_status_t Component::RpcGpio(const uint8_t* req_buf, uint32_t req_size, uint8_
   }
 }
 
-void Component::I2cTransactCallback(void* cookie, zx_status_t status, const i2c_op_t* op_list,
-                                    size_t op_count) {
+void Fragment::I2cTransactCallback(void* cookie, zx_status_t status, const i2c_op_t* op_list,
+                                   size_t op_count) {
   auto* ctx = static_cast<I2cTransactContext*>(cookie);
   ctx->result = status;
   if (status == ZX_OK && ctx->read_buf && ctx->read_length) {
@@ -241,9 +241,9 @@ void Component::I2cTransactCallback(void* cookie, zx_status_t status, const i2c_
   sync_completion_signal(&ctx->completion);
 }
 
-void Component::CodecTransactCallback(void* cookie, zx_status_t status,
-                                      const dai_supported_formats_t* formats_list,
-                                      size_t formats_count) {
+void Fragment::CodecTransactCallback(void* cookie, zx_status_t status,
+                                     const dai_supported_formats_t* formats_list,
+                                     size_t formats_count) {
   auto* out = reinterpret_cast<CodecTransactContext*>(cookie);
   auto* p = reinterpret_cast<uint8_t*>(out->buffer);
   memcpy(p, &formats_count, sizeof(size_t));
@@ -283,10 +283,10 @@ void Component::CodecTransactCallback(void* cookie, zx_status_t status,
   sync_completion_signal(&out->completion);
 }
 
-zx_status_t Component::RpcI2c(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
-                              uint32_t* out_resp_size, zx::handle* req_handles,
-                              uint32_t req_handle_count, zx::handle* resp_handles,
-                              uint32_t* resp_handle_count) {
+zx_status_t Fragment::RpcI2c(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
+                             uint32_t* out_resp_size, zx::handle* req_handles,
+                             uint32_t req_handle_count, zx::handle* resp_handles,
+                             uint32_t* resp_handle_count) {
   if (!i2c_client_.proto_client().is_valid()) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -353,10 +353,10 @@ zx_status_t Component::RpcI2c(const uint8_t* req_buf, uint32_t req_size, uint8_t
   }
 }
 
-zx_status_t Component::RpcPdev(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
-                               uint32_t* out_resp_size, zx::handle* req_handles,
-                               uint32_t req_handle_count, zx::handle* resp_handles,
-                               uint32_t* resp_handle_count) {
+zx_status_t Fragment::RpcPdev(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
+                              uint32_t* out_resp_size, zx::handle* req_handles,
+                              uint32_t req_handle_count, zx::handle* resp_handles,
+                              uint32_t* resp_handle_count) {
   if (!pdev_client_.proto_client().is_valid()) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -417,10 +417,10 @@ zx_status_t Component::RpcPdev(const uint8_t* req_buf, uint32_t req_size, uint8_
   }
 }
 
-zx_status_t Component::RpcPower(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
-                                uint32_t* out_resp_size, zx::handle* req_handles,
-                                uint32_t req_handle_count, zx::handle* resp_handles,
-                                uint32_t* resp_handle_count) {
+zx_status_t Fragment::RpcPower(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
+                               uint32_t* out_resp_size, zx::handle* req_handles,
+                               uint32_t req_handle_count, zx::handle* resp_handles,
+                               uint32_t* resp_handle_count) {
   if (!power_client_.proto_client().is_valid()) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -454,10 +454,10 @@ zx_status_t Component::RpcPower(const uint8_t* req_buf, uint32_t req_size, uint8
   }
 }
 
-zx_status_t Component::RpcPwm(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
-                              uint32_t* out_resp_size, zx::handle* req_handles,
-                              uint32_t req_handle_count, zx::handle* resp_handles,
-                              uint32_t* resp_handle_count) {
+zx_status_t Fragment::RpcPwm(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
+                             uint32_t* out_resp_size, zx::handle* req_handles,
+                             uint32_t req_handle_count, zx::handle* resp_handles,
+                             uint32_t* resp_handle_count) {
   if (!pwm_client_.proto_client().is_valid()) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -498,10 +498,10 @@ zx_status_t Component::RpcPwm(const uint8_t* req_buf, uint32_t req_size, uint8_t
   }
 }
 
-zx_status_t Component::RpcSpi(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
-                              uint32_t* out_resp_size, zx::handle* req_handles,
-                              uint32_t req_handle_count, zx::handle* resp_handles,
-                              uint32_t* resp_handle_count) {
+zx_status_t Fragment::RpcSpi(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
+                             uint32_t* out_resp_size, zx::handle* req_handles,
+                             uint32_t req_handle_count, zx::handle* resp_handles,
+                             uint32_t* resp_handle_count) {
   if (!spi_client_.proto_client().is_valid()) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -538,10 +538,10 @@ zx_status_t Component::RpcSpi(const uint8_t* req_buf, uint32_t req_size, uint8_t
   }
 }
 
-zx_status_t Component::RpcSysmem(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
-                                 uint32_t* out_resp_size, zx::handle* req_handles,
-                                 uint32_t req_handle_count, zx::handle* resp_handles,
-                                 uint32_t* resp_handle_count) {
+zx_status_t Fragment::RpcSysmem(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
+                                uint32_t* out_resp_size, zx::handle* req_handles,
+                                uint32_t req_handle_count, zx::handle* resp_handles,
+                                uint32_t* resp_handle_count) {
   if (!sysmem_client_.proto_client().is_valid()) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -585,10 +585,10 @@ zx_status_t Component::RpcSysmem(const uint8_t* req_buf, uint32_t req_size, uint
   }
 }
 
-zx_status_t Component::RpcTee(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
-                              uint32_t* out_resp_size, zx::handle* req_handles,
-                              uint32_t req_handle_count, zx::handle* resp_handles,
-                              uint32_t* resp_handle_count) {
+zx_status_t Fragment::RpcTee(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
+                             uint32_t* out_resp_size, zx::handle* req_handles,
+                             uint32_t req_handle_count, zx::handle* resp_handles,
+                             uint32_t* resp_handle_count) {
   if (!tee_client_.proto_client().is_valid()) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -619,10 +619,10 @@ zx_status_t Component::RpcTee(const uint8_t* req_buf, uint32_t req_size, uint8_t
   }
 }
 
-zx_status_t Component::RpcUms(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
-                              uint32_t* out_resp_size, zx::handle* req_handles,
-                              uint32_t req_handle_count, zx::handle* resp_handles,
-                              uint32_t* resp_handle_count) {
+zx_status_t Fragment::RpcUms(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
+                             uint32_t* out_resp_size, zx::handle* req_handles,
+                             uint32_t req_handle_count, zx::handle* resp_handles,
+                             uint32_t* resp_handle_count) {
   if (!ums_client_.proto_client().is_valid()) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -644,10 +644,10 @@ zx_status_t Component::RpcUms(const uint8_t* req_buf, uint32_t req_size, uint8_t
   }
 }
 
-zx_status_t Component::RpcCodec(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
-                                uint32_t* out_resp_size, zx::handle* req_handles,
-                                uint32_t req_handle_count, zx::handle* resp_handles,
-                                uint32_t* resp_handle_count) {
+zx_status_t Fragment::RpcCodec(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
+                               uint32_t* out_resp_size, zx::handle* req_handles,
+                               uint32_t req_handle_count, zx::handle* resp_handles,
+                               uint32_t* resp_handle_count) {
   static constexpr uint32_t kTimeoutSecs = 1;
   if (!codec_client_.proto_client().is_valid()) {
     return ZX_ERR_NOT_SUPPORTED;
@@ -830,7 +830,7 @@ zx_status_t Component::RpcCodec(const uint8_t* req_buf, uint32_t req_size, uint8
   }
 }
 
-zx_status_t Component::DdkRxrpc(zx_handle_t raw_channel) {
+zx_status_t Fragment::DdkRxrpc(zx_handle_t raw_channel) {
   zx::unowned_channel channel(raw_channel);
   if (!channel->is_valid()) {
     // This driver is stateless, so we don't need to reset anything here
@@ -950,9 +950,9 @@ zx_status_t Component::DdkRxrpc(zx_handle_t raw_channel) {
   return status;
 }
 
-void Component::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+void Fragment::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
 
-zx_status_t Component::DdkGetProtocol(uint32_t proto_id, void* out_protocol) {
+zx_status_t Fragment::DdkGetProtocol(uint32_t proto_id, void* out_protocol) {
   switch (proto_id) {
     case ZX_PROTOCOL_AMLOGIC_CANVAS: {
       if (!canvas_client_.proto_client().is_valid()) {
@@ -1143,17 +1143,17 @@ zx_status_t Component::DdkGetProtocol(uint32_t proto_id, void* out_protocol) {
   }
 }
 
-void Component::DdkRelease() { delete this; }
+void Fragment::DdkRelease() { delete this; }
 
 const zx_driver_ops_t driver_ops = []() {
   zx_driver_ops_t ops = {};
   ops.version = DRIVER_OPS_VERSION;
-  ops.bind = Component::Bind;
+  ops.bind = Fragment::Bind;
   return ops;
 }();
 
-}  // namespace component
+}  // namespace fragment
 
-ZIRCON_DRIVER_BEGIN(component, component::driver_ops, "zircon", "0.1", 1)
+ZIRCON_DRIVER_BEGIN(fragment, fragment::driver_ops, "zircon", "0.1", 1)
 BI_MATCH()  // This driver is excluded from the normal matching process, so this is fine.
-ZIRCON_DRIVER_END(component)
+ZIRCON_DRIVER_END(fragment)

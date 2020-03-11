@@ -130,7 +130,7 @@ TEST(BootsvcIntegrationTest, BootfsExecutability) {
   const char* kExecutableFiles[] = {
       "/boot/pkg/bootsvc/bin/bootsvc",
       "/boot/pkg/dummy_pkg/lib/dummy.so",
-      "/boot/driver/component.so",
+      "/boot/driver/fragment.so",
       "/boot/lib/dummy.so",
       "/boot/kernel/lib/hermetic/decompress-zbi.so",
       "/boot/kernel/vdso/full",

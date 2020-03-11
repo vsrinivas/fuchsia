@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_CORE_DEVMGR_COMPONENT_PROXY_PROTOCOL_H_
-#define ZIRCON_SYSTEM_CORE_DEVMGR_COMPONENT_PROXY_PROTOCOL_H_
+#ifndef ZIRCON_SYSTEM_CORE_DEVMGR_FRAGMENT_PROXY_PROTOCOL_H_
+#define ZIRCON_SYSTEM_CORE_DEVMGR_FRAGMENT_PROXY_PROTOCOL_H_
 
-namespace component {
+namespace fragment {
 
 // Maximum transfer size we can proxy.
 static constexpr size_t kProxyMaxTransferSize = 4096;
@@ -373,6 +373,6 @@ struct UsbModeSwitchProxyRequest {
   usb_mode_t mode;
 };
 
-}  // namespace component
+}  // namespace fragment
 
-#endif  // ZIRCON_SYSTEM_CORE_DEVMGR_COMPONENT_PROXY_PROTOCOL_H_
+#endif  // ZIRCON_SYSTEM_CORE_DEVMGR_FRAGMENT_PROXY_PROTOCOL_H_

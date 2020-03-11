@@ -9,6 +9,6 @@ banjo_library("ddk.protocol.sdio") {
   public_deps = [ "$zx/system/banjo/ddk.protocol.sdmmc" ]
   visibility = [
     ":*",
-    "$zx/system/core/devmgr/component:*",
+    "$zx/system/core/devmgr/fragment:*",
   ]
 }

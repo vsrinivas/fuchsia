@@ -9,6 +9,6 @@ banjo_library("ddk.protocol.mipicsi") {
   deps = [ "$zx/system/banjo/ddk.protocol.camerasensor" ]
   visibility = [
     ":*",
-    "$zx/system/core/devmgr/component:*",
+    "$zx/system/core/devmgr/fragment:*",
   ]
 }

@@ -67,7 +67,7 @@ zbi_input("integration-test-deps") {
     # Pull in the dependencies of devcoordinator so that we can test
     # requesting libdriver.so from the bootsvc loader service.
     # This could possibly be smaller, but seems pretty reasonable.
-    "$zx/system/core/devmgr/component",
+    "$zx/system/core/devmgr/fragment",
     "$zx/system/core/miscsvc",
     "$zx/system/core/netsvc",
     "$zx/system/core/netsvc:device-name-provider",

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_CORE_DEVMGR_COMPONENT_COMPONENT_PROXY_H_
-#define ZIRCON_SYSTEM_CORE_DEVMGR_COMPONENT_COMPONENT_PROXY_H_
+#ifndef ZIRCON_SYSTEM_CORE_DEVMGR_FRAGMENT_FRAGMENT_PROXY_H_
+#define ZIRCON_SYSTEM_CORE_DEVMGR_FRAGMENT_FRAGMENT_PROXY_H_
 
 #include <lib/zx/channel.h>
 
@@ -28,29 +28,29 @@
 
 #include "proxy-protocol.h"
 
-namespace component {
+namespace fragment {
 
-class ComponentProxy;
-using ComponentProxyBase = ddk::Device<ComponentProxy, ddk::UnbindableNew, ddk::GetProtocolable>;
+class FragmentProxy;
+using FragmentProxyBase = ddk::Device<FragmentProxy, ddk::UnbindableNew, ddk::GetProtocolable>;
 
-class ComponentProxy : public ComponentProxyBase,
-                       public ddk::AmlogicCanvasProtocol<ComponentProxy>,
-                       public ddk::ButtonsProtocol<ComponentProxy>,
-                       public ddk::ClockProtocol<ComponentProxy>,
-                       public ddk::EthBoardProtocol<ComponentProxy>,
-                       public ddk::GpioProtocol<ComponentProxy>,
-                       public ddk::I2cProtocol<ComponentProxy>,
-                       public ddk::CodecProtocol<ComponentProxy>,
-                       public ddk::PDevProtocol<ComponentProxy>,
-                       public ddk::PowerProtocol<ComponentProxy>,
-                       public ddk::PwmProtocol<ComponentProxy>,
-                       public ddk::SpiProtocol<ComponentProxy>,
-                       public ddk::SysmemProtocol<ComponentProxy>,
-                       public ddk::TeeProtocol<ComponentProxy>,
-                       public ddk::UsbModeSwitchProtocol<ComponentProxy> {
+class FragmentProxy : public FragmentProxyBase,
+                      public ddk::AmlogicCanvasProtocol<FragmentProxy>,
+                      public ddk::ButtonsProtocol<FragmentProxy>,
+                      public ddk::ClockProtocol<FragmentProxy>,
+                      public ddk::EthBoardProtocol<FragmentProxy>,
+                      public ddk::GpioProtocol<FragmentProxy>,
+                      public ddk::I2cProtocol<FragmentProxy>,
+                      public ddk::CodecProtocol<FragmentProxy>,
+                      public ddk::PDevProtocol<FragmentProxy>,
+                      public ddk::PowerProtocol<FragmentProxy>,
+                      public ddk::PwmProtocol<FragmentProxy>,
+                      public ddk::SpiProtocol<FragmentProxy>,
+                      public ddk::SysmemProtocol<FragmentProxy>,
+                      public ddk::TeeProtocol<FragmentProxy>,
+                      public ddk::UsbModeSwitchProtocol<FragmentProxy> {
  public:
-  ComponentProxy(zx_device_t* parent, zx::channel rpc)
-      : ComponentProxyBase(parent), rpc_(std::move(rpc)) {}
+  FragmentProxy(zx_device_t* parent, zx::channel rpc)
+      : FragmentProxyBase(parent), rpc_(std::move(rpc)) {}
 
   static zx_status_t Create(void* ctx, zx_device_t* parent, const char* name, const char* args,
                             zx_handle_t raw_rpc);
@@ -148,6 +148,6 @@ class ComponentProxy : public ComponentProxyBase,
   zx::channel rpc_;
 };
 
-}  // namespace component
+}  // namespace fragment
 
-#endif  // ZIRCON_SYSTEM_CORE_DEVMGR_COMPONENT_COMPONENT_PROXY_H_
+#endif  // ZIRCON_SYSTEM_CORE_DEVMGR_FRAGMENT_FRAGMENT_PROXY_H_

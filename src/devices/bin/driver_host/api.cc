@@ -9,9 +9,9 @@
 
 #include <utility>
 
-#include <ddk/component-device.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
+#include <ddk/fragment-device.h>
 
 #include "driver_host.h"
 #include "scheduler_profile.h"
@@ -381,4 +381,3 @@ __EXPORT void driver_printf(uint32_t flags, const char* fmt, ...) {
   vfprintf(stderr, fmt, ap);
   va_end(ap);
 }
-

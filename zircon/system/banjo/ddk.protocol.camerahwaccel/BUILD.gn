@@ -9,7 +9,7 @@ banjo_library("ddk.protocol.camerahwaccel") {
       [ "../../../../sdk/banjo/ddk.protocol.camerahwaccel/camerahwaccel.banjo" ]
   visibility = [
     ":*",
-    "$zx/system/core/devmgr/component:*",
+    "$zx/system/core/devmgr/fragment:*",
     "$zx/system/banjo/ddk.protocol.gdc:*",
     "$zx/system/banjo/ddk.protocol.ge2d:*",
     "$zx/system/banjo/ddk.protocol.isp:*",

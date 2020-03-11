@@ -13,6 +13,6 @@ banjo_library("ddk.protocol.isp") {
   ]
   visibility = [
     ":*",
-    "$zx/system/core/devmgr/component:*",
+    "$zx/system/core/devmgr/fragment:*",
   ]
 }

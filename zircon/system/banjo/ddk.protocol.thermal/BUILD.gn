@@ -8,6 +8,6 @@ banjo_library("ddk.protocol.thermal") {
   sources = [ "../../../../sdk/banjo/ddk.protocol.thermal/thermal.banjo" ]
   visibility = [
     ":*",
-    "$zx/system/core/devmgr/component:*",
+    "$zx/system/core/devmgr/fragment:*",
   ]
 }

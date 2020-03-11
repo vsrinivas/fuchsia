@@ -12,6 +12,6 @@ banjo_library("ddk.protocol.ge2d") {
   ]
   visibility = [
     ":*",
-    "$zx/system/core/devmgr/component:*",
+    "$zx/system/core/devmgr/fragment:*",
   ]
 }

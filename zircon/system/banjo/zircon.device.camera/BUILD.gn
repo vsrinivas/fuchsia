@@ -8,7 +8,7 @@ banjo_library("zircon.device.camera") {
   sources = [ "../../../../sdk/banjo/zircon.device.camera/camera.banjo" ]
   visibility = [
     ":*",
-    "$zx/system/core/devmgr/component:*",
+    "$zx/system/core/devmgr/fragment:*",
     "$zx/system/banjo/ddk.protocol.isp:*",
   ]
 }

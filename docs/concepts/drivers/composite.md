@@ -275,7 +275,7 @@ initially shown:
 ![Figure: Composite hardware device using proxies](composite-proxy.png)
 
 The components are bound to an internal driver (located in the
-[//zircon/system/core/devmgr/component][component] directory).
+[//zircon/system/core/devmgr/fragment][fragment] directory).
 
 The driver handles proxying across process boundaries if necessary.
 This proxying uses the `DEVICE_ADD_MUST_ISOLATE` mechanism (introduced
@@ -297,20 +297,20 @@ the driver runtime each time a message is received from the channel
 shared with the proxy.
 
 So, in order to implement a new protocol proxy, one must modify the
-`component.proxy.so` drivers to handle the desired protocol by sending
-messages to the normal device, and modify the `component.so` driver to
+`fragment.proxy.so` drivers to handle the desired protocol by sending
+messages to the normal device, and modify the `fragment.so` driver to
 service those messages appropriately.
 
 The component proxy is implemented in
-[/zircon/system/core/devmgr/component/component-proxy.cpp][component-proxy.cpp], and
+[/zircon/system/core/devmgr/fragment/fragment-proxy.cc][fragment-proxy.cc], and
 the other half in
-[/zircon/system/core/devmgr/component/component.cpp][component.cpp].
+[/zircon/system/core/devmgr/fragment/fragment.cc][fragment.cc].
 
 <!-- xrefs -->
 
-[component-proxy.cpp]: /zircon/system/core/devmgr/component/component-proxy.cc
-[component.cpp]: /zircon/system/core/devmgr/component/component.cc
-[component]: /zircon/system/core/devmgr/component/
+[fragment-proxy.cc]: /zircon/system/core/devmgr/fragment/fragment-proxy.cc
+[fragment.cc]: /zircon/system/core/devmgr/fragment/fragment.cc
+[fragment]: /zircon/system/core/devmgr/fragment/
 [composite.banjo]: /zircon/system/banjo/ddk.protocol.composite/composite.banjo
 [driver.h]: /zircon/system/ulib/ddk/include/ddk/driver.h
 [isolate]: driver-development.md#isolate-devices

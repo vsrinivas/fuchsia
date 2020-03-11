@@ -8,6 +8,6 @@ banjo_library("ddk.protocol.usb.phy") {
   sources = [ "../../../../sdk/banjo/ddk.protocol.usb.phy/usb-phy.banjo" ]
   visibility = [
     ":*",
-    "$zx/system/core/devmgr/component:*",
+    "$zx/system/core/devmgr/fragment:*",
   ]
 }
