@@ -45,6 +45,8 @@ std::string drain_socket(zx::socket socket) {
   return out_string;
 }
 
+// TODO(48127): This hangs w/ ASan. Fix and re-enable.
+#if !__has_feature(address_sanitizer)
 static int run_grpc_client(void* client_to_run) {
   ClientImpl<PosixPlatform>* client_impl = (ClientImpl<PosixPlatform>*)client_to_run;
   client_impl->Run();
@@ -197,6 +199,7 @@ TEST_F(GuestInteractionTest, GrpcExecScriptTest) {
 
   ASSERT_STREQ(output_string.c_str(), kTestScriptInput);
 }
+#endif  // !__has_feature(address_sanitizer)
 
 // Create a file large enough that it needs to be fragmented when it is sent
 // to and received from the guest and then send it to and retrieve it from the
