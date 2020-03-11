@@ -119,6 +119,8 @@ rustc_test("ot-stack-soft-reset-mock") {
     "//sdk/fidl/fuchsia.lowpan.spinel:fuchsia.lowpan.spinel-rustc",
     "//src/connectivity/openthread/tests/lib",
     "//src/connectivity/openthread/tests/test-code",
+    "//src/lib/fuchsia-async",
+    "//src/lib/syslog/rust:syslog",
   ]
   non_rust_deps = [ "//zircon/public/lib/syslog" ]
 }
@@ -131,6 +133,8 @@ rustc_test("ot-radio-ncp-ver-query-mock") {
     "//sdk/fidl/fuchsia.lowpan.spinel:fuchsia.lowpan.spinel-rustc",
     "//src/connectivity/openthread/tests/lib",
     "//src/connectivity/openthread/tests/test-code",
+    "//src/lib/fuchsia-async",
+    "//src/lib/syslog/rust:syslog",
   ]
   non_rust_deps = [ "//zircon/public/lib/syslog" ]
 }
