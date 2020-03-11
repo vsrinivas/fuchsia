@@ -58,9 +58,6 @@ executable("test_harness_fixture_test_bin") {
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
   ]
-
-  # TODO(46849): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 test_package("test_harness_fixture_test") {
