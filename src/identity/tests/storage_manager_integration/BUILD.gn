@@ -9,7 +9,7 @@ import("//build/testing/environments.gni")
 
 group("storage_manager_integration") {
   testonly = true
-  deps = [ ":storage_manager_integration_test_pkg" ]
+  deps = [ ":storage-manager-integration-test-pkg" ]
 }
 
 rustc_test("test") {
@@ -26,7 +26,7 @@ rustc_test("test") {
   ]
 }
 
-test_package("storage_manager_integration_test_pkg") {
+test_package("storage-manager-integration-test-pkg") {
   deps = [ ":test" ]
 
   tests = [
