@@ -5,8 +5,11 @@
 #![allow(dead_code)]
 
 use {
-    core::hash::Hash, fidl_fuchsia_wlan_device, fidl_fuchsia_wlan_device_service, fuchsia_zircon,
-    std::collections::HashMap, thiserror::Error,
+    core::hash::Hash,
+    fidl_fuchsia_wlan_device, fidl_fuchsia_wlan_device_service, fuchsia_zircon,
+    log::{error, info},
+    std::collections::HashMap,
+    thiserror::Error,
 };
 
 /// Errors raised while attempting to query information about or configure PHYs and ifaces.
@@ -72,7 +75,7 @@ impl PhyManager {
         };
 
         if let Some(response) = query_phy_response {
-            println!("wlancfg: adding PHY ID #{}", phy_id);
+            info!("adding PHY ID #{}", phy_id);
             self.phys.insert(PhyId(response.info.id), PhyContainer::new(response.info));
         }
         Ok(())

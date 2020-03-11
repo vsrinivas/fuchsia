@@ -146,7 +146,7 @@ impl SavedNetworksManager {
             {
                 saved_networks.entry(network_id).or_default().push(network_config);
             } else {
-                eprintln!(
+                error!(
                     "Error creating network config from loaded data for SSID {}",
                     String::from_utf8_lossy(&network_id.ssid.clone())
                 );
@@ -185,7 +185,7 @@ impl SavedNetworksManager {
         if let Entry::Occupied(network_configs) = &network_entry {
             if network_configs.get().iter().any(|cfg| cfg.credential == credential) {
                 info!(
-                    "wlancfg: Saving a previously saved network with same password: {}",
+                    "Saving a previously saved network with same password: {}",
                     String::from_utf8_lossy(&network_id.ssid)
                 );
                 return Ok(());

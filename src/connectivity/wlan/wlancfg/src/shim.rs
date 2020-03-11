@@ -10,7 +10,7 @@ use {
     fidl_fuchsia_wlan_stats as fidl_wlan_stats, fuchsia_zircon as zx,
     futures::{channel::oneshot, prelude::*},
     itertools::Itertools,
-    log::info,
+    log::{error, info},
     std::{
         cmp::Ordering,
         collections::HashMap,
@@ -98,11 +98,11 @@ async fn handle_request(
             responder.send(&mut r)
         }
         legacy::WlanRequest::StartBss { responder, .. } => {
-            eprintln!("StartBss() is not implemented");
+            error!("StartBss() is not implemented");
             responder.send(&mut not_supported())
         }
         legacy::WlanRequest::StopBss { responder } => {
-            eprintln!("StopBss() is not implemented");
+            error!("StopBss() is not implemented");
             responder.send(&mut not_supported())
         }
         legacy::WlanRequest::Stats { responder } => {
@@ -112,7 +112,7 @@ async fn handle_request(
         legacy::WlanRequest::ClearSavedNetworks { responder } => {
             info!("Clearing all saved networks.");
             if let Err(e) = saved_networks.clear() {
-                eprintln!("Error clearing network configs: {}", e);
+                error!("Error clearing network configs: {}", e);
             }
             responder.send()
         }
@@ -151,7 +151,7 @@ async fn scan(client: &ClientRef, legacy_req: legacy::ScanRequest) -> legacy::Sc
     let r = async move {
         let client = client.get()?;
         let scan_txn = start_scan_txn(&client, legacy_req).map_err(|e| {
-            eprintln!("Failed to start a scan transaction: {}", e);
+            error!("Failed to start a scan transaction: {}", e);
             internal_error()
         })?;
 
@@ -160,7 +160,7 @@ async fn scan(client: &ClientRef, legacy_req: legacy::ScanRequest) -> legacy::Sc
         let mut done = false;
 
         while let Some(event) = evt_stream.try_next().await.map_err(|e| {
-            eprintln!("Error reading from scan transaction stream: {}", e);
+            error!("Error reading from scan transaction stream: {}", e);
             internal_error()
         })? {
             match event {
@@ -176,7 +176,7 @@ async fn scan(client: &ClientRef, legacy_req: legacy::ScanRequest) -> legacy::Sc
         }
 
         if !done {
-            eprintln!("Failed to fetch all results before the channel was closed");
+            error!("Failed to fetch all results before the channel was closed");
             return Err(internal_error());
         }
 
@@ -251,12 +251,12 @@ fn connect(
                 responder,
             };
             future::ready(client.client.connect(req).map_err(|e| {
-                eprintln!("Failed to start a connect transaction: {}", e);
+                error!("Failed to start a connect transaction: {}", e);
                 internal_error()
             }))
             .and_then(move |()| {
                 receiver.map_err(|_e| {
-                    eprintln!("Did not receive a connect result");
+                    error!("Did not receive a connect result");
                     internal_error()
                 })
             })
@@ -272,7 +272,7 @@ async fn disconnect(client: ClientRef) -> legacy::Error {
     };
     let (responder, receiver) = oneshot::channel();
     if let Err(e) = client.client.disconnect(responder) {
-        eprintln!("Failed to enqueue a disconnect command: {}", e);
+        error!("Failed to enqueue a disconnect command: {}", e);
         return internal_error();
     }
     match receiver.await {
@@ -296,7 +296,7 @@ fn status(client: &ClientRef) -> impl Future<Output = legacy::WlanStatus> {
     future::ready(client.get())
         .and_then(|client| {
             client.sme.status().map_err(|e| {
-                eprintln!("Failed to query status: {}", e);
+                error!("Failed to query status: {}", e);
                 internal_error()
             })
         })
@@ -327,7 +327,7 @@ fn stats(client: &ClientRef) -> impl Future<Output = legacy::WlanStats> {
     future::ready(client.get())
         .and_then(|client| {
             client.service.get_iface_stats(client.iface_id).map_err(|e| {
-                eprintln!("Failed to query statistics: {}", e);
+                error!("Failed to query statistics: {}", e);
                 internal_error()
             })
         })
@@ -336,7 +336,7 @@ fn stats(client: &ClientRef) -> impl Future<Output = legacy::WlanStats> {
                 legacy::WlanStats { error: success(), stats: *iface_stats }
             }
             Ok((err_code, _)) => {
-                eprintln!("GetIfaceStats returned error code {}", zx::Status::from_raw(err_code));
+                error!("GetIfaceStats returned error code {}", zx::Status::from_raw(err_code));
                 legacy::WlanStats { error: internal_error(), stats: empty_stats() }
             }
             Err(error) => legacy::WlanStats { error, stats: empty_stats() },

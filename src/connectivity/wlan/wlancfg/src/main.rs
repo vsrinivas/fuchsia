@@ -24,6 +24,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     futures::{channel::mpsc, future::try_join, prelude::*, select},
+    log::error,
     parking_lot::Mutex,
     pin_utils::pin_mut,
     std::sync::Arc,
@@ -44,7 +45,7 @@ async fn serve_fidl(
         .add_fidl_service(|stream| {
             let fut =
                 shim::serve_legacy(stream, legacy_client_ref.clone(), Arc::clone(&saved_networks))
-                    .unwrap_or_else(|e| eprintln!("error serving legacy wlan API: {}", e));
+                    .unwrap_or_else(|e| error!("error serving legacy wlan API: {}", e));
             fasync::spawn(fut)
         })
         .add_fidl_service(move |reqs| {

@@ -2,13 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{Context as _, Error};
-use fidl_fuchsia_wlan_device as wlan;
-use serde_derive::Deserialize;
-use std::{
-    collections::BTreeMap,
-    fs::File,
-    io::{Read, Write},
+use {
+    anyhow::{Context as _, Error},
+    fidl_fuchsia_wlan_device as wlan,
+    log::info,
+    serde_derive::Deserialize,
+    std::{
+        collections::BTreeMap,
+        fs::File,
+        io::{Read, Write},
+    },
 };
 
 const CONFIG_FILE: &str = "/data/config.json";
@@ -59,13 +62,13 @@ impl Config {
 
         if let Some(roles) = self.phy.get(key) {
             if key == "*" {
-                println!("using default wlan config entry for phy");
+                info!("using default wlan config entry for phy");
             } else {
-                println!("using wlan config entry {} for phy {}", key, path);
+                info!("using wlan config entry {} for phy {}", key, path);
             }
             Some(roles)
         } else {
-            println!("no wlan config entry found for phy at {}", path);
+            info!("no wlan config entry found for phy at {}", path);
             None
         }
     }

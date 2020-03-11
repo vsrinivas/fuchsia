@@ -214,6 +214,24 @@ async fn handle_provider_request(
     }
 }
 
+/// Logs a message for an incoming ClientControllerRequest
+fn log_client_request(request: &fidl_policy::ClientControllerRequest) {
+    info!(
+        "Received policy client request {}",
+        match request {
+            fidl_policy::ClientControllerRequest::Connect { .. } => "Connect",
+            fidl_policy::ClientControllerRequest::StartClientConnections { .. } =>
+                "StartClientConnections",
+            fidl_policy::ClientControllerRequest::StopClientConnections { .. } =>
+                "StopClientConnections",
+            fidl_policy::ClientControllerRequest::ScanForNetworks { .. } => "ScanForNetworks",
+            fidl_policy::ClientControllerRequest::SaveNetwork { .. } => "SaveNetwork",
+            fidl_policy::ClientControllerRequest::RemoveNetwork { .. } => "RemoveNetwork",
+            fidl_policy::ClientControllerRequest::GetSavedNetworks { .. } => "GetSavedNetworks",
+        }
+    );
+}
+
 /// Handles all incoming requests from a ClientController.
 async fn handle_client_requests(
     client: ClientPtr,
@@ -223,6 +241,7 @@ async fn handle_client_requests(
 ) -> Result<(), fidl::Error> {
     let mut request_stream = requests.into_stream()?;
     while let Some(request) = request_stream.try_next().await? {
+        log_client_request(&request);
         match request {
             fidl_policy::ClientControllerRequest::Connect { id, responder, .. } => {
                 match handle_client_request_connect(

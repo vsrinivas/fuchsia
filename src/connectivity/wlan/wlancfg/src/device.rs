@@ -2,18 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{client, config::Config, config_manager::SavedNetworksManager, policy, shim};
-
-use anyhow::format_err;
-use fidl::endpoints::create_proxy;
-use fidl_fuchsia_wlan_device as wlan;
-use fidl_fuchsia_wlan_device_service::{
-    self as wlan_service, DeviceServiceProxy, DeviceWatcherEvent,
+use {
+    crate::{client, config::Config, config_manager::SavedNetworksManager, policy, shim},
+    anyhow::format_err,
+    fidl::endpoints::create_proxy,
+    fidl_fuchsia_wlan_device as wlan,
+    fidl_fuchsia_wlan_device_service::{
+        self as wlan_service, DeviceServiceProxy, DeviceWatcherEvent,
+    },
+    fuchsia_async as fasync, fuchsia_zircon as zx,
+    futures::{prelude::*, stream},
+    log::info,
+    std::sync::Arc,
 };
-use fuchsia_async as fasync;
-use fuchsia_zircon as zx;
-use futures::{prelude::*, stream};
-use std::sync::Arc;
 
 pub struct Listener {
     proxy: DeviceServiceProxy,
@@ -27,39 +28,39 @@ pub async fn handle_event(
     evt: DeviceWatcherEvent,
     saved_networks: Arc<SavedNetworksManager>,
 ) {
-    println!("wlancfg got event: {:?}", evt);
+    info!("got event: {:?}", evt);
     match evt {
         DeviceWatcherEvent::OnPhyAdded { phy_id } => {
             if let Err(e) = on_phy_added(listener, phy_id).await {
-                println!("wlancfg: error adding new phy {}: {}", phy_id, e);
+                info!("error adding new phy {}: {}", phy_id, e);
             }
         }
         DeviceWatcherEvent::OnPhyRemoved { phy_id } => {
-            println!("wlancfg: phy removed: {}", phy_id);
+            info!("phy removed: {}", phy_id);
         }
         DeviceWatcherEvent::OnIfaceAdded { iface_id } => {
             if let Err(e) = on_iface_added(listener, iface_id, saved_networks).await {
-                println!("wlancfg: error adding new iface {}: {}", iface_id, e);
+                info!("error adding new iface {}: {}", iface_id, e);
             }
         }
         DeviceWatcherEvent::OnIfaceRemoved { iface_id } => {
             listener.legacy_client.remove_if_matching(iface_id);
-            println!("wlancfg: iface removed: {}", iface_id);
+            info!("iface removed: {}", iface_id);
         }
     }
 }
 
 async fn on_phy_added(listener: &Listener, phy_id: u16) -> Result<(), anyhow::Error> {
-    println!("wlancfg: phy {} added", phy_id);
+    info!("phy {} added", phy_id);
     let info = query_phy(listener, phy_id).await?;
     let path = info.dev_path.unwrap_or("*".into());
-    println!("wlancfg: received a PhyInfo from phy #{}: path is {}", phy_id, path);
+    info!("received a PhyInfo from phy #{}: path is {}", phy_id, path);
     let roles_to_create =
         listener.config.roles_for_path(&path).ok_or_else(|| format_err!("no matching roles"))?;
 
     let mut futures = stream::FuturesUnordered::new();
     for role in roles_to_create {
-        println!("wlancfg: Creating {:?} iface for phy {}", role, phy_id);
+        info!("Creating {:?} iface for phy {}", role, phy_id);
         let mut req = wlan_service::CreateIfaceRequest { phy_id, role: wlan::MacRole::from(*role) };
         let fut = listener.proxy.create_iface(&mut req).map(move |res| (res, role));
         futures.push(fut);
@@ -67,10 +68,7 @@ async fn on_phy_added(listener: &Listener, phy_id: u16) -> Result<(), anyhow::Er
 
     while let Some((res, role)) = futures.next().await {
         if let Err(e) = res {
-            println!(
-                "wlancfg: error creating iface for role {:?} and phy {}: {:?}",
-                role, phy_id, e
-            );
+            info!("error creating iface for role {:?} and phy {}: {:?}", role, phy_id, e);
         }
     }
     Ok(())
@@ -115,7 +113,7 @@ async fn on_iface_added(
     let lc = shim::Client { service, client: c, sme: sme.clone(), iface_id };
     legacy_client.set_if_empty(lc);
     client.lock().set_sme(sme);
-    println!("wlancfg: new iface {} added successfully", iface_id);
+    info!("new iface {} added successfully", iface_id);
     Ok(())
 }
 

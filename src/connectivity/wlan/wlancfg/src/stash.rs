@@ -120,7 +120,7 @@ impl Stash {
                                 config_list.push(network_config);
                             }
                             Err(e) => {
-                                error!("wlancfg: Error loading from stash: {:?}", e);
+                                error!("Error loading from stash: {:?}", e);
                             }
                         }
                     }
@@ -131,7 +131,7 @@ impl Stash {
                     network_configs.insert(net_id, config_list);
                 }
                 Err(e) => {
-                    error!("wlancfg: Error reading network identifier from stash: {:?}", e);
+                    error!("Error reading network identifier from stash: {:?}", e);
                     continue;
                 }
             }

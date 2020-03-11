@@ -21,6 +21,7 @@ use {
         select,
         stream::{self, StreamExt, TryStreamExt},
     },
+    log::{error, info},
     pin_utils::pin_mut,
     std::{collections::HashMap, sync::Arc},
     void::ResultVoidErrExt,
@@ -94,22 +95,22 @@ async fn serve(
     let removal_watcher = sme_event_stream.map_ok(|_| ()).try_collect::<()>();
     select! {
         state_machine = state_machine.fuse() =>
-            println!("wlancfg: Client station state machine for iface #{} terminated with an error: {}",
+            info!("Client station state machine for iface #{} terminated with an error: {}",
                 iface_id, state_machine.void_unwrap_err()),
         removal_watcher = removal_watcher.fuse() => if let Err(e) = removal_watcher {
-            println!("wlancfg: Error reading from Client SME channel of iface #{}: {}",
+            info!("Error reading from Client SME channel of iface #{}: {}",
                 iface_id, e);
         },
     }
-    println!("wlancfg: Removed client station for iface #{}", iface_id);
+    info!("Removed client station for iface #{}", iface_id);
 }
 
 async fn auto_connect_state(
     services: Services,
     mut next_req: NextReqFut,
 ) -> Result<State, anyhow::Error> {
-    println!(
-        "wlancfg: Starting auto-connect loop with {} saved networks",
+    info!(
+        "starting auto-connect loop with {} saved networks",
         services.saved_networks.known_network_count()
     );
     let auto_connected = auto_connect(&services);
@@ -198,15 +199,15 @@ async fn connect_to_known_network(
     credential: Credential,
 ) -> Result<bool, anyhow::Error> {
     let ssid_str = String::from_utf8_lossy(&ssid).into_owned();
-    println!("wlancfg: Auto-connecting to '{}'", ssid_str);
+    info!("Auto-connecting to '{}'", ssid_str);
     let txn = start_connect_txn(sme, &ssid, &credential)?;
     match wait_until_connected(txn).await? {
         fidl_sme::ConnectResultCode::Success => {
-            println!("wlancfg: Auto-connected to '{}'", ssid_str);
+            info!("Auto-connected to '{}'", ssid_str);
             Ok(true)
         }
         other => {
-            println!("wlancfg: Failed to auto-connect to '{}': {:?}", ssid_str, other);
+            info!("Failed to auto-connect to '{}': {:?}", ssid_str, other);
             Ok(false)
         }
     }
@@ -217,8 +218,8 @@ async fn manual_connect_state(
     mut next_req: NextReqFut,
     req: ConnectRequest,
 ) -> Result<State, anyhow::Error> {
-    println!(
-        "wlancfg: Connecting to '{}' because of a manual request from the user",
+    info!(
+        "Connecting to '{}' because of a manual request from the user",
         String::from_utf8_lossy(&req.ssid)
     );
     // This can only be password or none - PSK is not supported by legacy connect calls.
@@ -233,7 +234,7 @@ async fn manual_connect_state(
             req.responder.send(code).unwrap_or_else(|_| ());
             Ok(match code {
                 fidl_sme::ConnectResultCode::Success => {
-                    println!("wlancfg: Successfully connected to '{}'",
+                    info!("Successfully connected to '{}'",
                              String::from_utf8_lossy(&req.ssid));
                     let network_id = NetworkIdentifier::new(
                         req.ssid.clone(),
@@ -241,13 +242,13 @@ async fn manual_connect_state(
                     );
                     services.saved_networks.store(network_id.clone(), credential.clone())
                          .unwrap_or_else(
-                            |e| eprintln!("wlancfg: Failed to store network config: {:?}", e));
+                            |e| error!("Failed to store network config: {:?}", e));
                     services.saved_networks
                         .record_connect_success(network_id, &credential);
                     connected_state(services, next_req).into_state()
                 },
                 other => {
-                    println!("wlancfg: Failed to connect to '{}': {:?}",
+                    info!("Failed to connect to '{}': {:?}",
                              String::from_utf8_lossy(&req.ssid), other);
                     auto_connect_state(services, next_req).into_state()
                 }
@@ -412,12 +413,12 @@ async fn fetch_scan_results(
             fidl_sme::ScanTransactionEvent::OnResult { aps } => all_aps.extend(aps),
             fidl_sme::ScanTransactionEvent::OnFinished {} => return Ok(all_aps),
             fidl_sme::ScanTransactionEvent::OnError { error } => {
-                eprintln!("wlancfg: Scanning failed with error: {:?}", error);
+                error!("Scanning failed with error: {:?}", error);
                 return Ok(all_aps);
             }
         }
     }
-    eprintln!("Server closed the ScanTransaction channel before sending a Finished or Error event");
+    error!("Server closed the ScanTransaction channel before sending a Finished or Error event");
     Ok(all_aps)
 }
 
