@@ -196,17 +196,24 @@ func (q *QEMUCommandBuilder) AddKernelArg(kernelArg string) {
 	q.kernelArgs = append(q.kernelArgs, kernelArg)
 }
 
+func (q *QEMUCommandBuilder) validate() error {
+	if q.qemuPath == "" {
+		return fmt.Errorf("QEMU binary path must be set.")
+	}
+	if q.kernel == "" {
+		return fmt.Errorf("QEMU kernel path must be set.")
+	}
+	if q.initrd == "" {
+		return fmt.Errorf("QEMU initrd path must be set.")
+	}
+	return nil
+}
+
 // Build creates a QEMU invocation given a particular configuration, a list of
 // images, and any specified command-line arguments.
 func (q *QEMUCommandBuilder) Build() ([]string, error) {
-	if q.qemuPath == "" {
-		return []string{}, fmt.Errorf("QEMU binary path must be set.")
-	}
-	if q.kernel == "" {
-		return []string{}, fmt.Errorf("QEMU kernel path must be set.")
-	}
-	if q.initrd == "" {
-		return []string{}, fmt.Errorf("QEMU initrd path must be set.")
+	if err := q.validate(); err != nil {
+		return []string{}, err
 	}
 	cmd := []string{
 		q.qemuPath,
