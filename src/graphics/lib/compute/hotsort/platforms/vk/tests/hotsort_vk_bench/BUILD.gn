@@ -6,10 +6,10 @@ import("../../../../../gn/build_rules.gni")
 import("../../targets/hotsort_target.gni")
 
 #
-# hotsort_vk_bench: benchmark HotSort
+# hotsort-vk-bench: benchmark HotSort
 #
 
-graphics_compute_vulkan_executable("hotsort_vk_bench") {
+graphics_compute_vulkan_executable("hotsort-vk-bench") {
   sources = [
     "main.c",
     "sort.cc",

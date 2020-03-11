@@ -7,7 +7,7 @@ import("../../../../../gn/build_rules.gni")
 #
 # spinel_vk_svg: exercise the Spinel API with basic SVGs
 #
-graphics_compute_vulkan_executable("spinel_vk_svg") {
+graphics_compute_vulkan_executable("spinel-vk-svg") {
   #
   # Fails trying to build a Fuchsia executable
   # configs = [
@@ -31,7 +31,8 @@ graphics_compute_vulkan_executable("spinel_vk_svg") {
     # FIXME(allanmac): these includes are necessary only because we're
     # using a convenient Vulkan allocator defined in Spinel
     "${graphics_compute_dir}/spinel",  # only for suballocator.h
-    "${graphics_compute_dir}/spinel/platforms/vk",  # only for allocator_device.h
+    "${graphics_compute_dir}/spinel/platforms/vk",  # only for
+                                                    # allocator_device.h
   ]
   deps = [
     "${graphics_compute_dir}/common",

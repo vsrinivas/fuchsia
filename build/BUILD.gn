@@ -504,8 +504,6 @@ group("deprecated_package_underscore") {
     "//src/graphics/drivers/msd-img-rgx/tests/unit_tests:msd_img_rgx_nonhardware_tests",
     "//src/graphics/lib/compute/examples:mold_svg_demo",
     "//src/graphics/lib/compute/examples:spinel_svg_demo",
-    "//src/graphics/lib/compute/hotsort/platforms/vk/tests/hotsort_vk_bench:hotsort_vk_bench",
-    "//src/graphics/lib/compute/spinel/platforms/vk/tests/spinel_vk_svg:spinel_vk_svg",
     "//src/graphics/lib/compute/tests/vk_app_state_test:vk_app_state_test",
     "//src/graphics/lib/compute/tests/vk_swapchain_test:vk_swapchain_test",
     "//src/graphics/lib/compute/tests/vk_transfer_test:vk_transfer_test",

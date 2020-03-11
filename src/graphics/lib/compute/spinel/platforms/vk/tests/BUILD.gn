@@ -4,7 +4,7 @@
 
 group("tests") {
   testonly = true
-  public_deps = [ "spinel_vk_svg" ]
+  public_deps = [ "spinel_vk_svg:spinel-vk-svg" ]
 }
 
 group("vk_unittests") {
