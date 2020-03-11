@@ -163,27 +163,27 @@ config("relative_paths") {
   # the debug symbols.
 
   if (use_goma) {
-    # TODO(TC-585): `-ffile-prefix-map` is also used by Goma to canonicalize
+    # TODO(TC-585): `-fdebug-prefix-map` is also used by Goma to canonicalize
     # build commands, allowing it to reuse compilation results for users running
     # out of different working directories. However, it only supports a single
-    # "-ffile-prefix-map" prefix. Attempting to provide more than one causes
+    # "-fdebug-prefix-map" prefix. Attempting to provide more than one causes
     # canonicalization to fail, meaning that builds running out of different
     # directories won't share cache results. For now, we just provide a single
     # debug-prefix-map, even though more would be ideal.
 
     # Map "/some/dir/fuchsia" to "../..".
-    cflags = [ "-ffile-prefix-map=" + rebase_path("//") + "=" +
+    cflags = [ "-fdebug-prefix-map=" + rebase_path("//") + "=" +
                rebase_path("//", root_build_dir) ]
   } else {
     cflags = [
       # Map "/some/dir/fuchsia/out/my-build.my-arch" to ".".
-      "-ffile-prefix-map=" + rebase_path(root_build_dir) + "=.",
+      "-fdebug-prefix-map=" + rebase_path(root_build_dir) + "=.",
 
       # Map "/some/dir/fuchsia/out" to "..".
-      "-ffile-prefix-map=" + rebase_path("$root_build_dir/..") + "=..",
+      "-fdebug-prefix-map=" + rebase_path("$root_build_dir/..") + "=..",
 
       # Map "/some/dir/fuchsia" to "../..".
-      "-ffile-prefix-map=" + rebase_path("//.") + "=" +
+      "-fdebug-prefix-map=" + rebase_path("//.") + "=" +
           rebase_path("//.", root_build_dir),
     ]
   }
