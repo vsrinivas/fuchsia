@@ -1,8 +1,8 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-
-use std::{convert::TryInto, ffi::CString};
+use std::ffi::CString;
+use std::os::raw;
 
 /// trait that can ping.
 pub trait Pinger {
@@ -10,9 +10,9 @@ pub trait Pinger {
     fn ping(&self, url: &str) -> bool;
 }
 
-#[link(name = "ping", kind = "static")]
+#[link(name = "ext_ping", kind = "static")]
 extern "C" {
-    fn ping(argc: libc::c_int, argv: *const *const libc::c_char) -> libc::c_int;
+    fn c_ping(url: *const raw::c_char) -> raw::c_int;
 }
 
 pub struct IcmpPinger;
@@ -20,15 +20,16 @@ impl Pinger for IcmpPinger {
     // pings an IPv4 address.
     // returns true if there has been a response, false otherwise.
     fn ping(&self, url: &str) -> bool {
-        let c_name = CString::new("ping").unwrap();
-        let c_url = CString::new(url).unwrap();
-        let args = [c_name.as_ptr(), c_url.as_ptr(), std::ptr::null()];
+        let ret;
         // unsafe needed as we are calling C code.
-        let ret = unsafe { ping((args.len() - 1).try_into().unwrap(), args.as_ptr()) };
+        let c_str = CString::new(url).unwrap();
+        unsafe {
+            ret = c_ping(c_str.as_ptr());
+        }
         if ret == 0 {
-            debug!("ping {} succeeded", url);
+            debug!("ping {:#?} succeeded!", url);
         } else {
-            info!("ping {} failed: {}", url, std::io::Error::last_os_error());
+            info!("ping {:#?} failed (err={:#?})!", url, ret);
         }
         ret == 0
     }

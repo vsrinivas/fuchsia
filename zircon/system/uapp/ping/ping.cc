@@ -2,19 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "ping.h"
-
 #include <arpa/inet.h>
+#include <fcntl.h>
 #include <netdb.h>
 #include <netinet/icmp6.h>
+#include <netinet/in.h>
 #include <netinet/ip_icmp.h>
 #include <poll.h>
 #include <unistd.h>
+#include <zircon/compiler.h>
 #include <zircon/syscalls.h>
 
 #include <cerrno>
+#include <climits>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 
 #define USEC_TO_MSEC(x) (float(x) / 1000.0)
 
@@ -26,15 +29,15 @@ typedef struct {
 } __PACKED packet_t;
 
 struct Options {
-  unsigned int interval_usec = 1e6;
+  long interval_msec = 1000;
+  long payload_size_bytes = 0;
   long count = 3;
-  int timeout_msec = 1000;
+  long timeout_msec = 1000;
   uint32_t scope_id = 0;
   const char* host = nullptr;
-  size_t payload_size_bytes = 0;
-  size_t min_payload_size_bytes = 0;
+  long min_payload_size_bytes = 0;
 
-  explicit Options(size_t min) {
+  explicit Options(long min) {
     payload_size_bytes = min;
     min_payload_size_bytes = min;
   }
@@ -42,17 +45,17 @@ struct Options {
   void Print() const {
     printf("Count: %ld, ", count);
     printf("Payload size: %ld bytes, ", payload_size_bytes);
-    printf("Interval: %u ms, ", interval_usec / 1000);
-    printf("Timeout: %d ms, ", timeout_msec);
+    printf("Interval: %ld ms, ", interval_msec);
+    printf("Timeout: %ld ms, ", timeout_msec);
     printf("Scope ID: %u, ", scope_id);
     if (host != nullptr) {
       printf("Destination: %s\n", host);
     }
   }
 
-  [[nodiscard]] bool Validate() const {
-    if (interval_usec == 0) {
-      fprintf(stderr, "interval must be greater than zero\n");
+  bool Validate() const {
+    if (interval_msec <= 0) {
+      fprintf(stderr, "interval must be positive: %ld\n", interval_msec);
       return false;
     }
 
@@ -72,7 +75,7 @@ struct Options {
     }
 
     if (timeout_msec <= 0) {
-      fprintf(stderr, "timeout must be positive: %d\n", timeout_msec);
+      fprintf(stderr, "timeout must be positive: %ld\n", timeout_msec);
       return false;
     }
 
@@ -83,7 +86,7 @@ struct Options {
     return true;
   }
 
-  [[nodiscard]] int Usage() const {
+  int Usage() const {
     fprintf(stderr, "\n\tUsage: ping [ <option>* ] destination\n");
     fprintf(stderr, "\n\tSend ICMP ECHO_REQUEST to a destination. This destination\n");
     fprintf(stderr, "\tmay be a hostname (google.com) or an IP address (8.8.8.8).\n\n");
@@ -105,7 +108,7 @@ struct Options {
         case 'h':
           return Usage();
         case 'i':
-          interval_usec = static_cast<unsigned int>(strtoul(optarg, &endptr, 10) * 1000);
+          interval_msec = strtol(optarg, &endptr, 10);
           if (*endptr != '\0') {
             fprintf(stderr, "-i must be followed by a non-negative integer\n");
             return Usage();
@@ -126,7 +129,7 @@ struct Options {
           }
           break;
         case 't':
-          timeout_msec = static_cast<int>(strtol(optarg, &endptr, 10));
+          timeout_msec = strtol(optarg, &endptr, 10);
           if (*endptr != '\0') {
             fprintf(stderr, "-t must be followed by a non-negative integer\n");
             return Usage();
@@ -229,9 +232,10 @@ bool ValidateReceivedPacket(const packet_t& sent_packet, size_t sent_packet_size
   return true;
 }
 
-int ping(int argc, char* argv[]) {
+int main(int argc, char** argv) {
   constexpr char ping_message[] = "This is an echo message!";
-  Options options(strlen(ping_message) + 1);
+  long message_size = static_cast<long>(strlen(ping_message) + 1);
+  Options options(message_size);
   PingStatistics stats;
 
   if (options.ParseCommandLine(argc, argv) != 0) {
@@ -244,12 +248,13 @@ int ping(int argc, char* argv[]) {
 
   options.Print();
 
-  struct addrinfo hints = {};
+  struct addrinfo hints;
+  memset(&hints, 0, sizeof(hints));
   hints.ai_family = AF_UNSPEC;
   hints.ai_socktype = SOCK_RAW;
   hints.ai_flags = 0;
   struct addrinfo* info;
-  if (getaddrinfo(options.host, nullptr, &hints, &info)) {
+  if (getaddrinfo(options.host, NULL, &hints, &info)) {
     fprintf(stderr, "ping: unknown host %s\n", options.host);
     return -1;
   }
@@ -287,59 +292,64 @@ int ping(int argc, char* argv[]) {
     return -1;
   }
 
+  uint16_t sequence = 1;
+  packet_t packet, received_packet;
+  ssize_t r = 0;
+  ssize_t sent_packet_size = 0;
   const zx_ticks_t ticks_per_usec = zx_ticks_per_second() / 1000000;
 
-  packet_t packet = {};
-  packet.hdr.type = type;
-  packet.hdr.code = 0;
-  packet.hdr.un.echo.id = 0;
-  strcpy(reinterpret_cast<char*>(packet.payload), ping_message);
-
-  uint16_t sequence = 1;
   while (options.count-- > 0) {
+    memset(&packet, 0, sizeof(packet));
+    packet.hdr.type = type;
+    packet.hdr.code = 0;
+    packet.hdr.un.echo.id = 0;
     packet.hdr.un.echo.sequence = htons(sequence++);
+    strcpy(reinterpret_cast<char*>(packet.payload), ping_message);
     // Netstack will overwrite the checksum
     zx_ticks_t before = zx_ticks_get();
-    ssize_t sent_packet_size = sizeof(packet.hdr) + options.payload_size_bytes;
-    ssize_t r = sendto(s, &packet, sent_packet_size, 0, info->ai_addr, info->ai_addrlen);
+    sent_packet_size = sizeof(packet.hdr) + options.payload_size_bytes;
+    r = sendto(s, &packet, sent_packet_size, 0, info->ai_addr, info->ai_addrlen);
     if (r < 0) {
       fprintf(stderr, "ping: Could not send packet\n");
       return -1;
     }
 
-    struct pollfd fd = {};
+    struct pollfd fd;
     fd.fd = s;
     fd.events = POLLIN;
-    switch (poll(&fd, 1, options.timeout_msec)) {
-      case 0:
-        fprintf(stderr, "ping: Timeout after %d ms\n", options.timeout_msec);
-        return -1;
+    switch (poll(&fd, 1, static_cast<int>(options.timeout_msec))) {
       case 1:
         if (fd.revents & POLLIN) {
-          packet_t received_packet;
-          r = recvfrom(s, &received_packet, sizeof(received_packet), 0, nullptr, nullptr);
-          if (r < 0) {
-            fprintf(stderr, "ping: Could not read result of ping\n");
-            return -1;
-          }
+          r = recvfrom(s, &received_packet, sizeof(received_packet), 0, NULL, NULL);
           if (!ValidateReceivedPacket(packet, sent_packet_size, received_packet, r, options)) {
-            fprintf(stderr, "ping: Received packet didn't match sent packet: %d\n", sequence);
-          } else {
-            zx_ticks_t after = zx_ticks_get();
-            uint64_t usec = (after - before) / ticks_per_usec;
-            stats.Update(usec);
-            printf("%zu bytes from %s : icmp_seq=%d rtt=%.3f ms\n", r, options.host, sequence,
-                   (float)usec / 1000.0);
+            fprintf(stderr, "ping: Received packet didn't match sent packet: %d\n",
+                    packet.hdr.un.echo.sequence);
           }
-          if (options.count > 0) {
-            usleep(options.interval_usec);
-          }
-          continue;
+          break;
+        } else {
+          fprintf(stderr, "ping: Spurious wakeup from poll\n");
+          r = -1;
+          break;
         }
+      case 0:
+        fprintf(stderr, "ping: Timeout after %d ms\n", static_cast<int>(options.timeout_msec));
         __FALLTHROUGH;
       default:
-        fprintf(stderr, "ping: Spurious wakeup from poll\n");
-        return -1;
+        r = -1;
+    }
+
+    if (r < 0) {
+      fprintf(stderr, "ping: Could not read result of ping\n");
+      return -1;
+    }
+    zx_ticks_t after = zx_ticks_get();
+    int seq = ntohs(packet.hdr.un.echo.sequence);
+    uint64_t usec = (after - before) / ticks_per_usec;
+    stats.Update(usec);
+    printf("%" PRIu64 " bytes from %s : icmp_seq=%d rtt=%.3f ms\n", r, options.host, seq,
+           (float)usec / 1000.0);
+    if (options.count > 0) {
+      usleep(static_cast<unsigned int>(options.interval_msec * 1000));
     }
   }
   freeaddrinfo(info);
