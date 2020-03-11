@@ -24,6 +24,7 @@ pub use self::types::*;
 
 use alloc::vec::Vec;
 use core::fmt::{Debug, Display};
+use core::num::NonZeroU8;
 use core::ops::Deref;
 
 use log::{debug, trace};
@@ -56,7 +57,8 @@ use crate::wire::ipv6::{Ipv6Packet, Ipv6PacketRaw};
 use crate::{BufferDispatcher, Context, EventDispatcher, StackState, TimerId, TimerIdInner};
 
 /// Default IPv4 TTL.
-const DEFAULT_TTL: u8 = 64;
+// TODO(joshlf): Use `new` instead of `new_unchecked` once `new` is a const fn.
+const DEFAULT_TTL: NonZeroU8 = unsafe { NonZeroU8::new_unchecked(64) };
 
 /// Minimum MTU required by all IPv6 devices.
 pub(crate) const IPV6_MIN_MTU: u32 = 1280;
@@ -2043,7 +2045,7 @@ fn get_hop_limit<D: EventDispatcher, I: Ip>(ctx: &Context<D>, device: DeviceId) 
     //               Advertisement.
 
     match I::VERSION {
-        IpVersion::V4 => DEFAULT_TTL,
+        IpVersion::V4 => DEFAULT_TTL.get(),
         // This value can be updated by NDP's Router Advertisements.
         IpVersion::V6 => crate::device::get_ipv6_hop_limit(ctx, device).get(),
     }

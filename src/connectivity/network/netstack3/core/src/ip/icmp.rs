@@ -1876,7 +1876,7 @@ fn new_icmpv4_connection_inner<C: Icmpv4SocketContext>(
     icmp_id: u16,
 ) -> Result<IcmpConnId<Ipv4>, SocketError> {
     let ip =
-        ctx.new_ip_socket(local_addr, remote_addr, IpProto::Icmp, None, UnroutableBehavior::Close)?;
+        ctx.new_ip_socket(local_addr, remote_addr, IpProto::Icmp, UnroutableBehavior::Close, None)?;
     Ok(new_icmp_connection_inner(&mut ctx.get_state_mut().conns, remote_addr, icmp_id, ip)?)
 }
 
@@ -1910,8 +1910,8 @@ fn new_icmpv6_connection_inner<C: Icmpv6SocketContext>(
         local_addr,
         remote_addr,
         IpProto::Icmpv6,
-        None,
         UnroutableBehavior::Close,
+        None,
     )?;
     Ok(new_icmp_connection_inner(&mut ctx.get_state_mut().conns, remote_addr, icmp_id, ip)?)
 }

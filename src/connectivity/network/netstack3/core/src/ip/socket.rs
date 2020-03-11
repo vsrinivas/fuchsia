@@ -6,6 +6,7 @@
 
 use core::cmp::Ordering;
 use core::marker::PhantomData;
+use core::num::NonZeroU8;
 
 use net_types::ip::{Ip, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
 use net_types::SpecifiedAddr;
@@ -73,6 +74,11 @@ pub(crate) trait IpSocketContext<I: Ip> {
     // TODO(joshlf): Remove `Clone` bound once we're no longer cloning sockets.
     type IpSocket: IpSocket<I> + Clone;
 
+    /// A builder carrying optional parameters passed to [`new_ip_socket`].
+    ///
+    /// [`new_ip_socket`]: crate::ip::socket::IpSocketContext::new_ip_socket
+    type Builder: Default;
+
     /// Constructs a new [`Self::IpSocket`].
     ///
     /// `new_ip_socket` constructs a new `Self::IpSocket` to the given remote IP
@@ -86,15 +92,16 @@ pub(crate) trait IpSocketContext<I: Ip> {
     /// regardless of the value of `unroutable_behavior`. Eventually, this will
     /// be changed.
     ///
-    /// Outbound frames will have the given `ttl` or a default value if `ttl` is
-    /// `None`.
+    /// The builder may be used to override certain default parameters. Passing
+    /// `None` for the `builder` parameter is equivalent to passing
+    /// `Some(Default::default())`.
     fn new_ip_socket(
         &mut self,
         local_ip: Option<SpecifiedAddr<I::Addr>>,
         remote_ip: SpecifiedAddr<I::Addr>,
         proto: IpProto,
-        ttl: Option<u8>,
         unroutable_behavior: UnroutableBehavior,
+        builder: Option<Self::Builder>,
     ) -> Result<Self::IpSocket, NoRouteError>;
 }
 
@@ -142,6 +149,60 @@ pub(crate) enum UnroutableBehavior {
     StayOpen,
     /// The socket should close.
     Close,
+}
+
+/// A builder for IPv4 sockets.
+///
+/// [`IpSocketContext::new_ip_socket`] accepts optional configuration in the
+/// form of a `SocketBuilder`. All configurations have default values that are
+/// used if a custom value is not provided.
+#[derive(Default)]
+pub(crate) struct Ipv4SocketBuilder {
+    // NOTE(joshlf): These fields are `Option`s rather than being set to a
+    // default value in `Default::default` because global defaults may be set
+    // per-stack at runtime, meaning that default values cannot be known at
+    // compile time.
+    ttl: Option<NonZeroU8>,
+}
+
+impl Ipv4SocketBuilder {
+    /// Set the Time to Live (TTL) field that will be set on outbound IPv4
+    /// packets.
+    ///
+    /// The TTL must be non-zero. Per [RFC 1122 Section 3.2.1.7] and [RFC 1812
+    /// Section 4.2.2.9], hosts and routers (respectively) must not originate
+    /// IPv4 packets with a TTL of zero.
+    ///
+    /// [RFC 1122 Section 3.2.1.7]: https://tools.ietf.org/html/rfc1122#section-3.2.1.7
+    /// [RFC 1812 Section 4.2.2.9]: https://tools.ietf.org/html/rfc1812#section-4.2.2.9
+    #[allow(dead_code)] // TODO(joshlf): Remove once this is used
+    pub(crate) fn ttl(&mut self, ttl: NonZeroU8) -> &mut Ipv4SocketBuilder {
+        self.ttl = Some(ttl);
+        self
+    }
+}
+
+/// A builder for IPv6 sockets.
+///
+/// [`IpSocketContext::new_ip_socket`] accepts optional configuration in the
+/// form of a `SocketBuilder`. All configurations have default values that are
+/// used if a custom value is not provided.
+#[derive(Default)]
+pub(crate) struct Ipv6SocketBuilder {
+    // NOTE(joshlf): These fields are `Option`s rather than being set to a
+    // default value in `Default::default` because global defaults may be set
+    // per-stack at runtime, meaning that default values cannot be known at
+    // compile time.
+    hop_limit: Option<u8>,
+}
+
+impl Ipv6SocketBuilder {
+    /// Set the Hop Limit field that will be set on outbound IPv6 packets.
+    #[allow(dead_code)] // TODO(joshlf): Remove once this is used
+    pub(crate) fn hop_limit(&mut self, hop_limit: u8) -> &mut Ipv6SocketBuilder {
+        self.hop_limit = Some(hop_limit);
+        self
+    }
 }
 
 /// The production implementation of the [`IpSocket`] trait.
@@ -266,14 +327,18 @@ pub(crate) fn apply_ipv6_socket_update<D: EventDispatcher>(
 impl<D: EventDispatcher> IpSocketContext<Ipv4> for Context<D> {
     type IpSocket = IpSock<Ipv4, DeviceId>;
 
+    type Builder = Ipv4SocketBuilder;
+
     fn new_ip_socket(
         &mut self,
         local_ip: Option<SpecifiedAddr<Ipv4Addr>>,
         remote_ip: SpecifiedAddr<Ipv4Addr>,
         proto: IpProto,
-        ttl: Option<u8>,
         unroutable_behavior: UnroutableBehavior,
+        builder: Option<Ipv4SocketBuilder>,
     ) -> Result<IpSock<Ipv4, DeviceId>, NoRouteError> {
+        let builder = builder.unwrap_or_default();
+
         if Ipv4::LOOPBACK_SUBNET.contains(&remote_ip) {
             return Err(NoRouteError);
         }
@@ -308,7 +373,7 @@ impl<D: EventDispatcher> IpSocketContext<Ipv4> for Context<D> {
                     builder: Ipv4PacketBuilder::new(
                         local_ip,
                         remote_ip,
-                        ttl.unwrap_or(super::DEFAULT_TTL),
+                        builder.ttl.unwrap_or(super::DEFAULT_TTL).get(),
                         proto,
                     ),
                     device: dst.device,
@@ -322,14 +387,18 @@ impl<D: EventDispatcher> IpSocketContext<Ipv4> for Context<D> {
 impl<D: EventDispatcher> IpSocketContext<Ipv6> for Context<D> {
     type IpSocket = IpSock<Ipv6, DeviceId>;
 
+    type Builder = Ipv6SocketBuilder;
+
     fn new_ip_socket(
         &mut self,
         local_ip: Option<SpecifiedAddr<Ipv6Addr>>,
         remote_ip: SpecifiedAddr<Ipv6Addr>,
         proto: IpProto,
-        hop_limit: Option<u8>,
         unroutable_behavior: UnroutableBehavior,
+        builder: Option<Ipv6SocketBuilder>,
     ) -> Result<IpSock<Ipv6, DeviceId>, NoRouteError> {
+        let builder = builder.unwrap_or_default();
+
         if Ipv6::LOOPBACK_SUBNET.contains(&remote_ip) {
             return Err(NoRouteError);
         }
@@ -384,7 +453,7 @@ impl<D: EventDispatcher> IpSocketContext<Ipv6> for Context<D> {
                     builder: Ipv6PacketBuilder::new(
                         local_ip,
                         remote_ip,
-                        hop_limit.unwrap_or(super::DEFAULT_TTL),
+                        builder.hop_limit.unwrap_or(super::DEFAULT_TTL.get()),
                         proto,
                     ),
                     device,
@@ -654,19 +723,28 @@ pub(crate) mod testutil {
         }
     }
 
+    #[derive(Default)]
+    pub(crate) struct DummyIpSocketBuilder {
+        ttl: Option<u8>,
+    }
+
     impl<I: Ip, S: AsRef<DummyIpSocketContext<I>> + AsMut<DummyIpSocketContext<I>>, Id, Meta>
         IpSocketContext<I> for DummyContext<S, Id, Meta>
     {
         type IpSocket = DummyIpSocket<I::Addr>;
+
+        type Builder = DummyIpSocketBuilder;
 
         fn new_ip_socket(
             &mut self,
             local_ip: Option<SpecifiedAddr<I::Addr>>,
             remote_ip: SpecifiedAddr<I::Addr>,
             proto: IpProto,
-            ttl: Option<u8>,
             unroutable_behavior: UnroutableBehavior,
+            builder: Option<DummyIpSocketBuilder>,
         ) -> Result<DummyIpSocket<I::Addr>, NoRouteError> {
+            let builder = builder.unwrap_or_default();
+
             let ctx = self.get_ref().as_ref();
 
             if !ctx.routable_at_creation {
@@ -677,7 +755,7 @@ pub(crate) mod testutil {
                 local_ip: local_ip.unwrap_or(ctx.default_local_ip),
                 remote_ip,
                 proto,
-                ttl: ttl.unwrap_or(crate::ip::DEFAULT_TTL),
+                ttl: builder.ttl.unwrap_or(crate::ip::DEFAULT_TTL.get()),
                 unroutable_behavior,
                 routable: true,
             })
@@ -734,7 +812,7 @@ mod tests {
                 builder: Ipv4PacketBuilder::new(
                     DUMMY_CONFIG_V4.local_ip,
                     DUMMY_CONFIG_V4.remote_ip,
-                    crate::ip::DEFAULT_TTL,
+                    crate::ip::DEFAULT_TTL.get(),
                     IpProto::Icmp,
                 ),
                 device: DeviceId::new_ethernet(0),
@@ -749,22 +827,24 @@ mod tests {
                 None,
                 DUMMY_CONFIG_V4.remote_ip,
                 IpProto::Icmp,
+                UnroutableBehavior::Close,
                 None,
-                UnroutableBehavior::Close
             )
             .unwrap()
                 == template
         );
 
         // TTL is specified.
+        let mut builder = Ipv4SocketBuilder::default();
+        builder.ttl(NonZeroU8::new(1).unwrap());
         assert!(
             IpSocketContext::<Ipv4>::new_ip_socket(
                 &mut ctx,
                 None,
                 DUMMY_CONFIG_V4.remote_ip,
                 IpProto::Icmp,
-                Some(1),
-                UnroutableBehavior::Close
+                UnroutableBehavior::Close,
+                Some(builder),
             )
             .unwrap()
                 == {
@@ -791,8 +871,8 @@ mod tests {
                 Some(DUMMY_CONFIG_V4.local_ip),
                 DUMMY_CONFIG_V4.remote_ip,
                 IpProto::Icmp,
+                UnroutableBehavior::Close,
                 None,
-                UnroutableBehavior::Close
             )
             .unwrap()
                 == template
@@ -805,8 +885,8 @@ mod tests {
                 Some(DUMMY_CONFIG_V4.remote_ip),
                 DUMMY_CONFIG_V4.remote_ip,
                 IpProto::Icmp,
+                UnroutableBehavior::Close,
                 None,
-                UnroutableBehavior::Close
             ) == Err(NoRouteError)
         );
 
@@ -817,8 +897,8 @@ mod tests {
                 None,
                 Ipv4::LOOPBACK_ADDRESS,
                 IpProto::Icmp,
+                UnroutableBehavior::Close,
                 None,
-                UnroutableBehavior::Close
             ) == Err(NoRouteError)
         );
 
@@ -840,7 +920,7 @@ mod tests {
                 builder: Ipv6PacketBuilder::new(
                     DUMMY_CONFIG_V6.local_ip,
                     DUMMY_CONFIG_V6.remote_ip,
-                    crate::ip::DEFAULT_TTL,
+                    crate::ip::DEFAULT_TTL.get(),
                     IpProto::Icmpv6,
                 ),
                 device: DeviceId::new_ethernet(0),
@@ -855,22 +935,24 @@ mod tests {
                 None,
                 DUMMY_CONFIG_V6.remote_ip,
                 IpProto::Icmpv6,
+                UnroutableBehavior::Close,
                 None,
-                UnroutableBehavior::Close
             )
             .unwrap()
                 == template
         );
 
         // TTL is specified.
+        let mut builder = Ipv6SocketBuilder::default();
+        builder.hop_limit(1);
         assert!(
             IpSocketContext::<Ipv6>::new_ip_socket(
                 &mut ctx,
                 None,
                 DUMMY_CONFIG_V6.remote_ip,
                 IpProto::Icmpv6,
-                Some(1),
-                UnroutableBehavior::Close
+                UnroutableBehavior::Close,
+                Some(builder),
             )
             .unwrap()
                 == {
@@ -897,8 +979,8 @@ mod tests {
                 Some(DUMMY_CONFIG_V6.local_ip),
                 DUMMY_CONFIG_V6.remote_ip,
                 IpProto::Icmpv6,
+                UnroutableBehavior::Close,
                 None,
-                UnroutableBehavior::Close
             )
             .unwrap()
                 == template
@@ -911,8 +993,8 @@ mod tests {
                 Some(DUMMY_CONFIG_V6.remote_ip),
                 DUMMY_CONFIG_V6.remote_ip,
                 IpProto::Icmpv6,
+                UnroutableBehavior::Close,
                 None,
-                UnroutableBehavior::Close
             ) == Err(NoRouteError)
         );
 
@@ -923,8 +1005,8 @@ mod tests {
                 None,
                 Ipv6::LOOPBACK_ADDRESS,
                 IpProto::Icmpv6,
+                UnroutableBehavior::Close,
                 None,
-                UnroutableBehavior::Close
             ) == Err(NoRouteError)
         );
     }
@@ -942,13 +1024,15 @@ mod tests {
             .build::<DummyEventDispatcher>();
 
         // Create a normal, routable socket.
+        let mut builder = Ipv4SocketBuilder::default();
+        builder.ttl(NonZeroU8::new(1).unwrap());
         let mut sock = IpSocketContext::<Ipv4>::new_ip_socket(
             &mut ctx,
             None,
             DUMMY_CONFIG_V4.remote_ip,
             IpProto::Icmp,
-            Some(1),
             UnroutableBehavior::Close,
+            Some(builder),
         )
         .unwrap();
 
@@ -1010,13 +1094,15 @@ mod tests {
             .build::<DummyEventDispatcher>();
 
         // Create a normal, routable socket.
+        let mut builder = Ipv6SocketBuilder::default();
+        builder.hop_limit(1);
         let mut sock = IpSocketContext::<Ipv6>::new_ip_socket(
             &mut ctx,
             None,
             DUMMY_CONFIG_V6.remote_ip,
             IpProto::Icmpv6,
-            Some(1),
             UnroutableBehavior::Close,
+            Some(builder),
         )
         .unwrap();
 
