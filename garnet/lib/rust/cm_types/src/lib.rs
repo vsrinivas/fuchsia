@@ -16,7 +16,7 @@ use {
 
 /// A name that can refer to a component, collection, or other entity in the
 /// Component Manifest.
-#[derive(Serialize, Clone, Debug, Hash, PartialEq, Eq)]
+#[derive(Serialize, Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Name(String);
 
 /// The error representing a failed validation of a `Name` string.

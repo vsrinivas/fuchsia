@@ -123,12 +123,14 @@
       ],
       "from": "#core",
       "to": [ "#bootstrap" ],
+      "dependency": "weak_for_migration",
     },
     // driver_manager needs the v1 hub for the serial console
     {
       "directory": "/hub",
       "from": "#core",
       "to": [ "#bootstrap" ],
+      "dependency": "weak_for_migration",
     },
 
     // Offer the ELF runner to children.

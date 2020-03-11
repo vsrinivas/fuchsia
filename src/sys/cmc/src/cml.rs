@@ -17,6 +17,7 @@ pub const LAZY: &str = "lazy";
 pub const EAGER: &str = "eager";
 pub const PERSISTENT: &str = "persistent";
 pub const TRANSIENT: &str = "transient";
+pub const STRONG: &str = "strong";
 
 /// A relative reference to another object.
 ///

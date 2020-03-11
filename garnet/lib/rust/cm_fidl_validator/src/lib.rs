@@ -3,10 +3,12 @@
 // found in the LICENSE file.
 
 use {
+    directed_graph::DirectedGraph,
     fidl_fuchsia_sys2 as fsys,
-    std::collections::{HashMap, HashSet},
-    std::error,
-    std::fmt,
+    std::{
+        collections::{HashMap, HashSet},
+        error, fmt,
+    },
     thiserror::Error,
 };
 
@@ -45,8 +47,10 @@ pub enum Error {
     InvalidResolver(DeclField, String),
     #[error("{0} specifies multiple runners")]
     MultipleRunnersSpecified(String),
-    #[error("cycle detected between {0} (\"{1}\") and {2} (\"{3}\")")]
-    CycleDetected(DeclField, String, DeclField, String),
+    #[error("a dependency cycle exists between resolver registrations")]
+    ResolverDependencyCycle,
+    #[error("a dependency cycle exists between offer declarations")]
+    OfferDependencyCycle,
 }
 
 impl Error {
@@ -155,20 +159,12 @@ impl Error {
         Error::MultipleRunnersSpecified(decl_type.into())
     }
 
-    pub fn cycle_detected(
-        decl_type1: impl Into<String>,
-        keyword1: impl Into<String>,
-        value1: impl Into<String>,
-        decl_type2: impl Into<String>,
-        keyword2: impl Into<String>,
-        value2: impl Into<String>,
-    ) -> Self {
-        Error::CycleDetected(
-            DeclField { decl: decl_type1.into(), field: keyword1.into() },
-            value1.into(),
-            DeclField { decl: decl_type2.into(), field: keyword2.into() },
-            value2.into(),
-        )
+    pub fn resolver_dependency_cycle() -> Self {
+        Error::ResolverDependencyCycle
+    }
+
+    pub fn offer_dependency_cycle() -> Self {
+        Error::OfferDependencyCycle
     }
 }
 
@@ -226,6 +222,7 @@ pub fn validate(decl: &fsys::ComponentDecl) -> Result<(), ErrorList> {
         all_runners_and_sources: HashMap::new(),
         all_resolvers: HashSet::new(),
         all_environment_names: HashSet::new(),
+        strong_dependencies: DirectedGraph::new(),
         target_paths: HashMap::new(),
         offered_runner_names: HashMap::new(),
         offered_resolver_names: HashMap::new(),
@@ -261,6 +258,7 @@ struct ValidationContext<'a> {
     all_runners_and_sources: HashMap<&'a str, Option<&'a str>>,
     all_resolvers: HashSet<&'a str>,
     all_environment_names: HashSet<&'a str>,
+    strong_dependencies: DirectedGraph<&'a str>,
     target_paths: PathMap<'a>,
     offered_runner_names: NameMap<'a>,
     offered_resolver_names: NameMap<'a>,
@@ -349,6 +347,9 @@ impl<'a> ValidationContext<'a> {
         if let Some(offers) = self.decl.offers.as_ref() {
             for offer in offers.iter() {
                 self.validate_offers_decl(&offer);
+            }
+            if let Err(_) = self.strong_dependencies.topological_sort() {
+                self.errors.push(Error::offer_dependency_cycle());
             }
         }
 
@@ -566,14 +567,7 @@ impl<'a> ValidationContext<'a> {
                             (Some(environment_name), Some(child_environment_name))
                                 if environment_name == child_environment_name =>
                             {
-                                self.errors.push(Error::cycle_detected(
-                                    "ResolverRegistration",
-                                    "source",
-                                    child_name,
-                                    "ChildDecl",
-                                    "environment",
-                                    child_environment_name,
-                                ));
+                                self.errors.push(Error::resolver_dependency_cycle());
                             }
                             _ => {}
                         }
@@ -896,6 +890,18 @@ impl<'a> ValidationContext<'a> {
         }
     }
 
+    fn add_strong_dep(&mut self, from: Option<&'a fsys::Ref>, to: Option<&'a fsys::Ref>) {
+        if let Some(fsys::Ref::Child(fsys::ChildRef { name: source, .. })) = from {
+            if let Some(fsys::Ref::Child(fsys::ChildRef { name: target, .. })) = to {
+                if source == target {
+                    // This is already its own error, don't report this as a cycle.
+                } else {
+                    self.strong_dependencies.add_edge(source.as_str(), target.as_str());
+                }
+            }
+        }
+    }
+
     fn validate_offers_decl(&mut self, offer: &'a fsys::OfferDecl) {
         match offer {
             fsys::OfferDecl::Service(o) => {
@@ -907,6 +913,7 @@ impl<'a> ValidationContext<'a> {
                     o.target.as_ref(),
                     o.target_path.as_ref(),
                 );
+                self.add_strong_dep(o.source.as_ref(), o.target.as_ref());
             }
             fsys::OfferDecl::Protocol(o) => {
                 self.validate_offers_fields(
@@ -919,6 +926,8 @@ impl<'a> ValidationContext<'a> {
                 );
                 if o.dependency_type.is_none() {
                     self.errors.push(Error::missing_field("OfferProtocolDecl", "dependency_type"));
+                } else if o.dependency_type == Some(fsys::DependencyType::Strong) {
+                    self.add_strong_dep(o.source.as_ref(), o.target.as_ref());
                 }
             }
             fsys::OfferDecl::Directory(o) => {
@@ -932,6 +941,8 @@ impl<'a> ValidationContext<'a> {
                 );
                 if o.dependency_type.is_none() {
                     self.errors.push(Error::missing_field("OfferDirectoryDecl", "dependency_type"));
+                } else if o.dependency_type == Some(fsys::DependencyType::Strong) {
+                    self.add_strong_dep(o.source.as_ref(), o.target.as_ref());
                 }
                 match o.source.as_ref() {
                     Some(fsys::Ref::Self_(_)) => {
@@ -957,12 +968,15 @@ impl<'a> ValidationContext<'a> {
                     o.source.as_ref(),
                     o.target.as_ref(),
                 );
+                self.add_strong_dep(o.source.as_ref(), o.target.as_ref());
             }
             fsys::OfferDecl::Runner(o) => {
                 self.validate_runner_offer_fields(o);
+                self.add_strong_dep(o.source.as_ref(), o.target.as_ref());
             }
             fsys::OfferDecl::Resolver(o) => {
                 self.validate_resolver_offer_fields(o);
+                self.add_strong_dep(o.source.as_ref(), o.target.as_ref());
             }
             fsys::OfferDecl::Event(e) => {
                 self.validate_event_offer_fields(e);
@@ -1707,6 +1721,106 @@ mod tests {
                 #[test]
                 fn $test_name() {
                     check_test($check_fn, $input, $result);
+                }
+            )+
+        }
+    }
+
+    macro_rules! test_dependency {
+        (
+            $(
+                $test_name:ident => {
+                    ty = $ty:expr,
+                    offer_decl = $offer_decl:expr,
+                },
+            )+
+        ) => {
+            $(
+                #[test]
+                fn $test_name() {
+                    let mut decl = new_component_decl();
+                    let dependencies = vec![
+                        ("a", "b"),
+                        ("b", "a"),
+                    ];
+                    let offers = dependencies.into_iter().map(|(from,to)| {
+                        let mut offer_decl = $offer_decl;
+                        offer_decl.source = Some(Ref::Child(
+                           ChildRef { name: from.to_string(), collection: None },
+                        ));
+                        offer_decl.target = Some(Ref::Child(
+                           ChildRef { name: to.to_string(), collection: None },
+                        ));
+                        $ty(offer_decl)
+                    }).collect();
+                    let children = ["a", "b"].iter().map(|name| {
+                        ChildDecl {
+                            name: Some(name.to_string()),
+                            url: Some(format!("fuchsia-pkg://fuchsia.com/pkg#meta/{}.cm", name)),
+                            startup: Some(StartupMode::Lazy),
+                            environment: None,
+                        }
+                    }).collect();
+                    decl.offers = Some(offers);
+                    decl.children = Some(children);
+                    let result = Err(ErrorList::new(vec![
+                        Error::offer_dependency_cycle(),
+                    ]));
+                    validate_test(decl, result);
+                }
+            )+
+        }
+    }
+
+    macro_rules! test_weak_dependency {
+        (
+            $(
+                $test_name:ident => {
+                    ty = $ty:expr,
+                    offer_decl = $offer_decl:expr,
+                },
+            )+
+        ) => {
+            $(
+                #[test]
+                fn $test_name() {
+                    let mut decl = new_component_decl();
+                    let offers = vec![
+                        {
+                            let mut offer_decl = $offer_decl;
+                            offer_decl.source = Some(Ref::Child(
+                               ChildRef { name: "a".to_string(), collection: None },
+                            ));
+                            offer_decl.target = Some(Ref::Child(
+                               ChildRef { name: "b".to_string(), collection: None },
+                            ));
+                            offer_decl.dependency_type = Some(DependencyType::Strong);
+                            $ty(offer_decl)
+                        },
+                        {
+                            let mut offer_decl = $offer_decl;
+                            offer_decl.source = Some(Ref::Child(
+                               ChildRef { name: "b".to_string(), collection: None },
+                            ));
+                            offer_decl.target = Some(Ref::Child(
+                               ChildRef { name: "a".to_string(), collection: None },
+                            ));
+                            offer_decl.dependency_type = Some(DependencyType::WeakForMigration);
+                            $ty(offer_decl)
+                        },
+                    ];
+                    let children = ["a", "b"].iter().map(|name| {
+                        ChildDecl {
+                            name: Some(name.to_string()),
+                            url: Some(format!("fuchsia-pkg://fuchsia.com/pkg#meta/{}.cm", name)),
+                            startup: Some(StartupMode::Lazy),
+                            environment: None,
+                        }
+                    }).collect();
+                    decl.offers = Some(offers);
+                    decl.children = Some(children);
+                    let result = Ok(());
+                    validate_test(decl, result);
                 }
             )+
         }
@@ -2866,7 +2980,7 @@ mod tests {
                         })),
                         source_path: Some("foo/".to_string()),
                         target: Some(Ref::Child(ChildRef {
-                            name: "^bad".to_string(),
+                            name: "%bad".to_string(),
                             collection: None,
                         })),
                         target_path: Some("/".to_string()),
@@ -2878,7 +2992,7 @@ mod tests {
                         })),
                         source_path: Some("foo/".to_string()),
                         target: Some(Ref::Child(ChildRef {
-                            name: "^bad".to_string(),
+                            name: "%bad".to_string(),
                             collection: None,
                         })),
                         target_path: Some("/".to_string()),
@@ -2891,7 +3005,7 @@ mod tests {
                         })),
                         source_path: Some("foo/".to_string()),
                         target: Some(Ref::Child(ChildRef {
-                            name: "^bad".to_string(),
+                            name: "%bad".to_string(),
                             collection: None,
                         })),
                         target_path: Some("/".to_string()),
@@ -2938,15 +3052,15 @@ mod tests {
             result = Err(ErrorList::new(vec![
                 Error::invalid_character_in_field("OfferServiceDecl", "source.child.name", '^'),
                 Error::invalid_field("OfferServiceDecl", "source_path"),
-                Error::invalid_character_in_field("OfferServiceDecl", "target.child.name", '^'),
+                Error::invalid_character_in_field("OfferServiceDecl", "target.child.name", '%'),
                 Error::invalid_field("OfferServiceDecl", "target_path"),
                 Error::invalid_character_in_field("OfferProtocolDecl", "source.child.name", '^'),
                 Error::invalid_field("OfferProtocolDecl", "source_path"),
-                Error::invalid_character_in_field("OfferProtocolDecl", "target.child.name", '^'),
+                Error::invalid_character_in_field("OfferProtocolDecl", "target.child.name", '%'),
                 Error::invalid_field("OfferProtocolDecl", "target_path"),
                 Error::invalid_character_in_field("OfferDirectoryDecl", "source.child.name", '^'),
                 Error::invalid_field("OfferDirectoryDecl", "source_path"),
-                Error::invalid_character_in_field("OfferDirectoryDecl", "target.child.name", '^'),
+                Error::invalid_character_in_field("OfferDirectoryDecl", "target.child.name", '%'),
                 Error::invalid_field("OfferDirectoryDecl", "target_path"),
                 Error::invalid_field("OfferDirectoryDecl", "subdir"),
                 Error::invalid_character_in_field("OfferRunnerDecl", "source.child.name", '^'),
@@ -3521,6 +3635,44 @@ mod tests {
                 Error::invalid_field("OfferEventDecl", "source"),
             ])),
         },
+        test_validate_offers_long_dependency_cycle => {
+            input = {
+                let mut decl = new_component_decl();
+                let dependencies = vec![
+                    ("d", "b"),
+                    ("a", "b"),
+                    ("b", "c"),
+                    ("b", "d"),
+                    ("c", "a"),
+                ];
+                let offers = dependencies.into_iter().map(|(from,to)|
+                    OfferDecl::Protocol(OfferProtocolDecl {
+                        source: Some(Ref::Child(
+                           ChildRef { name: from.to_string(), collection: None },
+                        )),
+                        source_path: Some(format!("/svc/thing_{}", from)),
+                        target: Some(Ref::Child(
+                           ChildRef { name: to.to_string(), collection: None },
+                        )),
+                        target_path: Some(format!("/svc/thing_{}", from)),
+                        dependency_type: Some(DependencyType::Strong),
+                    })).collect();
+                let children = ["a", "b", "c", "d"].iter().map(|name| {
+                    ChildDecl {
+                        name: Some(name.to_string()),
+                        url: Some(format!("fuchsia-pkg://fuchsia.com/pkg#meta/{}.cm", name)),
+                        startup: Some(StartupMode::Lazy),
+                        environment: None,
+                    }
+                }).collect();
+                decl.offers = Some(offers);
+                decl.children = Some(children);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::offer_dependency_cycle(),
+            ])),
+        },
 
         // environments
         test_validate_environment_empty => {
@@ -3691,7 +3843,7 @@ mod tests {
                 decl
             },
             result = Err(ErrorList::new(vec![
-                Error::cycle_detected("ResolverRegistration", "source", "child", "ChildDecl", "environment", "env"),
+                Error::resolver_dependency_cycle(),
             ])),
         },
 
@@ -4011,6 +4163,82 @@ mod tests {
             result = Err(ErrorList::new(vec![
                 Error::invalid_resolver("ExposeResolverDecl", "source", "a"),
             ])),
+        },
+    }
+
+    test_dependency! {
+        test_validate_offers_protocol_dependency_cycle => {
+            ty = OfferDecl::Protocol,
+            offer_decl = OfferProtocolDecl {
+                source: None,  // Filled by macro
+                target: None,  // Filled by macro
+                source_path: Some(format!("/thing")),
+                target_path: Some(format!("/thing")),
+                dependency_type: Some(DependencyType::Strong),
+            },
+        },
+        test_validate_offers_directory_dependency_cycle => {
+            ty = OfferDecl::Directory,
+            offer_decl = OfferDirectoryDecl {
+                source: None,  // Filled by macro
+                target: None,  // Filled by macro
+                source_path: Some(format!("/thing")),
+                target_path: Some(format!("/thing")),
+                rights: Some(fio2::Operations::Connect),
+                subdir: None,
+                dependency_type: Some(DependencyType::Strong),
+            },
+        },
+        test_validate_offers_service_dependency_cycle => {
+            ty = OfferDecl::Service,
+            offer_decl = OfferServiceDecl {
+                source: None,  // Filled by macro
+                target: None,  // Filled by macro
+                source_path: Some(format!("/thing")),
+                target_path: Some(format!("/thing")),
+            },
+        },
+        test_validate_offers_runner_dependency_cycle => {
+            ty = OfferDecl::Runner,
+            offer_decl = OfferRunnerDecl {
+                source: None,  // Filled by macro
+                target: None,  // Filled by macro
+                source_name: Some(format!("thing")),
+                target_name: Some(format!("thing")),
+            },
+        },
+        test_validate_offers_resolver_dependency_cycle => {
+            ty = OfferDecl::Resolver,
+            offer_decl = OfferResolverDecl {
+                source: None,  // Filled by macro
+                target: None,  // Filled by macro
+                source_name: Some(format!("thing")),
+                target_name: Some(format!("thing")),
+            },
+        },
+    }
+    test_weak_dependency! {
+        test_validate_offers_protocol_weak_dependency_cycle => {
+            ty = OfferDecl::Protocol,
+            offer_decl = OfferProtocolDecl {
+                source: None,  // Filled by macro
+                target: None,  // Filled by macro
+                source_path: Some(format!("/thing")),
+                target_path: Some(format!("/thing")),
+                dependency_type: None, // Filled by macro
+            },
+        },
+        test_validate_offers_directory_weak_dependency_cycle => {
+            ty = OfferDecl::Directory,
+            offer_decl = OfferDirectoryDecl {
+                source: None,  // Filled by macro
+                target: None,  // Filled by macro
+                source_path: Some(format!("/thing")),
+                target_path: Some(format!("/thing")),
+                rights: Some(fio2::Operations::Connect),
+                subdir: None,
+                dependency_type: None,  // Filled by macro
+            },
         },
     }
 }

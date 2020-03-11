@@ -65,9 +65,7 @@
     // runtime being made available to the v2 component runtime. These all cause
     // dependency cycles between the two runtimes. Cycles require trickier
     // runtime logic to ensure correctness, are a general design smell, and may
-    // be disallowed in the future. Please talk to dgonyeo@google.com before
-    // adding any additional exposed services to this list.
-
+    // be disallowed in the future.
     {
       "protocol": [
         "/svc/fuchsia.cobalt.LoggerFactory",

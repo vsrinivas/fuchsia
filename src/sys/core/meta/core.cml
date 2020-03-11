@@ -57,6 +57,7 @@
       ],
       "from": "#appmgr",
       "to": [ "#font_provider" ],
+      "dependency": "weak_for_migration",
     },
     // Passing from root realm to appmgr
     {

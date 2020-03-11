@@ -2,17 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{cml, one_or_many::OneOrMany};
-use cm_json::{self, Error, JsonSchema, CML_SCHEMA, CMX_SCHEMA};
-use serde_json::Value;
-use std::collections::{HashMap, HashSet};
-use std::fmt::Display;
-use std::fs::File;
-use std::hash::Hash;
-use std::io::Read;
-use std::iter;
-use std::path::Path;
-use valico::json_schema;
+use {
+    crate::{cml, one_or_many::OneOrMany},
+    cm_json::{self, Error, JsonSchema, CML_SCHEMA, CMX_SCHEMA},
+    directed_graph::{self, DirectedGraph},
+    serde_json::Value,
+    std::{
+        collections::{HashMap, HashSet},
+        fmt::Display,
+        fs::File,
+        hash::Hash,
+        io::Read,
+        iter,
+        path::Path,
+    },
+    valico::json_schema,
+};
 
 /// Read in and parse one or more manifest files. Returns an Err() if any file is not valid
 /// or Ok(()) if all files are valid.
@@ -313,8 +318,19 @@ impl<'a> ValidationContext<'a> {
         // Validate "offer".
         if let Some(offers) = self.document.offer.as_ref() {
             let mut used_ids = HashMap::new();
+            let mut strong_dependencies = DirectedGraph::new();
             for offer in offers.iter() {
-                self.validate_offer(&offer, &mut used_ids)?;
+                self.validate_offer(&offer, &mut used_ids, &mut strong_dependencies)?;
+            }
+            match strong_dependencies.topological_sort() {
+                Ok(_) => {}
+                Err(directed_graph::Error::CycleDetected) => {
+                    // TODO: Report all cycles that existed. Requires more advanced graph
+                    // traversal.
+                    return Err(Error::validate(
+                        "Strong dependency cycles were found between offer declarations. Break the \
+                        cycle or mark one of the dependencies as weak."));
+                }
             }
         }
 
@@ -513,6 +529,7 @@ impl<'a> ValidationContext<'a> {
         &self,
         offer: &'a cml::Offer,
         used_ids: &mut HashMap<&'a cml::Name, HashMap<&'a str, CapabilityId<'a>>>,
+        strong_dependencies: &mut DirectedGraph<&'a cml::Name>,
     ) -> Result<(), Error> {
         self.validate_from_clause("offer", offer)?;
 
@@ -615,6 +632,24 @@ impl<'a> ValidationContext<'a> {
                             )));
                         }
                         _ => {}
+                    }
+                }
+            }
+
+            // Collect strong dependencies. We'll check for dependency cycles after all offer
+            // declarations are validated.
+            for from in offer.from.iter() {
+                let is_strong = if offer.directory.is_some() || offer.protocol.is_some() {
+                    offer.dependency.as_ref().map(|n| n.as_str()).unwrap_or(cml::STRONG)
+                        == cml::STRONG
+                } else {
+                    true
+                };
+                if is_strong {
+                    if let cml::Ref::Named(from) = from {
+                        if let cml::Ref::Named(to) = to {
+                            strong_dependencies.add_edge(from, to);
+                        }
                     }
                 }
             }
@@ -1834,6 +1869,86 @@ mod tests {
                     } ]
                 }),
             result = Err(Error::validate("Dependency can only be provided for protocol and directory capabilities")),
+        },
+        test_cml_offer_dependency_cycle => {
+            input = json!({
+                    "offer": [
+                        {
+                            "protocol": "/svc/fuchsia.logger.Log",
+                            "from": "#child_a",
+                            "to": [ "#child_b" ],
+                            "dependency": "strong"
+                        },
+                        {
+                            "directory": "/data",
+                            "from": "#child_b",
+                            "to": [ "#child_c" ],
+                        },
+                        {
+                            "service": "/dev/ethernet",
+                            "from": "#child_c",
+                            "to": [ "#child_a" ],
+                        },
+                        {
+                            "runner": "elf",
+                            "from": "#child_b",
+                            "to": [ "#child_d" ],
+                        },
+                        {
+                            "resolver": "http",
+                            "from": "#child_d",
+                            "to": [ "#child_b" ],
+                        },
+                    ],
+                    "children": [
+                        {
+                            "name": "child_a",
+                            "url": "fuchsia-pkg://fuchsia.com/child_a#meta/child_a.cm"
+                        },
+                        {
+                            "name": "child_b",
+                            "url": "fuchsia-pkg://fuchsia.com/child_b#meta/child_b.cm"
+                        },
+                        {
+                            "name": "child_c",
+                            "url": "fuchsia-pkg://fuchsia.com/child_b#meta/child_c.cm"
+                        },
+                        {
+                            "name": "child_d",
+                            "url": "fuchsia-pkg://fuchsia.com/child_b#meta/child_d.cm"
+                        },
+                    ]
+                }),
+            result = Err(Error::validate(
+                "Strong dependency cycles were found between offer declarations. Break the cycle or mark one of the dependencies as weak.")),
+        },
+        test_cml_offer_weak_dependency_cycle => {
+            input = json!({
+                    "offer": [
+                        {
+                            "protocol": "/svc/fuchsia.logger.Log",
+                            "from": "#child_a",
+                            "to": [ "#child_b" ],
+                            "dependency": "weak_for_migration"
+                        },
+                        {
+                            "directory": "/data",
+                            "from": "#child_b",
+                            "to": [ "#child_a" ],
+                        },
+                    ],
+                    "children": [
+                        {
+                            "name": "child_a",
+                            "url": "fuchsia-pkg://fuchsia.com/child_a#meta/child_a.cm"
+                        },
+                        {
+                            "name": "child_b",
+                            "url": "fuchsia-pkg://fuchsia.com/child_b#meta/child_b.cm"
+                        },
+                    ]
+                }),
+            result = Ok(()),
         },
 
         // children

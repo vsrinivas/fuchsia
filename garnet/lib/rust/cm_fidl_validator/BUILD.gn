@@ -11,6 +11,7 @@ rustc_library("cm_fidl_validator") {
   deps = [
     "//garnet/lib/rust/cm_types",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//src/lib/directed_graph",
     "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-io2:fuchsia-io2-rustc",
   ]

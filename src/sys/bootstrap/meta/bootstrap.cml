@@ -64,6 +64,7 @@
       "protocol": "/svc/fuchsia.fshost.Loader",
       "from": "#fshost",
       "to": [ "#driver_manager" ],
+      "dependency": "weak_for_migration",
     },
     {
       "directory": "/dev",
@@ -74,46 +75,55 @@
       "directory": "/minfs",
       "from": "#fshost",
       "to": [ "#driver_manager" ],
+      "dependency": "weak_for_migration",
     },
     {
       "directory": "/pkgfs",
       "from": "#fshost",
       "to": [ "#driver_manager" ],
+      "dependency": "weak_for_migration",
     },
     {
       "directory": "/system-delayed",
       "from": "#fshost",
       "to": [ "#driver_manager" ],
+      "dependency": "weak_for_migration",
     },
     {
       "directory": "/system",
       "from": "#fshost",
       "to": [ "#driver_manager" ],
+      "dependency": "weak_for_migration",
     },
     {
       "directory": "/blob",
       "from": "#fshost",
       "to": [ "#driver_manager" ],
+      "dependency": "weak_for_migration",
     },
     {
       "directory": "/volume",
       "from": "#fshost",
       "to": [ "#driver_manager" ],
+      "dependency": "weak_for_migration",
     },
     {
       "directory": "/install",
       "from": "#fshost",
       "to": [ "#driver_manager" ],
+      "dependency": "weak_for_migration",
     },
     {
       "directory": "/tmp",
       "from": "#fshost",
       "to": [ "#driver_manager" ],
+      "dependency": "weak_for_migration",
     },
     {
       "directory": "/bin",
       "from": "#fshost",
       "to": [ "#driver_manager" ],
+      "dependency": "weak_for_migration",
     },
     {
       "protocol": [
@@ -147,6 +157,7 @@
       "protocol": "/svc/fuchsia.sysinfo.SysInfo",
       "from": "#sysinfo",
       "to": [ "#driver_manager" ],
+      "dependency": "weak_for_migration",
     },
     // Offer the ELF runner to children.
     {
@@ -192,6 +203,7 @@
       ],
       "from": "#fshost",
       "to": [ "#driver_manager" ],
+      "dependency": "weak_for_migration",
     },
   ],
   "expose": [
