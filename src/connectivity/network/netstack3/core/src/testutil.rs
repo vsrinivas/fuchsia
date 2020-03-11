@@ -520,8 +520,8 @@ where
 {
     let (body, src_mac, dst_mac, src_ip, dst_ip, proto, ttl) =
         parse_ip_packet_in_ethernet_frame::<I>(buf)?;
-    if proto != I::IP_PROTO {
-        debug!("unexpected IP protocol: {} (wanted {})", proto, I::IP_PROTO);
+    if proto != I::ICMP_IP_PROTO {
+        debug!("unexpected IP protocol: {} (wanted {})", proto, I::ICMP_IP_PROTO);
         return Err(ParseError::NotExpected.into());
     }
     let (message, code) = parse_icmp_packet(body, src_ip, dst_ip, f)?;

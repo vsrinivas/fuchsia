@@ -224,7 +224,7 @@ create_net_enum! {
 }
 
 /// An ICMPv6 Parameter Problem message.
-#[derive(Copy, Clone, Debug, FromBytes, AsBytes, Unaligned)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, FromBytes, AsBytes, Unaligned)]
 #[repr(C)]
 pub(crate) struct Icmpv6ParameterProblem {
     pointer: U32,

@@ -1624,7 +1624,7 @@ pub(crate) fn should_send_icmpv6_error(
 ///
 /// [RFC 4443 Section 2.4.e]: https://tools.ietf.org/html/rfc4443#section-2.4
 fn is_icmp_error_message<I: IcmpIpExt>(proto: IpProto, buf: &[u8]) -> bool {
-    proto == I::IP_PROTO
+    proto == I::ICMP_IP_PROTO
         && peek_message_type::<I::IcmpMessageType>(buf).map(IcmpMessageType::is_err).unwrap_or(true)
 }
 
@@ -1933,7 +1933,7 @@ mod tests {
     use std::time::Duration;
 
     use net_types::{
-        ip::{Ip, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr},
+        ip::{Ip, IpVersion, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr},
         LinkLocalAddr,
     };
     use packet::{Buf, Serializer};
@@ -1948,14 +1948,16 @@ mod tests {
     use crate::ip::mld::{MldContext, MldFrameMetadata, MldInterface, MldReportDelay};
     use crate::ip::path_mtu::testutil::DummyPmtuState;
     use crate::ip::socket::testutil::{DummyIpSocket, DummyIpSocketContext};
-    use crate::ip::{receive_ipv4_packet, DummyDeviceId, IpExt};
+    use crate::ip::{
+        receive_ipv4_packet, receive_ipv6_packet, DummyDeviceId, IpExt, IpPacketBuilder,
+    };
     use crate::testutil::{
         DummyEventDispatcher, DummyEventDispatcherBuilder, TestIpExt, DUMMY_CONFIG_V4,
         DUMMY_CONFIG_V6,
     };
     use crate::wire::icmp::{
-        IcmpEchoRequest, IcmpMessage, IcmpPacket, IcmpUnusedCode, Icmpv4TimestampRequest,
-        MessageBody, NdpPacket,
+        IcmpEchoReply, IcmpEchoRequest, IcmpMessage, IcmpPacket, IcmpUnusedCode,
+        Icmpv4TimestampRequest, MessageBody, NdpPacket,
     };
     use crate::wire::udp::UdpPacketBuilder;
     use crate::StackStateBuilder;
@@ -1968,7 +1970,7 @@ mod tests {
     /// response.
     ///
     /// Test that receiving an IP packet from remote host
-    /// `DUMMY_CONFIG_V4.remote_ip` to host `dst_ip` with `ttl` and `proto`
+    /// `I::DUMMY_CONFIG.remote_ip` to host `dst_ip` with `ttl` and `proto`
     /// results in all of the counters in `assert_counters` being triggered at
     /// least once.
     ///
@@ -1980,17 +1982,18 @@ mod tests {
     /// `modify_stack_state_builder` is invoked on the `StackStateBuilder`
     /// before it is used to build the context.
     ///
-    /// The state is initialized to `DUMMY_CONFIG_V4` when testing.
+    /// The state is initialized to `I::DUMMY_CONFIG` when testing.
     #[allow(clippy::too_many_arguments)]
     fn test_receive_ip_packet<
+        I: TestIpExt + IcmpIpExt,
         C: PartialEq + Debug,
-        M: for<'a> IcmpMessage<Ipv4, &'a [u8], Code = C> + PartialEq + Debug,
+        M: for<'a> IcmpMessage<I, &'a [u8], Code = C> + PartialEq + Debug,
         F: FnOnce(&mut StackStateBuilder),
-        FF: for<'a> FnOnce(&IcmpPacket<Ipv4, &'a [u8], M>),
+        FF: for<'a> FnOnce(&IcmpPacket<I, &'a [u8], M>),
     >(
         modify_stack_state_builder: F,
         body: &mut [u8],
-        dst_ip: Ipv4Addr,
+        dst_ip: I::Addr,
         ttl: u8,
         proto: IpProto,
         assert_counters: &[&str],
@@ -1999,8 +2002,8 @@ mod tests {
     ) {
         crate::testutil::set_logger_for_test();
         let buffer = Buf::new(body, ..)
-            .encapsulate(<Ipv4 as IpExt>::PacketBuilder::new(
-                DUMMY_CONFIG_V4.remote_ip,
+            .encapsulate(<I as IpExt>::PacketBuilder::new(
+                *I::DUMMY_CONFIG.remote_ip,
                 dst_ip,
                 ttl,
                 proto,
@@ -2008,16 +2011,19 @@ mod tests {
             .serialize_vec_outer()
             .unwrap();
 
-        let mut ctx = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V4)
+        let mut ctx = DummyEventDispatcherBuilder::from_config(I::DUMMY_CONFIG)
             .build_with_modifications::<DummyEventDispatcher, _>(modify_stack_state_builder);
 
-        // currently only used by test_receive_timestamp
-        ctx.state_mut().ipv4.icmp.send_timestamp_reply = true;
         let device = DeviceId::new_ethernet(0);
-        // currently only used by test_ttl_exceeded
-        ctx.state_mut().ipv4.inner.forward = true;
-        set_routing_enabled::<_, Ipv4>(&mut ctx, device, true);
-        receive_ipv4_packet(&mut ctx, device, FrameDestination::Unicast, buffer);
+        set_routing_enabled::<_, I>(&mut ctx, device, true);
+        match I::VERSION {
+            IpVersion::V4 => {
+                receive_ipv4_packet(&mut ctx, device, FrameDestination::Unicast, buffer)
+            }
+            IpVersion::V6 => {
+                receive_ipv6_packet(&mut ctx, device, FrameDestination::Unicast, buffer)
+            }
+        }
 
         for counter in assert_counters {
             assert!(*ctx.state().test_counters.get(counter) > 0, "counter at zero: {}", counter);
@@ -2026,16 +2032,16 @@ mod tests {
         if let Some((expect_message, expect_code)) = expect_message_code {
             assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
             let (src_mac, dst_mac, src_ip, dst_ip, _, message, code) =
-                crate::testutil::parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv4, _, M, _>(
+                crate::testutil::parse_icmp_packet_in_ip_packet_in_ethernet_frame::<I, _, M, _>(
                     &ctx.dispatcher().frames_sent()[0].1,
                     f,
                 )
                 .unwrap();
 
-            assert_eq!(src_mac, DUMMY_CONFIG_V4.local_mac);
-            assert_eq!(dst_mac, DUMMY_CONFIG_V4.remote_mac);
-            assert_eq!(src_ip, DUMMY_CONFIG_V4.local_ip.get());
-            assert_eq!(dst_ip, DUMMY_CONFIG_V4.remote_ip.get());
+            assert_eq!(src_mac, I::DUMMY_CONFIG.local_mac);
+            assert_eq!(dst_mac, I::DUMMY_CONFIG.remote_mac);
+            assert_eq!(src_ip, I::DUMMY_CONFIG.local_ip.get());
+            assert_eq!(dst_ip, I::DUMMY_CONFIG.remote_ip.get());
             assert_eq!(message, expect_message);
             assert_eq!(code, expect_code);
         } else {
@@ -2047,27 +2053,44 @@ mod tests {
     fn test_receive_echo() {
         crate::testutil::set_logger_for_test();
 
-        let req = IcmpEchoRequest::new(0, 0);
-        let req_body = &[1, 2, 3, 4];
-        let mut buffer = Buf::new(req_body.to_vec(), ..)
-            .encapsulate(IcmpPacketBuilder::<Ipv4, &[u8], _>::new(
-                DUMMY_CONFIG_V4.remote_ip,
-                DUMMY_CONFIG_V4.local_ip,
-                IcmpUnusedCode,
-                req,
-            ))
-            .serialize_vec_outer()
-            .unwrap();
-        test_receive_ip_packet(
-            |_| {},
-            buffer.as_mut(),
-            DUMMY_CONFIG_V4.local_ip.get(),
-            64,
-            IpProto::Icmp,
-            &["receive_icmpv4_packet::echo_request", "send_ipv4_packet"],
-            Some((req.reply(), IcmpUnusedCode)),
-            |packet| assert_eq!(packet.original_packet().bytes(), req_body),
-        );
+        // Test that, when receiving an echo request, we respond with an echo
+        // reply with the appropriate parameters.
+
+        fn test<I: TestIpExt + IcmpIpExt>(assert_counters: &[&str])
+        where
+            IcmpEchoRequest: for<'a> IcmpMessage<I, &'a [u8], Code = IcmpUnusedCode>,
+            IcmpEchoReply: for<'a> IcmpMessage<
+                I,
+                &'a [u8],
+                Code = IcmpUnusedCode,
+                Body = OriginalPacket<&'a [u8]>,
+            >,
+        {
+            let req = IcmpEchoRequest::new(0, 0);
+            let req_body = &[1, 2, 3, 4];
+            let mut buffer = Buf::new(req_body.to_vec(), ..)
+                .encapsulate(IcmpPacketBuilder::<I, &[u8], _>::new(
+                    I::DUMMY_CONFIG.remote_ip.get(),
+                    I::DUMMY_CONFIG.local_ip.get(),
+                    IcmpUnusedCode,
+                    req,
+                ))
+                .serialize_vec_outer()
+                .unwrap();
+            test_receive_ip_packet::<I, _, _, _, _>(
+                |_| {},
+                buffer.as_mut(),
+                I::DUMMY_CONFIG.local_ip.get(),
+                64,
+                I::ICMP_IP_PROTO,
+                assert_counters,
+                Some((req.reply(), IcmpUnusedCode)),
+                |packet| assert_eq!(packet.original_packet().bytes(), req_body),
+            );
+        }
+
+        test::<Ipv4>(&["receive_icmpv4_packet::echo_request", "send_ipv4_packet"]);
+        test::<Ipv6>(&["receive_icmpv6_packet::echo_request", "send_ipv6_packet"]);
     }
 
     #[test]
@@ -2084,8 +2107,10 @@ mod tests {
             ))
             .serialize_vec_outer()
             .unwrap();
-        test_receive_ip_packet(
-            |_| {},
+        test_receive_ip_packet::<Ipv4, _, _, _, _>(
+            |builder| {
+                builder.ipv4_builder().icmpv4_builder().send_timestamp_reply(true);
+            },
             buffer.as_mut(),
             DUMMY_CONFIG_V4.local_ip.get(),
             64,
@@ -2098,25 +2123,58 @@ mod tests {
 
     #[test]
     fn test_protocol_unreachable() {
-        // Receive an IP packet for an unreachable protocol (255). Check to make
-        // sure that we respond with the appropriate ICMP message.
+        // Test receiving an IP packet for an unreachable protocol. Check to
+        // make sure that we respond with the appropriate ICMP message.
         //
-        // TODO(joshlf): Also perform the check for IPv6 once we support dummy
-        // IPv6 networks.
-        test_receive_ip_packet(
-            |_| {},
-            &mut [0u8; 128],
-            DUMMY_CONFIG_V4.local_ip.get(),
-            64,
-            IpProto::Other(255),
-            &["send_icmpv4_protocol_unreachable", "send_icmp_error_message"],
-            Some((
-                IcmpDestUnreachable::default(),
-                Icmpv4DestUnreachableCode::DestProtocolUnreachable,
-            )),
-            // ensure packet is truncated to the right length
-            |packet| assert_eq!(packet.original_packet().bytes().len(), 84),
-        );
+        // Currently, for IPv4, we test for all unreachable protocols, while for
+        // IPv6, we only test for IGMP and TCP. See the comment below for why
+        // that limitation exists. Once the limitation is fixed, we should test
+        // with all unreachable protocols for both versions.
+
+        for proto in 0..256 {
+            let proto = IpProto::from(proto as u8);
+
+            const IPV4_RECOGNIZED_PROTOS: &[IpProto] =
+                &[IpProto::Icmp, IpProto::Igmp, IpProto::Udp];
+            if !IPV4_RECOGNIZED_PROTOS.iter().any(|p| *p == proto) {
+                test_receive_ip_packet::<Ipv4, _, _, _, _>(
+                    |_| {},
+                    &mut [0u8; 128],
+                    DUMMY_CONFIG_V4.local_ip.get(),
+                    64,
+                    proto,
+                    &["send_icmpv4_protocol_unreachable", "send_icmp_error_message"],
+                    Some((
+                        IcmpDestUnreachable::default(),
+                        Icmpv4DestUnreachableCode::DestProtocolUnreachable,
+                    )),
+                    // ensure packet is truncated to the right length
+                    |packet| assert_eq!(packet.original_packet().bytes().len(), 84),
+                );
+            }
+
+            // TODO(fxb/47953): We seem to fail to parse an IPv6 packet if its
+            // Next Header value is unrecognized (rather than treating this as a
+            // valid parsing but then replying with a parameter problem error
+            // message). We should a) fix this and, b) expand this test to
+            // ensure we don't regress.
+            if (&[IpProto::Igmp, IpProto::Tcp]).iter().any(|p| *p == proto) {
+                test_receive_ip_packet::<Ipv6, _, _, _, _>(
+                    |_| {},
+                    &mut [0u8; 128],
+                    DUMMY_CONFIG_V6.local_ip.get(),
+                    64,
+                    proto,
+                    &["send_icmpv6_protocol_unreachable", "send_icmp_error_message"],
+                    Some((
+                        Icmpv6ParameterProblem::new(40),
+                        Icmpv6ParameterProblemCode::UnrecognizedNextHeaderType,
+                    )),
+                    // ensure packet is truncated to the right length
+                    |packet| assert_eq!(packet.original_packet().bytes().len(), 168),
+                );
+            }
+        }
     }
 
     #[test]
@@ -2127,45 +2185,60 @@ mod tests {
         // make sure that we respond with the appropriate ICMP message. Then, do
         // the same for a stack which has the UDP `send_port_unreachable` option
         // disable, and make sure that we DON'T respond with an ICMP message.
-        //
-        // TODO(joshlf):
-        // - Also perform the check for IPv6 once we support dummy IPv6
-        //   networks.
-        // - Perform the same check for TCP once the logic is implemented
-        // let mut buf = [0u8; 128];
-        let mut buffer = Buf::new(vec![0; 128], ..)
-            .encapsulate(UdpPacketBuilder::new(
-                DUMMY_CONFIG_V4.remote_ip.get(),
-                DUMMY_CONFIG_V4.local_ip.get(),
+
+        fn test<I: TestIpExt + IcmpIpExt, C: PartialEq + Debug>(
+            code: C,
+            assert_counters: &[&str],
+            original_packet_len: usize,
+        ) where
+            IcmpDestUnreachable:
+                for<'a> IcmpMessage<I, &'a [u8], Code = C, Body = OriginalPacket<&'a [u8]>>,
+        {
+            let mut buffer = Buf::new(vec![0; 128], ..)
+                .encapsulate(UdpPacketBuilder::new(
+                    I::DUMMY_CONFIG.remote_ip.get(),
+                    I::DUMMY_CONFIG.local_ip.get(),
+                    None,
+                    NonZeroU16::new(1234).unwrap(),
+                ))
+                .serialize_vec_outer()
+                .unwrap();
+            test_receive_ip_packet::<I, _, _, _, _>(
+                // enable the `send_port_unreachable` feature
+                |builder| {
+                    builder.transport_builder().udp_builder().send_port_unreachable(true);
+                },
+                buffer.as_mut(),
+                I::DUMMY_CONFIG.local_ip.get(),
+                64,
+                IpProto::Udp,
+                assert_counters,
+                Some((IcmpDestUnreachable::default(), code)),
+                // ensure packet is truncated to the right length
+                |packet| assert_eq!(packet.original_packet().bytes().len(), original_packet_len),
+            );
+            test_receive_ip_packet::<I, C, IcmpDestUnreachable, _, _>(
+                // leave the `send_port_unreachable` feature disabled
+                |_| {},
+                buffer.as_mut(),
+                I::DUMMY_CONFIG.local_ip.get(),
+                64,
+                IpProto::Udp,
+                &[],
                 None,
-                NonZeroU16::new(1234).unwrap(),
-            ))
-            .serialize_vec_outer()
-            .unwrap();
-        test_receive_ip_packet(
-            // enable the UDP `send_port_unreachable` option
-            |builder| {
-                builder.transport_builder().udp_builder().send_port_unreachable(true);
-            },
-            buffer.clone().as_mut(),
-            DUMMY_CONFIG_V4.local_ip.get(),
-            64,
-            IpProto::Udp,
+                |_| {},
+            );
+        }
+
+        test::<Ipv4, _>(
+            Icmpv4DestUnreachableCode::DestPortUnreachable,
             &["send_icmpv4_port_unreachable", "send_icmp_error_message"],
-            Some((IcmpDestUnreachable::default(), Icmpv4DestUnreachableCode::DestPortUnreachable)),
-            // ensure packet is truncated to the right length
-            |packet| assert_eq!(packet.original_packet().bytes().len(), 84),
+            84,
         );
-        test_receive_ip_packet::<Icmpv4DestUnreachableCode, IcmpDestUnreachable, _, _>(
-            // leave the UDP `send_port_unreachable` option disabled
-            |_| {},
-            buffer.as_mut(),
-            DUMMY_CONFIG_V4.local_ip.get(),
-            64,
-            IpProto::Udp,
-            &[],
-            None,
-            |_| {},
+        test::<Ipv6, _>(
+            Icmpv6DestUnreachableCode::PortUnreachable,
+            &["send_icmpv6_port_unreachable", "send_icmp_error_message"],
+            176,
         );
     }
 
@@ -2173,10 +2246,7 @@ mod tests {
     fn test_net_unreachable() {
         // Receive an IP packet for an unreachable destination address. Check to
         // make sure that we respond with the appropriate ICMP message.
-        //
-        // TODO(joshlf): Also perform the check for IPv6 once we support dummy
-        // IPv6 networks.
-        test_receive_ip_packet(
+        test_receive_ip_packet::<Ipv4, _, _, _, _>(
             |_| {},
             &mut [0u8; 128],
             Ipv4Addr::new([1, 2, 3, 4]),
@@ -2190,17 +2260,27 @@ mod tests {
             // ensure packet is truncated to the right length
             |packet| assert_eq!(packet.original_packet().bytes().len(), 84),
         );
+        test_receive_ip_packet::<Ipv6, _, _, _, _>(
+            |_| {},
+            &mut [0u8; 128],
+            Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8]),
+            64,
+            IpProto::Udp,
+            &["send_icmpv6_net_unreachable", "send_icmp_error_message"],
+            Some((IcmpDestUnreachable::default(), Icmpv6DestUnreachableCode::NoRoute)),
+            // ensure packet is truncated to the right length
+            |packet| assert_eq!(packet.original_packet().bytes().len(), 168),
+        );
     }
 
     #[test]
     fn test_ttl_expired() {
         // Receive an IP packet with an expired TTL. Check to make sure that we
         // respond with the appropriate ICMP message.
-        //
-        // TODO(joshlf): Also perform the check for IPv6 once we support dummy
-        // IPv6 networks.
-        test_receive_ip_packet(
-            |_| {},
+        test_receive_ip_packet::<Ipv4, _, _, _, _>(
+            |builder| {
+                builder.ipv4_builder().forward(true);
+            },
             &mut [0u8; 128],
             DUMMY_CONFIG_V4.remote_ip.get(),
             1,
@@ -2209,6 +2289,19 @@ mod tests {
             Some((IcmpTimeExceeded::default(), Icmpv4TimeExceededCode::TtlExpired)),
             // ensure packet is truncated to the right length
             |packet| assert_eq!(packet.original_packet().bytes().len(), 84),
+        );
+        test_receive_ip_packet::<Ipv6, _, _, _, _>(
+            |builder| {
+                builder.ipv6_builder().forward(true);
+            },
+            &mut [0u8; 128],
+            DUMMY_CONFIG_V6.remote_ip.get(),
+            1,
+            IpProto::Udp,
+            &["send_icmpv6_ttl_expired", "send_icmp_error_message"],
+            Some((IcmpTimeExceeded::default(), Icmpv6TimeExceededCode::HopLimitExceeded)),
+            // ensure packet is truncated to the right length
+            |packet| assert_eq!(packet.original_packet().bytes().len(), 168),
         );
     }
 

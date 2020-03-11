@@ -305,7 +305,7 @@ impl<B: ByteSlice> IpPacket<B, Ipv6> for Ipv6Packet<B> {
 ///
 /// `IpPacketBuilder` is implemented by `Ipv4PacketBuilder` and
 /// `Ipv6PacketBuilder`.
-pub(crate) trait IpPacketBuilder<I: Ip>: PacketBuilder + Clone {
+pub(crate) trait IpPacketBuilder<I: Ip>: PacketBuilder + Clone + Debug {
     fn new(src_ip: I::Addr, dst_ip: I::Addr, ttl: u8, proto: IpProto) -> Self;
 }
 

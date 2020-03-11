@@ -142,7 +142,7 @@ pub trait IcmpIpExt: Ip {
     /// `Icmpv6MessageType`.
     type IcmpMessageType: IcmpMessageType;
 
-    const IP_PROTO: IpProto;
+    const ICMP_IP_PROTO: IpProto;
 
     /// Compute the length of the header of the packet prefix stored in `bytes`.
     ///
@@ -156,7 +156,7 @@ pub trait IcmpIpExt: Ip {
 impl IcmpIpExt for Ipv4 {
     type IcmpMessageType = Icmpv4MessageType;
 
-    const IP_PROTO: IpProto = IpProto::Icmp;
+    const ICMP_IP_PROTO: IpProto = IpProto::Icmp;
 
     fn header_len(bytes: &[u8]) -> usize {
         if bytes.len() < ipv4::IPV4_MIN_HDR_LEN {
@@ -171,7 +171,7 @@ impl IcmpIpExt for Ipv4 {
 impl IcmpIpExt for Ipv6 {
     type IcmpMessageType = Icmpv6MessageType;
 
-    const IP_PROTO: IpProto = IpProto::Icmpv6;
+    const ICMP_IP_PROTO: IpProto = IpProto::Icmpv6;
 
     // TODO: Re-implement this in terms of partial parsing, and then get rid of
     // the `header_len` method.

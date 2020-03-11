@@ -237,7 +237,7 @@ impl Ipv4StateBuilder {
     }
 
     /// Get the builder for the ICMPv4 state.
-    pub fn icmp_builder(&mut self) -> &mut Icmpv4StateBuilder {
+    pub fn icmpv4_builder(&mut self) -> &mut Icmpv4StateBuilder {
         &mut self.icmp
     }
 
