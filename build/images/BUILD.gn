@@ -1463,6 +1463,7 @@ package_metadata_list("update_meta_far_merkle_index") {
     ":base_packages",
     ":meta_packages",
     ":system_image.meta",
+    ":cache_packages",
   ]
 }
 
