@@ -7,16 +7,19 @@ use crate::{
     inspect::{AppsNode, LastResultsNode, ProtocolStateNode, ScheduleNode, StateNode},
     observer::FuchsiaObserver,
 };
-use anyhow::{format_err, Context as _, Error};
+use anyhow::{Context as _, Error};
+use event_queue::{ClosedClient, ControlHandle, Event, EventQueue, Notify};
 use fidl_fuchsia_update::{
-    CheckStartedResult, Initiator, ManagerRequest, ManagerRequestStream, ManagerState,
-    MonitorControlHandle, State,
+    self as update, CheckNotStartedReason, CheckingForUpdatesData, ErrorCheckingForUpdateData,
+    Initiator, InstallationDeferredData, InstallationErrorData, InstallationProgress,
+    InstallingData, ManagerRequest, ManagerRequestStream, MonitorProxy, NoUpdateAvailableData,
+    UpdateInfo,
 };
 use fidl_fuchsia_update_channel::{ProviderRequest, ProviderRequestStream};
 use fidl_fuchsia_update_channelcontrol::{ChannelControlRequest, ChannelControlRequestStream};
 use fuchsia_async as fasync;
 use fuchsia_component::server::{ServiceFs, ServiceObjLocal};
-use futures::{lock::Mutex, prelude::*};
+use futures::{future::BoxFuture, lock::Mutex, prelude::*};
 use log::{error, info, warn};
 use omaha_client::{
     common::{AppSet, CheckOptions},
@@ -52,6 +55,85 @@ fn write_partition(partition: SysconfigPartition, data: &[u8]) -> Result<(), Err
     Ok(())
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct State {
+    pub manager_state: state_machine::State,
+    pub version_available: Option<String>,
+}
+
+impl From<State> for Option<update::State> {
+    fn from(state: State) -> Self {
+        let update =
+            Some(UpdateInfo { version_available: state.version_available, download_size: None });
+        let installation_progress = Some(InstallationProgress { fraction_completed: None });
+        match state.manager_state {
+            state_machine::State::Idle => None,
+            state_machine::State::CheckingForUpdates => {
+                Some(update::State::CheckingForUpdates(CheckingForUpdatesData {}))
+            }
+            state_machine::State::ErrorCheckingForUpdate => {
+                Some(update::State::ErrorCheckingForUpdate(ErrorCheckingForUpdateData {}))
+            }
+            state_machine::State::NoUpdateAvailable => {
+                Some(update::State::NoUpdateAvailable(NoUpdateAvailableData {}))
+            }
+            state_machine::State::InstallationDeferredByPolicy => {
+                Some(update::State::InstallationDeferredByPolicy(InstallationDeferredData {
+                    update,
+                }))
+            }
+            state_machine::State::InstallingUpdate => {
+                Some(update::State::InstallingUpdate(InstallingData {
+                    update,
+                    installation_progress,
+                }))
+            }
+            state_machine::State::WaitingForReboot => {
+                Some(update::State::WaitingForReboot(InstallingData {
+                    update,
+                    installation_progress,
+                }))
+            }
+            state_machine::State::InstallationError => {
+                Some(update::State::InstallationError(InstallationErrorData {
+                    update,
+                    installation_progress,
+                }))
+            }
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+struct StateNotifier {
+    proxy: MonitorProxy,
+}
+
+impl Notify<State> for StateNotifier {
+    fn notify(&self, state: State) -> BoxFuture<'static, Result<(), ClosedClient>> {
+        match state.into() {
+            Some(mut state) => self
+                .proxy
+                .on_state(&mut state)
+                .map(|result| result.map_err(|_| ClosedClient))
+                .boxed(),
+            None => future::ready(Ok(())).boxed(),
+        }
+    }
+}
+
+impl Event for State {
+    fn can_merge(&self, other: &State) -> bool {
+        if self.manager_state != other.manager_state {
+            return false;
+        }
+        if self.version_available != other.version_available {
+            warn!("version_available mismatch between two states: {:?}, {:?}", self, other);
+        }
+        true
+    }
+}
+
 pub struct FidlServer<PE, HR, IN, TM, MR, ST>
 where
     PE: PolicyEngine,
@@ -73,15 +155,10 @@ where
 
     channel_configs: Option<ChannelConfigs>,
 
-    // The current State table, defined in fuchsia.update.fidl.
+    // The current State, this is the internal representation of the fuchsia.update/State.
     state: State,
 
-    /// The monitor handles for monitoring all updates.
-    monitor_handles: Vec<MonitorControlHandle>,
-
-    /// The monitor handles for monitoring the current update only, will be cleared after each
-    /// update.
-    current_monitor_handles: Vec<MonitorControlHandle>,
+    monitor_queue: ControlHandle<StateNotifier, State>,
 }
 
 pub enum IncomingServices {
@@ -107,8 +184,10 @@ where
         state_node: StateNode,
         channel_configs: Option<ChannelConfigs>,
     ) -> Self {
-        let state = State { state: Some(ManagerState::Idle), version_available: None };
+        let state = State { manager_state: state_machine::State::Idle, version_available: None };
         state_node.set(&state);
+        let (monitor_queue_fut, monitor_queue) = EventQueue::new();
+        fasync::spawn_local(monitor_queue_fut);
         FidlServer {
             state_machine_ref,
             storage_ref,
@@ -117,8 +196,7 @@ where
             state_node,
             channel_configs,
             state,
-            monitor_handles: vec![],
-            current_monitor_handles: vec![],
+            monitor_queue,
         }
     }
 
@@ -182,7 +260,7 @@ where
                 while let Some(request) =
                     stream.try_next().await.context("error receiving Manager request")?
                 {
-                    Self::handle_manager_request(Rc::clone(&server), request)?;
+                    Self::handle_manager_request(Rc::clone(&server), request).await?;
                 }
             }
             IncomingServices::ChannelControl(mut stream) => {
@@ -204,7 +282,7 @@ where
     }
 
     /// Handle fuchsia.update.Manager requests.
-    fn handle_manager_request(
+    async fn handle_manager_request(
         server: Rc<RefCell<Self>>,
         request: ManagerRequest,
     ) -> Result<(), Error> {
@@ -212,51 +290,51 @@ where
             ManagerRequest::CheckNow { options, monitor, responder } => {
                 info!("Received CheckNow request with {:?} and {:?}", options, monitor);
 
+                let source = match options.initiator {
+                    Some(Initiator::User) => InstallSource::OnDemand,
+                    Some(Initiator::Service) => InstallSource::ScheduledTask,
+                    None => {
+                        responder
+                            .send(&mut Err(CheckNotStartedReason::InvalidOptions))
+                            .context("error sending response")?;
+                        return Ok(());
+                    }
+                };
+
                 // Attach the monitor if passed for current update.
                 if let Some(monitor) = monitor {
-                    let (_stream, handle) = monitor.into_stream_and_control_handle()?;
-                    let mut server = server.borrow_mut();
-                    handle.send_on_state(clone(&server.state))?;
-                    server.current_monitor_handles.push(handle);
+                    if options.allow_attaching_to_existing_update_check == Some(true)
+                        || server.borrow().state.manager_state == state_machine::State::Idle
+                    {
+                        let monitor_proxy = monitor.into_proxy()?;
+                        let mut monitor_queue = server.borrow().monitor_queue.clone();
+                        monitor_queue.add_client(StateNotifier { proxy: monitor_proxy }).await?;
+                    }
                 }
 
-                match server.borrow().state.state {
-                    Some(ManagerState::Idle) => {
-                        let options = CheckOptions {
-                            source: match options.initiator {
-                                Some(Initiator::User) => InstallSource::OnDemand,
-                                Some(Initiator::Service) => InstallSource::ScheduledTask,
-                                None => return Err(format_err!("Options.Initiator is required")),
-                            },
-                        };
+                match server.borrow().state.manager_state {
+                    state_machine::State::Idle => {
+                        let options = CheckOptions { source };
                         let state_machine_ref = Rc::clone(&server.borrow().state_machine_ref);
-                        // TODO: Detect and return CheckStartedResult::Throttled.
+                        // TODO: Detect and return CheckNotStartedReason::Throttled.
                         fasync::spawn_local(async move {
                             // FIXME awaiting with runtime borrow!
                             let mut state_machine = state_machine_ref.borrow_mut();
                             state_machine.start_update_check(options).await;
                         });
-                        responder
-                            .send(CheckStartedResult::Started)
-                            .context("error sending response")?;
+
+                        responder.send(&mut Ok(())).context("error sending response")?;
                     }
                     _ => {
-                        responder
-                            .send(CheckStartedResult::InProgress)
-                            .context("error sending response")?;
+                        let mut response =
+                            if options.allow_attaching_to_existing_update_check == Some(true) {
+                                Ok(())
+                            } else {
+                                Err(CheckNotStartedReason::AlreadyInProgress)
+                            };
+                        responder.send(&mut response).context("error sending response")?;
                     }
                 }
-            }
-            ManagerRequest::GetState { responder } => {
-                info!("Received GetState request");
-                responder.send(clone(&server.borrow().state)).context("error sending response")?;
-            }
-            ManagerRequest::AddMonitor { monitor, control_handle: _ } => {
-                info!("Received AddMonitor request with {:?}", monitor);
-                let (_stream, handle) = monitor.into_stream_and_control_handle()?;
-                let mut server = server.borrow_mut();
-                handle.send_on_state(clone(&server.state))?;
-                server.monitor_handles.push(handle);
             }
         }
         Ok(())
@@ -363,57 +441,47 @@ where
 
     /// The state change callback from StateMachine.
     pub async fn on_state_change(server: Rc<RefCell<Self>>, state: state_machine::State) {
-        let mut s = server.borrow_mut();
+        server.borrow_mut().state.manager_state = state;
 
-        s.state.state = Some(match state {
-            state_machine::State::Idle => ManagerState::Idle,
-            state_machine::State::CheckingForUpdates => ManagerState::CheckingForUpdates,
-            state_machine::State::UpdateAvailable => ManagerState::UpdateAvailable,
-            state_machine::State::PerformingUpdate => ManagerState::PerformingUpdate,
-            state_machine::State::WaitingForReboot => ManagerState::WaitingForReboot,
-            state_machine::State::FinalizingUpdate => ManagerState::FinalizingUpdate,
-            state_machine::State::EncounteredError => ManagerState::EncounteredError,
-        });
+        Self::send_state_to_queue(Rc::clone(&server)).await;
 
-        // Send the new state to all monitor handles and remove the handle if it fails.
-        let state = clone(&s.state);
-        let send_state_and_remove_failed =
-            |handle: &MonitorControlHandle| match handle.send_on_state(clone(&state)) {
-                Ok(()) => true,
-                Err(e) => {
-                    error!(
-                        "Failed to send on_state callback to {:?}: {:?}, removing handle.",
-                        handle, e
-                    );
-                    false
+        {
+            let s = server.borrow();
+            // State is back to idle, clear the current update monitor handles.
+            if s.state.manager_state == state_machine::State::Idle {
+                let mut monitor_queue = s.monitor_queue.clone();
+                drop(s);
+                if let Err(e) = monitor_queue.clear().await {
+                    warn!("error clearing clients of monitor_queue: {:?}", e)
                 }
-            };
-        s.current_monitor_handles.retain(send_state_and_remove_failed);
-        s.monitor_handles.retain(send_state_and_remove_failed);
-
-        // State is back to idle, clear the current update monitor handles.
-        if s.state.state == Some(ManagerState::Idle) {
-            s.current_monitor_handles.clear();
+            }
         }
+
+        let s = server.borrow();
 
         s.state_node.set(&s.state);
 
         // The state machine might make changes to apps only when state changes to `Idle` or
         // `WaitingForReboot`, update the apps node in inspect.
-        if s.state.state == Some(ManagerState::Idle)
-            || s.state.state == Some(ManagerState::WaitingForReboot)
+        if s.state.manager_state == state_machine::State::Idle
+            || s.state.manager_state == state_machine::State::WaitingForReboot
         {
             let app_set = s.app_set.clone();
             drop(s);
             let app_set = app_set.to_vec().await;
-            server.borrow_mut().apps_node.set(&app_set);
+            server.borrow().apps_node.set(&app_set);
         }
     }
-}
 
-/// Manually clone |State| because FIDL table doesn't derive clone.
-fn clone(state: &State) -> State {
-    State { state: state.state.clone(), version_available: state.version_available.clone() }
+    async fn send_state_to_queue(server: Rc<RefCell<Self>>) {
+        let server = server.borrow();
+        let mut monitor_queue = server.monitor_queue.clone();
+        let state = server.state.clone();
+        drop(server);
+        if let Err(e) = monitor_queue.queue_event(state).await {
+            warn!("error sending state to monitor_queue: {:?}", e)
+        }
+    }
 }
 
 #[cfg(test)]
@@ -510,11 +578,12 @@ mod stub {
 mod tests {
     use super::*;
     use crate::channel::ChannelConfig;
-    use fidl::endpoints::{create_proxy, create_proxy_and_stream};
-    use fidl_fuchsia_update::{ManagerMarker, MonitorEvent, MonitorMarker, Options};
+    use fidl::endpoints::{create_proxy_and_stream, create_request_stream};
+    use fidl_fuchsia_update::{self as update, ManagerMarker, MonitorMarker, MonitorRequest};
     use fidl_fuchsia_update_channel::ProviderMarker;
     use fidl_fuchsia_update_channelcontrol::ChannelControlMarker;
     use fuchsia_inspect::{assert_inspect_tree, Inspector};
+    use matches::assert_matches;
     use omaha_client::{common::App, protocol::Cohort};
 
     fn spawn_fidl_server<M: fidl::endpoints::ServiceMarker>(
@@ -531,45 +600,49 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_on_state_change() {
         let fidl = FidlServerBuilder::new().build().await;
-
-        StubFidlServer::on_state_change(Rc::clone(&fidl), state_machine::State::CheckingForUpdates)
+        FidlServer::on_state_change(Rc::clone(&fidl), state_machine::State::CheckingForUpdates)
             .await;
-        assert_eq!(Some(ManagerState::CheckingForUpdates), fidl.borrow().state.state);
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_get_state() {
-        let fidl = FidlServerBuilder::new().build().await;
-        let proxy = spawn_fidl_server::<ManagerMarker>(Rc::clone(&fidl), IncomingServices::Manager);
-        let state = proxy.get_state().await.unwrap();
-        let fidl = fidl.borrow();
-        assert_eq!(state, fidl.state);
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_monitor() {
-        let fidl = FidlServerBuilder::new().build().await;
-        let proxy = spawn_fidl_server::<ManagerMarker>(Rc::clone(&fidl), IncomingServices::Manager);
-        let (client_proxy, server_end) = create_proxy::<MonitorMarker>().unwrap();
-        proxy.add_monitor(server_end).unwrap();
-        let mut stream = client_proxy.take_event_stream();
-        let event = stream.next().await.unwrap().unwrap();
-        let fidl = fidl.borrow();
-        match event {
-            MonitorEvent::OnState { state } => {
-                assert_eq!(state, fidl.state);
-            }
-        }
-        assert_eq!(fidl.monitor_handles.len(), 1);
+        assert_eq!(state_machine::State::CheckingForUpdates, fidl.borrow().state.manager_state);
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_check_now() {
         let fidl = FidlServerBuilder::new().build().await;
         let proxy = spawn_fidl_server::<ManagerMarker>(fidl, IncomingServices::Manager);
-        let options = Options { initiator: Some(Initiator::User) };
+        let options = update::CheckOptions {
+            initiator: Some(Initiator::User),
+            allow_attaching_to_existing_update_check: Some(false),
+        };
         let result = proxy.check_now(options, None).await.unwrap();
-        assert_eq!(result, CheckStartedResult::Started);
+        assert_matches!(result, Ok(()));
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_check_now_invalid_options() {
+        let fidl = FidlServerBuilder::new().build().await;
+        let proxy = spawn_fidl_server::<ManagerMarker>(fidl, IncomingServices::Manager);
+        let (client_end, mut stream) = create_request_stream::<MonitorMarker>().unwrap();
+        let options = update::CheckOptions {
+            initiator: None,
+            allow_attaching_to_existing_update_check: None,
+        };
+        let result = proxy.check_now(options, Some(client_end)).await.unwrap();
+        assert_matches!(result, Err(CheckNotStartedReason::InvalidOptions));
+        assert_matches!(stream.next().await, None);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_check_now_already_in_progress() {
+        let fidl = FidlServerBuilder::new().build().await;
+        FidlServer::on_state_change(Rc::clone(&fidl), state_machine::State::CheckingForUpdates)
+            .await;
+        let proxy = spawn_fidl_server::<ManagerMarker>(fidl, IncomingServices::Manager);
+        let options = update::CheckOptions {
+            initiator: Some(Initiator::User),
+            allow_attaching_to_existing_update_check: None,
+        };
+        let result = proxy.check_now(options, None).await.unwrap();
+        assert_matches!(result, Err(CheckNotStartedReason::AlreadyInProgress));
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -588,27 +661,27 @@ mod tests {
             true,
         );
         let proxy = spawn_fidl_server::<ManagerMarker>(Rc::clone(&fidl), IncomingServices::Manager);
-        let (client_proxy, server_end) = create_proxy::<MonitorMarker>().unwrap();
-        let options = Options { initiator: Some(Initiator::User) };
-        let result = proxy.check_now(options, Some(server_end)).await.unwrap();
-        assert_eq!(result, CheckStartedResult::Started);
+        let (client_end, mut stream) = create_request_stream::<MonitorMarker>().unwrap();
+        let options = update::CheckOptions {
+            initiator: Some(Initiator::User),
+            allow_attaching_to_existing_update_check: Some(true),
+        };
+        let result = proxy.check_now(options, Some(client_end)).await.unwrap();
+        assert_matches!(result, Ok(()));
         let mut expected_states = [
-            State { state: Some(ManagerState::Idle), version_available: None },
-            State { state: Some(ManagerState::CheckingForUpdates), version_available: None },
-            State { state: Some(ManagerState::EncounteredError), version_available: None },
-            State { state: Some(ManagerState::Idle), version_available: None },
+            update::State::CheckingForUpdates(CheckingForUpdatesData {}),
+            update::State::ErrorCheckingForUpdate(ErrorCheckingForUpdateData {}),
         ]
         .iter();
-        let mut stream = client_proxy.take_event_stream();
         while let Some(event) = stream.try_next().await.unwrap() {
             match event {
-                MonitorEvent::OnState { state } => {
+                MonitorRequest::OnState { state, responder } => {
                     assert_eq!(Some(&state), expected_states.next());
+                    responder.send().unwrap();
                 }
             }
         }
         assert_eq!(None, expected_states.next());
-        assert!(fidl.borrow().current_monitor_handles.is_empty());
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -796,7 +869,7 @@ mod tests {
             }
         );
 
-        StubFidlServer::on_state_change(Rc::clone(&fidl), state_machine::State::PerformingUpdate)
+        StubFidlServer::on_state_change(Rc::clone(&fidl), state_machine::State::InstallingUpdate)
             .await;
 
         assert_inspect_tree!(

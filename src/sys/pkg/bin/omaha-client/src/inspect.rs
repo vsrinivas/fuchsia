@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::fidl::State;
 use chrono::{DateTime, Utc};
-use fidl_fuchsia_update::State;
 use fuchsia_inspect::{Node, Property, StringProperty};
 use omaha_client::{
     common::{App, ProtocolState, UpdateCheckSchedule},
@@ -194,9 +194,8 @@ impl LastResultsNode {
 mod tests {
     use super::*;
     use crate::configuration::get_config;
-    use fidl_fuchsia_update::ManagerState;
     use fuchsia_inspect::{assert_inspect_tree, Inspector};
-    use omaha_client::{common::UserCounting, protocol::Cohort};
+    use omaha_client::{common::UserCounting, protocol::Cohort, state_machine};
     use std::time::Duration;
 
     #[test]
@@ -252,7 +251,7 @@ mod tests {
         let inspector = Inspector::new();
         let node = StateNode::new(inspector.root().create_child("state"));
         let state = State {
-            state: Some(ManagerState::CheckingForUpdates),
+            manager_state: state_machine::State::CheckingForUpdates,
             version_available: Some("1.2.3.4".to_string()),
         };
         node.set(&state);

@@ -12,6 +12,7 @@ rustc_test("driver") {
 
   deps = [
     "//sdk/fidl/fuchsia.update:fuchsia.update-rustc",
+    "//sdk/fidl/fuchsia.update:fuchsia.update-rustc",
     "//sdk/fidl/fuchsia.update.channel:fuchsia.update.channel-rustc",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

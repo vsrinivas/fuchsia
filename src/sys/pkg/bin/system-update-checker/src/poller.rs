@@ -7,15 +7,15 @@ use crate::config::Config;
 use crate::update_manager::{
     CurrentChannelUpdater, TargetChannelUpdater, UpdateApplier, UpdateChecker, UpdateManager,
 };
-use crate::update_monitor::StateChangeCallback;
-use fidl_fuchsia_update::CheckStartedResult;
+use crate::update_monitor::StateNotifier;
+use fidl_fuchsia_update::CheckNotStartedReason;
 use fuchsia_async as fasync;
 use fuchsia_syslog::fx_log_info;
 use futures::prelude::*;
 use std::sync::Arc;
 
-pub fn run_periodic_update_check<T, Ch, C, A, S>(
-    manager: Arc<UpdateManager<T, Ch, C, A, S>>,
+pub fn run_periodic_update_check<T, Ch, C, A, N>(
+    manager: Arc<UpdateManager<T, Ch, C, A, N>>,
     config: &Config,
 ) -> impl Future<Output = ()>
 where
@@ -23,7 +23,7 @@ where
     Ch: CurrentChannelUpdater,
     C: UpdateChecker,
     A: UpdateApplier,
-    S: StateChangeCallback,
+    N: StateNotifier,
 {
     let timer = config.poll_frequency().map(|duration| fasync::Interval::new(duration.into()));
 
@@ -34,13 +34,19 @@ where
         };
 
         while let Some(()) = timer.next().await {
-            match manager.try_start_update(Initiator::Automatic, None) {
-                CheckStartedResult::Started => {}
-                CheckStartedResult::Throttled => {
+            match manager.try_start_update(Initiator::Automatic, None, None).await {
+                Ok(()) => {}
+                Err(CheckNotStartedReason::Throttled) => {
                     fx_log_info!("Automatic update check throttled");
                 }
-                CheckStartedResult::InProgress => {
+                Err(CheckNotStartedReason::AlreadyInProgress) => {
                     fx_log_info!("Update in progress, automatic update check skipped");
+                }
+                Err(CheckNotStartedReason::Internal) => {
+                    fx_log_info!("Internal error, will try again later");
+                }
+                Err(CheckNotStartedReason::InvalidOptions) => {
+                    fx_log_info!("Invalid options, update check skipped");
                 }
             }
         }
@@ -53,10 +59,9 @@ mod tests {
     use crate::config::ConfigBuilder;
     use crate::update_manager::tests::{
         FakeCurrentChannelUpdater, FakeLastUpdateStorage, FakeTargetChannelUpdater,
-        FakeUpdateChecker, StateChangeCollector, UnreachableStateChangeCallback,
-        UnreachableUpdateApplier,
+        FakeUpdateChecker, StateChangeCollector, UnreachableNotifier, UnreachableUpdateApplier,
     };
-    use fidl_fuchsia_update::ManagerState;
+    use fidl_fuchsia_update_ext as ext;
     use fuchsia_async::DurationExt;
     use fuchsia_zircon::DurationNum;
     use futures::task::Poll;
@@ -66,14 +71,19 @@ mod tests {
         let mut executor = fasync::Executor::new_with_fake_time().unwrap();
 
         let checker = FakeUpdateChecker::new_up_to_date();
-        let manager: UpdateManager<_, _, _, _, UnreachableStateChangeCallback> =
-            UpdateManager::from_checker_and_applier(
-                FakeTargetChannelUpdater::new(),
-                FakeCurrentChannelUpdater::new(),
-                checker.clone(),
-                UnreachableUpdateApplier,
-                FakeLastUpdateStorage::new(),
-            );
+        let mut fut = UpdateManager::from_checker_and_applier(
+            FakeTargetChannelUpdater::new(),
+            FakeCurrentChannelUpdater::new(),
+            checker.clone(),
+            UnreachableUpdateApplier,
+            FakeLastUpdateStorage::new(),
+        )
+        .boxed();
+        let manager: UpdateManager<_, _, _, _, UnreachableNotifier> =
+            match executor.run_until_stalled(&mut fut) {
+                Poll::Ready(manager) => manager,
+                Poll::Pending => panic!("manager not ready"),
+            };
 
         let mut cron = run_periodic_update_check(Arc::new(manager), &Config::default()).boxed();
 
@@ -88,22 +98,28 @@ mod tests {
 
         let checker = FakeUpdateChecker::new_up_to_date();
         let callback = StateChangeCollector::new();
-        let manager = UpdateManager::from_checker_and_applier(
+        let mut fut = UpdateManager::<_, _, _, _, StateChangeCollector>::from_checker_and_applier(
             FakeTargetChannelUpdater::new(),
             FakeCurrentChannelUpdater::new(),
             checker.clone(),
             UnreachableUpdateApplier,
             FakeLastUpdateStorage::new(),
-        );
-        manager.add_permanent_callback(callback.clone());
+        )
+        .boxed();
+        let manager = match executor.run_until_stalled(&mut fut) {
+            Poll::Ready(manager) => Arc::new(manager),
+            Poll::Pending => panic!("manager not ready"),
+        };
+        let mut fut = manager.add_temporary_callback(callback.clone()).boxed();
+        assert_eq!(Poll::Ready(()), executor.run_until_stalled(&mut fut));
 
         let period = 10.minutes();
         let config = ConfigBuilder::new().poll_frequency(period).build();
-        let mut cron = run_periodic_update_check(Arc::new(manager), &config).boxed();
+        let mut cron = run_periodic_update_check(manager.clone(), &config).boxed();
 
         // Let the cron task set up the timer, but nothing interesting happens until time advances.
         assert_eq!(Poll::Pending, executor.run_until_stalled(&mut cron));
-        assert_eq!(callback.take_states(), vec![ManagerState::Idle.into()]);
+        assert_eq!(callback.take_states(), vec![]);
 
         // Not time yet.
         executor.set_fake_time(8.minutes().after_now());
@@ -118,8 +134,17 @@ mod tests {
         assert_eq!(checker.call_count(), 1);
         assert_eq!(
             callback.take_states(),
-            vec![ManagerState::CheckingForUpdates.into(), ManagerState::Idle.into()]
+            vec![
+                Some(ext::State::CheckingForUpdates).into(),
+                Some(ext::State::NoUpdateAvailable).into(),
+                None.into()
+            ]
         );
+
+        // Need to re add temp callback since it gets removed after prev update
+        // check completes
+        let mut fut = manager.add_temporary_callback(callback.clone()).boxed();
+        assert_eq!(Poll::Ready(()), executor.run_until_stalled(&mut fut));
 
         // Verify the timer fires more than once.
         executor.set_fake_time(period.after_now());
@@ -128,7 +153,12 @@ mod tests {
         assert_eq!(checker.call_count(), 2);
         assert_eq!(
             callback.take_states(),
-            vec![ManagerState::CheckingForUpdates.into(), ManagerState::Idle.into()]
+            vec![
+                None.into(),
+                Some(ext::State::CheckingForUpdates).into(),
+                Some(ext::State::NoUpdateAvailable).into(),
+                None.into()
+            ]
         );
     }
 
@@ -139,15 +169,20 @@ mod tests {
         let checker = FakeUpdateChecker::new_up_to_date();
         let update_blocked = checker.block().unwrap();
         let callback = StateChangeCollector::new();
-        let manager = UpdateManager::from_checker_and_applier(
+        let mut fut = UpdateManager::<_, _, _, _, StateChangeCollector>::from_checker_and_applier(
             FakeTargetChannelUpdater::new(),
             FakeCurrentChannelUpdater::new(),
             checker.clone(),
             UnreachableUpdateApplier,
             FakeLastUpdateStorage::new(),
-        );
-        let manager = Arc::new(manager);
-        manager.add_permanent_callback(callback.clone());
+        )
+        .boxed();
+        let manager = match executor.run_until_stalled(&mut fut) {
+            Poll::Ready(manager) => Arc::new(manager),
+            Poll::Pending => panic!("manager not ready"),
+        };
+        let mut fut = manager.add_temporary_callback(callback.clone()).boxed();
+        assert_eq!(Poll::Ready(()), executor.run_until_stalled(&mut fut));
 
         let period = 24.hours();
         let config = ConfigBuilder::new().poll_frequency(period).build();
@@ -157,7 +192,8 @@ mod tests {
         assert_eq!(Poll::Pending, executor.run_until_stalled(&mut cron));
 
         // User wins, and only 1 update check happens.
-        assert_eq!(manager.try_start_update(Initiator::Manual, None), CheckStartedResult::Started);
+        let mut fut = manager.try_start_update(Initiator::Manual, None, None).boxed();
+        assert_eq!(executor.run_until_stalled(&mut fut), Poll::Ready(Ok(())));
         // The automatic update is skipped because an update is already in progress.
         executor.set_fake_time(period.after_now());
         assert!(executor.wake_expired_timers());
@@ -170,9 +206,9 @@ mod tests {
         assert_eq!(
             callback.take_states(),
             vec![
-                ManagerState::Idle.into(),
-                ManagerState::CheckingForUpdates.into(),
-                ManagerState::Idle.into()
+                Some(ext::State::CheckingForUpdates).into(),
+                Some(ext::State::NoUpdateAvailable).into(),
+                None.into(),
             ]
         );
     }

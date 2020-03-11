@@ -278,16 +278,16 @@ async fn main_helper(command: Command) -> Result<i32, anyhow::Error> {
                 .context("Failed to connect to update manager service")?;
             match update
                 .check_now(
-                    fidl_update::Options { initiator: Some(fidl_update::Initiator::User) },
+                    fidl_update::CheckOptions {
+                        initiator: Some(fidl_update::Initiator::User),
+                        allow_attaching_to_existing_update_check: Some(true),
+                    },
                     None,
                 )
                 .await?
             {
-                fidl_update::CheckStartedResult::Throttled => {
-                    Err(format_err!("Update check was throttled.").into())
-                }
-                fidl_update::CheckStartedResult::Started
-                | fidl_update::CheckStartedResult::InProgress => Ok(0),
+                Ok(()) => Ok(0),
+                Err(e) => Err(format_err!("Update check failed to start: {:?}.", e).into()),
             }
         }
         Command::Gc(GcCommand {}) => {

@@ -39,6 +39,7 @@ rustc_binary("bin") {
     "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/pkg/fidl/fuchsia.update.installer:fuchsia.update.installer-rustc",
+    "//src/sys/pkg/lib/event-queue",
     "//src/sys/pkg/lib/omaha-client",
     "//src/sys/pkg/lib/system-health-check",
     "//third_party/rust_crates:anyhow",

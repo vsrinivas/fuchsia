@@ -25,7 +25,6 @@ use {
         update_service::{RealUpdateManager, RealUpdateService},
     },
     anyhow::{Context as _, Error},
-    fidl_fuchsia_update::ManagerRequestStream,
     fidl_fuchsia_update_channel::ProviderRequestStream,
     forced_fdr::perform_fdr_if_necessary,
     fuchsia_async as fasync,
@@ -67,14 +66,13 @@ async fn main() -> Result<(), Error> {
         )?;
     futures.push(current_channel_notifier.run().boxed());
 
-    let update_manager = Arc::new(
-        RealUpdateManager::new(
-            target_channel_manager,
-            current_channel_manager,
-            inspector.root().create_child("update-manager"),
-        )
-        .await,
-    );
+    let update_manager = RealUpdateManager::new(
+        target_channel_manager,
+        current_channel_manager,
+        inspector.root().create_child("update-manager"),
+    )
+    .await;
+    let update_manager = Arc::new(update_manager);
 
     let mut fs = ServiceFs::new();
     let update_manager_clone = update_manager.clone();
@@ -101,7 +99,11 @@ async fn main() -> Result<(), Error> {
         async move {
             if config.poll_frequency().is_some() {
                 fasync::Timer::new(fasync::Time::after(Duration::from_secs(60).into())).await;
-                update_manager.try_start_update(Initiator::Automatic, None);
+                if let Err(e) =
+                    update_manager.try_start_update(Initiator::Automatic, None, None).await
+                {
+                    fx_log_warn!("Update check failed with error: {:?}", e);
+                }
             }
         }
         .boxed(),
@@ -117,7 +119,7 @@ async fn main() -> Result<(), Error> {
 }
 
 enum IncomingServices<'a> {
-    Manager(ManagerRequestStream, RealUpdateService),
+    Manager(fidl_fuchsia_update::ManagerRequestStream, RealUpdateService),
     Provider(ProviderRequestStream, &'a ProviderHandler),
 }
 
