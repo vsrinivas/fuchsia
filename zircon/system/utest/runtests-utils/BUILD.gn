@@ -43,9 +43,6 @@ test("runtests-utils") {
     ":test-data",
     ":test-scripts",
   ]
-
-  # TODO(47444): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 executable("publish-data-helper") {

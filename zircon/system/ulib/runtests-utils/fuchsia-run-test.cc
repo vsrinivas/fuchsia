@@ -291,6 +291,7 @@ std::unique_ptr<Result> RunTest(const char* argv[], const char* output_dir,
     fprintf(stderr, "FAILURE: Cannot export root namespace: %s\n", zx_status_get_string(status));
     return std::make_unique<Result>(path, FAILED_UNKNOWN, 0, 0);
   }
+  auto auto_fdio_free_flat_ns = fbl::MakeAutoCall([&flat]() { fdio_ns_free_flat_ns(flat); });
 
   auto action_ns_entry = [](const char* prefix, zx_handle_t handle) {
     return fdio_spawn_action{.action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
