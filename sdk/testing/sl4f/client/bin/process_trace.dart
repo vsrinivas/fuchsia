@@ -21,13 +21,31 @@ Process a trace file into metrics, and dump them to standard out.
 Example: out/default/dart-tools/process_trace --metrics=ui trace.json
 ''';
 
+void _printSupportedMetricsAndBundles() {
+  print('Supported metrics:');
+  for (final metric in _metricsReporters.keys) {
+    print('  $metric');
+  }
+  print('');
+  print('Supported bundles:');
+  for (final bundle in _metricsBundles.entries) {
+    final bundleContents = bundle.value.join(', ');
+    print('  ${bundle.key}: $bundleContents');
+  }
+}
+
+void _printHelp() {
+  print(_helpText);
+  _printSupportedMetricsAndBundles();
+}
+
 void main(List<String> args) async {
   List<String> metricsOrBundles = [];
   String traceFilePath;
 
   for (final arg in args) {
     if (arg == '--help') {
-      print(_helpText);
+      _printHelp();
       return;
     } else if (arg.startsWith('--metrics=')) {
       final rest = arg.substring('--metrics='.length);
@@ -36,30 +54,38 @@ void main(List<String> args) async {
       traceFilePath = arg;
     } else {
       print('Error: Encountered unknown arg: "$arg"');
-      print(_helpText);
+      _printHelp();
       return;
     }
   }
 
   if (traceFilePath == null) {
     print('Error, no trace file specified');
-    print(_helpText);
+    _printHelp();
     return;
   }
 
   if (metricsOrBundles.isEmpty) {
     print('Error, no values specified for --metrics=...');
-    print(_helpText);
+    _printHelp();
     return;
   }
 
   final List<String> metrics = [];
+  bool foundUnsupportedMetricOrBundle = false;
   for (final metricOrBundle in metricsOrBundles) {
     if (_metricsBundles.containsKey(metricOrBundle)) {
       metrics.addAll(_metricsBundles[metricOrBundle]);
-    } else {
+    } else if (_metricsReporters.containsKey(metricOrBundle)) {
       metrics.add(metricOrBundle);
+    } else {
+      print('Unsupported metric or bundle: $metricOrBundle');
+      foundUnsupportedMetricOrBundle = true;
     }
+  }
+  if (foundUnsupportedMetricOrBundle) {
+    _printSupportedMetricsAndBundles();
+    return;
   }
 
   print('Processing $traceFilePath using metrics: $metrics');
