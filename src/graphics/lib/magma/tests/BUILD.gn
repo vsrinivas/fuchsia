@@ -52,14 +52,23 @@ group("vulkan-tests") {
   ]
 }
 
-# Packages needed for L1 tests from //doc/the-book/magma/contributing.md
-group("l1") {
+# Packages needed for L0 from //doc/the-book/magma/contributing.md
+group("l0") {
   testonly = true
   deps = [
     ":tests",
-    "//garnet/packages/examples:vkcube-on-fb",
-    "//garnet/packages/examples:vkcube-on-scenic",
+    ":vulkan-tests",
+  ]
+}
+
+# Packages needed for L1
+group("l1") {
+  testonly = true
+  deps = [
+    ":l0",
     "//garnet/packages/prod:scenic",
+    "//src/graphics/examples/vkcube:vkcube-on-fb",
+    "//src/graphics/examples/vkcube:vkcube-on-scenic",
     "//src/graphics/lib/magma/src/tools",
     "//src/lib/vulkan/tests:image-pipe-swapchain-tests",
   ]

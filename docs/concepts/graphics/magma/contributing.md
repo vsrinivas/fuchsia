@@ -6,18 +6,15 @@ See [Contributing](/CONTRIBUTING.md).
 
 ### Source Code
 
-The source code for a magma graphics driver may be hosted entirely within the garnet repository.
-
 The core magma code is found under:
 
-* [lib/magma/src](/src/graphics/lib/magma/src)
+* [lib/magma](/src/graphics/lib/magma)
 
-Implementations of the magma service drivers are found under:
+Magma service drivers are found under:
 
 * [src/graphics/drivers](/src/graphics/drivers)
 
-Implementations of the magma application driver may be located in drivers/gpu; though
-often these are built from third party projects, such as third_party/mesa.
+Magma client drivers are third party codebases.  Open source client drivers typically live in [third_party/mesa](/third_party/mesa).
 
 ### Coding Conventions and Formatting
 
@@ -36,7 +33,7 @@ often these are built from third party projects, such as third_party/mesa.
 * workstation
 
 ##### Package for L2 testing:
-* topaz/app/spinning_cube
+* src/experiences/examples/spinning_cube
 
 ### Testing Pre-Submit
 
@@ -44,7 +41,7 @@ For details on the testing strategy for magma, see [Test Strategy](test_strategy
 
 There are multiple levels for magma TPS.  Each level includes all previous levels.
 
-When submitting a change you must indicate the TPS level tested, preface by the hardware
+When submitting a change, indicate the TPS level tested, prefaced by the hardware
 on which the testing was performed:
 
 TEST:  
@@ -57,17 +54,18 @@ nuc,vim2:go/magma-tps#P0
 
 Includes all unit tests and integration tests.  There are 2 steps at this tps level:
 
-1. Build with --args magma_enable_developer_build=true; this will run unit tests that require hardware,
-then present the device as usual for general applications.  Inspect the syslog for test results.
+1. Build with --args magma_enable_developer_build=true; this will run unit tests that require hardware when
+the system driver starts, then exposes the device as usual.  Inspect the syslog for test results.
 
-2. Run the test script [lib/magma/scripts/test.sh](/src/graphics/lib/magma/scripts/test.sh) and inspect the test results.
+2. Build with `--with src/graphics/lib/magma/tests:l0` and run the test script [src/graphics/lib/magma/scripts/test.sh](/src/graphics/lib/magma/scripts/test.sh).
 
 #### L1
 
 If you have an attached display, execute the spinning [vkcube](/src/graphics/examples/vkcube).
 This test uses an imagepipe swapchain to pass frames to the system compositor.  
 Build with `--with src/graphics/lib/magma/tests:l1`.
-Run the test with `run fuchsia-pkg://fuchsia.com/present_view#meta/present_view.cmx fuchsia-pkg://fuchsia.com/vkcube_on_scenic#meta/vkcube_on_scenic.cmx`.
+Test with present direct to display: `run vkcube-on-fb --c 500`
+Test with present via Scenic: `run present_view fuchsia-pkg://fuchsia.com/vkcube-on-scenic#meta/vkcube-on-scenic.cmx`.
 
 #### L2
 
@@ -81,12 +79,11 @@ For details, refer to top level project documentation.
 
 #### S0
 
-For stress testing, run the test script [lib/magma/scripts/stress.sh](/src/graphics/lib/magma/scripts/stress.sh)
-and ensure that the driver does not leak resources over time.
+Run vkcube-on-scenic overnight (12-24 hours).
 
 #### S1
 
-A full UI stress test.  Launch the spinning_cube example and the infinite_scroller, and let them run overnight.
+A full UI stress test.  Launch two instances of the spinning_cube flutter example, and let them run overnight.
 
 #### C0
 
@@ -102,12 +99,6 @@ For some changes, it's appropriate to run benchmarks to validate performance met
 For details on the Vulkan conformance test suite, see
 
 * [../third_party/vulkan-cts](/third_party/vulkan-cts)
-
-### Benchmarking
-
-The source to Vulkan gfxbench is access-restricted. It should be cloned into third_party.
-
-* https://fuchsia-vendor-internal.googlesource.com/gfxbench
 
 ### See Also
 * [Test Strategy](test_strategy.md)
