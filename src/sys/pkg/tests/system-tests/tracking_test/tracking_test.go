@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"sync"
 	"testing"
 	"time"
 
@@ -276,8 +275,8 @@ func otaToPackage(
 		return fmt.Errorf("error resolving the run package: %v", err)
 	}
 
-	var wg sync.WaitGroup
-	device.RegisterDisconnectListener(&wg)
+	ch := make(chan struct{})
+	device.RegisterDisconnectListener(ch)
 
 	log.Printf("starting system OTA")
 
@@ -290,12 +289,6 @@ func otaToPackage(
 	}
 
 	// Wait until we get a signal that we have disconnected
-	ch := make(chan struct{})
-	go func() {
-		wg.Wait()
-		ch <- struct{}{}
-	}()
-
 	select {
 	case <-ch:
 	case <-ctx.Done():

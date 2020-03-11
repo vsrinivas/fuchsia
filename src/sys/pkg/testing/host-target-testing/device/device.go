@@ -15,7 +15,6 @@ import (
 	"net"
 	"os"
 	"strings"
-	"sync"
 	"time"
 
 	"fuchsia.googlesource.com/host_target_testing/packages"
@@ -83,8 +82,8 @@ func (c *Client) WaitForDeviceToBeConnected(ctx context.Context) error {
 
 // RegisterDisconnectListener adds a waiter that gets notified when the ssh and
 // shell is disconnected.
-func (c *Client) RegisterDisconnectListener(wg *sync.WaitGroup) {
-	c.sshClient.RegisterDisconnectListener(wg)
+func (c *Client) RegisterDisconnectListener(ch chan struct{}) {
+	c.sshClient.RegisterDisconnectListener(ch)
 }
 
 func (c *Client) GetSshConnection(ctx context.Context) (string, error) {
@@ -133,8 +132,8 @@ func (c *Client) Reboot(ctx context.Context, repo *packages.Repository, rpcClien
 func (c *Client) RebootToRecovery(ctx context.Context) error {
 	log.Printf("rebooting to recovery")
 
-	var wg sync.WaitGroup
-	c.RegisterDisconnectListener(&wg)
+	ch := make(chan struct{})
+	c.RegisterDisconnectListener(ch)
 
 	err := c.Run(ctx, "dm reboot-recovery", os.Stdout, os.Stderr)
 	if err != nil {
@@ -148,12 +147,6 @@ func (c *Client) RebootToRecovery(ctx context.Context) error {
 	}
 
 	// Wait until we get a signal that we have disconnected
-	ch := make(chan struct{})
-	go func() {
-		defer close(ch)
-		wg.Wait()
-	}()
-
 	select {
 	case <-ch:
 	case <-ctx.Done():
@@ -219,8 +212,8 @@ func (c *Client) ExpectReboot(ctx context.Context, repo *packages.Repository, rp
 		return err
 	}
 
-	var wg sync.WaitGroup
-	c.RegisterDisconnectListener(&wg)
+	ch := make(chan struct{})
+	c.RegisterDisconnectListener(ch)
 
 	if err := f(); err != nil {
 		// It's okay if we leak the disconnect listener, it'll get
@@ -229,12 +222,6 @@ func (c *Client) ExpectReboot(ctx context.Context, repo *packages.Repository, rp
 	}
 
 	// Wait until we get a signal that we have disconnected
-	ch := make(chan struct{})
-	go func() {
-		defer close(ch)
-		wg.Wait()
-	}()
-
 	select {
 	case <-ch:
 	case <-ctx.Done():

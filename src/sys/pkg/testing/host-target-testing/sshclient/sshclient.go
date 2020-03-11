@@ -33,8 +33,8 @@ type Client struct {
 	mu                     sync.Mutex
 	client                 *ssh.Client
 	conn                   net.Conn
-	connectionListeners    []*sync.WaitGroup
-	disconnectionListeners []*sync.WaitGroup
+	connectionListeners    []chan struct{}
+	disconnectionListeners []chan struct{}
 }
 
 // NewClient creates a new ssh client to the address.
@@ -171,14 +171,8 @@ func (c *Client) GetSshConnection(ctx context.Context) (string, error) {
 func (c *Client) WaitToBeConnected(ctx context.Context) error {
 	log.Printf("waiting for %s to to connect", c.addr)
 
-	var wg sync.WaitGroup
-	c.RegisterConnectListener(&wg)
-
 	ch := make(chan struct{})
-	go func() {
-		wg.Wait()
-		close(ch)
-	}()
+	c.RegisterConnectListener(ch)
 
 	select {
 	case <-ch:
@@ -191,28 +185,24 @@ func (c *Client) WaitToBeConnected(ctx context.Context) error {
 
 // RegisterConnectListener adds a waiter that gets notified when the ssh
 // client is connected.
-func (c *Client) RegisterConnectListener(wg *sync.WaitGroup) {
-	wg.Add(1)
-
+func (c *Client) RegisterConnectListener(ch chan struct{}) {
 	c.mu.Lock()
 	if c.client == nil {
-		c.connectionListeners = append(c.connectionListeners, wg)
+		c.connectionListeners = append(c.connectionListeners, ch)
 	} else {
-		wg.Done()
+		close(ch)
 	}
 	c.mu.Unlock()
 }
 
 // RegisterDisconnectListener adds a waiter that gets notified when the ssh
 // client is disconnected.
-func (c *Client) RegisterDisconnectListener(wg *sync.WaitGroup) {
-	wg.Add(1)
-
+func (c *Client) RegisterDisconnectListener(ch chan struct{}) {
 	c.mu.Lock()
 	if c.client == nil {
-		wg.Done()
+		close(ch)
 	} else {
-		c.disconnectionListeners = append(c.disconnectionListeners, wg)
+		c.disconnectionListeners = append(c.disconnectionListeners, ch)
 	}
 	c.mu.Unlock()
 }
@@ -242,9 +232,9 @@ func (c *Client) disconnectLocked() {
 	}
 
 	for _, listener := range c.disconnectionListeners {
-		listener.Done()
+		close(listener)
 	}
-	c.disconnectionListeners = []*sync.WaitGroup{}
+	c.disconnectionListeners = []chan struct{}{}
 }
 
 // Make a single attempt to reconnect to the ssh server.
@@ -262,9 +252,9 @@ func (c *Client) reconnectLocked(ctx context.Context) {
 		c.conn = conn
 
 		for _, listener := range c.connectionListeners {
-			listener.Done()
+			close(listener)
 		}
-		c.connectionListeners = []*sync.WaitGroup{}
+		c.connectionListeners = []chan struct{}{}
 
 		log.Printf("reconnected to %s", c.addr)
 	} else {
