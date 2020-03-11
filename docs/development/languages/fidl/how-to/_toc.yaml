@@ -4,5 +4,5 @@
 toc:
 - title: "ABI and source compatibility guide"
   path: /docs/development/languages/fidl/how-to/abi-compat.md
-- title: "Attributes"
+- title: "Max out pagination"
   path: /docs/development/languages/fidl/how-to/max-out-pagination.md
