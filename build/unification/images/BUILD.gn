@@ -102,7 +102,6 @@ aggregate_manifest("legacy-image") {
     ":bin.svchost",
 #------------------
 #------------------
-    ":bin.syscall-check",
 #------------------
 #------------------
     ":bin.sysinfo",
@@ -1336,7 +1335,7 @@ aggregate_manifest("migrated-image") {
     #":bin.svchost",
 #------------------
 #------------------
-    #":bin.syscall-check",
+    "//zircon/system/uapp/syscall-check:syscall-check-manifest",
 #------------------
 #------------------
     #":bin.sysinfo",
