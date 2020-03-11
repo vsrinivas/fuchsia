@@ -571,26 +571,39 @@ func (c *compiler) inExternalLibrary(ci types.CompoundIdentifier) bool {
 
 // Handle rights annotations are added to fields that contain handles
 // or arrays and vectors of handles (recursively).
-func (c *compiler) computeHandleRights(t types.Type) *types.HandleRights {
+func (c *compiler) computeHandleRights(t types.Type) (types.HandleRights, bool) {
 	switch t.Kind {
 	case types.HandleType:
-		return &t.HandleRights
+		return t.HandleRights, true
 	case types.ArrayType, types.VectorType:
 		return c.computeHandleRights(*t.ElementType)
 	}
-	return nil
+	return 0, false
 }
 
 // Handle subtype annotations are added to fields that contain handles
 // or arrays and vectors of handles (recursively).
-func (c *compiler) computeHandleSubtype(t types.Type) types.ObjectType {
+func (c *compiler) computeHandleSubtype(t types.Type) (types.ObjectType, bool) {
+	// TODO(fxb/45998): clean up once numeric subtype is emitted in IR
 	switch t.Kind {
 	case types.HandleType:
-		return types.ObjectTypeFromHandleSubtype(t.HandleSubtype)
+		// TODO(fxb/48012): subtypes of aliased handle types are not currently
+		// set in the JSON, so they are unchecked.
+		return types.ObjectTypeFromHandleSubtype(t.HandleSubtype), true
+	case types.RequestType:
+		return types.ObjectTypeChannel, true
+	case types.IdentifierType:
+		declType, ok := c.decls[t.Identifier]
+		if !ok {
+			log.Fatal("Unknown identifier: ", t.Identifier)
+		}
+		if declType == types.InterfaceDeclType {
+			return types.ObjectTypeChannel, true
+		}
 	case types.ArrayType, types.VectorType:
 		return c.computeHandleSubtype(*t.ElementType)
 	}
-	return types.ObjectTypeNone
+	return types.ObjectTypeNone, false
 }
 
 func (_ *compiler) compileIdentifier(id types.Identifier, export bool, ext string) string {
@@ -817,10 +830,10 @@ func (c *compiler) compileStructMember(withCtx bool, val types.StructMember) Str
 		FidlTag:         rbtag.String(),
 		FidlOffsetV1Tag: val.FieldShapeV1.Offset,
 	}
-	if handleRights := c.computeHandleRights(val.Type); handleRights != nil {
-		tags[FidlHandleRightsTag] = int(*handleRights)
+	if handleRights, ok := c.computeHandleRights(val.Type); ok {
+		tags[FidlHandleRightsTag] = int(handleRights)
 	}
-	if handleSubtype := c.computeHandleSubtype(val.Type); handleSubtype != types.ObjectTypeNone {
+	if handleSubtype, ok := c.computeHandleSubtype(val.Type); ok {
 		tags[FidlHandleSubtypeTag] = handleSubtype
 	}
 
@@ -864,10 +877,10 @@ func (c *compiler) compileUnion(val types.Union) Union {
 		tags := Tags{
 			FidlTag: rbtag,
 		}
-		if handleRights := c.computeHandleRights(member.Type); handleRights != nil {
-			tags[FidlHandleRightsTag] = *handleRights
+		if handleRights, ok := c.computeHandleRights(member.Type); ok {
+			tags[FidlHandleRightsTag] = handleRights
 		}
-		if handleSubtype := c.computeHandleSubtype(member.Type); handleSubtype != types.ObjectTypeNone {
+		if handleSubtype, ok := c.computeHandleSubtype(member.Type); ok {
 			tags[FidlHandleSubtypeTag] = handleSubtype
 		}
 		members = append(members, UnionMember{
@@ -910,10 +923,10 @@ func (c *compiler) compileTable(val types.Table) Table {
 		tags := Tags{
 			FidlTag: rbtag.String(),
 		}
-		if handleRights := c.computeHandleRights(member.Type); handleRights != nil {
-			tags[FidlHandleRightsTag] = *handleRights
+		if handleRights, ok := c.computeHandleRights(member.Type); ok {
+			tags[FidlHandleRightsTag] = handleRights
 		}
-		if handleSubtype := c.computeHandleSubtype(member.Type); handleSubtype != types.ObjectTypeNone {
+		if handleSubtype, ok := c.computeHandleSubtype(member.Type); ok {
 			tags[FidlHandleSubtypeTag] = handleSubtype
 		}
 		members = append(members, TableMember{
