@@ -37,6 +37,8 @@ source_set("lib") {
     "namespace.h",
     "namespace_builder.cc",
     "namespace_builder.h",
+    "policy_checker.cc",
+    "policy_checker.h",
     "realm.cc",
     "realm.h",
     "runner_holder.cc",
@@ -77,6 +79,7 @@ source_set("lib") {
     "//zircon/public/lib/trace-provider-with-fdio",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-process",
+    "//third_party/googletest:gtest_prod",
   ]
 
   defines = [ "_ALL_SOURCE=1" ]
@@ -136,7 +139,7 @@ executable("unittest_bin") {
     "hub/hub_holder_unittest.cc",
     "namespace_builder_unittest.cc",
     "namespace_unittest.cc",
-    "realm_unittest.cc",
+    "policy_checker_unittest.cc",
     "scheme_map_unittest.cc",
     "service_provider_dir_unittest.cc",
     "storage_watchdog_unittest.cc",

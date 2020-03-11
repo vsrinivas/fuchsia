@@ -42,10 +42,10 @@
 #include "src/lib/fxl/strings/substitute.h"
 #include "src/lib/json_parser/json_parser.h"
 #include "src/lib/pkg_url/url_resolver.h"
-#include "src/sys/appmgr/allow_list.h"
 #include "src/sys/appmgr/dynamic_library_loader.h"
 #include "src/sys/appmgr/hub/realm_hub.h"
 #include "src/sys/appmgr/namespace_builder.h"
+#include "src/sys/appmgr/policy_checker.h"
 #include "src/sys/appmgr/scheme_map.h"
 #include "src/sys/appmgr/util.h"
 
@@ -59,14 +59,6 @@ constexpr char kDataKey[] = "data";
 constexpr char kBinaryKey[] = "binary";
 constexpr char kAppArgv0Prefix[] = "/pkg/";
 constexpr zx_status_t kComponentCreationFailed = -1;
-
-constexpr char kDeprecatedShellAllowList[] = "allowlist/deprecated_shell.txt";
-constexpr char kDeprecatedAmbientReplaceAsExecAllowList[] =
-    "allowlist/deprecated_ambient_replace_as_executable.txt";
-constexpr char kComponentEventProviderAllowList[] = "allowlist/component_event_provider.txt";
-constexpr char kPackageResolverAllowList[] = "allowlist/package_resolver.txt";
-constexpr char kPackageCacheAllowList[] = "allowlist/package_cache.txt";
-constexpr char kPkgFsVersionsAllowList[] = "allowlist/pkgfs_versions.txt";
 
 using fuchsia::sys::TerminationReason;
 
@@ -869,7 +861,6 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
   const std::vector<std::string>* service_whitelist = nullptr;
   std::vector<zx_policy_basic_v2_t> policies;
 
-  bool should_have_ambient_executable = false;
   if (!cmx.sandbox_meta().IsNull()) {
     const auto& sandbox = cmx.sandbox_meta();
     service_whitelist = &sandbox.services();
@@ -884,84 +875,55 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
         [&] { return IsolatedPathForPackage(cache_path(), fp); },
         [&] { return IsolatedPathForPackage(temp_path(), fp); });
 
-    if (sandbox.HasFeature("deprecated-ambient-replace-as-executable")) {
-      if (!IsAllowedToUseDeprecatedAmbientReplaceAsExecutable(fp.ToString())) {
-        FXL_LOG(ERROR) << "Component " << fp.ToString() << " is not allowed to use "
-                       << "deprecated-ambient-replace-as-executable. go/fx-hermetic-sandboxes";
-        component_request.SetReturnValues(kComponentCreationFailed, TerminationReason::UNSUPPORTED);
-        return;
-      }
-      should_have_ambient_executable = true;
-    }
-
-    if (sandbox.HasFeature("deprecated-shell") && !IsAllowedToUseDeprecatedShell(fp.ToString())) {
-      FXL_LOG(ERROR) << "Component " << fp.ToString() << " is not allowed to use "
-                     << "deprecated-shell. go/fx-hermetic-sandboxes";
+    // It is critical that if nothing is returned the component does not lanuch.
+    PolicyChecker policy_checker(appmgr_config_dir_.duplicate());
+    std::optional<SecurityPolicy> security_policy = policy_checker.Check(sandbox, fp);
+    if (!security_policy.has_value()) {
       component_request.SetReturnValues(kComponentCreationFailed, TerminationReason::UNSUPPORTED);
       return;
     }
 
-    if (sandbox.HasService("fuchsia.pkg.PackageResolver") &&
-        !IsAllowedToUsePackageResolver(fp.WithoutVariantAndHash())) {
-      FXL_LOG(ERROR) << "Component " << fp.WithoutVariantAndHash() << " is not allowed to use "
-                     << "fuchsia.pkg.PackageResolver. go/no-package-resolver";
-      component_request.SetReturnValues(kComponentCreationFailed, TerminationReason::UNSUPPORTED);
+    if (!security_policy->enable_ambient_executable) {
+      policies.push_back(zx_policy_basic_v2_t{.condition = ZX_POL_AMBIENT_MARK_VMO_EXEC,
+                                              .action = ZX_POL_ACTION_DENY,
+                                              .flags = ZX_POL_OVERRIDE_DENY});
+    }
+
+    fxl::RefPtr<Namespace> ns = fxl::MakeRefCounted<Namespace>(
+        default_namespace_, weak_ptr_factory_.GetWeakPtr(),
+        std::move(launch_info.additional_services), service_whitelist);
+
+    if (security_policy->enable_component_event_provider) {
+      ns->MaybeAddComponentEventProvider();
+    }
+
+    ns->set_component_url(launch_info.url);
+    zx::channel svc = ns->OpenServicesAsDirectory();
+    if (!svc) {
+      component_request.SetReturnValues(kComponentCreationFailed,
+                                        TerminationReason::INTERNAL_ERROR);
       return;
     }
-    if (sandbox.HasService("fuchsia.pkg.PkgCache") &&
-        !IsAllowedToUsePackageCache(fp.WithoutVariantAndHash())) {
-      FXL_LOG(ERROR) << "Component " << fp.WithoutVariantAndHash() << " is not allowed to use "
-                     << "fuchsia.pkg.PkgCache. go/no-package-cache";
-      component_request.SetReturnValues(kComponentCreationFailed, TerminationReason::UNSUPPORTED);
-      return;
+    builder.AddServices(std::move(svc));
+
+    // Add the custom namespace.
+    // Note that this must be the last |builder| step adding entries to the
+    // namespace so that we can filter out entries already added in previous
+    // steps.
+    builder.AddFlatNamespace(std::move(launch_info.flat_namespace));
+
+    if (runtime.IsNull()) {
+      // Use the default runner: ELF binaries.
+      CreateElfBinaryComponentFromPackage(std::move(launch_info), std::move(executable), app_argv0,
+                                          program.env_vars(), std::move(loader_service),
+                                          builder.Build(), std::move(component_request),
+                                          std::move(ns), policies, std::move(callback));
+    } else {
+      // Use other component runners.
+      CreateRunnerComponentFromPackage(std::move(package), std::move(launch_info), runtime,
+                                       builder.BuildForRunner(), std::move(component_request),
+                                       std::move(ns), std::move(program_metadata));
     }
-    if (sandbox.HasPkgFsPath("versions") &&
-        !IsAllowedToUsePkgFsVersions(fp.WithoutVariantAndHash())) {
-      FXL_LOG(ERROR) << "Component " << fp.WithoutVariantAndHash() << " is not allowed to use "
-                     << "pkgfs/versions. go/no-pkgfs-versions";
-      component_request.SetReturnValues(kComponentCreationFailed, TerminationReason::UNSUPPORTED);
-      return;
-    }
-  }
-  if (!should_have_ambient_executable) {
-    policies.push_back(zx_policy_basic_v2_t{.condition = ZX_POL_AMBIENT_MARK_VMO_EXEC,
-                                            .action = ZX_POL_ACTION_DENY,
-                                            .flags = ZX_POL_OVERRIDE_DENY});
-  }
-
-  fxl::RefPtr<Namespace> ns =
-      fxl::MakeRefCounted<Namespace>(default_namespace_, weak_ptr_factory_.GetWeakPtr(),
-                                     std::move(launch_info.additional_services), service_whitelist);
-
-  if (IsAllowedToConnectToComponentEventProvider(fp.ToString())) {
-    ns->MaybeAddComponentEventProvider();
-  }
-
-  ns->set_component_url(launch_info.url);
-  zx::channel svc = ns->OpenServicesAsDirectory();
-  if (!svc) {
-    component_request.SetReturnValues(kComponentCreationFailed, TerminationReason::INTERNAL_ERROR);
-    return;
-  }
-  builder.AddServices(std::move(svc));
-
-  // Add the custom namespace.
-  // Note that this must be the last |builder| step adding entries to the
-  // namespace so that we can filter out entries already added in previous
-  // steps.
-  builder.AddFlatNamespace(std::move(launch_info.flat_namespace));
-
-  if (runtime.IsNull()) {
-    // Use the default runner: ELF binaries.
-    CreateElfBinaryComponentFromPackage(std::move(launch_info), std::move(executable), app_argv0,
-                                        program.env_vars(), std::move(loader_service),
-                                        builder.Build(), std::move(component_request),
-                                        std::move(ns), policies, std::move(callback));
-  } else {
-    // Use other component runners.
-    CreateRunnerComponentFromPackage(std::move(package), std::move(launch_info), runtime,
-                                     builder.BuildForRunner(), std::move(component_request),
-                                     std::move(ns), std::move(program_metadata));
   }
 }
 
@@ -1095,53 +1057,6 @@ std::string Realm::IsolatedPathForPackage(std::string path_prefix, const Fuchsia
     return "";
   }
   return path;
-}
-
-bool Realm::IsAllowedToUseDeprecatedShell(std::string ns_id) {
-  AllowList deprecated_shell_allowlist(appmgr_config_dir_, kDeprecatedShellAllowList,
-                                       AllowList::kExpected);
-  return deprecated_shell_allowlist.IsAllowed(ns_id);
-}
-
-bool Realm::IsAllowedToUseDeprecatedAmbientReplaceAsExecutable(std::string ns_id) {
-  AllowList deprecated_exec_allowlist(appmgr_config_dir_, kDeprecatedAmbientReplaceAsExecAllowList,
-                                      AllowList::kOptional);
-  // We treat the absence of the allowlist as an indication that we should be
-  // permissive and allow all components to use replace-as-executable.  We add
-  // the allowlist in user builds to ensure we are enforcing policy.
-  if (!deprecated_exec_allowlist.WasFilePresent()) {
-    return true;
-  }
-  // Otherwise, enforce the allowlist.
-  return deprecated_exec_allowlist.IsAllowed(ns_id);
-}
-
-bool Realm::IsAllowedToConnectToComponentEventProvider(std::string ns_id) {
-  AllowList component_event_provider_allowlist(appmgr_config_dir_, kComponentEventProviderAllowList,
-                                               AllowList::kExpected);
-  return component_event_provider_allowlist.IsAllowed(ns_id);
-}
-
-bool Realm::IsAllowedToUsePackageResolver(std::string ns_id) {
-  // There is a more permissive allowlist for non-user builds, but we enforce some kind
-  // of allowlist in all build types.
-  AllowList package_resolver_allowlist(appmgr_config_dir_, kPackageResolverAllowList,
-                                       AllowList::kExpected);
-  return package_resolver_allowlist.IsAllowed(ns_id);
-}
-
-bool Realm::IsAllowedToUsePackageCache(std::string ns_id) {
-  // There is a more permissive allowlist for non-user builds, but we enforce some kind
-  // of allowlist in all build types.
-  AllowList package_cache_allowlist(appmgr_config_dir_, kPackageCacheAllowList,
-                                    AllowList::kExpected);
-  return package_cache_allowlist.IsAllowed(ns_id);
-}
-
-bool Realm::IsAllowedToUsePkgFsVersions(std::string ns_id) {
-  AllowList pkgfs_versions_allowlist(appmgr_config_dir_, kPkgFsVersionsAllowList,
-                                     AllowList::kExpected);
-  return pkgfs_versions_allowlist.IsAllowed(ns_id);
 }
 
 void Realm::NotifyComponentStarted(const std::string& component_url,
