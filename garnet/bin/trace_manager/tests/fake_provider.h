@@ -46,7 +46,7 @@ class FakeProvider : public provider::Provider {
   static constexpr size_t kHeaderSize = sizeof(trace::internal::trace_buffer_header);
 
   // The size of our durable buffer in CIRCULAR,STREAMING modes.
-  size_t kDurableBufferSize = 4096;
+  static constexpr size_t kDurableBufferSize = 4096;
 
   FakeProvider(zx_koid_t pid, const std::string& name);
 
