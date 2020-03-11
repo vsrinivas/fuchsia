@@ -18,7 +18,7 @@ void platform_graceful_halt_helper(platform_halt_action action, zircon_crash_rea
   Thread::Current::MigrateToCpu(BOOT_CPU_ID);
 
   printf("platform_graceful_halt_helper: Halting secondary CPUs.\n");
-  [[maybe_unused]] zx_status_t status = platform_halt_secondary_cpus();
+  [[maybe_unused]] zx_status_t status = platform_halt_secondary_cpus(ZX_TIME_INFINITE);
   DEBUG_ASSERT(status == ZX_OK);
 
   // Delay shutdown of debuglog to ensure log messages emitted by above calls will be written.
@@ -31,12 +31,12 @@ void platform_graceful_halt_helper(platform_halt_action action, zircon_crash_rea
   panic("ERROR: failed to halt the platform\n");
 }
 
-zx_status_t platform_halt_secondary_cpus() {
+zx_status_t platform_halt_secondary_cpus(zx_time_t deadline) {
   // Ensure the current thread is pinned to the boot CPU.
   DEBUG_ASSERT(Thread::Current::Get()->hard_affinity_ == cpu_num_to_mask(BOOT_CPU_ID));
 
   // "Unplug" online secondary CPUs before halting them.
   cpu_mask_t primary = cpu_num_to_mask(BOOT_CPU_ID);
   cpu_mask_t mask = mp_get_online_mask() & ~primary;
-  return mp_unplug_cpu_mask(mask);
+  return mp_unplug_cpu_mask(mask, deadline);
 }

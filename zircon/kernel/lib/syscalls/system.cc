@@ -377,7 +377,7 @@ zx_status_t sys_system_mexec(zx_handle_t resource, zx_handle_t kernel_vmo,
   // this as the boot CPU.
   // We want to make sure that this is the CPU that eventually branches into
   // the new kernel so we attempt to migrate this thread to that cpu.
-  result = platform_halt_secondary_cpus();
+  result = platform_halt_secondary_cpus(ZX_TIME_INFINITE);
   DEBUG_ASSERT(result == ZX_OK);
 
   platform_mexec_prep(final_bootimage_addr, bootimage_len);
@@ -467,7 +467,7 @@ zx_status_t sys_system_powerctl(zx_handle_t root_rsrc, uint32_t cmd,
     }
     case ZX_SYSTEM_POWERCTL_DISABLE_ALL_CPUS_BUT_PRIMARY: {
       cpu_mask_t primary = cpu_num_to_mask(0);
-      return mp_unplug_cpu_mask(mp_get_online_mask() & ~primary);
+      return mp_unplug_cpu_mask(mp_get_online_mask() & ~primary, ZX_TIME_INFINITE);
     }
 #if defined __x86_64__
     case ZX_SYSTEM_POWERCTL_ACPI_TRANSITION_S_STATE:
