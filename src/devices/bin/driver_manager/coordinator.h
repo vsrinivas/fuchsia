@@ -65,7 +65,7 @@ class SuspendContext {
 
   void set_task(fbl::RefPtr<SuspendTask> task) { task_ = std::move(task); }
 
-  const SuspendTask& task() const { return *task_; }
+  const SuspendTask* task() const { return task_.get(); }
 
   Flags flags() const { return flags_; }
   void set_flags(Flags flags) { flags_ = flags; }
@@ -362,7 +362,7 @@ class Coordinator : public llcpp::fuchsia::hardware::power::statecontrol::Admin:
   fbl::RefPtr<Device> sys_device_;
   fbl::RefPtr<Device> test_device_;
 
-  SuspendContext suspend_context_;
+  SuspendContext suspend_context_ = {};
   ResumeContext resume_context_;
 
   // Power state control interface
