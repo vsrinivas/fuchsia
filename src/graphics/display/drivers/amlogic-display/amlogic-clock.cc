@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "astro-clock.h"
+#include "amlogic-clock.h"
 
 #include <ddk/debug.h>
 
-namespace astro_display {
+namespace amlogic_display {
 
 namespace {
 constexpr uint8_t kMaxPllLockAttempt = 3;
@@ -21,7 +21,7 @@ constexpr uint32_t kKHZ = 1000;
 #define READ32_VPU_REG(a) vpu_mmio_->Read32(a)
 #define WRITE32_VPU_REG(a, v) vpu_mmio_->Write32(v, a)
 
-void AstroDisplayClock::CalculateLcdTiming(const display_setting_t& d) {
+void AmlogicDisplayClock::CalculateLcdTiming(const display_setting_t& d) {
   // Calculate and store DataEnable horizontal and vertical start/stop times
   const uint32_t de_hstart = d.h_period - d.h_active - 1;
   const uint32_t de_vstart = d.v_period - d.v_active;
@@ -49,7 +49,7 @@ void AstroDisplayClock::CalculateLcdTiming(const display_setting_t& d) {
   lcd_timing_.vs_ve_addr = vend;
 }
 
-zx_status_t AstroDisplayClock::PllLockWait() {
+zx_status_t AmlogicDisplayClock::PllLockWait() {
   uint32_t pll_lock;
 
   for (int lock_attempts = 0; lock_attempts < kMaxPllLockAttempt; lock_attempts++) {
@@ -74,7 +74,7 @@ zx_status_t AstroDisplayClock::PllLockWait() {
   return ZX_ERR_UNAVAILABLE;
 }
 
-zx_status_t AstroDisplayClock::GenerateHPLL(const display_setting_t& d) {
+zx_status_t AmlogicDisplayClock::GenerateHPLL(const display_setting_t& d) {
   uint32_t pll_fout;
   // Requested Pixel clock
   pll_cfg_.fout = d.lcd_clock / kKHZ;  // KHz
@@ -138,7 +138,7 @@ zx_status_t AstroDisplayClock::GenerateHPLL(const display_setting_t& d) {
   return ZX_ERR_INTERNAL;
 }
 
-void AstroDisplayClock::Disable() {
+void AmlogicDisplayClock::Disable() {
   ZX_DEBUG_ASSERT(initialized_);
   if (!clock_enabled_) {
     return;
@@ -154,7 +154,7 @@ void AstroDisplayClock::Disable() {
   clock_enabled_ = false;
 }
 
-zx_status_t AstroDisplayClock::Enable(const display_setting_t& d) {
+zx_status_t AmlogicDisplayClock::Enable(const display_setting_t& d) {
   ZX_DEBUG_ASSERT(initialized_);
 
   if (clock_enabled_) {
@@ -339,14 +339,14 @@ zx_status_t AstroDisplayClock::Enable(const display_setting_t& d) {
   return ZX_OK;
 }
 
-zx_status_t AstroDisplayClock::Init(zx_device_t* parent) {
+zx_status_t AmlogicDisplayClock::Init(zx_device_t* parent) {
   if (initialized_) {
     return ZX_OK;
   }
 
   zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &pdev_);
   if (status != ZX_OK) {
-    DISP_ERROR("AstroDisplayClock: Could not get ZX_PROTOCOL_PDEV protocol\n");
+    DISP_ERROR("AmlogicDisplayClock: Could not get ZX_PROTOCOL_PDEV protocol\n");
     return status;
   }
 
@@ -354,14 +354,14 @@ zx_status_t AstroDisplayClock::Init(zx_device_t* parent) {
   mmio_buffer_t mmio;
   status = pdev_map_mmio_buffer(&pdev_, MMIO_VPU, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
   if (status != ZX_OK) {
-    DISP_ERROR("AstroDisplayClock: Could not map VPU mmio\n");
+    DISP_ERROR("AmlogicDisplayClock: Could not map VPU mmio\n");
     return status;
   }
   vpu_mmio_ = ddk::MmioBuffer(mmio);
 
   status = pdev_map_mmio_buffer(&pdev_, MMIO_HHI, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
   if (status != ZX_OK) {
-    DISP_ERROR("AstroDisplayClock: Could not map HHI mmio\n");
+    DISP_ERROR("AmlogicDisplayClock: Could not map HHI mmio\n");
     return status;
   }
   hhi_mmio_ = ddk::MmioBuffer(mmio);
@@ -370,7 +370,7 @@ zx_status_t AstroDisplayClock::Init(zx_device_t* parent) {
   return ZX_OK;
 }
 
-void AstroDisplayClock::Dump() {
+void AmlogicDisplayClock::Dump() {
   ZX_DEBUG_ASSERT(initialized_);
   DISP_INFO("#############################\n");
   DISP_INFO("Dumping pll_cfg structure:\n");
@@ -405,4 +405,4 @@ void AstroDisplayClock::Dump() {
   DISP_INFO("vs_ve_addr = 0x%x (%u)\n", lcd_timing_.vs_ve_addr, lcd_timing_.vs_ve_addr);
 }
 
-}  // namespace astro_display
+}  // namespace amlogic_display

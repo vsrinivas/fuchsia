@@ -7,7 +7,7 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 import("//build/unification/images/migrated_manifest.gni")
 
-driver_module("astro-display") {
+driver_module("amlogic-display") {
   defines = [ "_ALL_SOURCE" ]
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
@@ -16,8 +16,8 @@ driver_module("astro-display") {
   sources = [
     "aml-dsi-host.cc",
     "aml-mipi-phy.cc",
-    "astro-clock.cc",
-    "astro-display.cc",
+    "amlogic-clock.cc",
+    "amlogic-display.cc",
     "lcd.cc",
     "osd.cc",
     "vpu.cc",
@@ -52,14 +52,14 @@ driver_module("astro-display") {
   ]
 }
 
-test("astro-display-test") {
+test("amlogic-display-test") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "aml-dsi-host.cc",
     "aml-mipi-phy.cc",
-    "astro-clock.cc",
-    "astro-display-test.cc",
-    "astro-display.cc",
+    "amlogic-clock.cc",
+    "amlogic-display-test.cc",
+    "amlogic-display.cc",
     "lcd.cc",
     "osd.cc",
     "vpu.cc",
@@ -100,22 +100,22 @@ test("astro-display-test") {
   ]
 }
 
-migrated_manifest("astro-display-manifest") {
-  deps = [ ":astro-display" ]
+migrated_manifest("amlogic-display-manifest") {
+  deps = [ ":amlogic-display" ]
 }
 
 group("tests") {
   testonly = true
-  deps = [ ":astro-display-test-package" ]
+  deps = [ ":amlogic-display-test-package" ]
 }
 
-unittest_package("astro-display-test-package") {
-  package_name = "astro-display-test"
-  deps = [ ":astro-display-test" ]
+unittest_package("amlogic-display-test-package") {
+  package_name = "amlogic-display-test"
+  deps = [ ":amlogic-display-test" ]
 
   tests = [
     {
-      name = "astro-display-test"
+      name = "amlogic-display-test"
       environments = basic_envs
     },
   ]

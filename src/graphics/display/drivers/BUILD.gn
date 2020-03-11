@@ -7,7 +7,7 @@ group("tests") {
 
   deps = [
     "aml-canvas:tests",
-    "astro-display:tests",
+    "amlogic-display:tests",
     "display:tests",
     "goldfish-display:tests",
     "hikey-display:tests",

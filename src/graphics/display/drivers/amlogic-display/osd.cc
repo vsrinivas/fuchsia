@@ -15,7 +15,7 @@
 #include "vpp-regs.h"
 #include "vpu-regs.h"
 
-namespace astro_display {
+namespace amlogic_display {
 
 #define READ32_VPU_REG(a) vpu_mmio_->Read32(a)
 #define WRITE32_VPU_REG(a, v) vpu_mmio_->Write32(v, a)
@@ -415,7 +415,7 @@ void Osd::EnableScaling(bool enable) {
 }
 
 void Osd::ResetRdmaTable() {
-  // For Astro display driver, RDMA table is simple.
+  // For Amlogic display driver, RDMA table is simple.
   // Setup RDMA Table Register values
   for (int i = 0; i < kMaxRdmaChannels; i++) {
     RdmaTable* rdma_table = reinterpret_cast<RdmaTable*>(rdma_chnl_container_[i].virt_offset);
@@ -715,4 +715,4 @@ void Osd::Release() {
   zx_pmt_unpin(rdma_pmt_);
 }
 
-}  // namespace astro_display
+}  // namespace amlogic_display
