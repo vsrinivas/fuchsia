@@ -37,14 +37,14 @@ Once you install the prerequisite tools, do the following:
  1. Go to the directory where you want to set up your workspace for the Fuchsia
     codebase. This can be anywhere, but this example uses your home directory.
 
-    ```
+    ```posix-terminal
     cd ~
     ```
 
  1. Run the script to bootstrap your development environment. This script
     automatically creates a `fuchsia` directory for the source code.
 
-    ```
+    ```posix-terminal
     curl -s "https://fuchsia.googlesource.com/fuchsia/+/master/scripts/bootstrap?format=TEXT" | base64 --decode | bash
     ```
 
@@ -83,9 +83,8 @@ a `bash` terminal as example:
 
 1. Add the `export` and `source` commands to your `.bashrc` script:
 
-   ```
-   $ cat >> ~/.bashrc <<EOL
-   
+   ```sh
+   cat >> ~/.bashrc <<EOL
    # Fuchsia
    # If you use a custom directory, adjust accordingly
    export PATH=~/fuchsia/.jiri_root/bin:$PATH
@@ -94,7 +93,7 @@ a `bash` terminal as example:
    ```
 1. To update your environment with the new changes, run the following command:
 
-   ```
+   ```posix-terminal
    source ~/.bashrc
    ```
 
@@ -117,15 +116,15 @@ to the directory into which you copy `jiri`. If you don't, then `jiri`
 will not be able to keep itself up-to-date.
 
 Note: If your Fuchsia source code is not located in the `~/fuchsia` directory,
-replace `~/fuchsia/` with your Fuchsia directory.
+replace `~/fuchsia` with your Fuchsia directory.
 
-```
+```posix-terminal
 cp ~/fuchsia/.jiri_root/bin/jiri ~/bin
 ```
 
 To use the `fx` tool, you can either symlink it into your `~/bin` directory:
 
-```
+```posix-terminal
 ln -s ~/fuchsia/scripts/fx ~/bin
 ```
 
