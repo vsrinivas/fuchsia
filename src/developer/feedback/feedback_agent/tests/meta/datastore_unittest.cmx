@@ -1,0 +1,22 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.sysinfo.SysInfo"
+            ]
+        }
+    },
+    "program": {
+        "binary": "test/datastore_unittest"
+    },
+    "sandbox": {
+        "features": [
+            "build-info",
+            "isolated-persistent-storage"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.sysinfo.SysInfo"
+        ]
+    }
+}

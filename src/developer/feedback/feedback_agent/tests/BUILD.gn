@@ -51,6 +51,9 @@ test_package("feedback_agent_tests") {
       dest = "config_unittest"
     },
     {
+      name = "datastore_unittest"
+    },
+    {
       name = "device_id_provider_unittest"
     },
     {
@@ -136,6 +139,7 @@ test_package("feedback_agent_tests") {
     ":channel_provider_unittest",
     ":config_unittest",
     ":data_provider_unittest",
+    ":datastore_unittest",
     ":device_id_provider_unittest",
     ":feedback_agent_integration_test",
     ":inspect_exe",
@@ -253,6 +257,31 @@ executable("data_provider_unittest") {
 
   # TODO(46560): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+}
+
+executable("datastore_unittest") {
+  testonly = true
+
+  sources = [ "datastore_unittest.cc" ]
+
+  deps = [
+    "//src/developer/feedback/feedback_agent:constants",
+    "//src/developer/feedback/feedback_agent:datastore",
+    "//src/developer/feedback/feedback_agent:device_id_provider",
+    "//src/developer/feedback/feedback_agent/annotations:aliases",
+    "//src/developer/feedback/feedback_agent/attachments:aliases",
+    "//src/developer/feedback/feedback_agent/attachments:util",
+    "//src/developer/feedback/testing:cobalt_test_fixture",
+    "//src/developer/feedback/testing:gtest_with_syslog_main",
+    "//src/developer/feedback/testing:unit_test_fixture",
+    "//src/developer/feedback/testing/stubs:stub_cobalt_logger_factory",
+    "//src/lib/files",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/zx",
+  ]
 }
 
 executable("device_id_provider_unittest") {

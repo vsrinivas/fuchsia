@@ -90,8 +90,6 @@ source_set("data_provider") {
     "config.h",
     "data_provider.cc",
     "data_provider.h",
-    "datastore.cc",
-    "datastore.h",
     "image_conversion.cc",
     "image_conversion.h",
   ]
@@ -100,26 +98,23 @@ source_set("data_provider") {
     "//garnet/public/lib/timekeeper",
     "//garnet/public/lib/timekeeper:system",
     "//sdk/fidl/fuchsia.feedback",
-    "//sdk/fidl/fuchsia.images",
     "//sdk/lib/sys/cpp",
     "//src/developer/feedback/utils:cobalt",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-mem",
   ]
 
   deps = [
     ":constants",
+    ":datastore",
     "//garnet/public/lib/fostr/fidl/fuchsia.images",
+    "//sdk/fidl/fuchsia.images",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//src/developer/feedback/feedback_agent/annotations:aliases",
-    "//src/developer/feedback/feedback_agent/annotations:annotation_providers",
-    "//src/developer/feedback/feedback_agent/annotations:static_annotations",
     "//src/developer/feedback/feedback_agent/attachments:aliases",
     "//src/developer/feedback/feedback_agent/attachments:attachment_providers",
-    "//src/developer/feedback/feedback_agent/attachments:static_attachments",
     "//src/developer/feedback/feedback_agent/attachments:util",
     "//src/developer/feedback/utils:archive",
     "//src/developer/feedback/utils:promise",
@@ -130,6 +125,34 @@ source_set("data_provider") {
     "//third_party/libpng",
     "//third_party/rapidjson",
     "//zircon/public/lib/async-loop-default",
+    "//zircon/system/fidl/fuchsia-mem",
+  ]
+}
+
+source_set("datastore") {
+  sources = [
+    "datastore.cc",
+    "datastore.h",
+  ]
+
+  public_deps = [
+    "//sdk/lib/sys/cpp",
+    "//src/developer/feedback/feedback_agent/annotations:aliases",
+    "//src/developer/feedback/feedback_agent/attachments:aliases",
+    "//src/developer/feedback/utils:cobalt",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/zx",
+  ]
+
+  deps = [
+    ":constants",
+    "//src/developer/feedback/feedback_agent/annotations:annotation_providers",
+    "//src/developer/feedback/feedback_agent/annotations:static_annotations",
+    "//src/developer/feedback/feedback_agent/attachments:attachment_providers",
+    "//src/developer/feedback/feedback_agent/attachments:static_attachments",
+    "//src/developer/feedback/feedback_agent/attachments:util",
+    "//src/lib/syslog/cpp",
   ]
 }
 

@@ -765,48 +765,6 @@ TEST_F(DataProviderTest, GetData_ProductInfo) {
       }));
 }
 
-TEST_F(DataProviderTest, GetData_Time) {
-  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
-  SetUpDataProvider(kDefaultConfig);
-
-  fit::result<Data, zx_status_t> result = GetData();
-  ASSERT_TRUE(result.is_ok());
-
-  const Data& data = result.value();
-  ASSERT_TRUE(data.has_annotations());
-  EXPECT_THAT(data.annotations(), testing::IsSupersetOf({
-                                      MatchesKey(kAnnotationDeviceUptime),
-                                      MatchesKey(kAnnotationDeviceUTCTime),
-                                  }));
-}
-
-TEST_F(DataProviderTest, GetData_DeviceId) {
-  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
-  SetUpDataProvider(kDefaultConfig);
-
-  std::string device_id;
-  ASSERT_TRUE(files::ReadFileToString(kDeviceIdPath, &device_id));
-
-  fit::result<Data, zx_status_t> result = GetData();
-  ASSERT_TRUE(result.is_ok());
-
-  const Data& data = result.value();
-  ASSERT_TRUE(data.has_annotations());
-  EXPECT_THAT(data.annotations(),
-              testing::Contains(MatchesAnnotation(kAnnotationDeviceFeedbackId, device_id)));
-}
-
-TEST_F(DataProviderTest, GetData_EmptyAnnotationAllowlist) {
-  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
-  SetUpDataProvider(Config{/*annotation_allowlist=*/{}, kDefaultAttachments});
-
-  fit::result<Data, zx_status_t> result = GetData();
-  ASSERT_TRUE(result.is_ok());
-
-  const Data& data = result.value();
-  EXPECT_FALSE(data.has_annotations());
-}
-
 TEST_F(DataProviderTest, GetData_EmptyAttachmentAllowlist) {
   SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
   SetUpDataProvider(Config{kDefaultAnnotations, /*attachment_allowlist=*/{}});
@@ -830,31 +788,6 @@ TEST_F(DataProviderTest, GetData_EmptyAllowlists) {
   const Data& data = result.value();
   EXPECT_FALSE(data.has_annotations());
   EXPECT_FALSE(data.has_attachment_bundle());
-}
-
-TEST_F(DataProviderTest, GetData_UnknownAllowlistedAnnotation) {
-  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
-  SetUpDataProvider(Config{/*annotation_allowlist=*/{"unknown.annotation"}, kDefaultAttachments});
-
-  fit::result<Data, zx_status_t> result = GetData();
-  ASSERT_TRUE(result.is_ok());
-
-  const Data& data = result.value();
-  EXPECT_FALSE(data.has_annotations());
-}
-
-TEST_F(DataProviderTest, GetData_UnknownAllowlistedAttachment) {
-  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
-  SetUpDataProvider(Config{kDefaultAnnotations,
-                           /*attachment_allowlist=*/{"unknown.attachment"}});
-
-  fit::result<Data, zx_status_t> result = GetData();
-  ASSERT_TRUE(result.is_ok());
-
-  const Data& data = result.value();
-  std::vector<Attachment> unpacked_attachments;
-  UnpackAttachmentBundle(data, &unpacked_attachments);
-  EXPECT_THAT(unpacked_attachments, testing::Contains(MatchesKey(kAttachmentAnnotations)));
 }
 
 }  // namespace
