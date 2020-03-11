@@ -40,10 +40,6 @@ pub struct Arguments {
     // has to use the fuchsia.process.Launcher service provided through its namespace instead.
     pub use_builtin_process_launcher: bool,
 
-    /// If true, component_manager will serve an instance of fuchsia.security.resource.Vmex to the
-    /// root realm.
-    pub use_builtin_vmex: bool,
-
     /// If true, component manager will be in debug mode. In this mode, the EventSourceSync FIDL
     /// service will be exposed via the ServiceFs directory (usually the out dir). ComponentManager
     /// will not start until it is resumed by the EventSourceSync FIDL API.
@@ -73,8 +69,6 @@ impl Arguments {
         while let Some(arg) = iter.next() {
             if arg == "--use-builtin-process-launcher" {
                 args.use_builtin_process_launcher = true;
-            } else if arg == "--use-builtin-vmex" {
-                args.use_builtin_vmex = true;
             } else if arg == "--debug" {
                 args.debug = true;
             } else if arg.starts_with("--") {
@@ -107,9 +101,7 @@ impl Arguments {
             "Usage: {} [options] <root-component-url>\n\
              Options:\n\
              --use-builtin-process-launcher   Provide and use a built-in implementation of\n\
-             fuchsia.process.Launcher\n\
-             --use-builtin-vmex Provide and use a built-in implementation of\n\
-             fuchsia.security.resource.Vmex",
+             fuchsia.process.Launcher\n",
             std::env::args().next().unwrap_or("component_manager".to_string())
         )
     }
@@ -189,13 +181,11 @@ mod tests {
         let dummy_url2 = || "fuchsia-pkg://fuchsia.com/pkg#meta/component2.cm".to_string();
         let unknown_flag = || "--unknown".to_string();
         let use_builtin_launcher = || "--use-builtin-process-launcher".to_string();
-        let use_builtin_vmex = || "--use-builtin-vmex".to_string();
         let debug = || "--debug".to_string();
 
         // Zero or multiple positional arguments is an error; must be exactly one URL.
         assert!(Arguments::new(vec![]).is_err());
         assert!(Arguments::new(vec![use_builtin_launcher()]).is_err());
-        assert!(Arguments::new(vec![use_builtin_vmex()]).is_err());
         assert!(Arguments::new(vec![dummy_url(), dummy_url2()]).is_err());
         assert!(Arguments::new(vec![dummy_url(), use_builtin_launcher(), dummy_url2()]).is_err());
 
@@ -234,21 +224,10 @@ mod tests {
             }
         );
         assert_eq!(
-            Arguments::new(vec![dummy_url(), use_builtin_launcher(), use_builtin_vmex()])
+            Arguments::new(vec![dummy_url(), use_builtin_launcher(), debug()])
                 .expect("Unexpected error with option"),
             Arguments {
                 use_builtin_process_launcher: true,
-                use_builtin_vmex: true,
-                root_component_url: dummy_url(),
-                debug: false,
-            }
-        );
-        assert_eq!(
-            Arguments::new(vec![dummy_url(), use_builtin_launcher(), use_builtin_vmex(), debug()])
-                .expect("Unexpected error with option"),
-            Arguments {
-                use_builtin_process_launcher: true,
-                use_builtin_vmex: true,
                 root_component_url: dummy_url(),
                 debug: true,
             }

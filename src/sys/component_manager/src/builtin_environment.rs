@@ -46,8 +46,6 @@ use {
 /// The available built-in capabilities depends on the  configuration provided in Arguments:
 /// * If [Arguments::use_builtin_process_launcher] is true, a fuchsia.process.Launcher service
 ///   is available.
-/// * If [Arguments::use_builtin_vmex] is true, a fuchsia.security.resource.Vmex service is
-///   available.
 pub struct BuiltinEnvironment {
     // Framework capabilities.
     pub boot_args: Arc<BootArguments>,
@@ -109,7 +107,11 @@ impl BuiltinEnvironment {
 
         // Set up ReadOnlyLog service.
         let read_only_log = root_resource_handle.as_ref().map(|handle| {
-            ReadOnlyLog::new(handle.duplicate_handle(zx::Rights::SAME_RIGHTS).unwrap())
+            ReadOnlyLog::new(
+                handle
+                    .duplicate_handle(zx::Rights::SAME_RIGHTS)
+                    .expect("Failed to duplicate root resource handle"),
+            )
         });
         if let Some(read_only_log) = read_only_log.as_ref() {
             model.root_realm.hooks.install(read_only_log.hooks()).await;
@@ -123,6 +125,18 @@ impl BuiltinEnvironment {
             model.root_realm.hooks.install(write_only_log.hooks()).await;
         }
 
+        // Set up the Vmex service.
+        let vmex_service = root_resource_handle.as_ref().map(|handle| {
+            VmexService::new(
+                handle
+                    .duplicate_handle(zx::Rights::SAME_RIGHTS)
+                    .expect("Failed to duplicate root resource handle"),
+            )
+        });
+        if let Some(vmex_service) = vmex_service.as_ref() {
+            model.root_realm.hooks.install(vmex_service.hooks()).await;
+        }
+
         // Set up RootResource service.
         let root_resource = root_resource_handle.map(RootResource::new);
         if let Some(root_resource) = root_resource.as_ref() {
@@ -132,15 +146,6 @@ impl BuiltinEnvironment {
         // Set up System Controller service.
         let system_controller = Arc::new(SystemController::new(model.clone()));
         model.root_realm.hooks.install(system_controller.hooks()).await;
-
-        // Set up the Vmex service if available.
-        let vmex_service = if args.use_builtin_vmex {
-            let vmex_service = Arc::new(VmexService::new());
-            model.root_realm.hooks.install(vmex_service.hooks()).await;
-            Some(vmex_service)
-        } else {
-            None
-        };
 
         // Set up work scheduler.
         let work_scheduler =

@@ -163,7 +163,6 @@ mod tests {
         resolver.register("test".to_string(), Box::new(mock_resolver));
         let startup_args = startup::Arguments {
             use_builtin_process_launcher: false,
-            use_builtin_vmex: false,
             root_component_url: "".to_string(),
             debug: false,
         };

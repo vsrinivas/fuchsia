@@ -14,9 +14,8 @@ use {
     async_trait::async_trait,
     cm_rust::CapabilityPath,
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_boot as fboot, fidl_fuchsia_security_resource as fsec, fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_service,
-    fuchsia_zircon::{self as zx, HandleBased},
+    fidl_fuchsia_security_resource as fsec, fuchsia_async as fasync,
+    fuchsia_zircon::{self as zx, HandleBased, Resource},
     futures::prelude::*,
     lazy_static::lazy_static,
     log::warn,
@@ -33,11 +32,14 @@ lazy_static! {
 }
 
 /// An implementation of fuchsia.security.resource.Vmex protocol.
-pub struct VmexService;
+pub struct VmexService {
+    resource: Resource,
+}
 
 impl VmexService {
-    pub fn new() -> Self {
-        Self
+    /// `resource` must be the root resource.
+    pub fn new(resource: Resource) -> Arc<Self> {
+        Arc::new(Self { resource })
     }
 
     pub fn hooks(self: &Arc<Self>) -> Vec<HooksRegistration> {
@@ -51,14 +53,11 @@ impl VmexService {
     /// Serves an instance of the 'fuchsia.security.resource.Vmex' protocol given an appropriate
     /// RequestStream. Returns when the channel backing the RequestStream is closed or an
     /// unrecoverable error, like failure to acquire the root resource occurs.
-    pub async fn serve(mut stream: fsec::VmexRequestStream) -> Result<(), Error> {
-        let root_resource_provider = connect_to_service::<fboot::RootResourceMarker>()?;
-        let root_resource = root_resource_provider.get().await?;
-
+    pub async fn serve(self: Arc<Self>, mut stream: fsec::VmexRequestStream) -> Result<(), Error> {
+        let vmex_handle =
+            self.resource.create_child(zx::ResourceKind::VMEX, None, 0, 0, b"vmex")?;
         while let Some(fsec::VmexRequest::Get { responder }) = stream.try_next().await? {
-            let vmex_handle =
-                root_resource.create_child(zx::ResourceKind::VMEX, None, 0, 0, b"vmex")?;
-            let restricted_vmex_handle = vmex_handle.replace_handle(
+            let restricted_vmex_handle = vmex_handle.duplicate_handle(
                 zx::Rights::TRANSFER | zx::Rights::DUPLICATE | zx::Rights::INSPECT,
             )?;
             responder.send(zx::Resource::from(restricted_vmex_handle))?;
@@ -75,7 +74,7 @@ impl VmexService {
             FrameworkCapability::Protocol(capability_path)
                 if *capability_path == *VMEX_CAPABILITY_PATH =>
             {
-                Ok(Some(Box::new(VmexCapabilityProvider::new()) as Box<dyn CapabilityProvider>))
+                Ok(Some(Box::new(VmexCapabilityProvider::new(self)) as Box<dyn CapabilityProvider>))
             }
             _ => Ok(capability_provider),
         }
@@ -99,11 +98,13 @@ impl Hook for VmexService {
     }
 }
 
-struct VmexCapabilityProvider;
+struct VmexCapabilityProvider {
+    vmex_service: Arc<VmexService>,
+}
 
 impl VmexCapabilityProvider {
-    pub fn new() -> Self {
-        Self {}
+    pub fn new(vmex_service: Arc<VmexService>) -> Self {
+        Self { vmex_service: vmex_service }
     }
 }
 
@@ -119,9 +120,9 @@ impl CapabilityProvider for VmexCapabilityProvider {
         let server_end = ServerEnd::<fsec::VmexMarker>::new(server_end);
         let stream: fsec::VmexRequestStream = server_end.into_stream().unwrap();
         fasync::spawn(async move {
-            let result = VmexService::serve(stream).await;
+            let result = self.vmex_service.serve(stream).await;
             if let Err(e) = result {
-                warn!("VmexService.open failed: {}", e);
+                warn!("VmexService.serve failed: {}", e);
             }
         });
 
@@ -135,7 +136,8 @@ mod tests {
         super::*,
         crate::model::{hooks::Hooks, moniker::AbsoluteMoniker},
         fidl::endpoints::ClientEnd,
-        fuchsia_async as fasync,
+        fidl_fuchsia_boot as fboot, fuchsia_async as fasync,
+        fuchsia_component::client::connect_to_service,
         fuchsia_zircon::AsHandleRef,
         fuchsia_zircon_sys as sys,
         futures::lock::Mutex,
@@ -150,10 +152,19 @@ mod tests {
         }
     }
 
-    fn serve_vmex() -> Result<fsec::VmexProxy, Error> {
+    async fn get_root_resource() -> Result<Resource, Error> {
+        let root_resource_provider = connect_to_service::<fboot::RootResourceMarker>()?;
+        let root_resource_handle = root_resource_provider.get().await?;
+        Ok(Resource::from(root_resource_handle))
+    }
+
+    async fn serve_vmex() -> Result<fsec::VmexProxy, Error> {
+        let root_resource = get_root_resource().await?;
+
         let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<fsec::VmexMarker>()?;
         fasync::spawn_local(
-            VmexService::serve(stream)
+            VmexService::new(root_resource)
+                .serve(stream)
                 .unwrap_or_else(|e| panic!("Error while serving vmex service: {}", e)),
         );
         Ok(proxy)
@@ -165,7 +176,10 @@ mod tests {
             return Ok(());
         }
         let (_, stream) = fidl::endpoints::create_proxy_and_stream::<fsec::VmexMarker>()?;
-        assert!(!VmexService::serve(stream).await.is_ok());
+        assert!(!VmexService::new(Resource::from(zx::Handle::invalid()))
+            .serve(stream)
+            .await
+            .is_ok());
         Ok(())
     }
 
@@ -175,7 +189,7 @@ mod tests {
             return Ok(());
         }
 
-        let vmex_provider = serve_vmex()?;
+        let vmex_provider = serve_vmex().await?;
         let vmex_resource = vmex_provider.get().await?;
         let resource_info = vmex_resource.info()?;
         assert_eq!(resource_info.kind, zx::sys::ZX_RSRC_KIND_VMEX);
@@ -190,7 +204,7 @@ mod tests {
             return Ok(());
         }
 
-        let vmex_provider = serve_vmex()?;
+        let vmex_provider = serve_vmex().await?;
         let vmex_resource = vmex_provider.get().await?;
         let resource_info = zx::Handle::from(vmex_resource).basic_info()?;
         assert_eq!(
@@ -206,7 +220,8 @@ mod tests {
             return Ok(());
         }
 
-        let vmex_service = Arc::new(VmexService::new());
+        let root_resource = get_root_resource().await?;
+        let vmex_service = Arc::new(VmexService::new(root_resource));
         let hooks = Hooks::new(None);
         hooks.install(vmex_service.hooks()).await;
 

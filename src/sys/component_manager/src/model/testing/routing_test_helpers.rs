@@ -228,7 +228,6 @@ impl RoutingTest {
 
         let startup_args = startup::Arguments {
             use_builtin_process_launcher: false,
-            use_builtin_vmex: false,
             root_component_url: "".to_string(),
             debug: false,
         };

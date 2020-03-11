@@ -738,7 +738,6 @@ mod tests {
 
         let startup_args = startup::Arguments {
             use_builtin_process_launcher: false,
-            use_builtin_vmex: false,
             root_component_url: root_component_url.clone(),
             debug: false,
         };
