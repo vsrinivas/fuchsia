@@ -130,10 +130,7 @@ struct Equality<std::unique_ptr<T>> {
 
 template <class T>
 bool Equals(const T& lhs, const T& rhs) {
-  // TODO(46638): Switch to functor-style invocation when all clients have transitioned.
-  // return ::fidl::Equality<T>{}(lhs, rhs);
-
-  return ::fidl::Equality<T>::Equals(lhs, rhs);
+  return ::fidl::Equality<T>{}(lhs, rhs);
 }
 
 }  // namespace fidl
