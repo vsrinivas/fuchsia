@@ -8,6 +8,7 @@
 #include <lib/fdio/io.h>
 #include <lib/fdio/spawn.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/zx/clock.h>
 #include <unistd.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls/object.h>
@@ -16,7 +17,6 @@
 #include <sstream>
 
 #include "src/lib/fxl/arraysize.h"
-#include "src/lib/fxl/time/stopwatch.h"
 
 using fuchsia::testing::runner::TestResult;
 using fuchsia::testing::runner::TestRunner;
@@ -39,13 +39,13 @@ class Reporter {
 
   void Start() {
     test_runner_->Identify(name_, [] {});
-    stopwatch_.Start();
+    start_ = zx::clock::get_monotonic();
   }
 
   void Finish(bool failed, const std::string& message) {
     TestResult result;
     result.name = name_;
-    result.elapsed = stopwatch_.Elapsed().ToMilliseconds();
+    result.elapsed = (zx::clock::get_monotonic() - start_).to_nsecs() / 1000000.0;
     result.failed = failed;
     result.message = message;
 
@@ -58,7 +58,7 @@ class Reporter {
   async::Loop* const loop_;
   std::string name_;
   TestRunner* test_runner_;
-  fxl::Stopwatch stopwatch_;
+  zx::time start_;
 };
 
 void ReadPipe(int pipe, std::stringstream* stream) {

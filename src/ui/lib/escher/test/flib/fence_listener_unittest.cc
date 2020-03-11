@@ -23,7 +23,7 @@ TEST_F(FenceListenerTest, SimpleFenceListenerSignalling) {
 
   // Expect that it is not signaled initially.
   EXPECT_FALSE(buffer_fence1.ready());
-  EXPECT_FALSE(buffer_fence1.WaitReady(fxl::TimeDelta::Zero()));
+  EXPECT_FALSE(buffer_fence1.WaitReady(zx::duration()));
 
   // Still should not be ready.
   EXPECT_FALSE(buffer_fence1.ready());
@@ -32,7 +32,7 @@ TEST_F(FenceListenerTest, SimpleFenceListenerSignalling) {
   fence1.signal(0u, kFenceSignalled);
 
   // Expect that it is signaled now.
-  EXPECT_TRUE(buffer_fence1.WaitReady(fxl::TimeDelta::Zero()));
+  EXPECT_TRUE(buffer_fence1.WaitReady(zx::duration()));
   EXPECT_TRUE(buffer_fence1.ready());
 }
 
@@ -43,7 +43,7 @@ TEST_F(FenceListenerTest, AsyncFenceListenerSignalling) {
   FenceListener buffer_fence1(CopyEvent(fence1));
 
   // Expect that it is not signaled initially.
-  EXPECT_FALSE(buffer_fence1.WaitReady(fxl::TimeDelta::Zero()));
+  EXPECT_FALSE(buffer_fence1.WaitReady(zx::duration()));
   EXPECT_FALSE(buffer_fence1.ready());
 
   bool signalled = false;

@@ -164,7 +164,7 @@ static bool RunSession(const cpuperf::SessionSpec& spec,
       return false;
     }
 
-    zx::nanosleep(zx::deadline_after(zx::duration(spec.duration.ToNanoseconds())));
+    zx::nanosleep(zx::deadline_after(spec.duration));
 
     controller->Stop();
 
@@ -253,7 +253,7 @@ int main(int argc, char* argv[]) {
   }
 
   FXL_LOG(INFO) << "cpuperf control program starting";
-  FXL_LOG(INFO) << spec.num_iterations << " iteration(s), " << spec.duration.ToSeconds()
+  FXL_LOG(INFO) << spec.num_iterations << " iteration(s), " << spec.duration.to_secs()
                 << " second(s) per iteration";
 
   bool success = RunSession(spec, spec.model_event_manager.get(), controller.get());

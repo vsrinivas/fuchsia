@@ -7,6 +7,7 @@
 #include <fuchsia/hardware/input/c/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <lib/fostr/fidl/fuchsia/ui/input/formatting.h>
+#include <lib/zx/clock.h>
 #include <sys/types.h>
 #include <sys/uio.h>
 #include <zircon/errors.h>
@@ -28,11 +29,10 @@
 
 #include "src/lib/fxl/arraysize.h"
 #include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/time/time_point.h"
 
 namespace {
 
-int64_t InputEventTimestampNow() { return fxl::TimePoint::Now().ToEpochDelta().ToNanoseconds(); }
+int64_t InputEventTimestampNow() { return zx::clock::get_monotonic().get(); }
 
 fuchsia::ui::input::InputReport CloneReport(const fuchsia::ui::input::InputReport& report) {
   fuchsia::ui::input::InputReport result;

@@ -8,6 +8,7 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/zx/process.h>
+#include <lib/zx/time.h>
 
 #include <memory>
 #include <string>
@@ -24,7 +25,6 @@
 #include "garnet/lib/measure/time_between.h"
 #include "garnet/lib/trace_converters/chromium_exporter.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
-#include "src/lib/fxl/time/time_delta.h"
 
 namespace tracing {
 
@@ -37,7 +37,7 @@ class RecordCommand : public CommandWithController {
     std::string app;
     std::vector<std::string> args;
     std::vector<std::string> categories = {};
-    fxl::TimeDelta duration = fxl::TimeDelta::FromSeconds(kDefaultDurationSeconds);
+    zx::duration duration = zx::sec(kDefaultDurationSeconds);
     bool detach = false;
     bool decouple = false;
     bool spawn = false;

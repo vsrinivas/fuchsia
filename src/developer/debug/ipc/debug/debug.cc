@@ -4,7 +4,7 @@
 
 #include "src/developer/debug/ipc/debug/debug.h"
 
-#include "src/lib/fxl/time/time_point.h"
+#include <lib/zx/clock.h>
 
 namespace debug_ipc {
 
@@ -13,7 +13,7 @@ namespace {
 bool kDebugMode = false;
 
 // This marks the moment SetDebugMode was called.
-fxl::TimePoint kStartTime = fxl::TimePoint::Now();
+zx::time kStartTime = zx::clock::get_monotonic();
 
 }  // namespace
 
@@ -21,6 +21,8 @@ bool IsDebugModeActive() { return kDebugMode; }
 
 void SetDebugMode(bool activate) { kDebugMode = activate; }
 
-double SecondsSinceStart() { return (fxl::TimePoint::Now() - kStartTime).ToSecondsF(); }
+double SecondsSinceStart() {
+  return (zx::clock::get_monotonic() - kStartTime).to_nsecs() / 1000000000.0;
+}
 
 }  // namespace debug_ipc

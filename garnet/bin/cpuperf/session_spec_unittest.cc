@@ -152,7 +152,7 @@ TEST_F(SessionSpecTest, DecodeDuration) {
 
   SessionSpec result;
   ASSERT_TRUE(DecodeSessionSpec(json, &result));
-  EXPECT_EQ(fxl::TimeDelta::FromSeconds(42).ToNanoseconds(), result.duration.ToNanoseconds());
+  EXPECT_EQ(zx::sec(42).to_nsecs(), result.duration.to_nsecs());
 }
 
 TEST_F(SessionSpecTest, DecodeNumIterations) {

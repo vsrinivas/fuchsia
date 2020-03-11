@@ -4,6 +4,7 @@
 
 #include "src/developer/debug/zxdb/common/perf_test.h"
 
+#include <lib/zx/clock.h>
 #include <stdio.h>
 
 #include "src/lib/fxl/logging.h"
@@ -68,7 +69,7 @@ void LogPerfResult(const char* test_suite_name, const char* test_name, double va
 
 PerfTimeLogger::PerfTimeLogger(const char* test_suite_name, const char* test_name)
     : test_suite_name_(test_suite_name), test_name_(test_name) {
-  timer_.Start();
+  start_ = zx::clock::get_monotonic();
 }
 
 PerfTimeLogger::~PerfTimeLogger() {
@@ -80,8 +81,9 @@ void PerfTimeLogger::Done() {
   // Use a floating-point millisecond value because it is more
   // intuitive than microseconds and we want more precision than
   // integer milliseconds
-  LogPerfResult(test_suite_name_.c_str(), test_name_.c_str(), timer_.Elapsed().ToMillisecondsF(),
-                "ms");
+  const double msecs =
+      (zx::clock::get_monotonic() - start_).to_nsecs() /
+      1000000.0 LogPerfResult(test_suite_name_.c_str(), test_name_.c_str(), msecs, "ms");
   logged_ = true;
 }
 

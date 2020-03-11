@@ -229,7 +229,7 @@ bool DecodeSessionSpec(const std::string& json, SessionSpec* out_spec) {
   }
 
   if (document.HasMember(kDurationKey)) {
-    result.duration = fxl::TimeDelta::FromSeconds(document[kDurationKey].GetUint());
+    result.duration = zx::sec(document[kDurationKey].GetUint());
   }
 
   if (document.HasMember(kNumIterationsKey)) {

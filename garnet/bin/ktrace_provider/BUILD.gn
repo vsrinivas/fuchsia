@@ -20,6 +20,7 @@ source_set("importer") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/trace-engine",
     "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zx",
   ]
 
   # TODO(47051): UBSan has found an instance of undefined behavior in this target.

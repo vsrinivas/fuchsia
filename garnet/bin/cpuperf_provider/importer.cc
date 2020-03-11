@@ -6,6 +6,7 @@
 
 #include <assert.h>
 #include <inttypes.h>
+#include <lib/zx/clock.h>
 #include <zircon/syscalls.h>
 
 #include <atomic>
@@ -62,12 +63,12 @@ Importer::~Importer() = default;
 bool Importer::Import(perfmon::Reader& reader, const perfmon::Config& perfmon_config) {
   trace_context_write_process_info_record(context_, kCpuProcess, &cpu_string_ref_);
 
-  auto start = fxl::TimePoint::Now();
+  auto start = zx::clock::get_monotonic();
 
   uint32_t record_count = ImportRecords(reader, perfmon_config);
 
   FXL_LOG(INFO) << "Import of " << record_count << " cpu perf records took "
-                << (fxl::TimePoint::Now() - start).ToMicroseconds() << " us";
+                << (zx::clock::get_monotonic() - start).to_usecs() << " us";
 
   return true;
 }

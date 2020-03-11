@@ -8,10 +8,10 @@
 #include <lib/async/cpp/wait.h>
 #include <lib/fit/function.h>
 #include <lib/zx/event.h>
+#include <lib/zx/time.h>
 #include <zircon/syscalls/port.h>
 
 #include "src/lib/fxl/macros.h"
-#include "src/lib/fxl/time/time_delta.h"
 #include "src/ui/lib/escher/flib/fence.h"
 
 namespace escher {
@@ -25,7 +25,7 @@ class FenceListener {
 
   // Waits for the fence to indicate that the buffer is ready or for the
   // timeout to expire, whichever comes first.
-  bool WaitReady(fxl::TimeDelta timeout = fxl::TimeDelta::Max());
+  bool WaitReady(zx::duration timeout = zx::duration::infinite());
 
   // Invokes the callback when the fence has been signalled. The callback will
   // be invoked on the current message loop.

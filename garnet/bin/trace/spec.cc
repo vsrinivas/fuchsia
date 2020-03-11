@@ -346,8 +346,8 @@ bool DecodeSpec(const std::string& json, Spec* spec) {
   }
 
   if (document.HasMember(kDurationKey)) {
-    result.duration = std::make_unique<fxl::TimeDelta>(
-        fxl::TimeDelta::FromSeconds(document[kDurationKey].GetUint()));
+    result.duration = std::make_unique<zx::duration>(
+        zx::sec(document[kDurationKey].GetUint()));
   }
 
   if (document.HasMember(kTestSuiteNameKey)) {

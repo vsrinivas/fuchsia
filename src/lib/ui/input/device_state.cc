@@ -8,15 +8,14 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/fidl/cpp/clone.h>
+#include <lib/zx/clock.h>
 
 #include <trace/event.h>
 
 #include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/time/time_delta.h"
-#include "src/lib/fxl/time/time_point.h"
 
 namespace {
-int64_t InputEventTimestampNow() { return fxl::TimePoint::Now().ToEpochDelta().ToNanoseconds(); }
+int64_t InputEventTimestampNow() { return zx::clock::get_monotonic().get(); }
 // TODO(SCN-1278): Remove this.
 // Turn 64-bit id into two floats: high bits and low bits.
 void PointerTraceHACK(trace_async_id_t id, float* fa, float* fb) {

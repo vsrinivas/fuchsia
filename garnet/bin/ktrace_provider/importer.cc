@@ -8,10 +8,10 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/string_printf.h>
+#include <lib/zx/clock.h>
 
 #include "garnet/bin/ktrace_provider/reader.h"
 #include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/time/time_point.h"
 
 namespace ktrace_provider {
 namespace {
@@ -126,7 +126,7 @@ Importer::~Importer() = default;
 bool Importer::Import(Reader& reader) {
   trace_context_write_process_info_record(context_, kNoProcess, &kernel_string_ref_);
 
-  auto start = fxl::TimePoint::Now();
+  auto start = zx::clock::get_monotonic();
 
   while (true) {
     if (auto record = reader.ReadNextRecord()) {
@@ -144,7 +144,7 @@ bool Importer::Import(Reader& reader) {
   // This is an INFO and not VLOG() as we currently always want to see this.
   FXL_LOG(INFO) << "Import of " << nr_records_read << " ktrace records"
                 << "(" << nr_bytes_read
-                << " bytes) took: " << (fxl::TimePoint::Now() - start).ToMicroseconds() << "us";
+                << " bytes) took: " << (zx::clock::get_monotonic() - start).to_usecs() << "us";
 
   return true;
 }

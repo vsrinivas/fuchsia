@@ -69,6 +69,7 @@ source_set("spec") {
   public_deps = [
     "//garnet/lib/measure",
     "//src/lib/fxl",
+    "//zircon/public/lib/zx",
   ]
 
   deps = [

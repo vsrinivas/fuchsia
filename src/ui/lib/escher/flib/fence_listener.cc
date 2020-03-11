@@ -5,7 +5,6 @@
 #include "src/ui/lib/escher/flib/fence_listener.h"
 
 #include <lib/async/default.h>
-#include <lib/zx/time.h>
 
 #include "src/lib/fxl/logging.h"
 
@@ -19,14 +18,14 @@ FenceListener::FenceListener(zx::event fence)
   FXL_DCHECK(fence_);
 }
 
-bool FenceListener::WaitReady(fxl::TimeDelta timeout) {
+bool FenceListener::WaitReady(zx::duration timeout) {
   zx::time zx_deadline;
-  if (timeout <= fxl::TimeDelta::Zero())
+  if (timeout <= zx::nsec(0))
     zx_deadline = zx::time();
-  else if (timeout == fxl::TimeDelta::Max())
+  else if (timeout == zx::duration::infinite())
     zx_deadline = zx::time::infinite();
   else
-    zx_deadline = zx::deadline_after(zx::nsec(timeout.ToNanoseconds()));
+    zx_deadline = zx::deadline_after(timeout);
 
   zx_signals_t pending = 0u;
   while (!ready_) {

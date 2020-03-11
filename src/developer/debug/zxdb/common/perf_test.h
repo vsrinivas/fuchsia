@@ -5,10 +5,11 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_COMMON_PERF_TEST_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_COMMON_PERF_TEST_H_
 
+#include <lib/zx/time.h>
+
 #include <string>
 
 #include "src/lib/fxl/macros.h"
-#include "src/lib/fxl/time/stopwatch.h"
 
 namespace zxdb {
 
@@ -39,7 +40,7 @@ class PerfTimeLogger {
   bool logged_ = false;
   std::string test_suite_name_;
   std::string test_name_;
-  fxl::Stopwatch timer_;
+  zx::time start_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(PerfTimeLogger);
 };

@@ -234,7 +234,7 @@ TEST(Spec, DecodeDuration) {
 
   Spec result;
   ASSERT_TRUE(DecodeSpec(json, &result));
-  EXPECT_EQ(fxl::TimeDelta::FromSeconds(42).ToNanoseconds(), result.duration->ToNanoseconds());
+  EXPECT_EQ(zx::sec(42).to_nsecs(), result.duration->to_nsecs());
   EXPECT_TRUE(result.duration);
 }
 

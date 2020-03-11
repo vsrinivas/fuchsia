@@ -5,10 +5,10 @@
 #include <fuchsia/ui/input/cpp/fidl.h>
 
 #include <hid/usages.h>
+#include <lib/zx/clock.h>
 
 #include "gtest/gtest.h"
 #include "lib/gtest/test_loop_fixture.h"
-#include "src/lib/fxl/time/time_point.h"
 #include "src/ui/testing/mock_input_device.h"
 #include "src/ui/testing/mock_input_device_registry.h"
 
@@ -63,7 +63,7 @@ TEST_F(InputInterfaceTest, InputKeyboardTest) {
   keyboard_report->pressed_keys.push_back(HID_USAGE_KEY_A);
 
   fuchsia::ui::input::InputReport report;
-  report.event_time = fxl::TimePoint::Now().ToEpochDelta().ToNanoseconds();
+  report.event_time = zx::clock::get_monotonic().get();
   report.keyboard = std::move(keyboard_report);
   input_device->DispatchReport(std::move(report));
 

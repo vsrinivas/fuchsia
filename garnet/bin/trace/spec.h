@@ -9,11 +9,12 @@
 #include <string>
 #include <vector>
 
+#include <lib/zx/time.h>
+
 #include "garnet/lib/measure/argument_value.h"
 #include "garnet/lib/measure/duration.h"
 #include "garnet/lib/measure/measurements.h"
 #include "garnet/lib/measure/time_between.h"
-#include "src/lib/fxl/time/time_delta.h"
 
 namespace tracing {
 
@@ -73,7 +74,7 @@ struct Spec {
   std::unique_ptr<std::vector<ProviderSpec>> provider_specs;
 
   // Duration of the benchmark.
-  std::unique_ptr<fxl::TimeDelta> duration;
+  std::unique_ptr<zx::duration> duration;
 
   // Measurements to be performed on the captured traces.
   std::unique_ptr<measure::Measurements> measurements;

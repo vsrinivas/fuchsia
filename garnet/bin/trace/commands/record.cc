@@ -201,7 +201,7 @@ bool RecordCommand::Options::Setup(const fxl::CommandLine& command_line) {
                      << command_line.options()[index].value;
       return false;
     }
-    duration = fxl::TimeDelta::FromSeconds(seconds);
+    duration = zx::sec(seconds);
     CheckCommandLineOverride("duration", spec.duration);
   }
 
@@ -681,8 +681,8 @@ void RecordCommand::StartTimer() {
         if (weak)
           weak->TerminateTrace(EXIT_SUCCESS);
       },
-      zx::nsec(options_.duration.ToNanoseconds()));
-  out() << "Starting trace; will stop in " << options_.duration.ToSecondsF() << " seconds..."
+      options_.duration);
+  out() << "Starting trace; will stop in " << options_.duration.to_nsecs() / 1000000000.0  << " seconds..."
         << std::endl;
 }
 

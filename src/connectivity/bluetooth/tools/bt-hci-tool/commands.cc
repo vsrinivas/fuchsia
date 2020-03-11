@@ -9,6 +9,8 @@
 #include <cstring>
 #include <iostream>
 
+#include <lib/zx/time.h>
+
 #include "src/connectivity/bluetooth/core/bt-host/common/manufacturer_names.h"
 #include "src/connectivity/bluetooth/core/bt-host/gap/advertising_data.h"
 #include "src/connectivity/bluetooth/core/bt-host/hci/advertising_report_parser.h"
@@ -17,7 +19,6 @@
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"
 #include "src/lib/fxl/strings/string_printf.h"
-#include "src/lib/fxl/time/time_delta.h"
 
 namespace hcitool {
 namespace {
@@ -543,7 +544,7 @@ bool HandleLEScan(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
     return false;
   }
 
-  auto timeout = fxl::TimeDelta::FromSeconds(10);  // Default to 10 seconds.
+  auto timeout = zx::sec(10);  // Default to 10 seconds.
   std::string timeout_str;
   if (cmd_line.GetOptionValue("timeout", &timeout_str)) {
     uint32_t time_seconds;
@@ -552,7 +553,7 @@ bool HandleLEScan(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
       return false;
     }
 
-    timeout = fxl::TimeDelta::FromSeconds(time_seconds);
+    timeout = zx::sec(time_seconds);
   }
 
   std::string name_filter;
@@ -630,8 +631,7 @@ bool HandleLEScan(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
       cleanup_cb();
       return;
     }
-    async::PostDelayedTask(dispatcher, std::move(scan_disable_cb),
-                           zx::duration(timeout.ToNanoseconds()));
+    async::PostDelayedTask(dispatcher, std::move(scan_disable_cb), timeout);
   };
 
   auto id = SendCommand(cmd_data, std::move(packet), std::move(cb), std::move(complete_cb));

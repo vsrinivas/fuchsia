@@ -14,7 +14,6 @@
 
 #include "garnet/lib/perfmon/config.h"
 #include "garnet/lib/perfmon/events.h"
-#include "src/lib/fxl/time/time_delta.h"
 
 namespace cpuperf {
 
@@ -23,7 +22,7 @@ namespace cpuperf {
 struct SessionSpec {
   static const char kDefaultModelName[];
   static constexpr uint32_t kDefaultBufferSizeInMb = 16u;
-  static constexpr fxl::TimeDelta kDefaultDuration{fxl::TimeDelta::FromSeconds(10)};
+  static constexpr zx::duration kDefaultDuration{zx::sec(10)};
   static constexpr size_t kDefaultNumIterations = 1u;
   static const char kDefaultOutputPathPrefix[];
   static const char kDefaultSessionResultSpecPath[];
@@ -47,7 +46,7 @@ struct SessionSpec {
   uint32_t buffer_size_in_mb{kDefaultBufferSizeInMb};
 
   // How long to collect data for.
-  fxl::TimeDelta duration{kDefaultDuration};
+  zx::duration duration{kDefaultDuration};
 
   // How many iterations of data to collect.
   size_t num_iterations{kDefaultNumIterations};
