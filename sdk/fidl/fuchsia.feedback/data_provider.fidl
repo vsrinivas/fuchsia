@@ -8,7 +8,7 @@ using fuchsia.math;
 using fuchsia.mem;
 using zx;
 
-/// Provides data useful to attach in feedback reports (crash or user feedback).
+/// Provides data useful to attach in feedback reports (crash, user feedback or bug reports).
 [Discoverable]
 protocol DataProvider {
     /// Returns all the feedback data except the screenshot, which is provided
@@ -26,6 +26,8 @@ protocol DataProvider {
     GetScreenshot(ImageEncoding encoding) -> (Screenshot? screenshot);
 };
 
+const uint32 MAX_NUM_ANNOTATIONS_PROVIDED = 64;
+
 /// Data to attach to feedback reports.
 ///
 /// Clients typically upload the data straight to servers without expecting some
@@ -33,7 +35,7 @@ protocol DataProvider {
 /// that clients can directly forward to the servers.
 table Data {
     /// A vector of key-value string pairs. Keys are guaranteed to be unique.
-    1: vector<Annotation>:32 annotations;
+    1: vector<Annotation>:MAX_NUM_ANNOTATIONS_PROVIDED annotations;
 
     /// A bundle of Attachments objects stored as an Attachment itself, e.g., it
     /// could be a ZIP archive bundling a vector of Attachment objects.

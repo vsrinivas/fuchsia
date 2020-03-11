@@ -1,0 +1,78 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.feedback;
+
+/// Registers data useful to attach in feedback reports (crash, user feedback or bug reports).
+///
+/// This can be used by components to augment the data attached to feedback reports. This is
+/// useful for component-specific data in certain products that is not exposed to the rest of the
+/// system and that the Feedback service already fetches.
+///
+/// The epitaph ZX_ERR_INVALID_ARGS indicates that the client is attempting to update platform
+/// data that are attached by default in feedback reports. The client should use a different
+/// namespace or data keys.
+///
+/// The epitaph ZX_ERR_NO_RESOURCES indicates that the server can no longer store additional
+/// component data and will not service new connections.
+[Discoverable]
+protocol ComponentDataRegister {
+    /// Updates or inserts extra component data to be included in feedback reports.
+    ///
+    /// The namespace and each annotation key are used to decide whether to update or insert an
+    /// annotation. If an annotation is already present for a given key within the same namespace,
+    /// update the value, otherwise insert the annotation with that key under that namespace.
+    ///
+    /// For instance, assuming these are the data already held by the server (from previous calls
+    /// to Upsert()):
+    /// {
+    ///   "chromium": { # namespace
+    ///     "channel": "stable",
+    ///   },
+    ///   "build": { # namespace
+    ///     "version": "0.2",
+    ///   },
+    /// }
+    ///
+    /// then Upsert({
+    ///   "namespace": "chromium",
+    ///   "annotations": [
+    ///     "version": "1.2.3.45",
+    ///     "channel": "beta",
+    ///   ]
+    /// }) would result in the server now holding:
+    /// {
+    ///   "chromium": { # namespace
+    ///     "channel": "beta", # updated
+    ///     "version": "1.2.3.45" # inserted
+    ///   },
+    ///   "build": { # namespace
+    ///     "version": "0.2", # untouched
+    ///   },
+    /// }
+    ///
+    /// Note that the server will only hold at most MAX_NUM_ANNOTATIONS_PER_NAMESPACE distinct
+    /// annotation keys per namespace, picking up the latest values.
+    Upsert(ComponentData data) -> ();
+};
+
+const uint32 MAX_NAMESPACE_LENGTH = 32;
+const uint32 MAX_NUM_ANNOTATIONS_PER_NAMESPACE = 16;
+
+/// Component-specific data to attach to feedback reports.
+table ComponentData {
+    /// The top-level namespace associated with the data, e.g., "chromium" or "build":
+    /// * intended to group related data together and reduce key collisions across namespaces
+    /// * prefixed to every data key passed within that namespace
+    ///
+    /// Multiple clients may share the same namespace, e.g., there could be multiple Chromium
+    /// components that want to expose Chromium-related data and they would all use "chromium".
+    1: string:MAX_NAMESPACE_LENGTH namespace;
+
+    /// A vector of key-value string pairs, e.g., `<"version", "1.2.3.45">`.
+    ///
+    /// Keys should be unique as only the latest value for a given key in the vector will be
+    /// considered.
+    2: vector<Annotation>:MAX_NUM_ANNOTATIONS_PER_NAMESPACE annotations;
+};

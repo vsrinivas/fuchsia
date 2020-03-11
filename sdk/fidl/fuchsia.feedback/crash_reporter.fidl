@@ -18,8 +18,8 @@ protocol CrashReporter {
 };
 
 const uint32 MAX_PROGRAM_NAME_LENGTH = 1024;
-const uint32 MAX_NUM_ANNOTATIONS = 32;
-const uint32 MAX_NUM_ATTACHMENTS = 16;
+const uint32 MAX_NUM_ANNOTATIONS_PER_CRASH_REPORT = 32;
+const uint32 MAX_NUM_ATTACHMENTS_PER_CRASH_REPORT = 16;
 const uint32 MAX_EVENT_ID_LENGTH = 128;
 
 /// Represents a crash report.
@@ -34,12 +34,18 @@ table CrashReport {
     2: SpecificCrashReport specific_report;
 
     /// A vector of key-value string pairs representing arbitrary data that should be attached to a
-    /// crash report. Keys should be unique.
-    3: vector<Annotation>:MAX_NUM_ANNOTATIONS annotations;
+    /// crash report.
+    ///
+    /// Keys should be unique as only the latest value for a given key in the vector will be
+    /// considered.
+    3: vector<Annotation>:MAX_NUM_ANNOTATIONS_PER_CRASH_REPORT annotations;
 
     /// A vector of key-value string-to-VMO pairs representing arbitrary data that should be
-    /// attached to a crash report. Keys should be unique.
-    4: vector<Attachment>:MAX_NUM_ATTACHMENTS attachments;
+    /// attached to a crash report.
+    ///
+    /// Keys should be unique as only the latest value for a given key in the vector will be
+    /// considered.
+    4: vector<Attachment>:MAX_NUM_ATTACHMENTS_PER_CRASH_REPORT attachments;
 
     /// A text ID that the crash server can use to group multiple crash reports related to the
     /// same event.

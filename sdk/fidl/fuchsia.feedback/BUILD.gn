@@ -12,6 +12,7 @@ fidl("fuchsia.feedback") {
     "attachment.fidl",
     "crash_reporter.fidl",
     "data_provider.fidl",
+    "data_register.fidl",
     "device_id_provider.fidl",
   ]
 
