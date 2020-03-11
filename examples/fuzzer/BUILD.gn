@@ -6,49 +6,55 @@ import("//build/fuzzing/fuzzer.gni")
 
 group("fuzzer") {
   testonly = true
-  deps = [
-    ":tests",
-    "go",
-  ]
+  deps = [ ":tests" ]
 }
 
 group("tests") {
   testonly = true
-  deps = [
-    ":example_fuzzers",
-    "go:tests",
-  ]
+  deps = [ ":fuzzing-examples" ]
 }
 
-fuzzers_package("example_fuzzers") {
-  fuzzer_profiles = [
+fuzzers_package("fuzzing-examples") {
+  # Packages can have non-default names.
+  package_name = "example-fuzzers"
+
+  # Variables set in the outer scope apply to all fuzzers.
+  fuzz_host = true
+
+  # `fuzzers` (without a language prefix) are folded into `cpp_fuzzers` below.
+  fuzzers = [ ":corpus_fuzzer" ]
+
+  # Fuzzers are defined for each supported language
+  cpp_fuzzers = [
+    # Each list of fuzzers can contain simple labels...
+    ":overflow_fuzzer",
+    ":fuzzed_data_provider_fuzzer",
+    ":trap_fuzzer",
     {
-      fuzzers = [
-        ":baz_fuzzer",
-        ":overflow_fuzzer",
-        ":trap_fuzzer",
-        ":fuzzed_data_provider_fuzzer",
-        ":corpus_fuzzer",
-        ":oom_fuzzer",
-      ]
-      sanitizers = [
-        "asan",
-        "ubsan",
-      ]
-      fuzz_host = true
+      # ... or scopes with additional fields, like a non-default output name.
+      label = ":oom_fuzzer"
+      output_name = "out_of_memory_fuzzer"
     },
+  ]
+
+  # A fuzzers package can have fuzzers for multiple languages.
+  rust_fuzzers = [
+    "rust:toy_example_arbitrary",
+    "rust:toy_example_raw_bytes",
+    "rust:toy_example_with_main",
+  ]
+
+  # Variables set in inner scopes override those set in the outer scope.
+  go_fuzzers = [
     {
-      fuzzers = [
-        "rust:toy_example_arbitrary",
-        "rust:toy_example_raw_bytes",
-        "rust:toy_example_with_main",
-      ]
-      sanitizers = [ "rust-asan" ]
+      label = "go:basic_fuzzer"
+      fuzz_host = host_os != "mac"
     },
   ]
 }
 
 fuzzer("oom_fuzzer") {
+  output_name = "out_of_memory_fuzzer"
   sources = [ "oom.cc" ]
 }
 
