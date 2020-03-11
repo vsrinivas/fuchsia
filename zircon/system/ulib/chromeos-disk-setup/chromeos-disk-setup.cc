@@ -24,7 +24,8 @@ namespace {
 constexpr uint8_t kFvmGuid[GPT_GUID_LEN] = GUID_FVM_VALUE;
 constexpr uint8_t kKernGuid[GPT_GUID_LEN] = GUID_CROS_KERNEL_VALUE;
 constexpr uint8_t kRootGuid[GPT_GUID_LEN] = GUID_CROS_ROOT_VALUE;
-constexpr uint8_t kStateGuid[GPT_GUID_LEN] = GUID_CROS_STATE_VALUE;
+constexpr uint8_t kStateCrosGuid[GPT_GUID_LEN] = GUID_CROS_STATE_VALUE;
+constexpr uint8_t kStateLinuxGuid[GPT_GUID_LEN] = GUID_LINUX_FILESYSTEM_DATA_VALUE;
 constexpr uint8_t kSysCfgGuid[GPT_GUID_LEN] = GUID_SYS_CONFIG_VALUE;
 
 // this value is shared with device-partitioner.cpp
@@ -184,7 +185,11 @@ bool is_cros(const GptDevice* gpt) {
     } else if (!memcmp(p->type, kKernGuid, GPT_GUID_LEN) &&
                (part_name_eql(p, "KERN-A") || part_name_eql(p, "KERN-B"))) {
       kerns++;
-    } else if (!memcmp(p->type, kStateGuid, GPT_GUID_LEN) && part_name_eql(p, "STATE")) {
+    } else if ((!memcmp(p->type, kStateCrosGuid, GPT_GUID_LEN) ||
+                !memcmp(p->type, kStateLinuxGuid, GPT_GUID_LEN)) &&
+               part_name_eql(p, "STATE")) {
+      // Note that STATE GUID type can either be cros_data or, in the case of a
+      // freshly recovered device, linux_filesystem
       state = true;
     }
   }
@@ -314,7 +319,10 @@ zx_status_t config_cros_for_fuchsia(GptDevice* gpt,
   }
 
   // Still not enough contiguous space is available on disk, try shrinking STATE
-  if (!found_hole && (p = find_by_type_and_name(gpt, kStateGuid, "STATE")) != NULL) {
+  // Note STATE type GUID can either be cros_data or, in the case of a freshly
+  // recovered device, linux_filesystem
+  if (!found_hole && (((p = find_by_type_and_name(gpt, kStateCrosGuid, "STATE")) != NULL) ||
+                      (p = find_by_type_and_name(gpt, kStateLinuxGuid, "STATE")) != NULL)) {
     uint64_t min_state_sz_blks = howmany(MIN_SZ_STATE, blk_info->block_size);
 
     // TODO (TO-607) consider if there is free space on either side of STATE

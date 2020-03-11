@@ -44,6 +44,7 @@ using paver::PartitionSpec;
 constexpr uint8_t kBootloaderType[GPT_GUID_LEN] = GUID_BOOTLOADER_VALUE;
 constexpr uint8_t kEfiType[GPT_GUID_LEN] = GUID_EFI_VALUE;
 constexpr uint8_t kCrosKernelType[GPT_GUID_LEN] = GUID_CROS_KERNEL_VALUE;
+constexpr uint8_t kCrosRootfsType[GPT_GUID_LEN] = GUID_CROS_ROOTFS_VALUE;
 constexpr uint8_t kZirconAType[GPT_GUID_LEN] = GUID_ZIRCON_A_VALUE;
 constexpr uint8_t kZirconBType[GPT_GUID_LEN] = GUID_ZIRCON_B_VALUE;
 constexpr uint8_t kZirconRType[GPT_GUID_LEN] = GUID_ZIRCON_R_VALUE;
@@ -54,6 +55,8 @@ constexpr uint8_t kFvmType[GPT_GUID_LEN] = GUID_FVM_VALUE;
 constexpr uint8_t kEmptyType[GPT_GUID_LEN] = GUID_EMPTY_VALUE;
 constexpr uint8_t kSysConfigType[GPT_GUID_LEN] = GUID_SYS_CONFIG_VALUE;
 constexpr uint8_t kAbrMetaType[GPT_GUID_LEN] = GUID_ABR_META_VALUE;
+// constexpr uint8_t kStateCrosGuid[GPT_GUID_LEN] = GUID_CROS_STATE_VALUE;
+constexpr uint8_t kStateLinuxGuid[GPT_GUID_LEN] = GUID_LINUX_FILESYSTEM_DATA_VALUE;
 
 constexpr uint8_t kBoot0Type[GPT_GUID_LEN] = GUID_EMMC_BOOT1_VALUE;
 constexpr uint8_t kBoot1Type[GPT_GUID_LEN] = GUID_EMMC_BOOT2_VALUE;
@@ -636,7 +639,8 @@ TEST_F(CrosDevicePartitionerTests, DISABLED_InitPartitionTables) {
   }
   ASSERT_OK(gpt->Sync());
 
-  // Create EFI device partitioner and initialise partition tables.
+
+  // Create CrOS device partitioner and initialise partition tables.
   std::unique_ptr<paver::DevicePartitioner> partitioner;
   ASSERT_NO_FATAL_FAILURES(CreatePartitioner(disk.get(), &partitioner));
   ASSERT_OK(partitioner->InitPartitionTables());
@@ -714,6 +718,60 @@ TEST_F(CrosDevicePartitionerTests, DISABLED_ValidatePayload) {
   // Non-kernel partitions are not validated.
   ASSERT_OK(partitioner->ValidatePayload(PartitionSpec(paver::Partition::kFuchsiaVolumeManager),
                                          fbl::Span<uint8_t>()));
+}
+
+TEST_F(CrosDevicePartitionerTests, DISABLED_InitPartitionTablesForRecoveredDevice) {
+  std::unique_ptr<BlockDevice> disk;
+  ASSERT_NO_FATAL_FAILURES(CreateCrosDisk(32 * kGibibyte, &disk));
+
+  // Write initial partitions to disk.
+  std::unique_ptr<gpt::GptDevice> gpt;
+  ASSERT_NO_FATAL_FAILURES(CreateGptDevice(disk.get(), &gpt));
+
+  // Write initial partitions to disk. (reflective of state resulting
+  // from CrOS recovery)
+  const std::array<PartitionDescription, 9> partitions_at_start{
+      PartitionDescription{"efi-system", kEfiType, 0x22, 0x1},
+      PartitionDescription{"KERN-A", kCrosKernelType, 0x23, 0x1},
+      PartitionDescription{"KERN_B", kCrosKernelType, 0x24, 0x1},
+      PartitionDescription{"KERN_C", kCrosKernelType, 0x25, 0x1},
+      PartitionDescription{"ROOT_A", kCrosRootfsType, 0x26, 0x1},
+      PartitionDescription{"ROOT_B", kCrosRootfsType, 0x27, 0x1},
+      PartitionDescription{"ROOT_C", kCrosRootfsType, 0x28, 0x1},
+      PartitionDescription{"STATE", kStateLinuxGuid, 0x29, 0x1},
+      PartitionDescription{"sys-config", kSysConfigType, 0x2A, 0x1},
+  };
+
+  for (auto& part : partitions_at_start) {
+    ASSERT_OK(gpt->AddPartition(part.name, part.type, GetRandomGuid(), part.start, part.length, 0),
+              "%s", part.name);
+  }
+  ASSERT_OK(gpt->Sync());
+
+
+  // Create CrOS device partitioner and initialise partition tables.
+  std::unique_ptr<paver::DevicePartitioner> partitioner;
+  ASSERT_NO_FATAL_FAILURES(CreatePartitioner(disk.get(), &partitioner));
+  ASSERT_OK(partitioner->InitPartitionTables());
+
+  // Ensure the final partition layout looks like we expect it to.
+  ASSERT_NO_FATAL_FAILURES(CreateGptDevice(disk.get(), &gpt));
+  const std::array<PartitionDescription, 4> partitions_at_end{
+      PartitionDescription{GUID_ZIRCON_A_NAME, kCrosKernelType, 0x82B, 0x20000},
+      PartitionDescription{GUID_ZIRCON_B_NAME, kCrosKernelType, 0x2082B, 0x20000},
+      PartitionDescription{GUID_ZIRCON_R_NAME, kCrosKernelType, 0x4082B, 0x20000},
+      PartitionDescription{GUID_FVM_NAME, kFvmType, 0x6082B, 0x2000000},
+  };
+
+  ASSERT_NO_FATAL_FAILURES(EnsurePartitionsMatch(gpt.get(), partitions_at_end));
+
+  // Make sure we can find the important partitions.
+  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kZirconA), nullptr));
+  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kZirconB), nullptr));
+  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kZirconR), nullptr));
+  EXPECT_OK(
+      partitioner->FindPartition(PartitionSpec(paver::Partition::kFuchsiaVolumeManager), nullptr));
+
 }
 
 class FixedDevicePartitionerTests : public zxtest::Test {
