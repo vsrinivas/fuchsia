@@ -24,6 +24,10 @@
 #include "fuchsia/io/test/cpp/fidl.h"
 #include "src/lib/syslog/cpp/logger.h"
 
+zx_status_t DummyReader(fbl::String* output) { return ZX_OK; }
+
+zx_status_t DummyWriter(fbl::StringPiece input) { return ZX_OK; }
+
 class UlibfsHarness : public fuchsia::io::test::Io1Harness {
  public:
   explicit UlibfsHarness() : vfs_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
@@ -70,7 +74,8 @@ class UlibfsHarness : public fuchsia::io::test::Io1Harness {
       std::string filename, uint32_t flags,
       fidl::InterfaceRequest<fuchsia::io::Directory> directory_request) final {
     fbl::RefPtr<fs::PseudoDir> root{fbl::MakeRefCounted<fs::PseudoDir>()};
-    root->AddEntry(filename, fbl::MakeRefCounted<fs::BufferedPseudoFile>());
+    root->AddEntry(filename,
+                   fbl::MakeRefCounted<fs::BufferedPseudoFile>(&DummyReader, &DummyWriter));
     fs::VnodeConnectionOptions options = fs::VnodeConnectionOptions::FromIoV1Flags(flags);
     options = fs::VnodeConnectionOptions::FilterForNewConnection(options);
     zx_status_t status = vfs_->Serve(std::move(root), directory_request.TakeChannel(), options);
