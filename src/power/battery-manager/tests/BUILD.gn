@@ -28,7 +28,7 @@ go_test("battery_manager_test") {
   non_go_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
-test_package("battery_manager_gotests") {
+test_package("battery-manager-gotests") {
   deps = [ ":battery_manager_test" ]
   tests = [
     {

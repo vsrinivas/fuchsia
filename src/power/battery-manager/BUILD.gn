@@ -8,7 +8,7 @@ import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 rustc_binary("bin") {
-  name = "battery_manager"
+  name = "battery-manager"
   with_unit_tests = true
   edition = "2018"
 
@@ -34,7 +34,7 @@ rustc_binary("bin") {
   ]
 }
 
-package("battery_manager") {
+package("battery-manager") {
   deps = [ ":bin" ]
 
   binary = "battery_manager"
@@ -47,7 +47,7 @@ package("battery_manager") {
   ]
 }
 
-test_package("battery_manager_tests") {
+test_package("battery-manager-tests") {
   deps = [ ":bin_test" ]
 
   tests = [
@@ -61,7 +61,7 @@ test_package("battery_manager_tests") {
 group("tests") {
   testonly = true
   public_deps = [
-    ":battery_manager_tests",
-    "//src/power/battery_manager/tests:battery_manager_gotests",
+    ":battery-manager-tests",
+    "//src/power/battery-manager/tests:battery-manager-gotests",
   ]
 }
