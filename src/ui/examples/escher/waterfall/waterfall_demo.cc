@@ -29,6 +29,21 @@ using namespace escher;
 static constexpr float kNear = 1.f;
 static constexpr float kFar = -200.f;
 static constexpr size_t kMaxNumPointLights = 2;
+static constexpr vk::Format kYuvTextureFormat = vk::Format::eG8B8G8R8422Unorm;
+static constexpr vk::ImageTiling kYuvTextureTiling = vk::ImageTiling::eOptimal;
+
+namespace {
+
+bool IsImageFormatSupported(vk::PhysicalDevice device, vk::Format format, vk::ImageTiling tiling) {
+  vk::FormatProperties properties = device.getFormatProperties(format);
+  if (tiling == vk::ImageTiling::eLinear) {
+    return properties.linearTilingFeatures != vk::FormatFeatureFlags();
+  } else {
+    return properties.optimalTilingFeatures != vk::FormatFeatureFlags();
+  }
+}
+
+}  // namespace
 
 WaterfallDemo::WaterfallDemo(escher::EscherWeakPtr escher_in, vk::Format swapchain_format, int argc,
                              char** argv)
@@ -62,7 +77,8 @@ WaterfallDemo::WaterfallDemo(escher::EscherWeakPtr escher_in, vk::Format swapcha
     }
   }
 
-  if (device_caps.allow_ycbcr) {
+  if (device_caps.allow_ycbcr && IsImageFormatSupported(escher()->vk_physical_device(),
+                                                        kYuvTextureFormat, kYuvTextureTiling)) {
     InitializeYcbcrTexture();
   }
 
@@ -139,7 +155,7 @@ void WaterfallDemo::InitializeYcbcrTexture() {
   const char* kYuvFramePath = "/assets/bbb_frame.yuv";
   constexpr uint32_t kYuvFrameWidth = 320;
   constexpr uint32_t kYuvFrameHeight = 180;
-  constexpr vk::Format kYuvFrameFormat = vk::Format::eG8B8G8R8422Unorm;
+  constexpr vk::Format kYuvFrameFormat = kYuvTextureFormat;
 
   auto base = escher()->shader_program_factory()->filesystem()->base_path();
   FXL_CHECK(base);
@@ -149,12 +165,11 @@ void WaterfallDemo::InitializeYcbcrTexture() {
 
   auto image = escher()->gpu_allocator()->AllocateImage(
       escher()->resource_recycler(),
-      {
-          .format = kYuvFrameFormat,
-          .width = kYuvFrameWidth,
-          .height = kYuvFrameHeight,
-          .usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst,
-      });
+      {.format = kYuvFrameFormat,
+       .width = kYuvFrameWidth,
+       .height = kYuvFrameHeight,
+       .usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst,
+       .tiling = kYuvTextureTiling});
 
   BatchGpuUploader gpu_uploader(escher()->GetWeakPtr(), 0);
   image_utils::WritePixelsToImage(&gpu_uploader, data.data(), image,
