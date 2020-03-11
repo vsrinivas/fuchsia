@@ -28,12 +28,16 @@ fuzzers_package("fuzzing-examples") {
   cpp_fuzzers = [
     # Each list of fuzzers can contain simple labels...
     ":overflow_fuzzer",
-    ":fuzzed_data_provider_fuzzer",
     ":trap_fuzzer",
     {
       # ... or scopes with additional fields, like a non-default output name.
       label = ":oom_fuzzer"
       output_name = "out_of_memory_fuzzer"
+    },
+    {
+      # Variables set here override those in the outer scope.
+      label = ":fuzzed_data_provider_fuzzer"
+      fuzz_host = false
     },
   ]
 
@@ -44,13 +48,10 @@ fuzzers_package("fuzzing-examples") {
     "rust:toy_example_with_main",
   ]
 
-  # Variables set in inner scopes override those set in the outer scope.
-  go_fuzzers = [
-    {
-      label = "go:basic_fuzzer"
-      fuzz_host = host_os != "mac"
-    },
-  ]
+  # TODO(44551): Building Go fuzzers exhibits linker errors on macOS. Unlink from build until fixed.
+  if (host_os != "mac") {
+    go_fuzzers = [ "go:basic_fuzzer" ]
+  }
 }
 
 fuzzer("oom_fuzzer") {
