@@ -123,7 +123,7 @@ pub fn open_node_in_namespace(path: &str, flags: u32) -> Result<NodeProxy, Error
 /// open_directory_in_namespace will open a NodeProxy to the given path and convert it into a
 /// DirectoryProxy. The path argument must be an absolute path.
 pub fn open_directory_in_namespace(path: &str, flags: u32) -> Result<DirectoryProxy, Error> {
-    node_to_directory(open_node_in_namespace(path, flags)?)
+    node_to_directory(open_node_in_namespace(path, flags | OPEN_FLAG_DIRECTORY)?)
 }
 
 /// open_file_in_namespace will open a NodeProxy to the given path and convert it into a FileProxy.
@@ -229,7 +229,7 @@ mod tests {
         },
         std::fs,
         std::iter,
-        tempfile::TempDir,
+        tempfile::{NamedTempFile, TempDir},
     };
 
     #[fasync::run_singlethreaded(test)]
@@ -348,6 +348,19 @@ mod tests {
             assert_eq!(zx::Status::OK, zx::Status::from_raw(file_proxy.close().await?));
         }
         Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn open_directory_in_namespace_rejects_files() {
+        let tempfile = NamedTempFile::new().expect("failed to create tmp file");
+        let dir =
+            open_directory_in_namespace(tempfile.path().to_str().unwrap(), OPEN_RIGHT_READABLE)
+                .expect("could not send open request");
+
+        let channel = dir.into_channel().expect("Could not convert to channel").into_zx_channel();
+        let signals = fasync::OnSignals::new(&channel, zx::Signals::CHANNEL_PEER_CLOSED);
+        // We should see a PEER_CLOSED because we tried to open a file as a directory
+        signals.await.expect("Error waiting for peer closed");
     }
 
     #[fasync::run_singlethreaded(test)]

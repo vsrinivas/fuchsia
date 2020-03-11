@@ -20,7 +20,7 @@ use {
         sink::SinkExt,
         stream::{BoxStream, StreamExt, TryStreamExt},
     },
-    io_util::{open_directory_in_namespace, OPEN_RIGHT_READABLE},
+    io_util::{open_node_in_namespace, OPEN_RIGHT_READABLE},
     std::path::{Path, PathBuf},
 };
 
@@ -58,7 +58,7 @@ impl NodeType {
  non-blocking directory apis require utf8 paths: {:?}.",
             path
         ))?;
-        let dir_proxy = open_directory_in_namespace(path_as_str, OPEN_RIGHT_READABLE)?;
+        let dir_proxy = open_node_in_namespace(path_as_str, OPEN_RIGHT_READABLE)?;
         Ok(match dir_proxy.describe().await {
             Ok(NodeInfo::Directory(_)) => NodeType::Directory,
             Ok(NodeInfo::File(_)) | Ok(NodeInfo::Vmofile(_)) => NodeType::File,
