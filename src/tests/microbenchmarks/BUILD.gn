@@ -10,6 +10,7 @@ executable("bin") {
   output_name = "fuchsia_microbenchmarks"
   testonly = true
   sources = [
+    "atomics.cc",
     "channels.cc",
     "clock.cc",
     "events.cc",
