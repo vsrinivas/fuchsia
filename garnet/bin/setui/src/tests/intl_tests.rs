@@ -12,6 +12,7 @@ use {
     fidl::endpoints::{ServerEnd, ServiceMarker},
     fidl_fuchsia_settings::*,
     fuchsia_async as fasync, fuchsia_zircon as zx,
+    futures::future::BoxFuture,
     futures::lock::Mutex,
     futures::prelude::*,
     std::sync::Arc,
@@ -23,36 +24,46 @@ use crate::switchboard::intl_types::IntlInfo;
 const ENV_NAME: &str = "settings_service_intl_test_environment";
 
 async fn create_test_intl_env(storage_factory: Arc<Mutex<InMemoryStorageFactory>>) -> IntlProxy {
-    let service_gen = |service_name: &str, channel: zx::Channel| {
-        if service_name != fidl_fuchsia_deprecatedtimezone::TimezoneMarker::NAME {
-            return Err(format_err!("unsupported!"));
-        }
-
-        let mut timezone_stream =
-            ServerEnd::<fidl_fuchsia_deprecatedtimezone::TimezoneMarker>::new(channel)
-                .into_stream()?;
-
-        fasync::spawn(async move {
-            while let Some(req) = timezone_stream.try_next().await.unwrap() {
-                #[allow(unreachable_patterns)]
-                match req {
-                    fidl_fuchsia_deprecatedtimezone::TimezoneRequest::GetTimezoneId {
-                        responder,
-                    } => {
-                        responder.send("PDT").unwrap();
-                    }
-                    fidl_fuchsia_deprecatedtimezone::TimezoneRequest::SetTimezone {
-                        timezone_id: _,
-                        responder,
-                    } => {
-                        responder.send(true).unwrap();
-                    }
-                    _ => {}
-                }
+    let service_gen = Box::new(
+        |service_name: &str,
+         channel: zx::Channel|
+         -> BoxFuture<'static, Result<(), anyhow::Error>> {
+            if service_name != fidl_fuchsia_deprecatedtimezone::TimezoneMarker::NAME {
+                return Box::pin(async { Err(format_err!("unsupported!")) });
             }
-        });
-        Ok(())
-    };
+
+            let timezone_stream_result =
+                ServerEnd::<fidl_fuchsia_deprecatedtimezone::TimezoneMarker>::new(channel)
+                    .into_stream();
+
+            if timezone_stream_result.is_err() {
+                return Box::pin(async { Err(format_err!("could not open stream")) });
+            }
+
+            let mut timezone_stream = timezone_stream_result.unwrap();
+
+            fasync::spawn(async move {
+                while let Some(req) = timezone_stream.try_next().await.unwrap() {
+                    #[allow(unreachable_patterns)]
+                    match req {
+                        fidl_fuchsia_deprecatedtimezone::TimezoneRequest::GetTimezoneId {
+                            responder,
+                        } => {
+                            responder.send("PDT").unwrap();
+                        }
+                        fidl_fuchsia_deprecatedtimezone::TimezoneRequest::SetTimezone {
+                            timezone_id: _,
+                            responder,
+                        } => {
+                            responder.send(true).unwrap();
+                        }
+                        _ => {}
+                    }
+                }
+            });
+            return Box::pin(async { Ok(()) });
+        },
+    );
 
     let env = EnvironmentBuilder::new(Runtime::Nested(ENV_NAME), storage_factory)
         .service(Box::new(service_gen))

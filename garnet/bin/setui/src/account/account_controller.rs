@@ -19,7 +19,8 @@ async fn schedule_clear_accounts(
     let connect_result = service_context_handle
         .lock()
         .await
-        .connect::<fidl_fuchsia_devicesettings::DeviceSettingsManagerMarker>();
+        .connect::<fidl_fuchsia_devicesettings::DeviceSettingsManagerMarker>()
+        .await;
 
     if connect_result.is_err() {
         return Err(SwitchboardError::ExternalFailure {

@@ -5,7 +5,7 @@ use crate::service_context::GenerateService;
 use crate::tests::fakes::base::Service;
 use anyhow::{format_err, Error};
 use fuchsia_zircon as zx;
-use futures::executor::block_on;
+use futures::future::BoxFuture;
 use futures::lock::Mutex;
 use std::sync::Arc;
 
@@ -26,9 +26,9 @@ impl ServiceRegistry {
         self.services.push(service);
     }
 
-    fn service_channel(&self, service_name: &str, channel: zx::Channel) -> Result<(), Error> {
+    async fn service_channel(&self, service_name: &str, channel: zx::Channel) -> Result<(), Error> {
         for service_handle in self.services.iter() {
-            let service = block_on(service_handle.lock());
+            let service = service_handle.lock().await;
             if service.can_handle_service(service_name) {
                 return service.process_stream(service_name, channel);
             }
@@ -38,8 +38,19 @@ impl ServiceRegistry {
     }
 
     pub fn serve(registry_handle: ServiceRegistryHandle) -> GenerateService {
-        return Box::new(move |service_name: &str, channel: zx::Channel| {
-            return block_on(registry_handle.lock()).service_channel(service_name, channel);
-        });
+        return Box::new(
+            move |service_name: &str, channel: zx::Channel| -> BoxFuture<'_, Result<(), Error>> {
+                let registry_handle_clone = registry_handle.clone();
+                let service_name_clone = String::from(service_name);
+
+                Box::pin(async move {
+                    return registry_handle_clone
+                        .lock()
+                        .await
+                        .service_channel(service_name_clone.as_str(), channel)
+                        .await;
+                })
+            },
+        );
     }
 }

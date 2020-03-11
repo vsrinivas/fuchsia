@@ -37,7 +37,8 @@ pub fn spawn_light_sensor_controller<T: DeviceStorageFactory + Send + Sync + 'st
         let mut sensor_proxy_result = service_context_handle
             .lock()
             .await
-            .connect_named::<SensorMarker>(LIGHT_SENSOR_SERVICE_NAME);
+            .connect_named::<SensorMarker>(LIGHT_SENSOR_SERVICE_NAME)
+            .await;
 
         // If not, enumuerate through HIDs to try to find it
         if let Err(_) = sensor_proxy_result {

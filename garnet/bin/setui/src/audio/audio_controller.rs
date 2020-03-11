@@ -263,7 +263,7 @@ async fn watch_background_usage(
     priority_stream_playing: Arc<AtomicBool>,
 ) -> Result<(), Error> {
     let usage_reporter_proxy =
-        service_context_handle.lock().await.connect::<UsageReporterMarker>()?;
+        service_context_handle.lock().await.connect::<UsageReporterMarker>().await?;
 
     // Create channel for usage reporter watch results.
     let (watcher_client, mut watcher_requests) = create_request_stream()?;
@@ -355,6 +355,7 @@ async fn connect_to_sound_player(
         .lock()
         .await
         .connect::<PlayerMarker>()
+        .await
         .context("Connecting to fuchsia.media.sounds.Player")
     {
         Ok(result) => Some(result),
@@ -391,7 +392,7 @@ async fn check_and_bind_volume_controls(
     }
 
     let service_result =
-        service_context_handle.lock().await.connect::<fidl_fuchsia_media::AudioCoreMarker>();
+        service_context_handle.lock().await.connect::<fidl_fuchsia_media::AudioCoreMarker>().await;
 
     let audio_service = match service_result {
         Ok(service) => {

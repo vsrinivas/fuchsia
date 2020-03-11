@@ -40,6 +40,7 @@ pub fn spawn_display_controller<T: DeviceStorageFactory + Send + Sync + 'static>
             .lock()
             .await
             .connect::<fidl_fuchsia_ui_brightness::ControlMarker>()
+            .await
             .expect("connected to brightness");
 
         let storage = storage_handle.lock().await.get_store::<DisplayInfo>();

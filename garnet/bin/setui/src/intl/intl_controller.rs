@@ -175,7 +175,8 @@ impl IntlController {
             let service_result = service_context
                 .lock()
                 .await
-                .connect::<fidl_fuchsia_deprecatedtimezone::TimezoneMarker>();
+                .connect::<fidl_fuchsia_deprecatedtimezone::TimezoneMarker>()
+                .await;
 
             if service_result.is_err() {
                 fx_log_err!("Failed to connect to fuchsia.timezone");

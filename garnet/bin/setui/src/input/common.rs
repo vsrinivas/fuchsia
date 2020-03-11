@@ -21,7 +21,7 @@ pub async fn monitor_mic_mute(
     sender: futures::channel::mpsc::UnboundedSender<MediaButtonsEvent>,
 ) -> Result<(), Error> {
     let service_result =
-        service_context_handle.lock().await.connect::<DeviceListenerRegistryMarker>();
+        service_context_handle.lock().await.connect::<DeviceListenerRegistryMarker>().await;
 
     let presenter_service = match service_result {
         Ok(service) => service,

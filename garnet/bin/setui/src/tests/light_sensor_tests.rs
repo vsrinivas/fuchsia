@@ -7,7 +7,7 @@ use {
     crate::display::LIGHT_SENSOR_SERVICE_NAME, crate::registry::device_storage::testing::*,
     crate::switchboard::base::SettingType, crate::EnvironmentBuilder, crate::Runtime,
     anyhow::format_err, fidl::endpoints::ServerEnd, fidl_fuchsia_settings::*,
-    fuchsia_async as fasync, fuchsia_zircon as zx, futures::prelude::*,
+    fuchsia_async as fasync, fuchsia_zircon as zx, futures::future::BoxFuture, futures::prelude::*,
 };
 
 const ENV_NAME: &str = "settings_service_light_sensor_test_environment";
@@ -19,13 +19,22 @@ const TEST_BLUE_VAL: u8 = 6;
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_light_sensor() {
-    let service_gen = |service_name: &str, channel: zx::Channel| {
+    let service_gen = |service_name: &str,
+                       channel: zx::Channel|
+     -> BoxFuture<'static, Result<(), anyhow::Error>> {
         if service_name != LIGHT_SENSOR_SERVICE_NAME {
-            return Err(format_err!("{:?} unsupported!", service_name));
+            let service = String::from(service_name);
+            return Box::pin(async move { Err(format_err!("{:?} unsupported!", service)) });
         }
 
-        let mut stream =
-            ServerEnd::<fidl_fuchsia_hardware_input::DeviceMarker>::new(channel).into_stream()?;
+        let stream_result =
+            ServerEnd::<fidl_fuchsia_hardware_input::DeviceMarker>::new(channel).into_stream();
+
+        if stream_result.is_err() {
+            return Box::pin(async { Err(format_err!("could not connect to service")) });
+        }
+
+        let mut stream = stream_result.unwrap();
 
         fasync::spawn(async move {
             while let Some(request) = stream.try_next().await.unwrap() {
@@ -53,7 +62,8 @@ async fn test_light_sensor() {
                 }
             }
         });
-        Ok(())
+
+        Box::pin(async { Ok(()) })
     };
 
     let env =

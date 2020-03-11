@@ -15,6 +15,7 @@ use {
     fidl::endpoints::{ServerEnd, ServiceMarker},
     fidl_fuchsia_settings::*,
     fuchsia_async as fasync, fuchsia_zircon as zx,
+    futures::future::BoxFuture,
     futures::lock::Mutex,
     futures::prelude::*,
     std::sync::Arc,
@@ -28,13 +29,21 @@ async fn test_display() {
     const STARTING_BRIGHTNESS: f32 = 0.5;
     const CHANGED_BRIGHTNESS: f32 = 0.8;
 
-    let service_gen = move |service_name: &str, channel: zx::Channel| {
+    let service_gen = |service_name: &str,
+                       channel: zx::Channel|
+     -> BoxFuture<'static, Result<(), anyhow::Error>> {
         if service_name != fidl_fuchsia_ui_brightness::ControlMarker::NAME {
-            return Err(format_err!("unsupported!"));
+            return Box::pin(async { Err(format_err!("unsupported!")) });
         }
 
-        let mut manager_stream =
-            ServerEnd::<fidl_fuchsia_ui_brightness::ControlMarker>::new(channel).into_stream()?;
+        let manager_stream_result =
+            ServerEnd::<fidl_fuchsia_ui_brightness::ControlMarker>::new(channel).into_stream();
+
+        if manager_stream_result.is_err() {
+            return Box::pin(async { Err(format_err!("could not move into stream")) });
+        }
+
+        let mut manager_stream = manager_stream_result.unwrap();
 
         fasync::spawn(async move {
             let mut stored_brightness_value: f32 = STARTING_BRIGHTNESS;
@@ -71,7 +80,7 @@ async fn test_display() {
             }
         });
 
-        Ok(())
+        Box::pin(async { Ok(()) })
     };
 
     let env =
@@ -156,34 +165,51 @@ async fn validate_restore(manual_brightness: f32, auto_brightness: bool) {
 /// Makes sure that a failing display stream doesn't cause a failure for a different interface.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_display_failure() {
-    let service_gen = move |service_name: &str, channel: zx::Channel| match service_name {
-        fidl_fuchsia_ui_brightness::ControlMarker::NAME => {
-            // This stream is closed immediately
-            let _manager_stream =
-                ServerEnd::<fidl_fuchsia_ui_brightness::ControlMarker>::new(channel)
-                    .into_stream()?;
-            Ok(())
-        }
-        fidl_fuchsia_deprecatedtimezone::TimezoneMarker::NAME => {
-            let mut timezone_stream =
-                ServerEnd::<fidl_fuchsia_deprecatedtimezone::TimezoneMarker>::new(channel)
-                    .into_stream()?;
-            fasync::spawn(async move {
-                while let Some(req) = timezone_stream.try_next().await.unwrap() {
-                    #[allow(unreachable_patterns)]
-                    match req {
-                        fidl_fuchsia_deprecatedtimezone::TimezoneRequest::GetTimezoneId {
-                            responder,
-                        } => {
-                            responder.send("PDT").unwrap();
-                        }
-                        _ => {}
-                    }
+    let service_gen = |service_name: &str,
+                       channel: zx::Channel|
+     -> BoxFuture<'static, Result<(), anyhow::Error>> {
+        match service_name {
+            fidl_fuchsia_ui_brightness::ControlMarker::NAME => {
+                // This stream is closed immediately
+                let manager_stream_result =
+                    ServerEnd::<fidl_fuchsia_ui_brightness::ControlMarker>::new(channel)
+                        .into_stream();
+
+                if manager_stream_result.is_err() {
+                    return Box::pin(async {
+                        Err(format_err!("could not move brightness channel into stream"))
+                    });
                 }
-            });
-            Ok(())
+                return Box::pin(async { Ok(()) });
+            }
+            fidl_fuchsia_deprecatedtimezone::TimezoneMarker::NAME => {
+                let timezone_stream_result =
+                    ServerEnd::<fidl_fuchsia_deprecatedtimezone::TimezoneMarker>::new(channel)
+                        .into_stream();
+
+                if timezone_stream_result.is_err() {
+                    return Box::pin(async {
+                        Err(format_err!("could not move timezone channel into stream"))
+                    });
+                }
+                let mut timezone_stream = timezone_stream_result.unwrap();
+                fasync::spawn(async move {
+                    while let Some(req) = timezone_stream.try_next().await.unwrap() {
+                        #[allow(unreachable_patterns)]
+                        match req {
+                            fidl_fuchsia_deprecatedtimezone::TimezoneRequest::GetTimezoneId {
+                                responder,
+                            } => {
+                                responder.send("PDT").unwrap();
+                            }
+                            _ => {}
+                        }
+                    }
+                });
+                return Box::pin(async { Ok(()) });
+            }
+            _ => Box::pin(async { Err(format_err!("unsupported")) }),
         }
-        _ => Err(format_err!("unsupported!")),
     };
 
     let env =

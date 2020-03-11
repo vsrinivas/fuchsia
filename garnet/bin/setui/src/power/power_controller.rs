@@ -16,6 +16,7 @@ async fn reboot(service_context_handle: ServiceContextHandle) {
         .lock()
         .await
         .connect::<fidl_fuchsia_device_manager::AdministratorMarker>()
+        .await
         .expect("connected to device manager");
 
     device_admin.suspend(fidl_fuchsia_device_manager::SUSPEND_FLAG_REBOOT).await.ok();
