@@ -181,6 +181,14 @@ top-level BUILD.gn file:
   * When a new sub-directory is added with a new tests target, the tests target
     should be added to the parent directories tests target.
 
+### Naming conventions
+
+Typically, when naming files and directories, the best practice is to use names
+that are short and clear. In those cases where a name is comprised of multiple
+words, those words should be separated by underscores .e.g `long_file_name`.
+However, package names should use dashes to separate words. For more information, see
+[package name](/docs/concepts/packages/package_url.md#package_name).
+
 #### Example
 
 The following is an example for a directory called `fortune`.
