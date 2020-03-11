@@ -40,6 +40,7 @@
 #include <loader-service/loader-service.h>
 #include <runtests-utils/fuchsia-run-test.h>
 #include <runtests-utils/service-proxy-dir.h>
+#include <runtests-utils/profile.h>
 
 namespace fio = ::llcpp::fuchsia::io;
 
@@ -63,6 +64,36 @@ fbl::String RootName(const fbl::String& path) {
     end = &path.c_str()[path.size()];
   }
   return fbl::String::Concat({"/", fbl::String(start, end - start)});
+}
+
+bool ReadFile(const fbl::unique_fd& fd, uint8_t* data, size_t size) {
+  auto* buf = data;
+  ssize_t count = size;
+  while (count > 0) {
+    ssize_t len = read(fd.get(), buf, count);
+    if (len == -1) {
+      return false;
+    }
+    count -= len;
+    buf += len;
+  }
+  lseek(fd.get(), 0, SEEK_SET);
+  return true;
+}
+
+bool WriteFile(const fbl::unique_fd& fd, uint8_t* data, size_t size) {
+  auto* buf = data;
+  ssize_t count = size;
+  while (count > 0) {
+    ssize_t len = write(fd.get(), buf, count);
+    if (len == -1) {
+      return false;
+    }
+    count -= len;
+    buf += len;
+  }
+  lseek(fd.get(), 0, SEEK_SET);
+  return true;
 }
 
 std::optional<DumpFile> ProcessDataSinkDump(debugdata::DataSinkDump& data,
@@ -116,30 +147,57 @@ std::optional<DumpFile> ProcessDataSinkDump(debugdata::DataSinkDump& data,
   }
 
   char filename[ZX_MAX_NAME_LEN];
-  snprintf(filename, sizeof(filename), "%s.%" PRIu64, data.sink_name.c_str(), info.koid);
-
-  fbl::unique_fd fd{openat(sink_dir_fd.get(), filename, O_WRONLY | O_CREAT | O_EXCL, 0666)};
-  if (!fd) {
-    fprintf(stderr, "FAILURE: Cannot open data-sink file \"%s\": %s\n", data.sink_name.c_str(),
-            strerror(errno));
-    return {};
+  if (data.sink_name == "llvm-profile") {
+    strncpy(filename, name, ZX_MAX_NAME_LEN);
+  } else {
+    snprintf(filename, sizeof(filename), "%s.%" PRIu64, data.sink_name.c_str(), info.koid);
   }
-  // Strip any leading slashes (including a sequence of slashes) so the dump
-  // file path is a relative to directory that contains the summary file.
-  size_t i = strspn(path, "/");
-  auto dump_file = JoinPath(&path[i], JoinPath(data.sink_name, filename));
+  fbl::String dump_file = JoinPath(data.sink_name, filename);
 
-  auto* buf = reinterpret_cast<uint8_t*>(mapper.start());
-  ssize_t count = size;
-  while (count > 0) {
-    ssize_t len = write(fd.get(), buf, count);
-    if (len == -1) {
+  struct stat stat;
+  if (data.sink_name == "llvm-profile" && fstatat(sink_dir_fd.get(), filename, &stat, 0) != -1) {
+    fbl::unique_fd fd{openat(sink_dir_fd.get(), filename, O_RDWR | O_EXCL, 0666)};
+    if (!fd) {
+      fprintf(stderr, "FAILURE: Cannot open data-sink file \"%s\": %s\n", dump_file.c_str(),
+              strerror(errno));
+      return {};
+    }
+
+    auto* dst = new uint8_t[stat.st_size];
+    auto delete_data = fbl::MakeAutoCall([dst] { delete[] dst; });
+    if (!ReadFile(fd, dst, stat.st_size)) {
+      fprintf(stderr, "FAILURE: Cannot read data from \"%s\": %s\n", dump_file.c_str(),
+              strerror(errno));
+      return {};
+    }
+
+    // Ensure that profiles are structuraly compatible.
+    auto* src = reinterpret_cast<uint8_t*>(mapper.start());
+    if (!ProfilesCompatible(src, dst, size)) {
+      fprintf(stderr, "FAILURE: Unable to merge profile data: %s\n",
+              "source profile file is not compatible");
+      return {};
+    }
+
+    // Write the merged profile.
+    if (!WriteFile(fd, MergeProfiles(src, dst, size), size)) {
       fprintf(stderr, "FAILURE: Cannot write data to \"%s\": %s\n", dump_file.c_str(),
               strerror(errno));
       return {};
     }
-    count -= len;
-    buf += len;
+  } else {
+    fbl::unique_fd fd{openat(sink_dir_fd.get(), filename, O_WRONLY | O_CREAT | O_EXCL, 0666)};
+    if (!fd) {
+      fprintf(stderr, "FAILURE: Cannot open data-sink file \"%s\": %s\n", dump_file.c_str(),
+              strerror(errno));
+      return {};
+    }
+
+    if (!WriteFile(fd, reinterpret_cast<uint8_t*>(mapper.start()), size)) {
+      fprintf(stderr, "FAILURE: Cannot write data to \"%s\": %s\n", dump_file.c_str(),
+              strerror(errno));
+      return {};
+    }
   }
 
   return DumpFile{name, dump_file.c_str()};
@@ -460,7 +518,7 @@ std::unique_ptr<Result> RunTest(const char* argv[], const char* output_dir,
 
   fbl::unique_fd data_sink_dir_fd{open(output_dir, O_RDONLY | O_DIRECTORY)};
   if (!data_sink_dir_fd) {
-    printf("FAILURE: Could not open output directory %s: %s\n", output_dir, strerror(errno));
+    printf("FAILURE: Could not open output directory %s: %s\n", "/tmp", strerror(errno));
     return result;
   }
 

@@ -77,6 +77,14 @@ static fbl::String PublishDataHelperBin() {
   return JoinPath(PublishDataHelperDir(), "publish-data-helper");
 }
 
+static fbl::String ProfileHelperDir() {
+  return JoinPath(packaged_script_dir(), "profile");
+}
+
+static fbl::String ProfileHelperBin() {
+  return JoinPath(ProfileHelperDir(), "profile-helper");
+}
+
 bool RunTestDontPublishData() {
   BEGIN_TEST;
 
@@ -166,7 +174,7 @@ bool RunAllTestsPublishData() {
 
   fbl::String test_data_sink_rel_path;
   ASSERT_TRUE(
-      GetOutputFileRelPath(output_dir, JoinPath(test_name, "test"), &test_data_sink_rel_path));
+      GetOutputFileRelPath(output_dir, "test", &test_data_sink_rel_path));
 
   fbl::StringBuffer<1024> expected_data_sink_buf;
   expected_data_sink_buf.AppendPrintf(
@@ -176,7 +184,7 @@ bool RunAllTestsPublishData() {
       "            \"file\": \"%s\"\n"
       "          }\n"
       "        ]",
-      test_data_sink_rel_path.c_str() + 1);  // +1 to discard the leading slash.
+      test_data_sink_rel_path.c_str());
 
   // Extract the actual output.
   const fbl::String output_path = JoinPath(output_dir, "summary.json");
@@ -189,6 +197,42 @@ bool RunAllTestsPublishData() {
 
   EXPECT_TRUE(std::regex_search(buf, expected_output_regex));
   EXPECT_NONNULL(strstr(buf, expected_data_sink_buf.c_str()));
+
+  END_TEST;
+}
+
+bool RunProfileMergeData() {
+  BEGIN_TEST;
+
+  ScopedTestDir test_dir;
+  fbl::String test_name = ProfileHelperBin();
+  int num_failed = 0;
+  fbl::Vector<std::unique_ptr<Result>> results;
+  const signed char verbosity = 77;
+  const fbl::String output_dir = JoinPath(test_dir.path(), "output");
+  const char output_file_base_name[] = "output.txt";
+  ASSERT_EQ(0, MkDirAll(output_dir));
+
+  // Run the test for the first time.
+  EXPECT_TRUE(RunTests({test_name}, {}, 1, 0, output_dir.c_str(), output_file_base_name, verbosity,
+                       &num_failed, &results));
+  EXPECT_EQ(0, num_failed);
+  EXPECT_EQ(1, results.size());
+  EXPECT_LE(1, results[0]->data_sinks.size());
+  EXPECT_TRUE(results[0]->data_sinks.find("llvm-profile") != results[0]->data_sinks.end());
+  EXPECT_EQ(1, results[0]->data_sinks["llvm-profile"].size());
+
+  // Run the test for the second time.
+  EXPECT_TRUE(RunTests({test_name}, {}, 1, 0, output_dir.c_str(), output_file_base_name, verbosity,
+                       &num_failed, &results));
+  EXPECT_EQ(0, num_failed);
+  EXPECT_EQ(2, results.size());
+  EXPECT_LE(1, results[1]->data_sinks.size());
+  EXPECT_TRUE(results[1]->data_sinks.find("llvm-profile") != results[1]->data_sinks.end());
+  EXPECT_EQ(1, results[1]->data_sinks["llvm-profile"].size());
+
+  // Check that the data was merged (i.e. they're the same).
+  EXPECT_TRUE(results[0]->data_sinks["llvm-profile"][0].file == results[1]->data_sinks["llvm-profile"][0].file);
 
   END_TEST;
 }
@@ -243,6 +287,7 @@ RUN_TEST(RunTestDontPublishData)
 RUN_TEST_MEDIUM(RunTestsPublishData)
 RUN_TEST_MEDIUM(RunDuplicateTestsPublishData)
 RUN_TEST_MEDIUM(RunAllTestsPublishData)
+RUN_TEST_MEDIUM(RunProfileMergeData)
 RUN_TEST_MEDIUM(RunTestRootDir)
 END_TEST_CASE(RunTests)
 

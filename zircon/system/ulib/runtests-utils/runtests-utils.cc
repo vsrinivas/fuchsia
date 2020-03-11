@@ -302,7 +302,6 @@ bool RunTests(const fbl::Vector<fbl::String>& test_paths, const fbl::Vector<fbl:
   std::map<fbl::String, int> test_name_to_count;
   for (int i = 1; i <= repeat; ++i) {
     for (const fbl::String& test_path : test_paths) {
-      fbl::String output_dir_for_test_str;
       fbl::String output_filename_str;
       fbl::String output_test_name;
       if (test_name_to_count.find(test_path) != test_name_to_count.end()) {
@@ -318,7 +317,7 @@ bool RunTests(const fbl::Vector<fbl::String>& test_paths, const fbl::Vector<fbl:
       if (output_dir != nullptr) {
         // If output_dir was specified, ask |RunTest| to redirect stdout/stderr
         // to a file whose name is based on the test name.
-        output_dir_for_test_str = runtests::JoinPath(output_dir, output_test_name);
+        fbl::String output_dir_for_test_str = runtests::JoinPath(output_dir, output_test_name);
         const int error = runtests::MkDirAll(output_dir_for_test_str);
         if (error) {
           fprintf(stderr, "Error: Could not create output directory %s: %s\n",
@@ -344,8 +343,6 @@ bool RunTests(const fbl::Vector<fbl::String>& test_paths, const fbl::Vector<fbl:
         argv.push_back(test_arg->c_str());
       }
       argv.push_back(nullptr);  // Important, since there's no argc.
-      const char* output_dir_for_test =
-          output_dir_for_test_str.empty() ? nullptr : output_dir_for_test_str.c_str();
 
       const char* output_filename = nullptr;
       if (!output_filename_str.empty()) {
@@ -367,7 +364,7 @@ bool RunTests(const fbl::Vector<fbl::String>& test_paths, const fbl::Vector<fbl:
           "RUNNING TEST: %s\n\n",
           output_test_name.c_str());
       fflush(stdout);
-      std::unique_ptr<Result> result = RunTest(argv.data(), output_dir_for_test, output_filename,
+      std::unique_ptr<Result> result = RunTest(argv.data(), output_dir, output_filename,
                                                output_test_name.c_str(), timeout_msec);
       if (result->launch_status != SUCCESS) {
         *failed_count += 1;

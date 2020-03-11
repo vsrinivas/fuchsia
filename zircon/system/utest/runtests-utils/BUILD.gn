@@ -38,6 +38,8 @@ test("runtests-utils") {
   ]
   data_deps = [
     ":packaged-publish-data-helper",
+    ":packaged-profile-helper",
+    ":packaged-raw-profile",
     ":test-data",
     ":test-scripts",
   ]
@@ -64,6 +66,24 @@ executable("publish-data-helper") {
   # TODO: Don't instrument the helper until we have a way to route sinks
   # from the inner runtests instance to the outer one so they make it
   # into summary.json.
+}
+
+executable("profile-helper") {
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+
+  # TODO(44278): restore to true when properly convert to GN idioms.
+  testonly = false
+  visibility = [ ":*" ]
+  sources = [ "helper/profile-helper.cc" ]
+
+  deps = [
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+  ]
 }
 
 template("resource") {
@@ -95,6 +115,21 @@ resource("packaged-publish-data-helper") {
   deps = [ ":publish-data-helper" ]
   dest = "test/sys/runtests-utils-testdata/publish-data/publish-data-helper"
   source = "$root_out_dir/publish-data-helper"
+}
+
+resource("packaged-profile-helper") {
+  # TODO(44278): restore to true when properly convert to GN idioms.
+  testonly = false
+  deps = [ ":profile-helper" ]
+  dest = "test/sys/runtests-utils-testdata/profile/profile-helper"
+  source = "$root_out_dir/profile-helper"
+}
+
+resource("packaged-raw-profile") {
+  # TODO(44278): restore to true when properly convert to GN idioms.
+  testonly = false
+  dest = "test/sys/runtests-utils-testdata/profile/15822697145192797690.profraw"
+  source = "helper/15822697145192797690.profraw"
 }
 
 resource("test-data") {
@@ -265,4 +300,8 @@ migrated_manifest("runtests-utils-manifest") {
 
 migrated_manifest("publish-data-helper-manifest") {
   deps = [ ":publish-data-helper" ]
+}
+
+migrated_manifest("profile-helper-manifest") {
+  deps = [ ":profile-helper" ]
 }

@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx/public/gn/toolchain/clang.gni")
+
 zx_library("runtests-utils") {
   testonly = true
   host = true
@@ -30,6 +32,7 @@ zx_library("runtests-utils") {
     sources += [
       "fuchsia-run-test.cc",
       "log-exporter.cc",
+      "profile.cc",
       "service-proxy-dir.cc",
     ]
     public_deps += [
@@ -61,6 +64,25 @@ zx_library("runtests-utils") {
       "$zx/system/ulib/zircon",
       "$zx/system/ulib/zx",
     ]
+    if (is_gcc) {
+      if (clang_tool_dir == "") {
+        clang_exec = "clang"
+      } else {
+        clang_exec = rebase_path("${clang_tool_dir}/clang")
+      }
+      resource_dir = rebase_path(exec_script("/usr/bin/env",
+                                             [
+                                               clang_exec,
+                                               "-print-resource-dir",
+                                             ],
+                                             "trim string"),
+                                 "",
+                                 root_build_dir)
+      write_file("$target_gen_dir/profile/InstrProfData.inc",
+                 [ "#include \"$resource_dir/include/profile/InstrProfData.inc\"" ],
+                 "list lines")
+      include_dirs = [ target_gen_dir ]
+    }
   } else {
     sources += [ "posix-run-test.cc" ]
   }
