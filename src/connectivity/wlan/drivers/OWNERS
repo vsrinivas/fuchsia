@@ -1,9 +1,13 @@
 eyw@google.com
-gbonik@google.com
 kiettran@google.com
-porce@google.com
 sheu@google.com
 yjlou@google.com
+joshconner@google.com
+karthikrish@google.com
+zhiyichen@google.com
+bjoernj@google.com
 
 # Driver Framework Team for refactoring.
 include /src/devices/OWNERS
+
+# COMPONENT: WLAN
