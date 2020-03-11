@@ -13,12 +13,17 @@ void platform_graceful_halt_helper(platform_halt_action action, zircon_crash_rea
   // Migrate to the boot CPU before shutting down the secondary CPUs.  Note that
   // this action also hard-pins our thread to the boot CPU, so we don't need to
   // worry about migration after this.
+  printf("platform_graceful_halt_helper: Migrating thread to boot CPU.\n");
   Thread::Current::MigrateToCpu(BOOT_CPU_ID);
+
+  printf("platform_graceful_halt_helper: Halting secondary CPUs.\n");
   platform_halt_secondary_cpus();
 
   // Delay shutdown of debuglog to ensure log messages emitted by above calls will be written.
+  printf("platform_graceful_halt_helper: Shutting down dlog.\n");
   dlog_shutdown();
 
+  printf("platform_graceful_halt_helper: Calling platform_halt.\n");
   platform_halt(action, reason);
   panic("ERROR: failed to halt the platform\n");
 }
