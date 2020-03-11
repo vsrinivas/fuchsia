@@ -14,6 +14,13 @@ group("config") {
   ]
 }
 
+group("config_no_fuchsia_udp") {
+  public_deps = [
+    "//garnet/packages/config:network",
+    "//src/connectivity/network/mdns/service:mdns_config",
+  ]
+}
+
 group("utils") {
   testonly = true
   public_deps = [ "//src/connectivity/network/mdns/util:mdns-util" ]
