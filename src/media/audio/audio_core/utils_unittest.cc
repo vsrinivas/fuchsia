@@ -52,6 +52,10 @@ class FakeProfileProvider : public fuchsia::scheduler::ProfileProvider {
   void GetDeadlineProfile(uint64_t capacity, uint64_t deadline, uint64_t period, std::string name,
                           GetProfileCallback callback) override {}
 
+  // |fuchsia::scheduler::ProfileProvider|
+  void GetCpuAffinityProfile(fuchsia::scheduler::CpuSet cpu_mask,
+                             GetProfileCallback callback) override {}
+
   std::unordered_map<uint32_t, zx::profile> profiles_by_priority_;
   fidl::BindingSet<fuchsia::scheduler::ProfileProvider> bindings_;
 };

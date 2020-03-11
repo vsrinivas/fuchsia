@@ -94,4 +94,20 @@ TEST(Profile, GetDeadlineProfile) {
   CheckBasicDetails(profile);
 }
 
+// Test getting a profile via the GetCpuAffinityProfile FIDL method.
+TEST(Profile, GetCpuAffinityProfile) {
+  zx::channel provider;
+  GetProfileProvider(&provider);
+  ASSERT_FALSE(CURRENT_TEST_HAS_FAILURES());
+
+  fuchsia_scheduler_CpuSet cpu_set = {};
+  cpu_set.mask[0] = 1;
+  zx::profile profile;
+  zx_status_t server_status;
+  ASSERT_OK(fuchsia_scheduler_ProfileProviderGetCpuAffinityProfile(
+      provider.get(), &cpu_set, &server_status, profile.reset_and_get_address()));
+
+  CheckBasicDetails(profile);
+}
+
 }  // namespace

@@ -49,9 +49,27 @@ zx_status_t GetDeadlineProfileSimple(void* ctx, uint64_t capacity, uint64_t rela
       txn, status, status == ZX_OK ? profile.release() : ZX_HANDLE_INVALID);
 }
 
+zx_status_t GetCpuAffinityProfileSimple(void* ctx, const fuchsia_scheduler_CpuSet* cpu_mask,
+                                        fidl_txn_t* txn) {
+  auto root_job = static_cast<zx_handle_t>(reinterpret_cast<uintptr_t>(ctx));
+
+  zx_profile_info_t info = {};
+  info.flags = ZX_PROFILE_INFO_FLAG_CPU_MASK;
+
+  static_assert(sizeof(info.cpu_affinity_mask.mask) == sizeof(cpu_mask->mask));
+  static_assert(countof(info.cpu_affinity_mask.mask) == countof(cpu_mask->mask));
+  memcpy(info.cpu_affinity_mask.mask, cpu_mask->mask, sizeof(cpu_mask->mask));
+
+  zx::profile profile;
+  zx_status_t status = zx_profile_create(root_job, 0u, &info, profile.reset_and_get_address());
+  return fuchsia_scheduler_ProfileProviderGetCpuAffinityProfile_reply(
+      txn, status, status == ZX_OK ? profile.release() : ZX_HANDLE_INVALID);
+}
+
 fuchsia_scheduler_ProfileProvider_ops ops = {
     .GetProfile = GetProfileSimple,
     .GetDeadlineProfile = GetDeadlineProfileSimple,
+    .GetCpuAffinityProfile = GetCpuAffinityProfileSimple,
 };
 
 constexpr const char* profile_svc_names[] = {

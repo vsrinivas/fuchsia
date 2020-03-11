@@ -6,6 +6,11 @@ library fuchsia.scheduler;
 
 using zx;
 
+// Corresponds to zx_cpu_set_t.
+struct CpuSet {
+    array<uint64>:8 mask;
+};
+
 [Discoverable, Layout = "Simple"]
 protocol ProfileProvider {
     // Obtain a profile handle.
@@ -14,4 +19,7 @@ protocol ProfileProvider {
     // Obtain a deadline profile handle.
     GetDeadlineProfile(uint64 capacity, uint64 deadline, uint64 period, string:64 name)
         -> (zx.status status, handle<profile>? profile);
+
+    // Obtain a handle for a profile that sets CPU affinity.
+    GetCpuAffinityProfile(CpuSet cpu_mask) -> (zx.status status, handle<profile>? profile);
 };
