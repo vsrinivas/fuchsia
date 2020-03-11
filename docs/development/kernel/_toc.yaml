@@ -4,6 +4,14 @@
 toc:
 - title: "Getting started"
   path: /docs/development/kernel/getting_started.md
+- title: "Manage memory"
+  section:
+  - include: /docs/development/kernel/memory/_toc.yaml
+- title: "Manage threads"
+  section:
+  - include: /docs/development/kernel/threads/_toc.yaml
+- title: "Object usage analysis tools"
+  path: /docs/development/kernel/handles.md
 - title: "Cross translation unit static analysis in Zircon"
   path: /docs/development/kernel/ctu_analysis.md
 - title: "Notes on kernel development"
