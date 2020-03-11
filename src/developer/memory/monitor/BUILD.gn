@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/config.gni")
 import("//build/package.gni")
 import("//third_party/cobalt/metrics_registry.gni")
 
@@ -65,10 +64,7 @@ executable("bin") {
 
 package("monitor") {
   package_name = "memory_monitor"
-  deps = [
-    ":bin",
-    ":config",
-  ]
+  deps = [ ":bin" ]
   binary = "memory_monitor"
   meta = [
     {
@@ -76,9 +72,4 @@ package("monitor") {
       dest = "memory_monitor.cmx"
     },
   ]
-}
-
-config_data("config") {
-  for_pkg = "sysmgr"
-  sources = [ "memory_monitor.config" ]
 }
