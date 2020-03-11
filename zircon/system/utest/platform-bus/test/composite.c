@@ -28,25 +28,25 @@
 
 #define DRIVER_NAME "test-composite"
 
-enum Components_1 {
-  COMPONENT_PDEV_1, /* Should be 1st component */
-  COMPONENT_GPIO_1,
-  COMPONENT_CLOCK_1,
-  COMPONENT_I2C_1,
-  COMPONENT_POWER_1,
-  COMPONENT_CHILD4_1,
-  COMPONENT_CODEC_1,
-  COMPONENT_COUNT_1,
+enum Fragments_1 {
+  FRAGMENT_PDEV_1, /* Should be 1st fragment */
+  FRAGMENT_GPIO_1,
+  FRAGMENT_CLOCK_1,
+  FRAGMENT_I2C_1,
+  FRAGMENT_POWER_1,
+  FRAGMENT_CHILD4_1,
+  FRAGMENT_CODEC_1,
+  FRAGMENT_COUNT_1,
 };
 
-enum Components_2 {
-  COMPONENT_PDEV_2, /* Should be 1st component */
-  COMPONENT_CLOCK_2,
-  COMPONENT_POWER_2,
-  COMPONENT_CHILD4_2,
-  COMPONENT_SPI_2,
-  COMPONENT_PWM_2,
-  COMPONENT_COUNT_2,
+enum Fragments_2 {
+  FRAGMENT_PDEV_2, /* Should be 1st fragment */
+  FRAGMENT_CLOCK_2,
+  FRAGMENT_POWER_2,
+  FRAGMENT_CHILD4_2,
+  FRAGMENT_SPI_2,
+  FRAGMENT_PWM_2,
+  FRAGMENT_COUNT_2,
 };
 
 typedef struct {
@@ -438,18 +438,18 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
     return status;
   }
 
-  uint32_t count = composite_get_component_count(&composite);
+  uint32_t count = composite_get_fragment_count(&composite);
   size_t actual;
-  zx_device_t* components[count];
-  composite_get_components(&composite, components, count, &actual);
+  zx_device_t* fragments[count];
+  composite_get_fragments(&composite, fragments, count, &actual);
   if (count != actual) {
-    zxlogf(ERROR, "%s: got the wrong number of components (%u, %zu)\n", DRIVER_NAME, count, actual);
+    zxlogf(ERROR, "%s: got the wrong number of fragments (%u, %zu)\n", DRIVER_NAME, count, actual);
     return ZX_ERR_BAD_STATE;
   }
 
   pdev_protocol_t pdev;
 
-  status = device_get_protocol(components[COMPONENT_PDEV_1], ZX_PROTOCOL_PDEV, &pdev);
+  status = device_get_protocol(fragments[FRAGMENT_PDEV_1], ZX_PROTOCOL_PDEV, &pdev);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_PDEV\n", DRIVER_NAME);
     return status;
@@ -457,12 +457,12 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
 
   size_t size;
   composite_test_metadata metadata;
-  status = device_get_metadata_size(components[COMPONENT_PDEV_1], DEVICE_METADATA_PRIVATE, &size);
+  status = device_get_metadata_size(fragments[FRAGMENT_PDEV_1], DEVICE_METADATA_PRIVATE, &size);
   if (status != ZX_OK || size != sizeof(composite_test_metadata)) {
     zxlogf(ERROR, "%s: device_get_metadata_size failed: %d\n", DRIVER_NAME, status);
     return ZX_ERR_INTERNAL;
   }
-  status = device_get_metadata(components[COMPONENT_PDEV_1], DEVICE_METADATA_PRIVATE, &metadata,
+  status = device_get_metadata(fragments[FRAGMENT_PDEV_1], DEVICE_METADATA_PRIVATE, &metadata,
                                sizeof(metadata), &size);
   if (status != ZX_OK || size != sizeof(composite_test_metadata)) {
     zxlogf(ERROR, "%s: device_get_metadata failed: %d\n", DRIVER_NAME, status);
@@ -484,38 +484,38 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
   pwm_protocol_t pwm;
 
   if (metadata.composite_device_id == PDEV_DID_TEST_COMPOSITE_1) {
-    if (count != COMPONENT_COUNT_1) {
-      zxlogf(ERROR, "%s: got the wrong number of components (%u, %d)\n", DRIVER_NAME, count,
-             COMPONENT_COUNT_1);
+    if (count != FRAGMENT_COUNT_1) {
+      zxlogf(ERROR, "%s: got the wrong number of fragments (%u, %d)\n", DRIVER_NAME, count,
+             FRAGMENT_COUNT_1);
       return ZX_ERR_BAD_STATE;
     }
 
-    status = device_get_protocol(components[COMPONENT_CLOCK_1], ZX_PROTOCOL_CLOCK, &clock);
+    status = device_get_protocol(fragments[FRAGMENT_CLOCK_1], ZX_PROTOCOL_CLOCK, &clock);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_CLOCK\n", DRIVER_NAME);
       return status;
     }
-    status = device_get_protocol(components[COMPONENT_POWER_1], ZX_PROTOCOL_POWER, &power);
+    status = device_get_protocol(fragments[FRAGMENT_POWER_1], ZX_PROTOCOL_POWER, &power);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_POWER\n", DRIVER_NAME);
       return status;
     }
-    status = device_get_protocol(components[COMPONENT_CHILD4_1], ZX_PROTOCOL_CLOCK, &child4);
+    status = device_get_protocol(fragments[FRAGMENT_CHILD4_1], ZX_PROTOCOL_CLOCK, &child4);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: could not get protocol from child4\n", DRIVER_NAME);
       return status;
     }
-    status = device_get_protocol(components[COMPONENT_GPIO_1], ZX_PROTOCOL_GPIO, &gpio);
+    status = device_get_protocol(fragments[FRAGMENT_GPIO_1], ZX_PROTOCOL_GPIO, &gpio);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_GPIO\n", DRIVER_NAME);
       return status;
     }
-    status = device_get_protocol(components[COMPONENT_I2C_1], ZX_PROTOCOL_I2C, &i2c);
+    status = device_get_protocol(fragments[FRAGMENT_I2C_1], ZX_PROTOCOL_I2C, &i2c);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_I2C\n", DRIVER_NAME);
       return status;
     }
-    status = device_get_protocol(components[COMPONENT_CODEC_1], ZX_PROTOCOL_CODEC, &codec);
+    status = device_get_protocol(fragments[FRAGMENT_CODEC_1], ZX_PROTOCOL_CODEC, &codec);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_CODEC\n", DRIVER_NAME);
       return status;
@@ -541,33 +541,33 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
       return status;
     }
   } else if (metadata.composite_device_id == PDEV_DID_TEST_COMPOSITE_2) {
-    if (count != COMPONENT_COUNT_2) {
+    if (count != FRAGMENT_COUNT_2) {
       zxlogf(ERROR, "%s: got the wrong number of components (%u, %d)\n", DRIVER_NAME, count,
-             COMPONENT_COUNT_2);
+             FRAGMENT_COUNT_2);
       return ZX_ERR_BAD_STATE;
     }
 
-    status = device_get_protocol(components[COMPONENT_CLOCK_2], ZX_PROTOCOL_CLOCK, &clock);
+    status = device_get_protocol(fragments[FRAGMENT_CLOCK_2], ZX_PROTOCOL_CLOCK, &clock);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_CLOCK\n", DRIVER_NAME);
       return status;
     }
-    status = device_get_protocol(components[COMPONENT_POWER_2], ZX_PROTOCOL_POWER, &power);
+    status = device_get_protocol(fragments[FRAGMENT_POWER_2], ZX_PROTOCOL_POWER, &power);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_POWER\n", DRIVER_NAME);
       return status;
     }
-    status = device_get_protocol(components[COMPONENT_CHILD4_2], ZX_PROTOCOL_CLOCK, &child4);
+    status = device_get_protocol(fragments[FRAGMENT_CHILD4_2], ZX_PROTOCOL_CLOCK, &child4);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: could not get protocol from child4\n", DRIVER_NAME);
       return status;
     }
-    status = device_get_protocol(components[COMPONENT_SPI_2], ZX_PROTOCOL_SPI, &spi);
+    status = device_get_protocol(fragments[FRAGMENT_SPI_2], ZX_PROTOCOL_SPI, &spi);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_SPI\n", DRIVER_NAME);
       return status;
     }
-    status = device_get_protocol(components[COMPONENT_PWM_2], ZX_PROTOCOL_PWM, &pwm);
+    status = device_get_protocol(fragments[FRAGMENT_PWM_2], ZX_PROTOCOL_PWM, &pwm);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_PWM\n", DRIVER_NAME);
       return status;
@@ -611,7 +611,7 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
     return status;
   }
 
-  // Make sure we can read metadata added to a component.
+  // Make sure we can read metadata added to a fragment.
   status = device_get_metadata_size(test->zxdev, DEVICE_METADATA_PRIVATE, &size);
   if (status != ZX_OK || size != sizeof(composite_test_metadata)) {
     zxlogf(ERROR, "%s: device_get_metadata_size failed: %d\n", DRIVER_NAME, status);

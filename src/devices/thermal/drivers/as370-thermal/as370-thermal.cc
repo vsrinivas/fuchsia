@@ -20,10 +20,10 @@
 namespace {
 
 enum {
-  COMPONENT_PDEV,
-  COMPONENT_CPU_CLOCK,
-  COMPONENT_CPU_POWER,
-  COMPONENT_COUNT,
+  FRAGMENT_PDEV,
+  FRAGMENT_CPU_CLOCK,
+  FRAGMENT_CPU_POWER,
+  FRAGMENT_COUNT,
 };
 
 constexpr uint32_t kEocLoopTimeout = 20000;
@@ -47,27 +47,27 @@ zx_status_t As370Thermal::Create(void* ctx, zx_device_t* parent) {
     return ZX_ERR_NO_RESOURCES;
   }
 
-  zx_device_t* components[COMPONENT_COUNT] = {};
-  size_t component_count = 0;
-  composite.GetComponents(components, COMPONENT_COUNT, &component_count);
-  if (component_count < COMPONENT_COUNT) {
-    zxlogf(ERROR, "%s: Failed to get components\n", __func__);
+  zx_device_t* fragments[FRAGMENT_COUNT] = {};
+  size_t fragment_count = 0;
+  composite.GetFragments(fragments, FRAGMENT_COUNT, &fragment_count);
+  if (fragment_count < FRAGMENT_COUNT) {
+    zxlogf(ERROR, "%s: Failed to get fragments\n", __func__);
     return ZX_ERR_NO_RESOURCES;
   }
 
-  ddk::PDev pdev(components[COMPONENT_PDEV]);
+  ddk::PDev pdev(fragments[FRAGMENT_PDEV]);
   if (!pdev.is_valid()) {
     zxlogf(ERROR, "%s: Failed to get platform device protocol\n", __func__);
     return ZX_ERR_NO_RESOURCES;
   }
 
-  ddk::ClockProtocolClient cpu_clock(components[COMPONENT_CPU_CLOCK]);
+  ddk::ClockProtocolClient cpu_clock(fragments[FRAGMENT_CPU_CLOCK]);
   if (!cpu_clock.is_valid()) {
     zxlogf(ERROR, "%s: Failed to get clock protocol\n", __func__);
     return ZX_ERR_NO_RESOURCES;
   }
 
-  ddk::PowerProtocolClient cpu_power(components[COMPONENT_CPU_POWER]);
+  ddk::PowerProtocolClient cpu_power(fragments[FRAGMENT_CPU_POWER]);
   if (!cpu_clock.is_valid()) {
     zxlogf(ERROR, "%s: Failed to get power protocol\n", __func__);
     return ZX_ERR_NO_RESOURCES;

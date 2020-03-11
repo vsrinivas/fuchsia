@@ -104,7 +104,7 @@ zx_status_t GpioTest::Init() {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  gpio_count_ = composite.GetComponentCount();
+  gpio_count_ = composite.GetFragmentCount();
 
   fbl::AllocChecker ac;
   gpios_ = fbl::Array(new (&ac) ddk::GpioProtocolClient[gpio_count_], gpio_count_);
@@ -112,15 +112,15 @@ zx_status_t GpioTest::Init() {
     return ZX_ERR_NO_MEMORY;
   }
 
-  zx_device_t* components[gpio_count_];
+  zx_device_t* fragments[gpio_count_];
   size_t actual;
-  composite.GetComponents(components, gpio_count_, &actual);
+  composite.GetFragments(fragments, gpio_count_, &actual);
   if (actual != gpio_count_) {
     return ZX_ERR_INTERNAL;
   }
 
   for (uint32_t i = 0; i < gpio_count_; i++) {
-    auto status = device_get_protocol(components[i], ZX_PROTOCOL_GPIO, &gpios_[i]);
+    auto status = device_get_protocol(fragments[i], ZX_PROTOCOL_GPIO, &gpios_[i]);
     if (status != ZX_OK) {
       return status;
     }

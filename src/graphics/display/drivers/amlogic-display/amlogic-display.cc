@@ -89,7 +89,7 @@ zx_status_t AmlogicDisplay::DisplayInit() {
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
-  status = vpu_->Init(components_[COMPONENT_PDEV]);
+  status = vpu_->Init(fragments_[FRAGMENT_PDEV]);
   if (status != ZX_OK) {
     DISP_ERROR("Could not initialize VPU object\n");
     return status;
@@ -143,7 +143,7 @@ zx_status_t AmlogicDisplay::DisplayInit() {
     if (!ac.check()) {
       return ZX_ERR_NO_MEMORY;
     }
-    status = clock_->Init(components_[COMPONENT_PDEV]);
+    status = clock_->Init(fragments_[FRAGMENT_PDEV]);
     if (status != ZX_OK) {
       DISP_ERROR("Could not initialize Clock object\n");
       return status;
@@ -158,8 +158,8 @@ zx_status_t AmlogicDisplay::DisplayInit() {
 
     // Program and Enable DSI Host Interface
     dsi_host_ = fbl::make_unique_checked<amlogic_display::AmlDsiHost>(
-        &ac, components_[COMPONENT_PDEV], components_[COMPONENT_DSI],
-        components_[COMPONENT_LCD_GPIO], clock_->GetBitrate(), panel_type_);
+        &ac, fragments_[FRAGMENT_PDEV], fragments_[FRAGMENT_DSI], fragments_[FRAGMENT_LCD_GPIO],
+        clock_->GetBitrate(), panel_type_);
     if (!ac.check()) {
       return ZX_ERR_NO_MEMORY;
     }
@@ -182,7 +182,7 @@ zx_status_t AmlogicDisplay::DisplayInit() {
   }
 
   // Initialize osd object
-  status = osd_->Init(components_[COMPONENT_PDEV]);
+  status = osd_->Init(fragments_[FRAGMENT_PDEV]);
   if (status != ZX_OK) {
     DISP_ERROR("Could not initialize OSD object\n");
     return status;
@@ -721,20 +721,20 @@ zx_status_t AmlogicDisplay::Bind() {
   width_ = display_info.width;
   height_ = display_info.height;
 
-  composite_get_components(&composite, components_, fbl::count_of(components_), &actual);
-  if (actual != fbl::count_of(components_)) {
-    DISP_ERROR("could not get components\n");
+  composite_get_fragments(&composite, fragments_, fbl::count_of(fragments_), &actual);
+  if (actual != fbl::count_of(fragments_)) {
+    DISP_ERROR("could not get fragments\n");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  status = device_get_protocol(components_[COMPONENT_PDEV], ZX_PROTOCOL_PDEV, &pdev_);
+  status = device_get_protocol(fragments_[FRAGMENT_PDEV], ZX_PROTOCOL_PDEV, &pdev_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not get PDEV protocol\n");
     return status;
   }
 
   dsi_impl_protocol_t dsi;
-  status = device_get_protocol(components_[COMPONENT_DSI], ZX_PROTOCOL_DSI_IMPL, &dsi);
+  status = device_get_protocol(fragments_[FRAGMENT_DSI], ZX_PROTOCOL_DSI_IMPL, &dsi);
   if (status != ZX_OK) {
     DISP_ERROR("Could not get DSI_IMPL protocol\n");
     return status;
@@ -748,13 +748,13 @@ zx_status_t AmlogicDisplay::Bind() {
     return status;
   }
 
-  status = device_get_protocol(components_[COMPONENT_SYSMEM], ZX_PROTOCOL_SYSMEM, &sysmem_);
+  status = device_get_protocol(fragments_[FRAGMENT_SYSMEM], ZX_PROTOCOL_SYSMEM, &sysmem_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not get Display SYSMEM protocol\n");
     return status;
   }
 
-  status = device_get_protocol(components_[COMPONENT_CANVAS], ZX_PROTOCOL_AMLOGIC_CANVAS, &canvas_);
+  status = device_get_protocol(fragments_[FRAGMENT_CANVAS], ZX_PROTOCOL_AMLOGIC_CANVAS, &canvas_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not obtain CANVAS protocol\n");
     return status;

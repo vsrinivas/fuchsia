@@ -18,9 +18,9 @@
 
 namespace {
 enum {
-  kI2cComponent,
-  kTouchGpioComponent,
-  kComponentCount,
+  kI2cFragment,
+  kTouchGpioFragment,
+  kFragmentCount,
 };
 }  // namespace
 
@@ -250,23 +250,23 @@ zx_status_t Cy8cmbr3108::InitializeProtocols() {
     return status;
   }
 
-  zx_device_t* components[kComponentCount];
+  zx_device_t* fragments[kFragmentCount];
   size_t actual;
-  composite_get_components(&composite, components, countof(components), &actual);
-  if (actual != kComponentCount) {
-    zxlogf(ERROR, "%s: Invalid component count (need %d, have %zu)", __func__, kComponentCount,
+  composite_get_fragments(&composite, fragments, countof(fragments), &actual);
+  if (actual != kFragmentCount) {
+    zxlogf(ERROR, "%s: Invalid fragment count (need %d, have %zu)", __func__, kFragmentCount,
            actual);
     return ZX_ERR_INTERNAL;
   }
 
   // Get I2C and GPIO protocol.
-  i2c_ = ddk::I2cProtocolClient(components[kI2cComponent]);
+  i2c_ = ddk::I2cProtocolClient(fragments[kI2cFragment]);
   if (!i2c_.is_valid()) {
     zxlogf(ERROR, "%s: ZX_PROTOCOL_I2C not found, err=%d\n", __func__, status);
     return status;
   }
 
-  touch_gpio_ = ddk::GpioProtocolClient(components[kTouchGpioComponent]);
+  touch_gpio_ = ddk::GpioProtocolClient(fragments[kTouchGpioFragment]);
   if (!touch_gpio_.is_valid()) {
     zxlogf(ERROR, "%s: ZX_PROTOCOL_GPIO not found, err=%d\n", __func__, status);
     return status;

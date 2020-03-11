@@ -62,13 +62,13 @@ zx_status_t As370::LightInit() {
       BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 0x29),
   };
 
-  static const device_component_part_t i2c_component[] = {
+  static const device_fragment_part_t i2c_fragment[] = {
       {countof(root_match), root_match},
       {countof(i2c_match), i2c_match},
   };
 
-  static const device_component_t components[] = {
-      {countof(i2c_component), i2c_component},
+  static const device_fragment_t fragments[] = {
+      {countof(i2c_fragment), i2c_fragment},
   };
 
   pbus_dev_t light_dev = {};
@@ -79,7 +79,7 @@ zx_status_t As370::LightInit() {
   light_dev.metadata_list = light_metadata;
   light_dev.metadata_count = countof(light_metadata);
 
-  status = pbus_.CompositeDeviceAdd(&light_dev, components, countof(components), UINT32_MAX);
+  status = pbus_.CompositeDeviceAdd(&light_dev, fragments, countof(fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd failed %d\n", __FUNCTION__, status);
     return status;

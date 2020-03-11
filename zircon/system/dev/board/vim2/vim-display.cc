@@ -85,22 +85,22 @@ static const zx_bind_inst_t canvas_match[] = {
 static const zx_bind_inst_t sysmem_match[] = {
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_SYSMEM),
 };
-static const device_component_part_t hpd_gpio_component[] = {
+static const device_fragment_part_t hpd_gpio_fragment[] = {
     {countof(root_match), root_match},
     {countof(hpd_gpio_match), hpd_gpio_match},
 };
-static const device_component_part_t canvas_component[] = {
+static const device_fragment_part_t canvas_fragment[] = {
     {countof(root_match), root_match},
     {countof(canvas_match), canvas_match},
 };
-static const device_component_part_t sysmem_component[] = {
+static const device_fragment_part_t sysmem_fragment[] = {
     {countof(root_match), root_match},
     {countof(sysmem_match), sysmem_match},
 };
-static const device_component_t components[] = {
-    {countof(hpd_gpio_component), hpd_gpio_component},
-    {countof(canvas_component), canvas_component},
-    {countof(sysmem_component), sysmem_component},
+static const device_fragment_t fragments[] = {
+    {countof(hpd_gpio_fragment), hpd_gpio_fragment},
+    {countof(canvas_fragment), canvas_fragment},
+    {countof(sysmem_fragment), sysmem_fragment},
 };
 
 zx_status_t Vim::DisplayInit() {
@@ -122,7 +122,7 @@ zx_status_t Vim::DisplayInit() {
     gpio_set_alt_function(&bus->gpio, S912_SPDIF_H4, S912_SPDIF_H4_OUT_FN);
 #endif
 
-  if ((status = pbus_.CompositeDeviceAdd(&display_dev, components, countof(components),
+  if ((status = pbus_.CompositeDeviceAdd(&display_dev, fragments, countof(fragments),
                                          UINT32_MAX)) != ZX_OK) {
     zxlogf(ERROR, "DisplayInit: pbus_device_add() failed for display: %d\n", status);
     return status;

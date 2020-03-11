@@ -195,28 +195,28 @@ static const zx_bind_inst_t camera_sensor_match[] = {
 static const zx_bind_inst_t amlogiccanvas_match[] = {
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_AMLOGIC_CANVAS),
 };
-static const device_component_part_t camera_sensor_component[] = {
+static const device_fragment_part_t camera_sensor_fragment[] = {
     {countof(root_match), root_match},
     {countof(camera_sensor_match), camera_sensor_match},
 };
-static const device_component_t isp_components[] = {
-    {countof(camera_sensor_component), camera_sensor_component},
+static const device_fragment_t isp_fragments[] = {
+    {countof(camera_sensor_fragment), camera_sensor_fragment},
 };
 
 // Compisite binding rules for GDC
-static const device_component_t gdc_components[] = {
-    {countof(camera_sensor_component), camera_sensor_component},
+static const device_fragment_t gdc_fragments[] = {
+    {countof(camera_sensor_fragment), camera_sensor_fragment},
 };
 
-static const device_component_part_t amlogiccanvas_component[] = {
+static const device_fragment_part_t amlogiccanvas_fragment[] = {
     {countof(root_match), root_match},
     {countof(amlogiccanvas_match), amlogiccanvas_match},
 };
 
 // Composite binding rules for GE2D
-static const device_component_t ge2d_components[] = {
-    {countof(camera_sensor_component), camera_sensor_component},
-    {countof(amlogiccanvas_component), amlogiccanvas_component},
+static const device_fragment_t ge2d_fragments[] = {
+    {countof(camera_sensor_fragment), camera_sensor_fragment},
+    {countof(amlogiccanvas_fragment), amlogiccanvas_fragment},
 };
 
 // Composite binding rules for IMX227 Sensor.
@@ -244,37 +244,37 @@ static const zx_bind_inst_t clk_sensor_match[] = {
 static const zx_bind_inst_t mipicsi_match[] = {
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_MIPI_CSI),
 };
-static const device_component_part_t i2c_component[] = {
+static const device_fragment_part_t i2c_fragment[] = {
     {countof(root_match), root_match},
     {countof(i2c_match), i2c_match},
 };
-static const device_component_part_t gpio_reset_component[] = {
+static const device_fragment_part_t gpio_reset_fragment[] = {
     {countof(root_match), root_match},
     {countof(gpio_reset_match), gpio_reset_match},
 };
-static const device_component_part_t gpio_vana_component[] = {
+static const device_fragment_part_t gpio_vana_fragment[] = {
     {countof(root_match), root_match},
     {countof(gpio_vana_match), gpio_vana_match},
 };
-static const device_component_part_t gpio_vdig_component[] = {
+static const device_fragment_part_t gpio_vdig_fragment[] = {
     {countof(root_match), root_match},
     {countof(gpio_vdig_match), gpio_vdig_match},
 };
-static const device_component_part_t clk_sensor_component[] = {
+static const device_fragment_part_t clk_sensor_fragment[] = {
     {countof(root_match), root_match},
     {countof(clk_sensor_match), clk_sensor_match},
 };
-static const device_component_part_t mipicsi_component[] = {
+static const device_fragment_part_t mipicsi_fragment[] = {
     {countof(root_match), root_match},
     {countof(mipicsi_match), mipicsi_match},
 };
-static const device_component_t imx227_sensor_components[] = {
-    {countof(mipicsi_component), mipicsi_component},
-    {countof(i2c_component), i2c_component},
-    {countof(gpio_vana_component), gpio_vana_component},
-    {countof(gpio_vdig_component), gpio_vdig_component},
-    {countof(gpio_reset_component), gpio_reset_component},
-    {countof(clk_sensor_component), clk_sensor_component},
+static const device_fragment_t imx227_sensor_fragments[] = {
+    {countof(mipicsi_fragment), mipicsi_fragment},
+    {countof(i2c_fragment), i2c_fragment},
+    {countof(gpio_vana_fragment), gpio_vana_fragment},
+    {countof(gpio_vdig_fragment), gpio_vdig_fragment},
+    {countof(gpio_reset_fragment), gpio_reset_fragment},
+    {countof(clk_sensor_fragment), clk_sensor_fragment},
 };
 
 // Composite device binding rules for Camera Controller
@@ -293,30 +293,30 @@ static const zx_bind_inst_t sysmem_match[] = {
 static const zx_bind_inst_t buttons_match[] = {
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_BUTTONS),
 };
-static const device_component_part_t isp_component[] = {
+static const device_fragment_part_t isp_fragment[] = {
     {countof(root_match), root_match},
     {countof(isp_match), isp_match},
 };
-static const device_component_part_t gdc_component[] = {
+static const device_fragment_part_t gdc_fragment[] = {
     {countof(root_match), root_match},
     {countof(gdc_match), gdc_match},
 };
-static const device_component_part_t ge2d_component[] = {
+static const device_fragment_part_t ge2d_fragment[] = {
     {countof(root_match), root_match},
     {countof(ge2d_match), ge2d_match},
 };
-static const device_component_part_t sysmem_component[] = {
+static const device_fragment_part_t sysmem_fragment[] = {
     {countof(root_match), root_match},
     {countof(sysmem_match), sysmem_match},
 };
-static const device_component_part_t buttons_component[] = {
+static const device_fragment_part_t buttons_fragment[] = {
     {countof(root_match), root_match},
     {countof(buttons_match), buttons_match},
 };
-static const device_component_t camera_controller_components[] = {
-    {countof(isp_component), isp_component},         {countof(gdc_component), gdc_component},
-    {countof(gdc_component), ge2d_component},        {countof(sysmem_component), sysmem_component},
-    {countof(buttons_component), buttons_component},
+static const device_fragment_t camera_controller_fragments[] = {
+    {countof(isp_fragment), isp_fragment},         {countof(gdc_fragment), gdc_fragment},
+    {countof(gdc_fragment), ge2d_fragment},        {countof(sysmem_fragment), sysmem_fragment},
+    {countof(buttons_fragment), buttons_fragment},
 };
 
 constexpr pbus_mmio_t mipi_mmios[] = {
@@ -403,20 +403,20 @@ zx_status_t Sherlock::CameraInit() {
     return status;
   }
 
-  status = pbus_.CompositeDeviceAdd(&sensor_dev, imx227_sensor_components,
-                                    countof(imx227_sensor_components), 1);
+  status = pbus_.CompositeDeviceAdd(&sensor_dev, imx227_sensor_fragments,
+                                    countof(imx227_sensor_fragments), 1);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: IMX227 DeviceAdd failed %d\n", __func__, status);
     return status;
   }
 
-  status = pbus_.CompositeDeviceAdd(&gdc_dev, gdc_components, countof(gdc_components), 1);
+  status = pbus_.CompositeDeviceAdd(&gdc_dev, gdc_fragments, countof(gdc_fragments), 1);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: GDC DeviceAdd failed %d\n", __func__, status);
     return status;
   }
 
-  status = pbus_.CompositeDeviceAdd(&ge2d_dev, ge2d_components, countof(ge2d_components), 1);
+  status = pbus_.CompositeDeviceAdd(&ge2d_dev, ge2d_fragments, countof(ge2d_fragments), 1);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: GE2D DeviceAdd failed %d\n", __func__, status);
     return status;
@@ -425,9 +425,9 @@ zx_status_t Sherlock::CameraInit() {
   // Add a composite device for ARM ISP
   // TODO(CAM-138): This is a temporary hack. Remove when new driver validated.
   if (kUseArmDriver) {
-    status = pbus_.CompositeDeviceAdd(&isp_dev_v2, isp_components, countof(isp_components), 1);
+    status = pbus_.CompositeDeviceAdd(&isp_dev_v2, isp_fragments, countof(isp_fragments), 1);
   } else {
-    status = pbus_.CompositeDeviceAdd(&isp_dev, isp_components, countof(isp_components), 1);
+    status = pbus_.CompositeDeviceAdd(&isp_dev, isp_fragments, countof(isp_fragments), 1);
   }
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: ISP DeviceAdd failed %d\n", __func__, status);
@@ -441,8 +441,8 @@ zx_status_t Sherlock::CameraInit() {
   const composite_device_desc_t camera_comp_desc = {
       .props = camera_controller_props,
       .props_count = countof(camera_controller_props),
-      .components = camera_controller_components,
-      .components_count = countof(camera_controller_components),
+      .fragments = camera_controller_fragments,
+      .fragments_count = countof(camera_controller_fragments),
       .coresident_device_index = 0,
       .metadata_list = nullptr,
       .metadata_count = 0,

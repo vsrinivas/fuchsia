@@ -80,12 +80,12 @@ static const zx_bind_inst_t root_match[] = {
 constexpr zx_bind_inst_t pwm_e_match[] = {
     BI_MATCH_IF(EQ, BIND_INIT_STEP, BIND_INIT_STEP_PWM),
 };
-constexpr device_component_part_t pwm_e_component[] = {
+constexpr device_fragment_part_t pwm_e_fragment[] = {
     {countof(root_match), root_match},
     {countof(pwm_e_match), pwm_e_match},
 };
-static const device_component_t uart_components[] = {
-    {countof(pwm_e_component), pwm_e_component},
+static const device_fragment_t uart_fragments[] = {
+    {countof(pwm_e_fragment), pwm_e_fragment},
 };
 
 zx_status_t Nelson::BluetoothInit() {
@@ -113,7 +113,7 @@ zx_status_t Nelson::BluetoothInit() {
   }
 
   // Bind UART for Bluetooth HCI
-  status = pbus_.CompositeDeviceAdd(&bt_uart_dev, uart_components, 1, UINT32_MAX);
+  status = pbus_.CompositeDeviceAdd(&bt_uart_dev, uart_fragments, 1, UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DeviceAdd failed: %d\n", __func__, status);
     return status;

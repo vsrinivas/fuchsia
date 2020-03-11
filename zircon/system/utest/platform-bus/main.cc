@@ -104,7 +104,7 @@ TEST(PbusTest, Enumeration) {
   EXPECT_EQ(fstatat(dirfd, "composite-dev/composite", &st, 0), 0);
 
   // Check that we see multiple entries that begin with "fragment-" for a device that is a
-  // component of multiple composites
+  // fragment of multiple composites
   fbl::unique_fd clock_dir(
       openat(dirfd, "sys/platform/11:01:7/test-clock/clock-1", O_DIRECTORY | O_RDONLY));
   size_t devices_seen = 0;

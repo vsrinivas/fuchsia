@@ -101,27 +101,27 @@ zx_status_t Sysdev::MakeComposite() {
   const zx_bind_inst_t root_match[] = {
       BI_MATCH(),
   };
-  const zx_bind_inst_t component1_match[] = {
+  const zx_bind_inst_t fragment1_match[] = {
       BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TEST),
       BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_LIBDRIVER_TEST),
       BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TEST_CHILD_1),
   };
-  const zx_bind_inst_t component2_match[] = {
+  const zx_bind_inst_t fragment2_match[] = {
       BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TEST),
       BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_LIBDRIVER_TEST),
       BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TEST_CHILD_2),
   };
-  const device_component_part_t component1[] = {
+  const device_fragment_part_t fragment1[] = {
       {countof(root_match), root_match},
-      {countof(component1_match), component1_match},
+      {countof(fragment1_match), fragment1_match},
   };
-  const device_component_part_t component2[] = {
+  const device_fragment_part_t fragment2[] = {
       {countof(root_match), root_match},
-      {countof(component2_match), component2_match},
+      {countof(fragment2_match), fragment2_match},
   };
-  const device_component_t components[] = {
-      {countof(component1), component1},
-      {countof(component2), component2},
+  const device_fragment_t fragments[] = {
+      {countof(fragment1), fragment1},
+      {countof(fragment2), fragment2},
   };
 
   const zx_device_prop_t props[] = {
@@ -133,8 +133,8 @@ zx_status_t Sysdev::MakeComposite() {
   const composite_device_desc_t comp_desc = {
       .props = props,
       .props_count = countof(props),
-      .components = components,
-      .components_count = countof(components),
+      .fragments = fragments,
+      .fragments_count = countof(fragments),
       .coresident_device_index = UINT32_MAX,
       .metadata_list = nullptr,
       .metadata_count = 0,

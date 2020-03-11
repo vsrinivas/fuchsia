@@ -162,7 +162,7 @@ class FakeComposite : public ddk::CompositeProtocol<FakeComposite> {
 
   const composite_protocol_t* proto() const { return &proto_; }
 
-  uint32_t CompositeGetFragmentCount() { return static_cast<uint32_t>(kNumComponents); }
+  uint32_t CompositeGetFragmentCount() { return static_cast<uint32_t>(kNumFragments); }
 
   void CompositeGetFragments(zx_device_t** comp_list, size_t comp_count, size_t* comp_actual) {
     size_t comp_cur;
@@ -182,7 +182,7 @@ class FakeComposite : public ddk::CompositeProtocol<FakeComposite> {
   }
 
  private:
-  static constexpr size_t kNumComponents = 2;
+  static constexpr size_t kNumFragments = 2;
 
   composite_protocol_t proto_;
   zx_device_t* parent_;

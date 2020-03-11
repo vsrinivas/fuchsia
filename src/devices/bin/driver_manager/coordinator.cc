@@ -124,7 +124,7 @@ void suspend_fallback(const zx::resource& root_resource, uint32_t flags) {
 
 namespace power_fidl = llcpp::fuchsia::hardware::power;
 
-const char* kComponentDriverPath = "/boot/driver/fragment.so";
+const char* kFragmentDriverPath = "/boot/driver/fragment.so";
 
 uint32_t log_flags = LOG_ERROR | LOG_INFO;
 
@@ -628,15 +628,15 @@ zx_status_t Coordinator::AddDevice(
   // use |dev->parent()|.  This case can happen if |parent| refers to a device
   // proxy.
 
-  // If we're creating a device that's using the component driver, inform the
-  // component.
-  if (component_driver_ != nullptr && dev->libname() == component_driver_->libname) {
-    for (auto& cur_component : dev->parent()->components()) {
-      if (cur_component.component_device() == nullptr) {
-        // Pick the first component that does not have a device added by the component
+  // If we're creating a device that's using the fragment driver, inform the
+  // fragment.
+  if (fragment_driver_ != nullptr && dev->libname() == fragment_driver_->libname) {
+    for (auto& cur_fragment : dev->parent()->fragments()) {
+      if (cur_fragment.fragment_device() == nullptr) {
+        // Pick the first fragment that does not have a device added by the fragment
         // driver.
-        cur_component.set_component_device(dev);
-        status = cur_component.composite()->TryAssemble();
+        cur_fragment.set_fragment_device(dev);
+        status = cur_fragment.composite()->TryAssemble();
         if (status != ZX_OK && status != ZX_ERR_SHOULD_WAIT) {
           log(ERROR, "driver_manager: failed to assemble composite: %s\n",
               zx_status_get_string(status));
@@ -752,19 +752,19 @@ zx_status_t Coordinator::RemoveDevice(const fbl::RefPtr<Device>& dev, bool force
     dev->composite()->Remove();
   }
 
-  // Check if this device is a composite component device
-  if (component_driver_ != nullptr && dev->libname() == component_driver_->libname) {
+  // Check if this device is a composite fragment device
+  if (fragment_driver_ != nullptr && dev->libname() == fragment_driver_->libname) {
     // If it is, then its parent will know about which one (since the parent
-    // is the actual device matched by the component description).
+    // is the actual device matched by the fragment description).
     const auto& parent = dev->parent();
 
-    for (auto itr = parent->components().begin(); itr != parent->components().end();) {
-      auto& cur_component = *itr;
+    for (auto itr = parent->fragments().begin(); itr != parent->fragments().end();) {
+      auto& cur_fragment = *itr;
       // Advance the iterator because we will erase the current element from the list.
       ++itr;
-      if (cur_component.component_device() == dev) {
-        cur_component.Unbind();
-        parent->components().erase(cur_component);
+      if (cur_fragment.fragment_device() == dev) {
+        cur_fragment.Unbind();
+        parent->fragments().erase(cur_fragment);
         break;
       }
     }
@@ -888,12 +888,12 @@ zx_status_t Coordinator::AddCompositeDevice(
 
     auto dev_ref = fbl::RefPtr(&dev);
     size_t index;
-    if (new_device->TryMatchComponents(dev_ref, &index)) {
-      log(SPEW, "driver_manager: dev='%s' matched component %zu of composite='%s'\n",
+    if (new_device->TryMatchFragments(dev_ref, &index)) {
+      log(SPEW, "driver_manager: dev='%s' matched fragment %zu of composite='%s'\n",
           dev.name().data(), index, new_device->name().data());
-      status = new_device->BindComponent(index, dev_ref);
+      status = new_device->BindFragment(index, dev_ref);
       if (status != ZX_OK) {
-        log(ERROR, "driver_manager: dev='%s' failed to bind component %zu of composite='%s': %s\n",
+        log(ERROR, "driver_manager: dev='%s' failed to bind fragment %zu of composite='%s': %s\n",
             dev.name().data(), index, new_device->name().data(), zx_status_get_string(status));
       }
     }
@@ -965,10 +965,10 @@ zx_status_t Coordinator::GetMetadataRecurse(const fbl::RefPtr<Device>& dev, uint
     test = test->parent();
   }
 
-  // search components of composite devices
+  // search fragments of composite devices
   if (test->composite()) {
-    for (auto& component : test->composite()->bound_components()) {
-      auto dev = component.bound_device();
+    for (auto& fragment : test->composite()->bound_fragments()) {
+      auto dev = fragment.bound_device();
       if (dev != nullptr) {
         if (GetMetadataRecurse(dev, type, buffer, buflen, size) == ZX_OK) {
           return ZX_OK;
@@ -1526,9 +1526,9 @@ void Coordinator::DriverAddedInit(Driver* drv, const char* version) {
     return;
   }
 
-  // Record the special component driver when we see it
-  if (!strcmp(driver->libname.data(), kComponentDriverPath)) {
-    component_driver_ = driver.get();
+  // Record the special fragment driver when we see it
+  if (!strcmp(driver->libname.data(), kFragmentDriverPath)) {
+    fragment_driver_ = driver.get();
     driver->never_autoselect = true;
   }
 
@@ -1646,12 +1646,12 @@ zx_status_t Coordinator::BindDevice(const fbl::RefPtr<Device>& dev, fbl::StringP
     zx_status_t status;
     for (auto& composite : composite_devices_) {
       size_t index;
-      if (composite.TryMatchComponents(dev, &index)) {
-        log(SPEW, "driver_manager: dev='%s' matched component %zu of composite='%s'\n",
+      if (composite.TryMatchFragments(dev, &index)) {
+        log(SPEW, "driver_manager: dev='%s' matched fragment %zu of composite='%s'\n",
             dev->name().data(), index, composite.name().data());
-        status = composite.BindComponent(index, dev);
+        status = composite.BindFragment(index, dev);
         if (status != ZX_OK) {
-          log(ERROR, "composite bind component failed\n");
+          log(ERROR, "composite bind fragment failed\n");
           return status;
         }
       }

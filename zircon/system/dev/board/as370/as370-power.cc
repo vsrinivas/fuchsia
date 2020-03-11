@@ -25,7 +25,7 @@ static const zx_bind_inst_t power_impl_driver_match[] = {
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_POWER_IMPL),
 };
 
-constexpr device_component_part_t power_impl_component[] = {
+constexpr device_fragment_part_t power_impl_fragment[] = {
     {countof(root_match), root_match},
     {countof(power_impl_driver_match), power_impl_driver_match},
 };
@@ -34,8 +34,8 @@ zx_device_prop_t power_domain_kBuckSoC_props[] = {
     {BIND_POWER_DOMAIN_COMPOSITE, 0, PDEV_DID_POWER_DOMAIN_COMPOSITE},
 };
 
-constexpr device_component_t power_domain_kBuckSoC_components[] = {
-    {countof(power_impl_component), power_impl_component},
+constexpr device_fragment_t power_domain_kBuckSoC_fragments[] = {
+    {countof(power_impl_fragment), power_impl_fragment},
 };
 
 static const power_domain_t power_domain_kBuckSoC[] = {
@@ -53,8 +53,8 @@ static const device_metadata_t power_domain_kBuckSoC_metadata[] = {
 const composite_device_desc_t power_domain_kBuckSoC_desc = {
     .props = power_domain_kBuckSoC_props,
     .props_count = countof(power_domain_kBuckSoC_props),
-    .components = power_domain_kBuckSoC_components,
-    .components_count = countof(power_domain_kBuckSoC_components),
+    .fragments = power_domain_kBuckSoC_fragments,
+    .fragments_count = countof(power_domain_kBuckSoC_fragments),
     .coresident_device_index = 0,
     .metadata_list = power_domain_kBuckSoC_metadata,
     .metadata_count = countof(power_domain_kBuckSoC_metadata),
@@ -66,13 +66,13 @@ static const zx_bind_inst_t i2c_match[] = {
     BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 0x66),
 };
 
-static const device_component_part_t i2c_component[] = {
+static const device_fragment_part_t i2c_fragment[] = {
     {countof(root_match), root_match},
     {countof(i2c_match), i2c_match},
 };
 
-static const device_component_t components[] = {
-    {countof(i2c_component), i2c_component},
+static const device_fragment_t fragments[] = {
+    {countof(i2c_fragment), i2c_fragment},
 };
 
 constexpr zx_device_prop_t props[] = {
@@ -83,8 +83,8 @@ constexpr zx_device_prop_t props[] = {
 const composite_device_desc_t comp_desc = {
     .props = props,
     .props_count = countof(props),
-    .components = components,
-    .components_count = countof(components),
+    .fragments = fragments,
+    .fragments_count = countof(fragments),
     .coresident_device_index = UINT32_MAX,
     .metadata_list = nullptr,
     .metadata_count = 0,

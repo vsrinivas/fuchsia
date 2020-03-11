@@ -47,27 +47,27 @@ static constexpr zx_bind_inst_t gpio_bootloader_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_OT_RADIO_BOOTLOADER),
 };
-static constexpr device_component_part_t ot_dev_component[] = {
+static constexpr device_fragment_part_t ot_dev_fragment[] = {
     {fbl::count_of(root_match), root_match},
     {fbl::count_of(ot_dev_match), ot_dev_match},
 };
-static constexpr device_component_part_t gpio_int_component[] = {
+static constexpr device_fragment_part_t gpio_int_fragment[] = {
     {fbl::count_of(root_match), root_match},
     {fbl::count_of(gpio_int_match), gpio_int_match},
 };
-static constexpr device_component_part_t gpio_reset_component[] = {
+static constexpr device_fragment_part_t gpio_reset_fragment[] = {
     {fbl::count_of(root_match), root_match},
     {fbl::count_of(gpio_reset_match), gpio_reset_match},
 };
-static constexpr device_component_part_t gpio_bootloader_component[] = {
+static constexpr device_fragment_part_t gpio_bootloader_fragment[] = {
     {fbl::count_of(root_match), root_match},
     {fbl::count_of(gpio_bootloader_match), gpio_bootloader_match},
 };
-static constexpr device_component_t ot_components[] = {
-    {fbl::count_of(ot_dev_component), ot_dev_component},
-    {fbl::count_of(gpio_int_component), gpio_int_component},
-    {fbl::count_of(gpio_reset_component), gpio_reset_component},
-    {fbl::count_of(gpio_bootloader_component), gpio_bootloader_component},
+static constexpr device_fragment_t ot_fragments[] = {
+    {fbl::count_of(ot_dev_fragment), ot_dev_fragment},
+    {fbl::count_of(gpio_int_fragment), gpio_int_fragment},
+    {fbl::count_of(gpio_reset_fragment), gpio_reset_fragment},
+    {fbl::count_of(gpio_bootloader_fragment), gpio_bootloader_fragment},
 };
 
 zx_status_t Sherlock::OtRadioInit() {
@@ -80,7 +80,7 @@ zx_status_t Sherlock::OtRadioInit() {
   dev.metadata_count = fbl::count_of(nrf52840_radio_metadata);
 
   zx_status_t status =
-      pbus_.CompositeDeviceAdd(&dev, ot_components, fbl::count_of(ot_components), UINT32_MAX);
+      pbus_.CompositeDeviceAdd(&dev, ot_fragments, fbl::count_of(ot_fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s(nrf52840): DeviceAdd failed: %d\n", __func__, status);
   } else {

@@ -363,7 +363,7 @@ zx_status_t SystemInstance::StartSvchost(const zx::job& root_job, const zx::chan
   });
 
   // Add handle to channel to allow svchost to connect to services from devcoordinator's /svc, which
-  // is hosted by component_manager and includes services routed from other components; see
+  // is hosted by fragment_manager and includes services routed from other fragments; see
   // "devcoordinator.cml".
   actions.push_back((fdio_spawn_action_t){
       .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
@@ -415,7 +415,7 @@ zx_status_t SystemInstance::ReuseExistingSvchost() {
   // This may or may not work well, depending on the services those processes require and whether
   // they happen to be in the /svc exposed to this test instance of devcoordinator.
   // TODO(bryanhenry): This can go away once we move the processes devcoordinator spawns today out
-  // into separate components.
+  // into separate fragments.
   zx::channel dir_request;
   zx_status_t status = zx::channel::create(0, &dir_request, &svchost_outgoing_);
   if (status != ZX_OK) {

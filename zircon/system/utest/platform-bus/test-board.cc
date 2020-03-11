@@ -113,7 +113,7 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
       BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_POWER),
       BI_MATCH_IF(EQ, BIND_POWER_DOMAIN, 3),
   };
-  device_component_part_t power_component[] = {
+  device_fragment_part_t power_fragment[] = {
       {fbl::count_of(root_match), root_match},
       {fbl::count_of(power_match), power_match},
   };
@@ -152,43 +152,43 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
       BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PWM),
       BI_MATCH_IF(EQ, BIND_PWM_ID, 0),
   };
-  device_component_part_t gpio_component[] = {
+  device_fragment_part_t gpio_fragment[] = {
       {fbl::count_of(root_match), root_match},
       {fbl::count_of(gpio_match), gpio_match},
   };
-  device_component_part_t clock_component[] = {
+  device_fragment_part_t clock_fragment[] = {
       {fbl::count_of(root_match), root_match},
       {fbl::count_of(clock_match), clock_match},
   };
-  device_component_part_t i2c_component[] = {
+  device_fragment_part_t i2c_fragment[] = {
       {fbl::count_of(root_match), root_match},
       {fbl::count_of(i2c_match), i2c_match},
   };
-  device_component_part_t child4_component[] = {
+  device_fragment_part_t child4_fragment[] = {
       {fbl::count_of(root_match), root_match},
       {fbl::count_of(child2_match), child2_match},
       {fbl::count_of(child4_match), child4_match},
   };
-  device_component_part_t codec_component[] = {
+  device_fragment_part_t codec_fragment[] = {
       {fbl::count_of(root_match), root_match},
       {fbl::count_of(codec_match), codec_match},
   };
-  device_component_part_t spi_component[] = {
+  device_fragment_part_t spi_fragment[] = {
       {fbl::count_of(root_match), root_match},
       {fbl::count_of(spi_match), spi_match},
   };
-  device_component_part_t pwm_component[] = {
+  device_fragment_part_t pwm_fragment[] = {
       {fbl::count_of(root_match), root_match},
       {fbl::count_of(pwm_match), pwm_match},
   };
 
-  device_component_t composite[] = {
-      {fbl::count_of(gpio_component), gpio_component},
-      {fbl::count_of(clock_component), clock_component},
-      {fbl::count_of(i2c_component), i2c_component},
-      {fbl::count_of(power_component), power_component},
-      {fbl::count_of(child4_component), child4_component},
-      {fbl::count_of(codec_component), codec_component},
+  device_fragment_t composite[] = {
+      {fbl::count_of(gpio_fragment), gpio_fragment},
+      {fbl::count_of(clock_fragment), clock_fragment},
+      {fbl::count_of(i2c_fragment), i2c_fragment},
+      {fbl::count_of(power_fragment), power_fragment},
+      {fbl::count_of(child4_fragment), child4_fragment},
+      {fbl::count_of(codec_fragment), codec_fragment},
   };
 
   struct composite_test_metadata metadata_1 = {
@@ -226,12 +226,12 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
     zxlogf(ERROR, "TestBoard::Create: pbus_composite_device_add failed: %d\n", status);
   }
 
-  device_component_t composite2[] = {
-      {fbl::count_of(clock_component), clock_component},
-      {fbl::count_of(power_component), power_component},
-      {fbl::count_of(child4_component), child4_component},
-      {fbl::count_of(spi_component), spi_component},
-      {fbl::count_of(pwm_component), pwm_component},
+  device_fragment_t composite2[] = {
+      {fbl::count_of(clock_fragment), clock_fragment},
+      {fbl::count_of(power_fragment), power_fragment},
+      {fbl::count_of(child4_fragment), child4_fragment},
+      {fbl::count_of(spi_fragment), spi_fragment},
+      {fbl::count_of(pwm_fragment), pwm_fragment},
   };
 
   pbus_dev_t pdev2 = {};

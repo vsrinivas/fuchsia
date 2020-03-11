@@ -106,14 +106,14 @@ class AmlogicDisplay
 
  private:
   enum {
-    COMPONENT_PDEV,
-    COMPONENT_DSI,
-    COMPONENT_LCD_GPIO,
-    COMPONENT_SYSMEM,
-    COMPONENT_CANVAS,
-    COMPONENT_COUNT,
+    FRAGMENT_PDEV,
+    FRAGMENT_DSI,
+    FRAGMENT_LCD_GPIO,
+    FRAGMENT_SYSMEM,
+    FRAGMENT_CANVAS,
+    FRAGMENT_COUNT,
   };
-  zx_device_t* components_[COMPONENT_COUNT];
+  zx_device_t* fragments_[FRAGMENT_COUNT];
 
   zx_status_t SetupDisplayInterface();
   int VSyncThread();

@@ -321,7 +321,7 @@ class Coordinator : public llcpp::fuchsia::hardware::power::statecontrol::Admin:
 
   zx_status_t BindFidlServiceProxy(zx::channel listen_on);
 
-  const Driver* component_driver() const { return component_driver_; }
+  const Driver* fragment_driver() const { return fragment_driver_; }
 
   void ReleaseDevhost(Devhost* dh);
 
@@ -383,9 +383,9 @@ class Coordinator : public llcpp::fuchsia::hardware::power::statecontrol::Admin:
 
   fbl::DoublyLinkedList<std::unique_ptr<Metadata>, Metadata::Node> published_metadata_;
 
-  // Once the special component driver is loaded, this will refer to it.  This
-  // driver is used for binding against components of composite devices
-  const Driver* component_driver_ = nullptr;
+  // Once the special fragment driver is loaded, this will refer to it.  This
+  // driver is used for binding against fragments of composite devices
+  const Driver* fragment_driver_ = nullptr;
 
   void DumpDevice(VmoWriter* vmo, const Device* dev, size_t indent) const;
   void DumpDeviceProps(VmoWriter* vmo, const Device* dev) const;
@@ -423,8 +423,8 @@ class Coordinator : public llcpp::fuchsia::hardware::power::statecontrol::Admin:
 bool driver_is_bindable(const Driver* drv, uint32_t protocol_id,
                         const fbl::Array<const zx_device_prop_t>& props, bool autobind);
 
-// Path to driver that should be bound to components of composite devices
-extern const char* kComponentDriverPath;
+// Path to driver that should be bound to fragments of composite devices
+extern const char* kFragmentDriverPath;
 
 zx_status_t fidl_DirectoryWatch(void* ctx, uint32_t mask, uint32_t options, zx_handle_t raw_watcher,
                                 fidl_txn_t* txn);

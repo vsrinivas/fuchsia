@@ -364,7 +364,7 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
     return out->data();
   }
 
-  // If this device is a component of a composite, this points to the
+  // If this device is a fragment of a composite, this points to the
   // composite control structure.
   fbl::RefPtr<CompositeDevice> composite_;
 

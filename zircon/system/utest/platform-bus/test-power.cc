@@ -22,7 +22,7 @@ constexpr zx_bind_inst_t root_match[] = {
 static const zx_bind_inst_t power_impl_driver_match[] = {
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_POWER_IMPL),
 };
-constexpr device_component_part_t power_impl_component[] = {
+constexpr device_fragment_part_t power_impl_fragment[] = {
     {countof(root_match), root_match},
     {countof(power_impl_driver_match), power_impl_driver_match},
 };
@@ -30,8 +30,8 @@ zx_device_prop_t props[] = {
     {BIND_POWER_DOMAIN_COMPOSITE, 0, PDEV_DID_POWER_DOMAIN_COMPOSITE},
 };
 
-constexpr device_component_t power_domain_1_components[] = {
-    {countof(power_impl_component), power_impl_component},
+constexpr device_fragment_t power_domain_1_fragments[] = {
+    {countof(power_impl_fragment), power_impl_fragment},
 };
 static const power_domain_t power_domain_1[] = {
     {1},
@@ -45,8 +45,8 @@ static const device_metadata_t power_metadata_1[] = {{
 const composite_device_desc_t power_domain_1_desc = {
     .props = props,
     .props_count = countof(props),
-    .components = power_domain_1_components,
-    .components_count = countof(power_domain_1_components),
+    .fragments = power_domain_1_fragments,
+    .fragments_count = countof(power_domain_1_fragments),
     .coresident_device_index = 0,
     .metadata_list = power_metadata_1,
     .metadata_count = countof(power_metadata_1),
@@ -57,14 +57,14 @@ static const zx_bind_inst_t parent_domain_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_POWER),
     BI_MATCH_IF(EQ, BIND_POWER_DOMAIN, 1),
 };
-constexpr device_component_part_t parent_domain_component[] = {
+constexpr device_fragment_part_t parent_domain_fragment[] = {
     {countof(root_match), root_match},
     {countof(parent_domain_match), parent_domain_match},
 };
 
-constexpr device_component_t power_domain_3_components[] = {
-    {countof(power_impl_component), power_impl_component},
-    {countof(parent_domain_component), parent_domain_component},
+constexpr device_fragment_t power_domain_3_fragments[] = {
+    {countof(power_impl_fragment), power_impl_fragment},
+    {countof(parent_domain_fragment), parent_domain_fragment},
 };
 static const power_domain_t power_domain_3[] = {
     {3},
@@ -78,8 +78,8 @@ static const device_metadata_t power_metadata_3[] = {{
 const composite_device_desc_t power_domain_3_desc = {
     .props = props,
     .props_count = countof(props),
-    .components = power_domain_3_components,
-    .components_count = countof(power_domain_3_components),
+    .fragments = power_domain_3_fragments,
+    .fragments_count = countof(power_domain_3_fragments),
     .coresident_device_index = 0,
     .metadata_list = power_metadata_3,
     .metadata_count = countof(power_metadata_3),

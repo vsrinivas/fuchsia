@@ -30,13 +30,13 @@ constexpr zx_bind_inst_t thermal_match[] ={
   BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_THERMAL),
 };
 
-constexpr device_component_part_t thermal_component[] = {
+constexpr device_fragment_part_t thermal_fragment[] = {
   {countof(root_match), root_match},
   {countof(thermal_match), thermal_match},
 };
 
-constexpr device_component_t components[] = {
-  {countof(thermal_component), thermal_component},
+constexpr device_fragment_t fragments[] = {
+  {countof(thermal_fragment), thermal_fragment},
 };
 
 }  // namespace
@@ -45,7 +45,7 @@ namespace astro {
 
 zx_status_t Astro::CpuInit() {
   zx_status_t result = 
-    pbus_.CompositeDeviceAdd(&cpu_dev, components, countof(components), 1);
+    pbus_.CompositeDeviceAdd(&cpu_dev, fragments, countof(fragments), 1);
   
   if (result != ZX_OK) {
     zxlogf(ERROR, "%s: Failed to add CPU composite device, st = %d\n", __func__, result);

@@ -476,18 +476,18 @@ zx_status_t FakeDisplay::Bind(bool start_vsync) {
     return status;
   }
   size_t actual;
-  composite_get_components(&composite, components_, fbl::count_of(components_), &actual);
-  if (actual != fbl::count_of(components_)) {
-    DISP_ERROR("could not get components\n");
+  composite_get_fragments(&composite, fragments_, fbl::count_of(fragments_), &actual);
+  if (actual != fbl::count_of(fragments_)) {
+    DISP_ERROR("could not get fragments\n");
     return ZX_ERR_NOT_SUPPORTED;
   }
-  status = device_get_protocol(components_[COMPONENT_PDEV], ZX_PROTOCOL_PDEV, &pdev_);
+  status = device_get_protocol(fragments_[FRAGMENT_PDEV], ZX_PROTOCOL_PDEV, &pdev_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not get PDEV protocol\n");
     return status;
   }
 
-  status = device_get_protocol(components_[COMPONENT_SYSMEM], ZX_PROTOCOL_SYSMEM, &sysmem_);
+  status = device_get_protocol(fragments_[FRAGMENT_SYSMEM], ZX_PROTOCOL_SYSMEM, &sysmem_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not get Display SYSMEM protocol\n");
     return status;

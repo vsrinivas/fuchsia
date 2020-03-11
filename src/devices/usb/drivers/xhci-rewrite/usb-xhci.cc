@@ -1931,21 +1931,21 @@ zx_status_t UsbXhci::Create(void* ctx, zx_device_t* parent) {
   }
   if (dev->composite_.is_valid()) {
     enum { PDEV = 0, PHY = 1, COUNT = 2 };
-    zx_device_t* components[COUNT];
+    zx_device_t* fragments[COUNT];
     size_t actual;
 
-    // Retrieve platform device protocol from our first component.
-    dev->composite_.GetComponents(components, COUNT, &actual);
+    // Retrieve platform device protocol from our first fragment.
+    dev->composite_.GetFragments(fragments, COUNT, &actual);
     // We need at least a PDEV, but the PHY is optional
     // for devices not implementing OTG.
     if (actual < 1) {
       return ZX_ERR_NOT_SUPPORTED;
     }
     if (actual > 1) {
-      ddk::UsbPhyProtocolClient phy_proto(components[PHY]);
+      ddk::UsbPhyProtocolClient phy_proto(fragments[PHY]);
       dev->phy_ = std::move(phy_proto);
     }
-    dev->pdev_ = components[PDEV];
+    dev->pdev_ = fragments[PDEV];
     if (!dev->pdev_.is_valid()) {
       zxlogf(ERROR, "UsbXhci::Init: could not get platform device protocol\n");
       return ZX_ERR_NOT_SUPPORTED;

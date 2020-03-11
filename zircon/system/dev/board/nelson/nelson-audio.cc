@@ -43,19 +43,19 @@ static const zx_bind_inst_t ref_out_clk0_match[] = {
     BI_MATCH_IF(EQ, BIND_CLOCK_ID, sm1_clk::CLK_HIFI_PLL),
 };
 
-static const device_component_part_t ref_out_i2c_component[] = {
+static const device_fragment_part_t ref_out_i2c_fragment[] = {
     {countof(root_match), root_match},
     {countof(ref_out_i2c_match), ref_out_i2c_match},
 };
-static const device_component_part_t p2_out_i2c_component[] = {
+static const device_fragment_part_t p2_out_i2c_fragment[] = {
     {countof(root_match), root_match},
     {countof(p2_out_i2c_match), p2_out_i2c_match},
 };
-static const device_component_part_t ref_out_codec_component[] = {
+static const device_fragment_part_t ref_out_codec_fragment[] = {
     {countof(root_match), root_match},
     {countof(ref_out_codec_match), ref_out_codec_match},
 };
-static const device_component_part_t p2_out_codec_component[] = {
+static const device_fragment_part_t p2_out_codec_fragment[] = {
     {countof(root_match), root_match},
     {countof(p2_out_codec_match), p2_out_codec_match},
 };
@@ -68,39 +68,39 @@ static const zx_bind_inst_t ref_out_fault_gpio_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_AUDIO_SOC_FAULT_L),
 };
-static const device_component_part_t ref_out_enable_gpio_component[] = {
+static const device_fragment_part_t ref_out_enable_gpio_fragment[] = {
     {countof(root_match), root_match},
     {countof(ref_out_enable_gpio_match), ref_out_enable_gpio_match},
 };
-static const device_component_part_t ref_out_fault_gpio_component[] = {
+static const device_fragment_part_t ref_out_fault_gpio_fragment[] = {
     {countof(root_match), root_match},
     {countof(ref_out_fault_gpio_match), ref_out_fault_gpio_match},
 };
-static const device_component_part_t ref_out_clk0_component[] = {
+static const device_fragment_part_t ref_out_clk0_fragment[] = {
     {countof(root_match), root_match},
     {countof(ref_out_clk0_match), ref_out_clk0_match},
 };
 
-static const device_component_t ref_codec_components[] = {
-    {countof(ref_out_i2c_component), ref_out_i2c_component},
-    {countof(ref_out_enable_gpio_component), ref_out_enable_gpio_component},
-    {countof(ref_out_enable_gpio_component), ref_out_fault_gpio_component},
+static const device_fragment_t ref_codec_fragments[] = {
+    {countof(ref_out_i2c_fragment), ref_out_i2c_fragment},
+    {countof(ref_out_enable_gpio_fragment), ref_out_enable_gpio_fragment},
+    {countof(ref_out_enable_gpio_fragment), ref_out_fault_gpio_fragment},
 };
-static const device_component_t p2_codec_components[] = {
-    {countof(ref_out_i2c_component), p2_out_i2c_component},
-    {countof(ref_out_enable_gpio_component), ref_out_enable_gpio_component},
-    {countof(ref_out_enable_gpio_component), ref_out_fault_gpio_component},
+static const device_fragment_t p2_codec_fragments[] = {
+    {countof(ref_out_i2c_fragment), p2_out_i2c_fragment},
+    {countof(ref_out_enable_gpio_fragment), ref_out_enable_gpio_fragment},
+    {countof(ref_out_enable_gpio_fragment), ref_out_fault_gpio_fragment},
 };
-static const device_component_t ref_controller_components[] = {
-    {countof(ref_out_codec_component), ref_out_codec_component},
-    {countof(ref_out_clk0_component), ref_out_clk0_component},
+static const device_fragment_t ref_controller_fragments[] = {
+    {countof(ref_out_codec_fragment), ref_out_codec_fragment},
+    {countof(ref_out_clk0_fragment), ref_out_clk0_fragment},
 };
-static const device_component_t p2_controller_components[] = {
-    {countof(p2_out_codec_component), p2_out_codec_component},
-    {countof(ref_out_clk0_component), ref_out_clk0_component},
+static const device_fragment_t p2_controller_fragments[] = {
+    {countof(p2_out_codec_fragment), p2_out_codec_fragment},
+    {countof(ref_out_clk0_fragment), ref_out_clk0_fragment},
 };
-static const device_component_t in_components[] = {
-    {countof(ref_out_clk0_component), ref_out_clk0_component},
+static const device_fragment_t in_fragments[] = {
+    {countof(ref_out_clk0_fragment), ref_out_clk0_fragment},
 };
 
 zx_status_t Nelson::AudioInit() {
@@ -187,15 +187,15 @@ zx_status_t Nelson::AudioInit() {
     codec_desc.props = props;
     codec_desc.props_count = countof(props);
     codec_desc.coresident_device_index = UINT32_MAX;
-    codec_desc.components = ref_codec_components;
-    codec_desc.components_count = countof(ref_codec_components);
+    codec_desc.fragments = ref_codec_fragments;
+    codec_desc.fragments_count = countof(ref_codec_fragments);
     status = DdkAddComposite("audio-max98373", &codec_desc);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s DdkAddComposite failed %d\n", __FILE__, status);
       return status;
     }
-    status = pbus_.CompositeDeviceAdd(&controller_out, ref_controller_components,
-                                      countof(ref_controller_components), UINT32_MAX);
+    status = pbus_.CompositeDeviceAdd(&controller_out, ref_controller_fragments,
+                                      countof(ref_controller_fragments), UINT32_MAX);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s adding audio controller out device failed %d\n", __FILE__, status);
       return status;
@@ -233,15 +233,15 @@ zx_status_t Nelson::AudioInit() {
     codec_desc.props = props;
     codec_desc.props_count = countof(props);
     codec_desc.coresident_device_index = UINT32_MAX;
-    codec_desc.components = p2_codec_components;
-    codec_desc.components_count = countof(p2_codec_components);
+    codec_desc.fragments = p2_codec_fragments;
+    codec_desc.fragments_count = countof(p2_codec_fragments);
     status = DdkAddComposite("audio-tas5805", &codec_desc);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s DdkAddComposite failed %d\n", __FILE__, status);
       return status;
     }
-    status = pbus_.CompositeDeviceAdd(&controller_out, p2_controller_components,
-                                      countof(p2_controller_components), UINT32_MAX);
+    status = pbus_.CompositeDeviceAdd(&controller_out, p2_controller_fragments,
+                                      countof(p2_controller_fragments), UINT32_MAX);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s adding audio controller out device failed %d\n", __FILE__, status);
       return status;
@@ -249,7 +249,7 @@ zx_status_t Nelson::AudioInit() {
   }
 
   // Input device.
-  status = pbus_.CompositeDeviceAdd(&dev_in, in_components, countof(in_components), UINT32_MAX);
+  status = pbus_.CompositeDeviceAdd(&dev_in, in_fragments, countof(in_fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s adding audio input device failed %d\n", __FILE__, status);
     return status;

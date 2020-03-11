@@ -19,9 +19,9 @@
 
 namespace {
 enum {
-  COMPONENT_PDEV,
-  COMPONENT_APLL_CLOCK,
-  COMPONENT_COUNT,
+  FRAGMENT_PDEV,
+  FRAGMENT_APLL_CLOCK,
+  FRAGMENT_COUNT,
 };
 }  // namespace
 namespace audio {
@@ -84,15 +84,15 @@ zx_status_t NelsonAudioStreamIn::InitPDev() {
     return status;
   }
 
-  zx_device_t* components[COMPONENT_COUNT] = {};
+  zx_device_t* fragments[FRAGMENT_COUNT] = {};
   size_t actual = 0;
-  composite_get_components(&composite, components, countof(components), &actual);
-  if (actual != COMPONENT_COUNT) {
-    zxlogf(ERROR, "%s could not get components\n", __FILE__);
+  composite_get_fragments(&composite, fragments, countof(fragments), &actual);
+  if (actual != FRAGMENT_COUNT) {
+    zxlogf(ERROR, "%s could not get fragments\n", __FILE__);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  pdev_ = components[COMPONENT_PDEV];
+  pdev_ = fragments[FRAGMENT_PDEV];
   if (!pdev_.is_valid()) {
     zxlogf(ERROR, "%s could not get pdev\n", __FILE__);
     return ZX_ERR_NO_RESOURCES;
@@ -104,7 +104,7 @@ zx_status_t NelsonAudioStreamIn::InitPDev() {
     return status;
   }
 
-  clks_[kHifiPllClk] = components[COMPONENT_APLL_CLOCK];
+  clks_[kHifiPllClk] = fragments[FRAGMENT_APLL_CLOCK];
   if (!clks_[kHifiPllClk].is_valid()) {
     zxlogf(ERROR, "%s could not get clk\n", __FILE__);
     return status;

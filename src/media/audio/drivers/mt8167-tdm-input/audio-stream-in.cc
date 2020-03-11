@@ -20,10 +20,10 @@ namespace audio {
 namespace mt8167 {
 
 enum {
-  COMPONENT_PDEV,
-  COMPONENT_I2C,
-  COMPONENT_GPIO,
-  COMPONENT_COUNT,
+  FRAGMENT_PDEV,
+  FRAGMENT_I2C,
+  FRAGMENT_GPIO,
+  FRAGMENT_COUNT,
 };
 
 // Expects 2 mics.
@@ -80,26 +80,26 @@ zx_status_t Mt8167AudioStreamIn::InitPdev() {
     return status;
   }
 
-  zx_device_t* components[COMPONENT_COUNT];
+  zx_device_t* fragments[FRAGMENT_COUNT];
   size_t actual;
-  composite_get_components(&composite, components, countof(components), &actual);
-  if (actual != countof(components)) {
-    zxlogf(ERROR, "could not get components\n");
+  composite_get_fragments(&composite, fragments, countof(fragments), &actual);
+  if (actual != countof(fragments)) {
+    zxlogf(ERROR, "could not get fragments\n");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  pdev_ = components[COMPONENT_PDEV];
+  pdev_ = fragments[FRAGMENT_PDEV];
   if (!pdev_.is_valid()) {
     return ZX_ERR_NO_RESOURCES;
   }
 
-  codec_reset_ = components[COMPONENT_GPIO];
+  codec_reset_ = fragments[FRAGMENT_GPIO];
   if (!codec_reset_.is_valid()) {
     zxlogf(ERROR, "%s failed to allocate gpio\n", __FUNCTION__);
     return ZX_ERR_NO_RESOURCES;
   }
 
-  codec_ = Tlv320adc::Create(components[COMPONENT_I2C], 0);  // ADC for TDM in.
+  codec_ = Tlv320adc::Create(fragments[FRAGMENT_I2C], 0);  // ADC for TDM in.
   if (!codec_) {
     zxlogf(ERROR, "%s could not get Tlv320adc\n", __func__);
     return ZX_ERR_NO_RESOURCES;

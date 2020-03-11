@@ -181,9 +181,8 @@ class FakePBus : public ddk::PBusProtocol<FakePBus, ddk::base_protocol> {
   zx_status_t PBusSetBootloaderInfo(const pbus_bootloader_info_t* info) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  zx_status_t PBusCompositeDeviceAdd(const pbus_dev_t* dev,
-                                     const device_component_t* components_list,
-                                     size_t components_count, uint32_t coresident_device_index) {
+  zx_status_t PBusCompositeDeviceAdd(const pbus_dev_t* dev, const device_fragment_t* fragments_list,
+                                     size_t fragments_count, uint32_t coresident_device_index) {
     return ZX_ERR_NOT_SUPPORTED;
   }
   zx_status_t PBusRegisterSysSuspendCallback(const pbus_sys_suspend_t* suspend_cbin) {
@@ -229,7 +228,7 @@ class FakeComposite : public ddk::CompositeProtocol<FakeComposite> {
 
   const composite_protocol_t* proto() const { return &proto_; }
 
-  uint32_t CompositeGetFragmentCount() { return static_cast<uint32_t>(kNumComponents); }
+  uint32_t CompositeGetFragmentCount() { return static_cast<uint32_t>(kNumFragments); }
 
   void CompositeGetFragments(zx_device_t** comp_list, size_t comp_count, size_t* comp_actual) {
     size_t comp_cur;
@@ -250,7 +249,7 @@ class FakeComposite : public ddk::CompositeProtocol<FakeComposite> {
   }
 
  private:
-  static constexpr size_t kNumComponents = 2;
+  static constexpr size_t kNumFragments = 2;
 
   composite_protocol_t proto_;
   zx_device_t* parent_;

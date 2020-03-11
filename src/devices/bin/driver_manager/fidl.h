@@ -29,7 +29,7 @@ zx_status_t dh_send_complete_removal(Device* dev, fit::function<void()> cb);
 zx_status_t dh_send_complete_compatibility_tests(const Device* dev, zx_status_t test_status_);
 zx_status_t dh_send_create_composite_device(Devhost* dh, const Device* composite_dev,
                                             const CompositeDevice& composite,
-                                            const uint64_t* component_local_ids,
+                                            const uint64_t* fragment_local_ids,
                                             zx::channel coordinator_rpc,
                                             zx::channel device_controller_rpc);
 

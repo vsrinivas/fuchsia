@@ -175,8 +175,8 @@ zx_status_t AmlLight::Init() {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  auto component_count = composite.GetComponentCount();
-  if (component_count <= 0) {
+  auto fragment_count = composite.GetFragmentCount();
+  if (fragment_count <= 0) {
     return ZX_ERR_INTERNAL;
   }
 
@@ -220,9 +220,9 @@ zx_status_t AmlLight::Init() {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  zx_device_t* components[component_count];
-  composite.GetComponents(components, component_count, &actual);
-  if (actual != component_count) {
+  zx_device_t* fragments[fragment_count];
+  composite.GetFragments(fragments, fragment_count, &actual);
+  if (actual != fragment_count) {
     return ZX_ERR_INTERNAL;
   }
 
@@ -230,7 +230,7 @@ zx_status_t AmlLight::Init() {
   for (uint32_t i = 0; i < led_count; i++) {
     auto* config = &configs[i];
 
-    ddk::GpioProtocolClient gpio(components[count]);
+    ddk::GpioProtocolClient gpio(fragments[count]);
     if (!gpio.is_valid()) {
       zxlogf(ERROR, "%s: could not get gpio protocol: %d\n", __func__, status);
       return status;
@@ -238,7 +238,7 @@ zx_status_t AmlLight::Init() {
     count++;
 
     if (config->brightness) {
-      ddk::PwmProtocolClient pwm(components[count]);
+      ddk::PwmProtocolClient pwm(fragments[count]);
       if (!pwm.is_valid()) {
         zxlogf(ERROR, "%s: could not get pwm protocol: %d\n", __func__, status);
         return status;

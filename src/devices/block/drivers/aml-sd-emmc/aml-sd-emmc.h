@@ -77,9 +77,9 @@ class AmlSdEmmc : public AmlSdEmmcType, public ddk::SdmmcProtocol<AmlSdEmmc, ddk
 
  private:
   enum {
-    COMPONENT_PDEV,
-    COMPONENT_GPIO_RESET,
-    COMPONENT_COUNT,
+    FRAGMENT_PDEV,
+    FRAGMENT_GPIO_RESET,
+    FRAGMENT_COUNT,
   };
 
   struct TuneWindow {

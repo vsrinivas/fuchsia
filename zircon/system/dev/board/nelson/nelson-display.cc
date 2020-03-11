@@ -161,31 +161,31 @@ static const zx_bind_inst_t canvas_match[] = {
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_AMLOGIC_CANVAS),
 };
 
-static const device_component_part_t dsi_component[] = {
+static const device_fragment_part_t dsi_fragment[] = {
     {countof(root_match), root_match},
     {countof(dsi_match), dsi_match},
 };
 
-static const device_component_part_t lcd_gpio_component[] = {
+static const device_fragment_part_t lcd_gpio_fragment[] = {
     {countof(root_match), root_match},
     {countof(lcd_gpio_match), lcd_gpio_match},
 };
 
-static const device_component_part_t sysmem_component[] = {
+static const device_fragment_part_t sysmem_fragment[] = {
     {countof(root_match), root_match},
     {countof(sysmem_match), sysmem_match},
 };
 
-static const device_component_part_t canvas_component[] = {
+static const device_fragment_part_t canvas_fragment[] = {
     {countof(root_match), root_match},
     {countof(canvas_match), canvas_match},
 };
 
-static const device_component_t components[] = {
-    {countof(dsi_component), dsi_component},
-    {countof(lcd_gpio_component), lcd_gpio_component},
-    {countof(sysmem_component), sysmem_component},
-    {countof(canvas_component), canvas_component},
+static const device_fragment_t fragments[] = {
+    {countof(dsi_fragment), dsi_fragment},
+    {countof(lcd_gpio_fragment), lcd_gpio_fragment},
+    {countof(sysmem_fragment), sysmem_fragment},
+    {countof(canvas_fragment), canvas_fragment},
 };
 
 zx_status_t Nelson::DisplayInit() {
@@ -213,7 +213,7 @@ zx_status_t Nelson::DisplayInit() {
   display_panel_metadata[0].data_size = sizeof(display_panel_info);
   display_panel_metadata[0].data_buffer = &display_panel_info;
 
-  status = pbus_.CompositeDeviceAdd(&display_dev, components, countof(components), 1);
+  status = pbus_.CompositeDeviceAdd(&display_dev, fragments, countof(fragments), 1);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd display failed: %d\n", __func__, status);
     return status;

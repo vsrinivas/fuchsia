@@ -53,7 +53,7 @@ class Mt8167I2c : public DeviceType, public ddk::I2cImplProtocol<Mt8167I2c, ddk:
   uint32_t bus_count_;
 
  private:
-  static constexpr uint32_t kMaxComponents = 7;  // 1 pdev + 6 GPIOs for 3 I2C busses.
+  static constexpr uint32_t kMaxFragments = 7;  // 1 pdev + 6 GPIOs for 3 I2C busses.
 
   struct Key {
     ddk::MmioBuffer mmio;

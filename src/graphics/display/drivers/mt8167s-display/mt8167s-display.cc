@@ -29,12 +29,12 @@ zx_pixel_format_t kSupportedPixelFormats[3] = {ZX_PIXEL_FORMAT_ARGB_8888, ZX_PIX
                                                ZX_PIXEL_FORMAT_RGB_565};
 
 enum {
-  COMPONENT_PDEV,
-  COMPONENT_GPIO,
-  COMPONENT_SYSMEM,
-  COMPONENT_DSI_IMPL,  // DSI is optional
-  COMPONENT_POWER,
-  COMPONENT_COUNT,
+  FRAGMENT_PDEV,
+  FRAGMENT_GPIO,
+  FRAGMENT_SYSMEM,
+  FRAGMENT_DSI_IMPL,  // DSI is optional
+  FRAGMENT_POWER,
+  FRAGMENT_COUNT,
 };
 
 constexpr uint64_t kDisplayId = PANEL_DISPLAY_ID;
@@ -645,24 +645,24 @@ zx_status_t Mt8167sDisplay::Bind() {
   width_ = display_info.width;
   height_ = display_info.height;
 
-  zx_device_t* components[COMPONENT_COUNT];
-  composite_get_components(&composite, components, COMPONENT_COUNT, &actual);
-  if (actual < COMPONENT_DSI_IMPL) {
-    DISP_ERROR("could not get components\n");
+  zx_device_t* fragments[FRAGMENT_COUNT];
+  composite_get_fragments(&composite, fragments, FRAGMENT_COUNT, &actual);
+  if (actual < FRAGMENT_DSI_IMPL) {
+    DISP_ERROR("could not get fragments\n");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  status = device_get_protocol(components[COMPONENT_PDEV], ZX_PROTOCOL_PDEV, &pdev_);
+  status = device_get_protocol(fragments[FRAGMENT_PDEV], ZX_PROTOCOL_PDEV, &pdev_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not get parent protocol\n");
     return status;
   }
-  pdev_device_ = components[COMPONENT_PDEV];
+  pdev_device_ = fragments[FRAGMENT_PDEV];
 
   // Retrieve optional DSI_IMPL protocol.
-  if (actual == COMPONENT_COUNT) {
+  if (actual == FRAGMENT_COUNT) {
     dsi_impl_protocol_t dsi;
-    status = device_get_protocol(components[COMPONENT_DSI_IMPL], ZX_PROTOCOL_DSI_IMPL, &dsi);
+    status = device_get_protocol(fragments[FRAGMENT_DSI_IMPL], ZX_PROTOCOL_DSI_IMPL, &dsi);
     if (status != ZX_OK) {
       DISP_ERROR("Could not get Display DSI_IMPL protocol\n");
       return status;
@@ -683,7 +683,7 @@ zx_status_t Mt8167sDisplay::Bind() {
   }
 
   gpio_protocol_t gpio;
-  status = device_get_protocol(components[COMPONENT_GPIO], ZX_PROTOCOL_GPIO, &gpio);
+  status = device_get_protocol(fragments[FRAGMENT_GPIO], ZX_PROTOCOL_GPIO, &gpio);
   if (status != ZX_OK) {
     DISP_ERROR("Could not get Display GPIO protocol\n");
     return status;
@@ -691,14 +691,14 @@ zx_status_t Mt8167sDisplay::Bind() {
   gpio_ = &gpio;
 
   power_protocol_t power;
-  status = device_get_protocol(components[COMPONENT_POWER], ZX_PROTOCOL_POWER, &power);
+  status = device_get_protocol(fragments[FRAGMENT_POWER], ZX_PROTOCOL_POWER, &power);
   if (status != ZX_OK) {
     DISP_ERROR("Could not get Display Power protocol\n");
     return status;
   }
   power_ = &power;
 
-  status = device_get_protocol(components[COMPONENT_SYSMEM], ZX_PROTOCOL_SYSMEM, &sysmem_);
+  status = device_get_protocol(fragments[FRAGMENT_SYSMEM], ZX_PROTOCOL_SYSMEM, &sysmem_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not get Display SYSMEM protocol\n");
     return status;

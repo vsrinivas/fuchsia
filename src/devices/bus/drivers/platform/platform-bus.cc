@@ -234,14 +234,14 @@ zx_status_t PlatformBus::PBusRegisterSysSuspendCallback(const pbus_sys_suspend_t
 }
 
 zx_status_t PlatformBus::PBusCompositeDeviceAdd(const pbus_dev_t* pdev,
-                                                const device_component_t* components_list,
-                                                size_t components_count,
+                                                const device_fragment_t* fragments_list,
+                                                size_t fragments_count,
                                                 uint32_t coresident_device_index) {
   if (!pdev || !pdev->name) {
     return ZX_ERR_INVALID_ARGS;
   }
   // Do not allow adding composite devices in our devhost.
-  // The index must be greater than zero to specify one of the other components, or UINT32_MAX
+  // The index must be greater than zero to specify one of the other fragments, or UINT32_MAX
   // to create a new devhost.
   if (coresident_device_index == 0) {
     zxlogf(ERROR, "%s: coresident_device_index cannot be zero\n", __func__);
@@ -249,7 +249,7 @@ zx_status_t PlatformBus::PBusCompositeDeviceAdd(const pbus_dev_t* pdev,
   }
 
   std::unique_ptr<platform_bus::PlatformDevice> dev;
-  auto status = PlatformDevice::Create(pdev, zxdev(), this, PlatformDevice::Component, &dev);
+  auto status = PlatformDevice::Create(pdev, zxdev(), this, PlatformDevice::Fragment, &dev);
   if (status != ZX_OK) {
     return status;
   }
@@ -262,8 +262,8 @@ zx_status_t PlatformBus::PBusCompositeDeviceAdd(const pbus_dev_t* pdev,
   // devmgr is now in charge of the device.
   __UNUSED auto* dummy = dev.release();
 
-  device_component_t components[components_count + 1];
-  memcpy(&components[1], components_list, components_count * sizeof(components[1]));
+  device_fragment_t fragments[fragments_count + 1];
+  memcpy(&fragments[1], fragments_list, fragments_count * sizeof(fragments[1]));
 
   constexpr zx_bind_inst_t root_match[] = {
       BI_MATCH(),
@@ -274,13 +274,13 @@ zx_status_t PlatformBus::PBusCompositeDeviceAdd(const pbus_dev_t* pdev,
       BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, pdev->pid),
       BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, pdev->did),
   };
-  const device_component_part_t pdev_component[] = {
+  const device_fragment_part_t pdev_fragment[] = {
       {countof(root_match), root_match},
       {countof(pdev_match), pdev_match},
   };
 
-  components[0].parts_count = fbl::count_of(pdev_component);
-  components[0].parts = pdev_component;
+  fragments[0].parts_count = fbl::count_of(pdev_fragment);
+  fragments[0].parts = pdev_fragment;
 
   const zx_device_prop_t props[] = {
       {BIND_PLATFORM_DEV_VID, 0, pdev->vid},
@@ -291,8 +291,8 @@ zx_status_t PlatformBus::PBusCompositeDeviceAdd(const pbus_dev_t* pdev,
   const composite_device_desc_t comp_desc = {
       .props = props,
       .props_count = fbl::count_of(props),
-      .components = components,
-      .components_count = components_count + 1,
+      .fragments = fragments,
+      .fragments_count = fragments_count + 1,
       .coresident_device_index = coresident_device_index,
       .metadata_list = nullptr,
       .metadata_count = 0,

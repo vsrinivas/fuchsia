@@ -135,12 +135,12 @@ zx_status_t GpioLight::Init() {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  auto component_count = composite.GetComponentCount();
-  if (component_count <= 0) {
+  auto fragment_count = composite.GetFragmentCount();
+  if (fragment_count <= 0) {
     return ZX_ERR_INTERNAL;
   }
-  // component 0 is platform device, only used for passing metadata.
-  gpio_count_ = component_count - 1;
+  // fragment 0 is platform device, only used for passing metadata.
+  gpio_count_ = fragment_count - 1;
 
   size_t metadata_size;
   size_t expected = gpio_count_ * kNameLength;
@@ -165,10 +165,10 @@ zx_status_t GpioLight::Init() {
     }
   }
 
-  zx_device_t* components[component_count];
+  zx_device_t* fragments[fragment_count];
   size_t actual;
-  composite.GetComponents(components, component_count, &actual);
-  if (actual != component_count) {
+  composite.GetFragments(fragments, fragment_count, &actual);
+  if (actual != fragment_count) {
     return ZX_ERR_INTERNAL;
   }
 
@@ -181,7 +181,7 @@ zx_status_t GpioLight::Init() {
 
   for (uint32_t i = 0; i < gpio_count_; i++) {
     auto* gpio = &gpios_[i];
-    auto status = device_get_protocol(components[i + 1], ZX_PROTOCOL_GPIO, gpio);
+    auto status = device_get_protocol(fragments[i + 1], ZX_PROTOCOL_GPIO, gpio);
     if (status != ZX_OK) {
       return status;
     }

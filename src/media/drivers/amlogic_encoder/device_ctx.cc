@@ -43,10 +43,10 @@ enum Interrupt {
 };
 
 enum {
-  kComponentPdev = 0,
-  kComponentSysmem = 1,
-  kComponentCanvas = 2,
-  kComponentCount = 3,
+  kFragmentPdev = 0,
+  kFragmentSysmem = 1,
+  kFragmentCanvas = 2,
+  kFragmentCount = 3,
 };
 
 // clock_level = 5 or 6 will cause encoder reset, reference bug 120995073
@@ -68,28 +68,28 @@ std::unique_ptr<DeviceCtx> DeviceCtx::Create(zx_device_t* parent) {
     return nullptr;
   }
 
-  zx_device_t* components[kComponentCount];
-  size_t component_count = 0;
-  composite.GetComponents(components, fbl::count_of(components), &component_count);
+  zx_device_t* fragments[kFragmentCount];
+  size_t fragment_count = 0;
+  composite.GetFragments(fragments, fbl::count_of(fragments), &fragment_count);
 
-  if (component_count != kComponentCount) {
-    ENCODE_ERROR("Could not get components");
+  if (fragment_count != kFragmentCount) {
+    ENCODE_ERROR("Could not get fragments");
     return nullptr;
   }
 
-  ddk::PDev pdev(components[kComponentPdev]);
+  ddk::PDev pdev(fragments[kFragmentPdev]);
   if (!pdev.is_valid()) {
     ENCODE_ERROR("Failed to get pdev protocol");
     return nullptr;
   }
 
-  ddk::SysmemProtocolClient sysmem(components[kComponentSysmem]);
+  ddk::SysmemProtocolClient sysmem(fragments[kFragmentSysmem]);
   if (!sysmem.is_valid()) {
     ENCODE_ERROR("Could not get sysmem protocol");
     return nullptr;
   }
 
-  ddk::AmlogicCanvasProtocolClient canvas(components[kComponentCanvas]);
+  ddk::AmlogicCanvasProtocolClient canvas(fragments[kFragmentCanvas]);
   if (!canvas.is_valid()) {
     ENCODE_ERROR("Could not get canvas protocol");
     return nullptr;

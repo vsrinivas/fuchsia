@@ -348,22 +348,22 @@ zx_status_t Lp50xxLight::InitHelper() {
     return status;
   }
 
-  zx_device_t* components[kComponentCount];
+  zx_device_t* fragments[kFragmentCount];
   size_t actual;
-  composite_get_components(&composite, components, countof(components), &actual);
-  if (actual != kComponentCount) {
-    zxlogf(ERROR, "Invalid component count (need %d, have %zu)", kComponentCount, actual);
+  composite_get_fragments(&composite, fragments, countof(fragments), &actual);
+  if (actual != kFragmentCount) {
+    zxlogf(ERROR, "Invalid fragment count (need %d, have %zu)", kFragmentCount, actual);
     return ZX_ERR_INTERNAL;
   }
 
-  // status = device_get_protocol(components[kI2cComponent], ZX_PROTOCOL_I2C, &i2c_);
-  ddk::I2cProtocolClient i2c(components[kI2cComponent]);
+  // status = device_get_protocol(fragments[kI2cFragment], ZX_PROTOCOL_I2C, &i2c_);
+  ddk::I2cProtocolClient i2c(fragments[kI2cFragment]);
   if (!i2c.is_valid()) {
     zxlogf(ERROR, "ZX_PROTOCOL_I2C not found, err=%d\n", status);
     return status;
   }
 
-  ddk::PDevProtocolClient pdev(components[kPdevComponent]);
+  ddk::PDevProtocolClient pdev(fragments[kPdevFragment]);
   if (!pdev.is_valid()) {
     zxlogf(ERROR, "%s: Get PBusProtocolClient failed\n", __func__);
     return ZX_ERR_INTERNAL;

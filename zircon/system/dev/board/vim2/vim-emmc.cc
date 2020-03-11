@@ -72,12 +72,12 @@ static const zx_bind_inst_t gpio_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, S912_EMMC_RST),
 };
-static const device_component_part_t gpio_component[] = {
+static const device_fragment_part_t gpio_fragment[] = {
     {countof(root_match), root_match},
     {countof(gpio_match), gpio_match},
 };
-static const device_component_t components[] = {
-    {countof(gpio_component), gpio_component},
+static const device_fragment_t fragments[] = {
+    {countof(gpio_fragment), gpio_fragment},
 };
 
 zx_status_t Vim::EmmcInit() {
@@ -113,7 +113,7 @@ zx_status_t Vim::EmmcInit() {
   gpio_impl_.SetAltFunction(S912_EMMC_CMD, S912_EMMC_CMD_FN);
   gpio_impl_.SetAltFunction(S912_EMMC_DS, S912_EMMC_DS_FN);
 
-  status = pbus_.CompositeDeviceAdd(&emmc_dev, components, countof(components), UINT32_MAX);
+  status = pbus_.CompositeDeviceAdd(&emmc_dev, fragments, countof(fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "SdEmmcInit could not add emmc_dev: %d\n", status);
     return status;

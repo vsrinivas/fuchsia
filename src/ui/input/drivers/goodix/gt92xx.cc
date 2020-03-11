@@ -18,10 +18,10 @@
 
 namespace goodix {
 enum {
-  COMPONENT_I2C,
-  COMPONENT_INT_GPIO,
-  COMPONENT_RESET_GPIO,
-  COMPONENT_COUNT,
+  FRAGMENT_I2C,
+  FRAGMENT_INT_GPIO,
+  FRAGMENT_RESET_GPIO,
+  FRAGMENT_COUNT,
 };
 
 // clang-format off
@@ -131,30 +131,30 @@ zx_status_t Gt92xxDevice::Create(zx_device_t* device) {
     return status;
   }
 
-  zx_device_t* components[COMPONENT_COUNT];
+  zx_device_t* fragments[FRAGMENT_COUNT];
   size_t actual;
-  composite_get_components(&composite, components, fbl::count_of(components), &actual);
-  if (actual != fbl::count_of(components)) {
-    zxlogf(ERROR, "could not get components\n");
+  composite_get_fragments(&composite, fragments, fbl::count_of(fragments), &actual);
+  if (actual != fbl::count_of(fragments)) {
+    zxlogf(ERROR, "could not get fragments\n");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   i2c_protocol_t i2c;
-  status = device_get_protocol(components[COMPONENT_I2C], ZX_PROTOCOL_I2C, &i2c);
+  status = device_get_protocol(fragments[FRAGMENT_I2C], ZX_PROTOCOL_I2C, &i2c);
   if (status != ZX_OK) {
     zxlogf(ERROR, "focaltouch: failed to acquire i2c\n");
     return status;
   }
 
   gpio_protocol_t int_gpio;
-  status = device_get_protocol(components[COMPONENT_INT_GPIO], ZX_PROTOCOL_GPIO, &int_gpio);
+  status = device_get_protocol(fragments[FRAGMENT_INT_GPIO], ZX_PROTOCOL_GPIO, &int_gpio);
   if (status != ZX_OK) {
     zxlogf(ERROR, "focaltouch: failed to acquire gpio\n");
     return status;
   }
 
   gpio_protocol_t reset_gpio;
-  status = device_get_protocol(components[COMPONENT_RESET_GPIO], ZX_PROTOCOL_GPIO, &reset_gpio);
+  status = device_get_protocol(fragments[FRAGMENT_RESET_GPIO], ZX_PROTOCOL_GPIO, &reset_gpio);
   if (status != ZX_OK) {
     zxlogf(ERROR, "focaltouch: failed to acquire gpio\n");
     return status;

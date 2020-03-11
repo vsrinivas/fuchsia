@@ -334,27 +334,27 @@ void DevhostControllerConnection::CreateDevice(zx::channel coordinator_rpc,
 
 void DevhostControllerConnection::CreateCompositeDevice(
     zx::channel coordinator_rpc, zx::channel device_controller_rpc,
-    ::fidl::VectorView<uint64_t> components, ::fidl::StringView name, uint64_t local_device_id,
+    ::fidl::VectorView<uint64_t> fragments, ::fidl::StringView name, uint64_t local_device_id,
     CreateCompositeDeviceCompleter::Sync completer) {
   log(RPC_IN, "driver_host: create composite device %.*s'\n", static_cast<int>(name.size()),
       name.data());
 
-  // Convert the component IDs into zx_device references
-  CompositeComponents components_list(new fbl::RefPtr<zx_device>[components.count()],
-                                      components.count());
+  // Convert the fragment IDs into zx_device references
+  CompositeFragments fragments_list(new fbl::RefPtr<zx_device>[fragments.count()],
+                                      fragments.count());
   {
     // Acquire the API lock so that we don't have to worry about concurrent
     // device removes
     ApiAutoLock lock;
 
-    for (size_t i = 0; i < components.count(); ++i) {
-      uint64_t local_id = components.data()[i];
+    for (size_t i = 0; i < fragments.count(); ++i) {
+      uint64_t local_id = fragments.data()[i];
       fbl::RefPtr<zx_device_t> dev = zx_device::GetDeviceFromLocalId(local_id);
       if (dev == nullptr || (dev->flags & DEV_FLAG_DEAD)) {
         completer.Reply(ZX_ERR_NOT_FOUND);
         return;
       }
-      components_list[i] = std::move(dev);
+      fragments_list[i] = std::move(dev);
     }
   }
 
@@ -377,7 +377,7 @@ void DevhostControllerConnection::CreateCompositeDevice(
     return;
   }
 
-  status = InitializeCompositeDevice(dev, std::move(components_list));
+  status = InitializeCompositeDevice(dev, std::move(fragments_list));
   if (status != ZX_OK) {
     completer.Reply(status);
     return;
@@ -975,7 +975,7 @@ zx_status_t publish_metadata(const fbl::RefPtr<zx_device_t>& dev, const char* pa
 zx_status_t device_add_composite(const fbl::RefPtr<zx_device_t>& dev, const char* name,
                                  const composite_device_desc_t* comp_desc) {
   if (comp_desc == nullptr || (comp_desc->props == nullptr && comp_desc->props_count > 0) ||
-      comp_desc->components == nullptr || name == nullptr) {
+      comp_desc->fragments == nullptr || name == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
   const zx::channel& rpc = *dev->coordinator_rpc;
@@ -983,30 +983,30 @@ zx_status_t device_add_composite(const fbl::RefPtr<zx_device_t>& dev, const char
     return ZX_ERR_IO_REFUSED;
   }
 
-  std::vector<fuchsia::device::manager::DeviceComponent> compvec = {};
-  for (size_t i = 0; i < comp_desc->components_count; i++) {
-    ::fidl::Array<fuchsia::device::manager::DeviceComponentPart,
-                  fuchsia::device::manager::DEVICE_COMPONENT_PARTS_MAX>
+  std::vector<fuchsia::device::manager::DeviceFragment> compvec = {};
+  for (size_t i = 0; i < comp_desc->fragments_count; i++) {
+    ::fidl::Array<fuchsia::device::manager::DeviceFragmentPart,
+                  fuchsia::device::manager::DEVICE_FRAGMENT_PARTS_MAX>
         parts{};
-    for (uint32_t j = 0; j < comp_desc->components[i].parts_count; j++) {
+    for (uint32_t j = 0; j < comp_desc->fragments[i].parts_count; j++) {
       ::fidl::Array<fuchsia::device::manager::BindInstruction,
-                    fuchsia::device::manager::DEVICE_COMPONENT_PART_INSTRUCTIONS_MAX>
+                    fuchsia::device::manager::DEVICE_FRAGMENT_PART_INSTRUCTIONS_MAX>
           bind_instructions{};
-      for (uint32_t k = 0; k < comp_desc->components[i].parts[j].instruction_count; k++) {
+      for (uint32_t k = 0; k < comp_desc->fragments[i].parts[j].instruction_count; k++) {
         bind_instructions[k] = fuchsia::device::manager::BindInstruction{
-            .op = comp_desc->components[i].parts[j].match_program[k].op,
-            .arg = comp_desc->components[i].parts[j].match_program[k].arg,
-            .debug = comp_desc->components[i].parts[j].match_program[k].debug,
+            .op = comp_desc->fragments[i].parts[j].match_program[k].op,
+            .arg = comp_desc->fragments[i].parts[j].match_program[k].arg,
+            .debug = comp_desc->fragments[i].parts[j].match_program[k].debug,
         };
       }
-      auto part = fuchsia::device::manager::DeviceComponentPart{
-          .match_program_count = comp_desc->components[i].parts[j].instruction_count,
+      auto part = fuchsia::device::manager::DeviceFragmentPart{
+          .match_program_count = comp_desc->fragments[i].parts[j].instruction_count,
           .match_program = bind_instructions,
       };
       parts[j] = part;
     }
-    auto dc = fuchsia::device::manager::DeviceComponent{
-        .parts_count = comp_desc->components[i].parts_count,
+    auto dc = fuchsia::device::manager::DeviceFragment{
+        .parts_count = comp_desc->fragments[i].parts_count,
         .parts = parts,
     };
     compvec.push_back(dc);
@@ -1029,7 +1029,7 @@ zx_status_t device_add_composite(const fbl::RefPtr<zx_device_t>& dev, const char
 
   fuchsia::device::manager::CompositeDeviceDescriptor comp_dev = {
       .props = ::fidl::VectorView(props),
-      .components = ::fidl::VectorView(compvec),
+      .fragments = ::fidl::VectorView(compvec),
       .coresident_device_index = comp_desc->coresident_device_index,
       .metadata = ::fidl::VectorView(metadata)};
 

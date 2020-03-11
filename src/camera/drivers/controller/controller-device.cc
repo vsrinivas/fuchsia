@@ -23,12 +23,12 @@ constexpr auto kTag = "camera_controller";
 
 namespace {
 enum {
-  COMPONENT_ISP,
-  COMPONENT_GDC,
-  COMPONENT_GE2D,
-  COMPONENT_SYSMEM,
-  COMPONENT_BUTTONS,
-  COMPONENT_COUNT,
+  FRAGMENT_ISP,
+  FRAGMENT_GDC,
+  FRAGMENT_GE2D,
+  FRAGMENT_SYSMEM,
+  FRAGMENT_BUTTONS,
+  FRAGMENT_COUNT,
 };
 }  // namespace
 
@@ -145,39 +145,39 @@ zx_status_t ControllerDevice::Setup(zx_device_t* parent, std::unique_ptr<Control
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  zx_device_t* components[COMPONENT_COUNT];
+  zx_device_t* fragments[FRAGMENT_COUNT];
   size_t actual;
-  composite.GetComponents(components, COMPONENT_COUNT, &actual);
-  if (actual != COMPONENT_COUNT) {
-    zxlogf(ERROR, "%s: Could not get components\n", __func__);
+  composite.GetFragments(fragments, FRAGMENT_COUNT, &actual);
+  if (actual != FRAGMENT_COUNT) {
+    zxlogf(ERROR, "%s: Could not get fragments\n", __func__);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  ddk::GdcProtocolClient gdc(components[COMPONENT_GDC]);
+  ddk::GdcProtocolClient gdc(fragments[FRAGMENT_GDC]);
   if (!gdc.is_valid()) {
     zxlogf(ERROR, "%s: ZX_PROTOCOL_GDC not available\n", __func__);
     return ZX_ERR_NO_RESOURCES;
   }
 
-  ddk::Ge2dProtocolClient ge2d(components[COMPONENT_GE2D]);
+  ddk::Ge2dProtocolClient ge2d(fragments[FRAGMENT_GE2D]);
   if (!ge2d.is_valid()) {
     zxlogf(ERROR, "%s: ZX_PROTOCOL_GE2D not available\n", __func__);
     return ZX_ERR_NO_RESOURCES;
   }
 
-  ddk::IspProtocolClient isp(components[COMPONENT_ISP]);
+  ddk::IspProtocolClient isp(fragments[FRAGMENT_ISP]);
   if (!isp.is_valid()) {
     zxlogf(ERROR, "%s: ZX_PROTOCOL_ISP not available\n", __func__);
     return ZX_ERR_NO_RESOURCES;
   }
 
-  ddk::SysmemProtocolClient sysmem(components[COMPONENT_SYSMEM]);
+  ddk::SysmemProtocolClient sysmem(fragments[FRAGMENT_SYSMEM]);
   if (!sysmem.is_valid()) {
     zxlogf(ERROR, "%s: ZX_PROTOCOL_SYSMEM not available\n", __func__);
     return ZX_ERR_NO_RESOURCES;
   }
 
-  ddk::ButtonsProtocolClient buttons(components[COMPONENT_BUTTONS]);
+  ddk::ButtonsProtocolClient buttons(fragments[FRAGMENT_BUTTONS]);
   if (!buttons.is_valid()) {
     zxlogf(ERROR, "%s: ZX_PROTOCOL_BUTTONS not available\n", __func__);
     return ZX_ERR_NO_RESOURCES;
@@ -190,8 +190,8 @@ zx_status_t ControllerDevice::Setup(zx_device_t* parent, std::unique_ptr<Control
   }
 
   auto controller = std::make_unique<ControllerDevice>(
-      parent, components[COMPONENT_ISP], components[COMPONENT_GDC], components[COMPONENT_GE2D],
-      components[COMPONENT_SYSMEM], components[COMPONENT_BUTTONS], std::move(event));
+      parent, fragments[FRAGMENT_ISP], fragments[FRAGMENT_GDC], fragments[FRAGMENT_GE2D],
+      fragments[FRAGMENT_SYSMEM], fragments[FRAGMENT_BUTTONS], std::move(event));
 
   status = controller->StartThread();
   if (status != ZX_OK) {

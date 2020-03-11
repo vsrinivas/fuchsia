@@ -32,19 +32,19 @@ static const zx_bind_inst_t gpio_match[] = {
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_LIGHT_INTERRUPT),
 };
 
-static const device_component_part_t i2c_component[] = {
+static const device_fragment_part_t i2c_fragment[] = {
     {countof(root_match), root_match},
     {countof(i2c_match), i2c_match},
 };
 
-static const device_component_part_t gpio_component[] = {
+static const device_fragment_part_t gpio_fragment[] = {
     {countof(root_match), root_match},
     {countof(gpio_match), gpio_match},
 };
 
-static const device_component_t components[] = {
-    {countof(i2c_component), i2c_component},
-    {countof(gpio_component), gpio_component},
+static const device_fragment_t fragments[] = {
+    {countof(i2c_fragment), i2c_fragment},
+    {countof(gpio_fragment), gpio_fragment},
 };
 
 zx_status_t Astro::LightInit() {
@@ -69,8 +69,8 @@ zx_status_t Astro::LightInit() {
   const composite_device_desc_t comp_desc = {
       .props = props,
       .props_count = countof(props),
-      .components = components,
-      .components_count = countof(components),
+      .fragments = fragments,
+      .fragments_count = countof(fragments),
       .coresident_device_index = UINT32_MAX,
       .metadata_list = metadata,
       .metadata_count = countof(metadata),

@@ -132,18 +132,18 @@ static const zx_bind_inst_t gpio_int_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, VIM3_ETH_MAC_INTR),
 };
-static const device_component_part_t i2c_component[] = {
+static const device_fragment_part_t i2c_fragment[] = {
     {countof(root_match), root_match},
     {countof(i2c_match), i2c_match},
 };
 
-static const device_component_part_t gpio_int_component[] = {
+static const device_fragment_part_t gpio_int_fragment[] = {
     {countof(root_match), root_match},
     {countof(gpio_int_match), gpio_int_match},
 };
-static const device_component_t eth_components[] = {
-    {countof(i2c_component), i2c_component},
-    {countof(gpio_int_component), gpio_int_component},
+static const device_fragment_t eth_fragments[] = {
+    {countof(i2c_fragment), i2c_fragment},
+    {countof(gpio_int_fragment), gpio_int_fragment},
 };
 
 // Composite binding rules for dwmac.
@@ -152,12 +152,12 @@ static const zx_bind_inst_t eth_board_match[] = {
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_DESIGNWARE),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_ETH_MAC),
 };
-static const device_component_part_t eth_board_component[] = {
+static const device_fragment_part_t eth_board_fragment[] = {
     {fbl::count_of(root_match), root_match},
     {fbl::count_of(eth_board_match), eth_board_match},
 };
-static const device_component_t dwmac_components[] = {
-    {fbl::count_of(eth_board_component), eth_board_component},
+static const device_fragment_t dwmac_fragments[] = {
+    {fbl::count_of(eth_board_fragment), eth_board_fragment},
 };
 
 zx_status_t Vim3::EthInit() {
@@ -179,8 +179,8 @@ zx_status_t Vim3::EthInit() {
   gpio_impl_.SetAltFunction(A311D_GPIOZ(13), A311D_GPIOZ_13_ETH_TXD3_FN);
 
   // Add a composite device for ethernet board in a new devhost.
-  auto status = pbus_.CompositeDeviceAdd(&eth_board_dev, eth_components,
-                                         fbl::count_of(eth_components), UINT32_MAX);
+  auto status = pbus_.CompositeDeviceAdd(&eth_board_dev, eth_fragments,
+                                         fbl::count_of(eth_fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d\n", __func__, status);
     return status;
@@ -188,7 +188,7 @@ zx_status_t Vim3::EthInit() {
 
   // Add a composite device for dwmac driver in the ethernet board driver's devhost.
   status =
-      pbus_.CompositeDeviceAdd(&dwmac_dev, dwmac_components, fbl::count_of(dwmac_components), 1);
+      pbus_.CompositeDeviceAdd(&dwmac_dev, dwmac_fragments, fbl::count_of(dwmac_fragments), 1);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d\n", __func__, status);
     return status;

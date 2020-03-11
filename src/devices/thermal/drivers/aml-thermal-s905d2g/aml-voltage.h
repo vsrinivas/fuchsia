@@ -51,10 +51,10 @@ class AmlVoltageRegulator {
 
  private:
   enum {
-    COMPONENT_PDEV = 0,
-    COMPONENT_PWM_BIG_CLUSTER = 1,
-    COMPONENT_PWM_LITTLE_CLUSTER = 2,
-    COMPONENT_COUNT = 3,
+    FRAGMENT_PDEV = 0,
+    FRAGMENT_PWM_BIG_CLUSTER = 1,
+    FRAGMENT_PWM_LITTLE_CLUSTER = 2,
+    FRAGMENT_COUNT = 3,
   };
 
   zx_status_t SetClusterVoltage(int* current_voltage_index, const ddk::PwmProtocolClient& pwm,

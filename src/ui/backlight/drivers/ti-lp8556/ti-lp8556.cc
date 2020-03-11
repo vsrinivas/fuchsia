@@ -18,9 +18,9 @@
 namespace ti {
 
 enum {
-  COMPONENT_PDEV,
-  COMPONENT_I2C,
-  COMPONENT_COUNT,
+  FRAGMENT_PDEV,
+  FRAGMENT_I2C,
+  FRAGMENT_COUNT,
 };
 
 void Lp8556Device::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
@@ -236,16 +236,16 @@ zx_status_t ti_lp8556_bind(void* ctx, zx_device_t* parent) {
     return status;
   }
 
-  zx_device_t* components[COMPONENT_COUNT];
+  zx_device_t* fragments[FRAGMENT_COUNT];
   size_t actual;
-  composite_get_components(&composite, components, COMPONENT_COUNT, &actual);
-  if (actual != COMPONENT_COUNT) {
-    LOG_ERROR("Could not get components\n");
+  composite_get_fragments(&composite, fragments, FRAGMENT_COUNT, &actual);
+  if (actual != FRAGMENT_COUNT) {
+    LOG_ERROR("Could not get fragments\n");
     return ZX_ERR_INTERNAL;
   }
 
   // Get platform device protocol
-  ddk::PDev pdev(components[COMPONENT_PDEV]);
+  ddk::PDev pdev(fragments[FRAGMENT_PDEV]);
   if (!pdev.is_valid()) {
     LOG_ERROR("Could not get PDEV protocol\n");
     return ZX_ERR_NO_RESOURCES;
@@ -261,7 +261,7 @@ zx_status_t ti_lp8556_bind(void* ctx, zx_device_t* parent) {
 
   // Obtain I2C protocol needed to control backlight
   i2c_protocol_t i2c;
-  status = device_get_protocol(components[COMPONENT_I2C], ZX_PROTOCOL_I2C, &i2c);
+  status = device_get_protocol(fragments[FRAGMENT_I2C], ZX_PROTOCOL_I2C, &i2c);
   if (status != ZX_OK) {
     LOG_ERROR("Could not obtain I2C protocol\n");
     return status;

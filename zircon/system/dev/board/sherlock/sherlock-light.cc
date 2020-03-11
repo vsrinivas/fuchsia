@@ -31,17 +31,17 @@ zx_status_t Sherlock::LightInit() {
       BI_ABORT_IF(NE, BIND_I2C_BUS_ID, SHERLOCK_I2C_A0_0),
       BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 0x39),
   };
-  const device_component_part_t gpio_component[] = {
+  const device_fragment_part_t gpio_fragment[] = {
       {countof(root_match), root_match},
       {countof(gpio_match), gpio_match},
   };
-  const device_component_part_t i2c_component[] = {
+  const device_fragment_part_t i2c_fragment[] = {
       {countof(root_match), root_match},
       {countof(i2c_match), i2c_match},
   };
-  const device_component_t components[] = {
-      {countof(i2c_component), i2c_component},
-      {countof(gpio_component), gpio_component},
+  const device_fragment_t fragments[] = {
+      {countof(i2c_fragment), i2c_fragment},
+      {countof(gpio_fragment), gpio_fragment},
   };
 
   metadata::LightSensorParams params = {};
@@ -66,8 +66,8 @@ zx_status_t Sherlock::LightInit() {
   const composite_device_desc_t comp_desc = {
       .props = props,
       .props_count = countof(props),
-      .components = components,
-      .components_count = countof(components),
+      .fragments = fragments,
+      .fragments_count = countof(fragments),
       .coresident_device_index = UINT32_MAX,
       .metadata_list = metadata,
       .metadata_count = countof(metadata),
@@ -80,10 +80,10 @@ zx_status_t Sherlock::LightInit() {
   }
 
   // Lights
-  // Instructions: include components in this order
-  //     GPIO component
-  //     BRIGHTNESS capable--include PWM component
-  //     RGB capable--include RGB component
+  // Instructions: include fragments in this order
+  //     GPIO fragment
+  //     BRIGHTNESS capable--include PWM fragment
+  //     RGB capable--include RGB fragment
   //   Set GPIO alternative function here!
   using LightName = char[ZX_MAX_NAME_LEN];
   constexpr LightName kLightNames[] = {"AMBER_LED", "GREEN_LED"};
@@ -120,27 +120,27 @@ zx_status_t Sherlock::LightInit() {
       BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PWM),
       BI_MATCH_IF(EQ, BIND_PWM_ID, T931_PWM_F),
   };
-  const device_component_part_t amber_led_gpio_component[] = {
+  const device_fragment_part_t amber_led_gpio_fragment[] = {
       {countof(root_match), root_match},
       {countof(amber_led_gpio_match), amber_led_gpio_match},
   };
-  const device_component_part_t amber_led_pwm_component[] = {
+  const device_fragment_part_t amber_led_pwm_fragment[] = {
       {countof(root_match), root_match},
       {countof(amber_led_pwm_match), amber_led_pwm_match},
   };
-  const device_component_part_t green_led_gpio_component[] = {
+  const device_fragment_part_t green_led_gpio_fragment[] = {
       {countof(root_match), root_match},
       {countof(green_led_gpio_match), green_led_gpio_match},
   };
-  const device_component_part_t green_led_pwm_component[] = {
+  const device_fragment_part_t green_led_pwm_fragment[] = {
       {countof(root_match), root_match},
       {countof(green_led_pwm_match), green_led_pwm_match},
   };
-  const device_component_t light_components[] = {
-      {countof(amber_led_gpio_component), amber_led_gpio_component},
-      {countof(amber_led_pwm_component), amber_led_pwm_component},
-      {countof(green_led_gpio_component), green_led_gpio_component},
-      {countof(green_led_pwm_component), green_led_pwm_component},
+  const device_fragment_t light_fragments[] = {
+      {countof(amber_led_gpio_fragment), amber_led_gpio_fragment},
+      {countof(amber_led_pwm_fragment), amber_led_pwm_fragment},
+      {countof(green_led_gpio_fragment), green_led_gpio_fragment},
+      {countof(green_led_pwm_fragment), green_led_pwm_fragment},
   };
 
   static const pbus_dev_t light_dev = []() {
@@ -174,7 +174,7 @@ zx_status_t Sherlock::LightInit() {
   }
 
   status =
-      pbus_.CompositeDeviceAdd(&light_dev, light_components, countof(light_components), UINT32_MAX);
+      pbus_.CompositeDeviceAdd(&light_dev, light_fragments, countof(light_fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d\n", __func__, status);
     return status;

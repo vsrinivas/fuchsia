@@ -116,11 +116,11 @@ protocol PBus {
     SetBootloaderInfo(PbusBootloaderInfo info) -> (zx.status s);
     RegisterSysSuspendCallback(PbusSysSuspend suspend_cb) -> (zx.status s);
     /// Adds a composite platform device to the bus. The platform device specified by |dev|
-    /// is the zeroth component and the |components| array specifies components 1 through n.
-    /// The composite device is started in a the devhost of the component with index
+    /// is the zeroth fragment and the |fragments| array specifies fragments 1 through n.
+    /// The composite device is started in a the devhost of the fragment with index
     /// |coresident_device_index|, or a new devhost if |coresident_device_index| is UINT32_MAX.
     /// |coresident_device_index| is not allowed to be zero, since we don't want platform device
     /// drivers running in the platform bus's devhost. 
-    CompositeDeviceAdd(PbusDev dev, vector<ddk.driver.DeviceComponent> components,
+    CompositeDeviceAdd(PbusDev dev, vector<ddk.driver.DeviceFragment> fragments,
                        uint32 coresident_device_index) -> (zx.status s);
 };

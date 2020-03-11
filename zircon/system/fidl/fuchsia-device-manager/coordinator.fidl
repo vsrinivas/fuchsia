@@ -49,40 +49,40 @@ const uint32 METADATA_MAX = 32;
 /// Maximum number of properties that can be attached to a device
 const uint32 PROPERTIES_MAX = 256;
 
-/// Maximum number of components that a composite device can have
-const uint32 COMPONENTS_MAX = 16;
+/// Maximum number of fragments that a composite device can have
+const uint32 FRAGMENTS_MAX = 16;
 
-/// Maximum number of parts that a composite device component can have
-const uint32 DEVICE_COMPONENT_PARTS_MAX = 16;
+/// Maximum number of parts that a composite device fragment can have
+const uint32 DEVICE_FRAGMENT_PARTS_MAX = 16;
 
-/// Maximum number of instructions in the match program of a device component part
-const uint32 DEVICE_COMPONENT_PART_INSTRUCTIONS_MAX = 32;
+/// Maximum number of instructions in the match program of a device fragment part
+const uint32 DEVICE_FRAGMENT_PART_INSTRUCTIONS_MAX = 32;
 
 // Maximum number of instructions in a driver bind program
 const uint32 BIND_PROGRAM_INSTRUCTIONS_MAX = 256;
 
 /// Bit flags for device add configuration
 bits AddDeviceConfig : uint32 {
-    ///  Device can be a component in multiple composite devices
+    ///  Device can be a fragment in multiple composite devices
     ALLOW_MULTI_COMPOSITE = 0x00000001;
 };
 
-/// A part of a description of a DeviceComponent
-struct DeviceComponentPart {
+/// A part of a description of a DeviceFragment
+struct DeviceFragmentPart {
     // This is an awful hack around the LLCPP bindings not being ready yet.
     // Since we're using the C ones for now, we can only embed these structures as
     // arrays instead of vectors.
     uint32 match_program_count;
-    array<BindInstruction>:DEVICE_COMPONENT_PART_INSTRUCTIONS_MAX match_program;
+    array<BindInstruction>:DEVICE_FRAGMENT_PART_INSTRUCTIONS_MAX match_program;
 };
 
 /// A piece of a composite device
-struct DeviceComponent {
+struct DeviceFragment {
     // This is an awful hack around the LLCPP bindings not being ready yet.
     // Since we're using the C ones for now, we can only embed these structures as
     // arrays instead of vectors.
     uint32 parts_count;
-    array<DeviceComponentPart>:DEVICE_COMPONENT_PARTS_MAX parts;
+    array<DeviceFragmentPart>:DEVICE_FRAGMENT_PARTS_MAX parts;
 };
 
 /// Metadata that can be added to a device
@@ -94,7 +94,7 @@ struct DeviceMetadata {
 /// Composite device parts and properties
 struct CompositeDeviceDescriptor {
     vector<DeviceProperty>:PROPERTIES_MAX props;
-    vector<DeviceComponent>:COMPONENTS_MAX components;
+    vector<DeviceFragment>:FRAGMENTS_MAX fragments;
     uint32 coresident_device_index;
     vector<DeviceMetadata>:METADATA_MAX? metadata;
 };
@@ -177,15 +177,15 @@ protocol DevhostController {
                  string:DEVICE_ARGS_MAX? proxy_args, LocalDeviceId local_device_id);
 
     /// Introduce a composite device that has the given name and properties.
-    /// `components` will be a list of all of the composite's components,
-    /// described using devhost local device ids.  The order of the components
+    /// `fragments` will be a list of all of the composite's fragments,
+    /// described using devhost local device ids.  The order of the fragments
     /// will match the original composite creation request.  The new device will
     /// communicate with devcoordinator via `rpc`.
     ///
     /// `local_device_id` will be a unique value within the device's devhost, identifying
     /// the resulting composite device.
     CreateCompositeDevice(Coordinator coordinator_rpc, request<DeviceController> device_controller_rpc,
-                          vector<LocalDeviceId>:COMPONENTS_MAX components,
+                          vector<LocalDeviceId>:FRAGMENTS_MAX fragments,
                           string:DEVICE_NAME_MAX name, LocalDeviceId local_device_id)
         -> (zx.status status);
 };
@@ -266,8 +266,8 @@ protocol Coordinator {
                     vector<uint8>:METADATA_BYTES_MAX? data) -> () error zx.status;
 
     /// Adds the given composite device.  This causes the devcoordinator to try to match the
-    /// components against the existing device tree, and to monitor all new device additions
-    /// in order to find the components as they are created.
+    /// fragments against the existing device tree, and to monitor all new device additions
+    /// in order to find the fragments as they are created.
     AddCompositeDevice(string:DEVICE_NAME_MAX name, CompositeDeviceDescriptor comp_desc)
         -> () error zx.status;
 

@@ -36,27 +36,27 @@ zx_status_t Sherlock::ButtonsInit() {
       BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
       BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_MIC_PRIVACY),
   };
-  static const device_component_part_t volume_up_component[] = {
+  static const device_fragment_part_t volume_up_fragment[] = {
       {countof(root_match), root_match},
       {countof(volume_up_match), volume_up_match},
   };
-  static const device_component_part_t volume_down_component[] = {
+  static const device_fragment_part_t volume_down_fragment[] = {
       {countof(root_match), root_match},
       {countof(volume_down_match), volume_down_match},
   };
-  static const device_component_part_t volume_both_component[] = {
+  static const device_fragment_part_t volume_both_fragment[] = {
       {countof(root_match), root_match},
       {countof(volume_both_match), volume_both_match},
   };
-  static const device_component_part_t mic_privacy_component[] = {
+  static const device_fragment_part_t mic_privacy_fragment[] = {
       {countof(root_match), root_match},
       {countof(mic_privacy_match), mic_privacy_match},
   };
-  static const device_component_t components[] = {
-      {countof(volume_up_component), volume_up_component},
-      {countof(volume_down_component), volume_down_component},
-      {countof(volume_both_component), volume_both_component},
-      {countof(mic_privacy_component), mic_privacy_component},
+  static const device_fragment_t fragments[] = {
+      {countof(volume_up_fragment), volume_up_fragment},
+      {countof(volume_down_fragment), volume_down_fragment},
+      {countof(volume_both_fragment), volume_both_fragment},
+      {countof(mic_privacy_fragment), mic_privacy_fragment},
   };
   // clang-format off
     static constexpr buttons_button_config_t buttons[] = {
@@ -94,8 +94,8 @@ zx_status_t Sherlock::ButtonsInit() {
   const composite_device_desc_t comp_desc = {
       .props = props,
       .props_count = countof(props),
-      .components = components,
-      .components_count = countof(components),
+      .fragments = fragments,
+      .fragments_count = countof(fragments),
       .coresident_device_index = UINT32_MAX,
       .metadata_list = available_buttons_metadata,
       .metadata_count = countof(available_buttons_metadata),

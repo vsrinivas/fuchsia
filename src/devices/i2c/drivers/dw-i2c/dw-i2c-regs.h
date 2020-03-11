@@ -455,7 +455,7 @@ class SMBusUdidLsbReg : public hwreg::RegisterBase<SMBusUdidLsbReg, uint32_t> {
   static auto Get() { return hwreg::RegisterAddr<SMBusUdidLsbReg>(0xdc); }
 };
 
-/* Component Parameter */
+/* Fragment Parameter */
 class CompParam1Reg : public hwreg::RegisterBase<CompParam1Reg, uint32_t> {
  public:
   DEF_FIELD(23, 16, tx_buffer_depth);
@@ -469,13 +469,13 @@ class CompParam1Reg : public hwreg::RegisterBase<CompParam1Reg, uint32_t> {
   static auto Get() { return hwreg::RegisterAddr<CompParam1Reg>(0xf4); }
 };
 
-/* I2C Component Version */
+/* I2C Fragment Version */
 class CompVersionReg : public hwreg::RegisterBase<CompVersionReg, uint32_t> {
  public:
   static auto Get() { return hwreg::RegisterAddr<CompVersionReg>(0xf8); }
 };
 
-/* I2C Component Type */
+/* I2C Fragment Type */
 class CompTypeReg : public hwreg::RegisterBase<CompTypeReg, uint32_t> {
  public:
   static auto Get() { return hwreg::RegisterAddr<CompTypeReg>(0xfc); }

@@ -54,9 +54,9 @@ static const dai_supported_formats_t kSupportedDaiFormats = {
 };
 
 enum {
-  COMPONENT_I2C,
-  COMPONENT_RESET_GPIO,
-  COMPONENT_COUNT,
+  FRAGMENT_I2C,
+  FRAGMENT_RESET_GPIO,
+  FRAGMENT_COUNT,
 };
 
 }  // namespace
@@ -151,17 +151,17 @@ zx_status_t Max98373::Create(zx_device_t* parent) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  zx_device_t* components[COMPONENT_COUNT] = {};
+  zx_device_t* fragments[FRAGMENT_COUNT] = {};
   size_t actual = 0;
-  composite_get_components(&composite, components, countof(components), &actual);
-  if (actual != COMPONENT_COUNT) {
-    zxlogf(ERROR, "%s Could not get components\n", __FILE__);
+  composite_get_fragments(&composite, fragments, countof(fragments), &actual);
+  if (actual != FRAGMENT_COUNT) {
+    zxlogf(ERROR, "%s Could not get fragments\n", __FILE__);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   fbl::AllocChecker ac;
   auto dev = std::unique_ptr<Max98373>(
-      new (&ac) Max98373(parent, components[COMPONENT_I2C], components[COMPONENT_RESET_GPIO]));
+      new (&ac) Max98373(parent, fragments[FRAGMENT_I2C], fragments[FRAGMENT_RESET_GPIO]));
   if (!ac.check()) {
     zxlogf(ERROR, "%s Could not allocate memory\n", __FILE__);
     return ZX_ERR_NO_MEMORY;

@@ -40,10 +40,10 @@ static const dai_supported_formats_t kSupportedDaiFormats = {
 };
 
 enum {
-  COMPONENT_I2C,
-  COMPONENT_RESET_GPIO,
-  COMPONENT_MUTE_GPIO,
-  COMPONENT_COUNT,
+  FRAGMENT_I2C,
+  FRAGMENT_RESET_GPIO,
+  FRAGMENT_MUTE_GPIO,
+  FRAGMENT_COUNT,
 };
 
 }  // namespace
@@ -120,19 +120,19 @@ zx_status_t Tas5782::Create(zx_device_t* parent) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  zx_device_t* components[COMPONENT_COUNT] = {};
+  zx_device_t* fragments[FRAGMENT_COUNT] = {};
   size_t actual = 0;
-  composite_get_components(&composite, components, countof(components), &actual);
-  // Only I2C component is required.
+  composite_get_fragments(&composite, fragments, countof(fragments), &actual);
+  // Only I2C fragment is required.
   if (actual < 1) {
-    zxlogf(ERROR, "%s Could not get components\n", __FILE__);
+    zxlogf(ERROR, "%s Could not get fragments\n", __FILE__);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   fbl::AllocChecker ac;
-  auto dev = std::unique_ptr<Tas5782>(new (&ac) Tas5782(parent, components[COMPONENT_I2C],
-                                                        components[COMPONENT_RESET_GPIO],
-                                                        components[COMPONENT_MUTE_GPIO]));
+  auto dev = std::unique_ptr<Tas5782>(new (&ac) Tas5782(parent, fragments[FRAGMENT_I2C],
+                                                        fragments[FRAGMENT_RESET_GPIO],
+                                                        fragments[FRAGMENT_MUTE_GPIO]));
   if (!ac.check()) {
     zxlogf(ERROR, "%s Could not allocate memory\n", __FILE__);
     return ZX_ERR_NO_MEMORY;

@@ -20,13 +20,13 @@ namespace audio {
 namespace sherlock {
 
 enum {
-  COMPONENT_PDEV,
-  COMPONENT_FAULT_GPIO,
-  COMPONENT_ENABLE_GPIO,
-  COMPONENT_I2C_0,
-  COMPONENT_I2C_1,
-  COMPONENT_I2C_2,  // Optional
-  COMPONENT_COUNT,
+  FRAGMENT_PDEV,
+  FRAGMENT_FAULT_GPIO,
+  FRAGMENT_ENABLE_GPIO,
+  FRAGMENT_I2C_0,
+  FRAGMENT_I2C_1,
+  FRAGMENT_I2C_2,  // Optional
+  FRAGMENT_COUNT,
 };
 
 // Expects L+R for tweeters + L+R for the 1 Woofer (mixed in HW).
@@ -143,15 +143,15 @@ zx_status_t SherlockAudioStreamOut::InitPdev() {
     return status;
   }
 
-  zx_device_t* components[COMPONENT_COUNT] = {};
+  zx_device_t* fragments[FRAGMENT_COUNT] = {};
   size_t actual;
-  composite_get_components(&composite, components, countof(components), &actual);
-  if (actual < countof(components) - 1) {
-    zxlogf(ERROR, "could not get components\n");
+  composite_get_fragments(&composite, fragments, countof(fragments), &actual);
+  if (actual < countof(fragments) - 1) {
+    zxlogf(ERROR, "could not get fragments\n");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  pdev_ = components[COMPONENT_PDEV];
+  pdev_ = fragments[FRAGMENT_PDEV];
   if (!pdev_.is_valid()) {
     return ZX_ERR_NO_RESOURCES;
   }
@@ -171,7 +171,7 @@ zx_status_t SherlockAudioStreamOut::InitPdev() {
       return ZX_ERR_NO_MEMORY;
     }
     for (uint32_t i = 0; i < 3; ++i) {
-      codecs_[i] = Tas5720::Create(components[COMPONENT_I2C_0 + i]);
+      codecs_[i] = Tas5720::Create(fragments[FRAGMENT_I2C_0 + i]);
       if (!codecs_[i]) {
         zxlogf(ERROR, "%s could not get tas5720\n", __func__);
         return ZX_ERR_NO_RESOURCES;
@@ -182,8 +182,8 @@ zx_status_t SherlockAudioStreamOut::InitPdev() {
     return ZX_ERR_NO_RESOURCES;
   }
 
-  audio_fault_ = components[COMPONENT_FAULT_GPIO];
-  audio_en_ = components[COMPONENT_ENABLE_GPIO];
+  audio_fault_ = fragments[FRAGMENT_FAULT_GPIO];
+  audio_en_ = fragments[FRAGMENT_ENABLE_GPIO];
 
   if (!audio_fault_.is_valid() || !audio_en_.is_valid()) {
     zxlogf(ERROR, "%s failed to allocate gpio\n", __func__);

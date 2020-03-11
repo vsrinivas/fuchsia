@@ -25,7 +25,7 @@ static const zx_bind_inst_t ref_out_i2c_match[] = {
     BI_ABORT_IF(NE, BIND_I2C_BUS_ID, 0),
     BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 0x37),
 };
-static const device_component_part_t ref_out_i2c_component[] = {
+static const device_fragment_part_t ref_out_i2c_fragment[] = {
     {fbl::count_of(root_match), root_match},
     {fbl::count_of(ref_out_i2c_match), ref_out_i2c_match},
 };
@@ -34,14 +34,14 @@ static const zx_bind_inst_t ref_out_touch_gpio_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, 5),
 };
-static const device_component_part_t ref_out_touch_gpio_component[] = {
+static const device_fragment_part_t ref_out_touch_gpio_fragment[] = {
     {countof(root_match), root_match},
     {countof(ref_out_touch_gpio_match), ref_out_touch_gpio_match},
 };
 
-static const device_component_t controller_components[] = {
-    {countof(ref_out_i2c_component), ref_out_i2c_component},
-    {countof(ref_out_touch_gpio_component), ref_out_touch_gpio_component},
+static const device_fragment_t controller_fragments[] = {
+    {countof(ref_out_i2c_fragment), ref_out_i2c_fragment},
+    {countof(ref_out_touch_gpio_fragment), ref_out_touch_gpio_fragment},
 };
 
 zx_status_t As370::TouchInit() {
@@ -76,8 +76,8 @@ zx_status_t As370::TouchInit() {
   const composite_device_desc_t comp_desc = {
       .props = props,
       .props_count = countof(props),
-      .components = controller_components,
-      .components_count = countof(controller_components),
+      .fragments = controller_fragments,
+      .fragments_count = countof(controller_fragments),
       .coresident_device_index = UINT32_MAX,
       .metadata_list = as370_touch_metadata,
       .metadata_count = countof(as370_touch_metadata),

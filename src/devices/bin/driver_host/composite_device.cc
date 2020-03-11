@@ -17,25 +17,25 @@ namespace {
 
 class CompositeDeviceInstance {
  public:
-  CompositeDeviceInstance(zx_device_t* zxdev, CompositeComponents&& components)
-      : zxdev_(zxdev), components_(std::move(components)) {}
+  CompositeDeviceInstance(zx_device_t* zxdev, CompositeFragments&& fragments)
+      : zxdev_(zxdev), fragments_(std::move(fragments)) {}
 
-  static zx_status_t Create(fbl::RefPtr<zx_device> zxdev, CompositeComponents&& components,
+  static zx_status_t Create(fbl::RefPtr<zx_device> zxdev, CompositeFragments&& fragments,
                             std::unique_ptr<CompositeDeviceInstance>* device) {
     // Leak a reference to the zxdev here.  It will be cleaned up by the
     // device_remove() in Unbind().
     auto dev = std::make_unique<CompositeDeviceInstance>(fbl::ExportToRawPtr(&zxdev),
-                                                         std::move(components));
+                                                         std::move(fragments));
     *device = std::move(dev);
     return ZX_OK;
   }
 
-  uint32_t GetComponentCount() { return static_cast<uint32_t>(components_.size()); }
+  uint32_t GetFragmentCount() { return static_cast<uint32_t>(fragments_.size()); }
 
-  void GetComponents(zx_device_t** comp_list, size_t comp_count, size_t* comp_actual) {
-    size_t actual = std::min(comp_count, components_.size());
+  void GetFragments(zx_device_t** comp_list, size_t comp_count, size_t* comp_actual) {
+    size_t actual = std::min(comp_count, fragments_.size());
     for (size_t i = 0; i < actual; ++i) {
-      comp_list[i] = components_[i].get();
+      comp_list[i] = fragments_[i].get();
     }
     *comp_actual = actual;
   }
@@ -43,19 +43,19 @@ class CompositeDeviceInstance {
   void Release() { delete this; }
 
   void Unbind() {
-    for (auto& component : components_) {
+    for (auto& fragment : fragments_) {
       // Drop the reference to the composite device.
-      component->take_composite();
+      fragment->take_composite();
     }
-    components_.reset();
+    fragments_.reset();
     device_remove_deprecated(zxdev_);
   }
 
-  const CompositeComponents& components() { return components_; }
+  const CompositeFragments& fragments() { return fragments_; }
 
  private:
   zx_device_t* zxdev_;
-  CompositeComponents components_;
+  CompositeFragments fragments_;
 };
 
 // Get the placeholder driver structure for the composite driver
@@ -78,7 +78,7 @@ fbl::RefPtr<zx_driver> GetCompositeDriver() {
 }  // namespace
 
 zx_status_t InitializeCompositeDevice(const fbl::RefPtr<zx_device>& dev,
-                                      CompositeComponents&& components) {
+                                      CompositeFragments&& fragments) {
   static const zx_protocol_device_t composite_device_ops = []() {
     zx_protocol_device_t ops = {};
     ops.unbind = [](void* ctx) { static_cast<CompositeDeviceInstance*>(ctx)->Unbind(); };
@@ -88,18 +88,25 @@ zx_status_t InitializeCompositeDevice(const fbl::RefPtr<zx_device>& dev,
   static composite_protocol_ops_t composite_ops = []() {
     composite_protocol_ops_t ops = {};
     ops.get_component_count = [](void* ctx) {
-      return static_cast<CompositeDeviceInstance*>(ctx)->GetComponentCount();
+      return static_cast<CompositeDeviceInstance*>(ctx)->GetFragmentCount();
     };
     ops.get_components = [](void* ctx, zx_device_t** comp_list, size_t comp_count,
                             size_t* comp_actual) {
-      static_cast<CompositeDeviceInstance*>(ctx)->GetComponents(comp_list, comp_count, comp_actual);
+      static_cast<CompositeDeviceInstance*>(ctx)->GetFragments(comp_list, comp_count, comp_actual);
     };
     ops.get_fragment_count = [](void* ctx) {
-      return static_cast<CompositeDeviceInstance*>(ctx)->GetComponentCount();
+      return static_cast<CompositeDeviceInstance*>(ctx)->GetFragmentCount();
     };
     ops.get_fragments = [](void* ctx, zx_device_t** comp_list, size_t comp_count,
                            size_t* comp_actual) {
-      static_cast<CompositeDeviceInstance*>(ctx)->GetComponents(comp_list, comp_count, comp_actual);
+      static_cast<CompositeDeviceInstance*>(ctx)->GetFragments(comp_list, comp_count, comp_actual);
+    };
+    ops.get_fragment_count = [](void* ctx) {
+      return static_cast<CompositeDeviceInstance*>(ctx)->GetFragmentCount();
+    };
+    ops.get_fragments = [](void* ctx, zx_device_t** comp_list, size_t comp_count,
+                           size_t* comp_actual) {
+      static_cast<CompositeDeviceInstance*>(ctx)->GetFragments(comp_list, comp_count, comp_actual);
     };
     return ops;
   }();
@@ -112,13 +119,13 @@ zx_status_t InitializeCompositeDevice(const fbl::RefPtr<zx_device>& dev,
   auto composite = fbl::MakeRefCounted<CompositeDevice>(dev);
 
   std::unique_ptr<CompositeDeviceInstance> new_device;
-  zx_status_t status = CompositeDeviceInstance::Create(dev, std::move(components), &new_device);
+  zx_status_t status = CompositeDeviceInstance::Create(dev, std::move(fragments), &new_device);
   if (status != ZX_OK) {
     return status;
   }
 
-  for (auto& component : new_device->components()) {
-    component->set_composite(composite);
+  for (auto& fragment : new_device->fragments()) {
+    fragment->set_composite(composite);
   }
 
   dev->protocol_id = ZX_PROTOCOL_COMPOSITE;

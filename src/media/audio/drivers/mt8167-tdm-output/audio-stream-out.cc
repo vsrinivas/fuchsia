@@ -22,9 +22,9 @@
 namespace {
 
 enum {
-  COMPONENT_PDEV,
-  COMPONENT_CODEC,
-  COMPONENT_COUNT,
+  FRAGMENT_PDEV,
+  FRAGMENT_CODEC,
+  FRAGMENT_COUNT,
 };
 
 // Expects L+R.
@@ -49,16 +49,16 @@ zx_status_t Mt8167AudioStreamOut::InitPdev() {
     return status;
   }
 
-  zx_device_t* components[COMPONENT_COUNT] = {};
+  zx_device_t* fragments[FRAGMENT_COUNT] = {};
   size_t actual;
-  composite_get_components(&composite, components, countof(components), &actual);
-  // Only PDEV and I2C components are required.
+  composite_get_fragments(&composite, fragments, countof(fragments), &actual);
+  // Only PDEV and I2C fragments are required.
   if (actual < 2) {
-    zxlogf(ERROR, "could not get components\n");
+    zxlogf(ERROR, "could not get fragments\n");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  pdev_ = components[COMPONENT_PDEV];
+  pdev_ = fragments[FRAGMENT_PDEV];
   if (!pdev_.is_valid()) {
     return ZX_ERR_NO_RESOURCES;
   }
@@ -71,7 +71,7 @@ zx_status_t Mt8167AudioStreamOut::InitPdev() {
     return status;
   }
 
-  codec_.proto_client_ = components[COMPONENT_CODEC];
+  codec_.proto_client_ = fragments[FRAGMENT_CODEC];
   if (!pdev_.is_valid()) {
     return ZX_ERR_NO_RESOURCES;
   }

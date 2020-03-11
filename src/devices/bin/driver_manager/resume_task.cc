@@ -24,13 +24,13 @@ fbl::RefPtr<ResumeTask> ResumeTask::Create(fbl::RefPtr<Device> device, uint32_t 
 
 bool ResumeTask::AddParentResumeTask() {
   if (device_->parent() == nullptr) {
-    // For a composite device, each component is a parent.
-    // Until all the components resume, composite device cannot
+    // For a composite device, each fragment is a parent.
+    // Until all the fragments resume, composite device cannot
     // be resumed.
     if (device_->composite()) {
       bool parent_dependency_added = false;
-      for (auto& component : device_->composite()->bound_components()) {
-        auto dev = component.bound_device();
+      for (auto& fragment : device_->composite()->bound_fragments()) {
+        auto dev = fragment.bound_device();
         if (dev != nullptr) {
           switch (dev->state()) {
             case Device::State::kDead:

@@ -813,23 +813,23 @@ zx_status_t Dwc2::Init() {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  zx_device_t* components[2];
+  zx_device_t* fragments[2];
   size_t actual;
 
-  // Retrieve platform device protocol from our first component.
-  composite.GetComponents(components, fbl::count_of(components), &actual);
-  if (actual < fbl::count_of(components)) {
+  // Retrieve platform device protocol from our first fragment.
+  composite.GetFragments(fragments, fbl::count_of(fragments), &actual);
+  if (actual < fbl::count_of(fragments)) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  pdev_ = components[0];
+  pdev_ = fragments[0];
   if (!pdev_.is_valid()) {
     zxlogf(ERROR, "Dwc2::Create: could not get platform device protocol\n");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   // USB PHY protocol is optional.
-  usb_phy_ = components[1];
+  usb_phy_ = fragments[1];
   if (!usb_phy_->is_valid()) {
     usb_phy_.reset();
   }

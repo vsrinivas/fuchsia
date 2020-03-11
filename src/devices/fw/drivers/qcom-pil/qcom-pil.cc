@@ -178,15 +178,15 @@ zx_status_t PilDevice::Bind() {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  zx_device_t* components[kClockCount + 1];
+  zx_device_t* fragments[kClockCount + 1];
   size_t actual;
-  composite.GetComponents(components, fbl::count_of(components), &actual);
-  if (actual != fbl::count_of(components)) {
-    zxlogf(ERROR, "%s could not get components\n", __func__);
+  composite.GetFragments(fragments, fbl::count_of(fragments), &actual);
+  if (actual != fbl::count_of(fragments)) {
+    zxlogf(ERROR, "%s could not get fragments\n", __func__);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  pdev_ = components[0];
+  pdev_ = fragments[0];
   if (!pdev_.is_valid()) {
     zxlogf(ERROR, "%s could not get pdev protocol\n", __func__);
     return ZX_ERR_NOT_SUPPORTED;
@@ -204,7 +204,7 @@ zx_status_t PilDevice::Bind() {
   }
 
   for (unsigned i = 0; i < kClockCount; i++) {
-    clks_[i] = components[i + 1];
+    clks_[i] = fragments[i + 1];
     if (!clks_[i].is_valid()) {
       zxlogf(ERROR, "%s GetClk failed %d\n", __func__, status);
       return status;

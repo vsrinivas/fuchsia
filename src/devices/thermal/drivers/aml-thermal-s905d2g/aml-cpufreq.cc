@@ -54,23 +54,23 @@ zx_status_t AmlCpuFrequency::Create(
       thermal_info.initial_cluster_frequencies
           [fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN];
 
-  constexpr size_t kMaxComponents =
+  constexpr size_t kMaxFragments =
       ((kPwmsPerCluster + kClocksPerCluster) * fuchsia_hardware_thermal_MAX_DVFS_DOMAINS) + 1;
 
   const size_t num_clocks = kClocksPerCluster * (big_little_ ? 2 : 1);
   const size_t num_pwms = kPwmsPerCluster * (big_little_ ? 2 : 1);
 
-  // zeroth component is pdev
-  zx_device_t* components[kMaxComponents];
+  // zeroth fragment is pdev
+  zx_device_t* fragments[kMaxFragments];
   size_t actual = 0;
-  composite.GetComponents(components, fbl::count_of(components), &actual);
+  composite.GetFragments(fragments, fbl::count_of(fragments), &actual);
 
   if (actual < (num_clocks + num_pwms + 1)) {
-    zxlogf(ERROR, "aml-cpufreq: not enough components\n");
+    zxlogf(ERROR, "aml-cpufreq: not enough fragments\n");
     return ZX_ERR_NO_RESOURCES;
   }
 
-  ddk::PDev pdev(components[0]);
+  ddk::PDev pdev(fragments[0]);
   if (!pdev.is_valid()) {
     zxlogf(ERROR, "aml-cpufreq: failed to get pdev protocol\n");
     return ZX_ERR_NOT_SUPPORTED;
@@ -96,7 +96,7 @@ zx_status_t AmlCpuFrequency::Create(
 
   for (size_t i = 0; i < num_clocks; i++) {
     ddk::ClockProtocolClient clock;
-    status = ddk::ClockProtocolClient::CreateFromDevice(components[num_pwms + i + 1], &clock);
+    status = ddk::ClockProtocolClient::CreateFromDevice(fragments[num_pwms + i + 1], &clock);
     if (status != ZX_OK) {
       zxlogf(ERROR, "aml-cpufreq: failed to get clk protocol\n");
       return status;

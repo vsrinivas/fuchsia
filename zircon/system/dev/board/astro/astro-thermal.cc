@@ -188,22 +188,22 @@ static const zx_bind_inst_t clk2_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
     BI_MATCH_IF(EQ, BIND_CLOCK_ID, g12a_clk::CLK_SYS_CPU_CLK_DIV16),
 };
-const device_component_part_t pwm_ao_d_component[] = {
+const device_fragment_part_t pwm_ao_d_fragment[] = {
     {countof(root_match), root_match},
     {countof(pwm_ao_d_match), pwm_ao_d_match},
 };
-static const device_component_part_t clk1_component[] = {
+static const device_fragment_part_t clk1_fragment[] = {
     {countof(root_match), root_match},
     {countof(clk1_match), clk1_match},
 };
-static const device_component_part_t clk2_component[] = {
+static const device_fragment_part_t clk2_fragment[] = {
     {countof(root_match), root_match},
     {countof(clk2_match), clk2_match},
 };
-static const device_component_t components[] = {
-    {countof(pwm_ao_d_component), pwm_ao_d_component},
-    {countof(clk1_component), clk1_component},
-    {countof(clk2_component), clk2_component},
+static const device_fragment_t fragments[] = {
+    {countof(pwm_ao_d_fragment), pwm_ao_d_fragment},
+    {countof(clk1_fragment), clk1_fragment},
+    {countof(clk2_fragment), clk2_fragment},
 };
 
 zx_status_t Astro::ThermalInit() {
@@ -221,7 +221,7 @@ zx_status_t Astro::ThermalInit() {
     return status;
   }
 
-  status = pbus_.CompositeDeviceAdd(&thermal_dev, components, countof(components), UINT32_MAX);
+  status = pbus_.CompositeDeviceAdd(&thermal_dev, fragments, countof(fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DeviceAdd failed: %d\n", __func__, status);
     return status;

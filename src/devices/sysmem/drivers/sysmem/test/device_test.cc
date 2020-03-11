@@ -40,8 +40,8 @@ class FakePBus : public ddk::PBusProtocol<FakePBus, ddk::base_protocol> {
     return ZX_ERR_NOT_SUPPORTED;
   }
   zx_status_t PBusCompositeDeviceAdd(const pbus_dev_t* dev,
-                                     const device_component_t* components_list,
-                                     size_t components_count, uint32_t coresident_device_index) {
+                                     const device_fragment_t* fragments_list,
+                                     size_t fragments_count, uint32_t coresident_device_index) {
     return ZX_ERR_NOT_SUPPORTED;
   }
   zx_status_t PBusRegisterSysSuspendCallback(const pbus_sys_suspend_t* suspend_cbin) {

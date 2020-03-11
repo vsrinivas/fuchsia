@@ -69,23 +69,23 @@ static const zx_bind_inst_t cleo_out_codec_match[] = {
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TI),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TI_TAS5805),
 };
-static const device_component_part_t in_i2c_component[] = {
+static const device_fragment_part_t in_i2c_fragment[] = {
     {fbl::count_of(root_match), root_match},
     {fbl::count_of(in_i2c_match), in_i2c_match},
 };
-static const device_component_part_t mt8167s_out_i2c_component[] = {
+static const device_fragment_part_t mt8167s_out_i2c_fragment[] = {
     {fbl::count_of(root_match), root_match},
     {fbl::count_of(mt8167s_out_i2c_match), mt8167s_out_i2c_match},
 };
-static const device_component_part_t cleo_out_i2c_component[] = {
+static const device_fragment_part_t cleo_out_i2c_fragment[] = {
     {fbl::count_of(root_match), root_match},
     {fbl::count_of(cleo_out_i2c_match), cleo_out_i2c_match},
 };
-static const device_component_part_t cleo_out_codec_component[] = {
+static const device_fragment_part_t cleo_out_codec_fragment[] = {
     {fbl::count_of(root_match), root_match},
     {fbl::count_of(cleo_out_codec_match), cleo_out_codec_match},
 };
-static const device_component_part_t mt8167s_out_codec_component[] = {
+static const device_fragment_part_t mt8167s_out_codec_fragment[] = {
     {fbl::count_of(root_match), root_match},
     {fbl::count_of(mt8167s_out_codec_match), mt8167s_out_codec_match},
 };
@@ -102,36 +102,36 @@ static const zx_bind_inst_t mt8167s_out_mute_gpio_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, MT8167_GPIO108_MSDC1_DAT2),
 };
-static const device_component_part_t in_gpio_component[] = {
+static const device_fragment_part_t in_gpio_fragment[] = {
     {countof(root_match), root_match},
     {countof(in_gpio_match), in_gpio_match},
 };
-static const device_component_part_t mt8167s_out_reset_gpio_component[] = {
+static const device_fragment_part_t mt8167s_out_reset_gpio_fragment[] = {
     {countof(root_match), root_match},
     {countof(mt8167s_out_reset_gpio_match), mt8167s_out_reset_gpio_match},
 };
-static const device_component_part_t mt8167s_out_mute_gpio_component[] = {
+static const device_fragment_part_t mt8167s_out_mute_gpio_fragment[] = {
     {countof(root_match), root_match},
     {countof(mt8167s_out_mute_gpio_match), mt8167s_out_mute_gpio_match},
 };
 
-static const device_component_t in_components[] = {
-    {countof(in_i2c_component), in_i2c_component},
-    {countof(in_gpio_component), in_gpio_component},
+static const device_fragment_t in_fragments[] = {
+    {countof(in_i2c_fragment), in_i2c_fragment},
+    {countof(in_gpio_fragment), in_gpio_fragment},
 };
-static const device_component_t mt8167s_codec_components[] = {
-    {countof(mt8167s_out_i2c_component), mt8167s_out_i2c_component},
-    {countof(mt8167s_out_reset_gpio_component), mt8167s_out_reset_gpio_component},
-    {countof(mt8167s_out_mute_gpio_component), mt8167s_out_mute_gpio_component},
+static const device_fragment_t mt8167s_codec_fragments[] = {
+    {countof(mt8167s_out_i2c_fragment), mt8167s_out_i2c_fragment},
+    {countof(mt8167s_out_reset_gpio_fragment), mt8167s_out_reset_gpio_fragment},
+    {countof(mt8167s_out_mute_gpio_fragment), mt8167s_out_mute_gpio_fragment},
 };
-static const device_component_t mt8167s_controller_components[] = {
-    {countof(mt8167s_out_codec_component), mt8167s_out_codec_component},
+static const device_fragment_t mt8167s_controller_fragments[] = {
+    {countof(mt8167s_out_codec_fragment), mt8167s_out_codec_fragment},
 };
-static const device_component_t cleo_codec_components[] = {
-    {countof(cleo_out_i2c_component), cleo_out_i2c_component},
+static const device_fragment_t cleo_codec_fragments[] = {
+    {countof(cleo_out_i2c_fragment), cleo_out_i2c_fragment},
 };
-static const device_component_t cleo_controller_components[] = {
-    {countof(cleo_out_codec_component), cleo_out_codec_component},
+static const device_fragment_t cleo_controller_fragments[] = {
+    {countof(cleo_out_codec_fragment), cleo_out_codec_fragment},
 };
 
 zx_status_t Mt8167::AudioInit() {
@@ -297,8 +297,8 @@ zx_status_t Mt8167::AudioInit() {
     const composite_device_desc_t comp_desc = {
         .props = props,
         .props_count = fbl::count_of(props),
-        .components = mt8167s_codec_components,
-        .components_count = countof(mt8167s_codec_components),
+        .fragments = mt8167s_codec_fragments,
+        .fragments_count = countof(mt8167s_codec_fragments),
         .coresident_device_index = UINT32_MAX,
         .metadata_list = nullptr,
         .metadata_count = 0,
@@ -310,8 +310,8 @@ zx_status_t Mt8167::AudioInit() {
       return status;
     }
 
-    status = pbus_.CompositeDeviceAdd(&controller_out, mt8167s_controller_components,
-                                      countof(mt8167s_controller_components), UINT32_MAX);
+    status = pbus_.CompositeDeviceAdd(&controller_out, mt8167s_controller_fragments,
+                                      countof(mt8167s_controller_fragments), UINT32_MAX);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: pbus_.CompositeDeviceAdd failed %d\n", __FUNCTION__, status);
       return status;
@@ -323,8 +323,8 @@ zx_status_t Mt8167::AudioInit() {
     const composite_device_desc_t comp_desc = {
         .props = props,
         .props_count = fbl::count_of(props),
-        .components = cleo_codec_components,
-        .components_count = countof(cleo_codec_components),
+        .fragments = cleo_codec_fragments,
+        .fragments_count = countof(cleo_codec_fragments),
         .coresident_device_index = UINT32_MAX,
         .metadata_list = nullptr,
         .metadata_count = 0,
@@ -336,14 +336,14 @@ zx_status_t Mt8167::AudioInit() {
       return status;
     }
 
-    status = pbus_.CompositeDeviceAdd(&controller_out, cleo_controller_components,
-                                      countof(cleo_controller_components), UINT32_MAX);
+    status = pbus_.CompositeDeviceAdd(&controller_out, cleo_controller_fragments,
+                                      countof(cleo_controller_fragments), UINT32_MAX);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: pbus_.CompositeDeviceAdd failed %d\n", __FUNCTION__, status);
       return status;
     }
   }
-  status = pbus_.CompositeDeviceAdd(&dev_in, in_components, countof(in_components), UINT32_MAX);
+  status = pbus_.CompositeDeviceAdd(&dev_in, in_fragments, countof(in_fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: pbus_.CompositeDeviceAdd failed %d\n", __FUNCTION__, status);
     return status;

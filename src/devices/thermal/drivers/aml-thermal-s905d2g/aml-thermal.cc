@@ -87,16 +87,16 @@ zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  // zeroth component is pdev
-  zx_device_t* component;
+  // zeroth fragment is pdev
+  zx_device_t* fragment;
   size_t actual;
-  composite.GetComponents(&component, 1, &actual);
+  composite.GetFragments(&fragment, 1, &actual);
   if (actual != 1) {
-    zxlogf(ERROR, "%s: failed to get pdev component\n", __func__);
+    zxlogf(ERROR, "%s: failed to get pdev fragment\n", __func__);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  ddk::PDev pdev(component);
+  ddk::PDev pdev(fragment);
   if (!pdev.is_valid()) {
     zxlogf(ERROR, "aml-thermal: failed to get pdev protocol\n");
     return ZX_ERR_NOT_SUPPORTED;
@@ -141,7 +141,7 @@ zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
   }
 
   // Initialize Temperature Sensor.
-  status = tsensor->Create(component, thermal_config);
+  status = tsensor->Create(fragment, thermal_config);
   if (status != ZX_OK) {
     zxlogf(ERROR, "aml-thermal: Could not initialize Temperature Sensor: %d\n", status);
     return status;

@@ -108,8 +108,8 @@ class As370Power : public As370PowerType,
       ddk::I2cProtocolClient* i2c);  // virtual method overloaded in unit test
 
  private:
-  static constexpr uint32_t kComponentCount = 1;
-  static constexpr uint32_t kI2cComponent = 0;
+  static constexpr uint32_t kFragmentCount = 1;
+  static constexpr uint32_t kI2cFragment = 0;
 
   zx_status_t Bind();
   zx_status_t InitializePowerDomains(const ddk::I2cProtocolClient& i2c);

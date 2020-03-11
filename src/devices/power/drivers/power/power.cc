@@ -183,16 +183,16 @@ zx_status_t PowerDevice::Create(void* ctx, zx_device_t* parent) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  uint32_t parent_count = composite.GetComponentCount();
-  zx_device_t* components[parent_count];
-  composite.GetComponents(components, parent_count, &actual);
+  uint32_t parent_count = composite.GetFragmentCount();
+  zx_device_t* fragments[parent_count];
+  composite.GetFragments(fragments, parent_count, &actual);
   if (actual != parent_count) {
-    zxlogf(ERROR, "%s could not get composite components\n", __func__);
+    zxlogf(ERROR, "%s could not get composite fragments\n", __func__);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  // POWER_IMPL_PROTOCOL is always the first component
-  ddk::PowerImplProtocolClient power(components[0]);
+  // POWER_IMPL_PROTOCOL is always the first fragment
+  ddk::PowerImplProtocolClient power(fragments[0]);
   if (!power.is_valid()) {
     zxlogf(ERROR, "%s: ZX_PROTOCOL_POWER_IMPL not available\n", __func__);
     return ZX_ERR_NO_RESOURCES;

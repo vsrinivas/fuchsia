@@ -90,34 +90,34 @@ the I2C (`i2c_match[]`) device and the two GPIOs (`fault_gpio_match[]` and
 `enable_gpio_match[]`).
 
 These instructions are then placed into an array of structures
-(`device_component_part_t`) which defines each component:
+(`device_fragment_part_t`) which defines each fragment:
 
-![Figure: Binding instructions gathered into a component
-array](composite-component.png)
+![Figure: Binding instructions gathered into a fragment
+array](composite-fragment.png)
 
 In the `astro-audio` device, we have:
 
 ```c
-static const device_component_part_t i2c_component[] = {
+static const device_fragment_part_t i2c_fragment[] = {
     { countof(root_match), root_match },
     { countof(i2c_match), i2c_match },
 };
 
-static const device_component_part_t fault_gpio_component[] = {
+static const device_fragment_part_t fault_gpio_fragment[] = {
     { countof(root_match), root_match },
     { countof(fault_gpio_match), fault_gpio_match },
 };
 
-static const device_component_part_t enable_gpio_component[] = {
+static const device_fragment_part_t enable_gpio_fragment[] = {
     { countof(root_match), root_match },
     { countof(enable_gpio_match), enable_gpio_match },
 };
 ```
 
-At this point, we have three component devices, `i2c_component[]`,
-`fault_gpio_component[]`, and `enable_gpio_component[]`.
+At this point, we have three fragment devices, `i2c_fragment[]`,
+`fault_gpio_fragment[]`, and `enable_gpio_fragment[]`.
 
-### Component device matching rules
+### Fragment device matching rules
 
 The following rules apply:
 
@@ -135,21 +135,21 @@ The following rules apply:
    and PCI) must be matched.
    These sequences of matches must be unique.
 
-Finally, we combine them into an aggregate called `components[]` of type
-`device_component_t`:
+Finally, we combine them into an aggregate called `fragments[]` of type
+`device_fragment_t`:
 
-![Figure: Gathering components into an aggregate](composite-components.png)
+![Figure: Gathering fragments into an aggregate](composite-fragments.png)
 
-This now gives us a single identifier, `components[]`, that we can use
+This now gives us a single identifier, `fragments[]`, that we can use
 when creating the composite device.
 
 In `astro-audio`, this looks like:
 
 ```c
-static const device_component_t components[] = {
-    { countof(i2c_component), i2c_component },
-    { countof(fault_gpio_component), fault_gpio_component },
-    { countof(enable_gpio_component), enable_gpio_component },
+static const device_fragment_t fragments[] = {
+    { countof(i2c_fragment), i2c_fragment },
+    { countof(fault_gpio_fragment), fault_gpio_fragment },
+    { countof(enable_gpio_fragment), enable_gpio_fragment },
 };
 ```
 
@@ -166,8 +166,8 @@ zx_status_t device_add_composite(
     const char* name,
     const zx_device_prop_t* props,
     size_t props_count,
-    const device_component_t* components,
-    size_t components_count,
+    const device_fragment_t* fragments,
+    size_t fragments_count,
     uint32_t coresident_device_index);
 ```
 
@@ -179,8 +179,8 @@ Argument                  | Meaning
 `name`                    | The name of the device
 `props`                   | Properties ([see "Declaring a Driver"](driver-development.md#declaring-a-driver))
 `props_count`             | How many entries are in `props`
-`components`              | The individual component devices
-`components_count`        | How many entries are in `components`
+`fragments`              | The individual fragment devices
+`fragments_count`        | How many entries are in `fragments`
 `coresident_device_index` | Which devhost to use
 
 The `dev` value must be the `zx_device_t` corresponding to the "`sys`"
@@ -194,24 +194,24 @@ If you specify `UINT32_MAX`, the device will reside in a new devhost.
 > than **composite_device_add()**.
 > The difference is that **pbus_composite_device_add()** is an API
 > provided by the platform bus driver that wraps **composite_device_add()** and
-> inserts an additional component for ferrying over direct-access resources
+> inserts an additional fragment for ferrying over direct-access resources
 > such as MMIO, IRQs, and BTIs.
 
 ## Using a composite device
 
 From a programming perspective, a composite device acts like an ordinary device
 that implements a `ZX_PROTOCOL_COMPOSITE` protocol.
-This allows you to access all of the individual components that make up the
+This allows you to access all of the individual fragments that make up the
 composite device.
 
 The first thing to do is get a list of the devices.
-This is done via **composite_get_components()**:
+This is done via **composite_get_fragments()**:
 
 ```c
-void composite_get_components (
+void composite_get_fragments (
      composite_protocol_t* composite,
-     zx_device_t* components,
-     size_t component_count,
+     zx_device_t* fragments,
+     size_t fragment_count,
      size_t* actual_count);
 ```
 
@@ -220,9 +220,9 @@ The arguments are as follows:
 Argument          | Meaning
 ------------------|---------------------------------------------------
 `composite`       | The protocol handle
-`components`      | Pointer to an array of `zx_device_t*`
-`component_count` | Size of `components` array
-`actual_count`    | Actual number of entries filled in `components`
+`fragments`      | Pointer to an array of `zx_device_t*`
+`fragment_count` | Size of `fragments` array
+`actual_count`    | Actual number of entries filled in `fragments`
 
 The program starts by calling **device_get_protocol()** to get the protocol for the
 composite driver:
@@ -235,32 +235,32 @@ auto status = device_get_protocol(parent, ZX_PROTOCOL_COMPOSITE, &composite);
 
 Assuming there aren't any errors (`status` is equal to `ZX_OK`), the next step is to
 declare an array of `zx_device_t*` pointers to hold the devices, and call
-**composite_get_components()**:
+**composite_get_fragments()**:
 
 ```c
 enum {
-    COMPONENT_I2C,
-    COMPONENT_GPIO,
-    COMPONENT_COUNT
+    FRAGMENT_I2C,
+    FRAGMENT_GPIO,
+    FRAGMENT_COUNT
 };
 
-zx_device_t* components[COMPONENT_COUNT];
+zx_device_t* fragments[FRAGMENT_COUNT];
 size_t actual;
-composite_get_components(&composite, components, COMPONENT_COUNT, &actual);
-if (actual != COMPONENT_COUNT) {
-    zxlogf(ERROR, "%s: could not get our components\n", __FILE__);
+composite_get_fragments(&composite, fragments, FRAGMENT_COUNT, &actual);
+if (actual != FRAGMENT_COUNT) {
+    zxlogf(ERROR, "%s: could not get our fragments\n", __FILE__);
     return ZX_ERR_INTERNAL;
 }
 ```
 
-> The ordering of the devices returned by **device_get_components()**
+> The ordering of the devices returned by **device_get_fragments()**
 > is defined to be the same as the ordering given to the **device_add_composite()**
 > call by the board driver.
 > Therefore, any enums are for convenience, and are not inherently tied to the
 > ordering.
-> Many composite devices will have a fixed number of components in a specific
+> Many composite devices will have a fixed number of fragments in a specific
 > order, but there may also be composite devices that have a variable number
-> of components, in which case the components might be identified by device
+> of fragments, in which case the fragments might be identified by device
 > metadata (via **device_get_metadata()**), or by some other means.
 
 ## Advanced Topics
@@ -274,7 +274,7 @@ initially shown:
 
 ![Figure: Composite hardware device using proxies](composite-proxy.png)
 
-The components are bound to an internal driver (located in the
+The fragments are bound to an internal driver (located in the
 [//zircon/system/core/devmgr/fragment][fragment] directory).
 
 The driver handles proxying across process boundaries if necessary.
@@ -301,7 +301,7 @@ So, in order to implement a new protocol proxy, one must modify the
 messages to the normal device, and modify the `fragment.so` driver to
 service those messages appropriately.
 
-The component proxy is implemented in
+The fragment proxy is implemented in
 [/zircon/system/core/devmgr/fragment/fragment-proxy.cc][fragment-proxy.cc], and
 the other half in
 [/zircon/system/core/devmgr/fragment/fragment.cc][fragment.cc].

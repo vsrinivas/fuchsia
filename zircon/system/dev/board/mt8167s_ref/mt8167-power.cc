@@ -20,7 +20,7 @@ static const zx_bind_inst_t root_match[] = {
 static const zx_bind_inst_t power_impl_driver_match[] = {
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_POWER_IMPL),
 };
-static const device_component_part_t power_impl_component[] = {
+static const device_fragment_part_t power_impl_fragment[] = {
     {countof(root_match), root_match},
     {countof(power_impl_driver_match), power_impl_driver_match},
 };
@@ -29,8 +29,8 @@ zx_device_prop_t props[] = {
 };
 
 // kVDLdoVGp2
-static const device_component_t power_domain_kVDLdoVGp2_components[] = {
-    {countof(power_impl_component), power_impl_component},
+static const device_fragment_t power_domain_kVDLdoVGp2_fragments[] = {
+    {countof(power_impl_fragment), power_impl_fragment},
 };
 static const power_domain_t power_domain_kVDLdoVGp2[] = {
     {kVDLdoVGp2},
@@ -43,8 +43,8 @@ static const device_metadata_t power_metadata_kVDLdoVGp2[] = {{
 const composite_device_desc_t power_domain_kVDLdoVGp2_desc = {
     .props = props,
     .props_count = countof(props),
-    .components = power_domain_kVDLdoVGp2_components,
-    .components_count = countof(power_domain_kVDLdoVGp2_components),
+    .fragments = power_domain_kVDLdoVGp2_fragments,
+    .fragments_count = countof(power_domain_kVDLdoVGp2_fragments),
     .coresident_device_index = 0,
     .metadata_list = power_metadata_kVDLdoVGp2,
     .metadata_count = countof(power_metadata_kVDLdoVGp2),

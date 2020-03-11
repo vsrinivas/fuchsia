@@ -51,29 +51,29 @@ zx_status_t Mt8167::TouchInit() {
       BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
       BI_MATCH_IF(EQ, BIND_GPIO_PIN, MT8167_GPIO_TOUCH_RST),
   };
-  const device_component_part_t ft_i2c_component[] = {
+  const device_fragment_part_t ft_i2c_fragment[] = {
       {fbl::count_of(root_match), root_match},
       {fbl::count_of(ft_i2c_match), ft_i2c_match},
   };
-  const device_component_part_t gpio_int_component[] = {
+  const device_fragment_part_t gpio_int_fragment[] = {
       {fbl::count_of(root_match), root_match},
       {fbl::count_of(gpio_int_match), gpio_int_match},
   };
-  const device_component_part_t gpio_reset_component[] = {
+  const device_fragment_part_t gpio_reset_fragment[] = {
       {fbl::count_of(root_match), root_match},
       {fbl::count_of(gpio_reset_match), gpio_reset_match},
   };
-  const device_component_t ft_components[] = {
-      {fbl::count_of(ft_i2c_component), ft_i2c_component},
-      {fbl::count_of(gpio_int_component), gpio_int_component},
-      {fbl::count_of(gpio_reset_component), gpio_reset_component},
+  const device_fragment_t ft_fragments[] = {
+      {fbl::count_of(ft_i2c_fragment), ft_i2c_fragment},
+      {fbl::count_of(gpio_int_fragment), gpio_int_fragment},
+      {fbl::count_of(gpio_reset_fragment), gpio_reset_fragment},
   };
 
   static const composite_device_desc_t ft_comp_desc = {
       .props = ft_props,
       .props_count = countof(ft_props),
-      .components = ft_components,
-      .components_count = countof(ft_components),
+      .fragments = ft_fragments,
+      .fragments_count = countof(ft_fragments),
       .coresident_device_index = UINT32_MAX,
       .metadata_list = touch_metadata,
       .metadata_count = countof(touch_metadata),

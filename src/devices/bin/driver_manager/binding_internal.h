@@ -54,42 +54,42 @@ enum class Match : uint8_t {
 // Performs saturating arithmetic on Match values
 Match SumMatchCounts(Match m1, Match m2);
 
-// Internal bookkeeping for finding composite device component matches
-class ComponentMatchState {
+// Internal bookkeeping for finding composite device fragment matches
+class FragmentMatchState {
  public:
-  ComponentMatchState() = default;
-  ComponentMatchState(const ComponentMatchState&) = delete;
-  ComponentMatchState& operator=(const ComponentMatchState&) = delete;
+  FragmentMatchState() = default;
+  FragmentMatchState(const FragmentMatchState&) = delete;
+  FragmentMatchState& operator=(const FragmentMatchState&) = delete;
 
-  ComponentMatchState(ComponentMatchState&&) = default;
-  ComponentMatchState& operator=(ComponentMatchState&&) = default;
+  FragmentMatchState(FragmentMatchState&&) = default;
+  FragmentMatchState& operator=(FragmentMatchState&&) = default;
 
-  // Create the bookkeeping state for the component matching algorithm.  This
+  // Create the bookkeeping state for the fragment matching algorithm.  This
   // preinitializes the state with Match::None,
-  static zx_status_t Create(size_t components_count, size_t devices_count,
-                            ComponentMatchState* out) {
-    ComponentMatchState state;
-    state.components_count_ = components_count;
+  static zx_status_t Create(size_t fragments_count, size_t devices_count,
+                            FragmentMatchState* out) {
+    FragmentMatchState state;
+    state.fragments_count_ = fragments_count;
     state.devices_count_ = devices_count;
     // If we wanted to reduce the memory usage here, we could avoid
     // bookkeeping for the perimeter of the array, in which all entries
     // except for the starting point are 0s.
-    state.matches_ = std::make_unique<Match[]>(devices_count * components_count);
+    state.matches_ = std::make_unique<Match[]>(devices_count * fragments_count);
     *out = std::move(state);
     return ZX_OK;
   }
 
-  Match get(size_t component, size_t ancestor) const {
-    return matches_[devices_count_ * component + ancestor];
+  Match get(size_t fragment, size_t ancestor) const {
+    return matches_[devices_count_ * fragment + ancestor];
   }
 
-  void set(size_t component, size_t ancestor, Match value) {
-    matches_[devices_count_ * component + ancestor] = value;
+  void set(size_t fragment, size_t ancestor, Match value) {
+    matches_[devices_count_ * fragment + ancestor] = value;
   }
 
  private:
   std::unique_ptr<Match[]> matches_;
-  size_t components_count_ = 0;
+  size_t fragments_count_ = 0;
   size_t devices_count_ = 0;
 };
 
@@ -146,7 +146,7 @@ DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_protocol_id, protocol_id, uint32_t (C::
 // the properties except for property 6 hold, it returns Match::Many.
 // Otherwise, it returns Match::None.
 template <typename T>
-Match MatchParts(const fbl::RefPtr<T>& device, const ComponentPartDescriptor* parts,
+Match MatchParts(const fbl::RefPtr<T>& device, const FragmentPartDescriptor* parts,
                  uint32_t parts_count) {
   static_assert(has_props<T>::value && has_topo_prop<T>::value && has_parent<T>::value &&
                 has_protocol_id<T>::value);
@@ -205,10 +205,10 @@ Match MatchParts(const fbl::RefPtr<T>& device, const ComponentPartDescriptor* pa
 
   ZX_DEBUG_ASSERT(device_list.size() >= 2 && parts_count >= 2);
 
-  ComponentMatchState state;
+  FragmentMatchState state;
   // For the matching state, we're focused on all of the devices between the
   // leaf device and the root device.
-  zx_status_t status = ComponentMatchState::Create(parts_count, device_list.size(), &state);
+  zx_status_t status = FragmentMatchState::Create(parts_count, device_list.size(), &state);
   if (status != ZX_OK) {
     return Match::None;
   }
@@ -218,10 +218,10 @@ Match MatchParts(const fbl::RefPtr<T>& device, const ComponentPartDescriptor* pa
   // We need to find a match for each intermediate part.  We'll move from the
   // closest to the leaf to the furthest.
   for (size_t part_idx = parts_count - 2; part_idx >= 1; --part_idx) {
-    const ComponentPartDescriptor& part = parts[part_idx];
+    const FragmentPartDescriptor& part = parts[part_idx];
 
     // The number of matches we have so far is the sum of the number of
-    // matches from the last iteration (i.e. of the chain of components from
+    // matches from the last iteration (i.e. of the chain of fragments from
     // part_idx+1 to to the end of the parts list) that did not make use of
     // this device or any of its ancestors.
     Match match_count = Match::None;
@@ -244,7 +244,7 @@ Match MatchParts(const fbl::RefPtr<T>& device, const ComponentPartDescriptor* pa
         state.set(part_idx, device_idx, match_count);
       }
 
-      // Move on to the next component, since we cannot cross a
+      // Move on to the next fragment, since we cannot cross a
       // topological property without matching against it.
       if (device_list[device_idx]->topo_prop() != nullptr) {
         break;

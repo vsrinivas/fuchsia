@@ -96,12 +96,12 @@ const zx_bind_inst_t i2c_match[] = {
     BI_ABORT_IF(NE, BIND_I2C_BUS_ID, AML_I2C_B),
     BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 0x4C),
 };
-const device_component_part_t i2c_component[] = {
+const device_fragment_part_t i2c_fragment[] = {
     {countof(root_match), root_match},
     {countof(i2c_match), i2c_match},
 };
-const device_component_t components[] = {
-    {countof(i2c_component), i2c_component},
+const device_fragment_t fragments[] = {
+    {countof(i2c_fragment), i2c_fragment},
 };
 
 zx_status_t gauss_audio_init(gauss_bus_t* bus) {
@@ -115,8 +115,8 @@ zx_status_t gauss_audio_init(gauss_bus_t* bus) {
   }
 
   printf("Adding the tdm device\n");
-  if ((status = pbus_composite_device_add(&bus->pbus, &gauss_tdm_audio_dev, components,
-                                          countof(components), UINT32_MAX)) != ZX_OK) {
+  if ((status = pbus_composite_device_add(&bus->pbus, &gauss_tdm_audio_dev, fragments,
+                                          countof(fragments), UINT32_MAX)) != ZX_OK) {
     zxlogf(ERROR, "a113_audio_init could not add gauss_tdm_audio_dev: %d\n", status);
   }
 

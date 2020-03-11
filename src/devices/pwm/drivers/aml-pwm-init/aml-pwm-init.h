@@ -28,10 +28,10 @@ class PwmInitDevice : public PwmInitDeviceType {
   friend class FakePwmInitDevice;
 
   enum {
-    COMPONENT_PWM,
-    COMPONENT_WIFI_GPIO,
-    COMPONENT_BT_GPIO,
-    COMPONENT_COUNT,
+    FRAGMENT_PWM,
+    FRAGMENT_WIFI_GPIO,
+    FRAGMENT_BT_GPIO,
+    FRAGMENT_COUNT,
   };
 
   explicit PwmInitDevice(zx_device_t* parent, ddk::PwmProtocolClient pwm,

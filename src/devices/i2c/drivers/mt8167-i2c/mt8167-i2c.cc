@@ -193,19 +193,19 @@ zx_status_t Mt8167I2c::GetI2cGpios(fbl::Array<ddk::GpioProtocolClient>* gpios) {
     zxlogf(ERROR, "%s: Could not get composite protocol\n", __FILE__);
     return ZX_ERR_NOT_SUPPORTED;
   }
-  auto component_count = composite.GetComponentCount();
-  if (component_count != kMaxComponents) {
-    zxlogf(ERROR, "%s Wrong number of components %u\n", __func__, component_count);
+  auto fragment_count = composite.GetFragmentCount();
+  if (fragment_count != kMaxFragments) {
+    zxlogf(ERROR, "%s Wrong number of fragments %u\n", __func__, fragment_count);
     return ZX_ERR_INTERNAL;
   }
   size_t actual = 0;
-  zx_device_t* components[kMaxComponents];
-  composite.GetComponents(components, component_count, &actual);
-  if (actual != component_count) {
+  zx_device_t* fragments[kMaxFragments];
+  composite.GetFragments(fragments, fragment_count, &actual);
+  if (actual != fragment_count) {
     return ZX_ERR_INTERNAL;
   }
 
-  size_t gpio_count = kMaxComponents - 1;  // kMaxComponents is 1 pdev + 6 GPIOs for 3 I2C busses.
+  size_t gpio_count = kMaxFragments - 1;  // kMaxFragments is 1 pdev + 6 GPIOs for 3 I2C busses.
 
   fbl::AllocChecker ac;
   gpios->reset(new (&ac) ddk::GpioProtocolClient[gpio_count], gpio_count);
@@ -215,7 +215,7 @@ zx_status_t Mt8167I2c::GetI2cGpios(fbl::Array<ddk::GpioProtocolClient>* gpios) {
   }
 
   for (uint32_t i = 0; i < gpio_count; i++) {
-    auto status = device_get_protocol(components[i + 1], ZX_PROTOCOL_GPIO, &((*gpios)[i]));
+    auto status = device_get_protocol(fragments[i + 1], ZX_PROTOCOL_GPIO, &((*gpios)[i]));
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s ZX_PROTOCOL_GPIO failed\n", __FUNCTION__);
       return status;
@@ -271,19 +271,19 @@ zx_status_t Mt8167I2c::Bind() {
     zxlogf(ERROR, "%s: Could not get composite protocol\n", __FILE__);
     return ZX_ERR_NOT_SUPPORTED;
   }
-  auto component_count = composite.GetComponentCount();
-  if (component_count != kMaxComponents) {
-    zxlogf(ERROR, "%s Wrong number of components %u\n", __func__, component_count);
+  auto fragment_count = composite.GetFragmentCount();
+  if (fragment_count != kMaxFragments) {
+    zxlogf(ERROR, "%s Wrong number of fragments %u\n", __func__, fragment_count);
     return ZX_ERR_INTERNAL;
   }
   size_t actual = 0;
-  zx_device_t* components[kMaxComponents];
-  composite.GetComponents(components, component_count, &actual);
-  if (actual != component_count) {
+  zx_device_t* fragments[kMaxFragments];
+  composite.GetFragments(fragments, fragment_count, &actual);
+  if (actual != fragment_count) {
     return ZX_ERR_INTERNAL;
   }
 
-  ddk::PDev pdev = components[0];
+  ddk::PDev pdev = fragments[0];
   pdev_device_info_t info;
   status = pdev.GetDeviceInfo(&info);
   if (status != ZX_OK) {

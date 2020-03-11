@@ -203,12 +203,12 @@ static const zx_bind_inst_t xhci_phy_match[] = {
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_USB_XHCI_COMPOSITE),
 };
-static const device_component_part_t xhci_phy_component[] = {
+static const device_fragment_part_t xhci_phy_fragment[] = {
     {countof(root_match), root_match},
     {countof(xhci_phy_match), xhci_phy_match},
 };
-static const device_component_t xhci_components[] = {
-    {countof(xhci_phy_component), xhci_phy_component},
+static const device_fragment_t xhci_fragments[] = {
+    {countof(xhci_phy_fragment), xhci_phy_fragment},
 };
 static const zx_bind_inst_t dwc2_phy_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_PHY),
@@ -216,12 +216,12 @@ static const zx_bind_inst_t dwc2_phy_match[] = {
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_USB_DWC2),
 };
-static const device_component_part_t dwc2_phy_component[] = {
+static const device_fragment_part_t dwc2_phy_fragment[] = {
     {countof(root_match), root_match},
     {countof(dwc2_phy_match), dwc2_phy_match},
 };
-static const device_component_t dwc2_components[] = {
-    {countof(dwc2_phy_component), dwc2_phy_component},
+static const device_fragment_t dwc2_fragments[] = {
+    {countof(dwc2_phy_fragment), dwc2_phy_fragment},
 };
 
 }  // namespace
@@ -234,7 +234,7 @@ zx_status_t Sherlock::UsbInit() {
   }
 
   // Add XHCI and DWC2 to the same devhost as the aml-usb-phy.
-  status = pbus_.CompositeDeviceAdd(&xhci_dev, xhci_components, countof(xhci_components), 1);
+  status = pbus_.CompositeDeviceAdd(&xhci_dev, xhci_fragments, countof(xhci_fragments), 1);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd failed %d\n", __func__, status);
     return status;
@@ -263,7 +263,7 @@ zx_status_t Sherlock::UsbInit() {
   usb_metadata[0].data_size = config_size;
   usb_metadata[0].data_buffer = config;
 
-  status = pbus_.CompositeDeviceAdd(&dwc2_dev, dwc2_components, countof(dwc2_components), 1);
+  status = pbus_.CompositeDeviceAdd(&dwc2_dev, dwc2_fragments, countof(dwc2_fragments), 1);
   free(config);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd failed %d\n", __func__, status);

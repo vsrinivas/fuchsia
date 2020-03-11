@@ -19,9 +19,9 @@ namespace {
 constexpr int64_t kEnableSleepTimeMs = 20;
 
 enum {
-  COMPONENT_I2C,
-  COMPONENT_GPIO,
-  COMPONENT_COUNT,
+  FRAGMENT_I2C,
+  FRAGMENT_GPIO,
+  FRAGMENT_COUNT,
 };
 
 }  // namespace
@@ -37,23 +37,23 @@ zx_status_t Sgm37603a::Create(void* ctx, zx_device_t* parent) {
     return status;
   }
 
-  zx_device_t* components[COMPONENT_COUNT];
+  zx_device_t* fragments[FRAGMENT_COUNT];
   size_t actual;
-  composite_get_components(&composite, components, COMPONENT_COUNT, &actual);
-  if (actual != COMPONENT_COUNT) {
-    zxlogf(ERROR, "%s: could not get our components\n", __FILE__);
+  composite_get_fragments(&composite, fragments, FRAGMENT_COUNT, &actual);
+  if (actual != FRAGMENT_COUNT) {
+    zxlogf(ERROR, "%s: could not get our fragments\n", __FILE__);
     return ZX_ERR_INTERNAL;
   }
 
   i2c_protocol_t i2c;
-  status = device_get_protocol(components[COMPONENT_I2C], ZX_PROTOCOL_I2C, &i2c);
+  status = device_get_protocol(fragments[FRAGMENT_I2C], ZX_PROTOCOL_I2C, &i2c);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_I2C\n", __FILE__);
     return status;
   }
 
   gpio_protocol_t reset_gpio;
-  status = device_get_protocol(components[COMPONENT_GPIO], ZX_PROTOCOL_GPIO, &reset_gpio);
+  status = device_get_protocol(fragments[FRAGMENT_GPIO], ZX_PROTOCOL_GPIO, &reset_gpio);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_GPIO\n", __FILE__);
     return status;

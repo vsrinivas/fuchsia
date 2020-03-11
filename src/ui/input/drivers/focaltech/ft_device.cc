@@ -28,10 +28,10 @@
 namespace ft {
 
 enum {
-  COMPONENT_I2C,
-  COMPONENT_INT_GPIO,
-  COMPONENT_RESET_GPIO,
-  COMPONENT_COUNT,
+  FRAGMENT_I2C,
+  FRAGMENT_INT_GPIO,
+  FRAGMENT_RESET_GPIO,
+  FRAGMENT_COUNT,
 };
 
 FtDevice::FtDevice(zx_device_t* device) : ddk::Device<FtDevice, ddk::UnbindableNew>(device) {}
@@ -85,28 +85,28 @@ zx_status_t FtDevice::Init() {
     return status;
   }
 
-  zx_device_t* components[COMPONENT_COUNT];
+  zx_device_t* fragments[FRAGMENT_COUNT];
   size_t actual;
-  composite_get_components(&composite, components, fbl::count_of(components), &actual);
-  if (actual != fbl::count_of(components)) {
-    zxlogf(ERROR, "could not get components\n");
+  composite_get_fragments(&composite, fragments, fbl::count_of(fragments), &actual);
+  if (actual != fbl::count_of(fragments)) {
+    zxlogf(ERROR, "could not get fragments\n");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  status = device_get_protocol(components[COMPONENT_I2C], ZX_PROTOCOL_I2C, &i2c_);
+  status = device_get_protocol(fragments[FRAGMENT_I2C], ZX_PROTOCOL_I2C, &i2c_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "focaltouch: failed to acquire i2c\n");
     return status;
   }
 
   status =
-      device_get_protocol(components[COMPONENT_INT_GPIO], ZX_PROTOCOL_GPIO, &gpios_[FT_INT_PIN]);
+      device_get_protocol(fragments[FRAGMENT_INT_GPIO], ZX_PROTOCOL_GPIO, &gpios_[FT_INT_PIN]);
   if (status != ZX_OK) {
     zxlogf(ERROR, "focaltouch: failed to acquire gpio\n");
     return status;
   }
 
-  status = device_get_protocol(components[COMPONENT_RESET_GPIO], ZX_PROTOCOL_GPIO,
+  status = device_get_protocol(fragments[FRAGMENT_RESET_GPIO], ZX_PROTOCOL_GPIO,
                                &gpios_[FT_RESET_PIN]);
   if (status != ZX_OK) {
     zxlogf(ERROR, "focaltouch: failed to acquire gpio\n");

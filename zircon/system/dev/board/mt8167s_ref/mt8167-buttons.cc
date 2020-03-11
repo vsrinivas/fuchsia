@@ -97,31 +97,31 @@ zx_status_t Mt8167::ButtonsInit() {
         BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
         BI_MATCH_IF(EQ, BIND_GPIO_PIN, MT8167_GPIO_KP_COL1),
     };
-    static const device_component_part_t row0_component[] = {
+    static const device_fragment_part_t row0_fragment[] = {
         {countof(root_match), root_match},
         {countof(row0_match), row0_match},
     };
-    static const device_component_part_t row1_component[] = {
+    static const device_fragment_part_t row1_fragment[] = {
         {countof(root_match), root_match},
         {countof(row1_match), row1_match},
     };
-    static const device_component_part_t col0_component[] = {
+    static const device_fragment_part_t col0_fragment[] = {
         {countof(root_match), root_match},
         {countof(col0_match), col0_match},
     };
-    static const device_component_part_t col1_component[] = {
+    static const device_fragment_part_t col1_fragment[] = {
         {countof(root_match), root_match},
         {countof(col1_match), col1_match},
     };
-    static const device_component_t components[] = {
-        {countof(row0_component), row0_component},
-        {countof(row1_component), row1_component},
-        {countof(col0_component), col0_component},
-        {countof(col0_component), col1_component},
+    static const device_fragment_t fragments[] = {
+        {countof(row0_fragment), row0_fragment},
+        {countof(row1_fragment), row1_fragment},
+        {countof(col0_fragment), col0_fragment},
+        {countof(col0_fragment), col1_fragment},
     };
 
-    comp_desc.components = components;
-    comp_desc.components_count = countof(components);
+    comp_desc.fragments = fragments;
+    comp_desc.fragments_count = countof(fragments);
 
     zx_status_t status = DdkAddComposite("mt8167-buttons", &comp_desc);
     if (status != ZX_OK) {
@@ -139,20 +139,20 @@ zx_status_t Mt8167::ButtonsInit() {
         BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
         BI_MATCH_IF(EQ, BIND_GPIO_PIN, MT8167_GPIO_MIC_PRIVACY),
     };
-    static const device_component_part_t volume_up_component[] = {
+    static const device_fragment_part_t volume_up_fragment[] = {
         {countof(root_match), root_match},
         {countof(volume_up_match), volume_up_match},
     };
-    static const device_component_part_t mic_privacy_component[] = {
+    static const device_fragment_part_t mic_privacy_fragment[] = {
         {countof(root_match), root_match},
         {countof(mic_privacy_match), mic_privacy_match},
     };
-    static const device_component_t components[] = {
-        {countof(volume_up_component), volume_up_component},
-        {countof(mic_privacy_component), mic_privacy_component},
+    static const device_fragment_t fragments[] = {
+        {countof(volume_up_fragment), volume_up_fragment},
+        {countof(mic_privacy_fragment), mic_privacy_fragment},
     };
-    comp_desc.components = components;
-    comp_desc.components_count = countof(components);
+    comp_desc.fragments = fragments;
+    comp_desc.fragments_count = countof(fragments);
 
     zx_status_t status = DdkAddComposite("mt8167-buttons", &comp_desc);
     if (status != ZX_OK) {

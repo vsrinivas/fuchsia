@@ -32,10 +32,10 @@ constexpr uint32_t kGe2d = 0;
 constexpr auto kTag = "ge2d";
 
 enum {
-  COMPONENT_PDEV,
-  COMPONENT_SENSOR,
-  COMPONENT_CANVAS,
-  COMPONENT_COUNT,
+  FRAGMENT_PDEV,
+  FRAGMENT_SENSOR,
+  FRAGMENT_CANVAS,
+  FRAGMENT_COUNT,
 };
 
 }  // namespace
@@ -841,15 +841,15 @@ zx_status_t Ge2dDevice::Setup(zx_device_t* parent, std::unique_ptr<Ge2dDevice>* 
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  zx_device_t* components[COMPONENT_COUNT];
+  zx_device_t* fragments[FRAGMENT_COUNT];
   size_t actual;
-  composite.GetComponents(components, COMPONENT_COUNT, &actual);
-  if (actual != COMPONENT_COUNT) {
-    FX_LOG(ERROR, kTag, "Could not get components");
+  composite.GetFragments(fragments, FRAGMENT_COUNT, &actual);
+  if (actual != FRAGMENT_COUNT) {
+    FX_LOG(ERROR, kTag, "Could not get fragments");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  ddk::PDev pdev(components[COMPONENT_PDEV]);
+  ddk::PDev pdev(fragments[FRAGMENT_PDEV]);
   if (!pdev.is_valid()) {
     FX_LOG(ERROR, kTag, "ZX_PROTOCOL_PDEV not available");
     return ZX_ERR_NO_RESOURCES;
@@ -889,7 +889,7 @@ zx_status_t Ge2dDevice::Setup(zx_device_t* parent, std::unique_ptr<Ge2dDevice>* 
     return status;
   }
 
-  ddk::AmlogicCanvasProtocolClient canvas(components[COMPONENT_CANVAS]);
+  ddk::AmlogicCanvasProtocolClient canvas(fragments[FRAGMENT_CANVAS]);
   if (!canvas.is_valid()) {
     FX_LOG(ERROR, kTag, "Could not get Amlogic Canvas protocol");
     return ZX_ERR_NO_RESOURCES;

@@ -37,11 +37,11 @@
 #include "hdmitx.h"
 
 enum {
-  COMPONENT_PDEV,
-  COMPONENT_HPD_GPIO,
-  COMPONENT_CANVAS,
-  COMPONENT_SYSMEM,
-  COMPONENT_COUNT,
+  FRAGMENT_PDEV,
+  FRAGMENT_HPD_GPIO,
+  FRAGMENT_CANVAS,
+  FRAGMENT_SYSMEM,
+  FRAGMENT_COUNT,
 };
 
 /* Default formats */
@@ -752,15 +752,15 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
     return status;
   }
 
-  zx_device_t* components[COMPONENT_COUNT];
+  zx_device_t* fragments[FRAGMENT_COUNT];
   size_t actual;
-  composite_get_components(&composite, components, countof(components), &actual);
-  if (actual != countof(components)) {
-    DISP_ERROR("could not get components\n");
+  composite_get_fragments(&composite, fragments, countof(fragments), &actual);
+  if (actual != countof(fragments)) {
+    DISP_ERROR("could not get fragments\n");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  status = device_get_protocol(components[COMPONENT_PDEV], ZX_PROTOCOL_PDEV, &display->pdev);
+  status = device_get_protocol(fragments[FRAGMENT_PDEV], ZX_PROTOCOL_PDEV, &display->pdev);
   if (status != ZX_OK) {
     DISP_ERROR("Could not get PDEV protocol\n");
     return status;
@@ -806,20 +806,20 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
     return status;
   }
 
-  status = device_get_protocol(components[COMPONENT_HPD_GPIO], ZX_PROTOCOL_GPIO, &display->gpio);
+  status = device_get_protocol(fragments[FRAGMENT_HPD_GPIO], ZX_PROTOCOL_GPIO, &display->gpio);
   if (status != ZX_OK) {
     DISP_ERROR("Could not get Display GPIO protocol\n");
     return status;
   }
 
-  status = device_get_protocol(components[COMPONENT_CANVAS], ZX_PROTOCOL_AMLOGIC_CANVAS,
+  status = device_get_protocol(fragments[FRAGMENT_CANVAS], ZX_PROTOCOL_AMLOGIC_CANVAS,
                                &display->canvas);
   if (status != ZX_OK) {
     DISP_ERROR("Could not get Display CANVAS protocol\n");
     return status;
   }
 
-  status = device_get_protocol(components[COMPONENT_SYSMEM], ZX_PROTOCOL_SYSMEM, &display->sysmem);
+  status = device_get_protocol(fragments[FRAGMENT_SYSMEM], ZX_PROTOCOL_SYSMEM, &display->sysmem);
   if (status != ZX_OK) {
     DISP_ERROR("Could not get Display SYSMEM protocol\n");
     return status;

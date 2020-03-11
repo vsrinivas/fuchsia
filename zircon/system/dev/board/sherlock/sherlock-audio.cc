@@ -89,32 +89,32 @@ zx_status_t Sherlock::AudioInit() {
       BI_ABORT_IF(NE, BIND_I2C_BUS_ID, SHERLOCK_I2C_A0_0),
       BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 0x6f),
   };
-  const device_component_part_t fault_gpio_component[] = {
+  const device_fragment_part_t fault_gpio_fragment[] = {
       {countof(root_match), root_match},
       {countof(fault_gpio_match), fault_gpio_match},
   };
-  const device_component_part_t enable_gpio_component[] = {
+  const device_fragment_part_t enable_gpio_fragment[] = {
       {countof(root_match), root_match},
       {countof(enable_gpio_match), enable_gpio_match},
   };
-  const device_component_part_t tweeter_left_i2c_component[] = {
+  const device_fragment_part_t tweeter_left_i2c_fragment[] = {
       {countof(root_match), root_match},
       {countof(tweeter_left_i2c_match), tweeter_left_i2c_match},
   };
-  const device_component_part_t tweeter_right_i2c_component[] = {
+  const device_fragment_part_t tweeter_right_i2c_fragment[] = {
       {countof(root_match), root_match},
       {countof(tweeter_right_i2c_match), tweeter_right_i2c_match},
   };
-  const device_component_part_t woofer_i2c_component[] = {
+  const device_fragment_part_t woofer_i2c_fragment[] = {
       {countof(root_match), root_match},
       {countof(woofer_i2c_match), woofer_i2c_match},
   };
-  const device_component_t components[] = {
-      {countof(fault_gpio_component), fault_gpio_component},
-      {countof(enable_gpio_component), enable_gpio_component},
-      {countof(tweeter_left_i2c_component), tweeter_left_i2c_component},
-      {countof(tweeter_right_i2c_component), tweeter_right_i2c_component},
-      {countof(woofer_i2c_component), woofer_i2c_component},
+  const device_fragment_t fragments[] = {
+      {countof(fault_gpio_fragment), fault_gpio_fragment},
+      {countof(enable_gpio_fragment), enable_gpio_fragment},
+      {countof(tweeter_left_i2c_fragment), tweeter_left_i2c_fragment},
+      {countof(tweeter_right_i2c_fragment), tweeter_right_i2c_fragment},
+      {countof(woofer_i2c_fragment), woofer_i2c_fragment},
   };
 
   pbus_dev_t tdm_dev = {};
@@ -186,7 +186,7 @@ zx_status_t Sherlock::AudioInit() {
 
   gpio_impl_.ConfigOut(T931_GPIOH(7), 1);  // SOC_AUDIO_EN.
 
-  status = pbus_.CompositeDeviceAdd(&tdm_dev, components, countof(components), UINT32_MAX);
+  status = pbus_.CompositeDeviceAdd(&tdm_dev, fragments, countof(fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s pbus_.DeviceAdd failed %d\n", __FUNCTION__, status);
     return status;

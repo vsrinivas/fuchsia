@@ -46,17 +46,17 @@ zx_status_t HikeyUsb::Init() {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  zx_device_t* components[COMPONENT_COUNT];
+  zx_device_t* fragments[FRAGMENT_COUNT];
   size_t actual;
-  composite.GetComponents(components, fbl::count_of(components), &actual);
-  if (actual != fbl::count_of(components)) {
-    zxlogf(ERROR, "HikeyUsb::Could not get components\n");
+  composite.GetFragments(fragments, fbl::count_of(fragments), &actual);
+  if (actual != fbl::count_of(fragments)) {
+    zxlogf(ERROR, "HikeyUsb::Could not get fragments\n");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   for (uint32_t i = 0; i < countof(gpios_); i++) {
-    // components[0] is platform device, which is only used for providing metadata.
-    auto status = device_get_protocol(components[i + 1], ZX_PROTOCOL_GPIO, &gpios_[i]);
+    // fragments[0] is platform device, which is only used for providing metadata.
+    auto status = device_get_protocol(fragments[i + 1], ZX_PROTOCOL_GPIO, &gpios_[i]);
     if (status != ZX_OK) {
       return status;
     }

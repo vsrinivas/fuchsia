@@ -380,7 +380,7 @@ zx_status_t DwI2cBus::HostInit() {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  // Read the various capabilities of the component.
+  // Read the various capabilities of the fragment.
   auto comp_reg = CompParam1Reg::Get().ReadFrom(&mmio_);
   tx_fifo_depth_ = comp_reg.tx_buffer_depth();
   rx_fifo_depth_ = comp_reg.rx_buffer_depth();

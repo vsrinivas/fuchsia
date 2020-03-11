@@ -277,13 +277,13 @@ zx_status_t device_get_deadline_profile(zx_device_t* device, uint64_t capacity, 
                                         uint64_t period, const char* name,
                                         zx_handle_t* out_profile);
 
-// A description of a part of a device component.  It provides a bind program
+// A description of a part of a device fragment.  It provides a bind program
 // that will match a device on the path from the root of the device tree to the
 // target device.
-typedef struct device_component_part {
+typedef struct device_fragment_part {
   uint32_t instruction_count;
   const zx_bind_inst_t* match_program;
-} device_component_part_t;
+} device_fragment_part_t;
 
 // A description of a device that makes up part of a composite device.  The
 // particular device is identified by a sequence of part descriptions.  Each
@@ -296,10 +296,10 @@ typedef struct device_component_part {
 // property from the range [BIND_TOPO_START, BIND_TOPO_END] must be matched to
 // an element of |parts|.  This sequences of matches between |parts| and devices
 // must be unique.
-typedef struct device_component {
+typedef struct device_fragment {
   uint32_t parts_count;
-  const device_component_part_t* parts;
-} device_component_t;
+  const device_fragment_part_t* parts;
+} device_fragment_t;
 
 //
 typedef struct device_metadata {
@@ -309,22 +309,22 @@ typedef struct device_metadata {
 } device_metadata_t;
 
 // A description of the composite device with properties |props| and made of
-// |components| devices. The composite device will reside in the same devhost
-// as the device that matches |components[coresident_device_index]|, unless
+// |fragments| devices. The composite device will reside in the same devhost
+// as the device that matches |fragments[coresident_device_index]|, unless
 // |coresident_device_index| is UINT32_MAX, in which case it reside in a new devhost.
 // |metadata_list| contains the metadata to be added to the composite device, if any.
 typedef struct composite_device_desc {
   const zx_device_prop_t* props;
   size_t props_count;
-  const device_component_t* components;
-  size_t components_count;
+  const device_fragment_t* fragments;
+  size_t fragments_count;
   uint32_t coresident_device_index;
   const device_metadata_t* metadata_list;
   size_t metadata_count;
 } composite_device_desc_t;
 
 // Create a composite device with the properties |comp_desc|.
-// Once all of the component devices are found, the composite
+// Once all of the fragment devices are found, the composite
 // device will be published with protocol_id ZX_PROTOCOL_COMPOSITE and the
 // given properties.  A driver may then bind to the created device, and
 // access its parents via the protocol operations returned by

@@ -23,10 +23,10 @@ namespace thermal {
 namespace {
 
 enum {
-  COMPONENT_SCPI,
-  COMPONENT_GPIO_FAN_0,
-  COMPONENT_GPIO_FAN_1,
-  COMPONENT_COUNT,
+  FRAGMENT_SCPI,
+  FRAGMENT_GPIO_FAN_0,
+  FRAGMENT_GPIO_FAN_1,
+  FRAGMENT_COUNT,
 };
 
 }  // namespace
@@ -41,16 +41,16 @@ zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  zx_device_t* components[COMPONENT_COUNT];
+  zx_device_t* fragments[FRAGMENT_COUNT];
   size_t actual;
-  composite.GetComponents(components, COMPONENT_COUNT, &actual);
-  if (actual != COMPONENT_COUNT) {
-    THERMAL_ERROR("could not get components\n");
+  composite.GetFragments(fragments, FRAGMENT_COUNT, &actual);
+  if (actual != FRAGMENT_COUNT) {
+    THERMAL_ERROR("could not get fragments\n");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   scpi_protocol_t scpi_proto;
-  status = device_get_protocol(components[COMPONENT_SCPI], ZX_PROTOCOL_SCPI, &scpi_proto);
+  status = device_get_protocol(fragments[FRAGMENT_SCPI], ZX_PROTOCOL_SCPI, &scpi_proto);
   if (status != ZX_OK) {
     THERMAL_ERROR("could not get scpi protocol: %d\n", status);
     return status;
@@ -58,7 +58,7 @@ zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
 
   gpio_protocol_t fan0_gpio_proto;
   status =
-      device_get_protocol(components[COMPONENT_GPIO_FAN_0], ZX_PROTOCOL_GPIO, &fan0_gpio_proto);
+      device_get_protocol(fragments[FRAGMENT_GPIO_FAN_0], ZX_PROTOCOL_GPIO, &fan0_gpio_proto);
   if (status != ZX_OK) {
     THERMAL_ERROR("could not get fan0 gpio protocol: %d\n", status);
     return status;
@@ -66,7 +66,7 @@ zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
 
   gpio_protocol_t fan1_gpio_proto;
   status =
-      device_get_protocol(components[COMPONENT_GPIO_FAN_1], ZX_PROTOCOL_GPIO, &fan1_gpio_proto);
+      device_get_protocol(fragments[FRAGMENT_GPIO_FAN_1], ZX_PROTOCOL_GPIO, &fan1_gpio_proto);
   if (status != ZX_OK) {
     THERMAL_ERROR("could not get fan1 gpio protocol: %d\n", status);
     return status;
@@ -97,7 +97,7 @@ zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
   }
 
   // Perform post-construction initialization before device is made visible.
-  status = thermal->Init(components[COMPONENT_SCPI]);
+  status = thermal->Init(fragments[FRAGMENT_SCPI]);
   if (status != ZX_OK) {
     THERMAL_ERROR("could not initialize thermal driver: %d\n", status);
     thermal->DdkAsyncRemove();

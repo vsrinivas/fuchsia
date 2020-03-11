@@ -78,7 +78,7 @@ zx_status_t As370::ThermalInit() {
       BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
       BI_MATCH_IF(EQ, BIND_CLOCK_ID, as370::kClkCpu),
   };
-  static const device_component_part_t cpu_clock_component[] = {
+  static const device_fragment_part_t cpu_clock_fragment[] = {
       {fbl::count_of(root_match), root_match},
       {fbl::count_of(cpu_clock_match), cpu_clock_match},
   };
@@ -87,14 +87,14 @@ zx_status_t As370::ThermalInit() {
       BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_POWER),
       BI_MATCH_IF(EQ, BIND_POWER_DOMAIN, kBuckSoC),
   };
-  static const device_component_part_t cpu_power_component[] = {
+  static const device_fragment_part_t cpu_power_fragment[] = {
       {fbl::count_of(root_match), root_match},
       {fbl::count_of(cpu_power_match), cpu_power_match},
   };
 
-  static const device_component_t components[] = {
-      {fbl::count_of(cpu_clock_component), cpu_clock_component},
-      {fbl::count_of(cpu_power_component), cpu_power_component},
+  static const device_fragment_t fragments[] = {
+      {fbl::count_of(cpu_clock_fragment), cpu_clock_fragment},
+      {fbl::count_of(cpu_power_fragment), cpu_power_fragment},
   };
 
   pbus_dev_t thermal_dev = {};
@@ -107,7 +107,7 @@ zx_status_t As370::ThermalInit() {
   thermal_dev.metadata_count = countof(thermal_metadata);
 
   zx_status_t status =
-      pbus_.CompositeDeviceAdd(&thermal_dev, components, countof(components), UINT32_MAX);
+      pbus_.CompositeDeviceAdd(&thermal_dev, fragments, countof(fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: ProtocolDeviceAdd failed: %d\n", __func__, status);
     return status;

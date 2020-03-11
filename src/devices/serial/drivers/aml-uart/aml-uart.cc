@@ -41,16 +41,16 @@ zx_status_t AmlUart::Create(void* ctx, zx_device_t* parent) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  zx_device_t* components[1];
-  size_t component_count;
-  composite.GetComponents(components, fbl::count_of(components), &component_count);
-  // Only pdev component is required.
-  if (component_count < 1) {
-    zxlogf(ERROR, "AmlUart: Could not get components\n");
+  zx_device_t* fragments[1];
+  size_t fragment_count;
+  composite.GetFragments(fragments, fbl::count_of(fragments), &fragment_count);
+  // Only pdev fragment is required.
+  if (fragment_count < 1) {
+    zxlogf(ERROR, "AmlUart: Could not get fragments\n");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  ddk::PDev pdev(components[0]);
+  ddk::PDev pdev(fragments[0]);
   if (!pdev.is_valid()) {
     zxlogf(ERROR, "AmlUart::Create: Could not get pdev\n");
     return ZX_ERR_NO_RESOURCES;

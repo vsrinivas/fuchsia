@@ -80,22 +80,22 @@ static const zx_bind_inst_t bt_gpio_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_SOC_BT_REG_ON),
 };
-static const device_component_part_t pwm_component[] = {
+static const device_fragment_part_t pwm_fragment[] = {
     {countof(root_match), root_match},
     {countof(pwm_match), pwm_match},
 };
-static const device_component_part_t wifi_gpio_component[] = {
+static const device_fragment_part_t wifi_gpio_fragment[] = {
     {countof(root_match), root_match},
     {countof(wifi_gpio_match), wifi_gpio_match},
 };
-static const device_component_part_t bt_gpio_component[] = {
+static const device_fragment_part_t bt_gpio_fragment[] = {
     {countof(root_match), root_match},
     {countof(bt_gpio_match), bt_gpio_match},
 };
-static const device_component_t composite[] = {
-    {countof(pwm_component), pwm_component},
-    {countof(wifi_gpio_component), wifi_gpio_component},
-    {countof(bt_gpio_component), bt_gpio_component},
+static const device_fragment_t composite[] = {
+    {countof(pwm_fragment), pwm_fragment},
+    {countof(wifi_gpio_fragment), wifi_gpio_fragment},
+    {countof(bt_gpio_fragment), bt_gpio_fragment},
 };
 
 zx_status_t Sherlock::PwmInit() {
@@ -115,8 +115,8 @@ zx_status_t Sherlock::PwmInit() {
   const composite_device_desc_t comp_desc = {
       .props = props,
       .props_count = countof(props),
-      .components = composite,
-      .components_count = countof(composite),
+      .fragments = composite,
+      .fragments_count = countof(composite),
       .coresident_device_index = 0,
       .metadata_list = nullptr,
       .metadata_count = 0,

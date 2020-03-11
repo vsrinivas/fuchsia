@@ -43,15 +43,15 @@ static const zx_bind_inst_t ref_out_clk0_match[] = {
     BI_MATCH_IF(EQ, BIND_CLOCK_ID, as370::As370Clk::kClkAvpll0),
 };
 
-static const device_component_part_t ref_out_i2c_component[] = {
+static const device_fragment_part_t ref_out_i2c_fragment[] = {
     {fbl::count_of(root_match), root_match},
     {fbl::count_of(ref_out_i2c_match), ref_out_i2c_match},
 };
-static const device_component_part_t ref_out_codec_component[] = {
+static const device_fragment_part_t ref_out_codec_fragment[] = {
     {fbl::count_of(root_match), root_match},
     {fbl::count_of(ref_out_codec_match), ref_out_codec_match},
 };
-static const device_component_part_t dma_component[] = {
+static const device_fragment_part_t dma_fragment[] = {
     {fbl::count_of(root_match), root_match},
     {fbl::count_of(dma_match), dma_match},
 };
@@ -60,27 +60,27 @@ static const zx_bind_inst_t ref_out_enable_gpio_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, 17),
 };
-static const device_component_part_t ref_out_enable_gpio_component[] = {
+static const device_fragment_part_t ref_out_enable_gpio_fragment[] = {
     {countof(root_match), root_match},
     {countof(ref_out_enable_gpio_match), ref_out_enable_gpio_match},
 };
-static const device_component_part_t ref_out_clk0_component[] = {
+static const device_fragment_part_t ref_out_clk0_fragment[] = {
     {countof(root_match), root_match},
     {countof(ref_out_clk0_match), ref_out_clk0_match},
 };
 
-static const device_component_t codec_components[] = {
-    {countof(ref_out_i2c_component), ref_out_i2c_component},
-    {countof(ref_out_enable_gpio_component), ref_out_enable_gpio_component},
+static const device_fragment_t codec_fragments[] = {
+    {countof(ref_out_i2c_fragment), ref_out_i2c_fragment},
+    {countof(ref_out_enable_gpio_fragment), ref_out_enable_gpio_fragment},
 };
-static const device_component_t controller_components[] = {
-    {countof(dma_component), dma_component},
-    {countof(ref_out_codec_component), ref_out_codec_component},
-    {countof(ref_out_clk0_component), ref_out_clk0_component},
+static const device_fragment_t controller_fragments[] = {
+    {countof(dma_fragment), dma_fragment},
+    {countof(ref_out_codec_fragment), ref_out_codec_fragment},
+    {countof(ref_out_clk0_fragment), ref_out_clk0_fragment},
 };
-static const device_component_t in_components[] = {
-    {countof(dma_component), dma_component},
-    {countof(ref_out_clk0_component), ref_out_clk0_component},
+static const device_fragment_t in_fragments[] = {
+    {countof(dma_fragment), dma_fragment},
+    {countof(ref_out_clk0_fragment), ref_out_clk0_fragment},
 };
 
 zx_status_t As370::AudioInit() {
@@ -185,8 +185,8 @@ zx_status_t As370::AudioInit() {
   const composite_device_desc_t comp_desc = {
       .props = props,
       .props_count = countof(props),
-      .components = codec_components,
-      .components_count = countof(codec_components),
+      .fragments = codec_fragments,
+      .fragments_count = countof(codec_fragments),
       .coresident_device_index = UINT32_MAX,
       .metadata_list = nullptr,
       .metadata_count = 0,
@@ -203,8 +203,8 @@ zx_status_t As370::AudioInit() {
   // we can have these drivers in different devhosts.
   constexpr uint32_t controller_coresident_device_index = 1;
   status =
-      pbus_.CompositeDeviceAdd(&controller_out, controller_components,
-                               countof(controller_components), controller_coresident_device_index);
+      pbus_.CompositeDeviceAdd(&controller_out, controller_fragments,
+                               countof(controller_fragments), controller_coresident_device_index);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s adding audio controller out device failed %d\n", __FILE__, status);
     return status;
@@ -215,7 +215,7 @@ zx_status_t As370::AudioInit() {
   // When autoproxying (ZX-3478) or its replacement is in place,
   // we can have these drivers in different devhosts.
   constexpr uint32_t in_coresident_device_index = 1;
-  status = pbus_.CompositeDeviceAdd(&dev_in, in_components, countof(in_components),
+  status = pbus_.CompositeDeviceAdd(&dev_in, in_fragments, countof(in_fragments),
                                     in_coresident_device_index);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s adding audio input device failed %d\n", __FILE__, status);

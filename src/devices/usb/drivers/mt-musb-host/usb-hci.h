@@ -83,7 +83,7 @@ class UsbHci : public DeviceType, public ddk::UsbHciProtocol<UsbHci, ddk::base_p
   ddk::MmioBuffer* phy_mmio() { return &phy_mmio_; }
   UsbRootHub* root_hub() { return static_cast<UsbRootHub*>(device_[kRootHubId].get()); }
 
-  // Initialize the given USB HCI sub-components.
+  // Initialize the given USB HCI sub-fragments.
   zx_status_t InitPhy();
   zx_status_t InitRootHub();
   zx_status_t InitEndpointControllers();

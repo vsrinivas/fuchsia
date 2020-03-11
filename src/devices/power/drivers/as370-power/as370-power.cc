@@ -274,16 +274,16 @@ zx_status_t As370Power::InitializeProtocols(ddk::I2cProtocolClient* i2c) {
     return status;
   }
 
-  zx_device_t* components[kComponentCount];
+  zx_device_t* fragments[kFragmentCount];
   size_t actual;
-  composite_get_components(&composite, components, countof(components), &actual);
-  if (actual != kComponentCount) {
-    zxlogf(ERROR, "%s: Invalid component count (need %d, have %zu)", __func__, kComponentCount,
+  composite_get_fragments(&composite, fragments, countof(fragments), &actual);
+  if (actual != kFragmentCount) {
+    zxlogf(ERROR, "%s: Invalid fragment count (need %d, have %zu)", __func__, kFragmentCount,
            actual);
     return ZX_ERR_INTERNAL;
   }
 
-  *i2c = ddk::I2cProtocolClient(components[kI2cComponent]);
+  *i2c = ddk::I2cProtocolClient(fragments[kI2cFragment]);
   if (!i2c->is_valid()) {
     zxlogf(ERROR, "%s: ZX_PROTOCOL_I2C not found, err=%d\n", __func__, status);
     return status;

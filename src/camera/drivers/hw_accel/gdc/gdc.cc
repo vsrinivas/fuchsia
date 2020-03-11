@@ -33,9 +33,9 @@ constexpr uint32_t kAxiAlignment = 16;
 constexpr uint32_t kWordSize = 4;
 
 enum {
-  COMPONENT_PDEV,
-  COMPONENT_SENSOR,
-  COMPONENT_COUNT,
+  FRAGMENT_PDEV,
+  FRAGMENT_SENSOR,
+  FRAGMENT_COUNT,
 };
 
 }  // namespace
@@ -463,15 +463,15 @@ zx_status_t GdcDevice::Setup(void* /*ctx*/, zx_device_t* parent, std::unique_ptr
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  zx_device_t* components[COMPONENT_COUNT];
+  zx_device_t* fragments[FRAGMENT_COUNT];
   size_t actual;
-  composite.GetComponents(components, COMPONENT_COUNT, &actual);
-  if (actual != COMPONENT_COUNT) {
-    FX_LOG(ERROR, kTag, "Could not get components");
+  composite.GetFragments(fragments, FRAGMENT_COUNT, &actual);
+  if (actual != FRAGMENT_COUNT) {
+    FX_LOG(ERROR, kTag, "Could not get fragments");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  ddk::PDev pdev(components[COMPONENT_PDEV]);
+  ddk::PDev pdev(fragments[FRAGMENT_PDEV]);
   if (!pdev.is_valid()) {
     FX_LOG(ERROR, kTag, "ZX_PROTOCOL_PDEV not available");
     return ZX_ERR_NO_RESOURCES;

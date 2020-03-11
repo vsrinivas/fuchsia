@@ -227,11 +227,11 @@ static zx_status_t RecursivelyWalkPath(zx::unowned_channel& root_channel,
     }
   } else {
     zx::unowned_channel current_channel(root_channel);
-    for (const auto& component : path) {
+    for (const auto& fragment : path) {
       zx::channel temporary_channel;
       static constexpr uint32_t kOpenMode = fuchsia_io::MODE_TYPE_DIRECTORY;
       status = OpenObjectInDirectory(std::move(current_channel), kOpenFlags, kOpenMode,
-                                     component.string(), &temporary_channel);
+                                     fragment.string(), &temporary_channel);
       if (status != ZX_OK) {
         return status;
       }

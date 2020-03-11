@@ -22,19 +22,19 @@ zx_status_t PwmInitDevice::Create(void* ctx, zx_device_t* parent) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  zx_device_t* components[COMPONENT_COUNT];
-  size_t component_count;
-  composite.GetComponents(components, countof(components), &component_count);
-  if (component_count != COMPONENT_COUNT) {
-    zxlogf(ERROR, "PwmInitDevice: Could not get components\n");
+  zx_device_t* fragments[FRAGMENT_COUNT];
+  size_t fragment_count;
+  composite.GetFragments(fragments, countof(fragments), &fragment_count);
+  if (fragment_count != FRAGMENT_COUNT) {
+    zxlogf(ERROR, "PwmInitDevice: Could not get fragments\n");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  ddk::PwmProtocolClient pwm(components[COMPONENT_PWM]);
-  ddk::GpioProtocolClient wifi_gpio(components[COMPONENT_WIFI_GPIO]);
-  ddk::GpioProtocolClient bt_gpio(components[COMPONENT_BT_GPIO]);
+  ddk::PwmProtocolClient pwm(fragments[FRAGMENT_PWM]);
+  ddk::GpioProtocolClient wifi_gpio(fragments[FRAGMENT_WIFI_GPIO]);
+  ddk::GpioProtocolClient bt_gpio(fragments[FRAGMENT_BT_GPIO]);
   if (!pwm.is_valid() || !wifi_gpio.is_valid() || !bt_gpio.is_valid()) {
-    zxlogf(ERROR, "%s: could not get components\n", __func__);
+    zxlogf(ERROR, "%s: could not get fragments\n", __func__);
     return ZX_ERR_NO_RESOURCES;
   }
 

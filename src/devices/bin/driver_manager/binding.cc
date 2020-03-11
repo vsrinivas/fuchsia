@@ -129,7 +129,7 @@ Match SumMatchCounts(Match m1, Match m2) {
 }
 
 // Instantiate MatchParts<Device>
-template Match MatchParts(const fbl::RefPtr<Device>& device, const ComponentPartDescriptor* parts,
+template Match MatchParts(const fbl::RefPtr<Device>& device, const FragmentPartDescriptor* parts,
                           uint32_t parts_count);
 
 }  // namespace internal

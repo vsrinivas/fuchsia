@@ -42,22 +42,22 @@ zx_status_t AmlPcieDevice::InitProtocols() {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  // Zeroth component is pdev, first is GPIO
-  zx_device_t* components[kClockCount + 2];
+  // Zeroth fragment is pdev, first is GPIO
+  zx_device_t* fragments[kClockCount + 2];
   size_t actual;
-  composite.GetComponents(components, fbl::count_of(components), &actual);
-  if (actual != fbl::count_of(components)) {
-    zxlogf(ERROR, "could not retrieve all our components\n");
+  composite.GetFragments(fragments, fbl::count_of(fragments), &actual);
+  if (actual != fbl::count_of(fragments)) {
+    zxlogf(ERROR, "could not retrieve all our fragments\n");
     return ZX_ERR_INTERNAL;
   }
 
-  auto st = device_get_protocol(components[0], ZX_PROTOCOL_PDEV, &pdev_);
+  auto st = device_get_protocol(fragments[0], ZX_PROTOCOL_PDEV, &pdev_);
   if (st != ZX_OK) {
     zxlogf(ERROR, "aml_pcie: failed to get pdev protocol, st = %d", st);
     return st;
   }
 
-  st = device_get_protocol(components[1], ZX_PROTOCOL_GPIO, &gpio_);
+  st = device_get_protocol(fragments[1], ZX_PROTOCOL_GPIO, &gpio_);
   if (st != ZX_OK) {
     zxlogf(ERROR, "aml_pcie: failed to get gpio protocol, st = %d", st);
     return st;
@@ -70,7 +70,7 @@ zx_status_t AmlPcieDevice::InitProtocols() {
   }
 
   for (unsigned i = 0; i < kClockCount; i++) {
-    auto status = device_get_protocol(components[i + 2], ZX_PROTOCOL_CLOCK, &clks_[i]);
+    auto status = device_get_protocol(fragments[i + 2], ZX_PROTOCOL_CLOCK, &clks_[i]);
     if (status != ZX_OK) {
       zxlogf(ERROR, "aml_pcie: failed to get clk protocol\n");
       return status;

@@ -146,7 +146,7 @@ static const zx_bind_inst_t gpio1_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_HUB_VDD33_EN),
 };
-static const device_component_part_t gpio1_component[] = {
+static const device_fragment_part_t gpio1_fragment[] = {
     {countof(root_match), root_match},
     {countof(gpio1_match), gpio1_match},
 };
@@ -154,7 +154,7 @@ static const zx_bind_inst_t gpio2_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_VBUS_TYPEC),
 };
-static const device_component_part_t gpio2_component[] = {
+static const device_fragment_part_t gpio2_fragment[] = {
     {countof(root_match), root_match},
     {countof(gpio2_match), gpio2_match},
 };
@@ -162,14 +162,14 @@ static const zx_bind_inst_t gpio3_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_USBSW_SW_SEL),
 };
-static const device_component_part_t gpio3_component[] = {
+static const device_fragment_part_t gpio3_fragment[] = {
     {countof(root_match), root_match},
     {countof(gpio3_match), gpio3_match},
 };
-static const device_component_t hikey_usb_components[] = {
-    {countof(gpio1_component), gpio1_component},
-    {countof(gpio2_component), gpio2_component},
-    {countof(gpio3_component), gpio3_component},
+static const device_fragment_t hikey_usb_fragments[] = {
+    {countof(gpio1_fragment), gpio1_fragment},
+    {countof(gpio2_fragment), gpio2_fragment},
+    {countof(gpio3_fragment), gpio3_fragment},
 };
 
 static const zx_bind_inst_t ums_match[] = {
@@ -178,12 +178,12 @@ static const zx_bind_inst_t ums_match[] = {
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_USB_DWC3),
 };
-static const device_component_part_t ums_component[] = {
+static const device_fragment_part_t ums_fragment[] = {
     {countof(root_match), root_match},
     {countof(ums_match), ums_match},
 };
-static const device_component_t dwc3_components[] = {
-    {countof(ums_component), ums_component},
+static const device_fragment_t dwc3_fragments[] = {
+    {countof(ums_fragment), ums_fragment},
 };
 
 zx_status_t hikey960_usb_init(hikey960_t* hikey) {
@@ -192,8 +192,8 @@ zx_status_t hikey960_usb_init(hikey960_t* hikey) {
     return status;
   }
 
-  status = pbus_composite_device_add(&hikey->pbus, &hikey_usb_dev, hikey_usb_components,
-                                     countof(hikey_usb_components), UINT32_MAX);
+  status = pbus_composite_device_add(&hikey->pbus, &hikey_usb_dev, hikey_usb_fragments,
+                                     countof(hikey_usb_fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "hikey960_add_devices could not add hikey_usb_dev: %d\n", status);
     return status;
@@ -213,8 +213,8 @@ zx_status_t hikey960_usb_init(hikey960_t* hikey) {
   dwc3_metadata[0].data_size = sizeof(struct UsbConfig) + sizeof(FunctionDescriptor);
   dwc3_metadata[0].data_buffer = config;
 
-  status = pbus_composite_device_add(&hikey->pbus, &dwc3_dev, dwc3_components,
-                                     countof(dwc3_components), 1);
+  status = pbus_composite_device_add(&hikey->pbus, &dwc3_dev, dwc3_fragments,
+                                     countof(dwc3_fragments), 1);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: pbus_composite_device_add failed: %d\n", __FUNCTION__, status);
     return status;

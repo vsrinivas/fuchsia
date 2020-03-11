@@ -173,27 +173,27 @@ constexpr zx_bind_inst_t dsi_impl_match[] = {
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_MEDIATEK_8167S_REF),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_MEDIATEK_DISPLAY),
 };
-static const device_component_part_t lcd_gpio_component[] = {
+static const device_fragment_part_t lcd_gpio_fragment[] = {
     {countof(root_match), root_match},
     {countof(lcd_gpio_match), lcd_gpio_match},
 };
-constexpr device_component_part_t sysmem_component[] = {
+constexpr device_fragment_part_t sysmem_fragment[] = {
     {countof(root_match), root_match},
     {countof(sysmem_match), sysmem_match},
 };
-constexpr device_component_part_t dsi_impl_component[] = {
+constexpr device_fragment_part_t dsi_impl_fragment[] = {
     {countof(root_match), root_match},
     {countof(dsi_impl_match), dsi_impl_match},
 };
-constexpr device_component_part_t power_component[] = {
+constexpr device_fragment_part_t power_fragment[] = {
     {countof(root_match), root_match},
     {countof(power_match), power_match},
 };
-constexpr device_component_t components[] = {
-    {countof(lcd_gpio_component), lcd_gpio_component},
-    {countof(sysmem_component), sysmem_component},
-    {countof(dsi_impl_component), dsi_impl_component},
-    {countof(power_component), power_component},
+constexpr device_fragment_t fragments[] = {
+    {countof(lcd_gpio_fragment), lcd_gpio_fragment},
+    {countof(sysmem_fragment), sysmem_fragment},
+    {countof(dsi_impl_fragment), dsi_impl_fragment},
+    {countof(power_fragment), power_fragment},
 };
 
 }  // namespace
@@ -285,7 +285,7 @@ zx_status_t Mt8167::DisplayInit() {
   display_panel_metadata[0].data_buffer = &display_panel_info;
 
   // Load display driver in same devhost as DSI driver.
-  status = pbus_.CompositeDeviceAdd(&display_dev, components, fbl::count_of(components), 3);
+  status = pbus_.CompositeDeviceAdd(&display_dev, fragments, fbl::count_of(fragments), 3);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd failed %d\n", __func__, status);
     return status;

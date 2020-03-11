@@ -18,9 +18,9 @@ namespace {
 using llcpp::fuchsia::device::MAX_DEVICE_PERFORMANCE_STATES;
 using llcpp::fuchsia::hardware::thermal::PowerDomain;
 
-__UNUSED constexpr size_t kComponentPdev = 0;
-constexpr size_t kComponentThermal = 1;
-constexpr size_t kComponentCount = 2;
+__UNUSED constexpr size_t kFragmentPdev = 0;
+constexpr size_t kFragmentThermal = 1;
+constexpr size_t kFragmentCount = 2;
 
 uint16_t PstateToOperatingPoint(const uint32_t pstate, const size_t n_operating_points) {
   ZX_ASSERT(pstate < n_operating_points);
@@ -42,12 +42,12 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
     return ZX_ERR_INTERNAL;
   }
 
-  zx_device_t* devices[kComponentCount];
+  zx_device_t* devices[kFragmentCount];
   size_t actual;
-  composite.GetComponents(devices, kComponentCount, &actual);
-  if (actual != kComponentCount) {
-    zxlogf(ERROR, "%s: Expected to get %lu components, actually got %lu\n", __func__,
-           kComponentCount, actual);
+  composite.GetFragments(devices, kFragmentCount, &actual);
+  if (actual != kFragmentCount) {
+    zxlogf(ERROR, "%s: Expected to get %lu fragments, actually got %lu\n", __func__,
+           kFragmentCount, actual);
     return ZX_ERR_INTERNAL;
   }
 
@@ -62,7 +62,7 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
 
   // The Thermal Driver is our parent and it exports an interface with one
   // method (Connect) which allows us to connect to its FIDL interface.
-  zx_device_t* device = devices[kComponentThermal];
+  zx_device_t* device = devices[kFragmentThermal];
   ddk::ThermalProtocolClient thermal_client;
   status = ddk::ThermalProtocolClient::CreateFromDevice(device, &thermal_client);
   if (status != ZX_OK) {

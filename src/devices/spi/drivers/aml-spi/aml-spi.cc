@@ -27,8 +27,8 @@ namespace spi {
 static constexpr size_t kBurstMax = 16;
 
 enum {
-  COMPONENT_PDEV,
-  COMPONENT_GPIO0,
+  FRAGMENT_PDEV,
+  FRAGMENT_GPIO0,
 };
 
 void AmlSpi::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
@@ -136,11 +136,11 @@ zx_status_t AmlSpi::SpiImplExchange(uint32_t cs, const uint8_t* txdata, size_t t
   return ZX_OK;
 }
 
-zx_status_t AmlSpi::GpioInit(amlspi_cs_map_t* map, zx_device_t** gpio_components, size_t count) {
+zx_status_t AmlSpi::GpioInit(amlspi_cs_map_t* map, zx_device_t** gpio_fragments, size_t count) {
   for (uint32_t i = 0; i < map->cs_count; i++) {
     gpio_protocol_t gpio;
     uint32_t index = map->cs[i];
-    zx_status_t status = device_get_protocol(gpio_components[index], ZX_PROTOCOL_GPIO, &gpio);
+    zx_status_t status = device_get_protocol(gpio_fragments[index], ZX_PROTOCOL_GPIO, &gpio);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: failed to acquire gpio for SS%d\n", __func__, i);
       return status;
@@ -162,18 +162,18 @@ zx_status_t AmlSpi::Create(void* ctx, zx_device_t* device) {
     return status;
   }
 
-  size_t component_count = composite_get_component_count(&composite);
+  size_t fragment_count = composite_get_fragment_count(&composite);
 
-  zx_device_t* components[component_count];
+  zx_device_t* fragments[fragment_count];
   size_t actual;
-  composite_get_components(&composite, components, component_count, &actual);
-  if (actual != component_count) {
-    zxlogf(ERROR, "%s: could not get components\n", __func__);
+  composite_get_fragments(&composite, fragments, fragment_count, &actual);
+  if (actual != fragment_count) {
+    zxlogf(ERROR, "%s: could not get fragments\n", __func__);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   pdev_protocol_t pdev;
-  status = device_get_protocol(components[COMPONENT_PDEV], ZX_PROTOCOL_PDEV, &pdev);
+  status = device_get_protocol(fragments[FRAGMENT_PDEV], ZX_PROTOCOL_PDEV, &pdev);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: ZX_PROTOCOL_PDEV not available\n", __func__);
     return status;
@@ -217,7 +217,7 @@ zx_status_t AmlSpi::Create(void* ctx, zx_device_t* device) {
 
     auto cleanup = fbl::MakeAutoCall([&spi]() { spi->DdkRelease(); });
 
-    status = spi->GpioInit(&gpio_map[i], &components[COMPONENT_GPIO0], component_count - 1);
+    status = spi->GpioInit(&gpio_map[i], &fragments[FRAGMENT_GPIO0], fragment_count - 1);
     if (status != ZX_OK) {
       return status;
     }

@@ -222,7 +222,7 @@ class DevhostControllerConnection : public AsyncLoopOwnedRpcHandler<DevhostContr
                     ::fidl::StringView proxy_args, uint64_t local_device_id,
                     CreateDeviceCompleter::Sync completer) override;
   void CreateCompositeDevice(zx::channel coordinator_rpc, zx::channel device_controller_rpc,
-                             ::fidl::VectorView<uint64_t> components, ::fidl::StringView name,
+                             ::fidl::VectorView<uint64_t> fragments, ::fidl::StringView name,
                              uint64_t local_device_id,
                              CreateCompositeDeviceCompleter::Sync completer) override;
   void CreateDeviceStub(zx::channel coordinator_rpc, zx::channel device_controller_rpc,

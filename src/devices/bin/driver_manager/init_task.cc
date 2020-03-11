@@ -25,7 +25,7 @@ void InitTask::Run() {
 
   // Composite and proxy devices do not implement init hooks or use init tasks.
   // If the parent is a composite device, we do not need to wait on any init task,
-  // as composite devices are not created until all its component devices have finished
+  // as composite devices are not created until all its fragment devices have finished
   // initializing.
   // If the parent is a proxy device, it is sufficient to wait on the init task of the
   // stored real parent (parent of the proxy device).

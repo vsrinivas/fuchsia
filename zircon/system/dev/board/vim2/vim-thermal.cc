@@ -179,22 +179,22 @@ static const zx_bind_inst_t fan1_gpio_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_THERMAL_FAN_1),
 };
-static const device_component_part_t scpi_component[] = {
+static const device_fragment_part_t scpi_fragment[] = {
     {fbl::count_of(root_match), root_match},
     {fbl::count_of(scpi_match), scpi_match},
 };
-static const device_component_part_t fan0_gpio_component[] = {
+static const device_fragment_part_t fan0_gpio_fragment[] = {
     {fbl::count_of(root_match), root_match},
     {fbl::count_of(fan0_gpio_match), fan0_gpio_match},
 };
-static const device_component_part_t fan1_gpio_component[] = {
+static const device_fragment_part_t fan1_gpio_fragment[] = {
     {fbl::count_of(root_match), root_match},
     {fbl::count_of(fan1_gpio_match), fan1_gpio_match},
 };
-static const device_component_t components[] = {
-    {fbl::count_of(scpi_component), scpi_component},
-    {fbl::count_of(fan0_gpio_component), fan0_gpio_component},
-    {fbl::count_of(fan1_gpio_component), fan1_gpio_component},
+static const device_fragment_t fragments[] = {
+    {fbl::count_of(scpi_fragment), scpi_fragment},
+    {fbl::count_of(fan0_gpio_fragment), fan0_gpio_fragment},
+    {fbl::count_of(fan1_gpio_fragment), fan1_gpio_fragment},
 };
 
 zx_status_t Vim::ThermalInit() {
@@ -227,8 +227,8 @@ zx_status_t Vim::ThermalInit() {
   const composite_device_desc_t comp_desc = {
       .props = props,
       .props_count = countof(props),
-      .components = components,
-      .components_count = countof(components),
+      .fragments = fragments,
+      .fragments_count = countof(fragments),
       .coresident_device_index = 0,
       .metadata_list = nullptr,
       .metadata_count = 0,

@@ -60,25 +60,25 @@ static const zx_bind_inst_t enable_gpio_match[] = {
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_SOC_AUDIO_EN),
 };
 
-static const device_component_part_t i2c_component[] = {
+static const device_fragment_part_t i2c_fragment[] = {
     {countof(root_match), root_match},
     {countof(i2c_match), i2c_match},
 };
 
-static const device_component_part_t fault_gpio_component[] = {
+static const device_fragment_part_t fault_gpio_fragment[] = {
     {countof(root_match), root_match},
     {countof(fault_gpio_match), fault_gpio_match},
 };
 
-static const device_component_part_t enable_gpio_component[] = {
+static const device_fragment_part_t enable_gpio_fragment[] = {
     {countof(root_match), root_match},
     {countof(enable_gpio_match), enable_gpio_match},
 };
 
-static const device_component_t components[] = {
-    {countof(i2c_component), i2c_component},
-    {countof(fault_gpio_component), fault_gpio_component},
-    {countof(enable_gpio_component), enable_gpio_component},
+static const device_fragment_t fragments[] = {
+    {countof(i2c_fragment), i2c_fragment},
+    {countof(fault_gpio_fragment), fault_gpio_fragment},
+    {countof(enable_gpio_fragment), enable_gpio_fragment},
 };
 
 // PDM input configurations
@@ -144,7 +144,7 @@ zx_status_t Astro::AudioInit() {
 
   gpio_impl_.ConfigOut(S905D2_GPIOA(5), 1);
 
-  status = pbus_.CompositeDeviceAdd(&tdm_dev, components, countof(components), UINT32_MAX);
+  status = pbus_.CompositeDeviceAdd(&tdm_dev, fragments, countof(fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d\n", __func__, status);
     return status;

@@ -48,9 +48,9 @@ class PlatformDevice : public PlatformDeviceType,
     // This platform device is run in the same process as platform bus and provides
     // its protocol to the platform bus.
     Protocol,
-    // This platform device is a component for a composite device.
-    // The PDEV protocol is proxied by the devmgr "component" driver.
-    Component,
+    // This platform device is a fragment for a composite device.
+    // The PDEV protocol is proxied by the devmgr "fragment" driver.
+    Fragment,
   };
 
   // Creates a new PlatformDevice instance.

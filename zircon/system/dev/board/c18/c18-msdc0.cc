@@ -91,15 +91,15 @@ zx_status_t C18::Msdc0Init() {
       BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
       BI_MATCH_IF(EQ, BIND_GPIO_PIN, MT8183_GPIO_MSDC0_RST),
   };
-  static const device_component_part_t reset_gpio_component[] = {
+  static const device_fragment_part_t reset_gpio_fragment[] = {
       {fbl::count_of(root_match), root_match},
       {fbl::count_of(reset_gpio_match), reset_gpio_match},
   };
-  static const device_component_t components[] = {
-      {fbl::count_of(reset_gpio_component), reset_gpio_component},
+  static const device_fragment_t fragments[] = {
+      {fbl::count_of(reset_gpio_fragment), reset_gpio_fragment},
   };
 
-  status = pbus_.CompositeDeviceAdd(&msdc0_dev, components, fbl::count_of(components), UINT32_MAX);
+  status = pbus_.CompositeDeviceAdd(&msdc0_dev, fragments, fbl::count_of(fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd MSDC0 failed: %d\n", __FUNCTION__, status);
   }

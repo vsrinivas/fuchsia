@@ -154,12 +154,12 @@ zx_status_t Vim::GpioInit() {
       BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
       BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_SYS_LED),
   };
-  const device_component_part_t gpio_component[] = {
+  const device_fragment_part_t gpio_fragment[] = {
       {fbl::count_of(root_match), root_match},
       {fbl::count_of(gpio_match), gpio_match},
   };
-  const device_component_t components[] = {
-      {fbl::count_of(gpio_component), gpio_component},
+  const device_fragment_t fragments[] = {
+      {fbl::count_of(gpio_fragment), gpio_fragment},
   };
 
   pbus_dev_t light_dev = {};
@@ -170,7 +170,7 @@ zx_status_t Vim::GpioInit() {
   light_dev.metadata_list = light_metadata;
   light_dev.metadata_count = fbl::count_of(light_metadata);
 
-  status = pbus_.CompositeDeviceAdd(&light_dev, components, fbl::count_of(components), UINT32_MAX);
+  status = pbus_.CompositeDeviceAdd(&light_dev, fragments, fbl::count_of(fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "GpioInit could not add gpio_light_dev: %d\n", status);
     return status;

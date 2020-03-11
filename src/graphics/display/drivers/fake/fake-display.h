@@ -100,11 +100,11 @@ class FakeDisplay : public DeviceType,
 
  private:
   enum {
-    COMPONENT_PDEV,
-    COMPONENT_SYSMEM,
-    COMPONENT_COUNT,
+    FRAGMENT_PDEV,
+    FRAGMENT_SYSMEM,
+    FRAGMENT_COUNT,
   };
-  zx_device_t* components_[COMPONENT_COUNT];
+  zx_device_t* fragments_[FRAGMENT_COUNT];
 
   zx_status_t SetupDisplayInterface();
   int VSyncThread();

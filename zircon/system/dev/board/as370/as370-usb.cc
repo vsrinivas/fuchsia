@@ -140,12 +140,12 @@ static const zx_bind_inst_t dwc2_phy_match[] = {
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_USB_DWC2),
 };
-static const device_component_part_t dwc2_phy_component[] = {
+static const device_fragment_part_t dwc2_phy_fragment[] = {
     {countof(root_match), root_match},
     {countof(dwc2_phy_match), dwc2_phy_match},
 };
-static const device_component_t dwc2_components[] = {
-    {countof(dwc2_phy_component), dwc2_phy_component},
+static const device_fragment_t dwc2_fragments[] = {
+    {countof(dwc2_phy_fragment), dwc2_phy_fragment},
 };
 
 zx_status_t As370::UsbInit() {
@@ -178,7 +178,7 @@ zx_status_t As370::UsbInit() {
   usb_metadata[0].data_size = config_size;
   usb_metadata[0].data_buffer = config;
 
-  status = pbus_.CompositeDeviceAdd(&dwc2_dev, dwc2_components, countof(dwc2_components), 1);
+  status = pbus_.CompositeDeviceAdd(&dwc2_dev, dwc2_fragments, countof(dwc2_fragments), 1);
   free(config);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DeviceAdd failed: %d\n", __func__, status);

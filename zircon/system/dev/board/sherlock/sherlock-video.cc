@@ -89,27 +89,27 @@ const zx_bind_inst_t dos_gclk0_vdec_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
     BI_MATCH_IF(EQ, BIND_CLOCK_ID, g12b_clk::G12B_CLK_DOS_GCLK_VDEC),
 };
-constexpr device_component_part_t sysmem_component[] = {
+constexpr device_fragment_part_t sysmem_fragment[] = {
     {countof(root_match), root_match},
     {countof(sysmem_match), sysmem_match},
 };
-constexpr device_component_part_t canvas_component[] = {
+constexpr device_fragment_part_t canvas_fragment[] = {
     {countof(root_match), root_match},
     {countof(canvas_match), canvas_match},
 };
-constexpr device_component_part_t tee_component[] = {
+constexpr device_fragment_part_t tee_fragment[] = {
     {countof(root_match), root_match},
     {countof(tee_match), tee_match},
 };
-constexpr device_component_part_t dos_gclk0_vdec_component[] = {
+constexpr device_fragment_part_t dos_gclk0_vdec_fragment[] = {
     {countof(root_match), root_match},
     {countof(dos_gclk0_vdec_match), dos_gclk0_vdec_match},
 };
-constexpr device_component_t components[] = {
-    {countof(sysmem_component), sysmem_component},
-    {countof(canvas_component), canvas_component},
-    {countof(dos_gclk0_vdec_component), dos_gclk0_vdec_component},
-    {countof(tee_component), tee_component},
+constexpr device_fragment_t fragments[] = {
+    {countof(sysmem_fragment), sysmem_fragment},
+    {countof(canvas_fragment), canvas_fragment},
+    {countof(dos_gclk0_vdec_fragment), dos_gclk0_vdec_fragment},
+    {countof(tee_fragment), tee_fragment},
 };
 
 static pbus_dev_t video_dev = []() {
@@ -131,7 +131,7 @@ static pbus_dev_t video_dev = []() {
 
 zx_status_t Sherlock::VideoInit() {
   zx_status_t status =
-      pbus_.CompositeDeviceAdd(&video_dev, components, countof(components), UINT32_MAX);
+      pbus_.CompositeDeviceAdd(&video_dev, fragments, countof(fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Sherlock::VideoInit: CompositeDeviceAdd() failed for video: %d\n", status);
     return status;

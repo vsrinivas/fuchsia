@@ -598,7 +598,7 @@ constexpr uint8_t kHidDescriptorGroupEpilogue[] = {
     HID_END_COLLECTION,
 };
 
-// Start all components with the report ID and phys params so we can easily overwrite
+// Start all fragments with the report ID and phys params so we can easily overwrite
 // them.  Report ID will become the sensor number.
 #define SENSOR_PREAMBLE HID_REPORT_ID(0), HID_PHYSICAL_MIN32(0), HID_PHYSICAL_MAX32(0)
 

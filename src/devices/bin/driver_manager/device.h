@@ -58,7 +58,7 @@ struct UnbindTaskOpts;
 // Device has been remove()'d
 #define DEV_CTX_DEAD               0x10
 
-// This device is a component of a composite device and
+// This device is a fragment of a composite device and
 // can be part of multiple composite devices.
 #define DEV_CTX_ALLOW_MULTI_COMPOSITE    0x20
 
@@ -210,18 +210,18 @@ class Device : public fbl::RefCounted<Device>,
                 // If there are no more children, run through the Composite
                 // state next.
                 if (device_->parent_) {
-                  state_ = Composite{device_->parent_->components().begin()};
+                  state_ = Composite{device_->parent_->fragments().begin()};
                 } else {
                   state_ = Composite{};
                 }
                 return true;
               } else if constexpr (std::is_same_v<T, Composite>) {
-                // Check if this device is an internal component device
-                // that bound to a composite component.  If it is, and
+                // Check if this device is an internal fragment device
+                // that bound to a composite fragment.  If it is, and
                 // the composite has been constructed, the iterator
                 // should yield the composite.
                 if (device_->parent_) {
-                  if (arg != device_->parent_->components().end() &&
+                  if (arg != device_->parent_->fragments().end() &&
                       arg->composite()->device() != nullptr) {
                     return false;
                   }
@@ -236,8 +236,8 @@ class Device : public fbl::RefCounted<Device>,
       }
     }
 
-    using Composite = fbl::DoublyLinkedList<CompositeDeviceComponent*,
-                                            CompositeDeviceComponent::DeviceNode>::iterator;
+    using Composite = fbl::DoublyLinkedList<CompositeDeviceFragment*,
+                                            CompositeDeviceFragment::DeviceNode>::iterator;
     struct Done {
       bool operator==(Done) const { return true; }
     };
@@ -364,12 +364,12 @@ class Device : public fbl::RefCounted<Device>,
     return true;
   }
 
-  void push_component(CompositeDeviceComponent* component) { components_.push_back(component); }
-  bool is_components_empty() { return components_.is_empty(); }
+  void push_fragment(CompositeDeviceFragment* fragment) { fragments_.push_back(fragment); }
+  bool is_fragments_empty() { return fragments_.is_empty(); }
 
-  fbl::DoublyLinkedList<CompositeDeviceComponent*, CompositeDeviceComponent::DeviceNode>&
-  components() {
-    return components_;
+  fbl::DoublyLinkedList<CompositeDeviceFragment*, CompositeDeviceFragment::DeviceNode>&
+  fragments() {
+    return fragments_;
   }
   // If the device was created as a composite, this returns its description.
   CompositeDevice* composite() const {
@@ -579,14 +579,14 @@ class Device : public fbl::RefCounted<Device>,
   // listnode for this device in its devhost's list-of-devices
   fbl::DoublyLinkedListNodeState<Device*> devhost_node_;
 
-  // list of all components that this device bound to.
-  fbl::DoublyLinkedList<CompositeDeviceComponent*, CompositeDeviceComponent::DeviceNode>
-      components_;
+  // list of all fragments that this device bound to.
+  fbl::DoublyLinkedList<CompositeDeviceFragment*, CompositeDeviceFragment::DeviceNode>
+      fragments_;
 
   // - If this device is part of a composite device, this is inhabited by
-  //   CompositeDeviceComponent* and it points to the component that matched it.
-  //   Note that this is only set on the device that matched the component, not
-  //   the "component device" added by the component driver.
+  //   CompositeDeviceFragment* and it points to the fragment that matched it.
+  //   Note that this is only set on the device that matched the fragment, not
+  //   the "fragment device" added by the fragment driver.
   // - If this device is a composite device, this is inhabited by
   //   CompositeDevice* and it points to the composite that describes it.
   // - Otherwise, it is inhabited by UnassociatedWithComposite

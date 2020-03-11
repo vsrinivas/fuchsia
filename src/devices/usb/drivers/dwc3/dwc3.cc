@@ -31,11 +31,11 @@ enum {
   IRQ_USB3,
 };
 
-// Component indices
+// Fragment indices
 enum {
-  COMPONENT_PDEV,
-  COMPONENT_UMS,
-  COMPONENT_COUNT,
+  FRAGMENT_PDEV,
+  FRAGMENT_UMS,
+  FRAGMENT_COUNT,
 };
 
 void dwc3_print_status(dwc3_t* dwc) {
@@ -506,21 +506,21 @@ zx_status_t dwc3_bind(void* ctx, zx_device_t* parent) {
     zxlogf(ERROR, "%s: Could not get ZX_PROTOCOL_COMPOSITE\n", __func__);
     goto fail;
   }
-  zx_device_t* components[COMPONENT_COUNT];
+  zx_device_t* fragments[FRAGMENT_COUNT];
   size_t actual;
-  composite_get_components(&composite, components, COMPONENT_COUNT, &actual);
-  if (actual != COMPONENT_COUNT) {
-    zxlogf(ERROR, "%s: Could not get components\n", __func__);
+  composite_get_fragments(&composite, fragments, FRAGMENT_COUNT, &actual);
+  if (actual != FRAGMENT_COUNT) {
+    zxlogf(ERROR, "%s: Could not get fragments\n", __func__);
     goto fail;
   }
 
-  status = device_get_protocol(components[COMPONENT_PDEV], ZX_PROTOCOL_PDEV, &dwc->pdev);
+  status = device_get_protocol(fragments[FRAGMENT_PDEV], ZX_PROTOCOL_PDEV, &dwc->pdev);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: Could not get ZX_PROTOCOL_PDEV\n", __func__);
     goto fail;
   }
 
-  status = device_get_protocol(components[COMPONENT_UMS], ZX_PROTOCOL_USB_MODE_SWITCH, &dwc->ums);
+  status = device_get_protocol(fragments[FRAGMENT_UMS], ZX_PROTOCOL_USB_MODE_SWITCH, &dwc->ums);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: Could not get ZX_PROTOCOL_USB_MODE_SWITCH\n", __func__);
     goto fail;
@@ -537,7 +537,7 @@ zx_status_t dwc3_bind(void* ctx, zx_device_t* parent) {
     list_initialize(&ep->queued_reqs);
   }
   dwc->parent = parent;
-  dwc->pdev_dev = components[COMPONENT_PDEV];
+  dwc->pdev_dev = fragments[FRAGMENT_PDEV];
   dwc->usb_mode = USB_MODE_NONE;
 
   mmio_buffer_t mmio;

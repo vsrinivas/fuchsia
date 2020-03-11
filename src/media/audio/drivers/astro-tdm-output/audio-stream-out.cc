@@ -19,11 +19,11 @@ namespace audio {
 namespace astro {
 
 enum {
-  COMPONENT_PDEV,
-  COMPONENT_I2C,
-  COMPONENT_FAULT_GPIO,
-  COMPONENT_ENABLE_GPIO,
-  COMPONENT_COUNT,
+  FRAGMENT_PDEV,
+  FRAGMENT_I2C,
+  FRAGMENT_FAULT_GPIO,
+  FRAGMENT_ENABLE_GPIO,
+  FRAGMENT_COUNT,
 };
 
 constexpr size_t kNumberOfChannels = 2;
@@ -109,28 +109,28 @@ zx_status_t AstroAudioStreamOut::InitPDev() {
     return status;
   }
 
-  zx_device_t* components[COMPONENT_COUNT] = {};
+  zx_device_t* fragments[FRAGMENT_COUNT] = {};
   size_t actual;
-  composite_get_components(&composite, components, countof(components), &actual);
-  if (actual < countof(components)) {
-    zxlogf(ERROR, "could not get components\n");
+  composite_get_fragments(&composite, fragments, countof(fragments), &actual);
+  if (actual < countof(fragments)) {
+    zxlogf(ERROR, "could not get fragments\n");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  pdev_ = components[COMPONENT_PDEV];
+  pdev_ = fragments[FRAGMENT_PDEV];
   if (!pdev_.is_valid()) {
     return ZX_ERR_NO_RESOURCES;
   }
 
-  audio_fault_ = components[COMPONENT_FAULT_GPIO];
-  audio_en_ = components[COMPONENT_ENABLE_GPIO];
+  audio_fault_ = fragments[FRAGMENT_FAULT_GPIO];
+  audio_en_ = fragments[FRAGMENT_ENABLE_GPIO];
 
   if (!audio_fault_.is_valid() || !audio_en_.is_valid()) {
     zxlogf(ERROR, "%s failed to allocate gpio\n", __func__);
     return ZX_ERR_NO_RESOURCES;
   }
 
-  ddk::I2cChannel i2c = components[COMPONENT_I2C];
+  ddk::I2cChannel i2c = fragments[FRAGMENT_I2C];
   if (!i2c.is_valid()) {
     zxlogf(ERROR, "%s failed to allocate i2c\n", __func__);
     return ZX_ERR_NO_RESOURCES;

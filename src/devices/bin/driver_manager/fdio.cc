@@ -52,7 +52,7 @@ const static struct {
     { "/boot",      "boot",      FS_BOOT,     FdioAction::CloneDir },
     { "/data",      "data",      FS_DATA,     FdioAction::CloneDir },
     { "/dev",       "dev",       FS_DEV,      FdioAction::AddNsEntry },
-    // TODO(dgonyeo): add this path back in once the appmgr component doesn't
+    // TODO(dgonyeo): add this path back in once the appmgr fragment doesn't
     // exist on bringup builds
     //{ "/hub",       "hub",       FS_HUB,      FdioAction::CloneDir },
     { "/install",   "install",   FS_INSTALL,  FdioAction::CloneDir },

@@ -245,28 +245,28 @@ zx_status_t Mt8167::Msdc2Init() {
       BI_MATCH_IF(EQ, BIND_GPIO_PIN, MT8167_CLEO_GPIO_HUB_PWR_EN),
   };
 
-  static const device_component_part_t reset_gpio_component[] = {
+  static const device_fragment_part_t reset_gpio_fragment[] = {
       {fbl::count_of(root_match), root_match},
       {fbl::count_of(reset_gpio_match), reset_gpio_match},
   };
-  static const device_component_part_t power_en_gpio_component[] = {
+  static const device_fragment_part_t power_en_gpio_fragment[] = {
       {fbl::count_of(root_match), root_match},
       {fbl::count_of(power_en_gpio_match), power_en_gpio_match},
   };
 
-  static const device_component_t ref_components[] = {
-      {fbl::count_of(reset_gpio_component), reset_gpio_component},
+  static const device_fragment_t ref_fragments[] = {
+      {fbl::count_of(reset_gpio_fragment), reset_gpio_fragment},
   };
-  static const device_component_t cleo_components[] = {
-      {fbl::count_of(reset_gpio_component), reset_gpio_component},
-      {fbl::count_of(power_en_gpio_component), power_en_gpio_component},
+  static const device_fragment_t cleo_fragments[] = {
+      {fbl::count_of(reset_gpio_fragment), reset_gpio_fragment},
+      {fbl::count_of(power_en_gpio_fragment), power_en_gpio_fragment},
   };
 
   if (board_info_.vid == PDEV_VID_GOOGLE && board_info_.pid == PDEV_PID_CLEO) {
-    status = pbus_.CompositeDeviceAdd(&msdc2_dev, cleo_components, fbl::count_of(cleo_components),
+    status = pbus_.CompositeDeviceAdd(&msdc2_dev, cleo_fragments, fbl::count_of(cleo_fragments),
                                       UINT32_MAX);
   } else {
-    status = pbus_.CompositeDeviceAdd(&msdc2_dev, ref_components, fbl::count_of(ref_components),
+    status = pbus_.CompositeDeviceAdd(&msdc2_dev, ref_fragments, fbl::count_of(ref_fragments),
                                       UINT32_MAX);
   }
 

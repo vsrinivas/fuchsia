@@ -27,7 +27,7 @@
 
 namespace {
 
-enum { COMPONENT_PDEV, COMPONENT_RESET_GPIO, COMPONENT_POWER_EN_GPIO, COMPONENT_COUNT };
+enum { FRAGMENT_PDEV, FRAGMENT_RESET_GPIO, FRAGMENT_POWER_EN_GPIO, FRAGMENT_COUNT };
 
 constexpr uint32_t kIdentificationModeBusFreq = 400000;
 constexpr int kTuningDelayIterations = 4;
@@ -87,15 +87,15 @@ zx_status_t MtkSdmmc::Create(void* ctx, zx_device_t* parent) {
     return ZX_ERR_NO_RESOURCES;
   }
 
-  zx_device_t* components[COMPONENT_COUNT] = {};
-  size_t component_count = 0;
-  composite.GetComponents(components, COMPONENT_COUNT, &component_count);
-  if (component_count <= COMPONENT_PDEV) {
-    zxlogf(ERROR, "%s: Failed to get components\n", __FILE__);
+  zx_device_t* fragments[FRAGMENT_COUNT] = {};
+  size_t fragment_count = 0;
+  composite.GetFragments(fragments, FRAGMENT_COUNT, &fragment_count);
+  if (fragment_count <= FRAGMENT_PDEV) {
+    zxlogf(ERROR, "%s: Failed to get fragments\n", __FILE__);
     return ZX_ERR_NO_RESOURCES;
   }
 
-  ddk::PDev pdev(components[COMPONENT_PDEV]);
+  ddk::PDev pdev(fragments[FRAGMENT_PDEV]);
   if (!pdev.is_valid()) {
     zxlogf(ERROR, "%s: ZX_PROTOCOL_PDEV not available\n", __FILE__);
     return ZX_ERR_NO_RESOURCES;
@@ -147,8 +147,8 @@ zx_status_t MtkSdmmc::Create(void* ctx, zx_device_t* parent) {
   }
 
   ddk::GpioProtocolClient reset_gpio;
-  if (component_count > COMPONENT_RESET_GPIO) {
-    reset_gpio = ddk::GpioProtocolClient(components[COMPONENT_RESET_GPIO]);
+  if (fragment_count > FRAGMENT_RESET_GPIO) {
+    reset_gpio = ddk::GpioProtocolClient(fragments[FRAGMENT_RESET_GPIO]);
     if (!reset_gpio.is_valid()) {
       zxlogf(ERROR, "%s: Failed to get reset GPIO\n", __FILE__);
       return ZX_ERR_NO_RESOURCES;
@@ -156,8 +156,8 @@ zx_status_t MtkSdmmc::Create(void* ctx, zx_device_t* parent) {
   }
 
   ddk::GpioProtocolClient power_en_gpio;
-  if (component_count > COMPONENT_POWER_EN_GPIO) {
-    power_en_gpio = ddk::GpioProtocolClient(components[COMPONENT_POWER_EN_GPIO]);
+  if (fragment_count > FRAGMENT_POWER_EN_GPIO) {
+    power_en_gpio = ddk::GpioProtocolClient(fragments[FRAGMENT_POWER_EN_GPIO]);
     if (!power_en_gpio.is_valid()) {
       zxlogf(ERROR, "%s: Failed to get power enable GPIO\n", __FILE__);
       return ZX_ERR_NO_RESOURCES;

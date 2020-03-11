@@ -74,16 +74,16 @@ enum Interrupt {
 };
 
 enum {
-  kComponentPdev = 0,
-  kComponentSysmem = 1,
-  kComponentCanvas = 2,
-  kComponentDosGclkVdec = 3,
+  kFragmentPdev = 0,
+  kFragmentSysmem = 1,
+  kFragmentCanvas = 2,
+  kFragmentDosGclkVdec = 3,
   // The tee is optional.
-  kComponentTee = 4,
+  kFragmentTee = 4,
   // with tee
-  kMaxComponentCount = 5,
+  kMaxFragmentCount = 5,
   // without tee
-  kMinComponentCount = 4,
+  kMinFragmentCount = 4,
 };
 
 }  // namespace
@@ -669,37 +669,37 @@ zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
     return status;
   }
 
-  zx_device_t* components[kMaxComponentCount];
+  zx_device_t* fragments[kMaxFragmentCount];
   size_t actual;
-  composite_get_components(&composite, components, countof(components), &actual);
-  if (actual < kMinComponentCount || actual > kMaxComponentCount) {
-    DECODE_ERROR("could not get components");
+  composite_get_fragments(&composite, fragments, countof(fragments), &actual);
+  if (actual < kMinFragmentCount || actual > kMaxFragmentCount) {
+    DECODE_ERROR("could not get fragments");
     return ZX_ERR_NOT_SUPPORTED;
   }
-  // If tee is available as a component, we require that we can get ZX_PROTOCOL_TEE.  It'd be nice
+  // If tee is available as a fragment, we require that we can get ZX_PROTOCOL_TEE.  It'd be nice
   // if there were a less fragile way to detect this.  Passing in driver metadata for this doesn't
   // seem worthwhile so far.  There's no tee on vim2.
-  is_tee_available_ = (actual == kMaxComponentCount);
+  is_tee_available_ = (actual == kMaxFragmentCount);
 
-  status = device_get_protocol(components[kComponentPdev], ZX_PROTOCOL_PDEV, &pdev_);
+  status = device_get_protocol(fragments[kFragmentPdev], ZX_PROTOCOL_PDEV, &pdev_);
   if (status != ZX_OK) {
     DECODE_ERROR("Failed to get pdev protocol");
     return ZX_ERR_NO_MEMORY;
   }
 
-  status = device_get_protocol(components[kComponentSysmem], ZX_PROTOCOL_SYSMEM, &sysmem_);
+  status = device_get_protocol(fragments[kFragmentSysmem], ZX_PROTOCOL_SYSMEM, &sysmem_);
   if (status != ZX_OK) {
     DECODE_ERROR("Could not get SYSMEM protocol");
     return status;
   }
 
-  status = device_get_protocol(components[kComponentCanvas], ZX_PROTOCOL_AMLOGIC_CANVAS, &canvas_);
+  status = device_get_protocol(fragments[kFragmentCanvas], ZX_PROTOCOL_AMLOGIC_CANVAS, &canvas_);
   if (status != ZX_OK) {
     DECODE_ERROR("Could not get video CANVAS protocol");
     return status;
   }
 
-  status = device_get_protocol(components[kComponentDosGclkVdec], ZX_PROTOCOL_CLOCK,
+  status = device_get_protocol(fragments[kFragmentDosGclkVdec], ZX_PROTOCOL_CLOCK,
                                &clocks_[static_cast<int>(ClockType::kGclkVdec)]);
   if (status != ZX_OK) {
     DECODE_ERROR("Could not get CLOCK protocol\n");
@@ -707,7 +707,7 @@ zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
   }
 
   if (is_tee_available_) {
-    status = device_get_protocol(components[kComponentTee], ZX_PROTOCOL_TEE, &tee_);
+    status = device_get_protocol(fragments[kFragmentTee], ZX_PROTOCOL_TEE, &tee_);
     if (status != ZX_OK) {
       DECODE_ERROR("Could not get TEE protocol, despite is_tee_available_");
       return status;

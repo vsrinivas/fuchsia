@@ -8,7 +8,7 @@
 #   dev-battery
 #   dev-pwrsrc
 #
-# While not ideal, this test serves to act as validation for these components
+# While not ideal, this test serves to act as validation for these fragments
 # at least until there is a more comprehensive test framework capable of
 # exercising the full breadth of device enumerations within a given product that
 # uses ACPI.

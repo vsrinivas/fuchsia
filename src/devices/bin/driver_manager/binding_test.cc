@@ -74,7 +74,7 @@ TEST(BindingTestCase, CompositeMatchOnePartOneDeviceFail) {
   auto part = MakeBindProgram({
       BI_MATCH_IF(EQ, BIND_PROTOCOL, 2),
   });
-  ComponentPartDescriptor parts[] = {
+  FragmentPartDescriptor parts[] = {
       {std::move(part)},
   };
 
@@ -89,7 +89,7 @@ TEST(BindingTestCase, CompositeMatchOnePartOneDeviceSucceed) {
   auto part = MakeBindProgram({
       BI_MATCH_IF(EQ, BIND_PROTOCOL, 1),
   });
-  ComponentPartDescriptor parts[] = {
+  FragmentPartDescriptor parts[] = {
       {std::move(part)},
   };
 
@@ -109,7 +109,7 @@ TEST(BindingTestCase, CompositeMatchTwoPartOneDevice) {
   auto part2 = MakeBindProgram({
       BI_MATCH_IF(EQ, BIND_PROTOCOL, 1),
   });
-  ComponentPartDescriptor parts[] = {
+  FragmentPartDescriptor parts[] = {
       {std::move(part1)},
       {std::move(part2)},
   };
@@ -139,7 +139,7 @@ TEST(BindingTestCase, CompositeMatchOnePartTwoDevices) {
   auto part = MakeBindProgram({
       BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId),
   });
-  ComponentPartDescriptor parts[] = {
+  FragmentPartDescriptor parts[] = {
       {std::move(part)},
   };
 
@@ -161,7 +161,7 @@ TEST(BindingTestCase, CompositeMatchTwoPartsTwoDevicesFail) {
   auto part2 = MakeBindProgram({
       BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId2),
   });
-  ComponentPartDescriptor parts[] = {
+  FragmentPartDescriptor parts[] = {
       // First entry should match the root, but this rule matches leaf
       {std::move(part2)},
       // Last entry should match the leaf, but this rule matches root
@@ -186,7 +186,7 @@ TEST(BindingTestCase, CompositeMatchTwoPartsTwoDevicesSucceed) {
   auto part2 = MakeBindProgram({
       BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId2),
   });
-  ComponentPartDescriptor parts[] = {
+  FragmentPartDescriptor parts[] = {
       {std::move(part1)},
       {std::move(part2)},
   };
@@ -212,7 +212,7 @@ TEST(BindingTestCase, CompositeMatchThreePartsTwoDevices) {
   auto part3 = MakeBindProgram({
       BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId2),
   });
-  ComponentPartDescriptor parts[] = {
+  FragmentPartDescriptor parts[] = {
       {std::move(part1)},
       {std::move(part2)},
       {std::move(part3)},
@@ -244,7 +244,7 @@ TEST(BindingTestCase, CompositeMatchTwoPartsThreeDevicesNoMidTopoFail1) {
   auto part2 = MakeBindProgram({
       BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId2),
   });
-  ComponentPartDescriptor parts[] = {
+  FragmentPartDescriptor parts[] = {
       {std::move(part1)},
       // This matches the middle device, not the leaf
       {std::move(part2)},
@@ -276,7 +276,7 @@ TEST(BindingTestCase, CompositeMatchTwoPartsThreeDevicesNoMidTopoFail2) {
   auto part2 = MakeBindProgram({
       BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId3),
   });
-  ComponentPartDescriptor parts[] = {
+  FragmentPartDescriptor parts[] = {
       // This matches the middle device, not the root
       {std::move(part1)},
       {std::move(part2)},
@@ -308,7 +308,7 @@ TEST(BindingTestCase, CompositeMatchTwoPartsThreeDevicesNoMidTopoSuccess) {
   auto part2 = MakeBindProgram({
       BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId3),
   });
-  ComponentPartDescriptor parts[] = {
+  FragmentPartDescriptor parts[] = {
       {std::move(part1)},
       {std::move(part2)},
   };
@@ -340,7 +340,7 @@ TEST(BindingTestCase, CompositeMatchTwoPartsThreeDevicesMidTopo) {
   auto part2 = MakeBindProgram({
       BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId3),
   });
-  ComponentPartDescriptor parts[] = {
+  FragmentPartDescriptor parts[] = {
       {std::move(part1)},
       // We need to match on the topological node, but we don't have a rule
       // for it.
@@ -377,7 +377,7 @@ TEST(BindingTestCase, CompositeMatchThreePartsThreeDevicesMidTopo) {
   auto part3 = MakeBindProgram({
       BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId3),
   });
-  ComponentPartDescriptor parts[] = {
+  FragmentPartDescriptor parts[] = {
       {std::move(part1)},
       {std::move(part2)},
       {std::move(part3)},
@@ -412,7 +412,7 @@ TEST(BindingTestCase, CompositeMatchTwoPartsFourDevicesOneTopo) {
   auto part2 = MakeBindProgram({
       BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId4),
   });
-  ComponentPartDescriptor parts[] = {
+  FragmentPartDescriptor parts[] = {
       {std::move(part1)},
       {std::move(part2)},
   };
@@ -449,7 +449,7 @@ TEST(BindingTestCase, CompositeMatchThreePartsFourDevicesOneTopo) {
   auto part3 = MakeBindProgram({
       BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId4),
   });
-  ComponentPartDescriptor parts[] = {
+  FragmentPartDescriptor parts[] = {
       {std::move(part1)},
       {std::move(part2)},
       {std::move(part3)},
@@ -490,7 +490,7 @@ TEST(BindingTestCase, CompositeMatchFourPartsFourDevicesOneTopo) {
   auto part4 = MakeBindProgram({
       BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId4),
   });
-  ComponentPartDescriptor parts[] = {
+  FragmentPartDescriptor parts[] = {
       {std::move(part1)},
       {std::move(part2)},
       {std::move(part3)},
@@ -521,7 +521,7 @@ TEST(BindingTestCase, CompositeMatchThreePartsFourDevicesAmbiguous) {
   auto part3 = MakeBindProgram({
       BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId3),
   });
-  ComponentPartDescriptor parts[] = {
+  FragmentPartDescriptor parts[] = {
       {std::move(part1)},
       // This matches both of the inner devices.
       {std::move(part2)},
@@ -552,7 +552,7 @@ TEST(BindingTestCase, CompositeMatchThreePartsFourDevicesAmbiguousAgainstLeaf) {
   auto part3 = MakeBindProgram({
       BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId3),
   });
-  ComponentPartDescriptor parts[] = {
+  FragmentPartDescriptor parts[] = {
       {std::move(part1)},
       {std::move(part2)},
       // This matches the leaf and its parent, but is not considered ambiguous
@@ -584,7 +584,7 @@ TEST(BindingTestCase, CompositeMatchThreePartsFourDevicesAmbiguousAgainstRoot) {
   auto part3 = MakeBindProgram({
       BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId3),
   });
-  ComponentPartDescriptor parts[] = {
+  FragmentPartDescriptor parts[] = {
       // This matches the root and its immediate child, but is not considered
       // ambiguous isnce we force the match to the root
       {std::move(part1)},
@@ -635,7 +635,7 @@ TEST(BindingTestCase, CompositeMatchComplexTopology) {
   auto part5 = MakeBindProgram({
       BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId),
   });
-  ComponentPartDescriptor parts[] = {
+  FragmentPartDescriptor parts[] = {
       {std::move(part1)}, {std::move(part2)}, {std::move(part3)},
       {std::move(part4)}, {std::move(part5)},
   };
@@ -668,7 +668,7 @@ TEST(BindingTestCase, CompositeMatchComplexAmbiguity) {
   auto part4 = MakeBindProgram({
       BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId3),
   });
-  ComponentPartDescriptor parts[] = {
+  FragmentPartDescriptor parts[] = {
       {std::move(part1)},
       // parts 2 and 3 can match ancestors 1 and 2 or 2 and 3.
       {std::move(part2)},

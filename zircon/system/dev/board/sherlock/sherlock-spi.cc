@@ -54,7 +54,7 @@ static const spi_channel_t spi_channels[] = {
 
 static const amlspi_cs_map_t spi_cs_map[] = {
     {
-        .bus_id = SHERLOCK_SPICC0, .cs_count = 1, .cs = {0}  // index into components list
+        .bus_id = SHERLOCK_SPICC0, .cs_count = 1, .cs = {0}  // index into fragments list
     },
     {.bus_id = SHERLOCK_SPICC1, .cs_count = 0, .cs = {}}};
 
@@ -94,12 +94,12 @@ static constexpr zx_bind_inst_t gpio_spicc0_ss0_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_SPICC0_SS0),
 };
-static constexpr device_component_part_t gpio_spicc0_ss0_component[] = {
+static constexpr device_fragment_part_t gpio_spicc0_ss0_fragment[] = {
     {fbl::count_of(root_match), root_match},
     {fbl::count_of(gpio_spicc0_ss0_match), gpio_spicc0_ss0_match},
 };
-static constexpr device_component_t components[] = {
-    {fbl::count_of(gpio_spicc0_ss0_component), gpio_spicc0_ss0_component},
+static constexpr device_fragment_t fragments[] = {
+    {fbl::count_of(gpio_spicc0_ss0_fragment), gpio_spicc0_ss0_fragment},
 };
 
 zx_status_t Sherlock::SpiInit() {
@@ -129,7 +129,7 @@ zx_status_t Sherlock::SpiInit() {
   }
 
   zx_status_t status =
-      pbus_.CompositeDeviceAdd(&spi_dev, components, fbl::count_of(components), UINT32_MAX);
+      pbus_.CompositeDeviceAdd(&spi_dev, fragments, fbl::count_of(fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DeviceAdd failed %d\n", __func__, status);
     return status;

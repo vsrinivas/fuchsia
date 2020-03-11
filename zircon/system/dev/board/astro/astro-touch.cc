@@ -48,31 +48,31 @@ static const zx_bind_inst_t gpio_reset_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_TOUCH_RESET),
 };
-static const device_component_part_t ft_i2c_component[] = {
+static const device_fragment_part_t ft_i2c_fragment[] = {
     {countof(root_match), root_match},
     {countof(ft_i2c_match), ft_i2c_match},
 };
-static const device_component_part_t goodix_i2c_component[] = {
+static const device_fragment_part_t goodix_i2c_fragment[] = {
     {countof(root_match), root_match},
     {countof(goodix_i2c_match), goodix_i2c_match},
 };
-static const device_component_part_t gpio_int_component[] = {
+static const device_fragment_part_t gpio_int_fragment[] = {
     {countof(root_match), root_match},
     {countof(gpio_int_match), gpio_int_match},
 };
-static const device_component_part_t gpio_reset_component[] = {
+static const device_fragment_part_t gpio_reset_fragment[] = {
     {countof(root_match), root_match},
     {countof(gpio_reset_match), gpio_reset_match},
 };
-static const device_component_t ft_components[] = {
-    {countof(ft_i2c_component), ft_i2c_component},
-    {countof(gpio_int_component), gpio_int_component},
-    {countof(gpio_reset_component), gpio_reset_component},
+static const device_fragment_t ft_fragments[] = {
+    {countof(ft_i2c_fragment), ft_i2c_fragment},
+    {countof(gpio_int_fragment), gpio_int_fragment},
+    {countof(gpio_reset_fragment), gpio_reset_fragment},
 };
-static const device_component_t goodix_components[] = {
-    {countof(goodix_i2c_component), goodix_i2c_component},
-    {countof(gpio_int_component), gpio_int_component},
-    {countof(gpio_reset_component), gpio_reset_component},
+static const device_fragment_t goodix_fragments[] = {
+    {countof(goodix_i2c_fragment), goodix_i2c_fragment},
+    {countof(gpio_int_fragment), gpio_int_fragment},
+    {countof(gpio_reset_fragment), gpio_reset_fragment},
 };
 
 zx_status_t Astro::TouchInit() {
@@ -98,8 +98,8 @@ zx_status_t Astro::TouchInit() {
     const composite_device_desc_t comp_desc = {
         .props = props,
         .props_count = countof(props),
-        .components = goodix_components,
-        .components_count = countof(goodix_components),
+        .fragments = goodix_fragments,
+        .fragments_count = countof(goodix_fragments),
         .coresident_device_index = UINT32_MAX,
         .metadata_list = nullptr,
         .metadata_count = 0,
@@ -120,8 +120,8 @@ zx_status_t Astro::TouchInit() {
     const composite_device_desc_t comp_desc = {
         .props = props,
         .props_count = countof(props),
-        .components = ft_components,
-        .components_count = countof(ft_components),
+        .fragments = ft_fragments,
+        .fragments_count = countof(ft_fragments),
         .coresident_device_index = UINT32_MAX,
         .metadata_list = ft3x27_touch_metadata,
         .metadata_count = fbl::count_of(ft3x27_touch_metadata),

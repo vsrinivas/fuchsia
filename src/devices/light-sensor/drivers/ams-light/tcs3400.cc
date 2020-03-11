@@ -46,9 +46,9 @@ constexpr uint8_t SAMPLES_TO_TRIGGER = 0x01;
 // clang-format on
 
 enum {
-  COMPONENT_I2C,
-  COMPONENT_GPIO,
-  COMPONENT_COUNT,
+  FRAGMENT_I2C,
+  FRAGMENT_GPIO,
+  FRAGMENT_COUNT,
 };
 
 }  // namespace
@@ -327,19 +327,19 @@ zx_status_t Tcs3400Device::Bind() {
     return status;
   }
 
-  zx_device_t* components[COMPONENT_COUNT];
+  zx_device_t* fragments[FRAGMENT_COUNT];
   size_t actual;
-  composite_get_components(&composite, components, fbl::count_of(components), &actual);
-  if (actual != fbl::count_of(components)) {
-    zxlogf(ERROR, "could not get components\n");
+  composite_get_fragments(&composite, fragments, fbl::count_of(fragments), &actual);
+  if (actual != fbl::count_of(fragments)) {
+    zxlogf(ERROR, "could not get fragments\n");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  if (device_get_protocol(components[COMPONENT_I2C], ZX_PROTOCOL_I2C, &i2c_) != ZX_OK) {
+  if (device_get_protocol(fragments[FRAGMENT_I2C], ZX_PROTOCOL_I2C, &i2c_) != ZX_OK) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  if (device_get_protocol(components[COMPONENT_GPIO], ZX_PROTOCOL_GPIO, &gpio_) != ZX_OK) {
+  if (device_get_protocol(fragments[FRAGMENT_GPIO], ZX_PROTOCOL_GPIO, &gpio_) != ZX_OK) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 

@@ -24,9 +24,9 @@ namespace audio {
 namespace gauss {
 
 enum {
-  COMPONENT_PDEV,
-  COMPONENT_I2C,
-  COMPONENT_COUNT,
+  FRAGMENT_PDEV,
+  FRAGMENT_I2C,
+  FRAGMENT_COUNT,
 };
 
 #define RegOffset(field) offsetof(aml_tdm_regs_t, field)
@@ -48,15 +48,15 @@ zx_status_t TdmOutputStream::Create(zx_device_t* parent) {
     return res;
   }
 
-  zx_device_t* components[COMPONENT_COUNT];
+  zx_device_t* fragments[FRAGMENT_COUNT];
   size_t actual;
-  composite_get_components(&composite, components, fbl::count_of(components), &actual);
-  if (actual != countof(components)) {
-    zxlogf(ERROR, "could not get components\n");
+  composite_get_fragments(&composite, fragments, fbl::count_of(fragments), &actual);
+  if (actual != countof(fragments)) {
+    zxlogf(ERROR, "could not get fragments\n");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  res = device_get_protocol(components[COMPONENT_PDEV], ZX_PROTOCOL_PDEV, &stream->pdev_);
+  res = device_get_protocol(fragments[FRAGMENT_PDEV], ZX_PROTOCOL_PDEV, &stream->pdev_);
   if (res != ZX_OK) {
     return res;
   }
@@ -80,7 +80,7 @@ zx_status_t TdmOutputStream::Create(zx_device_t* parent) {
   // Sleep to let clocks stabilize in amps.
   zx_nanosleep(zx_deadline_after(ZX_MSEC(20)));
 
-  res = device_get_protocol(components[COMPONENT_I2C], ZX_PROTOCOL_I2C, &stream->i2c_);
+  res = device_get_protocol(fragments[FRAGMENT_I2C], ZX_PROTOCOL_I2C, &stream->i2c_);
   if (res != ZX_OK) {
     zxlogf(ERROR, "tdm-output-driver: failed to acquire i2c\n");
     return res;

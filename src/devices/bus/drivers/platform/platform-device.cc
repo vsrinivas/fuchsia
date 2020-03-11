@@ -74,8 +74,8 @@ zx_status_t PlatformDevice::Init(const pbus_dev_t* pdev) {
       return ZX_ERR_NOT_SUPPORTED;
     };
     pbus_ops_.composite_device_add =
-        [](void* ctx, const pbus_dev_t* dev, const device_component_t* components_list,
-           size_t components_count,
+        [](void* ctx, const pbus_dev_t* dev, const device_fragment_t* fragments_list,
+           size_t fragments_count,
            uint32_t t_coresident_device_index) { return ZX_ERR_NOT_SUPPORTED; };
   }
 
@@ -480,9 +480,9 @@ zx_status_t PlatformDevice::Start() {
 
   // Isolated devices run in separate devhosts.
   // Protocol devices must be in same devhost as platform bus.
-  // Composite device components are also in the same devhost as platform bus,
+  // Composite device fragments are also in the same devhost as platform bus,
   // but the actual composite device will be in a new devhost or devhost belonging to
-  // one of the other components.
+  // one of the other fragments.
   if (type_ == Isolated) {
     device_add_flags |= DEVICE_ADD_MUST_ISOLATE;
   }

@@ -43,9 +43,9 @@ constexpr uint8_t kSafeStop = 0;
 constexpr uint8_t kSafeStart = 1;
 
 enum {
-  COMPONENT_PDEV,
-  COMPONENT_CAMERA_SENSOR,
-  COMPONENT_COUNT,
+  FRAGMENT_PDEV,
+  FRAGMENT_CAMERA_SENSOR,
+  FRAGMENT_COUNT,
 };
 
 }  // namespace
@@ -475,21 +475,21 @@ zx_status_t ArmIspDevice::Create(void* ctx, zx_device_t* parent) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  zx_device_t* components[COMPONENT_COUNT];
+  zx_device_t* fragments[FRAGMENT_COUNT];
   size_t actual;
-  composite.GetComponents(components, COMPONENT_COUNT, &actual);
-  if (actual != COMPONENT_COUNT) {
-    zxlogf(ERROR, "%s Could not get components\n", __func__);
+  composite.GetFragments(fragments, FRAGMENT_COUNT, &actual);
+  if (actual != FRAGMENT_COUNT) {
+    zxlogf(ERROR, "%s Could not get fragments\n", __func__);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  ddk::PDev pdev(components[COMPONENT_PDEV]);
+  ddk::PDev pdev(fragments[FRAGMENT_PDEV]);
   if (!pdev.is_valid()) {
     zxlogf(ERROR, "%s: ZX_PROTOCOL_PDEV not available\n", __FILE__);
     return ZX_ERR_NO_RESOURCES;
   }
 
-  ddk::CameraSensorProtocolClient camera_sensor(components[COMPONENT_CAMERA_SENSOR]);
+  ddk::CameraSensorProtocolClient camera_sensor(fragments[FRAGMENT_CAMERA_SENSOR]);
   if (!camera_sensor.is_valid()) {
     zxlogf(ERROR, "%s: ZX_PROTOCOL_CAMERA_SENSOR not available\n", __FILE__);
     return ZX_ERR_NO_RESOURCES;
@@ -555,7 +555,7 @@ zx_status_t ArmIspDevice::Create(void* ctx, zx_device_t* parent) {
   auto isp_device = std::make_unique<ArmIspDevice>(
       parent, std::move(*hiu_mmio), std::move(*power_mmio), std::move(*memory_pd_mmio),
       std::move(*reset_mmio), std::move(*isp_mmio), local_mmio_buffer, std::move(isp_irq),
-      std::move(bti), components[COMPONENT_CAMERA_SENSOR]);
+      std::move(bti), fragments[FRAGMENT_CAMERA_SENSOR]);
 
   status = isp_device->InitIsp();
   if (status != ZX_OK) {

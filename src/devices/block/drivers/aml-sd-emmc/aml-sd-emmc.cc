@@ -982,16 +982,16 @@ zx_status_t AmlSdEmmc::Create(void* ctx, zx_device_t* parent) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  zx_device_t* components[COMPONENT_COUNT];
-  size_t component_count;
-  composite.GetComponents(components, fbl::count_of(components), &component_count);
-  // Only pdev component is required.
-  if (component_count < 1) {
-    zxlogf(ERROR, "AmlSdEmmc: Could not get components\n");
+  zx_device_t* fragments[FRAGMENT_COUNT];
+  size_t fragment_count;
+  composite.GetFragments(fragments, fbl::count_of(fragments), &fragment_count);
+  // Only pdev fragment is required.
+  if (fragment_count < 1) {
+    zxlogf(ERROR, "AmlSdEmmc: Could not get fragments\n");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  ddk::PDev pdev(components[COMPONENT_PDEV]);
+  ddk::PDev pdev(fragments[FRAGMENT_PDEV]);
   if (!pdev.is_valid()) {
     zxlogf(ERROR, "AmlSdEmmc::Create: Could not get pdev: %d\n", status);
     return ZX_ERR_NO_RESOURCES;
@@ -1041,8 +1041,8 @@ zx_status_t AmlSdEmmc::Create(void* ctx, zx_device_t* parent) {
   }
 
   ddk::GpioProtocolClient reset_gpio;
-  if (component_count > COMPONENT_GPIO_RESET) {
-    reset_gpio = components[COMPONENT_GPIO_RESET];
+  if (fragment_count > FRAGMENT_GPIO_RESET) {
+    reset_gpio = fragments[FRAGMENT_GPIO_RESET];
     if (!reset_gpio.is_valid()) {
       zxlogf(ERROR, "AmlSdEmmc::Create: Failed to get GPIO\n");
       return ZX_ERR_NO_RESOURCES;

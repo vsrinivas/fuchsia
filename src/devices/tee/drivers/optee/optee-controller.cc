@@ -30,9 +30,9 @@ namespace optee {
 namespace fuchsia_tee = ::llcpp::fuchsia::tee;
 
 enum {
-  kComponentPdev,
-  kComponentSysmem,
-  kComponentCount,
+  kFragmentPdev,
+  kFragmentSysmem,
+  kFragmentCount,
 };
 
 constexpr TEEC_UUID kOpteeOsUuid = {
@@ -240,21 +240,21 @@ zx_status_t OpteeController::Bind() {
     return status;
   }
 
-  zx_device_t* components[kComponentCount];
+  zx_device_t* fragments[kFragmentCount];
   size_t actual;
-  composite_get_components(&composite, components, countof(components), &actual);
-  if (actual != countof(components)) {
-    LOG(ERROR, "unable to composite_get_components()");
+  composite_get_fragments(&composite, fragments, countof(fragments), &actual);
+  if (actual != countof(fragments)) {
+    LOG(ERROR, "unable to composite_get_fragments()");
     return ZX_ERR_INTERNAL;
   }
 
-  status = device_get_protocol(components[kComponentPdev], ZX_PROTOCOL_PDEV, &pdev_proto_);
+  status = device_get_protocol(fragments[kFragmentPdev], ZX_PROTOCOL_PDEV, &pdev_proto_);
   if (status != ZX_OK) {
     LOG(ERROR, "unable to get pdev protocol");
     return status;
   }
 
-  status = device_get_protocol(components[kComponentSysmem], ZX_PROTOCOL_SYSMEM, &sysmem_proto_);
+  status = device_get_protocol(fragments[kFragmentSysmem], ZX_PROTOCOL_SYSMEM, &sysmem_proto_);
   if (status != ZX_OK) {
     LOG(ERROR, "unable to get sysmem protocol");
     return status;

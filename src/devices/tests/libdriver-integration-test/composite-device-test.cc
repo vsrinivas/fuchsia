@@ -22,8 +22,8 @@ class CompositeDeviceTest : public IntegrationTest {
   static void SetUpTestCase() { DoSetup(true /* should_create_composite */); }
 
  protected:
-  // Create the components for the well-known composite that the mock sysdev creates.
-  Promise<void> CreateComponentDevices(std::unique_ptr<RootMockDevice>* root_device,
+  // Create the fragments for the well-known composite that the mock sysdev creates.
+  Promise<void> CreateFragmentDevices(std::unique_ptr<RootMockDevice>* root_device,
                                        std::unique_ptr<MockDevice>* child1_device,
                                        std::unique_ptr<MockDevice>* child2_device) {
     fit::bridge<void, Error> child1_bridge;
@@ -44,10 +44,10 @@ class CompositeDeviceTest : public IntegrationTest {
                         });
                         ActionList actions;
                         actions.AppendAddMockDevice(loop_.dispatcher(), (*root_device)->path(),
-                                                    "component1", std::move(child1_props), ZX_OK,
+                                                    "fragment1", std::move(child1_props), ZX_OK,
                                                     std::move(child1_completer), child1_device);
                         actions.AppendAddMockDevice(loop_.dispatcher(), (*root_device)->path(),
-                                                    "component2", std::move(child2_props), ZX_OK,
+                                                    "fragment2", std::move(child2_props), ZX_OK,
                                                     std::move(child2_completer), child2_device);
                         actions.AppendReturnStatus(ZX_OK);
 
@@ -68,7 +68,7 @@ TEST_F(CompositeDeviceTest, CreateTest) {
   std::unique_ptr<MockDevice> child_device1, child_device2;
   fidl::InterfacePtr<fuchsia::io::Node> client;
 
-  auto promise = CreateComponentDevices(&root_device, &child_device1, &child_device2)
+  auto promise = CreateFragmentDevices(&root_device, &child_device1, &child_device2)
                      .and_then(DoWaitForPath("composite"))
                      .and_then([&]() -> Promise<void> { return DoOpen("composite", &client); })
                      .and_then([&]() -> Promise<void> {
@@ -85,9 +85,9 @@ TEST_F(CompositeDeviceTest, CreateTest) {
 // TODO(FLK-344): Re-enable once flake is fixed.
 //
 // This test creates the well-known composite, and force binds a test driver
-// stack to the composite.  It then forces one of the components to unbind.
+// stack to the composite.  It then forces one of the fragments to unbind.
 // It verifies that the composite mock-device's unbind hook is called.
-TEST_F(CompositeDeviceTest, DISABLED_UnbindComponent) {
+TEST_F(CompositeDeviceTest, DISABLED_UnbindFragment) {
   std::unique_ptr<RootMockDevice> root_device, composite_mock;
   std::unique_ptr<MockDevice> child_device1, child_device2, composite_child_device;
   fidl::InterfacePtr<fuchsia::io::Node> client;
@@ -95,7 +95,7 @@ TEST_F(CompositeDeviceTest, DISABLED_UnbindComponent) {
   fidl::SynchronousInterfacePtr<fuchsia::device::test::RootDevice> composite_test;
 
   auto promise =
-      CreateComponentDevices(&root_device, &child_device1, &child_device2)
+      CreateFragmentDevices(&root_device, &child_device1, &child_device2)
           .and_then(DoWaitForPath("composite"))
           .and_then([&]() -> Promise<void> { return DoWaitForPath("composite/test"); })
           .and_then([&]() -> Promise<void> { return DoOpen("composite/test", &client); })
