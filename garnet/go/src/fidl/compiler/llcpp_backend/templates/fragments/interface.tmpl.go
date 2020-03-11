@@ -217,6 +217,7 @@ class {{ .Name }} final {
 
   class SyncClient final {
    public:
+    SyncClient() = default;
     explicit SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
     ~SyncClient() = default;
     SyncClient(SyncClient&&) = default;

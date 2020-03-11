@@ -212,3 +212,11 @@ TEST(MagicNumberTest, EventRead) {
   ASSERT_EQ(test::Frobinator::Call::HandleEvents(zx::unowned_channel(h2), std::move(handlers)),
             ZX_ERR_PROTOCOL_NOT_SUPPORTED);
 }
+
+TEST(SyncClientTest, DefaultInitializationError) {
+  test::ErrorMethods::SyncClient client;
+  ASSERT_FALSE(client.channel().is_valid());
+
+  auto resp = client.NoArgsPrimitiveError(false);
+  ASSERT_EQ(ZX_ERR_BAD_HANDLE, resp.status());
+}

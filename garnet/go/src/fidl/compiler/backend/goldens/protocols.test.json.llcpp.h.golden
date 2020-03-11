@@ -640,6 +640,7 @@ class ChannelProtocol final {
 
   class SyncClient final {
    public:
+    SyncClient() = default;
     explicit SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
     ~SyncClient() = default;
     SyncClient(SyncClient&&) = default;
@@ -1146,6 +1147,7 @@ class WithAndWithoutRequestResponse final {
 
   class SyncClient final {
    public:
+    SyncClient() = default;
     explicit SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
     ~SyncClient() = default;
     SyncClient(SyncClient&&) = default;
@@ -1562,6 +1564,7 @@ class WithErrorSyntax final {
 
   class SyncClient final {
    public:
+    SyncClient() = default;
     explicit SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
     ~SyncClient() = default;
     SyncClient(SyncClient&&) = default;

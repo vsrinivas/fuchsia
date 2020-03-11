@@ -124,6 +124,7 @@ class super final {
 
   class SyncClient final {
    public:
+    SyncClient() = default;
     explicit SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
     ~SyncClient() = default;
     SyncClient(SyncClient&&) = default;
@@ -313,6 +314,7 @@ class sub final {
 
   class SyncClient final {
    public:
+    SyncClient() = default;
     explicit SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
     ~SyncClient() = default;
     SyncClient(SyncClient&&) = default;
