@@ -45,7 +45,8 @@ impl CustomTargetMetadata {
 }
 
 pub struct Repository {
-    updating_client: Arc<AsyncMutex<updating_tuf_client::UpdatingTufClient>>,
+    updating_client:
+        Arc<AsyncMutex<updating_tuf_client::UpdatingTufClient<EphemeralRepository<Json>>>>,
     inspect: RepositoryInspectState,
 }
 
