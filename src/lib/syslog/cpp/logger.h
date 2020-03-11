@@ -174,6 +174,14 @@ zx_status_t InitLogger();
 #define FX_DCHECKT(condition, tag) _FX_EAT_STREAM_PARAMETERS(condition, tag)
 #endif
 
+// Writes a message to the global logger only in debug builds.
+// |severity| is one of DEBUG, INFO, WARNING, ERROR, FATAL
+#ifndef NDEBUG
+#define FX_DLOGS(severity) FX_LOGS(severity)
+#else
+#define FX_DLOGS(severity) _FX_EAT_STREAM_PARAMETERS(true, nullptr)
+#endif
+
 #define FX_NOTREACHED() FX_DCHECK(false)
 
 #define FX_NOTIMPLEMENTED() FX_LOGS(ERROR) << "Not implemented in: " << __PRETTY_FUNCTION__
