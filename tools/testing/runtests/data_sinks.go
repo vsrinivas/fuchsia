@@ -71,8 +71,6 @@ func (v sftpViewer) copyFile(remote, local string) error {
 	if err != nil {
 		return err
 	}
-	// Remove file after copying to local path to save space on the device.
-	defer v.client.Remove(remote)
 	defer remoteFile.Close()
 
 	if err = os.MkdirAll(filepath.Dir(local), 0777); err != nil {
