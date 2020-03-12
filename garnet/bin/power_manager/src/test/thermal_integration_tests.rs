@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::thermal_policy::tests::get_sample_interval;
 use crate::thermal_policy::*;
 use crate::types::{Celsius, Farads, Hertz, Nanoseconds, Seconds, Volts, Watts};
 use crate::{
@@ -355,7 +356,7 @@ impl ThermalPolicyTest {
 
         let thermal_config = ThermalConfig {
             temperature_node,
-            cpu_control_node,
+            cpu_control_nodes: vec![cpu_control_node],
             sys_pwr_handler,
             thermal_limiter_node,
             policy_params,
@@ -365,7 +366,7 @@ impl ThermalPolicyTest {
 
     /// Iterates the policy n times.
     fn iterate_n_times(&mut self, n: u32) {
-        let dt = self.thermal_policy.get_sample_interval();
+        let dt = get_sample_interval(&self.thermal_policy);
 
         for _ in 0..n {
             self.time += dt;

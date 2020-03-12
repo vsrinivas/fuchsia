@@ -84,9 +84,10 @@ pub struct ThermalConfig {
     /// this node responds to the ReadTemperature message.
     pub temperature_node: Rc<dyn Node>,
 
-    /// The node to impose limits on the CPU power state. It is expected that this node responds to
-    /// the SetMaxPowerConsumption message.
-    pub cpu_control_node: Rc<dyn Node>,
+    /// The nodes used to impose limits on CPU power state. There will be one node for each CPU
+    /// power domain (e.g., big.LITTLE). It is expected that these nodes respond to the
+    /// SetMaxPowerConsumption message.
+    pub cpu_control_nodes: Vec<Rc<dyn Node>>,
 
     /// The node to handle system power state changes (e.g., shutdown). It is expected that this
     /// node responds to the SystemShutdown message.
@@ -461,20 +462,34 @@ impl ThermalPolicy {
     /// system. Initially, CPU is the only power actor. In later versions of the thermal policy,
     /// there may be more power actors with associated "weights" for distributing power amongst
     /// them.
-    async fn distribute_power(&self, available_power: Watts) -> Result<(), Error> {
+    async fn distribute_power(&self, mut total_available_power: Watts) -> Result<(), Error> {
         fuchsia_trace::duration!(
             "power_manager",
             "ThermalPolicy::distribute_power",
-            "available_power" => available_power.0
+            "total_available_power" => total_available_power.0
         );
-        let message = Message::SetMaxPowerConsumption(available_power);
-        self.send_message(&self.config.cpu_control_node, &message).await?;
-        Ok(())
-    }
 
-    #[cfg(test)]
-    pub fn get_sample_interval(&self) -> Seconds {
-        self.config.policy_params.controller_params.sample_interval
+        // The power distribution currently works by allocating the total available power to the
+        // first CPU control node in `cpu_control_nodes`. The node replies to the
+        // SetMaxPowerConsumption message with the amount of power it was able to utilize. This
+        // utilized amount is subtracted from the total available power, then the remaining power is
+        // allocated to the remaining CPU control nodes in the same way.
+
+        // TODO(fxb/48205): We may want to revisit this distribution algorithm to avoid potentially
+        // starving some CPU control nodes. We'll want to have some discussions and learn more about
+        // intended big.LITTLE scheduling and operation to better inform our decisions here. We may
+        // find that we'll need to first query the nodes to learn how much power they intend to use
+        // before making allocation decisions.
+        for node in &self.config.cpu_control_nodes {
+            if let MessageReturn::SetMaxPowerConsumption(power_used) = self
+                .send_message(&node, &Message::SetMaxPowerConsumption(total_available_power))
+                .await?
+            {
+                total_available_power = total_available_power - power_used;
+            }
+        }
+
+        Ok(())
     }
 }
 
@@ -583,10 +598,15 @@ impl InspectData {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use super::*;
-    use crate::test::mock_node::create_mock_node;
+    use crate::test::mock_node::{create_mock_node, MessageMatcher};
+    use crate::{msg_eq, msg_ok_return};
     use inspect::assert_inspect_tree;
+
+    pub fn get_sample_interval(thermal_policy: &ThermalPolicy) -> Seconds {
+        thermal_policy.config.policy_params.controller_params.sample_interval
+    }
 
     fn default_policy_params() -> ThermalPolicyParams {
         ThermalPolicyParams {
@@ -649,13 +669,84 @@ mod tests {
         }
     }
 
+    /// Tests that the ThermalPolicy will correctly divide total available power amongst multiple
+    /// CPU control nodes.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_multiple_cpu_actors() {
+        // Setup the two CpuControlHandler mock nodes. The message reply to SetMaxPowerConsumption
+        // indicates how much power the mock node was able to utilize, and ultimately drives the
+        // test logic.
+        let cpu_node_1 = create_mock_node(
+            "CpuCtrlNode1",
+            vec![
+                // On the first iteration, this node will consume all available power (1W)
+                (
+                    msg_eq!(SetMaxPowerConsumption(Watts(1.0))),
+                    msg_ok_return!(SetMaxPowerConsumption(Watts(1.0))),
+                ),
+                // On the second iteration, this node will consume half of the available power
+                // (0.5W)
+                (
+                    msg_eq!(SetMaxPowerConsumption(Watts(1.0))),
+                    msg_ok_return!(SetMaxPowerConsumption(Watts(0.5))),
+                ),
+                // On the third iteration, this node will consume none of the available power
+                // (0.0W)
+                (
+                    msg_eq!(SetMaxPowerConsumption(Watts(1.0))),
+                    msg_ok_return!(SetMaxPowerConsumption(Watts(0.0))),
+                ),
+            ],
+        );
+        let cpu_node_2 = create_mock_node(
+            "CpuCtrlNode2",
+            vec![
+                // On the first iteration, the first node consumes all available power (1W), so
+                // expect to receive a power allocation of 0W
+                (
+                    msg_eq!(SetMaxPowerConsumption(Watts(0.0))),
+                    msg_ok_return!(SetMaxPowerConsumption(Watts(0.0))),
+                ),
+                // On the second iteration, the first node consumes half of the available power
+                // (1W), so expect to receive a power allocation of 0.5W
+                (
+                    msg_eq!(SetMaxPowerConsumption(Watts(0.5))),
+                    msg_ok_return!(SetMaxPowerConsumption(Watts(0.5))),
+                ),
+                // On the third iteration, the first node consumes none of the available power
+                // (1W), so expect to receive a power allocation of 1W
+                (
+                    msg_eq!(SetMaxPowerConsumption(Watts(1.0))),
+                    msg_ok_return!(SetMaxPowerConsumption(Watts(1.0))),
+                ),
+            ],
+        );
+
+        let thermal_config = ThermalConfig {
+            temperature_node: create_mock_node("TemperatureNode", vec![]),
+            cpu_control_nodes: vec![cpu_node_1, cpu_node_2],
+            sys_pwr_handler: create_mock_node("SysPwrNode", vec![]),
+            thermal_limiter_node: create_mock_node("ThermalLimiterNode", vec![]),
+            policy_params: default_policy_params(),
+        };
+        let node = ThermalPolicyBuilder::new(thermal_config).build().unwrap();
+
+        // Distribute 1W of total power across the two CPU nodes. The real test logic happens inside
+        // the mock node, where we verify that the expected power amounts are granted to both CPU
+        // nodes via the SetMaxPowerConsumption message. Repeat for the number of messages that the
+        // mock nodes expect to receive (three).
+        node.distribute_power(Watts(1.0)).await.unwrap();
+        node.distribute_power(Watts(1.0)).await.unwrap();
+        node.distribute_power(Watts(1.0)).await.unwrap();
+    }
+
     /// Tests for the presence and correctness of dynamically-added inspect data
     #[fasync::run_singlethreaded(test)]
     async fn test_inspect_data() {
         let policy_params = default_policy_params();
         let thermal_config = ThermalConfig {
             temperature_node: create_mock_node("TemperatureNode", vec![]),
-            cpu_control_node: create_mock_node("CpuCtrlNode", vec![]),
+            cpu_control_nodes: vec![create_mock_node("CpuCtrlNode", vec![])],
             sys_pwr_handler: create_mock_node("SysPwrNode", vec![]),
             thermal_limiter_node: create_mock_node("ThermalLimiterNode", vec![]),
             policy_params: default_policy_params(),

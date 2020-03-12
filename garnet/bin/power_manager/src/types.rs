@@ -72,7 +72,7 @@ macro_rules! define_arithmetic {
         define_arithmetic!($($more),+);
     };
 }
-define_arithmetic!(Seconds, Nanoseconds, Celsius);
+define_arithmetic!(Seconds, Nanoseconds, Celsius, Watts);
 
 // Convert Seconds to and from Nanoseconds.
 impl Seconds {

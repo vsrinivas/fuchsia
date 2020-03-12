@@ -89,7 +89,7 @@ impl PowerManager {
 
         let thermal_config = thermal_policy::ThermalConfig {
             temperature_node: cpu_temperature,
-            cpu_control_node,
+            cpu_control_nodes: vec![cpu_control_node],
             sys_pwr_handler,
             thermal_limiter_node,
 
