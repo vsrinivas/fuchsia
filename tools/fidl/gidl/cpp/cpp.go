@@ -351,7 +351,7 @@ func (b *cppValueBuilder) OnTable(value gidlir.Object, decl *gidlmixer.TableDecl
 	b.onObject(value, decl)
 }
 
-func (b *cppValueBuilder) OnXUnion(value gidlir.Object, decl *gidlmixer.XUnionDecl) {
+func (b *cppValueBuilder) OnUnion(value gidlir.Object, decl *gidlmixer.UnionDecl) {
 	b.onObject(value, decl)
 }
 
@@ -449,7 +449,7 @@ func typeName(decl gidlmixer.Declaration) string {
 		return identifierName(decl.Name)
 	case *gidlmixer.TableDecl:
 		return identifierName(decl.Name)
-	case *gidlmixer.XUnionDecl:
+	case *gidlmixer.UnionDecl:
 		if decl.IsNullable() {
 			return fmt.Sprintf("std::unique_ptr<%s>", identifierName(decl.Name))
 		}

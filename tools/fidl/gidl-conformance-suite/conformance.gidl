@@ -455,7 +455,7 @@ encode_failure("StrictXUnion Field Not Set") {
     value = TestStrictXUnionInStruct {
         xu: SampleStrictXUnion {},
     },
-    err = STRICT_XUNION_FIELD_NOT_SET,
+    err = STRICT_UNION_FIELD_NOT_SET,
 }
 
 decode_failure("StrictXUnion Field Unknown") {
@@ -470,7 +470,7 @@ decode_failure("StrictXUnion Field Unknown") {
             0xde, 0xad, 0xbe, 0xef, 0x5c, 0xa1, 0xab, 0x1e,  // fake out-of-line data
         ),
     ],
-    err = STRICT_XUNION_UNKNOWN_FIELD,
+    err = STRICT_UNION_UNKNOWN_FIELD,
 }
 
 success("AddEthernetDeviceRequest") {

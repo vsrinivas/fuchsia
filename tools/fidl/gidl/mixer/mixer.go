@@ -51,7 +51,7 @@ type ValueVisitor interface {
 	OnString(value string, decl *StringDecl)
 	OnStruct(value gidlir.Object, decl *StructDecl)
 	OnTable(value gidlir.Object, decl *TableDecl)
-	OnXUnion(value gidlir.Object, decl *XUnionDecl)
+	OnUnion(value gidlir.Object, decl *UnionDecl)
 	OnArray(value []interface{}, decl *ArrayDecl)
 	OnVector(value []interface{}, decl *VectorDecl)
 	OnNull(decl Declaration)
@@ -82,8 +82,8 @@ func Visit(visitor ValueVisitor, value interface{}, decl Declaration) {
 			visitor.OnStruct(value, decl)
 		case *TableDecl:
 			visitor.OnTable(value, decl)
-		case *XUnionDecl:
-			visitor.OnXUnion(value, decl)
+		case *UnionDecl:
+			visitor.OnUnion(value, decl)
 		default:
 			panic(fmt.Sprintf("expected %T, got %T: %v", decl, value, value))
 		}
@@ -124,7 +124,7 @@ var _ = []Declaration{
 	&StringDecl{},
 	&StructDecl{},
 	&TableDecl{},
-	&XUnionDecl{},
+	&UnionDecl{},
 	&ArrayDecl{},
 	&VectorDecl{},
 }
@@ -152,7 +152,7 @@ type KeyedDeclaration interface {
 var _ = []KeyedDeclaration{
 	&StructDecl{},
 	&TableDecl{},
-	&XUnionDecl{},
+	&UnionDecl{},
 }
 
 type ListDeclaration interface {
@@ -396,18 +396,18 @@ func (decl *TableDecl) conforms(value interface{}) error {
 	return nil
 }
 
-// XUnionDecl describes a xunion declaration.
-type XUnionDecl struct {
-	fidlir.XUnion
+// UnionDecl describes a union declaration.
+type UnionDecl struct {
+	fidlir.Union
 	schema   schema
 	nullable bool
 }
 
-func (decl *XUnionDecl) IsNullable() bool {
+func (decl *UnionDecl) IsNullable() bool {
 	return decl.nullable
 }
 
-func (decl *XUnionDecl) MemberType(key gidlir.FieldKey) (fidlir.Type, bool) {
+func (decl *UnionDecl) MemberType(key gidlir.FieldKey) (fidlir.Type, bool) {
 	for _, member := range decl.Members {
 		if string(member.Name) == key.Name || uint64(member.Ordinal) == key.Ordinal {
 			return member.Type, true
@@ -417,15 +417,15 @@ func (decl *XUnionDecl) MemberType(key gidlir.FieldKey) (fidlir.Type, bool) {
 }
 
 // TODO(bprosnitz) Don't repeat this across types.
-func (decl XUnionDecl) ForKey(key gidlir.FieldKey) (Declaration, bool) {
+func (decl UnionDecl) ForKey(key gidlir.FieldKey) (Declaration, bool) {
 	if typ, ok := decl.MemberType(key); ok {
 		return decl.schema.LookupDeclByType(typ)
 	}
 	return nil, false
 }
 
-func (decl XUnionDecl) conforms(value interface{}) error {
-	object, err := objectConforms(value, "xunion", decl.Name, decl.schema, decl.nullable)
+func (decl UnionDecl) conforms(value interface{}) error {
+	object, err := objectConforms(value, "union", decl.Name, decl.schema, decl.nullable)
 	if err != nil {
 		return err
 	}
@@ -558,19 +558,10 @@ func (s schema) LookupDeclByName(name string, nullable bool) (Declaration, bool)
 			}, true
 		}
 	}
-	for _, decl := range s.XUnions {
-		if decl.Name == s.name(name) {
-			return &XUnionDecl{
-				XUnion:   decl,
-				schema:   s,
-				nullable: nullable,
-			}, true
-		}
-	}
 	for _, decl := range s.Unions {
 		if decl.Name == s.name(name) {
-			return &XUnionDecl{
-				XUnion:   fidlir.ConvertUnionToXUnion(decl),
+			return &UnionDecl{
+				Union:    decl,
 				schema:   s,
 				nullable: nullable,
 			}, true

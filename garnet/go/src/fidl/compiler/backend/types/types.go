@@ -484,24 +484,14 @@ type FieldShape struct {
 type Union struct {
 	Attributes
 	Name        EncodedCompoundIdentifier `json:"name"`
-	Members     []XUnionMember            `json:"members"`
+	Members     []UnionMember             `json:"members"`
 	Strictness  `json:"strict"`
 	TypeShapeV1 TypeShape `json:"type_shape_v1"`
 }
 
-// TODO(fxb/45702) remove after fidlmerge is transitioned
-// XUnion represents the declaration of a FIDL extensible union.
-type XUnion struct {
-	Attributes
-	Name        EncodedCompoundIdentifier `json:"name"`
-	Members     []XUnionMember            `json:"members"`
-	Strictness  `json:"strict"`
-	TypeShapeV1 TypeShape `json:"type_shape_v1"`
-}
-
-// XUnionMember represents the declaration of a field in a FIDL extensible
-// xunion.
-type XUnionMember struct {
+// UnionMember represents the declaration of a field in a FIDL extensible
+// union.
+type UnionMember struct {
 	Attributes
 	Reserved     bool       `json:"reserved"`
 	Ordinal      int        `json:"ordinal"`
@@ -748,7 +738,6 @@ const (
 	StructDeclType             = "struct"
 	TableDeclType              = "table"
 	UnionDeclType              = "union"
-	XUnionDeclType             = "xunion"
 )
 
 type DeclMap map[EncodedCompoundIdentifier]DeclType
@@ -780,7 +769,6 @@ type Root struct {
 	Structs    []Struct                    `json:"struct_declarations,omitempty"`
 	Tables     []Table                     `json:"table_declarations,omitempty"`
 	Unions     []Union                     `json:"union_declarations,omitempty"`
-	XUnions    []XUnion                    `json:"xunion_declarations,omitempty"`
 	DeclOrder  []EncodedCompoundIdentifier `json:"declaration_order,omitempty"`
 	Decls      DeclMap                     `json:"declarations,omitempty"`
 	Libraries  []Library                   `json:"library_dependencies,omitempty"`

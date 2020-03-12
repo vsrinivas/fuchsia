@@ -1108,9 +1108,6 @@ func Compile(fidlData types.Root) Root {
 	for _, v := range fidlData.Unions {
 		r.Unions = append(r.Unions, c.compileUnion(v))
 	}
-	if len(fidlData.XUnions) > 0 {
-		panic("unexpected xunions in JSON IR: xunions have been replaced by unions and should no longer exist")
-	}
 	for _, v := range fidlData.Tables {
 		r.Tables = append(r.Tables, c.compileTable(v))
 	}

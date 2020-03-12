@@ -12,13 +12,13 @@ const (
 	_                          ErrorCode = ""
 	StringTooLong                        = "STRING_TOO_LONG"
 	NonEmptyStringWithNullBody           = "NON_EMPTY_STRING_WITH_NULL_BODY"
-	StrictXUnionFieldNotSet              = "STRICT_XUNION_FIELD_NOT_SET"
-	StrictXUnionUnknownField             = "STRICT_XUNION_UNKNOWN_FIELD"
+	StrictUnionFieldNotSet               = "STRICT_UNION_FIELD_NOT_SET"
+	StrictUnionUnknownField              = "STRICT_UNION_UNKNOWN_FIELD"
 )
 
 var AllErrorCodes = map[ErrorCode]bool{
 	StringTooLong:              true,
 	NonEmptyStringWithNullBody: true,
-	StrictXUnionFieldNotSet:    true,
-	StrictXUnionUnknownField:   true,
+	StrictUnionFieldNotSet:     true,
+	StrictUnionUnknownField:    true,
 }

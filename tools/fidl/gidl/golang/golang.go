@@ -380,7 +380,7 @@ func (b *goValueBuilder) OnTable(value gidlir.Object, decl *gidlmixer.TableDecl)
 	b.onObject(value, decl)
 }
 
-func (b *goValueBuilder) OnXUnion(value gidlir.Object, decl *gidlmixer.XUnionDecl) {
+func (b *goValueBuilder) OnUnion(value gidlir.Object, decl *gidlmixer.UnionDecl) {
 	b.onObject(value, decl)
 }
 
@@ -436,7 +436,7 @@ func typeNameHelper(decl gidlmixer.Declaration, pointerPrefix string) string {
 		return pointerPrefix + identifierName(decl.Name)
 	case *gidlmixer.TableDecl:
 		return pointerPrefix + identifierName(decl.Name)
-	case *gidlmixer.XUnionDecl:
+	case *gidlmixer.UnionDecl:
 		return pointerPrefix + identifierName(decl.Name)
 	case *gidlmixer.ArrayDecl:
 		return fmt.Sprintf("[%d]%s", decl.Size(), elemName(decl))
@@ -474,8 +474,8 @@ func elemName(parent gidlmixer.ListDeclaration) string {
 var goErrorCodeNames = map[gidlir.ErrorCode]string{
 	gidlir.StringTooLong:              "ErrStringTooLong",
 	gidlir.NonEmptyStringWithNullBody: "ErrUnexpectedNullRef",
-	gidlir.StrictXUnionFieldNotSet:    "ErrInvalidXUnionTag",
-	gidlir.StrictXUnionUnknownField:   "ErrInvalidXUnionTag",
+	gidlir.StrictUnionFieldNotSet:     "ErrInvalidXUnionTag",
+	gidlir.StrictUnionUnknownField:    "ErrInvalidXUnionTag",
 }
 
 func goErrorCode(code gidlir.ErrorCode) (string, error) {

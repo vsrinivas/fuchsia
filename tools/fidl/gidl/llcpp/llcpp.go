@@ -375,7 +375,7 @@ func (b *llcppValueBuilder) OnTable(value gidlir.Object, decl *gidlmixer.TableDe
 	b.lastVar = tableVar
 }
 
-func (b *llcppValueBuilder) OnXUnion(value gidlir.Object, decl *gidlmixer.XUnionDecl) {
+func (b *llcppValueBuilder) OnUnion(value gidlir.Object, decl *gidlmixer.UnionDecl) {
 	containerVar := b.newVar()
 
 	b.Builder.WriteString(fmt.Sprintf(
@@ -454,7 +454,7 @@ func typeNameImpl(decl gidlmixer.Declaration, ignoreNullable bool) string {
 		return identifierName(decl.Name)
 	case *gidlmixer.TableDecl:
 		return identifierName(decl.Name)
-	case *gidlmixer.XUnionDecl:
+	case *gidlmixer.UnionDecl:
 		return identifierName(decl.Name)
 	case *gidlmixer.ArrayDecl:
 		return fmt.Sprintf("fidl::Array<%s, %d>", elemName(decl), decl.Size())

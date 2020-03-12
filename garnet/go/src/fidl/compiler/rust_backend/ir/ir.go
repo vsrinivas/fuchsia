@@ -797,7 +797,7 @@ func (c *compiler) compileStruct(val types.Struct) Struct {
 	return r
 }
 
-func (c *compiler) compileUnionMember(val types.XUnionMember) UnionMember {
+func (c *compiler) compileUnionMember(val types.UnionMember) UnionMember {
 	return UnionMember{
 		Attributes: val.Attributes,
 		Type:       c.compileType(val.Type, false).Decl,
@@ -1111,9 +1111,6 @@ typeSwitch:
 		derivesOut = derivesOut.remove(derivesCopy).andUnknown()
 		table.Derives = derivesOut
 	case types.UnionDeclType:
-		// Although there are no more unions in Rust, this switch statement is
-		// over dc.decls[eci] where decls comes from DeclsWithDependencies(),
-		// which still distinguishes UnionDeclType and XUnionDeclType.
 		union := dc.root.findUnion(eci)
 		var result *Result
 		if union == nil {
@@ -1279,10 +1276,6 @@ func Compile(r types.Root) Root {
 		} else {
 			root.Structs = append(root.Structs, c.compileStruct(v))
 		}
-	}
-
-	if len(r.XUnions) > 0 {
-		panic("unexpected xunions in JSON IR: xunions have been replaced by unions and should no longer exist")
 	}
 
 	for _, v := range r.Unions {

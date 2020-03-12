@@ -367,24 +367,14 @@ func TestTableDeclConforms(t *testing.T) {
 	)
 }
 
-func TestUnionConvertsToXUnionDecl(t *testing.T) {
-	decl, ok := schema(fidlRoot).LookupDeclByName("ExampleUnion", false)
-	if !ok {
-		t.Fatalf("LookupDeclByName failed")
-	}
-	if _, ok := decl.(*XUnionDecl); !ok {
-		t.Fatalf("expected XUnionDecl, got %T", decl)
-	}
-}
-
-func TestXUnionDeclConformsNonNullable(t *testing.T) {
+func TestUnionDeclConformsNonNullable(t *testing.T) {
 	decl, ok := schema(fidlRoot).LookupDeclByName("ExampleXUnion", false)
 	if !ok {
 		t.Fatalf("LookupDeclByName failed")
 	}
-	xunionDecl := decl.(*XUnionDecl)
+	unionDecl := decl.(*UnionDecl)
 	checkConforms(t,
-		xunionDecl,
+		unionDecl,
 		[]conformTest{
 			conformOk{gidlir.Object{
 				Name: "ExampleXUnion",
@@ -411,14 +401,14 @@ func TestXUnionDeclConformsNonNullable(t *testing.T) {
 	)
 }
 
-func TestXUnionDeclConformsNullable(t *testing.T) {
+func TestUnionDeclConformsNullable(t *testing.T) {
 	decl, ok := schema(fidlRoot).LookupDeclByName("ExampleXUnion", true)
 	if !ok {
 		t.Fatalf("LookupDeclByName failed")
 	}
-	xunionDecl := decl.(*XUnionDecl)
+	unionDecl := decl.(*UnionDecl)
 	checkConforms(t,
-		xunionDecl,
+		unionDecl,
 		[]conformTest{
 			conformOk{gidlir.Object{
 				Name: "ExampleXUnion",
@@ -492,7 +482,7 @@ func (v *visitor) OnFloat64(float64, fidlir.PrimitiveSubtype) { v.visited = "Flo
 func (v *visitor) OnString(string, *StringDecl)               { v.visited = "String" }
 func (v *visitor) OnStruct(gidlir.Object, *StructDecl)        { v.visited = "Struct" }
 func (v *visitor) OnTable(gidlir.Object, *TableDecl)          { v.visited = "Table" }
-func (v *visitor) OnXUnion(gidlir.Object, *XUnionDecl)        { v.visited = "XUnion" }
+func (v *visitor) OnUnion(gidlir.Object, *UnionDecl)          { v.visited = "Union" }
 func (v *visitor) OnArray([]interface{}, *ArrayDecl)          { v.visited = "Array" }
 func (v *visitor) OnVector([]interface{}, *VectorDecl)        { v.visited = "Vector" }
 func (v *visitor) OnNull(Declaration)                         { v.visited = "Null" }
@@ -513,7 +503,7 @@ func TestVisit(t *testing.T) {
 		// purposes of Visit() it should not matter.
 		{gidlir.Object{}, &StructDecl{}, "Struct"},
 		{gidlir.Object{}, &TableDecl{}, "Table"},
-		{gidlir.Object{}, &XUnionDecl{}, "XUnion"},
+		{gidlir.Object{}, &UnionDecl{}, "Union"},
 	}
 	for _, test := range tests {
 		var v visitor

@@ -292,8 +292,8 @@ func visit(value interface{}, decl gidlmixer.Declaration) string {
 			return onObject(value, decl)
 		case *gidlmixer.TableDecl:
 			return onObject(value, decl)
-		case *gidlmixer.XUnionDecl:
-			return onXUnion(value, decl)
+		case *gidlmixer.UnionDecl:
+			return onUnion(value, decl)
 		}
 	case []interface{}:
 		switch decl := decl.(type) {
@@ -325,7 +325,7 @@ func onObject(value gidlir.Object, decl gidlmixer.KeyedDeclaration) string {
 	return fmt.Sprintf("%s(%s)", fidlcommon.ToUpperCamelCase(value.Name), strings.Join(args, ", "))
 }
 
-func onXUnion(value gidlir.Object, decl *gidlmixer.XUnionDecl) string {
+func onUnion(value gidlir.Object, decl *gidlmixer.UnionDecl) string {
 	for _, field := range value.Fields {
 		if field.Key.Name == "" {
 			panic("unknown field not supported")
@@ -334,7 +334,7 @@ func onXUnion(value gidlir.Object, decl *gidlmixer.XUnionDecl) string {
 		val := visit(field.Value, fieldDecl)
 		return fmt.Sprintf("%s.with%s(%s)", value.Name, fidlcommon.ToUpperCamelCase(field.Key.Name), val)
 	}
-	// Not currently possible to construct a union/xunion in dart with an invalid value.
+	// Not currently possible to construct a union in dart with an invalid value.
 	panic("unions must have a value set")
 }
 
@@ -354,8 +354,8 @@ func onList(value []interface{}, decl gidlmixer.ListDeclaration) string {
 var dartErrorCodeNames = map[gidlir.ErrorCode]string{
 	gidlir.StringTooLong:              "fidlStringTooLong",
 	gidlir.NonEmptyStringWithNullBody: "fidlNonNullableTypeWithNullValue",
-	gidlir.StrictXUnionFieldNotSet:    "fidlStrictXUnionFieldNotSet",
-	gidlir.StrictXUnionUnknownField:   "fidlStrictXUnionUnknownField",
+	gidlir.StrictUnionFieldNotSet:     "fidlStrictXUnionFieldNotSet",
+	gidlir.StrictUnionUnknownField:    "fidlStrictXUnionUnknownField",
 }
 
 func dartErrorCode(code gidlir.ErrorCode) (string, error) {

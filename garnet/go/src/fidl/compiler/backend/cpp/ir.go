@@ -1061,7 +1061,7 @@ func (c *compiler) compileTable(val types.Table, appendNamespace string) Table {
 	return r
 }
 
-func (c *compiler) compileUnionMember(val types.XUnionMember) UnionMember {
+func (c *compiler) compileUnionMember(val types.UnionMember) UnionMember {
 	n := changeIfReserved(val.Name, "")
 	return UnionMember{
 		Attributes:  val.Attributes,
@@ -1173,10 +1173,6 @@ func compile(r types.Root, namespaceFormatter func(types.LibraryIdentifier, stri
 	for _, v := range r.Unions {
 		d := c.compileUnion(v)
 		decls[v.Name] = d
-	}
-
-	if len(r.XUnions) > 0 {
-		panic("unexpected xunions in JSON IR: xunions have been replaced by unions and should no longer exist")
 	}
 
 	for _, v := range r.Structs {
