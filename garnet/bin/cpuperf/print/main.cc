@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <chrono>
 #include <string>
 
 #include "garnet/bin/cpuperf/session_result_spec.h"
@@ -17,7 +18,6 @@
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
-#include "src/lib/fxl/time/stopwatch.h"
 
 static constexpr char kUsageString[] =
     "cpuperf_print [options]\n"
@@ -115,8 +115,7 @@ int main(int argc, char** argv) {
   std::string path_prefix_basename = files::GetBaseName(session_result_spec.output_path_prefix);
   session_result_spec.output_path_prefix = spec_directory + "/" + path_prefix_basename;
 
-  fxl::Stopwatch stop_watch;
-  stop_watch.Start();
+  const auto start_time = std::chrono::steady_clock::now();
 
   if (!session_result_spec.config_name.empty()) {
     FXL_LOG(INFO) << "Config: " << session_result_spec.config_name;
@@ -140,9 +139,9 @@ int main(int argc, char** argv) {
     return EXIT_FAILURE;
   }
 
-  fxl::TimeDelta delta = stop_watch.Elapsed();
-  int64_t seconds = delta.ToSeconds();
-  int milliseconds = delta.ToMilliseconds() % 1000;
+  const auto& delta = (std::chrono::steady_clock::now() - start_time);
+  int64_t seconds = std::chrono::duration_cast<std::chrono::seconds>(delta).count();
+  int milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(delta).count() % 1000;
   FXL_LOG(INFO) << fxl::StringPrintf("%" PRIu64 " records processed in %" PRId64 ".%03d seconds\n",
                                      total_records, seconds, milliseconds);
 

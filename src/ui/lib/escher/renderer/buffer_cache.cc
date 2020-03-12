@@ -78,7 +78,7 @@ void BufferCache::RecycleResource(std::unique_ptr<Resource> resource) {
   std::unique_ptr<Buffer> buffer(static_cast<Buffer*>(resource.release()));
   CacheInfo cache_info;
   cache_info.id = buffer->uid();
-  cache_info.allocation_time = fxl::TimePoint::Now();
+  cache_info.allocation_time = std::chrono::steady_clock::now();
   // TODO(40736): Now buffer->size() is the size of VkBuffer, so it can only
   // reclaim buffers of size greater than or equal to the requested size. For
   // buffers with size less than the requested size, but with memory enough to
@@ -99,7 +99,7 @@ void BufferCache::RecycleResource(std::unique_ptr<Resource> resource) {
   // Prune if the cache has grown too much.
   while (cache_size_ > kMaxMemoryCached && !free_buffer_cache_.empty()) {
     // Find the oldest buffer in the cache.
-    auto cache_itr = free_buffer_cache_.lower_bound(fxl::TimePoint::Min());
+    auto cache_itr = free_buffer_cache_.lower_bound(std::chrono::steady_clock::time_point::min());
     FXL_DCHECK(cache_itr != free_buffer_cache_.end());
     uint64_t id_to_free = cache_itr->second.id;
     vk::DeviceSize size_freed = cache_itr->second.size;

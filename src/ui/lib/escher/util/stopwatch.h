@@ -11,7 +11,6 @@
 
 namespace escher {
 
-// TODO: augment fxl::Stopwatch to support Stop/Reset, and use that instead.
 class Stopwatch {
   typedef std::chrono::high_resolution_clock ClockT;
   typedef std::chrono::microseconds UnitT;

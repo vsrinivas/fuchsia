@@ -4,6 +4,7 @@
 
 #include "src/developer/debug/shared/logging/debug.h"
 
+#include <chrono>
 #include <mutex>
 #include <set>
 
@@ -11,7 +12,6 @@
 #include "src/lib/files/path.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
-#include "src/lib/fxl/time/time_point.h"
 
 namespace debug_ipc {
 
@@ -20,7 +20,7 @@ namespace {
 bool kDebugMode = false;
 
 // This marks the moment SetDebugMode was called.
-fxl::TimePoint kStartTime = fxl::TimePoint::Now();
+std::chrono::steady_clock::time_point kStartTime = std::chrono::steady_clock::now();
 
 std::set<LogCategory>& GetLogCategories() {
   static std::set<LogCategory> categories = {LogCategory::kAll};
@@ -33,7 +33,9 @@ bool IsDebugModeActive() { return kDebugMode; }
 
 void SetDebugMode(bool activate) { kDebugMode = activate; }
 
-double SecondsSinceStart() { return (fxl::TimePoint::Now() - kStartTime).ToSecondsF(); }
+double SecondsSinceStart() {
+  return std::chrono::duration<double>(std::chrono::steady_clock::now() - kStartTime).count();
+}
 
 const std::set<LogCategory>& GetActiveLogCategories() { return GetLogCategories(); }
 
@@ -157,7 +159,6 @@ void UnwindLogTree(const LogEntry& entry, std::vector<std::string>* logs, int in
   }
 }
 
-
 // If the log entry is not filled, it means that it's still in the stack. We use the backpointer it
 // was to the log statement that generated it to fill it. This normally happens then |PopLogEntry|
 // is called, but an exception handler that calls |FlushLogEntries| can also make this happen.
@@ -165,12 +166,12 @@ void FillInLogEntryFromStatement(LogEntry* entry) {
   if (Valid(*entry))
     return;
 
- if (!entry->statement)
+  if (!entry->statement)
     return;
 
   // Refill the slot with the log statement.
   entry->category = entry->statement->category();
-  entry->location= entry->statement->origin();
+  entry->location = entry->statement->origin();
   entry->msg = entry->statement->GetMsg();
   entry->start_time = entry->statement->start_time();
   entry->end_time = SecondsSinceStart();

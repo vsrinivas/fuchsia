@@ -5,12 +5,12 @@
 #ifndef SRC_UI_LIB_ESCHER_RENDERER_BUFFER_CACHE_H_
 #define SRC_UI_LIB_ESCHER_RENDERER_BUFFER_CACHE_H_
 
+#include <chrono>
 #include <list>
 #include <map>
 #include <vulkan/vulkan.hpp>
 
 #include "src/lib/fxl/memory/weak_ptr.h"
-#include "src/lib/fxl/time/time_point.h"
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/forward_declarations.h"
 #include "src/ui/lib/escher/resources/resource_recycler.h"
@@ -58,14 +58,14 @@ class BufferCache : public ResourceRecycler {
 
   struct CacheInfo {
     uint64_t id;
-    fxl::TimePoint allocation_time;
+    std::chrono::steady_clock::time_point allocation_time;
     vk::DeviceSize size;
   };
 
   // Represents an LRU cache of Buffers. Buffers are identified by their ID and
   // accessed from the map of free buffers by their size. The cache is pruned
   // when the working cache size exceeds kMaxMemoryCached.
-  std::map<fxl::TimePoint, CacheInfo> free_buffer_cache_;
+  std::map<std::chrono::steady_clock::time_point, CacheInfo> free_buffer_cache_;
   std::map<uint64_t, CacheInfo> free_buffers_by_id_;
   size_t cache_size_ = 0;
 

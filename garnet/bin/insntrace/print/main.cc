@@ -6,21 +6,18 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <chrono>
 #include <string>
 
+#include "command_line_settings.h"
 #include "garnet/lib/intel_pt_decode/decoder.h"
-
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings.h"
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"
 #include "src/lib/fxl/strings/string_printf.h"
-#include "src/lib/fxl/time/stopwatch.h"
-
 #include "third_party/processor-trace/libipt/include/intel-pt.h"
-
-#include "command_line_settings.h"
 
 using namespace intel_processor_trace;
 
@@ -335,8 +332,7 @@ int main(int argc, char** argv) {
     return EXIT_FAILURE;
   }
 
-  fxl::Stopwatch stop_watch;
-  stop_watch.Start();
+  const auto start_time = std::chrono::steady_clock::now();
 
   auto decoder = DecoderState::Create(decoder_config);
   if (!decoder) {
@@ -364,9 +360,9 @@ int main(int argc, char** argv) {
     return EXIT_FAILURE;
   }
 
-  fxl::TimeDelta delta = stop_watch.Elapsed();
-  int64_t seconds = delta.ToSeconds();
-  int milliseconds = delta.ToMilliseconds() % 1000;
+  const auto& delta = (std::chrono::steady_clock::now() - start_time);
+  int64_t seconds = std::chrono::duration_cast<std::chrono::seconds>(delta).count();
+  int milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(delta).count() % 1000;
   FXL_LOG(INFO) << fxl::StringPrintf("%" PRIu64 " instructions processed in %" PRId64
                                      ".%03d seconds\n",
                                      total_insns, seconds, milliseconds);
