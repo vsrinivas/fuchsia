@@ -13,6 +13,14 @@ declare_args() {
   bootfs_allowlist_recovery = []
 }
 
+group("recovery") {
+  testonly = true
+  public_deps = [
+    ":recovery-eng",
+    ":recovery-fdr",
+  ]
+}
+
 recovery_packages = [
   "//build/info:build-info",
   "//garnet/bin/network_time_service",
@@ -41,7 +49,7 @@ recovery_packages = [
   "//src/sys/timekeeper",
 ]
 
-assemble_system("recovery") {
+assemble_system("recovery-eng") {
   base_packages = recovery_packages
 
   # We avoid compressing blobs in the blobfs image so that they can be more
@@ -56,13 +64,28 @@ assemble_system("recovery") {
             ] + zedboot_cmdline_args + board_zedboot_cmdline_args
   cmdline_inputs = zedboot_cmdline_files
 
-  # XXX: Temporary: output into root_out_dir as the tests expect that:
-  output_dir = root_out_dir
-
-  #XXX(comfoltey) Disable bootfs_allowlist_recovery while build unification is
-  # in progress
+  # XXX(comfoltey): Disable bootfs_allowlist_recovery while build
+  # unification is in progress
   bootfs_allowlist = []
   metadata = {
-    test_runtime_deps = [ "$root_out_dir/${target_name}.zbi" ]
+    test_runtime_deps = [ "${target_out_dir}/${target_name}.zbi" ]
+  }
+}
+
+assemble_system("recovery-fdr") {
+  base_packages = recovery_packages
+
+  # We avoid compressing blobs in the blobfs image so that they can be more
+  # effectively compressed by the ZBI compressor that is tuned to zstd max.
+  compress_blobs = false
+  netboot = true
+  devmgr_config = [ "virtcon.disable=true" ]
+  cmdline = []
+
+  # XXX(comfoltey): Disable bootfs_allowlist_recovery while build
+  # unification is in progress
+  bootfs_allowlist = []
+  metadata = {
+    test_runtime_deps = [ "${target_out_dir}/${target_name}.zbi" ]
   }
 }

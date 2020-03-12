@@ -132,7 +132,7 @@ template("assemble_system") {
     deps = [ ":${image_name}_base_packages" ]
   }
 
-  boot_manifest = "$target_out_dir/boot.manifest"
+  boot_manifest = "$target_out_dir/${image_name}.boot.manifest"
 
   generate_manifest("${image_name}_system_image.manifest") {
     visibility = [ ":*" ]
@@ -253,7 +253,7 @@ template("assemble_system") {
     visibility = [ ":*" ]
     testonly = true
     script = "//build/images/manifest.py"
-    outputs = [ "$target_out_dir/devmgr_config.txt" ]
+    outputs = [ "$target_out_dir/$target_name" ]
     args = [ "--output=" + rebase_path(outputs[0], root_build_dir) ]
     sources = []
     deps = [ ":${image_name}_system_image.manifest" ]

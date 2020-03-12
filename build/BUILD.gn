@@ -163,13 +163,11 @@ group("deprecated_package_underscore") {
   # TODO(22679): Provide a mechanism for vendor to temporarily contribute to this list.
   visibility = [ "//vendor/*" ]
 
+  # TODO(48237): replace system_image with system-image, see bug for details.
+  visibility += [ "//build/images/*" ]
+
   # Do not add new entries to this list.
   visibility += [
-    "//build/images/guest:guest_system_image.meta",
-    "//build/images/recovery:recovery_system_image.meta",
-    "//build/images:system_image.meta",
-    "//build/images:system_image_prime.meta",
-    "//build/images:update_prime.meta",
     "//examples/components/basic:components_basic_example",
     "//examples/components/routing:components_routing_example",
     "//examples/criterion_bench:criterion_bench",

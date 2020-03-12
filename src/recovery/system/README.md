@@ -10,10 +10,11 @@ inoperative.
 You can build the recovery image using the following command:
 
 ```sh
-$ fx build recovery_image
+$ fx build build/images/recovery
 ```
 
-This command builds `recovery.zbi`, which is a self-contained archive of the
+This command builds several `recovery-*.zbi` files in
+`obj/build/images/recovery`, which are self-contained archives of the
 recovery system.
 
 ## Running the recovery image
@@ -29,7 +30,7 @@ The easiest way to run recovery on hardware is to netboot a device into a newly
 built recovery image:
 
 ```sh
-$ out/default.zircon/tools/bootserver --board_name pc --boot out/default/recovery.zbi
+$ out/default.zircon/tools/bootserver --board_name pc --boot out/default/obj/build/images/recovery/recovery-eng.zbi
 ```
 
 ## Testing

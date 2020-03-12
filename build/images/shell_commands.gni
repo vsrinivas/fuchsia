@@ -14,7 +14,7 @@ import("//build/package.gni")
 #   testonly (optional)
 #     Usual GN meanings.
 template("shell_commands") {
-  shell_commands_manifest = "shell-commands-extra.manifest"
+  shell_commands_manifest = "${target_name}.shell-commands-extra.manifest"
   shell_commands_manifest_path = target_gen_dir + "/" + shell_commands_manifest
 
   generated_file(shell_commands_manifest) {

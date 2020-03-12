@@ -19,7 +19,8 @@ func zbiPath(t *testing.T) string {
 		return ""
 	}
 	exPath := filepath.Dir(ex)
-	return filepath.Join(exPath, "../recovery.zbi")
+	// TODO(47555): get the path from a build API instead.
+	return filepath.Join(exPath, "../obj/build/images/recovery/recovery-eng.zbi")
 }
 
 // TestUnpack checks that we can unpack qemu.

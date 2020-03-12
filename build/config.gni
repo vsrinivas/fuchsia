@@ -72,7 +72,7 @@ template("config_data") {
 #   testonly (optional)
 #     Usual GN meanings.
 template("config_package") {
-  config_package_manifest = "config-package-extra.manifest"
+  config_package_manifest = "${target_name}.config-package-extra.manifest"
   config_package_manifest_path = target_gen_dir + "/" + config_package_manifest
 
   generated_file(config_package_manifest) {
