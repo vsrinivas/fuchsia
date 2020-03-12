@@ -5,7 +5,9 @@
 #ifndef DEVICE_REQUEST_H
 #define DEVICE_REQUEST_H
 
+#include <chrono>
 #include <memory>
+#include <optional>
 
 #include "magma_util/macros.h"
 #include "magma_util/status.h"
@@ -49,10 +51,18 @@ class DeviceRequest {
       reply_->Signal(status);
   }
 
+  void OnEnqueued() { enqueue_time_ = std::chrono::steady_clock::now(); }
+
+  std::chrono::steady_clock::time_point enqueue_time() const {
+    DASSERT(enqueue_time_.has_value());
+    return *enqueue_time_;
+  }
+
  protected:
   virtual magma::Status Process(MsdArmDevice* device) { return MAGMA_STATUS_OK; }
 
  private:
+  std::optional<std::chrono::steady_clock::time_point> enqueue_time_;
   std::shared_ptr<Reply> reply_;
 };
 

@@ -713,6 +713,7 @@ void MsdArmDevice::DisableInterrupts() {
 void MsdArmDevice::EnqueueDeviceRequest(std::unique_ptr<DeviceRequest> request,
                                         bool enqueue_front) {
   std::unique_lock<std::mutex> lock(device_request_mutex_);
+  request->OnEnqueued();
   if (enqueue_front) {
     device_request_list_.emplace_front(std::move(request));
   } else {
@@ -827,6 +828,21 @@ void MsdArmDevice::DumpToString(std::vector<std::string>* dump_string, bool on_d
   Dump(&dump_state, on_device_thread);
 
   FormatDump(dump_state, dump_string);
+
+  {
+    std::unique_lock<std::mutex> lock(device_request_mutex_);
+    auto current_time = std::chrono::steady_clock::now();
+    dump_string->push_back(
+        fbl::StringPrintf("Device request queue size: %ld", device_request_list_.size()).c_str());
+    for (auto& request : device_request_list_) {
+      dump_string->push_back(
+          fbl::StringPrintf("Device request queuing delay: %lld ms",
+                            std::chrono::duration_cast<std::chrono::milliseconds>(
+                                current_time - request->enqueue_time())
+                                .count())
+              .c_str());
+    }
+  }
 }
 
 static const char* ExceptionTypeToString(uint32_t exception_code) {

@@ -339,6 +339,12 @@ void JobScheduler::HandleTimedOutAtoms() {
       if (!have_output_hang_message) {
         have_output_hang_message = true;
         owner_->OutputHangMessage();
+        // Delay should be near 0 if the device thread is running well.
+        MAGMA_LOG(WARNING, "Device thread wakeup delay %lld ms",
+                  std::chrono::duration_cast<std::chrono::milliseconds>(
+                      now - (atom->execution_start_time() +
+                             std::chrono::milliseconds(timeout_duration_ms_)))
+                      .count());
       }
 
       atom->set_hard_stopped();
