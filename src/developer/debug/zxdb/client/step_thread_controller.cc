@@ -279,7 +279,12 @@ bool StepThreadController::TrySteppingIntoInline(StepIntoInline command) {
   FrameFingerprint new_inline_fingerprint = stack.GetFrameFingerprint(0);
   stack.SetHideAmbiguousInlineFrameCount(hidden_frame_count);
 
-  FXL_DCHECK(original_frame_fingerprint_.is_valid());  // Should have been filled in previously.
+  // Either the original_frame_fingerprint_ or the new_inline_fingerprint could be null at this
+  // point if the CFA for the current frame is 0. This can occur in unsymbolized code and I've also
+  // seen it in Go code where it seems the unwinder doesn't completely work.
+  //
+  // In this case, two null fingerprints will compare equal, and the frame will be considered the
+  // same (what we want for this case).
   if (!FrameFingerprint::Newer(new_inline_fingerprint, original_frame_fingerprint_))
     return false;  // Not newer.
 
