@@ -52,64 +52,57 @@ class MinfsInspector {
   // make valid calls using other functions in this class.
   void ReloadMetadataFromSuperblock();
 
-  // Returns the superblock from the buffer cache.
+  // Returns a copy of |superblock_|.
   Superblock InspectSuperblock();
 
-  // Returns the number of inodes as calculated from the size of |inode_table_|
-  // buffer.
+  // Returns the number of inodes from |superblock_|.
   uint64_t GetInodeCount();
 
-  // Returns the number of inode allocation bits as calcuated from the size
-  // of |inode_bitmap_| buffer.
-  uint64_t GetInodeBitmapCount();
-
-  // Returns the Inode at |index| from the buffer cache. Applications should
-  // check to make sure |index| is within range using GetInodeCount().
-  Inode InspectInode(uint64_t index);
-
-  // Returns whether an inode is allocated from the cached metadata. Applications
-  // should check to make sure |index| is within range using GetInodeBitmapCount().
-  bool CheckInodeAllocated(uint64_t index);
-
-  // Returns the journal info from the cached metadata. If the |journal| buffer
-  // is not initialized, returns a zeroed out JournalSuperblock.
-  fs::JournalInfo InspectJournalSuperblock();
-
-  // Returns the number of journal entires calculated from the size of |journal_|
-  // buffer.
+  // Returns the number of journal entires calculated from |superblock_|.
   uint64_t GetJournalEntryCount();
 
-  // Parses and returns the journal prefix from the cached journal entry block
-  // at |index|. This may not necessarily be a valid prefix if the block index
-  // does not represent a journal entry with a prefix. Applications should
-  // check to make sure |index| is within range using GetJournalEntryCount().
-  fs::JournalPrefix InspectJournalPrefix(uint64_t index);
+  // The following functions need to load data from disk, leading to the
+  // possibility of failed loads. Since they need to return values, we have
+  // fit::results for all of the return types. In addition, they all depend
+  // on the loaded |superblock_| value to get where to start indexing.
 
-  // Parses and returns the journal header block from the cached journal entry
-  // block at |index|. This may not necessarily be a valid header if the block
-  // index does not represent a journal header block. Applications should
-  // check to make sure |index| is within range using GetJournalEntryCount().
-  fs::JournalHeaderBlock InspectJournalHeader(uint64_t index);
+  // Loads the inode table blocks for which the inodes from |start_index| inclusive
+  // to |end_index| exclusive from disk and returns the Inodes in the range as
+  // a vector.
+  fit::result<std::vector<Inode>, zx_status_t> InspectInodeRange(uint64_t start_index,
+                                                                 uint64_t end_index);
 
-  // Parses and returns the journal commit block from the cached journal entry
-  // block at |index|. This may not necessarily be a valid header if the block
-  // index does not represent a journal commit block. Applications should
-  // check to make sure |index| is within range using GetJournalEntryCount().
-  fs::JournalCommitBlock InspectJournalCommit(uint64_t index);
+  // Loads the inode bitmap blocks for which the inode allocation bits for inodes
+  // from |start_index| inclusive to |end_index| exclusive from disk and returns
+  // the inode indices for which the corresponding bits are allocated.
+  fit::result<std::vector<uint64_t>, zx_status_t> InspectInodeAllocatedInRange(uint64_t start_index,
+                                                                               uint64_t end_index);
 
-  // Loads and returns the backup superblock into the argument. Errors if the
-  // load fails.
-  zx_status_t InspectBackupSuperblock(Superblock* backup);
+  // Loads the first journal block
+  fit::result<fs::JournalInfo, zx_status_t> InspectJournalSuperblock();
+
+  // Loads the |index| element journal entry block and returns it as a struct
+  // of type T. Only supports casting to fs::JournalPrefix, fs::JournalHeaderBlock,
+  // and fs::JournalCommitBlock.
+  template <typename T>
+  fit::result<T, zx_status_t> InspectJournalEntryAs(uint64_t index);
+
+  // Loads and returns the backup superblock.
+  fit::result<Superblock, zx_status_t> InspectBackupSuperblock();
 
  private:
   explicit MinfsInspector(std::unique_ptr<disk_inspector::InspectorTransactionHandler> handler)
       : handler_(std::move(handler)) {}
 
+  zx_status_t LoadJournalEntry(storage::VmoBuffer* buffer, uint64_t index);
+
   std::unique_ptr<disk_inspector::InspectorTransactionHandler> handler_;
-  std::unique_ptr<storage::VmoBuffer> superblock_;
-  std::unique_ptr<storage::VmoBuffer> inode_bitmap_;
-  std::unique_ptr<storage::VmoBuffer> inode_table_;
-  std::unique_ptr<storage::VmoBuffer> journal_;
+  Superblock superblock_;
+  // Scratch buffer initialized to be a single block in the Create method.
+  // Functions that use this buffer should try to treat it as an initialized
+  // buffer only valid for the duration of the function without any presaved
+  // state or ability for the function to save state.
+  storage::VmoBuffer buffer_;
 };
 
 }  // namespace minfs

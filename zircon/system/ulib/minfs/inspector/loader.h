@@ -31,9 +31,11 @@ class Loader {
   // Loads the journal at the location specified by the superblock to the start of the buffer.
   zx_status_t LoadJournal(const Superblock& superblock, storage::BlockBuffer* buffer) const;
 
- private:
+  // Reads a block
   zx_status_t RunReadOperation(storage::BlockBuffer* buffer, uint64_t vmo_offset,
                                uint64_t dev_offset, uint64_t length) const;
+
+ private:
   fs::TransactionHandler* handler_;
 };
 }  // namespace minfs

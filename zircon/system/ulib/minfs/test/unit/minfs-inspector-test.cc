@@ -116,15 +116,6 @@ TEST(MinfsInspector, GetInodeCount) {
   EXPECT_EQ(inspector->GetInodeCount(), sb.inode_count);
 }
 
-TEST(MinfsInspector, GetInodeBitmapCount) {
-  std::unique_ptr<MinfsInspector> inspector;
-  SetupMinfsInspector(&inspector);
-
-  Superblock sb = inspector->InspectSuperblock();
-  uint64_t expected_count = InodeBitmapBlocks(sb) * kMinfsBlockSize * CHAR_BIT;
-  EXPECT_EQ(inspector->GetInodeBitmapCount(), expected_count);
-}
-
 TEST(MinfsInspector, InspectInode) {
   std::unique_ptr<MinfsInspector> inspector;
   SetupMinfsInspector(&inspector);
@@ -134,25 +125,26 @@ TEST(MinfsInspector, InspectInode) {
   // allocated inode 1.
   ASSERT_EQ(sb.alloc_inode_count, 2);
 
+  auto result = inspector->InspectInodeRange(0, 3);
+  ASSERT_TRUE(result.is_ok());
+  std::vector<Inode> inodes = result.take_value();
   // 0th inode is uninitialized.
-  uint32_t i = 0;
-  Inode inode = inspector->InspectInode(i);
+
+  Inode inode = inodes[0];
   EXPECT_EQ(inode.magic, 0);
   EXPECT_EQ(inode.size, 0);
   EXPECT_EQ(inode.block_count, 0);
   EXPECT_EQ(inode.link_count, 0);
 
   // 1st inode is initialized and is the root directory.
-  i = 1;
-  inode = inspector->InspectInode(i);
+  inode = inodes[1];
   EXPECT_EQ(inode.magic, kMinfsMagicDir);
   EXPECT_EQ(inode.size, kMinfsBlockSize);
   EXPECT_EQ(inode.block_count, 1);
   EXPECT_EQ(inode.link_count, 2);
 
   // 2nd inode is uninitialized.
-  i = 2;
-  inode = inspector->InspectInode(i);
+  inode = inodes[2];
   EXPECT_EQ(inode.magic, 0);
   EXPECT_EQ(inode.size, 0);
   EXPECT_EQ(inode.block_count, 0);
@@ -169,13 +161,14 @@ TEST(MinfsInspector, CheckInodeAllocated) {
   uint32_t max_samples = 10;
   uint32_t num_inodes_to_sample = (sb.inode_count < max_samples) ? sb.inode_count : max_samples;
 
-  for (uint32_t i = 0; i < num_inodes_to_sample; ++i) {
-    bool is_allocated = inspector->CheckInodeAllocated(i);
-    if (i < sb.alloc_inode_count) {
-      EXPECT_TRUE(is_allocated);
-    } else {
-      EXPECT_FALSE(is_allocated);
-    }
+  auto result = inspector->InspectInodeAllocatedInRange(0, num_inodes_to_sample);
+  ASSERT_TRUE(result.is_ok());
+
+  std::vector<uint64_t> allocated_indices = result.take_value();
+
+  ASSERT_EQ(allocated_indices.size(), sb.alloc_inode_count);
+  for (uint32_t i = 0; i < sb.alloc_inode_count; ++i) {
+    EXPECT_EQ(allocated_indices[i], i);
   }
 }
 
@@ -183,7 +176,9 @@ TEST(MinfsInspector, InspectJournalSuperblock) {
   std::unique_ptr<MinfsInspector> inspector;
   SetupMinfsInspector(&inspector);
 
-  fs::JournalInfo journal_info = inspector->InspectJournalSuperblock();
+  auto result = inspector->InspectJournalSuperblock();
+  ASSERT_TRUE(result.is_ok());
+  fs::JournalInfo journal_info = result.take_value();
 
   EXPECT_EQ(journal_info.magic, fs::kJournalMagic);
   EXPECT_EQ(journal_info.start_block, 8);
@@ -210,46 +205,34 @@ TEST(MinfsInspector, GetJournalEntryCountWithNoJournalBlocks) {
   EXPECT_EQ(inspector->GetJournalEntryCount(), 0);
 }
 
-TEST(MinfsInspector, InspectJournalPrefix) {
-  std::unique_ptr<MinfsInspector> inspector;
-  SetupMinfsInspector(&inspector);
-
-  // First four entry blocks should be header, payload, payload, commit.
-  fs::JournalPrefix prefix = inspector->InspectJournalPrefix(0);
-  EXPECT_EQ(prefix.magic, fs::kJournalEntryMagic);
-  EXPECT_EQ(prefix.sequence_number, 0);
-  EXPECT_EQ(prefix.flags, fs::kJournalPrefixFlagHeader);
-
-  prefix = inspector->InspectJournalPrefix(1);
-  EXPECT_NE(prefix.magic, fs::kJournalEntryMagic);
-
-  prefix = inspector->InspectJournalPrefix(2);
-  EXPECT_NE(prefix.magic, fs::kJournalEntryMagic);
-
-  prefix = inspector->InspectJournalPrefix(3);
-  EXPECT_EQ(prefix.magic, fs::kJournalEntryMagic);
-  EXPECT_EQ(prefix.sequence_number, 0);
-  EXPECT_EQ(prefix.flags, fs::kJournalPrefixFlagCommit);
+template <typename T>
+void LoadAndUnwrapJournalEntry(MinfsInspector* inspector, uint64_t index, T* out_value) {
+  auto result = inspector->InspectJournalEntryAs<T>(index);
+  ASSERT_TRUE(result.is_ok());
+  *out_value = result.take_value();
 }
 
-TEST(MinfsInspector, InspectJournalHeader) {
+TEST(MinfsInspector, InspectJournalEntryAs) {
   std::unique_ptr<MinfsInspector> inspector;
   SetupMinfsInspector(&inspector);
 
   // First four entry blocks should be header, payload, payload, commit.
-  fs::JournalHeaderBlock header = inspector->InspectJournalHeader(0);
+  fs::JournalHeaderBlock header;
+  LoadAndUnwrapJournalEntry<fs::JournalHeaderBlock>(inspector.get(), 0, &header);
   EXPECT_EQ(header.prefix.magic, fs::kJournalEntryMagic);
   EXPECT_EQ(header.prefix.sequence_number, 0);
   EXPECT_EQ(header.prefix.flags, fs::kJournalPrefixFlagHeader);
   EXPECT_EQ(header.payload_blocks, 2);
-}
 
-TEST(MinfsInspector, InspectJournalCommit) {
-  std::unique_ptr<MinfsInspector> inspector;
-  SetupMinfsInspector(&inspector);
+  fs::JournalPrefix prefix;
+  LoadAndUnwrapJournalEntry<fs::JournalPrefix>(inspector.get(), 1, &prefix);
+  EXPECT_NE(prefix.magic, fs::kJournalEntryMagic);
 
-  // First four entry blocks should be header, payload, payload, commit.
-  fs::JournalCommitBlock commit = inspector->InspectJournalCommit(3);
+  LoadAndUnwrapJournalEntry<fs::JournalPrefix>(inspector.get(), 2, &prefix);
+  EXPECT_NE(prefix.magic, fs::kJournalEntryMagic);
+
+  fs::JournalCommitBlock commit;
+  LoadAndUnwrapJournalEntry<fs::JournalCommitBlock>(inspector.get(), 3, &commit);
   EXPECT_EQ(commit.prefix.magic, fs::kJournalEntryMagic);
   EXPECT_EQ(commit.prefix.sequence_number, 0);
   EXPECT_EQ(commit.prefix.flags, fs::kJournalPrefixFlagCommit);
@@ -258,8 +241,10 @@ TEST(MinfsInspector, InspectJournalCommit) {
 TEST(MinfsInspector, InspectBackupSuperblock) {
   std::unique_ptr<MinfsInspector> inspector;
   SetupMinfsInspector(&inspector);
-  Superblock sb;
-  ASSERT_OK(inspector->InspectBackupSuperblock(&sb));
+
+  auto result = inspector->InspectBackupSuperblock();
+  ASSERT_TRUE(result.is_ok());
+  Superblock sb = result.take_value();
 
   EXPECT_EQ(sb.magic0, kMinfsMagic0);
   EXPECT_EQ(sb.magic1, kMinfsMagic1);

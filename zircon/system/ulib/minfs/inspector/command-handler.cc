@@ -53,7 +53,7 @@ zx_status_t CommandHandler::CallCommand(std::vector<std::string> command_args) {
     std::cerr << os.str();
     return fit_result.take_error();
   }
-  ParsedCommand args = fit_result.take_ok_result().value;
+  ParsedCommand args = fit_result.take_value();
   return command.function(std::move(args));
 }
 
@@ -174,14 +174,11 @@ zx_status_t CommandHandler::PrintSuperblock() {
 }
 
 zx_status_t CommandHandler::PrintInode(uint64_t index) {
-  uint64_t inode_count = inspector_->GetInodeCount();
-  // TODO(fxb/47554): Remove this check once minfs-inspector stops caching
-  // this data and does not error if receiving an invalid index.
-  if (index >= inode_count) {
-    *output_ << "Index outside range of valid inodes. Total: " << inode_count << "\n";
-    return ZX_ERR_INVALID_ARGS;
+  auto result = inspector_->InspectInodeRange(index, index + 1);
+  if (result.is_error()) {
+    return result.take_error();
   }
-  Inode inode = inspector_->InspectInode(index);
+  Inode inode = result.take_value()[0];
   std::unique_ptr<disk_inspector::DiskStruct> object = GetInodeStruct(index);
   *output_ << object->ToString(&inode, options_);
   return ZX_OK;
@@ -189,28 +186,48 @@ zx_status_t CommandHandler::PrintInode(uint64_t index) {
 
 zx_status_t CommandHandler::PrintInodes(uint64_t max) {
   uint64_t count = std::min(max, inspector_->GetInodeCount());
+  if (count == 0) {
+    return ZX_OK;
+  }
+  auto result = inspector_->InspectInodeRange(0, count);
+  if (result.is_error()) {
+    return result.take_error();
+  }
+  std::vector<Inode> inodes = result.take_value();
   for (uint64_t i = 0; i < count; ++i) {
-    PrintInode(i);
+    Inode inode = inodes[i];
+    std::unique_ptr<disk_inspector::DiskStruct> object = GetInodeStruct(i);
+    *output_ << object->ToString(&inode, options_);
   }
   return ZX_OK;
 }
 
 zx_status_t CommandHandler::PrintAllocatedInodes(uint64_t max) {
-  uint64_t count = 0;
-  for (uint64_t i = 0; i < inspector_->GetInodeBitmapCount(); ++i) {
-    if (inspector_->CheckInodeAllocated(i)) {
-      PrintInode(i);
-      count++;
-      if (count >= max) {
-        break;
-      }
-    }
+  uint64_t count = inspector_->GetInodeCount();
+  if (count == 0) {
+    return ZX_OK;
+  }
+  auto result = inspector_->InspectInodeAllocatedInRange(0, count);
+  if (result.is_error()) {
+    return result.take_error();
+  }
+
+  std::vector<uint64_t> allocated_indices = result.take_value();
+  if (allocated_indices.size() > max) {
+    allocated_indices.resize(max);
+  }
+  for (uint64_t allocated_index : allocated_indices) {
+    PrintInode(allocated_index);
   }
   return ZX_OK;
 }
 
 zx_status_t CommandHandler::PrintJournalSuperblock() {
-  fs::JournalInfo info = inspector_->InspectJournalSuperblock();
+  auto result = inspector_->InspectJournalSuperblock();
+  if (result.is_error()) {
+    return result.take_error();
+  }
+  fs::JournalInfo info = result.take_value();
   std::unique_ptr<disk_inspector::DiskStruct> object = fs::GetJournalSuperblockStruct();
   *output_ << object->ToString(&info, options_);
   return ZX_OK;
@@ -219,7 +236,11 @@ zx_status_t CommandHandler::PrintJournalSuperblock() {
 zx_status_t CommandHandler::PrintJournalEntries(uint64_t max) {
   uint64_t count = std::min(max, inspector_->GetJournalEntryCount());
   for (uint64_t i = 0; i < count; ++i) {
-    fs::JournalPrefix prefix = inspector_->InspectJournalPrefix(i);
+    auto result = inspector_->InspectJournalEntryAs<fs::JournalPrefix>(i);
+    if (result.is_error()) {
+      return result.take_error();
+    }
+    fs::JournalPrefix prefix = result.take_value();
     switch (prefix.ObjectType()) {
       case fs::JournalObjectType::kHeader: {
         PrintJournalHeader(i);
@@ -243,40 +264,33 @@ zx_status_t CommandHandler::PrintJournalEntries(uint64_t max) {
 }
 
 zx_status_t CommandHandler::PrintJournalHeader(uint64_t index) {
-  uint64_t count = inspector_->GetJournalEntryCount();
-  // TODO(fxb/47554): Remove this check once minfs-inspector stops caching
-  // this data and does not error if receiving an invalid index.
-  if (index >= count) {
-    *output_ << "Index outside range of valid entries. Total: " << count << "\n";
-    return ZX_ERR_INVALID_ARGS;
+  auto result = inspector_->InspectJournalEntryAs<fs::JournalHeaderBlock>(index);
+  if (result.is_error()) {
+    return result.take_error();
   }
-  fs::JournalHeaderBlock header = inspector_->InspectJournalHeader(index);
+  fs::JournalHeaderBlock header = result.take_value();
   std::unique_ptr<disk_inspector::DiskStruct> object = fs::GetJournalHeaderBlockStruct(index);
   *output_ << object->ToString(&header, options_);
   return ZX_OK;
 }
 
 zx_status_t CommandHandler::PrintJournalCommit(uint64_t index) {
-  uint64_t count = inspector_->GetJournalEntryCount();
-  // TODO(fxb/47554): Remove this check once minfs-inspector stops caching
-  // this data and does not error if receiving an invalid index.
-  if (index >= count) {
-    *output_ << "Index outside range of valid entries. Total: " << count << "\n";
-    return ZX_ERR_INVALID_ARGS;
+  auto result = inspector_->InspectJournalEntryAs<fs::JournalCommitBlock>(index);
+  if (result.is_error()) {
+    return result.take_error();
   }
-  fs::JournalCommitBlock commit = inspector_->InspectJournalCommit(index);
+  fs::JournalCommitBlock commit = result.take_value();
   std::unique_ptr<disk_inspector::DiskStruct> object = fs::GetJournalCommitBlockStruct(index);
   *output_ << object->ToString(&commit, options_);
   return ZX_OK;
 }
 
 zx_status_t CommandHandler::PrintBackupSuperblock() {
-  Superblock superblock;
-  zx_status_t status = inspector_->InspectBackupSuperblock(&superblock);
-  if (status != ZX_OK) {
-    *output_ << "Cannot get backup superblock. err: " << status << "\n";
-    return status;
+  auto result = inspector_->InspectBackupSuperblock();
+  if (result.is_error()) {
+    return result.take_error();
   }
+  Superblock superblock = result.take_value();
   std::unique_ptr<disk_inspector::DiskStruct> object = GetSuperblockStruct();
   *output_ << object->ToString(&superblock, options_);
   return ZX_OK;
