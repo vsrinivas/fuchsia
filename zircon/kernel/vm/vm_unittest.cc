@@ -14,6 +14,7 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>
 #include <fbl/auto_call.h>
+#include <fbl/vector.h>
 #include <kernel/semaphore.h>
 #include <ktl/move.h>
 #include <vm/fault.h>
@@ -2733,6 +2734,113 @@ static bool pq_move_self_queue() {
   END_TEST;
 }
 
+static bool physmap_for_each_gap_test() {
+  BEGIN_TEST;
+
+  struct Gap {
+    vaddr_t base;
+    size_t size;
+  };
+
+  fbl::Vector<Gap> actual_gaps;
+  fbl::AllocChecker ac;
+  auto PushBack = [&](vaddr_t base, size_t size) {
+    actual_gaps.push_back({base, size}, &ac);
+    ASSERT(ac.check());
+  };
+
+  {
+    // No arenas, [ ].
+    actual_gaps.reset();
+    physmap_for_each_gap(PushBack, nullptr, 0);
+    // One gap covering the entire physmap.
+    ASSERT_EQ(actual_gaps.size(), 1u);
+    ASSERT_EQ(actual_gaps[0].base, PHYSMAP_BASE);
+    ASSERT_EQ(actual_gaps[0].size, PHYSMAP_SIZE);
+  }
+
+  {
+    // One arena, no gaps, [A].
+    actual_gaps.reset();
+    pmm_arena_info_t arenas[] = {
+        {"test-arena", 0, PHYSMAP_BASE_PHYS, PHYSMAP_SIZE},
+    };
+    physmap_for_each_gap(PushBack, arenas, fbl::count_of(arenas));
+    // No gaps.
+    ASSERT_EQ(actual_gaps.size(), 0u);
+  }
+
+  {
+    // One arena, gap at bottom, [ A].
+    actual_gaps.reset();
+    const size_t gap_size = 0x1000;
+    const size_t arena_size = PHYSMAP_SIZE - gap_size;
+    pmm_arena_info_t arenas[] = {
+        {"test-arena", 0, PHYSMAP_BASE_PHYS + gap_size, arena_size},
+    };
+    physmap_for_each_gap(PushBack, arenas, fbl::count_of(arenas));
+    // One gap.
+    ASSERT_EQ(actual_gaps.size(), 1u);
+    ASSERT_EQ(actual_gaps[0].base, PHYSMAP_BASE);
+    ASSERT_EQ(actual_gaps[0].size, gap_size);
+  }
+
+  {
+    // One arena, gap at top, [A ].
+    actual_gaps.reset();
+    const size_t gap_size = 0x5000;
+    const size_t arena_size = PHYSMAP_SIZE - gap_size;
+    pmm_arena_info_t arenas[] = {
+        {"test-arena", 0, PHYSMAP_BASE_PHYS, arena_size},
+    };
+    physmap_for_each_gap(PushBack, arenas, fbl::count_of(arenas));
+    // One gap.
+    ASSERT_EQ(actual_gaps.size(), 1u);
+    ASSERT_EQ(actual_gaps[0].base, PHYSMAP_BASE + arena_size);
+    ASSERT_EQ(actual_gaps[0].size, gap_size);
+  }
+
+  {
+    // Two arenas, no gaps, [AA].
+    actual_gaps.reset();
+    const size_t size = PHYSMAP_SIZE / 2;
+    pmm_arena_info_t arenas[] = {
+        {"test-arena", 0, PHYSMAP_BASE_PHYS, size},
+        {"test-arena", 0, PHYSMAP_BASE_PHYS + size, size},
+    };
+    physmap_for_each_gap(PushBack, arenas, fbl::count_of(arenas));
+    // No gaps.
+    ASSERT_EQ(actual_gaps.size(), 0u);
+  }
+
+  {
+    // Two arenas, three gaps, [ A A ].
+    actual_gaps.reset();
+    const size_t gap1_size = 0x300000;
+    const size_t arena1_offset = gap1_size;
+    const size_t arena1_size = 0x1000000;
+    const size_t gap2_size = 0x35000;
+    const size_t arena2_offset = gap1_size + arena1_size + gap2_size;
+    const size_t arena2_size = 0xff1000000;
+    pmm_arena_info_t arenas[] = {
+        {"test-arena", 0, PHYSMAP_BASE_PHYS + arena1_offset, arena1_size},
+        {"test-arena", 0, PHYSMAP_BASE_PHYS + arena2_offset, arena2_size},
+    };
+    physmap_for_each_gap(PushBack, arenas, fbl::count_of(arenas));
+    // Three gaps.
+    ASSERT_EQ(actual_gaps.size(), 3u);
+    ASSERT_EQ(actual_gaps[0].base, PHYSMAP_BASE);
+    ASSERT_EQ(actual_gaps[0].size, gap1_size);
+    ASSERT_EQ(actual_gaps[1].base, PHYSMAP_BASE + arena1_offset + arena1_size);
+    ASSERT_EQ(actual_gaps[1].size, gap2_size);
+    const size_t arena3_offset = gap1_size + arena1_size + gap2_size + arena2_size;
+    ASSERT_EQ(actual_gaps[2].base, PHYSMAP_BASE + arena3_offset);
+    ASSERT_EQ(actual_gaps[2].size, PHYSMAP_SIZE - arena3_offset);
+  }
+
+  END_TEST;
+}
+
 // Use the function name as the test name
 #define VM_UNITTEST(fname) UNITTEST(#fname, fname)
 
@@ -2822,3 +2930,7 @@ VM_UNITTEST(pq_add_remove)
 VM_UNITTEST(pq_move_queues)
 VM_UNITTEST(pq_move_self_queue)
 UNITTEST_END_TESTCASE(page_queues_tests, "pq", "PageQueues tests")
+
+UNITTEST_START_TESTCASE(physmap_tests)
+VM_UNITTEST(physmap_for_each_gap_test)
+UNITTEST_END_TESTCASE(physmap_tests, "physmap", "physmap tests")

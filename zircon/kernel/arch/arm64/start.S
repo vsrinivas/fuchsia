@@ -153,7 +153,8 @@ FUNCTION(_start)
 
     /* void arm64_boot_map(pte_t* kernel_table0, vaddr_t vaddr, paddr_t paddr, size_t len, pte_t flags); */
 
-    /* map a large run of physical memory at the base of the kernel's address space */
+    /* map a large run of physical memory at the base of the kernel's address space
+     * TODO(fxb/47856): Only map the arenas. */
     mov     x0, page_table1
     mov     x1, KERNEL_ASPACE_BASE
     mov     x2, 0

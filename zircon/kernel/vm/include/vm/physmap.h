@@ -27,6 +27,7 @@
 #include <inttypes.h>
 #include <zircon/compiler.h>
 
+#include <fbl/function.h>
 #include <vm/vm.h>
 
 __BEGIN_CDECLS
@@ -59,6 +60,41 @@ static inline paddr_t physmap_to_paddr(const void* addr) {
 }
 
 __END_CDECLS
+
+struct pmm_arena_info;
+
+// Invokes |func| on each non-arena backed region of the physmap in ascending order of base address.
+//
+// No locks are held while calling |func|.
+void physmap_for_each_gap(fbl::Function<void(vaddr_t base, size_t size)> func,
+                          pmm_arena_info* arenas, size_t num_arenas);
+
+// Protects all the regions of the physmap that are not backed by a PMM arena.
+//
+// Should not be called before the VM is up and running.
+//
+// Why does this function exist?
+//
+// The physmap is mapped early in boot and contains a contiguous mapping of a large portion of the
+// physical address space, which may include device memory regions (think MMIO).  If the device
+// memory remains mapped, hardware based memory prefetching might attempt to read from device
+// memory.  That would be bad.  Ideally, we wouldn't map the device memory in the first place, but
+// that's easier said that done (fxb/47856).
+//
+// The second best thing is to unmap the non-arena memory.  There are two problems with that
+// approach.  One, on arm64 the physmap was mapped using 1GB pages.  However, the arm64 MMU Unmap
+// code does not yet know how to deal with (i.e. split) 1GB pages (fxb/47920).  Two, Unmap attempts
+// to free pages by returning them to the PMM.  However, the pages backing the phsymap's page tables
+// didn't come from the PMM.  They came from the bootalloc.
+//
+// So that leaves us with the third best approach: change the protection bits on the non-arena
+// regions to prevent caching.
+//
+// TODO(fxb/47856): Change the way the physmap is initially mapped.  Ideally, we would parse the
+// boot data (ZBI) early on and only map the parts of the physmap that coorespond to normal memory.
+// As it stands, we are still suseptible to problems arising from hardware prefetching device memory
+// from the physmap.
+void physmap_protect_non_arena_regions();
 
 #endif  // !__ASSEMBLER__
 

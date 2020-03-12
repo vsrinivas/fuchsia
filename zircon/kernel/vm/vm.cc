@@ -19,6 +19,7 @@
 #include <arch/mmu.h>
 #include <fbl/algorithm.h>
 #include <kernel/thread.h>
+#include <ktl/array.h>
 #include <vm/bootalloc.h>
 #include <vm/init.h>
 #include <vm/physmap.h>
@@ -117,6 +118,20 @@ void vm_init_preheap() {
 
 void vm_init() {
   LTRACE_ENTRY;
+
+  // Protect the regions of the physmap that are not backed by normal memory.
+  //
+  // See the comments for |phsymap_protect_non_arena_regions| for why we're doing this.
+  //
+#if defined(__aarch64__)
+  physmap_protect_non_arena_regions();
+#elif defined(__x86_64__)
+  // TODO(fxb/48018): Call this on x64.  On x64, we access some non-arena parts of the physmap
+  // (e.g. for smbios) so we can't change their protection.  Track down and remove these
+  // dependencies so we can unify the arm64 and x64 paths.
+#else
+#error "unsupported architecture"
+#endif
 
   VmAspace* aspace = VmAspace::kernel_aspace();
 
