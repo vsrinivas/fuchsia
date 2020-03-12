@@ -106,14 +106,22 @@ fuzzers_package("zircon_fuzzers") {
   # Zircon fuzzers built using Fuchsia GN.
   fuzzers = _migrated_fuzzers
 
-  # Zircon fuzzers built using Zircon GN., only enabled if a fuzzer variant is selected.
+  # Zircon fuzzers built using Zircon GN; only enabled if a fuzzer variant is selected.
   fuzzer_variants = [
     "asan-fuzzer",
     "asan-ubsan-fuzzer",
     "ubsan-fuzzer",
   ]
-  if (select_variant_canonical + fuzzer_variants - fuzzer_variants !=
-      select_variant_canonical) {
+
+  selected_variants = []
+  foreach(selected_variant, select_variant_canonical) {
+    if (defined(selected_variant.variant)) {
+      selected_variants += [ selected_variant.variant ]
+    }
+  }
+
+  if (selected_variants + fuzzer_variants - fuzzer_variants !=
+      selected_variants) {
     fuzzers_manifest = {
       target = ":zircon_fuzzers_manifest"
       output = "$zircon_root_build_dir/legacy_fuzzers-$target_cpu.json"
