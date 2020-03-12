@@ -32,6 +32,10 @@ test_package("audio-loopback-tests") {
     {
       name = "audio_loopback_tests"
 
+      # TODO(47968): The tests are temporarily disabled due to a flake that's
+      # causing device timeout.
+      disabled = true
+
       # This test uses real-time streaming and must be run on real hardware.
       environments = hardware_envs
     },
