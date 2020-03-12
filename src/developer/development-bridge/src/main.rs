@@ -147,6 +147,11 @@ impl Cli {
                 match result {
                     Ok(ComponentControllerEvent::OnTerminated { exit_code }) => {
                         println!("Component exited with exit code: {}", exit_code);
+                        match exit_code {
+                            -1 => println!("This exit code may mean that the specified package doesn't exist.\
+                                        \nCheck that the package is in your universe (`fx set --with ...`) and that `fx serve` is running."),
+                            _ => {}
+                        };
                         break;
                     }
                     Err(err) => {
