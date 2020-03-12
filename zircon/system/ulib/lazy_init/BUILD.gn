@@ -12,31 +12,3 @@ zx_library("lazy_init") {
     deps = [ "$zx/system/ulib/zx" ]
   }
 }
-
-zx_test("lazy_init-test") {
-  output_name = "lazy_init-test"
-  sources = []
-  deps = [
-    "$zx/system/ulib/lazy_init",
-    "$zx/system/ulib/unittest",
-  ]
-
-  if (is_fuchsia) {
-    # These tests won't run on the host because some of these tests make
-    # use of the ASSERT_DEATH macro to ensure that certain actions result
-    # in program termination, which is not currently supported in the
-    # host test environment.
-    # See: TODO(ZX-1053)
-    sources += [ "lazy_init_tests.cc" ]
-    deps += [
-      "$zx/system/ulib/fdio",
-      "$zx/system/ulib/zircon",
-      "$zx/system/ulib/zx",
-    ]
-  }
-  configs += [ "$zx_build/public/gn/config:static-libc++" ]
-
-  # TODO(47442): Fix the leaks and remove this.
-  deps +=
-      [ "$zx/public/gn/config/instrumentation:suppress-lsan.DO-NOT-USE-THIS" ]
-}
