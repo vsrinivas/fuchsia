@@ -108,10 +108,13 @@ List<TestCaseResults> drmFpsMetricsProcessor(
     }
 
     final uiThread = uiThreads.first;
+    // TODO(48263): Only match "vsync callback".
     final vsyncCallbackEvents = filterEventsTyped<DurationEvent>(
-        uiThread.events,
-        category: 'flutter',
-        name: 'vsync callback');
+            uiThread.events,
+            category: 'flutter',
+            name: 'vsync callback')
+        .followedBy(filterEventsTyped<DurationEvent>(uiThread.events,
+            category: 'flutter', name: 'VsyncProcessCallback'));
     if (vsyncCallbackEvents.length < 2) {
       throw ArgumentError(
           'Error, only found ${vsyncCallbackEvents.length} "vsync callback" '

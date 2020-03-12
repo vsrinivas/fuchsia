@@ -91,7 +91,9 @@ _FpsResult _computeFps(Model model, Thread uiThread, Thread gpuThread) {
       maybeNewEnd = event.start + event.duration;
     } else if (event is DurationEvent &&
         event.category == 'flutter' &&
-        event.name == 'vsync callback') {
+        // TODO(48263): Only match "vsync callback".
+        (event.name == 'vsync callback' ||
+            event.name == 'VsyncProcessCallback')) {
       final maybeFollowingVsync = findFollowingVsync(event);
       if (maybeFollowingVsync == null) {
         maybeNewEnd =
@@ -136,8 +138,11 @@ _FpsResult _computeFps(Model model, Thread uiThread, Thread gpuThread) {
     // Hitting this indicates a logic error in the above grouping code.
     assert(group.events.isNotEmpty);
 
+    // TODO(48263): Only match "vsync callback".
     final vsyncCallbacks = filterEventsTyped<DurationEvent>(group.events,
-        category: 'flutter', name: 'vsync callback');
+            category: 'flutter', name: 'vsync callback')
+        .followedBy(filterEventsTyped<DurationEvent>(group.events,
+            category: 'flutter', name: 'VsyncProcessCallback'));
     final followingVsyncs =
         vsyncCallbacks.map(findFollowingVsync).where((e) => e != null);
 
@@ -181,8 +186,11 @@ _Results _flutterFrameStats(Model model, Thread uiThread, Thread gpuThread) {
 
   return _Results()
     ..fpsResult = _computeFps(model, uiThread, gpuThread)
+    // TODO(48263): Only match "vsync callback".
     ..frameBuildTimes = filterEventsTyped<DurationEvent>(uiThread.events,
             category: 'flutter', name: 'vsync callback')
+        .followedBy(filterEventsTyped<DurationEvent>(uiThread.events,
+            category: 'flutter', name: 'VsyncProcessCallback'))
         .map(getDurationInMilliseconds)
         .toList()
     ..frameRasterizerTimes = filterEventsTyped<DurationEvent>(gpuThread.events,
