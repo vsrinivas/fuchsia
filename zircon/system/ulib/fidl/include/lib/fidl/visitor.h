@@ -97,6 +97,8 @@ class Visitor {
     kMemoryError                // overflow/out-of-bounds etc. Non-recoverable.
   };
 
+  enum class PointeeType { kVectorOrString, kOther };
+
   // Compile-time interface checking. Code is invisible to the subclass.
  private:
   // Visit an indirection, which can be the data pointer of a string/vector, the data pointer
@@ -108,14 +110,16 @@ class Visitor {
   // vectors and strings.
   //
   // |ptr_position|   Position of the pointer.
+  // |pointee_type|   Type of the pointee.
   // |object_ptr_ptr| Pointer to the data pointer, obtained from |ptr_position.Get(start)|.
   //                  It can be used to patch the pointer.
   // |inline_size|    Size of the inline part of the target object.
   //                  For vectors, this covers the inline part of all the elements.
   //                  It will not contain any trailing padding between objects.
   // |out_position|   Returns the position where the walker will continue its object traversal.
-  Status VisitPointer(Position ptr_position, ObjectPointerPointer object_ptr_ptr,
-                      uint32_t inline_size, Position* out_position) {
+  Status VisitPointer(Position ptr_position, PointeeType pointee_type,
+                      ObjectPointerPointer object_ptr_ptr, uint32_t inline_size,
+                      Position* out_position) {
     return Status::kSuccess;
   }
 

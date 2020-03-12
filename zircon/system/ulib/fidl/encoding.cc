@@ -67,8 +67,9 @@ class FidlEncoder final
 
   static constexpr bool kAllowNonNullableCollectionsToBeAbsent = false;
 
-  Status VisitPointer(Position ptr_position, ObjectPointerPointer object_ptr_ptr,
-                      uint32_t inline_size, Position* out_position) {
+  Status VisitPointer(Position ptr_position, PointeeType pointee_type,
+                      ObjectPointerPointer object_ptr_ptr, uint32_t inline_size,
+                      Position* out_position) {
     // Make sure objects in secondary storage are contiguous
     if (!ClaimOutOfLineStorage(static_cast<uint32_t>(inline_size), *object_ptr_ptr, out_position)) {
       return Status::kMemoryError;

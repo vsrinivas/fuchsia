@@ -21,7 +21,10 @@ namespace fidl {
 
 namespace internal {
 
-constexpr uint64_t kVectorViewOwnershipMask = uint64_t(1) << 63;
+// The MSB is an ownership bit in the count field of vectors.
+constexpr uint64_t kVectorOwnershipMask = uint64_t(1) << 63;
+// The LSB is an ownership bit in tracking_ptr of non-array type.
+constexpr uint64_t kNonArrayTrackingPtrOwnershipMask = uint64_t(1) << 0;
 
 // Some assumptions about data type layout.
 static_assert(offsetof(fidl_string_t, size) == 0u, "fidl_string_t layout");
@@ -555,9 +558,9 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
           Pop();
           continue;
         }
-        auto status =
-            visitor.VisitPointer(frame->position, PtrTo<Ptr<void>>(frame->position),
-                                 frame->struct_pointer_state.struct_type->size, &frame->position);
+        auto status = visitor.VisitPointer(
+            frame->position, VisitorImpl::PointeeType::kOther, PtrTo<Ptr<void>>(frame->position),
+            frame->struct_pointer_state.struct_type->size, &frame->position);
         FIDL_STATUS_GUARD(status);
         const FidlCodedStruct* coded_struct = frame->struct_pointer_state.struct_type;
         *frame = Frame(coded_struct, frame->position);
@@ -588,8 +591,8 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
             visitor.OnError("integer overflow calculating table size");
             return;
           }
-          auto status = visitor.VisitPointer(frame->position, &envelope_vector_ptr->data, size,
-                                             &frame->position);
+          auto status = visitor.VisitPointer(frame->position, VisitorImpl::PointeeType::kOther,
+                                             &envelope_vector_ptr->data, size, &frame->position);
           FIDL_STATUS_GUARD(status);
           table_frame.ordinal = 1;
           table_frame.present_count = static_cast<uint32_t>(envelope_vector_ptr->count);
@@ -637,7 +640,7 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
             payload_type != nullptr ? TypeSize(payload_type) : envelope_ptr->num_bytes;
         Position position;
         status =
-            visitor.VisitPointer(frame->position,
+            visitor.VisitPointer(frame->position, VisitorImpl::PointeeType::kOther,
                                  // casting since |envelope_ptr->data| is always void*
                                  &const_cast<Ptr<void>&>(envelope_ptr->data), num_bytes, &position);
         // Do not pop the table frame, to guarantee calling |LeaveEnvelope|
@@ -684,9 +687,9 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
           Pop();
           continue;
         }
-        auto status =
-            visitor.VisitPointer(frame->position, PtrTo<Ptr<void>>(frame->position),
-                                 frame->union_pointer_state.union_type->size, &frame->position);
+        auto status = visitor.VisitPointer(
+            frame->position, VisitorImpl::PointeeType::kOther, PtrTo<Ptr<void>>(frame->position),
+            frame->union_pointer_state.union_type->size, &frame->position);
         FIDL_STATUS_GUARD(status);
         const FidlCodedUnion* coded_union = frame->union_pointer_state.union_type;
         *frame = Frame(coded_union, frame->position);
@@ -749,8 +752,9 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
         uint32_t num_bytes =
             payload_type != nullptr ? TypeSize(payload_type) : envelope_ptr->num_bytes;
         Position position;
-        status = visitor.VisitPointer(frame->position, &const_cast<Ptr<void>&>(envelope_ptr->data),
-                                      num_bytes, &position);
+        status =
+            visitor.VisitPointer(frame->position, VisitorImpl::PointeeType::kOther,
+                                 &const_cast<Ptr<void>&>(envelope_ptr->data), num_bytes, &position);
         FIDL_STATUS_GUARD_NO_POP(status);
         if (payload_type != nullptr && !IsPrimitive(payload_type)) {
           if (!Push(Frame(payload_type, position))) {
@@ -813,7 +817,8 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
         }
         Position position;
         auto status = visitor.VisitPointer(
-            position, &reinterpret_cast<Ptr<void>&>(const_cast<Ptr<char>&>(string_ptr->data)),
+            position, VisitorImpl::PointeeType::kVectorOrString,
+            &reinterpret_cast<Ptr<void>&>(const_cast<Ptr<char>&>(string_ptr->data)),
             static_cast<uint32_t>(size), &position);
         FIDL_STATUS_GUARD(status);
         Pop();
@@ -839,7 +844,7 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
         // The MSB of the count is reserved for an ownership bit used by fidl::VectorView.
         // fidl::VectorView's count would be ideally used in place of the direct bit masking
         // here, but because of build dependencies this is currently not possible.
-        const uint64_t count = vector_ptr->count & ~kVectorViewOwnershipMask;
+        const uint64_t count = vector_ptr->count & ~kVectorOwnershipMask;
         if (vector_ptr->data == nullptr) {
           if (!frame->vector_state.nullable &&
               !VisitorImpl::kAllowNonNullableCollectionsToBeAbsent) {
@@ -867,7 +872,8 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
           return;
         }
         auto status =
-            visitor.VisitPointer(frame->position, &vector_ptr->data, size, &frame->position);
+            visitor.VisitPointer(frame->position, VisitorImpl::PointeeType::kVectorOrString,
+                                 &vector_ptr->data, size, &frame->position);
         FIDL_STATUS_GUARD(status);
         if (frame->vector_state.element) {
           // Continue by visiting the vector elements as an array.

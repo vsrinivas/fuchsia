@@ -63,8 +63,9 @@ class FidlValidator final
 
   static constexpr bool kAllowNonNullableCollectionsToBeAbsent = false;
 
-  Status VisitPointer(Position ptr_position, ObjectPointerPointer object_ptr_ptr,
-                      uint32_t inline_size, Position* out_position) {
+  Status VisitPointer(Position ptr_position, PointeeType pointee_type,
+                      ObjectPointerPointer object_ptr_ptr, uint32_t inline_size,
+                      Position* out_position) {
     if (reinterpret_cast<uintptr_t>(*object_ptr_ptr) != kAllocPresenceMarker) {
       SetError("validator encountered invalid pointer");
       return Status::kConstraintViolationError;

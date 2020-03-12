@@ -54,8 +54,9 @@ class FidlHandleCloser final
 
   static constexpr bool kAllowNonNullableCollectionsToBeAbsent = false;
 
-  Status VisitPointer(Position ptr_position, ObjectPointerPointer object_ptr_ptr,
-                      uint32_t inline_size, Position* out_position) {
+  Status VisitPointer(Position ptr_position, PointeeType pointee_type,
+                      ObjectPointerPointer object_ptr_ptr, uint32_t inline_size,
+                      Position* out_position) {
     // Just follow the pointer into the child object
     *out_position = Position{*object_ptr_ptr};
     return Status::kSuccess;

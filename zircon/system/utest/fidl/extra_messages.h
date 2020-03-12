@@ -2,11 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// TODO(fxb/48186) Auto-generate this file.
+
 #ifndef ZIRCON_SYSTEM_UTEST_FIDL_EXTRA_MESSAGES_H_
 #define ZIRCON_SYSTEM_UTEST_FIDL_EXTRA_MESSAGES_H_
 
 #include <lib/fidl/coding.h>
 #include <lib/fidl/internal.h>
+#include <lib/fidl/llcpp/envelope.h>
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fidl/llcpp/vector_view.h>
 
@@ -53,11 +56,60 @@ extern const fidl_type_t fidl_test_coding_Uint64EnumStructTable;
 extern const fidl_type_t fidl_test_coding_LinearizerTestVectorOfUint32RequestTable;
 extern const fidl_type_t fidl_test_coding_LinearizerTestVectorOfStringRequestTable;
 
+extern const fidl_type_t v1_fidl_test_coding_LLCPPStyleUnionStructTable;
+
 #if defined(__cplusplus)
 }
 #endif
 
 namespace fidl {
+
+class LLCPPStyleUnion {
+ public:
+  LLCPPStyleUnion() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  LLCPPStyleUnion(LLCPPStyleUnion&&) = default;
+  LLCPPStyleUnion& operator=(LLCPPStyleUnion&&) = default;
+
+  ~LLCPPStyleUnion() { reset_ptr(nullptr); }
+
+  void set_Primitive(::fidl::tracking_ptr<int32_t>&& elem) {
+    ordinal_ = Ordinal::kPrimitive;
+    reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
+  }
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kPrimitive = 1,  // 0x1
+  };
+
+  void reset_ptr(::fidl::tracking_ptr<void>&& new_ptr) {
+    // To clear the existing value, std::move it and let it go out of scope.
+    switch (ordinal_) {
+      case Ordinal::Invalid: {
+        return;
+      }
+      case Ordinal::kPrimitive: {
+        ::fidl::tracking_ptr<int32_t> to_destroy =
+            static_cast<::fidl::tracking_ptr<int32_t>>(std::move(envelope_.data));
+        break;
+      }
+    }
+
+    envelope_.data = std::move(new_ptr);
+  }
+
+  static void SizeAndOffsetAssertionHelper();
+  Ordinal ordinal_;
+  FIDL_ALIGNDECL
+  ::fidl::Envelope<void> envelope_;
+};
+
+struct LLCPPStyleUnionStruct {
+  FIDL_ALIGNDECL
+  LLCPPStyleUnion u;
+};
 
 using SimpleTable = fidl::VectorView<fidl_envelope_t>;
 struct SimpleTableEnvelopes {

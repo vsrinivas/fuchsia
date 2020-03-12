@@ -37,9 +37,9 @@ class VectorView {
   using marked_count = uint64_t;
 
   // The MSB of count_ stores whether or not data_ is owned by VectorView.
-  static constexpr marked_count kOwnershipMask = internal::kVectorViewOwnershipMask;
+  static constexpr marked_count kOwnershipMask = internal::kVectorOwnershipMask;
   // The maximum count to avoid colliding with the ownership bit.
-  static constexpr uint64_t kMaxCount = (1ULL << 63) - 1ULL;
+  static constexpr uint64_t kMaxCount = uint64_t(kOwnershipMask) - 1ULL;
 
  public:
   VectorView() {}

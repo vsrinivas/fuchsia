@@ -5,6 +5,8 @@
 #ifndef LIB_FIDL_LLCPP_TRACKING_PTR_H_
 #define LIB_FIDL_LLCPP_TRACKING_PTR_H_
 
+#include <lib/fidl/walker.h>
+
 #include <cstddef>
 #include <functional>
 #include <memory>
@@ -13,8 +15,6 @@
 #include "aligned.h"
 #include "array.h"
 #include "unowned_ptr.h"
-
-#define TRACKING_PTR_ENABLE_UNIQUE_PTR_CONSTRUCTOR false
 
 namespace fidl {
 
@@ -64,10 +64,11 @@ class tracking_ptr final {
 
   // A marked_ptr is a pointer with the LSB reserved for the ownership bit.
   using marked_ptr = uintptr_t;
-  static constexpr marked_ptr kOwnershipMask = 0x1;
+  static constexpr marked_ptr kOwnershipMask = internal::kNonArrayTrackingPtrOwnershipMask;
   static constexpr marked_ptr kNullMarkedPtr = 0x0;
 
   static constexpr size_t kMinAlignment = 2;
+  static_assert(kOwnershipMask == 1, "alignment is dependent on ownership mask");
 
  public:
   constexpr tracking_ptr() noexcept { set_marked(kNullMarkedPtr); }
@@ -82,10 +83,7 @@ class tracking_ptr final {
                   "fidl::unowned_ptr "
                   "using the fidl::unowned(&val) helper. "
                   "As an alternative, consider using a fidl::Allocator."
-#if TRACKING_PTR_ENABLE_UNIQUE_PTR_CONSTRUCTOR
-                  " For heap allocator values, construct with unique_ptr<T>."
-#endif
-    );
+                  " For heap allocator values, construct with unique_ptr<T>.");
   }
   template <typename U,
             typename = std::enable_if_t<(std::is_array<T>::value == std::is_array<U>::value) ||
@@ -96,9 +94,7 @@ class tracking_ptr final {
     set_marked(reinterpret_cast<marked_ptr>(
         static_cast<T*>(reinterpret_cast<U*>(other.release_marked_ptr()))));
   }
-  template <typename U = T,
-            typename = std::enable_if_t<TRACKING_PTR_ENABLE_UNIQUE_PTR_CONSTRUCTOR &&
-                                        !std::is_void<U>::value>>
+  template <typename U = T, typename = std::enable_if_t<!std::is_void<U>::value>>
   tracking_ptr(std::unique_ptr<U>&& other) {
     set_owned(other.release());
   }
@@ -180,9 +176,6 @@ class tracking_ptr final {
 
 template <typename T>
 class tracking_ptr<T[]> final {
-  template <typename>
-  friend class tracking_ptr;
-
  public:
   constexpr tracking_ptr() noexcept {}
   constexpr tracking_ptr(std::nullptr_t) noexcept {}
@@ -196,22 +189,17 @@ class tracking_ptr<T[]> final {
                   "fidl::unowned_ptr "
                   "using the fidl::unowned(&val) helper. "
                   "As an alternative, consider using a fidl::Allocator."
-#if TRACKING_PTR_ENABLE_UNIQUE_PTR_CONSTRUCTOR
-                  " For heap allocator values, construct with unique_ptr<T>."
-#endif
-    );
+                  " For heap allocator values, construct with unique_ptr<T>.");
   }
-  template <typename U>
-  tracking_ptr(tracking_ptr<U[]>&& other) noexcept {
-    // Force a static cast to restrict the types of assignments that can be made.
-    // Ideally this would be implemented with a type trait, but none exist now.
-    reset(other.is_owned_, static_cast<T*>(reinterpret_cast<U*>(other.ptr_)));
+  tracking_ptr(tracking_ptr&& other) noexcept {
+    reset(other.is_owned_, other.ptr_);
     other.is_owned_ = false;
     other.ptr_ = nullptr;
   }
-#if TRACKING_PTR_ENABLE_UNIQUE_PTR_CONSTRUCTOR
-  tracking_ptr(std::unique_ptr<U>&& other) { reset(true, other.release()); }
-#endif
+  template <typename U = T, typename = std::enable_if_t<!std::is_void<U>::value>>
+  tracking_ptr(std::unique_ptr<U>&& other) {
+    reset(true, other.release());
+  }
   tracking_ptr(unowned_ptr<T> other) { reset(false, other.get()); }
   tracking_ptr(const tracking_ptr&) = delete;
 

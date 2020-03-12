@@ -7,6 +7,8 @@
 
 // NOTE: Refer to README.md to regenerate the coding tables whenever these definitions change.
 
+// TODO(fxb/48186) Auto-generate extra_messages.h
+
 library fidl.test.coding;
 
 protocol LinearizerTest {
@@ -90,6 +92,14 @@ struct SampleXUnionStruct {
 
 struct SampleNullableXUnionStruct {
     SampleXUnion? opt_xu;
+};
+
+xunion LLCPPStyleUnion {
+    1: int32 primitive;
+};
+
+struct LLCPPStyleUnionStruct {
+    LLCPPStyleUnion u;
 };
 
 bits Int16Bits : uint16 {

@@ -645,6 +645,56 @@ bool linearize_xunion_primitive_field() {
   END_TEST;
 }
 
+bool linearize_union_tracking_ptr_unowned() {
+  BEGIN_TEST;
+
+  int32_t int_val = 2;
+  LLCPPStyleUnionStruct str;
+  str.u.set_Primitive(fidl::unowned(&int_val));
+
+  constexpr uint32_t buf_size = 512;
+  uint8_t buffer[buf_size];
+  const char* error = nullptr;
+  uint32_t actual_num_bytes = 0;
+  auto status = fidl_linearize(&v1_fidl_test_coding_LLCPPStyleUnionStructTable, &str, buffer,
+                               buf_size, &actual_num_bytes, &error);
+  EXPECT_EQ(status, ZX_OK);
+
+  fidl_xunion_t* written_xunion = reinterpret_cast<fidl_xunion_t*>(buffer);
+
+  EXPECT_EQ(written_xunion->tag, 1);
+  EXPECT_EQ(written_xunion->envelope.num_handles, 0);
+  EXPECT_EQ(written_xunion->envelope.num_bytes, 8);
+  EXPECT_EQ(*reinterpret_cast<int32_t*>(written_xunion->envelope.data), int_val);
+
+  END_TEST;
+}
+
+bool linearize_union_tracking_ptr_heap_allocate() {
+  BEGIN_TEST;
+
+  constexpr int32_t int_val = 2;
+  LLCPPStyleUnionStruct str;
+  str.u.set_Primitive(std::make_unique<int32_t>(int_val));
+
+  constexpr uint32_t buf_size = 512;
+  uint8_t buffer[buf_size];
+  const char* error = nullptr;
+  uint32_t actual_num_bytes = 0;
+  auto status = fidl_linearize(&v1_fidl_test_coding_LLCPPStyleUnionStructTable, &str, buffer,
+                               buf_size, &actual_num_bytes, &error);
+  EXPECT_EQ(status, ZX_OK);
+
+  fidl_xunion_t* written_xunion = reinterpret_cast<fidl_xunion_t*>(buffer);
+
+  EXPECT_EQ(written_xunion->tag, 1);
+  EXPECT_EQ(written_xunion->envelope.num_handles, 0);
+  EXPECT_EQ(written_xunion->envelope.num_bytes, 8);
+  EXPECT_EQ(*reinterpret_cast<int32_t*>(written_xunion->envelope.data), int_val);
+
+  END_TEST;
+}
+
 BEGIN_TEST_CASE(strings)
 RUN_TEST(linearize_present_nonnullable_string)
 RUN_TEST(linearize_present_nonnullable_longer_string)
@@ -676,6 +726,11 @@ RUN_TEST(linearize_xunion_empty_invariant_empty)
 RUN_TEST(linearize_xunion_empty_invariant_zero_ordinal)
 RUN_TEST(linearize_xunion_primitive_field)
 END_TEST_CASE(xunions)
+
+BEGIN_TEST_CASE(tracking_ptr)
+RUN_TEST(linearize_union_tracking_ptr_unowned)
+RUN_TEST(linearize_union_tracking_ptr_heap_allocate)
+END_TEST_CASE(tracking_ptr)
 
 }  // namespace
 }  // namespace fidl

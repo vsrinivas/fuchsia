@@ -80,15 +80,17 @@ class FidlLinearizer final
   // in the case of an empty vector/string.
   static constexpr bool kAllowNonNullableCollectionsToBeAbsent = true;
 
-  Status VisitPointer(Position ptr_position, ObjectPointerPointer object_ptr_ptr,
-                      uint32_t inline_size, Position* out_position) {
-    // We are undergoing a migration to tracking_ptr, which reserves the LSB of the
-    // pointer to indicate if the object is heap allocated. To assist with the
-    // migration, ensure that no pointer has the LSB set.
-    // TODO(fxb/42059) Remove this assertion after switching objects to tracking_ptr.
-    if ((reinterpret_cast<uintptr_t>(object_ptr_ptr) & 0x1) != 0) {
-      abort();
-    }
+  Status VisitPointer(Position ptr_position, PointeeType pointee_type,
+                      ObjectPointerPointer object_ptr_ptr, uint32_t inline_size,
+                      Position* out_position) {
+    // For pointers in types other than vectors and strings, the LSB is reserved to mark ownership
+    // and may be set to 1 if the object is heap allocated. However, the original pointer has this
+    // bit cleared. For vectors and strings, any value is accepted.
+    auto object_ptr =
+        pointee_type == PointeeType::kVectorOrString
+            ? *object_ptr_ptr
+            : reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(*object_ptr_ptr) &
+                                      ~fidl::internal::kNonArrayTrackingPtrOwnershipMask);
 
     uint32_t new_offset;
     if (!FidlAddOutOfLine(next_out_of_line_, inline_size, &new_offset)) {
@@ -102,10 +104,10 @@ class FidlLinearizer final
     }
 
     // Copy the pointee to the desired location in secondary storage
-    memcpy(&bytes_[next_out_of_line_], *object_ptr_ptr, inline_size);
+    memcpy(&bytes_[next_out_of_line_], object_ptr, inline_size);
 
     // Instruct the walker to traverse the pointee afterwards.
-    *out_position = Position{.object = *object_ptr_ptr, .offset = next_out_of_line_};
+    *out_position = Position{.object = object_ptr, .offset = next_out_of_line_};
 
     // Update the pointer within message buffer to point to the copy
     *object_ptr_ptr = &bytes_[next_out_of_line_];
