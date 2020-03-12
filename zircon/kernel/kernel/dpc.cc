@@ -56,7 +56,7 @@ zx_status_t Dpc::QueueThreadLocked() {
   return ZX_OK;
 }
 
-void Dpc::Shutdown(uint cpu_id) {
+zx_status_t Dpc::Shutdown(uint cpu_id, zx_time_t deadline) {
   DEBUG_ASSERT(cpu_id < SMP_MAX_CPUS);
 
   spin_lock_saved_state_t state;
@@ -78,10 +78,7 @@ void Dpc::Shutdown(uint cpu_id) {
   event_signal(&percpu.dpc_event, false);
 
   // Wait for it to terminate.
-  int ret = 0;
-  zx_status_t status = t->Join(&ret, ZX_TIME_INFINITE);
-  DEBUG_ASSERT(status == ZX_OK);
-  DEBUG_ASSERT(ret == 0);
+  return t->Join(nullptr, deadline);
 }
 
 void Dpc::ShutdownTransitionOffCpu(uint cpu_id) {
