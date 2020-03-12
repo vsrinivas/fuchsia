@@ -9,56 +9,6 @@ use test_util::assert_near;
 const NULL_TOKEN: u64 = zx::sys::ZX_KOID_INVALID as u64;
 const INVALID_TOKEN: u64 = 33;
 
-async fn get_gain_does_not_disconnect(token: u64) -> Result<()> {
-    let env = Environment::new()?;
-
-    let enumerator = env.connect_to_service::<AudioDeviceEnumeratorMarker>()?;
-    let (actual_token, _) = enumerator.get_device_gain(token).await?;
-    assert_eq!(actual_token, NULL_TOKEN);
-
-    Ok(())
-}
-
-async fn set_gain_does_not_disconnect(token: u64) -> Result<()> {
-    let env = Environment::new()?;
-
-    let enumerator = env.connect_to_service::<AudioDeviceEnumeratorMarker>()?;
-    enumerator.set_device_gain(
-        token,
-        &mut AudioGainInfo { gain_db: -30.0, flags: 0 },
-        /*flags=*/ 0,
-    )?;
-
-    // Ensure the channel does not close.
-    let _ = enumerator.get_devices().await?;
-
-    Ok(())
-}
-
-#[fasync::run_singlethreaded]
-#[test]
-async fn get_gain_null_token_does_not_disconnect_and_returns_invalid_token() -> Result<()> {
-    get_gain_does_not_disconnect(NULL_TOKEN).await
-}
-
-#[fasync::run_singlethreaded]
-#[test]
-async fn set_gain_null_token_does_not_disconnect() -> Result<()> {
-    set_gain_does_not_disconnect(NULL_TOKEN).await
-}
-
-#[fasync::run_singlethreaded]
-#[test]
-async fn get_gain_invalid_token_does_not_disconnect_and_returns_invalid_token() -> Result<()> {
-    get_gain_does_not_disconnect(INVALID_TOKEN).await
-}
-
-#[fasync::run_singlethreaded]
-#[test]
-async fn set_gain_invalid_token_does_not_disconnect() -> Result<()> {
-    set_gain_does_not_disconnect(INVALID_TOKEN).await
-}
-
 #[fasync::run_singlethreaded]
 #[test]
 async fn on_device_gain_changed_ignores_invalid_tokens_in_sets() -> Result<()> {
