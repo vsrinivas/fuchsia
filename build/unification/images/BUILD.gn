@@ -542,7 +542,6 @@ aggregate_manifest("legacy-aux") {
     ":test.sys.linenoise-test-test",
 #------------------
 #------------------
-    ":test.sys.lockdep-test-test",
 #------------------
 #------------------
     ":test.sys.log-test",
@@ -1102,7 +1101,6 @@ aggregate_manifest("legacy-tests") {
     ":test.sys.linenoise-test-test",
 #------------------
 #------------------
-    ":test.sys.lockdep-test-test",
 #------------------
 #------------------
     ":test.sys.log-test",
@@ -2968,7 +2966,7 @@ aggregate_manifest("migrated-aux") {
 #------------------
     "//zircon/system/utest/loader-service:loader-service-manifest",
 #------------------
-    #":test.sys.lockdep-test-test",
+    "//zircon/system/ulib/lockdep/test:lockdep-test-manifest",
 #------------------
 #------------------
     #":test.sys.log-test",
@@ -3664,7 +3662,7 @@ aggregate_manifest("migrated-tests") {
 #------------------
     "//zircon/system/utest/loader-service:loader-service-manifest",
 #------------------
-    #":test.sys.lockdep-test-test",
+    "//zircon/system/ulib/lockdep/test:lockdep-test-manifest",
 #------------------
 #------------------
     #":test.sys.log-test",
