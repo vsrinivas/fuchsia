@@ -100,7 +100,7 @@ within the debugger which avoids the "attach" dance:
 
 ```
 [zxdb] break main
-Breakpoint 1 (Software) on Global, Enabled, stop=All, @ @main
+Breakpoint 1 (Software) on Global, Enabled, stop=All, @ $main
 Pending: No matches for location, it will be pending library loads.
 
 [zxdb] run /bin/cowsay

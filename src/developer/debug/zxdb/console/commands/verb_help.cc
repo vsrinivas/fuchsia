@@ -18,7 +18,7 @@ namespace zxdb {
 namespace {
 
 const char kExpressionsName[] = "expressions";
-const char kExpressionsHelp[] = R"(Expressions
+const char kExpressionsHelp[] = R"*(Expressions
 
   Expressions appear in many commands. Some commands expect just an expression,
   most notably "print":
@@ -67,11 +67,42 @@ Casting
 
   Rust expressions in zxdb should currently use C++ casts (bug 6001)
 
+Special names
+
+  Special names begin with '$'. There are different forms:
+
+  Escaped strings: "$(...)"
+
+      Sometimes there are symbol names that can't be parsed in the standard
+      language. This especially applies to compiler-generated symbols. Enclose
+      such strings in "$(...)". Parens inside the escaped contents can be
+      literal as long as they're balanced, otherwise, escape them by preceeding
+      with a backslash. Include a literal backslash with two blackslashes:
+
+        $(something with spaces)
+        $({{impl}})
+        $(some_closure(data))
+        $(line\)noise\\)
+
+  Register names: "$reg(...)"
+
+      To unambiguously refer to register names, use the "$reg" annotation. So on
+      x64 "$reg(rax)" or "$reg(xmm0)".
+
+  Main function: "$main"
+
+      Maps to the entrypoint declared in the symbols, and falls back on the
+      function named "main" if there is no entrypoint defined.
+
 CPU registers
 
-  Unambiguously refer to CPU registers using the form "$regname", so on x64
-  "$rax" or "$xmm0". If there is no collision with named values in the debugged
-  process, the bare register name can also be used, so "rax" and "xmm0".
+  The expression evaluator will check for register names if there is no variable
+  with a given string. So in most cases you can just use literal register names:
+
+    [zxdb] print rax
+
+  Unambiguously refer to CPU registers using the form "$reg(rax)" as discussed
+  above under "Special names".
 
   Vector registers are interpreted according to the current vector-format option
   (see "get vector-format" for possibilities, and "set vector-format <new_mode>"
@@ -79,10 +110,13 @@ CPU registers
   notation can be used to refer to individual values. Using "double" vector
   format on a 128-bit ARM "v6" register would give:
 
-    [zxdb] print $v6
+    [zxdb] print v6
     {0.0, 3.14}
 
-    [zxdb] print $v6[1]
+    [zxdb] print $reg(v6)
+    {0.0, 3.14}
+
+    [zxdb] print $reg(v6)[1]
     3.14
 
     [zxdb] print $v6[0] = 2.71    # Assignment to a vector sub-value.
@@ -152,7 +186,7 @@ Common errors
 
       You can ignore the "DWARF expression bytes" which are the internal
       instructions for finding the variable.
-)";
+)*";
 
 constexpr char kJitdName[] = "jitd";
 constexpr char kJitdHelp[] = R"(Just In Time Debugging

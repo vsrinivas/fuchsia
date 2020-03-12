@@ -86,7 +86,7 @@ void GetNamedValue(const fxl::RefPtr<EvalContext>& eval_context, const std::stri
                    ValueResult* result) {
   ParsedIdentifier ident;
   Err err = ExprParser::ParseIdentifier(name, &ident);
-  ASSERT_FALSE(err.has_error());
+  ASSERT_FALSE(err.has_error()) << name;
 
   eval_context->GetNamedValue(ident, [result](ErrOrValue value) {
     result->called = true;
@@ -409,7 +409,7 @@ TEST_F(EvalContextImplTest, RegisterByName) {
 
   // Test again, this time with $ prefix
   reg.called = false;
-  GetNamedValue(context, "$x0", &reg);
+  GetNamedValue(context, "$reg(x0)", &reg);
 
   EXPECT_FALSE(reg.called);
 
@@ -475,7 +475,7 @@ TEST_F(EvalContextImplTest, RegisterShadowed) {
 
   // $ prefix should make the register show through.
   val.called = false;
-  GetNamedValue(context, "$x0", &val);
+  GetNamedValue(context, "$reg(x0)", &val);
 
   EXPECT_FALSE(val.called);
 

@@ -75,6 +75,12 @@ class ExprParser {
   };
   ParseNameResult ParseName(bool expand_types);
 
+  // Converts the current token to an identifier component. The current token must be a kName or a
+  // kSpecialName token. On error, the error will be set and an empty IdentifierComponent will be
+  // returned. This doesn't handle templates, it is called as part of ParseName to do the full name
+  // parsing.
+  ParsedIdentifierComponent GetIdentifierComponent();
+
   // Parses a type starting at cur_token() and returns it. Returns a null type and sets has_error()
   // on failure.
   //
@@ -147,6 +153,7 @@ class ExprParser {
   // qualified type.
   fxl::RefPtr<Type> ApplyQualifiers(fxl::RefPtr<Type> input, const std::vector<DwarfTag>& qual);
 
+  void SetError(const ExprToken& token, Err err);
   void SetError(const ExprToken& token, std::string msg);
 
   // Returns true if the current token is the first of a pair of adjacent ">" tokens that might

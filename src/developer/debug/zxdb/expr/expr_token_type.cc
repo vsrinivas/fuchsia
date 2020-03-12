@@ -49,6 +49,7 @@ constexpr ExprTokenRecord kRecords[kNumExprTokenTypes] = {
     // clang-format off
     {ExprTokenType::kInvalid,         0},
     {ExprTokenType::kName,            kLangAll},
+    {ExprTokenType::kSpecialName,     kLangAll},
     {ExprTokenType::kInteger,         kLangAll},
     {ExprTokenType::kFloat,           kLangAll},
     {ExprTokenType::kStringLiteral,   kLangAll},

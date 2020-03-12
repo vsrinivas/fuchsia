@@ -9,6 +9,7 @@
 #include <type_traits>
 
 #include "src/developer/debug/zxdb/expr/number_parser.h"
+#include "src/developer/debug/zxdb/expr/parse_special_identifier.h"
 #include "src/developer/debug/zxdb/expr/parse_string.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
@@ -24,7 +25,7 @@ bool IsNameFirstChar(char c) {
   //  - "@main" special location for the program entrypoint. can be changed in the future if we have
   //    a better way of identifying these.
   //
-  // "$" is used to disambiguate register names.
+  // "$" is used to escape special names.
   return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || c == '_' || c == '~' || c == '@' ||
          c == '$';
 }
@@ -82,6 +83,21 @@ bool ExprTokenizer::Tokenize() {
 
       tokens_.emplace_back(ExprTokenType::kStringLiteral, result.value(),
                            string_info->string_begin);
+      continue;
+    }
+
+    // Special escaped identifiers.
+    if (cur_char() == '$') {
+      // Here just discard the name and contents. These will be re-extracted by the parser. This
+      // could be optimized to avoid the extra work, but we don't need that level of optimization.
+      size_t token_begin = cur_;
+      SpecialIdentifier special = SpecialIdentifier::kNone;
+      std::string special_cont;
+      err_ = ParseSpecialIdentifier(input_, &cur_, &special, &special_cont, &error_location_);
+      if (err_.has_error())
+        break;
+      tokens_.emplace_back(ExprTokenType::kSpecialName,
+                           input_.substr(token_begin, cur_ - token_begin), token_begin);
       continue;
     }
 

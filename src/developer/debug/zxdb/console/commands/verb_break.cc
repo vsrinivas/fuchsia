@@ -47,9 +47,9 @@ Location arguments
       break
 
 )" LOCATION_ARG_HELP("break") LOCATION_EXPRESSION_HELP("break")
-        R"(  You can also specify the magic symbol "@main" to break on the process'
+        R"(  You can also specify the magic symbol "$main" to break on the process'
   entrypoint:
-      break @main
+      break $main
 
 Options
 

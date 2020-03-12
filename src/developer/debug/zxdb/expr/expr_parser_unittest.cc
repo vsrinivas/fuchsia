@@ -410,6 +410,22 @@ TEST_F(ExprParserTest, Identifiers) {
   */
 }
 
+TEST_F(ExprParserTest, SpecialIdentifiers) {
+  // Most special identifier parsing is tested in the dedicated special identifier parser tests.
+  // This checks that the integration is correct.
+  EXPECT_EQ("IDENTIFIER(\"ns\"; ::\"$anon\"; ::\"Foo\")\n", GetParseString("ns::$anon::Foo"));
+  EXPECT_EQ("IDENTIFIER(\"$main\")\n", GetParseString("$main"));
+  EXPECT_EQ(
+      "BINARY_OP(+)\n"
+      " BINARY_OP(+)\n"
+      "  LITERAL(2)\n"
+      "  IDENTIFIER(\"$plt(foo_bar)\")\n"
+      " LITERAL(2)\n",
+      GetParseString("2+$plt(foo_bar)+2"));
+  EXPECT_EQ("IDENTIFIER(\"$({{impl}})\"; ::\"$(some(crazyness)$here))\")\n",
+            GetParseString("$({{impl}})::$(some(crazyness)$here\\))"));
+}
+
 // Tests << and >> operators. They are challenging because this can also appear in template
 // expressions and are parsed as something else.
 TEST_F(ExprParserTest, Shift) {

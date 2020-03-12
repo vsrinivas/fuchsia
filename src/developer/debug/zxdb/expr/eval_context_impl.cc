@@ -37,12 +37,16 @@ namespace {
 using debug_ipc::RegisterID;
 
 RegisterID GetRegisterID(const ParsedIdentifier& ident) {
+  // Check for explicit register identifier annotation.
+  if (ident.components().size() == 1 &&
+      ident.components()[0].special() == SpecialIdentifier::kRegister) {
+    return debug_ipc::StringToRegisterID(ident.components()[0].name());
+  }
+
+  // Try to convert the identifier string to a register name.
   auto str = GetSingleComponentIdentifierName(ident);
   if (!str)
     return debug_ipc::RegisterID::kUnknown;
-  if (!str->empty() && (*str)[0] == '$') {
-    return debug_ipc::StringToRegisterID(str->substr(1));
-  }
   return debug_ipc::StringToRegisterID(*str);
 }
 

@@ -18,15 +18,21 @@ class IdentifierComponent {
  public:
   IdentifierComponent();
   explicit IdentifierComponent(std::string name) : name_(std::move(name)) {}
+  IdentifierComponent(SpecialIdentifier si, std::string name = std::string())
+      : special_(si), name_(std::move(name)) {}
 
-  bool operator==(const IdentifierComponent& other) const { return name_ == other.name_; }
+  bool operator==(const IdentifierComponent& other) const {
+    return special_ == other.special_ && name_ == other.name_;
+  }
   bool operator!=(const IdentifierComponent& other) const { return !operator==(other); }
 
+  SpecialIdentifier special() const { return special_; }
   const std::string& name() const { return name_; }
 
   std::string GetName(bool include_debug) const;
 
  private:
+  SpecialIdentifier special_ = SpecialIdentifier::kNone;
   std::string name_;
 };
 

@@ -13,7 +13,18 @@ std::string ParsedIdentifierComponent::GetName(bool include_debug) const {
 
   if (include_debug)
     result.push_back('"');
-  result += name_;
+
+  if (special_ == SpecialIdentifier::kNone) {
+    result += name_;
+  } else {
+    result.append(SpecialIdentifierToString(special_));
+    if (SpecialIdentifierHasData(special_)) {
+      result.push_back('(');
+      result += name_;
+      result.push_back(')');
+    }
+  }
+
   if (include_debug)
     result.push_back('"');
 
@@ -43,8 +54,15 @@ Identifier ToIdentifier(const ParsedIdentifier& parsed) {
   ret.components().reserve(parsed.components().size());
 
   // Just convert each component to its simple name.
-  for (const auto& c : parsed.components())
-    ret.AppendComponent(IdentifierComponent(c.GetName(false)));
+  for (const auto& c : parsed.components()) {
+    // Assume components either are special or have templates, but not both.
+    if (c.special() == SpecialIdentifier::kNone) {
+      ret.AppendComponent(IdentifierComponent(c.GetName(false)));
+    } else {
+      FXL_DCHECK(!c.has_template());
+      ret.AppendComponent(IdentifierComponent(c.special(), c.name()));
+    }
+  }
   return ret;
 }
 
@@ -57,6 +75,13 @@ ParsedIdentifier ToParsedIdentifier(const Identifier& ident) {
   Err err;
   ParsedIdentifier parsed;
   for (const auto& c : ident.components()) {
+    if (c.special() != SpecialIdentifier::kNone) {
+      // Assume special components don't have templates and can be copied as-is.
+      ret.AppendComponent(ParsedIdentifierComponent(c.special(), c.name()));
+      continue;
+    }
+
+    // All normal components: try to parse.
     std::string c_name = c.GetName(false);
     err = ExprParser::ParseIdentifier(c_name, &parsed);
     if (err.has_error() || parsed.components().size() != 1) {

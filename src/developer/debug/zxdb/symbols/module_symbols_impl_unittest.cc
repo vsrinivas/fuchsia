@@ -289,7 +289,7 @@ TEST(ModuleSymbols, ResolvePLTEntry) {
   auto result = setup.symbols()->ResolveInputLocation(
       symbol_context,
       InputLocation(Identifier(
-          IdentifierComponent(std::string(TestSymbolModule::kPltFunctionName) + "@plt"))),
+          IdentifierComponent(SpecialIdentifier::kPlt, TestSymbolModule::kPltFunctionName))),
       options);
 
   ASSERT_EQ(1u, result.size());
@@ -320,7 +320,7 @@ TEST(ModuleSymbols, ResolveMainFunction) {
   SymbolContext symbol_context = SymbolContext::ForRelativeAddresses();
 
   // The sample module is a shared library with no main function, so there should be nothing found.
-  InputLocation input_loc(Identifier(IdentifierComponent("@main")));
+  InputLocation input_loc((Identifier(IdentifierComponent(SpecialIdentifier::kMain))));
   ResolveOptions options;
   auto addrs = setup.symbols()->ResolveInputLocation(symbol_context, input_loc, options);
   EXPECT_TRUE(addrs.empty());
@@ -337,7 +337,7 @@ TEST(ModuleSymbols, ResolveMainFunction) {
   auto main_node = setup.symbols()->index_.root().AddChild(IndexNode::Kind::kFunction, "main");
   main_node->AddDie(my_function_matches[0]);
 
-  // Query for @main again. Since nothing is marked as the main function, the
+  // Query for $main again. Since nothing is marked as the main function, the
   // one named "main" should be returned. Since we redirected the index above,
   // this will actually be "MyFunction".
   addrs = setup.symbols()->ResolveInputLocation(symbol_context, input_loc, options);

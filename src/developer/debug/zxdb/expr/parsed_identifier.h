@@ -14,11 +14,10 @@ namespace zxdb {
 // languages (while the base Identifier will always only support opaque string components).
 class ParsedIdentifierComponent {
  public:
-  ParsedIdentifierComponent();
+  ParsedIdentifierComponent() = default;
 
   // Constructor for names without templates.
-  explicit ParsedIdentifierComponent(std::string name)
-      : name_(std::move(name)), has_template_(false) {}
+  explicit ParsedIdentifierComponent(std::string name) : name_(std::move(name)) {}
 
   // Constructor for names with templates. The contents will be a vector of somewhat-normalized type
   // string in between the <>. This always generates a template even if the contents are empty
@@ -28,6 +27,9 @@ class ParsedIdentifierComponent {
         has_template_(true),
         template_contents_(std::move(template_contents)) {}
 
+  ParsedIdentifierComponent(SpecialIdentifier si, std::string name = std::string())
+      : special_(si), name_(std::move(name)) {}
+
   bool operator==(const ParsedIdentifierComponent& other) const {
     return name_ == other.name_ && has_template_ == other.has_template_ &&
            template_contents_ == other.template_contents_;
@@ -36,6 +38,7 @@ class ParsedIdentifierComponent {
 
   bool has_template() const { return has_template_; }
 
+  SpecialIdentifier special() const { return special_; }
   const std::string& name() const { return name_; }
 
   const std::vector<std::string>& template_contents() const { return template_contents_; }
@@ -46,9 +49,10 @@ class ParsedIdentifierComponent {
   std::string GetName(bool include_debug) const;
 
  private:
+  SpecialIdentifier special_ = SpecialIdentifier::kNone;
   std::string name_;
 
-  bool has_template_;
+  bool has_template_ = false;
 
   std::vector<std::string> template_contents_;
 };

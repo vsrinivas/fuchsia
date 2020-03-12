@@ -88,6 +88,10 @@ std::optional<std::string> GetPLTInputLocation(const InputLocation& loc) {
   if (loc.type != InputLocation::Type::kName || loc.name.components().size() != 1)
     return std::nullopt;
 
+  if (loc.name.components()[0].special() == SpecialIdentifier::kPlt)
+    return loc.name.components()[0].name();
+
+  // TODO(bug 5722) remove support for the "@plt" method once all callers have been updated.
   const IdentifierComponent& comp = loc.name.components()[0];
   if (!StringEndsWith(comp.name(), "@plt"))
     return std::nullopt;
@@ -99,7 +103,7 @@ std::optional<std::string> GetPLTInputLocation(const InputLocation& loc) {
 bool ReferencesMainFunction(const InputLocation& loc) {
   if (loc.type != InputLocation::Type::kName || loc.name.components().size() != 1)
     return false;
-  return loc.name.components()[0].name() == "@main";
+  return loc.name.components()[0].special() == SpecialIdentifier::kMain;
 }
 
 }  // namespace

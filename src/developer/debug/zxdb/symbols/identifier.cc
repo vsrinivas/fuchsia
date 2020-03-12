@@ -7,13 +7,26 @@
 namespace zxdb {
 
 std::string IdentifierComponent::GetName(bool include_debug) const {
-  if (!include_debug)
+  if (!include_debug && special_ == SpecialIdentifier::kNone)  // Common case.
     return name_;
 
   std::string result;
-  result.push_back('"');
-  result.append(name_);
-  result.push_back('"');
+  if (include_debug)
+    result.push_back('"');
+
+  if (special_ == SpecialIdentifier::kNone) {
+    result.append(name_);
+  } else {
+    result.append(SpecialIdentifierToString(special_));
+    if (SpecialIdentifierHasData(special_)) {
+      result.push_back('(');
+      result.append(name_);
+      result.push_back(')');
+    }
+  }
+
+  if (include_debug)
+    result.push_back('"');
   return result;
 }
 

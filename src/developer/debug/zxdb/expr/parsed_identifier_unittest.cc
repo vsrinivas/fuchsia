@@ -26,6 +26,16 @@ TEST(ParsedIdentifier, GetName) {
   qualified.AppendComponent(ParsedIdentifierComponent("Second", {"int", "Foo"}));
   EXPECT_EQ("::First::Second<int, Foo>", qualified.GetFullName());
   EXPECT_EQ("::\"First\"; ::\"Second\",<\"int\", \"Foo\">", qualified.GetDebugName());
+
+  // PLT function.
+  ParsedIdentifier plt(IdentifierQualification::kRelative,
+                       ParsedIdentifierComponent(SpecialIdentifier::kPlt, "zx_foo_bar"));
+  EXPECT_EQ("$plt(zx_foo_bar)", plt.GetFullName());
+
+  // Main function.
+  ParsedIdentifier main(IdentifierQualification::kRelative,
+                        ParsedIdentifierComponent(SpecialIdentifier::kMain));
+  EXPECT_EQ("$main", main.GetFullName());
 }
 
 TEST(ParsedIdentifier, ToIdentifier) {
@@ -40,6 +50,16 @@ TEST(ParsedIdentifier, ToIdentifier) {
 
   Identifier complex_out = ToIdentifier(complex);
   EXPECT_EQ("::\"std\"; ::\"vector<int>\"; ::\"iterator\"", complex_out.GetDebugName());
+
+  // PLT function.
+  ParsedIdentifier plt(IdentifierQualification::kRelative,
+                       ParsedIdentifierComponent(SpecialIdentifier::kPlt, "zx_foo_bar"));
+  EXPECT_EQ("\"$plt(zx_foo_bar)\"", ToIdentifier(plt).GetDebugName());
+
+  // Main function.
+  ParsedIdentifier main(IdentifierQualification::kRelative,
+                        ParsedIdentifierComponent(SpecialIdentifier::kMain));
+  EXPECT_EQ("\"$main\"", ToIdentifier(main).GetDebugName());
 }
 
 TEST(ParsedIdentifier, ToParsedIdentifier) {
@@ -72,6 +92,15 @@ TEST(ParsedIdentifier, ToParsedIdentifier) {
   Identifier ident2 = ToIdentifier(ident_parsed);
   EXPECT_EQ(ident, ident2);
   EXPECT_EQ("\"vector<int>\"; ::\"foo::bar\"; ::\"hello{<\"", ident2.GetDebugName());
+
+  // Check some special names.
+  Identifier plt(IdentifierQualification::kRelative,
+                 IdentifierComponent(SpecialIdentifier::kPlt, "zx_foo_bar"));
+  EXPECT_EQ("\"$plt(zx_foo_bar)\"", ToParsedIdentifier(plt).GetDebugName());
+
+  Identifier main(IdentifierQualification::kRelative,
+                  IdentifierComponent(SpecialIdentifier::kMain));
+  EXPECT_EQ("\"$main\"", ToParsedIdentifier(main).GetDebugName());
 }
 
 }  // namespace zxdb

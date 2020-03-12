@@ -14,6 +14,7 @@ namespace zxdb {
 enum class ExprTokenType : size_t {
   kInvalid = 0,
   kName,           // random_text
+  kSpecialName,    // $something(perhaps_something_else)
   kInteger,        // 123, 0x89ab
   kFloat,          // 0.23e12  1.  2.3f  (never including a leading sign).
   kStringLiteral,  // "foo" (token value will be the decoded contents between the quotes).

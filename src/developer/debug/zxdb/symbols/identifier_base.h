@@ -6,6 +6,7 @@
 #define SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_IDENTIFIER_BASE_H_
 
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -15,6 +16,34 @@ namespace zxdb {
 // global qualification ("foo" or "Foo::Bar" in C++). Note that relative
 // can still include class or namespace qualifications.
 enum class IdentifierQualification { kGlobal, kRelative };
+
+enum class SpecialIdentifier {
+  kNone = 0,  // Not special.
+
+  // Used for "$(foo bar)" where there is no special name and the "$" is used to escape some
+  // contents. This is not stored in an Identifier since the "contents" in this case is just an
+  // identifier literal that can be stored normally. It is used by the parser to identify this case
+  // of special identifier.
+  kEscaped,
+
+  kAnon,  // Anonymous namespace.
+  kMain,  // Main function (uses DWARF-indicated "entrypoint" regardless of name).
+  kPlt,   // PLT identifier.
+  kRegister,
+
+  kLast,  // Not a type, marker for array size.
+};
+
+// The input and output strings should includes the "$" but no parens, so kMain -> "$main" and kPlt
+// -> "$plt". SpecialIdentifierToString returns the empty string for kNone and "$" for kEscaped.
+// StringToSpecialIdentifier return kNone if there's no match.
+std::string_view SpecialIdentifierToString(SpecialIdentifier i);
+SpecialIdentifier StringToSpecialIdentifier(std::string_view name);
+
+// Returns true if the given special identifier has data associated with it, e.g. "$plt(foo)".
+// Returns false if there are no parens required. Returns true for kNone since in that case it's
+// only the data.
+bool SpecialIdentifierHasData(SpecialIdentifier i);
 
 extern const char kAnonIdentifierComponentName[];
 
@@ -34,6 +63,12 @@ extern const char kAnonIdentifierComponentName[];
 //  - Comparison:
 //      operator==
 //      operator!=
+//
+// TODO(brettw) there is currently an annoying amount of duplicating between Identifier[Base] and
+// ParsedIdentifier, and also a fair bit of converting back-and-forth. We should consider moving
+// ParsedIdentifier to symbols and using that everywhere (renamed to Identifier), and having a
+// "parse" callback function for the higher-level "expr" layer to inject its full parser into the
+// lower-layer symbol directory.
 template <class ComponentType>
 class IdentifierBase {
  public:

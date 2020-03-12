@@ -32,6 +32,16 @@ TEST(Identifier, GetName) {
   EXPECT_EQ("::$anon", anon.GetFullName());
   anon.AppendComponent(IdentifierComponent("SomeFunction"));
   EXPECT_EQ("::$anon::SomeFunction", anon.GetFullName());
+
+  // PLT function.
+  Identifier plt(IdentifierQualification::kRelative,
+                 IdentifierComponent(SpecialIdentifier::kPlt, "zx_foo_bar"));
+  EXPECT_EQ("$plt(zx_foo_bar)", plt.GetFullName());
+
+  // Main function.
+  Identifier main(IdentifierQualification::kRelative,
+                  IdentifierComponent(SpecialIdentifier::kMain));
+  EXPECT_EQ("$main", main.GetFullName());
 }
 
 TEST(Identifier, GetScope) {

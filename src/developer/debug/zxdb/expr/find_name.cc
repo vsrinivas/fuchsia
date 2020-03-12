@@ -602,7 +602,8 @@ VisitResult FindIndexedNameInModule(const FindNameOptions& options,
 }
 
 const std::string* GetSingleComponentIdentifierName(const ParsedIdentifier& ident) {
-  if (ident.components().size() != 1 || ident.components()[0].has_template())
+  if (ident.components().size() != 1 || ident.components()[0].has_template() ||
+      ident.components()[0].special() != SpecialIdentifier::kNone)
     return nullptr;
   return &ident.components()[0].name();
 }

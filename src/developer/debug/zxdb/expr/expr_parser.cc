@@ -9,6 +9,7 @@
 #include "src/developer/debug/zxdb/expr/expr_tokenizer.h"
 #include "src/developer/debug/zxdb/expr/name_lookup.h"
 #include "src/developer/debug/zxdb/expr/number_parser.h"
+#include "src/developer/debug/zxdb/expr/parse_special_identifier.h"
 #include "src/developer/debug/zxdb/expr/template_type_extractor.h"
 #include "src/developer/debug/zxdb/symbols/array_type.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
@@ -98,6 +99,7 @@ ExprParser::DispatchInfo ExprParser::kDispatchInfo[] = {
     // Prefix handler              Infix handler                 Precedence for infix
     {nullptr,                      nullptr,                      -1},                             // kInvalid
     {&ExprParser::NamePrefix,      nullptr,                      -1},                             // kName
+    {&ExprParser::NamePrefix,      nullptr,                      -1},                             // kSpecialName
     {&ExprParser::LiteralPrefix,   nullptr,                      -1},                             // kInteger
     {&ExprParser::LiteralPrefix,   nullptr,                      -1},                             // kFloat
     {&ExprParser::LiteralPrefix,   nullptr,                      -1},                             // kStringLiteral
@@ -238,9 +240,11 @@ ExprParser::ParseNameResult ExprParser::ParseName(bool expand_types) {
   // like how the C++ spec uses it), while our Identifier class represents a whole name with scopes
   // and templates.
   //
-  //   name := type-name | other-identifier
+  //   name := type-name | special-identifier | other-identifier
   //
   //   type-name := [ scope-name "::" ] identifier [ "<" template-list ">" ]
+  //
+  //   special-identifier := "$" [ special-name ] [ "(" special-contents ")" ]
   //
   //   other-identifier := [ <scope-name> "::" ] <identifier>
   //
@@ -357,7 +361,8 @@ ExprParser::ParseNameResult ExprParser::ParseName(bool expand_types) {
         continue;  // Don't Consume() since we already ate the token.
       }
 
-      case ExprTokenType::kName: {
+      case ExprTokenType::kName:
+      case ExprTokenType::kSpecialName: {
         // Names can only follow nothing or "::".
         if (mode == kType) {
           // Normally in C++ a name can follow a type, so make a special error for this case.
@@ -365,9 +370,9 @@ ExprParser::ParseNameResult ExprParser::ParseName(bool expand_types) {
           return ParseNameResult();
         } else if (mode == kBegin) {
           // Found an identifier name with nothing before it.
-          result.ident = ParsedIdentifier(token.value());
+          result.ident = ParsedIdentifier(GetIdentifierComponent());
         } else if (mode == kColonColon) {
-          result.ident.AppendComponent(ParsedIdentifierComponent(cur_token().value()));
+          result.ident.AppendComponent(GetIdentifierComponent());
         } else {
           // Anything else like "std::vector foo" or "foo bar".
           SetError(token, "Unexpected identifier, did you forget an operator?");
@@ -439,6 +444,29 @@ ExprParser::ParseNameResult ExprParser::ParseName(bool expand_types) {
   FXL_NOTREACHED();
   SetError(ExprToken(), "Internal error.");
   return ParseNameResult();
+}
+
+ParsedIdentifierComponent ExprParser::GetIdentifierComponent() {
+  const ExprToken& token = cur_token();
+  FXL_DCHECK(!token.value().empty());  // Should not have an empty name token.
+
+  if (token.value()[0] == '$') {
+    // Special identifier, need to parse it.
+    size_t cur = 0;             // Special name is at the beginning of the token.
+    size_t error_location = 0;  // Don't need this.
+    SpecialIdentifier si = SpecialIdentifier::kNone;
+    std::string special_cont;
+    if (Err err = ParseSpecialIdentifier(token.value(), &cur, &si, &special_cont, &error_location);
+        err.has_error()) {
+      SetError(token, err);
+      return ParsedIdentifierComponent();
+    }
+
+    return ParsedIdentifierComponent(si, special_cont);
+  }
+
+  // Regular identifier, can just return a component for the literal value.
+  return ParsedIdentifierComponent(token.value());
 }
 
 fxl::RefPtr<Type> ExprParser::ParseType(fxl::RefPtr<Type> optional_base) {
@@ -902,7 +930,8 @@ fxl::RefPtr<ExprNode> ExprParser::UnaryPrefix(const ExprToken& token) {
 
 fxl::RefPtr<ExprNode> ExprParser::NamePrefix(const ExprToken& token) {
   // Handles names and "::" which precedes names. This could be a typename ("int", or
-  // "::std::vector<int>") or a variable name ("i", "std::basic_string<char>::npos").
+  // "::std::vector<int>"), a variable name ("i", "std::basic_string<char>::npos"), and can also
+  // include special names like "$plt(zx_foo_bar)"
 
   // Back up so the current token is the first component of the name so we can hand-off to the
   // specialized name parser.
@@ -1067,6 +1096,11 @@ fxl::RefPtr<Type> ExprParser::ApplyQualifiers(fxl::RefPtr<Type> input,
     type = fxl::MakeRefCounted<ModifiedType>(*iter, std::move(type));
   }
   return type;
+}
+
+void ExprParser::SetError(const ExprToken& token, Err err) {
+  err_ = std::move(err);
+  error_token_ = token;
 }
 
 void ExprParser::SetError(const ExprToken& token, std::string msg) {

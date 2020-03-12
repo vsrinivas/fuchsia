@@ -19,11 +19,11 @@ namespace {
 // (called "@main"). The @ sign is not a valid identifier character otherwise, so we key off of
 // that.
 //
-// TODO(bug 5722): This should be updated when we have more consistent escaping and we can be
-// sure that the name is actually special
+// TODO(bug 5722): Remove handling for "@" when al callers are updated to use the new syntax.
 bool IsSpecialSymbolName(const Identifier& ident) {
   return ident.components().size() == 1u &&
-         ident.components()[0].name().find('@') != std::string::npos;
+         (ident.components()[0].name().find('@') != std::string::npos ||
+          ident.components()[0].special() != SpecialIdentifier::kNone);
 }
 
 }  // namespace
