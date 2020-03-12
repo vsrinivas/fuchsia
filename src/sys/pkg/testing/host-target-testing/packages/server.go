@@ -24,10 +24,11 @@ import (
 )
 
 type Server struct {
-	Dir    string
-	URL    string
-	Hash   string
-	server *http.Server
+	Dir          string
+	URL          string
+	Hash         string
+	server       *http.Server
+	shuttingDown chan struct{}
 }
 
 func newServer(ctx context.Context, dir string, localHostname string, repoName string) (*Server, error) {
@@ -68,9 +69,12 @@ func newServer(ctx context.Context, dir string, localHostname string, repoName s
 		}
 	}()
 
+	shuttingDown := make(chan struct{})
+
 	// Tear down the server if the context expires.
 	go func() {
 		select {
+		case <-shuttingDown:
 		case <-ctx.Done():
 			server.Shutdown(ctx)
 		}
@@ -78,15 +82,17 @@ func newServer(ctx context.Context, dir string, localHostname string, repoName s
 	}()
 
 	return &Server{
-		Dir:    dir,
-		URL:    configURL,
-		Hash:   configHash,
-		server: server,
+		Dir:          dir,
+		URL:          configURL,
+		Hash:         configHash,
+		server:       server,
+		shuttingDown: shuttingDown,
 	}, err
 }
 
 func (s *Server) Shutdown(ctx context.Context) {
 	s.server.Shutdown(ctx)
+	close(s.shuttingDown)
 }
 
 type loggingWriter struct {
