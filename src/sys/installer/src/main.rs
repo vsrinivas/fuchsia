@@ -13,7 +13,7 @@ use {
     fidl_fuchsia_device::ControllerProxy,
     fidl_fuchsia_hardware_block::BlockProxy,
     fidl_fuchsia_paver::{DynamicDataSinkProxy, PaverMarker, PaverProxy},
-    fuchsia_async as fasync,
+    fidl_fuchsia_sysinfo as fsysinfo, fuchsia_async as fasync,
     fuchsia_component::client,
     fuchsia_zircon as zx, fuchsia_zircon_status as zx_status,
     std::{
@@ -23,6 +23,12 @@ use {
     },
     structopt::StructOpt,
 };
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum BootloaderType {
+    Efi,
+    Coreboot,
+}
 
 async fn connect_to_service(path: &str) -> Result<fidl::AsyncChannel, Error> {
     let (local, remote) = zx::Channel::create().context("Creating channel")?;
@@ -116,12 +122,15 @@ fn select_block_device(devices: Vec<&(String, u64)>) -> Result<&String, Error> {
     get_user_selection(devices.iter().map(|(path, _)| path).collect())
 }
 
-async fn find_install_source(block_devices: Vec<&String>) -> Result<&String, Error> {
+async fn find_install_source(
+    block_devices: Vec<&String>,
+    bootloader: BootloaderType,
+) -> Result<&String, Error> {
     let mut candidate = Err(anyhow!("Could not find the installer disk. Is it plugged in?"));
     for device in block_devices.iter() {
         // get_partitions returns an empty vector if it doesn't find any partitions
         // with the workstation-installer GUID on the disk.
-        let partitions = Partition::get_partitions(&device).await?;
+        let partitions = Partition::get_partitions(&device, bootloader).await?;
         if !partitions.is_empty() {
             if candidate.is_err() {
                 candidate = Ok(*device);
@@ -149,6 +158,29 @@ fn paver_connect(path: &str) -> Result<(PaverProxy, DynamicDataSinkProxy), Error
     let data_sink =
         DynamicDataSinkProxy::from_channel(fidl::AsyncChannel::from_channel(data_sink_chan)?);
     Ok((paver, data_sink))
+}
+
+async fn get_bootloader_type() -> Result<BootloaderType, Error> {
+    let (sysinfo_chan, remote) = zx::Channel::create()?;
+    fdio::service_connect(&"/dev/sys/platform", remote).context("Connect to sysinfo")?;
+    let sysinfo =
+        fsysinfo::SysInfoProxy::from_channel(fidl::AsyncChannel::from_channel(sysinfo_chan)?);
+    let (status, bootloader) =
+        sysinfo.get_bootloader_vendor().await.context("Getting bootloader vendor")?;
+    if let Some(bootloader) = bootloader {
+        println!("Bootloader vendor = {}", bootloader);
+        if bootloader == "coreboot" {
+            Ok(BootloaderType::Coreboot)
+        } else {
+            // The installer only supports coreboot and EFI,
+            // and EFI BIOS vendor depends on the manufacturer,
+            // so we assume that non-coreboot bootloader vendors
+            // mean EFI.
+            Ok(BootloaderType::Efi)
+        }
+    } else {
+        Err(Error::new(zx::Status::from_raw(status)))
+    }
 }
 
 fn do_confirmation_prompt() -> Result<bool, Error> {
@@ -185,8 +217,10 @@ struct Opt {
 async fn main() -> Result<(), Error> {
     let opt = Opt::from_args();
     let block_devices = get_block_devices().await?;
+    let bootloader_type = get_bootloader_type().await?;
     let install_source =
-        find_install_source(block_devices.iter().map(|(part, _)| part).collect()).await?;
+        find_install_source(block_devices.iter().map(|(part, _)| part).collect(), bootloader_type)
+            .await?;
     let block_device_path = opt.block_device.as_ref().unwrap_or_else(|| {
         select_block_device(
             block_devices.iter().filter(|(part, _)| part != install_source).collect(),
@@ -220,8 +254,9 @@ async fn main() -> Result<(), Error> {
     data_sink.initialize_partition_tables().await?;
     println!("Success.");
 
-    let to_install =
-        Partition::get_partitions(&install_source).await.context("Getting source partitions")?;
+    let to_install = Partition::get_partitions(&install_source, bootloader_type)
+        .await
+        .context("Getting source partitions")?;
 
     for part in to_install {
         print!("{:?}... ", part);

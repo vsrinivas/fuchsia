@@ -23,12 +23,14 @@ rustc_binary("bin") {
     "//src/lib/zircon/rust:fuchsia-zircon-status",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:regex",
     "//third_party/rust_crates:structopt",
     "//zircon/system/fidl/fuchsia-device:fuchsia-device-rustc",
     "//zircon/system/fidl/fuchsia-hardware-block:fuchsia-hardware-block-rustc",
     "//zircon/system/fidl/fuchsia-hardware-block-partition:fuchsia-hardware-block-partition-rustc",
     "//zircon/system/fidl/fuchsia-mem:fuchsia-mem-rustc",
     "//zircon/system/fidl/fuchsia-paver:fuchsia-paver-rustc",
+    "//zircon/system/fidl/fuchsia-sysinfo:fuchsia-sysinfo-rustc",
   ]
 }
 
