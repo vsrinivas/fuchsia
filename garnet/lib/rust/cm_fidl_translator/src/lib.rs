@@ -168,6 +168,7 @@ impl CmInto<fsys::UseRunnerDecl> for cm::UseRunner {
 impl CmInto<fsys::UseEventDecl> for cm::UseEvent {
     fn cm_into(self) -> Result<fsys::UseEventDecl, Error> {
         Ok(fsys::UseEventDecl {
+            source: Some(self.source.cm_into()?),
             source_name: Some(self.source_name.into()),
             target_name: Some(self.target_name.into()),
         })
@@ -792,7 +793,19 @@ mod tests {
                     },
                     {
                         "event": {
-                            "source_name": "started_on_x",
+                            "source": {
+                                "realm": {}
+                            },
+                            "source_name": "started",
+                            "target_name": "started_from_realm"
+                        }
+                    },
+                    {
+                        "event": {
+                            "source": {
+                                "framework": {}
+                            },
+                            "source_name": "started",
                             "target_name": "started"
                         }
                     }
@@ -842,7 +855,13 @@ mod tests {
                         source_name: Some("elf".to_string()),
                     }),
                     fsys::UseDecl::Event(fsys::UseEventDecl {
-                        source_name: Some("started_on_x".to_string()),
+                        source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                        source_name: Some("started".to_string()),
+                        target_name: Some("started_from_realm".to_string()),
+                    }),
+                    fsys::UseDecl::Event(fsys::UseEventDecl {
+                        source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
+                        source_name: Some("started".to_string()),
                         target_name: Some("started".to_string()),
                     }),
                 ];

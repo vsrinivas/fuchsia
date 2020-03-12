@@ -43,10 +43,12 @@ fn main() {
                 target_path: Some("/svc/fuchsia.fonts.LegacyProvider".to_string()),
             }),
             UseDecl::Event(UseEventDecl {
+                source: Some(Ref::Framework(FrameworkRef {})),
                 source_name: Some("started".to_string()),
                 target_name: Some("started".to_string()),
             }),
             UseDecl::Event(UseEventDecl {
+                source: Some(Ref::Realm(RealmRef {})),
                 source_name: Some("capability_ready_diagnostics".to_string()),
                 target_name: Some("capability_ready".to_string()),
             }),

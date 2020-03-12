@@ -469,6 +469,7 @@ fsys::UseRunnerDecl,
 fidl_into_struct!(UseEventDecl, UseEventDecl, fsys::UseEventDecl,
 fsys::UseEventDecl,
 {
+    source: UseSource,
     source_name: CapabilityName,
     target_name: CapabilityName,
 });
@@ -1630,6 +1631,7 @@ mod tests {
                        source_name: Some("myrunner".to_string()),
                    }),
                    fsys::UseDecl::Event(fsys::UseEventDecl {
+                       source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
                        source_name: Some("started_on_x".to_string()),
                        target_name: Some("started".to_string()),
                    }),
@@ -1883,6 +1885,7 @@ mod tests {
                             source_name: "myrunner".into(),
                         }),
                         UseDecl::Event(UseEventDecl {
+                            source: UseSource::Realm,
                             source_name: "started_on_x".into(),
                             target_name: "started".into(),
                         })

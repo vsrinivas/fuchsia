@@ -1030,7 +1030,7 @@ mod tests {
                   { "storage": "cache", "as": "/tmp" },
                   { "storage": "meta" },
                   { "runner": "elf" },
-                  { "event": "started" },
+                  { "event": "started", "from": "framework" },
                   { "event": "capability_ready_diagnostics", "as": "capability_ready" },
                 ]
             }),

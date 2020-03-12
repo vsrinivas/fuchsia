@@ -458,6 +458,7 @@ impl<'a> ValidationContext<'a> {
                 );
             }
             fsys::UseDecl::Event(e) => {
+                self.validate_source(e.source.as_ref(), "UseEventDecl", "source");
                 check_name(e.source_name.as_ref(), "UseEventDecl", "source_name", &mut self.errors);
                 check_name(e.target_name.as_ref(), "UseEventDecl", "target_name", &mut self.errors);
             }
@@ -474,18 +475,22 @@ impl<'a> ValidationContext<'a> {
         source_path: Option<&String>,
         target_path: Option<&String>,
     ) {
+        self.validate_source(source, decl, "source");
+        check_path(source_path, decl, "source_path", &mut self.errors);
+        check_path(target_path, decl, "target_path", &mut self.errors);
+    }
+
+    fn validate_source(&mut self, source: Option<&fsys::Ref>, decl: &str, field: &str) {
         match source {
             Some(fsys::Ref::Realm(_)) => {}
             Some(fsys::Ref::Framework(_)) => {}
             Some(_) => {
-                self.errors.push(Error::invalid_field(decl, "source"));
+                self.errors.push(Error::invalid_field(decl, field));
             }
             None => {
-                self.errors.push(Error::missing_field(decl, "source"));
+                self.errors.push(Error::missing_field(decl, field));
             }
         };
-        check_path(source_path, decl, "source_path", &mut self.errors);
-        check_path(target_path, decl, "target_path", &mut self.errors);
     }
 
     fn validate_child_decl(&mut self, child: &'a fsys::ChildDecl) {
@@ -1932,6 +1937,7 @@ mod tests {
                         source_name: None,
                     }),
                     UseDecl::Event(UseEventDecl {
+                        source: None,
                         source_name: None,
                         target_name: None,
                     })
@@ -1952,6 +1958,7 @@ mod tests {
                 Error::missing_field("UseStorageDecl", "type"),
                 Error::missing_field("UseStorageDecl", "target_path"),
                 Error::missing_field("UseRunnerDecl", "source_name"),
+                Error::missing_field("UseEventDecl", "source"),
                 Error::missing_field("UseEventDecl", "source_name"),
                 Error::missing_field("UseEventDecl", "target_name"),
             ])),
@@ -1986,6 +1993,7 @@ mod tests {
                         target_path: Some("/meta".to_string()),
                     }),
                     UseDecl::Event(UseEventDecl {
+                        source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
                         source_name: Some("/foo".to_string()),
                         target_name: Some("/foo".to_string()),
                     }),
@@ -2005,6 +2013,7 @@ mod tests {
                 Error::invalid_field("UseDirectoryDecl", "subdir"),
                 Error::invalid_field("UseStorageDecl", "target_path"),
                 Error::invalid_field("UseStorageDecl", "target_path"),
+                Error::invalid_field("UseEventDecl", "source"),
                 Error::invalid_character_in_field("UseEventDecl", "source_name", '/'),
                 Error::invalid_character_in_field("UseEventDecl", "target_name", '/'),
             ])),
@@ -2055,6 +2064,7 @@ mod tests {
                         source_name: Some(format!("{}", "a".repeat(101))),
                     }),
                     UseDecl::Event(UseEventDecl {
+                        source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
                         source_name: Some(format!("{}", "a".repeat(101))),
                         target_name: Some(format!("{}", "a".repeat(101)))
                     }),

@@ -109,9 +109,12 @@ table UseRunnerDecl {
 
 /// Declares an event used by a component.
 table UseEventDecl {
+    /// The provider of the event. Must be |realm| or |framework|.
+    1: Ref source;
+
     /// Name identifying the event which was presented to this component.
-    1: fuchsia.component.event_name source_name;
+    2: fuchsia.component.event_name source_name;
 
     /// The name which the component will use to refer to this event.
-    2: fuchsia.component.event_name target_name;
+    3: fuchsia.component.event_name target_name;
 };

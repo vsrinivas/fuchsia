@@ -267,6 +267,8 @@ pub struct UseRunner {
 /// [`UseEventDecl`]: ../../fidl_fuchsia_sys2/struct.UseEventDecl.html
 #[derive(Serialize, Deserialize, Debug)]
 pub struct UseEvent {
+    /// Used event source.
+    pub source: Ref,
     /// Used event source name.
     pub source_name: Name,
     /// Used event target name.

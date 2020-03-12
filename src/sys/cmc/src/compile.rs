@@ -146,7 +146,9 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<cm::Use>, Error> {
             out_uses.push(cm::Use::Runner(cm::UseRunner { source_name: cm::Name::new(p.clone())? }))
         } else if let Some(p) = use_.event() {
             let target_id = one_target_capability_id(use_, use_)?;
+            let source = extract_use_source(use_)?;
             out_uses.push(cm::Use::Event(cm::UseEvent {
+                source,
                 source_name: cm::Name::new(p.clone())?,
                 target_name: cm::Name::new(target_id)?,
             }));
@@ -836,7 +838,7 @@ mod tests {
                     { "storage": "cache", "as": "/tmp" },
                     { "runner": "elf" },
                     { "runner": "web" },
-                    { "event": "started" },
+                    { "event": "started", "from": "framework" },
                     { "event": "diagnostics_on_x", "as": "diagnostics" },
                 ],
             }),
@@ -926,12 +928,18 @@ mod tests {
         },
         {
             "event": {
+                "source": {
+                    "framework": {}
+                },
                 "source_name": "started",
                 "target_name": "started"
             }
         },
         {
             "event": {
+                "source": {
+                    "realm": {}
+                },
                 "source_name": "diagnostics_on_x",
                 "target_name": "diagnostics"
             }

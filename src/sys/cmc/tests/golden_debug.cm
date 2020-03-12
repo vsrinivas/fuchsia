@@ -28,12 +28,18 @@
         },
         {
             "event": {
+                "source": {
+                    "framework": {}
+                },
                 "source_name": "started",
                 "target_name": "started"
             }
         },
         {
             "event": {
+                "source": {
+                    "realm": {}
+                },
                 "source_name": "capability_ready_diagnostics",
                 "target_name": "capability_ready"
             }

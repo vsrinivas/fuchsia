@@ -17,6 +17,7 @@
     },
     {
       "event": "started",
+      "from": "framework"
     },
     {
       "event": "capability_ready_diagnostics",
