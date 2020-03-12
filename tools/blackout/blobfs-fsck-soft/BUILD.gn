@@ -59,7 +59,7 @@ package("blobfs-fsck-soft-target") {
   deps = [
     ":blobfs-fsck-soft-target-bin",
     ":blobfs.manifest",
-    "//src/storage/blobfs-load-generator",
+    "//zircon/system/ulib/blobfs/test:blobfs-load-generator",
   ]
   binaries = [
     {
@@ -82,7 +82,7 @@ test_package("blobfs-fsck-soft-target-test") {
   deps = [
     ":blobfs-fsck-soft-target-bin_test",
     ":blobfs.manifest",
-    "//src/storage/blobfs-load-generator",
+    "//zircon/system/ulib/blobfs/test:blobfs-load-generator",
   ]
   binaries = [
     {

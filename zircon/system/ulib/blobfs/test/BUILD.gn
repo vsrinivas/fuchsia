@@ -157,6 +157,19 @@ test("blobfs-integration") {
   include_dirs = [ ".." ]
 }
 
+source_set("load-generator") {
+  # TODO(44278): revert to true.
+  testonly = false
+  sources = [ "integration/load_generator.cc" ]
+  deps = [
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fs-test-utils",
+  ]
+}
+
 test("blobfs-large-integration") {
   # Dependent manifests unfortunately cannot be marked as `testonly`.
   # TODO(44278): Remove when converting this file to proper GN build idioms.
@@ -176,10 +189,10 @@ test("blobfs-large-integration") {
   sources = [
     "integration/large_integration_main.cc",
     "integration/large_integration_test.cc",
-    "integration/load_generator.cc",
   ]
   deps = [
     ":integration-fixtures",
+    ":load-generator",
     "//zircon/public/lib/async-loop",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/blobfs",
@@ -228,6 +241,19 @@ fuzzer("zstd-seekable-fuzzer") {
     "//zircon/public/lib/blobfs",
   ]
   include_dirs = [ ".." ]
+}
+
+executable("blobfs-load-generator") {
+  testonly = true
+  sources = [ "integration/load_generator_main.cc" ]
+  deps = [
+    ":load-generator",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fs-test-utils",
+  ]
 }
 
 migrated_manifest("blobfs-unit-manifest") {
