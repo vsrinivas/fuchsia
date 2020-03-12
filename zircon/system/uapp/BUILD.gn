@@ -6,6 +6,5 @@ group("uapp") {
   testonly = true
   deps = [
     "kcounter",
-    "kstress",
   ]
 }

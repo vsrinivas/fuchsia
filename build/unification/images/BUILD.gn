@@ -81,7 +81,6 @@ aggregate_manifest("legacy-image") {
     ":bin.kilo",
 #------------------
 #------------------
-    ":bin.kstress",
 #------------------
 #------------------
     ":bin.miscsvc",
@@ -1292,7 +1291,7 @@ aggregate_manifest("migrated-image") {
 #------------------
     "//zircon/system/uapp/psutils:kstats-manifest",
 #------------------
-    #":bin.kstress",
+    "//zircon/system/uapp/kstress:kstress-manifest",
 #------------------
     "//zircon/system/uapp/ktrace:ktrace-manifest",
     "//zircon/system/uapp/loadgen:loadgen-manifest",
