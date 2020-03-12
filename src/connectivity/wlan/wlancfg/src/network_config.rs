@@ -117,6 +117,17 @@ impl NetworkConfig {
     }
 }
 
+impl From<&NetworkConfig> for fidl_policy::NetworkConfig {
+    fn from(network_config: &NetworkConfig) -> Self {
+        let network_id = fidl_policy::NetworkIdentifier {
+            ssid: network_config.ssid.clone(),
+            type_: network_config.security_type.clone().into(),
+        };
+        let credential = network_config.credential.clone().into();
+        fidl_policy::NetworkConfig { id: Some(network_id), credential: Some(credential) }
+    }
+}
+
 /// The credential of a network connection. It mirrors the fidl_fuchsia_wlan_policy Credential
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub enum Credential {
@@ -169,6 +180,16 @@ impl TryFrom<fidl_policy::Credential> for Credential {
             fidl_policy::Credential::Password(pwd) => Ok(Self::Password(pwd)),
             fidl_policy::Credential::Psk(psk) => Ok(Self::Psk(psk)),
             _ => Err(NetworkConfigError::CredentialTypeInvalid),
+        }
+    }
+}
+
+impl From<Credential> for fidl_policy::Credential {
+    fn from(credential: Credential) -> Self {
+        match credential {
+            Credential::Password(pwd) => fidl_policy::Credential::Password(pwd),
+            Credential::Psk(psk) => fidl_policy::Credential::Psk(psk),
+            Credential::None => fidl_policy::Credential::None(fidl_policy::Empty),
         }
     }
 }

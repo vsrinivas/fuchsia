@@ -241,6 +241,12 @@ impl SavedNetworksManager {
             id.security_type
         );
     }
+
+    // Return a list of every network config that has been saved.
+    pub fn get_networks(&self) -> Vec<NetworkConfig> {
+        let guard = self.saved_networks.lock();
+        guard.values().into_iter().map(|cfgs| cfgs.clone()).flatten().collect()
+    }
 }
 
 /// If the list of configs is at capacity for the number of saved configs per SSID,

@@ -34,6 +34,11 @@ use {
 pub mod listener;
 mod scan;
 
+/// Max number of network configs that we will send at once through the network config iterator
+/// in get_saved_networks. This depends on the maximum size of a FIDL NetworkConfig, so it may
+/// need to change if a FIDL NetworkConfig or FIDL Credential changes.
+const MAX_CONFIGS_PER_RESPONSE: usize = 100;
+
 /// Wrapper around a Client interface, granting access to the Client SME.
 /// A Client might not always be available, for example, if no Client interface was created yet.
 #[derive(Debug)]
@@ -428,21 +433,40 @@ fn handle_client_request_remove_network(
 
 /// For now, instead of giving actual results simply give nothing.
 async fn handle_client_request_get_networks(
-    _saved_networks: SavedNetworksPtr,
+    saved_networks: SavedNetworksPtr,
     iterator: fidl::endpoints::ServerEnd<fidl_policy::NetworkConfigIteratorMarker>,
 ) -> Result<(), fidl::Error> {
+    // make sufficiently small batches of networks to send and convert configs to FIDL values
+    let network_configs = saved_networks.get_networks();
+    let chunks = network_configs.chunks(MAX_CONFIGS_PER_RESPONSE);
+    let fidl_chunks = chunks.into_iter().map(|chunk| {
+        chunk
+            .iter()
+            .map(fidl_policy::NetworkConfig::from)
+            .collect::<Vec<fidl_policy::NetworkConfig>>()
+    });
     let mut stream = iterator.into_stream()?;
+    for chunk in fidl_chunks {
+        send_next_chunk(&mut stream, chunk).await?;
+    }
+    send_next_chunk(&mut stream, vec![]).await
+}
+
+/// Send a chunk of saved networks to the specified FIDL iterator
+async fn send_next_chunk(
+    stream: &mut fidl_policy::NetworkConfigIteratorRequestStream,
+    chunk: Vec<fidl_policy::NetworkConfig>,
+) -> Result<(), fidl::Error> {
     if let Some(req) = stream.try_next().await? {
         let fidl_policy::NetworkConfigIteratorRequest::GetNext { responder } = req;
-        let networks: Vec<fidl_policy::NetworkConfig> = vec![];
-        responder.send(&mut networks.into_iter())?;
+        responder.send(&mut chunk.into_iter())
     } else {
         // This will happen if the iterator request stream was closed and we expected to send
         // another response.
         // TODO(45113) Test this error path
-        info!("Info: peer closed channel for get saved networks results unexpectedly");
+        info!("Info: peer closed channel for network config results unexpectedly");
+        Ok(())
     }
-    Ok(())
 }
 
 /// convert from policy fidl Credential to sme fidl Credential
@@ -1556,27 +1580,120 @@ mod tests {
     }
 
     #[test]
-    fn get_saved_networks_should_fail() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let mut test_values = test_setup("get_saved_networks_should_fail", &mut exec);
-        let serve_fut = serve_provider_requests(
-            test_values.client,
-            test_values.update_sender,
-            Arc::clone(&test_values.saved_networks),
-            test_values.requests,
+    fn get_saved_networks_empty() {
+        let saved_networks = vec![];
+        let expected_configs = vec![];
+        let expected_num_sends = 0;
+        test_get_saved_networks(
+            "get_saved_networks_empty",
+            saved_networks,
+            expected_configs,
+            expected_num_sends,
         );
+    }
+
+    #[test]
+    fn get_saved_network() {
+        // save a network
+        let network_id = NetworkIdentifier::new(b"foobar".to_vec(), SecurityType::Wpa2);
+        let credential = Credential::Password(b"password".to_vec());
+        let saved_networks = vec![(network_id.clone(), credential.clone())];
+
+        let expected_id = network_id.into();
+        let expected_credential = credential.into();
+        let expected_configs = vec![fidl_policy::NetworkConfig {
+            id: Some(expected_id),
+            credential: Some(expected_credential),
+        }];
+
+        let expected_num_sends = 1;
+        test_get_saved_networks(
+            "get_saved_network",
+            saved_networks,
+            expected_configs,
+            expected_num_sends,
+        );
+    }
+
+    #[test]
+    fn get_saved_networks_multiple_chunks() {
+        // Save MAX_CONFIGS_PER_RESPONSE + 1 configs so that get_saved_networks should respond with
+        // 2 chunks of responses plus one response with an empty vector.
+        let mut saved_networks = vec![];
+        let mut expected_configs = vec![];
+        for index in 0..MAX_CONFIGS_PER_RESPONSE + 1 {
+            // Create unique network config to be saved.
+            let ssid = format!("some_config{}", index).into_bytes();
+            let net_id = NetworkIdentifier::new(ssid.clone(), SecurityType::None);
+            saved_networks.push((net_id, Credential::None));
+
+            // Create corresponding FIDL value and add to list of expected configs/
+            let ssid = format!("some_config{}", index).into_bytes();
+            let net_id = fidl_policy::NetworkIdentifier {
+                ssid: ssid,
+                type_: fidl_policy::SecurityType::None,
+            };
+            let credential = fidl_policy::Credential::None(fidl_policy::Empty);
+            let network_config =
+                fidl_policy::NetworkConfig { id: Some(net_id), credential: Some(credential) };
+            expected_configs.push(network_config);
+        }
+
+        let expected_num_sends = 2;
+        test_get_saved_networks(
+            "get_saved_networks_multiple_chunks",
+            saved_networks,
+            expected_configs,
+            expected_num_sends,
+        );
+    }
+
+    /// Test that get saved networks with the given saved networks
+    /// test_id: the name of the test to create a unique persistent store for each test
+    /// saved_configs: list of NetworkIdentifier and Credential pairs that are to be stored to the
+    ///     SavedNetworksManager in the test.
+    /// expected_configs: list of FIDL NetworkConfigs that we expect to get from get_saved_networks
+    /// expected_num_sends: number of chunks of results we expect to get from get_saved_networks.
+    ///     This is not counting the empty vector that signifies no more results.
+    fn test_get_saved_networks(
+        test_id: impl AsRef<str>,
+        saved_configs: Vec<(NetworkIdentifier, Credential)>,
+        expected_configs: Vec<fidl_policy::NetworkConfig>,
+        expected_num_sends: usize,
+    ) {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let temp_dir = TempDir::new().expect("failed to create temp dir");
+        let path = temp_dir.path().join("networks.json");
+        let tmp_path = temp_dir.path().join("tmp.json");
+        let saved_networks = Arc::new(
+            exec.run_singlethreaded(SavedNetworksManager::new_with_stash_or_paths(
+                test_id, path, tmp_path,
+            ))
+            .expect("Failed to create a KnownEssStore"),
+        );
+
+        let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
+            .expect("failed to create ClientProvider proxy");
+        let requests = requests.into_stream().expect("failed to create stream");
+
+        let (client, _sme_stream) = create_client();
+        let (update_sender, _listener_updates) = mpsc::unbounded();
+
+        let serve_fut =
+            serve_provider_requests(client, update_sender, Arc::clone(&saved_networks), requests);
         pin_mut!(serve_fut);
 
         // No request has been sent yet. Future should be idle.
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
 
+        // Save the networks specified for this test.
+        for (net_id, credential) in saved_configs {
+            saved_networks.store(net_id, credential).expect("failed to store network");
+        }
+
         // Request a new controller.
-        let (controller, _update_stream) = request_controller(&test_values.provider);
+        let (controller, _update_stream) = request_controller(&provider);
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-        assert_variant!(
-            exec.run_until_stalled(&mut test_values.listener_updates.next()),
-            Poll::Ready(_)
-        );
 
         // Issue request to get the list of saved networks.
         let (iter, server) =
@@ -1584,20 +1701,36 @@ mod tests {
                 .expect("failed to create iterator");
         controller.get_saved_networks(server).expect("Failed to call scan for networks");
 
-        // Request a chunk of results. Will progress until waiting on response from server side of
-        // the iterator.
-        let mut get_saved_fut = iter.get_next();
-        assert_variant!(exec.run_until_stalled(&mut get_saved_fut), Poll::Pending);
-        // Progress sever side forward so that it will respond to the iterator get next request.
-        // After, it will be waiting on the next client provider request because get saved networks
-        // simply returns an empty list for now
+        // Get responses from iterator. Expect to see the specified number of responses with
+        // results plus one response of an empty vector indicating the end of results.
+        let mut saved_networks_results = vec![];
+        for i in 0..expected_num_sends {
+            let mut get_saved_fut = iter.get_next();
+            assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+            let results = exec
+                .run_singlethreaded(&mut get_saved_fut)
+                .expect("Failed to get next chunk of saved networks results");
+            // the size of received chunk should either be max chunk size or whatever is left
+            // to receive in the last chunk
+            if i < expected_num_sends - 1 {
+                assert_eq!(results.len(), MAX_CONFIGS_PER_RESPONSE);
+            } else {
+                assert_eq!(results.len(), expected_configs.len() % MAX_CONFIGS_PER_RESPONSE);
+            }
+            saved_networks_results.extend(results);
+        }
+        let mut get_saved_end_fut = iter.get_next();
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+        let results = exec
+            .run_singlethreaded(&mut get_saved_end_fut)
+            .expect("Failed to get next chunk of saved networks results");
+        assert!(results.is_empty());
 
-        // the iterator should have given an empty list
-        assert_variant!(exec.run_until_stalled(&mut get_saved_fut), Poll::Ready(result) => {
-            let results = result.expect("Failed to get next get-saved-networks results");
-            assert!(results.is_empty());
-        });
+        // check whether each network we saved is in the results and that nothing else is there.
+        for network_config in &expected_configs {
+            assert!(saved_networks_results.contains(&network_config));
+        }
+        assert_eq!(expected_configs.len(), saved_networks_results.len());
     }
 
     #[test]

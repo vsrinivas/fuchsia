@@ -175,7 +175,7 @@ impl PersistentData {
     fn into_config_with_id(self, network_id: NetworkIdentifier) -> Result<NetworkConfig, Error> {
         let seen_in_passive = false;
         NetworkConfig::new(network_id, self.credential, self.has_ever_connected, seen_in_passive)
-            .map_err(|_| format_err!("error creating network config from persistent data"))
+            .map_err(|e| format_err!("error creating network config from persistent data: {:?}", e))
     }
 }
 
