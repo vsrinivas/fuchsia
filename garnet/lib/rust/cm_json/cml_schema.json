@@ -129,6 +129,26 @@
               "VERBOSITY": "1"
             }
           ]
+        },
+        "lifecycle": {
+          "type": "object",
+          "title": "Lifecycle events",
+          "description": "Lifecycle events which a program is interested in. The default is 'ignore', meaning a the component will not be notified of the event.",
+          "additionalProperties": false,
+          "properties": {
+            "stop_event": {
+              "type": "string",
+              "title": "Stop event",
+              "description": "The stop event will occur before a component is terminated",
+              "examples": [
+                "notify"
+              ],
+              "enum": [
+                "notify",
+                "ignore"
+              ]
+            }
+          }
         }
       }
     },

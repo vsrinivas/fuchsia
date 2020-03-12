@@ -1,6 +1,7 @@
 {
     "program": {
-        "binary": "bin/example"
+        "binary": "bin/example",
+        "lifecycle.stop_event": "notify"
     },
     "uses": [
         {

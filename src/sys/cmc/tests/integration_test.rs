@@ -25,10 +25,16 @@ fn main() {
     let cm_decl = cm_fidl_translator::translate(&cm_content).expect("could not translate cm");
     let expected_decl = {
         let program = fdata::Dictionary {
-            entries: Some(vec![fdata::DictionaryEntry {
-                key: "binary".to_string(),
-                value: Some(Box::new(fdata::DictionaryValue::Str("bin/example".to_string()))),
-            }]),
+            entries: Some(vec![
+                fdata::DictionaryEntry {
+                    key: "binary".to_string(),
+                    value: Some(Box::new(fdata::DictionaryValue::Str("bin/example".to_string()))),
+                },
+                fdata::DictionaryEntry {
+                    key: "lifecycle.stop_event".to_string(),
+                    value: Some(Box::new(fdata::DictionaryValue::Str("notify".to_string()))),
+                },
+            ]),
         };
         let uses = vec![
             UseDecl::Runner(UseRunnerDecl { source_name: Some("elf".to_string()) }),

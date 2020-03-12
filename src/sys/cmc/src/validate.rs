@@ -1002,6 +1002,45 @@ mod tests {
             ),
             result = Ok(()),
         },
+        test_cml_invalid_lifecycle_event => {
+            input = json!(
+                {
+                    "program": {
+                        "binary": "bin/app",
+                        "lifecycle": {
+                            "foo": "bar",
+                        }
+                    },
+                    "use": [
+                        { "runner": "elf" }
+                    ]
+                }
+            ),
+            result = Err(Error::validate_schema(
+                CML_SCHEMA,
+                "Property conditions are not met at /program/lifecycle")
+                ),
+        },
+        test_cml_invalid_subscription_value => {
+            // what if someone spelled notify backwards!?
+            input = json!(
+                {
+                    "program": {
+                        "binary": "bin/app",
+                        "lifecycle": {
+                            "stop_event": "yfiton",
+                        }
+                    },
+                    "use": [
+                        { "runner": "elf" }
+                    ]
+                }
+            ),
+        result = Err(Error::validate_schema(
+            CML_SCHEMA,
+            "Enum conditions are not met at /program/lifecycle/stop_event")
+            ),
+        },
         test_cml_program_no_binary => {
             input = json!({"program": {}}),
             result = Err(Error::validate_schema(CML_SCHEMA, "This property is required at /program/binary")),

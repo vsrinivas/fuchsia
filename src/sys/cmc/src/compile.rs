@@ -7,8 +7,12 @@ use crate::one_or_many::{OneOrMany, OneOrManyBorrow};
 use crate::validate;
 use cm_json::{self, cm, Error};
 use serde::ser::Serialize;
-use serde_json;
-use serde_json::ser::{CompactFormatter, PrettyFormatter, Serializer};
+use serde_json::{
+    self,
+    ser::{CompactFormatter, PrettyFormatter, Serializer},
+    value::Value,
+    Map,
+};
 use std::collections::HashSet;
 use std::fs::{self, File};
 use std::io::{Read, Write};
@@ -66,7 +70,7 @@ pub fn compile(file: &PathBuf, pretty: bool, output: Option<PathBuf>) -> Result<
 
 fn compile_cml(document: cml::Document) -> Result<cm::Document, Error> {
     let mut out = cm::Document::default();
-    out.program = document.program.as_ref().cloned();
+    out.program = document.program.as_ref().map(translate_program).transpose()?;
     out.children = document.children.as_ref().map(translate_children).transpose()?;
     out.uses = document.r#use.as_ref().map(translate_use).transpose()?;
     out.exposes = document.expose.as_ref().map(translate_expose).transpose()?;
@@ -82,6 +86,31 @@ fn compile_cml(document: cml::Document) -> Result<cm::Document, Error> {
     out.runners = document.runners.as_ref().map(translate_runners).transpose()?;
     out.resolvers = document.resolvers.as_ref().map(translate_resolvers).transpose()?;
     Ok(out)
+}
+
+pub fn translate_program(program: &Map<String, Value>) -> Result<Map<String, Value>, Error> {
+    let mut program_out: Map<String, Value> = Map::new();
+    for (k, v) in program {
+        match &k[..] {
+            "lifecycle" => match v {
+                Value::Object(events) => {
+                    for (event, subscription) in events {
+                        program_out.insert(format!("lifecycle.{}", event), subscription.clone());
+                    }
+                }
+                _ => {
+                    return Err(Error::parse(format!(
+                        "Unexpected entry in lifecycle section: {}",
+                        v
+                    )));
+                }
+            },
+            _ => {
+                let _ = program_out.insert(k.clone(), v.clone());
+            }
+        }
+    }
+    return Ok(program_out);
 }
 
 /// `use` rules consume a single capability from one source (realm|framework).
@@ -751,6 +780,7 @@ fn str_to_storage_type(s: &str) -> Result<cm::StorageType, Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use cm_json::{self, Error};
     use serde_json::json;
     use std::fs::File;
     use std::io;
@@ -809,6 +839,32 @@ mod tests {
             output = r#"{
     "program": {
         "binary": "bin/app"
+    },
+    "uses": [
+        {
+            "runner": {
+                "source_name": "elf"
+            }
+        }
+    ]
+}"#,
+        },
+        test_compile_program_with_lifecycle => {
+            input = json!({
+                "program": {
+                    "binary": "bin/app",
+                    "lifecycle": {
+                        "stop_event": "notify",
+                    }
+                },
+                "use": [
+                    { "runner": "elf" }
+                ]
+            }),
+            output = r#"{
+    "program": {
+        "binary": "bin/app",
+        "lifecycle.stop_event": "notify"
     },
     "uses": [
         {
