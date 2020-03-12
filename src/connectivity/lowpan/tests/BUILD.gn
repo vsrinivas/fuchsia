@@ -11,6 +11,7 @@ test_package("tests") {
 
   deps = [
     "integration:lowpan_integration_tests",
+    "//src/connectivity/lowpan/drivers/lowpan-dummy-driver:tests",
     "//src/connectivity/lowpan/drivers/lowpan_spinel_driver:tests",
     "//src/connectivity/lowpan/drivers/spinel_spi_driver:tests",
     "//src/connectivity/lowpan/service:tests",
@@ -27,6 +28,10 @@ test_package("tests") {
     },
     {
       name = "lowpan_spinel_driver_bin_test"
+      environments = basic_envs
+    },
+    {
+      name = "lowpan_dummy_driver_bin_test"
       environments = basic_envs
     },
     {

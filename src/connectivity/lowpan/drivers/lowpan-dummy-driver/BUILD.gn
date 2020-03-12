@@ -1,4 +1,4 @@
-# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -7,7 +7,7 @@ import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 rustc_binary("bin") {
-  name = "lowpanservice"
+  name = "lowpan_dummy_driver"
   with_unit_tests = true
   edition = "2018"
   deps = [
@@ -23,39 +23,24 @@ rustc_binary("bin") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:log",
-    "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:rand",
-    "//third_party/rust_crates:regex",
-    "//third_party/rust_crates:slab",
     "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
   ]
 }
 
-package("lowpanservice") {
+package("lowpan-dummy-driver") {
   deps = [ ":bin" ]
 
-  binary = "lowpanservice"
-
-  binaries = [
-    {
-      name = "lowpanservice"
-      shell = true
-    },
-  ]
+  binary = "lowpan_dummy_driver"
 
   meta = [
     {
-      path = rebase_path("meta/lowpanservice.cmx")
-      dest = "lowpanservice.cmx"
+      path = rebase_path("meta/lowpan-dummy-driver.cmx")
+      dest = "lowpan-dummy-driver.cmx"
     },
   ]
-}
-
-group("service") {
-  deps = [ ":lowpanservice" ]
 }
 
 group("tests") {

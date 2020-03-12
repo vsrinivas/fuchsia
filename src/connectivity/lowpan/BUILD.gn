@@ -16,6 +16,7 @@ group("tests") {
   testonly = true
   public_deps = [
     "drivers:tests",
+    "lib:tests",
     "service:tests",
     "tests",
     "tools:tests",

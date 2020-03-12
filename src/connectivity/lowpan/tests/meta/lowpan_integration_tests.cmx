@@ -1,5 +1,21 @@
 {
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.lowpan.device.Lookup": "fuchsia-pkg://fuchsia.com/lowpanservice#meta/lowpanservice.cmx",
+                "fuchsia.lowpan.device.Register": "fuchsia-pkg://fuchsia.com/lowpanservice#meta/lowpanservice.cmx"
+            }
+        }
+    },
     "program": {
         "binary": "test/lowpan_integration_tests"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.lowpan.device.Lookup",
+            "fuchsia.lowpan.device.Register",
+            "fuchsia.sys.Launcher",
+            "fuchsia.logger.LogSink"
+        ]
     }
 }

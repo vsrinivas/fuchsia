@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/lowpan_dummy_driver_bin_test"
+    }
+}
