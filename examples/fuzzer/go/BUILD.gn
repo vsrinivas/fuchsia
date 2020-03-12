@@ -6,28 +6,6 @@ import("//build/fuzzing/fuzzer.gni")
 import("//build/go/go_fuzzer.gni")
 import("//build/go/go_library.gni")
 
-group("go") {
-  testonly = true
-  deps = [ ":tests" ]
-}
-
-group("tests") {
-  testonly = true
-
-  # Building Go fuzzers exhibits linker errors on macOS for some
-  # reason (fxbug.dev/44551). Unlink from build while those are still
-  # being diagnosed.
-  deps = []
-  if (host_os != "mac") {
-    deps += [ ":go_fuzzers" ]
-  }
-}
-
-fuzzers_package("go_fuzzers") {
-  fuzzers = [ ":basic_fuzzer" ]
-  fuzz_host = true
-}
-
 go_fuzzer("basic_fuzzer") {
   gopackage = "fuzzer_lib/basic"
   deps = [ ":fuzzer_lib" ]
