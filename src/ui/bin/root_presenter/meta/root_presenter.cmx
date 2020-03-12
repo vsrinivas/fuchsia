@@ -4,7 +4,7 @@
     },
     "sandbox": {
         "dev": [
-            "class/input"
+            "class/input-report"
         ],
         "features": [
             "config-data"

@@ -30,7 +30,7 @@
 #include "src/ui/bin/root_presenter/factory_reset_manager.h"
 #include "src/ui/bin/root_presenter/media_buttons_handler.h"
 #include "src/ui/bin/root_presenter/presentation.h"
-#include "src/ui/lib/input_reader/input_reader.h"
+#include "src/ui/lib/input_report_reader/input_reader.h"
 
 namespace root_presenter {
 
