@@ -64,6 +64,10 @@ int Luis::Thread() {
     zxlogf(ERROR, "%s: EmmcInit() failed\n", __func__);
   }
 
+  if (UsbInit() != ZX_OK) {
+    zxlogf(ERROR, "%s: UsbInit() failed\n", __func__);
+  }
+
   return 0;
 }
 }  // namespace board_luis

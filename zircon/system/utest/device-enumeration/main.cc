@@ -75,6 +75,8 @@ fbl::String GetTestFilter() {
     return "*C18*";
   } else if (!strcmp(board_name, "nelson")) {
     return "*Nelson*";
+  } else if (!strcmp(board_name, "luis")) {
+    return "*Luis*";
   }
 
   return "Unknown";
@@ -482,6 +484,19 @@ TEST_F(DeviceEnumerationTest, As370Test) {
       "power/as370-power",
       "power/as370-power/power-0",
       "class/thermal/000",
+  };
+
+  ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));
+  EXPECT_EQ(zx_system_get_num_cpus(), 4);
+}
+
+TEST_F(DeviceEnumerationTest, LuisTest) {
+  static const char* kDevicePaths[] = {
+      "sys/platform/luis",
+      "sys/platform/14:02:1",
+      "sys/platform/14:02:b/vs680-sdhci/sdhci/sdmmc/sdmmc-mmc",
+      "sys/platform/14:02:c/vs680-usb-phy",
+      "sys/platform/00:00:5",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));

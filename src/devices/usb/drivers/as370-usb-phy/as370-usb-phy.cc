@@ -21,12 +21,13 @@
 #include <hw/reg.h>
 #include <soc/as370/as370-reset.h>
 #include <soc/as370/as370-usb.h>
+#include <soc/vs680/vs680-reset.h>
+#include <soc/vs680/vs680-usb.h>
 
 namespace as370_usb_phy {
 
 void UsbPhy::ResetPhy() {
   auto* mmio = &*reset_mmio_;
-
   auto reset = as370::GblPerifStickyResetN::Get().ReadFrom(mmio);
   reset.set_usbOtgPhyreset(0).WriteTo(mmio);
   reset.set_usbOtgPrstn(1).WriteTo(mmio);
@@ -38,23 +39,63 @@ void UsbPhy::ResetPhy() {
 zx_status_t UsbPhy::InitPhy() {
   auto* mmio = &*usbphy_mmio_;
 
-  as370::USB_PHY_CTRL0::Get().FromValue(0).set_value(0x0EB35E84).WriteTo(mmio);
-  as370::USB_PHY_CTRL1::Get().FromValue(0).set_value(0x80E9F004).WriteTo(mmio);
+  if (did_ == PDEV_DID_VS680_USB_PHY) {
+    auto* resetmmio = &*reset_mmio_;
 
-  ResetPhy();
+    vs680::ClockReg700::Get().ReadFrom(resetmmio).set_usb0coreclkEn(1).WriteTo(resetmmio);
 
-  uint32_t count = 10000;
-  while (count) {
-    if (as370::USB_PHY_RB::Get().ReadFrom(mmio).clk_rdy()) {
-      break;
+    // 1.  Trigger usb0SyncReset (set usb0SyncReset to 1). No read back because no read modify write
+    //     that could trigger other agent reset
+    vs680::Gbl_perifReset::Get().FromValue(0).set_usb0SyncReset(1).WriteTo(resetmmio);
+
+    // 2.  Assert sticky resets to USBOTG PHY and MAC. (set usb0PhyRstn, usb0CoreRstn
+    //     and usb0MahbRstn to 0)
+    vs680::Gbl_perifStickyResetN::Get()
+      .ReadFrom(resetmmio)
+      .set_usb0PhyRstn(0)
+      .set_usb0CoreRstn(0)
+      .set_usb0MahbRstn(0)
+      .WriteTo(resetmmio);
+
+    // 3.1.  Program USB_CTRL0
+    vs680::USB_PHY_CTRL0::Get().FromValue(0).set_value(0x533DADF0).WriteTo(mmio);
+    // 3.2.  Program USB_CTRL1
+    vs680::USB_PHY_CTRL1::Get().FromValue(0).set_value(0x01B10000).WriteTo(mmio);
+
+    // 4.  De-assert sticky resets PHY only. (set usb0PhyRstn to 1)
+    vs680::Gbl_perifStickyResetN::Get().ReadFrom(resetmmio).set_usb0PhyRstn(1).WriteTo(resetmmio);
+
+    // 5.  Wait more than 45us
+    usleep(45);
+
+    // 6.  De-assert core(set usb0CoreRstn and usb0MahbRstn to 1).
+    vs680::Gbl_perifStickyResetN::Get()
+      .ReadFrom(resetmmio)
+      .set_usb0CoreRstn(1)
+      .set_usb0MahbRstn(1)
+      .WriteTo(resetmmio);
+    usleep(100);
+
+    return ZX_OK;
+  } else {
+    as370::USB_PHY_CTRL0::Get().FromValue(0).set_value(0x0EB35E84).WriteTo(mmio);
+    as370::USB_PHY_CTRL1::Get().FromValue(0).set_value(0x80E9F004).WriteTo(mmio);
+
+    ResetPhy();
+
+    uint32_t count = 10000;
+    while (count) {
+      if (as370::USB_PHY_RB::Get().ReadFrom(mmio).clk_rdy()) {
+        break;
+      }
+      usleep(1);
+      count--;
     }
-    usleep(1);
-    count--;
+
+    return count ? 0 : ZX_ERR_TIMED_OUT;
+
+    return ZX_OK;
   }
-
-  return count ? 0 : ZX_ERR_TIMED_OUT;
-
-  return ZX_OK;
 }
 
 zx_status_t UsbPhy::Create(void* ctx, zx_device_t* parent) {
@@ -120,13 +161,25 @@ zx_status_t UsbPhy::Init() {
     return status;
   }
 
+  pdev_device_info_t info;
+  status = pdev_.GetDeviceInfo(&info);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "UsbPhy::Init: GetDeviceInfo failed\n");
+    return status;
+  }
+  did_ = info.did;
+
   status = InitPhy();
   if (status != ZX_OK) {
     zxlogf(ERROR, "UsbPhy::Init: InitPhy() failed\n");
     return status;
   }
 
-  status = DdkAdd("as370-usb-phy", DEVICE_ADD_NON_BINDABLE);
+  const char* name = "as370-usb-phy";
+  if (did_ == PDEV_DID_VS680_USB_PHY) {
+    name = "vs680-usb-phy";
+  }
+  status = DdkAdd(name, DEVICE_ADD_NON_BINDABLE);
   if (status != ZX_OK) {
     zxlogf(ERROR, "UsbPhy::Init: DdkAdd() failed\n");
     return status;
@@ -156,5 +209,6 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 ZIRCON_DRIVER_BEGIN(as370_usb_phy, as370_usb_phy::driver_ops, "zircon", "0.1", 4)
 BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_SYNAPTICS),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_SYNAPTICS_AS370),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AS370_USB_PHY), ZIRCON_DRIVER_END(as370_usb_phy)
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AS370_USB_PHY),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_VS680_USB_PHY),
+ZIRCON_DRIVER_END(as370_usb_phy)

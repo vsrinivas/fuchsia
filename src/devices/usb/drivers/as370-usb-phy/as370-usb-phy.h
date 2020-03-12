@@ -45,6 +45,7 @@ class UsbPhy : public UsbPhyType {
 
   // Device node for binding DWC2 driver.
   std::unique_ptr<Dwc2Device> dwc2_device_;
+  uint32_t did_;
 };
 
 }  // namespace as370_usb_phy
