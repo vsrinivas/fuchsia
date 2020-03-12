@@ -8,3 +8,5 @@ toc:
   path: /docs/concepts/drivers/driver_interfaces/audio_codec.md
 - title: "Audio streaming"
   path: /docs/concepts/drivers/driver_interfaces/audio_streaming.md
+- title: "Legacy Audio streaming"
+  path: /docs/concepts/drivers/driver_interfaces/audio_streaming_original.md
