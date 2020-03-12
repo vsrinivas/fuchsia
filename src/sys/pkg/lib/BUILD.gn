@@ -5,6 +5,7 @@
 group("lib") {
   testonly = true
   deps = [
+    "async-generator",
     "event-queue",
     "fidl-fuchsia-amber-ext",
     "fidl-fuchsia-update-ext",
@@ -25,6 +26,7 @@ group("lib") {
 group("tests") {
   testonly = true
   deps = [
+    "async-generator:tests",
     "event-queue:tests",
     "fidl-fuchsia-amber-ext:tests",
     "fidl-fuchsia-update-ext:tests",
