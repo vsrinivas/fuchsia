@@ -15,6 +15,8 @@ source_set("spinel_utils") {
   sources = [
     "spinel_image.cc",
     "spinel_image.h",
+    "spinel_path_sink.cc",
+    "spinel_path_sink.h",
     "svg_spinel_image.cc",
     "svg_spinel_image.h",
   ]
@@ -51,6 +53,7 @@ source_set("spinel_test_utils") {
 graphics_compute_unittests("unittests") {
   sources = [
     "spinel_image_unittest.cc",
+    "spinel_path_sink_unittest.cc",
     "spinel_test_utils_unittest.cc",
     "svg_spinel_image_unittest.cc",
   ]

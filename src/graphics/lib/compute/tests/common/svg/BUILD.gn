@@ -13,14 +13,20 @@ source_set("svg") {
   public = [
     "scoped_svg.h",
     "svg_bounds.h",
+    "svg_path_sink.h",
     "svg_print.h",
+    "svg_utils.h",
   ]
   sources = [
     "scoped_svg.h",
     "svg_bounds.cc",
     "svg_bounds.h",
+    "svg_path_sink.cc",
+    "svg_path_sink.h",
     "svg_print.cc",
     "svg_print.h",
+    "svg_utils.cc",
+    "svg_utils.h",
   ]
   public_deps = [
     "${graphics_compute_dir}/svg:svg",
@@ -39,6 +45,10 @@ graphics_compute_unittests("unittests") {
     "scoped_svg_unittest.cc",
     "svg_bounds_unittest.cc",
     "svg_print_unittest.cc",
+    "svg_utils_unittest.cc",
   ]
-  deps = [ ":svg" ]
+  deps = [
+    ":svg",
+    "${graphics_compute_dir}/tests:common_test_utils",
+  ]
 }

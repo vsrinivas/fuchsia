@@ -110,46 +110,6 @@ affine_transform_equal(const affine_transform_t * a, const affine_transform_t * 
 extern bool
 affine_transform_less(const affine_transform_t * a, const affine_transform_t * b);
 
-//
-// affine_transform_stack_t
-//
-
-// An opaque type used to model a stack of transforms, useful to operate
-// nested transformations in 2D space, e.g. when processing vector documents or
-// graphical hierarchies.
-typedef struct affine_transform_stack affine_transform_stack_t;
-
-// Create a new affine_transform_stack_t instance.
-// It will have a depht of 1, with identity as the current top.
-extern affine_transform_stack_t *
-affine_transform_stack_create(void);
-
-// Return the current depth of a transform stack.
-extern uint32_t
-affine_transform_stack_depth(const affine_transform_stack_t * stack);
-
-// Destroy a given double transform stack instance.
-extern void
-affine_transform_stack_destroy(affine_transform_stack_t * stack);
-
-// Return a const pointer to the transform at the top of the stack
-// Asserts if the stack is empty.
-extern const affine_transform_t *
-affine_transform_stack_top(const affine_transform_stack_t * stack);
-
-// Push a new transform on top of the stack, after multiplying it with the
-// current stack top. Asserts if the stack is empty.
-extern void
-affine_transform_stack_push(affine_transform_stack_t * stack, affine_transform_t transform);
-
-// Push a new transform directly on top of the stack, ignores previous entries.
-extern void
-affine_transform_stack_push_direct(affine_transform_stack_t * stack, affine_transform_t transform);
-
-// Pop the top-most transform from the stack. asserts if the stack is empty.
-extern void
-affine_transform_stack_pop(affine_transform_stack_t * stack);
-
 #ifdef __cplusplus
 }
 

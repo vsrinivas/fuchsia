@@ -26,6 +26,7 @@ source_set("common") {
     "common/argparse.h",
     "common/fps_counter.h",
     "common/list_ostream.h",
+    "common/path_sink.h",
     "common/scoped_struct.h",
     "common/utils.h",
   ]
@@ -39,6 +40,8 @@ source_set("common") {
     "common/fps_counter.c",
     "common/fps_counter.h",
     "common/list_ostream.h",
+    "common/path_sink.cc",
+    "common/path_sink.h",
     "common/scoped_struct.h",
     "common/utils.c",
     "common/utils.h",
@@ -50,6 +53,7 @@ source_set("common_test_utils") {
   sources = [
     "common/affine_transform_test_utils.cc",
     "common/affine_transform_test_utils.h",
+    "common/path_sink_test_utils.h",
   ]
   public_deps = [
     ":common",
@@ -65,6 +69,7 @@ graphics_compute_unittests("common_unittests") {
     "common/argparse_unittest.cc",
     "common/fps_counter_unittest.cc",
     "common/list_ostream_unittest.cc",
+    "common/path_sink_unittest.cc",
     "common/scoped_struct_unittest.cc",
   ]
   deps = [
