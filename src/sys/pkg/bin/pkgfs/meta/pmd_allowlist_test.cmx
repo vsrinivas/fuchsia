@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/pmd_allowlist_test"
+    }
+}

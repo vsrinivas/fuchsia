@@ -19,7 +19,10 @@ import (
 // Main starts a package server program
 func Main() {
 	var (
-		blob = flag.String("blob", "/blob", "Path at which to store blobs")
+		blob                                   = flag.String("blob", "/blob", "Path at which to store blobs")
+		enforcePkgfsPackagesNonStaticAllowlist = flag.Bool("enforcePkgfsPackagesNonStaticAllowlist",
+			false,
+			"Whether to enforce the allowlist of non-static packages allowed to appear in /pkgfs/packages")
 	)
 
 	log.SetPrefix("pkgsvr: ")
@@ -33,7 +36,8 @@ func Main() {
 		log.Fatalf("pkgfs: failed to open %q: %s", *blob, err)
 	}
 
-	fs, err := pkgfs.New(blobDir.(*fdio.Directory))
+	log.Printf("pkgfs: enforce pkgfs/packages non-static allowlist: %v", *enforcePkgfsPackagesNonStaticAllowlist)
+	fs, err := pkgfs.New(blobDir.(*fdio.Directory), *enforcePkgfsPackagesNonStaticAllowlist)
 	if err != nil {
 		log.Fatalf("pkgfs: initialization failed: %s", err)
 	}

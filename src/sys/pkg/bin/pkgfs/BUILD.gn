@@ -23,8 +23,9 @@ go_library("pmd") {
 }
 
 test_packages = [
-  "pkgfs",
+  "allowlist",
   "index",
+  "pkgfs",
 ]
 foreach(testpkg, test_packages) {
   go_test("pmd_${testpkg}_test") {

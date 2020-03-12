@@ -40,7 +40,7 @@ type Filesystem struct {
 }
 
 // New initializes a new pkgfs filesystem server
-func New(blobDir *fdio.Directory) (*Filesystem, error) {
+func New(blobDir *fdio.Directory, enforcePkgfsPackagesNonStaticAllowlist bool) (*Filesystem, error) {
 	bm, err := blobfs.New(blobDir)
 	if err != nil {
 		return nil, fmt.Errorf("pkgfs: open blobfs: %s", err)
@@ -81,8 +81,10 @@ func New(blobDir *fdio.Directory) (*Filesystem, error) {
 				fs:                   f,
 			},
 			"packages": &packagesRoot{
-				unsupportedDirectory: unsupportedDirectory("/packages"),
-				fs:                   f,
+				unsupportedDirectory:      unsupportedDirectory("/packages"),
+				fs:                        f,
+				allowedNonStaticPackages:  nil,
+				enforceNonStaticAllowlist: enforcePkgfsPackagesNonStaticAllowlist,
 			},
 			"versions": &versionsDirectory{
 				unsupportedDirectory: unsupportedDirectory("/versions"),
@@ -98,6 +100,7 @@ func New(blobDir *fdio.Directory) (*Filesystem, error) {
 // staticIndexPath is the path inside the system package directory that contains the static packages for that system version.
 const staticIndexPath = "data/static_packages"
 const cacheIndexPath = "data/cache_packages"
+const packagesAllowlistPath = "data/pkgfs_packages_non_static_packages_allowlist.txt"
 
 // loadStaticIndex loads the blob specified by root from blobfs. A non-nil
 // *StaticIndex is always returned. If an error is returned that indicates a
@@ -144,6 +147,29 @@ func (f *Filesystem) loadCacheIndex(root string) error {
 	return nil
 }
 
+// Read the /pkgfs/packages allowlist for which non-static packages it should return,
+// and set the allowlist in the packages directory.
+func (f *Filesystem) retrievePackagesAllowlist(pd *packageDir) {
+	log.Println("pkgfs: loading /pkgfs/packages non static allowlist")
+	blob, ok := pd.getBlobFor(packagesAllowlistPath)
+	if !ok {
+		log.Printf("pkgfs: couldn't get a blob for /pkgfs/packages allowlist path %v", packagesAllowlistPath)
+		return
+	}
+
+	packagesDirectory := f.root.dirs["packages"]
+	packagesRoot, ok := packagesDirectory.(*packagesRoot)
+	if !ok {
+		log.Printf("pkgfs: couldn't coerce packages directory to a packagesRoot...")
+		return
+	}
+
+	err := packagesRoot.setAllowedNonStaticPackages(blob)
+	if err != nil {
+		log.Printf("pkgfs: could not load pkgfs/packages allowlist: %v", err)
+	}
+}
+
 // SetSystemRoot sets/updates the merkleroot (and static index) that backs the /system partition and static package index.
 func (f *Filesystem) SetSystemRoot(merkleroot string) error {
 	pd, err := newPackageDirFromBlob(merkleroot, f)
@@ -162,7 +188,7 @@ func (f *Filesystem) SetSystemRoot(merkleroot string) error {
 		return err
 	}
 
-	// Ensure that the "system_image" package is also indexed
+	// Ensure that the "system_image" package is also indexed.
 	f.static.Set(
 		pkg.Package{
 			Name:    "system_image",
@@ -178,6 +204,10 @@ func (f *Filesystem) SetSystemRoot(merkleroot string) error {
 			return err
 		}
 	}
+
+	// Using our root package, retrieve the packages allowlist, if it exists,
+	// and pass it off to the packages root directory.
+	f.retrievePackagesAllowlist(pd)
 
 	return nil
 }

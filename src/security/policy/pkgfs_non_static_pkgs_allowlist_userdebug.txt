@@ -1,0 +1,13 @@
+# Connectivity debugging
+net-cli
+log_listener
+wlan
+iquery
+curl
+
+# DevTools
+system_monitor_harvester
+
+# Other debugging tools
+run
+

@@ -5,16 +5,54 @@
 package pkgfs
 
 import (
+	"fmt"
+	"log"
 	"path/filepath"
 	"strings"
 	"thinfs/fs"
 	"time"
+
+	"fuchsia.googlesource.com/pmd/allowlist"
 )
 
 type packagesRoot struct {
 	unsupportedDirectory
 
-	fs *Filesystem
+	fs                        *Filesystem
+	allowedNonStaticPackages  *allowlist.Allowlist
+	enforceNonStaticAllowlist bool
+}
+
+func (pr *packagesRoot) isAllowedNonStaticPackage(packageName string) bool {
+	if pr.allowedNonStaticPackages == nil {
+		return false
+	}
+
+	return pr.allowedNonStaticPackages.Contains(packageName)
+}
+
+func (pr *packagesRoot) loadAllowedNonStaticPackages(blob string) (*allowlist.Allowlist, error) {
+	allowListFile, err := pr.fs.blobfs.Open(blob)
+	if err != nil {
+		return nil, fmt.Errorf("could not load non_static_pkgs allowlist from blob %s: %v", blob, err)
+	}
+	defer allowListFile.Close()
+
+	return allowlist.LoadFrom(allowListFile)
+}
+
+func (pr *packagesRoot) setAllowedNonStaticPackages(blob string) error {
+	allowedNonStaticPackages, err := pr.loadAllowedNonStaticPackages(blob)
+	if err != nil {
+		log.Printf("pkgfs: couldn't load allowed non-static packages list: %v", err)
+		return err
+	}
+
+	pr.allowedNonStaticPackages = allowedNonStaticPackages
+
+	log.Printf("pkgfs: parsed non-static pkgs allowlist: %v", allowedNonStaticPackages)
+
+	return nil
 }
 
 func (pr *packagesRoot) Dup() (fs.Directory, error) {
@@ -32,15 +70,29 @@ func (pr *packagesRoot) Open(name string, flags fs.OpenFlags) (fs.File, fs.Direc
 
 	parts := strings.Split(name, "/")
 
-	pld, err := newPackageListDir(parts[0], pr.fs)
-	if err != nil {
+	packageName := parts[0]
 
+	if (pr.fs.static == nil || (pr.fs.static != nil && !pr.fs.static.HasName(packageName))) && !pr.isAllowedNonStaticPackage(packageName) {
+		log.Printf("pkgfs: attempted open of non-static package %s, see go/pkgfs-base-packages. Full path: %s", packageName, name)
+
+		if pr.enforceNonStaticAllowlist {
+			return nil, nil, nil, fs.ErrNotFound
+		}
+	}
+
+	pld, err := newPackageListDir(packageName, pr.fs)
+	if err != nil {
+		// If the package isn't on the system at all, we'll return an error here.
 		return nil, nil, nil, err
 	}
-	if len(parts) > 1 {
 
-		return pld.Open(filepath.Join(parts[1:]...), flags)
+	if len(parts) > 1 {
+		// We were asked for a specific variant, so return a package directory itself, not just the list of variants
+		file, directory, remote, err := pld.Open(filepath.Join(parts[1:]...), flags)
+		return file, directory, remote, err
 	}
+
+	// Return the list of variants
 	return nil, pld, nil, nil
 }
 
@@ -58,6 +110,9 @@ func (pr *packagesRoot) Read() ([]fs.Dirent, error) {
 
 	pkgs := pr.fs.index.List()
 	for _, p := range pkgs {
+		if pr.enforceNonStaticAllowlist && !pr.isAllowedNonStaticPackage(p.Name) {
+			continue
+		}
 		names[p.Name] = struct{}{}
 	}
 

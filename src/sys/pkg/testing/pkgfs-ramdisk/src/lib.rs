@@ -74,9 +74,12 @@ impl PkgfsRamdisk {
     /// Starts a package server backed by the provided blobfs.
     ///
     /// If system_image_merkle is Some, uses that as the starting system_image package.
-    pub fn start_with_blobfs(
+    /// Strings in the other_args vector will be appended to the argv before the system image merkle.
+    /// Specifying the system image merkle in the argv vector and the system_image_merkle param is undefined behavior.
+    pub fn start_with_blobfs_and_argv(
         blobfs: BlobfsRamdisk,
         system_image_merkle: Option<impl Into<String>>,
+        other_args: &[&str],
     ) -> Result<Self, Error> {
         let system_image_merkle = system_image_merkle.map(|m| m.into());
 
@@ -88,6 +91,14 @@ impl PkgfsRamdisk {
             system_image_merkle.as_ref().map(|s| CString::new(s.clone()).unwrap());
 
         let mut argv: Vec<&CStr> = vec![&pkgsvr_bin];
+
+        // golang's flag library is very specific about the fact that it wants positional args _last_,
+        // so specify other_args first, and the system image arg last.
+        let other_args_cstring: Vec<CString> =
+            other_args.into_iter().map(|s| CString::new(s.as_bytes()).unwrap()).collect();
+        let mut other_args_cstr: Vec<&CStr> = other_args_cstring.iter().map(|s| &**s).collect();
+        argv.append(&mut other_args_cstr);
+
         if let Some(system_image_flag) = system_image_flag.as_ref() {
             argv.push(system_image_flag)
         }
@@ -113,6 +124,16 @@ impl PkgfsRamdisk {
         .context("spawning 'pkgsvr'")?;
 
         Ok(PkgfsRamdisk { blobfs, proxy, process: process.into(), system_image_merkle })
+    }
+
+    /// Starts a package server backed by the provided blobfs.
+    ///
+    /// If system_image_merkle is Some, uses that as the starting system_image package.
+    pub fn start_with_blobfs(
+        blobfs: BlobfsRamdisk,
+        system_image_merkle: Option<impl Into<String>>,
+    ) -> Result<Self, Error> {
+        Self::start_with_blobfs_and_argv(blobfs, system_image_merkle, &[])
     }
 
     /// Returns a reference to the [`BlobfsRamdisk`] backing this pkgfs.

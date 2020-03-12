@@ -261,6 +261,11 @@ generate_manifest("system_image.manifest") {
   sources += [ cache_index ]
   args += [ "--entry=data/cache_packages=" +
             rebase_path(cache_index, root_build_dir) ]
+
+  # Add the allowlist for which non-static packages pkgfs will return.
+  sources += [ pkgfs_packages_allowlist ]
+  args += [ "--entry=data/pkgfs_packages_non_static_packages_allowlist.txt=" +
+            rebase_path(pkgfs_packages_allowlist, root_build_dir) ]
 }
 system_manifest_outputs = get_target_outputs(":system_image.manifest")
 assert(boot_manifest == system_manifest_outputs[2])

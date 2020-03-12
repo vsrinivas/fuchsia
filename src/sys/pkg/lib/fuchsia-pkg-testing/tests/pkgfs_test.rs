@@ -1281,3 +1281,145 @@ async fn test_pkgfs_with_system_image() {
 
     pkgfs.stop().await.expect("shutting down pkgfs");
 }
+
+#[fasync::run_singlethreaded(test)]
+async fn test_pkgfs_packages_dynamic_packages_allowlist_succeeds() {
+    let pkg = example_package().await;
+
+    let system_image_package = PackageBuilder::new("system_image")
+        .add_resource_at(
+            "data/pkgfs_packages_non_static_packages_allowlist.txt",
+            "example".as_bytes(),
+        )
+        .add_resource_at(
+            "data/cache_packages",
+            format!("example/0={}", pkg.meta_far_merkle_root()).as_bytes(),
+        )
+        .add_resource_at("data/static_packages", "".as_bytes())
+        .build()
+        .await
+        .unwrap();
+
+    let blobfs = BlobfsRamdisk::start().unwrap();
+    system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+    pkg.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+
+    let pkgfs = PkgfsRamdisk::start_with_blobfs_and_argv(
+        blobfs,
+        Some(system_image_package.meta_far_merkle_root().to_string()),
+        &["--enforcePkgfsPackagesNonStaticAllowlist=true"],
+    )
+    .expect("starting pkgfs");
+    let d = pkgfs.root_dir().expect("getting pkgfs root dir");
+
+    // We've put the 'example' package on the allowlist, so we should be
+    // able to read files from it through pkgfs/packages
+    let mut file_contents = String::new();
+    d.open_file("packages/example/0/a/b")
+        .expect("read package file1")
+        .read_to_string(&mut file_contents)
+        .expect("read package file2");
+    assert_eq!(&file_contents, "Hello world!\n");
+
+    // We should be able to see our package in the /packages directory
+    assert_eq!(
+        ls_simple(d.list_dir("packages").expect("list dir")).expect("list dir contents"),
+        ["system_image", "example"]
+    );
+
+    pkgfs.stop().await.expect("shutting down pkgfs");
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_pkgfs_packages_dynamic_packages_allowlist_fails() {
+    let pkg = example_package().await;
+
+    let system_image_package = PackageBuilder::new("system_image")
+        .add_resource_at(
+            "data/pkgfs_packages_non_static_packages_allowlist.txt",
+            "not_example".as_bytes(),
+        )
+        .add_resource_at(
+            "data/cache_packages",
+            format!("example/0={}", pkg.meta_far_merkle_root()).as_bytes(),
+        )
+        .add_resource_at("data/static_packages", "".as_bytes())
+        .build()
+        .await
+        .unwrap();
+
+    let blobfs = BlobfsRamdisk::start().unwrap();
+    system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+    pkg.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+
+    let pkgfs = PkgfsRamdisk::start_with_blobfs_and_argv(
+        blobfs,
+        Some(system_image_package.meta_far_merkle_root().to_string()),
+        &["--enforcePkgfsPackagesNonStaticAllowlist=true"],
+    )
+    .expect("starting pkgfs");
+    let d = pkgfs.root_dir().expect("getting pkgfs root dir");
+
+    // Test the 'Open' path - we shouldn't be able to open a file in our
+    // package through /packages.
+    // The 'example' package wasn't in the allowlist, so we expect this to fail
+    d.open_file("packages/example/0/a/b")
+        .expect_err("shouldn't be able to open file in example package");
+
+    // Test the 'Read' path for /packages - listing
+    // We should *not* be able to see our package in the /packages directory
+    assert_eq!(
+        ls_simple(d.list_dir("packages").expect("list dir")).expect("list dir contents"),
+        ["system_image"] // We should not see the 'example' package, since it's a dynamic package that's not on the allowlist.
+    );
+
+    pkgfs.stop().await.expect("shutting down pkgfs");
+}
+
+// Test the enforcement flag of `pkgfs`. If set to false, it should return dynamic packages
+// from /pkgfs/packages even if they aren't on the allowlist.
+#[fasync::run_singlethreaded(test)]
+async fn test_pkgfs_packages_dynamic_packages_allowlist_enforcement_flag() {
+    let pkg = example_package().await;
+
+    let system_image_package = PackageBuilder::new("system_image")
+        .add_resource_at(
+            "data/pkgfs_packages_non_static_packages_allowlist.txt",
+            "not_example".as_bytes(),
+        )
+        .add_resource_at(
+            "data/cache_packages",
+            format!("example/0={}", pkg.meta_far_merkle_root()).as_bytes(),
+        )
+        .add_resource_at("data/static_packages", "".as_bytes())
+        .build()
+        .await
+        .unwrap();
+
+    let blobfs = BlobfsRamdisk::start().unwrap();
+    system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+    pkg.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+
+    let pkgfs = PkgfsRamdisk::start_with_blobfs_and_argv(
+        blobfs,
+        Some(system_image_package.meta_far_merkle_root().to_string()),
+        &["--enforcePkgfsPackagesNonStaticAllowlist=false"], // turn off allowlist enforcement
+    )
+    .expect("starting pkgfs");
+    let d = pkgfs.root_dir().expect("getting pkgfs root dir");
+
+    let mut file_contents = String::new();
+    d.open_file("packages/example/0/a/b")
+        .expect("read package file1")
+        .read_to_string(&mut file_contents)
+        .expect("read package file2");
+    assert_eq!(&file_contents, "Hello world!\n");
+
+    // We should be able to see our package in the /packages directory
+    assert_eq!(
+        ls_simple(d.list_dir("packages").expect("list dir")).expect("list dir contents"),
+        ["system_image", "example"]
+    );
+
+    pkgfs.stop().await.expect("shutting down pkgfs");
+}

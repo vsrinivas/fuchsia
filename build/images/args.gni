@@ -93,6 +93,10 @@ declare_args() {
 
   # Build boot images that prefer Zedboot over local boot (only for EFI).
   always_zedboot = false
+
+  # The allowlist file to load for /pkgfs/packages non-base packages
+  pkgfs_packages_allowlist =
+      "//src/security/policy/pkgfs_non_static_pkgs_allowlist_userdebug.txt"
 }
 
 assert(custom_signing_script == "" || !use_vboot,
