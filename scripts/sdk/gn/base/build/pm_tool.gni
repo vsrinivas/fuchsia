@@ -62,14 +62,13 @@ template("fuchsia_pm_tool") {
         _meta_far_file,
         _pkg_output_manifest,
       ]
+      depfile = "${_meta_far_file}.d"
     } else {
       inputs += [ _meta_far_file ]
 
       _final_far_file = "$_pkg_out_dir/${package_name}.far"
       outputs = [ _final_far_file ]
     }
-
-    depfile = "$_pkg_out_dir/meta.far.d"
 
     args = [
       rebase_path(_pm_tool_path, root_build_dir),
