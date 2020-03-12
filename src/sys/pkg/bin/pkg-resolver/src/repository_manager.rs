@@ -266,11 +266,11 @@ impl RepositoryManager {
     pub fn get_package_hash<'a>(
         &self,
         url: &'a PkgUrl,
-    ) -> LocalBoxFuture<'a, Result<BlobId, Status>> {
+    ) -> LocalBoxFuture<'a, Result<BlobId, GetPackageError>> {
         let config = if let Some(config) = self.get(url.repo()) {
             Arc::clone(config)
         } else {
-            return futures::future::ready(Err(Status::ADDRESS_UNREACHABLE)).boxed_local();
+            return futures::future::ready(Err(GetPackageError::RepoNotFound)).boxed_local();
         };
 
         let repo = open_cached_or_new_repository(
@@ -281,10 +281,10 @@ impl RepositoryManager {
         );
 
         async move {
-            let repo = repo.await.map_err(|e| e.to_resolve_status())?;
+            let repo = repo.await?;
             crate::cache::merkle_for_url(repo, url).await.map(|(blob_id, _)| blob_id).map_err(|e| {
                 fx_log_err!("while fetching package hash {} using rust tuf: {}", url, e);
-                e.to_resolve_status()
+                GetPackageError::Cache(CacheError::MerkleFor(e))
             })
         }
         .boxed_local()

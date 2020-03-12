@@ -67,6 +67,7 @@ pub async fn run_resolver_service(
     repo_manager: Arc<RwLock<RepositoryManager>>,
     rewriter: Arc<RwLock<RewriteManager>>,
     package_fetcher: Arc<PackageFetcher>,
+    system_cache_list: Arc<CachePackages>,
     stream: PackageResolverRequestStream,
 ) -> Result<(), Error> {
     stream
@@ -90,7 +91,14 @@ pub async fn run_resolver_service(
                         Ok(())
                     }
                     PackageResolverRequest::GetHash { package_url, responder } => {
-                        match get_hash(&rewriter, &repo_manager, &package_url.url).await {
+                        match get_hash(
+                            &rewriter,
+                            &repo_manager,
+                            &system_cache_list,
+                            &package_url.url,
+                        )
+                        .await
+                        {
                             Ok(blob_id) => {
                                 fx_log_info!("hash of {} is {}", package_url.url, blob_id);
                                 responder.send(&mut Ok(blob_id.into()))?;
@@ -116,6 +124,33 @@ fn rewrite_url(rewriter: &RwLock<RewriteManager>, url: &PkgUrl) -> Result<PkgUrl
         return Err(Status::INVALID_ARGS);
     }
     Ok(rewritten_url)
+}
+
+async fn hash_from_repo_or_cache(
+    repo_manager: &RwLock<RepositoryManager>,
+    rewriter: &RwLock<RewriteManager>,
+    system_cache_list: &CachePackages,
+    pkg_url: &PkgUrl,
+) -> Result<BlobId, Status> {
+    let rewritten_url = rewrite_url(rewriter, &pkg_url)?;
+    let fut = repo_manager.read().get_package_hash(&rewritten_url);
+    let res = fut.await;
+    let res = match res {
+        Ok(b) => Ok(b),
+        Err(e @ GetPackageError::Cache(CacheError::MerkleFor(MerkleForError::NotFound))) => {
+            // If we can get metadata but the repo doesn't know about the package,
+            // it shouldn't be in the cache, and we wouldn't trust it if it was.
+            Err(e)
+        }
+        Err(e) => {
+            // If we couldn't get TUF metadata, we might not have networking. Check in
+            // system/data/cache_packages (not to be confused with the package cache).
+            // The system cache doesn't know about rewrite rules, so use the original url.
+            // Return the existing error if not found in the cache.
+            lookup_from_system_cache(&pkg_url, system_cache_list).ok_or(e)
+        }
+    };
+    res.map_err(|e| e.to_resolve_status())
 }
 
 async fn package_from_repo_or_cache(
@@ -193,6 +228,7 @@ fn lookup_from_system_cache<'a>(
 async fn get_hash(
     rewriter: &RwLock<RewriteManager>,
     repo_manager: &RwLock<RepositoryManager>,
+    system_cache_list: &CachePackages,
     url: &str,
 ) -> Result<BlobId, Status> {
     let pkg_url = match PkgUrl::parse(url) {
@@ -201,9 +237,10 @@ async fn get_hash(
             return Err(handle_bad_package_url(err, url));
         }
     };
-    let rewritten_url = rewrite_url(rewriter, &pkg_url)?;
-    trace::duration_begin!("app", "get-hash", "url" => rewritten_url.to_string().as_str());
-    let hash_or_status = repo_manager.read().get_package_hash(&rewritten_url).await;
+    trace::duration_begin!("app", "get-hash", "url" => pkg_url.to_string().as_str());
+    let hash_or_status =
+        hash_from_repo_or_cache(&repo_manager, &rewriter, &system_cache_list, &pkg_url).await;
+
     trace::duration_end!("app", "get-hash", "status" => Status::from(hash_or_status.err().unwrap_or(Status::OK)).to_string().as_str());
     hash_or_status
 }

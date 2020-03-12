@@ -136,6 +136,7 @@ async fn main_inner_async() -> Result<(), Error> {
         let repo_manager = Arc::clone(&repo_manager);
         let rewrite_manager = Arc::clone(&rewrite_manager);
         let package_fetcher = Arc::clone(&package_fetcher);
+        let system_cache_list = Arc::clone(&system_cache_list);
         move |stream| {
             fasync::spawn_local(
                 resolver_service::run_resolver_service(
@@ -143,6 +144,7 @@ async fn main_inner_async() -> Result<(), Error> {
                     Arc::clone(&repo_manager),
                     Arc::clone(&rewrite_manager),
                     Arc::clone(&package_fetcher),
+                    Arc::clone(&system_cache_list),
                     stream,
                 )
                 .unwrap_or_else(|e| fx_log_err!("failed to spawn_local {:?}", e)),

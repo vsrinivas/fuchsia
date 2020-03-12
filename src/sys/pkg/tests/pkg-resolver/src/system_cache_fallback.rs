@@ -70,6 +70,10 @@ async fn test_cache_fallback_succeeds_no_network() {
     cache_pkg.verify_contents(&package_dir).await.unwrap();
     assert!(repo_pkg.verify_contents(&package_dir).await.is_err());
 
+    // Check that get_hash fallback behavior matches resolve.
+    let hash = env.get_hash(pkg_url).await;
+    assert_eq!(hash.unwrap(), cache_pkg.meta_far_merkle_root().clone().into());
+
     env.stop().await;
 }
 
@@ -112,6 +116,10 @@ async fn test_cache_fallback_succeeds_no_targets() {
     // Make sure we got the cache version, not the repo version.
     cache_pkg.verify_contents(&package_dir).await.unwrap();
     assert!(repo_pkg.verify_contents(&package_dir).await.is_err());
+
+    // Check that get_hash fallback behavior matches resolve.
+    let hash = env.get_hash(pkg_url).await;
+    assert_eq!(hash.unwrap(), cache_pkg.meta_far_merkle_root().clone().into());
 
     env.stop().await;
 }
@@ -158,13 +166,18 @@ async fn test_cache_fallback_succeeds_rewrite_rule() {
     cache_pkg.verify_contents(&package_dir).await.unwrap();
     assert!(repo_pkg.verify_contents(&package_dir).await.is_err());
 
+    // Check that get_hash fallback behavior matches resolve.
+    let hash = env.get_hash(pkg_url).await;
+    assert_eq!(hash.unwrap(), cache_pkg.meta_far_merkle_root().clone().into());
+
     env.stop().await;
 }
 
 // The package is in the cache but not known to the repository. Don't fall back.
 #[fasync::run_singlethreaded(test)]
 async fn test_resolve_fails_not_in_repo() {
-    let pkg = test_package("test_resolve_fails_not_in_repo", "stuff").await;
+    let pkg_name = "test_resolve_fails_not_in_repo";
+    let pkg = test_package(pkg_name, "stuff").await;
     let system_image_package = SystemImageBuilder::new(&[]).cache_packages(&[&pkg]).build().await;
     let pkgfs = pkgfs_with_system_image_and_pkg(&system_image_package, &pkg).await;
     let env = TestEnvBuilder::new().pkgfs(pkgfs).build();
@@ -183,6 +196,11 @@ async fn test_resolve_fails_not_in_repo() {
     let pkg_url = format!("fuchsia-pkg://fuchsia.com/{}", pkg.name());
     let res = env.resolve_package(&pkg_url).await;
     assert_matches!(res, Err(Status::NOT_FOUND));
+
+    // Check that get_hash fallback behavior matches resolve.
+    let hash = env.get_hash(pkg_url).await;
+    assert_matches!(hash, Err(Status::NOT_FOUND));
+
     env.stop().await;
 }
 
@@ -213,5 +231,10 @@ async fn test_resolve_prefers_repo() {
     // Make sure we got the repo version, not the cache version.
     repo_pkg.verify_contents(&package_dir).await.unwrap();
     assert!(cache_pkg.verify_contents(&package_dir).await.is_err());
+
+    // Check that get_hash fallback behavior matches resolve.
+    let hash = env.get_hash(pkg_url).await;
+    assert_eq!(hash.unwrap(), repo_pkg.meta_far_merkle_root().clone().into());
+
     env.stop().await;
 }
