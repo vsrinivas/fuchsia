@@ -35,7 +35,6 @@ class GestureManager : public fuchsia::ui::input::accessibility::PointerEventLis
   // current Interaction with a gesture. When a gesture is matched, if an action
   // is bound to handle that particular gesture, it gets called. Please
   // also see interaction.h and gesture_handler.h for more details.
-  // TODO(lucasradaelli): Implement rejecting a pointer event stream.
   void OnEvent(fuchsia::ui::input::accessibility::PointerEvent pointer_event) override;
 
   // Returns a pointer to the gesture handler, which can be used to bind actions to gestures.
