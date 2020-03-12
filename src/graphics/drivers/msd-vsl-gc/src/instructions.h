@@ -71,11 +71,11 @@ class MiSemaphore {
  public:
   static constexpr uint32_t kCommandType = 0x00003808;
 
-  static void write(magma::InstructionWriter* writer, uint32_t from, uint32_t to) {
+  static void write(magma::InstructionWriter* writer, uint32_t from, uint32_t to, uint32_t value) {
     DASSERT(from <= kRecipientMask);
     DASSERT(to <= kRecipientMask);
     to = to << 8;
-    MiLoadState::write(writer, kCommandType, to | from);
+    MiLoadState::write(writer, kCommandType, to | from | value);
   }
 };
 
@@ -83,12 +83,12 @@ class MiStall {
  public:
   static constexpr uint32_t kCommandType = 0x48000000;
 
-  static void write(magma::InstructionWriter* writer, uint32_t from, uint32_t to) {
+  static void write(magma::InstructionWriter* writer, uint32_t from, uint32_t to, uint32_t value) {
     DASSERT(from <= kRecipientMask);
     DASSERT(to <= kRecipientMask);
     to = to << 8;
     writer->Write32(kCommandType);
-    writer->Write32(from | to);
+    writer->Write32(from | to | value);
   }
 };
 

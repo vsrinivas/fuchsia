@@ -214,7 +214,7 @@ class TestEngineCommandStreamer : public EngineCommandStreamer::Owner,
                     ->MapCpu(&addr));
 
     gpu_addr_t gpu_addr;
-    EXPECT_TRUE(ringbuffer->GetGpuAddress(&gpu_addr));
+    EXPECT_TRUE(context_->GetRingbufferGpuAddress(engine_cs_->id(), &gpu_addr));
 
     uint32_t* state = reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(addr) + PAGE_SIZE);
     EXPECT_EQ(state[6], 0x2030ul);

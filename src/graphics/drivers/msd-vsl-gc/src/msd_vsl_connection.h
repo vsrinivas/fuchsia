@@ -11,11 +11,14 @@
 #include "magma_util/macros.h"
 #include "mapped_batch.h"
 #include "msd.h"
+#include "ringbuffer.h"
 
 class MsdVslConnection {
  public:
   class Owner {
    public:
+    virtual Ringbuffer* GetRingbuffer() = 0;
+
     // If |do_flush| is true, a flush TLB command will be queued before the batch commands.
     virtual magma::Status SubmitBatch(std::unique_ptr<MappedBatch> batch, bool do_flush) = 0;
   };
@@ -26,6 +29,8 @@ class MsdVslConnection {
 
   magma::Status MapBufferGpu(std::shared_ptr<MsdVslBuffer> buffer, uint64_t gpu_va,
                              uint64_t page_offset, uint64_t page_count);
+
+  Ringbuffer* GetRingbuffer() { return owner_->GetRingbuffer(); }
 
   magma::Status SubmitBatch(std::unique_ptr<MappedBatch> mapped_batch, bool do_flush = false) {
     return owner_->SubmitBatch(std::move(mapped_batch), do_flush);

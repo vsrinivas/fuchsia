@@ -13,8 +13,13 @@ void msd_connection_close(msd_connection_t* connection) {
 
 msd_context_t* msd_connection_create_context(msd_connection_t* abi_connection) {
   auto connection = MsdVslAbiConnection::cast(abi_connection)->ptr();
-  return new MsdVslAbiContext(
-      std::make_shared<MsdVslContext>(connection, connection->address_space()));
+
+  auto context =
+      MsdVslContext::Create(connection, connection->address_space(), connection->GetRingbuffer());
+  if (!context) {
+    return DRETP(nullptr, "failed to create new context");
+  }
+  return new MsdVslAbiContext(context);
 }
 
 magma_status_t msd_connection_map_buffer_gpu(msd_connection_t* abi_connection,

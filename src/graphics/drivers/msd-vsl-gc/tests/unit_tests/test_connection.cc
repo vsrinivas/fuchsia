@@ -8,6 +8,8 @@
 
 class TestMsdVslConnection : public ::testing::Test, public MsdVslConnection::Owner {
  public:
+  Ringbuffer* GetRingbuffer() override { return nullptr; }
+
   magma::Status SubmitBatch(std::unique_ptr<MappedBatch> batch, bool do_flush) override {
     return MAGMA_STATUS_UNIMPLEMENTED;
   }

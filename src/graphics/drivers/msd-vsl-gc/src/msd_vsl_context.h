@@ -12,9 +12,14 @@
 #include "mapped_batch.h"
 #include "msd.h"
 #include "msd_vsl_connection.h"
+#include "ringbuffer.h"
 
 class MsdVslContext {
  public:
+  static std::shared_ptr<MsdVslContext> Create(std::weak_ptr<MsdVslConnection> connection,
+                                               std::shared_ptr<AddressSpace> address_space,
+                                               Ringbuffer* ringbuffer);
+
   MsdVslContext(std::weak_ptr<MsdVslConnection> connection,
                 std::shared_ptr<AddressSpace> address_space)
       : connection_(connection), address_space_(std::move(address_space)) {}
@@ -31,9 +36,20 @@ class MsdVslContext {
                                                   msd_semaphore_t** msd_wait_semaphores,
                                                   msd_semaphore_t** msd_signal_semaphores);
 
+  bool MapRingbuffer(Ringbuffer* ringbuffer);
+
+  bool GetRingbufferGpuAddress(uint64_t* gpu_addr_out) {
+    if (ringbuffer_gpu_addr_) {
+      *gpu_addr_out = *ringbuffer_gpu_addr_;
+      return true;
+    }
+    return false;
+  }
+
  private:
   std::weak_ptr<MsdVslConnection> connection_;
   std::shared_ptr<AddressSpace> address_space_;
+  std::optional<uint64_t> ringbuffer_gpu_addr_;
 };
 
 class MsdVslAbiContext : public msd_context_t {

@@ -219,9 +219,7 @@ TEST_F(MsdVslDeviceTest, RingbufferCanHoldMaxEvents) {
   uint32_t wait_link_size = 2 * kInstructionDwords * sizeof(uint32_t);
   uint32_t available_space =
       (MsdVslDevice::kRingbufferSizeInPages * magma::page_size()) - wait_link_size;
-  uint32_t max_instructions_per_batch =
-      MsdVslDevice::kRbInstructionsPerFlush + MsdVslDevice::kRbInstructionsPerBatch;
   uint32_t max_used_space =
-      max_instructions_per_batch * sizeof(uint64_t) * MsdVslDevice::kNumEvents;
+      MsdVslDevice::kRbMaxInstructionsPerEvent * sizeof(uint64_t) * MsdVslDevice::kNumEvents;
   ASSERT_GE(available_space, max_used_space);
 }

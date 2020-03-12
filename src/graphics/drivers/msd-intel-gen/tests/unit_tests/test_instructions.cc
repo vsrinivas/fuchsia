@@ -34,7 +34,8 @@ class TestInstructions {
     address_space_ = std::make_shared<AllocatingAddressSpace>(address_space_owner_.get(), 0x10000,
                                                               ringbuffer_->size());
 
-    EXPECT_TRUE(ringbuffer_->Map(address_space_));
+    gpu_addr_t gpu_addr;
+    EXPECT_TRUE(ringbuffer_->Map(address_space_, &gpu_addr));
   }
 
   void Noop() {

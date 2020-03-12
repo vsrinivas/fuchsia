@@ -7,6 +7,20 @@
 #include "command_buffer.h"
 #include "msd_vsl_semaphore.h"
 
+// TODO(fxb/47800): ensure clients cannot map / unmap at the ringbuffer gpu address.
+static constexpr uint32_t kRingbufferGpuAddr = 0x0;
+
+// static
+std::shared_ptr<MsdVslContext> MsdVslContext::Create(std::weak_ptr<MsdVslConnection> connection,
+                                                     std::shared_ptr<AddressSpace> address_space,
+                                                     Ringbuffer* ringbuffer) {
+  auto context = std::make_shared<MsdVslContext>(connection, address_space);
+  if (!context->MapRingbuffer(ringbuffer)) {
+    return DRETP(nullptr, "failed to map ringbuffer into new context");
+  }
+  return context;
+}
+
 std::unique_ptr<MappedBatch> MsdVslContext::CreateBatch(std::shared_ptr<MsdVslContext> context,
                                                         magma_system_command_buffer* cmd_buf,
                                                         magma_system_exec_resource* exec_resources,
@@ -73,6 +87,18 @@ magma::Status MsdVslContext::SubmitBatch(std::unique_ptr<MappedBatch> batch) {
 
   // TODO(fxb/42748): handle wait semaphores.
   return connection->SubmitBatch(std::move(batch));
+}
+
+bool MsdVslContext::MapRingbuffer(Ringbuffer* ringbuffer) {
+  if (ringbuffer_gpu_addr_) {
+    // Already mapped.
+    return true;
+  }
+  bool res = ringbuffer->MultiMap(exec_address_space(), kRingbufferGpuAddr);
+  if (res) {
+    ringbuffer_gpu_addr_ = kRingbufferGpuAddr;
+  }
+  return res;
 }
 
 void msd_context_destroy(msd_context_t* abi_context) { delete MsdVslAbiContext::cast(abi_context); }

@@ -24,24 +24,27 @@ void TestCommandBuffer::CreateMsdBuffer(uint32_t buffer_size,
   *out_buffer = msd_buffer;
 }
 
-void TestCommandBuffer::CreateAndMapBuffer(uint32_t buffer_size, uint32_t map_page_count,
+void TestCommandBuffer::CreateAndMapBuffer(std::shared_ptr<MsdVslContext> context,
+                                           uint32_t buffer_size, uint32_t map_page_count,
                                            uint32_t gpu_addr,
                                            std::shared_ptr<MsdVslBuffer>* out_buffer) {
   std::shared_ptr<MsdVslBuffer> msd_buffer;
   ASSERT_NO_FATAL_FAILURE(CreateMsdBuffer(buffer_size, &msd_buffer));
 
   std::shared_ptr<GpuMapping> gpu_mapping;
-  magma::Status status = AddressSpace::MapBufferGpu(
-      address_space(), msd_buffer, gpu_addr, 0 /* page_offset */, map_page_count, &gpu_mapping);
+  magma::Status status =
+      AddressSpace::MapBufferGpu(context->exec_address_space(), msd_buffer, gpu_addr,
+                                 0 /* page_offset */, map_page_count, &gpu_mapping);
   ASSERT_TRUE(status.ok());
   ASSERT_NE(gpu_mapping, nullptr);
 
-  ASSERT_TRUE(address_space()->AddMapping(std::move(gpu_mapping)));
+  ASSERT_TRUE(context->exec_address_space()->AddMapping(std::move(gpu_mapping)));
 
   *out_buffer = msd_buffer;
 }
 
-void TestCommandBuffer::CreateAndPrepareBatch(std::shared_ptr<MsdVslBuffer> buffer,
+void TestCommandBuffer::CreateAndPrepareBatch(std::shared_ptr<MsdVslContext> context,
+                                              std::shared_ptr<MsdVslBuffer> buffer,
                                               uint32_t data_size, uint32_t batch_offset,
                                               std::shared_ptr<magma::PlatformSemaphore> signal,
                                               std::unique_ptr<CommandBuffer>* out_batch) {
@@ -52,7 +55,7 @@ void TestCommandBuffer::CreateAndPrepareBatch(std::shared_ptr<MsdVslBuffer> buff
       .wait_semaphore_count = 0,
       .signal_semaphore_count = signal ? 1 : 0u,
   });
-  auto batch = std::make_unique<CommandBuffer>(context(), 0, std::move(command_buffer));
+  auto batch = std::make_unique<CommandBuffer>(context, 0, std::move(command_buffer));
   ASSERT_NE(batch, nullptr);
 
   std::vector<CommandBuffer::ExecResource> resources;
@@ -70,11 +73,12 @@ void TestCommandBuffer::CreateAndPrepareBatch(std::shared_ptr<MsdVslBuffer> buff
   *out_batch = std::move(batch);
 }
 
-void TestCommandBuffer::CreateAndSubmitBuffer(const BufferDesc& buffer_desc,
+void TestCommandBuffer::CreateAndSubmitBuffer(std::shared_ptr<MsdVslContext> context,
+                                              const BufferDesc& buffer_desc,
                                               std::shared_ptr<MsdVslBuffer>* out_buffer) {
   std::shared_ptr<MsdVslBuffer> buffer;
-  ASSERT_NO_FATAL_FAILURE(CreateAndMapBuffer(buffer_desc.buffer_size, buffer_desc.map_page_count,
-                                             buffer_desc.gpu_addr, &buffer));
+  ASSERT_NO_FATAL_FAILURE(CreateAndMapBuffer(
+      context, buffer_desc.buffer_size, buffer_desc.map_page_count, buffer_desc.gpu_addr, &buffer));
 
   // Write a WAIT command at offset |kBatchOffset|.
   WriteWaitCommand(buffer, buffer_desc.batch_offset);
@@ -84,11 +88,12 @@ void TestCommandBuffer::CreateAndSubmitBuffer(const BufferDesc& buffer_desc,
   ASSERT_NE(semaphore, nullptr);
 
   std::unique_ptr<CommandBuffer> batch;
-  ASSERT_NO_FATAL_FAILURE(CreateAndPrepareBatch(
-      buffer, buffer_desc.data_size, buffer_desc.batch_offset, semaphore->Clone(), &batch));
+  ASSERT_NO_FATAL_FAILURE(CreateAndPrepareBatch(context, buffer, buffer_desc.data_size,
+                                                buffer_desc.batch_offset, semaphore->Clone(),
+                                                &batch));
   ASSERT_TRUE(batch->IsValidBatchBuffer());
 
-  ASSERT_TRUE(context()->SubmitBatch(std::move(batch)).ok());
+  ASSERT_TRUE(context->SubmitBatch(std::move(batch)).ok());
 
   constexpr uint64_t kTimeoutMs = 1000;
   ASSERT_EQ(MAGMA_STATUS_OK, semaphore->Wait(kTimeoutMs).get());
@@ -111,12 +116,14 @@ class TestIsValidBatchBuffer : public TestCommandBuffer {
  public:
   void DoTest(const BufferDesc& buffer_desc, bool want_is_valid) {
     std::shared_ptr<MsdVslBuffer> buffer;
-    ASSERT_NO_FATAL_FAILURE(CreateAndMapBuffer(buffer_desc.buffer_size, buffer_desc.map_page_count,
-                                               buffer_desc.gpu_addr, &buffer));
+    ASSERT_NO_FATAL_FAILURE(CreateAndMapBuffer(default_context(), buffer_desc.buffer_size,
+                                               buffer_desc.map_page_count, buffer_desc.gpu_addr,
+                                               &buffer));
 
     std::unique_ptr<CommandBuffer> batch;
-    ASSERT_NO_FATAL_FAILURE(CreateAndPrepareBatch(
-        buffer, buffer_desc.data_size, buffer_desc.batch_offset, nullptr /* signal */, &batch));
+    ASSERT_NO_FATAL_FAILURE(CreateAndPrepareBatch(default_context(), buffer, buffer_desc.data_size,
+                                                  buffer_desc.batch_offset, nullptr /* signal */,
+                                                  &batch));
     ASSERT_EQ(want_is_valid, batch->IsValidBatchBuffer());
   }
 };

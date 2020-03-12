@@ -80,7 +80,14 @@ class TestMsdVslContext : public ::testing::Test {
                                                      0 /* client_id */);
     EXPECT_NE(connection_, nullptr);
 
-    context_ = std::make_shared<MsdVslContext>(connection_, address_space_);
+    // Buffers are not submitted to hardware, so we just need a mock ringbuffer that the
+    // context can map.
+    const uint32_t kRingbufferSize = magma::page_size();
+    ringbuffer_ = std::make_unique<Ringbuffer>(MsdVslBuffer::Create(kRingbufferSize, "ringbuffer"),
+                                               0 /* start_offset */);
+    EXPECT_NE(ringbuffer_, nullptr);
+
+    context_ = MsdVslContext::Create(connection_, address_space_, ringbuffer_.get());
     EXPECT_NE(context_, nullptr);
   }
 
@@ -88,6 +95,8 @@ class TestMsdVslContext : public ::testing::Test {
   class MockConnectionOwner : public MsdVslConnection::Owner {
    public:
     // MsdVslConnection::Owner
+    Ringbuffer* GetRingbuffer() override { return nullptr; }
+
     magma::Status SubmitBatch(std::unique_ptr<MappedBatch> batch, bool do_flush) override {
       submitted_batch_ids_.push_back(batch->GetBatchBufferId());
       if (submitted_batch_ids_.size() == num_expected_batches_) {
@@ -133,6 +142,8 @@ class TestMsdVslContext : public ::testing::Test {
   std::shared_ptr<AddressSpace> address_space_;
   std::shared_ptr<MsdVslConnection> connection_;
   std::shared_ptr<MsdVslContext> context_;
+
+  std::unique_ptr<Ringbuffer> ringbuffer_;
 };
 
 void TestMsdVslContext::TestSubmitBatches(uint32_t num_batches, uint32_t num_resources_per_batch) {

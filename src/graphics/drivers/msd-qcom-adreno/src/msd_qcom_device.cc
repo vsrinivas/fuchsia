@@ -155,7 +155,8 @@ bool MsdQcomDevice::InitRingbuffer() {
   }
 
   DASSERT(address_space_);
-  if (!ringbuffer_->Map(address_space_))
+  uint64_t gpu_addr;
+  if (!ringbuffer_->Map(address_space_, &gpu_addr))
     return DRETF(false, "Failed to map ringbuffer");
 
   {
@@ -164,10 +165,6 @@ bool MsdQcomDevice::InitRingbuffer() {
     reg.disable_read_ptr_update();
     reg.WriteTo(register_io_.get());
   }
-
-  uint64_t gpu_addr;
-  if (!ringbuffer_->GetGpuAddress(&gpu_addr))
-    return DRETF(false, "Failed to get ringbuffer gpu addr");
 
   registers::A6xxCpRingbufferBase::CreateFrom(gpu_addr).WriteTo(register_io_.get());
 

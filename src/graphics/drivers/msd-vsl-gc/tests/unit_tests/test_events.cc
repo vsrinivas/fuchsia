@@ -21,7 +21,7 @@ class TestEvents : public ::testing::Test {
     EXPECT_NE(address_space_, nullptr);
     device_->page_table_arrays()->AssignAddressSpace(kAddressSpaceIndex, address_space_.get());
     std::weak_ptr<MsdVslConnection> connection;
-    context_ = std::make_shared<MsdVslContext>(connection, address_space_);
+    context_ = MsdVslContext::Create(connection, address_space_, device_->GetRingbuffer());
     EXPECT_NE(context_, nullptr);
   }
 
@@ -82,35 +82,35 @@ TEST_F(TestEvents, AllocAndFree) {
 TEST_F(TestEvents, WriteSameEvent) {
   // We need to load the address space as we are writing to the ringbuffer directly,
   // rather than via SubmitCommandBuffer.
-  ASSERT_TRUE(device_->LoadInitialAddressSpace(address_space_, kAddressSpaceIndex));
-  ASSERT_TRUE(device_->StartRingbuffer(address_space_));
+  ASSERT_TRUE(device_->LoadInitialAddressSpace(context_, kAddressSpaceIndex));
+  ASSERT_TRUE(device_->StartRingbuffer(context_));
 
   uint32_t event_id;
   ASSERT_TRUE(device_->AllocInterruptEvent(false /* free_on_complete */, &event_id));
 
   auto mapped_batch = std::make_unique<MockMappedBatch>(nullptr);
-  ASSERT_TRUE(device_->WriteInterruptEvent(event_id, std::move(mapped_batch)));
+  ASSERT_TRUE(device_->WriteInterruptEvent(event_id, std::move(mapped_batch), context_));
 
   // Writing the event again should fail as it is still pending.
   mapped_batch = std::make_unique<MockMappedBatch>(nullptr);
-  ASSERT_FALSE(device_->WriteInterruptEvent(event_id, std::move(mapped_batch)));
+  ASSERT_FALSE(device_->WriteInterruptEvent(event_id, std::move(mapped_batch), context_));
 
   ASSERT_TRUE(device_->CompleteInterruptEvent(event_id));
 
   // Now that the event completed, writing should succeed.
   mapped_batch = std::make_unique<MockMappedBatch>(nullptr);
-  ASSERT_TRUE(device_->WriteInterruptEvent(event_id, std::move(mapped_batch)));
+  ASSERT_TRUE(device_->WriteInterruptEvent(event_id, std::move(mapped_batch), context_));
 }
 
 TEST_F(TestEvents, WriteUnorderedEventIds) {
   // We need to load the address space as we are writing to the ringbuffer directly,
   // rather than via SubmitCommandBuffer.
-  ASSERT_TRUE(device_->LoadInitialAddressSpace(address_space_, kAddressSpaceIndex));
-  ASSERT_TRUE(device_->StartRingbuffer(address_space_));
+  ASSERT_TRUE(device_->LoadInitialAddressSpace(context_, kAddressSpaceIndex));
+  ASSERT_TRUE(device_->StartRingbuffer(context_));
 
   auto& ringbuffer = device_->ringbuffer_;
   uint64_t rb_gpu_addr;
-  ASSERT_TRUE(ringbuffer->GetGpuAddress(&rb_gpu_addr));
+  ASSERT_TRUE(context_->GetRingbufferGpuAddress(&rb_gpu_addr));
 
   // Allocate the maximum number of interrupt events, and corresponding semaphores.
   uint32_t event_ids[MsdVslDevice::kNumEvents] = {};
@@ -131,7 +131,7 @@ TEST_F(TestEvents, WriteUnorderedEventIds) {
     auto copy = semaphores[i]->Clone();
     ASSERT_NE(copy, nullptr);
     auto mapped_batch = std::make_unique<MockMappedBatch>(std::move(copy));
-    ASSERT_TRUE(device_->WriteInterruptEvent(event_ids[i], std::move(mapped_batch)));
+    ASSERT_TRUE(device_->WriteInterruptEvent(event_ids[i], std::move(mapped_batch), context_));
   }
 
   ASSERT_TRUE(device_->AddRingbufferWaitLink());

@@ -86,6 +86,7 @@ class MsdIntelContext {
     std::shared_ptr<MsdIntelBuffer> context_buffer;
     std::unique_ptr<GpuMapping> context_mapping;
     std::unique_ptr<Ringbuffer> ringbuffer;
+    gpu_addr_t ringbuffer_gpu_addr = 0;
     void* context_buffer_cpu_addr = nullptr;
   };
 

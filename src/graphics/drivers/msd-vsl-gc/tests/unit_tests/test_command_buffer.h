@@ -62,7 +62,7 @@ class TestCommandBuffer : public ::testing::Test {
     auto connection =
         std::make_shared<MsdVslConnection>(device_.get(), address_space, 1 /* client_id */);
     ASSERT_NE(connection, nullptr);
-    auto context = std::make_shared<MsdVslContext>(connection, address_space);
+    auto context = MsdVslContext::Create(connection, address_space, device_->GetRingbuffer());
     ASSERT_NE(context, nullptr);
     *out_client = std::make_unique<Client>(connection, context, address_space);
   }
@@ -72,7 +72,8 @@ class TestCommandBuffer : public ::testing::Test {
 
   // Creates a buffer of |buffer_size| bytes, and maps the buffer to |gpu_addr|.
   // |map_page_count| may be less bytes than buffer size.
-  void CreateAndMapBuffer(uint32_t buffer_size, uint32_t map_page_count, uint32_t gpu_addr,
+  void CreateAndMapBuffer(std::shared_ptr<MsdVslContext> context, uint32_t buffer_size,
+                          uint32_t map_page_count, uint32_t gpu_addr,
                           std::shared_ptr<MsdVslBuffer>* out_buffer);
 
   // Creates a new command buffer.
@@ -80,7 +81,8 @@ class TestCommandBuffer : public ::testing::Test {
   // the size of |buffer|.
   // |signal| is an optional semaphore. If present, it will be signalled after the batch
   // is submitted via |SubmitBatch| and execution completes.
-  void CreateAndPrepareBatch(std::shared_ptr<MsdVslBuffer> buffer, uint32_t data_size,
+  void CreateAndPrepareBatch(std::shared_ptr<MsdVslContext> context,
+                             std::shared_ptr<MsdVslBuffer> buffer, uint32_t data_size,
                              uint32_t batch_offset,
                              std::shared_ptr<magma::PlatformSemaphore> signal,
                              std::unique_ptr<CommandBuffer>* out_batch);
@@ -88,15 +90,17 @@ class TestCommandBuffer : public ::testing::Test {
   // Creates a buffer from |buffer_desc|, writes a test instruction to it and
   // submits it as a command buffer. This will wait for execution to complete.
   // If |out_buffer| is non-null, it will be populated with the created buffer.
-  void CreateAndSubmitBuffer(const BufferDesc& buffer_desc,
+  void CreateAndSubmitBuffer(std::shared_ptr<MsdVslContext> context, const BufferDesc& buffer_desc,
                              std::shared_ptr<MsdVslBuffer>* out_buffer = nullptr);
 
   // Writes a single WAIT command in |buf| at |offset|.
   void WriteWaitCommand(std::shared_ptr<MsdVslBuffer> buf, uint32_t offset);
 
-  std::shared_ptr<MsdVslConnection> connection() { return client_->connection; }
-  std::shared_ptr<MsdVslContext> context() { return client_->context; }
-  std::shared_ptr<AddressSpace> address_space() { return client_->address_space; }
+  void DropDefaultClient() { client_ = nullptr; }
+
+  std::shared_ptr<MsdVslConnection> default_connection() { return client_->connection; }
+  std::shared_ptr<MsdVslContext> default_context() { return client_->context; }
+  std::shared_ptr<AddressSpace> default_address_space() { return client_->address_space; }
 
   std::unique_ptr<MsdVslDevice> device_;
   std::unique_ptr<AddressSpaceOwner> address_space_owner_;

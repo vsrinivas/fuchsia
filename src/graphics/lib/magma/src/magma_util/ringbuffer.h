@@ -40,14 +40,9 @@ class Ringbuffer : public InstructionWriter {
   bool HasSpace(uint32_t bytes);
 
   // Maps to both CPU and GPU.
-  bool Map(std::shared_ptr<AddressSpace<GpuMapping>> address_space);
+  bool Map(std::shared_ptr<AddressSpace<GpuMapping>> address_space, uint64_t* gpu_addr_out);
+  bool MultiMap(std::shared_ptr<AddressSpace<GpuMapping>> address_space, uint64_t gpu_addr);
   bool Unmap();
-
-  bool GetGpuAddress(uint64_t* addr_out);
-
-  std::weak_ptr<AddressSpace<GpuMapping>> GetMappedAddressSpace() const {
-    return gpu_mapping_ ? gpu_mapping_->address_space() : std::weak_ptr<AddressSpace<GpuMapping>>();
-  }
 
  protected:
   uint32_t* vaddr() { return vaddr_; }
@@ -61,7 +56,7 @@ class Ringbuffer : public InstructionWriter {
 
  private:
   std::shared_ptr<typename GpuMapping::BufferType> buffer_;
-  std::unique_ptr<GpuMapping> gpu_mapping_;
+  std::vector<std::shared_ptr<GpuMapping>> gpu_mappings_;
   uint64_t size_;
   uint32_t head_;
   uint32_t tail_;
@@ -106,21 +101,74 @@ bool Ringbuffer<GpuMapping>::HasSpace(uint32_t bytes) {
 }
 
 template <typename GpuMapping>
-bool Ringbuffer<GpuMapping>::Map(std::shared_ptr<AddressSpace<GpuMapping>> address_space) {
+bool Ringbuffer<GpuMapping>::Map(std::shared_ptr<AddressSpace<GpuMapping>> address_space,
+                                 uint64_t* gpu_addr_out) {
   DASSERT(!vaddr_);
 
-  gpu_mapping_ = AddressSpace<GpuMapping>::MapBufferGpu(address_space, buffer_);
-  if (!gpu_mapping_)
+  auto gpu_mapping = AddressSpace<GpuMapping>::MapBufferGpu(address_space, buffer_);
+  if (!gpu_mapping)
     return DRETF(false, "MapBufferGpu failed");
 
   void* addr;
   if (!BufferAccessor<typename GpuMapping::BufferType>::platform_buffer(buffer_.get())
            ->MapCpu(&addr)) {
-    gpu_mapping_ = nullptr;
     return DRETF(false, "MapCpu failed");
   }
 
   vaddr_ = reinterpret_cast<uint32_t*>(addr);
+
+  *gpu_addr_out = gpu_mapping->gpu_addr();
+  gpu_mappings_.push_back(std::move(gpu_mapping));
+
+  return true;
+}
+
+template <typename GpuMapping>
+bool Ringbuffer<GpuMapping>::MultiMap(std::shared_ptr<AddressSpace<GpuMapping>> address_space,
+                                      uint64_t gpu_addr) {
+  // Check if the address space is already mapped.
+  // If an address space is already dead, we can also drop the mapping to avoid forever
+  // accumulating more gpu mappings.
+  bool found_mapping = false;
+  unsigned int i = 0;
+  while (i < gpu_mappings_.size()) {
+    auto mapped_address_space = gpu_mappings_[i]->address_space().lock();
+    if (!mapped_address_space) {
+      gpu_mappings_.erase(gpu_mappings_.begin() + i);
+      continue;
+    }
+    if (mapped_address_space.get() == address_space.get()) {
+      found_mapping = true;
+    }
+    i++;
+  }
+  if (found_mapping) {
+    return DRETF(false, "Ringbuffer was already mapped in address space %p\n", address_space.get());
+  }
+
+  DASSERT(magma::is_page_aligned(size_));
+  uint64_t page_count = size_ / magma::page_size();
+
+  std::shared_ptr<GpuMapping> gpu_mapping;
+  magma::Status status = AddressSpace<GpuMapping>::MapBufferGpu(
+      address_space, buffer_, gpu_addr, 0 /* page_offset */, page_count, &gpu_mapping);
+  if (!status.ok()) {
+    return DRET_MSG(status.get(), "MapBufferGpu failed");
+  }
+  DASSERT(gpu_mapping);
+
+  if (!vaddr_) {
+    void* addr;
+    if (!BufferAccessor<typename GpuMapping::BufferType>::platform_buffer(buffer_.get())
+             ->MapCpu(&addr)) {
+      return DRETF(false, "MapCpu failed");
+    }
+
+    vaddr_ = reinterpret_cast<uint32_t*>(addr);
+  }
+
+  gpu_mappings_.push_back(std::move(gpu_mapping));
+
   return true;
 }
 
@@ -131,17 +179,8 @@ bool Ringbuffer<GpuMapping>::Unmap() {
   if (!buffer_->platform_buffer()->UnmapCpu())
     return DRETF(false, "UnmapCpu failed");
 
-  gpu_mapping_.reset();
+  gpu_mappings_.clear();
 
-  return true;
-}
-
-template <typename GpuMapping>
-bool Ringbuffer<GpuMapping>::GetGpuAddress(uint64_t* addr_out) {
-  if (!gpu_mapping_)
-    return DRETF(false, "Not mapped");
-
-  *addr_out = gpu_mapping_->gpu_addr();
   return true;
 }
 

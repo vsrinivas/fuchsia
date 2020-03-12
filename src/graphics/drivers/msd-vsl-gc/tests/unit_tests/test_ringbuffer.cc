@@ -5,6 +5,7 @@
 #include "gtest/gtest.h"
 #include "mock/mock_bus_mapper.h"
 #include "src/graphics/drivers/msd-vsl-gc/src/address_space.h"
+#include "src/graphics/drivers/msd-vsl-gc/src/msd_vsl_context.h"
 #include "src/graphics/drivers/msd-vsl-gc/src/ringbuffer.h"
 
 class RingbufferTest : public ::testing::Test {
@@ -35,7 +36,10 @@ TEST_F(RingbufferTest, Map) {
   std::shared_ptr<AddressSpace> address_space = AddressSpace::Create(&owner, 0);
   ASSERT_NE(nullptr, address_space);
 
-  EXPECT_TRUE(ringbuffer->Map(address_space));
+  auto context =
+      MsdVslContext::Create(std::weak_ptr<MsdVslConnection>(), address_space, ringbuffer.get());
+
+  EXPECT_TRUE(context->MapRingbuffer(ringbuffer.get()));
 }
 
 TEST_F(RingbufferTest, OffsetPopulatedEmpty) {
@@ -99,7 +103,9 @@ TEST_F(RingbufferTest, ReserveContiguous) {
   MockAddressSpaceOwner owner;
   std::shared_ptr<AddressSpace> address_space = AddressSpace::Create(&owner, 0);
   ASSERT_NE(nullptr, address_space);
-  EXPECT_TRUE(ringbuffer->Map(address_space));
+  auto context =
+      MsdVslContext::Create(std::weak_ptr<MsdVslConnection>(), address_space, ringbuffer.get());
+  EXPECT_TRUE(context->MapRingbuffer(ringbuffer.get()));
 
   // Cannot request the same number of bytes as the ringbuffer size,
   // as the ringbuffer holds 4 bytes less.

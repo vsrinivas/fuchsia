@@ -66,6 +66,9 @@ class MsdVslDevice : public msd_device_t,
   // LOAD_STATE, SEMAPHORE, STALL, WAIT, LINK
   // This is in addition to |kRbInstructionsPerBatch|.
   static constexpr uint32_t kRbInstructionsPerFlush = 5;
+  // Includes an additional instruction for address space switching.
+  static constexpr uint32_t kRbMaxInstructionsPerEvent =
+      kRbInstructionsPerBatch + kRbInstructionsPerFlush + 1;
 
   static constexpr uint32_t kInvalidRingbufferOffset = ~0;
 
@@ -79,6 +82,10 @@ class MsdVslDevice : public msd_device_t,
     // The offset following this event in the ringbuffer.
     uint32_t ringbuffer_offset = kInvalidRingbufferOffset;
     std::unique_ptr<MappedBatch> mapped_batch;
+    // If |mapped_batch| requires a context switch, this will be populated with the
+    // context the ringbuffer was last configured with, to ensure it stays alive until the
+    // switch is completed by hardware.
+    std::shared_ptr<MsdVslContext> prev_context;
   };
 
 #define CHECK_THREAD_IS_CURRENT(x) \
@@ -109,11 +116,14 @@ class MsdVslDevice : public msd_device_t,
   bool FreeInterruptEvent(uint32_t event_id);
   // Writes a new interrupt event to the end of the ringbuffer. The event must have been allocated
   // using |AllocInterruptEvent|.
-  bool WriteInterruptEvent(uint32_t event_id, std::unique_ptr<MappedBatch> mapped_batch);
+  bool WriteInterruptEvent(uint32_t event_id, std::unique_ptr<MappedBatch> mapped_batch,
+                           std::shared_ptr<MsdVslContext> prev_context);
   bool CompleteInterruptEvent(uint32_t event_id);
 
+  bool MapRingbuffer(std::shared_ptr<MsdVslContext> context);
+
   // Returns true if starting the ringbuffer succeeded, or the ringbuffer was already running.
-  bool StartRingbuffer(std::shared_ptr<AddressSpace> address_space);
+  bool StartRingbuffer(std::shared_ptr<MsdVslContext> context);
   // Adds a WAIT-LINK to the end of the ringbuffer.
   bool AddRingbufferWaitLink();
   // Modifies the last WAIT in the ringbuffer to link to |gpu_addr|.
@@ -127,18 +137,21 @@ class MsdVslDevice : public msd_device_t,
 
   // Returns whether the device became idle before |timeout_ms| elapsed.
   bool WaitUntilIdle(uint32_t timeout_ms);
-  bool LoadInitialAddressSpace(std::shared_ptr<AddressSpace>, uint32_t address_space_index);
+  bool LoadInitialAddressSpace(std::shared_ptr<MsdVslContext> context,
+                               uint32_t address_space_index);
 
   // If |prefetch_out| is not null, it will be populated with the prefetch that was submitted
   // to the device.
   bool SubmitCommandBufferNoMmu(uint64_t bus_addr, uint32_t length,
                                 uint16_t* prefetch_out = nullptr);
 
-  bool SubmitFlushTlb(std::shared_ptr<AddressSpace> address_space);
+  // If |context| is not the same as |configured_context|, the hardware will be configured with
+  // the new |context|.
+  bool SubmitFlushTlb(std::shared_ptr<MsdVslContext> context);
 
-  bool SubmitCommandBuffer(std::shared_ptr<AddressSpace> address_space,
-                           uint32_t address_space_index, bool do_flush,
-                           std::unique_ptr<MappedBatch> mapped_batch, uint32_t event_id);
+  bool SubmitCommandBuffer(std::shared_ptr<MsdVslContext> context, uint32_t address_space_index,
+                           bool do_flush, std::unique_ptr<MappedBatch> mapped_batch,
+                           uint32_t event_id);
 
   magma::Status ProcessBatch(std::unique_ptr<MappedBatch> batch, bool do_flush);
 
@@ -153,6 +166,8 @@ class MsdVslDevice : public msd_device_t,
   }
 
   // MsdVslConnection::Owner
+  Ringbuffer* GetRingbuffer() override { return ringbuffer_.get(); }
+
   // If |do_flush| is true, a flush TLB command will be queued before the batch commands.
   magma::Status SubmitBatch(std::unique_ptr<MappedBatch> batch, bool do_flush) override;
 
@@ -170,6 +185,11 @@ class MsdVslDevice : public msd_device_t,
 
   // The command queue.
   std::unique_ptr<Ringbuffer> ringbuffer_;
+  // This holds the context that the hardware would be configured with at the current point
+  // in the ringbuffer. If a client's context differs to |configured_context_|, |SubmitFlushTlb|
+  // will write the commands for loading the client's context and flushing the TLB prior to linking
+  // to the new command buffer.
+  std::shared_ptr<MsdVslContext> configured_context_;
 
   std::thread interrupt_thread_;
   std::unique_ptr<magma::PlatformInterrupt> interrupt_;
@@ -208,6 +228,8 @@ class MsdVslDevice : public msd_device_t,
   friend class TestExec_BacklogWithInvalidBatch_Test;
   friend class TestExec_ReuseGpuAddress_Test;
   friend class TestExec_SubmitBatchWithOffset_Test;
+  friend class TestExec_SwitchContext_Test;
+  friend class TestExec_SwitchMultipleContexts_Test;
   friend class TestEvents;
   friend class TestEvents_AllocAndFree_Test;
   friend class TestEvents_Submit_Test;

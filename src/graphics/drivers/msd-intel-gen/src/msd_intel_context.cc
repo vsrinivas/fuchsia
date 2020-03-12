@@ -42,7 +42,7 @@ bool MsdIntelContext::Map(std::shared_ptr<AddressSpace> address_space, EngineCom
   if (!state.context_mapping)
     return DRETF(false, "context map failed");
 
-  if (!state.ringbuffer->Map(address_space)) {
+  if (!state.ringbuffer->Map(address_space, &state.ringbuffer_gpu_addr)) {
     state.context_mapping.reset();
     return DRETF(false, "ringbuffer map failed");
   }
@@ -92,8 +92,7 @@ bool MsdIntelContext::GetRingbufferGpuAddress(EngineCommandStreamerId id, gpu_ad
   if (!state.context_mapping)
     return DRETF(false, "context not mapped");
 
-  if (!state.ringbuffer->GetGpuAddress(addr_out))
-    return DRETF(false, "failed to get gpu address");
+  *addr_out = state.ringbuffer_gpu_addr;
 
   return true;
 }

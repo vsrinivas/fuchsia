@@ -52,7 +52,8 @@ class TestMsdVslDevice : public drm_test_info {
                                                                     address_space_.get());
 
     std::weak_ptr<MsdVslConnection> connection;
-    context_ = std::make_shared<MsdVslContext>(connection, address_space_);
+    context_ =
+        MsdVslContext::Create(connection, address_space_, device_.msd_vsl_device->GetRingbuffer());
     EXPECT_NE(context_, nullptr);
 
     command_stream_.etna_buffer =
@@ -106,6 +107,7 @@ class TestMsdVslDevice : public drm_test_info {
 
   magma::RegisterIo* register_io() { return device_.msd_vsl_device->register_io(); }
 
+  std::shared_ptr<MsdVslContext> context() { return context_; }
   std::shared_ptr<AddressSpace> address_space() { return address_space_; }
 
   bool AllocInterruptEvent(uint32_t* out_id) {
@@ -271,13 +273,14 @@ void* etna_bo_map(struct etna_bo* bo) {
 }
 
 // Returns true if the |gpu_addr| lies between the addresses of the last WAIT-LINK command.
-bool matches_last_wait_link(Ringbuffer* ringbuffer, uint32_t gpu_addr) {
+bool matches_last_wait_link(std::shared_ptr<MsdVslContext> context, Ringbuffer* ringbuffer,
+                            uint32_t gpu_addr) {
   // The last WAIT-LINK will be between [tail - 16, tail].
   auto wait_link_start = ringbuffer->SubtractOffset(kWaitLinkDwords * sizeof(uint32_t));
   auto wait_link_end = ringbuffer->tail();
 
   uint64_t rb_gpu_addr;
-  if (!ringbuffer->GetGpuAddress(&rb_gpu_addr)) {
+  if (!context->GetRingbufferGpuAddress(&rb_gpu_addr)) {
     return DRETF(false, "Failed to get ringbuffer gpu addr");
   }
   // The address lies before the start of the ringbuffer.
@@ -314,7 +317,8 @@ void etna_cmd_stream_finish(struct etna_cmd_stream* stream) {
 
   {
     auto dma_addr = registers::DmaAddress::Get().ReadFrom(cmd_stream->test->register_io());
-    EXPECT_TRUE(matches_last_wait_link(cmd_stream->test->ringbuffer(), dma_addr.reg_value()));
+    EXPECT_TRUE(matches_last_wait_link(cmd_stream->test->context(), cmd_stream->test->ringbuffer(),
+                                       dma_addr.reg_value()));
     DLOG("dma_addr 0x%x", dma_addr.reg_value());
   }
 
