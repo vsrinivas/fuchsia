@@ -89,6 +89,8 @@ RenderUsage UsageFromString(std::string_view string) {
     return RenderUsage::INTERRUPTION;
   } else if (string == "system_agent") {
     return RenderUsage::SYSTEM_AGENT;
+  } else if (string == "ultrasound") {
+    return RenderUsage::ULTRASOUND;
   }
   FX_CHECK(false);
   return RenderUsage::MEDIA;
@@ -328,8 +330,17 @@ void ParseOutputDevicePoliciesFromJsonObject(const rapidjson::Value& output_devi
         ParseOutputDeviceProfileFromJsonObject(output_device_profile, &all_supported_usages));
   }
 
-  FX_CHECK(all_supported_usages.size() == kStreamRenderUsageCount)
-      << "Not all output usages are supported in the config";
+  // We expect all the usages that clients can select are supported.
+  FX_CHECK(all_supported_usages.find(RenderUsage::BACKGROUND) != all_supported_usages.end());
+  FX_CHECK(all_supported_usages.find(RenderUsage::MEDIA) != all_supported_usages.end());
+  FX_CHECK(all_supported_usages.find(RenderUsage::INTERRUPTION) != all_supported_usages.end());
+  FX_CHECK(all_supported_usages.find(RenderUsage::SYSTEM_AGENT) != all_supported_usages.end());
+  FX_CHECK(all_supported_usages.find(RenderUsage::COMMUNICATION) != all_supported_usages.end());
+
+  // Not all devices will support ultrasound.
+  if (all_supported_usages.find(RenderUsage::ULTRASOUND) == all_supported_usages.end()) {
+    FX_LOGS(INFO) << "Device does not support ultrasound";
+  }
 }
 
 std::pair<std::optional<std::vector<audio_stream_unique_id_t>>, DeviceConfig::InputDeviceProfile>

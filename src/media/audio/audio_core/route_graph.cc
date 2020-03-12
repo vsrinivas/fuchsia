@@ -28,14 +28,16 @@ RouteGraph::RouteGraph(const DeviceConfig& device_config, LinkMatrix* link_matri
   static_assert(static_cast<std::underlying_type_t<RenderUsage>>(RenderUsage::INTERRUPTION) == 2);
   static_assert(static_cast<std::underlying_type_t<RenderUsage>>(RenderUsage::SYSTEM_AGENT) == 3);
   static_assert(static_cast<std::underlying_type_t<RenderUsage>>(RenderUsage::COMMUNICATION) == 4);
-  static_assert(kStreamRenderUsageCount == 5);
+  static_assert(static_cast<std::underlying_type_t<RenderUsage>>(RenderUsage::ULTRASOUND) == 5);
+  static_assert(kStreamRenderUsageCount == 6);
 
   static_assert(static_cast<std::underlying_type_t<CaptureUsage>>(CaptureUsage::BACKGROUND) == 0);
   static_assert(static_cast<std::underlying_type_t<CaptureUsage>>(CaptureUsage::FOREGROUND) == 1);
   static_assert(static_cast<std::underlying_type_t<CaptureUsage>>(CaptureUsage::SYSTEM_AGENT) == 2);
   static_assert(static_cast<std::underlying_type_t<CaptureUsage>>(CaptureUsage::COMMUNICATION) ==
                 3);
-  static_assert(kStreamCaptureUsageCount == 4);
+  static_assert(static_cast<std::underlying_type_t<CaptureUsage>>(CaptureUsage::ULTRASOUND) == 4);
+  static_assert(kStreamCaptureUsageCount == 5);
 }
 
 RouteGraph::~RouteGraph() {

@@ -179,7 +179,8 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithRoutingPolicyNoDefault) {
           "interruption",
           "background",
           "communications",
-          "system_agent"
+          "system_agent",
+          "ultrasound"
         ],
         "eligible_for_loopback": true
       }
@@ -197,8 +198,12 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithRoutingPolicyNoDefault) {
 
   auto& config = process_config->device_config();
 
-  EXPECT_TRUE(config.output_device_profile(unknown_id).supports_usage(RenderUsage::INTERRUPTION));
   EXPECT_TRUE(config.output_device_profile(unknown_id).supports_usage(RenderUsage::MEDIA));
+  EXPECT_TRUE(config.output_device_profile(unknown_id).supports_usage(RenderUsage::INTERRUPTION));
+  EXPECT_TRUE(config.output_device_profile(unknown_id).supports_usage(RenderUsage::BACKGROUND));
+  EXPECT_TRUE(config.output_device_profile(unknown_id).supports_usage(RenderUsage::COMMUNICATION));
+  EXPECT_TRUE(config.output_device_profile(unknown_id).supports_usage(RenderUsage::SYSTEM_AGENT));
+  EXPECT_TRUE(config.output_device_profile(unknown_id).supports_usage(RenderUsage::ULTRASOUND));
 
   EXPECT_TRUE(config.output_device_profile(unknown_id).eligible_for_loopback());
 }
@@ -232,6 +237,39 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithRoutingPolicyInsufficientCove
                                kConfigWithRoutingPolicy.size()));
 
   ASSERT_DEATH(ProcessConfigLoader::LoadProcessConfig(kTestAudioCoreConfigFilename), "");
+}
+
+TEST(ProcessConfigLoaderTest, AllowConfigWithoutUltrasound) {
+  static const std::string kConfigWithRoutingPolicy =
+      R"JSON({
+    "volume_curve": [
+      {
+          "level": 0.0,
+          "db": -160.0
+      },
+      {
+          "level": 1.0,
+          "db": 0.0
+      }
+    ],
+    "output_devices": [
+      {
+        "device_id" : "34384e7da9d52c8062a9765baeb6053a",
+        "supported_output_stream_types": [
+          "media",
+          "interruption",
+          "background",
+          "communications",
+          "system_agent"
+        ],
+        "eligible_for_loopback": true
+      }
+    ]
+  })JSON";
+  ASSERT_TRUE(files::WriteFile(kTestAudioCoreConfigFilename, kConfigWithRoutingPolicy.data(),
+                               kConfigWithRoutingPolicy.size()));
+
+  ProcessConfigLoader::LoadProcessConfig(kTestAudioCoreConfigFilename);
 }
 
 TEST(ProcessConfigLoaderTest, LoadProcessConfigWithInputDevices) {

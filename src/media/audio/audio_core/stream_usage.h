@@ -33,6 +33,9 @@ static_assert(fuchsia::media::RENDER_USAGE_COUNT == 5);
   EXPAND_RENDER_USAGE(SYSTEM_AGENT)   \
   EXPAND_RENDER_USAGE(COMMUNICATION)
 
+static constexpr uint32_t kStreamInternalRenderUsageCount = 1;
+#define EXPAND_EACH_INTERNAL_RENDER_USAGE EXPAND_RENDER_USAGE(ULTRASOUND)
+
 static_assert(fuchsia::media::CAPTURE_USAGE_COUNT == 4);
 #define EXPAND_EACH_FIDL_CAPTURE_USAGE \
   EXPAND_CAPTURE_USAGE(BACKGROUND)     \
@@ -40,17 +43,28 @@ static_assert(fuchsia::media::CAPTURE_USAGE_COUNT == 4);
   EXPAND_CAPTURE_USAGE(SYSTEM_AGENT)   \
   EXPAND_CAPTURE_USAGE(COMMUNICATION)
 
-static constexpr uint32_t kStreamRenderUsageCount = fuchsia::media::RENDER_USAGE_COUNT + 0;
+static constexpr uint32_t kStreamInternalCaptureUsageCount = 1;
+#define EXPAND_EACH_INTERNAL_CAPTURE_USAGE EXPAND_CAPTURE_USAGE(ULTRASOUND)
+
+static constexpr uint32_t kStreamRenderUsageCount =
+    fuchsia::media::RENDER_USAGE_COUNT + kStreamInternalRenderUsageCount;
 enum class RenderUsage : std::underlying_type_t<fuchsia::media::AudioRenderUsage> {
 #define EXPAND_RENDER_USAGE(U) U = fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::U),
   EXPAND_EACH_FIDL_RENDER_USAGE
 #undef EXPAND_RENDER_USAGE
+#define EXPAND_RENDER_USAGE(U) U,
+      EXPAND_EACH_INTERNAL_RENDER_USAGE
+#undef EXPAND_RENDER_USAGE
 };
 
-static constexpr uint32_t kStreamCaptureUsageCount = fuchsia::media::CAPTURE_USAGE_COUNT + 0;
+static constexpr uint32_t kStreamCaptureUsageCount =
+    fuchsia::media::CAPTURE_USAGE_COUNT + kStreamInternalCaptureUsageCount;
 enum class CaptureUsage : std::underlying_type_t<fuchsia::media::AudioCaptureUsage> {
 #define EXPAND_CAPTURE_USAGE(U) U = fidl::ToUnderlying(fuchsia::media::AudioCaptureUsage::U),
   EXPAND_EACH_FIDL_CAPTURE_USAGE
+#undef EXPAND_CAPTURE_USAGE
+#define EXPAND_CAPTURE_USAGE(U) U,
+      EXPAND_EACH_INTERNAL_CAPTURE_USAGE
 #undef EXPAND_CAPTURE_USAGE
 };
 
@@ -134,5 +148,7 @@ class StreamUsage {
 
 #undef EXPAND_EACH_FIDL_CAPTURE_USAGE
 #undef EXPAND_EACH_FIDL_RENDER_USAGE
+#undef EXPAND_EACH_INTERNAL_CAPTURE_USAGE
+#undef EXPAND_EACH_INTERNAL_RENDER_USAGE
 
 #endif  // SRC_MEDIA_AUDIO_AUDIO_CORE_STREAM_USAGE_H_
