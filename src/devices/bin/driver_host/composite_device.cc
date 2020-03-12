@@ -87,13 +87,6 @@ zx_status_t InitializeCompositeDevice(const fbl::RefPtr<zx_device>& dev,
   }();
   static composite_protocol_ops_t composite_ops = []() {
     composite_protocol_ops_t ops = {};
-    ops.get_component_count = [](void* ctx) {
-      return static_cast<CompositeDeviceInstance*>(ctx)->GetFragmentCount();
-    };
-    ops.get_components = [](void* ctx, zx_device_t** comp_list, size_t comp_count,
-                            size_t* comp_actual) {
-      static_cast<CompositeDeviceInstance*>(ctx)->GetFragments(comp_list, comp_count, comp_actual);
-    };
     ops.get_fragment_count = [](void* ctx) {
       return static_cast<CompositeDeviceInstance*>(ctx)->GetFragmentCount();
     };

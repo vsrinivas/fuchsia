@@ -176,11 +176,6 @@ class FakeComposite : public ddk::CompositeProtocol<FakeComposite> {
     }
   }
 
-  uint32_t CompositeGetComponentCount() { return CompositeGetFragmentCount(); }
-  void CompositeGetComponents(zx_device_t** comp_list, size_t comp_count, size_t* comp_actual) {
-    return CompositeGetFragments(comp_list, comp_count, comp_actual);
-  }
-
  private:
   static constexpr size_t kNumFragments = 2;
 
