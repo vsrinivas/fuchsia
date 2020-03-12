@@ -59,8 +59,15 @@ void mp_interrupt(mp_ipi_target_t, cpu_mask_t mask);
 void mp_sync_exec(mp_ipi_target_t, cpu_mask_t mask, mp_sync_task_t task, void* context);
 
 zx_status_t mp_hotplug_cpu_mask(cpu_mask_t mask);
+
+// Unplug the cpu specified by |mask|, waiting, up to |deadline| for its "shutdown" thread to
+// complete.
+//
+// If |leaked_thread| is non-null and a "shutdown" thread was created, it will be assigned to
+// |leaked_thread| so the caller can |Forget| it.
 zx_status_t mp_unplug_cpu_mask(cpu_mask_t mask, zx_time_t deadline,
                                Thread** leaked_thread = nullptr);
+
 static inline zx_status_t mp_hotplug_cpu(cpu_num_t cpu) {
   return mp_hotplug_cpu_mask(cpu_num_to_mask(cpu));
 }
