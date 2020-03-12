@@ -13,16 +13,17 @@
 
 #include <fbl/mutex.h>
 #include <fbl/unique_fd.h>
-#include <fs-test-utils/blobfs/blobfs.h>
+
+#include "test/blob_utils.h"
 
 struct BlobFile {
-  BlobFile(std::unique_ptr<fs_test_utils::BlobInfo> i, size_t writes_remaining)
+  BlobFile(std::unique_ptr<blobfs::BlobInfo> i, size_t writes_remaining)
       : info(std::move(i)), writes_remaining(writes_remaining) {
     bytes_remaining = info->size_data;
   }
   BlobFile() {}
 
-  std::unique_ptr<fs_test_utils::BlobInfo> info;
+  std::unique_ptr<blobfs::BlobInfo> info;
   fbl::unique_fd fd;
   size_t writes_remaining;
   size_t bytes_remaining;
