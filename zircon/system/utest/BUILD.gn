@@ -92,7 +92,6 @@ if (current_cpu != "") {
 #------------------
 #------------------
 #------------------
-      "$zx/system/ulib/lazy_init/test",
 #------------------
 #------------------
       "$zx/system/ulib/lockdep/test",
