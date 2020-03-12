@@ -55,6 +55,13 @@ protocol PackageCache {
         vector<string> selectors,
         request<fuchsia.io.Directory> dir
         ) -> (zx.status status);
+
+    /// Retrieves a chunk iterator to the base package index.
+    ///
+    /// Arguments:
+    /// * `packages` is a request for the `PackageIndexIterator` that will return sets of
+    ///   `PackageIndexEntry` objects until all packages in the base index have been iterated.
+    BasePackageIndex(request<PackageIndexIterator> iterator);
 };
 
 /// The `NeededBlobs` is an abstract interface that is provided by a `PackageCache` to the
@@ -80,4 +87,14 @@ protocol NeededBlobs {
     /// * `ZX_ERR_IO` if there is some other unspecified error during I/O.
     /// * `ZX_ERR_NO_SPACE` if there is no space available to store the package.
     Open(BlobId blob_id, request<fuchsia.io.File> file) -> (zx.status status);
+};
+
+const uint32 PACKAGE_INDEX_CHUNK_SIZE = 32;
+
+/// The `PackageIndexIterator` is a chunk iterator for the package index. This is required because
+/// it is possible for the package index to be too large to send over in a single request
+/// (over 64KiB).
+protocol PackageIndexIterator {
+    /// Returns an empty vector when the iterator is exhausted.
+    Next() -> (vector<PackageIndexEntry>:PACKAGE_INDEX_CHUNK_SIZE entries);
 };

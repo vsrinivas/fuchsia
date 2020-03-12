@@ -22,3 +22,9 @@ struct BlobInfo {
 struct PackageUrl {
     string:2048 url;
 };
+
+/// PackageIndexEntry represents a single entry in the package index.
+struct PackageIndexEntry {
+    PackageUrl package_url;
+    BlobId meta_far_blob_id;
+};

@@ -22,6 +22,7 @@ use {
     pkgfs_ramdisk::PkgfsRamdisk,
 };
 
+mod base_pkg_index;
 mod inspect;
 mod space;
 

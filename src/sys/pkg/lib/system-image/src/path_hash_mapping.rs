@@ -49,6 +49,11 @@ impl<T> PathHashMapping<T> {
         Ok(Self { contents, phantom: PhantomData })
     }
 
+    /// Iterator over the contents of the mapping.
+    pub fn contents(&self) -> impl Iterator<Item = &(PackagePath, Hash)> + ExactSizeIterator {
+        self.contents.iter()
+    }
+
     /// Iterator over the contained hashes.
     pub fn hashes(&self) -> impl Iterator<Item = &Hash> {
         self.contents.iter().map(|(_, hash)| hash)
@@ -57,6 +62,11 @@ impl<T> PathHashMapping<T> {
     /// Get the hash for a package.
     pub fn hash_for_package(&self, path: &PackagePath) -> Option<Hash> {
         self.contents.iter().find_map(|(n, hash)| if n == path { Some(*hash) } else { None })
+    }
+
+    /// Create an empty mapping.
+    pub fn empty() -> Self {
+        Self { contents: vec![], phantom: PhantomData }
     }
 
     /// Create a `PathHashMapping` from a `Vec` of `(PackagePath, Hash)` pairs.

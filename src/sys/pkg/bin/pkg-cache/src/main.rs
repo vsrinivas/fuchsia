@@ -10,6 +10,8 @@ use {
     fuchsia_inspect as finspect,
     fuchsia_syslog::{self, fx_log_err, fx_log_info},
     futures::{StreamExt, TryFutureExt},
+    std::sync::Arc,
+    system_image::StaticPackages,
 };
 
 mod blob_location;
@@ -30,9 +32,11 @@ fn main() -> Result<(), Error> {
 
     let pkgfs_versions =
         pkgfs::versions::Client::open_from_namespace().context("error opening pkgfs/versions")?;
+    let static_packages = executor.run_singlethreaded(get_static_packages())?;
+
     fs.dir("svc").add_fidl_service(move |stream| {
         fasync::spawn(
-            cache_service::serve(Clone::clone(&pkgfs_versions), stream)
+            cache_service::serve(Clone::clone(&pkgfs_versions), static_packages.clone(), stream)
                 .unwrap_or_else(|e| fx_log_err!("error handling PackageCache connection {:?}", e)),
         )
     });
@@ -58,4 +62,17 @@ fn main() -> Result<(), Error> {
 
     let () = executor.run(fs.collect(), SERVER_THREADS);
     Ok(())
+}
+
+async fn get_static_packages() -> Result<Arc<StaticPackages>, Error> {
+    let pkgfs_system =
+        pkgfs::system::Client::open_from_namespace().context("error opening pkgfs/system")?;
+    Ok(Arc::new(if let Ok(file) = pkgfs_system.open_file("data/static_packages").await {
+        StaticPackages::deserialize(file).unwrap_or_else(|e| {
+            fx_log_err!("error deserializing data/static_packages: {:?}", e);
+            StaticPackages::empty()
+        })
+    } else {
+        StaticPackages::empty()
+    }))
 }

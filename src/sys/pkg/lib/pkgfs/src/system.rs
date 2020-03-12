@@ -7,6 +7,7 @@
 use {crate::iou, anyhow::anyhow, fidl_fuchsia_io::DirectoryProxy, std::fs};
 
 /// An open handle to /pkgfs/system
+#[derive(Debug, Clone)]
 pub struct Client {
     proxy: DirectoryProxy,
 }

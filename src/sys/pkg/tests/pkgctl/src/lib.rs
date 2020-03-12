@@ -428,6 +428,9 @@ impl MockPackageCacheService {
                     responder.send(self.open_response.lock().unwrap().into_raw()).expect("send ok");
                 }
                 PackageCacheRequest::Get { .. } => panic!("should only support Open requests"),
+                PackageCacheRequest::BasePackageIndex { .. } => {
+                    panic!("should only support Open requests")
+                }
             }
         }
         Ok(())

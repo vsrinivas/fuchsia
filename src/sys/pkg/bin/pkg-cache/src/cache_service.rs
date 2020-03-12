@@ -6,16 +6,25 @@ use {
     anyhow::Error,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::DirectoryMarker,
-    fidl_fuchsia_pkg::{NeededBlobsMarker, PackageCacheRequest, PackageCacheRequestStream},
+    fidl_fuchsia_pkg::{
+        NeededBlobsMarker, PackageCacheRequest, PackageCacheRequestStream, PackageIndexEntry,
+        PackageIndexIteratorRequest, PackageIndexIteratorRequestStream, PackageUrl,
+        PACKAGE_INDEX_CHUNK_SIZE,
+    },
     fidl_fuchsia_pkg_ext::{BlobId, BlobInfo},
+    fuchsia_async as fasync,
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
     fuchsia_trace as trace,
     fuchsia_zircon::Status,
     futures::prelude::*,
+    std::convert::TryInto,
+    std::sync::Arc,
+    system_image::StaticPackages,
 };
 
 pub async fn serve(
     pkgfs_versions: pkgfs::versions::Client,
+    static_packages: Arc<StaticPackages>,
     mut stream: PackageCacheRequestStream,
 ) -> Result<(), Error> {
     while let Some(event) = stream.try_next().await? {
@@ -38,6 +47,10 @@ pub async fn serve(
                 trace::duration_end!("app", "cache_open",
                     "status" => Status::from(status).to_string().as_str());
                 responder.send(Status::from(status).into_raw())?;
+            }
+            PackageCacheRequest::BasePackageIndex { iterator, control_handle: _ } => {
+                let stream = iterator.into_stream()?;
+                base_package_index(Arc::clone(&static_packages), stream).await;
             }
         }
     }
@@ -87,4 +100,45 @@ async fn open<'a>(
             Err(Status::INTERNAL)
         }
     }
+}
+
+/// Serves the `PackageIndexIteratorRequest` with `LIST_CHUNK_SIZE` entries per request.
+async fn base_package_index(
+    static_packages: Arc<StaticPackages>,
+    mut stream: PackageIndexIteratorRequestStream,
+) {
+    let list_chunk_size: usize = PACKAGE_INDEX_CHUNK_SIZE
+        .try_into()
+        .expect("Failed to convert PACKAGE_INDEX_CHUNK_SIZE into usize");
+    let mut package_entries = static_packages
+        .contents()
+        .map(|(path, hash)| PackageIndexEntry {
+            package_url: PackageUrl { url: format!("fuchsia-pkg://fuchsia.com/{}", path.name()) },
+            meta_far_blob_id: BlobId::from(hash.clone()).into(),
+        })
+        .collect::<Vec<PackageIndexEntry>>();
+    fasync::spawn(
+        async move {
+            for chunk in package_entries.chunks_mut(list_chunk_size) {
+                if let Some(PackageIndexIteratorRequest::Next { responder }) =
+                    stream.try_next().await?
+                {
+                    responder.send(&mut chunk.iter_mut())?;
+                } else {
+                    return Ok(());
+                }
+            }
+            // Continue to send empty payloads if we passed all chunks to the stream and they are
+            // still being requested.
+            let mut eof = Vec::<PackageIndexEntry>::new();
+            if let Some(PackageIndexIteratorRequest::Next { responder }) = stream.try_next().await?
+            {
+                responder.send(&mut eof.iter_mut())?;
+            }
+            Ok(())
+        }
+        .unwrap_or_else(|e: anyhow::Error| {
+            fx_log_err!("error running BasePackageIndex protocol: {:?}", e)
+        }),
+    );
 }
