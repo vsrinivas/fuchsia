@@ -33,7 +33,6 @@ ColorTransformHandler::ColorTransformHandler(sys::ComponentContext& component_co
   fidl::InterfaceHandle<fuchsia::accessibility::ColorTransformHandler> handle;
   color_transform_handler_bindings_.Bind(handle.NewRequest());
   color_transform_manager_->RegisterColorTransformHandler(std::move(handle));
-  component_context.outgoing()->AddPublicService(color_adjustment_bindings_.GetHandler(this));
 }
 
 void ColorTransformHandler::SetColorTransformConfiguration(

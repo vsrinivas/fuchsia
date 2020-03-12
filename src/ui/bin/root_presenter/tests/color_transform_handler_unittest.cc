@@ -174,17 +174,5 @@ TEST_F(ColorTransformHandlerTest, BrightnessMissingMatrix) {
   ASSERT_FALSE(fake_session_->PresentWasCalled());
 }
 
-// Makes sure that color adjustment service is available.
-TEST_F(ColorTransformHandlerTest, OffersColorAdjustment) {
-  color_transform_handler_ =
-      std::make_unique<ColorTransformHandler>(*context_provider_.context(), id, session_.get());
-  RunLoopUntilIdle();
-
-  fuchsia::ui::brightness::ColorAdjustmentHandlerPtr color_adjustment_ptr;
-  context_provider_.ConnectToPublicService(color_adjustment_ptr.NewRequest());
-  RunLoopUntilIdle();
-  ASSERT_TRUE(color_adjustment_ptr.is_bound());
-}
-
 }  // namespace testing
 }  // namespace root_presenter
