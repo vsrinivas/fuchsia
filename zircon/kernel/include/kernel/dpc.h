@@ -51,22 +51,25 @@ class Dpc : public fbl::DoublyLinkedListable<Dpc*> {
   // |ShutdownTransitionOffCpu| for the second phase.
   //
   // This function:
-  // - stops servicing the queue
-  // - waits for any in-progress DPC to complete
-  // - ensures no queued DPCs will begin executing
-  // - joins the DPC thread
+  // - tells |cpu|'s DPC thread to stop servicing its queue then
+  // - waits, up to |deadline|, for it to finish any in-progress DPC and join
   //
-  // Upon completion, |cpu| may have unexecuted DPCs and |Queue| will continue to queue new DPCs.
+  // Upon successful completion, |cpu|'s DPC queue may contain unexecuted DPCs and new ones may be
+  // added by |Queue|.  However, they will not execute (on any CPU) until |ShutdownTransitionOffCpu|
+  // is called.
   //
-  // Once |cpu| is no longer executing tasks, finish the shutdown process by calling
-  // |ShutdownTransitionOffCpu|.
-  static void Shutdown(uint cpu);
+  // Once |Shutdown| for |cpu| has completed successfully, finish the shutdown process by calling
+  // |ShutdownTransitionOffCpu| on some CPU other than |cpu|.
+  //
+  // If |Shutdown| fails, the DPC system for |cpu| is left in an undefined state and
+  // |ShutdownTransitionOffCpu| must not be called.
+  static zx_status_t Shutdown(uint cpu, zx_time_t deadline);
 
   // Moves queued DPCs from |cpu| to the caller's CPU.
   //
   // This is the second phase of DPC shutdown.  See |Shutdown|.
   //
-  // Should only be called after |cpu| has stopped executing tasks.
+  // Should only be called after |Shutdown| for |cpu| has completed successfully.
   static void ShutdownTransitionOffCpu(uint cpu);
 
  private:
