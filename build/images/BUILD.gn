@@ -1466,9 +1466,9 @@ package_metadata_list("update_meta_far_merkle_index") {
   data_keys = [ "meta_far_merkle_index_entries" ]
   deps = [
     ":base_packages",
+    ":cache_packages",
     ":meta_packages",
     ":system_image.meta",
-    ":cache_packages",
   ]
 }
 
