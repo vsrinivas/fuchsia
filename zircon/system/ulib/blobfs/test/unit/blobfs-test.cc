@@ -165,7 +165,7 @@ TEST_F(BlobfsTest, TrimsData) {
   fs::Vnode* root_node = root.get();
 
   std::unique_ptr<BlobInfo> info;
-  ASSERT_TRUE(GenerateRandomBlob("", 1024, &info));
+  ASSERT_NO_FAILURES(GenerateRandomBlob("", 1024, &info));
   memmove(info->path, info->path + 1, strlen(info->path));  // Remove leading slash.
 
   fbl::RefPtr<fs::Vnode> file;
