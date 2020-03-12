@@ -483,16 +483,20 @@ zx_status_t sys_system_powerctl(zx_handle_t root_rsrc, uint32_t cmd,
     }
 #endif  //__x86_64
     case ZX_SYSTEM_POWERCTL_REBOOT:
-      platform_graceful_halt_helper(HALT_ACTION_REBOOT, ZirconCrashReason::NoCrash);
+      platform_graceful_halt_helper(HALT_ACTION_REBOOT, ZirconCrashReason::NoCrash,
+                                    ZX_TIME_INFINITE);
       break;
     case ZX_SYSTEM_POWERCTL_REBOOT_BOOTLOADER:
-      platform_graceful_halt_helper(HALT_ACTION_REBOOT_BOOTLOADER, ZirconCrashReason::NoCrash);
+      platform_graceful_halt_helper(HALT_ACTION_REBOOT_BOOTLOADER, ZirconCrashReason::NoCrash,
+                                    ZX_TIME_INFINITE);
       break;
     case ZX_SYSTEM_POWERCTL_REBOOT_RECOVERY:
-      platform_graceful_halt_helper(HALT_ACTION_REBOOT_RECOVERY, ZirconCrashReason::NoCrash);
+      platform_graceful_halt_helper(HALT_ACTION_REBOOT_RECOVERY, ZirconCrashReason::NoCrash,
+                                    ZX_TIME_INFINITE);
       break;
     case ZX_SYSTEM_POWERCTL_SHUTDOWN:
-      platform_graceful_halt_helper(HALT_ACTION_SHUTDOWN, ZirconCrashReason::NoCrash);
+      platform_graceful_halt_helper(HALT_ACTION_SHUTDOWN, ZirconCrashReason::NoCrash,
+                                    ZX_TIME_INFINITE);
       break;
     default:
       return ZX_ERR_INVALID_ARGS;

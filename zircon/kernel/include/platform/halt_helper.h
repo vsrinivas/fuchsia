@@ -11,7 +11,10 @@
 #include <zircon/boot/crash-reason.h>
 
 // Gracefully halt and perform |action|.
-void platform_graceful_halt_helper(platform_halt_action action, zircon_crash_reason_t);
+//
+// Panics if the system cannot be successfully halted before |panic_deadline| is reached.
+void platform_graceful_halt_helper(platform_halt_action action, zircon_crash_reason_t,
+                                   zx_time_t panic_deadline);
 
 // Gracefully halt secondary (non-boot) CPUs.
 //

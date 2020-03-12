@@ -127,7 +127,13 @@ static void on_oom() {
       // specific order in the log, the test will fail.
       printf("stowing crashlog\nZIRCON REBOOT REASON (OOM)\n");
 
-      platform_graceful_halt_helper(HALT_ACTION_REBOOT, ZirconCrashReason::Oom);
+      // It is important that we don't hang while trying to reboot.  Set a deadline by which we must
+      // successfully reboot, else panic.
+      //
+      // How long should we wait?  If the system is OOMing chances are there are a lot of usermode
+      // tasks so it make take a while for the shutdown threads to be scheduled.
+      zx_time_t deadline = current_time() + ZX_SEC(10);
+      platform_graceful_halt_helper(HALT_ACTION_REBOOT, ZirconCrashReason::Oom, deadline);
   }
 }
 

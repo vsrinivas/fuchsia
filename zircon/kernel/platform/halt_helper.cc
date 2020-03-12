@@ -10,21 +10,25 @@
 #include <kernel/mp.h>
 #include <platform/halt_helper.h>
 
-void platform_graceful_halt_helper(platform_halt_action action, zircon_crash_reason_t reason) {
+void platform_graceful_halt_helper(platform_halt_action action, zircon_crash_reason_t reason,
+                                   zx_time_t panic_deadline) {
+  printf("platform_graceful_halt_helper: action=%d reason=%u panic_deadline=%ld current_time=%ld\n",
+         action, static_cast<uint32_t>(reason), panic_deadline, current_time());
+
   // Migrate to the boot CPU before shutting down the secondary CPUs.  Note that
   // this action also hard-pins our thread to the boot CPU, so we don't need to
   // worry about migration after this.
-  printf("platform_graceful_halt_helper: Migrating thread to boot CPU.\n");
   Thread::Current::MigrateToCpu(BOOT_CPU_ID);
+  printf("platform_graceful_halt_helper: Migrated thread to boot CPU.\n");
 
-  printf("platform_graceful_halt_helper: Halting secondary CPUs.\n");
-  [[maybe_unused]] zx_status_t status = platform_halt_secondary_cpus(ZX_TIME_INFINITE);
-  DEBUG_ASSERT(status == ZX_OK);
+  zx_status_t status = platform_halt_secondary_cpus(panic_deadline);
+  ASSERT_MSG(status == ZX_OK, "platform_halt_secondary_cpus failed: %d\n", status);
+  printf("platform_graceful_halt_helper: Halted secondary CPUs.\n");
 
   // Delay shutdown of debuglog to ensure log messages emitted by above calls will be written.
   printf("platform_graceful_halt_helper: Shutting down dlog.\n");
-  const zx_time_t dlog_deadline = current_time() + ZX_SEC(5);
-  dlog_shutdown(dlog_deadline);
+  status = dlog_shutdown(panic_deadline);
+  ASSERT_MSG(status == ZX_OK, "dlog_shutdown failed: %d\n", status);
 
   printf("platform_graceful_halt_helper: Calling platform_halt.\n");
   platform_halt(action, reason);
