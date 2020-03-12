@@ -4,8 +4,6 @@
 
 #include "spinel_image.h"
 
-#include <new>
-
 #include "spinel/ext/transform_stack/transform_stack.h"
 #include "spinel/spinel.h"
 #include "spinel/spinel_assert.h"
@@ -39,6 +37,15 @@ void
 SpinelImage::init(spn_context_t context)
 {
   init(context, Config());
+}
+
+void
+SpinelImage::init(spn_context_t context, uint32_t clip_width, uint32_t clip_height)
+{
+  init(context,
+       (Config){
+         .clip = { 0, 0, clip_width, clip_height },
+       });
 }
 
 void

@@ -22,6 +22,7 @@ config("common_public_config") {
 source_set("common") {
   public = [
     "common/affine_transform.h",
+    "common/arc_parameters.h",
     "common/argparse.h",
     "common/fps_counter.h",
     "common/list_ostream.h",
@@ -31,6 +32,8 @@ source_set("common") {
   sources = [
     "common/affine_transform.c",
     "common/affine_transform.h",
+    "common/arc_parameters.cc",
+    "common/arc_parameters.h",
     "common/argparse.c",
     "common/argparse.h",
     "common/fps_counter.c",
@@ -43,15 +46,31 @@ source_set("common") {
   public_configs = [ ":common_public_config" ]
 }
 
+source_set("common_test_utils") {
+  sources = [
+    "common/affine_transform_test_utils.cc",
+    "common/affine_transform_test_utils.h",
+  ]
+  public_deps = [
+    ":common",
+    graphics_compute_gtest_target,
+  ]
+  testonly = true
+}
+
 graphics_compute_unittests("common_unittests") {
   sources = [
     "common/affine_transform_unittest.cc",
+    "common/arc_parameters_unittest.cc",
     "common/argparse_unittest.cc",
     "common/fps_counter_unittest.cc",
     "common/list_ostream_unittest.cc",
     "common/scoped_struct_unittest.cc",
   ]
-  deps = [ ":common" ]
+  deps = [
+    ":common",
+    ":common_test_utils",
+  ]
 }
 
 # Vulkan-dependent files.

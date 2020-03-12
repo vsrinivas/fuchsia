@@ -7,8 +7,6 @@
 
 #include <spinel/spinel_types.h>
 
-#include <utility>
-
 struct transform_stack;
 
 // Convenience holder for several Spinel object handles/pointers related to
@@ -38,6 +36,10 @@ struct SpinelImage
   // Initialize instance.
   void
   init(spn_context_t context, const Config & config);
+
+  // Initialize instance with specific clip dimensions.
+  void
+  init(spn_context_t context, uint32_t clip_width, uint32_t clip_height);
 
   // Initialize instance with default configuration.
   void

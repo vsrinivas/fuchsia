@@ -22,6 +22,8 @@ struct SvgSpinelImage : public SpinelImage
   void
   init(const svg * svg, spn_context_t context, const SpinelImage::Config & config);
   void
+  init(const svg * svg, spn_context_t context, uint32_t width, uint32_t height);
+  void
   init(const svg * svg, spn_context_t context);
   void
   reset();

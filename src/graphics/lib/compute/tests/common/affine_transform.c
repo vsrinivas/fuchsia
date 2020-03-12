@@ -138,6 +138,34 @@ affine_transform_make_skew_y(double angle)
   };
 }
 
+bool
+affine_transform_equal(const affine_transform_t * a, const affine_transform_t * b)
+{
+  return a->sx == b->sx && a->shx == b->shx && a->tx == b->tx && a->shy == b->shy &&
+         a->sy == b->sy && a->ty == b->ty;
+}
+
+bool
+affine_transform_less(const affine_transform_t * a, const affine_transform_t * b)
+{
+#define COMPARE_MEMBER(name)                                                                       \
+  if (a->name < b->name)                                                                           \
+    return true;                                                                                   \
+  if (a->name > b->name)                                                                           \
+  return false
+
+  COMPARE_MEMBER(sx);
+  COMPARE_MEMBER(sy);
+  COMPARE_MEMBER(tx);
+  COMPARE_MEMBER(ty);
+  COMPARE_MEMBER(shx);
+  COMPARE_MEMBER(shy);
+
+#undef COMPARE_MEMBER
+
+  return false;
+}
+
 //
 // affine_transform_stack_t
 //
@@ -210,11 +238,4 @@ affine_transform_stack_pop(affine_transform_stack_t * ts)
 {
   assert(ts->depth > 0);
   ts->depth--;
-}
-
-bool
-affine_transform_equal(const affine_transform_t * a, const affine_transform_t * b)
-{
-  return a->sx == b->sx && a->shx == b->shx && a->tx == b->tx && a->shy == b->shy &&
-         a->sy == b->sy && a->ty == b->ty;
 }

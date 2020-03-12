@@ -4,26 +4,11 @@
 
 #include "affine_transform.h"
 
-#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include <iostream>
 
-// Helper function to print an affine_transform_t
-static std::ostream &
-operator<<(std::ostream & os, const affine_transform_t & t)
-{
-  os << "[sx:" << t.sx;
-  if (t.shx)
-    os << ",shx:" << t.shx;
-  if (t.shy)
-    os << ",shy:" << t.shy;
-  os << ",sy:" << t.sy;
-  if (t.tx || t.ty)
-    os << ",tx:" << t.tx << ",ty:" << t.ty;
-  os << "]";
-  return os;
-}
+#include "affine_transform_test_utils.h"
 
 TEST(affine_transform, identity)
 {

@@ -104,6 +104,12 @@ affine_transform_make_skew_y(double angle);
 extern bool
 affine_transform_equal(const affine_transform_t * a, const affine_transform_t * b);
 
+// Return true if |a| is less than |b| in an arbitrary strict order. This is
+// only useful as a comparison function in a sorted container, not specific meaning
+// should be associated with the order otherwise.
+extern bool
+affine_transform_less(const affine_transform_t * a, const affine_transform_t * b);
+
 //
 // affine_transform_stack_t
 //
@@ -146,6 +152,7 @@ affine_transform_stack_pop(affine_transform_stack_t * stack);
 
 #ifdef __cplusplus
 }
-#endif
+
+#endif  // __cplusplus
 
 #endif  // SRC_GRAPHICS_LIB_COMPUTE_TESTS_COMMON_AFFINE_TRANSFORM_H_

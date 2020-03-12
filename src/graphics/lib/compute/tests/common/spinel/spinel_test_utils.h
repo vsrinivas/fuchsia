@@ -26,11 +26,17 @@
 extern std::ostream &
 operator<<(std::ostream & os, spn_path_t path);
 
+#define ASSERT_SPN_PATH_VALID(h) ASSERT_NE((h).handle, UINT32_MAX)
+#define EXPECT_SPN_PATH_VALID(h) EXPECT_NE((h).handle, UINT32_MAX)
+
 //
 // spn_raster_t
 //
 extern std::ostream &
 operator<<(std::ostream & os, spn_raster_t raster);
+
+#define ASSERT_SPN_RASTER_VALID(h) ASSERT_NE((h).handle, UINT32_MAX)
+#define EXPECT_SPN_RASTER_VALID(h) EXPECT_NE((h).handle, UINT32_MAX)
 
 //
 // spn_transform_t

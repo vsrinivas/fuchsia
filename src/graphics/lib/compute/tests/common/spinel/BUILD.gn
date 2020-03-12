@@ -22,6 +22,7 @@ source_set("spinel_utils") {
     "${graphics_compute_dir}/spinel/ext/svg2spinel",
     "${graphics_compute_dir}/spinel/ext/transform_stack",
     "${graphics_compute_dir}/tests:common",
+    "${graphics_compute_dir}/tests/common/svg",
   ]
   public_configs = [ ":public_config" ]
   public_deps = [

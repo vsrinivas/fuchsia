@@ -91,6 +91,17 @@ main(int argc, const char ** argv)
     double svg_xmin, svg_ymin, svg_xmax, svg_ymax;
     svg_estimate_bounds(svg.get(), nullptr, &svg_xmin, &svg_ymin, &svg_xmax, &svg_ymax);
 
+    if (options.debug)
+      {
+        printf("Image bounds min=(%g,%g) max=(%g,%g) width=%g height=%g\n",
+               svg_xmin,
+               svg_ymin,
+               svg_xmax,
+               svg_ymax,
+               svg_xmax - svg_xmin,
+               svg_ymax - svg_ymin);
+      }
+
     if (svg_xmin >= svg_xmax || svg_ymin >= svg_ymax)
       {
         fprintf(stderr, "WARNING: Could not compute bounds of SVG document!\n");

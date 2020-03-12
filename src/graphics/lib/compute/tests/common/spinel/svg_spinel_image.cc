@@ -18,6 +18,13 @@ SvgSpinelImage::init(const svg * svg, spn_context_t context, const SpinelImage::
 }
 
 void
+SvgSpinelImage::init(const svg * svg, spn_context_t context, uint32_t width, uint32_t height)
+{
+  svg_ = svg;
+  SpinelImage::init(context, width, height);
+}
+
+void
 SvgSpinelImage::init(const svg * svg, spn_context_t context)
 {
   svg_ = svg;
@@ -89,7 +96,7 @@ SvgSpinelImage::resetRasters()
 void
 SvgSpinelImage::setupLayers()
 {
-  spn_svg_layers_decode(svg_, rasters_, composition, styling, true);
+  spn_svg_layers_decode(svg_, rasters_, composition, styling, false);
 
   spn(styling_seal(styling));
   spn(composition_seal(composition));

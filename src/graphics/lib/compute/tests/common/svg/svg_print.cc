@@ -366,22 +366,24 @@ svg_print(const struct svg * svg, svg_printf_func_t * print_func, void * print_o
 
           case SVG_PATH_CMD_ARC_TO:
             path_ls << "ArcTo"
-                    << "(rx:" << cmd->arc_to.rx
-                    << ",ry:" << cmd->arc_to.ry
-                    << ",x:"  << cmd->arc_to.x
+                    << "(x:"  << cmd->arc_to.x
                     << ",y:"  << cmd->arc_to.y
-                    << ",x_axis_rotation:" << cmd->arc_to.x_axis_rotation
-                    << ".swwp_flag:" << cmd->arc_to.sweep_flag
+                    << ",rx:" << cmd->arc_to.rx
+                    << ",ry:" << cmd->arc_to.ry
+                    << ",axis_rotation:" << cmd->arc_to.x_axis_rotation
+                    << ",large_arg_flag:" << cmd->arc_to.large_arc_flag
+                    << ".sweep_flag:" << cmd->arc_to.sweep_flag
                     << ")" << path_ls.comma;
             break;
           case SVG_PATH_CMD_ARC_TO_REL:
             path_ls << "ArcToRel"
-                    << "(rx:" << cmd->arc_to.rx
-                    << ",ry:" << cmd->arc_to.ry
-                    << ",dx:"  << cmd->arc_to.x
+                    << "(dx:"  << cmd->arc_to.x
                     << ",dy:"  << cmd->arc_to.y
-                    << ",x_axis_rotation:" << cmd->arc_to.x_axis_rotation
-                    << ".swee_flag:" << cmd->arc_to.sweep_flag
+                    << ",rx:" << cmd->arc_to.rx
+                    << ",ry:" << cmd->arc_to.ry
+                    << ",axis_rotation:" << cmd->arc_to.x_axis_rotation
+                    << ",large_arg_flag:" << cmd->arc_to.large_arc_flag
+                    << ".sweep_flag:" << cmd->arc_to.sweep_flag
                     << ")" << path_ls.comma;
             break;
           }
