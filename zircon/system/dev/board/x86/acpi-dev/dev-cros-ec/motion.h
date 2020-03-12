@@ -22,11 +22,12 @@
 #include <fbl/span.h>
 #include <fbl/vector.h>
 
+#include "acpi.h"
 #include "dev.h"
 
 namespace cros_ec {
 
-class AcpiCrOsEc;
+class EmbeddedController;
 class AcpiCrOsEcMotionDevice;
 using DeviceType = ddk::Device<AcpiCrOsEcMotionDevice>;
 
@@ -53,10 +54,20 @@ class AcpiCrOsEcMotionDevice
     : public DeviceType,
       public ddk::HidbusProtocol<AcpiCrOsEcMotionDevice, ddk::base_protocol> {
  public:
-  static zx_status_t Create(fbl::RefPtr<AcpiCrOsEc> ec, zx_device_t* parent,
-                            ACPI_HANDLE acpi_handle, std::unique_ptr<AcpiCrOsEcMotionDevice>* out);
+  ~AcpiCrOsEcMotionDevice();
 
-  // hidbus protocol implementation
+  // Create and bind the device.
+  //
+  // A pointer to the created device will be placed in |device|, though ownership
+  // remains with the DDK. Any use of |device| must occur before DdkRelease()
+  // is called.
+  static zx_status_t Bind(zx_device_t* parent, fbl::RefPtr<EmbeddedController> ec,
+                          std::unique_ptr<AcpiHandle> acpi_handle, AcpiCrOsEcMotionDevice** device);
+
+  // DDK implementation.
+  void DdkRelease();
+
+  // hidbus protocol implementation.
   zx_status_t HidbusQuery(uint32_t options, hid_info_t* info);
   zx_status_t HidbusStart(const hidbus_ifc_protocol_t* ifc);
   void HidbusStop();
@@ -70,11 +81,9 @@ class AcpiCrOsEcMotionDevice
   zx_status_t HidbusGetProtocol(uint8_t* protocol);
   zx_status_t HidbusSetProtocol(uint8_t protocol);
 
-  void DdkRelease();
-  ~AcpiCrOsEcMotionDevice();
-
  private:
-  AcpiCrOsEcMotionDevice(fbl::RefPtr<AcpiCrOsEc> ec, zx_device_t* parent, ACPI_HANDLE acpi_handle);
+  AcpiCrOsEcMotionDevice(fbl::RefPtr<EmbeddedController> ec, zx_device_t* parent,
+                         std::unique_ptr<AcpiHandle> acpi_handle);
   DISALLOW_COPY_ASSIGN_AND_MOVE(AcpiCrOsEcMotionDevice);
 
   static void NotifyHandler(ACPI_HANDLE handle, UINT32 value, void* ctx);
@@ -98,9 +107,9 @@ class AcpiCrOsEcMotionDevice
   // Chat with hardware to build up |sensors_|
   zx_status_t ProbeSensors();
 
-  fbl::RefPtr<AcpiCrOsEc> ec_;
+  fbl::RefPtr<EmbeddedController> ec_;
 
-  const ACPI_HANDLE acpi_handle_;
+  std::unique_ptr<AcpiHandle> acpi_handle_;
 
   // Interface the driver is currently bound to
   ddk::HidbusIfcProtocolClient client_;

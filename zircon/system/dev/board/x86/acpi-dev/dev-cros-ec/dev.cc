@@ -6,6 +6,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
@@ -24,18 +25,35 @@
 #include "../../include/errors.h"
 #include "motion.h"
 
-using cros_ec::AcpiCrOsEc;
-using cros_ec::AcpiCrOsEcMotionDevice;
-
 namespace cros_ec {
 
-zx_status_t AcpiCrOsEc::Create(fbl::RefPtr<AcpiCrOsEc>* out) {
+// An EmbeddedController wired up to real hardware.
+class RealEmbeddedController : public EmbeddedController {
+ public:
+  // Create a RealEmbeddedController, connected to the system's hardware.
+  static zx_status_t Create(fbl::RefPtr<EmbeddedController>* out);
+  ~RealEmbeddedController() = default;
+
+  // |EmbeddedController| interface implementation.
+  zx_status_t IssueCommand(uint16_t command, uint8_t command_version, const void* out,
+                           size_t outsize, void* in, size_t insize, size_t* actual) override;
+  virtual bool SupportsFeature(enum ec_feature_code feature) const override;
+
+ private:
+  RealEmbeddedController() = default;
+  DISALLOW_COPY_ASSIGN_AND_MOVE(RealEmbeddedController);
+
+  fbl::Mutex io_lock_;
+  struct ec_response_get_features features_;
+};
+
+zx_status_t RealEmbeddedController::Create(fbl::RefPtr<EmbeddedController>* out) {
   if (!CrOsEc::IsLpc3Supported()) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   fbl::AllocChecker ac;
-  fbl::RefPtr<AcpiCrOsEc> dev = fbl::AdoptRef(new (&ac) AcpiCrOsEc());
+  fbl::RefPtr<RealEmbeddedController> dev = fbl::AdoptRef(new (&ac) RealEmbeddedController());
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -58,22 +76,33 @@ zx_status_t AcpiCrOsEc::Create(fbl::RefPtr<AcpiCrOsEc>* out) {
   return ZX_OK;
 }
 
-zx_status_t AcpiCrOsEc::IssueCommand(uint16_t command, uint8_t command_version, const void* out,
-                                     size_t outsize, void* in, size_t insize, size_t* actual) {
+zx_status_t RealEmbeddedController::IssueCommand(uint16_t command, uint8_t command_version,
+                                                 const void* out, size_t outsize, void* in,
+                                                 size_t insize, size_t* actual) {
   fbl::AutoLock guard(&io_lock_);
   return CrOsEc::CommandLpc3(command, command_version, out, outsize, in, insize, actual);
 }
 
-AcpiCrOsEc::AcpiCrOsEc() {}
-
-AcpiCrOsEc::~AcpiCrOsEc() {}
-
-bool AcpiCrOsEc::supports_motion_sense() const {
-  return features_.flags[0] & EC_FEATURE_MASK_0(EC_FEATURE_MOTION_SENSE);
+bool RealEmbeddedController::SupportsFeature(enum ec_feature_code feature) const {
+  return features_.flags[0] & EC_FEATURE_MASK_0(feature);
 }
 
-bool AcpiCrOsEc::supports_motion_sense_fifo() const {
-  return features_.flags[0] & EC_FEATURE_MASK_0(EC_FEATURE_MOTION_SENSE_FIFO);
+zx_status_t InitDevices(fbl::RefPtr<EmbeddedController> controller, zx_device_t* parent,
+                        ACPI_HANDLE acpi_handle) {
+  // Initialize MotionSense driver.
+  if (controller->SupportsFeature(EC_FEATURE_MOTION_SENSE)) {
+    zxlogf(TRACE, "acpi-cros-ec-motion: init\n");
+    zx_status_t status =
+        AcpiCrOsEcMotionDevice::Bind(parent, controller, CreateAcpiHandle(acpi_handle), nullptr);
+    if (status != ZX_OK) {
+      zxlogf(INFO, "acpi-cros-ec-motion: failed to initialize: %s\n", zx_status_get_string(status));
+    } else {
+      zxlogf(INFO, "acpi-cros-ec-motion: initialized.\n");
+    }
+  }
+
+  zxlogf(INFO, "acpi-cros-ec-core: initialized\n");
+  return ZX_OK;
 }
 
 }  // namespace cros_ec
@@ -81,29 +110,12 @@ bool AcpiCrOsEc::supports_motion_sense_fifo() const {
 zx_status_t cros_ec_lpc_init(zx_device_t* parent, ACPI_HANDLE acpi_handle) {
   zxlogf(TRACE, "acpi-cros-ec-core: init\n");
 
-  fbl::RefPtr<AcpiCrOsEc> ec;
-  zx_status_t status = AcpiCrOsEc::Create(&ec);
+  fbl::RefPtr<cros_ec::EmbeddedController> ec;
+  zx_status_t status = cros_ec::RealEmbeddedController::Create(&ec);
   if (status != ZX_OK) {
+    zxlogf(ERROR, "acpi-cros-ec-core: Failed to initialise EC: %s\n", zx_status_get_string(status));
     return status;
   }
 
-  if (ec->supports_motion_sense()) {
-    zxlogf(TRACE, "acpi-cros-ec-motion: init\n");
-    // Set up motion device
-    std::unique_ptr<AcpiCrOsEcMotionDevice> motion_dev;
-    status = AcpiCrOsEcMotionDevice::Create(ec, parent, acpi_handle, &motion_dev);
-    if (status == ZX_OK) {
-      status = motion_dev->DdkAdd("acpi-cros-ec-motion");
-      if (status != ZX_OK) {
-        return status;
-      }
-
-      // devmgr is now in charge of the memory for motion_dev
-      __UNUSED auto ptr = motion_dev.release();
-      zxlogf(INFO, "acpi-cros-ec-motion: initialized\n");
-    }
-  }
-
-  zxlogf(INFO, "acpi-cros-ec-core: initialized\n");
-  return ZX_OK;
+  return cros_ec::InitDevices(std::move(ec), parent, acpi_handle);
 }

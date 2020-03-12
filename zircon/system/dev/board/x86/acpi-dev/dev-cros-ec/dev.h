@@ -5,6 +5,7 @@
 #ifndef ZIRCON_SYSTEM_DEV_BOARD_X86_ACPI_DEV_DEV_CROS_EC_DEV_H_
 #define ZIRCON_SYSTEM_DEV_BOARD_X86_ACPI_DEV_DEV_CROS_EC_DEV_H_
 
+#include <lib/zircon-internal/thread_annotations.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
@@ -24,27 +25,21 @@
 
 namespace cros_ec {
 
-class AcpiCrOsEc : public fbl::RefCounted<AcpiCrOsEc> {
+class EmbeddedController : public fbl::RefCounted<EmbeddedController> {
  public:
-  // Create a new AcpiCrOsEc object.
-  static zx_status_t Create(fbl::RefPtr<AcpiCrOsEc>* out);
-  ~AcpiCrOsEc();
+  virtual ~EmbeddedController() {}
 
   // Issue a command to the EC.
-  zx_status_t IssueCommand(uint16_t command, uint8_t command_version, const void* out,
-                           size_t outsize, void* in, size_t insize, size_t* actual);
+  virtual zx_status_t IssueCommand(uint16_t command, uint8_t command_version, const void* out,
+                                   size_t outsize, void* in, size_t insize, size_t* actual);
 
-  // Return true if the platform has any MotionSense sensors or a FIFO.
-  bool supports_motion_sense() const;
-  bool supports_motion_sense_fifo() const;
-
- private:
-  AcpiCrOsEc();
-  DISALLOW_COPY_ASSIGN_AND_MOVE(AcpiCrOsEc);
-
-  fbl::Mutex io_lock_;
-  struct ec_response_get_features features_;
+  // Return true if the platform supports the given feature.
+  virtual bool SupportsFeature(enum ec_feature_code feature) const = 0;
 };
+
+// Initialise detected devices in the DDK. Exposed for testing.
+zx_status_t InitDevices(fbl::RefPtr<EmbeddedController> controller, zx_device_t* parent,
+                        ACPI_HANDLE acpi_handle);
 
 }  // namespace cros_ec
 

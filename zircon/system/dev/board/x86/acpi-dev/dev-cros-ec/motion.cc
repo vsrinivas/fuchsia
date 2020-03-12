@@ -18,6 +18,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
@@ -37,6 +38,7 @@
 #include <hid/descriptor.h>
 
 #include "../../include/errors.h"
+#include "acpi.h"
 #include "dev.h"
 
 namespace cros_ec {
@@ -51,13 +53,12 @@ uint8_t SensorIdToReportId(uint8_t sensor_id) {
 }
 }  // namespace
 
-AcpiCrOsEcMotionDevice::AcpiCrOsEcMotionDevice(fbl::RefPtr<AcpiCrOsEc> ec, zx_device_t* parent,
-                                               ACPI_HANDLE acpi_handle)
-    : DeviceType(parent), ec_(std::move(ec)), acpi_handle_(acpi_handle) {}
+AcpiCrOsEcMotionDevice::AcpiCrOsEcMotionDevice(fbl::RefPtr<EmbeddedController> ec,
+                                               zx_device_t* parent,
+                                               std::unique_ptr<AcpiHandle> acpi_handle)
+    : DeviceType(parent), ec_(std::move(ec)), acpi_handle_(std::move(acpi_handle)) {}
 
-AcpiCrOsEcMotionDevice::~AcpiCrOsEcMotionDevice() {
-  AcpiRemoveNotifyHandler(acpi_handle_, ACPI_DEVICE_NOTIFY, NotifyHandler);
-}
+AcpiCrOsEcMotionDevice::~AcpiCrOsEcMotionDevice() {}
 
 void AcpiCrOsEcMotionDevice::NotifyHandler(ACPI_HANDLE handle, UINT32 value, void* ctx) {
   auto dev = reinterpret_cast<AcpiCrOsEcMotionDevice*>(ctx);
@@ -479,20 +480,25 @@ zx_status_t AcpiCrOsEcMotionDevice::FifoRead(struct ec_response_motion_sensor_da
   return ZX_OK;
 }
 
-zx_status_t AcpiCrOsEcMotionDevice::Create(fbl::RefPtr<AcpiCrOsEc> ec, zx_device_t* parent,
-                                           ACPI_HANDLE acpi_handle,
-                                           std::unique_ptr<AcpiCrOsEcMotionDevice>* out) {
-  if (!ec->supports_motion_sense() || !ec->supports_motion_sense_fifo()) {
+zx_status_t AcpiCrOsEcMotionDevice::Bind(zx_device_t* parent, fbl::RefPtr<EmbeddedController> ec,
+                                         std::unique_ptr<AcpiHandle> acpi_handle,
+                                         AcpiCrOsEcMotionDevice** device) {
+  // Ensure Motion Sense is supported by the EC.
+  if (!ec->SupportsFeature(EC_FEATURE_MOTION_SENSE) ||
+      !ec->SupportsFeature(EC_FEATURE_MOTION_SENSE_FIFO)) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
+  // Create the device.
   fbl::AllocChecker ac;
+  AcpiHandle* acpi_handle_ptr = acpi_handle.get();
   std::unique_ptr<AcpiCrOsEcMotionDevice> dev(
-      new (&ac) AcpiCrOsEcMotionDevice(std::move(ec), parent, acpi_handle));
+      new (&ac) AcpiCrOsEcMotionDevice(std::move(ec), parent, std::move(acpi_handle)));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
 
+  // Find motion sensors.
   zx_status_t status = dev->ProbeSensors();
   if (status != ZX_OK) {
     return status;
@@ -502,19 +508,31 @@ zx_status_t AcpiCrOsEcMotionDevice::Create(fbl::RefPtr<AcpiCrOsEc> ec, zx_device
   status = BuildHidDescriptor(fbl::Span(dev->sensors_.begin(), dev->sensors_.end()),
                               &dev->hid_descriptor_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "acpi-cros-ec-motion: failed to construct hid desc: %d\n", status);
+    zxlogf(ERROR, "acpi-cros-ec-motion: failed to construct hid desc: %s\n",
+           zx_status_get_string(status));
     return status;
   }
 
-  // Install acpi event handler
-  ACPI_STATUS acpi_status =
-      AcpiInstallNotifyHandler(acpi_handle, ACPI_DEVICE_NOTIFY, NotifyHandler, dev.get());
-  if (acpi_status != AE_OK) {
-    zxlogf(ERROR, "acpi-cros-ec-motion: could not install notify handler\n");
-    return acpi_to_zx_status(acpi_status);
+  // Install ACPI event handler
+  status = acpi_handle_ptr->InstallNotifyHandler(ACPI_DEVICE_NOTIFY, NotifyHandler, dev.get());
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "acpi-cros-ec-motion: could not install notify handler: %s\n",
+           zx_status_get_string(status));
+    return status;
   }
 
-  *out = std::move(dev);
+  // Bind.
+  status = dev->DdkAdd("acpi-cros-ec-motion");
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  // Ownership has transferred to the DDK, so release our unique_ptr, but
+  // let the caller have a pointer to it.
+  if (device != nullptr) {
+    *device = dev.get();
+  }
+  (void)dev.release();
   return ZX_OK;
 }
 

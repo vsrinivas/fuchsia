@@ -84,6 +84,7 @@ driver_module("platform-bus-x86") {
   }
   sources = [
     "acpi-dev/dev-battery.cc",
+    "acpi-dev/dev-cros-ec/acpi.cc",
     "acpi-dev/dev-cros-ec/dev.cc",
     "acpi-dev/dev-cros-ec/motion.cc",
     "acpi-dev/dev-ec.cc",
@@ -362,6 +363,8 @@ test("x86-cros-ec-test") {
   output_name = "x86-cros-ec-test"
   test_group = "ddk"
   sources = [
+    "acpi-dev/dev-cros-ec/acpi.cc",
+    "acpi-dev/dev-cros-ec/acpi.h",
     "acpi-dev/dev-cros-ec/dev.cc",
     "acpi-dev/dev-cros-ec/dev.h",
     "acpi-dev/dev-cros-ec/motion-test.cc",
