@@ -5,9 +5,15 @@
 # https://opensource.org/licenses/MIT
 
 zx_library("counters") {
+  sdk = "source"
+  sdk_headers = [
+    "lib/counters.h",
+    "lib/counters-vmo-abi.h",
+  ]
   visibility = [
     "$zx/kernel/*",
     "$zx/system/uapp/kcounter/*",
+    "$zx/system/ulib/*",
     "$zx/system/ulib/kcounter/*",
     "$zx/system/utest/kcounter/*",
   ]

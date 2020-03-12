@@ -75,7 +75,6 @@ aggregate_manifest("legacy-image") {
     ":bin.fshost",
 #------------------
 #------------------
-    ":bin.kcounter",
 #------------------
 #------------------
     ":bin.kilo",
@@ -1274,7 +1273,7 @@ aggregate_manifest("migrated-image") {
     "//src/devices/block/bin/iochk:iochk-manifest",
     "//src/devices/block/bin/iotime:iotime-manifest",
 #------------------
-    #":bin.kcounter",
+    "//zircon/system/uapp/kcounter:kcounter-manifest",
 #------------------
     "//zircon/system/uapp/minfs:minfs-manifest",
     "//zircon/system/uapp/psutils:kill-manifest",
