@@ -224,7 +224,10 @@ class KernelHandle {
  public:
   KernelHandle() = default;
 
-  explicit KernelHandle(fbl::RefPtr<T> dispatcher) : dispatcher_(ktl::move(dispatcher)) {}
+  // |dispatcher|'s handle count must be 0.
+  explicit KernelHandle(fbl::RefPtr<T> dispatcher) : dispatcher_(ktl::move(dispatcher)) {
+    DEBUG_ASSERT(!dispatcher_ || dispatcher_->current_handle_count() == 0);
+  }
 
   ~KernelHandle() { reset(); }
 

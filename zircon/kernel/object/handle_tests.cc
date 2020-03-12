@@ -25,6 +25,7 @@ class FakeDispatcherBase : public fbl::RefCounted<FakeDispatcherBase> {
  public:
   virtual ~FakeDispatcherBase() = default;
 
+  uint32_t current_handle_count() const { return 0; }
   int on_zero_handles_calls() const { return on_zero_handles_calls_; }
   void on_zero_handles() { on_zero_handles_calls_++; }
 
