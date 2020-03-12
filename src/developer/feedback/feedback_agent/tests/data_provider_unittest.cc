@@ -5,13 +5,10 @@
 #include "src/developer/feedback/feedback_agent/data_provider.h"
 
 #include <fuchsia/feedback/cpp/fidl.h>
-#include <fuchsia/hwinfo/cpp/fidl.h>
-#include <fuchsia/intl/cpp/fidl.h>
 #include <fuchsia/math/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fit/result.h>
 #include <lib/fostr/fidl/fuchsia/math/formatting.h>
-#include <lib/syslog/logger.h>
 #include <lib/zx/time.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
@@ -23,13 +20,6 @@
 
 #include "src/developer/feedback/feedback_agent/config.h"
 #include "src/developer/feedback/feedback_agent/constants.h"
-#include "src/developer/feedback/feedback_agent/device_id_provider.h"
-#include "src/developer/feedback/feedback_agent/tests/stub_board.h"
-#include "src/developer/feedback/feedback_agent/tests/stub_channel_provider.h"
-#include "src/developer/feedback/feedback_agent/tests/stub_inspect_archive.h"
-#include "src/developer/feedback/feedback_agent/tests/stub_inspect_batch_iterator.h"
-#include "src/developer/feedback/feedback_agent/tests/stub_logger.h"
-#include "src/developer/feedback/feedback_agent/tests/stub_product.h"
 #include "src/developer/feedback/feedback_agent/tests/stub_scenic.h"
 #include "src/developer/feedback/testing/cobalt_test_fixture.h"
 #include "src/developer/feedback/testing/gmatchers.h"
@@ -37,17 +27,12 @@
 #include "src/developer/feedback/testing/stubs/stub_cobalt_logger_factory.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/developer/feedback/utils/archive.h"
-#include "src/lib/files/file.h"
-#include "src/lib/files/path.h"
 #include "src/lib/fsl/vmo/file.h"
 #include "src/lib/fsl/vmo/sized_vmo.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fsl/vmo/vector.h"
 #include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/strings/split_string.h"
 #include "src/lib/fxl/strings/string_printf.h"
-#include "src/lib/fxl/strings/string_view.h"
-#include "src/lib/fxl/test/test_settings.h"
 #include "src/lib/syslog/cpp/logger.h"
 #include "src/lib/timekeeper/test_clock.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
@@ -62,51 +47,15 @@ using fuchsia::feedback::Attachment;
 using fuchsia::feedback::Data;
 using fuchsia::feedback::ImageEncoding;
 using fuchsia::feedback::Screenshot;
-using fuchsia::hwinfo::BoardInfo;
-using fuchsia::hwinfo::ProductInfo;
-using fuchsia::intl::LocaleId;
-using fuchsia::intl::RegulatoryDomain;
-using fxl::SplitResult::kSplitWantNonEmpty;
-using fxl::WhiteSpaceHandling::kTrimWhitespace;
 using testing::UnorderedElementsAreArray;
 
 const std::set<std::string> kDefaultAnnotations = {
-    kAnnotationBuildBoard,
-    kAnnotationBuildLatestCommitDate,
-    kAnnotationBuildProduct,
-    kAnnotationBuildVersion,
-    kAnnotationChannel,
-    kAnnotationDeviceBoardName,
-    kAnnotationDeviceFeedbackId,
-    kAnnotationDeviceUptime,
+    kAnnotationBuildBoard,    kAnnotationBuildLatestCommitDate, kAnnotationBuildProduct,
+    kAnnotationBuildVersion,  kAnnotationDeviceBoardName,       kAnnotationDeviceUptime,
     kAnnotationDeviceUTCTime,
-    kAnnotationHardwareBoardName,
-    kAnnotationHardwareBoardRevision,
-    kAnnotationHardwareProductSKU,
-    kAnnotationHardwareProductLanguage,
-    kAnnotationHardwareProductRegulatoryDomain,
-    kAnnotationHardwareProductLocaleList,
-    kAnnotationHardwareProductName,
-    kAnnotationHardwareProductModel,
-    kAnnotationHardwareProductManufacturer,
 };
-
 const std::set<std::string> kDefaultAttachments = {
-    kAttachmentBuildSnapshot,     kAttachmentInspect,   kAttachmentLogKernel,
-    kAttachmentLogSystemPrevious, kAttachmentLogSystem,
-};
-const std::map<std::string, std::string> kBoardInfoValues = {
-    {kAnnotationHardwareBoardName, "board-name"},
-    {kAnnotationHardwareBoardRevision, "revision"},
-};
-const std::map<std::string, std::string> kProductInfoValues = {
-    {kAnnotationHardwareProductSKU, "sku"},
-    {kAnnotationHardwareProductLanguage, "language"},
-    {kAnnotationHardwareProductRegulatoryDomain, "regulatory-domain"},
-    {kAnnotationHardwareProductLocaleList, "locale1, locale2, locale3"},
-    {kAnnotationHardwareProductName, "name"},
-    {kAnnotationHardwareProductModel, "model"},
-    {kAnnotationHardwareProductManufacturer, "manufacturer"},
+    kAttachmentBuildSnapshot,
 };
 const Config kDefaultConfig = Config{kDefaultAnnotations, kDefaultAttachments};
 
@@ -176,41 +125,6 @@ bool DoGetScreenshotResponseMatch(const GetScreenshotResponse& actual,
   return true;
 }
 
-BoardInfo CreateBoardInfo() {
-  BoardInfo info;
-
-  info.set_name(kBoardInfoValues.at(kAnnotationHardwareBoardName));
-  info.set_revision(kBoardInfoValues.at(kAnnotationHardwareBoardRevision));
-
-  return info;
-}
-
-ProductInfo CreateProductInfo() {
-  ProductInfo info;
-
-  info.set_sku(kProductInfoValues.at(kAnnotationHardwareProductSKU));
-  info.set_language(kProductInfoValues.at(kAnnotationHardwareProductLanguage));
-  info.set_name(kProductInfoValues.at(kAnnotationHardwareProductName));
-  info.set_model(kProductInfoValues.at(kAnnotationHardwareProductModel));
-  info.set_manufacturer(kProductInfoValues.at(kAnnotationHardwareProductManufacturer));
-
-  RegulatoryDomain domain;
-  domain.set_country_code(kProductInfoValues.at(kAnnotationHardwareProductRegulatoryDomain));
-  info.set_regulatory_domain(std::move(domain));
-
-  auto locale_strings =
-      fxl::SplitStringCopy(kProductInfoValues.at(kAnnotationHardwareProductLocaleList), ",",
-                           kTrimWhitespace, kSplitWantNonEmpty);
-  std::vector<LocaleId> locales;
-  for (const auto& locale : locale_strings) {
-    locales.emplace_back();
-    locales.back().id = locale;
-  }
-  info.set_locale_list(locales);
-
-  return info;
-}
-
 // Returns true if gMock |arg| matches |expected|, assuming two GetScreenshotResponse objects.
 MATCHER_P(MatchesGetScreenshotResponse, expected, "matches " + std::string(expected.get())) {
   return DoGetScreenshotResponseMatch(arg, expected, result_listener);
@@ -224,13 +138,6 @@ class DataProviderTest : public UnitTestFixture, public CobaltTestFixture {
  public:
   DataProviderTest() : CobaltTestFixture(/*unit_test_fixture=*/this) {}
 
-  void SetUp() override {
-    // Initialize the device id before any DataProvider.
-    ASSERT_TRUE(DeviceIdProvider(kDeviceIdPath).GetId().has_value());
-  }
-
-  void TearDown() override { ASSERT_TRUE(files::DeletePath(kDeviceIdPath, /*recursive=*/false)); }
-
  protected:
   void SetUpDataProvider(const Config& config) {
     // |data_provider_.cobalt_| owns the test clock through a unique_ptr so we need to allocate
@@ -241,57 +148,10 @@ class DataProviderTest : public UnitTestFixture, public CobaltTestFixture {
                                           std::unique_ptr<timekeeper::TestClock>(clock_)));
   }
 
-  void SetUpDataProviderOnlyRequestingChannel(zx::duration timeout) {
-    clock_ = new timekeeper::TestClock();
-    data_provider_.reset(new DataProvider(dispatcher(), services(),
-                                          Config{{kAnnotationChannel}, {}},
-                                          std::unique_ptr<timekeeper::TestClock>(clock_)));
-  }
-
   void SetUpScenic(std::unique_ptr<StubScenic> scenic) {
     scenic_ = std::move(scenic);
     if (scenic_) {
       InjectServiceProvider(scenic_.get());
-    }
-  }
-
-  void SetUpInspect(const std::string& inspect_chunk) {
-    inspect_archive_ = std::make_unique<StubInspectArchive>(
-        std::make_unique<StubInspectBatchIterator>(std::vector<std::vector<std::string>>({
-            {inspect_chunk},
-            {},
-        })));
-    InjectServiceProvider(inspect_archive_.get());
-  }
-
-  void SetUpPreviousSystemLog(const std::string& content) {
-    ASSERT_TRUE(files::WriteFile(kPreviousLogsFilePath, content.c_str(), content.size()));
-  }
-
-  void SetUpLogger(const std::vector<fuchsia::logger::LogMessage>& messages) {
-    logger_.reset(new StubLogger());
-    logger_->set_messages(messages);
-    InjectServiceProvider(logger_.get());
-  }
-
-  void SetUpChannelProvider(std::unique_ptr<StubChannelProvider> channel_provider) {
-    channel_provider_ = std::move(channel_provider);
-    if (channel_provider_) {
-      InjectServiceProvider(channel_provider_.get());
-    }
-  }
-
-  void SetUpBoardProvider(std::unique_ptr<StubBoard> board_provider) {
-    board_provider_ = std::move(board_provider);
-    if (board_provider_) {
-      InjectServiceProvider(board_provider_.get());
-    }
-  }
-
-  void SetUpProductProvider(std::unique_ptr<StubProduct> product_provider) {
-    product_provider_ = std::move(product_provider);
-    if (product_provider_) {
-      InjectServiceProvider(product_provider_.get());
     }
   }
 
@@ -341,12 +201,7 @@ class DataProviderTest : public UnitTestFixture, public CobaltTestFixture {
   std::unique_ptr<DataProvider> data_provider_;
 
  private:
-  std::unique_ptr<StubChannelProvider> channel_provider_;
   std::unique_ptr<StubScenic> scenic_;
-  std::unique_ptr<StubInspectArchive> inspect_archive_;
-  std::unique_ptr<StubLogger> logger_;
-  std::unique_ptr<StubBoard> board_provider_;
-  std::unique_ptr<StubProduct> product_provider_;
 
   // The lifetime of |clock_| is managed by |data_provider_|.
   timekeeper::TestClock* clock_;
@@ -578,51 +433,13 @@ TEST_F(DataProviderTest, GetData_AnnotationsAsAttachment) {
     },
     "%s": {
       "type": "string"
-    },
-    "%s": {
-      "type": "string"
-    },
-    "%s": {
-      "type": "string"
-    },
-    "%s": {
-      "type": "string"
-    },
-    "%s": {
-      "type": "string"
-    },
-    "%s": {
-      "type": "string"
-    },
-    "%s": {
-      "type": "string"
-    },
-    "%s": {
-      "type": "string"
-    },
-    "%s": {
-      "type": "string"
-    },
-    "%s": {
-      "type": "string"
-    },
-    "%s": {
-      "type": "string"
-    },
-    "%s": {
-      "type": "string"
     }
   },
   "additionalProperties": false
 })",
                 kAnnotationBuildBoard, kAnnotationBuildIsDebug, kAnnotationBuildLatestCommitDate,
-                kAnnotationBuildProduct, kAnnotationBuildVersion, kAnnotationChannel,
-                kAnnotationDeviceBoardName, kAnnotationDeviceFeedbackId, kAnnotationDeviceUptime,
-                kAnnotationDeviceUTCTime, kAnnotationHardwareBoardName,
-                kAnnotationHardwareBoardRevision, kAnnotationHardwareProductLanguage,
-                kAnnotationHardwareProductLocaleList, kAnnotationHardwareProductManufacturer,
-                kAnnotationHardwareProductModel, kAnnotationHardwareProductName,
-                kAnnotationHardwareProductRegulatoryDomain, kAnnotationHardwareProductSKU))
+                kAnnotationBuildProduct, kAnnotationBuildVersion, kAnnotationDeviceBoardName,
+                kAnnotationDeviceUptime, kAnnotationDeviceUTCTime))
             .HasParseError());
     rapidjson::SchemaDocument schema(schema_json);
     rapidjson::SchemaValidator validator(schema);
@@ -631,141 +448,7 @@ TEST_F(DataProviderTest, GetData_AnnotationsAsAttachment) {
   EXPECT_TRUE(found_annotations_attachment);
 }
 
-TEST_F(DataProviderTest, GetData_Inspect) {
-  // CollectInspectData() has its own set of unit tests so we only cover one chunk of Inspect data
-  // here to check that we are attaching the Inspect data.
-  SetUpInspect("foo");
-  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
-  SetUpDataProvider(kDefaultConfig);
-
-  fit::result<Data, zx_status_t> result = GetData();
-  ASSERT_TRUE(result.is_ok());
-
-  const Data& data = result.value();
-
-  // There should be a "inspect.json" attachment present in the attachment bundle.
-  std::vector<Attachment> unpacked_attachments;
-  UnpackAttachmentBundle(data, &unpacked_attachments);
-  EXPECT_THAT(unpacked_attachments,
-              testing::Contains(MatchesAttachment(kAttachmentInspect, "[\nfoo\n]")));
-}
-
-TEST_F(DataProviderTest, GetData_SysLog) {
-  // CollectSystemLogs() has its own set of unit tests so we only cover one log message here to
-  // check that we are attaching the logs.
-  SetUpLogger({
-      BuildLogMessage(FX_LOG_INFO, "log message",
-                      /*timestamp_offset=*/zx::duration(0), {"foo"}),
-  });
-  const std::string expected_syslog = "[15604.000][07559][07687][foo] INFO: log message\n";
-  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
-  SetUpDataProvider(kDefaultConfig);
-
-  fit::result<Data, zx_status_t> result = GetData();
-  ASSERT_TRUE(result.is_ok());
-
-  const Data& data = result.value();
-
-  // There should be a "log.system.txt" attachment present in the attachment bundle.
-  std::vector<Attachment> unpacked_attachments;
-  UnpackAttachmentBundle(data, &unpacked_attachments);
-  EXPECT_THAT(unpacked_attachments,
-              testing::Contains(MatchesAttachment(kAttachmentLogSystem, expected_syslog)));
-}
-
-TEST_F(DataProviderTest, GetData_PreviousSysLog) {
-  std::string previous_log_contents("LAST SYSTEM LOG");
-  SetUpPreviousSystemLog(previous_log_contents);
-  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
-  SetUpDataProvider(kDefaultConfig);
-
-  fit::result<Data, zx_status_t> result = GetData();
-  ASSERT_TRUE(result.is_ok());
-
-  const Data& data = result.value();
-  // There should be a "log.system.previous_boot.txt" attachment present in the attachment bundle.
-  std::vector<Attachment> unpacked_attachments;
-  UnpackAttachmentBundle(data, &unpacked_attachments);
-  EXPECT_THAT(unpacked_attachments, testing::Contains(MatchesAttachment(
-                                        kAttachmentLogSystemPrevious, previous_log_contents)));
-}
-
-TEST_F(DataProviderTest, GetData_Channel) {
-  auto channel_provider = std::make_unique<StubChannelProvider>();
-  channel_provider->set_channel("my-channel");
-  SetUpChannelProvider(std::move(channel_provider));
-  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
-  SetUpDataProvider(kDefaultConfig);
-
-  fit::result<Data, zx_status_t> result = GetData();
-  ASSERT_TRUE(result.is_ok());
-
-  const Data& data = result.value();
-  ASSERT_TRUE(data.has_annotations());
-  EXPECT_THAT(data.annotations(),
-              testing::Contains(MatchesAnnotation(kAnnotationChannel, "my-channel")));
-}
-
-TEST_F(DataProviderTest, GetData_BoardInfo) {
-  SetUpBoardProvider(std::make_unique<StubBoard>(CreateBoardInfo()));
-  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
-  SetUpDataProvider(kDefaultConfig);
-
-  std::set<std::string> keys;
-  for (const auto& [key, _] : kBoardInfoValues) {
-    keys.insert(key);
-  }
-
-  fit::result<Data, zx_status_t> result = GetData();
-  ASSERT_TRUE(result.is_ok());
-
-  const Data& data = result.value();
-  ASSERT_TRUE(data.has_annotations());
-  EXPECT_THAT(data.annotations(),
-              testing::IsSupersetOf({
-                  MatchesAnnotation(kAnnotationHardwareBoardName,
-                                    kBoardInfoValues.at(kAnnotationHardwareBoardName)),
-                  MatchesAnnotation(kAnnotationHardwareBoardRevision,
-                                    kBoardInfoValues.at(kAnnotationHardwareBoardRevision)),
-              }));
-}
-
-TEST_F(DataProviderTest, GetData_ProductInfo) {
-  SetUpProductProvider(std::make_unique<StubProduct>(CreateProductInfo()));
-  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
-  SetUpDataProvider(kDefaultConfig);
-
-  std::set<std::string> keys;
-  for (const auto& [key, _] : kProductInfoValues) {
-    keys.insert(key);
-  }
-
-  fit::result<Data, zx_status_t> result = GetData();
-  ASSERT_TRUE(result.is_ok());
-
-  const Data& data = result.value();
-  ASSERT_TRUE(data.has_annotations());
-  EXPECT_THAT(
-      data.annotations(),
-      testing::IsSupersetOf({
-          MatchesAnnotation(kAnnotationHardwareProductSKU,
-                            kProductInfoValues.at(kAnnotationHardwareProductSKU)),
-          MatchesAnnotation(kAnnotationHardwareProductLanguage,
-                            kProductInfoValues.at(kAnnotationHardwareProductLanguage)),
-          MatchesAnnotation(kAnnotationHardwareProductRegulatoryDomain,
-                            kProductInfoValues.at(kAnnotationHardwareProductRegulatoryDomain)),
-          MatchesAnnotation(kAnnotationHardwareProductLocaleList,
-                            kProductInfoValues.at(kAnnotationHardwareProductLocaleList)),
-          MatchesAnnotation(kAnnotationHardwareProductName,
-                            kProductInfoValues.at(kAnnotationHardwareProductName)),
-          MatchesAnnotation(kAnnotationHardwareProductModel,
-                            kProductInfoValues.at(kAnnotationHardwareProductModel)),
-          MatchesAnnotation(kAnnotationHardwareProductManufacturer,
-                            kProductInfoValues.at(kAnnotationHardwareProductManufacturer)),
-      }));
-}
-
-TEST_F(DataProviderTest, GetData_EmptyAttachmentAllowlist) {
+TEST_F(DataProviderTest, GetData_SingleAttachmentOnEmptyAttachmentAllowlist) {
   SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
   SetUpDataProvider(Config{kDefaultAnnotations, /*attachment_allowlist=*/{}});
 
@@ -778,7 +461,7 @@ TEST_F(DataProviderTest, GetData_EmptyAttachmentAllowlist) {
   EXPECT_THAT(unpacked_attachments, testing::Contains(MatchesKey(kAttachmentAnnotations)));
 }
 
-TEST_F(DataProviderTest, GetData_EmptyAllowlists) {
+TEST_F(DataProviderTest, GetData_NoDataOnEmptyAllowlists) {
   SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
   SetUpDataProvider(Config{/*annotation_allowlist=*/{}, /*attachment_allowlist=*/{}});
 

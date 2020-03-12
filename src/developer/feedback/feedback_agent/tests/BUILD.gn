@@ -227,11 +227,6 @@ executable("data_provider_unittest") {
   sources = [ "data_provider_unittest.cc" ]
 
   deps = [
-    ":stub_board",
-    ":stub_channel_provider",
-    ":stub_inspect",
-    ":stub_logger",
-    ":stub_product",
     ":stub_scenic",
     "//garnet/public/lib/fostr/fidl/fuchsia.math",
     "//garnet/public/lib/timekeeper:testing",
@@ -239,10 +234,8 @@ executable("data_provider_unittest") {
     "//sdk/fidl/fuchsia.math",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/fidl/cpp",
-    "//sdk/lib/sys/cpp/testing:integration",
     "//src/developer/feedback/feedback_agent:constants",
     "//src/developer/feedback/feedback_agent:data_provider",
-    "//src/developer/feedback/feedback_agent:device_id_provider",
     "//src/developer/feedback/testing:cobalt_test_fixture",
     "//src/developer/feedback/testing:gmatchers",
     "//src/developer/feedback/testing:gpretty_printers",
@@ -250,7 +243,6 @@ executable("data_provider_unittest") {
     "//src/developer/feedback/testing:unit_test_fixture",
     "//src/developer/feedback/testing/stubs:stub_cobalt_logger_factory",
     "//src/developer/feedback/utils:archive",
-    "//src/lib/files",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//third_party/googletest:gmock",
@@ -283,6 +275,13 @@ executable("datastore_unittest") {
   sources = [ "datastore_unittest.cc" ]
 
   deps = [
+    ":stub_board",
+    ":stub_channel_provider",
+    ":stub_inspect",
+    ":stub_logger",
+    ":stub_product",
+    "//sdk/fidl/fuchsia.hwinfo",
+    "//sdk/fidl/fuchsia.intl",
     "//src/developer/feedback/feedback_agent:constants",
     "//src/developer/feedback/feedback_agent:datastore",
     "//src/developer/feedback/feedback_agent:device_id_provider",

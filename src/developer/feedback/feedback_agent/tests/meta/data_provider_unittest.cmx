@@ -12,13 +12,10 @@
     "sandbox": {
         "features": [
             "build-info",
-            "isolated-persistent-storage",
             "isolated-temp"
         ],
         "services": [
             "fuchsia.logger.LogSink",
-            "fuchsia.sys.Environment",
-            "fuchsia.sys.Loader",
             "fuchsia.sysinfo.SysInfo"
         ]
     }

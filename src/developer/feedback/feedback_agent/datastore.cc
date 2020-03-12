@@ -31,8 +31,8 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
       timeout_(timeout),
       annotation_allowlist_(annotation_allowlist),
       attachment_allowlist_(attachment_allowlist),
-      static_annotations_(GetStaticAnnotations(annotation_allowlist_)),
-      static_attachments_(GetStaticAttachments(attachment_allowlist_)) {
+      static_annotations_(feedback::GetStaticAnnotations(annotation_allowlist_)),
+      static_attachments_(feedback::GetStaticAttachments(attachment_allowlist_)) {
   if (annotation_allowlist_.empty()) {
     FX_LOGS(WARNING)
         << "Annotation allowlist is empty, no annotations will be collected or returned";
