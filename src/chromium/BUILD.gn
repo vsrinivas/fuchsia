@@ -103,6 +103,21 @@ prebuilt_test_manifest("chromium_tests") {
     archive_dir = "//prebuilt/third_party/chromium_tests/arch/x64"
   }
   environments = test_env
+
+  disabled_tests = []
+
+  # Tests temporarily disabled due to flake.
+  # crbug.com/1060489
+  disabled_tests += [
+    {
+      component_name = "cast_runner_integration_tests"
+      package = "cast_runner_integration_tests"
+    },
+    {
+      component_name = "web_runner_integration_tests"
+      package = "web_runner_integration_tests"
+    },
+  ]
 }
 
 icu_tzdata_config_data("tzdata_for_chromium_tests_base_unittests") {
