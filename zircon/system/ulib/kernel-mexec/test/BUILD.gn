@@ -1,0 +1,26 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("test") {
+  testonly = true
+  deps = [ ":kernel-mexec-test" ]
+}
+
+zx_test("kernel-mexec-test") {
+  sources = [ "kernel-mexec_test.cc" ]
+  deps = [
+    "$zx/system/fidl/fuchsia-device-manager:c",
+    "$zx/system/ulib/async",
+    "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/async-loop:async-loop-default.static",
+    "$zx/system/ulib/fidl",
+    "$zx/system/ulib/fidl-async",
+    "$zx/system/ulib/fs",
+    "$zx/system/ulib/kernel-mexec",
+    "$zx/system/ulib/libzbi",
+    "$zx/system/ulib/svc",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
+  ]
+}

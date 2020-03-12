@@ -91,7 +91,7 @@ if (current_cpu != "") {
       "$zx/system/ulib/hermetic-decompressor/test",
 #------------------
 #------------------
-      "$zx/system/ulib/kernel-mexec:kernel-mexec-test",
+      "$zx/system/ulib/kernel-mexec/test",
 #------------------
 #------------------
       "$zx/system/ulib/lazy_init:lazy_init-test",
