@@ -353,6 +353,25 @@ bad:
     popq    %rax
 #endif
 
+    // Spectre V1: If the syscall is going to return certain errors, flush the L1D$
+    // TODO(fxb/33667): Can this be folded together w/ MD_CLEAR below?
+    test    %rax, %rax
+    jz      1f
+    // Before calling a function, we must preserve any registers we need for SYSRET.
+    pushq   %rax  // Save the syscall return value
+    pushq   %rcx  // Save user RIP
+    pushq   %r11  // Save user RFLAGS
+    movq    %rax, %rdi
+    call    x86_cpu_maybe_l1d_flush
+    popq    %r11  // Restore user RFLAGS
+    popq    %rcx  // Restore user RIP
+    popq    %rax  // Restore syscall return
+    xorl    %edi, %edi  // Zero registers clobbered by the call; prevents leaking scratch state
+    xorl    %esi, %esi  // to userspace.
+    xorl    %r8d, %r8d
+    xorl    %r9d, %r9d
+    xorl    %r10d, %r10d
+1:
     // If we are affected by the MDS speculative execution vulnerability, flush microarchitectural
     // buffers via mds_buff_overwrite(). x86_mds_flush_select() will NOP out the flush where it is
     // not required.

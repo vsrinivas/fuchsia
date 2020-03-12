@@ -1006,6 +1006,31 @@ void x86_cpu_ibrs(MsrAccess* msr) {
   msr->write_msr(/*msr_index=*/X86_MSR_IA32_SPEC_CTRL, /*value=*/X86_SPEC_CTRL_IBRS);
 }
 
+void x86_cpu_maybe_l1d_flush(zx_status_t syscall_return) {
+  if (x86_get_disable_spec_mitigations()) {
+    return;
+  }
+
+  // Spectre V1: If we are returning from a syscall with one of these errors, flush the entire
+  // L1D cache. This prevents hostile code from reading any data the kernel brought in to cache,
+  // even speculatively.
+  //
+  // We only flush on these errors as they are not expected in the steady state and cover most
+  // expected Spectre V1 attack constructions. Most attacks will either pass in invalid indexes
+  // or invalid handles, to leak table contents; ZX_ERR_INVALID_ARGS and ZX_ERR_BAD_HANDLE cover
+  // those cases.
+  //
+  // Allowing a process to cause an L1D cache flush is low risk; the process could cycle enough
+  // data through the L1 to evict + replace all data very quickly. Allowing a process to cause
+  // a WBINVD, however, would be higher-risk - it flushes every cache in the system, which could
+  // be very disruptive to other work; therefore we don't fall back from IA32_FLUSH_CMD to WBINVD.
+  if (syscall_return == ZX_ERR_INVALID_ARGS || syscall_return == ZX_ERR_BAD_HANDLE) {
+    if (x86_feature_test(X86_FEATURE_L1D_FLUSH)) {
+      write_msr(X86_MSR_IA32_FLUSH_CMD, 1);
+    }
+  }
+}
+
 const uint8_t kNop = 0x90;
 CODE_TEMPLATE(kLfence, "lfence")
 void swapgs_bug_postfence(const CodePatchInfo* patch) {
