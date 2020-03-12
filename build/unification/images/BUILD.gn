@@ -221,13 +221,10 @@ aggregate_manifest("legacy-aux") {
 #------------------
 #------------------
 #------------------
-    ":bin.elfload-fuzzer.asan",
 #------------------
 #------------------
-    ":bin.elfload-fuzzer.asan-ubsan",
 #------------------
 #------------------
-    ":bin.elfload-fuzzer.ubsan",
 #------------------
 #------------------
     ":bin.fidl-handle-policy-test-app",
@@ -801,13 +798,10 @@ aggregate_manifest("legacy-tests") {
     ":bin.debugdata-test-helper",
 #------------------
 #------------------
-    ":bin.elfload-fuzzer.asan",
 #------------------
 #------------------
-    ":bin.elfload-fuzzer.asan-ubsan",
 #------------------
 #------------------
-    ":bin.elfload-fuzzer.ubsan",
 #------------------
 #------------------
     ":bin.hermetic-decompressor-fuzzer.asan",
@@ -1740,13 +1734,10 @@ aggregate_manifest("migrated-aux") {
     "//zircon/system/ulib/elf-search/test:elf-search-test-helper-manifest",
 #------------------
 #------------------
-    #":bin.elfload-fuzzer.asan",
 #------------------
 #------------------
-    #":bin.elfload-fuzzer.asan-ubsan",
 #------------------
 #------------------
-    #":bin.elfload-fuzzer.ubsan",
 #------------------
     "//zircon/system/utest/evil:evil-manifest",
 #------------------
@@ -3243,13 +3234,10 @@ aggregate_manifest("migrated-tests") {
 #------------------
     "//zircon/system/utest/dump1:dump1-manifest",
 #------------------
-    #":bin.elfload-fuzzer.asan",
 #------------------
 #------------------
-    #":bin.elfload-fuzzer.asan-ubsan",
 #------------------
 #------------------
-    #":bin.elfload-fuzzer.ubsan",
 #------------------
     "//zircon/system/utest/evil:evil-manifest",
 #------------------

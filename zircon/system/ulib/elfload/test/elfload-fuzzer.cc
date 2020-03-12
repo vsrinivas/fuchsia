@@ -10,10 +10,6 @@
 
 #define PAGE_SIZE 4096
 
-static inline size_t roundup(size_t x, size_t boundary) {
-  return (x + boundary - 1) & ~(boundary - 1);
-}
-
 static const size_t kMaxPhNum = 1024;
 elf_phdr_t phdrs[kMaxPhNum];
 
