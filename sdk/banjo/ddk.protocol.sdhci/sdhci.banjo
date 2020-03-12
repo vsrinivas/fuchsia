@@ -26,6 +26,8 @@ enum SdhciQuirk : uint64 {
     STRIP_RESPONSE_CRC_PRESERVE_ORDER = 0x4;
     /// The controller uses a tuning process that does not follow the SDHCI specification.
     NON_STANDARD_TUNING = 0x8;
+    /// Force 1-bit bus, disallow 4- and 8-bit modes.
+    BUS_WIDTH_1 = 0x10;
 };
 
 [Layout = "ddk-protocol"]

@@ -629,6 +629,10 @@ zx_status_t Sdhci::SdmmcSetBusWidth(sdmmc_bus_width_t bus_width) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
+  if ((quirks_ & SDHCI_QUIRK_BUS_WIDTH_1) && (bus_width != SDMMC_BUS_WIDTH_ONE)) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   auto ctrl1 = HostControl1::Get().ReadFrom(&regs_mmio_buffer_);
 
   switch (bus_width) {
