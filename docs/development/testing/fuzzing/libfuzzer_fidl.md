@@ -12,7 +12,7 @@ An example fuzzer is defined in `//garnet/examples/fidl/echo_server_cpp/fuzzer`.
       Implement a library that defines the following symbols:
       * `zx_status_t fuzzer_init()`: Instantiate server implementation.
       * `zx_status_t fuzzer_connect(zx_handle_t, async_dispatcher_t*)`: Bind server implementation to the channel handle. Optionally, use the dispatcher if your server can be fuzzed on the same thread as fuzzer clients (see [note on threading][single-thread-dispatcher-preferred]).
-      * `zx_status_t fuzzer_disconnect(zx_handle_t, async_dispatcher_t*)`: Unbind server implemementation from the channel handle.
+      * `zx_status_t fuzzer_disconnect(zx_handle_t, async_dispatcher_t*)`: Unbind server implementation from the channel handle.
       * `zx_status_t fuzzer_clean_up()`: Clean up server implementation.
       If any of these returns a status other than `ZX_OK`, then the fuzzer will cleanup and halt.
 1. Define a `fidl_protocol_fuzzer()` gn target. Specify:
@@ -53,7 +53,7 @@ In terms of allocation trait details, collection and numeric types have relative
 ### A note about threading
 {#a-note-about-threading}
 
-It is **highly** desirable to keep the fuzz target single-threaded. That is, use `ServerProviderDispatcherMode::kFromCaller` in C++ or use the `async_dispatcher_t*` passed to `fuzzer_connect` in C. This is preferred because it increases the liklihood that bugs found by the fuzzer will be consistently reproducible.
+It is **highly** desirable to keep the fuzz target single-threaded. That is, use `ServerProviderDispatcherMode::kFromCaller` in C++ or use the `async_dispatcher_t*` passed to `fuzzer_connect` in C. This is preferred because it increases the likelihood that bugs found by the fuzzer will be consistently reproducible.
 
 ## Future work
 

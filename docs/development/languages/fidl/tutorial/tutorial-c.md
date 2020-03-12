@@ -121,7 +121,7 @@ The example server code is in [//garnet/examples/fidl/echo_server_c/echo_server.
 2. initializes the asynchronous loop (`[30` .. `37]`),
 3. adds the **connect()** function to handle the echo service (`[49]`),
    and finally
-4. runs the asychronous loop in the foreground via
+4. runs the asynchronous loop in the foreground via
    **async_loop_run()** (`[56]`).
 
 When the async loop returns, we clean up (`[63]` and `[64]`) and exit.
@@ -322,7 +322,7 @@ typedef struct fidl_txn fidl_txn_t;
 struct fidl_txn {
     // Replies to the outstanding request and complete the FIDL transaction.
     //
-    // Pass the |fidl_txn_t| object itself as the first paramter. The |msg|
+    // Pass the |fidl_txn_t| object itself as the first parameter. The |msg|
     // should already be encoded. This function always consumes any handles
     // present in |msg|.
     //

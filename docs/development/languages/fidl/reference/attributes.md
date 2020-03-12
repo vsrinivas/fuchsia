@@ -16,7 +16,7 @@ The following FIDL attributes are supported:
 
 ## Scope
 
-An attribute preceeds a FIDL element, for example:
+An attribute precedes a FIDL element, for example:
 
 ```fidl
 [Layout = "Simple"]

@@ -196,7 +196,7 @@ interesting to know where a system call has been called. Using the flag
 
 By default (**--stack=0**), the stack frames are not displayed.
 
-With **--statck=1** only the call site (1 to 4 frames) is displayed:
+With **--stack=1** only the call site (1 to 4 frames) is displayed:
 
 <pre>echo_client_cpp <font color="#CC0000">5231515</font>:<font color="#CC0000">5231528</font> <span style="background-color:#FCE94F">at </span><span style="background-color:#FCE94F"><font color="#CC0000">zircon/system/ulib/fidl/message.cc</font></span><span style="background-color:#FCE94F">:</span><span style="background-color:#FCE94F"><font color="#3465A4">62</font></span> fidl::Message::Read
 echo_client_cpp <font color="#CC0000">5231515</font>:<font color="#CC0000">5231528</font> zx_channel_read(handle:<font color="#4E9A06">handle</font>: <font color="#CC0000">a0575917</font>, options:<font color="#4E9A06">uint32</font>: <font color="#3465A4">0</font>, num_bytes:<font color="#4E9A06">uint32</font>: <font color="#3465A4">65536</font>, num_handles:<font color="#4E9A06">uint32</font>: <font color="#3465A4">64</font>)

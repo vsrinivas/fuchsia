@@ -235,7 +235,7 @@ followed by a bullet-point description of its contents.
 
 * [Record header](#record-header)
 * [Large record header](#large-record-header)
-* [Metada record (record type = 0)](#metada-record)
+* [Metadata record (record type = 0)](#metadata-record)
 * [Initialization record (record type = 1)](#initialization-record)
 * [String record (record type = 2)](#string-record)
 * [Thread record (record type = 3)](#thread-record)

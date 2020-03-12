@@ -42,7 +42,7 @@ fx build
 
 The build results are saved in $FUCHSIA_DIR/out/default.zircon.
 
-## Explictly set the target toolchain
+## Explicitly set the target toolchain
 
 By default Fuchsia uses the `clang` toolchain.  This can be
 set to `gcc` by using the `variants` argument with `fx set`:

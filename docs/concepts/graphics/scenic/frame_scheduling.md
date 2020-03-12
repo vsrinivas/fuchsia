@@ -26,7 +26,7 @@ channel. For examples of how to set up scenic, see
 The simplest type of application creates and presents a new update every
 time a previous one has been presented. This is reasonable for applications
 with small workloads (takes less than a frame to create a frame) and
-no reqirements to minimize latency.
+no requirements to minimize latency.
 
 ```cpp
 

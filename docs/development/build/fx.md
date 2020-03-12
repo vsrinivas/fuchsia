@@ -506,7 +506,7 @@ GI status: PENDING
 
 * `fx -x` the `-x` flag turns on tracing for the `fx` scripts, printing out all
   expressions evaluated during the `fx` invocation.
-* `fx exec` executes an abitrary program that follows inside of the current
+* `fx exec` executes an arbitrary program that follows inside of the current
   `fx` environment. As an example `fx exec env` prints all environment
   variables in that environment (`fx exec env | grep FUCHSIA` is likely of
   interest).

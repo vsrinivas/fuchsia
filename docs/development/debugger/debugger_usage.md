@@ -52,7 +52,7 @@ Breakpoint 1 (Software) on Global, Enabled, stop=All, @ main
 Pending: No matches for location, it will be pending library loads.
 ```
 
-Then run the process the way you would in normal use (direcly on the command
+Then run the process the way you would in normal use (directly on the command
 line, via `fx test`, via the shell's `run fuchsia-pkg://...`, or another
 way. The debugger should then immediately break on `main` (it may take some
 time to load symbols so you may see a delay before showing the source code):
@@ -112,7 +112,7 @@ environment. This is true even for things that may seem relatively simple.
 
 ### Directly launching components
 
-Components that can be executed with the console comand `run fuchsia-pkg://...`
+Components that can be executed with the console command `run fuchsia-pkg://...`
 can be loaded in the debugger with the following command, substituting your
 component's URL:
 
@@ -563,7 +563,7 @@ Notes:
     another part of the program when the stack memory is re-used. If you get a surprising breakpoint
     hit, check that execution is still in the frame you expect.
 
-### Programatic breakpoints
+### Programmatic breakpoints
 
 You can insert a hardcoded breakpoint in your code if you want to catch some
 specific condition. Clang has a builtin (it won't work in GCC Zircon builds):

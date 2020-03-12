@@ -65,7 +65,7 @@ you must use an encoding macro.
   <tr>
     <td><code>TA_DOUBLE</code></td>
     <td><p><b>Optional for C++</b></p>
-      <p>A double precison floating point value.</p>
+      <p>A double precision floating point value.</p>
     </td>
   <tr>
   <tr>
@@ -91,7 +91,7 @@ you must use an encoding macro.
   <tr>
     <td><code>TA_POINTER</code></td>
     <td><p><b>Optional for C++</b></p>
-      <p>A pointer value which recoreds the memory address
+      <p>A pointer value which records the memory address
        and not the target.</p>
     </td>
   <tr>
@@ -564,7 +564,7 @@ This macro accepts the following arguments:
     <td><code>category</code></td>
     <td><p><b>Required</b></p>
     <p>Specifies the category of the trace event. By convention, it should
-    use a category in a colon seperated format:</p>
+    use a category in a colon separated format:</p>
     <p><code>provider</code>:<code>category</code>:<code>sub-category</code></p>
     <p>For example <code>demo:flow:outline</code>, indicates the following:</p>
       <ul>
@@ -572,8 +572,8 @@ This macro accepts the following arguments:
         your actual component.</li>
         <li><code>flow</code>: Indicates the name of the category which can
         indicate, like in this example, a call by call flow of the component.</li>
-        <li><code>outline</code>: Indicates the name of the sub-catagory which
-        can indicate, like in this example, that you are trracing the high
+        <li><code>outline</code>: Indicates the name of the sub-category which
+        can indicate, like in this example, that you are tracing the high
         level flow of the component or just top level functions.</li>
       </ul>
       <p>The category namespace is global to all components that are running,

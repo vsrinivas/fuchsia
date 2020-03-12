@@ -75,7 +75,7 @@ The backend is a command-line program named `fidlgen`. The `fidlgen` compiler ha
 
 ### Limitations
 
-For the `cpp` backend, the generated `.h` file must be includeable as `#include
+For the `cpp` backend, the generated `.h` file must be includable as `#include
 <fuchsia/cpp/$LIBRARY_NAME.h>`, where `$LIBRARY_NAME` is the name of the corresponding FIDL
 library. Typically, that means that the `--output-base` flag will have the value
 `$INCLUDE_BASE/fuchsia/cpp/$LIBRARY_NAME`, where `$INCLUDE_BASE` is the value of the
@@ -269,7 +269,7 @@ top element off of `active_ast_scopes_`.
 
 ### Compilation
 
-At this point, the compiler has succesfully constructed a `raw::File` for each input file and
+At this point, the compiler has successfully constructed a `raw::File` for each input file and
 proceeds to compile these raw ASTs into flat ASTs in three steps:
 
 1. **Consumption**: where the raw ASTs (whose representation tries to match the FIDL grammar) are
@@ -322,7 +322,7 @@ for a given declaration.
 #### Resolution
 
 Given the sorted declarations, the compilation happens through the `CompileFoo` methods, generally
-correponding to the AST nodes (e.g. `CompileStruct`, `CompileConst`), with `CompileDecl` as the
+corresponding to the AST nodes (e.g. `CompileStruct`, `CompileConst`), with `CompileDecl` as the
 entrypoint. The main purpose of `CompileDecl` is for:
 
 * [`TypeDecl`s](#decl) to determine their [`TypeShape`](#typeshape)
@@ -336,7 +336,7 @@ be consumed by a separate backend
 #### Additional Checks
 
 Before marking compilation as successful, the FIDL compiler also does a few additional checks: for
-example, it will check that any constraints on attributes are satisifed, and that all declared
+example, it will check that any constraints on attributes are satisfied, and that all declared
 library dependencies were actually used.
 
 ### Backend generation
@@ -407,7 +407,7 @@ struct or union. Generally these fields will require both a `Typeshape` as well 
 
 A `Name` represents a scope variable name, and consists of the library the name belongs to (or
 `nullptr` for global names), and the variable name itself as a string (for anonymous names) or a
-`SourceLocation`. `Name`s can alos optionally include a `member_name_` field when referring to the
+`SourceLocation`. `Name`s can also optionally include a `member_name_` field when referring to the
 field of a declared variable (for example `MyEnum.MyField`).
 
 #### SourceElement {#sourceelement}

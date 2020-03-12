@@ -114,7 +114,7 @@ Typically the generated code will contain the following types of code:
 * Stub objects that represent the server end of a FIDL protocol. Typically,
   stub object have a *dispatch* method that deserializes a message read from a
   Zircon channel and perform an indirect jump into an implementation of the
-  method specied by the message's *ordinal*.
+  method specified by the message's *ordinal*.
 * Proxy objects that represent the client end of a FIDL protocol. Typically,
   method calls on proxy objects result in a message being serialized and
   sent over a Zircon channel. Typically, proxy object have a *dispatch* for
@@ -151,7 +151,7 @@ in a compact form.
 Typically, the support library is layered on top of the async library, which
 itself has no knowledge of FIDL. For example, most support libraries contain a
 *reader* object, which manages the asynchronous waiting and reading operations
-on channels. The generated code can then be restricted to serialzation,
+on channels. The generated code can then be restricted to serialization,
 deserialization, and dispatch.
 
  * [C](/zircon/system/ulib/fidl)
@@ -172,5 +172,5 @@ directly with `fuchsia.io` to provide POSIX-style IO.
 You can recover the underlying Zircon handles for file descriptors using [`lib/fdio/unsafe.h`](/zircon/system/ulib/fdio/include/lib/fdio/unsafe.h).
 Typically, languages have a tiny library that layers on top of the async library
 to perform asynchronous waits on file descriptors. This library typically
-provdes a less error-prone interface that abstracts these "unsafe" FDIO
+provides a less error-prone interface that abstracts these "unsafe" FDIO
 functions.

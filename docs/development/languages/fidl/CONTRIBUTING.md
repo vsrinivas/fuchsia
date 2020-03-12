@@ -413,7 +413,7 @@ Tab 3> fx set core.x64 --with-base //garnet/packages/tests:zircon --with //garne
 Tab 3> fx test fidl_compatibility_test
 ```
 
-To run the compatiblity tests with Dart:
+To run the compatibility tests with Dart:
 
 ```sh
 Tab 3> fx set core.x64 --with //topaz/packages/tests:all

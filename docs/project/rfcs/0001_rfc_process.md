@@ -202,7 +202,7 @@ Stakeholders who wish to object to an RFC can set the Code-Review flag to -1 or
 -2, depending on how strongly they feel that the RFC should not move forward.
 When setting the Code-Review flag to -1 or -2, a stakeholder must state their
 reason for objecting, ideally in a way that would let someone understand the
-objection clearly without having to read the entire discussion that preceeded
+objection clearly without having to read the entire discussion that preceded
 the objection.
 
 A stakeholder setting the Code-Review flag to -1 or -2 does not necessarily

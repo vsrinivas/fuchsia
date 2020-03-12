@@ -21,7 +21,7 @@ the [ICU data use instructions](icu_data.md) on how to load this data.
 ## `icu_data` `BUILD.gn` rules need changing
 
 Since `icu_data` needs the ICU data files to be made available in the Fuchsia
-package, please see [ICU data use instructions](icu_data.md) for an exaple of
+package, please see [ICU data use instructions](icu_data.md) for an example of
 how to make the data files available.
 
 # Using the ICU library

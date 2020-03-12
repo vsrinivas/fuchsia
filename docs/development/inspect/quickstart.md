@@ -358,7 +358,7 @@ See below for the quick start guide in your language of choice.
         {
           node.record_uint(2); // no return
         }
-        // The uint property will still be visibile to readers.
+        // The uint property will still be visible to readers.
     }
     ```
 

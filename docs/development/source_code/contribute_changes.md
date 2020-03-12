@@ -140,7 +140,7 @@ for more information on how to introduce testable and tested code in the Fuchsia
     git rebase origin/master
     ```
 
-1.  Edit those files to rsesolve the conflicts and finish the rebase:
+1.  Edit those files to resolve the conflicts and finish the rebase:
 
     ```
     git add <files_with_resolved_conflicts>
@@ -162,5 +162,5 @@ see the following pages:
 *   [Working across different petals](/docs/development/source_code/working_across_petals.md)
 *   [Upload changes from multiple repositories](/docs/development/source_code/upload_changes_from_multiple_repositories.md)
 
-More information on the structure of the `fuchsia.git` respository is available in
+More information on the structure of the `fuchsia.git` repository is available in
 [Source code layout](/docs/concepts/source_code/layout.md).

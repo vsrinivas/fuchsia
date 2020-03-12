@@ -14,7 +14,7 @@ including some of its design goals, requirements, and workflow.
 ## Language support
 
 The FIDL code generator creates code in a multitude of target languages.
-The following table gives you a reference to the details of the language implementaion,
+The following table gives you a reference to the details of the language implementation,
 as well as pointers to the code generated from the [tutorial's](tutorial/README.md)
 "*Hello, world*" client and server examples.
 

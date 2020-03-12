@@ -21,7 +21,7 @@ Property         |   Description
 |  arch          | Architecture targeted for this SDK. There is a host architecture and a list of target device architectures. |
 | id             | Build id of the SDK. |
 | parts          | The array of elements in the SDK. Each part has a type which is defined in `meta/schemas/<type>.json` |
-| schema_version | The version of the schema for the metadata. This value should be verifyed when using an automated integration process to make sure the metadata is being interpreted correctly. |
+| schema_version | The version of the schema for the metadata. This value should be verified when using an automated integration process to make sure the metadata is being interpreted correctly. |
 
 
 ## Element types

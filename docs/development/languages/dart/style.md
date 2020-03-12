@@ -204,7 +204,7 @@ import 'package:flutter/material.dart show Container, Row, Column, Padding,
   Expanded, ...;
 ```
 
-## Coding practicies
+## Coding practices
 
 ### DON'T use `new` or use `const` redundantly.
 

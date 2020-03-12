@@ -163,7 +163,7 @@ private:
 // Defined in the linker script to make the beginning and end of the section:
 // .rodata.string_ref_table.
 extern "C" StringRef __start_string_ref_table[];
-extern "C" StirngRef __end_string_ref_table[];
+extern "C" StringRef __end_string_ref_table[];
 
 struct StringRef {
     const char* const string;

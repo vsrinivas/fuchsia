@@ -17,7 +17,7 @@ with whatever path you downloaded and built it with.
 
 afl-fuzz treats crashes as interesting but the parser currently calls `__builtin_trap()`
 when it encounters invalid syntax.
-Remove that line in [parser.h](/zircon/tools/fidl/include/fidl/parser.h) - its in the `Parser::Fail()` method.
+Remove that line in [parser.h](/zircon/tools/fidl/include/fidl/parser.h) - it's in the `Parser::Fail()` method.
 
 ## Build the `fidl` tool with afl-fuzz's instrumentation
 

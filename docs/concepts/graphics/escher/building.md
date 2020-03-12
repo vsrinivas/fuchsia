@@ -1,6 +1,6 @@
 # Escher build instructions
 
-Escher can be built targetting both Fuchsia and Linux.  Building for Linux is useful because it allows use of Vulkan development tools that are not yet available on Fuchsia.
+Escher can be built targeting both Fuchsia and Linux.  Building for Linux is useful because it allows use of Vulkan development tools that are not yet available on Fuchsia.
 
 ## Building for Fuchsia
 

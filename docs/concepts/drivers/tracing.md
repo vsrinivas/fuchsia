@@ -99,7 +99,7 @@ documentation of running `fx` in general and `fx set` specifically.
 
 To be conservative, tracing uses a kernel command line flag to enable it:
 `driver.tracing.enable=1`.
-`driver.tracing.enable=1` is the default. To disable partipation
+`driver.tracing.enable=1` is the default. To disable participation
 of drivers in Fuchsia tracing, boot the kernel with `driver.tracing.enable=0`.
 
 Then boot. See the documentation for your hardware or qemu for instructions

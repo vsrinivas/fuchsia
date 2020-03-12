@@ -89,7 +89,7 @@ Notes:
 
 1. Generated types own all handles stored inline. Out-of-line handles e.g. those
    behind a pointer indirection are not closed when the containing object of the
-   pointer goes away. In thoses cases, the bindings provide a
+   pointer goes away. In those cases, the bindings provide a
    `fidl::DecodedMessage` object to manage all handles associated with a call.
 2. The bindings library can dispatch at most one in-flight transaction.
 3. The bindings library defined in [lib/fidl-async](/zircon/system/ulib/fidl-async) can dispatch an unbounded number of in-flight transactions via `fidl::AsyncBind` defined in [lib/fidl-async/cpp/async_bind.h](/zircon/system/ulib/fidl-async/include/lib/fidl-async/cpp/async_bind.h).

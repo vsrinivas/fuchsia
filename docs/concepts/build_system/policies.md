@@ -9,7 +9,7 @@ The Fuchsia build aims to provide common desirable build properties:
 * Hermeticity - the property that the build is self-contained and neither
   influences external software and configuration or is influenced by external
   software and configuration.
-* Repeatability and reproducability - the property that two builds from the same
+* Repeatability and reproducibility - the property that two builds from the same
   source tree produce the same output. This property is desirable for security
   and auditing, as well as determinism in the engineering process.
 * Efficient - builds should only spend time doing work relevant to the build,

@@ -67,7 +67,7 @@ To override the default behavior, pass the following flags to `fx set`:
     fx set core.x64 --no-ccache
     ```
 
-### Build Fuchisa
+### Build Fuchsia
 
 To build Fuchsia, run the following command:
 
@@ -246,7 +246,7 @@ To submit your contribution to Fuchsia, see [Contribute changes](/docs/developme
 
 ## See also
 
-* [fx worflows](/docs/development/build/fx.md)
+* [fx workflows](/docs/development/build/fx.md)
 * [Workflow tips and questions](/docs/development/source_code/workflow_tips_and_faq.md)
 * [Configure editors](/docs/development/editors/)
 * [Source code layout](/docs/concepts/source_code/layout.md)

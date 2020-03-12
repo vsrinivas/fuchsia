@@ -653,7 +653,7 @@ at how we would use it.
 
 # Reference
 
-> @@@ This is where we should list all builtin keywords and primitve types
+> @@@ This is where we should list all builtin keywords and primitive types
 
 ## Attributes
 

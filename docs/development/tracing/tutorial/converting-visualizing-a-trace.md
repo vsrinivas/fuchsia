@@ -36,7 +36,7 @@ The following types of file formats can store Fuchsia trace data:
 You can convert one or more files from FXT to JSON, and then to HTML with the
 following:
 
-Note: If you collect your tace with `fx traceutil record`, the conversion
+Note: If you collect your trace with `fx traceutil record`, the conversion
 is performed automatically.
 
 <pre class="prettyprint">

@@ -78,7 +78,7 @@ your PATH.
 Note: Adding `jiri` to your PATH is assumed by
 other parts of the Fuchsia toolchain.
 
-To show how to set up environement variables, the following steps uses
+To show how to set up environment variables, the following steps uses
 a `bash` terminal as example:
 
 1. Add the `export` and `source` commands to your `.bashrc` script:

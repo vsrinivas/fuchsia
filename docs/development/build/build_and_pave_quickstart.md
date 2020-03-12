@@ -35,7 +35,7 @@ To determine the correct path to your USB drive:
    Drives are usually in the form `/dev/sd[x]` such as `/dev/sdc`.
 
    Make sure that you select the drive rather than a specific
-   partition. For example, a specific partion has a number at the
+   partition. For example, a specific partition has a number at the
    end of the path such as `/dev/sdc1`.
 
 ### macOS
@@ -55,7 +55,7 @@ To determine the correct path to your USB drive:
    hdiutil unmount /dev/disk[n]
    ```
 
-   If this does not fix the error, try reformating the drive:
+   If this does not fix the error, try reformatting the drive:
 
    ```
    diskutil eraseDisk JHFSX <name_of_the_usb_stick> /dev/disk[n]
@@ -85,7 +85,7 @@ To perform an initial build and deploy of Fuchsia with `fx`, do the following:
 
 1. Build the Zedboot media and install to a USB device target:
 
-   Note: For information on obtainining the USB drive device path,
+   Note: For information on obtaining the USB drive device path,
    see [USB drive device path](#usb-drive-device-path).
 
    ```
@@ -172,5 +172,5 @@ To rebuild and redeploy with `fx`:
    ```
 
    Make that sure that the output of your `PATH` variable is a list of
-   directories seperated by colons. Make sure that none of the
-   directories are seperated by `.`.
+   directories separated by colons. Make sure that none of the
+   directories are separated by `.`.

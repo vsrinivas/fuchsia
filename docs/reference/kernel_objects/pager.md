@@ -18,9 +18,9 @@ the requests by supplying the appropriate pages to the VMO.
 The kernel does not do prefetching; it is the responsibility of the pager service to implement any
 applicable prefetching.
 
-It is possible for a single pager to simultaniously back multiple VMOs. Requests for the different
+It is possible for a single pager to simultaneously back multiple VMOs. Requests for the different
 VMOs can be differentiated by the *key* parameter used when creating the VMO. It is also possible
-for multiple independent pager objects to exist simultaniously.
+for multiple independent pager objects to exist simultaneously.
 
 Creating a pager is not a privileged operation. However, the default behavior of syscalls which
 operate on VMOs is to fail if the operation would require blocking on IPC back to a userspace

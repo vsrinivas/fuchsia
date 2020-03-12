@@ -111,7 +111,7 @@ The component framework avoids introducing ambient authorities.
   components outside of themselves. Components must trust their parents to have
   offered them capabilities from a trustworthy source.
 
-However, some of component framework's development diagnostics and debugging
+However, some of the component framework's development diagnostics and debugging
 features do introduce ambient authorities that are scoped to the realms of
 interest.
 

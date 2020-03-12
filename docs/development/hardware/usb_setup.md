@@ -38,7 +38,7 @@ anything on your internal storage.
     The `mkzedboot` command does the following:
 
     + Creates a File Allocation Table (FAT) partition that contains an Extensible
-    Firmware Interface (EFI) System Partition. The EFI System Partitition contains
+    Firmware Interface (EFI) System Partition. The EFI System Partition contains
     the Gigaboot EFI bootloader and a configuration that specifies that your
     device always boot into Zedboot.
     + Creates a ChromeOS bootable partition with a developer key signed Zedboot

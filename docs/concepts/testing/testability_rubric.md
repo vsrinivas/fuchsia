@@ -149,7 +149,7 @@ says `shard multiplied:<shard name>-<test name>` for each test. This feature
 is only supported for builders that test in shards. If there are no such
 builders that run their tests, they will not be able to use this feature.
 
-As a change author, when you add or modify automated tests, you should specifiy
+As a change author, when you add or modify automated tests, you should specify
 this with a MULTIPLY field in the commit message. For example, ``MULTIPLY:
 `<json_string>` `` where `<json_string>` should be a list of tests following
 this schema:

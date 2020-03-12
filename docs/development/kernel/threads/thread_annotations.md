@@ -117,6 +117,6 @@ invariants in use.
 
 The thread safety analysis can be defeated in a number of ways, for instance
 when using pointers.  For example, when taking the address of a guarded data
-member Clang looses track of the guard, e.g. for a foo_ protected by a lock_
+member Clang loses track of the guard, e.g. for a foo_ protected by a lock_
 a call to `memset(&foo_, 0, sizeof(foo_))` without holding lock_ won't be caught
 as a violation.

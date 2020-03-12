@@ -55,7 +55,7 @@ In order to do this, there is a configuration that has to be set into the build:
 fx set <YOUR CONFIG> --with //src/developer/exception_broker:enable_jitd_on_startup
 ```
 
-You can still use the Process Limbo CLI tool to disable and manipualte the limbo afterwards.
+You can still use the Process Limbo CLI tool to disable and manipulate the limbo afterwards.
 
 NOTE: Driver initialization is finicky and freezing crashing process can leave the system in an
 undefined state and "hang" it, so your mileage may vary when using this feature, especially for very
@@ -82,7 +82,7 @@ Processes waiting on exception:
 Type "attach <pid>" to reconnect.
 
 [zxdb] attach 272401
-Process 1 [Running] koid=272401 crashe
+Process 1 [Running] koid=272401 crashed
 Attached Process 1 [Running] koid=272401 crasher
 [Warning] Received thread exception for an unknown thread.
 

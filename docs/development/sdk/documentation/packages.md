@@ -89,7 +89,7 @@ To build a package:
    If the contents of the package change, you need to re-run the
    `pm -o $PACKAGE_DIR -m $MANIFEST_FILE archive` command.
 
-You have succesfully built a package. You are now ready to publish the package.
+You have successfully built a package. You are now ready to publish the package.
 
 ### Publish a package {#publish-package}
 
@@ -157,5 +157,5 @@ To run a component published in a package:
   run $COMPONENT_URI
   ```
 
-You have succesfully run a component from the installed package.
+You have successfully run a component from the installed package.
 

@@ -20,7 +20,7 @@ based on a target's dependency.
 
 The Dart runner for Fuchsia does not
 monitor the FIDL channels opened by Dart programs and as a result does not end
-the program normally, but rather waits for the explict call to `fuchsia.exit()`
+the program normally, but rather waits for the explicit call to `fuchsia.exit()`
 to indicate the program should be ended.
 
 Note: Calling exit() from dart:io will result in an exception since components

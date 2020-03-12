@@ -117,7 +117,7 @@ The superblock format is as follows, with each field described in turn:
   [GPT](/zircon/system/ulib/gpt/include/gpt/gpt.h).
 * _Instance GUID_: Per-device identifier, used as the KDF salt as explained below.
 * _Version_: Used to indicate which cryptographic algorithms to use.
-* _Sealed Key_: The data key, encrypted by the wrap key as describer below.
+* _Sealed Key_: The data key, encrypted by the wrap key as described below.
 * _Reserved_: Unused data to align the superblock with the block boundary.
 * [_HMAC_][hmac]: A keyed digest of the superblock up to this point (including the Reserved field).
 

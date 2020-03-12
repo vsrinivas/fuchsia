@@ -32,7 +32,7 @@ system stabilizes.
 The `vendor/*` directories contain closed-source code, organized by the vendor
 of that code. Nothing outside of `//vendor` can depend on `//vendor`.
 Dependencies between different vendors is supported, `vendor/A` can have a
-depency on `vendor/B`.
+dependency on `vendor/B`.
 
 The `products` directory contains a list of products that you can build. Some
 products are quite small and build quickly (e.g., the [core](/products/core.gni)

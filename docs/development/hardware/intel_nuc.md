@@ -29,7 +29,7 @@ This table shows what I bought from Amazon.
 | SSD | [B00TGIVZTW](https://www.amazon.com/gp/product/B00TGIVZTW) | Works fine. |
 | SSD | [B01M9K0N8I](https://www.amazon.com/gp/product/B01M9K0N8I) | Works fine. |
 | **Optional:** | | |
-| Keyboard and Mouse | [B00B7GV802](https://www.amazon.com/gp/product/B00B7GV802) | Works fine.  Next time I'd get a keyboard with a smaller foot print. |
+| Keyboard and Mouse | [B00B7GV802](https://www.amazon.com/gp/product/B00B7GV802) | Works fine.  Next time I'd get a keyboard with a smaller footprint. |
 | Monitor | [B015WCV70W](https://www.amazon.com/gp/product/B015WCV70W) | Works fine. |
 | HDMI Cable | [B014I8SIJY](https://www.amazon.com/gp/product/B014I8SIJY) | Works fine. |
 | USB 3.0 drive | [B01BGTG41W](https://www.amazon.com/gp/product/B01BGTG41W) | Works fine. |
@@ -72,7 +72,7 @@ Follow the instructions to install the RAM and SSD on the NUC:
        1. Set `USB` the first entry in the boot order.
     1. Select the `Boot configuration` tab.
        1. Check `Boot Network Devices Last`.
-       1. Check `Unlimited Network Boot Attepts`.
+       1. Check `Unlimited Network Boot Attempts`.
        1. Check `USB boot devices`.
        1. Set `Network boot` to `UEFI PXE & iSCSI`.
 2. Select the `Secure Boot` tab and uncheck `Secure Boot`.

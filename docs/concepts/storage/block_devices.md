@@ -11,8 +11,7 @@ driver-understood “I/O transactions”, where they are actually transmitted to
 particular block device driver, and eventually to real hardware.
 
 Particular block device drivers (USB, AHCI / SATA, Ramdisk, GPT, etc) implement
-the [`ZX_PROTOCOL_BLOCK_CORE`
-prototol](/zircon/system/public/zircon/device/block.h),
+the [`ZX_PROTOCOL_BLOCK_CORE` protocol](/zircon/system/public/zircon/device/block.h),
 which allows clients to queue transactions and query the block device.
 
 ## Fast Block I/O

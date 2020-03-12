@@ -33,7 +33,7 @@ Writing documentation is a great idea and is encouraged:
 
 *   Documentation should be in Markdown files.
 *   Zircon documentation is located in [/docs/concepts/kernel][googlesource-docs].
-*   Before submitting documetation, make sure that the markdown renders correctly.
+*   Before submitting documentation, make sure that the markdown renders correctly.
 
 When editing or adding `syscalls` or `cmdlines`, update these documents:
 

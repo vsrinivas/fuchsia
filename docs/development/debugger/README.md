@@ -67,7 +67,7 @@ boot. You will need to run:
 fx serve
 ```
 
-to make the debug agent's package avilable for serving to the system. Otherwise
+to make the debug agent's package available for serving to the system. Otherwise
 you will get the message "Timed out trying to find the Debug Agent".
 
 Once the server is running, launch the debugger in another terminal window:
@@ -155,7 +155,7 @@ change very often so there is some flexibility.
 
 When you run out-of-tree, you will need to tell zxdb where your symbols and
 source code are on the local development box (Linux or Mac). Zxdb can not use
-symbols in the binary that you pushedf to the Fuchsia target device.
+symbols in the binary that you pushed to the Fuchsia target device.
 
 See [Diagnosing symbol problems](#diagnosing-symbol-problems).
 
@@ -356,7 +356,7 @@ information:
 
 You may notice a mismatch when setting a breakpoint on a specific line where
 the displayed breakpoint location doesn't match the line number you typed. In
-most cases, this is because this symbols did not identifty any code on the
+most cases, this is because this symbols did not identify any code on the
 specified line so the debugger used the next line. It can happen even in
 unoptimized builds, and is most common for variable declarations.
 

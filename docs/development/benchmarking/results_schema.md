@@ -19,7 +19,7 @@ Fuchsia libraries for your language for emitting the JSON data:
 * [Go]
 * [Dart]
 
-Note: If your benchmark is in a different language, please provide a reuseable
+Note: If your benchmark is in a different language, please provide a reusable
 library or file a bug against IN to request one.
 
 [C/C++]: /zircon/system/ulib/perftest

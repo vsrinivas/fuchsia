@@ -37,7 +37,7 @@ When a clock maintainer wishes to change one or more of these parameters, they
 may do so using the `zx_clock_update` syscall. Updating a clock's parameters is
 an atomic operation from the perspective of all other users in the system.
 
-The first update operation performed by a clock maintainer must inclue a valid
+The first update operation performed by a clock maintainer must include a valid
 value. This update is the update that starts the clock and defines its initial
 value. Before this update operation has succeeded, the **ZX_CLOCK_STARTED**
 signal will be de-asserted, and afterwards it will be asserted and remain so for

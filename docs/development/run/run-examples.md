@@ -63,7 +63,7 @@ To include a package in your Fuchsia image, you have the following options:
     optional packages are fetched and run on-demand,
 
 
-## Include the example package in your Fuchshia image {#include-the-example-package-in-your-fuchsia-image}
+## Include the example package in your Fuchsia image {#include-the-example-package-in-your-fuchsia-image}
 
 To include the example package in Universe (so that it can be fetched on-demand),
 use the `--with` flag when setting your product and board environment:

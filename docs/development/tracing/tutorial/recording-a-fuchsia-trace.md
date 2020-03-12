@@ -31,7 +31,7 @@ host, calls the `trace` utility on your Fuchsia target.
 You can record a trace from your Fuchsia target from your development host
 or directly from the Fuchsia target.
 
-* [From a development host](#from-a-developmemt-host)
+* [From a development host](#from-a-development-host)
 * [From a Fuchsia target](#from-a-fuchsia-target)
 
 ### From a development host {#from-a-development-host}

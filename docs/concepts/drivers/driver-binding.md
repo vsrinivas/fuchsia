@@ -60,7 +60,7 @@ There are four kinds of statements:
 
  - **Condition statements** are equality (or inequality) expressions of the form
    `<key> == <value>` (or `<key> != <value>`).
- - **Accept statements** are lists of permissable values for a given key.
+ - **Accept statements** are lists of permissible values for a given key.
  - **If statements** provide simple branching.
  - **Abort statements** cause the bind rule execution to terminate and the driver will not bind.
 

@@ -270,7 +270,7 @@ Alternatively, you *could* do something as follows:
 
 Note: this answer is subject to change/breakage shortly after authorship.
 
-Lets assume you want to produce four builds:
+Let's assume you want to produce four builds:
 
  * a "bringup" product for x64
  * a "workstation" product for x64

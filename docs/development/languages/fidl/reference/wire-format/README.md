@@ -546,7 +546,7 @@ protocol Calculator {
 ```
 
 The **Add()** and **Divide()** methods illustrate both the method request
-(sent from the client to the server), and a method reponse
+(sent from the client to the server), and a method response
 (sent from the server back to the client).
 
 The **Clear()** method is an example of a method request that does not
@@ -563,7 +563,7 @@ in order to invoke the method.
 
 #### Method Response Messages
 
-The server sends method reponse messages to the client to indicate completion
+The server sends method response messages to the client to indicate completion
 of a method invocation and to provide a (possibly empty) result.
 
 Only two-way method requests which are defined to provide a (possibly empty) result
@@ -671,8 +671,8 @@ alignment.
 
 Notes:
 
-* **N** indicates the number of elements, whether stated explicity (as in
-  `array<T>:N`, an array with **N** elements of type **T**) or implictly
+* **N** indicates the number of elements, whether stated explicitly (as in
+  `array<T>:N`, an array with **N** elements of type **T**) or implicitly
   (a `table` consisting of 7 elements would have `N=7`).
 * The out-of-line size is always padded to 8 bytes. We indicate the content
   size below, excluding the padding.

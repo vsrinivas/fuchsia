@@ -1,4 +1,4 @@
-# FIDL linter nterface
+# FIDL linter interface
 
 This document describes the command-line interface to the FIDL linter.
 
@@ -22,7 +22,7 @@ the files with a `.fidl` extension, and passes all of them, together, to the FID
 linter command `fidl-lint`.
 
 `fx lint` is the recommended way to invoke the FIDL linter, and ideally should be
-run before uploading new FIDL librarys or changes to existing FIDL. Without any
+run before uploading new FIDL libraries or changes to existing FIDL. Without any
 arguments, `fx lint` will run all available linters on all files in your most
 recent `git commit`.
 

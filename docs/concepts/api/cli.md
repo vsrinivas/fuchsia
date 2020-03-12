@@ -625,7 +625,7 @@ integration.
 ## Documentation
 
 The Markdown documentation is the right place to put more verbose usage examples
-nd explanations.
+and explanations.
 
 > **SDK**
 >

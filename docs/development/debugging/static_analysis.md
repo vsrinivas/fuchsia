@@ -1,7 +1,7 @@
 # Static analysis
 
 Static analysis is a way of analyzing source code without
-executing it. One of its aplications is to find
+executing it. One of its applications is to find
 [code smells](https://en.wikipedia.org/wiki/Code_smell) and bugs.
 
 Fuchsia uses Clang as its compiler. Clang has several tools
