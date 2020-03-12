@@ -50,6 +50,10 @@ To use `ccache` on Linux, install the following package:
 sudo apt-get install ccache
 ```
 
+For macOS, see
+[Using CCache on Mac](https://chromium.googlesource.com/chromium/src.git/+/master/docs/ccache_mac.md){:.external}
+for installation instructions.
+
 `ccache` is enabled automatically if your `CCACHE_DIR` environment
 variable refers to an existing directory.
 
