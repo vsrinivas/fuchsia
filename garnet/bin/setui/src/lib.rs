@@ -303,12 +303,16 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
 
     // Creates switchboard, handed to interface implementations to send messages
     // to handlers.
-    let switchboard_handle = SwitchboardImpl::create(registry_messenger_factory.clone()).await;
+    let switchboard_handle = SwitchboardImpl::create(registry_messenger_factory.clone())
+        .await
+        .expect("could not create switchboard");
 
     let mut agent_authority = AuthorityImpl::new();
 
     // Creates registry, used to register handlers for setting types.
-    let _ = RegistryImpl::create(handler_factory.clone(), registry_messenger_factory.clone()).await;
+    let _ = RegistryImpl::create(handler_factory.clone(), registry_messenger_factory.clone())
+        .await
+        .expect("could not create registry");
     if components.contains(&SettingType::Accessibility) {
         let switchboard_handle_clone = switchboard_handle.clone();
         service_dir.add_fidl_service(move |stream: AccessibilityRequestStream| {

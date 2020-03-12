@@ -3,10 +3,36 @@
 // found in the LICENSE file.
 
 use crate::message::base::{
-    ActionSender, Address, Audience, Message, MessageAction, MessageType, MessengerId, Payload,
+    ActionSender, Address, Audience, CreateMessengerResult, Message, MessageAction, MessageError,
+    MessageType, MessengerAction, MessengerActionSender, MessengerId, MessengerType, Payload,
 };
 use crate::message::beacon::Beacon;
 use crate::message::message_builder::MessageBuilder;
+
+/// MessengerFactory is the artifact of creating a MessageHub. It can be used
+/// to create new messengers.
+#[derive(Clone)]
+pub struct MessengerFactory<P: Payload + 'static, A: Address + 'static> {
+    messenger_action_tx: MessengerActionSender<P, A>,
+}
+
+impl<P: Payload + 'static, A: Address + 'static> MessengerFactory<P, A> {
+    pub(super) fn new(action_tx: MessengerActionSender<P, A>) -> MessengerFactory<P, A> {
+        MessengerFactory { messenger_action_tx: action_tx }
+    }
+
+    pub async fn create(&self, messenger_type: MessengerType<A>) -> CreateMessengerResult<P, A> {
+        let (tx, rx) = futures::channel::oneshot::channel::<CreateMessengerResult<P, A>>();
+
+        self.messenger_action_tx.unbounded_send(MessengerAction::Create(messenger_type, tx)).ok();
+
+        if let Ok(result) = rx.await {
+            return result;
+        } else {
+            return Err(MessageError::Unexpected);
+        }
+    }
+}
 
 /// Messengers provide clients the ability to send messages to other registered
 /// clients. They can only be created through a MessageHub.

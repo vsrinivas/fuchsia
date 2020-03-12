@@ -4,18 +4,23 @@
 
 use crate::message::beacon::Beacon;
 use crate::message::message_client::MessageClient;
+use crate::message::messenger::Messenger;
+use crate::message::receptor::Receptor;
 use futures::channel::mpsc::UnboundedSender;
+use futures::channel::oneshot::Sender;
+use std::fmt::Debug;
 use std::hash::Hash;
+use thiserror::Error;
 
 /// Trait alias for types of data that can be used as the payload in a
 /// MessageHub.
-pub trait Payload: Clone + Send + Sync {}
-impl<T: Clone + Send + Sync> Payload for T {}
+pub trait Payload: Clone + Debug + Send + Sync {}
+impl<T: Clone + Debug + Send + Sync> Payload for T {}
 
 /// Trait alias for types of data that can be used as an address in a
 /// MessageHub.
-pub trait Address: Clone + Eq + Hash + Send + Sync {}
-impl<T: Clone + Eq + Hash + Send + Sync> Address for T {}
+pub trait Address: Clone + Debug + Eq + Hash + Send + Sync {}
+impl<T: Clone + Debug + Eq + Hash + Send + Sync> Address for T {}
 
 /// A MessageEvent defines the data that can be returned through a message
 /// receptor.
@@ -27,6 +32,14 @@ pub enum MessageEvent<P: Payload + 'static, A: Address + 'static> {
     /// A status update for the message that spawned the receptor delivering this
     /// update.
     Status(DeliveryStatus),
+}
+
+#[derive(Error, Debug, Clone)]
+pub enum MessageError<A: Address + 'static> {
+    #[error("Address conflig:{address:?} already exists")]
+    AddressConflict { address: A },
+    #[error("Unexpected Error")]
+    Unexpected,
 }
 
 /// The types of results possible from sending or replying.
@@ -127,6 +140,22 @@ pub(super) type ActionSender<P, A> =
 
 /// An internal identifier used by the MessageHub to identify messengers.
 pub(super) type MessengerId = usize;
+
+pub(super) type CreateMessengerResult<P, A> =
+    Result<(Messenger<P, A>, Receptor<P, A>), MessageError<A>>;
+
+/// Callback for handing back a messenger
+pub(super) type MessengerSender<P, A> = Sender<CreateMessengerResult<P, A>>;
+
+/// Type definition for a sender handed by the MessageHub to spawned components
+/// (messenger factories and messengers) to control messengers.
+pub(super) type MessengerActionSender<P, A> = UnboundedSender<MessengerAction<P, A>>;
+
+/// Internal representation of possible actions around a messenger.
+pub(super) enum MessengerAction<P: Payload + 'static, A: Address + 'static> {
+    // Creates a top level messenger
+    Create(MessengerType<A>, MessengerSender<P, A>),
+}
 
 /// Internal representation for possible actions on a message.
 pub(super) enum MessageAction<P: Payload + 'static, A: Address + 'static> {

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::internal::core::{Address, MessageClient, MessageHubHandle, Messenger, Payload};
+use crate::internal::core::{Address, MessageClient, Messenger, MessengerFactory, Payload};
 use crate::message::base::{Audience, MessageEvent, MessengerType};
 use crate::registry::base::{Command, SettingHandler, SettingHandlerFactory, State};
 use crate::switchboard::base::{
@@ -12,6 +12,7 @@ use crate::switchboard::base::{
 use anyhow::Context as _;
 use fuchsia_async as fasync;
 
+use anyhow::Error;
 use futures::channel::mpsc::UnboundedSender;
 use futures::lock::Mutex;
 use futures::stream::StreamExt;
@@ -39,14 +40,16 @@ impl RegistryImpl {
     /// provided receiver and will send responses/updates on the given sender.
     pub async fn create(
         handler_factory: Arc<Mutex<dyn SettingHandlerFactory + Send + Sync>>,
-        message_hub: MessageHubHandle,
-    ) -> Arc<Mutex<RegistryImpl>> {
+        messenger_factory: MessengerFactory,
+    ) -> Result<Arc<Mutex<RegistryImpl>>, Error> {
         let (notification_tx, mut notification_rx) =
             futures::channel::mpsc::unbounded::<SettingType>();
-        let (messenger, mut receptor) = message_hub
-            .lock()
-            .await
-            .create_messenger(MessengerType::Addressable(Address::Registry));
+        let messenger_result =
+            messenger_factory.create(MessengerType::Addressable(Address::Registry)).await;
+        if let Err(error) = messenger_result {
+            return Err(Error::new(error));
+        }
+        let (messenger, mut receptor) = messenger_result.unwrap();
 
         // We must create handle here rather than return back the value as we
         // reference the registry in the async tasks below.
@@ -88,7 +91,7 @@ impl RegistryImpl {
             );
         }
 
-        return registry;
+        Ok(registry)
     }
 
     /// Interpret action from switchboard into registry actions.
@@ -261,17 +264,17 @@ mod tests {
         }
     }
 
-    #[fuchsia_async::run_until_stalled(test)]
+    #[fuchsia_async::run_singlethreaded(test)]
     async fn test_notify() {
-        let message_hub = create_message_hub();
+        let messenger_factory = create_message_hub();
         let handler_factory = Arc::new(Mutex::new(FakeFactory::new()));
-        let _registry = RegistryImpl::create(handler_factory.clone(), message_hub.clone()).await;
+        let _registry =
+            RegistryImpl::create(handler_factory.clone(), messenger_factory.clone()).await;
         let setting_type = SettingType::Unknown;
-
-        let (messenger, mut receptor) = message_hub
-            .lock()
+        let (messenger, mut receptor) = messenger_factory
+            .create(MessengerType::Addressable(Address::Switchboard))
             .await
-            .create_messenger(MessengerType::Addressable(Address::Switchboard));
+            .unwrap();
 
         let (handler_tx, mut handler_rx) = futures::channel::mpsc::unbounded::<Command>();
         handler_factory.lock().await.register(setting_type, handler_tx);
@@ -339,14 +342,15 @@ mod tests {
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_request() {
-        let message_hub = create_message_hub();
+        let messenger_factory = create_message_hub();
         let handler_factory = Arc::new(Mutex::new(FakeFactory::new()));
-        let (messenger, _) = message_hub
-            .lock()
+        let (messenger, _) = messenger_factory
+            .create(MessengerType::Addressable(Address::Switchboard))
             .await
-            .create_messenger(MessengerType::Addressable(Address::Switchboard));
+            .unwrap();
 
-        let _registry = RegistryImpl::create(handler_factory.clone(), message_hub.clone()).await;
+        let _registry =
+            RegistryImpl::create(handler_factory.clone(), messenger_factory.clone()).await;
         let setting_type = SettingType::Unknown;
         let request_id = 42;
 
@@ -398,13 +402,14 @@ mod tests {
     /// Ensures setting handler is only generated once.
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_generation() {
-        let message_hub = create_message_hub();
+        let messenger_factory = create_message_hub();
         let handler_factory = Arc::new(Mutex::new(FakeFactory::new()));
-        let (messenger, _) = message_hub
-            .lock()
+        let (messenger, _) = messenger_factory
+            .create(MessengerType::Addressable(Address::Switchboard))
             .await
-            .create_messenger(MessengerType::Addressable(Address::Switchboard));
-        let _registry = RegistryImpl::create(handler_factory.clone(), message_hub.clone()).await;
+            .unwrap();
+        let _registry =
+            RegistryImpl::create(handler_factory.clone(), messenger_factory.clone()).await;
         let setting_type = SettingType::Unknown;
         let request_id = 42;
 

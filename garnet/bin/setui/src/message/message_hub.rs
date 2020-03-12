@@ -3,12 +3,11 @@
 // found in the LICENSE file.
 
 use crate::message::base::{
-    ActionSender, Address, Audience, DeliveryStatus, Message, MessageAction, MessageType,
-    MessengerId, MessengerType, Payload,
+    ActionSender, Address, Audience, DeliveryStatus, Message, MessageAction, MessageError,
+    MessageType, MessengerAction, MessengerId, MessengerType, Payload,
 };
 use crate::message::beacon::Beacon;
-use crate::message::messenger::Messenger;
-use crate::message::receptor::Receptor;
+use crate::message::messenger::{Messenger, MessengerFactory};
 use fuchsia_async as fasync;
 use futures::lock::Mutex;
 use futures::StreamExt;
@@ -39,12 +38,15 @@ pub struct MessageHub<P: Payload + 'static, A: Address + 'static> {
 
 impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
     /// Returns a new MessageHub for the given types.
-    pub fn create() -> MessageHubHandle<P, A> {
+    pub fn create() -> MessengerFactory<P, A> {
         let (action_tx, mut action_rx) = futures::channel::mpsc::unbounded::<(
             MessengerId,
             MessageAction<P, A>,
             Option<Beacon<P, A>>,
         )>();
+        let (messenger_tx, mut messenger_rx) =
+            futures::channel::mpsc::unbounded::<MessengerAction<P, A>>();
+
         let hub = Arc::new(Mutex::new(MessageHub {
             next_id: 0,
             action_tx: action_tx,
@@ -53,16 +55,27 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
             brokers: Vec::new(),
         }));
 
-        let hub_clone = hub.clone();
+        {
+            let hub_clone = hub.clone();
+            // Spawn a separate thread to service messenger-related requests.
+            fasync::spawn(async move {
+                while let Some(action) = messenger_rx.next().await {
+                    hub_clone.lock().await.process_messenger_request(action).await;
+                }
+            });
+        }
 
-        // Spawn a separate thread to service any request to this instance.
-        fasync::spawn(async move {
-            while let Some((id, action, beacon)) = action_rx.next().await {
-                hub_clone.lock().await.process_request(id, action, beacon).await;
-            }
-        });
+        {
+            let hub_clone = hub.clone();
+            // Spawn a separate thread to service any request to this instance.
+            fasync::spawn(async move {
+                while let Some((id, action, beacon)) = action_rx.next().await {
+                    hub_clone.lock().await.process_request(id, action, beacon).await;
+                }
+            });
+        }
 
-        hub
+        MessengerFactory::new(messenger_tx)
     }
 
     // Determines whether the beacon belongs to a broker.
@@ -193,6 +206,37 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
         }
     }
 
+    async fn process_messenger_request(&mut self, action: MessengerAction<P, A>) {
+        match action {
+            MessengerAction::Create(messenger_type, responder) => {
+                if let MessengerType::Addressable(address) = messenger_type.clone() {
+                    if self.addresses.contains_key(&address) {
+                        responder
+                            .send(Err(MessageError::AddressConflict { address: address }))
+                            .ok();
+                        return;
+                    }
+                }
+
+                let id = self.next_id;
+                let messenger = Messenger::create(id, self.action_tx.clone());
+                self.next_id += 1;
+                let (beacon, receptor) = Beacon::create(messenger.clone());
+                self.beacons.insert(id, beacon.clone());
+
+                match messenger_type {
+                    MessengerType::Broker => {
+                        self.brokers.push(id);
+                    }
+                    MessengerType::Addressable(address) => {
+                        self.addresses.insert(address, id);
+                    }
+                }
+                responder.send(Ok((messenger, receptor))).ok();
+            } // MessengerAction::Delete(_, _) => {}
+        }
+    }
+
     // Translates messenger requests into actions upon the MessageHub.
     async fn process_request(
         &self,
@@ -245,31 +289,5 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
 
             self.send_to_next(messenger_id, outgoing_message).await;
         }
-    }
-
-    /// Returns a new messenger that can be used by a client to author new
-    /// messages. Messengers are limited to participation within the ecosystem of
-    /// the MessageHub that created them.
-    pub fn create_messenger(
-        &mut self,
-        messenger_type: MessengerType<A>,
-    ) -> (Messenger<P, A>, Receptor<P, A>) {
-        let id = self.next_id;
-        let messenger = Messenger::create(id, self.action_tx.clone());
-        self.next_id += 1;
-
-        let (beacon, receptor) = Beacon::create(messenger.clone());
-        self.beacons.insert(id, beacon.clone());
-
-        match messenger_type {
-            MessengerType::Broker => {
-                self.brokers.push(id);
-            }
-            MessengerType::Addressable(address) => {
-                self.addresses.insert(address, id);
-            }
-        }
-
-        (messenger, receptor)
     }
 }

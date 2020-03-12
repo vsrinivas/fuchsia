@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use crate::internal::core::{
-    Address, MessageHubHandle as RegistryMessageHubHandle, Messenger as RegistryMessenger, Payload,
+    Address, Messenger as RegistryMessenger, MessengerFactory as RegistryMessengerFactory, Payload,
 };
 use crate::message::base::{Audience, MessageEvent, MessengerType};
 use crate::switchboard::base::*;
@@ -95,15 +95,19 @@ impl SwitchboardImpl {
     /// Creates a new SwitchboardImpl, which will return the instance along with
     /// a sender to provide events in response to the actions sent.
     pub async fn create(
-        registry_message_hub: RegistryMessageHubHandle,
-    ) -> Arc<Mutex<SwitchboardImpl>> {
+        registry_messenger_factory: RegistryMessengerFactory,
+    ) -> Result<Arc<Mutex<SwitchboardImpl>>, Error> {
         let (cancel_listen_tx, mut cancel_listen_rx) =
             futures::channel::mpsc::unbounded::<ListenSessionInfo>();
+        let messenger_result = registry_messenger_factory
+            .create(MessengerType::Addressable(Address::Switchboard))
+            .await;
 
-        let (registry_messenger, mut receptor) = registry_message_hub
-            .lock()
-            .await
-            .create_messenger(MessengerType::Addressable(Address::Switchboard));
+        if let Err(error) = messenger_result {
+            return Err(Error::new(error));
+        }
+
+        let (registry_messenger, mut receptor) = messenger_result.unwrap();
 
         let switchboard = Arc::new(Mutex::new(Self {
             next_session_id: 0,
@@ -134,7 +138,7 @@ impl SwitchboardImpl {
             });
         }
 
-        return switchboard;
+        return Ok(switchboard);
     }
 
     pub fn get_next_action_id(&mut self) -> u64 {
@@ -300,13 +304,11 @@ mod tests {
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_request() {
-        let message_hub = create_registry_hub();
-        let switchboard = SwitchboardImpl::create(message_hub.clone()).await;
+        let messenger_factory = create_registry_hub();
+        let switchboard = SwitchboardImpl::create(messenger_factory.clone()).await.unwrap();
         // Create registry endpoint
-        let (_, mut receptor) = message_hub
-            .lock()
-            .await
-            .create_messenger(MessengerType::Addressable(Address::Registry));
+        let (_, mut receptor) =
+            messenger_factory.create(MessengerType::Addressable(Address::Registry)).await.unwrap();
 
         let (response_tx, response_rx) =
             futures::channel::oneshot::channel::<SettingResponseResult>();
@@ -335,15 +337,13 @@ mod tests {
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_listen() {
-        let message_hub = create_registry_hub();
-        let switchboard = SwitchboardImpl::create(message_hub.clone()).await;
+        let messenger_factory = create_registry_hub();
+        let switchboard = SwitchboardImpl::create(messenger_factory.clone()).await.unwrap();
         let setting_type = SettingType::Unknown;
 
         // Create registry endpoint
-        let (_, mut receptor) = message_hub
-            .lock()
-            .await
-            .create_messenger(MessengerType::Addressable(Address::Registry));
+        let (_, mut receptor) =
+            messenger_factory.create(MessengerType::Addressable(Address::Registry)).await.unwrap();
 
         // Register first listener and verify count.
         let (notify_tx1, _notify_rx1) = futures::channel::mpsc::unbounded::<SettingType>();
@@ -373,15 +373,13 @@ mod tests {
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_notify() {
-        let message_hub = create_registry_hub();
-        let switchboard = SwitchboardImpl::create(message_hub.clone()).await;
+        let messenger_factory = create_registry_hub();
+        let switchboard = SwitchboardImpl::create(messenger_factory.clone()).await.unwrap();
         let setting_type = SettingType::Unknown;
 
         // Create registry endpoint
-        let (messenger, mut receptor) = message_hub
-            .lock()
-            .await
-            .create_messenger(MessengerType::Addressable(Address::Registry));
+        let (messenger, mut receptor) =
+            messenger_factory.create(MessengerType::Addressable(Address::Registry)).await.unwrap();
 
         // Register first listener and verify count.
         let (notify_tx1, mut notify_rx1) = futures::channel::mpsc::unbounded::<SettingType>();
