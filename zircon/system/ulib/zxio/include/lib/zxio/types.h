@@ -92,7 +92,7 @@ typedef uint64_t zxio_node_protocols_t;
    ZXIO_NODE_PROTOCOL_MEMORY | ZXIO_NODE_PROTOCOL_POSIX_SOCKET | ZXIO_NODE_PROTOCOL_PIPE | \
    ZXIO_NODE_PROTOCOL_DEBUGLOG | ZXIO_NODE_PROTOCOL_DEVICE | ZXIO_NODE_PROTOCOL_TTY)
 
-typedef uint64_t zxio_node_id_t;
+typedef uint64_t zxio_id_t;
 
 // The kinds of operations behind |zxio_rights_t| and |zxio_abilities_t|.
 // Refer to |fuchsia.io2/Operations| for the documentation of each item.
@@ -133,7 +133,7 @@ typedef struct zxio_node_attr {
   zxio_abilities_t abilities;
 
   // A filesystem-unique ID.
-  zxio_node_id_t id;
+  zxio_id_t id;
 
   // Node size, in bytes.
   uint64_t content_size;
@@ -235,7 +235,7 @@ typedef struct zxio_dirent {
   zxio_abilities_t abilities;
 
   // A filesystem-unique ID.
-  zxio_node_id_t id;
+  zxio_id_t id;
 
   // Presence indicator for the above fields. Note that the |name| field
   // is never absent.
