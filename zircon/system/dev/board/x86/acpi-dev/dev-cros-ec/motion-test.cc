@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "motion.h"
+
 #include <inttypes.h>
 
 #include <memory>
@@ -12,6 +14,7 @@
 
 #include "dev.h"
 
+namespace cros_ec {
 namespace {
 
 SensorInfo SampleSensorInfo(enum motionsensor_type type) {
@@ -58,3 +61,4 @@ TEST(BuildHidDescriptor, AllSensors) {
 }
 
 }  // namespace
+}  // namespace cros_ec

@@ -14,6 +14,8 @@
 //   dropping a marker into the FIFO so you can synchronize (c.f. the FLUSH
 //   subcommand of the MOTIONSENSE command).
 
+#include "motion.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <zircon/syscalls.h>
@@ -36,6 +38,8 @@
 
 #include "../../include/errors.h"
 #include "dev.h"
+
+namespace cros_ec {
 
 namespace {
 // Convert a sensor index into a HID report ID.
@@ -797,3 +801,5 @@ zx_status_t BuildHidDescriptor(fbl::Span<const SensorInfo> sensors, fbl::Array<u
   *result = fbl::Array<uint8_t>(desc.release(), total_size);
   return ZX_OK;
 }
+
+}  // namespace cros_ec

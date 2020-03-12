@@ -22,6 +22,12 @@
 
 #include "../../include/dev.h"
 #include "../../include/errors.h"
+#include "motion.h"
+
+using cros_ec::AcpiCrOsEc;
+using cros_ec::AcpiCrOsEcMotionDevice;
+
+namespace cros_ec {
 
 zx_status_t AcpiCrOsEc::Create(fbl::RefPtr<AcpiCrOsEc>* out) {
   if (!CrOsEc::IsLpc3Supported()) {
@@ -61,6 +67,16 @@ zx_status_t AcpiCrOsEc::IssueCommand(uint16_t command, uint8_t command_version, 
 AcpiCrOsEc::AcpiCrOsEc() {}
 
 AcpiCrOsEc::~AcpiCrOsEc() {}
+
+bool AcpiCrOsEc::supports_motion_sense() const {
+  return features_.flags[0] & EC_FEATURE_MASK_0(EC_FEATURE_MOTION_SENSE);
+}
+
+bool AcpiCrOsEc::supports_motion_sense_fifo() const {
+  return features_.flags[0] & EC_FEATURE_MASK_0(EC_FEATURE_MOTION_SENSE_FIFO);
+}
+
+}  // namespace cros_ec
 
 zx_status_t cros_ec_lpc_init(zx_device_t* parent, ACPI_HANDLE acpi_handle) {
   zxlogf(TRACE, "acpi-cros-ec-core: init\n");
