@@ -144,7 +144,7 @@ class TypeInt8 : public TypeSignedInt {
   TypeKind Kind() const override { return TypeKind::kInt8; }
 
   std::pair<uint64_t, uint64_t> Limits() const override {
-    return std::make_pair(std::numeric_limits<int8_t>::max() + 1,
+    return std::make_pair(static_cast<uint64_t>(std::numeric_limits<int8_t>::max()) + 1,
                           std::numeric_limits<int8_t>::max());
   }
 
@@ -183,7 +183,7 @@ class TypeInt16 : public TypeSignedInt {
   TypeKind Kind() const override { return TypeKind::kInt16; }
 
   std::pair<uint64_t, uint64_t> Limits() const override {
-    return std::make_pair(std::numeric_limits<int16_t>::max() + 1,
+    return std::make_pair(static_cast<uint64_t>(std::numeric_limits<int16_t>::max()) + 1,
                           std::numeric_limits<int16_t>::max());
   }
 
@@ -261,7 +261,7 @@ class TypeInt64 : public TypeSignedInt {
   TypeKind Kind() const override { return TypeKind::kInt64; }
 
   std::pair<uint64_t, uint64_t> Limits() const override {
-    return std::make_pair(std::numeric_limits<int64_t>::max() + 1,
+    return std::make_pair(static_cast<uint64_t>(std::numeric_limits<int64_t>::max()) + 1,
                           std::numeric_limits<int64_t>::max());
   }
 

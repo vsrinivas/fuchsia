@@ -27,11 +27,6 @@ static_library("shell_interpreter") {
   ]
 
   deps = [ "//src/lib/syslog/cpp" ]
-
-  # TODO(48116): UBSan has found an instance of undefined behavior in this target.
-  # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
-  # Add this to public_configs because the UB is exposed in a public header.
-  public_configs = [ "//build/config:temporarily_disable_ubsan_do_not_use" ]
 }
 
 static_library("shell_server_lib") {
