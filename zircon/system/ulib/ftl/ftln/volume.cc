@@ -6,8 +6,6 @@
 #include <zircon/assert.h>
 
 #include "ftl_private.h"
-#include "inc/kprivate/ndm.h"
-#include "inc/posix.h"
 
 namespace ftl {
 

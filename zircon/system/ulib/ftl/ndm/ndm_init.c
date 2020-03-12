@@ -7,6 +7,12 @@
 // Symbol Definitions
 #define NDM_META_BLKS 2  // blocks reserved for internal use
 
+// Count number of bits set to 1 in a byte/32 bit value
+#define ONES_UI8(b) (NumberOnes[(b) >> 4] + NumberOnes[(b)&0xF])
+#define ONES_UI32(w)                                   \
+  (ONES_UI8(((ui8*)&w)[0]) + ONES_UI8(((ui8*)&w)[1]) + \
+   ONES_UI8(((ui8*)&w)[2]) + ONES_UI8(((ui8*)&w)[3]))
+
 // Global Variable Declarations
 CircLink NdmDevs;
 SEM NdmSem;
@@ -14,6 +20,11 @@ static int NdmSemCount;
 #if NV_NDM_CTRL_STORE
 static ui8 NdmDevCnt;
 #endif
+// Lookup for number of bits in half byte.
+static const ui8 NumberOnes[] = {
+    // 0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F
+    0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4,
+};
 
 // Local Function Definitions
 

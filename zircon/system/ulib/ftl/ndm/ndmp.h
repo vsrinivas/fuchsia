@@ -4,9 +4,6 @@
 
 #pragma once
 
-// Unfortunately, the configuration file needs to go first.
-#include "inc/config.h"
-
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -14,10 +11,6 @@
 
 #include <zircon/compiler.h>
 
-#include "inc/kprivate/fsprivate.h"
-#include "inc/kprivate/ndm.h"
-#include "inc/posix.h"
-#include "inc/sys.h"
 #include "ftl_private.h"
 
 //

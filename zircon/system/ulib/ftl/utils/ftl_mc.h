@@ -8,7 +8,7 @@
 
 #include <zircon/compiler.h>
 
-#include "inc/targetos.h"
+#include "ftl_private.h"
 
 /***********************************************************************/
 /* Type Declarations                                                   */

@@ -6,8 +6,6 @@
 #include <zircon/assert.h>
 
 #include "ftl_private.h"
-#include "inc/sys.h"
-#include "utils/bsp.h"
 
 #ifndef CACHE_LINE_SIZE
 #error CACHE_LINE_SIZE is undefined

@@ -6,9 +6,6 @@
 
 #include <zircon/compiler.h>
 
-#include "inc/config.h"
-#include "inc/targetos.h"
-
 // Flags for Semaphore/Queue Mode for Task Queueing
 #define OS_FIFO 0
 

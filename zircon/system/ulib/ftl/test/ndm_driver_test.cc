@@ -6,8 +6,7 @@
 
 #include <zxtest/zxtest.h>
 
-#include "ndm/ndmp.h"
-#include "inc/kprivate/ndm.h"
+#include "ftl_private.h"
 
 namespace {
 

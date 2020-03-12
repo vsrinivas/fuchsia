@@ -27,15 +27,7 @@ source_set("private_headers") {
     "ftl.h",
     "ftl_private.h",
     "ftln/ftlnp.h",
-    "inc/config.h",
-    "inc/kprivate/fsdriver.h",
-    "inc/kprivate/fsprivate.h",
-    "inc/kprivate/ndm.h",
-    "inc/posix.h",
-    "inc/sys.h",
-    "inc/targetos.h",
     "ndm/ndmp.h",
-    "utils/bsp.h",
     "utils/ftl_mc.h",
     "utils/kernel.h",
   ]
@@ -63,10 +55,8 @@ zx_library("ftl") {
     "utils/aalloc.c",
     "utils/crc32_tbl.c",
     "utils/fsmem.c",
-    "utils/fsys.c",
     "utils/fsysinit.c",
     "utils/ftl_mc.c",
-    "utils/sys.c",
   ]
 
   deps = [

@@ -2,15 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "inc/kprivate/ndm.h"
-
 #include <lib/ftl/ndm-driver.h>
 
 #include <vector>
 
 #include <zxtest/zxtest.h>
 
-#include "inc/kprivate/fsprivate.h"
+#include "ftl.h"
 #include "ndm/ndmp.h"
 
 namespace {

@@ -7,8 +7,7 @@
 #include <stdlib.h>
 
 #include "ftl_private.h"
-#include "inc/kprivate/fsprivate.h"
-#include "utils/kernel.h"
+#include "kernel.h"
 
 SEM FileSysSem;         // Global File System Semaphore
 static int g_fs_error;  // File system error code (FsError enum).

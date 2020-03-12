@@ -5,8 +5,6 @@
 #include <stdlib.h>
 
 #include "ftl_private.h"
-#include "inc/kprivate/fsprivate.h"
-#include "inc/sys.h"
 
 // Wrapper for malloc()
 void* FsMalloc(size_t size) {

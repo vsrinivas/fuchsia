@@ -8,10 +8,8 @@
 
 #include <memory>
 
+#include "ftl.h"
 #include "ftl_private.h"
-#include "inc/kprivate/fsprivate.h"
-#include "inc/kprivate/ndm.h"
-#include "inc/posix.h"
 
 namespace ftl {
 
@@ -32,7 +30,7 @@ struct UserData {
 static_assert(sizeof(UserData) == 96);
 
 // This structure exposes the two views into the partition data.
-// See inc/kprivate/ndm.h for the definition of NDMPartitionInfo.
+// See ftl.h for the definition of NDMPartitionInfo.
 union PartitionInfo {
   NDMPartitionInfo ndm;
   struct {

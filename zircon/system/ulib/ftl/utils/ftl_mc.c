@@ -7,8 +7,6 @@
 #include <stddef.h>
 
 #include "ftl_private.h"
-#include "inc/kprivate/fsprivate.h"
-#include "inc/sys.h"
 
 // Configuration
 #define MC_DEBUG FALSE

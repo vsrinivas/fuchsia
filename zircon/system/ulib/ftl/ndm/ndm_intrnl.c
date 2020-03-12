@@ -859,7 +859,7 @@ static ui32 get_pbn(NDM ndm, ui32 vbn, int reason) {
 //              vpn = virtual page number
 //              buf = pointer to main page buffer array
 //              spare = pointer to spare page buffer array
-//              action = NDM_NONE, NDM_ECC, or NDM_ECC_VAL
+//              action = NDM_ECC or NDM_ECC_VAL
 //
 //     Returns: 0 on success, -2 on fatal error
 //

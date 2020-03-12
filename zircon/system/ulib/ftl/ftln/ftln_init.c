@@ -1135,9 +1135,9 @@ void* FtlnAddVol(FtlNdmVol* ftl_cfg, XfsVol* xfs) {
   }
 #endif
 
-  // Ensure physical page size is a multiple of FAT sector size and
+  // Ensure physical page size is a multiple of 512 bytes and
   // not bigger than the device block size.
-  if (ftl_cfg->page_size % FAT_SECT_SZ || ftl_cfg->page_size == 0 ||
+  if (ftl_cfg->page_size % 512 || ftl_cfg->page_size == 0 ||
       ftl_cfg->page_size > ftl_cfg->block_size) {
     FsError2(FTL_CFG_ERR, EINVAL);
     return NULL;
