@@ -381,7 +381,8 @@ zx_status_t sys_system_mexec(zx_handle_t resource, zx_handle_t kernel_vmo,
 
   platform_mexec_prep(final_bootimage_addr, bootimage_len);
 
-  dlog_shutdown();
+  const zx_time_t dlog_deadline = current_time() + ZX_SEC(5);
+  dlog_shutdown(dlog_deadline);
 
   arch_disable_ints();
 

@@ -56,7 +56,8 @@ void RootJobObserver::Halt(Dpc* dpc) {
   }
 
   printf("root-job: taking %s action\n", behavior);
-  dlog_shutdown();
+  const zx_time_t dlog_deadline = current_time() + ZX_SEC(5);
+  dlog_shutdown(dlog_deadline);
 
   if (!strcmp(behavior, "halt")) {
     platform_halt(HALT_ACTION_HALT, ZirconCrashReason::NoCrash);
