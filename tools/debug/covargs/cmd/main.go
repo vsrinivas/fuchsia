@@ -244,17 +244,6 @@ func process(ctx context.Context, repo symbolize.Repository) error {
 				modSet[mod] = struct{}{}
 			}
 		}
-		// TODO(https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=34796): ideally this would
-		// be handled by llvm-profdata tool itself.
-		cmd := exec.Command(llvmProfdata, "show", entry.ProfileData)
-		if err := cmd.Run(); err != nil {
-			if _, ok := err.(*exec.ExitError); ok {
-				logger.Warningf(ctx, "profile %q is corrupted\n", entry.ProfileData)
-				continue
-			} else {
-				return fmt.Errorf("llvm-profdata show %s failed: %v", entry.ProfileData, err)
-			}
-		}
 		covFiles = append(covFiles, entry.ProfileData)
 	}
 
@@ -278,7 +267,8 @@ func process(ctx context.Context, repo symbolize.Repository) error {
 	mergedFile := filepath.Join(dir, "merged.profdata")
 	mergeCmd := Action{Path: llvmProfdata, Args: []string{
 		"merge",
-		"-o", mergedFile,
+		"-failure-mode=all",
+		"-output", mergedFile,
 		"@" + profdataFile.Name(),
 	}}
 	data, err := mergeCmd.Run(ctx)
