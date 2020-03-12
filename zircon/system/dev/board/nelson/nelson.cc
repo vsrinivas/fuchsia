@@ -110,9 +110,10 @@ int Nelson::Thread() {
     zxlogf(ERROR, "UsbInit failed: %d\n", status);
   }
 
-  if ((status = TouchInit()) != ZX_OK) {
-    zxlogf(ERROR, "TouchInit failed: %d\n", status);
-  }
+  // TODO(fxb/48099): Enable init once the touch driver has landed.
+  // if ((status = TouchInit()) != ZX_OK) {
+  //   zxlogf(ERROR, "TouchInit failed: %d\n", status);
+  // }
 
   if ((status = DisplayInit()) != ZX_OK) {
     zxlogf(ERROR, "DisplayInit failed: %d\n", status);
