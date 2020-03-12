@@ -31,6 +31,9 @@ static_assert((DLOG_SIZE & DLOG_MASK) == 0u, "must be power of two");
 static_assert(DLOG_MAX_RECORD <= DLOG_SIZE, "wat");
 static_assert((DLOG_MAX_RECORD & 3) == 0, "E_DONT_DO_THAT");
 
+static constexpr char kDlogNotifierThreadName[] = "debuglog-notifier";
+static constexpr char kDlogDumperThreadName[] = "debuglog-dumper";
+
 static uint8_t DLOG_DATA[DLOG_SIZE];
 
 struct dlog {
@@ -408,49 +411,56 @@ void dlog_bluescreen_init(void) {
 
 void dlog_force_panic(void) { dlog_bypass_ = true; }
 
-void dlog_shutdown(void) {
+static zx_status_t dlog_shutdown_thread(Thread* thread, const char* name,
+                                        std::atomic<bool>* shutdown_requested, event_t* event,
+                                        zx_time_t deadline) {
+  shutdown_requested->store(true);
+  event_signal(event, false);
+  if (thread != nullptr) {
+    zx_status_t status = thread->Join(nullptr, deadline);
+    if (status != ZX_OK) {
+      dprintf(INFO, "Failed to join %s thread: %d\n", name, status);
+      return status;
+    }
+  }
+  return ZX_OK;
+}
+
+zx_status_t dlog_shutdown(zx_time_t deadline) {
   DEBUG_ASSERT(!arch_ints_disabled());
 
   dprintf(INFO, "Shutting down debuglog\n");
 
-  // Limit how long we wait for the threads to terminate.
-  const zx_time_t deadline = current_time() + ZX_SEC(5);
-
   // Shutdown the notifier thread first. Ordering is important because the notifier thread is
   // responsible for passing log records to the dumper.
-  notifier_shutdown_requested.store(true);
-  event_signal(&DLOG.event, false);
-  if (notifier_thread != nullptr) {
-    zx_status_t status = notifier_thread->Join(nullptr, deadline);
-    if (status != ZX_OK) {
-      dprintf(INFO, "Failed to join notifier thread: %d\n", status);
-    }
-    notifier_thread = nullptr;
-  }
+  zx_status_t notifier_status =
+      dlog_shutdown_thread(notifier_thread, kDlogNotifierThreadName, &notifier_shutdown_requested,
+                           &DLOG.event, deadline);
+  notifier_thread = nullptr;
 
-  dumper_shutdown_requested.store(true);
-  event_signal(&dumper_event, false);
-  if (dumper_thread != nullptr) {
-    zx_status_t status = dumper_thread->Join(nullptr, deadline);
-    if (status != ZX_OK) {
-      dprintf(INFO, "Failed to join dumper thread: %d\n", status);
-    }
-    dumper_thread = nullptr;
+  zx_status_t dumper_status = dlog_shutdown_thread(
+      dumper_thread, kDlogDumperThreadName, &dumper_shutdown_requested, &dumper_event, deadline);
+  dumper_thread = nullptr;
+
+  // If one of them failed, return the status cooresponding to the first failure.
+  if (notifier_status != ZX_OK) {
+    return notifier_status;
   }
+  return dumper_status;
 }
 
 static void dlog_init_hook(uint level) {
   DEBUG_ASSERT(notifier_thread == nullptr);
   DEBUG_ASSERT(dumper_thread == nullptr);
 
-  if ((notifier_thread = Thread::Create("debuglog-notifier", debuglog_notifier, NULL,
+  if ((notifier_thread = Thread::Create(kDlogNotifierThreadName, debuglog_notifier, NULL,
                                         HIGH_PRIORITY - 1)) != NULL) {
     notifier_thread->Resume();
   }
 
   if (platform_serial_enabled() || platform_early_console_enabled()) {
-    if ((dumper_thread =
-             Thread::Create("debuglog-dumper", debuglog_dumper, NULL, HIGH_PRIORITY - 2)) != NULL) {
+    if ((dumper_thread = Thread::Create(kDlogDumperThreadName, debuglog_dumper, NULL,
+                                        HIGH_PRIORITY - 2)) != NULL) {
       dumper_thread->Resume();
     }
   }

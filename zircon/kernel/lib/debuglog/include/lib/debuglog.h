@@ -78,8 +78,12 @@ void dlog_force_panic(void);
 
 // Shutdown the debuglog subsystem.
 //
-// Note: This may block for an extended period of time.
-void dlog_shutdown(void);
+// Waits, up to |deadline|, for dlog threads to terminate.
+
+// On failure, the debuglog subsystem is left in an undefined state.
+//
+// Returns ZX_OK on success.
+zx_status_t dlog_shutdown(zx_time_t deadline);
 
 void dlog_bypass_init_early(void);
 void dlog_bypass_init(void);

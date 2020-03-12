@@ -21,7 +21,8 @@ void platform_graceful_halt_helper(platform_halt_action action, zircon_crash_rea
 
   // Delay shutdown of debuglog to ensure log messages emitted by above calls will be written.
   printf("platform_graceful_halt_helper: Shutting down dlog.\n");
-  dlog_shutdown();
+  const zx_time_t dlog_deadline = current_time() + ZX_SEC(5);
+  dlog_shutdown(dlog_deadline);
 
   printf("platform_graceful_halt_helper: Calling platform_halt.\n");
   platform_halt(action, reason);
