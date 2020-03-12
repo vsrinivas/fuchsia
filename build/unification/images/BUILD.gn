@@ -533,7 +533,6 @@ aggregate_manifest("legacy-aux") {
     ":test.sys.kernel-cmdline-test",
 #------------------
 #------------------
-    ":test.sys.kernel-mexec-test-test",
 #------------------
 #------------------
     ":test.sys.lazy_init-test",
@@ -1095,7 +1094,6 @@ aggregate_manifest("legacy-tests") {
     ":test.sys.kernel-cmdline-test",
 #------------------
 #------------------
-    ":test.sys.kernel-mexec-test-test",
 #------------------
 #------------------
     ":test.sys.lazy_init-test",
@@ -2955,7 +2953,7 @@ aggregate_manifest("migrated-aux") {
     #":test.sys.kernel-cmdline-test",
 #------------------
 #------------------
-    #":test.sys.kernel-mexec-test-test",
+    "//zircon/system/ulib/kernel-mexec/test:kernel-mexec-test-manifest",
 #------------------
     "//zircon/system/utest/kernel-unittests:kernel-unittests-manifest",
     "//zircon/system/ulib/launchpad/test:launchpad-manifest",
@@ -3651,7 +3649,7 @@ aggregate_manifest("migrated-tests") {
     #":test.sys.kernel-cmdline-test",
 #------------------
 #------------------
-    #":test.sys.kernel-mexec-test-test",
+    "//zircon/system/ulib/kernel-mexec/test:kernel-mexec-test-manifest",
 #------------------
     "//zircon/system/utest/kernel-unittests:kernel-unittests-manifest",
     "//zircon/system/ulib/launchpad/test:launchpad-manifest",
