@@ -5,7 +5,7 @@
 #[cfg(test)]
 use {
     crate::registry::device_storage::testing::*, crate::switchboard::base::SettingType,
-    crate::EnvironmentBuilder, crate::Runtime, fidl_fuchsia_setui::*,
+    crate::EnvironmentBuilder, fidl_fuchsia_setui::*,
 };
 
 const ENV_NAME: &str = "setui_service_system_test_environment";
@@ -17,12 +17,11 @@ async fn tests_setui() {
     const CHANGED_LOGIN_MODE: fidl_fuchsia_setui::LoginOverride =
         fidl_fuchsia_setui::LoginOverride::AuthProvider;
 
-    let env =
-        EnvironmentBuilder::new(Runtime::Nested(ENV_NAME), InMemoryStorageFactory::create_handle())
-            .settings(&[SettingType::System])
-            .spawn_and_get_nested_environment()
-            .await
-            .unwrap();
+    let env = EnvironmentBuilder::new(InMemoryStorageFactory::create_handle())
+        .settings(&[SettingType::System])
+        .spawn_and_get_nested_environment(ENV_NAME)
+        .await
+        .unwrap();
 
     let system_proxy = env.connect_to_service::<SetUiServiceMarker>().unwrap();
 

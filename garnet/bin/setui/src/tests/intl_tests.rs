@@ -7,7 +7,6 @@ use {
     crate::registry::device_storage::testing::*,
     crate::switchboard::base::SettingType,
     crate::EnvironmentBuilder,
-    crate::Runtime,
     anyhow::format_err,
     fidl::endpoints::{ServerEnd, ServiceMarker},
     fidl_fuchsia_settings::*,
@@ -65,10 +64,10 @@ async fn create_test_intl_env(storage_factory: Arc<Mutex<InMemoryStorageFactory>
         },
     );
 
-    let env = EnvironmentBuilder::new(Runtime::Nested(ENV_NAME), storage_factory)
+    let env = EnvironmentBuilder::new(storage_factory)
         .service(Box::new(service_gen))
         .settings(&[SettingType::Intl])
-        .spawn_and_get_nested_environment()
+        .spawn_and_get_nested_environment(ENV_NAME)
         .await
         .unwrap();
 

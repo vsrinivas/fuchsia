@@ -10,7 +10,6 @@ use crate::service_context::ServiceContext;
 use crate::switchboard::base::SettingType;
 use crate::switchboard::switchboard_impl::SwitchboardImpl;
 use crate::EnvironmentBuilder;
-use crate::Runtime;
 use anyhow::{format_err, Error};
 use core::fmt::{Debug, Formatter};
 use futures::channel::mpsc::UnboundedSender;
@@ -119,15 +118,15 @@ async fn test_environment_startup() {
     let (service_tx, mut service_rx) = futures::channel::mpsc::unbounded::<(u32, Invocation)>();
     let service_agent = TestAgent::new(service_agent_id, Lifespan::Service, Some(service_tx));
 
-    let environment =
-        EnvironmentBuilder::new(Runtime::Nested(ENV_NAME), InMemoryStorageFactory::create_handle())
-            .agents(&[
-                TestAgent::new(startup_agent_id, Lifespan::Initialization, Some(startup_tx)),
-                service_agent.clone(),
-            ])
-            .settings(&[SettingType::Display])
-            .spawn()
-            .unwrap();
+    let environment = EnvironmentBuilder::new(InMemoryStorageFactory::create_handle())
+        .agents(&[
+            TestAgent::new(startup_agent_id, Lifespan::Initialization, Some(startup_tx)),
+            service_agent.clone(),
+        ])
+        .settings(&[SettingType::Display])
+        .spawn_nested(ENV_NAME)
+        .await
+        .unwrap();
 
     // Wait for the initialization agent to receive invocation
     if let Some((id, invocation)) = startup_rx.next().await {
@@ -156,7 +155,7 @@ async fn test_environment_startup() {
 async fn test_sequential() {
     let (tx, mut rx) = futures::channel::mpsc::unbounded::<(u32, Invocation)>();
     let message_hub = create_registry_hub();
-    let switchboard = SwitchboardImpl::create(message_hub);
+    let switchboard = SwitchboardImpl::create(message_hub).await;
     let mut authority = AuthorityImpl::new();
     let service_context = ServiceContext::create(None);
 
@@ -205,7 +204,7 @@ async fn test_sequential() {
 async fn test_simultaneous() {
     let (tx, mut rx) = futures::channel::mpsc::unbounded::<(u32, Invocation)>();
     let message_hub = create_registry_hub();
-    let switchboard = SwitchboardImpl::create(message_hub);
+    let switchboard = SwitchboardImpl::create(message_hub).await;
     let mut authority = AuthorityImpl::new();
     let service_context = ServiceContext::create(None);
     let agent_ids = create_agents(12, Lifespan::Initialization, &mut authority, tx.clone());
@@ -251,7 +250,7 @@ async fn test_err_handling() {
     let (tx, mut rx) = futures::channel::mpsc::unbounded::<(u32, Invocation)>();
 
     let message_hub = create_registry_hub();
-    let switchboard = SwitchboardImpl::create(message_hub);
+    let switchboard = SwitchboardImpl::create(message_hub).await;
     let mut authority = AuthorityImpl::new();
     let service_context = ServiceContext::create(None);
     let mut rng = rand::thread_rng();
@@ -305,7 +304,7 @@ async fn test_available_components() {
     let (tx, mut rx) = futures::channel::mpsc::unbounded::<(u32, Invocation)>();
 
     let message_hub = create_registry_hub();
-    let switchboard = SwitchboardImpl::create(message_hub);
+    let switchboard = SwitchboardImpl::create(message_hub).await;
     let mut authority = AuthorityImpl::new();
     let service_context = ServiceContext::create(None);
     let mut rng = rand::thread_rng();

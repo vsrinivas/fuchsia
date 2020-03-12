@@ -5,7 +5,7 @@
 #[cfg(test)]
 use {
     crate::registry::device_storage::testing::*, crate::switchboard::base::SettingType,
-    crate::EnvironmentBuilder, crate::Runtime, fidl_fuchsia_settings::DeviceMarker,
+    crate::EnvironmentBuilder, fidl_fuchsia_settings::DeviceMarker,
 };
 
 const ENV_NAME: &str = "settings_service_device_test_environment";
@@ -14,12 +14,11 @@ const ENV_NAME: &str = "settings_service_device_test_environment";
 /// sent to the switchboard.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_device() {
-    let env =
-        EnvironmentBuilder::new(Runtime::Nested(ENV_NAME), InMemoryStorageFactory::create_handle())
-            .settings(&[SettingType::Device])
-            .spawn_and_get_nested_environment()
-            .await
-            .unwrap();
+    let env = EnvironmentBuilder::new(InMemoryStorageFactory::create_handle())
+        .settings(&[SettingType::Device])
+        .spawn_and_get_nested_environment(ENV_NAME)
+        .await
+        .unwrap();
 
     let device_proxy = env.connect_to_service::<DeviceMarker>().expect("connected to service");
 

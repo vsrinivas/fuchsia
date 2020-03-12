@@ -7,7 +7,6 @@ use {
     crate::registry::device_storage::testing::*,
     crate::switchboard::base::{DoNotDisturbInfo, SettingType},
     crate::EnvironmentBuilder,
-    crate::Runtime,
     fidl_fuchsia_settings::{DoNotDisturbMarker, DoNotDisturbProxy, DoNotDisturbSettings},
 };
 
@@ -27,9 +26,9 @@ async fn test_do_not_disturb() {
         assert!(store_lock.write(&DoNotDisturbInfo::new(true, false), false).await.is_ok());
     }
 
-    let env = EnvironmentBuilder::new(Runtime::Nested(ENV_NAME), storage_factory)
+    let env = EnvironmentBuilder::new(storage_factory)
         .settings(&[SettingType::DoNotDisturb])
-        .spawn_and_get_nested_environment()
+        .spawn_and_get_nested_environment(ENV_NAME)
         .await
         .unwrap();
 

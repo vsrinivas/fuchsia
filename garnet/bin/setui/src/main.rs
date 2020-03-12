@@ -12,7 +12,6 @@ use {
     settings::registry::device_storage::StashDeviceStorageFactory,
     settings::Configuration,
     settings::EnvironmentBuilder,
-    settings::Runtime,
     std::sync::Arc,
 };
 
@@ -32,11 +31,10 @@ fn main() -> Result<(), Error> {
     // EnvironmentBuilder::spawn returns a future that can be awaited for the
     // result of the startup. Since main is a synchronous function, we cannot
     // block here and therefore continue without waiting for the result.
-    let _ =
-        EnvironmentBuilder::new(Runtime::Service(executor), Arc::new(Mutex::new(storage_factory)))
-            .configuration(Configuration::All)
-            .agents(&[Arc::new(Mutex::new(RestoreAgent::new()))])
-            .spawn();
+    EnvironmentBuilder::new(Arc::new(Mutex::new(storage_factory)))
+        .configuration(Configuration::All)
+        .agents(&[Arc::new(Mutex::new(RestoreAgent::new()))])
+        .spawn(executor);
 
     Ok(())
 }

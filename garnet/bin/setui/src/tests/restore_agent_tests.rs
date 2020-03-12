@@ -10,7 +10,6 @@ use crate::switchboard::base::{
 };
 use crate::tests::fakes::base::create_setting_handler;
 use crate::EnvironmentBuilder;
-use crate::Runtime;
 use futures::lock::Mutex;
 use std::sync::Arc;
 
@@ -25,29 +24,28 @@ async fn verify_restore_handling(
     let counter: Arc<Mutex<u64>> = Arc::new(Mutex::new(0));
 
     let counter_clone = counter.clone();
-    if let Ok(environment) =
-        EnvironmentBuilder::new(Runtime::Nested(ENV_NAME), InMemoryStorageFactory::create_handle())
-            .handler(
-                SettingType::Unknown,
-                create_setting_handler(Box::new(move |command| {
-                    let counter = counter_clone.clone();
-                    if let Command::HandleRequest(SettingRequest::Restore, responder) = command {
-                        let result = (response_generate)();
-                        return Box::pin(async move {
-                            let mut counter_lock = counter.lock().await;
-                            *counter_lock += 1;
-                            responder.send(result).ok();
-                            return ();
-                        });
-                    } else {
-                        return Box::pin(async move {});
-                    }
-                })),
-            )
-            .settings(&[SettingType::Unknown])
-            .agents(&[Arc::new(Mutex::new(RestoreAgent::new()))])
-            .settings(&[SettingType::Unknown])
-            .spawn()
+    if let Ok(environment) = EnvironmentBuilder::new(InMemoryStorageFactory::create_handle())
+        .handler(
+            SettingType::Unknown,
+            create_setting_handler(Box::new(move |command| {
+                let counter = counter_clone.clone();
+                if let Command::HandleRequest(SettingRequest::Restore, responder) = command {
+                    let result = (response_generate)();
+                    return Box::pin(async move {
+                        let mut counter_lock = counter.lock().await;
+                        *counter_lock += 1;
+                        responder.send(result).ok();
+                        return ();
+                    });
+                } else {
+                    return Box::pin(async move {});
+                }
+            })),
+        )
+        .agents(&[Arc::new(Mutex::new(RestoreAgent::new()))])
+        .settings(&[SettingType::Unknown])
+        .spawn_nested(ENV_NAME)
+        .await
     {
         if let Ok(result) = environment.completion_rx.await {
             assert!(result.is_ok(), success);

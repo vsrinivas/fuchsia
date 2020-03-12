@@ -82,8 +82,8 @@ pub mod switchboard;
 /// production environments and will hydrate components to be discoverable as
 /// an environment service. Nested creates a service only usable in the scope
 /// of a test.
-pub enum Runtime {
-    Service(fasync::Executor),
+enum Runtime {
+    Service,
     Nested(&'static str),
 }
 #[derive(PartialEq)]
@@ -113,7 +113,6 @@ impl Environment {
 /// The EnvironmentBuilder aggregates the parameters surrounding an environment
 /// and ultimately spawns an environment based on them.
 pub struct EnvironmentBuilder<T: DeviceStorageFactory + Send + Sync + 'static> {
-    runtime: Runtime,
     configuration: Option<Configuration>,
     settings: Vec<SettingType>,
     agents: Vec<AgentHandle>,
@@ -129,9 +128,8 @@ macro_rules! register_handler {
 }
 
 impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
-    pub fn new(runtime: Runtime, storage_factory: Arc<Mutex<T>>) -> EnvironmentBuilder<T> {
+    pub fn new(storage_factory: Arc<Mutex<T>>) -> EnvironmentBuilder<T> {
         EnvironmentBuilder {
-            runtime: runtime,
             configuration: None,
             settings: vec![],
             agents: vec![],
@@ -174,13 +172,13 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
         self
     }
 
-    /// Spawns the environment based on previously set parameters.
-    pub fn spawn(self) -> Result<Environment, Error> {
-        let mut nested_environment = None;
-
+    async fn prepare_env(
+        self,
+        runtime: Runtime,
+    ) -> (ServiceFs<ServiceObj<'static, ()>>, Receiver<Result<(), Error>>) {
         let mut fs = ServiceFs::new();
         let service_dir =
-            if let Runtime::Service(_) = self.runtime { fs.dir("svc") } else { fs.root_dir() };
+            if let Runtime::Service = runtime { fs.dir("svc") } else { fs.root_dir() };
 
         let mut settings = match self.configuration {
             Some(Configuration::All) => get_all_setting_types(),
@@ -204,34 +202,43 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
         }
 
         EnvironmentBuilder::get_configuration_handlers(&mut handler_factory);
+
         let rx = create_environment(
             service_dir,
             settings,
             self.agents,
             service_context,
             Arc::new(Mutex::new(handler_factory)),
-        );
+        )
+        .await;
 
-        match self.runtime {
-            Runtime::Service(mut executor) => {
-                fs.take_and_serve_directory_handle()?;
-                let () = executor.run_singlethreaded(fs.collect());
-            }
-            Runtime::Nested(environment_name) => {
-                nested_environment = Some(fs.create_salted_nested_environment(&environment_name)?);
-                fasync::spawn(fs.collect());
-            }
-        }
+        (fs, rx)
+    }
 
-        return Ok(Environment::new(nested_environment, rx));
+    pub fn spawn(self, mut executor: fasync::Executor) {
+        let env_future = self.prepare_env(Runtime::Service);
+        let (mut fs, _) = executor.run_singlethreaded(env_future);
+        fs.take_and_serve_directory_handle().expect("could not service directory handle");
+        let () = executor.run_singlethreaded(fs.collect());
+    }
+
+    pub async fn spawn_nested(self, env_name: &'static str) -> Result<Environment, Error> {
+        let (mut fs, rx) = self.prepare_env(Runtime::Nested(env_name)).await;
+        let nested_environment = Some(fs.create_salted_nested_environment(&env_name)?);
+        fasync::spawn(fs.collect());
+
+        Ok(Environment::new(nested_environment, rx))
     }
 
     /// Spawns a nested environment and returns the associated
     /// NestedEnvironment. Note that this is a helper function that provides a
     /// shortcut for calling EnvironmentBuilder::name() and
     /// EnvironmentBuilder::spawn().
-    pub async fn spawn_and_get_nested_environment(self) -> Result<NestedEnvironment, Error> {
-        let environment = self.spawn()?;
+    pub async fn spawn_and_get_nested_environment(
+        self,
+        env_name: &'static str,
+    ) -> Result<NestedEnvironment, Error> {
+        let environment = self.spawn_nested(env_name).await?;
         // Wait for environment to be setup.
         let _ = environment.completion_rx.await??;
 
@@ -285,25 +292,23 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
 /// This method generates the necessary infrastructure to support the settings
 /// service (switchboard, registry, etc.) and brings up the components necessary
 /// to support the components specified in the components HashSet.
-fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>(
+async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>(
     mut service_dir: ServiceFsDir<'_, ServiceObj<'a, ()>>,
     components: HashSet<switchboard::base::SettingType>,
     agents: Vec<AgentHandle>,
     service_context_handle: ServiceContextHandle,
     handler_factory: Arc<Mutex<SettingHandlerFactoryImpl<T>>>,
 ) -> Receiver<Result<(), Error>> {
-    let registry_message_hub = create_registry_message_hub();
+    let registry_messenger_factory = create_registry_message_hub();
 
     // Creates switchboard, handed to interface implementations to send messages
     // to handlers.
-    let switchboard_handle = SwitchboardImpl::create(registry_message_hub.clone());
+    let switchboard_handle = SwitchboardImpl::create(registry_messenger_factory.clone()).await;
 
     let mut agent_authority = AuthorityImpl::new();
 
     // Creates registry, used to register handlers for setting types.
-    let _registry_handle =
-        RegistryImpl::create(handler_factory.clone(), registry_message_hub.clone());
-
+    let _ = RegistryImpl::create(handler_factory.clone(), registry_messenger_factory.clone()).await;
     if components.contains(&SettingType::Accessibility) {
         let switchboard_handle_clone = switchboard_handle.clone();
         service_dir.add_fidl_service(move |stream: AccessibilityRequestStream| {

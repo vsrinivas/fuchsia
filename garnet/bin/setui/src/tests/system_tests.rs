@@ -10,7 +10,6 @@ use {
     crate::tests::fakes::device_settings_service::DeviceSettingsService,
     crate::tests::fakes::service_registry::ServiceRegistry,
     crate::EnvironmentBuilder,
-    crate::Runtime,
     fidl_fuchsia_settings::*,
     futures::lock::Mutex,
     std::sync::Arc,
@@ -44,10 +43,10 @@ async fn test_system() {
     let device_admin_service_handle = Arc::new(Mutex::new(DeviceAdminService::new()));
     service_registry.lock().await.register_service(device_admin_service_handle.clone());
 
-    let env = EnvironmentBuilder::new(Runtime::Nested(ENV_NAME), storage_factory)
+    let env = EnvironmentBuilder::new(storage_factory)
         .service(ServiceRegistry::serve(service_registry.clone()))
         .settings(&[SettingType::System, SettingType::Account, SettingType::Power])
-        .spawn_and_get_nested_environment()
+        .spawn_and_get_nested_environment(ENV_NAME)
         .await
         .unwrap();
 

@@ -18,7 +18,6 @@ use {
     crate::tests::fakes::sound_player_service::SoundPlayerService,
     crate::tests::fakes::usage_reporter_service::UsageReporterService,
     crate::EnvironmentBuilder,
-    crate::Runtime,
     fidl_fuchsia_media::{
         AudioRenderUsage, Usage,
         UsageState::{Ducked, Muted, Unadjusted},
@@ -176,10 +175,10 @@ async fn create_environment(
     let storage_factory = InMemoryStorageFactory::create_handle();
     let store = create_storage(storage_factory.clone()).await;
 
-    let env = EnvironmentBuilder::new(Runtime::Nested(ENV_NAME), storage_factory)
+    let env = EnvironmentBuilder::new(storage_factory)
         .service(ServiceRegistry::serve(service_registry))
         .settings(&[SettingType::Audio])
-        .spawn_and_get_nested_environment()
+        .spawn_and_get_nested_environment(ENV_NAME)
         .await
         .unwrap();
 
@@ -462,11 +461,12 @@ async fn test_volume_restore() {
         assert!(store.lock().await.write(&stored_info, false).await.is_ok());
     }
 
-    let env = EnvironmentBuilder::new(Runtime::Nested(ENV_NAME), storage_factory)
+    let env = EnvironmentBuilder::new(storage_factory)
         .service(Box::new(ServiceRegistry::serve(service_registry)))
         .agents(&[Arc::new(Mutex::new(RestoreAgent::new()))])
         .settings(&[SettingType::Audio])
-        .spawn()
+        .spawn_nested(ENV_NAME)
+        .await
         .unwrap();
     assert!(env.completion_rx.await.unwrap().is_ok());
 
@@ -563,11 +563,11 @@ async fn test_persisted_values_applied_at_start() {
         store_lock.write(&test_audio_info, false).await.expect("write audio info in store");
     }
 
-    let env = EnvironmentBuilder::new(Runtime::Nested(ENV_NAME), storage_factory)
+    let env = EnvironmentBuilder::new(storage_factory)
         .service(ServiceRegistry::serve(service_registry))
         .agents(&[Arc::new(Mutex::new(RestoreAgent::new()))])
         .settings(&[SettingType::Audio])
-        .spawn_and_get_nested_environment()
+        .spawn_and_get_nested_environment(ENV_NAME)
         .await
         .unwrap();
 

@@ -10,7 +10,6 @@ use {
     crate::tests::fakes::device_admin_service::{Action, DeviceAdminService},
     crate::tests::fakes::service_registry::ServiceRegistry,
     crate::EnvironmentBuilder,
-    crate::Runtime,
     fidl_fuchsia_settings::*,
     futures::lock::Mutex,
     std::sync::Arc,
@@ -21,12 +20,11 @@ const ENV_NAME: &str = "settings_service_setup_test_environment";
 // Ensures the default value returned is WiFi.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_setup_default() {
-    let env =
-        EnvironmentBuilder::new(Runtime::Nested(ENV_NAME), InMemoryStorageFactory::create_handle())
-            .settings(&[SettingType::Setup, SettingType::Power])
-            .spawn_and_get_nested_environment()
-            .await
-            .unwrap();
+    let env = EnvironmentBuilder::new(InMemoryStorageFactory::create_handle())
+        .settings(&[SettingType::Setup, SettingType::Power])
+        .spawn_and_get_nested_environment(ENV_NAME)
+        .await
+        .unwrap();
 
     let setup_service = env.connect_to_service::<SetupMarker>().unwrap();
 
@@ -64,10 +62,10 @@ async fn test_setup() {
     service_registry.lock().await.register_service(device_admin_service_handle.clone());
 
     // Handle reboot
-    let env = EnvironmentBuilder::new(Runtime::Nested(ENV_NAME), storage_factory)
+    let env = EnvironmentBuilder::new(storage_factory)
         .service(ServiceRegistry::serve(service_registry.clone()))
         .settings(&[SettingType::Setup, SettingType::Power])
-        .spawn_and_get_nested_environment()
+        .spawn_and_get_nested_environment(ENV_NAME)
         .await
         .unwrap();
 

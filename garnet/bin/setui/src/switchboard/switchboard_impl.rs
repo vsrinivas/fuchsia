@@ -10,7 +10,6 @@ use crate::switchboard::base::*;
 use anyhow::{format_err, Error};
 
 use futures::channel::mpsc::UnboundedSender;
-use futures::executor::block_on;
 use futures::lock::Mutex;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -95,11 +94,15 @@ pub struct SwitchboardImpl {
 impl SwitchboardImpl {
     /// Creates a new SwitchboardImpl, which will return the instance along with
     /// a sender to provide events in response to the actions sent.
-    pub fn create(registry_message_hub: RegistryMessageHubHandle) -> Arc<Mutex<SwitchboardImpl>> {
+    pub async fn create(
+        registry_message_hub: RegistryMessageHubHandle,
+    ) -> Arc<Mutex<SwitchboardImpl>> {
         let (cancel_listen_tx, mut cancel_listen_rx) =
             futures::channel::mpsc::unbounded::<ListenSessionInfo>();
 
-        let (registry_messenger, mut receptor) = block_on(registry_message_hub.lock())
+        let (registry_messenger, mut receptor) = registry_message_hub
+            .lock()
+            .await
             .create_messenger(MessengerType::Addressable(Address::Switchboard));
 
         let switchboard = Arc::new(Mutex::new(Self {
@@ -298,7 +301,7 @@ mod tests {
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_request() {
         let message_hub = create_registry_hub();
-        let switchboard = SwitchboardImpl::create(message_hub.clone());
+        let switchboard = SwitchboardImpl::create(message_hub.clone()).await;
         // Create registry endpoint
         let (_, mut receptor) = message_hub
             .lock()
@@ -333,7 +336,7 @@ mod tests {
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_listen() {
         let message_hub = create_registry_hub();
-        let switchboard = SwitchboardImpl::create(message_hub.clone());
+        let switchboard = SwitchboardImpl::create(message_hub.clone()).await;
         let setting_type = SettingType::Unknown;
 
         // Create registry endpoint
@@ -371,7 +374,7 @@ mod tests {
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_notify() {
         let message_hub = create_registry_hub();
-        let switchboard = SwitchboardImpl::create(message_hub.clone());
+        let switchboard = SwitchboardImpl::create(message_hub.clone()).await;
         let setting_type = SettingType::Unknown;
 
         // Create registry endpoint

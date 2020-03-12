@@ -10,7 +10,6 @@ use {
     crate::tests::fakes::brightness_service::BrightnessService,
     crate::tests::fakes::service_registry::ServiceRegistry,
     crate::EnvironmentBuilder,
-    crate::Runtime,
     anyhow::format_err,
     fidl::endpoints::{ServerEnd, ServiceMarker},
     fidl_fuchsia_settings::*,
@@ -83,13 +82,12 @@ async fn test_display() {
         Box::pin(async { Ok(()) })
     };
 
-    let env =
-        EnvironmentBuilder::new(Runtime::Nested(ENV_NAME), InMemoryStorageFactory::create_handle())
-            .service(Box::new(service_gen))
-            .settings(&[SettingType::Display])
-            .spawn_and_get_nested_environment()
-            .await
-            .unwrap();
+    let env = EnvironmentBuilder::new(InMemoryStorageFactory::create_handle())
+        .service(Box::new(service_gen))
+        .settings(&[SettingType::Display])
+        .spawn_and_get_nested_environment(ENV_NAME)
+        .await
+        .unwrap();
 
     let display_proxy = env.connect_to_service::<DisplayMarker>().unwrap();
 
@@ -142,11 +140,12 @@ async fn validate_restore(manual_brightness: f32, auto_brightness: bool) {
         assert!(store.lock().await.write(&info, false).await.is_ok());
     }
 
-    let env = EnvironmentBuilder::new(Runtime::Nested(ENV_NAME), storage_factory)
+    let env = EnvironmentBuilder::new(storage_factory)
         .service(Box::new(ServiceRegistry::serve(service_registry)))
         .agents(&[Arc::new(Mutex::new(RestoreAgent::new()))])
         .settings(&[SettingType::Display])
-        .spawn()
+        .spawn_nested(ENV_NAME)
+        .await
         .unwrap();
 
     assert!(env.completion_rx.await.unwrap().is_ok());
@@ -212,13 +211,12 @@ async fn test_display_failure() {
         }
     };
 
-    let env =
-        EnvironmentBuilder::new(Runtime::Nested(ENV_NAME), InMemoryStorageFactory::create_handle())
-            .service(Box::new(service_gen))
-            .settings(&[SettingType::Display, SettingType::Intl])
-            .spawn_and_get_nested_environment()
-            .await
-            .unwrap();
+    let env = EnvironmentBuilder::new(InMemoryStorageFactory::create_handle())
+        .service(Box::new(service_gen))
+        .settings(&[SettingType::Display, SettingType::Intl])
+        .spawn_and_get_nested_environment(ENV_NAME)
+        .await
+        .unwrap();
 
     let display_proxy = env.connect_to_service::<DisplayMarker>().expect("connected to service");
 

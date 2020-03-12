@@ -9,12 +9,10 @@ use crate::switchboard::base::{
     SettingAction, SettingActionData, SettingEvent, SettingRequest, SettingResponseResult,
     SettingType, SwitchboardError,
 };
-
 use anyhow::Context as _;
 use fuchsia_async as fasync;
 
 use futures::channel::mpsc::UnboundedSender;
-use futures::executor::block_on;
 use futures::lock::Mutex;
 use futures::stream::StreamExt;
 use futures::TryFutureExt;
@@ -39,13 +37,15 @@ pub struct RegistryImpl {
 impl RegistryImpl {
     /// Returns a handle to a RegistryImpl which is listening to SettingAction from the
     /// provided receiver and will send responses/updates on the given sender.
-    pub fn create(
+    pub async fn create(
         handler_factory: Arc<Mutex<dyn SettingHandlerFactory + Send + Sync>>,
         message_hub: MessageHubHandle,
     ) -> Arc<Mutex<RegistryImpl>> {
         let (notification_tx, mut notification_rx) =
             futures::channel::mpsc::unbounded::<SettingType>();
-        let (messenger, mut receptor) = block_on(message_hub.lock())
+        let (messenger, mut receptor) = message_hub
+            .lock()
+            .await
             .create_messenger(MessengerType::Addressable(Address::Registry));
 
         // We must create handle here rather than return back the value as we
@@ -265,7 +265,7 @@ mod tests {
     async fn test_notify() {
         let message_hub = create_message_hub();
         let handler_factory = Arc::new(Mutex::new(FakeFactory::new()));
-        let _registry = RegistryImpl::create(handler_factory.clone(), message_hub.clone());
+        let _registry = RegistryImpl::create(handler_factory.clone(), message_hub.clone()).await;
         let setting_type = SettingType::Unknown;
 
         let (messenger, mut receptor) = message_hub
@@ -346,7 +346,7 @@ mod tests {
             .await
             .create_messenger(MessengerType::Addressable(Address::Switchboard));
 
-        let _registry = RegistryImpl::create(handler_factory.clone(), message_hub.clone());
+        let _registry = RegistryImpl::create(handler_factory.clone(), message_hub.clone()).await;
         let setting_type = SettingType::Unknown;
         let request_id = 42;
 
@@ -404,7 +404,7 @@ mod tests {
             .lock()
             .await
             .create_messenger(MessengerType::Addressable(Address::Switchboard));
-        let _registry = RegistryImpl::create(handler_factory.clone(), message_hub.clone());
+        let _registry = RegistryImpl::create(handler_factory.clone(), message_hub.clone()).await;
         let setting_type = SettingType::Unknown;
         let request_id = 42;
 

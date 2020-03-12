@@ -9,7 +9,6 @@ use {
     crate::switchboard::accessibility_types::{AccessibilityInfo, ColorBlindnessType},
     crate::switchboard::base::SettingType,
     crate::EnvironmentBuilder,
-    crate::Runtime,
     fidl_fuchsia_settings::*,
     fidl_fuchsia_ui_types::ColorRgba,
     futures::lock::Mutex,
@@ -21,9 +20,9 @@ const ENV_NAME: &str = "settings_service_accessibility_test_environment";
 async fn create_test_accessibility_env(
     storage_factory: Arc<Mutex<InMemoryStorageFactory>>,
 ) -> AccessibilityProxy {
-    EnvironmentBuilder::new(Runtime::Nested(ENV_NAME), storage_factory)
+    EnvironmentBuilder::new(storage_factory)
         .settings(&[SettingType::Accessibility])
-        .spawn_and_get_nested_environment()
+        .spawn_and_get_nested_environment(ENV_NAME)
         .await
         .unwrap()
         .connect_to_service::<AccessibilityMarker>()

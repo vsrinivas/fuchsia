@@ -5,8 +5,7 @@
 #[cfg(test)]
 use {
     crate::registry::device_storage::testing::*, crate::switchboard::base::PrivacyInfo,
-    crate::switchboard::base::SettingType, crate::EnvironmentBuilder, crate::Runtime,
-    fidl_fuchsia_settings::*,
+    crate::switchboard::base::SettingType, crate::EnvironmentBuilder, fidl_fuchsia_settings::*,
 };
 
 const ENV_NAME: &str = "settings_service_privacy_test_environment";
@@ -21,9 +20,9 @@ async fn test_privacy() {
     let factory = InMemoryStorageFactory::create_handle();
     let store = factory.lock().await.get_device_storage::<PrivacyInfo>(StorageAccessContext::Test);
 
-    let env = EnvironmentBuilder::new(Runtime::Nested(ENV_NAME), factory)
+    let env = EnvironmentBuilder::new(factory)
         .settings(&[SettingType::Privacy])
-        .spawn_and_get_nested_environment()
+        .spawn_and_get_nested_environment(ENV_NAME)
         .await
         .unwrap();
 

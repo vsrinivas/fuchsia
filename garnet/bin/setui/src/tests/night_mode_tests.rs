@@ -5,8 +5,7 @@
 #[cfg(test)]
 use {
     crate::registry::device_storage::testing::*, crate::switchboard::base::NightModeInfo,
-    crate::switchboard::base::SettingType, crate::EnvironmentBuilder, crate::Runtime,
-    fidl_fuchsia_settings::*,
+    crate::switchboard::base::SettingType, crate::EnvironmentBuilder, fidl_fuchsia_settings::*,
 };
 
 const ENV_NAME: &str = "settings_service_night_mode_test_environment";
@@ -21,9 +20,9 @@ async fn test_night_mode() {
     let store =
         factory.lock().await.get_device_storage::<NightModeInfo>(StorageAccessContext::Test);
 
-    let env = EnvironmentBuilder::new(Runtime::Nested(ENV_NAME), factory)
+    let env = EnvironmentBuilder::new(factory)
         .settings(&[SettingType::NightMode])
-        .spawn_and_get_nested_environment()
+        .spawn_and_get_nested_environment(ENV_NAME)
         .await
         .unwrap();
 
