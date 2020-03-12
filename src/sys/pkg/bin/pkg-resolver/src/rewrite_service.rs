@@ -69,7 +69,7 @@ impl RewriteService {
             Status::INVALID_ARGS
         })?;
 
-        let rewritten = self.state.read().rewrite(url);
+        let rewritten = self.state.read().rewrite(&url);
         Ok(rewritten)
     }
 
