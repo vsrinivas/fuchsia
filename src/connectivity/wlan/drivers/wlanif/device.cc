@@ -354,25 +354,26 @@ void Device::DeauthenticateReq(wlan_mlme::DeauthenticateRequest req) {
 }
 
 void Device::AssociateReq(wlan_mlme::AssociateRequest req) {
-  std::lock_guard<std::mutex> lock(lock_);
-  protected_bss_ = req.rsne.has_value() || req.vendor_ies.has_value();
-
   wlanif_assoc_req_t impl_req = {};
 
   // peer_sta_address
   std::memcpy(impl_req.peer_sta_address, req.peer_sta_address.data(), ETH_ALEN);
+  {
+    std::lock_guard<std::mutex> lock(lock_);
+    protected_bss_ = req.rsne.has_value() || req.vendor_ies.has_value();
 
-  // rsne
-  if (protected_bss_) {
-    if (req.rsne.has_value()) {
-      CopyRSNE(req.rsne.value(), impl_req.rsne, &impl_req.rsne_len);
+    // rsne
+    if (protected_bss_) {
+      if (req.rsne.has_value()) {
+        CopyRSNE(req.rsne.value(), impl_req.rsne, &impl_req.rsne_len);
+      }
+      if (req.vendor_ies.has_value()) {
+        CopyVendorSpecificIE(req.vendor_ies.value(), impl_req.vendor_ie, &impl_req.vendor_ie_len);
+      }
+    } else {
+      impl_req.rsne_len = 0;
+      impl_req.vendor_ie_len = 0;
     }
-    if (req.vendor_ies.has_value()) {
-      CopyVendorSpecificIE(req.vendor_ies.value(), impl_req.vendor_ie, &impl_req.vendor_ie_len);
-    }
-  } else {
-    impl_req.rsne_len = 0;
-    impl_req.vendor_ie_len = 0;
   }
 
   wlanif_impl_assoc_req(&wlanif_impl_, &impl_req);
