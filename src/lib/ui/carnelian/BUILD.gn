@@ -75,27 +75,6 @@ rustc_library("carnelian") {
   ]
 }
 
-rustc_binary("spinning_square_example") {
-  version = "0.1.0"
-  edition = "2018"
-  source_root = "examples/spinning_square.rs"
-  deps = [
-    "//garnet/examples/fidl/services:echo-rustc",
-    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
-    "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia-async",
-    "//src/lib/trace/rust:trace",
-    "//src/lib/trace/rust:trace-provider",
-    "//src/lib/ui/carnelian",
-    "//src/lib/ui/fuchsia-scenic",
-    "//src/lib/zircon/rust:fuchsia-zircon",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:euclid",
-    "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:thiserror",
-  ]
-}
-
 rustc_binary("button_example") {
   version = "0.1.0"
   edition = "2018"
@@ -103,8 +82,6 @@ rustc_binary("button_example") {
   deps = [
     "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
     "//src/lib/fuchsia-async",
-    "//src/lib/trace/rust:trace",
-    "//src/lib/trace/rust:trace-provider",
     "//src/lib/ui/carnelian",
     "//src/lib/ui/fuchsia-scenic",
     "//src/lib/zircon/rust:fuchsia-zircon",
@@ -114,107 +91,21 @@ rustc_binary("button_example") {
   ]
 }
 
-rustc_binary("perf_test_01") {
-  version = "0.1.0"
-  edition = "2018"
-  source_root = "examples/perf_test_01.rs"
-  deps = [
-    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
-    "//src/lib/fuchsia-async",
-    "//src/lib/ui/carnelian",
-    "//src/lib/ui/fuchsia-scenic",
-    "//src/lib/zircon/rust:fuchsia-zircon",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:euclid",
-    "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:rand",
-    "//third_party/rust_crates:thiserror",
-  ]
-}
+package("button-rs") {
+  deps = [ ":button_example" ]
 
-rustc_binary("perf_test_02") {
-  version = "0.1.0"
-  edition = "2018"
-  source_root = "examples/perf_test_02.rs"
-  deps = [
-    "//src/lib/fuchsia-async",
-    "//src/lib/ui/carnelian",
-    "//src/lib/ui/fuchsia-scenic",
-    "//src/lib/zircon/rust:fuchsia-zircon",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:euclid",
-    "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:thiserror",
+  binaries = [
+    {
+      name = "app"
+      source = "button_example"
+    },
   ]
-}
 
-rustc_binary("perf_test_03") {
-  version = "0.1.0"
-  edition = "2018"
-  source_root = "examples/perf_test_03.rs"
-  deps = [
-    "//src/lib/fuchsia-async",
-    "//src/lib/ui/carnelian",
-    "//src/lib/ui/fuchsia-scenic",
-    "//src/lib/zircon/rust:fuchsia-zircon",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:chrono",
-    "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:thiserror",
-  ]
-}
-
-rustc_binary("perf_test_04") {
-  version = "0.1.0"
-  edition = "2018"
-  source_root = "examples/perf_test_04.rs"
-  deps = [
-    "//src/lib/fuchsia-async",
-    "//src/lib/ui/carnelian",
-    "//src/lib/ui/fuchsia-scenic",
-    "//src/lib/zircon/rust:fuchsia-zircon",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:thiserror",
-  ]
-}
-
-rustc_binary("drawing") {
-  version = "0.1.0"
-  edition = "2018"
-  source_root = "examples/drawing.rs"
-  deps = [
-    "//sdk/fidl/fuchsia.images:fuchsia.images-rustc",
-    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
-    "//src/lib/fuchsia-async",
-    "//src/lib/ui/carnelian",
-    "//src/lib/ui/fuchsia-framebuffer",
-    "//src/lib/ui/fuchsia-scenic",
-    "//src/lib/zircon/rust:fuchsia-zircon",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:euclid",
-    "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:thiserror",
-  ]
-}
-
-rustc_binary("drawing_mold") {
-  version = "0.1.0"
-  edition = "2018"
-  source_root = "examples/drawing_mold.rs"
-  deps = [
-    "//sdk/fidl/fuchsia.images:fuchsia.images-rustc",
-    "//src/graphics/lib/compute/mold",
-    "//src/lib/fuchsia-async",
-    "//src/lib/ui/carnelian",
-    "//src/lib/ui/fuchsia-framebuffer",
-    "//src/lib/ui/fuchsia-scenic",
-    "//src/lib/zircon/rust:fuchsia-zircon",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:euclid",
-    "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:rusttype",
-    "//third_party/rust_crates:thiserror",
+  meta = [
+    {
+      path = rebase_path("meta/example.cmx")
+      dest = "button-rs.cmx"
+    },
   ]
 }
 
@@ -242,32 +133,26 @@ rustc_binary("clockface") {
   ]
 }
 
-rustc_binary("ink") {
-  version = "0.1.0"
-  edition = "2018"
-  source_root = "examples/ink.rs"
-  deps = [
-    "//sdk/fidl/fuchsia.input.report:fuchsia.input.report-rustc",
-    "//src/lib/fdio/rust:fdio",
-    "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia-async",
-    "//src/lib/fuchsia-component",
-    "//src/lib/trace/rust:trace",
-    "//src/lib/trace/rust:trace-provider",
-    "//src/lib/ui/carnelian",
-    "//src/lib/ui/fuchsia-framebuffer",
-    "//src/lib/ui/fuchsia-scenic",
-    "//src/lib/zircon/rust:fuchsia-zircon",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:argh",
-    "//third_party/rust_crates:euclid",
-    "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:itertools",
-    "//third_party/rust_crates:rand",
-    "//third_party/rust_crates:rusttype",
-    "//third_party/rust_crates:thiserror",
-    "//zircon/system/fidl/fuchsia-hardware-input:fuchsia-hardware-input-rustc",
+package("clockface-rs") {
+  deps = [ ":clockface" ]
+
+  binaries = [
+    {
+      name = "app"
+      source = "clockface"
+    },
   ]
+
+  meta = [
+    {
+      path = rebase_path("meta/example.cmx")
+      dest = "clockface-rs.cmx"
+    },
+  ]
+
+  public_deps = vulkan_validation_layers.public_deps
+  loadable_modules = vulkan_validation_layers.loadable_modules
+  resources = vulkan_validation_layers.resources
 }
 
 rustc_binary("infinite_scroll") {
@@ -301,195 +186,7 @@ rustc_binary("infinite_scroll") {
   ]
 }
 
-package("spinning_square_rs") {
-  deps = [ ":spinning_square_example" ]
-
-  binaries = [
-    {
-      name = "app"
-      source = "spinning_square_example"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/example.cmx")
-      dest = "spinning_square_rs.cmx"
-    },
-  ]
-}
-
-package("button_rs") {
-  deps = [ ":button_example" ]
-
-  binaries = [
-    {
-      name = "app"
-      source = "button_example"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/example.cmx")
-      dest = "button_rs.cmx"
-    },
-  ]
-}
-
-package("perf_test_01_rs") {
-  deps = [ ":perf_test_01" ]
-
-  binaries = [
-    {
-      name = "app"
-      source = "perf_test_01"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/example.cmx")
-      dest = "perf_test_01_rs.cmx"
-    },
-  ]
-}
-
-package("perf_test_02_rs") {
-  deps = [ ":perf_test_02" ]
-
-  binaries = [
-    {
-      name = "app"
-      source = "perf_test_02"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/example.cmx")
-      dest = "perf_test_02_rs.cmx"
-    },
-  ]
-}
-
-package("perf_test_03_rs") {
-  deps = [ ":perf_test_03" ]
-
-  binaries = [
-    {
-      name = "app"
-      source = "perf_test_03"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/example.cmx")
-      dest = "perf_test_03_rs.cmx"
-    },
-  ]
-}
-
-package("perf_test_04_rs") {
-  deps = [ ":perf_test_04" ]
-
-  binaries = [
-    {
-      name = "app"
-      source = "perf_test_04"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/example.cmx")
-      dest = "perf_test_04_rs.cmx"
-    },
-  ]
-}
-
-package("drawing_rs") {
-  deps = [ ":drawing" ]
-
-  binaries = [
-    {
-      name = "app"
-      source = "drawing"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/example.cmx")
-      dest = "drawing_rs.cmx"
-    },
-  ]
-}
-
-package("drawing_mold_rs") {
-  deps = [ ":drawing_mold" ]
-
-  binaries = [
-    {
-      name = "app"
-      source = "drawing_mold"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/example.cmx")
-      dest = "drawing_mold_rs.cmx"
-    },
-  ]
-}
-
-package("clockface_rs") {
-  deps = [ ":clockface" ]
-
-  binaries = [
-    {
-      name = "app"
-      source = "clockface"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/example.cmx")
-      dest = "clockface_rs.cmx"
-    },
-  ]
-
-  public_deps = vulkan_validation_layers.public_deps
-  loadable_modules = vulkan_validation_layers.loadable_modules
-  resources = vulkan_validation_layers.resources
-}
-
-package("ink_rs") {
-  deps = [ ":ink" ]
-
-  binaries = [
-    {
-      name = "app"
-      source = "ink"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/example.cmx")
-      dest = "ink_rs.cmx"
-    },
-  ]
-
-  public_deps = vulkan_validation_layers.public_deps
-  loadable_modules = vulkan_validation_layers.loadable_modules
-  resources = vulkan_validation_layers.resources
-}
-
-package("infinite_scroll_rs") {
+package("infinite-scroll-rs") {
   deps = [ ":infinite_scroll" ]
 
   binaries = [
@@ -502,7 +199,7 @@ package("infinite_scroll_rs") {
   meta = [
     {
       path = rebase_path("meta/example.cmx")
-      dest = "infinite_scroll_rs.cmx"
+      dest = "infinite-scroll-rs.cmx"
     },
   ]
 
@@ -526,7 +223,199 @@ package("infinite_scroll_rs") {
   }
 }
 
-test_package("carnelian_render_tests") {
+rustc_binary("ink") {
+  version = "0.1.0"
+  edition = "2018"
+  source_root = "examples/ink.rs"
+  deps = [
+    "//sdk/fidl/fuchsia.input.report:fuchsia.input.report-rustc",
+    "//src/lib/fdio/rust:fdio",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/trace/rust:trace",
+    "//src/lib/trace/rust:trace-provider",
+    "//src/lib/ui/carnelian",
+    "//src/lib/ui/fuchsia-framebuffer",
+    "//src/lib/ui/fuchsia-scenic",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:argh",
+    "//third_party/rust_crates:euclid",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:itertools",
+    "//third_party/rust_crates:rand",
+    "//third_party/rust_crates:rusttype",
+    "//third_party/rust_crates:thiserror",
+    "//zircon/system/fidl/fuchsia-hardware-input:fuchsia-hardware-input-rustc",
+  ]
+}
+
+package("ink-rs") {
+  deps = [ ":ink" ]
+
+  binaries = [
+    {
+      name = "app"
+      source = "ink"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/example.cmx")
+      dest = "ink-rs.cmx"
+    },
+  ]
+
+  public_deps = vulkan_validation_layers.public_deps
+  loadable_modules = vulkan_validation_layers.loadable_modules
+  resources = vulkan_validation_layers.resources
+}
+
+rustc_binary("rainbow") {
+  version = "0.1.0"
+  edition = "2018"
+  source_root = "examples/rainbow.rs"
+  deps = [
+    "//src/lib/fuchsia-async",
+    "//src/lib/ui/carnelian",
+    "//src/lib/ui/fuchsia-scenic",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:thiserror",
+  ]
+}
+
+package("rainbow-rs") {
+  deps = [ ":rainbow" ]
+
+  binaries = [
+    {
+      name = "app"
+      source = "rainbow"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/example.cmx")
+      dest = "rainbow-rs.cmx"
+    },
+  ]
+}
+
+rustc_binary("shapes") {
+  version = "0.1.0"
+  edition = "2018"
+  source_root = "examples/shapes.rs"
+  deps = [
+    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
+    "//src/lib/fuchsia-async",
+    "//src/lib/ui/carnelian",
+    "//src/lib/ui/fuchsia-scenic",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:euclid",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:rand",
+    "//third_party/rust_crates:thiserror",
+  ]
+}
+
+package("shapes-rs") {
+  deps = [ ":shapes" ]
+
+  binaries = [
+    {
+      name = "app"
+      source = "shapes"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/example.cmx")
+      dest = "shapes-rs.cmx"
+    },
+  ]
+}
+
+rustc_binary("spinning_square") {
+  version = "0.1.0"
+  edition = "2018"
+  source_root = "examples/spinning_square.rs"
+  deps = [
+    "//garnet/examples/fidl/services:echo-rustc",
+    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/trace/rust:trace",
+    "//src/lib/trace/rust:trace-provider",
+    "//src/lib/ui/carnelian",
+    "//src/lib/ui/fuchsia-scenic",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:euclid",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:thiserror",
+  ]
+}
+
+package("spinning-square-rs") {
+  deps = [ ":spinning_square" ]
+
+  binaries = [
+    {
+      name = "app"
+      source = "spinning_square"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/example.cmx")
+      dest = "spinning-square-rs.cmx"
+    },
+  ]
+}
+
+rustc_binary("text_scroll") {
+  version = "0.1.0"
+  edition = "2018"
+  source_root = "examples/text_scroll.rs"
+  deps = [
+    "//src/lib/fuchsia-async",
+    "//src/lib/ui/carnelian",
+    "//src/lib/ui/fuchsia-scenic",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:euclid",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:thiserror",
+  ]
+}
+
+package("text-scroll-rs") {
+  deps = [ ":text_scroll" ]
+
+  binaries = [
+    {
+      name = "app"
+      source = "text_scroll"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/example.cmx")
+      dest = "text-scroll-rs.cmx"
+    },
+  ]
+}
+
+test_package("carnelian-render-tests") {
   deps = [ ":carnelian_test" ]
 
   tests = [
@@ -541,7 +430,7 @@ test_package("carnelian_render_tests") {
   resources = vulkan_validation_layers.resources
 }
 
-unittest_package("carnelian_tests") {
+unittest_package("carnelian-tests") {
   deps = [ ":carnelian_test" ]
 
   tests = [
@@ -568,7 +457,7 @@ rustc_binary("carnelian_integration_test_bin") {
   ]
 }
 
-test_package("carnelian_integration_test") {
+test_package("carnelian-integration-test") {
   deps = [ ":carnelian_integration_test_bin" ]
 
   tests = [
@@ -595,7 +484,7 @@ rustc_binary("carnelian_fb_integration_test_bin") {
   ]
 }
 
-test_package("carnelian_fb_integration_test") {
+test_package("carnelian-fb-integration-test") {
   deps = [ ":carnelian_fb_integration_test_bin" ]
 
   tests = [
@@ -608,16 +497,13 @@ test_package("carnelian_fb_integration_test") {
 
 group("examples") {
   public_deps = [
-    "//src/lib/ui/carnelian:button_rs",
-    "//src/lib/ui/carnelian:clockface_rs",
-    "//src/lib/ui/carnelian:drawing_mold_rs",
-    "//src/lib/ui/carnelian:drawing_rs",
-    "//src/lib/ui/carnelian:infinite_scroll_rs",
-    "//src/lib/ui/carnelian:ink_rs",
-    "//src/lib/ui/carnelian:perf_test_01_rs",
-    "//src/lib/ui/carnelian:perf_test_02_rs",
-    "//src/lib/ui/carnelian:perf_test_03_rs",
-    "//src/lib/ui/carnelian:perf_test_04_rs",
-    "//src/lib/ui/carnelian:spinning_square_rs",
+    "//src/lib/ui/carnelian:button-rs",
+    "//src/lib/ui/carnelian:clockface-rs",
+    "//src/lib/ui/carnelian:infinite-scroll-rs",
+    "//src/lib/ui/carnelian:ink-rs",
+    "//src/lib/ui/carnelian:rainbow-rs",
+    "//src/lib/ui/carnelian:rainbow-rs",
+    "//src/lib/ui/carnelian:spinning-square-rs",
+    "//src/lib/ui/carnelian:text-scroll-rs",
   ]
 }
