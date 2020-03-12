@@ -14,6 +14,7 @@ import stat
 import subprocess
 import sys
 import time
+import typing
 
 import paths
 
@@ -29,15 +30,23 @@ WORKSTATION_INSTALLER_GPT_GUID = '4dce98ce-e77e-45c1-a863-caf92f1330c1'
 # This is the list of Fuchsia build images we write to the final image,
 # and the partition types they will have (passed to cgpt)
 IMAGES = {
+    # Standard x64 partitions
     # This is the zedboot image, which is actually booted.
     'zedboot-efi': 'efi',
     # This is the EFI system partition that will be installed to the target.
     'efi': WORKSTATION_INSTALLER_GPT_GUID,
     'zircon-a': WORKSTATION_INSTALLER_GPT_GUID,
     'zircon-r': WORKSTATION_INSTALLER_GPT_GUID,
+
+    # ChromeOS partitions
+    # The zircon-r.signed partition is used as both zedboot on the installation
+    # disk and also the installed zircon-r partition.
+    'zircon-r.signed': ('kernel', WORKSTATION_INSTALLER_GPT_GUID),
+    'zircon-a.signed': WORKSTATION_INSTALLER_GPT_GUID,
+
+    # Common partitions - installed everywhere.
     'storage-sparse': WORKSTATION_INSTALLER_GPT_GUID,
 }
-
 
 
 def ParseSize(size):
@@ -96,24 +105,31 @@ class Partition:
   """
   FAT32_MIN_SIZE = (63 * 1024 * 1024)
 
-  def __init__(self, path, part_type, label):
+  def __init__(self, path, part_type, label, size: typing.Optional[int] = None):
     self.path = path
     self.type = part_type
     self.label = label
 
     # Calculate sector-aligned size of this file.
-    stat_result = os.stat(path)
-    if not stat.S_ISREG(stat_result.st_mode):
-      raise ValueError('{} is not a regular file.'.format(path))
-    rounded_size = stat_result.st_size
+    if path:
+      stat_result = os.stat(path)
+      if not stat.S_ISREG(stat_result.st_mode):
+        raise ValueError('{} is not a regular file.'.format(path))
+      rounded_size = stat_result.st_size
+      size = stat_result.st_size
+    elif size:
+      rounded_size = size
+    else:
+      raise ValueError('Expected a source file or size')
     if rounded_size % Image.SECTOR_SIZE != 0:
       rounded_size += Image.SECTOR_SIZE
       rounded_size -= rounded_size % Image.SECTOR_SIZE
     if self.type == 'efi':
       # Gigaboot won't be able to load zedboot.bin from an EFI partition that's
-      # too small, so we ensure the partition is at least big enough for it to work.
+      # too small, so we ensure the partition is at least big enough for it to
+      # work.
       rounded_size = max(Partition.FAT32_MIN_SIZE, rounded_size)
-    self.real_size = stat_result.st_size
+    self.real_size = size
     self.size = rounded_size
 
 
@@ -133,6 +149,7 @@ class Image:
   CGPT_BIN = paths.FUCHSIA_BUILD_DIR + '/host-tools/cgpt'
   SECTOR_SIZE = 512
   GPT_SECTORS = 2048
+  CROS_RESERVED_SECTORS = 2048
 
   def __init__(self, filename, is_usb, block_size):
     self.filename = filename
@@ -143,6 +160,11 @@ class Image:
     # Allocate space for the primary and backup GPTs
     self.file_size = 2 * Image.GPT_SECTORS * Image.SECTOR_SIZE
     self.partitions = []
+
+    # Set up the ChromeOS reserved partition.
+    reserved_part = Partition(None, 'reserved', 'reserved',
+                              self.CROS_RESERVED_SECTORS * self.SECTOR_SIZE)
+    self.AddPartition(reserved_part)
 
   def _Cgpt(self, args):
     args = [Image.CGPT_BIN] + args
@@ -163,11 +185,19 @@ class Image:
       raise ValueError('Size must be a multiple of SECTOR_SIZE!')
     size = part.size // Image.SECTOR_SIZE
     offset //= Image.SECTOR_SIZE
-    ret = self._Cgpt([
-        'add', '-s',
-        str(size), '-t', part.type, '-b',
-        str(offset), '-l', part.label, self.filename
-    ])
+    cgpt_args = ['add', '-s', str(size), '-t', part.type, '-b', str(offset),
+                 '-l', part.label, self.filename]
+
+    if part.type == 'kernel':
+      # Mark CrOS kernel partition as bootable.
+      # We assume that the disk will only have 1 kernel partition.
+      # -T 1 = Bootloader will try to boot this partition once.
+      # -S 0 = This partition has been successfully booted.
+      # -P 2 = Partition priority is 2. Partition with the highest priority gets
+      # booted.
+      cgpt_args += ['-T', '1', '-S', '1', '-P', '2']
+
+    ret = self._Cgpt(cgpt_args)
     if ret.returncode != 0:
       print('\n'
             '======= CGPT ADD FAILED! =======\n'
@@ -196,6 +226,8 @@ class Image:
       part: partiton to write
       offset: offset in bytes to write to
     """
+    if part.path is None:
+      return
     self.file.seek(offset, 0)
 
     written = 0
@@ -267,15 +299,26 @@ def GetPartitions():
     return []
 
   ret = []
-  for (name, part_type) in IMAGES.items():
+  is_bootable = False
+  for (name, part_types) in IMAGES.items():
     if name not in images:
-      raise ValueError(
-          'Could not find required image {} in images.json!'
-          'Are you building for a platform that supports the installer?'.format(
-              name))
+      print("Skipping image that wasn't built: {}".format(name))
+      continue
+    if not isinstance(part_types, tuple):
+      part_types = (part_types,)
 
-    full_path = os.path.join(paths.FUCHSIA_BUILD_DIR, images[name]['path'])
-    ret.append(Partition(full_path, part_type, name))
+    for part_type in part_types:
+      full_path = os.path.join(paths.FUCHSIA_BUILD_DIR, images[name]['path'])
+      ret.append(Partition(full_path, part_type, name))
+      # Assume that any non-installer partition is a bootable partition.
+      if part_type != WORKSTATION_INSTALLER_GPT_GUID:
+        is_bootable = True
+
+  if not is_bootable:
+    print('ERROR: mkinstaller would generate an unbootable image.' +
+          'Are you building for a supported platform?')
+    return []
+
   return ret
 
 
