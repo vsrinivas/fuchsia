@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "local-connection.h"
+
 #include <fcntl.h>
 #include <lib/fdio/namespace.h>
 #include <lib/zxio/inception.h>
@@ -15,7 +17,6 @@
 #include <fbl/ref_ptr.h>
 
 #include "../private.h"
-#include "local-connection.h"
 #include "local-filesystem.h"
 #include "local-vnode.h"
 
@@ -79,12 +80,12 @@ zx_status_t local_dir_open(fdio_t* io, const char* path, uint32_t flags, uint32_
   return dir->fs->Open(fbl::RefPtr(dir->vn), path, flags, mode, out);
 }
 
-zx_status_t local_dir_get_attr(fdio_t* io, zxio_node_attr_t* attr) {
+zx_status_t local_dir_get_attr(fdio_t* io, zxio_node_attributes_t* attr) {
   *attr = {};
   ZXIO_NODE_ATTR_SET(*attr, protocols, ZXIO_NODE_PROTOCOL_DIRECTORY);
-  ZXIO_NODE_ATTR_SET(*attr, abilities,
-                     ZXIO_OPERATION_ENUMERATE | ZXIO_OPERATION_TRAVERSE |
-                         ZXIO_OPERATION_GET_ATTRIBUTES);
+  ZXIO_NODE_ATTR_SET(
+      *attr, abilities,
+      ZXIO_OPERATION_ENUMERATE | ZXIO_OPERATION_TRAVERSE | ZXIO_OPERATION_GET_ATTRIBUTES);
   ZXIO_NODE_ATTR_SET(*attr, link_count, 1);
   return ZX_OK;
 }

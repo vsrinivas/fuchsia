@@ -34,9 +34,7 @@ const zxio_node_internal_t* to_internal(const zxio_node_t* io) {
   return reinterpret_cast<const zxio_node_internal_t*>(io);
 }
 
-zxio_node_t* to_node(zxio_t* io) {
-  return reinterpret_cast<zxio_node_t*>(io);
-}
+zxio_node_t* to_node(zxio_t* io) { return reinterpret_cast<zxio_node_t*>(io); }
 
 zx_status_t zxio_node_close(zxio_t* io) {
   zxio_node_internal_t* node = to_internal(io);
@@ -78,11 +76,11 @@ zx_status_t zxio_node_clone(zxio_t* io, zx_handle_t* out_handle) {
   return zxio_raw_remote_clone(zx::unowned_channel(to_internal(io)->control), out_handle);
 }
 
-zx_status_t zxio_node_attr_get(zxio_t* io, zxio_node_attr_t* out_attr) {
+zx_status_t zxio_node_attr_get(zxio_t* io, zxio_node_attributes_t* out_attr) {
   return zxio_raw_remote_attr_get(zx::unowned_channel(to_internal(io)->control), out_attr);
 }
 
-zx_status_t zxio_node_attr_set(zxio_t* io, const zxio_node_attr_t* attr) {
+zx_status_t zxio_node_attr_set(zxio_t* io, const zxio_node_attributes_t* attr) {
   return zxio_raw_remote_attr_set(zx::unowned_channel(to_internal(io)->control), attr);
 }
 
@@ -126,6 +124,4 @@ void zxio_node_init(zxio_node_t* node, zx_handle_t control, const zxio_extension
   remote->extension_ops = ops;
 }
 
-zx_handle_t zxio_node_borrow_channel(const zxio_node_t* node) {
-  return to_internal(node)->control;
-}
+zx_handle_t zxio_node_borrow_channel(const zxio_node_t* node) { return to_internal(node)->control; }

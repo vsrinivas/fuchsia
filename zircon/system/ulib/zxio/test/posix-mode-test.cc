@@ -9,7 +9,7 @@
 
 #include <zxtest/zxtest.h>
 
-// Tests the conversion between |zxio_node_attr_t| and POSIX |mode_t|.
+// Tests the conversion between |zxio_node_attributes_t| and POSIX |mode_t|.
 
 TEST(NodeProtocolsToPosixType, Basic) {
   EXPECT_EQ(S_IFREG, zxio_node_protocols_to_posix_type(ZXIO_NODE_PROTOCOL_CONNECTOR));

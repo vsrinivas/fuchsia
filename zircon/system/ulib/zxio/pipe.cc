@@ -41,7 +41,7 @@ static zx_status_t zxio_pipe_clone(zxio_t* io, zx_handle_t* out_handle) {
   return ZX_OK;
 }
 
-static zx_status_t zxio_pipe_attr_get(zxio_t* io, zxio_node_attr_t* out_attr) {
+static zx_status_t zxio_pipe_attr_get(zxio_t* io, zxio_node_attributes_t* out_attr) {
   *out_attr = {};
   ZXIO_NODE_ATTR_SET(*out_attr, protocols, ZXIO_NODE_PROTOCOL_PIPE);
   ZXIO_NODE_ATTR_SET(

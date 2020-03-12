@@ -164,7 +164,7 @@ zx_status_t zxio_sync(zxio_t* io) {
   return zio->ops->sync(io);
 }
 
-zx_status_t zxio_attr_get(zxio_t* io, zxio_node_attr_t* out_attr) {
+zx_status_t zxio_attr_get(zxio_t* io, zxio_node_attributes_t* out_attr) {
   if (!zxio_is_valid(io)) {
     return ZX_ERR_BAD_HANDLE;
   }
@@ -172,7 +172,7 @@ zx_status_t zxio_attr_get(zxio_t* io, zxio_node_attr_t* out_attr) {
   return zio->ops->attr_get(io, out_attr);
 }
 
-zx_status_t zxio_attr_set(zxio_t* io, const zxio_node_attr_t* attr) {
+zx_status_t zxio_attr_set(zxio_t* io, const zxio_node_attributes_t* attr) {
   if (!zxio_is_valid(io)) {
     return ZX_ERR_BAD_HANDLE;
   }

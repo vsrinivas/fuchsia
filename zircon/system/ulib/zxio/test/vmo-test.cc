@@ -7,8 +7,8 @@
 #include <lib/zxio/inception.h>
 #include <lib/zxio/zxio.h>
 #include <limits.h>
-
 #include <zircon/compiler.h>
+
 #include <zxtest/zxtest.h>
 
 constexpr size_t kSize = 300;
@@ -48,7 +48,7 @@ TEST_F(VmoTest, Basic) {
   ASSERT_OK(zxio_clone(io, clone.reset_and_get_address()));
   ASSERT_STATUS(ZX_ERR_NOT_SUPPORTED, zxio_sync(io));
 
-  zxio_node_attr_t attr = {};
+  zxio_node_attributes_t attr = {};
   ASSERT_OK(zxio_attr_get(io, &attr));
   EXPECT_EQ(PAGE_SIZE, attr.content_size);
   ASSERT_STATUS(ZX_ERR_NOT_SUPPORTED, zxio_attr_set(io, &attr));
@@ -121,21 +121,24 @@ TEST_F(VmoTest, SeekNegativeOverflow) {
   ASSERT_EQ(original_seek, new_seek);
 
   // Seeking backwards from the start past zero should fail, without moving the seek pointer.
-  ASSERT_STATUS(ZX_ERR_OUT_OF_RANGE, zxio_seek(io, ZXIO_SEEK_ORIGIN_START, kTooFarBackwards, &new_seek));
+  ASSERT_STATUS(ZX_ERR_OUT_OF_RANGE,
+                zxio_seek(io, ZXIO_SEEK_ORIGIN_START, kTooFarBackwards, &new_seek));
   ASSERT_OK(zxio_seek(io, ZXIO_SEEK_ORIGIN_CURRENT, 0, &new_seek));
   ASSERT_EQ(original_seek, new_seek);
 
   new_seek = 42;
 
   // Seeking backwards from the seek pointer past zero should fail, without moving the seek pointer.
-  ASSERT_STATUS(ZX_ERR_OUT_OF_RANGE, zxio_seek(io, ZXIO_SEEK_ORIGIN_CURRENT, kTooFarBackwards, &new_seek));
+  ASSERT_STATUS(ZX_ERR_OUT_OF_RANGE,
+                zxio_seek(io, ZXIO_SEEK_ORIGIN_CURRENT, kTooFarBackwards, &new_seek));
   ASSERT_OK(zxio_seek(io, ZXIO_SEEK_ORIGIN_CURRENT, 0, &new_seek));
   ASSERT_EQ(original_seek, new_seek);
 
   new_seek = 42;
 
   // Seeking backwards from the end past zero should fail, without moving the seek pointer.
-  ASSERT_STATUS(ZX_ERR_OUT_OF_RANGE, zxio_seek(io, ZXIO_SEEK_ORIGIN_END, kTooFarBackwards, &new_seek));
+  ASSERT_STATUS(ZX_ERR_OUT_OF_RANGE,
+                zxio_seek(io, ZXIO_SEEK_ORIGIN_END, kTooFarBackwards, &new_seek));
   ASSERT_OK(zxio_seek(io, ZXIO_SEEK_ORIGIN_CURRENT, 0, &new_seek));
   ASSERT_EQ(original_seek, new_seek);
 }
@@ -187,7 +190,8 @@ TEST_F(HugeVmoTest, SeekPositiveOverflow) {
 
   // Seeking forward from the seek pointer past past infinity should fail, without moving the seek
   // pointer.
-  ASSERT_STATUS(ZX_ERR_OUT_OF_RANGE, zxio_seek(io, ZXIO_SEEK_ORIGIN_CURRENT, kTooFarForwards, &new_seek));
+  ASSERT_STATUS(ZX_ERR_OUT_OF_RANGE,
+                zxio_seek(io, ZXIO_SEEK_ORIGIN_CURRENT, kTooFarForwards, &new_seek));
   ASSERT_OK(zxio_seek(io, ZXIO_SEEK_ORIGIN_CURRENT, 0, &new_seek));
   ASSERT_EQ(original_seek, new_seek);
 
@@ -195,14 +199,16 @@ TEST_F(HugeVmoTest, SeekPositiveOverflow) {
 
   // Seeking forward from the end past past infinity should fail, without moving the seek
   // pointer.
-  ASSERT_STATUS(ZX_ERR_OUT_OF_RANGE, zxio_seek(io, ZXIO_SEEK_ORIGIN_END, kTooFarForwards, &new_seek));
+  ASSERT_STATUS(ZX_ERR_OUT_OF_RANGE,
+                zxio_seek(io, ZXIO_SEEK_ORIGIN_END, kTooFarForwards, &new_seek));
   ASSERT_OK(zxio_seek(io, ZXIO_SEEK_ORIGIN_CURRENT, 0, &new_seek));
   ASSERT_EQ(original_seek, new_seek);
 }
 
 class VmoCloseTest : public VmoTest {
  public:
-  void TearDown() override { /* The test case body will exercise closing and destroying */ }
+  void TearDown() override { /* The test case body will exercise closing and destroying */
+  }
 };
 
 TEST_F(VmoCloseTest, UseAfterClose) {

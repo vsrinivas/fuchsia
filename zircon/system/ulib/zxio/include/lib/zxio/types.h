@@ -154,8 +154,8 @@ typedef struct zxio_node_attr {
   //
   // If a particular field is absent, it should be set to zero/none,
   // and the corresponding presence indicator will be false.
-  // Therefore, a completely empty |zxio_node_attr_t| may be conveniently
-  // obtained via value-initialization e.g. `zxio_node_attr_t a = {};`.
+  // Therefore, a completely empty |zxio_node_attributes_t| may be conveniently
+  // obtained via value-initialization e.g. `zxio_node_attributes_t a = {};`.
   struct zxio_node_attr_has_t {
     bool protocols;
     bool abilities;
@@ -210,11 +210,11 @@ typedef struct zxio_node_attr {
   }
   constexpr bool operator!=(const zxio_node_attr& other) const { return !(*this == other); }
 #endif  // _cplusplus
-} zxio_node_attr_t;
+} zxio_node_attributes_t;
 
 #define ZXIO_NODE_ATTR_SET(attr, field_name, value) \
   do {                                              \
-    zxio_node_attr_t* _tmp_attr = &(attr);          \
+    zxio_node_attributes_t* _tmp_attr = &(attr);    \
     _tmp_attr->field_name = value;                  \
     _tmp_attr->has.field_name = true;               \
   } while (0)

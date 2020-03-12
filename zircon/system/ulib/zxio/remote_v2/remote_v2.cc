@@ -21,8 +21,8 @@ namespace fio2 = llcpp::fuchsia::io2;
 
 namespace {
 
-zxio_node_attr_t ToZxioNodeAttr(const fio2::NodeAttributes& attr) {
-  zxio_node_attr_t zxio_attr = {};
+zxio_node_attributes_t ToZxioNodeAttributes(const fio2::NodeAttributes& attr) {
+  zxio_node_attributes_t zxio_attr = {};
   if (attr.has_protocols()) {
     ZXIO_NODE_ATTR_SET(zxio_attr, protocols, ToZxioNodeProtocols(attr.protocols()));
   }
@@ -50,11 +50,11 @@ zxio_node_attr_t ToZxioNodeAttr(const fio2::NodeAttributes& attr) {
   return zxio_attr;
 }
 
-fio2::NodeAttributes ToIo2NodeAttributes(fidl::Allocator& allocator, const zxio_node_attr_t& attr) {
+fio2::NodeAttributes ToIo2NodeAttributes(fidl::Allocator& allocator,
+                                         const zxio_node_attributes_t& attr) {
   fio2::NodeAttributes::Builder builder(allocator.make<fio2::NodeAttributes::Frame>());
   if (attr.has.protocols) {
-    builder.set_protocols(
-        allocator.make<fio2::NodeProtocols>(ToIo2NodeProtocols(attr.protocols)));
+    builder.set_protocols(allocator.make<fio2::NodeProtocols>(ToIo2NodeProtocols(attr.protocols)));
   }
   if (attr.has.abilities) {
     builder.set_abilities(allocator.make<fio2::Operations>(ToIo2Abilities(attr.abilities)));
@@ -191,7 +191,7 @@ zx_status_t zxio_remote_sync(zxio_t* io) {
   return ZX_OK;
 }
 
-zx_status_t zxio_remote_v2_attr_get(zxio_t* io, zxio_node_attr_t* out_attr) {
+zx_status_t zxio_remote_v2_attr_get(zxio_t* io, zxio_node_attributes_t* out_attr) {
   RemoteV2 rio(io);
   auto result = fio2::Node::Call::GetAttributes(rio.control(), fio2::NodeAttributesQuery::mask);
   if (result.status() != ZX_OK) {
@@ -201,11 +201,11 @@ zx_status_t zxio_remote_v2_attr_get(zxio_t* io, zxio_node_attr_t* out_attr) {
     return result->result.err();
   }
   const fio2::NodeAttributes& attributes = result->result.response().attributes;
-  *out_attr = ToZxioNodeAttr(attributes);
+  *out_attr = ToZxioNodeAttributes(attributes);
   return ZX_OK;
 }
 
-zx_status_t zxio_remote_v2_attr_set(zxio_t* io, const zxio_node_attr_t* attr) {
+zx_status_t zxio_remote_v2_attr_set(zxio_t* io, const zxio_node_attributes_t* attr) {
   fidl::BufferAllocator<1024> allocator;
   auto attributes = ToIo2NodeAttributes(allocator, *attr);
   RemoteV2 rio(io);

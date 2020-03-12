@@ -111,12 +111,12 @@ static zx_status_t fdio_zxio_sync(fdio_t* io) {
   return zxio_sync(z);
 }
 
-static zx_status_t fdio_zxio_get_attr(fdio_t* io, zxio_node_attr_t* out) {
+static zx_status_t fdio_zxio_get_attr(fdio_t* io, zxio_node_attributes_t* out) {
   zxio_t* z = fdio_get_zxio(io);
   return zxio_attr_get(z, out);
 }
 
-static zx_status_t fdio_zxio_set_attr(fdio_t* io, const zxio_node_attr_t* attr) {
+static zx_status_t fdio_zxio_set_attr(fdio_t* io, const zxio_node_attributes_t* attr) {
   zxio_t* z = fdio_get_zxio(io);
   return zxio_attr_set(z, attr);
 }

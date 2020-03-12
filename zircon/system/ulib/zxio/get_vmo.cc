@@ -23,7 +23,7 @@ static zx_status_t read_at(zxio_t* io, void* buf, size_t len, off_t offset, size
     if (status == ZX_ERR_SHOULD_WAIT) {
       zxio_signals_t observed = ZXIO_SIGNAL_NONE;
       status = zxio_wait_one(io, ZXIO_SIGNAL_READABLE | ZXIO_SIGNAL_READ_DISABLED, ZX_TIME_INFINITE,
-                            &observed);
+                             &observed);
       if (status != ZX_OK) {
         return status;
       }
@@ -49,7 +49,7 @@ constexpr size_t kMaxWindow = 64 << 20;
 static zx_status_t read_file_into_vmo(zxio_t* io, zx_handle_t* out_vmo, size_t* out_size) {
   auto current_vmar = zx::vmar::root_self();
 
-  zxio_node_attr_t attr;
+  zxio_node_attributes_t attr;
   zx_status_t status = zxio_attr_get(io, &attr);
   if (status != ZX_OK) {
     return status;

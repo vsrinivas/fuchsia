@@ -21,7 +21,7 @@ TEST(NullTest, Basic) {
 
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_sync(&io));
 
-  zxio_node_attr_t attr = {};
+  zxio_node_attributes_t attr = {};
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_attr_get(&io, &attr));
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_attr_set(&io, &attr));
   char buffer[1024];

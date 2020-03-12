@@ -392,7 +392,7 @@ TEST_F(FileConcurrentAccess, CloseShouldInterruptOtherOps) {
 
   std::atomic<bool> get_attr_returned = false;
   std::future<zx_status_t> concurrent = std::async(std::launch::async, [&] {
-    zxio_node_attr_t attr;
+    zxio_node_attributes_t attr;
     zx_status_t status = zxio_attr_get(&file_.io, &attr);
     get_attr_returned.store(true);
     return status;

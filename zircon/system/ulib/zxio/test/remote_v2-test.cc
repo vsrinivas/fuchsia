@@ -123,7 +123,7 @@ TEST_F(RemoteV2, GetAttributes) {
   };
   ASSERT_NO_FAILURES(StartServer<TestServer>());
 
-  zxio_node_attr_t attr = {};
+  zxio_node_attributes_t attr = {};
   ASSERT_OK(zxio_attr_get(&remote_.io, &attr));
 
   EXPECT_TRUE(attr.has.protocols);
@@ -149,7 +149,7 @@ TEST_F(RemoteV2, GetAttributesError) {
   };
   ASSERT_NO_FAILURES(StartServer<TestServer>());
 
-  zxio_node_attr_t attr = {};
+  zxio_node_attributes_t attr = {};
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, zxio_attr_get(&remote_.io, &attr));
 }
 
@@ -179,7 +179,7 @@ TEST_F(RemoteV2, SetAttributes) {
   TestServer* server;
   ASSERT_NO_FAILURES(server = StartServer<TestServer>());
 
-  zxio_node_attr_t attr = {};
+  zxio_node_attributes_t attr = {};
   ZXIO_NODE_ATTR_SET(attr, creation_time, kCreationTime);
   ASSERT_OK(zxio_attr_set(&remote_.io, &attr));
   EXPECT_TRUE(server->called_.load());
@@ -195,7 +195,7 @@ TEST_F(RemoteV2, SetAttributesError) {
   };
   ASSERT_NO_FAILURES(StartServer<TestServer>());
 
-  zxio_node_attr_t attr = {};
+  zxio_node_attributes_t attr = {};
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, zxio_attr_set(&remote_.io, &attr));
 }
 

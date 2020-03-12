@@ -59,7 +59,7 @@ static zx_status_t zxio_vmofile_clone(zxio_t* io, zx_handle_t* out_handle) {
   return ZX_OK;
 }
 
-static zx_status_t zxio_vmofile_attr_get(zxio_t* io, zxio_node_attr_t* out_attr) {
+static zx_status_t zxio_vmofile_attr_get(zxio_t* io, zxio_node_attributes_t* out_attr) {
   auto file = reinterpret_cast<zxio_vmofile_t*>(io);
   *out_attr = {};
   ZXIO_NODE_ATTR_SET(*out_attr, protocols, ZXIO_NODE_PROTOCOL_FILE | ZXIO_NODE_PROTOCOL_MEMORY);

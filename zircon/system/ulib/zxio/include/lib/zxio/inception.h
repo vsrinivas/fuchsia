@@ -73,7 +73,7 @@ zx_status_t zxio_file_v2_init(zxio_storage_t* remote, zx_handle_t control, zx_ha
 
 // These are defined in zxio today because the "mode" field in
 // |fuchsia.io/NodeAttributes| is POSIX, whereas the "protocols" and "abilities"
-// field in |zxio_node_attr_t| aligns with |fuchsia.io2|.
+// field in |zxio_node_attributes_t| aligns with |fuchsia.io2|.
 
 uint32_t zxio_node_protocols_to_posix_type(zxio_node_protocols_t protocols);
 uint32_t zxio_abilities_to_posix_permissions_for_file(zxio_abilities_t abilities);

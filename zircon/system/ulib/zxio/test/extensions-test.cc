@@ -37,13 +37,9 @@ class TestServerBase : public llcpp::fuchsia::io::Node::Interface {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Sync(SyncCompleter::Sync completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
+  void Sync(SyncCompleter::Sync completer) override { completer.Close(ZX_ERR_NOT_SUPPORTED); }
 
-  void GetAttr(GetAttrCompleter::Sync completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
+  void GetAttr(GetAttrCompleter::Sync completer) override { completer.Close(ZX_ERR_NOT_SUPPORTED); }
 
   void SetAttr(uint32_t flags, llcpp::fuchsia::io::NodeAttributes attribute,
                SetAttrCompleter::Sync completer) override {
@@ -123,10 +119,10 @@ TEST_F(ExtensionNode, CloseError) {
 TEST_F(ExtensionNode, SkipClose) {
   zxio_node_t node;
   constexpr static zxio_extension_ops_t extension_ops = {
-    .destroy = nullptr,
-    .skip_close_call = true,
-    .read_vector = nullptr,
-    .write_vector = nullptr,
+      .destroy = nullptr,
+      .skip_close_call = true,
+      .read_vector = nullptr,
+      .write_vector = nullptr,
   };
   zxio_node_init(&node, control_client_end_.release(), &extension_ops);
 
@@ -206,6 +202,7 @@ TEST_F(ExtensionNode, GetAttr) {
       completer.Reply(ZX_OK, attr);
     }
     bool called() const { return called_.load(); }
+
    private:
     std::atomic<bool> called_ = false;
   };
@@ -213,7 +210,7 @@ TEST_F(ExtensionNode, GetAttr) {
   ASSERT_NO_FAILURES(server = StartServer<TestServer>());
 
   ASSERT_FALSE(server->called());
-  zxio_node_attr_t attr;
+  zxio_node_attributes_t attr;
   ASSERT_OK(zxio_attr_get(&node.io, &attr));
   ASSERT_TRUE(server->called());
   ASSERT_TRUE(attr.has.content_size);

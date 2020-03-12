@@ -97,12 +97,12 @@ void zxio_wait_end(zxio_t* io, zx_signals_t zx_signals, zxio_signals_t* out_zxio
 zx_status_t zxio_sync(zxio_t* io);
 
 // Returns information about the file.
-zx_status_t zxio_attr_get(zxio_t* io, zxio_node_attr_t* out_attr);
+zx_status_t zxio_attr_get(zxio_t* io, zxio_node_attributes_t* out_attr);
 
 // Update information about the file.
 //
 // The presence of a particular field in |attr| indicates it is to be updated.
-zx_status_t zxio_attr_set(zxio_t* io, const zxio_node_attr_t* attr);
+zx_status_t zxio_attr_set(zxio_t* io, const zxio_node_attributes_t* attr);
 
 // File
 

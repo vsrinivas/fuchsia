@@ -5,10 +5,10 @@
 #ifndef ZIRCON_SYSTEM_ULIB_ZXIO_PRIVATE_H_
 #define ZIRCON_SYSTEM_ULIB_ZXIO_PRIVATE_H_
 
+#include <lib/zx/channel.h>
+#include <lib/zx/event.h>
 #include <lib/zxio/extensions.h>
 #include <lib/zxio/zxio.h>
-#include <lib/zx/event.h>
-#include <lib/zx/channel.h>
 #include <zircon/types.h>
 
 #include <algorithm>
@@ -148,8 +148,9 @@ zx_status_t zxio_raw_remote_close(zx::unowned_channel control);
 
 zx_status_t zxio_raw_remote_clone(zx::unowned_channel source, zx_handle_t* out_handle);
 
-zx_status_t zxio_raw_remote_attr_get(zx::unowned_channel control, zxio_node_attr_t* out_attr);
+zx_status_t zxio_raw_remote_attr_get(zx::unowned_channel control, zxio_node_attributes_t* out_attr);
 
-zx_status_t zxio_raw_remote_attr_set(zx::unowned_channel control, const zxio_node_attr_t* attr);
+zx_status_t zxio_raw_remote_attr_set(zx::unowned_channel control,
+                                     const zxio_node_attributes_t* attr);
 
 #endif  // ZIRCON_SYSTEM_ULIB_ZXIO_PRIVATE_H_
