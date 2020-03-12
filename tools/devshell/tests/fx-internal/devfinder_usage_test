@@ -1,0 +1,80 @@
+
+#!/bin/bash
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### Test expected usage of device-finder in fx scripts
+
+
+BT_FILE_DEPS=(
+  "scripts/fx"
+  "tools/devshell/lib/vars.sh"
+  "tools/devshell/lib/prebuilt.sh"
+  "tools/devshell/set-device"
+  "tools/devshell/get-device-addr"
+)
+
+declare fx devfinder
+
+BT_SET_UP() {
+  source "${BT_TEMP_DIR}/tools/devshell/tests/lib/fuchsia-mock.sh"
+  fx="$(btf::setup_fx)"
+  devfinder="$(btf::make_installed_hosttools_mock device-finder)"
+}
+
+not_expect_args() {
+  local mock_state_file="$1"
+  shift
+  for arg in "$@"; do
+    if btf::does-mock-args-contain "${mock_state_file}" "$arg"; then
+      btf::_fail 1 "Argument ${arg} found but not expected in call to devfinder: ${mock_state_file}"
+      return 1
+    fi
+  done
+}
+
+expect_args() {
+  local mock_state_file="$1"
+  shift
+  for arg in "$@"; do
+    if btf::does-mock-args-not-contain "${mock_state_file}" "$arg"; then
+      btf::_fail 1 "Expected argument ${arg} not found in call to devfinder: ${mock_state_file}"
+      return 1
+    fi
+  done
+}
+
+# ensure that set-device invocations of device-finder use the proper network flags
+TEST_setdevice() {
+  ${fx} set-device
+  expect_args "${devfinder}.mock_state" "-netboot" "-ipv4=false"
+  not_expect_args "${devfinder}.mock_state" "-mdns=false"
+} 
+
+# ensure that get-fuchsia-device-addr invocations of device-finder use the proper network flags
+TEST_getdeviceaddr_singledevice() {
+  local ip="fe80::c0ff:eec0:ffee%coffee"
+  echo "${ip}" > "${devfinder}.mock_stdout"
+  ${fx} get-device-addr > /dev/null
+  expect_args "${devfinder}.mock_state" "-netboot" "-ipv4=false"
+  not_expect_args "${devfinder}.mock_state" "-mdns=false"
+}
+
+# ensure that get-fuchsia-device-addr invocations of device-finder use the proper network flags
+TEST_getdeviceaddr_multipledevice() {
+  local ip1="ccff::c0ff:eec0:ffee%coffee"
+  local ip2="00ee::c0ff:eec0:ffee%coffee"
+  echo -e "${ip1}\n${ip2}" > "${devfinder}.mock_stdout"
+  # in this test we don't care about the results of get-device-addr
+  ${fx} get-device-addr 2&>1 > /dev/null
+  # first device-finder call is for a regular list and
+  # second device-finder call is for a -full list. Both require the same network
+  # flags.
+  expect_args "${devfinder}.mock_state.1" "-netboot" "-ipv4=false"
+  not_expect_args "${devfinder}.mock_state.1" "-mdns=false"
+  expect_args "${devfinder}.mock_state.2" "-netboot" "-ipv4=false"
+  not_expect_args "${devfinder}.mock_state.2" "-mdns=false"
+}
+
+BT_RUN_TESTS "$@"

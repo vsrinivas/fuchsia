@@ -59,28 +59,26 @@ btf::setup_fx_with_metrics() {
   btf::setup_fx 1
 }
 
-btf::make_hosttools_mock() {
-  local -r _HOST_OUT_DIR="host_x64"
-  local -r _REL_BUILD_DIR="out/default"
-  local -r _FUCHSIA_DIR="${BT_TEMP_DIR}"
-  local -r _FUCHSIA_BUILD_DIR="${_FUCHSIA_DIR}/${_REL_BUILD_DIR}"
+btf::_make_buildtool_mock() {
+  local rel_path="$1"
+  local path="${BT_TEMP_DIR}/${rel_path}"
+  btf::make_mock "${path}"
+  echo "${path}"
+}
 
+btf::make_installed_hosttools_mock() {
   local hosttool_name="$1"
-  local hosttool_path="${_FUCHSIA_BUILD_DIR}/${_HOST_OUT_DIR}/${hosttool_name}"
-  btf::make_mock "${hosttool_path}"
-  echo "${hosttool_path}"
+  btf::_make_buildtool_mock "out/default/host-tools/${hosttool_name}"
+}
+
+btf::make_hosttools_mock() {
+  local hosttool_name="$1"
+  btf::_make_buildtool_mock "out/default/host_x64/${hosttool_name}"
 }
 
 btf::make_zircontools_mock() {
-  local -r _ZIRCON_TOOLS_DIR="tools"
-  local -r _REL_BUILD_DIR="out/default.zircon"
-  local -r _FUCHSIA_DIR="${BT_TEMP_DIR}"
-  local -r _ZIRCON_BUILD_DIR="${_FUCHSIA_DIR}/${_REL_BUILD_DIR}"
-
   local zircontool_name="$1"
-  local zircontool_path="${_ZIRCON_BUILD_DIR}/${_ZIRCON_TOOLS_DIR}/${zircontool_name}"
-  btf::make_mock "${zircontool_path}"
-  echo "${zircontool_path}"
+  btf::_make_buildtool_mock "out/default.zircon/tools/${zircontool_name}"
 }
 
 btf::make_mock_binary() {
@@ -131,7 +129,7 @@ btf::does-mock-args-contain() {
   if [[ $el -gt $al ]]; then
     return 1
   fi
-  for (( a=0; a<"$(( al - el ))"; a++ )); do
+  for (( a=1; a<"$(( al - el + 1 ))"; a++ )); do
     for (( e=0; e<"${el}"; e++ )); do
       local shifted="$((a + e))"
       if [[ "${expected[$e]}" != "_ANY_" && "${actual[$shifted]}" != "${expected[$e]}" ]]; then
@@ -156,7 +154,7 @@ btf::does-mock-args-not-contain() {
   if [[ $el -gt $al ]]; then
     return 0
   fi
-  for (( a=0; a<"$(( al - el ))"; a++ )); do
+  for (( a=1; a<"$(( al - el + 1 ))"; a++ )); do
     for (( e=0; e<"${el}"; e++ )); do
       local shifted="$((a + e))"
       if [[ "${expected[$e]}" != "_ANY_" && "${actual[$shifted]}" != "${expected[$e]}" ]]; then
