@@ -20,6 +20,10 @@ import("//build/packages/prebuilt_test_package.gni")
 #
 #     Environment scope is defined in //build/testing/test_spec.gni
 #
+#   disabled_tests (optional)
+#     [list of scopes] List of scopes containing "package" and "component_name"
+#     entries to disable.
+#
 template("prebuilt_test_manifest") {
   assert(defined(invoker.archive_dir), "archive_dir must be defined.")
 
@@ -33,13 +37,24 @@ template("prebuilt_test_manifest") {
     if (defined(test.runner)) {
       runner = test.runner
     }
-    prebuilt_test_package(test_package) {
-      archive = "${invoker.archive_dir}/${test_package}.far"
-      component_name = component_name
-      runner = runner
-      forward_variables_from(invoker, [ "environments" ])
+    test_disabled = false
+    if (defined(invoker.disabled_tests)) {
+      foreach(disabled_test, invoker.disabled_tests) {
+        if (test_package == disabled_test.package &&
+            component_name == disabled_test.component_name) {
+          test_disabled = true
+        }
+      }
     }
-    test_targets += [ ":${test_package}" ]
+    if (!test_disabled) {
+      prebuilt_test_package(test_package) {
+        archive = "${invoker.archive_dir}/${test_package}.far"
+        component_name = component_name
+        runner = runner
+        forward_variables_from(invoker, [ "environments" ])
+      }
+      test_targets += [ ":${test_package}" ]
+    }
   }
 
   group(target_name) {
