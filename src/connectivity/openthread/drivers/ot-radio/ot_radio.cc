@@ -39,12 +39,12 @@ namespace ot {
 namespace lowpan_spinel_fidl = ::llcpp::fuchsia::lowpan::spinel;
 
 enum {
-  COMPONENT_PDEV,
-  COMPONENT_SPI,
-  COMPONENT_INT_GPIO,
-  COMPONENT_RESET_GPIO,
-  COMPONENT_BOOTLOADER_GPIO,
-  COMPONENT_COUNT,
+  FRAGMENT_PDEV,
+  FRAGMENT_SPI,
+  FRAGMENT_INT_GPIO,
+  FRAGMENT_RESET_GPIO,
+  FRAGMENT_BOOTLOADER_GPIO,
+  FRAGMENT_COUNT,
 };
 
 OtRadioDevice::LowpanSpinelDeviceFidlImpl::LowpanSpinelDeviceFidlImpl(OtRadioDevice& ot_radio)
@@ -188,22 +188,22 @@ zx_status_t OtRadioDevice::Init() {
     return status;
   }
 
-  zx_device_t* components[COMPONENT_COUNT];
+  zx_device_t* fragments[FRAGMENT_COUNT];
   size_t actual;
-  composite_get_components(&composite, components, fbl::count_of(components), &actual);
-  if (actual != fbl::count_of(components)) {
-    zxlogf(ERROR, "could not get components\n");
+  composite_get_fragments(&composite, fragments, fbl::count_of(fragments), &actual);
+  if (actual != fbl::count_of(fragments)) {
+    zxlogf(ERROR, "could not get fragments\n");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  spi_ = ddk::SpiProtocolClient(components[COMPONENT_SPI]);
+  spi_ = ddk::SpiProtocolClient(fragments[FRAGMENT_SPI]);
   if (!spi_.is_valid()) {
     zxlogf(ERROR, "ot-radio %s: failed to acquire spi\n", __func__);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  status = device_get_protocol(components[COMPONENT_INT_GPIO], ZX_PROTOCOL_GPIO,
-                               &gpio_[OT_RADIO_INT_PIN]);
+  status =
+      device_get_protocol(fragments[FRAGMENT_INT_GPIO], ZX_PROTOCOL_GPIO, &gpio_[OT_RADIO_INT_PIN]);
   if (status != ZX_OK) {
     zxlogf(ERROR, "ot-radio %s: failed to acquire interrupt gpio\n", __func__);
     return status;
@@ -223,7 +223,7 @@ zx_status_t OtRadioDevice::Init() {
     return status;
   }
 
-  status = device_get_protocol(components[COMPONENT_RESET_GPIO], ZX_PROTOCOL_GPIO,
+  status = device_get_protocol(fragments[FRAGMENT_RESET_GPIO], ZX_PROTOCOL_GPIO,
                                &gpio_[OT_RADIO_RESET_PIN]);
   if (status != ZX_OK) {
     zxlogf(ERROR, "ot-radio %s: failed to acquire reset gpio\n", __func__);
@@ -237,7 +237,7 @@ zx_status_t OtRadioDevice::Init() {
     return status;
   }
 
-  status = device_get_protocol(components[COMPONENT_BOOTLOADER_GPIO], ZX_PROTOCOL_GPIO,
+  status = device_get_protocol(fragments[FRAGMENT_BOOTLOADER_GPIO], ZX_PROTOCOL_GPIO,
                                &gpio_[OT_RADIO_BOOTLOADER_PIN]);
   if (status != ZX_OK) {
     zxlogf(ERROR, "ot-radio %s: failed to acquire radio bootloader pin\n", __func__);
@@ -253,7 +253,7 @@ zx_status_t OtRadioDevice::Init() {
   }
 
   uint32_t device_id;
-  status = device_get_metadata(components[COMPONENT_PDEV], DEVICE_METADATA_PRIVATE, &device_id,
+  status = device_get_metadata(fragments[FRAGMENT_PDEV], DEVICE_METADATA_PRIVATE, &device_id,
                                sizeof(device_id), &actual);
   if (status != ZX_OK || sizeof(device_id) != actual) {
     zxlogf(ERROR, "ot-radio: failed to read metadata\n");

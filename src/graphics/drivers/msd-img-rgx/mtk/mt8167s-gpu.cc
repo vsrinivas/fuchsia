@@ -40,7 +40,7 @@ void magma_indriver_test(zx_device_t* device, void* driver_device_handle);
 #endif
 
 namespace {
-struct ComponentDescription {
+struct FragmentDescription {
   static constexpr uint32_t kPowerResetBBit = 0;
   static constexpr uint32_t kPowerIsoBit = 1;
   static constexpr uint32_t kPowerOnBit = 2;
@@ -61,13 +61,13 @@ struct ComponentDescription {
   uint32_t sram_ack_bits;
 };
 
-zx_status_t ComponentDescription::PowerOn(ddk::MmioBuffer* power_gpu_buffer) {
+zx_status_t FragmentDescription::PowerOn(ddk::MmioBuffer* power_gpu_buffer) {
   power_gpu_buffer->SetBit<uint32_t>(kPowerOnBit, reg_offset);
   power_gpu_buffer->SetBit<uint32_t>(kPowerOn2ndBit, reg_offset);
   zx::time timeout = zx::deadline_after(zx::msec(100));  // Arbitrary timeout
   while (!IsPoweredOn(power_gpu_buffer, on_bit_offset)) {
     if (zx::clock::get_monotonic() > timeout) {
-      GPU_ERROR("Timed out powering on component");
+      GPU_ERROR("Timed out powering on fragment");
       return ZX_ERR_TIMED_OUT;
     }
   }
@@ -87,7 +87,7 @@ zx_status_t ComponentDescription::PowerOn(ddk::MmioBuffer* power_gpu_buffer) {
   return ZX_OK;
 }
 
-zx_status_t ComponentDescription::PowerDown(ddk::MmioBuffer* power_gpu_buffer) {
+zx_status_t FragmentDescription::PowerDown(ddk::MmioBuffer* power_gpu_buffer) {
   if (sram_bits) {
     power_gpu_buffer->SetBits32(sram_bits, reg_offset);
     zx::time timeout = zx::deadline_after(zx::msec(100));  // Arbitrary timeout
@@ -108,30 +108,30 @@ zx_status_t ComponentDescription::PowerDown(ddk::MmioBuffer* power_gpu_buffer) {
   zx::time timeout = zx::deadline_after(zx::msec(100));  // Arbitrary timeout
   while (IsPoweredOn(power_gpu_buffer, on_bit_offset)) {
     if (zx::clock::get_monotonic() > timeout) {
-      GPU_ERROR("Timed out powering down component");
+      GPU_ERROR("Timed out powering down fragment");
       return ZX_ERR_TIMED_OUT;
     }
   }
   return ZX_OK;
 }
 
-bool ComponentDescription::IsPoweredOn(ddk::MmioBuffer* power_gpu_buffer, uint32_t bit) {
+bool FragmentDescription::IsPoweredOn(ddk::MmioBuffer* power_gpu_buffer, uint32_t bit) {
   return power_gpu_buffer->GetBit<uint32_t>(bit, kPwrStatus) &&
          power_gpu_buffer->GetBit<uint32_t>(bit, kPwrStatus2nd);
 }
 
-static ComponentDescription MfgAsyncComponent() {
+static FragmentDescription MfgAsyncFragment() {
   constexpr uint32_t kAsyncPwrStatusBit = 25;
   constexpr uint32_t kAsyncPwrRegOffset = 0x2c4;
-  return ComponentDescription{kAsyncPwrRegOffset, kAsyncPwrStatusBit, 0, 0};
+  return FragmentDescription{kAsyncPwrRegOffset, kAsyncPwrStatusBit, 0, 0};
 }
 
-static ComponentDescription Mfg2dComponent() {
+static FragmentDescription Mfg2dFragment() {
   constexpr uint32_t k2dPwrStatusBit = 24;
   constexpr uint32_t k2dPwrRegOffset = 0x2c0;
   constexpr uint32_t kSramPdMask = 0xf << 8;
   constexpr uint32_t kSramPdAckMask = 0xf << 12;
-  return ComponentDescription{k2dPwrRegOffset, k2dPwrStatusBit, kSramPdMask, kSramPdAckMask};
+  return FragmentDescription{k2dPwrRegOffset, k2dPwrStatusBit, kSramPdMask, kSramPdAckMask};
 }
 
 }  // namespace
@@ -175,7 +175,7 @@ zx_status_t Mt8167sGpu::PowerOnMfgAsync() {
   clock_gpu_buffer_->ModifyBits<uint32_t>(1, 18, 2, 0x40);
   clks_[kClkSlowMfgIndex].Enable();
   clks_[kClkAxiMfgIndex].Enable();
-  return MfgAsyncComponent().PowerOn(&power_gpu_buffer_.value());
+  return MfgAsyncFragment().PowerOn(&power_gpu_buffer_.value());
 }
 
 // Power on the 2D engine (it's unclear whether this is needed to access the 3D
@@ -184,7 +184,7 @@ zx_status_t Mt8167sGpu::PowerOnMfg2d() {
   // Enable access to AXI Bus
   clock_gpu_buffer_->SetBits32(kInfraTopAxiSi1WayEnMfg2d, kInfraTopAxiSi1Ctl);
 
-  zx_status_t status = Mfg2dComponent().PowerOn(&power_gpu_buffer_.value());
+  zx_status_t status = Mfg2dFragment().PowerOn(&power_gpu_buffer_.value());
   if (status != ZX_OK)
     return status;
   // Disable AXI protection after it's powered up.
@@ -196,7 +196,7 @@ zx_status_t Mt8167sGpu::PowerOnMfg2d() {
 // Power on the 3D engine (IMG GPU).
 zx_status_t Mt8167sGpu::PowerOnMfg() {
   clks_[kClkMfgMmIndex].Enable();
-  // The APM should handle actually powering up the MFG component as needed,
+  // The APM should handle actually powering up the MFG fragment as needed,
   // so that doesn't need to be done here.
 
   // Enable clocks in MFG (using controls internal to MFG_TOP)
@@ -212,7 +212,7 @@ zx_status_t Mt8167sGpu::PowerOnMfg() {
 
 // Power down the asynchronous memory interface between the GPU and the DDR controller.
 zx_status_t Mt8167sGpu::PowerDownMfgAsync() {
-  zx_status_t status = MfgAsyncComponent().PowerDown(&power_gpu_buffer_.value());
+  zx_status_t status = MfgAsyncFragment().PowerDown(&power_gpu_buffer_.value());
   if (status != ZX_OK) {
     return status;
   }
@@ -226,7 +226,7 @@ zx_status_t Mt8167sGpu::PowerDownMfg2d() {
   // Enable AXI protection
   clock_gpu_buffer_->SetBits32(kInfraTopAxiBusProtMaskMfg2d, kInfraTopAxiProtectEn);
 
-  zx_status_t status = Mfg2dComponent().PowerDown(&power_gpu_buffer_.value());
+  zx_status_t status = Mfg2dFragment().PowerDown(&power_gpu_buffer_.value());
   if (status != ZX_OK)
     return status;
   // Disable access to AXI Bus
@@ -244,7 +244,7 @@ zx_status_t Mt8167sGpu::PowerDownMfg() {
   constexpr uint32_t kB26MClr = (1 << 3);
   gpu_buffer_->SetBits32(kBAxiClr | kBMemClr | kBG3dClr | kB26MClr, kMfgCgSet);
 
-  // The APM should handle actually powering down the MFG component as needed,
+  // The APM should handle actually powering down the MFG fragment as needed,
   // so that doesn't need to be done here.
 
   // Disable MFG clock.
@@ -333,24 +333,24 @@ zx_status_t Mt8167sGpu::Bind() {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  // Zeroth component is pdev
-  zx_device_t* components[kClockCount + 1];
+  // Zeroth fragment is pdev
+  zx_device_t* fragments[kClockCount + 1];
   size_t actual;
-  composite.GetComponents(components, fbl::count_of(components), &actual);
-  if (actual != fbl::count_of(components)) {
-    GPU_ERROR("could not retrieve all our components\n");
+  composite.GetFragments(fragments, fbl::count_of(fragments), &actual);
+  if (actual != fbl::count_of(fragments)) {
+    GPU_ERROR("could not retrieve all our fragments\n");
     return ZX_ERR_INTERNAL;
   }
 
   for (unsigned i = 0; i < kClockCount; i++) {
-    clks_[i] = components[i + 1];
+    clks_[i] = fragments[i + 1];
     if (!clks_[i].is_valid()) {
       zxlogf(ERROR, "%s could not get clock\n", __func__);
       return ZX_ERR_INTERNAL;
     }
   }
 
-  ddk::PDev pdev(components[0]);
+  ddk::PDev pdev(fragments[0]);
   auto status = pdev.MapMmio(kMfgMmioIndex, &real_gpu_buffer_);
   if (status != ZX_OK) {
     GPU_ERROR("pdev_map_mmio_buffer failed\n");

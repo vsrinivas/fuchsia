@@ -51,22 +51,22 @@ zx_status_t AmlEthernet::InitPdev() {
     return status;
   }
 
-  zx_device_t* components[COMPONENT_COUNT];
+  zx_device_t* fragments[FRAGMENT_COUNT];
   size_t actual;
-  composite_get_components(&composite, components, fbl::count_of(components), &actual);
-  if (actual == fbl::count_of(components)) {
+  composite_get_fragments(&composite, fragments, fbl::count_of(fragments), &actual);
+  if (actual == fbl::count_of(fragments)) {
     has_reset_ = true;
   } else {
-    if (actual == (fbl::count_of(components) - 1)) {
+    if (actual == (fbl::count_of(fragments) - 1)) {
       has_reset_ = false;
     } else {
-      zxlogf(ERROR, "could not get components\n");
+      zxlogf(ERROR, "could not get fragments\n");
       return ZX_ERR_NOT_SUPPORTED;
     }
   }
 
   pdev_protocol_t pdev;
-  status = device_get_protocol(components[COMPONENT_PDEV], ZX_PROTOCOL_PDEV, &pdev);
+  status = device_get_protocol(fragments[FRAGMENT_PDEV], ZX_PROTOCOL_PDEV, &pdev);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Could not get PDEV protocol\n");
     return status;
@@ -74,7 +74,7 @@ zx_status_t AmlEthernet::InitPdev() {
   pdev_ = &pdev;
 
   i2c_protocol_t i2c;
-  status = device_get_protocol(components[COMPONENT_I2C], ZX_PROTOCOL_I2C, &i2c);
+  status = device_get_protocol(fragments[FRAGMENT_I2C], ZX_PROTOCOL_I2C, &i2c);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Could not get I2C protocol\n");
     return status;
@@ -83,7 +83,7 @@ zx_status_t AmlEthernet::InitPdev() {
 
   gpio_protocol_t gpio;
   if (has_reset_) {
-    status = device_get_protocol(components[COMPONENT_RESET_GPIO], ZX_PROTOCOL_GPIO, &gpio);
+    status = device_get_protocol(fragments[FRAGMENT_RESET_GPIO], ZX_PROTOCOL_GPIO, &gpio);
     if (status != ZX_OK) {
       zxlogf(ERROR, "Could not get GPIO protocol\n");
       return status;
@@ -91,7 +91,7 @@ zx_status_t AmlEthernet::InitPdev() {
     gpios_[PHY_RESET] = &gpio;
   }
 
-  status = device_get_protocol(components[COMPONENT_INTR_GPIO], ZX_PROTOCOL_GPIO, &gpio);
+  status = device_get_protocol(fragments[FRAGMENT_INTR_GPIO], ZX_PROTOCOL_GPIO, &gpio);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Could not get GPIO protocol\n");
     return status;

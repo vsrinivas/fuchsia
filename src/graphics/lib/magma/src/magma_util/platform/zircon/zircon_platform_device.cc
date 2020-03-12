@@ -115,7 +115,7 @@ std::unique_ptr<PlatformDevice> PlatformDevice::Create(void* device_handle) {
     if (device_get_protocol(zx_device, ZX_PROTOCOL_COMPOSITE, &composite) == ZX_OK) {
       zx_device_t* pdev_device;
       size_t actual;
-      composite_get_components(&composite, &pdev_device, 1, &actual);
+      composite_get_fragments(&composite, &pdev_device, 1, &actual);
       if (actual == 1) {
         status = device_get_protocol(pdev_device, ZX_PROTOCOL_PDEV, &pdev);
       }

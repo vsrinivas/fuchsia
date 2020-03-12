@@ -36,13 +36,13 @@ class AmlEthernet : public DeviceType,
   zx_status_t EthBoardResetPhy();
 
  private:
-  // Component Indexes.
+  // Fragment Indexes.
   enum {
-    COMPONENT_PDEV,
-    COMPONENT_I2C,
-    COMPONENT_INTR_GPIO,
-    COMPONENT_RESET_GPIO,
-    COMPONENT_COUNT,
+    FRAGMENT_PDEV,
+    FRAGMENT_I2C,
+    FRAGMENT_INTR_GPIO,
+    FRAGMENT_RESET_GPIO,
+    FRAGMENT_COUNT,
   };
 
   // GPIO Indexes.

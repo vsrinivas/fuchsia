@@ -35,9 +35,9 @@ namespace eth {
 namespace {
 
 enum {
-  COMPONENT_PDEV,
-  COMPONENT_ETH_BOARD,
-  COMPONENT_COUNT,
+  FRAGMENT_PDEV,
+  FRAGMENT_ETH_BOARD,
+  FRAGMENT_COUNT,
 };
 
 // MMIO Indexes.
@@ -171,21 +171,21 @@ zx_status_t DWMacDevice::Create(void* ctx, zx_device_t* device) {
     return status;
   }
 
-  zx_device_t* components[COMPONENT_COUNT];
+  zx_device_t* fragments[FRAGMENT_COUNT];
   size_t actual;
-  composite_get_components(&composite, components, COMPONENT_COUNT, &actual);
+  composite_get_fragments(&composite, fragments, FRAGMENT_COUNT, &actual);
   if (actual != 2) {
-    zxlogf(ERROR, "%s could not get components\n", __func__);
+    zxlogf(ERROR, "%s could not get fragments\n", __func__);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  status = device_get_protocol(components[COMPONENT_PDEV], ZX_PROTOCOL_PDEV, &pdev);
+  status = device_get_protocol(fragments[FRAGMENT_PDEV], ZX_PROTOCOL_PDEV, &pdev);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s could not get ZX_PROTOCOL_PDEV\n", __func__);
     return status;
   }
 
-  status = device_get_protocol(components[COMPONENT_ETH_BOARD], ZX_PROTOCOL_ETH_BOARD, &eth_board);
+  status = device_get_protocol(fragments[FRAGMENT_ETH_BOARD], ZX_PROTOCOL_ETH_BOARD, &eth_board);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s could not get ZX_PROTOCOL_ETH_BOARD\n", __func__);
     return status;
@@ -202,7 +202,7 @@ zx_status_t DWMacDevice::Create(void* ctx, zx_device_t* device) {
   mac_device->eth_board_.ResetPhy();
 
   // Get and cache the mac address.
-  mac_device->GetMAC(components[COMPONENT_PDEV]);
+  mac_device->GetMAC(fragments[FRAGMENT_PDEV]);
 
   // Reset the dma peripheral.
   mac_device->mmio_->SetBits32(DMAMAC_SRST, DW_MAC_DMA_BUSMODE);
@@ -232,8 +232,8 @@ zx_status_t DWMacDevice::Create(void* ctx, zx_device_t* device) {
 
   // Populate board specific information
   eth_dev_metadata_t phy_info;
-  status = device_get_metadata(components[COMPONENT_PDEV], DEVICE_METADATA_ETH_PHY_DEVICE,
-                               &phy_info, sizeof(eth_dev_metadata_t), &actual);
+  status = device_get_metadata(fragments[FRAGMENT_PDEV], DEVICE_METADATA_ETH_PHY_DEVICE, &phy_info,
+                               sizeof(eth_dev_metadata_t), &actual);
   if (status != ZX_OK || actual != sizeof(eth_dev_metadata_t)) {
     zxlogf(ERROR, "dwmac: Could not get PHY metadata %d\n", status);
     return status;

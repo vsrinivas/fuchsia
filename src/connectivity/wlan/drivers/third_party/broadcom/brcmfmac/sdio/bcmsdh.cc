@@ -745,17 +745,17 @@ zx_status_t brcmf_sdio_register(brcmf_pub* drvr, std::unique_ptr<brcmf_bus>* out
     return status;
   }
 
-  uint32_t component_count = composite_get_component_count(&composite_proto);
-  if (component_count < 2) {
-    BRCMF_ERR("Not enough components (need atleast 2, have %u)", component_count);
+  uint32_t fragment_count = composite_get_fragment_count(&composite_proto);
+  if (fragment_count < 2) {
+    BRCMF_ERR("Not enough fragments (need atleast 2, have %u)", fragment_count);
     return ZX_ERR_INTERNAL;
   }
   // One for SDIO, one or two GPIOs.
-  zx_device_t* components[COMPONENT_COUNT];
+  zx_device_t* fragments[FRAGMENT_COUNT];
   size_t actual;
-  composite_get_components(&composite_proto, components, countof(components), &actual);
+  composite_get_fragments(&composite_proto, fragments, countof(fragments), &actual);
   if (actual < 2) {
-    BRCMF_ERR("Not enough components (need atleast 2, have %zu)", actual);
+    BRCMF_ERR("Not enough fragments (need atleast 2, have %zu)", actual);
     return ZX_ERR_INTERNAL;
   }
 
@@ -764,25 +764,25 @@ zx_status_t brcmf_sdio_register(brcmf_pub* drvr, std::unique_ptr<brcmf_bus>* out
   gpio_protocol_t gpio_protos[GPIO_COUNT];
   bool has_debug_gpio = false;
 
-  status = device_get_protocol(components[COMPONENT_SDIO_FN1], ZX_PROTOCOL_SDIO, &sdio_proto_fn1);
+  status = device_get_protocol(fragments[FRAGMENT_SDIO_FN1], ZX_PROTOCOL_SDIO, &sdio_proto_fn1);
   if (status != ZX_OK) {
     BRCMF_ERR("ZX_PROTOCOL_SDIO not found, err=%d\n", status);
     return status;
   }
-  status = device_get_protocol(components[COMPONENT_SDIO_FN2], ZX_PROTOCOL_SDIO, &sdio_proto_fn2);
+  status = device_get_protocol(fragments[FRAGMENT_SDIO_FN2], ZX_PROTOCOL_SDIO, &sdio_proto_fn2);
   if (status != ZX_OK) {
     BRCMF_ERR("ZX_PROTOCOL_SDIO not found, err=%d\n", status);
     return status;
   }
-  status = device_get_protocol(components[COMPONENT_OOB_GPIO], ZX_PROTOCOL_GPIO,
+  status = device_get_protocol(fragments[FRAGMENT_OOB_GPIO], ZX_PROTOCOL_GPIO,
                                &gpio_protos[WIFI_OOB_IRQ_GPIO_INDEX]);
   if (status != ZX_OK) {
     BRCMF_ERR("ZX_PROTOCOL_GPIO not found, err=%d\n", status);
     return status;
   }
   // Debug GPIO is optional
-  if (component_count > 3) {
-    status = device_get_protocol(components[COMPONENT_DEBUG_GPIO], ZX_PROTOCOL_GPIO,
+  if (fragment_count > 3) {
+    status = device_get_protocol(fragments[FRAGMENT_DEBUG_GPIO], ZX_PROTOCOL_GPIO,
                                  &gpio_protos[DEBUG_GPIO_INDEX]);
     if (status != ZX_OK) {
       BRCMF_ERR("ZX_PROTOCOL_GPIO not found, err=%d\n", status);
