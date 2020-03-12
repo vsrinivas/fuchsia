@@ -1254,33 +1254,40 @@ zx_status_t CrosDevicePartitioner::FinalizePartition(const PartitionSpec& spec) 
     return ZX_OK;
   }
 
+  // Find the Zircon A kernel partition.
+  const uint8_t cros_kernel_type[GPT_GUID_LEN] = GUID_CROS_KERNEL_VALUE;
+  const char* name = PartitionName(Partition::kZirconA);
+  const auto filter = [cros_kernel_type, name](const gpt_partition_t& part) {
+    return FilterByTypeAndName(part, cros_kernel_type, name);
+  };
+  gpt_partition_t* zircon_a_partition;
+  zx_status_t status = gpt_->FindPartition(filter, nullptr, &zircon_a_partition);
+  if (status != ZX_OK) {
+    ERROR("Cannot find %s partition\n", name);
+    return status;
+  }
+
   // Find the highest priority kernel partition.
-  const uint8_t type[GPT_GUID_LEN] = GUID_CROS_KERNEL_VALUE;
   uint8_t top_priority = 0;
   for (uint32_t i = 0; i < gpt::kPartitionCount; ++i) {
     const gpt_partition_t* part = gpt_->GetGpt()->GetPartition(i);
     if (part == NULL) {
       continue;
     }
-    if (memcmp(part->type, type, GPT_GUID_LEN)) {
+    const uint8_t priority = gpt_cros_attr_get_priority(part->flags);
+    // Ignore anything not of type CROS KERNEL.
+    if (memcmp(part->type, cros_kernel_type, GPT_GUID_LEN)) {
       continue;
     }
-    const uint8_t priority = gpt_cros_attr_get_priority(part->flags);
+
+    // Ignore ourself.
+    if (part == zircon_a_partition) {
+      continue;
+    }
+
     if (priority > top_priority) {
       top_priority = priority;
     }
-  }
-
-  // Find the Zircon A kernel partition.
-  const char* name = PartitionName(Partition::kZirconA);
-  const auto filter = [type, name](const gpt_partition_t& part) {
-    return FilterByTypeAndName(part, type, name);
-  };
-  gpt_partition_t* partition;
-  zx_status_t status = gpt_->FindPartition(filter, nullptr, &partition);
-  if (status != ZX_OK) {
-    ERROR("Cannot find %s partition\n", name);
-    return status;
   }
 
   // Priority for Zircon A set to higher priority than all other kernels.
@@ -1288,7 +1295,8 @@ zx_status_t CrosDevicePartitioner::FinalizePartition(const PartitionSpec& spec) 
     ERROR("Cannot set CrOS partition priority higher than other kernels\n");
     return ZX_ERR_OUT_OF_RANGE;
   }
-  int ret = gpt_cros_attr_set_priority(&partition->flags, ++top_priority);
+  int ret = gpt_cros_attr_set_priority(&zircon_a_partition->flags,
+                                       static_cast<uint8_t>(top_priority + 1));
   if (ret != 0) {
     ERROR("Cannot set CrOS partition priority for ZIRCON-A\n");
     return ZX_ERR_OUT_OF_RANGE;
@@ -1299,10 +1307,10 @@ zx_status_t CrosDevicePartitioner::FinalizePartition(const PartitionSpec& spec) 
 
   // Successful set to 'true' to encourage the bootloader to
   // use this partition.
-  gpt_cros_attr_set_successful(&partition->flags, true);
+  gpt_cros_attr_set_successful(&zircon_a_partition->flags, true);
   // Maximize the number of attempts to boot this partition before
   // we fall back to a different kernel.
-  ret = gpt_cros_attr_set_tries(&partition->flags, 15);
+  ret = gpt_cros_attr_set_tries(&zircon_a_partition->flags, 15);
   if (ret != 0) {
     ERROR("Cannot set CrOS partition 'tries' for ZIRCON-A\n");
     return ZX_ERR_OUT_OF_RANGE;

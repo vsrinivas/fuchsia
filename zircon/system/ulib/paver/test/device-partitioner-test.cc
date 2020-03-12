@@ -774,6 +774,64 @@ TEST_F(CrosDevicePartitionerTests, DISABLED_InitPartitionTablesForRecoveredDevic
 
 }
 
+// Get Cros GPT flags for a kernel with the given priority.
+uint64_t CrosGptPriorityFlags(uint8_t priority) {
+  uint64_t flags = 0;
+  ZX_ASSERT(gpt_cros_attr_set_priority(&flags, priority) >= 0);
+  return flags;
+}
+
+TEST_F(CrosDevicePartitionerTests, DISABLED_KernelPriority) {
+  // Create a 32 GiB disk.
+  std::unique_ptr<BlockDevice> disk;
+  ASSERT_NO_FATAL_FAILURES(CreateCrosDisk(32 * kGibibyte, &disk));
+
+  // Set up partition table for test.
+  {
+    // Add non-ChromeOS partitions.
+    std::unique_ptr<gpt::GptDevice> gpt;
+    ASSERT_NO_FATAL_FAILURES(CreateGptDevice(disk.get(), &gpt));
+    ASSERT_OK(gpt->AddPartition("CROS_KERNEL", kCrosKernelType, GetRandomGuid(), 0x1000, 0x1000,
+                                CrosGptPriorityFlags(3)));
+    ASSERT_OK(gpt->AddPartition("NOT_KERNEL", GetRandomGuid(), GetRandomGuid(), 0x2000, 0x10,
+                                CrosGptPriorityFlags(7)));
+    ASSERT_OK(gpt->Sync());
+  }
+
+  // Partition the disk, which will add ChromeOS partitions and adjust priorities.
+  {
+    std::unique_ptr<paver::DevicePartitioner> partitioner;
+    ASSERT_NO_FATAL_FAILURES(CreatePartitioner(disk.get(), &partitioner));
+    ASSERT_OK(partitioner->InitPartitionTables());
+    ASSERT_OK(partitioner->FinalizePartition(PartitionSpec(paver::Partition::kZirconA)));
+  }
+
+  // Ensure that the "zircon-a" kernel was created with priority 4 (priority of CROS_KERNEL + 1).
+  {
+    std::unique_ptr<gpt::GptDevice> gpt;
+    ASSERT_NO_FATAL_FAILURES(CreateGptDevice(disk.get(), &gpt));
+    gpt_partition_t* partition = FindPartitionWithLabel(gpt.get(), GUID_ZIRCON_A_NAME);
+    ASSERT_TRUE(partition != nullptr);
+    EXPECT_EQ(gpt_cros_attr_get_priority(partition->flags), 4);
+  }
+
+  // Partition the disk again.
+  {
+    std::unique_ptr<paver::DevicePartitioner> partitioner;
+    ASSERT_NO_FATAL_FAILURES(CreatePartitioner(disk.get(), &partitioner));
+    ASSERT_OK(partitioner->FinalizePartition(PartitionSpec(paver::Partition::kZirconA)));
+  }
+
+  // Ensure that the "zircon-a" kernel still has priority 4.
+  {
+    std::unique_ptr<gpt::GptDevice> gpt;
+    ASSERT_NO_FATAL_FAILURES(CreateGptDevice(disk.get(), &gpt));
+    gpt_partition_t* partition = FindPartitionWithLabel(gpt.get(), GUID_ZIRCON_A_NAME);
+    ASSERT_TRUE(partition != nullptr);
+    EXPECT_EQ(gpt_cros_attr_get_priority(partition->flags), 4);
+  }
+}
+
 class FixedDevicePartitionerTests : public zxtest::Test {
  protected:
   FixedDevicePartitionerTests() {
