@@ -118,6 +118,14 @@ prebuilt_test_manifest("chromium_tests") {
       package = "web_runner_integration_tests"
     },
   ]
+
+  # https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=47760
+  disabled_tests += [
+    {
+      component_name = "base_unittests"
+      package = "base_unittests"
+    },
+  ]
 }
 
 icu_tzdata_config_data("tzdata_for_chromium_tests_base_unittests") {
