@@ -15,6 +15,7 @@ import (
 	"os/exec"
 	"regexp"
 	"strconv"
+	"sync"
 	"syscall"
 	"time"
 )
@@ -25,6 +26,11 @@ type Zedmon struct {
 	csvout *csv.Reader
 	stderr io.ReadCloser
 	err    error
+
+	// Synchronizes use of `stdout` between `csvout.Read`, which reads from it, and `cmd.Wait`,
+	// which closes it. Also guards the clearing of `cmd`, which signals that reads from stdout
+	// should stop.
+	stdoutMutex sync.Mutex
 }
 
 type zTraceReport struct {
@@ -161,13 +167,11 @@ func (z *Zedmon) Run(fOffset, fDelta time.Duration, path string) (data chan []by
 }
 
 func (z *Zedmon) doRun(fOffset, fDelta time.Duration, path string, data chan []byte, errs chan error, started chan bool) {
+	// Guards the `started` channel. See comments below, where channel is notified.
+	startSignalled := false
+
 	// TODO(markdittmer): Add error delta to trace.
 	zOffset, zDelta, err := z.start(path)
-
-	// This is required by tests so that Stop() can be safely called. If data the data channel
-	// continuously streamed results, we could watch it instead of using this channel, but as
-	// it stands, the data channel is only notified once, after Stop() is called.
-	started <- true
 
 	if err != nil {
 		errs <- err
@@ -182,12 +186,33 @@ func (z *Zedmon) doRun(fOffset, fDelta time.Duration, path string, data chan []b
 	events[0] = newZMetadataEvent()
 	var t0 time.Time
 	for {
+		z.stdoutMutex.Lock()
+		// If the underlying Zedmon client process has been terminated, stop reading.
+		if z.cmd == nil {
+			z.stdoutMutex.Unlock()
+			break
+		}
+
 		strs, err := z.csvout.Read()
+		z.stdoutMutex.Unlock()
+
+		// The `started` channel is a hack to synchronize with unit tests. A test needs to be able
+		// to guarantee that the underlying (probably fake) zedmon process has registered its SIGINT
+		// handler, and that `z.csvout` has processed some data.
+		//
+		// It would be better if `Zedmon` emitted records as it processed them. However, it would
+		// likely be better to invest the effort in converting traceutil to Dart (see fxb/48045),
+		// in which there is already a Zedmon interface that behaves accordingly.
+		if !startSignalled {
+			started <- true
+			startSignalled = true
+		}
+
 		if err == io.EOF {
 			break
 		}
 		if err != nil {
-			errs <- z.fail(errors.New("Failed to parse CSV record"))
+			errs <- z.fail(fmt.Errorf("Failed to parse CSV record; reader error: %s", err))
 			break
 		}
 		if len(strs) != 4 {
@@ -306,8 +331,11 @@ func (z *Zedmon) Stop() error {
 	if err != nil {
 		return z.fail(errors.New("Failed to send zedmon process SIGINT"))
 	}
+	z.stdoutMutex.Lock()
 	err = z.cmd.Wait()
 	z.cmd = nil
+	z.stdoutMutex.Unlock()
+
 	z.stderr = nil
 	return err
 }

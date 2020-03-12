@@ -18,14 +18,9 @@ import (
 //
 // It will terminate when it has both written its data and received a SIGINT.
 func main() {
-	// Set a trap that prevents exit until SIGINT is received and we're done writing data.
+	// Trap SIGINT. This program will wait to exit until the corresponding channel is notified.
 	sigint := make(chan os.Signal)
 	signal.Notify(sigint, os.Interrupt)
-	done := make(chan bool)
-	go func() {
-		<-sigint
-		<-done
-	}()
 
 	myPath, err := filepath.Abs(os.Args[0])
 	stderrDataPath := myPath + ".stderr.testdata"
@@ -43,5 +38,5 @@ func main() {
 	os.Stderr.Write(stderrData)
 	os.Stdout.Write(stdoutData)
 
-	done <- true
+	<-sigint
 }

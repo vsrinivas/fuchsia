@@ -47,9 +47,6 @@ go_test("zedmon_test") {
   ]
   deps = [ ":lib" ]
   non_go_deps = [ ":zedmon_test_runtime_deps" ]
-
-  # TODO(fxb/47830): Re-enable when flakiness is resolved.
-  disabled = true
 }
 
 copy("zedmon_test_runtime_deps") {
