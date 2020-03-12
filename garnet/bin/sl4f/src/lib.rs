@@ -29,3 +29,4 @@ pub mod tracing;
 pub mod update;
 pub mod webdriver;
 pub mod wlan;
+pub mod wlan_policy;
