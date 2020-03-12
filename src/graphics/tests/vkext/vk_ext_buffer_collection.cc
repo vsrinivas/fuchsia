@@ -335,6 +335,7 @@ bool VulkanTest::Exec(
 
   // This bool suggests that we dup another token to set the same constraints, skipping protected
   // memory requirements. This emulates another participant which does not require protected memory.
+  VkBufferCollectionFUCHSIA non_protected_collection;
   if (repeat_constraints_as_non_protected) {
     fuchsia::sysmem::BufferCollectionTokenSyncPtr repeat_token;
     status =
@@ -356,13 +357,14 @@ bool VulkanTest::Exec(
         .pNext = nullptr,
         .collectionToken = repeat_token.Unbind().TakeChannel().release(),
     };
-    VkBufferCollectionFUCHSIA collection;
-    result = vkCreateBufferCollectionFUCHSIA_(vk_device_, &import_info, nullptr, &collection);
+    result = vkCreateBufferCollectionFUCHSIA_(vk_device_, &import_info, nullptr,
+                                              &non_protected_collection);
     if (result != VK_SUCCESS) {
-      PRINT_STDERR("Failed to import buffer collection: %d", result);
+      PRINT_STDERR("Failed to create buffer collection: %d", result);
       return false;
     }
-    result = vkSetBufferCollectionConstraintsFUCHSIA_(vk_device_, collection, &image_create_info);
+    result = vkSetBufferCollectionConstraintsFUCHSIA_(vk_device_, non_protected_collection,
+                                                      &image_create_info);
     if (result != VK_SUCCESS) {
       PRINT_STDERR("Failed to set buffer constraints: %d", result);
       return false;
@@ -379,7 +381,7 @@ bool VulkanTest::Exec(
   VkBufferCollectionFUCHSIA collection;
   result = vkCreateBufferCollectionFUCHSIA_(vk_device_, &import_info, nullptr, &collection);
   if (result != VK_SUCCESS) {
-    PRINT_STDERR("Failed to import buffer collection: %d", result);
+    PRINT_STDERR("Failed to create buffer collection: %d", result);
     return false;
   }
 
@@ -612,6 +614,9 @@ bool VulkanTest::Exec(
   }
 
   vkDestroyBufferCollectionFUCHSIA_(vk_device_, collection, nullptr);
+  if (repeat_constraints_as_non_protected) {
+    vkDestroyBufferCollectionFUCHSIA_(vk_device_, non_protected_collection, nullptr);
+  }
 
   return true;
 }
