@@ -30,8 +30,9 @@ class EmbeddedController : public fbl::RefCounted<EmbeddedController> {
   virtual ~EmbeddedController() {}
 
   // Issue a command to the EC.
-  virtual zx_status_t IssueCommand(uint16_t command, uint8_t command_version, const void* out,
-                                   size_t outsize, void* in, size_t insize, size_t* actual);
+  virtual zx_status_t IssueCommand(uint16_t command, uint8_t command_version, const void* input,
+                                   size_t input_size, void* result, size_t result_buff_size,
+                                   size_t* actual);
 
   // Return true if the platform supports the given feature.
   virtual bool SupportsFeature(enum ec_feature_code feature) const = 0;

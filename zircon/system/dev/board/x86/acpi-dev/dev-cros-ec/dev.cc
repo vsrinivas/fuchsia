@@ -35,8 +35,9 @@ class RealEmbeddedController : public EmbeddedController {
   ~RealEmbeddedController() = default;
 
   // |EmbeddedController| interface implementation.
-  zx_status_t IssueCommand(uint16_t command, uint8_t command_version, const void* out,
-                           size_t outsize, void* in, size_t insize, size_t* actual) override;
+  zx_status_t IssueCommand(uint16_t command, uint8_t command_version, const void* input,
+                           size_t input_size, void* result, size_t result_buff_size,
+                           size_t* actual) override;
   virtual bool SupportsFeature(enum ec_feature_code feature) const override;
 
  private:
@@ -77,10 +78,11 @@ zx_status_t RealEmbeddedController::Create(fbl::RefPtr<EmbeddedController>* out)
 }
 
 zx_status_t RealEmbeddedController::IssueCommand(uint16_t command, uint8_t command_version,
-                                                 const void* out, size_t outsize, void* in,
-                                                 size_t insize, size_t* actual) {
+                                                 const void* input, size_t input_size, void* result,
+                                                 size_t result_buff_size, size_t* actual) {
   fbl::AutoLock guard(&io_lock_);
-  return CrOsEc::CommandLpc3(command, command_version, out, outsize, in, insize, actual);
+  return CrOsEc::CommandLpc3(command, command_version, input, input_size, result, result_buff_size,
+                             actual);
 }
 
 bool RealEmbeddedController::SupportsFeature(enum ec_feature_code feature) const {

@@ -63,15 +63,16 @@ TEST(BuildHidDescriptor, AllSensors) {
 
 // A Fake EmbeddedController with MotionSense support for 1 sensor.
 class FakeMotionSenseEC : public EmbeddedController {
-  zx_status_t IssueCommand(uint16_t command, uint8_t command_version, const void* out,
-                           size_t outsize, void* in, size_t insize, size_t* actual) override {
+  zx_status_t IssueCommand(uint16_t command, uint8_t command_version, const void* input,
+                           size_t input_size, void* result, size_t result_buff_size,
+                           size_t* actual) override {
     // Ensure command is correct for MotionSense.
     if (command != EC_CMD_MOTION_SENSE_CMD) {
       return ZX_ERR_NOT_SUPPORTED;
     }
-    ZX_ASSERT(outsize == sizeof(ec_params_motion_sense));
+    ZX_ASSERT(input_size == sizeof(ec_params_motion_sense));
     struct ec_params_motion_sense cmd;
-    memcpy(&cmd, out, outsize);
+    memcpy(&cmd, input, input_size);
 
     // Parse command.
     struct ec_response_motion_sense rsp = {};
@@ -115,7 +116,7 @@ class FakeMotionSenseEC : public EmbeddedController {
     }
 
     // Copy response.
-    memcpy(in, &rsp, response_size);
+    memcpy(result, &rsp, response_size);
     *actual = response_size;
     return ZX_OK;
   }
