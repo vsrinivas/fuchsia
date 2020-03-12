@@ -215,106 +215,6 @@ static zx_status_t fidl_node_describe(void* ctx, fidl_txn_t* txn) {
   return fuchsia_io_NodeDescribe_reply(txn, &info);
 }
 
-static zx_status_t fidl_directory_open(void* ctx, uint32_t flags, uint32_t mode,
-                                       const char* path_data, size_t path_size,
-                                       zx_handle_t object) {
-  zx_handle_close(object);
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
-static zx_status_t fidl_directory_unlink(void* ctx, const char* path_data, size_t path_size,
-                                         fidl_txn_t* txn) {
-  return fuchsia_io_DirectoryUnlink_reply(txn, ZX_ERR_NOT_SUPPORTED);
-}
-
-static zx_status_t fidl_directory_readdirents(void* ctx, uint64_t max_out, fidl_txn_t* txn) {
-  return fuchsia_io_DirectoryReadDirents_reply(txn, ZX_ERR_NOT_SUPPORTED, nullptr, 0);
-}
-
-static zx_status_t fidl_directory_rewind(void* ctx, fidl_txn_t* txn) {
-  return fuchsia_io_DirectoryRewind_reply(txn, ZX_ERR_NOT_SUPPORTED);
-}
-
-static zx_status_t fidl_directory_gettoken(void* ctx, fidl_txn_t* txn) {
-  return fuchsia_io_DirectoryGetToken_reply(txn, ZX_ERR_NOT_SUPPORTED, ZX_HANDLE_INVALID);
-}
-
-static zx_status_t fidl_directory_rename(void* ctx, const char* src_data, size_t src_size,
-                                         zx_handle_t dst_parent_token, const char* dst_data,
-                                         size_t dst_size, fidl_txn_t* txn) {
-  zx_handle_close(dst_parent_token);
-  return fuchsia_io_DirectoryRename_reply(txn, ZX_ERR_NOT_SUPPORTED);
-}
-
-static zx_status_t fidl_directory_link(void* ctx, const char* src_data, size_t src_size,
-                                       zx_handle_t dst_parent_token, const char* dst_data,
-                                       size_t dst_size, fidl_txn_t* txn) {
-  zx_handle_close(dst_parent_token);
-  return fuchsia_io_DirectoryLink_reply(txn, ZX_ERR_NOT_SUPPORTED);
-}
-
-static zx_status_t fidl_directory_watch(void* ctx, uint32_t mask, uint32_t options,
-                                        zx_handle_t raw_watcher, fidl_txn_t* txn) {
-  zx::channel watcher(raw_watcher);
-  return fuchsia_io_DirectoryWatch_reply(txn, ZX_ERR_NOT_SUPPORTED);
-}
-
-static const fuchsia_io_Directory_ops_t kDirectoryOps = []() {
-  fuchsia_io_Directory_ops_t ops;
-  ops.Open = fidl_directory_open;
-  ops.Unlink = fidl_directory_unlink;
-  ops.ReadDirents = fidl_directory_readdirents;
-  ops.Rewind = fidl_directory_rewind;
-  ops.GetToken = fidl_directory_gettoken;
-  ops.Rename = fidl_directory_rename;
-  ops.Link = fidl_directory_link;
-  ops.Watch = fidl_directory_watch;
-  return ops;
-}();
-
-static zx_status_t fidl_directory_admin_mount(void* ctx, zx_handle_t h, fidl_txn_t* txn) {
-  zx_handle_close(h);
-  return fuchsia_io_DirectoryAdminMount_reply(txn, ZX_ERR_NOT_SUPPORTED);
-}
-
-static zx_status_t fidl_directory_admin_mount_and_create(void* ctx, zx_handle_t h, const char* name,
-                                                         size_t len, uint32_t flags,
-                                                         fidl_txn_t* txn) {
-  zx_handle_close(h);
-  return fuchsia_io_DirectoryAdminMountAndCreate_reply(txn, ZX_ERR_NOT_SUPPORTED);
-}
-
-static zx_status_t fidl_directory_admin_unmount(void* ctx, fidl_txn_t* txn) {
-  return fuchsia_io_DirectoryAdminUnmount_reply(txn, ZX_ERR_NOT_SUPPORTED);
-}
-
-static zx_status_t fidl_directory_admin_unmount_node(void* ctx, fidl_txn_t* txn) {
-  return fuchsia_io_DirectoryAdminUnmountNode_reply(txn, ZX_ERR_NOT_SUPPORTED, ZX_HANDLE_INVALID);
-}
-
-static zx_status_t fidl_directory_admin_query_filesystem(void* ctx, fidl_txn_t* txn) {
-  fuchsia_io_FilesystemInfo info;
-  memset(&info, 0, sizeof(info));
-  const char* driver_host_name = "devfs:host";
-  strlcpy((char*)info.name, driver_host_name, fuchsia_io_MAX_FS_NAME_BUFFER);
-  return fuchsia_io_DirectoryAdminQueryFilesystem_reply(txn, ZX_OK, &info);
-}
-
-static zx_status_t fidl_directory_admin_get_device_path(void* ctx, fidl_txn_t* txn) {
-  return fuchsia_io_DirectoryAdminGetDevicePath_reply(txn, ZX_ERR_NOT_SUPPORTED, NULL, 0);
-}
-
-static const fuchsia_io_DirectoryAdmin_ops_t kDirectoryAdminOps = []() {
-  fuchsia_io_DirectoryAdmin_ops_t ops;
-  ops.Mount = fidl_directory_admin_mount;
-  ops.MountAndCreate = fidl_directory_admin_mount_and_create;
-  ops.Unmount = fidl_directory_admin_unmount;
-  ops.UnmountNode = fidl_directory_admin_unmount_node;
-  ops.QueryFilesystem = fidl_directory_admin_query_filesystem;
-  ops.GetDevicePath = fidl_directory_admin_get_device_path;
-  return ops;
-}();
-
 static zx_status_t fidl_file_read(void* ctx, uint64_t count, fidl_txn_t* txn) {
   auto conn = static_cast<DevfsConnection*>(ctx);
   const auto& dev = conn->dev;
@@ -527,14 +427,6 @@ zx_status_t fidl_handler(fidl_msg_t* msg, fidl_txn_t* txn, void* cookie) {
     return status;
   }
   status = fuchsia_io_File_try_dispatch(cookie, txn, msg, &kFileOps);
-  if (status != ZX_ERR_NOT_SUPPORTED) {
-    return status;
-  }
-  status = fuchsia_io_Directory_try_dispatch(cookie, txn, msg, &kDirectoryOps);
-  if (status != ZX_ERR_NOT_SUPPORTED) {
-    return status;
-  }
-  status = fuchsia_io_DirectoryAdmin_try_dispatch(cookie, txn, msg, &kDirectoryAdminOps);
   if (status != ZX_ERR_NOT_SUPPORTED) {
     return status;
   }
