@@ -14,10 +14,9 @@ void main() {
   FlutterDriverConnector connector;
   FlutterDriver driver;
 
-  void setLocale(String localeId) async {
-    expect(
-        (await sl4f.ssh.run('run setui_client.cm intl -l $localeId')).exitCode,
-        0);
+  Future<void> setLocale(String localeId) async {
+    var result = await sl4f.ssh.run('run setui_client.cm intl -l $localeId');
+    expect(result.exitCode, 0);
   }
 
   void findTextOnScreen(String text) {
@@ -45,7 +44,7 @@ void main() {
   });
 
   tearDownAll(() async {
-    setLocale('en-US');
+    await setLocale('en-US');
 
     // Any of these may end up being null if the test fails in setup.
     await driver?.close();
@@ -55,11 +54,11 @@ void main() {
   });
 
   test('Locale can be switched and takes effect', () async {
-    setLocale('en-US');
+    await setLocale('en-US');
     findTextOnScreen('MEMORY');
 
     // The text on screen is equivalent to US English "MEMORY".
-    setLocale('sr');
+    await setLocale('sr');
     findTextOnScreen('МЕМОРИЈА');
   });
 }
