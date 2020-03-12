@@ -33,19 +33,3 @@ zx_library("lockdep") {
     ]
   }
 }
-
-zx_test("lockdep-test") {
-  testonly = true
-  sources = [ "lock_dep_test.cc" ]
-  deps = [
-    ":lockdep",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/zircon-internal",
-    "$zx/system/ulib/zxtest",
-  ]
-}
-
-group("test") {
-  testonly = true
-  deps = [ ":lockdep-test" ]
-}

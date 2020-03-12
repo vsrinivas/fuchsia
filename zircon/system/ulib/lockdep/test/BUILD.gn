@@ -1,0 +1,19 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+zx_test("lockdep-test") {
+  testonly = true
+  sources = [ "lock_dep_test.cc" ]
+  deps = [
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/lockdep",
+    "$zx/system/ulib/zircon-internal",
+    "$zx/system/ulib/zxtest",
+  ]
+}
+
+group("test") {
+  testonly = true
+  deps = [ ":lockdep-test" ]
+}
