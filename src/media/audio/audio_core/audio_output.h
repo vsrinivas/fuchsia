@@ -52,7 +52,7 @@ class AudioOutput : public AudioDevice {
     next_sched_time_known_ = true;
   }
 
-  void SetupMixTask(const Format& format, size_t max_block_size_frames,
+  void SetupMixTask(const PipelineConfig& config, uint32_t channels, size_t max_block_size_frames,
                     TimelineFunction device_reference_clock_to_fractional_frame)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 

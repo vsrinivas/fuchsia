@@ -91,6 +91,8 @@ class DriverOutput : public AudioOutput {
   // Details about the final output format
   std::unique_ptr<OutputProducer> output_producer_;
 
+  std::optional<PipelineConfig> pipeline_config_;
+
   // This atomic is only used when the final-mix wave-writer is enabled --
   // specifically to generate unique ids for each final-mix WAV file.
   static std::atomic<uint32_t> final_mix_instance_num_;

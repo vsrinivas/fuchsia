@@ -19,7 +19,6 @@ constexpr bool VERBOSE_TIMING_DEBUG = false;
 
 namespace media::audio {
 
-static constexpr uint32_t kDefaultFramesPerSec = 48000;
 static constexpr uint32_t kDefaultChannelCount = 2;
 static constexpr fuchsia::media::AudioSampleFormat kDefaultAudioFmt =
     fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32;
@@ -320,8 +319,12 @@ void DriverOutput::OnDriverInfoFetched() {
 
   zx_status_t res;
 
-  // TODO(mpuryear): Use the best driver-supported format, not hardwired default
-  uint32_t pref_fps = kDefaultFramesPerSec;
+  pipeline_config_ = {ProcessConfig::instance()
+                          .device_config()
+                          .output_device_profile(driver()->persistent_unique_id())
+                          .pipeline_config()};
+
+  uint32_t pref_fps = pipeline_config_->root().output_rate;
   uint32_t pref_chan = kDefaultChannelCount;
   fuchsia::media::AudioSampleFormat pref_fmt = kDefaultAudioFmt;
   zx::duration min_rb_duration =
@@ -347,6 +350,14 @@ void DriverOutput::OnDriverInfoFetched() {
     return;
   }
   auto& format = format_result.value();
+
+  // Update our pipeline to produce audio in the compatible format.
+  if (pipeline_config_->root().output_rate != pref_fps) {
+    FX_LOGS(WARNING) << "Hardware does not support the requested rate of "
+                     << pipeline_config_->root().output_rate << " fps; hardware will run at "
+                     << pref_fps << " fps";
+    pipeline_config_->mutable_root().output_rate = pref_fps;
+  }
 
   // Select our output producer
   output_producer_ = OutputProducer::Select(format.stream_type());
@@ -451,29 +462,15 @@ void DriverOutput::OnDriverStartComplete() {
 
   // Set up the mix task in the AudioOutput.
   //
-  // Configure our mix job output format. Note we want the same format (frame rate, channelization)
-  // as our output, except output audio as FLOAT samples since that's the only output sample format
-  // the Mixer supports. The conversion to the format required by the hardware ring buffer is done
-  // after the mix is done (see FinishMixJob).
-  //
   // TODO(39886): The intermediate buffer probably does not need to be as large as the entire ring
   // buffer.  Consider limiting this to be something only slightly larger than a nominal mix job.
-  auto format_result = Format::Create(fuchsia::media::AudioStreamType{
-      .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
-      .channels = format->channels(),
-      .frames_per_second = format->frames_per_second(),
-  });
-  if (format_result.is_error()) {
-    FX_LOGS(ERROR) << "Driver format is invalid";
-    return;
-  }
-  auto& mix_format = format_result.value();
-
   TimelineRate fractional_frames_per_frame =
       TimelineRate(FractionalFrames<uint32_t>(1).raw_value());
   auto reference_clock_to_fractional_frame = TimelineFunction::Compose(
       TimelineFunction(fractional_frames_per_frame), clock_monotonic_to_output_frame_);
-  SetupMixTask(mix_format, driver_ring_buffer()->frames(), reference_clock_to_fractional_frame);
+  FX_DCHECK(pipeline_config_);
+  SetupMixTask(*pipeline_config_, format->channels(), driver_ring_buffer()->frames(),
+               reference_clock_to_fractional_frame);
 
   const TimelineFunction& trans = clock_monotonic_to_output_frame_;
   uint32_t fd_frames = driver()->fifo_depth_frames();

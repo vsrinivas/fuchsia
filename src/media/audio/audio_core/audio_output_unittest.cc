@@ -19,10 +19,10 @@ class TestAudioOutput : public AudioOutput {
       : AudioOutput(threading_model, registry, link_matrix) {}
 
   using AudioOutput::SetNextSchedTime;
-  void SetupMixTask(const Format& format, uint32_t max_frames,
+  void SetupMixTask(const PipelineConfig& config, uint32_t channels, uint32_t max_frames,
                     TimelineFunction clock_mono_to_output_frame) {
     OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &mix_domain());
-    AudioOutput::SetupMixTask(format, max_frames, clock_mono_to_output_frame);
+    AudioOutput::SetupMixTask(config, channels, max_frames, clock_mono_to_output_frame);
   }
   void Process() {
     OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &mix_domain());
@@ -74,9 +74,9 @@ TEST_F(AudioOutputTest, ProcessTrimsInputStreamsIfNoMixJobProvided) {
   auto renderer = testing::FakeAudioRenderer::CreateWithDefaultFormatInfo(dispatcher(),
                                                                           &context().link_matrix());
   static const TimelineFunction kOneFramePerMs = TimelineFunction(TimelineRate(1, 1'000'000));
-  auto format_result = Format::Create(renderer->format()->stream_type());
-  ASSERT_TRUE(format_result.is_ok());
-  audio_output_->SetupMixTask(format_result.value(), zx::msec(1).to_msecs(), kOneFramePerMs);
+  static PipelineConfig config = PipelineConfig::Default();
+  audio_output_->SetupMixTask(config, renderer->format()->channels(), zx::msec(1).to_msecs(),
+                              kOneFramePerMs);
   context().link_matrix().LinkObjects(renderer, audio_output_,
                                       std::make_shared<MappedLoudnessTransform>(volume_curve_));
 

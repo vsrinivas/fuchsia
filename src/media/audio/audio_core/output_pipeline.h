@@ -34,16 +34,20 @@ class OutputPipeline : public Stream {
   // |ref_clock_to_fractional_frame| is a timeline function that will compute the output frame
   // number (in fixed point format with 13 bits of fractional precision) based on a reference
   // timestamp.
-  OutputPipeline(const PipelineConfig& config, const Format& output_format,
-                 uint32_t max_block_size_frames,
-                 TimelineFunction reference_clock_to_fractional_frame);
+  //
+  // The |sampler| is optionally used to select the type of sampler to be used when joining
+  // mix stages together.
+  OutputPipeline(const PipelineConfig& config, uint32_t channels, uint32_t max_block_size_frames,
+                 TimelineFunction reference_clock_to_fractional_frame,
+                 Mixer::Resampler sampler = Mixer::Resampler::Default);
 
   // Returns the loopback |Stream| for this pipeline.
   std::shared_ptr<Stream> loopback() const { return loopback_; }
 
   // Adds |stream| as an input to be mixed. The given |usage| will indicate where in the pipeline
   // this stream will be routed (based on the |PipelineConfig| this pipeline was created with).
-  std::shared_ptr<Mixer> AddInput(std::shared_ptr<Stream> stream, const StreamUsage& usage);
+  std::shared_ptr<Mixer> AddInput(std::shared_ptr<Stream> stream, const StreamUsage& usage,
+                                  Mixer::Resampler sampler_hint = Mixer::Resampler::Default);
 
   // Removes |stream| from the pipeline.
   //
@@ -79,8 +83,9 @@ class OutputPipeline : public Stream {
 
  private:
   std::shared_ptr<Stream> CreateMixStage(
-      const PipelineConfig::MixGroup& spec, const Format& output_format, uint32_t block_size,
-      fbl::RefPtr<VersionedTimelineFunction> ref_clock_to_output_frame, uint32_t* usage_mask);
+      const PipelineConfig::MixGroup& spec, uint32_t channels, uint32_t block_size,
+      fbl::RefPtr<VersionedTimelineFunction> ref_clock_to_output_frame, uint32_t* usage_mask,
+      Mixer::Resampler sampler);
   MixStage& LookupStageForUsage(const StreamUsage& usage);
 
   std::vector<std::pair<std::shared_ptr<MixStage>, std::vector<StreamUsage>>> mix_stages_;

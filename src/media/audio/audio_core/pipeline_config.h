@@ -57,6 +57,8 @@ class PipelineConfig {
 
   const MixGroup& root() const { return root_; }
 
+  MixGroup& mutable_root() { return root_; }
+
  private:
   friend class ProcessConfigBuilder;
 

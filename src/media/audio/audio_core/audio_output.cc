@@ -119,22 +119,11 @@ fit::result<std::shared_ptr<Stream>, zx_status_t> AudioOutput::InitializeDestLin
   return fit::ok(pipeline_->loopback());
 }
 
-void AudioOutput::SetupMixTask(const Format& format, size_t max_block_size_frames,
+void AudioOutput::SetupMixTask(const PipelineConfig& config, uint32_t channels,
+                               size_t max_block_size_frames,
                                TimelineFunction device_reference_clock_to_fractional_frame) {
-  FX_CHECK(format.sample_format() == fuchsia::media::AudioSampleFormat::FLOAT);
-
-  if (driver()) {
-    auto config = ProcessConfig::instance();
-    pipeline_ = std::make_unique<OutputPipeline>(
-        config.device_config()
-            .output_device_profile(driver()->persistent_unique_id())
-            .pipeline_config(),
-        format, max_block_size_frames, device_reference_clock_to_fractional_frame);
-  } else {
-    auto default_config = PipelineConfig::Default();
-    pipeline_ = std::make_unique<OutputPipeline>(default_config, format, max_block_size_frames,
-                                                 device_reference_clock_to_fractional_frame);
-  }
+  pipeline_ = std::make_unique<OutputPipeline>(config, channels, max_block_size_frames,
+                                               device_reference_clock_to_fractional_frame);
 }
 
 void AudioOutput::Cleanup() {

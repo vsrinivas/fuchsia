@@ -36,38 +36,51 @@ class OutputPipelineTest : public testing::ThreadingModelFixture {
  protected:
   std::shared_ptr<OutputPipeline> CreateOutputPipeline() {
     ProcessConfig::Builder builder;
-    PipelineConfig::MixGroup root{.name = "linearize",
-                                  .input_streams =
-                                      {
-                                          RenderUsage::BACKGROUND,
-                                      },
-                                  .effects = {},
-                                  .inputs = {{.name = "mix",
-                                              .input_streams =
-                                                  {
-                                                      RenderUsage::INTERRUPTION,
-                                                  },
-                                              .effects = {},
-                                              .inputs = {{
-                                                             .name = "default",
-                                                             .input_streams =
-                                                                 {
-                                                                     RenderUsage::MEDIA,
-                                                                     RenderUsage::SYSTEM_AGENT,
-                                                                 },
-                                                             .effects = {},
-                                                         },
-                                                         {
-                                                             .name = "communications",
-                                                             .input_streams =
-                                                                 {
-                                                                     RenderUsage::COMMUNICATION,
-                                                                 },
-                                                             .effects = {},
-                                                         }}}}};
+    PipelineConfig::MixGroup root{
+        .name = "linearize",
+        .input_streams =
+            {
+                RenderUsage::BACKGROUND,
+            },
+        .effects = {},
+        .inputs = {{
+            .name = "mix",
+            .input_streams =
+                {
+                    RenderUsage::INTERRUPTION,
+                },
+            .effects = {},
+            .inputs = {{
+                           .name = "default",
+                           .input_streams =
+                               {
+                                   RenderUsage::MEDIA,
+                                   RenderUsage::SYSTEM_AGENT,
+                               },
+                           .effects = {},
+                           .loopback = false,
+                           .output_rate = 48000,
+                       },
+                       {
+                           .name = "communications",
+                           .input_streams =
+                               {
+                                   RenderUsage::COMMUNICATION,
+                               },
+                           .effects = {},
+                           .loopback = false,
+                           .output_rate = 48000,
+                       }},
+            .loopback = false,
+            .output_rate = 48000,
+
+        }},
+        .loopback = false,
+        .output_rate = 48000,
+    };
 
     auto pipeline_config = PipelineConfig(root);
-    return std::make_shared<OutputPipeline>(pipeline_config, kDefaultFormat, 128,
+    return std::make_shared<OutputPipeline>(pipeline_config, kDefaultFormat.channels(), 128,
                                             kDefaultTransform);
   }
 
@@ -143,35 +156,40 @@ TEST_F(OutputPipelineTest, Trim) {
 TEST_F(OutputPipelineTest, Loopback) {
   auto test_effects = testing::TestEffectsModule::Open();
   test_effects.AddEffect("add_1.0").WithAction(TEST_EFFECTS_ACTION_ADD, 1.0);
-  PipelineConfig::MixGroup root{.name = "linearize",
-                                .input_streams =
-                                    {
-                                        RenderUsage::BACKGROUND,
-                                    },
-                                .effects =
-                                    {
-                                        {
-                                            .lib_name = "test_effects.so",
-                                            .effect_name = "add_1.0",
-                                            .instance_name = "",
-                                            .effect_config = "",
-                                        },
-                                    },
-                                .inputs = {{
-                                    .name = "mix",
-                                    .input_streams =
-                                        {
-                                            RenderUsage::MEDIA,
-                                            RenderUsage::SYSTEM_AGENT,
-                                            RenderUsage::INTERRUPTION,
-                                            RenderUsage::COMMUNICATION,
-                                        },
-                                    .effects = {},
-                                    .loopback = true,
-                                }}};
+  PipelineConfig::MixGroup root{
+      .name = "linearize",
+      .input_streams =
+          {
+              RenderUsage::BACKGROUND,
+          },
+      .effects =
+          {
+              {
+                  .lib_name = "test_effects.so",
+                  .effect_name = "add_1.0",
+                  .instance_name = "",
+                  .effect_config = "",
+              },
+          },
+      .inputs = {{
+          .name = "mix",
+          .input_streams =
+              {
+                  RenderUsage::MEDIA,
+                  RenderUsage::SYSTEM_AGENT,
+                  RenderUsage::INTERRUPTION,
+                  RenderUsage::COMMUNICATION,
+              },
+          .effects = {},
+          .loopback = true,
+          .output_rate = 48000,
+      }},
+      .loopback = false,
+      .output_rate = 48000,
+  };
   auto pipeline_config = PipelineConfig(root);
-  auto pipeline =
-      std::make_shared<OutputPipeline>(pipeline_config, kDefaultFormat, 128, kDefaultTransform);
+  auto pipeline = std::make_shared<OutputPipeline>(pipeline_config, kDefaultFormat.channels(), 128,
+                                                   kDefaultTransform);
 
   // Verify our stream from the pipeline has the effects applied (we have no input streams so we
   // should have silence with a single effect that adds 1.0 to each sample, so we expect all samples
@@ -198,34 +216,38 @@ TEST_F(OutputPipelineTest, SetEffectConfig) {
   auto test_effects = testing::TestEffectsModule::Open();
   test_effects.AddEffect("assign_config_size")
       .WithAction(TEST_EFFECTS_ACTION_ASSIGN_CONFIG_SIZE, 0.0);
-  PipelineConfig::MixGroup root{.name = "linearize",
-                                .input_streams =
-                                    {
-                                        RenderUsage::BACKGROUND,
-                                    },
-                                .effects =
-                                    {
-                                        {
-                                            .lib_name = "test_effects.so",
-                                            .effect_name = "assign_config_size",
-                                            .instance_name = kInstanceName,
-                                            .effect_config = "",
-                                        },
-                                    },
-                                .inputs = {{
-                                    .name = "mix",
-                                    .input_streams =
-                                        {
-                                            RenderUsage::MEDIA,
-                                            RenderUsage::SYSTEM_AGENT,
-                                            RenderUsage::INTERRUPTION,
-                                            RenderUsage::COMMUNICATION,
-                                        },
-                                    .effects = {},
-                                }}};
+  PipelineConfig::MixGroup root{
+      .name = "linearize",
+      .input_streams =
+          {
+              RenderUsage::BACKGROUND,
+          },
+      .effects =
+          {
+              {
+                  .lib_name = "test_effects.so",
+                  .effect_name = "assign_config_size",
+                  .instance_name = kInstanceName,
+                  .effect_config = "",
+              },
+          },
+      .inputs = {{
+          .name = "mix",
+          .input_streams =
+              {
+                  RenderUsage::MEDIA,
+                  RenderUsage::SYSTEM_AGENT,
+                  RenderUsage::INTERRUPTION,
+                  RenderUsage::COMMUNICATION,
+              },
+          .effects = {},
+          .output_rate = 48000,
+      }},
+      .output_rate = 48000,
+  };
   auto pipeline_config = PipelineConfig(root);
-  auto pipeline =
-      std::make_shared<OutputPipeline>(pipeline_config, kDefaultFormat, 128, kDefaultTransform);
+  auto pipeline = std::make_shared<OutputPipeline>(pipeline_config, kDefaultFormat.channels(), 128,
+                                                   kDefaultTransform);
 
   pipeline->SetEffectConfig(kInstanceName, kConfig);
 
@@ -237,6 +259,74 @@ TEST_F(OutputPipelineTest, SetEffectConfig) {
   ASSERT_EQ(buf->length().Floor(), 48u);
   float expected_sample = static_cast<float>(kConfig.size());
   CheckBuffer(buf->payload(), expected_sample, 96);
+}
+
+TEST_F(OutputPipelineTest, DifferentMixRates) {
+  static const PipelineConfig::MixGroup root{
+      .name = "linearize",
+      .input_streams =
+          {
+              RenderUsage::BACKGROUND,
+          },
+      .inputs = {{
+          .name = "mix",
+          .input_streams =
+              {
+                  RenderUsage::MEDIA,
+                  RenderUsage::SYSTEM_AGENT,
+                  RenderUsage::INTERRUPTION,
+                  RenderUsage::COMMUNICATION,
+              },
+          .effects = {},
+          .loopback = true,
+          .output_rate = 24000,
+      }},
+      .loopback = false,
+      .output_rate = 48000,
+  };
+  testing::PacketFactory packet_factory1(dispatcher(), kDefaultFormat, PAGE_SIZE);
+  // Add the stream with a usage that routes to the mix stage. We request a simple point sampler
+  // to make data verficications a bit simpler.
+  const Mixer::Resampler resampler = Mixer::Resampler::SampleAndHold;
+  auto timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(kDefaultTransform);
+  auto stream1 = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function);
+  auto pipeline_config = PipelineConfig(root);
+  auto pipeline = std::make_shared<OutputPipeline>(pipeline_config, kDefaultFormat.channels(), 480,
+                                                   kDefaultTransform, resampler);
+
+  pipeline->AddInput(stream1, StreamUsage::WithRenderUsage(RenderUsage::MEDIA), resampler);
+
+  bool packet_released[2] = {};
+  {
+    stream1->PushPacket(packet_factory1.CreatePacket(
+        1.0, zx::msec(5), [&packet_released] { packet_released[0] = true; }));
+    stream1->PushPacket(packet_factory1.CreatePacket(
+        100.0, zx::msec(5), [&packet_released] { packet_released[1] = true; }));
+  }
+
+  {
+    auto buf = pipeline->LockBuffer(zx::time(0), 0, 240);
+    RunLoopUntilIdle();
+
+    EXPECT_TRUE(buf);
+    EXPECT_TRUE(packet_released[0]);
+    EXPECT_FALSE(packet_released[1]);
+    EXPECT_EQ(buf->start().Floor(), 0u);
+    EXPECT_EQ(buf->length().Floor(), 240u);
+    CheckBuffer(buf->payload(), 1.0, 240);
+  }
+
+  {
+    auto buf = pipeline->LockBuffer(zx::time(0) + zx::msec(10), 240, 240);
+    RunLoopUntilIdle();
+
+    EXPECT_TRUE(buf);
+    EXPECT_TRUE(packet_released[0]);
+    EXPECT_TRUE(packet_released[1]);
+    EXPECT_EQ(buf->start().Floor(), 240u);
+    EXPECT_EQ(buf->length().Floor(), 240u);
+    CheckBuffer(buf->payload(), 100.0, 240);
+  }
 }
 
 }  // namespace
