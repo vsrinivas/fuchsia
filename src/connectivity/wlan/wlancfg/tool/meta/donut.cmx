@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/wlancfg_tool"
+        "binary": "bin/donut"
     },
     "sandbox": {
         "services": [
