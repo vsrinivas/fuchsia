@@ -6,6 +6,7 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
+#include <ddk/metadata/gpt.h>
 #include <ddk/platform-defs.h>
 #include <fbl/algorithm.h>
 #include <soc/vs680/vs680-gpio.h>
@@ -14,6 +15,13 @@
 #include "luis.h"
 
 namespace board_luis {
+
+constexpr guid_map_t guid_map[] = {
+    {"rootfs_a", GUID_ZIRCON_A_VALUE},
+    {"rootfs_b", GUID_ZIRCON_B_VALUE},
+    {"userdata", GUID_ZIRCON_R_VALUE},
+    {"cache", GUID_FVM_VALUE},
+};
 
 zx_status_t Luis::EmmcInit() {
   zx_status_t status;
@@ -39,6 +47,14 @@ zx_status_t Luis::EmmcInit() {
     },
   };
 
+  constexpr pbus_metadata_t emmc_metadata[] = {
+      {
+          .type = DEVICE_METADATA_GUID_MAP,
+          .data_buffer = guid_map,
+          .data_size = sizeof(guid_map),
+      },
+  };
+
   pbus_dev_t emmc_dev = {};
   emmc_dev.name = "vs680-emmc";
   emmc_dev.vid = PDEV_VID_SYNAPTICS;
@@ -50,6 +66,8 @@ zx_status_t Luis::EmmcInit() {
   emmc_dev.mmio_count = countof(emmc_mmios);
   emmc_dev.bti_list = emmc_btis;
   emmc_dev.bti_count = countof(emmc_btis);
+  emmc_dev.metadata_list = emmc_metadata;
+  emmc_dev.metadata_count = countof(emmc_metadata);
 
   status = pbus_.DeviceAdd(&emmc_dev);
   if (status != ZX_OK) {
