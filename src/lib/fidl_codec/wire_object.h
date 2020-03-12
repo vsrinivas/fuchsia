@@ -18,6 +18,7 @@
 
 namespace fidl_codec {
 
+class FidlMessageValue;
 class HandleValue;
 class StringValue;
 class StructValue;
@@ -49,6 +50,7 @@ class Value {
   virtual const HandleValue* AsHandleValue() const { return nullptr; }
   virtual StructValue* AsStructValue() { return nullptr; }
   virtual const StructValue* AsStructValue() const { return nullptr; }
+  virtual const FidlMessageValue* AsFidlMessageValue() const { return nullptr; }
 
   // Returns the size needed to display the value. If the needed size is
   // greater than |remaining_size|, the return value can be anything greater
@@ -360,12 +362,68 @@ class TableValue : public Value {
   Ordinal32 highest_member_ = 0;
 };
 
-enum class MessageType { kRequest, kResponse };
+// An instance of a FIDL message.
+class FidlMessageValue : public Value {
+ public:
+  FidlMessageValue(fidl_codec::DecodedMessage* message, std::string global_errors,
+                   const uint8_t* bytes, uint32_t num_bytes, const zx_handle_info_t* handles,
+                   uint32_t num_handles);
 
-struct DecodedMessageData {
-  const semantic::MethodSemantic* semantic = nullptr;
-  std::unique_ptr<StructValue> decoded_request;
-  std::unique_ptr<StructValue> decoded_response;
+  bool is_request() const { return is_request_; }
+  const fidl_codec::InterfaceMethod* method() const { return method_; }
+  const StructValue* decoded_request() const { return decoded_request_.get(); }
+  const StructValue* decoded_response() const { return decoded_response_.get(); }
+  bool matched_request() const { return (decoded_request_ != nullptr) && request_errors_.empty(); }
+  bool matched_response() const {
+    return (decoded_response_ != nullptr) && response_errors_.empty();
+  }
+
+  const FidlMessageValue* AsFidlMessageValue() const override { return this; }
+
+  int DisplaySize(const Type* for_type, int remaining_size) const override;
+
+  void PrettyPrint(const Type* for_type, PrettyPrinter& printer) const override;
+
+  void PrintMessage(PrettyPrinter& printer) const;
+
+  void PrintMessageBody(PrettyPrinter& printer) const;
+
+  void DumpMessage(PrettyPrinter& printer) const;
+
+  void Visit(Visitor* visitor, const Type* for_type) const override;
+
+ private:
+  // The transfer ID of the mesage.
+  const zx_txid_t txid_;
+  // The ordinal of the message.
+  const uint64_t ordinal_;
+  // Global errors for the message (errors before we can start decoding anything).
+  const std::string global_errors_;
+  // Text value of the error status of the epitaph.
+  const std::string epitaph_error_;
+  // True if the message was received.
+  const bool received_;
+  // True if the message is a request. False if the message is a response.
+  const bool is_request_;
+  // True if we haven't been able to select a request of a response (case where both can be
+  // decoded).
+  const bool unknown_direction_;
+  // The method associated with the ordinal.
+  const fidl_codec::InterfaceMethod* const method_;
+  // All the bytes of the message.
+  std::vector<uint8_t> bytes_;
+  // All the handles of the message.
+  std::vector<zx_handle_info_t> handles_;
+  // Value of the request we have been able to decode.
+  std::unique_ptr<StructValue> decoded_request_;
+  // Errors generated during the decoding of the request. If not empty, decoded_request_ holds only
+  // a partial result.
+  const std::string request_errors_;
+  // Value of the response we have been able to decode.
+  std::unique_ptr<StructValue> decoded_response_;
+  // Errors generated during the decoding of the response. If not empty, decoded_response_ holds
+  // only a partial result.
+  const std::string response_errors_;
 };
 
 }  // namespace fidl_codec

@@ -5,6 +5,7 @@
 #include "message_decoder.h"
 
 #include <ostream>
+#include <sstream>
 
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
@@ -17,51 +18,50 @@
 
 namespace fidl_codec {
 
-std::string DocumentToString(rapidjson::Document* document) {
-  rapidjson::StringBuffer output;
-  rapidjson::Writer<rapidjson::StringBuffer> writer(output);
-  document->Accept(writer);
-  return output.GetString();
-}
+std::string DocumentToString(rapidjson::Document* document);
 
 bool DecodedMessage::DecodeMessage(MessageDecoderDispatcher* dispatcher, uint64_t process_koid,
                                    zx_handle_t handle, const uint8_t* bytes, uint32_t num_bytes,
                                    const zx_handle_info_t* handles, uint32_t num_handles,
-                                   SyscallFidlType type, std::ostream& os,
-                                   std::string_view line_header, int tabs) {
-  if (dispatcher->loader() == nullptr) {
-    return false;
-  }
+                                   SyscallFidlType type, std::ostream& error_stream) {
   if ((bytes == nullptr) || (num_bytes < sizeof(fidl_message_header_t))) {
-    os << line_header << std::string(tabs * kTabSize, ' ') << "not enough data for message\n";
+    error_stream << "not enough data for message\n";
     return false;
   }
+
   header_ = reinterpret_cast<const fidl_message_header_t*>(bytes);
+  txid_ = header_->txid;
+  ordinal_ = header_->ordinal;
 
   // Handle the epitaph header explicitly.
-  if (header_->ordinal == kFidlOrdinalEpitaph) {
+  if (ordinal_ == kFidlOrdinalEpitaph) {
     if (num_bytes < sizeof(fidl_epitaph)) {
-      os << line_header << std::string(tabs * kTabSize, ' ') << "not enough data for epitaph\n";
+      error_stream << "not enough data for epitaph\n";
       return false;
     }
     switch (type) {
       case SyscallFidlType::kOutputRequest:
       case SyscallFidlType::kOutputMessage:
-        message_direction_ = "sent ";
+        received_ = false;
         break;
       case SyscallFidlType::kInputResponse:
       case SyscallFidlType::kInputMessage:
-        message_direction_ = "received ";
+        received_ = true;
         break;
     }
+    auto epitaph = reinterpret_cast<const fidl_epitaph_t*>(header_);
+    epitaph_error_ = epitaph->error;
     return true;
   }
 
-  const std::vector<const InterfaceMethod*>* methods =
-      dispatcher->loader()->GetByOrdinal(header_->ordinal);
+  if ((dispatcher == nullptr) || (dispatcher->loader() == nullptr)) {
+    return false;
+  }
+
+  const std::vector<const InterfaceMethod*>* methods = dispatcher->loader()->GetByOrdinal(ordinal_);
   if (methods == nullptr || methods->empty()) {
-    os << line_header << std::string(tabs * kTabSize, ' ') << "Protocol method with ordinal 0x"
-       << std::hex << header_->ordinal << " not found\n";
+    error_stream << "Protocol method with ordinal 0x" << std::hex << header_->ordinal
+                 << " not found\n";
     return false;
   }
 
@@ -79,20 +79,20 @@ bool DecodedMessage::DecodeMessage(MessageDecoderDispatcher* dispatcher, uint64_
       if (direction_ == Direction::kClient) {
         is_request_ = true;
       }
-      message_direction_ = "sent ";
+      received_ = false;
       break;
     case SyscallFidlType::kInputMessage:
       if (direction_ == Direction::kServer) {
         is_request_ = true;
       }
-      message_direction_ = "received ";
+      received_ = true;
       break;
     case SyscallFidlType::kOutputRequest:
       is_request_ = true;
-      message_direction_ = "sent ";
+      received_ = false;
       break;
     case SyscallFidlType::kInputResponse:
-      message_direction_ = "received ";
+      received_ = true;
       break;
   }
   if (direction_ != Direction::kUnknown) {
@@ -120,13 +120,11 @@ bool DecodedMessage::DecodeMessage(MessageDecoderDispatcher* dispatcher, uint64_
 }
 
 bool DecodedMessage::Display(const Colors& colors, bool pretty_print, int columns, std::ostream& os,
-                             std::string_view line_header, int tabs,
-                             DecodedMessageData* decoded_message_data) {
+                             std::string_view line_header, int tabs) {
   if (header_->ordinal == kFidlOrdinalEpitaph) {
-    auto epitaph = reinterpret_cast<const fidl_epitaph_t*>(header_);
     PrettyPrinter printer(os, colors, line_header, columns, tabs);
-    printer << WhiteOnMagenta << message_direction_ << "epitaph" << ResetColor << ' ' << Red
-            << StatusName(epitaph->error) << ResetColor << "\n";
+    printer << WhiteOnMagenta << (received_ ? "received" : "sent") << " epitaph" << ResetColor
+            << ' ' << Red << StatusName(epitaph_error_) << ResetColor << "\n";
     return true;
   }
 
@@ -144,9 +142,9 @@ bool DecodedMessage::Display(const Colors& colors, bool pretty_print, int column
 
   if (matched_request_ && (is_request_ || (direction_ == Direction::kUnknown))) {
     PrettyPrinter printer(os, colors, line_header, columns, /*header_on_every_line=*/true, tabs);
-    printer << WhiteOnMagenta << message_direction_ << "request" << ResetColor << ' ' << Green
-            << method_->enclosing_interface().name() << '.' << method_->name() << ResetColor
-            << " = ";
+    printer << WhiteOnMagenta << (received_ ? "received" : "sent") << " request" << ResetColor
+            << ' ' << Green << method_->enclosing_interface().name() << '.' << method_->name()
+            << ResetColor << " = ";
     if (pretty_print) {
       decoded_request_->PrettyPrint(nullptr, printer);
       printer << '\n';
@@ -157,16 +155,12 @@ bool DecodedMessage::Display(const Colors& colors, bool pretty_print, int column
       }
       os << DocumentToString(&actual_request) << '\n';
     }
-    if (is_request_ && (decoded_message_data != nullptr)) {
-      decoded_message_data->semantic = method_->semantic();
-      decoded_message_data->decoded_request = std::move(decoded_request_);
-    }
   }
   if (matched_response_ && (!is_request_ || (direction_ == Direction::kUnknown))) {
     PrettyPrinter printer(os, colors, line_header, columns, /*header_on_every_line=*/true, tabs);
-    printer << WhiteOnMagenta << message_direction_ << "response" << ResetColor << ' ' << Green
-            << method_->enclosing_interface().name() << '.' << method_->name() << ResetColor
-            << " = ";
+    printer << WhiteOnMagenta << (received_ ? "received" : "sent") << " response" << ResetColor
+            << ' ' << Green << method_->enclosing_interface().name() << '.' << method_->name()
+            << ResetColor << " = ";
     if (pretty_print) {
       decoded_response_->PrettyPrint(nullptr, printer);
       printer << '\n';
@@ -177,10 +171,6 @@ bool DecodedMessage::Display(const Colors& colors, bool pretty_print, int column
       }
       os << DocumentToString(&actual_response) << '\n';
     }
-    if (is_request_ && (decoded_message_data != nullptr)) {
-      decoded_message_data->semantic = method_->semantic();
-      decoded_message_data->decoded_response = std::move(decoded_response_);
-    }
   }
   if (matched_request_ || matched_response_) {
     return true;
@@ -188,15 +178,15 @@ bool DecodedMessage::Display(const Colors& colors, bool pretty_print, int column
   std::string request_errors = request_error_stream_.str();
   if (!request_errors.empty()) {
     PrettyPrinter printer(os, colors, line_header, columns, /*header_on_every_line=*/true, tabs);
-    printer << Red << message_direction_ << "request errors" << ResetColor << ":\n";
+    printer << Red << (received_ ? "received" : "sent") << " request errors" << ResetColor << ":\n";
     {
       Indent indent(printer);
       printer << request_errors;
     }
     if (decoded_request_ != nullptr) {
-      printer << WhiteOnMagenta << message_direction_ << "request" << ResetColor << ' ' << Green
-              << method_->enclosing_interface().name() << '.' << method_->name() << ResetColor
-              << " = ";
+      printer << WhiteOnMagenta << (received_ ? "received" : "sent") << " request" << ResetColor
+              << ' ' << Green << method_->enclosing_interface().name() << '.' << method_->name()
+              << ResetColor << " = ";
       decoded_request_->PrettyPrint(nullptr, printer);
       printer << '\n';
     }
@@ -204,15 +194,16 @@ bool DecodedMessage::Display(const Colors& colors, bool pretty_print, int column
   std::string response_errors = response_error_stream_.str();
   if (!response_errors.empty()) {
     PrettyPrinter printer(os, colors, line_header, columns, /*header_on_every_line=*/true, tabs);
-    printer << Red << message_direction_ << "response errors" << colors.reset << ":\n";
+    printer << Red << (received_ ? "received" : "sent") << " response errors" << colors.reset
+            << ":\n";
     {
       Indent indent(printer);
       printer << response_errors;
     }
     if (decoded_response_ != nullptr) {
-      printer << WhiteOnMagenta << message_direction_ << "response" << ResetColor << ' ' << Green
-              << method_->enclosing_interface().name() << '.' << method_->name() << ResetColor
-              << " = ";
+      printer << WhiteOnMagenta << (received_ ? "received" : "sent") << " response" << ResetColor
+              << ' ' << Green << method_->enclosing_interface().name() << '.' << method_->name()
+              << ResetColor << " = ";
       decoded_response_->PrettyPrint(nullptr, printer);
       printer << '\n';
     }
@@ -220,19 +211,21 @@ bool DecodedMessage::Display(const Colors& colors, bool pretty_print, int column
   return false;
 }
 
-bool MessageDecoderDispatcher::DecodeMessage(uint64_t process_koid, zx_handle_t handle,
-                                             const uint8_t* bytes, uint32_t num_bytes,
-                                             const zx_handle_info_t* handles, uint32_t num_handles,
-                                             SyscallFidlType type, std::ostream& os,
-                                             std::string_view line_header, int tabs,
-                                             DecodedMessageData* decoded_message_data) {
+bool MessageDecoderDispatcher::DecodeAndDisplayMessage(uint64_t process_koid, zx_handle_t handle,
+                                                       const uint8_t* bytes, uint32_t num_bytes,
+                                                       const zx_handle_info_t* handles,
+                                                       uint32_t num_handles, SyscallFidlType type,
+                                                       std::ostream& os,
+                                                       std::string_view line_header, int tabs) {
   DecodedMessage message;
+  std::stringstream error_stream;
   if (!message.DecodeMessage(this, process_koid, handle, bytes, num_bytes, handles, num_handles,
-                             type, os, line_header, tabs)) {
+                             type, error_stream)) {
+    os << error_stream.str();
     return false;
   }
   return message.Display(colors_, display_options_.pretty_print, display_options_.columns, os,
-                         line_header, tabs, decoded_message_data);
+                         line_header, tabs);
 }
 
 Direction MessageDecoderDispatcher::ComputeDirection(uint64_t process_koid, zx_handle_t handle,

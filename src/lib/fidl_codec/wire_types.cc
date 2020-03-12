@@ -492,6 +492,16 @@ std::unique_ptr<Value> TableType::Decode(MessageDecoder* decoder, uint64_t offse
 
 void TableType::Visit(TypeVisitor* visitor) const { visitor->VisitTableType(this); }
 
+std::string FidlMessageType::Name() const { return "fidl-message"; }
+
+size_t FidlMessageType::InlineSize() const { return 0; }
+
+std::unique_ptr<Value> FidlMessageType::Decode(MessageDecoder* decoder, uint64_t offset) const {
+  return nullptr;
+}
+
+void FidlMessageType::Visit(TypeVisitor* visitor) const { visitor->VisitFidlMessageType(this); }
+
 std::unique_ptr<Type> Type::ScalarTypeFromName(const std::string& type_name) {
   static std::map<std::string, std::function<std::unique_ptr<Type>()>> scalar_type_map_{
       {"bool", []() { return std::make_unique<BoolType>(); }},

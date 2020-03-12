@@ -59,9 +59,9 @@ TEST_F(DispatcherTest, TwoStringArrayInt) {
       });
 
   std::stringstream output;
-  bool result = dispatcher()->DecodeMessage(kProcessKoid, kHandle, message.bytes().data(),
-                                            message.bytes().size(), nullptr, 0,
-                                            SyscallFidlType::kOutputMessage, output, "", 2);
+  bool result = dispatcher()->DecodeAndDisplayMessage(
+      kProcessKoid, kHandle, message.bytes().data(), message.bytes().size(), nullptr, 0,
+      SyscallFidlType::kOutputMessage, output, "", 2);
   ASSERT_TRUE(result);
   ASSERT_EQ(
       output.str(),
@@ -80,9 +80,9 @@ TEST_F(DispatcherTest, TwoStringArrayIntIncorrect) {
       });
 
   std::stringstream output;
-  bool result = dispatcher()->DecodeMessage(kProcessKoid, kHandle, message.bytes().data(),
-                                            message.bytes().size() - 1, nullptr, 0,
-                                            SyscallFidlType::kOutputMessage, output, "", 2);
+  bool result = dispatcher()->DecodeAndDisplayMessage(
+      kProcessKoid, kHandle, message.bytes().data(), message.bytes().size() - 1, nullptr, 0,
+      SyscallFidlType::kOutputMessage, output, "", 2);
   ASSERT_FALSE(result);
   ASSERT_EQ(
       output.str(),

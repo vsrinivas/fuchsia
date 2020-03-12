@@ -9,15 +9,25 @@
 #include <memory>
 #include <vector>
 
+#include "rapidjson/stringbuffer.h"
+#include "rapidjson/writer.h"
 #include "src/lib/fidl_codec/display_handle.h"
 #include "src/lib/fidl_codec/json_visitor.h"
 #include "src/lib/fidl_codec/library_loader.h"
 #include "src/lib/fidl_codec/printer.h"
+#include "src/lib/fidl_codec/status.h"
 #include "src/lib/fidl_codec/visitor.h"
 #include "src/lib/fidl_codec/wire_types.h"
 #include "src/lib/fxl/logging.h"
 
 namespace fidl_codec {
+
+std::string DocumentToString(rapidjson::Document* document) {
+  rapidjson::StringBuffer output;
+  rapidjson::Writer<rapidjson::StringBuffer> writer(output);
+  document->Accept(writer);
+  return output.GetString();
+}
 
 void InvalidValue::Visit(Visitor* visitor, const Type* for_type) const {
   visitor->VisitInvalidValue(this, for_type);
@@ -388,6 +398,203 @@ void TableValue::PrettyPrint(const Type* for_type, PrettyPrinter& printer) const
 
 void TableValue::Visit(Visitor* visitor, const Type* for_type) const {
   visitor->VisitTableValue(this, for_type);
+}
+
+FidlMessageValue::FidlMessageValue(fidl_codec::DecodedMessage* message, std::string global_errors,
+                                   const uint8_t* bytes, uint32_t num_bytes,
+                                   const zx_handle_info_t* handles, uint32_t num_handles)
+    : txid_(message->txid()),
+      ordinal_(message->ordinal()),
+      global_errors_(std::move(global_errors)),
+      epitaph_error_(
+          (message->ordinal() == kFidlOrdinalEpitaph) ? StatusName(message->epitaph_error()) : ""),
+      received_(message->received()),
+      is_request_(message->is_request()),
+      unknown_direction_(message->direction() == Direction::kUnknown),
+      method_(message->method()),
+      bytes_(bytes, bytes + num_bytes),
+      handles_(handles, handles + num_handles),
+      decoded_request_(std::move(message->decoded_request())),
+      request_errors_(message->request_error_stream().str()),
+      decoded_response_(std::move(message->decoded_response())),
+      response_errors_(message->response_error_stream().str()) {}
+
+int FidlMessageValue::DisplaySize(const Type* for_type, int remaining_size) const { return 0; }
+
+void FidlMessageValue::PrettyPrint(const Type* for_type, PrettyPrinter& printer) const {
+  PrintMessage(printer);
+  DumpMessage(printer);
+}
+
+void FidlMessageValue::PrintMessage(PrettyPrinter& printer) const {
+  if (!global_errors_.empty()) {
+    printer << global_errors_;
+    return;
+  }
+  if (ordinal_ == kFidlOrdinalEpitaph) {
+    printer << fidl_codec::WhiteOnMagenta << (received_ ? "received" : "sent") << " epitaph"
+            << fidl_codec::ResetColor << ' ' << fidl_codec::Red << epitaph_error_
+            << fidl_codec::ResetColor << "\n";
+    return;
+  }
+
+  if (unknown_direction_) {
+    bool matched_request = (decoded_request_ != nullptr) && request_errors_.empty();
+    bool matched_response = (decoded_response_ != nullptr) && response_errors_.empty();
+    if (matched_request || matched_response) {
+      printer << fidl_codec::Red << "Can't determine request/response." << fidl_codec::ResetColor
+              << " it can be:\n";
+      fidl_codec::Indent indent(printer);
+      PrintMessageBody(printer);
+      return;
+    }
+  }
+  PrintMessageBody(printer);
+}
+
+void FidlMessageValue::PrintMessageBody(PrettyPrinter& printer) const {
+  if (matched_request() && (is_request_ || unknown_direction_)) {
+    printer << fidl_codec::WhiteOnMagenta << (received_ ? "received" : "sent") << " request"
+            << fidl_codec::ResetColor << ' ' << fidl_codec::Green
+            << method_->enclosing_interface().name() << '.' << method_->name()
+            << fidl_codec::ResetColor << " = ";
+    if (printer.PrettyPrint()) {
+      decoded_request_->PrettyPrint(nullptr, printer);
+      printer << '\n';
+    } else {
+      rapidjson::Document actual_request;
+      if (decoded_request_ != nullptr) {
+        decoded_request_->ExtractJson(actual_request.GetAllocator(), actual_request);
+      }
+      printer << DocumentToString(&actual_request) << '\n';
+    }
+  }
+  if (matched_response() && (!is_request_ || unknown_direction_)) {
+    printer << fidl_codec::WhiteOnMagenta << (received_ ? "received" : "sent") << " response"
+            << fidl_codec::ResetColor << ' ' << fidl_codec::Green
+            << method_->enclosing_interface().name() << '.' << method_->name()
+            << fidl_codec::ResetColor << " = ";
+    if (printer.PrettyPrint()) {
+      decoded_response_->PrettyPrint(nullptr, printer);
+      printer << '\n';
+    } else {
+      rapidjson::Document actual_response;
+      if (decoded_response_ != nullptr) {
+        decoded_response_->ExtractJson(actual_response.GetAllocator(), actual_response);
+      }
+      printer << DocumentToString(&actual_response) << '\n';
+    }
+  }
+  if (matched_request() || matched_response()) {
+    return;
+  }
+  if (!request_errors_.empty()) {
+    printer << fidl_codec::Red << (received_ ? "received" : "sent") << " request errors"
+            << fidl_codec::ResetColor << ":\n";
+    {
+      Indent indent(printer);
+      printer << request_errors_;
+    }
+    if (decoded_request_ != nullptr) {
+      printer << fidl_codec::WhiteOnMagenta << (received_ ? "received" : "sent") << " request"
+              << fidl_codec::ResetColor << ' ' << fidl_codec::Green
+              << method_->enclosing_interface().name() << '.' << method_->name()
+              << fidl_codec::ResetColor << " = ";
+      decoded_request_->PrettyPrint(nullptr, printer);
+      printer << '\n';
+    }
+  }
+  if (!response_errors_.empty()) {
+    printer << fidl_codec::Red << (received_ ? "received" : "sent") << " response errors"
+            << fidl_codec::ResetColor << ":\n";
+    {
+      Indent indent(printer);
+      printer << response_errors_;
+    }
+    if (decoded_response_ != nullptr) {
+      printer << fidl_codec::WhiteOnMagenta << (received_ ? "received" : "sent") << " response"
+              << fidl_codec::ResetColor << ' ' << fidl_codec::Green
+              << method_->enclosing_interface().name() << '.' << method_->name()
+              << fidl_codec::ResetColor << " = ";
+      decoded_response_->PrettyPrint(nullptr, printer);
+      printer << '\n';
+    }
+  }
+}
+
+void FidlMessageValue::DumpMessage(PrettyPrinter& printer) const {
+  constexpr int kPatternColorSize = 4;
+  constexpr int kPatternSize = 8;
+  constexpr int kLineSize = 16;
+  constexpr int kLineHandleSize = 4;
+  constexpr int kCharactersPerByte = 2;
+  if ((decoded_request_ == nullptr) && (decoded_response_ == nullptr)) {
+    printer << fidl_codec::Red << "Can't decode message: ";
+  } else if (printer.DumpMessages()) {
+    printer << "Message: ";
+  } else {
+    return;
+  }
+  printer << "num_bytes=" << bytes_.size() << " num_handles=" << handles_.size();
+  if (ordinal_ != 0) {
+    printer << " ordinal=" << std::hex << ordinal_ << std::dec;
+    if (method_ != nullptr) {
+      printer << '(' << method_->enclosing_interface().name() << '.' << method_->name() << ')';
+    }
+  }
+  printer << fidl_codec::ResetColor << '\n';
+  {
+    Indent indent_data(printer);
+    printer << "data=";
+    const char* separator = "";
+    Indent indent_dump(printer);
+    for (uint32_t i = 0; i < bytes_.size(); ++i) {
+      // Display 16 bytes per line.
+      if (i % kLineSize == 0) {
+        std::vector<char> buffer(sizeof(uint32_t) * kCharactersPerByte + 1);
+        snprintf(buffer.data(), buffer.size(), "%04x", i);
+        printer << separator << "\n";
+        printer << buffer.data() << ": ";
+        separator = "";
+      }
+      // Display 4 bytes in red then four bytes in black ...
+      if (i % kPatternSize == 0) {
+        printer << fidl_codec::Red;
+      } else if (i % kPatternColorSize == 0) {
+        printer << fidl_codec::ResetColor;
+      }
+      std::vector<char> buffer(sizeof(uint8_t) * kCharactersPerByte + 1);
+      snprintf(buffer.data(), buffer.size(), "%02x", bytes_[i]);
+      printer << separator << buffer.data();
+      separator = ", ";
+    }
+    printer << fidl_codec::ResetColor << '\n';
+  }
+  if (handles_.size() > 0) {
+    Indent indent_data(printer);
+    printer << "handles=";
+    Indent indent_dump(printer);
+    const char* separator = "";
+    for (uint32_t i = 0; i < handles_.size(); ++i) {
+      // Display 4 bytes per line.
+      if (i % kLineHandleSize == 0) {
+        std::vector<char> buffer(sizeof(uint32_t) * kCharactersPerByte + 1);
+        snprintf(buffer.data(), buffer.size(), "%04x", i);
+        printer << separator << "\n";
+        printer << buffer.data() << ": ";
+        separator = "";
+      }
+      std::vector<char> buffer(sizeof(zx_handle_t) * kCharactersPerByte + 1);
+      snprintf(buffer.data(), buffer.size(), "%08x", handles_[i].handle);
+      printer << separator << buffer.data();
+      separator = ", ";
+    }
+    printer << '\n';
+  }
+}
+
+void FidlMessageValue::Visit(Visitor* visitor, const Type* for_type) const {
+  visitor->VisitFidlMessageValue(this, for_type);
 }
 
 }  // namespace fidl_codec

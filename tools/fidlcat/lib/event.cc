@@ -90,12 +90,31 @@ void FidlcatPrinter::DisplayInline(
   (*this) << ")";
 }
 
+void FidlcatPrinter::DisplayOutline(
+    const std::vector<std::unique_ptr<fidl_codec::StructMember>>& members,
+    const std::map<const fidl_codec::StructMember*, std::unique_ptr<fidl_codec::Value>>& values) {
+  fidl_codec::Indent indent(*this);
+  for (const auto& member : members) {
+    auto it = values.find(member.get());
+    if (it == values.end())
+      continue;
+    auto fidl_message_value = it->second->AsFidlMessageValue();
+    if (fidl_message_value != nullptr) {
+      it->second->PrettyPrint(member->type(), *this);
+    } else {
+      (*this) << member->name() << ":" << fidl_codec::Green << member->type()->Name()
+              << fidl_codec::ResetColor << ": ";
+      it->second->PrettyPrint(member->type(), *this);
+      (*this) << '\n';
+    }
+  }
+}
+
 void InvokedEvent::PrettyPrint(FidlcatPrinter& printer) {
   printer << syscall_->name();
   printer.DisplayInline(syscall_->input_inline_members(), inline_fields_);
   printer << '\n';
-  // Currently we can only have handle values which are inline.
-  FXL_DCHECK(syscall_->input_outline_members().empty());
+  printer.DisplayOutline(syscall_->input_outline_members(), outline_fields_);
 }
 
 void OutputEvent::PrettyPrint(FidlcatPrinter& printer) {
@@ -104,13 +123,12 @@ void OutputEvent::PrettyPrint(FidlcatPrinter& printer) {
     return;
   }
   // Adds the inline output arguments (if any).
-  if (!syscall_->output_inline_members().empty()) {
+  if (!inline_fields_.empty()) {
     printer << ' ';
     printer.DisplayInline(syscall_->output_inline_members(), inline_fields_);
   }
   printer << '\n';
-  // Currently we can only have handle values which are inline.
-  FXL_DCHECK(syscall_->output_outline_members().empty());
+  printer.DisplayOutline(syscall_->output_outline_members(), outline_fields_);
 }
 
 }  // namespace fidlcat

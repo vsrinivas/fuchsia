@@ -1145,6 +1145,11 @@ class SyscallFidlMessageHandle : public SyscallFidlMessage<zx_handle_t> {
 
   bool InlineValue() const override { return false; }
 
+  std::unique_ptr<fidl_codec::Type> ComputeType() const override;
+
+  std::unique_ptr<fidl_codec::Value> GenerateValue(SyscallDecoder* decoder,
+                                                   Stage stage) const override;
+
   void DisplayOutline(SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder, Stage stage,
                       std::string_view line_header, int tabs, std::ostream& os) const override;
 };
@@ -1163,6 +1168,11 @@ class SyscallFidlMessageHandleInfo : public SyscallFidlMessage<zx_handle_info_t>
                                              std::move(handles), std::move(num_handles)) {}
 
   bool InlineValue() const override { return false; }
+
+  std::unique_ptr<fidl_codec::Type> ComputeType() const override;
+
+  std::unique_ptr<fidl_codec::Value> GenerateValue(SyscallDecoder* decoder,
+                                                   Stage stage) const override;
 
   void DisplayOutline(SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder, Stage stage,
                       std::string_view line_header, int tabs, std::ostream& os) const override;
@@ -1554,6 +1564,8 @@ class SyscallDecoderDispatcher {
   // Decode an exception received by a thread.
   void DecodeException(InterceptionWorkflow* workflow, zxdb::Thread* thread);
 
+  virtual fidl_codec::MessageDecoderDispatcher* MessageDecoderDispatcher() { return nullptr; }
+
   // Called when we are watching a process we launched.
   virtual void AddLaunchedProcess(uint64_t process_koid) {}
 
@@ -1574,12 +1586,12 @@ class SyscallDecoderDispatcher {
   // displayed or the exception had an error.
   virtual void DeleteDecoder(ExceptionDecoder* decoder);
 
-  // Called when a process is launched (by using the run option). If |error_message| is not empty,
-  // the the process didn't launch and |error_message| explains why.
+  // Called when a process is launched (by using the run option). If |error_message| is not
+  // empty, the the process didn't launch and |error_message| explains why.
   virtual void ProcessLaunched(const std::string& command, std::string_view error_message) {}
 
-  // Called when a process is monitored. If |error_message| is not empty, we haven't been able to
-  // monitor the process.
+  // Called when a process is monitored. If |error_message| is not empty, we haven't been able
+  // to monitor the process.
   virtual void ProcessMonitored(std::string_view name, zx_koid_t koid,
                                 std::string_view error_message);
 
@@ -1690,6 +1702,10 @@ class SyscallDisplayDispatcher : public SyscallDecoderDispatcher {
   }
 
   bool dump_messages() const { return dump_messages_; }
+
+  fidl_codec::MessageDecoderDispatcher* MessageDecoderDispatcher() override {
+    return &message_decoder_dispatcher_;
+  }
 
   void AddLaunchedProcess(uint64_t process_koid) override {
     message_decoder_dispatcher_.AddLaunchedProcess(process_koid);

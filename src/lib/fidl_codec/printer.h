@@ -55,6 +55,9 @@ class PrettyPrinter {
 
   bool LineEmpty() const { return need_to_print_header_; }
 
+  virtual bool DumpMessages() const { return false; }
+  virtual bool PrettyPrint() const { return false; }
+
   // Displays a handle. This allows the caller to also display some infered data we have inferered
   // for this handle (if any).
   virtual void DisplayHandle(const zx_handle_info_t& handle);
@@ -112,6 +115,15 @@ class PrettyPrinter {
     }
     return *this;
   }
+
+#ifdef __MACH__
+  // On MacOs, the type of size_t is unsigned long.
+  PrettyPrinter& operator<<(size_t data) {
+    FXL_DCHECK((os_.flags() & os_.basefield) == os_.dec);
+    *this << std::to_string(data);
+    return *this;
+  }
+#endif
 
   PrettyPrinter& operator<<(std::string_view data);
 

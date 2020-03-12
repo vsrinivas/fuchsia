@@ -98,17 +98,16 @@ void Inference::LibcExtensionsInit(SyscallDecoder* decoder) {
 
 void Inference::InferMessage(SyscallDecoder* decoder,
                              fidl_codec::semantic::ContextType context_type) {
-  if (decoder->decoded_message_data().semantic == nullptr) {
+  if (decoder->semantic() == nullptr) {
     return;
   }
   constexpr int kHandle = 0;
   zx_handle_t handle = decoder->ArgumentValue(kHandle);
   if (handle != ZX_HANDLE_INVALID) {
-    fidl_codec::semantic::SemanticContext context(
-        this, decoder->process_id(), handle, context_type,
-        decoder->decoded_message_data().decoded_request.get(),
-        decoder->decoded_message_data().decoded_response.get());
-    decoder->decoded_message_data().semantic->ExecuteAssignments(&context);
+    fidl_codec::semantic::SemanticContext context(this, decoder->process_id(), handle, context_type,
+                                                  decoder->decoded_request(),
+                                                  decoder->decoded_response());
+    decoder->semantic()->ExecuteAssignments(&context);
   }
 }
 

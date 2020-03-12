@@ -42,19 +42,34 @@ class DecodedMessage {
  public:
   DecodedMessage() = default;
 
+  zx_txid_t txid() const { return txid_; }
+  uint64_t ordinal() const { return ordinal_; }
+  zx_status_t epitaph_error() const { return epitaph_error_; }
+  const InterfaceMethod* method() const { return method_; }
+  std::unique_ptr<StructValue>& decoded_request() { return decoded_request_; }
+  std::stringstream& request_error_stream() { return request_error_stream_; }
+  std::unique_ptr<StructValue>& decoded_response() { return decoded_response_; }
+  std::stringstream& response_error_stream() { return response_error_stream_; }
+  Direction direction() const { return direction_; }
+  bool is_request() const { return is_request_; }
+  bool received() const { return received_; }
+
   // Decodes a message and fill all the fields. Returns true if we can display something.
   bool DecodeMessage(MessageDecoderDispatcher* dispatcher, uint64_t process_koid,
                      zx_handle_t handle, const uint8_t* bytes, uint32_t num_bytes,
                      const zx_handle_info_t* handles, uint32_t num_handles, SyscallFidlType type,
-                     std::ostream& os, std::string_view line_header = "", int tabs = 0);
+                     std::ostream& error_stream);
 
   // Displays a decoded message using the fields. Returns true if we have been able to display
   // correctly the message.
   bool Display(const Colors& colors, bool pretty_print, int columns, std::ostream& os,
-               std::string_view line_header, int tabs, DecodedMessageData* decoded_message_data);
+               std::string_view line_header, int tabs);
 
  private:
   const fidl_message_header_t* header_ = nullptr;
+  zx_txid_t txid_ = 0;
+  uint64_t ordinal_ = 0;
+  zx_status_t epitaph_error_ = ZX_OK;
   const InterfaceMethod* method_ = nullptr;
   std::unique_ptr<StructValue> decoded_request_;
   std::stringstream request_error_stream_;
@@ -64,7 +79,7 @@ class DecodedMessage {
   bool matched_response_ = false;
   Direction direction_ = Direction::kUnknown;
   bool is_request_ = false;
-  const char* message_direction_ = "";
+  bool received_ = false;
 };
 
 // Class which is able to decode all the messages received/sent.
@@ -90,10 +105,10 @@ class MessageDecoderDispatcher {
     return launched_processes_.find(process_koid) != launched_processes_.end();
   }
 
-  bool DecodeMessage(uint64_t process_koid, zx_handle_t handle, const uint8_t* bytes,
-                     uint32_t num_bytes, const zx_handle_info_t* handles, uint32_t num_handles,
-                     SyscallFidlType type, std::ostream& os, std::string_view line_header = "",
-                     int tabs = 0, DecodedMessageData* decoded_message_data = nullptr);
+  bool DecodeAndDisplayMessage(uint64_t process_koid, zx_handle_t handle, const uint8_t* bytes,
+                               uint32_t num_bytes, const zx_handle_info_t* handles,
+                               uint32_t num_handles, SyscallFidlType type, std::ostream& os,
+                               std::string_view line_header = "", int tabs = 0);
 
   // Heuristic which computes the direction of a message (outgoing request, incomming response,
   // ...).

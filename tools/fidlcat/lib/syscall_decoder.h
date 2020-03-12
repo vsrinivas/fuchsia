@@ -20,9 +20,11 @@
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/client/thread_observer.h"
+#include "src/lib/fidl_codec/semantic.h"
 #include "src/lib/fidl_codec/wire_object.h"
 #include "tools/fidlcat/lib/comparator.h"
 #include "tools/fidlcat/lib/decoder.h"
+#include "tools/fidlcat/lib/event.h"
 #include "tools/fidlcat/lib/type_decoder.h"
 
 namespace fidlcat {
@@ -144,11 +146,24 @@ class SyscallDecoder {
   uint64_t return_address() const { return return_address_; }
   uint64_t syscall_return_value() const { return syscall_return_value_; }
   int pending_request_count() const { return pending_request_count_; }
-  const fidl_codec::DecodedMessageData& decoded_message_data() const {
-    return decoded_message_data_;
+  InvokedEvent* set_invoked_event(std::unique_ptr<InvokedEvent> invoked_event) {
+    invoked_event_ = std::move(invoked_event);
+    return invoked_event_.get();
   }
-
-  fidl_codec::DecodedMessageData* GetDecodedMessageDataAddress() { return &decoded_message_data_; }
+  OutputEvent* set_output_event(std::unique_ptr<OutputEvent> output_event) {
+    output_event_ = std::move(output_event);
+    return output_event_.get();
+  }
+  const fidl_codec::semantic::MethodSemantic* semantic() const { return semantic_; }
+  void set_semantic(const fidl_codec::semantic::MethodSemantic* semantic) { semantic_ = semantic; }
+  const fidl_codec::StructValue* decoded_request() const { return decoded_request_; }
+  void set_decoded_request(const fidl_codec::StructValue* decoded_request) {
+    decoded_request_ = decoded_request;
+  }
+  const fidl_codec::StructValue* decoded_response() const { return decoded_response_; }
+  void set_decoded_response(const fidl_codec::StructValue* decoded_response) {
+    decoded_response_ = decoded_response;
+  }
 
   // True if the decoder has been aborted. That means that the process for this decoder
   // terminated but we have still some pending requests.
@@ -281,7 +296,11 @@ class SyscallDecoder {
   DecoderError error_;
   // All the decoded message (a request and/or a response). This is only available after the
   // syscall have been printed. It is used to try to infer some information from the message.
-  fidl_codec::DecodedMessageData decoded_message_data_;
+  std::unique_ptr<InvokedEvent> invoked_event_;
+  std::unique_ptr<OutputEvent> output_event_;
+  const fidl_codec::semantic::MethodSemantic* semantic_ = nullptr;
+  const fidl_codec::StructValue* decoded_request_ = nullptr;
+  const fidl_codec::StructValue* decoded_response_ = nullptr;
 };
 
 class SyscallDisplay : public SyscallUse {

@@ -403,7 +403,8 @@ void SyscallDisplay::SyscallInputsDecoded(SyscallDecoder* decoder) {
       }
       thread = dispatcher_->CreateThread(decoder->thread_id(), process);
     }
-    auto result = std::make_unique<InvokedEvent>(timestamp << 32, thread, decoder->syscall());
+    InvokedEvent* invoked_event = decoder->set_invoked_event(
+        std::make_unique<InvokedEvent>(timestamp << 32, thread, decoder->syscall()));
     auto inline_member = decoder->syscall()->input_inline_members().begin();
     auto outline_member = decoder->syscall()->input_outline_members().begin();
     for (const auto& input : decoder->syscall()->inputs()) {
@@ -412,7 +413,7 @@ void SyscallDisplay::SyscallInputsDecoded(SyscallDecoder* decoder) {
           FXL_DCHECK(inline_member != decoder->syscall()->input_inline_members().end());
           std::unique_ptr<fidl_codec::Value> value = input->GenerateValue(decoder, Stage::kEntry);
           FXL_DCHECK(value != nullptr);
-          result->AddInlineField(inline_member->get(), std::move(value));
+          invoked_event->AddInlineField(inline_member->get(), std::move(value));
         }
         ++inline_member;
       } else {
@@ -420,19 +421,21 @@ void SyscallDisplay::SyscallInputsDecoded(SyscallDecoder* decoder) {
           FXL_DCHECK(outline_member != decoder->syscall()->input_outline_members().end());
           std::unique_ptr<fidl_codec::Value> value = input->GenerateValue(decoder, Stage::kEntry);
           FXL_DCHECK(value != nullptr);
-          result->AddOutlineField(outline_member->get(), std::move(value));
+          invoked_event->AddOutlineField(outline_member->get(), std::move(value));
         }
         ++outline_member;
       }
     }
     const fidl_codec::Colors& colors = dispatcher_->colors();
-    std::string line_header = result->thread()->process()->name() + ' ' + colors.red +
-                              std::to_string(result->thread()->process()->koid()) + colors.reset +
-                              ':' + colors.red + std::to_string(result->thread()->koid()) +
-                              colors.reset + ' ';
-    FidlcatPrinter printer(decoder, os_, dispatcher_->colors(), line_header, dispatcher_->columns(),
+    std::string line_header = invoked_event->thread()->process()->name() + ' ' + colors.red +
+                              std::to_string(invoked_event->thread()->process()->koid()) +
+                              colors.reset + ':' + colors.red +
+                              std::to_string(invoked_event->thread()->koid()) + colors.reset + ' ';
+    FidlcatPrinter printer(decoder, dispatcher_->dump_messages(),
+                           dispatcher_->message_decoder_dispatcher().display_options().pretty_print,
+                           os_, dispatcher_->colors(), line_header, dispatcher_->columns(),
                            dispatcher_->with_process_info());
-    result->PrettyPrint(printer);
+    invoked_event->PrettyPrint(printer);
 
     if (!dispatcher_->with_process_info()) {
       line_header_ = "";
@@ -482,43 +485,49 @@ void SyscallDisplay::SyscallOutputsDecoded(SyscallDecoder* decoder) {
         }
         thread = dispatcher_->CreateThread(decoder->thread_id(), process);
       }
-      auto result = std::make_unique<OutputEvent>(timestamp << 32, thread, decoder->syscall(),
-                                                  decoder->syscall_return_value());
+      OutputEvent* output_event = decoder->set_output_event(std::make_unique<OutputEvent>(
+          timestamp << 32, thread, decoder->syscall(), decoder->syscall_return_value()));
       auto inline_member = decoder->syscall()->output_inline_members().begin();
       auto outline_member = decoder->syscall()->output_outline_members().begin();
       for (const auto& output : decoder->syscall()->outputs()) {
         if (output->InlineValue()) {
-          if (output->ConditionsAreTrue(decoder, Stage::kExit)) {
+          if ((output->error_code() == static_cast<zx_status_t>(decoder->syscall_return_value())) &&
+              (output->ConditionsAreTrue(decoder, Stage::kExit))) {
             FXL_DCHECK(inline_member != decoder->syscall()->output_inline_members().end());
             std::unique_ptr<fidl_codec::Value> value = output->GenerateValue(decoder, Stage::kExit);
             FXL_DCHECK(value != nullptr);
-            result->AddInlineField(inline_member->get(), std::move(value));
+            output_event->AddInlineField(inline_member->get(), std::move(value));
           }
           ++inline_member;
         } else {
-          if (output->ConditionsAreTrue(decoder, Stage::kExit)) {
+          if ((output->error_code() == static_cast<zx_status_t>(decoder->syscall_return_value())) &&
+              (output->ConditionsAreTrue(decoder, Stage::kExit))) {
             FXL_DCHECK(outline_member != decoder->syscall()->output_outline_members().end());
             std::unique_ptr<fidl_codec::Value> value = output->GenerateValue(decoder, Stage::kExit);
             FXL_DCHECK(value != nullptr);
-            result->AddOutlineField(outline_member->get(), std::move(value));
+            output_event->AddOutlineField(outline_member->get(), std::move(value));
           }
           ++outline_member;
         }
       }
       std::string line_header;
       if (dispatcher_->with_process_info() || (dispatcher_->last_displayed_syscall() != this)) {
-        line_header = result->thread()->process()->name() + ' ' + colors.red +
-                      std::to_string(result->thread()->process()->koid()) + colors.reset + ':' +
-                      colors.red + std::to_string(result->thread()->koid()) + colors.reset + ' ';
+        line_header = output_event->thread()->process()->name() + ' ' + colors.red +
+                      std::to_string(output_event->thread()->process()->koid()) + colors.reset +
+                      ':' + colors.red + std::to_string(output_event->thread()->koid()) +
+                      colors.reset + ' ';
       }
       if (dispatcher_->last_displayed_syscall() != this) {
         // Add a blank line to tell the user that this display is not linked to the
         // previous displayed lines.
         os_ << "\n";
       }
-      FidlcatPrinter printer(decoder, os_, dispatcher_->colors(), line_header,
-                             dispatcher_->columns(), dispatcher_->with_process_info());
-      result->PrettyPrint(printer);
+      FidlcatPrinter printer(
+          decoder, dispatcher_->dump_messages(),
+          dispatcher_->message_decoder_dispatcher().display_options().pretty_print, os_,
+          dispatcher_->colors(), line_header, dispatcher_->columns(),
+          dispatcher_->with_process_info());
+      output_event->PrettyPrint(printer);
     } else {
       // This code will be deleted when we will be able to have the two step printing for all the
       // syscalls.

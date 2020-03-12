@@ -38,6 +38,7 @@ class TypeVisitor {
   virtual void VisitArrayType(const ArrayType* type) { VisitElementSequenceType(type); }
   virtual void VisitVectorType(const VectorType* type) { VisitElementSequenceType(type); }
   virtual void VisitTableType(const TableType* type) { VisitType(type); }
+  virtual void VisitFidlMessageType(const FidlMessageType* type) { VisitType(type); }
 
   friend class Type;
   friend class InvalidType;
@@ -66,6 +67,7 @@ class TypeVisitor {
   friend class ArrayType;
   friend class VectorType;
   friend class TableType;
+  friend class FidlMessageType;
 };
 
 }  // namespace fidl_codec

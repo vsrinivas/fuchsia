@@ -50,6 +50,9 @@ class Visitor {
   virtual void VisitTableValue(const TableValue* node, const Type* for_type) {
     VisitValue(node, for_type);
   }
+  virtual void VisitFidlMessageValue(const FidlMessageValue* node, const Type* for_type) {
+    VisitValue(node, for_type);
+  }
 
   friend class Value;
   friend class InvalidValue;
@@ -64,6 +67,7 @@ class Visitor {
   friend class StructValue;
   friend class VectorValue;
   friend class TableValue;
+  friend class FidlMessageValue;
 };
 
 }  // namespace fidl_codec

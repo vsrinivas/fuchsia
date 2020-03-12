@@ -9,6 +9,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <sstream>
 
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/thread.h"
@@ -204,6 +205,48 @@ const char* SyscallInputOutputFixedSizeString::DisplayInline(SyscallDisplayDispa
   return ", ";
 }
 
+std::unique_ptr<fidl_codec::Type> SyscallFidlMessageHandle::ComputeType() const {
+  return std::make_unique<fidl_codec::FidlMessageType>();
+}
+
+std::unique_ptr<fidl_codec::Value> SyscallFidlMessageHandle::GenerateValue(SyscallDecoder* decoder,
+                                                                           Stage stage) const {
+  zx_handle_t handle_value = handle()->Value(decoder, stage);
+  const uint8_t* bytes_value = bytes()->Content(decoder, stage);
+  uint32_t num_bytes_value = num_bytes()->Value(decoder, stage);
+  const zx_handle_t* handles_value = handles()->Content(decoder, stage);
+  uint32_t num_handles_value = num_handles()->Value(decoder, stage);
+  zx_handle_info_t* handle_infos_value = nullptr;
+  if (num_handles_value > 0) {
+    handle_infos_value = new zx_handle_info_t[num_handles_value];
+    for (uint32_t i = 0; i < num_handles_value; ++i) {
+      handle_infos_value[i].handle = handles_value[i];
+      handle_infos_value[i].type = ZX_OBJ_TYPE_NONE;
+      handle_infos_value[i].rights = 0;
+    }
+  }
+  fidl_codec::DecodedMessage message;
+  std::stringstream error_stream;
+  message.DecodeMessage(decoder->dispatcher()->MessageDecoderDispatcher(), decoder->process_id(),
+                        handle_value, bytes_value, num_bytes_value, handle_infos_value,
+                        num_handles_value, type(), error_stream);
+  auto result = std::make_unique<fidl_codec::FidlMessageValue>(
+      &message, error_stream.str(), bytes_value, num_bytes_value, handle_infos_value,
+      num_handles_value);
+  delete[] handle_infos_value;
+  if (result->is_request()) {
+    if (result->matched_request()) {
+      decoder->set_semantic(result->method()->semantic());
+      decoder->set_decoded_request(result->decoded_request());
+    }
+    if (result->matched_response()) {
+      decoder->set_semantic(result->method()->semantic());
+      decoder->set_decoded_response(result->decoded_response());
+    }
+  }
+  return result;
+}
+
 void SyscallFidlMessageHandle::DisplayOutline(SyscallDisplayDispatcher* dispatcher,
                                               SyscallDecoder* decoder, Stage stage,
                                               std::string_view line_header, int tabs,
@@ -222,10 +265,9 @@ void SyscallFidlMessageHandle::DisplayOutline(SyscallDisplayDispatcher* dispatch
       handle_infos_value[i].rights = 0;
     }
   }
-  if (!dispatcher->message_decoder_dispatcher().DecodeMessage(
+  if (!dispatcher->message_decoder_dispatcher().DecodeAndDisplayMessage(
           decoder->process_id(), handle_value, bytes_value, num_bytes_value, handle_infos_value,
-          num_handles_value, type(), os, line_header, tabs,
-          decoder->GetDecodedMessageDataAddress())) {
+          num_handles_value, type(), os, line_header, tabs)) {
     DumpMessage(/*error=*/true, bytes_value, num_bytes_value, handle_infos_value, num_handles_value,
                 dispatcher, line_header, tabs, os);
   } else if (dispatcher->dump_messages()) {
@@ -233,6 +275,38 @@ void SyscallFidlMessageHandle::DisplayOutline(SyscallDisplayDispatcher* dispatch
                 num_handles_value, dispatcher, line_header, tabs, os);
   }
   delete[] handle_infos_value;
+}
+
+std::unique_ptr<fidl_codec::Type> SyscallFidlMessageHandleInfo::ComputeType() const {
+  return std::make_unique<fidl_codec::FidlMessageType>();
+}
+
+std::unique_ptr<fidl_codec::Value> SyscallFidlMessageHandleInfo::GenerateValue(
+    SyscallDecoder* decoder, Stage stage) const {
+  zx_handle_t handle_value = handle()->Value(decoder, stage);
+  const uint8_t* bytes_value = bytes()->Content(decoder, stage);
+  uint32_t num_bytes_value = num_bytes()->Value(decoder, stage);
+  const zx_handle_info_t* handle_infos_value = handles()->Content(decoder, stage);
+  uint32_t num_handles_value = num_handles()->Value(decoder, stage);
+  fidl_codec::DecodedMessage message;
+  std::stringstream error_stream;
+  message.DecodeMessage(decoder->dispatcher()->MessageDecoderDispatcher(), decoder->process_id(),
+                        handle_value, bytes_value, num_bytes_value, handle_infos_value,
+                        num_handles_value, type(), error_stream);
+  auto result = std::make_unique<fidl_codec::FidlMessageValue>(
+      &message, error_stream.str(), bytes_value, num_bytes_value, handle_infos_value,
+      num_handles_value);
+  if (result->is_request()) {
+    if (result->matched_request()) {
+      decoder->set_semantic(result->method()->semantic());
+      decoder->set_decoded_request(result->decoded_request());
+    }
+    if (result->matched_response()) {
+      decoder->set_semantic(result->method()->semantic());
+      decoder->set_decoded_response(result->decoded_response());
+    }
+  }
+  return result;
 }
 
 void SyscallFidlMessageHandleInfo::DisplayOutline(SyscallDisplayDispatcher* dispatcher,
@@ -244,10 +318,9 @@ void SyscallFidlMessageHandleInfo::DisplayOutline(SyscallDisplayDispatcher* disp
   uint32_t num_bytes_value = num_bytes()->Value(decoder, stage);
   const zx_handle_info_t* handle_infos_value = handles()->Content(decoder, stage);
   uint32_t num_handles_value = num_handles()->Value(decoder, stage);
-  if (!dispatcher->message_decoder_dispatcher().DecodeMessage(
+  if (!dispatcher->message_decoder_dispatcher().DecodeAndDisplayMessage(
           decoder->process_id(), handle_value, bytes_value, num_bytes_value, handle_infos_value,
-          num_handles_value, type(), os, line_header, tabs,
-          decoder->GetDecodedMessageDataAddress())) {
+          num_handles_value, type(), os, line_header, tabs)) {
     DumpMessage(/*error=*/true, bytes_value, num_bytes_value, handle_infos_value, num_handles_value,
                 dispatcher, line_header, tabs, os);
   } else if (dispatcher->dump_messages()) {

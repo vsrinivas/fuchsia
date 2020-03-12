@@ -19,11 +19,16 @@ class SyscallDecoder;
 // Printer which allows us to print the infered data for handles.
 class FidlcatPrinter : public fidl_codec::PrettyPrinter {
  public:
-  FidlcatPrinter(SyscallDecoder* decoder, std::ostream& os, const fidl_codec::Colors& colors,
-                 std::string_view line_header, int max_line_size, bool header_on_every_line,
-                 int tabulations = 0)
+  FidlcatPrinter(SyscallDecoder* decoder, bool dump_messages, bool pretty_print, std::ostream& os,
+                 const fidl_codec::Colors& colors, std::string_view line_header, int max_line_size,
+                 bool header_on_every_line, int tabulations = 0)
       : PrettyPrinter(os, colors, line_header, max_line_size, header_on_every_line, tabulations),
-        decoder_(decoder) {}
+        decoder_(decoder),
+        dump_messages_(dump_messages),
+        pretty_print_(pretty_print) {}
+
+  bool DumpMessages() const override { return dump_messages_; }
+  bool PrettyPrint() const override { return pretty_print_; }
 
   void DisplayHandle(const zx_handle_info_t& handle) override;
   void DisplayStatus(zx_status_t status);
@@ -32,9 +37,14 @@ class FidlcatPrinter : public fidl_codec::PrettyPrinter {
   void DisplayInline(
       const std::vector<std::unique_ptr<fidl_codec::StructMember>>& members,
       const std::map<const fidl_codec::StructMember*, std::unique_ptr<fidl_codec::Value>>& values);
+  void DisplayOutline(
+      const std::vector<std::unique_ptr<fidl_codec::StructMember>>& members,
+      const std::map<const fidl_codec::StructMember*, std::unique_ptr<fidl_codec::Value>>& values);
 
  private:
   SyscallDecoder* decoder_;
+  const bool dump_messages_;
+  const bool pretty_print_;
 };
 
 class Process {
@@ -96,7 +106,7 @@ class InvokedEvent : public Event {
 
   void AddOutlineField(const fidl_codec::StructMember* member,
                        std::unique_ptr<fidl_codec::Value> value) {
-    inline_fields_.emplace(std::make_pair(member, std::move(value)));
+    outline_fields_.emplace(std::make_pair(member, std::move(value)));
   }
 
   void PrettyPrint(FidlcatPrinter& printer);
@@ -133,7 +143,7 @@ class OutputEvent : public Event {
 
   void AddOutlineField(const fidl_codec::StructMember* member,
                        std::unique_ptr<fidl_codec::Value> value) {
-    inline_fields_.emplace(std::make_pair(member, std::move(value)));
+    outline_fields_.emplace(std::make_pair(member, std::move(value)));
   }
 
   void PrettyPrint(FidlcatPrinter& printer);

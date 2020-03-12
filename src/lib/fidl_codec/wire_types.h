@@ -469,6 +469,19 @@ class TableType : public Type {
   const Table& table_definition_;
 };
 
+class FidlMessageType : public Type {
+ public:
+  FidlMessageType() = default;
+
+  std::string Name() const override;
+
+  size_t InlineSize() const override;
+
+  std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
+
+  void Visit(TypeVisitor* visitor) const override;
+};
+
 }  // namespace fidl_codec
 
 #endif  // SRC_LIB_FIDL_CODEC_WIRE_TYPES_H_

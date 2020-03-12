@@ -73,9 +73,9 @@ class MessageDecoderTest : public ::testing::Test {
       }
     }
     std::stringstream result;
-    decoder()->DecodeMessage(process_koid(), ZX_HANDLE_INVALID, message.bytes().data(),
-                             message.bytes().size(), handle_infos.get(), message.handles().size(),
-                             syscall_type, result);
+    decoder()->DecodeAndDisplayMessage(process_koid(), ZX_HANDLE_INVALID, message.bytes().data(),
+                                       message.bytes().size(), handle_infos.get(),
+                                       message.handles().size(), syscall_type, result);
     ASSERT_EQ(result.str(), expected) << "expected = " << expected << " actual = " << result.str();
   }
 
