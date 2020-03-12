@@ -26,8 +26,6 @@ class GestureHandler {
   using AddRecognizerToArenaCallback = fit::function<void(GestureRecognizer*)>;
 
   // The high-level gestures identified by this class.
-  // TODO(lucasradaelli): Implement swipe-like gestures.
-  // TODO(lucasradaelli): Implement multiple finger taps.
   enum GestureType { kUnknown, kOneFingerSingleTap, kOneFingerDoubleTap, kOneFingerDrag };
 
   // Some gestures need additional information about what was touched and where it was touched on
