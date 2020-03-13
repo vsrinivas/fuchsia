@@ -9,13 +9,16 @@ import("../gn/build_rules.gni")
 #
 source_set("common") {
   sources = [
-    "common/demo_spinel_image.h",
+    "common/demo_app_base.cc",
+    "common/demo_app_base.h",
+    "common/demo_image.h",
+    "common/demo_image_group.h",
     "common/demo_utils.cc",
     "common/demo_utils.h",
-    "common/demo_vulkan_app.cc",
-    "common/demo_vulkan_app.h",
-    "common/svg_demo_spinel_image.cc",
-    "common/svg_demo_spinel_image.h",
+    "common/vulkan_device.cc",
+    "common/vulkan_device.h",
+    "common/vulkan_window.cc",
+    "common/vulkan_window.h",
   ]
   public_deps = [
     "${graphics_compute_dir}/tests:common_vk",
@@ -33,8 +36,9 @@ graphics_compute_unittests("common_vk_unittests") {
 #
 source_set("common_spinel") {
   sources = [
-    "common/demo_spinel_app.cc",
-    "common/demo_spinel_app.h",
+    "common/demo_app_spinel.cc",
+    "common/demo_app_spinel.h",
+    "common/vulkan_device_spinel.cc",
   ]
   public_deps = [
     ":common",
@@ -48,8 +52,8 @@ source_set("common_spinel") {
 #
 source_set("common_mold") {
   sources = [
-    "common/demo_mold_app.cc",
-    "common/demo_mold_app.h",
+    "common/demo_app_mold.cc",
+    "common/demo_app_mold.h",
   ]
   deps = [ "${graphics_compute_dir}/tests/common/spinel:spinel_utils" ]
   public_deps = [

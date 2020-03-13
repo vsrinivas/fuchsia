@@ -7,13 +7,13 @@
 #include <vector>
 
 #if USE_MOLD
-#define DEMO_CLASS_HEADER "common/demo_mold_app.h"
-#define DEMO_CLASS_NAME DemoMoldApp
+#define DEMO_CLASS_HEADER "common/demo_app_mold.h"
+#define DEMO_CLASS_NAME DemoAppMold
 #define ONLY_IF_MOLD(...) __VA_ARGS__
 #define ONLY_IF_SPINEL(...) /* nothing */
 #else                       // !USE_MOLD
-#define DEMO_CLASS_HEADER "common/demo_spinel_app.h"
-#define DEMO_CLASS_NAME DemoSpinelApp
+#define DEMO_CLASS_HEADER "common/demo_app_spinel.h"
+#define DEMO_CLASS_NAME DemoAppSpinel
 #define ONLY_IF_MOLD(...) /* nothing */
 #define ONLY_IF_SPINEL(...) __VA_ARGS__
 #endif  // !USE_MOLD
@@ -23,10 +23,12 @@
 // #ifdef .. #endif blocks. Note that this is standard cpp behaviour!
 #include DEMO_CLASS_HEADER
 
+#include "common/demo_image.h"
+#include "common/demo_image_group.h"
 #include "common/demo_utils.h"
-#include "common/svg_demo_spinel_image.h"
 #include "tests/common/affine_transform.h"
 #include "tests/common/argparse.h"
+#include "tests/common/spinel/svg_spinel_image.h"
 #include "tests/common/svg/scoped_svg.h"
 #include "tests/common/svg/svg_bounds.h"
 #include "tests/common/utils.h"
@@ -37,6 +39,70 @@
 #ifndef PROGRAM_NAME
 #define PROGRAM_NAME "svg_demo"
 #endif
+
+//
+//
+//
+
+namespace {
+
+// A DemoImage derived class to display a single SVG document.
+//
+// TODO(digit): For simplicity, each instance has its own set of path handles.
+// It might be useful to share these between several instances, but this requires
+// non-trivial changes to the SvgSpinelImage class.
+class SvgDemoImage : public DemoImage {
+  // Type of a callback used to compute a transform to apply to a given frame
+  // based on its counter value.
+  using FrameTransformFunc = std::function<spn_transform_t(uint32_t)>;
+
+ public:
+  SvgDemoImage(const DemoImage::Config & config, const svg * svg, FrameTransformFunc transform_func)
+      : transform_func_(transform_func)
+  {
+    svg_image_.init(svg, config.context, config.surface_width, config.surface_height);
+    svg_image_.setupPaths();
+  }
+
+  ~SvgDemoImage()
+  {
+    svg_image_.reset();
+  }
+
+  void
+  setup(uint32_t frame_counter) override
+  {
+    spn_transform_t transform = { .sx = 1., .sy = 1. };
+    if (transform_func_)
+      transform = transform_func_(frame_counter);
+
+    svg_image_.setupRasters(&transform);
+    svg_image_.setupLayers();
+  }
+
+  void
+  render(void * submit_ext, uint32_t clip_width, uint32_t clip_height) override
+  {
+    svg_image_.render(submit_ext, clip_width, clip_height);
+    svg_image_.resetRasters();
+  }
+
+  void
+  flush() override
+  {
+    svg_image_.resetLayers();
+  }
+
+ protected:
+  SvgSpinelImage     svg_image_ = {};
+  FrameTransformFunc transform_func_;
+};
+
+}  // namespace
+
+//
+//
+//
 
 int
 main(int argc, const char ** argv)
@@ -130,7 +196,7 @@ main(int argc, const char ** argv)
   DEMO_CLASS_NAME demo(config);
 
   // Determine per-frame transform / animation.
-  VkExtent2D swapchain_extent = demo.extent();
+  VkExtent2D swapchain_extent = demo.window_extent();
 
   auto per_frame_transform = [swapchain_extent, image_center](uint32_t frame_counter) {
     double angle = (frame_counter / 60.) * M_PI;
@@ -155,7 +221,9 @@ main(int argc, const char ** argv)
     };
   };
 
-  demo.setImageProvider(std::make_unique<SvgDemoImageProvider>(svg.get(), per_frame_transform));
+  demo.setImageFactory([&](const DemoImage::Config & config) {
+    return std::make_unique<SvgDemoImage>(config, svg.get(), per_frame_transform);
+  });
 
   demo.run();
 

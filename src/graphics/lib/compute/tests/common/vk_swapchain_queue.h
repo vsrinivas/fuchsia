@@ -89,7 +89,7 @@ typedef struct vk_swapchain_queue vk_swapchain_queue_t;
 // vk_swapchain_queue_acquire_next_image() and vk_swapchain_queue_submit_xxx().
 // The value should be <= MAX_VK_SYNC_SEMAPHORES.
 //
-typedef struct
+typedef struct vk_swapchain_queue_config
 {
   vk_swapchain_t *              swapchain;
   uint32_t                      queue_family;
@@ -128,7 +128,7 @@ typedef struct
 // All entries are VK_NULL_HANDLE by default, unless
 // |vk_swapchain_queue_config_t::sync_semaphores_count| is > 0.
 //
-typedef struct
+typedef struct vk_swapchain_queue_image
 {
   VkImage         image;
   VkImageView     image_view;

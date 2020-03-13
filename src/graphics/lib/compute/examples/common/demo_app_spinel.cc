@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "demo_spinel_app.h"
+#include "demo_app_spinel.h"
 
 #include "spinel/spinel.h"
 #include "spinel/spinel_assert.h"
@@ -16,51 +16,47 @@
 #define ENABLE_LOG 0
 
 #if ENABLE_LOG
+#include <stdio.h>
 #define LOG(...) fprintf(stderr, __VA_ARGS__)
 #else
 #define LOG(...) ((void)0)
 #endif
 
-DemoSpinelApp::DemoSpinelApp(const Config & config) : config_no_clear_(config.no_clear)
+DemoAppSpinel::DemoAppSpinel(const Config & config) : config_no_clear_(config.no_clear)
 {
-  spinel_vk_device_configuration_t spinel_device_config = {
-    .wanted_vendor_id = config.wanted_vendor_id,
-    .wanted_device_id = config.wanted_device_id,
+  LOG("CREATING VULKAN DEVICE AND PRESENTATION SURFACE\n");
+  VulkanDevice::Config dev_config = {
+    .app_name          = config.app.app_name,
+    .verbose           = config.app.verbose,
+    .debug             = config.app.debug,
+    .require_swapchain = true,
+    .disable_vsync     = config.app.disable_vsync,
   };
 
-  DemoVulkanApp::AppStateConfigCallback config_callback =
-    [&spinel_device_config](vk_app_state_config_t * config) {
-      config->device_config_callback = spinel_vk_device_config_callback;
-      config->device_config_opaque   = &spinel_device_config;
-      config->enable_pipeline_cache  = true;
-    };
+  struct spn_vk_context_create_info spinel_create_info = {};
+  ASSERT_MSG(device_.initForSpinel(dev_config,
+                                   config.wanted_vendor_id,
+                                   config.wanted_device_id,
+                                   &spinel_create_info),
+             "Could not initialize Vulkan device for Spinel!\n");
 
-  LOG("CREATING VULKAN DEVICE AND PRESENTATION SURFACE\n");
-  DemoVulkanApp::Config app_config                  = config.app;
+  DemoAppBase::Config app_config                    = config.app;
   app_config.require_swapchain_image_shader_storage = true;
 
-  if (!init(app_config, &config_callback))
-    {
-      ASSERT_MSG(false, "Could not initialize application!\n");
-    }
+  ASSERT_MSG(this->DemoAppBase::initAfterDevice(app_config), "Could not initialize application!\n");
 
-  spinel_env_ = vk_app_state_get_spinel_environment(&app_state_);
+  spinel_env_ = vk_app_state_get_spinel_environment(&device_.vk_app_state());
 
-  const struct spn_vk_context_create_info spinel_create_info
-  {
-    .spinel = spinel_device_config.spinel_target, .hotsort = spinel_device_config.hotsort_target,
-    .block_pool_size = 1 << 26, .handle_count = 1 << 15,
-  };
   spn(vk_context_create(&spinel_env_, &spinel_create_info, &spinel_context_));
 
-  surface_sampler_ = vk_sampler_create_linear_clamp_to_edge(app_state_.d, app_state_.ac);
+  surface_sampler_ =
+    vk_sampler_create_linear_clamp_to_edge(device_.vk_device(), device_.vk_allocator());
   LOG("INIT COMPLETED\n");
 }
 
-DemoSpinelApp::~DemoSpinelApp()
+DemoAppSpinel::~DemoAppSpinel()
 {
   LOG("DESTRUCTOR\n");
-  teardown();
   spn_context_release(spinel_context_);
   LOG("DESTRUCTOR COMPLETED\n");
 }
@@ -69,13 +65,15 @@ DemoSpinelApp::~DemoSpinelApp()
 //
 //
 bool
-DemoSpinelApp::setup()
+DemoAppSpinel::setup()
 {
   LOG("SETUP\n");
-  image_provider_->setup(spinel_context_,
-                         swapchain_image_count_,
-                         swapchain_extent_.width,
-                         swapchain_extent_.height);
+  demo_images_.setup((DemoImage::Config){
+    .context        = spinel_context_,
+    .surface_width  = window_extent().width,
+    .surface_height = window_extent().height,
+    .image_count    = swapchain_image_count_,
+  });
 
   // Create one SpinelVkSubmitState per swapchain image.
   spinel_submits_.resize(swapchain_image_count_);
@@ -89,23 +87,21 @@ DemoSpinelApp::setup()
 //
 //
 void
-DemoSpinelApp::teardown()
+DemoAppSpinel::teardown()
 {
   LOG("TEARDOWN\n");
 
-  {
-    // Need to force submission of previous frame. See tech note in drawFrame().
-    uint32_t          prev_frame_index = (frame_index_ - 1) % swapchain_image_count_;
-    DemoSpinelImage & prev_demo_image  = image_provider_->getImage(prev_frame_index);
-    prev_demo_image.resetLayers();
-  }
+  // Need to force submission of previous frame. See tech note in drawFrame().
+  demo_images_.getPreviousImage().flush();
+
   // Force spinel to complete rendering operations, to trigger swapchain
   // presentation of the last acquired swapchain image.
   spn_vk_context_wait(spinel_context_, 0, NULL, true, UINT64_MAX, NULL);
 
   spinel_submits_.clear();
-  image_provider_->teardown();
-  this->DemoVulkanApp::teardown();
+  demo_images_.teardown();
+
+  this->DemoAppBase::teardown();
   LOG("TEARDOWN COMPLETED\n");
 }
 
@@ -114,7 +110,7 @@ DemoSpinelApp::teardown()
 //
 
 bool
-DemoSpinelApp::drawFrame(uint32_t frame_counter)
+DemoAppSpinel::drawFrame(uint32_t frame_counter)
 {
   LOG("FRAME %u\n", frame_counter);
 
@@ -196,33 +192,31 @@ DemoSpinelApp::drawFrame(uint32_t frame_counter)
   //
 
   // 1) Submit and present previous frame, by unsealing its composition and styling.
-  {
-    uint32_t          prev_frame_index = (frame_index_ - 1) % swapchain_image_count_;
-    DemoSpinelImage & prev_demo_image  = image_provider_->getImage(prev_frame_index);
-    prev_demo_image.resetLayers();
-  }
+  LOG("FLUSHING FRAME %d\n", demo_images_.current_index());
+  demo_images_.getPreviousImage().flush();
 
   // 2) Acquire swapchain image.
-  if (!acquireSwapchainImage())
+  if (!window_.acquireSwapchainImage())
     return false;
 
   LOG("FRAME ACQUIRED\n");
 
   // 3) Setup new image's composition and styling.
-  DemoSpinelImage & demo_image = image_provider_->getImage(frame_index_);
+  uint32_t    frame_index;
+  DemoImage & demo_image = demo_images_.getNextImage(&frame_index);
 
-  demo_image.setupPaths(frame_counter);
-  demo_image.setupRasters(frame_counter);
-  demo_image.setupLayers(frame_counter);
+  demo_image.setup(frame_counter);
 
   // 4) Call spn_render() with the appropriate submit extensions, including
   //    a callback that will call presentSwapchainImage() just after the
   //    command buffer submission.
-  SpinelVkSubmitState * spinel_submit = &spinel_submits_[frame_index_];
+  SpinelVkSubmitState * spinel_submit = &spinel_submits_[frame_index];
+
+  uint32_t image_index = window_.image_index();
 
   spinel_vk_submit_state_reset(spinel_submit,
-                               vk_swapchain_get_image(swapchain_, image_index_),
-                               vk_swapchain_get_image_view(swapchain_, image_index_),
+                               vk_swapchain_get_image(swapchain_, image_index),
+                               vk_swapchain_get_image_view(swapchain_, image_index),
                                surface_sampler_,
                                vk_swapchain_get_image_acquired_semaphore(swapchain_),
                                vk_swapchain_get_image_rendered_semaphore(swapchain_));
@@ -241,22 +235,17 @@ DemoSpinelApp::drawFrame(uint32_t frame_counter)
   // This ensures that the presentSwapchainImage() call is performed as soon as Spinel
   // has submitted its command buffer(s) to the queue. See technical note above.
   auto present_callback = [](void * opaque) {
-    reinterpret_cast<DemoSpinelApp *>(opaque)->presentSwapchainImage();
+    reinterpret_cast<DemoAppSpinel *>(opaque)->window_.presentSwapchainImage();
     LOG("FRAME PRESENTED\n");
   };
   spinel_vk_submit_state_set_post_callback(spinel_submit, present_callback, this);
 
   LOG("FRAME RENDER\n");
   demo_image.render(spinel_vk_submit_state_get_ext(spinel_submit),
-                    swapchain_extent_.width,
-                    swapchain_extent_.height);
+                    window_extent().width,
+                    window_extent().height);
 
-  // It is always ok to dispose of path and raster handles on the host even
-  // if a Spinel submit is pending.
-  demo_image.resetRasters();
-  demo_image.resetPaths();
   LOG("FRAME COMPLETED\n");
 
-  frame_index_ = (frame_index_ + 1) % swapchain_image_count_;
   return true;
 }

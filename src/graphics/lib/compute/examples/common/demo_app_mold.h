@@ -2,16 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_GRAPHICS_LIB_COMPUTE_EXAMPLES_COMMON_DEMO_MOLD_APP_H_
-#define SRC_GRAPHICS_LIB_COMPUTE_EXAMPLES_COMMON_DEMO_MOLD_APP_H_
+#ifndef SRC_GRAPHICS_LIB_COMPUTE_EXAMPLES_COMMON_DEMO_APP_MOLD_H_
+#define SRC_GRAPHICS_LIB_COMPUTE_EXAMPLES_COMMON_DEMO_APP_MOLD_H_
 
 #include <vector>
 
-#include "demo_spinel_image.h"
-#include "demo_vulkan_app.h"
+#include "demo_app_base.h"
+#include "demo_image_group.h"
 #include "spinel/spinel_types.h"
 #include "tests/common/scoped_struct.h"
 #include "tests/common/vk_buffer.h"
+#include "vulkan_device.h"
 
 // Base class for all demos that render things using Mold in a Vulkan window.
 // Usage is the following:
@@ -25,22 +26,22 @@
 //
 //   3) Call run().
 //
-class DemoMoldApp : public DemoVulkanApp {
+class DemoAppMold : public DemoAppBase {
  public:
   struct Config
   {
-    DemoVulkanApp::Config app;
-    bool                  no_clear = false;
+    DemoAppBase::Config app;
+    bool                no_clear = false;
   };
 
-  DemoMoldApp(const Config & config);
+  DemoAppMold(const Config & config);
 
-  virtual ~DemoMoldApp();
+  virtual ~DemoAppMold();
 
   void
-  setImageProvider(std::unique_ptr<DemoSpinelImageProvider> image_provider)
+  setImageFactory(const DemoImage::Factory & factory)
   {
-    image_provider_ = std::move(image_provider);
+    demo_images_.setFactory(std::move(factory));
   }
 
  protected:
@@ -80,12 +81,13 @@ class DemoMoldApp : public DemoVulkanApp {
 
   using ScopedBuffer = ScopedStruct<vk_buffer_t, vk_buffer_traits_t>;
 
-  bool                                     config_no_clear_     = false;
-  bool                                     config_reset_before_ = false;
-  std::unique_ptr<DemoSpinelImageProvider> image_provider_;
+  VulkanDevice   device_;
+  bool           config_no_clear_     = false;
+  bool           config_reset_before_ = false;
+  DemoImageGroup demo_images_;
 
   spn_context_t             spinel_context_;
   std::vector<ScopedBuffer> image_buffers_;
 };
 
-#endif  // SRC_GRAPHICS_LIB_COMPUTE_EXAMPLES_COMMON_DEMO_MOLD_APP_H_
+#endif  // SRC_GRAPHICS_LIB_COMPUTE_EXAMPLES_COMMON_DEMO_APP_MOLD_H_

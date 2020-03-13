@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_GRAPHICS_LIB_COMPUTE_EXAMPLES_COMMON_DEMO_SPINEL_APP_H_
-#define SRC_GRAPHICS_LIB_COMPUTE_EXAMPLES_COMMON_DEMO_SPINEL_APP_H_
+#ifndef SRC_GRAPHICS_LIB_COMPUTE_EXAMPLES_COMMON_DEMO_APP_SPINEL_H_
+#define SRC_GRAPHICS_LIB_COMPUTE_EXAMPLES_COMMON_DEMO_APP_SPINEL_H_
 
 #include <memory>
 #include <vector>
 
-#include "demo_spinel_image.h"
-#include "demo_vulkan_app.h"
+#include "demo_app_base.h"
+#include "demo_image_group.h"
 #include "spinel/spinel_types.h"
 #include "spinel/spinel_vk_types.h"
 #include "tests/common/spinel_vk/spinel_vk_submit_state.h"
@@ -25,26 +25,26 @@
 //
 //   2) Call run().
 //
-class DemoSpinelApp : public DemoVulkanApp {
+class DemoAppSpinel : public DemoAppBase {
  public:
   struct Config
   {
-    DemoVulkanApp::Config app;
-    uint32_t              wanted_vendor_id = 0;
-    uint32_t              wanted_device_id = 0;
-    bool                  no_clear         = false;
+    DemoAppBase::Config app;
+    uint32_t            wanted_vendor_id = 0;
+    uint32_t            wanted_device_id = 0;
+    bool                no_clear         = false;
   };
 
-  DemoSpinelApp(const Config & config);
+  DemoAppSpinel(const Config & config);
 
-  virtual ~DemoSpinelApp();
+  virtual ~DemoAppSpinel();
 
-  // Set the DemoSpinelImageProvider to be used to render images
+  // Set the DemoImageGroup to be used to render images
   // into swapchain images with the Spinel library.
   void
-  setImageProvider(std::unique_ptr<DemoSpinelImageProvider> image_provider)
+  setImageFactory(const DemoImage::Factory & factory)
   {
-    image_provider_ = std::move(image_provider);
+    demo_images_.setFactory(std::move(factory));
   }
 
  protected:
@@ -57,15 +57,14 @@ class DemoSpinelApp : public DemoVulkanApp {
   bool
   drawFrame(uint32_t frame_counter) override;
 
-  bool                                     config_no_clear_ = false;
-  std::unique_ptr<DemoSpinelImageProvider> image_provider_  = nullptr;
+  bool           config_no_clear_ = false;
+  DemoImageGroup demo_images_;
 
   struct spn_vk_environment spinel_env_;
   spn_context_t             spinel_context_;
   VkSampler                 surface_sampler_;
-  uint32_t                  frame_index_ = 0;
 
   std::vector<SpinelVkSubmitState> spinel_submits_;
 };
 
-#endif  // SRC_GRAPHICS_LIB_COMPUTE_EXAMPLES_COMMON_DEMO_SPINEL_APP_H_
+#endif  // SRC_GRAPHICS_LIB_COMPUTE_EXAMPLES_COMMON_DEMO_APP_SPINEL_H_

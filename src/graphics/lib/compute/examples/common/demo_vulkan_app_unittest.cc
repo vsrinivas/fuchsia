@@ -2,16 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "demo_vulkan_app.h"
-
 #include <gtest/gtest.h>
 #include <stdio.h>
 
+#include "demo_app_base.h"
 #include "tests/common/vk_utils.h"
 
-class TestDemoVulkanApp : public DemoVulkanApp {
+class TestDemoAppBase : public DemoAppBase {
  public:
-  TestDemoVulkanApp() = default;
+  TestDemoAppBase() = default;
 
   bool setup_called_    = false;
   bool teardown_called_ = false;
@@ -77,16 +76,16 @@ class TestDemoVulkanApp : public DemoVulkanApp {
   uint32_t max_counter_ = 1;
 };
 
-TEST(DemoVulkanAppTest, SimpleTest)
+TEST(DemoAppBaseTest, SimpleTest)
 {
-  DemoVulkanApp::Config config = {
-    .app_name      = "DemoVulkanAppTest::SimpleTest",
+  DemoAppBase::Config config = {
+    .app_name      = "DemoAppBaseTest::SimpleTest",
     .window_width  = 16,
     .window_height = 16,
   };
 
   {
-    TestDemoVulkanApp app;
+    TestDemoAppBase app;
     ASSERT_TRUE(app.init(config));
 
     // Should stop after 0 instances.
@@ -97,7 +96,7 @@ TEST(DemoVulkanAppTest, SimpleTest)
   }
 
   {
-    TestDemoVulkanApp app;
+    TestDemoAppBase app;
     ASSERT_TRUE(app.init(config));
 
     // Should stop after 10 instances.
@@ -109,10 +108,10 @@ TEST(DemoVulkanAppTest, SimpleTest)
   }
 }
 
-TEST(DemoVulkanAppTest, SimpleTestWithQueue)
+TEST(DemoAppBaseTest, SimpleTestWithQueue)
 {
-  DemoVulkanApp::Config config = {
-    .app_name               = "DemoVulkanAppTest::SimpleTestWithQueue",
+  DemoAppBase::Config config = {
+    .app_name               = "DemoAppBaseTest::SimpleTestWithQueue",
     .window_width           = 16,
     .window_height          = 16,
     .enable_swapchain_queue = true,
@@ -120,7 +119,7 @@ TEST(DemoVulkanAppTest, SimpleTestWithQueue)
   };
 
   {
-    TestDemoVulkanApp app;
+    TestDemoAppBase app;
     ASSERT_TRUE(app.init(config));
 
     // Should stop after 0 instances.
@@ -131,7 +130,7 @@ TEST(DemoVulkanAppTest, SimpleTestWithQueue)
   }
 
   {
-    TestDemoVulkanApp app;
+    TestDemoAppBase app;
     ASSERT_TRUE(app.init(config));
 
     // Should stop after 10 instances.

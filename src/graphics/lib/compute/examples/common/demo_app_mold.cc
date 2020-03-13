@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "demo_mold_app.h"
+#include "demo_app_mold.h"
 
 #include <stdio.h>
 
@@ -11,12 +11,14 @@
 #include "spinel/spinel_assert.h"
 #include "spinel/spinel_vk_types.h"
 #include "tests/common/utils.h"
+#include "tests/common/vk_swapchain_queue.h"
 #include "tests/common/vk_utils.h"
 
 // Set to 1 to enable log messages during development.
 #define ENABLE_LOG 0
 
 #if ENABLE_LOG
+#include <stdio.h>
 #define LOG(...) fprintf(stderr, __VA_ARGS__)
 #else
 #define LOG(...) ((void)0)
@@ -257,15 +259,15 @@ cmdImageLayoutTransition(VkCommandBuffer      command_buffer,
 //
 //
 
-DemoMoldApp::DemoMoldApp(const Config & config) : config_no_clear_(config.no_clear)
+DemoAppMold::DemoAppMold(const Config & config) : config_no_clear_(config.no_clear)
 {
-  DemoVulkanApp::Config app_config  = config.app;
+  DemoAppBase::Config app_config    = config.app;
   app_config.enable_swapchain_queue = true;
-  this->DemoVulkanApp::init(app_config);
+  this->DemoAppBase::init(app_config);
   mold_context_create(&spinel_context_);
 }
 
-DemoMoldApp::~DemoMoldApp()
+DemoAppMold::~DemoAppMold()
 {
   spn_context_release(spinel_context_);
 }
@@ -274,26 +276,31 @@ DemoMoldApp::~DemoMoldApp()
 //
 //
 bool
-DemoMoldApp::setup()
+DemoAppMold::setup()
 {
   LOG("SETUP\n");
-  image_provider_->setup(spinel_context_,
-                         swapchain_image_count_,
-                         swapchain_extent_.width,
-                         swapchain_extent_.height);
+  demo_images_.setup((DemoImage::Config){
+    .context        = spinel_context_,
+    .surface_width  = window_extent().width,
+    .surface_height = window_extent().height,
+    .image_count    = swapchain_image_count_,
+  });
+
+  const VulkanDevice & device = window_.device();
 
   for (uint32_t nn = 0; nn < swapchain_image_count_; ++nn)
     image_buffers_.push_back(ScopedBuffer(SPN_DEMO_SURFACE_SIZE,
                                           VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                                          app_state_.pd,
-                                          app_state_.d,
-                                          app_state_.ac));
+                                          device.vk_physical_device(),
+                                          device.vk_device(),
+                                          device.vk_allocator()));
 
   // Prepare the command buffer for each swapchain image.
   for (uint32_t nn = 0; nn < swapchain_image_count_; ++nn)
     {
-      const vk_swapchain_queue_image_t * image = vk_swapchain_queue_get_image(swapchain_queue_, nn);
-      VkCommandBuffer                    buffer = image->command_buffer;
+      const vk_swapchain_queue_image_t * image =
+        vk_swapchain_queue_get_image(window_.swapchain_queue(), nn);
+      VkCommandBuffer buffer = image->command_buffer;
 
       const VkCommandBufferBeginInfo beginInfo = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -323,14 +330,14 @@ DemoMoldApp::setup()
             .height = SPN_DEMO_SURFACE_HEIGHT,
           },
           .dst = {
-            .width  = swapchain_extent_.width,
-            .height = swapchain_extent_.height,
+            .width  = window_extent().width,
+            .height = window_extent().height,
           },
           .copy = {
             .src_x = 0,
             .src_y = 0,
-            .dst_x = (int32_t)(swapchain_extent_.width - SPN_DEMO_SURFACE_WIDTH)/2,
-            .dst_y = (int32_t)(swapchain_extent_.height - SPN_DEMO_SURFACE_HEIGHT)/2,
+            .dst_x = (int32_t)(window_extent().width - SPN_DEMO_SURFACE_WIDTH)/2,
+            .dst_y = (int32_t)(window_extent().height - SPN_DEMO_SURFACE_HEIGHT)/2,
             .w     = SPN_DEMO_SURFACE_WIDTH,
             .h     = SPN_DEMO_SURFACE_HEIGHT,
           },
@@ -355,14 +362,14 @@ DemoMoldApp::setup()
 //
 //
 void
-DemoMoldApp::teardown()
+DemoAppMold::teardown()
 {
   LOG("TEARDOWN\n");
   // TODO(digit): Wait for Spinel context drain
 
   image_buffers_.clear();
-  image_provider_->teardown();
-  this->DemoVulkanApp::teardown();
+  demo_images_.teardown();
+  this->DemoAppBase::teardown();
   LOG("TEARDOWN COMPLETED\n");
 }
 
@@ -371,20 +378,19 @@ DemoMoldApp::teardown()
 //
 
 bool
-DemoMoldApp::drawFrame(uint32_t frame_counter)
+DemoAppMold::drawFrame(uint32_t frame_counter)
 {
-  if (!acquireSwapchainQueueImage())
+  if (!window_.acquireSwapchainQueueImage())
     return false;
 
   // Setup image.
-  DemoSpinelImage & demo_image   = image_provider_->getImage(image_index_);
-  ScopedBuffer &    image_buffer = image_buffers_[image_index_];
+  uint32_t       frame_index;
+  DemoImage &    demo_image   = demo_images_.getNextImage(&frame_index);
+  ScopedBuffer & image_buffer = image_buffers_[frame_index];
 
   LOG("FRAME %u\n", frame_counter);
 
-  demo_image.setupPaths(frame_counter);
-  demo_image.setupRasters(frame_counter);
-  demo_image.setupLayers(frame_counter);
+  demo_image.setup(frame_counter);
 
   // Render it to the buffer with Mold.
   LOG("FRAME RENDER\n");
@@ -393,7 +399,7 @@ DemoMoldApp::drawFrame(uint32_t frame_counter)
     memset(image_buffer->mapped, 0xff, image_buffer->size);
 
   mold_pixel_format_t pixel_format = MOLD_RGBA8888;
-  if (swapchain_surface_format_.format == VK_FORMAT_B8G8R8A8_UNORM)
+  if (window_.info().surface_format.format == VK_FORMAT_B8G8R8A8_UNORM)
     pixel_format = MOLD_BGRA8888;
 
   mold_raw_buffer_t mold_target_buffer = {
@@ -403,16 +409,14 @@ DemoMoldApp::drawFrame(uint32_t frame_counter)
   };
 
   demo_image.render(&mold_target_buffer, SPN_DEMO_SURFACE_WIDTH, SPN_DEMO_SURFACE_HEIGHT);
+  demo_image.flush();
 
   vk_buffer_flush_all(&image_buffer);
 
-  presentSwapchainQueueImage();
+  window_.presentSwapchainQueueImage();
 
   LOG("FRAME SUBMITTED\n");
 
-  demo_image.resetLayers();
-  demo_image.resetRasters();
-  demo_image.resetPaths();
   LOG("FRAME COMPLETED\n");
   return true;
 }

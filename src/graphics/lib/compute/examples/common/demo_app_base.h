@@ -2,15 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_GRAPHICS_LIB_COMPUTE_EXAMPLES_COMMON_DEMO_VULKAN_APP_H_
-#define SRC_GRAPHICS_LIB_COMPUTE_EXAMPLES_COMMON_DEMO_VULKAN_APP_H_
+#ifndef SRC_GRAPHICS_LIB_COMPUTE_EXAMPLES_COMMON_DEMO_APP_BASE_H_
+#define SRC_GRAPHICS_LIB_COMPUTE_EXAMPLES_COMMON_DEMO_APP_BASE_H_
 
 #include <functional>
 
 #include "tests/common/fps_counter.h"
-#include "tests/common/vk_app_state.h"
-#include "tests/common/vk_swapchain.h"
-#include "tests/common/vk_swapchain_queue.h"
+#include "vulkan_device.h"
+#include "vulkan_window.h"
 
 // Base class for multiple demo applications that use Spinel or Mold and
 // display things using Vulkan. This setups a Vulkan device and swapchain,
@@ -28,7 +27,7 @@
 //    3) Call the run() method, which will end up calling drawFrame()
 //       in a loop with a monotonic frame counter argument.
 //
-class DemoVulkanApp {
+class DemoAppBase {
  public:
   // Configuration information used during initialization.
   struct Config
@@ -47,8 +46,8 @@ class DemoVulkanApp {
     bool verbose = false;
     bool debug   = false;
 
-    // |disable_vsync| is used to disable vsync synchronization,
-    // and |print_fps| prints a frames/second count on stdout
+    // |disable_vsync| is used to disable vsync synchronization.
+    // |print_fps| prints a frames/second count on stdout
     // every 2 seconds. Enabling these is useful for benchmarking
     // raw rendering performance, but will introduce tearing.
     bool disable_vsync = false;
@@ -80,18 +79,17 @@ class DemoVulkanApp {
     uint32_t     sync_semaphores_count = 0u;
   };
 
-  DemoVulkanApp() = default;
-  virtual ~DemoVulkanApp();
-
-  // Optional callback to customize the vk_app_state_config_t before
-  // calling vk_app_state_create().
-  using AppStateConfigCallback = std::function<void(vk_app_state_config_t *)>;
+  DemoAppBase() = default;
+  virtual ~DemoAppBase();
 
   // Initialize instance. Return true on success. On failure, print error messages
-  // to stderr and return false. |app_state_config_callback| can be used to customize
-  // the vk_app_state_config_t (e.g. for device selection and/or Spinel target detection).
+  // to stderr and return false.
   bool
-  init(const Config & config, AppStateConfigCallback * app_state_config_callback = nullptr);
+  init(const Config & config);
+
+  // Same as above, but assumes the VulkanDevice was already initialized.
+  bool
+  initAfterDevice(const Config & config);
 
   // Called to perform swapchain-image specific setup before presentation.
   // Returns true for success, false for failure (in which case run() will
@@ -142,45 +140,24 @@ class DemoVulkanApp {
 
   // Return current swapchain extent.
   VkExtent2D
-  extent() const
+  window_extent() const
   {
-    return swapchain_extent_;
+    return window_.info().extent;
   }
 
  protected:
   // Derived classes should call these functions in their drawFrame()
   // implementation to acquire and present swapchain images.
 
-  // These functions should only be called if |enable_swapchain_queue| was false
-  // during construction.
-  bool
-  acquireSwapchainImage();
-  void
-  presentSwapchainImage();
+  VulkanDevice     device_;
+  VulkanWindow     window_;
+  vk_swapchain_t * swapchain_             = nullptr;
+  uint32_t         swapchain_image_count_ = 0;
 
-  // These functions should only be called if |enabled_swapchain_queue| was true
-  // during construction.
-  bool
-  acquireSwapchainQueueImage();
-  void
-  presentSwapchainQueueImage();
-
-  vk_app_state_t     app_state_                = {};
-  VkQueue            graphics_queue_           = VK_NULL_HANDLE;
-  vk_swapchain_t *   swapchain_                = nullptr;
-  VkSurfaceKHR       swapchain_surface_        = VK_NULL_HANDLE;
-  VkSurfaceFormatKHR swapchain_surface_format_ = {};
-  VkExtent2D         swapchain_extent_         = {};
-  uint32_t           swapchain_image_count_    = 0;
-
-  vk_swapchain_queue_t *             swapchain_queue_       = nullptr;
-  const vk_swapchain_queue_image_t * swapchain_queue_image_ = nullptr;
-
-  uint32_t      image_index_ = 0;
   bool          print_fps_   = false;
   fps_counter_t fps_counter_ = {};
   bool          print_ticks_ = false;
   bool          do_quit_     = false;
 };
 
-#endif  // SRC_GRAPHICS_LIB_COMPUTE_EXAMPLES_COMMON_DEMO_VULKAN_APP_H_
+#endif  // SRC_GRAPHICS_LIB_COMPUTE_EXAMPLES_COMMON_DEMO_APP_BASE_H_

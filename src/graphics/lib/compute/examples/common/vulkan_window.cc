@@ -1,47 +1,27 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "demo_vulkan_app.h"
+#include "vulkan_window.h"
 
 #include <stdio.h>
 
 #include "tests/common/utils.h"
+#include "tests/common/vk_app_state.h"
 #include "tests/common/vk_surface.h"
+#include "tests/common/vk_swapchain.h"
+#include "tests/common/vk_swapchain_queue.h"
+#include "vulkan_device.h"
 
 bool
-DemoVulkanApp::init(const DemoVulkanApp::Config & config, AppStateConfigCallback * config_callback)
+VulkanWindow::init(VulkanDevice * device, const VulkanWindow::Config & config)
 {
-  vk_app_state_config_t app_config = {
-    .app_name            = config.app_name ? config.app_name : "DemoVulkanApp",
-    .engine_name         = "DemoVulkanApp",
-    .enable_validation   = config.debug,
-    .enable_debug_report = config.debug,
-
-    .require_swapchain         = true,
-    .disable_swapchain_present = config.disable_vsync,
-  };
-
-  if (config_callback)
-    (*config_callback)(&app_config);
-
-  if (!vk_app_state_init(&app_state_, &app_config))
-    {
-      fprintf(stderr, "FAILURE\n");
-      return false;
-    }
-
-  if (config.verbose)
-    vk_app_state_print(&app_state_);
-
-  VkInstance instance = app_state_.instance;
-
-  vkGetDeviceQueue(app_state_.d, app_state_.qfi, 0, &graphics_queue_);
+  device_ = device;
 
   // Allocate display surface, and determine whether it's possible to directly
   // render to the swapchain with it.
-  swapchain_surface_ =
-    vk_app_state_create_surface(&app_state_, config.window_width, config.window_height);
+  VkSurfaceKHR window_surface =
+    vk_app_state_create_surface(&device->vk_app_state(), config.window_width, config.window_height);
 
   VkImageUsageFlags image_usage = 0;
 
@@ -50,9 +30,9 @@ DemoVulkanApp::init(const DemoVulkanApp::Config & config, AppStateConfigCallback
     {
       vk_device_surface_info_t surface_info;
       vk_device_surface_info_init(&surface_info,
-                                  app_state_.pd,
-                                  swapchain_surface_,
-                                  app_state_.instance);
+                                  device_->vk_physical_device(),
+                                  window_surface,
+                                  device_->vk_instance());
 
       VkFormat format = vk_device_surface_info_find_presentation_format(&surface_info,
                                                                         VK_IMAGE_USAGE_STORAGE_BIT,
@@ -71,17 +51,17 @@ DemoVulkanApp::init(const DemoVulkanApp::Config & config, AppStateConfigCallback
   VkFormat wanted_format = config.wanted_format;
 
   const vk_swapchain_config_t swapchain_config = {
-    .instance        = instance,
-    .device          = app_state_.d,
-    .physical_device = app_state_.pd,
-    .allocator       = app_state_.ac,
+    .instance        = device_->vk_instance(),
+    .device          = device_->vk_device(),
+    .physical_device = device_->vk_physical_device(),
+    .allocator       = device_->vk_allocator(),
 
-    .present_queue_family  = app_state_.qfi,
+    .present_queue_family  = device_->graphics_queue_family(),
     .present_queue_index   = 0,
-    .graphics_queue_family = app_state_.qfi,
+    .graphics_queue_family = device_->graphics_queue_family(),
     .graphics_queue_index  = 0,
 
-    .surface_khr = swapchain_surface_,
+    .surface_khr = window_surface,
 
     .max_frames              = 3,
     .pixel_format            = wanted_format,
@@ -101,98 +81,54 @@ DemoVulkanApp::init(const DemoVulkanApp::Config & config, AppStateConfigCallback
   if (config.verbose)
     vk_swapchain_print(swapchain_);
 
-  swapchain_image_count_ = vk_swapchain_get_image_count(swapchain_);
-  swapchain_extent_      = vk_swapchain_get_extent(swapchain_);
-
-  print_fps_   = config.print_fps;
-  print_ticks_ = config.debug;
+  info_.image_count    = vk_swapchain_get_image_count(swapchain_);
+  info_.extent         = vk_swapchain_get_extent(swapchain_);
+  info_.surface        = window_surface;
+  info_.surface_format = surface_format;
 
   if (config.enable_swapchain_queue)
     {
       vk_swapchain_queue_config_t queue_config = {
         .swapchain    = swapchain_,
-        .queue_family = app_state_.qfi,
+        .queue_family = device_->graphics_queue_family(),
         .queue_index  = 0u,
-        .device       = app_state_.d,
-        .allocator    = app_state_.ac,
+        .device       = device_->vk_device(),
+        .allocator    = device_->vk_allocator(),
 
         .enable_framebuffers   = config.enable_framebuffers,
         .sync_semaphores_count = config.sync_semaphores_count,
       };
       swapchain_queue_ = vk_swapchain_queue_create(&queue_config);
     }
+
   return true;
 }
 
-DemoVulkanApp::~DemoVulkanApp()
+VulkanWindow::~VulkanWindow()
 {
+  if (swapchain_queue_)
+    vk_swapchain_queue_destroy(swapchain_queue_);
+
   if (swapchain_)
     vk_swapchain_destroy(swapchain_);
-
-  vk_app_state_destroy(&app_state_);
-}
-
-void
-DemoVulkanApp::run()
-{
-  if (!this->setup())
-    return;
-
-  if (print_fps_)
-    fps_counter_start(&fps_counter_);
-
-  uint32_t frame_counter = 0;
-  while (!do_quit_ && vk_app_state_poll_events(&app_state_))
-    {
-      if (!drawFrame(frame_counter))
-        break;
-
-      if (print_fps_)
-        fps_counter_tick_and_print(&fps_counter_);
-
-      // With --debug, print a small tick every two seconds (assuming a 60hz
-      // swapchain) to check that everything is working.
-      if (print_ticks_)
-        {
-          if (frame_counter > 0 && frame_counter % (60 * 2) == 0)
-            {
-              printf("!");
-              fflush(stdout);
-            }
-        }
-
-      frame_counter++;
-    }
-
-  if (print_fps_)
-    fps_counter_stop(&fps_counter_);
-
-  vkDeviceWaitIdle(app_state_.d);
-  this->teardown();
-}
-
-void
-DemoVulkanApp::doQuit()
-{
-  do_quit_ = true;
 }
 
 bool
-DemoVulkanApp::acquireSwapchainImage()
+VulkanWindow::acquireSwapchainImage()
 {
   ASSERT_MSG(!swapchain_queue_, "Calling this method requires enable_swapchain_queue=false");
   return vk_swapchain_acquire_next_image(swapchain_, &image_index_);
 }
 
 void
-DemoVulkanApp::presentSwapchainImage()
+VulkanWindow::presentSwapchainImage()
 {
   ASSERT_MSG(!swapchain_queue_, "Calling this method requires enable_swapchain_queue=false");
   vk_swapchain_present_image(swapchain_);
 }
 
 bool
-DemoVulkanApp::acquireSwapchainQueueImage()
+VulkanWindow::acquireSwapchainQueueImage()
 {
   ASSERT_MSG(swapchain_queue_, "Calling this method requires enable_swapchain_queue=true");
 
@@ -205,8 +141,20 @@ DemoVulkanApp::acquireSwapchainQueueImage()
 }
 
 void
-DemoVulkanApp::presentSwapchainQueueImage()
+VulkanWindow::presentSwapchainQueueImage()
 {
   ASSERT_MSG(swapchain_queue_, "Calling this method requires enable_swapchain_queue=true");
   vk_swapchain_queue_submit_and_present_image(swapchain_queue_);
+}
+
+bool
+VulkanWindow::handleUserEvents()
+{
+  return vk_app_state_poll_events(&device_->vk_app_state());
+}
+
+void
+VulkanWindow::waitIdle()
+{
+  vkDeviceWaitIdle(device_->vk_device());
 }
