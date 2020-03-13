@@ -9,10 +9,7 @@ group("intl") {
 
 group("tests") {
   testonly = true
-  public_deps = [
-    ":intl",
-    "intl_services:tests",
-  ]
+  public_deps = [ "intl_services:tests" ]
 }
 
 group("config") {
