@@ -14,6 +14,21 @@ pub enum State {
     WaitingForReboot(InstallingData),
     InstallationError(InstallationErrorData),
 }
+
+impl State {
+    /// Returns true if this state is an error state.
+    pub fn is_error(&self) -> bool {
+        match self {
+            State::ErrorCheckingForUpdate | State::InstallationError(_) => true,
+            State::CheckingForUpdates
+            | State::NoUpdateAvailable
+            | State::InstallationDeferredByPolicy(_)
+            | State::InstallingUpdate(_)
+            | State::WaitingForReboot(_) => false,
+        }
+    }
+}
+
 impl Into<fidl::State> for State {
     fn into(self) -> fidl::State {
         match self {

@@ -16,9 +16,11 @@ rustc_test("driver") {
     "//sdk/fidl/fuchsia.update:fuchsia.update-rustc",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/sys/pkg/lib/fidl-fuchsia-update-ext",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:parking_lot",
+    "//third_party/rust_crates:pretty_assertions",
   ]
 }
 

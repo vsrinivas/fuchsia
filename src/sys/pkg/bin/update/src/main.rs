@@ -5,9 +5,10 @@
 use anyhow::{Context as _, Error};
 use fidl_fuchsia_update::{
     CheckOptions, Initiator, ManagerMarker, ManagerProxy, MonitorMarker, MonitorRequest,
-    MonitorRequestStream, State,
+    MonitorRequestStream,
 };
 use fidl_fuchsia_update_channelcontrol::{ChannelControlMarker, ChannelControlProxy};
+use fidl_fuchsia_update_ext::State;
 use fuchsia_async as fasync;
 use fuchsia_component::client::connect_to_service;
 use futures::prelude::*;
@@ -22,8 +23,16 @@ async fn monitor_state(mut stream: MonitorRequestStream) -> Result<(), Error> {
     while let Some(event) = stream.try_next().await? {
         match event {
             MonitorRequest::OnState { state, responder } => {
-                print_state(&state);
                 responder.send()?;
+
+                let state = State::from(state);
+
+                // Exit if we encounter an error during an update.
+                if state.is_error() {
+                    anyhow::bail!("Update failed: {:?}", state)
+                } else {
+                    print_state(&state);
+                }
             }
         }
     }
