@@ -145,8 +145,8 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
 
   if (dev && client_remote.is_valid()) {
     // This needs to be called outside the ApiAutoLock, as device_open will be called
-    internal::device_connect(dev, ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE,
-                             std::move(client_remote));
+    internal::ContextForApi()->DeviceConnect(dev, ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE,
+                                             std::move(client_remote));
 
     // Leak the reference that was written to |out|, it will be recovered in device_remove().
     // For device instances we mimic the behavior of |open| by not leaking the reference,
@@ -372,7 +372,7 @@ __EXPORT zx_status_t device_add_composite(zx_device_t* dev, const char* name,
 __EXPORT zx_status_t device_schedule_work(zx_device_t* dev, void (*callback)(void*), void* cookie) {
   ApiAutoLock lock;
   auto dev_ref = fbl::RefPtr(dev);
-  return internal::schedule_work(dev_ref, callback, cookie);
+  return internal::ContextForApi()->ScheduleWork(dev_ref, callback, cookie);
 }
 
 __EXPORT void driver_printf(uint32_t flags, const char* fmt, ...) {

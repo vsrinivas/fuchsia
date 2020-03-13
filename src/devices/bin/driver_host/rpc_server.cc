@@ -97,16 +97,15 @@ static zx_status_t create_description(const fbl::RefPtr<zx_device_t>& dev, OnOpe
   return ZX_OK;
 }
 
-namespace internal {
-
-zx_status_t device_connect(const fbl::RefPtr<zx_device_t>& dev, uint32_t flags, zx::channel rh) {
+zx_status_t DriverHostContext::DeviceConnect(const fbl::RefPtr<zx_device_t>& dev, uint32_t flags,
+                                             zx::channel rh) {
   zx_status_t r;
   // detect response directives and discard all other
   // protocol flags
   bool describe = flags & ZX_FS_FLAG_DESCRIBE;
   flags &= (~ZX_FS_FLAG_DESCRIBE);
 
-  auto newconn = fbl::MakeRefCounted<DevfsConnection>();
+  auto newconn = fbl::MakeRefCounted<DevfsConnection>(this);
   if (!newconn) {
     r = ZX_ERR_NO_MEMORY;
     if (describe) {
@@ -143,7 +142,7 @@ zx_status_t device_connect(const fbl::RefPtr<zx_device_t>& dev, uint32_t flags, 
 
   // If we can't add the new conn and handle to the dispatcher our only option
   // is to give up and tear down.  In practice, this should never happen.
-  if ((r = start_connection(std::move(newconn), std::move(rh))) != ZX_OK) {
+  if ((r = StartConnection(std::move(newconn), std::move(rh))) != ZX_OK) {
     // TODO(teisenbe/kulakowski): Should this be goto fail_open?
     goto fail;
   }
@@ -157,8 +156,6 @@ fail:
   }
   return r;
 }
-
-}  // namespace internal
 
 #define DO_READ 0
 #define DO_WRITE 1
@@ -183,7 +180,7 @@ static zx_status_t fidl_node_clone(void* ctx, uint32_t flags, zx_handle_t object
   auto conn = static_cast<DevfsConnection*>(ctx);
   zx::channel c(object);
   flags = conn->flags | (flags & ZX_FS_FLAG_DESCRIBE);
-  internal::device_connect(conn->dev, flags, std::move(c));
+  conn->driver_host_context().DeviceConnect(conn->dev, flags, std::move(c));
   return ZX_OK;
 }
 

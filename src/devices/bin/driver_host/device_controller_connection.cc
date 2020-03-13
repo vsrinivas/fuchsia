@@ -115,7 +115,7 @@ void DeviceControllerConnection::ConnectProxy(::zx::channel shadow,
   this->dev()->ops->rxrpc(this->dev()->ctx, ZX_HANDLE_INVALID);
   // Ignore any errors in the creation for now?
   // TODO(teisenbe): Investigate if this is the right thing
-  ProxyIostate::Create(this->dev(), std::move(shadow), internal::DevhostAsyncLoop()->dispatcher());
+  ProxyIostate::Create(this->dev(), std::move(shadow), driver_host_context_->loop().dispatcher());
 }
 
 void DeviceControllerConnection::BindDriver(::fidl::StringView driver_path_view, zx::vmo driver,
@@ -225,9 +225,10 @@ void DeviceControllerConnection::CompleteRemoval(CompleteRemovalCompleter::Sync 
   internal::device_complete_removal(this->dev());
 }
 
-DeviceControllerConnection::DeviceControllerConnection(fbl::RefPtr<zx_device> dev, zx::channel rpc,
+DeviceControllerConnection::DeviceControllerConnection(DriverHostContext* ctx,
+                                                       fbl::RefPtr<zx_device> dev, zx::channel rpc,
                                                        zx::channel coordinator_rpc)
-    : dev_(std::move(dev)) {
+    : driver_host_context_(ctx), dev_(std::move(dev)) {
   dev_->rpc = zx::unowned_channel(rpc);
   dev_->coordinator_rpc = zx::unowned_channel(coordinator_rpc);
   dev_->conn.store(this);
@@ -243,12 +244,12 @@ DeviceControllerConnection::~DeviceControllerConnection() {
   dev_->rpc = zx::unowned_channel();
 }
 
-zx_status_t DeviceControllerConnection::Create(fbl::RefPtr<zx_device> dev,
+zx_status_t DeviceControllerConnection::Create(DriverHostContext* ctx, fbl::RefPtr<zx_device> dev,
                                                zx::channel controller_rpc,
                                                zx::channel coordinator_rpc,
                                                std::unique_ptr<DeviceControllerConnection>* conn) {
-  *conn = std::make_unique<DeviceControllerConnection>(std::move(dev), std::move(controller_rpc),
-                                                       std::move(coordinator_rpc));
+  *conn = std::make_unique<DeviceControllerConnection>(
+      ctx, std::move(dev), std::move(controller_rpc), std::move(coordinator_rpc));
   if (*conn == nullptr) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -262,7 +263,7 @@ void DeviceControllerConnection::Open(uint32_t flags, uint32_t mode, ::fidl::Str
     log(ERROR, "driver_host: Tried to open path '%.*s'\n", static_cast<int>(path.size()),
         path.data());
   }
-  internal::device_connect(this->dev(), flags, std::move(object));
+  driver_host_context_->DeviceConnect(this->dev(), flags, std::move(object));
 }
 
 void DeviceControllerConnection::HandleRpc(std::unique_ptr<DeviceControllerConnection> conn,

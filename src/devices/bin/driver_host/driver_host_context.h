@@ -14,13 +14,36 @@
 #include <fbl/ref_ptr.h>
 
 #include "async_loop_owned_event_handler.h"
+#include "lock.h"
 #include "zx_device.h"
 
-class DevhostContext {
+class DriverHostContext {
  public:
   using Callback = fit::inline_callback<void(void), 2 * sizeof(void*)>;
 
-  explicit DevhostContext(const async_loop_config_t* config) : loop_(config) {}
+  explicit DriverHostContext(const async_loop_config_t* config) : loop_(config) {}
+
+  zx_status_t SetupRootDevcoordinatorConnection(zx::channel ch);
+
+  zx_status_t ScheduleWork(const fbl::RefPtr<zx_device_t>& dev, void (*callback)(void*),
+                           void* cookie) REQ_DM_LOCK;
+
+  zx_status_t StartConnection(fbl::RefPtr<DevfsConnection> ios, zx::channel h);
+
+  void ProxyIosDestroy(const fbl::RefPtr<zx_device_t>& dev);
+
+  // Attaches channel |c| to new state representing an open connection to |dev|.
+  zx_status_t DeviceConnect(const fbl::RefPtr<zx_device_t>& dev, uint32_t flags, zx::channel c);
+
+  // routines driver_host uses to talk to dev coordinator
+  // |client_remote| will only be a valid handle if the device was added with
+  // DEVICE_ADD_INVISIBLE or DEVICE_ADD_MUST_ISOLATE.
+  zx_status_t Add(const fbl::RefPtr<zx_device_t>& dev, const fbl::RefPtr<zx_device_t>& child,
+                  const char* proxy_args, const zx_device_prop_t* props, uint32_t prop_count,
+                  zx::channel client_remote) REQ_DM_LOCK;
+  // Note that remove() takes a RefPtr rather than a const RefPtr&.
+  // It intends to consume a reference.
+  zx_status_t Remove(fbl::RefPtr<zx_device_t> dev) REQ_DM_LOCK;
 
   // Sets up event on async loop which gets triggered once
   zx_status_t SetupEventWaiter();

@@ -11,7 +11,7 @@
 class DeviceControllerConnection;
 struct ProxyIostate;
 
-// Handles destroying Connection objects in the single-threaded DevhostAsyncLoop().
+// Handles destroying Connection objects in the single-threaded DriverHostContext::loop().
 // This allows us to prevent races between canceling waiting on the connection
 // channel and executing the connection's handler.
 class ConnectionDestroyer {

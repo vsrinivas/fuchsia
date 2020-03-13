@@ -15,12 +15,13 @@
 #include <zxtest/zxtest.h>
 
 #include "connection_destroyer.h"
+#include "driver_host_context.h"
 #include "zx_device.h"
 
 namespace {
 
 TEST(DeviceControllerConnectionTestCase, Creation) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  DriverHostContext ctx(&kAsyncLoopConfigNoAttachToCurrentThread);
 
   fbl::RefPtr<zx_device> dev;
   ASSERT_OK(zx_device::Create(&dev));
@@ -34,16 +35,16 @@ TEST(DeviceControllerConnectionTestCase, Creation) {
   std::unique_ptr<DeviceControllerConnection> conn;
 
   ASSERT_NULL(dev->conn.load());
-  ASSERT_OK(DeviceControllerConnection::Create(dev, std::move(device_remote),
+  ASSERT_OK(DeviceControllerConnection::Create(&ctx, dev, std::move(device_remote),
                                                std::move(device_remote2), &conn));
   ASSERT_NOT_NULL(dev->conn.load());
 
-  ASSERT_OK(DeviceControllerConnection::BeginWait(std::move(conn), loop.dispatcher()));
-  ASSERT_OK(loop.RunUntilIdle());
+  ASSERT_OK(DeviceControllerConnection::BeginWait(std::move(conn), ctx.loop().dispatcher()));
+  ASSERT_OK(ctx.loop().RunUntilIdle());
 }
 
 TEST(DeviceControllerConnectionTestCase, PeerClosedDuringReply) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  DriverHostContext ctx(&kAsyncLoopConfigNoAttachToCurrentThread);
 
   fbl::RefPtr<zx_device> dev;
   ASSERT_OK(zx_device::Create(&dev));
@@ -56,10 +57,11 @@ TEST(DeviceControllerConnectionTestCase, PeerClosedDuringReply) {
 
   class DeviceControllerConnectionTest : public DeviceControllerConnection {
    public:
-    DeviceControllerConnectionTest(fbl::RefPtr<zx_device> dev, zx::channel rpc,
-                                   zx::channel coordinator_rpc, async_dispatcher_t* dispatcher,
-                                   zx::channel local)
-        : DeviceControllerConnection(std::move(dev), std::move(rpc), std::move(coordinator_rpc)) {
+    DeviceControllerConnectionTest(DriverHostContext* ctx, fbl::RefPtr<zx_device> dev,
+                                   zx::channel rpc, zx::channel coordinator_rpc,
+                                   async_dispatcher_t* dispatcher, zx::channel local)
+        : DeviceControllerConnection(ctx, std::move(dev), std::move(rpc),
+                                     std::move(coordinator_rpc)) {
       dispatcher_ = dispatcher;
       local_ = std::move(local);
     }
@@ -83,11 +85,11 @@ TEST(DeviceControllerConnectionTestCase, PeerClosedDuringReply) {
   std::unique_ptr<DeviceControllerConnectionTest> conn;
   auto device_local_handle = device_local.get();
   conn = std::make_unique<DeviceControllerConnectionTest>(
-      std::move(dev), std::move(device_remote), std::move(device_remote2), loop.dispatcher(),
-      std::move(device_local));
+      &ctx, std::move(dev), std::move(device_remote), std::move(device_remote2),
+      ctx.loop().dispatcher(), std::move(device_local));
 
-  ASSERT_OK(DeviceControllerConnectionTest::BeginWait(std::move(conn), loop.dispatcher()));
-  ASSERT_OK(loop.RunUntilIdle());
+  ASSERT_OK(DeviceControllerConnectionTest::BeginWait(std::move(conn), ctx.loop().dispatcher()));
+  ASSERT_OK(ctx.loop().RunUntilIdle());
 
   // Create a thread to send a BindDriver message.  The thread isn't strictly
   // necessary, but is done out of convenience since the FIDL LLCPP bindings currently don't
@@ -119,7 +121,7 @@ TEST(DeviceControllerConnectionTestCase, PeerClosedDuringReply) {
     return;
   });
 
-  ASSERT_OK(loop.Run(zx::time::infinite(), true /* run_once */));
+  ASSERT_OK(ctx.loop().Run(zx::time::infinite(), true /* run_once */));
 
   synchronous_call_thread.join();
   ASSERT_EQ(SUCCESS, thread_status);
@@ -128,7 +130,7 @@ TEST(DeviceControllerConnectionTestCase, PeerClosedDuringReply) {
 
 // Verify we do not abort when an expected PEER_CLOSED comes in.
 TEST(DeviceControllerConnectionTestCase, PeerClosed) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  DriverHostContext ctx(&kAsyncLoopConfigNoAttachToCurrentThread);
 
   fbl::RefPtr<zx_device> dev;
   ASSERT_OK(zx_device::Create(&dev));
@@ -140,23 +142,23 @@ TEST(DeviceControllerConnectionTestCase, PeerClosed) {
   ASSERT_OK(zx::channel::create(0, &device_local2, &device_remote2));
 
   std::unique_ptr<DeviceControllerConnection> conn;
-  ASSERT_OK(DeviceControllerConnection::Create(dev, std::move(device_remote),
+  ASSERT_OK(DeviceControllerConnection::Create(&ctx, dev, std::move(device_remote),
                                                std::move(device_remote2), &conn));
 
-  ASSERT_OK(DeviceControllerConnection::BeginWait(std::move(conn), loop.dispatcher()));
-  ASSERT_OK(loop.RunUntilIdle());
+  ASSERT_OK(DeviceControllerConnection::BeginWait(std::move(conn), ctx.loop().dispatcher()));
+  ASSERT_OK(ctx.loop().RunUntilIdle());
 
   // Perform the device shutdown protocol, since otherwise the driver_host code
   // will assert, since it is unable to handle unexpected connection closures.
   auto dev_conn = dev->conn.exchange(nullptr);
-  ConnectionDestroyer::Get()->QueueDeviceControllerConnection(loop.dispatcher(), dev_conn);
+  ConnectionDestroyer::Get()->QueueDeviceControllerConnection(ctx.loop().dispatcher(), dev_conn);
   device_local.reset();
 
-  ASSERT_OK(loop.RunUntilIdle());
+  ASSERT_OK(ctx.loop().RunUntilIdle());
 }
 
 TEST(DeviceControllerConnectionTestCase, UnbindHook) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  DriverHostContext ctx(&kAsyncLoopConfigNoAttachToCurrentThread);
 
   fbl::RefPtr<zx_device> dev;
   ASSERT_OK(zx_device::Create(&dev));
@@ -169,9 +171,10 @@ TEST(DeviceControllerConnectionTestCase, UnbindHook) {
 
   class DeviceControllerConnectionTest : public DeviceControllerConnection {
    public:
-    DeviceControllerConnectionTest(fbl::RefPtr<zx_device> dev, zx::channel rpc,
-                                   zx::channel coordinator_rpc)
-        : DeviceControllerConnection(std::move(dev), std::move(rpc), std::move(coordinator_rpc)) {}
+    DeviceControllerConnectionTest(DriverHostContext* ctx, fbl::RefPtr<zx_device> dev,
+                                   zx::channel rpc, zx::channel coordinator_rpc)
+        : DeviceControllerConnection(ctx, std::move(dev), std::move(rpc),
+                                     std::move(coordinator_rpc)) {}
 
     void Unbind(UnbindCompleter::Sync completer) {
       fbl::RefPtr<zx_device> dev = this->dev();
@@ -186,11 +189,11 @@ TEST(DeviceControllerConnectionTestCase, UnbindHook) {
   };
 
   std::unique_ptr<DeviceControllerConnectionTest> conn;
-  conn = std::make_unique<DeviceControllerConnectionTest>(std::move(dev), std::move(device_remote),
-                                                          std::move(device_remote2));
+  conn = std::make_unique<DeviceControllerConnectionTest>(
+      &ctx, std::move(dev), std::move(device_remote), std::move(device_remote2));
   fbl::RefPtr<zx_device> my_dev = conn->dev();
-  ASSERT_OK(DeviceControllerConnectionTest::BeginWait(std::move(conn), loop.dispatcher()));
-  ASSERT_OK(loop.RunUntilIdle());
+  ASSERT_OK(DeviceControllerConnectionTest::BeginWait(std::move(conn), ctx.loop().dispatcher()));
+  ASSERT_OK(ctx.loop().RunUntilIdle());
 
   // Create a thread to send the Unbind message.  The thread isn't strictly
   // necessary, but is done out of convenience since the FIDL C bindings don't
@@ -211,7 +214,7 @@ TEST(DeviceControllerConnectionTestCase, UnbindHook) {
     thread_status = SUCCESS;
   });
 
-  ASSERT_OK(loop.Run(zx::time::infinite(), true /* run_once */));
+  ASSERT_OK(ctx.loop().Run(zx::time::infinite(), true /* run_once */));
 
   synchronous_call_thread.join();
   ASSERT_EQ(SUCCESS, thread_status);

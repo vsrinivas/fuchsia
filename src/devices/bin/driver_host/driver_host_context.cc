@@ -10,7 +10,7 @@
 
 #include "log.h"
 
-void DevhostContext::PushWorkItem(const fbl::RefPtr<zx_device_t>& dev, Callback callback) {
+void DriverHostContext::PushWorkItem(const fbl::RefPtr<zx_device_t>& dev, Callback callback) {
   auto work_item = std::make_unique<WorkItem>(dev, std::move(callback));
 
   fbl::AutoLock al(&lock_);
@@ -23,7 +23,7 @@ void DevhostContext::PushWorkItem(const fbl::RefPtr<zx_device_t>& dev, Callback 
   }
 }
 
-void DevhostContext::InternalRunWorkItems(size_t how_many_to_run) {
+void DriverHostContext::InternalRunWorkItems(size_t how_many_to_run) {
   {
     fbl::AutoLock al(&lock_);
     if (event_waiter_->signaled()) {
@@ -62,7 +62,7 @@ void DevhostContext::InternalRunWorkItems(size_t how_many_to_run) {
   }
 }
 
-void DevhostContext::RunWorkItems(size_t how_many_to_run) {
+void DriverHostContext::RunWorkItems(size_t how_many_to_run) {
   std::unique_ptr<EventWaiter> event_waiter;
   {
     fbl::AutoLock al(&lock_);
@@ -77,7 +77,7 @@ void DevhostContext::RunWorkItems(size_t how_many_to_run) {
   EventWaiter::BeginWait(std::move(event_waiter), loop_.dispatcher());
 }
 
-zx_status_t DevhostContext::SetupEventWaiter() {
+zx_status_t DriverHostContext::SetupEventWaiter() {
   zx::event event;
   if (zx_status_t status = zx::event::create(0, &event); status != ZX_OK) {
     return status;
@@ -94,7 +94,7 @@ zx_status_t DevhostContext::SetupEventWaiter() {
   return EventWaiter::BeginWait(std::move(event_waiter), loop_.dispatcher());
 }
 
-void DevhostContext::EventWaiter::HandleEvent(std::unique_ptr<EventWaiter> event_waiter,
+void DriverHostContext::EventWaiter::HandleEvent(std::unique_ptr<EventWaiter> event_waiter,
                                               async_dispatcher_t* dispatcher, async::WaitBase* wait,
                                               zx_status_t status,
                                               const zx_packet_signal_t* signal) {

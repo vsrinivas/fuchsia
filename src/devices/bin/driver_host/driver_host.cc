@@ -57,6 +57,18 @@
 #include "scheduler_profile.h"
 #include "tracing.h"
 
+namespace {
+
+llcpp::fuchsia::device::manager::DeviceProperty convert_device_prop(const zx_device_prop_t& prop) {
+  return llcpp::fuchsia::device::manager::DeviceProperty{
+      .id = prop.id,
+      .reserved = prop.reserved,
+      .value = prop.value,
+  };
+}
+
+}  // namespace
+
 zx_status_t zx_driver::Create(fbl::RefPtr<zx_driver>* out_driver) {
   *out_driver = fbl::AdoptRef(new zx_driver());
   return ZX_OK;
@@ -64,27 +76,191 @@ zx_status_t zx_driver::Create(fbl::RefPtr<zx_driver>* out_driver) {
 
 uint32_t log_flags = LOG_ERROR | LOG_INFO;
 
-namespace internal {
-
-static fbl::DoublyLinkedList<fbl::RefPtr<zx_driver>> dh_drivers;
-
-DevhostContext& DevhostCtx() {
-  static DevhostContext ctx(&kAsyncLoopConfigAttachToCurrentThread);
-  return ctx;
-}
-
-// Access the driver_host's async event loop
-async::Loop* DevhostAsyncLoop() { return &DevhostCtx().loop(); }
-
-static zx_status_t SetupRootDevcoordinatorConnection(zx::channel ch) {
-  auto conn = std::make_unique<DevhostControllerConnection>();
+zx_status_t DriverHostContext::SetupRootDevcoordinatorConnection(zx::channel ch) {
+  auto conn = std::make_unique<internal::DevhostControllerConnection>(this);
   if (conn == nullptr) {
     return ZX_ERR_NO_MEMORY;
   }
 
   conn->set_channel(std::move(ch));
-  return DevhostControllerConnection::BeginWait(std::move(conn), DevhostAsyncLoop()->dispatcher());
+  return internal::DevhostControllerConnection::BeginWait(std::move(conn), loop_.dispatcher());
 }
+
+zx_status_t DriverHostContext::ScheduleWork(const fbl::RefPtr<zx_device_t>& dev,
+                                            void (*callback)(void*), void* cookie) {
+  if (!callback) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  PushWorkItem(dev, [callback, cookie]() { callback(cookie); });
+  return ZX_OK;
+}
+
+zx_status_t DriverHostContext::StartConnection(fbl::RefPtr<DevfsConnection> conn, zx::channel h) {
+  conn->set_channel(std::move(h));
+  return DevfsConnection::BeginWait(std::move(conn), loop_.dispatcher());
+}
+
+// Send message to devcoordinator asking to add child device to
+// parent device.  Called under driver_host api lock.
+zx_status_t DriverHostContext::Add(const fbl::RefPtr<zx_device_t>& parent,
+                                   const fbl::RefPtr<zx_device_t>& child, const char* proxy_args,
+                                   const zx_device_prop_t* props, uint32_t prop_count,
+                                   zx::channel client_remote) {
+  char buffer[512];
+  const char* path = internal::mkdevpath(parent, buffer, sizeof(buffer));
+
+  bool add_invisible = child->flags & DEV_FLAG_INVISIBLE;
+  fuchsia::device::manager::AddDeviceConfig add_device_config;
+
+  if (child->flags & DEV_FLAG_ALLOW_MULTI_COMPOSITE) {
+    add_device_config |= fuchsia::device::manager::AddDeviceConfig::ALLOW_MULTI_COMPOSITE;
+  }
+
+  zx_status_t status;
+  zx::channel coordinator, coordinator_remote;
+  if ((status = zx::channel::create(0, &coordinator, &coordinator_remote)) != ZX_OK) {
+    return status;
+  }
+
+  zx::channel device_controller, device_controller_remote;
+  if ((status = zx::channel::create(0, &device_controller, &device_controller_remote)) != ZX_OK) {
+    return status;
+  }
+
+  std::unique_ptr<DeviceControllerConnection> conn;
+  status = DeviceControllerConnection::Create(this, child, std::move(device_controller),
+                                              std::move(coordinator), &conn);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  std::vector<llcpp::fuchsia::device::manager::DeviceProperty> props_list = {};
+  for (size_t i = 0; i < prop_count; i++) {
+    props_list.push_back(convert_device_prop(props[i]));
+  }
+
+  const zx::channel& rpc = *parent->coordinator_rpc;
+  if (!rpc.is_valid()) {
+    return ZX_ERR_IO_REFUSED;
+  }
+  size_t proxy_args_len = proxy_args ? strlen(proxy_args) : 0;
+  zx_status_t call_status = ZX_OK;
+  static_assert(sizeof(zx_device_prop_t) == sizeof(uint64_t));
+  uint64_t device_id = 0;
+  if (add_invisible) {
+    auto response = fuchsia::device::manager::Coordinator::Call::AddDeviceInvisible(
+        zx::unowned_channel(rpc.get()), std::move(coordinator_remote),
+        std::move(device_controller_remote), ::fidl::VectorView(props_list),
+        ::fidl::StringView(child->name, strlen(child->name)), child->protocol_id,
+        ::fidl::StringView(child->driver->libname()),
+        ::fidl::StringView(proxy_args, proxy_args_len), child->ops->init /* has_init */,
+        std::move(client_remote));
+    status = response.status();
+    if (status == ZX_OK) {
+      if (response.Unwrap()->result.is_response()) {
+        device_id = response.Unwrap()->result.response().local_device_id;
+        // Mark child as invisible until the init function is replied.
+        child->flags |= DEV_FLAG_INVISIBLE;
+      } else {
+        call_status = response.Unwrap()->result.err();
+      }
+    }
+  } else {
+    auto response = fuchsia::device::manager::Coordinator::Call::AddDevice(
+        zx::unowned_channel(rpc.get()), std::move(coordinator_remote),
+        std::move(device_controller_remote), ::fidl::VectorView(props_list),
+        ::fidl::StringView(child->name, strlen(child->name)), child->protocol_id,
+        ::fidl::StringView(child->driver->libname()),
+        ::fidl::StringView(proxy_args, proxy_args_len), add_device_config,
+        child->ops->init /* has_init */, std::move(client_remote));
+    status = response.status();
+    if (status == ZX_OK) {
+      if (response.Unwrap()->result.is_response()) {
+        device_id = response.Unwrap()->result.response().local_device_id;
+      } else {
+        call_status = response.Unwrap()->result.err();
+      }
+    }
+  }
+  if (status != ZX_OK) {
+    log(ERROR, "driver_host[%s] add '%s': rpc sending failed: %d\n", path, child->name, status);
+    return status;
+  } else if (call_status != ZX_OK) {
+    log(ERROR, "driver_host[%s] add '%s': rpc failed: %d\n", path, child->name, call_status);
+    return call_status;
+  }
+
+  child->set_local_id(device_id);
+
+  status = DeviceControllerConnection::BeginWait(std::move(conn), loop_.dispatcher());
+  if (status != ZX_OK) {
+    return status;
+  }
+  return ZX_OK;
+}
+
+// Send message to devcoordinator informing it that this device
+// is being removed.  Called under driver_host api lock.
+zx_status_t DriverHostContext::Remove(fbl::RefPtr<zx_device_t> dev) {
+  DeviceControllerConnection* conn = dev->conn.load();
+  if (conn == nullptr) {
+    log(ERROR, "removing device %p, conn is nullptr\n", dev.get());
+    return ZX_ERR_INTERNAL;
+  }
+
+  // This must be done before the RemoveDevice message is sent to
+  // devcoordinator, since devcoordinator will close the channel in response.
+  // The async loop may see the channel close before it sees the queued
+  // shutdown packet, so it needs to check if dev->conn has been nulled to
+  // handle that gracefully.
+  dev->conn.store(nullptr);
+
+  log(DEVLC, "removing device %p, conn %p\n", dev.get(), conn);
+
+  // respond to the remove fidl call
+  dev->removal_cb(ZX_OK);
+
+  // Forget our local ID, to release the reference stored by the local ID map
+  dev->set_local_id(0);
+
+  // Forget about our rpc channel since after the port_queue below it may be
+  // closed.
+  dev->rpc = zx::unowned_channel();
+  dev->coordinator_rpc = zx::unowned_channel();
+
+  // queue an event to destroy the connection
+  ConnectionDestroyer::Get()->QueueDeviceControllerConnection(loop_.dispatcher(), conn);
+
+  // shut down our proxy rpc channel if it exists
+  ProxyIosDestroy(dev);
+
+  return ZX_OK;
+}
+
+void DriverHostContext::ProxyIosDestroy(const fbl::RefPtr<zx_device_t>& dev) {
+  fbl::AutoLock guard(&dev->proxy_ios_lock);
+
+  if (dev->proxy_ios) {
+    dev->proxy_ios->CancelLocked(loop_.dispatcher());
+  }
+}
+
+namespace internal {
+
+namespace {
+
+// We need a global pointer to a DriverHostContext so that we can implement the functions exported
+// to drivers.  Some of these functions unfortunately do not take an argument that can be used to
+// find a context.
+DriverHostContext* kContextForApi = nullptr;
+void RegisterContextForApi(DriverHostContext* context) { kContextForApi = context; }
+
+}  // namespace
+
+DriverHostContext* ContextForApi() { return kContextForApi; }
+
+// TODO(fxb/48246): This should be moved into DriverHostContext in a future patch.
+static fbl::DoublyLinkedList<fbl::RefPtr<zx_driver>> dh_drivers;
 
 const char* mkdevpath(const fbl::RefPtr<zx_device_t>& dev, char* path, size_t max) {
   if (dev == nullptr) {
@@ -249,6 +425,17 @@ zx_status_t find_driver(fbl::StringPiece libname, zx::vmo vmo, fbl::RefPtr<zx_dr
   return new_driver->status();
 }
 
+// This will be removed in a later patch, in favor of making functions members of DriverHostContext.
+zx_status_t add(const fbl::RefPtr<zx_device_t>& parent, const fbl::RefPtr<zx_device_t>& child,
+                const char* proxy_args, const zx_device_prop_t* props, uint32_t prop_count,
+                zx::channel client_remote) {
+  return ContextForApi()->Add(parent, child, proxy_args, props, prop_count,
+                              std::move(client_remote));
+}
+
+// This will be removed in a later patch, in favor of making functions members of DriverHostContext.
+zx_status_t remove(fbl::RefPtr<zx_device_t> dev) { return ContextForApi()->Remove(std::move(dev)); }
+
 void DevhostControllerConnection::CreateDevice(zx::channel coordinator_rpc,
                                                zx::channel device_controller_rpc,
                                                ::fidl::StringView driver_path_view,
@@ -316,7 +503,8 @@ void DevhostControllerConnection::CreateDevice(zx::channel coordinator_rpc,
 
   new_device->set_local_id(local_device_id);
   std::unique_ptr<DeviceControllerConnection> newconn;
-  r = DeviceControllerConnection::Create(std::move(new_device), std::move(device_controller_rpc),
+  r = DeviceControllerConnection::Create(driver_host_context_, std::move(new_device),
+                                         std::move(device_controller_rpc),
                                          std::move(coordinator_rpc), &newconn);
   if (r != ZX_OK) {
     return;
@@ -326,8 +514,8 @@ void DevhostControllerConnection::CreateDevice(zx::channel coordinator_rpc,
 
   log(RPC_IN, "driver_host: creating '%.*s' conn=%p\n", static_cast<int>(driver_path.size()),
       driver_path.data(), newconn.get());
-  if ((r = DeviceControllerConnection::BeginWait(std::move(newconn),
-                                                 DevhostAsyncLoop()->dispatcher())) != ZX_OK) {
+  if ((r = DeviceControllerConnection::BeginWait(
+           std::move(newconn), driver_host_context_->loop().dispatcher())) != ZX_OK) {
     return;
   }
 }
@@ -341,7 +529,7 @@ void DevhostControllerConnection::CreateCompositeDevice(
 
   // Convert the fragment IDs into zx_device references
   CompositeFragments fragments_list(new fbl::RefPtr<zx_device>[fragments.count()],
-                                      fragments.count());
+                                    fragments.count());
   {
     // Acquire the API lock so that we don't have to worry about concurrent
     // device removes
@@ -370,7 +558,8 @@ void DevhostControllerConnection::CreateCompositeDevice(
   dev->set_local_id(local_device_id);
 
   std::unique_ptr<DeviceControllerConnection> newconn;
-  status = DeviceControllerConnection::Create(dev, std::move(device_controller_rpc),
+  status = DeviceControllerConnection::Create(driver_host_context_, dev,
+                                              std::move(device_controller_rpc),
                                               std::move(coordinator_rpc), &newconn);
   if (status != ZX_OK) {
     completer.Reply(status);
@@ -384,8 +573,8 @@ void DevhostControllerConnection::CreateCompositeDevice(
   }
 
   log(RPC_IN, "driver_host: creating new composite conn=%p\n", newconn.get());
-  if ((status = DeviceControllerConnection::BeginWait(std::move(newconn),
-                                                      DevhostAsyncLoop()->dispatcher())) != ZX_OK) {
+  if ((status = DeviceControllerConnection::BeginWait(
+           std::move(newconn), driver_host_context_->loop().dispatcher())) != ZX_OK) {
     completer.Reply(status);
     return;
   }
@@ -411,15 +600,16 @@ void DevhostControllerConnection::CreateDeviceStub(zx::channel coordinator_rpc,
   dev->set_local_id(local_device_id);
 
   std::unique_ptr<DeviceControllerConnection> newconn;
-  r = DeviceControllerConnection::Create(dev, std::move(device_controller_rpc),
+  r = DeviceControllerConnection::Create(driver_host_context_, dev,
+                                         std::move(device_controller_rpc),
                                          std::move(coordinator_rpc), &newconn);
   if (r != ZX_OK) {
     return;
   }
 
   log(RPC_IN, "driver_host: creating new stub conn=%p\n", newconn.get());
-  if ((r = DeviceControllerConnection::BeginWait(std::move(newconn),
-                                                 DevhostAsyncLoop()->dispatcher())) != ZX_OK) {
+  if ((r = DeviceControllerConnection::BeginWait(
+           std::move(newconn), driver_host_context_->loop().dispatcher())) != ZX_OK) {
     return;
   }
 }
@@ -480,122 +670,7 @@ void DevhostControllerConnection::HandleRpc(std::unique_ptr<DevhostControllerCon
   BeginWait(std::move(conn), dispatcher);
 }
 
-void proxy_ios_destroy(const fbl::RefPtr<zx_device_t>& dev) {
-  fbl::AutoLock guard(&dev->proxy_ios_lock);
-
-  if (dev->proxy_ios) {
-    dev->proxy_ios->CancelLocked(DevhostAsyncLoop()->dispatcher());
-  }
-}
-
 zx_handle_t root_resource_handle = ZX_HANDLE_INVALID;
-
-static llcpp::fuchsia::device::manager::DeviceProperty convert_device_prop(
-    const zx_device_prop_t& prop) {
-  return llcpp::fuchsia::device::manager::DeviceProperty{
-      .id = prop.id,
-      .reserved = prop.reserved,
-      .value = prop.value,
-  };
-}
-
-// Send message to devcoordinator asking to add child device to
-// parent device.  Called under driver_host api lock.
-zx_status_t add(const fbl::RefPtr<zx_device_t>& parent, const fbl::RefPtr<zx_device_t>& child,
-                const char* proxy_args, const zx_device_prop_t* props, uint32_t prop_count,
-                zx::channel client_remote) {
-  char buffer[512];
-  const char* path = mkdevpath(parent, buffer, sizeof(buffer));
-
-  bool add_invisible = child->flags & DEV_FLAG_INVISIBLE;
-  fuchsia::device::manager::AddDeviceConfig add_device_config;
-
-  if (child->flags & DEV_FLAG_ALLOW_MULTI_COMPOSITE) {
-    add_device_config |= fuchsia::device::manager::AddDeviceConfig::ALLOW_MULTI_COMPOSITE;
-  }
-
-  zx_status_t status;
-  zx::channel coordinator, coordinator_remote;
-  if ((status = zx::channel::create(0, &coordinator, &coordinator_remote)) != ZX_OK) {
-    return status;
-  }
-
-  zx::channel device_controller, device_controller_remote;
-  if ((status = zx::channel::create(0, &device_controller, &device_controller_remote)) != ZX_OK) {
-    return status;
-  }
-
-  std::unique_ptr<DeviceControllerConnection> conn;
-  status = DeviceControllerConnection::Create(child, std::move(device_controller),
-                                              std::move(coordinator), &conn);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  std::vector<llcpp::fuchsia::device::manager::DeviceProperty> props_list = {};
-  for (size_t i = 0; i < prop_count; i++) {
-    props_list.push_back(convert_device_prop(props[i]));
-  }
-
-  const zx::channel& rpc = *parent->coordinator_rpc;
-  if (!rpc.is_valid()) {
-    return ZX_ERR_IO_REFUSED;
-  }
-  size_t proxy_args_len = proxy_args ? strlen(proxy_args) : 0;
-  zx_status_t call_status = ZX_OK;
-  static_assert(sizeof(zx_device_prop_t) == sizeof(uint64_t));
-  uint64_t device_id = 0;
-  if (add_invisible) {
-    auto response = fuchsia::device::manager::Coordinator::Call::AddDeviceInvisible(
-        zx::unowned_channel(rpc.get()), std::move(coordinator_remote),
-        std::move(device_controller_remote), ::fidl::VectorView(props_list),
-        ::fidl::StringView(child->name, strlen(child->name)), child->protocol_id,
-        ::fidl::StringView(child->driver->libname()),
-        ::fidl::StringView(proxy_args, proxy_args_len), child->ops->init /* has_init */,
-        std::move(client_remote));
-    status = response.status();
-    if (status == ZX_OK) {
-      if (response.Unwrap()->result.is_response()) {
-        device_id = response.Unwrap()->result.response().local_device_id;
-        // Mark child as invisible until the init function is replied.
-        child->flags |= DEV_FLAG_INVISIBLE;
-      } else {
-        call_status = response.Unwrap()->result.err();
-      }
-    }
-  } else {
-    auto response = fuchsia::device::manager::Coordinator::Call::AddDevice(
-        zx::unowned_channel(rpc.get()), std::move(coordinator_remote),
-        std::move(device_controller_remote), ::fidl::VectorView(props_list),
-        ::fidl::StringView(child->name, strlen(child->name)), child->protocol_id,
-        ::fidl::StringView(child->driver->libname()),
-        ::fidl::StringView(proxy_args, proxy_args_len), add_device_config,
-        child->ops->init /* has_init */, std::move(client_remote));
-    status = response.status();
-    if (status == ZX_OK) {
-      if (response.Unwrap()->result.is_response()) {
-        device_id = response.Unwrap()->result.response().local_device_id;
-      } else {
-        call_status = response.Unwrap()->result.err();
-      }
-    }
-  }
-  if (status != ZX_OK) {
-    log(ERROR, "driver_host[%s] add '%s': rpc sending failed: %d\n", path, child->name, status);
-    return status;
-  } else if (call_status != ZX_OK) {
-    log(ERROR, "driver_host[%s] add '%s': rpc failed: %d\n", path, child->name, call_status);
-    return call_status;
-  }
-
-  child->set_local_id(device_id);
-
-  status = DeviceControllerConnection::BeginWait(std::move(conn), DevhostAsyncLoop()->dispatcher());
-  if (status != ZX_OK) {
-    return status;
-  }
-  return ZX_OK;
-}
 
 static void log_rpc(const fbl::RefPtr<zx_device_t>& dev, const char* opname) {
   char buffer[512];
@@ -660,45 +735,6 @@ void make_visible(const fbl::RefPtr<zx_device_t>& dev, const device_make_visible
   if (auto rebind_conn = dev->parent->take_rebind_conn(); rebind_conn) {
     rebind_conn(status);
   }
-}
-
-// Send message to devcoordinator informing it that this device
-// is being removed.  Called under driver_host api lock.
-zx_status_t remove(fbl::RefPtr<zx_device_t> dev) {
-  DeviceControllerConnection* conn = dev->conn.load();
-  if (conn == nullptr) {
-    log(ERROR, "removing device %p, conn is nullptr\n", dev.get());
-    return ZX_ERR_INTERNAL;
-  }
-
-  // This must be done before the RemoveDevice message is sent to
-  // devcoordinator, since devcoordinator will close the channel in response.
-  // The async loop may see the channel close before it sees the queued
-  // shutdown packet, so it needs to check if dev->conn has been nulled to
-  // handle that gracefully.
-  dev->conn.store(nullptr);
-
-  log(DEVLC, "removing device %p, conn %p\n", dev.get(), conn);
-
-  // respond to the remove fidl call
-  dev->removal_cb(ZX_OK);
-
-  // Forget our local ID, to release the reference stored by the local ID map
-  dev->set_local_id(0);
-
-  // Forget about our rpc channel since after the port_queue below it may be
-  // closed.
-  dev->rpc = zx::unowned_channel();
-  dev->coordinator_rpc = zx::unowned_channel();
-
-  // queue an event to destroy the connection
-  ConnectionDestroyer::Get()->QueueDeviceControllerConnection(DevhostAsyncLoop()->dispatcher(),
-                                                              conn);
-
-  // shut down our proxy rpc channel if it exists
-  internal::proxy_ios_destroy(dev);
-
-  return ZX_OK;
 }
 
 zx_status_t schedule_remove(const fbl::RefPtr<zx_device_t>& dev, bool unbind_self) {
@@ -1049,20 +1085,6 @@ zx_status_t device_add_composite(const fbl::RefPtr<zx_device_t>& dev, const char
   return call_status;
 }
 
-zx_status_t schedule_work(const fbl::RefPtr<zx_device_t>& dev, void (*callback)(void*),
-                          void* cookie) {
-  if (!callback) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-  DevhostCtx().PushWorkItem(dev, [callback, cookie]() { callback(cookie); });
-  return ZX_OK;
-}
-
-zx_status_t start_connection(fbl::RefPtr<DevfsConnection> conn, zx::channel h) {
-  conn->set_channel(std::move(h));
-  return DevfsConnection::BeginWait(std::move(conn), DevhostAsyncLoop()->dispatcher());
-}
-
 int main(int argc, char** argv) {
   root_resource_handle = zx_take_startup_handle(PA_HND(PA_RESOURCE, 0));
   if (root_resource_handle == ZX_HANDLE_INVALID) {
@@ -1076,6 +1098,9 @@ int main(int argc, char** argv) {
     log(ERROR, "driver_host: rpc handle invalid\n");
     return -1;
   }
+
+  DriverHostContext ctx(&kAsyncLoopConfigAttachToCurrentThread);
+  RegisterContextForApi(&ctx);
 
   zx_status_t r;
 
@@ -1093,17 +1118,17 @@ int main(int argc, char** argv) {
     return -1;
   }
 
-  if ((r = SetupRootDevcoordinatorConnection(std::move(root_conn_channel))) != ZX_OK) {
+  if ((r = ctx.SetupRootDevcoordinatorConnection(std::move(root_conn_channel))) != ZX_OK) {
     log(ERROR, "driver_host: could not watch rpc channel: %d\n", r);
     return -1;
   }
 
-  if (r = DevhostCtx().SetupEventWaiter(); r != ZX_OK) {
+  if (r = ctx.SetupEventWaiter(); r != ZX_OK) {
     log(ERROR, "driver_host: could not setup event watcher: %d\n", r);
     return -1;
   }
 
-  r = DevhostAsyncLoop()->Run(zx::time::infinite(), false /* once */);
+  r = ctx.loop().Run(zx::time::infinite(), false /* once */);
   log(ERROR, "driver_host: async loop finished: %d\n", r);
 
   return 0;

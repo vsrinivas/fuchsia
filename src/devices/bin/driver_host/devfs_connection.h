@@ -29,6 +29,7 @@
 typedef struct zx_device zx_device_t;
 
 class Connection;
+class DriverHostContext;
 
 // callback to process a FIDL message.
 // - |msg| is a decoded FIDL message.
@@ -48,11 +49,14 @@ class DevfsConnection : public fbl::RefCounted<DevfsConnection>,
                         public AsyncLoopRefCountedRpcHandler<DevfsConnection>,
                         public llcpp::fuchsia::device::Controller::Interface {
  public:
-  DevfsConnection() = default;
+  // |ctx| must outlive this connection
+  explicit DevfsConnection(DriverHostContext* ctx) : driver_host_context_(ctx) {}
 
   static void HandleRpc(fbl::RefPtr<DevfsConnection>&& conn, async_dispatcher_t* dispatcher,
                         async::WaitBase* wait, zx_status_t status,
                         const zx_packet_signal_t* signal);
+
+  DriverHostContext& driver_host_context() { return *driver_host_context_; }
 
   fbl::RefPtr<zx_device_t> dev;
   size_t io_off = 0;
@@ -100,6 +104,8 @@ class DevfsConnection : public fbl::RefCounted<DevfsConnection>,
   void Suspend(::llcpp::fuchsia::device::DevicePowerState requested_state,
                SuspendCompleter::Sync _completer) override;
   void Resume(ResumeCompleter::Sync _complete) override;
+
+  DriverHostContext* const driver_host_context_;
 };
 
 class Connection {

@@ -34,8 +34,9 @@
 #include "lock.h"
 #include "zx_device.h"
 
-namespace internal {
 namespace fuchsia = ::llcpp::fuchsia;
+
+namespace internal {
 
 struct BindContext {
   fbl::RefPtr<zx_device_t> parent;
@@ -141,6 +142,9 @@ extern zx_protocol_device_t device_default_ops;
 
 namespace internal {
 
+// Get the DriverHostContext that should be used by all external API methods
+DriverHostContext* ContextForApi();
+
 // |client_remote| will only be a valid handle if the device was added with
 // DEVICE_ADD_INVISIBLE or DEVICE_ADD_MUST_ISOLATE.
 zx_status_t device_add(const fbl::RefPtr<zx_device_t>& dev, const fbl::RefPtr<zx_device_t>& parent,
@@ -203,13 +207,11 @@ zx_status_t publish_metadata(const fbl::RefPtr<zx_device_t>& dev, const char* pa
 zx_status_t device_add_composite(const fbl::RefPtr<zx_device_t>& dev, const char* name,
                                  const composite_device_desc_t* comp_desc) REQ_DM_LOCK;
 
-zx_status_t schedule_work(const fbl::RefPtr<zx_device_t>& dev, void (*callback)(void*),
-                          void* cookie) REQ_DM_LOCK;
-
 class DevhostControllerConnection : public AsyncLoopOwnedRpcHandler<DevhostControllerConnection>,
                                     public fuchsia::device::manager::DevhostController::Interface {
  public:
-  DevhostControllerConnection() = default;
+  // |ctx| must outlive this connection
+  explicit DevhostControllerConnection(DriverHostContext* ctx) : driver_host_context_(ctx) {}
 
   static void HandleRpc(std::unique_ptr<DevhostControllerConnection> conn,
                         async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
@@ -228,14 +230,11 @@ class DevhostControllerConnection : public AsyncLoopOwnedRpcHandler<DevhostContr
   void CreateDeviceStub(zx::channel coordinator_rpc, zx::channel device_controller_rpc,
                         uint32_t protocol_id, uint64_t local_device_id,
                         CreateDeviceStubCompleter::Sync completer) override;
+
+  DriverHostContext* const driver_host_context_;
 };
 
 zx_status_t fidl_handler(fidl_msg_t* msg, fidl_txn_t* txn, void* cookie);
-
-// Attaches channel |c| to new state representing an open connection to |dev|.
-zx_status_t device_connect(const fbl::RefPtr<zx_device_t>& dev, uint32_t flags, zx::channel c);
-
-zx_status_t start_connection(fbl::RefPtr<DevfsConnection> ios, zx::channel h);
 
 // routines driver_host uses to talk to dev coordinator
 // |client_remote| will only be a valid handle if the device was added with
@@ -262,12 +261,6 @@ zx_status_t find_driver(fbl::StringPiece libname, zx::vmo vmo, fbl::RefPtr<zx_dr
 // Construct a string describing the path of |dev| relative to its most
 // distant ancestor in this driver_host.
 const char* mkdevpath(const fbl::RefPtr<zx_device_t>& dev, char* path, size_t max);
-
-// Retrieve the singleton Devhost context.
-DevhostContext& DevhostCtx();
-
-// Retrieve the singleton async loop
-async::Loop* DevhostAsyncLoop();
 
 }  // namespace internal
 

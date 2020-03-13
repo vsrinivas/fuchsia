@@ -14,6 +14,7 @@
 
 #include "async_loop_owned_rpc_handler.h"
 
+class DriverHostContext;
 struct zx_device;
 
 class DeviceControllerConnection
@@ -21,10 +22,12 @@ class DeviceControllerConnection
       public llcpp::fuchsia::device::manager::DeviceController::Interface,
       public llcpp::fuchsia::io::Directory::Interface {
  public:
-  DeviceControllerConnection(fbl::RefPtr<zx_device> dev, zx::channel rpc,
+  // |ctx| must outlive this connection
+  DeviceControllerConnection(DriverHostContext* ctx, fbl::RefPtr<zx_device> dev, zx::channel rpc,
                              zx::channel coordinator_rpc);
 
-  static zx_status_t Create(fbl::RefPtr<zx_device> dev, zx::channel rpc,
+  // |ctx| must outlive this connection
+  static zx_status_t Create(DriverHostContext* ctx, fbl::RefPtr<zx_device> dev, zx::channel rpc,
                             zx::channel coordinator_rpc,
                             std::unique_ptr<DeviceControllerConnection>* conn);
 
@@ -73,6 +76,7 @@ class DeviceControllerConnection
   void Watch(uint32_t mask, uint32_t options, ::zx::channel watcher,
              WatchCompleter::Sync _completer) override {}
 
+  DriverHostContext* const driver_host_context_;
   const fbl::RefPtr<zx_device> dev_;
 };
 
