@@ -43,3 +43,8 @@ driver_module("sherlock-tdm-output") {
 migrated_manifest("sherlock-tdm-output-manifest") {
   deps = [ ":sherlock-tdm-output" ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "test:tests" ]
+}

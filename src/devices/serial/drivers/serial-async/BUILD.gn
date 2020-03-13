@@ -43,3 +43,8 @@ source_set("common") {
 migrated_manifest("serial-async-manifest") {
   deps = [ ":serial-async" ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "test:tests" ]
+}

@@ -37,3 +37,8 @@ source_set("common") {
 migrated_manifest("serial-manifest") {
   deps = [ ":serial" ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "test:tests" ]
+}

@@ -4,6 +4,7 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
+import("//build/test/test_package.gni")
 import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("mtk-sdmmc") {
@@ -36,9 +37,6 @@ driver_module("mtk-sdmmc") {
 }
 
 test("mtk-sdmmc-test") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # Remove when converting this file to proper GN build idioms.
-  testonly = false
   configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "mtk-sdmmc-test"
   sources = [
@@ -74,6 +72,19 @@ migrated_manifest("mtk-sdmmc-manifest") {
   deps = [ ":mtk-sdmmc" ]
 }
 
-migrated_manifest("mtk-sdmmc-test-manifest") {
+unittest_package("mtk-sdmmc-test-package") {
+  package_name = "mtk-sdmmc-test"
   deps = [ ":mtk-sdmmc-test" ]
+
+  tests = [
+    {
+      name = "mtk-sdmmc-test"
+      environments = basic_envs
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":mtk-sdmmc-test-package" ]
 }

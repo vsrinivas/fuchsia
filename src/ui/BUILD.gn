@@ -21,6 +21,7 @@ group("tests") {
     "bin:tests",
     "input:tests",
     "lib:tests",
+    "light:tests",
     "scenic:tests",
     "testing:tests",
     "tests",

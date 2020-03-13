@@ -11,3 +11,11 @@ group("light") {
     "lp50xx-light",
   ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [
+    "aml-light:tests",
+    "lp50xx-light:tests",
+  ]
+}

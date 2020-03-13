@@ -27,10 +27,11 @@ group("tests") {
   testonly = true
   deps = [
     ":audio_fuzzers",
+    "drivers:tests",
     "//src/media/audio/audio:tests",
     "//src/media/audio/audio_core:tests",
-    "//src/media/audio/examples:tests",
     "//src/media/audio/drivers:tests",
+    "//src/media/audio/examples:tests",
     "//src/media/audio/lib:tests",
     "//src/media/audio/lib/audio_test_devmgr",
   ]

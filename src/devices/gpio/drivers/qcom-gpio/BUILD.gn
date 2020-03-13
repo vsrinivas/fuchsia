@@ -4,6 +4,7 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
+import("//build/test/test_package.gni")
 import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("qcom-gpio") {
@@ -34,9 +35,6 @@ driver_module("qcom-gpio") {
 }
 
 test("qcom-gpio-test") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  testonly = false
   configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "qcom-gpio-test"
   sources = [
@@ -66,6 +64,19 @@ migrated_manifest("qcom-gpio-manifest") {
   deps = [ ":qcom-gpio" ]
 }
 
-migrated_manifest("qcom-gpio-test-manifest") {
+unittest_package("qcom-gpio-test-package") {
+  package_name = "qcom-gpio-test"
   deps = [ ":qcom-gpio-test" ]
+
+  tests = [
+    {
+      name = "qcom-gpio-test"
+      environments = basic_envs
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":qcom-gpio-test-package" ]
 }

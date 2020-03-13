@@ -19,6 +19,7 @@ group("media") {
 group("tests") {
   testonly = true
   deps = [
+    "audio:tests",
     "//sdk/lib/media/cpp:media_lib_timeline_tests",
     "//src/media/audio:tests",
     "//src/media/codec:tests",
