@@ -9,6 +9,7 @@
 #include <trace/event.h>
 
 #include "src/media/audio/audio_core/audio_driver.h"
+#include "src/media/audio/audio_core/process_config.h"
 
 namespace media::audio {
 
@@ -65,7 +66,10 @@ void AudioInput::OnDriverInfoFetched() {
   TRACE_DURATION("audio", "AudioInput::OnDriverInfoFetched");
   state_ = State::Idle;
 
-  uint32_t pref_fps = 48000;
+  uint32_t pref_fps = ProcessConfig::instance()
+                          .device_config()
+                          .input_device_profile(driver()->persistent_unique_id())
+                          .rate();
   uint32_t pref_chan = 1;
   fuchsia::media::AudioSampleFormat pref_fmt = fuchsia::media::AudioSampleFormat::SIGNED_16;
 
