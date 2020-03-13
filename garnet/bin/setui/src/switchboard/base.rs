@@ -84,6 +84,7 @@ pub fn get_all_setting_types() -> HashSet<SettingType> {
     set.insert(SettingType::Intl);
     set.insert(SettingType::LightSensor);
     set.insert(SettingType::NightMode);
+    set.insert(SettingType::Power);
     set.insert(SettingType::Privacy);
     set.insert(SettingType::Setup);
     set.insert(SettingType::System);
