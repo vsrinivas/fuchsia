@@ -87,6 +87,8 @@ class FakeLegacyStreamImpl : public FakeLegacyStream, public fuchsia::camera2::S
     return ZX_OK;
   }
 
+  bool IsStreaming() override { return !stopped_; }
+
  private:
   std::stringstream& ClientErrors() {
     if (client_error_count_ > 0) {

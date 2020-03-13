@@ -6,6 +6,9 @@
 
 #include <lib/async-loop/default.h>
 #include <lib/syslog/cpp/logger.h>
+#include <zircon/errors.h>
+
+#include "src/camera/lib/fake_legacy_stream/fake_legacy_stream.h"
 
 static fuchsia::camera2::DeviceInfo DefaultDeviceInfo() {
   fuchsia::camera2::DeviceInfo device_info{};
@@ -99,6 +102,13 @@ FakeController::FakeController()
 
 FakeController::~FakeController() { loop_.Shutdown(); }
 
+zx_status_t FakeController::SendFrameViaLegacyStream(fuchsia::camera2::FrameAvailableInfo info) {
+  if (!stream_ || !stream_->IsStreaming()) {
+    return ZX_ERR_SHOULD_WAIT;
+  }
+  return stream_->SendFrameAvailable(std::move(info));
+}
+
 void FakeController::GetConfigs(fuchsia::camera2::hal::Controller::GetConfigsCallback callback) {
   callback(DefaultConfigs(), ZX_OK);
 }
@@ -107,8 +117,12 @@ void FakeController::CreateStream(uint32_t config_index, uint32_t stream_index,
                                   uint32_t image_format_index,
                                   fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection,
                                   fidl::InterfaceRequest<fuchsia::camera2::Stream> stream) {
-  // Stash the channel so it's not closed immediately, but don't do anything with it.
-  channels_.push_back(stream.TakeChannel());
+  auto result = camera::FakeLegacyStream::Create(std::move(stream));
+  if (result.is_error()) {
+    stream.Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  stream_ = result.take_value();
 }
 
 void FakeController::EnableStreaming() {}

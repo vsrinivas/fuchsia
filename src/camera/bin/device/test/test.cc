@@ -6,6 +6,7 @@
 #include <fuchsia/camera3/cpp/fidl.h>
 #include <fuchsia/sysmem/cpp/fidl.h>
 #include <lib/sys/cpp/component_context.h>
+#include <zircon/errors.h>
 
 #include "src/camera/bin/device/device_impl.h"
 #include "src/camera/bin/device/stream_impl.h"
@@ -132,10 +133,8 @@ TEST_F(DeviceTest, GetFrames) {
       },
       nop);
 
-  fuchsia::sysmem::AllocatorPtr allocator;
-  context_->svc()->Connect(allocator.NewRequest());
   fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token;
-  allocator->AllocateSharedCollection(token.NewRequest());
+  allocator_->AllocateSharedCollection(token.NewRequest());
   stream->SetBufferCollection(std::move(token));
   fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> received_token;
   bool buffer_collection_returned = false;
@@ -268,6 +267,48 @@ TEST_F(DeviceTest, Identifier) {
     EXPECT_EQ(identifier.value(), kExpectedDeviceIdentifier);
     callback_received = true;
   });
+  RunLoopUntilFailureOr(callback_received);
+}
+
+TEST_F(DeviceTest, RequestStreamFromController) {
+  fuchsia::camera3::DevicePtr device;
+  SetFailOnError(device, "Device");
+  device_->GetHandler()(device.NewRequest());
+  fuchsia::camera3::StreamPtr stream;
+  SetFailOnError(stream, "Stream");
+  device->ConnectToStream(0, stream.NewRequest());
+  fuchsia::sysmem::BufferCollectionTokenPtr token;
+  allocator_->AllocateSharedCollection(token.NewRequest());
+  token->Sync([&]() { stream->SetBufferCollection(std::move(token)); });
+  stream->WatchBufferCollection(
+      [&](fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
+        fuchsia::sysmem::BufferCollectionPtr buffers;
+        SetFailOnError(buffers, "BufferCollection");
+        allocator_->BindSharedCollection(std::move(token), buffers.NewRequest());
+        buffers->SetConstraints(true, {.usage{.cpu = fuchsia::sysmem::cpuUsageRead},
+                                       .min_buffer_count_for_camping = 1});
+        buffers->Close();
+      });
+  constexpr uint32_t kBufferId = 42;
+  fuchsia::camera2::FrameAvailableInfo info;
+  info.frame_status = fuchsia::camera2::FrameStatus::OK;
+  info.buffer_id = kBufferId;
+  info.metadata.set_timestamp(0);
+  bool callback_received = false;
+  stream->GetNextFrame([&](fuchsia::camera3::FrameInfo info) {
+    EXPECT_EQ(info.buffer_index, kBufferId);
+    callback_received = true;
+  });
+  bool frame_sent = false;
+  while (!HasFailure() && !frame_sent) {
+    RunLoopUntilIdle();
+    zx_status_t status = controller_->SendFrameViaLegacyStream(std::move(info));
+    if (status == ZX_OK) {
+      frame_sent = true;
+    } else {
+      EXPECT_EQ(status, ZX_ERR_SHOULD_WAIT);
+    }
+  }
   RunLoopUntilFailureOr(callback_received);
 }
 

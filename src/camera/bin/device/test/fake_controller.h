@@ -14,7 +14,10 @@
 #include <zircon/status.h>
 
 #include <memory>
+#include <queue>
 #include <vector>
+
+#include "src/camera/lib/fake_legacy_stream/fake_legacy_stream.h"
 
 class FakeController : public fuchsia::camera2::hal::Controller {
  public:
@@ -23,6 +26,7 @@ class FakeController : public fuchsia::camera2::hal::Controller {
   static fit::result<std::unique_ptr<FakeController>, zx_status_t> Create(
       fidl::InterfaceRequest<fuchsia::camera2::hal::Controller> request);
   static std::vector<fuchsia::camera2::hal::Config> GetDefaultConfigs();
+  zx_status_t SendFrameViaLegacyStream(fuchsia::camera2::FrameAvailableInfo info);
 
  private:
   // |fuchsia::camera2::hal::Controller|
@@ -36,7 +40,7 @@ class FakeController : public fuchsia::camera2::hal::Controller {
 
   async::Loop loop_;
   fidl::Binding<fuchsia::camera2::hal::Controller> binding_;
-  std::vector<zx::channel> channels_;
+  std::unique_ptr<camera::FakeLegacyStream> stream_;
 };
 
 #endif  // SRC_CAMERA_BIN_DEVICE_TEST_FAKE_CONTROLLER_H_

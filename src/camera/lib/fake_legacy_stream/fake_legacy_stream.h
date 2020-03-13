@@ -33,6 +33,9 @@ class FakeLegacyStream {
   // Sends the OnFrameAvailable event to the client. Returns ZX_ERR_BAD_STATE if it is currently
   // invalid to send a frame, otherwise returns ZX_OK.
   virtual zx_status_t SendFrameAvailable(fuchsia::camera2::FrameAvailableInfo info) = 0;
+
+  // Indicates the streaming state.
+  virtual bool IsStreaming() = 0;
 };
 
 }  // namespace camera

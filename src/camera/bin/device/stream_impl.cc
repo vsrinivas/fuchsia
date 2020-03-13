@@ -64,6 +64,12 @@ void StreamImpl::OnFrameAvailable(fuchsia::camera2::FrameAvailableInfo info) {
     return;
   }
 
+  if (!info.metadata.has_timestamp()) {
+    FX_LOGS(WARNING)
+        << "Driver sent a frame without a timestamp. This frame will not be sent to clients.";
+    return;
+  }
+
   // Construct the frame info and create the release fence.
   fuchsia::camera3::FrameInfo frame;
   frame.buffer_index = info.buffer_id;
