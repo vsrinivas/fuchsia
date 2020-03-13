@@ -195,7 +195,7 @@ extern "C" {
 #define ARGPARSE_OPTION_STRING(macro, name, chr, string, description)                              \
   macro(ARGPARSE_OPTION_TYPE_STRING, name, chr, string, description)
 
-// Used to declare an option integer option. The corresponding options
+// Used to declare an optional integer option. The corresponding options
 // member is an argparse_int value, which contains a |used| boolean flag,
 // and a |value| int32_t value that is only valid if |used == true|.
 #define ARGPARSE_OPTION_INT(macro, name, chr, string, description)                                 \
@@ -206,6 +206,12 @@ extern "C" {
 #define ARGPARSE_OPTION_COUNTER(macro, name, chr, string, description)                             \
   macro(ARGPARSE_OPTION_TYPE_COUNTER, name, chr, string, description)
 
+// Used to declare an optional double option. The corresponding options
+// member is an argparse_double value, which contains a |used| boolean flag,
+// and a |value| double value that is only valid if |used == true|.
+#define ARGPARSE_OPTION_DOUBLE(macro, name, chr, string, description)                              \
+  macro(ARGPARSE_OPTION_TYPE_DOUBLE, name, chr, string, description)
+
 // A small type used to store the value of an optional integer.
 // If the option appears, |used| will be true, and |value| will be the
 // value that appears on the command-line. Otherwise |used| is false and
@@ -214,6 +220,13 @@ struct argparse_int
 {
   bool    used;
   int32_t value;
+};
+
+// Same as argparse_int, but for a double value.
+struct argparse_double
+{
+  bool   used;
+  double value;
 };
 
 // Call this macro to perform everything for you at the start of your main():
@@ -346,6 +359,7 @@ enum argparse_option_type
   ARGPARSE_OPTION_TYPE_INT,
   ARGPARSE_OPTION_TYPE_STRING,
   ARGPARSE_OPTION_TYPE_COUNTER,
+  ARGPARSE_OPTION_TYPE_DOUBLE,
 
   ARGPARSE_OPTION_TYPE_HELP,  // Must always be last.
 };
@@ -354,6 +368,7 @@ enum argparse_option_type
 #define ARGPARSE_OPTION_TYPE_INT_CTYPE struct argparse_int
 #define ARGPARSE_OPTION_TYPE_STRING_CTYPE char *
 #define ARGPARSE_OPTION_TYPE_COUNTER_CTYPE int
+#define ARGPARSE_OPTION_TYPE_DOUBLE_CTYPE struct argparse_double
 #define ARGPARSE_OPTION_TYPE_HELP_CTYPE bool
 
 #define ARGPARSE_OPTION_TYPE_CTYPE(type) ARGPARSE_EVAL(type##_CTYPE)

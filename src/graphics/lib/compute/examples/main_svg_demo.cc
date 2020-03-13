@@ -110,6 +110,13 @@ main(int argc, const char ** argv)
   // clang-format off
 
 #define MY_OPTIONS_LIST(param)                                                                     \
+  ARGPARSE_OPTION_DOUBLE(param, scale, 's', "scale", "Apply affine scale to the image.")           \
+  ARGPARSE_OPTION_DOUBLE(param, fixed_scale, 'S', "fixed-scale", \
+      "Fix animation scale to specific value. Useful for "  \
+      "replicating rendering bugs. Implies --fixed-rotation=0 if that option is not used.") \
+  ARGPARSE_OPTION_DOUBLE(param, fixed_rotation, 'R', "fixed-rotation", \
+      "Fix animation rotation to specific angle value in degrees. Useful for " \
+      "replicating rendering bugs. Implies --fixed-scale=1 if that option is not used.") \
   ARGPARSE_OPTION_FLAG(param, debug, 'D', "debug",                                                 \
       "Enable debug messages and Vulkan validation layers.")                                       \
   ARGPARSE_OPTION_STRING(param, window, '\0', "window", "Set window dimensions (e.g. 800x600).")   \
@@ -142,6 +149,12 @@ main(int argc, const char ** argv)
                          &window_width,
                          &window_height))
     return EXIT_FAILURE;
+
+  double svg_scale = 1.0;
+  if (options.scale.used)
+    {
+      svg_scale = options.scale.value;
+    }
 
   // Parse the SVG input document.
   if (argc < 2)
@@ -198,28 +211,41 @@ main(int argc, const char ** argv)
   // Determine per-frame transform / animation.
   VkExtent2D swapchain_extent = demo.window_extent();
 
-  auto per_frame_transform = [swapchain_extent, image_center](uint32_t frame_counter) {
-    double angle = (frame_counter / 60.) * M_PI;
-    float  scale = 1. + 0.25 * (1. + sin(M_PI * frame_counter / 20.));
+  auto per_frame_transform =
+    [options, svg_scale, swapchain_extent, image_center](uint32_t frame_counter) {
+      double angle;
+      double scale;
 
-    affine_transform_t affine;
+      if (options.fixed_scale.used || options.fixed_rotation.used)
+        {
+          angle = options.fixed_rotation.used ? options.fixed_rotation.value * M_PI / 180. : 0.;
+          scale = options.fixed_scale.used ? options.fixed_scale.value : 1.;
+        }
+      else
+        {
+          angle = (frame_counter / 60.) * M_PI;
+          scale = (1. + 0.25 * (1. + sin(M_PI * frame_counter / 20.)));
+        }
+      scale *= svg_scale;
 
-    affine = affine_transform_make_translation(-image_center.x, -image_center.y);
-    affine = affine_transform_multiply_by_value(affine_transform_make_rotation(angle), affine);
-    affine = affine_transform_multiply_by_value(affine_transform_make_scale(scale), affine);
-    affine = affine_transform_multiply_by_value(
-      affine_transform_make_translation(swapchain_extent.width / 2, swapchain_extent.height / 2),
-      affine);
+      affine_transform_t affine;
 
-    return spn_transform_t{
-      .sx  = (float)affine.sx,
-      .shx = (float)affine.shx,
-      .tx  = (float)affine.tx,
-      .shy = (float)affine.shy,
-      .sy  = (float)affine.sy,
-      .ty  = (float)affine.ty,
+      affine = affine_transform_make_translation(-image_center.x, -image_center.y);
+      affine = affine_transform_multiply_by_value(affine_transform_make_rotation(angle), affine);
+      affine = affine_transform_multiply_by_value(affine_transform_make_scale(scale), affine);
+      affine = affine_transform_multiply_by_value(
+        affine_transform_make_translation(swapchain_extent.width / 2, swapchain_extent.height / 2),
+        affine);
+
+      return spn_transform_t{
+        .sx  = (float)affine.sx,
+        .shx = (float)affine.shx,
+        .tx  = (float)affine.tx,
+        .shy = (float)affine.shy,
+        .sy  = (float)affine.sy,
+        .ty  = (float)affine.ty,
+      };
     };
-  };
 
   demo.setImageFactory([&](const DemoImage::Config & config) {
     return std::make_unique<SvgDemoImage>(config, svg.get(), per_frame_transform);

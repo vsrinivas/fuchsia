@@ -5,6 +5,7 @@
 #include "argparse.h"
 
 #include <assert.h>
+#include <errno.h>
 #include <limits.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -21,7 +22,8 @@ typedef enum argparse_status          status_t;
 static bool
 opt_type_requires_parameter(opt_type_t const type)
 {
-  return (type == ARGPARSE_OPTION_TYPE_STRING) || (type == ARGPARSE_OPTION_TYPE_INT);
+  return (type == ARGPARSE_OPTION_TYPE_STRING) || (type == ARGPARSE_OPTION_TYPE_INT) ||
+         (type == ARGPARSE_OPTION_TYPE_DOUBLE);
 }
 
 #ifndef NDEBUG
@@ -129,6 +131,19 @@ opt_layout_apply(const opt_layout_t * layout, void * const ptr, const char * par
             return argparse_error("Integer expected: %s", parameter);
           *((struct argparse_int *)ptr) =
             (struct argparse_int){ .used = 1, .value = (int)val_long };
+          break;
+        }
+        case ARGPARSE_OPTION_TYPE_DOUBLE: {
+          assert(parameter);
+          char * end        = NULL;
+          errno             = 0;
+          double val_double = strtod(parameter, &end);
+          if (errno == ERANGE)
+            return argparse_error("Double value out of range: %s", parameter);
+          if (!*parameter || *end != '\0')
+            return argparse_error("Double expected: %s", parameter);
+          *((struct argparse_double *)ptr) =
+            (struct argparse_double){ .used = 1, .value = val_double };
           break;
         }
       case ARGPARSE_OPTION_TYPE_HELP:

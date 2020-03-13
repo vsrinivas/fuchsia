@@ -482,6 +482,195 @@ TEST(argparse, IntOptionWithInvalidValues)
   }
 }
 
+TEST(argparse, DoubleOption)
+{
+#undef MY_OPTIONS
+#define MY_OPTIONS(param) ARGPARSE_OPTION_DOUBLE(param, scale, 's', "scale", "Affine scale")
+
+  // Short format.
+  {
+    ARGPARSE_DEFINE_OPTIONS_STRUCT(options, MY_OPTIONS);
+    EXPECT_FALSE(options.scale.used);
+    EXPECT_DOUBLE_EQ(0., options.scale.value);
+
+    int          argc   = 4;
+    const char * argv[] = { "program", "-s", "1.234", "argument" };
+    EXPECT_TRUE(ARGPARSE_PARSE_ARGS(argc, argv, options, MY_OPTIONS));
+    EXPECT_EQ(argc, 2);
+    EXPECT_STREQ("program", argv[0]);
+    EXPECT_STREQ("argument", argv[1]);
+    EXPECT_TRUE(options.scale.used);
+    EXPECT_DOUBLE_EQ(1.234, options.scale.value);
+    EXPECT_FALSE(options.help_needed);
+  }
+
+  {
+    ARGPARSE_DEFINE_OPTIONS_STRUCT(options, MY_OPTIONS);
+
+    int          argc   = 3;
+    const char * argv[] = { "program", "-s-1.234", "argument" };
+    EXPECT_TRUE(ARGPARSE_PARSE_ARGS(argc, argv, options, MY_OPTIONS));
+    EXPECT_EQ(argc, 2);
+    EXPECT_STREQ("program", argv[0]);
+    EXPECT_STREQ("argument", argv[1]);
+    EXPECT_TRUE(options.scale.used);
+    EXPECT_DOUBLE_EQ(-1.234, options.scale.value);
+    EXPECT_FALSE(options.help_needed);
+  }
+
+  // Long format
+  {
+    ARGPARSE_DEFINE_OPTIONS_STRUCT(options, MY_OPTIONS);
+
+    int          argc   = 4;
+    const char * argv[] = { "program", "--scale", "+1.234", "argument" };
+    EXPECT_TRUE(ARGPARSE_PARSE_ARGS(argc, argv, options, MY_OPTIONS));
+    EXPECT_EQ(argc, 2);
+    EXPECT_STREQ("program", argv[0]);
+    EXPECT_STREQ("argument", argv[1]);
+    EXPECT_TRUE(options.scale.used);
+    EXPECT_DOUBLE_EQ(1.234, options.scale.value);
+    EXPECT_FALSE(options.help_needed);
+  }
+
+  {
+    ARGPARSE_DEFINE_OPTIONS_STRUCT(options, MY_OPTIONS);
+
+    int          argc   = 3;
+    const char * argv[] = { "program", "--scale=-1.234", "argument" };
+    EXPECT_TRUE(ARGPARSE_PARSE_ARGS(argc, argv, options, MY_OPTIONS));
+    EXPECT_EQ(argc, 2);
+    EXPECT_STREQ("program", argv[0]);
+    EXPECT_STREQ("argument", argv[1]);
+    EXPECT_TRUE(options.scale.used);
+    EXPECT_DOUBLE_EQ(-1.234, options.scale.value);
+    EXPECT_FALSE(options.help_needed);
+  }
+
+  // None
+  {
+    ARGPARSE_DEFINE_OPTIONS_STRUCT(options, MY_OPTIONS);
+
+    const char * argv[] = { "program", "argument" };
+    int          argc   = sizeof(argv) / sizeof(argv[0]);
+    EXPECT_TRUE(ARGPARSE_PARSE_ARGS(argc, argv, options, MY_OPTIONS));
+    EXPECT_EQ(argc, 2);
+    EXPECT_STREQ("program", argv[0]);
+    EXPECT_STREQ("argument", argv[1]);
+    EXPECT_FALSE(options.scale.used);
+    EXPECT_DOUBLE_EQ(0., options.scale.value);
+    EXPECT_FALSE(options.help_needed);
+  }
+
+  // Multiple
+  {
+    ARGPARSE_DEFINE_OPTIONS_STRUCT(options, MY_OPTIONS);
+
+    const char * argv[] = { "program", "-s", "1.234", "--scale", "2.345", "argument" };
+    int          argc   = sizeof(argv) / sizeof(argv[0]);
+    EXPECT_TRUE(ARGPARSE_PARSE_ARGS(argc, argv, options, MY_OPTIONS));
+    EXPECT_EQ(argc, 2);
+    EXPECT_STREQ("program", argv[0]);
+    EXPECT_STREQ("argument", argv[1]);
+    EXPECT_TRUE(options.scale.used);
+    EXPECT_DOUBLE_EQ(2.345, options.scale.value);
+    EXPECT_FALSE(options.help_needed);
+  }
+
+  {
+    ARGPARSE_DEFINE_OPTIONS_STRUCT(options, MY_OPTIONS);
+
+    const char * argv[] = { "program", "--scale=1.234", "-s2.345", "--scale", "3.456",
+                            "-s",      "4.567",         "argument" };
+    int          argc   = sizeof(argv) / sizeof(argv[0]);
+    EXPECT_TRUE(ARGPARSE_PARSE_ARGS(argc, argv, options, MY_OPTIONS));
+    EXPECT_EQ(argc, 2);
+    EXPECT_STREQ("program", argv[0]);
+    EXPECT_STREQ("argument", argv[1]);
+    EXPECT_TRUE(options.scale.used);
+    EXPECT_DOUBLE_EQ(4.567, options.scale.value);
+    EXPECT_FALSE(options.help_needed);
+  }
+}
+
+TEST(argparse, DoubleOptionWithInvalidValues)
+{
+#undef MY_OPTIONS
+#define MY_OPTIONS(param) ARGPARSE_OPTION_DOUBLE(param, scale, 's', "scale", "Affine scale")
+
+  // Not a number.
+  {
+    ARGPARSE_DEFINE_OPTIONS_STRUCT(options, MY_OPTIONS);
+    EXPECT_FALSE(options.scale.used);
+    EXPECT_DOUBLE_EQ(0., options.scale.value);
+
+    const char * argv[] = { "program", "-sX", "argument" };
+    int          argc   = sizeof(argv) / sizeof(argv[0]);
+    EXPECT_FALSE(ARGPARSE_PARSE_ARGS(argc, argv, options, MY_OPTIONS));
+    EXPECT_FALSE(options.help_needed);
+  }
+
+  // Trailing non-digits.
+  {
+    ARGPARSE_DEFINE_OPTIONS_STRUCT(options, MY_OPTIONS);
+    EXPECT_FALSE(options.scale.used);
+    EXPECT_DOUBLE_EQ(0., options.scale.value);
+
+    const char * argv[] = { "program", "-s100Z", "argument" };
+    int          argc   = sizeof(argv) / sizeof(argv[0]);
+    EXPECT_FALSE(ARGPARSE_PARSE_ARGS(argc, argv, options, MY_OPTIONS));
+    EXPECT_FALSE(options.help_needed);
+  }
+
+  // Positive overflow
+  {
+    ARGPARSE_DEFINE_OPTIONS_STRUCT(options, MY_OPTIONS);
+    EXPECT_FALSE(options.scale.used);
+    EXPECT_DOUBLE_EQ(0., options.scale.value);
+
+    const char * argv[] = { "program", "--scale", "1e2000", "argument" };
+    int          argc   = sizeof(argv) / sizeof(argv[0]);
+    EXPECT_FALSE(ARGPARSE_PARSE_ARGS(argc, argv, options, MY_OPTIONS));
+    EXPECT_FALSE(options.help_needed);
+  }
+
+  // Negative overflow
+  {
+    ARGPARSE_DEFINE_OPTIONS_STRUCT(options, MY_OPTIONS);
+    EXPECT_FALSE(options.scale.used);
+    EXPECT_DOUBLE_EQ(0., options.scale.value);
+
+    const char * argv[] = { "program", "--count", "-1e2000", "argument" };
+    int          argc   = sizeof(argv) / sizeof(argv[0]);
+    EXPECT_FALSE(ARGPARSE_PARSE_ARGS(argc, argv, options, MY_OPTIONS));
+    EXPECT_FALSE(options.help_needed);
+  }
+
+  // Positive underflow
+  {
+    ARGPARSE_DEFINE_OPTIONS_STRUCT(options, MY_OPTIONS);
+    EXPECT_FALSE(options.scale.used);
+    EXPECT_DOUBLE_EQ(0., options.scale.value);
+
+    const char * argv[] = { "program", "--scale", "1e-2000", "argument" };
+    int          argc   = sizeof(argv) / sizeof(argv[0]);
+    EXPECT_FALSE(ARGPARSE_PARSE_ARGS(argc, argv, options, MY_OPTIONS));
+    EXPECT_FALSE(options.help_needed);
+  }
+
+  // Negative underflow
+  {
+    ARGPARSE_DEFINE_OPTIONS_STRUCT(options, MY_OPTIONS);
+    EXPECT_FALSE(options.scale.used);
+    EXPECT_DOUBLE_EQ(0., options.scale.value);
+
+    const char * argv[] = { "program", "--count", "-1e-2000", "argument" };
+    int          argc   = sizeof(argv) / sizeof(argv[0]);
+    EXPECT_FALSE(ARGPARSE_PARSE_ARGS(argc, argv, options, MY_OPTIONS));
+    EXPECT_FALSE(options.help_needed);
+  }
+}
+
 TEST(argparse, HelpOption)
 {
 #undef MY_OPTIONS
