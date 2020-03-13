@@ -197,8 +197,8 @@ func paveDevice(ctx context.Context, device *device.Client) (*sl4f.Client, error
 		return nil, fmt.Errorf("device failed to pave: %s", err)
 	}
 
-	// Wait for the device to come online.
-	if err = device.WaitForDeviceToBeConnected(ctx); err != nil {
+	// Reconnect to the device.
+	if err = device.Reconnect(ctx); err != nil {
 		return nil, fmt.Errorf("device failed to connect: %s", err)
 	}
 
@@ -295,7 +295,7 @@ func otaToPackage(
 		return fmt.Errorf("device did not disconnect: %s", ctx.Err())
 	}
 
-	if err = device.WaitForDeviceToBeConnected(ctx); err != nil {
+	if err = device.Reconnect(ctx); err != nil {
 		return fmt.Errorf("device failed to connect: %s", err)
 	}
 

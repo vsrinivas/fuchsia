@@ -19,61 +19,87 @@ import (
 )
 
 const (
-	keepaliveInterval = 5 * time.Second
+	reconnectInterval = 5 * time.Second
+	keepaliveInterval = 1 * time.Second
+	keepaliveDeadline = keepaliveInterval + 15*time.Second
 )
 
 // Client is a wrapper around ssh that supports keepalive and auto-reconnection.
 type Client struct {
 	addr         string
 	config       *ssh.ClientConfig
-	shuttingDown bool
-	done         chan struct{}
+	shuttingDown chan struct{}
 
 	// This mutex protects the following fields
 	mu                     sync.Mutex
 	client                 *ssh.Client
 	conn                   net.Conn
-	connectionListeners    []chan struct{}
 	disconnectionListeners []chan struct{}
 }
 
 // NewClient creates a new ssh client to the address.
 func NewClient(ctx context.Context, addr string, config *ssh.ClientConfig) (*Client, error) {
+	client, conn, err := connect(ctx, addr, config)
+	if err != nil {
+		return nil, err
+	}
+
 	c := &Client{
 		addr:         addr,
 		config:       config,
-		client:       nil,
-		conn:         nil,
-		shuttingDown: false,
-		done:         make(chan struct{}),
+		client:       client,
+		conn:         conn,
+		shuttingDown: make(chan struct{}),
 	}
-	go c.keepalive()
 
-	// Wait for the initial connection, so we don't return a client that's
-	// in a "just created but not connected" state.
-	if err := c.WaitToBeConnected(ctx); err != nil {
-		return nil, err
-	}
+	go c.keepalive()
 
 	return c, nil
 }
 
-// Helper to create an ssh client and connection to the address.
+// connect continously attempts to connect to a remote server, and returns an
+// ssh client and connection if successful, or errs out if the context is
+// canceled.
 func connect(ctx context.Context, addr string, config *ssh.ClientConfig) (*ssh.Client, net.Conn, error) {
-	d := net.Dialer{Timeout: config.Timeout}
+	t := time.NewTicker(reconnectInterval)
 
+	for {
+		log.Printf("trying to connect to %s...", addr)
+
+		client, conn, err := connectToSSH(ctx, addr, config)
+		if err == nil {
+			log.Printf("connected to %s", addr)
+
+			return client, conn, nil
+		}
+
+		log.Printf("failed to connect, will try again in %s: %s", reconnectInterval, err)
+
+		select {
+		case <-t.C:
+			continue
+		case <-ctx.Done():
+			return nil, nil, ctx.Err()
+		}
+	}
+}
+
+func connectToSSH(ctx context.Context, addr string, config *ssh.ClientConfig) (*ssh.Client, net.Conn, error) {
+	d := net.Dialer{Timeout: config.Timeout}
 	conn, err := d.DialContext(ctx, "tcp", addr)
 	if err != nil {
 		return nil, nil, err
 	}
-	clientConn, chans, reqs, err := ssh.NewClientConn(conn, addr, config)
-	if err != nil {
-		conn.Close()
-		return nil, nil, err
-	}
-	client := ssh.NewClient(clientConn, chans, reqs)
 
-	return client, conn, nil
+	// We made a TCP connection, now establish an SSH connection over it.
+	clientConn, chans, reqs, err := ssh.NewClientConn(conn, addr, config)
+	if err == nil {
+		return ssh.NewClient(clientConn, chans, reqs), conn, nil
+	}
+
+	conn.Close()
+
+	return nil, nil, err
 }
 
 func (c *Client) makeSession(ctx context.Context, stdout io.Writer, stderr io.Writer) (*Session, error) {
@@ -150,8 +176,8 @@ func (c *Client) Run(ctx context.Context, command string, stdout io.Writer, stde
 
 // Close the ssh client connections.
 func (c *Client) Close() {
-	c.shuttingDown = true
-	close(c.done)
+	// Notify the keepalive goroutine we are shutting down.
+	close(c.shuttingDown)
 	c.disconnect()
 }
 
@@ -167,34 +193,6 @@ func (c *Client) GetSshConnection(ctx context.Context) (string, error) {
 	return strings.Split(string(stdout.Bytes()), " ")[0], nil
 }
 
-// WaitToBeConnected blocks until the ssh connection is available for use.
-func (c *Client) WaitToBeConnected(ctx context.Context) error {
-	log.Printf("waiting for %s to to connect", c.addr)
-
-	ch := make(chan struct{})
-	c.RegisterConnectListener(ch)
-
-	select {
-	case <-ch:
-		log.Printf("connected to %s", c.addr)
-		return nil
-	case <-ctx.Done():
-		return ctx.Err()
-	}
-}
-
-// RegisterConnectListener adds a waiter that gets notified when the ssh
-// client is connected.
-func (c *Client) RegisterConnectListener(ch chan struct{}) {
-	c.mu.Lock()
-	if c.client == nil {
-		c.connectionListeners = append(c.connectionListeners, ch)
-	} else {
-		close(ch)
-	}
-	c.mu.Unlock()
-}
-
 // RegisterDisconnectListener adds a waiter that gets notified when the ssh
 // client is disconnected.
 func (c *Client) RegisterDisconnectListener(ch chan struct{}) {
@@ -207,24 +205,10 @@ func (c *Client) RegisterDisconnectListener(ch chan struct{}) {
 	c.mu.Unlock()
 }
 
-// IsConnected checks if we are currently connected to the server.
-func (c *Client) IsConnected() bool {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	return c.client != nil
-}
-
 // disconnect from ssh, and notify anyone waiting for disconnection.
 func (c *Client) disconnect() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-
-	c.disconnectLocked()
-}
-
-func (c *Client) disconnectLocked() {
-	log.Printf("disconnected from %s", c.addr)
 
 	if c.client != nil {
 		c.client.Close()
@@ -237,71 +221,69 @@ func (c *Client) disconnectLocked() {
 	c.disconnectionListeners = []chan struct{}{}
 }
 
-// Make a single attempt to reconnect to the ssh server.
-func (c *Client) reconnectLocked(ctx context.Context) {
-	// We can exit early if we are shutting down, or we already have a client.
-	if c.shuttingDown || c.client != nil {
-		return
-	}
-
-	log.Printf("attempting to reconnect to %s...", c.addr)
-
-	client, conn, err := connect(ctx, c.addr, c.config)
-	if err == nil {
-		c.client = client
-		c.conn = conn
-
-		for _, listener := range c.connectionListeners {
-			close(listener)
-		}
-		c.connectionListeners = []chan struct{}{}
-
-		log.Printf("reconnected to %s", c.addr)
-	} else {
-		log.Printf("reconnection failed: %s", err)
-	}
-}
-
 // Send periodic keep-alives. If we don't do this, then we might not observe
 // the server side disconnecting from us.
 func (c *Client) keepalive() {
-	ctx := context.Background()
-
-	c.emitKeepalive(ctx)
+	t := time.NewTicker(keepaliveInterval)
+	defer t.Stop()
 
 	for {
-		select {
-		case <-time.After(keepaliveInterval):
-			c.emitKeepalive(ctx)
-		case <-c.done:
+		c.mu.Lock()
+		client := c.client
+		conn := c.conn
+		c.mu.Unlock()
+
+		// Exit early if the client's already been shut down.
+		if client == nil {
 			return
 		}
-	}
-}
 
-// Emit a heartbeat to the ssh server.
-func (c *Client) emitKeepalive(ctx context.Context) {
-	// If the client is disconnected from the server, attempt to reconnect.
-	// Otherwise, emit a heartbeat.
-	c.mu.Lock()
-	defer c.mu.Unlock()
+		// SendRequest can actually hang if the server stops responding
+		// in between receving a keepalive and sending a response (see
+		// fxb/47698). To protect against this, we'll emit events in a
+		// separate goroutine so if we don't get one in the expected
+		// time we'll disconnect.
+		ch := make(chan error)
+		go func() {
+			// ssh keepalive is not completely reliable. So in
+			// addition to emitting it, we'll also set a tcp
+			// deadline to timeout if we don't get a keepalive
+			// response within some period of time.
+			conn.SetDeadline(time.Now().Add(keepaliveDeadline))
 
-	if c.client == nil {
-		c.reconnectLocked(ctx)
-		return
-	}
+			// Try to emit a keepalive message. We use a unique
+			// name to distinguish ourselves from the server-side
+			// keepalive name to ease debugging. If we get any
+			// error, reconnect to the server.
+			_, _, err := client.SendRequest("keepalive@fuchsia.com", true, nil)
+			ch <- err
+		}()
 
-	// ssh keepalive is not completely reliable. So in addition to emitting
-	// it, we'll also set a tcp deadline to timeout if we don't get a
-	// keepalive response within some period of time.
-	c.conn.SetDeadline(time.Now().Add(keepaliveInterval).Add(15 * time.Second))
+		select {
+		case <-c.shuttingDown:
+			// Ignore the keepalive result if we are shutting down.
+			c.disconnect()
 
-	_, _, err := c.client.SendRequest("keepalive@openssh.com", true, nil)
-	if err != nil {
-		if !c.shuttingDown {
-			log.Printf("disconnected from %s: %s", c.addr, err)
+		case err := <-ch:
+			// disconnect if we hit an error sending a keepalive.
+			if err != nil {
+				log.Printf("error sending keepalive to %s, disconnecting: %s", c.addr, err)
+				c.disconnect()
+				return
+			}
+
+		case <-time.After(keepaliveDeadline):
+			log.Printf("timed out sending keepalive, disconnecting")
+			c.disconnect()
+			return
 		}
-		c.disconnectLocked()
+
+		// Otherwise, sleep until the next poll cycle.
+		select {
+		case <-t.C:
+		case <-c.shuttingDown:
+			return
+		}
 	}
 }
 

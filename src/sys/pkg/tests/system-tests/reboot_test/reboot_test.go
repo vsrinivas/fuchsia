@@ -150,8 +150,8 @@ func paveDevice(ctx context.Context, device *device.Client, outputDir string) er
 		return fmt.Errorf("device failed to pave: %s", err)
 	}
 
-	// Wait for the device to come online.
-	if err := device.WaitForDeviceToBeConnected(ctx); err != nil {
+	// Reconnect to the device.
+	if err := device.Reconnect(ctx); err != nil {
 		return fmt.Errorf("device failed to connect: %s", err)
 	}
 

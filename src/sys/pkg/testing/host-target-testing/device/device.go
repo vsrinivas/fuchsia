@@ -15,6 +15,7 @@ import (
 	"net"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"fuchsia.googlesource.com/host_target_testing/packages"
@@ -29,7 +30,12 @@ const rebootCheckPath = "/tmp/ota_test_should_reboot"
 // Client manages the connection to the device.
 type Client struct {
 	deviceHostname string
-	sshClient      *sshclient.Client
+	addr           string
+	sshConfig      *ssh.ClientConfig
+
+	// This mutex protects the following fields.
+	mu        sync.Mutex
+	sshClient *sshclient.Client
 }
 
 // NewClient creates a new Client.
@@ -38,13 +44,17 @@ func NewClient(ctx context.Context, deviceHostname string, privateKey ssh.Signer
 	if err != nil {
 		return nil, err
 	}
-	sshClient, err := sshclient.NewClient(ctx, net.JoinHostPort(deviceHostname, "22"), sshConfig)
+
+	addr := net.JoinHostPort(deviceHostname, "22")
+	sshClient, err := sshclient.NewClient(ctx, addr, sshConfig)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Client{
 		deviceHostname: deviceHostname,
+		addr:           addr,
+		sshConfig:      sshConfig,
 		sshClient:      sshClient,
 	}, nil
 }
@@ -66,24 +76,45 @@ func newSSHConfig(privateKey ssh.Signer) (*ssh.ClientConfig, error) {
 
 // Close the Client connection
 func (c *Client) Close() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	c.sshClient.Close()
+}
+
+func (c *Client) Reconnect(ctx context.Context) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	c.sshClient.Close()
+
+	sshClient, err := sshclient.NewClient(ctx, c.addr, c.sshConfig)
+	if err != nil {
+		return err
+	}
+	c.sshClient = sshClient
+
+	return nil
 }
 
 // Run a command to completion on the remote device and write STDOUT and STDERR
 // to the passed in io.Writers.
 func (c *Client) Run(ctx context.Context, command string, stdout io.Writer, stderr io.Writer) error {
-	return c.sshClient.Run(ctx, command, stdout, stderr)
-}
+	c.mu.Lock()
+	sshClient := c.sshClient
+	c.mu.Unlock()
 
-// WaitForDeviceToBeConnected blocks until a device is available for access.
-func (c *Client) WaitForDeviceToBeConnected(ctx context.Context) error {
-	return c.sshClient.WaitToBeConnected(ctx)
+	return sshClient.Run(ctx, command, stdout, stderr)
 }
 
 // RegisterDisconnectListener adds a waiter that gets notified when the ssh and
 // shell is disconnected.
 func (c *Client) RegisterDisconnectListener(ch chan struct{}) {
-	c.sshClient.RegisterDisconnectListener(ch)
+	c.mu.Lock()
+	sshClient := c.sshClient
+	c.mu.Unlock()
+
+	sshClient.RegisterDisconnectListener(ch)
 }
 
 func (c *Client) GetSshConnection(ctx context.Context) (string, error) {
@@ -146,12 +177,16 @@ func (c *Client) RebootToRecovery(ctx context.Context) error {
 		}
 	}
 
+	log.Printf("waiting for device to disconnect")
+
 	// Wait until we get a signal that we have disconnected
 	select {
 	case <-ch:
 	case <-ctx.Done():
 		return fmt.Errorf("device did not disconnect: %s", ctx.Err())
 	}
+
+	log.Printf("device disconnected")
 
 	return nil
 }
@@ -230,6 +265,10 @@ func (c *Client) ExpectReboot(ctx context.Context, repo *packages.Repository, rp
 
 	log.Printf("device disconnected, waiting for device to boot")
 
+	if err := c.Reconnect(ctx); err != nil {
+		return fmt.Errorf("failed to reconnect: %s", err)
+	}
+
 	if err := c.verifyReboot(ctx, repo, rpcClient); err != nil {
 		return fmt.Errorf("failed to verify reboot: %s", err)
 	}
@@ -260,10 +299,6 @@ func (c *Client) setupReboot(ctx context.Context, rpcClient **sl4f.Client) error
 }
 
 func (c *Client) verifyReboot(ctx context.Context, repo *packages.Repository, rpcClient **sl4f.Client) error {
-	if err := c.WaitForDeviceToBeConnected(ctx); err != nil {
-		return err
-	}
-
 	if *rpcClient != nil {
 		// FIXME: It would make sense to be able to close the rpcClient
 		// before the reboot, but for an unknown reason, closing this
@@ -325,7 +360,7 @@ func (c *Client) ValidateStaticPackages(ctx context.Context) error {
 func (c *Client) ReadRemotePath(ctx context.Context, path string) ([]byte, error) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
-	err := c.sshClient.Run(ctx, fmt.Sprintf(
+	err := c.Run(ctx, fmt.Sprintf(
 		`(
 		test -e "%s" &&
 		while IFS='' read f; do
@@ -345,7 +380,7 @@ func (c *Client) ReadRemotePath(ctx context.Context, path string) ([]byte, error
 // DeleteRemotePath deletes a file off the remote device.
 func (c *Client) DeleteRemotePath(ctx context.Context, path string) error {
 	var stderr bytes.Buffer
-	err := c.sshClient.Run(ctx, fmt.Sprintf("PATH= rm %q", path), os.Stdout, &stderr)
+	err := c.Run(ctx, fmt.Sprintf("PATH= rm %q", path), os.Stdout, &stderr)
 	if err != nil {
 		return fmt.Errorf("failed to delete %q: %s: %s", path, err, string(stderr.Bytes()))
 	}
@@ -407,8 +442,12 @@ func (c *Client) StartRpcSession(ctx context.Context, repo *packages.Repository)
 	log.Printf("connecting to sl4f")
 	startTime := time.Now()
 
+	c.mu.Lock()
+	sshClient := c.sshClient
+	c.mu.Unlock()
+
 	// Determine the address of this device from the point of view of the target.
-	localHostname, err := c.sshClient.GetSshConnection(ctx)
+	localHostname, err := sshClient.GetSshConnection(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get local hostname: %s", err)
 	}
@@ -433,11 +472,11 @@ func (c *Client) StartRpcSession(ctx context.Context, repo *packages.Repository)
 	// Configure the target to use this repository as "fuchsia-pkg://host_target_testing".
 	log.Printf("registering package repository: %s", repoServer.Dir)
 	cmd := fmt.Sprintf("amberctl add_repo_cfg -f %s -h %s", repoServer.URL, repoServer.Hash)
-	if err := c.sshClient.Run(ctx, cmd, os.Stdout, os.Stderr); err != nil {
+	if err := c.Run(ctx, cmd, os.Stdout, os.Stderr); err != nil {
 		return nil, fmt.Errorf("error registering repo: %s", err)
 	}
 
-	rpcClient, err := sl4f.NewClient(ctx, c.sshClient, net.JoinHostPort(c.deviceHostname, "80"), repoName)
+	rpcClient, err := sl4f.NewClient(ctx, sshClient, net.JoinHostPort(c.deviceHostname, "80"), repoName)
 	if err != nil {
 		return nil, fmt.Errorf("error creating sl4f client: %s", err)
 	}
