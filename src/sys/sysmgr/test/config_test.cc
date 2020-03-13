@@ -137,5 +137,33 @@ TEST_F(ConfigTest, Parse) {
   EXPECT_EQ(diagnostics, "the-archivist");
 }
 
+TEST_F(ConfigTest, FailWhenDuplicateDetected) {
+  constexpr char kServices[] = R"json({
+    "services": {
+      "fuchsia.logger.Log": "logger",
+      "fuchsia.logger.Log": "logger_duplicated",
+      "fuchsia.Debug": ["debug", "arg1"]
+    }
+  })json";
+  constexpr char kApps[] = R"json({
+    "services": {
+      "fuchsia.some.Service": "fuchsia-pkg://some/package",
+      "fuchsia.Debug": "fuchsia-pkg://some/duplicate/implementation"
+    }
+  })json";
+
+  std::string dir;
+  ASSERT_TRUE(tmp_dir_.NewTempDir(&dir));
+  NewJSONFile(dir, kServices);
+  NewJSONFile(dir, kApps);
+
+  Config config;
+  EXPECT_FALSE(config.ParseFromDirectory(dir));
+  EXPECT_EQ(config.error_str(),
+            "json_file1: Duplicate definition in map for 'services': fuchsia.logger.Log\n"
+            "json_file2: Duplicate definition in map for 'services': fuchsia.Debug");
+  EXPECT_TRUE(config.HasError());
+}
+
 }  // namespace
 }  // namespace sysmgr
