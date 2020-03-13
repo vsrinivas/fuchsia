@@ -83,13 +83,13 @@ func execute(ctx context.Context, paths ...string) error {
 	// Generate all symbol files.
 	path, err := generator.Generate(bfrs, dumpSymsPath)
 	if err != nil {
-		return fmt.Errorf("failed to generate symbols: %v", err)
+		return fmt.Errorf("failed to generate symbols: %w", err)
 	}
 
 	// Write all files to the specified tar archive.
 	tarfd, err := os.Create(tarFilepath)
 	if err != nil {
-		return fmt.Errorf("failed to create %q: %v", tarFilepath, err)
+		return fmt.Errorf("failed to create %q: %w", tarFilepath, err)
 	}
 	gzw := gzip.NewWriter(tarfd)
 	defer gzw.Close()
@@ -98,18 +98,18 @@ func execute(ctx context.Context, paths ...string) error {
 
 	log.Printf("archiving %q to %q", path, tarFilepath)
 	if err := tarutil.TarDirectory(tw, path); err != nil {
-		return fmt.Errorf("failed to write %q: %v", tarFilepath, err)
+		return fmt.Errorf("failed to write %q: %w", tarFilepath, err)
 	}
 
 	// Write the Ninja dep file.
 	depfile := depfile{outputPath: tarFilepath, inputPaths: paths}
 	depfd, err := os.Create(depFilepath)
 	if err != nil {
-		return fmt.Errorf("failed to create %q: %v", depFilepath, err)
+		return fmt.Errorf("failed to create %q: %w", depFilepath, err)
 	}
 	n, err := depfile.WriteTo(depfd)
 	if err != nil {
-		return fmt.Errorf("failed to write %q: %v", depFilepath, err)
+		return fmt.Errorf("failed to write %q: %w", depFilepath, err)
 	}
 	if n == 0 {
 		return fmt.Errorf("wrote 0 bytes to %q", depFilepath)
@@ -123,12 +123,12 @@ func bfrsFromIdsTxt(paths ...string) ([]elflib.BinaryFileRef, error) {
 	for _, path := range paths {
 		fd, err := os.Open(path)
 		if err != nil {
-			return nil, fmt.Errorf("failed to open %q: %v", path, err)
+			return nil, fmt.Errorf("failed to open %q: %w", path, err)
 		}
 		defer fd.Close()
 		newbfrs, err := elflib.ReadIDsFile(fd)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read %q: %v", path, err)
+			return nil, fmt.Errorf("failed to read %q: %w", path, err)
 		}
 		bfrs = append(bfrs, newbfrs...)
 	}

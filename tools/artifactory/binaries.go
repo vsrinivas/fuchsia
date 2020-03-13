@@ -26,7 +26,7 @@ func debugBinaryUploads(mods binModules, namespace string) ([]Upload, []string, 
 		}
 		prebuiltBins, err := pkg.Binaries(mods.BuildDir())
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to derive binaries from prebuilt package %q: %v", pkg.Name, err)
+			return nil, nil, fmt.Errorf("failed to derive binaries from prebuilt package %q: %w", pkg.Name, err)
 		}
 		bins = append(bins, prebuiltBins...)
 	}

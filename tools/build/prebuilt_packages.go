@@ -42,12 +42,12 @@ func (pp *PrebuiltPackage) Binaries(buildDir string) ([]Binary, error) {
 func loadPrebuiltPackages(manifest string) ([]PrebuiltPackage, error) {
 	f, err := os.Open(manifest)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open %s: %v", manifest, err)
+		return nil, fmt.Errorf("failed to open %s: %w", manifest, err)
 	}
 	defer f.Close()
 	var pkgs []PrebuiltPackage
 	if err := json.NewDecoder(f).Decode(&pkgs); err != nil {
-		return nil, fmt.Errorf("failed to decode %s: %v", manifest, err)
+		return nil, fmt.Errorf("failed to decode %s: %w", manifest, err)
 	}
 	return pkgs, nil
 }

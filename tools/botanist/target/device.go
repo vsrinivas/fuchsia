@@ -63,7 +63,7 @@ func LoadDeviceConfigs(path string) ([]DeviceConfig, error) {
 
 	var configs []DeviceConfig
 	if err := json.Unmarshal(data, &configs); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal configs: %v", err)
+		return nil, fmt.Errorf("failed to unmarshal configs: %w", err)
 	}
 	return configs, nil
 }
@@ -86,17 +86,17 @@ func NewDeviceTarget(ctx context.Context, config DeviceConfig, opts Options) (*D
 	}
 	signers, err := parseOutSigners(config.SSHKeys)
 	if err != nil {
-		return nil, fmt.Errorf("could not parse out signers from private keys: %v", err)
+		return nil, fmt.Errorf("could not parse out signers from private keys: %w", err)
 	}
 	var s io.ReadWriteCloser
 	if config.Serial != "" {
 		s, err = serial.Open(config.Serial)
 		if err != nil {
-			return nil, fmt.Errorf("unable to open %s: %v", config.Serial, err)
+			return nil, fmt.Errorf("unable to open %s: %w", config.Serial, err)
 		}
 		// Dump the existing serial debug log buffer.
 		if _, err := io.WriteString(s, dlogCmd); err != nil {
-			return nil, fmt.Errorf("failed to tail serial logs: %v", err)
+			return nil, fmt.Errorf("failed to tail serial logs: %w", err)
 		}
 	}
 	addr, err := netutil.GetNodeAddress(ctx, config.Network.Nodename, false)
@@ -154,7 +154,7 @@ func (t *DeviceTarget) Start(ctx context.Context, images []bootserver.Image, arg
 	// Set up log listener and dump kernel output to stdout.
 	l, err := netboot.NewLogListener(t.Nodename())
 	if err != nil {
-		return fmt.Errorf("cannot listen: %v", err)
+		return fmt.Errorf("cannot listen: %w", err)
 	}
 	go func() {
 		defer l.Close()
@@ -206,7 +206,7 @@ func parseOutSigners(keyPaths []string) ([]ssh.Signer, error) {
 	for _, keyPath := range keyPaths {
 		p, err := ioutil.ReadFile(keyPath)
 		if err != nil {
-			return nil, fmt.Errorf("could not read SSH key file %q: %v", keyPath, err)
+			return nil, fmt.Errorf("could not read SSH key file %q: %w", keyPath, err)
 		}
 		keys = append(keys, p)
 	}

@@ -824,7 +824,7 @@ func (c *mDNSConn6) InitReceiver(port int) error {
 // This allows us to listen on this specific interface.
 func (c *mDNSConn6) JoinGroup(iface net.Interface) error {
 	if err := c.receiver.JoinGroup(&iface, &c.dst); err != nil {
-		return fmt.Errorf("joining %v%%%v: %v", iface, c.dst, err)
+		return fmt.Errorf("joining %v%%%v: %w", iface, c.dst, err)
 	}
 	return nil
 }
@@ -1062,7 +1062,7 @@ func connectOnAllIfaces(c mDNSConn, ifaces []net.Interface, port int, ipv6 bool)
 			continue
 		}
 		if err := c.JoinGroup(iface); err != nil {
-			lastConnectErr = fmt.Errorf("joining %v: %v", iface, err)
+			lastConnectErr = fmt.Errorf("joining %v: %w", iface, err)
 			log.Println(lastConnectErr)
 			continue
 		}

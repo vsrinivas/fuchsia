@@ -80,7 +80,7 @@ func (binary Binary) ELFBuildID(buildDir string) (string, error) {
 			defer f.Close()
 			content, err := ioutil.ReadAll(f)
 			if err != nil {
-				return "", fmt.Errorf("failed to read binary's build ID file: %v", err)
+				return "", fmt.Errorf("failed to read binary's build ID file: %w", err)
 			}
 			return strings.TrimSpace(string(content)), nil
 		} else if !os.IsNotExist(err) {
@@ -99,12 +99,12 @@ func (binary Binary) ELFBuildID(buildDir string) (string, error) {
 func loadBinaries(manifest string) ([]Binary, error) {
 	f, err := os.Open(manifest)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open %s: %v", manifest, err)
+		return nil, fmt.Errorf("failed to open %s: %w", manifest, err)
 	}
 	defer f.Close()
 	var bins []Binary
 	if err := json.NewDecoder(f).Decode(&bins); err != nil {
-		return nil, fmt.Errorf("failed to decode %s: %v", manifest, err)
+		return nil, fmt.Errorf("failed to decode %s: %w", manifest, err)
 	}
 	return bins, nil
 }

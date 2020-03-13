@@ -111,7 +111,7 @@ func NewQEMUTarget(config QEMUConfig, opts Options) (*QEMUTarget, error) {
 		var err error
 		ptm, pts, err = pty.Open()
 		if err != nil {
-			return nil, fmt.Errorf("failed to create ptm/pts pair: %v", err)
+			return nil, fmt.Errorf("failed to create ptm/pts pair: %w", err)
 		}
 
 		// We should be streaming serial's output to stdout even if nothing is
@@ -184,7 +184,7 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 	qemuSystem := filepath.Join(t.config.Path, fmt.Sprintf("%s-%s", qemuSystemPrefix, qemuTarget))
 	absQEMUSystemPath, err := normalizeFile(qemuSystem)
 	if err != nil {
-		return fmt.Errorf("could not find qemu binary %q: %v", qemuSystem, err)
+		return fmt.Errorf("could not find qemu binary %q: %w", qemuSystem, err)
 	}
 	qemuCmd.SetBinary(absQEMUSystemPath)
 
@@ -303,7 +303,7 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 	log.Printf("QEMU invocation:\n%s", strings.Join(invocation, " "))
 
 	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("failed to start: %v", err)
+		return fmt.Errorf("failed to start: %w", err)
 	}
 	t.process = cmd.Process
 
@@ -382,7 +382,7 @@ func copyImageToDir(dir string, img *bootserver.Image) error {
 	}()
 
 	if _, err := io.Copy(f, iomisc.ReaderAtToReader(img.Reader)); err != nil {
-		return fmt.Errorf("failed to copy image %q to %q: %v", img.Name, dest, err)
+		return fmt.Errorf("failed to copy image %q to %q: %w", img.Name, dest, err)
 	}
 	return nil
 }

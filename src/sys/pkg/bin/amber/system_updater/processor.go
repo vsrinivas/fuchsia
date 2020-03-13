@@ -580,24 +580,24 @@ func UpdateCurrentChannel() error {
 	targetPath := "/misc/ota/target_channel.json"
 	contents, err := ioutil.ReadFile(targetPath)
 	if err != nil {
-		return fmt.Errorf("no target channel recorded in %v: %v", targetPath, err)
+		return fmt.Errorf("no target channel recorded in %v: %w", targetPath, err)
 	}
 	currentPath := "/misc/ota/current_channel.json"
 	partPath := currentPath + ".part"
 	f, err := os.Create(partPath)
 	if err != nil {
-		return fmt.Errorf("unable to write current channel to %v: %v", partPath, err)
+		return fmt.Errorf("unable to write current channel to %v: %w", partPath, err)
 	}
 	defer f.Close()
 	buf := bytes.NewBuffer(contents)
 	_, err = buf.WriteTo(f)
 	if err != nil {
-		return fmt.Errorf("unable to write current channel to %v: %v", currentPath, err)
+		return fmt.Errorf("unable to write current channel to %v: %w", currentPath, err)
 	}
 	f.Sync()
 	f.Close()
 	if err := os.Rename(partPath, currentPath); err != nil {
-		return fmt.Errorf("error moving %v to %v: %v", partPath, currentPath, err)
+		return fmt.Errorf("error moving %v to %v: %w", partPath, currentPath, err)
 	}
 	return nil
 }

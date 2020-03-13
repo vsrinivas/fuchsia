@@ -334,10 +334,10 @@ func TestLinkOrCopy(t *testing.T) {
 func copyFile(src string, dest string) error {
 	b, err := ioutil.ReadFile(src)
 	if err != nil {
-		return fmt.Errorf("ReadFile: failed to read file %s, err: %v", src, err)
+		return fmt.Errorf("ReadFile: failed to read file %s, err: %w", src, err)
 	}
 	if err := ioutil.WriteFile(dest, b, os.ModePerm); err != nil {
-		return fmt.Errorf("WriteFile: failed to write file %s, err: %v", dest, err)
+		return fmt.Errorf("WriteFile: failed to write file %s, err: %w", dest, err)
 	}
 	return nil
 }

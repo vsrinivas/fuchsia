@@ -183,12 +183,12 @@ func populateReaders(imgs []bootserver.Image) (func() error, error) {
 		if err != nil {
 			// Close already opened readers.
 			closeFunc()
-			return closeFunc, fmt.Errorf("failed to open %s: %v", imgs[i].Path, err)
+			return closeFunc, fmt.Errorf("failed to open %s: %w", imgs[i].Path, err)
 		}
 		fi, err := r.Stat()
 		if err != nil {
 			closeFunc()
-			return closeFunc, fmt.Errorf("failed to get file info for %s: %v", imgs[i].Path, err)
+			return closeFunc, fmt.Errorf("failed to get file info for %s: %w", imgs[i].Path, err)
 		}
 		imgs[i].Reader = r
 		imgs[i].Size = fi.Size()

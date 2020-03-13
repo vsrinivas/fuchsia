@@ -99,7 +99,7 @@ func copyDataSinks(viewer remoteViewer, remoteOutputDir, localOutputDir string) 
 	summaryPath := path.Join(remoteOutputDir, TestSummaryFilename)
 	summary, err := viewer.summary(summaryPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read test summary from %q: %v", summaryPath, err)
+		return nil, fmt.Errorf("failed to read test summary from %q: %w", summaryPath, err)
 	}
 
 	sinks := DataSinkMap{}
@@ -110,7 +110,7 @@ func copyDataSinks(viewer remoteViewer, remoteOutputDir, localOutputDir string) 
 				src := path.Join(remoteOutputDir, file.File)
 				dest := filepath.Join(localOutputDir, file.File)
 				if err = viewer.copyFile(src, dest); err != nil {
-					return nil, fmt.Errorf("failed to copy data sink %q: %v", file.File, err)
+					return nil, fmt.Errorf("failed to copy data sink %q: %w", file.File, err)
 				}
 				outputFiles = append(outputFiles, DataSink{
 					Name: file.Name,

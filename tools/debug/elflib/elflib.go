@@ -62,7 +62,7 @@ func (b BinaryFileRef) Verify() error {
 	}
 	binBuild, err := hex.DecodeString(b.BuildID)
 	if err != nil {
-		return newBuildIDError(fmt.Errorf("build ID `%s` is not a hex string: %v", b.BuildID, err), b.Filepath)
+		return newBuildIDError(fmt.Errorf("build ID `%s` is not a hex string: %w", b.BuildID, err), b.Filepath)
 	}
 	for _, buildID := range buildIDs {
 		if bytes.Equal(buildID, binBuild) {
@@ -133,7 +133,7 @@ func getBuildIDs(filename string, endian binary.ByteOrder, data io.ReaderAt, siz
 	noteBytes := make([]byte, size)
 	_, err := data.ReadAt(noteBytes, 0)
 	if err != nil {
-		return nil, fmt.Errorf("error parsing section header in %s: %v", filename, err)
+		return nil, fmt.Errorf("error parsing section header in %s: %w", filename, err)
 	}
 	out := [][]byte{}
 	err = forEachNote(noteBytes, endian, func(entry noteEntry) {
@@ -149,7 +149,7 @@ func getBuildIDs(filename string, endian binary.ByteOrder, data io.ReaderAt, siz
 func GetBuildIDs(filename string, file io.ReaderAt) ([][]byte, error) {
 	elfFile, err := elf.NewFile(file)
 	if err != nil {
-		return nil, fmt.Errorf("could not parse ELF file %s: %v", filename, err)
+		return nil, fmt.Errorf("could not parse ELF file %s: %w", filename, err)
 	}
 	if len(elfFile.Progs) == 0 && len(elfFile.Sections) == 0 {
 		return nil, fmt.Errorf("no program headers or sections in %s", filename)
@@ -195,11 +195,11 @@ func GetBuildIDs(filename string, file io.ReaderAt) ([][]byte, error) {
 func GetSoName(filename string, file io.ReaderAt) (string, error) {
 	elfFile, err := elf.NewFile(file)
 	if err != nil {
-		return "", fmt.Errorf("could not parse ELF file %s: %v", filename, err)
+		return "", fmt.Errorf("could not parse ELF file %s: %w", filename, err)
 	}
 	strings, err := elfFile.DynString(elf.DT_SONAME)
 	if err != nil {
-		return "", fmt.Errorf("when parsing .dynamic from %s: %v", filename, err)
+		return "", fmt.Errorf("when parsing .dynamic from %s: %w", filename, err)
 	}
 	if len(strings) > 1 {
 		return "", fmt.Errorf("expected at most one DT_SONAME entry in %s", filename)
@@ -246,7 +246,7 @@ func ReadIDsFile(file io.Reader) ([]BinaryFileRef, error) {
 func WalkBuildIDDir(dirpath string) ([]BinaryFileRef, error) {
 	info, err := os.Stat(dirpath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to stat %q: %v", dirpath, err)
+		return nil, fmt.Errorf("failed to stat %q: %w", dirpath, err)
 	}
 	if !info.IsDir() {
 		return nil, fmt.Errorf("%q is not a directory", dirpath)
@@ -254,7 +254,7 @@ func WalkBuildIDDir(dirpath string) ([]BinaryFileRef, error) {
 	var refs []BinaryFileRef
 	if err := filepath.Walk(dirpath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
-			return fmt.Errorf("%q: %v", path, err)
+			return fmt.Errorf("%q: %w", path, err)
 		}
 		if info.IsDir() {
 			return nil

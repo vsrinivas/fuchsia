@@ -50,8 +50,7 @@ func (o *testOutputs) record(result testrunner.TestResult) error {
 		OutputFile: outputRelPath,
 		Result:     result.Result,
 		StartTime:  result.StartTime,
-		// TODO(fxbug.dev/43518): when 1.13 is available, spell this as `duration.Milliseconds()`.
-		DurationMillis: duration.Nanoseconds() / (1000 * 1000),
+		DurationMillis: duration.Milliseconds(),
 		DataSinks:      result.DataSinks,
 	})
 

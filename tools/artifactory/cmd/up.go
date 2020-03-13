@@ -238,7 +238,7 @@ func (s *cloudSink) objectExistsAt(ctx context.Context, name string) (bool, erro
 	if err == storage.ErrObjectNotExist {
 		return false, nil
 	} else if err != nil {
-		return false, fmt.Errorf("object %q: possibly exists remotely, but is in an unknown state: %v", name, err)
+		return false, fmt.Errorf("object %q: possibly exists remotely, but is in an unknown state: %w", name, err)
 	}
 	// Check if MD5 is not set, mark this as a miss, then write() function will
 	// handle the race.
@@ -441,7 +441,7 @@ func uploadFiles(ctx context.Context, files []artifactory.Upload, dest dataSink,
 
 			logger.Debugf(ctx, "object %q: attempting creation", upload.Destination)
 			if err := dest.write(ctx, upload.Destination, upload.Source); err != nil {
-				errs <- fmt.Errorf("%s: %v", upload.Destination, err)
+				errs <- fmt.Errorf("%s: %w", upload.Destination, err)
 				return
 			}
 			logger.Debugf(ctx, "object %q: created", upload.Destination)

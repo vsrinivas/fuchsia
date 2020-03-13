@@ -32,7 +32,7 @@ func ReadJSONIr(filename string) (Root, error) {
 
 	bytes, err := ioutil.ReadFile(filename)
 	if err != nil {
-		return root, fmt.Errorf("Error reading from %s: %v", filename, err)
+		return root, fmt.Errorf("Error reading from %s: %w", filename, err)
 	}
 
 	err = json.Unmarshal(bytes, &root)

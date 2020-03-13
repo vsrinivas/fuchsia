@@ -91,13 +91,13 @@ func readSummary(summaryFiles []string) (runtests.DataSinkMap, error) {
 		// TODO(phosek): process these in parallel using goroutines.
 		file, err := os.Open(summaryFile)
 		if err != nil {
-			return nil, fmt.Errorf("cannot open %q: %v", summaryFile, err)
+			return nil, fmt.Errorf("cannot open %q: %w", summaryFile, err)
 		}
 		defer file.Close()
 
 		var summary runtests.TestSummary
 		if err := json.NewDecoder(file).Decode(&summary); err != nil {
-			return nil, fmt.Errorf("cannot decode %q: %v", summaryFile, err)
+			return nil, fmt.Errorf("cannot decode %q: %w", summaryFile, err)
 		}
 
 		dir := filepath.Dir(summaryFile)
@@ -123,12 +123,12 @@ func readSymbolizerOutput(outputFiles []string) (map[string]symbolize.DumpEntry,
 		// TODO(phosek): process these in parallel using goroutines.
 		file, err := os.Open(outputFile)
 		if err != nil {
-			return nil, fmt.Errorf("cannot open %q: %v", outputFile, err)
+			return nil, fmt.Errorf("cannot open %q: %w", outputFile, err)
 		}
 		defer file.Close()
 		var output []symbolize.DumpEntry
 		if err := json.NewDecoder(file).Decode(&output); err != nil {
-			return nil, fmt.Errorf("cannot decode %q: %v", outputFile, err)
+			return nil, fmt.Errorf("cannot decode %q: %w", outputFile, err)
 		}
 
 		for _, dump := range output {
@@ -209,29 +209,29 @@ func process(ctx context.Context, repo symbolize.Repository) error {
 	// Make the output directory
 	err := os.MkdirAll(outputDir, os.ModePerm)
 	if err != nil {
-		return fmt.Errorf("creating output dir %s: %v", outputDir, err)
+		return fmt.Errorf("creating output dir %s: %w", outputDir, err)
 	}
 
 	// Read in all the data
 	info, err := readInfo(symbolizeDumpFile, summaryFile)
 	if err != nil {
-		return fmt.Errorf("parsing info: %v", err)
+		return fmt.Errorf("parsing info: %w", err)
 	}
 
 	// Merge all the information
 	entries, err := covargs.MergeProfiles(ctx, info.dumps, info.summary, repo)
 	if err != nil {
-		return fmt.Errorf("merging info: %v", err)
+		return fmt.Errorf("merging info: %w", err)
 	}
 
 	if jsonOutput != "" {
 		file, err := os.Create(jsonOutput)
 		if err != nil {
-			return fmt.Errorf("creating profile output file: %v", err)
+			return fmt.Errorf("creating profile output file: %w", err)
 		}
 		defer file.Close()
 		if err := json.NewEncoder(file).Encode(entries); err != nil {
-			return fmt.Errorf("writing profile information: %v", err)
+			return fmt.Errorf("writing profile information: %w", err)
 		}
 	}
 
@@ -253,7 +253,7 @@ func process(ctx context.Context, repo symbolize.Repository) error {
 	if saveTemps == "" {
 		tempDir, err = ioutil.TempDir(saveTemps, "covargs")
 		if err != nil {
-			return fmt.Errorf("cannot create temporary dir: %v", err)
+			return fmt.Errorf("cannot create temporary dir: %w", err)
 		}
 		defer os.RemoveAll(tempDir)
 	}
@@ -261,7 +261,7 @@ func process(ctx context.Context, repo symbolize.Repository) error {
 	// Make the llvm-profdata response file
 	profdataFile, err := os.Create(filepath.Join(tempDir, "llvm-profdata.rsp"))
 	if err != nil {
-		return fmt.Errorf("creating llvm-profdata.rsp file: %v", err)
+		return fmt.Errorf("creating llvm-profdata.rsp file: %w", err)
 	}
 	for _, covFile := range covFiles {
 		fmt.Fprintf(profdataFile, "%s\n", covFile)
@@ -284,7 +284,7 @@ func process(ctx context.Context, repo symbolize.Repository) error {
 	// Make the llvm-cov response file
 	covFile, err := os.Create(filepath.Join(tempDir, "llvm-cov.rsp"))
 	if err != nil {
-		return fmt.Errorf("creating llvm-cov.rsp file: %v", err)
+		return fmt.Errorf("creating llvm-cov.rsp file: %w", err)
 	}
 	for _, mod := range mods {
 		fmt.Fprintf(covFile, "-object %s\n", mod)

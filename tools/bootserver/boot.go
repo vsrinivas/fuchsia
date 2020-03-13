@@ -144,7 +144,7 @@ func downloadAndOpenImage(dest string, img Image) (*os.File, error) {
 
 	if _, err := io.Copy(f, iomisc.ReaderAtToReader(img.Reader)); err != nil {
 		f.Close()
-		return nil, fmt.Errorf("failed to copy image %q to %q: %v", img.Name, dest, err)
+		return nil, fmt.Errorf("failed to copy image %q to %q: %w", img.Name, dest, err)
 	}
 	if err := f.Close(); err != nil {
 		return nil, err

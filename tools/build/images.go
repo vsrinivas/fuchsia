@@ -41,12 +41,12 @@ type Image struct {
 func LoadImages(manifest string) ([]Image, error) {
 	f, err := os.Open(manifest)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open %s: %v", manifest, err)
+		return nil, fmt.Errorf("failed to open %s: %w", manifest, err)
 	}
 	defer f.Close()
 	var imgs []Image
 	if err := json.NewDecoder(f).Decode(&imgs); err != nil {
-		return nil, fmt.Errorf("failed to decode %s: %v", manifest, err)
+		return nil, fmt.Errorf("failed to decode %s: %w", manifest, err)
 	}
 	return imgs, nil
 }

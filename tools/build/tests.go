@@ -88,12 +88,12 @@ type DimensionSet struct {
 func loadTestSpecs(manifest string) ([]TestSpec, error) {
 	f, err := os.Open(manifest)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open %s: %v", manifest, err)
+		return nil, fmt.Errorf("failed to open %s: %w", manifest, err)
 	}
 	defer f.Close()
 	var specs []TestSpec
 	if err := json.NewDecoder(f).Decode(&specs); err != nil {
-		return nil, fmt.Errorf("failed to decode %s: %v", manifest, err)
+		return nil, fmt.Errorf("failed to decode %s: %w", manifest, err)
 	}
 	return specs, nil
 }
@@ -102,12 +102,12 @@ func loadTestSpecs(manifest string) ([]TestSpec, error) {
 func loadPlatforms(manifest string) ([]DimensionSet, error) {
 	f, err := os.Open(manifest)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open %s: %v", manifest, err)
+		return nil, fmt.Errorf("failed to open %s: %w", manifest, err)
 	}
 	defer f.Close()
 	var platforms []DimensionSet
 	if err := json.NewDecoder(f).Decode(&platforms); err != nil {
-		return nil, fmt.Errorf("failed to decode %s: %v", manifest, err)
+		return nil, fmt.Errorf("failed to decode %s: %w", manifest, err)
 	}
 	return platforms, nil
 }

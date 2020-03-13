@@ -137,7 +137,7 @@ func (g *generator) genSymbolFile(bfr elflib.BinaryFileRef) (*breakpad.SymbolFil
 		Stdout: &stdout,
 	}
 	if err := cmd.Run(); err != nil {
-		return nil, fmt.Errorf("command failed %v: %v", cmd.Args, err)
+		return nil, fmt.Errorf("command failed %v: %w", cmd.Args, err)
 	}
 	return breakpad.ParseSymbolFile(&stdout)
 }
@@ -145,7 +145,7 @@ func (g *generator) genSymbolFile(bfr elflib.BinaryFileRef) (*breakpad.SymbolFil
 func (g *generator) readSoName(path string) (string, error) {
 	fd, err := os.Open(path)
 	if err != nil {
-		return "", fmt.Errorf("open failed %q: %v", path, err)
+		return "", fmt.Errorf("open failed %q: %w", path, err)
 	}
 	defer fd.Close()
 	return elflib.GetSoName(path, fd)

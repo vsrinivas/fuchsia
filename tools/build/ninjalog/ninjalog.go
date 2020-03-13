@@ -156,7 +156,7 @@ func Parse(fname string, r io.Reader) (*NinjaLog, error) {
 		}
 		step, err := lineToStep(line)
 		if err != nil {
-			return nil, fmt.Errorf("error at %d: %v", lineno, err)
+			return nil, fmt.Errorf("error at %d: %w", lineno, err)
 		}
 		if step.End < lastStep.End {
 			nlog.Start = lineno
@@ -167,11 +167,11 @@ func Parse(fname string, r io.Reader) (*NinjaLog, error) {
 		lineno++
 	}
 	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("error at %d: %v", lineno, err)
+		return nil, fmt.Errorf("error at %d: %w", lineno, err)
 	}
 	if !scanner.Scan() {
 		if err := scanner.Err(); err != nil {
-			return nil, fmt.Errorf("error at %d: %v", lineno, err)
+			return nil, fmt.Errorf("error at %d: %w", lineno, err)
 		}
 		// missing metadata?
 		return nlog, nil
@@ -206,15 +206,15 @@ func lineToStep(line string) (Step, error) {
 	}
 	s, err := strconv.ParseUint(fields[0], 10, 0)
 	if err != nil {
-		return step, fmt.Errorf("bad start %s:%v", fields[0], err)
+		return step, fmt.Errorf("bad start %s:%w", fields[0], err)
 	}
 	e, err := strconv.ParseUint(fields[1], 10, 0)
 	if err != nil {
-		return step, fmt.Errorf("bad end %s:%v", fields[1], err)
+		return step, fmt.Errorf("bad end %s:%w", fields[1], err)
 	}
 	rs, err := strconv.ParseUint(fields[2], 10, 0)
 	if err != nil {
-		return step, fmt.Errorf("bad restat %s:%v", fields[2], err)
+		return step, fmt.Errorf("bad restat %s:%w", fields[2], err)
 	}
 	step.Start = time.Duration(s) * time.Millisecond
 	step.End = time.Duration(e) * time.Millisecond

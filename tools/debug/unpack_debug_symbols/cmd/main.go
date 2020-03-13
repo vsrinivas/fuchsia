@@ -206,7 +206,7 @@ func produceSymbols(ctx context.Context, inputBuildIDDir string, br *runner.Batc
 	logger.Tracef(ctx, "about to walk build-id-dir")
 	refs, err := elflib.WalkBuildIDDir(inputBuildIDDir)
 	if err != nil {
-		return nil, fmt.Errorf("while calling dump_syms for %s: %v", inputBuildIDDir, err)
+		return nil, fmt.Errorf("while calling dump_syms for %s: %w", inputBuildIDDir, err)
 	}
 	logger.Tracef(ctx, "about spin up dump_syms")
 	outs := []binaryRef{}
@@ -228,7 +228,7 @@ func unpack(ctx context.Context, br *runner.BatchRunner) ([]binaryRef, error) {
 	// unpack each debug binary into buildIDDir
 	file, err := os.Open(debugArchive)
 	if err != nil {
-		return nil, fmt.Errorf("while unpacking %s: %v", debugArchive, err)
+		return nil, fmt.Errorf("while unpacking %s: %w", debugArchive, err)
 	}
 	defer file.Close()
 	// The file is bzip2 compressed
@@ -239,7 +239,7 @@ func unpack(ctx context.Context, br *runner.BatchRunner) ([]binaryRef, error) {
 		if err == io.EOF {
 			break
 		} else if err != nil {
-			return nil, fmt.Errorf("while reading %s: %v", debugArchive, err)
+			return nil, fmt.Errorf("while reading %s: %w", debugArchive, err)
 		} else if hdr.Typeflag == tar.TypeDir {
 			continue
 		}
@@ -257,21 +257,21 @@ func unpack(ctx context.Context, br *runner.BatchRunner) ([]binaryRef, error) {
 		unpackFilePath := filepath.Join(buildIDDir, hdr.Name)
 		outFile, err := createFile(unpackFilePath)
 		if err != nil {
-			return nil, fmt.Errorf("while attempting to write %s from %s to %s: %v", hdr.Name, debugArchive, unpackFilePath, err)
+			return nil, fmt.Errorf("while attempting to write %s from %s to %s: %w", hdr.Name, debugArchive, unpackFilePath, err)
 		}
 		if _, err := io.Copy(outFile, tr); err != nil {
 			outFile.Close()
-			return nil, fmt.Errorf("while attempting to write %s from %s to %s: %v", hdr.Name, debugArchive, unpackFilePath, err)
+			return nil, fmt.Errorf("while attempting to write %s from %s to %s: %w", hdr.Name, debugArchive, unpackFilePath, err)
 		}
 		outFile.Close()
 		bfr := elflib.NewBinaryFileRef(unpackFilePath, buildID)
 		if err := bfr.Verify(); err != nil {
-			return nil, fmt.Errorf("while attempting to verify %s copied from %s: %v", unpackFilePath, debugArchive, err)
+			return nil, fmt.Errorf("while attempting to verify %s copied from %s: %w", unpackFilePath, debugArchive, err)
 		}
 		symbolFile := filepath.Join(buildIDDir, bfr.BuildID[:2], bfr.BuildID[2:]+".sym")
 		logger.Tracef(ctx, "adding dump_syms command for %s -> %s", bfr.Filepath, symbolFile)
 		if err := runDumpSyms(ctx, br, bfr.Filepath, symbolFile); err != nil {
-			return nil, fmt.Errorf("running dumpSyms on %s to produce %s: %v", bfr.Filepath, symbolFile, err)
+			return nil, fmt.Errorf("running dumpSyms on %s to produce %s: %w", bfr.Filepath, symbolFile, err)
 		}
 		out = append(out, binaryRef{bfr, symbolFile})
 	}
@@ -291,13 +291,13 @@ func writeManifest(bfrs []binaryRef) error {
 	}
 	file, err := createFile(outputManifest)
 	if err != nil {
-		return fmt.Errorf("while writing json to %s: %v", outputManifest, err)
+		return fmt.Errorf("while writing json to %s: %w", outputManifest, err)
 	}
 	defer file.Close()
 	enc := json.NewEncoder(file)
 	enc.SetIndent("", "  ")
 	if err = enc.Encode(out); err != nil {
-		return fmt.Errorf("while writing json to %s: %v", outputManifest, err)
+		return fmt.Errorf("while writing json to %s: %w", outputManifest, err)
 	}
 	return nil
 }

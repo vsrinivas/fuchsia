@@ -124,12 +124,12 @@ func main() {
 func loadTests(path string) ([]build.Test, error) {
 	bytes, err := ioutil.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read %q: %v", path, err)
+		return nil, fmt.Errorf("failed to read %q: %w", path, err)
 	}
 
 	var tests []build.Test
 	if err := json.Unmarshal(bytes, &tests); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal %q: %v", path, err)
+		return nil, fmt.Errorf("failed to unmarshal %q: %w", path, err)
 	}
 
 	return tests, nil

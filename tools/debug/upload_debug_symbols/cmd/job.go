@@ -54,7 +54,7 @@ func (j *job) ensure(ctx context.Context, bkt bucket) error {
 	object := j.bfr.BuildID + elflib.DebugFileSuffix
 	exists, err := bkt.objectExists(ctx, object)
 	if err != nil {
-		return fmt.Errorf("failed to determine object %s existence: %v", object, err)
+		return fmt.Errorf("failed to determine object %s existence: %w", object, err)
 	}
 	if exists {
 		return nil
@@ -62,7 +62,7 @@ func (j *job) ensure(ctx context.Context, bkt bucket) error {
 	filepath := j.bfr.Filepath
 	reader, err := os.Open(filepath)
 	if err != nil {
-		return fmt.Errorf("failed to open %q: %v", filepath, err)
+		return fmt.Errorf("failed to open %q: %w", filepath, err)
 	}
 	defer reader.Close()
 	return bkt.upload(ctx, object, reader)
