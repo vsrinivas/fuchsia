@@ -134,20 +134,15 @@ class PidControlTest : public testing::Test {
 
       auto predict_ppm = static_cast<int64_t>(round(control.Read()));
       predict_ppm = std::max<int64_t>(std::min<int64_t>(predict_ppm, +1000), -1000);
-      std::cout << rate_adjust_ppm << "(" << num_iterations << "):" << predict_ppm << "\n";
 
       if (predict_ppm == rate_adjust_ppm) {
         if (previous_prediction_accurate && consecutive_prediction > num_iterations) {
           consecutive_prediction = num_iterations;
-          FX_LOGS(INFO) << "Final settle for ppm " << predict_ppm << " at "
-                        << consecutive_prediction << " iterations\n";
           break;
         }
         previous_prediction_accurate = true;
         if (first_accurate_prediction > num_iterations) {
           first_accurate_prediction = num_iterations;
-          FX_LOGS(INFO) << "First settle for ppm " << predict_ppm << " at "
-                        << first_accurate_prediction << " iterations\n";
         }
       } else {
         previous_prediction_accurate = false;

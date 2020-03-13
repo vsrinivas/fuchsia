@@ -46,6 +46,10 @@ test_package("audio-clock-lib-unittests") {
   tests = [
     {
       name = "audio-clock-lib-unittests"
+
+      dest = "audio_clock_lib_unittests"
+      manifest = rebase_path("meta/audio_clock_lib_unittests.cmx")
+
       environments = basic_envs
     },
   ]

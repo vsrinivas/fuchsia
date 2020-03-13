@@ -126,16 +126,14 @@ fit::result<zx::time, zx_status_t> MonotonicTimeFromReferenceTime(const zx::cloc
 }
 
 affine::Transform ToAffineTransform(TimelineFunction& tl_function) {
-  auto transform =
-      affine::Transform(tl_function.reference_time(), tl_function.subject_time(),
-                        affine::Ratio(tl_function.subject_delta(), tl_function.reference_delta()));
-  return transform;
+  return affine::Transform(
+      tl_function.reference_time(), tl_function.subject_time(),
+      affine::Ratio(tl_function.subject_delta(), tl_function.reference_delta()));
 }
 
 TimelineFunction ToTimelineFunction(affine::Transform affine_trans) {
-  auto tl_function = TimelineFunction(affine_trans.b_offset(), affine_trans.a_offset(),
-                                      affine_trans.numerator(), affine_trans.denominator());
-  return tl_function;
+  return TimelineFunction(affine_trans.b_offset(), affine_trans.a_offset(),
+                          affine_trans.numerator(), affine_trans.denominator());
 }
 
 }  // namespace media::audio

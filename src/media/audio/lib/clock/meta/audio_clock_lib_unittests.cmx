@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/audio-clock-lib-unittests"
+        "binary": "test/audio_clock_lib_unittests"
     },
     "sandbox": {
         "services": [
