@@ -1,0 +1,38 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.weave;
+
+/// Error codes for WeaveKeyStore operations.
+enum ErrorCode {
+    /// Key/pairing code not found in storage.
+    FILE_NOT_FOUND = 1;
+    /// Error occurred during cryptographic operations.
+    CRYPTO_ERROR = 2;
+};
+
+/// This protocol is used for signing operations with the factory-provisioned
+/// Weave key.
+[Discoverable]
+protocol Signer {
+    /// Sign the provided |hash| with the factory provisioned key. On success
+    /// the result is returned in |signature|. The signature must be of a type
+    /// that is supported by Weave, and must take the standard form of an ASN.1
+    /// DER SEQUENCE. This operation must support SHA1 and SHA256 hash values.
+    ///
+    /// Currently, Weave only supports ECDSA signatures using the P224 curve,
+    /// however, to allow this protocol to support future changes to supported
+    /// Weave signatures the maximum size of the returned signature is set to
+    /// 139 bytes which is the largest amount of space needed to return an
+    /// encoded ECDSA P521 signature.
+    SignHash(bytes:32 hash) -> (bytes:139 signature) error ErrorCode;
+};
+
+/// This protocol is used to retrieve factory data that may be encrypted at
+/// rest.
+[Discoverable]
+protocol FactoryDataManager {
+    /// Return the device |pairing_code| on success.
+    GetPairingCode() -> (bytes:16 pairing_code) error ErrorCode;
+};
