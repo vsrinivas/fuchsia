@@ -36,11 +36,62 @@ class EmbeddedController : public fbl::RefCounted<EmbeddedController> {
 
   // Return true if the platform supports the given feature.
   virtual bool SupportsFeature(enum ec_feature_code feature) const = 0;
+
+  // Send a fixed-sized command to the EC with a fixed-size output.
+  //
+  // These call into the raw "IssueCommand" method above.
+  template <typename Input, typename Output>
+  zx_status_t IssueCommand(uint16_t command, uint8_t command_version, const Input& input,
+                           Output* output);
+  template <typename Output>
+  zx_status_t IssueCommand(uint16_t command, uint8_t command_version, Output* output);
 };
 
 // Initialise detected devices in the DDK. Exposed for testing.
 zx_status_t InitDevices(fbl::RefPtr<EmbeddedController> controller, zx_device_t* parent,
                         ACPI_HANDLE acpi_handle);
+
+//
+// Implementation details follow.
+//
+
+// Send a fixed-sized command to the EC with a fixed-size output.
+template <typename Input, typename Output>
+zx_status_t EmbeddedController::IssueCommand(uint16_t command, uint8_t command_version,
+                                             const Input& input, Output* output) {
+  static_assert(!std::is_pointer<Input>::value, "Input type should be a reference, not pointer.");
+  static_assert(std::is_pod<Input>::value, "Input type should be POD.");
+  static_assert(std::is_pod<Output>::value, "Output type should be POD.");
+
+  size_t actual;
+  zx_status_t status = this->IssueCommand(command, command_version, &input, sizeof(Input), output,
+                                          sizeof(Output), &actual);
+  if (status != ZX_OK) {
+    return status;
+  }
+  if (actual != sizeof(Output)) {
+    return ZX_ERR_IO;
+  }
+  return ZX_OK;
+}
+
+// Send a command with no input to the EC with a fixed-size output.
+template <typename Output>
+zx_status_t EmbeddedController::IssueCommand(uint16_t command, uint8_t command_version,
+                                             Output* output) {
+  static_assert(std::is_pod<Output>::value, "Output type should be POD.");
+
+  size_t actual;
+  zx_status_t status =
+      this->IssueCommand(command, command_version, nullptr, 0, output, sizeof(Output), &actual);
+  if (status != ZX_OK) {
+    return status;
+  }
+  if (actual != sizeof(Output)) {
+    return ZX_ERR_IO;
+  }
+  return ZX_OK;
+}
 
 }  // namespace cros_ec
 

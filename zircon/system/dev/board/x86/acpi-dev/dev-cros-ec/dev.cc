@@ -53,24 +53,19 @@ zx_status_t RealEmbeddedController::Create(fbl::RefPtr<EmbeddedController>* out)
     return ZX_ERR_NOT_SUPPORTED;
   }
 
+  // Create the controller.
   fbl::AllocChecker ac;
   fbl::RefPtr<RealEmbeddedController> dev = fbl::AdoptRef(new (&ac) RealEmbeddedController());
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
 
-  size_t actual;
-  zx_status_t status = CrOsEc::CommandLpc3(EC_CMD_GET_FEATURES, 0, nullptr, 0, &dev->features_,
-                                           sizeof(dev->features_), &actual);
+  // Cache the feature set.
+  zx_status_t status =
+      dev->EmbeddedController::IssueCommand(EC_CMD_GET_FEATURES, 0, &dev->features_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "acpi-cros-ec-core: get features failed: %d\n", status);
     return status;
-  }
-
-  if (actual != sizeof(dev->features_)) {
-    zxlogf(ERROR, "acpi-cros-ec-core: get features bad read: %zu vs %zu\n", actual,
-           sizeof(dev->features_));
-    return ZX_ERR_IO;
   }
 
   *out = std::move(dev);

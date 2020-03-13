@@ -254,18 +254,14 @@ void AcpiCrOsEcMotionDevice::DdkRelease() {
 zx_status_t AcpiCrOsEcMotionDevice::QueryNumSensors(uint8_t* count) {
   zxlogf(TRACE, "acpi-cros-ec-motion: QueryNumSensors\n");
   struct ec_params_motion_sense cmd;
-  struct ec_response_motion_sense rsp;
   cmd.cmd = MOTIONSENSE_CMD_DUMP;
   cmd.dump.max_sensor_count = 0;  // We only care about the number of sensors.
 
-  size_t actual;
-  zx_status_t status = ec_->IssueCommand(EC_CMD_MOTION_SENSE_CMD, 3, &cmd, sizeof(cmd), &rsp.dump,
-                                         sizeof(rsp.dump), &actual);
+  // Get information about the sensors.
+  struct ec_response_motion_sense rsp;
+  zx_status_t status = ec_->IssueCommand(EC_CMD_MOTION_SENSE_CMD, 3, cmd, &rsp.dump);
   if (status != ZX_OK) {
     return status;
-  }
-  if (actual != sizeof(rsp.dump)) {
-    return ZX_ERR_IO;
   }
 
   *count = rsp.dump.sensor_count;
@@ -276,18 +272,13 @@ zx_status_t AcpiCrOsEcMotionDevice::QuerySensorInfo(uint8_t sensor_num, SensorIn
   zxlogf(TRACE, "acpi-cros-ec-motion: QuerySensorInfo %d\n", sensor_num);
 
   struct ec_params_motion_sense cmd;
-  struct ec_response_motion_sense rsp;
   cmd.cmd = MOTIONSENSE_CMD_INFO;
   cmd.info_3.sensor_num = sensor_num;
 
-  size_t actual;
-  zx_status_t status = ec_->IssueCommand(EC_CMD_MOTION_SENSE_CMD, 3, &cmd, sizeof(cmd), &rsp.info_3,
-                                         sizeof(rsp.info_3), &actual);
+  struct ec_response_motion_sense rsp;
+  zx_status_t status = ec_->IssueCommand(EC_CMD_MOTION_SENSE_CMD, 3, cmd, &rsp.info_3);
   if (status != ZX_OK) {
     return status;
-  }
-  if (actual != sizeof(rsp.info_3)) {
-    return ZX_ERR_IO;
   }
 
   if (rsp.info_3.type >= MOTIONSENSE_TYPE_MAX || rsp.info_3.location >= MOTIONSENSE_LOC_MAX) {
@@ -310,15 +301,9 @@ zx_status_t AcpiCrOsEcMotionDevice::FifoInterruptEnable(bool enable) {
   cmd.cmd = MOTIONSENSE_CMD_FIFO_INT_ENABLE;
   cmd.fifo_int_enable.enable = enable;
 
-  size_t actual;
-  zx_status_t status =
-      ec_->IssueCommand(EC_CMD_MOTION_SENSE_CMD, 3, &cmd, sizeof(cmd), &rsp.fifo_int_enable,
-                        sizeof(rsp.fifo_int_enable), &actual);
+  zx_status_t status = ec_->IssueCommand(EC_CMD_MOTION_SENSE_CMD, 3, cmd, &rsp.fifo_int_enable);
   if (status != ZX_OK) {
     return status;
-  }
-  if (actual != sizeof(rsp.fifo_int_enable)) {
-    return ZX_ERR_IO;
   }
 
   return ZX_OK;
@@ -336,14 +321,9 @@ zx_status_t AcpiCrOsEcMotionDevice::SetSensorOutputDataRate(uint8_t sensor_num,
   cmd.sensor_odr.roundup = 0;
   cmd.sensor_odr.data = static_cast<int32_t>(freq_millihertz);
 
-  size_t actual;
-  zx_status_t status = ec_->IssueCommand(EC_CMD_MOTION_SENSE_CMD, 3, &cmd, sizeof(cmd),
-                                         &rsp.sensor_odr, sizeof(rsp.sensor_odr), &actual);
+  zx_status_t status = ec_->IssueCommand(EC_CMD_MOTION_SENSE_CMD, 3, cmd, &rsp.sensor_odr);
   if (status != ZX_OK) {
     return status;
-  }
-  if (actual != sizeof(rsp.sensor_odr)) {
-    return ZX_ERR_IO;
   }
 
   return ZX_OK;
@@ -359,14 +339,9 @@ zx_status_t AcpiCrOsEcMotionDevice::SetEcSamplingRate(uint8_t sensor_num, uint32
   cmd.ec_rate.roundup = 0;
   cmd.ec_rate.data = static_cast<int32_t>(milliseconds);
 
-  size_t actual;
-  zx_status_t status = ec_->IssueCommand(EC_CMD_MOTION_SENSE_CMD, 3, &cmd, sizeof(cmd),
-                                         &rsp.ec_rate, sizeof(rsp.ec_rate), &actual);
+  zx_status_t status = ec_->IssueCommand(EC_CMD_MOTION_SENSE_CMD, 3, cmd, &rsp.ec_rate);
   if (status != ZX_OK) {
     return status;
-  }
-  if (actual != sizeof(rsp.ec_rate)) {
-    return ZX_ERR_IO;
   }
 
   return ZX_OK;
@@ -382,14 +357,9 @@ zx_status_t AcpiCrOsEcMotionDevice::GetSensorRange(uint8_t sensor_num, int32_t* 
   cmd.sensor_range.roundup = 0;
   cmd.sensor_range.data = EC_MOTION_SENSE_NO_VALUE;
 
-  size_t actual;
-  zx_status_t status = ec_->IssueCommand(EC_CMD_MOTION_SENSE_CMD, 3, &cmd, sizeof(cmd),
-                                         &rsp.sensor_range, sizeof(rsp.sensor_range), &actual);
+  zx_status_t status = ec_->IssueCommand(EC_CMD_MOTION_SENSE_CMD, 3, cmd, &rsp.sensor_range);
   if (status != ZX_OK) {
     return status;
-  }
-  if (actual != sizeof(rsp.sensor_range)) {
-    return ZX_ERR_IO;
   }
 
   *range = rsp.sensor_range.ret;
@@ -405,14 +375,9 @@ zx_status_t AcpiCrOsEcMotionDevice::GetKbWakeAngle(int32_t* angle) {
   cmd.cmd = MOTIONSENSE_CMD_KB_WAKE_ANGLE;
   cmd.kb_wake_angle.data = EC_MOTION_SENSE_NO_VALUE;
 
-  size_t actual;
-  zx_status_t status = ec_->IssueCommand(EC_CMD_MOTION_SENSE_CMD, 3, &cmd, sizeof(cmd),
-                                         &rsp.kb_wake_angle, sizeof(rsp.kb_wake_angle), &actual);
+  zx_status_t status = ec_->IssueCommand(EC_CMD_MOTION_SENSE_CMD, 3, cmd, &rsp.kb_wake_angle);
   if (status != ZX_OK) {
     return status;
-  }
-  if (actual != sizeof(rsp.kb_wake_angle)) {
-    return ZX_ERR_IO;
   }
 
   *angle = rsp.kb_wake_angle.ret;
@@ -432,14 +397,9 @@ zx_status_t AcpiCrOsEcMotionDevice::SetKbWakeAngle(int16_t angle) {
   cmd.cmd = MOTIONSENSE_CMD_KB_WAKE_ANGLE;
   cmd.kb_wake_angle.data = angle;
 
-  size_t actual;
-  zx_status_t status = ec_->IssueCommand(EC_CMD_MOTION_SENSE_CMD, 3, &cmd, sizeof(cmd),
-                                         &rsp.kb_wake_angle, sizeof(rsp.kb_wake_angle), &actual);
+  zx_status_t status = ec_->IssueCommand(EC_CMD_MOTION_SENSE_CMD, 3, cmd, &rsp.kb_wake_angle);
   if (status != ZX_OK) {
     return status;
-  }
-  if (actual != sizeof(rsp.kb_wake_angle)) {
-    return ZX_ERR_IO;
   }
 
   zxlogf(SPEW, "acpi-cros-ec-motion: kb_wake_angle %d\n", rsp.kb_wake_angle.ret);
