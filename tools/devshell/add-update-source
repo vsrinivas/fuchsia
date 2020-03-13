@@ -66,15 +66,6 @@ function main {
     shift
   done
 
-  # If the user specified a custom address, then it may not be on localhost.
-  if [[ -z "${addr}" ]]; then
-    repository_dir="${FUCHSIA_BUILD_DIR}/amber-files/repository"
-    if [[ ! -d "${repository_dir}" ]]; then
-      fx-error "local repository does not exist.  Please build first."
-      exit 1
-    fi
-  fi
-
   if [[ -z "${addr}" ]]; then
     addr=$(fx-command-run shell 'echo $SSH_CONNECTION' | cut -d ' ' -f 1)
     if [[ $? -ne 0 || -z "${addr}" ]]; then
