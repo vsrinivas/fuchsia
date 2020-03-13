@@ -16,7 +16,6 @@ import (
 	"net"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 	"time"
 
@@ -300,10 +299,6 @@ func (r *RunCommand) runAgainstTarget(ctx context.Context, t Target, args []stri
 		}
 
 		if r.repoURL != "" {
-			// TODO(ihuh): Remove once recipes have been changed to point to new repo URL under packages.
-			if !strings.HasSuffix(r.repoURL, "packages/repository") {
-				r.repoURL = strings.TrimSuffix(r.repoURL, "repository") + "packages/repository"
-			}
 			if err := repo.AddInsecurely(client, repoID, r.repoURL, r.blobURL); err != nil {
 				return err
 			}
