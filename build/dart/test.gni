@@ -37,6 +37,8 @@ import("//build/testing/test_spec.gni")
 #       like the program/args entry in a component manifest.
 #
 template("dart_test") {
+  testonly = true
+
   assert(defined(invoker.sources), "dart_test() must specify sources")
 
   _main_target_name = target_name
@@ -68,9 +70,7 @@ template("dart_test") {
 
   action(_test_grouping_target_name) {
     script = "//build/dart/group_tests.py"
-    outputs = [
-      _grouped_main_file,
-    ]
+    outputs = [ _grouped_main_file ]
     args = [
       "--out",
       rebase_path(_grouped_main_file),
@@ -90,12 +90,8 @@ template("dart_test") {
 
     _copy_target_name = "${target_name}_copy"
     copy(_copy_target_name) {
-      sources = [
-        "$dart_sdk/bin/dart",
-      ]
-      outputs = [
-        _dart_binary,
-      ]
+      sources = [ "$dart_sdk/bin/dart" ]
+      outputs = [ _dart_binary ]
       deps = dart_sdk_deps
     }
     _sdk_deps = [ ":$_copy_target_name" ]
@@ -113,9 +109,7 @@ template("dart_test") {
   action(_snapshot_target_name) {
     depfile = "${_snapshot}.d"
 
-    outputs = [
-      _snapshot,
-    ]
+    outputs = [ _snapshot ]
 
     script = _dart_binary
 
@@ -153,9 +147,7 @@ template("dart_test") {
 
     forward_variables_from(invoker, [ "environments" ])
 
-    deps = [
-      ":$_snapshot_target_name",
-    ]
+    deps = [ ":$_snapshot_target_name" ]
 
     if (defined(invoker.deps)) {
       deps += invoker.deps
@@ -169,12 +161,8 @@ template("dart_test") {
   action(_main_target_name) {
     script = "//build/dart/gen_dart_test_invocation.py"
 
-    inputs = [
-      _snapshot,
-    ]
-    outputs = [
-      _invocation,
-    ]
+    inputs = [ _snapshot ]
+    outputs = [ _invocation ]
 
     args = [
       "--wd",

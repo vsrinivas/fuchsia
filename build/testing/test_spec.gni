@@ -51,18 +51,17 @@ import("//build/testing/platforms.gni")
 #         default testing pipeline for special tests or environments.
 #
 template("test_spec") {
+  testonly = true
+
   assert(defined(invoker.name), "name must be defined.")
 
   assert(defined(invoker.path) || defined(invoker.command),
          "path or command must be defined.")
-  forward_variables_from(invoker,
-                         [
-                           "environments",
+  forward_variables_from(invoker, [ "environments" ])
 
-                           # Not all test-defining targets have testonly = true
-                           # (e.g., rust library targets with unit tests)
-                           "testonly",
-                         ])
+  # TODO(fxbug.dev/3288): Delete this as soon as flutter_test() (in topaz) is
+  # no longer setting testonly.
+  not_needed(invoker, [ "testonly" ])
 
   # Set default environments: QEMU for a fuchsia test, and VMs for linux and mac
   # tests.

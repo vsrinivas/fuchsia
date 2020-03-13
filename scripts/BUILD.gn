@@ -3,5 +3,6 @@
 # found in the LICENSE file.
 
 group("tests") {
+  testonly = true
   deps = [ "blobstats:tests" ]
 }

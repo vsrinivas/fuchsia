@@ -31,5 +31,6 @@ if (current_toolchain == host_toolchain) {
 }
 
 group("tests") {
+  testonly = true
   deps = [ ":blobstats_host_test($host_toolchain)" ]
 }

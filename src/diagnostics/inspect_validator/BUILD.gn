@@ -52,6 +52,7 @@ rustc_test("validator_bin_test") {
 }
 
 package("inspect_validator") {
+  testonly = true
   deps = [ ":validator_bin" ]
 
   tests = [
