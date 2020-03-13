@@ -13,6 +13,7 @@ rustc_library("fidl-fuchsia-update-ext") {
 
   deps = [
     "//sdk/fidl/fuchsia.update:fuchsia.update-rustc",
+    "//src/sys/pkg/lib/event-queue",
     "//third_party/rust_crates:proptest",
   ]
 }

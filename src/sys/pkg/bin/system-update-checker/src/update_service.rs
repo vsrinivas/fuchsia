@@ -9,7 +9,6 @@ use crate::update_manager::{
     CurrentChannelUpdater, RealUpdateApplier, RealUpdateChecker, TargetChannelUpdater,
     UpdateApplier, UpdateChecker, UpdateManager,
 };
-use crate::update_monitor::State;
 use anyhow::{format_err, Context as _, Error};
 use event_queue::{ClosedClient, Notify};
 use fidl::endpoints::ClientEnd;
@@ -17,6 +16,7 @@ use fidl_fuchsia_update::{
     CheckNotStartedReason, CheckOptions, ManagerCheckNowResponder, ManagerRequest,
     ManagerRequestStream, MonitorMarker,
 };
+use fidl_fuchsia_update_ext::State;
 use futures::{future::BoxFuture, prelude::*};
 use std::sync::Arc;
 
@@ -106,7 +106,7 @@ where
         let notifier = match monitor {
             Some(monitor)
                 if options.allow_attaching_to_existing_update_check == Some(true)
-                    || update_state == State(None) =>
+                    || update_state == None =>
             {
                 Some(RealStateNotifier {
                     proxy: monitor.into_proxy().context("CheckNow monitor into_proxy")?,
@@ -149,15 +149,10 @@ pub struct RealStateNotifier {
 
 impl Notify<State> for RealStateNotifier {
     fn notify(&self, state: State) -> BoxFuture<'static, Result<(), ClosedClient>> {
-        match state {
-            // TODO(fxb/47875) dont send None (since statenotifier will only send ext::State)
-            State(None) => futures::future::ready(Ok(())).boxed(),
-            State(Some(ext_state)) => self
-                .proxy
-                .on_state(&mut ext_state.into())
-                .map(|result| result.map_err(|_| ClosedClient))
-                .boxed(),
-        }
+        self.proxy
+            .on_state(&mut state.into())
+            .map(|result| result.map_err(|_| ClosedClient))
+            .boxed()
     }
 }
 
@@ -172,7 +167,9 @@ mod tests {
     use fidl_fuchsia_update::{
         Initiator, ManagerMarker, ManagerProxy, MonitorRequest, MonitorRequestStream,
     };
-    use fidl_fuchsia_update_ext::{self as ext, CheckOptionsBuilder};
+    use fidl_fuchsia_update_ext::{
+        CheckOptionsBuilder, InstallationErrorData, InstallingData, UpdateInfo,
+    };
     use fuchsia_async as fasync;
     use matches::assert_matches;
 
@@ -209,14 +206,12 @@ mod tests {
         (proxy, update_service_clone)
     }
 
-    async fn collect_all_on_state_events(
-        monitor: MonitorRequestStream,
-    ) -> Vec<fidl_fuchsia_update::State> {
+    async fn collect_all_on_state_events(monitor: MonitorRequestStream) -> Vec<State> {
         monitor
             .map(|r| {
                 let MonitorRequest::OnState { state, responder } = r.unwrap();
                 responder.send().unwrap();
-                state
+                state.into()
             })
             .collect()
             .await
@@ -225,13 +220,13 @@ mod tests {
     async fn next_n_on_state_events(
         mut request_stream: MonitorRequestStream,
         n: usize,
-    ) -> (MonitorRequestStream, Vec<fidl_fuchsia_update::State>) {
+    ) -> (MonitorRequestStream, Vec<State>) {
         let mut v = Vec::with_capacity(n);
         for _ in 0..n {
             let MonitorRequest::OnState { state, responder } =
                 request_stream.next().await.unwrap().unwrap();
             responder.send().unwrap();
-            v.push(state);
+            v.push(state.into());
         }
         (request_stream, v)
     }
@@ -248,7 +243,7 @@ mod tests {
         .0;
         let (client_end, request_stream) =
             fidl::endpoints::create_request_stream().expect("create_request_stream");
-        let expected_update_info = Some(ext::UpdateInfo {
+        let expected_update_info = Some(UpdateInfo {
             version_available: Some(LATEST_SYSTEM_IMAGE.to_string()),
             download_size: None,
         });
@@ -259,31 +254,30 @@ mod tests {
         assert_eq!(
             collect_all_on_state_events(request_stream).await,
             vec![
-                ext::State::CheckingForUpdates.into(),
-                ext::State::InstallingUpdate(ext::InstallingData {
+                State::CheckingForUpdates,
+                State::InstallingUpdate(InstallingData {
                     update: expected_update_info.clone(),
                     installation_progress: None,
-                })
-                .into(),
-                ext::State::InstallationError(ext::InstallationErrorData {
+                }),
+                State::InstallationError(InstallationErrorData {
                     update: expected_update_info,
                     installation_progress: None,
-                })
-                .into(),
+                }),
             ]
         );
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_multiple_clients_see_on_state_events() {
+        let (blocking_update_checker, unblocker) = BlockingUpdateChecker::new_checker_and_sender();
         let (proxy0, service) = spawn_update_service(
             FakeTargetChannelUpdater::new(),
             FakeCurrentChannelUpdater::new(),
-            FakeUpdateChecker::new_update_available(),
+            blocking_update_checker,
             FakeUpdateApplier::new_error(),
         )
         .await;
-        let expected_update_info = Some(ext::UpdateInfo {
+        let expected_update_info = Some(UpdateInfo {
             version_available: Some(LATEST_SYSTEM_IMAGE.to_string()),
             download_size: None,
         });
@@ -296,49 +290,51 @@ mod tests {
             fidl::endpoints::create_request_stream().expect("create_request_stream");
         let (client_end1, request_stream1) =
             fidl::endpoints::create_request_stream().expect("create_request_stream");
-        let options = ext::CheckOptionsBuilder::new()
+        let opt_builder = CheckOptionsBuilder::new()
             .initiator(Initiator::User)
-            .allow_attaching_to_existing_update_check(true)
-            .build();
+            .allow_attaching_to_existing_update_check(true);
 
+        // Add both monitor clients. We use a blocker to ensure we only start the update check when
+        // both Monitor clients are enqueued. This prevents the second client from getting an
+        // additional state event (since the event queue sends the last event when you add a client)
         assert_matches!(
-            proxy0.check_now(options.clone().into(), Some(client_end0)).await.unwrap(),
+            proxy0.check_now(opt_builder.clone().build(), Some(client_end0)).await.unwrap(),
             Ok(())
         );
-        assert_matches!(proxy1.check_now(options.into(), Some(client_end1)).await.unwrap(), Ok(()));
+        assert_matches!(
+            proxy1.check_now(opt_builder.build(), Some(client_end1)).await.unwrap(),
+            Ok(())
+        );
+        assert_matches!(unblocker.send(()), Ok(()));
 
         let events = next_n_on_state_events(request_stream0, 3).await.1;
         assert_eq!(
             events,
             vec![
-                ext::State::CheckingForUpdates.into(),
-                ext::State::InstallingUpdate(ext::InstallingData {
+                State::CheckingForUpdates,
+                State::InstallingUpdate(InstallingData {
                     update: expected_update_info.clone(),
                     installation_progress: None,
-                })
-                .into(),
-                ext::State::InstallationError(ext::InstallationErrorData {
+                }),
+                State::InstallationError(InstallationErrorData {
                     update: expected_update_info.clone(),
                     installation_progress: None,
-                })
-                .into(),
+                }),
             ]
         );
 
         assert_eq!(
             collect_all_on_state_events(request_stream1).await,
             vec![
-                ext::State::CheckingForUpdates.into(),
-                ext::State::InstallingUpdate(ext::InstallingData {
+                State::CheckingForUpdates,
+                State::InstallingUpdate(InstallingData {
                     update: expected_update_info.clone(),
                     installation_progress: None,
-                })
-                .into(),
-                ext::State::InstallationError(ext::InstallationErrorData {
+                }),
+                State::InstallationError(InstallationErrorData {
                     update: expected_update_info.clone(),
                     installation_progress: None,
-                })
-                .into(),
+                }),
             ]
         );
     }
@@ -354,7 +350,7 @@ mod tests {
         )
         .await
         .0;
-        let expected_update_info = Some(ext::UpdateInfo {
+        let expected_update_info = Some(UpdateInfo {
             version_available: Some(LATEST_SYSTEM_IMAGE.to_string()),
             download_size: None,
         });
@@ -362,21 +358,20 @@ mod tests {
             fidl::endpoints::create_request_stream().expect("create_request_stream");
         let (client_end1, request_stream1) =
             fidl::endpoints::create_request_stream().expect("create_request_stream");
-        let options = CheckOptionsBuilder::new()
+        let opt_builder = CheckOptionsBuilder::new()
             .initiator(Initiator::User)
-            .allow_attaching_to_existing_update_check(false)
-            .build();
+            .allow_attaching_to_existing_update_check(false);
 
         //Start a hang on InstallingUpdate
         assert_matches!(
-            proxy.check_now(options.clone().into(), Some(client_end0)).await.unwrap(),
+            proxy.check_now(opt_builder.clone().build(), Some(client_end0)).await.unwrap(),
             Ok(())
         );
 
         // When we do the next check, we should get an already in progress error since we're not
         // allowed to attach another client
         assert_eq!(
-            proxy.check_now(options.into(), Some(client_end1)).await.unwrap(),
+            proxy.check_now(opt_builder.build(), Some(client_end1)).await.unwrap(),
             Err(CheckNotStartedReason::AlreadyInProgress)
         );
 
@@ -385,17 +380,15 @@ mod tests {
         assert_eq!(
             collect_all_on_state_events(request_stream0).await,
             vec![
-                ext::State::CheckingForUpdates.into(),
-                ext::State::InstallingUpdate(ext::InstallingData {
+                State::CheckingForUpdates,
+                State::InstallingUpdate(InstallingData {
                     update: expected_update_info.clone(),
                     installation_progress: None,
-                })
-                .into(),
-                ext::State::InstallationError(ext::InstallationErrorData {
+                }),
+                State::InstallationError(InstallationErrorData {
                     update: expected_update_info,
                     installation_progress: None,
-                })
-                .into(),
+                }),
             ]
         );
         assert_eq!(collect_all_on_state_events(request_stream1).await, vec![]);
@@ -416,7 +409,7 @@ mod tests {
         // Default has no initiator
         let options = CheckOptionsBuilder::new().build();
 
-        let res = proxy.check_now(options.into(), Some(client_end)).await.unwrap();
+        let res = proxy.check_now(options, Some(client_end)).await.unwrap();
 
         assert_eq!(res, Err(CheckNotStartedReason::InvalidOptions));
         assert_eq!(collect_all_on_state_events(request_stream).await, vec![]);
@@ -438,21 +431,20 @@ mod tests {
             fidl::endpoints::create_request_stream().expect("create_request_stream");
         let (client_end1, request_stream1) =
             fidl::endpoints::create_request_stream().expect("create_request_stream");
-        let options = CheckOptionsBuilder::new()
+        let opt_builder = CheckOptionsBuilder::new()
             .initiator(Initiator::User)
-            .allow_attaching_to_existing_update_check(true)
-            .build();
-        let expected_update_info = Some(ext::UpdateInfo {
+            .allow_attaching_to_existing_update_check(true);
+        let expected_update_info = Some(UpdateInfo {
             version_available: Some(LATEST_SYSTEM_IMAGE.to_string()),
             download_size: None,
         });
         let expected_states = vec![
-            ext::State::CheckingForUpdates,
-            ext::State::InstallingUpdate(ext::InstallingData {
+            State::CheckingForUpdates,
+            State::InstallingUpdate(InstallingData {
                 update: expected_update_info.clone(),
                 installation_progress: None,
             }),
-            ext::State::InstallationError(ext::InstallationErrorData {
+            State::InstallationError(InstallationErrorData {
                 update: expected_update_info,
                 installation_progress: None,
             }),
@@ -460,31 +452,21 @@ mod tests {
 
         // Start a hang on InstallingUpdate
         assert_matches!(
-            proxy.check_now(options.clone().into(), Some(client_end0)).await.unwrap(),
+            proxy.check_now(opt_builder.clone().build(), Some(client_end0)).await.unwrap(),
             Ok(())
         );
 
         // When we do the next check, we should get an OK since we're allowed to attach to
         // an existing check
-        assert_matches!(proxy.check_now(options.into(), Some(client_end1)).await.unwrap(), Ok(()));
+        assert_matches!(
+            proxy.check_now(opt_builder.build(), Some(client_end1)).await.unwrap(),
+            Ok(())
+        );
 
         // When we resume, both clients should see the on state events
         assert_matches!(unblocker.send(()), Ok(()));
-        assert_eq!(
-            collect_all_on_state_events(request_stream0).await,
-            expected_states
-                .clone()
-                .into_iter()
-                .map(Into::into)
-                .collect::<Vec<fidl_fuchsia_update::State>>()
-        );
-        assert_eq!(
-            collect_all_on_state_events(request_stream1).await,
-            expected_states
-                .into_iter()
-                .map(Into::into)
-                .collect::<Vec<fidl_fuchsia_update::State>>()
-        );
+        assert_eq!(collect_all_on_state_events(request_stream0).await, expected_states.clone());
+        assert_eq!(collect_all_on_state_events(request_stream1).await, expected_states);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -498,7 +480,7 @@ mod tests {
             fake_update_applier.clone(),
         )
         .await;
-        let expected_update_info = Some(ext::UpdateInfo {
+        let expected_update_info = Some(UpdateInfo {
             version_available: Some(LATEST_SYSTEM_IMAGE.to_string()),
             download_size: None,
         });
@@ -507,18 +489,17 @@ mod tests {
             fidl::endpoints::create_request_stream().expect("create_request_stream");
         let (client_end1, request_stream1) =
             fidl::endpoints::create_request_stream().expect("create_request_stream");
-        let options = CheckOptionsBuilder::new()
+        let opt_builder = CheckOptionsBuilder::new()
             .initiator(Initiator::User)
-            .allow_attaching_to_existing_update_check(true)
-            .build();
+            .allow_attaching_to_existing_update_check(true);
 
         assert_matches!(
-            proxy0.check_now(options.clone().into(), Some(client_end0)).await.unwrap(),
+            proxy0.check_now(opt_builder.clone().build(), Some(client_end0)).await.unwrap(),
             Ok(())
         );
 
         let (_, events) = next_n_on_state_events(request_stream0, 1).await;
-        assert_eq!(events, vec![ext::State::CheckingForUpdates.into()]);
+        assert_eq!(events, vec![State::CheckingForUpdates]);
 
         drop(proxy0);
 
@@ -528,7 +509,10 @@ mod tests {
 
         // The first update check is still in progress and blocked, but we'll get an OK
         // since we allow_attaching_to_existing_update_check=true
-        assert_matches!(proxy1.check_now(options.into(), Some(client_end1)).await.unwrap(), Ok(()));
+        assert_matches!(
+            proxy1.check_now(opt_builder.build(), Some(client_end1)).await.unwrap(),
+            Ok(())
+        );
 
         // Once we unblock, the update should resume
         assert_matches!(unblocker.send(()), Ok(()));
@@ -536,17 +520,15 @@ mod tests {
             collect_all_on_state_events(request_stream1).await,
             vec![
                 // the second request stream gets this since the event queue sent the last event :)
-                ext::State::CheckingForUpdates.into(),
-                ext::State::InstallingUpdate(ext::InstallingData {
+                State::CheckingForUpdates,
+                State::InstallingUpdate(InstallingData {
                     update: expected_update_info.clone(),
                     installation_progress: None,
-                })
-                .into(),
-                ext::State::InstallationError(ext::InstallationErrorData {
+                }),
+                State::InstallationError(InstallationErrorData {
                     update: expected_update_info,
                     installation_progress: None,
-                })
-                .into(),
+                }),
             ]
         );
         assert_eq!(fake_update_applier.call_count(), 1);

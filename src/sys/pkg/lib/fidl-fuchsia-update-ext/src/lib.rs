@@ -12,6 +12,6 @@ pub use crate::types::{
         random_installation_progress, random_installing_data, random_update_info,
         random_version_available,
     },
-    CheckOptions, CheckOptionsBuilder, InstallationDeferredData, InstallationErrorData,
-    InstallationProgress, InstallingData, State, UpdateInfo,
+    CheckOptionsBuilder, InstallationDeferredData, InstallationErrorData, InstallationProgress,
+    InstallingData, State, UpdateInfo,
 };

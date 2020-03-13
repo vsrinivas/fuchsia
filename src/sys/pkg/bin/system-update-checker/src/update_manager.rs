@@ -7,12 +7,12 @@ use crate::channel::{CurrentChannelManager, TargetChannelManager};
 use crate::check::{check_for_system_update, SystemUpdateStatus};
 use crate::connect::ServiceConnect;
 use crate::last_update_storage::{LastUpdateStorage, LastUpdateStorageFile};
-use crate::update_monitor::{State, StateNotifier, UpdateMonitor};
+use crate::update_monitor::{StateNotifier, UpdateMonitor};
 use crate::update_service::RealStateNotifier;
 use anyhow::{Context as _, Error};
 use fidl_fuchsia_pkg::{PackageResolverMarker, PackageResolverProxyInterface};
 use fidl_fuchsia_update::CheckNotStartedReason;
-use fidl_fuchsia_update_ext as ext;
+use fidl_fuchsia_update_ext::{InstallationErrorData, InstallingData, State, UpdateInfo};
 use fuchsia_async as fasync;
 use fuchsia_component::client::connect_to_service;
 use fuchsia_inspect as finspect;
@@ -153,11 +153,11 @@ where
         let mut monitor = self.monitor.lock().await;
 
         match monitor.update_state() {
-            State(None) => {
+            None => {
                 if let Some(cb) = callback {
                     monitor.add_temporary_callback(cb).await;
                 }
-                monitor.advance_update_state(ext::State::CheckingForUpdates).await;
+                monitor.advance_update_state(Some(State::CheckingForUpdates)).await;
                 drop(monitor);
                 let updater = Arc::clone(&self.updater);
                 let monitor = Arc::clone(&self.monitor);
@@ -185,7 +185,7 @@ where
         }
     }
 
-    pub async fn get_state(&self) -> State {
+    pub async fn get_state(&self) -> Option<State> {
         let monitor = self.monitor.lock().await;
         monitor.update_state()
     }
@@ -299,13 +299,13 @@ where
         }
         let mut monitor = monitor.lock().await;
         match monitor.update_state() {
-            State(Some(ext::State::WaitingForReboot(_))) => fx_log_err!(
+            Some(State::WaitingForReboot(_)) => fx_log_err!(
                 "system-update-checker is in the WaitingForReboot state. \
                  This should not have happened, because the sytem-updater should \
                  have rebooted the device before it returned."
             ),
             _ => {
-                monitor.advance_update_state(State(None)).await;
+                monitor.advance_update_state(None).await;
             }
         }
     }
@@ -332,7 +332,11 @@ where
             .context("check_for_system_update failed")
         {
             Err(e) => {
-                monitor.lock().await.advance_update_state(ext::State::ErrorCheckingForUpdate).await;
+                monitor
+                    .lock()
+                    .await
+                    .advance_update_state(Some(State::ErrorCheckingForUpdate))
+                    .await;
                 return Err(e);
             }
             Ok(SystemUpdateStatus::UpToDate { system_image, update_package }) => {
@@ -345,7 +349,7 @@ where
                 }
 
                 self.current_channel_updater.update().await;
-                monitor.lock().await.advance_update_state(ext::State::NoUpdateAvailable).await;
+                monitor.lock().await.advance_update_state(Some(State::NoUpdateAvailable)).await;
 
                 return Ok(());
             }
@@ -360,13 +364,13 @@ where
                     let mut monitor = monitor.lock().await;
                     monitor.set_version_available(latest_system_image.to_string());
                     monitor
-                        .advance_update_state(ext::State::InstallingUpdate(ext::InstallingData {
-                            update: Some(ext::UpdateInfo {
+                        .advance_update_state(Some(State::InstallingUpdate(InstallingData {
+                            update: Some(UpdateInfo {
                                 version_available: Some(latest_system_image.to_string()),
                                 download_size: None,
                             }),
                             installation_progress: None,
-                        }))
+                        })))
                         .await;
                 }
 
@@ -381,15 +385,15 @@ where
                     monitor
                         .lock()
                         .await
-                        .advance_update_state(ext::State::InstallationError(
-                            ext::InstallationErrorData {
-                                update: Some(ext::UpdateInfo {
+                        .advance_update_state(Some(State::InstallationError(
+                            InstallationErrorData {
+                                update: Some(UpdateInfo {
                                     version_available: Some(latest_system_image.to_string()),
                                     download_size: None,
                                 }),
                                 installation_progress: None,
                             },
-                        ))
+                        )))
                         .await;
                     return Err(e);
                 };
@@ -399,13 +403,13 @@ where
                 monitor
                     .lock()
                     .await
-                    .advance_update_state(ext::State::WaitingForReboot(ext::InstallingData {
-                        update: Some(ext::UpdateInfo {
+                    .advance_update_state(Some(State::WaitingForReboot(InstallingData {
+                        update: Some(UpdateInfo {
                             version_available: Some(latest_system_image.to_string()),
                             download_size: None,
                         }),
                         installation_progress: None,
-                    }))
+                    })))
                     .await;
             }
         }
@@ -794,13 +798,13 @@ pub(crate) mod tests {
 
         // Wait for first update attempt to complete, to guarantee that the second
         // try_start_update() call starts a new attempt (and generates more callback calls).
-        wait_until_update_state_n(&mut receiver0, State(None), 1).await;
+        wait_until_update_state_n(&mut receiver0, State::NoUpdateAvailable, 1).await;
 
         manager.try_start_update(Initiator::Manual, Some(callback1), None).await.unwrap();
 
         // Wait for the second update attempt to complete, to guarantee the callbacks
         // have been called with more states.
-        wait_until_update_state_n(&mut receiver1, State(None), 1).await;
+        wait_until_update_state_n(&mut receiver1, State::NoUpdateAvailable, 1).await;
 
         // The first callback should have been dropped after the first attempt completed,
         // so it should still be empty.
@@ -823,11 +827,7 @@ pub(crate) mod tests {
 
         assert_eq!(
             receiver.collect::<Vec<State>>().await,
-            vec![
-                ext::State::CheckingForUpdates.into(),
-                ext::State::NoUpdateAvailable.into(),
-                State(None)
-            ]
+            vec![State::CheckingForUpdates, State::NoUpdateAvailable,]
         );
     }
 
@@ -842,7 +842,7 @@ pub(crate) mod tests {
         )
         .await;
         let (callback, receiver) = FakeStateNotifier::new_callback_and_receiver();
-        let expected_update_info = Some(ext::UpdateInfo {
+        let expected_update_info = Some(UpdateInfo {
             version_available: Some(LATEST_SYSTEM_IMAGE.to_string()),
             download_size: None,
         });
@@ -852,18 +852,15 @@ pub(crate) mod tests {
         assert_eq!(
             receiver.collect::<Vec<State>>().await,
             vec![
-                ext::State::CheckingForUpdates.into(),
-                ext::State::InstallingUpdate(ext::InstallingData {
+                State::CheckingForUpdates,
+                State::InstallingUpdate(InstallingData {
                     update: expected_update_info.clone(),
                     installation_progress: None,
-                })
-                .into(),
-                ext::State::InstallationError(ext::InstallationErrorData {
+                }),
+                State::InstallationError(InstallationErrorData {
                     update: expected_update_info,
                     installation_progress: None,
-                })
-                .into(),
-                State(None),
+                }),
             ]
         );
     }
@@ -879,8 +876,8 @@ pub(crate) mod tests {
         )
         .await;
         let (callback, mut receiver) = FakeStateNotifier::new_callback_and_receiver();
-        let expected_installing_data = ext::InstallingData {
-            update: Some(ext::UpdateInfo {
+        let expected_installing_data = InstallingData {
+            update: Some(UpdateInfo {
                 version_available: Some(LATEST_SYSTEM_IMAGE.to_string()),
                 download_size: None,
             }),
@@ -892,9 +889,9 @@ pub(crate) mod tests {
         assert_eq!(
             next_n_states(&mut receiver, 3).await,
             vec![
-                ext::State::CheckingForUpdates.into(),
-                ext::State::InstallingUpdate(expected_installing_data.clone()).into(),
-                ext::State::WaitingForReboot(expected_installing_data).into(),
+                State::CheckingForUpdates,
+                State::InstallingUpdate(expected_installing_data.clone()),
+                State::WaitingForReboot(expected_installing_data),
             ]
         );
     }
@@ -1106,7 +1103,7 @@ pub(crate) mod tests {
 
         manager.try_start_update(Initiator::Manual, None, None).await.unwrap();
 
-        assert_eq!(manager.get_state().await, ext::State::CheckingForUpdates.into());
+        assert_eq!(manager.get_state().await, Some(State::CheckingForUpdates));
     }
 
     #[fasync::run_singlethreaded(test)]

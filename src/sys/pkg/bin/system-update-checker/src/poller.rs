@@ -61,7 +61,7 @@ mod tests {
         FakeCurrentChannelUpdater, FakeLastUpdateStorage, FakeTargetChannelUpdater,
         FakeUpdateChecker, StateChangeCollector, UnreachableNotifier, UnreachableUpdateApplier,
     };
-    use fidl_fuchsia_update_ext as ext;
+    use fidl_fuchsia_update_ext::State;
     use fuchsia_async::DurationExt;
     use fuchsia_zircon::DurationNum;
     use futures::task::Poll;
@@ -134,11 +134,7 @@ mod tests {
         assert_eq!(checker.call_count(), 1);
         assert_eq!(
             callback.take_states(),
-            vec![
-                Some(ext::State::CheckingForUpdates).into(),
-                Some(ext::State::NoUpdateAvailable).into(),
-                None.into()
-            ]
+            vec![State::CheckingForUpdates, State::NoUpdateAvailable,]
         );
 
         // Need to re add temp callback since it gets removed after prev update
@@ -153,12 +149,7 @@ mod tests {
         assert_eq!(checker.call_count(), 2);
         assert_eq!(
             callback.take_states(),
-            vec![
-                None.into(),
-                Some(ext::State::CheckingForUpdates).into(),
-                Some(ext::State::NoUpdateAvailable).into(),
-                None.into()
-            ]
+            vec![State::CheckingForUpdates, State::NoUpdateAvailable,]
         );
     }
 
@@ -205,11 +196,7 @@ mod tests {
         assert_eq!(checker.call_count(), 1);
         assert_eq!(
             callback.take_states(),
-            vec![
-                Some(ext::State::CheckingForUpdates).into(),
-                Some(ext::State::NoUpdateAvailable).into(),
-                None.into(),
-            ]
+            vec![State::CheckingForUpdates, State::NoUpdateAvailable,]
         );
     }
 }

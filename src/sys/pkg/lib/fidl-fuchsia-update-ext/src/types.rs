@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_fuchsia_update as fidl;
+use {event_queue::Event, fidl_fuchsia_update as fidl};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum State {
@@ -26,6 +26,21 @@ impl State {
             | State::InstallingUpdate(_)
             | State::WaitingForReboot(_) => false,
         }
+    }
+}
+
+impl Event for State {
+    fn can_merge(&self, other: &State) -> bool {
+        if self == other {
+            return true;
+        }
+        // Merge states that have the same update info but different installation progress
+        if let State::InstallingUpdate(InstallingData { update: update0, .. }) = self {
+            if let State::InstallingUpdate(InstallingData { update: update1, .. }) = other {
+                return update0 == update1;
+            }
+        }
+        false
     }
 }
 
@@ -160,30 +175,6 @@ impl From<fidl::UpdateInfo> for UpdateInfo {
     }
 }
 
-// TODO(fxb/47875) remove this, instead make check options builder clone
-#[derive(Clone, Debug, PartialEq)]
-pub struct CheckOptions {
-    pub initiator: Option<fidl::Initiator>,
-    pub allow_attaching_to_existing_update_check: Option<bool>,
-}
-impl Into<fidl::CheckOptions> for CheckOptions {
-    fn into(self) -> fidl::CheckOptions {
-        fidl::CheckOptions {
-            initiator: self.initiator,
-            allow_attaching_to_existing_update_check: self.allow_attaching_to_existing_update_check,
-        }
-    }
-}
-impl From<fidl::CheckOptions> for CheckOptions {
-    fn from(options: fidl::CheckOptions) -> Self {
-        Self {
-            initiator: options.initiator,
-            allow_attaching_to_existing_update_check: options
-                .allow_attaching_to_existing_update_check,
-        }
-    }
-}
-
 #[derive(Clone, Debug, PartialEq)]
 pub struct CheckOptionsBuilder {
     initiator: Option<fidl::Initiator>,
@@ -201,8 +192,8 @@ impl CheckOptionsBuilder {
         self.allow_attaching_to_existing_update_check = Some(allow);
         self
     }
-    pub fn build(self) -> CheckOptions {
-        CheckOptions {
+    pub fn build(self) -> fidl::CheckOptions {
+        fidl::CheckOptions {
             initiator: self.initiator,
             allow_attaching_to_existing_update_check: self.allow_attaching_to_existing_update_check,
         }
@@ -215,63 +206,57 @@ pub mod proptest_util {
 
     prop_compose! {
         pub fn random_installation_error_data()(
-            update_info in random_update_info(),
+            update in random_update_info(),
             installation_progress in random_installation_progress()
-        )(
-            update_info_opt in prop_oneof![Just(Some(update_info)),Just(None)],
-            installation_progress_opt in prop_oneof![Just(Some(installation_progress)),Just(None)],
         ) -> InstallationErrorData {
                 InstallationErrorData {
-                    update: update_info_opt.map(|ext|ext.into()),
-                    installation_progress: installation_progress_opt.map(|ext|ext.into()),
+                    update,
+                    installation_progress
                 }
         }
     }
 
     prop_compose! {
         pub fn random_installing_data() (
-            update_info in random_update_info(),
-            progress in random_installation_progress()
-        )(
-            update in prop_oneof![Just(Some(update_info)),Just(None)],
-            installation_progress in prop_oneof![Just(Some(progress)),Just(None)]
-        ) -> InstallingData {
+            update in random_update_info(),
+            installation_progress in random_installation_progress()
+        )-> InstallingData {
             InstallingData { update, installation_progress  }
         }
     }
 
     prop_compose! {
         pub fn random_installation_deferred_data() (
-            update_info in random_update_info()
-        )(
-            update in prop_oneof![Just(Some(update_info)),Just(None)]
-        ) -> InstallationDeferredData {
+            update in random_update_info()
+        )-> InstallationDeferredData {
             InstallationDeferredData { update }
         }
     }
 
     prop_compose! {
         pub fn random_installation_progress() (
-            fraction_completed in prop_oneof![prop::num::f32::NORMAL.prop_map(Some),Just(None)],
-        ) -> InstallationProgress {
-            InstallationProgress { fraction_completed }
+            fraction_completed in proptest::option::of(prop::num::f32::NORMAL),
+        )(
+            progress in proptest::option::of(Just(InstallationProgress { fraction_completed })),
+        ) -> Option<InstallationProgress> {
+            progress
         }
     }
 
     prop_compose! {
         pub fn random_update_info() (
             version_available in random_version_available(),
-            download_size in prop_oneof![prop::num::u64::ANY.prop_map(Some), Just(None)]
-        ) -> UpdateInfo {
-            UpdateInfo { version_available, download_size }
+            download_size in proptest::option::of(prop::num::u64::ANY)
+        )(
+            update_info in proptest::option::of(Just(UpdateInfo { version_available, download_size }))
+        ) -> Option<UpdateInfo> {
+            update_info
         }
     }
 
     prop_compose! {
         pub fn random_version_available()(
-            random_version in "[0-9A-Z]{10,20}"
-        )(
-            version_available in prop_oneof![ Just(Some(random_version.to_string())), Just(None) ]
+            version_available in proptest::option::of(Just("[0-9A-Z]{10,20}".to_string()))
         ) -> Option<String> {
             version_available
         }
@@ -282,6 +267,7 @@ pub mod proptest_util {
 mod tests {
     use super::*;
     use proptest::prelude::*;
+    use proptest_util::*;
 
     prop_compose! {
         fn random_update_state()(
@@ -304,36 +290,35 @@ mod tests {
         }
     }
 
-    prop_compose! {
-        pub fn random_check_options()(
-          initiator in prop_oneof![Just(fidl::Initiator::User), Just(fidl::Initiator::Service)],
-          allow_attaching_to_existing_update_check in prop::bool::ANY,
-        )
-        (
-          initiator in prop_oneof![Just(Some(initiator)), Just(None)],
-          allow_attaching_to_existing_update_check in prop_oneof![Just(Some(allow_attaching_to_existing_update_check)), Just(None)],
-        ) -> CheckOptions
-        {
-          CheckOptions {initiator, allow_attaching_to_existing_update_check }
-        }
-    }
-
     proptest! {
+        // states with the same update info but different progress should merge
+        #[test]
+        fn test_can_merge(
+            update_info in random_update_info(),
+            progress0 in random_installation_progress(),
+            progress1 in random_installation_progress(),
+        ) {
+            let event0 = State::InstallingUpdate(
+                InstallingData {
+                    update: update_info.clone(),
+                    installation_progress: progress0,
+                }
+            );
+            let event1 = State::InstallingUpdate(
+                InstallingData {
+                    update: update_info,
+                    installation_progress: progress1,
+                }
+            );
+            prop_assert!(event0.can_merge(&event1));
+        }
+
         #[test]
         fn test_state_roundtrips(state in random_update_state()) {
             let state0: State = state.clone();
             let fidl_intermediate: fidl::State = state.into();
             let state1: State = fidl_intermediate.into();
             prop_assert_eq!(state0, state1);
-        }
-
-        // TODO(fxb/47875) remove this
-        #[test]
-        fn test_check_options_round_trip(options in random_check_options()) {
-            let options0: CheckOptions = options.clone();
-            let fidl_intermediate: fidl::CheckOptions = options.into();
-            let options1: CheckOptions = fidl_intermediate.into();
-            prop_assert_eq!(options0, options1);
         }
     }
 }

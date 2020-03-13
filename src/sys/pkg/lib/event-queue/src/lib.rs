@@ -226,6 +226,7 @@ where
                 i += 1;
             }
         }
+        self.last_event = None;
     }
 
     fn queue_event(&mut self, event: E) {
@@ -446,7 +447,7 @@ mod tests {
         handle.clear().await.unwrap();
         let mut stream2 = add_client(&mut handle).await;
         handle.queue_event("event3".into()).await.unwrap();
-        assert_events(&mut stream2, &["event2", "event3"]).await;
+        assert_events(&mut stream2, &["event3"]).await;
         assert_events(&mut stream1, &["event1", "event2"]).await;
         // No event3 because the event queue was cleared.
         assert_matches!(stream1.next().await, None);
