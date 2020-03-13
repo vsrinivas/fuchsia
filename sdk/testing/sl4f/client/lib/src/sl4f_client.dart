@@ -8,6 +8,7 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:core';
 import 'dart:io';
 
 import 'package:http/http.dart' as http;
@@ -177,18 +178,22 @@ class Sl4f {
   /// Restarts the device under test.
   ///
   /// Throws an Sl4fException if it fails to reboot the device or if all the
-  /// attempts at restarting SL4F fail.
-  Future<void> reboot() async {
+  /// attempts at restarting SL4F fail.  Returns a duration showing how long
+  /// it took to issue a command until a reboot was detected.
+  Future<Duration> reboot() async {
     _log.info('Initiating reboot sequence.');
     // Kill SL4F first, we'll use it to try to guess when the reboot is done.
     await stopServer();
     // Issue a reboot command and wait.
     // TODO(DNO-621): trap errors
+    final Stopwatch rebootStopwatch = Stopwatch()..start();
     await ssh.run('dm reboot');
     await Future.delayed(Duration(seconds: 20));
 
     // Try to restart SL4F
-    return startServer();
+    await startServer();
+    rebootStopwatch.stop();
+    return rebootStopwatch.elapsed;
   }
 
   /// Dumps files with useful device diagnostics.

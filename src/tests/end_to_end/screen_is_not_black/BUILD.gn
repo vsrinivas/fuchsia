@@ -16,6 +16,8 @@ dart_test("screen_is_not_black_test") {
     "//third_party/dart-pkg/pub/test",
   ]
 
+  non_dart_deps = [ ":runtime_deps" ]
+
   environments = [
     # Runs on "main" builders (try and ci) in NUC environments.
     nuc_env,
@@ -37,6 +39,20 @@ dart_test("screen_is_not_black_test") {
       tags = [ "e2e-fyi" ]
     },
   ]
+}
+
+copy("runtime_deps") {
+  _data_dir = "$target_gen_dir/runtime_deps"
+
+  sources = [ "$root_out_dir/catapult_converter" ]
+
+  outputs = [ "$_data_dir/{{source_file_part}}" ]
+
+  metadata = {
+    test_runtime_deps = [ "$_data_dir/catapult_converter" ]
+  }
+
+  deps = [ "//garnet/bin/catapult_converter:converter_bin" ]
 }
 
 group("test") {
