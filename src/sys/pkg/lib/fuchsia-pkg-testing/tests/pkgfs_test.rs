@@ -1380,8 +1380,8 @@ async fn test_pkgfs_packages_dynamic_packages_allowlist_succeeds() {
 
     // We should be able to see our package in the /packages directory
     assert_eq!(
-        ls_simple(d.list_dir("packages").expect("list dir")).expect("list dir contents"),
-        ["system_image", "example"]
+        sorted(ls_simple(d.list_dir("packages").expect("list dir")).expect("list dir contents")),
+        ["example", "system_image"]
     );
 
     drop(d);
@@ -1427,7 +1427,8 @@ async fn test_pkgfs_packages_dynamic_packages_allowlist_fails() {
     // Test the 'Read' path for /packages - listing
     // We should *not* be able to see our package in the /packages directory
     assert_eq!(
-        ls_simple(d.list_dir("packages").expect("list dir")).expect("list dir contents"),
+        // This doesn't have to be sorted, but leaving it as sorted so anyone who modifies this doesn't trip over the possible bug.
+        sorted(ls_simple(d.list_dir("packages").expect("list dir")).expect("list dir contents")),
         ["system_image"] // We should not see the 'example' package, since it's a dynamic package that's not on the allowlist.
     );
 
@@ -1476,8 +1477,8 @@ async fn test_pkgfs_packages_dynamic_packages_allowlist_enforcement_flag() {
 
     // We should be able to see our package in the /packages directory
     assert_eq!(
-        ls_simple(d.list_dir("packages").expect("list dir")).expect("list dir contents"),
-        ["system_image", "example"]
+        sorted(ls_simple(d.list_dir("packages").expect("list dir")).expect("list dir contents")),
+        ["example", "system_image"]
     );
 
     pkgfs.stop().await.expect("shutting down pkgfs");
