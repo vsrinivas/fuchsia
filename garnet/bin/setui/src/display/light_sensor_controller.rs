@@ -27,7 +27,7 @@ const SCAN_DURATION_MS: i64 = 1000;
 pub fn spawn_light_sensor_controller<T: DeviceStorageFactory + Send + Sync + 'static>(
     context: &Context<T>,
 ) -> SettingHandler {
-    let service_context_handle = context.service_context_handle.clone();
+    let service_context_handle = context.environment.service_context_handle.clone();
     let (light_sensor_handler_tx, light_sensor_handler_rx) = unbounded::<Command>();
 
     let notifier_lock = Arc::<RwLock<Option<Notifier>>>::new(RwLock::new(None));

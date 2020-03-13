@@ -40,7 +40,7 @@ impl DeviceStorageCompatible for AccessibilityInfo {
 pub fn spawn_accessibility_controller<T: DeviceStorageFactory + Send + Sync + 'static>(
     context: &Context<T>,
 ) -> SettingHandler {
-    let storage_factory_handle = context.storage_factory_handle.clone();
+    let storage_factory_handle = context.environment.storage_factory_handle.clone();
     let (accessibility_handler_tx, mut accessibility_handler_rx) =
         futures::channel::mpsc::unbounded::<Command>();
 

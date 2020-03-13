@@ -28,7 +28,7 @@ impl DeviceStorageCompatible for DoNotDisturbInfo {
 pub fn spawn_do_not_disturb_controller<T: DeviceStorageFactory + Send + Sync + 'static>(
     context: &Context<T>,
 ) -> SettingHandler {
-    let storage_handle = context.storage_factory_handle.clone();
+    let storage_handle = context.environment.storage_factory_handle.clone();
     let (do_not_disturb_handler_tx, mut do_not_disturb_handler_rx) =
         futures::channel::mpsc::unbounded::<Command>();
 

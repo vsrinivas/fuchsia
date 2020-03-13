@@ -34,24 +34,44 @@ pub trait SettingHandlerFactory {
     fn generate(&mut self, setting_type: SettingType) -> Option<SettingHandler>;
 }
 
-/// Context captures all details necessary for a handler to execute in a given
-/// settings service environment.
-pub struct Context<T: DeviceStorageFactory> {
+pub struct Environment<T: DeviceStorageFactory> {
     pub settings: HashSet<SettingType>,
     pub service_context_handle: ServiceContextHandle,
     pub storage_factory_handle: Arc<Mutex<T>>,
 }
 
-impl<T: DeviceStorageFactory> Context<T> {
+impl<T: DeviceStorageFactory> Clone for Environment<T> {
+    fn clone(&self) -> Environment<T> {
+        Environment::new(
+            self.settings.clone(),
+            self.service_context_handle.clone(),
+            self.storage_factory_handle.clone(),
+        )
+    }
+}
+
+impl<T: DeviceStorageFactory> Environment<T> {
     pub fn new(
         settings: HashSet<SettingType>,
         service_context_handle: ServiceContextHandle,
         storage_factory_handle: Arc<Mutex<T>>,
-    ) -> Context<T> {
-        return Context {
+    ) -> Environment<T> {
+        return Environment {
             settings: settings,
             service_context_handle: service_context_handle,
             storage_factory_handle: storage_factory_handle,
         };
+    }
+}
+
+/// Context captures all details necessary for a handler to execute in a given
+/// settings service environment.
+pub struct Context<T: DeviceStorageFactory> {
+    pub environment: Environment<T>,
+}
+
+impl<T: DeviceStorageFactory> Context<T> {
+    pub fn new(environment: Environment<T>) -> Context<T> {
+        return Context { environment: environment.clone() };
     }
 }

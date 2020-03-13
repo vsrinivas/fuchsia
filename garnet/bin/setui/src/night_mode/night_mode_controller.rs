@@ -41,7 +41,7 @@ impl NightModeController {
     pub fn spawn<T: DeviceStorageFactory + Send + Sync + 'static>(
         context: &Context<T>,
     ) -> SettingHandler {
-        let storage_handle = context.storage_factory_handle.clone();
+        let storage_handle = context.environment.storage_factory_handle.clone();
         let (ctrl_tx, mut ctrl_rx) = futures::channel::mpsc::unbounded::<Command>();
 
         fasync::spawn(

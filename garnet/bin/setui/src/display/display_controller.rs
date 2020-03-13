@@ -28,8 +28,8 @@ impl DeviceStorageCompatible for DisplayInfo {
 pub fn spawn_display_controller<T: DeviceStorageFactory + Send + Sync + 'static>(
     context: &Context<T>,
 ) -> SettingHandler {
-    let storage_handle = context.storage_factory_handle.clone();
-    let service_context_handle = context.service_context_handle.clone();
+    let storage_handle = context.environment.storage_factory_handle.clone();
+    let service_context_handle = context.environment.service_context_handle.clone();
     let (display_handler_tx, mut display_handler_rx) =
         futures::channel::mpsc::unbounded::<Command>();
 

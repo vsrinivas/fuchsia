@@ -51,8 +51,8 @@ const VOLUME_CHANGED_FILE_PATH: &str = "volume-changed.wav";
 pub fn spawn_audio_controller<T: DeviceStorageFactory + Send + Sync + 'static>(
     context: &Context<T>,
 ) -> SettingHandler {
-    let service_context_handle = context.service_context_handle.clone();
-    let storage_factory_handle = context.storage_factory_handle.clone();
+    let service_context_handle = context.environment.service_context_handle.clone();
+    let storage_factory_handle = context.environment.storage_factory_handle.clone();
     let (audio_handler_tx, mut audio_handler_rx) = futures::channel::mpsc::unbounded::<Command>();
 
     let default_audio_settings = default_audio_info();

@@ -25,7 +25,7 @@ async fn reboot(service_context_handle: ServiceContextHandle) {
 pub fn spawn_power_controller<T: DeviceStorageFactory + Send + Sync + 'static>(
     context: &Context<T>,
 ) -> SettingHandler {
-    let service_context_handle = context.service_context_handle.clone();
+    let service_context_handle = context.environment.service_context_handle.clone();
     let (system_handler_tx, mut system_handler_rx) = futures::channel::mpsc::unbounded::<Command>();
 
     fasync::spawn(async move {

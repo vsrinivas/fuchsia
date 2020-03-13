@@ -23,7 +23,7 @@ impl DeviceStorageCompatible for SystemInfo {
 pub fn spawn_system_controller<T: DeviceStorageFactory + Send + Sync + 'static>(
     context: &Context<T>,
 ) -> SettingHandler {
-    let storage_handle = context.storage_factory_handle.clone();
+    let storage_handle = context.environment.storage_factory_handle.clone();
     let (system_handler_tx, mut system_handler_rx) = futures::channel::mpsc::unbounded::<Command>();
 
     let notifier_lock = Arc::<RwLock<Option<Notifier>>>::new(RwLock::new(None));

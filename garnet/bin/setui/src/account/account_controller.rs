@@ -46,7 +46,7 @@ async fn schedule_clear_accounts(
 pub fn spawn_account_controller<T: DeviceStorageFactory + Send + Sync + 'static>(
     context: &Context<T>,
 ) -> SettingHandler {
-    let service_context_handle = context.service_context_handle.clone();
+    let service_context_handle = context.environment.service_context_handle.clone();
 
     let (account_handler_tx, mut account_handler_rx) =
         futures::channel::mpsc::unbounded::<Command>();
