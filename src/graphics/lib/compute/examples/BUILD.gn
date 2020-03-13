@@ -138,8 +138,35 @@ graphics_compute_spinel_demo("svg-demo") {
 }
 
 #
+# Demo programs that display an input SVG file in a ring.
+#
+source_set("svg_scene_demo_image") {
+  sources = [
+    "svg_scene_demo_image.cc",
+    "svg_scene_demo_image.h",
+  ]
+  deps = [
+    ":common",
+    "${graphics_compute_dir}/spinel/ext/color",
+    "${graphics_compute_dir}/spinel/ext/transform_stack",
+    "${graphics_compute_dir}/tests/common/svg",
+  ]
+}
+
+graphics_compute_spinel_demo("ring-demo") {
+  sources = [ "main_svg_ring_demo.cc" ]
+  deps = [
+    ":svg_scene_demo_image",
+    "${graphics_compute_dir}/tests/common/svg",
+  ]
+}
+
+#
 #  All examples in this group.
 #
 group("examples") {
-  deps = [ ":svg-demo" ]
+  deps = [
+    ":ring-demo",
+    ":svg-demo",
+  ]
 }
