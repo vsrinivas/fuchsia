@@ -1,14 +1,14 @@
 # Updates to Security policy should be reviewed by one of the owners below.
 set noparent
 
-jln@google.com
-dkrahn@google.com
+aarongreen@google.com
 ampearce@google.com
 benwright@google.com
 bryanhenry@google.com
-zarvox@google.com
+dkrahn@google.com
+jln@google.com
 jseibert@google.com
-aarongreen@google.com
+zarvox@google.com
 
 per-file package_resolver_allowlist_* = file: /src/sys/pkg/OWNERS
 per-file package_cache_allowlist_* = file: /src/sys/pkg/OWNERS
