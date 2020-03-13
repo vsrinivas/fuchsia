@@ -9,6 +9,8 @@
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 
+#include <cstdint>
+
 #include "src/lib/fxl/macros.h"
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_listener.h"
 #include "src/ui/a11y/lib/util/util.h"
@@ -53,6 +55,9 @@ class MockSemanticProvider {
   // Returns receive_action_ with the given action. This will be used to track if
   // OnAccessibilityActionRequested() is called with correct action.
   fuchsia::accessibility::semantics::Action GetRequestedAction() const;
+
+  // Returns node_id on which action is called.
+  uint32_t GetRequestedActionNodeId() const;
 
   // Function for sending signal to the view ref peer.
   void SendEventPairSignal();

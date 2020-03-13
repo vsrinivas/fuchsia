@@ -45,17 +45,21 @@ class A11yFocusManager : public AccessibilityFocusChainListener {
   // |focus_chain_requester| and |registry| must outlive this object.
   explicit A11yFocusManager(AccessibilityFocusChainRequester* focus_chain_requester,
                             AccessibilityFocusChainRegistry* registry);
-  ~A11yFocusManager();
+  virtual ~A11yFocusManager();
 
   // Returns the current a11y focus if it exists.
-  std::optional<A11yFocusInfo> GetA11yFocus();
+  virtual std::optional<A11yFocusInfo> GetA11yFocus();
 
   // Sets the a11y focus to a different node. If the current focused view is different than the one
   // in this request, a focus Chain is first performed to change the focus to the other view.
   // |callback| is invoked when this operation is done, indicating if the request was granted. The
   // request can fail if the View is not providing semantics or if the Focus Chain request was
   // denied.
-  void SetA11yFocus(zx_koid_t koid, uint32_t node_id, SetA11yFocusCallback callback);
+  virtual void SetA11yFocus(zx_koid_t koid, uint32_t node_id, SetA11yFocusCallback callback);
+
+ protected:
+  // For mocks only.
+  A11yFocusManager();
 
  private:
   // |AccessibilityFocusChainListener|

@@ -64,8 +64,8 @@ void ScreenReader::InitializeServicesAndAction() {
   // Initialize Screen reader supported "Actions".
   actions_.insert(std::make_pair("explore_action",
                                  std::make_unique<a11y::ExploreAction>(action_context_.get())));
-  actions_.insert(std::make_pair("default_action",
-                                 std::make_unique<a11y::DefaultAction>(action_context_.get())));
+  actions_.insert(std::make_pair("default_action", std::make_unique<a11y::DefaultAction>(
+                                                       action_context_.get(), context_.get())));
 }
 
 bool ScreenReader::ExecuteAction(const std::string& action_name,

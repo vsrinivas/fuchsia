@@ -13,6 +13,7 @@
 #include "src/ui/a11y/lib/gesture_manager/gesture_manager.h"
 #include "src/ui/a11y/lib/gesture_manager/recognizers/one_finger_drag_recognizer.h"
 #include "src/ui/a11y/lib/gesture_manager/recognizers/one_finger_n_tap_recognizer.h"
+#include "src/ui/a11y/lib/screen_reader/focus/tests/mocks/mock_a11y_focus_manager.h"
 #include "src/ui/a11y/lib/screen_reader/tests/mocks/mock_tts_engine.h"
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_provider.h"
 #include "src/ui/a11y/lib/testing/input.h"
@@ -38,8 +39,8 @@ class ScreenReaderTest : public gtest::TestLoopFixture {
       : tts_manager_(context_provider_.context()),
         view_manager_(std::make_unique<a11y::SemanticTreeServiceFactory>(),
                       context_provider_.context()->outgoing()->debug_dir()),
-        a11y_focus_manager_(std::make_unique<a11y::A11yFocusManager>(&mock_focus_chain_requester_,
-                                                                     &mock_focus_chain_registry_)),
+        a11y_focus_manager_(std::make_unique<MockA11yFocusManager>()),
+        a11y_focus_manager_ptr_(a11y_focus_manager_.get()),
         context_(std::make_unique<a11y::ScreenReaderContext>(std::move(a11y_focus_manager_))),
         screen_reader_(std::move(context_), &view_manager_, &tts_manager_),
         semantic_provider_(&view_manager_) {
@@ -62,9 +63,9 @@ class ScreenReaderTest : public gtest::TestLoopFixture {
   a11y::TtsManager tts_manager_;
   a11y::ViewManager view_manager_;
   a11y::GestureManager gesture_manager_;
-  MockAccessibilityFocusChainRequester mock_focus_chain_requester_;
-  MockAccessibilityFocusChainRegistry mock_focus_chain_registry_;
-  std::unique_ptr<a11y::A11yFocusManager> a11y_focus_manager_;
+
+  std::unique_ptr<MockA11yFocusManager> a11y_focus_manager_;
+  MockA11yFocusManager *a11y_focus_manager_ptr_;
   std::unique_ptr<a11y::ScreenReaderContext> context_;
   a11y::ScreenReader screen_reader_;
   accessibility_test::MockSemanticProvider semantic_provider_;
@@ -128,7 +129,8 @@ TEST_F(ScreenReaderTest, OnOneFingerSingleTapAction) {
 TEST_F(ScreenReaderTest, OnOneFingerDoubleTapAction) {
   // Creating test node to update.
   std::vector<Node> update_nodes;
-  Node node = CreateTestNode(0, "Label A");
+  uint32_t node_id = 0;
+  Node node = CreateTestNode(node_id, "Label A");
   Node clone_node;
   node.Clone(&clone_node);
   update_nodes.push_back(std::move(clone_node));
@@ -141,7 +143,10 @@ TEST_F(ScreenReaderTest, OnOneFingerDoubleTapAction) {
   semantic_provider_.CommitUpdates();
   RunLoopUntilIdle();
 
-  semantic_provider_.SetHitTestResult(0);
+  // Prepare the context of the screen reader(by setting A11yFocusInfo), assuming that it has a node
+  // selected in a particular view.
+  a11y_focus_manager_ptr_->SetA11yFocus(semantic_provider_.koid(), node_id,
+                                        [](bool result) { EXPECT_TRUE(result); });
 
   semantic_provider_.SetRequestedAction(fuchsia::accessibility::semantics::Action::SET_FOCUS);
 

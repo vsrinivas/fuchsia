@@ -10,8 +10,11 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
 
+#include <cstdint>
+
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
+#include "zircon/kernel/arch/x86/include/arch/x86/interrupts.h"
 
 namespace accessibility_test {
 
@@ -52,6 +55,9 @@ class MockSemanticListener : public fuchsia::accessibility::semantics::SemanticL
   // OnAccessibilityActionRequested() is called with correct action.
   fuchsia::accessibility::semantics::Action GetRequestedAction() const;
 
+  // Returns node_id on which action is called.
+  uint32_t GetRequestedActionNodeId() const;
+
   void Bind(fidl::InterfaceHandle<fuchsia::accessibility::semantics::SemanticListener> *listener);
 
   bool GetSemanticsEnabled() { return semantics_enabled_; }
@@ -65,6 +71,8 @@ class MockSemanticListener : public fuchsia::accessibility::semantics::SemanticL
   bool semantics_enabled_ = false;
 
   fuchsia::accessibility::semantics::Action received_action_;
+
+  uint32_t action_node_id_ = UINT32_MAX;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(MockSemanticListener);
 };

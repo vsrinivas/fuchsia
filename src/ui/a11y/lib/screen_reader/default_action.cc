@@ -8,29 +8,29 @@
 
 namespace a11y {
 
-DefaultAction::DefaultAction(ActionContext* context) : action_context_(context) {}
+DefaultAction::DefaultAction(ActionContext* action_context,
+                             ScreenReaderContext* screen_reader_context)
+    : action_context_(action_context), screen_reader_context_(screen_reader_context) {
+  FX_DCHECK(action_context_);
+  FX_DCHECK(screen_reader_context_);
+}
 DefaultAction::~DefaultAction() = default;
 
 void DefaultAction::Run(ActionData process_data) {
-  ExecuteHitTesting(action_context_, process_data,
-                    [this, process_data](::fuchsia::accessibility::semantics::Hit hit) {
-                      if (hit.has_node_id()) {
-                        const auto tree_weak_ptr =
-                            GetTreePointer(action_context_, process_data.current_view_koid);
-                        if (!tree_weak_ptr) {
-                          return;
-                        }
+  auto a11y_focus = screen_reader_context_->GetA11yFocusManager()->GetA11yFocus();
+  if (!a11y_focus) {
+    FX_LOGS(INFO) << "No view is in focus.";
+    return;
+  }
 
-                        // Call OnAccessibilityActionRequested.
-                        tree_weak_ptr->PerformAccessibilityAction(
-                            hit.node_id(), fuchsia::accessibility::semantics::Action::DEFAULT,
-                            [](bool result) {
-                              FX_LOGS(INFO) << "Default Action completed with status:" << result;
-                            });
-                      } else {
-                        FX_LOGS(INFO) << "DefaultAction: Node id is missing in the hit result.";
-                      }
-                    });
+  const auto tree_weak_ptr = GetTreePointer(action_context_, a11y_focus.value().view_ref_koid);
+  if (!tree_weak_ptr) {
+    return;
+  }
+  // Call OnAccessibilityActionRequested.
+  tree_weak_ptr->PerformAccessibilityAction(
+      a11y_focus.value().node_id, fuchsia::accessibility::semantics::Action::DEFAULT,
+      [](bool result) { FX_LOGS(INFO) << "Default Action completed with status:" << result; });
 }
 
 }  // namespace a11y

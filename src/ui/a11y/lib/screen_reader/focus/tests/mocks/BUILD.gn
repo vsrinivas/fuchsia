@@ -6,6 +6,8 @@ source_set("mocks") {
   testonly = true
 
   sources = [
+    "mock_a11y_focus_manager.cc",
+    "mock_a11y_focus_manager.h",
     "mock_focuser.cc",
     "mock_focuser.h",
   ]
@@ -16,6 +18,8 @@ source_set("mocks") {
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//src/lib/syslog/cpp",
+    "//src/ui/a11y/lib/focus_chain",
+    "//src/ui/a11y/lib/screen_reader/focus",
     "//src/ui/a11y/lib/util",
   ]
 }

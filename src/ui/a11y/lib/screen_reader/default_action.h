@@ -6,6 +6,8 @@
 #define SRC_UI_A11Y_LIB_SCREEN_READER_DEFAULT_ACTION_H_
 
 #include "src/ui/a11y/lib/screen_reader/actions.h"
+#include "src/ui/a11y/lib/screen_reader/focus/a11y_focus_manager.h"
+#include "src/ui/a11y/lib/screen_reader/screen_reader_context.h"
 
 namespace a11y {
 // This class implements "Default" Action. Default Action is triggered when the
@@ -15,7 +17,7 @@ namespace a11y {
 //   listener for default action.
 class DefaultAction : public ScreenReaderAction {
  public:
-  explicit DefaultAction(ActionContext* context);
+  explicit DefaultAction(ActionContext* action_context, ScreenReaderContext* screen_reader_context);
   ~DefaultAction() override;
 
   // This method implements the actual sequence of events that should
@@ -25,6 +27,11 @@ class DefaultAction : public ScreenReaderAction {
  private:
   // ActionContext which is used to make calls to Semantics Manager and TTS.
   ActionContext* action_context_;
+
+  // ScreenReaderContext is used to get the current state of the screen reader which includes the
+  // currently selected node(via the a11y focus manager) and state(currently selected semantic
+  // level).
+  ScreenReaderContext* screen_reader_context_;
 };
 
 }  // namespace a11y

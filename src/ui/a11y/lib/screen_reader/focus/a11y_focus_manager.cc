@@ -21,6 +21,8 @@ A11yFocusManager::A11yFocusManager(AccessibilityFocusChainRequester* focus_chain
   registry_->Register(weak_ptr_factory_.GetWeakPtr());
 }
 
+A11yFocusManager::A11yFocusManager() : weak_ptr_factory_(this) {}
+
 A11yFocusManager::~A11yFocusManager() = default;
 
 std::optional<A11yFocusManager::A11yFocusInfo> A11yFocusManager::GetA11yFocus() {

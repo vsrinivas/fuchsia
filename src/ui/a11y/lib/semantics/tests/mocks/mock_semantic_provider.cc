@@ -4,6 +4,8 @@
 
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_provider.h"
 
+#include <cstdint>
+
 #include "src/lib/syslog/cpp/logger.h"
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_provider.h"
 
@@ -66,6 +68,10 @@ void MockSemanticProvider::SetRequestedAction(fuchsia::accessibility::semantics:
 
 fuchsia::accessibility::semantics::Action MockSemanticProvider::GetRequestedAction() const {
   return semantic_listener_.GetRequestedAction();
+}
+
+uint32_t MockSemanticProvider::GetRequestedActionNodeId() const {
+  return semantic_listener_.GetRequestedActionNodeId();
 }
 
 bool MockSemanticProvider::IsChannelClosed() { return !tree_ptr_.channel().is_valid(); }

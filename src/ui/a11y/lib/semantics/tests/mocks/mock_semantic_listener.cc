@@ -20,6 +20,7 @@ void MockSemanticListener::OnAccessibilityActionRequested(
     fuchsia::accessibility::semantics::SemanticListener::OnAccessibilityActionRequestedCallback
         callback) {
   received_action_ = action;
+  action_node_id_ = node_id;
   // Return true to indicate that OnAccessibilityActionRequested is called.
   callback(true);
 }
@@ -44,5 +45,7 @@ void MockSemanticListener::SetRequestedAction(fuchsia::accessibility::semantics:
 fuchsia::accessibility::semantics::Action MockSemanticListener::GetRequestedAction() const {
   return received_action_;
 }
+
+uint32_t MockSemanticListener::GetRequestedActionNodeId() const { return action_node_id_; }
 
 }  // namespace accessibility_test
