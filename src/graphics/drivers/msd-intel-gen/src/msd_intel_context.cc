@@ -242,6 +242,8 @@ magma_status_t msd_context_execute_command_buffer_with_resources(
 
   auto command_buffer = CommandBuffer::Create(context, cmd_buf, exec_resources, buffers,
                                               wait_semaphores, signal_semaphores);
+  if (!command_buffer)
+    return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Failed to create command buffer");
 
   TRACE_DURATION_BEGIN("magma", "PrepareForExecution", "id", command_buffer->GetBatchBufferId());
   if (!command_buffer->PrepareForExecution())

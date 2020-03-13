@@ -17,6 +17,9 @@ std::unique_ptr<CommandBuffer> CommandBuffer::Create(std::weak_ptr<ClientContext
                                                      msd_buffer_t** msd_buffers,
                                                      msd_semaphore_t** msd_wait_semaphores,
                                                      msd_semaphore_t** msd_signal_semaphores) {
+  if (cmd_buf->num_resources == 0)
+    return DRETP(nullptr, "Command buffer requires at least 1 resource");
+
   std::vector<ExecResource> resources;
   resources.reserve(cmd_buf->num_resources);
   for (uint32_t i = 0; i < cmd_buf->num_resources; i++) {
