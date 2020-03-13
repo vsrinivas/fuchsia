@@ -20,7 +20,6 @@
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"
 #include "src/lib/fxl/strings/string_printf.h"
-#include "src/lib/fxl/time/time_delta.h"
 
 using bt::hci::CommandPacket;
 using bt::hci::EventPacket;

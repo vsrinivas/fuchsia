@@ -8,7 +8,6 @@
 #include <hid-parser/parser.h>
 #include <hid-parser/usages.h>
 
-#include "src/lib/fxl/time/time_point.h"
 #include "src/ui/lib/input_reader/tests/sensor_test_data.h"
 
 namespace input {

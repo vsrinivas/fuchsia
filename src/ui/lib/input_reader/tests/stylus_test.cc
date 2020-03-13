@@ -12,8 +12,6 @@
 #include <hid/acer12.h>
 #include <hid/paradise.h>
 
-#include "src/lib/fxl/time/time_point.h"
-
 namespace input {
 
 namespace {

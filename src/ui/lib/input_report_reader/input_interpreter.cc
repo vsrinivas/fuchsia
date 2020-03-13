@@ -15,7 +15,6 @@
 
 #include "src/lib/fxl/arraysize.h"
 #include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/time/time_point.h"
 
 namespace ui_input {
 

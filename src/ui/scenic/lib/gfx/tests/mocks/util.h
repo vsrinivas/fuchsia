@@ -16,7 +16,6 @@
 #include "lib/fidl/cpp/vector.h"
 #include "src/lib/fsl/vmo/shared_vmo.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
-#include "src/lib/fxl/time/time_delta.h"
 #include "src/ui/scenic/lib/scenic/scenic.h"
 
 namespace scenic_impl::gfx::test {

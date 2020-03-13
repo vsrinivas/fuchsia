@@ -12,8 +12,6 @@
 #include <hid/boot.h>
 #include <hid/usages.h>
 
-#include "src/lib/fxl/time/time_point.h"
-
 namespace input {
 
 namespace test {

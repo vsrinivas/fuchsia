@@ -7,7 +7,6 @@
 #include <hid-parser/usages.h>
 #include <hid/paradise.h>
 
-#include "src/lib/fxl/time/time_point.h"
 #include "src/ui/lib/input_reader/touch.h"
 
 namespace input {

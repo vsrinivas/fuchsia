@@ -21,7 +21,6 @@
 
 #include "src/lib/fxl/arraysize.h"
 #include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/time/time_point.h"
 #include "src/ui/lib/input_reader/device.h"
 #include "src/ui/lib/input_reader/fdio_hid_decoder.h"
 #include "src/ui/lib/input_reader/protocols.h"

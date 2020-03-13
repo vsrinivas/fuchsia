@@ -16,7 +16,6 @@
 #include "garnet/lib/perfmon/writer.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
-#include "src/lib/fxl/time/time_point.h"
 
 namespace cpuperf_provider {
 

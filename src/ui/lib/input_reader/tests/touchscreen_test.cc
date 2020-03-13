@@ -8,7 +8,6 @@
 #include <hid/ft3x27.h>
 #include <hid/paradise.h>
 
-#include "src/lib/fxl/time/time_point.h"
 #include "src/ui/lib/input_reader/tests/touchscreen_test_data.h"
 #include "src/ui/lib/input_reader/touch.h"
 

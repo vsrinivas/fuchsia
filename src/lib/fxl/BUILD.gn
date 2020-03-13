@@ -102,23 +102,6 @@ source_set("strings") {
   ]
 }
 
-source_set("time") {
-  visibility = [ ":*" ]
-
-  sources = [
-    "time/stopwatch.cc",
-    "time/stopwatch.h",
-    "time/time_delta.h",
-    "time/time_point.cc",
-    "time/time_point.h",
-  ]
-
-  public_deps = [
-    ":common",
-    ":fxl_logging",
-  ]
-}
-
 source_set("functional") {
   visibility = [ ":*" ]
 
@@ -151,7 +134,6 @@ static_library("fxl") {
     ":fxl_logging",
     ":memory",
     ":strings",
-    ":time",
     "//src/lib/files",
     "//zircon/public/lib/fit",
   ]
@@ -160,20 +142,6 @@ static_library("fxl") {
     libs = [ "zircon" ]
   }
 }
-
-source_set("printers") {
-  testonly = true
-
-  sources = [ "time/time_printers.cc" ]
-  deps = [ ":fxl" ]
-}
-
-group("fxl_printers") {
-  testonly = true
-
-  public_deps = [ ":printers" ]
-}
-
 executable("fxl_unittests") {
   testonly = true
 
@@ -206,16 +174,11 @@ executable("fxl_unittests") {
     "synchronization/thread_annotations_unittest.cc",
     "synchronization/thread_checker_unittest.cc",
     "test/test_settings_unittest.cc",
-    "time/stopwatch_unittest.cc",
-    "time/time_delta_unittest.cc",
-    "time/time_point_unittest.cc",
-    "time/time_unittest.cc",
   ]
 
   deps = [
     ":fxl",
     ":fxl_logging",
-    ":printers",
     "test:gtest_main",
     "test:test_settings",
     "//src/lib/files",

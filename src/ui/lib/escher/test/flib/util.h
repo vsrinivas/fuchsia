@@ -7,8 +7,6 @@
 
 #include <lib/zx/event.h>
 
-#include "src/lib/fxl/time/time_delta.h"
-
 namespace escher {
 namespace test {
 

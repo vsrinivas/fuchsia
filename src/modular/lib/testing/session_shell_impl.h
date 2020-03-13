@@ -12,7 +12,6 @@
 
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
-#include "src/lib/fxl/time/time_delta.h"
 
 namespace modular_testing {
 

@@ -11,8 +11,6 @@
 #include <hid-parser/usages.h>
 #include <hid/visalia-touch.h>
 
-#include "src/lib/fxl/time/time_point.h"
-
 namespace input {
 
 // Each test parses the report descriptor for the mouse and then sends one

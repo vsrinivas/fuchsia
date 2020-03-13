@@ -12,7 +12,6 @@
 
 #include "lib/fidl/cpp/vector.h"
 #include "src/lib/fxl/macros.h"
-#include "src/lib/fxl/time/time_delta.h"
 #include "src/ui/lib/escher/flib/fence.h"
 
 namespace escher {
