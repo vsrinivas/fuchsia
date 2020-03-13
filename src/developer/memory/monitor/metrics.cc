@@ -2,12 +2,15 @@
 
 #include <zircon/time.h>
 
+#include <algorithm>
 #include <array>
+#include <string>
 
 #include <src/lib/cobalt/cpp/cobalt_event_builder.h>
 #include <trace/event.h>
 
 #include "src/developer/memory/metrics/digest.h"
+#include "src/developer/memory/metrics/printer.h"
 #include "src/lib/syslog/cpp/logger.h"
 
 namespace monitor {
@@ -74,6 +77,14 @@ void Metrics::CollectMetrics() {
   Capture capture;
   capture_cb_(&capture, VMO);
   Digest digest(capture, &digester_);
+  std::ostringstream oss;
+  Printer p(oss);
+
+  p.PrintDigest(digest);
+  auto str = oss.str();
+  std::replace(str.begin(), str.end(), '\n', ' ');
+  FX_LOGS(INFO) << str;
+
   std::vector<fuchsia::cobalt::CobaltEvent> events;
   const auto& kmem = capture.kmem();
   AddKmemEvents(kmem, &events);
