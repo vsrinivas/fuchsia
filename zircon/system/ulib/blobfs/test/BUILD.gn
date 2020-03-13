@@ -66,6 +66,9 @@ test("blobfs-unit") {
     "unit/utils.cc",
     "unit/vector-extent-iterator-test.cc",
   ]
+  if (is_fuchsia) {
+    sources += [ "unit/zstd-compressed-block-collection-test.cc" ]
+  }
   deps = [
     "//zircon/public/lib/async-loop",
     "//zircon/public/lib/async-loop-cpp",
