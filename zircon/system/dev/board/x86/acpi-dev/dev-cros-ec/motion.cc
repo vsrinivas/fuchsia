@@ -253,7 +253,7 @@ void AcpiCrOsEcMotionDevice::DdkRelease() {
 
 zx_status_t AcpiCrOsEcMotionDevice::QueryNumSensors(uint8_t* count) {
   zxlogf(TRACE, "acpi-cros-ec-motion: QueryNumSensors\n");
-  struct ec_params_motion_sense cmd;
+  struct ec_params_motion_sense cmd = {};
   cmd.cmd = MOTIONSENSE_CMD_DUMP;
   cmd.dump.max_sensor_count = 0;  // We only care about the number of sensors.
 
@@ -271,7 +271,7 @@ zx_status_t AcpiCrOsEcMotionDevice::QueryNumSensors(uint8_t* count) {
 zx_status_t AcpiCrOsEcMotionDevice::QuerySensorInfo(uint8_t sensor_num, SensorInfo* info) {
   zxlogf(TRACE, "acpi-cros-ec-motion: QuerySensorInfo %d\n", sensor_num);
 
-  struct ec_params_motion_sense cmd;
+  struct ec_params_motion_sense cmd = {};
   cmd.cmd = MOTIONSENSE_CMD_INFO;
   cmd.info_3.sensor_num = sensor_num;
 
@@ -296,7 +296,7 @@ zx_status_t AcpiCrOsEcMotionDevice::QuerySensorInfo(uint8_t sensor_num, SensorIn
 zx_status_t AcpiCrOsEcMotionDevice::FifoInterruptEnable(bool enable) {
   zxlogf(TRACE, "acpi-cros-ec-motion: FifoInterruptEnable %d\n", enable);
 
-  struct ec_params_motion_sense cmd;
+  struct ec_params_motion_sense cmd = {};
   struct ec_response_motion_sense rsp;
   cmd.cmd = MOTIONSENSE_CMD_FIFO_INT_ENABLE;
   cmd.fifo_int_enable.enable = enable;
@@ -314,7 +314,7 @@ zx_status_t AcpiCrOsEcMotionDevice::SetSensorOutputDataRate(uint8_t sensor_num,
   zxlogf(TRACE, "acpi-cros-ec-motion: SetSensorOutputDataRate %d %u\n", sensor_num,
          freq_millihertz);
 
-  struct ec_params_motion_sense cmd;
+  struct ec_params_motion_sense cmd = {};
   struct ec_response_motion_sense rsp;
   cmd.cmd = MOTIONSENSE_CMD_SENSOR_ODR;
   cmd.sensor_odr.sensor_num = sensor_num;
@@ -332,7 +332,7 @@ zx_status_t AcpiCrOsEcMotionDevice::SetSensorOutputDataRate(uint8_t sensor_num,
 zx_status_t AcpiCrOsEcMotionDevice::SetEcSamplingRate(uint8_t sensor_num, uint32_t milliseconds) {
   zxlogf(TRACE, "acpi-cros-ec-motion: SetEcSamplingRate %d %u\n", sensor_num, milliseconds);
 
-  struct ec_params_motion_sense cmd;
+  struct ec_params_motion_sense cmd = {};
   struct ec_response_motion_sense rsp;
   cmd.cmd = MOTIONSENSE_CMD_EC_RATE;
   cmd.ec_rate.sensor_num = sensor_num;
@@ -350,7 +350,7 @@ zx_status_t AcpiCrOsEcMotionDevice::SetEcSamplingRate(uint8_t sensor_num, uint32
 zx_status_t AcpiCrOsEcMotionDevice::GetSensorRange(uint8_t sensor_num, int32_t* range) {
   zxlogf(TRACE, "acpi-cros-ec-motion: GetSensorRange %d\n", sensor_num);
 
-  struct ec_params_motion_sense cmd;
+  struct ec_params_motion_sense cmd = {};
   struct ec_response_motion_sense rsp;
   cmd.cmd = MOTIONSENSE_CMD_SENSOR_RANGE;
   cmd.sensor_range.sensor_num = sensor_num;
@@ -370,7 +370,7 @@ zx_status_t AcpiCrOsEcMotionDevice::GetSensorRange(uint8_t sensor_num, int32_t* 
 zx_status_t AcpiCrOsEcMotionDevice::GetKbWakeAngle(int32_t* angle) {
   zxlogf(TRACE, "acpi-cros-ec-motion: GetKbWakeAngle\n");
 
-  struct ec_params_motion_sense cmd;
+  struct ec_params_motion_sense cmd = {};
   struct ec_response_motion_sense rsp;
   cmd.cmd = MOTIONSENSE_CMD_KB_WAKE_ANGLE;
   cmd.kb_wake_angle.data = EC_MOTION_SENSE_NO_VALUE;
@@ -392,7 +392,7 @@ zx_status_t AcpiCrOsEcMotionDevice::SetKbWakeAngle(int16_t angle) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  struct ec_params_motion_sense cmd;
+  struct ec_params_motion_sense cmd = {};
   struct ec_response_motion_sense rsp;
   cmd.cmd = MOTIONSENSE_CMD_KB_WAKE_ANGLE;
   cmd.kb_wake_angle.data = angle;
@@ -409,7 +409,7 @@ zx_status_t AcpiCrOsEcMotionDevice::SetKbWakeAngle(int16_t angle) {
 zx_status_t AcpiCrOsEcMotionDevice::FifoRead(struct ec_response_motion_sensor_data* data) {
   zxlogf(DEBUG1, "acpi-cros-ec-motion: FifoRead\n");
 
-  struct ec_params_motion_sense cmd;
+  struct ec_params_motion_sense cmd = {};
   struct __packed {
     uint32_t count;
     struct ec_response_motion_sensor_data data;
