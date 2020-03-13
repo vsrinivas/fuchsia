@@ -177,9 +177,11 @@ fn render_composition(
     mold_composition: &mut mold_next::Composition,
     composition: &MoldComposition,
     buffer: mold_next::Buffer<'_>,
-    clip: Rect<u32>,
+    _clip: Rect<u32>,
 ) {
     duration!("gfx", "render_composition");
+
+    // TODO(dtiselice): Use clip.
 
     for layer in mold_composition.layers_mut() {
         layer.disable();
@@ -252,12 +254,6 @@ fn render_composition(
 
     mold_composition.render(
         buffer,
-        Some(mold_next::Clip {
-            x: clip.origin.x as usize,
-            y: clip.origin.y as usize,
-            width: clip.size.width as usize,
-            height: clip.size.height as usize,
-        }),
         [
             composition.background_color.b,
             composition.background_color.g,

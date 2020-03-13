@@ -14,9 +14,9 @@ pub use layer::Layer;
 pub use point::Point;
 pub use segment::{Lines, LinesBuilder, Segment};
 
-pub const PIXEL_WIDTH: usize = 16;
+const PIXEL_WIDTH: usize = 16;
 const PIXEL_SHIFT: usize = PIXEL_WIDTH.trailing_zeros() as usize;
 const PIXEL_MASK: usize = PIXEL_WIDTH - 1;
-pub const TILE_SIZE: usize = 16;
+const TILE_SIZE: usize = 16;
 const TILE_SHIFT: usize = TILE_SIZE.trailing_zeros() as usize;
 const TILE_MASK: usize = TILE_SIZE - 1;

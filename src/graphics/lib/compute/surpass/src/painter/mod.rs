@@ -11,13 +11,13 @@ use std::{
 
 use crate::{
     rasterizer::{search_last_by_key, CompactSegment},
-    PIXEL_WIDTH, TILE_MASK, TILE_SHIFT, TILE_SIZE,
+    PIXEL_WIDTH, TILE_SIZE,
 };
 
 mod buffer_layout;
 
 use buffer_layout::TileSlice;
-pub use buffer_layout::{BufferLayout, BufferLayoutBuilder, Clip, Flusher};
+pub use buffer_layout::{BufferLayout, BufferLayoutBuilder, Flusher};
 
 const LAST_BYTE_MASK: i32 = 0b1111_1111;
 const LAST_BIT_MASK: i32 = 0b1;
@@ -302,70 +302,41 @@ impl Painter {
         }
     }
 
-    fn covers_left(
-        &mut self,
-        segments: &[CompactSegment],
-        clip: Option<Clip>,
-    ) -> (Option<usize>, Option<usize>) {
-        let mut left: BTreeMap<u16, [i8; TILE_SIZE]> = BTreeMap::new();
-
-        let start =
-            clip.map(|clip| (clip.x >> TILE_SHIFT) as i16).filter(|&i| i > 0).and_then(|i| {
-                search_last_by_key(segments, false, |segment| segment.tile_i() >= i)
-                    .map(|i| {
-                        let i = i + 1;
-
-                        for segment in &segments[..i] {
-                            left.entry(segment.layer()).or_insert_with(|| [0; TILE_SIZE])
-                                [segment.tile_y() as usize] += segment.cover();
-                        }
-
-                        i
-                    })
-                    .ok()
-            });
-
-        let end = search_last_by_key(segments, false, |segment| segment.tile_i().is_negative())
+    fn covers_left(&mut self, segments: &[CompactSegment]) -> Option<usize> {
+        search_last_by_key(segments, false, |segment| segment.tile_i().is_negative())
             .map(|i| {
                 let i = i + 1;
+                let mut left: BTreeMap<u16, [i8; TILE_SIZE]> = BTreeMap::new();
 
                 for segment in &segments[i..] {
                     left.entry(segment.layer()).or_insert_with(|| [0; TILE_SIZE])
                         [segment.tile_y() as usize] += segment.cover();
                 }
 
+                for (layer, covers) in left {
+                    self.queue.push_back(CoverCarry { layer, covers });
+                }
+
                 i
             })
-            .ok();
-
-        for (layer, covers) in left {
-            self.queue.push_back(CoverCarry { layer, covers });
-        }
-
-        (start, end)
+            .ok()
     }
 
     pub fn paint_tile_row<F>(
         &mut self,
-        row: ChunksExactMut<'_, TileSlice>,
-        clip: Option<Clip>,
-        flusher: Option<&Box<dyn Flusher>>,
         mut segments: &[CompactSegment],
         styles: F,
         clear_color: [u8; 4],
+        flusher: Option<&Box<dyn Flusher>>,
+        row: ChunksExactMut<'_, TileSlice>,
     ) where
         F: Fn(u16) -> Style + Send + Sync,
     {
-        let (start, end) = self.covers_left(segments, clip);
-
-        if let Some(end) = end {
+        if let Some(end) = self.covers_left(segments) {
             segments = &segments[..end];
         }
-        if let Some(start) = start {
-            segments = &segments[start..];
-        }
 
-        let mut paint_tile = |i: usize, tile: &mut [TileSlice]| {
+        for (i, tile) in row.enumerate() {
             let current_segments =
                 search_last_by_key(segments, i as i16, |segment| segment.tile_i())
                     .map(|last_index| {
@@ -394,20 +365,6 @@ impl Painter {
                         flusher.flush(&mut slice.as_mut_slice()[0..TILE_SIZE]);
                     }
                 }
-            }
-        };
-
-        if let Some(clip) = clip {
-            for (i, tile) in row
-                .enumerate()
-                .skip(clip.x >> TILE_SHIFT)
-                .take((clip.width + TILE_MASK) >> TILE_SHIFT)
-            {
-                paint_tile(i, tile);
-            }
-        } else {
-            for (i, tile) in row.enumerate() {
-                paint_tile(i, tile);
             }
         }
     }
