@@ -6,7 +6,7 @@ use crate::message::base::*;
 use crate::message::message_client::MessageClient;
 use crate::message::message_hub::MessageHub;
 use crate::message::receptor::*;
-use futures::executor::block_on;
+use futures::future::BoxFuture;
 use futures::lock::Mutex;
 use std::fmt::Debug;
 use std::hash::Hash;
@@ -27,13 +27,15 @@ enum TestAddress {
 async fn verify_payload<P: Payload + PartialEq + 'static, A: Address + PartialEq + 'static>(
     payload: P,
     receptor: &mut Receptor<P, A>,
-    client_fn: Option<Box<dyn Fn(&mut MessageClient<P, A>) + Send + Sync + 'static>>,
+    client_fn: Option<
+        Box<dyn Fn(&mut MessageClient<P, A>) -> BoxFuture<'_, ()> + Send + Sync + 'static>,
+    >,
 ) {
     while let Ok(message_event) = receptor.watch().await {
         if let MessageEvent::Message(incoming_payload, mut client) = message_event {
             assert_eq!(payload, incoming_payload);
             if let Some(func) = client_fn {
-                (func)(&mut client);
+                (func)(&mut client).await;
             }
             return;
         }
@@ -120,8 +122,11 @@ async fn test_end_to_end_messaging() {
     verify_payload(
         ORIGINAL,
         &mut receptor_2,
-        Some(Box::new(|client| {
-            let _ = client.reply(REPLY).send();
+        Some(Box::new(|client| -> BoxFuture<'_, ()> {
+            Box::pin(async move {
+                let _ = client.reply(REPLY).send();
+                ()
+            })
         })),
     )
     .await;
@@ -150,8 +155,11 @@ async fn test_implicit_forward() {
     verify_payload(
         ORIGINAL,
         &mut receiver_3,
-        Some(Box::new(|client| {
-            let _ = client.reply(REPLY).send();
+        Some(Box::new(|client| -> BoxFuture<'_, ()> {
+            Box::pin(async move {
+                let _ = client.reply(REPLY).send();
+                ()
+            })
         })),
     )
     .await;
@@ -181,9 +189,13 @@ async fn test_observe_addressable() {
     verify_payload(
         ORIGINAL,
         &mut receptor_2,
-        Some(Box::new(move |client| {
-            let mut receptor = block_on(observe_receptor_clone.lock());
-            *receptor = Some(client.observe());
+        Some(Box::new(move |client| -> BoxFuture<'_, ()> {
+            let observe_receptor = observe_receptor_clone.clone();
+            Box::pin(async move {
+                let mut receptor = observe_receptor.lock().await;
+                *receptor = Some(client.observe());
+                ()
+            })
         })),
     )
     .await;
@@ -191,8 +203,11 @@ async fn test_observe_addressable() {
     verify_payload(
         ORIGINAL,
         &mut receptor_3,
-        Some(Box::new(|client| {
-            let _ = client.reply(REPLY).send();
+        Some(Box::new(|client| -> BoxFuture<'_, ()> {
+            Box::pin(async move {
+                let _ = client.reply(REPLY).send();
+                ()
+            })
         })),
     )
     .await;
