@@ -407,6 +407,7 @@ void x86_cpu_ibpb(MsrAccess* msr);
 void x86_cpu_ibrs(MsrAccess* msr);
 bool x86_intel_cpu_has_enhanced_ibrs(const cpu_id::CpuId* cpuid, MsrAccess* msr);
 bool x86_amd_cpu_has_ibrs_always_on(const cpu_id::CpuId* cpuid);
+void x86_intel_cpu_try_disable_tsx(const cpu_id::CpuId* cpuid, MsrAccess* msr);
 #endif
 uint32_t x86_amd_get_patch_level(void);
 uint32_t x86_intel_get_patch_level(void);

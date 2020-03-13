@@ -173,6 +173,16 @@ void x86_feature_init(void) {
     g_has_l1tf = x86_intel_cpu_has_l1tf(&cpuid, &msr);
     g_l1d_flush_on_vmentry = ((x86_get_disable_spec_mitigations() == false)) &&
                              g_has_l1tf && x86_feature_test(X86_FEATURE_L1D_FLUSH);
+    if (x86_get_disable_spec_mitigations() == false) {
+      // If mitigations are enabled, try to disable TSX. Disabling TSX prevents exploiting
+      // TAA/CacheOut attacks and potential future exploits. It also avoids MD_CLEAR on CPUs
+      // without MDS.
+      //
+      // WARNING: If we disable TSX, we must do so before we determine whether we are affected by
+      // TAA/Cacheout; otherwise the TAA/Cacheout determination code will run before the TSX
+      // CPUID bit is masked.
+      x86_intel_cpu_try_disable_tsx(&cpuid, &msr);
+    }
     g_has_mds_taa = x86_intel_cpu_has_mds_taa(&cpuid, &msr);
     g_has_md_clear = cpuid.ReadFeatures().HasFeature(cpu_id::Features::MD_CLEAR);
     g_md_clear_on_user_return = ((x86_get_disable_spec_mitigations() == false)) &&

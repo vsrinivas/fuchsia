@@ -256,6 +256,19 @@ void x86_intel_cpus_set_turbo(const cpu_id::CpuId* cpu, MsrAccess* msr, Turbosta
                reinterpret_cast<void*>(&context));
 }
 
+// Disable TSX if possible.
+void x86_intel_cpu_try_disable_tsx(const cpu_id::CpuId* cpuid, MsrAccess* msr) {
+  if (cpuid->ReadFeatures().HasFeature(cpu_id::Features::ARCH_CAPABILITIES)) {
+    uint64_t arch_capabilities = msr->read_msr(X86_MSR_IA32_ARCH_CAPABILITIES);
+    if (!(arch_capabilities & X86_ARCH_CAPABILITIES_TSX_CTRL)) {
+      return;
+    }
+
+    msr->write_msr(/*index=*/X86_MSR_IA32_TSX_CTRL,
+                   X86_TSX_CTRL_RTM_DISABLE | X86_TSX_CTRL_CPUID_DISABLE);
+  }
+}
+
 void x86_intel_init_percpu(void) {
   cpu_id::CpuId cpuid;
   MsrAccess msr;
