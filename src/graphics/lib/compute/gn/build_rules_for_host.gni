@@ -54,6 +54,7 @@ template("graphics_compute_test_rule") {
   if (_is_fuchsia_tree) {
     _test_spec_target_name = "${target_name}__test_spec"
     test_spec(_test_spec_target_name) {
+      testonly = true
       name = _target_name
       target = _target_name
       path = "${root_out_dir}/${_target_name}"

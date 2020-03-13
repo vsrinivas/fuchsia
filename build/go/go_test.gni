@@ -62,6 +62,8 @@ template("go_test") {
     _include_test_metadata = !_is_disabled && (is_linux || is_mac)
     if (_include_test_metadata) {
       test_spec(_test_spec_target_name) {
+        # TODO(BLD-493): testonly should be automatic here
+        testonly = true
         name = _output_name
         target = _main_target_name
         path = _output_path
