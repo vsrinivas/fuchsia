@@ -32,7 +32,6 @@ pub trait EventHandler {
 
 pub struct ElementEventHandler {
     proxy: GraphicalPresenterProxy,
-    termination_event: async_helpers::event::Event,
 }
 
 /// The ElementEventHandler is a concrete implementation of the EventHandler trait which
@@ -40,7 +39,7 @@ pub struct ElementEventHandler {
 impl ElementEventHandler {
     /// Creates a new instance of the ElementEventHandler.
     pub fn new(proxy: GraphicalPresenterProxy) -> ElementEventHandler {
-        ElementEventHandler { proxy, termination_event: async_helpers::event::Event::new() }
+        ElementEventHandler { proxy }
     }
 
     /// Attempts to connect to the element's view provider and if it does
@@ -83,18 +82,11 @@ impl EventHandler for ElementEventHandler {
         // future we will want to communicate the failure back to the proposer.
         let view_controller_proxy = self.present_view_for_element(&mut element).ok();
 
-        let termination_event = self.termination_event.clone();
         // Hold the element in the spawn_local here. when the call closes all
         // of the proxies will be closed.
         fasync::spawn_local(async move {
-            let element_close_fut =
-                Box::pin(run_until_closed(element, stream, view_controller_proxy));
-            futures::future::select(element_close_fut, termination_event.wait()).await;
+            run_until_closed(element, stream, view_controller_proxy).await;
         });
-    }
-
-    fn shutdown(&mut self) {
-        self.termination_event.signal();
     }
 }
 
@@ -366,31 +358,6 @@ mod tests {
         drop(view_controller_stream);
 
         expect_element_wait_fut_completion!(element_wait_fut);
-    }
-    #[fasync::run_singlethreaded(test)]
-    async fn calling_shutdown_on_the_handler_kills_elements() {
-        init_logger();
-        let (element, channel) = make_mock_element();
-        let (proxy, _stream) =
-            create_proxy_and_stream::<GraphicalPresenterMarker>().expect("failed to create proxy");
-
-        let mut handler = ElementEventHandler::new(proxy);
-        handler.add_element(element, None);
-
-        // shutdown should kill elements
-        handler.shutdown();
-
-        let timeout = Timer::new(500_i64.millis().after_now());
-        let handle_ref = channel.as_handle_ref();
-        let element_close_fut =
-            fasync::OnSignals::new(&handle_ref, zx::Signals::CHANNEL_PEER_CLOSED);
-
-        let either = futures::future::select(timeout, element_close_fut);
-        let resolved = either.await;
-        match resolved {
-            Either::Left(_) => panic!("element should have closed before timeout"),
-            Either::Right(_) => (),
-        }
     }
 
     #[fasync::run_singlethreaded(test)]

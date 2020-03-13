@@ -44,9 +44,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:rand",
-
-    # TODO: use the shared library when fxb/370681 lands
-    "//src/connectivity/bluetooth/lib/async-helpers",
   ]
 
   test_deps = []
