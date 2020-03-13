@@ -20,6 +20,7 @@
 #include <arch/ops.h>
 #include <dev/interrupt.h>
 #include <fbl/algorithm.h>
+#include <fbl/auto_call.h>
 #include <kernel/align.h>
 #include <kernel/dpc.h>
 #include <kernel/event.h>
@@ -287,6 +288,18 @@ zx_status_t mp_hotplug_cpu_mask(cpu_mask_t cpu_mask) {
 // Unplug a single CPU.  Must be called while holding the hotplug lock
 static zx_status_t mp_unplug_cpu_mask_single_locked(cpu_num_t cpu_id, zx_time_t deadline,
                                                     Thread** leaked_thread) {
+  Thread* thread = nullptr;
+  auto cleanup_thread = fbl::MakeAutoCall([&thread, &leaked_thread, cpu_id]() {
+    // TODO(fxb/34447): Work around a race in thread cleanup by leaking the thread and stack
+    // structure. Since we're only using this while turning off the system currently, it's not a big
+    // problem leaking the thread structure and stack.
+    if (leaked_thread) {
+      *leaked_thread = thread;
+    } else if (thread != nullptr) {
+      TRACEF("WARNING: leaking thread for cpu %u\n", cpu_id);
+    }
+  });
+
   // Wait for |cpu_id| to complete any in-progress DPCs and terminate its DPC thread.  Later, once
   // nothing is running on it, we'll migrate its queued DPCs to another CPU.
   zx_status_t status = Dpc::Shutdown(cpu_id, deadline);
@@ -308,9 +321,9 @@ static zx_status_t mp_unplug_cpu_mask_single_locked(cpu_num_t cpu_id, zx_time_t 
   // HIGHEST_PRIORITY task scheduled in between when we resume the
   // thread and when the CPU is woken up).
   event_t unplug_done = EVENT_INITIAL_VALUE(unplug_done, false, 0);
-  Thread* t = Thread::CreateEtc(NULL, "unplug_thread", NULL, &unplug_done, HIGHEST_PRIORITY,
-                                mp_unplug_trampoline);
-  if (t == NULL) {
+  thread = Thread::CreateEtc(nullptr, "unplug_thread", nullptr, &unplug_done, HIGHEST_PRIORITY,
+                             mp_unplug_trampoline);
+  if (thread == nullptr) {
     return ZX_ERR_NO_MEMORY;
   }
 
@@ -320,49 +333,29 @@ static zx_status_t mp_unplug_cpu_mask_single_locked(cpu_num_t cpu_id, zx_time_t 
   }
 
   // Pin to the target CPU
-  t->SetCpuAffinity(cpu_num_to_mask(cpu_id));
+  thread->SetCpuAffinity(cpu_num_to_mask(cpu_id));
   // Set real time to cancel the pre-emption timer
-  t->SetRealTime();
+  thread->SetRealTime();
 
-  status = t->DetachAndResume();
+  status = thread->DetachAndResume();
   if (status != ZX_OK) {
-    goto cleanup_thread;
-  }
-
-  // Wait for the unplug thread to get scheduled on the target
-  do {
-    status = event_wait(&unplug_done);
-  } while (status != ZX_OK);
-
-  // Now that the CPU is no longer processing tasks, move all of its timers
-  timer_transition_off_cpu(cpu_id);
-  // Move the CPU's queued DPCs to the current CPU.
-  Dpc::ShutdownTransitionOffCpu(cpu_id);
-
-  status = platform_mp_cpu_unplug(cpu_id);
-  if (status != ZX_OK) {
-    // Do not cleanup the unplug thread in this case.  We have successfully
-    // unplugged the CPU from the scheduler's perspective, but the platform
-    // may have failed to shut down the CPU
     return status;
   }
 
-// Fall through.  Since the thread is scheduled, it should not be in any
-// queues.  Since the CPU running this thread is now shutdown, we can just
-// erase the thread's existence.
-cleanup_thread:
-  // ZX-2232: workaround race in thread cleanup by leaking the thread
-  // and stack structure. Since we're only using this while turning off
-  // the system currently, it's not a big problem leaking the thread structure
-  // and stack.
-  // thread_forget(t);
-  if (leaked_thread) {
-    *leaked_thread = t;
-  } else {
-    TRACEF("WARNING: leaking thread for cpu %u\n", cpu_id);
+  // Wait for the unplug thread to get scheduled on the target
+  const bool interruptable = false;
+  status = event_wait_deadline(&unplug_done, deadline, interruptable);
+  if (status != ZX_OK) {
+    return status;
   }
 
-  return status;
+  // Now that the CPU is no longer processing tasks, move all of its timers
+  timer_transition_off_cpu(cpu_id);
+
+  // Move the CPU's queued DPCs to the current CPU.
+  Dpc::ShutdownTransitionOffCpu(cpu_id);
+
+  return platform_mp_cpu_unplug(cpu_id);
 }
 
 // Unplug the given cpus.  Blocks until the CPUs are removed or |deadline| has been reached.
