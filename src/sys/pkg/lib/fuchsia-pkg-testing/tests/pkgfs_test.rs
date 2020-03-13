@@ -1327,6 +1327,7 @@ async fn test_pkgfs_packages_dynamic_packages_allowlist_succeeds() {
         ["system_image", "example"]
     );
 
+    drop(d);
     pkgfs.stop().await.expect("shutting down pkgfs");
 }
 
@@ -1373,6 +1374,7 @@ async fn test_pkgfs_packages_dynamic_packages_allowlist_fails() {
         ["system_image"] // We should not see the 'example' package, since it's a dynamic package that's not on the allowlist.
     );
 
+    drop(d);
     pkgfs.stop().await.expect("shutting down pkgfs");
 }
 
