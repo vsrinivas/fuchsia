@@ -1031,7 +1031,7 @@ mod tests {
     #[cfg(not(target_os = "fuchsia"))]
     fn initial_greeting_packet() {
         use crate::coding::decode_fidl;
-        use crate::stream_framer::StreamDeframer;
+        use crate::stream_framer::{new_deframer, FrameType, LosslessBinary};
         use fidl_fuchsia_overnet_protocol::StreamSocketGreeting;
         run(|| async move {
             let n = Router::new(test_router_options()).unwrap();
@@ -1047,15 +1047,19 @@ mod tests {
             )
             .unwrap();
 
-            let mut deframer = StreamDeframer::new();
-            let mut buf = [0u8; 1024];
-            let mut greeting_bytes = loop {
-                let n = c.read(&mut buf).await.unwrap();
-                deframer.queue_recv(&buf[..n]);
-                if let Some(greeting) = deframer.next_incoming_frame() {
-                    break greeting;
-                }
-            };
+            let (mut deframer_writer, mut deframer) = new_deframer(LosslessBinary);
+            spawn(log_errors(
+                async move {
+                    let mut buf = [0u8; 1024];
+                    loop {
+                        let n = c.read(&mut buf).await?;
+                        deframer_writer.write(&buf[..n]).await?;
+                    }
+                },
+                "deframer failed",
+            ));
+            let (frame_type, mut greeting_bytes) = deframer.read().await.unwrap();
+            assert_eq!(frame_type, FrameType::Overnet);
             let greeting = decode_fidl::<StreamSocketGreeting>(greeting_bytes.as_mut()).unwrap();
             assert_eq!(greeting.magic_string, Some("OVERNET SOCKET LINK".to_string()));
             assert_eq!(greeting.node_id, Some(node_id.into()));

@@ -36,4 +36,4 @@ pub use labels::{NodeId, NodeLinkId};
 pub use link::Link;
 pub use router::{generate_node_id, Router, RouterOptions};
 pub use runtime::{run, spawn, wait_until};
-pub use stream_framer::{StreamDeframer, StreamFramer};
+pub use stream_framer::*;

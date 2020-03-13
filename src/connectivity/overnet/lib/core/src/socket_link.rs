@@ -10,58 +10,14 @@ use {
         future_help::log_errors,
         labels::NodeId,
         router::Router,
-        runtime::{spawn, wait_until},
-        stream_framer::{StreamDeframer, StreamFramer},
+        runtime::spawn,
+        stream_framer::{new_deframer, new_framer, Format, FrameType, LosslessBinary, LossyBinary},
     },
-    anyhow::{Context as _, Error},
+    anyhow::{bail, Context as _, Error},
     fidl_fuchsia_overnet_protocol::StreamSocketGreeting,
     futures::{io::AsyncWriteExt, prelude::*},
-    std::{
-        rc::Rc,
-        time::{Duration, Instant},
-    },
+    std::{rc::Rc, time::Duration},
 };
-
-async fn read_or_unstick(
-    buf: &mut [u8],
-    deframer: &mut StreamDeframer,
-    rx_bytes: &mut futures::io::ReadHalf<fidl::AsyncSocket>,
-    duration_per_byte: Option<Duration>,
-) -> Result<Option<usize>, Error> {
-    if let Some(duration_per_byte) = duration_per_byte {
-        if deframer.is_stuck() {
-            let mut rx_read_bytes = rx_bytes.read(buf).fuse();
-            return futures::select! {
-                r = rx_read_bytes => r.map_err(|e| e.into()).map(Some),
-                _ = wait_until(Instant::now() + duration_per_byte).fuse() => {
-                    deframer.skip_byte();
-                    Ok(None)
-                }
-            };
-        }
-    }
-    rx_bytes.read(buf).await.map_err(|e| e.into()).map(Some)
-}
-
-async fn socket_deframer(
-    mut rx_bytes: futures::io::ReadHalf<fidl::AsyncSocket>,
-    mut tx_frames: futures::channel::mpsc::Sender<Vec<u8>>,
-    duration_per_byte: Option<Duration>,
-) -> Result<(), Error> {
-    let mut deframer = StreamDeframer::new();
-    let mut buf = [0u8; 1024];
-
-    loop {
-        if let Some(n) =
-            read_or_unstick(&mut buf, &mut deframer, &mut rx_bytes, duration_per_byte).await?
-        {
-            deframer.queue_recv(&buf[..n]);
-        }
-        while let Some(frame) = deframer.next_incoming_frame() {
-            tx_frames.send(frame).await?;
-        }
-    }
-}
 
 pub(crate) fn spawn_socket_link(
     node: Rc<Router>,
@@ -94,30 +50,57 @@ async fn run_socket_link(
     const GREETING_STRING: &str = "OVERNET SOCKET LINK";
 
     // Send first frame
-    let mut framer = StreamFramer::new();
+    let (mut rx_bytes, mut tx_bytes) = futures::io::AsyncReadExt::split(
+        fidl::AsyncSocket::from_socket(socket).context("asyncify socket")?,
+    );
+    let make_format = || -> Box<dyn Format> {
+        if let Some(d) = duration_per_byte {
+            Box::new(LossyBinary::new(d))
+        } else {
+            Box::new(LosslessBinary)
+        }
+    };
+    let (mut framer, mut framer_read) = new_framer(make_format(), 4096);
+    let (mut deframer_write, mut deframer) = new_deframer(make_format());
+    spawn(log_errors(
+        async move {
+            loop {
+                let msg = framer_read.read().await?;
+                tx_bytes.write(&msg).await?;
+            }
+        },
+        "socket write failed",
+    ));
+    spawn(log_errors(
+        async move {
+            let mut buf = [0u8; 4096];
+            loop {
+                let n = rx_bytes.read(&mut buf).await?;
+                deframer_write.write(&buf[..n]).await?;
+            }
+        },
+        "socket read failed",
+    ));
+
     let mut greeting = StreamSocketGreeting {
         magic_string: Some(GREETING_STRING.to_string()),
         node_id: Some(node_id.into()),
         connection_label,
     };
     framer
-        .queue_send(encode_fidl(&mut greeting).context("encoding greeting")?.as_slice())
+        .write(
+            FrameType::Overnet,
+            encode_fidl(&mut greeting).context("encoding greeting")?.as_slice(),
+        )
+        .await
         .context("queue greeting")?;
-    let send = framer.take_sends();
-    assert_eq!(send.len(), socket.write(&send).context("write greeting")?);
     log::trace!("[HS:{}] Wrote greeting: {:?}", handshake_id, greeting);
 
     // Wait for first frame
-    let (rx_bytes, mut tx_bytes) = futures::io::AsyncReadExt::split(
-        fidl::AsyncSocket::from_socket(socket).context("asyncify socket")?,
-    );
-    let (tx_frames, mut rx_frames) = futures::channel::mpsc::channel(1);
-    spawn(log_errors(
-        socket_deframer(rx_bytes, tx_frames, duration_per_byte),
-        "Error reading/deframing socket",
-    ));
-    let mut greeting_bytes =
-        rx_frames.next().await.ok_or(anyhow::format_err!("No greeting received on socket"))?;
+    let (frame_type, mut greeting_bytes) = deframer.read().await?;
+    if frame_type != FrameType::Overnet {
+        bail!("Expected Overnet frame, got {:?}", frame_type);
+    }
     let greeting = decode_fidl::<StreamSocketGreeting>(greeting_bytes.as_mut())
         .context("decoding greeting")?;
     log::trace!("[HS:{}] Got greeting: {:?}", handshake_id, greeting);
@@ -146,18 +129,24 @@ async fn run_socket_link(
     let link_receiver = link_sender.clone();
 
     log::trace!("[HS:{}] Running link", handshake_id);
-    spawn(async move {
-        while let Some(mut frame) = rx_frames.next().await {
-            if let Err(err) = link_receiver.received_packet(frame.as_mut()).await {
-                log::warn!("[HS:{}] Error reading packet: {:?}", handshake_id, err);
+    spawn(log_errors(
+        async move {
+            loop {
+                let (frame_type, mut frame) = deframer.read().await?;
+                if frame_type != FrameType::Overnet {
+                    continue;
+                }
+                if let Err(err) = link_receiver.received_packet(frame.as_mut()).await {
+                    log::warn!("[HS:{}] Error reading packet: {:?}", handshake_id, err);
+                }
             }
-        }
-    });
+        },
+        "socket link deframer failed",
+    ));
 
     let mut buf = [0u8; 4096];
     while let Some(n) = link_sender.next_send(&mut buf).await? {
-        framer.queue_send(&buf[..n])?;
-        tx_bytes.write_all(framer.take_sends().as_slice()).await?;
+        framer.write(FrameType::Overnet, &buf[..n]).await?;
     }
 
     Ok(())

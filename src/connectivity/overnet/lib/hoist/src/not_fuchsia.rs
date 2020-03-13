@@ -5,13 +5,16 @@
 #![cfg(not(target_os = "fuchsia"))]
 
 use {
-    anyhow::{bail, format_err, Context as _, Error},
+    anyhow::{bail, ensure, Context as _, Error},
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_overnet::{Peer, ServiceProviderMarker},
     fidl_fuchsia_overnet_protocol::StreamSocketGreeting,
     fuchsia_zircon_status as zx_status,
     futures::prelude::*,
-    overnet_core::{log_errors, Link, NodeId, Router, RouterOptions, StreamDeframer, StreamFramer},
+    overnet_core::{
+        log_errors, new_deframer, new_framer, DeframerWriter, FrameType, FramerReader,
+        LosslessBinary, NodeId, Router, RouterOptions,
+    },
     parking_lot::Mutex,
     std::{rc::Rc, sync::Arc},
     tokio::{io::AsyncRead, runtime::current_thread},
@@ -76,11 +79,10 @@ struct Time(std::time::Instant);
 
 async fn read_incoming(
     stream: tokio::io::ReadHalf<tokio::net::UnixStream>,
-    mut chan: futures::channel::mpsc::Sender<Vec<u8>>,
+    mut incoming_writer: DeframerWriter<LosslessBinary>,
 ) -> Result<(), Error> {
     let mut buf = [0u8; 1024];
     let mut stream = Some(stream);
-    let mut deframer = StreamDeframer::new();
 
     loop {
         let rd = tokio::io::read(stream.take().unwrap(), &mut buf[..]);
@@ -90,29 +92,22 @@ async fn read_incoming(
             return Ok(());
         }
         stream = Some(returned_stream);
-        deframer.queue_recv(&mut buf[..n]);
-        while let Some(frame) = deframer.next_incoming_frame() {
-            chan.send(frame).await?;
-        }
+        incoming_writer.write(&buf[..n]).await?;
     }
 }
 
 async fn write_outgoing(
+    mut outgoing_reader: FramerReader<LosslessBinary>,
     tx_bytes: tokio::io::WriteHalf<tokio::net::UnixStream>,
-    link_sender: Rc<Link>,
-    mut framer: StreamFramer,
 ) -> Result<(), Error> {
-    let mut frame = [0u8; 2048];
     let mut tx_bytes = Some(tx_bytes);
-    while let Some(n) = link_sender.next_send(&mut frame).await? {
-        framer.queue_send(&mut frame[..n])?;
-        let out = framer.take_sends();
+    loop {
+        let out = outgoing_reader.read().await?;
         let wr = tokio::io::write_all(tx_bytes.take().unwrap(), out.as_slice());
         let wr = futures::compat::Compat01As03::new(wr).map_err(|e| -> Error { e.into() });
         let (t, _) = wr.await?;
         tx_bytes = Some(t);
     }
-    Ok(())
 }
 
 /// Retry a future until it succeeds or retries run out.
@@ -152,12 +147,13 @@ async fn run_overnet_prelude() -> Result<Rc<Router>, Error> {
     let uds = futures::compat::Compat01As03::new(uds);
     let uds = uds.await.context(format!("Opening uds path: {}", ascendd_path))?;
     let (rx_bytes, tx_bytes) = uds.split();
-    let (tx_frames, mut rx_frames) = futures::channel::mpsc::channel(8);
+    let (mut framer, outgoing_reader) = new_framer(LosslessBinary, 4096);
+    let (incoming_writer, mut deframer) = new_deframer(LosslessBinary);
 
-    spawn(log_errors(read_incoming(rx_bytes, tx_frames), "Error reading"));
+    spawn(log_errors(read_incoming(rx_bytes, incoming_writer), "Error reading"));
+    spawn(log_errors(write_outgoing(outgoing_reader, tx_bytes), "Error writing"));
 
     // Send first frame
-    let mut framer = StreamFramer::new();
     let mut greeting = StreamSocketGreeting {
         magic_string: Some(ASCENDD_CLIENT_CONNECTION_STRING.to_string()),
         node_id: Some(fidl_fuchsia_overnet_protocol::NodeId { id: node_id.0 }),
@@ -167,16 +163,11 @@ async fn run_overnet_prelude() -> Result<Rc<Router>, Error> {
     let mut handles = Vec::new();
     fidl::encoding::Encoder::encode(&mut bytes, &mut handles, &mut greeting)?;
     assert_eq!(handles.len(), 0);
-    framer.queue_send(bytes.as_slice())?;
-    let send = framer.take_sends();
-    let wr = tokio::io::write_all(tx_bytes, send);
-    let wr = futures::compat::Compat01As03::new(wr).map_err(|e| -> Error { e.into() });
+    framer.write(FrameType::Overnet, bytes.as_slice()).await?;
 
     log::trace!("Wait for greeting & first frame write");
-    let first_frame = rx_frames
-        .next()
-        .map(|r| r.ok_or_else(|| format_err!("Stream closed before greeting received")));
-    let (mut frame, (tx_bytes, _)) = futures::try_join!(first_frame, wr)?;
+    let (frame_type, mut frame) = deframer.read().await?;
+    ensure!(frame_type == FrameType::Overnet, "Expect Overnet frame as first frame");
 
     let mut greeting = StreamSocketGreeting::empty();
     // WARNING: Since we are decoding without a transaction header, we have to
@@ -214,15 +205,29 @@ async fn run_overnet_prelude() -> Result<Rc<Router>, Error> {
     let link = node.new_link(ascendd_node_id.into()).await?;
 
     let link_receiver = link.clone();
-    spawn(async move {
-        while let Some(mut frame) = rx_frames.next().await {
-            if let Err(e) = link_receiver.received_packet(frame.as_mut_slice()).await {
-                log::warn!("Error receiving packet: {}", e);
+    spawn(log_errors(
+        async move {
+            loop {
+                let (frame_type, mut frame) = deframer.read().await?;
+                ensure!(frame_type == FrameType::Overnet, "Should only see Overnet frames");
+                if let Err(e) = link_receiver.received_packet(frame.as_mut_slice()).await {
+                    log::warn!("Error receiving packet: {}", e);
+                }
             }
-        }
-    });
+        },
+        "Error decoding frames",
+    ));
 
-    spawn(log_errors(write_outgoing(tx_bytes, link, framer), "Error writing"));
+    spawn(log_errors(
+        async move {
+            let mut buffer = [0u8; 2048];
+            while let Some(n) = link.next_send(&mut buffer).await? {
+                framer.write(FrameType::Overnet, &buffer[..n]).await?;
+            }
+            Ok(())
+        },
+        "Error sending frames",
+    ));
 
     Ok(node)
 }
