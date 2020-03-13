@@ -361,8 +361,10 @@ bad:
     pushq   %rax  // Save the syscall return value
     pushq   %rcx  // Save user RIP
     pushq   %r11  // Save user RFLAGS
+    pushq   $0    // Align stack
     movq    %rax, %rdi
     call    x86_cpu_maybe_l1d_flush
+    popq    %rdx  // $0 (Trashed)
     popq    %r11  // Restore user RFLAGS
     popq    %rcx  // Restore user RIP
     popq    %rax  // Restore syscall return
