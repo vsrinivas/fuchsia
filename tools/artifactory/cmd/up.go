@@ -34,14 +34,17 @@ const (
 
 	// Relative path within the build directory to the repo produced by a build.
 	repoSubpath = "amber-files"
-	// Names of the repository metadata, key, and blob directories within a repo.
+	// Names of the repository metadata, key, blob, and target directories within a repo.
 	metadataDirName = "repository"
 	keyDirName      = "keys"
 	blobDirName     = "blobs"
-	buildsDirName   = "builds"
-	imageDirName    = "images"
-	debugDirName    = "debug"
 	targetDirName   = "targets"
+
+	// Names of directories to be uploaded to in GCS.
+	buildsDirName  = "builds"
+	debugDirName   = "debug"
+	imageDirName   = "images"
+	packageDirName = "packages"
 
 	// A record of all of the fuchsia debug symbols processed.
 	// This is eventually consumed by crash reporting infrastructure.
@@ -74,12 +77,13 @@ Uploads artifacts from a build to $GCS_BUCKET with the following structure:
 │   │   │   └── <debug binaries>
 │   │   ├── builds
 │   │   │   ├── $UUID
-│   │   │   │   ├── repository
-│   │   │   │   │   ├── targets
-│   │   │   │   │   │   └── <package repo target files>
-│   │   │   │   │   └── <package repo metadata files>
-│   │   │   │   ├── keys
-│   │   │   │   │   └── <package repo keys>
+│   │   │   │   ├── packages
+│   │   │   │   │   ├── repository
+│   │   │   │   │   │   ├── targets
+│   │   │   │   │   │   │   └── <package repo target files>
+│   │   │   │   │   │   └── <package repo metadata files>
+│   │   │   │   │   └── keys
+│   │   │   │   │       └── <package repo keys>
 │   │   │   │   ├── images
 │   │   │   │   │   └── <images>
 
@@ -143,17 +147,17 @@ func (cmd upCommand) execute(ctx context.Context, buildDir string) error {
 		},
 		{
 			Source:      metadataDir,
-			Destination: path.Join(buildsUUIDDir, metadataDirName),
+			Destination: path.Join(buildsUUIDDir, packageDirName, metadataDirName),
 			Deduplicate: false,
 		},
 		{
 			Source:      keyDir,
-			Destination: path.Join(buildsUUIDDir, keyDirName),
+			Destination: path.Join(buildsUUIDDir, packageDirName, keyDirName),
 			Deduplicate: false,
 		},
 		{
 			Source:      targetDir,
-			Destination: path.Join(buildsUUIDDir, metadataDirName, targetDirName),
+			Destination: path.Join(buildsUUIDDir, packageDirName, metadataDirName, targetDirName),
 			Deduplicate: false,
 			Recursive:   true,
 		},
