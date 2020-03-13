@@ -6,7 +6,7 @@ use super::{
     context::MultiInnerValue,
     devices::{CommonInfo, Devices},
     ethernet_worker,
-    util::{ContextFidlCompatible, CoreCompatible, FidlCompatible, IntoFidlExt},
+    util::{IntoFidl, TryFromFidlWithContext, TryIntoCore, TryIntoFidl, TryIntoFidlWithContext},
     LockedStackContext, StackContext, StackDispatcher,
 };
 
@@ -302,7 +302,7 @@ impl<'a, C: StackContext> LockedFidlWorker<'a, C> {
         let device_id = device_info.core_id().ok_or(fidl_net_stack::Error::BadState)?;
 
         add_ip_addr_subnet(&mut self.ctx, device_id, addr.try_into_core()?)
-            .map_err(IntoFidlExt::into_fidl)
+            .map_err(IntoFidl::into_fidl)
     }
 
     fn fidl_del_interface_address(
@@ -315,9 +315,10 @@ impl<'a, C: StackContext> LockedFidlWorker<'a, C> {
         // TODO(gongt): Since addresses can't be added to inactive interfaces
         // they can't be deleted either; return BadState for now.
         let device_id = device_info.core_id().ok_or(fidl_net_stack::Error::BadState)?;
-        let addr: SpecifiedAddr<_> = addr.ip_address.try_into_core()?;
+        let addr: SpecifiedAddr<_> =
+            addr.ip_address.try_into_core().map_err(IntoFidl::into_fidl)?;
 
-        del_ip_addr(&mut self.ctx, device_id, addr.into()).map_err(IntoFidlExt::into_fidl)
+        del_ip_addr(&mut self.ctx, device_id, addr.into()).map_err(IntoFidl::into_fidl)
     }
 
     fn fidl_get_forwarding_table(self) -> Vec<fidl_net_stack::ForwardingEntry> {
@@ -340,7 +341,7 @@ impl<'a, C: StackContext> LockedFidlWorker<'a, C> {
             Ok(entry) => entry,
             Err(e) => return Err(e.into()),
         };
-        add_route(&mut self.ctx, entry).map_err(IntoFidlExt::into_fidl)
+        add_route(&mut self.ctx, entry).map_err(IntoFidl::into_fidl)
     }
 
     fn fidl_del_forwarding_entry(
@@ -348,7 +349,7 @@ impl<'a, C: StackContext> LockedFidlWorker<'a, C> {
         subnet: fidl_net::Subnet,
     ) -> Result<(), fidl_net_stack::Error> {
         if let Ok(subnet) = subnet.try_into_core() {
-            del_device_route(&mut self.ctx, subnet).map_err(IntoFidlExt::into_fidl)
+            del_device_route(&mut self.ctx, subnet).map_err(IntoFidl::into_fidl)
         } else {
             Err(fidl_net_stack::Error::InvalidArgs)
         }

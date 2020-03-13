@@ -39,7 +39,7 @@ use crate::bindings::{
     context::{FromOuterValue, GuardContext, InnerValue, LockableContext},
     devices::DeviceInfo,
     icmp::InnerIcmpConnId,
-    util::{ContextFidlCompatible, ConversionContext, FidlCompatible, IntoFidlExt},
+    util::{ConversionContext, IntoFidl, TryFromFidlWithContext, TryIntoFidl},
     BindingsDispatcher, LockedStackContext, StackContext, StackDispatcher,
 };
 

@@ -19,118 +19,131 @@ impl From<InvalidSubnetError> for fidl_net_stack::Error {
     }
 }
 
-/// Defines a type that can be converted to a FIDL type `F`.
+/// A core type which can be fallibly converted from the FIDL type `F`.
 ///
-/// This trait provides easy conversion to and from FIDL types. All implementers
-/// of this trait for `F` automatically provide the inverse conversion for `F`
-/// by implementing [`CoreCompatible`] for `F`.
+/// For all `C: TryFromFidl<F>`, we provide a blanket impl of [`F:
+/// TryIntoCore<C>`].
 ///
-/// This trait is meant only to be implemented for types in `netstack3_core`.
-pub(crate) trait FidlCompatible<F>: Sized {
-    type FromError;
-    type IntoError;
+/// [`F: TryIntoCore<C>`]: crate::bindings::util::TryIntoCore
+pub(crate) trait TryFromFidl<F>: Sized {
+    /// The type of error returned from [`try_from_fidl`].
+    ///
+    /// [`try_from_fidl`]: crate::bindings::util::TryFromFidl::try_from_fidl
+    type Error;
 
-    fn try_from_fidl(fidl: F) -> Result<Self, Self::FromError>;
-    fn try_into_fidl(self) -> Result<F, Self::IntoError>;
+    /// Attempt to convert from `fidl` into an instance of `Self`.
+    fn try_from_fidl(fidl: F) -> Result<Self, Self::Error>;
 }
 
-/// Defines a type that can be converted to a Core type `C`.
+/// A core type which can be fallibly converted to the FIDL type `F`.
 ///
-/// This trait offers the convenient symmetrical for [`FidlCompatible`] and is
-/// automatically implemented for all types for which a [`FidlCompatible`]
-/// conversion is implemented.
-pub(crate) trait CoreCompatible<C>: Sized {
-    type FromError;
-    type IntoError;
+/// For all `C: TryIntoFidl<F>`, we provide a blanket impl of [`F:
+/// TryFromCore<C>`].
+///
+/// [`F: TryFromCore<C>`]: crate::bindings::util::TryFromCore
+pub(crate) trait TryIntoFidl<F>: Sized {
+    /// The type of error returned from [`try_into_fidl`].
+    ///
+    /// [`try_into_fidl`]: crate::bindings::util::TryIntoFidl::try_into_fidl
+    type Error;
 
-    fn try_from_core(core: C) -> Result<Self, Self::FromError>;
-    fn try_into_core(self) -> Result<C, Self::IntoError>;
+    /// Attempt to convert `self` into an instance of `F`.
+    fn try_into_fidl(self) -> Result<F, Self::Error>;
 }
 
-/// Utility trait for infallible FIDL conversion.
-pub(crate) trait FromFidlExt<F>: FidlCompatible<F, FromError = Never> {
-    fn from_fidl(fidl: F) -> Self {
-        match Self::try_from_fidl(fidl) {
-            Ok(slf) => slf,
-            Err(err) => match err {},
-        }
-    }
-}
-
-/// Utility trait for infallible FIDL conversion.
-pub(crate) trait IntoFidlExt<F>: FidlCompatible<F, IntoError = Never> {
+/// A core type which can be infallibly converted into the FIDL type `F`.
+///
+/// `IntoFidl<F>` extends [`TryIntoFidl<F, Error = Never>`], and provides the
+/// infallible conversion method [`into_fidl`].
+///
+/// [`TryIntoFidl<F, Error = Never>`]: crate::bindings::util::TryIntoFidl
+/// [`into_fidl`]: crate::bindings::util::IntoFidl::into_fidl
+pub(crate) trait IntoFidl<F>: TryIntoFidl<F, Error = Never> {
+    /// Infallibly convert `self` into an instance of `F`.
     fn into_fidl(self) -> F {
         match self.try_into_fidl() {
-            Ok(fidl) => fidl,
-            Err(err) => match err {},
+            Ok(f) => f,
+            Err(never) => never.into_any(),
         }
     }
 }
 
-/// Utility trait for infallible Core conversion.
-pub(crate) trait FromCoreExt<C>: CoreCompatible<C, FromError = Never> {
-    fn from_core(core: C) -> Self {
-        match Self::try_from_core(core) {
-            Ok(slf) => slf,
-            Err(err) => match err {},
-        }
-    }
-}
+impl<F, T: TryIntoFidl<F, Error = Never>> IntoFidl<F> for T {}
 
-/// Utility trait for infallible Core conversion.
-pub(crate) trait IntoCoreExt<C>: CoreCompatible<C, IntoError = Never> {
-    fn into_core(self) -> C {
-        match self.try_into_core() {
-            Ok(core) => core,
-            Err(err) => match err {},
-        }
-    }
-}
-
-impl<F, C> CoreCompatible<C> for F
+/// A FIDL type which can be fallibly converted from the core type `C`.
+///
+/// `TryFromCore<C>` is automatically implemented for all `F` where [`C:
+/// TryIntoFidl<F>`].
+///
+/// [`C: TryIntoFidl<F>`]: crate::bindings::util::TryIntoFidl
+pub(crate) trait TryFromCore<C>: Sized
 where
-    C: FidlCompatible<F>,
+    C: TryIntoFidl<Self>,
 {
-    type FromError = C::IntoError;
-    type IntoError = C::FromError;
-
-    fn try_from_core(core: C) -> Result<Self, Self::FromError> {
+    /// Attempt to convert from `core` into an instance of `Self`.
+    fn try_from_core(core: C) -> Result<Self, C::Error> {
         core.try_into_fidl()
     }
+}
 
-    fn try_into_core(self) -> Result<C, Self::IntoError> {
+impl<F, C: TryIntoFidl<F>> TryFromCore<C> for F {}
+
+/// A FIDL type which can be fallibly converted into the core type `C`.
+///
+/// `TryIntoCore<C>` is automatically implemented for all `F` where [`C:
+/// TryFromFidl<F>`].
+///
+/// [`C: TryFromFidl<F>`]: crate::bindings::util::TryFromFidl
+pub(crate) trait TryIntoCore<C>: Sized
+where
+    C: TryFromFidl<Self>,
+{
+    /// Attempt to convert from `self` into an instance of `C`.
+    ///
+    /// This is equivalent to [`C::try_from_fidl(self)`].
+    ///
+    /// [`C::try_from_fidl(self)`]: crate::bindings::util::TryFromFidl::try_from_fidl
+    fn try_into_core(self) -> Result<C, C::Error> {
         C::try_from_fidl(self)
     }
 }
 
-impl<C, F: CoreCompatible<C, IntoError = Never>> IntoCoreExt<C> for F {}
-impl<C, F: CoreCompatible<C, FromError = Never>> FromCoreExt<C> for F {}
-impl<F, C: FidlCompatible<F, IntoError = Never>> IntoFidlExt<F> for C {}
-impl<F, C: FidlCompatible<F, FromError = Never>> FromFidlExt<F> for C {}
+impl<F, C: TryFromFidl<F>> TryIntoCore<C> for F {}
 
-// NOTE This error exists solely to support implementing
-// `FidlCompatible<fidl_net_stack::Error>` for `NetstackError` so that the
-// latter can be converted into the former. There is no real use case for
-// converting in the other direction, so realistically this error should never
-// be seen.
-/// Error indicating that a value cannot be converted into another type because
-/// there is no appropriate representation of the value in the target type.
-#[derive(Debug)]
-pub struct NotRepresentedError;
-
-impl FidlCompatible<fidl_net_stack::Error> for NetstackError {
-    type FromError = NotRepresentedError;
-    type IntoError = Never;
-
-    fn try_from_fidl(fidl: fidl_net_stack::Error) -> Result<Self, Self::FromError> {
-        match fidl {
-            fidl_net_stack::Error::AlreadyExists => Ok(NetstackError::Exists),
-            fidl_net_stack::Error::NotFound => Ok(NetstackError::NotFound),
-            _ => Err(NotRepresentedError),
+/// A FIDL type which can be infallibly converted into the core type `C`.
+///
+/// `IntoCore<C>` extends [`TryIntoCore<C>`] where `<C as TryFromFidl<_>>::Error =
+/// Never`, and provides the infallible conversion method [`into_core`].
+///
+/// [`TryIntoCore<C>`]: crate::bindings::util::TryIntoCore
+/// [`into_fidl`]: crate::bindings::util::IntoCore::into_core
+pub(crate) trait IntoCore<C>: TryIntoCore<C>
+where
+    C: TryFromFidl<Self, Error = Never>,
+{
+    /// Infallibly convert `self` into an instance of `C`.
+    fn into_core(self) -> C {
+        match self.try_into_core() {
+            Ok(c) => c,
+            Err(never) => never.into_any(),
         }
     }
+}
 
-    fn try_into_fidl(self) -> Result<fidl_net_stack::Error, Self::IntoError> {
+impl<F, C: TryFromFidl<F, Error = Never>> IntoCore<C> for F {}
+
+impl<T> TryIntoFidl<T> for Never {
+    type Error = Never;
+
+    fn try_into_fidl(self) -> Result<T, Never> {
+        self.into_any()
+    }
+}
+
+impl TryIntoFidl<fidl_net_stack::Error> for NetstackError {
+    type Error = Never;
+
+    fn try_into_fidl(self) -> Result<fidl_net_stack::Error, Never> {
         match self {
             NetstackError::Exists => Ok(fidl_net_stack::Error::AlreadyExists),
             NetstackError::NotFound => Ok(fidl_net_stack::Error::NotFound),
@@ -139,18 +152,21 @@ impl FidlCompatible<fidl_net_stack::Error> for NetstackError {
     }
 }
 
-impl FidlCompatible<fidl_net::IpAddress> for IpAddr {
-    type FromError = Never;
-    type IntoError = Never;
+impl TryFromFidl<fidl_net::IpAddress> for IpAddr {
+    type Error = Never;
 
-    fn try_from_fidl(fidl: fidl_net::IpAddress) -> Result<Self, Self::FromError> {
-        match fidl {
+    fn try_from_fidl(addr: fidl_net::IpAddress) -> Result<IpAddr, Never> {
+        match addr {
             fidl_net::IpAddress::Ipv4(v4) => Ok(IpAddr::V4(v4.addr.into())),
             fidl_net::IpAddress::Ipv6(v6) => Ok(IpAddr::V6(v6.addr.into())),
         }
     }
+}
 
-    fn try_into_fidl(self) -> Result<fidl_net::IpAddress, Self::IntoError> {
+impl TryIntoFidl<fidl_net::IpAddress> for IpAddr {
+    type Error = Never;
+
+    fn try_into_fidl(self) -> Result<fidl_net::IpAddress, Never> {
         match self {
             IpAddr::V4(addr) => {
                 Ok(fidl_net::IpAddress::Ipv4(fidl_net::Ipv4Address { addr: addr.ipv4_bytes() }))
@@ -168,49 +184,62 @@ pub struct AddrClassError;
 
 // TODO(joshlf): Introduce a separate variant to `fidl_net_stack::Error` for
 // `AddrClassError`?
-impl From<AddrClassError> for fidl_net_stack::Error {
-    fn from(_err: AddrClassError) -> Self {
-        fidl_net_stack::Error::InvalidArgs
+impl TryIntoFidl<fidl_net_stack::Error> for AddrClassError {
+    type Error = Never;
+
+    fn try_into_fidl(self) -> Result<fidl_net_stack::Error, Never> {
+        Ok(fidl_net_stack::Error::InvalidArgs)
     }
 }
 
-impl FidlCompatible<fidl_net::IpAddress> for SpecifiedAddr<IpAddr> {
-    type FromError = AddrClassError;
-    type IntoError = Never;
+impl TryFromFidl<fidl_net::IpAddress> for SpecifiedAddr<IpAddr> {
+    type Error = AddrClassError;
 
-    fn try_from_fidl(fidl: fidl_net::IpAddress) -> Result<Self, AddrClassError> {
+    fn try_from_fidl(fidl: fidl_net::IpAddress) -> Result<SpecifiedAddr<IpAddr>, AddrClassError> {
         SpecifiedAddr::new(fidl.into_core()).ok_or(AddrClassError)
     }
+}
+
+impl TryIntoFidl<fidl_net::IpAddress> for SpecifiedAddr<IpAddr> {
+    type Error = Never;
 
     fn try_into_fidl(self) -> Result<fidl_net::IpAddress, Never> {
         Ok(self.into_addr().into_fidl())
     }
 }
 
-impl FidlCompatible<fidl_net_stack::InterfaceAddress> for AddrSubnetEither {
-    type FromError = InvalidSubnetError;
-    type IntoError = Never;
+impl TryFromFidl<fidl_net_stack::InterfaceAddress> for AddrSubnetEither {
+    type Error = InvalidSubnetError;
 
-    fn try_from_fidl(fidl: fidl_net_stack::InterfaceAddress) -> Result<Self, Self::FromError> {
+    fn try_from_fidl(
+        fidl: fidl_net_stack::InterfaceAddress,
+    ) -> Result<AddrSubnetEither, InvalidSubnetError> {
         AddrSubnetEither::new(fidl.ip_address.into_core(), fidl.prefix_len)
             .ok_or(InvalidSubnetError)
     }
+}
 
-    fn try_into_fidl(self) -> Result<fidl_net_stack::InterfaceAddress, Self::IntoError> {
+impl TryIntoFidl<fidl_net_stack::InterfaceAddress> for AddrSubnetEither {
+    type Error = Never;
+
+    fn try_into_fidl(self) -> Result<fidl_net_stack::InterfaceAddress, Never> {
         let (addr, prefix) = self.into_addr_prefix();
         Ok(fidl_net_stack::InterfaceAddress { ip_address: addr.into_fidl(), prefix_len: prefix })
     }
 }
 
-impl FidlCompatible<fidl_net::Subnet> for SubnetEither {
-    type FromError = InvalidSubnetError;
-    type IntoError = Never;
+impl TryFromFidl<fidl_net::Subnet> for SubnetEither {
+    type Error = InvalidSubnetError;
 
-    fn try_from_fidl(fidl: fidl_net::Subnet) -> Result<Self, Self::FromError> {
+    fn try_from_fidl(fidl: fidl_net::Subnet) -> Result<SubnetEither, InvalidSubnetError> {
         SubnetEither::new(fidl.addr.into_core(), fidl.prefix_len).ok_or(InvalidSubnetError)
     }
+}
 
-    fn try_into_fidl(self) -> Result<fidl_net::Subnet, Self::IntoError> {
+impl TryIntoFidl<fidl_net::Subnet> for SubnetEither {
+    type Error = Never;
+
+    fn try_into_fidl(self) -> Result<fidl_net::Subnet, Never> {
         let (net, prefix) = self.into_net_prefix();
         Ok(fidl_net::Subnet { addr: net.into_fidl(), prefix_len: prefix })
     }
@@ -220,7 +249,7 @@ impl FidlCompatible<fidl_net::Subnet> for SubnetEither {
 /// completed.
 ///
 /// `ConversionContext` is used by conversion functions in
-/// [`ContextFidlCompatible`] and [`ContextCoreCompatible`].
+/// [`TryFromFidlWithContext`] and [`TryFromCoreWithContext`].
 pub(crate) trait ConversionContext {
     /// Converts a binding identifier (exposed in FIDL as `u64`) to a core
     /// identifier `DeviceId`.
@@ -234,76 +263,99 @@ pub(crate) trait ConversionContext {
     fn get_binding_id(&self, core_id: DeviceId) -> Option<u64>;
 }
 
-/// Defines a type that can be converted to a FIDL type `F`, given a context
-/// that implements [`ConversionContext`].
+/// A core type which can be fallibly converted from the FIDL type `F` given a
+/// context that implements [`ConversionContext`].
 ///
-/// This trait provides easy conversion to and from FIDL types. All implementers
-/// of this trait for `F` automatically provide the inverse conversion for `F`
-/// by implementing [`ContextCoreCompatible`] for `F`.
+/// For all `C: TryFromFidlWithContext<F>`, we provide a blanket impl of [`F:
+/// TryIntoCoreWithContext<C>`].
 ///
-/// This trait is meant only to be implemented for types in `netstack3_core`.
-pub(crate) trait ContextFidlCompatible<F>: Sized {
-    type FromError;
-    type IntoError;
+/// [`F: TryIntoCoreWithContext<C>`]: crate::bindings::util::TryIntoCoreWithContext
+pub(crate) trait TryFromFidlWithContext<F>: Sized {
+    /// The type of error returned from [`try_from_fidl_with_ctx`].
+    ///
+    /// [`try_from_fidl_with_ctx`]: crate::bindings::util::TryFromFidlWithContext::try_from_fidl_with_ctx
+    type Error;
 
-    fn try_from_fidl_with_ctx<C: ConversionContext>(
-        ctx: &C,
-        fidl: F,
-    ) -> Result<Self, Self::FromError>;
-    fn try_into_fidl_with_ctx<C: ConversionContext>(self, ctx: &C) -> Result<F, Self::IntoError>;
+    /// Attempt to convert from `fidl` into an instance of `Self`.
+    fn try_from_fidl_with_ctx<C: ConversionContext>(ctx: &C, fidl: F) -> Result<Self, Self::Error>;
 }
 
-/// Defines a type that can be converted to a Core type `C`, given a context
-/// that implements [`ConversionContext`].
+/// A core type which can be fallibly converted to the FIDL type `F` given a
+/// context that implements [`ConversionContext`].
 ///
-/// This trait offers the convenient symmetrical for [`ContextFidlCompatible`]
-/// and is automatically implemented for all types for which a
-/// [`ContextFidlCompatible`] conversion is implemented.
-pub(crate) trait ContextCoreCompatible<T>: Sized {
-    type FromError;
-    type IntoError;
+/// For all `C: TryIntoFidlWithContext<F>`, we provide a blanket impl of [`F:
+/// TryFromCoreWithContext<C>`].
+///
+/// [`F: TryFromCoreWithContext<C>`]: crate::bindings::util::TryFromCoreWithContext
+pub(crate) trait TryIntoFidlWithContext<F>: Sized {
+    /// The type of error returned from [`try_into_fidl_with_ctx`].
+    ///
+    /// [`try_into_fidl_with_ctx`]: crate::bindings::util::TryIntoFidlWithContext::try_from_fidl_with_ctx
+    type Error;
 
-    fn try_from_core_with_ctx<C: ConversionContext>(
-        ctx: &C,
-        core: T,
-    ) -> Result<Self, Self::FromError>;
-    fn try_into_core_with_ctx<C: ConversionContext>(self, ctx: &C) -> Result<T, Self::IntoError>;
+    /// Attempt to convert from `self` into an instance of `F`.
+    fn try_into_fidl_with_ctx<C: ConversionContext>(self, ctx: &C) -> Result<F, Self::Error>;
 }
 
-impl<F, C> ContextCoreCompatible<C> for F
+/// A FIDL type which can be fallibly converted from the core type `C` given a
+/// context that implements [`ConversionContext`].
+///
+/// `TryFromCoreWithContext<C>` is automatically implemented for all `F` where
+/// [`C: TryIntoFidlWithContext<F>`].
+///
+/// [`C: TryIntoFidlWithContext<F>`]: crate::bindings::util::TryIntoFidlWithContext
+pub(crate) trait TryFromCoreWithContext<C>: Sized
 where
-    C: ContextFidlCompatible<F>,
+    C: TryIntoFidlWithContext<Self>,
 {
-    type FromError = C::IntoError;
-    type IntoError = C::FromError;
-
-    fn try_from_core_with_ctx<X: ConversionContext>(
-        ctx: &X,
-        core: C,
-    ) -> Result<Self, Self::FromError> {
+    /// Attempt to convert from `core` into an instance of `Self`.
+    fn try_from_core_with_ctx<X: ConversionContext>(ctx: &X, core: C) -> Result<Self, C::Error> {
         core.try_into_fidl_with_ctx(ctx)
     }
+}
 
-    fn try_into_core_with_ctx<X: ConversionContext>(self, ctx: &X) -> Result<C, Self::IntoError> {
+impl<F, C: TryIntoFidlWithContext<F>> TryFromCoreWithContext<C> for F {}
+
+/// A FIDL type which can be fallibly converted into the core type `C` given a
+/// context that implements [`ConversionContext`].
+///
+/// `TryIntoCoreWithContext<C>` is automatically implemented for all `F` where
+/// [`C: TryFromFidlWithContext<F>`].
+///
+/// [`C: TryFromFidlWithContext<F>`]: crate::bindings::util::TryFromFidlWithContext
+pub(crate) trait TryIntoCoreWithContext<C>: Sized
+where
+    C: TryFromFidlWithContext<Self>,
+{
+    /// Attempt to convert from `self` into an instance of `C`.
+    fn try_into_core_with_ctx<X: ConversionContext>(self, ctx: &X) -> Result<C, C::Error> {
         C::try_from_fidl_with_ctx(ctx, self)
     }
 }
 
+impl<F, C: TryFromFidlWithContext<F>> TryIntoCoreWithContext<C> for F {}
+
 #[derive(Debug)]
 pub struct DeviceNotFoundError;
 
-impl ContextFidlCompatible<u64> for DeviceId {
-    type FromError = DeviceNotFoundError;
-    type IntoError = DeviceNotFoundError;
+impl TryFromFidlWithContext<u64> for DeviceId {
+    type Error = DeviceNotFoundError;
 
     fn try_from_fidl_with_ctx<C: ConversionContext>(
         ctx: &C,
         fidl: u64,
-    ) -> Result<Self, Self::FromError> {
+    ) -> Result<DeviceId, DeviceNotFoundError> {
         ctx.get_core_id(fidl).ok_or(DeviceNotFoundError)
     }
+}
 
-    fn try_into_fidl_with_ctx<C: ConversionContext>(self, ctx: &C) -> Result<u64, Self::IntoError> {
+impl TryIntoFidlWithContext<u64> for DeviceId {
+    type Error = DeviceNotFoundError;
+
+    fn try_into_fidl_with_ctx<C: ConversionContext>(
+        self,
+        ctx: &C,
+    ) -> Result<u64, DeviceNotFoundError> {
         ctx.get_binding_id(self).ok_or(DeviceNotFoundError)
     }
 }
@@ -345,14 +397,13 @@ impl From<ForwardingConversionError> for fidl_net_stack::Error {
     }
 }
 
-impl ContextFidlCompatible<fidl_net_stack::ForwardingDestination> for EntryDestEither<DeviceId> {
-    type FromError = ForwardingConversionError;
-    type IntoError = DeviceNotFoundError;
+impl TryFromFidlWithContext<fidl_net_stack::ForwardingDestination> for EntryDestEither<DeviceId> {
+    type Error = ForwardingConversionError;
 
     fn try_from_fidl_with_ctx<C: ConversionContext>(
         ctx: &C,
         fidl: fidl_net_stack::ForwardingDestination,
-    ) -> Result<Self, Self::FromError> {
+    ) -> Result<EntryDestEither<DeviceId>, ForwardingConversionError> {
         Ok(match fidl {
             fidl_net_stack::ForwardingDestination::DeviceId(binding_id) => {
                 EntryDest::Local { device: binding_id.try_into_core_with_ctx(ctx)? }
@@ -362,11 +413,15 @@ impl ContextFidlCompatible<fidl_net_stack::ForwardingDestination> for EntryDestE
             }
         })
     }
+}
+
+impl TryIntoFidlWithContext<fidl_net_stack::ForwardingDestination> for EntryDestEither<DeviceId> {
+    type Error = DeviceNotFoundError;
 
     fn try_into_fidl_with_ctx<C: ConversionContext>(
         self,
         ctx: &C,
-    ) -> Result<fidl_net_stack::ForwardingDestination, Self::IntoError> {
+    ) -> Result<fidl_net_stack::ForwardingDestination, DeviceNotFoundError> {
         Ok(match self {
             EntryDest::Local { device } => {
                 fidl_net_stack::ForwardingDestination::DeviceId(device.try_into_fidl_with_ctx(ctx)?)
@@ -379,25 +434,28 @@ impl ContextFidlCompatible<fidl_net_stack::ForwardingDestination> for EntryDestE
     }
 }
 
-impl ContextFidlCompatible<fidl_net_stack::ForwardingEntry> for EntryEither<DeviceId> {
-    type FromError = ForwardingConversionError;
-    type IntoError = DeviceNotFoundError;
+impl TryFromFidlWithContext<fidl_net_stack::ForwardingEntry> for EntryEither<DeviceId> {
+    type Error = ForwardingConversionError;
 
     fn try_from_fidl_with_ctx<C: ConversionContext>(
         ctx: &C,
         fidl: fidl_net_stack::ForwardingEntry,
-    ) -> Result<Self, Self::FromError> {
+    ) -> Result<EntryEither<DeviceId>, ForwardingConversionError> {
         EntryEither::new(
             fidl.subnet.try_into_core()?,
             fidl.destination.try_into_core_with_ctx(ctx)?,
         )
         .ok_or(ForwardingConversionError::TypeMismatch)
     }
+}
+
+impl TryIntoFidlWithContext<fidl_net_stack::ForwardingEntry> for EntryEither<DeviceId> {
+    type Error = DeviceNotFoundError;
 
     fn try_into_fidl_with_ctx<C: ConversionContext>(
         self,
         ctx: &C,
-    ) -> Result<fidl_net_stack::ForwardingEntry, Self::IntoError> {
+    ) -> Result<fidl_net_stack::ForwardingEntry, DeviceNotFoundError> {
         let (subnet, dest) = self.into_subnet_dest();
         Ok(fidl_net_stack::ForwardingEntry {
             subnet: subnet.into_fidl(),
