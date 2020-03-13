@@ -32,6 +32,7 @@ group("core") {
     "//src/media/bundles:tools",
     "//tools",
     "//tools:tests",
+    "//topaz/bundles:buildbot",
   ]
 }
 
