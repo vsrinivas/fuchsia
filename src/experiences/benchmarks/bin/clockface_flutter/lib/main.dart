@@ -9,7 +9,7 @@ import 'package:flutter/material.dart';
 
 const backgroundColor = Color(0xFFEBD4B3);
 const hourHandColor = Color(0xFFFD4763);
-const minuteHandColor = Color(0x7FFEA3B1);
+const minuteHandColor = Color(0x7FFF7284);
 const secondHandColor = Colors.white;
 const shadowColor = Color(0x0D000000);
 const radius = 0.4;
