@@ -117,7 +117,7 @@ static int cmd_watchdog(int argc, const cmd_args* argv, uint32_t flags) {
       // 4) Spin forever.
       //
       Thread::Current::MigrateToCpu(BOOT_CPU_ID);
-      [[maybe_unused]] zx_status_t status = platform_halt_secondary_cpus();
+      [[maybe_unused]] zx_status_t status = platform_halt_secondary_cpus(ZX_TIME_INFINITE);
       DEBUG_ASSERT(status == ZX_OK);
 
       arch_disable_ints();

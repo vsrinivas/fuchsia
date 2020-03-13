@@ -23,7 +23,7 @@ static int resume_cpu_test_thread(void* arg) {
 // "Unplug" online secondary (non-BOOT) cores
 static zx_status_t unplug_all_cores(Thread** leaked_threads) {
   cpu_mask_t cpumask = mp_get_online_mask() & ~cpu_num_to_mask(BOOT_CPU_ID);
-  return mp_unplug_cpu_mask(cpumask, leaked_threads);
+  return mp_unplug_cpu_mask(cpumask, ZX_TIME_INFINITE, leaked_threads);
 }
 
 static zx_status_t hotplug_core(uint i) {

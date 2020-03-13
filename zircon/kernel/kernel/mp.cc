@@ -285,11 +285,14 @@ zx_status_t mp_hotplug_cpu_mask(cpu_mask_t cpu_mask) {
 }
 
 // Unplug a single CPU.  Must be called while holding the hotplug lock
-static zx_status_t mp_unplug_cpu_mask_single_locked(cpu_num_t cpu_id, Thread** leaked_thread) {
+static zx_status_t mp_unplug_cpu_mask_single_locked(cpu_num_t cpu_id, zx_time_t deadline,
+                                                    Thread** leaked_thread) {
   // Wait for |cpu_id| to complete any in-progress DPCs and terminate its DPC thread.  Later, once
   // nothing is running on it, we'll migrate its queued DPCs to another CPU.
-  zx_status_t status = Dpc::Shutdown(cpu_id, ZX_TIME_INFINITE);
-  DEBUG_ASSERT(status == ZX_OK);
+  zx_status_t status = Dpc::Shutdown(cpu_id, deadline);
+  if (status != ZX_OK) {
+    return status;
+  }
 
   // TODO(maniscalco): |cpu_id| is about to shutdown.  We should ensure it has no pinned threads
   // (except maybe the idle thread).  Once we're confident we've terminated/migrated them all,
@@ -362,16 +365,17 @@ cleanup_thread:
   return status;
 }
 
-// Unplug the given cpus.  Blocks until the CPUs are removed.  Partial
-// failure may occur (in which some CPUs are removed but not others).
+// Unplug the given cpus.  Blocks until the CPUs are removed or |deadline| has been reached.
 //
-// This should be called in a thread context
+// Partial failure may occur (in which some CPUs are removed but not others).
+//
+// This should be called in a thread context.
 //
 // |leaked_threads| is an optional array of pointers to threads with length
 // |SMP_MAX_CPUS|. If null, the threads used to "cleanup" each CPU will be
 // leaked. If non-null, they will be returned to the caller so that the caller
 // can |thread_forget| them.
-zx_status_t mp_unplug_cpu_mask(cpu_mask_t cpu_mask, Thread** leaked_threads) {
+zx_status_t mp_unplug_cpu_mask(cpu_mask_t cpu_mask, zx_time_t deadline, Thread** leaked_threads) {
   DEBUG_ASSERT(!arch_ints_disabled());
   Guard<Mutex> lock(&mp.hotplug_lock);
 
@@ -385,7 +389,7 @@ zx_status_t mp_unplug_cpu_mask(cpu_mask_t cpu_mask, Thread** leaked_threads) {
     cpu_mask &= ~cpu_num_to_mask(cpu_id);
 
     zx_status_t status = mp_unplug_cpu_mask_single_locked(
-        cpu_id, leaked_threads ? &leaked_threads[cpu_id] : nullptr);
+        cpu_id, deadline, leaked_threads ? &leaked_threads[cpu_id] : nullptr);
     if (status != ZX_OK) {
       return status;
     }
