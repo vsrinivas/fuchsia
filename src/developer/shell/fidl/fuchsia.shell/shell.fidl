@@ -229,6 +229,9 @@ protocol Shell {
     /// running when this method is called, the value of the variable is just a snapshot value (it
     /// may be modified later by the running code).
     ///
+    /// The return value is a set of nodes; the node ids are assumed to be their index in the
+    /// vector.
+    ///
     /// - `name` the name of the variable to load.
     LoadGlobal(string:MAX name) -> (vector<Node>:MAX nodes);
 

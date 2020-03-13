@@ -10,19 +10,17 @@ source_set("lib") {
   sources = [
     "app.cc",
     "app.h",
-    "ast_builder.cc",
-    "ast_builder.h",
     "command.cc",
     "command.h",
     "console.cc",
     "console.h",
-    "err.h",
     "executor.cc",
     "executor.h",
     "scoped_interpreter.h",
   ]
 
   public_deps = [
+    ":common",
     "//src/developer/shell/fidl/fuchsia.shell:shell_llcpp",
     "//src/developer/shell/interpreter:shell_server_lib",
     "//src/developer/shell/parser",
@@ -33,6 +31,17 @@ source_set("lib") {
     "//zircon/public/lib/cmdline",
     "//zircon/system/fidl/fuchsia-hardware-pty:c",
   ]
+}
+
+# TODO(jeremymanson): Break this out into its own directory.
+source_set("common") {
+  sources = [
+    "ast_builder.cc",
+    "ast_builder.h",
+    "err.h",
+  ]
+
+  public_deps = [ "//src/developer/shell/fidl/fuchsia.shell:shell_llcpp" ]
 }
 
 executable("bin") {

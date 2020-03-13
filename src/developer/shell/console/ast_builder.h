@@ -17,7 +17,11 @@ namespace shell::console {
 // Builds the remote AST for consumption by the interpreter service.
 class AstBuilder {
  public:
-  AstBuilder() : undef_(true), next_id_(0) {}
+  using NodeId = llcpp::fuchsia::shell::NodeId;
+
+  // Constructs an AstBuilder. |file_id| is the id of the file (1 by default, because 0 means
+  // "builtin")
+  explicit AstBuilder(uint64_t file_id = 1) : file_id_(file_id), undef_(true), next_id_(0) {}
 
   AstBuilder& operator=(AstBuilder&&);
   AstBuilder(AstBuilder&&);
@@ -27,17 +31,23 @@ class AstBuilder {
     return llcpp::fuchsia::shell::ShellType::WithUndef(fidl::unowned(&undef_));
   }
 
-  // Returns the set of nodes managed by thie AstBuilder as a vector view, suitable for sending to
-  // the service.
-  fidl::VectorView<llcpp::fuchsia::shell::NodeDefinition> AsVectorView() {
+  // Returns the set of nodes managed by this AstBuilder as a vector view, suitable for sending to
+  // Shell::AddNodes.
+  fidl::VectorView<llcpp::fuchsia::shell::NodeDefinition> DefsAsVectorView() {
     return fidl::VectorView(nodes_);
   }
+
+  // Returns the set of nodes managed by this AstBuilder as a vector view, suitable for returning
+  // from Shell::LoadGlobal.  The node id is assumed to be the individual index.  Caution:
+  // DefsAsVectorView will not return anything after this method is called.
+  fidl::VectorView<llcpp::fuchsia::shell::Node> NodesAsVectorView();
 
   bool empty() const { return nodes_.empty(); }
 
   template <class T>
   T* ManageCopyOf(const T* value, size_t size = sizeof(T)) {
     auto buf = bufs_.emplace_back(new char[size]).get();
+    memcpy(buf, value, size);
     return new (buf) T(*value);
   }
 
@@ -54,47 +64,121 @@ class AstBuilder {
   }
 
   // Sets the given node to be the root node for remote computation.
-  void SetRoot(uint64_t node_id);
+  void SetRoot(NodeId node_id);
 
   // Adds a variable declaration.  The variable is named with the given |identifier|, the type is
   // the given |type|, the |node_id| refers to the node that, when evaluated, gives the initial
   // value, and |is_const| tells you whether the variable is const.  Returns the resulting node_id.
-  uint64_t AddVariableDeclaration(const std::string& identifier,
-                                  llcpp::fuchsia::shell::ShellType&& type, uint64_t node_id,
-                                  bool is_const);
+  NodeId AddVariableDeclaration(const std::string& identifier,
+                                llcpp::fuchsia::shell::ShellType&& type, NodeId node_id,
+                                bool is_const, bool is_root = false);
+
+  // Adds a variable reference, where |node_id| was the variable declaration.
+  NodeId AddVariableFromDef(NodeId node_id);
 
   // Adds an integer literal node with the value |i|.  Returns the resulting node_id.
-  uint64_t AddIntegerLiteral(int64_t i);
+  NodeId AddIntegerLiteral(uint64_t i, bool is_negative);
+
+  // Adds an integer literal node with the value |i|.  Returns the resulting node_id.
+  NodeId AddIntegerLiteral(int64_t i);
 
   // Adds a string literal node with the value |s|.  Returns the resulting node_id.
-  uint64_t AddStringLiteral(std::string s);
+  NodeId AddStringLiteral(const std::string& s);
+
+  // Adds an addition of two values.
+  NodeId AddAddition(bool with_exceptions, NodeId left, NodeId right);
 
   struct NodePair {
-    uint64_t value_node;
-    uint64_t schema_node;
+    NodeId value_node;
+    NodeId schema_node;
   };
 
   // Call OpenObject when you start parsing an object, and CloseObject when you finish.
   // The resulting NodePair will contain nodes with its schema and value.
   void OpenObject();
-  NodePair CloseObject(uint64_t file_id);
+  NodePair CloseObject();
 
   // Adds a field type
-  NodePair AddField(const std::string& key, uint64_t file_id, uint64_t expression_node_id,
+  NodePair AddField(const std::string& key, NodeId expression_node_id,
                     llcpp::fuchsia::shell::ShellType&& type);
 
   AstBuilder& operator=(const AstBuilder&) = delete;
   AstBuilder(const AstBuilder&) = delete;
 
+  // Returns the added node_id
+  NodeId AddNode(llcpp::fuchsia::shell::Node&& node, bool is_root = false);
+
+  // The following methods generate a ShellType object for the given type.
+  llcpp::fuchsia::shell::ShellType TypeUndef() {
+    fidl::aligned<bool> undef = false;
+    fidl::aligned<bool>* undef_ptr = ManageCopyOf(&undef);
+    return llcpp::fuchsia::shell::ShellType::WithUndef(fidl::unowned(undef_ptr));
+  }
+
+  llcpp::fuchsia::shell::ShellType TypeBool() {
+    return TypeBuiltin(llcpp::fuchsia::shell::BuiltinType::BOOL);
+  }
+
+  llcpp::fuchsia::shell::ShellType TypeChar() {
+    return TypeBuiltin(llcpp::fuchsia::shell::BuiltinType::CHAR);
+  }
+
+  llcpp::fuchsia::shell::ShellType TypeString() {
+    return TypeBuiltin(llcpp::fuchsia::shell::BuiltinType::STRING);
+  }
+
+  llcpp::fuchsia::shell::ShellType TypeInt8() {
+    return TypeBuiltin(llcpp::fuchsia::shell::BuiltinType::INT8);
+  }
+
+  llcpp::fuchsia::shell::ShellType TypeUint8() {
+    return TypeBuiltin(llcpp::fuchsia::shell::BuiltinType::UINT8);
+  }
+
+  llcpp::fuchsia::shell::ShellType TypeInt16() {
+    return TypeBuiltin(llcpp::fuchsia::shell::BuiltinType::INT16);
+  }
+
+  llcpp::fuchsia::shell::ShellType TypeUint16() {
+    return TypeBuiltin(llcpp::fuchsia::shell::BuiltinType::UINT16);
+  }
+
+  llcpp::fuchsia::shell::ShellType TypeInt32() {
+    return TypeBuiltin(llcpp::fuchsia::shell::BuiltinType::INT32);
+  }
+
+  llcpp::fuchsia::shell::ShellType TypeUint32() {
+    return TypeBuiltin(llcpp::fuchsia::shell::BuiltinType::UINT32);
+  }
+
+  llcpp::fuchsia::shell::ShellType TypeInt64() {
+    return TypeBuiltin(llcpp::fuchsia::shell::BuiltinType::INT64);
+  }
+
+  llcpp::fuchsia::shell::ShellType TypeUint64() {
+    return TypeBuiltin(llcpp::fuchsia::shell::BuiltinType::UINT64);
+  }
+
+  llcpp::fuchsia::shell::ShellType TypeInteger() {
+    return TypeBuiltin(llcpp::fuchsia::shell::BuiltinType::INTEGER);
+  }
+
+  llcpp::fuchsia::shell::ShellType TypeFloat32() {
+    return TypeBuiltin(llcpp::fuchsia::shell::BuiltinType::FLOAT32);
+  }
+
+  llcpp::fuchsia::shell::ShellType TypeFloat64() {
+    return TypeBuiltin(llcpp::fuchsia::shell::BuiltinType::FLOAT64);
+  }
+
  private:
+  uint64_t file_id_;
   fidl::aligned<bool> undef_;
   uint64_t next_id_;
   // Replace with arena allocation.
   std::vector<std::unique_ptr<char[]>> bufs_;
   std::vector<llcpp::fuchsia::shell::NodeDefinition> nodes_;
-
-  // Returns the added node_id
-  uint64_t AddNode(llcpp::fuchsia::shell::Node&& node, bool is_root = false);
+  std::vector<llcpp::fuchsia::shell::Node> raw_nodes_;
 
   struct FidlNodeIdPair {
     FidlNodeIdPair(llcpp::fuchsia::shell::NodeId&& schema, llcpp::fuchsia::shell::NodeId&& value)
@@ -102,6 +186,13 @@ class AstBuilder {
     llcpp::fuchsia::shell::NodeId schema_id;
     llcpp::fuchsia::shell::NodeId value_id;
   };
+
+  llcpp::fuchsia::shell::ShellType TypeBuiltin(llcpp::fuchsia::shell::BuiltinType type) {
+    llcpp::fuchsia::shell::BuiltinType* type_ptr = ManageCopyOf(&type);
+    return llcpp::fuchsia::shell::ShellType::WithBuiltinType(fidl::unowned(type_ptr));
+  }
+
+  llcpp::fuchsia::shell::NodeId* ManagedNodeId(NodeId node_id) { return ManageCopyOf(&node_id); }
 
   std::vector<std::vector<FidlNodeIdPair>> object_stack_;
 };

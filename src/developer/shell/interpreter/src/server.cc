@@ -10,6 +10,7 @@
 #include "lib/async-loop/default.h"
 #include "lib/fidl-async/cpp/bind.h"
 #include "lib/svc/dir.h"
+#include "src/developer/shell/console/ast_builder.h"
 #include "src/developer/shell/interpreter/src/expressions.h"
 #include "src/developer/shell/interpreter/src/instructions.h"
 #include "src/developer/shell/interpreter/src/schema.h"
@@ -382,45 +383,50 @@ class LoadGlobalHelper {
  public:
   LoadGlobalHelper() = default;
 
-  std::vector<llcpp::fuchsia::shell::Node>& nodes() { return nodes_; }
+  fidl::VectorView<llcpp::fuchsia::shell::Node> nodes() { return builder_.NodesAsVectorView(); }
 
-  void SetSignedInteger(int64_t value) {
-    uint64_t tmp = value;
-    if (value < 0) {
-      tmp = -tmp;
+  void Set(const Value& value) {
+    switch (value.type()) {
+      case ValueType::kUndef:
+        break;
+      case ValueType::kInt8:
+        builder_.AddIntegerLiteral(value.GetInt8());
+        break;
+      case ValueType::kUint8:
+        builder_.AddIntegerLiteral(value.GetUint8());
+        break;
+      case ValueType::kInt16:
+        builder_.AddIntegerLiteral(value.GetInt16());
+        break;
+      case ValueType::kUint16:
+        builder_.AddIntegerLiteral(value.GetUint16());
+        break;
+      case ValueType::kInt32:
+        builder_.AddIntegerLiteral(value.GetInt32());
+        break;
+      case ValueType::kUint32:
+        builder_.AddIntegerLiteral(value.GetUint32());
+        break;
+      case ValueType::kInt64:
+        builder_.AddIntegerLiteral(value.GetInt64());
+        break;
+      case ValueType::kUint64:
+        builder_.AddIntegerLiteral(value.GetUint64());
+        break;
+      // Float ?
+      case ValueType::kString:
+        builder_.AddStringLiteral(value.GetString()->value());
+        break;
     }
-    absolute_value_.emplace_back(tmp);
-    integer_literal_.negative = value < 0;
-    integer_literal_.absolute_value = fidl::VectorView(absolute_value_);
-    llcpp::fuchsia::shell::Node shell_value;
-    shell_value.set_integer_literal(
-        fidl::unowned_ptr<llcpp::fuchsia::shell::IntegerLiteral>(&integer_literal_));
-    nodes_.emplace_back(std::move(shell_value));
   }
 
-  void SetUnsignedInteger(uint64_t value) {
-    absolute_value_.emplace_back(value);
-    integer_literal_.negative = false;
-    integer_literal_.absolute_value = fidl::VectorView(absolute_value_);
-    llcpp::fuchsia::shell::Node shell_value;
-    shell_value.set_integer_literal(
-        fidl::unowned_ptr<llcpp::fuchsia::shell::IntegerLiteral>(&integer_literal_));
-    nodes_.emplace_back(std::move(shell_value));
-  }
-
-  void SetString(String* value) {
-    string_.set_data(value->value().data());
-    string_.set_size(value->value().size());
-    llcpp::fuchsia::shell::Node shell_value;
-    shell_value.set_string_literal(fidl::unowned_ptr<fidl::StringView>(&string_));
-    nodes_.emplace_back(std::move(shell_value));
+  llcpp::fuchsia::shell::ShellType GetBuiltin(llcpp::fuchsia::shell::BuiltinType type) {
+    llcpp::fuchsia::shell::BuiltinType* type_ptr = builder_.ManageCopyOf(&type);
+    return llcpp::fuchsia::shell::ShellType::WithBuiltinType(fidl::unowned(type_ptr));
   }
 
  private:
-  std::vector<llcpp::fuchsia::shell::Node> nodes_;
-  llcpp::fuchsia::shell::IntegerLiteral integer_literal_;
-  std::vector<uint64_t> absolute_value_;
-  fidl::StringView string_;
+  shell::console::AstBuilder builder_;
 };
 
 void Service::LoadGlobal(::fidl::StringView name, LoadGlobalCompleter::Sync completer) {
@@ -429,39 +435,9 @@ void Service::LoadGlobal(::fidl::StringView name, LoadGlobalCompleter::Sync comp
   if (variable != nullptr) {
     Value value;
     interpreter_->LoadGlobal(variable, &value);
-    switch (value.type()) {
-      case ValueType::kUndef:
-        break;
-      case ValueType::kInt8:
-        helper.SetSignedInteger(value.GetInt8());
-        break;
-      case ValueType::kUint8:
-        helper.SetUnsignedInteger(value.GetUint8());
-        break;
-      case ValueType::kInt16:
-        helper.SetSignedInteger(value.GetInt16());
-        break;
-      case ValueType::kUint16:
-        helper.SetUnsignedInteger(value.GetUint16());
-        break;
-      case ValueType::kInt32:
-        helper.SetSignedInteger(value.GetInt32());
-        break;
-      case ValueType::kUint32:
-        helper.SetUnsignedInteger(value.GetUint32());
-        break;
-      case ValueType::kInt64:
-        helper.SetSignedInteger(value.GetInt64());
-        break;
-      case ValueType::kUint64:
-        helper.SetUnsignedInteger(value.GetUint64());
-        break;
-      case ValueType::kString:
-        helper.SetString(value.GetString());
-        break;
-    }
+    helper.Set(value);
   }
-  completer.Reply(fidl::VectorView(helper.nodes()));
+  completer.Reply(helper.nodes());
 }
 
 void Service::AddIntegerLiteral(ServerInterpreterContext* context, uint64_t node_file_id,

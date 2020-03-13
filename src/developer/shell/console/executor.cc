@@ -35,7 +35,7 @@ Err Executor::Execute(std::unique_ptr<Command> command, fit::closure callback) {
   // TODO: Make sure that add_result is small enough to fit in a single FIDL message.  Otherwise,
   // split it.
   llcpp::fuchsia::shell::Shell::ResultOf::AddNodes add_result =
-      client_->AddNodes(context_id_, command->nodes().AsVectorView());
+      client_->AddNodes(context_id_, command->nodes().DefsAsVectorView());
   if (!add_result.ok()) {
     return Err(add_result.status(), add_result.error());
   }

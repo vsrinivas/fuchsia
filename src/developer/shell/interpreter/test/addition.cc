@@ -7,6 +7,7 @@
 #include <memory>
 #include <vector>
 
+#include "src/developer/shell/console/ast_builder.h"
 #include "src/developer/shell/interpreter/test/interpreter_test.h"
 
 // - String ----------------------------------------------------------------------------------------
@@ -14,39 +15,43 @@
 TEST_F(InterpreterTest, StringAdditionOk) {
   constexpr uint64_t kFileId = 1;
   InterpreterTestContext* context = CreateContext();
-  shell()->CreateExecutionContext(context->id);
+  ASSERT_CALL_OK(shell().CreateExecutionContext(context->id));
 
-  NodeBuilder builder(kFileId);
-  auto marx =
-      builder.VariableDefinition("marx", TypeString(), false, builder.StringLiteral("Marx"));
+  shell::console::AstBuilder builder(kFileId);
+  auto marx = builder.AddVariableDeclaration("marx", builder.TypeString(),
+                                             builder.AddStringLiteral("Marx"), false, true);
   // Checks s1 + (s2 + s3).
-  builder.VariableDefinition(
-      "groucho1", TypeString(), false,
-      builder.Addition(/*with_exceptions=*/true, builder.StringLiteral("A "),
-                       builder.Addition(/*with_exceptions=*/true, builder.Variable(marx),
-                                        builder.StringLiteral(" brother"))));
+  builder.AddVariableDeclaration(
+      "groucho1", builder.TypeString(),
+      builder.AddAddition(
+          /*with_exceptions=*/true, builder.AddStringLiteral("A "),
+          builder.AddAddition(/*with_exceptions=*/true, builder.AddVariableFromDef(marx),
+                              builder.AddStringLiteral(" brother"))),
+      false, true);
   // Checks (s1 + s2) + s3.
-  builder.VariableDefinition(
-      "groucho2", TypeString(), false,
-      builder.Addition(/*with_exceptions=*/true,
-                       builder.Addition(/*with_exceptions=*/true, builder.StringLiteral("A "),
-                                        builder.Variable(marx)),
-                       builder.StringLiteral(" brother")));
+  builder.AddVariableDeclaration(
+      "groucho2", builder.TypeString(),
+      builder.AddAddition(
+          /*with_exceptions=*/true,
+          builder.AddAddition(/*with_exceptions=*/true, builder.AddStringLiteral("A "),
+                              builder.AddVariableFromDef(marx)),
+          builder.AddStringLiteral(" brother")),
+      false, true);
 
-  shell()->AddNodes(context->id, std::move(*builder.nodes()));
-  shell()->ExecuteExecutionContext(context->id);
+  ASSERT_CALL_OK(shell().AddNodes(context->id, builder.DefsAsVectorView()));
+  ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));
   LoadGlobal("groucho1");
   LoadGlobal("groucho2");
-  Run();
+  Finish(kExecute);
 
-  ASSERT_EQ(fuchsia::shell::ExecuteResult::OK, context->GetResult());
+  ASSERT_EQ(llcpp::fuchsia::shell::ExecuteResult::OK, context->GetResult());
 
-  fuchsia::shell::Node* groucho1 = GetGlobal("groucho1");
+  llcpp::fuchsia::shell::Node* groucho1 = GetGlobal("groucho1");
   ASSERT_TRUE(groucho1->is_string_literal());
   ASSERT_EQ("A Marx brother",
             std::string(groucho1->string_literal().data(), groucho1->string_literal().size()));
 
-  fuchsia::shell::Node* groucho2 = GetGlobal("groucho2");
+  llcpp::fuchsia::shell::Node* groucho2 = GetGlobal("groucho2");
   ASSERT_TRUE(groucho2->is_string_literal());
   ASSERT_EQ("A Marx brother",
             std::string(groucho2->string_literal().data(), groucho2->string_literal().size()));
@@ -55,31 +60,36 @@ TEST_F(InterpreterTest, StringAdditionOk) {
 TEST_F(InterpreterTest, StringAdditionEmpty) {
   constexpr uint64_t kFileId = 1;
   InterpreterTestContext* context = CreateContext();
-  shell()->CreateExecutionContext(context->id);
+  ASSERT_CALL_OK(shell().CreateExecutionContext(context->id));
 
-  NodeBuilder builder(kFileId);
-  auto foo = builder.VariableDefinition("foo", TypeString(), false, builder.StringLiteral("foo"));
-  builder.VariableDefinition(
-      "foo1", TypeString(), false,
-      builder.Addition(/*with_exceptions=*/true, builder.Variable(foo), builder.StringLiteral("")));
-  builder.VariableDefinition(
-      "foo2", TypeString(), false,
-      builder.Addition(/*with_exceptions=*/true, builder.StringLiteral(""), builder.Variable(foo)));
+  shell::console::AstBuilder builder(kFileId);
+  auto foo = builder.AddVariableDeclaration("foo", builder.TypeString(),
+                                            builder.AddStringLiteral("foo"), false, true);
+  builder.AddVariableDeclaration(
+      "foo1", builder.TypeString(),
+      builder.AddAddition(/*with_exceptions=*/true, builder.AddVariableFromDef(foo),
+                          builder.AddStringLiteral("")),
+      false, true);
+  builder.AddVariableDeclaration(
+      "foo2", builder.TypeString(),
+      builder.AddAddition(/*with_exceptions=*/true, builder.AddStringLiteral(""),
+                          builder.AddVariableFromDef(foo)),
+      false, true);
 
-  shell()->AddNodes(context->id, std::move(*builder.nodes()));
-  shell()->ExecuteExecutionContext(context->id);
+  ASSERT_CALL_OK(shell().AddNodes(context->id, builder.DefsAsVectorView()));
+  ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));
   LoadGlobal("foo1");
   LoadGlobal("foo2");
-  Run();
+  Finish(kExecute);
 
-  ASSERT_EQ(fuchsia::shell::ExecuteResult::OK, context->GetResult());
+  ASSERT_EQ(llcpp::fuchsia::shell::ExecuteResult::OK, context->GetResult());
 
-  fuchsia::shell::Node* groucho1 = GetGlobal("foo1");
+  llcpp::fuchsia::shell::Node* groucho1 = GetGlobal("foo1");
   ASSERT_TRUE(groucho1->is_string_literal());
   ASSERT_EQ("foo",
             std::string(groucho1->string_literal().data(), groucho1->string_literal().size()));
 
-  fuchsia::shell::Node* groucho2 = GetGlobal("foo2");
+  llcpp::fuchsia::shell::Node* groucho2 = GetGlobal("foo2");
   ASSERT_TRUE(groucho2->is_string_literal());
   ASSERT_EQ("foo",
             std::string(groucho2->string_literal().data(), groucho2->string_literal().size()));
@@ -90,46 +100,48 @@ TEST_F(InterpreterTest, StringAdditionEmpty) {
 #define ExecuteAddition(type, with_exceptions, left, right)                                    \
   constexpr uint64_t kFileId = 1;                                                              \
   InterpreterTestContext* context = CreateContext();                                           \
-  shell()->CreateExecutionContext(context->id);                                                \
+  ASSERT_CALL_OK(shell().CreateExecutionContext(context->id));                                 \
                                                                                                \
-  NodeBuilder builder(kFileId);                                                                \
-  auto x = builder.VariableDefinition(                                                         \
-      "x", type, false,                                                                        \
-      (left < 0) ? builder.IntegerLiteral(-left, true) : builder.IntegerLiteral(left, false)); \
-  builder.VariableDefinition(                                                                  \
-      "y", type, false,                                                                        \
-      builder.Addition(with_exceptions, builder.Variable(x),                                   \
-                       (right < 0) ? builder.IntegerLiteral(-right, true)                      \
-                                   : builder.IntegerLiteral(right, false)));                   \
+  shell::console::AstBuilder builder(kFileId);                                                 \
+  auto x = builder.AddVariableDeclaration("x", type,                                           \
+                                          (left < 0) ? builder.AddIntegerLiteral(-left, true)  \
+                                                     : builder.AddIntegerLiteral(left, false), \
+                                          false, true);                                        \
+  builder.AddVariableDeclaration(                                                              \
+      "y", type,                                                                               \
+      builder.AddAddition(with_exceptions, builder.AddVariableFromDef(x),                      \
+                          (right < 0) ? builder.AddIntegerLiteral(-right, true)                \
+                                      : builder.AddIntegerLiteral(right, false)),              \
+      false, true);                                                                            \
                                                                                                \
-  shell()->AddNodes(context->id, std::move(*builder.nodes()));                                 \
-  shell()->ExecuteExecutionContext(context->id);                                               \
+  ASSERT_CALL_OK(shell().AddNodes(context->id, builder.DefsAsVectorView()));                   \
+  ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));                                \
   LoadGlobal("y");                                                                             \
-  Run();
+  Finish(kExecute);
 
 #define DoAdditionTest(name, type, with_exceptions, left, right, result)               \
   TEST_F(InterpreterTest, name) {                                                      \
-    ExecuteAddition(type, with_exceptions, left, right);                               \
+    ExecuteAddition(builder.type, with_exceptions, left, right);                       \
                                                                                        \
-    ASSERT_EQ(fuchsia::shell::ExecuteResult::OK, context->GetResult());                \
+    ASSERT_EQ(llcpp::fuchsia::shell::ExecuteResult::OK, context->GetResult());         \
                                                                                        \
-    fuchsia::shell::Node* y = GetGlobal("y");                                          \
+    llcpp::fuchsia::shell::Node* y = GetGlobal("y");                                   \
     ASSERT_TRUE(y->is_integer_literal());                                              \
     ASSERT_EQ(y->integer_literal().negative, result < 0);                              \
-    ASSERT_EQ(y->integer_literal().absolute_value.size(), static_cast<size_t>(1));     \
+    ASSERT_EQ(y->integer_literal().absolute_value.count(), static_cast<size_t>(1));    \
     uint64_t absolute_value =                                                          \
         (result < 0) ? -static_cast<uint64_t>(result) : static_cast<uint64_t>(result); \
     ASSERT_EQ(y->integer_literal().absolute_value[0], absolute_value);                 \
   }
 
-#define DoAdditionTestException(name, type, left, right, errors)                \
-  TEST_F(InterpreterTest, name) {                                               \
-    ExecuteAddition(type, /*with_exceptions=*/true, left, right);               \
-                                                                                \
-    ASSERT_EQ(fuchsia::shell::ExecuteResult::EXECUTION_ERROR, context->result); \
-                                                                                \
-    std::string error_result = context->error_stream.str();                     \
-    ASSERT_EQ(errors, error_result);                                            \
+#define DoAdditionTestException(name, type, left, right, errors)                       \
+  TEST_F(InterpreterTest, name) {                                                      \
+    ExecuteAddition(builder.type, /*with_exceptions=*/true, left, right);              \
+                                                                                       \
+    ASSERT_EQ(llcpp::fuchsia::shell::ExecuteResult::EXECUTION_ERROR, context->result); \
+                                                                                       \
+    std::string error_result = context->error_stream.str();                            \
+    ASSERT_EQ(errors, error_result);                                                   \
   }
 
 #define AdditionTest(name, type, left, right, result) \

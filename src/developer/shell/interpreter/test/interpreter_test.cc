@@ -4,16 +4,18 @@
 
 #include "src/developer/shell/interpreter/test/interpreter_test.h"
 
+#include <lib/fdio/directory.h>
+
 #include <iostream>
 #include <sstream>
 #include <string>
 
-#include "fuchsia/shell/cpp/fidl.h"
+#include "fuchsia/shell/llcpp/fidl.h"
 #include "fuchsia/sys/cpp/fidl.h"
 #include "lib/async-loop/default.h"
 #include "zircon/status.h"
 
-fuchsia::shell::ExecuteResult InterpreterTestContext::GetResult() const {
+llcpp::fuchsia::shell::ExecuteResult InterpreterTestContext::GetResult() const {
   std::string string = error_stream.str();
   if (!string.empty()) {
     std::cout << string;
@@ -34,77 +36,120 @@ InterpreterTest::InterpreterTest()
   launcher->CreateComponent(std::move(launch_info), controller_.NewRequest());
 
   shell_provider_ = std::make_unique<sys::ServiceDirectory>(std::move(directory));
+}
 
-  shell_.set_error_handler([this](zx_status_t status) {
-    global_error_stream_ << "Shell server closed connection: " << zx_status_get_string(status)
-                         << "\n";
-    loop_.Quit();
-    ASSERT_FALSE(running_) << "Unexpected server termination.";
-  });
-
-  shell_.events().OnError = [this](uint64_t context_id,
-                                   std::vector<fuchsia::shell::Location> locations,
-                                   std::string error_message) {
-    if (context_id == 0) {
-      global_error_stream_ << error_message << "\n";
-      Quit();
-    } else {
-      InterpreterTestContext* context = GetContext(context_id);
-      ASSERT_NE(nullptr, context);
-      for (const auto& location : locations) {
-        if (location.has_node_id()) {
-          context->error_stream << "node " << location.node_id().file_id << ':'
-                                << location.node_id().node_id << ' ';
-        }
+void InterpreterTest::Finish(FinishAction action) {
+  llcpp::fuchsia::shell::Shell::EventHandlers handlers;
+  bool done = false;
+  enum Errs : zx_status_t { kNoContext = 1, kPendingNodes, kNoResult, kWrongAction };
+  while (!done) {
+    std::string msg;
+    handlers.on_error = [this, &msg, &done, action](
+                            uint64_t context_id,
+                            fidl::VectorView<llcpp::fuchsia::shell::Location> locations,
+                            fidl::StringView error_message) -> zx_status_t {
+      if (action == kError) {
+        done = true;
       }
-      context->error_stream << error_message << "\n";
-    }
-  };
+      if (context_id == 0) {
+        global_error_stream_ << std::string(error_message.data(), error_message.size()) << "\n";
+      } else {
+        InterpreterTestContext* context = GetContext(context_id);
+        if (context == nullptr) {
+          msg = "context == nullptr in on_error";
+          return kNoContext;
+        }
+        for (const auto& location : locations) {
+          if (location.has_node_id()) {
+            context->error_stream << "node " << location.node_id().file_id << ':'
+                                  << location.node_id().node_id << ' ';
+          }
+        }
+        context->error_stream << std::string(error_message.data(), error_message.size()) << "\n";
+      }
+      return ZX_OK;
+    };
 
-  shell_.events().OnDumpDone = [this](uint64_t context_id) {
-    InterpreterTestContext* context = GetContext(context_id);
-    ASSERT_NE(nullptr, context);
-    Quit();
-  };
+    handlers.on_dump_done = [this, &done, &msg, action](uint64_t context_id) -> zx_status_t {
+      if (action == kDump) {
+        done = true;
+      }
+      InterpreterTestContext* context = GetContext(context_id);
+      if (context == nullptr) {
+        msg = "context == nullptr in on_dump_done";
+        return kNoContext;
+      }
+      return ZX_OK;
+    };
 
-  shell_.events().OnExecutionDone = [this](uint64_t context_id,
-                                           fuchsia::shell::ExecuteResult result) {
-    InterpreterTestContext* context = GetContext(context_id);
-    ASSERT_NE(nullptr, context);
-    context->result = result;
-    if (globals_to_load_.empty() || (result != fuchsia::shell::ExecuteResult::OK)) {
-      Quit();
-    } else {
-      // Now that the execution is finished, loads all the global variables we asked using
-      // LoadGlobal.
-      for (const auto& global : globals_to_load_) {
-        ++pending_globals_;
-        shell()->LoadGlobal(global, [this, global](std::vector<fuchsia::shell::Node> nodes) {
+    handlers.on_execution_done = [this, &msg, &done, action](
+                                     uint64_t context_id,
+                                     llcpp::fuchsia::shell::ExecuteResult result) -> zx_status_t {
+      if (action != kExecute) {
+        msg = "Expected action: kExecute was: " + std::to_string(action);
+        return kWrongAction;
+      }
+      done = true;
+
+      InterpreterTestContext* context = GetContext(context_id);
+      if (context == nullptr) {
+        msg = "context == nullptr in on_execution_done";
+        return kNoContext;
+      }
+      context->result = result;
+      if (globals_to_load_.empty() || (result != llcpp::fuchsia::shell::ExecuteResult::OK)) {
+        return ZX_OK;
+      } else {
+        // Now that the execution is finished, loads all the global variables we asked using
+        // LoadGlobal.
+        for (const auto& global : globals_to_load_) {
+          ++pending_globals_;
+          fidl::Buffer<llcpp::fuchsia::shell::Node> request_buffer;
+          auto& response_buffer =
+              to_be_deleted_.emplace_back(new fidl::Buffer<llcpp::fuchsia::shell::Node>());
+          auto response = shell().LoadGlobal(request_buffer.view(), fidl::StringView(global),
+                                             response_buffer->view());
+          auto& nodes = response->nodes;
           if (!nodes.empty()) {
             // Currently we only support single values.
-            ASSERT_EQ(nodes.size(), static_cast<size_t>(1));
-            globals_[global] = std::move(nodes[0]);
+            if (nodes.count() != static_cast<size_t>(1)) {
+              msg =
+                  "nodes.count() (" + std::to_string(nodes.count()) + ") != 1 in on_execution_done";
+              return kPendingNodes;
+            }
+            globals_.emplace(global, std::move(response));
           }
-          if (--pending_globals_ == 0) {
-            Quit();
-          }
-        });
+        }
       }
-    }
-  };
+      return ZX_OK;
+    };
 
-  shell_.events().OnTextResult = [this](uint64_t context_id, std::string result,
-                                        bool partial_result) {
-    InterpreterTestContext* context = GetContext(context_id);
-    ASSERT_NE(nullptr, context);
-    if (last_result_partial_) {
-      ASSERT_FALSE(results_.empty());
-      results_.back() += result;
-    } else {
-      results_.emplace_back(std::move(result));
-    }
-    last_result_partial_ = partial_result;
-  };
+    handlers.on_text_result = [this, &msg, &done, action](uint64_t context_id,
+                                                          fidl::StringView result,
+                                                          bool partial_result) -> zx_status_t {
+      if (action == kTextResult) {
+        done = true;
+      }
+      InterpreterTestContext* context = GetContext(context_id);
+      if (context == nullptr) {
+        msg = "context == nullptr in on_text_result";
+        return kNoContext;
+      }
+      std::string result_string(result.data(), result.size());
+      if (last_result_partial_) {
+        if (results_.empty()) {
+          msg = "results empty";
+          return kNoResult;
+        }
+        results_.back() += result_string;
+      } else {
+        results_.emplace_back(std::move(result_string));
+      }
+      last_result_partial_ = partial_result;
+      return ZX_OK;
+    };
+    ASSERT_EQ(ZX_OK, shell_->HandleEvents(std::move(handlers))) << msg;
+  }
 }
 
 InterpreterTestContext* InterpreterTest::CreateContext() {
@@ -124,102 +169,18 @@ InterpreterTestContext* InterpreterTest::GetContext(uint64_t context_id) {
 }
 
 void InterpreterTest::SetUp() {
+  zx_handle_t client_ch;
+  zx_handle_t server_ch;
+  zx_channel_create(0, &client_ch, &server_ch);
+  zx::channel client_channel(client_ch);
+  shell_ = std::make_unique<llcpp::fuchsia::shell::Shell::SyncClient>(std::move(client_channel));
+
   // Reset context ids.
   last_context_id_ = 0;
   // Resets the global error stream for the test (to be able to run multiple tests).
   global_error_stream_.str() = "";
+
+  zx::channel server_channel(server_ch);
   // Creates a new connection to the server.
-  shell_provider_->Connect(shell_.NewRequest());
-}
-
-fuchsia::shell::NodeId NullNode{0, 0};
-
-fuchsia::shell::ShellType TypeUndef() {
-  fuchsia::shell::ShellType type;
-  type.set_undef(true);
-  return type;
-}
-
-fuchsia::shell::ShellType TypeBool() {
-  fuchsia::shell::ShellType type;
-  type.set_builtin_type(fuchsia::shell::BuiltinType::BOOL);
-  return type;
-}
-
-fuchsia::shell::ShellType TypeChar() {
-  fuchsia::shell::ShellType type;
-  type.set_builtin_type(fuchsia::shell::BuiltinType::CHAR);
-  return type;
-}
-
-fuchsia::shell::ShellType TypeString() {
-  fuchsia::shell::ShellType type;
-  type.set_builtin_type(fuchsia::shell::BuiltinType::STRING);
-  return type;
-}
-
-fuchsia::shell::ShellType TypeInt8() {
-  fuchsia::shell::ShellType type;
-  type.set_builtin_type(fuchsia::shell::BuiltinType::INT8);
-  return type;
-}
-
-fuchsia::shell::ShellType TypeUint8() {
-  fuchsia::shell::ShellType type;
-  type.set_builtin_type(fuchsia::shell::BuiltinType::UINT8);
-  return type;
-}
-
-fuchsia::shell::ShellType TypeInt16() {
-  fuchsia::shell::ShellType type;
-  type.set_builtin_type(fuchsia::shell::BuiltinType::INT16);
-  return type;
-}
-
-fuchsia::shell::ShellType TypeUint16() {
-  fuchsia::shell::ShellType type;
-  type.set_builtin_type(fuchsia::shell::BuiltinType::UINT16);
-  return type;
-}
-
-fuchsia::shell::ShellType TypeInt32() {
-  fuchsia::shell::ShellType type;
-  type.set_builtin_type(fuchsia::shell::BuiltinType::INT32);
-  return type;
-}
-
-fuchsia::shell::ShellType TypeUint32() {
-  fuchsia::shell::ShellType type;
-  type.set_builtin_type(fuchsia::shell::BuiltinType::UINT32);
-  return type;
-}
-
-fuchsia::shell::ShellType TypeInt64() {
-  fuchsia::shell::ShellType type;
-  type.set_builtin_type(fuchsia::shell::BuiltinType::INT64);
-  return type;
-}
-
-fuchsia::shell::ShellType TypeUint64() {
-  fuchsia::shell::ShellType type;
-  type.set_builtin_type(fuchsia::shell::BuiltinType::UINT64);
-  return type;
-}
-
-fuchsia::shell::ShellType TypeInteger() {
-  fuchsia::shell::ShellType type;
-  type.set_builtin_type(fuchsia::shell::BuiltinType::INTEGER);
-  return type;
-}
-
-fuchsia::shell::ShellType TypeFloat32() {
-  fuchsia::shell::ShellType type;
-  type.set_builtin_type(fuchsia::shell::BuiltinType::FLOAT32);
-  return type;
-}
-
-fuchsia::shell::ShellType TypeFloat64() {
-  fuchsia::shell::ShellType type;
-  type.set_builtin_type(fuchsia::shell::BuiltinType::FLOAT64);
-  return type;
+  ASSERT_EQ(ZX_OK, shell_provider_->Connect("fuchsia.shell.Shell", std::move(server_channel)));
 }

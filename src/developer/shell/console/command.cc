@@ -49,7 +49,7 @@ std::string CollectErrors(const parser::ast::Node& node) {
 class NodeASTVisitor : public parser::ast::NodeVisitor {
  public:
   explicit NodeASTVisitor(AstBuilder* builder) : builder_(builder) {}
-  uint64_t id() const { return id_; }
+  AstBuilder::NodeId id() const { return id_; }
 
   void VisitNode(const parser::ast::Node& node) override {
     FX_NOTREACHED() << "Parser produced unknown node type.";
@@ -105,24 +105,23 @@ class NodeASTVisitor : public parser::ast::NodeVisitor {
       field->Visit(this);
     }
 
-    auto result = builder_->CloseObject(0);
+    auto result = builder_->CloseObject();
     id_ = result.value_node;
 
     llcpp::fuchsia::shell::NodeId id;
-    id.node_id = result.schema_node;
-    id.file_id = 0;
+    id = result.schema_node;
     llcpp::fuchsia::shell::NodeId* id_ptr = builder_->ManageCopyOf(&id);
     type_ = llcpp::fuchsia::shell::ShellType::WithObjectSchema(fidl::unowned(id_ptr));
   }
 
   void VisitField(const parser::ast::Field& node) override {
     node.value()->Visit(this);
-    builder_->AddField(node.name(), 0, id_, std::move(type_));
+    builder_->AddField(node.name(), id_, std::move(type_));
   }
 
  private:
   AstBuilder* builder_;
-  uint64_t id_ = 0;
+  AstBuilder::NodeId id_;
   llcpp::fuchsia::shell::ShellType type_;
 };
 
@@ -143,7 +142,8 @@ bool Command::Parse(const std::string& line) {
   auto program = node->AsProgram();
   FX_DCHECK(program) << "Parse did not yield a program node!";
 
-  AstBuilder builder;
+  // TODO: Change the file ID to something useful.
+  AstBuilder builder(1);
   NodeASTVisitor visitor(&builder);
   program->Visit(&visitor);
   builder.SetRoot(visitor.id());
