@@ -12,12 +12,14 @@ extern const fidl_type_t v1_fidl_test_json_ExamplefooRequestTable;
 extern const fidl_type_t v1_fidl_test_json_ExamplefooResponseTable;
 extern const fidl_type_t v1_fidl_test_json_Example_foo_ResponseTable;
 extern const fidl_type_t v1_fidl_test_json_Example_foo_ResultTable;
+extern const fidl_type_t v1_fidl_test_json_Example_foo_ResultNullableRefTable;
 
 // Coding tables for old wire format.
 
 extern const fidl_type_t fidl_test_json_Example_foo_ResponseTable;
 extern const fidl_type_t fidl_test_json_Example_foo_ResultTable;
 
+static const fidl_type_t Pointer33fidl_test_json_Example_foo_ResultTable __attribute__((unused)) = {.type_tag=kFidlTypeUnionPointer, {.coded_union_pointer={.union_type=&fidl_test_json_Example_foo_ResultTable.coded_union}}};
 
 static const fidl_type_t String4294967295nonnullableTable = {.type_tag=kFidlTypeString, {.coded_string={.max_size=4294967295u, .nullable=kFidlNullability_Nonnullable}}};
 
@@ -49,6 +51,7 @@ const fidl_type_t fidl_test_json_Example_foo_ResultTable = {.type_tag=kFidlTypeU
 
 extern const fidl_type_t v1_fidl_test_json_Example_foo_ResponseTable;
 extern const fidl_type_t v1_fidl_test_json_Example_foo_ResultTable;
+extern const fidl_type_t v1_fidl_test_json_Example_foo_ResultNullableRefTable;
 
 
 static const fidl_type_t v1_String4294967295nonnullableTable = {.type_tag=kFidlTypeString, {.coded_string={.max_size=4294967295u, .nullable=kFidlNullability_Nonnullable}}};
@@ -76,3 +79,8 @@ static const struct FidlXUnionField Fields36v1_fidl_test_json_Example_foo_Result
     /*FidlXUnionField*/{.type=&fidl_internal_kUint32Table, .ordinal=2u}
 };
 const fidl_type_t v1_fidl_test_json_Example_foo_ResultTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=2u, .fields=Fields36v1_fidl_test_json_Example_foo_Result, .nullable=kFidlNullability_Nonnullable, .name="fidl.test.json/Example_foo_Result", .strictness=kFidlStrictness_Strict, .alt_type=&fidl_test_json_Example_foo_ResultTable}}};
+static const struct FidlXUnionField Fields47v1_fidl_test_json_Example_foo_ResultNullableRef[] = {
+    /*FidlXUnionField*/{.type=&v1_fidl_test_json_Example_foo_ResponseTable, .ordinal=1u},
+    /*FidlXUnionField*/{.type=&fidl_internal_kUint32Table, .ordinal=2u}
+};
+const fidl_type_t v1_fidl_test_json_Example_foo_ResultNullableRefTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=2u, .fields=Fields47v1_fidl_test_json_Example_foo_ResultNullableRef, .nullable=kFidlNullability_Nullable, .name="fidl.test.json/Example_foo_Result", .strictness=kFidlStrictness_Strict, .alt_type=&Pointer33fidl_test_json_Example_foo_ResultTable}}};

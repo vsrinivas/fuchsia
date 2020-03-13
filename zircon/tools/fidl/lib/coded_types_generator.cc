@@ -4,7 +4,9 @@
 
 #include "fidl/coded_types_generator.h"
 
+#include "fidl/coded_ast.h"
 #include "fidl/names.h"
+#include "fidl/types.h"
 
 namespace fidl {
 
@@ -163,21 +165,11 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
 
           // Unions were compiled as part of decl compilation,
           // but we may now need to generate the UnionPointer.
-          if (identifier_type->nullability != types::Nullability::kNullable)
+          if (identifier_type->nullability != types::Nullability::kNullable) {
             return coded_type;
-
-          auto iter = union_type_map_.find(identifier_type);
-          if (iter != union_type_map_.end()) {
-            return iter->second;
           }
           auto coded_union_type = static_cast<coded::UnionType*>(coded_type);
-          auto union_pointer_type = std::make_unique<coded::UnionPointerType>(
-              NamePointer(coded_union_type->coded_name, wire_format), coded_union_type,
-              identifier_type->typeshape(wire_format).inline_size);
-          coded_union_type->maybe_reference_type = union_pointer_type.get();
-          union_type_map_[identifier_type] = union_pointer_type.get();
-          coded_types_.push_back(std::move(union_pointer_type));
-          return coded_types_.back().get();
+          return coded_union_type->maybe_reference_type;
         }
         case coded::Type::Kind::kXUnion: {
           assert(wire_format != WireFormat::kOld);
@@ -185,24 +177,7 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
           if (identifier_type->nullability != types::Nullability::kNullable) {
             return coded_type;
           }
-
-          // XUnions were compiled as part of decl compilation, but we may now need to generate
-          // a nullable XUnion. (This is analogous to the code for the coded::Type::kUnion case
-          // above, which generates a UnionPointer from the Union.)
-          auto iter = xunion_type_map_.find(identifier_type);
-          if (iter != xunion_type_map_.end()) {
-            return iter->second;
-          }
           auto coded_xunion_type = static_cast<coded::XUnionType*>(coded_type);
-          auto nullable_xunion_type = std::make_unique<coded::XUnionType>(
-              NamePointer(coded_xunion_type->coded_name, wire_format), coded_xunion_type->fields,
-              coded_xunion_type->qname, types::Nullability::kNullable,
-              coded_xunion_type->strictness);
-          nullable_xunion_type->source = coded::XUnionType::Source::kFromUnionPointer;
-          coded_xunion_type->maybe_reference_type = nullable_xunion_type.get();
-          xunion_type_map_[identifier_type] = nullable_xunion_type.get();
-          coded_types_.push_back(std::move(nullable_xunion_type));
-
           return coded_xunion_type->maybe_reference_type;
         }
         case coded::Type::Kind::kProtocol: {
@@ -239,25 +214,6 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
 }
 
 void CodedTypesGenerator::CompileFields(const flat::Decl* decl, const WireFormat wire_format) {
-  auto update_xunion =
-      [this, wire_format](
-          coded::XUnionType* coded_xunion,
-          const std::vector<std::tuple<const flat::Type*, raw::Ordinal32*>>& members) {
-        assert(coded_xunion->fields.size() == 0 &&
-               "The coded xunion fields are being compiled twice!");
-
-        coded::XUnionType* nullable_coded_xunion = coded_xunion->maybe_reference_type;
-
-        for (const auto& [type, ordinal] : members) {
-          auto coded_member_type =
-              CompileType(type, coded::CodingContext::kInsideEnvelope, wire_format);
-          coded_xunion->fields.emplace_back(coded_member_type, ordinal->value);
-
-          if (nullable_coded_xunion)
-            nullable_coded_xunion->fields.emplace_back(coded_member_type, ordinal->value);
-        }
-      };
-
   switch (decl->kind) {
     case flat::Decl::Kind::kProtocol: {
       auto protocol_decl = static_cast<const flat::Protocol*>(decl);
@@ -342,34 +298,25 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl, const WireFormat
       auto type = named_coded_types_[decl->name].get();
       switch (wire_format) {
         case WireFormat::kOld: {
-          coded::UnionType* union_struct = static_cast<coded::UnionType*>(type);
+          coded::UnionType* coded_union = static_cast<coded::UnionType*>(type);
+          assert(coded_union->maybe_reference_type != nullptr &&
+                 "Named coded union must have reference type!");
+          assert(coded_union->members.empty() &&
+                 "The coded union fields are being compiled twice!");
 
           std::set<uint32_t> members;
-
-          // As part of the union-to-xunion migration, static unions now use an
-          // explicit syntax to specify their xunion_ordinal:
-          //
-          //     union Foo {
-          //         1: int bar;  // union tag 0, xunion ordinal 1
-          //         2: bool baz; // union tag 1, xunion ordinal 2
-          //     };
-          //
-          // This makes it look like the variants can be safely reordered, like
-          // table fields. However, since union tags correspond to indices in the
-          // coding table "members" array -- which usually follows source order --
-          // it would break ABI. We prevent this by sorting members by
-          // ordinal before emitting the array.
+          // On the wire, static unions use tags which are indices in the coding
+          // table "members" array instead of ordinals. In order to maintain the
+          // same ABI properties, members need to be sorted by ordinal before emitting the array.
           for (const auto& member_ref : union_decl->MembersSortedByXUnionOrdinal()) {
             const auto& member = member_ref.get();
-
             if (!members.emplace(member.ordinal->value).second) {
               assert(false && "Duplicate ordinal found in table generation");
             }
-
             if (!member.maybe_used)
               continue;
 
-            const coded::Type* coded_member_type =
+            const auto* coded_member_type =
                 CompileType(member.maybe_used->type_ctor->type,
                             coded::CodingContext::kInsideEnvelope, wire_format);
             const coded::Type* member_type = [&]() -> const coded::Type* {
@@ -381,29 +328,36 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl, const WireFormat
 
               return coded_member_type;
             }();
-
-            union_struct->members.emplace_back(member_type,
-                                               member.maybe_used->fieldshape(wire_format).Padding(),
-                                               member.ordinal->value);
+            coded_union->members.emplace_back(member_type,
+                                              member.maybe_used->fieldshape(wire_format).Padding(),
+                                              member.ordinal->value);
           }
           break;
         }
         case WireFormat::kV1Header:
         case WireFormat::kV1NoEe: {
           coded::XUnionType* coded_xunion = static_cast<coded::XUnionType*>(type);
+          coded::XUnionType* nullable_coded_xunion = coded_xunion->maybe_reference_type;
+          assert(nullable_coded_xunion != nullptr &&
+                 "Named coded xunion must have a reference type!");
+          assert(coded_xunion->fields.empty() &&
+                 "The coded xunion fields are being compiled twice!");
 
-          std::vector<std::tuple<const flat::Type*, raw::Ordinal32*>> type_ordinals;
+          std::set<uint32_t> members;
           for (const auto& member_ref : union_decl->MembersSortedByXUnionOrdinal()) {
             const auto& member = member_ref.get();
-
+            if (!members.emplace(member.ordinal->value).second) {
+              assert(false && "Duplicate ordinal found in table generation");
+            }
             if (!member.maybe_used)
               continue;
 
-            type_ordinals.push_back(
-                std::make_tuple(member.maybe_used->type_ctor->type, member.ordinal.get()));
+            const auto* coded_member_type =
+                CompileType(member.maybe_used->type_ctor->type,
+                            coded::CodingContext::kInsideEnvelope, wire_format);
+            coded_xunion->fields.emplace_back(coded_member_type, member.ordinal->value);
+            nullable_coded_xunion->fields.emplace_back(coded_member_type, member.ordinal->value);
           }
-
-          update_xunion(coded_xunion, type_ordinals);
           break;
         }
       }
@@ -542,20 +496,42 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl, const WireFormat w
 
       switch (wire_format) {
         case WireFormat::kOld: {
-          named_coded_types_.emplace(
-              decl->name,
-              std::make_unique<coded::UnionType>(union_name, std::vector<coded::UnionField>(),
-                                                 TypeShape(union_decl, wire_format).alignment,
-                                                 union_decl->typeshape(wire_format).InlineSize(),
-                                                 NameFlatName(union_decl->name)));
+          std::string union_pointer_name = NamePointer(union_name, wire_format);
+
+          auto union_type = std::make_unique<coded::UnionType>(
+              union_name, std::vector<coded::UnionField>(),
+              TypeShape(union_decl, wire_format).alignment,
+              union_decl->typeshape(wire_format).InlineSize(), NameFlatName(union_decl->name));
+
+          // Always create the reference type in order to match xunions
+          auto nullable_union_type =
+              flat::IdentifierType(union_decl->name, types::Nullability::kNullable, union_decl);
+          auto union_pointer_type = std::make_unique<coded::UnionPointerType>(
+              std::move(union_pointer_name), union_type.get(),
+              nullable_union_type.typeshape(wire_format).inline_size);
+          union_type->maybe_reference_type = union_pointer_type.get();
+
+          coded_types_.push_back(std::move(union_pointer_type));
+          named_coded_types_.emplace(decl->name, std::move(union_type));
           break;
         }
         case WireFormat::kV1Header:
         case WireFormat::kV1NoEe: {
+          std::string nullable_xunion_name = NameCodedNullableName(union_decl->name, wire_format);
+
+          // Always create the reference type
+          auto nullable_xunion_type = std::make_unique<coded::XUnionType>(
+              std::move(nullable_xunion_name), std::vector<coded::XUnionField>(),
+              NameFlatName(union_decl->name), types::Nullability::kNullable,
+              union_decl->strictness);
+          coded::XUnionType* nullable_xunion_ptr = nullable_xunion_type.get();
+          coded_types_.push_back(std::move(nullable_xunion_type));
+
           auto xunion_type = std::make_unique<coded::XUnionType>(
-              union_name, std::vector<coded::XUnionField>(), NameFlatName(union_decl->name),
-              types::Nullability::kNonnullable, union_decl->strictness);
-          xunion_type->source = coded::XUnionType::Source::kFromUnion;
+              std::move(union_name), std::vector<coded::XUnionField>(),
+              NameFlatName(union_decl->name), types::Nullability::kNonnullable,
+              union_decl->strictness);
+          xunion_type->maybe_reference_type = nullable_xunion_ptr;
           named_coded_types_.emplace(decl->name, std::move(xunion_type));
           break;
         }

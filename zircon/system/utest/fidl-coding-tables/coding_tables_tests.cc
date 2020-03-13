@@ -232,7 +232,7 @@ TEST(ForeignXUnions, CodingTable) {
   ASSERT_EQ(kFidlNullability_Nonnullable, tx_table.nullable);
   ASSERT_EQ(2, tx_table.field_count);
 
-  const fidl_type& resp_type = fidl_test_example_codingtables_CodingForeignXUnionsResponseTable;
+  const fidl_type& resp_type = v1_fidl_test_example_codingtables_CodingForeignXUnionsResponseTable;
   ASSERT_EQ(kFidlTypeStruct, resp_type.type_tag);
   const FidlCodedStruct& response_struct = resp_type.coded_struct;
   ASSERT_EQ(1, response_struct.field_count);
@@ -240,9 +240,10 @@ TEST(ForeignXUnions, CodingTable) {
                 response_struct.name);
   const FidlStructField& rx_field = response_struct.fields[0];
   const fidl_type& rx_type = *rx_field.type;
-  ASSERT_EQ(kFidlTypeUnionPointer, rx_type.type_tag);
-  const FidlCodedUnion& rx_table = *rx_type.coded_union_pointer.union_type;
+  ASSERT_EQ(kFidlTypeXUnion, rx_type.type_tag);
+  const FidlCodedXUnion& rx_table = rx_type.coded_xunion;
   ASSERT_STR_EQ("fidl.test.example.codingtablesdeps/MyXUnionA", rx_table.name);
+  ASSERT_EQ(kFidlNullability_Nullable, rx_table.nullable);
   ASSERT_EQ(2, rx_table.field_count);
 }
 

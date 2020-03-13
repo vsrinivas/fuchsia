@@ -262,18 +262,6 @@ struct XUnionType : public Type {
   types::Nullability nullability;
   types::Strictness strictness;
   XUnionType* maybe_reference_type = nullptr;
-
-  // While the transformer exists, it is the only user of the "old" wire format
-  // and we assume that all xunions are "from union"
-  enum class Source {
-    kFromUnion,         // ... a (static) union declaration.
-    kFromUnionPointer,  // ... a (static) pointer-to-union declaration.
-  };
-  Source source = Source::kFromUnion;
-
-  bool FromUnion() const { return source == Source::kFromUnion; }
-
-  bool FromUnionPointer() const { return source == Source::kFromUnionPointer; }
 };
 
 struct MessageType : public Type {

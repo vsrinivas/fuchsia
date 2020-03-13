@@ -244,17 +244,13 @@ void TablesGenerator::Generate(const coded::UnionType& union_type) {
 }
 
 void TablesGenerator::Generate(const coded::XUnionType& xunion_type) {
-  Emit(&forward_decls_,
-       AltTableDeclaration(xunion_type, /*is_static=*/xunion_type.FromUnionPointer()));
+  Emit(&forward_decls_, AltTableDeclaration(xunion_type, /*is_static=*/false));
 
   Emit(&tables_file_, "static const struct FidlXUnionField ");
   Emit(&tables_file_, NameFields(xunion_type.coded_name));
   Emit(&tables_file_, "[] = ");
   GenerateArray(xunion_type.fields);
   Emit(&tables_file_, ";\n");
-
-  if (xunion_type.FromUnionPointer())
-    Emit(&tables_file_, "static ");
 
   Emit(&tables_file_, "const fidl_type_t ");
   Emit(&tables_file_, NameTable(xunion_type.coded_name));
@@ -285,7 +281,10 @@ void TablesGenerator::Generate(const coded::StructPointerType& pointer) {
 void TablesGenerator::Generate(const coded::UnionPointerType& pointer) {
   Emit(&tables_file_, "static const fidl_type_t ");
   Emit(&tables_file_, NameTable(pointer.coded_name));
-  Emit(&tables_file_, " = {.type_tag=kFidlTypeUnionPointer, {.coded_union_pointer={.union_type=");
+  // Since we always generate union pointers they may be unused
+  Emit(&tables_file_,
+       " __attribute__((unused)) = {.type_tag=kFidlTypeUnionPointer, "
+       "{.coded_union_pointer={.union_type=");
   Generate(pointer.element_type);
   Emit(&tables_file_, ".coded_union}}};\n");
 }
@@ -450,33 +449,33 @@ void TablesGenerator::Generate(const coded::XUnionField& field) {
 }
 
 template <class T>
-std::string ForwardDecls(const T& t, bool is_static) {
-  return std::string(is_static ? "static" : "extern") + " const fidl_type_t " +
-         NameTable(t.coded_name) + ";\n";
+std::string ForwardDecls(const T& t) {
+  // Since we always generate nullable xunions they may be unused
+  return "extern const fidl_type_t " + NameTable(t.coded_name) + ";\n";
 }
 
 void TablesGenerator::GenerateForward(const coded::EnumType& enum_type) {
-  Emit(&tables_file_, ForwardDecls(enum_type, /*is_static=*/false));
+  Emit(&tables_file_, ForwardDecls(enum_type));
 }
 
 void TablesGenerator::GenerateForward(const coded::BitsType& bits_type) {
-  Emit(&tables_file_, ForwardDecls(bits_type, /*is_static=*/false));
+  Emit(&tables_file_, ForwardDecls(bits_type));
 }
 
 void TablesGenerator::GenerateForward(const coded::StructType& struct_type) {
-  Emit(&tables_file_, ForwardDecls(struct_type, /*is_static=*/false));
+  Emit(&tables_file_, ForwardDecls(struct_type));
 }
 
 void TablesGenerator::GenerateForward(const coded::TableType& table_type) {
-  Emit(&tables_file_, ForwardDecls(table_type, /*is_static=*/false));
+  Emit(&tables_file_, ForwardDecls(table_type));
 }
 
 void TablesGenerator::GenerateForward(const coded::UnionType& union_type) {
-  Emit(&tables_file_, ForwardDecls(union_type, /*is_static=*/false));
+  Emit(&tables_file_, ForwardDecls(union_type));
 }
 
 void TablesGenerator::GenerateForward(const coded::XUnionType& xunion_type) {
-  Emit(&tables_file_, ForwardDecls(xunion_type, /*is_static=*/xunion_type.FromUnionPointer()));
+  Emit(&tables_file_, ForwardDecls(xunion_type));
 }
 
 void TablesGenerator::Produce(CodedTypesGenerator* coded_types_generator) {

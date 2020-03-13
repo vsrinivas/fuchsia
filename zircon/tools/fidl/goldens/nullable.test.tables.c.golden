@@ -27,7 +27,7 @@ extern const fidl_type_t v1_fidl_test_nullable_StructWithNullableRequestTable;
 extern const fidl_type_t v1_fidl_test_nullable_StructWithNullableProtocolTable;
 extern const fidl_type_t v1_fidl_test_nullable_StructWithNullableHandleTable;
 extern const fidl_type_t v1_fidl_test_nullable_SimpleUnionTable;
-static const fidl_type_t v1_Pointer33v1_fidl_test_nullable_SimpleUnionTable;
+extern const fidl_type_t v1_fidl_test_nullable_SimpleUnionNullableRefTable;
 extern const fidl_type_t v1_fidl_test_nullable_Int32WrapperTable;
 
 // Coding tables for old wire format.
@@ -42,7 +42,7 @@ extern const fidl_type_t fidl_test_nullable_StructWithNullableHandleTable;
 extern const fidl_type_t fidl_test_nullable_SimpleUnionTable;
 extern const fidl_type_t fidl_test_nullable_Int32WrapperTable;
 
-static const fidl_type_t Pointer30fidl_test_nullable_SimpleUnionTable = {.type_tag=kFidlTypeUnionPointer, {.coded_union_pointer={.union_type=&fidl_test_nullable_SimpleUnionTable.coded_union}}};
+static const fidl_type_t Pointer30fidl_test_nullable_SimpleUnionTable __attribute__((unused)) = {.type_tag=kFidlTypeUnionPointer, {.coded_union_pointer={.union_type=&fidl_test_nullable_SimpleUnionTable.coded_union}}};
 static const fidl_type_t Pointer31fidl_test_nullable_Int32WrapperTable = {.type_tag=kFidlTypeStructPointer, {.coded_struct_pointer={.struct_type=&fidl_test_nullable_Int32WrapperTable.coded_struct}}};
 
 static const fidl_type_t Vector4294967295nullable5int32Table = {.type_tag=kFidlTypeVector, {.coded_vector={.element=NULL, .max_count=4294967295u, .element_size=4u, .nullable=kFidlNullability_Nullable, .alt_type=&v1_Vector4294967295nullable5int32Table}}};
@@ -125,7 +125,7 @@ extern const fidl_type_t v1_fidl_test_nullable_StructWithNullableRequestTable;
 extern const fidl_type_t v1_fidl_test_nullable_StructWithNullableProtocolTable;
 extern const fidl_type_t v1_fidl_test_nullable_StructWithNullableHandleTable;
 extern const fidl_type_t v1_fidl_test_nullable_SimpleUnionTable;
-static const fidl_type_t v1_Pointer33v1_fidl_test_nullable_SimpleUnionTable;
+extern const fidl_type_t v1_fidl_test_nullable_SimpleUnionNullableRefTable;
 extern const fidl_type_t v1_fidl_test_nullable_Int32WrapperTable;
 
 static const fidl_type_t v1_Pointer34v1_fidl_test_nullable_Int32WrapperTable = {.type_tag=kFidlTypeStructPointer, {.coded_struct_pointer={.struct_type=&v1_fidl_test_nullable_Int32WrapperTable.coded_struct}}};
@@ -160,7 +160,7 @@ static const struct FidlStructField Fields46v1_fidl_test_nullable_StructWithNull
 const fidl_type_t v1_fidl_test_nullable_StructWithNullableVectorTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields46v1_fidl_test_nullable_StructWithNullableVector, .field_count=1u, .size=16u, .max_out_of_line=4294967295u, .contains_union=false, .name="fidl.test.nullable/StructWithNullableVector", .alt_type=&fidl_test_nullable_StructWithNullableVectorTable}}};
 
 static const struct FidlStructField Fields45v1_fidl_test_nullable_StructWithNullableUnion[] = {
-    /*FidlStructField*/{.type=&v1_Pointer33v1_fidl_test_nullable_SimpleUnionTable, .offset=0u, .padding=0u}
+    /*FidlStructField*/{.type=&v1_fidl_test_nullable_SimpleUnionNullableRefTable, .offset=0u, .padding=0u}
 };
 const fidl_type_t v1_fidl_test_nullable_StructWithNullableUnionTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields45v1_fidl_test_nullable_StructWithNullableUnion, .field_count=1u, .size=24u, .max_out_of_line=8u, .contains_union=true, .name="fidl.test.nullable/StructWithNullableUnion", .alt_type=&fidl_test_nullable_StructWithNullableUnionTable}}};
 
@@ -194,11 +194,11 @@ static const struct FidlXUnionField Fields33v1_fidl_test_nullable_SimpleUnion[] 
     /*FidlXUnionField*/{.type=&fidl_internal_kFloat32Table, .ordinal=2u}
 };
 const fidl_type_t v1_fidl_test_nullable_SimpleUnionTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=2u, .fields=Fields33v1_fidl_test_nullable_SimpleUnion, .nullable=kFidlNullability_Nonnullable, .name="fidl.test.nullable/SimpleUnion", .strictness=kFidlStrictness_Strict, .alt_type=&fidl_test_nullable_SimpleUnionTable}}};
-static const struct FidlXUnionField Fields45v1_Pointer33v1_fidl_test_nullable_SimpleUnion[] = {
+static const struct FidlXUnionField Fields44v1_fidl_test_nullable_SimpleUnionNullableRef[] = {
     /*FidlXUnionField*/{.type=&fidl_internal_kInt32Table, .ordinal=1u},
     /*FidlXUnionField*/{.type=&fidl_internal_kFloat32Table, .ordinal=2u}
 };
-static const fidl_type_t v1_Pointer33v1_fidl_test_nullable_SimpleUnionTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=2u, .fields=Fields45v1_Pointer33v1_fidl_test_nullable_SimpleUnion, .nullable=kFidlNullability_Nullable, .name="fidl.test.nullable/SimpleUnion", .strictness=kFidlStrictness_Strict, .alt_type=&Pointer30fidl_test_nullable_SimpleUnionTable}}};
+const fidl_type_t v1_fidl_test_nullable_SimpleUnionNullableRefTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=2u, .fields=Fields44v1_fidl_test_nullable_SimpleUnionNullableRef, .nullable=kFidlNullability_Nullable, .name="fidl.test.nullable/SimpleUnion", .strictness=kFidlStrictness_Strict, .alt_type=&Pointer30fidl_test_nullable_SimpleUnionTable}}};
 static const struct FidlStructField Fields34v1_fidl_test_nullable_Int32Wrapper[] = {
     /*FidlStructField*/{.type=NULL, .padding_offset=4u, .padding=0u}
 };

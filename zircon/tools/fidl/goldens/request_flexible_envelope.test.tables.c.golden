@@ -15,13 +15,17 @@ extern const fidl_type_t v1_fidl_test_json_ProtocolRequestStrictResponseFlexible
 extern const fidl_type_t v1_fidl_test_json_ProtocolRequestFlexibleResponseStrictRequestTable;
 extern const fidl_type_t v1_fidl_test_json_ProtocolRequestFlexibleResponseStrictResponseTable;
 extern const fidl_type_t v1_fidl_test_json_StrictFooTable;
+extern const fidl_type_t v1_fidl_test_json_StrictFooNullableRefTable;
 extern const fidl_type_t v1_fidl_test_json_FlexibleFooTable;
+extern const fidl_type_t v1_fidl_test_json_FlexibleFooNullableRefTable;
 
 // Coding tables for old wire format.
 
 extern const fidl_type_t fidl_test_json_StrictFooTable;
 extern const fidl_type_t fidl_test_json_FlexibleFooTable;
 
+static const fidl_type_t Pointer24fidl_test_json_StrictFooTable __attribute__((unused)) = {.type_tag=kFidlTypeUnionPointer, {.coded_union_pointer={.union_type=&fidl_test_json_StrictFooTable.coded_union}}};
+static const fidl_type_t Pointer26fidl_test_json_FlexibleFooTable __attribute__((unused)) = {.type_tag=kFidlTypeUnionPointer, {.coded_union_pointer={.union_type=&fidl_test_json_FlexibleFooTable.coded_union}}};
 
 static const fidl_type_t String4294967295nonnullableTable = {.type_tag=kFidlTypeString, {.coded_string={.max_size=4294967295u, .nullable=kFidlNullability_Nonnullable}}};
 
@@ -65,7 +69,9 @@ const fidl_type_t fidl_test_json_FlexibleFooTable = {.type_tag=kFidlTypeUnion, {
 // Coding tables for v1 wire format.
 
 extern const fidl_type_t v1_fidl_test_json_StrictFooTable;
+extern const fidl_type_t v1_fidl_test_json_StrictFooNullableRefTable;
 extern const fidl_type_t v1_fidl_test_json_FlexibleFooTable;
+extern const fidl_type_t v1_fidl_test_json_FlexibleFooNullableRefTable;
 
 
 static const fidl_type_t v1_String4294967295nonnullableTable = {.type_tag=kFidlTypeString, {.coded_string={.max_size=4294967295u, .nullable=kFidlNullability_Nonnullable}}};
@@ -100,8 +106,18 @@ static const struct FidlXUnionField Fields27v1_fidl_test_json_StrictFoo[] = {
     /*FidlXUnionField*/{.type=&fidl_internal_kInt32Table, .ordinal=2u}
 };
 const fidl_type_t v1_fidl_test_json_StrictFooTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=2u, .fields=Fields27v1_fidl_test_json_StrictFoo, .nullable=kFidlNullability_Nonnullable, .name="fidl.test.json/StrictFoo", .strictness=kFidlStrictness_Strict, .alt_type=&fidl_test_json_StrictFooTable}}};
+static const struct FidlXUnionField Fields38v1_fidl_test_json_StrictFooNullableRef[] = {
+    /*FidlXUnionField*/{.type=&v1_String4294967295nonnullableTable, .ordinal=1u},
+    /*FidlXUnionField*/{.type=&fidl_internal_kInt32Table, .ordinal=2u}
+};
+const fidl_type_t v1_fidl_test_json_StrictFooNullableRefTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=2u, .fields=Fields38v1_fidl_test_json_StrictFooNullableRef, .nullable=kFidlNullability_Nullable, .name="fidl.test.json/StrictFoo", .strictness=kFidlStrictness_Strict, .alt_type=&Pointer24fidl_test_json_StrictFooTable}}};
 static const struct FidlXUnionField Fields29v1_fidl_test_json_FlexibleFoo[] = {
     /*FidlXUnionField*/{.type=&v1_String4294967295nonnullableTable, .ordinal=1u},
     /*FidlXUnionField*/{.type=&fidl_internal_kInt32Table, .ordinal=2u}
 };
 const fidl_type_t v1_fidl_test_json_FlexibleFooTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=2u, .fields=Fields29v1_fidl_test_json_FlexibleFoo, .nullable=kFidlNullability_Nonnullable, .name="fidl.test.json/FlexibleFoo", .strictness=kFidlStrictness_Flexible, .alt_type=&fidl_test_json_FlexibleFooTable}}};
+static const struct FidlXUnionField Fields40v1_fidl_test_json_FlexibleFooNullableRef[] = {
+    /*FidlXUnionField*/{.type=&v1_String4294967295nonnullableTable, .ordinal=1u},
+    /*FidlXUnionField*/{.type=&fidl_internal_kInt32Table, .ordinal=2u}
+};
+const fidl_type_t v1_fidl_test_json_FlexibleFooNullableRefTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=2u, .fields=Fields40v1_fidl_test_json_FlexibleFooNullableRef, .nullable=kFidlNullability_Nullable, .name="fidl.test.json/FlexibleFoo", .strictness=kFidlStrictness_Flexible, .alt_type=&Pointer26fidl_test_json_FlexibleFooTable}}};

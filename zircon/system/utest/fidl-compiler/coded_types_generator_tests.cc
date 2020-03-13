@@ -5,6 +5,7 @@
 #include <fidl/tables_generator.h>
 #include <unittest/unittest.h>
 
+#include "fidl/coded_ast.h"
 #include "fidl/coded_types_generator.h"
 #include "test_library.h"
 
@@ -219,18 +220,141 @@ xunion MyXUnion {
 )FIDL");
   ASSERT_TRUE(library.Compile());
   fidl::CodedTypesGenerator gen(library.library());
-  gen.CompileCodedTypes(fidl::WireFormat::kOld);
+  gen.CompileCodedTypes(fidl::WireFormat::kV1NoEe);
 
-  ASSERT_EQ(2, gen.coded_types().size());
+  ASSERT_EQ(3, gen.coded_types().size());
 
-  auto type1 = gen.coded_types().at(0).get();
+  auto type0 = gen.coded_types().at(0).get();
+  ASSERT_STR_EQ("v1_example_MyXUnionNullableRef", type0->coded_name.c_str());
+  ASSERT_TRUE(type0->coding_needed);
+  ASSERT_EQ(fidl::coded::Type::Kind::kXUnion, type0->kind);
+  auto nullable_xunion = static_cast<const fidl::coded::XUnionType*>(type0);
+  ASSERT_EQ(fidl::types::Nullability::kNullable, nullable_xunion->nullability);
+
+  auto type1 = gen.coded_types().at(1).get();
   ASSERT_STR_EQ("bool", type1->coded_name.c_str());
   ASSERT_TRUE(type1->coding_needed);
   ASSERT_EQ(fidl::coded::Type::Kind::kPrimitive, type1->kind);
   auto type2_primitive = static_cast<const fidl::coded::PrimitiveType*>(type1);
   ASSERT_EQ(fidl::types::PrimitiveSubtype::kBool, type2_primitive->subtype);
 
-  auto type2 = gen.coded_types().at(1).get();
+  auto type2 = gen.coded_types().at(2).get();
+  ASSERT_STR_EQ("int32", type2->coded_name.c_str());
+  ASSERT_TRUE(type2->coding_needed);
+  ASSERT_EQ(fidl::coded::Type::Kind::kPrimitive, type2->kind);
+  auto type1_primitive = static_cast<const fidl::coded::PrimitiveType*>(type2);
+  ASSERT_EQ(fidl::types::PrimitiveSubtype::kInt32, type1_primitive->subtype);
+
+  auto name = fidl::flat::Name::Key(library.library(), "MyXUnion");
+  auto type = gen.CodedTypeFor(name);
+  ASSERT_NONNULL(type);
+  ASSERT_STR_EQ("v1_example_MyXUnion", type->coded_name.c_str());
+  ASSERT_TRUE(type->coding_needed);
+  ASSERT_EQ(fidl::coded::Type::Kind::kXUnion, type->kind);
+  auto coded_xunion = static_cast<const fidl::coded::XUnionType*>(type);
+  ASSERT_EQ(2, coded_xunion->fields.size());
+  auto xunion_field0 = coded_xunion->fields.at(0);
+  ASSERT_EQ(fidl::coded::Type::Kind::kPrimitive, xunion_field0.type->kind);
+  auto xunion_field0_primitive = static_cast<const fidl::coded::PrimitiveType*>(xunion_field0.type);
+  ASSERT_EQ(fidl::types::PrimitiveSubtype::kBool, xunion_field0_primitive->subtype);
+  auto xunion_field1 = coded_xunion->fields.at(1);
+  ASSERT_EQ(fidl::coded::Type::Kind::kPrimitive, xunion_field1.type->kind);
+  auto xunion_field1_primitive = static_cast<const fidl::coded::PrimitiveType*>(xunion_field1.type);
+  ASSERT_EQ(fidl::types::PrimitiveSubtype::kInt32, xunion_field1_primitive->subtype);
+  ASSERT_STR_EQ("example/MyXUnion", coded_xunion->qname.c_str());
+  ASSERT_EQ(fidl::types::Nullability::kNonnullable, coded_xunion->nullability);
+  ASSERT_NONNULL(coded_xunion->maybe_reference_type);
+
+  END_TEST;
+}
+
+// The code between |CodedTypesOfXUnions| and |CodedTypesOfNullableXUnions| is now very similar
+// because the compiler emits both the non-nullable and nullable xunion types regardless of whether
+// it is used in the library in which it was defined.
+bool CodedTypesOfNullableXUnions() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library example;
+
+xunion MyXUnion {
+  1: bool foo;
+  2: int32 bar;
+};
+
+struct Wrapper1 {
+  MyXUnion? xu;
+};
+
+// This ensures that MyXUnion? doesn't show up twice in the coded types.
+struct Wrapper2 {
+  MyXUnion? xu;
+};
+
+)FIDL");
+  ASSERT_TRUE(library.Compile());
+  fidl::CodedTypesGenerator gen(library.library());
+  gen.CompileCodedTypes(fidl::WireFormat::kV1NoEe);
+
+  // 3 == size of {bool, int32, MyXUnion?}, which is all of the types used in
+  // the example.
+  ASSERT_EQ(3, gen.coded_types().size());
+
+  auto type0 = gen.coded_types().at(0).get();
+  ASSERT_STR_EQ("v1_example_MyXUnionNullableRef", type0->coded_name.c_str());
+  ASSERT_TRUE(type0->coding_needed);
+  ASSERT_EQ(fidl::coded::Type::Kind::kXUnion, type0->kind);
+  auto nullable_xunion = static_cast<const fidl::coded::XUnionType*>(type0);
+  ASSERT_EQ(fidl::types::Nullability::kNullable, nullable_xunion->nullability);
+
+  auto type1 = gen.coded_types().at(1).get();
+  ASSERT_STR_EQ("bool", type1->coded_name.c_str());
+  ASSERT_TRUE(type1->coding_needed);
+  ASSERT_EQ(fidl::coded::Type::Kind::kPrimitive, type1->kind);
+  auto type2_primitive = static_cast<const fidl::coded::PrimitiveType*>(type1);
+  ASSERT_EQ(fidl::types::PrimitiveSubtype::kBool, type2_primitive->subtype);
+
+  auto type2 = gen.coded_types().at(2).get();
+  ASSERT_STR_EQ("int32", type2->coded_name.c_str());
+  ASSERT_TRUE(type2->coding_needed);
+  ASSERT_EQ(fidl::coded::Type::Kind::kPrimitive, type2->kind);
+  auto type1_primitive = static_cast<const fidl::coded::PrimitiveType*>(type2);
+  ASSERT_EQ(fidl::types::PrimitiveSubtype::kInt32, type1_primitive->subtype);
+
+  END_TEST;
+}
+
+bool CodedTypesOfStaticUnions() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library example;
+
+xunion MyXUnion {
+  1: bool foo;
+  2: int32 bar;
+};
+)FIDL");
+  ASSERT_TRUE(library.Compile());
+  fidl::CodedTypesGenerator gen(library.library());
+  gen.CompileCodedTypes(fidl::WireFormat::kOld);
+
+  ASSERT_EQ(3, gen.coded_types().size());
+
+  auto type0 = gen.coded_types().at(0).get();
+  ASSERT_STR_EQ("Pointer16example_MyXUnion", type0->coded_name.c_str());
+  ASSERT_TRUE(type0->coding_needed);
+  ASSERT_EQ(fidl::coded::Type::Kind::kUnionPointer, type0->kind);
+  ASSERT_EQ(8, type0->size);
+
+  auto type1 = gen.coded_types().at(1).get();
+  ASSERT_STR_EQ("bool", type1->coded_name.c_str());
+  ASSERT_TRUE(type1->coding_needed);
+  ASSERT_EQ(fidl::coded::Type::Kind::kPrimitive, type1->kind);
+  auto type2_primitive = static_cast<const fidl::coded::PrimitiveType*>(type1);
+  ASSERT_EQ(fidl::types::PrimitiveSubtype::kBool, type2_primitive->subtype);
+
+  auto type2 = gen.coded_types().at(2).get();
   ASSERT_STR_EQ("int32", type2->coded_name.c_str());
   ASSERT_TRUE(type2->coding_needed);
   ASSERT_EQ(fidl::coded::Type::Kind::kPrimitive, type2->kind);
@@ -251,7 +375,58 @@ xunion MyXUnion {
   ASSERT_NULL(xunion_field1.type);
 
   ASSERT_STR_EQ("example/MyXUnion", coded_xunion->qname.c_str());
-  ASSERT_NULL(coded_xunion->maybe_reference_type);
+  ASSERT_NONNULL(coded_xunion->maybe_reference_type);
+
+  END_TEST;
+}
+
+bool CodedTypesOfStaticUnionPointers() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library example;
+
+xunion MyXUnion {
+  1: bool foo;
+  2: int32 bar;
+};
+
+struct Wrapper1 {
+  MyXUnion? xu;
+};
+
+// This ensures that MyXUnion? doesn't show up twice in the coded types.
+struct Wrapper2 {
+  MyXUnion? xu;
+};
+
+)FIDL");
+  ASSERT_TRUE(library.Compile());
+  fidl::CodedTypesGenerator gen(library.library());
+  gen.CompileCodedTypes(fidl::WireFormat::kOld);
+
+  // 3 == size of {bool, int32, MyXUnion?}, which is all of the types used in
+  // the example.
+  ASSERT_EQ(3, gen.coded_types().size());
+
+  auto type0 = gen.coded_types().at(0).get();
+  ASSERT_STR_EQ("Pointer16example_MyXUnion", type0->coded_name.c_str());
+  ASSERT_TRUE(type0->coding_needed);
+  ASSERT_EQ(fidl::coded::Type::Kind::kUnionPointer, type0->kind);
+
+  auto type1 = gen.coded_types().at(1).get();
+  ASSERT_STR_EQ("bool", type1->coded_name.c_str());
+  ASSERT_TRUE(type1->coding_needed);
+  ASSERT_EQ(fidl::coded::Type::Kind::kPrimitive, type1->kind);
+  auto type2_primitive = static_cast<const fidl::coded::PrimitiveType*>(type1);
+  ASSERT_EQ(fidl::types::PrimitiveSubtype::kBool, type2_primitive->subtype);
+
+  auto type2 = gen.coded_types().at(2).get();
+  ASSERT_STR_EQ("int32", type2->coded_name.c_str());
+  ASSERT_TRUE(type2->coding_needed);
+  ASSERT_EQ(fidl::coded::Type::Kind::kPrimitive, type2->kind);
+  auto type1_primitive = static_cast<const fidl::coded::PrimitiveType*>(type2);
+  ASSERT_EQ(fidl::types::PrimitiveSubtype::kInt32, type1_primitive->subtype);
 
   END_TEST;
 }
@@ -440,62 +615,6 @@ struct Complex {
   EXPECT_EQ(type_complex_struct->fields[3].type, nullptr);
   EXPECT_EQ(type_complex_struct->fields[3].offset, 16);
   EXPECT_EQ(type_complex_struct->fields[3].padding, 6);
-
-  END_TEST;
-}
-
-// The code between |CodedTypesOfXUnions| and |CodedTypesOfNullableXUnions| is now very similar
-// because the compiler emits both the non-nullable and nullable xunion types regardless of whether
-// it is used in the library in which it was defined.
-bool CodedTypesOfNullableXUnions() {
-  BEGIN_TEST;
-
-  TestLibrary library(R"FIDL(
-library example;
-
-xunion MyXUnion {
-  1: bool foo;
-  2: int32 bar;
-};
-
-struct Wrapper1 {
-  MyXUnion? xu;
-};
-
-// This ensures that MyXUnion? doesn't show up twice in the coded types.
-struct Wrapper2 {
-  MyXUnion? xu;
-};
-
-)FIDL");
-  ASSERT_TRUE(library.Compile());
-  fidl::CodedTypesGenerator gen(library.library());
-  gen.CompileCodedTypes(fidl::WireFormat::kOld);
-
-  // 3 == size of {bool, int32, MyXUnion?}, which is all of the types used in
-  // the example.
-  // ASSERT_EQ(3, gen.coded_types().size());
-
-  // auto type0 = gen.coded_types().at(0).get();
-  // ASSERT_STR_EQ("example_MyXUnionNullableRef", type0->coded_name.c_str());
-  // ASSERT_TRUE(type0->coding_needed);
-  // ASSERT_EQ(fidl::coded::Type::Kind::kXUnion, type0->kind);
-  // auto nullable_xunion = static_cast<const fidl::coded::XUnionType*>(type0);
-  // ASSERT_EQ(fidl::types::Nullability::kNullable, nullable_xunion->nullability);
-
-  auto type1 = gen.coded_types().at(1).get();
-  ASSERT_STR_EQ("bool", type1->coded_name.c_str());
-  ASSERT_TRUE(type1->coding_needed);
-  ASSERT_EQ(fidl::coded::Type::Kind::kPrimitive, type1->kind);
-  auto type2_primitive = static_cast<const fidl::coded::PrimitiveType*>(type1);
-  ASSERT_EQ(fidl::types::PrimitiveSubtype::kBool, type2_primitive->subtype);
-
-  auto type2 = gen.coded_types().at(2).get();
-  ASSERT_STR_EQ("int32", type2->coded_name.c_str());
-  ASSERT_TRUE(type2->coding_needed);
-  ASSERT_EQ(fidl::coded::Type::Kind::kPrimitive, type2->kind);
-  auto type1_primitive = static_cast<const fidl::coded::PrimitiveType*>(type2);
-  ASSERT_EQ(fidl::types::PrimitiveSubtype::kInt32, type1_primitive->subtype);
 
   END_TEST;
 }
@@ -903,10 +1022,12 @@ RUN_TEST(CodedTypesOfArrays);
 RUN_TEST(CodedTypesOfVectors);
 RUN_TEST(CodedTypesOfProtocol);
 RUN_TEST(CodedTypesOfRequestOfProtocol);
+RUN_TEST(CodedTypesOfStaticUnions);
+RUN_TEST(CodedTypesOfStaticUnionPointers);
 RUN_TEST(CodedTypesOfXUnions);
+RUN_TEST(CodedTypesOfNullableXUnions);
 RUN_TEST(CodedTypesOfNullablePointers);
 RUN_TEST(CodedTypesOfStructsWithPaddings);
-RUN_TEST(CodedTypesOfNullableXUnions);
 RUN_TEST(CodedTypesOfTables);
 RUN_TEST(CodedTypesOfBits);
 RUN_TEST(CodedTypesOfEnum);

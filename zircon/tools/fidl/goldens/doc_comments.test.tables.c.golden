@@ -11,6 +11,7 @@ extern const fidl_type_t test_name_StructTable;
 extern const fidl_type_t v1_test_name_InterfaceMethodRequestTable;
 extern const fidl_type_t v1_test_name_InterfaceOnEventEventTable;
 extern const fidl_type_t v1_test_name_UnionTable;
+extern const fidl_type_t v1_test_name_UnionNullableRefTable;
 extern const fidl_type_t v1_test_name_StructTable;
 
 // Coding tables for old wire format.
@@ -21,6 +22,7 @@ extern const fidl_type_t test_name_StructTable;
 extern const fidl_type_t test_name_MyEnumTable;
 extern const fidl_type_t test_name_MyBitsTable;
 
+static const fidl_type_t Pointer15test_name_UnionTable __attribute__((unused)) = {.type_tag=kFidlTypeUnionPointer, {.coded_union_pointer={.union_type=&test_name_UnionTable.coded_union}}};
 
 extern const fidl_type_t test_name_InterfaceMethodRequestTable;
 static const struct FidlStructField Fields32test_name_InterfaceMethodRequest[] = {};
@@ -54,6 +56,7 @@ const fidl_type_t test_name_MyBitsTable = {.type_tag=kFidlTypeBits, {.coded_bits
 // Coding tables for v1 wire format.
 
 extern const fidl_type_t v1_test_name_UnionTable;
+extern const fidl_type_t v1_test_name_UnionNullableRefTable;
 extern const fidl_type_t v1_test_name_TableTable;
 extern const fidl_type_t v1_test_name_StructTable;
 extern const fidl_type_t v1_test_name_MyEnumTable;
@@ -73,6 +76,10 @@ static const struct FidlXUnionField Fields18v1_test_name_Union[] = {
     /*FidlXUnionField*/{.type=&fidl_internal_kInt32Table, .ordinal=1u}
 };
 const fidl_type_t v1_test_name_UnionTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=1u, .fields=Fields18v1_test_name_Union, .nullable=kFidlNullability_Nonnullable, .name="test.name/Union", .strictness=kFidlStrictness_Strict, .alt_type=&test_name_UnionTable}}};
+static const struct FidlXUnionField Fields29v1_test_name_UnionNullableRef[] = {
+    /*FidlXUnionField*/{.type=&fidl_internal_kInt32Table, .ordinal=1u}
+};
+const fidl_type_t v1_test_name_UnionNullableRefTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=1u, .fields=Fields29v1_test_name_UnionNullableRef, .nullable=kFidlNullability_Nullable, .name="test.name/Union", .strictness=kFidlStrictness_Strict, .alt_type=&Pointer15test_name_UnionTable}}};
 static const struct FidlTableField Fields18v1_test_name_Table[] = {
     /*FidlTableField*/{.type=&fidl_internal_kInt32Table, .ordinal=1u}
 };

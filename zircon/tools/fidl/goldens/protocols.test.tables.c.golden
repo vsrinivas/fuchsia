@@ -60,10 +60,13 @@ extern const fidl_type_t v1_test_name_WithErrorSyntaxErrorAsEnumRequestTable;
 extern const fidl_type_t v1_test_name_WithErrorSyntaxErrorAsEnumResponseTable;
 extern const fidl_type_t v1_test_name_WithErrorSyntax_ResponseAsStruct_ResponseTable;
 extern const fidl_type_t v1_test_name_WithErrorSyntax_ResponseAsStruct_ResultTable;
+extern const fidl_type_t v1_test_name_WithErrorSyntax_ResponseAsStruct_ResultNullableRefTable;
 extern const fidl_type_t v1_test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseTable;
 extern const fidl_type_t v1_test_name_WithErrorSyntax_ErrorAsPrimitive_ResultTable;
+extern const fidl_type_t v1_test_name_WithErrorSyntax_ErrorAsPrimitive_ResultNullableRefTable;
 extern const fidl_type_t v1_test_name_WithErrorSyntax_ErrorAsEnum_ResponseTable;
 extern const fidl_type_t v1_test_name_WithErrorSyntax_ErrorAsEnum_ResultTable;
+extern const fidl_type_t v1_test_name_WithErrorSyntax_ErrorAsEnum_ResultNullableRefTable;
 
 // Coding tables for old wire format.
 
@@ -75,6 +78,9 @@ extern const fidl_type_t test_name_WithErrorSyntax_ErrorAsEnum_ResponseTable;
 extern const fidl_type_t test_name_ErrorEnunTable;
 extern const fidl_type_t test_name_WithErrorSyntax_ErrorAsEnum_ResultTable;
 
+static const fidl_type_t Pointer49test_name_WithErrorSyntax_ResponseAsStruct_ResultTable __attribute__((unused)) = {.type_tag=kFidlTypeUnionPointer, {.coded_union_pointer={.union_type=&test_name_WithErrorSyntax_ResponseAsStruct_ResultTable.coded_union}}};
+static const fidl_type_t Pointer49test_name_WithErrorSyntax_ErrorAsPrimitive_ResultTable __attribute__((unused)) = {.type_tag=kFidlTypeUnionPointer, {.coded_union_pointer={.union_type=&test_name_WithErrorSyntax_ErrorAsPrimitive_ResultTable.coded_union}}};
+static const fidl_type_t Pointer44test_name_WithErrorSyntax_ErrorAsEnum_ResultTable __attribute__((unused)) = {.type_tag=kFidlTypeUnionPointer, {.coded_union_pointer={.union_type=&test_name_WithErrorSyntax_ErrorAsEnum_ResultTable.coded_union}}};
 
 extern const fidl_type_t test_name_ChannelProtocolMethodARequestTable;
 static const struct FidlStructField Fields39test_name_ChannelProtocolMethodARequest[] = {
@@ -248,11 +254,14 @@ const fidl_type_t test_name_WithErrorSyntax_ErrorAsEnum_ResultTable = {.type_tag
 
 extern const fidl_type_t v1_test_name_WithErrorSyntax_ResponseAsStruct_ResponseTable;
 extern const fidl_type_t v1_test_name_WithErrorSyntax_ResponseAsStruct_ResultTable;
+extern const fidl_type_t v1_test_name_WithErrorSyntax_ResponseAsStruct_ResultNullableRefTable;
 extern const fidl_type_t v1_test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseTable;
 extern const fidl_type_t v1_test_name_WithErrorSyntax_ErrorAsPrimitive_ResultTable;
+extern const fidl_type_t v1_test_name_WithErrorSyntax_ErrorAsPrimitive_ResultNullableRefTable;
 extern const fidl_type_t v1_test_name_WithErrorSyntax_ErrorAsEnum_ResponseTable;
 extern const fidl_type_t v1_test_name_ErrorEnunTable;
 extern const fidl_type_t v1_test_name_WithErrorSyntax_ErrorAsEnum_ResultTable;
+extern const fidl_type_t v1_test_name_WithErrorSyntax_ErrorAsEnum_ResultNullableRefTable;
 
 
 extern const fidl_type_t v1_test_name_ChannelProtocolMethodARequestTable;
@@ -401,6 +410,11 @@ static const struct FidlXUnionField Fields52v1_test_name_WithErrorSyntax_Respons
     /*FidlXUnionField*/{.type=&fidl_internal_kUint32Table, .ordinal=2u}
 };
 const fidl_type_t v1_test_name_WithErrorSyntax_ResponseAsStruct_ResultTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=2u, .fields=Fields52v1_test_name_WithErrorSyntax_ResponseAsStruct_Result, .nullable=kFidlNullability_Nonnullable, .name="test.name/WithErrorSyntax_ResponseAsStruct_Result", .strictness=kFidlStrictness_Strict, .alt_type=&test_name_WithErrorSyntax_ResponseAsStruct_ResultTable}}};
+static const struct FidlXUnionField Fields63v1_test_name_WithErrorSyntax_ResponseAsStruct_ResultNullableRef[] = {
+    /*FidlXUnionField*/{.type=&v1_test_name_WithErrorSyntax_ResponseAsStruct_ResponseTable, .ordinal=1u},
+    /*FidlXUnionField*/{.type=&fidl_internal_kUint32Table, .ordinal=2u}
+};
+const fidl_type_t v1_test_name_WithErrorSyntax_ResponseAsStruct_ResultNullableRefTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=2u, .fields=Fields63v1_test_name_WithErrorSyntax_ResponseAsStruct_ResultNullableRef, .nullable=kFidlNullability_Nullable, .name="test.name/WithErrorSyntax_ResponseAsStruct_Result", .strictness=kFidlStrictness_Strict, .alt_type=&Pointer49test_name_WithErrorSyntax_ResponseAsStruct_ResultTable}}};
 static const struct FidlStructField Fields54v1_test_name_WithErrorSyntax_ErrorAsPrimitive_Response[] = {};
 const fidl_type_t v1_test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields54v1_test_name_WithErrorSyntax_ErrorAsPrimitive_Response, .field_count=0u, .size=1u, .max_out_of_line=0u, .contains_union=false, .name="test.name/WithErrorSyntax_ErrorAsPrimitive_Response", .alt_type=&test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseTable}}};
 
@@ -409,6 +423,11 @@ static const struct FidlXUnionField Fields52v1_test_name_WithErrorSyntax_ErrorAs
     /*FidlXUnionField*/{.type=&fidl_internal_kUint32Table, .ordinal=2u}
 };
 const fidl_type_t v1_test_name_WithErrorSyntax_ErrorAsPrimitive_ResultTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=2u, .fields=Fields52v1_test_name_WithErrorSyntax_ErrorAsPrimitive_Result, .nullable=kFidlNullability_Nonnullable, .name="test.name/WithErrorSyntax_ErrorAsPrimitive_Result", .strictness=kFidlStrictness_Strict, .alt_type=&test_name_WithErrorSyntax_ErrorAsPrimitive_ResultTable}}};
+static const struct FidlXUnionField Fields63v1_test_name_WithErrorSyntax_ErrorAsPrimitive_ResultNullableRef[] = {
+    /*FidlXUnionField*/{.type=&v1_test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseTable, .ordinal=1u},
+    /*FidlXUnionField*/{.type=&fidl_internal_kUint32Table, .ordinal=2u}
+};
+const fidl_type_t v1_test_name_WithErrorSyntax_ErrorAsPrimitive_ResultNullableRefTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=2u, .fields=Fields63v1_test_name_WithErrorSyntax_ErrorAsPrimitive_ResultNullableRef, .nullable=kFidlNullability_Nullable, .name="test.name/WithErrorSyntax_ErrorAsPrimitive_Result", .strictness=kFidlStrictness_Strict, .alt_type=&Pointer49test_name_WithErrorSyntax_ErrorAsPrimitive_ResultTable}}};
 static const struct FidlStructField Fields49v1_test_name_WithErrorSyntax_ErrorAsEnum_Response[] = {};
 const fidl_type_t v1_test_name_WithErrorSyntax_ErrorAsEnum_ResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields49v1_test_name_WithErrorSyntax_ErrorAsEnum_Response, .field_count=0u, .size=1u, .max_out_of_line=0u, .contains_union=false, .name="test.name/WithErrorSyntax_ErrorAsEnum_Response", .alt_type=&test_name_WithErrorSyntax_ErrorAsEnum_ResponseTable}}};
 
@@ -420,3 +439,8 @@ static const struct FidlXUnionField Fields47v1_test_name_WithErrorSyntax_ErrorAs
     /*FidlXUnionField*/{.type=&v1_test_name_ErrorEnunTable, .ordinal=2u}
 };
 const fidl_type_t v1_test_name_WithErrorSyntax_ErrorAsEnum_ResultTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=2u, .fields=Fields47v1_test_name_WithErrorSyntax_ErrorAsEnum_Result, .nullable=kFidlNullability_Nonnullable, .name="test.name/WithErrorSyntax_ErrorAsEnum_Result", .strictness=kFidlStrictness_Strict, .alt_type=&test_name_WithErrorSyntax_ErrorAsEnum_ResultTable}}};
+static const struct FidlXUnionField Fields58v1_test_name_WithErrorSyntax_ErrorAsEnum_ResultNullableRef[] = {
+    /*FidlXUnionField*/{.type=&v1_test_name_WithErrorSyntax_ErrorAsEnum_ResponseTable, .ordinal=1u},
+    /*FidlXUnionField*/{.type=&v1_test_name_ErrorEnunTable, .ordinal=2u}
+};
+const fidl_type_t v1_test_name_WithErrorSyntax_ErrorAsEnum_ResultNullableRefTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=2u, .fields=Fields58v1_test_name_WithErrorSyntax_ErrorAsEnum_ResultNullableRef, .nullable=kFidlNullability_Nullable, .name="test.name/WithErrorSyntax_ErrorAsEnum_Result", .strictness=kFidlStrictness_Strict, .alt_type=&Pointer44test_name_WithErrorSyntax_ErrorAsEnum_ResultTable}}};
