@@ -122,16 +122,33 @@ OutputBuffer FormatIdentifier(const ParsedIdentifier& identifier,
     if (i > 0)
       result.Append(identifier.GetSeparator());
 
-    // Name.
-    std::string name = comp.name();
-    if (name.empty()) {
-      // Provide names for anonymous components.
-      result.Append(Syntax::kComment, kAnonIdentifierComponentName);
+    if (comp.special() == SpecialIdentifier::kNone) {
+      // Name.
+      std::string name = comp.name();
+      if (name.empty()) {
+        // Provide names for anonymous components.
+        result.Append(Syntax::kComment, kAnonIdentifierComponentName);
+      } else {
+        if (options.bold_last && i == comps.size() - 1)
+          result.Append(Syntax::kHeading, name);
+        else
+          result.Append(Syntax::kNormal, name);
+      }
+    } else if (comp.special() == SpecialIdentifier::kAnon) {
+      // Always dim anonymous names.
+      result.Append(Syntax::kComment, std::string(SpecialIdentifierToString(comp.special())));
     } else {
-      if (options.bold_last && i == comps.size() - 1)
-        result.Append(Syntax::kHeading, name);
-      else
-        result.Append(Syntax::kNormal, name);
+      // Other special name.
+      if (SpecialIdentifierHasData(comp.special())) {
+        // Special identifier has data, dim the tag part to emphasize the contents.
+        result.Append(Syntax::kComment,
+                      std::string(SpecialIdentifierToString(comp.special())) + "(");
+        result.Append(comp.name());
+        result.Append(Syntax::kComment, ")");
+      } else {
+        // Standalone special identifier, just append it as normal.
+        result.Append(Syntax::kNormal, std::string(SpecialIdentifierToString(comp.special())));
+      }
     }
 
     // Template.

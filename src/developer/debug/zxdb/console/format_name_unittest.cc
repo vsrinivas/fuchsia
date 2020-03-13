@@ -157,4 +157,23 @@ TEST(FormatName, FormatIdentifier) {
       FormatIdentifier(anon, bold_no_global_opts).GetDebugString());
 }
 
+TEST(FormatName, FormatSpecialIdentifier) {
+  FormatIdentifierOptions global_opts;
+  global_opts.show_global_qual = true;
+
+  // Hierarchical name.
+  ParsedIdentifier ident;
+  ident.AppendComponent(ParsedIdentifierComponent(SpecialIdentifier::kAnon));
+  ident.AppendComponent(ParsedIdentifierComponent(SpecialIdentifier::kPlt, "zx_channel_write"));
+  ident.AppendComponent(ParsedIdentifierComponent(SpecialIdentifier::kMain));
+  EXPECT_EQ(
+      "kComment \"$anon\", "  // $anon always dim.
+      "kNormal \"::\", "
+      "kComment \"$plt(\", "            // PLT annotation dim
+      "kNormal \"zx_channel_write\", "  // PLT function name regular.
+      "kComment \")\", "
+      "kNormal \"::$main\"",
+      FormatIdentifier(ident, global_opts).GetDebugString());
+}
+
 }  // namespace zxdb
