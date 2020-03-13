@@ -17,7 +17,6 @@
 #include "src/developer/feedback/feedback_agent/constants.h"
 #include "src/developer/feedback/utils/rotating_file_set.h"
 #include "src/lib/files/path.h"
-#include "src/lib/fxl/strings/string_printf.h"
 
 namespace feedback {
 namespace {
@@ -104,17 +103,8 @@ void FeedbackAgent::HandleComponentDataRegisterRequest(
 
 void FeedbackAgent::HandleDataProviderRequest(
     fidl::InterfaceRequest<fuchsia::feedback::DataProvider> request) {
-  const std::string connection_identifier =
-      fxl::StringPrintf("(connection %03" PRIu64 ")", next_data_provider_connection_id_++);
-  FX_LOGS(INFO) << "Client opened a new connection to fuchsia.feedback.DataProvider "
-                << connection_identifier;
   data_provider_connections_.AddBinding(
-      &data_provider_, std::move(request), dispatcher_,
-      [this, connection_identifier](const zx_status_t status) {
-        if (status == ZX_ERR_PEER_CLOSED) {
-          FX_LOGS(INFO) << "Client closed their connection to fuchsia.feedback.DataProvider "
-                        << connection_identifier;
-        }
+      &data_provider_, std::move(request), dispatcher_, [this](const zx_status_t status) {
         inspect_manager_.DecrementCurrentNumDataProviderConnections();
       });
   inspect_manager_.IncrementNumDataProviderConnections();

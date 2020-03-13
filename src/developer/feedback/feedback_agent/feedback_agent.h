@@ -10,7 +10,6 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/service_directory.h>
 
-#include <cstdint>
 #include <memory>
 
 #include "src/developer/feedback/feedback_agent/config.h"
@@ -64,7 +63,6 @@ class FeedbackAgent {
 
   DataProvider data_provider_;
   fidl::BindingSet<fuchsia::feedback::DataProvider> data_provider_connections_;
-  uint64_t next_data_provider_connection_id_ = 1;
 
   DataRegister data_register_;
   fidl::BindingSet<fuchsia::feedback::ComponentDataRegister> data_register_connections_;
