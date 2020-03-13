@@ -111,7 +111,7 @@ class ModuleSymbolsImpl : public ModuleSymbols {
                                  const Function* func, std::vector<Location>* result) const;
 
   // Looks up a PLT symbol. The symbol name only matches the mangled names and must not include
-  // "@plt" at the end. Returns a vector of one entry if found, an empty vector if not.
+  // the "$plt(...)" annotation. Returns a vector of one entry if found, an empty vector if not.
   std::vector<Location> ResolvePltName(const SymbolContext& symbol_context,
                                        const std::string& mangled_name) const;
 

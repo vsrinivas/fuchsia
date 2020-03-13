@@ -19,15 +19,8 @@ namespace zxdb {
 namespace {
 
 bool IsNameFirstChar(char c) {
-  // Note that "@" is used to annotate some special things:
-  //  - "PLT" breakpoints which are breakpoints set on ELF imports rather than DWARF symbols (for
-  //    example, "__stack_chk_fail@plt"). So it needs to count as a name character. This
-  //  - "@main" special location for the program entrypoint. can be changed in the future if we have
-  //    a better way of identifying these.
-  //
-  // "$" is used to escape special names.
-  return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || c == '_' || c == '~' || c == '@' ||
-         c == '$';
+  // '$' isn't valid in C but we use this as the indicator for special identifiers.
+  return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || c == '_' || c == '~' || c == '$';
 }
 
 bool IsNameContinuingChar(char c) { return IsNameFirstChar(c) || (c >= '0' && c <= '9'); }

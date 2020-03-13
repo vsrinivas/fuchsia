@@ -117,10 +117,9 @@ ELF PLT breakpoints for system calls
   from inserting hardware breakpoints. But each library's calls to vDSO
   functions goes through that library's PLT which is writable by the debugger.
 
-  To indicate a PLT breakpoint, append "@plt" to the name of the imported
-  function:
+  To indicate a PLT breakpoint, use the form $plt(...):
 
-    [zxdb] break zx_debug_write@plt
+    [zxdb] break $plt(zx_debug_write)
 
   This will apply the breakpoint to every library's PLT entry for
   "zx_debug_write".

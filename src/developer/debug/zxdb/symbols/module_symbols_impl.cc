@@ -83,7 +83,7 @@ bool SameFileLine(const llvm::DWARFDebugLine::Row& reference,
 }
 
 // Determines if the given input location references a PLT symbol. If it does, returns the name of
-// that symbol (with the "@plt" annotation stripped). If it does not, returns a null optional.
+// that symbol. If it does not, returns a null optional.
 std::optional<std::string> GetPLTInputLocation(const InputLocation& loc) {
   if (loc.type != InputLocation::Type::kName || loc.name.components().size() != 1)
     return std::nullopt;
@@ -91,12 +91,7 @@ std::optional<std::string> GetPLTInputLocation(const InputLocation& loc) {
   if (loc.name.components()[0].special() == SpecialIdentifier::kPlt)
     return loc.name.components()[0].name();
 
-  // TODO(bug 5722) remove support for the "@plt" method once all callers have been updated.
-  const IdentifierComponent& comp = loc.name.components()[0];
-  if (!StringEndsWith(comp.name(), "@plt"))
-    return std::nullopt;
-
-  return comp.name().substr(0, comp.name().size() - 4);
+  return std::nullopt;
 }
 
 // Returns true if the given input references the special "main" function annotation.

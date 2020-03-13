@@ -12,18 +12,14 @@ namespace zxdb {
 
 namespace {
 
-// Returns true if the identifier is a special name that' sunderstood by the symbol system but
+// Returns true if the identifier is a special name that's understood by the symbol system but
 // which won't be in the index.
 //
-// Currently these are PLT breakpoints (called "foo@plt" for the function "foo"), and the entrypoint
-// (called "@main"). The @ sign is not a valid identifier character otherwise, so we key off of
-// that.
-//
-// TODO(bug 5722): Remove handling for "@" when al callers are updated to use the new syntax.
+// Currently these are PLT breakpoints (called "$plt(foo)" for the function "foo"), and the
+// entrypoint (called "$main").
 bool IsSpecialSymbolName(const Identifier& ident) {
   return ident.components().size() == 1u &&
-         (ident.components()[0].name().find('@') != std::string::npos ||
-          ident.components()[0].special() != SpecialIdentifier::kNone);
+         ident.components()[0].special() != SpecialIdentifier::kNone;
 }
 
 }  // namespace

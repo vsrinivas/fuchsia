@@ -960,14 +960,4 @@ TEST_F(ExprParserTest, FromStringError) {
   EXPECT_EQ("", bad_ident.GetDebugName());
 }
 
-// "PLT" breakpoints are breakpoints set on ELF imports rather than DWARF symbols. We need to be
-// able to parse them as an identifier even though it's not a valid C++ name. This can be changed in
-// the future if we have a better way of identifying these.
-TEST_F(ExprParserTest, PltName) {
-  Identifier ident;
-  Err err = ExprParser::ParseIdentifier("__stack_chk_fail@plt", &ident);
-  EXPECT_FALSE(err.has_error());
-  EXPECT_EQ("\"__stack_chk_fail@plt\"", ident.GetDebugName());
-}
-
 }  // namespace zxdb
