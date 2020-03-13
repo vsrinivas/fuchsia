@@ -84,8 +84,31 @@ bool RealEmbeddedController::SupportsFeature(enum ec_feature_code feature) const
   return features_.flags[0] & EC_FEATURE_MASK_0(feature);
 }
 
+zx_status_t GetECVersion(EmbeddedController* controller, ec_response_get_version* version) {
+  // Fetch the version strings.
+  zx_status_t status = controller->IssueCommand(EC_CMD_GET_VERSION, 0, version);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  // The spec states that returned strings should be NUL terminated, but we re-write
+  // the final NUL to avoid undefined behaviour if the EC is out of spec.
+  version->version_string_ro[sizeof(version->version_string_ro) - 1] = 0;
+  version->version_string_rw[sizeof(version->version_string_rw) - 1] = 0;
+  return ZX_OK;
+}
+
 zx_status_t InitDevices(fbl::RefPtr<EmbeddedController> controller, zx_device_t* parent,
                         ACPI_HANDLE acpi_handle) {
+  // Get EC version.
+  ec_response_get_version version;
+  if (zx_status_t status = GetECVersion(controller.get(), &version); status != ZX_OK) {
+    zxlogf(TRACE, "acpi-cros-ec-core: failed to get EC version details.\n");
+    return status;
+  }
+  zxlogf(INFO, "acpi-cros-ec-core: Detected EC firmware version %s (RO), %s (RW).\n",
+         version.version_string_ro, version.version_string_rw);
+
   // Initialize MotionSense driver.
   if (controller->SupportsFeature(EC_FEATURE_MOTION_SENSE)) {
     zxlogf(TRACE, "acpi-cros-ec-motion: init\n");
