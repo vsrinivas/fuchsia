@@ -477,7 +477,7 @@ void Controller::DisplayControllerInterfaceOnDisplayVsync(uint64_t display_id, z
     } else if (list_is_empty(&info->images)) {
       // If the images list is empty, then we can't have any pending layers and
       // the change is done when there are no handles being displayed.
-      ZX_ASSERT(info->vsync_layer_count == 0);
+      ZX_ASSERT_MSG(info->vsync_layer_count == 0, "vsync_layer_count = %d", info->vsync_layer_count);
       done = handle_count == 0;
     } else {
       // Otherwise the change is done when the last handle_count==info->layer_count
