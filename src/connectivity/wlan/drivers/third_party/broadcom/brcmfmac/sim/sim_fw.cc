@@ -679,21 +679,19 @@ void SimFirmware::AssocStart() {
 }
 
 // Get the index of the SoftAP IF based on Mac.
-int16_t SimFirmware::GetSoftAPIfidx(const common::MacAddr& addr) {
+int16_t SimFirmware::GetIfidxByMac(const common::MacAddr& addr) {
   for (uint8_t i = 0; i < kMaxIfSupported; i++) {
-    if (iface_tbl_[i].allocated && iface_tbl_[i].ap_mode) {
-      if (iface_tbl_[i].mac_addr == addr) {
-        return i;
-      }
+    if (iface_tbl_[i].allocated && iface_tbl_[i].mac_addr == addr) {
+      return i;
     }
   }
   return -1;
 }
 
 // Get the index of the SoftAP IF
-int16_t SimFirmware::GetSoftAPIfidx() {
+int16_t SimFirmware::GetIfidx(bool is_ap) {
   for (uint8_t i = 0; i < kMaxIfSupported; i++) {
-    if (iface_tbl_[i].allocated && iface_tbl_[i].ap_mode) {
+    if (iface_tbl_[i].allocated && (is_ap == iface_tbl_[i].ap_mode)) {
       return i;
     }
   }
@@ -705,8 +703,8 @@ void SimFirmware::RxDisassocReq(const simulation::SimDisassocReqFrame* frame) {
   BRCMF_DBG(SIM, "Disassoc from %s for %s reason: %d\n", MACSTR(frame->src_addr_),
             MACSTR(frame->dst_addr_), frame->reason_);
   // First check if this is a disassoc meant for a client associated to our SoftAP
-  auto ifidx = GetSoftAPIfidx(frame->dst_addr_);
-  if (ifidx == -1) {
+  auto ifidx = GetIfidxByMac(frame->dst_addr_);
+  if (!iface_tbl_[ifidx].ap_mode) {
     // Not meant for the SoftAP. Check if it is meant for the client interface
     HandleDisassocForClientIF(frame->src_addr_, frame->dst_addr_, frame->reason_);
     return;
@@ -938,17 +936,39 @@ zx_status_t SimFirmware::HandleJoinRequest(const void* value, size_t value_len, 
 }
 
 zx_status_t SimFirmware::SetIFChanspec(uint16_t ifidx, uint16_t chanspec) {
-  // Ensure that all active IFs are using the same channel
-  for (int i = 0; i < kMaxIfSupported; i++) {
-    if (ifidx != i && iface_tbl_[i].allocated && iface_tbl_[i].chanspec != 0) {
-      ZX_ASSERT_MSG(
-          iface_tbl_[i].chanspec == chanspec,
-          "All IFs should use the same channel idx:%d chanspec: 0x%x this setting: 0x%x\n", i,
-          iface_tbl_[i].chanspec, chanspec);
-      return ZX_ERR_INVALID_ARGS;
+  if (ifidx < 0 || ifidx >= kMaxIfSupported || !iface_tbl_[ifidx].allocated) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  if (iface_tbl_[ifidx].ap_mode) {
+    int16_t client = GetIfidx(false);
+    // When it's set for softAP, and if there is a client with a chanspec
+    if (client == -1 || iface_tbl_[client].chanspec == 0) {
+      // If no client is activated, just set the chanspec
+      iface_tbl_[ifidx].chanspec = chanspec;
+      return ZX_OK;
+    }
+
+    if (iface_tbl_[ifidx].chanspec == 0) {
+      // When a new softAP iface is created, set the chanspec to client iface chanspec, ignore
+      // the input.
+      iface_tbl_[ifidx].chanspec = iface_tbl_[client].chanspec;
+      return ZX_OK;
+    } else {
+      // If the softAP iface already have a chanspec, refuse the operation.
+      return ZX_ERR_BAD_STATE;
+    }
+  } else {
+    // If it's set for clients, change all chanspecs of existing ifaces into the same one(the one we
+    // want to set).
+    for (uint16_t i = 0; i < kMaxIfSupported; i++) {
+      if (iface_tbl_[i].allocated) {
+        // TODO(zhiyichen): If this operation change the chanspec for softAP iface, send out CSA
+        // announcement when there is any client connecting to it.
+        iface_tbl_[i].chanspec = chanspec;
+      }
     }
   }
-  iface_tbl_[ifidx].chanspec = chanspec;
   return ZX_OK;
 }
 
@@ -1039,7 +1059,7 @@ zx_status_t SimFirmware::IovarsSet(uint16_t ifidx, const char* name, const void*
     }
     auto mpc = static_cast<const uint32_t*>(value);
     // Ensure that mpc is never enabled when AP has been started
-    int16_t ap_ifidx = GetSoftAPIfidx();
+    int16_t ap_ifidx = GetIfidx(true);
     if (ap_ifidx != -1) {
       // A SoftAP IF has been created
       if (iface_tbl_[ifidx].ap_config.ap_started) {
@@ -1128,6 +1148,14 @@ zx_status_t SimFirmware::IovarsGet(uint16_t ifidx, const char* name, void* value
       return ZX_ERR_INVALID_ARGS;
     }
     memcpy(value_out, &wsec_key_, sizeof(wsec_key_));
+  } else if (!std::strcmp(name, "chanspec")) {
+    if (value_len != sizeof(uint16_t)) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    if (!iface_tbl_[ifidx].allocated) {
+      return ZX_ERR_BAD_STATE;
+    }
+    memcpy(value_out, &iface_tbl_[ifidx].chanspec, sizeof(uint16_t));
   } else {
     // FIXME: We should return an error for an unrecognized firmware variable
     BRCMF_DBG(SIM, "Ignoring request to read iovar '%s'\n", name);

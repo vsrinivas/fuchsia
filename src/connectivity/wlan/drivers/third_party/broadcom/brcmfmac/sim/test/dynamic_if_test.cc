@@ -15,6 +15,8 @@ namespace wlan::brcmfmac {
 constexpr uint16_t kDefaultCh = 149;
 constexpr wlan_channel_t kDefaultChannel = {
     .primary = kDefaultCh, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0};
+// Chanspec value corresponding to kDefaultChannel with current d11 encoder.
+constexpr uint16_t kDefaultChanpsec = 53397;
 constexpr simulation::WlanTxInfo kDefaultTxInfo = {.channel = kDefaultChannel};
 constexpr wlan_ssid_t kDefaultSsid = {.len = 15, .ssid = "Fuchsia Fake AP"};
 const common::MacAddr kDefaultBssid({0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc});
@@ -53,6 +55,10 @@ class DynamicIfTest : public SimTest {
 
   // Query for wlanphy info
   void Query(wlanphy_impl_info_t* out_info);
+
+  // Interfaces to set and get chanspec iovar in sim-fw
+  void SetChanspec(bool is_ap_iface, uint16_t* chanspec, zx_status_t expect_result);
+  uint16_t GetChanspec(bool is_ap_iface, zx_status_t expect_result);
 
  protected:
   struct AssocContext {
@@ -296,6 +302,24 @@ void DynamicIfTest::VerifyAssoc() {
   ASSERT_EQ(num_clients, 1U);
 }
 
+void DynamicIfTest::SetChanspec(bool is_ap_iface, uint16_t* chanspec, zx_status_t expect_result) {
+  brcmf_simdev* sim = device_->GetSim();
+  zx_status_t err =
+      sim->sim_fw->IovarsSet(is_ap_iface ? softap_ifc_->iface_id_ : client_ifc_->iface_id_,
+                             "chanspec", chanspec, sizeof(uint16_t));
+  EXPECT_EQ(err, expect_result);
+}
+
+uint16_t DynamicIfTest::GetChanspec(bool is_ap_iface, zx_status_t expect_result) {
+  brcmf_simdev* sim = device_->GetSim();
+  uint16_t chanspec;
+  zx_status_t err =
+      sim->sim_fw->IovarsGet(is_ap_iface ? softap_ifc_->iface_id_ : client_ifc_->iface_id_,
+                             "chanspec", &chanspec, sizeof(uint16_t));
+  EXPECT_EQ(err, expect_result);
+  return chanspec;
+}
+
 TEST_F(DynamicIfTest, CreateDestroy) {
   Init();
   CreateInterface(WLAN_INFO_MAC_ROLE_CLIENT);
@@ -359,6 +383,52 @@ TEST_F(DynamicIfTest, ConnectBothInterfaces) {
   // Verify Assoc with SoftAP succeeded
   VerifyAssoc();
   // TODO(karthikrish) Will add disassoc once support in SIM FW is available
+}
+
+TEST_F(DynamicIfTest, SetClientChanspecAfterAPStarted) {
+  // Create our device instances
+  Init();
+
+  uint16_t chanspec;
+  // Create softAP iface and start
+  CreateInterface(WLAN_INFO_MAC_ROLE_AP);
+  StartSoftAP();
+
+  // The chanspec of softAP iface should be set to default one.
+  chanspec = GetChanspec(true, ZX_OK);
+  EXPECT_EQ(chanspec, kDefaultChanpsec);
+
+  // After creating client iface and setting a different chanspec to it, chanspec of softAP will
+  // change as a result of this operation.
+  CreateInterface(WLAN_INFO_MAC_ROLE_CLIENT);
+  chanspec = 1;
+  SetChanspec(false, &chanspec, ZX_OK);
+  chanspec = GetChanspec(true, ZX_OK);
+  EXPECT_EQ(chanspec, (uint16_t)1);
+}
+
+TEST_F(DynamicIfTest, SetAPChanspecAfterClientCreated) {
+  // Create our device instances
+  Init();
+
+  // Create client iface and set chanspec
+  uint16_t chanspec = 1;
+  CreateInterface(WLAN_INFO_MAC_ROLE_CLIENT);
+  SetChanspec(false, &chanspec, ZX_OK);
+
+  // Create and start softAP iface to and set another chanspec
+  CreateInterface(WLAN_INFO_MAC_ROLE_AP);
+  StartSoftAP();
+  // When we call StartSoftAP, the kDefaultCh will be transformed into chanspec(in this case the
+  // value is 53397) and set to soffAP iface, but since there is already a client iface activated,
+  // that input chanspec will be ignored and set to 1, which is the same as client's chanspec.
+  chanspec = GetChanspec(true, ZX_OK);
+  EXPECT_EQ(chanspec, (uint16_t)1);
+
+  // Now if we set chanspec again to softAP when it already have a chanspec, this the operation will
+  // be rejected.
+  chanspec = 2;
+  SetChanspec(true, &chanspec, ZX_ERR_BAD_STATE);
 }
 
 }  // namespace wlan::brcmfmac

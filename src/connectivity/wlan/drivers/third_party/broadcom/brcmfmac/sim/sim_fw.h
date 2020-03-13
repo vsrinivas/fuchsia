@@ -293,10 +293,11 @@ class SimFirmware {
                                std::optional<common::MacAddr> addr = {});
 
   // Get the idx of the SoftAP IF based on Mac address
-  int16_t GetSoftAPIfidx(const common::MacAddr& addr);
+  int16_t GetIfidxByMac(const common::MacAddr& addr);
 
-  // Get the idx of the SoftAP IF
-  int16_t GetSoftAPIfidx();
+  // Get the idx of the SoftAP IF, the parameter indicates whether we need to find softAP ifidx or
+  // client ifidx.
+  int16_t GetIfidx(bool is_ap);
 
   zx_status_t SetIFChanspec(uint16_t ifidx, uint16_t chanspec);
   // This is the simulator object that represents the interface between the driver and the
