@@ -34,6 +34,7 @@ class JobScheduler {
   using ClockCallback = std::function<Clock::time_point()>;
 
   JobScheduler(Owner* owner, uint32_t job_slots);
+  virtual ~JobScheduler() = default;
 
   void EnqueueAtom(std::shared_ptr<MsdArmAtom> atom);
   void TryToSchedule();
@@ -49,9 +50,9 @@ class JobScheduler {
 
   // Gets the duration until the earliest currently executing or waiting atom should time out, or
   // max if there's no timeout pending.
-  Clock::duration GetCurrentTimeoutDuration();
+  virtual Clock::duration GetCurrentTimeoutDuration();
 
-  void HandleTimedOutAtoms();
+  virtual void HandleTimedOutAtoms();
 
   void ReleaseMappingsForConnection(std::shared_ptr<MsdArmConnection> connection);
 
