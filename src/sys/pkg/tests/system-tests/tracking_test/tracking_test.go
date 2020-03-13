@@ -261,7 +261,7 @@ func otaToPackage(
 		return fmt.Errorf("device already updated to the expected version %q", expectedSystemImageMerkle)
 	}
 
-	server, err := device.ServePackageRepository(ctx, repo, "upgrade_test")
+	server, err := device.ServePackageRepository(ctx, repo, "tracking_test", true)
 	if err != nil {
 		return fmt.Errorf("error setting up server: %s", err)
 	}

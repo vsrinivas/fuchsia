@@ -163,32 +163,20 @@ func (c *Client) Reboot(ctx context.Context, repo *packages.Repository, rpcClien
 func (c *Client) RebootToRecovery(ctx context.Context) error {
 	log.Printf("rebooting to recovery")
 
-	ch := make(chan struct{})
-	c.RegisterDisconnectListener(ch)
-
-	err := c.Run(ctx, "dm reboot-recovery", os.Stdout, os.Stderr)
-	if err != nil {
-		// If the device rebooted before ssh was able to tell
-		// us the command ran, it will tell us the session
-		// exited without passing along an exit code. So,
-		// ignore that specific error.
-		if _, ok := err.(*ssh.ExitMissingError); !ok {
-			return fmt.Errorf("failed to reboot into recovery: %s", err)
+	return c.ExpectDisconnect(ctx, func() error {
+		err := c.Run(ctx, "dm reboot-recovery", os.Stdout, os.Stderr)
+		if err != nil {
+			// If the device rebooted before ssh was able to tell
+			// us the command ran, it will tell us the session
+			// exited without passing along an exit code. So,
+			// ignore that specific error.
+			if _, ok := err.(*ssh.ExitMissingError); !ok {
+				return fmt.Errorf("failed to reboot into recovery: %s", err)
+			}
 		}
-	}
 
-	log.Printf("waiting for device to disconnect")
-
-	// Wait until we get a signal that we have disconnected
-	select {
-	case <-ch:
-	case <-ctx.Done():
-		return fmt.Errorf("device did not disconnect: %s", ctx.Err())
-	}
-
-	log.Printf("device disconnected")
-
-	return nil
+		return nil
+	})
 }
 
 func (c *Client) ReadBasePackages(ctx context.Context) (map[string]string, error) {
@@ -212,7 +200,8 @@ func (c *Client) ReadBasePackages(ctx context.Context) (map[string]string, error
 // TriggerSystemOTA gets the device to perform a system update, ensuring it
 // reboots as expected. rpcClient, if provided, will be used and re-connected
 func (c *Client) TriggerSystemOTA(ctx context.Context, repo *packages.Repository, rpcClient **sl4f.Client) error {
-	log.Printf("triggering OTA")
+	log.Printf("Triggering OTA")
+	startTime := time.Now()
 
 	basePackages, err := c.ReadBasePackages(ctx)
 	if err != nil {
@@ -225,6 +214,12 @@ func (c *Client) TriggerSystemOTA(ctx context.Context, repo *packages.Repository
 	}
 
 	return c.ExpectReboot(ctx, repo, rpcClient, func() error {
+		server, err := c.ServePackageRepository(ctx, repo, "trigger-ota", true)
+		if err != nil {
+			return fmt.Errorf("error setting up server: %s", err)
+		}
+		defer server.Shutdown(ctx)
+
 		// FIXME: running this out of /pkgfs/versions is unsound WRT using the correct loader service
 		// Adding this as a short-term hack to unblock http://fxb/47213
 		cmd := fmt.Sprintf("/pkgfs/versions/%s/bin/update check-now --monitor", updateBinMerkle)
@@ -240,6 +235,35 @@ func (c *Client) TriggerSystemOTA(ctx context.Context, repo *packages.Repository
 
 		return nil
 	})
+	if err != nil {
+		return err
+	}
+
+	log.Printf("OTA completed in %s", time.Now().Sub(startTime))
+
+	return nil
+}
+
+func (c *Client) ExpectDisconnect(ctx context.Context, f func() error) error {
+	ch := make(chan struct{})
+	c.RegisterDisconnectListener(ch)
+
+	if err := f(); err != nil {
+		// It's okay if we leak the disconnect listener, it'll get
+		// cleaned up next time the device disconnects.
+		return err
+	}
+
+	// Wait until we get a signal that we have disconnected
+	select {
+	case <-ch:
+	case <-ctx.Done():
+		return fmt.Errorf("device did not disconnect: %s", ctx.Err())
+	}
+
+	log.Printf("device disconnected")
+
+	return nil
 }
 
 func (c *Client) ExpectReboot(ctx context.Context, repo *packages.Repository, rpcClient **sl4f.Client, f func() error) error {
@@ -406,13 +430,23 @@ func (c *Client) RemoteFileExists(ctx context.Context, path string) (bool, error
 }
 
 // RegisterPackageRepository adds the repository as a repository inside the device.
-func (c *Client) RegisterPackageRepository(ctx context.Context, repo *packages.Server) error {
+func (c *Client) RegisterPackageRepository(ctx context.Context, repo *packages.Server, createRewriteRule bool) error {
 	log.Printf("registering package repository: %s", repo.Dir)
-	cmd := fmt.Sprintf("amberctl add_src -f %s -h %s", repo.URL, repo.Hash)
+	var cmd string
+	if createRewriteRule {
+		cmd = fmt.Sprintf("amberctl add_src -f %s -h %s", repo.URL, repo.Hash)
+	} else {
+		cmd = fmt.Sprintf("amberctl add_repo_cfg -f %s -h %s", repo.URL, repo.Hash)
+	}
 	return c.Run(ctx, cmd, os.Stdout, os.Stderr)
 }
 
-func (c *Client) ServePackageRepository(ctx context.Context, repo *packages.Repository, name string) (*packages.Server, error) {
+func (c *Client) ServePackageRepository(
+	ctx context.Context,
+	repo *packages.Repository,
+	name string,
+	createRewriteRule bool,
+) (*packages.Server, error) {
 	// Make sure the device doesn't have any broken static packages.
 	if err := c.ValidateStaticPackages(ctx); err != nil {
 		return nil, err
@@ -425,12 +459,12 @@ func (c *Client) ServePackageRepository(ctx context.Context, repo *packages.Repo
 	}
 
 	// Serve the repository before the test begins.
-	server, err := repo.Serve(ctx, localHostname, "host_target_testing")
+	server, err := repo.Serve(ctx, localHostname, name)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := c.RegisterPackageRepository(ctx, server); err != nil {
+	if err := c.RegisterPackageRepository(ctx, server, createRewriteRule); err != nil {
 		server.Shutdown(ctx)
 		return nil, err
 	}
@@ -446,12 +480,6 @@ func (c *Client) StartRpcSession(ctx context.Context, repo *packages.Repository)
 	sshClient := c.sshClient
 	c.mu.Unlock()
 
-	// Determine the address of this device from the point of view of the target.
-	localHostname, err := sshClient.GetSshConnection(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get local hostname: %s", err)
-	}
-
 	// Ensure this client is running system_image or system_image_prime from repo.
 	currentSystemImageMerkle, err := c.GetSystemImageMerkle(ctx)
 	if err != nil {
@@ -461,20 +489,13 @@ func (c *Client) StartRpcSession(ctx context.Context, repo *packages.Repository)
 		return nil, fmt.Errorf("repo does not match system version: %s", err)
 	}
 
-	// Serve the package repository.
+	// Configure the target to use this repository as "fuchsia-pkg://host_target_testing_sl4f".
 	repoName := "host_target_testing_sl4f"
-	repoServer, err := repo.Serve(ctx, localHostname, repoName)
+	repoServer, err := c.ServePackageRepository(ctx, repo, repoName, false)
 	if err != nil {
 		return nil, fmt.Errorf("error serving repo to device: %s", err)
 	}
 	defer repoServer.Shutdown(ctx)
-
-	// Configure the target to use this repository as "fuchsia-pkg://host_target_testing".
-	log.Printf("registering package repository: %s", repoServer.Dir)
-	cmd := fmt.Sprintf("amberctl add_repo_cfg -f %s -h %s", repoServer.URL, repoServer.Hash)
-	if err := c.Run(ctx, cmd, os.Stdout, os.Stderr); err != nil {
-		return nil, fmt.Errorf("error registering repo: %s", err)
-	}
 
 	rpcClient, err := sl4f.NewClient(ctx, sshClient, net.JoinHostPort(c.deviceHostname, "80"), repoName)
 	if err != nil {
@@ -484,4 +505,34 @@ func (c *Client) StartRpcSession(ctx context.Context, repo *packages.Repository)
 	log.Printf("connected to sl4f in %s", time.Now().Sub(startTime))
 
 	return rpcClient, nil
+}
+
+func (c *Client) DownloadOTA(ctx context.Context, repo *packages.Repository, updatePackageUrl string) error {
+	log.Printf("Downloading OTA")
+	startTime := time.Now()
+
+	server, err := c.ServePackageRepository(ctx, repo, "download-ota", true)
+	if err != nil {
+		return fmt.Errorf("error setting up server: %s", err)
+	}
+	defer server.Shutdown(ctx)
+
+	// In order to manually trigger the system updater, we need the `run`
+	// package. Since builds can be configured to not automatically install
+	// packages, we need to explicitly resolve it.
+	err = c.Run(ctx, "pkgctl resolve fuchsia-pkg://fuchsia.com/run/0", os.Stdout, os.Stderr)
+	if err != nil {
+		return fmt.Errorf("error resolving the run package: %v", err)
+	}
+
+	log.Printf("Downloading system OTA")
+
+	cmd := fmt.Sprintf("run \"fuchsia-pkg://fuchsia.com/amber#meta/system_updater.cmx\" --initiator manual --reboot=false --update \"%s\"", updatePackageUrl)
+	if err = c.Run(ctx, cmd, os.Stdout, os.Stderr); err != nil {
+		return fmt.Errorf("failed to run system_updater.cmx: %s", err)
+	}
+
+	log.Printf("OTA successfully downloaded in %s", time.Now().Sub(startTime))
+
+	return nil
 }

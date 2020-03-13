@@ -22,6 +22,7 @@ import (
 type Config struct {
 	archiveConfig            *config.ArchiveConfig
 	deviceConfig             *config.DeviceConfig
+	otaToRecovery            bool
 	downgradeBuilderName     string
 	downgradeBuildID         string
 	downgradeFuchsiaBuildDir string
@@ -45,6 +46,7 @@ func NewConfig(fs *flag.FlagSet) (*Config, error) {
 	fs.StringVar(&c.upgradeBuilderName, "upgrade-builder-name", "", "upgrade to the latest version of this builder")
 	fs.StringVar(&c.upgradeBuildID, "upgrade-build-id", os.Getenv("BUILDBUCKET_ID"), "upgrade to this build id (default is $BUILDBUCKET_ID)")
 	fs.StringVar(&c.upgradeFuchsiaBuildDir, "upgrade-fuchsia-build-dir", "", "Path to the upgrade fuchsia build dir")
+	fs.BoolVar(&c.otaToRecovery, "ota-to-recovery", false, "downgrade with an OTA instead of rebooting to recovery")
 	fs.DurationVar(&c.paveTimeout, "pave-timeout", 5*time.Minute, "Err if a pave takes longer than this time (default is 5 minutes)")
 	fs.IntVar(&c.cycleCount, "cycle-count", 1, "How many cycles to run the test before completing (default is 1)")
 	fs.DurationVar(&c.cycleTimeout, "cycle-timeout", 10*time.Minute, "Err if a test cycle takes longer than this time (default is 10 minutes)")

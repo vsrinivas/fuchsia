@@ -27,7 +27,7 @@ import (
 //
 // This client requires the target to contain the "pkgctl" binary and for the
 // target to have the "run" and "sl4f" packages available at
-// "fuchsia-pkg://host_target_testing".
+// "fuchsia-pkg://host_target_testing_sl4f".
 type Client struct {
 	sshClient *sshclient.Client
 	url       string

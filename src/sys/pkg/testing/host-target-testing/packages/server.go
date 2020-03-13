@@ -47,7 +47,7 @@ func newServer(ctx context.Context, dir string, localHostname string, repoName s
 	}
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/host_target_testing/config.json", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc(fmt.Sprintf("/%s/config.json", repoName), func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(200)
 		w.Write(config)
@@ -149,7 +149,7 @@ func genConfig(dir string, localHostname string, repoName string, port int) (con
 	} else {
 		repoURL = fmt.Sprintf("http://%s:%d", hostname, port)
 	}
-	configURL = fmt.Sprintf("%s/host_target_testing/config.json", repoURL)
+	configURL = fmt.Sprintf("%s/%s/config.json", repoURL, repoName)
 
 	config, err = json.Marshal(&sourceConfig{
 		ID:          repoName,

@@ -13,6 +13,8 @@ import (
 	"testing"
 	"time"
 
+	"golang.org/x/crypto/ssh"
+
 	"fuchsia.googlesource.com/host_target_testing/device"
 	"fuchsia.googlesource.com/host_target_testing/packages"
 	"fuchsia.googlesource.com/host_target_testing/sl4f"
@@ -168,7 +170,7 @@ func paveDevice(ctx context.Context, device *device.Client) (*sl4f.Client, error
 	}
 
 	// Reboot the device into recovery and pave it.
-	if err = device.RebootToRecovery(ctx); err != nil {
+	if err := rebootToRecovery(ctx, device, downgradeRepo); err != nil {
 		return nil, fmt.Errorf("failed to reboot to recovery: %s", err)
 	}
 
@@ -199,6 +201,32 @@ func paveDevice(ctx context.Context, device *device.Client) (*sl4f.Client, error
 	log.Printf("paving successful in %s", time.Now().Sub(startTime))
 
 	return rpcClient, nil
+}
+
+func rebootToRecovery(ctx context.Context, device *device.Client, repo *packages.Repository) error {
+	if !c.otaToRecovery {
+		return device.RebootToRecovery(ctx)
+	}
+
+	if err := device.DownloadOTA(ctx, repo, "fuchsia-pkg://fuchsia.com/update-to-zedboot/0"); err != nil {
+		return fmt.Errorf("failed to download OTA: %s", err)
+	}
+
+	return device.ExpectDisconnect(ctx, func() error {
+		err := device.Run(ctx, "dm reboot", os.Stdout, os.Stderr)
+
+		if err != nil {
+			// If the device rebooted before ssh was able to tell
+			// us the command ran, it will tell us the session
+			// exited without passing along an exit code. So,
+			// ignore that specific error.
+			if _, ok := err.(*ssh.ExitMissingError); !ok {
+				return fmt.Errorf("failed to reboot: %s", err)
+			}
+		}
+
+		return nil
+	})
 }
 
 // FIXME(45156) In order to ease landing Omaha, we're temporarily disabling the
@@ -234,12 +262,6 @@ func systemOTA(
 	if upToDate {
 		return fmt.Errorf("device already updated to the expected version %q", expectedSystemImageMerkle)
 	}
-
-	server, err := device.ServePackageRepository(ctx, repo, "upgrade_test")
-	if err != nil {
-		return fmt.Errorf("error setting up server: %s", err)
-	}
-	defer server.Shutdown(ctx)
 
 	if err := device.TriggerSystemOTA(ctx, repo, rpcClient); err != nil {
 		return fmt.Errorf("OTA failed: %s", err)
@@ -311,35 +333,18 @@ func otaToPackage(
 		return fmt.Errorf("device already updated to the expected version %q", expectedSystemImageMerkle)
 	}
 
-	server, err := device.ServePackageRepository(ctx, repo, "upgrade_test")
-	if err != nil {
-		return fmt.Errorf("error setting up server: %s", err)
-	}
-	defer server.Shutdown(ctx)
-
-	// In order to manually trigger the system updater, we need the `run`
-	// package. Since builds can be configured to not automatically install
-	// packages, we need to explicitly resolve it.
-	err = device.Run(ctx, "pkgctl resolve fuchsia-pkg://fuchsia.com/run/0", os.Stdout, os.Stderr)
-	if err != nil {
-		return fmt.Errorf("error resolving the run package: %v", err)
+	if err := device.DownloadOTA(ctx, repo, updatePackageUrl); err != nil {
+		return fmt.Errorf("failed to download OTA: %s", err)
 	}
 
-	log.Printf("Starting system OTA")
+	log.Printf("Rebooting device")
 	startTime := time.Now()
-
-	cmd := fmt.Sprintf("run \"fuchsia-pkg://fuchsia.com/amber#meta/system_updater.cmx\" --initiator manual --reboot=false --update \"%s\"", updatePackageUrl)
-	if err = device.Run(ctx, cmd, os.Stdout, os.Stderr); err != nil {
-		return fmt.Errorf("failed to run system_updater.cmx: %s", err)
-	}
-
-	log.Printf("Update successful, rebooting now")
 
 	if err = device.Reboot(ctx, repo, rpcClient); err != nil {
 		return fmt.Errorf("device failed to reboot after OTA applied: %s", err)
 	}
 
-	log.Printf("OTA complete in in %s", time.Now().Sub(startTime))
+	log.Printf("Reboot complete in in %s", time.Now().Sub(startTime))
 
 	log.Printf("Validating device")
 	// FIXME: See comment in device.TriggerSystemOTA()
