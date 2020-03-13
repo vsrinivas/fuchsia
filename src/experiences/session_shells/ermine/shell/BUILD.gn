@@ -12,14 +12,14 @@ import("//topaz/runtime/flutter_runner/flutter_app.gni")
 
 group("shell") {
   public_deps = [
-    ":ermine_app",
+    ":ermine",
     ":ermine_fonts",
   ]
 }
 
 tz_ids_path = "${target_gen_dir}/tz_ids.txt"
 
-flutter_app("ermine_app") {
+flutter_app("ermine") {
   main_dart = "lib/main.dart"
 
   fuchsia_package_name = "ermine"
@@ -35,42 +35,6 @@ flutter_app("ermine_app") {
   ]
 
   manifest = "pubspec.yaml"
-
-  deps = [
-    ":ermine_library",
-  ]
-
-  non_dart_deps = [ ":time_zone_list" ]
-
-  resources = [
-    {
-      path = rebase_path("config/keyboard_shortcuts.json")
-      dest = "keyboard_shortcuts.json"
-    },
-    {
-      path = rebase_path(tz_ids_path)
-      dest = "tz_ids.txt"
-    },
-  ]
-}
-
-static_icu_data("time_zone_list") {
-  command = "tz-ids"
-  output = tz_ids_path
-
-  # Put these time zones at the top for the convenience of Fuchsia developers.
-  fixed_order_ids = [
-    "America/Los_Angeles",
-    "America/New_York",
-    "Europe/Paris",
-    "Australia/Sydney",
-  ]
-  fixed_order = string_join(",", fixed_order_ids)
-  command_args = [ "--fixed-order=${fixed_order}" ]
-}
-
-dart_library("ermine_library") {
-  package_name = "ermine_library"
 
   sources = [
     "main.dart",
@@ -151,6 +115,34 @@ dart_library("ermine_library") {
     "//topaz/public/dart/widgets:lib.widgets",
     "//zircon/system/fidl/fuchsia-device-manager",
   ]
+
+  non_dart_deps = [ ":time_zone_list" ]
+
+  resources = [
+    {
+      path = rebase_path("config/keyboard_shortcuts.json")
+      dest = "keyboard_shortcuts.json"
+    },
+    {
+      path = rebase_path(tz_ids_path)
+      dest = "tz_ids.txt"
+    },
+  ]
+}
+
+static_icu_data("time_zone_list") {
+  command = "tz-ids"
+  output = tz_ids_path
+
+  # Put these time zones at the top for the convenience of Fuchsia developers.
+  fixed_order_ids = [
+    "America/Los_Angeles",
+    "America/New_York",
+    "Europe/Paris",
+    "Australia/Sydney",
+  ]
+  fixed_order = string_join(",", fixed_order_ids)
+  command_args = [ "--fixed-order=${fixed_order}" ]
 }
 
 config_data("ermine_fonts") {
@@ -183,7 +175,7 @@ flutter_test("ermine_unittests") {
   ]
 
   deps = [
-    ":ermine_library",
+    ":ermine_dart_library",
     "//third_party/dart-pkg/git/flutter/packages/flutter_test",
     "//third_party/dart-pkg/pub/mockito",
     "//third_party/dart-pkg/pub/test",

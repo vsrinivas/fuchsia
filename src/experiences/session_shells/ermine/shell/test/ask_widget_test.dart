@@ -10,9 +10,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 
 // ignore_for_file: implementation_imports
-import 'package:ermine_library/src/utils/suggestion.dart';
-import 'package:ermine_library/src/utils/suggestions.dart';
-import 'package:ermine_library/src/widgets/ask/ask.dart';
+import 'package:ermine/src/utils/suggestion.dart';
+import 'package:ermine/src/utils/suggestions.dart';
+import 'package:ermine/src/widgets/ask/ask.dart';
 
 void main() {
   testWidgets('Create Ask Widget', (tester) async {

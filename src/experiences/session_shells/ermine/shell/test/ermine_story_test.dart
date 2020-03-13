@@ -5,9 +5,9 @@
 import 'dart:async';
 
 // ignore_for_file: implementation_imports
-import 'package:ermine_library/src/models/ermine_story.dart';
-import 'package:ermine_library/src/utils/presenter.dart';
-import 'package:ermine_library/src/utils/suggestion.dart';
+import 'package:ermine/src/models/ermine_story.dart';
+import 'package:ermine/src/utils/presenter.dart';
+import 'package:ermine/src/utils/suggestion.dart';
 import 'package:mockito/mockito.dart';
 import 'package:test/test.dart';
 
