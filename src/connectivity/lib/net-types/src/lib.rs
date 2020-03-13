@@ -231,6 +231,8 @@ impl<S> Scope<S> {
 /// `ScopeableAddress` by setting the associated `NonGlobalScope` type to the
 /// never type, which has the effect of ensuring that the [`scope`] method
 /// always returns [`Scope::Global`].
+///
+/// [`scope`]: crate::ScopeableAddress::scope
 pub trait ScopeableAddress {
     /// The type of all non-global scopes.
     type NonGlobalScope;

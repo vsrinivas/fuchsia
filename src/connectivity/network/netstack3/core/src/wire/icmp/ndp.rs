@@ -231,7 +231,7 @@ impl_icmp_message!(Ipv6, Redirect, Redirect, IcmpUnusedCode, Options<B>);
 
 pub(crate) mod options {
     use byteorder::{ByteOrder, NetworkEndian};
-    use net_types::ip::{AddrSubnet, Ipv6Addr};
+    use net_types::ip::{AddrSubnet, AddrSubnetError, Ipv6Addr};
     use zerocopy::{AsBytes, FromBytes, LayoutVerified, Unaligned};
 
     use crate::wire::U32;
@@ -371,7 +371,7 @@ pub(crate) mod options {
         }
 
         /// Get an [`AddrSubnet`] from this prefix.
-        pub(crate) fn addr_subnet(&self) -> Option<AddrSubnet<Ipv6Addr>> {
+        pub(crate) fn addr_subnet(&self) -> Result<AddrSubnet<Ipv6Addr>, AddrSubnetError> {
             AddrSubnet::new(self.prefix, self.prefix_length)
         }
     }

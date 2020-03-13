@@ -4,20 +4,10 @@
 
 use fidl_fuchsia_net as fidl_net;
 use fidl_fuchsia_net_stack as fidl_net_stack;
-use net_types::ip::{AddrSubnetEither, IpAddr, SubnetEither};
+use net_types::ip::{AddrSubnetEither, AddrSubnetError, IpAddr, SubnetEither, SubnetError};
 use net_types::{SpecifiedAddr, Witness};
 use netstack3_core::{DeviceId, EntryDest, EntryDestEither, EntryEither, NetstackError};
 use never::Never;
-
-/// Error returned when trying to create `core` subnets with invalid values.
-#[derive(Debug)]
-pub struct InvalidSubnetError;
-
-impl From<InvalidSubnetError> for fidl_net_stack::Error {
-    fn from(_error: InvalidSubnetError) -> Self {
-        Self::InvalidArgs
-    }
-}
 
 /// A core type which can be fallibly converted from the FIDL type `F`.
 ///
@@ -140,6 +130,22 @@ impl<T> TryIntoFidl<T> for Never {
     }
 }
 
+impl TryIntoFidl<fidl_net_stack::Error> for SubnetError {
+    type Error = Never;
+
+    fn try_into_fidl(self) -> Result<fidl_net_stack::Error, Never> {
+        Ok(fidl_net_stack::Error::InvalidArgs)
+    }
+}
+
+impl TryIntoFidl<fidl_net_stack::Error> for AddrSubnetError {
+    type Error = Never;
+
+    fn try_into_fidl(self) -> Result<fidl_net_stack::Error, Never> {
+        Ok(fidl_net_stack::Error::InvalidArgs)
+    }
+}
+
 impl TryIntoFidl<fidl_net_stack::Error> for NetstackError {
     type Error = Never;
 
@@ -209,13 +215,12 @@ impl TryIntoFidl<fidl_net::IpAddress> for SpecifiedAddr<IpAddr> {
 }
 
 impl TryFromFidl<fidl_net_stack::InterfaceAddress> for AddrSubnetEither {
-    type Error = InvalidSubnetError;
+    type Error = AddrSubnetError;
 
     fn try_from_fidl(
         fidl: fidl_net_stack::InterfaceAddress,
-    ) -> Result<AddrSubnetEither, InvalidSubnetError> {
+    ) -> Result<AddrSubnetEither, AddrSubnetError> {
         AddrSubnetEither::new(fidl.ip_address.into_core(), fidl.prefix_len)
-            .ok_or(InvalidSubnetError)
     }
 }
 
@@ -229,10 +234,10 @@ impl TryIntoFidl<fidl_net_stack::InterfaceAddress> for AddrSubnetEither {
 }
 
 impl TryFromFidl<fidl_net::Subnet> for SubnetEither {
-    type Error = InvalidSubnetError;
+    type Error = SubnetError;
 
-    fn try_from_fidl(fidl: fidl_net::Subnet) -> Result<SubnetEither, InvalidSubnetError> {
-        SubnetEither::new(fidl.addr.into_core(), fidl.prefix_len).ok_or(InvalidSubnetError)
+    fn try_from_fidl(fidl: fidl_net::Subnet) -> Result<SubnetEither, SubnetError> {
+        SubnetEither::new(fidl.addr.into_core(), fidl.prefix_len)
     }
 }
 
@@ -364,7 +369,7 @@ impl TryIntoFidlWithContext<u64> for DeviceId {
 pub enum ForwardingConversionError {
     DeviceNotFound,
     TypeMismatch,
-    InvalidSubnet,
+    Subnet(SubnetError),
     AddrClassError,
 }
 
@@ -374,9 +379,9 @@ impl From<DeviceNotFoundError> for ForwardingConversionError {
     }
 }
 
-impl From<InvalidSubnetError> for ForwardingConversionError {
-    fn from(_: InvalidSubnetError) -> Self {
-        ForwardingConversionError::InvalidSubnet
+impl From<SubnetError> for ForwardingConversionError {
+    fn from(err: SubnetError) -> Self {
+        ForwardingConversionError::Subnet(err)
     }
 }
 
@@ -391,7 +396,7 @@ impl From<ForwardingConversionError> for fidl_net_stack::Error {
         match fwd_error {
             ForwardingConversionError::DeviceNotFound => fidl_net_stack::Error::NotFound,
             ForwardingConversionError::TypeMismatch
-            | ForwardingConversionError::InvalidSubnet
+            | ForwardingConversionError::Subnet(_)
             | ForwardingConversionError::AddrClassError => fidl_net_stack::Error::InvalidArgs,
         }
     }
@@ -754,7 +759,7 @@ mod tests {
         fidl.subnet.prefix_len = 64;
         assert_eq!(
             EntryEither::try_from_fidl_with_ctx(&ctx, fidl).unwrap_err(),
-            ForwardingConversionError::InvalidSubnet
+            ForwardingConversionError::Subnet(SubnetError::PrefixTooLong)
         );
 
         // Try with a mismatched address:

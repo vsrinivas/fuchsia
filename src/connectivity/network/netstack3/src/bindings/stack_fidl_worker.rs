@@ -301,8 +301,12 @@ impl<'a, C: StackContext> LockedFidlWorker<'a, C> {
         // to interfaces that are not installed, return BadState for now
         let device_id = device_info.core_id().ok_or(fidl_net_stack::Error::BadState)?;
 
-        add_ip_addr_subnet(&mut self.ctx, device_id, addr.try_into_core()?)
-            .map_err(IntoFidl::into_fidl)
+        add_ip_addr_subnet(
+            &mut self.ctx,
+            device_id,
+            addr.try_into_core().map_err(IntoFidl::into_fidl)?,
+        )
+        .map_err(IntoFidl::into_fidl)
     }
 
     fn fidl_del_interface_address(

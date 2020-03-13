@@ -344,7 +344,7 @@ impl Ipv6 {
     /// The length, in bits, of the interface identifier portion of unicast IPv6
     /// addresses *except* for addresses which start with the binary value 000.
     ///
-    /// According to [RFC 4291 Section 2.5.1], "[f]or all unicast addresses,
+    /// According to [RFC 4291 Section 2.5.1], "\[f\]or all unicast addresses,
     /// except those that start with the binary value 000, Interface IDs are
     /// required to be 64 bits."
     ///
@@ -581,6 +581,9 @@ impl LinkLocalAddress for Ipv4Addr {
     /// `is_linklocal` returns true if `self` is in
     /// [`Ipv4::LINK_LOCAL_UNICAST_SUBNET`] or
     /// [`Ipv4::LINK_LOCAL_MULTICAST_SUBNET`].
+    ///
+    /// [`Ipv4::LINK_LOCAL_UNICAST_SUBNET`]: crate::ip::Ip::LINK_LOCAL_UNICAST_SUBNET
+    /// [`Ipv4::LINK_LOCAL_MULTICAST_SUBNET`]: crate::ip::Ipv4::LINK_LOCAL_MULTICAST_SUBNET
     #[inline]
     fn is_linklocal(&self) -> bool {
         Ipv4::LINK_LOCAL_UNICAST_SUBNET.contains(self)
@@ -594,6 +597,8 @@ impl LinkLocalAddress for Ipv6Addr {
     /// `is_linklocal` returns true if `self` is in
     /// [`Ipv6::LINK_LOCAL_UNICAST_SUBNET`] or `self` is a multicast address
     /// whose scope is link-local.
+    ///
+    /// [`Ipv6::LINK_LOCAL_UNICAST_SUBNET`]: crate::ip::Ip::LINK_LOCAL_UNICAST_SUBNET
     #[inline]
     fn is_linklocal(&self) -> bool {
         const LINK_LOCAL_SCOPE: u8 = 0x02;
@@ -1006,6 +1011,17 @@ impl Debug for Ipv6Addr {
     }
 }
 
+/// The error returned from [`Subnet::new`] and [`SubnetEither::new`].
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub enum SubnetError {
+    /// The network prefix is longer than the number of bits in the address (32
+    /// for IPv4/128 for IPv6).
+    PrefixTooLong,
+    /// The network address has some bits in the host part (past the network
+    /// prefix) set to one.
+    HostBitsSet,
+}
+
 /// An IP subnet.
 ///
 /// `Subnet` is a combination of an IP network address and a prefix length.
@@ -1038,17 +1054,20 @@ impl<A: IpAddress> Subnet<A> {
     /// Creates a new subnet.
     ///
     /// `new` creates a new subnet with the given network address and prefix
-    /// length. It returns `None` if `prefix` is longer than the number of bits
+    /// length. It returns `Err` if `prefix` is longer than the number of bits
     /// in this type of IP address (32 for IPv4 and 128 for IPv6) or if any of
-    /// the lower bits (beyond the first `prefix` bits) are set in `network`.
+    /// the host bits (beyond the first `prefix` bits) are set in `network`.
     #[inline]
-    pub fn new(network: A, prefix: u8) -> Option<Subnet<A>> {
+    pub fn new(network: A, prefix: u8) -> Result<Subnet<A>, SubnetError> {
+        if prefix > A::BYTES * 8 {
+            return Err(SubnetError::PrefixTooLong);
+        }
         // TODO(joshlf): Is there a more efficient way we can perform this
         // check?
-        if prefix > A::BYTES * 8 || network != network.mask(prefix) {
-            return None;
+        if network != network.mask(prefix) {
+            return Err(SubnetError::HostBitsSet);
         }
-        Some(Subnet { network, prefix })
+        Ok(Subnet { network, prefix })
     }
 
     /// Gets the network address component of this subnet.
@@ -1124,12 +1143,12 @@ impl SubnetEither {
     /// Creates a new subnet.
     ///
     /// `new` creates a new subnet with the given network address and prefix
-    /// length. It returns `None` if `prefix` is longer than the number of bits
+    /// length. It returns `Err` if `prefix` is longer than the number of bits
     /// in this type of IP address (32 for IPv4 and 128 for IPv6) or if any of
-    /// the lower bits (beyond the first `prefix` bits) are set in `network`.
+    /// the host bits (beyond the first `prefix` bits) are set in `network`.
     #[inline]
-    pub fn new(network: IpAddr, prefix: u8) -> Option<SubnetEither> {
-        Some(match network {
+    pub fn new(network: IpAddr, prefix: u8) -> Result<SubnetEither, SubnetError> {
+        Ok(match network {
             IpAddr::V4(network) => SubnetEither::V4(Subnet::new(network, prefix)?),
             IpAddr::V6(network) => SubnetEither::V6(Subnet::new(network, prefix)?),
         })
@@ -1149,6 +1168,19 @@ impl<A: IpAddress> From<Subnet<A>> for SubnetEither {
     fn from(subnet: Subnet<A>) -> SubnetEither {
         A::into_subnet_either(subnet)
     }
+}
+
+/// The error returned from [`AddrSubnet::new`] and [`AddrSubnetEither::new`].
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub enum AddrSubnetError {
+    /// The network prefix is longer than the number of bits in the address (32
+    /// for IPv4/128 for IPv6).
+    PrefixTooLong,
+    /// The address is not a unicast address in the given subnet (see
+    /// [`IpAddress::is_unicast_in_subnet`]).
+    NotUnicastInSubnet,
+    /// The address does not satisfy the requirements of the witness type.
+    InvalidWitness,
 }
 
 // TODO(joshlf): Is the unicast restriction always necessary, or will some users
@@ -1175,22 +1207,22 @@ impl<S: IpAddress, A: Witness<S>> AddrSubnet<S, A> {
     ///
     /// `new` creates a new `AddrSubnet` with the given address and prefix
     /// length. The network address of the subnet is taken to be the first
-    /// `prefix` bits of the address. It returns `None` if `prefix` is longer
+    /// `prefix` bits of the address. It returns `Err` if `prefix` is longer
     /// than the number of bits in this type of IP address (32 for IPv4 and 128
     /// for IPv6), if `addr` is not a unicast address in the resulting subnet
     /// (see [`IpAddress::is_unicast_in_subnet`]), or if `addr` does not satisfy
     /// the requirements of the witness type `A`.
     #[inline]
-    pub fn new(addr: S, prefix: u8) -> Option<AddrSubnet<S, A>> {
+    pub fn new(addr: S, prefix: u8) -> Result<AddrSubnet<S, A>, AddrSubnetError> {
         if prefix > S::BYTES * 8 {
-            return None;
+            return Err(AddrSubnetError::PrefixTooLong);
         }
         let subnet = Subnet { network: addr.mask(prefix), prefix };
         if !addr.is_unicast_in_subnet(&subnet) {
-            return None;
+            return Err(AddrSubnetError::NotUnicastInSubnet);
         }
-        let addr = A::new(addr)?;
-        Some(AddrSubnet { addr, subnet })
+        let addr = A::new(addr).ok_or(AddrSubnetError::InvalidWitness)?;
+        Ok(AddrSubnet { addr, subnet })
     }
 
     /// Gets the subnet.
@@ -1284,11 +1316,11 @@ impl<A: IpAddrWitness> AddrSubnetEither<A> {
     /// Creates a new `AddrSubnetEither`.
     ///
     /// `new` creates a new `AddrSubnetEither` with the given address and prefix
-    /// length. It returns `None` under the same conditions as
+    /// length. It returns `Err` under the same conditions as
     /// [`AddrSubnet::new`].
     #[inline]
-    pub fn new(addr: IpAddr, prefix: u8) -> Option<AddrSubnetEither<A>> {
-        Some(match addr {
+    pub fn new(addr: IpAddr, prefix: u8) -> Result<AddrSubnetEither<A>, AddrSubnetError> {
+        Ok(match addr {
             IpAddr::V4(addr) => AddrSubnetEither::V4(AddrSubnet::new(addr, prefix)?),
             IpAddr::V6(addr) => AddrSubnetEither::V6(AddrSubnet::new(addr, prefix)?),
         })
@@ -1407,46 +1439,65 @@ mod tests {
     fn test_subnet_new() {
         Subnet::new(Ipv4Addr::new([255, 255, 255, 255]), 32).unwrap();
         // Prefix exceeds 32 bits
-        assert_eq!(Subnet::new(Ipv4Addr::new([255, 255, 0, 0]), 33), None);
+        assert_eq!(
+            Subnet::new(Ipv4Addr::new([255, 255, 0, 0]), 33),
+            Err(SubnetError::PrefixTooLong)
+        );
         // Network address has more than top 8 bits set
-        assert_eq!(Subnet::new(Ipv4Addr::new([255, 255, 0, 0]), 8), None);
+        assert_eq!(Subnet::new(Ipv4Addr::new([255, 255, 0, 0]), 8), Err(SubnetError::HostBitsSet));
 
         AddrSubnet::<_, SpecifiedAddr<_>>::new(Ipv4Addr::new([1, 2, 3, 4]), 32).unwrap();
         // The unspecified address is not considered to be a unicast address in
         // any subnet (use assert, not assert_eq, because AddrSubnet doesn't
         // impl Debug)
-        assert!(AddrSubnet::<_, SpecifiedAddr<_>>::new(Ipv4::UNSPECIFIED_ADDRESS, 16) == None);
-        assert!(AddrSubnet::<_, SpecifiedAddr<_>>::new(Ipv6::UNSPECIFIED_ADDRESS, 64) == None);
+        assert!(
+            AddrSubnet::<_, SpecifiedAddr<_>>::new(Ipv4::UNSPECIFIED_ADDRESS, 16)
+                == Err(AddrSubnetError::NotUnicastInSubnet)
+        );
+        assert!(
+            AddrSubnet::<_, SpecifiedAddr<_>>::new(Ipv6::UNSPECIFIED_ADDRESS, 64)
+                == Err(AddrSubnetError::NotUnicastInSubnet)
+        );
         // Prefix exceeds 32/128 bits
-        assert!(AddrSubnet::<_, SpecifiedAddr<_>>::new(Ipv4Addr::new([1, 2, 3, 4]), 33) == None);
+        assert!(
+            AddrSubnet::<_, SpecifiedAddr<_>>::new(Ipv4Addr::new([1, 2, 3, 4]), 33)
+                == Err(AddrSubnetError::PrefixTooLong)
+        );
         assert!(
             AddrSubnet::<_, SpecifiedAddr<_>>::new(
                 Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]),
                 129
-            ) == None
+            ) == Err(AddrSubnetError::PrefixTooLong)
         );
         // Global broadcast
         assert!(
             AddrSubnet::<_, SpecifiedAddr<_>>::new(Ipv4::GLOBAL_BROADCAST_ADDRESS.into_addr(), 16)
-                == None
+                == Err(AddrSubnetError::NotUnicastInSubnet)
         );
         // Subnet broadcast
         assert!(
-            AddrSubnet::<_, SpecifiedAddr<_>>::new(Ipv4Addr::new([192, 168, 255, 255]), 16) == None
+            AddrSubnet::<_, SpecifiedAddr<_>>::new(Ipv4Addr::new([192, 168, 255, 255]), 16)
+                == Err(AddrSubnetError::NotUnicastInSubnet)
         );
         // Multicast
-        assert!(AddrSubnet::<_, SpecifiedAddr<_>>::new(Ipv4Addr::new([224, 0, 0, 1]), 16) == None);
+        assert!(
+            AddrSubnet::<_, SpecifiedAddr<_>>::new(Ipv4Addr::new([224, 0, 0, 1]), 16)
+                == Err(AddrSubnetError::NotUnicastInSubnet)
+        );
         assert!(
             AddrSubnet::<_, SpecifiedAddr<_>>::new(
                 Ipv6Addr::new([0xff, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]),
                 64
-            ) == None
+            ) == Err(AddrSubnetError::NotUnicastInSubnet)
         );
 
         // If we use the `LinkLocalAddr` witness type, then non link-local
         // addresses are rejected. Note that this address was accepted above
         // when `SpecifiedAddr` was used.
-        assert!(AddrSubnet::<_, LinkLocalAddr<_>>::new(Ipv4Addr::new([1, 2, 3, 4]), 32) == None);
+        assert!(
+            AddrSubnet::<_, LinkLocalAddr<_>>::new(Ipv4Addr::new([1, 2, 3, 4]), 32)
+                == Err(AddrSubnetError::InvalidWitness)
+        );
     }
 
     #[test]

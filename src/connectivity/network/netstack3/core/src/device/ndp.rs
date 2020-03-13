@@ -2866,11 +2866,11 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                         trace!("receive_ndp_packet_inner: prefix information option with prefix = {:?}", prefix_info);
 
                         let addr_sub = match prefix_info.addr_subnet() {
-                            None => {
-                                trace!("receive_ndp_packet_inner: malformed prefix information, so ignoring");
+                            Ok(a) => a,
+                            Err(err) => {
+                                trace!("receive_ndp_packet_inner: malformed prefix information ({:?}), so ignoring", err);
                                 continue;
                             }
-                            Some(a) => a,
                         };
 
                         if prefix_info.on_link_flag() {
@@ -2945,14 +2945,15 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                                 continue;
                             }
 
-                            let subnet = if let Some(subnet) =
-                                Subnet::new(*prefix_info.prefix(), prefix_info.prefix_length())
-                            {
-                                subnet
-                            } else {
-                                // The prefix is not valid.
-                                trace!("receive_ndp_packet_inner: autonomous prefix {:?} with length {:?} is not valid", prefix_info.prefix(), prefix_info.prefix_length());
-                                continue;
+                            let subnet = match Subnet::new(
+                                *prefix_info.prefix(),
+                                prefix_info.prefix_length(),
+                            ) {
+                                Ok(subnet) => subnet,
+                                Err(err) => {
+                                    trace!("receive_ndp_packet_inner: autonomous prefix {:?} with length {:?} is not valid: {:?}", prefix_info.prefix(), prefix_info.prefix_length(), err);
+                                    continue;
+                                }
                             };
 
                             let now = ctx.now();
