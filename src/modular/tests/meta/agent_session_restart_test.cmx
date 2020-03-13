@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "test/agent_session_restart_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Environment"
+        ]
+    }
+}

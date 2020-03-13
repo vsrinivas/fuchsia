@@ -31,8 +31,7 @@ StartupAgentLauncher::SessionAgentData::DeferredInterfaceRequest::DeferredInterf
     fidl::InterfaceRequest<Interface> request)
     : name(Interface::Name_), channel(request.TakeChannel()) {}
 
-StartupAgentLauncher::SessionAgentData::SessionAgentData()
-    : restart(kSessionAgentRetryLimit) {}
+StartupAgentLauncher::SessionAgentData::SessionAgentData() : restart(kSessionAgentRetryLimit) {}
 
 template <class Interface>
 void StartupAgentLauncher::SessionAgentData::ConnectOrQueueServiceRequest(
@@ -47,16 +46,19 @@ void StartupAgentLauncher::SessionAgentData::ConnectOrQueueServiceRequest(
 StartupAgentLauncher::StartupAgentLauncher(
     fidl::InterfaceRequestHandler<fuchsia::modular::FocusProvider> focus_provider_connector,
     fidl::InterfaceRequestHandler<fuchsia::modular::PuppetMaster> puppet_master_connector,
+    fidl::InterfaceRequestHandler<fuchsia::modular::SessionShellContext>
+        session_shell_context_connector,
     fidl::InterfaceRequestHandler<fuchsia::intl::PropertyProvider> intl_property_provider_connector,
     fit::function<bool()> is_terminating_cb)
     : focus_provider_connector_(std::move(focus_provider_connector)),
       puppet_master_connector_(std::move(puppet_master_connector)),
+      session_shell_context_connector_(std::move(session_shell_context_connector)),
       intl_property_provider_connector_(std::move(intl_property_provider_connector)),
       is_terminating_cb_(std::move(is_terminating_cb)){};
 
 void StartupAgentLauncher::StartAgents(AgentRunner* agent_runner,
-                                               std::vector<std::string> session_agents,
-                                               std::vector<std::string> startup_agents) {
+                                       std::vector<std::string> session_agents,
+                                       std::vector<std::string> startup_agents) {
   FXL_LOG(INFO) << "Starting session_agents:";
   for (const auto& agent : session_agents) {
     FXL_LOG(INFO) << " " << agent;
@@ -86,8 +88,7 @@ void StartupAgentLauncher::StartAgent(AgentRunner* agent_runner, const std::stri
   agent_controllers_.push_back(std::move(controller));
 }
 
-void StartupAgentLauncher::StartSessionAgent(AgentRunner* agent_runner,
-                                                     const std::string& url) {
+void StartupAgentLauncher::StartSessionAgent(AgentRunner* agent_runner, const std::string& url) {
   SessionAgentData* const agent_data = &session_agents_[url];
 
   agent_runner->ConnectToAgent(kInternalAgentRunnerRequestorUrl, url,
@@ -128,8 +129,7 @@ void StartupAgentLauncher::StartSessionAgent(AgentRunner* agent_runner,
     ReportSessionAgentEvent(url, SessionAgentEventsMetricDimensionEventType::Crash);
 
     if (is_terminating_cb_ != nullptr && is_terminating_cb_()) {
-      FXL_LOG(INFO) << "Not restarting " << url
-                    << " because StartupAgentLauncher is terminating.";
+      FXL_LOG(INFO) << "Not restarting " << url << " because StartupAgentLauncher is terminating.";
     } else {
       if (agent_data.restart.ShouldRetry()) {
         FXL_LOG(INFO) << "Restarting " << url << "...";
@@ -155,21 +155,18 @@ std::vector<std::string> StartupAgentLauncher::AddAgentServices(
     // All services added below should be exclusive to session agents.
     service_names.push_back(fuchsia::modular::PuppetMaster::Name_);
     agent_host->AddService<fuchsia::modular::PuppetMaster>(
-        [this](fidl::InterfaceRequest<fuchsia::modular::PuppetMaster> request) {
-          puppet_master_connector_(std::move(request));
-        });
+        [this](auto request) { puppet_master_connector_(std::move(request)); });
 
     service_names.push_back(fuchsia::modular::FocusProvider::Name_);
     agent_host->AddService<fuchsia::modular::FocusProvider>(
-        [this, url](fidl::InterfaceRequest<fuchsia::modular::FocusProvider> request) {
-          focus_provider_connector_(std::move(request));
-        });
+        [this, url](auto request) { focus_provider_connector_(std::move(request)); });
 
+    service_names.push_back(fuchsia::modular::SessionShellContext::Name_);
+    agent_host->AddService<fuchsia::modular::SessionShellContext>(
+        [this, url](auto request) { session_shell_context_connector_(std::move(request)); });
     service_names.push_back(fuchsia::intl::PropertyProvider::Name_);
     agent_host->AddService<fuchsia::intl::PropertyProvider>(
-        [this, url](fidl::InterfaceRequest<fuchsia::intl::PropertyProvider> request) {
-          intl_property_provider_connector_(std::move(request));
-        });
+        [this, url](auto request) { intl_property_provider_connector_(std::move(request)); });
   }
 
   return service_names;

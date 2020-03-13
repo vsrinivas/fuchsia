@@ -41,6 +41,22 @@ executable("agent_services_test") {
   ]
 }
 
+executable("agent_session_restart_test") {
+  testonly = true
+
+  output_name = "agent_session_restart_test"
+
+  sources = [ "agent_session_restart_test.cc" ]
+
+  deps = [
+    ":fuchsia.testing.modular",
+    "//sdk/fidl/fuchsia.modular.testing",
+    "//sdk/lib/sys/cpp/testing:integration",
+    "//src/modular/lib/modular_test_harness/cpp:test_harness_fixture",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest_main",
+  ]
+}
 executable("last_focus_time_test") {
   testonly = true
 
@@ -335,6 +351,10 @@ package("module_with_fake_runner") {
 test_package("modular_integration_tests") {
   tests = [
     {
+      name = "agent_session_restart_test"
+      environments = basic_envs
+    },
+    {
       name = "agent_services_test"
       environments = basic_envs
     },
@@ -402,6 +422,7 @@ test_package("modular_integration_tests") {
 
   deps = [
     ":agent_services_test",
+    ":agent_session_restart_test",
     ":component_context_test",
     ":inspect_session_test",
     ":intents_test",
