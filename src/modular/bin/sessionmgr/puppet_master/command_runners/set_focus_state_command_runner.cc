@@ -4,7 +4,7 @@
 
 #include "src/modular/bin/sessionmgr/puppet_master/command_runners/set_focus_state_command_runner.h"
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace modular {
 
@@ -18,7 +18,7 @@ void SetFocusStateCommandRunner::Execute(
     fidl::StringPtr story_id, StoryStorage* const story_storage,
     fuchsia::modular::StoryCommand command,
     fit::function<void(fuchsia::modular::ExecuteResult)> done) {
-  FXL_CHECK(command.is_set_focus_state());
+  FX_CHECK(command.is_set_focus_state());
 
   fuchsia::modular::ExecuteResult result;
   result.status = fuchsia::modular::ExecuteStatus::OK;

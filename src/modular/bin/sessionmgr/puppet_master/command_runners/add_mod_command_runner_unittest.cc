@@ -10,6 +10,7 @@
 #include "gtest/gtest.h"
 #include "src/lib/fsl/types/type_converters.h"
 #include "src/lib/fsl/vmo/strings.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/lib/ledger_client/page_id.h"
 #include "src/modular/lib/testing/entity_resolver_fake.h"
 #include "src/modular/lib/testing/test_with_session_storage.h"
@@ -91,8 +92,8 @@ class AddModCommandRunnerTest : public modular_testing::TestWithSessionStorage {
             break;
           }
 
-          FXL_CHECK(fsl::StringFromVmo(old_param.json(), &old_string));
-          FXL_CHECK(fsl::StringFromVmo(new_param.json(), &new_string));
+          FX_CHECK(fsl::StringFromVmo(old_param.json(), &old_string));
+          FX_CHECK(fsl::StringFromVmo(new_param.json(), &new_string));
           if (old_string != new_string) {
             return false;
           }
@@ -160,7 +161,7 @@ class AddModCommandRunnerTest : public modular_testing::TestWithSessionStorage {
   void AddParameterWithoutName(fuchsia::modular::Intent* intent) {
     fuchsia::modular::IntentParameter parameter;
     fsl::SizedVmo vmo;
-    FXL_CHECK(fsl::VmoFromString("10", &vmo));
+    FX_CHECK(fsl::VmoFromString("10", &vmo));
     parameter.data.set_json(std::move(vmo).ToTransport());
     if (!intent->parameters.has_value()) {
       intent->parameters.emplace();
@@ -173,7 +174,7 @@ class AddModCommandRunnerTest : public modular_testing::TestWithSessionStorage {
     fuchsia::modular::IntentParameter parameter;
     parameter.name = name;
     fsl::SizedVmo vmo;
-    FXL_CHECK(fsl::VmoFromString(json, &vmo));
+    FX_CHECK(fsl::VmoFromString(json, &vmo));
     parameter.data.set_json(std::move(vmo).ToTransport());
     if (!intent->parameters.has_value()) {
       intent->parameters.emplace();

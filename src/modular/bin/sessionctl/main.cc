@@ -25,6 +25,7 @@
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/strings/string_printf.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/bin/sessionctl/logger.h"
 #include "src/modular/bin/sessionctl/session_ctl_app.h"
 #include "src/modular/bin/sessionctl/session_ctl_constants.h"
@@ -131,7 +132,7 @@ void FindDebugServicesForPath(const char* glob_str, const char* regex_str,
       DebugService s;
       s.service_path = globbuf.gl_pathv[i];
       std::smatch match;
-      FXL_CHECK(std::regex_search(s.service_path, match, name_regex)) << s.service_path;
+      FX_CHECK(std::regex_search(s.service_path, match, name_regex)) << s.service_path;
       s.name = match[1];
       services->push_back(std::move(s));
     }
@@ -158,7 +159,7 @@ PuppetMasterPtr ConnectToPuppetMaster(const DebugService& session) {
   auto request = puppet_master.NewRequest().TakeChannel();
   std::string service_path = session.service_path + "/" + PuppetMaster::Name_;
   if (fdio_service_connect(service_path.c_str(), request.get()) != ZX_OK) {
-    FXL_LOG(FATAL) << "Could not connect to PuppetMaster service in " << session.service_path;
+    FX_LOGS(FATAL) << "Could not connect to PuppetMaster service in " << session.service_path;
   }
   return puppet_master;
 }
@@ -174,13 +175,13 @@ fuchsia::modular::internal::BasemgrDebugPtr ConnectToBasemgr() {
   if (services.empty()) {
     return nullptr;
   }
-  FXL_CHECK(services.size() == 1);
+  FX_CHECK(services.size() == 1);
   std::string service_path = services[0].service_path;
 
   fuchsia::modular::internal::BasemgrDebugPtr basemgr;
   auto request = basemgr.NewRequest().TakeChannel();
   if (fdio_service_connect(service_path.c_str(), request.get()) != ZX_OK) {
-    FXL_LOG(FATAL) << "Could not connect to basemgr service in " << service_path;
+    FX_LOGS(FATAL) << "Could not connect to basemgr service in " << service_path;
   }
 
   return basemgr;
@@ -227,6 +228,8 @@ bool LoginDefaultGuestUser(fuchsia::modular::internal::BasemgrDebugPtr basemgr,
 }
 
 int main(int argc, const char** argv) {
+  syslog::InitLogger({"sessionctl"});
+  
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   const auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);

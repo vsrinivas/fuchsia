@@ -10,6 +10,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/lib/fsl/vmo/strings.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/bin/sessionmgr/testing/annotations_matchers.h"
 #include "src/modular/lib/testing/test_story_command_executor.h"
 #include "src/modular/lib/testing/test_with_session_storage.h"
@@ -72,7 +73,7 @@ class PuppetMasterTest : public modular_testing::TestWithSessionStorage {
   void EnqueueAddModCommand(const fuchsia::modular::StoryPuppetMasterPtr& story,
                             const std::string& module_name) {
     auto story_name = story_name_.value_or("");
-    FXL_CHECK(story_name.size() > 0);
+    FX_CHECK(story_name.size() > 0);
     // Add the module.
     std::vector<fuchsia::modular::StoryCommand> commands;
     commands.push_back(MakeAddModCommand(module_name));
@@ -394,20 +395,20 @@ TEST_F(PuppetMasterTest, DeleteStoryWithQueuedCommands) {
   // Push an AddMod command to the StoryPuppetMaster.
   bool is_story_puppet_master_closed = false;
   story_puppet_master.set_error_handler([&](zx_status_t status) {
-                                          EXPECT_EQ(status, ZX_ERR_PEER_CLOSED);
-                                          is_story_puppet_master_closed = true;
-                                        });
+    EXPECT_EQ(status, ZX_ERR_PEER_CLOSED);
+    is_story_puppet_master_closed = true;
+  });
   std::vector<fuchsia::modular::StoryCommand> commands;
   commands.push_back(MakeAddModCommand(kModuleName));
   story_puppet_master->Enqueue(std::move(commands));
   story_puppet_master->Execute([](fuchsia::modular::ExecuteResult) {
-                                 // Execute() should never be processed
-                                 ADD_FAILURE();
-                               });
+    // Execute() should never be processed
+    ADD_FAILURE();
+  });
 
   // Call PuppetMaster directly (i.e. without requiring the loop to be spun)
   // to delete the Story before the commands can be executed.
-  impl_->DeleteStory(kStoryName, [](){});
+  impl_->DeleteStory(kStoryName, []() {});
 
   // Spin the loop and expect that the StoryPuppetMaster be disconnected.
   RunLoopUntilIdle();

@@ -12,6 +12,7 @@
 #include "fuchsia/ledger/cpp/fidl.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/strings/string_view.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/bin/sessionmgr/storage/constants_and_utils.h"
 #include "src/modular/bin/sessionmgr/storage/story_storage_xdr.h"
 #include "src/modular/lib/fidl/clone.h"
@@ -43,7 +44,7 @@ StoryStorage::StoryStorage(LedgerClient* ledger_client, fuchsia::ledger::PageId 
       ledger_client_(ledger_client),
       page_id_(page_id),
       weak_ptr_factory_(this) {
-  FXL_DCHECK(ledger_client_ != nullptr);
+  FX_DCHECK(ledger_client_ != nullptr);
 }
 
 FuturePtr<> StoryStorage::WriteModuleData(ModuleData module_data) {
@@ -90,8 +91,8 @@ FuturePtr<> StoryStorage::UpdateModuleData(const std::vector<std::string>& modul
       XdrWrite(&expected_value, &module_data_copy, XdrModuleData);
 
       if (current_module_data) {
-        FXL_DCHECK(new_module_data) << "StoryStorage::UpdateModuleData(): mutate_fn() must not "
-                                       "set to null an existing ModuleData record.";
+        FX_DCHECK(new_module_data) << "StoryStorage::UpdateModuleData(): mutate_fn() must not "
+                                      "set to null an existing ModuleData record.";
 
         // We complete this Future chain when the Ledger gives us the
         // notification that |module_data| has been written. The Ledger
@@ -111,7 +112,7 @@ FuturePtr<> StoryStorage::UpdateModuleData(const std::vector<std::string>& modul
         }
       }
 
-      FXL_DCHECK(new_module_data->module_path() == op_state->module_path)
+      FX_DCHECK(new_module_data->module_path() == op_state->module_path)
           << "StorageStorage::UpdateModuleData(path, ...): mutate_fn() "
              "must set "
              "ModuleData.module_path to |path|.";
@@ -195,7 +196,7 @@ std::tuple<StoryStorage::Status, fidl::StringPtr> ToLinkValue(
         // Leave link_value as a null-initialized StringPtr.
         break;
       default:
-        FXL_LOG(ERROR) << "PageSnapshot.Get() " << fidl::ToUnderlying(ledger_result.error());
+        FX_LOGS(ERROR) << "PageSnapshot.Get() " << fidl::ToUnderlying(ledger_result.error());
         link_value_status = StoryStorage::Status::LEDGER_ERROR;
         break;
     }
@@ -204,7 +205,7 @@ std::tuple<StoryStorage::Status, fidl::StringPtr> ToLinkValue(
     if (fsl::StringFromVmo(ledger_result.value(), &link_value_string)) {
       link_value = std::move(link_value_string);
     } else {
-      FXL_LOG(ERROR) << "VMO could not be copied.";
+      FX_LOGS(ERROR) << "VMO could not be copied.";
       link_value_status = StoryStorage::Status::VMO_COPY_ERROR;
     }
   }
@@ -250,7 +251,7 @@ class WriteVmoCall : public Operation<StoryStorage::Status> {
                                                  std::move(result.response().reference),
                                                  fuchsia::ledger::Priority::EAGER);
             } else {
-              FXL_LOG(ERROR) << "StoryStorage.WriteVmoCall " << key_ << " "
+              FX_LOGS(ERROR) << "StoryStorage.WriteVmoCall " << key_ << " "
                              << " Page.CreateReferenceFromBuffer() "
                              << zx_status_get_string(result.err());
               status_ = StoryStorage::Status::LEDGER_ERROR;
@@ -295,7 +296,7 @@ class GetEntityTypeCall : public PageOperation<StoryStorage::Status, std::string
             status_ = StoryStorage::Status::LEDGER_ERROR;
             return;
           }
-          FXL_CHECK(fsl::StringFromVmo(result.value(), &type_));
+          FX_CHECK(fsl::StringFromVmo(result.value(), &type_));
         }));
   }
 
@@ -419,7 +420,7 @@ class SetEntityDataCall : public PageOperation<StoryStorage::Status> {
 
     // Write the entity type.
     fuchsia::mem::Buffer type_vmo;
-    FXL_CHECK(fsl::VmoFromString(type_, &type_vmo));
+    FX_CHECK(fsl::VmoFromString(type_, &type_vmo));
     WriteVmo(std::move(type_vmo), EntityTypeKeyForCookie(cookie_), flow);
   }
 
@@ -431,7 +432,7 @@ class SetEntityDataCall : public PageOperation<StoryStorage::Status> {
             page()->PutReference(to_array(key), std::move(result.response().reference),
                                  fuchsia::ledger::Priority::EAGER);
           } else {
-            FXL_LOG(ERROR) << trace_name() << " "
+            FX_LOGS(ERROR) << trace_name() << " "
                            << "SetEntityDataCall.CreateReferenceFromBuffer " << key << " "
                            << zx_status_get_string(result.err());
             status_ = StoryStorage::Status::LEDGER_ERROR;
@@ -503,7 +504,7 @@ class UpdateLinkCall : public Operation<bool, StoryStorage::Status, fidl::String
             }
           }));
     } else {
-      FXL_LOG(ERROR) << "VMO could not be copied.";
+      FX_LOGS(ERROR) << "VMO could not be copied.";
       status_ = StoryStorage::Status::VMO_COPY_ERROR;
     }
   }
@@ -530,7 +531,7 @@ FuturePtr<StoryStorage::Status> StoryStorage::UpdateLinkValue(
     const void* context) {
   // nullptr is reserved for updates that came from other instances of
   // StoryStorage.
-  FXL_DCHECK(context != nullptr)
+  FX_DCHECK(context != nullptr)
       << "StoryStorage::UpdateLinkValue(..., context) of nullptr is reserved.";
 
   auto key = MakeLinkKey(link_path);
@@ -656,7 +657,7 @@ void StoryStorage::OnPageChange(const std::string& key, fuchsia::mem::BufferPtr 
     if (on_module_data_updated_) {
       auto module_data = ModuleData::New();
       if (!XdrRead(value_string, &module_data, XdrModuleData)) {
-        FXL_LOG(ERROR) << "Unable to parse ModuleData " << key << " " << value;
+        FX_LOGS(ERROR) << "Unable to parse ModuleData " << key << " " << value;
         return;
       }
       on_module_data_updated_(std::move(*module_data));
@@ -668,7 +669,7 @@ void StoryStorage::OnPageChange(const std::string& key, fuchsia::mem::BufferPtr 
     //
     // Consider putting all story-scoped data under a shared prefix, and use
     // that when initializing the PageClient.
-    FXL_LOG(ERROR) << "Unexpected StoryStorage Ledger key prefix: " << key;
+    FX_LOGS(ERROR) << "Unexpected StoryStorage Ledger key prefix: " << key;
   }
 
   if (pending_writes_it != pending_writes_.end()) {
@@ -690,7 +691,7 @@ void StoryStorage::OnPageDelete(const std::string& key) {
 void StoryStorage::OnPageConflict(Conflict* conflict) {
   // TODO(thatguy): Add basic conflict resolution. We can force a conflict for
   // link data in tests by using Page.StartTransaction() in UpdateLinkValue().
-  FXL_LOG(WARNING) << "StoryStorage::OnPageConflict() for link key " << to_string(conflict->key);
+  FX_LOGS(WARNING) << "StoryStorage::OnPageConflict() for link key " << to_string(conflict->key);
 }
 
 void StoryStorage::NotifyEntityWatchers(const std::string& cookie, fuchsia::mem::Buffer value) {

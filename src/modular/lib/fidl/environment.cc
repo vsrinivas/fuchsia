@@ -6,7 +6,7 @@
 
 #include <lib/async/default.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace modular {
 
@@ -19,7 +19,7 @@ Environment::Environment(const fuchsia::sys::EnvironmentPtr& parent_env, const s
 Environment::Environment(const Environment* const parent_env, const std::string& label,
                          const std::vector<std::string>& service_names, bool kill_on_oom)
     : vfs_(async_get_default_dispatcher()) {
-  FXL_DCHECK(parent_env != nullptr);
+  FX_DCHECK(parent_env != nullptr);
   InitEnvironment(parent_env->environment(), label, service_names, kill_on_oom);
 }
 

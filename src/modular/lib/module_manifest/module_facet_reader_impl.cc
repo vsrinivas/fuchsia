@@ -11,6 +11,7 @@
 #include "src/lib/json_parser/pretty_print.h"
 #include "src/lib/pkg_url/fuchsia_pkg_url.h"
 #include "src/lib/pkg_url/url_resolver.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/lib/fidl/json_xdr.h"
 #include "src/modular/lib/module_manifest/module_manifest_xdr.h"
 
@@ -57,7 +58,7 @@ void ModuleFacetReaderImpl::GetModuleManifest(const std::string& module_url,
     component::CmxFacetParser facet_parser;
     json::JSONParser json_parser;
     if (!facet_parser.ParseFromFileAt(fd.get(), cmx_path, &json_parser)) {
-      FXL_LOG(WARNING) << "Could not parse CMX manifest " << cmx_path << ": "
+      FX_LOGS(WARNING) << "Could not parse CMX manifest " << cmx_path << ": "
                        << json_parser.error_str();
       callback({});
       return;
@@ -72,7 +73,7 @@ void ModuleFacetReaderImpl::GetModuleManifest(const std::string& module_url,
     fuchsia::modular::ModuleManifestPtr module_manifest;
     auto mod_facet_str = json_parser::JsonValueToString(mod_facet);
     if (!XdrRead(mod_facet_str, &module_manifest, XdrModuleManifest)) {
-      FXL_LOG(WARNING) << "Unable to parse manifest module facet for " << package->resolved_url
+      FX_LOGS(WARNING) << "Unable to parse manifest module facet for " << package->resolved_url
                        << ": " << mod_facet_str;
       callback({});
       return;

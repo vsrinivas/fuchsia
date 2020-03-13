@@ -10,6 +10,7 @@
 #include <utility>
 
 #include "src/lib/fsl/vmo/strings.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/lib/fidl/array_to_string.h"
 #include "src/modular/lib/ledger_client/ledger_client.h"
 
@@ -36,7 +37,7 @@ fuchsia::ledger::PageSnapshotPtr PageClient::NewSnapshot() {
   fuchsia::ledger::PageSnapshotPtr ptr;
   ptr.set_error_handler([](zx_status_t status) {
     if (status != ZX_OK && status != ZX_ERR_PEER_CLOSED) {
-      FXL_LOG(ERROR) << "PageSnapshot error: " << zx_status_get_string(status);
+      FX_LOGS(ERROR) << "PageSnapshot error: " << zx_status_get_string(status);
     }
   });
   page_->GetSnapshot(ptr.NewRequest(), to_array(prefix_), nullptr /* page_watcher */);
@@ -68,7 +69,7 @@ void PageClient::OnPageChange(const std::string& key, fuchsia::mem::BufferPtr va
   if (fsl::StringFromVmo(*value, &value_string)) {
     OnPageChange(key, value_string);
   } else {
-    FXL_LOG(ERROR) << "PageClient::OnChange() " << context_ << ": "
+    FX_LOGS(ERROR) << "PageClient::OnChange() " << context_ << ": "
                    << "Unable to read/copy data.";
   }
 }
@@ -78,7 +79,7 @@ void PageClient::OnPageChange(const std::string& /*key*/, const std::string& /*v
 void PageClient::OnPageDelete(const std::string& /*key*/) {}
 
 void PageClient::OnPageConflict(Conflict* const conflict) {
-  FXL_LOG(INFO) << "PageClient::OnPageConflict() " << context_ << " "
+  FX_LOGS(INFO) << "PageClient::OnPageConflict() " << context_ << " "
                 << to_hex_string(conflict->key) << " " << conflict->left << " " << conflict->right;
 };
 

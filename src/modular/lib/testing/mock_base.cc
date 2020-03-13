@@ -5,7 +5,7 @@
 #include "src/modular/lib/testing/mock_base.h"
 
 #include "gtest/gtest.h"
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace modular_testing {
 
@@ -26,7 +26,7 @@ void MockBase::ClearCalls() { counts.clear(); }
 void MockBase::ExpectNoOtherCalls() {
   EXPECT_TRUE(counts.empty());
   for (const auto& c : counts) {
-    FXL_LOG(INFO) << "    Unexpected call: " << c.first;
+    FX_LOGS(INFO) << "    Unexpected call: " << c.first;
   }
 }
 

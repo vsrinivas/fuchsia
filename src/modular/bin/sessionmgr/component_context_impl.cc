@@ -6,7 +6,7 @@
 
 #include <utility>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/bin/sessionmgr/agent_runner/agent_runner.h"
 #include "src/modular/lib/fidl/array_to_string.h"
 
@@ -21,8 +21,8 @@ ComponentContextImpl::ComponentContextImpl(const ComponentContextInfo& info,
       component_namespace_(std::move(component_namespace)),
       component_instance_id_(std::move(component_instance_id)),
       component_url_(std::move(component_url)) {
-  FXL_DCHECK(agent_runner_);
-  FXL_DCHECK(entity_provider_runner_);
+  FX_DCHECK(agent_runner_);
+  FX_DCHECK(entity_provider_runner_);
 }
 
 ComponentContextImpl::~ComponentContextImpl() = default;

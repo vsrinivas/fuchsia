@@ -7,6 +7,7 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/vfs/cpp/service.h>
 
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/bin/sessionmgr/puppet_master/puppet_master_impl.h"
 
 namespace modular {
@@ -26,12 +27,12 @@ SessionCtl::SessionCtl(vfs::PseudoDir* dir, const std::string& entry_name,
       }));
 
   auto status = dir_->AddEntry(entry_name_, std::move(ctl_dir));
-  FXL_DCHECK(status == ZX_OK);
+  FX_DCHECK(status == ZX_OK);
 }
 
 SessionCtl::~SessionCtl() {
   auto status = dir_->RemoveEntry(entry_name_);
-  FXL_DCHECK(status == ZX_OK);
+  FX_DCHECK(status == ZX_OK);
 }
 
 }  // namespace modular

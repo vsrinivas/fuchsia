@@ -4,7 +4,7 @@
 
 #include "src/modular/bin/sessionmgr/entity_provider_runner/entity_provider_controller.h"
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/bin/sessionmgr/entity_provider_runner/entity_provider_runner.h"
 
 namespace modular {
@@ -70,7 +70,7 @@ EntityProviderController::EntityProviderController(
     : entity_provider_(std::move(entity_provider)),
       agent_controller_(std::move(agent_controller)),
       done_(std::move(done)) {
-  FXL_DLOG(INFO) << "Running fuchsia::modular::EntityProvider";
+  FX_DLOGS(INFO) << "Running fuchsia::modular::EntityProvider";
   if (agent_controller_) {
     agent_controller_.set_error_handler([this](zx_status_t status) {
       done_();
@@ -90,7 +90,7 @@ void EntityProviderController::ProvideEntity(
     std::tie(it, inserted) = entity_impls_.insert(std::make_pair(
         cookie,
         std::make_unique<EntityImpl>(this, entity_provider_.get(), cookie, entity_reference)));
-    FXL_DCHECK(inserted);
+    FX_DCHECK(inserted);
   }
   // When there are no more |fuchsia::modular::Entity|s being serviced for this
   // |cookie|, |OnEmptyEntityImpl()| is triggered.

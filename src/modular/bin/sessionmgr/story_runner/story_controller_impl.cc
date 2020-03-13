@@ -27,9 +27,9 @@
 
 #include "src/lib/fsl/types/type_converters.h"
 #include "src/lib/fsl/vmo/strings.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/fxl/strings/split_string.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/bin/basemgr/cobalt/cobalt.h"
 #include "src/modular/bin/sessionmgr/annotations.h"
 #include "src/modular/bin/sessionmgr/puppet_master/command_runners/operation_calls/add_mod_call.h"
@@ -274,7 +274,7 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
   }
 
   void Launch(FlowToken /*flow*/) {
-    FXL_LOG(INFO) << "StoryControllerImpl::LaunchModule() " << module_data_.module_url() << " "
+    FX_LOGS(INFO) << "StoryControllerImpl::LaunchModule() " << module_data_.module_url() << " "
                   << ModulePathToSurfaceID(module_data_.module_path());
     fuchsia::modular::AppConfig module_config;
     module_config.url = module_data_.module_url();
@@ -404,7 +404,7 @@ class StoryControllerImpl::KillModuleCall : public Operation<> {
       auto* const running_mod_info =
           story_controller_impl_->FindRunningModInfo(module_data_.module_path());
       if (!running_mod_info) {
-        FXL_LOG(INFO) << "No ModuleController for Module '"
+        FX_LOGS(INFO) << "No ModuleController for Module '"
                       << ModulePathToSurfaceID(module_data_.module_path())
                       << "'. Was ModuleController.Stop() called twice?";
         InvokeDone();
@@ -493,7 +493,7 @@ class StoryControllerImpl::LaunchModuleInShellCall : public Operation<> {
 
     auto* const running_mod_info =
         story_controller_impl_->FindRunningModInfo(module_data_.module_path());
-    FXL_CHECK(running_mod_info);  // This was just created in LaunchModuleCall.
+    FX_CHECK(running_mod_info);  // This was just created in LaunchModuleCall.
 
     std::string anchor_surface_id;
     auto* const anchor = story_controller_impl_->FindAnchor(running_mod_info);
@@ -534,7 +534,7 @@ class StoryControllerImpl::LaunchModuleInShellCall : public Operation<> {
   void ConnectViewToStoryShell(FlowToken flow, fuchsia::modular::ViewConnection view_connection,
                                fuchsia::modular::SurfaceInfo2 surface_info) {
     if (!view_connection.view_holder_token.value) {
-      FXL_LOG(WARNING) << "The module ViewHolder token is not valid, so it "
+      FX_LOGS(WARNING) << "The module ViewHolder token is not valid, so it "
                           "can't be sent to the story shell.";
       return;
     }
@@ -600,7 +600,7 @@ class StoryControllerImpl::StopCall : public Operation<> {
         [this, weak_this = GetWeakPtr(),
          story_id = story_controller_impl_->story_id_](const bool from_timeout) {
           if (from_timeout) {
-            FXL_LOG(INFO) << "DetachView() timed out: story_id=" << story_id;
+            FX_LOGS(INFO) << "DetachView() timed out: story_id=" << story_id;
           }
 
           if (weak_this) {
@@ -692,7 +692,7 @@ class StoryControllerImpl::StopModuleCall : public Operation<> {
     // see OnModuleDataUpdated().
     story_storage_->UpdateModuleData(module_path_,
                                      [flow](fuchsia::modular::ModuleDataPtr* module_data_ptr) {
-                                       FXL_DCHECK(*module_data_ptr);
+                                       FX_DCHECK(*module_data_ptr);
                                        (*module_data_ptr)->set_module_deleted(true);
                                      });
   }
@@ -860,7 +860,7 @@ class StoryControllerImpl::AddIntentCall : public Operation<fuchsia::modular::St
             return;
           }
           if (result.status != fuchsia::modular::ExecuteStatus::OK) {
-            FXL_LOG(WARNING) << "StoryController::AddIntentCall::AddModCall returned "
+            FX_LOGS(WARNING) << "StoryController::AddIntentCall::AddModCall returned "
                              << "error response with message: " << result.error_message;
           }
           module_data_ = std::move(module_data);
@@ -926,7 +926,7 @@ class StoryControllerImpl::StartCall : public Operation<> {
 
     // If the story is running, we do nothing.
     if (story_controller_impl_->IsRunning()) {
-      FXL_LOG(INFO) << "StoryControllerImpl::StartCall() while already running: ignored.";
+      FX_LOGS(INFO) << "StoryControllerImpl::StartCall() while already running: ignored.";
       return;
     }
 
@@ -942,7 +942,7 @@ class StoryControllerImpl::StartCall : public Operation<> {
             if (module_data.module_deleted() || module_data.is_embedded()) {
               continue;
             }
-            FXL_CHECK(module_data.has_intent());
+            FX_CHECK(module_data.has_intent());
             operation_queue_.Add(std::make_unique<LaunchModuleInShellCall>(
                 story_controller_impl_, std::move(module_data),
                 nullptr /* module_controller_request */, [flow] {}));
@@ -1030,7 +1030,7 @@ void StoryControllerImpl::ReleaseModule(ModuleControllerImpl* const module_contr
                           [module_controller_impl](const RunningModInfo& c) {
                             return c.module_controller_impl.get() == module_controller_impl;
                           });
-  FXL_DCHECK(fit != running_mod_infos_.end());
+  FX_DCHECK(fit != running_mod_infos_.end());
   fit->module_controller_impl.release();
   pending_story_shell_views_.erase(ModulePathToSurfaceID(fit->module_data->module_path()));
   running_mod_infos_.erase(fit);
@@ -1088,7 +1088,7 @@ void StoryControllerImpl::ProcessPendingStoryShellViews() {
     }
 
     if (!kv.second.view_connection.view_holder_token.value) {
-      FXL_LOG(WARNING) << "The module ViewHolder token is not valid, so it "
+      FX_LOGS(WARNING) << "The module ViewHolder token is not valid, so it "
                           "can't be sent to the story shell.";
       // Erase the pending view in this case, as it will never become valid.
       added_keys.push_back(kv.first);
@@ -1124,7 +1124,7 @@ void StoryControllerImpl::GetInfo(GetInfoCallback callback) {
   // resulting in |this| being destroyed, |callback| will be dropped.
   operation_queue_.Add(std::make_unique<SyncCall>([this, callback = std::move(callback)] {
     auto story_info_2 = story_provider_impl_->GetCachedStoryInfo(story_id_);
-    FXL_CHECK(story_info_2);
+    FX_CHECK(story_info_2);
     auto story_info = modular::StoryProviderImpl::StoryInfo2ToStoryInfo(*story_info_2);
     callback(std::move(story_info), story_observer_->model().runtime_state());
   }));
@@ -1138,7 +1138,7 @@ void StoryControllerImpl::GetInfo2(GetInfo2Callback callback) {
   // resulting in |this| being destroyed, |callback| will be dropped.
   operation_queue_.Add(std::make_unique<SyncCall>([this, callback = std::move(callback)] {
     auto story_info_2 = story_provider_impl_->GetCachedStoryInfo(story_id_);
-    FXL_CHECK(story_info_2);
+    FX_CHECK(story_info_2);
     callback(std::move(*story_info_2), story_observer_->model().runtime_state());
   }));
 }

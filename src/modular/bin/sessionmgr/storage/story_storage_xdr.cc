@@ -7,6 +7,7 @@
 #include <src/modular/bin/sessionmgr/storage/annotation_xdr.h>
 
 #include "src/lib/fsl/vmo/strings.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace modular {
 
@@ -61,14 +62,14 @@ void XdrIntentParameterData(XdrContext* const xdr,
         fidl::StringPtr value;
         xdr->Field(kJson, &value);
         fsl::SizedVmo vmo;
-        FXL_CHECK(fsl::VmoFromString(*value, &vmo));
+        FX_CHECK(fsl::VmoFromString(*value, &vmo));
         data->set_json(std::move(vmo).ToTransport());
       } else if (tag == kEntityType) {
         ::std::vector<::std::string> value;
         xdr->Field(kEntityType, &value);
         data->set_entity_type(std::move(value));
       } else {
-        FXL_LOG(ERROR) << "XdrIntentParameterData FROM_JSON unknown tag: " << tag;
+        FX_LOGS(ERROR) << "XdrIntentParameterData FROM_JSON unknown tag: " << tag;
       }
       break;
     }
@@ -86,7 +87,7 @@ void XdrIntentParameterData(XdrContext* const xdr,
         case fuchsia::modular::IntentParameterData::Tag::kJson: {
           tag = kJson;
           std::string json_string;
-          FXL_CHECK(fsl::StringFromVmo(data->json(), &json_string));
+          FX_CHECK(fsl::StringFromVmo(data->json(), &json_string));
           fidl::StringPtr value = json_string;
           xdr->Field(kJson, &value);
           break;
@@ -98,7 +99,7 @@ void XdrIntentParameterData(XdrContext* const xdr,
           break;
         }
         case fuchsia::modular::IntentParameterData::Tag::Invalid:
-          FXL_LOG(ERROR) << "XdrIntentParameterData TO_JSON unknown tag: "
+          FX_LOGS(ERROR) << "XdrIntentParameterData TO_JSON unknown tag: "
                          << static_cast<int>(data->Which());
           break;
       }

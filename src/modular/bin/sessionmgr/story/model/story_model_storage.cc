@@ -4,7 +4,7 @@
 
 #include "src/modular/bin/sessionmgr/story/model/story_model_storage.h"
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace modular {
 
@@ -18,7 +18,7 @@ void StoryModelStorage::SetObserveCallback(
 
 void StoryModelStorage::Observe(
     std::vector<fuchsia::modular::storymodel::StoryModelMutation> commands) {
-  FXL_DCHECK(observe_callback_);
+  FX_DCHECK(observe_callback_);
   observe_callback_(std::move(commands));
 }
 

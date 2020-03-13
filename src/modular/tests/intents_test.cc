@@ -5,7 +5,7 @@
 #include <fuchsia/modular/testing/cpp/fidl.h>
 
 #include "src/lib/fsl/vmo/strings.h"
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/lib/modular_test_harness/cpp/fake_module.h"
 #include "src/modular/lib/modular_test_harness/cpp/test_harness_fixture.h"
 
@@ -49,7 +49,7 @@ class IntentsTest : public modular_testing::TestHarnessFixture {
     intent_parameter.name = parameter_name;
     intent_parameter.data = fuchsia::modular::IntentParameterData();
     fsl::SizedVmo vmo;
-    FXL_CHECK(fsl::VmoFromString(parameter_data, &vmo));
+    FX_CHECK(fsl::VmoFromString(parameter_data, &vmo));
     intent_parameter.data.set_json(std::move(vmo).ToTransport());
     intent.parameters.emplace();
     intent.parameters->push_back(std::move(intent_parameter));
@@ -76,7 +76,7 @@ class IntentsTest : public modular_testing::TestHarnessFixture {
       if (parameter.data.is_json()) {
         if (parameter.name.value_or("") == expected_param_name) {
           std::string parameter_data;
-          FXL_CHECK(fsl::StringFromVmo(parameter.data.json(), &parameter_data));
+          FX_CHECK(fsl::StringFromVmo(parameter.data.json(), &parameter_data));
           if (expected_param_data == parameter_data) {
             return true;
           }

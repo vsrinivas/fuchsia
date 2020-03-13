@@ -11,7 +11,6 @@ source_set("module_manifest_source") {
   public_deps = [
     "//sdk/fidl/fuchsia.modular",
     "//src/lib/fsl",
-    "//src/lib/fxl",
   ]
 }
 
@@ -40,7 +39,6 @@ source_set("module_package_source") {
     ":json",
     ":module_manifest_source",
     "//sdk/lib/sys/cpp",
-    "//src/lib/fxl",
     "//src/modular/lib:maxwell_internal",
   ]
 }

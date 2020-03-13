@@ -19,6 +19,7 @@
 
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/macros.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/bin/basemgr/basemgr_impl.h"
 #include "src/modular/bin/basemgr/cobalt/cobalt.h"
 #include "src/modular/lib/modular_config/modular_config.h"
@@ -76,7 +77,7 @@ void ConfigureLoginOverride(fuchsia::modular::session::BasemgrConfig& config,
   }
 
   if (guest_mode_requested) {
-    FXL_LOG(INFO) << "Login Override: Guest mode";
+    FX_LOGS(INFO) << "Login Override: Guest mode";
     // When guest mode is specified, we use auto_login_base_shell with
     // a persistent guest user. The framework expects this package to be
     // available in all product configurations.
@@ -110,7 +111,7 @@ void ConfigureLoginOverride(fuchsia::modular::session::BasemgrConfig& config,
     setui->Mutate(fuchsia::setui::SettingType::ACCOUNT, std::move(mutation),
                   [](fuchsia::setui::MutationResponse response) {
                     if (response.return_code != fuchsia::setui::ReturnCode::OK) {
-                      FXL_LOG(ERROR) << "Failed to persist login type";
+                      FX_LOGS(ERROR) << "Failed to persist login type";
                     }
                   });
   }
@@ -237,7 +238,7 @@ int main(int argc, const char** argv) {
   setui.set_error_handler([&initialize_basemgr](zx_status_t) {
     // In case of error, log event and continue as if no user setting is
     // present.
-    FXL_LOG(ERROR) << "Error retrieving user set login override, defaulting to "
+    FX_LOGS(ERROR) << "Error retrieving user set login override, defaulting to "
                       "build time configuration";
     fuchsia::setui::AccountSettings default_account_settings;
     default_account_settings.set_mode(fuchsia::setui::LoginOverride::NONE);

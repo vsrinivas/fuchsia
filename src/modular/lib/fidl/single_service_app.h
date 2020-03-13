@@ -13,8 +13,8 @@
 
 #include <memory>
 
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace modular {
 
@@ -27,7 +27,7 @@ class ViewApp : private fuchsia::ui::app::ViewProvider {
       : component_context_(component_context), view_provider_binding_(this) {
     component_context_->outgoing()->AddPublicService<fuchsia::ui::app::ViewProvider>(
         [this](fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider> request) {
-          FXL_DCHECK(!view_provider_binding_.is_bound());
+          FX_DCHECK(!view_provider_binding_.is_bound());
           view_provider_binding_.Bind(std::move(request));
         });
   }
@@ -63,7 +63,7 @@ class SingleServiceApp : public ViewApp, protected Service {
     // template name.
     component_context()->outgoing()->template AddPublicService<Service>(
         [this](fidl::InterfaceRequest<Service> request) {
-          FXL_DCHECK(!service_binding_.is_bound());
+          FX_DCHECK(!service_binding_.is_bound());
           service_binding_.Bind(std::move(request));
         });
   }

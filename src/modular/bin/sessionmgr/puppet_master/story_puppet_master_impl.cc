@@ -7,7 +7,7 @@
 #include <utility>
 
 #include "src/lib/fsl/types/type_converters.h"
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/bin/sessionmgr/annotations.h"
 #include "src/modular/bin/sessionmgr/puppet_master/story_command_executor.h"
 #include "src/modular/bin/sessionmgr/storage/session_storage.h"
@@ -250,8 +250,8 @@ StoryPuppetMasterImpl::StoryPuppetMasterImpl(std::string story_name,
       executor_(executor),
       operations_(operations),
       weak_ptr_factory_(this) {
-  FXL_DCHECK(session_storage != nullptr);
-  FXL_DCHECK(executor != nullptr);
+  FX_DCHECK(session_storage != nullptr);
+  FX_DCHECK(executor != nullptr);
 }
 
 StoryPuppetMasterImpl::~StoryPuppetMasterImpl() = default;

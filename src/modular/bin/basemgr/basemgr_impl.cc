@@ -10,8 +10,8 @@
 #include <zxtest/zxtest.h>
 
 #include "src/lib/fsl/types/type_converters.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/intl/intl_property_provider_impl/intl_property_provider_impl.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/bin/basemgr/wait_for_minfs.h"
 #include "src/modular/lib/common/async_holder.h"
 #include "src/modular/lib/common/teardown.h"
@@ -94,7 +94,7 @@ void BasemgrImpl::Connect(
 
 void BasemgrImpl::StartBaseShell() {
   if (base_shell_running_) {
-    FXL_DLOG(INFO) << "StartBaseShell() called when already running";
+    FX_DLOGS(INFO) << "StartBaseShell() called when already running";
 
     return;
   }
@@ -126,7 +126,7 @@ void BasemgrImpl::StartBaseShell() {
 
 FuturePtr<> BasemgrImpl::StopBaseShell() {
   if (!base_shell_running_) {
-    FXL_DLOG(INFO) << "StopBaseShell() called when already stopped";
+    FX_DLOGS(INFO) << "StopBaseShell() called when already stopped";
 
     return Future<>::CreateCompleted("StopBaseShell::Completed");
   }
@@ -134,7 +134,7 @@ FuturePtr<> BasemgrImpl::StopBaseShell() {
   auto did_stop = Future<>::Create("StopBaseShell");
 
   base_shell_app_->Teardown(kBasicTimeout, [did_stop, this] {
-    FXL_DLOG(INFO) << "- fuchsia::modular::BaseShell down";
+    FX_DLOGS(INFO) << "- fuchsia::modular::BaseShell down";
 
     base_shell_running_ = false;
     did_stop->Complete();
@@ -148,7 +148,7 @@ FuturePtr<> BasemgrImpl::StopTokenManagerFactoryApp() {
     // Force kill;  token manager does not implement |fuchsia::modular::Lifecycle|.
     token_manager_factory_app_.reset();
   } else {
-    FXL_DLOG(INFO) << "StopTokenManagerFactoryApp(): TokenManagerFactory already not running.";
+    FX_DLOGS(INFO) << "StopTokenManagerFactoryApp(): TokenManagerFactory already not running.";
   }
   return Future<>::CreateCompleted("StopTokenManagerFactoryApp completed");
 }
@@ -156,7 +156,7 @@ FuturePtr<> BasemgrImpl::StopTokenManagerFactoryApp() {
 FuturePtr<> BasemgrImpl::StopScenic() {
   auto fut = Future<>::Create("StopScenic");
   if (!presenter_) {
-    FXL_LOG(INFO) << "StopScenic: no presenter; assuming that Scenic has not been launched";
+    FX_LOGS(INFO) << "StopScenic: no presenter; assuming that Scenic has not been launched";
     fut->Complete();
     return fut;
   }
@@ -166,7 +166,7 @@ FuturePtr<> BasemgrImpl::StopScenic() {
   scenic_lifecycle_controller_->Terminate();
 
   scenic_lifecycle_controller_.set_error_handler([fut](zx_status_t status) {
-    FXL_CHECK(status == ZX_ERR_PEER_CLOSED)
+    FX_CHECK(status == ZX_ERR_PEER_CLOSED)
         << "LifecycleController experienced some error other than PEER_CLOSED : " << status
         << std::endl;
     fut->Complete();
@@ -207,7 +207,7 @@ void BasemgrImpl::Start() {
           return;
         }
 
-        FXL_DLOG(INFO) << "Re-starting due to logout";
+        FX_DLOGS(INFO) << "Re-starting due to logout";
         ShowSetupOrLogin();
       }));
 
@@ -241,7 +241,7 @@ void BasemgrImpl::GetUserProvider(fidl::InterfaceRequest<fuchsia::modular::UserP
 }
 
 void BasemgrImpl::Shutdown() {
-  FXL_LOG(INFO) << "BASEMGR SHUTDOWN";
+  FX_LOGS(INFO) << "BASEMGR SHUTDOWN";
   // Prevent the shutdown sequence from running twice.
   if (state_ == State::SHUTTING_DOWN) {
     return;
@@ -253,13 +253,13 @@ void BasemgrImpl::Shutdown() {
   // sessionmgr processes.
   session_provider_.Teardown(kSessionProviderTimeout, [this] {
     StopBaseShell()->Then([this] {
-      FXL_DLOG(INFO) << "- fuchsia::modular::BaseShell down";
+      FX_DLOGS(INFO) << "- fuchsia::modular::BaseShell down";
       session_user_provider_impl_.reset();
-      FXL_DLOG(INFO) << "- fuchsia::modular::UserProvider down";
+      FX_DLOGS(INFO) << "- fuchsia::modular::UserProvider down";
       StopTokenManagerFactoryApp()->Then([this] {
-        FXL_DLOG(INFO) << "- fuchsia::auth::TokenManagerFactory down";
+        FX_DLOGS(INFO) << "- fuchsia::auth::TokenManagerFactory down";
         StopScenic()->Then([this] {
-          FXL_DLOG(INFO) << "- fuchsia::ui::Scenic down";
+          FX_DLOGS(INFO) << "- fuchsia::ui::Scenic down";
           on_shutdown_();
         });
       });
@@ -283,7 +283,7 @@ void BasemgrImpl::OnLogin(fuchsia::modular::auth::AccountPtr account,
   auto did_start_session = session_provider_->StartSession(
       std::move(view_token), std::move(account), std::move(agent_token_manager));
   if (!did_start_session) {
-    FXL_LOG(WARNING) << "Session was already started and the logged in user "
+    FX_LOGS(WARNING) << "Session was already started and the logged in user "
                         "could not join the session.";
     return;
   }
@@ -292,7 +292,7 @@ void BasemgrImpl::OnLogin(fuchsia::modular::auth::AccountPtr account,
   // running. So, if we're running under a test, do not shut down the base shell
   // after login.
   if (!config_.basemgr_config().base_shell().keep_alive_after_login()) {
-    FXL_DLOG(INFO) << "Stopping base shell due to login";
+    FX_DLOGS(INFO) << "Stopping base shell due to login";
     StopBaseShell();
   }
 
@@ -305,19 +305,19 @@ void BasemgrImpl::OnLogin(fuchsia::modular::auth::AccountPtr account,
 
 void BasemgrImpl::SelectNextSessionShell(SelectNextSessionShellCallback callback) {
   if (state_ == State::SHUTTING_DOWN) {
-    FXL_DLOG(INFO) << "SelectNextSessionShell() not supported while shutting down";
+    FX_DLOGS(INFO) << "SelectNextSessionShell() not supported while shutting down";
     callback();
     return;
   }
 
   if (config_.basemgr_config().session_shell_map().empty()) {
-    FXL_DLOG(INFO) << "No session shells has been defined";
+    FX_DLOGS(INFO) << "No session shells has been defined";
     callback();
     return;
   }
   auto shell_count = config_.basemgr_config().session_shell_map().size();
   if (shell_count <= 1) {
-    FXL_DLOG(INFO) << "Only one session shell has been defined so switch is disabled";
+    FX_DLOGS(INFO) << "Only one session shell has been defined so switch is disabled";
     callback();
     return;
   }
@@ -328,7 +328,7 @@ void BasemgrImpl::SelectNextSessionShell(SelectNextSessionShellCallback callback
 
   session_provider_->SwapSessionShell(CloneStruct(session_shell_config_))
       ->Then([callback = std::move(callback)] {
-        FXL_LOG(INFO) << "Swapped session shell";
+        FX_LOGS(INFO) << "Swapped session shell";
         callback();
       });
 }
@@ -384,11 +384,11 @@ void BasemgrImpl::ShowSetupOrLogin() {
       kFactoryResetKey,
       [this, show_setup_or_login](int factory_reset_value, fuchsia::devicesettings::Status status) {
         if (status == fuchsia::devicesettings::Status::ok && factory_reset_value > 0) {
-          FXL_LOG(INFO) << "Factory reset initiated";
+          FX_LOGS(INFO) << "Factory reset initiated";
           // Unset the factory reset flag.
           device_settings_manager_->SetInteger(kFactoryResetKey, 0, [](bool result) {
             if (!result) {
-              FXL_LOG(WARNING) << "Factory reset flag was not updated.";
+              FX_LOGS(WARNING) << "Factory reset flag was not updated.";
             }
           });
 

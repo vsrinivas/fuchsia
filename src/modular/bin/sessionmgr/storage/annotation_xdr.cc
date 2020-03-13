@@ -5,6 +5,7 @@
 #include "src/modular/bin/sessionmgr/storage/annotation_xdr.h"
 
 #include "src/lib/fsl/vmo/strings.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/lib/base64url/base64url.h"
 
 namespace modular {
@@ -18,7 +19,7 @@ std::vector<uint8_t> BytesFromBase64(const std::string& base64) {
   std::string decoded;
 
   if (!base64url::Base64UrlDecode(base64, &decoded)) {
-    FXL_LOG(ERROR) << "Unable to decode from Base64";
+    FX_LOGS(ERROR) << "Unable to decode from Base64";
     return std::vector<uint8_t>{};
   }
 
@@ -56,18 +57,18 @@ void XdrAnnotationValue_v0(XdrContext* const xdr, fuchsia::modular::AnnotationVa
 
         std::string decoded;
         if (!base64url::Base64UrlDecode(buffer_base64, &decoded)) {
-          FXL_LOG(ERROR) << "Unable to decode buffer value from Base64";
+          FX_LOGS(ERROR) << "Unable to decode buffer value from Base64";
         }
 
         fuchsia::mem::Buffer buffer{};
         if (!fsl::VmoFromString(decoded, &buffer)) {
-          FXL_LOG(ERROR)
+          FX_LOGS(ERROR)
               << "Unable to convert buffer VMO to string; annotation value will be empty";
         }
 
         data->set_buffer(std::move(buffer));
       } else {
-        FXL_LOG(ERROR) << "XdrAnnotationValue_v0 FROM_JSON unknown tag: " << tag;
+        FX_LOGS(ERROR) << "XdrAnnotationValue_v0 FROM_JSON unknown tag: " << tag;
       }
       break;
     }
@@ -92,7 +93,7 @@ void XdrAnnotationValue_v0(XdrContext* const xdr, fuchsia::modular::AnnotationVa
           tag = kBufferTag;
           std::string buffer;
           if (!fsl::StringFromVmo(data->buffer(), &buffer)) {
-            FXL_LOG(ERROR)
+            FX_LOGS(ERROR)
                 << "Unable to convert buffer VMO to string; annotation value will be empty";
           }
           auto buffer_base64 = base64url::Base64UrlEncode(buffer);
@@ -101,7 +102,7 @@ void XdrAnnotationValue_v0(XdrContext* const xdr, fuchsia::modular::AnnotationVa
         }
         default:
         case fuchsia::modular::AnnotationValue::Tag::kUnknown: {
-          FXL_LOG(ERROR) << "XdrAnnotation_v0 TO_JSON unknown tag: "
+          FX_LOGS(ERROR) << "XdrAnnotation_v0 TO_JSON unknown tag: "
                          << static_cast<int>(data->Which());
           break;
         }

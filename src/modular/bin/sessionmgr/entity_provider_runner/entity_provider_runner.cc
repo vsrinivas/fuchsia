@@ -12,6 +12,7 @@
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/strings/join_strings.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/bin/sessionmgr/entity_provider_runner/entity_provider_controller.h"
 #include "src/modular/bin/sessionmgr/entity_provider_runner/entity_provider_launcher.h"
 #include "src/modular/lib/fidl/json_xdr.h"
@@ -140,7 +141,7 @@ class EntityProviderRunner::DataEntity : fuchsia::modular::Entity {
     auto it = data_.find(type);
     if (it != data_.end()) {
       fsl::SizedVmo vmo;
-      FXL_CHECK(fsl::VmoFromString(it->second, &vmo));
+      FX_CHECK(fsl::VmoFromString(it->second, &vmo));
       auto vmo_ptr = std::make_unique<fuchsia::mem::Buffer>(std::move(vmo).ToTransport());
 
       result(std::move(vmo_ptr));
@@ -185,7 +186,7 @@ void EntityProviderRunner::ConnectEntityReferenceFactory(
     bool inserted;
     std::tie(it, inserted) = entity_reference_factory_bindings_.emplace(
         std::make_pair(agent_url, std::make_unique<EntityReferenceFactoryImpl>(agent_url, this)));
-    FXL_DCHECK(inserted);
+    FX_DCHECK(inserted);
     it->second->set_empty_set_handler(
         [this, agent_url] { entity_reference_factory_bindings_.erase(agent_url); });
   }
@@ -218,7 +219,7 @@ void EntityProviderRunner::ResolveDataEntity(
     fidl::InterfaceRequest<fuchsia::modular::Entity> entity_request) {
   std::map<std::string, std::string> entity_data;
   if (!DecodeEntityDataReference(entity_reference.value_or(""), &entity_data)) {
-    FXL_LOG(INFO) << "Could not decode entity reference: " << entity_reference;
+    FX_LOGS(INFO) << "Could not decode entity reference: " << entity_reference;
     return;
     // |entity_request| closes here.
   }
@@ -279,7 +280,7 @@ void EntityProviderRunner::ResolveEntity(
                                              OnEntityProviderFinished(provider_uri);
                                            }
                                          })));
-    FXL_DCHECK(inserted);
+    FX_DCHECK(inserted);
   }
 
   it->second->ProvideEntity(cookie, entity_reference, std::move(entity_request));

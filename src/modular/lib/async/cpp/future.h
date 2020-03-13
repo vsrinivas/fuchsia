@@ -20,6 +20,7 @@
 #include "src/lib/fxl/memory/ref_counted.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace modular {
 
@@ -139,9 +140,9 @@ namespace modular {
 //
 // FuturePtr<> f = MakeFuture();
 // f->WeakThen(weak_ptr_factory.GetWeakPtr(), [] {
-//   FXL_LOG(INFO) << "This won't execute";
+//   FX_LOGS(INFO) << "This won't execute";
 // })->Then([] {
-//   FXL_LOG(INFO) << "Neither will this";
+//   FX_LOGS(INFO) << "Neither will this";
 // });
 // weak_ptr_factory.InvalidateWeakPtrs();
 // f->Complete();
@@ -603,7 +604,7 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
     // *and* it has a callback: the completed value will be moved into the
     // callback and won't be available for a ConstThen().
     if (status_ == internal::FutureStatus::kConsumed) {
-      FXL_LOG(FATAL) << "Future@" << static_cast<void*>(this)
+      FX_LOGS(FATAL) << "Future@" << static_cast<void*>(this)
                      << (trace_name_.length() ? "(" + trace_name_ + ")" : "")
                      << ": Cannot add a const callback after completed result is "
                         "already moved into Then() callback.";
@@ -615,7 +616,7 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
   }
 
   void CompleteWithTuple(std::tuple<Result...>&& result) {
-    FXL_DCHECK(status_ == internal::FutureStatus::kAwaiting)
+    FX_DCHECK(status_ == internal::FutureStatus::kAwaiting)
         << "Future@" << static_cast<void*>(this)
         << (trace_name_.length() ? "(" + trace_name_ + ")" : "") << ": Complete() called twice.";
 
@@ -785,7 +786,7 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
 
   // For unit tests only.
   const std::tuple<Result...>& get() const {
-    FXL_DCHECK(status_ != internal::FutureStatus::kAwaiting)
+    FX_DCHECK(status_ != internal::FutureStatus::kAwaiting)
         << trace_name_ << ": get() called on unset future";
 
     return result_;

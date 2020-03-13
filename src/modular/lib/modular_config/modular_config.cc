@@ -11,6 +11,7 @@
 #include "src/lib/files/path.h"
 #include "src/lib/fxl/strings/substitute.h"
 #include "src/lib/json_parser/pretty_print.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/lib/fidl/json_xdr.h"
 #include "src/modular/lib/modular_config/modular_config_constants.h"
 #include "src/modular/lib/modular_config/modular_config_xdr.h"
@@ -36,7 +37,7 @@ std::string StripLeadingSlash(std::string str) {
 }  // namespace
 
 ModularConfigReader::ModularConfigReader(fbl::unique_fd dir_fd) {
-  FXL_CHECK(dir_fd.get() >= 0);
+  FX_CHECK(dir_fd.get() >= 0);
 
   // 1.  Figure out where the config file is.
   std::string config_path = files::JoinPath(StripLeadingSlash(modular_config::kOverriddenConfigDir),
@@ -74,7 +75,7 @@ void ModularConfigReader::ParseConfig(json::JSONParser json_parser, rapidjson::D
   std::string basemgr_json;
   std::string sessionmgr_json;
   if (json_parser.HasError()) {
-    FXL_LOG(ERROR) << "Error while parsing " << config_path
+    FX_LOGS(ERROR) << "Error while parsing " << config_path
                    << " to string. Error: " << json_parser.error_str();
     // Leave |basemgr_config_| and |sessionmgr_config_| empty-initialized.
     basemgr_json = "{}";
@@ -86,10 +87,10 @@ void ModularConfigReader::ParseConfig(json::JSONParser json_parser, rapidjson::D
   }
 
   if (!XdrRead(basemgr_json, &basemgr_config_, XdrBasemgrConfig)) {
-    FXL_LOG(ERROR) << "Unable to parse 'basemgr' from " << config_path;
+    FX_LOGS(ERROR) << "Unable to parse 'basemgr' from " << config_path;
   }
   if (!XdrRead(sessionmgr_json, &sessionmgr_config_, XdrSessionmgrConfig)) {
-    FXL_LOG(ERROR) << "Unable to parse 'sessionmgr' from " << config_path;
+    FX_LOGS(ERROR) << "Unable to parse 'sessionmgr' from " << config_path;
   }
 }
 

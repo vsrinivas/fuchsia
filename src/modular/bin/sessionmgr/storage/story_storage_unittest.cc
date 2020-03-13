@@ -8,6 +8,7 @@
 
 #include "gtest/gtest.h"
 #include "src/lib/fsl/vmo/strings.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/lib/async/cpp/future.h"
 #include "src/modular/lib/entity/entity_watcher_impl.h"
 #include "src/modular/lib/ledger_client/page_id.h"
@@ -288,7 +289,7 @@ TEST_F(StoryStorageTest, CreateAndReadEntity) {
 
   std::string data_string = "test_data";
   fuchsia::mem::Buffer buffer;
-  FXL_CHECK(fsl::VmoFromString(data_string, &buffer));
+  FX_CHECK(fsl::VmoFromString(data_string, &buffer));
 
   bool created_entity{};
   storage->SetEntityData(cookie, expected_type, std::move(buffer))
@@ -326,7 +327,7 @@ TEST_F(StoryStorageTest, CreateAndReadEntityIncorrectType) {
 
   std::string data_string = "test_data";
   fuchsia::mem::Buffer buffer;
-  FXL_CHECK(fsl::VmoFromString(data_string, &buffer));
+  FX_CHECK(fsl::VmoFromString(data_string, &buffer));
 
   bool created_entity{};
   storage->SetEntityData(cookie, expected_type, std::move(buffer))
@@ -354,7 +355,7 @@ TEST_F(StoryStorageTest, CreateAndReadEntityIncorrectCookie) {
 
   std::string data_string = "test_data";
   fuchsia::mem::Buffer buffer;
-  FXL_CHECK(fsl::VmoFromString(data_string, &buffer));
+  FX_CHECK(fsl::VmoFromString(data_string, &buffer));
 
   bool created_entity{};
   storage->SetEntityData(cookie, expected_type, std::move(buffer))
@@ -381,7 +382,7 @@ TEST_F(StoryStorageTest, CreateEntityWithEmptyType) {
 
   std::string data_string = "test_data";
   fuchsia::mem::Buffer buffer;
-  FXL_CHECK(fsl::VmoFromString(data_string, &buffer));
+  FX_CHECK(fsl::VmoFromString(data_string, &buffer));
 
   bool created_entity{};
   storage->SetEntityData(cookie, expected_type, std::move(buffer))
@@ -400,7 +401,7 @@ TEST_F(StoryStorageTest, CreateEntityWithEmptyCookie) {
 
   std::string data_string = "test_data";
   fuchsia::mem::Buffer buffer;
-  FXL_CHECK(fsl::VmoFromString(data_string, &buffer));
+  FX_CHECK(fsl::VmoFromString(data_string, &buffer));
 
   bool created_entity{};
   storage->SetEntityData(cookie, expected_type, std::move(buffer))
@@ -422,7 +423,7 @@ TEST_F(StoryStorageTest, WriteEntityDataWithIncorrectType) {
 
   std::string data_string = "test_data";
   fuchsia::mem::Buffer buffer;
-  FXL_CHECK(fsl::VmoFromString(data_string, &buffer));
+  FX_CHECK(fsl::VmoFromString(data_string, &buffer));
 
   bool created_entity{};
   storage->SetEntityData(cookie, expected_type, std::move(buffer))
@@ -469,11 +470,11 @@ TEST_F(StoryStorageTest, WriteToEntityTwice) {
 
   std::string data_string = "test_data";
   fuchsia::mem::Buffer buffer;
-  FXL_CHECK(fsl::VmoFromString(data_string, &buffer));
+  FX_CHECK(fsl::VmoFromString(data_string, &buffer));
 
   std::string second_data_string = "more_test_data";
   fuchsia::mem::Buffer second_buffer;
-  FXL_CHECK(fsl::VmoFromString(second_data_string, &second_buffer));
+  FX_CHECK(fsl::VmoFromString(second_data_string, &second_buffer));
 
   bool created_entity{};
   storage->SetEntityData(cookie, expected_type, std::move(buffer))
@@ -520,7 +521,7 @@ TEST_F(StoryStorageTest, WatchEntityData) {
 
   std::string data_string = "test_data";
   fuchsia::mem::Buffer buffer;
-  FXL_CHECK(fsl::VmoFromString(data_string, &buffer));
+  FX_CHECK(fsl::VmoFromString(data_string, &buffer));
 
   bool saw_entity_update{};
   bool saw_entity_update_with_no_data{};
@@ -566,7 +567,7 @@ TEST_F(StoryStorageTest, WatchEntityDataMultipleWatchers) {
 
   std::string data_string = "test_data";
   fuchsia::mem::Buffer buffer;
-  FXL_CHECK(fsl::VmoFromString(data_string, &buffer));
+  FX_CHECK(fsl::VmoFromString(data_string, &buffer));
 
   bool saw_entity_update{};
   auto watcher_impl = EntityWatcherImpl([&](std::unique_ptr<fuchsia::mem::Buffer> value) {

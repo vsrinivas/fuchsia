@@ -30,6 +30,7 @@ source_set("constants_and_utils") {
   deps = [
     "//sdk/lib/fidl/cpp",
     "//src/lib/fxl",
+    "//src/lib/syslog/cpp",
     "//src/modular/lib/string_escape",
   ]
 
@@ -47,7 +48,6 @@ executable("constants_and_utils_unittest") {
   deps = [
     ":constants_and_utils",
     "//src/lib/fsl",
-    "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
   ]

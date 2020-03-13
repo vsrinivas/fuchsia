@@ -5,6 +5,7 @@
 #include "src/modular/lib/testing/entity_resolver_fake.h"
 
 #include "src/lib/fsl/vmo/strings.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace modular {
 
@@ -34,7 +35,7 @@ class EntityResolverFake::EntityImpl : fuchsia::modular::Entity {
       return;
     }
     fsl::SizedVmo vmo;
-    FXL_CHECK(fsl::VmoFromString(it->second, &vmo));
+    FX_CHECK(fsl::VmoFromString(it->second, &vmo));
     auto vmo_ptr = std::make_unique<fuchsia::mem::Buffer>(std::move(vmo).ToTransport());
 
     callback(std::move(vmo_ptr));

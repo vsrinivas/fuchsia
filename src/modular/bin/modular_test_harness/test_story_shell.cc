@@ -133,6 +133,8 @@ class TestStoryShellApp : public modular::SingleServiceApp<fuchsia::modular::Sto
 }  // namespace
 
 int main(int /*argc*/, const char** /*argv*/) {
+  syslog::InitLogger({"test_story_shell"});
+  
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   auto context = sys::ComponentContext::Create();

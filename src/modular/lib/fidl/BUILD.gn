@@ -37,7 +37,6 @@ source_set("app_client") {
   deps = [
     "//garnet/public/lib/svc/cpp",
     "//src/lib/fsl",
-    "//src/lib/fxl",
     "//src/modular/lib/common:async_holder",
   ]
 }
@@ -56,8 +55,8 @@ source_set("json_xdr") {
 
   public_deps = [
     "//sdk/lib/fidl/cpp",
-    "//src/lib/fxl",
     "//src/lib/json_parser",
+    "//src/lib/syslog/cpp",
     "//third_party/rapidjson",
   ]
 }
@@ -71,15 +70,13 @@ source_set("proxy") {
   deps = [
     "//sdk/lib/fidl/cpp",
     "//src/lib/fxl",
+    "//src/lib/syslog/cpp",
   ]
 }
 
 source_set("clone") {
   sources = [ "clone.h" ]
-  deps = [
-    "//sdk/lib/fidl/cpp",
-    "//src/lib/fxl",
-  ]
+  deps = [ "//sdk/lib/fidl/cpp" ]
 }
 
 source_set("environment") {
@@ -91,10 +88,9 @@ source_set("environment") {
   public_deps = [
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
+    "//src/lib/syslog/cpp",
     "//zircon/public/lib/fs",
   ]
-
-  deps = [ "//src/lib/fxl" ]
 }
 
 source_set("single_service_app") {
@@ -107,6 +103,7 @@ source_set("single_service_app") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
+    "//src/lib/syslog/cpp",
     "//zircon/public/lib/zx",
   ]
 }
@@ -120,13 +117,14 @@ source_set("view_host") {
   public_deps = [
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.views",
+    "//src/lib/fxl",
+    "//src/lib/syslog/cpp",
     "//src/lib/ui/base_view",
   ]
 
   deps = [
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/lib/ui/scenic/cpp",
-    "//src/lib/fxl",
   ]
 }
 
@@ -165,7 +163,6 @@ source_set("app_client_unittest") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fsl",
-    "//src/lib/fxl",
     "//third_party/googletest:gtest",
   ]
 }

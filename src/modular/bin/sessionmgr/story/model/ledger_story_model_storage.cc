@@ -12,7 +12,7 @@
 #include <vector>
 
 #include "src/lib/fsl/vmo/vector.h"
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/bin/sessionmgr/story/model/apply_mutations.h"
 #include "src/modular/lib/ledger_client/promise.h"  // for fit::promise<> wrappers
 
@@ -43,7 +43,7 @@ std::vector<uint8_t> EncodeForStorage(T* table) {
   std::vector<uint8_t> encoded;
   // This can only fail if |table| contains handles. StoryModel and its fields
   // do not.
-  FXL_CHECK(fidl::EncodeObject(table, &encoded, nullptr /* error_msg_out */) == ZX_OK);
+  FX_CHECK(fidl::EncodeObject(table, &encoded, nullptr /* error_msg_out */) == ZX_OK);
   return encoded;
 }
 
@@ -53,8 +53,8 @@ template <class T>
 void DecodeFromStorage(std::vector<uint8_t> encoded, T* table) {
   // DecodeObject() takes a non-const pointer, even though it doesn't
   // modify the data.
-  FXL_CHECK(fidl::DecodeObject(encoded.data(), encoded.size(), table,
-                               nullptr /* error_msg_out */) == ZX_OK);
+  FX_CHECK(fidl::DecodeObject(encoded.data(), encoded.size(), table, nullptr /* error_msg_out */) ==
+           ZX_OK);
 }
 }  // namespace
 
@@ -89,7 +89,7 @@ void GenerateObservedMutationsForDeviceState(std::vector<uint8_t> device_state_b
 void GenerateObservedMutationsForDeviceState(const fuchsia::mem::Buffer& buffer,
                                              std::vector<StoryModelMutation>* commands) {
   std::vector<uint8_t> bytes;
-  FXL_CHECK(fsl::VectorFromVmo(buffer, &bytes));
+  FX_CHECK(fsl::VectorFromVmo(buffer, &bytes));
   GenerateObservedMutationsForDeviceState(std::move(bytes), commands);
 }
 }  // namespace
@@ -130,7 +130,7 @@ void LedgerStoryModelStorage::ProcessCompletePageChange(fuchsia::ledger::PageCha
   for (auto& entry : page_change.changed_entries) {
     auto key = to_string(entry.key);
     if (key == MakeDeviceKey(device_id_)) {
-      FXL_CHECK(entry.value) << key << ": This key should never be deleted. Something is wrong.";
+      FX_CHECK(entry.value) << key << ": This key should never be deleted. Something is wrong.";
       // Read the value and generate equivalent StoryModelMutation commands.
       GenerateObservedMutationsForDeviceState(std::move(*entry.value), &commands);
     } else if (key.find(kDeviceKeyPrefix) == 0) {
@@ -138,7 +138,7 @@ void LedgerStoryModelStorage::ProcessCompletePageChange(fuchsia::ledger::PageCha
       // TODO(thatguy): Store it in the local StoryModel when we care about
       // observing these data.
     } else {
-      FXL_LOG(FATAL) << "LedgerStoryModelStorage::OnPageChange(): key " << key
+      FX_LOGS(FATAL) << "LedgerStoryModelStorage::OnPageChange(): key " << key
                      << " unexpected in the Ledger.";
     }
   }
@@ -182,7 +182,7 @@ PartitionedCommands PartitionCommandsForDeviceAndShared(std::vector<StoryModelMu
         partitioned_commands.device_commands.push_back(std::move(i));
         break;
       case StoryModelMutation::Tag::Invalid:
-        FXL_LOG(FATAL) << "Encountered invalid StoryModelMutation.";
+        FX_LOGS(FATAL) << "Encountered invalid StoryModelMutation.";
         break;
     }
   }

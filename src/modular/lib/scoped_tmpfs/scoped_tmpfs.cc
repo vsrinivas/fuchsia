@@ -11,7 +11,7 @@
 #include <zircon/processargs.h>
 
 #include "src/lib/fsl/io/fd.h"
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace scoped_tmpfs {
 
@@ -25,12 +25,12 @@ async_loop_config_t MakeConfig() {
 
 ScopedTmpFS::ScopedTmpFS() : config_(MakeConfig()), loop_(&config_) {
   zx_status_t status = loop_.StartThread("tmpfs_thread");
-  FXL_CHECK(status == ZX_OK);
+  FX_CHECK(status == ZX_OK);
   zx_handle_t root_handle;
   status = memfs_create_filesystem(loop_.dispatcher(), &memfs_, &root_handle);
-  FXL_CHECK(status == ZX_OK);
+  FX_CHECK(status == ZX_OK);
   root_fd_ = fsl::OpenChannelAsFileDescriptor(zx::channel(root_handle));
-  FXL_CHECK(root_fd_.is_valid());
+  FX_CHECK(root_fd_.is_valid());
 }
 
 ScopedTmpFS::~ScopedTmpFS() {
@@ -38,7 +38,7 @@ ScopedTmpFS::~ScopedTmpFS() {
   sync_completion_t unmounted;
   memfs_free_filesystem(memfs_, &unmounted);
   zx_status_t status = sync_completion_wait(&unmounted, ZX_SEC(10));
-  FXL_DCHECK(status == ZX_OK) << status;
+  FX_DCHECK(status == ZX_OK) << status;
 }
 
 }  // namespace scoped_tmpfs

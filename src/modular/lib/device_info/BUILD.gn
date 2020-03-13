@@ -10,6 +10,7 @@ source_set("device_info") {
 
   deps = [
     "//src/lib/fxl",
+    "//src/lib/syslog/cpp",
     "//src/lib/uuid",
   ]
 }

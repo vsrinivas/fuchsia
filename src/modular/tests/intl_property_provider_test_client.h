@@ -10,7 +10,7 @@
 #include <fuchsia/modular/testing/cpp/fidl.h>
 #include <lib/modular/testing/cpp/fake_component.h>
 
-#include <src/lib/fxl/logging.h>
+#include <src/lib/syslog/cpp/logger.h>
 
 namespace modular_tests {
 
@@ -23,7 +23,7 @@ class IntlPropertyProviderTestClient {
   zx_status_t Connect() {
     auto status = fake_component_->component_context()->svc()->Connect(client_.NewRequest());
     client_.set_error_handler([this](zx_status_t status) {
-      FXL_LOG(ERROR) << "fuchsia::intl::PropertyProvider connection status: " << status;
+      FX_LOGS(ERROR) << "fuchsia::intl::PropertyProvider connection status: " << status;
       has_error_ = true;
     });
     return status;

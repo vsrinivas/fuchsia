@@ -7,7 +7,7 @@
 #include <lib/fit/bridge.h>
 #include <lib/fit/defer.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/bin/sessionmgr/story/model/apply_mutations.h"
 #include "src/modular/bin/sessionmgr/story/model/story_model_storage.h"
 #include "src/modular/bin/sessionmgr/story/model/story_mutator.h"
@@ -77,7 +77,7 @@ class StoryModelOwner::Observer : public StoryObserver {
   }
 
   const StoryModel& model() override {
-    FXL_CHECK(weak_owner_);
+    FX_CHECK(weak_owner_);
     return weak_owner_->model_;
   }
 
@@ -90,7 +90,7 @@ class StoryModelOwner::Observer : public StoryObserver {
 StoryModelOwner::StoryModelOwner(const std::string& story_name, fit::executor* executor,
                                  std::unique_ptr<StoryModelStorage> model_storage)
     : model_storage_(std::move(model_storage)), weak_ptr_factory_(this), executor_(executor) {
-  FXL_CHECK(model_storage_ != nullptr);
+  FX_CHECK(model_storage_ != nullptr);
   model_.mutable_name()->assign(story_name);
   InitializeModelDefaults(&model_);
   model_storage_->SetObserveCallback([this](std::vector<StoryModelMutation> commands) {
@@ -109,7 +109,7 @@ std::unique_ptr<StoryObserver> StoryModelOwner::NewObserver() {
 }
 
 void StoryModelOwner::LoadStorage() {
-  FXL_CHECK(!seen_any_requests_to_execute_)
+  FX_CHECK(!seen_any_requests_to_execute_)
       << "Must call LoadStorage() before any calls to StoryMutator.Execute();";
   executor_->schedule_task(model_storage_->Load());
 }
@@ -160,7 +160,7 @@ void StoryModelOwner::HandleObservedMutations(std::vector<StoryModelMutation> co
   // This is not thread-safe. We rely on the fact that
   // HandleObservedMutations() will only be called on a single thread.
   StoryModel old_model;
-  FXL_CHECK(fidl::Clone(model_, &old_model) == ZX_OK);
+  FX_CHECK(fidl::Clone(model_, &old_model) == ZX_OK);
   model_ = ApplyMutations(old_model, std::move(commands));
 
   // Don't notify anyone if the model didn't change.

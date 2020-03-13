@@ -10,6 +10,7 @@
 #include "src/lib/files/file.h"
 #include "src/lib/files/unique_fd.h"
 #include "src/lib/fsl/io/fd.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/lib/common/async_holder.h"
 #include "src/modular/lib/common/teardown.h"
 #include "src/modular/lib/modular_config/modular_config_constants.h"
@@ -28,8 +29,8 @@ SessionContextImpl::SessionContextImpl(
       get_presentation_(std::move(get_presentation)),
       on_session_shutdown_(std::move(on_session_shutdown)),
       weak_factory_(this) {
-  FXL_CHECK(get_presentation_);
-  FXL_CHECK(on_session_shutdown_);
+  FX_CHECK(get_presentation_);
+  FX_CHECK(on_session_shutdown_);
 
   // TODO(MF-280): We should replace USER* with SESSION* below. However, this
   // will lose existing user data, so the timing needs to be considered.
@@ -54,7 +55,7 @@ SessionContextImpl::SessionContextImpl(
                           std::move(view_token));
 
   sessionmgr_app_->SetAppErrorHandler([weak_this = weak_factory_.GetWeakPtr()] {
-    FXL_LOG(ERROR) << "Sessionmgr seems to have crashed unexpectedly. "
+    FX_LOGS(ERROR) << "Sessionmgr seems to have crashed unexpectedly. "
                    << "Calling on_session_shutdown_().";
     // This prevents us from receiving any further requests.
     weak_this->session_context_binding_.Unbind();
@@ -90,7 +91,7 @@ fuchsia::sys::FlatNamespacePtr SessionContextImpl::MakeConfigNamespace(zx::chann
 void SessionContextImpl::Shutdown(bool logout_users, fit::function<void()> callback) {
   shutdown_callbacks_.push_back(std::move(callback));
   if (shutdown_callbacks_.size() > 1) {
-    FXL_LOG(INFO) << "fuchsia::modular::internal::SessionContext::Shutdown() "
+    FX_LOGS(INFO) << "fuchsia::modular::internal::SessionContext::Shutdown() "
                      "already called, queuing callback while shutdown is in progress.";
     return;
   }

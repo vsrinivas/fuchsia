@@ -10,6 +10,7 @@
 #include "gmock/gmock.h"
 #include "lib/fostr/fidl/fuchsia/modular/formatting.h"
 #include "src/lib/fsl/vmo/strings.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace modular::annotations {
 
@@ -27,8 +28,8 @@ bool DoAnnotationEq(const Annotation& actual, const Annotation& expected,
   if (actual.value && actual.value->is_buffer() && expected.value && expected.value->is_buffer()) {
     std::string actual_str;
     std::string expected_str;
-    FXL_DCHECK(fsl::StringFromVmo(actual.value->buffer(), &actual_str));
-    FXL_DCHECK(fsl::StringFromVmo(expected.value->buffer(), &expected_str));
+    FX_DCHECK(fsl::StringFromVmo(actual.value->buffer(), &actual_str));
+    FX_DCHECK(fsl::StringFromVmo(expected.value->buffer(), &expected_str));
 
     if (actual_str != expected_str) {
       *result_listener << "Expected value " << expected.value << ", got " << actual.value;

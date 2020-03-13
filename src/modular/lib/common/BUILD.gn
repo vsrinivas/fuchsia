@@ -15,14 +15,9 @@ source_set("async_holder") {
     "async_holder.h",
   ]
 
-  deps = [
-    "//src/lib/fsl",
-    "//src/lib/fxl",
-  ]
+  deps = [ "//src/lib/fsl" ]
 }
 
 source_set("teardown") {
   sources = [ "teardown.h" ]
-
-  public_deps = [ "//src/lib/fxl" ]
 }

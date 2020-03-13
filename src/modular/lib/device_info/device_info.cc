@@ -9,10 +9,10 @@
 
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/fxl/strings/trim.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/lib/uuid/uuid.h"
 
 namespace modular {
@@ -51,10 +51,10 @@ std::string LoadDeviceID(const std::string& user) {
     // no existing device id. generate a UUID and store it to disk
     device_id = uuid::Generate();
     bool success = files::WriteFile(path, device_id.data(), device_id.length());
-    FXL_DCHECK(success);
+    FX_DCHECK(success);
   }
 
-  FXL_LOG(INFO) << "device_info: syncing device id for user: " << user
+  FX_LOGS(INFO) << "device_info: syncing device id for user: " << user
                 << "   set to: " << device_id;
 
   return device_id;
@@ -88,7 +88,7 @@ std::string LoadDeviceName(const std::string& user) {
     int result = gethostname(host_name_buffer, sizeof(host_name_buffer));
 
     if (result < 0) {
-      FXL_LOG(ERROR) << "unable to get hostname. errno " << errno;
+      FX_LOGS(ERROR) << "unable to get hostname. errno " << errno;
       device_name = "fuchsia";
     } else {
       device_name = host_name_buffer;
@@ -100,7 +100,7 @@ std::string LoadDeviceName(const std::string& user) {
     // TODO(jimbe) Don't write the result of gethostname() to this file once
     // NET-79 is fixed. (Maybe write an empty file so users can find it.)
     bool success = files::WriteFile(path, device_name.data(), device_name.length());
-    FXL_DCHECK(success);
+    FX_DCHECK(success);
   }
 
   return device_name;

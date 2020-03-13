@@ -5,12 +5,12 @@
 #include "src/modular/lib/modular_test_harness/cpp/test_harness_impl.h"
 
 #include <dirent.h>
+#include <fuchsia/stash/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 #include <lib/vfs/cpp/pseudo_file.h>
 #include <zircon/status.h>
 
-#include <fuchsia/stash/cpp/fidl.h>
 #include <src/lib/files/path.h>
 #include <src/lib/files/unique_fd.h>
 #include <src/modular/lib/modular_config/modular_config.h>
@@ -20,10 +20,10 @@
 
 #include "src/lib/fsl/io/fd.h"
 #include "src/lib/fsl/vmo/strings.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/fxl/strings/split_string.h"
 #include "src/lib/fxl/strings/substitute.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace modular_testing {
 namespace {
@@ -144,7 +144,7 @@ void TestHarnessImpl::Terminate() {
 
 bool TestHarnessImpl::CloseBindingIfError(zx_status_t status) {
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Destroying TestHarness because of error: " << zx_status_get_string(status);
+    FX_LOGS(ERROR) << "Destroying TestHarness because of error: " << zx_status_get_string(status);
     binding_.Close(status);
     // destory |enclosing_env_| should kill all processes.
     enclosing_env_.reset();
@@ -178,8 +178,7 @@ zx_status_t TestHarnessImpl::PopulateEnvServices(sys::testing::EnvironmentServic
        "fuchsia-pkg://fuchsia.com/account_manager#meta/account_manager.cmx"},
       {fuchsia::settings::Intl::Name_,
        "fuchsia-pkg://fuchsia.com/setui_service#meta/setui_service.cmx"},
-      {fuchsia::stash::Store::Name_,
-       "fuchsia-pkg://fuchsia.com/stash#meta/stash_tests.cmx"},
+      {fuchsia::stash::Store::Name_, "fuchsia-pkg://fuchsia.com/stash#meta/stash_tests.cmx"},
       {fuchsia::devicesettings::DeviceSettingsManager::Name_,
        "fuchsia-pkg://fuchsia.com/device_settings_manager#meta/"
        "device_settings_manager.cmx"}};
@@ -226,7 +225,7 @@ zx_status_t TestHarnessImpl::PopulateEnvServicesWithComponents(
   }
   for (const auto& svc : spec_.env_services().services_from_components()) {
     if (added_svcs->find(svc.name) != added_svcs->end()) {
-      FXL_LOG(ERROR) << svc.name
+      FX_LOGS(ERROR) << svc.name
                      << " has already been injected into the environment, "
                         "cannot add twice.";
       return ZX_ERR_ALREADY_EXISTS;
@@ -248,7 +247,7 @@ std::vector<std::string> GetDirListing(fuchsia::io::Directory* dir) {
 
   std::vector<std::string> svcs;
   DIR* fd = fdopendir(fsl::OpenChannelAsFileDescriptor(dir_copy.Unbind().TakeChannel()).release());
-  FXL_CHECK(fd != nullptr);
+  FX_CHECK(fd != nullptr);
 
   struct dirent* dp = nullptr;
   while ((dp = readdir(fd)) != nullptr) {
@@ -272,13 +271,13 @@ zx_status_t TestHarnessImpl::PopulateEnvServicesWithServiceDir(
   dir.Bind(std::move(*spec_.mutable_env_services()->mutable_service_dir()));
   for (auto& svc_name : GetDirListing(dir.get())) {
     if (added_svcs->find(svc_name) != added_svcs->end()) {
-      FXL_LOG(ERROR) << svc_name << " is already injected into the environment, cannot add twice.";
+      FX_LOGS(ERROR) << svc_name << " is already injected into the environment, cannot add twice.";
       return ZX_ERR_ALREADY_EXISTS;
     }
     env_services->AddService(
         std::make_unique<vfs::Service>(
             [this, svc_name](zx::channel request, async_dispatcher_t* dispatcher) {
-              FXL_CHECK(env_service_dir_->Connect(svc_name, std::move(request)) == ZX_OK);
+              FX_CHECK(env_service_dir_->Connect(svc_name, std::move(request)) == ZX_OK);
             }),
         svc_name);
     added_svcs->insert(svc_name);
@@ -342,7 +341,7 @@ void TestHarnessImpl::Run(fuchsia::modular::testing::TestHarnessSpec spec) {
 
   zx::channel client;
   zx::channel request;
-  FXL_CHECK(zx::channel::create(0u, &client, &request) == ZX_OK);
+  FX_CHECK(zx::channel::create(0u, &client, &request) == ZX_OK);
   basemgr_config_dir_ = MakeBasemgrConfigDir(spec_);
   basemgr_config_dir_->Serve(fuchsia::io::OPEN_RIGHT_READABLE, std::move(request));
 
@@ -367,7 +366,7 @@ zx::channel TakeSvcFromFlatNamespace(fuchsia::sys::FlatNamespace* flat_namespace
       return std::move(flat_namespace->directories[i]);
     }
   }
-  FXL_CHECK(false) << "Could not find /svc in component namespace.";
+  FX_CHECK(false) << "Could not find /svc in component namespace.";
   return zx::channel();
 }
 

@@ -16,9 +16,9 @@
 #include <rapidjson/document.h>
 #include <rapidjson/rapidjson.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/json_parser/pretty_print.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace modular {
 
@@ -785,15 +785,15 @@ bool XdrRead(rapidjson::Document* const doc, D* const data, XdrFilterList<V> fil
       return true;
     }
 
-    FXL_LOG(INFO) << "Filter failed, trying previous version.";
+    FX_LOGS(INFO) << "Filter failed, trying previous version.";
     errors.emplace_back(std::move(error));
   }
 
-  FXL_LOG(ERROR) << "XdrRead: No filter version succeeded"
+  FX_LOGS(ERROR) << "XdrRead: No filter version succeeded"
                  << " to extract data from JSON: " << json_parser::JsonValueToPrettyString(*doc)
                  << std::endl;
   for (const std::string& error : errors) {
-    FXL_LOG(INFO) << "XdrRead error message: " << error;
+    FX_LOGS(INFO) << "XdrRead error message: " << error;
   }
 
   return false;
@@ -808,7 +808,7 @@ bool XdrRead(const std::string& json, D* const data, XdrFilterList<V> filter_ver
   rapidjson::Document doc;
   doc.Parse(json);
   if (doc.HasParseError()) {
-    FXL_LOG(ERROR) << "Unable to parse data as JSON: " << json;
+    FX_LOGS(ERROR) << "Unable to parse data as JSON: " << json;
     return false;
   }
 
@@ -824,9 +824,9 @@ void XdrWrite(rapidjson::Document* const doc, D* const data, XdrFilterList<V> fi
   std::string error;
   XdrContext xdr(XdrOp::TO_JSON, doc, &error);
   xdr.Value(data, filter_versions[0]);
-  FXL_DCHECK(error.empty()) << "There are no errors possible in XdrOp::TO_JSON: " << std::endl
-                            << error << std::endl
-                            << json_parser::JsonValueToPrettyString(*doc) << std::endl;
+  FX_DCHECK(error.empty()) << "There are no errors possible in XdrOp::TO_JSON: " << std::endl
+                           << error << std::endl
+                           << json_parser::JsonValueToPrettyString(*doc) << std::endl;
 }
 
 // A wrapper function to write data as JSON to a string. This never fails.

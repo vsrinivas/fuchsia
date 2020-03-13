@@ -10,6 +10,7 @@
 #include <unordered_set>
 
 #include "fuchsia/ledger/cpp/fidl.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/lib/uuid/uuid.h"
 #include "src/modular/bin/sessionmgr/annotations.h"
 #include "src/modular/bin/sessionmgr/storage/constants_and_utils.h"
@@ -22,7 +23,7 @@ namespace modular {
 SessionStorage::SessionStorage(LedgerClient* ledger_client, LedgerPageId page_id)
     : PageClient("SessionStorage", ledger_client, page_id, kStoryKeyPrefix),
       ledger_client_(ledger_client) {
-  FXL_DCHECK(ledger_client_ != nullptr);
+  FX_DCHECK(ledger_client_ != nullptr);
 }
 
 namespace {
@@ -43,7 +44,7 @@ std::string StoryNameFromStoryDataKey(fidl::StringPtr key) {
 
 fuchsia::ledger::PageId ToPageId(const std::string& value) {
   fuchsia::ledger::PageId page_id;
-  FXL_DCHECK(value.size() == page_id.id.size())
+  FX_DCHECK(value.size() == page_id.id.size())
       << "value is of size: " << value.size() << ", expected size: " << page_id.id.size();
   memcpy(&page_id.id[0], value.data(), std::min(page_id.id.size(), value.size()));
   return page_id;
@@ -339,7 +340,7 @@ void SessionStorage::OnPageChange(const std::string& key, const std::string& val
   if (StartsWith(key, kStoryDataKeyPrefix)) {
     auto story_data = fuchsia::modular::internal::StoryData::New();
     if (!XdrRead(value, &story_data, XdrStoryData)) {
-      FXL_LOG(ERROR) << "SessionStorage::OnPageChange : could not decode ledger "
+      FX_LOGS(ERROR) << "SessionStorage::OnPageChange : could not decode ledger "
                         "value for key "
                      << key << "\nvalue:\n"
                      << value;

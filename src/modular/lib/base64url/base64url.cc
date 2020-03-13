@@ -4,7 +4,7 @@
 
 #include "src/modular/lib/base64url/base64url.h"
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "third_party/modp_b64/modp_b64.h"
 
 namespace base64url {
@@ -17,7 +17,7 @@ std::string Base64UrlEncode(fxl::StringView input) {
   // a '\0' that will override output[output.size()].
   output.resize(output_length);
   size_t written = modp_b64_encode(&output[0], input.data(), input.size());
-  FXL_DCHECK(output_length == written);
+  FX_DCHECK(output_length == written);
   for (char& c : output) {
     if (c == '+')
       c = '-';

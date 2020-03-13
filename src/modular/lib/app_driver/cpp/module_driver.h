@@ -18,7 +18,7 @@
 
 #include <src/modular/lib/lifecycle/cpp/lifecycle_impl.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace modular {
 
@@ -88,7 +88,7 @@ class ModuleDriver : LifecycleImpl::Delegate, ModuleHost {
 
   // |ModuleHost|
   fuchsia::modular::ModuleContext* module_context() override {
-    FXL_DCHECK(module_context_);
+    FX_DCHECK(module_context_);
     return module_context_.get();
   }
 

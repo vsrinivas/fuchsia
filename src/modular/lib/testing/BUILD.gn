@@ -31,7 +31,6 @@ source_set("component_base") {
   public_deps = [
     ":component_main",
     "//sdk/lib/sys/cpp",
-    "//src/lib/fxl",
     "//src/modular/lib/fidl:single_service_app",
     "//src/modular/lib/integration_testing/cpp",
   ]
@@ -57,10 +56,7 @@ source_set("entity_resolver_fake") {
     "entity_resolver_fake.h",
   ]
 
-  public_deps = [
-    "//sdk/fidl/fuchsia.modular",
-    "//src/lib/fxl",
-  ]
+  public_deps = [ "//sdk/fidl/fuchsia.modular" ]
 
   deps = [ "//src/lib/fsl" ]
 }
@@ -75,7 +71,6 @@ source_set("module_facet_reader_fake") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.modular",
-    "//src/lib/fxl",
     "//src/modular/lib/module_manifest:module_facet_reader",
   ]
 }
@@ -105,7 +100,6 @@ source_set("session_shell_impl") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fsl",
-    "//src/lib/fxl",
     "//src/modular/lib/integration_testing/cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
@@ -120,7 +114,6 @@ source_set("story_controller_mock") {
   public_deps = [
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.ui.views",
-    "//src/lib/fxl",
   ]
 
   deps = [ "//sdk/lib/fidl/cpp" ]
@@ -131,10 +124,7 @@ source_set("story_provider_mock") {
 
   sources = [ "story_provider_mock.h" ]
 
-  public_deps = [
-    "//sdk/fidl/fuchsia.modular",
-    "//src/lib/fxl",
-  ]
+  public_deps = [ "//sdk/fidl/fuchsia.modular" ]
 
   deps = [
     ":story_controller_mock",
@@ -172,7 +162,6 @@ source_set("test_with_ledger") {
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp",
     "//src/lib/fsl",
-    "//src/lib/fxl",
     "//src/modular/lib/ledger_client:page_client",
     "//third_party/googletest:gtest",
   ]
@@ -207,7 +196,6 @@ source_set("ledger_repository_for_testing") {
     "//src/ledger/fidl/fuchsia.ledger",
     "//src/ledger/fidl/fuchsia.ledger.internal",
     "//src/lib/fsl",
-    "//src/lib/fxl",
     "//src/modular/lib/common:teardown",
     "//src/modular/lib/fidl:app_client",
     "//src/modular/lib/ledger_client:constants",
@@ -228,7 +216,7 @@ source_set("mock_base") {
   ]
 
   deps = [
-    "//src/lib/fxl",
+    "//src/lib/syslog/cpp",
     "//third_party/googletest:gtest",
   ]
 }

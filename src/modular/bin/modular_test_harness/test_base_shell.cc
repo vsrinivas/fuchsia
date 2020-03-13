@@ -12,7 +12,7 @@
 #include <memory>
 #include <utility>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/lib/app_driver/cpp/app_driver.h"
 #include "src/modular/lib/fidl/single_service_app.h"
 
@@ -58,7 +58,7 @@ class TestBaseShellApp : modular::SingleServiceApp<fuchsia::modular::BaseShell> 
   // |fuchsia::modular::BaseShell|
   void GetAuthenticationUIContext(
       fidl::InterfaceRequest<fuchsia::auth::AuthenticationUIContext> /*request*/) override {
-    FXL_LOG(INFO) << "fuchsia::modular::BaseShell::GetAuthenticationUIContext() is"
+    FX_LOGS(INFO) << "fuchsia::modular::BaseShell::GetAuthenticationUIContext() is"
                      " unimplemented.";
   }
 
@@ -82,6 +82,8 @@ class TestBaseShellApp : modular::SingleServiceApp<fuchsia::modular::BaseShell> 
 }  // namespace modular
 
 int main(int argc, const char** argv) {
+  syslog::InitLogger({"test_base_shell"});
+  
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   auto context = sys::ComponentContext::Create();

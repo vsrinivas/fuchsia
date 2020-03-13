@@ -13,7 +13,7 @@
 
 #include <trace/event.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace modular {
 
@@ -26,7 +26,7 @@ OperationContainer::OperationContainer() = default;
 OperationContainer::~OperationContainer() = default;
 
 void OperationContainer::Add(std::unique_ptr<OperationBase> o) {
-  FXL_DCHECK(o != nullptr);
+  FX_DCHECK(o != nullptr);
 
   o->SetOwner(this);
   Hold(std::move(o));  // Takes ownership.
@@ -44,7 +44,7 @@ OperationCollection::~OperationCollection() {
   // that an outstanding FlowToken<> that gets destroyed in the process doesn't
   // erroneously call Operation<>::Done.
   for (auto& operation : operations_) {
-    FXL_DCHECK(operation.get() != nullptr);
+    FX_DCHECK(operation.get() != nullptr);
     InvalidateWeakPtrs(operation.get());
   }
 }
@@ -62,7 +62,7 @@ void OperationCollection::Hold(std::unique_ptr<OperationBase> o) {
 void OperationCollection::Drop(OperationBase* const o) {
   auto it = std::find_if(operations_.begin(), operations_.end(),
                          [o](const std::unique_ptr<OperationBase>& p) { return p.get() == o; });
-  FXL_DCHECK(it != operations_.end());
+  FX_DCHECK(it != operations_.end());
 
   // Ensures we erase the operation off our container first.
   // By keeping a reference to the operation its destructor is only triggered
@@ -82,8 +82,8 @@ void OperationCollection::Drop(OperationBase* const o) {
   //
   // See operation_unittest.cc for testcase. TestCollectionNotNullPtr
   std::unique_ptr<OperationBase> operation = std::move(*it);
-  FXL_DCHECK(it->get() == nullptr);
-  FXL_DCHECK(operation.get() == o);
+  FX_DCHECK(it->get() == nullptr);
+  FX_DCHECK(operation.get() == o);
   InvalidateWeakPtrs(operation.get());
   operations_.erase(it);
 }
@@ -104,7 +104,7 @@ OperationQueue::~OperationQueue() {
   // that an outstanding FlowToken<> that gets destroyed in the process doesn't
   // erroneously call Operation<>::Done.
   while (!operations_.empty()) {
-    FXL_DCHECK(operations_.front().get() != nullptr);
+    FX_DCHECK(operations_.front().get() != nullptr);
     InvalidateWeakPtrs(operations_.front().get());
     operations_.pop();
   }
@@ -118,20 +118,20 @@ void OperationQueue::Hold(std::unique_ptr<OperationBase> o) {
   auto o_ptr = o.get();
   operations_.push(std::move(o));
   if (idle_) {
-    FXL_DCHECK(operations_.size() == 1);
+    FX_DCHECK(operations_.size() == 1);
     idle_ = false;
     Schedule(o_ptr);
   }
 }
 
 void OperationQueue::Drop(OperationBase* const o) {
-  FXL_DCHECK(!operations_.empty());
-  FXL_DCHECK(operations_.front().get() == o);
+  FX_DCHECK(!operations_.empty());
+  FX_DCHECK(operations_.front().get() == o);
 
   // See comment in OperationCollection::Drop() for why this move is important.
   std::unique_ptr<OperationBase> operation = std::move(operations_.front());
-  FXL_DCHECK(operations_.front().get() == nullptr);
-  FXL_DCHECK(operation.get() == o);
+  FX_DCHECK(operations_.front().get() == nullptr);
+  FX_DCHECK(operation.get() == o);
   InvalidateWeakPtrs(operation.get());
   operations_.pop();
 }
@@ -157,7 +157,7 @@ class PromiseWrapperCall : public Operation<> {
   }
 
   void SayDone() {
-    FXL_CHECK(running_);
+    FX_CHECK(running_);
     Done();
   }
 
@@ -207,7 +207,7 @@ OperationBase::~OperationBase() = default;
 fxl::WeakPtr<OperationBase> OperationBase::GetWeakPtr() { return weak_ptr_factory_.GetWeakPtr(); }
 
 void OperationBase::SetOwner(OperationContainer* c) {
-  FXL_DCHECK(!container_);
+  FX_DCHECK(!container_);
   container_ = c->GetWeakPtr();
 }
 

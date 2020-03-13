@@ -97,6 +97,8 @@ class TestSessionShellApp : public modular::ViewApp,
 }  // namespace
 
 int main(int argc, const char** argv) {
+  syslog::InitLogger({"test_session_shell"});
+  
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   auto context = sys::ComponentContext::Create();

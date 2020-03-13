@@ -9,7 +9,6 @@
 #include <fuchsia/stash/cpp/fidl.h>
 #include <lib/modular/testing/cpp/test_harness_builder.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/modular/lib/modular_test_harness/cpp/test_harness_fixture.h"
 
 class LoginOverrideTest : public modular_testing::TestHarnessFixture {

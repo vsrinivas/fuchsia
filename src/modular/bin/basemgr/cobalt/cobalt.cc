@@ -7,6 +7,7 @@
 #include <fuchsia/cobalt/cpp/fidl.h>
 
 #include "src/lib/cobalt/cpp/cobalt_logger.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/bin/basemgr/cobalt/basemgr_metrics_registry.cb.h"
 
 namespace modular {
@@ -18,10 +19,10 @@ cobalt::CobaltLogger* g_cobalt_logger = nullptr;
 
 fit::deferred_action<fit::closure> InitializeCobalt(async_dispatcher_t* dispatcher,
                                                     sys::ComponentContext* context) {
-  FXL_DCHECK(!g_cobalt_logger) << "Cobalt has already been initialized.";
+  FX_DCHECK(!g_cobalt_logger) << "Cobalt has already been initialized.";
 
-  std::unique_ptr<cobalt::CobaltLogger> cobalt_logger = cobalt::NewCobaltLoggerFromProjectId(
-      dispatcher, context->svc(), cobalt_registry::kProjectId);
+  std::unique_ptr<cobalt::CobaltLogger> cobalt_logger =
+      cobalt::NewCobaltLoggerFromProjectId(dispatcher, context->svc(), cobalt_registry::kProjectId);
 
   g_cobalt_logger = cobalt_logger.get();
   return fit::defer<fit::closure>(

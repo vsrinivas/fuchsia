@@ -31,6 +31,8 @@ class ModuleWithFakeRunner {
 }  // namespace
 
 int main(int /*argc*/, const char** /*argv*/) {
+  syslog::InitLogger({"module_with_fake_runner"});
+  
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::Create();
   modular::ModuleDriver<ModuleWithFakeRunner> driver(context.get(), [&loop] { loop.Quit(); });

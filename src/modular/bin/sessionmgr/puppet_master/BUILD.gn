@@ -42,10 +42,7 @@ source_set("puppet_master_impl") {
     "story_puppet_master_impl.h",
   ]
 
-  deps = [
-    ":story_command_executor",
-    "//src/lib/fxl",
-  ]
+  deps = [ ":story_command_executor" ]
 
   public_deps = [
     "//sdk/fidl/fuchsia.modular",
@@ -107,6 +104,7 @@ source_set("dispatch_story_command_executor") {
   public_deps = [
     ":story_command_executor",
     "//sdk/fidl/fuchsia.modular",
+    "//src/lib/syslog/cpp",
     "//src/modular/bin/sessionmgr/puppet_master/command_runners:command_runner",
     "//src/modular/lib/async/cpp:future",
     "//src/modular/lib/async/cpp:operation",

@@ -4,6 +4,7 @@
 #include "src/modular/bin/sessionmgr/puppet_master/command_runners/operation_calls/initialize_chain_call.h"
 
 #include "src/lib/fsl/vmo/strings.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/bin/sessionmgr/puppet_master/command_runners/operation_calls/set_link_value_call.h"
 
 namespace modular {
@@ -60,7 +61,7 @@ class InitializeChainCall
         // destroyed, the InitializeChainCall will automatically finish.
         std::string initial_json;
         if (info.create_link().initial_data.size > 0) {
-          FXL_CHECK(fsl::StringFromVmo(info.create_link().initial_data, &initial_json));
+          FX_CHECK(fsl::StringFromVmo(info.create_link().initial_data, &initial_json));
         }
         fuchsia::modular::LinkPath out_path;
         mapping->link_path.Clone(&out_path);

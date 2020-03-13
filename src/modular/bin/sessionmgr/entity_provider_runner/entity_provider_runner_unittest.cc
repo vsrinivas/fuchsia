@@ -20,6 +20,7 @@
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/macros.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/bin/sessionmgr/agent_runner/agent_runner.h"
 #include "src/modular/bin/sessionmgr/entity_provider_runner/entity_provider_launcher.h"
 #include "src/modular/lib/connect/connect.h"
@@ -112,8 +113,8 @@ class MyEntityProvider : fuchsia::modular::Agent,
     outgoing_dir_server_->Serve(std::move(launch_info_.directory_request));
 
     // Get |agent_context_| and |entity_resolver_| from incoming namespace.
-    FXL_CHECK(launch_info_.additional_services);
-    FXL_CHECK(launch_info_.additional_services->provider.is_valid());
+    FX_CHECK(launch_info_.additional_services);
+    FX_CHECK(launch_info_.additional_services->provider.is_valid());
     auto additional_services = launch_info_.additional_services->provider.Bind();
     connect::ConnectToService(additional_services.get(), agent_context_.NewRequest());
     fuchsia::modular::ComponentContextPtr component_context;
@@ -147,7 +148,7 @@ class MyEntityProvider : fuchsia::modular::Agent,
   // |fuchsia::modular::EntityProvider|
   void GetData(std::string cookie, std::string type, GetDataCallback callback) override {
     fsl::SizedVmo vmo;
-    FXL_CHECK(fsl::VmoFromString(type + ":MyData", &vmo));
+    FX_CHECK(fsl::VmoFromString(type + ":MyData", &vmo));
     auto vmo_ptr = std::make_unique<fuchsia::mem::Buffer>(std::move(vmo).ToTransport());
 
     callback(std::move(vmo_ptr));
@@ -225,7 +226,7 @@ TEST_F(EntityProviderRunnerTest, Basic) {
   });
   entity->GetData("MyType", [&counts](std::unique_ptr<fuchsia::mem::Buffer> data) {
     std::string data_string;
-    FXL_CHECK(fsl::StringFromVmo(*data, &data_string));
+    FX_CHECK(fsl::StringFromVmo(*data, &data_string));
     EXPECT_EQ("MyType:MyData", data_string);
     counts["GetData"]++;
   });

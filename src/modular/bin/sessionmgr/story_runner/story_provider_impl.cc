@@ -18,6 +18,7 @@
 
 #include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/fsl/vmo/strings.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/lib/uuid/uuid.h"
 #include "src/modular/bin/basemgr/cobalt/cobalt.h"
 #include "src/modular/bin/sessionmgr/annotations.h"
@@ -54,11 +55,11 @@ class StoryProviderImpl::StopStoryCall : public Operation<> {
 
     auto i = story_runtime_containers_->find(story_id_.value_or(""));
     if (i == story_runtime_containers_->end()) {
-      FXL_LOG(WARNING) << "I was told to teardown story " << story_id_ << ", but I can't find it.";
+      FX_LOGS(WARNING) << "I was told to teardown story " << story_id_ << ", but I can't find it.";
       return;
     }
 
-    FXL_DCHECK(i->second.controller_impl != nullptr);
+    FX_DCHECK(i->second.controller_impl != nullptr);
     i->second.controller_impl->StopBulk(bulk_, [this, flow] { CleanupRuntime(flow); });
   }
 
@@ -345,7 +346,7 @@ void StoryProviderImpl::Watch(
   auto watcher_ptr = watcher.Bind();
   for (const auto& item : story_runtime_containers_) {
     const auto& container = item.second;
-    FXL_CHECK(container.current_data->has_story_info());
+    FX_CHECK(container.current_data->has_story_info());
     watcher_ptr->OnChange(StoryInfo2ToStoryInfo(container.current_data->story_info()),
                           container.model_observer->model().runtime_state(),
                           container.model_observer->model().visibility_state());
@@ -452,7 +453,7 @@ fuchsia::modular::StoryInfo2Ptr StoryProviderImpl::GetCachedStoryInfo(std::strin
   if (it == story_runtime_containers_.end()) {
     return nullptr;
   }
-  FXL_CHECK(it->second.current_data->has_story_info());
+  FX_CHECK(it->second.current_data->has_story_info());
   return CloneOptional(it->second.current_data->story_info());
 }
 
@@ -496,7 +497,7 @@ void StoryProviderImpl::GetStoryInfo2(std::string story_id, GetStoryInfo2Callbac
 
 void StoryProviderImpl::AttachView(fidl::StringPtr story_id,
                                    fuchsia::ui::views::ViewHolderToken view_holder_token) {
-  FXL_CHECK(session_shell_)
+  FX_CHECK(session_shell_)
       << "Is the session shell component exporting a fuchsia.modular.SessionShell service?";
   fuchsia::modular::ViewIdentifier view_id;
   view_id.story_id = story_id.value_or("");
@@ -504,7 +505,7 @@ void StoryProviderImpl::AttachView(fidl::StringPtr story_id,
 }
 
 void StoryProviderImpl::DetachView(fidl::StringPtr story_id, fit::function<void()> done) {
-  FXL_CHECK(session_shell_);
+  FX_CHECK(session_shell_);
   fuchsia::modular::ViewIdentifier view_id;
   view_id.story_id = story_id.value_or("");
   session_shell_->DetachView(std::move(view_id), std::move(done));
@@ -640,7 +641,7 @@ void StoryProviderImpl::OnFocusChange(fuchsia::modular::FocusInfoPtr info) {
 
     auto i = story_runtime_containers_.find(info->focused_story_id.value());
     if (i == story_runtime_containers_.end()) {
-      FXL_LOG(ERROR) << "Story controller not found for focused story " << info->focused_story_id;
+      FX_LOGS(ERROR) << "Story controller not found for focused story " << info->focused_story_id;
       return;
     }
 

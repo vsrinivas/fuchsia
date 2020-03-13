@@ -9,6 +9,7 @@
 #include <src/modular/bin/sessionmgr/storage/annotation_xdr.h>
 
 #include "src/lib/fsl/vmo/strings.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/lib/base64url/base64url.h"
 
 namespace modular {
@@ -22,7 +23,7 @@ std::string BytesFromBase64(const std::string& base64) {
   std::string decoded;
 
   if (!base64url::Base64UrlDecode(base64, &decoded)) {
-    FXL_LOG(ERROR) << "Unable to decode from Base64";
+    FX_LOGS(ERROR) << "Unable to decode from Base64";
     return "";
   }
 

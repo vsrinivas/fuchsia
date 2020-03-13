@@ -4,7 +4,7 @@
 
 #include "src/modular/bin/sessionmgr/puppet_master/puppet_master_impl.h"
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/bin/sessionmgr/puppet_master/story_puppet_master_impl.h"
 #include "src/modular/bin/sessionmgr/storage/session_storage.h"
 
@@ -13,8 +13,8 @@ namespace modular {
 PuppetMasterImpl::PuppetMasterImpl(SessionStorage* const session_storage,
                                    StoryCommandExecutor* const executor)
     : session_storage_(session_storage), executor_(executor) {
-  FXL_DCHECK(session_storage_ != nullptr);
-  FXL_DCHECK(executor_ != nullptr);
+  FX_DCHECK(session_storage_ != nullptr);
+  FX_DCHECK(executor_ != nullptr);
 }
 
 PuppetMasterImpl::~PuppetMasterImpl() = default;

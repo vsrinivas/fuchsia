@@ -11,6 +11,7 @@
 #include <zircon/status.h>
 
 #include "src/lib/files/file.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/bin/basemgr/cobalt/cobalt.h"
 #include "src/modular/lib/connect/connect.h"
 
@@ -59,15 +60,15 @@ StartupAgentLauncher::StartupAgentLauncher(
 void StartupAgentLauncher::StartAgents(AgentRunner* agent_runner,
                                        std::vector<std::string> session_agents,
                                        std::vector<std::string> startup_agents) {
-  FXL_LOG(INFO) << "Starting session_agents:";
+  FX_LOGS(INFO) << "Starting session_agents:";
   for (const auto& agent : session_agents) {
-    FXL_LOG(INFO) << " " << agent;
+    FX_LOGS(INFO) << " " << agent;
     StartSessionAgent(agent_runner, agent);
   }
 
-  FXL_LOG(INFO) << "Starting startup_agents:";
+  FX_LOGS(INFO) << "Starting startup_agents:";
   for (const auto& agent : startup_agents) {
-    FXL_LOG(INFO) << " " << agent;
+    FX_LOGS(INFO) << " " << agent;
     StartAgent(agent_runner, agent);
   }
 }
@@ -120,8 +121,8 @@ void StartupAgentLauncher::StartSessionAgent(AgentRunner* agent_runner, const st
   // connection requests until we can restart.
   agent_data->controller.set_error_handler([this, agent_runner, url](zx_status_t status) {
     auto it = session_agents_.find(url);
-    FXL_DCHECK(it != session_agents_.end()) << "Controller and services not registered for " << url;
-    FXL_LOG(INFO) << url << " session agent appears to have crashed, with status: "
+    FX_DCHECK(it != session_agents_.end()) << "Controller and services not registered for " << url;
+    FX_LOGS(INFO) << url << " session agent appears to have crashed, with status: "
                   << zx_status_get_string(status);
     auto& agent_data = it->second;
     agent_data.services.Unbind();
@@ -129,13 +130,13 @@ void StartupAgentLauncher::StartSessionAgent(AgentRunner* agent_runner, const st
     ReportSessionAgentEvent(url, SessionAgentEventsMetricDimensionEventType::Crash);
 
     if (is_terminating_cb_ != nullptr && is_terminating_cb_()) {
-      FXL_LOG(INFO) << "Not restarting " << url << " because StartupAgentLauncher is terminating.";
+      FX_LOGS(INFO) << "Not restarting " << url << " because StartupAgentLauncher is terminating.";
     } else {
       if (agent_data.restart.ShouldRetry()) {
-        FXL_LOG(INFO) << "Restarting " << url << "...";
+        FX_LOGS(INFO) << "Restarting " << url << "...";
         StartSessionAgent(agent_runner, url);
       } else {
-        FXL_LOG(WARNING) << url << " failed to restart more than " << kSessionAgentRetryLimit.count
+        FX_LOGS(WARNING) << url << " failed to restart more than " << kSessionAgentRetryLimit.count
                          << " times in " << kSessionAgentRetryLimit.period.to_secs() << " seconds.";
         ReportSessionAgentEvent(url,
                                 SessionAgentEventsMetricDimensionEventType::CrashLimitExceeded);

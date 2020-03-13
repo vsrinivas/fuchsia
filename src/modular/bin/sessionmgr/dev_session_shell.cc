@@ -20,8 +20,8 @@
 #include <utility>
 
 #include "src/lib/fxl/command_line.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/lib/app_driver/cpp/app_driver.h"
 #include "src/modular/lib/fidl/single_service_app.h"
 #include "src/modular/lib/fidl/view_host.h"
@@ -69,10 +69,10 @@ class DevSessionShellApp : fuchsia::modular::StoryWatcher,
   }
 
   void Connect() {
-    FXL_CHECK(!!view_token_.value);
-    FXL_CHECK(!!story_provider_);
-    FXL_CHECK(!!puppet_master_);
-    FXL_LOG(INFO) << "DevSessionShell START " << settings_.root_module;
+    FX_CHECK(!!view_token_.value);
+    FX_CHECK(!!story_provider_);
+    FX_CHECK(!!puppet_master_);
+    FX_LOGS(INFO) << "DevSessionShell START " << settings_.root_module;
 
     auto scenic = component_context()->svc()->Connect<fuchsia::ui::scenic::Scenic>();
     scenic::ViewContext context = {
@@ -104,13 +104,13 @@ class DevSessionShellApp : fuchsia::modular::StoryWatcher,
   void StartStoryById(const fidl::StringPtr& story_id) {
     story_provider_->GetController(story_id.value_or(""), story_controller_.NewRequest());
     story_controller_.set_error_handler([story_id](zx_status_t status) {
-      FXL_LOG(ERROR) << "Story controller for story " << story_id
+      FX_LOGS(ERROR) << "Story controller for story " << story_id
                      << " died. Does this story exist?";
     });
 
     story_controller_->Watch(story_watcher_binding_.NewBinding());
 
-    FXL_LOG(INFO) << "DevSessionShell Starting story with id: " << story_id;
+    FX_LOGS(INFO) << "DevSessionShell Starting story with id: " << story_id;
 
     story_controller_->RequestStart();
     focus_controller_->Set(story_id);
@@ -119,7 +119,7 @@ class DevSessionShellApp : fuchsia::modular::StoryWatcher,
   // |SessionShell|
   void AttachView(fuchsia::modular::ViewIdentifier view_id,
                   fuchsia::ui::views::ViewHolderToken view_holder_token) override {
-    FXL_LOG(INFO) << "DevSessionShell AttachView(): " << view_id.story_id;
+    FX_LOGS(INFO) << "DevSessionShell AttachView(): " << view_id.story_id;
     view_->ConnectView(std::move(view_holder_token));
   }
 
@@ -131,13 +131,13 @@ class DevSessionShellApp : fuchsia::modular::StoryWatcher,
 
   // |SessionShell|
   void DetachView(fuchsia::modular::ViewIdentifier view_id, fit::function<void()> done) override {
-    FXL_LOG(INFO) << "DevSessionShell DetachView(): " << view_id.story_id;
+    FX_LOGS(INFO) << "DevSessionShell DetachView(): " << view_id.story_id;
     done();
   }
 
   // |fuchsia::modular::StoryWatcher|
   void OnStateChange(fuchsia::modular::StoryState state) override {
-    FXL_LOG(INFO) << "DevSessionShell State " << fidl::ToUnderlying(state);
+    FX_LOGS(INFO) << "DevSessionShell State " << fidl::ToUnderlying(state);
   }
 
   // |fuchsia::modular::StoryWatcher|
@@ -170,6 +170,8 @@ class DevSessionShellApp : fuchsia::modular::StoryWatcher,
 }  // namespace
 
 int main(int argc, const char** argv) {
+  syslog::InitLogger({"dev_session_shell"});
+  
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   Settings settings(command_line);
 

@@ -8,6 +8,7 @@
 
 #include "gtest/gtest.h"
 #include "src/lib/fxl/macros.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/lib/fidl/array_to_string.h"
 #include "src/modular/lib/ledger_client/ledger_client.h"
 #include "src/modular/lib/ledger_client/page_id.h"
@@ -36,7 +37,7 @@ class PageClientImpl : public modular::PageClient {
 
     values_[key] = value;
 
-    FXL_LOG(INFO) << "OnPageChange \"" << prefix() << "\""
+    FX_LOGS(INFO) << "OnPageChange \"" << prefix() << "\""
                   << " " << change_count_ << " " << key << " " << value;
   }
 
@@ -47,7 +48,7 @@ class PageClientImpl : public modular::PageClient {
   void OnPageConflict(Conflict* const conflict) override {
     ++conflict_count_;
 
-    FXL_LOG(INFO) << "OnPageConflict " << prefix() << " " << conflict_count_ << " "
+    FX_LOGS(INFO) << "OnPageConflict " << prefix() << " " << conflict_count_ << " "
                   << modular::to_string(conflict->key) << " " << conflict->left << " "
                   << conflict->right;
 

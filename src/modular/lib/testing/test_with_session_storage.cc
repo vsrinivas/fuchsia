@@ -20,7 +20,7 @@ std::unique_ptr<modular::StoryStorage> TestWithSessionStorage::GetStoryStorage(
   std::unique_ptr<modular::StoryStorage> story_storage;
   bool done{};
   storage->GetStoryStorage(story_id)->Then([&](std::unique_ptr<modular::StoryStorage> result) {
-    FXL_DCHECK(!!result);
+    FX_DCHECK(!!result);
     story_storage = std::move(result);
     done = true;
   });
@@ -45,7 +45,7 @@ fidl::StringPtr TestWithSessionStorage::CreateStoryImpl(fidl::StringPtr story_id
 void TestWithSessionStorage::CreateStory(const std::string& story_id,
                                          modular::SessionStorage* const storage) {
   auto created_story_id = CreateStoryImpl(story_id, storage).value_or("");
-  FXL_DCHECK(story_id == created_story_id);
+  FX_DCHECK(story_id == created_story_id);
 }
 
 fidl::StringPtr TestWithSessionStorage::CreateStory(modular::SessionStorage* const storage) {

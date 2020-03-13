@@ -4,7 +4,7 @@
 
 #include "src/modular/bin/sessionmgr/puppet_master/command_runners/add_mod_command_runner.h"
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/bin/sessionmgr/puppet_master/command_runners/operation_calls/add_mod_call.h"
 
 namespace modular {
@@ -15,7 +15,7 @@ AddModCommandRunner::~AddModCommandRunner() = default;
 void AddModCommandRunner::Execute(fidl::StringPtr story_id, StoryStorage* const story_storage,
                                   fuchsia::modular::StoryCommand command,
                                   fit::function<void(fuchsia::modular::ExecuteResult)> done) {
-  FXL_CHECK(command.is_add_mod());
+  FX_CHECK(command.is_add_mod());
 
   auto& add_mod = command.add_mod();
   if (add_mod.mod_name.size() == 0 && !add_mod.mod_name_transitional.has_value()) {

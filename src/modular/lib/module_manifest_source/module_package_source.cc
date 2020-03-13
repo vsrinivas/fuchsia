@@ -11,10 +11,10 @@
 
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/lib/fxl/strings/split_string.h"
 #include "src/lib/fxl/strings/string_printf.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/lib/module_manifest_source/json.h"
 
 namespace modular {
@@ -35,18 +35,18 @@ ModulePackageSource::~ModulePackageSource() {}
 
 void ModulePackageSource::IndexManifest(std::string package_name,
                                         std::string module_manifest_path) {
-  FXL_DCHECK(dispatcher_);
-  FXL_DCHECK(new_entry_fn_);
+  FX_DCHECK(dispatcher_);
+  FX_DCHECK(new_entry_fn_);
 
   std::string data;
   if (!files::ReadFileToString(module_manifest_path, &data)) {
-    FXL_LOG(ERROR) << "Couldn't read module manifest from: " << module_manifest_path;
+    FX_LOGS(ERROR) << "Couldn't read module manifest from: " << module_manifest_path;
     return;
   }
 
   fuchsia::modular::ModuleManifest entry;
   if (!ModuleManifestEntryFromJson(data, &entry)) {
-    FXL_LOG(WARNING) << "Couldn't parse module manifest from: " << module_manifest_path;
+    FX_LOGS(WARNING) << "Couldn't parse module manifest from: " << module_manifest_path;
     return;
   }
 

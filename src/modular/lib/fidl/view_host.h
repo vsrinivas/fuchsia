@@ -13,8 +13,8 @@
 #include <map>
 #include <memory>
 
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/lib/ui/base_view/base_view.h"
 
 namespace modular {
@@ -49,7 +49,7 @@ class ViewHost : public scenic::BaseView {
   };
 
   // |scenic::SessionListener|
-  void OnScenicError(std::string error) override { FXL_LOG(ERROR) << "Scenic Error " << error; }
+  void OnScenicError(std::string error) override { FX_LOGS(ERROR) << "Scenic Error " << error; }
 
   // |scenic::BaseView|
   void OnPropertiesChanged(fuchsia::ui::gfx::ViewProperties old_properties) override;

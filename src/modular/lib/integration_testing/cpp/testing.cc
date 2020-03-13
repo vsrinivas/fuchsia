@@ -9,7 +9,7 @@
 
 #include <set>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 using fuchsia::testing::runner::TestRunner;
 using fuchsia::testing::runner::TestRunnerPtr;
@@ -26,18 +26,18 @@ bool g_connected;
 }  // namespace
 
 void Init(sys::ComponentContext* context, const std::string& identity) {
-  FXL_CHECK(context);
-  FXL_CHECK(!g_test_runner.is_bound());
-  FXL_CHECK(!g_test_runner_store.is_bound());
+  FX_CHECK(context);
+  FX_CHECK(!g_test_runner.is_bound());
+  FX_CHECK(!g_test_runner_store.is_bound());
 
   g_test_runner = context->svc()->Connect<TestRunner>();
   g_test_runner.set_error_handler([](zx_status_t status) {
     if (g_connected) {
-      FXL_LOG(ERROR) << "Lost connection to TestRunner. This indicates that "
+      FX_LOGS(ERROR) << "Lost connection to TestRunner. This indicates that "
                         "there was an observed process that was terminated "
                         "without calling TestRunner.Done().";
     } else {
-      FXL_LOG(ERROR) << "This application must be run under test_runner.";
+      FX_LOGS(ERROR) << "This application must be run under test_runner.";
     }
     exit(1);
   });
@@ -83,7 +83,7 @@ void Teardown(fit::function<void()> ack) {
 }
 
 TestRunnerStore* GetStore() {
-  FXL_CHECK(g_test_runner_store.is_bound());
+  FX_CHECK(g_test_runner_store.is_bound());
   return g_test_runner_store.get();
 }
 
@@ -106,27 +106,27 @@ void Await(const fidl::StringPtr& condition, fit::function<void()> cont) {
 
 void RegisterTestPoint(const std::string& label) {
   // Test points can only be registered before Init is called.
-  FXL_CHECK(!g_test_runner.is_bound()) << "Test Runner connection not bound. You must call "
-                                       << "ComponentBase::TestInit() before registering "
-                                       << "\"" << label << "\".";
+  FX_CHECK(!g_test_runner.is_bound()) << "Test Runner connection not bound. You must call "
+                                      << "ComponentBase::TestInit() before registering "
+                                      << "\"" << label << "\".";
 
   auto inserted = g_test_points.insert(label);
 
   // Test points must have unique labels.
-  FXL_CHECK(inserted.second) << "Test points must have unique labels. "
-                             << "\"" << label << "\" is repeated.";
+  FX_CHECK(inserted.second) << "Test points must have unique labels. "
+                            << "\"" << label << "\" is repeated.";
 }
 
 void PassTestPoint(const std::string& label) {
   // Test points can only be passed after initialization.
-  FXL_CHECK(g_test_runner.is_bound())
+  FX_CHECK(g_test_runner.is_bound())
       << "Test Runner connection not bound. You must call "
       << "ComponentBase::TestInit() before \"" << label << "\".Pass() can be "
       << "called.";
 
   // Test points can only be passed once.
-  FXL_CHECK(g_test_points.erase(label)) << "TEST FAILED: Test point can only be passed once. "
-                                        << "\"" << label << "\".Pass() has been called twice.";
+  FX_CHECK(g_test_points.erase(label)) << "TEST FAILED: Test point can only be passed once. "
+                                       << "\"" << label << "\".Pass() has been called twice.";
 
   g_test_runner->PassTestPoint();
 }

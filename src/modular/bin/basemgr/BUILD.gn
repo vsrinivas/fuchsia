@@ -49,7 +49,7 @@ executable_package("basemgr") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fsl",
-    "//src/lib/fxl",
+    "//src/lib/syslog/cpp",
     "//src/modular/bin/basemgr/cobalt",
     "//src/modular/lib/async/cpp:future",
     "//src/modular/lib/async/cpp:future",
@@ -87,10 +87,7 @@ source_set("wait_for_minfs") {
     "wait_for_minfs.h",
   ]
 
-  public_deps = [
-    "//src/lib/fsl",
-    "//src/lib/fxl",
-  ]
+  public_deps = [ "//src/lib/fsl" ]
 
   deps = [ "//zircon/public/lib/fdio-caller" ]
 }
@@ -115,7 +112,6 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/sys/cpp",
     "//src/lib/fsl",
-    "//src/lib/fxl",
     "//src/modular/lib/async/cpp:future",
     "//src/modular/lib/common:async_holder",
     "//src/modular/lib/common:teardown",
@@ -158,7 +154,6 @@ executable_package("dev_base_shell") {
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.ui.views",
     "//src/lib/callback",
-    "//src/lib/fxl",
     "//src/modular/lib/app_driver/cpp",
     "//src/modular/lib/fidl:single_service_app",
     "//src/modular/lib/integration_testing/cpp",
@@ -177,7 +172,6 @@ executable("auto_login_base_shell_bin") {
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.ui.views",
     "//src/lib/callback",
-    "//src/lib/fxl",
     "//src/modular/lib/app_driver/cpp",
     "//src/modular/lib/fidl:single_service_app",
     "//zircon/public/lib/async-loop-cpp",
@@ -244,7 +238,6 @@ executable("session_context_impl_unittest") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fsl",
-    "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//src/modular/lib/fidl:clone",
     "//src/modular/lib/fidl:environment",

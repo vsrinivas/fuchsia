@@ -8,7 +8,10 @@ source_set("string_escape") {
     "string_escape.h",
   ]
 
-  public_deps = [ "//src/lib/fxl" ]
+  public_deps = [
+    "//src/lib/fxl",
+    "//src/lib/syslog/cpp",
+  ]
 }
 
 source_set("unittests") {
@@ -19,7 +22,6 @@ source_set("unittests") {
   deps = [
     ":string_escape",
     "//garnet/public/lib/gtest",
-    "//src/lib/fxl",
     "//third_party/googletest:gtest",
   ]
 }

@@ -20,6 +20,7 @@
 #include "src/lib/files/unique_fd.h"
 #include "src/lib/fsl/io/fd.h"
 #include "src/lib/fxl/strings/substitute.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/lib/scoped_tmpfs/scoped_tmpfs.h"
 
 namespace {
@@ -32,10 +33,10 @@ class FilesystemForTest {
   // path.
   zx::channel GetChannelForDir(fxl::StringView dir) {
     std::string dir_str = ToRelativePath(dir);
-    FXL_CHECK(files::IsDirectoryAt(tmpfs_.root_fd(), dir_str));
+    FX_CHECK(files::IsDirectoryAt(tmpfs_.root_fd(), dir_str));
 
     int fd = openat(tmpfs_.root_fd(), dir_str.data(), O_DIRECTORY);
-    FXL_CHECK(fd != -1);
+    FX_CHECK(fd != -1);
 
     auto ch = fsl::CloneChannelFromFileDescriptor(fd);
     close(fd);
@@ -47,8 +48,8 @@ class FilesystemForTest {
   // required for |path| exist are created as needed.
   void AddFile(fxl::StringView path, const std::string& data) {
     std::string path_str = ToRelativePath(path);
-    FXL_CHECK(files::CreateDirectoryAt(tmpfs_.root_fd(), files::GetDirectoryName(path_str)));
-    FXL_CHECK(files::WriteFileAt(tmpfs_.root_fd(), path_str, data.data(), data.size()));
+    FX_CHECK(files::CreateDirectoryAt(tmpfs_.root_fd(), files::GetDirectoryName(path_str)));
+    FX_CHECK(files::WriteFileAt(tmpfs_.root_fd(), path_str, data.data(), data.size()));
   }
 
  private:

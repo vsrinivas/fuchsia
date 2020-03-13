@@ -4,7 +4,7 @@
 
 #include "src/modular/lib/fidl/proxy.h"
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace modular {
 
@@ -15,7 +15,7 @@ ProxySet::~ProxySet() = default;
 void ProxySet::Drop(ProxyBase* const proxy) {
   auto i = std::remove_if(proxies_.begin(), proxies_.end(),
                           [proxy](std::unique_ptr<ProxyBase>& p) { return proxy == p.get(); });
-  FXL_DCHECK(i != proxies_.end());
+  FX_DCHECK(i != proxies_.end());
   proxies_.erase(i, proxies_.end());
 }
 

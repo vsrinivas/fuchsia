@@ -14,6 +14,7 @@
 #include <memory>
 
 #include "lib/fdio/directory.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/bin/sessionmgr/agent_runner/agent_runner.h"
 #include "src/modular/lib/common/teardown.h"
 
@@ -44,7 +45,7 @@ void GetFidlDirectoryEntries(fuchsia::io::Directory* dir,
         std::vector<std::string> entry_names{};
 
         if (status != ZX_OK) {
-          FXL_LOG(ERROR) << "GetFidlDirectoryEntries: could not read directory entries, error "
+          FX_LOGS(ERROR) << "GetFidlDirectoryEntries: could not read directory entries, error "
                          << status << " (" << zx_status_get_string(status) << ")";
           callback(std::move(entry_names));
           return;
@@ -79,7 +80,7 @@ class AgentContextImpl::InitializeCall : public Operation<> {
 
  private:
   void Run() override {
-    FXL_CHECK(agent_context_impl_->state_ == State::INITIALIZING);
+    FX_CHECK(agent_context_impl_->state_ == State::INITIALIZING);
 
     FlowToken flow{this};
 
@@ -118,7 +119,7 @@ class AgentContextImpl::InitializeCall : public Operation<> {
     // Enumerate the services that the agent has published in its outgoing directory.
     auto agent_outgoing_dir_handle =
         fdio_service_clone(agent_context_impl_->app_client_->services().directory().get());
-    FXL_CHECK(agent_outgoing_dir_handle != ZX_HANDLE_INVALID);
+    FX_CHECK(agent_outgoing_dir_handle != ZX_HANDLE_INVALID);
     zx::channel agent_outgoing_dir_chan(agent_outgoing_dir_handle);
     outgoing_dir_ptr_.Bind(std::move(agent_outgoing_dir_chan));
 
@@ -245,7 +246,7 @@ void AgentContextImpl::ConnectToService(
   operation_queue_.Add(std::make_unique<SyncCall>(
       [this, requestor_url, agent_controller_request = std::move(agent_controller_request),
        service_name, channel = std::move(channel)]() mutable {
-        FXL_CHECK(state_ == State::RUNNING);
+        FX_CHECK(state_ == State::RUNNING);
 
         if (agent_outgoing_services_.count(service_name) > 0) {
           app_client_->services().ConnectToService(std::move(channel), service_name);
@@ -269,7 +270,7 @@ void AgentContextImpl::NewAgentConnection(
   operation_queue_.Add(std::make_unique<SyncCall>(
       [this, requestor_url, incoming_services_request = std::move(incoming_services_request),
        agent_controller_request = std::move(agent_controller_request)]() mutable {
-        FXL_CHECK(state_ == State::RUNNING);
+        FX_CHECK(state_ == State::RUNNING);
 
         agent_->Connect(requestor_url, std::move(incoming_services_request));
 
@@ -285,7 +286,7 @@ void AgentContextImpl::NewEntityProviderConnection(
   operation_queue_.Add(std::make_unique<SyncCall>(
       [this, entity_provider_request = std::move(entity_provider_request),
        agent_controller_request = std::move(agent_controller_request)]() mutable {
-        FXL_CHECK(state_ == State::RUNNING);
+        FX_CHECK(state_ == State::RUNNING);
         app_client_->services().ConnectToService(std::move(entity_provider_request));
         agent_controller_bindings_.AddBinding(this, std::move(agent_controller_request));
       }));
@@ -311,7 +312,7 @@ void AgentContextImpl::Authorize(
     fidl::InterfaceHandle<fuchsia::auth::AuthenticationUIContext> auth_ui_context,
     std::vector<::std::string> app_scopes, fidl::StringPtr user_profile_id,
     fidl::StringPtr auth_code, AuthorizeCallback callback) {
-  FXL_LOG(ERROR) << "AgentContextImpl::Authorize() not supported from agent "
+  FX_LOGS(ERROR) << "AgentContextImpl::Authorize() not supported from agent "
                  << "context";
   callback(fuchsia::auth::Status::INVALID_REQUEST, nullptr);
 }
@@ -320,14 +321,14 @@ void AgentContextImpl::GetAccessToken(fuchsia::auth::AppConfig app_config,
                                       std::string user_profile_id,
                                       std::vector<::std::string> app_scopes,
                                       GetAccessTokenCallback callback) {
-  FXL_LOG(ERROR) << "AgentContextImpl::GetAccessToken() not supported from "
+  FX_LOGS(ERROR) << "AgentContextImpl::GetAccessToken() not supported from "
                  << "agent context";
   callback(fuchsia::auth::Status::INVALID_REQUEST, nullptr);
 }
 
 void AgentContextImpl::GetIdToken(fuchsia::auth::AppConfig app_config, std::string user_profile_id,
                                   fidl::StringPtr audience, GetIdTokenCallback callback) {
-  FXL_LOG(ERROR) << "AgentContextImpl::GetIdToken() not supported from agent "
+  FX_LOGS(ERROR) << "AgentContextImpl::GetIdToken() not supported from agent "
                  << "context";
   callback(fuchsia::auth::Status::INVALID_REQUEST, nullptr);
 }
@@ -335,14 +336,14 @@ void AgentContextImpl::GetIdToken(fuchsia::auth::AppConfig app_config, std::stri
 void AgentContextImpl::DeleteAllTokens(fuchsia::auth::AppConfig app_config,
                                        std::string user_profile_id, bool force,
                                        DeleteAllTokensCallback callback) {
-  FXL_LOG(ERROR) << "AgentContextImpl::DeleteAllTokens() not supported from "
+  FX_LOGS(ERROR) << "AgentContextImpl::DeleteAllTokens() not supported from "
                  << "agent context";
   callback(fuchsia::auth::Status::INVALID_REQUEST);
 }
 
 void AgentContextImpl::ListProfileIds(fuchsia::auth::AppConfig app_config,
                                       ListProfileIdsCallback callback) {
-  FXL_LOG(ERROR) << "AgentContextImpl::ListProfileIds() not supported from "
+  FX_LOGS(ERROR) << "AgentContextImpl::ListProfileIds() not supported from "
                  << "agent context";
   callback(fuchsia::auth::Status::INVALID_REQUEST, {});
 }
@@ -366,11 +367,11 @@ void AgentContextImpl::StopAgentIfIdle() {
 }
 
 void AgentContextImpl::StopForTeardown(fit::function<void()> callback) {
-  FXL_DLOG(INFO) << "AgentContextImpl::StopForTeardown() " << url_;
+  FX_DLOGS(INFO) << "AgentContextImpl::StopForTeardown() " << url_;
   operation_queue_.Add(
       std::make_unique<StopCall>(true /* is agent runner terminating? */, this,
                                  [this, callback = std::move(callback)](bool stopped) {
-                                   FXL_DCHECK(stopped);
+                                   FX_DCHECK(stopped);
                                    agent_runner_->RemoveAgent(url_);
                                    callback();
                                    // |this| is no longer valid at this

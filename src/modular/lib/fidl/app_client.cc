@@ -15,6 +15,7 @@
 #include "src/lib/files/directory.h"
 #include "src/lib/files/unique_fd.h"
 #include "src/lib/fsl/io/fd.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace modular {
 AppClientBase::AppClientBase(fuchsia::sys::Launcher* const launcher,
@@ -35,7 +36,7 @@ AppClientBase::AppClientBase(fuchsia::sys::Launcher* const launcher,
 
   if (!data_origin.empty()) {
     if (!files::CreateDirectory(data_origin)) {
-      FXL_LOG(ERROR) << "Unable to create directory at " << data_origin;
+      FX_LOGS(ERROR) << "Unable to create directory at " << data_origin;
       return;
     }
     launch_info.flat_namespace = fuchsia::sys::FlatNamespace::New();
@@ -43,14 +44,14 @@ AppClientBase::AppClientBase(fuchsia::sys::Launcher* const launcher,
 
     fbl::unique_fd dir(open(data_origin.c_str(), O_DIRECTORY | O_RDONLY));
     if (!dir.is_valid()) {
-      FXL_LOG(ERROR) << "Unable to open directory at " << data_origin << ". errno: " << errno;
+      FX_LOGS(ERROR) << "Unable to open directory at " << data_origin << ". errno: " << errno;
       return;
     }
 
     launch_info.flat_namespace->directories.push_back(
         fsl::CloneChannelFromFileDescriptor(dir.get()));
     if (!launch_info.flat_namespace->directories.at(0)) {
-      FXL_LOG(ERROR) << "Unable create a handle from  " << data_origin;
+      FX_LOGS(ERROR) << "Unable create a handle from  " << data_origin;
       return;
     }
   }

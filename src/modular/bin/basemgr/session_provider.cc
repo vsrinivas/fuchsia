@@ -10,6 +10,7 @@
 
 #include <src/modular/lib/pseudo_dir/pseudo_dir_utils.h>
 
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/lib/fidl/clone.h"
 #include "src/modular/lib/modular_config/modular_config.h"
 #include "src/modular/lib/modular_config/modular_config_constants.h"
@@ -51,7 +52,7 @@ bool SessionProvider::StartSession(fuchsia::ui::views::ViewToken view_token,
                                    fuchsia::modular::auth::AccountPtr account,
                                    fuchsia::auth::TokenManagerPtr agent_token_manager) {
   if (session_context_) {
-    FXL_LOG(WARNING) << "StartSession() called when session context already "
+    FX_LOGS(WARNING) << "StartSession() called when session context already "
                         "exists. Try calling SessionProvider::Teardown()";
     return false;
   }
@@ -85,7 +86,7 @@ bool SessionProvider::StartSession(fuchsia::ui::views::ViewToken view_token,
   // Create a config directory
   // Channel endpoints for hosting an overriden config if using basemgr_launcher.
   zx::channel client;
-  FXL_CHECK(zx::channel::create(0u, &config_request_, &client) == ZX_OK);
+  FX_CHECK(zx::channel::create(0u, &config_request_, &client) == ZX_OK);
 
   // Host the config file in a PseudoDir
   auto basemgr = CloneStruct(config_.basemgr_config());
@@ -152,12 +153,12 @@ void SessionProvider::OnSessionShutdown(SessionContextImpl::ShutDownReason shutd
 
     // Check if max retry limit is reached
     if (session_crash_recovery_counter_ == kMaxCrashRecoveryLimit) {
-      FXL_LOG(ERROR) << "Sessionmgr restart limit reached. Considering "
+      FX_LOGS(ERROR) << "Sessionmgr restart limit reached. Considering "
                         "this an unrecoverable failure.";
       administrator_->Suspend(
           fuchsia::device::manager::SUSPEND_FLAG_REBOOT, [](zx_status_t status) {
             if (status != ZX_OK) {
-              FXL_LOG(ERROR) << "Failed to reboot: " << zx_status_get_string(status);
+              FX_LOGS(ERROR) << "Failed to reboot: " << zx_status_get_string(status);
             }
           });
       return;

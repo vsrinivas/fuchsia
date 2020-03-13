@@ -6,6 +6,8 @@
 
 #include <lib/async/cpp/task.h>
 
+#include "src/lib/syslog/cpp/logger.h"
+
 namespace modular {
 
 PseudoDirServer::PseudoDirServer(std::unique_ptr<vfs::PseudoDir> pseudo_dir)
@@ -22,7 +24,7 @@ PseudoDirServer::PseudoDirServer(std::unique_ptr<vfs::PseudoDir> pseudo_dir)
 }
 
 PseudoDirServer::~PseudoDirServer() {
-  FXL_CHECK(thread_loop_);
+  FX_CHECK(thread_loop_);
   // std::thread requires that we join() the thread before it is destroyed.
   thread_loop_->Quit();
   serving_thread_.join();

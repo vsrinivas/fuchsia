@@ -27,7 +27,6 @@ source_set("cobalt") {
   public_deps = [
     ":basemgr_metrics_registry",
     "//sdk/lib/sys/cpp",
-    "//src/lib/fxl",
   ]
 
   deps = [

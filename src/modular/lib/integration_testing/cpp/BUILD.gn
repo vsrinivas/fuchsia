@@ -12,6 +12,7 @@ source_set("cpp") {
 
   deps = [
     "//sdk/lib/sys/cpp",
+    "//src/lib/syslog/cpp",
     "//src/modular/lib/async/cpp:future",
   ]
   public_deps = [ "//sdk/fidl/fuchsia.testing.runner" ]

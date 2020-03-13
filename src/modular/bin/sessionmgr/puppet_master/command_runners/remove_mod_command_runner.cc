@@ -4,7 +4,7 @@
 
 #include "src/modular/bin/sessionmgr/puppet_master/command_runners/remove_mod_command_runner.h"
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace modular {
 
@@ -61,7 +61,7 @@ RemoveModCommandRunner::~RemoveModCommandRunner() = default;
 void RemoveModCommandRunner::Execute(fidl::StringPtr story_id, StoryStorage* const story_storage,
                                      fuchsia::modular::StoryCommand command,
                                      fit::function<void(fuchsia::modular::ExecuteResult)> done) {
-  FXL_CHECK(command.is_remove_mod());
+  FX_CHECK(command.is_remove_mod());
 
   operation_queue_.Add(std::make_unique<RemoveModCall>(
       story_storage, std::move(story_id), std::move(command.remove_mod()), std::move(done)));

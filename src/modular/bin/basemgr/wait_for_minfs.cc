@@ -20,10 +20,10 @@
 #include <fbl/unique_fd.h>
 
 #include "src/lib/files/file.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/fxl/strings/string_view.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace modular {
 
@@ -55,7 +55,7 @@ void WaitForMinfs() {
     delay = delay * 2;
   }
 
-  FXL_LOG(WARNING) << kPersistentFileSystem
+  FX_LOGS(WARNING) << kPersistentFileSystem
                    << " is not persistent. Did you forget to configure it?";
 }
 

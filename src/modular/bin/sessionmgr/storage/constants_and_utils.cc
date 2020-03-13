@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "src/lib/fxl/strings/join_strings.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/lib/string_escape/string_escape.h"
 
 namespace modular {
@@ -64,8 +65,8 @@ std::string MakeLinkKey(const fuchsia::modular::LinkPath& link_path) {
 }
 
 std::string MakeModuleKey(const std::vector<std::string>& module_path) {
-  FXL_DCHECK(module_path.size() > 0) << EncodeModulePath(module_path);
-  FXL_DCHECK(module_path.at(0).size() > 0) << EncodeModulePath(module_path);
+  FX_DCHECK(module_path.size() > 0) << EncodeModulePath(module_path);
+  FX_DCHECK(module_path.at(0).size() > 0) << EncodeModulePath(module_path);
   std::string key{kModuleKeyPrefix};
   key.append(EncodeModulePath(module_path));
   return key;

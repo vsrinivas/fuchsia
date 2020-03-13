@@ -6,6 +6,7 @@
 
 #include <map>
 
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/lib/async/cpp/future.h"
 #include "src/modular/lib/async/cpp/operation.h"
 
@@ -77,7 +78,7 @@ class DispatchStoryCommandExecutor::ExecuteStoryCommandsCall
 
     for (auto& command : commands_) {
       auto tag_string_it = executor_->story_command_tag_strings_.find(command.Which());
-      FXL_CHECK(tag_string_it != executor_->story_command_tag_strings_.end())
+      FX_CHECK(tag_string_it != executor_->story_command_tag_strings_.end())
           << "No fuchsia::modular::StoryCommand::Tag string for tag "
           << static_cast<int>(command.Which());
       const auto& tag_string = tag_string_it->second;
@@ -142,7 +143,7 @@ DispatchStoryCommandExecutor::DispatchStoryCommandExecutor(
           {fuchsia::modular::StoryCommand::Tag::kSetFocusState, "StoryCommand::SetFocusState"},
           {fuchsia::modular::StoryCommand::Tag::kSetKindOfProtoStoryOption,
            "StoryCommand::SetKindOfProtoStoryOption"}} {
-  FXL_DCHECK(session_storage_ != nullptr);
+  FX_DCHECK(session_storage_ != nullptr);
 }
 
 DispatchStoryCommandExecutor::~DispatchStoryCommandExecutor() {}

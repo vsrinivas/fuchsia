@@ -5,7 +5,7 @@
 #include "src/modular/bin/sessionmgr/story/model/apply_mutations.h"
 
 #include "lib/fostr/fidl/fuchsia/modular/storymodel/formatting.h"
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 using fuchsia::modular::StoryState;
 using fuchsia::modular::StoryVisibilityState;
@@ -40,7 +40,7 @@ StoryModel ApplyMutations(const StoryModel& current_model,
         ApplySetRuntimeState(command.set_runtime_state(), &new_model);
         break;
       case StoryModelMutation::Tag::Invalid:
-        FXL_LOG(FATAL) << "Encountered invalid StoryModelMutation: " << command;
+        FX_LOGS(FATAL) << "Encountered invalid StoryModelMutation: " << command;
     }
   }
 

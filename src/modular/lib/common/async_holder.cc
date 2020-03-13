@@ -7,7 +7,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace modular {
 
@@ -18,7 +18,7 @@ AsyncHolderBase::~AsyncHolderBase() {
   if (!*down_) {
     // This is not a warning because it happens because of an outer timeout, for
     // which there already is a warning issued.
-    FXL_DLOG(INFO) << "Delete without teardown: " << name_;
+    FX_DLOGS(INFO) << "Delete without teardown: " << name_;
   }
   *down_ = true;
 }
@@ -33,7 +33,7 @@ void AsyncHolderBase::Teardown(zx::duration timeout, fit::function<void()> done)
     *down = true;
 
     if (from_timeout) {
-      FXL_LOG(WARNING) << "Teardown() timed out for " << name_;
+      FX_LOGS(WARNING) << "Teardown() timed out for " << name_;
     }
 
     ImplReset();

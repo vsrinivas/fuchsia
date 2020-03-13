@@ -7,7 +7,6 @@
 
 #include "gtest/gtest-spi.h"
 #include "gtest/gtest.h"
-#include "src/lib/fxl/logging.h"
 
 namespace modular {
 

@@ -8,7 +8,7 @@
 
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace modular {
 
@@ -60,14 +60,14 @@ bool EntityReferenceFromJson(const rapidjson::Value& value, std::string* ref) {
 }
 
 bool ExtractEntityTypesFromJson(const std::string& json, std::vector<std::string>* const output) {
-  FXL_CHECK(output != nullptr);
+  FX_CHECK(output != nullptr);
   // If the content has the @type attribute, take its contents and populate the
   // fuchsia::modular::EntityMetadata appropriately, overriding whatever is
   // there.
   rapidjson::Document doc;
   doc.Parse(json);
   if (doc.HasParseError()) {
-    FXL_LOG(WARNING) << "Error parsing JSON: " << doc.GetParseError();
+    FX_LOGS(WARNING) << "Error parsing JSON: " << doc.GetParseError();
     return false;
   }
 

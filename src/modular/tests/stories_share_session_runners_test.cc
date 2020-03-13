@@ -8,7 +8,7 @@
 #include <lib/modular/testing/cpp/fake_agent.h>
 #include <lib/modular/testing/cpp/fake_component.h>
 
-#include <src/lib/fxl/logging.h>
+#include <src/lib/syslog/cpp/logger.h>
 #include <src/modular/lib/modular_test_harness/cpp/test_harness_fixture.h>
 
 #include "intl_property_provider_test_client.h"

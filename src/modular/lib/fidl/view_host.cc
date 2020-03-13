@@ -6,6 +6,8 @@
 
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 
+#include "src/lib/syslog/cpp/logger.h"
+
 namespace modular {
 
 ViewHost::ViewHost(scenic::ViewContext view_context)
@@ -31,10 +33,10 @@ void ViewHost::OnScenicEvent(fuchsia::ui::scenic::Event event) {
       switch (event.gfx().Which()) {
         case fuchsia::ui::gfx::Event::Tag::kViewDisconnected: {
           uint32_t view_holder_id = event.gfx().view_disconnected().view_holder_id;
-          FXL_LOG(ERROR) << "View died unexpectedly, id=" << view_holder_id;
+          FX_LOGS(ERROR) << "View died unexpectedly, id=" << view_holder_id;
 
           auto it = views_.find(view_holder_id);
-          FXL_DCHECK(it != views_.end());
+          FX_DCHECK(it != views_.end());
           it->second->host_node.Detach();
           views_.erase(it);
 
@@ -47,8 +49,8 @@ void ViewHost::OnScenicEvent(fuchsia::ui::scenic::Event event) {
       }
       break;
     default:
-      FXL_DCHECK(false) << "ViewHost::OnScenicEvent: Got an unhandled Scenic "
-                           "event.";
+      FX_DCHECK(false) << "ViewHost::OnScenicEvent: Got an unhandled Scenic "
+                          "event.";
       break;
   }
 }

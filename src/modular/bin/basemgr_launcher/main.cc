@@ -21,6 +21,8 @@
 #include <src/modular/lib/modular_config/modular_config_constants.h>
 #include <zxtest/zxtest.h>
 
+#include "src/lib/syslog/cpp/logger.h"
+
 constexpr char kBasemgrUrl[] = "fuchsia-pkg://fuchsia.com/basemgr#meta/basemgr.cmx";
 constexpr char kBasemgrHubPath[] = "/hub/c/basemgr.cmx/*/out/debug/basemgr";
 constexpr char kShutdownBasemgrCommandString[] = "shutdown";
@@ -42,7 +44,7 @@ void ShutdownBasemgr() {
   fuchsia::modular::internal::BasemgrDebugPtr basemgr;
   auto request = basemgr.NewRequest().TakeChannel();
   if (fdio_service_connect(service_path.c_str(), request.get()) != ZX_OK) {
-    FXL_LOG(FATAL) << "Could not connect to basemgr service in " << service_path;
+    FX_LOGS(FATAL) << "Could not connect to basemgr service in " << service_path;
   }
 
   basemgr->Shutdown();
@@ -109,6 +111,8 @@ fit::result<std::string, std::string> GetConfigFromArgs(fxl::CommandLine command
 }
 
 int main(int argc, const char** argv) {
+  syslog::InitLogger({"basemgr_launcher"});
+
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   bool basemgr_is_running = files::Glob(kBasemgrHubPath).size() != 0;

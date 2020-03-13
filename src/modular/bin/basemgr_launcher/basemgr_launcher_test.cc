@@ -9,7 +9,6 @@
 #include <lib/sys/cpp/testing/component_interceptor.h>
 
 #include <src/lib/files/glob.h>
-#include <src/lib/fxl/logging.h>
 
 #include "gtest/gtest.h"
 #include "lib/sys/cpp/testing/test_with_environment.h"

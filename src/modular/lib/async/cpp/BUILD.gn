@@ -21,6 +21,7 @@ source_set("future") {
 
   public_deps = [
     "//src/lib/fxl",
+    "//src/lib/syslog/cpp",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-default",
   ]
@@ -34,7 +35,6 @@ source_set("operation") {
 
   public_deps = [
     ":future",
-    "//src/lib/fxl",
     "//zircon/public/lib/async-cpp",
   ]
 
@@ -70,7 +70,6 @@ source_set("operation_unittest") {
   deps = [
     ":operation",
     "//garnet/public/lib/gtest",
-    "//src/lib/fxl",
     "//third_party/googletest:gtest",
   ]
 }

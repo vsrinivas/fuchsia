@@ -27,8 +27,8 @@ LedgerRepositoryForTesting::LedgerRepositoryForTesting()
           launcher.get(), std::move(ledger_config));
 
   ledger_repo_factory_.set_error_handler([](zx_status_t status) {
-    FXL_CHECK(false) << "LedgerRepositoryFactory returned an error. Status: "
-                     << zx_status_get_string(status);
+    FX_CHECK(false) << "LedgerRepositoryFactory returned an error. Status: "
+                    << zx_status_get_string(status);
   });
   ledger_app_client_->services().ConnectToService(ledger_repo_factory_.NewRequest());
 }

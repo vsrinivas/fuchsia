@@ -6,6 +6,7 @@
 
 #include <regex>
 
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/bin/sessionctl/session_ctl_constants.h"
 
 namespace modular {
@@ -294,7 +295,7 @@ modular::FuturePtr<bool, std::string> SessionCtlApp::ExecuteStoryCommand(
       std::string error = fxl::StringPrintf("Puppet master returned status: %d and error: %s",
                                             (uint32_t)result.status, result.error_message->c_str());
 
-      FXL_LOG(WARNING) << error << std::endl;
+      FX_LOGS(WARNING) << error << std::endl;
       fut->Complete(true, std::move(error));
     }
   });

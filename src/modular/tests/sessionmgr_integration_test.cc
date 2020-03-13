@@ -13,7 +13,6 @@
 #include "gmock/gmock.h"
 #include "src/lib/files/glob.h"
 #include "src/lib/fsl/vmo/strings.h"
-#include "src/lib/fxl/logging.h"
 #include "src/modular/lib/modular_test_harness/cpp/fake_module.h"
 #include "src/modular/lib/modular_test_harness/cpp/fake_session_shell.h"
 #include "src/modular/lib/modular_test_harness/cpp/test_harness_fixture.h"
@@ -145,7 +144,7 @@ TEST_F(SessionmgrIntegrationTest, SessionShellReceivesComponentArgsFromConfig) {
   bool session_shell_running = false;
   test_harness().events().OnNewComponent =
       [&](fuchsia::sys::StartupInfo startup_info,
-             fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent> component) {
+          fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent> component) {
         ASSERT_EQ(startup_info.launch_info.url, session_shell_url);
         ASSERT_TRUE(!!startup_info.launch_info.arguments);
         EXPECT_THAT(startup_info.launch_info.arguments.value(), ::testing::ElementsAre("foo"));

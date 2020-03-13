@@ -14,7 +14,6 @@ executable("sessionctl_bin") {
     ":lib",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.internal",
-    "//src/lib/fxl",
     "//src/modular/lib/async/cpp:future",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
@@ -50,7 +49,7 @@ source_set("lib") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.modular",
-    "//src/lib/fxl",
+    "//src/lib/syslog/cpp",
     "//src/modular/lib/async/cpp:future",
     "//third_party/rapidjson",
     "//zircon/public/lib/async-loop-cpp",

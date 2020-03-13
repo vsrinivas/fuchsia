@@ -7,7 +7,7 @@
 #include <lib/modular/testing/cpp/fake_component.h>
 
 #include "src/lib/fsl/vmo/strings.h"
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/lib/modular_test_harness/cpp/fake_story_shell.h"
 #include "src/modular/lib/modular_test_harness/cpp/test_harness_fixture.h"
 #include "src/modular/lib/testing/session_shell_impl.h"
@@ -137,9 +137,9 @@ class StoryShellFactoryTest : public modular_testing::TestHarnessFixture {
 
   void CreateStory() {
     // The session shell should be running and connected to PuppetMaster.
-    FXL_CHECK(test_session_shell_->is_running());
+    FX_CHECK(test_session_shell_->is_running());
     // The story should not already be created.
-    FXL_CHECK(!test_module_->is_running());
+    FX_CHECK(!test_module_->is_running());
 
     // Create a story
     fuchsia::modular::Intent intent;
@@ -153,9 +153,9 @@ class StoryShellFactoryTest : public modular_testing::TestHarnessFixture {
 
   void DeleteStory() {
     // The session shell should be running and connected to PuppetMaster.
-    FXL_CHECK(test_session_shell_->is_running());
+    FX_CHECK(test_session_shell_->is_running());
     // The story should have been previously created through CreateStory.
-    FXL_CHECK(test_module_->is_running());
+    FX_CHECK(test_module_->is_running());
 
     puppet_master_->DeleteStory(story_name, [] {});
 
@@ -165,7 +165,7 @@ class StoryShellFactoryTest : public modular_testing::TestHarnessFixture {
 
   fuchsia::modular::StoryControllerPtr ControlStory() {
     // The story should have been previously created through CreateStory.
-    FXL_CHECK(test_module_->is_running());
+    FX_CHECK(test_module_->is_running());
 
     // Get a story controller.
     fuchsia::modular::StoryControllerPtr story_controller;

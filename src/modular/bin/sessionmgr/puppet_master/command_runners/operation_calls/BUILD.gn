@@ -21,7 +21,6 @@ source_set("add_mod_call") {
     ":initialize_chain_call",
     "//sdk/lib/fidl/cpp",
     "//src/lib/fsl",
-    "//src/lib/fxl",
     "//src/modular/lib/entity/cpp:json",
     "//src/modular/lib/module_manifest:module_facet_reader",
   ]
@@ -58,7 +57,6 @@ source_set("get_types_from_entity_call") {
   deps = [
     "//sdk/fidl/fuchsia.modular",
     "//src/lib/fsl",
-    "//src/lib/fxl",
     "//src/modular/lib/async/cpp:operation",
   ]
 }

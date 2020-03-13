@@ -9,7 +9,7 @@
 #include <lib/fit/bridge.h>
 #include <lib/fit/promise.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/lib/fidl/array_to_string.h"  // for to_string(), to_array()
 
 namespace modular {
@@ -65,7 +65,7 @@ class PageSnapshotPromise {
               return;
             case fuchsia::ledger::Error::NEEDS_FETCH:
             case fuchsia::ledger::Error::NETWORK_ERROR:
-              FXL_LOG(ERROR) << "PageSnapshotPromise::GetInline() failed with "
+              FX_LOGS(ERROR) << "PageSnapshotPromise::GetInline() failed with "
                              << fidl::ToUnderlying(result.err());
               completer.complete_error();
           }

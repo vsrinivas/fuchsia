@@ -65,7 +65,7 @@ source_set("add_mod_command_runner") {
   ]
 
   deps = [
-    "//src/lib/fxl",
+    "//src/lib/syslog/cpp",
     "//src/modular/bin/sessionmgr/puppet_master/command_runners/operation_calls:add_mod_call",
     "//src/modular/lib/module_manifest:module_facet_reader",
   ]
@@ -86,7 +86,6 @@ executable("add_mod_command_runner_unittest") {
     "//garnet/public/lib/gtest",
     "//sdk/lib/fidl/cpp",
     "//src/lib/fsl",
-    "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//src/modular/lib/testing:entity_resolver_fake",
     "//src/modular/lib/testing:module_facet_reader_fake",
@@ -100,7 +99,7 @@ source_set("remove_mod_command_runner") {
     "remove_mod_command_runner.h",
   ]
 
-  deps = [ "//src/lib/fxl" ]
+  deps = [ "//src/lib/syslog/cpp" ]
 
   public_deps = [
     ":command_runner",
@@ -127,7 +126,7 @@ source_set("set_focus_state_command_runner") {
     "set_focus_state_command_runner.h",
   ]
 
-  deps = [ "//src/lib/fxl" ]
+  deps = [ "//src/lib/syslog/cpp" ]
 
   public_deps = [ ":command_runner" ]
 }

@@ -10,6 +10,7 @@
 #include <algorithm>
 
 #include "src/lib/fsl/vmo/strings.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/lib/fidl/array_to_string.h"
 #include "src/modular/lib/fidl/clone.h"
 #include "src/modular/lib/ledger_client/page_client.h"
@@ -32,7 +33,7 @@ PageClient::Conflict ToConflict(const fuchsia::ledger::DiffEntry* entry) {
     conflict.has_left = true;
     std::string value;
     if (!fsl::StringFromVmo(*entry->left->value, &value)) {
-      FXL_LOG(ERROR) << "Unable to read vmo for left entry of " << to_hex_string(conflict.key)
+      FX_LOGS(ERROR) << "Unable to read vmo for left entry of " << to_hex_string(conflict.key)
                      << ".";
       return conflict;
     }
@@ -44,7 +45,7 @@ PageClient::Conflict ToConflict(const fuchsia::ledger::DiffEntry* entry) {
     conflict.has_right = true;
     std::string value;
     if (!fsl::StringFromVmo(*entry->right->value, &value)) {
-      FXL_LOG(ERROR) << "Unable to read vmo for right entry of " << to_hex_string(conflict.key)
+      FX_LOGS(ERROR) << "Unable to read vmo for right entry of " << to_hex_string(conflict.key)
                      << ".";
       return conflict;
     }
@@ -111,9 +112,9 @@ class LedgerClient::ConflictResolverImpl::ResolveCall : public Operation<> {
         common_version_(std::move(common_version)) {
     result_provider_.set_error_handler([](zx_status_t status) {
       if (status != ZX_OK && status != ZX_ERR_PEER_CLOSED) {
-        FXL_LOG(ERROR) << "ResultProvider error: " << zx_status_get_string(status);
+        FX_LOGS(ERROR) << "ResultProvider error: " << zx_status_get_string(status);
       } else {
-        FXL_LOG(INFO) << "ResultProvider disconnected: " << zx_status_get_string(status);
+        FX_LOGS(INFO) << "ResultProvider disconnected: " << zx_status_get_string(status);
       }
     });
   }
@@ -191,9 +192,9 @@ class LedgerClient::ConflictResolverImpl::ResolveCall : public Operation<> {
   }
 
   void LogEntries(const std::string& headline, const std::vector<fuchsia::ledger::Entry>& entries) {
-    FXL_VLOG(4) << "Entries " << headline;
+    FX_VLOGS(4) << "Entries " << headline;
     for (const fuchsia::ledger::Entry& entry : entries) {
-      FXL_VLOG(4) << " - " << to_string(entry.key);
+      FX_VLOGS(4) << " - " << to_string(entry.key);
     }
   }
 
@@ -216,10 +217,10 @@ LedgerClient::LedgerClient(fuchsia::ledger::LedgerPtr ledger,
     : ledger_(std::move(ledger)) {
   ledger_.set_error_handler([error = std::move(error)](zx_status_t status) {
     if (status != ZX_OK && status != ZX_ERR_PEER_CLOSED) {
-      FXL_LOG(ERROR) << "Ledger error: " << zx_status_get_string(status);
+      FX_LOGS(ERROR) << "Ledger error: " << zx_status_get_string(status);
       error(status);
     } else {
-      FXL_LOG(INFO) << "Ledger disconnected: " << zx_status_get_string(status);
+      FX_LOGS(INFO) << "Ledger disconnected: " << zx_status_get_string(status);
     }
   });
   ledger_->SetConflictResolverFactory(bindings_.AddBinding(this));
@@ -229,10 +230,10 @@ LedgerClient::LedgerClient(fuchsia::ledger::internal::LedgerRepository* const le
                            const std::string& name, fit::function<void(zx_status_t)> error) {
   ledger_.set_error_handler([error = std::move(error)](zx_status_t status) {
     if (status != ZX_OK && status != ZX_ERR_PEER_CLOSED) {
-      FXL_LOG(ERROR) << "Ledger error: " << zx_status_get_string(status);
+      FX_LOGS(ERROR) << "Ledger error: " << zx_status_get_string(status);
       error(status);
     } else {
-      FXL_LOG(INFO) << "Ledger disconnected: " << zx_status_get_string(status);
+      FX_LOGS(INFO) << "Ledger disconnected: " << zx_status_get_string(status);
     }
   });
   // Open Ledger.
@@ -271,7 +272,7 @@ fuchsia::ledger::Page* LedgerClient::GetPage(PageClient* const page_client,
     // TODO(mesch): If this happens, larger things are wrong. This should
     // probably be signalled up, or at least must be signalled to the page
     // client.
-    FXL_LOG(ERROR) << context << ": "
+    FX_LOGS(ERROR) << context << ": "
                    << "Page connection unexpectedly closed.";
   });
 
@@ -365,7 +366,7 @@ void LedgerClient::ConflictResolverImpl::GetPageClients(std::vector<PageClient*>
   auto i = std::find_if(ledger_client_->pages_.begin(), ledger_client_->pages_.end(),
                         [this](auto& item) { return PageIdsEqual(item->page_id, page_id_); });
 
-  FXL_CHECK(i != ledger_client_->pages_.end());
+  FX_CHECK(i != ledger_client_->pages_.end());
   *page_clients = (*i)->clients;
 }
 

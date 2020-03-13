@@ -9,6 +9,7 @@
 #include <string>
 
 #include "src/lib/fxl/macros.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 using JsonDoc = rapidjson::Document;
 using JsonValue = rapidjson::Value;
@@ -41,16 +42,16 @@ thread_local JsonValue XdrContext::null_ = JsonValue();
 
 XdrContext::XdrContext(const XdrOp op, JsonDoc* const doc, std::string* const error)
     : parent_(nullptr), name_(nullptr), error_(error), op_(op), doc_(doc), value_(doc) {
-  FXL_DCHECK(doc_ != nullptr);
-  FXL_DCHECK(error_ != nullptr);
+  FX_DCHECK(doc_ != nullptr);
+  FX_DCHECK(error_ != nullptr);
 }
 
 XdrContext::XdrContext(XdrContext* const parent, const char* const name, const XdrOp op,
                        JsonDoc* const doc, JsonValue* const value)
     : parent_(parent), name_(name), error_(nullptr), op_(op), doc_(doc), value_(value) {
-  FXL_DCHECK(parent_ != nullptr);
-  FXL_DCHECK(doc_ != nullptr);
-  FXL_DCHECK(value_ != nullptr);
+  FX_DCHECK(parent_ != nullptr);
+  FX_DCHECK(doc_ != nullptr);
+  FX_DCHECK(value_ != nullptr);
 }
 
 XdrContext::~XdrContext() = default;
@@ -260,7 +261,7 @@ XdrContext XdrContext::Field(const char field[]) {
       JsonValue name{field, allocator()};
       value_->AddMember(name, JsonValue(), allocator());
       auto i = value_->FindMember(field);
-      FXL_DCHECK(i != value_->MemberEnd());
+      FX_DCHECK(i != value_->MemberEnd());
       return {this, field, op_, doc_, &i->value};
     }
 
@@ -293,7 +294,7 @@ XdrContext XdrContext::FieldWithDefault(const char field[]) {
       JsonValue name{field, allocator()};
       value_->AddMember(name, JsonValue(), allocator());
       auto i = value_->FindMember(field);
-      FXL_DCHECK(i != value_->MemberEnd());
+      FX_DCHECK(i != value_->MemberEnd());
       return {this, field, op_, doc_, &i->value};
     }
 

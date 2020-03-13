@@ -15,7 +15,10 @@ source_set("base64url") {
 
   public_deps = [ "//src/lib/fxl" ]
 
-  deps = [ "//third_party/modp_b64" ]
+  deps = [
+    "//src/lib/syslog/cpp",
+    "//third_party/modp_b64",
+  ]
 }
 
 source_set("unittests") {

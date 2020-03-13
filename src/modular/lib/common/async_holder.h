@@ -13,6 +13,7 @@
 #include <string>
 
 #include "src/lib/fxl/macros.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace modular {
 
@@ -66,7 +67,7 @@ class AsyncHolder : public AsyncHolderBase {
 
   // Must not be used to invoke Impl::Teardown().
   Impl* operator->() {
-    FXL_DCHECK(impl_.get());
+    FX_DCHECK(impl_.get());
     return impl_.get();
   }
 
@@ -75,7 +76,7 @@ class AsyncHolder : public AsyncHolderBase {
 
  private:
   void ImplTeardown(fit::function<void()> done) override {
-    FXL_DCHECK(impl_.get());
+    FX_DCHECK(impl_.get());
     impl_->Teardown(std::move(done));
   }
 

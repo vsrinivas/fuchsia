@@ -6,7 +6,7 @@
 
 #include <cmath>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace modular {
 
@@ -66,8 +66,8 @@ void PresentationContainer::OnEvent(fuchsia::ui::input::KeyboardEvent event) {
       break;
     }
     default:
-      FXL_DLOG(INFO) << "Unknown keyboard event: codepoint=" << event.code_point
-                     << ", modifiers=" << event.modifiers;
+      FX_DLOGS(INFO) << "Unknown keyboard event: codepoint=" << event.code_point
+                    << ", modifiers=" << event.modifiers;
       break;
   }
 }

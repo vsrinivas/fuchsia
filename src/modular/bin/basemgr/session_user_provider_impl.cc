@@ -7,6 +7,8 @@
 #include <lib/fit/function.h>
 #include <zircon/status.h>
 
+#include "src/lib/syslog/cpp/logger.h"
+
 namespace modular {
 
 namespace {
@@ -44,7 +46,7 @@ std::string MapIdentityProviderToAuthProviderType(
     case fuchsia::modular::auth::IdentityProvider::GOOGLE:
       return kGoogleAuthProviderType;
   }
-  FXL_DCHECK(false) << "Unrecognized IDP.";
+  FX_DCHECK(false) << "Unrecognized IDP.";
 }
 
 // Returns a list of supported auth provider configurations that includes the
@@ -81,21 +83,21 @@ SessionUserProviderImpl::SessionUserProviderImpl(
       on_initialize_(std::move(on_initialize)),
       on_login_(std::move(on_login)),
       weak_factory_(this) {
-  FXL_CHECK(account_manager_);
-  FXL_CHECK(token_manager_factory_);
-  FXL_CHECK(authentication_context_provider_);
-  FXL_CHECK(on_initialize_);
-  FXL_CHECK(on_login_);
+  FX_CHECK(account_manager_);
+  FX_CHECK(token_manager_factory_);
+  FX_CHECK(authentication_context_provider_);
+  FX_CHECK(on_initialize_);
+  FX_CHECK(on_login_);
 
   authentication_context_provider_binding_.set_error_handler([this](zx_status_t status) {
-    FXL_LOG(WARNING) << "AuthenticationContextProvider disconnected.";
+    FX_LOGS(WARNING) << "AuthenticationContextProvider disconnected.";
     authentication_context_provider_binding_.Unbind();
   });
 
   // Register SessionUserProvider as an AccountListener. All added accounts will
   // be logged in to a session.
   account_listener_binding_.set_error_handler([](zx_status_t status) {
-    FXL_LOG(FATAL) << "AccountListener disconnected with status: " << zx_status_get_string(status);
+    FX_LOGS(FATAL) << "AccountListener disconnected with status: " << zx_status_get_string(status);
   });
 
   fuchsia::identity::account::AccountListenerOptions options;
@@ -108,9 +110,9 @@ SessionUserProviderImpl::SessionUserProviderImpl(
           return;
         }
         if (result.is_response()) {
-          FXL_LOG(INFO) << "AccountListener registered.";
+          FX_LOGS(INFO) << "AccountListener registered.";
         } else {
-          FXL_LOG(FATAL) << "AccountListener registration failed with status: "
+          FX_LOGS(FATAL) << "AccountListener registration failed with status: "
                          << (uint32_t)result.err();
         }
       });
@@ -133,7 +135,7 @@ void SessionUserProviderImpl::AddUser(fuchsia::modular::auth::IdentityProvider i
           return;
         }
         if (result.is_err()) {
-          FXL_LOG(ERROR) << "Failed to provision new account from with "
+          FX_LOGS(ERROR) << "Failed to provision new account from with "
                             "provider with error: "
                          << (uint32_t)result.err();
           callback(nullptr, "Failed to provision new account from auth provider.");
@@ -160,7 +162,7 @@ void SessionUserProviderImpl::Login(fuchsia::modular::UserLoginParams params) {
 void SessionUserProviderImpl::Login2(fuchsia::modular::UserLoginParams2 params) {
   bool login_as_guest = params.account_id.value_or("") == "";
   if (login_as_guest) {
-    FXL_LOG(INFO) << "fuchsia::modular::UserProvider::Login() Login as guest";
+    FX_LOGS(INFO) << "fuchsia::modular::UserProvider::Login() Login as guest";
     // If requested, login as guest  by creating token managers with token
     // manager factory.
     auto account_id = GetRandomId();
@@ -173,24 +175,24 @@ void SessionUserProviderImpl::Login2(fuchsia::modular::UserLoginParams2 params) 
 
     on_login_(/* account= */ nullptr, std::move(agent_token_manager));
   } else {
-    FXL_LOG(INFO) << "fuchsia::modular::UserProvider::Login() Login as "
+    FX_LOGS(INFO) << "fuchsia::modular::UserProvider::Login() Login as "
                      "authenticated user";
     uint64_t account_id = std::atoll(params.account_id->c_str());
 
     fuchsia::identity::account::AccountPtr account;
     account_manager_->GetAccount(
         account_id, authentication_context_provider_binding_.NewBinding(), account.NewRequest(),
-        [](auto result) { FXL_LOG(INFO) << "Got account with error: " << (uint32_t)result.err(); });
+        [](auto result) { FX_LOGS(INFO) << "Got account with error: " << (uint32_t)result.err(); });
 
     fuchsia::identity::account::PersonaPtr persona;
     account->GetDefaultPersona(persona.NewRequest(), [](auto result) {
-      FXL_LOG(INFO) << "Got default persona with error: " << (uint32_t)result.err();
+      FX_LOGS(INFO) << "Got default persona with error: " << (uint32_t)result.err();
     });
 
     fuchsia::auth::TokenManagerPtr agent_token_manager;
     persona->GetTokenManager(
         kSessionUserProviderAppUrl, agent_token_manager.NewRequest(), [](auto result) {
-          FXL_LOG(INFO) << "Got token manager with error: " << (uint32_t)result.err();
+          FX_LOGS(INFO) << "Got token manager with error: " << (uint32_t)result.err();
         });
 
     auto account_deprecated = fuchsia::modular::auth::Account::New();
@@ -227,12 +229,12 @@ void SessionUserProviderImpl::RemoveAllUsers(fit::function<void()> callback) {
 }
 
 void SessionUserProviderImpl::RemoveUser(std::string account_id, RemoveUserCallback callback) {
-  FXL_LOG(INFO) << "RemoveUser() is not implemented yet.";
+  FX_LOGS(INFO) << "RemoveUser() is not implemented yet.";
   callback("");
 }
 
 void SessionUserProviderImpl::PreviousUsers(PreviousUsersCallback callback) {
-  FXL_LOG(INFO) << "PreviousUsers() is not implemented yet";
+  FX_LOGS(INFO) << "PreviousUsers() is not implemented yet";
   std::vector<::fuchsia::modular::auth::Account> users;
   callback(std::move(users));
 }
@@ -243,7 +245,7 @@ void SessionUserProviderImpl::GetAuthenticationUIContext(
 }
 
 fuchsia::auth::TokenManagerPtr SessionUserProviderImpl::CreateTokenManager(std::string account_id) {
-  FXL_CHECK(token_manager_factory_);
+  FX_CHECK(token_manager_factory_);
 
   fuchsia::auth::TokenManagerPtr token_mgr;
   token_manager_factory_->GetTokenManager(
@@ -251,7 +253,7 @@ fuchsia::auth::TokenManagerPtr SessionUserProviderImpl::CreateTokenManager(std::
       authentication_context_provider_binding_.NewBinding(), token_mgr.NewRequest());
 
   token_mgr.set_error_handler([account_id](zx_status_t status) {
-    FXL_LOG(INFO) << "Token Manager for account:" << account_id << " disconnected";
+    FX_LOGS(INFO) << "Token Manager for account:" << account_id << " disconnected";
   });
 
   return token_mgr;

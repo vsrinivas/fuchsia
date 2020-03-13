@@ -15,7 +15,7 @@
 #include "src/lib/files/unique_fd.h"
 #include "src/lib/fsl/io/fd.h"
 #include "src/lib/fsl/types/type_converters.h"
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/bin/basemgr/cobalt/cobalt.h"
 #include "src/modular/bin/sessionmgr/component_context_impl.h"
 #include "src/modular/bin/sessionmgr/focus.h"
@@ -84,7 +84,7 @@ fit::function<void(fit::function<void()>)> Teardown(const zx::duration timeout,
   return [timeout, message, field](fit::function<void()> cont) {
     field->Teardown(timeout, [message, cont = std::move(cont)] {
       if (message) {
-        FXL_DLOG(INFO) << "- " << message << " down.";
+        FX_DLOGS(INFO) << "- " << message << " down.";
       }
       cont();
     });
@@ -96,7 +96,7 @@ fit::function<void(fit::function<void()>)> ResetLedgerRepository(
   return [ledger_repository](fit::function<void()> cont) {
     ledger_repository->set_error_handler([cont = std::move(cont)](zx_status_t status) {
       if (status != ZX_OK) {
-        FXL_LOG(ERROR) << "LedgerRepository disconnected with epitaph: "
+        FX_LOGS(ERROR) << "LedgerRepository disconnected with epitaph: "
                        << zx_status_get_string(status) << std::endl;
       }
       cont();
@@ -162,7 +162,7 @@ void SessionmgrImpl::Initialize(
     fidl::InterfaceHandle<fuchsia::auth::TokenManager> agent_token_manager,
     fidl::InterfaceHandle<fuchsia::modular::internal::SessionContext> session_context,
     fuchsia::ui::views::ViewToken view_token) {
-  FXL_LOG(INFO) << "SessionmgrImpl::Initialize() called.";
+  FX_LOGS(INFO) << "SessionmgrImpl::Initialize() called.";
 
   // This is called in the service connection factory callbacks for session
   // shell (see how RunSessionShell() initializes session_shell_services_) to
@@ -174,7 +174,7 @@ void SessionmgrImpl::Initialize(
     if (called) {
       return;
     }
-    FXL_LOG(INFO) << "SessionmgrImpl::Initialize() finishing initialization.";
+    FX_LOGS(INFO) << "SessionmgrImpl::Initialize() finishing initialization.";
     called = true;
 
     InitializeLedger();
@@ -244,21 +244,21 @@ void SessionmgrImpl::InitializeSessionEnvironment(std::string session_id) {
 
 zx::channel SessionmgrImpl::GetLedgerRepositoryDirectory() {
   if ((config_.use_memfs_for_ledger())) {
-    FXL_DCHECK(!memfs_for_ledger_)
+    FX_DCHECK(!memfs_for_ledger_)
         << "An existing memfs for the Ledger has already been initialized.";
-    FXL_LOG(INFO) << "Using memfs-backed storage for the ledger.";
+    FX_LOGS(INFO) << "Using memfs-backed storage for the ledger.";
     memfs_for_ledger_ = std::make_unique<scoped_tmpfs::ScopedTmpFS>();
     AtEnd(Reset(&memfs_for_ledger_));
 
     return fsl::CloneChannelFromFileDescriptor(memfs_for_ledger_->root_fd());
   }
   if (!files::CreateDirectory(kLedgerRepositoryDirectory)) {
-    FXL_LOG(ERROR) << "Unable to create directory at " << kLedgerRepositoryDirectory;
+    FX_LOGS(ERROR) << "Unable to create directory at " << kLedgerRepositoryDirectory;
     return zx::channel();
   }
   fbl::unique_fd dir(open(kLedgerRepositoryDirectory, O_RDONLY));
   if (!dir.is_valid()) {
-    FXL_LOG(ERROR) << "Unable to open directory at " << kLedgerRepositoryDirectory
+    FX_LOGS(ERROR) << "Unable to open directory at " << kLedgerRepositoryDirectory
                    << ". errno: " << errno;
     return zx::channel();
   }
@@ -273,7 +273,7 @@ void SessionmgrImpl::InitializeLedger() {
   ledger_app_ = std::make_unique<AppClient<fuchsia::ledger::internal::LedgerController>>(
       sessionmgr_context_launcher_.get(), std::move(ledger_config), "", nullptr);
   ledger_app_->SetAppErrorHandler([this] {
-    FXL_LOG(ERROR) << "Ledger seems to have crashed unexpectedly." << std::endl
+    FX_LOGS(ERROR) << "Ledger seems to have crashed unexpectedly." << std::endl
                    << "CALLING Logout() DUE TO UNRECOVERABLE LEDGER ERROR.";
     Shutdown();
   });
@@ -282,12 +282,12 @@ void SessionmgrImpl::InitializeLedger() {
   auto repository_request = ledger_repository_.NewRequest();
   ledger_client_ =
       std::make_unique<LedgerClient>(ledger_repository_.get(), kAppId, [this](zx_status_t status) {
-        FXL_LOG(ERROR) << "CALLING Logout() DUE TO UNRECOVERABLE LEDGER ERROR.";
+        FX_LOGS(ERROR) << "CALLING Logout() DUE TO UNRECOVERABLE LEDGER ERROR.";
         Shutdown();
       });
 
   ledger_repository_factory_.set_error_handler([this](zx_status_t status) {
-    FXL_LOG(ERROR) << "LedgerRepositoryFactory.GetRepository() failed: "
+    FX_LOGS(ERROR) << "LedgerRepositoryFactory.GetRepository() failed: "
                    << zx_status_get_string(status) << std::endl
                    << "CALLING Shutdown() DUE TO UNRECOVERABLE LEDGER ERROR.";
     Shutdown();
@@ -303,7 +303,7 @@ void SessionmgrImpl::InitializeLedger() {
   // If ledger state is erased from underneath us (happens when the cloud store
   // is cleared), ledger will close the connection to |ledger_repository_|.
   ledger_repository_.set_error_handler([this](zx_status_t status) {
-    FXL_LOG(ERROR) << "LedgerRepository disconnected with epitaph: " << zx_status_get_string(status)
+    FX_LOGS(ERROR) << "LedgerRepository disconnected with epitaph: " << zx_status_get_string(status)
                    << std::endl
                    << "CALLING Shutdown() DUE TO UNRECOVERABLE LEDGER ERROR.";
     Shutdown();
@@ -539,7 +539,7 @@ void SessionmgrImpl::RunSessionShell(fuchsia::modular::AppConfig session_shell_c
       /* data_origin = */ "", std::move(service_list));
 
   session_shell_app_->SetAppErrorHandler([this] {
-    FXL_LOG(ERROR) << "Session Shell seems to have crashed unexpectedly."
+    FX_LOGS(ERROR) << "Session Shell seems to have crashed unexpectedly."
                    << " Shutting down.";
     Shutdown();
   });
@@ -592,7 +592,7 @@ void SessionmgrImpl::SwapSessionShell(fuchsia::modular::AppConfig session_shell_
 }
 
 void SessionmgrImpl::Terminate(fit::function<void()> done) {
-  FXL_LOG(INFO) << "Sessionmgr::Terminate()";
+  FX_LOGS(INFO) << "Sessionmgr::Terminate()";
   terminating_ = true;
   at_end_done_ = std::move(done);
 
@@ -635,7 +635,7 @@ void SessionmgrImpl::ConnectToEntityProvider(
     const std::string& agent_url,
     fidl::InterfaceRequest<fuchsia::modular::EntityProvider> entity_provider_request,
     fidl::InterfaceRequest<fuchsia::modular::AgentController> agent_controller_request) {
-  FXL_DCHECK(agent_runner_.get());
+  FX_DCHECK(agent_runner_.get());
   agent_runner_->ConnectToEntityProvider(agent_url, std::move(entity_provider_request),
                                          std::move(agent_controller_request));
 }
@@ -654,7 +654,7 @@ void SessionmgrImpl::TerminateRecurse(const int i) {
   if (i >= 0) {
     at_end_[i]([this, i] { TerminateRecurse(i - 1); });
   } else {
-    FXL_LOG(INFO) << "Sessionmgr::Terminate(): done";
+    FX_LOGS(INFO) << "Sessionmgr::Terminate(): done";
     at_end_done_();
   }
 }

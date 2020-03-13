@@ -19,7 +19,7 @@ source_set("json") {
   ]
 
   public_deps = [
-    "//src/lib/fxl",
+    "//src/lib/syslog/cpp",
     "//third_party/rapidjson",
   ]
 }

@@ -6,8 +6,8 @@
 #include <lib/fidl/cpp/clone.h>
 
 #include "src/lib/fsl/vmo/strings.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/bin/sessionmgr/puppet_master/command_runners/operation_calls/get_types_from_entity_call.h"
 #include "src/modular/bin/sessionmgr/puppet_master/command_runners/operation_calls/initialize_chain_call.h"
 #include "src/modular/lib/entity/cpp/json.h"
@@ -81,7 +81,7 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult, fuchsia::mo
           case fuchsia::modular::IntentParameterData::Tag::kEntityReference: {
             fuchsia::modular::CreateLinkInfo create_link;
             fsl::SizedVmo vmo;
-            FXL_CHECK(
+            FX_CHECK(
                 fsl::VmoFromString(EntityReferenceToJson(param.data.entity_reference()), &vmo));
             create_link.initial_data = std::move(vmo).ToTransport();
             entry.value.set_create_link(std::move(create_link));
@@ -92,7 +92,7 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult, fuchsia::mo
             // that the link is used as an 'output' link. Setting a valid JSON
             // value for null in the vmo.
             fsl::SizedVmo vmo;
-            FXL_CHECK(fsl::VmoFromString("null", &vmo));
+            FX_CHECK(fsl::VmoFromString("null", &vmo));
             fuchsia::modular::CreateLinkInfo create_link;
             create_link.initial_data = std::move(vmo).ToTransport();
             entry.value.set_create_link(std::move(create_link));

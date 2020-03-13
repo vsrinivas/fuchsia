@@ -20,10 +20,10 @@
 
 #include "src/lib/callback/scoped_callback.h"
 #include "src/lib/fxl/command_line.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/lib/app_driver/cpp/app_driver.h"
 #include "src/modular/lib/fidl/single_service_app.h"
 #include "src/modular/lib/integration_testing/cpp/reporting.h"
@@ -49,7 +49,7 @@ class Settings {
       std::string test_timeout_ms_string;
       command_line.GetOptionValue("test_timeout_ms", &test_timeout_ms_string);
       if (!fxl::StringToNumberWithError<uint64_t>(test_timeout_ms_string, &test_timeout_ms)) {
-        FXL_LOG(WARNING) << "Unable to parse timeout from '" << test_timeout_ms_string
+        FX_LOGS(WARNING) << "Unable to parse timeout from '" << test_timeout_ms_string
                          << "'. Setting to default.";
       }
     }
@@ -75,7 +75,7 @@ class DevBaseShellApp : modular::SingleServiceApp<fuchsia::modular::BaseShell> {
       async::PostDelayedTask(async_get_default_dispatcher(),
                              callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(),
                                                   [this] {
-                                                    FXL_LOG(WARNING) << "DevBaseShell timed out";
+                                                    FX_LOGS(WARNING) << "DevBaseShell timed out";
                                                     modular_testing::Fail("DevBaseShell timed out");
                                                     Terminate([] {});
                                                   }),
@@ -117,7 +117,7 @@ class DevBaseShellApp : modular::SingleServiceApp<fuchsia::modular::BaseShell> {
   // |fuchsia::modular::BaseShell|
   void GetAuthenticationUIContext(
       fidl::InterfaceRequest<fuchsia::auth::AuthenticationUIContext> /*request*/) override {
-    FXL_LOG(INFO) << "fuchsia::modular::BaseShell::GetAuthenticationUIContext() is"
+    FX_LOGS(INFO) << "fuchsia::modular::BaseShell::GetAuthenticationUIContext() is"
                      " unimplemented.";
   }
 
@@ -144,7 +144,7 @@ class DevBaseShellApp : modular::SingleServiceApp<fuchsia::modular::BaseShell> {
 
         account_manager_->ProvisionNewAccount(
             fuchsia::identity::account::Lifetime::PERSISTENT, nullptr, [](auto) {
-              FXL_LOG(INFO) << "Provisioned new account. Translating "
+              FX_LOGS(INFO) << "Provisioned new account. Translating "
                                "this account into a "
                                "fuchsia::modular::auth::Account.";
             });
@@ -167,6 +167,8 @@ class DevBaseShellApp : modular::SingleServiceApp<fuchsia::modular::BaseShell> {
 }  // namespace modular
 
 int main(int argc, const char** argv) {
+  syslog::InitLogger({"dev_bse_shell"});
+  
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   modular::Settings settings(command_line);
 

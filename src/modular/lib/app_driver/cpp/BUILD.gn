@@ -18,7 +18,6 @@ source_set("app_driver") {
 
   deps = [
     "//sdk/lib/fidl/cpp",
-    "//src/lib/fxl",
     "//src/modular/lib/lifecycle/cpp",
   ]
 }
@@ -31,7 +30,6 @@ source_set("module_driver") {
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
-    "//src/lib/fxl",
     "//src/modular/lib/lifecycle/cpp",
   ]
 }

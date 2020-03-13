@@ -13,6 +13,7 @@
 #include <string>
 
 #include "src/lib/fsl/vmo/strings.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/modular/lib/async/cpp/operation.h"
 #include "src/modular/lib/fidl/array_to_string.h"
 #include "src/modular/lib/fidl/json_xdr.h"
@@ -104,7 +105,7 @@ class ReadDataCall : public PageOperation<DataPtr> {
         to_array(key_), [this, flow](fuchsia::ledger::PageSnapshot_Get_Result result) {
           if (result.is_err()) {
             if (result.err() != fuchsia::ledger::Error::KEY_NOT_FOUND || !not_found_is_ok_) {
-              FXL_LOG(ERROR) << this->trace_name() << " " << key_ << " "
+              FX_LOGS(ERROR) << this->trace_name() << " " << key_ << " "
                              << "PageSnapshot.Get() " << fidl::ToUnderlying(result.err());
             }
             return;
@@ -112,7 +113,7 @@ class ReadDataCall : public PageOperation<DataPtr> {
 
           std::string value_as_string;
           if (!fsl::StringFromVmo(result.response().buffer, &value_as_string)) {
-            FXL_LOG(ERROR) << this->trace_name() << " " << key_ << " Unable to extract data.";
+            FX_LOGS(ERROR) << this->trace_name() << " " << key_ << " Unable to extract data.";
             return;
           }
 
@@ -121,7 +122,7 @@ class ReadDataCall : public PageOperation<DataPtr> {
             return;
           }
 
-          FXL_DCHECK(result_);
+          FX_DCHECK(result_);
         });
   }
 
@@ -159,7 +160,7 @@ class ReadAllDataCall : public PageOperation<DataArray> {
     for (auto& entry : entries_) {
       std::string value_as_string;
       if (!fsl::StringFromVmo(*entry.value, &value_as_string)) {
-        FXL_LOG(ERROR) << this->trace_name() << " "
+        FX_LOGS(ERROR) << this->trace_name() << " "
                        << "Unable to extract data.";
         continue;
       }
@@ -199,7 +200,7 @@ class WriteDataCall : public PageOperation<> {
     XdrWrite(&json, &data_, filter_);
 
     fsl::SizedVmo vmo;
-    FXL_CHECK(fsl::VmoFromString(json, &vmo));
+    FX_CHECK(fsl::VmoFromString(json, &vmo));
     page()->CreateReferenceFromBuffer(
         std::move(vmo).ToTransport(),
         [this, weak_ptr = GetWeakPtr(),
@@ -208,7 +209,7 @@ class WriteDataCall : public PageOperation<> {
             return;
           }
           if (result.is_err()) {
-            FXL_LOG(ERROR) << trace_name() << " " << key_ << " "
+            FX_LOGS(ERROR) << trace_name() << " " << key_ << " "
                            << "Page.Put() could not construct reference: "
                            << zx_status_get_string(result.err());
             return;
@@ -243,7 +244,7 @@ class DumpPageSnapshotCall : public PageOperation<std::string> {
 
       std::string value_as_string;
       if (!fsl::StringFromVmo(*entry.value, &value_as_string)) {
-        FXL_LOG(ERROR) << this->trace_name() << " "
+        FX_LOGS(ERROR) << this->trace_name() << " "
                        << "Unable to extract data.";
         continue;
       }
