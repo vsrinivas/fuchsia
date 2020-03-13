@@ -126,6 +126,98 @@ class TestMsdArmDevice {
     EXPECT_TRUE(processing_complete);
   }
 
+  // Check that if there's a waiting request for the device thread and it's
+  // descheduled for a long time for some reason that it doesn't immediately
+  // think the GPU's hung before processing the request.
+  void HangTimerRequest() {
+    std::unique_ptr<MsdArmDevice> device(MsdArmDevice::Create(GetTestDeviceHandle(), false));
+    ASSERT_NE(device, nullptr);
+
+    class FakeJobScheduler : public JobScheduler {
+     public:
+      FakeJobScheduler(Owner* owner) : JobScheduler(owner, 3) {}
+      ~FakeJobScheduler() override {}
+      Clock::duration GetCurrentTimeoutDuration() override {
+        if (got_timeout_check_)
+          return Clock::duration::max();
+        got_timeout_check_ = true;
+        return Clock::duration::zero();
+      }
+      void HandleTimedOutAtoms() override {
+        // The first hang check should be aborted since the semaphore pretended to
+        // be scheduled.
+        EXPECT_TRUE(false);
+      }
+
+     private:
+      bool got_timeout_check_ = false;
+    };
+    device->scheduler_ = std::make_unique<FakeJobScheduler>(device.get());
+
+    class FakeSemaphore : public magma::PlatformSemaphore {
+     public:
+      FakeSemaphore() : real_semaphore_(magma::PlatformSemaphore::Create()) {}
+      void Signal() override {
+        if (signal_count_++ > 0) {
+          // After the first one we need to pass through a signal to ensure
+          // the device thread receives its shutdown signal.
+          real_semaphore_->Signal();
+        }
+      }
+
+      void Reset() override {}
+
+      magma::Status WaitNoReset(uint64_t timeout_ms) override {
+        // After one time through the loop, pretend that the semaphore is signaled.
+        real_semaphore_->Signal();
+        return MAGMA_STATUS_OK;
+      }
+
+      magma::Status Wait(uint64_t timeout_ms) override { return MAGMA_STATUS_OK; }
+
+      bool WaitAsync(magma::PlatformPort* platform_port) override {
+        return real_semaphore_->WaitAsync(platform_port);
+      }
+      uint64_t id() override { return real_semaphore_->id(); }
+      bool duplicate_handle(uint32_t* handle_out) override {
+        return real_semaphore_->duplicate_handle(handle_out);
+      }
+
+     private:
+      std::unique_ptr<magma::PlatformSemaphore> real_semaphore_;
+      uint32_t signal_count_ = 0;
+    };
+    auto semaphore = std::make_unique<FakeSemaphore>();
+    device->device_request_semaphore_ = std::move(semaphore);
+
+    class TestRequest : public DeviceRequest {
+     public:
+      TestRequest(std::shared_ptr<std::atomic_bool> processing_complete)
+          : processing_complete_(processing_complete) {}
+
+     protected:
+      magma::Status Process(MsdArmDevice* device) override {
+        *processing_complete_ = true;
+        return MAGMA_STATUS_OK;
+      }
+
+     private:
+      std::shared_ptr<std::atomic_bool> processing_complete_;
+    };
+
+    auto processing_complete = std::make_shared<std::atomic_bool>(false);
+
+    std::thread device_thread([&device]() { device->DeviceThreadLoop(); });
+    auto request = std::make_unique<TestRequest>(processing_complete);
+    device->EnqueueDeviceRequest(std::move(request));
+    while (!*processing_complete)
+      ;
+    device.reset();
+    device_thread.join();
+
+    EXPECT_TRUE(processing_complete);
+  }
+
   void MockExecuteAtom() {
     auto register_io = std::make_unique<magma::RegisterIo>(MockMmio::Create(1024 * 1024));
     magma::RegisterIo* reg_io = register_io.get();
@@ -270,6 +362,11 @@ TEST(MsdArmDevice, MockDump) {
 TEST(MsdArmDevice, ProcessRequest) {
   TestMsdArmDevice test;
   test.ProcessRequest();
+}
+
+TEST(MsdArmDevice, HangTimerRequest) {
+  TestMsdArmDevice test;
+  test.HangTimerRequest();
 }
 
 TEST(MsdArmDevice, MockExecuteAtom) {

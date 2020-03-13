@@ -282,11 +282,20 @@ int MsdArmDevice::DeviceThreadLoop() {
   std::unique_lock<std::mutex> lock(device_request_mutex_, std::defer_lock);
   device_request_semaphore_->WaitAsync(device_port_.get());
 
+  uint32_t timeout_count = 0;
   while (!device_thread_quit_flag_) {
     auto timeout_duration = scheduler_->GetCurrentTimeoutDuration();
     if (timeout_duration <= JobScheduler::Clock::duration::zero()) {
-      scheduler_->HandleTimedOutAtoms();
-      continue;
+      // Don't timeout if the device request semaphore is signaled, because that could be a sign
+      // that the current thread just took a really long time to wakeup.
+      constexpr uint32_t kMaxConsecutiveTimeouts = 5;
+      if (!device_request_semaphore_->WaitNoReset(0).ok() ||
+          timeout_count >= kMaxConsecutiveTimeouts) {
+        scheduler_->HandleTimedOutAtoms();
+        timeout_count = 0;
+        continue;
+      }
+      timeout_count++;
     }
     uint64_t key;
     magma::Status status(MAGMA_STATUS_OK);
@@ -299,6 +308,7 @@ int MsdArmDevice::DeviceThreadLoop() {
       status = device_port_->Wait(&key);
     }
     if (status.ok()) {
+      timeout_count = 0;
       if (key == device_request_semaphore_->id()) {
         device_request_semaphore_->Reset();
         device_request_semaphore_->WaitAsync(device_port_.get());
