@@ -237,7 +237,7 @@ void EnsurePartitionsMatch(const gpt::GptDevice* gpt,
                            fbl::Span<const PartitionDescription> expected) {
   for (auto& part : expected) {
     gpt_partition_t* gpt_part = FindPartitionWithLabel(gpt, part.name);
-    ASSERT_TRUE(gpt_part != nullptr);
+    ASSERT_TRUE(gpt_part != nullptr, "Partition \"%s\" not found", part.name);
     EXPECT_TRUE(memcmp(part.type, gpt_part->type, GPT_GUID_LEN) == 0);
     EXPECT_EQ(part.start, gpt_part->first);
     EXPECT_EQ(part.start + part.length - 1, gpt_part->last);
@@ -472,16 +472,17 @@ TEST_F(EfiDevicePartitionerTests, DISABLED_InitPartitionTables) {
   ASSERT_OK(gpt->Sync());
 
   // Write initial partitions to disk.
-  const std::array<PartitionDescription, 9> partitions_at_start{
+  const std::array<PartitionDescription, 10> partitions_at_start{
       PartitionDescription{"efi", kEfiType, 0x22, 0x1},
-      PartitionDescription{"ZIRCON-A", kZirconAType, 0x23, 0x1},
-      PartitionDescription{"zircon_b", kZirconBType, 0x24, 0x1},
-      PartitionDescription{"zircon r", kZirconRType, 0x25, 0x1},
-      PartitionDescription{"vbmeta-a", kVbMetaAType, 0x26, 0x1},
-      PartitionDescription{"VBMETA_B", kVbMetaBType, 0x27, 0x1},
-      PartitionDescription{"VBMETA R", kVbMetaRType, 0x28, 0x1},
-      PartitionDescription{"abrmeta", kAbrMetaType, 0x29, 0x1},
-      PartitionDescription{"FVM", kFvmType, 0x30, 0x1},
+      PartitionDescription{GUID_EFI_NAME, kEfiType, 0x23, 0x8000},
+      PartitionDescription{"ZIRCON-A", kZirconAType, 0x8023, 0x1},
+      PartitionDescription{"zircon_b", kZirconBType, 0x8024, 0x1},
+      PartitionDescription{"zircon r", kZirconRType, 0x8025, 0x1},
+      PartitionDescription{"vbmeta-a", kVbMetaAType, 0x8026, 0x1},
+      PartitionDescription{"VBMETA_B", kVbMetaBType, 0x8027, 0x1},
+      PartitionDescription{"VBMETA R", kVbMetaRType, 0x8028, 0x1},
+      PartitionDescription{"abrmeta", kAbrMetaType, 0x8029, 0x1},
+      PartitionDescription{"FVM", kFvmType, 0x8030, 0x1},
   };
   for (auto& part : partitions_at_start) {
     ASSERT_OK(gpt->AddPartition(part.name, part.type, GetRandomGuid(), part.start, part.length, 0),
@@ -498,16 +499,17 @@ TEST_F(EfiDevicePartitionerTests, DISABLED_InitPartitionTables) {
 
   // Ensure the final partition layout looks like we expect it to.
   ASSERT_OK(gpt::GptDevice::Create(gpt_dev->fd(), kBlockSize, kBlockCount, &gpt));
-  const std::array<PartitionDescription, 9> partitions_at_end{
-      PartitionDescription{GUID_EFI_NAME, kEfiType, 0x22, 0x8000},
-      PartitionDescription{GUID_ZIRCON_A_NAME, kZirconAType, 0x8022, 0x40000},
-      PartitionDescription{GUID_ZIRCON_B_NAME, kZirconBType, 0x48022, 0x40000},
-      PartitionDescription{GUID_ZIRCON_R_NAME, kZirconRType, 0x88022, 0x60000},
-      PartitionDescription{GUID_VBMETA_A_NAME, kVbMetaAType, 0xe8022, 0x80},
-      PartitionDescription{GUID_VBMETA_B_NAME, kVbMetaBType, 0xe80a2, 0x80},
-      PartitionDescription{GUID_VBMETA_R_NAME, kVbMetaRType, 0xe8122, 0x80},
-      PartitionDescription{GUID_ABR_META_NAME, kAbrMetaType, 0xe81a2, 0x8},
-      PartitionDescription{GUID_FVM_NAME, kFvmType, 0xe81aa, 0x2000000},
+  const std::array<PartitionDescription, 10> partitions_at_end{
+      PartitionDescription{"efi", kEfiType, 0x22, 0x1},
+      PartitionDescription{GUID_EFI_NAME, kEfiType, 0x23, 0x8000},
+      PartitionDescription{GUID_ZIRCON_A_NAME, kZirconAType, 0x8023, 0x40000},
+      PartitionDescription{GUID_ZIRCON_B_NAME, kZirconBType, 0x48023, 0x40000},
+      PartitionDescription{GUID_ZIRCON_R_NAME, kZirconRType, 0x88023, 0x60000},
+      PartitionDescription{GUID_VBMETA_A_NAME, kVbMetaAType, 0xe8023, 0x80},
+      PartitionDescription{GUID_VBMETA_B_NAME, kVbMetaBType, 0xe80a3, 0x80},
+      PartitionDescription{GUID_VBMETA_R_NAME, kVbMetaRType, 0xe8123, 0x80},
+      PartitionDescription{GUID_ABR_META_NAME, kAbrMetaType, 0xe81a3, 0x8},
+      PartitionDescription{GUID_FVM_NAME, kFvmType, 0xe81ab, 0x2000000},
   };
   ASSERT_NO_FATAL_FAILURES(EnsurePartitionsMatch(gpt.get(), partitions_at_end));
 
@@ -639,7 +641,6 @@ TEST_F(CrosDevicePartitionerTests, DISABLED_InitPartitionTables) {
   }
   ASSERT_OK(gpt->Sync());
 
-
   // Create CrOS device partitioner and initialise partition tables.
   std::unique_ptr<paver::DevicePartitioner> partitioner;
   ASSERT_NO_FATAL_FAILURES(CreatePartitioner(disk.get(), &partitioner));
@@ -748,7 +749,6 @@ TEST_F(CrosDevicePartitionerTests, DISABLED_InitPartitionTablesForRecoveredDevic
   }
   ASSERT_OK(gpt->Sync());
 
-
   // Create CrOS device partitioner and initialise partition tables.
   std::unique_ptr<paver::DevicePartitioner> partitioner;
   ASSERT_NO_FATAL_FAILURES(CreatePartitioner(disk.get(), &partitioner));
@@ -771,7 +771,6 @@ TEST_F(CrosDevicePartitionerTests, DISABLED_InitPartitionTablesForRecoveredDevic
   EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kZirconR), nullptr));
   EXPECT_OK(
       partitioner->FindPartition(PartitionSpec(paver::Partition::kFuchsiaVolumeManager), nullptr));
-
 }
 
 // Get Cros GPT flags for a kernel with the given priority.

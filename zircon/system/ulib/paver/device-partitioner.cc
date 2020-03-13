@@ -1059,18 +1059,23 @@ zx_status_t EfiDevicePartitioner::InitPartitionTables() const {
 
   // Wipe partitions.
   // EfiDevicePartitioner operates on partition types.
-  using GuidArray = std::array<uint8_t, GPT_GUID_LEN>;
-  std::vector<GuidArray> partitions_to_wipe;
-  for (auto type : partitions_to_add) {
-    partitions_to_wipe.emplace_back();
-    zx_status_t status = GptPartitionType(type, partitions_to_wipe.back().data());
-    if (status != ZX_OK) {
-      return status;
-    }
-  }
-  zx_status_t status = gpt_->WipePartitions([&partitions_to_wipe](const gpt_partition_t& part) {
-    for (auto& partition : partitions_to_wipe) {
-      if (memcmp(part.type, partition.data(), GPT_GUID_LEN) == 0) {
+  zx_status_t status = gpt_->WipePartitions([&partitions_to_add](const gpt_partition_t& part) {
+    for (auto& partition : partitions_to_add) {
+      // Get the partition type GUID, and compare it.
+      std::array<uint8_t, GPT_GUID_LEN> type{};
+      zx_status_t status = GptPartitionType(partition, type.data());
+      if (status != ZX_OK || memcmp(part.type, type.data(), GPT_GUID_LEN) != 0) {
+        continue;
+      }
+      // If we are wiping any non-bootloader partition, we are done.
+      if (partition != Partition::kBootloader) {
+        return true;
+      }
+      // If we are wiping the bootloader partition, only do so if it is the
+      // Fuchsia-installed bootloader partition. This is to allow dual-booting.
+      char cstring_name[GPT_NAME_LEN] = {};
+      utf16_to_cstring(cstring_name, part.name, GPT_NAME_LEN);
+      if (strncmp(cstring_name, GUID_EFI_NAME, GPT_NAME_LEN) == 0) {
         return true;
       }
     }
@@ -1084,7 +1089,9 @@ zx_status_t EfiDevicePartitioner::InitPartitionTables() const {
   // Add partitions with default content_type.
   for (auto type : partitions_to_add) {
     status = AddPartition(PartitionSpec(type), nullptr);
-    if (status != ZX_OK) {
+    if (status == ZX_ERR_ALREADY_BOUND) {
+      ERROR("Warning: Skipping existing partition \"%s\"\n", PartitionName(type));
+    } else if (status != ZX_OK) {
       ERROR("Failed to create partition \"%s\": %s\n", PartitionName(type),
             zx_status_get_string(status));
       return status;
@@ -1093,7 +1100,7 @@ zx_status_t EfiDevicePartitioner::InitPartitionTables() const {
 
   LOG("Successfully initialized GPT\n");
   return ZX_OK;
-}
+}  // namespace paver
 
 zx_status_t EfiDevicePartitioner::WipePartitionTables() const {
   return gpt_->WipePartitionTables();
