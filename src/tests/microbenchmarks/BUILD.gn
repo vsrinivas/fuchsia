@@ -61,6 +61,10 @@ executable("bin") {
   ]
   public_deps = [ "//zircon/public/lib/perftest" ]
   libs = [ "zircon" ]
+
+  # TODO(46944): UBSan has found an instance of undefined behavior in this target.
+  # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
+  configs += [ "//build/config:temporarily_disable_ubsan_do_not_use" ]
 }
 
 # "Helper" executable used to implement the fdio_spawn benchmark.
