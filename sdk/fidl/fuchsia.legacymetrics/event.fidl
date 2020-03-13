@@ -9,7 +9,7 @@ using zx;
 /// A single metric event to be recorded and sent to the UMA backend.
 union Event {
     1: UserActionEvent user_action_event;
-    2: HistogramSample histogram_sample;
+    2: Histogram histogram;
     3: ImplementationDefinedEvent impl_defined_event;
 };
 
@@ -23,45 +23,27 @@ table UserActionEvent {
     2: zx.time time;
 };
 
-/// A sample to add to a collected histogram. See
-/// https://chromium.googlesource.com/chromium/src.git/+/HEAD/tools/metrics/histograms/README.md
-struct HistogramSample {
-    HistogramInfo info;
-    int64 value;
-};
-
-/// Descriptor that identifies a histogram.
-table HistogramInfo {
+table Histogram {
     /// Required histogram identifier. See these guidelines for more info:
     /// https://chromium.googlesource.com/chromium/src.git/+/HEAD/tools/metrics/histograms/README.md#naming-your-histogram
     1: string:MAX name;
 
-    /// Describes the structure of the histogram. Defaults to EXPONENTIAL when
-    /// empty.
-    2: HistogramType type;
+    2: vector<HistogramBucket>:MAX buckets;
 
-    /// The (inclusive) minimum and maximum values for the entire histogram,
-    /// respectively. Required for all histogram types except ENUM, where
-    /// they can be inferred from `num_buckets`.
-    3: int64 min;
-    4: int64 max;
-
-    /// `num_buckets` describes the number of buckets in the entire histogram.
-    /// Required for all histogram types.
-    5: uint32 num_buckets;
+    // The sum of all the sample values.
+    // Together with the total count of the sample values, this allows us to
+    // compute the average value.  The count of all sample values is just the sum
+    // of the counts of all the buckets.
+    3: int64 sum;
 };
 
-/// See Chromium Histogram documentation for more info:
-/// https://cs.chromium.org/chromium/src/base/metrics/histogram.h
-enum HistogramType : uint32 {
-    /// Bucket ranges increase exponentially.
-    EXPONENTIAL = 0;
+struct HistogramBucket {
+    // Each bucket's range is bounded by min <= x < max.
+    int64 min;
+    int64 max;
 
-    /// Bucket ranges are identical and evenly spaced.
-    LINEAR = 1;
-
-    /// Counts enumerated values (e.g. connection error codes).
-    ENUM = 2;
+    // The number of entries in this bucket.
+    int64 count;
 };
 
 /// A custom event defined by the MetricsRecorder service. Refer to your
