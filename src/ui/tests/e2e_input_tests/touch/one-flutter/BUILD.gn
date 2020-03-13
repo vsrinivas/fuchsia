@@ -1,0 +1,22 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//topaz/runtime/flutter_runner/flutter_app.gni")
+
+flutter_app("one-flutter") {
+  main_dart = "one-flutter.dart"
+  manifest = "pubspec.yaml"
+  meta = [
+    {
+      path = rebase_path("meta/one-flutter.cmx")
+      dest = "one-flutter.cmx"
+    },
+  ]
+  deps = [
+    "//src/ui/tests/e2e_input_tests/touch:fuchsia.test.ui",
+    "//third_party/dart-pkg/git/flutter/packages/flutter",
+    "//topaz/public/dart/fuchsia_services",
+    "//topaz/public/dart/widgets:lib.widgets",
+  ]
+}

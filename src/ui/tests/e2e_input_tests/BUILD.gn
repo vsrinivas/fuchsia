@@ -9,5 +9,6 @@ group("e2e_input_tests") {
     "keyboard:tests",
     "scenic:tests",
     "shortcut:tests",
+    "touch:tests",
   ]
 }

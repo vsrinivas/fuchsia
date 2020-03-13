@@ -1,0 +1,12 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.test.ui;
+
+/// A test-specific scheme to gather signal from the client-under-test.
+[Discoverable]
+protocol ResponseListener {
+    /// Notify the test that client-under-test has received expected input.
+    Respond();
+};

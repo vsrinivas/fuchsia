@@ -1,0 +1,63 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+import("//build/package.gni")
+import("//build/test.gni")
+import("//build/test/test_package.gni")
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":touch-input-test",
+    "//src/ui/tests/e2e_input_tests/touch/one-flutter",
+  ]
+}
+
+test_package("touch-input-test") {
+  deps = [ ":touch-input-test-bin" ]
+  tests = [
+    {
+      name = "touch-input-test"
+      environments = [ nuc_env ]
+    },
+  ]
+  data_deps = [
+    "//src/ui/bin/root_presenter",
+    "//src/ui/scenic",
+    "//src/ui/tests/e2e_input_tests/touch/one-flutter",
+  ]
+}
+
+test("touch-input-test-bin") {
+  sources = [ "touch-input-test.cc" ]
+  output_name = "touch-input-test"
+  deps = [
+    ":fuchsia.test.ui",
+    "//garnet/public/lib/fostr/fidl/fuchsia.ui.gfx",
+    "//garnet/public/lib/fostr/fidl/fuchsia.ui.input",
+    "//garnet/public/lib/gtest",
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.ui.app",
+    "//sdk/fidl/fuchsia.ui.input",
+    "//sdk/fidl/fuchsia.ui.policy",
+    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/ui/scenic/cpp",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+fidl("fuchsia.test.ui") {
+  sdk_category = "internal"
+  sources = [ "response_listener.fidl" ]
+}
