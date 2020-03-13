@@ -46,7 +46,7 @@ impl<P: Payload + 'static, A: Address + 'static> MessageClient<P, A> {
     /// Marks this client's Messenger as an active participant in any return
     /// communication.
     pub fn observe(&mut self) -> Receptor<P, A> {
-        let (beacon, receptor) = Beacon::create(self.messenger.clone());
+        let (beacon, receptor) = Beacon::create(self.messenger.clone(), None);
         self.messenger.forward(self.message.clone(), Some(beacon));
         ActionFuse::defuse(self.forwarder.clone());
 

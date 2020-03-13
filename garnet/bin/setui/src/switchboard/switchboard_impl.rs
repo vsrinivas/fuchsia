@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use crate::internal::core::{
-    Address, Messenger as RegistryMessenger, MessengerFactory as RegistryMessengerFactory, Payload,
+    Address, MessengerClient as RegistryMessengerClient,
+    MessengerFactory as RegistryMessengerFactory, Payload,
 };
 use crate::message::base::{Audience, MessageEvent, MessengerType};
 use crate::switchboard::base::*;
@@ -88,7 +89,7 @@ pub struct SwitchboardImpl {
     /// mapping of listeners for changes
     listeners: ListenerMap,
     /// registry messenger
-    registry_messenger: RegistryMessenger,
+    registry_messenger_client: RegistryMessengerClient,
 }
 
 impl SwitchboardImpl {
@@ -107,14 +108,14 @@ impl SwitchboardImpl {
             return Err(Error::new(error));
         }
 
-        let (registry_messenger, mut receptor) = messenger_result.unwrap();
+        let (registry_messenger_client, mut receptor) = messenger_result.unwrap();
 
         let switchboard = Arc::new(Mutex::new(Self {
             next_session_id: 0,
             next_action_id: 0,
             listen_cancellation_sender: cancel_listen_tx,
             listeners: HashMap::new(),
-            registry_messenger: registry_messenger,
+            registry_messenger_client: registry_messenger_client,
         }));
 
         {
@@ -167,7 +168,7 @@ impl SwitchboardImpl {
                 session_infos.remove(i);
 
                 let _ = self
-                    .registry_messenger
+                    .registry_messenger_client
                     .message(
                         Payload::Action(SettingAction {
                             id: action_id,
@@ -197,7 +198,7 @@ impl Switchboard for SwitchboardImpl {
         request: SettingRequest,
         callback: SettingRequestResponder,
     ) -> Result<(), Error> {
-        let messenger = self.registry_messenger.clone();
+        let messenger = self.registry_messenger_client.clone();
         let action_id = self.get_next_action_id();
 
         fasync::spawn(async move {
@@ -251,7 +252,7 @@ impl Switchboard for SwitchboardImpl {
             listeners.push(info.clone());
 
             let _ = self
-                .registry_messenger
+                .registry_messenger_client
                 .message(
                     Payload::Action(SettingAction {
                         id: action_id,

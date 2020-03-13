@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::message::action_fuse::ActionFuse;
 use crate::message::base::{
     ActionSender, Address, Audience, DeliveryStatus, Message, MessageAction, MessageError,
-    MessageType, MessengerAction, MessengerId, MessengerType, Payload,
+    MessageType, MessengerAction, MessengerActionSender, MessengerId, MessengerType, Payload,
 };
 use crate::message::beacon::Beacon;
-use crate::message::messenger::{Messenger, MessengerFactory};
+use crate::message::messenger::{Messenger, MessengerClient, MessengerFactory};
 use fuchsia_async as fasync;
 use futures::lock::Mutex;
 use futures::StreamExt;
@@ -22,6 +23,9 @@ pub type MessageHubHandle<P, A> = Arc<Mutex<MessageHub<P, A>>>;
 /// processes actions upon messages, incorporates brokers, and signals receipt
 /// of messages.
 pub struct MessageHub<P: Payload + 'static, A: Address + 'static> {
+    /// A sender handed to messenger components to signal when the
+    /// messenger is no longer needed. Also used for messenger creation.
+    messenger_tx: MessengerActionSender<P, A>,
     /// A sender given to messengers to signal actions upon the MessageHub.
     action_tx: ActionSender<P, A>,
     /// Address mapping for looking up messengers. Used for sending messages
@@ -49,6 +53,7 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
 
         let hub = Arc::new(Mutex::new(MessageHub {
             next_id: 0,
+            messenger_tx: messenger_tx.clone(),
             action_tx: action_tx,
             beacons: HashMap::new(),
             addresses: HashMap::new(),
@@ -219,9 +224,21 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
                 }
 
                 let id = self.next_id;
-                let messenger = Messenger::create(id, self.action_tx.clone());
+
+                let messenger = Messenger::new(id, self.action_tx.clone(), messenger_type.clone());
+
+                let messenger_clone = messenger.clone();
+                let messenger_tx_clone = self.messenger_tx.clone();
+
+                // Create fuse to delete Messenger.
+                let fuse = ActionFuse::create(Box::new(move || {
+                    messenger_tx_clone
+                        .unbounded_send(MessengerAction::Delete(messenger_clone.clone()))
+                        .ok();
+                }));
+
                 self.next_id += 1;
-                let (beacon, receptor) = Beacon::create(messenger.clone());
+                let (beacon, receptor) = Beacon::create(messenger.clone(), Some(fuse.clone()));
                 self.beacons.insert(id, beacon.clone());
 
                 match messenger_type {
@@ -232,8 +249,25 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
                         self.addresses.insert(address, id);
                     }
                 }
-                responder.send(Ok((messenger, receptor))).ok();
-            } // MessengerAction::Delete(_, _) => {}
+                responder.send(Ok((MessengerClient::new(messenger, fuse.clone()), receptor))).ok();
+            }
+            MessengerAction::Delete(messenger) => {
+                let id = messenger.get_id();
+                self.beacons.remove(&id);
+
+                match messenger.get_type() {
+                    MessengerType::Broker => {
+                        if let Some(index) =
+                            self.brokers.iter().position(|broker_id| id == *broker_id)
+                        {
+                            self.brokers.remove(index);
+                        }
+                    }
+                    MessengerType::Addressable(address) => {
+                        self.addresses.remove(&address);
+                    }
+                }
+            }
         }
     }
 

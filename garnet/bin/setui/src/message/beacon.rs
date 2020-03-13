@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::message::action_fuse::ActionFuseHandle;
 use crate::message::base::{Address, DeliveryStatus, Message, MessageEvent, MessengerId, Payload};
 use crate::message::message_client::MessageClient;
 use crate::message::messenger::Messenger;
@@ -31,11 +32,15 @@ pub struct Beacon<P: Payload + 'static, A: Address + 'static> {
 impl<P: Payload + 'static, A: Address + 'static> Beacon<P, A> {
     /// Creates a Beacon, Receptor tuple. The Messenger provided as an argument
     /// will be associated with any delivered Message for reply purposes.
-    pub fn create(messenger: Messenger<P, A>) -> (Beacon<P, A>, Receptor<P, A>) {
+    pub fn create(
+        messenger: Messenger<P, A>,
+        fuse: Option<ActionFuseHandle>,
+    ) -> (Beacon<P, A>, Receptor<P, A>) {
         let (event_tx, event_rx) = futures::channel::mpsc::unbounded::<MessageEvent<P, A>>();
         let beacon = Beacon { messenger: messenger, event_sender: event_tx };
 
-        let receptor = Receptor::new(event_rx);
+        // pass fuse to receptor to hold and set when it goes out of scope.
+        let receptor = Receptor::new(event_rx, fuse);
 
         (beacon, receptor)
     }

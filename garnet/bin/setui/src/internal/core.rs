@@ -3,14 +3,16 @@
 // found in the LICENSE file.
 use crate::message::message_client::MessageClient as BaseMessageClient;
 use crate::message::message_hub::MessageHub;
-use crate::message::messenger::{Messenger as BaseMessenger, MessengerFactory as BaseFactory};
+use crate::message::messenger::{
+    MessengerClient as BaseMessengerClient, MessengerFactory as BaseFactory,
+};
 use crate::switchboard::base::{SettingAction, SettingEvent};
 use std::fmt::Debug;
 
 /// This mod defines the common definitions for a MessageHub between the
 /// Switchboard and Registry.
 pub type MessengerFactory = BaseFactory<Payload, Address>;
-pub type Messenger = BaseMessenger<Payload, Address>;
+pub type MessengerClient = BaseMessengerClient<Payload, Address>;
 pub type MessageClient = BaseMessageClient<Payload, Address>;
 
 #[derive(PartialEq, Clone, Debug, Eq, Hash)]

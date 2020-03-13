@@ -4,7 +4,7 @@
 
 use crate::message::beacon::Beacon;
 use crate::message::message_client::MessageClient;
-use crate::message::messenger::Messenger;
+use crate::message::messenger::{Messenger, MessengerClient};
 use crate::message::receptor::Receptor;
 use futures::channel::mpsc::UnboundedSender;
 use futures::channel::oneshot::Sender;
@@ -142,7 +142,7 @@ pub(super) type ActionSender<P, A> =
 pub(super) type MessengerId = usize;
 
 pub(super) type CreateMessengerResult<P, A> =
-    Result<(Messenger<P, A>, Receptor<P, A>), MessageError<A>>;
+    Result<(MessengerClient<P, A>, Receptor<P, A>), MessageError<A>>;
 
 /// Callback for handing back a messenger
 pub(super) type MessengerSender<P, A> = Sender<CreateMessengerResult<P, A>>;
@@ -155,6 +155,8 @@ pub(super) type MessengerActionSender<P, A> = UnboundedSender<MessengerAction<P,
 pub(super) enum MessengerAction<P: Payload + 'static, A: Address + 'static> {
     // Creates a top level messenger
     Create(MessengerType<A>, MessengerSender<P, A>),
+    // Deletes a given messenger
+    Delete(Messenger<P, A>),
 }
 
 /// Internal representation for possible actions on a message.

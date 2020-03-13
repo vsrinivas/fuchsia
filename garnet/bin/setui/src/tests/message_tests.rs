@@ -73,19 +73,49 @@ async fn test_messenger_creation() {
     assert!(messenger_factory.create(MessengerType::Addressable(address)).await.is_err());
 }
 
+/// Tests messenger creation and address space collision.
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_messenger_deletion() {
+    let messenger_factory = MessageHub::<u64, u64>::create();
+    let address = 1;
+
+    {
+        let (_, _) = messenger_factory.create(MessengerType::Addressable(address)).await.unwrap();
+
+        // By the time this subsequent create happens, the previous messenger and
+        // receptor belonging to this address should have gone out of scope and
+        // freed up the address space.
+        assert!(messenger_factory.create(MessengerType::Addressable(address)).await.is_ok());
+    }
+
+    {
+        // Holding onto the MessengerClient should prevent deletion.
+        let (_messenger_client, _) =
+            messenger_factory.create(MessengerType::Addressable(address)).await.unwrap();
+        assert!(messenger_factory.create(MessengerType::Addressable(address)).await.is_err());
+    }
+
+    {
+        // Holding onto the Receptor should prevent deletion.
+        let (_, _receptor) =
+            messenger_factory.create(MessengerType::Addressable(address)).await.unwrap();
+        assert!(messenger_factory.create(MessengerType::Addressable(address)).await.is_err());
+    }
+}
+
 /// Tests basic functionality of the MessageHub, ensuring messages and replies
 /// are properly delivered.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_end_to_end_messaging() {
     let messenger_factory = MessageHub::<TestMessage, TestAddress>::create();
 
-    let (messenger_1, _) =
+    let (messenger_client_1, _) =
         messenger_factory.create(MessengerType::Addressable(TestAddress::Foo(1))).await.unwrap();
     let (_, mut receptor_2) =
         messenger_factory.create(MessengerType::Addressable(TestAddress::Foo(2))).await.unwrap();
 
     let mut reply_receptor =
-        messenger_1.message(ORIGINAL, Audience::Address(TestAddress::Foo(2))).send();
+        messenger_client_1.message(ORIGINAL, Audience::Address(TestAddress::Foo(2))).send();
 
     verify_payload(
         ORIGINAL,
@@ -105,14 +135,14 @@ async fn test_end_to_end_messaging() {
 async fn test_implicit_forward() {
     let messenger_factory = MessageHub::<TestMessage, TestAddress>::create();
 
-    let (messenger_1, _) =
+    let (messenger_client_1, _) =
         messenger_factory.create(MessengerType::Addressable(TestAddress::Foo(1))).await.unwrap();
     let (_, mut receiver_2) = messenger_factory.create(MessengerType::Broker).await.unwrap();
     let (_, mut receiver_3) =
         messenger_factory.create(MessengerType::Addressable(TestAddress::Foo(3))).await.unwrap();
 
     let mut reply_receptor =
-        messenger_1.message(ORIGINAL, Audience::Address(TestAddress::Foo(3))).send();
+        messenger_client_1.message(ORIGINAL, Audience::Address(TestAddress::Foo(3))).send();
 
     // Ensure observer gets payload and then do nothing with message.
     verify_payload(ORIGINAL, &mut receiver_2, None).await;
@@ -136,14 +166,14 @@ async fn test_implicit_forward() {
 async fn test_observe_addressable() {
     let messenger_factory = MessageHub::<TestMessage, TestAddress>::create();
 
-    let (messenger_1, _) =
+    let (messenger_client_1, _) =
         messenger_factory.create(MessengerType::Addressable(TestAddress::Foo(1))).await.unwrap();
     let (_, mut receptor_2) = messenger_factory.create(MessengerType::Broker).await.unwrap();
     let (_, mut receptor_3) =
         messenger_factory.create(MessengerType::Addressable(TestAddress::Foo(3))).await.unwrap();
 
     let mut reply_receptor =
-        messenger_1.message(ORIGINAL, Audience::Address(TestAddress::Foo(3))).send();
+        messenger_client_1.message(ORIGINAL, Audience::Address(TestAddress::Foo(3))).send();
 
     let observe_receptor = Arc::new(Mutex::new(None));
 
@@ -181,14 +211,14 @@ async fn test_observe_addressable() {
 async fn test_broadcast() {
     let messenger_factory = MessageHub::<TestMessage, TestAddress>::create();
 
-    let (messenger_1, _) =
+    let (messenger_client_1, _) =
         messenger_factory.create(MessengerType::Addressable(TestAddress::Foo(1))).await.unwrap();
     let (_, mut receptor_2) =
         messenger_factory.create(MessengerType::Addressable(TestAddress::Foo(2))).await.unwrap();
     let (_, mut receptor_3) =
         messenger_factory.create(MessengerType::Addressable(TestAddress::Foo(3))).await.unwrap();
 
-    messenger_1.message(ORIGINAL, Audience::Broadcast).send();
+    messenger_client_1.message(ORIGINAL, Audience::Broadcast).send();
 
     verify_payload(ORIGINAL, &mut receptor_2, None).await;
     verify_payload(ORIGINAL, &mut receptor_3, None).await;
@@ -200,14 +230,14 @@ async fn test_delivery_status() {
     let messenger_factory = MessageHub::<TestMessage, TestAddress>::create();
     let known_receiver_address = TestAddress::Foo(2);
     let unknown_address = TestAddress::Foo(3);
-    let (messenger_1, _) =
+    let (messenger_client_1, _) =
         messenger_factory.create(MessengerType::Addressable(TestAddress::Foo(1))).await.unwrap();
     let (_, mut receptor_2) =
         messenger_factory.create(MessengerType::Addressable(known_receiver_address)).await.unwrap();
 
     {
         let mut receptor =
-            messenger_1.message(ORIGINAL, Audience::Address(known_receiver_address)).send();
+            messenger_client_1.message(ORIGINAL, Audience::Address(known_receiver_address)).send();
 
         // Ensure observer gets payload and then do nothing with message.
         verify_payload(ORIGINAL, &mut receptor_2, None).await;
@@ -216,7 +246,8 @@ async fn test_delivery_status() {
     }
 
     {
-        let mut receptor = messenger_1.message(ORIGINAL, Audience::Address(unknown_address)).send();
+        let mut receptor =
+            messenger_client_1.message(ORIGINAL, Audience::Address(unknown_address)).send();
 
         verify_result(DeliveryStatus::Undeliverable, &mut receptor).await;
     }
@@ -227,7 +258,7 @@ async fn test_delivery_status() {
 async fn test_beacon_error() {
     let messenger_factory = MessageHub::<TestMessage, TestAddress>::create();
 
-    let (messenger, _) =
+    let (messenger_client, _) =
         messenger_factory.create(MessengerType::Addressable(TestAddress::Foo(1))).await.unwrap();
     {
         let (_, mut receptor) = messenger_factory
@@ -237,7 +268,7 @@ async fn test_beacon_error() {
 
         verify_result(
             DeliveryStatus::Received,
-            &mut messenger.message(ORIGINAL, Audience::Address(TestAddress::Foo(2))).send(),
+            &mut messenger_client.message(ORIGINAL, Audience::Address(TestAddress::Foo(2))).send(),
         )
         .await;
         verify_payload(ORIGINAL, &mut receptor, None).await;
@@ -245,7 +276,7 @@ async fn test_beacon_error() {
 
     verify_result(
         DeliveryStatus::Undeliverable,
-        &mut messenger.message(ORIGINAL, Audience::Address(TestAddress::Foo(2))).send(),
+        &mut messenger_client.message(ORIGINAL, Audience::Address(TestAddress::Foo(2))).send(),
     )
     .await;
 }

@@ -44,7 +44,7 @@ impl<P: Payload + 'static, A: Address + 'static> MessageBuilder<P, A> {
 
     /// Consumes the MessageBuilder and sends the message to the MessageHub.
     pub fn send(self) -> Receptor<P, A> {
-        let (beacon, receptor) = Beacon::create(self.messenger.clone());
+        let (beacon, receptor) = Beacon::create(self.messenger.clone(), None);
         self.messenger.transmit(MessageAction::Send(self.payload, self.message_type), Some(beacon));
 
         if let Some(forwarder) = self.forwarder {

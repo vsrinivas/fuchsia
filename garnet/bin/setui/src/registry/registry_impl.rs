@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::internal::core::{Address, MessageClient, Messenger, MessengerFactory, Payload};
+use crate::internal::core::{Address, MessageClient, MessengerClient, MessengerFactory, Payload};
 use crate::message::base::{Audience, MessageEvent, MessengerType};
 use crate::registry::base::{Command, SettingHandler, SettingHandlerFactory, State};
 use crate::switchboard::base::{
@@ -23,7 +23,7 @@ use std::sync::Arc;
 pub struct RegistryImpl {
     /// A mapping of setting types to senders, used to relay new commands.
     command_sender_map: HashMap<SettingType, UnboundedSender<Command>>,
-    messenger: Messenger,
+    messenger_client: MessengerClient,
     /// A sender handed as part of State::Listen to allow entities to provide
     /// back updates.
     /// TODO(SU-334): Investigate restricting the setting type a sender may
@@ -49,7 +49,7 @@ impl RegistryImpl {
         if let Err(error) = messenger_result {
             return Err(Error::new(error));
         }
-        let (messenger, mut receptor) = messenger_result.unwrap();
+        let (messenger_client, mut receptor) = messenger_result.unwrap();
 
         // We must create handle here rather than return back the value as we
         // reference the registry in the async tasks below.
@@ -58,7 +58,7 @@ impl RegistryImpl {
             notification_sender: notification_tx,
             active_listeners: vec![],
             handler_factory: handler_factory,
-            messenger: messenger,
+            messenger_client: messenger_client,
         }));
 
         // Async task for handling messages from the receptor.
@@ -162,7 +162,7 @@ impl RegistryImpl {
     fn notify(&self, setting_type: SettingType) {
         // Only return updates for types actively listened on.
         if self.active_listeners.contains(&setting_type) {
-            self.messenger
+            self.messenger_client
                 .message(
                     Payload::Event(SettingEvent::Changed(setting_type)),
                     Audience::Address(Address::Switchboard),
@@ -271,7 +271,7 @@ mod tests {
         let _registry =
             RegistryImpl::create(handler_factory.clone(), messenger_factory.clone()).await;
         let setting_type = SettingType::Unknown;
-        let (messenger, mut receptor) = messenger_factory
+        let (messenger_client, mut receptor) = messenger_factory
             .create(MessengerType::Addressable(Address::Switchboard))
             .await
             .unwrap();
@@ -281,7 +281,7 @@ mod tests {
 
         // Send a listen state and make sure sink is notified.
         {
-            let _ = messenger
+            let _ = messenger_client
                 .message(
                     Payload::Action(SettingAction {
                         id: 1,
@@ -318,7 +318,7 @@ mod tests {
 
         // Send an end listen state and make sure sink is notified.
         {
-            let _ = messenger
+            let _ = messenger_client
                 .message(
                     Payload::Action(SettingAction {
                         id: 1,
@@ -344,7 +344,7 @@ mod tests {
     async fn test_request() {
         let messenger_factory = create_message_hub();
         let handler_factory = Arc::new(Mutex::new(FakeFactory::new()));
-        let (messenger, _) = messenger_factory
+        let (messenger_client, _) = messenger_factory
             .create(MessengerType::Addressable(Address::Switchboard))
             .await
             .unwrap();
@@ -359,7 +359,7 @@ mod tests {
         handler_factory.lock().await.register(setting_type, handler_tx);
 
         // Send initial request.
-        let mut receptor = messenger
+        let mut receptor = messenger_client
             .message(
                 Payload::Action(SettingAction {
                     id: request_id,
@@ -404,7 +404,7 @@ mod tests {
     async fn test_generation() {
         let messenger_factory = create_message_hub();
         let handler_factory = Arc::new(Mutex::new(FakeFactory::new()));
-        let (messenger, _) = messenger_factory
+        let (messenger_client, _) = messenger_factory
             .create(MessengerType::Addressable(Address::Switchboard))
             .await
             .unwrap();
@@ -418,7 +418,7 @@ mod tests {
         handler_factory.lock().await.register(setting_type, handler_tx);
 
         // Send initial request.
-        let _ = messenger
+        let _ = messenger_client
             .message(
                 Payload::Action(SettingAction {
                     id: request_id,
@@ -436,7 +436,7 @@ mod tests {
         assert_eq!(1, handler_factory.lock().await.get_request_count(setting_type));
 
         // Send followup request.
-        let _ = messenger
+        let _ = messenger_client
             .message(
                 Payload::Action(SettingAction {
                     id: request_id,
