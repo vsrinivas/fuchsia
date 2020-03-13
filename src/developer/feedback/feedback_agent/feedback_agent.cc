@@ -96,9 +96,11 @@ void FeedbackAgent::SpawnSystemLogRecorder() {
 
 void FeedbackAgent::HandleComponentDataRegisterRequest(
     fidl::InterfaceRequest<fuchsia::feedback::ComponentDataRegister> request) {
-  data_register_connections_.AddBinding(&data_register_, std::move(request), dispatcher_);
-  // TODO(fxb/47368): track the number of connections to fuchsia.feeedback.ComponentDataRegister in
-  // Inspect.
+  data_register_connections_.AddBinding(
+      &data_register_, std::move(request), dispatcher_, [this](const zx_status_t status) {
+        inspect_manager_.DecrementCurrentNumComponentDataRegisterConnections();
+      });
+  inspect_manager_.IncrementNumComponentDataRegisterConnections();
 }
 
 void FeedbackAgent::HandleDataProviderRequest(
@@ -112,9 +114,11 @@ void FeedbackAgent::HandleDataProviderRequest(
 
 void FeedbackAgent::HandleDeviceIdProviderRequest(
     fidl::InterfaceRequest<fuchsia::feedback::DeviceIdProvider> request) {
-  device_id_provider_connections_.AddBinding(&device_id_provider_, std::move(request), dispatcher_);
-  // TODO(fxb/42590): track the number of connections to fuchsia.feeedback.DeviceIdProvider in
-  // Inspect.
+  device_id_provider_connections_.AddBinding(
+      &device_id_provider_, std::move(request), dispatcher_, [this](const zx_status_t status) {
+        inspect_manager_.DecrementCurrentNumDeviceIdProviderConnections();
+      });
+  inspect_manager_.IncrementNumDeviceIdProviderConnections();
 }
 
 }  // namespace feedback

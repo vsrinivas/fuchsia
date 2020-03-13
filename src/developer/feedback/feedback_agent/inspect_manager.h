@@ -19,21 +19,33 @@ class InspectManager {
  public:
   InspectManager(inspect::Node* root_node);
 
+  // Increments the current and total numbers of ComponentDataRegister connections.
+  void IncrementNumComponentDataRegisterConnections();
+  // Decrements the current number of ComponentDataRegister connections.
+  void DecrementCurrentNumComponentDataRegisterConnections();
+
   // Increments the current and total numbers of DataProvider connections.
   void IncrementNumDataProviderConnections();
   // Decrements the current number of DataProvider connections.
   void DecrementCurrentNumDataProviderConnections();
 
+  // Increments the current and total numbers of DeviceIdProvider connections.
+  void IncrementNumDeviceIdProviderConnections();
+  // Decrements the current number of DeviceIdProvider connections.
+  void DecrementCurrentNumDeviceIdProviderConnections();
+
  private:
-  // Inspect node containing the DataProvider stats.
-  struct DataProviderStats {
+  // Inspect node containing stats for a given protocol.
+  struct ProtocolStats {
     inspect::UintProperty total_num_connections;
     inspect::UintProperty current_num_connections;
   };
 
   InspectNodeManager node_manager_;
 
-  DataProviderStats data_provider_stats_;
+  ProtocolStats component_data_register_stats_;
+  ProtocolStats data_provider_stats_;
+  ProtocolStats device_id_provider_stats_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(InspectManager);
 };
