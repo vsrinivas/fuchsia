@@ -74,6 +74,7 @@ template("config_data") {
 template("config_package") {
   config_package_manifest = "${target_name}.config-package-extra.manifest"
   config_package_manifest_path = target_gen_dir + "/" + config_package_manifest
+  validate_sysmgr_config_target_name = "${target_name}_validate_sysmgr_config"
 
   generated_file(config_package_manifest) {
     forward_variables_from(invoker,
@@ -90,6 +91,32 @@ template("config_package") {
     outputs = [ config_package_manifest_path ]
   }
 
+  action(validate_sysmgr_config_target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "public_deps",
+                             "data_deps",
+                             "testonly",
+                           ])
+    deps += [ ":${config_package_manifest}" ]
+
+    script = "//build/tools/validate_sysmgr_config.py"
+    inputs = [ config_package_manifest_path ]
+
+    depfile = "$target_out_dir/$target_name.d"
+    stamp_file = "$target_out_dir/$target_name.script.stamp"
+    outputs = [ stamp_file ]
+
+    args = [
+      rebase_path(config_package_manifest_path, root_build_dir),
+      "--stamp",
+      rebase_path(stamp_file, root_build_dir),
+      "--depfile",
+      rebase_path(depfile, root_build_dir),
+    ]
+  }
+
   package(target_name) {
     forward_variables_from(invoker,
                            [
@@ -100,7 +127,11 @@ template("config_package") {
                              "testonly",
                              "visibility",
                            ])
-    deps += [ ":" + config_package_manifest ]
+    deps += [
+      ":${config_package_manifest}",
+      ":${validate_sysmgr_config_target_name}",
+    ]
+
     extra = [ config_package_manifest_path ]
     metadata = {
       if (defined(invoker.metadata)) {
