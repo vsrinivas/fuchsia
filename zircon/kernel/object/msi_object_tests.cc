@@ -162,6 +162,19 @@ static bool interrupt_creation_test() {
   ASSERT_EQ(ZX_OK, MsiAllocation::Create(msi_cnt, &alloc, MsiAllocate, MsiFree, MsiIsSupportedTrue,
                                          &rsrc_storage));
   ASSERT_EQ(1u, rsrc_storage.resource_list.size_slow());
+  fbl::RefPtr<VmObject> vmo;
+  size_t vmo_size = 48u;
+  ASSERT_EQ(ZX_OK,
+            VmObjectPaged::CreateContiguous(PMM_ALLOC_FLAG_ANY, vmo_size, 0 /* options */, &vmo));
+  ASSERT_EQ(ZX_OK, vmo->SetMappingCachePolicy(ZX_CACHE_POLICY_UNCACHED_DEVICE));
+  // This mapping must be created after the MsiDispatcher because the VMO's
+  // cache policy is set within Create().
+  fbl::RefPtr<VmMapping> mapping;
+  ASSERT_EQ(ZX_OK, VmAspace::kernel_aspace()->RootVmar()->CreateVmMapping(
+                       0 /* offset */, vmo_size, 0 /* align_pow2 */, 0 /* vmar_flags */, vmo,
+                       0 /* vmo offset */, ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE,
+                       nullptr, &mapping));
+  auto* reg_ptr = reinterpret_cast<uint32_t*>(mapping->base() + reg_offset);
 
   // This test emulates a block of MSI interrupts each taking up a given bit in a register for
   // their own masking. It validates that the MsiDispatcher masks / unmasks the correct bit, and
@@ -170,35 +183,10 @@ static bool interrupt_creation_test() {
   register_call_count = 0;
   for (uint32_t msi_id = 0; msi_id < msi_cnt; msi_id++) {
     zx_rights_t rights;
-    fbl::RefPtr<VmObject> vmo, vmo_noncontig;
-    size_t vmo_size = 48u;
-    ASSERT_EQ(ZX_OK,
-              VmObjectPaged::CreateContiguous(PMM_ALLOC_FLAG_ANY, vmo_size, 0 /* options */, &vmo));
-    ASSERT_EQ(ZX_OK,
-              VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0 /* options */, vmo_size, &vmo_noncontig));
-    // This should fail because the VMO is non-contiguous.
     KernelHandle<InterruptDispatcher> interrupt;
-    ASSERT_EQ(
-        ZX_ERR_INVALID_ARGS,
-        MsiDispatcher::Create(alloc, msi_id, vmo_noncontig, reg_offset, MSI_FLAG_HAS_PVM, &rights,
-                              &interrupt, register_fn, true /* virtual interrupt */));
-    // This should fail because the VMO has not had a cache policy set.
-    ASSERT_EQ(ZX_ERR_INVALID_ARGS,
-              MsiDispatcher::Create(alloc, msi_id, vmo, reg_offset, MSI_FLAG_HAS_PVM, &rights,
-                                    &interrupt, register_fn, true /* virtual interrupt */));
-    ASSERT_EQ(ZX_OK, vmo->SetMappingCachePolicy(ZX_CACHE_POLICY_UNCACHED_DEVICE));
-    // Now Create() should succeed.
     ASSERT_EQ(ZX_OK,
               MsiDispatcher::Create(alloc, msi_id, vmo, reg_offset, MSI_FLAG_HAS_PVM, &rights,
                                     &interrupt, register_fn, true /* virtual interrupt */));
-    // This mapping must be created after the MsiDispatcher because the VMO's
-    // cache policy is set within Create().
-    fbl::RefPtr<VmMapping> mapping;
-    ASSERT_EQ(ZX_OK, VmAspace::kernel_aspace()->RootVmar()->CreateVmMapping(
-                         0 /* offset */, vmo_size, 0 /* align_pow2 */, 0 /* vmar_flags */, vmo,
-                         0 /* vmo offset */, ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE,
-                         nullptr, &mapping));
-    auto* reg_ptr = reinterpret_cast<uint32_t*>(mapping->base() + reg_offset);
 
     // What the register should look like when |msi_id| is presently masked.
     uint32_t msi_id_masked = (1u << msi_id);
@@ -217,7 +205,7 @@ static bool interrupt_creation_test() {
     int ret = 0;
     EXPECT_EQ(ZX_OK, thread->Join(&ret, current_time() + ZX_SEC(1)));
     EXPECT_EQ(1, ret);
-    ASSERT_EQ(msi_id_masked, *reg_ptr);
+    EXPECT_EQ(msi_id_masked, *reg_ptr);
   }
 
   // the register fn should be called once for registering and once for
@@ -259,6 +247,47 @@ static bool interrupt_duplication_test() {
   END_TEST;
 }
 
+static bool interrupt_vmo_test() {
+  BEGIN_TEST;
+  ResourceDispatcher::ResourceStorage rsrc_storage;
+  const uint32_t msi_cnt = 8;
+  ASSERT_EQ(ZX_OK, ResourceDispatcher::InitializeAllocator(ZX_RSRC_KIND_IRQ, msi_cnt, kVectorMax,
+                                                           &rsrc_storage));
+  // Create an MsiAllocation and Interrupt that will attempt to use masking at the MSI Capability
+  // level.
+  fbl::RefPtr<MsiAllocation> alloc;
+  ASSERT_EQ(ZX_OK, MsiAllocation::Create(msi_cnt, &alloc, MsiAllocate, MsiFree, MsiIsSupportedTrue,
+                                         &rsrc_storage));
+  ASSERT_EQ(1u, rsrc_storage.resource_list.size_slow());
+
+  // This test emulates a block of MSI interrupts each taking up a given bit in a register for
+  // their own masking. It validates that the MsiDispatcher masks / unmasks the correct bit, and
+  // that the operation of the inherited InterruptDispatcher side of things behaves correctly when
+  // interrupts are triggered.
+  fbl::RefPtr<VmObject> vmo, vmo_noncontig;
+  size_t vmo_size = 48u;
+  ASSERT_EQ(ZX_OK,
+            VmObjectPaged::CreateContiguous(PMM_ALLOC_FLAG_ANY, vmo_size, 0 /* options */, &vmo));
+  ASSERT_EQ(ZX_OK,
+            VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0 /* options */, vmo_size, &vmo_noncontig));
+
+  zx_rights_t rights;
+  KernelHandle<InterruptDispatcher> interrupt;
+  // This should fail because the VMO is non-contiguous.
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS,
+            MsiDispatcher::Create(alloc, 0, vmo_noncontig, 0, MSI_FLAG_HAS_PVM, &rights, &interrupt,
+                                  register_fn, true /* virtual interrupt */));
+  // This should fail because the VMO has not had a cache policy set.
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS,
+            MsiDispatcher::Create(alloc, 0, vmo, 0, MSI_FLAG_HAS_PVM, &rights, &interrupt,
+                                  register_fn, true /* virtual interrupt */));
+  ASSERT_EQ(ZX_OK, vmo->SetMappingCachePolicy(ZX_CACHE_POLICY_UNCACHED_DEVICE));
+  // Now Create() should succeed.
+  ASSERT_EQ(ZX_OK, MsiDispatcher::Create(alloc, 0, vmo, 0, MSI_FLAG_HAS_PVM, &rights, &interrupt,
+                                         register_fn, true /* virtual interrupt */));
+  END_TEST;
+}
+
 UNITTEST_START_TESTCASE(msi_object)
 UNITTEST("Test that Create() and get_info() operate properly", allocation_creation_and_info_test)
 UNITTEST("Test allocation limits", allocation_irq_count_test)
@@ -266,5 +295,6 @@ UNITTEST("Test reservations for MSI ids", allocation_reservation_test)
 UNITTEST("Test for MSI platform support hooks", allocation_support_test)
 // TODO(fxb/46894): Disable test flake until root cause is found and resolved.
 // UNITTEST("Test MsiDispatcher operation", interrupt_creation_test)
-UNITTEST("Test MsiDispatchers cannot overlap on an MSI id", interrupt_duplication_test)
+UNITTEST("Test that MsiDispatchers cannot overlap on an MSI id", interrupt_duplication_test)
+UNITTEST("Test that MsiDispatcher validates the VMO", interrupt_vmo_test)
 UNITTEST_END_TESTCASE(msi_object, "msi", "Tests for MSI objects")
