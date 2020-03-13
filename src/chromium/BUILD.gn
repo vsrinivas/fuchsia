@@ -81,6 +81,9 @@ icu_tzdata_config_data("tzdata_for_web_runner") {
   data_version = "44"
 }
 
+# Prebuilt FAR tests
+test_env = [ nuc_env ]
+
 group("chromium_tests_group") {
   testonly = true
   deps = [
@@ -95,11 +98,11 @@ group("chromium_tests_group") {
 
 prebuilt_test_manifest("chromium_tests") {
   if (use_chromium_canary) {
-    archive_dir =
-        "//prebuilt/third_party/chromium_tests_latest/arch/" + target_cpu
+    archive_dir = "//prebuilt/third_party/chromium_tests_latest/arch/x64"
   } else {
-    archive_dir = "//prebuilt/third_party/chromium_tests/arch/" + target_cpu
+    archive_dir = "//prebuilt/third_party/chromium_tests/arch/x64"
   }
+  environments = test_env
 
   disabled_tests = []
 
