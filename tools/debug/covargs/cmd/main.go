@@ -57,6 +57,7 @@ var (
 	llvmProfdata      string
 	outputFormat      string
 	jsonOutput        string
+	saveTemps         string
 )
 
 func init() {
@@ -77,6 +78,7 @@ func init() {
 	flag.StringVar(&llvmCov, "llvm-cov", "llvm-cov", "the location of llvm-cov")
 	flag.StringVar(&outputFormat, "format", "html", "the output format used for llvm-cov")
 	flag.StringVar(&jsonOutput, "json-output", "", "outputs profile information to the specified file")
+	flag.StringVar(&saveTemps, "save-temps", "", "save temporary artifacts in a directory")
 }
 
 const llvmProfileSinkType = "llvm-profile"
@@ -247,14 +249,17 @@ func process(ctx context.Context, repo symbolize.Repository) error {
 		covFiles = append(covFiles, entry.ProfileData)
 	}
 
-	dir, err := ioutil.TempDir("", "covargs")
-	if err != nil {
-		return fmt.Errorf("cannot create temporary dir: %v", err)
+	tempDir := saveTemps
+	if saveTemps == "" {
+		tempDir, err = ioutil.TempDir(saveTemps, "covargs")
+		if err != nil {
+			return fmt.Errorf("cannot create temporary dir: %v", err)
+		}
+		defer os.RemoveAll(tempDir)
 	}
-	defer os.RemoveAll(dir)
 
 	// Make the llvm-profdata response file
-	profdataFile, err := os.Create(filepath.Join(dir, "llvm-profdata.rsp"))
+	profdataFile, err := os.Create(filepath.Join(tempDir, "llvm-profdata.rsp"))
 	if err != nil {
 		return fmt.Errorf("creating llvm-profdata.rsp file: %v", err)
 	}
@@ -264,7 +269,7 @@ func process(ctx context.Context, repo symbolize.Repository) error {
 	profdataFile.Close()
 
 	// Merge everything
-	mergedFile := filepath.Join(dir, "merged.profdata")
+	mergedFile := filepath.Join(tempDir, "merged.profdata")
 	mergeCmd := Action{Path: llvmProfdata, Args: []string{
 		"merge",
 		"-failure-mode=all",
@@ -277,7 +282,7 @@ func process(ctx context.Context, repo symbolize.Repository) error {
 	}
 
 	// Make the llvm-cov response file
-	covFile, err := os.Create(filepath.Join(dir, "llvm-cov.rsp"))
+	covFile, err := os.Create(filepath.Join(tempDir, "llvm-cov.rsp"))
 	if err != nil {
 		return fmt.Errorf("creating llvm-cov.rsp file: %v", err)
 	}
