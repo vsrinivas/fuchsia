@@ -13,10 +13,13 @@
 #include <cstdint>
 #include <memory>
 
+#include "src/developer/feedback/feedback_agent/config.h"
 #include "src/developer/feedback/feedback_agent/data_provider.h"
 #include "src/developer/feedback/feedback_agent/data_register.h"
+#include "src/developer/feedback/feedback_agent/datastore.h"
 #include "src/developer/feedback/feedback_agent/device_id_provider.h"
 #include "src/developer/feedback/feedback_agent/inspect_manager.h"
+#include "src/developer/feedback/utils/cobalt.h"
 #include "src/lib/fxl/macros.h"
 
 namespace feedback {
@@ -33,9 +36,8 @@ class FeedbackAgent {
                                                   std::shared_ptr<sys::ServiceDirectory> services,
                                                   inspect::Node* root_node);
 
-  FeedbackAgent(async_dispatcher_t* dispatcher, inspect::Node* root_node,
-                DeviceIdProvider device_id_provider, std::unique_ptr<DataProvider> data_provider,
-                DataRegister data_register);
+  FeedbackAgent(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
+                inspect::Node* root_node, Config config);
 
   void SpawnSystemLogRecorder();
 
@@ -53,11 +55,14 @@ class FeedbackAgent {
  private:
   async_dispatcher_t* dispatcher_;
   InspectManager inspect_manager_;
+  Cobalt cobalt_;
 
   DeviceIdProvider device_id_provider_;
   fidl::BindingSet<fuchsia::feedback::DeviceIdProvider> device_id_provider_connections_;
 
-  std::unique_ptr<DataProvider> data_provider_;
+  Datastore datastore_;
+
+  DataProvider data_provider_;
   fidl::BindingSet<fuchsia::feedback::DataProvider> data_provider_connections_;
   uint64_t next_data_provider_connection_id_ = 1;
 

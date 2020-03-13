@@ -43,6 +43,7 @@ using ::testing::IsEmpty;
 using ::testing::Not;
 using ::testing::Pair;
 
+// Keep in sync with the internal Datastore value.
 constexpr zx::duration kTimeout = zx::sec(30);
 
 // Allowlist to use in test cases where the annotations don't matter, but where we want to avoid
@@ -68,7 +69,7 @@ class DatastoreTest : public UnitTestFixture, public CobaltTestFixture {
  protected:
   void SetUpDatastore(const AnnotationKeys& annotation_allowlist,
                       const AttachmentKeys& attachment_allowlist) {
-    datastore_ = std::make_unique<Datastore>(dispatcher(), services(), cobalt_.get(), kTimeout,
+    datastore_ = std::make_unique<Datastore>(dispatcher(), services(), cobalt_.get(),
                                              annotation_allowlist, attachment_allowlist);
   }
 

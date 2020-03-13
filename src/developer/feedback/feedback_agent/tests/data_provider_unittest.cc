@@ -18,7 +18,8 @@
 #include <string>
 #include <vector>
 
-#include "src/developer/feedback/feedback_agent/config.h"
+#include "src/developer/feedback/feedback_agent/annotations/aliases.h"
+#include "src/developer/feedback/feedback_agent/attachments/aliases.h"
 #include "src/developer/feedback/feedback_agent/constants.h"
 #include "src/developer/feedback/feedback_agent/tests/stub_scenic.h"
 #include "src/developer/feedback/testing/cobalt_test_fixture.h"
@@ -49,15 +50,14 @@ using fuchsia::feedback::ImageEncoding;
 using fuchsia::feedback::Screenshot;
 using testing::UnorderedElementsAreArray;
 
-const std::set<std::string> kDefaultAnnotations = {
+const AnnotationKeys kDefaultAnnotations = {
     kAnnotationBuildBoard,    kAnnotationBuildLatestCommitDate, kAnnotationBuildProduct,
     kAnnotationBuildVersion,  kAnnotationDeviceBoardName,       kAnnotationDeviceUptime,
     kAnnotationDeviceUTCTime,
 };
-const std::set<std::string> kDefaultAttachments = {
+const AttachmentKeys kDefaultAttachments = {
     kAttachmentBuildSnapshot,
 };
-const Config kDefaultConfig = Config{kDefaultAnnotations, kDefaultAttachments};
 
 constexpr bool kSuccess = true;
 constexpr bool kFailure = false;
@@ -138,14 +138,23 @@ class DataProviderTest : public UnitTestFixture, public CobaltTestFixture {
  public:
   DataProviderTest() : CobaltTestFixture(/*unit_test_fixture=*/this) {}
 
- protected:
-  void SetUpDataProvider(const Config& config) {
-    // |data_provider_.cobalt_| owns the test clock through a unique_ptr so we need to allocate
-    // |clock_| on the heap and then give |data_provider_| ownership of it. This allows us to
-    // control the time perceived by |data_provider_.cobalt_|.
+  void SetUp() override {
+    // |cobalt_| owns the test clock through a unique_ptr so we need to allocate |clock_| on the
+    // heap and then give |cobalt_| ownership of it. This allows us to control the time perceived by
+    // |cobalt_|.
     clock_ = new timekeeper::TestClock();
-    data_provider_.reset(new DataProvider(dispatcher(), services(), config,
-                                          std::unique_ptr<timekeeper::TestClock>(clock_)));
+    cobalt_ = std::make_unique<Cobalt>(dispatcher(), services(),
+                                       std::unique_ptr<timekeeper::TestClock>(clock_));
+    SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+  }
+
+ protected:
+  void SetUpDataProvider(const AnnotationKeys& annotation_allowlist = kDefaultAnnotations,
+                         const AttachmentKeys& attachment_allowlist = kDefaultAttachments) {
+    datastore_ = std::make_unique<Datastore>(dispatcher(), services(), cobalt_.get(),
+                                             annotation_allowlist, attachment_allowlist);
+    data_provider_ =
+        std::make_unique<DataProvider>(dispatcher(), services(), cobalt_.get(), datastore_.get());
   }
 
   void SetUpScenic(std::unique_ptr<StubScenic> scenic) {
@@ -203,8 +212,10 @@ class DataProviderTest : public UnitTestFixture, public CobaltTestFixture {
  private:
   std::unique_ptr<StubScenic> scenic_;
 
-  // The lifetime of |clock_| is managed by |data_provider_|.
+  // The lifetime of |clock_| is managed by |cobalt_|.
   timekeeper::TestClock* clock_;
+  std::unique_ptr<Cobalt> cobalt_;
+  std::unique_ptr<Datastore> datastore_;
 };
 
 TEST_F(DataProviderTest, GetScreenshot_SucceedOnScenicReturningSuccess) {
@@ -214,8 +225,7 @@ TEST_F(DataProviderTest, GetScreenshot_SucceedOnScenicReturningSuccess) {
   auto scenic = std::make_unique<StubScenic>();
   scenic->set_take_screenshot_responses(std::move(scenic_responses));
   SetUpScenic(std::move(scenic));
-  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
-  SetUpDataProvider(kDefaultConfig);
+  SetUpDataProvider();
 
   GetScreenshotResponse feedback_response = GetScreenshot();
   EXPECT_TRUE(get_scenic_responses().empty());
@@ -237,9 +247,7 @@ TEST_F(DataProviderTest, GetScreenshot_SucceedOnScenicReturningSuccess) {
 }
 
 TEST_F(DataProviderTest, GetScreenshot_FailOnScenicNotAvailable) {
-  SetUpScenic(nullptr);
-  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
-  SetUpDataProvider(kDefaultConfig);
+  SetUpDataProvider();
 
   GetScreenshotResponse feedback_response = GetScreenshot();
   EXPECT_EQ(feedback_response.screenshot, nullptr);
@@ -251,8 +259,7 @@ TEST_F(DataProviderTest, GetScreenshot_FailOnScenicReturningFailure) {
   auto scenic = std::make_unique<StubScenic>();
   scenic->set_take_screenshot_responses(std::move(scenic_responses));
   SetUpScenic(std::move(scenic));
-  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
-  SetUpDataProvider(kDefaultConfig);
+  SetUpDataProvider();
 
   GetScreenshotResponse feedback_response = GetScreenshot();
   EXPECT_TRUE(get_scenic_responses().empty());
@@ -265,8 +272,7 @@ TEST_F(DataProviderTest, GetScreenshot_FailOnScenicReturningNonBGRA8Screenshot) 
   auto scenic = std::make_unique<StubScenic>();
   scenic->set_take_screenshot_responses(std::move(scenic_responses));
   SetUpScenic(std::move(scenic));
-  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
-  SetUpDataProvider(kDefaultConfig);
+  SetUpDataProvider();
 
   GetScreenshotResponse feedback_response = GetScreenshot();
   EXPECT_TRUE(get_scenic_responses().empty());
@@ -287,8 +293,7 @@ TEST_F(DataProviderTest, GetScreenshot_ParallelRequests) {
   auto scenic = std::make_unique<StubScenic>();
   scenic->set_take_screenshot_responses(std::move(scenic_responses));
   SetUpScenic(std::move(scenic));
-  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
-  SetUpDataProvider(kDefaultConfig);
+  SetUpDataProvider();
 
   std::vector<GetScreenshotResponse> feedback_responses;
   for (size_t i = 0; i < num_calls; i++) {
@@ -329,8 +334,7 @@ TEST_F(DataProviderTest, GetScreenshot_ParallelRequests) {
 TEST_F(DataProviderTest, GetScreenshot_OneScenicConnectionPerGetScreenshotCall) {
   // We use a stub that always returns false as we are not interested in the responses.
   SetUpScenic(std::make_unique<StubScenicAlwaysReturnsFalse>());
-  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
-  SetUpDataProvider(kDefaultConfig);
+  SetUpDataProvider();
 
   const size_t num_calls = 5u;
   std::vector<GetScreenshotResponse> feedback_responses;
@@ -351,8 +355,7 @@ TEST_F(DataProviderTest, GetScreenshot_OneScenicConnectionPerGetScreenshotCall) 
 }
 
 TEST_F(DataProviderTest, GetData_SmokeTest) {
-  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
-  SetUpDataProvider(kDefaultConfig);
+  SetUpDataProvider();
 
   fit::result<Data, zx_status_t> result = GetData();
 
@@ -376,8 +379,7 @@ TEST_F(DataProviderTest, GetData_SmokeTest) {
 }
 
 TEST_F(DataProviderTest, GetData_AnnotationsAsAttachment) {
-  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
-  SetUpDataProvider(kDefaultConfig);
+  SetUpDataProvider();
 
   fit::result<Data, zx_status_t> result = GetData();
 
@@ -449,8 +451,7 @@ TEST_F(DataProviderTest, GetData_AnnotationsAsAttachment) {
 }
 
 TEST_F(DataProviderTest, GetData_SingleAttachmentOnEmptyAttachmentAllowlist) {
-  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
-  SetUpDataProvider(Config{kDefaultAnnotations, /*attachment_allowlist=*/{}});
+  SetUpDataProvider(kDefaultAnnotations, /*attachment_allowlist=*/{});
 
   fit::result<Data, zx_status_t> result = GetData();
   ASSERT_TRUE(result.is_ok());
@@ -462,8 +463,7 @@ TEST_F(DataProviderTest, GetData_SingleAttachmentOnEmptyAttachmentAllowlist) {
 }
 
 TEST_F(DataProviderTest, GetData_NoDataOnEmptyAllowlists) {
-  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
-  SetUpDataProvider(Config{/*annotation_allowlist=*/{}, /*attachment_allowlist=*/{}});
+  SetUpDataProvider(/*annotation_allowlist=*/{}, /*attachment_allowlist=*/{});
 
   fit::result<Data, zx_status_t> result = GetData();
   ASSERT_TRUE(result.is_ok());

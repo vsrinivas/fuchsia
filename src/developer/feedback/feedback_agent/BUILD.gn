@@ -53,7 +53,6 @@ executable("main") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/inspect/cpp",
-    "//src/lib/fxl",
     "//src/lib/syslog/cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
@@ -78,6 +77,25 @@ executable("system_log_recorder") {
 ###############################################################################
 # SOURCES
 ###############################################################################
+source_set("config") {
+  sources = [
+    "config.cc",
+    "config.h",
+  ]
+
+  public_deps = [
+    "//src/developer/feedback/feedback_agent/annotations:aliases",
+    "//src/developer/feedback/feedback_agent/attachments:aliases",
+    "//zircon/public/lib/zx",
+  ]
+
+  deps = [
+    "//src/lib/files",
+    "//src/lib/syslog/cpp",
+    "//third_party/rapidjson",
+  ]
+}
+
 source_set("constants") {
   sources = [ "constants.h" ]
 
@@ -85,9 +103,9 @@ source_set("constants") {
 }
 
 source_set("data_provider") {
+  public = [ "data_provider.h" ]
+
   sources = [
-    "config.cc",
-    "config.h",
     "data_provider.cc",
     "data_provider.h",
     "image_conversion.cc",
@@ -95,14 +113,11 @@ source_set("data_provider") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/timekeeper",
-    "//garnet/public/lib/timekeeper:system",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/sys/cpp",
     "//src/developer/feedback/utils:cobalt",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
   ]
 
@@ -118,13 +133,10 @@ source_set("data_provider") {
     "//src/developer/feedback/feedback_agent/attachments:util",
     "//src/developer/feedback/utils:archive",
     "//src/developer/feedback/utils:promise",
-    "//src/lib/files",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/syslog/cpp",
     "//third_party/libpng",
-    "//third_party/rapidjson",
-    "//zircon/public/lib/async-loop-default",
     "//zircon/system/fidl/fuchsia-mem",
   ]
 }
@@ -188,23 +200,25 @@ source_set("feedback_agent_src") {
     "feedback_agent.h",
   ]
 
-  deps = [
-    ":constants",
-    "//garnet/public/lib/syslog/cpp",
-    "//sdk/lib/fidl/cpp",
-    "//sdk/lib/sys/cpp",
-    "//zircon/public/lib/zx",
-  ]
-
   public_deps = [
+    ":config",
     ":data_provider",
     ":data_register",
+    ":datastore",
     ":device_id_provider",
     ":inspect_manager",
-    "//sdk/fidl/fuchsia.feedback",
-    "//src/developer/feedback/utils:files",
+    "//src/developer/feedback/utils:cobalt",
     "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
+  ]
+
+  deps = [
+    ":constants",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//src/developer/feedback/utils:files",
+    "//src/lib/syslog/cpp",
+    "//zircon/public/lib/zx",
   ]
 }
 

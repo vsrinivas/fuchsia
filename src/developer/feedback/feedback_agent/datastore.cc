@@ -5,6 +5,7 @@
 #include "src/developer/feedback/feedback_agent/datastore.h"
 
 #include <lib/fit/promise.h>
+#include <lib/zx/time.h>
 
 #include <utility>
 
@@ -20,15 +21,20 @@
 #include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
+namespace {
+
+// Timeout for a single asynchronous piece of data, e.g., syslog collection.
+const zx::duration kTimeout = zx::sec(30);
+
+}  // namespace
 
 Datastore::Datastore(async_dispatcher_t* dispatcher,
                      std::shared_ptr<sys::ServiceDirectory> services, Cobalt* cobalt,
-                     const zx::duration timeout, const AnnotationKeys& annotation_allowlist,
+                     const AnnotationKeys& annotation_allowlist,
                      const AttachmentKeys& attachment_allowlist)
     : dispatcher_(dispatcher),
       services_(services),
       cobalt_(cobalt),
-      timeout_(timeout),
       annotation_allowlist_(annotation_allowlist),
       attachment_allowlist_(attachment_allowlist),
       static_annotations_(feedback::GetStaticAnnotations(annotation_allowlist_)),
@@ -50,7 +56,7 @@ fit::promise<Annotations> Datastore::GetAnnotations() {
 
   std::vector<fit::promise<Annotations>> annotations;
   for (auto& provider :
-       GetProviders(annotation_allowlist_, dispatcher_, services_, timeout_, cobalt_)) {
+       GetProviders(annotation_allowlist_, dispatcher_, services_, kTimeout, cobalt_)) {
     annotations.push_back(provider->GetAnnotations());
   }
 
@@ -118,11 +124,11 @@ fit::promise<Attachment> Datastore::BuildAttachment(const AttachmentKey& key) {
 
 fit::promise<AttachmentValue> Datastore::BuildAttachmentValue(const AttachmentKey& key) {
   if (key == kAttachmentLogKernel) {
-    return CollectKernelLog(dispatcher_, services_, timeout_, cobalt_);
+    return CollectKernelLog(dispatcher_, services_, kTimeout, cobalt_);
   } else if (key == kAttachmentLogSystem) {
-    return CollectSystemLog(dispatcher_, services_, timeout_, cobalt_);
+    return CollectSystemLog(dispatcher_, services_, kTimeout, cobalt_);
   } else if (key == kAttachmentInspect) {
-    return CollectInspectData(dispatcher_, services_, timeout_, cobalt_);
+    return CollectInspectData(dispatcher_, services_, kTimeout, cobalt_);
   }
   // There are static attachments in the allowlist that we just skip here.
   return fit::make_result_promise<AnnotationValue>(fit::error());

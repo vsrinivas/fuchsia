@@ -187,7 +187,7 @@ executable("channel_provider_unittest") {
 
   deps = [
     ":stub_channel_provider",
-    "//src/developer/feedback/feedback_agent:data_provider",
+    "//src/developer/feedback/feedback_agent/annotations:aliases",
     "//src/developer/feedback/feedback_agent/annotations:channel_provider",
     "//src/developer/feedback/testing:cobalt_test_fixture",
     "//src/developer/feedback/testing:gtest_with_syslog_main",
@@ -210,7 +210,7 @@ executable("config_unittest") {
   sources = [ "config_unittest.cc" ]
 
   deps = [
-    "//src/developer/feedback/feedback_agent:data_provider",
+    "//src/developer/feedback/feedback_agent:config",
     "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
@@ -236,6 +236,8 @@ executable("data_provider_unittest") {
     "//sdk/lib/fidl/cpp",
     "//src/developer/feedback/feedback_agent:constants",
     "//src/developer/feedback/feedback_agent:data_provider",
+    "//src/developer/feedback/feedback_agent/annotations:aliases",
+    "//src/developer/feedback/feedback_agent/attachments:aliases",
     "//src/developer/feedback/testing:cobalt_test_fixture",
     "//src/developer/feedback/testing:gmatchers",
     "//src/developer/feedback/testing:gpretty_printers",
@@ -338,7 +340,6 @@ executable("feedback_agent_integration_test") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/developer/feedback/feedback_agent:constants",
-    "//src/developer/feedback/feedback_agent:feedback_agent_src",
     "//src/developer/feedback/testing:fake_cobalt",
     "//src/developer/feedback/testing:gmatchers",
     "//src/developer/feedback/utils:archive",

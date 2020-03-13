@@ -20,28 +20,24 @@
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace feedback {
+namespace {
+
+const char kConfigPath[] = "/pkg/data/config.json";
+
+}  // namespace
 
 std::unique_ptr<FeedbackAgent> FeedbackAgent::TryCreate(
     async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
     inspect::Node* root_node) {
-  // We need to create a DeviceIdProvider before a DataProvider because the DeviceIdProvider will
-  // initialize the device id the DataProvider's Datastore uses.
-  // TODO(fxb/47734): pass a reference to the DeviceIdProvider to the Datastore to make that
-  // dependency explicit.
-  DeviceIdProvider device_id_provider(kDeviceIdPath);
+  Config config;
+  if (const zx_status_t status = ParseConfig(kConfigPath, &config); status != ZX_OK) {
+    FX_PLOGS(ERROR, status) << "Failed to read config file at " << kConfigPath;
 
-  std::unique_ptr<feedback::DataProvider> data_provider =
-      feedback::DataProvider::TryCreate(dispatcher, services);
-  if (!data_provider) {
     FX_LOGS(FATAL) << "Failed to set up feedback agent";
     return nullptr;
   }
 
-  // TODO(fxb/47368): pass a reference to the Datastore to be able to upsert extra annotations.
-  DataRegister data_register;
-
-  return std::make_unique<FeedbackAgent>(dispatcher, root_node, device_id_provider,
-                                         std::move(data_provider), data_register);
+  return std::make_unique<FeedbackAgent>(dispatcher, std::move(services), root_node, config);
 }
 
 namespace {
@@ -64,19 +60,28 @@ void MovePreviousLogs() {
 
 }  // namespace
 
-FeedbackAgent::FeedbackAgent(async_dispatcher_t* dispatcher, inspect::Node* root_node,
-                             DeviceIdProvider device_id_provider,
-                             std::unique_ptr<DataProvider> data_provider,
-                             DataRegister data_register)
+FeedbackAgent::FeedbackAgent(async_dispatcher_t* dispatcher,
+                             std::shared_ptr<sys::ServiceDirectory> services,
+                             inspect::Node* root_node, Config config)
     : dispatcher_(dispatcher),
       inspect_manager_(root_node),
-      device_id_provider_(device_id_provider),
-      data_provider_(std::move(data_provider)),
-      data_register_(data_register) {
+      cobalt_(dispatcher_, services),
+      // We need to create a DeviceIdProvider before a Datastore because the DeviceIdProvider
+      // will initialize the device id the Datastore uses.
+      // TODO(fxb/47734): pass a reference to the DeviceIdProvider to the Datastore to make that
+      // dependency explicit.
+      device_id_provider_(kDeviceIdPath),
+      datastore_(dispatcher_, services, &cobalt_, config.annotation_allowlist,
+                 config.attachment_allowlist),
+      data_provider_(dispatcher_, services, &cobalt_, &datastore_),
+      // TODO(fxb/47368): pass a reference to the Datastore to be able to upsert extra annotations.
+      data_register_() {
   // We need to move the logs from the previous boot before spawning the system log recorder process
   // so that the new process doesn't overwrite the old logs. Additionally, to guarantee the data
   // providers see the complete previous logs, this needs to be done before spawning any data
   // providers to avoid parallel attempts to read and write the previous logs file.
+  // TODO(fxb/44891): this is too late as the Datastore has already been initialized. Find a way to
+  // do it once per boot cycle and before the Datastore is instantiated.
   MovePreviousLogs();
 }
 
@@ -104,7 +109,7 @@ void FeedbackAgent::HandleDataProviderRequest(
   FX_LOGS(INFO) << "Client opened a new connection to fuchsia.feedback.DataProvider "
                 << connection_identifier;
   data_provider_connections_.AddBinding(
-      data_provider_.get(), std::move(request), dispatcher_,
+      &data_provider_, std::move(request), dispatcher_,
       [this, connection_identifier](const zx_status_t status) {
         if (status == ZX_ERR_PEER_CLOSED) {
           FX_LOGS(INFO) << "Client closed their connection to fuchsia.feedback.DataProvider "

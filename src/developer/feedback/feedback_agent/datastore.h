@@ -8,7 +8,6 @@
 #include <lib/async/dispatcher.h>
 #include <lib/fit/promise.h>
 #include <lib/sys/cpp/service_directory.h>
-#include <lib/zx/time.h>
 
 #include "src/developer/feedback/feedback_agent/annotations/aliases.h"
 #include "src/developer/feedback/feedback_agent/attachments/aliases.h"
@@ -31,21 +30,20 @@ namespace feedback {
 class Datastore {
  public:
   Datastore(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-            Cobalt* cobalt, zx::duration timeout, const AnnotationKeys& annotation_allowlist,
+            Cobalt* cobalt, const AnnotationKeys& annotation_allowlist,
             const AttachmentKeys& attachment_allowlist);
 
   fit::promise<Annotations> GetAnnotations();
   fit::promise<Attachments> GetAttachments();
 
   // Exposed for testing purposes.
-  Annotations GetStaticAnnotations() { return static_annotations_; }
-  Attachments GetStaticAttachments() { return static_attachments_; }
+  Annotations GetStaticAnnotations() const { return static_annotations_; }
+  Attachments GetStaticAttachments() const { return static_attachments_; }
 
  private:
   async_dispatcher_t* dispatcher_;
   const std::shared_ptr<sys::ServiceDirectory> services_;
   Cobalt* cobalt_;
-  const zx::duration timeout_;
   const AnnotationKeys annotation_allowlist_;
   const AttachmentKeys attachment_allowlist_;
 

@@ -19,13 +19,11 @@
 #include "src/developer/feedback/feedback_agent/attachments/aliases.h"
 #include "src/developer/feedback/feedback_agent/attachments/screenshot_ptr.h"
 #include "src/developer/feedback/feedback_agent/attachments/util.h"
-#include "src/developer/feedback/feedback_agent/config.h"
 #include "src/developer/feedback/feedback_agent/image_conversion.h"
 #include "src/lib/fsl/vmo/sized_vmo.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/syslog/cpp/logger.h"
-#include "src/lib/timekeeper/system_clock.h"
 
 namespace feedback {
 namespace {
@@ -34,39 +32,19 @@ using fuchsia::feedback::Data;
 using fuchsia::feedback::ImageEncoding;
 using fuchsia::feedback::Screenshot;
 
-const char kConfigPath[] = "/pkg/data/config.json";
-
-// Timeout for a single asynchronous piece of data, e.g., syslog collection.
-const zx::duration kDataTimeout = zx::sec(30);
 // Timeout for requesting the screenshot from Scenic.
 const zx::duration kScreenshotTimeout = zx::sec(10);
 
 }  // namespace
 
-std::unique_ptr<DataProvider> DataProvider::TryCreate(
-    async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services) {
-  Config config;
-
-  if (const zx_status_t status = ParseConfig(kConfigPath, &config); status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "Failed to read config file at " << kConfigPath;
-
-    FX_LOGS(FATAL) << "Failed to set up data provider";
-    return nullptr;
-  }
-
-  return std::make_unique<DataProvider>(dispatcher, std::move(services), config);
-}
-
 DataProvider::DataProvider(async_dispatcher_t* dispatcher,
-                           std::shared_ptr<sys::ServiceDirectory> services, const Config& config,
-                           std::unique_ptr<timekeeper::Clock> clock)
+                           std::shared_ptr<sys::ServiceDirectory> services, Cobalt* cobalt,
+                           Datastore* datastore)
     : dispatcher_(dispatcher),
       services_(services),
-      config_(config),
-      cobalt_(dispatcher_, services_, std::move(clock)),
-      executor_(dispatcher),
-      datastore_(dispatcher_, services_, &cobalt_, kDataTimeout, config_.annotation_allowlist,
-                 config_.attachment_allowlist) {}
+      cobalt_(cobalt),
+      datastore_(datastore),
+      executor_(dispatcher_) {}
 
 namespace {
 
@@ -101,12 +79,10 @@ std::vector<fuchsia::feedback::Attachment> ToAttachmentVector(const Attachments&
 }  // namespace
 
 void DataProvider::GetData(GetDataCallback callback) {
-  FX_CHECK(!shut_down_);
-
-  const uint64_t timer_id = cobalt_.StartTimer();
+  const uint64_t timer_id = cobalt_->StartTimer();
 
   auto promise =
-      fit::join_promises(datastore_.GetAnnotations(), datastore_.GetAttachments())
+      fit::join_promises(datastore_->GetAnnotations(), datastore_->GetAttachments())
           .and_then([](std::tuple<fit::result<Annotations>, fit::result<Attachments>>&
                            annotations_and_attachments) {
             Data data;
@@ -148,9 +124,9 @@ void DataProvider::GetData(GetDataCallback callback) {
           .then([this, callback = std::move(callback),
                  timer_id](fit::result<Data, zx_status_t>& result) {
             if (result.is_error()) {
-              cobalt_.LogElapsedTime(BugreportGenerationFlow::kFailure, timer_id);
+              cobalt_->LogElapsedTime(BugreportGenerationFlow::kFailure, timer_id);
             } else {
-              cobalt_.LogElapsedTime(BugreportGenerationFlow::kSuccess, timer_id);
+              cobalt_->LogElapsedTime(BugreportGenerationFlow::kSuccess, timer_id);
             }
             callback(std::move(result));
           });
@@ -159,8 +135,7 @@ void DataProvider::GetData(GetDataCallback callback) {
 }
 
 void DataProvider::GetScreenshot(ImageEncoding encoding, GetScreenshotCallback callback) {
-  FX_CHECK(!shut_down_);
-  auto promise = TakeScreenshot(dispatcher_, services_, kScreenshotTimeout, &cobalt_)
+  auto promise = TakeScreenshot(dispatcher_, services_, kScreenshotTimeout, cobalt_)
                      .and_then([encoding](fuchsia::ui::scenic::ScreenshotData& raw_screenshot)
                                    -> fit::result<Screenshot> {
                        Screenshot screenshot;
@@ -187,11 +162,6 @@ void DataProvider::GetScreenshot(ImageEncoding encoding, GetScreenshotCallback c
                      });
 
   executor_.schedule_task(std::move(promise));
-}
-
-void DataProvider::Shutdown() {
-  shut_down_ = true;
-  cobalt_.Shutdown();
 }
 
 }  // namespace feedback

@@ -26,7 +26,6 @@
 
 #include "garnet/public/lib/fostr/fidl/fuchsia/feedback/formatting.h"
 #include "src/developer/feedback/feedback_agent/constants.h"
-#include "src/developer/feedback/feedback_agent/feedback_agent.h"
 #include "src/developer/feedback/feedback_agent/tests/zx_object_util.h"
 #include "src/developer/feedback/testing/fake_cobalt.h"
 #include "src/developer/feedback/testing/gmatchers.h"

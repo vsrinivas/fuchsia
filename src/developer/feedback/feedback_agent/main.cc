@@ -16,7 +16,6 @@
 
 #include "src/developer/feedback/feedback_agent/constants.h"
 #include "src/developer/feedback/feedback_agent/feedback_agent.h"
-#include "src/lib/files/file.h"
 
 int main(int argc, const char** argv) {
   syslog::InitLogger({"feedback"});
