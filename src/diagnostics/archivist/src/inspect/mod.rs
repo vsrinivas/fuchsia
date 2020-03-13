@@ -273,7 +273,7 @@ impl PopulatedInspectDataContainer {
         unpopulated: UnpopulatedInspectDataContainer,
     ) -> Result<PopulatedInspectDataContainer, Error> {
         let mut collector = InspectDataCollector::new();
-        match collector.populate_data_map(&unpopulated.component_out_proxy).await {
+        match collector.populate_data_map(&unpopulated.component_diagnostics_proxy).await {
             Ok(_) => {
                 let mut snapshots = None;
                 if let Some(data_map) = Box::new(collector).take_data() {
@@ -339,7 +339,7 @@ pub struct UnpopulatedInspectDataContainer {
     relative_moniker: Vec<String>,
     /// DirectoryProxy for the out directory that this
     /// data packet is configured for.
-    component_out_proxy: DirectoryProxy,
+    component_diagnostics_proxy: DirectoryProxy,
     /// Optional hierarchy matcher. If unset, the reader is running
     /// in all-access mode, meaning no matching or filtering is required.
     inspect_matcher: Option<InspectHierarchyMatcher>,
@@ -406,7 +406,7 @@ impl InspectDataRepository {
                         key,
                         UnpopulatedInspectDataContainer {
                             relative_moniker: relative_moniker,
-                            component_out_proxy: directory_proxy,
+                            component_diagnostics_proxy: directory_proxy,
                             inspect_matcher: Some((&selectors).try_into()?),
                         },
                     );
@@ -418,7 +418,7 @@ impl InspectDataRepository {
                     key,
                     UnpopulatedInspectDataContainer {
                         relative_moniker: relative_moniker,
-                        component_out_proxy: directory_proxy,
+                        component_diagnostics_proxy: directory_proxy,
                         inspect_matcher: None,
                     },
                 );
@@ -434,18 +434,21 @@ impl InspectDataRepository {
         return self
             .data_directories
             .iter()
-            .filter_map(|(_, unpopulated_data_container)| {
-                io_util::clone_directory(
-                    &unpopulated_data_container.component_out_proxy,
-                    CLONE_FLAG_SAME_RIGHTS,
-                )
-                .ok()
-                .map(|directory| UnpopulatedInspectDataContainer {
-                    relative_moniker: unpopulated_data_container.relative_moniker.clone(),
-                    component_out_proxy: directory,
-                    inspect_matcher: unpopulated_data_container.inspect_matcher.clone(),
-                })
-            })
+            .filter_map(
+                |(_, unpopulated_data_container_opt)| match unpopulated_data_container_opt {
+                    Some(unpopulated_data_container) => io_util::clone_directory(
+                        &unpopulated_data_container.component_diagnostics_proxy,
+                        CLONE_FLAG_SAME_RIGHTS,
+                    )
+                    .ok()
+                    .map(|directory| UnpopulatedInspectDataContainer {
+                        relative_moniker: unpopulated_data_container.relative_moniker.clone(),
+                        component_diagnostics_proxy: directory,
+                        inspect_matcher: unpopulated_data_container.inspect_matcher.clone(),
+                    }),
+                    None => None,
+                },
+            )
             .collect();
     }
 

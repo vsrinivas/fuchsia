@@ -404,19 +404,27 @@ fn generate_selectors<'a>(
             .collect::<Vec<String>>()
             .join("/");
 
-        for (node_path, property) in matching_hierarchy.hierarchy.property_iter() {
-            let formatted_node_path = node_path
-                .iter()
-                .map(|s| selectors::sanitize_string_for_selectors(s))
-                .collect::<Vec<String>>()
-                .join("/");
-            let sanitized_property = selectors::sanitize_string_for_selectors(property.name());
-            output.push(format!(
-                "{}:{}:{}",
-                sanitized_moniker.clone(),
-                formatted_node_path,
-                sanitized_property
-            ));
+        for (node_path, property_opt) in matching_hierarchy.hierarchy.property_iter() {
+            match property_opt {
+                Some(property) => {
+                    let formatted_node_path = node_path
+                        .iter()
+                        .map(|s| selectors::sanitize_string_for_selectors(s))
+                        .collect::<Vec<String>>()
+                        .join("/");
+                    let sanitized_property =
+                        selectors::sanitize_string_for_selectors(property.name());
+                    output.push(format!(
+                        "{}:{}:{}",
+                        sanitized_moniker.clone(),
+                        formatted_node_path,
+                        sanitized_property
+                    ));
+                }
+                None => {
+                    continue;
+                }
+            }
         }
     }
 

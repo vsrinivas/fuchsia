@@ -212,10 +212,14 @@ where
     /// Pushes a new key fragment onto the key fragment aggregator.
     fn extend_curr_key(&mut self, new_fragment: &'a K);
 
+    /// Returns a clone of the current key defining the node the
+    /// iterator is currently at.
+    fn get_curr_key(&mut self) -> Vec<&'a K>;
+
     /// Processes the current node and returns the next value
     /// at that node. Also responsible for updating any node-specific
     /// state, like an index into the values.
-    fn expect_next_value(&mut self) -> (Vec<&'a K>, &'a V);
+    fn get_next_value(&mut self) -> &'a V;
 }
 
 impl<K, V> TrieIterableNode<K, V> for TrieNode<K, V>
@@ -303,15 +307,17 @@ where
     fn extend_curr_key(&mut self, new_fragment: &'a K) {
         self.curr_key.push(new_fragment);
     }
-    fn expect_next_value(&mut self) -> (Vec<&'a K>, &'a V) {
+
+    fn get_curr_key(&mut self) -> Vec<&'a K> {
+        self.curr_key.clone()
+    }
+
+    fn get_next_value(&mut self) -> &'a V {
         self.curr_val_index = self.curr_val_index + 1;
-        (
-            self.curr_key.clone(),
-            &self
-                .curr_node
-                .expect("Should never be retrieving a value when a working node is unset.")
-                .get_values()[self.curr_val_index - 1],
-        )
+        &self
+            .curr_node
+            .expect("Should never be retrieving a value when a working node is unset.")
+            .get_values()[self.curr_val_index - 1]
     }
 }
 
@@ -332,9 +338,9 @@ impl<'a, K, V, T: TrieIterable<'a, K, V>> Iterator for TrieIterableType<'a, K, V
 where
     K: Hash + Eq,
 {
-    type Item = (Vec<&'a K>, &'a V);
+    type Item = (Vec<&'a K>, Option<&'a V>);
 
-    fn next(&mut self) -> Option<(Vec<&'a K>, &'a V)> {
+    fn next(&mut self) -> Option<(Vec<&'a K>, Option<&'a V>)> {
         if !self.iterator.is_initialized() {
             self.iterator.initialize();
         }
@@ -369,6 +375,12 @@ where
                             potential_child: Some(child_node),
                         });
                     }
+
+                    // If a node is fully processed as soon as being added, then
+                    // it is empty. We need to signal empty nodes in the iterator.
+                    if self.iterator.is_curr_node_fully_processed() {
+                        return Some((self.iterator.get_curr_key(), None));
+                    }
                 }
             }
         }
@@ -376,7 +388,7 @@ where
         if self.iterator.is_curr_node_fully_processed() {
             None
         } else {
-            Some(self.iterator.expect_next_value())
+            Some((self.iterator.get_curr_key(), Some(self.iterator.get_next_value())))
         }
     }
 }
@@ -456,19 +468,22 @@ mod tests {
         test_trie.insert("test1".to_string().chars().collect(), "b".to_string());
         test_trie.insert("test1".to_string().chars().collect(), "b2".to_string());
         let mut results_vec = vec![
-            (vec!['t', 'e', 's', 't', '1'], "b2".to_string()),
-            (vec!['t', 'e', 's', 't', '1'], "b".to_string()),
-            (vec!['t', 'e', 's', 't'], "a2".to_string()),
-            (vec!['t', 'e', 's', 't'], "a".to_string()),
+            (vec!['t', 'e', 's', 't', '1'], Some("b2".to_string())),
+            (vec!['t', 'e', 's', 't', '1'], Some("b".to_string())),
+            (vec!['t', 'e', 's', 't'], Some("a2".to_string())),
+            (vec!['t', 'e', 's', 't'], Some("a".to_string())),
+            (vec!['t', 'e', 's'], None),
+            (vec!['t', 'e'], None),
+            (vec!['t'], None),
         ];
         let mut num_iterations = 0;
         for (key, val) in test_trie.iter() {
             num_iterations = num_iterations + 1;
             let (expected_key, expected_val) = results_vec.pop().unwrap();
-            assert_eq!(*val, expected_val);
+            assert_eq!(val, expected_val.as_ref());
             assert_eq!(key.into_iter().collect::<String>(), expected_key.iter().collect::<String>())
         }
 
-        assert_eq!(num_iterations, 4);
+        assert_eq!(num_iterations, 7);
     }
 }

@@ -13,7 +13,7 @@ async fn test_hierarchy_published(
     assert_eq!(1, state.hierarchies.len());
 
     // Don't assert the entire tree to avoid test fragility.
-    assert_inspect_tree!(&state.hierarchies[0], root: {
+    assert_inspect_tree!(&state.hierarchies[0], root: contains {
         system: contains {
             device_class: "default",
         },
