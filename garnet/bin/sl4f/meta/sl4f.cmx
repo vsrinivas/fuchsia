@@ -37,6 +37,8 @@
             "fuchsia.tracing.provider.Registry",
             "fuchsia.ui.policy.Presenter",
             "fuchsia.ui.scenic.Scenic",
+            "fuchsia.ui.input.InputDeviceRegistry",
+            "fuchsia.ui.input.InputDevice",
             "fuchsia.update.channelcontrol.ChannelControl",
             "fuchsia.update.Manager",
             "fuchsia.virtualaudio.Control",

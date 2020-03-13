@@ -18,11 +18,14 @@ enum Rotation {
 class Input {
   final Ssh ssh;
   final Rotation _screenRotation;
+  final Sl4f _sl4f;
 
   /// Construct an [Input] object.
   ///
   /// You can change the default [screenRotation] to compensate for.
-  Input(Sl4f sl4f, [this._screenRotation = Rotation.degrees0]) : ssh = sl4f.ssh;
+  Input(Sl4f sl4f, [this._screenRotation = Rotation.degrees0])
+      : ssh = sl4f.ssh,
+        _sl4f = sl4f;
 
   /// Taps on the screen at coordinates ([coord.x], [coord.y]).
   ///
@@ -30,9 +33,12 @@ class Input {
   /// size on the device, and they are rotated to compensate for the clockwise
   /// [screenRotation].
   Future<bool> tap(Point<int> coord, {Rotation screenRotation}) async {
-    var tcoord = _rotate(coord, screenRotation ?? _screenRotation);
-    final result = await ssh.run('input tap ${tcoord.x} ${tcoord.y}');
-    return result.exitCode == 0;
+    final tcoord = _rotate(coord, screenRotation ?? _screenRotation);
+    final result = await _sl4f.request('input_facade.Tap', {
+      'x': tcoord.x,
+      'y': tcoord.y,
+    });
+    return result == 'Success';
   }
 
   /// Swipes on the screen from coordinates ([from.x], [from.y]) to ([to.x],
@@ -45,11 +51,16 @@ class Input {
   Future<bool> swipe(Point<int> from, Point<int> to,
       {Duration duration = const Duration(milliseconds: 300),
       Rotation screenRotation}) async {
-    var tfrom = _rotate(from, screenRotation);
-    var tto = _rotate(to, screenRotation);
-    final result = await ssh.run('input --duration=${duration.inMilliseconds} '
-        'swipe ${tfrom.x} ${tfrom.y} ${tto.x} ${tto.y}');
-    return result.exitCode == 0;
+    final tfrom = _rotate(from, screenRotation);
+    final tto = _rotate(to, screenRotation);
+    final result = await _sl4f.request('input_facade.Swipe', {
+      'x0': tfrom.x,
+      'y0': tfrom.y,
+      'x1': tto.x,
+      'y1': tto.y,
+      'duration': duration.inMilliseconds,
+    });
+    return result == 'Success';
   }
 
   /// Compensates for the given [screenRotation].

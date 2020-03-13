@@ -69,6 +69,7 @@ rustc_library("lib") {
     "//src/lib/syslog/rust:syslog",
     "//src/lib/test_executor/rust:test_executor",
     "//src/lib/ui/fuchsia-scenic",
+    "//src/lib/ui/input-synthesis",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/test_manager/fidl:test_manager-rustc",
     "//third_party/rust_crates:anyhow",

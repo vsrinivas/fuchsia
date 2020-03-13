@@ -49,6 +49,9 @@ use crate::hardware_power_statecontrol::facade::HardwarePowerStatecontrolFacade;
 // Hwinfo related includes
 use crate::hwinfo::facade::HwinfoFacade;
 
+// Input related includes
+use crate::input::facade::InputFacade;
+
 // Location related includes
 use crate::location::regulatory_region_facade::RegulatoryRegionFacade;
 
@@ -125,6 +128,7 @@ impl Sl4f {
                 "gatt_server_facade" => GattServerFacade::new(),
                 "hardware_power_statecontrol_facade" => HardwarePowerStatecontrolFacade::new(),
                 "hwinfo_facade" => HwinfoFacade::new(),
+                "input_facade" => InputFacade::new(),
                 "location_regulatory_region_facade" => RegulatoryRegionFacade::new()?,
                 "logging_facade" => LoggingFacade::new(),
                 "netstack_facade" => NetstackFacade::new(),
