@@ -614,11 +614,11 @@ void Dwc2::HandleTransferComplete(uint8_t ep_num) {
   usb_request_t* req = ep->current_req;
   if (req) {
     Request request(req, sizeof(usb_request_t));
+    ep->current_req = nullptr;
     ep->lock.Release();
     request.Complete(ZX_OK, ep->req_offset);
     ep->lock.Acquire();
 
-    ep->current_req = nullptr;
     QueueNextRequest(ep);
   }
   ep->lock.Release();
