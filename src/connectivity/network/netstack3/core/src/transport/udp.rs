@@ -9,7 +9,7 @@ use core::num::{NonZeroU16, NonZeroUsize};
 use core::ops::RangeInclusive;
 
 use log::trace;
-use net_types::ip::{Ip, IpAddress, Ipv4, Ipv6};
+use net_types::ip::{Ip, IpAddress};
 use net_types::{SpecifiedAddr, Witness};
 use packet::{BufferMut, ParsablePacket, ParseBuffer, Serializer};
 use specialize_ip_macro::specialize_ip;
@@ -20,13 +20,10 @@ use crate::context::{CounterContext, RngContext, RngContextExt, StateContext};
 use crate::data_structures::IdMapCollectionKey;
 use crate::error::{LocalAddressError, NetstackError, RemoteAddressError, SocketError};
 use crate::ip::{
-    icmp::{IcmpIpExt, Icmpv4ErrorCode, Icmpv6ErrorCode},
-    BufferTransportIpContext, IpPacketFromArgs, IpProto, IpTransportContext, IpVersionMarker,
-    TransportIpContext, TransportReceiveError,
+    icmp::IcmpIpExt, BufferTransportIpContext, IpPacketFromArgs, IpProto, IpTransportContext,
+    IpVersionMarker, TransportIpContext, TransportReceiveError,
 };
 use crate::transport::{ConnAddrMap, ListenerAddrMap};
-use crate::wire::ipv4::{Ipv4Header, Ipv4PacketRaw};
-use crate::wire::ipv6::{Ipv6Header, Ipv6PacketRaw};
 use crate::wire::udp::{UdpPacket, UdpPacketBuilder, UdpPacketRaw, UdpParseArgs};
 use crate::{BufferDispatcher, Context, EventDispatcher};
 
@@ -1003,51 +1000,24 @@ impl<S: Serializer> From<S> for SendError {
     }
 }
 
-/// Receive an ICMPv4 error related to a UDP socket.
-pub(crate) fn receive_icmpv4_error<C: UdpContext<Ipv4>>(
+/// Receive an ICMP error related to a UDP socket.
+pub(crate) fn receive_icmp_error<I: IcmpIpExt, C: UdpContext<I>>(
     ctx: &mut C,
-    original_packet: Ipv4PacketRaw<&[u8]>,
-    err: Icmpv4ErrorCode,
-) {
-    ctx.increment_counter("udp::receive_icmpv4_error");
-    trace!("udp::receive_icmpv4_error({:?})", err);
-
-    let body = original_packet.body().into_inner();
-    receive_icmp_error(ctx, original_packet.src_ip(), original_packet.dst_ip(), body, err);
-}
-
-/// Receive an ICMPv6 error related to a UDP socket.
-pub(crate) fn receive_icmpv6_error<C: UdpContext<Ipv6>>(
-    ctx: &mut C,
-    original_packet: Ipv6PacketRaw<&[u8]>,
-    err: Icmpv6ErrorCode,
-) {
-    ctx.increment_counter("udp::receive_icmpv6_error");
-    trace!("udp::receive_icmpv6_error({:?})", err);
-
-    // TODO(joshlf): Do something with this `try_unit!` calls other than just
-    // silently returning?
-    let body = try_unit!(original_packet.body()).into_inner();
-    receive_icmp_error(ctx, original_packet.src_ip(), original_packet.dst_ip(), body, err);
-}
-
-fn receive_icmp_error<I: IcmpIpExt, C: UdpContext<I>>(
-    ctx: &mut C,
-    src_ip: I::Addr,
-    dst_ip: I::Addr,
+    src_ip: Option<SpecifiedAddr<I::Addr>>,
+    dst_ip: SpecifiedAddr<I::Addr>,
     mut udp_packet: &[u8],
     err: I::ErrorCode,
 ) {
+    ctx.increment_counter("udp::receive_icmp_error");
+    trace!("udp::receive_icmp_error({:?})", err);
+
     // TODO(joshlf): Do something with this `try_unit!` calls other than just
     // silently returning?
     let udp_packet =
         try_unit!(udp_packet.parse_with::<_, UdpPacketRaw<_>>(IpVersionMarker::<I>::default()));
-    if let (Some(src_ip), Some(dst_ip), Some(src_port), Some(dst_port)) = (
-        SpecifiedAddr::new(src_ip),
-        SpecifiedAddr::new(dst_ip),
-        udp_packet.src_port(),
-        udp_packet.dst_port(),
-    ) {
+    if let (Some(src_ip), Some(src_port), Some(dst_port)) =
+        (src_ip, udp_packet.src_port(), udp_packet.dst_port())
+    {
         if let Some(socket) = ctx.get_state().conn_state.lookup(src_ip, dst_ip, src_port, dst_port)
         {
             let id = match socket {
@@ -1056,7 +1026,7 @@ fn receive_icmp_error<I: IcmpIpExt, C: UdpContext<I>>(
             };
             ctx.receive_icmp_error(id, err);
         } else {
-            trace!("udp::receive_icmp_error: Got ICMP error message for IP packet with an unspecified destination IP address");
+            trace!("udp::receive_icmp_error: Got ICMP error message for nonexistent UDP socket; either the socket responsible has since been removed, or the error message was sent in error or corrupted");
         }
     } else {
         trace!("udp::receive_icmp_error: Got ICMP error message for IP packet with an invalid source or destination IP or port");
@@ -1070,9 +1040,14 @@ mod tests {
     use specialize_ip_macro::ip_test;
 
     use super::*;
-    use crate::ip::{IpExt, IpPacketBuilder, IpProto};
+    use crate::ip::{
+        icmp::{Icmpv4ErrorCode, Icmpv6ErrorCode},
+        IpExt, IpPacketBuilder, IpProto,
+    };
     use crate::testutil::{set_logger_for_test, TestIpExt};
     use crate::wire::icmp::{Icmpv4DestUnreachableCode, Icmpv6DestUnreachableCode};
+    use crate::wire::ipv4::{Ipv4Header, Ipv4PacketRaw};
+    use crate::wire::ipv6::{Ipv6Header, Ipv6PacketRaw};
 
     /// The listener data sent through a [`DummyUdpContext`].
     struct ListenData<I: Ip> {
@@ -2182,16 +2157,24 @@ mod tests {
 
         test(
             Icmpv4ErrorCode::DestUnreachable(Icmpv4DestUnreachableCode::DestNetworkUnreachable),
-            |ctx, mut packet, error_code| {
-                receive_icmpv4_error(ctx, packet.parse::<Ipv4PacketRaw<_>>().unwrap(), error_code)
+            |ctx: &mut DummyContext<Ipv4>, mut packet, error_code| {
+                let packet = packet.parse::<Ipv4PacketRaw<_>>().unwrap();
+                let src_ip = SpecifiedAddr::new(packet.src_ip());
+                let dst_ip = SpecifiedAddr::new(packet.dst_ip()).unwrap();
+                let body = packet.body().into_inner();
+                super::receive_icmp_error(ctx, src_ip, dst_ip, body, error_code)
             },
             Ipv4Addr::new([1, 2, 3, 4]),
         );
 
         test(
             Icmpv6ErrorCode::DestUnreachable(Icmpv6DestUnreachableCode::NoRoute),
-            |ctx, mut packet, error_code| {
-                receive_icmpv6_error(ctx, packet.parse::<Ipv6PacketRaw<_>>().unwrap(), error_code)
+            |ctx: &mut DummyContext<Ipv6>, mut packet, error_code| {
+                let packet = packet.parse::<Ipv6PacketRaw<_>>().unwrap();
+                let src_ip = SpecifiedAddr::new(packet.src_ip());
+                let dst_ip = SpecifiedAddr::new(packet.dst_ip()).unwrap();
+                let body = packet.body().unwrap().into_inner();
+                super::receive_icmp_error(ctx, src_ip, dst_ip, body, error_code)
             },
             Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8]),
         );
