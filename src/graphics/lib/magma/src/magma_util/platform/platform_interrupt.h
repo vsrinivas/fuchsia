@@ -20,6 +20,8 @@ class PlatformInterrupt {
   virtual bool Wait() = 0;
   virtual void Complete() = 0;
 
+  virtual uint64_t GetMicrosecondsSinceLastInterrupt() = 0;
+
  private:
   DISALLOW_COPY_AND_ASSIGN(PlatformInterrupt);
 };
