@@ -174,7 +174,7 @@ class Handle final {
 
 class HandleTableArena {
  public:
-  // Alloc runturns storage for a handle. GetNewBaseValue is a helper needed to actually create a
+  // Alloc returns storage for a handle. GetNewBaseValue is a helper needed to actually create a
   // Handle.
   static void* Alloc(const fbl::RefPtr<Dispatcher>&, const char* what, uint32_t* base_value);
   static uint32_t GetNewBaseValue(void* addr);
