@@ -48,7 +48,7 @@ Registers FindHighestCacheSubleaf(uint32_t leaf) {
     return empty;
   }
 
-  std::optional<Registers> highest;
+  ktl::optional<Registers> highest;
   const uint32_t max_cache_levels = 32;
   for (uint32_t i = 0; i < max_cache_levels; i++) {
     const Registers current = CallCpuId(leaf, i);
@@ -177,7 +177,7 @@ Topology::Topology(ManufacturerInfo info, Features features, Registers leaf4,
       leaf8_1D_(leaf8_1D),
       leaf8_1E_(leaf8_1E) {}
 
-std::optional<Topology::Levels> Topology::IntelLevels() const {
+ktl::optional<Topology::Levels> Topology::IntelLevels() const {
   Topology::Levels levels;
   if (info_.highest_cpuid_leaf() >= 11) {
     int nodes_under_previous_level = 0;
@@ -255,7 +255,7 @@ std::optional<Topology::Levels> Topology::IntelLevels() const {
   return (levels.level_count == 0) ? std::nullopt : std::make_optional(levels);
 }
 
-std::optional<Topology::Levels> Topology::AmdLevels() const {
+ktl::optional<Topology::Levels> Topology::AmdLevels() const {
   Topology::Levels levels;
   if (info_.highest_extended_cpuid_leaf() >= ExtendedLeaf<8>()) {
     uint8_t thread_id_bits = ExtractBits<15, 12, uint8_t>(leaf8_8_.ecx());
@@ -309,7 +309,7 @@ std::optional<Topology::Levels> Topology::AmdLevels() const {
   return (levels.level_count == 0) ? std::nullopt : std::make_optional(levels);
 }
 
-std::optional<Topology::Levels> Topology::levels() const {
+ktl::optional<Topology::Levels> Topology::levels() const {
   auto levels = IntelLevels();
   if (levels) {
     return levels;

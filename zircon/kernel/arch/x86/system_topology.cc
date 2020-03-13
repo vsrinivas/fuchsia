@@ -152,13 +152,13 @@ class Die {
 
   void SetNuma(const AcpiNumaDomain& numa) { numa_ = {numa}; }
 
-  const std::optional<AcpiNumaDomain>& numa() const { return numa_; }
+  const ktl::optional<AcpiNumaDomain>& numa() const { return numa_; }
 
  private:
   zbi_topology_node_t node_;
   fbl::Vector<ktl::unique_ptr<SharedCache>> caches_;
   fbl::Vector<ktl::unique_ptr<Core>> cores_;
-  std::optional<AcpiNumaDomain> numa_;
+  ktl::optional<AcpiNumaDomain> numa_;
 };
 
 class ApicDecoder {

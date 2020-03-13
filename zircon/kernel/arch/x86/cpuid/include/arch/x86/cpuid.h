@@ -11,7 +11,8 @@
 
 #include <cstdint>
 #include <cstring>
-#include <optional>
+
+#include <ktl/optional.h>
 
 namespace cpu_id {
 
@@ -246,12 +247,14 @@ class Features {
   static constexpr Feature XD = {.leaf = LEAF8_01, .reg = Registers::EDX, .bit = 20};
   static constexpr Feature SYSCALL = {.leaf = LEAF8_01, .reg = Registers::EDX, .bit = 11};
 
-  static constexpr Feature CPB = {.leaf = LEAF8_07, .reg = Registers::EDX, .bit=9};
+  static constexpr Feature CPB = {.leaf = LEAF8_07, .reg = Registers::EDX, .bit = 9};
 
   static constexpr Feature CLZERO = {.leaf = LEAF8_08, .reg = Registers::EBX, .bit = 0};
   static constexpr Feature AMD_IBPB = {.leaf = LEAF8_08, .reg = Registers::EBX, .bit = 12};
-  static constexpr Feature AMD_IBRS_ALWAYS_ON = {.leaf = LEAF8_08, .reg = Registers::EBX, .bit = 16};
-  static constexpr Feature AMD_STIBP_ALWAYS_ON = {.leaf = LEAF8_08, .reg = Registers::EBX, .bit = 17};
+  static constexpr Feature AMD_IBRS_ALWAYS_ON = {
+      .leaf = LEAF8_08, .reg = Registers::EBX, .bit = 16};
+  static constexpr Feature AMD_STIBP_ALWAYS_ON = {
+      .leaf = LEAF8_08, .reg = Registers::EBX, .bit = 17};
   static constexpr Feature AMD_PREFER_IBRS = {.leaf = LEAF8_08, .reg = Registers::EBX, .bit = 18};
   static constexpr Feature AMD_SSBD = {.leaf = LEAF8_08, .reg = Registers::EBX, .bit = 24};
   static constexpr Feature AMD_VIRT_SSBD = {.leaf = LEAF8_08, .reg = Registers::EBX, .bit = 25};
@@ -325,7 +328,7 @@ class Topology {
 
   // Provides details for each level of this system's topology.
   // Returns nullopt if unable to parse topology from cpuid data.
-  std::optional<Levels> levels() const;
+  ktl::optional<Levels> levels() const;
 
   // Returns info about the numerically highest level (i.e. L3 > L2 > L1) of processor cache.
   Cache highest_level_cache() const;
@@ -335,8 +338,8 @@ class Topology {
   Topology() : info_({}, {}), features_({}, {}, {}, {}, {}, {}) {}
 
  private:
-  std::optional<Levels> IntelLevels() const;
-  std::optional<Levels> AmdLevels() const;
+  ktl::optional<Levels> IntelLevels() const;
+  ktl::optional<Levels> AmdLevels() const;
 
   ManufacturerInfo info_;
   Features features_;
