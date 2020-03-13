@@ -84,7 +84,7 @@ func ParseIndexFile(f io.Reader) (result []indexFileEntry, _ error) {
 
 // LoadFrom reads a static index from `path` and replaces the index in the
 // receiver with the contents.
-func (idx *StaticIndex) LoadFrom(f io.Reader) error {
+func (idx *StaticIndex) LoadFrom(f io.Reader, systemImage pkg.Package, systemImageMerkleRoot string) error {
 	roots := map[pkg.Package]string{}
 
 	entries, err := ParseIndexFile(f)
@@ -94,6 +94,8 @@ func (idx *StaticIndex) LoadFrom(f io.Reader) error {
 	for _, entry := range entries {
 		roots[entry.Key] = entry.Merkle
 	}
+
+	roots[systemImage] = systemImageMerkleRoot
 
 	idx.mu.Lock()
 	idx.roots = roots
@@ -152,12 +154,7 @@ func (idx *StaticIndex) ListVersions(name string) []string {
 func (idx *StaticIndex) Get(p pkg.Package) (string, bool) {
 	idx.mu.RLock()
 	defer idx.mu.RUnlock()
-
-	s, ok := idx.updates[p]
-	if ok {
-		return s, ok
-	}
-	s, ok = idx.roots[p]
+	s, ok := idx.roots[p]
 	return s, ok
 }
 
@@ -203,9 +200,6 @@ func (idx *StaticIndex) List() ([]pkg.Package, error) {
 
 	var pkgs = make(map[pkg.Package]struct{})
 
-	for k := range idx.updates {
-		pkgs[k] = struct{}{}
-	}
 	for k := range idx.roots {
 		pkgs[k] = struct{}{}
 	}
