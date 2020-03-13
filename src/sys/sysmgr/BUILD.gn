@@ -10,14 +10,6 @@ declare_args() {
   auto_update_packages = true
 }
 
-group("tests") {
-  testonly = true
-  deps = [
-    "integration_tests",
-    "test",
-  ]
-}
-
 source_set("lib") {
   sources = [
     "app.cc",
