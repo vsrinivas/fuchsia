@@ -7,10 +7,10 @@ use {
     async_trait::async_trait,
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_io as fio,
-    fidl_fuchsia_process as fproc,
+    fidl_fuchsia_process as fproc, fuchsia_async as fasync,
     fuchsia_runtime::{job_default, HandleInfo, HandleType},
     fuchsia_zircon::{self as zx, HandleBased},
-    futures::prelude::*,
+    futures::{future::BoxFuture, prelude::*},
     lazy_static::lazy_static,
     library_loader,
     std::convert::TryFrom,
@@ -25,28 +25,37 @@ lazy_static! {
 
 /// Object implementing this type can be killed by calling kill function.
 #[async_trait]
-pub trait Killable {
+pub trait Controllable {
     /// Should kill self and do cleanup.
     /// Should not return error or panic, should log error instead.
-    async fn kill(self);
+    async fn kill(mut self);
+
+    /// Stop the component. Once the component is stopped, the
+    /// ComponentControllerControlHandle should be closed. If the component is
+    /// not stopped quickly enough, kill will be called. The amount of time
+    /// `stop` is allowed may vary based on a variety of factors.
+    fn stop<'a>(&mut self) -> BoxFuture<'a, ()>;
 }
 
 /// Holds information about the component that allows the controller to
 /// interact with and control the component.
-pub struct Controller<C: Killable> {
+pub struct Controller<C: Controllable> {
     /// stream via which the component manager will ask the controller to
     /// manipulate the component
     request_stream: fcrunner::ComponentControllerRequestStream,
 
-    /// killable object which kills underlying component.
+    /// Controllable object which controls the underlying component.
     /// This would be None once the object is killed.
-    killable: Option<C>,
+    controllable: Option<C>,
 }
 
-impl<C: Killable> Controller<C> {
+impl<C: Controllable> Controller<C> {
     /// Creates new instance
-    pub fn new(killable: C, requests: fcrunner::ComponentControllerRequestStream) -> Controller<C> {
-        Controller { killable: Some(killable), request_stream: requests }
+    pub fn new(
+        controllable: C,
+        requests: fcrunner::ComponentControllerRequestStream,
+    ) -> Controller<C> {
+        Controller { controllable: Some(controllable), request_stream: requests }
     }
 
     /// Serve the request stream held by this Controller.
@@ -54,12 +63,14 @@ impl<C: Killable> Controller<C> {
         while let Ok(Some(request)) = self.request_stream.try_next().await {
             match request {
                 fcrunner::ComponentControllerRequest::Stop { control_handle: c } => {
-                    // for now, treat a stop the same as a kill because this
-                    // is not yet implementing proper behavior to first ask the
-                    // remote process to exit
-                    self.kill().await;
-                    c.shutdown();
-                    break;
+                    // Since stop takes some period of time to complete, call
+                    // it in a future and then shut down the control handle
+                    // which will knock `serve` out of this loop.
+                    let stop_func = self.stop().await;
+                    fasync::spawn(async move {
+                        stop_func.await;
+                        c.shutdown();
+                    });
                 }
                 fcrunner::ComponentControllerRequest::Kill { control_handle: c } => {
                     self.kill().await;
@@ -74,8 +85,17 @@ impl<C: Killable> Controller<C> {
 
     /// Kill the job and shutdown control handle supplied to this function.
     async fn kill(&mut self) {
-        if self.killable.is_some() {
-            self.killable.take().unwrap().kill().await;
+        if let Some(controllable) = self.controllable.take() {
+            controllable.kill().await;
+        }
+    }
+
+    /// If we have a Controllable, ask it to stop the component.
+    async fn stop<'a>(&mut self) -> BoxFuture<'a, ()> {
+        if self.controllable.is_some() {
+            self.controllable.as_mut().unwrap().stop()
+        } else {
+            async {}.boxed()
         }
     }
 }
@@ -319,24 +339,32 @@ pub async fn configure_launcher(
 mod tests {
     use {
         super::*, anyhow::Context, fidl::endpoints::create_endpoints,
-        fidl::endpoints::create_proxy, fuchsia_async as fasync,
+        fidl::endpoints::create_proxy, fidl_fuchsia_component_runner as fcrunner,
+        fuchsia_async as fasync,
     };
 
     struct FakeComponent<K>
     where
-        K: FnOnce(),
+        K: FnOnce() + std::marker::Send,
     {
         pub onkill: Option<K>,
+
+        pub onstop: Option<K>,
     }
 
     #[async_trait]
-    impl<K> Killable for FakeComponent<K>
+    impl<K: 'static> Controllable for FakeComponent<K>
     where
         K: FnOnce() + std::marker::Send,
     {
         async fn kill(mut self) {
             let func = self.onkill.take().unwrap();
             func();
+        }
+
+        fn stop<'a>(&mut self) -> BoxFuture<'a, ()> {
+            let func = self.onstop.take().unwrap();
+            async move { func() }.boxed()
         }
     }
 
@@ -347,6 +375,7 @@ mod tests {
             onkill: Some(move || {
                 sender.send(()).unwrap();
             }),
+            onstop: None,
         };
 
         let (client_endpoint, server_endpoint) =
@@ -377,9 +406,10 @@ mod tests {
     async fn test_stop_component() -> Result<(), Error> {
         let (sender, recv) = futures::channel::oneshot::channel::<()>();
         let fake_component = FakeComponent {
-            onkill: Some(move || {
+            onstop: Some(move || {
                 sender.send(()).unwrap();
             }),
+            onkill: None,
         };
 
         let (client_endpoint, server_endpoint) =

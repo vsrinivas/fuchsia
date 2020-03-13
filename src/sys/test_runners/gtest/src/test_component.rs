@@ -20,7 +20,7 @@ use {
     fuchsia_zircon::{self as zx, HandleBased, Task},
     futures::future::abortable,
     futures::future::AbortHandle,
-    futures::prelude::*,
+    futures::{future::BoxFuture, prelude::*},
     rand::rngs::ThreadRng,
     rand::Rng,
     runner::component::ComponentNamespace,
@@ -132,9 +132,14 @@ impl Component {
 }
 
 #[async_trait]
-impl runner::component::Killable for ComponentRuntime {
+impl runner::component::Controllable for ComponentRuntime {
     async fn kill(mut self) {
         self.kill_self();
+    }
+
+    fn stop<'a>(&mut self) -> BoxFuture<'a, ()> {
+        // TODO what should this do?
+        async move {}.boxed()
     }
 }
 

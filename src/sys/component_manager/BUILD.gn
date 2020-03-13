@@ -29,6 +29,7 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
     "//sdk/fidl/fuchsia.component.runner:fuchsia.component.runner-rustc",
     "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
+    "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle-rustc",
     "//sdk/fidl/fuchsia.security.resource:fuchsia.security.resource-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
