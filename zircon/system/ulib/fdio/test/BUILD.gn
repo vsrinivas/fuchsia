@@ -10,9 +10,12 @@ group("test") {
 }
 
 zx_test("fdio") {
+  # If your test can run on host as well as target, consider adding it to
+  # fdio_hosttests in the "host" directory.
   sources = [
     "fdio_atexit.cc",
     "fdio_directory.cc",
+    "fdio_eventfd.cc",
     "fdio_fd.cc",
     "fdio_fdio.cc",
     "fdio_get_vmo.cc",

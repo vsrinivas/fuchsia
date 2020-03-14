@@ -331,6 +331,21 @@ void fdio_chdir(fdio_t* io, const char* path);
 fdio_t* fdio_waitable_create(zx_handle_t h, zx_signals_t signals_in, zx_signals_t signals_out,
                              bool shared_handle);
 
+// Returns the sum of the capacities of all the entries in |vector|.
+size_t fdio_iovec_get_capacity(const zx_iovec_t* vector, size_t vector_count);
+
+// Copies bytes from |buffer| into |vector|.
+//
+// Returns the number of bytes copied in |out_actual|.
+void fdio_iovec_copy_to(const uint8_t* buffer, size_t buffer_size, const zx_iovec_t* vector,
+                        size_t vector_count, size_t* out_actual);
+
+// Copies bytes from |vector| into |buffer|.
+//
+// Returns the number of bytes copied in |out_actual|.
+void fdio_iovec_copy_from(const zx_iovec_t* vector, size_t vector_count, uint8_t* buffer,
+                          size_t buffer_size, size_t* out_actual);
+
 // unsupported / do-nothing hooks shared by implementations
 zx_status_t fdio_default_get_token(fdio_t* io, zx_handle_t* out);
 zx_status_t fdio_default_set_attr(fdio_t* io, const zxio_node_attributes_t* attr);

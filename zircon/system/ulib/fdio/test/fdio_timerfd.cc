@@ -37,6 +37,14 @@ TEST(TimerFDTest, Unsupported) {
   ASSERT_EQ(EINVAL, errno, "errno incorrect");
 }
 
+TEST(TimerFDTest, NonBlock) {
+  fbl::unique_fd fd(timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK));
+  EXPECT_TRUE(fd.is_valid());
+
+  int flags = fcntl(fd.get(), F_GETFL);
+  EXPECT_TRUE(flags & O_NONBLOCK);
+}
+
 TEST(TimerFDTest, OneShotLifecycle) {
   fbl::unique_fd fd(timerfd_create(CLOCK_MONOTONIC, 0));
   EXPECT_TRUE(fd.is_valid());

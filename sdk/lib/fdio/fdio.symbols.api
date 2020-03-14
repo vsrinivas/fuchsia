@@ -17,6 +17,9 @@ dirfd
 dup
 dup2
 dup3
+eventfd
+eventfd_read
+eventfd_write
 faccessat
 fchmod
 fchmodat

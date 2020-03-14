@@ -50,9 +50,11 @@ if (get_path_info(toolchain.environment, "extension") == "fuzzer") {
     shared = true
     sources = [
       "bsdsocket.cc",
+      "event.cc",
       "fd.cc",
       "fdio.cc",
       "get-vmo.cc",
+      "iovec.cc",
       "namespace/local-connection.cc",
       "namespace/local-filesystem.cc",
       "namespace/local-vnode.cc",
@@ -72,6 +74,7 @@ if (get_path_info(toolchain.environment, "extension") == "fuzzer") {
     deps = [
       "$zx/system/fidl/fuchsia-device:llcpp",
       "$zx/system/fidl/fuchsia-io:llcpp",
+      "$zx/system/fidl/fuchsia-io2:llcpp",
       "$zx/system/fidl/fuchsia-ldsvc:c",
       "$zx/system/fidl/fuchsia-net:llcpp",
       "$zx/system/fidl/fuchsia-net-stack:llcpp",

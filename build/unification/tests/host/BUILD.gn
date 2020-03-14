@@ -126,6 +126,7 @@ group("migrated-tests") {
     # Disabled because of fxbug.dev/37779 (20min+ run-time)
     #"//zircon/system/utest/fvm-host",
   #------------------
+    "//zircon/system/ulib/fdio/test/host",
   #------------------
     "//zircon/system/ulib/fvm/test:fvm-unit",
   #------------------

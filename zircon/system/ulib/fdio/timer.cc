@@ -62,32 +62,9 @@ static zx_status_t fdio_timer_destroy(zxio_t* io) {
 
 static zx_status_t fdio_timer_close(zxio_t* io) { return ZX_OK; }
 
-static size_t get_total_capacity(const zx_iovec_t* vector, size_t vector_count) {
-  size_t total_capacity = 0u;
-  for (size_t i = 0; i < vector_count; ++i) {
-    total_capacity += vector[i].capacity;
-  }
-  return total_capacity;
-}
-
-static void copy_to_vector(const uint8_t* buffer, size_t buffer_size, const zx_iovec_t* vector,
-                           size_t vector_count, size_t* out_actual) {
-  size_t remaining = buffer_size;
-  for (size_t i = 0; i < vector_count && remaining > 0; ++i) {
-    size_t chunk_size = remaining;
-    if (chunk_size > vector[i].capacity) {
-      chunk_size = vector[i].capacity;
-    }
-    memcpy(vector[i].buffer, buffer, chunk_size);
-    buffer += chunk_size;
-    remaining -= chunk_size;
-  }
-  *out_actual = buffer_size - remaining;
-}
-
-zx_status_t fdio_timer_read_vector(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
-                                   zxio_flags_t flags, size_t* out_actual) {
-  if (get_total_capacity(vector, vector_count) < sizeof(uint64_t)) {
+static zx_status_t fdio_timer_read_vector(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
+                                          zxio_flags_t flags, size_t* out_actual) {
+  if (fdio_iovec_get_capacity(vector, vector_count) < sizeof(uint64_t)) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
 
@@ -123,8 +100,8 @@ zx_status_t fdio_timer_read_vector(zxio_t* io, const zx_iovec_t* vector, size_t 
     ZX_ASSERT(status == ZX_OK);
   }
 
-  copy_to_vector(reinterpret_cast<const uint8_t*>(&count), sizeof(count), vector, vector_count,
-                 out_actual);
+  fdio_iovec_copy_to(reinterpret_cast<const uint8_t*>(&count), sizeof(count), vector, vector_count,
+                     out_actual);
 
   sync_mutex_unlock(&timer->lock);
   return ZX_OK;
@@ -206,8 +183,8 @@ int timerfd_create(int clockid, int flags) {
       return ERRNO(EINVAL);
   }
 
-  if (flags) {
-    // TODO: Implement TFD_NONBLOCK and TFD_TIMER_ABSTIME.
+  if (flags & ~TFD_NONBLOCK) {
+    // TODO: Implement TFD_TIMER_ABSTIME.
     return ERRNO(EINVAL);
   }
 
@@ -220,6 +197,10 @@ int timerfd_create(int clockid, int flags) {
   fdio_t* io = nullptr;
   if ((io = fdio_timer_create(std::move(timer))) == nullptr) {
     return ERROR(ZX_ERR_NO_MEMORY);
+  }
+
+  if (flags & TFD_NONBLOCK) {
+    *fdio_get_ioflag(io) |= IOFLAG_NONBLOCK;
   }
 
   int fd = fdio_bind_to_fd(io, -1, 0);
