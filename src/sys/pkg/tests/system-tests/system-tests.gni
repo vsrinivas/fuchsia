@@ -166,6 +166,7 @@ template("system_test_reboot_suite") {
     _deps += [ ":${_spec_target_name}" ]
 
     _command = []
+    _command = [ rebase_path(_test_binary, root_build_dir) ]
 
     if (defined(invoker.timeout)) {
       assert(invoker.timeout != "",
