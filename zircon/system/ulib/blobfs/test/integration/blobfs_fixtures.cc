@@ -55,5 +55,5 @@ void MakeBlob(const blobfs::BlobInfo* info, fbl::unique_fd* fd) {
   ASSERT_EQ(ftruncate(fd->get(), info->size_data), 0);
   ASSERT_EQ(blobfs::StreamAll(write, fd->get(), info->data.get(), info->size_data), 0,
             "Failed to write Data");
-  ASSERT_NO_FAILURES(blobfs::VerifyContents(fd->get(), info->data.get(), info->size_data));
+  ASSERT_TRUE(blobfs::VerifyContents(fd->get(), info->data.get(), info->size_data));
 }

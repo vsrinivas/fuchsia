@@ -56,7 +56,7 @@ void BlobList::VerifyFiles() {
   for (auto it = lists_[static_cast<uint32_t>(QueueId::kWritten)].begin();
        it != lists_[static_cast<uint32_t>(QueueId::kWritten)].end(); ++it) {
     it->fd.reset(open(it->info->path, O_RDONLY));
-    ASSERT_NO_FAILURES(VerifyContents(it->fd.get(), it->info->data.get(), it->info->size_data));
+    ASSERT_TRUE(VerifyContents(it->fd.get(), it->info->data.get(), it->info->size_data));
   }
 }
 
@@ -98,7 +98,7 @@ void BlobList::CloseFilesFromQueue(QueueId queue) {
 
 void BlobList::CreateBlob(unsigned int* rand_state, size_t num_writes) {
   std::unique_ptr<BlobInfo> info;
-  ASSERT_NO_FAILURES(GenerateRandomBlob(mount_path_, 1 + (rand_r(rand_state) % (1 << 16)), &info));
+  ASSERT_TRUE(GenerateRandomBlob(mount_path_, 1 + (rand_r(rand_state) % (1 << 16)), &info));
 
   BlobFile file(std::move(info), num_writes);
 
@@ -162,7 +162,7 @@ void BlobList::ReadData() {
     return;
   }
 
-  ASSERT_NO_FAILURES(VerifyContents(file.fd.get(), file.info->data.get(), file.info->size_data));
+  ASSERT_TRUE(VerifyContents(file.fd.get(), file.info->data.get(), file.info->size_data));
 
   PushFileInto(QueueId::kWritten, std::move(file));
 }

@@ -87,7 +87,7 @@ TEST_F(QueryServiceTest, QueryInfo) {
   ASSERT_NO_FAILURES(QueryInfo(0, 0));
   for (size_t i = 10; i < 16; i++) {
     std::unique_ptr<blobfs::BlobInfo> info;
-    ASSERT_NO_FAILURES(blobfs::GenerateRandomBlob(kMountPath, 1 << i, &info));
+    ASSERT_TRUE(blobfs::GenerateRandomBlob(kMountPath, 1 << i, &info));
 
     fbl::unique_fd fd;
     ASSERT_NO_FAILURES(MakeBlob(info.get(), &fd));

@@ -11,8 +11,8 @@
 
 #include <digest/digest.h>
 #include <digest/merkle-tree.h>
+#include <fbl/string.h>
 #include <fbl/unique_fd.h>
-#include <zxtest/zxtest.h>
 
 namespace blobfs {
 
@@ -31,42 +31,64 @@ void RandomFill(char* data, size_t length) {
 }
 
 // Creates, writes, reads (to verify) and operates on a blob.
-void GenerateBlob(BlobSrcFunction data_generator, const std::string& mount_path, size_t data_size,
+// Returns the result of the post-processing 'func' (true == success).
+bool GenerateBlob(BlobSrcFunction sourceCb, fbl::String mount_path, size_t size_data,
                   std::unique_ptr<BlobInfo>* out) {
   std::unique_ptr<BlobInfo> info(new BlobInfo);
-  info->data.reset(new char[data_size]);
-  data_generator(info->data.get(), data_size);
-  info->size_data = data_size;
+  info->data.reset(new char[size_data]);
+  sourceCb(info->data.get(), size_data);
+  info->size_data = size_data;
 
+  // Generate the Merkle Tree
   Digest digest;
   std::unique_ptr<uint8_t[]> tree;
-  ASSERT_OK(MerkleTreeCreator::Create(info->data.get(), info->size_data, &tree,
-                                      &info->size_merkle, &digest));
+  zx_status_t status = MerkleTreeCreator::Create(info->data.get(), info->size_data, &tree,
+                                                 &info->size_merkle, &digest);
   info->merkle.reset(reinterpret_cast<char*>(tree.release()));
+  if (status != ZX_OK) {
+    printf("Couldn't create Merkle Tree\n");
+    return false;
+  }
   snprintf(info->path, sizeof(info->path), "%s/%s", mount_path.c_str(), digest.ToString().c_str());
 
-  // Sanity-check the merkle tree.
-  ASSERT_OK(MerkleTreeVerifier::Verify(info->data.get(), info->size_data, 0, info->size_data,
-                                       info->merkle.get(), info->size_merkle, digest));
-  *out = std::move(info);
-}
-
-void GenerateRandomBlob(const std::string& mount_path, size_t data_size,
-                        std::unique_ptr<BlobInfo>* out) {
-  GenerateBlob(RandomFill, mount_path, data_size, out);
-}
-
-void VerifyContents(int fd, const char* data, size_t data_size) {
-  ASSERT_EQ(0, lseek(fd, 0, SEEK_SET));
-
-  constexpr size_t kBuffersize = 8192;
-  std::unique_ptr<char[]> buffer(new char[kBuffersize]);
-
-  for (size_t total_read = 0; total_read < data_size; total_read += kBuffersize) {
-    size_t read_size = std::min(kBuffersize, data_size - total_read);
-    ASSERT_EQ(read_size, read(fd, buffer.get(), read_size));
-    ASSERT_BYTES_EQ(&data[total_read], buffer.get(), read_size);
+  // Sanity-check the merkle tree
+  status = MerkleTreeVerifier::Verify(info->data.get(), info->size_data, 0, info->size_data,
+                                      info->merkle.get(), info->size_merkle, digest);
+  if (status != ZX_OK) {
+    printf("Failed to validate Merkle Tree\n");
+    return false;
   }
+  *out = std::move(info);
+  return true;
+}
+
+bool GenerateRandomBlob(fbl::String mount_path, size_t size_data, std::unique_ptr<BlobInfo>* out) {
+  return GenerateBlob(RandomFill, mount_path, size_data, out);
+}
+
+bool VerifyContents(int fd, const char* data, size_t size_data) {
+  // Verify the contents of the Blob.
+  constexpr size_t kReadSize = 8192;
+  std::unique_ptr<char[]> buffer(new char[kReadSize]);
+  if (lseek(fd, 0, SEEK_SET) != 0) {
+    printf("Failed to seek to start\n");
+    return false;
+  }
+
+  size_t total_read = 0;
+  while (total_read != size_data) {
+    ssize_t result = read(fd, buffer.get(), kReadSize);
+    if (result <= 0) {
+      printf("Failed to read file. Result: %li\n", result);
+      return false;
+    }
+    if (memcmp(buffer.get(), &data[total_read], result) != 0) {
+      printf("Blob contents differ\n");
+      return false;
+    }
+    total_read += result;
+  }
+  return true;
 }
 
 }  // namespace blobfs
