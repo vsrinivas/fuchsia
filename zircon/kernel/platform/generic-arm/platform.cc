@@ -69,13 +69,9 @@ static zbi_header_t* zbi_root = nullptr;
 static bool uart_disabled = false;
 
 // all of the configured memory arenas from the zbi
-// at the moment, only support 1 arena
-static pmm_arena_info_t mem_arena = {
-    /* .name */ "sdram",
-    /* .flags */ 0,
-    /* .base */ 0,  // filled in by zbi
-    /* .size */ 0,  // filled in by zbi
-};
+static constexpr size_t kNumArenas = 16;
+static pmm_arena_info_t mem_arena[kNumArenas];
+static size_t arena_count = 0;
 
 // boot items to save for mexec
 // TODO(voydanoff): more generic way of doing this that can be shared with PC platform
@@ -235,28 +231,24 @@ static void save_mexec_zbi(zbi_header_t* item) {
 static void process_mem_range(const zbi_mem_range_t* mem_range) {
   switch (mem_range->type) {
     case ZBI_MEM_RANGE_RAM:
-      if (mem_arena.size == 0) {
-        mem_arena.base = mem_range->paddr;
-        mem_arena.size = mem_range->length;
-        dprintf(INFO, "mem_arena.base %#" PRIx64 " size %#" PRIx64 "\n", mem_arena.base,
-                mem_arena.size);
-      } else {
-        if (mem_range->paddr) {
-          mem_arena.base = mem_range->paddr;
-          dprintf(INFO, "overriding mem arena 0 base from FDT: %#zx\n", mem_arena.base);
-        }
-        // if mem_area.base is already set, then just update the size
-        mem_arena.size = mem_range->length;
-        dprintf(INFO, "overriding mem arena 0 size from FDT: %#zx\n", mem_arena.size);
+      dprintf(INFO, "ZBI: mem arena base %#" PRIx64 " size %#" PRIx64 "\n", mem_range->paddr,
+              mem_range->length);
+      if (arena_count >= kNumArenas) {
+        printf("ZBI: Warning, too many memory arenas, dropping additional\n");
+        break;
       }
+      mem_arena[arena_count] = pmm_arena_info_t{"ram", 0, mem_range->paddr, mem_range->length};
+      arena_count++;
       break;
     case ZBI_MEM_RANGE_PERIPHERAL: {
+      dprintf(INFO, "ZBI: peripheral range base %#" PRIx64 " size %#" PRIx64 "\n", mem_range->paddr,
+              mem_range->length);
       auto status = add_periph_range(mem_range->paddr, mem_range->length);
       ASSERT(status == ZX_OK);
       break;
     }
     case ZBI_MEM_RANGE_RESERVED:
-      dprintf(INFO, "boot reserve mem range: phys base %#" PRIx64 " length %#" PRIx64 "\n",
+      dprintf(INFO, "ZBI: reserve mem range base %#" PRIx64 " size %#" PRIx64 "\n",
               mem_range->paddr, mem_range->length);
       boot_reserve_add_range(mem_range->paddr, mem_range->length);
       break;
@@ -509,20 +501,29 @@ void platform_early_init(void) {
   // check if a memory limit was passed in via kernel.memory-limit-mb and
   // find memory ranges to use if one is found.
   zx_status_t status = memory_limit_init();
-  if (status == ZX_OK) {
-    // Figure out and add arenas based on the memory limit and our range of DRAM
-    memory_limit_add_range(mem_arena.base, mem_arena.size, mem_arena);
-    status = memory_limit_add_arenas(mem_arena);
+  bool have_limit = (status == ZX_OK);
+  for (size_t i = 0; i < arena_count; i++) {
+    if (have_limit) {
+      // Figure out and add arenas based on the memory limit and our range of DRAM
+      status = memory_limit_add_range(mem_arena[i].base, mem_arena[i].size, mem_arena[i]);
+    }
+
+    // If no memory limit was found, or adding arenas from the range failed, then add
+    // the existing global arena.
+    if (!have_limit || status != ZX_OK) {
+      // Init returns not supported if no limit exists
+      if (status != ZX_ERR_NOT_SUPPORTED) {
+        dprintf(INFO, "memory limit lib returned an error (%d), falling back to defaults\n",
+                status);
+      }
+      pmm_add_arena(&mem_arena[i]);
+    }
   }
 
-  // If no memory limit was found, or adding arenas from the range failed, then add
-  // the existing global arena.
-  if (status != ZX_OK) {
-    // Init returns not supported if no limit exists
-    if (status != ZX_ERR_NOT_SUPPORTED) {
-      dprintf(INFO, "memory limit lib returned an error (%d), falling back to defaults\n", status);
-    }
-    pmm_add_arena(&mem_arena);
+  // add any pending memory arenas the memory limit library has pending
+  if (have_limit) {
+    status = memory_limit_add_arenas(mem_arena[0]);
+    DEBUG_ASSERT(status == ZX_OK);
   }
 
   // tell the boot allocator to mark ranges we've reserved as off limits

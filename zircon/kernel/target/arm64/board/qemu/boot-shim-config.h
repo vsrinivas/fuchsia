@@ -12,16 +12,11 @@
 // time on KVM hosted qemu machines
 #define REMOVE_KERNEL_FROM_ZBI 0
 
-
 #define MAX_CPU_COUNT 16
 static size_t cpu_count = 0;
 
 static const zbi_mem_range_t mem_config[] = {
-    {
-        .type = ZBI_MEM_RANGE_RAM,
-        .paddr = 0x40000000,
-        .length = 0x08000000,  // assume 512MB, FDT will provide the real number
-    },
+    // ZBI_MEM_RANGE_RAM will come from device tree
     {
         .type = ZBI_MEM_RANGE_PERIPHERAL,
         .paddr = 0,
