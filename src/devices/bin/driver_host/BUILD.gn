@@ -66,6 +66,10 @@ source_set("common") {
 
   defines = [ "_ALL_SOURCE=1" ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+
+  # TODO(48366): UBSan has found an instance of undefined behavior in this target.
+  # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
+  configs += [ "//build/config:temporarily_disable_ubsan_do_not_use" ]
 }
 
 shared_library("driver") {
