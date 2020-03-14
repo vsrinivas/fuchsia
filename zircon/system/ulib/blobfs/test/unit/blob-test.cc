@@ -9,6 +9,7 @@
 #include <blobfs/mkfs.h>
 #include <block-client/cpp/fake-device.h>
 #include <fbl/auto_call.h>
+#include <fs-test-utils/blobfs/blobfs.h>
 #include <zxtest/zxtest.h>
 
 #include "blobfs.h"

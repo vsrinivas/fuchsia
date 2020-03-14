@@ -17,12 +17,14 @@ import("//build/unification/zx_library.gni")
 zx_library("fs-test-utils") {
   sdk = "source"
   sdk_headers = [
+    "fs-test-utils/blobfs/blobfs.h",
     "fs-test-utils/fixture.h",
     "fs-test-utils/perftest.h",
     "fs-test-utils/unittest.h",
   ]
   testonly = true
   sources = [
+    "blobfs/blobfs.cc",
     "fixture.cc",
     "perftest.cc",
   ]

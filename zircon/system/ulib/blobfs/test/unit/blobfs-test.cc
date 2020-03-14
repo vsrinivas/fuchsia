@@ -9,11 +9,11 @@
 #include <blobfs/format.h>
 #include <blobfs/mkfs.h>
 #include <block-client/cpp/fake-device.h>
+#include <fs-test-utils/blobfs/blobfs.h>
 #include <storage/buffer/vmo_buffer.h>
 #include <zxtest/zxtest.h>
 
 #include "directory.h"
-#include "test/blob_utils.h"
 
 namespace blobfs {
 namespace {
@@ -164,8 +164,8 @@ TEST_F(BlobfsTest, TrimsData) {
   ASSERT_OK(fs_->OpenRootNode(&root));
   fs::Vnode* root_node = root.get();
 
-  std::unique_ptr<BlobInfo> info;
-  ASSERT_TRUE(GenerateRandomBlob("", 1024, &info));
+  std::unique_ptr<fs_test_utils::BlobInfo> info;
+  ASSERT_TRUE(fs_test_utils::GenerateRandomBlob("", 1024, &info));
   memmove(info->path, info->path + 1, strlen(info->path));  // Remove leading slash.
 
   fbl::RefPtr<fs::Vnode> file;

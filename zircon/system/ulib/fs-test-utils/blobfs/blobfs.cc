@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "test/blob_utils.h"
-
 #include <fcntl.h>
 #include <lib/fdio/io.h>
 #include <stdio.h>
@@ -13,8 +11,9 @@
 #include <digest/merkle-tree.h>
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
+#include <fs-test-utils/blobfs/blobfs.h>
 
-namespace blobfs {
+namespace fs_test_utils {
 
 using digest::Digest;
 using digest::MerkleTreeCreator;
@@ -91,4 +90,4 @@ bool VerifyContents(int fd, const char* data, size_t size_data) {
   return true;
 }
 
-}  // namespace blobfs
+}  // namespace fs_test_utils

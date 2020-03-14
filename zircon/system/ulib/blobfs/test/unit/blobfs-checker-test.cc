@@ -10,10 +10,10 @@
 #include <blobfs/format.h>
 #include <blobfs/mkfs.h>
 #include <block-client/cpp/fake-device.h>
+#include <fs-test-utils/blobfs/blobfs.h>
 #include <zxtest/zxtest.h>
 
 #include "blobfs.h"
-#include "test/blob_utils.h"
 #include "utils.h"
 
 namespace blobfs {
@@ -66,8 +66,8 @@ class BlobfsCheckerTest : public zxtest::Test {
 // AddRandomBlob creates and writes a random blob to the file system as a child
 // of the provided Vnode.
 void AddRandomBlob(fs::Vnode* node) {
-  std::unique_ptr<BlobInfo> info;
-  ASSERT_TRUE(GenerateRandomBlob("", 1024, &info));
+  std::unique_ptr<fs_test_utils::BlobInfo> info;
+  ASSERT_TRUE(fs_test_utils::GenerateRandomBlob("", 1024, &info));
   memmove(info->path, info->path + 1, strlen(info->path));  // Remove leading slash.
 
   fbl::RefPtr<fs::Vnode> file;
