@@ -48,7 +48,19 @@ SynAudioInDevice::SynAudioInDevice(ddk::MmioBuffer mmio_global, ddk::MmioBuffer 
   cic_filter_ = std::make_unique<CicFilter>();
 }
 
-uint32_t SynAudioInDevice::fifo_depth() const { return dma_.GetTransferSize(DmaId::kDmaIdPdmW0); }
+uint32_t SynAudioInDevice::PcmAmountPerTransfer() const {
+  constexpr uint32_t kChannelsPerDma = 2;
+  const uint32_t kTransferSize = dma_.GetTransferSize(DmaId::kDmaIdPdmW0);
+  ZX_DEBUG_ASSERT(kTransferSize % (kChannelsPerDma * cic_filter_->GetInputToOutputRatio()) == 0);
+  const uint32_t kPcmDataForOneChannel =
+      kTransferSize / (kChannelsPerDma * cic_filter_->GetInputToOutputRatio());
+  return static_cast<uint32_t>(kNumberOfChannels) * kPcmDataForOneChannel;
+}
+
+uint32_t SynAudioInDevice::FifoDepth() const {
+  constexpr uint32_t kNumberOfTransfersForFifoDepth = 2;
+  return kNumberOfTransfersForFifoDepth * PcmAmountPerTransfer();
+}
 
 void SynAudioInDevice::ProcessDma(uint32_t index) {
   const uint32_t dma_transfer_size = dma_.GetTransferSize(DmaId::kDmaIdPdmW0);
@@ -199,9 +211,11 @@ zx_status_t SynAudioInDevice::Init() {
 uint32_t SynAudioInDevice::GetRingPosition() { return ring_buffer_current_; }
 
 zx_status_t SynAudioInDevice::GetBuffer(size_t size, zx::vmo* buffer) {
-  // dma_buffer_size (ask here is a buffer of size 8 x 16KB) allows for this driver not
-  // getting CPU time to perform the PDM decoding.  Higher numbers allow for more resiliance,
+  // dma_buffer_size (ask here is a buffer of size 8 x 16KB) allows for this driver not getting CPU
+  // time to perform the PDM decoding even when behind.  Higher numbers allow for more resiliance,
   // although if we get behind on decoding there is more latency added to the created ringbuffer.
+  // Note though that it is expected for the driver to decode one transfer within the time it takes
+  // to receive the next as reported on fifo_depth() (kNumberOfTransfersForFifoDepth == 2).
   ZX_ASSERT(dma_.GetTransferSize(DmaId::kDmaIdPdmW0) == dma_.GetTransferSize(DmaId::kDmaIdPdmW1));
   ZX_ASSERT(kNumberOfDmas <= 2);
 
@@ -222,7 +236,9 @@ zx_status_t SynAudioInDevice::GetBuffer(size_t size, zx::vmo* buffer) {
     dma_buffer_[i].op_range(ZX_VMO_OP_CACHE_CLEAN_INVALIDATE, 0, dma_buffer_size_[i], nullptr, 0);
   }
 
-  size = fbl::round_up<size_t, uint32_t>(size, dma_.GetTransferSize(DmaId::kDmaIdPdmW0));
+  // We simplify buffer management by having decoded PCM data for all channels to not wrap at the
+  // end of ring buffer, rounding up to the decoded PCM data amount per transfer.
+  size = fbl::round_up<size_t, uint32_t>(size, PcmAmountPerTransfer());
 
   auto status = zx::vmo::create(size, 0, &ring_buffer_);
   if (status != ZX_OK) {

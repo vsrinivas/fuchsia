@@ -51,7 +51,7 @@ class SynAudioInDevice {
   // Stops clocking data and quiets output signals.
   void Shutdown();
 
-  uint32_t fifo_depth() const;
+  uint32_t FifoDepth() const;
 
  protected:
   // We need one DMA every 2 channels.
@@ -84,6 +84,7 @@ class SynAudioInDevice {
   uint32_t overflows_ = 0;
 
   int Thread();
+  uint32_t PcmAmountPerTransfer() const;
 };
 
 #endif  // ZIRCON_SYSTEM_DEV_LIB_AS370_INCLUDE_SOC_AS370_SYN_AUDIO_IN_H_

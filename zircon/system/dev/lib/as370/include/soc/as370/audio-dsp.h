@@ -21,10 +21,13 @@ class CicFilter {
                           uint32_t input_total_channels, uint32_t input_channel,
                           uint32_t output_total_channels, uint32_t output_channel,
                           uint32_t multiplier_shift);  // virtual for unit testing.
+  uint32_t GetInputToOutputRatio() { return kInputBitsPerSample / kOutputBitsPerSample; }
 
  private:
   static constexpr uint32_t kMaxIndex = 4;
   static constexpr uint32_t kOrder = 5;
+  static constexpr uint32_t kInputBitsPerSample = 64;
+  static constexpr uint32_t kOutputBitsPerSample = 16;
 
   int32_t integrator_state[kMaxIndex][kOrder] = {};
   int32_t differentiator_state[kMaxIndex][kOrder] = {};

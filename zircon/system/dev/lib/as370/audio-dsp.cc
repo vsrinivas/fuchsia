@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 #include <unistd.h>
+#include <zircon/assert.h>
 
 #include <limits>
 
 #include <soc/as370/audio-dsp.h>
-
 // Cascaded integrator–comb filter.
 // TODO(andresoportus) generalize and place in signal processing library.
 #if defined(__clang__)
@@ -48,14 +48,13 @@ uint32_t CicFilter::Filter(uint32_t index,  // e.g. 0.
     amount_pcm += static_cast<uint32_t>(output_total_channels * sizeof(int32_t));
   }
 #else
-  constexpr uint32_t input_bits_per_channel = 32;
-  constexpr uint32_t input_bits_per_sample = 64;  // One PDM sample for L and R channels.
 
   // Since input bits per channel is 32, we use 32 bits pointers.
   uint32_t* in = static_cast<uint32_t*>(input);
   uint32_t* in_end = reinterpret_cast<uint32_t*>(static_cast<uint8_t*>(input) + input_size);
 
   // 16 output bits per channel.
+  ZX_ASSERT(kOutputBitsPerSample == 16);
   uint16_t* out = static_cast<uint16_t*>(output);
 
   if (index > kMaxIndex) {
@@ -65,10 +64,10 @@ uint32_t CicFilter::Filter(uint32_t index,  // e.g. 0.
   uint32_t amount_pcm = 0;
   while (in < in_end) {
     // Integrate.
-    for (size_t word = 0; word < input_bits_per_sample / input_bits_per_channel; ++word) {
+    for (size_t word = 0; word < kInputBitsPerSample / (sizeof(uint32_t) * 8); ++word) {
       uint32_t bits = in[input_channel];
       in += input_total_channels;
-      for (uint32_t i = 0; i < input_bits_per_channel; ++i, bits >>= 1) {
+      for (uint32_t i = 0; i < sizeof(uint32_t) * 8; ++i, bits >>= 1) {
         // Integrator state is allowed to overflow and wrap, this is ok becuase of modulo
         // arithmetic, the differentiation will undo the wrapping.
         auto plus_or_minus = (static_cast<int32_t>(bits & 1) << 1) - 1;  // +1/-1 from 1/0;

@@ -162,4 +162,15 @@ TEST(SynapticsAudioInTest, ProcessDmaPdm0AndPdm1) {
   dma.VerifyAndClear();
 }
 
+TEST(SynapticsAudioInTest, FifoDepth) {
+  ddk::MockSharedDma dma;
+  auto dev = SynAudioInDeviceTest::Create(&dma);
+  // 16384 PDM DMA transfer size as used for PDM, generates 1024 samples at 48KHz 16 bits.
+  dma.ExpectGetTransferSize(16384, DmaId::kDmaIdPdmW0);
+
+  // 12288 = 3 channels x 1024 samples per DMA x 2 bytes per sample x 2 for ping-pong.
+  ASSERT_EQ(dev->FifoDepth(), 12288);
+  dma.VerifyAndClear();
+}
+
 }  // namespace audio

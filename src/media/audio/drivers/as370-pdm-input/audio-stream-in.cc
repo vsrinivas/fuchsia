@@ -144,7 +144,7 @@ zx_status_t As370AudioStreamIn::InitPDev() {
 }
 
 zx_status_t As370AudioStreamIn::ChangeFormat(const audio_proto::StreamSetFmtReq& req) {
-  fifo_depth_ = lib_->fifo_depth();
+  fifo_depth_ = lib_->FifoDepth();
   external_delay_nsec_ = 0;
 
   // At this time only one format is supported, and hardware is initialized
