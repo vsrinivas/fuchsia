@@ -235,6 +235,8 @@ void ShaderModuleTemplate::Variant::UpdateModule() {
   std::vector<uint32_t> spirv;
   if (GenerateSpirV(&spirv)) {
     RecreateModuleFromSpirvAndNotifyListeners(spirv);
+  } else {
+    FXL_NOTREACHED() << "Shader compilation failed!";
   }
 }
 #else
