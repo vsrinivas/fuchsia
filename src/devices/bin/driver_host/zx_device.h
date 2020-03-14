@@ -267,7 +267,7 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
 
   // This is an atomic so that the connection's async loop can inspect this
   // value to determine if an expected shutdown is happening.  See comments in
-  // internal::remove().
+  // DriverManagerRemove().
   std::atomic<DeviceControllerConnection*> conn = nullptr;
 
   fbl::Mutex proxy_ios_lock;

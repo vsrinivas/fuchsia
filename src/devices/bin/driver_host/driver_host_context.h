@@ -35,15 +35,31 @@ class DriverHostContext {
   // Attaches channel |c| to new state representing an open connection to |dev|.
   zx_status_t DeviceConnect(const fbl::RefPtr<zx_device_t>& dev, uint32_t flags, zx::channel c);
 
-  // routines driver_host uses to talk to dev coordinator
+  // routines driver_host uses to talk to driver_manager
   // |client_remote| will only be a valid handle if the device was added with
   // DEVICE_ADD_INVISIBLE or DEVICE_ADD_MUST_ISOLATE.
-  zx_status_t Add(const fbl::RefPtr<zx_device_t>& dev, const fbl::RefPtr<zx_device_t>& child,
-                  const char* proxy_args, const zx_device_prop_t* props, uint32_t prop_count,
-                  zx::channel client_remote) REQ_DM_LOCK;
-  // Note that remove() takes a RefPtr rather than a const RefPtr&.
+  zx_status_t DriverManagerAdd(const fbl::RefPtr<zx_device_t>& dev,
+                               const fbl::RefPtr<zx_device_t>& child, const char* proxy_args,
+                               const zx_device_prop_t* props, uint32_t prop_count,
+                               zx::channel client_remote) REQ_DM_LOCK;
+  // Note that DriverManagerRemove() takes a RefPtr rather than a const RefPtr&.
   // It intends to consume a reference.
-  zx_status_t Remove(fbl::RefPtr<zx_device_t> dev) REQ_DM_LOCK;
+  zx_status_t DriverManagerRemove(fbl::RefPtr<zx_device_t> dev) REQ_DM_LOCK;
+
+  // |client_remote| will only be a valid handle if the device was added with
+  // DEVICE_ADD_INVISIBLE or DEVICE_ADD_MUST_ISOLATE.
+  zx_status_t DeviceAdd(const fbl::RefPtr<zx_device_t>& dev, const fbl::RefPtr<zx_device_t>& parent,
+                        const zx_device_prop_t* props, uint32_t prop_count, const char* proxy_args,
+                        zx::channel client_remote) REQ_DM_LOCK;
+
+  zx_status_t DeviceInit(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK;
+  void DeviceInitReply(const fbl::RefPtr<zx_device_t>& dev, zx_status_t status,
+                       const device_init_reply_args_t* args) REQ_DM_LOCK;
+  // TODO(fxb/34574): this should be removed once device_remove() is removed.
+  zx_status_t DeviceRemoveDeprecated(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK;
+  zx_status_t DeviceRemove(const fbl::RefPtr<zx_device_t>& dev,
+                           bool unbind_self = false) REQ_DM_LOCK;
+  zx_status_t DeviceCompleteRemoval(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK;
 
   // Sets up event on async loop which gets triggered once
   zx_status_t SetupEventWaiter();

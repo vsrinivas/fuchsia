@@ -100,12 +100,13 @@ zx_status_t DriverHostContext::StartConnection(fbl::RefPtr<DevfsConnection> conn
   return DevfsConnection::BeginWait(std::move(conn), loop_.dispatcher());
 }
 
-// Send message to devcoordinator asking to add child device to
-// parent device.  Called under driver_host api lock.
-zx_status_t DriverHostContext::Add(const fbl::RefPtr<zx_device_t>& parent,
-                                   const fbl::RefPtr<zx_device_t>& child, const char* proxy_args,
-                                   const zx_device_prop_t* props, uint32_t prop_count,
-                                   zx::channel client_remote) {
+// Send message to driver_manager asking to add child device to
+// parent device.  Called under the api lock.
+zx_status_t DriverHostContext::DriverManagerAdd(const fbl::RefPtr<zx_device_t>& parent,
+                                                const fbl::RefPtr<zx_device_t>& child,
+                                                const char* proxy_args,
+                                                const zx_device_prop_t* props, uint32_t prop_count,
+                                                zx::channel client_remote) {
   char buffer[512];
   const char* path = internal::mkdevpath(parent, buffer, sizeof(buffer));
 
@@ -199,9 +200,9 @@ zx_status_t DriverHostContext::Add(const fbl::RefPtr<zx_device_t>& parent,
   return ZX_OK;
 }
 
-// Send message to devcoordinator informing it that this device
-// is being removed.  Called under driver_host api lock.
-zx_status_t DriverHostContext::Remove(fbl::RefPtr<zx_device_t> dev) {
+// Send message to driver_manager informing it that this device
+// is being removed.  Called under the api lock.
+zx_status_t DriverHostContext::DriverManagerRemove(fbl::RefPtr<zx_device_t> dev) {
   DeviceControllerConnection* conn = dev->conn.load();
   if (conn == nullptr) {
     log(ERROR, "removing device %p, conn is nullptr\n", dev.get());
@@ -209,7 +210,7 @@ zx_status_t DriverHostContext::Remove(fbl::RefPtr<zx_device_t> dev) {
   }
 
   // This must be done before the RemoveDevice message is sent to
-  // devcoordinator, since devcoordinator will close the channel in response.
+  // driver_manager, since driver_manager will close the channel in response.
   // The async loop may see the channel close before it sees the queued
   // shutdown packet, so it needs to check if dev->conn has been nulled to
   // handle that gracefully.
@@ -424,17 +425,6 @@ zx_status_t find_driver(fbl::StringPiece libname, zx::vmo vmo, fbl::RefPtr<zx_dr
 
   return new_driver->status();
 }
-
-// This will be removed in a later patch, in favor of making functions members of DriverHostContext.
-zx_status_t add(const fbl::RefPtr<zx_device_t>& parent, const fbl::RefPtr<zx_device_t>& child,
-                const char* proxy_args, const zx_device_prop_t* props, uint32_t prop_count,
-                zx::channel client_remote) {
-  return ContextForApi()->Add(parent, child, proxy_args, props, prop_count,
-                              std::move(client_remote));
-}
-
-// This will be removed in a later patch, in favor of making functions members of DriverHostContext.
-zx_status_t remove(fbl::RefPtr<zx_device_t> dev) { return ContextForApi()->Remove(std::move(dev)); }
 
 void DevhostControllerConnection::CreateDevice(zx::channel coordinator_rpc,
                                                zx::channel device_controller_rpc,

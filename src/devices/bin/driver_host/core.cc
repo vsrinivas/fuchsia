@@ -55,7 +55,7 @@ static thread_local CreationContext* g_creation_context;
 
 // The bind and creation contexts is setup before the bind() or
 // create() ops are invoked to provide the ability to sanity check the
-// required device_add() operations these hooks should be making.
+// required DeviceAdd() operations these hooks should be making.
 void set_bind_context(internal::BindContext* ctx) { g_bind_context = ctx; }
 
 void set_creation_context(CreationContext* ctx) {
@@ -362,166 +362,6 @@ zx_status_t device_validate(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK {
   return ZX_OK;
 }
 
-}  // namespace
-
-zx_status_t device_add(const fbl::RefPtr<zx_device_t>& dev, const fbl::RefPtr<zx_device_t>& parent,
-                       const zx_device_prop_t* props, uint32_t prop_count, const char* proxy_args,
-                       zx::channel client_remote) REQ_DM_LOCK {
-  auto mark_dead = fbl::MakeAutoCall([&dev]() {
-    if (dev) {
-      dev->flags |= DEV_FLAG_DEAD;
-    }
-  });
-
-  zx_status_t status;
-  if ((status = device_validate(dev)) < 0) {
-    return status;
-  }
-  if (parent == nullptr) {
-    printf("device_add: cannot add %p(%s) to nullptr parent\n", dev.get(), dev->name);
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-  if (parent->flags & DEV_FLAG_DEAD) {
-    printf("device add: %p: is dead, cannot add child %p\n", parent.get(), dev.get());
-    return ZX_ERR_BAD_STATE;
-  }
-
-  internal::BindContext* bind_ctx = nullptr;
-  CreationContext* creation_ctx = nullptr;
-
-  // If the bind or creation ctx (thread locals) are set, we are in
-  // a thread that is handling a bind() or create() callback and if
-  // that ctx's parent matches the one provided to add we need to do
-  // some additional checking...
-  if ((g_bind_context != nullptr) && (g_bind_context->parent == parent)) {
-    bind_ctx = g_bind_context;
-  }
-  if ((g_creation_context != nullptr) && (g_creation_context->parent == parent)) {
-    creation_ctx = g_creation_context;
-    // create() must create only one child
-    if (creation_ctx->child != nullptr) {
-      printf("driver_host: driver attempted to create multiple proxy devices!\n");
-      return ZX_ERR_BAD_STATE;
-    }
-  }
-
-#if TRACE_ADD_REMOVE
-  printf("driver_host: device add: %p(%s) parent=%p(%s)\n", dev.get(), dev->name, parent.get(),
-         parent->name);
-#endif
-
-  // Don't create an event handle if we alredy have one
-  if (!dev->event.is_valid() &&
-      ((status = zx::eventpair::create(0, &dev->event, &dev->local_event)) < 0)) {
-    printf("device add: %p(%s): cannot create event: %d\n", dev.get(), dev->name, status);
-    return status;
-  }
-
-  dev->flags |= DEV_FLAG_BUSY;
-
-  // proxy devices are created through this handshake process
-  if (creation_ctx) {
-    if (dev->flags & DEV_FLAG_INVISIBLE) {
-      printf("driver_host: driver attempted to create invisible device in create()\n");
-      return ZX_ERR_INVALID_ARGS;
-    }
-    dev->flags |= DEV_FLAG_ADDED;
-    dev->flags &= (~DEV_FLAG_BUSY);
-    dev->rpc = zx::unowned_channel(creation_ctx->device_controller_rpc);
-    dev->coordinator_rpc = zx::unowned_channel(creation_ctx->coordinator_rpc);
-    creation_ctx->child = dev;
-    mark_dead.cancel();
-    return ZX_OK;
-  }
-
-  dev->parent = parent;
-
-  // attach to our parent
-  parent->children.push_back(dev.get());
-
-  if (!(dev->flags & DEV_FLAG_INSTANCE)) {
-    // internal::add always consumes the handle
-    status = internal::add(parent, dev, proxy_args, props, prop_count, std::move(client_remote));
-    if (status < 0) {
-      printf("driver_host: %p(%s): remote add failed %d\n", dev.get(), dev->name, status);
-      dev->parent->children.erase(*dev);
-      dev->parent.reset();
-
-      // since we are under the lock the whole time, we added the node
-      // to the tail and then we peeled it back off the tail when we
-      // failed, we don't need to interact with the enum lock mechanism
-      dev->flags &= (~DEV_FLAG_BUSY);
-      return status;
-    }
-  }
-  dev->flags |= DEV_FLAG_ADDED;
-  dev->flags &= (~DEV_FLAG_BUSY);
-
-  // record this device in the bind context if there is one
-  if (bind_ctx && (bind_ctx->child == nullptr)) {
-    bind_ctx->child = dev;
-  }
-  mark_dead.cancel();
-  return ZX_OK;
-}
-
-zx_status_t device_init(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK {
-  if (dev->flags & DEV_FLAG_INITIALIZING) {
-    return ZX_ERR_BAD_STATE;
-  }
-  // Call dev's init op.
-  if (dev->ops->init) {
-    dev->flags |= DEV_FLAG_INITIALIZING;
-    ApiAutoRelock relock;
-    dev->InitOp();
-  } else {
-    dev->init_cb(ZX_OK);
-  }
-  return ZX_OK;
-}
-
-void device_init_reply(const fbl::RefPtr<zx_device_t>& dev, zx_status_t status,
-                       const device_init_reply_args_t* args) REQ_DM_LOCK {
-  if (!(dev->flags & DEV_FLAG_INITIALIZING)) {
-    ZX_PANIC("device: %p(%s): cannot reply to init, flags are: (%x)\n", dev.get(), dev->name,
-             dev->flags);
-  }
-  if (status == ZX_OK) {
-    if (args && args->power_states && args->power_state_count != 0) {
-      dev->SetPowerStates(args->power_states, args->power_state_count);
-    }
-    if (args && args->performance_states && (args->performance_state_count != 0)) {
-      dev->SetPerformanceStates(args->performance_states, args->performance_state_count);
-    }
-  }
-
-  ZX_ASSERT_MSG(dev->init_cb,
-                "device: %p(%s): cannot reply to init, no callback set, flags are 0x%x\n",
-                dev.get(), dev->name, dev->flags);
-
-  dev->init_cb(status);
-  // Device is no longer invisible.
-  dev->flags &= ~(DEV_FLAG_INVISIBLE);
-  // If all children completed intializing,
-  // complete pending bind and rebind connections.
-  bool complete_bind_rebind = true;
-  for (auto& child : dev->parent->children) {
-    if (child.flags & DEV_FLAG_INVISIBLE) {
-      complete_bind_rebind = false;
-    }
-  }
-  if (complete_bind_rebind) {
-    if (auto bind_conn = dev->parent->take_bind_conn(); bind_conn) {
-      bind_conn(status);
-    }
-    if (auto rebind_conn = dev->parent->take_rebind_conn(); rebind_conn) {
-      rebind_conn(status);
-    }
-  }
-}
-
-namespace {
-
 #define REMOVAL_BAD_FLAGS (DEV_FLAG_DEAD | DEV_FLAG_BUSY | DEV_FLAG_INSTANCE | DEV_FLAG_MULTI_BIND)
 
 const char* removal_problem(uint32_t flags) {
@@ -541,30 +381,6 @@ const char* removal_problem(uint32_t flags) {
 }
 
 }  // namespace
-
-zx_status_t device_remove(const fbl::RefPtr<zx_device_t>& dev, bool unbind_self) REQ_DM_LOCK {
-  if (dev->flags & REMOVAL_BAD_FLAGS) {
-    printf("device: %p(%s): cannot be removed (%s)\n", dev.get(), dev->name,
-           removal_problem(dev->flags));
-    return ZX_ERR_INVALID_ARGS;
-  }
-  if (dev->flags & DEV_FLAG_INVISIBLE) {
-    // We failed during init and the device is being removed. Complete the pending
-    // bind/rebind conn of parent if any.
-    if (auto bind_conn = dev->parent->take_bind_conn(); bind_conn) {
-      bind_conn(ZX_ERR_IO);
-    }
-    if (auto rebind_conn = dev->parent->take_rebind_conn(); rebind_conn) {
-      rebind_conn(ZX_ERR_IO);
-    }
-  }
-#if TRACE_ADD_REMOVE
-  printf("device: %p(%s): is being scheduled for removal\n", dev.get(), dev->name);
-#endif
-  // Ask the devcoordinator to schedule the removal of this device and its children.
-  schedule_remove(dev, unbind_self);
-  return ZX_OK;
-}
 
 void device_suspend_reply(const fbl::RefPtr<zx_device_t>& dev, zx_status_t status,
                           uint8_t out_state) REQ_DM_LOCK {
@@ -622,15 +438,6 @@ void device_unbind_reply(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK {
   }
 }
 
-zx_status_t device_remove_deprecated(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK {
-  // This removal is in response to the unbind hook.
-  if (dev->flags & DEV_FLAG_UNBOUND) {
-    internal::device_unbind_reply(dev);
-    return ZX_OK;
-  }
-  return internal::device_remove(dev, false /* unbind_self */);
-}
-
 zx_status_t device_rebind(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK {
   if (!dev->children.is_empty() || dev->has_composite()) {
     // note that we want to be rebound when our children are all gone
@@ -663,19 +470,6 @@ zx_status_t device_unbind(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK {
   }
   enum_lock_release();
 
-  return ZX_OK;
-}
-
-zx_status_t device_complete_removal(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK {
-#if TRACE_ADD_REMOVE
-  printf("device: %p(%s): is being removed (removal requested)\n", dev.get(), dev->name);
-#endif
-
-  // This recovers the leaked reference that happened in device_add_from_driver().
-  auto dev_add_ref = fbl::ImportFromRawPtr(dev.get());
-  internal::remove(std::move(dev_add_ref));
-
-  dev->flags |= DEV_FLAG_DEAD;
   return ZX_OK;
 }
 
@@ -918,3 +712,211 @@ zx_status_t device_configure_auto_suspend(const fbl::RefPtr<zx_device>& dev, boo
 }
 
 }  // namespace internal
+
+zx_status_t DriverHostContext::DeviceAdd(const fbl::RefPtr<zx_device_t>& dev,
+                                         const fbl::RefPtr<zx_device_t>& parent,
+                                         const zx_device_prop_t* props, uint32_t prop_count,
+                                         const char* proxy_args,
+                                         zx::channel client_remote) REQ_DM_LOCK {
+  auto mark_dead = fbl::MakeAutoCall([&dev]() {
+    if (dev) {
+      dev->flags |= DEV_FLAG_DEAD;
+    }
+  });
+
+  zx_status_t status;
+  if ((status = internal::device_validate(dev)) < 0) {
+    return status;
+  }
+  if (parent == nullptr) {
+    printf("DeviceAdd: cannot add %p(%s) to nullptr parent\n", dev.get(), dev->name);
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  if (parent->flags & DEV_FLAG_DEAD) {
+    printf("DeviceAdd: %p: is dead, cannot add child %p\n", parent.get(), dev.get());
+    return ZX_ERR_BAD_STATE;
+  }
+
+  internal::BindContext* bind_ctx = nullptr;
+  internal::CreationContext* creation_ctx = nullptr;
+
+  // If the bind or creation ctx (thread locals) are set, we are in
+  // a thread that is handling a bind() or create() callback and if
+  // that ctx's parent matches the one provided to add we need to do
+  // some additional checking...
+  if ((internal::g_bind_context != nullptr) && (internal::g_bind_context->parent == parent)) {
+    bind_ctx = internal::g_bind_context;
+  }
+  if ((internal::g_creation_context != nullptr) &&
+      (internal::g_creation_context->parent == parent)) {
+    creation_ctx = internal::g_creation_context;
+    // create() must create only one child
+    if (creation_ctx->child != nullptr) {
+      printf("driver_host: driver attempted to create multiple proxy devices!\n");
+      return ZX_ERR_BAD_STATE;
+    }
+  }
+
+#if TRACE_ADD_REMOVE
+  printf("driver_host: DeviceAdd: %p(%s) parent=%p(%s)\n", dev.get(), dev->name, parent.get(),
+         parent->name);
+#endif
+
+  // Don't create an event handle if we alredy have one
+  if (!dev->event.is_valid() &&
+      ((status = zx::eventpair::create(0, &dev->event, &dev->local_event)) < 0)) {
+    printf("DeviceAdd: %p(%s): cannot create event: %d\n", dev.get(), dev->name, status);
+    return status;
+  }
+
+  dev->flags |= DEV_FLAG_BUSY;
+
+  // proxy devices are created through this handshake process
+  if (creation_ctx) {
+    if (dev->flags & DEV_FLAG_INVISIBLE) {
+      printf("driver_host: driver attempted to create invisible device in create()\n");
+      return ZX_ERR_INVALID_ARGS;
+    }
+    dev->flags |= DEV_FLAG_ADDED;
+    dev->flags &= (~DEV_FLAG_BUSY);
+    dev->rpc = zx::unowned_channel(creation_ctx->device_controller_rpc);
+    dev->coordinator_rpc = zx::unowned_channel(creation_ctx->coordinator_rpc);
+    creation_ctx->child = dev;
+    mark_dead.cancel();
+    return ZX_OK;
+  }
+
+  dev->parent = parent;
+
+  // attach to our parent
+  parent->children.push_back(dev.get());
+
+  if (!(dev->flags & DEV_FLAG_INSTANCE)) {
+    // Add always consumes the handle
+    status = DriverManagerAdd(parent, dev, proxy_args, props, prop_count, std::move(client_remote));
+    if (status < 0) {
+      printf("driver_host: %p(%s): remote add failed %d\n", dev.get(), dev->name, status);
+      dev->parent->children.erase(*dev);
+      dev->parent.reset();
+
+      // since we are under the lock the whole time, we added the node
+      // to the tail and then we peeled it back off the tail when we
+      // failed, we don't need to interact with the enum lock mechanism
+      dev->flags &= (~DEV_FLAG_BUSY);
+      return status;
+    }
+  }
+  dev->flags |= DEV_FLAG_ADDED;
+  dev->flags &= (~DEV_FLAG_BUSY);
+
+  // record this device in the bind context if there is one
+  if (bind_ctx && (bind_ctx->child == nullptr)) {
+    bind_ctx->child = dev;
+  }
+  mark_dead.cancel();
+  return ZX_OK;
+}
+
+zx_status_t DriverHostContext::DeviceInit(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK {
+  if (dev->flags & DEV_FLAG_INITIALIZING) {
+    return ZX_ERR_BAD_STATE;
+  }
+  // Call dev's init op.
+  if (dev->ops->init) {
+    dev->flags |= DEV_FLAG_INITIALIZING;
+    ApiAutoRelock relock;
+    dev->InitOp();
+  } else {
+    dev->init_cb(ZX_OK);
+  }
+  return ZX_OK;
+}
+
+void DriverHostContext::DeviceInitReply(const fbl::RefPtr<zx_device_t>& dev, zx_status_t status,
+                                        const device_init_reply_args_t* args) REQ_DM_LOCK {
+  if (!(dev->flags & DEV_FLAG_INITIALIZING)) {
+    ZX_PANIC("device: %p(%s): cannot reply to init, flags are: (%x)\n", dev.get(), dev->name,
+             dev->flags);
+  }
+  if (status == ZX_OK) {
+    if (args && args->power_states && args->power_state_count != 0) {
+      dev->SetPowerStates(args->power_states, args->power_state_count);
+    }
+    if (args && args->performance_states && (args->performance_state_count != 0)) {
+      dev->SetPerformanceStates(args->performance_states, args->performance_state_count);
+    }
+  }
+
+  ZX_ASSERT_MSG(dev->init_cb,
+                "device: %p(%s): cannot reply to init, no callback set, flags are 0x%x\n",
+                dev.get(), dev->name, dev->flags);
+
+  dev->init_cb(status);
+  // Device is no longer invisible.
+  dev->flags &= ~(DEV_FLAG_INVISIBLE);
+  // If all children completed intializing,
+  // complete pending bind and rebind connections.
+  bool complete_bind_rebind = true;
+  for (auto& child : dev->parent->children) {
+    if (child.flags & DEV_FLAG_INVISIBLE) {
+      complete_bind_rebind = false;
+    }
+  }
+  if (complete_bind_rebind) {
+    if (auto bind_conn = dev->parent->take_bind_conn(); bind_conn) {
+      bind_conn(status);
+    }
+    if (auto rebind_conn = dev->parent->take_rebind_conn(); rebind_conn) {
+      rebind_conn(status);
+    }
+  }
+}
+
+zx_status_t DriverHostContext::DeviceRemoveDeprecated(const fbl::RefPtr<zx_device_t>& dev)
+    REQ_DM_LOCK {
+  // This removal is in response to the unbind hook.
+  if (dev->flags & DEV_FLAG_UNBOUND) {
+    internal::device_unbind_reply(dev);
+    return ZX_OK;
+  }
+  return DeviceRemove(dev, false /* unbind_self */);
+}
+
+zx_status_t DriverHostContext::DeviceRemove(const fbl::RefPtr<zx_device_t>& dev,
+                                            bool unbind_self) REQ_DM_LOCK {
+  if (dev->flags & REMOVAL_BAD_FLAGS) {
+    printf("device: %p(%s): cannot be removed (%s)\n", dev.get(), dev->name,
+           internal::removal_problem(dev->flags));
+    return ZX_ERR_INVALID_ARGS;
+  }
+  if (dev->flags & DEV_FLAG_INVISIBLE) {
+    // We failed during init and the device is being removed. Complete the pending
+    // bind/rebind conn of parent if any.
+    if (auto bind_conn = dev->parent->take_bind_conn(); bind_conn) {
+      bind_conn(ZX_ERR_IO);
+    }
+    if (auto rebind_conn = dev->parent->take_rebind_conn(); rebind_conn) {
+      rebind_conn(ZX_ERR_IO);
+    }
+  }
+#if TRACE_ADD_REMOVE
+  printf("device: %p(%s): is being scheduled for removal\n", dev.get(), dev->name);
+#endif
+  // Ask the devcoordinator to schedule the removal of this device and its children.
+  internal::schedule_remove(dev, unbind_self);
+  return ZX_OK;
+}
+
+zx_status_t DriverHostContext::DeviceCompleteRemoval(const fbl::RefPtr<zx_device_t>& dev)
+    REQ_DM_LOCK {
+#if TRACE_ADD_REMOVE
+  printf("device: %p(%s): is being removed (removal requested)\n", dev.get(), dev->name);
+#endif
+
+  // This recovers the leaked reference that happened in device_add_from_driver().
+  auto dev_add_ref = fbl::ImportFromRawPtr(dev.get());
+  DriverManagerRemove(std::move(dev_add_ref));
+
+  dev->flags |= DEV_FLAG_DEAD;
+  return ZX_OK;
+}

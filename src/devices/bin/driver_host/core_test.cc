@@ -126,14 +126,14 @@ class FakeCoordinator : public ::llcpp::fuchsia::device::manager::Coordinator::I
 
 class CoreTest : public zxtest::Test {
  protected:
-  CoreTest() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
-    loop_.StartThread("driver_host-test-loop");
+  CoreTest() : ctx_(&kAsyncLoopConfigNoAttachToCurrentThread) {
+    ctx_.loop().StartThread("driver_host-test-loop");
   }
 
   void Connect(zx::channel* out) {
     zx::channel local, remote;
     ASSERT_OK(zx::channel::create(0, &local, &remote));
-    ASSERT_OK(coordinator_.Connect(loop_.dispatcher(), std::move(remote)));
+    ASSERT_OK(coordinator_.Connect(ctx_.loop().dispatcher(), std::move(remote)));
     *out = std::move(local);
   }
 
@@ -141,14 +141,14 @@ class CoreTest : public zxtest::Test {
   void UnbindDevice(fbl::RefPtr<zx_device> dev) {
     ApiAutoLock lock;
     internal::device_unbind(dev);
-    // internal::device_complete_removal() will drop the device reference added by device_add().
+    // DeviceCompleteRemoval() will drop the device reference added by device_add().
     // Since we never called device_add(), we should increment the reference count here.
     fbl::RefPtr<zx_device_t> dev_add_ref(dev.get());
     __UNUSED auto ptr = fbl::ExportToRawPtr(&dev_add_ref);
-    internal::device_complete_removal(dev);
+    ctx_.DeviceCompleteRemoval(dev);
   }
 
-  async::Loop loop_;
+  DriverHostContext ctx_;
   FakeCoordinator coordinator_;
 };
 

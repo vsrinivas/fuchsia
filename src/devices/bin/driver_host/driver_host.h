@@ -145,18 +145,6 @@ namespace internal {
 // Get the DriverHostContext that should be used by all external API methods
 DriverHostContext* ContextForApi();
 
-// |client_remote| will only be a valid handle if the device was added with
-// DEVICE_ADD_INVISIBLE or DEVICE_ADD_MUST_ISOLATE.
-zx_status_t device_add(const fbl::RefPtr<zx_device_t>& dev, const fbl::RefPtr<zx_device_t>& parent,
-                       const zx_device_prop_t* props, uint32_t prop_count, const char* proxy_args,
-                       zx::channel client_remote) REQ_DM_LOCK;
-zx_status_t device_init(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK;
-void device_init_reply(const fbl::RefPtr<zx_device_t>& dev, zx_status_t status,
-                       const device_init_reply_args_t* args) REQ_DM_LOCK;
-// TODO(fxb/34574): this should be removed once device_remove() is removed.
-zx_status_t device_remove_deprecated(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK;
-zx_status_t device_remove(const fbl::RefPtr<zx_device_t>& dev,
-                          bool unbind_self = false) REQ_DM_LOCK;
 void device_unbind_reply(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK;
 void device_suspend_reply(const fbl::RefPtr<zx_device_t>& dev, zx_status_t status,
                           uint8_t out_state) REQ_DM_LOCK;
@@ -165,7 +153,6 @@ void device_resume_reply(const fbl::RefPtr<zx_device_t>& dev, zx_status_t status
 zx_status_t device_bind(const fbl::RefPtr<zx_device_t>& dev, const char* drv_libname) REQ_DM_LOCK;
 zx_status_t device_rebind(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK;
 zx_status_t device_unbind(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK;
-zx_status_t device_complete_removal(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK;
 zx_status_t device_run_compatibility_tests(const fbl::RefPtr<zx_device_t>& dev,
                                            int64_t hook_wait_time) REQ_DM_LOCK;
 zx_status_t device_create(zx_driver_t* drv, const char* name, void* ctx,
@@ -237,14 +224,6 @@ class DevhostControllerConnection : public AsyncLoopOwnedRpcHandler<DevhostContr
 zx_status_t fidl_handler(fidl_msg_t* msg, fidl_txn_t* txn, void* cookie);
 
 // routines driver_host uses to talk to dev coordinator
-// |client_remote| will only be a valid handle if the device was added with
-// DEVICE_ADD_INVISIBLE or DEVICE_ADD_MUST_ISOLATE.
-zx_status_t add(const fbl::RefPtr<zx_device_t>& dev, const fbl::RefPtr<zx_device_t>& child,
-                const char* proxy_args, const zx_device_prop_t* props, uint32_t prop_count,
-                zx::channel client_remote) REQ_DM_LOCK;
-// Note that remove() takes a RefPtr rather than a const RefPtr&.
-// It intends to consume a reference.
-zx_status_t remove(fbl::RefPtr<zx_device_t> dev) REQ_DM_LOCK;
 zx_status_t schedule_remove(const fbl::RefPtr<zx_device_t>& dev, bool unbind_self) REQ_DM_LOCK;
 zx_status_t schedule_unbind_children(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK;
 void make_visible(const fbl::RefPtr<zx_device_t>& dev, const device_make_visible_args_t* args);

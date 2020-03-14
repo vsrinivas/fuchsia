@@ -115,25 +115,25 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
       return r;
     }
 
-    // out must be set before calling internal::device_add().
-    // internal::device_add() may result in child devices being created before it returns,
+    // out must be set before calling DeviceAdd().
+    // DeviceAdd() may result in child devices being created before it returns,
     // and those children may call ops on the device before device_add() returns.
     // This leaked-ref will be accounted below.
     if (out) {
       *out = dev.get();
     }
-
+    auto api_ctx = internal::ContextForApi();
     if (args->flags & DEVICE_ADD_MUST_ISOLATE) {
-      r = internal::device_add(dev, parent_ref, args->props, args->prop_count, args->proxy_args,
-                               std::move(client_remote));
+      r = api_ctx->DeviceAdd(dev, parent_ref, args->props, args->prop_count, args->proxy_args,
+                             std::move(client_remote));
     } else if (args->flags & DEVICE_ADD_INSTANCE) {
       dev->flags |= DEV_FLAG_INSTANCE | DEV_FLAG_UNBINDABLE;
-      r = internal::device_add(dev, parent_ref, nullptr, 0, nullptr,
-                               zx::channel() /* client_remote */);
+      r = api_ctx->DeviceAdd(dev, parent_ref, nullptr, 0, nullptr,
+                             zx::channel() /* client_remote */);
     } else {
       bool pass_client_remote = args->flags & DEVICE_ADD_INVISIBLE;
-      r = internal::device_add(dev, parent_ref, args->props, args->prop_count, nullptr,
-                               pass_client_remote ? std::move(client_remote) : zx::channel());
+      r = api_ctx->DeviceAdd(dev, parent_ref, args->props, args->prop_count, nullptr,
+                             pass_client_remote ? std::move(client_remote) : zx::channel());
     }
     if (r != ZX_OK) {
       if (out) {
@@ -166,16 +166,16 @@ __EXPORT void device_init_reply(zx_device_t* dev, zx_status_t status,
                                 const device_init_reply_args_t* args) {
   ApiAutoLock lock;
   fbl::RefPtr<zx_device_t> dev_ref(dev);
-  internal::device_init_reply(dev_ref, status, args);
+  internal::ContextForApi()->DeviceInitReply(dev_ref, status, args);
 }
 
 __EXPORT zx_status_t device_remove_deprecated(zx_device_t* dev) {
   ApiAutoLock lock;
   // The leaked reference in device_add_from_driver() will be recovered when
-  // internal::remove() completes. We can't drop it here as we may just be
+  // DriverManagerRemove() completes. We can't drop it here as we may just be
   // scheduling a removal, and do not know when that will happen.
   fbl::RefPtr<zx_device_t> dev_ref(dev);
-  return internal::device_remove_deprecated(dev_ref);
+  return internal::ContextForApi()->DeviceRemoveDeprecated(dev_ref);
 }
 
 __EXPORT zx_status_t device_remove(zx_device_t* dev) { return device_remove_deprecated(dev); }
@@ -195,10 +195,10 @@ __EXPORT void device_make_visible(zx_device_t* dev, const device_make_visible_ar
 __EXPORT void device_async_remove(zx_device_t* dev) {
   ApiAutoLock lock;
   // The leaked reference in device_add_from_driver() will be recovered when
-  // internal::remove() completes. We can't drop it here as we are just
+  // DriverManagerRemove() completes. We can't drop it here as we are just
   // scheduling the removal, and do not know when that will happen.
   fbl::RefPtr<zx_device_t> dev_ref(dev);
-  internal::device_remove(dev_ref, true /* unbind_self */);
+  internal::ContextForApi()->DeviceRemove(dev_ref, true /* unbind_self */);
 }
 
 __EXPORT void device_unbind_reply(zx_device_t* dev) {

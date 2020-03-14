@@ -67,7 +67,7 @@ void DeviceControllerConnection::Init(InitCompleter::Sync completer) {
   this->dev()->init_cb = [completer = completer.ToAsync(), trace = std::move(trace)](
                              zx_status_t status) mutable { completer.Reply(status); };
   ApiAutoLock lock;
-  internal::device_init(this->dev());
+  driver_host_context_->DeviceInit(this->dev());
 }
 
 void DeviceControllerConnection::Suspend(uint32_t flags, SuspendCompleter::Sync completer) {
@@ -222,7 +222,7 @@ void DeviceControllerConnection::CompleteRemoval(CompleteRemovalCompleter::Sync 
     completer.Reply(std::move(result));
   };
   ApiAutoLock lock;
-  internal::device_complete_removal(this->dev());
+  driver_host_context_->DeviceCompleteRemoval(this->dev());
 }
 
 DeviceControllerConnection::DeviceControllerConnection(DriverHostContext* ctx,
