@@ -100,15 +100,8 @@ zx_status_t As370Sdhci::SdhciGetBti(uint32_t index, zx::bti* out_bti) {
 uint32_t As370Sdhci::SdhciGetBaseClock() { return 0; }
 
 uint64_t As370Sdhci::SdhciGetQuirks() {
-  uint64_t quirks = SDHCI_QUIRK_NO_DMA |
-                    SDHCI_QUIRK_NON_STANDARD_TUNING |
-                    SDHCI_QUIRK_STRIP_RESPONSE_CRC_PRESERVE_ORDER;
-
-  if (did_ == PDEV_DID_VS680_SDHCI0) {
-    quirks |= SDHCI_QUIRK_BUS_WIDTH_1;
-  }
-
-  return quirks;
+  return SDHCI_QUIRK_NO_DMA | SDHCI_QUIRK_NON_STANDARD_TUNING |
+         SDHCI_QUIRK_STRIP_RESPONSE_CRC_PRESERVE_ORDER;
 }
 
 #define RXSELOFF   0x0
@@ -320,7 +313,7 @@ void As370Sdhci::SdhciHwReset() {
 
     SdclkDlDc::Get()
       .ReadFrom(&core_mmio_)
-      .set_cckdl_dc(30)
+      .set_cckdl_dc(0x7f)
       .WriteTo(&core_mmio_);
 
     SdclkDlConfig::Get()
