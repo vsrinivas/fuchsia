@@ -189,7 +189,7 @@ group("tests") {
     "dns:netstack_dns_gotests",
     "link/bridge:netstack_link_bridge_test($host_toolchain)",
     "routes:netstack_routes_gotests",
-    "tests:netstack_manual_tests",
+    "tests",
     "util:netstack_util_test($host_toolchain)",
   ]
 }

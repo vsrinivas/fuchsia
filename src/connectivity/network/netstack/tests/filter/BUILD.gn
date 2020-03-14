@@ -1,0 +1,42 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+group("filter") {
+  testonly = true
+  deps = [ ":netstack-filter-integration-tests" ]
+}
+
+test_package("netstack-filter-integration-tests") {
+  deps = [
+    ":netemul_empty_binaries",
+    "ip_forward",
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/ip_forward.cmx")
+      dest = "ip_forward.cmx"
+    },
+  ]
+
+  binaries = [
+    {
+      name = "ip_forward"
+    },
+  ]
+
+  tests = [
+    {
+      name = "ip_forward_test"
+      environments = [ nuc_env ]
+    },
+  ]
+}
+
+group("netemul_empty_binaries") {
+  write_file("$root_out_dir/ip_forward_test", "")
+}

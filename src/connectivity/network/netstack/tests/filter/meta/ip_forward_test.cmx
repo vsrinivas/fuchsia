@@ -1,0 +1,114 @@
+{
+    "facets": {
+        "fuchsia.netemul": {
+            "capture": true,
+            "default_url": "fuchsia-pkg://fuchsia.com/netstack-filter-integration-tests#meta/ip_forward.cmx",
+            "environment": {
+                "children": [
+                    {
+                        "name": "client",
+                        "setup": [
+                            {
+                                "arguments": [
+                                    "-e",
+                                    "client-ep",
+                                    "-i",
+                                    "192.168.1.2/24",
+                                    "-g",
+                                    "192.168.1.1"
+                                ],
+                                "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/helper_netstack_cfg.cmx"
+                            }
+                        ],
+                        "test": [
+                            {
+                                "arguments": [
+                                    "-c"
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "name": "router",
+                        "setup": [
+                            {
+                                "arguments": [
+                                    "-e",
+                                    "router-client-ep",
+                                    "-i",
+                                    "192.168.1.1/24"
+                                ],
+                                "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/helper_netstack_cfg.cmx"
+                            },
+                            {
+                                "arguments": [
+                                    "-e",
+                                    "router-server-ep",
+                                    "-i",
+                                    "192.168.0.1/24"
+                                ],
+                                "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/helper_netstack_cfg.cmx"
+                            }
+                        ],
+                        "test": [
+                            {
+                                "arguments": [
+                                    "-r"
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                "name": "server",
+                "services": {
+                    "fuchsia.net.stack.Stack": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
+                    "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
+                    "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx"
+                },
+                "setup": [
+                    {
+                        "arguments": [
+                            "-e",
+                            "server-ep",
+                            "-i",
+                            "192.168.0.2/24"
+                        ],
+                        "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/helper_netstack_cfg.cmx"
+                    }
+                ],
+                "test": [
+                    {}
+                ]
+            },
+            "networks": [
+                {
+                    "endpoints": [
+                        {
+                            "name": "server-ep"
+                        },
+                        {
+                            "name": "router-server-ep"
+                        }
+                    ],
+                    "name": "net-A"
+                },
+                {
+                    "endpoints": [
+                        {
+                            "name": "router-client-ep"
+                        },
+                        {
+                            "name": "client-ep"
+                        }
+                    ],
+                    "name": "net-B"
+                }
+            ],
+            "timeout": 120
+        }
+    },
+    "program": {
+        "binary": "test/ip_forward_test"
+    },
+    "runner": "fuchsia-pkg://fuchsia.com/netemul_runner#meta/netemul_runner.cmx"
+}
