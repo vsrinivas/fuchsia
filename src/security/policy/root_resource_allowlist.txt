@@ -1,0 +1,8 @@
+# Components
+fuchsia-pkg://fuchsia.com/loadbench#meta/loadbench.cmx
+fuchsia-pkg://fuchsia.com/system_monitor/harvester#meta/system_monitor_harvester.cmx
+fuchsia-pkg://fuchsia.com/thermd#meta/thermd.cmx
+fuchsia-pkg://fuchsia.com/vmm#meta/vmm.cmx
+# Component Tests
+fuchsia-pkg://fuchsia.com/component_manager_tests#meta/component_manager_boot_env_tests.cmx
+fuchsia-pkg://fuchsia.com/system_monitor_harvester_tests#meta/system_monitor_harvester_test.cmx

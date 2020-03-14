@@ -44,12 +44,16 @@ class PolicyChecker final {
   bool CheckPackageResolver(std::string ns_id);
   bool CheckPackageCache(std::string ns_id);
   bool CheckPkgFsVersions(std::string ns_id);
+  bool CheckRootJob(std::string ns_id);
+  bool CheckRootResource(std::string ns_id);
 
   FRIEND_TEST(PolicyCheckerTest, ReplaceAsExecPolicyPresent);
   FRIEND_TEST(PolicyCheckerTest, ReplaceAsExecPolicyAbsent);
   FRIEND_TEST(PolicyCheckerTest, PackageResolverPolicy);
   FRIEND_TEST(PolicyCheckerTest, PackageCachePolicy);
   FRIEND_TEST(PolicyCheckerTest, PkgFsVersionsPolicy);
+  FRIEND_TEST(PolicyCheckerTest, RootJobPolicy);
+  FRIEND_TEST(PolicyCheckerTest, RootResourcePolicy);
 };
 
 }  // end of namespace component.

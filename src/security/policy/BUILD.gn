@@ -68,3 +68,49 @@ config_data("appmgr_component_event_provider_allowlist") {
   sources = [ "component_event_provider_allowlist.txt" ]
   outputs = [ "allowlist/component_event_provider.txt" ]
 }
+
+# TODO(benwright) - Add logic in appmgr to use this allowlist.
+config_data("appmgr_root_resource_allowlist_user") {
+  for_pkg = "appmgr"
+  sources = [ "root_resource_allowlist_user.txt" ]
+  outputs = [ "allowlist/root_resource.txt" ]
+}
+
+config_data("appmgr_root_resource_allowlist") {
+  for_pkg = "appmgr"
+  sources = [ "root_resource_allowlist.txt" ]
+  outputs = [ "allowlist/root_resource.txt" ]
+}
+
+# TODO(benwright) - Add logic in appmgr to use this allowlist.
+config_data("appmgr_root_resource_allowlist_userdebug") {
+  for_pkg = "appmgr"
+  sources = [ "root_resource_allowlist_userdebug.txt" ]
+  outputs = [ "allowlist/root_resource.txt" ]
+
+  # TODO(benwright) - Enable non-production tag after integration step.
+  #deps = [ "//build/images:non_production_tag" ]
+}
+
+config_data("appmgr_root_job_allowlist") {
+  for_pkg = "appmgr"
+  sources = [ "root_job_allowlist.txt" ]
+  outputs = [ "allowlist/root_job.txt" ]
+}
+
+# TODO(benwright) - Add logic in appmgr to use this allowlist.
+config_data("appmgr_root_job_allowlist_user") {
+  for_pkg = "appmgr"
+  sources = [ "root_job_allowlist_user.txt" ]
+  outputs = [ "allowlist/root_job.txt" ]
+}
+
+# TODO(benwright) - Add logic in appmgr to use this allowlist.
+config_data("appmgr_root_job_allowlist_userdebug") {
+  for_pkg = "appmgr"
+  sources = [ "root_job_allowlist_userdebug.txt" ]
+  outputs = [ "allowlist/root_job.txt" ]
+
+  # TODO(benwright) - Enable non-production tag after integration step.
+  #deps = [ "//build/images:non_production_tag" ]
+}

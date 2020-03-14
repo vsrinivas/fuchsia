@@ -16,6 +16,8 @@ constexpr char kComponentEventProviderAllowList[] = "allowlist/component_event_p
 constexpr char kPackageResolverAllowList[] = "allowlist/package_resolver.txt";
 constexpr char kPackageCacheAllowList[] = "allowlist/package_cache.txt";
 constexpr char kPkgFsVersionsAllowList[] = "allowlist/pkgfs_versions.txt";
+constexpr char kRootJobAllowList[] = "allowlist/root_job.txt";
+constexpr char kRootResourceAllowList[] = "allowlist/root_resource.txt";
 
 }  // end of namespace.
 
@@ -59,6 +61,17 @@ std::optional<SecurityPolicy> PolicyChecker::Check(const SandboxMetadata& sandbo
                    << "pkgfs/versions. go/no-pkgfs-versions";
     return std::nullopt;
   }
+  if (sandbox.HasService("fuchsia.boot.RootJob") && !CheckRootJob(pkg_path_without_variant)) {
+    FXL_LOG(ERROR) << "Component " << pkg_path_without_variant << " is not allowed to use "
+                   << "fuchsia.boot.RootJob";
+    return std::nullopt;
+  }
+  if (sandbox.HasService("fuchsia.boot.RootResource") &&
+      !CheckRootResource(pkg_path_without_variant)) {
+    FXL_LOG(ERROR) << "Component " << pkg_path_without_variant << " is not allowed to use "
+                   << "fuchsia.boot.RootResource";
+    return std::nullopt;
+  }
   return policy;
 }
 
@@ -100,6 +113,16 @@ bool PolicyChecker::CheckPackageCache(std::string ns_id) {
 bool PolicyChecker::CheckPkgFsVersions(std::string ns_id) {
   AllowList pkgfs_versions_allowlist(config_, kPkgFsVersionsAllowList, AllowList::kExpected);
   return pkgfs_versions_allowlist.IsAllowed(ns_id);
+}
+
+bool PolicyChecker::CheckRootJob(std::string ns_id) {
+  AllowList root_job_allowlist(config_, kRootJobAllowList, AllowList::kExpected);
+  return root_job_allowlist.IsAllowed(ns_id);
+}
+
+bool PolicyChecker::CheckRootResource(std::string ns_id) {
+  AllowList root_resource_allowlist(config_, kRootResourceAllowList, AllowList::kExpected);
+  return root_resource_allowlist.IsAllowed(ns_id);
 }
 
 }  // namespace component
