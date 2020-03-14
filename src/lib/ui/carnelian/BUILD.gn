@@ -381,40 +381,6 @@ package("spinning-square-rs") {
   ]
 }
 
-rustc_binary("text_scroll") {
-  version = "0.1.0"
-  edition = "2018"
-  source_root = "examples/text_scroll.rs"
-  deps = [
-    "//src/lib/fuchsia-async",
-    "//src/lib/ui/carnelian",
-    "//src/lib/ui/fuchsia-scenic",
-    "//src/lib/zircon/rust:fuchsia-zircon",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:euclid",
-    "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:thiserror",
-  ]
-}
-
-package("text-scroll-rs") {
-  deps = [ ":text_scroll" ]
-
-  binaries = [
-    {
-      name = "app"
-      source = "text_scroll"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/example.cmx")
-      dest = "text-scroll-rs.cmx"
-    },
-  ]
-}
-
 test_package("carnelian-render-tests") {
   deps = [ ":carnelian_test" ]
 
@@ -502,8 +468,6 @@ group("examples") {
     "//src/lib/ui/carnelian:infinite-scroll-rs",
     "//src/lib/ui/carnelian:ink-rs",
     "//src/lib/ui/carnelian:rainbow-rs",
-    "//src/lib/ui/carnelian:rainbow-rs",
     "//src/lib/ui/carnelian:spinning-square-rs",
-    "//src/lib/ui/carnelian:text-scroll-rs",
   ]
 }
