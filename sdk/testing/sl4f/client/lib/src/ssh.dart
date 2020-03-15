@@ -123,9 +123,8 @@ class Ssh {
   ///
   /// It can optionally send input via [stdin]. If the exit code is nonzero,
   /// diagnostic warnings are logged.
-  Future<ProcessResult> run(String cmd, {String stdin}) async {
-    return runWithOutput(cmd, stdin: stdin);
-  }
+  Future<ProcessResult> run(String cmd, {String stdin}) =>
+      runWithOutput(cmd, stdin: stdin);
 
   /// Forwards TCP connections from the local [port] to the DUT's [remotePort].
   ///
@@ -226,7 +225,11 @@ class Ssh {
     }
   }
 
-  List<String> _makeBaseArgs() =>
+  /// Returns a list of arguments for ssh (and other ssh-like tools) containing
+  /// the default configuration options (i.e. -o arguments), as well as the path
+  /// to the ssh key if it's configured. The list does not contain the target's
+  /// user or host.
+  List<String> get defaultArguments =>
       [
         // Don't check known_hosts.
         '-o', 'UserKnownHostsFile=/dev/null',
@@ -246,9 +249,10 @@ class Ssh {
         // times in a row, terminate the connection.
         '-o', 'ServerAliveInterval=10',
         '-o', 'ServerAliveCountMax=6',
-        '$_sshUser@$target',
       ] +
       (sshKeyPath != null ? ['-i', sshKeyPath] : []);
+
+  List<String> _makeBaseArgs() => defaultArguments + ['$_sshUser@$target'];
 
   @visibleForTesting
   List<String> makeArgs(String cmd) => _makeBaseArgs() + [cmd];
