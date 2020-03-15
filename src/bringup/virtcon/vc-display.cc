@@ -519,6 +519,7 @@ zx_status_t dc_callback_handler(port_handler_t* ph, zx_signals_t signals, uint32
     while (!list_is_empty(&display_list)) {
       handle_display_removed(list_peek_head_type(&display_list, display_info_t, node)->id);
     }
+    vc_change_graphics(nullptr);
 
     zx_handle_close(dc_device);
     dc_ph.handle = ZX_HANDLE_INVALID;
