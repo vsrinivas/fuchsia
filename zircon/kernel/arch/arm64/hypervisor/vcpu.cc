@@ -19,6 +19,8 @@
 #include <hypervisor/ktrace.h>
 #include <kernel/event.h>
 #include <kernel/mp.h>
+#include <kernel/percpu.h>
+#include <kernel/stats.h>
 #include <platform/timer.h>
 #include <vm/physmap.h>
 #include <vm/pmm.h>
@@ -252,7 +254,9 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
 
       ktrace(TAG_VCPU_ENTER, 0, 0, 0, 0);
       running_.store(true);
+      GUEST_STATS_INC(vm_entries);
       status = arm64_el2_resume(vttbr, el2_state_.PhysicalAddress(), hcr_);
+      GUEST_STATS_INC(vm_exits);
       running_.store(false);
     }
     gich_state_.SetAllInterruptStates(ich_state);
@@ -263,6 +267,7 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
       ktrace_vcpu_exit(vmexit_interrupt_ktrace_meta(ich_state->misr),
                        guest_state->system_state.elr_el2);
       status = thread_->signals_ & THREAD_SIGNAL_KILL ? ZX_ERR_CANCELED : ZX_OK;
+      GUEST_STATS_INC(interrupts);
     } else if (status == ZX_OK) {
       status = vmexit_handler(&hcr_, guest_state, &gich_state_, guest_->AddressSpace(),
                               guest_->Traps(), packet);

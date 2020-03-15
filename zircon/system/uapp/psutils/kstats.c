@@ -27,6 +27,104 @@
 // TODO: dynamically compute this based on what it returns
 #define MAX_CPUS 32
 
+static zx_status_t gueststats(zx_handle_t root_resource, zx_duration_t delay) {
+  static zx_info_guest_stats_t old_stats[MAX_CPUS];
+  zx_info_guest_stats_t stats[MAX_CPUS];
+
+  size_t actual, avail;
+  zx_status_t err =
+     zx_object_get_info(root_resource, ZX_INFO_GUEST_STATS, &stats, sizeof(stats), &actual, &avail);
+  if (err != ZX_OK) {
+    fprintf(stderr, "ZX_INFO_GUEST_STATS returns %d (%s)\n", err, zx_status_get_string(err));
+    return err;
+  }
+
+  if (actual < avail) {
+    fprintf(stderr, "WARNING: actual cpus reported %zu less than available cpus %zu\n", actual,
+            avail);
+  }
+
+#ifdef __aarch64__
+  printf(
+      "cpu   "
+      " vm_entry"
+      " vm_exit"
+      " inst_abt"
+      " data_abt"
+      " wfx_inst"
+      " sys_inst"
+      " smc_inst"
+      " ints\n");
+
+  for (size_t i = 0; i < actual; i++) {
+    printf(
+        "%3zu"
+        " %9lu"
+        " %7lu"
+        " %8lu"
+        " %8lu"
+        " %7lu"
+        " %7lu"
+        " %7lu"
+        " %7lu"
+        "\n",
+        i,
+        stats[i].vm_entries- old_stats[i].vm_entries,
+        stats[i].vm_exits - old_stats[i].vm_exits,
+        stats[i].instruction_aborts - old_stats[i].instruction_aborts,
+        stats[i].data_aborts - old_stats[i].data_aborts,
+        stats[i].wfi_wfe_instructions - old_stats[i].wfi_wfe_instructions,
+        stats[i].system_instructions - old_stats[i].system_instructions,
+        stats[i].smc_instructions - old_stats[i].smc_instructions,
+        stats[i].interrupts - old_stats[i].interrupts);
+
+    old_stats[i] = stats[i];
+  }
+#else
+  printf(
+      "cpu   "
+      " vm_entry"
+      " vm_exit"
+      " ints"
+      " ints_win"
+      " ept"
+      " ctrl_reg"
+      " msr(rd wr)"
+      " inst(io hlt cpuid pause vmcall xsetbv)\n");
+
+  for (size_t i = 0; i < actual; i++) {
+    printf(
+        "%3zu"
+        " %7lu"
+        " %7lu"
+        " %7lu"
+        " %5lu"
+        " %6lu"
+        " %6lu"
+        " %8lu %3lu"
+        " %9lu %5lu %5lu %6lu %6lu %6lu\n",
+        i,
+        stats[i].vm_entries- old_stats[i].vm_entries,
+        stats[i].vm_exits - old_stats[i].vm_exits,
+        stats[i].interrupts - old_stats[i].interrupts,
+        stats[i].interrupt_windows - old_stats[i].interrupt_windows,
+        stats[i].ept_violations - old_stats[i].ept_violations,
+        stats[i].control_register_accesses - old_stats[i].control_register_accesses,
+        stats[i].wrmsr_instructions - old_stats[i].wrmsr_instructions,
+        stats[i].rdmsr_instructions - old_stats[i].rdmsr_instructions,
+        stats[i].io_instructions - old_stats[i].io_instructions,
+        stats[i].hlt_instructions - old_stats[i].hlt_instructions,
+        stats[i].cpuid_instructions - old_stats[i].cpuid_instructions,
+        stats[i].pause_instructions - old_stats[i].pause_instructions,
+        stats[i].vmcall_instructions - old_stats[i].vmcall_instructions,
+        stats[i].xsetbv_instructions - old_stats[i].xsetbv_instructions);
+
+    old_stats[i] = stats[i];
+  }
+#endif
+  return ZX_OK;
+}
+
 static zx_status_t cpustats(zx_handle_t root_resource, zx_duration_t delay) {
   static zx_duration_t last_idle_time[MAX_CPUS];
   static zx_info_cpu_stats_t old_stats[MAX_CPUS];
@@ -188,6 +286,7 @@ static zx_status_t memstats(zx_handle_t root_resource) {
 static void print_help(FILE* f) {
   fprintf(f, "Usage: kstats [options]\n");
   fprintf(f, "Options:\n");
+  fprintf(f, " -v              Print guest vm_entry/vm_exit stats\n");
   fprintf(f, " -c              Print system CPU stats\n");
   fprintf(f, " -l              Print system CPU load as bars\n");
   fprintf(f, " -m              Print system memory stats\n");
@@ -217,6 +316,7 @@ static void print_help(FILE* f) {
 
 int main(int argc, char** argv) {
   bool cpu_stats = false;
+  bool guest_stats = false;
   bool cpu_load = false;
   bool mem_stats = false;
   zx_duration_t delay = ZX_SEC(1);
@@ -224,8 +324,11 @@ int main(int argc, char** argv) {
   bool timestamp = false;
 
   int c;
-  while ((c = getopt(argc, argv, "cd:n:hlmt")) > 0) {
+  while ((c = getopt(argc, argv, "cvd:n:hlmt")) > 0) {
     switch (c) {
+      case 'v':
+        guest_stats = true;
+        break;
       case 'c':
         cpu_stats = true;
         break;
@@ -264,7 +367,7 @@ int main(int argc, char** argv) {
     }
   }
 
-  if (!cpu_stats && !mem_stats && !cpu_load) {
+  if (!cpu_stats && !mem_stats && !cpu_load && !guest_stats) {
     fprintf(stderr, "No statistics selected\n");
     print_help(stderr);
     return 1;
@@ -297,6 +400,9 @@ int main(int argc, char** argv) {
 
     if (cpu_load) {
       ret |= cpuload(root_resource, delay);
+    }
+    if (guest_stats) {
+      ret |= gueststats(root_resource, delay);
     }
     if (cpu_stats) {
       ret |= cpustats(root_resource, delay);

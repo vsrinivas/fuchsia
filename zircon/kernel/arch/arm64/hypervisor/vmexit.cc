@@ -17,6 +17,8 @@
 #include <dev/psci.h>
 #include <dev/timer/arm_generic.h>
 #include <hypervisor/ktrace.h>
+#include <kernel/percpu.h>
+#include <kernel/stats.h>
 #include <vm/fault.h>
 #include <vm/physmap.h>
 
@@ -335,25 +337,30 @@ zx_status_t vmexit_handler(uint64_t* hcr, GuestState* guest_state, GichState* gi
   switch (syndrome.ec) {
     case ExceptionClass::WFI_WFE_INSTRUCTION:
       LTRACEF("handling wfi/wfe instruction, iss %#x\n", syndrome.iss);
+      GUEST_STATS_INC(wfi_wfe_instructions);
       status = handle_wfi_wfe_instruction(syndrome.iss, guest_state, gich_state);
       break;
     case ExceptionClass::SMC_INSTRUCTION:
       LTRACEF("handling smc instruction, iss %#x func %#lx\n", syndrome.iss, guest_state->x[0]);
+      GUEST_STATS_INC(smc_instructions);
       ktrace_vcpu_exit(VCPU_SMC_INSTRUCTION, guest_state->system_state.elr_el2);
       status = handle_smc_instruction(syndrome.iss, guest_state, packet);
       break;
     case ExceptionClass::SYSTEM_INSTRUCTION:
       LTRACEF("handling system instruction\n");
+      GUEST_STATS_INC(system_instructions);
       ktrace_vcpu_exit(VCPU_SYSTEM_INSTRUCTION, guest_state->system_state.elr_el2);
       status = handle_system_instruction(syndrome.iss, hcr, guest_state, gpas, packet);
       break;
     case ExceptionClass::INSTRUCTION_ABORT:
       LTRACEF("handling instruction abort at %#lx\n", guest_state->hpfar_el2);
+      GUEST_STATS_INC(instruction_aborts);
       ktrace_vcpu_exit(VCPU_INSTRUCTION_ABORT, guest_state->system_state.elr_el2);
       status = handle_instruction_abort(guest_state, gpas);
       break;
     case ExceptionClass::DATA_ABORT:
       LTRACEF("handling data abort at %#lx\n", guest_state->hpfar_el2);
+      GUEST_STATS_INC(data_aborts);
       ktrace_vcpu_exit(VCPU_DATA_ABORT, guest_state->system_state.elr_el2);
       status = handle_data_abort(syndrome.iss, guest_state, gpas, traps, packet);
       break;

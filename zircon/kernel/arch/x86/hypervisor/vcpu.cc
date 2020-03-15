@@ -18,6 +18,8 @@
 #include <hypervisor/cpu.h>
 #include <hypervisor/ktrace.h>
 #include <kernel/mp.h>
+#include <kernel/percpu.h>
+#include <kernel/stats.h>
 #include <vm/fault.h>
 #include <vm/pmm.h>
 #include <vm/vm_object.h>
@@ -836,7 +838,9 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
     }
     ktrace(TAG_VCPU_ENTER, 0, 0, 0, 0);
     running_.store(true);
+    GUEST_STATS_INC(vm_entries);
     status = vmx_enter(&vmx_state_);
+    GUEST_STATS_INC(vm_exits);
     running_.store(false);
 
     SaveGuestExtendedRegisters(vmcs.Read(VmcsFieldXX::GUEST_CR4));

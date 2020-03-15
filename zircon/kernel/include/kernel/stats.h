@@ -12,6 +12,33 @@
 
 __BEGIN_CDECLS
 
+// per cpu guest statistics
+struct guest_stats {
+  ulong vm_entries;
+  ulong vm_exits;
+#ifdef __aarch64__
+  ulong wfi_wfe_instructions;
+  ulong instruction_aborts;
+  ulong data_aborts;
+  ulong system_instructions;
+  ulong smc_instructions;
+  ulong interrupts;
+#else
+  ulong interrupts;
+  ulong interrupt_windows;
+  ulong cpuid_instructions;
+  ulong hlt_instructions;
+  ulong control_register_accesses;
+  ulong io_instructions;
+  ulong rdmsr_instructions;
+  ulong wrmsr_instructions;
+  ulong ept_violations;
+  ulong xsetbv_instructions;
+  ulong pause_instructions;
+  ulong vmcall_instructions;
+#endif
+};
+
 // per cpu kernel level statistics
 struct cpu_stats {
   zx_duration_t idle_time;
@@ -38,6 +65,11 @@ __END_CDECLS
 
 // include after the cpu_stats definition above, since it is part of the percpu structure
 #include <kernel/percpu.h>
+
+#define GUEST_STATS_INC(name)                                                   \
+  do {                                                                          \
+    __atomic_fetch_add(&get_local_percpu()->gstats.name, 1u, __ATOMIC_RELAXED); \
+  } while (0)
 
 #define CPU_STATS_INC(name)                                                    \
   do {                                                                         \

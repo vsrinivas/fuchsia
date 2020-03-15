@@ -49,7 +49,8 @@ struct percpu {
   // state for runtime lock validation when in irq context
   lockdep::ThreadLockState lock_state;
 #endif
-
+  // guest entry/exit statistics
+  struct guest_stats gstats;
   // thread/cpu level statistics
   struct cpu_stats stats;
 

@@ -41,6 +41,7 @@ typedef uint32_t zx_object_info_topic_t;
 #define ZX_INFO_STREAM                  ((zx_object_info_topic_t) 26u) // zx_info_stream_t[1]
 #define ZX_INFO_HANDLE_TABLE            ((zx_object_info_topic_t) 27u) // zx_info_handle_extended_t[n]
 #define ZX_INFO_MSI                     ((zx_object_info_topic_t) 28u) // zx_info_msi_t[1]
+#define ZX_INFO_GUEST_STATS             ((zx_object_info_topic_t) 29u) // zx_info_guest_stats_t[1]
 
 typedef uint32_t zx_obj_props_t;
 #define ZX_OBJ_PROP_NONE                ((zx_obj_props_t) 0u)
@@ -478,6 +479,35 @@ typedef struct zx_info_vmo {
     // VMO mapping cache policy. One of ZX_CACHE_POLICY_*
     uint32_t cache_policy;
 } zx_info_vmo_t;
+
+typedef struct zx_info_guest_stats {
+    uint32_t cpu_number;
+    uint32_t flags;
+
+    uint64_t vm_entries;
+    uint64_t vm_exits;
+#ifdef __aarch64__
+    uint64_t wfi_wfe_instructions;
+    uint64_t instruction_aborts;
+    uint64_t data_aborts;
+    uint64_t system_instructions;
+    uint64_t smc_instructions;
+    uint64_t interrupts;
+#else
+    uint64_t interrupts;
+    uint64_t interrupt_windows;
+    uint64_t cpuid_instructions;
+    uint64_t hlt_instructions;
+    uint64_t control_register_accesses;
+    uint64_t io_instructions;
+    uint64_t rdmsr_instructions;
+    uint64_t wrmsr_instructions;
+    uint64_t ept_violations;
+    uint64_t xsetbv_instructions;
+    uint64_t pause_instructions;
+    uint64_t vmcall_instructions;
+#endif
+} zx_info_guest_stats_t;
 
 // kernel statistics per cpu
 // TODO(cpu), expose the deprecated stats via a new syscall.

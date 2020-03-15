@@ -396,6 +396,65 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
 
       return single_record_result(_buffer, buffer_size, _actual, _avail, info);
     }
+
+    case ZX_INFO_GUEST_STATS: {
+      auto status = validate_resource(handle, ZX_RSRC_KIND_ROOT);
+      if (status != ZX_OK)
+        return status;
+
+      size_t num_cpus = arch_max_num_cpus();
+      size_t num_space_for = buffer_size / sizeof(zx_info_cpu_stats_t);
+      size_t num_to_copy = ktl::min(num_cpus, num_space_for);
+
+      user_out_ptr<zx_info_guest_stats_t> guest_buf = _buffer.reinterpret<zx_info_guest_stats_t>();
+
+      for (unsigned int i = 0; i < static_cast<unsigned int>(num_to_copy); i++) {
+        const auto* cpu = &percpu::Get(i);
+        zx_info_guest_stats_t stats = {};
+        stats.cpu_number = i;
+        stats.flags = mp_is_cpu_online(i) ? ZX_INFO_CPU_STATS_FLAG_ONLINE : 0;
+
+        stats.vm_entries = cpu->gstats.vm_entries;
+        stats.vm_exits  = cpu->gstats.vm_exits;
+#ifdef __aarch64__
+        stats.wfi_wfe_instructions = cpu->gstats.wfi_wfe_instructions;
+        stats.system_instructions = cpu->gstats.system_instructions;
+        stats.instruction_aborts = cpu->gstats.instruction_aborts;
+        stats.data_aborts = cpu->gstats.data_aborts;
+        stats.smc_instructions = cpu->gstats.smc_instructions;
+        stats.interrupts = cpu->gstats.interrupts;
+#else
+        stats.vmcall_instructions = cpu->gstats.vmcall_instructions;
+        stats.pause_instructions = cpu->gstats.pause_instructions;
+        stats.xsetbv_instructions = cpu->gstats.xsetbv_instructions;
+        stats.ept_violations = cpu->gstats.ept_violations;
+        stats.wrmsr_instructions = cpu->gstats.wrmsr_instructions;
+        stats.rdmsr_instructions = cpu->gstats.rdmsr_instructions;
+        stats.io_instructions = cpu->gstats.io_instructions;
+        stats.control_register_accesses = cpu->gstats.control_register_accesses;
+        stats.hlt_instructions = cpu->gstats.hlt_instructions;
+        stats.cpuid_instructions = cpu->gstats.cpuid_instructions;
+        stats.interrupt_windows = cpu->gstats.interrupt_windows;
+        stats.interrupts = cpu->gstats.interrupts;
+#endif
+        if (guest_buf.copy_array_to_user(&stats, 1, i) != ZX_OK)
+          return ZX_ERR_INVALID_ARGS;
+      }
+
+      if (_actual) {
+        zx_status_t status = _actual.copy_to_user(num_to_copy);
+        if (status != ZX_OK)
+          return status;
+      }
+
+      if (_avail) {
+        zx_status_t status = _avail.copy_to_user(num_cpus);
+        if (status != ZX_OK)
+          return status;
+      }
+      return ZX_OK;
+    }
+
     case ZX_INFO_CPU_STATS: {
       auto status = validate_resource(handle, ZX_RSRC_KIND_ROOT);
       if (status != ZX_OK)
