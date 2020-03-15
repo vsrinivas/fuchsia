@@ -49,12 +49,16 @@ template("bind_rules") {
 
     sources = [ invoker.rules ]
 
+    depfile = "$target_gen_dir/$target_name.d"
+
     args = [
       rebase_path(invoker.rules, root_build_dir),
       "--output",
       rebase_path("$target_gen_dir/$output_file", root_build_dir),
       "--include-file",
       rebase_path(response_file, root_build_dir),
+      "--depfile",
+      rebase_path(depfile, root_build_dir),
     ]
 
     if (defined(invoker.disable_autobind) && invoker.disable_autobind) {

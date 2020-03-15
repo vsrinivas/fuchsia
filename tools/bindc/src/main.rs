@@ -4,11 +4,12 @@
 
 //! A Fuchsia Driver Bind Program compiler
 
+use anyhow::{Context, Error};
 use bind_debugger::instruction::{Condition, Instruction, InstructionDebug};
 use bind_debugger::{compiler, offline_debugger};
 use std::fmt::Write;
 use std::fs::File;
-use std::io::{self, BufRead};
+use std::io::{self, BufRead, Write as IoWrite};
 use std::path::PathBuf;
 use structopt::StructOpt;
 
@@ -36,6 +37,13 @@ struct Opt {
     #[structopt(short = "f", long = "include-file", parse(from_os_str))]
     include_file: Option<PathBuf>,
 
+    /// Specify a path for the compiler to generate a depfile. A depfile contain, in Makefile
+    /// format, the files that this invocation of the compiler depends on including all bind
+    /// libraries and the bind program input itself. An output file must be provided to generate a
+    /// depfile.
+    #[structopt(long = "depfile", parse(from_os_str))]
+    depfile: Option<PathBuf>,
+
     /// A file containing the properties of a specific device, as a list of key-value pairs.
     /// This will be used as the input to the bind program debugger.
     /// In debug mode no compiler output is produced, so --output should not be specified.
@@ -48,6 +56,21 @@ struct Opt {
     /// request.
     #[structopt(short = "a", long = "disable-autobind")]
     disable_autobind: bool,
+}
+
+fn write_depfile(output: &PathBuf, input: &PathBuf, includes: &[PathBuf]) -> Result<String, Error> {
+    fn path_to_str(path: &PathBuf) -> Result<&str, Error> {
+        path.as_os_str().to_str().context("failed to convert path to string")
+    };
+
+    let output_str = path_to_str(output)?;
+    let input_str = path_to_str(input)?;
+    let mut deps = includes.iter().map(|s| path_to_str(s)).collect::<Result<Vec<&str>, Error>>()?;
+    deps.push(input_str);
+
+    let mut out = String::new();
+    writeln!(&mut out, "{}: {}", output_str, deps.join(" "))?;
+    Ok(out)
 }
 
 fn write_bind_template(
@@ -110,6 +133,21 @@ fn main() {
     }
 
     let mut output: Box<dyn io::Write> = if let Some(output) = opt.output {
+        // If there's an output filename then we can generate a depfile too.
+        if let Some(filename) = opt.depfile {
+            let mut file = File::create(filename).unwrap();
+            let depfile_string = write_depfile(&output, &opt.input, &includes);
+            if depfile_string.is_err() {
+                eprintln!("Failed to create depfile");
+                std::process::exit(1);
+            }
+            let r = file.write(depfile_string.unwrap().as_bytes());
+            if r.is_err() {
+                eprintln!("Failed to write to depfile");
+                std::process::exit(1);
+            }
+        }
+
         Box::new(File::create(output).unwrap())
     } else {
         Box::new(io::stdout())
@@ -160,5 +198,27 @@ mod tests {
         let out_string = write_bind_template(instructions, true).unwrap();
         assert!(out_string.contains("ZIRCON_DRIVER_BEGIN(Driver, Ops, VendorName, Version, 2)"));
         assert!(out_string.contains("{0x20000002,0x0,0x0}"));
+    }
+
+    #[test]
+    fn depfile_no_includes() {
+        let output = PathBuf::from("/a/output");
+        let input = PathBuf::from("/a/input");
+        assert_eq!(
+            write_depfile(&output, &input, &[]).unwrap(),
+            "/a/output: /a/input\n".to_string()
+        );
+    }
+
+    #[test]
+    fn depfile_with_includes() {
+        let output = PathBuf::from("/a/output");
+        let input = PathBuf::from("/a/input");
+        let includes = vec![PathBuf::from("/a/include"), PathBuf::from("/b/include")];
+        let result = write_depfile(&output, &input, &includes).unwrap();
+        assert!(result.starts_with("/a/output:"));
+        assert!(result.contains("/a/input"));
+        assert!(result.contains("/a/include"));
+        assert!(result.contains("/b/include"));
     }
 }

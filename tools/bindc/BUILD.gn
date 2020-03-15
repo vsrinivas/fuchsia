@@ -20,6 +20,7 @@ if (host_toolchain == current_toolchain) {
 
     deps = [
       "//src/devices/bind/debugger:lib",
+      "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:structopt",
     ]
   }
