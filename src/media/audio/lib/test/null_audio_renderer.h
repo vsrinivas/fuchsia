@@ -23,7 +23,8 @@ class NullAudioRenderer : public fuchsia::media::AudioRenderer {
   void SetPtsUnits(uint32_t tick_per_second_numerator,
                    uint32_t tick_per_second_denominator) override {}
   void SetPtsContinuityThreshold(float threshold_seconds) override {}
-  void SetReferenceClock(::zx::handle reference_clock) override {}
+  void GetReferenceClock(GetReferenceClockCallback callback) override{};
+  void SetReferenceClock(::zx::clock reference_clock) override {}
   void Play(int64_t reference_time, int64_t media_time, PlayCallback callback) override {}
   void PlayNoReply(int64_t reference_time, int64_t media_time) override {}
   void Pause(PauseCallback callback) override {}

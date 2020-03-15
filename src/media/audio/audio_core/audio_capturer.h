@@ -32,6 +32,7 @@ class AudioCapturer : public BaseCapturer,
   void SetRoutingProfile(bool routable) override;
 
   // |fuchsia::media::AudioCapturer|
+  void SetReferenceClock(zx::clock ref_clock) final;
   void SetPcmStreamType(fuchsia::media::AudioStreamType stream_type) final;
   void BindGainControl(fidl::InterfaceRequest<fuchsia::media::audio::GainControl> request) final;
   void SetUsage(fuchsia::media::AudioCaptureUsage usage) final;

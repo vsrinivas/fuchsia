@@ -10,6 +10,7 @@
 #include <lib/fidl/cpp/binding.h>
 #include <lib/media/cpp/timeline_function.h>
 #include <lib/media/cpp/timeline_rate.h>
+#include <lib/zx/clock.h>
 
 #include <atomic>
 #include <memory>
@@ -127,6 +128,12 @@ class BaseCapturer : public AudioObject, public fuchsia::media::AudioCapturer {
   void CleanupSourceLink(const AudioObject& source, std::shared_ptr<Stream> stream) override;
   void OnLinkAdded() override;
 
+ protected:
+  const zx::clock& optimal_clock() const { return optimal_clock_; }
+  const zx::clock& reference_clock() const { return reference_clock_; }
+  void set_optimal_clock(zx::clock optimal_clock) { optimal_clock_ = std::move(optimal_clock); }
+  void set_reference_clock(zx::clock ref_clock) { reference_clock_ = std::move(ref_clock); }
+
  private:
   void UpdateState(State new_state);
 
@@ -136,10 +143,14 @@ class BaseCapturer : public AudioObject, public fuchsia::media::AudioCapturer {
 
   using PcbList = ::fbl::DoublyLinkedList<std::unique_ptr<PendingCaptureBuffer>>;
 
+  void CreateOptimalReferenceClock();
+  void EstablishDefaultReferenceClock();
+
   // |fuchsia::media::AudioCapturer|
   void GetStreamType(GetStreamTypeCallback cbk) final;
   void AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) final;
   void RemovePayloadBuffer(uint32_t id) final;
+  void GetReferenceClock(GetReferenceClockCallback callback) final;
   void CaptureAt(uint32_t payload_buffer_id, uint32_t offset_frames, uint32_t num_frames,
                  CaptureAtCallback cbk) final;
   void ReleasePacket(fuchsia::media::StreamPacket packet) final;
@@ -229,6 +240,13 @@ class BaseCapturer : public AudioObject, public fuchsia::media::AudioCapturer {
   std::shared_ptr<MixStage> mix_stage_;
 
   RouteGraphRemover route_graph_remover_;
+
+  // This clock is created and tuned by audio_core
+  zx::clock optimal_clock_;
+
+  // Whether default, optimal or custom clock, audio_core will treat this as not-rate-adjustable
+  // (although if set to the optimal_clock_, tuning of that clock will be reflected here)
+  zx::clock reference_clock_;
 };
 
 }  // namespace media::audio

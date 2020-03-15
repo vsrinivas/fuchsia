@@ -44,7 +44,12 @@ void FakeAudioRenderer::SetPtsContinuityThreshold(float threshold_seconds) {
   threshold_seconds_ = threshold_seconds;
 }
 
-void FakeAudioRenderer::SetReferenceClock(zx::handle ref_clock) { FX_NOTIMPLEMENTED(); }
+void FakeAudioRenderer::SetReferenceClock(zx::clock ref_clock) { FX_NOTIMPLEMENTED(); }
+
+void FakeAudioRenderer::GetReferenceClock(GetReferenceClockCallback callback) {
+  callback(zx::clock(ZX_HANDLE_INVALID));
+  FX_NOTIMPLEMENTED();
+}
 
 void FakeAudioRenderer::SendPacket(fuchsia::media::StreamPacket packet,
                                    SendPacketCallback callback) {

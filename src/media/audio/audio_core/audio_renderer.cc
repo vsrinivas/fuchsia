@@ -8,6 +8,7 @@
 
 #include "src/media/audio/audio_core/audio_admin.h"
 #include "src/media/audio/audio_core/reporter.h"
+#include "src/media/audio/lib/clock/utils.h"
 #include "src/media/audio/lib/logging/logging.h"
 
 namespace media::audio {
@@ -51,6 +52,22 @@ void AudioRenderer::SetUsage(fuchsia::media::AudioRenderUsage usage) {
     return;
   }
   usage_ = usage;
+}
+
+// If received handle is null, duplicate and use the optimal clock. Else, use this new clock as-is.
+void AudioRenderer::SetReferenceClock(zx::clock ref_clock) {
+  TRACE_DURATION("audio", "AudioRenderer::SetReferenceClock");
+  AUD_VLOG_OBJ(TRACE, this);
+
+  auto cleanup = fit::defer([this]() { context().route_graph().RemoveRenderer(*this); });
+
+  if (!ref_clock.is_valid()) {
+    auto status = DuplicateClock(optimal_clock(), &ref_clock);
+    FX_DCHECK(status == ZX_OK) << "Could not duplicate the optimal clock";
+  }
+  set_reference_clock(std::move(ref_clock));
+
+  cleanup.cancel();
 }
 
 void AudioRenderer::SetPcmStreamType(fuchsia::media::AudioStreamType stream_type) {

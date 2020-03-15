@@ -25,6 +25,8 @@ class NullAudioCapturer : public fuchsia::media::AudioCapturer {
   void StopAsyncCaptureNoReply() override {}
   void BindGainControl(::fidl::InterfaceRequest<::fuchsia::media::audio::GainControl>
                            gain_control_request) override {}
+  void GetReferenceClock(GetReferenceClockCallback callback) override {}
+  void SetReferenceClock(::zx::clock ref_clock) override {}
   void SetUsage(fuchsia::media::AudioCaptureUsage usage) override {}
   void GetStreamType(GetStreamTypeCallback callback) override {}
 };

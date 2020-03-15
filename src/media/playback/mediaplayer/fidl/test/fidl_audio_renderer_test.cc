@@ -65,7 +65,8 @@ class FakeAudioRenderer : public fuchsia::media::AudioRenderer {
   void SetPcmStreamType(fuchsia::media::AudioStreamType type) {}
   void SetPtsUnits(uint32_t tick_per_second_numerator, uint32_t tick_per_second_denominator) {}
   void SetPtsContinuityThreshold(float threshold_seconds) {}
-  void SetReferenceClock(::zx::handle reference_clock) {}
+  void GetReferenceClock(GetReferenceClockCallback callback) {}
+  void SetReferenceClock(::zx::clock reference_clock) {}
   void Play(int64_t reference_time, int64_t media_time, PlayCallback callback) {}
   void PlayNoReply(int64_t reference_time, int64_t media_time) {}
   void Pause(PauseCallback callback) {}

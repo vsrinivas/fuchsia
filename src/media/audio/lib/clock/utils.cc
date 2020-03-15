@@ -14,13 +14,7 @@ zx_status_t DuplicateClock(const zx::clock& original_clock, zx::clock* dupe_cloc
   FX_DCHECK(dupe_clock) << "Null ptr passed to DuplicateClock";
 
   constexpr auto rights = ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_READ;
-  auto status = original_clock.duplicate(rights, dupe_clock);
-
-  if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "Could not duplicate the provided clock handle";
-  }
-
-  return status;
+  return original_clock.duplicate(rights, dupe_clock);
 }
 
 zx_status_t GetAndDisplayClockDetails(const zx::clock& ref_clock) {

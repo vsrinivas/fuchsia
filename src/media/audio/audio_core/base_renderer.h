@@ -9,6 +9,7 @@
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fit/function.h>
 #include <lib/media/cpp/timeline_function.h>
+#include <lib/zx/clock.h>
 
 #include <atomic>
 #include <memory>
@@ -43,7 +44,7 @@ class BaseRenderer : public AudioObject, public fuchsia::media::AudioRenderer {
   void RemovePayloadBuffer(uint32_t id) final;
   void SetPtsUnits(uint32_t tick_per_second_numerator, uint32_t tick_per_second_denominator) final;
   void SetPtsContinuityThreshold(float threshold_seconds) final;
-  void SetReferenceClock(zx::handle ref_clock) final;
+  void GetReferenceClock(GetReferenceClockCallback callback) final;
   void SendPacket(fuchsia::media::StreamPacket packet, SendPacketCallback callback) final;
   void SendPacketNoReply(fuchsia::media::StreamPacket packet) final;
   void EndOfStream() final;
@@ -84,6 +85,12 @@ class BaseRenderer : public AudioObject, public fuchsia::media::AudioRenderer {
   // Minimum Lead Time state
   zx::duration min_lead_time_;
 
+ protected:
+  const zx::clock& optimal_clock() const { return optimal_clock_; }
+  const zx::clock& reference_clock() const { return reference_clock_; }
+  void set_optimal_clock(zx::clock optimal_clock) { optimal_clock_ = std::move(optimal_clock); }
+  void set_reference_clock(zx::clock ref_clock) { reference_clock_ = std::move(ref_clock); }
+
  private:
   // Recompute the minimum clock lead time based on the current set of outputs
   // we are linked to.  If this requirement is different from the previous
@@ -98,6 +105,9 @@ class BaseRenderer : public AudioObject, public fuchsia::media::AudioRenderer {
 
   std::unordered_map<uint32_t, fbl::RefPtr<RefCountedVmoMapper>> payload_buffers_;
   bool config_validated_ = false;
+
+  void CreateOptimalReferenceClock();
+  void EstablishDefaultReferenceClock();
 
   // PTS interpolation state.
   FractionalFrames<int64_t> next_frac_frame_pts_{0};
@@ -123,6 +133,13 @@ class BaseRenderer : public AudioObject, public fuchsia::media::AudioRenderer {
   Packet::Allocator packet_allocator_;
 
   WavWriter<kEnableRendererWavWriters> wav_writer_;
+
+  // This clock is created and tuned by audio_core
+  zx::clock optimal_clock_;
+
+  // Whether default, optimal or custom clock, audio_core will treat this as not-rate-adjustable
+  // (although if set to the optimal_clock_, tuning of that clock will be reflected here)
+  zx::clock reference_clock_;
 };
 
 }  // namespace media::audio

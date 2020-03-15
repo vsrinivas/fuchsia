@@ -84,7 +84,9 @@ class FakeAudioRenderer : public fuchsia::media::AudioRenderer,
 
   void SetPtsContinuityThreshold(float threshold_seconds) override;
 
-  void SetReferenceClock(zx::handle ref_clock) override;
+  void SetReferenceClock(zx::clock ref_clock) override;
+
+  void GetReferenceClock(GetReferenceClockCallback callback) override;
 
   void SendPacket(fuchsia::media::StreamPacket packet, SendPacketCallback callback) override;
 

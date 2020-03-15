@@ -3,11 +3,15 @@
 // found in the LICENSE file.
 
 #include <fuchsia/media/cpp/fidl.h>
+#include <lib/zx/clock.h>
 #include <lib/zx/vmo.h>
 
+#include "src/media/audio/lib/clock/testing/clock_test.h"
 #include "src/media/audio/lib/test/hermetic_audio_test.h"
 
 namespace media::audio::test {
+
+using namespace testing;
 
 // Just an arbitrary |AudioStreamType| that is valid to be used. Intended for
 // tests that don't care about the specific audio frames being sent.
@@ -50,6 +54,12 @@ class AudioRendererTest : public HermeticAudioCoreTest {
   fuchsia::media::audio::GainControlPtr gain_control_;
 
   bool bound_renderer_expected_ = true;
+};
+
+// AudioRendererClockTest - thin wrapper around AudioRendererTest
+class AudioRendererClockTest : public AudioRendererTest {
+ protected:
+  zx::clock GetAndValidateReferenceClock();
 };
 
 //
@@ -95,7 +105,6 @@ void AudioRendererTest::CreateAndAddPayloadBuffer(uint32_t id) {
 //
 // StreamBufferSet validation
 //
-
 // Sanity test adding a payload buffer. Just verify we don't get a disconnect.
 TEST_F(AudioRendererTest, AddPayloadBuffer) {
   CreateAndAddPayloadBuffer(0);
@@ -466,11 +475,6 @@ TEST_F(AudioRendererTest, SetPcmStreamType) {
 // TODO(mpuryear): test SetPtsContinuityThreshold(float32 threshold_sec);
 // Also negative testing: NaN, negative, very large, infinity
 
-// TODO(mpuryear): test SetReferenceClock(handle reference_clock);
-// Also negative testing: null handle, bad handle, handle to something else
-
-// TODO(mpuryear): Also: when already in Play, very positive vals, very negative
-// vals
 TEST_F(AudioRendererTest, Play) {
   // Configure with one buffer and a valid stream type.
   CreateAndAddPayloadBuffer(0);
@@ -721,6 +725,102 @@ TEST_F(AudioRendererTest, SetUsageAfterSetPcmStreamTypeCausesDisconnect) {
   AssertConnectedAndDiscardAllPackets();
 
   audio_renderer_->SetUsage(fuchsia::media::AudioRenderUsage::COMMUNICATION);
+  ExpectDisconnect();
+}
+
+zx::clock AudioRendererClockTest::GetAndValidateReferenceClock() {
+  zx::clock clock;
+
+  audio_renderer_->GetReferenceClock(CompletionCallback(
+      [&clock](zx::clock received_clock) { clock = std::move(received_clock); }));
+
+  ExpectCallback();
+  EXPECT_TRUE(clock.is_valid());
+  EXPECT_FALSE(error_occurred());
+
+  return clock;
+}
+
+// Accept the default clock that is returned if we set no clock
+TEST_F(AudioRendererClockTest, DefaultReferenceClock) {
+  zx::clock ref_clock = GetAndValidateReferenceClock();
+
+  VerifyAppropriateRights(ref_clock);
+  VerifyClockIsSystemMonotonic(ref_clock);
+
+  VerifyClockAdvances(ref_clock);
+  VerifyClockCannotBeRateAdjusted(ref_clock);
+}
+
+// Set a null clock; representing selecting the AudioCore-generated optimal clock.
+TEST_F(AudioRendererClockTest, OptimalReferenceClock) {
+  audio_renderer_->SetReferenceClock(zx::clock(ZX_HANDLE_INVALID));
+  zx::clock optimal_clock = GetAndValidateReferenceClock();
+
+  VerifyAppropriateRights(optimal_clock);
+  VerifyClockIsSystemMonotonic(optimal_clock);
+
+  VerifyClockAdvances(optimal_clock);
+  VerifyClockCannotBeRateAdjusted(optimal_clock);
+}
+
+constexpr auto kClockRights = ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_READ;
+TEST_F(AudioRendererClockTest, CustomReferenceClock) {
+  zx::clock dupe_clock, orig_clock = CreateClockForSamenessTest();
+  ASSERT_EQ(orig_clock.duplicate(kClockRights, &dupe_clock), ZX_OK);
+
+  audio_renderer_->SetReferenceClock(std::move(dupe_clock));
+  zx::clock received_clock = GetAndValidateReferenceClock();
+
+  VerifyAppropriateRights(received_clock);
+  VerifyClockIsNotSystemMonotonic(received_clock);
+
+  VerifyClockAdvances(received_clock);
+  VerifyClockCannotBeRateAdjusted(received_clock);
+
+  VerifySameClock(orig_clock, received_clock);
+
+  // We can still rate-adjust our custom clock.
+  VerifyClockCanBeRateAdjusted(orig_clock);
+  VerifyClockAdvances(orig_clock);
+}
+
+// inadequate ZX_RIGHTS -- if no TRANSFER, the SetReferenceClock silently does nothing.
+// Thus the default clock is still the system monotonic clock.
+TEST_F(AudioRendererClockTest, CustomReferenceClock_NoTransfer) {
+  zx::clock dupe_clock, orig_clock = CreateClockForSamenessTest();
+  ASSERT_EQ(orig_clock.duplicate(kClockRights & ~ZX_RIGHT_TRANSFER, &dupe_clock), ZX_OK);
+
+  audio_renderer_->SetReferenceClock(std::move(dupe_clock));
+  zx::clock received_clock = GetAndValidateReferenceClock();
+
+  VerifyAppropriateRights(received_clock);
+  VerifyClockIsSystemMonotonic(received_clock);
+}
+
+// inadequate ZX_RIGHTS -- no DUPLICATE should cause GetReferenceClock to fail.
+TEST_F(AudioRendererClockTest, CustomReferenceClock_NoDuplicate) {
+  zx::clock dupe_clock, orig_clock = CreateClockForSamenessTest();
+  ASSERT_EQ(orig_clock.duplicate(kClockRights & ~ZX_RIGHT_DUPLICATE, &dupe_clock), ZX_OK);
+
+  audio_renderer_->SetReferenceClock(std::move(dupe_clock));
+
+  audio_renderer_->GetReferenceClock(
+      CompletionCallback([](zx::clock clock) { zx::clock received_clock = std::move(clock); }));
+
+  ExpectDisconnect();
+}
+
+// inadequate ZX_RIGHTS -- no READ should cause GetReferenceClock to fail.
+TEST_F(AudioRendererClockTest, CustomReferenceClock_NoRead) {
+  zx::clock dupe_clock, orig_clock = CreateClockForSamenessTest();
+  ASSERT_EQ(orig_clock.duplicate(kClockRights & ~ZX_RIGHT_READ, &dupe_clock), ZX_OK);
+
+  audio_renderer_->SetReferenceClock(std::move(dupe_clock));
+
+  audio_renderer_->GetReferenceClock(
+      CompletionCallback([](zx::clock clock) { zx::clock received_clock = std::move(clock); }));
+
   ExpectDisconnect();
 }
 

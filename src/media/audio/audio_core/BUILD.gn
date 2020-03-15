@@ -178,6 +178,7 @@ source_set("audio_core_lib") {
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/media/audio/audio_core/mixer",
+    "//src/media/audio/lib/clock",
     "//src/media/audio/lib/effects_loader",
     "//src/media/audio/lib/logging",
     "//src/media/audio/lib/wav_writer:wav_writer",

@@ -3,10 +3,15 @@
 // found in the LICENSE file.
 
 #include <fuchsia/media/cpp/fidl.h>
+#include <lib/zx/clock.h>
 
+#include "src/media/audio/lib/clock/testing/clock_test.h"
+#include "src/media/audio/lib/logging/logging.h"
 #include "src/media/audio/lib/test/hermetic_audio_test.h"
 
 namespace media::audio::test {
+
+using namespace testing;
 
 //
 // AudioCapturerTest
@@ -22,6 +27,11 @@ class AudioCapturerTest : public HermeticAudioCoreTest {
   fuchsia::media::audio::GainControlPtr gain_control_;
 
   bool bound_capturer_expected_ = true;
+};
+
+class AudioCapturerClockTest : public AudioCapturerTest {
+ protected:
+  zx::clock GetAndValidateReferenceClock();
 };
 
 //
@@ -195,5 +205,100 @@ TEST_F(AudioCapturerTest, BindGainControlNull) {
 
 // TODO(mpuryear): test GetStreamType() -> (StreamType stream_type);
 // Also negative testing: before format set
+
+zx::clock AudioCapturerClockTest::GetAndValidateReferenceClock() {
+  zx::clock clock;
+
+  audio_capturer_->GetReferenceClock(CompletionCallback(
+      [&clock](zx::clock received_clock) { clock = std::move(received_clock); }));
+
+  ExpectCallback();
+  EXPECT_TRUE(clock.is_valid());
+
+  return clock;
+}
+
+// Accept the default clock that is returned if we set no clock
+TEST_F(AudioCapturerClockTest, DefaultReferenceClock) {
+  zx::clock ref_clock = GetAndValidateReferenceClock();
+
+  VerifyAppropriateRights(ref_clock);
+  VerifyClockIsSystemMonotonic(ref_clock);
+
+  VerifyClockAdvances(ref_clock);
+  VerifyClockCannotBeRateAdjusted(ref_clock);
+}
+
+// Set a null clock; representing selecting the AudioCore-generated optimal clock.
+TEST_F(AudioCapturerClockTest, OptimalReferenceClock) {
+  audio_capturer_->SetReferenceClock(zx::clock(ZX_HANDLE_INVALID));
+  zx::clock optimal_clock = GetAndValidateReferenceClock();
+
+  VerifyAppropriateRights(optimal_clock);
+  VerifyClockIsSystemMonotonic(optimal_clock);
+
+  VerifyClockAdvances(optimal_clock);
+  VerifyClockCannotBeRateAdjusted(optimal_clock);
+}
+
+constexpr auto kClockRights = ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_READ;
+TEST_F(AudioCapturerClockTest, CustomReferenceClock) {
+  zx::clock dupe_clock, orig_clock = CreateClockForSamenessTest();
+  ASSERT_EQ(orig_clock.duplicate(kClockRights, &dupe_clock), ZX_OK);
+
+  audio_capturer_->SetReferenceClock(std::move(dupe_clock));
+  zx::clock received_clock = GetAndValidateReferenceClock();
+
+  VerifyAppropriateRights(received_clock);
+  VerifyClockIsNotSystemMonotonic(received_clock);
+
+  VerifyClockAdvances(received_clock);
+  VerifyClockCannotBeRateAdjusted(received_clock);
+
+  VerifySameClock(orig_clock, received_clock);
+
+  // We can still rate-adjust our custom clock.
+  VerifyClockCanBeRateAdjusted(orig_clock);
+  VerifyClockAdvances(orig_clock);
+}
+
+// inadequate ZX_RIGHTS -- if no TRANSFER, the SetReferenceClock silently does nothing.
+// Thus the default clock is still the system monotonic clock.
+TEST_F(AudioCapturerClockTest, CustomReferenceClock_NoTransfer) {
+  zx::clock dupe_clock, orig_clock = CreateClockForSamenessTest();
+  ASSERT_EQ(orig_clock.duplicate(kClockRights & ~ZX_RIGHT_TRANSFER, &dupe_clock), ZX_OK);
+
+  audio_capturer_->SetReferenceClock(std::move(dupe_clock));
+  zx::clock received_clock = GetAndValidateReferenceClock();
+
+  VerifyAppropriateRights(received_clock);
+  VerifyClockIsSystemMonotonic(received_clock);
+}
+
+// inadequate ZX_RIGHTS -- if no DUPLICATE
+TEST_F(AudioCapturerClockTest, CustomReferenceClock_NoDuplicate) {
+  zx::clock dupe_clock, orig_clock = CreateClockForSamenessTest();
+  ASSERT_EQ(orig_clock.duplicate(kClockRights & ~ZX_RIGHT_DUPLICATE, &dupe_clock), ZX_OK);
+
+  audio_capturer_->SetReferenceClock(std::move(dupe_clock));
+
+  audio_capturer_->GetReferenceClock(
+      CompletionCallback([](zx::clock clock) { zx::clock received_clock = std::move(clock); }));
+
+  ExpectDisconnect();
+}
+
+// inadequate ZX_RIGHTS -- if no READ
+TEST_F(AudioCapturerClockTest, CustomReferenceClock_NoRead) {
+  zx::clock dupe_clock, orig_clock = CreateClockForSamenessTest();
+  ASSERT_EQ(orig_clock.duplicate(kClockRights & ~ZX_RIGHT_READ, &dupe_clock), ZX_OK);
+
+  audio_capturer_->SetReferenceClock(std::move(dupe_clock));
+
+  audio_capturer_->GetReferenceClock(
+      CompletionCallback([](zx::clock clock) { zx::clock received_clock = std::move(clock); }));
+
+  ExpectDisconnect();
+}
 
 }  // namespace media::audio::test

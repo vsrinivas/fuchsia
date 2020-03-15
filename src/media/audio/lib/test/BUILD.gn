@@ -75,7 +75,7 @@ source_set("message_transceiver") {
   ]
 }
 
-# Flexible utility class for channel-based communication (such as to drivers or device services).
+# Empty renderer and capturer implementations suitable for use in unit testing.
 source_set("null_renderer_capturer") {
   sources = [
     "null_audio_capturer.h",

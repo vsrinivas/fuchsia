@@ -15,7 +15,7 @@
 #include "src/media/audio/audio_core/audio_core_impl.h"
 #include "src/media/audio/audio_core/audio_driver.h"
 #include "src/media/audio/audio_core/reporter.h"
-#include "src/media/audio/audio_core/utils.h"
+#include "src/media/audio/lib/clock/utils.h"
 #include "src/media/audio/lib/logging/logging.h"
 
 namespace media::audio {
@@ -77,6 +77,11 @@ BaseCapturer::BaseCapturer(
   if (format) {
     UpdateFormat(*format);
   }
+
+  // For now, optimal clock is set as a clone of MONOTONIC. Ultimately this will be the clock of
+  // the device where the capturer is initially routed.
+  CreateOptimalReferenceClock();
+  EstablishDefaultReferenceClock();
 }
 
 BaseCapturer::~BaseCapturer() {
@@ -93,8 +98,9 @@ void BaseCapturer::UpdateState(State new_state) {
 
 fit::promise<> BaseCapturer::Cleanup() {
   TRACE_DURATION("audio.debug", "BaseCapturer::Cleanup");
-  // We need to stop all the async operations happening on the mix dispatcher. These components
-  // can only be touched on that thread, so post a task there to run that cleanup.
+
+  // We need to stop all the async operations happening on the mix dispatcher. These components can
+  // only be touched on that thread, so post a task there to run that cleanup.
   fit::bridge<> bridge;
   auto nonce = TRACE_NONCE();
   TRACE_FLOW_BEGIN("audio.debug", "BaseCapturer.capture_cleanup", nonce);
@@ -112,6 +118,7 @@ fit::promise<> BaseCapturer::Cleanup() {
 
 void BaseCapturer::CleanupFromMixThread() {
   TRACE_DURATION("audio", "BaseCapturer::CleanupFromMixThread");
+
   mix_wakeup_.Deactivate();
   mix_timer_.Cancel();
   mix_domain_ = nullptr;
@@ -959,6 +966,46 @@ void BaseCapturer::UpdateFormat(Format format) {
 
   FX_DCHECK(tmp <= std::numeric_limits<uint32_t>::max());
   FX_DCHECK(max_frames_per_capture_ > 0);
+}
+
+// Eventually, we'll set the optimal clock according to the source where it is initially routed.
+// For now, we just clone CLOCK_MONOTONIC.
+void BaseCapturer::CreateOptimalReferenceClock() {
+  TRACE_DURATION("audio", "BaseCapturer::CreateOptimalReferenceClock");
+
+  auto status =
+      zx::clock::create(ZX_CLOCK_OPT_MONOTONIC | ZX_CLOCK_OPT_CONTINUOUS | ZX_CLOCK_OPT_AUTO_START,
+                        nullptr, &optimal_clock_);
+  FX_DCHECK(status == ZX_OK) << "Could not create an AUTOSTART clock for optimal clock";
+}
+
+// For now, we supply the optimal clock as the default: we know it is a clone of MONOTONIC.
+// When we switch optimal clock to device clock, the default must still be a clone of MONOTONIC.
+// In long-term, use the optimal clock by default.
+void BaseCapturer::EstablishDefaultReferenceClock() {
+  TRACE_DURATION("audio", "BaseCapturer::EstablishDefaultReferenceClock");
+
+  auto status = DuplicateClock(optimal_clock_, &reference_clock_);
+  FX_DCHECK(status == ZX_OK) << "Could not duplicate the optimal clock";
+}
+
+// Regardless of the source of the reference clock, we can duplicate and return it here.
+void BaseCapturer::GetReferenceClock(GetReferenceClockCallback callback) {
+  TRACE_DURATION("audio", "BaseCapturer::GetReferenceClock");
+  AUD_VLOG_OBJ(TRACE, this);
+
+  auto cleanup = fit::defer([this]() { BeginShutdown(); });
+
+  zx::clock dupe_clock_for_client;
+  auto status = DuplicateClock(reference_clock_, &dupe_clock_for_client);
+  if (status != ZX_OK) {
+    FX_PLOGS(ERROR, status) << "Could not duplicate the current reference clock handle";
+    return;
+  }
+
+  callback(std::move(dupe_clock_for_client));
+
+  cleanup.cancel();
 }
 
 }  // namespace media::audio

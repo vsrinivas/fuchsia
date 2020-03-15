@@ -30,6 +30,7 @@ class AudioRenderer : public BaseRenderer,
   void OnLinkAdded() override;
 
   // |fuchsia::media::AudioRenderer|
+  void SetReferenceClock(zx::clock ref_clock) final;
   void SetPcmStreamType(fuchsia::media::AudioStreamType format) final;
   void SetUsage(fuchsia::media::AudioRenderUsage usage) override;
   void BindGainControl(fidl::InterfaceRequest<fuchsia::media::audio::GainControl> request) final;

@@ -9,6 +9,7 @@
 #include "src/media/audio/audio_core/audio_core_impl.h"
 #include "src/media/audio/audio_core/audio_output.h"
 #include "src/media/audio/audio_core/reporter.h"
+#include "src/media/audio/lib/clock/utils.h"
 #include "src/media/audio/lib/logging/logging.h"
 
 namespace media::audio {
@@ -33,13 +34,18 @@ BaseRenderer::BaseRenderer(
     : AudioObject(Type::AudioRenderer),
       context_(*context),
       audio_renderer_binding_(this, std::move(audio_renderer_request)),
-      pts_ticks_per_second_(1000000000, 1),
+      pts_ticks_per_second_(1'000'000'000, 1),
       reference_clock_to_fractional_frames_(fbl::MakeRefCounted<VersionedTimelineFunction>()),
       packet_allocator_(kMaxPacketAllocatorSlabs, true) {
   TRACE_DURATION("audio", "BaseRenderer::BaseRenderer");
   FX_DCHECK(context);
   REP(AddingRenderer(*this));
   AUD_VLOG_OBJ(TRACE, this);
+
+  // For now, optimal clock is set as a clone of MONOTONIC. Ultimately this will be the clock of the
+  // device where the renderer is initially routed.
+  CreateOptimalReferenceClock();
+  EstablishDefaultReferenceClock();
 
   audio_renderer_binding_.set_error_handler([this](zx_status_t status) {
     TRACE_DURATION("audio", "BaseRenderer::audio_renderer_binding_.error_handler", "zx_status",
@@ -144,10 +150,9 @@ bool BaseRenderer::ValidateConfig() {
                             << pts_continuity_threshold_frac_frame_.raw_value();
 
   // Compute the number of fractional frames per reference clock tick.
+  // Later we reconcile the actual reference clock with CLOCK_MONOTONIC
   //
-  // TODO(mpuryear): handle the case where the reference clock nominal rate is
-  // something other than CLOCK_MONOTONIC
-  frac_frames_per_ref_tick_ = TimelineRate(frac_fps.raw_value(), 1000000000u);
+  frac_frames_per_ref_tick_ = TimelineRate(frac_fps.raw_value(), 1'000'000'000u);
 
   // TODO(mpuryear): Precompute anything else needed here. Adding links to other
   // outputs (and selecting resampling filters) might belong here as well.
@@ -282,20 +287,6 @@ void BaseRenderer::SetPtsContinuityThreshold(float threshold_seconds) {
   // have to be revalidated as we move into the operational phase of our life.
   InvalidateConfiguration();
   cleanup.cancel();
-}
-
-void BaseRenderer::SetReferenceClock(zx::handle ref_clock) {
-  TRACE_DURATION("audio", "BaseRenderer::SetReferenceClock");
-  auto cleanup = fit::defer([this]() { context_.route_graph().RemoveRenderer(*this); });
-
-  AUD_VLOG_OBJ(TRACE, this);
-
-  if (IsOperating()) {
-    FX_LOGS(ERROR) << "Attempted to set reference clock while in operational mode.";
-    return;
-  }
-
-  FX_NOTIMPLEMENTED();
 }
 
 void BaseRenderer::SendPacket(fuchsia::media::StreamPacket packet, SendPacketCallback callback) {
@@ -478,8 +469,6 @@ void BaseRenderer::Play(int64_t _reference_time, int64_t media_time, PlayCallbac
 
   // Did the user supply a reference time? If not, figure out a safe starting time based on the
   // outputs we are currently linked to.
-  //
-  // TODO(mpuryear): query the actual reference clock, don't assume CLOCK_MONO
   if (reference_time.get() == fuchsia::media::NO_TIMESTAMP) {
     // TODO(mpuryear): How much more than the minimum clock lead time do we want to pad this by?
     // Also, if/when lead time requirements change, do we want to introduce a discontinuity?
@@ -489,7 +478,12 @@ void BaseRenderer::Play(int64_t _reference_time, int64_t media_time, PlayCallbac
     // streams across multiple parallel outputs. In this mode we must update lead time upon changes
     // in internal interconnect requirements, but impact should be small since internal lead time
     // factors tend to be small, while external factors can be huge.
-    reference_time = zx::clock::get_monotonic() + min_lead_time_ + kPaddingForUnspecifiedRefTime;
+    zx_time_t ref_now;
+    auto status = reference_clock_.read(&ref_now);
+    FX_DCHECK(status == ZX_OK) << "clock.read failed during Play";
+    auto ref_clock_now = zx::time(ref_now);
+
+    reference_time = ref_clock_now + min_lead_time_ + kPaddingForUnspecifiedRefTime;
   }
 
   // If no media time was specified, use the first pending packet's media time.
@@ -529,6 +523,7 @@ void BaseRenderer::Play(int64_t _reference_time, int64_t media_time, PlayCallbac
   // Update our transformation.
   //
   // TODO(mpuryear): if we need to trigger a remix for our outputs, do it here.
+  //
   reference_clock_to_fractional_frames_->Update(TimelineFunction(
       frac_frame_media_time.raw_value(), reference_time.get(), frac_frames_per_ref_tick_));
 
@@ -570,16 +565,16 @@ void BaseRenderer::Pause(PauseCallback callback) {
   }
 
   // Update our reference clock to fractional frame transformation, keeping it 1st order continuous.
-  int64_t ref_clock_now;
+  zx_time_t ref_now;
+  auto status = reference_clock_.read(&ref_now);
+  FX_DCHECK(status == ZX_OK) << "clock.read failed during Pause";
 
-  // TODO(mpuryear): query the actual reference clock, don't assume CLOCK_MONO
-  ref_clock_now = zx::clock::get_monotonic().get();
-  pause_time_frac_frames_ = FractionalFrames<int64_t>::FromRaw(
-      reference_clock_to_fractional_frames_->Apply(ref_clock_now));
+  pause_time_frac_frames_ =
+      FractionalFrames<int64_t>::FromRaw(reference_clock_to_fractional_frames_->Apply(ref_now));
   pause_time_frac_frames_valid_ = true;
 
   reference_clock_to_fractional_frames_->Update(
-      TimelineFunction(pause_time_frac_frames_.raw_value(), ref_clock_now, {0, 1}));
+      TimelineFunction(pause_time_frac_frames_.raw_value(), ref_now, {0, 1}));
 
   // If we do not know the pts_to_frac_frames relationship yet, compute one.
   if (!pts_to_frac_frames_valid_) {
@@ -588,14 +583,14 @@ void BaseRenderer::Pause(PauseCallback callback) {
   }
 
   // If the user requested a callback, figure out the media time that we paused at and report back.
-  AUD_VLOG_OBJ(TRACE, this) << ". Actual (ref: " << ref_clock_now << ", media: "
+  AUD_VLOG_OBJ(TRACE, this) << ". Actual (ref: " << ref_now << ", media: "
                             << pts_to_frac_frames_.ApplyInverse(pause_time_frac_frames_.raw_value())
                             << ")";
 
   if (callback != nullptr) {
     int64_t paused_media_time =
         pts_to_frac_frames_.ApplyInverse(pause_time_frac_frames_.raw_value());
-    callback(ref_clock_now, paused_media_time);
+    callback(ref_now, paused_media_time);
   }
 
   ReportStop();
@@ -637,6 +632,47 @@ void BaseRenderer::ReportNewMinLeadTime() {
     auto& lead_time_event = audio_renderer_binding_.events();
     lead_time_event.OnMinLeadTimeChanged(min_lead_time_.to_nsecs());
   }
+}
+
+// Eventually, we'll set the optimal clock according to the dest where it is initially routed.
+// For now, we just clone CLOCK_MONOTONIC.
+void BaseRenderer::CreateOptimalReferenceClock() {
+  TRACE_DURATION("audio", "BaseRenderer::CreateOptimalReferenceClock");
+
+  auto status =
+      zx::clock::create(ZX_CLOCK_OPT_MONOTONIC | ZX_CLOCK_OPT_CONTINUOUS | ZX_CLOCK_OPT_AUTO_START,
+                        nullptr, &optimal_clock_);
+  FX_DCHECK(status == ZX_OK) << "Could not create the optimal clock";
+}
+
+// For now, we supply the optimal clock as the default: we know it is a clone of MONOTONIC.
+// When we switch optimal clock to device clock, the default must still be a clone of MONOTONIC.
+// In long-term, use the optimal clock by default.
+void BaseRenderer::EstablishDefaultReferenceClock() {
+  TRACE_DURATION("audio", "BaseRenderer::EstablishDefaultReferenceClock");
+
+  auto status = DuplicateClock(optimal_clock_, &reference_clock_);
+  FX_DCHECK(status == ZX_OK) << "Could not duplicate the optimal clock";
+}
+
+// Regardless of the source of the reference clock, we can duplicate and return it here.
+void BaseRenderer::GetReferenceClock(GetReferenceClockCallback callback) {
+  TRACE_DURATION("audio", "BaseRenderer::GetReferenceClock");
+  AUD_VLOG_OBJ(TRACE, this);
+
+  // If something goes wrong, hang up the phone and shutdown.
+  auto cleanup = fit::defer([this]() { context_.route_graph().RemoveRenderer(*this); });
+
+  zx::clock dupe_clock_for_client;
+  auto status = DuplicateClock(reference_clock_, &dupe_clock_for_client);
+  if (status != ZX_OK) {
+    FX_PLOGS(ERROR, status) << "Could not duplicate the current reference clock handle";
+    return;
+  }
+
+  callback(std::move(dupe_clock_for_client));
+
+  cleanup.cancel();
 }
 
 }  // namespace media::audio
