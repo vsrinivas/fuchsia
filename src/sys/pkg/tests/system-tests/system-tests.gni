@@ -103,7 +103,6 @@ template("system_test_upgrade_suite") {
     }
 
     test_spec(_spec_target_name) {
-      testonly = true
       name = test
       target = _main_target_name
       path = _test_binary
@@ -196,7 +195,6 @@ template("system_test_reboot_suite") {
     }
 
     test_spec(_spec_target_name) {
-      testonly = true
       name = test
       target = _main_target_name
       path = _test_binary

@@ -90,7 +90,6 @@ template("rustc_test") {
     test_output_file = "${root_out_dir}/${crate_name}"
     test_spec_target_name = "${target_name}_spec"
     test_spec(test_spec_target_name) {
-      forward_variables_from(invoker, [ "testonly" ])
       name = invoker.target_name
       target = invoker.target_name
       path = test_output_file

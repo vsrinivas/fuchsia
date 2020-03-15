@@ -59,10 +59,6 @@ template("test_spec") {
          "path or command must be defined.")
   forward_variables_from(invoker, [ "environments" ])
 
-  # TODO(fxbug.dev/3288): Delete this as soon as flutter_test() (in topaz) is
-  # no longer setting testonly.
-  not_needed(invoker, [ "testonly" ])
-
   # Set default environments: QEMU for a fuchsia test, and VMs for linux and mac
   # tests.
   if (is_fuchsia) {
