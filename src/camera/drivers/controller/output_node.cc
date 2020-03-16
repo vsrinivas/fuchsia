@@ -28,14 +28,13 @@ fit::result<OutputNode*, zx_status_t> OutputNode::CreateOutputNode(
 
   auto output_node = std::make_unique<camera::OutputNode>(
       dispatcher, parent_node, internal_output_node, std::move(unused_buffer_collection),
-      info->stream_config->properties.stream_type());
+      info->stream_config->properties.stream_type(), info->image_format_index);
   if (!output_node) {
     FX_LOGST(ERROR, kTag) << "Failed to create output ProcessNode";
     return fit::error(ZX_ERR_NO_MEMORY);
   }
 
-  auto client_stream =
-      std::make_unique<camera::StreamImpl>(dispatcher, output_node.get(), info->image_format_index);
+  auto client_stream = std::make_unique<camera::StreamImpl>(dispatcher, output_node.get());
   if (!client_stream) {
     FX_LOGST(ERROR, kTag) << "Failed to create StreamImpl";
     return fit::error(ZX_ERR_INTERNAL);

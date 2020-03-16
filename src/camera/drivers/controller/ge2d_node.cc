@@ -60,7 +60,7 @@ fit::result<ProcessNode*, zx_status_t> Ge2dNode::CreateGe2dNode(
 
   auto ge2d_node = std::make_unique<camera::Ge2dNode>(
       dispatcher, ge2d, parent_node, internal_ge2d_node, std::move(output_buffers_hlcpp),
-      info->stream_config->properties.stream_type());
+      info->stream_config->properties.stream_type(), info->image_format_index);
   if (!ge2d_node) {
     FX_LOGST(ERROR, kTag) << "Failed to create GE2D node";
     return fit::error(ZX_ERR_NO_MEMORY);
@@ -218,6 +218,7 @@ void Ge2dNode::OnResolutionChangeRequest(uint32_t output_format_index) {
     } else {
       ge2d_.SetOutputResolution(task_index_, output_format_index);
     }
+    set_current_image_format_index(output_format_index);
   }
 }
 

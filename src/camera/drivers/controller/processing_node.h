@@ -33,7 +33,7 @@ class ProcessNode {
               const std::vector<fuchsia::sysmem::ImageFormat_2>& output_image_formats,
               fuchsia::sysmem::BufferCollectionInfo_2 output_buffer_collection,
               const std::vector<StreamInfo>& supported_streams, async_dispatcher_t* dispatcher,
-              fuchsia::camera2::FrameRate frame_rate)
+              fuchsia::camera2::FrameRate frame_rate, uint32_t current_image_format_index)
       : dispatcher_(dispatcher),
         output_frame_rate_(frame_rate),
         type_(type),
@@ -42,7 +42,8 @@ class ProcessNode {
         output_image_formats_(output_image_formats),
         enabled_(false),
         supported_streams_(supported_streams),
-        in_use_buffer_count_(output_buffer_collection.buffer_count, 0) {
+        in_use_buffer_count_(output_buffer_collection.buffer_count, 0),
+        current_image_format_index_(current_image_format_index) {
     configured_streams_.push_back(current_stream_type);
   }
 
@@ -93,6 +94,8 @@ class ProcessNode {
   fuchsia::sysmem::BufferCollectionInfo_2& output_buffer_collection() {
     return output_buffer_collection_;
   }
+
+  uint32_t current_image_format_index() const { return current_image_format_index_; }
 
   ProcessNode* parent_node() { return parent_node_; }
 
@@ -152,6 +155,8 @@ class ProcessNode {
     child_nodes_.push_back(std::move(child_node));
   }
 
+  void set_current_image_format_index(uint32_t index) { current_image_format_index_ = index; }
+
   // Curent state of the node.
   bool enabled() const { return enabled_; }
 
@@ -203,6 +208,7 @@ class ProcessNode {
   bool child_node_callback_received_ = false;
   fit::function<void(void)> shutdown_callback_;
   bool shutdown_requested_ = false;
+  uint32_t current_image_format_index_;
 };
 
 }  // namespace camera

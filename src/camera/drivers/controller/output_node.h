@@ -21,11 +21,12 @@ class OutputNode : public ProcessNode {
   OutputNode(async_dispatcher_t* dispatcher, ProcessNode* parent_node,
              const camera::InternalConfigNode& internal_output_node,
              fuchsia::sysmem::BufferCollectionInfo_2 output_buffer_collection,
-             fuchsia::camera2::CameraStreamType current_stream_type)
+             fuchsia::camera2::CameraStreamType current_stream_type,
+             uint32_t current_image_format_index)
       : ProcessNode(NodeType::kOutputStream, parent_node, current_stream_type,
                     internal_output_node.image_formats, std::move(output_buffer_collection),
                     internal_output_node.supported_streams, dispatcher,
-                    internal_output_node.output_frame_rate) {}
+                    internal_output_node.output_frame_rate, current_image_format_index) {}
 
   // Creates an |OutputNode| object.
   // Args:

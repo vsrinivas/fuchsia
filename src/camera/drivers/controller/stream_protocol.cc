@@ -19,12 +19,8 @@ namespace camera {
 
 constexpr auto kTag = "camera_controller";
 
-StreamImpl::StreamImpl(async_dispatcher_t* dispatcher, ProcessNode* output_node,
-                       uint32_t output_image_format_index)
-    : dispatcher_(dispatcher),
-      binding_(this),
-      output_node_(*output_node),
-      output_image_format_index_(output_image_format_index) {}
+StreamImpl::StreamImpl(async_dispatcher_t* dispatcher, ProcessNode* output_node)
+    : dispatcher_(dispatcher), binding_(this), output_node_(*output_node) {}
 
 zx_status_t StreamImpl::Attach(zx::channel channel, fit::function<void(void)> disconnect_handler) {
   FX_DCHECK(!binding_.is_bound());
@@ -101,7 +97,12 @@ void StreamImpl::SetRegionOfInterest(float /*x_min*/, float /*y_min*/, float /*x
 
 void StreamImpl::SetImageFormat(uint32_t image_format_index, SetImageFormatCallback callback) {
   zx_status_t status = ZX_OK;
-  auto cleanup = fbl::MakeAutoCall([&]() { callback(status); });
+  auto cleanup = fbl::MakeAutoCall([&]() {
+    if (status == ZX_OK) {
+      output_node_.set_current_image_format_index(image_format_index);
+    }
+    callback(status);
+  });
 
   auto& available_image_formats = output_node_.output_image_formats();
   if (image_format_index >= available_image_formats.size()) {
@@ -112,7 +113,7 @@ void StreamImpl::SetImageFormat(uint32_t image_format_index, SetImageFormatCallb
   auto stream_type = output_node_.configured_streams().at(0);
 
   auto* parent_node = output_node_.parent_node();
-  if (output_image_format_index_ != image_format_index) {
+  if (output_node_.current_image_format_index() != image_format_index) {
     while (parent_node) {
       if (parent_node->is_dynamic_resolution_supported(stream_type)) {
         parent_node->OnResolutionChangeRequest(image_format_index);

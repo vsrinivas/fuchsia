@@ -847,6 +847,11 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     fuchsia::camera2::StreamPtr ds_stream;
     ASSERT_EQ(ZX_OK, SetupStream(kMonitorConfig, ds_stream_type, ds_stream));
 
+    auto ds_head_node = pipeline_manager_->downscaled_resolution_stream();
+    auto gdc_node = static_cast<GdcNode*>(ds_head_node->child_nodes().at(0).get());
+    auto ge2d_node = static_cast<GdcNode*>(gdc_node->child_nodes().at(0).get());
+    auto output_node = static_cast<GdcNode*>(ge2d_node->child_nodes().at(0).get());
+
     bool ds_stream_alive = true;
     ds_stream.set_error_handler([&](zx_status_t /*status*/) { ds_stream_alive = false; });
 
@@ -856,14 +861,18 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     ds_stream.events().OnFrameAvailable = [&](fuchsia::camera2::FrameAvailableInfo info) {
       ds_frame_count++;
       if (ds_frame_count > 1) {
+        EXPECT_EQ(gdc_node->current_image_format_index(), new_resolution);
+        EXPECT_EQ(ge2d_node->current_image_format_index(), new_resolution);
+        EXPECT_EQ(output_node->current_image_format_index(), new_resolution);
         EXPECT_EQ(new_resolution, info.metadata.image_format_index());
       } else {
+        EXPECT_EQ(gdc_node->current_image_format_index(), old_resolution);
+        EXPECT_EQ(ge2d_node->current_image_format_index(), old_resolution);
+        EXPECT_EQ(output_node->current_image_format_index(), old_resolution);
         EXPECT_EQ(old_resolution, info.metadata.image_format_index());
       }
     };
 
-    auto ds_head_node = pipeline_manager_->downscaled_resolution_stream();
-    auto gdc_node = static_cast<GdcNode*>(ds_head_node->child_nodes().at(0).get());
     EXPECT_EQ(gdc_node->type(), NodeType::kGdc);
 
     // Start streaming.

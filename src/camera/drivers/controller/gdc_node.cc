@@ -114,9 +114,9 @@ fit::result<ProcessNode*, zx_status_t> GdcNode::CreateGdcNode(
   });
 
   // Create GDC Node
-  auto gdc_node = std::make_unique<camera::GdcNode>(dispatcher, gdc, parent_node, internal_gdc_node,
-                                                    std::move(output_buffers_hlcpp),
-                                                    info->stream_config->properties.stream_type());
+  auto gdc_node = std::make_unique<camera::GdcNode>(
+      dispatcher, gdc, parent_node, internal_gdc_node, std::move(output_buffers_hlcpp),
+      info->stream_config->properties.stream_type(), info->image_format_index);
   if (!gdc_node) {
     FX_LOGST(ERROR, kTag) << "Failed to create GDC node";
     return fit::error(ZX_ERR_NO_MEMORY);
@@ -218,6 +218,7 @@ void GdcNode::OnResolutionChangeRequest(uint32_t output_format_index) {
   if (enabled_) {
     TRACE_DURATION("camera", "GdcNode::OnResolutionChangeRequest", "index", output_format_index);
     gdc_.SetOutputResolution(task_index_, output_format_index);
+    set_current_image_format_index(output_format_index);
   }
 }
 }  // namespace camera

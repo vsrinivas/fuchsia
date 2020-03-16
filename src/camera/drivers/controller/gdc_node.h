@@ -34,11 +34,12 @@ class GdcNode : public ProcessNode {
   GdcNode(async_dispatcher_t* dispatcher, const ddk::GdcProtocolClient& gdc,
           ProcessNode* parent_node, const camera::InternalConfigNode& internal_gdc_node,
           fuchsia::sysmem::BufferCollectionInfo_2 output_buffer_collection,
-          fuchsia::camera2::CameraStreamType current_stream_type)
+          fuchsia::camera2::CameraStreamType current_stream_type,
+          uint32_t current_image_format_index)
       : ProcessNode(NodeType::kGdc, parent_node, current_stream_type,
                     internal_gdc_node.image_formats, std::move(output_buffer_collection),
                     internal_gdc_node.supported_streams, dispatcher,
-                    internal_gdc_node.output_frame_rate),
+                    internal_gdc_node.output_frame_rate, current_image_format_index),
         gdc_(gdc),
         frame_callback_{OnGdcFrameAvailable, this},
         res_callback_{OnGdcResChange, this},

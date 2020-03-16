@@ -36,11 +36,12 @@ class Ge2dNode : public ProcessNode {
   Ge2dNode(async_dispatcher_t* dispatcher, const ddk::Ge2dProtocolClient& ge2d,
            ProcessNode* parent_node, const camera::InternalConfigNode& internal_ge2d_node,
            fuchsia::sysmem::BufferCollectionInfo_2 output_buffer_collection,
-           fuchsia::camera2::CameraStreamType current_stream_type)
+           fuchsia::camera2::CameraStreamType current_stream_type,
+           uint32_t current_image_format_index)
       : ProcessNode(NodeType::kGe2d, parent_node, current_stream_type,
                     std::move(internal_ge2d_node.image_formats),
                     std::move(output_buffer_collection), internal_ge2d_node.supported_streams,
-                    dispatcher, internal_ge2d_node.output_frame_rate),
+                    dispatcher, internal_ge2d_node.output_frame_rate, current_image_format_index),
         ge2d_(ge2d),
         task_type_(internal_ge2d_node.ge2d_info.config_type),
         info_(internal_ge2d_node.ge2d_info.resize),
