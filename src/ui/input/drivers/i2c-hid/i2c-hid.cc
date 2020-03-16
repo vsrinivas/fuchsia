@@ -13,6 +13,8 @@
 #include <zircon/hw/i2c.h>
 #include <zircon/types.h>
 
+#include <vector>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
@@ -23,6 +25,39 @@
 
 namespace i2c_hid {
 
+namespace {
+
+// Sets the bytes for an I2c command. This requires there to be at least 5 bytes in |command_bytes|.
+// Also |command_register| must be in the host format. Returns the number of bytes set.
+constexpr uint8_t SetI2cCommandBytes(uint16_t command_register, uint8_t command,
+                                     uint8_t command_data, uint8_t* command_bytes) {
+  // Setup command_bytes as little endian.
+  command_bytes[0] = static_cast<uint8_t>(command_register & 0xff);
+  command_bytes[1] = static_cast<uint8_t>(command_register >> 8);
+  command_bytes[2] = command_data;
+  command_bytes[3] = command;
+  return 4;
+}
+
+// Set the command bytes for a HID GET/SET command. Returns the number of bytes set.
+static uint8_t SetI2cGetSetCommandBytes(uint16_t command_register, uint8_t command,
+                                        uint8_t rpt_type, uint8_t rpt_id, uint8_t* command_bytes) {
+  uint8_t command_bytes_index = 0;
+  uint8_t command_data = static_cast<uint8_t>(rpt_type << 4U);
+  if (rpt_id < 0xF) {
+    command_data |= rpt_id;
+  } else {
+    command_data |= 0x0F;
+  }
+  command_bytes_index += SetI2cCommandBytes(command_register, command, command_data, command_bytes);
+  if (rpt_id >= 0xF) {
+    command_bytes[command_bytes_index++] = rpt_id;
+  }
+  return command_bytes_index;
+}
+
+}  // namespace
+
 // Poll interval: 10 ms
 #define I2C_POLL_INTERVAL_USEC 10000
 
@@ -30,9 +65,10 @@ namespace i2c_hid {
 // i2c_wait_for_ready_locked() afterwards to guarantee completion.
 // If |force| is false, do not issue a reset if there is one outstanding.
 zx_status_t I2cHidbus::Reset(bool force) {
+  uint8_t buf[4];
+
   uint16_t cmd_reg = letoh16(hiddesc_.wCommandRegister);
-  uint8_t buf[4] = {static_cast<uint8_t>(cmd_reg & 0xff), static_cast<uint8_t>(cmd_reg >> 8), 0x00,
-                    0x01};
+  SetI2cCommandBytes(cmd_reg, kResetCommand, 0, buf);
   fbl::AutoLock lock(&i2c_lock_);
 
   if (!force && i2c_pending_reset_) {
@@ -55,6 +91,78 @@ void I2cHidbus::WaitForReadyLocked() {
   while (i2c_pending_reset_) {
     i2c_reset_cnd_.Wait(&i2c_lock_);
   }
+}
+
+zx_status_t I2cHidbus::HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data, size_t len,
+                                       size_t* out_len) {
+  uint16_t cmd_reg = letoh16(hiddesc_.wCommandRegister);
+  uint16_t data_reg = letoh16(hiddesc_.wDataRegister);
+  uint8_t command_bytes[7];
+  uint8_t command_bytes_index = 0;
+
+  // Set the command bytes.
+  command_bytes_index +=
+      SetI2cGetSetCommandBytes(cmd_reg, kGetReportCommand, rpt_type, rpt_id, command_bytes);
+  command_bytes[command_bytes_index++] = static_cast<uint8_t>(data_reg & 0xff);
+  command_bytes[command_bytes_index++] = static_cast<uint8_t>(data_reg >> 8);
+
+  fbl::AutoLock lock(&i2c_lock_);
+
+  // Send the command and read back the length of the response.
+  std::vector<uint8_t> report(len + 2);
+  zx_status_t status =
+      i2c_.WriteReadSync(command_bytes, command_bytes_index, report.data(), report.size());
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "i2c-hid: could not issue get_report: %d\n", status);
+    return status;
+  }
+
+  uint16_t response_len = static_cast<uint16_t>(report[0] + (report[1] << 8U));
+  if (response_len != len + 2) {
+    zxlogf(ERROR, "i2c-hid: response_len %d != len: %ld\n", response_len, len + 2);
+  }
+
+  uint16_t report_len = response_len - 2;
+  if (report_len > len) {
+    return ZX_ERR_BUFFER_TOO_SMALL;
+  }
+  *out_len = report_len;
+  memcpy(data, report.data() + 2, report_len);
+  return ZX_OK;
+}
+
+zx_status_t I2cHidbus::HidbusSetReport(uint8_t rpt_type, uint8_t rpt_id, const void* data,
+                                       size_t len) {
+  uint16_t cmd_reg = letoh16(hiddesc_.wCommandRegister);
+  uint16_t data_reg = letoh16(hiddesc_.wDataRegister);
+
+  // The command bytes are the 6 or 7 bytes for the command, 2 bytes for the report's size,
+  // and then the full report.
+  std::vector<uint8_t> command_bytes(7 + 2 + len);
+  uint8_t command_bytes_index = 0;
+
+  // Set the command bytes.
+  command_bytes_index +=
+      SetI2cGetSetCommandBytes(cmd_reg, kSetReportCommand, rpt_type, rpt_id, command_bytes.data());
+
+  command_bytes[command_bytes_index++] = static_cast<uint8_t>(data_reg & 0xff);
+  command_bytes[command_bytes_index++] = static_cast<uint8_t>(data_reg >> 8);
+  // Set the bytes for the report's size.
+  command_bytes[command_bytes_index++] = static_cast<uint8_t>((len + 2) & 0xff);
+  command_bytes[command_bytes_index++] = static_cast<uint8_t>((len + 2) >> 8);
+  // Set the bytes for the report.
+  memcpy(command_bytes.data() + command_bytes_index, data, len);
+  command_bytes_index += len;
+
+  fbl::AutoLock lock(&i2c_lock_);
+
+  // Send the command.
+  zx_status_t status = i2c_.WriteSync(command_bytes.data(), command_bytes_index);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "i2c-hid: could not issue set_report: %d\n", status);
+    return status;
+  }
+  return ZX_OK;
 }
 
 zx_status_t I2cHidbus::HidbusQuery(uint32_t options, hid_info_t* info) {

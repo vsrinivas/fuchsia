@@ -19,6 +19,14 @@
 
 namespace i2c_hid {
 
+// The I2c Hid Command codes.
+constexpr uint8_t kResetCommand = 0x01;
+constexpr uint8_t kGetReportCommand = 0x02;
+constexpr uint8_t kSetReportCommand = 0x03;
+
+// The i2c descriptor that describes the i2c's registers Ids.
+// This is populated directly from an I2cRead call, so all
+// of the values are in little endian.
 struct I2cHidDesc {
   uint16_t wHIDDescLength;
   uint16_t bcdVersion;
@@ -50,14 +58,11 @@ class I2cHidbus : public DeviceType, public ddk::HidbusProtocol<I2cHidbus, ddk::
   void HidbusStop();
   zx_status_t HidbusGetDescriptor(hid_description_type_t desc_type, void* out_data_buffer,
                                   size_t data_size, size_t* out_data_actual);
-  // TODO(ZX-4730): implement the rest of the HID protocol
   zx_status_t HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data, size_t len,
-                              size_t* out_len) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-  zx_status_t HidbusSetReport(uint8_t rpt_type, uint8_t rpt_id, const void* data, size_t len) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
+                              size_t* out_len);
+  zx_status_t HidbusSetReport(uint8_t rpt_type, uint8_t rpt_id, const void* data, size_t len);
+
+  // TODO(ZX-4730): implement the rest of the HID protocol
   zx_status_t HidbusGetIdle(uint8_t rpt_id, uint8_t* duration) { return ZX_ERR_NOT_SUPPORTED; }
   zx_status_t HidbusSetIdle(uint8_t rpt_id, uint8_t duration) { return ZX_ERR_NOT_SUPPORTED; }
   zx_status_t HidbusGetProtocol(uint8_t* protocol) { return ZX_ERR_NOT_SUPPORTED; }

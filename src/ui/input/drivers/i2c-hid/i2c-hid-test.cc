@@ -76,6 +76,51 @@ class FakeI2cHid : public fake_i2c::FakeI2c {
   }
 
  private:
+  zx_status_t TransactCommands(const uint8_t* write_buffer, size_t write_buffer_size,
+                               uint8_t* read_buffer, size_t* read_buffer_size) {
+    if (write_buffer_size < 4) {
+      return ZX_ERR_INTERNAL;
+    }
+
+    // Reset Command.
+    if (write_buffer[3] == kResetCommand) {
+      *read_buffer_size = 0;
+      pending_reset_ = true;
+      irq_.trigger(0, zx::clock::get_monotonic());
+      return ZX_OK;
+    }
+
+    // Set Command. At the moment this fake doesn't test for the types of reports, we only ever
+    // get/set |report_|.
+    if (write_buffer[3] == kSetReportCommand) {
+      if (write_buffer_size < 6) {
+        return ZX_ERR_INTERNAL;
+      }
+      // Get the report size.
+      uint16_t report_size = static_cast<uint16_t>(write_buffer[6] + (write_buffer[7] << 8));
+      if (write_buffer_size < (6 + report_size)) {
+        return ZX_ERR_INTERNAL;
+      }
+      // The report size includes the 2 bytes for the size, which we don't want when setting
+      // the report.
+      report_.resize(report_size - 2);
+      memcpy(report_.data(), write_buffer + 8, report_.size());
+      return ZX_OK;
+    }
+
+    // Get Command.
+    if (write_buffer[3] == kGetReportCommand) {
+      // Set the report size as the first two bytes.
+      read_buffer[0] = static_cast<uint8_t>((report_.size() + 2) & 0xFF);
+      read_buffer[1] = static_cast<uint8_t>(((report_.size() + 2) >> 8) & 0xFF);
+
+      memcpy(read_buffer + 2, report_.data(), report_.size());
+      *read_buffer_size = report_.size() + 2;
+      return ZX_OK;
+    }
+    return ZX_ERR_INTERNAL;
+  }
+
   zx_status_t Transact(const uint8_t* write_buffer, size_t write_buffer_size, uint8_t* read_buffer,
                        size_t* read_buffer_size) override {
     // General Read.
@@ -95,13 +140,6 @@ class FakeI2cHid : public fake_i2c::FakeI2c {
       sync_completion_signal(&report_read_);
       return ZX_OK;
     }
-    // Reset command.
-    if (CompareWrite(write_buffer, write_buffer_size, kResetCommand, sizeof(kResetCommand))) {
-      *read_buffer_size = 0;
-      pending_reset_ = true;
-      irq_.trigger(0, zx::clock::get_monotonic());
-      return ZX_OK;
-    }
     // Reading the Hid descriptor.
     if (CompareWrite(write_buffer, write_buffer_size, kHidDescCommand, sizeof(kHidDescCommand))) {
       if (hiddesc_status_ != ZX_OK) {
@@ -117,6 +155,13 @@ class FakeI2cHid : public fake_i2c::FakeI2c {
       SetRead(report_desc_.data(), report_desc_.size(), read_buffer, read_buffer_size);
       return ZX_OK;
     }
+
+    // General commands.
+    bool is_general_command = (write_buffer_size >= 2) && (write_buffer[0] == kHidCommand[0]) &&
+                              (write_buffer[1] == kHidCommand[1]);
+    if (is_general_command) {
+      return TransactCommands(write_buffer, write_buffer_size, read_buffer, read_buffer_size);
+    }
     return ZX_ERR_INTERNAL;
   }
 
@@ -129,11 +174,10 @@ class FakeI2cHid : public fake_i2c::FakeI2c {
 
   static constexpr uint16_t kMaxInputLength = 0x1000;
 
-  static constexpr uint8_t kResetCommand[4] = {static_cast<uint8_t>(kCommandRegister & 0xff),
-                                               static_cast<uint8_t>(kCommandRegister >> 8), 0x00,
-                                               0x01};
   static constexpr uint8_t kResetReport[2] = {0, 0};
   static constexpr uint8_t kHidDescCommand[2] = {0x01, 0x00};
+  static constexpr uint8_t kHidCommand[2] = {static_cast<uint8_t>(kCommandRegister & 0xff),
+                                             static_cast<uint8_t>(kCommandRegister >> 8)};
 
   I2cHidDesc hiddesc_ = []() {
     I2cHidDesc hiddesc = {};
@@ -389,6 +433,26 @@ TEST_F(I2cHidTest, HidTestDedupeReportsNoIrq) {
   ASSERT_EQ(returned_rpt3.size(), rpt3.size());
   for (size_t i = 0; i < returned_rpt3.size(); i++) {
     EXPECT_EQ(returned_rpt3[i], rpt3[i]);
+  }
+}
+
+TEST_F(I2cHidTest, HidTestSetReport) {
+  ASSERT_OK(device_->Bind(channel_));
+  ASSERT_OK(fake_i2c_hid_.WaitUntilReset());
+
+  // Any arbitrary values or vector length could be used here.
+  uint8_t report_data[4] = {1, 100, 255, 5};
+
+  ASSERT_OK(
+      device_->HidbusSetReport(HID_REPORT_TYPE_FEATURE, 0x1, report_data, sizeof(report_data)));
+
+  uint8_t received_data[4] = {};
+  size_t out_len;
+  ASSERT_OK(device_->HidbusGetReport(HID_REPORT_TYPE_FEATURE, 0x1, received_data,
+                                     sizeof(received_data), &out_len));
+  ASSERT_EQ(out_len, 4);
+  for (size_t i = 0; i < out_len; i++) {
+    EXPECT_EQ(received_data[i], report_data[i]);
   }
 }
 
