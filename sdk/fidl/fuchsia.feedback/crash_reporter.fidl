@@ -91,7 +91,7 @@ table NativeCrashReport {
 };
 
 const uint32 MAX_EXCEPTION_TYPE_LENGTH = 128;
-const uint32 MAX_EXCEPTION_MESSAGE_LENGTH = 1024;
+const uint32 MAX_EXCEPTION_MESSAGE_LENGTH = 2048;
 
 /// Represents a crash report for a runtime exception, applicable to most languages.
 table RuntimeCrashReport {
