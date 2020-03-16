@@ -639,6 +639,10 @@ class Compressor final {
       ZstdCall("nbWorkers", ZSTD_CCtx_setParameter, ctx_, ZSTD_c_nbWorkers,
                std::thread::hardware_concurrency());
       ZstdCall("compressionLevel", ZSTD_CCtx_setParameter, ctx_, ZSTD_c_compressionLevel, level);
+      if (level >= DefaultLevel()) {
+        ZstdCall("enableLongDistanceMatching", ZSTD_CCtx_setParameter, ctx_,
+                 ZSTD_c_enableLongDistanceMatching, 1);
+      }
       ZstdCall("PledgedSrcSize", ZSTD_CCtx_setPledgedSrcSize, ctx_, uncompressed_size);
     }
 
