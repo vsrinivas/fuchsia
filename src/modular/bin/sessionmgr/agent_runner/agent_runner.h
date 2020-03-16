@@ -5,7 +5,6 @@
 #ifndef SRC_MODULAR_BIN_SESSIONMGR_AGENT_RUNNER_AGENT_RUNNER_H_
 #define SRC_MODULAR_BIN_SESSIONMGR_AGENT_RUNNER_AGENT_RUNNER_H_
 
-#include <fuchsia/auth/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>

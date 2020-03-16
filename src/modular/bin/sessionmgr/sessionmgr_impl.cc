@@ -159,7 +159,6 @@ SessionmgrImpl::~SessionmgrImpl() = default;
 void SessionmgrImpl::Initialize(
     std::string session_id, fuchsia::modular::AppConfig session_shell_config,
     fuchsia::modular::AppConfig story_shell_config, bool use_session_shell_for_story_shell_factory,
-    fidl::InterfaceHandle<fuchsia::auth::TokenManager> agent_token_manager,
     fidl::InterfaceHandle<fuchsia::modular::internal::SessionContext> session_context,
     fuchsia::ui::views::ViewToken view_token) {
   FX_LOGS(INFO) << "SessionmgrImpl::Initialize() called.";

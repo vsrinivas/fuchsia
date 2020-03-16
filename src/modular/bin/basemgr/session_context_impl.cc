@@ -51,8 +51,7 @@ SessionContextImpl::SessionContextImpl(
   sessionmgr_app_->services().ConnectToService(sessionmgr_.NewRequest());
   sessionmgr_->Initialize(session_id, std::move(session_shell_config),
                           std::move(story_shell_config), use_session_shell_for_story_shell_factory,
-                          std::move(agent_token_manager), session_context_binding_.NewBinding(),
-                          std::move(view_token));
+                          session_context_binding_.NewBinding(), std::move(view_token));
 
   sessionmgr_app_->SetAppErrorHandler([weak_this = weak_factory_.GetWeakPtr()] {
     FX_LOGS(ERROR) << "Sessionmgr seems to have crashed unexpectedly. "

@@ -14,7 +14,6 @@ fidl("fuchsia.modular.internal") {
     "story_data.fidl",
   ]
   public_deps = [
-    "//sdk/fidl/fuchsia.auth",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.views",
