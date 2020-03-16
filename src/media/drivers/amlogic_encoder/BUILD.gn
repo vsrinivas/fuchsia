@@ -90,6 +90,9 @@ if (target_cpu == "arm64") {
       "//zircon/public/lib/mock-mmio-reg",
       "//zircon/public/lib/zxtest",
     ]
+
+    # TODO(48464): Fix the leaks and remove this.
+    deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
   }
 
   test_package("amlogic_encoder_tests") {
