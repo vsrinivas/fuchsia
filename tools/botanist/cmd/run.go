@@ -178,13 +178,16 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 
 	errs := make(chan error)
 
+	// Modify the zirconArgs passed to the kernel on boot to enable serial on x64.
+	// arm64 devices should already be enabling kernel.serial at compile time.
+	// We need to pass this in to all devices (even those without a serial line)
+	// to prevent race conditions that only occur when the option isn't present.
+	// TODO (fxb/10480): Move this back to being invoked in the if clause.
+	r.zirconArgs = append(r.zirconArgs, "kernel.serial=legacy")
+
 	var socketPath string
 	if t0.Serial() != nil {
 		defer t0.Serial().Close()
-
-		// Modify the zirconArgs passed to the kernel on boot to enable serial on x64.
-		// arm64 devices should already be enabling kernel.serial at compile time.
-		r.zirconArgs = append(r.zirconArgs, "kernel.serial=legacy")
 
 		sOpts := serial.ServerOptions{
 			WriteBufferSize: botanist.SerialLogBufferSize,
