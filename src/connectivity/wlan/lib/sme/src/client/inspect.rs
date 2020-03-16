@@ -177,6 +177,7 @@ pub struct BssInfoNode {
     bssid: StringProperty,
     ssid: StringProperty,
     rx_dbm: IntProperty,
+    snr_db: IntProperty,
     channel: UintProperty,
     protection: StringProperty,
 }
@@ -186,15 +187,17 @@ impl BssInfoNode {
         let bssid = node.create_string("bssid", bss_info.bssid.to_mac_str());
         let ssid = node.create_string("ssid", ssid_inspect_str(&bss_info.ssid));
         let rx_dbm = node.create_int("rx_dbm", bss_info.rx_dbm as i64);
+        let snr_db = node.create_int("snr_db", bss_info.snr_db as i64);
         let channel = node.create_uint("channel", bss_info.channel as u64);
         let protection = node.create_string("protection", format!("{}", bss_info.protection));
-        Self { _node: node, bssid, ssid, rx_dbm, channel, protection }
+        Self { _node: node, bssid, ssid, rx_dbm, snr_db, channel, protection }
     }
 
     fn update(&mut self, bss_info: &BssInfo) {
         self.bssid.set(&bss_info.bssid.to_mac_str());
         self.ssid.set(&ssid_inspect_str(&bss_info.ssid));
         self.rx_dbm.set(bss_info.rx_dbm as i64);
+        self.snr_db.set(bss_info.snr_db as i64);
         self.channel.set(bss_info.channel as u64);
         self.protection.set(&format!("{}", bss_info.protection));
     }

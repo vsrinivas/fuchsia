@@ -130,6 +130,7 @@ pub fn construct_bss_description(
         rssi_dbm: rx_info.as_ref().map(|info| info.rssi_dbm).unwrap_or(0),
         rcpi_dbmh: rx_info.as_ref().map(|info| info.rcpi_dbmh).unwrap_or(0),
         rsni_dbh: rx_info.as_ref().map(|info| info.snr_dbh).unwrap_or(0),
+        snr_db: 0,
     })
 }
 
@@ -307,6 +308,7 @@ mod tests {
                     cbw: fidl_common::Cbw::Cbw40,
                     secondary80: 0,
                 },
+                snr_db: 0,
             }
         );
     }

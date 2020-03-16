@@ -902,10 +902,10 @@ void Device::SignalReport(const wlanif_signal_report_indication_t* ind) {
     return;
   }
 
-  wlan_mlme::SignalReportIndication fidl_ind;
-
-  // rssi_dbm
-  fidl_ind.rssi_dbm = ind->rssi_dbm;
+  wlan_mlme::SignalReportIndication fidl_ind{
+      .rssi_dbm = ind->rssi_dbm,
+      .snr_db = ind->snr_db,
+  };
 
   binding_.events().SignalReport(std::move(fidl_ind));
 }

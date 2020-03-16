@@ -907,6 +907,7 @@ mod tests {
                         cbw: fidl_common::Cbw::Cbw20,
                         secondary80: 0,
                     },
+                    snr_db: 0,
                 }
             }
         );

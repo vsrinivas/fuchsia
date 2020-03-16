@@ -1469,6 +1469,7 @@ mod tests {
             bssid: [0, 1, 2, 3, 4, 5],
             ssid: ssid.to_vec(),
             rx_dbm: -30,
+            snr_db: 0,
             channel: 1,
             protection: fidl_sme::Protection::Wpa2Personal,
             compatible: true,

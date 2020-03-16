@@ -114,7 +114,12 @@ struct BSSDescription {
     /// This slice should be a valid chain of IEs including IE headers for each element.
     bytes? vendor_ies;
 
+    /// As per IEEE 802.11-2016, RCPI indicates total channel power (rssi, snr and noise) of
+    /// the received frame measured on the channel at the antenna connector. This value is
+    /// specifically meant for beacon reception.
     int16 rcpi_dbmh; // 0.5 step dBm. Do not use encoding from IEEE Std 802.11-2016 9.4.2.38.
+    /// As per IEEE 802.11-2016, RSNI indicates SNR + interference ratio of received frame.
+    /// This value is specifically meant for beacon reception.
     int16 rsni_dbh; // 0.5 step dB.  Do not use encoding from IEEE Std 802.11-2016 9.4.2.41.
 
     HtCapabilities? ht_cap;
@@ -125,7 +130,12 @@ struct BSSDescription {
 
     // List up non-standard, Fuchsia only parameters
     fuchsia.wlan.common.WlanChan chan;
+    // The running average of received signal strength indicator in units of dBm. This value is
+    // updated periodically when the client is associated to an AP.
     int8 rssi_dbm; // dBm
+    // The running average of snr in units of dB. This value is updated periodically when the
+    // client is associated to an AP.
+    int8 snr_db;
 };
 
 enum ScanResultCodes {

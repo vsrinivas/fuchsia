@@ -54,6 +54,7 @@ fn fake_bss_description(ssid: Ssid, rsne: Option<Vec<u8>>) -> fidl_mlme::BssDesc
         vht_op: Some(Box::new(fidl_mlme::VhtOperation { bytes: fake_vht_op_bytes() })),
         chan: fidl_common::WlanChan { primary: 1, secondary80: 0, cbw: fidl_common::Cbw::Cbw40 },
         rssi_dbm: 0,
+        snr_db: 0,
     }
 }
 
@@ -114,6 +115,7 @@ pub fn fake_bss_info() -> BssInfo {
         bssid: [55, 11, 22, 3, 9, 70],
         ssid: b"foo".to_vec(),
         rx_dbm: 0,
+        snr_db: 0,
         channel: 1,
         protection: Protection::Wpa2Personal,
         compatible: true,

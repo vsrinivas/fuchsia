@@ -664,6 +664,7 @@ impl Associated {
         if let Err(e) = sta.ctx.device.access_sme_sender(|sender| {
             sender.send_signal_report(&mut fidl_mlme::SignalReportIndication {
                 rssi_dbm: self.0.signal_strength_average.avg_dbm().0,
+                snr_db: 0,
             })
         }) {
             error!("Error sending MLME-SignalReport: {}", e)

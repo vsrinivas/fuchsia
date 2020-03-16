@@ -62,6 +62,7 @@ pub fn clone_bss_desc(d: &fidl_mlme::BssDescription) -> fidl_mlme::BssDescriptio
             secondary80: d.chan.secondary80,
         },
         rssi_dbm: d.rssi_dbm,
+        snr_db: d.snr_db,
     }
 }
 

@@ -31,6 +31,7 @@ pub fn fake_bss_description(ssid: Ssid, rsne: Option<Vec<u8>>) -> fidl_mlme::Bss
         vht_op: None,
         chan: fidl_common::WlanChan { primary: 1, secondary80: 0, cbw: fidl_common::Cbw::Cbw20 },
         rssi_dbm: 0,
+        snr_db: 0,
     }
 }
 

@@ -324,6 +324,7 @@ fn convert_bss_info(bss: BssInfo) -> fidl_sme::BssInfo {
         bssid: bss.bssid,
         ssid: bss.ssid,
         rx_dbm: bss.rx_dbm,
+        snr_db: bss.snr_db,
         channel: bss.channel,
         protection: bss.protection.into(),
         compatible: bss.compatible,

@@ -27,6 +27,7 @@ impl ClientConfig {
             bssid: bss.bssid.clone(),
             ssid: bss.ssid.clone(),
             rx_dbm: get_rx_dbm(bss),
+            snr_db: bss.snr_db,
             channel: bss.chan.primary,
             protection: bss.get_protection(),
             compatible: self.is_bss_compatible(bss),
@@ -81,6 +82,7 @@ pub struct BssInfo {
     pub bssid: [u8; 6],
     pub ssid: Ssid,
     pub rx_dbm: i8,
+    pub snr_db: i8,
     pub channel: u8,
     pub protection: Protection,
     pub compatible: bool,
@@ -231,6 +233,7 @@ mod tests {
                 bssid: [0u8; 6],
                 ssid: vec![],
                 rx_dbm: -5,
+                snr_db: 0,
                 channel: 1,
                 protection: Protection::Wpa2Personal,
                 compatible: true,
@@ -243,6 +246,7 @@ mod tests {
                 bssid: [0u8; 6],
                 ssid: vec![],
                 rx_dbm: -5,
+                snr_db: 0,
                 channel: 1,
                 protection: Protection::Wep,
                 compatible: false,
@@ -256,6 +260,7 @@ mod tests {
                 bssid: [0u8; 6],
                 ssid: vec![],
                 rx_dbm: -5,
+                snr_db: 0,
                 channel: 1,
                 protection: Protection::Wep,
                 compatible: true,
@@ -329,6 +334,7 @@ mod tests {
                 cbw: fidl_common::Cbw::Cbw20,
             },
             rssi_dbm: _rssi_dbm,
+            snr_db: 0,
         };
         ret
     }

@@ -118,6 +118,7 @@ pub fn clone_sme_bss_info(bss: &fidl_sme::BssInfo) -> fidl_sme::BssInfo {
         bssid: bss.bssid.clone(),
         ssid: bss.ssid.clone(),
         rx_dbm: bss.rx_dbm,
+        snr_db: bss.snr_db,
         channel: bss.channel,
         protection: bss.protection,
         compatible: bss.compatible,

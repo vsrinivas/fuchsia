@@ -16,6 +16,7 @@ using fuchsia.wlan.minstrel;
 
 struct SignalReportIndication {
     int8 rssi_dbm;
+    int8 snr_db;
 };
 
 // EAPOL.indication

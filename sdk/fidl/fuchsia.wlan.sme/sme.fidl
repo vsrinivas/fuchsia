@@ -25,6 +25,7 @@ struct BssInfo {
     array<uint8>:6 bssid;
     vector<uint8>:32 ssid;
     int8 rx_dbm;
+    int8 snr_db;
     uint8 channel;
     Protection protection;
     bool compatible;

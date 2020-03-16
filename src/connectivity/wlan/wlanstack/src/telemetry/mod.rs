@@ -1174,6 +1174,7 @@ mod tests {
                 cbw: fidl_common::Cbw::Cbw20,
             },
             rssi_dbm: 0,
+            snr_db: 0,
         }
     }
 

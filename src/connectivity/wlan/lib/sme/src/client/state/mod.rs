@@ -96,6 +96,7 @@ pub struct Associated {
     cfg: ClientConfig,
     bss: Box<BssDescription>,
     last_rssi: i8,
+    last_snr: i8,
     link_state: LinkState,
     radio_cfg: RadioConfig,
     chan: Channel,
@@ -296,6 +297,7 @@ impl Associating {
         Ok(Associated {
             cfg: self.cfg,
             last_rssi: self.cmd.bss.rssi_dbm,
+            last_snr: self.cmd.bss.snr_db,
             bss: self.cmd.bss,
             link_state,
             radio_cfg: self.cmd.radio_cfg,
@@ -566,6 +568,7 @@ impl ClientState {
                 }
                 MlmeEvent::SignalReport { ind } => {
                     state.last_rssi = ind.rssi_dbm;
+                    state.last_snr = ind.snr_db;
                     state.into()
                 }
                 MlmeEvent::EapolInd { ind } => {
@@ -757,6 +760,7 @@ impl ClientState {
                     connected_to: {
                         let mut bss = associated.cfg.convert_bss_description(&associated.bss);
                         bss.rx_dbm = associated.last_rssi;
+                        bss.snr_db = associated.last_snr;
                         Some(bss)
                     },
                     connecting_to: None,
@@ -1802,15 +1806,17 @@ mod tests {
     }
 
     #[test]
-    fn status_returns_last_rssi() {
+    fn status_returns_last_rssi_snr() {
         let mut h = TestHelper::new();
 
         let state = link_up_state(Box::new(unprotected_bss(b"RSSI".to_vec(), [42; 6])));
-        let state = state.on_mlme_event(signal_report_with_rssi_dbm(-42), &mut h.context);
+        let state = state.on_mlme_event(signal_report_with_rssi_snr(-42, 20), &mut h.context);
         assert_eq!(state.status().connected_to.unwrap().rx_dbm, -42);
+        assert_eq!(state.status().connected_to.unwrap().snr_db, 20);
 
-        let state = state.on_mlme_event(signal_report_with_rssi_dbm(-24), &mut h.context);
+        let state = state.on_mlme_event(signal_report_with_rssi_snr(-24, 10), &mut h.context);
         assert_eq!(state.status().connected_to.unwrap().rx_dbm, -24);
+        assert_eq!(state.status().connected_to.unwrap().snr_db, 10);
     }
 
     // Helper functions and data structures for tests
@@ -2155,6 +2161,7 @@ mod tests {
             cfg: ClientConfig::default(),
             bss: cmd.bss,
             last_rssi: 60,
+            last_snr: 0,
             link_state,
             radio_cfg: RadioConfig::default(),
             chan: fake_channel(),
@@ -2175,6 +2182,7 @@ mod tests {
             cfg: ClientConfig::default(),
             bss,
             last_rssi: 60,
+            last_snr: 0,
             link_state,
             radio_cfg: RadioConfig::default(),
             chan: fake_channel(),
@@ -2202,6 +2210,7 @@ mod tests {
             cfg: ClientConfig::default(),
             bss: Box::new(bss),
             last_rssi: 60,
+            last_snr: 0,
             link_state,
             radio_cfg: RadioConfig::default(),
             chan: fake_channel(),
@@ -2227,7 +2236,7 @@ mod tests {
         Channel { primary: 153, cbw: wlan_common::channel::Cbw::Cbw20 }
     }
 
-    fn signal_report_with_rssi_dbm(rssi_dbm: i8) -> MlmeEvent {
-        MlmeEvent::SignalReport { ind: fidl_mlme::SignalReportIndication { rssi_dbm } }
+    fn signal_report_with_rssi_snr(rssi_dbm: i8, snr_db: i8) -> MlmeEvent {
+        MlmeEvent::SignalReport { ind: fidl_mlme::SignalReportIndication { rssi_dbm, snr_db } }
     }
 }

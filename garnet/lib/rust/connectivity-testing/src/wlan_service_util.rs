@@ -980,6 +980,7 @@ mod tests {
                     bssid: [0, 1, 2, 3, 4, 5],
                     ssid: ssid,
                     rx_dbm: -30,
+                    snr_db: 10,
                     channel: 1,
                     protection: Protection::Wpa2Personal,
                     compatible: true,
@@ -1027,6 +1028,7 @@ mod tests {
             [0, 1, 2, 3, 4, 5],
             b"foo".to_vec(),
             -30,
+            20,
             1,
             Protection::Wpa2Personal,
             true,
@@ -1036,6 +1038,7 @@ mod tests {
             [1, 2, 3, 4, 5, 6],
             b"hello".to_vec(),
             -60,
+            10,
             2,
             Protection::Wpa2Personal,
             false,
@@ -1143,11 +1146,12 @@ mod tests {
         bssid: [u8; 6],
         ssid: Vec<u8>,
         rx_dbm: i8,
+        snr_db: i8,
         channel: u8,
         protection: Protection,
         compatible: bool,
     ) -> fidl_sme::BssInfo {
-        fidl_sme::BssInfo { bssid, ssid, rx_dbm, channel, protection, compatible }
+        fidl_sme::BssInfo { bssid, ssid, rx_dbm, snr_db, channel, protection, compatible }
     }
 
     fn assert_eq_credentials(
