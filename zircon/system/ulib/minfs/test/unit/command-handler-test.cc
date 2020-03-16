@@ -70,6 +70,11 @@ PrintJournalCommit [index]
 PrintBackupSuperblock
 	Prints the backup superblock.
 
+WriteSuperblockField [fieldname] [value]
+	Set the value of a field of the superblock to disk.
+		fieldname: Name of superblock field.
+		value: Value to set field.
+
 )""";
 
   EXPECT_STR_EQ(output_stream.str().c_str(), expected.c_str());
@@ -85,7 +90,8 @@ std::vector<std::vector<std::string>> test_commands = {{"InvalidCommand", "1", "
                                                        {"PrintJournalEntries", "5"},
                                                        {"PrintJournalHeader", "0"},
                                                        {"PrintJournalCommit", "0"},
-                                                       {"PrintBackupSuperblock"}};
+                                                       {"PrintBackupSuperblock"},
+                                                       {"WriteSuperblockField", "magic0", "0"}};
 
 // Make sure commands don't fail when running on an unformatted device.
 TEST(MinfsCommandHandler, CheckSupportedCommandsNoFail) {

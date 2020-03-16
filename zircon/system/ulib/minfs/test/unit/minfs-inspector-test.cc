@@ -257,6 +257,38 @@ TEST(MinfsInspector, InspectBackupSuperblock) {
   EXPECT_EQ(sb.alloc_block_count, 2);
 }
 
+TEST(MinfsInspector, WriteSuperblock) {
+  std::unique_ptr<MinfsInspector> inspector;
+  SetupMinfsInspector(&inspector);
+  Superblock sb = inspector->InspectSuperblock();
+  // Test original values are correct.
+  EXPECT_EQ(sb.magic0, kMinfsMagic0);
+  EXPECT_EQ(sb.magic1, kMinfsMagic1);
+  EXPECT_EQ(sb.version_major, kMinfsMajorVersion);
+  EXPECT_EQ(sb.version_minor, kMinfsMinorVersion);
+
+  // Edit values and write.
+  sb.magic0 = 0;
+  sb.version_major = 0;
+  auto result = inspector->WriteSuperblock(sb);
+  ASSERT_TRUE(result.is_ok());
+
+  // Test if superblock is saved in memory.
+  Superblock edit_sb = inspector->InspectSuperblock();
+  EXPECT_EQ(edit_sb.magic0, 0);
+  EXPECT_EQ(edit_sb.magic1, kMinfsMagic1);
+  EXPECT_EQ(edit_sb.version_major, 0);
+  EXPECT_EQ(edit_sb.version_minor, kMinfsMinorVersion);
+
+  // Test reloading from disk.
+  ASSERT_OK(inspector->ReloadSuperblock());
+  Superblock reload_sb = inspector->InspectSuperblock();
+  EXPECT_EQ(reload_sb.magic0, 0);
+  EXPECT_EQ(reload_sb.magic1, kMinfsMagic1);
+  EXPECT_EQ(reload_sb.version_major, 0);
+  EXPECT_EQ(reload_sb.version_minor, kMinfsMinorVersion);
+}
+
 // TODO(fxb/46821): Implement these tests once we have a fake block device
 // that can send proper error codes when bad operations are passed in.
 // Currently if we send a read beyond device command, the block device

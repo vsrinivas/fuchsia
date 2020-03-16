@@ -28,11 +28,21 @@ zx_status_t Loader::LoadJournal(const Superblock& superblock, storage::BlockBuff
 
 zx_status_t Loader::RunReadOperation(storage::BlockBuffer* buffer, uint64_t vmo_offset,
                                      uint64_t dev_offset, uint64_t length) const {
-  if (buffer->capacity() < length) {
-    return ZX_ERR_INVALID_ARGS;
-  }
+  ZX_ASSERT(buffer->capacity() - vmo_offset >= length);
   storage::Operation operation{
       .type = storage::OperationType::kRead,
+      .vmo_offset = vmo_offset,
+      .dev_offset = dev_offset,
+      .length = length,
+  };
+  return handler_->RunOperation(operation, buffer);
+}
+
+zx_status_t Loader::RunWriteOperation(storage::BlockBuffer* buffer, uint64_t vmo_offset,
+                                      uint64_t dev_offset, uint64_t length) const {
+  ZX_ASSERT(buffer->capacity() - vmo_offset >= length);
+  storage::Operation operation{
+      .type = storage::OperationType::kWrite,
       .vmo_offset = vmo_offset,
       .dev_offset = dev_offset,
       .length = length,

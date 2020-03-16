@@ -4,6 +4,8 @@
 
 #include "minfs/command-handler.h"
 
+#include <zircon/errors.h>
+
 #include <iostream>
 #include <memory>
 #include <sstream>
@@ -139,6 +141,15 @@ void CommandHandler::InitializeCommands() {
        "Prints the backup superblock.",
        [this](ParsedCommand args) -> zx_status_t { return PrintBackupSuperblock(); }},
 
+      {"WriteSuperblockField",
+       {
+           {"fieldname", ArgType::kString, "Name of superblock field."},
+           {"value", ArgType::kString, "Value to set field."},
+       },
+       "Set the value of a field of the superblock to disk.",
+       [this](ParsedCommand args) -> zx_status_t {
+         return WriteSuperblockField(args.string_fields["fieldname"], args.string_fields["value"]);
+       }},
   };
 
   for (uint64_t i = 0; i < command_list_.size(); ++i) {
@@ -293,6 +304,20 @@ zx_status_t CommandHandler::PrintBackupSuperblock() {
   Superblock superblock = result.take_value();
   std::unique_ptr<disk_inspector::DiskStruct> object = GetSuperblockStruct();
   *output_ << object->ToString(&superblock, options_);
+  return ZX_OK;
+}
+
+zx_status_t CommandHandler::WriteSuperblockField(std::string fieldname, std::string value) {
+  Superblock superblock = inspector_->InspectSuperblock();
+  std::unique_ptr<disk_inspector::DiskStruct> object = GetSuperblockStruct();
+  zx_status_t status = object->WriteField(&superblock, {std::move(fieldname)}, {0}, value);
+  if (status != ZX_OK) {
+    return status;
+  }
+  auto result = inspector_->WriteSuperblock(superblock);
+  if (result.is_error()) {
+    return result.take_error();
+  }
   return ZX_OK;
 }
 

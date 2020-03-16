@@ -34,7 +34,7 @@ class DiskStruct : public DiskObj {
   DiskStruct& operator=(DiskStruct&& other) = default;
   ~DiskStruct() override = default;
 
-  // DiskStruct interface:
+  // DiskObj interface:
   std::string GetTypeName() override { return name_; }
   uint64_t GetSize() override { return size_; }
   zx_status_t WriteField(void* position, std::vector<std::string> keys,

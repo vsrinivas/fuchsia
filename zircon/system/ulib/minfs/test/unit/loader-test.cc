@@ -152,5 +152,83 @@ TEST(InspectorLoader, LoadJournal) {
                   kMinfsBlockSize * block_length);
 }
 
+TEST(InspectorLoader, RunReadOperation) {
+  uint64_t block_length = 3;
+
+  storage::ArrayBuffer device(block_length, kMinfsBlockSize);
+  memset(device.Data(0), 'a', device.BlockSize());
+  memset(device.Data(1), 'b', device.BlockSize());
+  memset(device.Data(2), 'c', device.BlockSize());
+
+  MockTransactionHandler handler(&device);
+  Loader loader(&handler);
+
+  storage::ArrayBuffer client_buffer(block_length, kMinfsBlockSize);
+  memset(client_buffer.Data(0), 'd', client_buffer.capacity() * device.BlockSize());
+  ASSERT_OK(loader.RunReadOperation(&client_buffer, 0, 0, 1));
+  ASSERT_OK(loader.RunReadOperation(&client_buffer, 2, 2, 1));
+
+  storage::ArrayBuffer expected(block_length, kMinfsBlockSize);
+  memset(expected.Data(0), 'a', expected.BlockSize());
+  memset(expected.Data(1), 'd', expected.BlockSize());
+  memset(expected.Data(2), 'c', expected.BlockSize());
+  EXPECT_BYTES_EQ(client_buffer.Data(0), expected.Data(0), kMinfsBlockSize * block_length);
+}
+
+TEST(InspectorLoader, RunReadOperationBufferSizeAssertFail) {
+  ASSERT_DEATH(([] {
+                 uint64_t block_length = 2;
+
+                 storage::ArrayBuffer device(block_length, kMinfsBlockSize);
+                 MockTransactionHandler handler(&device);
+                 Loader loader(&handler);
+
+                 storage::ArrayBuffer client_buffer(0, kMinfsBlockSize);
+
+                 // Buffer too small. Should assert crash here.
+                 loader.RunReadOperation(&client_buffer, 0, 0, block_length);
+               }),
+               "Failed to crash on buffer too small\n");
+}
+
+TEST(InspectorLoader, RunWriteOperation) {
+  uint64_t block_length = 3;
+
+  storage::ArrayBuffer device(block_length, kMinfsBlockSize);
+  memset(device.Data(0), 'a', device.BlockSize());
+  memset(device.Data(1), 'b', device.BlockSize());
+  memset(device.Data(2), 'c', device.BlockSize());
+
+  MockTransactionHandler handler(&device);
+  Loader loader(&handler);
+
+  storage::ArrayBuffer client_buffer(block_length, kMinfsBlockSize);
+  memset(client_buffer.Data(0), 'd', client_buffer.capacity() * device.BlockSize());
+  ASSERT_OK(loader.RunWriteOperation(&client_buffer, 0, 0, 1));
+  ASSERT_OK(loader.RunWriteOperation(&client_buffer, 2, 2, 1));
+
+  storage::ArrayBuffer expected(block_length, kMinfsBlockSize);
+  memset(expected.Data(0), 'd', expected.BlockSize());
+  memset(expected.Data(1), 'b', expected.BlockSize());
+  memset(expected.Data(2), 'd', expected.BlockSize());
+  EXPECT_BYTES_EQ(device.Data(0), expected.Data(0), kMinfsBlockSize * block_length);
+}
+
+TEST(InspectorLoader, RunWriteOperationBufferSizeAssertFail) {
+  ASSERT_DEATH(([] {
+                 uint64_t block_length = 2;
+
+                 storage::ArrayBuffer device(block_length, kMinfsBlockSize);
+                 MockTransactionHandler handler(&device);
+                 Loader loader(&handler);
+
+                 storage::ArrayBuffer client_buffer(0, kMinfsBlockSize);
+
+                 // Buffer too small. Should assert crash here.
+                 loader.RunWriteOperation(&client_buffer, 0, 0, block_length);
+               }),
+               "Failed to crash on buffer too small\n");
+}
+
 }  // namespace
 }  // namespace minfs

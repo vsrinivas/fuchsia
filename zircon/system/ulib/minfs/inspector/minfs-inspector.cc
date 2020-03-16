@@ -204,6 +204,18 @@ fit::result<Superblock, zx_status_t> MinfsInspector::InspectBackupSuperblock() {
   return fit::ok(GetSuperblock(&buffer_));
 }
 
+fit::result<void, zx_status_t> MinfsInspector::WriteSuperblock(Superblock superblock) {
+  Loader loader(handler_.get());
+  *static_cast<Superblock*>(buffer_.Data(0)) = superblock;
+  zx_status_t status = loader.RunWriteOperation(&buffer_, 0, 0, 1);
+  if (status != ZX_OK) {
+    FS_TRACE_ERROR("Cannot write superblock. err: %d\n", status);
+    return fit::error(status);
+  }
+  superblock_ = superblock;
+  return fit::ok();
+}
+
 zx_status_t MinfsInspector::LoadJournalEntry(storage::VmoBuffer* buffer, uint64_t index) {
   Loader loader(handler_.get());
   uint64_t start_block = JournalStartBlock(superblock_) + fs::kJournalMetadataBlocks + index;

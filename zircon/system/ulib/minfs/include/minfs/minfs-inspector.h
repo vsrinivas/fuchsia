@@ -90,6 +90,10 @@ class MinfsInspector {
   // Loads and returns the backup superblock.
   fit::result<Superblock, zx_status_t> InspectBackupSuperblock();
 
+  // Writes the |superblock| argument to disk and sets |superblock_| to |superblock|
+  // if the write succeeds.
+  fit::result<void, zx_status_t> WriteSuperblock(Superblock superblock);
+
  private:
   explicit MinfsInspector(std::unique_ptr<disk_inspector::InspectorTransactionHandler> handler)
       : handler_(std::move(handler)) {}
