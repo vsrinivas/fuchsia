@@ -52,7 +52,7 @@ class TestNode : public CacheNode, fbl::Recyclable<TestNode> {
 
 Digest GenerateDigest(size_t seed) {
   Digest digest;
-  ZX_ASSERT(digest.Init() == ZX_OK);
+  digest.Init();
   digest.Update(&seed, sizeof(seed));
   digest.Final();
   return digest;

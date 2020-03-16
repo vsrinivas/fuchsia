@@ -26,10 +26,7 @@ zx_status_t NodeDigest::Reset(size_t data_off, size_t data_len) {
   }
   to_append_ = fbl::min(data_len - data_off, node_size_);
   pad_len_ = node_size_ - to_append_;
-  zx_status_t rc = digest_.Init();
-  if (rc != ZX_OK) {
-    return rc;
-  }
+  digest_.Init();
   uint64_t locality = id_ ^ data_off;
   digest_.Update(&locality, sizeof(locality));
   uint32_t length = static_cast<uint32_t>(to_append_);

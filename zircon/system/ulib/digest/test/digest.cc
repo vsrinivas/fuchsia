@@ -24,7 +24,7 @@ const char* kDoubleZeroDigest = "5df6e0e2761359d30a8275058e299fcc0381534545f55cf
 TEST(DigestTestCase, Strings) {
   Digest actual;
   size_t len = strlen(kZeroDigest);
-    // Incorrect length
+  // Incorrect length
   EXPECT_STATUS(actual.Parse(kZeroDigest, len - 1), ZX_ERR_INVALID_ARGS);
   EXPECT_STATUS(actual.Parse(kZeroDigest, len + 1), ZX_ERR_INVALID_ARGS);
   // Not hex
@@ -55,7 +55,7 @@ TEST(DigestTestCase, Self) {
   ASSERT_OK(expected.Parse(kDoubleZeroDigest));
   ASSERT_OK(actual.Parse(kZeroDigest));
   uint8_t buf[kSha256Length];
-  ASSERT_OK(actual.CopyTo(buf, sizeof(buf)));
+  actual.CopyTo(buf, sizeof(buf));
   actual.Hash(buf, kSha256Length);
   EXPECT_BYTES_EQ(actual.get(), expected.get(), kSha256Length);
 }
@@ -78,16 +78,39 @@ TEST(DigestTestCase, Equality) {
   Digest actual, expected;
   ASSERT_OK(expected.Parse(kZeroDigest));
   ASSERT_OK(actual.Parse(kZeroDigest));
-  EXPECT_FALSE(actual == nullptr, "Does not equal NULL");
+  EXPECT_FALSE(actual.Equals(nullptr, actual.len()), "Does not equal NULL");
+  EXPECT_FALSE(actual.Equals(actual.get(), actual.len() - 1), "Does not equal length-1");
+  EXPECT_TRUE(actual.Equals(actual.get(), actual.len()), "Equals self");
+  EXPECT_TRUE(actual.Equals(expected.get(), expected.len()), "Equals expected");
   EXPECT_TRUE(actual == actual, "Equals self");
-  EXPECT_TRUE(actual == actual.get(), "Equals self.bytes_");
   EXPECT_TRUE(actual == expected, "Equals expected");
-  EXPECT_TRUE(actual == expected.get(), "Equals expected.bytes_");
-  EXPECT_TRUE(actual != nullptr, "Doesn't equal NULL");
   EXPECT_FALSE(actual != actual, "Doesn't not equal self");
-  EXPECT_FALSE(actual != actual.get(), "Doesn't not equal self.bytes_");
   EXPECT_FALSE(actual != expected, "Doesn't not equal expected");
-  EXPECT_FALSE(actual != expected.get(), "Doesn't not equal expected.bytes_");
+}
+
+TEST(DigestTestCase, CopyTo) {
+  Digest actual;
+  uint8_t buf[kSha256Length * 2];
+  memset(buf, 1, sizeof(buf));
+  ASSERT_OK(actual.Parse(kZeroDigest));
+  ASSERT_DEATH(([&actual, &buf]() { actual.CopyTo(buf, kSha256Length - 1); }),
+               "Disallow truncation");
+  for (size_t len = 0; len < sizeof(buf); ++len) {
+    actual.CopyTruncatedTo(buf, len);
+
+    // First bytes match digest.
+    EXPECT_EQ(memcmp(buf, actual.get(), std::min(len, kSha256Length)), 0);
+
+    // Pad with zeros up to |len|.
+    for (size_t i = kSha256Length; i < len; ++i) {
+      EXPECT_EQ(buf[i], 0);
+    }
+
+    // Remaining bytes are untouched.
+    for (size_t i = len; i < sizeof(buf); ++i) {
+      EXPECT_EQ(buf[i], 1);
+    }
+  }
 }
 
 TEST(DigestTestCase, Move) {
@@ -107,7 +130,7 @@ TEST(DigestTestCase, Move) {
 
   // Start a hash operation in digest1, verify that this does not update the
   // initial hash value.
-  EXPECT_OK(digest1.Init());
+  digest1.Init();
   EXPECT_BYTES_EQ(digest1.get(), uninitialized_digest.get(), kSha256Length);
 
   // Hash some nothing into the hash.  Again verify the digest is still

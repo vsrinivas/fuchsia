@@ -38,12 +38,13 @@ class MockBlob {
     memset(data, identifier, kPagedVmoSize);
 
     size_t tree_len;
+    Digest root;
     ASSERT_OK(
-        digest::MerkleTreeCreator::Create(data, kPagedVmoSize, &merkle_tree_, &tree_len, &root_));
+        digest::MerkleTreeCreator::Create(data, kPagedVmoSize, &merkle_tree_, &tree_len, &root));
 
     std::unique_ptr<BlobVerifier> verifier;
-    ASSERT_OK(BlobVerifier::Create(digest::Digest(root_.get()), metrics, merkle_tree_.get(),
-                                   tree_len, kPagedVmoSize, &verifier));
+    ASSERT_OK(BlobVerifier::Create(std::move(root), metrics, merkle_tree_.get(), tree_len,
+                                   kPagedVmoSize, &verifier));
 
     UserPagerInfo pager_info;
     pager_info.verifier = std::move(verifier);
@@ -84,7 +85,6 @@ class MockBlob {
   std::unique_ptr<PageWatcher> page_watcher_;
   char identifier_;
   std::unique_ptr<uint8_t[]> merkle_tree_;
-  Digest root_;
 };
 
 // Mock user pager. Defines the UserPager interface such that the result of reads on distinct

@@ -28,10 +28,10 @@ constexpr size_t kSha256HexLength = (kSha256Length * 2);
 class Digest final {
  public:
   Digest();
-  explicit Digest(const uint8_t* other);
-  Digest(Digest&& o);
-  Digest& operator=(Digest&& o);
-  Digest& operator=(const uint8_t* rhs);
+  explicit Digest(const uint8_t (&bytes)[kSha256Length]);
+  Digest(Digest&& other);
+  Digest& operator=(const uint8_t (&bytes)[kSha256Length]);
+  Digest& operator=(Digest&& other);
   ~Digest();
 
   const uint8_t* get() const { return bytes_; }
@@ -39,7 +39,7 @@ class Digest final {
 
   // Initializes the hash algorithm context.  It must be called before Update,
   // and after Final when reusing the Digest object.
-  zx_status_t Init();
+  void Init();
 
   // Adds data to be hashed.  This may be called multiple times between calls
   // to |Init| and |Final|.  If A and B are byte sequences of length A_len and
@@ -69,17 +69,25 @@ class Digest final {
   // Returns the current digest as a hex string.
   fbl::String ToString() const;
 
-  // Write the current digest to |out|.  |len| must be at least kLength to
-  // succeed.
-  zx_status_t CopyTo(uint8_t* out, size_t len) const;
+  // Writes digest to |out|.
+  void CopyTo(uint8_t (&out)[kSha256Length]) const { CopyTo(out, kSha256Length); }
+
+  // Write digest to |out|. |len| must be at least |kSha256Length|; if it is
+  // greater, the remainder of |out| is filled with zeros.
+  void CopyTo(uint8_t* out, size_t len) const;
+
+  // Like |CopyTo(out, len)|, but only writes the first |len| bytes of the digest to |out| if |len|
+  // is less than |kSha256Length|.
+  void CopyTruncatedTo(uint8_t* out, size_t len) const;
 
   // Equality operators.  Those that take |const uint8_t *| arguments will
   // read |kLength| bytes; callers MUST ensure there are sufficient bytes
   // present.
-  bool operator==(const Digest& rhs) const;
-  bool operator!=(const Digest& rhs) const;
-  bool operator==(const uint8_t* rhs) const;
-  bool operator!=(const uint8_t* rhs) const;
+  bool Equals(const uint8_t* rhs, size_t rhs_len) const;
+  bool operator==(const Digest& rhs) const { return Equals(rhs.bytes_, kSha256Length); }
+  bool operator!=(const Digest& rhs) const { return !Equals(rhs.bytes_, kSha256Length); }
+  bool operator==(const uint8_t (&rhs)[kSha256Length]) const { return Equals(rhs, kSha256Length); }
+  bool operator!=(const uint8_t (&rhs)[kSha256Length]) const { return !Equals(rhs, kSha256Length); }
 
  private:
   // Opaque crypto implementation context.

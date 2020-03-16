@@ -159,7 +159,7 @@ TEST_F(BlobfsDiskTest, SucceedsIfFirstNodeMatches) {
 
   blobfs::Inode node = {};
   node.header.flags = blobfs::kBlobFlagAllocated;
-  ASSERT_OK(options.merkle.CopyTo(node.merkle_root_hash, sizeof(node.merkle_root_hash)));
+  options.merkle.CopyTo(node.merkle_root_hash);
   node.blob_size = 20;
   node.extent_count = 1;
   node.extents[0] = blobfs::Extent(0, 1);
@@ -191,7 +191,7 @@ TEST_F(BlobfsDiskTest, SucceedsIfLastNodeMatches) {
 
   blobfs::Inode node = {};
   node.header.flags = blobfs::kBlobFlagAllocated;
-  ASSERT_OK(options.merkle.CopyTo(node.merkle_root_hash, sizeof(node.merkle_root_hash)));
+  options.merkle.CopyTo(node.merkle_root_hash);
   node.blob_size = 20;
   node.extent_count = 1;
   node.extents[0] = blobfs::Extent(2, 1);

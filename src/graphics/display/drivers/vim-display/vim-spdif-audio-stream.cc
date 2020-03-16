@@ -258,11 +258,7 @@ zx_status_t Vim2SpdifAudioStream::Init() {
   // TODO(johngro): Someday, when this gets split into separate DAI/Codec
   // drivers, this code belongs in the HDMI codec section of things.
   digest::Digest sha;
-  res = sha.Init();
-  if (res != ZX_OK) {
-    zxlogf(WARN, "Failed to initialize digest while computing unique ID.  (res %d)\n", res);
-    return res;
-  }
+  sha.Init();
 
   // Seed our SHA with a constant number taken from 'uuidgen'.
   static const uint8_t SEED[] = {0xd8, 0x27, 0x52, 0xb7, 0x60, 0x9a, 0x46, 0xd4,
@@ -281,15 +277,8 @@ zx_status_t Vim2SpdifAudioStream::Init() {
 
   // Finish the SHA and attempt to copy as much of the results to our internal
   // cached representation as we can.
-  uint8_t digest_out[digest::kSha256Length];
   sha.Final();
-  res = sha.CopyTo(digest_out, sizeof(digest_out));
-  if (res != ZX_OK) {
-    zxlogf(ERROR, "Failed to copy digest while computing unique ID.  (res %d)", res);
-    return res;
-  }
-  ::memset(unique_id_.data, 0, sizeof(unique_id_.data));
-  ::memcpy(unique_id_.data, digest_out, fbl::min(sizeof(digest_out), sizeof(unique_id_.data)));
+  sha.CopyTruncatedTo(unique_id_.data, sizeof(unique_id_.data));
 
   return ZX_OK;
 }

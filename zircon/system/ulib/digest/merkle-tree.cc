@@ -108,6 +108,7 @@ zx_status_t MerkleTreeCreator::Create(const void *data, size_t data_len,
   *out_tree = std::move(tree);
   *out_tree_len = tree_len;
   *out_root = root;
+
   return ZX_OK;
 }
 

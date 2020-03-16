@@ -195,7 +195,7 @@ zx_status_t Blob::SpaceAllocate(uint64_t size_data) {
 }
 
 bool Blob::IsDataLoaded() const { return data_mapping_.vmo().is_valid(); }
-bool Blob::IsMerkleTreeLoaded() const { return merkle_mapping_.vmo().is_valid();  }
+bool Blob::IsMerkleTreeLoaded() const { return merkle_mapping_.vmo().is_valid(); }
 
 void* Blob::GetDataBuffer() const { return data_mapping_.start(); }
 void* Blob::GetMerkleTreeBuffer() const { return merkle_mapping_.start(); }
@@ -204,14 +204,14 @@ bool Blob::IsPagerBacked() const {
   return blobfs_->PagingEnabled() && SupportsPaging(inode_) && GetState() == kBlobStateReadable;
 }
 
-Digest Blob::MerkleRoot() const { return Digest(GetKey()); }
+Digest Blob::MerkleRoot() const { return GetKeyAsDigest(); }
 
 fit::promise<void, zx_status_t> Blob::WriteMetadata() {
   TRACE_DURATION("blobfs", "Blobfs::WriteMetadata");
   assert(GetState() == kBlobStateDataWrite);
 
   // Update the on-disk hash.
-  memcpy(inode_.merkle_root_hash, GetKey(), digest::kSha256Length);
+  MerkleRoot().CopyTo(inode_.merkle_root_hash);
 
   // All data has been written to the containing VMO.
   SetState(kBlobStateReadable);
@@ -361,26 +361,24 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
       return status;
     }
 
-    Digest expected(GetKey());
-    Digest actual(root);
-    if (expected != actual) {
+    Digest expected = MerkleRoot();
+    if (expected != root) {
       // Downloaded blob did not match provided digest.
       return ZX_ERR_IO_DATA_INTEGRITY;
     }
 
-    status = StreamBlocks(&block_iter, merkle_blocks,
-                          [&](uint64_t vmo_offset, uint64_t dev_offset, uint32_t length) {
-                            storage::UnbufferedOperation op = {
-                                .vmo = zx::unowned_vmo(merkle_mapping_.vmo().get()),
-                                {
-                                    .type = storage::OperationType::kWrite,
-                                    .vmo_offset = vmo_offset,
-                                    .dev_offset = dev_offset + data_start,
-                                    .length = length,
-                                }};
-                            streamer.StreamData(std::move(op));
-                            return ZX_OK;
-                          });
+    status = StreamBlocks(
+        &block_iter, merkle_blocks, [&](uint64_t vmo_offset, uint64_t dev_offset, uint32_t length) {
+          storage::UnbufferedOperation op = {.vmo = zx::unowned_vmo(merkle_mapping_.vmo().get()),
+                                             {
+                                                 .type = storage::OperationType::kWrite,
+                                                 .vmo_offset = vmo_offset,
+                                                 .dev_offset = dev_offset + data_start,
+                                                 .length = length,
+                                             }};
+          streamer.StreamData(std::move(op));
+          return ZX_OK;
+        });
 
     if (status != ZX_OK) {
       FS_TRACE_ERROR("blob: failed to write blocks: %s\n", zx_status_get_string(status));

@@ -19,58 +19,52 @@
 #define BORINGSSL_NO_CXX
 #include <utility>
 
+#include <openssl/mem.h>
 #include <openssl/sha.h>
 
 namespace digest {
 
 // The previously opaque crypto implementation context.
 struct Digest::Context {
-  Context() {}
-  ~Context() {}
   SHA256_CTX impl;
 };
 
 Digest::Digest() : bytes_{0} {}
 
-Digest::Digest(const uint8_t* other) : bytes_{0} { *this = other; }
+Digest::Digest(const uint8_t (&bytes)[sizeof(bytes_)]) { *this = bytes; }
 
-Digest::Digest(Digest&& o) {
-  ctx_ = std::move(o.ctx_);
-  memcpy(bytes_, o.bytes_, sizeof(bytes_));
-  memset(o.bytes_, 0, sizeof(o.bytes_));
-}
+Digest::Digest(Digest&& other) { *this = std::move(other); }
 
 Digest::~Digest() {}
 
-Digest& Digest::operator=(Digest&& o) {
-  memcpy(bytes_, o.bytes_, sizeof(bytes_));
+Digest& Digest::operator=(const uint8_t (&bytes)[sizeof(bytes_)]) {
+  ctx_.reset();
+  memcpy(bytes_, bytes, sizeof(bytes_));
   return *this;
 }
 
-Digest& Digest::operator=(const uint8_t* rhs) {
-  memcpy(bytes_, rhs, sizeof(bytes_));
+Digest& Digest::operator=(Digest&& other) {
+  ctx_ = std::move(other.ctx_);
+  memcpy(bytes_, other.bytes_, sizeof(bytes_));
+  memset(other.bytes_, 0, sizeof(other.bytes_));
   return *this;
 }
 
-zx_status_t Digest::Init() {
-  fbl::AllocChecker ac;
-  ctx_.reset(new (&ac) Context());
-  if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
-  }
+void Digest::Init() {
+  ctx_.reset(new Context());
   SHA256_Init(&ctx_->impl);
-  return ZX_OK;
 }
 
 void Digest::Update(const void* buf, size_t len) {
+  ZX_DEBUG_ASSERT(ctx_);
   ZX_DEBUG_ASSERT(len <= INT_MAX);
-  ZX_DEBUG_ASSERT(ctx_ != nullptr);
   SHA256_Update(&ctx_->impl, buf, len);
 }
 
 const uint8_t* Digest::Final() {
-  ZX_DEBUG_ASSERT(ctx_ != nullptr);
+  ZX_DEBUG_ASSERT(ctx_);
   SHA256_Final(bytes_, &ctx_->impl);
+  ctx_.reset();
   return bytes_;
 }
 
@@ -110,25 +104,26 @@ fbl::String Digest::ToString() const {
   return fbl::String(hex);
 }
 
-zx_status_t Digest::CopyTo(uint8_t* out, size_t len) const {
-  if (len < sizeof(bytes_)) {
-    return ZX_ERR_BUFFER_TOO_SMALL;
+void Digest::CopyTo(uint8_t* out, size_t len) const {
+  ZX_DEBUG_ASSERT(len >= sizeof(bytes_));
+  CopyTruncatedTo(out, len);
+}
+
+void Digest::CopyTruncatedTo(uint8_t* out, size_t len) const {
+  if (len == 0) {
+    return;
+  } else if (len <= sizeof(bytes_)) {
+    memcpy(out, bytes_, len);
+  } else {
+    memcpy(out, bytes_, sizeof(bytes_));
+    out += sizeof(bytes_);
+    len -= sizeof(bytes_);
+    memset(out, 0, len);
   }
-  memset(out, 0, len);
-  memcpy(out, bytes_, sizeof(bytes_));
-  return ZX_OK;
 }
 
-bool Digest::operator==(const Digest& rhs) const {
-  return memcmp(bytes_, rhs.bytes_, sizeof(bytes_)) == 0;
+bool Digest::Equals(const uint8_t* rhs, size_t len) const {
+  return rhs && len == sizeof(bytes_) && CRYPTO_memcmp(bytes_, rhs, sizeof(bytes_)) == 0;
 }
-
-bool Digest::operator!=(const Digest& rhs) const { return !(*this == rhs); }
-
-bool Digest::operator==(const uint8_t* rhs) const {
-  return rhs ? memcmp(bytes_, rhs, sizeof(bytes_)) == 0 : false;
-}
-
-bool Digest::operator!=(const uint8_t* rhs) const { return !(*this == rhs); }
 
 }  // namespace digest

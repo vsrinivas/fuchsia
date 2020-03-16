@@ -188,14 +188,7 @@ void UsbAudioStream::ComputePersistentUniqueId() {
   persistent_unique_id_ = fallback_id;
 
   digest::Digest sha;
-  zx_status_t res = sha.Init();
-  if (res != ZX_OK) {
-    LOG(WARN,
-        "Failed to initialize digest while computing unique ID.  "
-        "Falling back on defaults (res %d)\n",
-        res);
-    return;
-  }
+  sha.Init();
 
   // #1: Top level descriptor.
   sha.Update(&parent_.desc(), sizeof(parent_.desc()));
@@ -220,22 +213,8 @@ void UsbAudioStream::ComputePersistentUniqueId() {
 
   // Finish the SHA and attempt to copy as much of the results to our internal
   // cached representation as we can.
-  uint8_t digest_out[digest::kSha256Length];
   sha.Final();
-  res = sha.CopyTo(digest_out, sizeof(digest_out));
-  if (res != ZX_OK) {
-    LOG(WARN,
-        "Failed to copy digest while computing unique ID.  "
-        "Falling back on defaults (res %d)\n",
-        res);
-    return;
-  }
-
-  constexpr size_t todo = fbl::min(sizeof(digest_out), sizeof(persistent_unique_id_.data));
-  if (todo < sizeof(persistent_unique_id_.data)) {
-    ::memset(&persistent_unique_id_.data, 0, sizeof(persistent_unique_id_.data));
-  }
-  ::memcpy(persistent_unique_id_.data, digest_out, todo);
+  sha.CopyTruncatedTo(persistent_unique_id_.data, sizeof(persistent_unique_id_.data));
 }
 
 void UsbAudioStream::ReleaseRingBufferLocked() {

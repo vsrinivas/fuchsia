@@ -29,9 +29,9 @@ zx_status_t BlobVerifier::Create(digest::Digest digest, BlobfsMetrics* metrics, 
     FS_TRACE_ERROR("blobfs: merkle too small for data\n");
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
-  if ((status = verifier->tree_verifier_.SetTree(merkle, actual_merkle_length,
-                                                 verifier->digest_.get(),
-                                                 verifier->digest_.len())) != ZX_OK) {
+  if ((status = verifier->tree_verifier_.SetTree(
+           merkle, actual_merkle_length, verifier->digest_.get(), verifier->digest_.len())) !=
+      ZX_OK) {
     FS_TRACE_ERROR("blobfs: Failed to create merkle verifier: %s\n", zx_status_get_string(status));
     return status;
   }
@@ -40,7 +40,7 @@ zx_status_t BlobVerifier::Create(digest::Digest digest, BlobfsMetrics* metrics, 
   return ZX_OK;
 }
 
-zx_status_t BlobVerifier::CreateWithoutTree(digest::Digest digest, BlobfsMetrics *metrics,
+zx_status_t BlobVerifier::CreateWithoutTree(digest::Digest digest, BlobfsMetrics* metrics,
                                             size_t data_size, std::unique_ptr<BlobVerifier>* out) {
   auto verifier = std::make_unique<BlobVerifier>(metrics);
   verifier->digest_ = std::move(digest);

@@ -151,7 +151,7 @@ bool HashListVerifier::IsValidRange(size_t data_off, size_t buf_len) {
 }
 
 void HashListVerifier::HandleOne(const Digest &digest) {
-  verified_ &= (digest == (list() + list_off()));
+  verified_ &= (digest.Equals(list() + list_off(), GetDigestSize()));
 }
 
 }  // namespace digest

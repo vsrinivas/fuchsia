@@ -21,7 +21,7 @@ class BlobVerifier {
  public:
   // Public only to enable std::make_unique<>. Use |Create| or |CreateWithoutTree|.
   // TODO(45457): Hide when MerkleTreeVerifier is movable.
-  explicit BlobVerifier(BlobfsMetrics *metrics);
+  explicit BlobVerifier(BlobfsMetrics* metrics);
 
   // TODO(44742): Make this type movable. (Requires ulib/digest to be move friendly)
   DISALLOW_COPY_ASSIGN_AND_MOVE(BlobVerifier);
@@ -53,7 +53,7 @@ class BlobVerifier {
 
   // Modifies |data_off| and |buf_len| to be aligned to the minimum number of merkle tree nodes that
   // covered their original range.
-  zx_status_t Align(size_t *data_off, size_t *buf_len) const {
+  zx_status_t Align(size_t* data_off, size_t* buf_len) const {
     return tree_verifier_.Align(data_off, buf_len);
   }
 

@@ -76,6 +76,7 @@ class CacheNode : public fs::Vnode, fbl::Recyclable<CacheNode> {
 
   // Returns the node's digest.
   const uint8_t* GetKey() const { return &digest_[0]; }
+  digest::Digest GetKeyAsDigest() const { return digest::Digest(digest_); }
 
  private:
   friend struct TypeWavlTraits;
