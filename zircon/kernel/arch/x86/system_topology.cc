@@ -166,7 +166,7 @@ class ApicDecoder {
   ApicDecoder(uint8_t smt, uint8_t core, uint8_t die, uint8_t cache)
       : smt_bits_(smt), core_bits_(core), die_bits_(die), cache_shift_(cache) {}
 
-  static std::optional<ApicDecoder> From(const cpu_id::CpuId& cpuid) {
+  static ktl::optional<ApicDecoder> From(const cpu_id::CpuId& cpuid) {
     uint8_t smt_bits = 0, core_bits = 0, die_bits = 0, cache_shift = 0;
 
     const auto topology = cpuid.ReadTopology();
