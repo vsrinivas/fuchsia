@@ -14,6 +14,8 @@
 #include <ramdevice-client/ramnand.h>
 #include <zxtest/zxtest.h>
 
+#include "device-partitioner.h"
+
 constexpr uint64_t kBlockSize = 0x1000;
 constexpr uint32_t kBlockCount = 0x100;
 
@@ -75,5 +77,60 @@ class SkipBlockDevice {
 
 // Returns the relative topological path for a test device's channel.
 std::string GetTopologicalPath(const zx::channel& channel);
+
+// Dummy DevicePartition implementation meant to be used for testing. All functions are no-ops, i.e.
+// they silently pass without doing anything. Tests can inherit from this class and override
+// functions that are relevant for their test cases; this class provides an easy way to inherit from
+// DevicePartitioner which is an abstract class.
+class FakeDevicePartitioner : public paver::DevicePartitioner {
+ public:
+  bool IsFvmWithinFtl() const override { return false; }
+
+  bool SupportsPartition(const paver::PartitionSpec& spec) const override { return true; }
+
+  zx_status_t FindPartition(const paver::PartitionSpec& spec,
+                            std::unique_ptr<paver::PartitionClient>* out_partition) const override {
+    return ZX_OK;
+  }
+
+  zx_status_t FinalizePartition(const paver::PartitionSpec& spec) const override { return ZX_OK; }
+
+  zx_status_t AddPartition(const paver::PartitionSpec& spec,
+                           std::unique_ptr<paver::PartitionClient>* out_partition) const override {
+    return ZX_OK;
+  }
+
+  zx_status_t WipeFvm() const override { return ZX_OK; }
+
+  zx_status_t InitPartitionTables() const override { return ZX_OK; }
+
+  zx_status_t WipePartitionTables() const override { return ZX_OK; }
+
+  zx_status_t ValidatePayload(const paver::PartitionSpec& spec,
+                              fbl::Span<const uint8_t> data) const override {
+    return ZX_OK;
+  }
+};
+
+// Defines a PartitionClient that reads and writes to a partition backed by a VMO in memory.
+// Used for testing.
+class FakePartitionClient : public paver::PartitionClient {
+ public:
+  FakePartitionClient(size_t block_count, size_t block_size = PAGE_SIZE);
+
+  zx_status_t GetBlockSize(size_t* out_size);
+  zx_status_t GetPartitionSize(size_t* out_size);
+  zx_status_t Read(const zx::vmo& vmo, size_t size);
+  zx_status_t Write(const zx::vmo& vmo, size_t vmo_size);
+  zx_status_t Trim();
+  zx_status_t Flush();
+  zx::channel GetChannel();
+  fbl::unique_fd block_fd();
+
+ protected:
+  zx::vmo partition_;
+  size_t block_size_;
+  size_t partition_size_;
+};
 
 #endif  // ZIRCON_SYSTEM_ULIB_PAVER_TEST_TEST_UTILS_H_

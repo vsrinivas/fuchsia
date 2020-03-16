@@ -18,6 +18,8 @@
 #include "test-utils.h"
 #include "zircon/errors.h"
 
+namespace {
+
 using devmgr_integration_test::RecursiveWaitForFile;
 using driver_integration_test::IsolatedDevmgr;
 
@@ -574,3 +576,5 @@ TEST_F(SherlockBootloaderPartitionClientTest, Write) {
 
   ASSERT_EQ(std::memcmp(buf, ref, 1024), 0);
 }
+
+}  // namespace

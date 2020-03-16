@@ -39,6 +39,7 @@ test("paver-test") {
   output_name = "paver-test"
   sources = [
     "abr-test.cc",
+    "data-sink-test.cc",
     "device-partitioner-test.cc",
     "fvm-test.cc",
     "partition-client-test.cc",

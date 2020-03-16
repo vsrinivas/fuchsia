@@ -109,3 +109,70 @@ std::string GetTopologicalPath(const zx::channel& channel) {
   path.assign(raw_path.data() + strlen(kDevRoot), raw_path.size() - strlen(kDevRoot));
   return path;
 }
+
+FakePartitionClient::FakePartitionClient(size_t block_count, size_t block_size)
+    : block_size_(block_size) {
+  partition_size_ = block_count * block_size;
+  zx_status_t status = zx::vmo::create(partition_size_, ZX_VMO_RESIZABLE, &partition_);
+  if (status != ZX_OK) {
+    partition_size_ = 0;
+  }
+}
+
+zx_status_t FakePartitionClient::GetBlockSize(size_t* out_size) {
+  if (out_size != nullptr) {
+    *out_size = block_size_;
+  }
+  return ZX_OK;
+}
+
+zx_status_t FakePartitionClient::GetPartitionSize(size_t* out_size) {
+  if (out_size != nullptr) {
+    *out_size = partition_size_;
+  }
+  return ZX_OK;
+}
+
+zx_status_t FakePartitionClient::Read(const zx::vmo& vmo, size_t size) {
+  if (partition_size_ == 0) {
+    return ZX_OK;
+  }
+
+  fzl::VmoMapper mapper;
+  if (auto status = mapper.Map(vmo, 0, size, ZX_VM_PERM_WRITE); status != ZX_OK) {
+    return status;
+  }
+  return partition_.read(mapper.start(), 0, size);
+}
+
+zx_status_t FakePartitionClient::Write(const zx::vmo& vmo, size_t size) {
+  if (size > partition_size_) {
+    size_t new_size = fbl::round_up(size, block_size_);
+    zx_status_t status = partition_.set_size(new_size);
+    if (status != ZX_OK) {
+      return status;
+    }
+    partition_size_ = new_size;
+  }
+
+  fzl::VmoMapper mapper;
+  if (auto status = mapper.Map(vmo, 0, size, ZX_VM_PERM_READ); status != ZX_OK) {
+    return status;
+  }
+  return partition_.write(mapper.start(), 0, size);
+}
+
+zx_status_t FakePartitionClient::Trim() {
+  zx_status_t status = partition_.set_size(0);
+  if (status != ZX_OK) {
+    return status;
+  }
+  partition_size_ = 0;
+  return ZX_OK;
+}
+
+zx_status_t FakePartitionClient::Flush() { return ZX_OK; }
+
+zx::channel FakePartitionClient::GetChannel() { return {}; }
+
+fbl::unique_fd FakePartitionClient::block_fd() { return fbl::unique_fd(); }

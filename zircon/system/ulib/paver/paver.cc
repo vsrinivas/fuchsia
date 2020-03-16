@@ -269,8 +269,26 @@ zx_status_t PartitionPave(const DevicePartitioner& partitioner, zx::vmo payload_
                           size_t payload_size, const PartitionSpec& spec) {
   LOG("Paving partition \"%s\".\n", spec.ToString().c_str());
 
+  // The payload_vmo might be pager-backed. Commit its pages first before using it for
+  // block writes below, to avoid deadlocks in the block server. If all the pages of the
+  // payload_vmo are not in memory, the block server might see a read fault in the midst of
+  // a write. Read faults need to be fulfilled by the block server itself, so it will deadlock.
+  //
+  // TODO(ZX-48145): The caveat with this approach is that we also need to lock these pages to make
+  // sure they don't get evicted after we've committed them here.
+  //
+  // We should investigate if the block server can handle page faults without deadlocking. If we can
+  // support that, the client will not need to worry about re-entrancy in the block server code, and
+  // this ZX_VMO_OP_COMMIT will no longer be needed.
+  zx_status_t status = payload_vmo.op_range(ZX_VMO_OP_COMMIT, 0, payload_size, nullptr, 0);
+  if (status != ZX_OK) {
+    ERROR("Failed to commit payload VMO for partition \"%s\": %s\n", spec.ToString().c_str(),
+          zx_status_get_string(status));
+    return status;
+  }
+
   // Perform basic safety checking on the partition before we attempt to write it.
-  zx_status_t status = ValidatePartitionPayload(partitioner, payload_vmo, payload_size, spec);
+  status = ValidatePartitionPayload(partitioner, payload_vmo, payload_size, spec);
   if (status != ZX_OK) {
     ERROR("Failed to validate partition \"%s\": %s\n", spec.ToString().c_str(),
           zx_status_get_string(status));
@@ -944,4 +962,4 @@ void BootManager::SetActiveConfigurationHealthy(
   completer.Reply(ZX_OK);
 }
 
-}  //  namespace paver
+}  // namespace paver
