@@ -66,6 +66,9 @@ test_package("feedback_agent_tests") {
       environments = basic_envs
     },
     {
+      name = "feedback_agent_unittest"
+    },
+    {
       name = "inspect_ptr_unittest"
     },
     {
@@ -135,6 +138,14 @@ test_package("feedback_agent_tests") {
       path = "configs/bad_schema_missing_required_field.json"
       dest = "bad_schema_missing_required_field_config.json"
     },
+
+    # needed for feedback_agent_unittest
+    {
+      path = "configs/feedback_agent_unittest.json"
+
+      # feedback_agent.cc expects a config at /pkg/data/config.json
+      dest = "config.json"
+    },
   ]
 
   deps = [
@@ -146,6 +157,7 @@ test_package("feedback_agent_tests") {
     ":datastore_unittest",
     ":device_id_provider_unittest",
     ":feedback_agent_integration_test",
+    ":feedback_agent_unittest",
     ":inspect_exe",
     ":inspect_ptr_unittest",
     ":kernel_log_ptr_integration_test",
@@ -352,7 +364,6 @@ executable("feedback_agent_integration_test") {
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//third_party/rapidjson",
-    "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-cobalt",
     "//zircon/system/fidl/fuchsia-logger",
@@ -360,6 +371,25 @@ executable("feedback_agent_integration_test") {
 
   # TODO(46560): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+}
+
+executable("feedback_agent_unittest") {
+  testonly = true
+
+  sources = [ "feedback_agent_unittest.cc" ]
+
+  deps = [
+    "//sdk/lib/inspect/testing/cpp",
+    "//src/developer/feedback/feedback_agent:feedback_agent_src",
+    "//src/developer/feedback/testing:cobalt_test_fixture",
+    "//src/developer/feedback/testing:gtest_with_syslog_main",
+    "//src/developer/feedback/testing:unit_test_fixture",
+    "//src/developer/feedback/testing/stubs:stub_cobalt_logger_factory",
+    "//src/lib/syslog/cpp",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/inspect",
+  ]
 }
 
 executable("inspect_exe") {

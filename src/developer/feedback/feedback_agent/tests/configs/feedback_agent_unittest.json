@@ -1,0 +1,8 @@
+{
+    "annotation_allowlist": [
+        "build.is_debug"
+    ],
+    "attachment_allowlist": [
+        "build.snapshot.xml"
+    ]
+}

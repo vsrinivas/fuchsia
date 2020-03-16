@@ -9,20 +9,13 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/update/channel/cpp/fidl.h>
 #include <lib/async/cpp/executor.h>
-#include <lib/fdio/directory.h>
-#include <lib/fdio/fdio.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fit/result.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/inspect/contrib/cpp/archive_reader.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
-#include <lib/zx/job.h>
-#include <lib/zx/process.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
-
-#include <cstdint>
 
 #include "garnet/public/lib/fostr/fidl/fuchsia/feedback/formatting.h"
 #include "src/developer/feedback/feedback_agent/constants.h"
@@ -33,11 +26,8 @@
 #include "src/developer/feedback/utils/cobalt_metrics.h"
 #include "src/developer/feedback/utils/metrics_registry.cb.h"
 #include "src/lib/files/file.h"
-#include "src/lib/files/glob.h"
-#include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/strings/substitute.h"
 #include "src/lib/syslog/cpp/logger.h"
 #include "src/lib/uuid/uuid.h"
 #include "src/ui/lib/escher/test/gtest_vulkan.h"
@@ -50,14 +40,11 @@ namespace feedback {
 namespace {
 
 using fuchsia::feedback::Attachment;
-using fuchsia::feedback::ComponentDataRegisterPtr;
 using fuchsia::feedback::ComponentDataRegisterSyncPtr;
 using fuchsia::feedback::Data;
 using fuchsia::feedback::DataProvider_GetData_Result;
-using fuchsia::feedback::DataProviderPtr;
 using fuchsia::feedback::DataProviderSyncPtr;
 using fuchsia::feedback::DeviceIdProvider_GetId_Result;
-using fuchsia::feedback::DeviceIdProviderPtr;
 using fuchsia::feedback::DeviceIdProviderSyncPtr;
 using fuchsia::feedback::ImageEncoding;
 using fuchsia::feedback::Screenshot;
@@ -93,12 +80,6 @@ class LogListener : public fuchsia::logger::LogListener {
 // connecting through FIDL.
 class FeedbackAgentIntegrationTest : public sys::testing::TestWithEnvironment {
  public:
-  FeedbackAgentIntegrationTest()
-      : test_name_(testing::UnitTest::GetInstance()->current_test_info()->name()),
-        // We limit the sub-environment name to its first 20 characters as it will get truncated
-        // when creating the environment anyway.
-        subenvironment_name_(test_name_.substr(20)) {}
-
   void SetUp() override {
     environment_services_ = sys::ServiceDirectory::CreateFromNamespace();
     fake_cobalt_ = std::make_unique<FakeCobalt>(environment_services_);
@@ -197,131 +178,6 @@ class FeedbackAgentIntegrationTest : public sys::testing::TestWithEnvironment {
     RunLoopUntil([&ready] { return ready; });
   }
 
-  // Creates an enclosing environment for the test to run in isolation, and returns it.
-  //
-  // Use this |EnclosingEnvironment| to connect to its ComponentDataRegister service. This
-  // environment does not support |*SyncPtr|.
-  //
-  // Using this environment provides a fresh copy of |feedback_agent.cmx|, and resets Inspect
-  // across test cases (especially |total_num_connections|).
-  std::unique_ptr<sys::testing::EnclosingEnvironment> CreateComponentDataRegisterEnvironment() {
-    std::unique_ptr<sys::testing::EnvironmentServices> services = CreateServices();
-    // We inject a fresh copy of |feedback_agent.cmx| in the environment.
-    fuchsia::sys::LaunchInfo launch_info;
-    launch_info.url = "fuchsia-pkg://fuchsia.com/feedback_agent#meta/feedback_agent.cmx";
-    services->AddServiceWithLaunchInfo(std::move(launch_info),
-                                       "fuchsia.feedback.ComponentDataRegister");
-    auto env = CreateNewEnclosingEnvironment(subenvironment_name_, std::move(services));
-    WaitForEnclosingEnvToStart(env.get());
-    return env;
-  }
-
-  // Waits for the process serving the ComponentDataRegister connection to be spawned.
-  void WaitForComponentDataRegister(ComponentDataRegisterPtr* data_register) {
-    FX_CHECK(data_register);
-    // As the connection is asynchronous, we make a call and wait for a response to make sure the
-    // connection is established and the process for the service spawned.
-    bool done = false;
-    (*data_register)->Upsert({}, [&done]() { done = true; });
-    RunLoopUntil([&done] { return done; });
-  }
-
-  // Creates an enclosing environment for the test to run in isolation, and returns it.
-  //
-  // Use this |EnclosingEnvironment| to connect to its DataProvider service. This environment does
-  // not support |*SyncPtr|.
-  //
-  // Using this environment provides a fresh copy of |feedback_agent.cmx|, and resets Inspect
-  // across test cases (especially |total_num_connections|).
-  std::unique_ptr<sys::testing::EnclosingEnvironment> CreateDataProviderEnvironment() {
-    std::unique_ptr<sys::testing::EnvironmentServices> services = CreateServices();
-    // We inject a fresh copy of |feedback_agent.cmx| in the environment.
-    fuchsia::sys::LaunchInfo launch_info;
-    launch_info.url = "fuchsia-pkg://fuchsia.com/feedback_agent#meta/feedback_agent.cmx";
-    services->AddServiceWithLaunchInfo(std::move(launch_info), "fuchsia.feedback.DataProvider");
-    // We inherit the other injected services from the parent environment.
-    services->AllowParentService("fuchsia.boot.ReadOnlyLog");
-    services->AllowParentService("fuchsia.cobalt.LoggerFactory");
-    services->AllowParentService("fuchsia.diagnostics.Archive");
-    services->AllowParentService("fuchsia.hwinfo.Board");
-    services->AllowParentService("fuchsia.hwinfo.Product");
-    services->AllowParentService("fuchsia.logger.Log");
-    services->AllowParentService("fuchsia.sysinfo.SysInfo");
-    services->AllowParentService("fuchsia.update.channel.Provider");
-
-    auto env = CreateNewEnclosingEnvironment(subenvironment_name_, std::move(services));
-    WaitForEnclosingEnvToStart(env.get());
-    return env;
-  }
-
-  // Waits for the process serving the DataProvider connection to be spawned.
-  void WaitForDataProvider(DataProviderPtr* provider) {
-    FX_CHECK(provider);
-    // As the connection is asynchronous, we make a call and wait for a response to make sure the
-    // connection is established and the process for the service spawned.
-    bool done = false;
-    (*provider)->GetData([&done](DataProvider_GetData_Result res) { done = true; });
-    RunLoopUntil([&done] { return done; });
-  }
-
-  // Creates an enclosing environment for the test to run in isolation, and returns it.
-  //
-  // Use this |EnclosingEnvironment| to connect to its DeviceIdProvider service. This environment
-  // does not support |*SyncPtr|.
-  //
-  // Using this environment provides a fresh copy of |feedback_agent.cmx|, and resets Inspect
-  // across test cases (especially |total_num_connections|).
-  std::unique_ptr<sys::testing::EnclosingEnvironment> CreateDeviceIdProviderEnvironment() {
-    std::unique_ptr<sys::testing::EnvironmentServices> services = CreateServices();
-    // We inject a fresh copy of |feedback_agent.cmx| in the environment.
-    fuchsia::sys::LaunchInfo launch_info;
-    launch_info.url = "fuchsia-pkg://fuchsia.com/feedback_agent#meta/feedback_agent.cmx";
-    services->AddServiceWithLaunchInfo(std::move(launch_info), "fuchsia.feedback.DeviceIdProvider");
-    auto env = CreateNewEnclosingEnvironment(subenvironment_name_, std::move(services));
-    WaitForEnclosingEnvToStart(env.get());
-    return env;
-  }
-
-  // Waits for the process serving the DeviceIdProvider connection to be spawned.
-  void WaitForDeviceIdProvider(DeviceIdProviderPtr* provider) {
-    FX_CHECK(provider);
-    // As the connection is asynchronous, we make a call and wait for a response to make sure the
-    // connection is established and the process for the service spawned.
-    bool done = false;
-    (*provider)->GetId([&done](DeviceIdProvider_GetId_Result res) { done = true; });
-    RunLoopUntil([&done] { return done; });
-  }
-
-  // Checks the Inspect tree for "feedback_agent.cmx".
-  void CheckFeedbackAgentInspectTree(const std::string& protocol,
-                                     const int64_t expected_total_num_connections,
-                                     const int64_t expected_current_num_connections) {
-    async::Executor executor(dispatcher());
-
-    inspect::contrib::ArchiveReader reader(
-        environment_services_->Connect<fuchsia::diagnostics::Archive>(),
-        {fxl::Substitute("$0/feedback_agent.cmx:root", subenvironment_name_)});
-
-    fit::result<inspect::contrib::DiagnosticsData, std::string> data;
-    executor.schedule_task(
-        reader.SnapshotInspectUntilPresent({"feedback_agent.cmx"})
-            .then(
-                [&](fit::result<std::vector<inspect::contrib::DiagnosticsData>, std::string>& val) {
-                  if (val.is_error()) {
-                    data = fit::error(val.take_error());
-                  } else {
-                    data = fit::ok(std::move(val.take_value()[0]));
-                  }
-                }));
-    RunLoopUntil([&] { return !!data; });
-
-    ASSERT_TRUE(data.is_ok());
-    EXPECT_EQ(rapidjson::Value(expected_total_num_connections),
-              data.value().GetByPath({"root", protocol, "total_num_connections"}));
-    EXPECT_EQ(rapidjson::Value(expected_current_num_connections),
-              data.value().GetByPath({"root", protocol, "current_num_connections"}));
-  }
-
  private:
   void TerminateInspectTestApp() {
     inspect_test_app_controller_->Kill();
@@ -341,9 +197,6 @@ class FeedbackAgentIntegrationTest : public sys::testing::TestWithEnvironment {
   std::unique_ptr<sys::testing::EnclosingEnvironment> environment_;
   fuchsia::sys::ComponentControllerPtr inspect_test_app_controller_;
 
-  std::string test_name_;
-  std::string subenvironment_name_;
-
  protected:
   std::unique_ptr<FakeCobalt> fake_cobalt_;
 };
@@ -353,42 +206,6 @@ TEST_F(FeedbackAgentIntegrationTest, ComponentDataRegister_Upsert_SmokeTest) {
   environment_services_->Connect(data_register.NewRequest());
 
   ASSERT_EQ(data_register->Upsert({}), ZX_OK);
-}
-
-TEST_F(FeedbackAgentIntegrationTest, ComponentDataRegister_CheckInspect) {
-  auto env = CreateComponentDataRegisterEnvironment();
-
-  ComponentDataRegisterPtr data_register_1;
-  env->ConnectToService(data_register_1.NewRequest());
-  WaitForComponentDataRegister(&data_register_1);
-  CheckFeedbackAgentInspectTree("fuchsia.feedback.ComponentDataRegister",
-                                /*expected_total_num_connections=*/1u,
-                                /*expected_current_num_connections=*/1u);
-
-  ComponentDataRegisterPtr data_register_2;
-  env->ConnectToService(data_register_2.NewRequest());
-  WaitForComponentDataRegister(&data_register_2);
-  CheckFeedbackAgentInspectTree("fuchsia.feedback.ComponentDataRegister",
-                                /*expected_total_num_connections=*/2u,
-                                /*expected_current_num_connections=*/2u);
-
-  data_register_1.Unbind();
-  CheckFeedbackAgentInspectTree("fuchsia.feedback.ComponentDataRegister",
-                                /*expected_total_num_connections=*/2u,
-                                /*expected_current_num_connections=*/1u);
-
-  ComponentDataRegisterPtr data_register_3;
-  env->ConnectToService(data_register_3.NewRequest());
-  WaitForComponentDataRegister(&data_register_3);
-  CheckFeedbackAgentInspectTree("fuchsia.feedback.ComponentDataRegister",
-                                /*expected_total_num_connections=*/3u,
-                                /*expected_current_num_connections=*/2u);
-
-  data_register_2.Unbind();
-  data_register_3.Unbind();
-  CheckFeedbackAgentInspectTree("fuchsia.feedback.ComponentDataRegister",
-                                /*expected_total_num_connections=*/3u,
-                                /*expected_current_num_connections=*/0u);
 }
 
 // We use VK_TEST instead of the regular TEST macro because Scenic needs Vulkan to operate properly
@@ -551,42 +368,6 @@ TEST_F(FeedbackAgentIntegrationTest, DataProvider_GetData_CheckCobalt) {
               }));
 }
 
-TEST_F(FeedbackAgentIntegrationTest, DataProvider_CheckInspect) {
-  auto env = CreateDataProviderEnvironment();
-
-  DataProviderPtr data_provider_1;
-  env->ConnectToService(data_provider_1.NewRequest());
-  WaitForDataProvider(&data_provider_1);
-  CheckFeedbackAgentInspectTree("fuchsia.feedback.DataProvider",
-                                /*expected_total_num_connections=*/1u,
-                                /*expected_current_num_connections=*/1u);
-
-  DataProviderPtr data_provider_2;
-  env->ConnectToService(data_provider_2.NewRequest());
-  WaitForDataProvider(&data_provider_2);
-  CheckFeedbackAgentInspectTree("fuchsia.feedback.DataProvider",
-                                /*expected_total_num_connections=*/2u,
-                                /*expected_current_num_connections=*/2u);
-
-  data_provider_1.Unbind();
-  CheckFeedbackAgentInspectTree("fuchsia.feedback.DataProvider",
-                                /*expected_total_num_connections=*/2u,
-                                /*expected_current_num_connections=*/1u);
-
-  DataProviderPtr data_provider_3;
-  env->ConnectToService(data_provider_3.NewRequest());
-  WaitForDataProvider(&data_provider_3);
-  CheckFeedbackAgentInspectTree("fuchsia.feedback.DataProvider",
-                                /*expected_total_num_connections=*/3u,
-                                /*expected_current_num_connections=*/2u);
-
-  data_provider_2.Unbind();
-  data_provider_3.Unbind();
-  CheckFeedbackAgentInspectTree("fuchsia.feedback.DataProvider",
-                                /*expected_total_num_connections=*/3u,
-                                /*expected_current_num_connections=*/0u);
-}
-
 TEST_F(FeedbackAgentIntegrationTest, DeviceIdProvider_GetId_CheckValue) {
   DeviceIdProviderSyncPtr device_id_provider;
   environment_services_->Connect(device_id_provider.NewRequest());
@@ -596,42 +377,6 @@ TEST_F(FeedbackAgentIntegrationTest, DeviceIdProvider_GetId_CheckValue) {
 
   ASSERT_TRUE(out_result.is_response());
   EXPECT_TRUE(uuid::IsValid(out_result.response().ResultValue_()));
-}
-
-TEST_F(FeedbackAgentIntegrationTest, DeviceIdProvider_CheckInspect) {
-  auto env = CreateDeviceIdProviderEnvironment();
-
-  DeviceIdProviderPtr device_id_provider_1;
-  env->ConnectToService(device_id_provider_1.NewRequest());
-  WaitForDeviceIdProvider(&device_id_provider_1);
-  CheckFeedbackAgentInspectTree("fuchsia.feedback.DeviceIdProvider",
-                                /*expected_total_num_connections=*/1u,
-                                /*expected_current_num_connections=*/1u);
-
-  DeviceIdProviderPtr device_id_provider_2;
-  env->ConnectToService(device_id_provider_2.NewRequest());
-  WaitForDeviceIdProvider(&device_id_provider_2);
-  CheckFeedbackAgentInspectTree("fuchsia.feedback.DeviceIdProvider",
-                                /*expected_total_num_connections=*/2u,
-                                /*expected_current_num_connections=*/2u);
-
-  device_id_provider_1.Unbind();
-  CheckFeedbackAgentInspectTree("fuchsia.feedback.DeviceIdProvider",
-                                /*expected_total_num_connections=*/2u,
-                                /*expected_current_num_connections=*/1u);
-
-  DeviceIdProviderPtr device_id_provider_3;
-  env->ConnectToService(device_id_provider_3.NewRequest());
-  WaitForDeviceIdProvider(&device_id_provider_3);
-  CheckFeedbackAgentInspectTree("fuchsia.feedback.DeviceIdProvider",
-                                /*expected_total_num_connections=*/3u,
-                                /*expected_current_num_connections=*/2u);
-
-  device_id_provider_2.Unbind();
-  device_id_provider_3.Unbind();
-  CheckFeedbackAgentInspectTree("fuchsia.feedback.DeviceIdProvider",
-                                /*expected_total_num_connections=*/3u,
-                                /*expected_current_num_connections=*/0u);
 }
 
 }  // namespace
