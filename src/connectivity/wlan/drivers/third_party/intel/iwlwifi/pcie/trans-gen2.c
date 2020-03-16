@@ -127,7 +127,7 @@ static void iwl_pcie_gen2_apm_stop(struct iwl_trans* trans, bool op_mode_leave) 
 void _iwl_trans_pcie_gen2_stop_device(struct iwl_trans* trans, bool low_power) {
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 
-    lockdep_assert_held(&trans_pcie->mutex);
+    iwl_assert_lock_held(&trans_pcie->mutex);
 
     if (trans_pcie->is_down) { return; }
 

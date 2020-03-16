@@ -90,7 +90,7 @@ int iwl_mvm_tof_config_cmd(struct iwl_mvm* mvm) {
     struct iwl_tof_config_cmd* cmd = &mvm->tof_data.tof_cfg;
     bool enabled;
 
-    lockdep_assert_held(&mvm->mutex);
+    iwl_assert_lock_held(&mvm->mutex);
 
     if (!fw_has_capa(&mvm->fw->ucode_capa, IWL_UCODE_TLV_CAPA_TOF_SUPPORT)) { return -EINVAL; }
 
@@ -112,7 +112,7 @@ int iwl_mvm_tof_range_abort_cmd(struct iwl_mvm* mvm, uint8_t id) {
         .request_id = id,
     };
 
-    lockdep_assert_held(&mvm->mutex);
+    iwl_assert_lock_held(&mvm->mutex);
 
     if (!fw_has_capa(&mvm->fw->ucode_capa, IWL_UCODE_TLV_CAPA_TOF_SUPPORT)) { return -EINVAL; }
 
@@ -134,7 +134,7 @@ int iwl_mvm_tof_responder_cmd(struct iwl_mvm* mvm, struct ieee80211_vif* vif) {
     struct iwl_tof_responder_config_cmd* cmd = &mvm->tof_data.responder_cfg;
     struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
 
-    lockdep_assert_held(&mvm->mutex);
+    iwl_assert_lock_held(&mvm->mutex);
 
     if (!fw_has_capa(&mvm->fw->ucode_capa, IWL_UCODE_TLV_CAPA_TOF_SUPPORT)) { return -EINVAL; }
 
@@ -164,7 +164,7 @@ int iwl_mvm_tof_range_request_cmd(struct iwl_mvm* mvm, struct ieee80211_vif* vif
             },
     };
 
-    lockdep_assert_held(&mvm->mutex);
+    iwl_assert_lock_held(&mvm->mutex);
 
     if (!fw_has_capa(&mvm->fw->ucode_capa, IWL_UCODE_TLV_CAPA_TOF_SUPPORT)) { return -EINVAL; }
 
@@ -187,7 +187,7 @@ int iwl_mvm_tof_range_request_cmd(struct iwl_mvm* mvm, struct ieee80211_vif* vif
 }
 
 int iwl_mvm_tof_range_request_ext_cmd(struct iwl_mvm* mvm, struct ieee80211_vif* vif) {
-    lockdep_assert_held(&mvm->mutex);
+    iwl_assert_lock_held(&mvm->mutex);
 
     if (!fw_has_capa(&mvm->fw->ucode_capa, IWL_UCODE_TLV_CAPA_TOF_SUPPORT)) { return -EINVAL; }
 
@@ -234,7 +234,7 @@ void iwl_mvm_tof_resp_handler(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb
     struct iwl_rx_packet* pkt = rxb_addr(rxb);
     struct iwl_tof_gen_resp_cmd* resp = (void*)pkt->data;
 
-    lockdep_assert_held(&mvm->mutex);
+    iwl_assert_lock_held(&mvm->mutex);
 
     switch (le32_to_cpu(resp->sub_grp_cmd_id)) {
     case TOF_RANGE_RESPONSE_NOTIF:

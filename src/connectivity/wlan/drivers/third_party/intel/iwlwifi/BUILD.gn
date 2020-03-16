@@ -63,6 +63,7 @@ source_set("core") {
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
+    "//zircon/public/lib/zircon-internal",
   ]
 
   public_deps = [
@@ -70,11 +71,6 @@ source_set("core") {
     "//zircon/public/lib/backtrace-request",
     "//zircon/public/lib/sync",
   ]
-
-  # TODO(39324): This driver emits a bunch of -Wthread-safety warnings that
-  # should be addressed. The config is removed from this target in the
-  # meantime.
-  configs -= [ "//build/config/fuchsia:thread_safety_annotations" ]
 }
 
 # Contains the entire driver, separate from the driver_module for the unit
@@ -107,11 +103,6 @@ source_set("pcie") {
     "//zircon/public/lib/sync",
     "//zircon/system/banjo/ddk.protocol.pci",
   ]
-
-  # TODO(39324): This driver emits a bunch of -Wthread-safety warnings that
-  # should be addressed. The config is removed from this target in the
-  # meantime.
-  configs -= [ "//build/config/fuchsia:thread_safety_annotations" ]
 
   # TODO(47044): UBSan has found an instance of undefined behavior in this target.
   # Disable UBSan for this target temporarily until it is migrated into CI/CQ.

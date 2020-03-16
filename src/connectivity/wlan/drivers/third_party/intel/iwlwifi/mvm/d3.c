@@ -1444,7 +1444,7 @@ struct iwl_wowlan_status* iwl_mvm_send_wowlan_get_status(struct iwl_mvm* mvm) {
   };
   int ret, len, status_size;
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   ret = iwl_mvm_send_cmd(mvm, &cmd);
   if (ret) {

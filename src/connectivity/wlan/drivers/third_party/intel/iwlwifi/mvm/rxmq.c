@@ -380,7 +380,7 @@ static void iwl_mvm_release_frames(struct iwl_mvm* mvm, struct ieee80211_sta* st
         &baid_data->entries[reorder_buf->queue * baid_data->entries_per_queue];
     uint16_t ssn = reorder_buf->head_sn;
 
-    lockdep_assert_held(&reorder_buf->lock);
+    iwl_assert_lock_held(&reorder_buf->lock);
 
     /* ignore nssn smaller than head sn - this can happen due to timeout */
     if (iwl_mvm_is_sn_less(nssn, ssn, reorder_buf->buf_size)) { goto set_timer; }

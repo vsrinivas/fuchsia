@@ -253,7 +253,7 @@ int iwl_xvt_run_fw(struct iwl_xvt* xvt, uint32_t ucode_type, bool cont_run) {
     return -EINVAL;
   }
 
-  lockdep_assert_held(&xvt->mutex);
+  iwl_assert_lock_held(&xvt->mutex);
 
   if (xvt->state != IWL_XVT_STATE_UNINITIALIZED) {
     if (xvt->fw_running) {

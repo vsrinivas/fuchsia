@@ -1209,7 +1209,7 @@ static void iwl_pcie_init_msix(struct iwl_trans_pcie* trans_pcie) {
 static void _iwl_trans_pcie_stop_device(struct iwl_trans* trans, bool low_power) {
   struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 
-  lockdep_assert_held(&trans_pcie->mutex);
+  iwl_assert_lock_held(&trans_pcie->mutex);
 
   if (trans_pcie->is_down) {
     return;
@@ -1313,8 +1313,7 @@ static zx_status_t iwl_trans_pcie_start_fw(struct iwl_trans* trans, const struct
   /* This may fail if AMT took ownership of the device */
   if (ZX_OK != iwl_pcie_prepare_card_hw(trans)) {
     IWL_WARN(trans, "Exit HW not ready\n");
-    ret = ZX_ERR_UNAVAILABLE;
-    goto out;
+    return ZX_ERR_UNAVAILABLE;
   }
 
   iwl_enable_rfkill_int(trans);
@@ -1441,7 +1440,7 @@ static void iwl_trans_pcie_stop_device(struct iwl_trans* trans, bool low_power) 
 void iwl_trans_pcie_rf_kill(struct iwl_trans* trans, bool state) {
   __UNUSED struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 
-  lockdep_assert_held(&trans_pcie->mutex);
+  iwl_assert_lock_held(&trans_pcie->mutex);
 
   IWL_WARN(trans, "reporting RF_KILL (radio %s)\n", state ? "disabled" : "enabled");
   if (iwl_op_mode_hw_rf_kill(trans->op_mode, state)) {

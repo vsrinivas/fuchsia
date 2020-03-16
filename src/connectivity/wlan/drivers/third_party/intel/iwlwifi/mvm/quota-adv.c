@@ -179,7 +179,7 @@ enum iwl_mvm_quota_result iwl_mvm_calculate_advanced_quotas(struct iwl_mvm* mvm,
   uint32_t new_quota[NUM_MAC_INDEX_DRIVER];
   bool significant_change = false;
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
 #ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
   if (IWL_MVM_DYNQUOTA_DISABLED) {

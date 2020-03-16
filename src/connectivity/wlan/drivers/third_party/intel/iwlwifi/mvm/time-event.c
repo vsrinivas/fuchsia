@@ -36,8 +36,9 @@
 
 #include "time-event.h"
 
-#include <linux/jiffies.h>
 #include <net/mac80211.h>
+
+#include <linux/jiffies.h>
 
 #include "fw-api.h"
 #include "fw/notif-wait.h"
@@ -54,7 +55,7 @@
 #define IWL_MVM_ROC_TE_TYPE_MGMT_TX TE_P2P_CLIENT_ASSOC
 
 void iwl_mvm_te_clear_data(struct iwl_mvm* mvm, struct iwl_mvm_time_event_data* te_data) {
-  lockdep_assert_held(&mvm->time_event_lock);
+  iwl_assert_lock_held(&mvm->time_event_lock);
 
   if (!te_data->vif) {
     return;
@@ -255,7 +256,7 @@ static void iwl_mvm_te_check_trigger(struct iwl_mvm* mvm, struct iwl_time_event_
  */
 static void iwl_mvm_te_handle_notif(struct iwl_mvm* mvm, struct iwl_mvm_time_event_data* te_data,
                                     struct iwl_time_event_notif* notif) {
-  lockdep_assert_held(&mvm->time_event_lock);
+  iwl_assert_lock_held(&mvm->time_event_lock);
 
   IWL_DEBUG_TE(mvm, "Handle time event notif - UID = 0x%x action %d\n",
                le32_to_cpu(notif->unique_id), le32_to_cpu(notif->action));
@@ -465,7 +466,7 @@ static int iwl_mvm_time_event_send_add(struct iwl_mvm* mvm, struct ieee80211_vif
   struct iwl_notification_wait wait_time_event;
   int ret;
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   IWL_DEBUG_TE(mvm, "Add new TE, duration %d TU\n", le32_to_cpu(te_cmd->duration));
 
@@ -521,7 +522,7 @@ void iwl_mvm_protect_session(struct iwl_mvm* mvm, struct ieee80211_vif* vif, uin
   struct iwl_notification_wait wait_te_notif;
   struct iwl_time_event_cmd time_cmd = {};
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   if (te_data->running && time_after(te_data->end_jiffies, TU_TO_EXP_TIME(min_duration))) {
     IWL_DEBUG_TE(mvm, "We have enough time in the current TE: %u\n",
@@ -671,7 +672,7 @@ void iwl_mvm_stop_session_protection(struct iwl_mvm* mvm, struct ieee80211_vif* 
   struct iwl_mvm_time_event_data* te_data = &mvmvif->time_event_data;
   uint32_t id;
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   spin_lock_bh(&mvm->time_event_lock);
   id = te_data->id;
@@ -691,7 +692,7 @@ int iwl_mvm_start_p2p_roc(struct iwl_mvm* mvm, struct ieee80211_vif* vif, int du
   struct iwl_mvm_time_event_data* te_data = &mvmvif->time_event_data;
   struct iwl_time_event_cmd time_cmd = {};
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
   if (te_data->running) {
     IWL_WARN(mvm, "P2P_DEVICE remain on channel already running\n");
     return -EBUSY;
@@ -734,7 +735,7 @@ int iwl_mvm_start_p2p_roc(struct iwl_mvm* mvm, struct ieee80211_vif* vif, int du
 static struct iwl_mvm_time_event_data* iwl_mvm_get_roc_te(struct iwl_mvm* mvm) {
   struct iwl_mvm_time_event_data* te_data;
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   spin_lock_bh(&mvm->time_event_lock);
 
@@ -798,7 +799,7 @@ int iwl_mvm_schedule_csa_period(struct iwl_mvm* mvm, struct ieee80211_vif* vif, 
   struct iwl_mvm_time_event_data* te_data = &mvmvif->time_event_data;
   struct iwl_time_event_cmd time_cmd = {};
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   if (te_data->running) {
     uint32_t id;

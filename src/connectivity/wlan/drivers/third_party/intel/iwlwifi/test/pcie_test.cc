@@ -655,6 +655,16 @@ TEST_F(TxTest, UnmapCmdQueue) {
   }
 }
 
+static zx_status_t iwl_pcie_cmdq_reclaim_locked(struct iwl_trans* trans, int txq_id, uint32_t idx) {
+  struct iwl_txq* txq = IWL_TRANS_GET_PCIE_TRANS(trans)->txq[txq_id];
+
+  mtx_lock(&txq->lock);
+  zx_status_t ret = iwl_pcie_cmdq_reclaim(trans, txq_id, idx);
+  mtx_unlock(&txq->lock);
+
+  return ret;
+}
+
 //
 // Ensure iwl_pcie_cmdq_reclaim() operates only on cmd_queue.
 //
@@ -668,9 +678,9 @@ TEST_F(TxTest, ReclaimCmdQueueInvalidQueueID) {
   txq->read_ptr = 0;
   txq->write_ptr = 1;
 
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, iwl_pcie_cmdq_reclaim(trans_, txq_id + 1, 0));
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, iwl_pcie_cmdq_reclaim(trans_, txq_id - 1, 0));
-  ASSERT_EQ(ZX_OK, iwl_pcie_cmdq_reclaim(trans_, txq_id, 0));
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, iwl_pcie_cmdq_reclaim_locked(trans_, txq_id + 1, 0));
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, iwl_pcie_cmdq_reclaim_locked(trans_, txq_id - 1, 0));
+  ASSERT_EQ(ZX_OK, iwl_pcie_cmdq_reclaim_locked(trans_, txq_id, 0));
 }
 
 //
@@ -686,13 +696,13 @@ TEST_F(TxTest, ReclaimCmdQueueInvalidIndex) {
   txq->read_ptr = 0;
   txq->write_ptr = 1;
 
-  ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, iwl_pcie_cmdq_reclaim(trans_, txq_id, 1));
-  ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, iwl_pcie_cmdq_reclaim(trans_, txq_id, 2));
+  ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, iwl_pcie_cmdq_reclaim_locked(trans_, txq_id, 1));
+  ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, iwl_pcie_cmdq_reclaim_locked(trans_, txq_id, 2));
 
   uint32_t idx = trans_->cfg->base_params->max_tfd_queue_size + 1;
-  ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, iwl_pcie_cmdq_reclaim(trans_, txq_id, idx));
+  ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, iwl_pcie_cmdq_reclaim_locked(trans_, txq_id, idx));
 
-  ASSERT_EQ(ZX_OK, iwl_pcie_cmdq_reclaim(trans_, txq_id, 0));
+  ASSERT_EQ(ZX_OK, iwl_pcie_cmdq_reclaim_locked(trans_, txq_id, 0));
 }
 
 //
@@ -712,7 +722,7 @@ TEST_F(TxTest, ReclaimCmdQueueMultiReclaim) {
 
   // In this case, the read_ptr will have to be advanced more than once
   // to match the passed index of 2. This should be considered as bad state.
-  ASSERT_EQ(ZX_ERR_BAD_STATE, iwl_pcie_cmdq_reclaim(trans_, txq_id, 2));
+  ASSERT_EQ(ZX_ERR_BAD_STATE, iwl_pcie_cmdq_reclaim_locked(trans_, txq_id, 2));
 }
 
 //
@@ -729,12 +739,12 @@ TEST_F(TxTest, ReclaimCmdQueueInFlightFlag) {
   txq->write_ptr = 4;
   trans_pcie->ref_cmd_in_flight = true;
 
-  iwl_pcie_cmdq_reclaim(trans_, txq_id, 2);
+  iwl_pcie_cmdq_reclaim_locked(trans_, txq_id, 2);
   ASSERT_TRUE(trans_pcie->ref_cmd_in_flight);
 
   // Once index 3 is reclaimed, the readptr will move to 4 which should
   // make it equal to the write_ptr. This will clear the inflight flag.
-  iwl_pcie_cmdq_reclaim(trans_, txq_id, 3);
+  iwl_pcie_cmdq_reclaim_locked(trans_, txq_id, 3);
   ASSERT_FALSE(trans_pcie->ref_cmd_in_flight);
 }
 

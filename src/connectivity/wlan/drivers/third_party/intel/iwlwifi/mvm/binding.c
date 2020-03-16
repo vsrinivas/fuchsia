@@ -124,7 +124,7 @@ static int iwl_mvm_binding_update(struct iwl_mvm* mvm, struct ieee80211_vif* vif
   };
   uint32_t action = FW_CTXT_ACTION_MODIFY;
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   ieee80211_iterate_active_interfaces_atomic(mvm->hw, IEEE80211_IFACE_ITER_NORMAL,
                                              iwl_mvm_iface_iterator, &data);

@@ -5,6 +5,7 @@
 // Used to test mvm/phy-ctxt.c
 
 #include <lib/mock-function/mock-function.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <stdio.h>
 
 #include <zxtest/zxtest.h>
@@ -21,8 +22,11 @@ namespace {
 
 class PhyContextTest : public SingleApTest {
  public:
-  PhyContextTest() { mvm_ = iwl_trans_get_mvm(sim_trans_.iwl_trans()); }
-  ~PhyContextTest() {}
+  PhyContextTest() TA_NO_THREAD_SAFETY_ANALYSIS {
+    mvm_ = iwl_trans_get_mvm(sim_trans_.iwl_trans());
+    mtx_lock(&mvm_->mutex);
+  }
+  ~PhyContextTest() TA_NO_THREAD_SAFETY_ANALYSIS { mtx_unlock(&mvm_->mutex); }
 
  protected:
   struct iwl_mvm* mvm_;
@@ -156,6 +160,7 @@ TEST_F(PhyContextTest, Ref) {
 
   iwl_mvm_phy_ctxt_ref(mvm_, &ctxt);
   ASSERT_EQ(1, ctxt.ref);
+
   iwl_mvm_phy_ctxt_ref(mvm_, &ctxt);
   ASSERT_EQ(2, ctxt.ref);
 

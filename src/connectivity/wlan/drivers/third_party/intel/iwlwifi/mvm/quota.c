@@ -202,7 +202,7 @@ int iwl_mvm_dhc_quota_enforce(struct iwl_mvm* mvm, struct iwl_mvm_vif* vif, int 
   uint32_t cmd_id = iwl_cmd_id(DEBUG_HOST_COMMAND, IWL_ALWAYS_LONG_GROUP, 0);
   int ret;
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   dhc_cmd = kzalloc(sizeof(*dhc_cmd) + sizeof(*dhc_quota_cmd), GFP_KERNEL);
   if (!dhc_cmd) {
@@ -242,7 +242,7 @@ int iwl_mvm_update_quotas(struct iwl_mvm* mvm, bool force_update,
   struct iwl_time_quota_data *qdata, *last_data;
   bool send = false;
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   if (fw_has_capa(&mvm->fw->ucode_capa, IWL_UCODE_TLV_CAPA_DYNAMIC_QUOTA)) {
     return 0;

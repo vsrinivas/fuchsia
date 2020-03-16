@@ -295,7 +295,7 @@ zx_status_t iwl_mvm_phy_ctxt_add(struct iwl_mvm* mvm, struct iwl_mvm_phy_ctxt* c
                                  wlan_channel_t* chandef, uint8_t chains_static,
                                  uint8_t chains_dynamic) {
   WARN_ON(!test_bit(IWL_MVM_STATUS_IN_HW_RESTART, &mvm->status) && ctxt->ref);
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
 #ifdef CPTCFG_IWLWIFI_FRQ_MGR
   ctxt->fm_tx_power_limit = IWL_DEFAULT_MAX_TX_POWER;
@@ -310,7 +310,7 @@ zx_status_t iwl_mvm_phy_ctxt_add(struct iwl_mvm* mvm, struct iwl_mvm_phy_ctxt* c
  * in case the PHY context was already created, i.e., its reference count > 0.
  */
 void iwl_mvm_phy_ctxt_ref(struct iwl_mvm* mvm, struct iwl_mvm_phy_ctxt* ctxt) {
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
   ctxt->ref++;
 }
 
@@ -324,7 +324,7 @@ zx_status_t iwl_mvm_phy_ctxt_changed(struct iwl_mvm* mvm, struct iwl_mvm_phy_ctx
                                      uint8_t chains_dynamic) {
   enum iwl_ctxt_action action = FW_CTXT_ACTION_MODIFY;
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   if (fw_has_capa(&mvm->fw->ucode_capa, IWL_UCODE_TLV_CAPA_BINDING_CDB_SUPPORT) &&
       iwl_mvm_get_channel_band(chandef->primary) !=
@@ -347,7 +347,7 @@ zx_status_t iwl_mvm_phy_ctxt_changed(struct iwl_mvm* mvm, struct iwl_mvm_phy_ctx
 }
 
 zx_status_t iwl_mvm_phy_ctxt_unref(struct iwl_mvm* mvm, struct iwl_mvm_phy_ctxt* ctxt) {
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   if (!ctxt) {
     return ZX_ERR_INVALID_ARGS;

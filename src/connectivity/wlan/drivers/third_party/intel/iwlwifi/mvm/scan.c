@@ -368,9 +368,6 @@ void iwl_mvm_rx_lmac_scan_complete_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_
     return;
   }
 
-  /* scan status must be locked for proper checking */
-  lockdep_assert_held(&mvm->mutex);
-
   /* We first check if we were stopping a scan, in which case we
    * just clear the stopping flag.  Then we check if it was a
    * firmware initiated stop, in which case we need to inform
@@ -380,7 +377,7 @@ void iwl_mvm_rx_lmac_scan_complete_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_
    * scans stopping or running at the same time (since LMAC
    * doesn't support it).
    */
-
+  mtx_lock(&mvm->mutex);
   if (mvm->scan_status & IWL_MVM_SCAN_STOPPING_SCHED) {
     WARN_ON_ONCE(mvm->scan_status & IWL_MVM_SCAN_STOPPING_REGULAR);
 
@@ -432,6 +429,7 @@ void iwl_mvm_rx_lmac_scan_complete_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_
 
   mvm->last_ebs_successful = scan_notif->ebs_status == IWL_SCAN_EBS_SUCCESS ||
                              scan_notif->ebs_status == IWL_SCAN_EBS_INACTIVE;
+  mtx_unlock(&mvm->mutex);
 }
 
 #if 0   // NEEDS_PORTING
@@ -829,7 +827,7 @@ zx_status_t iwl_mvm_scan_lmac(struct iwl_mvm* mvm, struct iwl_mvm_scan_params* p
                                                             mvm->fw->ucode_capa.n_scan_channels);
   uint32_t ssid_bitmap = 0;
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   memset(cmd, 0, sizeof(*cmd));
 
@@ -1283,7 +1281,7 @@ static int iwl_mvm_scan_umac(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
 
     chan_param = iwl_mvm_get_scan_req_umac_channel(mvm);
 
-    lockdep_assert_held(&mvm->mutex);
+    iwl_assert_lock_held(&mvm->mutex);
 
     if (WARN_ON(params->n_scan_plans > IWL_MAX_SCHED_SCAN_PLANS)) { return -EINVAL; }
 
@@ -1461,7 +1459,7 @@ zx_status_t iwl_mvm_reg_scan_start(struct iwl_mvm_vif* mvmvif,
   };
   zx_status_t ret;
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
 #if 0   // NEEDS_PORTING
     // TODO(43484): Enable LAR (Location Aware Regulatory)
@@ -1600,7 +1598,7 @@ int iwl_mvm_sched_scan_start(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
     struct iwl_mvm_scan_params params = {};
     int ret;
 
-    lockdep_assert_held(&mvm->mutex);
+    iwl_assert_lock_held(&mvm->mutex);
 
     if (iwl_mvm_is_lar_supported(mvm) && !mvm->lar_regdom_set) {
         IWL_ERR(mvm, "sched-scan while LAR regdomain is not set\n");
@@ -1743,7 +1741,7 @@ static int iwl_mvm_umac_scan_abort(struct iwl_mvm* mvm, int type) {
     struct iwl_umac_scan_abort cmd = {};
     int uid, ret;
 
-    lockdep_assert_held(&mvm->mutex);
+    iwl_assert_lock_held(&mvm->mutex);
 
     /* We should always get a valid index here, because we already
      * checked that this type of scan was running in the generic
@@ -1771,7 +1769,7 @@ static int iwl_mvm_scan_stop_wait(struct iwl_mvm* mvm, int type) {
     };
     int ret;
 
-    lockdep_assert_held(&mvm->mutex);
+    iwl_assert_lock_held(&mvm->mutex);
 
     iwl_init_notification_wait(&mvm->notif_wait, &wait_scan_done, scan_done_notif,
                                ARRAY_SIZE(scan_done_notif), NULL, NULL);

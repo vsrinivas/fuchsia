@@ -42,7 +42,7 @@ int iwl_xvt_send_cmd(struct iwl_xvt* xvt, struct iwl_host_cmd* cmd) {
    * (or more) synchronous commands at a time.
    */
   if (!(cmd->flags & CMD_ASYNC)) {
-    lockdep_assert_held(&xvt->mutex);
+    iwl_assert_lock_held(&xvt->mutex);
   }
 
   return iwl_trans_send_cmd(xvt->trans, cmd);

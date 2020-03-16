@@ -48,7 +48,7 @@ void iwl_mvm_teardown_tdls_peers(struct iwl_mvm* mvm) {
   struct iwl_mvm_sta* mvmsta;
   int i;
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   for (i = 0; i < ARRAY_SIZE(mvm->fw_id_to_mac_id); i++) {
     sta = rcu_dereference_protected(mvm->fw_id_to_mac_id[i], lockdep_is_held(&mvm->mutex));
@@ -68,7 +68,7 @@ int iwl_mvm_tdls_sta_count(struct iwl_mvm* mvm, struct ieee80211_vif* vif) {
   int count = 0;
   int i;
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   for (i = 0; i < ARRAY_SIZE(mvm->fw_id_to_mac_id); i++) {
     sta = rcu_dereference_protected(mvm->fw_id_to_mac_id[i], lockdep_is_held(&mvm->mutex));
@@ -109,7 +109,7 @@ static void iwl_mvm_tdls_config(struct iwl_mvm* mvm, struct ieee80211_vif* vif) 
   int ret, i, cnt;
   struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   tdls_cfg_cmd.id_and_color = cpu_to_le32(FW_CMD_ID_AND_COLOR(mvmvif->id, mvmvif->color));
   tdls_cfg_cmd.tx_to_ap_tid = IWL_MVM_TDLS_FW_TID;
@@ -238,7 +238,7 @@ void iwl_mvm_rx_tdls_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb) {
   struct ieee80211_vif* vif;
   uint32_t sta_id = le32_to_cpu(notif->sta_id);
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   /* can fail sometimes */
   if (!le32_to_cpu(notif->status)) {
@@ -367,7 +367,7 @@ static int iwl_mvm_tdls_config_channel_switch(struct iwl_mvm* mvm, struct ieee80
   struct iwl_tdls_channel_switch_cmd cmd = {0};
   int ret;
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   ret = iwl_mvm_tdls_check_action(mvm, type, peer, peer_initiator, timestamp);
   if (ret) {

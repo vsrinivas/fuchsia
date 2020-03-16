@@ -288,7 +288,7 @@ static void iwl_pcie_txq_inc_wr_ptr(struct iwl_trans* trans, struct iwl_txq* txq
   uint32_t reg = 0;
   int txq_id = txq->id;
 
-  lockdep_assert_held(&txq->lock);
+  iwl_assert_lock_held(&txq->lock);
 
   /*
    * explicitly wake up the NIC if:
@@ -418,7 +418,7 @@ void iwl_pcie_txq_free_tfd(struct iwl_trans* trans, struct iwl_txq* txq) {
   int rd_ptr = txq->read_ptr;
   int idx = iwl_pcie_get_cmd_index(txq, rd_ptr);
 
-  lockdep_assert_held(&txq->lock);
+  iwl_assert_lock_held(&txq->lock);
 
   /* We have only q->n_window txq->entries, but we use
    * TFD_QUEUE_SIZE_MAX tfds
@@ -576,7 +576,7 @@ void iwl_pcie_free_tso_page(struct iwl_trans_pcie* trans_pcie, struct sk_buff* s
 static void iwl_pcie_clear_cmd_in_flight(struct iwl_trans* trans) {
   struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 
-  lockdep_assert_held(&trans_pcie->reg_lock);
+  iwl_assert_lock_held(&trans_pcie->reg_lock);
 
   if (trans_pcie->ref_cmd_in_flight) {
     trans_pcie->ref_cmd_in_flight = false;
@@ -974,7 +974,7 @@ error:
 }
 
 static inline void iwl_pcie_txq_progress(struct iwl_txq* txq) {
-  lockdep_assert_held(&txq->lock);
+  iwl_assert_lock_held(&txq->lock);
 
   if (!txq->wd_timeout) {
     return;
@@ -1107,7 +1107,7 @@ static zx_status_t iwl_pcie_set_cmd_in_flight(struct iwl_trans* trans,
   struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
   const struct iwl_cfg* cfg = trans->cfg;
 
-  lockdep_assert_held(&trans_pcie->reg_lock);
+  iwl_assert_lock_held(&trans_pcie->reg_lock);
 
   /* Make sure the NIC is still alive in the bus */
   if (test_bit(STATUS_TRANS_DEAD, &trans->status)) {
@@ -1161,7 +1161,7 @@ zx_status_t iwl_pcie_cmdq_reclaim(struct iwl_trans* trans, int txq_id, uint32_t 
     return ZX_ERR_INVALID_ARGS;
   }
 
-  lockdep_assert_held(&txq->lock);
+  iwl_assert_lock_held(&txq->lock);
 
   idx = iwl_pcie_get_cmd_index(txq, idx);
   uint16_t r = iwl_pcie_get_cmd_index(txq, txq->read_ptr);
@@ -1663,6 +1663,7 @@ static zx_status_t iwl_pcie_enqueue_hcmd(struct iwl_trans* trans, struct iwl_hos
     // if we need to support 2 NOCOPY fragments.
     if (used_dup_io_buf) {
       IWL_ERR(trans, "Cannot have 2 NOCOPY or DUP fragments in one command.\n");
+      mtx_unlock(&txq->lock);
       return ZX_ERR_IO_INVALID;
     } else {
       used_dup_io_buf = true;

@@ -69,7 +69,7 @@ static int iwl_mvm_find_free_sta_id(struct iwl_mvm* mvm, enum nl80211_iftype ift
   BUILD_BUG_ON(IWL_MVM_STATION_COUNT > 32);
   WARN_ON_ONCE(test_bit(IWL_MVM_STATUS_IN_HW_RESTART, &mvm->status));
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   /* d0i3/d3 assumes the AP's sta_id (of sta vif) is 0. reserve it. */
   if (iftype != NL80211_IFTYPE_STATION) {
@@ -396,7 +396,7 @@ static int iwl_mvm_get_queue_agg_tids(struct iwl_mvm* mvm, int queue) {
   uint8_t sta_id;
   int tid;
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   if (WARN_ON(iwl_mvm_has_new_tx_api(mvm))) {
     return -EINVAL;
@@ -437,7 +437,7 @@ static int iwl_mvm_remove_sta_queue_marking(struct iwl_mvm* mvm, int queue) {
   uint8_t sta_id;
   int tid;
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   if (WARN_ON(iwl_mvm_has_new_tx_api(mvm))) {
     return -EINVAL;
@@ -496,7 +496,7 @@ static int iwl_mvm_free_inactive_queue(struct iwl_mvm* mvm, int queue,
   bool same_sta;
   int ret;
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   if (WARN_ON(iwl_mvm_has_new_tx_api(mvm))) {
     return -EINVAL;
@@ -544,7 +544,7 @@ static int iwl_mvm_get_shared_queue(struct iwl_mvm* mvm, unsigned long tfd_queue
    * This protects us against grabbing a queue that's being reconfigured
    * by the inactivity checker.
    */
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   if (WARN_ON(iwl_mvm_has_new_tx_api(mvm))) {
     return -EINVAL;
@@ -698,7 +698,7 @@ static int iwl_mvm_find_free_queue(struct iwl_mvm* mvm, uint8_t sta_id, uint8_t 
                                    uint8_t maxq) {
   int i;
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   /* This should not be hit with new TX path */
   if (WARN_ON(iwl_mvm_has_new_tx_api(mvm))) {
@@ -745,7 +745,7 @@ static int iwl_mvm_sta_alloc_queue_tvqm(struct iwl_mvm* mvm, struct ieee80211_st
   unsigned int wdg_timeout = iwl_mvm_get_wd_timeout(mvm, mvmsta->vif, false, false);
   int queue = -1;
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   IWL_DEBUG_TX_QUEUES(mvm, "Allocating queue for sta %d on tid %d\n", mvmsta->sta_id, tid);
   queue = iwl_mvm_tvqm_enable_txq(mvm, mvmsta->sta_id, tid, wdg_timeout);
@@ -851,7 +851,7 @@ static void iwl_mvm_change_queue_tid(struct iwl_mvm* mvm, int queue) {
   unsigned long tid_bitmap;
   int ret;
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   if (WARN_ON(iwl_mvm_has_new_tx_api(mvm))) {
     return;
@@ -893,7 +893,7 @@ static void iwl_mvm_unshare_queue(struct iwl_mvm* mvm, int queue) {
     return;
   }
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   sta_id = mvm->queue_info[queue].ra_sta_id;
   tid_bitmap = mvm->queue_info[queue].tid_bitmap;
@@ -962,8 +962,8 @@ static bool iwl_mvm_remove_inactive_tids(struct iwl_mvm* mvm, struct iwl_mvm_sta
                                          unsigned long* changetid_queues) {
   int tid;
 
-  lockdep_assert_held(&mvmsta->lock);
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvmsta->lock);
+  iwl_assert_lock_held(&mvm->mutex);
 
   if (WARN_ON(iwl_mvm_has_new_tx_api(mvm))) {
     return false;
@@ -1053,7 +1053,7 @@ static int iwl_mvm_inactivity_check(struct iwl_mvm* mvm, uint8_t alloc_for_sta) 
   int i, ret, free_queue = -ENOSPC;
   struct ieee80211_sta* queue_owner = NULL;
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   if (iwl_mvm_has_new_tx_api(mvm)) {
     return -ENOSPC;
@@ -1162,7 +1162,7 @@ static int iwl_mvm_sta_alloc_queue(struct iwl_mvm* mvm, struct ieee80211_sta* st
   unsigned long tfd_queue_mask;
   int ret;
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   if (iwl_mvm_has_new_tx_api(mvm)) {
     return iwl_mvm_sta_alloc_queue_tvqm(mvm, sta, ac, tid);
@@ -1448,7 +1448,7 @@ static int iwl_mvm_add_int_sta_common(struct iwl_mvm* mvm, struct iwl_mvm_int_st
   int ret;
   uint32_t status = ADD_STA_SUCCESS;
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   memset(&cmd, 0, sizeof(cmd));
   cmd.sta_id = sta->sta_id;
@@ -1491,7 +1491,7 @@ int iwl_mvm_add_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif, struct ieee8
   bool sta_update = false;
   unsigned int sta_flags = 0;
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   if (!test_bit(IWL_MVM_STATUS_IN_HW_RESTART, &mvm->status)) {
     sta_id = iwl_mvm_find_free_sta_id(mvm, ieee80211_vif_type_p2p(vif));
@@ -1633,7 +1633,7 @@ int iwl_mvm_drain_sta(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvmsta, bool drai
   int ret;
   uint32_t status;
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   cmd.mac_id_n_color = cpu_to_le32(mvmsta->mac_id_n_color);
   cmd.sta_id = mvmsta->sta_id;
@@ -1694,7 +1694,7 @@ static void iwl_mvm_disable_sta_queues(struct iwl_mvm* mvm, struct ieee80211_vif
   struct iwl_mvm_sta* mvm_sta = iwl_mvm_sta_from_mac80211(sta);
   int i;
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   for (i = 0; i < ARRAY_SIZE(mvm_sta->tid_data); i++) {
     if (mvm_sta->tid_data[i].txq_id == IWL_MVM_INVALID_QUEUE) {
@@ -1742,7 +1742,7 @@ int iwl_mvm_rm_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif, struct ieee80
   uint8_t sta_id = mvm_sta->sta_id;
   int ret;
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   if (iwl_mvm_has_new_rx_api(mvm)) {
     kfree(mvm_sta->dup_data);
@@ -1832,7 +1832,7 @@ int iwl_mvm_rm_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif, struct ieee80
 int iwl_mvm_rm_sta_id(struct iwl_mvm* mvm, struct ieee80211_vif* vif, uint8_t sta_id) {
   int ret = iwl_mvm_rm_sta_common(mvm, sta_id);
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   RCU_INIT_POINTER(mvm->fw_id_to_mac_id[sta_id], NULL);
   return ret;
@@ -1885,7 +1885,7 @@ static void iwl_mvm_enable_aux_snif_queue(struct iwl_mvm* mvm, uint16_t* queue, 
 int iwl_mvm_add_aux_sta(struct iwl_mvm* mvm) {
   int ret;
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   /* Allocate aux station and assign to it the aux queue */
   ret = iwl_mvm_allocate_int_sta(mvm, &mvm->aux_sta, BIT(mvm->aux_queue),
@@ -1918,7 +1918,7 @@ int iwl_mvm_add_snif_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif) {
   struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
   int ret;
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   /* Map snif queue to fifo - must happen before adding snif station */
   if (!iwl_mvm_has_new_tx_api(mvm))
@@ -1942,7 +1942,7 @@ int iwl_mvm_add_snif_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif) {
 int iwl_mvm_rm_snif_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif) {
   int ret;
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   iwl_mvm_disable_txq(mvm, NULL, mvm->snif_queue, IWL_MAX_TID_COUNT, 0);
   ret = iwl_mvm_rm_sta_common(mvm, mvm->snif_sta.sta_id);
@@ -1956,7 +1956,7 @@ int iwl_mvm_rm_snif_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif) {
 void iwl_mvm_dealloc_snif_sta(struct iwl_mvm* mvm) { iwl_mvm_dealloc_int_sta(mvm, &mvm->snif_sta); }
 
 void iwl_mvm_del_aux_sta(struct iwl_mvm* mvm) {
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   iwl_mvm_dealloc_int_sta(mvm, &mvm->aux_sta);
 }
@@ -1985,7 +1985,7 @@ int iwl_mvm_send_add_bcast_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif) {
       .frame_limit = IWL_FRAME_LIMIT,
   };
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   if (!iwl_mvm_has_new_tx_api(mvm)) {
     if (vif->type == NL80211_IFTYPE_AP || vif->type == NL80211_IFTYPE_ADHOC) {
@@ -2035,7 +2035,7 @@ static void iwl_mvm_free_bcast_sta_queues(struct iwl_mvm* mvm, struct ieee80211_
   struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
   int queue;
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   iwl_mvm_flush_sta(mvm, &mvmvif->bcast_sta, true, 0);
 
@@ -2067,7 +2067,7 @@ int iwl_mvm_send_rm_bcast_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif) {
   struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
   int ret;
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   iwl_mvm_free_bcast_sta_queues(mvm, vif);
 
@@ -2081,7 +2081,7 @@ int iwl_mvm_send_rm_bcast_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif) {
 int iwl_mvm_alloc_bcast_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif) {
   struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   return iwl_mvm_allocate_int_sta(mvm, &mvmvif->bcast_sta, 0, ieee80211_vif_type_p2p(vif),
                                   IWL_STA_GENERAL_PURPOSE);
@@ -2099,7 +2099,7 @@ int iwl_mvm_add_p2p_bcast_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif) {
   struct iwl_mvm_int_sta* bsta = &mvmvif->bcast_sta;
   int ret;
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   ret = iwl_mvm_alloc_bcast_sta(mvm, vif);
   if (ret) {
@@ -2128,7 +2128,7 @@ void iwl_mvm_dealloc_bcast_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif) {
 int iwl_mvm_rm_p2p_bcast_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif) {
   int ret;
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   ret = iwl_mvm_send_rm_bcast_sta(mvm, vif);
 
@@ -2160,7 +2160,7 @@ int iwl_mvm_add_mcast_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif) {
   unsigned int timeout = iwl_mvm_get_wd_timeout(mvm, vif, false, false);
   int ret;
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   if (WARN_ON(vif->type != NL80211_IFTYPE_AP && vif->type != NL80211_IFTYPE_ADHOC)) {
     return -ENOTSUPP;
@@ -2244,7 +2244,7 @@ int iwl_mvm_rm_mcast_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif) {
   struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
   int ret;
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   iwl_mvm_flush_sta(mvm, &mvmvif->mcast_sta, true, 0);
 
@@ -2341,7 +2341,7 @@ int iwl_mvm_sta_rx_agg(struct iwl_mvm* mvm, struct ieee80211_sta* sta, int tid, 
   int ret;
   uint32_t status;
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   if (start && mvm->rx_ba_sessions >= IWL_MAX_RX_BA_SESSIONS) {
     IWL_WARN(mvm, "Not enough RX BA SESSIONS\n");
@@ -2501,7 +2501,7 @@ int iwl_mvm_sta_tx_agg(struct iwl_mvm* mvm, struct ieee80211_sta* sta, int tid, 
   int ret;
   uint32_t status;
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   if (start) {
     mvm_sta->tfd_queue_msk |= BIT(queue);
@@ -2567,7 +2567,7 @@ int iwl_mvm_sta_tx_agg_start(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
     return -ENXIO;
   }
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   if (mvmsta->tid_data[tid].txq_id == IWL_MVM_INVALID_QUEUE && iwl_mvm_has_new_tx_api(mvm)) {
     uint8_t ac = tid_to_mac80211_ac[tid];
@@ -2777,7 +2777,7 @@ static void iwl_mvm_unreserve_agg_queue(struct iwl_mvm* mvm, struct iwl_mvm_sta*
                                         struct iwl_mvm_tid_data* tid_data) {
   uint16_t txq_id = tid_data->txq_id;
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   if (iwl_mvm_has_new_tx_api(mvm)) {
     return;
@@ -2846,7 +2846,7 @@ int iwl_mvm_sta_tx_agg_stop(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
        */
 
       /* No barriers since we are under mutex */
-      lockdep_assert_held(&mvm->mutex);
+      iwl_assert_lock_held(&mvm->mutex);
 
       ieee80211_stop_tx_ba_cb_irqsafe(vif, sta->addr, tid);
       tid_data->state = IWL_AGG_OFF;
@@ -2912,7 +2912,7 @@ int iwl_mvm_sta_tx_agg_flush(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
 static int iwl_mvm_set_fw_key_idx(struct iwl_mvm* mvm) {
   int i, max = -1, max_offs = -1;
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   /* Pick the unused key offset with the highest 'deleted'
    * counter. Every time a key is deleted, all the counters
@@ -3267,7 +3267,7 @@ int iwl_mvm_set_sta_key(struct iwl_mvm* mvm, struct ieee80211_vif* vif, struct i
   int ret;
   static const uint8_t __maybe_unused zero_addr[ETH_ALEN] = {0};
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   if (vif->type != NL80211_IFTYPE_AP || keyconf->flags & IEEE80211_KEY_FLAG_PAIRWISE) {
     /* Get the station id from the mvm local station table */
@@ -3361,7 +3361,7 @@ int iwl_mvm_remove_sta_key(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
   uint8_t sta_id = IWL_MVM_INVALID_STA;
   int ret, i;
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   /* Get the station from the mvm local station table */
   mvm_sta = iwl_mvm_get_key_sta(mvm, vif, sta);
@@ -3606,7 +3606,7 @@ void iwl_mvm_modify_all_sta_disable_tx(struct iwl_mvm* mvm, struct iwl_mvm_vif* 
   struct iwl_mvm_sta* mvm_sta;
   int i;
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   /* Block/unblock all the stations of the given mvmvif */
   for (i = 0; i < ARRAY_SIZE(mvm->fw_id_to_mac_id); i++) {

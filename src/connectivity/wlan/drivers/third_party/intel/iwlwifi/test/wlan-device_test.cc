@@ -44,7 +44,11 @@ class WlanDeviceTest : public SingleApTest {
             .mvm = iwl_trans_get_mvm(sim_trans_.iwl_trans()),
             .mac_role = WLAN_INFO_MAC_ROLE_CLIENT,
         } {
-    EXPECT_EQ(ZX_OK, iwl_nvm_init(iwl_trans_get_mvm(sim_trans_.iwl_trans())));
+    struct iwl_mvm* mvm = iwl_trans_get_mvm(sim_trans_.iwl_trans());
+    mtx_lock(&mvm->mutex);
+    zx_status_t ret = iwl_nvm_init(mvm);
+    mtx_unlock(&mvm->mutex);
+    EXPECT_EQ(ZX_OK, ret);
   }
   ~WlanDeviceTest() {}
 

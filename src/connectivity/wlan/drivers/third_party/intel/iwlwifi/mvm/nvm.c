@@ -117,6 +117,7 @@ static zx_status_t iwl_nvm_read_chunk(struct iwl_mvm* mvm, uint16_t section, uin
 
   cmd.len[0] = sizeof(struct iwl_nvm_access_cmd);
 
+  iwl_assert_lock_held(&mvm->mutex);
   zx_status_t ret = iwl_mvm_send_cmd(mvm, &cmd);
   if (ret != ZX_OK) {
     return ret;
@@ -211,6 +212,9 @@ static zx_status_t iwl_nvm_read_section(struct iwl_mvm* mvm, uint16_t section, u
   length = IWL_NVM_DEFAULT_CHUNK_SIZE;
 
   size_t bytes_read = length;
+
+  /* Reading NVM sections require the mutex to be held */
+  iwl_assert_lock_held(&mvm->mutex);
 
   /* Read the NVM until exhausted (reading less than requested) */
   while (bytes_read == length) {
@@ -320,6 +324,8 @@ zx_status_t iwl_nvm_init(struct iwl_mvm* mvm) {
   int section;
   uint32_t size_read = 0;
   uint8_t *nvm_buffer, *temp;
+
+  iwl_assert_lock_held(&mvm->mutex);
 
   if (WARN_ON_ONCE(mvm->cfg->nvm_hw_section_num >= NVM_MAX_NUM_SECTIONS)) {
     return ZX_ERR_INVALID_ARGS;
@@ -570,7 +576,7 @@ void iwl_mvm_rx_chub_update_mcc(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* r
   char mcc[3];
   struct ieee80211_regdomain* regd;
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   if (iwl_mvm_is_vif_assoc(mvm) && notif->source_id == MCC_SOURCE_WIFI) {
     IWL_DEBUG_LAR(mvm, "Ignore mcc update while associated\n");

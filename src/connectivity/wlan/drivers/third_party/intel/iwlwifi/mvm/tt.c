@@ -199,7 +199,7 @@ int iwl_mvm_get_temp(struct iwl_mvm* mvm, int32_t* temp) {
     static uint16_t temp_notif[] = {WIDE_ID(PHY_OPS_GROUP, DTS_MEASUREMENT_NOTIF_WIDE)};
     int ret;
 
-    lockdep_assert_held(&mvm->mutex);
+    iwl_assert_lock_held(&mvm->mutex);
 
     iwl_init_notification_wait(&mvm->notif_wait, &wait_temp_notif, temp_notif,
                                ARRAY_SIZE(temp_notif), iwl_mvm_temp_notif_wait, temp);
@@ -271,7 +271,7 @@ static void iwl_mvm_tt_smps_iterator(void* _data, uint8_t* mac, struct ieee80211
     struct iwl_mvm* mvm = _data;
     enum ieee80211_smps_mode smps_mode;
 
-    lockdep_assert_held(&mvm->mutex);
+    iwl_assert_lock_held(&mvm->mutex);
 
     if (mvm->thermal_throttle.dynamic_smps) {
         smps_mode = IEEE80211_SMPS_DYNAMIC;
@@ -448,7 +448,7 @@ int iwl_mvm_ctdp_command(struct iwl_mvm* mvm, uint32_t op, uint32_t state) {
     int ret;
     uint32_t status;
 
-    lockdep_assert_held(&mvm->mutex);
+    iwl_assert_lock_held(&mvm->mutex);
 
     status = 0;
     ret = iwl_mvm_send_cmd_pdu_status(mvm, WIDE_ID(PHY_OPS_GROUP, CTDP_CONFIG_CMD), sizeof(cmd),
@@ -491,7 +491,7 @@ int iwl_mvm_send_temp_report_ths_cmd(struct iwl_mvm* mvm) {
     struct temp_report_ths_cmd cmd = {0};
     int ret, i, j, idx = 0;
 
-    lockdep_assert_held(&mvm->mutex);
+    iwl_assert_lock_held(&mvm->mutex);
 
     if (!mvm->tz_device.tzone) { return -EINVAL; }
 

@@ -289,7 +289,7 @@ struct ieee80211_regdomain* iwl_mvm_get_regdomain(struct wiphy* wiphy, const cha
 
     IWL_DEBUG_LAR(mvm, "Getting regdomain data for %s from FW\n", alpha2);
 
-    lockdep_assert_held(&mvm->mutex);
+    iwl_assert_lock_held(&mvm->mutex);
 
     resp = iwl_mvm_update_mcc(mvm, alpha2, src_id);
     if (IS_ERR_OR_NULL(resp)) {
@@ -940,7 +940,7 @@ static void iwl_mvm_restart_cleanup(struct iwl_mvm* mvm) {
 zx_status_t __iwl_mvm_mac_start(struct iwl_mvm* mvm) {
   zx_status_t ret;
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   if (test_bit(IWL_MVM_STATUS_HW_RESTART_REQUESTED, &mvm->status)) {
     /*
@@ -1051,7 +1051,7 @@ static void iwl_mvm_mac_reconfig_complete(struct ieee80211_hw* hw,
 #endif  // NEEDS_PORTING
 
 void __iwl_mvm_mac_stop(struct iwl_mvm* mvm) {
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   /* firmware counters are obviously reset now, but we shouldn't
    * partially track so also clear the fw_reset_accu counters.
@@ -1149,7 +1149,7 @@ void iwl_mvm_mac_stop(struct iwl_mvm* mvm) {
 static struct iwl_mvm_phy_ctxt* iwl_mvm_get_free_phy_ctxt(struct iwl_mvm* mvm) {
   uint16_t i;
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   for (i = 0; i < NUM_PHY_CTX; i++) {
     if (!mvm->phy_ctxts[i].ref) {
@@ -1534,7 +1534,7 @@ static
         .mvm = mvm,
     };
 
-    lockdep_assert_held(&mvm->mutex);
+    iwl_assert_lock_held(&mvm->mutex);
 
     if (WARN_ON_ONCE(!mvm->mcast_filter_cmd)) { return; }
 
@@ -3136,7 +3136,7 @@ static int iwl_mvm_send_aux_roc_cmd(struct iwl_mvm* mvm, struct ieee80211_channe
     /* Set the node address */
     memcpy(aux_roc_req.node_addr, vif->addr, ETH_ALEN);
 
-    lockdep_assert_held(&mvm->mutex);
+    iwl_assert_lock_held(&mvm->mutex);
 
     spin_lock_bh(&mvm->time_event_lock);
 
@@ -3323,7 +3323,7 @@ static zx_status_t __iwl_mvm_add_chanctx(struct iwl_mvm* mvm, const wlan_channel
   struct iwl_mvm_phy_ctxt* phy_ctxt;
   zx_status_t ret;
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   IWL_DEBUG_MAC80211(mvm, "Add channel context\n");
 
@@ -3365,7 +3365,7 @@ zx_status_t iwl_mvm_add_chanctx(struct iwl_mvm* mvm, const wlan_channel_t* chand
 static zx_status_t __iwl_mvm_remove_chanctx(struct iwl_mvm* mvm, uint16_t phy_ctxt_id) {
   struct iwl_mvm_phy_ctxt* phy_ctxt = &mvm->phy_ctxts[phy_ctxt_id];
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   return iwl_mvm_phy_ctxt_unref(mvm, phy_ctxt);
 #ifdef CPTCFG_IWLWIFI_FRQ_MGR
@@ -3426,7 +3426,7 @@ static int __iwl_mvm_assign_vif_chanctx(struct iwl_mvm* mvm, struct ieee80211_vi
     struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
     int ret;
 
-    lockdep_assert_held(&mvm->mutex);
+    iwl_assert_lock_held(&mvm->mutex);
 
     mvmvif->phy_ctxt = phy_ctxt;
 
@@ -3536,7 +3536,7 @@ static void __iwl_mvm_unassign_vif_chanctx(struct iwl_mvm* mvm, struct ieee80211
     struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
     struct ieee80211_vif* disabled_vif = NULL;
 
-    lockdep_assert_held(&mvm->mutex);
+    iwl_assert_lock_held(&mvm->mutex);
 
     iwl_mvm_remove_time_event(mvm, mvmvif, &mvmvif->time_event_data);
 
@@ -4374,7 +4374,7 @@ void iwl_mvm_sync_rx_queues_internal(struct iwl_mvm* mvm, struct iwl_mvm_interna
     uint32_t qmask = BIT(mvm->trans->num_rx_queues) - 1;
     int ret;
 
-    lockdep_assert_held(&mvm->mutex);
+    iwl_assert_lock_held(&mvm->mutex);
 
     if (!iwl_mvm_has_new_rx_api(mvm)) { return; }
 

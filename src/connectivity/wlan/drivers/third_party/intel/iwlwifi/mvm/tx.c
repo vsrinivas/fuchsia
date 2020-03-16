@@ -1110,7 +1110,7 @@ static void iwl_mvm_check_ratid_empty(struct iwl_mvm* mvm, struct ieee80211_sta*
     struct ieee80211_vif* vif = mvmsta->vif;
     uint16_t normalized_ssn;
 
-    lockdep_assert_held(&mvmsta->lock);
+    iwl_assert_lock_held(&mvmsta->lock);
 
     if ((tid_data->state == IWL_AGG_ON || tid_data->state == IWL_EMPTYING_HW_QUEUE_DELBA) &&
         iwl_mvm_tid_queued(mvm, tid_data) == 0) {

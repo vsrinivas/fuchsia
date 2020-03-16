@@ -1948,7 +1948,7 @@ static inline uint32_t iwl_mvm_flushable_queues(struct iwl_mvm* mvm) {
 }
 
 static inline void iwl_mvm_stop_device(struct iwl_mvm* mvm) {
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   /* calling this function without using dump_start/end since at this
    * point we already hold the op mode mutex

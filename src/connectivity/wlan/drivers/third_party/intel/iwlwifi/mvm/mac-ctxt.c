@@ -226,7 +226,7 @@ zx_status_t iwl_mvm_mac_ctxt_init(struct iwl_mvm_vif* mvmvif) {
   unsigned long used_hw_queues;
 #endif  // NEEDS_PORTING
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
 #if 0   // NEEDS_PORTING
   // TODO(43218): Support multiple interfaces simultaneously.
@@ -1154,6 +1154,8 @@ zx_status_t iwl_mvm_mac_ctxt_add(struct iwl_mvm_vif* mvmvif) {
   }
 #endif  // NEEDS_PORTING
 
+  iwl_assert_lock_held(&mvmvif->mvm->mutex);
+
   if (mvmvif->uploaded) {
     IWL_ERR(mvm, "Adding active MAC\n");
     return ZX_ERR_IO;
@@ -1179,6 +1181,8 @@ zx_status_t iwl_mvm_mac_ctxt_changed(struct iwl_mvm_vif* mvmvif, bool force_asso
   }
 #endif  // NEEDS_PORTING
 
+  iwl_assert_lock_held(&mvmvif->mvm->mutex);
+
   if (!mvmvif->uploaded) {
     IWL_ERR(mvm, "Changing inactive MAC\n");
     return ZX_ERR_IO;
@@ -1190,6 +1194,9 @@ zx_status_t iwl_mvm_mac_ctxt_changed(struct iwl_mvm_vif* mvmvif, bool force_asso
 zx_status_t iwl_mvm_mac_ctxt_remove(struct iwl_mvm_vif* mvmvif) {
   struct iwl_mac_ctx_cmd cmd;
   zx_status_t ret;
+  struct iwl_mvm* mvm = mvmvif->mvm;
+
+  iwl_assert_lock_held(&mvm->mutex);
 
 #if 0   // NEEDS_PORTING
   if (WARN_ON_ONCE(vif->type == NL80211_IFTYPE_NAN)) {
@@ -1207,7 +1214,7 @@ zx_status_t iwl_mvm_mac_ctxt_remove(struct iwl_mvm_vif* mvmvif) {
   cmd.id_and_color = cpu_to_le32(FW_CMD_ID_AND_COLOR(mvmvif->id, mvmvif->color));
   cmd.action = cpu_to_le32(FW_CTXT_ACTION_REMOVE);
 
-  ret = iwl_mvm_send_cmd_pdu(mvmvif->mvm, MAC_CONTEXT_CMD, 0, sizeof(cmd), &cmd);
+  ret = iwl_mvm_send_cmd_pdu(mvm, MAC_CONTEXT_CMD, 0, sizeof(cmd), &cmd);
   if (ret) {
     IWL_ERR(mvm, "Failed to remove MAC context: %d\n", ret);
     return ret;
@@ -1264,7 +1271,7 @@ void iwl_mvm_rx_beacon_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb)
   struct agg_tx_status* agg_status;
   uint16_t status;
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   beacon_notify_hdr = &beacon->beacon_notify_hdr;
   mvm->ap_last_beacon_gp2 = le32_to_cpu(beacon->gp2);

@@ -36,8 +36,9 @@
 
 #include "iwl-tm-gnl.h"
 
-#include <linux/export.h>
 #include <net/genetlink.h>
+
+#include <linux/export.h>
 
 #include "iwl-csr.h"
 #include "iwl-dnt-cfg.h"
@@ -509,7 +510,7 @@ static const struct nla_policy iwl_tm_gnl_msg_policy[IWL_TM_GNL_MSG_ATTR_MAX] = 
 static struct iwl_tm_gnl_dev* iwl_tm_gnl_get_dev(const char* dev_name) {
   struct iwl_tm_gnl_dev *dev_itr, *dev = NULL;
 
-  lockdep_assert_held(&dev_list_mtx);
+  iwl_assert_lock_held(&dev_list_mtx);
 
   list_for_each_entry(dev_itr, &dev_list, list) {
     if (!strcmp(dev_itr->dev_name, dev_name)) {

@@ -34,6 +34,7 @@
  *
  *****************************************************************************/
 
+#include <lib/zircon-internal/thread_annotations.h>
 #include <stdbool.h>
 #include <threads.h>
 
@@ -602,7 +603,7 @@ static void iwl_mvm_init_modparams(struct iwl_mvm* mvm) {
 }
 #endif
 
-static int iwl_mvm_fwrt_dump_start(void* ctx) {
+static int iwl_mvm_fwrt_dump_start(void* ctx) TA_NO_THREAD_SAFETY_ANALYSIS {
   struct iwl_mvm* mvm = ctx;
   int ret;
 
@@ -616,7 +617,7 @@ static int iwl_mvm_fwrt_dump_start(void* ctx) {
   return 0;
 }
 
-static void iwl_mvm_fwrt_dump_end(void* ctx) {
+static void iwl_mvm_fwrt_dump_end(void* ctx) TA_NO_THREAD_SAFETY_ANALYSIS {
   struct iwl_mvm* mvm = ctx;
 
   mtx_unlock(&mvm->mutex);
@@ -1767,7 +1768,7 @@ void iwl_mvm_d0i3_enable_tx(struct iwl_mvm* mvm, __le16* qos_seq) {
   int i;
   bool wake_queues = false;
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   spin_lock_bh(&mvm->d0i3_tx_lock);
 

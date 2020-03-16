@@ -156,7 +156,7 @@ zx_status_t iwl_mvm_send_bt_init_conf(struct iwl_mvm* mvm) {
   struct iwl_bt_coex_cmd bt_cmd = {};
   uint32_t mode;
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   if (unlikely(mvm->bt_force_ant_mode != BT_FORCE_ANT_DIS)) {
     switch (mvm->bt_force_ant_mode) {
@@ -283,7 +283,7 @@ static void iwl_mvm_bt_notif_iterator(void* _data, uint8_t* mac, struct ieee8021
   uint32_t bt_activity_grading, min_ag_for_static_smps;
   int ave_rssi;
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   switch (vif->type) {
     case NL80211_IFTYPE_STATION:
@@ -521,7 +521,7 @@ void iwl_mvm_bt_rssi_event(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
   struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
   int ret;
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   /* Ignore updates if we are in force mode */
   if (unlikely(mvm->bt_force_ant_mode != BT_FORCE_ANT_DIS)) {
@@ -824,7 +824,7 @@ void iwl_mvm_reset_lte_state(struct iwl_mvm* mvm) {
 void iwl_mvm_send_lte_commands(struct iwl_mvm* mvm) {
   struct lte_coex_state* lte_state = &mvm->lte_state;
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   if (lte_state->has_static) {
     iwl_mvm_send_lte_coex_static_params_cmd(mvm);

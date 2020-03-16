@@ -34,9 +34,10 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
-#include <linux/etherdevice.h>
 #include <net/mac80211.h>
 #include <net/netlink.h>
+
+#include <linux/etherdevice.h>
 
 #include "iwl-vendor-cmd.h"
 #include "mvm.h"
@@ -817,7 +818,7 @@ void iwl_mvm_active_rx_filters(struct iwl_mvm* mvm) {
   static const uint8_t ipv4_mdns[] = {0x01, 0x00, 0x5e, 0x00, 0x00, 0xfb};
   static const uint8_t ipv6_mdns[] = {0x33, 0x33, 0x00, 0x00, 0x00, 0xfb};
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   if (mvm->rx_filters & IWL_MVM_VENDOR_RXFILTER_EINVAL) {
     return;

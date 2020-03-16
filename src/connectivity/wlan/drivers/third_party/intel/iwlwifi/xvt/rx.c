@@ -53,7 +53,7 @@ static void iwl_xvt_release_frames(struct iwl_xvt* xvt, struct iwl_xvt_reorder_b
                                    uint16_t nssn) {
   uint16_t ssn = reorder_buf->head_sn;
 
-  lockdep_assert_held(&reorder_buf->lock);
+  iwl_assert_lock_held(&reorder_buf->lock);
   IWL_DEBUG_HT(xvt, "reorder: release nssn=%d\n", nssn);
 
   /* ignore nssn smaller than head sn - this can happen due to timeout */

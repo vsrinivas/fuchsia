@@ -4,6 +4,7 @@
 
 #include <lib/fake-bti/bti.h>
 #include <lib/mock-function/mock-function.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/bti.h>
 #include <stdio.h>
 
@@ -21,8 +22,11 @@ namespace {
 
 class MvmTest : public SingleApTest {
  public:
-  MvmTest() : mvm_(iwl_trans_get_mvm(sim_trans_.iwl_trans())) {}
-  ~MvmTest() {}
+  MvmTest() TA_NO_THREAD_SAFETY_ANALYSIS {
+    mvm_ = iwl_trans_get_mvm(sim_trans_.iwl_trans());
+    mtx_lock(&mvm_->mutex);
+  }
+  ~MvmTest() TA_NO_THREAD_SAFETY_ANALYSIS { mtx_unlock(&mvm_->mutex); }
 
  protected:
   void buildRxcb(struct iwl_rx_cmd_buffer* rxcb, void* pkt_data, size_t pkt_len) {
@@ -167,6 +171,7 @@ TEST_F(MvmTest, scanLmacNormal) {
   };
 
   EXPECT_EQ(ZX_OK, iwl_mvm_scan_lmac(mvm_, &params));
+
   struct iwl_scan_req_lmac* cmd = reinterpret_cast<struct iwl_scan_req_lmac*>(mvm_->scan_cmd);
   EXPECT_EQ(0x0001, le16_to_cpu(cmd->rx_chain_select));
   EXPECT_EQ(1, le32_to_cpu(cmd->iter_num));

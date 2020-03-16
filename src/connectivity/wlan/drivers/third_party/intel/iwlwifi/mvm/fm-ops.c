@@ -669,7 +669,7 @@ void iwl_mvm_fm_notify_channel_change(struct ieee80211_chanctx_conf* ctx,
     return;
   }
 
-  lockdep_assert_held(&g_mvm->mutex);
+  iwl_assert_lock_held(&g_mvm->mutex);
 
   /*
    * if notifying the FM about adding/removing a channel ctx we

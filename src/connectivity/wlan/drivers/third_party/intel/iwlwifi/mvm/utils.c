@@ -62,7 +62,7 @@ zx_status_t iwl_mvm_send_cmd(struct iwl_mvm* mvm, struct iwl_host_cmd* cmd) {
    * (or more) synchronous commands at a time.
    */
   if (!(cmd->flags & CMD_ASYNC)) {
-    lockdep_assert_held(&mvm->mutex);
+    iwl_assert_lock_held(&mvm->mutex);
     if (!(cmd->flags & CMD_SEND_IN_IDLE)) {
       iwl_mvm_ref(mvm, IWL_MVM_REF_SENDING_CMD);
     }
@@ -118,7 +118,7 @@ zx_status_t iwl_mvm_send_cmd_status(struct iwl_mvm* mvm, struct iwl_host_cmd* cm
   struct iwl_cmd_response* resp;
   int ret, resp_len;
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
 #if defined(CPTCFG_IWLWIFI_DEBUGFS) && defined(CONFIG_PM_SLEEP)
   if (WARN_ON(mvm->d3_test_active)) {
@@ -744,7 +744,7 @@ void iwl_mvm_update_smps(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
     enum ieee80211_smps_mode smps_mode;
     int i;
 
-    lockdep_assert_held(&mvm->mutex);
+    iwl_assert_lock_held(&mvm->mutex);
 
     /* SMPS is irrelevant for NICs that don't have at least 2 RX antenna */
     if (num_of_ant(iwl_mvm_get_valid_rx_ant(mvm)) == 1) { return; }
@@ -821,7 +821,7 @@ static void iwl_mvm_diversity_iter(void* _data, uint8_t* mac, struct ieee80211_v
 bool iwl_mvm_rx_diversity_allowed(struct iwl_mvm* mvm) {
     bool result = true;
 
-    lockdep_assert_held(&mvm->mutex);
+    iwl_assert_lock_held(&mvm->mutex);
 
     if (num_of_ant(iwl_mvm_get_valid_rx_ant(mvm)) == 1) { return false; }
 
@@ -856,7 +856,7 @@ int iwl_mvm_update_low_latency(struct iwl_mvm* mvm, struct ieee80211_vif* vif, b
     int res;
     bool prev;
 
-    lockdep_assert_held(&mvm->mutex);
+    iwl_assert_lock_held(&mvm->mutex);
 
     prev = iwl_mvm_vif_low_latency(mvmvif);
     iwl_mvm_vif_set_low_latency(mvmvif, low_latency, cause);
@@ -1409,7 +1409,7 @@ void iwl_mvm_tcm_rm_vif(struct iwl_mvm* mvm, struct ieee80211_vif* vif) {
 void iwl_mvm_get_sync_time(struct iwl_mvm* mvm, uint32_t* gp2, uint64_t* boottime) {
     bool ps_disabled;
 
-    lockdep_assert_held(&mvm->mutex);
+    iwl_assert_lock_held(&mvm->mutex);
 
     /* Disable power save when reading GP2 */
     ps_disabled = mvm->ps_disabled;

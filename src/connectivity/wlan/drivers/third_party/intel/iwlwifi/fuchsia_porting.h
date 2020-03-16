@@ -71,9 +71,8 @@ typedef char* acpi_string;
 
 #define IS_ENABLED(x) (false)
 
-#define lockdep_assert_held(x) \
-  do {                         \
-  } while (0)
+#define iwl_assert_lock_held(x) ZX_DEBUG_ASSERT(mtx_trylock(x) == thrd_busy)
+
 #define __aligned(x) __attribute__((aligned(x)))
 #define __force
 #define __must_check __attribute__((warn_unused_result))

@@ -573,7 +573,7 @@ static void iwl_mvm_power_set_pm(struct iwl_mvm* mvm, struct iwl_power_vifs* vif
   bool client_same_channel = false;
   bool ap_same_channel = false;
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   /* set pm_enable to false */
   ieee80211_iterate_active_interfaces_atomic(mvm->hw, IEEE80211_IFACE_ITER_NORMAL,
@@ -849,7 +849,7 @@ int iwl_mvm_power_update_ps(struct iwl_mvm* mvm) {
   };
   int ret;
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   /* get vifs info */
   ieee80211_iterate_active_interfaces_atomic(mvm->hw, IEEE80211_IFACE_ITER_NORMAL,
@@ -873,7 +873,7 @@ int iwl_mvm_power_update_mac(struct iwl_mvm* mvm) {
   };
   int ret;
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   /* get vifs info */
   ieee80211_iterate_active_interfaces_atomic(mvm->hw, IEEE80211_IFACE_ITER_NORMAL,

@@ -5,6 +5,7 @@
 // Used to test mvm/mac-ctxt.c
 
 #include <lib/mock-function/mock-function.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <stdio.h>
 
 #include <zxtest/zxtest.h>
@@ -20,8 +21,11 @@ namespace {
 
 class MacContextTest : public SingleApTest {
  public:
-  MacContextTest() { mvm_ = iwl_trans_get_mvm(sim_trans_.iwl_trans()); }
-  ~MacContextTest() {}
+  MacContextTest() TA_NO_THREAD_SAFETY_ANALYSIS {
+    mvm_ = iwl_trans_get_mvm(sim_trans_.iwl_trans());
+    mtx_lock(&mvm_->mutex);
+  }
+  ~MacContextTest() TA_NO_THREAD_SAFETY_ANALYSIS { mtx_unlock(&mvm_->mutex); }
 
  protected:
   struct iwl_mvm* mvm_;
@@ -32,6 +36,7 @@ TEST_F(MacContextTest, Init) {
       .mvm = mvm_,
       .mac_role = WLAN_INFO_MAC_ROLE_CLIENT,
   };
+
   ASSERT_OK(iwl_mvm_mac_ctxt_init(&mvmvif));
 }
 
@@ -40,9 +45,10 @@ TEST_F(MacContextTest, AddModifyRemove) {
       .mvm = mvm_,
       .mac_role = WLAN_INFO_MAC_ROLE_CLIENT,
   };
-  ASSERT_OK(iwl_mvm_mac_ctxt_init(&mvmvif));
 
+  ASSERT_OK(iwl_mvm_mac_ctxt_init(&mvmvif));
   ASSERT_OK(iwl_mvm_mac_ctxt_add(&mvmvif));
+
   // Already existing
   ASSERT_EQ(ZX_ERR_IO, iwl_mvm_mac_ctxt_add(&mvmvif));
 
@@ -50,7 +56,7 @@ TEST_F(MacContextTest, AddModifyRemove) {
   ASSERT_OK(iwl_mvm_mac_ctxt_changed(&mvmvif, false, nullptr));
   ASSERT_OK(iwl_mvm_mac_ctxt_remove(&mvmvif));
 
-  // Removed so expect error
+  // Removed so expect error.
   ASSERT_EQ(ZX_ERR_IO, iwl_mvm_mac_ctxt_changed(&mvmvif, false, nullptr));
   ASSERT_EQ(ZX_ERR_IO, iwl_mvm_mac_ctxt_remove(&mvmvif));
 }

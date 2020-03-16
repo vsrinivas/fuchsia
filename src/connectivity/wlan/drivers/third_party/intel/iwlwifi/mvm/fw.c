@@ -359,7 +359,7 @@ static int iwl_run_unified_mvm_ucode(struct iwl_mvm* mvm, bool read_nvm) {
     };
     int ret;
 
-    lockdep_assert_held(&mvm->mutex);
+    iwl_assert_lock_held(&mvm->mutex);
 
     iwl_init_notification_wait(&mvm->notif_wait, &init_wait, init_complete,
                                ARRAY_SIZE(init_complete), iwl_wait_init_complete, NULL);
@@ -517,7 +517,7 @@ zx_status_t iwl_run_init_mvm_ucode(struct iwl_mvm* mvm, bool read_nvm) {
   }
 #endif  // NEEDS_PORTING
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   if (WARN_ON_ONCE(mvm->calibrating)) {
     return ZX_OK;
@@ -1026,7 +1026,7 @@ static zx_status_t iwl_mvm_load_rt_fw(struct iwl_mvm* mvm) {
 zx_status_t iwl_mvm_up(struct iwl_mvm* mvm) {
   zx_status_t ret;
 
-  lockdep_assert_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
   ret = iwl_trans_start_hw(mvm->trans);
   if (ret != ZX_OK) {
@@ -1311,7 +1311,7 @@ error:
 int iwl_mvm_load_d3_fw(struct iwl_mvm* mvm) {
     int ret, i;
 
-    lockdep_assert_held(&mvm->mutex);
+    iwl_assert_lock_held(&mvm->mutex);
 
     ret = iwl_trans_start_hw(mvm->trans);
     if (ret) { return ret; }

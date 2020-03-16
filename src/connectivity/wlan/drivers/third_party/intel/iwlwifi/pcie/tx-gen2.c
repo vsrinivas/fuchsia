@@ -105,7 +105,7 @@ void iwl_pcie_gen2_update_byte_tbl(struct iwl_trans_pcie* trans_pcie, struct iwl
  * iwl_pcie_gen2_txq_inc_wr_ptr - Send new write index to hardware
  */
 void iwl_pcie_gen2_txq_inc_wr_ptr(struct iwl_trans* trans, struct iwl_txq* txq) {
-  lockdep_assert_held(&txq->lock);
+  iwl_assert_lock_held(&txq->lock);
 
   IWL_DEBUG_TX(trans, "Q:%d WR: 0x%x\n", txq->id, txq->write_ptr);
 
@@ -154,7 +154,7 @@ static void iwl_pcie_gen2_free_tfd(struct iwl_trans* trans, struct iwl_txq* txq)
    */
   int idx = iwl_pcie_get_cmd_index(txq, txq->read_ptr);
 
-  lockdep_assert_held(&txq->lock);
+  iwl_assert_lock_held(&txq->lock);
 
   iwl_pcie_gen2_tfd_unmap(trans, &txq->entries[idx].meta, iwl_pcie_get_tfd(trans, txq, idx));
 

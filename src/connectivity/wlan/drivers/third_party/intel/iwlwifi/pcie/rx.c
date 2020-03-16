@@ -197,7 +197,7 @@ int iwl_pcie_rx_stop(struct iwl_trans* trans) {
 static void iwl_pcie_rxq_inc_wr_ptr(struct iwl_trans* trans, struct iwl_rxq* rxq) {
   uint32_t reg;
 
-  lockdep_assert_held(&rxq->lock);
+  iwl_assert_lock_held(&rxq->lock);
 
   /*
    * explicitly wake up the NIC if:
@@ -744,7 +744,6 @@ zx_status_t _iwl_pcie_rx_init(struct iwl_trans* trans) {
         io_buffer_init(&rxb->io_buf, trans_pcie->bti, buffer_size, IO_BUFFER_RW | IO_BUFFER_CONTIG);
     if (status != ZX_OK) {
       IWL_WARN(trans, "Failed to allocate io buffer\n");
-      mtx_unlock(&def_rxq->lock);
       return status;
     }
 
@@ -1111,7 +1110,7 @@ static void iwl_pcie_irq_handle_error(struct iwl_trans* trans) {
 static uint32_t iwl_pcie_int_cause_non_ict(struct iwl_trans* trans) {
   uint32_t inta;
 
-  lockdep_assert_held(&IWL_TRANS_GET_PCIE_TRANS(trans)->irq_lock);
+  iwl_assert_lock_held(&IWL_TRANS_GET_PCIE_TRANS(trans)->irq_lock);
 
 #if 0   // NEEDS_PORTING
   trace_iwlwifi_dev_irq(trans->dev);
