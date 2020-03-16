@@ -98,28 +98,18 @@ bool GetKeyFromTeeDevice(const char* device_path, uint8_t* key_info, size_t key_
     return false;
   }
 
-  TEEC_Operation op1{};
-  op1.paramTypes =
+  TEEC_Operation op{};
+  op.paramTypes =
       TEEC_PARAM_TYPES(TEEC_MEMREF_TEMP_INPUT, TEEC_NONE, TEEC_NONE, TEEC_MEMREF_TEMP_OUTPUT);
-  op1.params[0].tmpref.buffer = key_info;
-  op1.params[0].tmpref.size = key_info_size;
-  op1.params[3].tmpref.buffer = key_buffer;
-  op1.params[3].tmpref.size = key_buffer_size;
-  TEEC_Operation op2 = op1;
-  TEEC_Operation* op = &op1;
+  op.params[0].tmpref.buffer = key_info;
+  op.params[0].tmpref.size = key_info_size;
+  op.params[3].tmpref.buffer = key_buffer;
+  op.params[3].tmpref.size = key_buffer_size;
 
-  result = session_ptr->invokeCommand(TA_KEYSAFE_CMD_GET_USER_DATA_STORAGE_KEY, op);
-  if (!(result == TEEC_SUCCESS || result == TEEC_ERROR_SHORT_BUFFER)) {
-    fprintf(stderr, "TA_KEYSAFE_CMD_GET_USER_DATA_STORAGE_KEY failed: result=0x%x\n", result);
-    // TODO(fxb/43162): Remove fall-back once the GET_USER_STORAGE_KEY command
-    // widely supported by the KeySafe TA.
-    op = &op2;
-    result = session_ptr->invokeCommand(TA_KEYSAFE_CMD_GET_HARDWARE_DERIVED_KEY, op);
-  }
-
+  result = session_ptr->invokeCommand(TA_KEYSAFE_CMD_GET_USER_DATA_STORAGE_KEY, &op);
   if (result == TEEC_ERROR_SHORT_BUFFER) {
     fprintf(stderr, "Output buffer for TEE key is too small!\n");
-    *key_size = op->params[3].tmpref.size;
+    *key_size = op.params[3].tmpref.size;
     return false;
   }
 
@@ -128,7 +118,7 @@ bool GetKeyFromTeeDevice(const char* device_path, uint8_t* key_info, size_t key_
     return false;
   }
 
-  *key_size = op->params[3].tmpref.size;
+  *key_size = op.params[3].tmpref.size;
   return true;
 }
 
