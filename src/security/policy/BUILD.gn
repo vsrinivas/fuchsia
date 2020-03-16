@@ -69,7 +69,6 @@ config_data("appmgr_component_event_provider_allowlist") {
   outputs = [ "allowlist/component_event_provider.txt" ]
 }
 
-# TODO(benwright) - Add logic in appmgr to use this allowlist.
 config_data("appmgr_root_resource_allowlist_user") {
   for_pkg = "appmgr"
   sources = [ "root_resource_allowlist_user.txt" ]
@@ -82,7 +81,6 @@ config_data("appmgr_root_resource_allowlist") {
   outputs = [ "allowlist/root_resource.txt" ]
 }
 
-# TODO(benwright) - Add logic in appmgr to use this allowlist.
 config_data("appmgr_root_resource_allowlist_userdebug") {
   for_pkg = "appmgr"
   sources = [ "root_resource_allowlist_userdebug.txt" ]
@@ -98,14 +96,12 @@ config_data("appmgr_root_job_allowlist") {
   outputs = [ "allowlist/root_job.txt" ]
 }
 
-# TODO(benwright) - Add logic in appmgr to use this allowlist.
 config_data("appmgr_root_job_allowlist_user") {
   for_pkg = "appmgr"
   sources = [ "root_job_allowlist_user.txt" ]
   outputs = [ "allowlist/root_job.txt" ]
 }
 
-# TODO(benwright) - Add logic in appmgr to use this allowlist.
 config_data("appmgr_root_job_allowlist_userdebug") {
   for_pkg = "appmgr"
   sources = [ "root_job_allowlist_userdebug.txt" ]
