@@ -33,6 +33,79 @@ const tag = "eth"
 
 type FifoEntry = C.struct_eth_fifo_entry
 
+func (e FifoEntry) index() int32 {
+	if e.cookie>>32 != cookieMagic {
+		panic(fmt.Sprintf("buffer entry has bad cookie: %x", e.cookie))
+	}
+	return int32(e.cookie)
+}
+
+// SetLength sets the length field. It is exported for use in tests which cannot depend on "C".
+func (e *FifoEntry) SetLength(length int) {
+	e.length = C.uint16_t(length)
+}
+
+const bufferSize = 2048
+
+// A Buffer is a segment of memory backed by a mapped VMO.
+//
+// A Buffer must not outlive its VMO's mapping.
+// A Buffer's head must not change (by slicing or appending).
+type Buffer []byte
+
+type IOBuffer struct {
+	vaddr zx.Vaddr
+	size  uint64
+}
+
+func MakeIOBuffer(vmo zx.VMO) (IOBuffer, error) {
+	size, err := vmo.Size()
+	if err != nil {
+		return IOBuffer{}, err
+	}
+	vaddr, err := zx.VMARRoot.Map(0 /* vmarOffset */, vmo, 0 /* vmoOffset */, size, zx.VMFlagPermRead|zx.VMFlagPermWrite)
+	if err != nil {
+		_ = vmo.Close()
+		return IOBuffer{}, err
+	}
+	return IOBuffer{
+		vaddr: vaddr,
+		size:  size,
+	}, nil
+}
+
+func (iob *IOBuffer) buffer(i int32) Buffer {
+	return *(*Buffer)(unsafe.Pointer(&reflect.SliceHeader{
+		Data: uintptr(iob.vaddr + zx.Vaddr(i)*bufferSize),
+		Len:  bufferSize,
+		Cap:  bufferSize,
+	}))
+}
+
+func (iob *IOBuffer) index(b Buffer) int {
+	return int((*(*reflect.SliceHeader)(unsafe.Pointer(&b))).Data-uintptr(iob.vaddr)) / bufferSize
+}
+
+const cookieMagic = 0x42420102 // used to fill top 32-bits of FifoEntry.cookie
+
+func (iob *IOBuffer) entry(b Buffer) FifoEntry {
+	i := iob.index(b)
+
+	return FifoEntry{
+		offset: C.uint32_t(i) * bufferSize,
+		length: C.uint16_t(len(b)),
+		cookie: (cookieMagic << 32) | C.uint64_t(i),
+	}
+}
+
+func (iob *IOBuffer) BufferFromEntry(e FifoEntry) Buffer {
+	return iob.buffer(e.index())[:e.length]
+}
+
+func (iob *IOBuffer) Close() error {
+	return zx.VMARRoot.Unmap(iob.vaddr, iob.size)
+}
+
 const FifoMaxSize = C.ZX_FIFO_MAX_SIZE_BYTES
 
 type entries struct {
@@ -171,12 +244,13 @@ type Client struct {
 	device ethernet.Device
 	fifos  ethernet.Fifos
 
+	iob IOBuffer
+
 	topopath, filepath string
 
 	mu        sync.Mutex
 	state     link.State
 	stateFunc func(link.State)
-	arena     *Arena
 
 	rx entries
 	tx struct {
@@ -194,7 +268,7 @@ type Client struct {
 }
 
 // NewClient creates a new ethernet Client.
-func NewClient(clientName string, topopath, filepath string, device ethernet.Device, arena *Arena) (*Client, error) {
+func NewClient(clientName string, topopath, filepath string, device ethernet.Device) (*Client, error) {
 	if status, err := device.SetClientName(clientName); err != nil {
 		return nil, err
 	} else if err := checkStatus(status, "SetClientName"); err != nil {
@@ -227,48 +301,56 @@ func NewClient(clientName string, topopath, filepath string, device ethernet.Dev
 		fifos:    *fifos,
 		topopath: topopath,
 		filepath: filepath,
-		arena:    arena,
 	}
-	c.Stats.Tx = makeFifoStats(fifos.TxDepth)
-	c.Stats.Rx = makeFifoStats(fifos.RxDepth)
+
 	c.rx.init(fifos.RxDepth)
-	for i := range c.rx.storage {
-		b := arena.alloc(c)
-		if b == nil {
-			return nil, fmt.Errorf("%s: failed to allocate initial RX buffer %d/%d", tag, i, len(c.rx.storage))
+	c.tx.mu.entries.init(fifos.TxDepth)
+
+	{
+		vmo, err := zx.NewVMO(bufferSize*uint64(len(c.rx.storage)+len(c.tx.mu.entries.storage)), 0)
+		if err != nil {
+			_ = c.Close()
+			return nil, fmt.Errorf("eth: cannot allocate VMO: %w", err)
 		}
-		c.rx.storage[i] = arena.entry(b)
+		if err := vmo.Handle().SetProperty(zx.PropName, []byte(fmt.Sprintf("ethernet.Device.IoBuffer: %s", topopath))); err != nil {
+			_ = vmo.Close()
+			_ = c.Close()
+			return nil, err
+		}
+		iob, err := MakeIOBuffer(vmo)
+		if err != nil {
+			_ = vmo.Close()
+			_ = c.Close()
+			return nil, fmt.Errorf("eth: make IO buffer: %w", err)
+		}
+		c.iob = iob
+		if status, err := device.SetIoBuffer(vmo); err != nil {
+			_ = c.Close()
+			return nil, fmt.Errorf("eth: cannot set IO VMO: %w", err)
+		} else if err := checkStatus(status, "SetIoBuffer"); err != nil {
+			_ = c.Close()
+			return nil, fmt.Errorf("eth: cannot set IO VMO: %w", err)
+		}
+	}
+
+	var bufferIndex int32
+	for i := range c.rx.storage {
+		b := c.iob.buffer(bufferIndex)
+		bufferIndex++
+		c.rx.storage[i] = c.iob.entry(b)
 		c.rx.incrementReadied(1)
 		c.rx.incrementQueued(1)
 	}
-	c.tx.mu.entries.init(fifos.TxDepth)
 	for i := range c.tx.mu.entries.storage {
-		b := arena.alloc(c)
-		if b == nil {
-			return nil, fmt.Errorf("%s: failed to allocate initial TX buffer %d/%d", tag, i, len(c.tx.mu.entries.storage))
-		}
-		c.tx.mu.entries.storage[i] = arena.entry(b)
+		b := c.iob.buffer(bufferIndex)
+		bufferIndex++
+		c.tx.mu.entries.storage[i] = c.iob.entry(b)
 		c.tx.mu.entries.incrementReadied(1)
 	}
 	c.tx.cond.L = &c.tx.mu.Mutex
 
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	if err := func() error {
-		h, err := c.arena.iovmo.Handle().Duplicate(zx.RightSameRights)
-		if err != nil {
-			return fmt.Errorf("%s: failed to duplicate vmo: %s", tag, err)
-		}
-		if status, err := device.SetIoBuffer(zx.VMO(h)); err != nil {
-			return err
-		} else if err := checkStatus(status, "SetIoBuffer"); err != nil {
-			return err
-		}
-		return nil
-	}(); err != nil {
-		_ = c.closeLocked()
-		return nil, err
-	}
+	c.Stats.Tx = makeFifoStats(fifos.TxDepth)
+	c.Stats.Rx = makeFifoStats(fifos.RxDepth)
 
 	return c, nil
 }
@@ -314,8 +396,8 @@ func (c *Client) write(pkts []tcpip.PacketBuffer) (int, *tcpip.Error) {
 
 			// This is being reused, reset its length to get an appropriately sized buffer.
 			entry := c.tx.mu.entries.getReadied()
-			entry.length = bufferSize
-			b := c.arena.bufferFromEntry(*entry)
+			entry.SetLength(bufferSize)
+			b := c.iob.BufferFromEntry(*entry)
 			used := copy(b, pkt.Header.View())
 			offset := pkt.DataOffset
 			size := pkt.DataSize
@@ -340,7 +422,7 @@ func (c *Client) write(pkts []tcpip.PacketBuffer) (int, *tcpip.Error) {
 				size -= len(v)
 				used += copy(b[used:], v)
 			}
-			*entry = c.arena.entry(b[:used])
+			*entry = c.iob.entry(b[:used])
 			c.tx.mu.entries.incrementQueued(1)
 
 			if i == len(pkts) || !c.tx.mu.entries.haveReadied() {
@@ -452,7 +534,7 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 				c.tx.mu.entries.incrementSent(uint16(n))
 				c.tx.mu.Unlock()
 
-				switch status, count := fifoWrite(c.fifos.Tx, batch[:n]); status {
+				switch status, count := FifoWrite(c.fifos.Tx, batch[:n]); status {
 				case zx.ErrOk:
 					if n := uint32(n); count != n {
 						return fmt.Errorf("fifoWrite(TX): tx_depth invariant violation; observed=%d expected=%d", c.fifos.TxDepth-n+count, c.fifos.TxDepth)
@@ -486,7 +568,7 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 					n := c.rx.getQueued(scratch[:batchSize])
 					c.rx.incrementSent(uint16(n))
 
-					status, count := fifoWrite(c.fifos.Rx, scratch[:n])
+					status, count := FifoWrite(c.fifos.Rx, scratch[:n])
 					switch status {
 					case zx.ErrOk:
 						c.Stats.Rx.Writes(count).Increment()
@@ -503,11 +585,11 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 
 					var emptyLinkAddress tcpip.LinkAddress
 					dispatcher.DeliverNetworkPacket(c, emptyLinkAddress, emptyLinkAddress, 0, tcpip.PacketBuffer{
-						Data: append(buffer.View(nil), c.arena.bufferFromEntry(*entry)...).ToVectorisedView(),
+						Data: append(buffer.View(nil), c.iob.BufferFromEntry(*entry)...).ToVectorisedView(),
 					})
 
 					// This entry is going back to the driver; it can be reused.
-					entry.length = bufferSize
+					entry.SetLength(bufferSize)
 					c.rx.incrementQueued(1)
 				}
 
@@ -674,7 +756,9 @@ func (c *Client) closeLocked() error {
 	if err := c.fifos.Rx.Close(); err != nil {
 		_ = syslog.WarnTf(tag, "failed to close rx fifo: %s", err)
 	}
-	c.arena.freeAll(c)
+	if err := c.iob.Close(); err != nil {
+		_ = syslog.WarnTf(tag, "failed to close IO buffer: %s", err)
+	}
 	c.changeStateLocked(link.StateClosed)
 
 	return err
@@ -692,7 +776,7 @@ func (c *Client) SetPromiscuousMode(enabled bool) error {
 	return nil
 }
 
-func fifoWrite(handle zx.Handle, b []FifoEntry) (zx.Status, uint32) {
+func FifoWrite(handle zx.Handle, b []FifoEntry) (zx.Status, uint32) {
 	var actual uint
 	data := unsafe.Pointer((*reflect.SliceHeader)(unsafe.Pointer(&b)).Data)
 	status := zx.Sys_fifo_write(handle, uint(unsafe.Sizeof(FifoEntry{})), data, uint(len(b)), &actual)

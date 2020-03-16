@@ -239,7 +239,6 @@ func (m *endpointsMap) Range(f func(key zx.Handle, value tcpip.Endpoint) bool) {
 
 // A Netstack tracks all of the running state of the network stack.
 type Netstack struct {
-	arena           *eth.Arena
 	dnsClient       *dns.Client
 	nameProvider    *device.NameProviderInterface
 	netstackService netstack.NetstackService
@@ -826,7 +825,7 @@ func (ns *Netstack) Bridge(nics []tcpip.NICID) (*ifState, error) {
 }
 
 func (ns *Netstack) addEth(topological_path string, config netstack.InterfaceConfig, device ethernet.Device) (*ifState, error) {
-	client, err := eth.NewClient("netstack", topological_path, config.Filepath, device, ns.arena)
+	client, err := eth.NewClient("netstack", topological_path, config.Filepath, device)
 	if err != nil {
 		return nil, err
 	}

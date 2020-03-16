@@ -318,11 +318,6 @@ func TestEthInfoInspectImpl(t *testing.T) {
 	const topopath, filepath = "topopath", "filepath"
 	const features = ethernet.InfoFeatureWlan | ethernet.InfoFeatureSynth | ethernet.InfoFeatureLoopback
 
-	arena, err := eth.NewArena()
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	device := ethernetext.Device{
 		TB: t,
 		GetInfoImpl: func() (ethernet.Info, error) {
@@ -331,10 +326,16 @@ func TestEthInfoInspectImpl(t *testing.T) {
 			}, nil
 		},
 		GetFifosImpl: func() (int32, *ethernet.Fifos, error) {
-			return int32(zx.ErrOk), &ethernet.Fifos{}, nil
+			return int32(zx.ErrOk), &ethernet.Fifos{
+				RxDepth: 1,
+				TxDepth: 1,
+			}, nil
 		},
 		SetIoBufferImpl: func(zx.VMO) (int32, error) {
 			return int32(zx.ErrOk), nil
+		},
+		StopImpl: func() error {
+			return nil
 		},
 		SetClientNameImpl: func(string) (int32, error) {
 			return int32(zx.ErrOk), nil
@@ -344,10 +345,14 @@ func TestEthInfoInspectImpl(t *testing.T) {
 		},
 	}
 
-	client, err := eth.NewClient("client", topopath, filepath, &device, arena)
+	client, err := eth.NewClient("client", topopath, filepath, &device)
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer func() {
+		_ = client.Close()
+		client.Wait()
+	}()
 
 	v := ethInfoInspectImpl{
 		name:  "doesn't matter",

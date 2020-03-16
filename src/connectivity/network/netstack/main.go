@@ -27,7 +27,6 @@ import (
 	"netstack/connectivity"
 	"netstack/dns"
 	"netstack/filter"
-	"netstack/link/eth"
 	networking_metrics "networking_metrics_golib"
 
 	"fidl/fuchsia/cobalt"
@@ -222,11 +221,6 @@ func Main() {
 		syslog.Fatalf("method SetTransportProtocolOption(%v, tcp.DelayEnabled(true)) failed: %v", tcp.ProtocolNumber, err)
 	}
 
-	arena, err := eth.NewArena()
-	if err != nil {
-		syslog.Fatalf("ethernet: %s", err)
-	}
-
 	req, np, err := device.NewNameProviderInterfaceRequest()
 	if err != nil {
 		syslog.Fatalf("could not connect to device name provider service: %s", err)
@@ -234,7 +228,6 @@ func Main() {
 	appCtx.ConnectToEnvService(req)
 
 	ns := &Netstack{
-		arena:        arena,
 		dnsClient:    dns.NewClient(stk),
 		nameProvider: np,
 		stack:        stk,

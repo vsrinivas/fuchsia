@@ -722,20 +722,15 @@ func TestStaticIPConfiguration(t *testing.T) {
 }
 
 func TestWLANStaticIPConfiguration(t *testing.T) {
-	arena, err := eth.NewArena()
-	if err != nil {
-		t.Fatal(err)
+	ns := Netstack{
+		stack: tcpipstack.New(tcpipstack.Options{
+			NetworkProtocols: []tcpipstack.NetworkProtocol{
+				arp.NewProtocol(),
+				ipv4.NewProtocol(),
+				ipv6.NewProtocol(),
+			},
+		}),
 	}
-	ns := &Netstack{
-		arena: arena,
-	}
-	ns.stack = tcpipstack.New(tcpipstack.Options{
-		NetworkProtocols: []tcpipstack.NetworkProtocol{
-			arp.NewProtocol(),
-			ipv4.NewProtocol(),
-			ipv6.NewProtocol(),
-		},
-	})
 
 	addr := fidlconv.ToNetIpAddress(testV4Address)
 	ifAddr := stack.InterfaceAddress{IpAddress: addr, PrefixLen: 32}
@@ -792,11 +787,7 @@ func newNetstackWithNDPDispatcher(t *testing.T, ndpDisp *ndpDispatcher) *Netstac
 func newNetstackWithStackNDPDispatcher(t *testing.T, ndpDisp tcpipstack.NDPDispatcher) *Netstack {
 	t.Helper()
 
-	arena, err := eth.NewArena()
-	if err != nil {
-		t.Fatal(err)
-	}
-	stack := tcpipstack.New(tcpipstack.Options{
+	stk := tcpipstack.New(tcpipstack.Options{
 		NetworkProtocols: []tcpipstack.NetworkProtocol{
 			arp.NewProtocol(),
 			ipv4.NewProtocol(),
@@ -808,15 +799,13 @@ func newNetstackWithStackNDPDispatcher(t *testing.T, ndpDisp tcpipstack.NDPDispa
 		},
 		NDPDisp: ndpDisp,
 	})
-	ns := &Netstack{
-		arena: arena,
-		stack: stack,
+	return &Netstack{
+		stack: stk,
 		// We need to initialize the DNS client, since adding/removing interfaces
 		// sets the DNS servers on that interface, which requires that dnsClient
 		// exist.
-		dnsClient: dns.NewClient(stack),
+		dnsClient: dns.NewClient(stk),
 	}
-	return ns
 }
 
 func getInterfaceAddresses(t *testing.T, ni *stackImpl, nicid tcpip.NICID) []tcpip.AddressWithPrefix {
