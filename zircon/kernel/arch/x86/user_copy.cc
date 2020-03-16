@@ -67,6 +67,8 @@ void x86_usercopy_select(const CodePatchInfo* patch) {
 }
 }
 
+enum class CopyDirection { ToUser, FromUser };
+
 static inline bool ac_flag(void) { return x86_save_flags() & X86_FLAGS_AC; }
 
 static bool can_access(const void* base, size_t len) {
@@ -79,71 +81,86 @@ static bool can_access(const void* base, size_t len) {
   return is_user_address_range(reinterpret_cast<vaddr_t>(base), len);
 }
 
-static X64CopyToFromUserRet _arch_copy_from_user(void* dst, const void* src, size_t len,
-                                                 uint64_t fault_return_mask) {
+template <uint64_t FAULT_RETURN_MASK, CopyDirection DIRECTION>
+static UserCopyCaptureFaultsResult _arch_copy_to_from_user(void* dst, const void* src, size_t len) {
+  // There are exactly two version of this function which may be expanded.
+  // Anything else would be an error which should be caught at compile time.
+  static_assert((FAULT_RETURN_MASK == X86_USER_COPY_DO_FAULTS) ||
+                    (FAULT_RETURN_MASK == X86_USER_COPY_CAPTURE_FAULTS),
+                "arch_copy_(to|from)_user routines must either capture faults, or simply take the "
+                "fault but return no details.");
+
   // If we have the SMAP feature, then AC should only be set when running
   // _x86_copy_to_or_from_user. If we don't have the SMAP feature, then we don't care if AC is set
   // or not.
   DEBUG_ASSERT(!g_x86_feature_has_smap || !ac_flag());
 
-  if (!can_access(src, len))
-    return (X64CopyToFromUserRet){.status = ZX_ERR_INVALID_ARGS, .pf_flags = 0, .pf_va = 0};
+  // Check to make sure that our user space address exists entirely within the
+  // possible user space address range.  If not, then we are not going to make
+  // _any_ attempt to copy the data at all.  If this direction of this copy is
+  // ToUser, then our "user" address to test is the destination address.
+  // Otherwise, it is the source address.
+  //
+  // In either case, if we are not going to even try, then there is no fault
+  // address or flags to propagate, just a failed status code.
+  if (!can_access((DIRECTION == CopyDirection::ToUser) ? dst : src, len)) {
+    return UserCopyCaptureFaultsResult{ZX_ERR_INVALID_ARGS};
+  }
 
-  // Spectre V1 - force resolution of can_access() before attempting to copy from user memory.
-  // A poisoned conditional branch predictor can be used to force the kernel to read any kernel
-  // address (speculatively); dependent operations can leak the values read-in.
-  __asm__ __volatile__("lfence" ::: "memory");
+  // Spectre V1 - force resolution of can_access() before attempting to copy
+  // from user memory.  A poisoned conditional branch predictor can be used to
+  // force the kernel to read any kernel address (speculatively); dependent
+  // operations can leak the values read-in.
+  //
+  // Note, this is only needed if we are copying data to the user address space.
+  // We skip this fence in the case that we are copying from the user address
+  // space into the kernel space.
+  if constexpr (DIRECTION == CopyDirection::ToUser) {
+    __asm__ __volatile__("lfence" ::: "memory");
+  }
 
   Thread* thr = Thread::Current::Get();
   X64CopyToFromUserRet ret =
-      _x86_copy_to_or_from_user(dst, src, len, &thr->arch_.page_fault_resume, fault_return_mask);
-
+      _x86_copy_to_or_from_user(dst, src, len, &thr->arch_.page_fault_resume, FAULT_RETURN_MASK);
   DEBUG_ASSERT(!g_x86_feature_has_smap || !ac_flag());
-  return ret;
+
+  // In the DO_FAULTS version of this expansion, do not make any attempt to
+  // propagate the fault address and flags.  We only propagate fault info in the
+  // CAPTURE_FAULTS version, and then only if we actually take a fault, not if
+  // we succeed.
+  if constexpr (FAULT_RETURN_MASK == X86_USER_COPY_DO_FAULTS) {
+    return UserCopyCaptureFaultsResult{ret.status};
+  } else {
+    if (ret.status == ZX_OK) {
+      return UserCopyCaptureFaultsResult{ZX_OK};
+    } else {
+      return {ret.status, {ret.pf_va, ret.pf_flags}};
+    }
+  }
 }
 
 zx_status_t arch_copy_from_user(void* dst, const void* src, size_t len) {
-  return _arch_copy_from_user(dst, src, len, X86_USER_COPY_DO_FAULTS).status;
+  // It should always be safe to invoke "error_value" here.  The DO_FAULTs
+  // version of the copy routine will never return fault information.  In a
+  // release build, all of this should vanish and the status should just end up
+  // getting returned directly.
+  return _arch_copy_to_from_user<X86_USER_COPY_DO_FAULTS, CopyDirection::FromUser>(dst, src, len)
+      .status;
 }
 
-zx_status_t arch_copy_from_user_capture_faults(void* dst, const void* src, size_t len,
-                                               vaddr_t* pf_va, uint* pf_flags) {
-  X64CopyToFromUserRet ret = _arch_copy_from_user(dst, src, len, X86_USER_COPY_CAPTURE_FAULTS);
-  // If a fault didn't occur, and ret.status == ZX_OK, this will copy garbage data. It is the
-  // responsibility of the caller to check the status and ignore.
-  *pf_va = ret.pf_va;
-  *pf_flags = ret.pf_flags;
-  return ret.status;
-}
-
-static X64CopyToFromUserRet _arch_copy_to_user(void* dst, const void* src, size_t len,
-                                               uint64_t fault_return_mask) {
-  // If we have the SMAP feature, then AC should only be set when running
-  // _x86_copy_to_or_from_user. If we don't have the SMAP feature, then we don't care if AC is set
-  // or not.
-  DEBUG_ASSERT(!g_x86_feature_has_smap || !ac_flag());
-
-  if (!can_access(dst, len))
-    return (X64CopyToFromUserRet){.status = ZX_ERR_INVALID_ARGS, .pf_flags = 0, .pf_va = 0};
-
-  Thread* thr = Thread::Current::Get();
-  X64CopyToFromUserRet ret =
-      _x86_copy_to_or_from_user(dst, src, len, &thr->arch_.page_fault_resume, fault_return_mask);
-
-  DEBUG_ASSERT(!g_x86_feature_has_smap || !ac_flag());
-  return ret;
+UserCopyCaptureFaultsResult arch_copy_from_user_capture_faults(void* dst, const void* src,
+                                                               size_t len) {
+  return _arch_copy_to_from_user<X86_USER_COPY_CAPTURE_FAULTS, CopyDirection::FromUser>(dst, src,
+                                                                                        len);
 }
 
 zx_status_t arch_copy_to_user(void* dst, const void* src, size_t len) {
-  return _arch_copy_to_user(dst, src, len, X86_USER_COPY_DO_FAULTS).status;
+  return _arch_copy_to_from_user<X86_USER_COPY_DO_FAULTS, CopyDirection::ToUser>(dst, src, len)
+      .status;
 }
 
-zx_status_t arch_copy_to_user_capture_faults(void* dst, const void* src, size_t len, vaddr_t* pf_va,
-                                             uint* pf_flags) {
-  X64CopyToFromUserRet ret = _arch_copy_to_user(dst, src, len, X86_USER_COPY_CAPTURE_FAULTS);
-  // If a fault didn't occur, and ret.status == ZX_OK, this will copy garbage data. It is the
-  // responsibility of the caller to check the status and ignore.
-  *pf_va = ret.pf_va;
-  *pf_flags = ret.pf_flags;
-  return ret.status;
+UserCopyCaptureFaultsResult arch_copy_to_user_capture_faults(void* dst, const void* src,
+                                                             size_t len) {
+  return _arch_copy_to_from_user<X86_USER_COPY_CAPTURE_FAULTS, CopyDirection::ToUser>(dst, src,
+                                                                                      len);
 }

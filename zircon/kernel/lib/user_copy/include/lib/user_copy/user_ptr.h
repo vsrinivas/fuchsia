@@ -72,7 +72,7 @@ class user_ptr {
 
   // Copies a single T to user memory. T must not be |void|.
   template <typename S>
-  __WARN_UNUSED_RESULT zx_status_t copy_to_user(const S& src) const {
+  [[nodiscard]] zx_status_t copy_to_user(const S& src) const {
     static_assert(!ktl::is_void<S>::value, "Type cannot be void. Use .reinterpret<>().");
     static_assert(ktl::is_same<S, T>::value, "S and T must be the same type.");
     static_assert(is_copy_allowed<S>::value, "Type must be ABI-safe.");
@@ -85,17 +85,16 @@ class user_ptr {
   // On success ZX_OK is returned and the values in pf_va and pf_flags are undefined, otherwise they
   // are filled with fault information.
   template <typename S>
-  __WARN_UNUSED_RESULT zx_status_t copy_to_user_capture_faults(const S& src, vaddr_t* pf_va,
-                                                               uint* pf_flags) const {
+  [[nodiscard]] UserCopyCaptureFaultsResult copy_to_user_capture_faults(const S& src) const {
     static_assert(!ktl::is_void<S>::value, "Type cannot be void. Use .reinterpret<>().");
     static_assert(ktl::is_same<S, T>::value, "S and T must be the same type.");
     static_assert(is_copy_allowed<S>::value, "Type must be ABI-safe.");
     static_assert(Policy & kOut, "Can only copy to user for kOut or kInOut user_ptr.");
-    return arch_copy_to_user_capture_faults(ptr_, &src, sizeof(S), pf_va, pf_flags);
+    return arch_copy_to_user_capture_faults(ptr_, &src, sizeof(S));
   }
 
   // Copies an array of T to user memory. Note: This takes a count not a size, unless T is |void|.
-  __WARN_UNUSED_RESULT zx_status_t copy_array_to_user(const T* src, size_t count) const {
+  [[nodiscard]] zx_status_t copy_array_to_user(const T* src, size_t count) const {
     static_assert(!ktl::is_void<T>::value, "Type cannot be void. Use .reinterpret<>().");
     static_assert(is_copy_allowed<T>::value, "Type must be ABI-safe.");
     static_assert(Policy & kOut, "Can only copy to user for kOut or kInOut user_ptr.");
@@ -110,22 +109,20 @@ class user_ptr {
   //
   // On success ZX_OK is returned and the values in pf_va and pf_flags are undefined, otherwise they
   // are filled with fault information.
-  __WARN_UNUSED_RESULT zx_status_t copy_array_to_user_capture_faults(const T* src, size_t count,
-                                                                     vaddr_t* pf_va,
-                                                                     uint* pf_flags) const {
+  [[nodiscard]] UserCopyCaptureFaultsResult copy_array_to_user_capture_faults(const T* src,
+                                                                              size_t count) const {
     static_assert(!ktl::is_void<T>::value, "Type cannot be void. Use .reinterpret<>().");
     static_assert(is_copy_allowed<T>::value, "Type must be ABI-safe.");
     static_assert(Policy & kOut, "Can only copy to user for kOut or kInOut user_ptr.");
     size_t len;
     if (mul_overflow(count, sizeof(T), &len)) {
-      return ZX_ERR_INVALID_ARGS;
+      return UserCopyCaptureFaultsResult{ZX_ERR_INVALID_ARGS};
     }
-    return arch_copy_to_user_capture_faults(ptr_, src, len, pf_va, pf_flags);
+    return arch_copy_to_user_capture_faults(ptr_, src, len);
   }
 
   // Copies an array of T to user memory. Note: This takes a count not a size, unless T is |void|.
-  __WARN_UNUSED_RESULT zx_status_t copy_array_to_user(const T* src, size_t count,
-                                                      size_t offset) const {
+  [[nodiscard]] zx_status_t copy_array_to_user(const T* src, size_t count, size_t offset) const {
     static_assert(!ktl::is_void<T>::value, "Type cannot be void. Use .reinterpret<>().");
     static_assert(is_copy_allowed<T>::value, "Type must be ABI-safe.");
     static_assert(Policy & kOut, "Can only copy to user for kOut or kInOut user_ptr.");
@@ -140,21 +137,21 @@ class user_ptr {
   //
   // On success ZX_OK is returned and the values in pf_va and pf_flags are undefined, otherwise they
   // are filled with fault information.
-  __WARN_UNUSED_RESULT zx_status_t copy_array_to_user_capture_faults(const T* src, size_t count,
-                                                                     size_t offset, vaddr_t* pf_va,
-                                                                     uint* pf_flags) const {
+  [[nodiscard]] UserCopyCaptureFaultsResult copy_array_to_user_capture_faults(const T* src,
+                                                                              size_t count,
+                                                                              size_t offset) const {
     static_assert(!ktl::is_void<T>::value, "Type cannot be void. Use .reinterpret<>().");
     static_assert(is_copy_allowed<T>::value, "Type must be ABI-safe.");
     static_assert(Policy & kOut, "Can only copy to user for kOut or kInOut user_ptr.");
     size_t len;
     if (mul_overflow(count, sizeof(T), &len)) {
-      return ZX_ERR_INVALID_ARGS;
+      return UserCopyCaptureFaultsResult{ZX_ERR_INVALID_ARGS};
     }
-    return arch_copy_to_user_capture_faults(ptr_ + offset, src, len, pf_va, pf_flags);
+    return arch_copy_to_user_capture_faults(ptr_ + offset, src, len);
   }
 
   // Copies a single T from user memory. T must not be |void|.
-  __WARN_UNUSED_RESULT zx_status_t copy_from_user(typename ktl::remove_const<T>::type* dst) const {
+  [[nodiscard]] zx_status_t copy_from_user(typename ktl::remove_const<T>::type* dst) const {
     static_assert(!ktl::is_void<T>::value, "Type cannot be void. Use .reinterpret<>().");
     static_assert(is_copy_allowed<T>::value, "Type must be ABI-safe.");
     static_assert(Policy & kIn, "Can only copy from user for kIn or kInOut user_ptr.");
@@ -165,17 +162,17 @@ class user_ptr {
   //
   // On success ZX_OK is returned and the values in pf_va and pf_flags are undefined, otherwise they
   // are filled with fault information.
-  __WARN_UNUSED_RESULT zx_status_t copy_from_user_capture_faults(
-      typename ktl::remove_const<T>::type* dst, vaddr_t* pf_va, uint* pf_flags) const {
+  [[nodiscard]] UserCopyCaptureFaultsResult copy_from_user_capture_faults(
+      typename ktl::remove_const<T>::type* dst) const {
     static_assert(!ktl::is_void<T>::value, "Type cannot be void. Use .reinterpret<>().");
     static_assert(is_copy_allowed<T>::value, "Type must be ABI-safe.");
     static_assert(Policy & kIn, "Can only copy from user for kIn or kInOut user_ptr.");
-    return arch_copy_from_user_capture_faults(dst, ptr_, sizeof(T), pf_va, pf_flags);
+    return arch_copy_from_user_capture_faults(dst, ptr_, sizeof(T));
   }
 
   // Copies an array of T from user memory. Note: This takes a count not a size, unless T is |void|.
-  __WARN_UNUSED_RESULT zx_status_t copy_array_from_user(typename ktl::remove_const<T>::type* dst,
-                                                        size_t count) const {
+  [[nodiscard]] zx_status_t copy_array_from_user(typename ktl::remove_const<T>::type* dst,
+                                                 size_t count) const {
     static_assert(!ktl::is_void<T>::value, "Type cannot be void. Use .reinterpret<>().");
     static_assert(is_copy_allowed<T>::value, "Type must be ABI-safe.");
     static_assert(Policy & kIn, "Can only copy from user for kIn or kInOut user_ptr.");
@@ -190,23 +187,22 @@ class user_ptr {
   //
   // On success ZX_OK is returned and the values in pf_va and pf_flags are undefined, otherwise they
   // are filled with fault information.
-  __WARN_UNUSED_RESULT zx_status_t
-  copy_array_from_user_capture_faults(typename ktl::remove_const<T>::type* dst, size_t count,
-                                      vaddr_t* pf_va, uint* pf_flags) const {
+  [[nodiscard]] UserCopyCaptureFaultsResult copy_array_from_user_capture_faults(
+      typename ktl::remove_const<T>::type* dst, size_t count) const {
     static_assert(!ktl::is_void<T>::value, "Type cannot be void. Use .reinterpret<>().");
     static_assert(is_copy_allowed<T>::value, "Type must be ABI-safe.");
     static_assert(Policy & kIn, "Can only copy from user for kIn or kInOut user_ptr.");
     size_t len;
     if (mul_overflow(count, sizeof(T), &len)) {
-      return ZX_ERR_INVALID_ARGS;
+      return UserCopyCaptureFaultsResult{ZX_ERR_INVALID_ARGS};
     }
-    return arch_copy_from_user_capture_faults(dst, ptr_, len, pf_va, pf_flags);
+    return arch_copy_from_user_capture_faults(dst, ptr_, len);
   }
 
   // Copies a sub-array of T from user memory. Note: This takes a count not a size, unless T is
   // |void|.
-  __WARN_UNUSED_RESULT zx_status_t copy_array_from_user(typename ktl::remove_const<T>::type* dst,
-                                                        size_t count, size_t offset) const {
+  [[nodiscard]] zx_status_t copy_array_from_user(typename ktl::remove_const<T>::type* dst,
+                                                 size_t count, size_t offset) const {
     static_assert(!ktl::is_void<T>::value, "Type cannot be void. Use .reinterpret<>().");
     static_assert(is_copy_allowed<T>::value, "Type must be ABI-safe.");
     static_assert(Policy & kIn, "Can only copy from user for kIn or kInOut user_ptr.");
@@ -222,17 +218,16 @@ class user_ptr {
   //
   // On success ZX_OK is returned and the values in pf_va and pf_flags are undefined, otherwise they
   // are filled with fault information.
-  __WARN_UNUSED_RESULT zx_status_t
-  copy_array_from_user_capture_faults(typename ktl::remove_const<T>::type* dst, size_t count,
-                                      size_t offset, vaddr_t* pf_va, uint* pf_flags) const {
+  [[nodiscard]] UserCopyCaptureFaultsResult copy_array_from_user_capture_faults(
+      typename ktl::remove_const<T>::type* dst, size_t count, size_t offset) const {
     static_assert(!ktl::is_void<T>::value, "Type cannot be void. Use .reinterpret<>().");
     static_assert(is_copy_allowed<T>::value, "Type must be ABI-safe.");
     static_assert(Policy & kIn, "Can only copy from user for kIn or kInOut user_ptr.");
     size_t len;
     if (mul_overflow(count, sizeof(T), &len)) {
-      return ZX_ERR_INVALID_ARGS;
+      return UserCopyCaptureFaultsResult{ZX_ERR_INVALID_ARGS};
     }
-    return arch_copy_from_user_capture_flags(dst, ptr_ + offset, len, pf_va, pf_flags);
+    return arch_copy_from_user_capture_faults(dst, ptr_ + offset, len);
   }
 
  private:

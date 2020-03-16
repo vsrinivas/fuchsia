@@ -12,7 +12,36 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-__BEGIN_CDECLS
+#include <ktl/optional.h>
+
+// A small helper struct used for the return type of the various
+// *_capture_faults forms of the copy_(to|from)_user routines.
+//
+// A user copy which captures faults has three different possible results.
+//
+// 1) The operation succeeds.  The status is OK.
+// 2) The operation attempts to copy, but page faults in the process.  The
+//    status is != ZX_OK, and the fault_info optional has a valid value which
+//    contains the virtual address describing the location of the fault and some
+//    flags which describe the nature of the fault.
+// 3) The operation fails without ever trying.  The status is != ZX_OK, but
+//    fault_info has no valid value.  There was no fault taken, so there is no
+//    fault to handle.
+//
+struct UserCopyCaptureFaultsResult {
+  struct FaultInfo {
+    FaultInfo(vaddr_t pf_va, uint pf_flags) : pf_va(pf_va), pf_flags(pf_flags) {}
+    vaddr_t pf_va;
+    uint pf_flags;
+  };
+
+  explicit UserCopyCaptureFaultsResult(zx_status_t status) : status(status) {}
+  UserCopyCaptureFaultsResult(zx_status_t status, FaultInfo fault_info)
+      : status(status), fault_info(fault_info) {}
+
+  zx_status_t status;
+  ktl::optional<FaultInfo> fault_info;
+};
 
 /*
  * @brief Copy data from userspace into kernelspace
@@ -43,8 +72,9 @@ zx_status_t arch_copy_from_user(void *dst, const void *src, size_t len);
  *
  * @return ZX_OK on success
  */
-zx_status_t arch_copy_from_user_capture_faults(void *dst, const void *src, size_t len,
-                                               vaddr_t *pf_va, uint *pf_flags);
+[[nodiscard]] UserCopyCaptureFaultsResult arch_copy_from_user_capture_faults(void *dst,
+                                                                             const void *src,
+                                                                             size_t len);
 /*
  * @brief Copy data from kernelspace into userspace
  *
@@ -74,9 +104,8 @@ zx_status_t arch_copy_to_user(void *dst, const void *src, size_t len);
  *
  * @return ZX_OK on success
  */
-zx_status_t arch_copy_to_user_capture_faults(void *dst, const void *src, size_t len, vaddr_t *pf_va,
-                                             uint *pf_flags);
-
-__END_CDECLS
+[[nodiscard]] UserCopyCaptureFaultsResult arch_copy_to_user_capture_faults(void *dst,
+                                                                           const void *src,
+                                                                           size_t len);
 
 #endif  // ZIRCON_KERNEL_INCLUDE_ARCH_USER_COPY_H_

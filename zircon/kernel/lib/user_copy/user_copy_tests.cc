@@ -11,6 +11,8 @@
 #include <lib/user_copy/user_ptr.h>
 #include <zircon/syscalls/port.h>
 
+#include <ktl/array.h>
+#include <ktl/limits.h>
 #include <ktl/move.h>
 #include <ktl/unique_ptr.h>
 #include <vm/fault.h>
@@ -74,10 +76,9 @@ bool capture_faults_copy_out_success() {
   auto user = UserMemory::Create(PAGE_SIZE);
   ASSERT_EQ(user->CommitAndMap(PAGE_SIZE), ZX_OK, "");
 
-  vaddr_t pf_va;
-  uint pf_flags;
-  ASSERT_EQ(user->user_out<uint32_t>().copy_to_user_capture_faults(kTestValue, &pf_va, &pf_flags),
-            ZX_OK, "");
+  auto ret = user->user_out<uint32_t>().copy_to_user_capture_faults(kTestValue);
+  ASSERT_FALSE(ret.fault_info.has_value(), "");
+  ASSERT_EQ(ZX_OK, ret.status, "");
 
   uint32_t temp;
   ASSERT_EQ(user->VmoRead(&temp, 0, sizeof(temp)), ZX_OK, "");
@@ -94,11 +95,10 @@ bool capture_faults_copy_in_success() {
 
   ASSERT_EQ(user->VmoWrite(&kTestValue, 0, sizeof(kTestValue)), ZX_OK, "");
 
-  vaddr_t pf_va;
-  uint pf_flags;
   uint32_t temp;
-  ASSERT_EQ(user->user_in<uint32_t>().copy_from_user_capture_faults(&temp, &pf_va, &pf_flags),
-            ZX_OK, "");
+  auto ret = user->user_in<uint32_t>().copy_from_user_capture_faults(&temp);
+  ASSERT_FALSE(ret.fault_info.has_value(), "");
+  ASSERT_EQ(ZX_OK, ret.status, "");
 
   EXPECT_EQ(temp, kTestValue, "");
 
@@ -109,19 +109,75 @@ bool capture_faults_test_capture() {
   BEGIN_TEST;
 
   auto user = UserMemory::Create(PAGE_SIZE);
-
-  vaddr_t pf_va;
-  uint pf_flags;
   uint32_t temp;
-  ASSERT_NE(user->user_in<uint32_t>().copy_from_user_capture_faults(&temp, &pf_va, &pf_flags),
-            ZX_OK, "");
-  EXPECT_EQ(pf_va, user->base(), "");
-  EXPECT_EQ(pf_flags, VMM_PF_FLAG_NOT_PRESENT, "");
 
-  ASSERT_NE(user->user_out<uint32_t>().copy_to_user_capture_faults(kTestValue, &pf_va, &pf_flags),
-            ZX_OK, "");
-  EXPECT_EQ(pf_va, user->base(), "");
-  EXPECT_EQ(pf_flags, VMM_PF_FLAG_NOT_PRESENT | VMM_PF_FLAG_WRITE, "");
+  {
+    auto ret = user->user_in<uint32_t>().copy_from_user_capture_faults(&temp);
+    ASSERT_TRUE(ret.fault_info.has_value(), "");
+    ASSERT_NE(ZX_OK, ret.status);
+
+    const auto& fault_info = ret.fault_info.value();
+    EXPECT_EQ(fault_info.pf_va, user->base(), "");
+    EXPECT_EQ(fault_info.pf_flags, VMM_PF_FLAG_NOT_PRESENT, "");
+  }
+
+  {
+    auto ret = user->user_out<uint32_t>().copy_to_user_capture_faults(kTestValue);
+    ASSERT_TRUE(ret.fault_info.has_value(), "");
+    ASSERT_NE(ZX_OK, ret.status);
+
+    const auto& fault_info = ret.fault_info.value();
+    EXPECT_EQ(fault_info.pf_va, user->base(), "");
+    EXPECT_EQ(fault_info.pf_flags, VMM_PF_FLAG_NOT_PRESENT | VMM_PF_FLAG_WRITE, "");
+  }
+
+  END_TEST;
+}
+
+bool capture_faults_test_out_of_user_range() {
+  BEGIN_TEST;
+
+  // If a user copy routine is asked to copy data to/from addresses which cannot
+  // possibly exist in the user's address space, the copy routine will not even
+  // try to perform the copy.  There is no "fault address" in this case, but the
+  // operation is still a failure.
+  //
+  // Test to make sure that we catch and reject anything which is outside of or
+  // overlapping with the acceptable user address space range.  None of these
+  // requests should be attempted, nor should they produce fault info.
+  uint8_t test_buffer[32] = {0};
+  static_assert((sizeof(test_buffer) * 2) < USER_ASPACE_BASE,
+                "Insufficient space before start of user address space for test buffer");
+  static_assert((sizeof(test_buffer) * 2) <
+                    (ktl::numeric_limits<vaddr_t>::max() - (USER_ASPACE_BASE + USER_ASPACE_SIZE)),
+                "Insufficient space afer end of user address space for test buffer.");
+  constexpr ktl::array<vaddr_t, 5> kTestAddrs = {
+      static_cast<vaddr_t>(0),                                          // Explicit check of null
+      USER_ASPACE_BASE - (sizeof(test_buffer) * 2),                     // Entirely before
+      USER_ASPACE_BASE - (sizeof(test_buffer) / 2),                     // Overlapping start
+      USER_ASPACE_BASE + USER_ASPACE_SIZE + sizeof(test_buffer),        // Entirely after
+      USER_ASPACE_BASE + USER_ASPACE_SIZE - (sizeof(test_buffer) / 2),  // Overlapping end
+  };
+
+  for (const vaddr_t test_addr : kTestAddrs) {
+    ASSERT_FALSE(is_user_address_range(test_addr, sizeof(test_buffer)));
+
+    {
+      user_in_ptr<const uint8_t> user{reinterpret_cast<uint8_t*>(test_addr)};
+
+      auto ret = user.copy_array_from_user_capture_faults(test_buffer, countof(test_buffer), 0);
+      ASSERT_FALSE(ret.fault_info.has_value(), "");
+      EXPECT_EQ(ZX_ERR_INVALID_ARGS, ret.status);
+    }
+
+    {
+      user_out_ptr<uint8_t> user{reinterpret_cast<uint8_t*>(test_addr)};
+
+      auto ret = user.copy_array_to_user_capture_faults(test_buffer, countof(test_buffer), 0);
+      ASSERT_FALSE(ret.fault_info.has_value(), "");
+      EXPECT_EQ(ZX_ERR_INVALID_ARGS, ret.status);
+    }
+  }
 
   END_TEST;
 }
@@ -235,6 +291,7 @@ USER_COPY_UNITTEST(fault_copy_in)
 USER_COPY_UNITTEST(capture_faults_copy_out_success)
 USER_COPY_UNITTEST(capture_faults_copy_in_success)
 USER_COPY_UNITTEST(capture_faults_test_capture)
+USER_COPY_UNITTEST(capture_faults_test_out_of_user_range)
 USER_COPY_UNITTEST(test_get_total_capacity)
 USER_COPY_UNITTEST(test_iovec_foreach)
 UNITTEST_END_TESTCASE(user_copy_tests, "user_copy_tests", "User Copy test")

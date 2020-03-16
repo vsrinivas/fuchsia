@@ -610,11 +610,12 @@ class VmMapBuilder final : public VmEnumerator {
       entry.size = vmar->size();
       entry.depth = depth + 1;  // The root aspace is depth 0.
       entry.type = ZX_INFO_MAPS_TYPE_VMAR;
-      if (maps_.copy_array_to_user_capture_faults(&entry, 1, nelem_, &pf_va_, &pf_flags_) !=
-          ZX_OK) {
-        faulted_ = true;
+
+      copy_res_ = maps_.copy_array_to_user_capture_faults(&entry, 1, nelem_);
+      if (copy_res_.status != ZX_OK) {
         return false;
       }
+
       nelem_++;
     }
     return true;
@@ -635,26 +636,35 @@ class VmMapBuilder final : public VmEnumerator {
       u->vmo_koid = vmo->user_id();
       u->committed_pages = vmo->AttributedPagesInRange(map->object_offset(), map->size());
       u->vmo_offset = map->object_offset();
-      if (maps_.copy_array_to_user_capture_faults(&entry, 1, nelem_, &pf_va_, &pf_flags_) !=
-          ZX_OK) {
-        faulted_ = true;
+
+      copy_res_ = maps_.copy_array_to_user_capture_faults(&entry, 1, nelem_);
+      if (copy_res_.status != ZX_OK) {
         return false;
       }
+
       nelem_++;
     }
     return true;
   }
 
   zx_status_t ResolveFault(VmAspace* aspace) {
-    DEBUG_ASSERT(faulted_);
-    return aspace->SoftFault(pf_va_, pf_flags_);
+    DEBUG_ASSERT(copy_res_.status != ZX_OK);
+
+    // If a fault actually occurred, attempt to handle it.  Otherwise, just
+    // propagate the error.
+    if (copy_res_.fault_info.has_value()) {
+      const auto& info = *copy_res_.fault_info;
+      return aspace->SoftFault(info.pf_va, info.pf_flags);
+    }
+
+    return copy_res_.status;
   }
 
   void reset() {
     // The caller must write an entry for the root VmAspace at index 0.
     nelem_ = 1;
     available_ = 1;
-    faulted_ = false;
+    copy_res_ = UserCopyCaptureFaultsResult{ZX_OK};
   }
 
   size_t nelem() const { return nelem_; }
@@ -666,9 +676,7 @@ class VmMapBuilder final : public VmEnumerator {
 
   size_t nelem_ = 1;
   size_t available_ = 1;
-  vaddr_t pf_va_ = 0;
-  uint pf_flags_ = 0;
-  bool faulted_ = false;
+  UserCopyCaptureFaultsResult copy_res_{ZX_OK};
 };
 }  // namespace
 
@@ -697,7 +705,8 @@ zx_status_t GetVmAspaceMaps(VmAspace* current_aspace, fbl::RefPtr<VmAspace> targ
 
   VmMapBuilder b(maps, max);
   while (!target_aspace->EnumerateChildren(&b)) {
-    // VmMapBuilder only returns false when it faulted trying to copy to the user pointer.
+    // VmMapBuilder only returns false when the copy to the user pointer fails.
+    // Attempt to handle any fault which may have occurred during the copy.
     zx_status_t status = b.ResolveFault(current_aspace);
     if (status != ZX_OK) {
       return status;
@@ -730,25 +739,34 @@ class AspaceVmoEnumerator final : public VmEnumerator {
       zx_info_vmo_t entry = VmoToInfoEntry(map->vmo_locked().get(),
                                            /*is_handle=*/false,
                                            /*handle_rights=*/0);
-      if (vmos_.copy_array_to_user_capture_faults(&entry, 1, nelem_, &pf_va_, &pf_flags_) !=
-          ZX_OK) {
-        faulted_ = true;
+
+      copy_res_ = vmos_.copy_array_to_user_capture_faults(&entry, 1, nelem_);
+      if (copy_res_.status != ZX_OK) {
         return false;
       }
+
       nelem_++;
     }
     return true;
   }
 
   zx_status_t ResolveFault(VmAspace* aspace) {
-    DEBUG_ASSERT(faulted_);
-    return aspace->SoftFault(pf_va_, pf_flags_);
+    DEBUG_ASSERT(copy_res_.status != ZX_OK);
+
+    // If a fault actually occurred, attempt to handle it.  Otherwise, just
+    // propagate the error.
+    if (copy_res_.fault_info.has_value()) {
+      const auto& info = *copy_res_.fault_info;
+      return aspace->SoftFault(info.pf_va, info.pf_flags);
+    }
+
+    return copy_res_.status;
   }
 
   void reset() {
     nelem_ = 0;
     available_ = 0;
-    faulted_ = false;
+    copy_res_ = UserCopyCaptureFaultsResult{ZX_OK};
   }
 
   size_t nelem() const { return nelem_; }
@@ -760,9 +778,7 @@ class AspaceVmoEnumerator final : public VmEnumerator {
 
   size_t nelem_ = 0;
   size_t available_ = 0;
-  vaddr_t pf_va_ = 0;
-  uint pf_flags_ = 0;
-  bool faulted_ = false;
+  UserCopyCaptureFaultsResult copy_res_{ZX_OK};
 };
 }  // namespace
 
@@ -782,7 +798,9 @@ zx_status_t GetVmAspaceVmos(VmAspace* current_aspace, fbl::RefPtr<VmAspace> targ
 
   AspaceVmoEnumerator ave(vmos, max);
   while (!target_aspace->EnumerateChildren(&ave)) {
-    // AspaceVmoEnumerator only returns false when the copy to the user pointer faults.
+    // AspaceVmoEnumerator only returns false when the copy to the user pointer
+    // fails.  Attempt to handle any fault which may have occurred during the
+    // copy.
     zx_status_t status = ave.ResolveFault(current_aspace);
     if (status != ZX_OK) {
       return status;
