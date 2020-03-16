@@ -22,6 +22,12 @@ void SetMouseInputDescriptor(FidlMouseInputDescriptor* descriptor) {
   if (descriptor->data.movement_y) {
     descriptor->builder.set_movement_y(fidl::unowned(&descriptor->data.movement_y.value()));
   }
+  if (descriptor->data.position_x) {
+    descriptor->builder.set_position_x(fidl::unowned(&descriptor->data.position_x.value()));
+  }
+  if (descriptor->data.position_y) {
+    descriptor->builder.set_position_y(fidl::unowned(&descriptor->data.position_y.value()));
+  }
 
   descriptor->buttons_view =
       fidl::VectorView<uint8_t>(descriptor->data.buttons.data(), descriptor->data.num_buttons);
@@ -36,6 +42,12 @@ void SetMouseInputReport(FidlMouseInputReport* report) {
   }
   if (report->data.movement_y) {
     report->builder.set_movement_y(fidl::unowned(&report->data.movement_y.value()));
+  }
+  if (report->data.position_x) {
+    report->builder.set_position_x(fidl::unowned(&report->data.position_x.value()));
+  }
+  if (report->data.position_y) {
+    report->builder.set_position_y(fidl::unowned(&report->data.position_y.value()));
   }
   if (report->data.scroll_v) {
     report->builder.set_scroll_v(fidl::unowned(&report->data.scroll_v.value()));
@@ -319,6 +331,12 @@ MouseDescriptor ToMouseDescriptor(const fuchsia_input_report::MouseDescriptor& f
     if (fidl_descriptor.input().has_movement_y()) {
       input.movement_y = fidl_descriptor.input().movement_y();
     }
+    if (fidl_descriptor.input().has_position_x()) {
+      input.position_x = fidl_descriptor.input().position_x();
+    }
+    if (fidl_descriptor.input().has_position_y()) {
+      input.position_y = fidl_descriptor.input().position_y();
+    }
     if (fidl_descriptor.input().has_scroll_v()) {
       input.scroll_v = fidl_descriptor.input().scroll_v();
     }
@@ -448,6 +466,12 @@ MouseInputReport ToMouseInputReport(const fuchsia_input_report::MouseInputReport
   }
   if (fidl_report.has_movement_y()) {
     report.movement_y = fidl_report.movement_y();
+  }
+  if (fidl_report.has_position_x()) {
+    report.position_x = fidl_report.position_x();
+  }
+  if (fidl_report.has_position_y()) {
+    report.position_y = fidl_report.position_y();
   }
   if (fidl_report.has_scroll_v()) {
     report.scroll_v = fidl_report.scroll_v();

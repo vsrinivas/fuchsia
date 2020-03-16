@@ -32,6 +32,8 @@ TEST(FidlTest, MouseInputDescriptor) {
   mouse_desc.input = hid_input_report::MouseInputDescriptor();
   mouse_desc.input->movement_x = axis;
   mouse_desc.input->movement_y = axis;
+  mouse_desc.input->position_x = axis;
+  mouse_desc.input->position_y = axis;
   mouse_desc.input->num_buttons = 3;
   mouse_desc.input->buttons[0] = 1;
   mouse_desc.input->buttons[1] = 10;
@@ -53,6 +55,8 @@ TEST(FidlTest, MouseInputDescriptor) {
   // Check the fields.
   TestAxis(*mouse_desc.input->movement_x, *new_desc.input->movement_x);
   TestAxis(*mouse_desc.input->movement_y, *new_desc.input->movement_y);
+  TestAxis(*mouse_desc.input->position_x, *new_desc.input->position_x);
+  TestAxis(*mouse_desc.input->position_y, *new_desc.input->position_y);
 
   ASSERT_EQ(mouse_desc.input->num_buttons, new_desc.input->num_buttons);
   for (size_t i = 0; i < mouse_desc.input->num_buttons; i++) {
@@ -65,6 +69,8 @@ TEST(FidlTest, MouseInputReport) {
   hid_input_report::MouseInputReport mouse = {};
   mouse.movement_x = 100;
   mouse.movement_y = 200;
+  mouse.position_x = 101;
+  mouse.position_y = 201;
   mouse.scroll_v = 100;
   mouse.num_buttons_pressed = 3;
   mouse.buttons_pressed[0] = 1;
@@ -85,6 +91,8 @@ TEST(FidlTest, MouseInputReport) {
   // Check the fields.
   ASSERT_EQ(mouse.movement_x, new_mouse.movement_x);
   ASSERT_EQ(mouse.movement_y, new_mouse.movement_y);
+  ASSERT_EQ(mouse.position_x, new_mouse.position_x);
+  ASSERT_EQ(mouse.position_y, new_mouse.position_y);
   ASSERT_EQ(mouse.scroll_v, new_mouse.scroll_v);
 
   ASSERT_EQ(mouse.num_buttons_pressed, new_mouse.num_buttons_pressed);

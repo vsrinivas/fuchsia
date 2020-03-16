@@ -22,6 +22,8 @@ namespace hid_input_report {
 struct MouseInputDescriptor {
   std::optional<fuchsia_input_report::Axis> movement_x = {};
   std::optional<fuchsia_input_report::Axis> movement_y = {};
+  std::optional<fuchsia_input_report::Axis> position_x = {};
+  std::optional<fuchsia_input_report::Axis> position_y = {};
   std::optional<fuchsia_input_report::Axis> scroll_v = {};
   std::optional<fuchsia_input_report::Axis> scroll_h = {};
 
@@ -32,6 +34,8 @@ struct MouseInputDescriptor {
 struct MouseInputReport {
   std::optional<int64_t> movement_x;
   std::optional<int64_t> movement_y;
+  std::optional<int64_t> position_x;
+  std::optional<int64_t> position_y;
   std::optional<int64_t> scroll_v;
   std::optional<int64_t> scroll_h;
   uint8_t num_buttons_pressed = 0;

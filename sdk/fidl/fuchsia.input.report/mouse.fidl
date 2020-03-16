@@ -17,10 +17,12 @@ table MouseInputDescriptor {
     /// The range of relative Y movement.
     2: Axis movement_y;
 
-    /// The range of the absolute position of X.
+    /// The range of the position of X.
+    /// The main use of position is from virtual mice like over VNC.
     6: Axis position_x;
 
-    /// The range of the absolute position of Y.
+    /// The range of the position of Y.
+    /// The main use of position is from virtual mice like over VNC.
     7: Axis position_y;
 
     /// The range of relative vertical scroll.
@@ -40,7 +42,7 @@ table MouseDescriptor {
 
 /// `MouseReport` gives the relative movement of the mouse and currently
 /// pressed buttons. Relative means the movement seen between the previous
-/// report and this report. The client is responsble for tracking this and
+/// report and this report. The client is responsible for tracking this and
 /// converting it to absolute movement.
 table MouseInputReport {
     /// Relative X positional displacement.
@@ -48,11 +50,13 @@ table MouseInputReport {
     /// Relative Y positional displacement.
     2: int64 movement_y;
 
-    /// The absolute position of X.
-    6: Axis position_x;
+    /// The position of X.
+    /// The main use of position is from virtual mice like over VNC.
+    6: int64 position_x;
 
-    /// The absolute position of Y.
-    7: Axis position_y;
+    /// The position of Y.
+    /// The main use of position is from virtual mice like over VNC.
+    7: int64 position_y;
 
     /// Relative vertical scrolling displacement.
     3: int64 scroll_v;

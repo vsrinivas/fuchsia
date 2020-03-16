@@ -24,6 +24,8 @@ class Mouse : public Device {
  private:
   hid::Attributes movement_x_ = {};
   hid::Attributes movement_y_ = {};
+  hid::Attributes position_x_ = {};
+  hid::Attributes position_y_ = {};
   hid::Attributes scroll_v_ = {};
   hid::Attributes buttons_[fuchsia_input_report::MOUSE_MAX_NUM_BUTTONS] = {};
   size_t num_buttons_ = 0;
