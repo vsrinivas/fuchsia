@@ -138,7 +138,7 @@ impl runner::component::Controllable for ComponentRuntime {
     }
 
     fn stop<'a>(&mut self) -> BoxFuture<'a, ()> {
-        // TODO what should this do?
+        self.kill_self();
         async move {}.boxed()
     }
 }
