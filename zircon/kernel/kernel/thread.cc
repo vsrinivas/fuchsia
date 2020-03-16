@@ -251,13 +251,6 @@ static void free_thread_resources(Thread* t) {
     DEBUG_ASSERT(status == ZX_OK);
   }
 
-  // call the tls callback for each slot as long there is one
-  for (uint ix = 0; ix != THREAD_MAX_TLS_ENTRY; ++ix) {
-    if (t->tls_callback_[ix]) {
-      t->tls_callback_[ix](t->tls_[ix]);
-    }
-  }
-
   // free the thread structure itself.  Manually trigger the struct's
   // destructor so that DEBUG_ASSERTs present in the owned_wait_queues member
   // get triggered.

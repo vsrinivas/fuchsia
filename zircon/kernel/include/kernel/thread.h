@@ -52,7 +52,6 @@ const char* ToString(enum thread_state state);
 
 typedef int (*thread_start_routine)(void* arg);
 typedef void (*thread_trampoline_routine)() __NO_RETURN;
-typedef void (*thread_tls_callback_t)(void* tls_value);
 
 // clang-format off
 #define THREAD_FLAG_DETACHED                 (1 << 0)
@@ -167,8 +166,6 @@ struct Thread {
     tls_[entry] = val;
     return oldval;
   }
-
-  void tls_set_callback(uint entry, thread_tls_callback_t cb) { tls_callback_[entry] = cb; }
 
   // Get/set the mask of valid CPUs that thread may run on. If a new mask
   // is set, the thread will be migrated to satisfy the new constraint.
@@ -505,9 +502,6 @@ struct Thread {
   // thread local storage, initialized to zero
   void* tls_[THREAD_MAX_TLS_ENTRY];
 
-  // callback for cleanup of tls slots
-  thread_tls_callback_t tls_callback_[THREAD_MAX_TLS_ENTRY];
-
   char name_[THREAD_NAME_LENGTH];
 #if WITH_DEBUG_LINEBUFFER
   // buffering for debug/klog output
@@ -569,11 +563,6 @@ static inline void* tls_get(uint entry) { return Thread::Current::Get()->tls_get
 
 static inline void* tls_set(uint entry, void* val) {
   return Thread::Current::Get()->tls_set(entry, val);
-}
-
-// set the callback that is issued when the thread exits
-static inline void tls_set_callback(uint entry, thread_tls_callback_t cb) {
-  Thread::Current::Get()->tls_set_callback(entry, cb);
 }
 
 // AutoReschedDisable is an RAII helper for disabling rescheduling

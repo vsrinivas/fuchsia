@@ -775,30 +775,20 @@ __NO_INLINE static void affinity_test() {
 
 #define TLS_TEST_TAGV ((void*)0x666)
 
-static void tls_test_callback(void* tls) {
-  ASSERT(tls == TLS_TEST_TAGV);
-  atomic_add(&atomic_count, 1);
-}
-
 static int tls_test_thread(void* arg) {
   tls_set(0u, TLS_TEST_TAGV);
-  tls_set_callback(0u, &tls_test_callback);
   tls_set(1u, TLS_TEST_TAGV);
-  tls_set_callback(1u, &tls_test_callback);
+  ASSERT(tls_get(0u) == TLS_TEST_TAGV);
+  ASSERT(tls_get(1u) == TLS_TEST_TAGV);
   return 0;
 }
 
 static void tls_tests() {
   printf("starting tls tests\n");
-  atomic_count = 0;
 
   Thread* t = Thread::Create("tls-test", tls_test_thread, 0, LOW_PRIORITY);
   t->Resume();
-  Thread::Current::SleepRelative(ZX_MSEC(200));
   t->Join(nullptr, ZX_TIME_INFINITE);
-
-  ASSERT(atomic_count == 2);
-  atomic_count = 0;
 
   printf("done with tls tests\n");
 }
