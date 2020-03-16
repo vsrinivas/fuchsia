@@ -124,7 +124,8 @@ class Controller : public ControllerParent,
   bool GetDisplayIdentifiers(uint64_t display_id, const char** manufacturer_name,
                              const char** monitor_name, const char** monitor_serial)
       __TA_REQUIRES(mtx());
-
+  bool GetDisplayPhysicalDimensions(uint64_t display_id, uint32_t* horizontal_size_mm,
+                                    uint32_t* vertical_size_mm) __TA_REQUIRES(mtx());
   ddk::DisplayControllerImplProtocolClient* dc() { return &dc_; }
   ddk::DisplayCaptureImplProtocolClient* dc_capture() {
     if (dc_capture_.is_valid()) {

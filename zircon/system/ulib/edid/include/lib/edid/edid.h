@@ -313,6 +313,8 @@ class Edid {
   const char* manufacturer_name() const { return manufacturer_name_; }
   const char* monitor_name() const { return monitor_name_; }
   const char* monitor_serial() const { return monitor_serial_; }
+  uint32_t horizontal_size_mm() const { return (base_edid_->horizontal_size_cm * 10); }
+  uint32_t vertical_size_mm() const { return (base_edid_->vertical_size_cm * 10); }
   bool is_hdmi() const;
 
  private:

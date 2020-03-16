@@ -6,6 +6,7 @@
 
 #include <fuchsia/hardware/display/llcpp/fidl.h>
 #include <lib/async/cpp/task.h>
+#include <threads.h>
 #include <zircon/threads.h>
 #include <zircon/time.h>
 #include <zircon/types.h>
@@ -358,6 +359,8 @@ void Controller::DisplayControllerInterfaceOnDisplaysChanged(
         strcpy(display_info->monitor_name, info->edid.monitor_name());
         strcpy(display_info->monitor_serial, info->edid.monitor_serial());
         display_info->manufacturer_name = info->edid.manufacturer_name();
+        display_info->horizontal_size_mm = info->edid.horizontal_size_mm();
+        display_info->vertical_size_mm = info->edid.vertical_size_mm();
       }
       if (zxlog_level_enabled_etc(DDK_LOG_TRACE)) {
         const char* manufacturer = strlen(info->edid.manufacturer_name())
@@ -807,6 +810,23 @@ bool Controller::GetDisplayIdentifiers(uint64_t display_id, const char** manufac
         *monitor_serial = display.edid.monitor_serial();
       } else {
         *manufacturer_name = *monitor_name = *monitor_serial = "";
+      }
+      return true;
+    }
+  }
+  return false;
+}
+
+bool Controller::GetDisplayPhysicalDimensions(uint64_t display_id, uint32_t* horizontal_size_mm,
+                                              uint32_t* vertical_size_mm) {
+  ZX_DEBUG_ASSERT(mtx_trylock(&mtx_) == thrd_busy);
+  for (auto& display : displays_) {
+    if (display.id == display_id) {
+      if (display.has_edid) {
+        *horizontal_size_mm = display.edid.horizontal_size_mm();
+        *vertical_size_mm = display.edid.vertical_size_mm();
+      } else {
+        *horizontal_size_mm = *vertical_size_mm = 0;
       }
       return true;
     }

@@ -66,6 +66,16 @@ struct Info {
     string:IDENTIFIER_MAX_LEN manufacturer_name;
     string:IDENTIFIER_MAX_LEN monitor_name;
     string:IDENTIFIER_MAX_LEN monitor_serial;
+
+    /// Physical horizontal size in millimeters.
+    /// If this value is not available, set to a best guess value and set the flag
+    uint32 horizontal_size_mm;
+    /// Physical vertical size in millimeters
+    /// If this value is not available, set to a best guess value and set the flag
+    uint32 vertical_size_mm;
+    /// This flag is set if fallback horizontal and vertical sizes were used as opposed
+    /// to actual values reported by the display.
+    bool using_fallback_size;
 };
 
 // An ImageConfig accompanies image data and defines how to interpret that data.

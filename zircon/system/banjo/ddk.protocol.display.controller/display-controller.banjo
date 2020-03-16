@@ -114,6 +114,11 @@ struct AddedDisplayInfo {
     string:14 monitor_name;
     /// null-terminated
     string:14 monitor_serial;
+
+    // physical horizontal size in millimeters
+    uint32 horizontal_size_mm;
+    // physical vertical size in millimeters
+    uint32 vertical_size_mm;
 };
 
 /// The client will not make any `ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL` calls into the device

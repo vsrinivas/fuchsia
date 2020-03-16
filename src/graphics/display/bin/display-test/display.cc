@@ -31,6 +31,10 @@ Display::Display(const fhd::Info& info) {
   manufacturer_name_ = fbl::String(info.manufacturer_name.data());
   monitor_name_ = fbl::String(info.monitor_name.data());
   monitor_serial_ = fbl::String(info.monitor_serial.data());
+
+  horizontal_size_mm_ = info.horizontal_size_mm;
+  vertical_size_mm_ = info.vertical_size_mm;
+  using_fallback_sizes_ = info.using_fallback_size;
 }
 
 void Display::Dump() {
@@ -56,6 +60,11 @@ void Display::Dump() {
     printf("\t\t%d\t: %dx%d\t%08x\n", i, cursors_[i].width, cursors_[i].height,
            cursors_[i].pixel_format);
   }
+
+  printf("\n\t%s Physical dimension in millimeters:\n",
+         using_fallback_sizes_ ? "[Best Guess / Fallback]" : "");
+  printf("\t\tHorizontal size = %d mm\n", horizontal_size_mm_);
+  printf("\t\tVertical size = %d mm\n", vertical_size_mm_);
   printf("\n");
 }
 

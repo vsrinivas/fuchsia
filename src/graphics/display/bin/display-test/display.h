@@ -50,6 +50,12 @@ class Display {
   fbl::String manufacturer_name_;
   fbl::String monitor_name_;
   fbl::String monitor_serial_;
+
+  // Display physical dimension in millimiters
+  uint32_t horizontal_size_mm_;
+  uint32_t vertical_size_mm_;
+  // flag used to indicate whether the values are actual values or fallback
+  bool using_fallback_sizes_;
 };
 
 #endif  // ZIRCON_SYSTEM_UAPP_DISPLAY_TEST_DISPLAY_H_

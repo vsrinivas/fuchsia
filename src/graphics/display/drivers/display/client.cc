@@ -38,6 +38,9 @@ namespace fhd = llcpp::fuchsia::hardware::display;
 
 namespace {
 
+constexpr uint32_t kFallbackHorizontalSizeMm = 160;
+constexpr uint32_t kFallbackVerticalSizeMm = 90;
+
 bool frame_contains(const frame_t& a, const frame_t& b) {
   return b.x_pos < a.width && b.y_pos < a.height && b.x_pos + b.width <= a.width &&
          b.y_pos + b.height <= a.height;
@@ -1456,6 +1459,18 @@ void Client::OnDisplaysChanged(const uint64_t* displays_added, size_t added_coun
                                             &monitor_serial)) {
       zxlogf(ERROR, "Failed to get display identifiers\n");
       ZX_DEBUG_ASSERT(false);
+    }
+
+    info.using_fallback_size = false;
+    if (!controller_->GetDisplayPhysicalDimensions(displays_added[i], &info.horizontal_size_mm,
+                                                   &info.vertical_size_mm)) {
+      zxlogf(ERROR, "Failed to get display physical dimensions\n");
+      ZX_DEBUG_ASSERT(false);
+    }
+    if (info.horizontal_size_mm == 0 || info.vertical_size_mm == 0) {
+      info.horizontal_size_mm = kFallbackHorizontalSizeMm;
+      info.vertical_size_mm = kFallbackVerticalSizeMm;
+      info.using_fallback_size = true;
     }
 
     info.manufacturer_name = fidl::StringView(manufacturer_name, strlen(manufacturer_name));
