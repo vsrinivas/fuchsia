@@ -59,6 +59,9 @@ rustc_binary("fuchsia_component_test_middle_bin") {
     "//third_party/rust_crates:thiserror",
   ]
   source_root = "middle.rs"
+
+  # TODO(46724): Fix the leaks and remove this.
+  non_rust_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 package("fuchsia_component_test_middle") {
