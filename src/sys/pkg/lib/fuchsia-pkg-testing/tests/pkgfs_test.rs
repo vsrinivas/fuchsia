@@ -776,63 +776,6 @@ async fn test_pkgfs_with_system_image_base_package_missing_content_blob() {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn test_pkgfs_packages_doesnt_show_base_package_updates() {
-    let original_base_pkg = PackageBuilder::new("example")
-        .add_resource_at("a/b", "Hello world!\n".as_bytes())
-        .build()
-        .await
-        .expect("build package");
-    let system_image_package = SystemImageBuilder::new(&[&original_base_pkg]).build().await;
-
-    let blobfs = BlobfsRamdisk::start().unwrap();
-
-    system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
-    original_base_pkg.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
-
-    let pkgfs = PkgfsRamdisk::start_with_blobfs(
-        blobfs,
-        Some(&system_image_package.meta_far_merkle_root().to_string()),
-    )
-    .expect("starting pkgfs");
-    let d = pkgfs.root_dir().expect("getting pkgfs root dir");
-
-    // When we start, pkgfs/packages contains the original base pkg
-    verify_contents(&original_base_pkg, subdir_proxy(&d, "packages/example/0"))
-        .await
-        .expect("valid system_image");
-    let expected_versions = vec![
-        original_base_pkg.meta_far_merkle_root().to_string(),
-        system_image_package.meta_far_merkle_root().to_string(),
-    ];
-    assert_eq!(sorted(ls(&pkgfs, "versions").unwrap()), sorted(expected_versions));
-
-    // Update the base package
-    let updated_base_pkg = PackageBuilder::new("example")
-        .add_resource_at("a/b", "UPDATED Hello world!\n".as_bytes())
-        .build()
-        .await
-        .expect("build package");
-    install(&pkgfs, &updated_base_pkg);
-
-    // pkgfs/packages SHOULD NOT see the update, whereas pkgfs/versions SHOULD
-    verify_contents(&original_base_pkg, subdir_proxy(&d, "packages/example/0"))
-        .await
-        .expect("valid system_image");
-    let expected_versions: Vec<String> =
-        vec![original_base_pkg, updated_base_pkg, system_image_package]
-            .into_iter()
-            .map(|pkg| pkg.meta_far_merkle_root().to_string())
-            .collect();
-    assert_eq!(sorted(ls(&pkgfs, "versions").unwrap()), sorted(expected_versions));
-
-    // Drop the directory before we shutdown the server that's serving it.
-    // In practice, this probably doesn't make a difference.
-    drop(d);
-
-    pkgfs.stop().await.expect("stopping pkgfs");
-}
-
-#[fasync::run_singlethreaded(test)]
 async fn test_pkgfs_install_update() {
     // GC doesn't work without a working system image
     let system_image_package = SystemImageBuilder::new(&[]).build().await;

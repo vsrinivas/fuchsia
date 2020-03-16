@@ -106,14 +106,14 @@ const packagesAllowlistPath = "data/pkgfs_packages_non_static_packages_allowlist
 // *StaticIndex is always returned. If an error is returned that indicates a
 // problem reading the index content from disk and therefore the StaticIndex
 // returned may be empty.
-func loadStaticIndex(static *index.StaticIndex, blobfs *blobfs.Manager, root string, systemImage pkg.Package, systemImageMerkleroot string) error {
+func loadStaticIndex(static *index.StaticIndex, blobfs *blobfs.Manager, root string) error {
 	indexFile, err := blobfs.Open(root)
 	if err != nil {
 		return fmt.Errorf("pkgfs: could not load static index from blob %s: %s", root, err)
 	}
 	defer indexFile.Close()
 
-	return static.LoadFrom(indexFile, systemImage, systemImageMerkleroot)
+	return static.LoadFrom(indexFile)
 }
 
 func (f *Filesystem) loadCacheIndex(root string) error {
@@ -183,13 +183,19 @@ func (f *Filesystem) SetSystemRoot(merkleroot string) error {
 		return fmt.Errorf("pkgfs: new system root set, but new static index %q not found in %q", staticIndexPath, merkleroot)
 	}
 
-	err = loadStaticIndex(f.static, f.blobfs, blob, pkg.Package{
-		Name:    "system_image",
-		Version: "0",
-	}, merkleroot)
+	err = loadStaticIndex(f.static, f.blobfs, blob)
 	if err != nil {
 		return err
 	}
+
+	// Ensure that the "system_image" package is also indexed.
+	f.static.Set(
+		pkg.Package{
+			Name:    "system_image",
+			Version: "0",
+		},
+		merkleroot,
+	)
 
 	blob, ok = pd.getBlobFor(cacheIndexPath)
 	if ok {

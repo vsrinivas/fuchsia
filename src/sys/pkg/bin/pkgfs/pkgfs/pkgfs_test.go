@@ -24,7 +24,6 @@ import (
 	"testing"
 
 	"fuchsia.googlesource.com/pm/build"
-	"fuchsia.googlesource.com/pm/pkg"
 	"fuchsia.googlesource.com/pmd/iou"
 	"fuchsia.googlesource.com/pmd/ramdisk"
 )
@@ -39,35 +38,6 @@ var (
 	blobDir  *ramdisk.Ramdisk
 )
 
-func installTestPackage(installJustMetaFar bool) string {
-	cfg := build.TestConfig()
-	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
-	build.TestPackage(cfg)
-	build.BuildTestPackage(cfg)
-
-	bi, err := cfg.BlobInfo()
-	panicErrWithInfo(err, "Creating BlobInfo")
-
-	// Install the blobs to blobfs directly.
-	for _, b := range bi {
-		src, err := os.Open(b.SourcePath)
-		panicErrWithInfo(err, "Opening blob src")
-		dst, err := blobDir.Open(b.Merkle.String(), os.O_WRONLY|os.O_CREATE, 0777)
-		panicErrWithInfo(err, "Opening blob dst")
-		panicErrWithInfo(dst.Truncate(int64(b.Size)), "Truncating dst blob")
-		_, err = io.Copy(dst, src)
-		panicErrWithInfo(err, "Writing blob")
-		panicErrWithInfo(src.Close(), "Closing src")
-		panicErrWithInfo(dst.Close(), "Closing dst")
-
-		if installJustMetaFar {
-			return bi[0].Merkle.String()
-		}
-	}
-
-	return bi[0].Merkle.String()
-}
-
 // tmain exists for the defer convenience, so that defers are run before os.Exit gets called.
 func tmain(m *testing.M) int {
 	// Undo the defaults that print to the system log...
@@ -75,12 +45,30 @@ func tmain(m *testing.M) int {
 
 	var err error
 	blobDir, err = ramdisk.New(10 * 1024 * 1024)
-	panicErrWithInfo(err, "Creating blobfs ramdisk")
-	panicErrWithInfo(blobDir.StartBlobfs(), "Starting blobfs")
+	panicerr(err)
+	panicerr(blobDir.StartBlobfs())
 	defer blobDir.Destroy()
 
-	testPackageMerkle := installTestPackage(false)
-	systemImageMerkle := installTestPackage(true)
+	cfg := build.TestConfig()
+	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
+	build.TestPackage(cfg)
+	build.BuildTestPackage(cfg)
+
+	bi, err := cfg.BlobInfo()
+	panicerr(err)
+
+	// Install the blobs to blobfs directly
+	for _, b := range bi {
+		src, err := os.Open(b.SourcePath)
+		panicerr(err)
+		dst, err := blobDir.Open(b.Merkle.String(), os.O_WRONLY|os.O_CREATE, 0777)
+		panicerr(err)
+		panicerr(dst.Truncate(int64(b.Size)))
+		_, err = io.Copy(dst, src)
+		panicerr(err)
+		panicerr(src.Close())
+		panicerr(dst.Close())
+	}
 
 	d, err := ioutil.TempDir("", "pkgfs-test-mount")
 	panicerr(err)
@@ -98,12 +86,8 @@ func tmain(m *testing.M) int {
 
 	pkgfs, err := New(syscall.FDIOForFD(int(blobd.Fd())).(*fdio.Directory), false)
 	panicerr(err)
-	systemImagePackage := pkg.Package{
-		Name:    "system_image",
-		Version: "0",
-	}
 	pkgfs.static.LoadFrom(strings.NewReader(
-		fmt.Sprintf("static-package/0=%s\n", testPackageMerkle)), systemImagePackage, systemImageMerkle)
+		fmt.Sprintf("static-package/0=%s\n", bi[0].Merkle.String())))
 
 	nc, sc, err := zx.NewChannel(0)
 	panicerr(err)
@@ -411,11 +395,5 @@ func TestVersions(t *testing.T) {
 func panicerr(err error) {
 	if err != nil {
 		panic(err)
-	}
-}
-
-func panicErrWithInfo(err error, info string) {
-	if err != nil {
-		panic(fmt.Errorf("%s: %v", info, err))
 	}
 }
