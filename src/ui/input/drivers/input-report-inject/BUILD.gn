@@ -28,7 +28,12 @@ driver_module("driver") {
 }
 
 driver_package("input-report-inject") {
-  deps = [ ":driver" ]
+  deps = [
+    ":driver",
+
+    # Injection driver should NOT be in production builds.
+    "//build/images:non_production_tag",
+  ]
 
   drivers = [
     {
