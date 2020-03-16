@@ -96,6 +96,8 @@ TEST_F(PrintInputReport, PrintMouseInputReport) {
   hid_input_report::MouseInputReport mouse = {};
   mouse.movement_x = 100;
   mouse.movement_y = 200;
+  mouse.position_x = 300;
+  mouse.position_y = 400;
   mouse.scroll_v = 100;
 
   mouse.num_buttons_pressed = 3;
@@ -112,6 +114,8 @@ TEST_F(PrintInputReport, PrintMouseInputReport) {
   printer.SetExpectedStrings(std::vector<std::string>{
       "Movement x: 00000100\n",
       "Movement y: 00000200\n",
+      "Position x: 00000300\n",
+      "Position y: 00000400\n",
       "Scroll v: 00000100\n",
       "Button 01 pressed\n",
       "Button 10 pressed\n",
@@ -136,6 +140,14 @@ TEST_F(PrintInputReport, PrintMouseInputDescriptor) {
   axis.range.max = -200;
   mouse.input->movement_y = axis;
 
+  axis.range.min = 300;
+  axis.range.max = 300;
+  mouse.input->position_x = axis;
+
+  axis.range.min = 400;
+  axis.range.max = 400;
+  mouse.input->position_y = axis;
+
   mouse.input->num_buttons = 3;
   mouse.input->buttons[0] = 1;
   mouse.input->buttons[1] = 10;
@@ -157,6 +169,14 @@ TEST_F(PrintInputReport, PrintMouseInputDescriptor) {
       "    Unit:     NONE\n",
       "    Min:      -200\n",
       "    Max:      -200\n",
+      "  Position X:\n",
+      "    Unit:     NONE\n",
+      "    Min:       300\n",
+      "    Max:       300\n",
+      "  Position Y:\n",
+      "    Unit:     NONE\n",
+      "    Min:       400\n",
+      "    Max:       400\n",
       "  Button: 1\n",
       "  Button: 10\n",
       "  Button: 5\n",

@@ -55,6 +55,14 @@ void PrintMouseDesc(Printer* printer,
     printer->Print("Movement Y:\n");
     printer->PrintAxisIndented(mouse_desc.movement_y());
   }
+  if (mouse_desc.has_position_x()) {
+    printer->Print("Position X:\n");
+    printer->PrintAxisIndented(mouse_desc.position_x());
+  }
+  if (mouse_desc.has_position_y()) {
+    printer->Print("Position Y:\n");
+    printer->PrintAxisIndented(mouse_desc.position_y());
+  }
   if (mouse_desc.has_buttons()) {
     for (uint8_t button : mouse_desc.buttons()) {
       printer->Print("Button: %d\n", button);
@@ -240,6 +248,12 @@ void PrintMouseInputReport(Printer* printer,
   }
   if (mouse_report.has_movement_y()) {
     printer->Print("Movement y: %08ld\n", mouse_report.movement_y());
+  }
+  if (mouse_report.has_position_x()) {
+    printer->Print("Position x: %08ld\n", mouse_report.position_x());
+  }
+  if (mouse_report.has_position_y()) {
+    printer->Print("Position y: %08ld\n", mouse_report.position_y());
   }
   if (mouse_report.has_scroll_v()) {
     printer->Print("Scroll v: %08ld\n", mouse_report.scroll_v());
