@@ -149,7 +149,9 @@ mod tests {
         let rights = fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE;
         let mut pkg_lib = io_util::open_directory_in_namespace("/pkg/lib", rights)?;
         let entries = list_directory(&pkg_lib).await;
-        if entries.iter().any(|f| &f as &str == "asan") {
+        if entries.iter().any(|f| &f as &str == "asan-ubsan") {
+            pkg_lib = io_util::open_directory(&pkg_lib, &Path::new("asan-ubsan"), rights)?;
+        } else if entries.iter().any(|f| &f as &str == "asan") {
             pkg_lib = io_util::open_directory(&pkg_lib, &Path::new("asan"), rights)?;
         }
 
