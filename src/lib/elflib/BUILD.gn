@@ -81,7 +81,10 @@ test_package("elflib_tests") {
 group("tests") {
   testonly = true
 
-  deps = [ ":elflib_tests" ]
+  deps = [
+    ":elflib_fuzzers",
+    ":elflib_tests",
+  ]
 }
 
 fuzzer("elflib_fuzzer") {
