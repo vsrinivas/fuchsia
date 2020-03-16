@@ -103,46 +103,55 @@ func TestDebugBinaryUploads(t *testing.T) {
 		{
 			Source:      filepath.Join(buildDir, ".build-id", "fi", "rst.debug"),
 			Destination: "NAMESPACE/first.debug",
+			Compress:    true,
 			Deduplicate: true,
 		},
 		{
 			Source:      filepath.Join(buildDir, "gen", "first.sym"),
 			Destination: "NAMESPACE/first.sym",
+			Compress:    true,
 			Deduplicate: true,
 		},
 		{
 			Source:      filepath.Join(buildDir, ".build-id", "se", "cond.debug"),
 			Destination: "NAMESPACE/second.debug",
+			Compress:    true,
 			Deduplicate: true,
 		},
 		{
 			Source:      filepath.Join(buildDir, "host", "gen", "second.sym"),
 			Destination: "NAMESPACE/second.sym",
+			Compress:    true,
 			Deduplicate: true,
 		},
 		{
 			Source:      filepath.Join(buildDir, ".build-id", "th", "ird.debug"),
 			Destination: "NAMESPACE/third.debug",
+			Compress:    true,
 			Deduplicate: true,
 		},
 		{
 			Source:      filepath.Join(buildDir, ".build-id", "pr", "ebuiltA.debug"),
 			Destination: "NAMESPACE/prebuiltA.debug",
+			Compress:    true,
 			Deduplicate: true,
 		},
 		{
 			Source:      filepath.Join(buildDir, "gen", "prebuiltA.sym"),
 			Destination: "NAMESPACE/prebuiltA.sym",
+			Compress:    true,
 			Deduplicate: true,
 		},
 		{
 			Source:      filepath.Join(buildDir, ".build-id", "pr", "ebuiltB.debug"),
 			Destination: "NAMESPACE/prebuiltB.debug",
+			Compress:    true,
 			Deduplicate: true,
 		},
 		{
 			Source:      filepath.Join(buildDir, "host", "gen", "prebuiltB.sym"),
 			Destination: "NAMESPACE/prebuiltB.sym",
+			Compress:    true,
 			Deduplicate: true,
 		},
 	}

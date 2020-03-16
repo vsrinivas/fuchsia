@@ -33,6 +33,7 @@ func imageUploads(mods imgModules, namespace string) []Upload {
 			files = append(files, Upload{
 				Source:      filepath.Join(mods.BuildDir(), img.Path),
 				Destination: filepath.Join(namespace, img.Path),
+				Compress:    true,
 			})
 			seen[img.Path] = true
 		}

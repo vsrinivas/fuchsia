@@ -77,18 +77,22 @@ func TestImageUploads(t *testing.T) {
 		{
 			Source:      filepath.Join("BUILD_DIR", "bootloader"),
 			Destination: "namespace/bootloader",
+			Compress:    true,
 		},
 		{
 			Source:      filepath.Join("BUILD_DIR", "zedboot.zbi"),
 			Destination: "namespace/zedboot.zbi",
+			Compress:    true,
 		},
 		{
 			Source:      filepath.Join("BUILD_DIR", "fuchsia.zbi"),
 			Destination: "namespace/fuchsia.zbi",
+			Compress:    true,
 		},
 		{
 			Source:      filepath.Join("BUILD_DIR", "qemu-kernel.bin"),
 			Destination: "namespace/qemu-kernel.bin",
+			Compress:    true,
 		},
 	}
 	actual := imageUploads(m, "namespace")

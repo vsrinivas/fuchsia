@@ -60,6 +60,7 @@ func debugBinaryUploads(mods binModules, namespace string) ([]Upload, []string, 
 			Source:      filepath.Join(mods.BuildDir(), bin.Debug),
 			Destination: debugDest,
 			Deduplicate: true,
+			Compress:    true,
 		})
 
 		// Ditto for breakpad symbols, if present.
@@ -69,6 +70,7 @@ func debugBinaryUploads(mods binModules, namespace string) ([]Upload, []string, 
 				Source:      filepath.Join(mods.BuildDir(), bin.Breakpad),
 				Destination: breakpadDest,
 				Deduplicate: true,
+				Compress:    true,
 			})
 		}
 	}

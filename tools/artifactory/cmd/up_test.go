@@ -12,11 +12,9 @@ import (
 	"path/filepath"
 	"reflect"
 	"strconv"
-	"strings"
 	"sync"
 	"testing"
 
-	"cloud.google.com/go/storage"
 	artifactory "go.fuchsia.dev/fuchsia/tools/artifactory/lib"
 )
 
@@ -45,7 +43,7 @@ func (s *memSink) objectExistsAt(ctx context.Context, name string) (bool, error)
 	return true, nil
 }
 
-func (s *memSink) write(ctx context.Context, name, path string) error {
+func (s *memSink) write(ctx context.Context, name, path string, _ bool) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	content, err := ioutil.ReadFile(path)
@@ -210,15 +208,4 @@ func TestUploading(t *testing.T) {
 			t.Fatal("sink should be empty")
 		}
 	})
-}
-
-func TestGetCompressedObjectWriter(t *testing.T) {
-	obj := &storage.ObjectHandle{}
-	w := getCompressedObjectWriter(context.Background(), obj)
-	if w.ContentEncoding != "gzip" {
-		t.Errorf("content-encoding is not gzip; actual: %s", w.ContentEncoding)
-	}
-	if w.ContentType == "" || strings.Contains(w.ContentType, "gzip") {
-		t.Errorf("content-type should be explicitly set to the type of the uncompressed data or the default of application/octet-stream.")
-	}
 }

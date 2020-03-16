@@ -213,7 +213,7 @@ type dataSink interface {
 	// Write writes the content of a file to a sink object at the given name.
 	// If an object at that name does not exists, it will be created; else it
 	// will be overwritten.
-	write(ctx context.Context, name, path string) error
+	write(ctx context.Context, name, path string, compress bool) error
 }
 
 // CloudSink is a GCS-backed data sink.
@@ -257,43 +257,52 @@ func (h *hasher) Write(p []byte) (int, error) {
 	return n, err
 }
 
-func getCompressedObjectWriter(ctx context.Context, obj *storage.ObjectHandle) *storage.Writer {
-	w := obj.If(storage.Conditions{DoesNotExist: true}).NewWriter(ctx)
-	w.ChunkSize = chunkSize
-	w.ContentType = "application/octet-stream"
-	w.ContentEncoding = "gzip"
-	return w
-}
-
-func (s *cloudSink) write(ctx context.Context, name, path string) error {
+func (s *cloudSink) write(ctx context.Context, name, path string, compress bool) error {
 	obj := s.bucket.Object(name)
-	w := getCompressedObjectWriter(ctx, obj)
+	sw := obj.If(storage.Conditions{DoesNotExist: true}).NewWriter(ctx)
+	sw.ChunkSize = chunkSize
+	sw.ContentType = "application/octet-stream"
+	if compress {
+		sw.ContentEncoding = "gzip"
+	}
 
 	fd, err := os.Open(path)
 	if err != nil {
 		return err
 	}
 
-	// We compress on the fly, and calculate the MD5 on the compressed data.
-	h := hasher{md5.New(), w}
-	gzw := gzip.NewWriter(&h)
-
-	_, err = io.Copy(gzw, fd)
+	// We optionally compress on the fly, and calculate the MD5 on the
+	// compressed data.
 	// Writes happen asynchronously, and so a nil may be returned while the write
 	// goes on to fail. It is recommended in
 	// https://godoc.org/cloud.google.com/go/storage#Writer.Write
 	// to return the value of Close() to detect the success of the write.
-	// Both the gzip compressor and the socket must be closed, one after then
-	// other.
-	// Keep the first error we got.
-	if err2 := gzw.Close(); err == nil {
-		err = err2
+	// Note that a gzip compressor would need to be closed before the storage
+	// writer that it wraps is.
+	h := &hasher{md5.New(), sw}
+	var writeErr, zipErr error
+	if compress {
+		gzw := gzip.NewWriter(h)
+		_, writeErr = io.Copy(gzw, fd)
+		zipErr = gzw.Close()
+	} else {
+		_, writeErr = io.Copy(h, fd)
 	}
-	if err2 := w.Close(); err == nil {
-		err = err2
-	}
+	closeErr := sw.Close()
+
 	// Time to close the file.
 	fd.Close()
+
+	// Keep the first error we encountered - and vet it for 'permissable' GCS
+	// error states.
+	// Note: consider an errorsmisc.FirstNonNil() helper if see this logic again.
+	err = writeErr
+	if err == nil {
+		err = zipErr
+	}
+	if err == nil {
+		err = closeErr
+	}
 	if err = checkGCSErr(ctx, err, name); err != nil {
 		return err
 	}
@@ -440,7 +449,7 @@ func uploadFiles(ctx context.Context, files []artifactory.Upload, dest dataSink,
 			}
 
 			logger.Debugf(ctx, "object %q: attempting creation", upload.Destination)
-			if err := dest.write(ctx, upload.Destination, upload.Source); err != nil {
+			if err := dest.write(ctx, upload.Destination, upload.Source, upload.Compress); err != nil {
 				errs <- fmt.Errorf("%s: %w", upload.Destination, err)
 				return
 			}
