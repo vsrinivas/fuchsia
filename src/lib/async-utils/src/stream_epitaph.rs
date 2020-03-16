@@ -73,6 +73,8 @@ where
 
 /// Extension trait to allow for easy creation of a `StreamWithEpitaph` from a `Stream`.
 pub trait WithEpitaph: Sized {
+    /// Map this stream to one producing a `StreamItem::Item` value for each item of the stream
+    /// followed by a single `StreamItem::Epitaph` value with the provided `epitaph`.
     fn with_epitaph<E>(self, epitaph: E) -> StreamWithEpitaph<Self, E>;
 }
 

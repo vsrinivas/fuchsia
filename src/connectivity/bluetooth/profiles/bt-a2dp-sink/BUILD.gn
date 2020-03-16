@@ -39,6 +39,7 @@ rustc_binary("bin") {
     "//src/connectivity/bluetooth/lib/bt-avdtp",
     "//src/connectivity/bluetooth/lib/fuchsia-audio-codec",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
+    "//src/lib/async-utils",
     "//src/lib/cobalt/rust:fuchsia-cobalt",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",

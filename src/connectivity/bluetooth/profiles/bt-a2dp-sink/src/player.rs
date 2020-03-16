@@ -4,7 +4,7 @@
 
 use {
     anyhow::{format_err, Context as _, Error},
-    async_helpers::hanging_get::client::HangingGetStream,
+    async_utils::hanging_get::client::HangingGetStream,
     bitfield::bitfield,
     bt_avdtp::RtpHeader,
     fidl_fuchsia_media::{

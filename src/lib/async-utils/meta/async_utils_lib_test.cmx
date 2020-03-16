@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/async_utils_lib_test"
+    }
+}

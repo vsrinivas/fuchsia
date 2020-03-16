@@ -15,6 +15,7 @@ rustc_library("async-helpers") {
 
   deps = [
     "//src/connectivity/bluetooth/fidl:component-rustc",
+    "//src/lib/async-utils",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/syslog/rust:syslog",

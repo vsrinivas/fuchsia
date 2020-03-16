@@ -17,7 +17,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.bluetooth.a2dp:fuchsia.bluetooth.a2dp-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/connectivity/bluetooth/fidl:component-rustc",
-    "//src/connectivity/bluetooth/lib/async-helpers",
+    "//src/lib/async-utils",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

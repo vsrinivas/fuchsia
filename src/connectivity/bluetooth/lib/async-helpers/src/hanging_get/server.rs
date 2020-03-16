@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    crate::{hanging_get::error::HangingGetServerError, stream_epitaph::*},
+    crate::hanging_get::error::HangingGetServerError,
+    async_utils::stream_epitaph::*,
     core::hash::Hash,
     futures::{
         channel::{mpsc, oneshot},

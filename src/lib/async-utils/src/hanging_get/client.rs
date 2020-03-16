@@ -37,6 +37,7 @@ impl<Fut, T> GeneratedFutureStream<Fut, T>
 where
     Fut: Future<Output = T> + Unpin + Send,
 {
+    /// Create a new `GeneratedFutureStream` from a `generator` function.
     pub fn new(generator: Box<dyn FnMut() -> Option<Fut> + Send>) -> Self {
         Self { generator: Some(generator), future: None }
     }

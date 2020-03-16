@@ -4,7 +4,7 @@
 
 use {
     super::*,
-    async_helpers::event::Event,
+    async_utils::event::Event,
     fidl::endpoints::*,
     fidl_fuchsia_bluetooth_component::{LifecycleMarker, LifecycleRequest, LifecycleState},
     fidl_fuchsia_io::{DirectoryMarker, DirectoryRequest},

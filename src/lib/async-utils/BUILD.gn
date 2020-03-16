@@ -1,0 +1,35 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_library.gni")
+import("//build/test/test_package.gni")
+
+rustc_library("async-utils") {
+  name = "async_utils"
+  edition = "2018"
+  with_unit_tests = true
+  deps = [
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:parking_lot",
+    "//third_party/rust_crates:slab",
+  ]
+}
+
+test_package("async-utils-tests") {
+  deps = [ ":async-utils_test" ]
+
+  tests = [
+    {
+      name = "async_utils_lib_test"
+      environments = basic_envs
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":async-utils-tests" ]
+}

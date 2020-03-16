@@ -6,7 +6,7 @@
 
 use {
     anyhow::{anyhow, Error},
-    async_helpers::event::Event,
+    async_utils::event::Event,
     fidl_fuchsia_bluetooth_a2dp::{AudioModeRequest, AudioModeRequestStream, Role},
     fidl_fuchsia_bluetooth_component::{LifecycleMarker, LifecycleState},
     fidl_fuchsia_sys::LauncherProxy,
