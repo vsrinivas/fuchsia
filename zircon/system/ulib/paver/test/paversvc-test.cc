@@ -43,6 +43,12 @@ namespace partition = ::llcpp::fuchsia::hardware::block::partition;
 using devmgr_integration_test::IsolatedDevmgr;
 using devmgr_integration_test::RecursiveWaitForFile;
 
+constexpr uint32_t kBootloaderFirstBlock = 4;
+
+// Currently our Astro implementation only supports the default empty type.
+constexpr fidl::StringView kSupportedFirmwareType("");
+constexpr fidl::StringView kUnsupportedFirmwareType("unsupported_type");
+
 constexpr fuchsia_hardware_nand_RamNandInfo
     kNandInfo =
         {
@@ -77,7 +83,7 @@ constexpr fuchsia_hardware_nand_RamNandInfo
                             {
                                 .type_guid = GUID_BOOTLOADER_VALUE,
                                 .unique_guid = {},
-                                .first_block = 4,
+                                .first_block = kBootloaderFirstBlock,
                                 .last_block = 7,
                                 .copy_count = 0,
                                 .copy_byte_offset = 0,
@@ -269,15 +275,16 @@ void PaverServiceTest::CreatePayload(size_t num_pages, ::llcpp::fuchsia::mem::Bu
 
 class PaverServiceSkipBlockTest : public PaverServiceTest {
  public:
-  PaverServiceSkipBlockTest() {
-    ASSERT_NO_FATAL_FAILURES(SpawnIsolatedDevmgr());
+  // Initializes the RAM NAND device.
+  void InitializeRamNand(const fuchsia_hardware_nand_RamNandInfo& nand_info = kNandInfo) {
+    ASSERT_NO_FATAL_FAILURES(SpawnIsolatedDevmgr(nand_info));
     ASSERT_NO_FATAL_FAILURES(WaitForDevices());
   }
 
  protected:
-  void SpawnIsolatedDevmgr() {
+  void SpawnIsolatedDevmgr(const fuchsia_hardware_nand_RamNandInfo& nand_info) {
     ASSERT_EQ(device_.get(), nullptr);
-    SkipBlockDevice::Create(kNandInfo, &device_);
+    SkipBlockDevice::Create(nand_info, &device_);
     static_cast<paver::Paver*>(provider_ctx_)->set_dispatcher(loop_.dispatcher());
     static_cast<paver::Paver*>(provider_ctx_)->set_devfs_root(device_->devfs_root());
     static_cast<paver::Paver*>(provider_ctx_)->set_svc_root(std::move(fake_svc_.svc_chan()));
@@ -396,6 +403,8 @@ void ComputeCrc(abr::Data* data) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, InitializeAbr) {
+  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+
   abr::Data abr_data = {};
   memset(&abr_data, 0x3d, sizeof(abr_data));
   SetAbr(abr_data);
@@ -407,6 +416,8 @@ TEST_F(PaverServiceSkipBlockTest, InitializeAbr) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, InitializeAbrAlreadyValid) {
+  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+
   abr::Data abr_data = kAbrData;
   ComputeCrc(&abr_data);
   SetAbr(abr_data);
@@ -418,6 +429,8 @@ TEST_F(PaverServiceSkipBlockTest, InitializeAbrAlreadyValid) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, QueryActiveConfigurationInvalidAbr) {
+  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+
   abr::Data abr_data = {};
   memset(&abr_data, 0x3d, sizeof(abr_data));
   SetAbr(abr_data);
@@ -431,6 +444,8 @@ TEST_F(PaverServiceSkipBlockTest, QueryActiveConfigurationInvalidAbr) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, QueryActiveConfigurationBothPriority0) {
+  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+
   abr::Data abr_data = kAbrData;
   abr_data.slots[0].priority = 0;
   abr_data.slots[1].priority = 0;
@@ -446,6 +461,8 @@ TEST_F(PaverServiceSkipBlockTest, QueryActiveConfigurationBothPriority0) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, QueryActiveConfigurationSlotB) {
+  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+
   abr::Data abr_data = kAbrData;
   ComputeCrc(&abr_data);
   SetAbr(abr_data);
@@ -459,6 +476,8 @@ TEST_F(PaverServiceSkipBlockTest, QueryActiveConfigurationSlotB) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, QueryActiveConfigurationSlotA) {
+  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+
   abr::Data abr_data = kAbrData;
   abr_data.slots[0].priority = 2;
   abr_data.slots[0].successful_boot = 1;
@@ -474,6 +493,8 @@ TEST_F(PaverServiceSkipBlockTest, QueryActiveConfigurationSlotA) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, QueryConfigurationStatusHealthy) {
+  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+
   abr::Data abr_data = kAbrData;
   ComputeCrc(&abr_data);
   SetAbr(abr_data);
@@ -488,6 +509,8 @@ TEST_F(PaverServiceSkipBlockTest, QueryConfigurationStatusHealthy) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, QueryConfigurationStatusPending) {
+  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+
   abr::Data abr_data = kAbrData;
   abr_data.slots[1].successful_boot = 0;
   abr_data.slots[1].tries_remaining = 1;
@@ -504,6 +527,8 @@ TEST_F(PaverServiceSkipBlockTest, QueryConfigurationStatusPending) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, QueryConfigurationStatusUnbootable) {
+  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+
   abr::Data abr_data = kAbrData;
   ComputeCrc(&abr_data);
   SetAbr(abr_data);
@@ -518,6 +543,8 @@ TEST_F(PaverServiceSkipBlockTest, QueryConfigurationStatusUnbootable) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, SetConfigurationActive) {
+  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+
   abr::Data abr_data = kAbrData;
   ComputeCrc(&abr_data);
   SetAbr(abr_data);
@@ -537,6 +564,8 @@ TEST_F(PaverServiceSkipBlockTest, SetConfigurationActive) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, SetConfigurationActiveRollover) {
+  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+
   abr::Data abr_data = kAbrData;
   abr_data.slots[1].priority = abr::kMaxPriority;
   ComputeCrc(&abr_data);
@@ -558,6 +587,8 @@ TEST_F(PaverServiceSkipBlockTest, SetConfigurationActiveRollover) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, SetConfigurationUnbootableSlotA) {
+  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+
   abr::Data abr_data = kAbrData;
   abr_data.slots[0].priority = 2;
   abr_data.slots[0].tries_remaining = 3;
@@ -581,6 +612,8 @@ TEST_F(PaverServiceSkipBlockTest, SetConfigurationUnbootableSlotA) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, SetConfigurationUnbootableSlotB) {
+  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+
   abr::Data abr_data = kAbrData;
   abr_data.slots[1].tries_remaining = 3;
   abr_data.slots[1].successful_boot = 0;
@@ -603,6 +636,8 @@ TEST_F(PaverServiceSkipBlockTest, SetConfigurationUnbootableSlotB) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, SetActiveConfigurationHealthy) {
+  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+
   abr::Data abr_data = kAbrData;
   abr_data.slots[1].tries_remaining = 3;
   abr_data.slots[1].successful_boot = 0;
@@ -623,6 +658,8 @@ TEST_F(PaverServiceSkipBlockTest, SetActiveConfigurationHealthy) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, SetActiveConfigurationHealthyBothPriorityZero) {
+  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+
   abr::Data abr_data = kAbrData;
   abr_data.slots[1].tries_remaining = 3;
   abr_data.slots[1].successful_boot = 0;
@@ -638,6 +675,8 @@ TEST_F(PaverServiceSkipBlockTest, SetActiveConfigurationHealthyBothPriorityZero)
 }
 
 TEST_F(PaverServiceSkipBlockTest, WriteAssetKernelConfigA) {
+  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+
   ::llcpp::fuchsia::mem::Buffer payload;
   CreatePayload(2 * kPagesPerBlock, &payload);
 
@@ -651,6 +690,8 @@ TEST_F(PaverServiceSkipBlockTest, WriteAssetKernelConfigA) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, WriteAssetKernelConfigB) {
+  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+
   ::llcpp::fuchsia::mem::Buffer payload;
   CreatePayload(2 * kPagesPerBlock, &payload);
 
@@ -665,6 +706,8 @@ TEST_F(PaverServiceSkipBlockTest, WriteAssetKernelConfigB) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, WriteAssetKernelConfigRecovery) {
+  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+
   ::llcpp::fuchsia::mem::Buffer payload;
   CreatePayload(2 * kPagesPerBlock, &payload);
 
@@ -678,6 +721,8 @@ TEST_F(PaverServiceSkipBlockTest, WriteAssetKernelConfigRecovery) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, WriteAssetVbMetaConfigA) {
+  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+
   ::llcpp::fuchsia::mem::Buffer payload;
   CreatePayload(32, &payload);
 
@@ -691,6 +736,8 @@ TEST_F(PaverServiceSkipBlockTest, WriteAssetVbMetaConfigA) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, WriteAssetVbMetaConfigB) {
+  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+
   ::llcpp::fuchsia::mem::Buffer payload;
   CreatePayload(32, &payload);
 
@@ -704,6 +751,8 @@ TEST_F(PaverServiceSkipBlockTest, WriteAssetVbMetaConfigB) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, WriteAssetVbMetaConfigRecovery) {
+  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+
   ::llcpp::fuchsia::mem::Buffer payload;
   CreatePayload(32, &payload);
 
@@ -717,6 +766,8 @@ TEST_F(PaverServiceSkipBlockTest, WriteAssetVbMetaConfigRecovery) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, WriteAssetTwice) {
+  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+
   ::llcpp::fuchsia::mem::Buffer payload;
   CreatePayload(2 * kPagesPerBlock, &payload);
 
@@ -736,7 +787,55 @@ TEST_F(PaverServiceSkipBlockTest, WriteAssetTwice) {
   ValidateUnwritten(10, 4);
 }
 
+TEST_F(PaverServiceSkipBlockTest, WriteFirmware) {
+  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+
+  ::llcpp::fuchsia::mem::Buffer payload;
+  CreatePayload(4 * kPagesPerBlock, &payload);
+
+  ASSERT_NO_FATAL_FAILURES(FindDataSink());
+  auto result = data_sink_->WriteFirmware(kSupportedFirmwareType, std::move(payload));
+  ASSERT_OK(result.status());
+  ASSERT_TRUE(result->result.is_status());
+  ASSERT_OK(result->result.status());
+  ValidateWritten(kBootloaderFirstBlock, 4);
+}
+
+TEST_F(PaverServiceSkipBlockTest, WriteFirmwareUnsupportedType) {
+  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+
+  ::llcpp::fuchsia::mem::Buffer payload;
+  CreatePayload(4 * kPagesPerBlock, &payload);
+
+  ASSERT_NO_FATAL_FAILURES(FindDataSink());
+  auto result = data_sink_->WriteFirmware(kUnsupportedFirmwareType, std::move(payload));
+  ASSERT_OK(result.status());
+  ASSERT_TRUE(result->result.is_unsupported_type());
+  ASSERT_TRUE(result->result.unsupported_type());
+  ValidateUnwritten(kBootloaderFirstBlock, 4);
+}
+
+TEST_F(PaverServiceSkipBlockTest, WriteFirmwareError) {
+  // Make a RAM NAND device without a visible "bootloader" partition so that
+  // the partitioner initializes properly but then fails when trying to find it.
+  fuchsia_hardware_nand_RamNandInfo info = kNandInfo;
+  info.partition_map.partitions[1].hidden = true;
+  ASSERT_NO_FATAL_FAILURES(InitializeRamNand(info));
+
+  ::llcpp::fuchsia::mem::Buffer payload;
+  CreatePayload(4 * kPagesPerBlock, &payload);
+
+  ASSERT_NO_FATAL_FAILURES(FindDataSink());
+  auto result = data_sink_->WriteFirmware(kSupportedFirmwareType, std::move(payload));
+  ASSERT_OK(result.status());
+  ASSERT_TRUE(result->result.is_status());
+  ASSERT_NOT_OK(result->result.status());
+  ValidateUnwritten(kBootloaderFirstBlock, 4);
+}
+
 TEST_F(PaverServiceSkipBlockTest, ReadAssetKernelConfigA) {
+  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+
   WriteData(8 * kPagesPerBlock, 2 * kPagesPerBlock, 0x4a);
 
   ASSERT_NO_FATAL_FAILURES(FindDataSink());
@@ -748,6 +847,8 @@ TEST_F(PaverServiceSkipBlockTest, ReadAssetKernelConfigA) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, ReadAssetKernelConfigB) {
+  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+
   WriteData(10 * kPagesPerBlock, 2 * kPagesPerBlock, 0x4a);
 
   ASSERT_NO_FATAL_FAILURES(FindDataSink());
@@ -759,6 +860,8 @@ TEST_F(PaverServiceSkipBlockTest, ReadAssetKernelConfigB) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, ReadAssetKernelConfigRecovery) {
+  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+
   WriteData(12 * kPagesPerBlock, 2 * kPagesPerBlock, 0x4a);
 
   ASSERT_NO_FATAL_FAILURES(FindDataSink());
@@ -770,6 +873,8 @@ TEST_F(PaverServiceSkipBlockTest, ReadAssetKernelConfigRecovery) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, ReadAssetVbMetaConfigA) {
+  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+
   WriteData(14 * kPagesPerBlock + 32, 32, 0x4a);
 
   ASSERT_NO_FATAL_FAILURES(FindDataSink());
@@ -781,6 +886,8 @@ TEST_F(PaverServiceSkipBlockTest, ReadAssetVbMetaConfigA) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, ReadAssetVbMetaConfigB) {
+  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+
   WriteData(14 * kPagesPerBlock + 64, 32, 0x4a);
 
   ASSERT_NO_FATAL_FAILURES(FindDataSink());
@@ -792,6 +899,8 @@ TEST_F(PaverServiceSkipBlockTest, ReadAssetVbMetaConfigB) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, ReadAssetVbMetaConfigRecovery) {
+  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+
   WriteData(14 * kPagesPerBlock + 96, 32, 0x4a);
 
   ASSERT_NO_FATAL_FAILURES(FindDataSink());
@@ -803,6 +912,8 @@ TEST_F(PaverServiceSkipBlockTest, ReadAssetVbMetaConfigRecovery) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, WriteBootloader) {
+  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+
   ::llcpp::fuchsia::mem::Buffer payload;
   CreatePayload(4 * kPagesPerBlock, &payload);
 
@@ -817,6 +928,8 @@ TEST_F(PaverServiceSkipBlockTest, WriteBootloader) {
 // Normally the last page would be overwritten with 0s, but because the actual payload is identical,
 // we don't actually pave the image, so the extra page stays as 0xFF.
 TEST_F(PaverServiceSkipBlockTest, WriteBootloaderNotAligned) {
+  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+
   ::llcpp::fuchsia::mem::Buffer payload;
   CreatePayload(5 * kPagesPerBlock, &payload);
   constexpr uint32_t kTplMagic = 0x4C4D4140;
@@ -844,6 +957,8 @@ TEST_F(PaverServiceSkipBlockTest, WriteVolumes) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, WipeVolumeEmptyFvm) {
+  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+
   ASSERT_NO_FATAL_FAILURES(FindDataSink());
   auto result = data_sink_->WipeVolume();
   ASSERT_OK(result.status());
@@ -861,6 +976,8 @@ void CheckGuid(const fbl::unique_fd& device, const uint8_t type[GPT_GUID_LEN]) {
 }
 
 TEST_F(PaverServiceSkipBlockTest, WipeVolumeCreatesFvm) {
+  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+
   constexpr size_t kBufferSize = 8192;
   char buffer[kBufferSize];
   memset(buffer, 'a', kBufferSize);

@@ -1,7 +1,8 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#pragma once
+#ifndef ZIRCON_SYSTEM_CORE_NETSVC_TEST_PAVER_TEST_COMMON_H_
+#define ZIRCON_SYSTEM_CORE_NETSVC_TEST_PAVER_TEST_COMMON_H_
 
 #include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/paver/llcpp/fidl.h>
@@ -39,6 +40,7 @@ enum class Command {
   kSetActiveConfigurationHealthy,
   kReadAsset,
   kWriteAsset,
+  kWriteFirmware,
   kWriteVolumes,
   kWriteBootloader,
   kWriteDataFile,
@@ -58,14 +60,16 @@ struct AbrData {
 };
 
 constexpr AbrData kInitAbrData = {
-  .slot_a = {
-    .unbootable = false,
-    .active = false,
-  },
-  .slot_b = {
-    .unbootable = false,
-    .active = false,
-  },
+    .slot_a =
+        {
+            .unbootable = false,
+            .active = false,
+        },
+    .slot_b =
+        {
+            .unbootable = false,
+            .active = false,
+        },
 };
 
 class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface,
@@ -190,6 +194,22 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface,
     completer.Reply(status);
   }
 
+  void WriteFirmware(fidl::StringView type, ::llcpp::fuchsia::mem::Buffer payload,
+                     WriteFirmwareCompleter::Sync completer) override {
+    using ::llcpp::fuchsia::paver::WriteFirmwareResult;
+
+    last_command_ = Command::kWriteFirmware;
+
+    // Reply varies depending on whether we support |type| or not.
+    if (supported_firmware_type_ == std::string_view(type.data(), type.size())) {
+      auto status = payload.size == expected_payload_size_ ? ZX_OK : ZX_ERR_INVALID_ARGS;
+      completer.Reply(WriteFirmwareResult::WithStatus(fidl::unowned(&status)));
+    } else {
+      fidl::aligned<bool> unsupported = true;
+      completer.Reply(WriteFirmwareResult::WithUnsupportedType(fidl::unowned(&unsupported)));
+    }
+  }
+
   void WriteVolumes(zx::channel payload_stream, WriteVolumesCompleter::Sync completer) override {
     last_command_ = Command::kWriteVolumes;
     // Register VMO.
@@ -281,6 +301,7 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface,
 
   Command last_command() { return last_command_; }
   void set_expected_payload_size(size_t size) { expected_payload_size_ = size; }
+  void set_supported_firmware_type(std::string type) { supported_firmware_type_ = type; }
   void set_abr_supported(bool supported) { abr_supported_ = supported; }
   void set_wait_for_start_signal(bool wait) { wait_for_start_signal_ = wait; }
   void set_expected_device(std::string expected) { expected_block_device_ = expected; }
@@ -296,6 +317,7 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface,
   Command last_command_ = Command::kUnknown;
   size_t expected_payload_size_ = 0;
   std::string expected_block_device_;
+  std::string supported_firmware_type_;
   bool abr_supported_ = false;
   bool abr_initialized_ = false;
   AbrData abr_data_ = kInitAbrData;
@@ -384,3 +406,5 @@ class PaverTest : public zxtest::Test {
   FakeDev fake_dev_;
   netsvc::Paver paver_;
 };
+
+#endif  // ZIRCON_SYSTEM_CORE_NETSVC_TEST_PAVER_TEST_COMMON_H_

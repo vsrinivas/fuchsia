@@ -52,6 +52,18 @@ union ReadResult {
     3: ReadInfo info;
 };
 
+union WriteFirmwareResult {
+    /// The result status if a write was attempted.
+    1: zx.status status;
+
+    /// True if a write was not attempted due to unsupported content type.
+    ///
+    /// Callers must not treat this as a fatal error, but instead ignore it and
+    /// continue to update the device. This is important to be able to add new
+    /// items to an update package without breaking updates on older devices.
+    2: bool unsupported_type;
+};
+
 /// Protocol for streaming the FVM payload.
 protocol PayloadStream {
     /// Registers a VMO to stream into.
@@ -111,6 +123,19 @@ protocol DataSink {
     WriteAsset(Configuration configuration, Asset asset, fuchsia.mem.Buffer payload)
         -> (zx.status status);
 
+    /// Writes firmware data from `payload`.
+    ///
+    /// `type` is a device-specific string identifying the payload contents,
+    /// used to select the proper paving logic. For example, a device with
+    /// multiple bootloader stages might send them as separate calls to
+    /// `WriteFirmware()`, differentiated by `type`. An empty string
+    /// indicates the default type.
+    ///
+    /// `payload` may need to be resized to the partition size, so the provided
+    /// vmo must have been created with `ZX_VMO_RESIZABLE` or must be a child
+    /// VMO that was created with `ZX_VMO_CHILD_RESIZABLE`.
+    WriteFirmware(string:256 type, fuchsia.mem.Buffer payload) -> (WriteFirmwareResult result);
+
     /// Writes FVM with data from streamed via `payload`. This potentially affects all
     /// configurations.
     WriteVolumes(PayloadStream payload) -> (zx.status status);
@@ -120,6 +145,8 @@ protocol DataSink {
     /// `payload` may need to be resized to the partition size, so the provided vmo must have
     /// been created with `ZX_VMO_RESIZABLE` or must be a child VMO that was created with
     /// `ZX_VMO_CHILD_RESIZABLE`.
+    // TODO(45606): transition users to `WriteFirmware()` and delete this.
+    [Deprecated]
     WriteBootloader(fuchsia.mem.Buffer payload) -> (zx.status status);
 
     /// Writes /data/`filename` with data from `payload`. Overwrites file if it already exists.

@@ -46,6 +46,7 @@ namespace {
 
 using ::llcpp::fuchsia::paver::Asset;
 using ::llcpp::fuchsia::paver::Configuration;
+using ::llcpp::fuchsia::paver::WriteFirmwareResult;
 
 // Get the architecture of the currently running platform.
 inline constexpr Arch GetCurrentArch() {
@@ -379,6 +380,23 @@ std::optional<Configuration> GetActiveConfiguration(const abr::Client& abr_clien
   }
 }
 
+// Helper to wrap a std::variant with a WriteFirmwareResult union.
+//
+// This can go away once llcpp unions support owning memory, but until then we
+// need the variant to own the underlying data.
+//
+// |variant| must outlive the returned WriteFirmwareResult.
+WriteFirmwareResult CreateWriteFirmwareResult(
+    std::variant<zx_status_t, fidl::aligned<bool>>* variant) {
+  WriteFirmwareResult result;
+  if (std::holds_alternative<zx_status_t>(*variant)) {
+    result.set_status(fidl::unowned(&std::get<zx_status_t>(*variant)));
+  } else {
+    result.set_unsupported_type(fidl::unowned(&std::get<fidl::aligned<bool>>(*variant)));
+  }
+  return result;
+}
+
 }  // namespace
 
 void Paver::FindDataSink(zx::channel data_sink, FindDataSinkCompleter::Sync _completer) {
@@ -432,6 +450,12 @@ void DataSink::ReadAsset(::llcpp::fuchsia::paver::Configuration configuration,
   }
 }
 
+void DataSink::WriteFirmware(fidl::StringView type, ::llcpp::fuchsia::mem::Buffer payload,
+                             WriteFirmwareCompleter::Sync completer) {
+  auto variant = sink_.WriteFirmware(type, std::move(payload));
+  completer.Reply(CreateWriteFirmwareResult(&variant));
+}
+
 void DataSink::WipeVolume(WipeVolumeCompleter::Sync completer) {
   zx::channel out;
   zx_status_t status = sink_.WipeVolume(&out);
@@ -445,7 +469,7 @@ void DataSink::WipeVolume(WipeVolumeCompleter::Sync completer) {
 zx_status_t DataSinkImpl::ReadAsset(Configuration configuration, Asset asset,
                                     ::llcpp::fuchsia::mem::Buffer* buf) {
   // No assets support content types yet, use the PartitionSpec default.
-  PartitionSpec spec = PartitionSpec(PartitionType(configuration, asset));
+  PartitionSpec spec(PartitionType(configuration, asset));
 
   // Important: if we ever do pass a content type here, do NOT just return
   // ZX_ERR_NOT_SUPPORTED directly - the caller needs to be able to distinguish
@@ -461,7 +485,7 @@ zx_status_t DataSinkImpl::ReadAsset(Configuration configuration, Asset asset,
 zx_status_t DataSinkImpl::WriteAsset(Configuration configuration, Asset asset,
                                      ::llcpp::fuchsia::mem::Buffer payload) {
   // No assets support content types yet, use the PartitionSpec default.
-  PartitionSpec spec = PartitionSpec(PartitionType(configuration, asset));
+  PartitionSpec spec(PartitionType(configuration, asset));
 
   // Important: if we ever do pass a content type here, do NOT just return
   // ZX_ERR_NOT_SUPPORTED directly - the caller needs to be able to distinguish
@@ -469,6 +493,19 @@ zx_status_t DataSinkImpl::WriteAsset(Configuration configuration, Asset asset,
   // that happen to return this same status code.
   if (!partitioner_->SupportsPartition(spec)) {
     return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  return PartitionPave(*partitioner_, std::move(payload.vmo), payload.size, spec);
+}
+
+std::variant<zx_status_t, fidl::aligned<bool>> DataSinkImpl::WriteFirmware(
+    fidl::StringView type, ::llcpp::fuchsia::mem::Buffer payload) {
+  // Currently all our supported firmware lives in Partition::kBootloader.
+  PartitionSpec spec(Partition::kBootloader, std::string_view(type.data(), type.size()));
+
+  if (!partitioner_->SupportsPartition(spec)) {
+    // unsupported_type = true.
+    return fidl::aligned<bool>(true);
   }
 
   return PartitionPave(*partitioner_, std::move(payload.vmo), payload.size, spec);
@@ -484,14 +521,11 @@ zx_status_t DataSinkImpl::WriteVolumes(zx::channel payload_stream) {
   return FvmPave(devfs_root_, *partitioner_, std::move(reader));
 }
 
+// Deprecated in favor of WriteFirmware().
+// TODO(45606): move clients off this function and delete it.
 zx_status_t DataSinkImpl::WriteBootloader(::llcpp::fuchsia::mem::Buffer payload) {
-  // TODO(45606): add a contents_type parameter and pass it to PartitionSpec.
-  PartitionSpec spec = PartitionSpec(Partition::kBootloader);
+  PartitionSpec spec(Partition::kBootloader);
 
-  // Important: if we ever do pass a content type here, do NOT just return
-  // ZX_ERR_NOT_SUPPORTED directly - the caller needs to be able to distinguish
-  // between unknown asset types (which should be ignored) and actual errors
-  // that happen to return this same status code.
   if (!partitioner_->SupportsPartition(spec)) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -709,6 +743,12 @@ void DynamicDataSink::ReadAsset(::llcpp::fuchsia::paver::Configuration configura
   } else {
     completer.ReplyError(status);
   }
+}
+
+void DynamicDataSink::WriteFirmware(fidl::StringView type, ::llcpp::fuchsia::mem::Buffer payload,
+                                    WriteFirmwareCompleter::Sync completer) {
+  auto variant = sink_.WriteFirmware(type, std::move(payload));
+  completer.Reply(CreateWriteFirmwareResult(&variant));
 }
 
 void DynamicDataSink::WipeVolume(WipeVolumeCompleter::Sync completer) {

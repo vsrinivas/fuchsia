@@ -2,11 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_ULIB_PAVER_PAVER_H_
+#define ZIRCON_SYSTEM_ULIB_PAVER_PAVER_H_
 
 #include <fuchsia/paver/llcpp/fidl.h>
 #include <lib/zx/channel.h>
 #include <zircon/types.h>
+
+#include <variant>
 
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
@@ -53,6 +56,14 @@ class DataSinkImpl {
                          ::llcpp::fuchsia::paver::Asset asset,
                          ::llcpp::fuchsia::mem::Buffer payload);
 
+  // FIDL llcpp unions don't currently support memory ownership so we need to
+  // return something that does own the underlying memory.
+  //
+  // Once unions do support owned memory we can just return
+  // WriteBootloaderResult directly here.
+  std::variant<zx_status_t, fidl::aligned<bool>> WriteFirmware(
+      fidl::StringView type, ::llcpp::fuchsia::mem::Buffer payload);
+
   zx_status_t WriteVolumes(zx::channel payload_stream);
 
   zx_status_t WriteBootloader(::llcpp::fuchsia::mem::Buffer payload);
@@ -70,7 +81,6 @@ class DataSinkImpl {
   std::unique_ptr<DevicePartitioner> partitioner_;
 };
 
-
 class DataSink : public ::llcpp::fuchsia::paver::DataSink::Interface {
  public:
   DataSink(fbl::unique_fd devfs_root, std::unique_ptr<DevicePartitioner> partitioner)
@@ -81,8 +91,7 @@ class DataSink : public ::llcpp::fuchsia::paver::DataSink::Interface {
                    zx::channel server);
 
   void ReadAsset(::llcpp::fuchsia::paver::Configuration configuration,
-                 ::llcpp::fuchsia::paver::Asset asset,
-                 ReadAssetCompleter::Sync completer) override;
+                 ::llcpp::fuchsia::paver::Asset asset, ReadAssetCompleter::Sync completer) override;
 
   void WriteAsset(::llcpp::fuchsia::paver::Configuration configuration,
                   ::llcpp::fuchsia::paver::Asset asset, ::llcpp::fuchsia::mem::Buffer payload,
@@ -90,8 +99,10 @@ class DataSink : public ::llcpp::fuchsia::paver::DataSink::Interface {
     completer.Reply(sink_.WriteAsset(configuration, asset, std::move(payload)));
   }
 
-  void WriteVolumes(zx::channel payload_stream,
-                    WriteVolumesCompleter::Sync completer) override {
+  void WriteFirmware(fidl::StringView type, ::llcpp::fuchsia::mem::Buffer payload,
+                     WriteFirmwareCompleter::Sync completer) override;
+
+  void WriteVolumes(zx::channel payload_stream, WriteVolumesCompleter::Sync completer) override {
     completer.Reply(sink_.WriteVolumes(std::move(payload_stream)));
   }
 
@@ -124,8 +135,7 @@ class DynamicDataSink : public ::llcpp::fuchsia::paver::DynamicDataSink::Interfa
   void WipePartitionTables(WipePartitionTablesCompleter::Sync completer) override;
 
   void ReadAsset(::llcpp::fuchsia::paver::Configuration configuration,
-                 ::llcpp::fuchsia::paver::Asset asset,
-                 ReadAssetCompleter::Sync completer) override;
+                 ::llcpp::fuchsia::paver::Asset asset, ReadAssetCompleter::Sync completer) override;
 
   void WriteAsset(::llcpp::fuchsia::paver::Configuration configuration,
                   ::llcpp::fuchsia::paver::Asset asset, ::llcpp::fuchsia::mem::Buffer payload,
@@ -133,8 +143,10 @@ class DynamicDataSink : public ::llcpp::fuchsia::paver::DynamicDataSink::Interfa
     completer.Reply(sink_.WriteAsset(configuration, asset, std::move(payload)));
   }
 
-  void WriteVolumes(zx::channel payload_stream,
-                    WriteVolumesCompleter::Sync completer) override {
+  void WriteFirmware(fidl::StringView type, ::llcpp::fuchsia::mem::Buffer payload,
+                     WriteFirmwareCompleter::Sync completer) override;
+
+  void WriteVolumes(zx::channel payload_stream, WriteVolumesCompleter::Sync completer) override {
     completer.Reply(sink_.WriteVolumes(std::move(payload_stream)));
   }
 
@@ -180,3 +192,5 @@ class BootManager : public ::llcpp::fuchsia::paver::BootManager::Interface {
 };
 
 }  // namespace paver
+
+#endif  // ZIRCON_SYSTEM_ULIB_PAVER_PAVER_H_
