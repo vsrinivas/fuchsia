@@ -5,14 +5,16 @@
 #![cfg(test)]
 use {
     blobfs_ramdisk::BlobfsRamdisk,
-    fuchsia_async as fasync,
+    fidl_fuchsia_io, fuchsia_async as fasync,
     fuchsia_pkg_testing::{Package, PackageBuilder, SystemImageBuilder, VerificationError},
+    io_util,
     matches::assert_matches,
     pkgfs_ramdisk::PkgfsRamdisk,
     std::collections::HashSet,
     std::fmt::Debug,
     std::future::Future,
     std::io::{self, Read, Write},
+    std::path::Path,
 };
 
 fn ls_simple(d: openat::DirIter) -> Result<Vec<String>, io::Error> {
@@ -1481,5 +1483,37 @@ async fn test_pkgfs_packages_dynamic_packages_allowlist_enforcement_flag() {
         ["example", "system_image"]
     );
 
+    drop(d);
+    pkgfs.stop().await.expect("shutting down pkgfs");
+}
+
+// For our pkgfs executability lockdown, we need to be able to test whether
+// or not we can open files in pkgfs as executable. This test serves as a proof of concept
+// that we can, and will be a jumping off point for the testing of the actual work.
+#[fasync::run_singlethreaded(test)]
+async fn test_pkgfs_open_executable() {
+    let pkg = example_package().await;
+    let system_image_package = SystemImageBuilder::new(&[&pkg]).build().await;
+
+    let blobfs = BlobfsRamdisk::start().unwrap();
+    system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+    pkg.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+    let pkgfs = PkgfsRamdisk::start_with_blobfs(
+        blobfs,
+        Some(&system_image_package.meta_far_merkle_root().to_string()),
+    )
+    .expect("starting pkgfs");
+
+    // Now try to open a file as executable.
+    let root_dir_proxy = pkgfs.root_dir_proxy().expect("retrieving root dir proxy");
+
+    io_util::open_file(
+        &root_dir_proxy,
+        &Path::new("packages/example/0/a/b"),
+        fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_EXECUTABLE,
+    )
+    .expect("opening file as executable");
+
+    drop(root_dir_proxy);
     pkgfs.stop().await.expect("shutting down pkgfs");
 }

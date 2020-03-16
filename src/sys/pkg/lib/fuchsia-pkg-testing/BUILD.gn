@@ -60,6 +60,7 @@ rustc_test("pkgfs-test") {
   source_root = "tests/pkgfs_test.rs"
   deps = [
     ":fuchsia-pkg-testing",
+    "//garnet/lib/rust/io_util",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fuchsia-async",
     "//src/sys/pkg/lib/fuchsia-merkle",
