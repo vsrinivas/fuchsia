@@ -202,20 +202,23 @@ class Frontend(object):
         with self._create_archive_dir() as archive_dir:
             self._source_dir = archive_dir
 
-            # Convenience for loading metadata files below.
-            def load_metadata(*args):
-                with open(self.source(*args), 'r') as meta_file:
-                    return json.load(meta_file)
-
-            manifest = load_metadata('meta', 'manifest.json')
+            manifest = load_metadata(self.source('meta', 'manifest.json'))
+            if not manifest:
+                return False
             types = set([p['type'] for p in manifest['parts']])
 
-            self.prepare(manifest['arch'], types)
+            try:
+                self.prepare(manifest['arch'], types)
+            except Exception as e:
+                print('Failed preparing elements: %s' % e)
+                return False
 
             # Process each SDK atom.
             for part in manifest['parts']:
                 type = part['type']
-                atom = load_metadata(part['meta'])
+                atom = load_metadata(self.source(part['meta']))
+                if not atom:
+                    return False
                 getattr(self, 'install_%s_atom' % type, self._handle_atom)(atom)
 
             self.finalize(manifest['arch'], types)
@@ -245,3 +248,23 @@ class Frontend(object):
                 shutil.rmtree(temp_dir, ignore_errors=True)
         else:
             raise Exception('Error: archive or directory must be set')
+
+def load_metadata(filename):
+    """Loads metadata from a file.
+    Args:
+      filename: The absolute path to the file to load metadata from.
+
+    Returns:
+      A dictionary representing the metadata from the file.
+      Returns False if the file doesn't exist or is invalid JSON.
+    """
+    try:
+        with open(filename, 'r') as meta_file:
+            return json.load(meta_file)
+    except IOError:
+        print('Metadata file not found: %s' % filename)
+        return False
+    except ValueError as e:
+        print('Unable to parse %s: %s' % (filename, e))
+        return False
+

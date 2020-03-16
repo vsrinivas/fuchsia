@@ -44,24 +44,20 @@ EXTRA_COPY = [
     # See base/bin/femu-meta.json for more detail about the files needed.
     # {fuchsia}/tools/devshell/emu -> {out}/bin/devshell/emu
     CopyArgs(
-        src = os.path.join(FUCHSIA_ROOT, 'tools', 'devshell', 'emu'),
-        base = os.path.join(FUCHSIA_ROOT, 'tools'),
-        dest = 'bin'
-    ),
+        src=os.path.join(FUCHSIA_ROOT, 'tools', 'devshell', 'emu'),
+        base=os.path.join(FUCHSIA_ROOT, 'tools'),
+        dest='bin'),
     # {fuchsia}/tools/devshell/lib/fvm.sh -> {out}/bin/devshell/lib/fvm.sh
     CopyArgs(
-        src = os.path.join(FUCHSIA_ROOT, 'tools', 'devshell', 'lib', 'fvm.sh'),
-        base = os.path.join(FUCHSIA_ROOT, 'tools'),
-        dest = 'bin'
-    )
+        src=os.path.join(FUCHSIA_ROOT, 'tools', 'devshell', 'lib', 'fvm.sh'),
+        base=os.path.join(FUCHSIA_ROOT, 'tools'),
+        dest='bin')
 ]
 
 # Capture the version of required prebuilts from the jiri manifest. Note
 # that ${platform} is actually part of the XML package name, so should
 # not be interpreted.
-EXTRA_PREBUILTS = {
-    'fuchsia/third_party/aemu/${platform}': 'aemu'
-}
+EXTRA_PREBUILTS = {'fuchsia/third_party/aemu/${platform}': 'aemu'}
 
 
 class GNBuilder(Frontend):
@@ -382,7 +378,8 @@ class GNBuilder(Frontend):
                     continue
 
                 # Replace harcoded arch in the found binary filename.
-                binary = filtered[0].replace('/' + arch + '/', "/${target_cpu}/")
+                binary = filtered[0].replace(
+                    '/' + arch + '/', "/${target_cpu}/")
 
                 layer = model.VulkanLayer(
                     name=layer_name,
@@ -446,12 +443,17 @@ def get_prebuilts(in_extra_prebuilts, jiri_manifest):
 
     Raises:
         RuntimeError: If in_extra_prebuilts contains items not found in the prebuilts file
+        or the jiri manifest can't be parsed
     """
 
     # Copy the input list since we modify it in the loop
     extra_prebuilts = in_extra_prebuilts.copy()
     prebuilt_results = {}
-    manifest_root = xml.etree.ElementTree.parse(jiri_manifest).getroot()
+    try:
+        manifest_root = xml.etree.ElementTree.parse(jiri_manifest).getroot()
+    except Exception as e:
+        raise RuntimeError(
+            'Unable to parse jiri manifest at %s: %s' % (jiri_manifest, e))
     remaining_prebuilts = extra_prebuilts
     for packages in manifest_root.iter('package'):
         prebuilt = remaining_prebuilts.pop(packages.attrib['name'], None)
