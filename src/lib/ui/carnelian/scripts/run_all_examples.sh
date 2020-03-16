@@ -7,5 +7,6 @@ examples_dir=`cd $carnelian_dir/examples; pwd`
 examples=$examples_dir/*.rs
 for example in ${examples} ; do
   pkg_name=$(basename "${example}" ".rs")
-  ${fuchsia_dir}/scripts/fx shell tiles_ctl add fuchsia-pkg://fuchsia.com/${pkg_name}_rs#meta/${pkg_name}_rs.cmx
+  pkg_name=${pkg_name//_/-}
+  ${fuchsia_dir}/scripts/fx shell tiles_ctl add fuchsia-pkg://fuchsia.com/${pkg_name}-rs#meta/${pkg_name}-rs.cmx
 done
