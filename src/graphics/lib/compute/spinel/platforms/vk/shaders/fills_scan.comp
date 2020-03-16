@@ -39,6 +39,40 @@ SPN_VK_GLSL_DECL_KERNEL_FILLS_SCAN();
 #define SPN_FILLS_SCAN_SUBGROUP_SIZE (1 << SPN_DEVICE_FILLS_SCAN_SUBGROUP_SIZE_LOG2)
 
 //
+//
+//
+
+// Add the primitive counts packed as uvec4 values in |a_| and |b_| and store the
+// result in |c_|. This macro is named with an _UNSAFE suffix because it assumes that
+// no overflow will happen, i.e. that no individual count sum will go over (1 << 25)
+// or (1 << 26), depending on primitive type. A better alternative would check for
+// overflows and set an output flag when detected, but its performance needs to be
+// quantified. For now, the caller should perform the checks properly before hand.
+//
+// NOTE: This macro supports |c_| being one of the input parameters |a_| or |b_|.
+//
+// NOTE: This implementation just adds the uvec4 values as two 128-bit integers,
+//       with proper handling of the carry between intermediate 32-bit additions. The
+//       latter is tricky because for the second and third field, the carry bit should
+//       correspond to the result of adding three values, not two, i.e.:
+//
+//          carry0 == carry of (a_[0] + b_[0])
+//          carry1 == carry of (a_[1] + b_[1] + carry0)
+//          carry2 == carry of (a_[2] + b_[2] + carry1)
+//
+#define SPN_PATH_PRIMS_ADD_UNSAFE(a_, b_, c_)                         \
+  {                                                                   \
+    uint sum, carry0, carry1, carry1b, carry2b, carry2;               \
+    c_[0] = uaddCarry(a_[0], b_[0], carry0);                          \
+    sum   = uaddCarry(a_[1], b_[1], carry1);                          \
+    c_[1] = uaddCarry(sum, carry0, carry1b);                          \
+    sum   = uaddCarry(a_[2], b_[2], carry2);                          \
+    c_[2] = uaddCarry(sum, carry1 + carry1b, carry2b);                \
+    c_[3] = a_[3] + b_[3] + carry2 + carry2b;                         \
+  }
+
+
+//
 // This kernel is executing a prefix-sum on each path primitive count.
 //
 // A slab of commands will be loaded and scanned in registers with an
@@ -176,11 +210,7 @@ main()
 #define SPN_EXPAND_X(I, N, P, L)                                                                   \
   if (I > 0)                                                                                       \
     {                                                                                              \
-      uint carry;                                                                                  \
-      pp##I[0] = uaddCarry(pp##I[0], pp##P[0], carry);                                             \
-      pp##I[1] = uaddCarry(pp##I[1], pp##P[1], carry) + carry;                                     \
-      pp##I[2] = uaddCarry(pp##I[2], pp##P[2], carry) + carry;                                     \
-      pp##I[3] = uaddCarry(pp##I[3], pp##P[3], carry) + carry;                                     \
+      SPN_PATH_PRIMS_ADD_UNSAFE(pp##I, pp##P, pp##I);                                              \
     }
 
   SPN_DEVICE_FILLS_SCAN_EXPAND();
@@ -368,12 +398,7 @@ main()
         else                                                                                       \
           {                                                                                        \
             uvec4 ppo##I;                                                                          \
-            uint  carry;                                                                           \
-                                                                                                   \
-            ppo##I[0] = uaddCarry(ppo_base[0], pp##P[0], carry);                                   \
-            ppo##I[1] = uaddCarry(ppo_base[1], pp##P[1], carry) + carry;                           \
-            ppo##I[2] = uaddCarry(ppo_base[2], pp##P[2], carry) + carry;                           \
-            ppo##I[3] = uaddCarry(ppo_base[3], pp##P[3], carry) + carry;                           \
+            SPN_PATH_PRIMS_ADD_UNSAFE(ppo_base, pp##P, ppo##I);                                    \
                                                                                                    \
             fill_scan_prefix[ppo_idx##I] = ppo##I;                                                 \
           }                                                                                        \
