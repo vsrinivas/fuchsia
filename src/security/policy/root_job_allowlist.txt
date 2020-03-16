@@ -18,3 +18,4 @@ fuchsia-pkg://fuchsia.com/shell_tests#meta/josh_tests_bin.cmx
 fuchsia-pkg://fuchsia.com/system_monitor_harvester_tests#meta/system_monitor_harvester_test.cmx
 fuchsia-pkg://fuchsia.com/trace_tests#meta/nested_environment_test.cmx
 fuchsia-pkg://fuchsia.com/trace_tests#meta/trace_integration_tests.cmx
+fuchsia-pkg://fuchsia.com/topaz_input_latency_benchmarks#meta/run_button_flutter_benchmark.cmx
