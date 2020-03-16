@@ -145,55 +145,6 @@ namespace internal {
 // Get the DriverHostContext that should be used by all external API methods
 DriverHostContext* ContextForApi();
 
-void device_unbind_reply(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK;
-void device_suspend_reply(const fbl::RefPtr<zx_device_t>& dev, zx_status_t status,
-                          uint8_t out_state) REQ_DM_LOCK;
-void device_resume_reply(const fbl::RefPtr<zx_device_t>& dev, zx_status_t status,
-                         uint8_t out_power_state, uint32_t out_perf_state) REQ_DM_LOCK;
-zx_status_t device_bind(const fbl::RefPtr<zx_device_t>& dev, const char* drv_libname) REQ_DM_LOCK;
-zx_status_t device_rebind(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK;
-zx_status_t device_unbind(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK;
-zx_status_t device_run_compatibility_tests(const fbl::RefPtr<zx_device_t>& dev,
-                                           int64_t hook_wait_time) REQ_DM_LOCK;
-zx_status_t device_create(zx_driver_t* drv, const char* name, void* ctx,
-                          const zx_protocol_device_t* ops,
-                          fbl::RefPtr<zx_device_t>* out) REQ_DM_LOCK;
-zx_status_t device_open(const fbl::RefPtr<zx_device_t>& dev, fbl::RefPtr<zx_device_t>* out,
-                        uint32_t flags) REQ_DM_LOCK;
-zx_status_t device_close(fbl::RefPtr<zx_device_t> dev, uint32_t flags) REQ_DM_LOCK;
-void device_system_suspend(const fbl::RefPtr<zx_device_t>& dev, uint32_t flags) REQ_DM_LOCK;
-void device_suspend_new(const fbl::RefPtr<zx_device_t>& dev,
-                        ::llcpp::fuchsia::device::DevicePowerState requested_state);
-zx_status_t device_set_performance_state(const fbl::RefPtr<zx_device_t>& dev,
-                                         uint32_t requested_state, uint32_t* out_state);
-zx_status_t device_configure_auto_suspend(
-    const fbl::RefPtr<zx_device_t>& dev, bool enable,
-    ::llcpp::fuchsia::device::DevicePowerState requested_state);
-void device_system_resume(const fbl::RefPtr<zx_device_t>& dev,
-                          uint32_t target_system_state) REQ_DM_LOCK;
-void device_resume_new(const fbl::RefPtr<zx_device_t>& dev);
-void device_destroy(zx_device_t* dev) REQ_DM_LOCK;
-
-zx_status_t load_firmware(const fbl::RefPtr<zx_device_t>& dev, const char* path, zx_handle_t* fw,
-                          size_t* size) REQ_DM_LOCK;
-zx_status_t get_topo_path(const fbl::RefPtr<zx_device_t>& dev, char* path, size_t max,
-                          size_t* actual);
-
-zx_status_t get_metadata(const fbl::RefPtr<zx_device_t>& dev, uint32_t type, void* buf,
-                         size_t buflen, size_t* actual) REQ_DM_LOCK;
-
-zx_status_t get_metadata_size(const fbl::RefPtr<zx_device_t>& dev, uint32_t type,
-                              size_t* size) REQ_DM_LOCK;
-
-zx_status_t add_metadata(const fbl::RefPtr<zx_device_t>& dev, uint32_t type, const void* data,
-                         size_t length) REQ_DM_LOCK;
-
-zx_status_t publish_metadata(const fbl::RefPtr<zx_device_t>& dev, const char* path, uint32_t type,
-                             const void* data, size_t length) REQ_DM_LOCK;
-
-zx_status_t device_add_composite(const fbl::RefPtr<zx_device_t>& dev, const char* name,
-                                 const composite_device_desc_t* comp_desc) REQ_DM_LOCK;
-
 class DevhostControllerConnection : public AsyncLoopOwnedRpcHandler<DevhostControllerConnection>,
                                     public fuchsia::device::manager::DevhostController::Interface {
  public:
@@ -223,11 +174,6 @@ class DevhostControllerConnection : public AsyncLoopOwnedRpcHandler<DevhostContr
 
 zx_status_t fidl_handler(fidl_msg_t* msg, fidl_txn_t* txn, void* cookie);
 
-// routines driver_host uses to talk to dev coordinator
-zx_status_t schedule_remove(const fbl::RefPtr<zx_device_t>& dev, bool unbind_self) REQ_DM_LOCK;
-zx_status_t schedule_unbind_children(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK;
-void make_visible(const fbl::RefPtr<zx_device_t>& dev, const device_make_visible_args_t* args);
-
 // State that is shared between the zx_device implementation and driver_host-core.cpp
 void finalize() REQ_DM_LOCK;
 extern fbl::DoublyLinkedList<zx_device*, zx_device::DeferNode> defer_device_list USE_DM_LOCK;
@@ -237,10 +183,10 @@ extern int enumerators USE_DM_LOCK;
 // that driver.
 zx_status_t find_driver(fbl::StringPiece libname, zx::vmo vmo, fbl::RefPtr<zx_driver_t>* out);
 
+}  // namespace internal
+
 // Construct a string describing the path of |dev| relative to its most
 // distant ancestor in this driver_host.
 const char* mkdevpath(const fbl::RefPtr<zx_device_t>& dev, char* path, size_t max);
-
-}  // namespace internal
 
 #endif  // SRC_DEVICES_BIN_DRIVER_HOST_DEVHOST_H_

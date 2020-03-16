@@ -188,7 +188,7 @@ void DevfsConnection::GetDeviceName(GetDeviceNameCompleter::Sync completer) {
 void DevfsConnection::GetTopologicalPath(GetTopologicalPathCompleter::Sync completer) {
   char buf[fuchsia_device_MAX_DEVICE_PATH_LEN + 1];
   size_t actual;
-  zx_status_t status = internal::get_topo_path(this->dev, buf, sizeof(buf), &actual);
+  zx_status_t status = driver_host_context_->GetTopoPath(this->dev, buf, sizeof(buf), &actual);
   if (status != ZX_OK) {
     return completer.ReplyError(status);
   }
@@ -261,14 +261,16 @@ void DevfsConnection::GetDevicePowerCaps(GetDevicePowerCapsCompleter::Sync compl
 void DevfsConnection::SetPerformanceState(uint32_t requested_state,
                                           SetPerformanceStateCompleter::Sync completer) {
   uint32_t out_state;
-  zx_status_t status = internal::device_set_performance_state(dev, requested_state, &out_state);
+  zx_status_t status =
+      driver_host_context_->DeviceSetPerformanceState(dev, requested_state, &out_state);
   return completer.Reply(status, out_state);
 }
 
 void DevfsConnection::ConfigureAutoSuspend(
     bool enable, ::llcpp::fuchsia::device::DevicePowerState requested_state,
     ConfigureAutoSuspendCompleter::Sync completer) {
-  zx_status_t status = internal::device_configure_auto_suspend(dev, enable, requested_state);
+  zx_status_t status =
+      driver_host_context_->DeviceConfigureAutoSuspend(dev, enable, requested_state);
   return completer.Reply(status);
 }
 
@@ -315,7 +317,7 @@ void DevfsConnection::Suspend(::llcpp::fuchsia::device::DevicePowerState request
                                                       uint8_t out_state) mutable {
     completer.Reply(status, static_cast<::llcpp::fuchsia::device::DevicePowerState>(out_state));
   };
-  internal::device_suspend_new(dev, requested_state);
+  driver_host_context_->DeviceSuspendNew(dev, requested_state);
 }
 
 void DevfsConnection::Resume(ResumeCompleter::Sync completer) {
@@ -325,7 +327,7 @@ void DevfsConnection::Resume(ResumeCompleter::Sync completer) {
                     static_cast<::llcpp::fuchsia::device::DevicePowerState>(out_power_state),
                     out_perf_state);
   };
-  internal::device_resume_new(dev);
+  driver_host_context_->DeviceResumeNew(dev);
 }
 
 void DevfsConnection::HandleRpc(fbl::RefPtr<DevfsConnection>&& conn, async_dispatcher_t* dispatcher,

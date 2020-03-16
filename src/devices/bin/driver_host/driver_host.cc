@@ -67,7 +67,86 @@ llcpp::fuchsia::device::manager::DeviceProperty convert_device_prop(const zx_dev
   };
 }
 
+static uint32_t logflagval(char* flag) {
+  if (!strcmp(flag, "error")) {
+    return DDK_LOG_ERROR;
+  }
+  if (!strcmp(flag, "warn")) {
+    return DDK_LOG_WARN;
+  }
+  if (!strcmp(flag, "info")) {
+    return DDK_LOG_INFO;
+  }
+  if (!strcmp(flag, "trace")) {
+    return DDK_LOG_TRACE;
+  }
+  if (!strcmp(flag, "spew")) {
+    return DDK_LOG_SPEW;
+  }
+  if (!strcmp(flag, "debug1")) {
+    return DDK_LOG_DEBUG1;
+  }
+  if (!strcmp(flag, "debug2")) {
+    return DDK_LOG_DEBUG2;
+  }
+  if (!strcmp(flag, "debug3")) {
+    return DDK_LOG_DEBUG3;
+  }
+  if (!strcmp(flag, "debug4")) {
+    return DDK_LOG_DEBUG4;
+  }
+  return static_cast<uint32_t>(strtoul(flag, nullptr, 0));
+}
+
+static void logflag(char* flag, uint32_t* flags) {
+  if (*flag == '+') {
+    *flags |= logflagval(flag + 1);
+  } else if (*flag == '-') {
+    *flags &= ~logflagval(flag + 1);
+  }
+}
+
+void log_rpc(const fbl::RefPtr<zx_device_t>& dev, const char* opname) {
+  char buffer[512];
+  const char* path = mkdevpath(dev, buffer, sizeof(buffer));
+  log(RPC_OUT, "driver_host[%s] %s'\n", path, opname);
+}
+
+void log_rpc_result(const char* opname, zx_status_t status, zx_status_t call_status = ZX_OK) {
+  if (status != ZX_OK) {
+    log(ERROR, "driver_host: rpc:%s sending failed: %d\n", opname, status);
+  } else if (call_status != ZX_OK) {
+    log(ERROR, "driver_host: rpc:%s failed: %d\n", opname, call_status);
+  }
+}
+
 }  // namespace
+
+const char* mkdevpath(const fbl::RefPtr<zx_device_t>& dev, char* path, size_t max) {
+  if (dev == nullptr) {
+    return "";
+  }
+  if (max < 1) {
+    return "<invalid>";
+  }
+  char* end = path + max;
+  char sep = 0;
+
+  fbl::RefPtr<zx_device> itr_dev(dev);
+  while (itr_dev) {
+    *(--end) = sep;
+
+    size_t len = strlen(itr_dev->name);
+    if (len > (size_t)(end - path)) {
+      break;
+    }
+    end -= len;
+    memcpy(end, itr_dev->name, len);
+    sep = '/';
+    itr_dev = itr_dev->parent;
+  }
+  return end;
+}
 
 zx_status_t zx_driver::Create(fbl::RefPtr<zx_driver>* out_driver) {
   *out_driver = fbl::AdoptRef(new zx_driver());
@@ -108,7 +187,7 @@ zx_status_t DriverHostContext::DriverManagerAdd(const fbl::RefPtr<zx_device_t>& 
                                                 const zx_device_prop_t* props, uint32_t prop_count,
                                                 zx::channel client_remote) {
   char buffer[512];
-  const char* path = internal::mkdevpath(parent, buffer, sizeof(buffer));
+  const char* path = mkdevpath(parent, buffer, sizeof(buffer));
 
   bool add_invisible = child->flags & DEV_FLAG_INVISIBLE;
   fuchsia::device::manager::AddDeviceConfig add_device_config;
@@ -262,71 +341,6 @@ DriverHostContext* ContextForApi() { return kContextForApi; }
 
 // TODO(fxb/48246): This should be moved into DriverHostContext in a future patch.
 static fbl::DoublyLinkedList<fbl::RefPtr<zx_driver>> dh_drivers;
-
-const char* mkdevpath(const fbl::RefPtr<zx_device_t>& dev, char* path, size_t max) {
-  if (dev == nullptr) {
-    return "";
-  }
-  if (max < 1) {
-    return "<invalid>";
-  }
-  char* end = path + max;
-  char sep = 0;
-
-  fbl::RefPtr<zx_device> itr_dev(dev);
-  while (itr_dev) {
-    *(--end) = sep;
-
-    size_t len = strlen(itr_dev->name);
-    if (len > (size_t)(end - path)) {
-      break;
-    }
-    end -= len;
-    memcpy(end, itr_dev->name, len);
-    sep = '/';
-    itr_dev = itr_dev->parent;
-  }
-  return end;
-}
-
-static uint32_t logflagval(char* flag) {
-  if (!strcmp(flag, "error")) {
-    return DDK_LOG_ERROR;
-  }
-  if (!strcmp(flag, "warn")) {
-    return DDK_LOG_WARN;
-  }
-  if (!strcmp(flag, "info")) {
-    return DDK_LOG_INFO;
-  }
-  if (!strcmp(flag, "trace")) {
-    return DDK_LOG_TRACE;
-  }
-  if (!strcmp(flag, "spew")) {
-    return DDK_LOG_SPEW;
-  }
-  if (!strcmp(flag, "debug1")) {
-    return DDK_LOG_DEBUG1;
-  }
-  if (!strcmp(flag, "debug2")) {
-    return DDK_LOG_DEBUG2;
-  }
-  if (!strcmp(flag, "debug3")) {
-    return DDK_LOG_DEBUG3;
-  }
-  if (!strcmp(flag, "debug4")) {
-    return DDK_LOG_DEBUG4;
-  }
-  return static_cast<uint32_t>(strtoul(flag, nullptr, 0));
-}
-
-static void logflag(char* flag, uint32_t* flags) {
-  if (*flag == '+') {
-    *flags |= logflagval(flag + 1);
-  } else if (*flag == '-') {
-    *flags &= ~logflagval(flag + 1);
-  }
-}
 
 zx_status_t find_driver(fbl::StringPiece libname, zx::vmo vmo, fbl::RefPtr<zx_driver_t>* out) {
   // check for already-loaded driver first
@@ -662,22 +676,59 @@ void DevhostControllerConnection::HandleRpc(std::unique_ptr<DevhostControllerCon
 
 zx_handle_t root_resource_handle = ZX_HANDLE_INVALID;
 
-static void log_rpc(const fbl::RefPtr<zx_device_t>& dev, const char* opname) {
-  char buffer[512];
-  const char* path = mkdevpath(dev, buffer, sizeof(buffer));
-  log(RPC_OUT, "driver_host[%s] %s'\n", path, opname);
-}
-
-static void log_rpc_result(const char* opname, zx_status_t status,
-                           zx_status_t call_status = ZX_OK) {
-  if (status != ZX_OK) {
-    log(ERROR, "driver_host: rpc:%s sending failed: %d\n", opname, status);
-  } else if (call_status != ZX_OK) {
-    log(ERROR, "driver_host: rpc:%s failed: %d\n", opname, call_status);
+int main(int argc, char** argv) {
+  root_resource_handle = zx_take_startup_handle(PA_HND(PA_RESOURCE, 0));
+  if (root_resource_handle == ZX_HANDLE_INVALID) {
+    log(TRACE, "driver_host: no root resource handle!\n");
   }
+
+  log(TRACE, "driver_host: main()\n");
+
+  zx::channel root_conn_channel(zx_take_startup_handle(PA_HND(PA_USER0, 0)));
+  if (!root_conn_channel.is_valid()) {
+    log(ERROR, "driver_host: rpc handle invalid\n");
+    return -1;
+  }
+
+  DriverHostContext ctx(&kAsyncLoopConfigAttachToCurrentThread);
+  RegisterContextForApi(&ctx);
+
+  zx_status_t r;
+
+  if (getenv_bool("driver.tracing.enable", true)) {
+    r = start_trace_provider();
+    if (r != ZX_OK) {
+      log(INFO, "driver_host: error registering as trace provider: %d\n", r);
+      // This is not a fatal error.
+    }
+  }
+
+  r = connect_scheduler_profile_provider();
+  if (r != ZX_OK) {
+    log(INFO, "driver_host: error connecting to profile provider: %d\n", r);
+    return -1;
+  }
+
+  if ((r = ctx.SetupRootDevcoordinatorConnection(std::move(root_conn_channel))) != ZX_OK) {
+    log(ERROR, "driver_host: could not watch rpc channel: %d\n", r);
+    return -1;
+  }
+
+  if (r = ctx.SetupEventWaiter(); r != ZX_OK) {
+    log(ERROR, "driver_host: could not setup event watcher: %d\n", r);
+    return -1;
+  }
+
+  r = ctx.loop().Run(zx::time::infinite(), false /* once */);
+  log(ERROR, "driver_host: async loop finished: %d\n", r);
+
+  return 0;
 }
 
-void make_visible(const fbl::RefPtr<zx_device_t>& dev, const device_make_visible_args_t* args) {
+}  // namespace internal
+
+void DriverHostContext::MakeVisible(const fbl::RefPtr<zx_device_t>& dev,
+                                    const device_make_visible_args_t* args) {
   ZX_ASSERT_MSG(!dev->ops->init,
                 "Cannot call device_make_visible if init hook is implemented."
                 "The device will automatically be made visible once the init hook is replied to.");
@@ -727,7 +778,8 @@ void make_visible(const fbl::RefPtr<zx_device_t>& dev, const device_make_visible
   }
 }
 
-zx_status_t schedule_remove(const fbl::RefPtr<zx_device_t>& dev, bool unbind_self) {
+zx_status_t DriverHostContext::ScheduleRemove(const fbl::RefPtr<zx_device_t>& dev,
+                                              bool unbind_self) {
   const zx::channel& rpc = *dev->coordinator_rpc;
   ZX_ASSERT(rpc.is_valid());
   log_rpc(dev, "schedule-remove");
@@ -737,7 +789,7 @@ zx_status_t schedule_remove(const fbl::RefPtr<zx_device_t>& dev, bool unbind_sel
   return resp.status();
 }
 
-zx_status_t schedule_unbind_children(const fbl::RefPtr<zx_device_t>& dev) {
+zx_status_t DriverHostContext::ScheduleUnbindChildren(const fbl::RefPtr<zx_device_t>& dev) {
   const zx::channel& rpc = *dev->coordinator_rpc;
   ZX_ASSERT(rpc.is_valid());
   log_rpc(dev, "schedule-unbind-children");
@@ -747,8 +799,8 @@ zx_status_t schedule_unbind_children(const fbl::RefPtr<zx_device_t>& dev) {
   return resp.status();
 }
 
-zx_status_t get_topo_path(const fbl::RefPtr<zx_device_t>& dev, char* path, size_t max,
-                          size_t* actual) {
+zx_status_t DriverHostContext::GetTopoPath(const fbl::RefPtr<zx_device_t>& dev, char* path,
+                                           size_t max, size_t* actual) {
   fbl::RefPtr<zx_device_t> remote_dev = dev;
   if (dev->flags & DEV_FLAG_INSTANCE) {
     // Instances cannot be opened a second time. If dev represents an instance, return the path
@@ -800,7 +852,8 @@ zx_status_t get_topo_path(const fbl::RefPtr<zx_device_t>& dev, char* path, size_
   return ZX_OK;
 }
 
-zx_status_t device_bind(const fbl::RefPtr<zx_device_t>& dev, const char* drv_libname) {
+zx_status_t DriverHostContext::DeviceBind(const fbl::RefPtr<zx_device_t>& dev,
+                                          const char* drv_libname) {
   const zx::channel& rpc = *dev->coordinator_rpc;
   if (!rpc.is_valid()) {
     log_rpc(dev, "bind failed");
@@ -823,8 +876,8 @@ zx_status_t device_bind(const fbl::RefPtr<zx_device_t>& dev, const char* drv_lib
   return call_status;
 }
 
-zx_status_t device_run_compatibility_tests(const fbl::RefPtr<zx_device_t>& dev,
-                                           int64_t hook_wait_time) {
+zx_status_t DriverHostContext::DeviceRunCompatibilityTests(const fbl::RefPtr<zx_device_t>& dev,
+                                                           int64_t hook_wait_time) {
   const zx::channel& rpc = *dev->coordinator_rpc;
   if (!rpc.is_valid()) {
     return ZX_ERR_IO_REFUSED;
@@ -844,8 +897,8 @@ zx_status_t device_run_compatibility_tests(const fbl::RefPtr<zx_device_t>& dev,
   return call_status;
 }
 
-zx_status_t load_firmware(const fbl::RefPtr<zx_device_t>& dev, const char* path,
-                          zx_handle_t* vmo_handle, size_t* size) {
+zx_status_t DriverHostContext::LoadFirmware(const fbl::RefPtr<zx_device_t>& dev, const char* path,
+                                            zx_handle_t* vmo_handle, size_t* size) {
   if ((vmo_handle == nullptr) || (size == nullptr)) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -880,8 +933,8 @@ zx_status_t load_firmware(const fbl::RefPtr<zx_device_t>& dev, const char* path,
   return call_status;
 }
 
-zx_status_t get_metadata(const fbl::RefPtr<zx_device_t>& dev, uint32_t type, void* buf,
-                         size_t buflen, size_t* actual) {
+zx_status_t DriverHostContext::GetMetadata(const fbl::RefPtr<zx_device_t>& dev, uint32_t type,
+                                           void* buf, size_t buflen, size_t* actual) {
   if (!buf) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -921,8 +974,8 @@ zx_status_t get_metadata(const fbl::RefPtr<zx_device_t>& dev, uint32_t type, voi
   return ZX_OK;
 }
 
-zx_status_t get_metadata_size(const fbl::RefPtr<zx_device_t>& dev, uint32_t type,
-                              size_t* out_length) {
+zx_status_t DriverHostContext::GetMetadataSize(const fbl::RefPtr<zx_device_t>& dev, uint32_t type,
+                                               size_t* out_length) {
   const zx::channel& rpc = *dev->coordinator_rpc;
   if (!rpc.is_valid()) {
     return ZX_ERR_IO_REFUSED;
@@ -949,8 +1002,8 @@ zx_status_t get_metadata_size(const fbl::RefPtr<zx_device_t>& dev, uint32_t type
   return ZX_OK;
 }
 
-zx_status_t add_metadata(const fbl::RefPtr<zx_device_t>& dev, uint32_t type, const void* data,
-                         size_t length) {
+zx_status_t DriverHostContext::AddMetadata(const fbl::RefPtr<zx_device_t>& dev, uint32_t type,
+                                           const void* data, size_t length) {
   if (!data && length) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -973,8 +1026,9 @@ zx_status_t add_metadata(const fbl::RefPtr<zx_device_t>& dev, uint32_t type, con
   return call_status;
 }
 
-zx_status_t publish_metadata(const fbl::RefPtr<zx_device_t>& dev, const char* path, uint32_t type,
-                             const void* data, size_t length) {
+zx_status_t DriverHostContext::PublishMetadata(const fbl::RefPtr<zx_device_t>& dev,
+                                               const char* path, uint32_t type, const void* data,
+                                               size_t length) {
   if (!path || (!data && length)) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -998,8 +1052,9 @@ zx_status_t publish_metadata(const fbl::RefPtr<zx_device_t>& dev, const char* pa
   return call_status;
 }
 
-zx_status_t device_add_composite(const fbl::RefPtr<zx_device_t>& dev, const char* name,
-                                 const composite_device_desc_t* comp_desc) {
+zx_status_t DriverHostContext::DeviceAddComposite(const fbl::RefPtr<zx_device_t>& dev,
+                                                  const char* name,
+                                                  const composite_device_desc_t* comp_desc) {
   if (comp_desc == nullptr || (comp_desc->props == nullptr && comp_desc->props_count > 0) ||
       comp_desc->fragments == nullptr || name == nullptr) {
     return ZX_ERR_INVALID_ARGS;
@@ -1074,54 +1129,3 @@ zx_status_t device_add_composite(const fbl::RefPtr<zx_device_t>& dev, const char
   log_rpc_result("create-composite", status, call_status);
   return call_status;
 }
-
-int main(int argc, char** argv) {
-  root_resource_handle = zx_take_startup_handle(PA_HND(PA_RESOURCE, 0));
-  if (root_resource_handle == ZX_HANDLE_INVALID) {
-    log(TRACE, "driver_host: no root resource handle!\n");
-  }
-
-  log(TRACE, "driver_host: main()\n");
-
-  zx::channel root_conn_channel(zx_take_startup_handle(PA_HND(PA_USER0, 0)));
-  if (!root_conn_channel.is_valid()) {
-    log(ERROR, "driver_host: rpc handle invalid\n");
-    return -1;
-  }
-
-  DriverHostContext ctx(&kAsyncLoopConfigAttachToCurrentThread);
-  RegisterContextForApi(&ctx);
-
-  zx_status_t r;
-
-  if (getenv_bool("driver.tracing.enable", true)) {
-    r = start_trace_provider();
-    if (r != ZX_OK) {
-      log(INFO, "driver_host: error registering as trace provider: %d\n", r);
-      // This is not a fatal error.
-    }
-  }
-
-  r = connect_scheduler_profile_provider();
-  if (r != ZX_OK) {
-    log(INFO, "driver_host: error connecting to profile provider: %d\n", r);
-    return -1;
-  }
-
-  if ((r = ctx.SetupRootDevcoordinatorConnection(std::move(root_conn_channel))) != ZX_OK) {
-    log(ERROR, "driver_host: could not watch rpc channel: %d\n", r);
-    return -1;
-  }
-
-  if (r = ctx.SetupEventWaiter(); r != ZX_OK) {
-    log(ERROR, "driver_host: could not setup event watcher: %d\n", r);
-    return -1;
-  }
-
-  r = ctx.loop().Run(zx::time::infinite(), false /* once */);
-  log(ERROR, "driver_host: async loop finished: %d\n", r);
-
-  return 0;
-}
-
-}  // namespace internal

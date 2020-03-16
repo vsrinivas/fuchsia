@@ -58,8 +58,9 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
   zx::channel client_remote(args->client_remote);
 
   {
+    auto api_ctx = internal::ContextForApi();
     ApiAutoLock lock;
-    r = internal::device_create(drv, args->name, args->ctx, args->ops, &dev);
+    r = api_ctx->DeviceCreate(drv, args->name, args->ctx, args->ops, &dev);
     if (r != ZX_OK) {
       return r;
     }
@@ -122,7 +123,6 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
     if (out) {
       *out = dev.get();
     }
-    auto api_ctx = internal::ContextForApi();
     if (args->flags & DEVICE_ADD_MUST_ISOLATE) {
       r = api_ctx->DeviceAdd(dev, parent_ref, args->props, args->prop_count, args->proxy_args,
                              std::move(client_remote));
@@ -183,13 +183,13 @@ __EXPORT zx_status_t device_remove(zx_device_t* dev) { return device_remove_depr
 __EXPORT zx_status_t device_rebind(zx_device_t* dev) {
   ApiAutoLock lock;
   fbl::RefPtr<zx_device_t> dev_ref(dev);
-  return internal::device_rebind(dev_ref);
+  return internal::ContextForApi()->DeviceRebind(dev_ref);
 }
 
 __EXPORT void device_make_visible(zx_device_t* dev, const device_make_visible_args_t* args) {
   ApiAutoLock lock;
   fbl::RefPtr<zx_device_t> dev_ref(dev);
-  internal::make_visible(dev_ref, args);
+  internal::ContextForApi()->MakeVisible(dev_ref, args);
 }
 
 __EXPORT void device_async_remove(zx_device_t* dev) {
@@ -204,20 +204,20 @@ __EXPORT void device_async_remove(zx_device_t* dev) {
 __EXPORT void device_unbind_reply(zx_device_t* dev) {
   ApiAutoLock lock;
   fbl::RefPtr<zx_device_t> dev_ref(dev);
-  internal::device_unbind_reply(dev_ref);
+  internal::ContextForApi()->DeviceUnbindReply(dev_ref);
 }
 
 __EXPORT void device_suspend_reply(zx_device_t* dev, zx_status_t status, uint8_t out_state) {
   ApiAutoLock lock;
   fbl::RefPtr<zx_device_t> dev_ref(dev);
-  internal::device_suspend_reply(dev_ref, status, out_state);
+  internal::ContextForApi()->DeviceSuspendReply(dev_ref, status, out_state);
 }
 
 __EXPORT void device_resume_reply(zx_device_t* dev, zx_status_t status, uint8_t out_power_state,
                                   uint32_t out_perf_state) {
   ApiAutoLock lock;
   fbl::RefPtr<zx_device_t> dev_ref(dev);
-  internal::device_resume_reply(dev_ref, status, out_power_state, out_perf_state);
+  internal::ContextForApi()->DeviceResumeReply(dev_ref, status, out_power_state, out_perf_state);
 }
 
 __EXPORT zx_status_t device_get_profile(zx_device_t* dev, uint32_t priority, const char* name,
@@ -292,81 +292,81 @@ __EXPORT zx_status_t load_firmware(zx_device_t* dev, const char* path, zx_handle
   ApiAutoLock lock;
   fbl::RefPtr<zx_device_t> dev_ref(dev);
   // TODO(bwb): Can we propogate zx::vmo further up?
-  return internal::load_firmware(dev_ref, path, fw, size);
+  return internal::ContextForApi()->LoadFirmware(dev_ref, path, fw, size);
 }
 
 // Interface Used by DevHost RPC Layer
 
 zx_status_t device_bind(const fbl::RefPtr<zx_device_t>& dev, const char* drv_libname) {
   ApiAutoLock lock;
-  return internal::device_bind(dev, drv_libname);
+  return internal::ContextForApi()->DeviceBind(dev, drv_libname);
 }
 
 zx_status_t device_unbind(const fbl::RefPtr<zx_device_t>& dev) {
   ApiAutoLock lock;
-  return internal::device_unbind(dev);
+  return internal::ContextForApi()->DeviceUnbind(dev);
 }
 
 zx_status_t device_schedule_remove(const fbl::RefPtr<zx_device_t>& dev, bool unbind_self) {
   ApiAutoLock lock;
-  return internal::schedule_remove(dev, unbind_self);
+  return internal::ContextForApi()->ScheduleRemove(dev, unbind_self);
 }
 
 zx_status_t device_schedule_unbind_children(const fbl::RefPtr<zx_device_t>& dev) {
   ApiAutoLock lock;
-  return internal::schedule_unbind_children(dev);
+  return internal::ContextForApi()->ScheduleUnbindChildren(dev);
 }
 
 zx_status_t device_run_compatibility_tests(const fbl::RefPtr<zx_device_t>& dev,
                                            int64_t hook_wait_time) {
   ApiAutoLock lock;
-  return internal::device_run_compatibility_tests(dev, hook_wait_time);
+  return internal::ContextForApi()->DeviceRunCompatibilityTests(dev, hook_wait_time);
 }
 
 zx_status_t device_open(const fbl::RefPtr<zx_device_t>& dev, fbl::RefPtr<zx_device_t>* out,
                         uint32_t flags) {
   ApiAutoLock lock;
-  return internal::device_open(dev, out, flags);
+  return internal::ContextForApi()->DeviceOpen(dev, out, flags);
 }
 
 // This function is intended to consume the reference produced by device_open()
 zx_status_t device_close(fbl::RefPtr<zx_device_t> dev, uint32_t flags) {
   ApiAutoLock lock;
-  return internal::device_close(std::move(dev), flags);
+  return internal::ContextForApi()->DeviceClose(std::move(dev), flags);
 }
 
 __EXPORT zx_status_t device_get_metadata(zx_device_t* dev, uint32_t type, void* buf, size_t buflen,
                                          size_t* actual) {
   ApiAutoLock lock;
   auto dev_ref = fbl::RefPtr(dev);
-  return internal::get_metadata(dev_ref, type, buf, buflen, actual);
+  return internal::ContextForApi()->GetMetadata(dev_ref, type, buf, buflen, actual);
 }
 
 __EXPORT zx_status_t device_get_metadata_size(zx_device_t* dev, uint32_t type, size_t* out_size) {
   ApiAutoLock lock;
   auto dev_ref = fbl::RefPtr(dev);
-  return internal::get_metadata_size(dev_ref, type, out_size);
+  return internal::ContextForApi()->GetMetadataSize(dev_ref, type, out_size);
 }
 
 __EXPORT zx_status_t device_add_metadata(zx_device_t* dev, uint32_t type, const void* data,
                                          size_t length) {
   ApiAutoLock lock;
   auto dev_ref = fbl::RefPtr(dev);
-  return internal::add_metadata(dev_ref, type, data, length);
+  return internal::ContextForApi()->AddMetadata(dev_ref, type, data, length);
 }
 
 __EXPORT zx_status_t device_publish_metadata(zx_device_t* dev, const char* path, uint32_t type,
                                              const void* data, size_t length) {
   ApiAutoLock lock;
   auto dev_ref = fbl::RefPtr(dev);
-  return internal::publish_metadata(dev_ref, path, type, data, length);
+  return internal::ContextForApi()->PublishMetadata(dev_ref, path, type, data, length);
 }
 
 __EXPORT zx_status_t device_add_composite(zx_device_t* dev, const char* name,
                                           const composite_device_desc_t* comp_desc) {
   ApiAutoLock lock;
   auto dev_ref = fbl::RefPtr(dev);
-  return internal::device_add_composite(dev_ref, name, comp_desc);
+  return internal::ContextForApi()->DeviceAddComposite(dev_ref, name, comp_desc);
 }
 
 __EXPORT zx_status_t device_schedule_work(zx_device_t* dev, void (*callback)(void*), void* cookie) {

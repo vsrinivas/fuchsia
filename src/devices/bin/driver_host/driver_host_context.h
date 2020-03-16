@@ -60,6 +60,58 @@ class DriverHostContext {
   zx_status_t DeviceRemove(const fbl::RefPtr<zx_device_t>& dev,
                            bool unbind_self = false) REQ_DM_LOCK;
   zx_status_t DeviceCompleteRemoval(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK;
+  zx_status_t DeviceUnbind(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK;
+  void DeviceUnbindReply(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK;
+  zx_status_t DeviceBind(const fbl::RefPtr<zx_device_t>& dev, const char* drv_libname) REQ_DM_LOCK;
+  zx_status_t DeviceRebind(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK;
+  void DeviceSuspendNew(const fbl::RefPtr<zx_device_t>& dev,
+                        ::llcpp::fuchsia::device::DevicePowerState requested_state);
+  void DeviceSuspendReply(const fbl::RefPtr<zx_device_t>& dev, zx_status_t status,
+                          uint8_t out_state) REQ_DM_LOCK;
+  void DeviceResumeNew(const fbl::RefPtr<zx_device_t>& dev);
+  void DeviceResumeReply(const fbl::RefPtr<zx_device_t>& dev, zx_status_t status,
+                         uint8_t out_power_state, uint32_t out_perf_state) REQ_DM_LOCK;
+  zx_status_t DeviceRunCompatibilityTests(const fbl::RefPtr<zx_device_t>& dev,
+                                          int64_t hook_wait_time) REQ_DM_LOCK;
+  zx_status_t DeviceCreate(zx_driver_t* drv, const char* name, void* ctx,
+                           const zx_protocol_device_t* ops,
+                           fbl::RefPtr<zx_device_t>* out) REQ_DM_LOCK;
+  zx_status_t DeviceOpen(const fbl::RefPtr<zx_device_t>& dev, fbl::RefPtr<zx_device_t>* out,
+                         uint32_t flags) REQ_DM_LOCK;
+  zx_status_t DeviceClose(fbl::RefPtr<zx_device_t> dev, uint32_t flags) REQ_DM_LOCK;
+  void DeviceSystemSuspend(const fbl::RefPtr<zx_device_t>& dev, uint32_t flags) REQ_DM_LOCK;
+  zx_status_t DeviceSetPerformanceState(const fbl::RefPtr<zx_device_t>& dev,
+                                        uint32_t requested_state, uint32_t* out_state);
+  zx_status_t DeviceConfigureAutoSuspend(
+      const fbl::RefPtr<zx_device_t>& dev, bool enable,
+      ::llcpp::fuchsia::device::DevicePowerState requested_state);
+  void DeviceSystemResume(const fbl::RefPtr<zx_device_t>& dev,
+                          uint32_t target_system_state) REQ_DM_LOCK;
+  void DeviceDestroy(zx_device_t* dev) REQ_DM_LOCK;
+
+  // routines driver_host uses to talk to dev coordinator
+  zx_status_t ScheduleRemove(const fbl::RefPtr<zx_device_t>& dev, bool unbind_self) REQ_DM_LOCK;
+  zx_status_t ScheduleUnbindChildren(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK;
+  void MakeVisible(const fbl::RefPtr<zx_device_t>& dev, const device_make_visible_args_t* args);
+
+  zx_status_t LoadFirmware(const fbl::RefPtr<zx_device_t>& dev, const char* path,
+                           zx_handle_t* vmo_handle, size_t* size);
+  zx_status_t GetTopoPath(const fbl::RefPtr<zx_device_t>& dev, char* path, size_t max,
+                          size_t* actual);
+  zx_status_t GetMetadata(const fbl::RefPtr<zx_device_t>& dev, uint32_t type, void* buf,
+                          size_t buflen, size_t* actual) REQ_DM_LOCK;
+
+  zx_status_t GetMetadataSize(const fbl::RefPtr<zx_device_t>& dev, uint32_t type,
+                              size_t* size) REQ_DM_LOCK;
+
+  zx_status_t AddMetadata(const fbl::RefPtr<zx_device_t>& dev, uint32_t type, const void* data,
+                          size_t length) REQ_DM_LOCK;
+
+  zx_status_t PublishMetadata(const fbl::RefPtr<zx_device_t>& dev, const char* path, uint32_t type,
+                              const void* data, size_t length) REQ_DM_LOCK;
+
+  zx_status_t DeviceAddComposite(const fbl::RefPtr<zx_device_t>& dev, const char* name,
+                                 const composite_device_desc_t* comp_desc) REQ_DM_LOCK;
 
   // Sets up event on async loop which gets triggered once
   zx_status_t SetupEventWaiter();

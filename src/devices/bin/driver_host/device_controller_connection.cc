@@ -82,7 +82,7 @@ void DeviceControllerConnection::Suspend(uint32_t flags, SuspendCompleter::Sync 
     completer.Reply(status);
   };
   ApiAutoLock lock;
-  internal::device_system_suspend(this->dev(), flags);
+  driver_host_context_->DeviceSystemSuspend(this->dev(), flags);
 }
 
 void DeviceControllerConnection::Resume(uint32_t target_system_state,
@@ -106,7 +106,7 @@ void DeviceControllerConnection::Resume(uint32_t target_system_state,
     completer.Reply(status);
   };
   ApiAutoLock lock;
-  internal::device_system_resume(this->dev(), target_system_state);
+  driver_host_context_->DeviceSystemResume(this->dev(), target_system_state);
 }
 
 void DeviceControllerConnection::ConnectProxy(::zx::channel shadow,
@@ -125,7 +125,7 @@ void DeviceControllerConnection::BindDriver(::fidl::StringView driver_path_view,
 
   // get path
   char buffer[512];
-  const char* path = internal::mkdevpath(dev, buffer, sizeof(buffer));
+  const char* path = mkdevpath(dev, buffer, sizeof(buffer));
 
   // TODO: api lock integration
   log(ERROR, "driver_host[%s] bind driver '%.*s'\n", path, static_cast<int>(driver_path.size()),
@@ -209,7 +209,7 @@ void DeviceControllerConnection::Unbind(UnbindCompleter::Sync completer) {
     completer.Reply(std::move(result));
   };
   ApiAutoLock lock;
-  internal::device_unbind(this->dev());
+  driver_host_context_->DeviceUnbind(this->dev());
 }
 
 void DeviceControllerConnection::CompleteRemoval(CompleteRemovalCompleter::Sync completer) {
@@ -334,7 +334,7 @@ zx_status_t DeviceControllerConnection::HandleRead() {
   }
 
   char buffer[512];
-  const char* path = internal::mkdevpath(dev_, buffer, sizeof(buffer));
+  const char* path = mkdevpath(dev_, buffer, sizeof(buffer));
 
   auto hdr = static_cast<fidl_message_header_t*>(fidl_msg.bytes);
   // Depending on the state of the migration, GenOrdinal and Ordinal may be the
