@@ -11,7 +11,7 @@ use {
     fuchsia_syslog::fx_log_info,
     futures::TryStreamExt,
     std::io::{Read, Write},
-    std::net::{SocketAddr, TcpListener, TcpStream},
+    std::net::{TcpListener, TcpStream},
     structopt::StructOpt,
 };
 
@@ -21,8 +21,6 @@ const ROUTER_NAME: &str = "router";
 const CLIENT_NAME: &str = "client";
 const HELLO_MSG_REQ: &str = "Hello World from Client!";
 const HELLO_MSG_RSP: &str = "Hello World from Server!";
-const SERVER_IP: &str = "192.168.0.2";
-const PORT: i32 = 8080;
 const SERVER_DONE: i32 = 1;
 
 pub struct BusConnection {
@@ -78,9 +76,8 @@ async fn run_router() -> Result<(), Error> {
     Ok(())
 }
 
-async fn run_server() -> Result<(), Error> {
-    let listener =
-        TcpListener::bind(&format!("{}:{}", SERVER_IP, PORT)).context("Can't bind to address")?;
+async fn run_server(listen_addr: String) -> Result<(), Error> {
+    let listener = TcpListener::bind(listen_addr).context("Can't bind to address")?;
     fx_log_info!("Waiting for connections...");
     let bus = BusConnection::new(SERVER_NAME)?;
 
@@ -101,7 +98,7 @@ async fn run_server() -> Result<(), Error> {
     Ok(())
 }
 
-async fn run_client() -> Result<(), Error> {
+async fn run_client(connect_addr: String) -> Result<(), Error> {
     let mut bus = BusConnection::new(CLIENT_NAME)?;
     fx_log_info!("Waiting for router to start...");
     let () = bus.wait_for_client(ROUTER_NAME).await?;
@@ -109,8 +106,7 @@ async fn run_client() -> Result<(), Error> {
     let () = bus.wait_for_client(SERVER_NAME).await?;
 
     fx_log_info!("Connecting to server...");
-    let addr: SocketAddr = format!("{}:{}", SERVER_IP, PORT).parse()?;
-    let mut stream = TcpStream::connect(&addr).context("Tcp connection failed")?;
+    let mut stream = TcpStream::connect(connect_addr).context("Tcp connection failed")?;
     let request = HELLO_MSG_REQ.as_bytes();
     stream.write(request)?;
     stream.flush()?;
@@ -126,11 +122,13 @@ async fn run_client() -> Result<(), Error> {
 }
 
 #[derive(StructOpt, Debug)]
-struct Opt {
-    #[structopt(short = "c")]
-    is_child: bool,
-    #[structopt(short = "r")]
-    is_router: bool,
+enum Opt {
+    #[structopt(name = "server")]
+    Server { listen_addr: String },
+    #[structopt(name = "router")]
+    Router,
+    #[structopt(name = "client")]
+    Client { connect_addr: String },
 }
 
 fn main() -> Result<(), Error> {
@@ -140,12 +138,10 @@ fn main() -> Result<(), Error> {
     let opt = Opt::from_args();
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
     executor.run_singlethreaded(async {
-        if opt.is_child {
-            run_client().await
-        } else if opt.is_router {
-            run_router().await
-        } else {
-            run_server().await
+        match opt {
+            Opt::Server { listen_addr } => run_server(listen_addr).await,
+            Opt::Router => run_router().await,
+            Opt::Client { connect_addr } => run_client(connect_addr).await,
         }
     })
 }

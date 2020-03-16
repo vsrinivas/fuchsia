@@ -2,7 +2,7 @@
     "facets": {
         "fuchsia.netemul": {
             "capture": true,
-            "default_url": "fuchsia-pkg://fuchsia.com/netstack-filter-integration-tests#meta/ip_forward.cmx",
+            "default_url": "fuchsia-pkg://fuchsia.com/netemul-ip-forward-test#meta/ip_forward.cmx",
             "environment": {
                 "children": [
                     {
@@ -23,7 +23,8 @@
                         "test": [
                             {
                                 "arguments": [
-                                    "-c"
+                                    "client",
+                                    "192.168.0.2:8080"
                                 ]
                             }
                         ]
@@ -53,7 +54,7 @@
                         "test": [
                             {
                                 "arguments": [
-                                    "-r"
+                                    "router"
                                 ]
                             }
                         ]
@@ -71,13 +72,20 @@
                             "-e",
                             "server-ep",
                             "-i",
-                            "192.168.0.2/24"
+                            "192.168.0.2/24",
+                            "-g",
+                            "192.168.0.1"
                         ],
                         "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/helper_netstack_cfg.cmx"
                     }
                 ],
                 "test": [
-                    {}
+                    {
+                        "arguments": [
+                            "server",
+                            "192.168.0.2:8080"
+                        ]
+                    }
                 ]
             },
             "networks": [

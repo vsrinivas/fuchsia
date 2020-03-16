@@ -17,7 +17,7 @@ group("tests") {
     ":netstack_if_nameindex_test($host_toolchain)",
     ":netstack_integration_tests",
     "benchmarks",
-    "integration",
+    "integration:tests",
   ]
 }
 
