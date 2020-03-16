@@ -7,11 +7,7 @@ import("//build/package.gni")
 group("tests") {
   testonly = true
   public_deps = [ ":unittests" ]
-}
-
-group("fuzztests") {
-  testonly = true
-  public_deps = [ "//src/ui/scenic/lib/input/tests/fuzzers:input_fuzzers" ]
+  deps = [ "fuzzers" ]
 }
 
 executable("unittests") {

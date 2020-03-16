@@ -5,7 +5,7 @@
 import("//build/fuzzing/fuzzer.gni")
 import("//build/package.gni")
 
-fuzzer("frame_scheduler_fuzzer") {
+fuzzer("frame-scheduler-fuzzer") {
   sources = [ "frame_scheduler_fuzztest.cc" ]
   deps = [
     "//src/ui/scenic/lib/scheduling:frame_scheduler",
@@ -13,6 +13,7 @@ fuzzer("frame_scheduler_fuzzer") {
   ]
 }
 
-fuzzers_package("frame_scheduling_fuzzers") {
-  fuzzers = [ ":frame_scheduler_fuzzer" ]
+fuzzers_package("fuzzers") {
+  package_name = "frame-scheduling-fuzzers"
+  fuzzers = [ ":frame-scheduler-fuzzer" ]
 }

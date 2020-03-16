@@ -5,7 +5,7 @@
 import("//build/fuzzing/fuzzer.gni")
 import("//build/package.gni")
 
-fuzzer("input_fuzzer") {
+fuzzer("input-fuzzer") {
   sources = [ "input_fuzztest.cc" ]
   deps = [
     "//sdk/lib/fidl/cpp",
@@ -17,6 +17,7 @@ fuzzer("input_fuzzer") {
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
-fuzzers_package("input_fuzzers") {
-  fuzzers = [ ":input_fuzzer" ]
+fuzzers_package("fuzzers") {
+  package_name = "input-fuzzers"
+  fuzzers = [ ":input-fuzzer" ]
 }

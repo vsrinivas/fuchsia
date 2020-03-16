@@ -30,8 +30,8 @@ group("tests") {
 group("fuzzers") {
   testonly = true
   public_deps = [
-    "lib/input/tests:fuzztests",
-    "lib/scheduling/tests:fuzztests",
+    "lib/input/tests/fuzzers",
+    "lib/scheduling/tests/fuzzers",
   ]
 }
 

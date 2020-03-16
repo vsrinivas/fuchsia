@@ -5,13 +5,7 @@
 group("tests") {
   testonly = true
   public_deps = [ ":unittests" ]
-}
-
-group("fuzztests") {
-  testonly = true
-  public_deps = [
-    # TODO(43840) Renable: "fuzzers:frame_scheduling_fuzzers",
-  ]
+  deps = [ "fuzzers" ]
 }
 
 executable("unittests") {
