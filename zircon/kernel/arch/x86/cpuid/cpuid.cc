@@ -249,10 +249,10 @@ ktl::optional<Topology::Levels> Topology::IntelLevels() const {
     printf(
         "WARNING: Unable to parse topology, missing necessary ACPI leaves. "
         "They may be disabled in the bios.\n");
-    return std::nullopt;
+    return ktl::nullopt;
   }
 
-  return (levels.level_count == 0) ? std::nullopt : std::make_optional(levels);
+  return (levels.level_count == 0) ? ktl::nullopt : ktl::make_optional(levels);
 }
 
 ktl::optional<Topology::Levels> Topology::AmdLevels() const {
@@ -306,7 +306,7 @@ ktl::optional<Topology::Levels> Topology::AmdLevels() const {
     };
   }
 
-  return (levels.level_count == 0) ? std::nullopt : std::make_optional(levels);
+  return (levels.level_count == 0) ? ktl::nullopt : ktl::make_optional(levels);
 }
 
 ktl::optional<Topology::Levels> Topology::levels() const {
@@ -325,7 +325,7 @@ ktl::optional<Topology::Levels> Topology::levels() const {
   printf(
       "WARNING: Unable to parse topology from CPUID. If this is an Intel chip, "
       "ensure IA32_MISC_ENABLES[22] is off.\n");
-  return std::nullopt;
+  return ktl::nullopt;
 }
 
 Topology::Cache Topology::highest_level_cache() const {
