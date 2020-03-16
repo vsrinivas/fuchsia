@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "syn-clk.h"
+#include "as370-clk.h"
 
 #include <lib/device-protocol/pdev.h>
 
@@ -22,7 +22,7 @@
 
 namespace clk {
 
-zx_status_t SynClk::Create(void* ctx, zx_device_t* parent) {
+zx_status_t As370Clk::Create(void* ctx, zx_device_t* parent) {
   ddk::PDev pdev(parent);
   if (!pdev.is_valid()) {
     zxlogf(ERROR, "%s: failed to get pdev\n", __FILE__);
@@ -46,8 +46,8 @@ zx_status_t SynClk::Create(void* ctx, zx_device_t* parent) {
     return status;
   }
 
-  std::unique_ptr<SynClk> device(
-      new SynClk(parent, *std::move(global_mmio), *std::move(avio_mmio), *std::move(cpu_mmio)));
+  std::unique_ptr<As370Clk> device(
+      new As370Clk(parent, *std::move(global_mmio), *std::move(avio_mmio), *std::move(cpu_mmio)));
 
   status = device->DdkAdd("synaptics-clk");
   if (status != ZX_OK) {
@@ -61,7 +61,7 @@ zx_status_t SynClk::Create(void* ctx, zx_device_t* parent) {
   return ZX_OK;
 }
 
-zx_status_t SynClk::AvpllClkEnable(bool avpll0, bool enable) {
+zx_status_t As370Clk::AvpllClkEnable(bool avpll0, bool enable) {
   uint32_t id = avpll0 ? 0 : 1;
   fbl::AutoLock lock(&lock_);
   // TODO(andresoportus): Manage dependencies between AVPLLs, avioSysClk and SYSPLL.
@@ -90,7 +90,7 @@ zx_status_t SynClk::AvpllClkEnable(bool avpll0, bool enable) {
   return ZX_OK;
 }
 
-zx_status_t SynClk::CpuSetRate(uint64_t rate) {
+zx_status_t As370Clk::CpuSetRate(uint64_t rate) {
   if (rate < 100'000'000 || rate > 1'800'000'000) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -138,7 +138,7 @@ zx_status_t SynClk::CpuSetRate(uint64_t rate) {
   return ZX_OK;
 }
 
-zx_status_t SynClk::AvpllSetRate(bool avpll0, uint64_t rate) {
+zx_status_t As370Clk::AvpllSetRate(bool avpll0, uint64_t rate) {
   // rate = (frac / (max_frac+1) + dn) * ref_clk / dm / dp.
   // frac = (rate * dp * dm / ref_clk - dn) * (max_frac+1).
 
@@ -247,7 +247,7 @@ zx_status_t SynClk::AvpllSetRate(bool avpll0, uint64_t rate) {
   return ZX_OK;
 }
 
-zx_status_t SynClk::ClockImplEnable(uint32_t index) {
+zx_status_t As370Clk::ClockImplEnable(uint32_t index) {
   switch (index) {
     case as370::kClkAvpll0:
       return AvpllClkEnable(true, true);
@@ -257,7 +257,7 @@ zx_status_t SynClk::ClockImplEnable(uint32_t index) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t SynClk::ClockImplDisable(uint32_t index) {
+zx_status_t As370Clk::ClockImplDisable(uint32_t index) {
   switch (index) {
     case as370::kClkAvpll0:
       return AvpllClkEnable(true, false);
@@ -267,20 +267,20 @@ zx_status_t SynClk::ClockImplDisable(uint32_t index) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t SynClk::ClockImplIsEnabled(uint32_t id, bool* out_enabled) {
+zx_status_t As370Clk::ClockImplIsEnabled(uint32_t id, bool* out_enabled) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t SynClk::ClockImplQuerySupportedRate(uint32_t id, uint64_t max_rate,
-                                                uint64_t* out_best_rate) {
+zx_status_t As370Clk::ClockImplQuerySupportedRate(uint32_t id, uint64_t max_rate,
+                                                  uint64_t* out_best_rate) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t SynClk::ClockImplGetRate(uint32_t id, uint64_t* out_current_rate) {
+zx_status_t As370Clk::ClockImplGetRate(uint32_t id, uint64_t* out_current_rate) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t SynClk::ClockImplSetRate(uint32_t index, uint64_t hz) {
+zx_status_t As370Clk::ClockImplSetRate(uint32_t index, uint64_t hz) {
   switch (index) {
     case as370::kClkAvpll0:
       return AvpllSetRate(true, hz);
@@ -292,15 +292,15 @@ zx_status_t SynClk::ClockImplSetRate(uint32_t index, uint64_t hz) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t SynClk::ClockImplSetInput(uint32_t id, uint32_t idx) { return ZX_ERR_NOT_SUPPORTED; }
+zx_status_t As370Clk::ClockImplSetInput(uint32_t id, uint32_t idx) { return ZX_ERR_NOT_SUPPORTED; }
 
-zx_status_t SynClk::ClockImplGetNumInputs(uint32_t id, uint32_t* out) {
+zx_status_t As370Clk::ClockImplGetNumInputs(uint32_t id, uint32_t* out) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t SynClk::ClockImplGetInput(uint32_t id, uint32_t* out) { return ZX_ERR_NOT_SUPPORTED; }
+zx_status_t As370Clk::ClockImplGetInput(uint32_t id, uint32_t* out) { return ZX_ERR_NOT_SUPPORTED; }
 
-void SynClk::DdkUnbindNew(ddk::UnbindTxn txn) {
+void As370Clk::DdkUnbindNew(ddk::UnbindTxn txn) {
   fbl::AutoLock lock(&lock_);
 
   global_mmio_.reset();
@@ -310,14 +310,14 @@ void SynClk::DdkUnbindNew(ddk::UnbindTxn txn) {
   txn.Reply();
 }
 
-void SynClk::DdkRelease() { delete this; }
+void As370Clk::DdkRelease() { delete this; }
 
 }  // namespace clk
 
 static constexpr zx_driver_ops_t syn_clk_driver_ops = []() {
   zx_driver_ops_t ops = {};
   ops.version = DRIVER_OPS_VERSION;
-  ops.bind = clk::SynClk::Create;
+  ops.bind = clk::As370Clk::Create;
   return ops;
 }();
 

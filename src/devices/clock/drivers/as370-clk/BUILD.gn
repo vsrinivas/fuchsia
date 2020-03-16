@@ -7,13 +7,13 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 import("//build/unification/images/migrated_manifest.gni")
 
-driver_module("syn-clk") {
+driver_module("as370-clk") {
   defines = [ "_ALL_SOURCE" ]
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
   configs += [ "//build/unification/config:zircon-migrated" ]
-  sources = [ "syn-clk.cc" ]
+  sources = [ "as370-clk.cc" ]
   deps = [
     "//src/devices/lib/driver",
     "//zircon/public/lib/as370",
@@ -34,12 +34,12 @@ driver_module("syn-clk") {
   ]
 }
 
-test("syn-clk-test") {
+test("as370-clk-test") {
   configs += [ "//build/unification/config:zircon-migrated" ]
-  output_name = "syn-clk-test"
+  output_name = "as370-clk-test"
   sources = [
-    "syn-clk-test.cc",
-    "syn-clk.cc",
+    "as370-clk-test.cc",
+    "as370-clk.cc",
   ]
   deps = [
     "//zircon/public/lib/as370",
@@ -64,17 +64,17 @@ test("syn-clk-test") {
   ]
 }
 
-migrated_manifest("syn-clk-manifest") {
-  deps = [ ":syn-clk" ]
+migrated_manifest("as370-clk-manifest") {
+  deps = [ ":as370-clk" ]
 }
 
-unittest_package("syn-clk-test-package") {
-  package_name = "syn-clk-test"
-  deps = [ ":syn-clk-test" ]
+unittest_package("as370-clk-test-package") {
+  package_name = "as370-clk-test"
+  deps = [ ":as370-clk-test" ]
 
   tests = [
     {
-      name = "syn-clk-test"
+      name = "as370-clk-test"
       environments = basic_envs
     },
   ]
@@ -82,5 +82,5 @@ unittest_package("syn-clk-test-package") {
 
 group("tests") {
   testonly = true
-  deps = [ ":syn-clk-test-package" ]
+  deps = [ ":as370-clk-test-package" ]
 }

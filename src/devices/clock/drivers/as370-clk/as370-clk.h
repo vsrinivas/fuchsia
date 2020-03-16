@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_CLOCK_DRIVERS_SYN_CLK_SYN_CLK_H_
-#define SRC_DEVICES_CLOCK_DRIVERS_SYN_CLK_SYN_CLK_H_
+#ifndef SRC_DEVICES_CLOCK_DRIVERS_AS370_CLK_AS370_CLK_H_
+#define SRC_DEVICES_CLOCK_DRIVERS_AS370_CLK_AS370_CLK_H_
 
 #include <lib/mmio/mmio.h>
 #include <lib/zircon-internal/thread_annotations.h>
@@ -15,10 +15,10 @@
 
 namespace clk {
 
-class SynClk;
-using DeviceType = ddk::Device<SynClk, ddk::UnbindableNew>;
+class As370Clk;
+using DeviceType = ddk::Device<As370Clk, ddk::UnbindableNew>;
 
-class SynClk : public DeviceType, public ddk::ClockImplProtocol<SynClk, ddk::base_protocol> {
+class As370Clk : public DeviceType, public ddk::ClockImplProtocol<As370Clk, ddk::base_protocol> {
  public:
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
@@ -41,8 +41,8 @@ class SynClk : public DeviceType, public ddk::ClockImplProtocol<SynClk, ddk::bas
 
   // Protected for unit tests.
  protected:
-  SynClk(zx_device_t* parent, ddk::MmioBuffer global_mmio, ddk::MmioBuffer avio_mmio,
-         ddk::MmioBuffer cpu_mmio)
+  As370Clk(zx_device_t* parent, ddk::MmioBuffer global_mmio, ddk::MmioBuffer avio_mmio,
+           ddk::MmioBuffer cpu_mmio)
       : DeviceType(parent),
         global_mmio_(std::move(global_mmio)),
         avio_mmio_(std::move(avio_mmio)),
@@ -61,4 +61,4 @@ class SynClk : public DeviceType, public ddk::ClockImplProtocol<SynClk, ddk::bas
 
 }  // namespace clk
 
-#endif  // SRC_DEVICES_CLOCK_DRIVERS_SYN_CLK_SYN_CLK_H_
+#endif  // SRC_DEVICES_CLOCK_DRIVERS_AS370_CLK_AS370_CLK_H_

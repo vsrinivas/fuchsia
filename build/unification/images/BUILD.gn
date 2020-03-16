@@ -1511,7 +1511,7 @@ aggregate_manifest("migrated-image") {
     "//src/devices/nand/drivers/skip-block:skip-block-manifest",
     "//src/devices/spi/drivers/spi:spi-manifest",
     "//src/graphics/display/drivers/ssd1306:ssd1306-manifest",
-    "//src/devices/clock/drivers/syn-clk:syn-clk-manifest",
+    "//src/devices/clock/drivers/as370-clk:as370-clk-manifest",
     "//src/devices/shareddma/drivers/syn-dma:syn-dma-manifest",
     "//src/devices/sysmem/drivers/sysmem:sysmem-manifest",
     "//src/media/audio/drivers/codecs/tas5782:tas5782-manifest",
