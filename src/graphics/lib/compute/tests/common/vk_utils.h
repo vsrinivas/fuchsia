@@ -141,6 +141,12 @@ vk_submit_one(VkSemaphore          wait_semaphore,
               VkCommandBuffer      command_buffer,
               VkFence              signal_fence);
 
+// Return the number of bytes per pixel corresponding to a given |format|.
+// NOTE: This will return 0 for compressed formats, as well as depth/stencil
+// ones.
+extern uint32_t
+vk_format_to_bytes_per_pixel(VkFormat format);
+
 #ifdef __cplusplus
 }
 #endif

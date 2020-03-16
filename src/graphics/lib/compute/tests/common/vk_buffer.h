@@ -22,6 +22,7 @@ typedef struct vk_buffer
   void *                        mapped;
   VkDevice                      device;
   const VkAllocationCallbacks * allocator;
+  VkMemoryPropertyFlags         memory_flags;
 
   // fields below are for debugging.
   VkMemoryRequirements memory_requirements;
@@ -76,7 +77,7 @@ vk_buffer_alloc_host(vk_buffer_t *                 buffer,
                      VkDevice                      device,
                      const VkAllocationCallbacks * allocator);
 
-// Allocate a new host-visible, cached and coherent buffer and map it.
+// Allocate a new host-visible, coherent buffer and map it.
 // Assumes the buffer will only every be used by a single queue.
 //
 // |buffer| is the target vk_buffer_t instance.
@@ -116,6 +117,16 @@ vk_buffer_alloc_device_local(vk_buffer_t *                 buffer,
 // buffers that are not coherent.
 extern void
 vk_buffer_flush_all(const vk_buffer_t * buffer);
+
+// Map the buffer then refresh its content if needed.
+// This can be used to refresh an already-mapped buffer when non-coherent
+// memory is used.
+extern void
+vk_buffer_map(vk_buffer_t * buffer);
+
+// Unmap the buffer, after flushing it if necessary.
+extern void
+vk_buffer_unmap(vk_buffer_t * buffer);
 
 // Release a buffer and its memory.
 extern void

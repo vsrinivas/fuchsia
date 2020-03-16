@@ -80,12 +80,14 @@ vk_buffer_alloc_generic(vk_buffer_t *                 buffer,
   // Bind the memory to the buffer.
   vk(BindBufferMemory(device, buffer->buffer, buffer->memory, 0));
 
+  buffer->device       = device;
+  buffer->allocator    = allocator;
+  buffer->memory_flags = memory_flags;
+  buffer->mapped       = NULL;
+
   // Map it now!
   if (memory_flags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
-    vk(MapMemory(device, buffer->memory, 0, buffer->size, 0, &buffer->mapped));
-
-  buffer->device    = device;
-  buffer->allocator = allocator;
+    vk_buffer_map(buffer);
 }
 
 void
@@ -117,9 +119,8 @@ vk_buffer_alloc_host_coherent(vk_buffer_t *                 buffer,
                               VkDevice                      device,
                               const VkAllocationCallbacks * allocator)
 {
-  VkMemoryPropertyFlags memory_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                                       VK_MEMORY_PROPERTY_HOST_CACHED_BIT |
-                                       VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+  VkMemoryPropertyFlags memory_flags =
+    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
   vk_buffer_alloc_generic(buffer,
                           buffer_size,
@@ -154,9 +155,47 @@ vk_buffer_alloc_device_local(vk_buffer_t *                 buffer,
 }
 
 void
-vk_buffer_flush_all(const vk_buffer_t * buffer)
+vk_buffer_map(vk_buffer_t * buffer)
+{
+  if (!buffer->mapped)
+    {
+      ASSERT_MSG((buffer->memory_flags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) != 0,
+                 "Cannot map device-local-only GPU buffer!\n");
+
+      vk(MapMemory(buffer->device, buffer->memory, 0, buffer->size, 0, &buffer->mapped));
+    }
+
+  // Ensure proper refresh for non-coherent memory.
+  if ((buffer->memory_flags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) == 0)
+    {
+      vk(InvalidateMappedMemoryRanges(buffer->device,
+                                      1,
+                                      &(const VkMappedMemoryRange){
+                                        .sType  = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
+                                        .memory = buffer->memory,
+                                        .offset = 0u,
+                                        .size   = buffer->size,
+                                      }));
+    }
+}
+
+void
+vk_buffer_unmap(vk_buffer_t * buffer)
 {
   if (buffer->mapped)
+    {
+      // Ensure proper flush for non-coherent memory.
+      vk_buffer_flush_all(buffer);
+
+      vkUnmapMemory(buffer->device, buffer->memory);
+      buffer->mapped = NULL;
+    }
+}
+
+void
+vk_buffer_flush_all(const vk_buffer_t * buffer)
+{
+  if (buffer->mapped && (buffer->memory_flags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) == 0)
     {
       vk(FlushMappedMemoryRanges(buffer->device,
                                  1,
@@ -175,14 +214,16 @@ vk_buffer_free(vk_buffer_t * buffer)
 {
   if (buffer->mapped != NULL)
     {
+      // No need to flush here. Avoid error if any.
       vkUnmapMemory(buffer->device, buffer->memory);
       buffer->mapped = NULL;
     }
 
   vkFreeMemory(buffer->device, buffer->memory, buffer->allocator);
   vkDestroyBuffer(buffer->device, buffer->buffer, buffer->allocator);
-  buffer->memory    = VK_NULL_HANDLE;
-  buffer->buffer    = VK_NULL_HANDLE;
-  buffer->device    = VK_NULL_HANDLE;
-  buffer->allocator = NULL;
+  buffer->memory       = VK_NULL_HANDLE;
+  buffer->buffer       = VK_NULL_HANDLE;
+  buffer->device       = VK_NULL_HANDLE;
+  buffer->allocator    = NULL;
+  buffer->memory_flags = 0;
 }

@@ -7,6 +7,7 @@
 
 #include "tests/common/vk_app_state.h"
 #include "tests/common/vk_buffer.h"
+#include "tests/common/vk_image_utils.h"
 #include "tests/common/vk_swapchain.h"
 #include "tests/common/vk_swapchain_queue.h"
 #include "tests/common/vk_utils.h"
@@ -398,96 +399,47 @@ main(int argc, char const * argv[])
         vkCmdEndRenderPass(buffer);
 
         // Step 2)
-        vkCmdPipelineBarrier(
-            buffer,
-            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-            VK_PIPELINE_STAGE_TRANSFER_BIT,
-            0,    // dependencyFlags
-            0,    // memoryBarrierCount
-            NULL, // pMemoryBarriers
-            0,    // bufferMemoryBarrierCount
-            NULL, // pBufferMemoryBarriers
-            1,    // imageMemoryBarrierCount,
-            &(const VkImageMemoryBarrier){
-                .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-                .pNext = NULL,
-                .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-                .dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT,
-                .oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-                .newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-                .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-                .image = swapchain_image,
-                .subresourceRange = {
-                    .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                    .baseMipLevel = 0,
-                    .levelCount = 1,
-                    .baseArrayLayer = 0,
-                    .layerCount = 1,
-                },
-            }
-        );
+        vk_cmd_image_layout_transition(buffer,
+                                       swapchain_image,
+                                       VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                                       VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+                                       VK_PIPELINE_STAGE_TRANSFER_BIT,
+                                       VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
         // Step 3)
-        vkCmdCopyBufferToImage(
+        vk_cmd_copy_buffer_to_image(
             buffer,
             my_buffer.buffer,
+            buffer_width * 4,
+            4,
             swapchain_image,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-            1,
-            &(const VkBufferImageCopy){
-                .bufferOffset = 0,
-                .bufferRowLength = buffer_width,
-                .bufferImageHeight = buffer_height,
-                .imageSubresource = {
-                  .aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT,
-                  .mipLevel       = 0,
-                  .baseArrayLayer = 0,
-                  .layerCount     = 1,
-                },
-                .imageOffset = {
-                  .x = 100 + ((counter / 4) % 50),
-                  .y = 100 + ((counter / 4) % 50),
-                  .z = 0,
-                },
-                .imageExtent = {
+            (const vk_image_copy_info_t){
+                .src = {
                   .width  = buffer_width,
                   .height = buffer_height,
-                  .depth  = 1,
+                },
+                .dst = {
+                  .width  = surface_extent.width,
+                  .height = surface_extent.height,
+                },
+                .copy = {
+                  .src_x = 0,
+                  .src_y = 0,
+                  .dst_x = 100 + ((counter / 4) % 50),
+                  .dst_y = 100 + ((counter / 4) % 50),
+                  .w     = buffer_width,
+                  .h     = buffer_height,
                 },
             });
 
         // Step 4)
-        vkCmdPipelineBarrier(
-            buffer,
-            VK_PIPELINE_STAGE_TRANSFER_BIT,
-            VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-            0,    // dependencyFlags
-            0,    // memoryBarrierCount
-            NULL, // pMemoryBarriers
-            0,    // bufferMemoryBarrierCount
-            NULL, // pBufferMemoryBarriers
-            1,    // imageMemoryBarrierCount,
-            &(const VkImageMemoryBarrier){
-                .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-                .pNext = NULL,
-                .srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT |
-                                 VK_ACCESS_TRANSFER_WRITE_BIT,
-                .dstAccessMask = 0,
-                .oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                .newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-                .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-                .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-                .image = swapchain_image,
-                .subresourceRange = {
-                    .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                    .baseMipLevel = 0,
-                    .levelCount = 1,
-                    .baseArrayLayer = 0,
-                    .layerCount = 1,
-                },
-            }
-        );
+        vk_cmd_image_layout_transition(buffer,
+                                       swapchain_image,
+                                       VK_PIPELINE_STAGE_TRANSFER_BIT,
+                                       VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                                       VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+                                       VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
         vk(EndCommandBuffer(buffer));
       }

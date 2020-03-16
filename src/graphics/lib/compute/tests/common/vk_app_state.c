@@ -1086,7 +1086,11 @@ vk_app_state_init(vk_app_state_t * app_state, const vk_app_state_config_t * conf
       bool found = false;
       for (uint32_t nn = 0; nn < gpus.count; ++nn)
         {
-          device_config = (const vk_device_config_t){};
+          device_config = (const vk_device_config_t){
+            .features = {
+              .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
+            },
+          };
 
           if (config->device_config_callback(config->device_config_opaque,
                                              app_state->instance,
@@ -1332,6 +1336,14 @@ vk_app_state_init(vk_app_state_t * app_state, const vk_app_state_config_t * conf
   string_list_add_n(&device_extensions,
                     device_config.extensions_count,
                     device_config.extensions_names);
+
+  // |device_config.features.sType| is likely to be 0 here since that what
+  // default initialization of a struct will do, but it needs to be fixed up
+  // properly before calling CreateDevice.
+  if (!device_config.features.sType)
+    {
+      device_config.features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+    }
 
   VkDeviceCreateInfo const device_info = {
 
