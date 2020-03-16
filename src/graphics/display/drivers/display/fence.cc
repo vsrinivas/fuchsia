@@ -6,6 +6,7 @@
 
 #include <utility>
 
+#include <ddk/debug.h>
 #include <ddk/trace/event.h>
 
 #include "client.h"
@@ -108,5 +109,78 @@ void FenceReference::Signal() { fence_->Signal(); }
 FenceReference::FenceReference(fbl::RefPtr<Fence> fence) : fence_(std::move(fence)) {}
 
 FenceReference::~FenceReference() { fence_->cb_->OnRefForFenceDead(fence_.get()); }
+
+FenceCollection::FenceCollection(async_dispatcher_t* dispatcher,
+                                 fit::function<void(FenceReference*)>&& fired_cb)
+    : dispatcher_(dispatcher), fired_cb_(std::move(fired_cb)) {}
+
+void FenceCollection::Clear() {
+  // Use a temporary list to prevent double locking when resetting
+  fbl::SinglyLinkedList<fbl::RefPtr<Fence>> fences;
+  {
+    fbl::AutoLock lock(&mtx_);
+    while (!fences_.is_empty()) {
+      fences.push_front(fences_.erase(fences_.begin()));
+    }
+  }
+  while (!fences.is_empty()) {
+    fences.pop_front()->ClearRef();
+  }
+}
+
+zx_status_t FenceCollection::ImportEvent(zx::event event, uint64_t id) {
+  fbl::AutoLock lock(&mtx_);
+  auto fence = fences_.find(id);
+  // Create and ref a new fence.
+  if (!fence.IsValid()) {
+    // TODO(stevensd): it would be good for this not to be able to fail due to allocation failures
+    fbl::AllocChecker ac;
+    auto new_fence = fbl::AdoptRef(new (&ac) Fence(this, dispatcher_, id, std::move(event)));
+    if (ac.check() && new_fence->CreateRef()) {
+      fences_.insert_or_find(std::move(new_fence));
+    } else {
+      zxlogf(ERROR, "Failed to allocate fence ref for event#%ld\n", id);
+      return ZX_ERR_NO_MEMORY;
+    }
+    return ZX_OK;
+  }
+
+  // Ref an existing fence
+  if (fence->event() != event.get()) {
+    zxlogf(ERROR, "Cannot reuse event#%ld for zx::event %u\n", id, event.get());
+    return ZX_ERR_INVALID_ARGS;
+  } else if (!fence->CreateRef()) {
+    zxlogf(ERROR, "Failed to allocate fence ref for event#%ld\n", id);
+    return ZX_ERR_NO_MEMORY;
+  }
+  return ZX_OK;
+}
+
+void FenceCollection::ReleaseEvent(uint64_t id) {
+  // Hold a ref to prevent double locking if this destroys the fence.
+  auto fence_ref = GetFence(id);
+  if (fence_ref) {
+    fbl::AutoLock lock(&mtx_);
+    fences_.find(id)->ClearRef();
+  }
+}
+
+fbl::RefPtr<FenceReference> FenceCollection::GetFence(uint64_t id) {
+  if (id == INVALID_ID) {
+    return nullptr;
+  }
+  fbl::AutoLock l(&mtx_);
+  auto fence = fences_.find(id);
+  return fence.IsValid() ? fence->GetReference() : nullptr;
+}
+
+void FenceCollection::OnFenceFired(FenceReference* fence) { fired_cb_(fence); }
+
+void FenceCollection::OnRefForFenceDead(Fence* fence) {
+  fbl::AutoLock lock(&mtx_);
+  if (fence->OnRefDead()) {
+    fences_.erase(fence->id);
+  }
+}
 
 }  // namespace display

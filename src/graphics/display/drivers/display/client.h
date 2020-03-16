@@ -134,8 +134,7 @@ class DisplayConfig : public IdMappable<std::unique_ptr<DisplayConfig>> {
 // The Client class manages all state associated with an open display client
 // connection. Other than initialization, all methods of this class execute on
 // on the controller's looper, so no synchronization is necessary.
-class Client : public llcpp::fuchsia::hardware::display::Controller::Interface,
-               private FenceCallback {
+class Client : public llcpp::fuchsia::hardware::display::Controller::Interface {
  public:
   // |controller| must outlive this and |proxy|.
   Client(Controller* controller, ClientProxy* proxy, bool is_vc, uint32_t id);
@@ -152,11 +151,9 @@ class Client : public llcpp::fuchsia::hardware::display::Controller::Interface,
   void SetOwnership(bool is_owner);
   void ApplyConfig();
 
-  void OnFenceFired(FenceReference* fence) override;
-  void OnRefForFenceDead(Fence* fence) __TA_EXCLUDES(fence_mtx_) override;
+  void OnFenceFired(FenceReference* fence);
 
-  void TearDown() __TA_EXCLUDES(fence_mtx_);
-
+  void TearDown();
   // This is used for testing
   void TearDownTest();
 
@@ -178,8 +175,6 @@ class Client : public llcpp::fuchsia::hardware::display::Controller::Interface,
   sync_completion_t* fidl_unbound() { return &fidl_unbound_; }
 
  private:
-  bool _ImportEvent(zx::event event, uint64_t id) __TA_EXCLUDES(fence_mtx_);
-
   void ImportVmoImage(llcpp::fuchsia::hardware::display::ImageConfig image_config, zx::vmo vmo,
                       int32_t offset, ImportVmoImageCompleter::Sync _completer) override;
   void ImportImage(llcpp::fuchsia::hardware::display::ImageConfig image_config,
@@ -278,9 +273,7 @@ class Client : public llcpp::fuchsia::hardware::display::Controller::Interface,
   };
   std::map<uint64_t, Collections> collection_map_;
 
-  Fence::Map fences_ __TA_GUARDED(fence_mtx_);
-  // Mutex held when creating or destroying fences.
-  mtx_t fence_mtx_;
+  FenceCollection fences_;
 
   Layer::Map layers_;
   uint64_t next_layer_id = 1;
@@ -292,8 +285,6 @@ class Client : public llcpp::fuchsia::hardware::display::Controller::Interface,
                              const int32_t* displays_removed, uint32_t removed_count);
   bool CheckConfig(llcpp::fuchsia::hardware::display::ConfigResult* res,
                    std::vector<llcpp::fuchsia::hardware::display::ClientCompositionOp>* ops);
-
-  fbl::RefPtr<FenceReference> GetFence(uint64_t id) __TA_EXCLUDES(fence_mtx_);
 
   uint64_t GetActiveCaptureImage() { return current_capture_image_; }
 

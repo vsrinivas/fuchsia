@@ -191,40 +191,11 @@ void Client::ReleaseImage(uint64_t image_id, ReleaseImageCompleter::Sync _comple
   }
 }
 
-bool Client::_ImportEvent(zx::event event, uint64_t id) {
-  fbl::AutoLock lock(&fence_mtx_);
-  auto fence = fences_.find(id);
-  // Create and ref a new fence.
-  if (!fence.IsValid()) {
-    // TODO(stevensd): it would be good for this not to be able to fail due to allocation failures
-    fbl::AllocChecker ac;
-    auto new_fence = fbl::AdoptRef(
-        new (&ac) Fence(this, controller_->loop().dispatcher(), id, std::move(event)));
-    if (ac.check() && new_fence->CreateRef()) {
-      fences_.insert_or_find(std::move(new_fence));
-    } else {
-      zxlogf(ERROR, "Failed to allocate fence ref for event#%ld\n", id);
-      return false;
-    }
-    return true;
-  }
-
-  // Ref an existing fence
-  if (fence->event() != event.get()) {
-    zxlogf(ERROR, "Cannot reuse event#%ld for zx::event %u\n", id, event.get());
-    return false;
-  } else if (!fence->CreateRef()) {
-    zxlogf(ERROR, "Failed to allocate fence ref for event#%ld\n", id);
-    return false;
-  }
-  return true;
-}
-
 void Client::ImportEvent(::zx::event event, uint64_t id, ImportEventCompleter::Sync _completer) {
   if (id == INVALID_ID) {
     zxlogf(ERROR, "Cannot import events with an invalid ID #%i\n", INVALID_ID);
     TearDown();
-  } else if (!_ImportEvent(std::move(event), id)) {
+  } else if (fences_.ImportEvent(std::move(event), id) != ZX_OK) {
     TearDown();
   }
 }
@@ -364,12 +335,7 @@ void Client::SetBufferCollectionConstraints(
 }
 
 void Client::ReleaseEvent(uint64_t id, ReleaseEventCompleter::Sync _completer) {
-  // Hold a ref to prevent double locking if this destroys the fence.
-  auto fence_ref = GetFence(id);
-  if (fence_ref) {
-    fbl::AutoLock lock(&fence_mtx_);
-    fences_.find(id)->ClearRef();
-  }
+  fences_.ReleaseEvent(id);
 }
 
 void Client::CreateLayer(CreateLayerCompleter::Sync _completer) {
@@ -817,14 +783,14 @@ void Client::ApplyConfig(ApplyConfigCompleter::Sync /*_completer*/) {
       }
 
       if (layer->pending_image_) {
-        auto wait_fence = GetFence(layer->pending_wait_event_id_);
+        auto wait_fence = fences_.GetFence(layer->pending_wait_event_id_);
         if (wait_fence && wait_fence->InContainer()) {
           zxlogf(ERROR, "Tried to wait with a busy event\n");
           TearDown();
           return;
         }
-        layer_node.layer->pending_image_->PrepareFences(std::move(wait_fence),
-                                                        GetFence(layer->pending_signal_event_id_));
+        layer_node.layer->pending_image_->PrepareFences(
+            std::move(wait_fence), fences_.GetFence(layer->pending_signal_event_id_));
         {
           fbl::AutoLock lock(controller_->mtx());
           controller_->AssertMtxAliasHeld(layer->pending_image_->mtx());
@@ -1002,7 +968,7 @@ void Client::StartCapture(uint64_t signal_event_id, uint64_t image_id,
   }
 
   // Ensure we have a capture fence for the request signal event.
-  auto signal_fence = GetFence(signal_event_id);
+  auto signal_fence = fences_.GetFence(signal_event_id);
   if (signal_fence == nullptr) {
     return _completer.ReplyError(ZX_ERR_INVALID_ARGS);
   }
@@ -1502,15 +1468,6 @@ void Client::OnDisplaysChanged(const uint64_t* displays_added, size_t added_coun
   }
 }
 
-fbl::RefPtr<FenceReference> Client::GetFence(uint64_t id) {
-  if (id == INVALID_ID) {
-    return nullptr;
-  }
-  fbl::AutoLock lock(&fence_mtx_);
-  auto fence = fences_.find(id);
-  return fence.IsValid() ? fence->GetReference() : nullptr;
-}
-
 void Client::OnFenceFired(FenceReference* fence) {
   for (auto& layer : layers_) {
     image_node_t* waiting;
@@ -1521,15 +1478,8 @@ void Client::OnFenceFired(FenceReference* fence) {
   ApplyConfig();
 }
 
-void Client::OnRefForFenceDead(Fence* fence) {
-  fbl::AutoLock lock(&fence_mtx_);
-  if (fence->OnRefDead()) {
-    fences_.erase(fence->id);
-  }
-}
-
 void Client::CaptureCompleted() {
-  auto signal_fence = GetFence(capture_fence_id_);
+  auto signal_fence = fences_.GetFence(capture_fence_id_);
   if (signal_fence != nullptr) {
     signal_fence->Signal();
   }
@@ -1564,17 +1514,7 @@ void Client::TearDown() {
   CleanUpImage(nullptr);
   CleanUpCaptureImage();
 
-  // Use a temporary list to prevent double locking when resetting
-  fbl::SinglyLinkedList<fbl::RefPtr<Fence>> fences;
-  {
-    fbl::AutoLock lock(&fence_mtx_);
-    while (!fences_.is_empty()) {
-      fences.push_front(fences_.erase(fences_.begin()));
-    }
-  }
-  while (!fences.is_empty()) {
-    fences.pop_front()->ClearRef();
-  }
+  fences_.Clear();
 
   for (auto& config : configs_) {
     config.pending_layers_.clear();
@@ -1704,13 +1644,15 @@ zx_status_t Client::Init(zx::channel server_channel) {
     sysmem_allocator_.reset();
   }
 
-  mtx_init(&fence_mtx_, mtx_plain);
-
   return ZX_OK;
 }
 
 Client::Client(Controller* controller, ClientProxy* proxy, bool is_vc, uint32_t client_id)
-    : controller_(controller), proxy_(proxy), is_vc_(is_vc), id_(client_id) {}
+    : controller_(controller),
+      proxy_(proxy),
+      is_vc_(is_vc),
+      id_(client_id),
+      fences_(controller->loop().dispatcher(), fit::bind_member(this, &Client::OnFenceFired)) {}
 
 Client::Client(Controller* controller, ClientProxy* proxy, bool is_vc, uint32_t client_id,
                zx::channel server_channel)
@@ -1719,7 +1661,8 @@ Client::Client(Controller* controller, ClientProxy* proxy, bool is_vc, uint32_t 
       is_vc_(is_vc),
       id_(client_id),
       server_channel_(std::move(server_channel)),
-      server_handle_(server_channel_.get()) {}
+      server_handle_(server_channel_.get()),
+      fences_(controller->loop().dispatcher(), fit::bind_member(this, &Client::OnFenceFired)) {}
 
 Client::~Client() { ZX_DEBUG_ASSERT(server_handle_ == ZX_HANDLE_INVALID); }
 

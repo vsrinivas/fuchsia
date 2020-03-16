@@ -5,7 +5,12 @@
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_DISPLAY_FENCE_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_DISPLAY_FENCE_H_
 
+#ifndef _ALL_SOURCE
+#define _ALL_SOURCE  // To get MTX_INIT
+#endif
+
 #include <lib/async/cpp/wait.h>
+#include <lib/fit/function.h>
 #include <lib/zx/event.h>
 #include <threads.h>
 
@@ -98,6 +103,36 @@ class FenceReference : public fbl::RefCounted<FenceReference>,
   fbl::RefPtr<FenceReference> release_fence_;
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(FenceReference);
+};
+
+// FenceCollection controls the access and lifecycles for several display::Fences.
+class FenceCollection : private FenceCallback {
+ public:
+  FenceCollection() = delete;
+  FenceCollection(const FenceCollection&) = delete;
+  FenceCollection(FenceCollection&&) = delete;
+
+  // fired_cb will be called whenever a fence fires, from dispatcher's threads.
+  FenceCollection(async_dispatcher_t* dispatcher, fit::function<void(FenceReference*)>&& fired_cb);
+
+  // Explicit destruction step. Use this to control when fences are destroyed.
+  void Clear() __TA_EXCLUDES(mtx_);
+
+  zx_status_t ImportEvent(zx::event event, uint64_t id) __TA_EXCLUDES(mtx_);
+  void ReleaseEvent(uint64_t id) __TA_EXCLUDES(mtx_);
+  fbl::RefPtr<FenceReference> GetFence(uint64_t id) __TA_EXCLUDES(mtx_);
+
+ private:
+  // |FenceCallback|
+  void OnFenceFired(FenceReference* fence) override;
+
+  // |FenceCallback|
+  void OnRefForFenceDead(Fence* fence) __TA_EXCLUDES(mtx_) override;
+
+  mtx_t mtx_ = MTX_INIT;
+  Fence::Map fences_ __TA_GUARDED(mtx_);
+  async_dispatcher_t* dispatcher_;
+  fit::function<void(FenceReference*)> fired_cb_;
 };
 
 }  // namespace display

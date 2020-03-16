@@ -8,6 +8,7 @@ import("//build/unification/images/migrated_manifest.gni")
 
 test("display-core-unittests") {
   configs += [ "//build/unification/config:zircon-migrated" ]
+  defines = [ "_ALL_SOURCE" ]
   sources = [
     "display-test.cc",
     "fence-test.cc",
@@ -29,7 +30,8 @@ test("display-core-unittests") {
   ]
 }
 
-source_set("base") {
+static_library("base") {
+  defines = [ "_ALL_SOURCE" ]
   sources = [
     "base.cc",
     "fidl_client.cc",
