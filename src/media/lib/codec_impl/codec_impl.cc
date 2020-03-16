@@ -920,7 +920,6 @@ void CodecImpl::QueueInputPacket_StreamControl(fuchsia::media::Packet packet) {
       FailLocked("client QueueInputPacket() with packet_index !free");
       return;
     }
-    all_packets_[kInputPort][packet.header().packet_index()]->SetFree(false);
 
     if (stream_->input_end_of_stream()) {
       FailLocked("QueueInputPacket() after QueueInputEndOfStream() unexpeted");
@@ -946,6 +945,8 @@ void CodecImpl::QueueInputPacket_StreamControl(fuchsia::media::Packet packet) {
       // ~lock
       return;
     }
+
+    all_packets_[kInputPort][packet.header().packet_index()]->SetFree(false);
 
     // Sending OnFreeInputPacket() will happen later instead, when the core
     // codec gives back the packet.
