@@ -117,13 +117,14 @@ void GichState::SetAllInterruptStates(IchState* ich_state) {
   }
 }
 
+// This function must only be called by SetAllInterruptStates, as it
+// assumes |current_interrupts_| has been cleared.
 void GichState::SetInterruptState(uint32_t vector, InterruptState state) {
   if (vector >= kNumInterrupts) {
     DEBUG_ASSERT(false);
     return;
   }
   size_t bitoff = vector * 2;
-  current_interrupts_.Clear(bitoff, bitoff + 2);
   if (state == InterruptState::PENDING || state == InterruptState::PENDING_AND_ACTIVE) {
     current_interrupts_.SetOne(bitoff);
   }
