@@ -39,6 +39,7 @@ source_set("tests") {
     "timer_tests.cc",
     "uart_tests.cc",
     "unittest_tests.cc",
+    "variant_tests.cc",
   ]
   deps = [
     "$zx/kernel/lib/console",

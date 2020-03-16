@@ -19,6 +19,9 @@ using std::disjunction_v;
 
 using std::conditional;
 
+using std::decay;
+using std::decay_t;
+
 using std::enable_if;
 using std::enable_if_t;
 
@@ -28,8 +31,20 @@ using std::has_unique_object_representations_v;
 using std::is_const;
 using std::is_const_v;
 
+using std::is_copy_constructible;
+using std::is_copy_constructible_v;
+
+using std::is_copy_assignable;
+using std::is_copy_assignable_v;
+
 using std::is_lvalue_reference;
 using std::is_lvalue_reference_v;
+
+using std::is_move_constructible;
+using std::is_move_constructible_v;
+
+using std::is_move_assignable;
+using std::is_move_assignable_v;
 
 using std::is_pod;
 using std::is_pod_v;
@@ -42,6 +57,21 @@ using std::is_standard_layout_v;
 
 using std::is_trivial;
 using std::is_trivial_v;
+
+using std::is_trivially_copy_assignable;
+using std::is_trivially_copy_assignable_v;
+
+using std::is_trivially_copy_constructible;
+using std::is_trivially_copy_constructible_v;
+
+using std::is_trivially_destructible;
+using std::is_trivially_destructible_v;
+
+using std::is_trivially_move_assignable;
+using std::is_trivially_move_assignable_v;
+
+using std::is_trivially_move_constructible;
+using std::is_trivially_move_constructible_v;
 
 using std::is_void;
 using std::is_void_v;
