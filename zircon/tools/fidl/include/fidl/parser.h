@@ -209,6 +209,7 @@ class Parser {
   decltype(nullptr) Fail();
   decltype(nullptr) Fail(std::string_view message);
   decltype(nullptr) Fail(Token token, std::string_view message);
+  decltype(nullptr) Fail(const SourceSpan& span, std::string_view message);
 
   std::optional<types::Strictness> MaybeParseStrictness();
 

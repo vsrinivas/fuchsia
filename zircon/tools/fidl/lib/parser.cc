@@ -122,6 +122,13 @@ decltype(nullptr) Parser::Fail(Token token, std::string_view message) {
   return nullptr;
 }
 
+nullptr_t Parser::Fail(const SourceSpan& span, std::string_view message) {
+  if (Ok()) {
+    error_reporter_->ReportErrorWithSquiggle(span, std::move(message));
+  }
+  return nullptr;
+}
+
 std::optional<types::Strictness> Parser::MaybeParseStrictness() {
   switch (Peek().combined()) {
     case CASE_IDENTIFIER(Token::Subkind::kStrict):
@@ -450,7 +457,7 @@ std::unique_ptr<raw::Using> Parser::ParseUsing(std::unique_ptr<raw::AttributeLis
       return Fail();
   } else if (MaybeConsumeToken(OfKind(Token::Kind::kEqual))) {
     if (!Ok() || using_path->components.size() != 1u)
-      return Fail();
+      return Fail(using_path->span(), "alias identifiers cannot contain '.'");
     maybe_type_ctor = ParseTypeConstructor();
     if (!Ok())
       return Fail();
@@ -1280,6 +1287,10 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
 
       case CASE_IDENTIFIER(Token::Subkind::kUsing): {
         auto using_decl = ParseUsing(std::move(attributes), scope);
+        if (using_decl == nullptr) {
+          // Failed to parse using declaration.
+          return Done;
+        }
         if (using_decl->maybe_type_ctor) {
           done_with_library_imports = true;
         } else if (done_with_library_imports) {

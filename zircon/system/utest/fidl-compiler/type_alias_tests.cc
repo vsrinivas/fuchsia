@@ -486,6 +486,23 @@ struct TheStruct {
   END_TEST;
 }
 
+bool invalid_compound_identifier() {
+  BEGIN_TEST;
+
+  TestLibrary library("test.fidl", R"FIDL(
+library example;
+
+using foo.bar.baz = uint8;
+)FIDL");
+
+  ASSERT_FALSE(library.Compile());
+  const auto& errors = library.errors();
+  ASSERT_EQ(1, errors.size());
+  ASSERT_STR_STR(errors[0].c_str(), "alias identifiers cannot contain '.'");
+
+  END_TEST;
+}
+
 }  // namespace
 
 BEGIN_TEST_CASE(type_alias_tests)
@@ -512,4 +529,5 @@ RUN_TEST(invalid_cannot_null_twice)
 RUN_TEST(multi_file_alias_reference)
 RUN_TEST(multi_file_nullable_alias_reference)
 RUN_TEST(invalid_recursive_alias)
+RUN_TEST(invalid_compound_identifier)
 END_TEST_CASE(type_alias_tests)
