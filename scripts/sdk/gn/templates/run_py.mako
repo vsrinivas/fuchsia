@@ -19,7 +19,7 @@ import argparse
 import imp
 import os
 import platform
-from subprocess import Popen
+from subprocess import Popen, PIPE
 import sys
 import unittest
 
@@ -80,30 +80,37 @@ class GnTester(object):
 
     def _generate_test(self):
         self._run_unit_test(test_generate)
+        print "Generate tests passed."
 
     def _gen_fild_resp_file_unittest(self):
         self._run_unit_test(self.gen_fidl_response_file_unittest)
+        print "FIDL response file unit test passed."
 
     def _bash_tests(self):
         self._run_cmd([BASH_TESTS_PATH])
+        print "Bash tests passed."
 
     def _run_cmd(self, args, cwd=None):
-        job = Popen(args, cwd=cwd)
-        job.communicate()
+        job = Popen(args, cwd=cwd, stdout=PIPE)
+        (stdoutdata, stderrdata) = job.communicate()
+        print stdoutdata
         if job.returncode:
-            print msg
+            print stderrdata
             msg = 'Command returned non-zero exit code: %s' % job.returncode
             raise AssertionError(msg)
+        return (stdoutdata, stderrdata)
 
     def _run_test(self, test):
         try:
             getattr(self, test)()
-        except:
+        except Exception as err:
+            print err
             self._test_failed = True
 
     def _build_test_project(self):
         self._invoke_gn()
         self._invoke_ninja()
+        print "Test project built successfully"
 
     def _invoke_gn(self):
         # Example invocation
@@ -135,13 +142,48 @@ class GnTester(object):
         # Add output directory to command
         invocation.append(self.out_dir)
         print 'Running ninja: "%s"' % ' '.join(invocation)
-        self._run_cmd(invocation, cwd=self.proj_dir)
+        return self._run_cmd(invocation, cwd=self.proj_dir)
+
+    def _verify_package_depfile(self):
+        print('Running package dep file verification test')
+        # Build test project
+        self._invoke_gn()
+        self._invoke_ninja()
+        # Verify package dep file for built project
+        package_dep_file_contents = "gen/tests/package/package/package.archive_manifest: lib/libfdio.so lib/libunwind.so.1 lib/libc++abi.so.1 hello_bin lib/ld.so.1 lib/libc++.so.2"
+        dep_filepath = os.path.join(
+            DEFAULT_OUT_DIR, "gen", "tests", "package", "package_stamp.d")
+        with open(dep_filepath, 'r') as dep_file:
+            dep_file_contents = dep_file.read()
+            if dep_file_contents != package_dep_file_contents:
+                msg = 'Dep file %s' % dep_filepath
+                msg += 'expected to have contents:\n\n%s\n\n' % package_dep_file_contents
+                msg += 'but got \n\n%s\n\n' % dep_file_contents
+                raise AssertionError(msg)
+
+    def _verify_rebuild_noop(self):
+        # Build test project initially
+        self._invoke_gn()
+        self._invoke_ninja()
+        # Build test project a second time
+        self._invoke_gn()
+        (stdout, stderr) = self._invoke_ninja()
+        # Verify that the second test project build is a noop for ninja
+        ninja_no_work_string = 'ninja: no work to do.'
+        if not ninja_no_work_string in stdout:
+            msg = 'Rebuild of test project did not result in noop.\n'
+            msg += 'Expected std out to contain "%s" but got:\n\n' % ninja_no_work_string
+            msg += '"%s"' % stdout
+            raise AssertionError(msg)
+        print "Test project rebuilt successfully"
 
     def run(self):
         self._run_test("_generate_test")
         self._run_test("_gen_fild_resp_file_unittest")
         self._run_test("_bash_tests")
         self._run_test("_build_test_project")
+        self._run_test("_verify_package_depfile")
+        self._run_test("_verify_rebuild_noop")
         return self._test_failed
 
 

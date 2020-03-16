@@ -17,12 +17,8 @@ import subprocess
 import sys
 import tempfile
 
-
 # File extension of a component manifest for each Component Framework version
-MANIFEST_VERSION_EXTENSIONS = {
-    "v1": ".cmx",
-    "v2": ".cm"
-}
+MANIFEST_VERSION_EXTENSIONS = {"v1": ".cmx", "v2": ".cm"}
 
 
 def make_package_path(file_path, roots):
@@ -114,8 +110,7 @@ def _write_build_ids_txt(binary_paths, ids_txt_path):
                 # Paths to the unstripped executables listed in "ids.txt" are specified
                 # as relative paths to that file.
                 unstripped_rel_path = os.path.relpath(
-                    os.path.abspath(
-                        unprocessed_binary_paths[binary_shortname]),
+                    os.path.abspath(unprocessed_binary_paths[binary_shortname]),
                     os.path.dirname(os.path.abspath(ids_txt_path)))
 
                 build_id = line[len(READELF_BUILD_ID_PREFIX):]
@@ -142,105 +137,133 @@ def _get_component_manifests(component_info):
     return [c for c in component_info if c.get('type') == 'manifest']
 
 
+def _get_expanded_files(runtime_deps_file):
+    """ Process the runtime deps file for file paths, recursively walking
+    directories as needed.
+
+    Returns a set of expanded files referenced by the runtime deps file.
+    """
+
+    # runtime_deps may contain duplicate paths, so use a set for
+    # de-duplication.
+    expanded_files = set()
+    for next_path in open(runtime_deps_file, 'r'):
+        next_path = next_path.strip()
+        if os.path.isdir(next_path):
+            for root, _, files in os.walk(next_path):
+                for current_file in files:
+                    if current_file.startswith('.'):
+                        continue
+                    expanded_files.add(
+                        os.path.normpath(os.path.join(root, current_file)))
+        else:
+            expanded_files.add(os.path.normpath(next_path))
+    return expanded_files
+
+
+def _write_gn_deps_file(depfile_path, manifest_path, out_dir, expanded_files):
+    with open(depfile_path, 'w') as depfile:
+        manifest_path = os.path.relpath(manifest_path, out_dir)
+        deps_list = []
+        for f in expanded_files:
+            deps_list.append(os.path.relpath(f, out_dir))
+        deps_string = ' '.join(deps_list)
+        depfile.write('%s: %s' % (manifest_path, deps_string))
+
+
+def _write_meta_package_manifest(
+        manifest, manifest_path, app_name, out_dir, package_version):
+    # Write meta/package manifest file and add to archive manifest.
+    meta_package = os.path.join(os.path.dirname(manifest_path), 'package')
+    with open(meta_package, 'w') as package_json:
+        json_payload = {'version': package_version, 'name': app_name}
+        json.dump(json_payload, package_json)
+        package_json_filepath = os.path.relpath(package_json.name, out_dir)
+        manifest.write('meta/package=%s\n' % package_json_filepath)
+
+
+def _write_component_manifest(manifest, component_info, manifest_path, out_dir):
+    """Copy component manifest files and add to archive manifest.
+
+    Raises an exception if a component uses a unknown manifest version.
+    """
+
+    for component_manifest in _get_component_manifests(component_info):
+        manifest_version = component_manifest.get('manifest_version')
+
+        if manifest_version not in MANIFEST_VERSION_EXTENSIONS:
+            raise Exception(
+                'Unknown manifest_version: {}'.format(manifest_version))
+
+        extension = MANIFEST_VERSION_EXTENSIONS.get(manifest_version)
+
+        manifest_dest_file_path = os.path.join(
+            os.path.dirname(manifest_path),
+            component_manifest.get('output_name') + extension)
+        shutil.copy(component_manifest.get('source'), manifest_dest_file_path)
+
+        manifest.write(
+            'meta/%s=%s\n' % (
+                os.path.basename(manifest_dest_file_path),
+                os.path.relpath(manifest_dest_file_path, out_dir)))
+
+
+def _write_package_manifest(
+        manifest, expanded_files, out_dir, exclude_file, root_dir,
+        component_info, binaries):
+    """Writes the package manifest for a Fuchsia package
+
+    Returns a list of binaries in the package.
+
+    Raises an exception if the app filename does not match the package path.
+    Raises an exception if excluded files are not found."""
+    app_filename = _get_app_filename(component_info)
+    gen_dir = os.path.normpath(os.path.join(out_dir, 'gen'))
+    app_found = False
+    excluded_files_set = set(exclude_file)
+    for current_file in expanded_files:
+        if _is_binary(current_file):
+            binaries.append(current_file)
+        current_file = _get_stripped_path(current_file)
+        # make_package_path() may relativize to either the source root or
+        # output directory.
+        in_package_path = make_package_path(
+            current_file, [gen_dir, root_dir, out_dir])
+        if in_package_path == app_filename:
+            app_found = True
+
+        if in_package_path in excluded_files_set:
+            excluded_files_set.remove(in_package_path)
+            continue
+
+        manifest.write('%s=%s\n' % (in_package_path, current_file))
+
+    if len(excluded_files_set) > 0:
+        raise Exception(
+            'Some files were excluded with --exclude-file, but '
+            'not found in the deps list: %s' % ', '.join(excluded_files_set))
+
+    if not app_found:
+        raise Exception('Could not locate executable inside runtime_deps.')
+
+
 def _build_manifest(args):
-    component_info_list = _parse_component(args.json_file)
-    binaries = []
-    with open(args.manifest_path, 'w') as manifest, \
-            open(args.depfile_path, 'w') as depfile:
-        for component_info in component_info_list:
-            app_filename = _get_app_filename(component_info)
+    expanded_files = _get_expanded_files(args.runtime_deps_file)
+    _write_gn_deps_file(
+        args.depfile_path, args.manifest_path, args.out_dir, expanded_files)
+    binaries = []  # keep track of binaries to write build IDs
+    with open(args.manifest_path, 'w') as manifest:
+        _write_meta_package_manifest(
+            manifest, args.manifest_path, args.app_name, args.out_dir,
+            args.package_version)
+        for component_info in _parse_component(args.json_file):
+            _write_package_manifest(
+                manifest, expanded_files, args.out_dir, args.exclude_file,
+                args.root_dir, component_info, binaries)
+            _write_component_manifest(
+                manifest, component_info, args.manifest_path, args.out_dir)
 
-            # Process the runtime deps file for file paths, recursively walking
-            # directories as needed.
-            # make_package_path() may relativize to either the source root or output
-            # directory.
-            # runtime_deps may contain duplicate paths, so use a set for
-            # de-duplication.
-            expanded_files = set()
-            for next_path in open(args.runtime_deps_file, 'r'):
-                next_path = next_path.strip()
-                if os.path.isdir(next_path):
-                    for root, _, files in os.walk(next_path):
-                        for current_file in files:
-                            if current_file.startswith('.'):
-                                continue
-                            expanded_files.add(
-                                os.path.join(root, current_file))
-                else:
-                    expanded_files.add(os.path.normpath(next_path))
-
-            # Format and write out the manifest contents.
-            gen_dir = os.path.normpath(os.path.join(args.out_dir, 'gen'))
-            app_found = False
-            excluded_files_set = set(args.exclude_file)
-            for current_file in expanded_files:
-                if _is_binary(current_file):
-                    binaries.append(current_file)
-                current_file = _get_stripped_path(current_file)
-
-                in_package_path = make_package_path(
-                    current_file, [gen_dir, args.root_dir, args.out_dir])
-                if in_package_path == app_filename:
-                    app_found = True
-
-                if in_package_path in excluded_files_set:
-                    excluded_files_set.remove(in_package_path)
-                    continue
-
-                manifest.write('%s=%s\n' % (in_package_path, current_file))
-
-            if len(excluded_files_set) > 0:
-                raise Exception(
-                    'Some files were excluded with --exclude-file, but '
-                    'not found in the deps list: %s' %
-                    ', '.join(excluded_files_set))
-
-            if not app_found:
-                raise Exception(
-                    'Could not locate executable inside runtime_deps.')
-
-            # Write meta/package manifest file and add to archive manifest.
-            with open(os.path.join(os.path.dirname(args.manifest_path),
-                                   'package'), 'w') as package_json:
-                json.dump({'version': '0', 'name': args.app_name},
-                          package_json)
-                manifest.write(
-                    'meta/package=%s\n' %
-                    os.path.relpath(package_json.name,
-                                    args.out_dir))
-
-            # Copy component manifest files and add to archive manifest.
-            for component_manifest in _get_component_manifests(component_info):
-                manifest_version = component_manifest.get('manifest_version')
-
-                if manifest_version not in MANIFEST_VERSION_EXTENSIONS:
-                    raise Exception(
-                        'Unknown manifest_version: {}'.format(manifest_version))
-
-                extension = MANIFEST_VERSION_EXTENSIONS.get(
-                    manifest_version)
-
-                manifest_dest_file_path = os.path.join(
-                    os.path.dirname(args.manifest_path),
-                    component_manifest.get('output_name') + extension)
-                shutil.copy(component_manifest.get('source'),
-                            manifest_dest_file_path)
-
-                manifest.write(
-                    'meta/%s=%s\n' % (
-                        os.path.basename(manifest_dest_file_path),
-                        os.path.relpath(manifest_dest_file_path, args.out_dir)))
-
-            # Write GN deps file.
-            depfile.write(
-                '%s: %s' % (
-                    os.path.relpath(args.manifest_path, args.out_dir), ' '.join(
-                        [
-                            os.path.relpath(f, args.out_dir)
-                            for f in expanded_files
-                        ])))
-
-            _write_build_ids_txt(binaries, args.build_ids_file)
+    _write_build_ids_txt(binaries, args.build_ids_file)
 
     return 0
 
@@ -268,6 +291,8 @@ def main():
     parser.add_argument(
         '--build-ids-file', required=True, help='Debug symbol index path.')
     parser.add_argument('--json-file', required=True)
+    parser.add_argument(
+        '--package-version', default='0', help='Version of the package')
 
     args = parser.parse_args()
 
