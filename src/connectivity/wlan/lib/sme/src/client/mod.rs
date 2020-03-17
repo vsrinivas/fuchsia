@@ -46,7 +46,7 @@ use {
     std::sync::Arc,
     thiserror::Error,
     wep_deprecated,
-    wlan_common::{self, bss::BssDescriptionExt, format::MacFmt, RadioConfig},
+    wlan_common::{self, bss::BssDescriptionExt, format::MacFmt, mac::MacAddr, RadioConfig},
     wlan_inspect::wrappers::InspectWlanChan,
 };
 
@@ -67,13 +67,7 @@ mod internal {
             timer::Timer,
         },
         fidl_fuchsia_wlan_mlme::DeviceInfo,
-        hex,
-        mundane::{
-            hash::{Digest, Sha256},
-            hmac::hmac,
-        },
         std::sync::Arc,
-        wlan_common::{format::MacFmt, mac::MacAddr},
     };
 
     pub struct Context {
@@ -82,21 +76,8 @@ mod internal {
         pub(crate) timer: Timer<Event>,
         pub att_id: ConnectionAttemptId,
         pub(crate) inspect: Arc<inspect::SmeTree>,
-        pub(crate) inspect_hash_key: [u8; 8],
         pub(crate) info: InfoReporter,
         pub(crate) is_softmac: bool,
-    }
-
-    impl Context {
-        pub(crate) fn inspect_hash(&self, bytes: &[u8]) -> String {
-            hex::encode(hmac::<Sha256>(&self.inspect_hash_key, bytes).bytes())
-        }
-
-        pub(crate) fn inspect_hash_mac_addr(&self, addr: MacAddr) -> String {
-            addr.to_mac_str_partial_hashed(|bytes| {
-                hex::encode(hmac::<Sha256>(&self.inspect_hash_key, bytes).bytes())
-            })
-        }
     }
 }
 
@@ -218,7 +199,7 @@ impl ClientSme {
         let (mlme_sink, mlme_stream) = mpsc::unbounded();
         let (info_sink, info_stream) = mpsc::unbounded();
         let (mut timer, time_stream) = timer::create_timer();
-        let inspect = Arc::new(inspect::SmeTree::new(&iface_tree_holder.node));
+        let inspect = Arc::new(inspect::SmeTree::new(&iface_tree_holder.node, inspect_hash_key));
         iface_tree_holder.place_iface_subtree(inspect.clone());
         timer.schedule(event::InspectPulseCheck);
 
@@ -233,7 +214,6 @@ impl ClientSme {
                     timer,
                     att_id: 0,
                     inspect,
-                    inspect_hash_key,
                     info: InfoReporter::new(InfoSink::new(info_sink)),
                     is_softmac,
                 },
@@ -284,7 +264,7 @@ impl ClientSme {
 
     pub fn on_disconnect_command(&mut self) {
         self.state = self.state.take().map(|state| state.disconnect(&mut self.context));
-        self.context.inspect.last_pulse.lock().update(self.status());
+        self.context.inspect.update_pulse(self.status());
     }
 
     pub fn on_scan_command(
@@ -346,6 +326,7 @@ impl super::Station for ClientSme {
                         if let Some(ref best_bss) = best_bss {
                             self.context.info.report_candidate_network(clone_bss_desc(best_bss));
                         }
+                        let best_bssid = best_bss.as_ref().map(|bss| bss.bssid.clone());
                         match best_bss {
                             // BSS found and compatible.
                             Some(best_bss) if self.cfg.is_bss_compatible(best_bss) => {
@@ -389,8 +370,7 @@ impl super::Station for ClientSme {
                             }
                             // Incompatible network
                             Some(incompatible_bss) => {
-                                inspect_msg
-                                    .replace(format!("incompatible BSS: {:?}", &incompatible_bss));
+                                inspect_msg.replace("incompatible BSS".to_string());
                                 error!("incompatible BSS: {:?}", &incompatible_bss);
                                 report_connect_finished(
                                     Some(token.responder),
@@ -410,12 +390,17 @@ impl super::Station for ClientSme {
                             }
                         };
 
-                        inspect_log_join_scan(&mut self.context, &bss_list, inspect_msg);
+                        inspect_log_join_scan(
+                            &mut self.context,
+                            &bss_list,
+                            best_bssid,
+                            inspect_msg,
+                        );
                     }
                     scan::ScanResult::JoinScanFinished { token, result: Err(e) } => {
                         inspect_log!(
                             self.context.inspect.join_scan_events.lock(),
-                            scan_failure: format!("{:?}", e),
+                            result: format!("scan failure: {:?}", e),
                         );
                         error!("cannot join network because scan failed: {:?}", e);
                         let result = ConnectResult::Failed(ConnectFailure::ScanFailure(e));
@@ -440,7 +425,7 @@ impl super::Station for ClientSme {
             }
         };
 
-        self.context.inspect.last_pulse.lock().update(self.status());
+        self.context.inspect.update_pulse(self.status());
     }
 
     fn on_timeout(&mut self, timed_event: TimedEvent<Event>) {
@@ -458,29 +443,37 @@ impl super::Station for ClientSme {
 
         // Because `self.status()` relies on the value of `self.state` to be present, we cannot
         // retrieve it and update pulse node inside the closure above.
-        self.context.inspect.last_pulse.lock().update(self.status());
+        self.context.inspect.update_pulse(self.status());
     }
 }
 
 fn inspect_log_join_scan(
     ctx: &mut Context,
     bss_list: &[fidl_mlme::BssDescription],
+    candidate_bssid: Option<MacAddr>,
     result_msg: Option<String>,
 ) {
     let inspect_bss = InspectListClosure(&bss_list, |node_writer, key, bss| {
-        let ssid = String::from_utf8_lossy(&bss.ssid[..]);
         inspect_insert!(node_writer, var key: {
             bssid: bss.bssid.to_mac_str(),
-            bssid_hash: ctx.inspect_hash_mac_addr(bss.bssid),
-            ssid: ssid.as_ref(),
-            ssid_hash: ctx.inspect_hash(ssid.as_bytes()),
+            bssid_hash: ctx.inspect.hasher.hash_mac_addr(bss.bssid),
+            ssid: String::from_utf8_lossy(&bss.ssid[..]).as_ref(),
+            ssid_hash: ctx.inspect.hasher.hash(&bss.ssid[..]),
             channel: InspectWlanChan(&bss.chan),
             rcpi_dbm: bss.rcpi_dbmh / 2,
             rsni_db: bss.rsni_dbh / 2,
             rssi_dbm: bss.rssi_dbm,
         });
     });
-    inspect_log!(ctx.inspect.join_scan_events.lock(), bss_list: inspect_bss, result?: result_msg);
+    let hasher = &ctx.inspect.hasher;
+    inspect_log!(ctx.inspect.join_scan_events.lock(), {
+        bss_list: inspect_bss,
+        candidate_bss: {
+            bssid?: candidate_bssid.as_ref().map(|bssid| bssid.to_mac_str()),
+            bssid_hash?: candidate_bssid.map(|bssid| hasher.hash_mac_addr(bssid)),
+        },
+        result?: result_msg,
+    });
 }
 
 fn report_connect_finished(

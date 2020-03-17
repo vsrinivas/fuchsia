@@ -438,9 +438,9 @@ impl Associated {
             inspect_log!(context.inspect.rsn_events.lock(), {
                 rx_eapol_frame: InspectBytes(&eapol_pdu),
                 foreign_bssid: ind.src_addr.to_mac_str(),
-                foreign_bssid_hash: context.inspect_hash_mac_addr(ind.src_addr),
+                foreign_bssid_hash: context.inspect.hasher.hash_mac_addr(ind.src_addr),
                 current_bssid: self.bss.bssid.to_mac_str(),
-                current_bssid_hash: context.inspect_hash_mac_addr(self.bss.bssid),
+                current_bssid_hash: context.inspect.hasher.hash_mac_addr(self.bss.bssid),
                 status: "rejected (foreign BSS)",
             });
             return Ok(self);
@@ -654,18 +654,14 @@ impl ClientState {
         context.info.report_join_started(context.att_id);
 
         let msg = connect_cmd_inspect_summary(&cmd);
-        let ssid = match String::from_utf8(cmd.bss.ssid.clone()) {
-            Ok(ssid) => ssid,
-            Err(_) => format!("{:?}", cmd.bss.ssid),
-        };
         inspect_log!(context.inspect.state_events.lock(), {
             from: start_state,
             to: JOINING_STATE,
             ctx: msg,
             bssid: cmd.bss.bssid.to_mac_str(),
-            bssid_hash: context.inspect_hash_mac_addr(cmd.bss.bssid),
-            ssid: ssid,
-            ssid_hash: context.inspect_hash(ssid.as_bytes()),
+            bssid_hash: context.inspect.hasher.hash_mac_addr(cmd.bss.bssid),
+            ssid: String::from_utf8_lossy(&cmd.bss.ssid[..]).as_ref(),
+            ssid_hash: context.inspect.hasher.hash(&cmd.bss.ssid[..]),
         });
         let state = Self::new(cfg.clone());
         match state {
@@ -1835,13 +1831,13 @@ mod tests {
             let (info_sink, info_stream) = mpsc::unbounded();
             let (timer, time_stream) = timer::create_timer();
             let inspector = Inspector::new();
+            let inspect_hash_key = [88, 77, 66, 55, 44, 33, 22, 11];
             let context = Context {
                 device_info: Arc::new(fake_device_info()),
                 mlme_sink: MlmeSink::new(mlme_sink),
                 timer,
                 att_id: 0,
-                inspect: Arc::new(inspect::SmeTree::new(inspector.root())),
-                inspect_hash_key: [88, 77, 66, 55, 44, 33, 22, 11],
+                inspect: Arc::new(inspect::SmeTree::new(inspector.root(), inspect_hash_key)),
                 info: InfoReporter::new(InfoSink::new(info_sink)),
                 is_softmac: true,
             };
