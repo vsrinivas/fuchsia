@@ -100,7 +100,7 @@ completion of the OTA the device will reboot.
   * `fx serve -v` (to run the update server for both build-push and ota)
     * `fx serve-updates -v` (to run only the update server, not the bootserver)
   * `fx build-push <package_name>` (each time a change is made you want to push)
-  * `fx shell "killall sysmgr"` (optional, depending on your component)
+  * `fx shell "killall sysmgr.cmx"` (optional, depending on your component)
   * `fx ota` (to trigger a full system update and reboot)
 
 ## Issues and considerations
@@ -120,7 +120,7 @@ If the package being updated hosts a service managed by Fuchsia that service
 may need to be restarted. Rebooting is undesirable both because it is slow and
 because the package will revert to the version paved on the device. In this
 case 'fuchsia' can be restarted. More accurately, `sysmgr` can be restarted.
-`sysmgr` can be restarted by running `fx shell "killall sysmgr"`.
+`sysmgr` can be restarted by running `fx shell "killall sysmgr.cmx"`.
 
 ### Updating things in the system package
 
