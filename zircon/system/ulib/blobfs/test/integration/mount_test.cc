@@ -15,7 +15,6 @@
 #include <fbl/auto_call.h>
 #include <fbl/unique_fd.h>
 #include <fs-management/mount.h>
-#include <fs-test-utils/blobfs/blobfs.h>
 #include <ramdevice-client/ramdisk.h>
 #include <zxtest/zxtest.h>
 

@@ -22,17 +22,24 @@
 namespace {
 
 namespace fio = ::llcpp::fuchsia::io;
+
+using blobfs::BlobInfo;
+using blobfs::GenerateBlob;
+using blobfs::GenerateRandomBlob;
+using blobfs::RandomFill;
+using blobfs::StreamAll;
+using blobfs::VerifyContents;
 using fs::FilesystemTest;
 using fs::RamDisk;
 
 void RunHugeBlobRandomTest(FilesystemTest* test) {
-  std::unique_ptr<fs_test_utils::BlobInfo> info;
+  std::unique_ptr<BlobInfo> info;
 
   // This blob is extremely large, and will remain large on disk.
   // It is not easily compressible.
   size_t kMaxSize = 1 << 25;  // 32 MB.
   size_t file_size = std::min(kMaxSize, 2 * blobfs::WriteBufferSize() * blobfs::kBlobfsBlockSize);
-  ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, file_size, &info));
+  ASSERT_TRUE(GenerateRandomBlob(kMountPath, file_size, &info));
 
   fbl::unique_fd fd;
   ASSERT_NO_FAILURES(MakeBlob(info.get(), &fd));
@@ -40,7 +47,7 @@ void RunHugeBlobRandomTest(FilesystemTest* test) {
   // We can re-open and verify the Blob as read-only.
   fd.reset(open(info->path, O_RDONLY));
   ASSERT_TRUE(fd, "Failed to-reopen blob");
-  ASSERT_TRUE(fs_test_utils::VerifyContents(fd.get(), info->data.get(), info->size_data));
+  ASSERT_TRUE(VerifyContents(fd.get(), info->data.get(), info->size_data));
 
   // We cannot re-open the blob as writable.
   fd.reset(open(info->path, O_RDWR | O_CREAT));
@@ -54,7 +61,7 @@ void RunHugeBlobRandomTest(FilesystemTest* test) {
   ASSERT_NO_FAILURES(test->Remount());
   fd.reset(open(info->path, O_RDONLY));
   ASSERT_TRUE(fd, "Failed to-reopen blob");
-  ASSERT_TRUE(fs_test_utils::VerifyContents(fd.get(), info->data.get(), info->size_data));
+  ASSERT_TRUE(VerifyContents(fd.get(), info->data.get(), info->size_data));
 
   ASSERT_EQ(0, unlink(info->path));
 }
@@ -64,15 +71,15 @@ TEST_F(BlobfsTest, HugeBlobRandom) { RunHugeBlobRandomTest(this); }
 TEST_F(BlobfsTestWithFvm, HugeBlobRandom) { RunHugeBlobRandomTest(this); }
 
 void RunHugeBlobCompressibleTest(FilesystemTest* test) {
-  std::unique_ptr<fs_test_utils::BlobInfo> info;
+  std::unique_ptr<BlobInfo> info;
 
   // This blob is extremely large, and will remain large on disk, even though
   // it is very compressible.
   size_t kMaxSize = 1 << 25;  // 32 MB.
   size_t file_size = std::min(kMaxSize, 2 * blobfs::WriteBufferSize() * blobfs::kBlobfsBlockSize);
-  ASSERT_TRUE(fs_test_utils::GenerateBlob(
+  ASSERT_TRUE(GenerateBlob(
       [](char* data, size_t length) {
-        fs_test_utils::RandomFill(data, length / 2);
+        RandomFill(data, length / 2);
         data += length / 2;
         memset(data, 'a', length / 2);
       },
@@ -84,7 +91,7 @@ void RunHugeBlobCompressibleTest(FilesystemTest* test) {
   // We can re-open and verify the Blob as read-only.
   fd.reset(open(info->path, O_RDONLY));
   ASSERT_TRUE(fd, "Failed to-reopen blob");
-  ASSERT_TRUE(fs_test_utils::VerifyContents(fd.get(), info->data.get(), info->size_data));
+  ASSERT_TRUE(VerifyContents(fd.get(), info->data.get(), info->size_data));
 
   // We cannot re-open the blob as writable.
   fd.reset(open(info->path, O_RDWR | O_CREAT));
@@ -98,7 +105,7 @@ void RunHugeBlobCompressibleTest(FilesystemTest* test) {
   ASSERT_NO_FAILURES(test->Remount());
   fd.reset(open(info->path, O_RDONLY));
   ASSERT_TRUE(fd, "Failed to-reopen blob");
-  ASSERT_TRUE(fs_test_utils::VerifyContents(fd.get(), info->data.get(), info->size_data));
+  ASSERT_TRUE(VerifyContents(fd.get(), info->data.get(), info->size_data));
 }
 
 TEST_F(BlobfsTest, HugeBlobCompressible) { RunHugeBlobCompressibleTest(this); }
@@ -149,13 +156,13 @@ TEST_F(BlobfsTest, MultiThreadStress) { RunMultiThreadStressTest(this); }
 TEST_F(BlobfsTestWithFvm, MultiThreadStress) { RunMultiThreadStressTest(this); }
 
 void RunNoSpaceTest() {
-  std::unique_ptr<fs_test_utils::BlobInfo> last_info = nullptr;
+  std::unique_ptr<BlobInfo> last_info = nullptr;
 
   // Keep generating blobs until we run out of space.
   size_t count = 0;
   while (true) {
-    std::unique_ptr<fs_test_utils::BlobInfo> info;
-    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << 17, &info));
+    std::unique_ptr<BlobInfo> info;
+    ASSERT_TRUE(GenerateRandomBlob(kMountPath, 1 << 17, &info));
 
     fbl::unique_fd fd(open(info->path, O_CREAT | O_RDWR));
     ASSERT_TRUE(fd, "Failed to create blob");
@@ -170,7 +177,7 @@ void RunNoSpaceTest() {
       // Yay! allocated successfully.
       break;
     }
-    ASSERT_EQ(fs_test_utils::StreamAll(write, fd.get(), info->data.get(), info->size_data), 0,
+    ASSERT_EQ(StreamAll(write, fd.get(), info->data.get(), info->size_data), 0,
               "Failed to write Data");
     last_info = std::move(info);
 
@@ -202,8 +209,8 @@ void RunFragmentationTest(FilesystemTest* test) {
   bool do_small_blob = true;
   size_t count = 0;
   while (true) {
-    std::unique_ptr<fs_test_utils::BlobInfo> info;
-    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath,
+    std::unique_ptr<BlobInfo> info;
+    ASSERT_TRUE(GenerateRandomBlob(kMountPath,
                                                   do_small_blob ? kSmallSize : kLargeSize, &info));
     fbl::unique_fd fd(open(info->path, O_CREAT | O_RDWR));
     ASSERT_TRUE(fd, "Failed to create blob");
@@ -211,7 +218,7 @@ void RunFragmentationTest(FilesystemTest* test) {
       ASSERT_EQ(ENOSPC, errno, "Blobfs expected to run out of space");
       break;
     }
-    ASSERT_EQ(0, fs_test_utils::StreamAll(write, fd.get(), info->data.get(), info->size_data),
+    ASSERT_EQ(0, StreamAll(write, fd.get(), info->data.get(), info->size_data),
               "Failed to write Data");
     if (do_small_blob) {
       small_blobs.push_back(fbl::String(info->path));
@@ -226,8 +233,8 @@ void RunFragmentationTest(FilesystemTest* test) {
 
   // We have filled up the disk with both small and large blobs.
   // Observe that we cannot add another large blob.
-  std::unique_ptr<fs_test_utils::BlobInfo> info;
-  ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, kLargeSize, &info));
+  std::unique_ptr<BlobInfo> info;
+  ASSERT_TRUE(GenerateRandomBlob(kMountPath, kLargeSize, &info));
 
   // Calculate actual number of blocks required to store the blob (including the merkle tree).
   blobfs::Inode large_inode;
@@ -265,10 +272,10 @@ void RunFragmentationTest(FilesystemTest* test) {
   ASSERT_EQ(0, ftruncate(fd.get(), info->size_data));
 
   // Sanity check that we can write and read the fragmented blob.
-  ASSERT_EQ(0, fs_test_utils::StreamAll(write, fd.get(), info->data.get(), info->size_data));
+  ASSERT_EQ(0, StreamAll(write, fd.get(), info->data.get(), info->size_data));
   std::unique_ptr<char[]> buf(new char[info->size_data]);
   ASSERT_EQ(0, lseek(fd.get(), 0, SEEK_SET));
-  ASSERT_EQ(0, fs_test_utils::StreamAll(read, fd.get(), buf.get(), info->size_data));
+  ASSERT_EQ(0, StreamAll(read, fd.get(), buf.get(), info->size_data));
   ASSERT_BYTES_EQ(info->data.get(), buf.get(), info->size_data);
 
   // Sanity check that we can re-open and unlink the fragmented blob.
@@ -281,11 +288,11 @@ TEST_F(BlobfsTest, Fragmentation) { RunFragmentationTest(this); }
 
 TEST_F(BlobfsTestWithFvm, Fragmentation) { RunFragmentationTest(this); }
 
-void MakeBlobUnverified(fs_test_utils::BlobInfo* info, fbl::unique_fd* out_fd) {
+void MakeBlobUnverified(BlobInfo* info, fbl::unique_fd* out_fd) {
   fbl::unique_fd fd(open(info->path, O_CREAT | O_RDWR));
   ASSERT_TRUE(fd, "Failed to create blob");
   ASSERT_EQ(ftruncate(fd.get(), info->size_data), 0);
-  ASSERT_EQ(fs_test_utils::StreamAll(write, fd.get(), info->data.get(), info->size_data), 0,
+  ASSERT_EQ(StreamAll(write, fd.get(), info->data.get(), info->size_data), 0,
             "Failed to write Data");
   out_fd->reset(fd.release());
 }
@@ -314,11 +321,11 @@ void ReopenThread(const std::string& path, std::atomic_bool* done) {
 void RunCreateWriteReopenTest() {
   size_t num_ops = 10;
 
-  std::unique_ptr<fs_test_utils::BlobInfo> anchor_info;
-  ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << 10, &anchor_info));
+  std::unique_ptr<BlobInfo> anchor_info;
+  ASSERT_TRUE(GenerateRandomBlob(kMountPath, 1 << 10, &anchor_info));
 
-  std::unique_ptr<fs_test_utils::BlobInfo> info;
-  ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 10 * (1 << 20), &info));
+  std::unique_ptr<BlobInfo> info;
+  ASSERT_TRUE(GenerateRandomBlob(kMountPath, 10 * (1 << 20), &info));
   std::string path(info->path);
 
   for (size_t i = 0; i < num_ops; i++) {
@@ -357,8 +364,8 @@ TEST_F(BlobfsTest, CreateWriteReopen) { RunCreateWriteReopenTest(); }
 TEST_F(BlobfsTestWithFvm, CreateWriteReopen) { RunCreateWriteReopenTest(); }
 
 void RunCreateFailureTest(const RamDisk* disk, FilesystemTest* test) {
-  std::unique_ptr<fs_test_utils::BlobInfo> info;
-  ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, blobfs::kBlobfsBlockSize, &info));
+  std::unique_ptr<BlobInfo> info;
+  ASSERT_TRUE(GenerateRandomBlob(kMountPath, blobfs::kBlobfsBlockSize, &info));
 
   // Attempt to create a blob, failing after each written block until the operations succeeds.
   // After each failure, check for disk consistency.
@@ -387,13 +394,13 @@ TEST_F(BlobfsTest, CreateFailure) { RunCreateFailureTest(environment_->ramdisk()
 TEST_F(BlobfsTestWithFvm, CreateFailure) { RunCreateFailureTest(environment_->ramdisk(), this); }
 
 // Creates a new blob but (mostly) without complaining about failures.
-void RelaxedMakeBlob(const fs_test_utils::BlobInfo* info, fbl::unique_fd* fd) {
+void RelaxedMakeBlob(const BlobInfo* info, fbl::unique_fd* fd) {
   fd->reset(open(info->path, O_CREAT | O_RDWR));
   ASSERT_TRUE(*fd);
   if (ftruncate(fd->get(), info->size_data) < 0) {
     return;
   }
-  fs_test_utils::StreamAll(write, fd->get(), info->data.get(), info->size_data);
+  StreamAll(write, fd->get(), info->data.get(), info->size_data);
 }
 
 TEST_F(BlobfsTestWithFvm, ExtendFailure) {
@@ -406,8 +413,8 @@ TEST_F(BlobfsTestWithFvm, ExtendFailure) {
   ASSERT_NO_FAILURES(GetFsInfo(&original_usage));
 
   // Create a blob of the maximum size possible without causing an FVM extension.
-  std::unique_ptr<fs_test_utils::BlobInfo> old_info;
-  ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(
+  std::unique_ptr<BlobInfo> old_info;
+  ASSERT_TRUE(GenerateRandomBlob(
       kMountPath, original_usage.total_bytes - blobfs::kBlobfsBlockSize, &old_info));
 
   fbl::unique_fd fd;
@@ -421,8 +428,8 @@ TEST_F(BlobfsTestWithFvm, ExtendFailure) {
   ASSERT_EQ(current_usage.total_bytes, original_usage.total_bytes);
 
   // Generate another blob of the smallest size possible.
-  std::unique_ptr<fs_test_utils::BlobInfo> new_info;
-  ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, blobfs::kBlobfsBlockSize, &new_info));
+  std::unique_ptr<BlobInfo> new_info;
+  ASSERT_TRUE(GenerateRandomBlob(kMountPath, blobfs::kBlobfsBlockSize, &new_info));
 
   // Since the FVM metadata covers a large range of blocks, it will take a while to test a
   // ramdisk failure after each individual block. Since we mostly care about what happens with
@@ -503,9 +510,9 @@ class LargeBlobTest : public BlobfsFixedDiskSizeTest {
 
 TEST_F(LargeBlobTest, UseSecondBitmap) {
   // Create (and delete) a blob large enough to overflow into the second bitmap block.
-  std::unique_ptr<fs_test_utils::BlobInfo> info;
+  std::unique_ptr<BlobInfo> info;
   size_t blob_size = ((GetDataBlockCount() / 2) + 1) * blobfs::kBlobfsBlockSize;
-  ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, blob_size, &info));
+  ASSERT_TRUE(GenerateRandomBlob(kMountPath, blob_size, &info));
 
   fbl::unique_fd fd;
   ASSERT_NO_FAILURES(MakeBlob(info.get(), &fd));

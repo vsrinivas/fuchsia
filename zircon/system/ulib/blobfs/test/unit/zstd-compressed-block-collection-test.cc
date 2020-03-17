@@ -20,13 +20,13 @@
 
 #include <blobfs/mkfs.h>
 #include <block-client/cpp/fake-device.h>
-#include <fs-test-utils/blobfs/blobfs.h>
 #include <zxtest/base/test.h>
 #include <zxtest/zxtest.h>
 
 #include "allocator/allocator.h"
 #include "blob.h"
 #include "blobfs.h"
+#include "test/blob_utils.h"
 
 namespace blobfs {
 namespace {
@@ -51,12 +51,12 @@ class ZSTDCompressedBlockCollectionTest : public zxtest::Test {
     ASSERT_OK(Blobfs::Create(loop_.dispatcher(), std::move(device), &options, &fs_));
   }
 
-  void AddRandomBlobAndSync(size_t sz, std::unique_ptr<fs_test_utils::BlobInfo>* out_info) {
+  void AddRandomBlobAndSync(size_t sz, std::unique_ptr<BlobInfo>* out_info) {
     AddRandomBlob(sz, out_info);
     ASSERT_OK(Sync());
   }
 
-  void InitCollection(const fs_test_utils::BlobInfo& blob_info, uint64_t num_vmo_bytes,
+  void InitCollection(const BlobInfo& blob_info, uint64_t num_vmo_bytes,
                       std::unique_ptr<ZSTDCompressedBlockCollection>* out_coll) {
     ASSERT_EQ(0, blob_info.size_merkle % kBlobfsBlockSize);
     uint64_t num_merkle_blocks64 = blob_info.size_merkle / kBlobfsBlockSize;
@@ -72,7 +72,7 @@ class ZSTDCompressedBlockCollectionTest : public zxtest::Test {
   }
 
  protected:
-  uint32_t LookupInode(const fs_test_utils::BlobInfo& info) {
+  uint32_t LookupInode(const BlobInfo& info) {
     Digest digest;
     fbl::RefPtr<CacheNode> node;
     EXPECT_OK(digest.Parse(info.path));
@@ -81,13 +81,13 @@ class ZSTDCompressedBlockCollectionTest : public zxtest::Test {
     return vnode->Ino();
   }
 
-  void AddRandomBlob(size_t sz, std::unique_ptr<fs_test_utils::BlobInfo>* out_info) {
+  void AddRandomBlob(size_t sz, std::unique_ptr<BlobInfo>* out_info) {
     fbl::RefPtr<fs::Vnode> root;
     ASSERT_OK(fs_->OpenRootNode(&root));
     fs::Vnode* root_node = root.get();
 
-    std::unique_ptr<fs_test_utils::BlobInfo> info;
-    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob("", sz, &info));
+    std::unique_ptr<BlobInfo> info;
+    ASSERT_NO_FAILURES(GenerateRandomBlob("", sz, &info));
     memmove(info->path, info->path + 1, strlen(info->path));  // Remove leading slash.
 
     fbl::RefPtr<fs::Vnode> file;
@@ -125,7 +125,7 @@ class ZSTDCompressedBlockCollectionTest : public zxtest::Test {
 
 TEST_F(ZSTDCompressedBlockCollectionTest, SmallBlobRead) {
   constexpr uint32_t kNumDataBlocks = 1;
-  std::unique_ptr<fs_test_utils::BlobInfo> blob_info;
+  std::unique_ptr<BlobInfo> blob_info;
   AddRandomBlobAndSync(kNumDataBlocks * kBlobfsBlockSize, &blob_info);
   ASSERT_EQ(false, blob_info->size_merkle > 0);
 
@@ -144,7 +144,7 @@ TEST_F(ZSTDCompressedBlockCollectionTest, SmallBlobRead) {
 
 TEST_F(ZSTDCompressedBlockCollectionTest, SmallBlobBadOffset) {
   constexpr uint32_t kNumDataBlocks = 1;
-  std::unique_ptr<fs_test_utils::BlobInfo> blob_info;
+  std::unique_ptr<BlobInfo> blob_info;
   AddRandomBlobAndSync(kNumDataBlocks * kBlobfsBlockSize, &blob_info);
   ASSERT_EQ(false, blob_info->size_merkle > 0);
 
@@ -161,7 +161,7 @@ TEST_F(ZSTDCompressedBlockCollectionTest, SmallBlobBadOffset) {
 
 TEST_F(ZSTDCompressedBlockCollectionTest, SmallBlobBadNumDataBlocks) {
   constexpr uint32_t kNumDataBlocks = 1;
-  std::unique_ptr<fs_test_utils::BlobInfo> blob_info;
+  std::unique_ptr<BlobInfo> blob_info;
   AddRandomBlobAndSync(kNumDataBlocks * kBlobfsBlockSize, &blob_info);
   ASSERT_EQ(false, blob_info->size_merkle > 0);
 
@@ -179,7 +179,7 @@ TEST_F(ZSTDCompressedBlockCollectionTest, SmallBlobBadNumDataBlocks) {
 
 TEST_F(ZSTDCompressedBlockCollectionTest, BlobRead) {
   constexpr uint32_t kNumDataBlocks = 4;
-  std::unique_ptr<fs_test_utils::BlobInfo> blob_info;
+  std::unique_ptr<BlobInfo> blob_info;
   AddRandomBlobAndSync(kNumDataBlocks * kBlobfsBlockSize, &blob_info);
   ASSERT_EQ(true, blob_info->size_merkle > 0);
 
@@ -198,7 +198,7 @@ TEST_F(ZSTDCompressedBlockCollectionTest, BlobRead) {
 
 TEST_F(ZSTDCompressedBlockCollectionTest, BadOffset) {
   constexpr uint32_t kNumDataBlocks = 4;
-  std::unique_ptr<fs_test_utils::BlobInfo> blob_info;
+  std::unique_ptr<BlobInfo> blob_info;
   AddRandomBlobAndSync(kNumDataBlocks * kBlobfsBlockSize, &blob_info);
   ASSERT_EQ(true, blob_info->size_merkle > 0);
 
@@ -215,7 +215,7 @@ TEST_F(ZSTDCompressedBlockCollectionTest, BadOffset) {
 
 TEST_F(ZSTDCompressedBlockCollectionTest, BadNumDataBlocks) {
   constexpr uint32_t kNumDataBlocks = 4;
-  std::unique_ptr<fs_test_utils::BlobInfo> blob_info;
+  std::unique_ptr<BlobInfo> blob_info;
   AddRandomBlobAndSync(kNumDataBlocks * kBlobfsBlockSize, &blob_info);
   ASSERT_EQ(true, blob_info->size_merkle > 0);
 
@@ -233,7 +233,7 @@ TEST_F(ZSTDCompressedBlockCollectionTest, BadNumDataBlocks) {
 
 TEST_F(ZSTDCompressedBlockCollectionTest, VMOTooSmall) {
   constexpr uint32_t kNumDataBlocks = 2;
-  std::unique_ptr<fs_test_utils::BlobInfo> blob_info;
+  std::unique_ptr<BlobInfo> blob_info;
   AddRandomBlobAndSync(kNumDataBlocks * kBlobfsBlockSize, &blob_info);
   ASSERT_EQ(true, blob_info->size_merkle > 0);
 

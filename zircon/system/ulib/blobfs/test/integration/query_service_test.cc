@@ -17,6 +17,7 @@
 #include <zxtest/zxtest.h>
 
 #include "blobfs_fixtures.h"
+#include "test/blob_utils.h"
 
 namespace {
 
@@ -85,8 +86,8 @@ TEST_F(QueryServiceTest, QueryInfo) {
   size_t total_bytes = 0;
   ASSERT_NO_FAILURES(QueryInfo(0, 0));
   for (size_t i = 10; i < 16; i++) {
-    std::unique_ptr<fs_test_utils::BlobInfo> info;
-    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << i, &info));
+    std::unique_ptr<blobfs::BlobInfo> info;
+    ASSERT_TRUE(blobfs::GenerateRandomBlob(kMountPath, 1 << i, &info));
 
     fbl::unique_fd fd;
     ASSERT_NO_FAILURES(MakeBlob(info.get(), &fd));

@@ -14,11 +14,11 @@
 #include <blobfs/mkfs.h>
 #include <block-client/cpp/fake-device.h>
 #include <fbl/auto_call.h>
-#include <fs-test-utils/blobfs/blobfs.h>
 #include <zxtest/zxtest.h>
 
 #include "blob.h"
 #include "blobfs.h"
+#include "test/blob_utils.h"
 #include "utils.h"
 
 namespace blobfs {
@@ -168,13 +168,13 @@ class BlobLoaderTest : public zxtest::Test {
 
   // AddRandomBlob creates and writes a random blob to the file system.
   // |out_info| is optional and is used to retrieve the created file information.
-  void AddRandomBlob(size_t sz, std::unique_ptr<fs_test_utils::BlobInfo>* out_info) {
+  void AddRandomBlob(size_t sz, std::unique_ptr<BlobInfo>* out_info) {
     fbl::RefPtr<fs::Vnode> root;
     ASSERT_OK(fs_->OpenRootNode(&root));
     fs::Vnode* root_node = root.get();
 
-    std::unique_ptr<fs_test_utils::BlobInfo> info;
-    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob("", sz, &info));
+    std::unique_ptr<BlobInfo> info;
+    ASSERT_NO_FAILURES(GenerateRandomBlob("", sz, &info));
     memmove(info->path, info->path + 1, strlen(info->path));  // Remove leading slash.
 
     fbl::RefPtr<fs::Vnode> file;
@@ -193,7 +193,7 @@ class BlobLoaderTest : public zxtest::Test {
 
   Blobfs* Fs() const { return fs_.get(); }
 
-  uint32_t LookupInode(const fs_test_utils::BlobInfo& info) {
+  uint32_t LookupInode(const BlobInfo& info) {
     Digest digest;
     fbl::RefPtr<CacheNode> node;
     EXPECT_OK(digest.Parse(info.path));
@@ -226,7 +226,7 @@ class CompressedBlobLoaderTest : public BlobLoaderTest {
 
 void DoTest_NullBlob(BlobLoaderTest* test) {
   size_t blob_len = 0;
-  std::unique_ptr<fs_test_utils::BlobInfo> info;
+  std::unique_ptr<BlobInfo> info;
   test->AddRandomBlob(blob_len, &info);
   ASSERT_OK(test->Sync());
 
@@ -248,7 +248,7 @@ TEST_F(UncompressedBlobLoaderTest, Test_NullBlob) { DoTest_NullBlob(this); }
 
 void DoTest_SmallBlob(BlobLoaderTest* test) {
   size_t blob_len = 1024;
-  std::unique_ptr<fs_test_utils::BlobInfo> info;
+  std::unique_ptr<BlobInfo> info;
   test->AddRandomBlob(blob_len, &info);
   ASSERT_OK(test->Sync());
 
@@ -270,7 +270,7 @@ TEST_F(UncompressedBlobLoaderTest, SmallBlob) { DoTest_SmallBlob(this); }
 
 void DoTest_Paged_SmallBlob(BlobLoaderTest* test) {
   size_t blob_len = 1024;
-  std::unique_ptr<fs_test_utils::BlobInfo> info;
+  std::unique_ptr<BlobInfo> info;
   test->AddRandomBlob(blob_len, &info);
   ASSERT_OK(test->Sync());
 
@@ -300,7 +300,7 @@ TEST_F(UncompressedBlobLoaderTest, Paged_SmallBlob) { DoTest_Paged_SmallBlob(thi
 
 void DoTest_LargeBlob(BlobLoaderTest* test) {
   size_t blob_len = 1<<18;
-  std::unique_ptr<fs_test_utils::BlobInfo> info;
+  std::unique_ptr<BlobInfo> info;
   test->AddRandomBlob(blob_len, &info);
   ASSERT_OK(test->Sync());
 
@@ -323,7 +323,7 @@ TEST_F(UncompressedBlobLoaderTest, LargeBlob) { DoTest_LargeBlob(this); }
 
 void DoTest_LargeBlob_NonAlignedLength(BlobLoaderTest* test) {
   size_t blob_len = (1<<18) - 1;
-  std::unique_ptr<fs_test_utils::BlobInfo> info;
+  std::unique_ptr<BlobInfo> info;
   test->AddRandomBlob(blob_len, &info);
   ASSERT_OK(test->Sync());
 
@@ -350,7 +350,7 @@ TEST_F(UncompressedBlobLoaderTest, LargeBlob_NonAlignedLength) {
 
 void DoTest_Paged_LargeBlob(BlobLoaderTest* test) {
   size_t blob_len = 1<<18;
-  std::unique_ptr<fs_test_utils::BlobInfo> info;
+  std::unique_ptr<BlobInfo> info;
   test->AddRandomBlob(blob_len, &info);
   ASSERT_OK(test->Sync());
 
@@ -381,7 +381,7 @@ TEST_F(UncompressedBlobLoaderTest, Paged_LargeBlob) { DoTest_Paged_LargeBlob(thi
 
 void DoTest_Paged_LargeBlob_NonAlignedLength(BlobLoaderTest* test) {
   size_t blob_len = (1<<18) - 1;
-  std::unique_ptr<fs_test_utils::BlobInfo> info;
+  std::unique_ptr<BlobInfo> info;
   test->AddRandomBlob(blob_len, &info);
   ASSERT_OK(test->Sync());
 

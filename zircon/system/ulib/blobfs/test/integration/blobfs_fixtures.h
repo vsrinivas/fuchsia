@@ -6,8 +6,9 @@
 #define ZIRCON_SYSTEM_ULIB_BLOBFS_TEST_INTEGRATION_BLOBFS_FIXTURES_H_
 
 #include <blobfs/format.h>
-#include <fs-test-utils/blobfs/blobfs.h>
 #include <fs/test_support/fixtures.h>
+
+#include "test/blob_utils.h"
 
 // FVM slice size used for tests.
 constexpr size_t kTestFvmSliceSize = blobfs::kBlobfsBlockSize;  // 8kb.
@@ -49,6 +50,6 @@ class BlobfsFixedDiskSizeTestWithFvm : public fs::FixedDiskSizeTestWithFvm {
 // Creates an open blob with the provided Merkle tree + Data, and reads back to
 // verify the data.
 // TODO(rvargas): Move to a better place.
-void MakeBlob(const fs_test_utils::BlobInfo* info, fbl::unique_fd* fd);
+void MakeBlob(const blobfs::BlobInfo* info, fbl::unique_fd* fd);
 
 #endif  // ZIRCON_SYSTEM_ULIB_BLOBFS_TEST_INTEGRATION_BLOBFS_FIXTURES_H_

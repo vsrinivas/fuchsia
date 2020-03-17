@@ -49,11 +49,11 @@ void BlobfsFixedDiskSizeTestWithFvm::CheckInfo() {
   CheckBlobfsInfo(this);
 }
 
-void MakeBlob(const fs_test_utils::BlobInfo* info, fbl::unique_fd* fd) {
+void MakeBlob(const blobfs::BlobInfo* info, fbl::unique_fd* fd) {
   fd->reset(open(info->path, O_CREAT | O_RDWR));
   ASSERT_TRUE(*fd, "Failed to create blob");
   ASSERT_EQ(ftruncate(fd->get(), info->size_data), 0);
-  ASSERT_EQ(fs_test_utils::StreamAll(write, fd->get(), info->data.get(), info->size_data), 0,
+  ASSERT_EQ(blobfs::StreamAll(write, fd->get(), info->data.get(), info->size_data), 0,
             "Failed to write Data");
-  ASSERT_TRUE(fs_test_utils::VerifyContents(fd->get(), info->data.get(), info->size_data));
+  ASSERT_TRUE(blobfs::VerifyContents(fd->get(), info->data.get(), info->size_data));
 }

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FS_TEST_UTILS_BLOBFS_BLOBFS_H_
-#define FS_TEST_UTILS_BLOBFS_BLOBFS_H_
+#ifndef ZIRCON_SYSTEM_ULIB_BLOBFS_TEST_BLOB_UTILS_H_
+#define ZIRCON_SYSTEM_ULIB_BLOBFS_TEST_BLOB_UTILS_H_
 
 #include <lib/fdio/io.h>
 
@@ -11,7 +11,7 @@
 
 #include <fbl/string.h>
 
-namespace fs_test_utils {
+namespace blobfs {
 
 using BlobSrcFunction = void (*)(char* data, size_t length);
 
@@ -46,6 +46,6 @@ bool GenerateRandomBlob(fbl::String mount_path, size_t size_data, std::unique_pt
 
 bool VerifyContents(int fd, const char* data, size_t size_data);
 
-}  // namespace fs_test_utils
+}  // namespace blobfs
 
-#endif  // FS_TEST_UTILS_BLOBFS_BLOBFS_H_
+#endif  // ZIRCON_SYSTEM_ULIB_BLOBFS_TEST_BLOB_UTILS_H_

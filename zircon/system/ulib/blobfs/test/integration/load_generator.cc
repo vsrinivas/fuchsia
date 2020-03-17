@@ -10,10 +10,10 @@
 
 #include "load_generator.h"
 
-using fs_test_utils::BlobInfo;
-using fs_test_utils::GenerateRandomBlob;
-using fs_test_utils::StreamAll;
-using fs_test_utils::VerifyContents;
+using blobfs::BlobInfo;
+using blobfs::GenerateRandomBlob;
+using blobfs::StreamAll;
+using blobfs::VerifyContents;
 
 // Make sure we do not exceed maximum fd count.
 static_assert(FDIO_MAX_FD >= 256, "");
