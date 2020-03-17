@@ -94,7 +94,9 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
   zx_device(const zx_device&) = delete;
   zx_device& operator=(const zx_device&) = delete;
 
-  static zx_status_t Create(fbl::RefPtr<zx_device>* out_dev);
+  // |ctx| must outlive |*out_dev|.  This is managed in the full binary by creating
+  // the DriverHostContext in main() (having essentially a static lifetime).
+  static zx_status_t Create(DriverHostContext* ctx, fbl::RefPtr<zx_device>* out_dev);
 
   void InitOp() {
     TraceLabelBuffer trace_label;
@@ -333,7 +335,7 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
   }
 
  private:
-  zx_device() = default;
+  explicit zx_device(DriverHostContext* ctx);
 
   // The fuchsia.Device.Manager.Coordinator protocol
   zx::channel coordinator_rpc_;
@@ -399,6 +401,8 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
   SystemPowerStateMapping system_power_states_mapping_;
   uint32_t current_performance_state_ = llcpp::fuchsia::device::DEVICE_PERFORMANCE_STATE_P0;
   bool auto_suspend_configured_ = false;
+
+  [[maybe_unused]] DriverHostContext* const driver_host_context_;
 };
 
 // zx_device_t objects must be created or initialized by the driver manager's

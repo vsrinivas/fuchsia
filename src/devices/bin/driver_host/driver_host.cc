@@ -470,7 +470,7 @@ void DevhostControllerConnection::CreateDevice(zx::channel coordinator_rpc,
 
   // Create a dummy parent device for use in this call to Create
   fbl::RefPtr<zx_device> parent;
-  if ((r = zx_device::Create(&parent)) != ZX_OK) {
+  if ((r = zx_device::Create(driver_host_context_, &parent)) != ZX_OK) {
     log(ERROR, "driver_host: device create() failed: %d\n", r);
     return;
   }
@@ -551,7 +551,7 @@ void DevhostControllerConnection::CreateCompositeDevice(
   }
 
   fbl::RefPtr<zx_device_t> dev;
-  zx_status_t status = zx_device::Create(&dev);
+  zx_status_t status = zx_device::Create(driver_host_context_, &dev);
   if (status != ZX_OK) {
     completer.Reply(status);
     return;
@@ -592,7 +592,7 @@ void DevhostControllerConnection::CreateDeviceStub(zx::channel coordinator_rpc,
   log(RPC_IN, "driver_host: create device stub\n");
 
   fbl::RefPtr<zx_device_t> dev;
-  zx_status_t r = zx_device::Create(&dev);
+  zx_status_t r = zx_device::Create(driver_host_context_, &dev);
   // TODO: dev->ops and other lifecycle bits
   // no name means a dummy proxy device
   if (r != ZX_OK) {

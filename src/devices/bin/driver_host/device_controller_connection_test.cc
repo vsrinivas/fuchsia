@@ -24,7 +24,7 @@ TEST(DeviceControllerConnectionTestCase, Creation) {
   DriverHostContext ctx(&kAsyncLoopConfigNoAttachToCurrentThread);
 
   fbl::RefPtr<zx_device> dev;
-  ASSERT_OK(zx_device::Create(&dev));
+  ASSERT_OK(zx_device::Create(&ctx, &dev));
 
   zx::channel device_local, device_remote;
   ASSERT_OK(zx::channel::create(0, &device_local, &device_remote));
@@ -47,7 +47,7 @@ TEST(DeviceControllerConnectionTestCase, PeerClosedDuringReply) {
   DriverHostContext ctx(&kAsyncLoopConfigNoAttachToCurrentThread);
 
   fbl::RefPtr<zx_device> dev;
-  ASSERT_OK(zx_device::Create(&dev));
+  ASSERT_OK(zx_device::Create(&ctx, &dev));
 
   zx::channel device_local, device_remote;
   ASSERT_OK(zx::channel::create(0, &device_local, &device_remote));
@@ -133,7 +133,7 @@ TEST(DeviceControllerConnectionTestCase, PeerClosed) {
   DriverHostContext ctx(&kAsyncLoopConfigNoAttachToCurrentThread);
 
   fbl::RefPtr<zx_device> dev;
-  ASSERT_OK(zx_device::Create(&dev));
+  ASSERT_OK(zx_device::Create(&ctx, &dev));
 
   zx::channel device_local, device_remote;
   ASSERT_OK(zx::channel::create(0, &device_local, &device_remote));
@@ -161,7 +161,7 @@ TEST(DeviceControllerConnectionTestCase, UnbindHook) {
   DriverHostContext ctx(&kAsyncLoopConfigNoAttachToCurrentThread);
 
   fbl::RefPtr<zx_device> dev;
-  ASSERT_OK(zx_device::Create(&dev));
+  ASSERT_OK(zx_device::Create(&ctx, &dev));
 
   zx::channel device_local, device_remote;
   ASSERT_OK(zx::channel::create(0, &device_local, &device_remote));

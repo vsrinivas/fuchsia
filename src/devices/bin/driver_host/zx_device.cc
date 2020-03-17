@@ -14,8 +14,10 @@
 #include "devfs_connection.h"
 #include "driver_host.h"
 
-zx_status_t zx_device::Create(fbl::RefPtr<zx_device>* out_dev) {
-  *out_dev = fbl::AdoptRef(new zx_device());
+zx_device::zx_device(DriverHostContext* ctx) : driver_host_context_(ctx) {}
+
+zx_status_t zx_device::Create(DriverHostContext* ctx, fbl::RefPtr<zx_device>* out_dev) {
+  *out_dev = fbl::AdoptRef(new zx_device(ctx));
   return ZX_OK;
 }
 

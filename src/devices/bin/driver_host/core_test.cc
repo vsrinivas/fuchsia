@@ -154,7 +154,7 @@ class CoreTest : public zxtest::Test {
 
 TEST_F(CoreTest, RebindNoChildren) {
   fbl::RefPtr<zx_device> dev;
-  ASSERT_OK(zx_device::Create(&dev));
+  ASSERT_OK(zx_device::Create(&ctx_, &dev));
 
   zx_protocol_device_t ops = {};
   dev->ops = &ops;
@@ -180,13 +180,13 @@ TEST_F(CoreTest, RebindHasOneChild) {
     zx_protocol_device_t ops = {};
     ops.unbind = [](void* ctx) { *static_cast<uint32_t*>(ctx) += 1; };
 
-    ASSERT_OK(zx_device::Create(&parent));
+    ASSERT_OK(zx_device::Create(&ctx_, &parent));
     parent->ops = &ops;
     parent->ctx = &unbind_count;
     parent->coordinator_rpc = zx::unowned(rpc);
     {
       fbl::RefPtr<zx_device> child;
-      ASSERT_OK(zx_device::Create(&child));
+      ASSERT_OK(zx_device::Create(&ctx_, &child));
       child->ops = &ops;
       child->ctx = &unbind_count;
       child->rpc = zx::unowned(rpc);
@@ -216,14 +216,14 @@ TEST_F(CoreTest, RebindHasMultipleChildren) {
     zx_protocol_device_t ops = {};
     ops.unbind = [](void* ctx) { *static_cast<uint32_t*>(ctx) += 1; };
 
-    ASSERT_OK(zx_device::Create(&parent));
+    ASSERT_OK(zx_device::Create(&ctx_, &parent));
     parent->ops = &ops;
     parent->ctx = &unbind_count;
     parent->coordinator_rpc = zx::unowned(rpc);
     {
       std::array<fbl::RefPtr<zx_device>, 5> children;
       for (auto& child : children) {
-        ASSERT_OK(zx_device::Create(&child));
+        ASSERT_OK(zx_device::Create(&ctx_, &child));
         child->ops = &ops;
         child->ctx = &unbind_count;
         child->rpc = zx::unowned(rpc);

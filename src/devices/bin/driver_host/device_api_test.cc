@@ -8,14 +8,17 @@
 #include <fbl/auto_lock.h>
 #include <zxtest/zxtest.h>
 
+#include "driver_host_context.h"
 #include "proxy_iostate.h"
 #include "zx_device.h"
 
 namespace {
 
 TEST(DeviceApiTest, OpsNotImplemented) {
+  DriverHostContext ctx(&kAsyncLoopConfigNoAttachToCurrentThread);
+
   fbl::RefPtr<zx_device> dev;
-  ASSERT_OK(zx_device::Create(&dev));
+  ASSERT_OK(zx_device::Create(&ctx, &dev));
 
   zx_protocol_device_t ops = {};
   dev->ops = &ops;
@@ -40,8 +43,9 @@ zx_off_t test_get_size(void* ctx) {
 }
 
 TEST(DeviceApiTest, GetProtocol) {
+  DriverHostContext ctx(&kAsyncLoopConfigNoAttachToCurrentThread);
   fbl::RefPtr<zx_device> dev;
-  ASSERT_OK(zx_device::Create(&dev));
+  ASSERT_OK(zx_device::Create(&ctx, &dev));
 
   zx_protocol_device_t ops = {};
   ops.get_protocol = test_get_protocol;
@@ -54,8 +58,9 @@ TEST(DeviceApiTest, GetProtocol) {
 }
 
 TEST(DeviceApiTest, GetSize) {
+  DriverHostContext ctx(&kAsyncLoopConfigNoAttachToCurrentThread);
   fbl::RefPtr<zx_device> dev;
-  ASSERT_OK(zx_device::Create(&dev));
+  ASSERT_OK(zx_device::Create(&ctx, &dev));
 
   zx_protocol_device_t ops = {};
   ops.get_size = test_get_size;

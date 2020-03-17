@@ -409,7 +409,7 @@ zx_status_t DriverHostContext::DeviceCreate(zx_driver_t* drv, const char* name, 
   }
 
   fbl::RefPtr<zx_device> dev;
-  zx_status_t status = zx_device::Create(&dev);
+  zx_status_t status = zx_device::Create(this, &dev);
   if (status != ZX_OK) {
     return status;
   }
