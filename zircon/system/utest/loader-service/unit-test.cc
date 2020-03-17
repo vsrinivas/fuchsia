@@ -72,10 +72,6 @@ class StubDirectory : public fuchsia::io::Directory::Interface {
 };
 
 TEST(LoaderServiceTest, Create) {
-  // make a dispatcher loop on a thread
-  async::Loop fs_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  ASSERT_OK(fs_loop.StartThread("fake-filesystem"));
-
   // make a mock filesystem (directory and contained file) that records:
   // * Open flags
   // * Open path
@@ -84,7 +80,11 @@ TEST(LoaderServiceTest, Create) {
   uint32_t last_get_buffer_flags = 0;
   uint32_t last_open_flags = 0;
   uint32_t open_count = 0;
-  char* last_opened_path = new char[PATH_MAX + 1];
+  char last_opened_path[PATH_MAX + 1];
+
+  // make a dispatcher loop on a thread
+  async::Loop fs_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  ASSERT_OK(fs_loop.StartThread("fake-filesystem"));
 
   class TestFile final : public StubFile {
    public:
