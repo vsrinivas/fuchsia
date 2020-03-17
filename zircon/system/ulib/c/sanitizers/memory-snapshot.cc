@@ -429,6 +429,7 @@ class MemorySnapshot {
         tcb->start_arg,
         tcb->locale,
         tcb->dlerror_buf,
+        tcb->tls_dtors,
     };
     callback(ptrs, sizeof(ptrs), callback_arg_);
 
