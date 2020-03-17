@@ -7,12 +7,12 @@
 #include <lib/async/cpp/executor.h>
 #include <lib/fit/promise.h>
 #include <lib/fit/promise_internal.h>
-#include <lib/gtest/test_loop_fixture.h>
 
 #include <memory>
 #include <vector>
 
 #include "src/lib/fxl/logging.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
 

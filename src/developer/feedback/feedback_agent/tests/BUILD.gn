@@ -241,7 +241,6 @@ executable("data_provider_unittest") {
   deps = [
     ":stub_scenic",
     "//garnet/public/lib/fostr/fidl/fuchsia.math",
-    "//garnet/public/lib/timekeeper:testing",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/fidl/fuchsia.math",
     "//sdk/fidl/fuchsia.sys",
@@ -259,6 +258,7 @@ executable("data_provider_unittest") {
     "//src/developer/feedback/utils:archive",
     "//src/lib/fsl",
     "//src/lib/fxl",
+    "//src/lib/timekeeper:testing",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//third_party/rapidjson",
@@ -275,9 +275,9 @@ executable("data_register_unittest") {
   sources = [ "data_register_unittest.cc" ]
 
   deps = [
-    "//garnet/public/lib/gtest",
     "//src/developer/feedback/feedback_agent:data_register",
     "//src/developer/feedback/testing:gtest_with_syslog_main",
+    "//src/lib/testing/loop_fixture",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
@@ -341,7 +341,6 @@ executable("feedback_agent_integration_test") {
   deps = [
     ":zx_object_util",
     "//garnet/public/lib/fostr/fidl/fuchsia.feedback",
-    "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.cobalt.test",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/fidl/fuchsia.hwinfo",

@@ -8,7 +8,6 @@
 #include <fuchsia/math/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fit/result.h>
-#include <lib/fostr/fidl/fuchsia/math/formatting.h>
 #include <lib/zx/time.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
@@ -18,6 +17,7 @@
 #include <string>
 #include <vector>
 
+#include "garnet/public/lib/fostr/fidl/fuchsia/math/formatting.h"
 #include "src/developer/feedback/feedback_agent/annotations/aliases.h"
 #include "src/developer/feedback/feedback_agent/attachments/aliases.h"
 #include "src/developer/feedback/feedback_agent/constants.h"

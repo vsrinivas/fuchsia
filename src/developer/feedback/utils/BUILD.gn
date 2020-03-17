@@ -45,10 +45,10 @@ source_set("cobalt") {
 
   public_deps = [
     ":metrics_registry",
-    "//garnet/public/lib/timekeeper:system",
-    "//garnet/public/lib/timekeeper:timekeeper",
     "//sdk/lib/sys/cpp",
     "//src/lib/backoff:backoff",
+    "//src/lib/timekeeper",
+    "//src/lib/timekeeper:system",
     "//zircon/public/lib/fit",
     "//zircon/system/fidl/fuchsia-cobalt",
   ]

@@ -62,11 +62,11 @@ executable("main") {
 
   deps = [
     ":src",
-    "//garnet/public/lib/timekeeper:system",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/sys/cpp",
     "//src/developer/feedback/crashpad_agent/info",
     "//src/lib/syslog/cpp",
+    "//src/lib/timekeeper:system",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
   ]
@@ -155,9 +155,9 @@ source_set("src") {
   deps = [
     ":constants",
     "//garnet/public/lib/fostr/fidl/fuchsia.settings",
-    "//garnet/public/lib/timekeeper:system",
     "//src/lib/fsl",
     "//src/lib/syslog/cpp",
+    "//src/lib/timekeeper:system",
     "//third_party/rapidjson",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",

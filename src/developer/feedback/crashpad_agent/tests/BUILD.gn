@@ -193,7 +193,6 @@ executable("crashpad_agent_unittest") {
   ]
 
   deps = [
-    "//garnet/public/lib/timekeeper:testing",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/fidl/fuchsia.settings",
     "//sdk/lib/fidl/cpp",
@@ -208,6 +207,7 @@ executable("crashpad_agent_unittest") {
     "//src/developer/feedback/utils:cobalt",
     "//src/lib/fsl",
     "//src/lib/fxl",
+    "//src/lib/timekeeper:testing",
     "//src/sys/timekeeper:fuchsia.time",
     "//third_party/crashpad/util",
     "//third_party/googletest:gmock",
@@ -254,7 +254,6 @@ executable("database_unittest") {
   ]
 
   deps = [
-    "//garnet/public/lib/timekeeper:testing",
     "//sdk/lib/inspect/testing/cpp",
     "//src/developer/feedback/crashpad_agent:src",
     "//src/developer/feedback/crashpad_agent/info:info",
@@ -264,6 +263,7 @@ executable("database_unittest") {
     "//src/developer/feedback/testing/stubs:stub_cobalt_logger_factory",
     "//src/developer/feedback/utils:cobalt",
     "//src/lib/fsl:fsl",
+    "//src/lib/timekeeper:testing",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
@@ -299,12 +299,12 @@ executable("inspect_manager_unittest") {
   sources = [ "inspect_manager_unittest.cc" ]
 
   deps = [
-    "//garnet/public/lib/timekeeper:testing",
     "//sdk/lib/inspect/testing/cpp",
     "//src/developer/feedback/crashpad_agent:constants",
     "//src/developer/feedback/crashpad_agent/info:inspect_manager",
     "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//src/lib/fxl",
+    "//src/lib/timekeeper:testing",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",
@@ -346,8 +346,6 @@ executable("queue_unittest") {
   ]
 
   deps = [
-    "//garnet/public/lib/gtest",
-    "//garnet/public/lib/timekeeper:testing",
     "//sdk/lib/inspect/testing/cpp",
     "//src/developer/feedback/crashpad_agent:constants",
     "//src/developer/feedback/crashpad_agent:src",
@@ -356,6 +354,7 @@ executable("queue_unittest") {
     "//src/developer/feedback/testing:unit_test_fixture",
     "//src/developer/feedback/testing/stubs:stub_network_reachability_provider",
     "//src/lib/fsl:fsl",
+    "//src/lib/timekeeper:testing",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
