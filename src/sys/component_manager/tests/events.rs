@@ -51,7 +51,10 @@ impl EventSource {
         event_types: Vec<fevents::EventType>,
     ) -> Result<EventStream, Error> {
         let (client_end, stream) = create_request_stream::<fevents::EventStreamMarker>()?;
-        self.proxy.subscribe(&mut event_types.into_iter(), client_end).await?;
+        self.proxy
+            .subscribe(&mut event_types.into_iter(), client_end)
+            .await?
+            .map_err(|error| format_err!("Error: {:?}", error))?;
         Ok(EventStream::new(stream))
     }
 

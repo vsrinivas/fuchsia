@@ -716,6 +716,12 @@ impl From<&str> for CapabilityName {
     }
 }
 
+impl From<String> for CapabilityName {
+    fn from(name: String) -> CapabilityName {
+        CapabilityName(name)
+    }
+}
+
 impl fmt::Display for CapabilityName {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         <String as fmt::Display>::fmt(&self.0, f)

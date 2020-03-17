@@ -112,9 +112,15 @@ table Event {
 [Discoverable]
 protocol EventSourceSync {
     /// Subscribes to the events of the provided EventTypes.
+    ///
     /// Returns a EventStreamSync which can be used
     /// to expect the registered types.
-    Subscribe(vector<EventType>:MAX_NUM_EVENT_TYPES_RECEIVED event_types, EventStream stream) -> ();
+    ///
+    /// Errors:
+    /// - `RESOURCE_UNAVAILABLE` when the component hasn't been granted the capability to subscribe
+    ///   to some event in the requested `event_types`.
+    Subscribe(vector<EventType>:MAX_NUM_EVENT_TYPES_RECEIVED event_types, EventStream stream)
+        -> () error fuchsia.component.Error;
 
     /// Resume the execution of components within the realm using a scoped
     /// EventSourceSync.  This method is idempotent.

@@ -15,10 +15,10 @@ use {
     },
     async_trait::async_trait,
     fidl::endpoints::{create_request_stream, ClientEnd},
-    fidl_fuchsia_test_events as fevents, fuchsia_async as fasync, fuchsia_trace as trace,
-    fuchsia_zircon as zx,
+    fidl_fuchsia_component as fcomponent, fidl_fuchsia_test_events as fevents,
+    fuchsia_async as fasync, fuchsia_trace as trace, fuchsia_zircon as zx,
     futures::{lock::Mutex, StreamExt, TryStreamExt},
-    log::{error, warn},
+    log::{debug, error, warn},
     std::{path::PathBuf, sync::Arc},
 };
 
@@ -43,15 +43,19 @@ pub async fn serve_event_source_sync(
                             .collect();
 
                         // Subscribe to events.
-                        let maybe_event_stream = event_source.subscribe(event_types).await;
+                        match event_source.subscribe(event_types).await {
+                            Ok(event_stream) => {
+                                // Unblock the component
+                                responder.send(&mut Ok(()))?;
 
-                        // Unblock the component
-                        responder.send()?;
-
-                        // Serve the event_stream over FIDL asynchronously
-                        if let Some(event_stream) = maybe_event_stream {
-                            serve_event_stream(event_stream, stream).await?;
-                        }
+                                // Serve the event_stream over FIDL asynchronously
+                                serve_event_stream(event_stream, stream).await?;
+                            }
+                            Err(error) => {
+                                debug!("Error subscribing to events: {}", error);
+                                responder.send(&mut Err(fcomponent::Error::ResourceUnavailable))?;
+                            }
+                        };
                     }
                     fevents::EventSourceSyncRequest::StartComponentTree { responder } => {
                         event_source.start_component_tree().await;

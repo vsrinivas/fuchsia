@@ -30,6 +30,7 @@ use {
         path::PathBuf,
         sync::{Arc, Weak},
     },
+    thiserror::Error,
 };
 
 lazy_static! {
@@ -180,6 +181,15 @@ pub struct EventSource {
     allowed_events: HashMap<CapabilityName, HashSet<AbsoluteMoniker>>,
 }
 
+#[derive(Debug, Error, PartialEq)]
+pub enum EventsError {
+    #[error("Events not allowed for subscription {:?}", names)]
+    NotAvailable { names: Vec<String> },
+
+    #[error("Registry not found")]
+    RegistryNotFound,
+}
+
 impl EventSource {
     /// Creates a new `EventSource` that will be used by the component identified with the given
     /// `target_moniker`.
@@ -205,14 +215,14 @@ impl EventSource {
 
     /// Subscribes to events provided in the `events` vector if they have been previously allowed
     /// (`allow_event`) on this event source under the scopes they were allowed.
-    pub async fn subscribe(&self, events: Vec<EventType>) -> Option<EventStream> {
+    pub async fn subscribe(&self, events: Vec<EventType>) -> Result<EventStream, EventsError> {
         // The client might request to subscribe to events that it's not allowed to see. Events
         // that are allowed should have been defined in its manifest and either offered to it or
         // requested from the current realm.
         let (allowed, not_allowed) = events.into_iter().fold(
             (Vec::new(), Vec::new()),
             |(mut allowed, mut not_allowed), event| {
-                if let Some(scopes) = self.allowed_events.get(&CapabilityName(event.to_string())) {
+                if let Some(scopes) = self.allowed_events.get(&event.to_string().into()) {
                     allowed.push((event, scopes.clone()));
                 } else {
                     not_allowed.push(event.to_string());
@@ -220,20 +230,14 @@ impl EventSource {
                 (allowed, not_allowed)
             },
         );
-        // TODO(fxb/48248): instead of logging (or in addition to) return an error when a requested
-        // event is not allowed.
         if !not_allowed.is_empty() {
-            warn!(
-                "Requested events not allowed for event source on {}: {}",
-                self.target_moniker,
-                not_allowed.join(", ")
-            );
+            return Err(EventsError::NotAvailable { names: not_allowed });
         }
         // Create an event stream for the given events
         if let Some(registry) = self.registry.upgrade() {
-            return Some(registry.subscribe(allowed).await);
+            return Ok(registry.subscribe(allowed).await);
         }
-        None
+        Err(EventsError::RegistryNotFound)
     }
 
     /// Serves a `EventSourceSync` FIDL protocol.
@@ -246,7 +250,7 @@ impl EventSource {
     /// Allows all events for this event source with the given scope for all of them.
     pub fn allow_all_events(&mut self, scope_moniker: AbsoluteMoniker) {
         for event in EventType::values() {
-            self.allow_event(CapabilityName(event.to_string()), scope_moniker.clone());
+            self.allow_event(event.to_string().into(), scope_moniker.clone());
         }
     }
 
@@ -287,5 +291,26 @@ impl CapabilityProvider for EventSource {
             .expect("could not convert channel into stream");
         self.serve_async(stream);
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[fasync::run_singlethreaded(test)]
+    async fn subscribe_fails_when_not_allowed() {
+        let event_source_factory = Arc::new(EventSourceFactory::new());
+        let mut event_source = event_source_factory.create(AbsoluteMoniker::root()).await;
+        event_source.allow_event(EventType::Started.to_string().into(), AbsoluteMoniker::root());
+        let events = vec![EventType::Destroyed, EventType::Stopped];
+        let result = event_source.subscribe(events.clone()).await;
+        assert!(result.is_err());
+        assert_eq!(
+            result.err(),
+            Some(EventsError::NotAvailable {
+                names: vec!["destroyed".to_string(), "stopped".to_string()]
+            })
+        );
     }
 }
