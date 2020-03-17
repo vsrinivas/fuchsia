@@ -83,7 +83,9 @@ test_package("cpuperf_tests") {
   tests = [
     {
       name = "cpuperf_integration_tests"
-      environments = basic_envs
+
+      # TODO(47484): Test fails on NUC w/ ASan. Fix and switch back to basic_envs.
+      environments = [ qemu_env ] + nuc_env_fails_on_asan
     },
     {
       name = "cpuperf_tests"
