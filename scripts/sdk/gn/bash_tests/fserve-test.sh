@@ -168,6 +168,7 @@ check_mock_has_args() {
       return 0
     fi
   done
+  BT_EXPECT false
   return 1
 }
 
