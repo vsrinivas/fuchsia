@@ -80,8 +80,7 @@ if [[ -z "${local_addr}" ]]; then
 fi
 
 echo "Using remote ${host}:${dir}"
-echo "Using target device ${target_addr}"
-echo "Using local server address ${local_addr}"
+echo "Using target device $(get-device-name)"
 
 # First we need to check if we already have a control master for the
 # host, if we do, we might already have the forwards and so we don't
