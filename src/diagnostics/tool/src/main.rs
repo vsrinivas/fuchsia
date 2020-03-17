@@ -19,6 +19,7 @@ use {
     regex::Regex,
     selectors,
     std::cmp::{max, min},
+    std::collections::HashSet,
     std::convert::TryInto,
     std::fs::read_to_string,
     std::io::{stdin, stdout, Write},
@@ -343,12 +344,35 @@ fn filter_data_to_lines(
     let new_str = serde_json::to_string_pretty(&filtered_collection_array).unwrap();
     let cs = difference::Changeset::new(&orig_str, &new_str, "\n");
 
+    // "Added" lines only appear when a property that was once in the middle of a
+    // nested object, and thus ended its line with a comma, becomes the final property
+    // in a node and thus loses the comma. The difference library doesn't expose edit distance
+    // per-line, so we must instead track these "added" lines, and check if any of the "removed"
+    // lines are one of the "added" lines with a comma on the end.
+    let added_line_tracker: HashSet<&str> =
+        cs.diffs.iter().fold(HashSet::new(), |mut acc, change| {
+            if let Add(val) = change {
+                acc.insert(val);
+            }
+            acc
+        });
+
     Ok(cs
         .diffs
-        .into_iter()
+        .iter()
         .map(|change| match change {
             Same(val) | Add(val) => val.split("\n").map(|l| Line::new(l)).collect::<Vec<Line>>(),
-            Rem(val) => val.split("\n").map(|l| Line::removed(l)).collect::<Vec<Line>>(),
+            Rem(val) => val
+                .split("\n")
+                .filter_map(|l| {
+                    let last_char_truncated: &str = &l[..l.len() - 1];
+                    if !added_line_tracker.contains(last_char_truncated) {
+                        Some(Line::removed(l))
+                    } else {
+                        None
+                    }
+                })
+                .collect::<Vec<Line>>(),
         })
         .flatten()
         .collect())
@@ -652,6 +676,50 @@ account_manager.cmx:root/listeners:total_opened";
             get_empty_value_json(),
             Some("bloop.cmx".to_string()),
         );
+    }
+
+    #[test]
+    fn trailing_comma_diff_test() {
+        let trailing_comma_hierarchy = serde_json::json!(
+            [
+                {
+                    "contents": {
+                        "root": {
+                            "a": {
+                                "b": 0,
+                                "c": 1
+                            }
+                        }
+                    },
+                    "path": "blooper.cmx"
+                }
+            ]
+        );
+
+        let selector = "blooper.cmx:root/a:b";
+        let mut selector_path =
+            tempfile::NamedTempFile::new().expect("Creating tmp selector file should succeed.");
+
+        selector_path
+            .write_all(selector.as_bytes())
+            .expect("writing selectors to file should be fine...");
+        let filtered_data_string = filter_data_to_lines(
+            &selector_path.path().to_string_lossy(),
+            &trailing_comma_hierarchy,
+            &Some("blooper.cmx".to_string()),
+        )
+        .expect("filtering hierarchy should succeed.");
+
+        let removed_lines = filtered_data_string.iter().fold(HashSet::new(), |mut acc, line| {
+            if line.removed {
+                eprintln!("line removed bloop:{}", line.value.clone());
+                acc.insert(line.value.clone());
+            }
+            acc
+        });
+
+        assert!(removed_lines.len() == 1);
+        assert!(removed_lines.contains(&r#"          "c": 1"#.to_string()));
     }
 
     #[test]
