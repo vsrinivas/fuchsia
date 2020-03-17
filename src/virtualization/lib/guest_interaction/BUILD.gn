@@ -179,7 +179,9 @@ test_package("guest_interaction_tests") {
     },
     {
       name = "guest_interaction_service_test"
-      environments = [ nuc_env ]
+
+      # TODO(48127): Currently hangs in ASan. Fix and switch to [ nuc_env ].
+      environments = nuc_env_fails_on_asan
     },
   ]
 }
