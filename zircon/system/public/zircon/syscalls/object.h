@@ -220,14 +220,9 @@ typedef struct zx_info_thread {
     // If |state| is ZX_THREAD_STATE_BLOCKED_EXCEPTION, the thread has gotten
     // an exception and is waiting for the exception response from the specified
     // handler.
-    union {
-        // The value is one of ZX_EXCEPTION_CHANNEL_TYPE_*.
-        uint32_t wait_exception_channel_type;
 
-        // The value is one of ZX_EXCEPTION_PORT_TYPE_*.
-        // TODO(ZX-4031): remove this once everyone is switched to channels.
-        uint32_t wait_exception_port_type;
-    };
+    // The value is one of ZX_EXCEPTION_CHANNEL_TYPE_*.
+    uint32_t wait_exception_channel_type;
 
     // CPUs this thread may be scheduled on, as specified by
     // a profile object applied to this thread.

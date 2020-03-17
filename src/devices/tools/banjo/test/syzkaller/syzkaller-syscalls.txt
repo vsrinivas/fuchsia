@@ -129,13 +129,6 @@ zx_iommu_desc_dummy {
 	reserved	int8
 }
 
-zx_packet_exception {
-	pid	int64
-	tid	int64
-	reserved0	int64
-	reserved1	int64
-}
-
 zx_packet_guest_bell {
 	addr	int64
 	reserved0	int64
@@ -336,6 +329,7 @@ zx_info_handle_basic {
 
 zx_info_thread {
 	state	flags[zx_thread_state_values]
+	wait_exception_channel_type	flags[zx_exception_channel_types]
 }
 
 zx_info_maps {
@@ -472,8 +466,6 @@ zx_event_kind = ZX_SYSTEM_EVENT_LOW_MEMORY
 
 zx_exception_channel_types = ZX_EXCEPTION_CHANNEL_TYPE_NONE, ZX_EXCEPTION_CHANNEL_TYPE_DEBUGGER, ZX_EXCEPTION_CHANNEL_TYPE_THREAD, ZX_EXCEPTION_CHANNEL_TYPE_PROCESS, ZX_EXCEPTION_CHANNEL_TYPE_JOB, ZX_EXCEPTION_CHANNEL_TYPE_JOB_DEBUGGER
 
-zx_exception_port_types = ZX_EXCEPTION_PORT_TYPE_NONE, ZX_EXCEPTION_PORT_TYPE_DEBUGGER, ZX_EXCEPTION_PORT_TYPE_THREAD, ZX_EXCEPTION_PORT_TYPE_PROCESS, ZX_EXCEPTION_PORT_TYPE_JOB, ZX_EXCEPTION_PORT_TYPE_JOB_DEBUGGER
-
 zx_feature_kind = ZX_FEATURE_KIND_CPU, ZX_FEATURE_KIND_HW_BREAKPOINT_COUNT, ZX_FEATURE_KIND_HW_WATCHPOINT_COUNT
 
 zx_guest_trap_kind = ZX_GUEST_TRAP_BELL, ZX_GUEST_TRAP_MEM, ZX_GUEST_TRAP_IO
@@ -523,10 +515,6 @@ zx_socket_shutdown_options = ZX_SOCKET_SHUTDOWN_WRITE, ZX_SOCKET_SHUTDOWN_READ
 zx_socket_write_options = ZX_SOCKET_CONTROL
 
 zx_system_powerctl_cmd = ZX_SYSTEM_POWERCTL_ENABLE_ALL_CPUS, ZX_SYSTEM_POWERCTL_DISABLE_ALL_CPUS_BUT_PRIMARY, ZX_SYSTEM_POWERCTL_ACPI_TRANSITION_S_STATE, ZX_SYSTEM_POWERCTL_X86_SET_PKG_PL1, ZX_SYSTEM_POWERCTL_REBOOT, ZX_SYSTEM_POWERCTL_REBOOT_BOOTLOADER, ZX_SYSTEM_POWERCTL_REBOOT_RECOVERY, ZX_SYSTEM_POWERCTL_SHUTDOWN
-
-zx_task_exception_port_options = ZX_EXCEPTION_PORT_DEBUGGER
-
-zx_task_resume_options = ZX_RESUME_TRY_NEXT
 
 zx_thread_state_values = ZX_THREAD_STATE_NEW, ZX_THREAD_STATE_RUNNING, ZX_THREAD_STATE_SUSPENDED, ZX_THREAD_STATE_BLOCKED, ZX_THREAD_STATE_DYING, ZX_THREAD_STATE_DEAD, ZX_THREAD_STATE_BLOCKED_EXCEPTION, ZX_THREAD_STATE_BLOCKED_SLEEPING, ZX_THREAD_STATE_BLOCKED_FUTEX, ZX_THREAD_STATE_BLOCKED_PORT, ZX_THREAD_STATE_BLOCKED_CHANNEL, ZX_THREAD_STATE_BLOCKED_WAIT_ONE, ZX_THREAD_STATE_BLOCKED_WAIT_MANY, ZX_THREAD_STATE_BLOCKED_INTERRUPT, ZX_THREAD_STATE_BLOCKED_PAGER
 
@@ -632,11 +620,9 @@ zx_process_write_memory(handle zx_process, vaddr int64, buffer ptr[in, array[int
 zx_job_create(parent_job zx_job, options int32, out ptr[out, zx_job])
 zx_job_set_policy$ZX_JOB_POL_BASIC(handle zx_job, options flags[zx_job_policy_options], topic const[ZX_JOB_POL_BASIC], policy ptr[in, zx_policy_basic], count len[policy])
 zx_job_set_policy$ZX_JOB_POL_TIMER_SLACK(handle zx_job, options flags[zx_job_policy_options], topic const[ZX_JOB_POL_TIMER_SLACK], policy ptr[in, zx_policy_timer_slack], count len[policy])
-zx_task_bind_exception_port(handle zx_handle, port zx_port, key int64, options flags[zx_task_exception_port_options])
 zx_task_suspend(handle zx_handle, token ptr[out, zx_handle])
 zx_task_suspend_token(handle zx_handle, token ptr[out, zx_handle])
-zx_task_resume_from_exception(handle zx_handle, port zx_port, options flags[zx_task_resume_options])
-zx_task_create_exception_channel(handle zx_handle, options flags[zx_task_exception_port_options], out ptr[out, zx_channel])
+zx_task_create_exception_channel(handle zx_handle, options flags[zx_task_exception_channel_options], out ptr[out, zx_channel])
 zx_task_kill(handle zx_handle)
 zx_exception_get_thread(handle zx_handle, out ptr[out, zx_thread])
 zx_exception_get_process(handle zx_handle, out ptr[out, zx_process])

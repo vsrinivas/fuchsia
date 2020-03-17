@@ -25,6 +25,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/debug.h>
 #include <zircon/syscalls/exception.h>
+#include <zircon/syscalls/port.h>
 #include <zircon/threads.h>
 
 #include <array>

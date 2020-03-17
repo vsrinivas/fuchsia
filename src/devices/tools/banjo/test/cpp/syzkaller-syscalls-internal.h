@@ -153,17 +153,11 @@ DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_api_protocol_job_create, Apijob_create,
 DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_api_protocol_job_set_policy, Apijob_set_policy,
         zx_status_t (C::*)(zx::job handle, uint32_t options, uint32_t topic, const void policy[count], uint32_t count));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_api_protocol_task_bind_exception_port, Apitask_bind_exception_port,
-        zx_status_t (C::*)(zx::handle handle, zx::port port, uint64_t key, uint32_t options));
-
 DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_api_protocol_task_suspend, Apitask_suspend,
         zx_status_t (C::*)(zx::handle handle, zx::handle* out_token));
 
 DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_api_protocol_task_suspend_token, Apitask_suspend_token,
         zx_status_t (C::*)(zx::handle handle, zx::handle* out_token));
-
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_api_protocol_task_resume_from_exception, Apitask_resume_from_exception,
-        zx_status_t (C::*)(zx::handle handle, zx::port port, uint32_t options));
 
 DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_api_protocol_task_create_exception_channel, Apitask_create_exception_channel,
         zx_status_t (C::*)(zx::handle handle, uint32_t options, zx::channel* out_out));
@@ -650,10 +644,6 @@ constexpr void CheckApiProtocolSubclass() {
         "ApiProtocol subclasses must implement "
         "zx_status_t Apijob_set_policy(zx::job handle, uint32_t options, uint32_t topic, const void policy[count], uint32_t count);");
 
-    static_assert(internal::has_api_protocol_task_bind_exception_port<D>::value,
-        "ApiProtocol subclasses must implement "
-        "zx_status_t Apitask_bind_exception_port(zx::handle handle, zx::port port, uint64_t key, uint32_t options);");
-
     static_assert(internal::has_api_protocol_task_suspend<D>::value,
         "ApiProtocol subclasses must implement "
         "zx_status_t Apitask_suspend(zx::handle handle, zx::handle* out_token);");
@@ -661,10 +651,6 @@ constexpr void CheckApiProtocolSubclass() {
     static_assert(internal::has_api_protocol_task_suspend_token<D>::value,
         "ApiProtocol subclasses must implement "
         "zx_status_t Apitask_suspend_token(zx::handle handle, zx::handle* out_token);");
-
-    static_assert(internal::has_api_protocol_task_resume_from_exception<D>::value,
-        "ApiProtocol subclasses must implement "
-        "zx_status_t Apitask_resume_from_exception(zx::handle handle, zx::port port, uint32_t options);");
 
     static_assert(internal::has_api_protocol_task_create_exception_channel<D>::value,
         "ApiProtocol subclasses must implement "

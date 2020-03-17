@@ -18,6 +18,7 @@
 #include <lib/zx/time.h>
 #include <zircon/status.h>
 #include <zircon/syscalls/exception.h>
+#include <zircon/syscalls/port.h>
 #include <zircon/types.h>
 #include <zxtest/base/death-statement.h>
 

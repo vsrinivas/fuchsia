@@ -270,7 +270,6 @@ VALIDATE_FIELD_OFFSET_SIZE(zx_port_packet_t, type, 8, 4);
 VALIDATE_FIELD_OFFSET_SIZE(zx_port_packet_t, status, 12, 4);
 VALIDATE_FIELD_OFFSET_SIZE(zx_port_packet_t, user, 16, 32);
 VALIDATE_FIELD_OFFSET_SIZE(zx_port_packet_t, signal, 16, 32);
-VALIDATE_FIELD_OFFSET_SIZE(zx_port_packet_t, exception, 16, 32);
 VALIDATE_FIELD_OFFSET_SIZE(zx_port_packet_t, guest_bell, 16, 32);
 VALIDATE_FIELD_OFFSET_SIZE(zx_port_packet_t, guest_mem, 16, 32);
 VALIDATE_FIELD_OFFSET_SIZE(zx_port_packet_t, guest_io, 16, 32);
@@ -290,12 +289,6 @@ VALIDATE_FIELD_OFFSET_SIZE(zx_packet_signal_t, observed, 4, 4);
 VALIDATE_FIELD_OFFSET_SIZE(zx_packet_signal_t, count, 8, 8);
 VALIDATE_FIELD_OFFSET_SIZE(zx_packet_signal_t, timestamp, 16, 8);
 VALIDATE_FIELD_OFFSET_SIZE(zx_packet_signal_t, reserved1, 24, 8);
-
-VALIDATE_TYPE_SIZE_ALIGNMENT(zx_packet_exception_t, 32, 8);
-VALIDATE_FIELD_OFFSET_SIZE(zx_packet_exception_t, pid, 0, 8);
-VALIDATE_FIELD_OFFSET_SIZE(zx_packet_exception_t, tid, 8, 8);
-VALIDATE_FIELD_OFFSET_SIZE(zx_packet_exception_t, reserved0, 16, 8);
-VALIDATE_FIELD_OFFSET_SIZE(zx_packet_exception_t, reserved1, 24, 8);
 
 VALIDATE_TYPE_SIZE_ALIGNMENT(zx_packet_guest_bell_t, 32, 8);
 VALIDATE_FIELD_OFFSET_SIZE(zx_packet_guest_bell_t, addr, 0, 8);

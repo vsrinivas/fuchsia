@@ -8,6 +8,7 @@
 #include <lib/zx/exception.h>
 #include <test-utils/test-utils.h>
 #include <unittest/unittest.h>
+#include <zircon/syscalls/port.h>
 
 #include "debugger.h"
 #include "inferior.h"

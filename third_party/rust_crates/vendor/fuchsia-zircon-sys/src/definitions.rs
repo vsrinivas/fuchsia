@@ -302,13 +302,6 @@ extern {
         count: u32
         ) -> zx_status_t;
 
-    pub fn zx_task_bind_exception_port(
-        object: zx_handle_t,
-        eport: zx_handle_t,
-        key: u64,
-        options: u32
-        ) -> zx_status_t;
-
     pub fn zx_task_suspend(
         task_handle: zx_handle_t
         ) -> zx_status_t;

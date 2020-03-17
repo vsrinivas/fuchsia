@@ -25,7 +25,6 @@ __BEGIN_CDECLS
 #define ZX_PKT_TYPE_GUEST_IO        ((uint8_t)0x05u)
 #define ZX_PKT_TYPE_GUEST_VCPU      ((uint8_t)0x06u)
 #define ZX_PKT_TYPE_INTERRUPT       ((uint8_t)0x07u)
-#define ZX_PKT_TYPE_EXCEPTION(n)    ((uint32_t)(0x08u | (((n) & 0xFFu) << 8)))
 #define ZX_PKT_TYPE_PAGE_REQUEST    ((uint8_t)0x09u)
 
 // For options passed to port_create
@@ -41,7 +40,6 @@ __BEGIN_CDECLS
 #define ZX_PKT_IS_GUEST_IO(type)      ((type) == ZX_PKT_TYPE_GUEST_IO)
 #define ZX_PKT_IS_GUEST_VCPU(type)    ((type) == ZX_PKT_TYPE_GUEST_VCPU)
 #define ZX_PKT_IS_INTERRUPT(type)     ((type) == ZX_PKT_TYPE_INTERRUPT)
-#define ZX_PKT_IS_EXCEPTION(type)     (((type) & ZX_PKT_TYPE_MASK) == ZX_PKT_TYPE_EXCEPTION(0))
 #define ZX_PKT_IS_PAGE_REQUEST(type)  ((type) == ZX_PKT_TYPE_PAGE_REQUEST)
 
 // zx_packet_guest_vcpu_t::type
@@ -69,13 +67,6 @@ typedef struct zx_packet_signal {
   uint64_t timestamp;
   uint64_t reserved1;
 } zx_packet_signal_t;
-
-typedef struct zx_packet_exception {
-  uint64_t pid;
-  uint64_t tid;
-  uint64_t reserved0;
-  uint64_t reserved1;
-} zx_packet_exception_t;
 
 typedef struct zx_packet_guest_bell {
   zx_gpaddr_t addr;
@@ -169,7 +160,6 @@ typedef struct zx_port_packet {
   union {
     zx_packet_user_t user;
     zx_packet_signal_t signal;
-    zx_packet_exception_t exception;
     zx_packet_guest_bell_t guest_bell;
     zx_packet_guest_mem_t guest_mem;
     zx_packet_guest_io_t guest_io;

@@ -5,6 +5,7 @@
 
 #include <lib/fdio/spawn.h>
 #include <zircon/status.h>
+#include <zircon/syscalls/port.h>
 
 #include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/syslog/cpp/logger.h"

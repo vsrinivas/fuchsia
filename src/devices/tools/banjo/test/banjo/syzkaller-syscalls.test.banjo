@@ -337,26 +337,12 @@ enum zx_exception_channel_types : uint32 {
     ZX_EXCEPTION_CHANNEL_TYPE_JOB_DEBUGGER = 5;
 };
 
-enum zx_exception_port_types : uint32 {
-    ZX_EXCEPTION_PORT_TYPE_NONE = 0;
-    ZX_EXCEPTION_PORT_TYPE_DEBUGGER = 1;
-    ZX_EXCEPTION_PORT_TYPE_THREAD = 2;
-    ZX_EXCEPTION_PORT_TYPE_PROCESS = 3;
-    ZX_EXCEPTION_PORT_TYPE_JOB = 4;
-    ZX_EXCEPTION_PORT_TYPE_JOB_DEBUGGER = 5;
-};
 
-
-// TODO(SEC-369): anonymous union
-[valueset = "state zx_thread_state_values"]
+[valueset = "state zx_thread_state_values"
+ valueset = "wait_exception_channel_type zx_exception_channel_types"]
 struct zx_info_thread {
     uint32 state;
-    //[valueset = "wait_exception_channel_type zx_exception_channel_types",
-    //valueset = "wait_exception_port_type zx_exception_port_types"]
-    //union {
-        //uint32 wait_exception_channel_type;
-        //uint32 wait_exception_port_type;
-    //};
+    uint32 wait_exception_channel_type;
 };
 
 struct zx_info_thread_stats {
@@ -754,20 +740,6 @@ enum zx_job_policy_actions : uint32 {
 
 //
 //
-// Tasks (shared between threads, processes, and jobs)
-//
-//
-
-enum zx_task_exception_port_options : uint32 {
-    ZX_EXCEPTION_PORT_DEBUGGER = 1;
-};
-
-enum zx_task_resume_options : uint32 {
-    ZX_RESUME_TRY_NEXT = 2;
-};
-
-//
-//
 // Ports
 //
 //
@@ -804,13 +776,6 @@ struct zx_packet_signal {
     zx.signals trigger;
     zx.signals observed;
     uint64 count;
-    uint64 reserved0;
-    uint64 reserved1;
-};
-
-struct zx_packet_exception {
-    uint64 pid;
-    uint64 tid;
     uint64 reserved0;
     uint64 reserved1;
 };
@@ -899,7 +864,6 @@ struct zx_port_packet {
     //union {
         //zx_packet_user user;
         //zx_packet_signal signal;
-        //zx_packet_exception exception;
         //zx_packet_guest_bell guest_bell;
         //zx_packet_guest_mem guest_mem;
         //zx_packet_guest_io guest_io;
@@ -1715,12 +1679,6 @@ protocol Api {
     //
     //
 
-    /// Bind to, or unbind from, the exception port corresponding to a given job, process, or thread.
-    [rights="port must be of type ZX_OBJ_TYPE_PORT.",
-     valueset="options zx_task_exception_port_options"]
-    task_bind_exception_port(handle handle, handle<port> port, uint64 key, uint32 options) ->
-        (zx.status status);
-
     /// Suspend the given task. Currently only thread or process handles may be suspended.
     [rights="handle must be of type ZX_OBJ_TYPE_THREAD or ZX_OBJ_TYPE_PROCESS and have ZX_RIGHT_WRITE.",
      argtype="token handle_acquire"]
@@ -1733,20 +1691,11 @@ protocol Api {
     // TODO(banjo): handle<task>?
     task_suspend_token(handle handle) -> (zx.status status, handle token);
 
-    /// Resume the given task after an exception has been reported.
-    [rights="handle must be of type ZX_OBJ_TYPE_THREAD.",
-     rights="port must be of type ZX_OBJ_TYPE_PORT.",
-     valueset="options zx_task_resume_options"]
-    // TODO(ZX-2967): No rights required on either?
-    // TODO(banjo): handle<task>?
-    task_resume_from_exception(handle handle, handle<port> port, uint32 options) ->
-        (zx.status status);
-
     /// Create an exception channel for a given job, process, or thread.
     [rights="handle must have ZX_RIGHT_INSPECT and have ZX_RIGHT_DUPLICATE and have ZX_RIGHT_TRANSFER and have ZX_RIGHT_MANAGE_THREAD.",
      rights="If handle is of type ZX_OBJ_TYPE_JOB or ZX_OBJ_TYPE_PROCESS, it must have ZX_RIGHT_ENUMERATE.",
      argtype="out handle_acquire",
-     valueset="options zx_task_exception_port_options"]
+     valueset="options zx_task_exception_channel_options"]
     // TODO(banjo): handle<task>?
     // TODO(banjo): is out a real handle<channel> or just something similar?
     task_create_exception_channel(handle handle, uint32 options) ->

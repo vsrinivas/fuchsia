@@ -5,6 +5,8 @@
 #include "gtest/gtest.h"
 #include "interception_workflow_test.h"
 
+#include <zircon/syscalls/port.h>
+
 namespace fidlcat {
 
 // zx_vcpu_create tests.

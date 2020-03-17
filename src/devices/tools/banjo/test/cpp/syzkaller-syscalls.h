@@ -157,13 +157,9 @@
 //
 //     zx_status_t Apijob_set_policy(zx::job handle, uint32_t options, uint32_t topic, const void policy[count], uint32_t count);
 //
-//     zx_status_t Apitask_bind_exception_port(zx::handle handle, zx::port port, uint64_t key, uint32_t options);
-//
 //     zx_status_t Apitask_suspend(zx::handle handle, zx::handle* out_token);
 //
 //     zx_status_t Apitask_suspend_token(zx::handle handle, zx::handle* out_token);
-//
-//     zx_status_t Apitask_resume_from_exception(zx::handle handle, zx::port port, uint32_t options);
 //
 //     zx_status_t Apitask_create_exception_channel(zx::handle handle, uint32_t options, zx::channel* out_out);
 //

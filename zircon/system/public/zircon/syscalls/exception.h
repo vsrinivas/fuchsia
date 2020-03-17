@@ -6,7 +6,6 @@
 #define SYSROOT_ZIRCON_SYSCALLS_EXCEPTION_H_
 
 #include <zircon/compiler.h>
-#include <zircon/syscalls/port.h>
 #include <zircon/types.h>
 
 __BEGIN_CDECLS
@@ -14,63 +13,60 @@ __BEGIN_CDECLS
 // ask clang format not to mess up the indentation:
 // clang-format off
 
-// This bit is set for synthetic exceptions to distinguish them from
-// architectural exceptions.
-// Note: Port packet types provide 8 bits to distinguish the exception type.
-// See zircon/port.h.
-#define ZX_EXCP_SYNTH ((uint8_t)0x80)
+// The following exception values were chosen for historical reasons.
 
-// The kind of an exception.
-// Exception types are a subset of port packet types. See zircon/port.h.
-
-// These are architectural exceptions.
+// Architectural exceptions.
+//
 // Depending on the exception, further information can be found in
 // |report.context.arch|.
 
-// General exception not covered by another value.
-#define ZX_EXCP_GENERAL ZX_PKT_TYPE_EXCEPTION(0)
-#define ZX_EXCP_FATAL_PAGE_FAULT ZX_PKT_TYPE_EXCEPTION(1)
-#define ZX_EXCP_UNDEFINED_INSTRUCTION ZX_PKT_TYPE_EXCEPTION(2)
-#define ZX_EXCP_SW_BREAKPOINT ZX_PKT_TYPE_EXCEPTION(3)
-#define ZX_EXCP_HW_BREAKPOINT ZX_PKT_TYPE_EXCEPTION(4)
-#define ZX_EXCP_UNALIGNED_ACCESS ZX_PKT_TYPE_EXCEPTION(5)
+#define ZX_EXCP_GENERAL                 ((uint32_t) 0x008u)
+#define ZX_EXCP_FATAL_PAGE_FAULT        ((uint32_t) 0x108u)
+#define ZX_EXCP_UNDEFINED_INSTRUCTION   ((uint32_t) 0x208u)
+#define ZX_EXCP_SW_BREAKPOINT           ((uint32_t) 0x308u)
+#define ZX_EXCP_HW_BREAKPOINT           ((uint32_t) 0x408u)
+#define ZX_EXCP_UNALIGNED_ACCESS        ((uint32_t) 0x508u)
 
 // Synthetic exceptions.
 
+// These bits are set for synthetic exceptions to distinguish them from
+// architectural exceptions.
+#define ZX_EXCP_SYNTH                   ((uint32_t) 0x8000u)
+
 // A thread is starting.
-// This exception is sent to debuggers only (ZX_EXCEPTION_PORT_TYPE_DEBUGGER).
-// The thread is paused until it is resumed by the debugger
-// with zx_task_resume_from_exception.
-#define ZX_EXCP_THREAD_STARTING ZX_PKT_TYPE_EXCEPTION(ZX_EXCP_SYNTH | 0)
+// This exception is sent to debuggers only (ZX_EXCEPTION_CHANNEL_TYPE_DEBUGGER).
+// The thread that generates this exception is paused until it the debugger
+// handles the exception.
+#define ZX_EXCP_THREAD_STARTING         ((uint32_t) 0x008u | ZX_EXCP_SYNTH)
 
 // A thread is exiting.
-// This exception is sent to debuggers only (ZX_EXCEPTION_PORT_TYPE_DEBUGGER).
+// This exception is sent to debuggers only (ZX_EXCEPTION_CHANNEL_TYPE_DEBUGGER).
 // This exception is different from ZX_EXCP_GONE in that a debugger can
 // still examine thread state.
-// The thread is paused until it is resumed by the debugger
-// with zx_task_resume_from_exception.
-#define ZX_EXCP_THREAD_EXITING ZX_PKT_TYPE_EXCEPTION(ZX_EXCP_SYNTH | 1)
+// The thread that generates this exception is paused until it the debugger
+// handles the exception.
+#define ZX_EXCP_THREAD_EXITING          ((uint32_t) 0x108u | ZX_EXCP_SYNTH)
 
 // This exception is generated when a syscall fails with a job policy
 // error (for example, an invalid handle argument is passed to the
 // syscall when the ZX_POL_BAD_HANDLE policy is enabled) and
-// ZX_POL_ACTION_EXCEPTION is set for the policy.  The thread that
-// invoked the syscall may be resumed with zx_task_resume_from_exception.
-#define ZX_EXCP_POLICY_ERROR ZX_PKT_TYPE_EXCEPTION(ZX_EXCP_SYNTH | 2)
+// ZX_POL_ACTION_EXCEPTION is set for the policy.
+// The thread that generates this exception is paused until it the debugger
+// handles the exception.
+#define ZX_EXCP_POLICY_ERROR            ((uint32_t) 0x208u | ZX_EXCP_SYNTH)
 
 // A process is starting.
 // This exception is sent to job debuggers only
-// (ZX_EXCEPTION_PORT_TYPE_JOB_DEBUGGER).
-// The initial thread is paused until it is resumed by the debugger with
-// zx_task_resume_from_exception.
-#define ZX_EXCP_PROCESS_STARTING ZX_PKT_TYPE_EXCEPTION(ZX_EXCP_SYNTH | 3)
+// (ZX_EXCEPTION_CHANNEL_TYPE_JOB_DEBUGGER).
+// The thread that generates this exception is paused until it the debugger
+// handles the exception.
+#define ZX_EXCP_PROCESS_STARTING        ((uint32_t) 0x308u | ZX_EXCP_SYNTH)
 
 typedef uint32_t zx_excp_type_t;
 
-// Assuming |excp| is an exception type, return non-zero if it is an
-// architectural exception.
-#define ZX_EXCP_IS_ARCH(excp) \
-  (((excp) & (ZX_PKT_TYPE_EXCEPTION(ZX_EXCP_SYNTH) & ~ZX_PKT_TYPE_MASK)) == 0)
+// Assuming |excp| is an exception type, the following returns true if the
+// type is architectural.
+#define ZX_EXCP_IS_ARCH(excp)  (((excp) & ZX_EXCP_SYNTH) == 0)
 
 typedef struct zx_x86_64_exc_data {
     uint64_t vector;
@@ -127,26 +123,13 @@ typedef struct zx_exception_info {
 #define ZX_EXCEPTION_CHANNEL_DEBUGGER ((uint32_t)1)
 
 // The type of exception handler a thread may be waiting for a response from.
-// These values are reported in zx_info_thread_t.wait_exception_port_type.
+// These values are reported in zx_info_thread_t.wait_exception_channel_type.
 #define ZX_EXCEPTION_CHANNEL_TYPE_NONE         ((uint32_t)0u)
 #define ZX_EXCEPTION_CHANNEL_TYPE_DEBUGGER     ((uint32_t)1u)
 #define ZX_EXCEPTION_CHANNEL_TYPE_THREAD       ((uint32_t)2u)
 #define ZX_EXCEPTION_CHANNEL_TYPE_PROCESS      ((uint32_t)3u)
 #define ZX_EXCEPTION_CHANNEL_TYPE_JOB          ((uint32_t)4u)
 #define ZX_EXCEPTION_CHANNEL_TYPE_JOB_DEBUGGER ((uint32_t)5u)
-
-// Deprecated, use channel-based exception API instead.
-// TODO(ZX-4031): remove port-based constants once everyone is switched over.
-#define ZX_RESUME_TRY_NEXT ((uint32_t)2)
-
-#define ZX_EXCEPTION_PORT_DEBUGGER ZX_EXCEPTION_CHANNEL_DEBUGGER
-
-#define ZX_EXCEPTION_PORT_TYPE_NONE         ZX_EXCEPTION_CHANNEL_TYPE_NONE
-#define ZX_EXCEPTION_PORT_TYPE_DEBUGGER     ZX_EXCEPTION_CHANNEL_TYPE_DEBUGGER
-#define ZX_EXCEPTION_PORT_TYPE_THREAD       ZX_EXCEPTION_CHANNEL_TYPE_THREAD
-#define ZX_EXCEPTION_PORT_TYPE_PROCESS      ZX_EXCEPTION_CHANNEL_TYPE_PROCESS
-#define ZX_EXCEPTION_PORT_TYPE_JOB          ZX_EXCEPTION_CHANNEL_TYPE_JOB
-#define ZX_EXCEPTION_PORT_TYPE_JOB_DEBUGGER ZX_EXCEPTION_CHANNEL_TYPE_JOB_DEBUGGER
 
 __END_CDECLS
 
