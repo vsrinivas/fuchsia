@@ -74,6 +74,14 @@ if (current_toolchain == default_toolchain) {
       # so it can override explicit code-generation switches.
       configs += common_configs + [ ":kernel_config" ]
 
+      # Always enable frame pointers in the kernel so there are panic
+      # backtraces and such.
+      # TODO(mcgrathr): Consider either removing this so there's a
+      # no-frame-pointers option, or removing the kernel's support for
+      # !WITH_FRAME_POINTERS if it will never be used.
+      configs -= [ "$zx/public/gn/config:default_frame_pointers" ]
+      configs += [ "$zx/public/gn/config:frame_pointers" ]
+
       tags = [ "standalone" ]
 
       if (cpu == "x64") {
