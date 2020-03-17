@@ -121,6 +121,6 @@ group("amlogic_hw_dependent_tests") {
 
     # Test amlogic-video vp9 decode.  This uses the same test executable as
     # VP9 decode conformance tests.
-    "//src/media/codec/examples:vp9_decoder_conformance_test__bear-vp9",
+    "//src/media/codec/examples:vp9-decoder-conformance-test--bear-vp9",
   ]
 }

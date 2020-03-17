@@ -639,7 +639,6 @@ group("deprecated_package_underscore") {
     "//src/media/codec/examples:use_vp9_decoder_secure_output_test",
     "//src/media/codec/examples:use_vp9_decoder_test",
     "//src/media/codec/examples:vp9_decoder_conformance_http",
-    "//src/media/codec/examples:vp9_decoder_conformance_test__bear-vp9",
     "//src/media/codec/examples:vp9_decoder_fuzzer_test",
     "//src/media/codec/factory:codec_detect_hw_decode_test",
     "//src/media/codec/factory:codec_detect_hw_encode_test",

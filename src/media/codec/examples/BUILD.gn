@@ -461,7 +461,7 @@ _vp9_file_conformance_tests_group_deps = []
 
 # This target makes sure the vp9_decoder_conformance_test executable builds and
 # can verify an md5 hash of decompressed frames.
-package_name = "vp9_decoder_conformance_test__bear-vp9"
+package_name = "vp9-decoder-conformance-test--bear-vp9"
 vp9_file_decoder_conformance_test(package_name) {
   ivf_file = "//garnet/test_data/media/third_party/chromium_media_test_data/bear-vp9.ivf"
   md5_file = "use_media_decoder/test/bear-vp9.i420.md5"
@@ -506,6 +506,8 @@ if (build_all_vp9_file_decoder_conformance_tests) {
     # allowed in package names.
     testcase = string_replace(testcase, "X", "x")
     package_name = "vp9_decoder_conformance_test__file__" + testcase
+    # Avoid any "_" in the package name.
+    package_name = string_replace(package_name, "_", "-")
     vp9_file_decoder_conformance_test(package_name) {
       ivf_file = "//garnet/test_data/media/third_party/webm_vp9_conformance_streams/processed/" + testcase_partial_path + ".webm.ivf"
       md5_file = "//garnet/test_data/media/third_party/webm_vp9_conformance_streams/decompressed_md5/" + testcase_partial_path + ".md5"
