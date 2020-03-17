@@ -44,8 +44,8 @@ static zx_status_t zxio_vmo_attr_get(zxio_t* io, zxio_node_attributes_t* out_att
   return ZX_OK;
 }
 
-static zx_status_t zxio_vmo_read_vector(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
-                                        zxio_flags_t flags, size_t* out_actual) {
+static zx_status_t zxio_vmo_readv(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
+                                  zxio_flags_t flags, size_t* out_actual) {
   if (flags) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -62,9 +62,8 @@ static zx_status_t zxio_vmo_read_vector(zxio_t* io, const zx_iovec_t* vector, si
   return status;
 }
 
-static zx_status_t zxio_vmo_read_vector_at(zxio_t* io, zx_off_t offset, const zx_iovec_t* vector,
-                                           size_t vector_count, zxio_flags_t flags,
-                                           size_t* out_actual) {
+static zx_status_t zxio_vmo_readv_at(zxio_t* io, zx_off_t offset, const zx_iovec_t* vector,
+                                     size_t vector_count, zxio_flags_t flags, size_t* out_actual) {
   if (flags) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -77,8 +76,8 @@ static zx_status_t zxio_vmo_read_vector_at(zxio_t* io, zx_off_t offset, const zx
                             });
 }
 
-static zx_status_t zxio_vmo_write_vector(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
-                                         zxio_flags_t flags, size_t* out_actual) {
+static zx_status_t zxio_vmo_writev(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
+                                   zxio_flags_t flags, size_t* out_actual) {
   if (flags) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -95,9 +94,8 @@ static zx_status_t zxio_vmo_write_vector(zxio_t* io, const zx_iovec_t* vector, s
   return status;
 }
 
-static zx_status_t zxio_vmo_write_vector_at(zxio_t* io, zx_off_t offset, const zx_iovec_t* vector,
-                                            size_t vector_count, zxio_flags_t flags,
-                                            size_t* out_actual) {
+static zx_status_t zxio_vmo_writev_at(zxio_t* io, zx_off_t offset, const zx_iovec_t* vector,
+                                      size_t vector_count, zxio_flags_t flags, size_t* out_actual) {
   if (flags) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -152,10 +150,10 @@ static constexpr zxio_ops_t zxio_vmo_ops = []() {
   ops.release = zxio_vmo_release;
   ops.clone = zxio_vmo_clone;
   ops.attr_get = zxio_vmo_attr_get;
-  ops.read_vector = zxio_vmo_read_vector;
-  ops.read_vector_at = zxio_vmo_read_vector_at;
-  ops.write_vector = zxio_vmo_write_vector;
-  ops.write_vector_at = zxio_vmo_write_vector_at;
+  ops.readv = zxio_vmo_readv;
+  ops.readv_at = zxio_vmo_readv_at;
+  ops.writev = zxio_vmo_writev;
+  ops.writev_at = zxio_vmo_writev_at;
   ops.seek = zxio_vmo_seek;
   return ops;
 }();

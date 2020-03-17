@@ -189,7 +189,7 @@ zx_status_t zxio_read(zxio_t* io, void* buffer, size_t capacity, zxio_flags_t fl
       .buffer = buffer,
       .capacity = capacity,
   };
-  return zxio_read_vector(io, &vector, 1, flags, out_actual);
+  return zxio_readv(io, &vector, 1, flags, out_actual);
 }
 
 zx_status_t zxio_read_at(zxio_t* io, zx_off_t offset, void* buffer, size_t capacity,
@@ -201,7 +201,7 @@ zx_status_t zxio_read_at(zxio_t* io, zx_off_t offset, void* buffer, size_t capac
       .buffer = buffer,
       .capacity = capacity,
   };
-  return zxio_read_vector_at(io, offset, &vector, 1, flags, out_actual);
+  return zxio_readv_at(io, offset, &vector, 1, flags, out_actual);
 }
 
 zx_status_t zxio_write(zxio_t* io, const void* buffer, size_t capacity, zxio_flags_t flags,
@@ -213,7 +213,7 @@ zx_status_t zxio_write(zxio_t* io, const void* buffer, size_t capacity, zxio_fla
       .buffer = const_cast<void*>(buffer),
       .capacity = capacity,
   };
-  return zxio_write_vector(io, &vector, 1, flags, out_actual);
+  return zxio_writev(io, &vector, 1, flags, out_actual);
 }
 
 zx_status_t zxio_write_at(zxio_t* io, zx_off_t offset, const void* buffer, size_t capacity,
@@ -225,43 +225,43 @@ zx_status_t zxio_write_at(zxio_t* io, zx_off_t offset, const void* buffer, size_
       .buffer = const_cast<void*>(buffer),
       .capacity = capacity,
   };
-  return zxio_write_vector_at(io, offset, &vector, 1, flags, out_actual);
+  return zxio_writev_at(io, offset, &vector, 1, flags, out_actual);
 }
 
-zx_status_t zxio_read_vector(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
-                             zxio_flags_t flags, size_t* out_actual) {
+zx_status_t zxio_readv(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
+                       zxio_flags_t flags, size_t* out_actual) {
   if (!zxio_is_valid(io)) {
     return ZX_ERR_BAD_HANDLE;
   }
   zxio_internal_t* zio = to_internal(io);
-  return zio->ops->read_vector(io, vector, vector_count, flags, out_actual);
+  return zio->ops->readv(io, vector, vector_count, flags, out_actual);
 }
 
-zx_status_t zxio_read_vector_at(zxio_t* io, zx_off_t offset, const zx_iovec_t* vector,
-                                size_t vector_count, zxio_flags_t flags, size_t* out_actual) {
+zx_status_t zxio_readv_at(zxio_t* io, zx_off_t offset, const zx_iovec_t* vector,
+                          size_t vector_count, zxio_flags_t flags, size_t* out_actual) {
   if (!zxio_is_valid(io)) {
     return ZX_ERR_BAD_HANDLE;
   }
   zxio_internal_t* zio = to_internal(io);
-  return zio->ops->read_vector_at(io, offset, vector, vector_count, flags, out_actual);
+  return zio->ops->readv_at(io, offset, vector, vector_count, flags, out_actual);
 }
 
-zx_status_t zxio_write_vector(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
-                              zxio_flags_t flags, size_t* out_actual) {
+zx_status_t zxio_writev(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
+                        zxio_flags_t flags, size_t* out_actual) {
   if (!zxio_is_valid(io)) {
     return ZX_ERR_BAD_HANDLE;
   }
   zxio_internal_t* zio = to_internal(io);
-  return zio->ops->write_vector(io, vector, vector_count, flags, out_actual);
+  return zio->ops->writev(io, vector, vector_count, flags, out_actual);
 }
 
-zx_status_t zxio_write_vector_at(zxio_t* io, zx_off_t offset, const zx_iovec_t* vector,
-                                 size_t vector_count, zxio_flags_t flags, size_t* out_actual) {
+zx_status_t zxio_writev_at(zxio_t* io, zx_off_t offset, const zx_iovec_t* vector,
+                           size_t vector_count, zxio_flags_t flags, size_t* out_actual) {
   if (!zxio_is_valid(io)) {
     return ZX_ERR_BAD_HANDLE;
   }
   zxio_internal_t* zio = to_internal(io);
-  return zio->ops->write_vector_at(io, offset, vector, vector_count, flags, out_actual);
+  return zio->ops->writev_at(io, offset, vector, vector_count, flags, out_actual);
 }
 
 static_assert(ZX_STREAM_SEEK_ORIGIN_START == ZXIO_SEEK_ORIGIN_START, "ZXIO should match ZX");

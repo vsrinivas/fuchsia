@@ -91,12 +91,12 @@ typedef struct zxio_extension_ops {
   bool skip_close_call;
 
   // The default behavior is returning |ZX_ERR_NOT_SUPPORTED|.
-  zx_status_t (*read_vector)(zxio_node_t* io, const zx_iovec_t* vector, size_t vector_count,
-                             zxio_flags_t flags, size_t* out_actual);
+  zx_status_t (*readv)(zxio_node_t* io, const zx_iovec_t* vector, size_t vector_count,
+                       zxio_flags_t flags, size_t* out_actual);
 
   // The default behavior is returning |ZX_ERR_NOT_SUPPORTED|.
-  zx_status_t (*write_vector)(zxio_node_t* io, const zx_iovec_t* vector, size_t vector_count,
-                              zxio_flags_t flags, size_t* out_actual);
+  zx_status_t (*writev)(zxio_node_t* io, const zx_iovec_t* vector, size_t vector_count,
+                        zxio_flags_t flags, size_t* out_actual);
 } zxio_extension_ops_t;
 
 zx_handle_t zxio_node_borrow_channel(const zxio_node_t* node);

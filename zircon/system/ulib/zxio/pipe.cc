@@ -120,9 +120,8 @@ static zx_status_t zxio_pipe_read_status(zx_status_t status, size_t* out_actual)
   return status;
 }
 
-zx_status_t zxio_datagram_pipe_read_vector(zxio_t* io, const zx_iovec_t* vector,
-                                           size_t vector_count, zxio_flags_t flags,
-                                           size_t* out_actual) {
+zx_status_t zxio_datagram_pipe_readv(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
+                                     zxio_flags_t flags, size_t* out_actual) {
   uint32_t zx_flags = 0;
   if (flags & ZXIO_PEEK) {
     zx_flags |= ZX_SOCKET_PEEK;
@@ -159,9 +158,8 @@ zx_status_t zxio_datagram_pipe_read_vector(zxio_t* io, const zx_iovec_t* vector,
                         });
 }
 
-zx_status_t zxio_datagram_pipe_write_vector(zxio_t* io, const zx_iovec_t* vector,
-                                            size_t vector_count, zxio_flags_t flags,
-                                            size_t* out_actual) {
+zx_status_t zxio_datagram_pipe_writev(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
+                                      zxio_flags_t flags, size_t* out_actual) {
   if (flags) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -183,10 +181,10 @@ zx_status_t zxio_datagram_pipe_write_vector(zxio_t* io, const zx_iovec_t* vector
   return pipe->socket.write(0, buf.get(), total, out_actual);
 }
 
-zx_status_t zxio_stream_pipe_read_vector(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
-                                         zxio_flags_t flags, size_t* out_actual) {
+zx_status_t zxio_stream_pipe_readv(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
+                                   zxio_flags_t flags, size_t* out_actual) {
   if (flags & ZXIO_PEEK) {
-    return zxio_datagram_pipe_read_vector(io, vector, vector_count, flags, out_actual);
+    return zxio_datagram_pipe_readv(io, vector, vector_count, flags, out_actual);
   }
   if (flags) {
     return ZX_ERR_NOT_SUPPORTED;
@@ -202,8 +200,8 @@ zx_status_t zxio_stream_pipe_read_vector(zxio_t* io, const zx_iovec_t* vector, s
       out_actual);
 }
 
-zx_status_t zxio_stream_pipe_write_vector(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
-                                          zxio_flags_t flags, size_t* out_actual) {
+zx_status_t zxio_stream_pipe_writev(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
+                                    zxio_flags_t flags, size_t* out_actual) {
   if (flags) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -230,15 +228,15 @@ static constexpr zxio_ops_t zxio_pipe_ops = []() {
 
 static constexpr zxio_ops_t zxio_datagram_pipe_ops = []() {
   zxio_ops_t ops = zxio_pipe_ops;
-  ops.read_vector = zxio_datagram_pipe_read_vector;
-  ops.write_vector = zxio_datagram_pipe_write_vector;
+  ops.readv = zxio_datagram_pipe_readv;
+  ops.writev = zxio_datagram_pipe_writev;
   return ops;
 }();
 
 static constexpr zxio_ops_t zxio_stream_pipe_ops = []() {
   zxio_ops_t ops = zxio_pipe_ops;
-  ops.read_vector = zxio_stream_pipe_read_vector;
-  ops.write_vector = zxio_stream_pipe_write_vector;
+  ops.readv = zxio_stream_pipe_readv;
+  ops.writev = zxio_stream_pipe_writev;
   return ops;
 }();
 

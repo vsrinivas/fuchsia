@@ -739,15 +739,15 @@ static constexpr zxio_ops_t zxio_stream_socket_ops = []() {
     auto zs = reinterpret_cast<zxio_stream_socket_t*>(io);
     zxio_wait_end(&zs->pipe.io, zx_signals, out_zxio_signals);
   };
-  ops.read_vector = [](zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
-                       zxio_flags_t flags, size_t* out_actual) {
+  ops.readv = [](zxio_t* io, const zx_iovec_t* vector, size_t vector_count, zxio_flags_t flags,
+                 size_t* out_actual) {
     auto zs = reinterpret_cast<zxio_stream_socket_t*>(io);
-    return zxio_read_vector(&zs->pipe.io, vector, vector_count, flags, out_actual);
+    return zxio_readv(&zs->pipe.io, vector, vector_count, flags, out_actual);
   };
-  ops.write_vector = [](zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
-                        zxio_flags_t flags, size_t* out_actual) {
+  ops.writev = [](zxio_t* io, const zx_iovec_t* vector, size_t vector_count, zxio_flags_t flags,
+                  size_t* out_actual) {
     auto zs = reinterpret_cast<zxio_stream_socket_t*>(io);
-    return zxio_write_vector(&zs->pipe.io, vector, vector_count, flags, out_actual);
+    return zxio_writev(&zs->pipe.io, vector, vector_count, flags, out_actual);
   };
   return ops;
 }();

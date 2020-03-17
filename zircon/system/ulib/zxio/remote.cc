@@ -515,8 +515,8 @@ static zx_status_t zxio_remote_do_vector(const Remote& rio, const zx_iovec_t* ve
                         });
 }
 
-zx_status_t zxio_remote_read_vector(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
-                                    zxio_flags_t flags, size_t* out_actual) {
+zx_status_t zxio_remote_readv(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
+                              zxio_flags_t flags, size_t* out_actual) {
   if (flags) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -552,9 +552,8 @@ zx_status_t zxio_remote_read_vector(zxio_t* io, const zx_iovec_t* vector, size_t
       });
 }
 
-zx_status_t zxio_remote_read_vector_at(zxio_t* io, zx_off_t offset, const zx_iovec_t* vector,
-                                       size_t vector_count, zxio_flags_t flags,
-                                       size_t* out_actual) {
+zx_status_t zxio_remote_readv_at(zxio_t* io, zx_off_t offset, const zx_iovec_t* vector,
+                                 size_t vector_count, zxio_flags_t flags, size_t* out_actual) {
   if (flags) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -590,8 +589,8 @@ zx_status_t zxio_remote_read_vector_at(zxio_t* io, zx_off_t offset, const zx_iov
       });
 }
 
-zx_status_t zxio_remote_write_vector(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
-                                     zxio_flags_t flags, size_t* out_actual) {
+zx_status_t zxio_remote_writev(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
+                               zxio_flags_t flags, size_t* out_actual) {
   if (flags) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -626,9 +625,8 @@ zx_status_t zxio_remote_write_vector(zxio_t* io, const zx_iovec_t* vector, size_
       });
 }
 
-zx_status_t zxio_remote_write_vector_at(zxio_t* io, zx_off_t offset, const zx_iovec_t* vector,
-                                        size_t vector_count, zxio_flags_t flags,
-                                        size_t* out_actual) {
+zx_status_t zxio_remote_writev_at(zxio_t* io, zx_off_t offset, const zx_iovec_t* vector,
+                                  size_t vector_count, zxio_flags_t flags, size_t* out_actual) {
   if (flags) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -814,10 +812,10 @@ static constexpr zxio_ops_t zxio_remote_ops = []() {
   ops.sync = zxio_remote_sync;
   ops.attr_get = zxio_remote_attr_get;
   ops.attr_set = zxio_remote_attr_set;
-  ops.read_vector = zxio_remote_read_vector;
-  ops.read_vector_at = zxio_remote_read_vector_at;
-  ops.write_vector = zxio_remote_write_vector;
-  ops.write_vector_at = zxio_remote_write_vector_at;
+  ops.readv = zxio_remote_readv;
+  ops.readv_at = zxio_remote_readv_at;
+  ops.writev = zxio_remote_writev;
+  ops.writev_at = zxio_remote_writev_at;
   ops.seek = zxio_remote_seek;
   ops.truncate = zxio_remote_truncate;
   ops.flags_get = zxio_remote_flags_get;
@@ -846,8 +844,8 @@ zx_status_t zxio_remote_init(zxio_storage_t* storage, zx_handle_t control, zx_ha
 
 namespace {
 
-zx_status_t zxio_dir_read_vector(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
-                                 zxio_flags_t flags, size_t* out_actual) {
+zx_status_t zxio_dir_readv(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
+                           zxio_flags_t flags, size_t* out_actual) {
   if (flags) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -862,9 +860,9 @@ zx_status_t zxio_dir_read_vector(zxio_t* io, const zx_iovec_t* vector, size_t ve
                         });
 }
 
-zx_status_t zxio_dir_read_vector_at(zxio_t* io, zx_off_t offset, const zx_iovec_t* vector,
-                                    size_t vector_count, zxio_flags_t flags, size_t* out_actual) {
-  return zxio_dir_read_vector(io, vector, vector_count, flags, out_actual);
+zx_status_t zxio_dir_readv_at(zxio_t* io, zx_off_t offset, const zx_iovec_t* vector,
+                              size_t vector_count, zxio_flags_t flags, size_t* out_actual) {
+  return zxio_dir_readv(io, vector, vector_count, flags, out_actual);
 }
 
 zx_status_t zxio_dir_attr_get(zxio_t* io, zxio_node_attributes_t* out_attr) {
@@ -889,8 +887,8 @@ static constexpr zxio_ops_t zxio_dir_ops = []() {
   ops.attr_get = zxio_dir_attr_get;
   ops.attr_set = zxio_dir_attr_set;
   // use specialized read functions that succeed for zero-sized reads.
-  ops.read_vector = zxio_dir_read_vector;
-  ops.read_vector_at = zxio_dir_read_vector_at;
+  ops.readv = zxio_dir_readv;
+  ops.readv_at = zxio_dir_readv_at;
   ops.flags_get = zxio_remote_flags_get;
   ops.flags_set = zxio_remote_flags_set;
   ops.open_async = zxio_remote_open_async;
@@ -964,10 +962,10 @@ static constexpr zxio_ops_t zxio_file_ops = []() {
   ops.sync = zxio_remote_sync;
   ops.attr_get = zxio_file_attr_get;
   ops.attr_set = zxio_file_attr_set;
-  ops.read_vector = zxio_remote_read_vector;
-  ops.read_vector_at = zxio_remote_read_vector_at;
-  ops.write_vector = zxio_remote_write_vector;
-  ops.write_vector_at = zxio_remote_write_vector_at;
+  ops.readv = zxio_remote_readv;
+  ops.readv_at = zxio_remote_readv_at;
+  ops.writev = zxio_remote_writev;
+  ops.writev_at = zxio_remote_writev_at;
   ops.seek = zxio_remote_seek;
   ops.truncate = zxio_remote_truncate;
   ops.flags_get = zxio_remote_flags_get;

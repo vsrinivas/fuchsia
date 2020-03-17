@@ -143,32 +143,32 @@ zx_status_t zxio_write_at(zxio_t* io, zx_off_t offset, const void* buffer, size_
 // The seek offset is moved forward by the actual number of bytes read.
 //
 // The actual number of bytes read is returned in |out_actual|.
-zx_status_t zxio_read_vector(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
-                             zxio_flags_t flags, size_t* out_actual);
+zx_status_t zxio_readv(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
+                       zxio_flags_t flags, size_t* out_actual);
 
 // Attempt to read bytes into the buffers described by |vector| at |offest|.
 //
 // Does not affect the seek offset.
 //
 // The actual number of bytes read is returned in |out_actual|.
-zx_status_t zxio_read_vector_at(zxio_t* io, zx_off_t offset, const zx_iovec_t* vector,
-                                size_t vector_count, zxio_flags_t flags, size_t* out_actual);
+zx_status_t zxio_readv_at(zxio_t* io, zx_off_t offset, const zx_iovec_t* vector,
+                          size_t vector_count, zxio_flags_t flags, size_t* out_actual);
 
 // Attempt to write bytes into the buffers described by |vector|.
 //
 // The seek offset is moved forward by the actual number of bytes written.
 //
 // The actual number of bytes written is returned in |out_actual|.
-zx_status_t zxio_write_vector(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
-                              zxio_flags_t flags, size_t* out_actual);
+zx_status_t zxio_writev(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
+                        zxio_flags_t flags, size_t* out_actual);
 
 // Attempt to write bytes into the buffers described by |vector| at |offest|.
 //
 // Does not affect the seek offset.
 //
 // The actual number of bytes written is returned in |out_actual|.
-zx_status_t zxio_write_vector_at(zxio_t* io, zx_off_t offset, const zx_iovec_t* vector,
-                                 size_t vector_count, zxio_flags_t flags, size_t* out_actual);
+zx_status_t zxio_writev_at(zxio_t* io, zx_off_t offset, const zx_iovec_t* vector,
+                           size_t vector_count, zxio_flags_t flags, size_t* out_actual);
 
 // Modify the seek offset.
 //

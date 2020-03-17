@@ -62,8 +62,8 @@ static zx_status_t fdio_timer_destroy(zxio_t* io) {
 
 static zx_status_t fdio_timer_close(zxio_t* io) { return ZX_OK; }
 
-static zx_status_t fdio_timer_read_vector(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
-                                          zxio_flags_t flags, size_t* out_actual) {
+static zx_status_t fdio_timer_readv(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
+                                    zxio_flags_t flags, size_t* out_actual) {
   if (fdio_iovec_get_capacity(vector, vector_count) < sizeof(uint64_t)) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
@@ -131,7 +131,7 @@ static constexpr zxio_ops_t fdio_timer_ops = []() {
   zxio_ops_t ops = zxio_default_ops;
   ops.destroy = fdio_timer_destroy;
   ops.close = fdio_timer_close;
-  ops.read_vector = fdio_timer_read_vector;
+  ops.readv = fdio_timer_readv;
   ops.wait_begin = fdio_timer_wait_begin;
   ops.wait_end = fdio_timer_wait_end;
   return ops;

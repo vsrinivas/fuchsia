@@ -45,7 +45,7 @@ constexpr zxio_ops_t Debuglog::kOps = ([]() {
   zxio_ops_t ops = zxio_default_ops;
   ops.close = Adaptor::From<&Debuglog::Close>;
   ops.clone = Adaptor::From<&Debuglog::Clone>;
-  ops.write_vector = Adaptor::From<&Debuglog::Writev>;
+  ops.writev = Adaptor::From<&Debuglog::Writev>;
   ops.isatty = Adaptor::From<&Debuglog::IsATty>;
   return ops;
 })();

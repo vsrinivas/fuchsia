@@ -37,25 +37,23 @@ zx_status_t zxio_default_attr_set(zxio_t* io, const zxio_node_attributes_t* attr
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t zxio_default_read_vector(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
-                                     zxio_flags_t flags, size_t* out_actual) {
+zx_status_t zxio_default_readv(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
+                               zxio_flags_t flags, size_t* out_actual) {
   return ZX_ERR_WRONG_TYPE;
 }
 
-zx_status_t zxio_default_read_vector_at(zxio_t* io, zx_off_t offset, const zx_iovec_t* vector,
-                                        size_t vector_count, zxio_flags_t flags,
-                                        size_t* out_actual) {
+zx_status_t zxio_default_readv_at(zxio_t* io, zx_off_t offset, const zx_iovec_t* vector,
+                                  size_t vector_count, zxio_flags_t flags, size_t* out_actual) {
   return ZX_ERR_WRONG_TYPE;
 }
 
-zx_status_t zxio_default_write_vector(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
-                                      zxio_flags_t flags, size_t* out_actual) {
+zx_status_t zxio_default_writev(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
+                                zxio_flags_t flags, size_t* out_actual) {
   return ZX_ERR_WRONG_TYPE;
 }
 
-zx_status_t zxio_default_write_vector_at(zxio_t* io, zx_off_t offset, const zx_iovec_t* vector,
-                                         size_t vector_count, zxio_flags_t flags,
-                                         size_t* out_actual) {
+zx_status_t zxio_default_writev_at(zxio_t* io, zx_off_t offset, const zx_iovec_t* vector,
+                                   size_t vector_count, zxio_flags_t flags, size_t* out_actual) {
   return ZX_ERR_WRONG_TYPE;
 }
 
@@ -118,8 +116,8 @@ void zxio_default_dirent_iterator_destroy(zxio_t* io, zxio_dirent_iterator_t* it
   iterator->io = nullptr;
 }
 
-static zx_status_t zxio_null_read_vector(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
-                                         zxio_flags_t flags, size_t* out_actual) {
+static zx_status_t zxio_null_readv(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
+                                   zxio_flags_t flags, size_t* out_actual) {
   if (flags) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -130,8 +128,8 @@ static zx_status_t zxio_null_read_vector(zxio_t* io, const zx_iovec_t* vector, s
                         });
 }
 
-static zx_status_t zxio_null_write_vector(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
-                                          zxio_flags_t flags, size_t* out_actual) {
+static zx_status_t zxio_null_writev(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
+                                    zxio_flags_t flags, size_t* out_actual) {
   if (flags) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -149,8 +147,8 @@ zx_status_t zxio_default_isatty(zxio_t* io, bool* tty) {
 
 static constexpr zxio_ops_t zxio_null_ops = []() {
   zxio_ops_t ops = zxio_default_ops;
-  ops.read_vector = zxio_null_read_vector;
-  ops.write_vector = zxio_null_write_vector;
+  ops.readv = zxio_null_readv;
+  ops.writev = zxio_null_writev;
   return ops;
 }();
 

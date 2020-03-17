@@ -84,22 +84,22 @@ zx_status_t zxio_node_attr_set(zxio_t* io, const zxio_node_attributes_t* attr) {
   return zxio_raw_remote_attr_set(zx::unowned_channel(to_internal(io)->control), attr);
 }
 
-zx_status_t zxio_node_read_vector(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
-                                  zxio_flags_t flags, size_t* out_actual) {
+zx_status_t zxio_node_readv(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
+                            zxio_flags_t flags, size_t* out_actual) {
   zxio_node_internal_t* node = to_internal(io);
-  if (!node->extension_ops || !node->extension_ops->read_vector) {
+  if (!node->extension_ops || !node->extension_ops->readv) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  return node->extension_ops->read_vector(to_node(io), vector, vector_count, flags, out_actual);
+  return node->extension_ops->readv(to_node(io), vector, vector_count, flags, out_actual);
 }
 
-zx_status_t zxio_node_write_vector(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
-                                   zxio_flags_t flags, size_t* out_actual) {
+zx_status_t zxio_node_writev(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
+                             zxio_flags_t flags, size_t* out_actual) {
   zxio_node_internal_t* node = to_internal(io);
-  if (!node->extension_ops || !node->extension_ops->write_vector) {
+  if (!node->extension_ops || !node->extension_ops->writev) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  return node->extension_ops->write_vector(to_node(io), vector, vector_count, flags, out_actual);
+  return node->extension_ops->writev(to_node(io), vector, vector_count, flags, out_actual);
 }
 
 }  // namespace
@@ -112,8 +112,8 @@ static constexpr zxio_ops_t zxio_node_ops = []() {
   ops.clone = zxio_node_clone;
   ops.attr_get = zxio_node_attr_get;
   ops.attr_set = zxio_node_attr_set;
-  ops.read_vector = zxio_node_read_vector;
-  ops.write_vector = zxio_node_write_vector;
+  ops.readv = zxio_node_readv;
+  ops.writev = zxio_node_writev;
   return ops;
 }();
 

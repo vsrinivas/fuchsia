@@ -48,8 +48,8 @@ const fuchsia_hardware_block_BlockInfo kDefaultBlockInfo = {
     .reserved = 0,
 };
 
-static zx_status_t mock_read_vector(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
-                                    zxio_flags_t flags, size_t* out_actual) {
+static zx_status_t mock_readv(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
+                              zxio_flags_t flags, size_t* out_actual) {
   if (flags) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -63,14 +63,13 @@ static zx_status_t mock_read_vector(zxio_t* io, const zx_iovec_t* vector, size_t
   return ZX_OK;
 }
 
-static zx_status_t mock_read_vector_at(zxio_t* io, zx_off_t offset, const zx_iovec_t* vector,
-                                       size_t vector_count, zxio_flags_t flags,
-                                       size_t* out_actual) {
-  return mock_read_vector(io, vector, vector_count, flags, out_actual);
+static zx_status_t mock_readv_at(zxio_t* io, zx_off_t offset, const zx_iovec_t* vector,
+                                 size_t vector_count, zxio_flags_t flags, size_t* out_actual) {
+  return mock_readv(io, vector, vector_count, flags, out_actual);
 }
 
-static zx_status_t mock_write_vector(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
-                                     zxio_flags_t flags, size_t* out_actual) {
+static zx_status_t mock_writev(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
+                               zxio_flags_t flags, size_t* out_actual) {
   if (flags) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -83,10 +82,9 @@ static zx_status_t mock_write_vector(zxio_t* io, const zx_iovec_t* vector, size_
   return ZX_OK;
 }
 
-static zx_status_t mock_write_vector_at(zxio_t* io, zx_off_t offset, const zx_iovec_t* vector,
-                                        size_t vector_count, zxio_flags_t flags,
-                                        size_t* out_actual) {
-  return mock_write_vector(io, vector, vector_count, flags, out_actual);
+static zx_status_t mock_writev_at(zxio_t* io, zx_off_t offset, const zx_iovec_t* vector,
+                                  size_t vector_count, zxio_flags_t flags, size_t* out_actual) {
+  return mock_writev(io, vector, vector_count, flags, out_actual);
 }
 
 static zx_status_t mock_seek(zxio_t* io, zxio_seek_origin_t start, int64_t offset,
@@ -103,10 +101,10 @@ static zx_status_t mock_seek(zxio_t* io, zxio_seek_origin_t start, int64_t offse
 
 constexpr zxio_ops_t mock_ops = []() {
   zxio_ops_t ops = zxio_default_ops;
-  ops.read_vector = mock_read_vector;
-  ops.read_vector_at = mock_read_vector_at;
-  ops.write_vector = mock_write_vector;
-  ops.write_vector_at = mock_write_vector_at;
+  ops.readv = mock_readv;
+  ops.readv_at = mock_readv_at;
+  ops.writev = mock_writev;
+  ops.writev_at = mock_writev_at;
   ops.seek = mock_seek;
   return ops;
 }();

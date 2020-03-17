@@ -62,8 +62,8 @@ static void fdio_event_update_signals(fdio_event_t* event) __TA_REQUIRES(event->
   ZX_ASSERT(status == ZX_OK);
 }
 
-static zx_status_t fdio_event_read_vector(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
-                                          zxio_flags_t flags, size_t* out_actual) {
+static zx_status_t fdio_event_readv(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
+                                    zxio_flags_t flags, size_t* out_actual) {
   if (fdio_iovec_get_capacity(vector, vector_count) < sizeof(uint64_t)) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
@@ -93,9 +93,8 @@ static zx_status_t fdio_event_read_vector(zxio_t* io, const zx_iovec_t* vector, 
   return ZX_OK;
 }
 
-static zx_status_t fdio_event_write_vector(zxio_t* io, const zx_iovec_t* vector,
-                                           size_t vector_count, zxio_flags_t flags,
-                                           size_t* out_actual) {
+static zx_status_t fdio_event_writev(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
+                                     zxio_flags_t flags, size_t* out_actual) {
   uint64_t increment = 0u;
   size_t actual = 0u;
   fdio_iovec_copy_from(vector, vector_count, reinterpret_cast<uint8_t*>(&increment),
@@ -130,7 +129,7 @@ static zx_status_t fdio_event_write_vector(zxio_t* io, const zx_iovec_t* vector,
     // ZX_ERR_SHOULD_WAIT without clearing the POLLOUT bit. (Of course, this
     // will cause code that attempts to wait for POLLOUT to spin hot, but that's
     // true on Linux as well.) If the write is blocking, then we should block on
-    // a sync_completion_t, which should be signaled in fdio_event_read_vector.
+    // a sync_completion_t, which should be signaled in fdio_event_readv.
     //
     // We hope the behavior we have implemented here is sufficiently compatible
     // to be useful. If not, we might need to restructure how we do blocking
@@ -181,8 +180,8 @@ static constexpr zxio_ops_t fdio_event_ops = []() {
   zxio_ops_t ops = zxio_default_ops;
   ops.destroy = fdio_event_destroy;
   ops.close = fdio_event_close;
-  ops.read_vector = fdio_event_read_vector;
-  ops.write_vector = fdio_event_write_vector;
+  ops.readv = fdio_event_readv;
+  ops.writev = fdio_event_writev;
   ops.wait_begin = fdio_event_wait_begin;
   ops.wait_end = fdio_event_wait_end;
   return ops;

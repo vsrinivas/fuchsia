@@ -549,7 +549,7 @@ zx_status_t fdio_zxio_recvmsg(fdio_t* io, struct msghdr* msg, int flags, size_t*
   // Variable length arrays have to have nonzero sizes, so we can't allocate a zx_iov for an empty
   // io vector. Instead, we can ask to read zero entries with a null vector.
   if (msg->msg_iovlen == 0) {
-    return zxio_read_vector(fdio_get_zxio(io), nullptr, 0, zxio_flags, out_actual);
+    return zxio_readv(fdio_get_zxio(io), nullptr, 0, zxio_flags, out_actual);
   }
 
   zx_iovec_t zx_iov[msg->msg_iovlen];
@@ -560,7 +560,7 @@ zx_status_t fdio_zxio_recvmsg(fdio_t* io, struct msghdr* msg, int flags, size_t*
     };
   }
 
-  return zxio_read_vector(fdio_get_zxio(io), zx_iov, msg->msg_iovlen, zxio_flags, out_actual);
+  return zxio_readv(fdio_get_zxio(io), zx_iov, msg->msg_iovlen, zxio_flags, out_actual);
 }
 
 zx_status_t fdio_zxio_sendmsg(fdio_t* io, const struct msghdr* msg, int flags, size_t* out_actual,
@@ -576,7 +576,7 @@ zx_status_t fdio_zxio_sendmsg(fdio_t* io, const struct msghdr* msg, int flags, s
   // Variable length arrays have to have nonzero sizes, so we can't allocate a zx_iov for an empty
   // io vector. Instead, we can ask to write zero entries with a null vector.
   if (msg->msg_iovlen == 0) {
-    return zxio_write_vector(fdio_get_zxio(io), nullptr, 0, 0, out_actual);
+    return zxio_writev(fdio_get_zxio(io), nullptr, 0, 0, out_actual);
   }
 
   zx_iovec_t zx_iov[msg->msg_iovlen];
@@ -586,7 +586,7 @@ zx_status_t fdio_zxio_sendmsg(fdio_t* io, const struct msghdr* msg, int flags, s
         .capacity = msg->msg_iov[i].iov_len,
     };
   }
-  return zxio_write_vector(fdio_get_zxio(io), zx_iov, msg->msg_iovlen, 0, out_actual);
+  return zxio_writev(fdio_get_zxio(io), zx_iov, msg->msg_iovlen, 0, out_actual);
 }
 
 zx_status_t fdio_zx_socket_shutdown(const zx::socket& socket, int how) {

@@ -60,14 +60,14 @@ typedef struct zxio_ops {
   zx_status_t (*sync)(zxio_t* io);
   zx_status_t (*attr_get)(zxio_t* io, zxio_node_attributes_t* out_attr);
   zx_status_t (*attr_set)(zxio_t* io, const zxio_node_attributes_t* attr);
-  zx_status_t (*read_vector)(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
-                             zxio_flags_t flags, size_t* out_actual);
-  zx_status_t (*read_vector_at)(zxio_t* io, zx_off_t offset, const zx_iovec_t* vector,
-                                size_t vector_count, zxio_flags_t flags, size_t* out_actual);
-  zx_status_t (*write_vector)(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
-                              zxio_flags_t flags, size_t* out_actual);
-  zx_status_t (*write_vector_at)(zxio_t* io, zx_off_t offset, const zx_iovec_t* vector,
-                                 size_t vector_count, zxio_flags_t flags, size_t* out_actual);
+  zx_status_t (*readv)(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
+                       zxio_flags_t flags, size_t* out_actual);
+  zx_status_t (*readv_at)(zxio_t* io, zx_off_t offset, const zx_iovec_t* vector,
+                          size_t vector_count, zxio_flags_t flags, size_t* out_actual);
+  zx_status_t (*writev)(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
+                        zxio_flags_t flags, size_t* out_actual);
+  zx_status_t (*writev_at)(zxio_t* io, zx_off_t offset, const zx_iovec_t* vector,
+                           size_t vector_count, zxio_flags_t flags, size_t* out_actual);
   zx_status_t (*seek)(zxio_t* io, zxio_seek_origin_t start, int64_t offset, size_t* out_offset);
   zx_status_t (*truncate)(zxio_t* io, size_t length);
   zx_status_t (*flags_get)(zxio_t* io, uint32_t* out_flags);

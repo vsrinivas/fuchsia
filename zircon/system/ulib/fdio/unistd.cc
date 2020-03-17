@@ -963,7 +963,7 @@ ssize_t preadv(int fd, const struct iovec* iov, int iovcnt, off_t offset) {
 
   for (;;) {
     size_t actual;
-    zx_status_t status = zxio_read_vector_at(fdio_get_zxio(io), offset, zx_iov, iovcnt, 0, &actual);
+    zx_status_t status = zxio_readv_at(fdio_get_zxio(io), offset, zx_iov, iovcnt, 0, &actual);
     if (status == ZX_ERR_SHOULD_WAIT && !nonblocking) {
       if (fdio_wait(io, FDIO_EVT_READABLE, deadline, nullptr) != ZX_ERR_TIMED_OUT) {
         continue;
@@ -996,8 +996,7 @@ ssize_t pwritev(int fd, const struct iovec* iov, int iovcnt, off_t offset) {
 
   for (;;) {
     size_t actual;
-    zx_status_t status =
-        zxio_write_vector_at(fdio_get_zxio(io), offset, zx_iov, iovcnt, 0, &actual);
+    zx_status_t status = zxio_writev_at(fdio_get_zxio(io), offset, zx_iov, iovcnt, 0, &actual);
     if (status == ZX_ERR_SHOULD_WAIT && !nonblocking) {
       if (fdio_wait(io, FDIO_EVT_WRITABLE, deadline, nullptr) != ZX_ERR_TIMED_OUT) {
         continue;

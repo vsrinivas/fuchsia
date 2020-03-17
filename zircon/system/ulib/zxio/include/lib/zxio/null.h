@@ -33,16 +33,14 @@ void zxio_default_wait_end(zxio_t* io, zx_signals_t zx_signals, zxio_signals_t* 
 zx_status_t zxio_default_sync(zxio_t* io);
 zx_status_t zxio_default_attr_get(zxio_t* io, zxio_node_attributes_t* out_attr);
 zx_status_t zxio_default_attr_set(zxio_t* io, const zxio_node_attributes_t* attr);
-zx_status_t zxio_default_read_vector(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
-                                     zxio_flags_t flags, size_t* out_actual);
-zx_status_t zxio_default_read_vector_at(zxio_t* io, zx_off_t offset, const zx_iovec_t* vector,
-                                        size_t vector_count, zxio_flags_t flags,
-                                        size_t* out_actual);
-zx_status_t zxio_default_write_vector(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
-                                      zxio_flags_t flags, size_t* out_actual);
-zx_status_t zxio_default_write_vector_at(zxio_t* io, zx_off_t offset, const zx_iovec_t* vector,
-                                         size_t vector_count, zxio_flags_t flags,
-                                         size_t* out_actual);
+zx_status_t zxio_default_readv(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
+                               zxio_flags_t flags, size_t* out_actual);
+zx_status_t zxio_default_readv_at(zxio_t* io, zx_off_t offset, const zx_iovec_t* vector,
+                                  size_t vector_count, zxio_flags_t flags, size_t* out_actual);
+zx_status_t zxio_default_writev(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
+                                zxio_flags_t flags, size_t* out_actual);
+zx_status_t zxio_default_writev_at(zxio_t* io, zx_off_t offset, const zx_iovec_t* vector,
+                                   size_t vector_count, zxio_flags_t flags, size_t* out_actual);
 zx_status_t zxio_default_seek(zxio_t* io, zxio_seek_origin_t start, int64_t offset,
                               size_t* out_offset);
 zx_status_t zxio_default_truncate(zxio_t* io, size_t length);
@@ -81,10 +79,10 @@ static __CONSTEXPR const zxio_ops_t zxio_default_ops = {
     .sync = zxio_default_sync,
     .attr_get = zxio_default_attr_get,
     .attr_set = zxio_default_attr_set,
-    .read_vector = zxio_default_read_vector,
-    .read_vector_at = zxio_default_read_vector_at,
-    .write_vector = zxio_default_write_vector,
-    .write_vector_at = zxio_default_write_vector_at,
+    .readv = zxio_default_readv,
+    .readv_at = zxio_default_readv_at,
+    .writev = zxio_default_writev,
+    .writev_at = zxio_default_writev_at,
     .seek = zxio_default_seek,
     .truncate = zxio_default_truncate,
     .flags_get = zxio_default_flags_get,

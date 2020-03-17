@@ -91,8 +91,8 @@ TEST_F(ExtensionNode, DefaultBehaviors) {
   TestServerBase* server;
   ASSERT_NO_FAILURES(server = StartServer<TestServerBase>());
 
-  ASSERT_STATUS(ZX_ERR_NOT_SUPPORTED, zxio_read_vector(&node.io, nullptr, 0, 0, nullptr));
-  ASSERT_STATUS(ZX_ERR_NOT_SUPPORTED, zxio_write_vector(&node.io, nullptr, 0, 0, nullptr));
+  ASSERT_STATUS(ZX_ERR_NOT_SUPPORTED, zxio_readv(&node.io, nullptr, 0, 0, nullptr));
+  ASSERT_STATUS(ZX_ERR_NOT_SUPPORTED, zxio_writev(&node.io, nullptr, 0, 0, nullptr));
 
   ASSERT_EQ(0, server->num_close());
   ASSERT_OK(zxio_close(&node.io));
@@ -121,8 +121,8 @@ TEST_F(ExtensionNode, SkipClose) {
   constexpr static zxio_extension_ops_t extension_ops = {
       .destroy = nullptr,
       .skip_close_call = true,
-      .read_vector = nullptr,
-      .write_vector = nullptr,
+      .readv = nullptr,
+      .writev = nullptr,
   };
   zxio_node_init(&node, control_client_end_.release(), &extension_ops);
 
@@ -142,13 +142,13 @@ TEST_F(ExtensionNode, OverrideOperations) {
       constexpr static zxio_extension_ops_t kExtensionOps = {
           .destroy = nullptr,
           .skip_close_call = false,
-          .read_vector =
+          .readv =
               [](zxio_node_t* io, const zx_iovec_t* vector, size_t vector_count, zxio_flags_t flags,
                  size_t* out_actual) {
                 static_cast<MyIo*>(io)->read_called_.store(true);
                 return ZX_OK;
               },
-          .write_vector =
+          .writev =
               [](zxio_node_t* io, const zx_iovec_t* vector, size_t vector_count, zxio_flags_t flags,
                  size_t* out_actual) {
                 static_cast<MyIo*>(io)->write_called_.store(true);
@@ -177,11 +177,11 @@ TEST_F(ExtensionNode, OverrideOperations) {
   ASSERT_NO_FAILURES(server = StartServer<TestServerBase>());
 
   ASSERT_FALSE(node.read_called());
-  ASSERT_OK(zxio_read_vector(*node, nullptr, 0, 0, nullptr));
+  ASSERT_OK(zxio_readv(*node, nullptr, 0, 0, nullptr));
   ASSERT_TRUE(node.read_called());
 
   ASSERT_FALSE(node.write_called());
-  ASSERT_OK(zxio_write_vector(*node, nullptr, 0, 0, nullptr));
+  ASSERT_OK(zxio_writev(*node, nullptr, 0, 0, nullptr));
   ASSERT_TRUE(node.write_called());
 }
 
