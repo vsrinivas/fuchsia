@@ -1,0 +1,99 @@
+#!/bin/bash
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+#### CATEGORY=Other
+### Remotely build, fetch and pave
+
+## usage: fx pave-remote HOST [DIR] [--no-pave] [--no-build]
+##
+## Connect to HOST, run a build using fx from DIR, fetch the artifacts and
+## start the paver.
+##
+##  --no-build    do not build, just pull artifacts already present
+##  --no-pave     do not start the paver, just pull the artifacts
+##
+##  HOST          the hostname to connect to
+##  DIR           defaults to ~/fuchsia, the path to the FUCHSIA_DIR on HOST
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
+fx-config-read
+
+build=true
+pave=true
+host=""
+dir=""
+while [[ $# -ne 0 ]]; do
+  case "$1" in
+  --help|-h)
+      fx-command-help
+      exit 0
+      ;;
+  --no-build)
+    build=false
+    ;;
+  --no-pave)
+    pave=false
+    ;;
+  -*)
+    fx-error "Unknown flag: $1"
+    fx-command-help
+    exit 1
+    ;;
+  *)
+    if [[ -z "${host}" ]]; then
+      host="$1"
+    elif [[ -z "${dir}" ]]; then
+      dir="$1"
+    else
+      fx-error "unexpected argument: '$1'"
+      exit 1
+    fi
+    ;;
+  esac
+  shift
+done
+
+
+if [[ -z "${host}" ]]; then
+fx-error "HOST must be specified"
+fx-command-help
+exit 1
+fi
+
+if [[ -z "${dir}" ]]; then
+  if ssh "$host" ls \~/fuchsia/.jiri_root/bin/fx > /dev/null; then
+    dir="~/fuchsia"
+  else
+    fx-error "failed to find ~/fuchsia on $host, please specify DIR"
+    fx-command-help
+    exit 1
+  fi
+fi
+
+ssh "${host}" "cd ${dir} && ./.jiri_root/bin/fx build build-archive.tgz" || exit $?
+build_dir=$(ssh "${host}" "cd ${dir} && ./.jiri_root/bin/fx get-build-dir")
+
+rsync -P "${host}":"${build_dir}/build-archive.tgz" out/build-archive.tgz
+
+mkdir -p out/fetched
+tar zxf out/build-archive.tgz -C out/fetched
+echo >&2 "Build archive expanded into out/fetched"
+
+if "${pave}"; then
+  cd out/fetched
+
+  if [[ $(uname) = "Darwin" ]]; then
+    # HACK!
+    rm -f bootserver.exe.linux-x64
+    cp "${FUCHSIA_BUILD_DIR}/host_x64/bootserver" ./bootserver.exe.linux-x64
+  fi
+
+  args=()
+  if [[ -n "$(get-device-name)" ]]; then
+    args+=(-n $(get-device-name))
+  fi
+
+  ./pave.sh --authorized-keys "${FUCHSIA_DIR}/.ssh/authorized_keys" "${args[@]}"
+fi
