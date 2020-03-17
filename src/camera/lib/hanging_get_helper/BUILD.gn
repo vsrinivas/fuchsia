@@ -1,0 +1,15 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("hanging_get_helper") {
+  public_deps = [ ":lib" ]
+}
+
+source_set("lib") {
+  visibility = [ ":*" ]
+
+  public = [ "hanging_get_helper.h" ]
+
+  public_deps = [ "//zircon/public/lib/fit" ]
+}

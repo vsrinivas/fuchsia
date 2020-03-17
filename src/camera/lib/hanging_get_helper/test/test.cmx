@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "test/hanging_get_helper_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.tracing.provider.Registry",
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

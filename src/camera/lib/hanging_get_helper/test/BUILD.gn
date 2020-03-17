@@ -1,0 +1,16 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("test") {
+  testonly = true
+
+  output_name = "hanging_get_helper_test"
+
+  sources = [ "test.cc" ]
+
+  deps = [
+    "..",
+    "//src/lib/fxl/test:gtest_main_with_syslog",
+  ]
+}
