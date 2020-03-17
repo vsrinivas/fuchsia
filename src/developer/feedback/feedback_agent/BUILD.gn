@@ -175,6 +175,7 @@ source_set("data_register") {
   ]
 
   public_deps = [
+    ":datastore",
     "//sdk/fidl/fuchsia.feedback",
     "//src/developer/feedback/feedback_agent/annotations:aliases",
   ]

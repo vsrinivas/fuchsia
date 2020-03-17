@@ -70,8 +70,7 @@ FeedbackAgent::FeedbackAgent(async_dispatcher_t* dispatcher,
       datastore_(dispatcher_, services, &cobalt_, config.annotation_allowlist,
                  config.attachment_allowlist),
       data_provider_(dispatcher_, services, &cobalt_, &datastore_),
-      // TODO(fxb/47368): pass a reference to the Datastore to be able to upsert extra annotations.
-      data_register_() {
+      data_register_(&datastore_) {
   // We need to move the logs from the previous boot before spawning the system log recorder process
   // so that the new process doesn't overwrite the old logs. Additionally, to guarantee the data
   // providers see the complete previous logs, this needs to be done before spawning any data

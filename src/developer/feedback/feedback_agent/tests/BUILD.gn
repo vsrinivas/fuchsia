@@ -278,7 +278,7 @@ executable("data_register_unittest") {
     "//sdk/fidl/fuchsia.feedback",
     "//src/developer/feedback/feedback_agent:data_register",
     "//src/developer/feedback/testing:gtest_with_syslog_main",
-    "//src/lib/testing/loop_fixture",
+    "//src/developer/feedback/testing:unit_test_fixture",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]

@@ -24,6 +24,7 @@ namespace feedback {
 // * dynamic and collected upon data request, e.g., uptime or logs.
 // * collected synchronously, e.g., build version or uptime.
 // * collected asynchronously, e.g., hardware info or logs.
+// * pushed by other components.
 //
 // Because of dynamic asynchronous data, the data requests can take some time and return a
 // fit::promise.
@@ -33,12 +34,20 @@ class Datastore {
             Cobalt* cobalt, const AnnotationKeys& annotation_allowlist,
             const AttachmentKeys& attachment_allowlist);
 
+  // Exposed for testing purposes.
+  Datastore(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services);
+
   fit::promise<Annotations> GetAnnotations();
   fit::promise<Attachments> GetAttachments();
+
+  void SetExtraAnnotations(const Annotations& extra_annotations) {
+    extra_annotations_ = extra_annotations;
+  }
 
   // Exposed for testing purposes.
   const Annotations& GetStaticAnnotations() const { return static_annotations_; }
   const Attachments& GetStaticAttachments() const { return static_attachments_; }
+  const Annotations& GetExtraAnnotations() const { return extra_annotations_; }
 
  private:
   async_dispatcher_t* dispatcher_;
@@ -49,6 +58,8 @@ class Datastore {
 
   const Annotations static_annotations_;
   const Attachments static_attachments_;
+
+  Annotations extra_annotations_;
 
   fit::promise<Attachment> BuildAttachment(const AttachmentKey& key);
   fit::promise<AttachmentValue> BuildAttachmentValue(const AttachmentKey& key);

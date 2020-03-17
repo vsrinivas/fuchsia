@@ -8,13 +8,14 @@
 #include <fuchsia/feedback/cpp/fidl.h>
 
 #include "src/developer/feedback/feedback_agent/annotations/aliases.h"
+#include "src/developer/feedback/feedback_agent/datastore.h"
 
 namespace feedback {
 
 // Registers data useful to attach in feedback reports (crash, user feedback or bug reports).
 class DataRegister : public fuchsia::feedback::ComponentDataRegister {
  public:
-  DataRegister() = default;
+  explicit DataRegister(Datastore* datastore);
 
   // |fuchsia.feedback.ComponentDataRegister|
   void Upsert(fuchsia::feedback::ComponentData data, UpsertCallback callback);
@@ -25,6 +26,8 @@ class DataRegister : public fuchsia::feedback::ComponentDataRegister {
   };
 
  private:
+  Datastore* datastore_;
+
   std::map<std::string, Annotations> namespaced_annotations_;
 };
 

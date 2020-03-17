@@ -49,6 +49,18 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
   }
 }
 
+Datastore::Datastore(async_dispatcher_t* dispatcher,
+                     std::shared_ptr<sys::ServiceDirectory> services)
+    : dispatcher_(dispatcher),
+      services_(services),
+      // Somewhat risky, but the Cobalt's constructor sets up a bunch of stuff and this constructor
+      // is intended for tests.
+      cobalt_(nullptr),
+      annotation_allowlist_({}),
+      attachment_allowlist_({}),
+      static_annotations_({}),
+      static_attachments_({}) {}
+
 fit::promise<Annotations> Datastore::GetAnnotations() {
   if (annotation_allowlist_.empty()) {
     return fit::make_result_promise<Annotations>(fit::error());
