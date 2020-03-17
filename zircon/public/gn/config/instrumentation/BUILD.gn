@@ -13,11 +13,6 @@ declare_args() {
   # with programs that define their own `__asan_default_options` C
   # function.
   asan_default_options = ""
-  if (is_fuchsia) {
-    # TODO(45047): Temporary until all lsan bugs are filed and marked with
-    # deps += [ "$zx/public/gn/config/instrumentation:suppress-lsan.DO-NOT-USE-THIS" ]
-    asan_default_options = "detect_leaks=0"
-  }
 
   # Default [UndefinedBehaviorSanitizer](https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html)
   # options (before the `UBSAN_OPTIONS` environment variable is read at
@@ -40,7 +35,8 @@ declare_args() {
 # marked that way, the asan_default_options default above will be removed.
 source_set("suppress-lsan.DO-NOT-USE-THIS") {
   # This would conflict with the generic one.
-  if (asan_default_options == "") {
+  if (asan_default_options == "" &&
+      toolchain.tags + [ "asan" ] - [ "asan" ] != toolchain.tags) {
     sources = [ "asan_default_options.c" ]
     defines = [ "ASAN_DEFAULT_OPTIONS=\"detect_leaks=0\"" ]
     configs -= [ "$zx_build/public/gn/config:visibility_hidden" ]
