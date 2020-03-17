@@ -33,4 +33,7 @@ rustc_library("vfs") {
   ]
 
   test_deps = [ "//garnet/examples/fidl/services:echo-rustc" ]
+
+  # TODO(48539): Fix the leaks and remove this.
+  non_rust_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
