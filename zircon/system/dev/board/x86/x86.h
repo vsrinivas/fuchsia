@@ -5,6 +5,7 @@
 #ifndef ZIRCON_SYSTEM_DEV_BOARD_X86_X86_H_
 #define ZIRCON_SYSTEM_DEV_BOARD_X86_X86_H_
 
+#include <fuchsia/hardware/acpi/llcpp/fidl.h>
 #include <threads.h>
 
 #include <memory>
@@ -13,16 +14,18 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/platform/bus.h>
 #include <fbl/macros.h>
+#include <fbl/vector.h>
 
 #include "iommu.h"
 
 namespace x86 {
 
 // This is the main class for the X86 platform bus driver.
-class X86 : public ddk::Device<X86> {
+class X86 : public ddk::Device<X86, ddk::Messageable>,
+            public ::llcpp::fuchsia::hardware::acpi::Acpi::Interface {
  public:
   explicit X86(zx_device_t* parent, pbus_protocol_t* pbus, zx_device_t* sys_root)
-      : ddk::Device<X86>(parent), pbus_(pbus), sys_root_(sys_root) {}
+      : ddk::Device<X86, ddk::Messageable>(parent), pbus_(pbus), sys_root_(sys_root) {}
   ~X86();
 
   static zx_status_t Create(void* ctx, zx_device_t* parent, std::unique_ptr<X86>* out);
@@ -31,11 +34,23 @@ class X86 : public ddk::Device<X86> {
 
   // Device protocol implementation.
   void DdkRelease();
+  zx_status_t DdkMessage(fidl_msg*, fidl_txn*);
+
+  // ACPI protocol FIDL interface implementation.
+  void ListTableEntries(ListTableEntriesCompleter::Sync completer) override;
+  void ReadNamedTable(fidl::Array<uint8_t, 4> name, uint32_t instance, ::zx::vmo result,
+                      ReadNamedTableCompleter::Sync completer) override;
 
   // Performs ACPICA initialization.
   zx_status_t EarlyAcpiInit();
 
   zx_status_t EarlyInit();
+
+  // Add the list of ACPI entries present in the system to |entries|.
+  //
+  // Requires that ACPI has been initialised.
+  zx_status_t GetAcpiTableEntries(
+      fbl::Vector<::llcpp::fuchsia::hardware::acpi::TableInfo>* entries);
 
  private:
   X86(const X86&) = delete;

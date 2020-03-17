@@ -4,7 +4,7 @@
 
 #include "x86.h"
 
-#include <fuchsia/sysinfo/c/fidl.h>
+#include <fuchsia/hardware/acpi/llcpp/fidl.h>
 #include <lib/driver-unit-test/utils.h>
 #include <stdlib.h>
 #include <string.h>
@@ -16,11 +16,16 @@
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
+#include <ddktl/fidl.h>
 #include <fbl/alloc_checker.h>
+#include <fbl/vector.h>
 
 #include "acpi.h"
 #include "smbios.h"
 #include "sysmem.h"
+
+using ::llcpp::fuchsia::hardware::acpi::MAX_ACPI_TABLE_ENTRIES;
+using ::llcpp::fuchsia::hardware::acpi::TableInfo;
 
 zx_handle_t root_resource_handle;
 
@@ -178,6 +183,80 @@ zx_status_t X86::Bind() {
 
 bool X86::RunUnitTests(void* ctx, zx_device_t* parent, zx_handle_t channel) {
   return driver_unit_test::RunZxTests("X86Tests", parent, channel);
+}
+
+zx_status_t X86::DdkMessage(fidl_msg* message, fidl_txn* txn) {
+  DdkTransaction transaction(txn);
+  llcpp::fuchsia::hardware::acpi::Acpi::Dispatch(this, message, &transaction);
+  return transaction.Status();
+}
+
+zx_status_t X86::GetAcpiTableEntries(fbl::Vector<TableInfo>* entries) {
+  ZX_DEBUG_ASSERT(acpica_initialized_);
+
+  for (uint32_t i = 0; i < MAX_ACPI_TABLE_ENTRIES; i++) {
+    // Fetch the next table entry.
+    ACPI_TABLE_HEADER* table;
+    ACPI_STATUS status = AcpiGetTableByIndex(i, &table);
+    if (status == AE_BAD_PARAMETER) {
+      // End of iteration.
+      break;
+    } else if (status != AE_OK) {
+      // Unexpected error.
+      return ZX_ERR_INTERNAL;
+    }
+
+    // Create an ACPI table header entry.
+    TableInfo info;
+    static_assert(sizeof(info.name) == sizeof(table->Signature));
+    memcpy(info.name.data(), table->Signature, sizeof(table->Signature));
+    info.size = table->Length;
+
+    // Add it to the list.
+    fbl::AllocChecker ac;
+    entries->push_back(info, &ac);
+    if (!ac.check()) {
+      return ZX_ERR_NO_MEMORY;
+    }
+  }
+
+  return ZX_OK;
+}
+
+void X86::ListTableEntries(ListTableEntriesCompleter::Sync completer) {
+  ZX_DEBUG_ASSERT(acpica_initialized_);
+
+  // Fetch the entries.
+  fbl::Vector<TableInfo> entries;
+  zx_status_t status = GetAcpiTableEntries(&entries);
+  if (status != ZX_OK) {
+    completer.ReplyError(status);
+    return;
+  }
+
+  // Send them back to the user.
+  completer.ReplySuccess(fidl::VectorView<TableInfo>(entries.data(), entries.size()));
+}
+
+void X86::ReadNamedTable(fidl::Array<uint8_t, 4> name, uint32_t instance, ::zx::vmo result,
+                         ReadNamedTableCompleter::Sync completer) {
+  // Fetch the requested table.
+  ACPI_TABLE_HEADER* table;
+  if (ACPI_STATUS status = AcpiGetTable(reinterpret_cast<char*>(name.data()), instance, &table);
+      status != AE_OK) {
+    completer.ReplyError(status == AE_NOT_FOUND ? ZX_ERR_NOT_FOUND : ZX_ERR_INTERNAL);
+    return;
+  }
+
+  // Copy it into the VMO.
+  if (zx_status_t status =
+          result.write(reinterpret_cast<uint8_t*>(table), /*offset=*/0, table->Length);
+      status != ZX_OK) {
+    completer.ReplyError(status);
+    return;
+  }
+
+  completer.ReplySuccess(table->Length);
 }
 
 static zx_driver_ops_t x86_driver_ops = []() {

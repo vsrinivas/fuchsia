@@ -143,6 +143,7 @@ driver_module("platform-bus-x86") {
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.scpi",
     "//zircon/system/banjo/ddk.protocol.sysmem",
+    "//zircon/system/fidl/fuchsia-hardware-acpi:llcpp",
     "//zircon/system/fidl/fuchsia-hardware-thermal:c",
     "//zircon/system/fidl/fuchsia-sysinfo:c",
     "//zircon/system/fidl/fuchsia-sysmem:c",

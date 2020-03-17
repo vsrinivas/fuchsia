@@ -3170,6 +3170,7 @@ aggregate_manifest("migrated-aux") {
       "//zircon/system/dev/board/x86:x86-lid-test-manifest",
       "//zircon/system/dev/board/x86:x86-pwrsrc-test-manifest",
       "//zircon/system/dev/board/x86:x86-thermal-test-manifest",
+      "//zircon/system/utest/x86-board:x86-board-manifest",
       "//zircon/system/utest/x86-umip:x86-umip-manifest",
     ]
   }
@@ -3831,6 +3832,7 @@ aggregate_manifest("migrated-tests") {
       "//zircon/system/dev/board/x86:x86-lid-test-manifest",
       "//zircon/system/dev/board/x86:x86-pwrsrc-test-manifest",
       "//zircon/system/dev/board/x86:x86-thermal-test-manifest",
+      "//zircon/system/utest/x86-board:x86-board-manifest",
       "//zircon/system/utest/x86-umip:x86-umip-manifest",
     ]
   }
