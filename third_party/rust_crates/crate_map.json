@@ -51,6 +51,11 @@
             "package_name": "bytes"
         },
         {
+            "crate_name": "cargo_metadata",
+            "crate_type": "lib",
+            "package_name": "cargo_metadata"
+        },
+        {
             "crate_name": "chrono",
             "crate_type": "lib",
             "package_name": "chrono"
@@ -321,6 +326,11 @@
             "package_name": "pest_derive"
         },
         {
+            "crate_name": "pest_generator",
+            "crate_type": "lib",
+            "package_name": "pest_generator"
+        },
+        {
             "crate_name": "pin_project",
             "crate_type": "lib",
             "package_name": "pin-project"
@@ -491,6 +501,11 @@
             "package_name": "scopeguard"
         },
         {
+            "crate_name": "semver",
+            "crate_type": "lib",
+            "package_name": "semver"
+        },
+        {
             "crate_name": "serde",
             "crate_type": "lib",
             "package_name": "serde"
@@ -574,6 +589,11 @@
             "crate_name": "tokio_rustls",
             "crate_type": "lib",
             "package_name": "tokio-rustls"
+        },
+        {
+            "crate_name": "toml",
+            "crate_type": "lib",
+            "package_name": "toml"
         },
         {
             "crate_name": "tracing",
@@ -721,6 +741,11 @@
             "crate_name": "byteorder",
             "crate_type": "lib",
             "package_name": "byteorder"
+        },
+        {
+            "crate_name": "cargo_metadata",
+            "crate_type": "lib",
+            "package_name": "cargo_metadata"
         },
         {
             "crate_name": "chrono",
@@ -908,6 +933,11 @@
             "package_name": "pest_derive"
         },
         {
+            "crate_name": "pest_generator",
+            "crate_type": "lib",
+            "package_name": "pest_generator"
+        },
+        {
             "crate_name": "png",
             "crate_type": "lib",
             "package_name": "png"
@@ -928,16 +958,6 @@
             "package_name": "proc-macro2"
         },
         {
-            "crate_name": "pulldown_cmark",
-            "crate_type": "lib",
-            "package_name": "pulldown-cmark"
-        },
-        {
-            "crate_name": "quote",
-            "crate_type": "lib",
-            "package_name": "quote"
-        },
-        {
             "crate_name": "proptest",
             "crate_type": "lib",
             "package_name": "proptest"
@@ -946,6 +966,16 @@
             "crate_name": "proptest_derive",
             "crate_type": "proc-macro",
             "package_name": "proptest-derive"
+        },
+        {
+            "crate_name": "pulldown_cmark",
+            "crate_type": "lib",
+            "package_name": "pulldown-cmark"
+        },
+        {
+            "crate_name": "quote",
+            "crate_type": "lib",
+            "package_name": "quote"
         },
         {
             "crate_name": "rand",
@@ -991,6 +1021,11 @@
             "crate_name": "scopeguard",
             "crate_type": "lib",
             "package_name": "scopeguard"
+        },
+        {
+            "crate_name": "semver",
+            "crate_type": "lib",
+            "package_name": "semver"
         },
         {
             "crate_name": "serde",
@@ -1076,6 +1111,11 @@
             "crate_name": "tokio",
             "crate_type": "lib",
             "package_name": "tokio"
+        },
+        {
+            "crate_name": "toml",
+            "crate_type": "lib",
+            "package_name": "toml"
         },
         {
             "crate_name": "tracing",
