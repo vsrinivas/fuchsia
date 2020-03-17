@@ -1,0 +1,125 @@
+#!/bin/bash
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+#### CATEGORY=Other
+### serve from a remote workstation
+
+## usage: fx serve-remote [--no-serve] HOSTNAME [REMOTE-PATH]
+##
+## HOSTNAME     the hostname of the workstation you want to serve from
+## REMOTE-PATH  defaults to ~/fuchsia. The path on the to FUCHSIA_DIR on the workstation.
+##
+##  --no-serve  only tunnel, do not start a package server
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
+fx-config-read
+
+serve=true
+host=""
+dir=""
+while [[ $# -ne 0 ]]; do
+  case "$1" in
+  --help|-h)
+      fx-command-help
+      exit 0
+      ;;
+  --no-serve)
+    serve=false
+    ;;
+  -*)
+    fx-error "Unknown flag: $1"
+    fx-command-help
+    exit 1
+    ;;
+  *)
+    if [[ -z "${host}" ]]; then
+      host="$1"
+    elif [[ -z "${dir}" ]]; then
+      dir="$1"
+    else
+      fx-error "unexpected argument: '$1'"
+      exit 1
+    fi
+    ;;
+  esac
+  shift
+done
+
+if [[ -z "${host}" ]]; then
+  fx-error "HOSTNAME must be specified"
+  fx-command-help
+  exit 1
+fi
+
+if "${serve}"; then
+  if [[ -z "${dir}" ]]; then
+    if ssh "$host" ls \~/fuchsia/.jiri_root/bin/fx > /dev/null; then
+      dir="~/fuchsia"
+    else
+      fx-error "failed to find ~/fuchsia on $host, please specify REMOTE-DIR"
+      fx-command-help
+      exit 1
+    fi
+  fi
+fi
+
+target_addr=$(get-fuchsia-device-addr)
+if [[ $? -ne 0 || -z "${target_addr}" ]]; then
+  fx-error "unable to discover device. Is the target up?"
+  exit 1
+fi
+
+finder="${FUCHSIA_BUILD_DIR}/host-tools/device-finder"
+# TODO(raggi): evaluate more deeply if we need to integrate with set-device here.
+local_addr=$("$finder" list -local -netboot -ipv4=false -device-limit 1)
+if [[ -z "${local_addr}" ]]; then
+  fx-error "unable to determine local address of host."
+  exit 1
+fi
+
+echo "Using remote ${host}:${dir}"
+echo "Using target device ${target_addr}"
+echo "Using local server address ${local_addr}"
+
+# First we need to check if we already have a control master for the
+# host, if we do, we might already have the forwards and so we don't
+# need to worry about tearing down:
+if ! ssh -O check "${host}" > /dev/null 2>&1; then
+  # If we didn't have a control master, and the device already has 8022
+  # bound, then there's a good chance there's a stale sshd instance
+  # running from another device or another session that will block the
+  # forward, so we'll check for that and speculatively attempt to clean
+  # it up. Unfortunately this means authing twice, but it's likely the
+  # best we can do for now.
+  if ssh "${host}" 'ss -ln | grep :8022' > /dev/null; then
+    ssh "${host}" 'pkill -u $USER sshd'
+    ssh "${host}" -O exit > /dev/null 2>&1
+  fi
+fi
+
+args=(
+  -6 # We want ipv6 binds for the port forwards
+  -L "[${local_addr}]:8083:localhost:8083" # requests to the package server address locally go to the workstation
+  -R "8022:[${target_addr}]:22" # requests from the workstaiton to ssh to localhost:8022 will make it to the target
+  -o ExitOnForwardFailure=yes
+  "${host}"
+)
+
+# If the user requested serving, then we'll check to see if there's a
+# server already running and kill it, this prevents most cases where
+# signal propagation seems to sometimes not make it to "pm".
+if "${serve}" && ssh "${args[@]}" 'ss -ln | grep :8083' > /dev/null; then
+  ssh "${args[@]}" 'pkill -u $USER pm'
+fi
+
+if "${serve}"; then
+  # Starts a package server
+  args+=("cd ${dir} && ./.jiri_root/bin/fx set-device 127.0.0.1 && ./.jiri_root/bin/fx serve-updates")
+else
+  # Starts nothing, just goes to sleep
+  args+=("-nNT")
+fi
+
+exec ssh  "${args[@]}"
