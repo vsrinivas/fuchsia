@@ -243,12 +243,7 @@ impl Glyph {
                             let p2 = flip_y!(curve.p[2]);
 
                             path_builder.move_to(p0);
-                            // TODO: use quad_to when working correctly in spinel backend.
-                            path_builder.cubic_to(
-                                lerp(2.0 / 3.0, p0, p1),
-                                lerp(2.0 / 3.0, p2, p1),
-                                p2,
-                            );
+                            path_builder.quad_to(p1, p2);
                         }
                     }
                 }
