@@ -32,6 +32,72 @@ Follow the steps below to install Fuchsia:
 
 1. To access the Fuchsia shell, press alt+tab.
 
+These are the ways you can install Fuchsia:
+
+* [Automatic installation](#automatic_installation)
+* [Manual installation](#manual_installation)
+
+### Automatic installation
+
+1. Run `installer` to launch the installer.
+
+  <pre class="prettyprint">
+  <code class="devsite-terminal">installer</code>
+  <span class="no-select">Bootloader vendor = Intel Corp.
+  Please select the disk you want to install Fuchsia to:
+  [0] /dev/sys/pci/00:17.0/ahci/sata2/block (119G)
+  Enter a selection (0..0):
+  </span>
+  </pre>
+
+  You will see a list of disks, along with their sizes.
+
+
+1. Type in the number corresponding to the disk you wish to install Fuchsia on, and press ENTER.
+
+  Note: What you type in won't be displayed until you press ENTER.
+
+  <pre class="prettyprint">
+  <span class="no-select">
+  Enter a selection (0..0): 0
+  Using /dev/sys/pci/00:17.0/ahci/sata2/block as installation target.
+
+  WARNING: Installing Fuchsia will WIPE YOUR DISK. Make sure you've backed
+  everything up before proceeding!
+  Do you wish to proceed? (yes/[no])
+  </span>
+  </pre>
+
+1. Confirm that you want to continue. The installer will wipe your disk, set up
+   the Fuchsia partition tables, and install Fuchsia to your disk. The installer
+   will show its progress as it installs, and exit once the installation is
+   complete.
+
+   <pre class="prettyprint">
+   <span class="no-select">
+   Do you wish to proceed? (yes/[no]) yes
+   Wiping old partition tables...
+   Initializing Fuchsia partition tables...
+   Success.
+   Partition[src=/dev/sys/pci/00:14.0/xhci/usb-bus/001/001/ifc-000/ums/lun-000/block/part-002/block, pave_type=Bootloader]... OK
+   Partition[src=/dev/sys/pci/00:14.0/xhci/usb-bus/001/001/ifc-000/ums/lun-000/block/part-003/block, pave_type=Asset { type: Kernel, config: A }, asset=Kernel, config=A]... OK
+   Partition[src=/dev/sys/pci/00:14.0/xhci/usb-bus/001/001/ifc-000/ums/lun-000/block/part-003/block, pave_type=Asset { type: Kernel, config: A }, asset=Kernel, config=A] [-B]... OK
+   Partition[src=/dev/sys/pci/00:14.0/xhci/usb-bus/001/001/ifc-000/ums/lun-000/block/part-004/block, pave_type=Asset { type: Kernel, config: Recovery }, asset=Kernel, config=Recovery]... OK
+   Partition[src=/dev/sys/pci/00:14.0/xhci/usb-bus/001/001/ifc-000/ums/lun-000/block/part-005/block, pave_type=Volume]... OK
+   </span>
+   </pre>
+
+1. Unplug the installation USB drive.
+
+1. Reboot your machine.
+
+  <pre class="prettyprint">
+  <code class="devsite-terminal">dm reboot</code>
+  </pre>
+
+### Manual installation
+
+
 1. Run `lsblk` to determine the main disk of the target machine.
 
   <pre class="prettyprint">
@@ -152,5 +218,13 @@ Follow the steps below to install Fuchsia:
   <span class="no-select">
   disk-pave: install-fvm operation succeeded.
   </span>
+  </pre>
+
+1. Unplug the installation USB drive.
+
+1. Reboot your machine.
+
+  <pre class="prettyprint">
+  <code class="devsite-terminal">dm reboot</code>
   </pre>
 
