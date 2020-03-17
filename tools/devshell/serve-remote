@@ -71,14 +71,6 @@ if [[ $? -ne 0 || -z "${target_addr}" ]]; then
   exit 1
 fi
 
-finder="${FUCHSIA_BUILD_DIR}/host-tools/device-finder"
-# TODO(raggi): evaluate more deeply if we need to integrate with set-device here.
-local_addr=$("$finder" list -local -netboot -ipv4=false -device-limit 1)
-if [[ -z "${local_addr}" ]]; then
-  fx-error "unable to determine local address of host."
-  exit 1
-fi
-
 echo "Using remote ${host}:${dir}"
 echo "Using target device $(get-device-name)"
 
@@ -100,7 +92,7 @@ fi
 
 args=(
   -6 # We want ipv6 binds for the port forwards
-  -L "[${local_addr}]:8083:localhost:8083" # requests to the package server address locally go to the workstation
+  -L "\*:8083:localhost:8083" # requests to the package server address locally go to the workstation
   -R "8022:[${target_addr}]:22" # requests from the workstaiton to ssh to localhost:8022 will make it to the target
   -o ExitOnForwardFailure=yes
   "${host}"
