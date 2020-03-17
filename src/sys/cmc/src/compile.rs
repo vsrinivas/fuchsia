@@ -175,8 +175,7 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<cm::Use>, Error> {
             out_uses.push(cm::Use::Runner(cm::UseRunner { source_name: cm::Name::new(p.clone())? }))
         } else if let Some(p) = use_.event() {
             let target_id = one_target_capability_id(use_, use_)?;
-            // TODO(fxb/48437): default source for events should be framework not realm.
-            let source = extract_use_source(use_)?;
+            let source = extract_use_event_source(use_)?;
             out_uses.push(cm::Use::Event(cm::UseEvent {
                 source,
                 source_name: cm::Name::new(p.clone())?,
@@ -513,6 +512,15 @@ fn extract_use_source(in_obj: &cml::Use) -> Result<cm::Ref, Error> {
         Some(cml::Ref::Framework) => Ok(cm::Ref::Framework(cm::FrameworkRef {})),
         Some(other) => Err(Error::internal(format!("invalid \"from\" for \"use\": {}", other))),
         None => Ok(cm::Ref::Realm(cm::RealmRef {})), // Default value.
+    }
+}
+
+fn extract_use_event_source(in_obj: &cml::Use) -> Result<cm::Ref, Error> {
+    match in_obj.from.as_ref() {
+        Some(cml::Ref::Realm) => Ok(cm::Ref::Realm(cm::RealmRef {})),
+        Some(cml::Ref::Framework) => Ok(cm::Ref::Framework(cm::FrameworkRef {})),
+        Some(other) => Err(Error::internal(format!("invalid \"from\" for \"use\": {}", other))),
+        None => Err(Error::internal(format!("No source \"from\" provided for \"use\""))),
     }
 }
 
@@ -896,7 +904,7 @@ mod tests {
                     { "runner": "elf" },
                     { "runner": "web" },
                     { "event": "started", "from": "framework" },
-                    { "event": "diagnostics_on_x", "as": "diagnostics" },
+                    { "event": "diagnostics_on_x", "as": "diagnostics", "from": "realm" },
                 ],
             }),
             output = r#"{

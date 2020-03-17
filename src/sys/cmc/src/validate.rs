@@ -398,6 +398,11 @@ impl<'a> ValidationContext<'a> {
             _ => Ok(()),
         }?;
 
+        match (&use_.event, &use_.from) {
+            (Some(_), None) => Err(Error::validate("\"from\" should be present with \"event\"")),
+            _ => Ok(()),
+        }?;
+
         let storage = use_.storage.as_ref().map(|s| s.as_str());
         match (storage, &use_.r#as) {
             (Some("meta"), Some(_)) => {
@@ -1070,10 +1075,22 @@ mod tests {
                   { "storage": "meta" },
                   { "runner": "elf" },
                   { "event": "started", "from": "framework" },
-                  { "event": "capability_ready_diagnostics", "as": "capability_ready" },
+                  {
+                    "event": "capability_ready_diagnostics",
+                    "as": "capability_ready",
+                    "from": "realm",
+                  },
                 ]
             }),
             result = Ok(()),
+        },
+        test_cml_use_event_missing_from => {
+            input = json!({
+                "use": [
+                    { "event": "started" },
+                ]
+            }),
+            result = Err(Error::validate("\"from\" should be present with \"event\"")),
         },
         test_cml_use_missing_props => {
             input = json!({

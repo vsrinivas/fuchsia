@@ -20,11 +20,12 @@
     },
     {
       "event": "started",
-      "from": "framework"
+      "from": "framework",
     },
     {
       "event": "capability_ready_diagnostics",
-      "as": "capability_ready"
+      "as": "capability_ready",
+      "from": "realm"
     },
   ],
   "expose": [

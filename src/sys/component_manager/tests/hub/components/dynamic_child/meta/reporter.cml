@@ -19,7 +19,7 @@
         },
         { "event": "stopped", "from": "framework" },
         { "event": "marked_for_destruction", "from": "framework" },
-        { "event": "destroyed", "from": "framework" }
+        { "event": "destroyed", "from": "framework" },
     ],
     "collections": [
         {

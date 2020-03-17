@@ -15,7 +15,7 @@
       {
         "protocol": "/svc/fidl.test.components.Trigger",
       },
-      { "event": "started" },
+      { "event": "started", "from": "realm" },
       { "runner": "elf" },
     ]
 }
