@@ -1,0 +1,40 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.hardware.acpi;
+using zx;
+
+const uint32 MAX_ACPI_TABLE_ENTRIES = 512;
+
+/// An ACPI table name signature. This consists of four ASCII characters.
+using AcpiTableSignature = array<uint8>:4;
+
+/// Metadata about an ACPI table entry.
+struct TableInfo {
+    /// Name of the table. There may be multiple tables with the same name.
+    AcpiTableSignature name;
+
+    /// The size of the table, in bytes.
+    uint32 size;
+};
+
+/// Defines access to raw system ACPI data.
+///
+/// This interface is intended only for low-level debugging tools.
+protocol Acpi {
+    /// Return the list of ACPI tables present in the system.
+    ListTableEntries() -> (vector<TableInfo>:MAX_ACPI_TABLE_ENTRIES entries) error zx.status;
+
+    /// Write the raw content of the named ACPI table into the given VMO.
+    ///
+    /// Some systems may have multiple ACPI tables with the same name ("SSDT" is
+    /// a commonly repeated table, for example). |instance| is used to specify
+    /// which instance of the named table to return. A value of |n| returns the
+    /// |n|'th occurence. If only one table with the given name is present,
+    /// |instance| should be 0.
+    ///
+    /// On success, returns the number of bytes written into result.
+    ReadNamedTable(AcpiTableSignature name, uint32 instance, handle<vmo> result)
+        -> (uint32 size) error zx.status;
+};
