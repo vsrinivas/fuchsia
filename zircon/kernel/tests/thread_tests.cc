@@ -773,26 +773,6 @@ __NO_INLINE static void affinity_test() {
   printf("done with affinity test\n");
 }
 
-#define TLS_TEST_TAGV ((void*)0x666)
-
-static int tls_test_thread(void* arg) {
-  tls_set(0u, TLS_TEST_TAGV);
-  tls_set(1u, TLS_TEST_TAGV);
-  ASSERT(tls_get(0u) == TLS_TEST_TAGV);
-  ASSERT(tls_get(1u) == TLS_TEST_TAGV);
-  return 0;
-}
-
-static void tls_tests() {
-  printf("starting tls tests\n");
-
-  Thread* t = Thread::Create("tls-test", tls_test_thread, 0, LOW_PRIORITY);
-  t->Resume();
-  t->Join(nullptr, ZX_TIME_INFINITE);
-
-  printf("done with tls tests\n");
-}
-
 static int prio_test_thread(void* arg) {
   Thread* t = Thread::Current::Get();
   ASSERT(t->base_priority_ == LOW_PRIORITY);
@@ -899,8 +879,6 @@ int thread_tests(int, const cmd_args*, uint32_t) {
   join_test();
 
   affinity_test();
-
-  tls_tests();
 
   priority_test();
 

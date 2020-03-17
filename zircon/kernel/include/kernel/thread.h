@@ -73,9 +73,6 @@ typedef void (*thread_trampoline_routine)() __NO_RETURN;
 
 #define THREAD_LINEBUFFER_LENGTH 128
 
-// Number of kernel tls slots.
-#define THREAD_MAX_TLS_ENTRY 2
-
 struct vmm_aspace;
 
 // thread priority
@@ -159,13 +156,8 @@ struct Thread {
   void SetPriority(int priority);
   void SetDeadline(const zx_sched_deadline_params_t& params);
 
-  void* tls_get(uint entry) { return tls_[entry]; }
-
-  void* tls_set(uint entry, void* val) {
-    void* oldval = tls_[entry];
-    tls_[entry] = val;
-    return oldval;
-  }
+  void* recursive_object_deletion_list() { return recursive_object_deletion_list_; }
+  void set_recursive_object_deletion_list(void* ptr) { recursive_object_deletion_list_ = ptr; }
 
   // Get/set the mask of valid CPUs that thread may run on. If a new mask
   // is set, the thread will be migrated to satisfy the new constraint.
@@ -499,8 +491,8 @@ struct Thread {
   //    while preempt_pending_ is being checked.
   volatile bool preempt_pending_;
 
-  // thread local storage, initialized to zero
-  void* tls_[THREAD_MAX_TLS_ENTRY];
+  // This is used by dispatcher.cc:SafeDeleter.
+  void* recursive_object_deletion_list_ = nullptr;
 
   char name_[THREAD_NAME_LENGTH];
 #if WITH_DEBUG_LINEBUFFER
@@ -555,15 +547,6 @@ extern "C" void arch_iframe_process_pending_signals(iframe_t* iframe);
 Thread* thread_id_to_thread_slow(uint64_t tid);
 
 static inline bool thread_lock_held(void) { return spin_lock_held(&thread_lock); }
-
-// Thread local storage. See tls_slots.h in the object layer above for
-// the current slot usage.
-
-static inline void* tls_get(uint entry) { return Thread::Current::Get()->tls_get(entry); }
-
-static inline void* tls_set(uint entry, void* val) {
-  return Thread::Current::Get()->tls_set(entry, val);
-}
 
 // AutoReschedDisable is an RAII helper for disabling rescheduling
 // using thread_resched_disable()/thread_resched_reenable().

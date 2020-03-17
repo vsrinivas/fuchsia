@@ -13,7 +13,6 @@
 #include <arch/ops.h>
 #include <fbl/mutex.h>
 #include <ktl/atomic.h>
-#include <object/tls_slots.h>
 
 // kernel counters. The following counters never decrease.
 // counts the number of times a dispatcher has been created and destroyed.
@@ -33,19 +32,20 @@ zx_koid_t GenerateKernelObjectId() {
   return global_koid.fetch_add(1ULL, ktl::memory_order_relaxed);
 }
 
-// Helper class that safely allows deleting Dispatchers without
-// risk of blowing up the kernel stack. It uses one TLS slot to
-// unwind the recursion.
+// Helper class that safely allows deleting Dispatchers without risk of
+// blowing up the kernel stack.  It uses one pointer in the Thread
+// structure to unwind the recursion.
 class SafeDeleter {
  public:
   static void Delete(Dispatcher* kobj) {
-    auto deleter = reinterpret_cast<SafeDeleter*>(tls_get(TLS_ENTRY_KOBJ_DELETER));
-    if (deleter) {
+    auto recursive_deleter =
+        static_cast<SafeDeleter*>(Thread::Current::Get()->recursive_object_deletion_list());
+    if (recursive_deleter) {
       // Delete() was called recursively.
-      deleter->pending_.push_front(kobj);
+      recursive_deleter->pending_.push_front(kobj);
     } else {
       SafeDeleter deleter;
-      tls_set(TLS_ENTRY_KOBJ_DELETER, &deleter);
+      Thread::Current::Get()->set_recursive_object_deletion_list(&deleter);
 
       do {
         // This delete call can cause recursive calls to
@@ -55,7 +55,7 @@ class SafeDeleter {
         kobj = deleter.pending_.pop_front();
       } while (kobj);
 
-      tls_set(TLS_ENTRY_KOBJ_DELETER, nullptr);
+      Thread::Current::Get()->set_recursive_object_deletion_list(nullptr);
     }
   }
 
