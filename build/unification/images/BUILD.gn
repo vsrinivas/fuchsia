@@ -1605,6 +1605,7 @@ aggregate_manifest("migrated-image") {
       "//src/devices/serial/drivers/intel-serialio:intel-serialio-manifest",
       "//src/devices/serial/drivers/uart16550:uart16550-manifest",
       "//zircon/system/dev/board/x86:platform-bus-x86-manifest",
+      "//zircon/system/uapp/acpidump:acpidump-manifest",
     ]
   }
 
@@ -3834,6 +3835,7 @@ aggregate_manifest("migrated-tests") {
       "//zircon/system/dev/board/x86:x86-thermal-test-manifest",
       "//zircon/system/utest/x86-board:x86-board-manifest",
       "//zircon/system/utest/x86-umip:x86-umip-manifest",
+      "//zircon/system/uapp/acpidump:acpidump-test-manifest",
     ]
   }
 }

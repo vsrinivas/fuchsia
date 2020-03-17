@@ -5,6 +5,13 @@
 # WARNING: This file was machine-generated from previous json files and
 # will eventually be deleted.
 
+group("acpidump") {
+  testonly = true
+  if (target_cpu == "x64") {
+    public_deps = [ "//zircon/system/uapp/acpidump" ]
+  }
+}
+
 group("broadcom") {
   public_deps = [
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac",
@@ -92,6 +99,7 @@ group("all") {
   testonly = true
   public_deps = [
     ":drivers",
+    "//garnet/packages/prod:acpidump",
     "//garnet/packages/prod:atheros",
     "//garnet/packages/prod:bluetooth_a2dp",
     "//garnet/packages/prod:bluetooth_all",

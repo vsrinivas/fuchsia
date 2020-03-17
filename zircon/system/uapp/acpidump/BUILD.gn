@@ -1,0 +1,62 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+source_set("src") {
+  sources = [
+    "acpidump.cc",
+    "acpidump.h",
+  ]
+  public_deps = [
+    "//zircon/public/lib/cmdline",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fdio-caller",
+    "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-hardware-acpi:llcpp",
+  ]
+  visibility = [ ":*" ]
+}
+
+executable("acpidump") {
+  configs += [ "//build/unification/config:zircon-migrated" ]
+  output_name = "acpidump"
+  output_dir = "$root_out_dir/zircon-migrated"
+  sources = [ "main.cc" ]
+  deps = [ ":src" ]
+}
+
+test("test") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  testonly = false
+  configs += [ "//build/unification/config:zircon-migrated" ]
+  output_name = "acpidump-test"
+  sources = [ "acpidump_test.cc" ]
+  include_dirs = [ "." ]
+  deps = [
+    ":src",
+    "//zircon/public/lib/zxtest",
+  ]
+}
+
+migrated_manifest("acpidump-manifest") {
+  deps = [ ":acpidump" ]
+}
+
+migrated_manifest("acpidump-test-manifest") {
+  deps = [ ":test" ]
+}
