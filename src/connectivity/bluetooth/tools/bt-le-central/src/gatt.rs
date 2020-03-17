@@ -4,10 +4,11 @@
 
 use {
     anyhow::Error,
+    fidl::encoding::Decodable as FidlDecodable,
     fidl::endpoints,
     fidl_fuchsia_bluetooth_gatt::{
         Characteristic as FidlCharacteristic, ClientProxy, RemoteServiceEvent, RemoteServiceProxy,
-        ServiceInfo,
+        ServiceInfo, WriteOptions,
     },
     fuchsia_async as fasync,
     fuchsia_bluetooth::error::Error as BTError,
@@ -170,7 +171,7 @@ async fn write_long_characteristic(
     value: Vec<u8>,
 ) -> Result<(), Error> {
     let status = svc
-        .write_long_characteristic(id, offset, &value)
+        .write_long_characteristic(id, offset, &value, WriteOptions::new_empty())
         .await
         .map_err(|_| BTError::new("Failed to send message"))?;
 

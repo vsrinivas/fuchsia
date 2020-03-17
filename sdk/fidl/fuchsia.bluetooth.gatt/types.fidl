@@ -133,3 +133,20 @@ struct Descriptor {
     /// For local descriptors, this value is mandatory.
     AttributePermissions? permissions;
 };
+
+/// Represents the reliability mode during long and prepared write operations.
+///
+/// If enabled, every value blob is verified against an echo response from the server.
+/// The procedure is aborted if a value blob has not been reliably delivered to the peer.
+enum ReliableMode {
+    DISABLED = 1;
+    ENABLED = 2;
+};
+
+/// Represents the supported options to write a characteristic value to a server.
+table WriteOptions {
+    /// The reliable mode of the write operation.
+    ///
+    /// Defaults to [`fuchsia.bluetooth.gatt/ReliableMode.DISABLED`] if not present.
+    1: ReliableMode reliable_mode;
+};

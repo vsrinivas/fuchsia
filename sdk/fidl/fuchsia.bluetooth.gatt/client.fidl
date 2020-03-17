@@ -41,7 +41,9 @@ protocol RemoteService {
     ///      property.
     WriteCharacteristic(uint64 id, bytes value) -> (fuchsia.bluetooth.Status status);
 
-    /// Writes `value` to the characteristic with `id`, beginning at `offset`.
+    /// Writes `value` to the characteristic with `id`, beginning at `offset` using
+    /// the provided `write_options`.
+    ///
     /// This procedure should be used if the value to be written is too long to
     /// fit in a single request or needs to be written at an offset. This may
     /// return an error if:
@@ -53,7 +55,8 @@ protocol RemoteService {
     /// while a long write is in process to the same id and data range. The order
     /// of the responses from this function signify the order in which the remote
     /// service received them, not necessarily the order in which it is called.
-    WriteLongCharacteristic(uint64 id, uint16 offset, bytes:MAX_VALUE_LENGTH value) -> (fuchsia.bluetooth.Status status);
+    WriteLongCharacteristic(uint64 id, uint16 offset, bytes:MAX_VALUE_LENGTH value, WriteOptions write_options)
+        -> (fuchsia.bluetooth.Status status);
 
     /// Writes `value` to the characteristic with `id` without soliciting an
     /// acknowledgement from the peer. This method has no response and its delivery

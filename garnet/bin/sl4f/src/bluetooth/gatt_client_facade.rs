@@ -5,7 +5,7 @@
 use anyhow::{format_err, Context as _, Error};
 use fidl;
 use fidl::endpoints;
-use fidl_fuchsia_bluetooth_gatt::{Characteristic, RemoteServiceProxy};
+use fidl_fuchsia_bluetooth_gatt::{Characteristic, ReliableMode, RemoteServiceProxy, WriteOptions};
 use fidl_fuchsia_bluetooth_gatt::{ClientProxy, ServiceInfo};
 use fidl_fuchsia_bluetooth_le::RemoteDevice;
 use fidl_fuchsia_bluetooth_le::{
@@ -157,7 +157,12 @@ impl GattClientFacade {
         let tag = "GattClientFacade::gattc_write_long_char_by_id";
 
         let write_long_characteristic = match &self.inner.read().active_proxy {
-            Some(proxy) => proxy.write_long_characteristic(id, offset, &write_value),
+            Some(proxy) => proxy.write_long_characteristic(
+                id,
+                offset,
+                &write_value,
+                WriteOptions { reliable_mode: Some(ReliableMode::Disabled) },
+            ),
             None => fx_err_and_bail!(&with_line!(tag), "Central proxy not available."),
         };
 
