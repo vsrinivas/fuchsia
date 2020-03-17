@@ -45,6 +45,7 @@ EXTERN(trace_context_write_kernel_object_record_for_handle)
 EXTERN(trace_context_register_current_thread)
 EXTERN(trace_context_register_string_literal)
 EXTERN(trace_context_register_vthread)
+EXTERN(trace_context_send_trigger)
 EXTERN(trace_engine_flush_category_cache)
 
 /* The observer API. */

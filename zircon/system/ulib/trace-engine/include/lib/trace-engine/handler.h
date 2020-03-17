@@ -77,6 +77,11 @@ struct trace_handler_ops {
   // Called by instrumentation on any thread.  Must be thread-safe.
   void (*notify_buffer_full)(trace_handler_t* handler, uint32_t wrapped_count,
                              uint64_t durable_data_end);
+
+  // Called by the trace engine to send a trigger.
+  //
+  // Called by instrumentation on any thread.  Must be thread-safe.
+  void (*send_trigger)(trace_handler_t* handler, const char* trigger_name);
 };
 
 // Whether to clear the trace buffer when starting the engine.

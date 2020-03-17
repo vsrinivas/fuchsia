@@ -61,7 +61,23 @@ typedef struct trace_provider_packet {
 // |data16,data32,data64| are unused (must be zero).
 #define TRACE_PROVIDER_STOPPED (0x3)
 
-// Next Provider->Manager packet = 0x4
+// Sends a trigger.
+// |data16| is the length of the trigger name.
+// |data32, data64| contains the first 12 characters of the trigger name, padded
+// with zeros if the name is less than 12 characters. If the trigger name is
+// longer than 12 characters, |TRACE_PROVIDER_TRIGGER_CONT| packets are sent
+// immediately thereafter to transfer the additional characters.
+//
+// A trigger with a name of length L is sent as one |TRACE_PROVIDER_TRIGGER|
+// packet followed by (L+1)/14 |TRACE_PROVIDER_TRIGGER_CONT| packets.
+#define TRACE_PROVIDER_TRIGGER (0x4)
+
+// Continues |TRACE_PROVIDER_TRIGGER| for long trigger names.
+// |data16, data32, data64| Up to 14 characters of the trigger name, zero padded
+// if the remainder of the trigger name is less than 14 characters.
+#define TRACE_PROVIDER_TRIGGER_CONT (0x5)
+
+// Next Provider->Manager packet = 0x6
 
 // Manager->Provider
 // A buffer has been saved (streaminng mode only).

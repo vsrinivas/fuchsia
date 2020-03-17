@@ -215,6 +215,11 @@ void trace_context_write_blob_record(trace_context_t* context, trace_blob_type_t
                                      const trace_string_ref_t* name_ref, const void* blob,
                                      size_t blob_size);
 
+// Send a trigger.
+// |context| must be a valid trace context reference.
+// |trigger_name| is the name of the trigger (max 100 characters).
+void trace_context_send_trigger(trace_context_t* context, const char* trigger_name);
+
 // Writes a kernel object record for the object reference by the specified handle
 // into the trace buffer.  Discards the record if it cannot be written.
 //

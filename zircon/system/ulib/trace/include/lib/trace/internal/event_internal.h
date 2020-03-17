@@ -280,6 +280,18 @@ __BEGIN_CDECLS
     }                                                                                              \
   } while (0)
 
+#ifndef NTRACE
+#define TRACE_INTERNAL_TRIGGER(trigger_name)                                           \
+  do {                                                                                             \
+    trace_context_t* TRACE_INTERNAL_CONTEXT = trace_acquire_context();                             \
+    if (unlikely(TRACE_INTERNAL_CONTEXT)) {                                                        \
+      trace_internal_trigger_and_release_context(TRACE_INTERNAL_CONTEXT, (trigger_name));                   \
+    }                                                                                              \
+  } while (0)
+#else
+#define TRACE_INTERNAL_TRIGGER(trigger_name) ((void)(trigger_name), false)
+#endif  // NTRACE
+
 ///////////////////////////////////////////////////////////////////////////////
 
 // When "destroyed" (by the cleanup attribute), writes a duration event.
@@ -348,6 +360,9 @@ void trace_internal_write_blob_record_and_release_context(trace_context_t* conte
                                                           trace_blob_type_t type,
                                                           const char* name_literal,
                                                           const void* blob, size_t blob_size);
+
+void trace_internal_trigger_and_release_context(trace_context_t* context,
+                                                const char* trigger_name);
 
 #ifndef NTRACE
 

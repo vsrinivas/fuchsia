@@ -718,6 +718,10 @@ EXPORT void trace_context_write_blob_record(trace_context_t* context, trace_blob
   }
 }
 
+EXPORT void trace_context_send_trigger(trace_context_t* context, const char* trigger_name) {
+  context->handler()->ops->send_trigger(context->handler(), trigger_name);
+}
+
 void trace_context_write_kernel_object_record(trace_context_t* context, bool use_durable,
                                               zx_koid_t koid, zx_obj_type_t type,
                                               const trace_string_ref_t* name_ref,

@@ -41,6 +41,7 @@ test("provider-test") {
     "fake_trace_manager.cc",
     "fake_trace_manager.h",
     "provider_test.cc",
+    "session_test.cc",
   ]
   deps = [
     "//zircon/public/lib/async-cpp",
@@ -48,6 +49,7 @@ test("provider-test") {
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fidl",
+    "//zircon/public/lib/trace",
     "//zircon/public/lib/trace-provider",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",

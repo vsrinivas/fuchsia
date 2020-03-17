@@ -47,6 +47,7 @@ class Session final : public trace::TraceHandler {
   // This is called in streaming mode to notify the trace manager that
   // buffer |buffer_number| is full and needs to be saved.
   void NotifyBufferFull(uint32_t wrapped_count, uint64_t durable_data_end) override;
+  void SendTrigger(const char* trigger_name) override;
 
   void HandleFifo(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                   const zx_packet_signal_t* signal);

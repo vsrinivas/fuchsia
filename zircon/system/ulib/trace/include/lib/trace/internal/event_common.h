@@ -392,4 +392,16 @@
 #define TRACE_BLOB(type, name, blob, blob_size) \
   TRACE_INTERNAL_BLOB((type), (name), (blob), (blob_size))
 
+// Sends a trigger.
+//
+// |trigger_name| is the name of the trigger to send.
+//
+// Trigger names are limited to at most 100 characters.
+//
+// Usage:
+//     TRACE_TRIGGER("my-trigger");
+//
+#define TRACE_TRIGGER(trigger_name) \
+  TRACE_INTERNAL_TRIGGER((trigger_name))
+
 #endif  // LIB_TRACE_INTERNAL_EVENT_COMMON_H_

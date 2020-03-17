@@ -190,3 +190,9 @@ void trace_internal_write_blob_record_and_release_context(trace_context_t* conte
   trace_context_write_blob_record(context, type, &name_ref, blob, blob_size);
   trace_release_context(context);
 }
+
+void trace_internal_trigger_and_release_context(trace_context_t* context,
+                                                const char* trigger_name) {
+  trace_context_send_trigger(context, trigger_name);
+  trace_release_context(context);
+}
