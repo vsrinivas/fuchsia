@@ -18,6 +18,11 @@ type WlanService = DeviceServiceProxy;
 
 const SCAN_TIMEOUT_SECONDS: u8 = 20;
 
+// IEEE Std. 802.11-2016 - J.4.1 mandates a password to be <= 63 bytes to distinguish from a PSK
+// represented as a HEX string.
+const WLAN_PASSWORD_MAX_LEN: usize = 63;
+const WLAN_PSK_HEX_STRING_LEN: usize = 64;
+
 // Helper methods for calling wlan_service fidl methods
 pub async fn get_iface_list(wlan_svc: &DeviceServiceProxy) -> Result<Vec<u16>, Error> {
     let response = wlan_svc.list_ifaces().await.context("Error getting iface list")?;
@@ -80,7 +85,7 @@ pub async fn connect_to_network(
     let target_ssid_clone = target_ssid.clone();
 
     // create ConnectRequest holding network info
-    let credential = credential_from_password(target_pwd);
+    let credential = credential_from_bytes(target_pwd)?;
     let mut req = fidl_sme::ConnectRequest {
         ssid: target_ssid,
         credential,
@@ -263,11 +268,15 @@ async fn get_scan_results(
     return Err(format_err!("ScanTransaction channel closed before scan finished"));
 }
 
-fn credential_from_password(pwd: Vec<u8>) -> fidl_sme::Credential {
-    if pwd.is_empty() {
-        fidl_sme::Credential::None(fidl_sme::Empty)
-    } else {
-        fidl_sme::Credential::Password(pwd)
+fn credential_from_bytes(pwd: Vec<u8>) -> Result<fidl_sme::Credential, Error> {
+    use hex::FromHex;
+    match pwd.len() {
+        0 => Ok(fidl_sme::Credential::None(fidl_sme::Empty)),
+        n if n <= WLAN_PASSWORD_MAX_LEN => Ok(fidl_sme::Credential::Password(pwd)),
+        WLAN_PSK_HEX_STRING_LEN => Ok(fidl_sme::Credential::Psk(
+            Vec::from_hex(pwd).context("PSK {:02X?} is not a HEX string")?,
+        )),
+        n => Err(format_err!("{} bytes is too many", n)),
     }
 }
 
@@ -763,7 +772,7 @@ mod tests {
             &mut exec,
             &mut next_client_sme_req,
             target_ssid,
-            credential_from_password(target_password.to_vec()),
+            credential_from_bytes(target_password.to_vec()).expect("password should be valid"),
             result_code,
         );
 
@@ -811,7 +820,7 @@ mod tests {
             &mut exec,
             &mut next_client_sme_req,
             target_ssid,
-            credential_from_password(target_password.to_vec()),
+            credential_from_bytes(target_password.to_vec()).expect("password should be valid"),
         );
     }
 
@@ -833,7 +842,7 @@ mod tests {
             &mut exec,
             &mut next_client_sme_req,
             target_ssid,
-            credential_from_password(vec![]),
+            credential_from_bytes(vec![]).expect("password should be valid"),
         );
     }
 
@@ -1282,5 +1291,45 @@ mod tests {
             Poll::Ready(Ok(_)) => (),
             _ => panic!("Expected a status response"),
         };
+    }
+
+    #[test]
+    fn test_credential_empty() {
+        assert_variant!(
+            credential_from_bytes(vec![]),
+            Ok(fidl_sme::Credential::None(fidl_sme::Empty))
+        );
+    }
+
+    #[test]
+    fn test_credential_password() {
+        assert_variant!(
+            credential_from_bytes(vec![42; 63]),
+            Ok(fidl_sme::Credential::Password(pwd)) => assert_eq!(pwd, vec![42; 63])
+        );
+    }
+
+    #[test]
+    fn test_credential_psk() {
+        assert_variant!(
+            credential_from_bytes(vec![0x39; 64]), // ASCII 0x39 -> '9',
+            Ok(fidl_sme::Credential::Psk(psk)) => assert_eq!(psk, vec![0x99; 32])
+        );
+    }
+
+    #[test]
+    fn test_credential_psk_not_hex_string() {
+        assert_variant!(
+            credential_from_bytes(vec![0x48; 64]), // ASCII 0x48 -> 'h',
+            Err(e) => assert!(format!("{}", e).contains("not a HEX string"))
+        )
+    }
+
+    #[test]
+    fn test_credential_password_too_long() {
+        assert_variant!(
+            credential_from_bytes(vec![42; 65]),
+            Err(e) => assert!(format!("{}", e).contains("is too many"))
+        )
     }
 }
