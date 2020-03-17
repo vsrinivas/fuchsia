@@ -482,7 +482,7 @@ TEST_F(DeviceEnumerationTest, As370Test) {
       "sys/platform/00:00:22/cadence-hpnfc/nand/fastboot_1st/skip-block",
       "sys/platform/00:00:22/cadence-hpnfc/nand/fastboot_2nd/skip-block",
       "power/as370-power",
-      "power/as370-power/power-0",
+      "power/as370-power/fragment-0",
       "class/thermal/000",
   };
 
@@ -524,6 +524,7 @@ TEST_F(DeviceEnumerationTest, VisaliaTest) {
       "sys/platform/00:00:9/dw-i2c",
       "sys/platform/14:01:2/as370-usb-phy",
       "sys/platform/14:01:a/as370-sdhci/sdhci/sdmmc/sdmmc-sdio/sdmmc-sdio-1",
+      "sys/platform/14:01:a/as370-sdhci/sdhci/sdmmc/sdmmc-sdio/sdmmc-sdio-2",
       "dwc2-usb",
       "sys/platform/00:00:22/cadence-hpnfc/nand/fvm/ftl/block",
       "sys/platform/00:00:22/cadence-hpnfc/nand/tzk_normal/skip-block",
@@ -539,7 +540,7 @@ TEST_F(DeviceEnumerationTest, VisaliaTest) {
       "sys/platform/00:00:22/cadence-hpnfc/nand/fastboot_1st/skip-block",
       "sys/platform/00:00:22/cadence-hpnfc/nand/fastboot_2nd/skip-block",
       "power/as370-power",
-      "power/as370-power/power-0",
+      "power/as370-power/fragment-0",
       "class/thermal/000",
       "lp5018-light",
       "lp5018-light/lp50xx-light",
