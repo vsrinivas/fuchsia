@@ -26,7 +26,6 @@ base_package_labels += [
   "//src/ui/bin/brightness_manager",
   "//src/ui/bin/shortcut",
   "//third_party/dart-pkg/git/flutter/examples/flutter_gallery",
-  "//third_party/openssh-portable:openssh-tools",
 ]
 
 cache_package_labels -= [ "//src/ui/tools/tiles" ]
@@ -69,5 +68,4 @@ cache_package_labels -=
 universe_package_labels += [
   "//src/experiences/tests/e2e:test",
   "//src/tests/end_to_end/can_browse_web:test",
-  "//src/tests/end_to_end/copy_files:test",
 ]
