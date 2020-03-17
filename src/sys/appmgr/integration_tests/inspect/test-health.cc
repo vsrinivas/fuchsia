@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/inspect/cpp/fidl.h>
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/async/default.h>
 #include <lib/fdio/directory.h>
@@ -54,38 +55,30 @@ class InspectHealthTest : public sys::testing::TestWithEnvironment {
     RunLoopUntil([&done] { return done; });
   }
 
-  // Open the root object connection on the given sync pointer.
+  // Open the root vmo from the Inspect Tree.
   // Returns ZX_OK on success.
   zx_status_t GetInspectVmo(zx::vmo* out_vmo) {
     files::Glob glob(
-        Substitute("/hub/r/test/*/c/$0/*/out/diagnostics/root.inspect", kTestProcessName));
+        Substitute("/hub/r/test/*/c/$0/*/out/diagnostics/fuchsia.inspect.Tree", kTestProcessName));
     if (glob.size() == 0) {
       return ZX_ERR_NOT_FOUND;
     }
 
-    fuchsia::io::FileSyncPtr file;
+    fuchsia::inspect::TreeSyncPtr ptr;
     zx_status_t status;
-    status = fdio_open(std::string(*glob.begin()).c_str(), ZX_FS_RIGHT_READABLE,
-                       file.NewRequest().TakeChannel().release());
+    status = fdio_service_connect(std::string(*glob.begin()).c_str(),
+                                  ptr.NewRequest().TakeChannel().release());
     if (status != ZX_OK) {
       return status;
     }
 
-    EXPECT_TRUE(file.is_bound());
-
-    fuchsia::io::NodeInfo info;
-    auto get_status = file->Describe(&info);
-    if (get_status != ZX_OK) {
-      printf("get failed\n");
-      return get_status;
+    fuchsia::inspect::TreeContent content;
+    status = ptr->GetContent(&content);
+    if (status != ZX_OK) {
+      return status;
     }
 
-    if (!info.is_vmofile()) {
-      printf("not a vmofile");
-      return ZX_ERR_NOT_FOUND;
-    }
-
-    *out_vmo = std::move(info.vmofile().vmo);
+    *out_vmo = std::move(content.mutable_buffer()->vmo);
     return ZX_OK;
   }
 

@@ -64,6 +64,7 @@ executable("test-vmo") {
   sources = [ "test-vmo.cc" ]
 
   deps = [
+    "//sdk/fidl/fuchsia.inspect",
     "//sdk/lib/inspect/testing/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
@@ -97,6 +98,7 @@ executable("test-health") {
   sources = [ "test-health.cc" ]
 
   deps = [
+    "//sdk/fidl/fuchsia.inspect",
     "//sdk/lib/inspect/testing/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",

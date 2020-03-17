@@ -24,6 +24,8 @@ executable("test") {
   output_name = "sys_inspect_cpp_tests"
   sources = [ "test.cc" ]
   deps = [
+    "//sdk/fidl/fuchsia.inspect",
+    "//sdk/lib/inspect/service/cpp",
     "//sdk/lib/inspect/testing/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",

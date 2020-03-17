@@ -18,7 +18,7 @@ namespace sys {
 class ComponentInspector final {
  public:
   // Creates a new Inspector for this component, and publishes it in this component's outgoing
-  // directory at the path "inspect/root.inspect".
+  // directory at the path "diagnostics/root.inspect".
   explicit ComponentInspector(sys::ComponentContext* startup_context);
 
   // Get the inspector for this component.
@@ -41,7 +41,6 @@ class ComponentInspector final {
   ComponentInspector();
 
   std::unique_ptr<::inspect::NodeHealth> component_health_;
-
   ::inspect::Inspector inspector_;
 };
 

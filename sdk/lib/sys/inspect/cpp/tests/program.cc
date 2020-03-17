@@ -13,9 +13,25 @@ int main(int argc, const char** argv) {
   auto context = sys::ComponentContext::Create();
   auto inspector = std::make_unique<sys::ComponentInspector>(context.get());
 
-  inspector->root().CreateInt("val1", 1, inspector.get());
-  inspector->root().CreateInt("val2", 2, inspector.get());
-  inspector->root().CreateInt("val3", 3, inspector.get());
+  inspector->root().CreateInt("val1", 1, inspector->inspector());
+  inspector->root().CreateInt("val2", 2, inspector->inspector());
+  inspector->root().CreateInt("val3", 3, inspector->inspector());
+  inspector->root().CreateLazyNode(
+      "child",
+      [] {
+        inspect::Inspector insp;
+        insp.GetRoot().CreateInt("val", 0, &insp);
+        return fit::make_ok_promise(std::move(insp));
+      },
+      inspector->inspector());
+  inspector->root().CreateLazyValues(
+      "values",
+      [] {
+        inspect::Inspector insp;
+        insp.GetRoot().CreateInt("val4", 4, &insp);
+        return fit::make_ok_promise(std::move(insp));
+      },
+      inspector->inspector());
 
   inspector->Health().Ok();
 
