@@ -1,13 +1,14 @@
 # Get Fuchsia source code
 
-This page provides instructions on how to download Fuchsia source code and
-set up environment variables for working on Fuchsia.
+This guide provides instructions for the following tasks:
+
+*   [Download the Fuchsia source code](#download-fuchsia-source).
+*   [Set up environment variables](#set-up-environment-variables).
 
 ## Prerequisites
 
-Fuchsia provides a bootstrap script that sets up your development environment
-and syncs with the Fuchsia source repository. The script requires
-Python, cURL, unzip, and Git to be up-to-date.
+Fuchsia's [bootstrap script](/scripts/bootstrap) requires Python, cURL, unzip,
+and Git to be up-to-date.
 
 ### Linux
 
@@ -21,7 +22,7 @@ sudo apt-get install build-essential curl git python unzip
 
 Do the following:
 
-1.  Install the Xcode command line tools:
+1.  Install the Xcode command line tool:
 
     ```posix-terminal
     xcode-select --install
@@ -30,90 +31,119 @@ Do the following:
 1.  Install the latest version of
     [Xcode](https://developer.apple.com/xcode/){:.external}.
 
-## Download Fuchsia source
+## Download Fuchsia source {#download-fuchsia-source}
 
-Once you install the prerequisite tools, do the following:
+Fuchsia's bootstrap script creates a `fuchsia` directory and downloads the
+content of the Fuchsia source repository to this new directory.
 
- 1. Go to the directory where you want to set up your workspace for the Fuchsia
-    codebase. This can be anywhere, but this example uses your home directory.
+To download the Fuchsia source, do the following:
+
+1.  Go to the directory where you want to create your `fuchsia` directory, for
+    example:
 
     ```posix-terminal
     cd ~
     ```
 
- 1. Run the script to bootstrap your development environment. This script
-    automatically creates a `fuchsia` directory for the source code.
+    Note: All examples and instructions in `fuchsia.dev` use `~/fuchsia` as the
+    root directory of the Fuchsia project.
+
+1.  Run the bootstrap script:
 
     ```posix-terminal
     curl -s "https://fuchsia.googlesource.com/fuchsia/+/master/scripts/bootstrap?format=TEXT" | base64 --decode | bash
     ```
 
-Downloading Fuchsia source can take up to 60 minutes. To understand how the Fuchsia repository is organized,
-see [Source code layout](/docs/concepts/source_code/layout.md).
+    Downloading may take up to 60 minutes.
 
-### Authentication errors
+To learn how the Fuchsia source code is organized, see
+[Source code layout](/docs/concepts/source_code/layout.md).
 
-When checking out the code, if you see the `Invalid
-authentication credentials` error, it means that your
-`$HOME/.gitcookies` file already contains a cookie
-(likely in the `.googlesource.com` domain) that applies to
-the repositories that the script tries to check out anonymously.
+### Authentication error
 
-In this case, do one of the following:
+If you see the `Invalid authentication credentials` error during the bootstrap
+process, your `~/.gitcookies` file may contain cookies from some
+repositories in `googlesource.com` that the bootstrap script
+wants to check out anonymously.
 
-*  Follow the onscreen directions to get passwords for the specific
-   repositories.
-*  Delete the offending cookie from the `.gitcookies` file.
+To resolve this error, do one of the following:
 
-## Set up environment variables
+*   Follow the onscreen directions to get passwords for the specified
+    repositories.
+*   Delete the offending cookies from the `.gitcookies` file.
 
-Fuchsia uses the `jiri` tool to manage git repositories. This tool manages
-a set of repositories specified by a manifest. (The `jiri` tool is located at
-[https://fuchsia.googlesource.com/jiri](https://fuchsia.googlesource.com/jiri){:.external}.)
+## Set up environment variables {#set-up-environment-variables}
 
-Upon successfully downloading Fuchsia source, the bootstrap script prints
-a message recommending that you add the `.jiri_root/bin` directory to
-your PATH.
+Setting up Fuchsia environment variables requires the following:
 
-Note: Adding `jiri` to your PATH is assumed by
-other parts of the Fuchsia toolchain.
+*   Add the `.jiri_root/bin` directory to your `PATH`.
+*   Source the `scripts/fx-env.sh` file.
 
-To show how to set up environment variables, the following steps uses
-a `bash` terminal as example:
+The `.jiri_root/bin` directory in the Fuchsia source contains
+the [`jiri`](https://fuchsia.googlesource.com/jiri){:.external} and
+[`fx`](/docs/development/build/fx.md) tools, which are essential to Fuchsia workflows.
+Fuchsia uses the `jiri` tool to manage multiple repositories in the Fuchsia project.
+The `fx` tool helps configure, build, run, and debug Fuchsia.
+The Fuchsia toolchain requires `jiri` to be available in your `PATH`.
 
-1. Add the `export` and `source` commands to your `.bashrc` script:
+Additionally, sourcing the [`fx-env.sh`](/scripts/fx-env.sh) script
+enables useful shell functions in your terminal. For
+instance, it creates a `FUCHSIA_DIR` environment variable and
+provides the `fd` command for navigating directories with auto-completion.
+See comments in `fx-env.sh` for details.
 
-   ```sh
-   cat >> ~/.bashrc <<EOL
-   # Fuchsia
-   # If you use a custom directory, adjust accordingly
-   export PATH=~/fuchsia/.jiri_root/bin:$PATH
-   source ~/fuchsia/scripts/fx-env.sh
-   EOL
-   ```
-1. To update your environment with the new changes, run the following command:
+### Update your shell script {#update-your-shell-script}
 
-   ```posix-terminal
-   source ~/.bashrc
-   ```
+Update your shell script to automatically set up Fuchsia environment variables
+in your terminal.
 
+The following steps use a `bash` terminal as an example:
 
-Another tool in `.jiri_root/bin` is `fx`, which helps configuring, building,
-running and debugging Fuchsia. See [fx workflow](/docs/development/build/fx.md) for details.
+1.  Use a text editor to open your `~/.bashrc` file:
 
-You can also source `scripts/fx-env.sh`, but sourcing `fx-env.sh` is not
-required. This script defines a few environment variables that are commonly used in the
-documentation (such as `$FUCHSIA_DIR`) and provides useful shell functions (for
-instance, `fd` to change directories effectively). See comments in
-`scripts/fx-env.sh` for more details.
+    ```posix-terminal
+    vim ~/.bashrc
+    ```
 
-### Work on Fuchsia without altering your PATH
+1.  Add the following lines your `~/.bashrc` file and save the file:
 
-If you don't like having to mangle your environment variables, and you want
-`jiri` to "just work" depending on your current working directory, copy
-`jiri` into your PATH.  However, you must have write access (without `sudo`)
-to the directory into which you copy `jiri`. If you don't, then `jiri`
-will not be able to keep itself up-to-date.
+    Note: If your Fuchsia source code is not located in the `~/fuchsia` directory,
+    replace `~/fuchsia` with your Fuchsia directory.
+
+    ```sh
+    export PATH=~/fuchsia/.jiri_root/bin:$PATH
+    source ~/fuchsia/scripts/fx-env.sh
+    ```
+
+1.  Update your environment variables:
+
+    ```posix-terminal
+    source ~/.bashrc
+    ```
+
+    You can now run `jiri` and `fx` in any directory.
+
+Run the following commands in any directory and confirm that these commands
+print a usage guide for the tool:
+
+```posix-terminal
+jiri help
+```
+
+```posix-terminal
+fx help
+```
+
+### Work on Fuchsia without updating your PATH
+
+The following sections provide alternative approaches to the
+[Update your shell script](#update-your-shell-script) section.
+
+#### Copy the tool to your binary directory
+
+If you don't wish to update your environment variables, but you want `jiri` to
+work in any directory, copy the `jiri` tool to your `~/bin` directory, for
+example:
 
 Note: If your Fuchsia source code is not located in the `~/fuchsia` directory,
 replace `~/fuchsia` with your Fuchsia directory.
@@ -122,17 +152,32 @@ replace `~/fuchsia` with your Fuchsia directory.
 cp ~/fuchsia/.jiri_root/bin/jiri ~/bin
 ```
 
-To use the `fx` tool, you can either symlink it into your `~/bin` directory:
+However, you must have write access to the `~/bin` directory without `sudo`.
+If you don't, `jiri` cannot keep itself up-to-date.
+
+#### Add a symlink to your binary directory
+
+Similarly, if you want to use the `fx` tool without updating your environment
+variables, provide the `fx` tool's symlink in your `~/bin` directory, for
+example:
+
+Note: If your Fuchsia source code is not located in the `~/fuchsia` directory,
+replace `~/fuchsia` with your Fuchsia directory.
 
 ```posix-terminal
 ln -s ~/fuchsia/scripts/fx ~/bin
 ```
 
-or just run the tool directly as `scripts/fx`. Make sure you have **jiri** in
-your PATH.
+Alternatively, run the `fx` tool directly using its path, for example:
+
+```posix-terminal
+./scripts/fx help
+```
+
+In either case, you need `jiri` in your `PATH`.
 
 ## See also
 
-For the next steps, see [Configure and build Fuchsia](/docs/getting_started.md#configure-and-build-fuchsia) in
-the Getting started guide.
-
+For the next steps, see
+[Configure and build Fuchsia](/docs/getting_started.md#configure-and-build-fuchsia)
+in the Getting started guide.
