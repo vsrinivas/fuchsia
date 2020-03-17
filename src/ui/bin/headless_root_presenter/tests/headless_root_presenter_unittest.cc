@@ -2,14 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/bin/headless_root_presenter/app.h"
-
 #include <fuchsia/ui/activity/cpp/fidl.h>
 #include <fuchsia/ui/activity/cpp/fidl_test_base.h>
-
 #include <lib/async-loop/default.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
+
+#include "src/ui/bin/headless_root_presenter/app.h"
 
 namespace headless_root_presenter {
 namespace testing {
@@ -19,8 +18,9 @@ class MockMediaButtonsListener : public fuchsia::ui::policy::MediaButtonsListene
     last_event_ = std::make_unique<fuchsia::ui::input::MediaButtonsEvent>(std::move(event));
     media_button_event_count_++;
   }
-  int GetMediaButtonEventCount(){return media_button_event_count_;}
-  fuchsia::ui::input::MediaButtonsEvent* GetLastEvent(){return last_event_.get();}
+  int GetMediaButtonEventCount() { return media_button_event_count_; }
+  fuchsia::ui::input::MediaButtonsEvent* GetLastEvent() { return last_event_.get(); }
+
  private:
   uint32_t media_button_event_count_ = 0;
   std::unique_ptr<fuchsia::ui::input::MediaButtonsEvent> last_event_;
@@ -60,23 +60,23 @@ class AppUnitTest : public gtest::TestLoopFixture {
     context_provider_.service_directory_provider()->AddService(
         fake_tracker_.GetHandler(dispatcher()));
 
-    app_ = std::make_unique<headless_root_presenter::App>(command_line_, &loop_, context_provider_.TakeContext());
+    app_ = std::make_unique<headless_root_presenter::App>(command_line_, &loop_,
+                                                          context_provider_.TakeContext());
     SetupMockDevice();
   }
-  void SetUp() override {
-    TestLoopFixture::SetUp();
-  }
+  void SetUp() override { TestLoopFixture::SetUp(); }
 
-  void SetupMockDevice(){
+  void SetupMockDevice() {
     fuchsia::ui::input::DeviceDescriptor device_descriptor;
-    device_descriptor.media_buttons = std::make_unique<fuchsia::ui::input::MediaButtonsDescriptor>();
+    device_descriptor.media_buttons =
+        std::make_unique<fuchsia::ui::input::MediaButtonsDescriptor>();
 
     fuchsia::ui::input::InputDeviceRegistryPtr inpReg;
     context_provider_.ConnectToPublicService(inpReg.NewRequest());
     inpReg->RegisterDevice(std::move(device_descriptor), input_device_.NewRequest());
   }
 
-  void RegisterMockListener(){
+  void RegisterMockListener() {
     fidl::InterfaceHandle<fuchsia::ui::policy::MediaButtonsListener> listener_handle;
     listener_binding_.Bind(listener_handle.NewRequest());
 
@@ -101,7 +101,7 @@ class AppUnitTest : public gtest::TestLoopFixture {
   FakeActivityTracker fake_tracker_;
 };
 
-fuchsia::ui::input::InputReport CreateOneReport(){
+fuchsia::ui::input::InputReport CreateOneReport() {
   std::unique_ptr<fuchsia::ui::input::MediaButtonsReport> media_buttons_report =
       std::make_unique<fuchsia::ui::input::MediaButtonsReport>();
   media_buttons_report->volume_down = true;
@@ -110,7 +110,8 @@ fuchsia::ui::input::InputReport CreateOneReport(){
   return input_report;
 }
 
-TEST_F(AppUnitTest, NormalFlowTest) {
+// TODO(48425) - Tests are DISABLED because they are flaking.
+TEST_F(AppUnitTest, DISABLED_NormalFlowTest) {
   RegisterMockListener();
   RunLoopUntilIdle();
   int current_count = listener_.GetMediaButtonEventCount();
@@ -124,7 +125,8 @@ TEST_F(AppUnitTest, NormalFlowTest) {
   EXPECT_TRUE(listener_.GetLastEvent()->volume() == -1);
 }
 
-TEST_F(AppUnitTest, NoListenerTest) {
+// TODO(48425) - Tests are DISABLED because they are flaking.
+TEST_F(AppUnitTest, DISABLED_NoListenerTest) {
   input_device_->DispatchReport(CreateOneReport());
   RunLoopUntilIdle();
 
@@ -132,7 +134,8 @@ TEST_F(AppUnitTest, NoListenerTest) {
   EXPECT_TRUE(listener_.GetMediaButtonEventCount() == 0);
 }
 
-TEST_F(AppUnitTest, DisconnectTest) {
+// TODO(48425) - Tests are DISABLED because they are flaking.
+TEST_F(AppUnitTest, DISABLED_DisconnectTest) {
   RegisterMockListener();
   RunLoopUntilIdle();
   int current_count = listener_.GetMediaButtonEventCount();
