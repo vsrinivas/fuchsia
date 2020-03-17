@@ -275,6 +275,7 @@ executable("data_register_unittest") {
   sources = [ "data_register_unittest.cc" ]
 
   deps = [
+    "//sdk/fidl/fuchsia.feedback",
     "//src/developer/feedback/feedback_agent:data_register",
     "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//src/lib/testing/loop_fixture",

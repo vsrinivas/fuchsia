@@ -4,19 +4,16 @@
 
 #include "src/developer/feedback/feedback_agent/feedback_agent.h"
 
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async/default.h>
 #include <lib/fdio/spawn.h>
-#include <lib/syslog/cpp/logger.h>
 #include <zircon/processargs.h>
 #include <zircon/types.h>
 
 #include <cinttypes>
 
-#include "fuchsia/feedback/cpp/fidl.h"
 #include "src/developer/feedback/feedback_agent/constants.h"
 #include "src/developer/feedback/utils/rotating_file_set.h"
 #include "src/lib/files/path.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 namespace {

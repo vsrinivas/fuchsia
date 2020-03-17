@@ -37,8 +37,8 @@ class Datastore {
   fit::promise<Attachments> GetAttachments();
 
   // Exposed for testing purposes.
-  Annotations GetStaticAnnotations() const { return static_annotations_; }
-  Attachments GetStaticAttachments() const { return static_attachments_; }
+  const Annotations& GetStaticAnnotations() const { return static_annotations_; }
+  const Attachments& GetStaticAttachments() const { return static_attachments_; }
 
  private:
   async_dispatcher_t* dispatcher_;

@@ -1,5 +1,10 @@
 {
     "program": {
         "binary": "test/data_register_unittest"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
     }
 }
