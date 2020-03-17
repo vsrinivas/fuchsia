@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::network_config::{Credential, NetworkConfig, NetworkIdentifier},
+    crate::config_management::{Credential, NetworkConfig, NetworkIdentifier},
     anyhow::{bail, format_err, Context, Error},
     fidl::endpoints::create_proxy,
     fidl_fuchsia_stash as fidl_stash,
@@ -183,7 +183,7 @@ impl PersistentData {
 mod tests {
     use {
         super::*,
-        crate::network_config::{Credential, NetworkIdentifier, SecurityType, PSK_BYTE_LEN},
+        crate::config_management::{Credential, NetworkIdentifier, SecurityType, PSK_BYTE_LEN},
         fuchsia_async as fasync,
     };
 

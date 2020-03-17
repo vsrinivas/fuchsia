@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{client, config_manager::SavedNetworksManager},
+    crate::{config_management::SavedNetworksManager, legacy::client},
     fidl::{self, endpoints::create_proxy},
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_device_service as wlan_service,
     fidl_fuchsia_wlan_service as legacy, fidl_fuchsia_wlan_sme as fidl_sme,
@@ -394,7 +394,7 @@ fn empty_counter() -> fidl_wlan_stats::Counter {
 mod tests {
     use {
         super::*,
-        crate::network_config::{Credential, NetworkIdentifier, SecurityType},
+        crate::config_management::{Credential, NetworkIdentifier, SecurityType},
         fuchsia_async as fasync,
         futures::task::Poll,
         pin_utils::pin_mut,

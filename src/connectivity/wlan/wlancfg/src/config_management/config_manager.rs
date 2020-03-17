@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 use {
-    crate::{
-        known_ess_store::{self, EssJsonRead, KnownEss, KnownEssStore},
+    super::{
         network_config::{
             Credential, NetworkConfig, NetworkConfigError, NetworkIdentifier, SecurityType,
         },
         stash::Stash,
     },
+    crate::legacy::known_ess_store::{self, EssJsonRead, KnownEss, KnownEssStore},
     anyhow::format_err,
     log::{error, info},
     parking_lot::Mutex,
@@ -278,7 +278,7 @@ fn evict_if_needed(configs: &mut Vec<NetworkConfig>) {
 mod tests {
     use {
         super::*,
-        crate::network_config::{PerformanceStats, SecurityType},
+        crate::config_management::PerformanceStats,
         fuchsia_async as fasync,
         std::{io::Write, mem},
         tempfile::TempDir,

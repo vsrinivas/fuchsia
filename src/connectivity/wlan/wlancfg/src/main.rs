@@ -5,20 +5,13 @@
 #![recursion_limit = "512"]
 
 mod client;
-mod config;
-mod config_manager;
-mod device;
-mod fuse_pending;
-mod known_ess_store;
-mod network_config;
-mod policy;
-mod shim;
-mod stash;
-mod state_machine;
+mod config_management;
+mod legacy;
+mod mode_management;
 mod util;
 
 use {
-    crate::{config::Config, config_manager::SavedNetworksManager},
+    crate::config_management::SavedNetworksManager,
     anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_wlan_device_service::DeviceServiceMarker,
     fuchsia_async as fasync,
@@ -32,8 +25,8 @@ use {
 };
 
 async fn serve_fidl(
-    client_ref: policy::client::ClientPtr,
-    legacy_client_ref: shim::ClientRef,
+    client_ref: client::ClientPtr,
+    legacy_client_ref: legacy::shim::ClientRef,
     saved_networks: Arc<SavedNetworksManager>,
 ) -> Result<Void, Error> {
     let mut fs = ServiceFs::new();
@@ -43,13 +36,16 @@ async fn serve_fidl(
     let saved_networks_clone = Arc::clone(&saved_networks);
     fs.dir("svc")
         .add_fidl_service(|stream| {
-            let fut =
-                shim::serve_legacy(stream, legacy_client_ref.clone(), Arc::clone(&saved_networks))
-                    .unwrap_or_else(|e| error!("error serving legacy wlan API: {}", e));
+            let fut = legacy::shim::serve_legacy(
+                stream,
+                legacy_client_ref.clone(),
+                Arc::clone(&saved_networks),
+            )
+            .unwrap_or_else(|e| error!("error serving legacy wlan API: {}", e));
             fasync::spawn(fut)
         })
         .add_fidl_service(move |reqs| {
-            policy::client::spawn_provider_server(
+            client::spawn_provider_server(
                 client_ref.clone(),
                 listener_msg_sender1.clone(),
                 Arc::clone(&saved_networks_clone),
@@ -57,13 +53,13 @@ async fn serve_fidl(
             )
         })
         .add_fidl_service(move |reqs| {
-            policy::client::spawn_listener_server(listener_msg_sender2.clone(), reqs)
+            client::spawn_listener_server(listener_msg_sender2.clone(), reqs)
         });
     fs.take_and_serve_directory_handle()?;
     let service_fut = fs.collect::<()>().fuse();
     pin_mut!(service_fut);
 
-    let serve_policy_listeners = policy::client::listener::serve(listener_msgs).fuse();
+    let serve_policy_listeners = client::listener::serve(listener_msgs).fuse();
     pin_mut!(serve_policy_listeners);
 
     loop {
@@ -76,24 +72,24 @@ async fn serve_fidl(
 
 fn main() -> Result<(), Error> {
     util::logger::init();
-    let cfg = Config::load_from_file()?;
+    let cfg = legacy::config::Config::load_from_file()?;
 
     let mut executor = fasync::Executor::new().context("error create event loop")?;
     let wlan_svc = fuchsia_component::client::connect_to_service::<DeviceServiceMarker>()
         .context("failed to connect to device service")?;
 
     let saved_networks = Arc::new(executor.run_singlethreaded(SavedNetworksManager::new())?);
-    let legacy_client = shim::ClientRef::new();
-    let client = Arc::new(Mutex::new(policy::client::Client::new_empty()));
+    let legacy_client = legacy::shim::ClientRef::new();
+    let client = Arc::new(Mutex::new(client::Client::new_empty()));
     let fidl_fut = serve_fidl(client.clone(), legacy_client.clone(), Arc::clone(&saved_networks));
 
     let (watcher_proxy, watcher_server_end) = fidl::endpoints::create_proxy()?;
     wlan_svc.watch_devices(watcher_server_end)?;
-    let listener = device::Listener::new(wlan_svc, cfg, legacy_client, client);
+    let listener = legacy::device::Listener::new(wlan_svc, cfg, legacy_client, client);
     let fut = watcher_proxy
         .take_event_stream()
         .try_for_each(|evt| {
-            device::handle_event(&listener, evt, Arc::clone(&saved_networks)).map(Ok)
+            legacy::device::handle_event(&listener, evt, Arc::clone(&saved_networks)).map(Ok)
         })
         .err_into()
         .and_then(|_| future::ready(Err(format_err!("Device watcher future exited unexpectedly"))));

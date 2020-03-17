@@ -11,10 +11,10 @@
 //!       get closed.
 use {
     crate::{
-        config_manager::SavedNetworksManager,
-        fuse_pending::FusePending,
-        network_config::{Credential, NetworkConfigError, NetworkIdentifier, SaveError},
-        policy::client::scan::handle_scan,
+        config_management::{
+            Credential, NetworkConfigError, NetworkIdentifier, SaveError, SavedNetworksManager,
+        },
+        util::fuse_pending::FusePending,
     },
     anyhow::{format_err, Error},
     fidl::epitaph::ChannelEpitaphExt,
@@ -28,6 +28,7 @@ use {
     },
     log::{error, info},
     parking_lot::Mutex,
+    scan::handle_scan,
     std::{convert::TryFrom, sync::Arc},
 };
 
@@ -517,8 +518,7 @@ mod tests {
     use {
         super::*,
         crate::{
-            config_manager::SavedNetworksManager,
-            network_config::{NetworkConfig, SecurityType, PSK_BYTE_LEN},
+            config_management::{NetworkConfig, SavedNetworksManager, SecurityType, PSK_BYTE_LEN},
             util::logger::set_logger_for_test,
         },
         fidl::{

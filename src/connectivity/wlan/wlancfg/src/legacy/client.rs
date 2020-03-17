@@ -4,11 +4,12 @@
 
 use {
     crate::{
-        config_manager::SavedNetworksManager,
-        network_config::{Credential, NetworkIdentifier},
-        policy::client::sme_credential_from_policy,
-        state_machine::{self, IntoStateExt},
-        util::security_from_sme_protection,
+        client::sme_credential_from_policy,
+        config_management::{Credential, NetworkIdentifier, SavedNetworksManager},
+        util::{
+            sme_conversion::security_from_sme_protection,
+            state_machine::{self, IntoStateExt},
+        },
     },
     anyhow::format_err,
     fidl::endpoints::create_proxy,
@@ -426,7 +427,7 @@ async fn fetch_scan_results(
 mod tests {
     use {
         super::*,
-        crate::network_config::{NetworkConfig, SecurityType},
+        crate::config_management::{NetworkConfig, SecurityType},
         fidl::endpoints::RequestStream,
         fidl_fuchsia_wlan_sme::{ClientSmeRequest, ClientSmeRequestStream},
         fuchsia_async as fasync,

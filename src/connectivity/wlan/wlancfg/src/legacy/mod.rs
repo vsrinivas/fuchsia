@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-pub mod fuse_pending;
-pub mod logger;
-pub mod sme_conversion;
-pub mod state_machine;
+mod client;
+pub mod config;
+pub mod device;
+pub mod known_ess_store;
+pub mod shim;

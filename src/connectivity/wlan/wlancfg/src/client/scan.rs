@@ -4,7 +4,7 @@
 
 //! Manages Scan requests for the Client Policy API.
 use {
-    crate::{policy::client::ClientPtr, util::security_from_sme_protection},
+    crate::{client::ClientPtr, util::sme_conversion::security_from_sme_protection},
     anyhow::{format_err, Context, Error},
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_policy as fidl_policy,
     fidl_fuchsia_wlan_sme as fidl_sme,

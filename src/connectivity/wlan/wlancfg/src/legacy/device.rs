@@ -3,7 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    crate::{client, config::Config, config_manager::SavedNetworksManager, policy, shim},
+    crate::{
+        client,
+        config_management::SavedNetworksManager,
+        legacy::{client as legacy_client, config::Config, shim},
+    },
     anyhow::format_err,
     fidl::endpoints::create_proxy,
     fidl_fuchsia_wlan_device as wlan,
@@ -20,7 +24,7 @@ pub struct Listener {
     proxy: DeviceServiceProxy,
     config: Config,
     legacy_client: shim::ClientRef,
-    client: policy::client::ClientPtr,
+    client: client::ClientPtr,
 }
 
 pub async fn handle_event(
@@ -108,7 +112,7 @@ async fn on_iface_added(
 
     zx::Status::ok(status).map_err(|e| format_err!("GetClientSme returned an error: {}", e))?;
 
-    let (c, fut) = client::new_client(iface_id, sme.clone(), saved_networks);
+    let (c, fut) = legacy_client::new_client(iface_id, sme.clone(), saved_networks);
     fasync::spawn(fut);
     let lc = shim::Client { service, client: c, sme: sme.clone(), iface_id };
     legacy_client.set_if_empty(lc);
@@ -122,7 +126,7 @@ impl Listener {
         proxy: DeviceServiceProxy,
         config: Config,
         legacy_client: shim::ClientRef,
-        client: policy::client::ClientPtr,
+        client: client::ClientPtr,
     ) -> Self {
         Listener { proxy, config, legacy_client, client }
     }
