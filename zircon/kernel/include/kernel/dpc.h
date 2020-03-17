@@ -33,6 +33,8 @@ class Dpc : public fbl::DoublyLinkedListable<Dpc*> {
   // Queue an already filled out dpc, optionally reschedule immediately to run the dpc thread.
   // the deferred procedure runs in a dedicated thread that runs at DPC_THREAD_PRIORITY
   // |Queue| will not block; it may wait briefly for a spinlock.
+  //
+  // Returns ZX_ERR_ALREADY_EXISTS if |this| is already queued.
   zx_status_t Queue(bool reschedule);
 
   // Queue a dpc, but must be holding the thread lock.
@@ -40,6 +42,8 @@ class Dpc : public fbl::DoublyLinkedListable<Dpc*> {
   // QueueThreadLocked will not block; it may wait briefly for a spinlock.
   // |this| may be deallocated once the function starts executing.
   // |func_| may requeue the DPC if needed.
+  //
+  // Returns ZX_ERR_ALREADY_EXISTS if |this| is already queued.
   zx_status_t QueueThreadLocked() TA_REQ(thread_lock);
 
   // Initializes the DPC subsystem for the current cpu.
