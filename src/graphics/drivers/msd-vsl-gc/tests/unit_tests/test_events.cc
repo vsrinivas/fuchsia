@@ -89,17 +89,17 @@ TEST_F(TestEvents, WriteSameEvent) {
   ASSERT_TRUE(device_->AllocInterruptEvent(false /* free_on_complete */, &event_id));
 
   auto mapped_batch = std::make_unique<MockMappedBatch>(nullptr);
-  ASSERT_TRUE(device_->WriteInterruptEvent(event_id, std::move(mapped_batch), context_));
+  ASSERT_TRUE(device_->WriteInterruptEvent(event_id, std::move(mapped_batch), address_space_));
 
   // Writing the event again should fail as it is still pending.
   mapped_batch = std::make_unique<MockMappedBatch>(nullptr);
-  ASSERT_FALSE(device_->WriteInterruptEvent(event_id, std::move(mapped_batch), context_));
+  ASSERT_FALSE(device_->WriteInterruptEvent(event_id, std::move(mapped_batch), address_space_));
 
   ASSERT_TRUE(device_->CompleteInterruptEvent(event_id));
 
   // Now that the event completed, writing should succeed.
   mapped_batch = std::make_unique<MockMappedBatch>(nullptr);
-  ASSERT_TRUE(device_->WriteInterruptEvent(event_id, std::move(mapped_batch), context_));
+  ASSERT_TRUE(device_->WriteInterruptEvent(event_id, std::move(mapped_batch), address_space_));
 }
 
 TEST_F(TestEvents, WriteUnorderedEventIds) {
@@ -110,7 +110,7 @@ TEST_F(TestEvents, WriteUnorderedEventIds) {
 
   auto& ringbuffer = device_->ringbuffer_;
   uint64_t rb_gpu_addr;
-  ASSERT_TRUE(context_->GetRingbufferGpuAddress(&rb_gpu_addr));
+  ASSERT_TRUE(context_->exec_address_space()->GetRingbufferGpuAddress(&rb_gpu_addr));
 
   // Allocate the maximum number of interrupt events, and corresponding semaphores.
   uint32_t event_ids[MsdVslDevice::kNumEvents] = {};
@@ -131,7 +131,8 @@ TEST_F(TestEvents, WriteUnorderedEventIds) {
     auto copy = semaphores[i]->Clone();
     ASSERT_NE(copy, nullptr);
     auto mapped_batch = std::make_unique<MockMappedBatch>(std::move(copy));
-    ASSERT_TRUE(device_->WriteInterruptEvent(event_ids[i], std::move(mapped_batch), context_));
+    ASSERT_TRUE(
+        device_->WriteInterruptEvent(event_ids[i], std::move(mapped_batch), address_space_));
   }
 
   ASSERT_TRUE(device_->AddRingbufferWaitLink());

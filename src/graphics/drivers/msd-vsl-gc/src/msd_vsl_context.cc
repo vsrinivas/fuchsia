@@ -90,13 +90,14 @@ magma::Status MsdVslContext::SubmitBatch(std::unique_ptr<MappedBatch> batch) {
 }
 
 bool MsdVslContext::MapRingbuffer(Ringbuffer* ringbuffer) {
-  if (ringbuffer_gpu_addr_) {
+  uint64_t gpu_addr;
+  if (exec_address_space()->GetRingbufferGpuAddress(&gpu_addr)) {
     // Already mapped.
     return true;
   }
   bool res = ringbuffer->MultiMap(exec_address_space(), kRingbufferGpuAddr);
   if (res) {
-    ringbuffer_gpu_addr_ = kRingbufferGpuAddr;
+    exec_address_space()->SetRingbufferGpuAddress(kRingbufferGpuAddr);
   }
   return res;
 }

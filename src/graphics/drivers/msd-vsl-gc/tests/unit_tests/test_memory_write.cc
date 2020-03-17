@@ -280,7 +280,7 @@ bool matches_last_wait_link(std::shared_ptr<MsdVslContext> context, Ringbuffer* 
   auto wait_link_end = ringbuffer->tail();
 
   uint64_t rb_gpu_addr;
-  if (!context->GetRingbufferGpuAddress(&rb_gpu_addr)) {
+  if (!context->exec_address_space()->GetRingbufferGpuAddress(&rb_gpu_addr)) {
     return DRETF(false, "Failed to get ringbuffer gpu addr");
   }
   // The address lies before the start of the ringbuffer.

@@ -38,18 +38,9 @@ class MsdVslContext {
 
   bool MapRingbuffer(Ringbuffer* ringbuffer);
 
-  bool GetRingbufferGpuAddress(uint64_t* gpu_addr_out) {
-    if (ringbuffer_gpu_addr_) {
-      *gpu_addr_out = *ringbuffer_gpu_addr_;
-      return true;
-    }
-    return false;
-  }
-
  private:
   std::weak_ptr<MsdVslConnection> connection_;
   std::shared_ptr<AddressSpace> address_space_;
-  std::optional<uint64_t> ringbuffer_gpu_addr_;
 };
 
 class MsdVslAbiContext : public msd_context_t {

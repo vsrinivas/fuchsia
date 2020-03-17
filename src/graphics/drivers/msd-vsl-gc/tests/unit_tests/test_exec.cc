@@ -23,6 +23,36 @@ TEST_F(TestExec, SubmitBatchWithOffset) {
   ASSERT_NO_FATAL_FAILURE(CreateAndSubmitBuffer(default_context(), buffer_desc));
 }
 
+// Tests submitting buffers from different contexts from the same connection.
+TEST_F(TestExec, SubmitBatchesMultipleContexts) {
+  // Create an additional context on the default connection.
+  auto context2 = MsdVslContext::Create(default_connection(), default_address_space(),
+                                        device_->GetRingbuffer());
+  ASSERT_NE(context2, nullptr);
+
+  device_->StartDeviceThread();
+
+  BufferDesc buffer_desc = {
+      .buffer_size = 4096,
+      .map_page_count = 1,
+      .data_size = 4,
+      .batch_offset = 0,
+      .gpu_addr = 0x10000,
+  };
+  ASSERT_NO_FATAL_FAILURE(CreateAndSubmitBuffer(default_context(), buffer_desc));
+  ASSERT_EQ(device_->configured_address_space_.get(), default_address_space().get());
+
+  BufferDesc buffer_desc2 = {
+      .buffer_size = 4096,
+      .map_page_count = 1,
+      .data_size = 4,
+      .batch_offset = 0,
+      .gpu_addr = 0x20000,
+  };
+  ASSERT_NO_FATAL_FAILURE(CreateAndSubmitBuffer(context2, buffer_desc2));
+  ASSERT_EQ(device_->configured_address_space_.get(), default_address_space().get());
+}
+
 // Tests reusing a gpu address after unmapping it.
 //
 // Creates two buffers, submits one and releases its GPU mapping.
@@ -163,7 +193,7 @@ TEST_F(TestExec, BacklogWithInvalidBatch) {
   }
 }
 
-TEST_F(TestExec, SwitchContext) {
+TEST_F(TestExec, SwitchAddressSpace) {
   device_->StartDeviceThread();
 
   BufferDesc buffer_desc = {
@@ -194,8 +224,8 @@ TEST_F(TestExec, SwitchContext) {
   ASSERT_NO_FATAL_FAILURE(CreateAndSubmitBuffer(client->context, buffer_desc2));
 }
 
-// Tests submitting buffers from many clients, each with different contexts.
-TEST_F(TestExec, SwitchMultipleContexts) {
+// Tests submitting buffers from many clients, each with different address spaces.
+TEST_F(TestExec, SwitchMultipleAddressSpaces) {
   device_->StartDeviceThread();
 
   constexpr uint32_t kNumClients = 10;
@@ -219,7 +249,7 @@ TEST_F(TestExec, SwitchMultipleContexts) {
           .gpu_addr = static_cast<uint32_t>(kBaseGpuAddr + (magma::page_size() * (i + j))),
       };
       ASSERT_NO_FATAL_FAILURE(CreateAndSubmitBuffer(clients[j]->context, buffer_desc));
-      ASSERT_EQ(device_->configured_context_.get(), clients[j]->context.get());
+      ASSERT_EQ(device_->configured_address_space_.get(), clients[j]->address_space.get());
     }
   }
 }

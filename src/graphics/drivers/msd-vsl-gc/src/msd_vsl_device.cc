@@ -385,7 +385,7 @@ bool MsdVslDevice::FreeInterruptEvent(uint32_t event_id) {
 
 // Writes an event into the end of the ringbuffer.
 bool MsdVslDevice::WriteInterruptEvent(uint32_t event_id, std::unique_ptr<MappedBatch> mapped_batch,
-                                       std::shared_ptr<MsdVslContext> prev_context) {
+                                       std::shared_ptr<AddressSpace> prev_address_space) {
   CHECK_THREAD_IS_CURRENT(device_thread_id_);
 
   if (event_id >= kNumEvents) {
@@ -402,7 +402,7 @@ bool MsdVslDevice::WriteInterruptEvent(uint32_t event_id, std::unique_ptr<Mapped
   }
   events_[event_id].submitted = true;
   events_[event_id].mapped_batch = std::move(mapped_batch);
-  events_[event_id].prev_context = prev_context;
+  events_[event_id].prev_address_space = prev_address_space;
   MiEvent::write(ringbuffer_.get(), event_id);
 
   // Save the ringbuffer offset immediately after this event.
@@ -531,7 +531,7 @@ bool MsdVslDevice::LoadInitialAddressSpace(std::shared_ptr<MsdVslContext> contex
 
   DLOG("Address space loaded, index %u", address_space_index);
 
-  configured_context_ = context;
+  configured_address_space_ = context->exec_address_space();
 
   return true;
 }
@@ -575,7 +575,7 @@ bool MsdVslDevice::StartRingbuffer(std::shared_ptr<MsdVslContext> context) {
     return true;  // Already running and looping on WAIT-LINK.
   }
   uint64_t rb_gpu_addr;
-  bool res = context->GetRingbufferGpuAddress(&rb_gpu_addr);
+  bool res = context->exec_address_space()->GetRingbufferGpuAddress(&rb_gpu_addr);
   if (!res) {
     return DRETF(res, "Could not get ringbuffer gpu address");
   }
@@ -607,7 +607,7 @@ bool MsdVslDevice::StartRingbuffer(std::shared_ptr<MsdVslContext> context) {
 
 bool MsdVslDevice::AddRingbufferWaitLink() {
   uint64_t rb_gpu_addr;
-  bool res = configured_context_->GetRingbufferGpuAddress(&rb_gpu_addr);
+  bool res = configured_address_space_->GetRingbufferGpuAddress(&rb_gpu_addr);
   if (!res) {
     return DRETF(false, "Failed to get ringbuffer gpu address");
   }
@@ -657,12 +657,12 @@ bool MsdVslDevice::WriteLinkCommand(magma::PlatformBuffer* buf, uint32_t write_o
 }
 
 bool MsdVslDevice::SubmitFlushTlb(std::shared_ptr<MsdVslContext> context) {
-  // It's possible we may need to switch to |context|. We will use the currently
-  // configured context until the switch occurs.
-  // The ringbuffer should already be mapped.
-  DASSERT(configured_context_);
+  // It's possible we may need to switch to the address space of |context|. We will use the
+  // currently configured address space until the switch occurs. The ringbuffer should already be
+  // mapped.
+  DASSERT(configured_address_space_);
   uint64_t rb_gpu_addr;
-  bool res = configured_context_->GetRingbufferGpuAddress(&rb_gpu_addr);
+  bool res = configured_address_space_->GetRingbufferGpuAddress(&rb_gpu_addr);
   if (!res) {
     return DRETF(false, "Failed to get ringbuffer gpu address");
   }
@@ -671,8 +671,9 @@ bool MsdVslDevice::SubmitFlushTlb(std::shared_ptr<MsdVslContext> context) {
   uint32_t prev_wait_link = ringbuffer_->SubtractOffset(kWaitLinkDwords * sizeof(uint32_t));
 
   uint32_t prefetch = kRbInstructionsPerFlush;
-  bool switch_context = configured_context_.get() != context.get();
-  if (switch_context) {
+  bool switch_address_space =
+      configured_address_space_.get() != context->exec_address_space().get();
+  if (switch_address_space) {
     // Need to add an additional instruction to load the address space.
     prefetch++;
   }
@@ -685,11 +686,11 @@ bool MsdVslDevice::SubmitFlushTlb(std::shared_ptr<MsdVslContext> context) {
   uint32_t new_rb_instructions_start_offset = ringbuffer_->tail();
   uint32_t gpu_addr = rb_gpu_addr + new_rb_instructions_start_offset;
 
-  if (switch_context) {
+  if (switch_address_space) {
     auto reg = registers::MmuPageTableArrayConfig::Get().addr();
     MiLoadState::write(ringbuffer_.get(), reg,
                        context->exec_address_space()->page_table_array_slot());
-    configured_context_ = context;
+    configured_address_space_ = context->exec_address_space();
   }
   auto reg = registers::MmuConfig::Get().addr();
   // The MmuConfig register can also be used to change modes.
@@ -744,19 +745,19 @@ bool MsdVslDevice::SubmitCommandBuffer(std::shared_ptr<MsdVslContext> context,
       return DRETF(false, "Failed to start ringbuffer");
     }
   }
-  // Check if we need to switch context. We should also save this copy before
-  // any possible context switch happens in |SubmitFlushTlb|.
-  auto prev_context = configured_context_;
-  // We always save the last context the ringbuffer was mapped to, as we need
-  // to keep the previous context alive until the switch is completed by the hardware.
-  DASSERT(prev_context);
-  bool switch_context = prev_context.get() != context.get();
-  do_flush |= switch_context;
+  // Check if we need to switch address spaces. We should also save this copy before
+  // any possible address space switch happens in |SubmitFlushTlb|.
+  auto prev_address_space = configured_address_space_;
+  // We always save the last address space the ringbuffer was mapped to, as we need
+  // to keep the previous address space alive until the switch is completed by the hardware.
+  DASSERT(prev_address_space);
+  bool switch_address_space = prev_address_space.get() != context->exec_address_space().get();
+  do_flush |= switch_address_space;
   if (do_flush && !SubmitFlushTlb(context)) {
     return DRETF(false, "Failed to submit flush tlb command");
   }
   uint64_t rb_gpu_addr;
-  bool res = context->GetRingbufferGpuAddress(&rb_gpu_addr);
+  bool res = context->exec_address_space()->GetRingbufferGpuAddress(&rb_gpu_addr);
   if (!res) {
     return DRETF(false, "Failed to get ringbuffer gpu address");
   }
@@ -801,7 +802,7 @@ bool MsdVslDevice::SubmitCommandBuffer(std::shared_ptr<MsdVslContext> context,
   // When adding new instructions, make sure to modify |kRbInstructionsPerBatch| accordingly.
   // Add an EVENT to the end to the ringbuffer.
   uint32_t new_rb_instructions_start = ringbuffer_->tail();
-  if (!WriteInterruptEvent(event_id, std::move(mapped_batch), prev_context)) {
+  if (!WriteInterruptEvent(event_id, std::move(mapped_batch), prev_address_space)) {
     return DRETF(false, "Failed to write interrupt event %u\n", event_id);
   }
   // Add a new WAIT-LINK to the end of the ringbuffer.

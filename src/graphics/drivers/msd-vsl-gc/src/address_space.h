@@ -45,6 +45,19 @@ class AddressSpace : public magma::AddressSpace<GpuMapping> {
 
   uint32_t page_table_array_slot() { return page_table_array_slot_; }
 
+  void SetRingbufferGpuAddress(uint64_t gpu_addr) {
+    DASSERT(!ringbuffer_gpu_addr_.has_value());
+    ringbuffer_gpu_addr_ = gpu_addr;
+  }
+
+  bool GetRingbufferGpuAddress(uint64_t* gpu_addr_out) {
+    if (ringbuffer_gpu_addr_.has_value()) {
+      *gpu_addr_out = *ringbuffer_gpu_addr_;
+      return true;
+    }
+    return false;
+  }
+
  private:
   // Maximum bus address is 40 bits.
   // Only a 32bit pte is needed because bits [11..0] of a page aligned address
@@ -163,6 +176,8 @@ class AddressSpace : public magma::AddressSpace<GpuMapping> {
   std::unique_ptr<PageDirectory> root_;
 
   uint32_t page_table_array_slot_;
+
+  std::optional<uint64_t> ringbuffer_gpu_addr_;
 
   friend class TestAddressSpace;
 
