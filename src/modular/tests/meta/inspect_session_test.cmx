@@ -1,15 +1,20 @@
 {
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.diagnostics.Archive": "fuchsia-pkg://fuchsia.com/archivist#meta/observer.cmx"
+            }
+        }
+    },
     "program": {
         "binary": "test/inspect_session_test"
     },
     "sandbox": {
-        "features": [
-            "hub"
-        ],
         "services": [
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
-            "fuchsia.sys.Loader"
+            "fuchsia.sys.Loader",
+            "fuchsia.diagnostics.Archive"
         ]
     }
 }

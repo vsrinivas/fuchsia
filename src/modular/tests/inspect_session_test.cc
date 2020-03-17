@@ -4,11 +4,12 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/modular/testing/cpp/fidl.h>
+#include <lib/async/cpp/executor.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fidl/cpp/optional.h>
-#include <lib/inspect/testing/cpp/inspect.h>
+#include <lib/inspect/contrib/cpp/archive_reader.h>
 #include <zircon/device/vfs.h>
 
 #include <sdk/lib/inspect/testing/cpp/inspect.h>
@@ -32,18 +33,12 @@ using fuchsia::modular::StoryState;
 using fuchsia::modular::StoryVisibilityState;
 using fuchsia::modular::ViewIdentifier;
 using ::fxl::Substitute;
-using inspect::testing::DoubleIs;
-using inspect::testing::IntIs;
-using inspect::testing::NameMatches;
-using inspect::testing::NodeMatches;
-using inspect::testing::PropertyList;
-using inspect::testing::StringIs;
 using testing::IsNull;
 using testing::Not;
 
 constexpr char kFakeModuleUrl[] = "fuchsia-pkg://example.com/FAKE_MODULE_PKG/fake_module.cmx";
-constexpr char kSessionmgrInspectRootGlobPath[] =
-    "/hub/r/mth_*_inspect/*/c/sessionmgr.cmx/*/out/diagnostics/root.inspect";
+constexpr char kSessionmgrSelector[] = "*_inspect/sessionmgr.cmx:root";
+constexpr char kSessionmgrName[] = "sessionmgr.cmx";
 // The initial module's intent parameter data. This needs to be JSON formatted.
 constexpr char kInitialIntentParameterData[] = "\"initial\"";
 constexpr char kIntentAction[] = "action";
@@ -52,7 +47,8 @@ constexpr char kIntentParameterName[] = "intent_parameter";
 class InspectSessionTest : public modular_testing::TestHarnessFixture {
  protected:
   InspectSessionTest()
-      : fake_session_shell_(modular_testing::FakeSessionShell::CreateWithDefaultOptions()) {}
+      : fake_session_shell_(modular_testing::FakeSessionShell::CreateWithDefaultOptions()),
+        executor_(dispatcher()) {}
 
   void RunHarnessAndInterceptSessionShell() {
     fuchsia::modular::testing::TestHarnessSpec spec;
@@ -65,37 +61,30 @@ class InspectSessionTest : public modular_testing::TestHarnessFixture {
     RunLoopUntil([&] { return fake_session_shell_->is_running(); });
   }
 
-  zx_status_t GetInspectVmo(zx::vmo* out_vmo) {
-    files::Glob glob(kSessionmgrInspectRootGlobPath);
-    if (glob.size() == 0) {
-      return ZX_ERR_NOT_FOUND;
+  fit::result<inspect::contrib::DiagnosticsData> GetInspect() {
+    auto archive = real_services()->Connect<fuchsia::diagnostics::Archive>();
+
+    inspect::contrib::ArchiveReader reader(std::move(archive), {kSessionmgrSelector});
+    fit::result<std::vector<inspect::contrib::DiagnosticsData>, std::string> result;
+    executor_.schedule_task(
+        reader.SnapshotInspectUntilPresent({kSessionmgrName})
+            .then([&](fit::result<std::vector<inspect::contrib::DiagnosticsData>, std::string>&
+                          rest) { result = std::move(rest); }));
+    RunLoopUntil([&] { return result.is_ok() || result.is_error(); });
+
+    if (result.is_error()) {
+      EXPECT_FALSE(result.is_error()) << "Error was " << result.error();
+      return fit::error();
     }
 
-    fuchsia::io::FileSyncPtr file;
-    zx_status_t status;
-    status = fdio_open(std::string(*glob.begin()).c_str(), ZX_FS_RIGHT_READABLE,
-                       file.NewRequest().TakeChannel().release());
-    if (status != ZX_OK) {
-      return status;
+    if (result.value().size() != 1) {
+      EXPECT_EQ(1u, result.value().size()) << "Expected only one component";
+      return fit::error();
     }
 
-    EXPECT_TRUE(file.is_bound());
-
-    fuchsia::io::NodeInfo info;
-    auto get_status = file->Describe(&info);
-    if (get_status != ZX_OK) {
-      printf("get failed\n");
-      return get_status;
-    }
-
-    if (!info.is_vmofile()) {
-      printf("not a vmofile");
-      return ZX_ERR_NOT_FOUND;
-    }
-
-    *out_vmo = std::move(info.vmofile().vmo);
-    return ZX_OK;
+    return fit::ok(std::move(result.value()[0]));
   }
+
   fuchsia::modular::Intent CreateIntent(std::string handler, std::string parameter_name,
                                         std::string parameter_data) {
     fuchsia::modular::Intent intent;
@@ -115,6 +104,7 @@ class InspectSessionTest : public modular_testing::TestHarnessFixture {
   }
 
   std::unique_ptr<modular_testing::FakeSessionShell> fake_session_shell_;
+  async::Executor executor_;
 };  // namespace
 
 class TestStoryProviderWatcher : public fuchsia::modular::StoryProviderWatcher {
@@ -160,13 +150,11 @@ TEST_F(InspectSessionTest, NodeHierarchyNoStories) {
 
   RunLoopUntil([&] { return called_get_stories; });
 
-  // Check the iquery node hierarchy is properly set up with only a root.
-  zx::vmo vmo;
-  ASSERT_EQ(ZX_OK, GetInspectVmo(&vmo));
-  auto hierarchy = inspect::ReadFromVmo(std::move(vmo)).take_value();
-
-  EXPECT_THAT(hierarchy,
-              AllOf(inspect::testing::NodeMatches(inspect::testing::NameMatches("root"))));
+  // Check the Inspect node hierarchy is properly set up with only a root.
+  auto data_result = GetInspect();
+  ASSERT_TRUE(data_result.is_ok());
+  auto data = data_result.take_value();
+  EXPECT_NE(rapidjson::Value(), data.GetByPath({"root"}));
 }
 
 TEST_F(InspectSessionTest, DefaultAgentsHierarchy) {
@@ -179,15 +167,11 @@ TEST_F(InspectSessionTest, DefaultAgentsHierarchy) {
   // Wait for our session shell to start.
   RunLoopUntil([&] { return fake_session_shell_->is_running(); });
 
-  zx::vmo vmo;
-  ASSERT_EQ(ZX_OK, GetInspectVmo(&vmo));
-  auto hierarchy = inspect::ReadFromVmo(std::move(vmo)).take_value();
-  EXPECT_THAT(hierarchy, (NodeMatches(NameMatches("root"))));
-
-  const auto& child = hierarchy.children();
-  ASSERT_THAT(child.size(), 1);
-  EXPECT_THAT(child.at(0),
-              NodeMatches(NameMatches(modular_testing::kSessionAgentFakeInterceptionUrl)));
+  auto data_result = GetInspect();
+  ASSERT_TRUE(data_result.is_ok());
+  auto data = data_result.take_value();
+  EXPECT_NE(rapidjson::Value(),
+            data.GetByPath({"root", modular_testing::kSessionAgentFakeInterceptionUrl}));
 }
 
 TEST_F(InspectSessionTest, CheckNodeHierarchyStartAndStopStory) {
@@ -253,18 +237,13 @@ TEST_F(InspectSessionTest, CheckNodeHierarchyStartAndStopStory) {
       [&execute_called](fuchsia::modular::ExecuteResult result) { execute_called = true; });
   RunLoopUntil([&] { return execute_called; });
 
-  zx::vmo vmo_inspect;
-  ASSERT_EQ(ZX_OK, GetInspectVmo(&vmo_inspect));
-  auto hierarchy = inspect::ReadFromVmo(std::move(vmo_inspect)).take_value();
-  EXPECT_THAT(hierarchy, (NodeMatches(NameMatches("root"))));
-
-  const auto& children = hierarchy.children();
-  // Contains 1 agent and 1 story
-  ASSERT_THAT(children.size(), 2);
-  EXPECT_THAT(children, Contains(NodeMatches(NameMatches("my_story"))));
-  EXPECT_THAT(children.at(0), NodeMatches(AllOf(PropertyList(UnorderedElementsAre(
-                                  IntIs("last_focus_time", last_focus_timestamps.back()),
-                                  StringIs("annotation: test_key", "test_value"))))));
+  auto data_result = GetInspect();
+  ASSERT_TRUE(data_result.is_ok());
+  auto data = data_result.take_value();
+  EXPECT_EQ(rapidjson::Value(last_focus_timestamps.back()),
+            data.GetByPath({"root", kStoryId, "last_focus_time"}));
+  EXPECT_EQ(rapidjson::Value("test_value"),
+            data.GetByPath({"root", kStoryId, "annotation: test_key"}));
 
   bool story_deleted = false;
   puppet_master->DeleteStory(kStoryId, [&] { story_deleted = true; });
@@ -272,10 +251,12 @@ TEST_F(InspectSessionTest, CheckNodeHierarchyStartAndStopStory) {
   RunLoopUntil([&] { return story_deleted; });
 
   // Check that a node is removed from the hierarchy when a story is removed.
-  ASSERT_EQ(ZX_OK, GetInspectVmo(&vmo_inspect));
-
-  hierarchy = inspect::ReadFromVmo(std::move(vmo_inspect)).take_value();
-  EXPECT_THAT(hierarchy, AllOf(NodeMatches(NameMatches("root"))));
+  // TODO(fxb/48109): This test must check that root/my_story is missing, but it is actually
+  // present. Update this test when the underlying bug is fixed.
+  data_result = GetInspect();
+  ASSERT_TRUE(data_result.is_ok());
+  data = data_result.take_value();
+  EXPECT_NE(rapidjson::Value(), data.GetByPath({"root"}));
 }
 
 TEST_F(InspectSessionTest, CheckNodeHierarchyMods) {
@@ -328,32 +309,35 @@ TEST_F(InspectSessionTest, CheckNodeHierarchyMods) {
       });
   RunLoopUntil([&] { return annotate_done && execute_called; });
 
-  zx::vmo vmo_inspect;
-  ASSERT_EQ(ZX_OK, GetInspectVmo(&vmo_inspect));
-  auto hierarchy = inspect::ReadFromVmo(std::move(vmo_inspect)).take_value();
-  EXPECT_THAT(hierarchy, (NodeMatches(NameMatches("root"))));
-
-  const auto& child = hierarchy.children();
-  ASSERT_THAT(child.size(), 2);
-
-  EXPECT_THAT(child.at(0), NodeMatches(NameMatches("my_story")));
-
-  const auto& grandchild = child.at(0).children();
-
-  ASSERT_THAT(grandchild.size(), 1);
-  EXPECT_THAT(grandchild.at(0), NodeMatches(NameMatches(kFakeModuleUrl)));
-  EXPECT_THAT(grandchild.at(0),
-              NodeMatches(AllOf(PropertyList(UnorderedElementsAre(
-                  StringIs(modular_config::kInspectIsEmbedded, "False"),
-                  StringIs(modular_config::kInspectModuleSource, "EXTERNAL"),
-                  StringIs(modular_config::kInspectIntentHandler, kFakeModuleUrl),
-                  StringIs(modular_config::kInspectIntentAction, "action"),
-                  StringIs(modular_config::kInspectIsDeleted, "False"),
-                  StringIs(modular_config::kInspectIntentParams, "name : intent_parameter "),
-                  StringIs(modular_config::kInspectSurfaceRelationArrangement, "NONE"),
-                  StringIs(modular_config::kInspectSurfaceRelationDependency, "NONE"),
-                  DoubleIs(modular_config::kInspectSurfaceRelationEmphasis, 1.0),
-                  StringIs(modular_config::kInspectModulePath, "mod1"),
-                  StringIs("annotation: text_key", "bytes"))))));
+  auto data_result = GetInspect();
+  ASSERT_TRUE(data_result.is_ok());
+  auto data = data_result.take_value();
+  EXPECT_EQ(rapidjson::Value("False"),
+            data.GetByPath({"root", kStoryId, kFakeModuleUrl, modular_config::kInspectIsEmbedded}));
+  EXPECT_EQ(rapidjson::Value("EXTERNAL"), data.GetByPath({"root", kStoryId, kFakeModuleUrl,
+                                                          modular_config::kInspectModuleSource}));
+  EXPECT_EQ(
+      rapidjson::Value(kFakeModuleUrl),
+      data.GetByPath({"root", kStoryId, kFakeModuleUrl, modular_config::kInspectIntentHandler}));
+  EXPECT_EQ(rapidjson::Value("action"), data.GetByPath({"root", kStoryId, kFakeModuleUrl,
+                                                        modular_config::kInspectIntentAction}));
+  EXPECT_EQ(rapidjson::Value("False"),
+            data.GetByPath({"root", kStoryId, kFakeModuleUrl, modular_config::kInspectIsDeleted}));
+  EXPECT_EQ(
+      rapidjson::Value("name : intent_parameter "),
+      data.GetByPath({"root", kStoryId, kFakeModuleUrl, modular_config::kInspectIntentParams}));
+  EXPECT_EQ(rapidjson::Value("NONE"),
+            data.GetByPath({"root", kStoryId, kFakeModuleUrl,
+                            modular_config::kInspectSurfaceRelationArrangement}));
+  EXPECT_EQ(rapidjson::Value("NONE"),
+            data.GetByPath({"root", kStoryId, kFakeModuleUrl,
+                            modular_config::kInspectSurfaceRelationDependency}));
+  EXPECT_EQ(rapidjson::Value(1.0),
+            data.GetByPath({"root", kStoryId, kFakeModuleUrl,
+                            modular_config::kInspectSurfaceRelationEmphasis}));
+  EXPECT_EQ(rapidjson::Value("mod1"),
+            data.GetByPath({"root", kStoryId, kFakeModuleUrl, modular_config::kInspectModulePath}));
+  EXPECT_EQ(rapidjson::Value("bytes"),
+            data.GetByPath({"root", kStoryId, kFakeModuleUrl, "annotation: text_key"}));
 }
 }  // namespace
