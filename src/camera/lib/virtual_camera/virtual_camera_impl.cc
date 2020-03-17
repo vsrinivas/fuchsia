@@ -10,6 +10,8 @@
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/syslog/cpp/logger.h>
 #include <zircon/errors.h>
+#include <zircon/syscalls.h>
+#include <zircon/types.h>
 
 #include <cmath>
 #include <sstream>
@@ -46,6 +48,8 @@ static fuchsia::camera3::StreamProperties DefaultStreamProperties() {
 static fuchsia::sysmem::BufferCollectionConstraints DefaultBufferConstraints() {
   return {.usage = {.cpu = fuchsia::sysmem::cpuUsageWrite},
           .min_buffer_count_for_camping = 2,
+          .has_buffer_memory_constraints = true,
+          .buffer_memory_constraints{.ram_domain_supported = true},
           .image_format_constraints_count = 1,
           .image_format_constraints = {{{
               .pixel_format = DefaultStreamProperties().image_format.pixel_format,
@@ -286,7 +290,7 @@ void VirtualCameraImpl::FillFrame(uint32_t buffer_index) {
   // Render the UV plane with time-varying Y.
 
   // Luma
-  const uint8_t y = 128 + 127.5f * sinf(2 * M_PI * (frame_count_ % 60) / 60.0);
+  const uint8_t y = 128 + 127.5f * sinf(2 * M_PI * (frame_count_ % 240) / 240.0);
   for (uint32_t row = 0; row < format.coded_height; ++row) {
     memset(data, y, format.bytes_per_row);
     data += format.bytes_per_row;
@@ -298,13 +302,14 @@ void VirtualCameraImpl::FillFrame(uint32_t buffer_index) {
   for (uint32_t row = 0; row < chroma_height; ++row) {
     for (uint32_t col = 0; col < chroma_width; ++col) {
       const uint8_t u = (col * 256) / chroma_width;
-      const uint8_t v = (row * 256) / chroma_height;
+      const uint8_t v = 255 - (row * 256) / chroma_height;
       data[col * 2] = u;
       data[col * 2 + 1] = v;
     }
     data += format.bytes_per_row;
   }
 
+  zx_cache_flush(mapper.start(), mapper.size(), ZX_CACHE_FLUSH_DATA);
   mapper.Unmap();
 }
 

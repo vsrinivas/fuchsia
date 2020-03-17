@@ -15,6 +15,7 @@ group("tools") {
     "//garnet/packages/prod:tracing",
     "//garnet/packages/testing:all",
     "//garnet/packages/tools:all",
+    "//src/camera:tools",
     "//src/connectivity/network/dhcpd-cli",
     "//src/connectivity/network/netdump",
     "//src/connectivity/network/netstack:tools",

@@ -141,10 +141,12 @@ void ImagePipe2::AddBufferCollection(
     return;
   }
 
-  // Set dummy constraints for |local_token| because all tokens needs to be used before allocation.
-  // Also, |has_constraints| should be true to acess VMOs.
+  // Set constraints for |local_token|.
   fuchsia::sysmem::BufferCollectionConstraints constraints;
-  constraints.min_buffer_count = 1;
+  // ImagePipe2 persistently holds a single buffer reference for the active image and transiently
+  // holds a second when a new one is requested for presentation but the current one has not yet
+  // been released.
+  constraints.min_buffer_count_for_camping = 2;
   // Used because every constraints need to have a usage.
   constraints.usage.vulkan = fuchsia::sysmem::vulkanUsageSampled;
   status = buffer_collection->SetConstraints(true /* has_constraints */, constraints);
