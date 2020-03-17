@@ -25,7 +25,7 @@ async fn main() -> Result<(), Error> {
     let args: Vec<String> = std::env::args().collect();
     if args.len() > 1 && args[1] == "with-diagnostics" {
         component::health().set_ok();
-        component::inspector().serve_tree(&mut fs)?;
+        component::inspector().serve(&mut fs)?;
     }
     fs.take_and_serve_directory_handle()?;
     fs.collect::<()>().await;

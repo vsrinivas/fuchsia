@@ -181,8 +181,7 @@ impl Inspector {
     }
 
     /// Spawns a server for handling inspect `Tree` requests in the diagnostics directory.
-    // TODO(miguelfrde): make this the default one
-    pub fn serve_tree<'a, ServiceObjTy: ServiceObjTrait>(
+    pub fn serve<'a, ServiceObjTy: ServiceObjTrait>(
         &self,
         service_fs: &mut ServiceFs<ServiceObjTy>,
     ) -> Result<(), Error> {
@@ -204,30 +203,6 @@ impl Inspector {
         dir.open(scope, OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, 0, Path::empty(), server_end);
         service_fs.add_remote(SERVICE_DIR, proxy);
 
-        Ok(())
-    }
-
-    /// Exports the VMO backing this Inspector at the standard location in the
-    /// supplied ServiceFs.
-    pub fn serve<ServiceObjTy: ServiceObjTrait>(
-        &self,
-        service_fs: &mut ServiceFs<ServiceObjTy>,
-    ) -> Result<(), Error> {
-        self.duplicate_vmo()
-            .ok_or(format_err!("Failed to duplicate VMO"))
-            .and_then(|vmo| {
-                let size = vmo.get_size()?;
-                service_fs.dir(SERVICE_DIR).add_vmo_file_at(
-                    "root.inspect",
-                    vmo,
-                    0, /* vmo offset */
-                    size,
-                );
-                Ok(())
-            })
-            .unwrap_or_else(|e| {
-                fx_log_err!("Failed to expose vmo. Error: {:?}", e);
-            });
         Ok(())
     }
 

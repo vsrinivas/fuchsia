@@ -17,6 +17,7 @@ rustc_library("fuchsia-pkg-testing") {
     "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
     "//garnet/public/rust/fuchsia-hyper",
+    "//sdk/fidl/fuchsia.inspect:fuchsia.inspect-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
