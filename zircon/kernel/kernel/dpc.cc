@@ -27,6 +27,11 @@ zx_status_t Dpc::Queue(bool reschedule) {
   spin_lock_saved_state_t state;
   spin_lock_irqsave(&dpc_lock, state);
 
+  if (InContainer()) {
+    spin_unlock_irqrestore(&dpc_lock, state);
+    return ZX_ERR_ALREADY_EXISTS;
+  }
+
   struct percpu* cpu = get_local_percpu();
 
   // put the dpc at the tail of the list and signal the worker
@@ -44,6 +49,11 @@ zx_status_t Dpc::QueueThreadLocked() {
 
   // interrupts are already disabled
   spin_lock(&dpc_lock);
+
+  if (InContainer()) {
+    spin_unlock(&dpc_lock);
+    return ZX_ERR_ALREADY_EXISTS;
+  }
 
   struct percpu* cpu = get_local_percpu();
 

@@ -77,6 +77,38 @@ static bool test_dpc_queue() {
   END_TEST;
 }
 
+// Test that it's safe to repeatedly queue up the same DPC over and over.
+static bool test_dpc_requeue() {
+  BEGIN_TEST;
+
+  ktl::atomic<uint64_t> actual_count = 0;
+  Dpc dpc_increment([](Dpc* d) { d->arg<ktl::atomic<uint64_t>>()->fetch_add(1); }, &actual_count);
+
+  constexpr uint64_t kNumIterations = 10000;
+  uint64_t expected_count = 0;
+  for (unsigned i = 0; i < kNumIterations; ++i) {
+    // If we queue faster than the DPC worker thread can dequeue, the call may fail with
+    // ZX_ERR_ALREADY_EXISTS.  That's OK, we just won't increment |expected_count| in that case.
+    zx_status_t status = dpc_increment.Queue(/* reschedule = */ true);
+    if (status == ZX_OK) {
+      ++expected_count;
+    } else {
+      ASSERT_EQ(status, ZX_ERR_ALREADY_EXISTS);
+    }
+  }
+
+  // There might still be one DPC queued up for execution.  Wait for it to "flush" the queue.
+  Event event_flush;
+  Dpc dpc_flush([](Dpc* d){ d->arg<Event>()->Signal();}, &event_flush);
+  dpc_flush.Queue(/* reschedule = */ true);
+  event_flush.Wait(Deadline::no_slack(ZX_TIME_INFINITE));
+
+  ASSERT_EQ(actual_count.load(), expected_count);
+
+  END_TEST;
+}
+
 UNITTEST_START_TESTCASE(dpc_tests)
 UNITTEST("basic test of dpc_queue", test_dpc_queue)
+UNITTEST("repeatedly queue the same dpc", test_dpc_requeue)
 UNITTEST_END_TESTCASE(dpc_tests, "dpc_tests", "Tests of DPCs")
