@@ -261,7 +261,6 @@ standard_sanitizer_variants = [
         runtime_deps_cflags = [ "-fsanitize=address" ]
       }
       tags = [
-        "asan",
         "instrumented",
         "useronly",
       ]

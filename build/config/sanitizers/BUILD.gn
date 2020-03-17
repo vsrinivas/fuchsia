@@ -14,6 +14,11 @@ declare_args() {
   # nonempty may conflict with programs that define their own
   # `__asan_default_options` C function.
   asan_default_options = ""
+  if (is_fuchsia) {
+    # TODO(45047): Temporary until all lsan bugs are filed and marked with
+    # deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+    asan_default_options = "detect_leaks=0"
+  }
 
   # Default [UndefinedBehaviorSanitizer](https://llvm.org/docs/UndefinedBehaviorSanitizer.html)
   # options (before the `UBSAN_OPTIONS` environment variable is read at
