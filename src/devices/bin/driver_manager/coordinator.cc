@@ -1838,7 +1838,7 @@ void Coordinator::GetBindProgram(::fidl::StringView driver_path_view,
         .debug = driver->binding[i].debug,
     });
   }
-  completer.ReplySuccess(::fidl::VectorView(instructions));
+  completer.ReplySuccess(::fidl::unowned_vec(instructions));
 }
 
 void Coordinator::GetDeviceProperties(::fidl::StringView device_path,
@@ -1863,7 +1863,7 @@ void Coordinator::GetDeviceProperties(::fidl::StringView device_path,
         .value = prop.value,
     });
   }
-  completer.ReplySuccess(::fidl::VectorView(props));
+  completer.ReplySuccess(::fidl::unowned_vec(props));
 }
 
 zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& svc_dir) {

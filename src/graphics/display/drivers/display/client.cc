@@ -727,7 +727,7 @@ void Client::CheckConfig(bool discard, CheckConfigCompleter::Sync _completer) {
     pending_config_valid_ = true;
   }
 
-  _completer.Reply(res, ::fidl::VectorView<fhd::ClientCompositionOp>(ops));
+  _completer.Reply(res, ::fidl::unowned_vec(ops));
 }
 
 void Client::ApplyConfig(ApplyConfigCompleter::Sync /*_completer*/) {
@@ -1404,10 +1404,10 @@ void Client::OnDisplaysChanged(const uint64_t* displays_added, size_t added_coun
       modes.push_back(std::move(mode));
     }
     modes_vector.emplace_back(std::move(modes));
-    info.modes = fidl::VectorView<fhd::Mode>(modes_vector.back());
+    info.modes = fidl::unowned_vec(modes_vector.back());
 
     static_assert(sizeof(zx_pixel_format_t) == sizeof(int32_t), "Bad pixel format size");
-    info.pixel_format = fidl::VectorView<uint32_t>(config->pixel_formats_);
+    info.pixel_format = fidl::unowned_vec(config->pixel_formats_);
 
     static_assert(offsetof(cursor_info_t, width) == offsetof(fhd::CursorInfo, width), "Bad struct");
     static_assert(offsetof(cursor_info_t, height) == offsetof(fhd::CursorInfo, height),
@@ -1416,7 +1416,8 @@ void Client::OnDisplaysChanged(const uint64_t* displays_added, size_t added_coun
                   "Bad struct");
     static_assert(sizeof(cursor_info_t) <= sizeof(fhd::CursorInfo), "Bad size");
     info.cursor_configs = fidl::VectorView<fhd::CursorInfo>(
-        (fhd::CursorInfo*)config->cursor_infos_.data(), config->cursor_infos_.size());
+        fidl::unowned((fhd::CursorInfo*)config->cursor_infos_.data()),
+        config->cursor_infos_.size());
 
     const char* manufacturer_name = "";
     const char* monitor_name = "";
@@ -1460,8 +1461,8 @@ void Client::OnDisplaysChanged(const uint64_t* displays_added, size_t added_coun
 
   if (!coded_configs.empty() || !removed_ids.empty()) {
     zx_status_t status = fhd::Controller::SendOnDisplaysChangedEvent(
-        zx::unowned_channel(server_handle_), fidl::VectorView(coded_configs),
-        fidl::VectorView(removed_ids));
+        zx::unowned_channel(server_handle_), fidl::unowned_vec(coded_configs),
+        fidl::unowned_vec(removed_ids));
     if (status != ZX_OK) {
       zxlogf(ERROR, "Error writing remove message %d\n", status);
     }
@@ -1751,7 +1752,7 @@ zx_status_t ClientProxy::OnDisplayVsync(uint64_t display_id, zx_time_t timestamp
 
   zx_status_t status =
       fhd::Controller::SendOnVsyncEvent(zx::unowned_channel(server_channel_), display_id, timestamp,
-                                        fidl::VectorView(image_ids, count));
+                                        fidl::VectorView(fidl::unowned(image_ids), count));
   // Make sure status is not ZX_ERR_BAD_HANDLE, otherwise, depending on policy setting
   // the above will crash
   ZX_DEBUG_ASSERT(status != ZX_ERR_BAD_HANDLE);

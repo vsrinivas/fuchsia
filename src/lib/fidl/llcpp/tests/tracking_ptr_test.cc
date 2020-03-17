@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/fidl/llcpp/aligned.h>
+#include <lib/fidl/llcpp/memory.h>
 #include <lib/fidl/llcpp/tracking_ptr.h>
 
 #include <set>

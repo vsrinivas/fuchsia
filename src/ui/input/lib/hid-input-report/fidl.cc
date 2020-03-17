@@ -29,8 +29,8 @@ void SetMouseInputDescriptor(FidlMouseInputDescriptor* descriptor) {
     descriptor->builder.set_position_y(fidl::unowned(&descriptor->data.position_y.value()));
   }
 
-  descriptor->buttons_view =
-      fidl::VectorView<uint8_t>(descriptor->data.buttons.data(), descriptor->data.num_buttons);
+  descriptor->buttons_view = fidl::VectorView<uint8_t>(
+      fidl::unowned(descriptor->data.buttons.data()), descriptor->data.num_buttons);
   descriptor->builder.set_buttons(fidl::unowned(&descriptor->buttons_view));
 
   descriptor->descriptor = descriptor->builder.build();
@@ -55,8 +55,8 @@ void SetMouseInputReport(FidlMouseInputReport* report) {
   if (report->data.scroll_h) {
     report->builder.set_scroll_h(fidl::unowned(&report->data.scroll_h.value()));
   }
-  report->buttons_view = fidl::VectorView<uint8_t>(report->data.buttons_pressed.data(),
-                                                   report->data.num_buttons_pressed);
+  report->buttons_view = fidl::VectorView<uint8_t>(
+      fidl::unowned(report->data.buttons_pressed.data()), report->data.num_buttons_pressed);
 
   report->builder.set_pressed_buttons(fidl::unowned(&report->buttons_view));
 
@@ -65,14 +65,14 @@ void SetMouseInputReport(FidlMouseInputReport* report) {
 
 void SetSensorInputDescriptor(FidlSensorInputDescriptor* descriptor) {
   descriptor->values_view = fidl::VectorView<fuchsia_input_report::SensorAxis>(
-      descriptor->data.values.data(), descriptor->data.num_values);
+      fidl::unowned(descriptor->data.values.data()), descriptor->data.num_values);
   descriptor->builder.set_values(fidl::unowned(&descriptor->values_view));
   descriptor->descriptor = descriptor->builder.build();
 }
 
 void SetSensorInputReport(FidlSensorInputReport* report) {
   report->values_view =
-      fidl::VectorView<int64_t>(report->data.values.data(), report->data.num_values);
+      fidl::VectorView<int64_t>(fidl::unowned(report->data.values.data()), report->data.num_values);
   report->builder.set_values(fidl::unowned(&report->values_view));
 
   report->report = report->builder.build();
@@ -105,11 +105,11 @@ void SetTouchInputDescriptor(FidlTouchInputDescriptor* descriptor) {
   }
 
   descriptor->contacts_view = fidl::VectorView<fuchsia_input_report::ContactInputDescriptor>(
-      descriptor->contacts_built.data(), descriptor->data.num_contacts);
+      fidl::unowned(descriptor->contacts_built.data()), descriptor->data.num_contacts);
   descriptor->builder.set_contacts(fidl::unowned(&descriptor->contacts_view));
 
-  descriptor->buttons_view =
-      fidl::VectorView<uint8_t>(descriptor->data.buttons.data(), descriptor->data.num_buttons);
+  descriptor->buttons_view = fidl::VectorView<uint8_t>(
+      fidl::unowned(descriptor->data.buttons.data()), descriptor->data.num_buttons);
   descriptor->builder.set_buttons(fidl::unowned(&descriptor->buttons_view));
 
   descriptor->builder.set_max_contacts(fidl::unowned(&descriptor->data.max_contacts));
@@ -146,11 +146,11 @@ void SetTouchInputReport(FidlTouchInputReport* report) {
   }
 
   report->contacts_view = fidl::VectorView<fuchsia_input_report::ContactInputReport>(
-      report->contacts_built.data(), report->data.num_contacts);
+      fidl::unowned(report->contacts_built.data()), report->data.num_contacts);
   report->builder.set_contacts(fidl::unowned(&report->contacts_view));
 
-  report->pressed_buttons_view = fidl::VectorView<uint8_t>(report->data.pressed_buttons.data(),
-                                                           report->data.num_pressed_buttons);
+  report->pressed_buttons_view = fidl::VectorView<uint8_t>(
+      fidl::unowned(report->data.pressed_buttons.data()), report->data.num_pressed_buttons);
   report->builder.set_pressed_buttons(fidl::unowned(&report->pressed_buttons_view));
 
   report->report = report->builder.build();
@@ -158,35 +158,35 @@ void SetTouchInputReport(FidlTouchInputReport* report) {
 
 void SetKeyboardInputDescriptor(FidlKeyboardInputDescriptor* descriptor) {
   descriptor->keys_view = fidl::VectorView<llcpp::fuchsia::ui::input2::Key>(
-      descriptor->data.keys.data(), descriptor->data.num_keys);
+      fidl::unowned(descriptor->data.keys.data()), descriptor->data.num_keys);
   descriptor->builder.set_keys(fidl::unowned(&descriptor->keys_view));
   descriptor->descriptor = descriptor->builder.build();
 }
 
 void SetKeyboardOutputDescriptor(FidlKeyboardOutputDescriptor* descriptor) {
   descriptor->leds_view = fidl::VectorView<fuchsia_input_report::LedType>(
-      descriptor->data.leds.data(), descriptor->data.num_leds);
+      fidl::unowned(descriptor->data.leds.data()), descriptor->data.num_leds);
   descriptor->builder.set_leds(fidl::unowned(&descriptor->leds_view));
   descriptor->descriptor = descriptor->builder.build();
 }
 
 void SetKeyboardInputReport(FidlKeyboardInputReport* report) {
   report->pressed_keys_view = fidl::VectorView<llcpp::fuchsia::ui::input2::Key>(
-      report->data.pressed_keys.data(), report->data.num_pressed_keys);
+      fidl::unowned(report->data.pressed_keys.data()), report->data.num_pressed_keys);
   report->builder.set_pressed_keys(fidl::unowned(&report->pressed_keys_view));
   report->report = report->builder.build();
 }
 
 void SetConsumerControlInputDescriptor(FidlConsumerControlInputDescriptor* descriptor) {
   descriptor->buttons_view = fidl::VectorView<fuchsia_input_report::ConsumerControlButton>(
-      descriptor->data.buttons.data(), descriptor->data.num_buttons);
+      fidl::unowned(descriptor->data.buttons.data()), descriptor->data.num_buttons);
   descriptor->builder.set_buttons(fidl::unowned(&descriptor->buttons_view));
   descriptor->descriptor = descriptor->builder.build();
 }
 
 void SetConsumerControlInputReport(FidlConsumerControlInputReport* report) {
   report->pressed_buttons_view = fidl::VectorView<fuchsia_input_report::ConsumerControlButton>(
-      report->data.pressed_buttons.data(), report->data.num_pressed_buttons);
+      fidl::unowned(report->data.pressed_buttons.data()), report->data.num_pressed_buttons);
   report->builder.set_pressed_buttons(fidl::unowned(&report->pressed_buttons_view));
   report->report = report->builder.build();
 }

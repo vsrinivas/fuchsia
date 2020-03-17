@@ -160,7 +160,7 @@ TEST_F(UsbOneEndpointTest, SetAndGetReport) {
   uint8_t buf[sizeof(hid_boot_mouse_report_t)] = {0xab, 0xbc, 0xde};
 
   auto set_result = sync_client_->SetReport(::llcpp::fuchsia::hardware::input::ReportType::INPUT, 0,
-                                            fidl::VectorView(buf));
+                                            fidl::unowned_vec(buf));
   auto get_result =
       sync_client_->GetReport(::llcpp::fuchsia::hardware::input::ReportType::INPUT, 0);
 
@@ -182,7 +182,7 @@ TEST_F(UsbTwoEndpointTest, SetAndGetReport) {
   uint8_t buf[sizeof(hid_boot_mouse_report_t)] = {0xab, 0xbc, 0xde};
 
   auto set_result = sync_client_->SetReport(::llcpp::fuchsia::hardware::input::ReportType::INPUT, 0,
-                                            fidl::VectorView(buf));
+                                            fidl::unowned_vec(buf));
   auto get_result =
       sync_client_->GetReport(::llcpp::fuchsia::hardware::input::ReportType::INPUT, 0);
 

@@ -43,16 +43,33 @@ class VectorView {
 
  public:
   VectorView() {}
-  VectorView(T* data, uint64_t count) {
-    set_data_internal(fidl::unowned(data));
+
+  VectorView(tracking_ptr<T[]>&& data, uint64_t count) {
+    set_data_internal(std::move(data));
     set_count(count);
   }
+
+  // Ideally these constructors wouldn't be needed, but automatic deduction into the tracking_ptr
+  // doesn't currently work. A deduction guide can fix this, but it is C++17-only.
+  VectorView(unowned_ptr<T> data, uint64_t count) : VectorView(tracking_ptr<T[]>(data), count) {}
+  VectorView(std::unique_ptr<T[]>&& data, uint64_t count)
+      : VectorView(tracking_ptr<T[]>(std::move(data)), count) {}
+  VectorView(nullptr_t data, uint64_t count) : VectorView(tracking_ptr<T[]>(data), count) {}
+  // This constructor triggers a static assertion in tracking_ptr.
+  template <typename U>
+  VectorView(U* data, uint64_t count) : VectorView(tracking_ptr<U[]>(data), count) {}
 
   VectorView(VectorView&& other) {
     count_ = other.count_;
     data_ = other.data_;
     other.count_ = 0;
     other.data_ = nullptr;
+  }
+
+  ~VectorView() {
+    if (is_owned()) {
+      delete[] data_;
+    }
   }
 
   VectorView& operator=(VectorView&& other) {
@@ -69,25 +86,6 @@ class VectorView {
   VectorView(const VectorView&) = delete;
   VectorView& operator=(const VectorView&) = delete;
 
-  // Creates a view over any container that implements |std::data| and |std::size|. For example:
-  //
-  //     std::vector<Foo> foo_vec = /* ... */;
-  //     auto my_view = fidl::VectorView(foo_vec);
-  //
-  // Note: The constness requirement of C follows that of T, meaning that if the LLCPP call asks for
-  // a VectorView<T> where |T| is non-const, this constructor would require a non-const |container|
-  // as well.
-  template <
-      typename C, typename = decltype(std::data(std::declval<C&>())),
-      typename = decltype(std::size(std::declval<C&>())),
-      typename = std::enable_if_t<std::is_same<std::is_const<typename std::remove_pointer<
-                                                   decltype(std::data(std::declval<C&>()))>::type>,
-                                               std::is_const<T>>::value>>
-  explicit VectorView(C& container) {
-    set_count(std::size(container));
-    set_data_internal(fidl::unowned(std::data(container)));
-  }
-
   uint64_t count() const { return count_ & ~kOwnershipMask; }
   void set_count(uint64_t count) {
     if (count > kMaxCount) {
@@ -97,7 +95,7 @@ class VectorView {
   }
 
   const T* data() const { return data_; }
-  void set_data(T* data) { set_data_internal(fidl::unowned(data)); }
+  void set_data(tracking_ptr<T[]> data) { set_data_internal(std::move(data)); }
 
   T* mutable_data() const { return data_; }
 
@@ -120,7 +118,7 @@ class VectorView {
   fidl_vector_t* impl() { return this; }
 
  private:
-  void set_data_internal(tracking_ptr<T[]> data) {
+  void set_data_internal(tracking_ptr<T[]>&& data) {
     if (data_ != nullptr && is_owned()) {
       delete[] data_;
     }
@@ -142,11 +140,6 @@ class VectorView {
   marked_count count_ = 0;
   T* data_ = nullptr;
 };
-
-template <typename C, typename = decltype(std::data(std::declval<C&>())),
-          typename = decltype(std::size(std::declval<C&>()))>
-explicit VectorView(C&)
-    -> VectorView<typename std::remove_pointer<decltype(std::data(std::declval<C&>()))>::type>;
 
 }  // namespace fidl
 

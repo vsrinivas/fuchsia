@@ -1226,7 +1226,8 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemWriteFile(
     uint64_t write_chunk_request = std::min(bytes_left, fuchsia_io::MAX_BUF);
 
     auto result = fuchsia_io::File::Call::WriteAt(
-        zx::unowned_channel(file_channel), fidl::VectorView(buffer, write_chunk_request), offset);
+        zx::unowned_channel(file_channel),
+        fidl::VectorView(fidl::unowned(buffer), write_chunk_request), offset);
     status = result.status();
     io_status = result->s;
     buffer += result->actual;

@@ -81,6 +81,7 @@ zx_library("fidl-llcpp") {
     "lib/fidl/llcpp/allocator.h",
     "lib/fidl/llcpp/buffer_allocator.h",
     "lib/fidl/llcpp/envelope.h",
+    "lib/fidl/llcpp/memory.h",
     "lib/fidl/llcpp/unowned_ptr.h",
   ]
   sources = [ "llcpp_transaction.cc" ]

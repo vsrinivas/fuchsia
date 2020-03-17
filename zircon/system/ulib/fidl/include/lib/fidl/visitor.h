@@ -90,6 +90,9 @@ class Visitor {
   // EnvelopePointer is ([const] fidl_envelope_t)*
   using EnvelopePointer = Ptr<fidl_envelope_t>;
 
+  // CountPointer is ([const] uint64_t)*
+  using CountPointer = Ptr<uint64_t>;
+
   // Status returned by visitor callbacks.
   enum class Status {
     kSuccess = 0,
@@ -129,6 +132,9 @@ class Visitor {
   Status VisitHandle(Position handle_position, HandlePointer handle_ptr) {
     return Status::kSuccess;
   }
+
+  // Visit a vector or string count. The count pointer will be mutable if the visitor is mutating.
+  Status VisitVectorOrStringCount(CountPointer ptr) {}
 
   // Visit a region of padding bytes within message objects. They may be between members of a
   // struct, from after the last member to the end of the struct, or from after a union variant

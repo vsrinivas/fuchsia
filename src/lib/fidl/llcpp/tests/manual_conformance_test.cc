@@ -335,7 +335,7 @@ TEST(ComplexTable, Success) {
         fidl::StringView(before),
         fidl::StringView(after),
     };
-    fidl::VectorView<fidl::StringView> strings(strings_vector);
+    fidl::VectorView<fidl::StringView> strings = fidl::unowned_vec(strings_vector);
     auto builder = llcpp_misc::ComplexTable::UnownedBuilder()
                        .set_simple(fidl::unowned(&simple_table))
                        .set_u(fidl::unowned(&xu))

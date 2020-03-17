@@ -264,7 +264,7 @@ zx_status_t FakeOtRadioDevice::TrySendInboundFrame() {
     auto spinel_frame = inbound_queue_.front();
     ::fidl::VectorView<uint8_t> data;
     data.set_count(spinel_frame.size());
-    data.set_data(spinel_frame.data());
+    data.set_data(fidl::unowned(spinel_frame.data()));
     zx_status_t res = lowpan_spinel_fidl::Device::SendOnReceiveFrameEvent(fidl_channel_->borrow(),
                                                                           std::move(data));
     if (res != ZX_OK) {

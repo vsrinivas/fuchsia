@@ -158,7 +158,7 @@ void KernelStatsImpl::GetCpuStats(GetCpuStatsCompleter::Sync completer) {
   stats.actual_num_cpus = actual;
   llcpp::fuchsia::kernel::PerCpuStats per_cpu_stats[available];
   fbl::Vector<std::unique_ptr<llcpp::fuchsia::kernel::PerCpuStats::UnownedBuilder>> builders;
-  stats.per_cpu_stats = fidl::VectorView(per_cpu_stats, available);
+  stats.per_cpu_stats = fidl::VectorView(fidl::unowned(per_cpu_stats), available);
   for (uint32_t cpu_num = 0; cpu_num < available; ++cpu_num) {
     // TODO(fxb/42059) Switch to using owned heap allocated builders.
     builders.push_back(std::make_unique<llcpp::fuchsia::kernel::PerCpuStats::UnownedBuilder>());

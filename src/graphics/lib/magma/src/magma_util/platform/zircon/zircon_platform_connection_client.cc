@@ -120,9 +120,10 @@ class ZirconPlatformConnectionClient : public PlatformConnectionClient {
     magma_status_t result = MagmaChannelStatus(
         magma_fidl_
             .ExecuteCommandBufferWithResources(
-                context_id, std::move(fidl_command_buffer), fidl::VectorView(fidl_resources),
-                fidl::VectorView<uint64_t>(wait_semaphores, command_buffer->wait_semaphore_count),
-                fidl::VectorView<uint64_t>(signal_semaphores,
+                context_id, std::move(fidl_command_buffer), fidl::unowned_vec(fidl_resources),
+                fidl::VectorView<uint64_t>(fidl::unowned(wait_semaphores),
+                                           command_buffer->wait_semaphore_count),
+                fidl::VectorView<uint64_t>(fidl::unowned(signal_semaphores),
                                            command_buffer->signal_semaphore_count))
             .status());
     if (result != MAGMA_STATUS_OK)
@@ -175,8 +176,8 @@ class ZirconPlatformConnectionClient : public PlatformConnectionClient {
       }
       magma_status_t result = MagmaChannelStatus(
           magma_fidl_
-              .ExecuteImmediateCommands(context_id, fidl::VectorView(command_vec),
-                                        fidl::VectorView(semaphore_vec))
+              .ExecuteImmediateCommands(context_id, fidl::unowned_vec(command_vec),
+                                        fidl::unowned_vec(semaphore_vec))
               .status());
       if (result != MAGMA_STATUS_OK)
         SetError(result);

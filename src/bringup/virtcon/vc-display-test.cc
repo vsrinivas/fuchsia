@@ -320,13 +320,13 @@ class VcDisplayTest : public zxtest::Test {
   }
   void SendAddDisplay(fhd::Info* display) {
     fhd::Controller::SendOnDisplaysChangedEvent(zx::unowned_channel(server_end_),
-                                                fidl::VectorView(display, 1),
+                                                fidl::VectorView(fidl::unowned(display), 1),
                                                 fidl::VectorView<uint64_t>());
   }
   void SendRemoveDisplay(uint64_t id) {
     fhd::Controller::SendOnDisplaysChangedEvent(zx::unowned_channel(server_end_),
                                                 fidl::VectorView<fhd::Info>(),
-                                                fidl::VectorView<uint64_t>(&id, 1));
+                                                fidl::VectorView<uint64_t>(fidl::unowned(&id), 1));
   }
   void ProcessEvent() { ASSERT_OK(dc_callback_handler(nullptr, ZX_CHANNEL_READABLE, 0)); }
   std::unique_ptr<StubDisplayController> controller_;
@@ -346,8 +346,8 @@ TEST_F(VcDisplayTest, OneDisplay) {
   info.id = 1;
   uint32_t format = 0x0;
   fhd::Mode mode;
-  info.modes = fidl::VectorView(&mode, 1);
-  info.pixel_format = fidl::VectorView(&format, 1);
+  info.modes = fidl::VectorView(fidl::unowned(&mode), 1);
+  info.pixel_format = fidl::VectorView(fidl::unowned(&format), 1);
 
   SendAddDisplay(&info);
   ProcessEvent();
@@ -367,8 +367,8 @@ TEST_F(VcDisplayTest, TwoDisplays) {
   hardware_display.id = 1;
   uint32_t format = 0x0;
   fhd::Mode mode;
-  hardware_display.modes = fidl::VectorView(&mode, 1);
-  hardware_display.pixel_format = fidl::VectorView(&format, 1);
+  hardware_display.modes = fidl::VectorView(fidl::unowned(&mode), 1);
+  hardware_display.pixel_format = fidl::VectorView(fidl::unowned(&format), 1);
 
   // Add the first display.
   SendAddDisplay(&hardware_display);
@@ -416,8 +416,8 @@ TEST_F(VcDisplayTest, ChangePrimaryDisplay) {
   hardware_display.id = 1;
   uint32_t format = 0x0;
   fhd::Mode mode;
-  hardware_display.modes = fidl::VectorView(&mode, 1);
-  hardware_display.pixel_format = fidl::VectorView(&format, 1);
+  hardware_display.modes = fidl::VectorView(fidl::unowned(&mode), 1);
+  hardware_display.pixel_format = fidl::VectorView(fidl::unowned(&format), 1);
 
   // Add the first display.
   SendAddDisplay(&hardware_display);
@@ -461,8 +461,8 @@ TEST_F(VcDisplayTest, SingleBufferVmo) {
   hardware_display.id = 1;
   uint32_t format = 0x0;
   fhd::Mode mode;
-  hardware_display.modes = fidl::VectorView(&mode, 1);
-  hardware_display.pixel_format = fidl::VectorView(&format, 1);
+  hardware_display.modes = fidl::VectorView(fidl::unowned(&mode), 1);
+  hardware_display.pixel_format = fidl::VectorView(fidl::unowned(&format), 1);
 
   // Add the first display.
   SendAddDisplay(&hardware_display);
@@ -491,8 +491,8 @@ class VcDisplayMultibufferTest : public VcDisplayTest {
     fhd::Mode mode;
     mode.horizontal_resolution = 641;
     mode.vertical_resolution = 480;
-    hardware_display.modes = fidl::VectorView(&mode, 1);
-    hardware_display.pixel_format = fidl::VectorView(&format, 1);
+    hardware_display.modes = fidl::VectorView(fidl::unowned(&mode), 1);
+    hardware_display.pixel_format = fidl::VectorView(fidl::unowned(&format), 1);
 
     // Add the first display.
     SendAddDisplay(&hardware_display);

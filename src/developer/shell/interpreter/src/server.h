@@ -189,7 +189,7 @@ class Service final : public llcpp::fuchsia::shell::Shell::Interface {
   zx_status_t OnError(uint64_t context_id, std::vector<llcpp::fuchsia::shell::Location>& locations,
                       const std::string& error_message) {
     return llcpp::fuchsia::shell::Shell::SendOnErrorEvent(::zx::unowned_channel(handle_),
-                                                          context_id, fidl::VectorView(locations),
+                                                          context_id, fidl::unowned_vec(locations),
                                                           fidl::StringView(error_message));
   }
 

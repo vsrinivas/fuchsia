@@ -102,6 +102,8 @@ class FidlValidator final
     return Status::kSuccess;
   }
 
+  Status VisitVectorOrStringCount(CountPointer ptr) { return Status::kSuccess; }
+
   Status VisitInternalPadding(Position padding_position, uint32_t padding_length) {
     auto padding_ptr = padding_position.template Get<const uint8_t>(StartingPoint{bytes_});
     return ValidatePadding(padding_ptr, padding_length);

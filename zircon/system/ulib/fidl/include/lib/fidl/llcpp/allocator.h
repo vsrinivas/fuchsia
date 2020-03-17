@@ -33,7 +33,8 @@ namespace fidl {
 // out of scope).
 // - Return a allocation_result with requires_delete set to true. This will result in a
 // tracking_ptr being returned that will apply the delete/delete[] operator when the tracking_ptr
-// goes out of scop.e
+// goes out of scope
+// TODO(fxb/42059) Support the equivalent of std::make_unique_for_overwrite. (see helpers.h).
 class Allocator {
  public:
   // make allocates an object of the specified type and initializes it with the given arguments.

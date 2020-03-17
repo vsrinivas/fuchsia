@@ -515,7 +515,7 @@ TEST_F(HidDevTest, KeyboardOutputReportTest) {
   std::array<hid_input_report::fuchsia_input_report::LedType, 2> led_array;
   led_array[0] = hid_input_report::fuchsia_input_report::LedType::NUM_LOCK;
   led_array[1] = hid_input_report::fuchsia_input_report::LedType::SCROLL_LOCK;
-  auto led_view = fidl::VectorView<hid_input_report::fuchsia_input_report::LedType>(led_array);
+  auto led_view = fidl::unowned_vec(led_array);
   auto keyboard_builder =
       hid_input_report::fuchsia_input_report::KeyboardOutputReport::UnownedBuilder();
   keyboard_builder.set_enabled_leds(fidl::unowned(&led_view));

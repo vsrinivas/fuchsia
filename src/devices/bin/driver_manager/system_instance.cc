@@ -61,7 +61,7 @@ ServiceStarterParams GetServiceStarterParams(llcpp::fuchsia::boot::Arguments::Sy
       fidl::StringView{"zircon.autorun.boot"},
   };
 
-  auto string_resp = client->GetStrings(fidl::VectorView{string_keys});
+  auto string_resp = client->GetStrings(fidl::unowned_vec(string_keys));
   ServiceStarterParams ret;
   if (string_resp.ok()) {
     auto& values = string_resp->values;
@@ -79,7 +79,7 @@ ServiceStarterParams GetServiceStarterParams(llcpp::fuchsia::boot::Arguments::Sy
       {fidl::StringView{"virtcon.disable"}, false},
   };
 
-  auto bool_resp = client->GetBools(fidl::VectorView{bool_keys});
+  auto bool_resp = client->GetBools(fidl::unowned_vec(bool_keys));
   if (bool_resp.ok()) {
     ret.netsvc_disable = bool_resp->values[0];
     ret.netsvc_netboot = bool_resp->values[1];
@@ -93,7 +93,7 @@ ServiceStarterParams GetServiceStarterParams(llcpp::fuchsia::boot::Arguments::Sy
 
 ConsoleParams GetConsoleParams(llcpp::fuchsia::boot::Arguments::SyncClient* client) {
   std::vector<fidl::StringView> vars{fidl::StringView{"TERM"}, fidl::StringView{"console.path"}};
-  auto resp = client->GetStrings(fidl::VectorView{vars});
+  auto resp = client->GetStrings(fidl::unowned_vec(vars));
   ConsoleParams ret;
   if (!resp.ok()) {
     return ret;

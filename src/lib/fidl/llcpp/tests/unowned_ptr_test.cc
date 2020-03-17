@@ -176,10 +176,3 @@ TEST(UnownedPtr, Casting) {
   auto d_ptr2 = static_cast<fidl::unowned_ptr<Derived>>(vptr);
   EXPECT_EQ(d_ptr2, d_ptr);
 }
-
-TEST(UnownedPtr, UnownedHelper) {
-  int32_t val = 1;
-  auto ptr = fidl::unowned(&val);
-  static_assert(std::is_same<decltype(ptr), fidl::unowned_ptr<int32_t>>::value);
-  EXPECT_EQ(ptr.get(), &val);
-}

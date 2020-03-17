@@ -10,6 +10,7 @@
 #include <lib/fidl/coding.h>
 #include <lib/fidl/internal.h>
 #include <lib/fidl/llcpp/envelope.h>
+#include <lib/fidl/llcpp/memory.h>
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fidl/llcpp/vector_view.h>
 
@@ -57,6 +58,8 @@ extern const fidl_type_t fidl_test_coding_LinearizerTestVectorOfUint32RequestTab
 extern const fidl_type_t fidl_test_coding_LinearizerTestVectorOfStringRequestTable;
 
 extern const fidl_type_t v1_fidl_test_coding_LLCPPStyleUnionStructTable;
+
+extern const fidl_type_t v1_fidl_test_coding_Uint32VectorStructTable;
 
 #if defined(__cplusplus)
 }
@@ -153,17 +156,16 @@ struct SampleXUnion {
   FIDL_ALIGNDECL
   fidl_xunion_t header;
 
-  // Representing out-of-line part
-  union {
-    FIDL_ALIGNDECL
-    IntStruct i;
+  // Representing out-of-line part.
+  // There are three possibilities. All are allocated here, but only one will be set and used.
+  FIDL_ALIGNDECL
+  IntStruct i;
 
-    FIDL_ALIGNDECL
-    SimpleTable st;
+  FIDL_ALIGNDECL
+  SimpleTable st;
 
-    FIDL_ALIGNDECL
-    int32_t raw_int;
-  };
+  FIDL_ALIGNDECL
+  int32_t raw_int;
 };
 constexpr uint32_t kSampleXUnionIntStructOrdinal = 1;
 constexpr uint32_t kSampleXUnionSimpleTableOrdinal = 2;
@@ -173,17 +175,16 @@ struct SampleStrictXUnion {
   FIDL_ALIGNDECL
   fidl_xunion_t header;
 
-  // Representing out-of-line part
-  union {
-    FIDL_ALIGNDECL
-    IntStruct i;
+  // Representing out-of-line part.
+  // There are three possibilities. All are allocated here, but only one will be set and used.
+  FIDL_ALIGNDECL
+  IntStruct i;
 
-    FIDL_ALIGNDECL
-    SimpleTable st;
+  FIDL_ALIGNDECL
+  SimpleTable st;
 
-    FIDL_ALIGNDECL
-    int32_t raw_int;
-  };
+  FIDL_ALIGNDECL
+  int32_t raw_int;
 };
 constexpr uint32_t kSampleStrictXUnionIntStructOrdinal = 1;
 constexpr uint32_t kSampleStrictXUnionSimpleTableOrdinal = 2;
@@ -202,6 +203,10 @@ struct SampleStrictXUnionStruct {
 struct SampleNullableXUnionStruct {
   FIDL_ALIGNDECL
   SampleXUnion opt_xu;
+};
+
+struct Uint32VectorStruct {
+  fidl::VectorView<uint32_t> vec;
 };
 
 struct Int16Bits {

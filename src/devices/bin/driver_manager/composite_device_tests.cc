@@ -109,16 +109,17 @@ void BindCompositeDefineComposite(const fbl::RefPtr<Device>& platform_bus,
   for (size_t i = 0; i < metadata_count; i++) {
     auto meta = llcpp::fuchsia::device::manager::DeviceMetadata{
         .key = metadata[i].type,
-        .data = ::fidl::VectorView(reinterpret_cast<uint8_t*>(const_cast<void*>(metadata[i].data)),
-                                   metadata[i].length)};
+        .data = ::fidl::VectorView(
+            fidl::unowned(reinterpret_cast<uint8_t*>(const_cast<void*>(metadata[i].data))),
+            metadata[i].length)};
     metadata_list.emplace_back(std::move(meta));
   }
 
   llcpp::fuchsia::device::manager::CompositeDeviceDescriptor comp_desc = {
-      .props = ::fidl::VectorView(props_list),
-      .fragments = ::fidl::VectorView(fragments),
+      .props = ::fidl::unowned_vec(props_list),
+      .fragments = ::fidl::unowned_vec(fragments),
       .coresident_device_index = 0,
-      .metadata = ::fidl::VectorView(metadata_list),
+      .metadata = ::fidl::unowned_vec(metadata_list),
   };
 
   Coordinator* coordinator = platform_bus->coordinator;
@@ -136,7 +137,7 @@ class CompositeTestCase : public MultipleDeviceTestCase {
                               zx::channel* composite_remote_out2);
 
   fbl::RefPtr<Device> GetCompositeDeviceFromFragment(const char* composite_name,
-                                                      size_t fragment_index);
+                                                     size_t fragment_index);
 
  protected:
   void SetUp() override {
@@ -146,7 +147,7 @@ class CompositeTestCase : public MultipleDeviceTestCase {
 };
 
 fbl::RefPtr<Device> CompositeTestCase::GetCompositeDeviceFromFragment(const char* composite_name,
-                                                                       size_t fragment_index) {
+                                                                      size_t fragment_index) {
   fbl::RefPtr<Device> composite_device;
   auto fragment_device = device(fragment_index)->device;
   for (auto& comp : fragment_device->fragments()) {
@@ -207,7 +208,7 @@ class CompositeAddOrderSharedFragmentTestCase : public CompositeAddOrderTestCase
 };
 
 void CompositeAddOrderSharedFragmentTestCase::ExecuteSharedFragmentTest(AddLocation dev1_add,
-                                                                          AddLocation dev2_add) {
+                                                                        AddLocation dev2_add) {
   size_t device_indexes[3];
   uint32_t protocol_id[] = {
       ZX_PROTOCOL_GPIO,
@@ -380,10 +381,10 @@ TEST_F(CompositeTestCase, AddMultipleSharedFragmentCompositeDevices) {
   for (size_t i = 1; i <= 5; i++) {
     char composite_dev_name[32];
     snprintf(composite_dev_name, sizeof(composite_dev_name), "composite-dev-%zu", i);
-    ASSERT_NO_FATAL_FAILURES(CheckCompositeCreation(
-        composite_dev_name, device_indexes, fbl::count_of(device_indexes),
-        fragment_device_indexes[i - 1], &composite_remote_coordinator[i - 1],
-        &composite_remote_controller[i - 1]));
+    ASSERT_NO_FATAL_FAILURES(
+        CheckCompositeCreation(composite_dev_name, device_indexes, fbl::count_of(device_indexes),
+                               fragment_device_indexes[i - 1], &composite_remote_coordinator[i - 1],
+                               &composite_remote_controller[i - 1]));
   }
   auto device1 = device(device_indexes[1])->device;
   size_t count = 0;

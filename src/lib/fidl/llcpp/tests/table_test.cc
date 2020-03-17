@@ -44,7 +44,7 @@ TEST(Table, UnownedBuilderBuildTableVectorOfStruct) {
       {.x = 30},
       {.x = 42},
   };
-  fidl::VectorView<test::CopyableStruct> vector_view(structs);
+  fidl::VectorView<test::CopyableStruct> vector_view = fidl::unowned_vec(structs);
   auto builder =
       test::SampleTable::UnownedBuilder().set_vector_of_struct(fidl::unowned(&vector_view));
   const auto& table = builder.build();
@@ -63,7 +63,7 @@ TEST(Table, BuilderBuildTableVectorOfStruct) {
       {.x = 30},
       {.x = 42},
   };
-  fidl::VectorView<test::CopyableStruct> vector_view(structs);
+  fidl::VectorView<test::CopyableStruct> vector_view = fidl::unowned_vec(structs);
   test::SampleTable::Frame frame;
   auto builder = test::SampleTable::Builder(fidl::unowned(&frame))
                      .set_vector_of_struct(fidl::unowned(&vector_view));

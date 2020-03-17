@@ -262,9 +262,9 @@ class StubDisplayController : public fhd::Controller::Interface {
 
 void SendInitialDisplay(const zx::channel& server_channel, fhd::Mode* mode, uint32_t pixel_format) {
   fhd::Info info;
-  info.pixel_format = fidl::VectorView(&pixel_format, 1);
-  info.modes = fidl::VectorView(mode, 1);
-  fidl::VectorView<fhd::Info> added(&info, 1);
+  info.pixel_format = fidl::VectorView(fidl::unowned(&pixel_format), 1);
+  info.modes = fidl::VectorView(fidl::unowned(mode), 1);
+  fidl::VectorView<fhd::Info> added(fidl::unowned(&info), 1);
   fidl::VectorView<uint64_t> removed;
 
   ASSERT_OK(fhd::Controller::SendOnDisplaysChangedEvent(zx::unowned_channel(server_channel),

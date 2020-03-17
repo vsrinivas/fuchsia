@@ -4,8 +4,9 @@
 
 #include "sdio.h"
 
-#include <fbl/algorithm.h>
 #include <lib/zx/clock.h>
+
+#include <fbl/algorithm.h>
 
 namespace sdio {
 
@@ -263,7 +264,7 @@ int ReadStress(SdioClient client, uint32_t address, int argc, const char** argv)
     if (use_dma) {
       txn.dma_vmo = std::move(dma_vmo);
     } else {
-      txn.virt = fidl::VectorView(buffer.get(), size);
+      txn.virt = fidl::VectorView(fidl::unowned(buffer.get()), size);
     }
 
     auto result = client.DoRwTxn(std::move(txn));

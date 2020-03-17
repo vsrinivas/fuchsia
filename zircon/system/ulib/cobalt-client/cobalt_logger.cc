@@ -29,7 +29,8 @@ namespace {
   event.component = fidl::StringView(metric_info.component);
   // Safe to do so, since the request is read only.
   event.event_codes = fidl::VectorView<uint32_t>(
-      const_cast<uint32_t*>(metric_info.event_codes.data()), metric_info.metric_dimensions);
+      fidl::unowned(const_cast<uint32_t*>(metric_info.event_codes.data())),
+      metric_info.metric_dimensions);
   return event;
 }
 
@@ -75,8 +76,8 @@ bool CobaltLogger::Log(const MetricOptions& metric_info, const HistogramBucket* 
   }
   auto event = MetricIntoToCobaltEvent(metric_info);
   // Safe because is read only.
-  auto int_histogram =
-      fidl::VectorView<HistogramBucket>(const_cast<HistogramBucket*>(buckets), bucket_count);
+  auto int_histogram = fidl::VectorView<HistogramBucket>(
+      fidl::unowned(const_cast<HistogramBucket*>(buckets)), bucket_count);
   event.payload.set_int_histogram(fidl::unowned(&int_histogram));
 
   auto log_result = llcpp::fuchsia::cobalt::Logger::Call::LogCobaltEvent(

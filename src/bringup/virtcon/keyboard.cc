@@ -126,7 +126,8 @@ void Keyboard::SetCapsLockLed(bool caps_lock) {
       llcpp::fuchsia::input::report::LedType::CAPS_LOCK;
 
   if (caps_lock) {
-    led_view = fidl::VectorView<llcpp::fuchsia::input::report::LedType>(&caps_led, 1);
+    led_view =
+        fidl::VectorView<llcpp::fuchsia::input::report::LedType>(fidl::unowned(&caps_led), 1);
   } else {
     led_view = fidl::VectorView<llcpp::fuchsia::input::report::LedType>(nullptr, 0);
   }
@@ -152,7 +153,8 @@ void Keyboard::ProcessInput(const ::llcpp::fuchsia::input::report::InputReport& 
     return;
   }
 
-  fidl::VectorView last_pressed_keys(last_pressed_keys_.data(), last_pressed_keys_size_);
+  fidl::VectorView last_pressed_keys(fidl::unowned(last_pressed_keys_.data()),
+                                     last_pressed_keys_size_);
 
   // Process the released keys.
   for (llcpp::fuchsia::ui::input2::Key prev_key : last_pressed_keys) {

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/fidl/cpp/builder.h>
+#include <lib/fidl/llcpp/memory.h>
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fidl/llcpp/vector_view.h>
 
@@ -44,7 +45,7 @@ bool vector_view_test() {
   EXPECT_TRUE(view->data() == nullptr);
 
   int* data = builder.NewArray<int>(3);
-  view->set_data(data);
+  view->set_data(fidl::unowned(data));
   view->set_count(3);
 
   EXPECT_EQ(view->count(), 3);

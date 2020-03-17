@@ -2,18 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/algorithm.h>
 #include <lib/fidl/coding.h>
 #include <lib/fidl/internal.h>
 #include <lib/zx/event.h>
 #include <lib/zx/eventpair.h>
 #include <limits.h>
-#include <unittest/unittest.h>
 #include <zircon/syscalls.h>
 
 #include <cstddef>
 #include <memory>
 #include <new>
+
+#include <fbl/algorithm.h>
+#include <unittest/unittest.h>
 
 #include "extra_messages.h"
 #include "fidl_coded_types.h"
@@ -149,7 +150,8 @@ bool DecodeErrorTest() {
   constexpr uint32_t buf_size = 512;
   uint8_t buffer[buf_size] = {};
   TableOfStructLayout* msg = reinterpret_cast<TableOfStructLayout*>(&buffer[0]);
-  msg->envelope_vector.set_data(reinterpret_cast<fidl_envelope_t*>(FIDL_ALLOC_PRESENT));
+  msg->envelope_vector.set_data(
+      fidl::unowned(reinterpret_cast<fidl_envelope_t*>(FIDL_ALLOC_PRESENT)));
   msg->envelope_vector.set_count(2);
   msg->envelopes.a = fidl_envelope_t{.num_bytes = sizeof(OrdinalOneStructWithHandle),
                                      .num_handles = 1,

@@ -34,7 +34,7 @@ class AstBuilder {
   // Returns the set of nodes managed by this AstBuilder as a vector view, suitable for sending to
   // Shell::AddNodes.
   fidl::VectorView<llcpp::fuchsia::shell::NodeDefinition> DefsAsVectorView() {
-    return fidl::VectorView(nodes_);
+    return fidl::unowned_vec(nodes_);
   }
 
   // Returns the set of nodes managed by this AstBuilder as a vector view, suitable for returning

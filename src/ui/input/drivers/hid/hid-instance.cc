@@ -100,7 +100,7 @@ void HidInstance::ReadReport(ReadReportCompleter::Sync completer) {
     status = ReadReportFromFifo(buf.data(), buf.size(), &time, &report_size);
   }
 
-  ::fidl::VectorView<uint8_t> buf_view(buf.data(), report_size);
+  ::fidl::VectorView<uint8_t> buf_view(fidl::unowned(buf.data()), report_size);
   completer.Reply(status, std::move(buf_view), time);
 }
 
@@ -139,7 +139,7 @@ void HidInstance::ReadReports(ReadReportsCompleter::Sync completer) {
     return;
   }
 
-  ::fidl::VectorView<uint8_t> buf_view(buf.data(), buf_index);
+  ::fidl::VectorView<uint8_t> buf_view(fidl::unowned(buf.data()), buf_index);
   completer.Reply(status, std::move(buf_view));
 }
 
@@ -188,7 +188,8 @@ void HidInstance::GetReportDesc(GetReportDescCompleter::Sync completer) {
 
   // (BUG 35762) Const cast is necessary until simple data types are generated
   // as const in LLCPP. We know the data is not modified.
-  completer.Reply(::fidl::VectorView<uint8_t>(const_cast<uint8_t*>(desc), desc_size));
+  completer.Reply(
+      ::fidl::VectorView<uint8_t>(fidl::unowned(const_cast<uint8_t*>(desc)), desc_size));
 }
 
 void HidInstance::GetNumReports(GetNumReportsCompleter::Sync completer) {
@@ -199,7 +200,7 @@ void HidInstance::GetReportIds(GetReportIdsCompleter::Sync completer) {
   uint8_t report_ids[::llcpp::fuchsia::hardware::input::MAX_REPORT_IDS];
   base_->GetReportIds(report_ids);
 
-  fidl::VectorView id_view(report_ids, base_->GetNumReports());
+  fidl::VectorView id_view(fidl::unowned(report_ids), base_->GetNumReports());
 
   completer.Reply(std::move(id_view));
 }
@@ -226,7 +227,7 @@ void HidInstance::GetReport(ReportType type, uint8_t id, GetReportCompleter::Syn
   zx_status_t status = base_->GetHidbusProtocol()->GetReport(static_cast<uint8_t>(type), id, report,
                                                              needed, &actual);
 
-  fidl::VectorView<uint8_t> report_view(report, actual);
+  fidl::VectorView<uint8_t> report_view(fidl::unowned(report), actual);
   completer.Reply(status, std::move(report_view));
 }
 

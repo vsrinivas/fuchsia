@@ -211,7 +211,7 @@ SerialDeviceTest::~SerialDeviceTest() { device_->DdkRelease(); }
 
 static zx_status_t SerialWrite(llcpp::fuchsia::hardware::serial::NewDevice::SyncClient* interface,
                                std::vector<uint8_t>* data) {
-  zx_status_t status = interface->Write(fidl::VectorView<uint8_t>(*data)).status();
+  zx_status_t status = interface->Write(fidl::unowned_vec(*data)).status();
   if (status != ZX_OK) {
     return status;
   }

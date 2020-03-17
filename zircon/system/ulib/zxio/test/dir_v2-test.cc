@@ -171,7 +171,7 @@ TEST_F(DirV2, Enumerate) {
           }
           count_++;
           fio2::DirectoryEntry entry[1] = {builder.build()};
-          completer.ReplySuccess(fidl::VectorView(entry));
+          completer.ReplySuccess(fidl::unowned_vec(entry));
         }
 
         ~IteratorServer() { sync_completion_signal(completion_); }

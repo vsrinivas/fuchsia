@@ -118,7 +118,7 @@ class FshostBootArgs {
         {fidl::StringView{"blobfs.uncompressed"}, false},
     };
 
-    auto ret = boot_args_->GetBools(fidl::VectorView{defaults});
+    auto ret = boot_args_->GetBools(fidl::unowned_vec(defaults));
     if (!ret.ok()) {
       fprintf(stderr, "fshost: failed to get parameters: %s", ret.error());
       return;

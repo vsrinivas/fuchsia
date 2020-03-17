@@ -251,7 +251,7 @@ bool linearize_vector_of_string() {
   strings[2].set_size(sizeof(str3));
 
   VectorOfStringRequest message;
-  message.vector.set_data(strings);
+  message.vector.set_data(fidl::unowned(strings));
   message.vector.set_count(3);
 
   const char* error = nullptr;
@@ -335,7 +335,7 @@ bool linearize_struct_with_many_handles() {
 
   fidl::VectorView<zx_handle_t> hs;
   hs.set_count(2);
-  hs.set_data(&dummy_handles[2]);
+  hs.set_data(fidl::unowned(&dummy_handles[2]));
 
   constexpr uint32_t buf_size = 512;
   StructWithManyHandles message = {
@@ -374,7 +374,7 @@ bool linearize_simple_table() {
   SimpleTableEnvelopes envelopes = {};
   SimpleTable simple_table;
   simple_table.set_count(5);
-  simple_table.set_data(&envelopes.x);
+  simple_table.set_data(fidl::unowned(&envelopes.x));
 
   IntStruct x = {10};
   IntStruct y = {20};
@@ -469,7 +469,7 @@ bool linearize_table_field_1() {
   TableOfStructEnvelopes envelopes = {};
   TableOfStruct table;
   table.set_count(1);
-  table.set_data(&envelopes.a);
+  table.set_data(fidl::unowned(&envelopes.a));
 
   constexpr zx_handle_t dummy_handle = static_cast<zx_handle_t>(42);
   OrdinalOneStructWithHandle ordinal1 = {.h = dummy_handle, .foo = 0};
@@ -504,7 +504,7 @@ bool linearize_table_field_2() {
   TableOfStructEnvelopes envelopes = {};
   TableOfStruct table;
   table.set_count(2);
-  table.set_data(&envelopes.a);
+  table.set_data(fidl::unowned(&envelopes.a));
 
   zx_handle_t dummy_handles[4] = {};
   auto handle_value_at = [](int i) -> zx_handle_t { return static_cast<zx_handle_t>(100 + i); };
@@ -513,7 +513,7 @@ bool linearize_table_field_2() {
   }
   fidl::VectorView<zx_handle_t> hs;
   hs.set_count(2);
-  hs.set_data(&dummy_handles[2]);
+  hs.set_data(fidl::unowned(&dummy_handles[2]));
 
   OrdinalTwoStructWithManyHandles ordinal2 = {
       .h1 = dummy_handles[0],
@@ -695,6 +695,68 @@ bool linearize_union_tracking_ptr_heap_allocate() {
   END_TEST;
 }
 
+bool linearize_vector_view_tracking_ptr_unowned() {
+  BEGIN_TEST;
+
+  constexpr uint32_t kSize = 16;
+  uint32_t arr[kSize];
+  for (uint32_t i = 0; i < kSize; i++)
+    arr[i] = i;
+
+  Uint32VectorStruct str;
+  str.vec.set_data(fidl::unowned(arr));
+  str.vec.set_count(kSize);
+
+  constexpr uint32_t kBufSize = 512;
+  uint8_t buffer[kBufSize];
+  const char* error = nullptr;
+  uint32_t actual_num_bytes = 0;
+  auto status = fidl_linearize(&v1_fidl_test_coding_Uint32VectorStructTable, &str, buffer, kBufSize,
+                               &actual_num_bytes, &error);
+  EXPECT_EQ(status, ZX_OK);
+
+  fidl_vector_t* written_vector = reinterpret_cast<fidl_vector_t*>(buffer);
+
+  EXPECT_EQ(written_vector->count, 16);
+  EXPECT_NE(written_vector->data, nullptr);
+  uint32_t* written_arr = reinterpret_cast<uint32_t*>(written_vector->data);
+  for (uint32_t i = 0; i < kSize; i++)
+    EXPECT_EQ(written_arr[i], i);
+
+  END_TEST;
+}
+
+bool linearize_vector_view_tracking_ptr_heap_allocate() {
+  BEGIN_TEST;
+
+  constexpr uint32_t kSize = 16;
+  auto uptr = std::make_unique<uint32_t[]>(kSize);
+  for (uint32_t i = 0; i < kSize; i++)
+    uptr[i] = i;
+
+  Uint32VectorStruct str;
+  str.vec.set_data(std::move(uptr));
+  str.vec.set_count(kSize);
+
+  constexpr uint32_t kBufSize = 512;
+  uint8_t buffer[kBufSize];
+  const char* error = nullptr;
+  uint32_t actual_num_bytes = 0;
+  auto status = fidl_linearize(&v1_fidl_test_coding_Uint32VectorStructTable, &str, buffer, kBufSize,
+                               &actual_num_bytes, &error);
+  EXPECT_EQ(status, ZX_OK);
+
+  fidl_vector_t* written_vector = reinterpret_cast<fidl_vector_t*>(buffer);
+
+  EXPECT_EQ(written_vector->count, 16);
+  EXPECT_NE(written_vector->data, nullptr);
+  uint32_t* written_arr = reinterpret_cast<uint32_t*>(written_vector->data);
+  for (uint32_t i = 0; i < kSize; i++)
+    EXPECT_EQ(written_arr[i], i);
+
+  END_TEST;
+}
+
 BEGIN_TEST_CASE(strings)
 RUN_TEST(linearize_present_nonnullable_string)
 RUN_TEST(linearize_present_nonnullable_longer_string)
@@ -730,6 +792,8 @@ END_TEST_CASE(xunions)
 BEGIN_TEST_CASE(tracking_ptr)
 RUN_TEST(linearize_union_tracking_ptr_unowned)
 RUN_TEST(linearize_union_tracking_ptr_heap_allocate)
+RUN_TEST(linearize_vector_view_tracking_ptr_unowned)
+RUN_TEST(linearize_vector_view_tracking_ptr_heap_allocate)
 END_TEST_CASE(tracking_ptr)
 
 }  // namespace

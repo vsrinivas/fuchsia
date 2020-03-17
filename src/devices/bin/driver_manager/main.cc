@@ -67,7 +67,7 @@ DriverManagerParams GetDriverManagerParams(llcpp::fuchsia::boot::Arguments::Sync
       // Turn it on by default. See fxb/34577
       {fidl::StringView{"devmgr.suspend-timeout-fallback"}, true},
   };
-  auto bool_resp = client.GetBools(fidl::VectorView{bool_req});
+  auto bool_resp = client.GetBools(fidl::unowned_vec(bool_req));
   DriverManagerParams params{false, false, false, false, true};
 
   if (bool_resp.ok()) {

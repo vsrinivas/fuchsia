@@ -88,7 +88,7 @@ zx::eventpair GetEvent(Connection* conn) {
 
 void WriteCtrlC(Connection* conn) {
   uint8_t data[] = {0x03};
-  auto result = conn->Write(fidl::VectorView<uint8_t>{data, fbl::count_of(data)});
+  auto result = conn->Write(fidl::VectorView<uint8_t>{fidl::unowned(data), fbl::count_of(data)});
   ASSERT_OK(result.status());
   ASSERT_OK(result->s);
   ASSERT_EQ(result->actual, fbl::count_of(data));
@@ -206,7 +206,8 @@ TEST_F(PtyTestCase, ServerWithNoClientsInitialConditions) {
     // Attempts to write should fail with ZX_ERR_PEER_CLOSED
     {
       uint8_t data[16] = {};
-      auto result = server.Write(fidl::VectorView<uint8_t>{data, fbl::count_of(data)});
+      auto result =
+          server.Write(fidl::VectorView<uint8_t>{fidl::unowned(data), fbl::count_of(data)});
       ASSERT_OK(result.status());
       ASSERT_STATUS(result->s, ZX_ERR_PEER_CLOSED);
     }
@@ -287,7 +288,7 @@ TEST_F(PtyTestCase, ClientFull0ByteServerWrite) {
   // Fill up FIFO
   while (true) {
     uint8_t buf[256] = {};
-    auto result = server.Write({buf, fbl::count_of(buf)});
+    auto result = server.Write({fidl::unowned(buf), fbl::count_of(buf)});
     ASSERT_OK(result.status());
     if (result->s == ZX_ERR_SHOULD_WAIT) {
       break;
@@ -629,7 +630,8 @@ TEST_F(PtyTestCase, ServerClosesWhenClientPresent) {
 
   uint8_t kTestData[] = u8"hello world";
   {
-    auto result = server.Write(fidl::VectorView<uint8_t>{kTestData, fbl::count_of(kTestData)});
+    auto result =
+        server.Write(fidl::VectorView<uint8_t>{fidl::unowned(kTestData), fbl::count_of(kTestData)});
     ASSERT_OK(result.status());
     ASSERT_OK(result->s);
     ASSERT_EQ(result->actual, fbl::count_of(kTestData));
@@ -674,7 +676,7 @@ TEST_F(PtyTestCase, ServerClosesWhenClientPresent) {
   // Attempts to write should fail with ZX_ERR_PEER_CLOSED
   {
     uint8_t data[16] = {};
-    auto result = client.Write(fidl::VectorView<uint8_t>{data, fbl::count_of(data)});
+    auto result = client.Write(fidl::VectorView<uint8_t>{fidl::unowned(data), fbl::count_of(data)});
     ASSERT_OK(result.status());
     ASSERT_STATUS(result->s, ZX_ERR_PEER_CLOSED);
   }
@@ -691,7 +693,8 @@ TEST_F(PtyTestCase, ServerReadClientCooked) {
   uint8_t kTestData[] = u8"hello\x03 world\ntest message\n";
   const uint8_t kExpectedReadback[] = u8"hello\x03 world\r\ntest message\r\n";
   {
-    auto result = client.Write(fidl::VectorView<uint8_t>{kTestData, fbl::count_of(kTestData)});
+    auto result =
+        client.Write(fidl::VectorView<uint8_t>{fidl::unowned(kTestData), fbl::count_of(kTestData)});
     ASSERT_OK(result.status());
     ASSERT_OK(result->s);
     ASSERT_EQ(result->actual, fbl::count_of(kTestData));
@@ -725,7 +728,8 @@ TEST_F(PtyTestCase, ServerWriteClientCooked) {
   // We expect to read this back, but without the trailing nul
   const uint8_t kExpectedReadbackWithNul[] = u8"hello world\ntest";
   {
-    auto result = server.Write(fidl::VectorView<uint8_t>{kTestData, fbl::count_of(kTestData)});
+    auto result =
+        server.Write(fidl::VectorView<uint8_t>{fidl::unowned(kTestData), fbl::count_of(kTestData)});
     ASSERT_OK(result.status());
     ASSERT_OK(result->s);
     // We expect to see the written count to include the ^C
@@ -764,7 +768,8 @@ TEST_F(PtyTestCase, ServerReadClientRaw) {
   // In raw mode, client writes should be untouched.
   uint8_t kTestData[] = u8"hello\x03 world\ntest message\n";
   {
-    auto result = client.Write(fidl::VectorView<uint8_t>{kTestData, fbl::count_of(kTestData)});
+    auto result =
+        client.Write(fidl::VectorView<uint8_t>{fidl::unowned(kTestData), fbl::count_of(kTestData)});
     ASSERT_OK(result.status());
     ASSERT_OK(result->s);
     ASSERT_EQ(result->actual, fbl::count_of(kTestData));
@@ -803,7 +808,8 @@ TEST_F(PtyTestCase, ServerWriteClientRaw) {
   // In raw mode, server writes should be untouched.
   uint8_t kTestData[] = u8"hello world\ntest\x03 message\n";
   {
-    auto result = server.Write(fidl::VectorView<uint8_t>{kTestData, fbl::count_of(kTestData)});
+    auto result =
+        server.Write(fidl::VectorView<uint8_t>{fidl::unowned(kTestData), fbl::count_of(kTestData)});
     ASSERT_OK(result.status());
     ASSERT_OK(result->s);
     ASSERT_EQ(result->actual, fbl::count_of(kTestData));
@@ -845,8 +851,8 @@ TEST_F(PtyTestCase, ServerFillsClientFifo) {
   size_t total_written = 0;
   while (server_event.wait_one(::llcpp::fuchsia::device::DEVICE_SIGNAL_WRITABLE, zx::time{},
                                nullptr) == ZX_OK) {
-    auto result =
-        server.Write(fidl::VectorView<uint8_t>{kTestString, fbl::count_of(kTestString) - 1});
+    auto result = server.Write(
+        fidl::VectorView<uint8_t>{fidl::unowned(kTestString), fbl::count_of(kTestString) - 1});
     ASSERT_OK(result.status());
     ASSERT_OK(result->s);
     ASSERT_GT(result->actual, 0);
@@ -855,8 +861,8 @@ TEST_F(PtyTestCase, ServerFillsClientFifo) {
 
   // Trying to write when full gets SHOULD_WAIT
   {
-    auto result =
-        server.Write(fidl::VectorView<uint8_t>{kTestString, fbl::count_of(kTestString) - 1});
+    auto result = server.Write(
+        fidl::VectorView<uint8_t>{fidl::unowned(kTestString), fbl::count_of(kTestString) - 1});
     ASSERT_OK(result.status());
     ASSERT_STATUS(result->s, ZX_ERR_SHOULD_WAIT);
   }
@@ -892,8 +898,8 @@ TEST_F(PtyTestCase, ClientFillsServerFifo) {
   size_t total_written = 0;
   while (client_event.wait_one(::llcpp::fuchsia::device::DEVICE_SIGNAL_WRITABLE, zx::time{},
                                nullptr) == ZX_OK) {
-    auto result =
-        client.Write(fidl::VectorView<uint8_t>{kTestString, fbl::count_of(kTestString) - 1});
+    auto result = client.Write(
+        fidl::VectorView<uint8_t>{fidl::unowned(kTestString), fbl::count_of(kTestString) - 1});
     ASSERT_OK(result.status());
     ASSERT_OK(result->s);
     ASSERT_GT(result->actual, 0);
@@ -902,8 +908,8 @@ TEST_F(PtyTestCase, ClientFillsServerFifo) {
 
   // Trying to write when full gets SHOULD_WAIT
   {
-    auto result =
-        client.Write(fidl::VectorView<uint8_t>{kTestString, fbl::count_of(kTestString) - 1});
+    auto result = client.Write(
+        fidl::VectorView<uint8_t>{fidl::unowned(kTestString), fbl::count_of(kTestString) - 1});
     ASSERT_OK(result.status());
     ASSERT_STATUS(result->s, ZX_ERR_SHOULD_WAIT);
   }
@@ -942,7 +948,7 @@ TEST_F(PtyTestCase, NonActiveClientsCantWrite) {
   ASSERT_FALSE(observed & ::llcpp::fuchsia::device::DEVICE_SIGNAL_WRITABLE);
   {
     uint8_t byte = 0;
-    auto result = other_client.Write(fidl::VectorView<uint8_t>{&byte, 1});
+    auto result = other_client.Write(fidl::VectorView<uint8_t>{fidl::unowned(&byte), 1});
     ASSERT_OK(result.status());
     ASSERT_STATUS(result->s, ZX_ERR_SHOULD_WAIT);
   }
@@ -960,7 +966,7 @@ TEST_F(PtyTestCase, ClientsHaveIndependentFifos) {
 
   // control_client is the current active, so it should go to its FIFO
   {
-    auto result = server.Write(fidl::VectorView<uint8_t>{&kControlClientByte, 1});
+    auto result = server.Write(fidl::VectorView<uint8_t>{fidl::unowned(&kControlClientByte), 1});
     ASSERT_OK(result.status());
     ASSERT_OK(result->s);
     ASSERT_EQ(result->actual, 1);
@@ -975,7 +981,7 @@ TEST_F(PtyTestCase, ClientsHaveIndependentFifos) {
 
   // This should go to the other client's FIFO
   {
-    auto result = server.Write(fidl::VectorView<uint8_t>{&kOtherClientByte, 1});
+    auto result = server.Write(fidl::VectorView<uint8_t>{fidl::unowned(&kOtherClientByte), 1});
     ASSERT_OK(result.status());
     ASSERT_OK(result->s);
     ASSERT_EQ(result->actual, 1);

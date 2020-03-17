@@ -29,7 +29,7 @@ TEST(VectorView, PointerConstructor) {
   DestructionState ds[3] = {};
   DestructableObject arr[3] = {&ds[0], &ds[1], &ds[2]};
   {
-    fidl::VectorView<DestructableObject> vv(arr, 2);
+    fidl::VectorView<DestructableObject> vv(fidl::unowned_ptr<DestructableObject>(arr), 2);
     EXPECT_EQ(vv.count(), 2ULL);
     EXPECT_FALSE(vv.empty());
     EXPECT_EQ(vv.data(), arr);
@@ -39,41 +39,9 @@ TEST(VectorView, PointerConstructor) {
   EXPECT_FALSE(ds[1].destructor_called);
 }
 
-TEST(VectorView, ArrayConstructor) {
-  DestructionState ds[2] = {};
-  DestructableObject arr[2] = {&ds[0], &ds[1]};
-  {
-    fidl::VectorView<DestructableObject> vv(arr);
-    EXPECT_EQ(vv.count(), 2ULL);
-    EXPECT_EQ(vv.data(), arr);
-  }
-  EXPECT_FALSE(ds[0].destructor_called);
-  EXPECT_FALSE(ds[1].destructor_called);
-}
-
-TEST(VectorView, FidlArrayConstructor) {
-  DestructionState ds[2] = {};
-  fidl::Array<DestructableObject, 2> arr = {&ds[0], &ds[1]};
-  {
-    fidl::VectorView<DestructableObject> vv(arr);
-    EXPECT_EQ(vv.count(), 2ULL);
-    EXPECT_EQ(vv.data(), arr.data());
-  }
-  EXPECT_FALSE(ds[0].destructor_called);
-  EXPECT_FALSE(ds[1].destructor_called);
-}
-
-TEST(VectorView, StdVectorConstructor) {
-  DestructionState ds[2] = {};
-  std::vector<DestructableObject> vec{&ds[0], &ds[1]};
-  fidl::VectorView<DestructableObject> vv(vec);
-  EXPECT_EQ(vv.count(), 2ULL);
-  EXPECT_EQ(vv.data(), vec.data());
-}
-
 TEST(VectorView, MoveConstructor) {
   std::vector<int32_t> vec{1, 2, 3};
-  fidl::VectorView<int32_t> vv(vec);
+  fidl::VectorView<int32_t> vv(fidl::unowned_ptr<int32_t>(vec.data()), vec.size());
   fidl::VectorView<int32_t> moved_vv(std::move(vv));
   EXPECT_EQ(vv.count(), 0ULL);
   EXPECT_EQ(vv.data(), nullptr);
@@ -83,7 +51,7 @@ TEST(VectorView, MoveConstructor) {
 
 TEST(VectorView, MoveAssigment) {
   std::vector<int32_t> vec{1, 2, 3};
-  fidl::VectorView<int32_t> vv(vec);
+  fidl::VectorView<int32_t> vv(fidl::unowned_ptr<int32_t>(vec.data()), vec.size());
   fidl::VectorView<int32_t> moved_vv;
   moved_vv = std::move(vv);
   EXPECT_EQ(vv.count(), 0ULL);
@@ -94,7 +62,7 @@ TEST(VectorView, MoveAssigment) {
 
 TEST(VectorView, Iteration) {
   std::vector<int32_t> vec{1, 2, 3};
-  fidl::VectorView<int32_t> vv(vec);
+  fidl::VectorView<int32_t> vv(fidl::unowned_ptr<int32_t>(vec.data()), vec.size());
   int32_t i = 1;
   for (auto& val : vv) {
     EXPECT_EQ(&val, &vec.at(i - 1));
@@ -105,7 +73,7 @@ TEST(VectorView, Iteration) {
 
 TEST(VectorView, Indexing) {
   std::vector<int32_t> vec{1, 2, 3};
-  fidl::VectorView<int32_t> vv(vec);
+  fidl::VectorView<int32_t> vv(fidl::unowned_ptr<int32_t>(vec.data()), vec.size());
   for (uint64_t i = 0; i < vv.count(); i++) {
     EXPECT_EQ(&vv[i], &vec.at(i));
   }
@@ -113,7 +81,7 @@ TEST(VectorView, Indexing) {
 
 TEST(VectorView, Mutations) {
   std::vector<int32_t> vec{1, 2, 3};
-  fidl::VectorView<int32_t> vv(vec);
+  fidl::VectorView<int32_t> vv(fidl::unowned_ptr<int32_t>(vec.data()), vec.size());
   vv.set_count(2);
   *vv.mutable_data() = 4;
   vv[1] = 5;

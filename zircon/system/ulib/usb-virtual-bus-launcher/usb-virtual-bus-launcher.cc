@@ -78,7 +78,7 @@ void USBVirtualBusBase::SetupPeripheralDevice(const DeviceDescriptor& device_des
   auto set_result = peripheral_->SetStateChangeListener(std::move(handles[1]));
   ASSERT_OK(set_result.status());
 
-  auto set_config = peripheral_->SetConfiguration(device_desc, ::fidl::VectorView(function_descs));
+  auto set_config = peripheral_->SetConfiguration(device_desc, fidl::unowned_vec(function_descs));
   ASSERT_OK(set_config.status());
   ASSERT_FALSE(set_config->result.is_err());
 

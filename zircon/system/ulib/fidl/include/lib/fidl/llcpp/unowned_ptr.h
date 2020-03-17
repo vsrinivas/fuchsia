@@ -65,15 +65,6 @@ class unowned_ptr {
 static_assert(sizeof(fidl::unowned_ptr<void>) == sizeof(void*),
               "unowned_ptr has the same size as a raw pointer");
 
-// In a number of cases, unowned_ptr requires the template argument to
-// be explicitly specified.
-// The unowned helper avoids this in certain cases, making user code
-// more concise.
-template <typename T>
-unowned_ptr<typename std::remove_extent_t<T>> unowned(T* ptr) {
-  return unowned_ptr<T>(ptr);
-}
-
 #define UNIQUE_PTR_OPERATOR_COMPARISONS(func_name, op)                 \
   template <typename T1, typename T2>                                  \
   bool func_name(const unowned_ptr<T1> p1, const unowned_ptr<T2> p2) { \

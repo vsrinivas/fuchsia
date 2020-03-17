@@ -96,6 +96,8 @@ class FidlEncoder final
     return Status::kSuccess;
   }
 
+  Status VisitVectorOrStringCount(CountPointer ptr) { return Status::kSuccess; }
+
   Status VisitInternalPadding(Position padding_position, uint32_t padding_length) {
     auto padding_ptr = padding_position.template Get<uint8_t>(StartingPoint{bytes_});
     memset(padding_ptr, 0, padding_length);

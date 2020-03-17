@@ -196,7 +196,7 @@ class ParameterSet {
       llcpp_parameters_.push_back(parameter.to_llcpp());
     }
 
-    return fidl::VectorView(llcpp_parameters_);
+    return fidl::unowned_vec(llcpp_parameters_);
   }
 
   void set_parameters(std::vector<Parameter> parameters) { parameters_ = std::move(parameters); }

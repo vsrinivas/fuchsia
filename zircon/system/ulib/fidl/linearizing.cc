@@ -128,6 +128,14 @@ class FidlLinearizer final
     return Status::kSuccess;
   }
 
+  Status VisitVectorOrStringCount(CountPointer ptr) {
+    // Clear the MSB that is used for storing ownership information for vectors and strings.
+    // While this operationg could be considered part of encoding, it is LLCPP specific so it
+    // is done during linearization.
+    *ptr &= ~fidl::internal::kVectorOwnershipMask;
+    return Status::kSuccess;
+  }
+
   Status VisitInternalPadding(Position padding_position, uint32_t padding_length) {
     return Status::kSuccess;
   }

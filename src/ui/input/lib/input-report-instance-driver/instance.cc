@@ -86,7 +86,8 @@ void InputReportInstance::GetReports(GetReportsCompleter::Sync _completer) {
     reports_event_.signal(DEV_STATE_READABLE, 0);
   }
 
-  fidl::VectorView<fuchsia_input_report::InputReport> report_view(reports_.data(), index);
+  fidl::VectorView<fuchsia_input_report::InputReport> report_view(fidl::unowned(reports_.data()),
+                                                                  index);
   _completer.Reply(std::move(report_view));
 }
 

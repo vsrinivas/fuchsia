@@ -230,7 +230,7 @@ zx_status_t DriverHostContext::DriverManagerAdd(const fbl::RefPtr<zx_device_t>& 
   if (add_invisible) {
     auto response = fuchsia::device::manager::Coordinator::Call::AddDeviceInvisible(
         zx::unowned_channel(rpc.get()), std::move(coordinator_remote),
-        std::move(device_controller_remote), ::fidl::VectorView(props_list),
+        std::move(device_controller_remote), ::fidl::unowned_vec(props_list),
         ::fidl::StringView(child->name, strlen(child->name)), child->protocol_id,
         ::fidl::StringView(child->driver->libname()),
         ::fidl::StringView(proxy_args, proxy_args_len), child->ops->init /* has_init */,
@@ -248,7 +248,7 @@ zx_status_t DriverHostContext::DriverManagerAdd(const fbl::RefPtr<zx_device_t>& 
   } else {
     auto response = fuchsia::device::manager::Coordinator::Call::AddDevice(
         zx::unowned_channel(rpc.get()), std::move(coordinator_remote),
-        std::move(device_controller_remote), ::fidl::VectorView(props_list),
+        std::move(device_controller_remote), ::fidl::unowned_vec(props_list),
         ::fidl::StringView(child->name, strlen(child->name)), child->protocol_id,
         ::fidl::StringView(child->driver->libname()),
         ::fidl::StringView(proxy_args, proxy_args_len), add_device_config,
@@ -1014,7 +1014,8 @@ zx_status_t DriverHostContext::AddMetadata(const fbl::RefPtr<zx_device_t>& dev, 
   log_rpc(dev, "add-metadata");
   auto response = fuchsia::device::manager::Coordinator::Call::AddMetadata(
       zx::unowned_channel(rpc.get()), type,
-      ::fidl::VectorView(reinterpret_cast<uint8_t*>(const_cast<void*>(data)), length));
+      ::fidl::VectorView(fidl::unowned(reinterpret_cast<uint8_t*>(const_cast<void*>(data))),
+                         length));
   zx_status_t status = response.status();
   zx_status_t call_status = ZX_OK;
   if (status == ZX_OK && response.Unwrap()->result.is_err()) {
@@ -1039,7 +1040,8 @@ zx_status_t DriverHostContext::PublishMetadata(const fbl::RefPtr<zx_device_t>& d
   log_rpc(dev, "publish-metadata");
   auto response = fuchsia::device::manager::Coordinator::Call::PublishMetadata(
       zx::unowned_channel(rpc.get()), ::fidl::StringView(path, strlen(path)), type,
-      ::fidl::VectorView(reinterpret_cast<uint8_t*>(const_cast<void*>(data)), length));
+      ::fidl::VectorView(fidl::unowned(reinterpret_cast<uint8_t*>(const_cast<void*>(data))),
+                         length));
   zx_status_t status = response.status();
   zx_status_t call_status = ZX_OK;
   if (status == ZX_OK && response.Unwrap()->result.is_err()) {
@@ -1097,9 +1099,9 @@ zx_status_t DriverHostContext::DeviceAddComposite(const fbl::RefPtr<zx_device_t>
   for (size_t i = 0; i < comp_desc->metadata_count; i++) {
     auto meta = fuchsia::device::manager::DeviceMetadata{
         .key = comp_desc->metadata_list[i].type,
-        .data = ::fidl::VectorView(
-            reinterpret_cast<uint8_t*>(const_cast<void*>(comp_desc->metadata_list[i].data)),
-            comp_desc->metadata_list[i].length)};
+        .data = fidl::VectorView(fidl::unowned(reinterpret_cast<uint8_t*>(
+                                     const_cast<void*>(comp_desc->metadata_list[i].data))),
+                                 comp_desc->metadata_list[i].length)};
     metadata.emplace_back(std::move(meta));
   }
 
@@ -1109,10 +1111,10 @@ zx_status_t DriverHostContext::DeviceAddComposite(const fbl::RefPtr<zx_device_t>
   }
 
   fuchsia::device::manager::CompositeDeviceDescriptor comp_dev = {
-      .props = ::fidl::VectorView(props),
-      .fragments = ::fidl::VectorView(compvec),
+      .props = ::fidl::unowned_vec(props),
+      .fragments = ::fidl::unowned_vec(compvec),
       .coresident_device_index = comp_desc->coresident_device_index,
-      .metadata = ::fidl::VectorView(metadata)};
+      .metadata = ::fidl::unowned_vec(metadata)};
 
   log_rpc(dev, "create-composite");
   static_assert(sizeof(comp_desc->props[0]) == sizeof(uint64_t));

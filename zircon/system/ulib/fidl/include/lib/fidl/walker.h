@@ -787,6 +787,7 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
         continue;
       }
       case Frame::kStateString: {
+        // TODO(fxb/42059) Clear the ownership bit in size and call VisitVectorOrStringCount.
         auto string_ptr = PtrTo<fidl_string_t>(frame->position);
         if (string_ptr->data == nullptr) {
           if (!frame->string_state.nullable &&
@@ -845,6 +846,8 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
         // fidl::VectorView's count would be ideally used in place of the direct bit masking
         // here, but because of build dependencies this is currently not possible.
         const uint64_t count = vector_ptr->count & ~kVectorOwnershipMask;
+        auto status = visitor.VisitVectorOrStringCount(&vector_ptr->count);
+        FIDL_STATUS_GUARD(status);
         if (vector_ptr->data == nullptr) {
           if (!frame->vector_state.nullable &&
               !VisitorImpl::kAllowNonNullableCollectionsToBeAbsent) {
@@ -871,9 +874,8 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
           visitor.OnError("integer overflow calculating vector size");
           return;
         }
-        auto status =
-            visitor.VisitPointer(frame->position, VisitorImpl::PointeeType::kVectorOrString,
-                                 &vector_ptr->data, size, &frame->position);
+        status = visitor.VisitPointer(frame->position, VisitorImpl::PointeeType::kVectorOrString,
+                                      &vector_ptr->data, size, &frame->position);
         FIDL_STATUS_GUARD(status);
         if (frame->vector_state.element) {
           // Continue by visiting the vector elements as an array.

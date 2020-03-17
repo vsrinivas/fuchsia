@@ -281,7 +281,7 @@ void SerialPpp::FrameDeviceServer::Rx(fppp::ProtocolType protocol, RxCompleter::
     if (frame.is_ok()) {
       fppp::Device_Rx_Response response;
       auto [protocol, data] = frame.take_value();
-      response.data = fidl::VectorView<uint8_t>(data.data(), data.size());
+      response.data = fidl::VectorView<uint8_t>(fidl::unowned(data.data()), data.size());
       result.set_response(fidl::unowned(&response));
       completer.Reply(std::move(result));
     } else if (frame.is_error()) {

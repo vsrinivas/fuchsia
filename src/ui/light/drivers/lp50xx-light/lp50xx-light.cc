@@ -300,8 +300,8 @@ void Lp50xxLight::GetGroupCurrentRgbValue(uint32_t group_id,
   if (status != ZX_OK) {
     completer.ReplyError(::llcpp::fuchsia::hardware::light::LightError::FAILED);
   } else {
-    completer.ReplySuccess(
-        ::fidl::VectorView<::llcpp::fuchsia::hardware::light::Rgb>(out.data(), out.size()));
+    completer.ReplySuccess(::fidl::VectorView<::llcpp::fuchsia::hardware::light::Rgb>(
+        fidl::unowned(out.data()), out.size()));
   }
 }
 

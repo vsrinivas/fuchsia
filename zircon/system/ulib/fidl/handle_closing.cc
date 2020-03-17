@@ -69,6 +69,8 @@ class FidlHandleCloser final
     return Status::kSuccess;
   }
 
+  Status VisitVectorOrStringCount(CountPointer ptr) { return Status::kSuccess; }
+
   Status VisitInternalPadding(Position padding_position, uint32_t padding_length) {
     return Status::kSuccess;
   }

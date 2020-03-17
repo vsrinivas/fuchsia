@@ -235,7 +235,8 @@ void X86::ListTableEntries(ListTableEntriesCompleter::Sync completer) {
   }
 
   // Send them back to the user.
-  completer.ReplySuccess(fidl::VectorView<TableInfo>(entries.data(), entries.size()));
+  completer.ReplySuccess(
+      fidl::VectorView<TableInfo>(fidl::unowned(entries.data()), entries.size()));
 }
 
 void X86::ReadNamedTable(fidl::Array<uint8_t, 4> name, uint32_t instance, ::zx::vmo result,

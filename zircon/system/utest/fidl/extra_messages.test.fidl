@@ -206,3 +206,7 @@ enum Uint64Enum : uint64 {
 struct Uint64EnumStruct {
     Uint64Enum e;
 };
+
+struct Uint32VectorStruct {
+    vector<uint32> vec;
+};
