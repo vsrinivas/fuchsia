@@ -108,12 +108,32 @@ class BindingSet final {
   // Removes a binding from the set.
   //
   // Returns true iff the binding was successfully found and removed.
-  // Upon removal, the server endpoint of the channel is closed.
+  // Upon removal, the server endpoint of the channel is closed without sending an epitaph.
   template <class T>
   bool RemoveBinding(const T& impl) {
     return RemoveMatchedBinding([&impl](const std::unique_ptr<Binding>& b) {
       return ResolvePtr(impl) == ResolvePtr(b->impl());
     });
+  }
+
+  // Removes a binding from the set.
+  //
+  // Returns true iff the binding was successfully found and removed.
+  // Upon removal, the server endpoint of the channel is closed and the epitaph provided is sent.
+
+  template <class T>
+  bool CloseBinding(const T& impl, zx_status_t epitaph_value) {
+    auto binding = ExtractMatchedBinding([&impl](const std::unique_ptr<Binding>& b) {
+      return ResolvePtr(impl) == ResolvePtr(b->impl());
+    });
+
+    if (binding == nullptr)
+      return false;
+
+    binding->Close(epitaph_value);
+
+    CheckIfEmpty();
+    return true;
   }
 
   // Returns an InterfaceRequestHandler that binds the incoming
@@ -188,21 +208,32 @@ class BindingSet final {
   }
 
   bool RemoveMatchedBinding(std::function<bool(const std::unique_ptr<Binding>&)> binding_matcher) {
-    auto it = std::find_if(bindings_.begin(), bindings_.end(), binding_matcher);
-    if (it == bindings_.end())
-      return false;
-
     {
-      // Move ownership of binding out of storage, such that the binding is
-      // destroyed AFTER it is removed from the bindings.
-      auto binding_local = std::move(*it);
-      binding_local->set_error_handler(nullptr);
-      bindings_.erase(it);
+      auto matching_binding = ExtractMatchedBinding(binding_matcher);
+      if (matching_binding == nullptr)
+        return false;
     }
 
+    CheckIfEmpty();
+    return true;
+  }
+
+  std::unique_ptr<Binding> ExtractMatchedBinding(
+      std::function<bool(const std::unique_ptr<Binding>&)> binding_matcher) {
+    auto it = std::find_if(bindings_.begin(), bindings_.end(), binding_matcher);
+    if (it == bindings_.end())
+      return nullptr;
+
+    auto binding_local = std::move(*it);
+    binding_local->set_error_handler(nullptr);
+    bindings_.erase(it);
+
+    return binding_local;
+  }
+
+  void CheckIfEmpty() {
     if (bindings_.empty() && empty_set_handler_)
       empty_set_handler_();
-    return true;
   }
 
   StorageType bindings_;

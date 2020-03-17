@@ -248,6 +248,66 @@ TEST(BindingSet, EpitaphSentWithCloseAll) {
   EXPECT_EQ(client_error_handler_status, kEpitaphValue);
 }
 
+TEST(BindingSet, EpitaphSentWithClose) {
+  fidl::test::AsyncLoopForTest loop;
+
+  BindingSet<fidl::test::frobinator::Frobinator, test::FrobinatorImpl*> binding_set;
+
+  // Attach an error handler.
+  fidl::test::frobinator::FrobinatorPtr ptr;
+  bool client_error_handler_invoked = false;
+  zx_status_t client_error_handler_status = ZX_OK;
+  ptr.set_error_handler([&](zx_status_t status) {
+    client_error_handler_status = status;
+    client_error_handler_invoked = true;
+  });
+  test::FrobinatorImpl impl;
+
+  // Add the binding.
+  binding_set.AddBinding(&impl, ptr.NewRequest());
+  EXPECT_EQ(1u, binding_set.size());
+
+  constexpr auto kEpitaphValue = ZX_ERR_ADDRESS_UNREACHABLE;
+  binding_set.CloseBinding(&impl, kEpitaphValue);
+  loop.RunUntilIdle();
+
+  EXPECT_TRUE(binding_set.bindings().empty());
+  ASSERT_TRUE(client_error_handler_invoked);
+  EXPECT_EQ(client_error_handler_status, kEpitaphValue);
+}
+
+TEST(BindingSet, CloseBindingsHandlesEmptySet) {
+  fidl::test::AsyncLoopForTest loop;
+
+  BindingSet<fidl::test::frobinator::Frobinator, test::FrobinatorImpl*> binding_set;
+  bool empty_set_handled = false;
+  binding_set.set_empty_set_handler([&] { empty_set_handled = true; });
+
+  fidl::test::frobinator::FrobinatorPtr ptr;
+  test::FrobinatorImpl impl;
+  fidl::test::frobinator::FrobinatorPtr other_ptr;
+  test::FrobinatorImpl other_impl;
+
+  // Add the bindings.
+  binding_set.AddBinding(&impl, ptr.NewRequest());
+  binding_set.AddBinding(&other_impl, other_ptr.NewRequest());
+  loop.RunUntilIdle();
+
+  EXPECT_EQ(2u, binding_set.size());
+  EXPECT_FALSE(empty_set_handled);
+
+  // Check that the empty_set_handler is not called when the first binding is removed.
+  constexpr auto kEpitaphValue = ZX_ERR_ADDRESS_UNREACHABLE;
+  binding_set.CloseBinding(&impl, kEpitaphValue);
+  loop.RunUntilIdle();
+  EXPECT_FALSE(empty_set_handled);
+
+  // Check that the empty_set_handler is called when the last binding is removed.
+  binding_set.CloseBinding(&other_impl, kEpitaphValue);
+  loop.RunUntilIdle();
+  EXPECT_TRUE(empty_set_handled);
+}
+
 TEST(BindingSet, RemoveBindingDeletesTheBinding) {
   fidl::test::AsyncLoopForTest loop;
 

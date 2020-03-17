@@ -1,6 +1,6 @@
 {
   "pkg/fidl_cpp/include/lib/fidl/cpp/binding.h": "7f203538aca29287ea5fc6050bcc432d",
-  "pkg/fidl_cpp/include/lib/fidl/cpp/binding_set.h": "5eee839a307270cf5491130e660e6536",
+  "pkg/fidl_cpp/include/lib/fidl/cpp/binding_set.h": "c42c7312c9cf792e071ee67e944bb8f4",
   "pkg/fidl_cpp/include/lib/fidl/cpp/enum.h": "ad164c5cd66ea3db9d5df386b47755a4",
   "pkg/fidl_cpp/include/lib/fidl/cpp/event_sender.h": "cac2e1fe4c1e0f4efafec35a57e04ab3",
   "pkg/fidl_cpp/include/lib/fidl/cpp/interface_ptr.h": "6a9d47bcabd33792dafebe19663feca0",
