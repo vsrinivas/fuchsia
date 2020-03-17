@@ -219,7 +219,7 @@ func process(ctx context.Context, repo symbolize.Repository) error {
 	}
 
 	// Merge all the information
-	entries, err := covargs.MergeProfiles(ctx, info.dumps, info.summary, repo)
+	entries, err := covargs.MergeEntries(ctx, info.dumps, info.summary)
 	if err != nil {
 		return fmt.Errorf("merging info: %w", err)
 	}
@@ -233,20 +233,6 @@ func process(ctx context.Context, repo symbolize.Repository) error {
 		if err := json.NewEncoder(file).Encode(entries); err != nil {
 			return fmt.Errorf("writing profile information: %w", err)
 		}
-	}
-
-	// Gather the set of modules and coverage files
-	modSet := make(map[string]struct{})
-	var mods []string
-	var covFiles []string
-	for _, entry := range entries {
-		for _, mod := range entry.ModuleFiles {
-			if _, ok := modSet[mod]; !ok && isInstrumented(mod) {
-				mods = append(mods, mod)
-				modSet[mod] = struct{}{}
-			}
-		}
-		covFiles = append(covFiles, entry.ProfileData)
 	}
 
 	tempDir := saveTemps
@@ -263,12 +249,12 @@ func process(ctx context.Context, repo symbolize.Repository) error {
 	if err != nil {
 		return fmt.Errorf("creating llvm-profdata.rsp file: %w", err)
 	}
-	for _, covFile := range covFiles {
-		fmt.Fprintf(profdataFile, "%s\n", covFile)
+	for _, entry := range entries {
+		fmt.Fprintf(profdataFile, "%s\n", entry.Profile)
 	}
 	profdataFile.Close()
 
-	// Merge everything
+	// Merge all raw profiles
 	mergedFile := filepath.Join(tempDir, "merged.profdata")
 	mergeCmd := Action{Path: llvmProfdata, Args: []string{
 		"merge",
@@ -281,13 +267,36 @@ func process(ctx context.Context, repo symbolize.Repository) error {
 		return fmt.Errorf("%v:\n%s", err, string(data))
 	}
 
+	// Gather the set of modules and coverage files
+	modules := []symbolize.FileCloser{}
+	moduleSet := make(map[string]struct{})
+	for _, entry := range entries {
+		for _, module := range entry.Modules {
+			if _, ok := moduleSet[module]; ok {
+				continue
+			}
+			moduleSet[module] = struct{}{}
+			file, err := repo.GetBuildObject(module)
+			if err != nil {
+				logger.Warningf(ctx, "module with build id %s not found\n", module)
+				continue
+			}
+			if isInstrumented(file.String()) {
+				modules = append(modules, file)
+				defer file.Close()
+			} else {
+				file.Close()
+			}
+		}
+	}
+
 	// Make the llvm-cov response file
 	covFile, err := os.Create(filepath.Join(tempDir, "llvm-cov.rsp"))
 	if err != nil {
 		return fmt.Errorf("creating llvm-cov.rsp file: %w", err)
 	}
-	for _, mod := range mods {
-		fmt.Fprintf(covFile, "-object %s\n", mod)
+	for _, module := range modules {
+		fmt.Fprintf(covFile, "-object %s\n", module.String())
 	}
 	covFile.Close()
 

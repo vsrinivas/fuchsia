@@ -64,14 +64,14 @@ var testSummary = runtests.DataSinkMap{
 }
 
 var testEntries = []ProfileEntry{
-	{ProfileData: "build/llvm-profile.4321", ModuleFiles: []string{filepath.Join("testdata", "foo"), filepath.Join("testdata", "libc.so"), filepath.Join("testdata", "libfbl.so")}},
-	{ProfileData: "build/llvm-profile.8765", ModuleFiles: []string{filepath.Join("testdata", "bar"), filepath.Join("testdata", "libc.so")}},
+	{Profile: "build/llvm-profile.4321", Modules: []string{"12ef5c50b3ed3599c07c02d4509311be", "5bf6a28a259b95b4f20ffbcea0cbb149", "4fcb712aa6387724a9f465a32cd8c14b"}},
+	{Profile: "build/llvm-profile.8765", Modules: []string{"e242ed3bffccdf271b7fbaf34ed72d08", "5bf6a28a259b95b4f20ffbcea0cbb149"}},
 }
 
-func TestProfileMerge(t *testing.T) {
+func TestMergeEntries(t *testing.T) {
 	ctx := context.Background()
 
-	entries, err := MergeProfiles(ctx, testDumps, testSummary, testRepository)
+	entries, err := MergeEntries(ctx, testDumps, testSummary)
 	if err != nil {
 		t.Fatal(err)
 	}

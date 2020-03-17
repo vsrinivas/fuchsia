@@ -15,11 +15,14 @@ import (
 const llvmProfileSinkType = "llvm-profile"
 
 type ProfileEntry struct {
-	ProfileData string   `json:"profile"`
-	ModuleFiles []string `json:"modules"`
+	Profile string   `json:"profile"`
+	Modules []string `json:"modules"`
 }
 
-func MergeProfiles(ctx context.Context, dumps map[string]symbolize.DumpEntry, summary runtests.DataSinkMap, repo symbolize.Repository) ([]ProfileEntry, error) {
+// ProfileEntries combines data from runtests and symbolizer, returning
+// a sequence of entries, where each entry contains a raw profile and all
+// modules (specified by build ID) present in that profile.
+func MergeEntries(ctx context.Context, dumps map[string]symbolize.DumpEntry, summary runtests.DataSinkMap) ([]ProfileEntry, error) {
 	entries := []ProfileEntry{}
 
 	for _, sink := range summary[llvmProfileSinkType] {
@@ -29,22 +32,18 @@ func MergeProfiles(ctx context.Context, dumps map[string]symbolize.DumpEntry, su
 			continue
 		}
 
-		// This is going to go in a covDataEntry as the list of paths to the modules for the data
-		moduleFiles := []string{}
+		modules := []string{}
+		moduleSet := make(map[string]struct{})
 		for _, mod := range dump.Modules {
-			file, err := repo.GetBuildObject(mod.Build)
-			if err != nil {
-				logger.Warningf(ctx, "module with build id %s not found\n", mod.Build)
-				continue
+			if _, ok := moduleSet[mod.Build]; !ok {
+				modules = append(modules, mod.Build)
+				moduleSet[mod.Build] = struct{}{}
 			}
-			moduleFiles = append(moduleFiles, file.String())
-			file.Close()
 		}
 
-		// Finally we can add all the data
 		entries = append(entries, ProfileEntry{
-			ModuleFiles: moduleFiles,
-			ProfileData: sink.File,
+			Modules: modules,
+			Profile: sink.File,
 		})
 	}
 
