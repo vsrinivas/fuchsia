@@ -126,8 +126,10 @@ void BaseCapturer::CleanupFromMixThread() {
 }
 
 void BaseCapturer::BeginShutdown() {
-  context_.threading_model().FidlDomain().ScheduleTask(Cleanup().then(
-      [this](fit::result<>&) { (context_.route_graph().*route_graph_remover_)(*this); }));
+  context_.threading_model().FidlDomain().ScheduleTask(Cleanup().then([this](fit::result<>&) {
+    ReportStop();
+    (context_.route_graph().*route_graph_remover_)(*this);
+  }));
 }
 
 void BaseCapturer::OnStateChanged(State old_state, State new_state) {

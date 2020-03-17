@@ -62,9 +62,15 @@ void AudioCoreImpl::CreateAudioCapturerWithConfiguration(
     return;
   }
 
-  context_.route_graph().AddLoopbackCapturer(std::unique_ptr<AudioCapturer>(
+  const bool loopback = configuration.is_loopback();
+  auto capturer = std::unique_ptr<AudioCapturer>(
       new AudioCapturer(std::move(configuration), {format.take_value()}, {usage},
-                        std::move(audio_capturer_request), &context_)));
+                        std::move(audio_capturer_request), &context_));
+  if (loopback) {
+    context_.route_graph().AddLoopbackCapturer(std::move(capturer));
+  } else {
+    context_.route_graph().AddCapturer(std::move(capturer));
+  }
 }
 
 void AudioCoreImpl::CreateAudioCapturer(

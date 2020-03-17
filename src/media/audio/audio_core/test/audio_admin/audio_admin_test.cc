@@ -33,6 +33,7 @@ class AudioAdminTest : public HermeticAudioTest {
   static constexpr int16_t kPlaybackData1 = 0x1111;
   static constexpr int16_t kDuckedPlaybackData1 = 0x4e;  // reduced by 35dB
   static constexpr int16_t kPlaybackData2 = 0x2222;
+  static constexpr int16_t kVirtualInputSampleValue = 0x3333;
 
   static void SetUpTestSuite();
   static void TearDownTestSuite();
@@ -41,6 +42,7 @@ class AudioAdminTest : public HermeticAudioTest {
   void TearDown() override;
 
   void SetUpVirtualAudioOutput();
+  void SetUpVirtualAudioInput();
 
   template <typename T>
   struct StreamHolder {
@@ -52,8 +54,21 @@ class AudioAdminTest : public HermeticAudioTest {
 
   StreamHolder<fuchsia::media::AudioRenderer> SetUpRenderer(fuchsia::media::AudioRenderUsage usage,
                                                             int16_t data);
+
+  StreamHolder<fuchsia::media::AudioCapturer> SetUpCapturer(
+      fuchsia::media::AudioCapturerConfiguration configuration,
+      fuchsia::media::AudioCaptureUsage usage, int16_t data);
   StreamHolder<fuchsia::media::AudioCapturer> SetUpCapturer(fuchsia::media::AudioCaptureUsage usage,
-                                                            int16_t data);
+                                                            int16_t data) {
+    return SetUpCapturer(fuchsia::media::AudioCapturerConfiguration::WithInput(
+                             fuchsia::media::InputAudioCapturerConfiguration()),
+                         usage, data);
+  }
+  StreamHolder<fuchsia::media::AudioCapturer> SetUpLoopbackCapturer(int16_t data) {
+    return SetUpCapturer(fuchsia::media::AudioCapturerConfiguration::WithLoopback(
+                             fuchsia::media::LoopbackAudioCapturerConfiguration()),
+                         fuchsia::media::AudioCaptureUsage::BACKGROUND, data);
+  }
 
   zx_duration_t GetMinLeadTime(
       std::initializer_list<
@@ -61,11 +76,16 @@ class AudioAdminTest : public HermeticAudioTest {
           renderers);
 
   fuchsia::media::AudioDeviceEnumeratorPtr audio_dev_enum_;
-  uint64_t virtual_audio_output_token_;
 
   fuchsia::media::AudioCoreSyncPtr audio_core_sync_;
   static fuchsia::virtualaudio::ControlSyncPtr virtual_audio_control_sync_;
+
+  uint64_t virtual_audio_input_token_;
   fuchsia::virtualaudio::OutputSyncPtr virtual_audio_output_sync_;
+  fzl::VmoMapper virtual_audio_input_ring_buffer_;
+
+  uint64_t virtual_audio_output_token_;
+  fuchsia::virtualaudio::InputSyncPtr virtual_audio_input_sync_;
 };
 
 fuchsia::virtualaudio::ControlSyncPtr AudioAdminTest::virtual_audio_control_sync_;
@@ -96,6 +116,7 @@ void AudioAdminTest::SetUp() {
   audio_dev_enum_.set_error_handler(ErrorHandler());
 
   SetUpVirtualAudioOutput();
+  SetUpVirtualAudioInput();
 
   audio_dev_enum_.events().OnDeviceAdded =
       CompletionCallback([](fuchsia::media::AudioDeviceInfo unused) {
@@ -115,11 +136,14 @@ void AudioAdminTest::SetUp() {
 }
 
 void AudioAdminTest::TearDown() {
-  bool removed = false;
+  bool removed_input = false;
+  bool removed_output = false;
   audio_dev_enum_.events().OnDeviceRemoved =
-      CompletionCallback([&removed, want_token = virtual_audio_output_token_](uint64_t token) {
-        if (token == want_token) {
-          removed = true;
+      CompletionCallback([this, &removed_input, &removed_output](uint64_t token) {
+        if (token == virtual_audio_input_token_) {
+          removed_input = true;
+        } else if (token == virtual_audio_output_token_) {
+          removed_output = true;
         }
       });
   audio_dev_enum_.events().OnDeviceAdded = nullptr;
@@ -129,11 +153,15 @@ void AudioAdminTest::TearDown() {
   if (virtual_audio_output_sync_.is_bound()) {
     zx_status_t status = virtual_audio_output_sync_->Remove();
     ASSERT_EQ(status, ZX_OK) << "Failed to remove virtual audio output";
-
     virtual_audio_output_sync_.Unbind();
   }
+  if (virtual_audio_input_sync_.is_bound()) {
+    zx_status_t status = virtual_audio_input_sync_->Remove();
+    ASSERT_EQ(status, ZX_OK) << "Failed to remove virtual audio input";
+    virtual_audio_input_sync_.Unbind();
+  }
 
-  RunLoopUntil([&removed]() { return removed; });
+  RunLoopUntil([&removed_input, &removed_output]() { return removed_input && removed_output; });
 
   EXPECT_TRUE(audio_dev_enum_.is_bound());
   EXPECT_TRUE(audio_core_sync_.is_bound());
@@ -208,6 +236,82 @@ void AudioAdminTest::SetUpVirtualAudioOutput() {
          "the default.";
 }
 
+void AudioAdminTest::SetUpVirtualAudioInput() {
+  std::string dev_uuid_read = "4a41494a4a41494a4a41494a4a41494b";
+  std::array<uint8_t, 16> dev_uuid{0x4a, 0x41, 0x49, 0x4a, 0x4a, 0x41, 0x49, 0x4a,
+                                   0x4a, 0x41, 0x49, 0x4a, 0x4a, 0x41, 0x49, 0x4b};
+
+  // Connect to audio device enumerator to handle device topology changes during
+  // test execution.
+  audio_dev_enum_.events().OnDeviceAdded = [this,
+                                            dev_uuid_read](fuchsia::media::AudioDeviceInfo dev) {
+    if (dev.unique_id == dev_uuid_read) {
+      virtual_audio_input_token_ = dev.token_id;
+    }
+  };
+
+  uint64_t default_dev = 0;
+  audio_dev_enum_.events().OnDefaultDeviceChanged = [&default_dev](uint64_t old_default_token,
+                                                                   uint64_t new_default_token) {
+    default_dev = new_default_token;
+  };
+
+  // Ensure that that our connection to the device enumerator has completed enumerating the audio
+  // devices if any exist before we add ours. This serves as a synchronization point to make sure
+  // audio_core has our OnDeviceAdded and OnDefaultDeviceChanged callbacks registered before w
+  // trigger the device add. Without this call, the add for the virtual input may be picked up and
+  // processed in the device_manager in audio_core before it's added our listener for events.
+  audio_dev_enum_->GetDevices(
+      CompletionCallback([](std::vector<fuchsia::media::AudioDeviceInfo> devices) {}));
+  ExpectCallback();
+
+  EXPECT_FALSE(virtual_audio_input_sync_.is_bound());
+  environment()->ConnectToService(virtual_audio_input_sync_.NewRequest());
+
+  // Create an input device using default settings, save it while tests run.
+  auto status = virtual_audio_input_sync_->SetUniqueId(dev_uuid);
+  ASSERT_EQ(status, ZX_OK) << "Failed to set virtual audio input uuid";
+
+  status = virtual_audio_input_sync_->ClearFormatRanges();
+  ASSERT_EQ(status, ZX_OK) << "Failed to clear preexisting virtual audio input format ranges";
+
+  status = virtual_audio_input_sync_->SetFifoDepth(0);
+  ASSERT_EQ(status, ZX_OK) << "Failed to set virtual input fifo depth";
+  status = virtual_audio_input_sync_->SetExternalDelay(0);
+  ASSERT_EQ(status, ZX_OK) << "Failed to set virtual input external delay";
+  status = virtual_audio_input_sync_->AddFormatRange(AUDIO_SAMPLE_FORMAT_16BIT, kSampleRate,
+                                                     kSampleRate, kChannelCount, kChannelCount,
+                                                     ASF_RANGE_FLAG_FPS_CONTINUOUS);
+  ASSERT_EQ(status, ZX_OK) << "Failed to add virtual audio input format range";
+
+  status = virtual_audio_input_sync_->Add();
+  ASSERT_EQ(status, ZX_OK) << "Failed to add virtual audio input";
+
+  // Wait for OnDeviceAdded and OnDefaultDeviceChanged callback.  These will
+  // both need to have happened for the new device to be used for the test.
+  RunLoopUntil([this, &default_dev]() {
+    return virtual_audio_input_token_ != 0 && default_dev == virtual_audio_input_token_;
+  });
+
+  ASSERT_EQ(virtual_audio_input_token_, default_dev)
+      << "Timed out waiting for audio_core to make the virtual audio input "
+         "the default.";
+
+  zx::vmo input_ring_buffer;
+  uint32_t ring_frames, notifications;
+  status = virtual_audio_input_sync_->GetBuffer(&input_ring_buffer, &ring_frames, &notifications);
+  ASSERT_EQ(status, ZX_OK) << "Failed to get virtual audio input ring buffer";
+
+  status = virtual_audio_input_ring_buffer_.Map(input_ring_buffer, 0,
+                                                ring_frames * kChannelCount * sizeof(int16_t),
+                                                ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
+  ASSERT_EQ(status, ZX_OK) << "Failed to map virtual audio input ring buffer";
+  int16_t* ring_ptr = reinterpret_cast<int16_t*>(virtual_audio_input_ring_buffer_.start());
+  for (size_t i = 0; i < ring_frames * kChannelCount; ++i) {
+    ring_ptr[i] = kVirtualInputSampleValue;
+  }
+}
+
 // SetUpRenderer
 //
 // For loopback tests, setup the first audio_renderer interface.
@@ -272,13 +376,11 @@ AudioAdminTest::StreamHolder<fuchsia::media::AudioRenderer> AudioAdminTest::SetU
 //
 // For loopback tests, setup an audio_capturer interface
 AudioAdminTest::StreamHolder<fuchsia::media::AudioCapturer> AudioAdminTest::SetUpCapturer(
+    fuchsia::media::AudioCapturerConfiguration configuration,
     fuchsia::media::AudioCaptureUsage usage, int16_t data) {
   StreamHolder<fuchsia::media::AudioCapturer> holder;
   int16_t* buffer;
   zx::vmo capture_vmo;
-
-  fuchsia::media::AudioCapturerConfiguration configuration;
-  configuration.set_loopback(fuchsia::media::LoopbackAudioCapturerConfiguration());
 
   auto format =
       fuchsia::media::AudioStreamType{.sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16,
@@ -353,7 +455,7 @@ TEST_F(AudioAdminTest, SingleRenderStream) {
 
   // SetUp playback stream
   auto renderer = SetUpRenderer(fuchsia::media::AudioRenderUsage::MEDIA, kPlaybackData1);
-  auto capturer = SetUpCapturer(fuchsia::media::AudioCaptureUsage::BACKGROUND, kInitialCaptureData);
+  auto capturer = SetUpLoopbackCapturer(kInitialCaptureData);
 
   // Get the minimum duration after submitting a packet to when we can start
   // capturing what we sent on the loopback interface
@@ -513,28 +615,27 @@ TEST_F(AudioAdminTest, CaptureMuteRender) {
                                      fuchsia::media::Behavior::MUTE);
   }
 
-  fuchsia::media::StreamPacket packet, captured;
-
   // SetUp playback stream
   auto renderer = SetUpRenderer(fuchsia::media::AudioRenderUsage::BACKGROUND, kPlaybackData1);
   auto capturer =
       SetUpCapturer(fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT, kInitialCaptureData);
 
-  auto* capture = reinterpret_cast<int16_t*>(capturer.payload_buffer.start());
-
-  // Start the capturer so that it affects policy, but we don't care about what
-  // we receive yet, so don't register for OnPacketProduced.
+  // Immediately start this capturer so that it impacts policy.
   capturer.stream_ptr->StartAsyncCapture(10);
+
+  auto loopback_capturer = SetUpLoopbackCapturer(kInitialCaptureData);
 
   // Get the minimum duration after submitting a packet to when we can start
   // capturing what we sent on the loopback interface
   zx_duration_t sleep_duration = GetMinLeadTime({renderer});
   ASSERT_NE(sleep_duration, 0) << "Failed to get MinLeadTime";
 
-  packet.payload_offset = 0;
-  packet.payload_size = renderer.buffer_size;
-
-  renderer.stream_ptr->SendPacketNoReply(packet);
+  {
+    fuchsia::media::StreamPacket packet;
+    packet.payload_offset = 0;
+    packet.payload_size = renderer.buffer_size;
+    renderer.stream_ptr->SendPacketNoReply(packet);
+  }
 
   int64_t ref_time_received = -1;
   int64_t media_time_received = -1;
@@ -558,29 +659,33 @@ TEST_F(AudioAdminTest, CaptureMuteRender) {
   // Give the playback some time to get mixed.
   zx_nanosleep(zx_deadline_after(sleep_duration));
 
+  auto* loopback_capture = reinterpret_cast<int16_t*>(loopback_capturer.payload_buffer.start());
+
   // Add a callback for when we get our captured packet.
-  bool produced_packet = false;
-  capturer.stream_ptr.events().OnPacketProduced = CompletionCallback(
-      [&capturer, &captured, &produced_packet](fuchsia::media::StreamPacket packet) {
+  fuchsia::media::StreamPacket loopback_captured;
+  bool produced_loopback_packet = false;
+  loopback_capturer.stream_ptr.events().OnPacketProduced =
+      CompletionCallback([&loopback_captured, &produced_loopback_packet,
+                          ref_time_received](fuchsia::media::StreamPacket packet) {
         // We only care about the first set of captured samples
-        if (captured.payload_size == 0) {
-          captured = packet;
-          produced_packet = true;
-          capturer.stream_ptr->StopAsyncCaptureNoReply();
+        if (packet.pts > ref_time_received && loopback_captured.payload_size == 0) {
+          loopback_captured = packet;
+          produced_loopback_packet = true;
         }
       });
 
   // Capture 10 samples of audio.
+  loopback_capturer.stream_ptr->StartAsyncCapture(10);
   ExpectCallback();
 
   // Check that we got 10 samples as we expected.
-  EXPECT_EQ(captured.payload_size / capturer.sample_size, 10U);
+  EXPECT_EQ(loopback_captured.payload_size / loopback_capturer.sample_size, 10U);
 
   // Check that all of the samples contain the expected data.
-  for (size_t i = 0; i < (captured.payload_size / capturer.sample_size); i++) {
-    size_t index = (captured.payload_offset + i) % 8000;
+  for (size_t i = 0; i < (loopback_captured.payload_size / loopback_capturer.sample_size); i++) {
+    size_t index = (loopback_captured.payload_offset + i) % 8000;
 
-    EXPECT_EQ(capture[index], 0x0);
+    EXPECT_EQ(loopback_capture[index], 0x0);
   }
 }
 
@@ -604,7 +709,7 @@ TEST_F(AudioAdminTest, DualRenderStreamMix) {
   auto renderer2 = SetUpRenderer(fuchsia::media::AudioRenderUsage::MEDIA, kPlaybackData2);
 
   // SetUp loopback capture
-  auto capturer = SetUpCapturer(fuchsia::media::AudioCaptureUsage::BACKGROUND, kInitialCaptureData);
+  auto capturer = SetUpLoopbackCapturer(kInitialCaptureData);
 
   auto* capture = reinterpret_cast<int16_t*>(capturer.payload_buffer.start());
 
@@ -704,7 +809,7 @@ TEST_F(AudioAdminTest, DualRenderStreamDucking) {
   auto renderer2 = SetUpRenderer(fuchsia::media::AudioRenderUsage::INTERRUPTION, kPlaybackData2);
 
   // SetUp loopback capture
-  auto capturer = SetUpCapturer(fuchsia::media::AudioCaptureUsage::BACKGROUND, kInitialCaptureData);
+  auto capturer = SetUpLoopbackCapturer(kInitialCaptureData);
 
   auto* capture = reinterpret_cast<int16_t*>(capturer.payload_buffer.start());
 
@@ -785,26 +890,13 @@ TEST_F(AudioAdminTest, DualRenderStreamMute) {
     audio_core_sync_->SetInteraction(std::move(active), std::move(affected),
                                      fuchsia::media::Behavior::MUTE);
   }
-  {
-    fuchsia::media::Usage active, affected;
-    active.set_render_usage(fuchsia::media::AudioRenderUsage::MEDIA);
-    affected.set_capture_usage(fuchsia::media::AudioCaptureUsage::BACKGROUND);
-    audio_core_sync_->SetInteraction(std::move(active), std::move(affected),
-                                     fuchsia::media::Behavior::NONE);
-  }
-  {
-    fuchsia::media::Usage active, affected;
-    active.set_render_usage(fuchsia::media::AudioRenderUsage::BACKGROUND);
-    affected.set_capture_usage(fuchsia::media::AudioCaptureUsage::BACKGROUND);
-    audio_core_sync_->SetInteraction(std::move(active), std::move(affected),
-                                     fuchsia::media::Behavior::NONE);
-  }
+
   // SetUp playback streams
   auto renderer1 = SetUpRenderer(fuchsia::media::AudioRenderUsage::MEDIA, kPlaybackData1);
   auto renderer2 = SetUpRenderer(fuchsia::media::AudioRenderUsage::BACKGROUND, kPlaybackData2);
 
   // SetUp loopback capture
-  auto capturer = SetUpCapturer(fuchsia::media::AudioCaptureUsage::BACKGROUND, kInitialCaptureData);
+  auto capturer = SetUpLoopbackCapturer(kInitialCaptureData);
 
   auto* capture = reinterpret_cast<int16_t*>(capturer.payload_buffer.start());
 
@@ -971,12 +1063,11 @@ TEST_F(AudioAdminTest, DualCaptureStreamNone) {
   for (size_t i = 0; i < (captured1.payload_size / capturer1.sample_size); i++) {
     size_t index = (captured1.payload_offset + i) % 8000;
 
-    EXPECT_EQ(capture1[index], kPlaybackData1);
+    EXPECT_EQ(capture1[index], kVirtualInputSampleValue);
   }
-
   for (size_t i = 0; i < (captured2.payload_size / capturer2.sample_size); i++) {
     size_t index = (captured2.payload_offset + i) % 8000;
-    EXPECT_EQ(capture2[index], kPlaybackData1);
+    EXPECT_EQ(capture2[index], kVirtualInputSampleValue);
   }
 }
 
