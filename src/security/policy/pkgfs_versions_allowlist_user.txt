@@ -1,3 +1,1 @@
-# TODO(benwright) - Remove terminal.
-fuchsia-pkg://fuchsia.com/terminal#meta/terminal.cmx
 fuchsia-pkg://fuchsia.com/pkg-cache#meta/pkg-cache.cmx
