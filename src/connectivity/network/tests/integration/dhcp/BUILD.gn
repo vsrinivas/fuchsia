@@ -48,7 +48,9 @@ test_package("netemul_dhcp_tests") {
   tests = [
     {
       name = "dhcp_validity_test"
-      environments = [ nuc_env ]
+
+      # TODO(48129): test hangs w/ ASan. Fix and switch to [ nuc_env ].
+      environments = nuc_env_fails_on_asan
     },
   ]
 }
