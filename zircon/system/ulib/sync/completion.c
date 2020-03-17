@@ -103,7 +103,18 @@ zx_status_t sync_completion_wait_deadline(sync_completion_t* completion, zx_time
       // be UWW by the time we join the wait queue.  If it is anything else
       // (BAD_STATE), then it must have achieved SIGNALED at some point in the
       // past.
+      //
+      // Before we exit, however, we toss in an explicit acquire fence.  This is
+      // needed to provide the acquire semantics that we guarantee in the
+      // documentation of sync_completion.  More concretely, it means that load
+      // operations which take place after this wait operation cannot be moved
+      // (either by the compiler or the hardware) before this point in our
+      // program.  The fence is a slightly stronger guarantee then we actually
+      // need, but we would rather not run the risk that an aggressive compiler
+      // decides that it wants to optimize away the load-acquire operation for
+      // some reason.
       case ZX_ERR_BAD_STATE:
+        atomic_thread_fence(memory_order_acquire);
         return ZX_OK;
 
       case ZX_ERR_TIMED_OUT:
