@@ -39,8 +39,9 @@ use crate::error::{ExistsError, IpParseError, NotFoundError};
 use crate::ip::forwarding::{Destination, ForwardingTable};
 use crate::ip::icmp::{
     send_icmpv4_parameter_problem, send_icmpv6_parameter_problem, BufferIcmpContext,
-    BufferIcmpEventDispatcher, IcmpContext, IcmpEventDispatcher, Icmpv4ErrorCode, Icmpv4State,
-    Icmpv4StateBuilder, Icmpv6ErrorCode, Icmpv6State, Icmpv6StateBuilder,
+    BufferIcmpEventDispatcher, IcmpContext, IcmpEventDispatcher, IcmpIpExt, IcmpIpTransportContext,
+    Icmpv4ErrorCode, Icmpv4State, Icmpv4StateBuilder, Icmpv6ErrorCode, Icmpv6State,
+    Icmpv6StateBuilder,
 };
 use crate::ip::igmp::{IgmpContext, IgmpPacketMetadata, IgmpTimerId};
 use crate::ip::ipv6::Ipv6PacketAction;
@@ -126,7 +127,33 @@ enum TransportReceiveErrorInner {
 ///
 /// An implementation for `()` is provided which indicates that a particular
 /// transport layer protocol is unsupported.
-pub(crate) trait IpTransportContext<I: Ip, B: BufferMut, C: ?Sized> {
+pub(crate) trait IpTransportContext<I: IcmpIpExt, C: ?Sized> {
+    /// Receive an ICMP error message.
+    ///
+    /// All arguments beginning with `original_` are fields from the IP packet
+    /// that triggered the error. The `original_body` is provided here so that
+    /// the error can be associated with a transport-layer socket.
+    ///
+    /// While ICMPv4 error messages are supposed to contain the first 8 bytes of
+    /// the body of the offending packet, and ICMPv6 error messages are supposed
+    /// to contain as much of the offending packet as possible without violating
+    /// the IPv6 minimum MTU, the caller does NOT guarantee that either of these
+    /// hold. It is `receive_icmp_error`'s responsibility to handle any length
+    /// of `original_body`, and to perform any necessary validation.
+    fn receive_icmp_error(
+        ctx: &mut C,
+        original_src_ip: Option<SpecifiedAddr<I::Addr>>,
+        original_dst_ip: SpecifiedAddr<I::Addr>,
+        original_body: &[u8],
+        err: I::ErrorCode,
+    );
+}
+
+/// The execution context provided by a transport layer protocol to the IP layer
+/// when a buffer is required.
+pub(crate) trait BufferIpTransportContext<I: IcmpIpExt, B: BufferMut, C: ?Sized>:
+    IpTransportContext<I, C>
+{
     /// Receive a transport layer packet in an IP packet.
     ///
     /// In the event of an unreachable port, `receive_ip_packet` returns the
@@ -140,7 +167,19 @@ pub(crate) trait IpTransportContext<I: Ip, B: BufferMut, C: ?Sized> {
     ) -> Result<(), (B, TransportReceiveError)>;
 }
 
-impl<I: Ip, B: BufferMut, C: ?Sized> IpTransportContext<I, B, C> for () {
+impl<I: IcmpIpExt, C: ?Sized> IpTransportContext<I, C> for () {
+    fn receive_icmp_error(
+        _ctx: &mut C,
+        _original_src_ip: Option<SpecifiedAddr<I::Addr>>,
+        _original_dst_ip: SpecifiedAddr<I::Addr>,
+        _original_body: &[u8],
+        err: I::ErrorCode,
+    ) {
+        trace!("IpTransportContext::receive_icmp_error: Received ICMP error message ({:?}) for unsupported IP protocol", err);
+    }
+}
+
+impl<I: IcmpIpExt, B: BufferMut, C: ?Sized> BufferIpTransportContext<I, B, C> for () {
     fn receive_ip_packet(
         _ctx: &mut C,
         _src_ip: I::Addr,
@@ -152,44 +191,6 @@ impl<I: Ip, B: BufferMut, C: ?Sized> IpTransportContext<I, B, C> for () {
             TransportReceiveError { inner: TransportReceiveErrorInner::ProtocolUnsupported },
         ))
     }
-}
-
-// TODO(joshlf): With all 256 protocol numbers (minus reserved ones) given their
-// own associated type in both traits, running `cargo check` on a 2018 MacBook
-// Pro takes over a minute. Eventually - and before we formally publish this as
-// a library - we should identify the bottleneck in the compiler and optimize
-// it. For the time being, however, we only support protocol numbers that we
-// actually use (TCP and UDP).
-
-/// The execution context for IPv6's transport layer.
-///
-/// `Ipv6TransportLayerContext` defines the [`IpTransportContext`] for each IPv6
-/// protocol number. The procol numbers 1 (ICMP) and 2 (IGMP) are used by the
-/// stack itself, and cannot be overriddedn.
-pub(crate) trait Ipv4TransportLayerContext<B: BufferMut> {
-    type Proto6: IpTransportContext<Ipv4, B, Self>;
-    type Proto17: IpTransportContext<Ipv4, B, Self>;
-}
-
-/// The execution context for IPv6's transport layer.
-///
-/// `Ipv6TransportLayerContext` defines the [`IpTransportContext`] for each IPv6
-/// protocol number. The procol numbers 0 (Hop-by-Hop Options), 58 (ICMPv6), 59
-/// (No Next Header), and 60 (Destination Options) are used by the stack itself,
-/// and cannot be overriddedn.
-pub(crate) trait Ipv6TransportLayerContext<B: BufferMut> {
-    type Proto6: IpTransportContext<Ipv6, B, Self>;
-    type Proto17: IpTransportContext<Ipv6, B, Self>;
-}
-
-impl<B: BufferMut, D: BufferDispatcher<B>> Ipv4TransportLayerContext<B> for Context<D> {
-    type Proto6 = ();
-    type Proto17 = crate::transport::udp::UdpIpTransportContext;
-}
-
-impl<B: BufferMut, D: BufferDispatcher<B>> Ipv6TransportLayerContext<B> for Context<D> {
-    type Proto6 = ();
-    type Proto17 = crate::transport::udp::UdpIpTransportContext;
 }
 
 /// The execution context provided by the IP layer to transport layer protocols.
@@ -232,6 +233,44 @@ impl<
         C: TransportIpContext<I> + FrameContext<B, IpPacketFromArgs<I::Addr>>,
     > BufferTransportIpContext<I, B> for C
 {
+}
+
+// TODO(joshlf): With all 256 protocol numbers (minus reserved ones) given their
+// own associated type in both traits, running `cargo check` on a 2018 MacBook
+// Pro takes over a minute. Eventually - and before we formally publish this as
+// a library - we should identify the bottleneck in the compiler and optimize
+// it. For the time being, however, we only support protocol numbers that we
+// actually use (TCP and UDP).
+
+/// The execution context for IPv6's transport layer.
+///
+/// `Ipv6TransportLayerContext` defines the [`IpTransportContext`] for each IPv6
+/// protocol number. The procol numbers 1 (ICMP) and 2 (IGMP) are used by the
+/// stack itself, and cannot be overridden.
+pub(crate) trait Ipv4TransportLayerContext {
+    type Proto6: IpTransportContext<Ipv4, Self>;
+    type Proto17: IpTransportContext<Ipv4, Self>;
+}
+
+/// The execution context for IPv6's transport layer.
+///
+/// `Ipv6TransportLayerContext` defines the [`IpTransportContext`] for
+/// each IPv6 protocol number. The procol numbers 0 (Hop-by-Hop Options), 58
+/// (ICMPv6), 59 (No Next Header), and 60 (Destination Options) are used by the
+/// stack itself, and cannot be overridden.
+pub(crate) trait Ipv6TransportLayerContext {
+    type Proto6: IpTransportContext<Ipv6, Self>;
+    type Proto17: IpTransportContext<Ipv6, Self>;
+}
+
+impl<D: EventDispatcher> Ipv4TransportLayerContext for Context<D> {
+    type Proto6 = ();
+    type Proto17 = crate::transport::udp::UdpIpTransportContext;
+}
+
+impl<D: EventDispatcher> Ipv6TransportLayerContext for Context<D> {
+    type Proto6 = ();
+    type Proto17 = crate::transport::udp::UdpIpTransportContext;
 }
 
 impl<A: IpAddress, B: BufferMut, D: BufferDispatcher<B>> FrameContext<B, IpPacketFromArgs<A>>
@@ -683,7 +722,7 @@ fn dispatch_receive_ipv4_packet<B: BufferMut, D: BufferDispatcher<B>>(
                     );
                     Ok(())
                 }
-                $($cond => <<Context<D> as Ipv4TransportLayerContext<_>>::$ty as IpTransportContext<Ipv4, _, _>>
+                $($cond => <<Context<D> as Ipv4TransportLayerContext>::$ty as BufferIpTransportContext<Ipv4, _, _>>
                             ::receive_ip_packet(ctx, src_ip, dst_ip, buffer),)*
                 // TODO(joshlf): Once all IP protocol numbers are covered,
                 // remove this default case.
@@ -765,7 +804,7 @@ fn dispatch_receive_ipv6_packet<B: BufferMut, D: BufferDispatcher<B>>(
                 // header whatsoever following the last lower-level header so we
                 // stop processing here.
                 IpProto::NoNextHeader => Ok(()),
-                $($cond => <<Context<D> as Ipv4TransportLayerContext<_>>::$ty as IpTransportContext<Ipv6, _, _>>
+                $($cond => <<Context<D> as Ipv4TransportLayerContext>::$ty as BufferIpTransportContext<Ipv6, _, _>>
                             ::receive_ip_packet(ctx, src_ip, dst_ip, buffer),)*
                 // TODO(joshlf): Once all IP Next Header numbers are covered,
                 // remove this default case.
@@ -1826,26 +1865,23 @@ impl<D: EventDispatcher> IcmpContext<Ipv4> for Context<D> {
     ) {
         self.increment_counter("IcmpContext<Ipv4>::receive_icmp_error");
         trace!("IcmpContext<Ipv4>::receive_icmp_error({:?})", err);
-        match original_proto {
-            IpProto::Icmp => crate::ip::icmp::receive_icmpv4_socket_error(
-                self,
-                original_src_ip,
-                original_dst_ip,
-                original_body,
-                err,
-            ),
-            IpProto::Udp => crate::transport::udp::receive_icmp_error::<Ipv4, _>(
-                self,
-                original_src_ip,
-                original_dst_ip,
-                original_body,
-                err,
-            ),
-            original_proto => trace!(
-                "IcmpContext<Ipv4>::receive_icmp_error: received ICMPv4 error message for unsupported protocol {:?}",
-                original_proto
-            ),
+
+        macro_rules! mtch {
+            ($($cond:pat => $ty:ident),*) => {
+                match original_proto {
+                    IpProto::Icmp => <IcmpIpTransportContext as IpTransportContext<Ipv4, _>>
+                                ::receive_icmp_error(self, original_src_ip, original_dst_ip, original_body, err),
+                    $($cond => <<Context<D> as Ipv4TransportLayerContext>::$ty as IpTransportContext<Ipv4, _>>
+                                ::receive_icmp_error(self, original_src_ip, original_dst_ip, original_body, err),)*
+                    // TODO(joshlf): Once all IP protocol numbers are covered,
+                    // remove this default case.
+                    _ => <() as IpTransportContext<Ipv4, _>>::receive_icmp_error(self, original_src_ip, original_dst_ip, original_body, err),
+                }
+            };
         }
+
+        #[rustfmt::skip]
+        mtch!(IpProto::Tcp => Proto6, IpProto::Udp => Proto17);
     }
 }
 
@@ -1915,26 +1951,22 @@ impl<D: EventDispatcher> IcmpContext<Ipv6> for Context<D> {
         self.increment_counter("IcmpContext<Ipv6>::receive_icmp_error");
         trace!("IcmpContext<Ipv6>::receive_icmp_error({:?})", err);
 
-        match original_next_header {
-            IpProto::Icmp => crate::ip::icmp::receive_icmpv6_socket_error(
-                self,
-                original_src_ip,
-                original_dst_ip,
-                original_body,
-                err,
-            ),
-            IpProto::Udp => crate::transport::udp::receive_icmp_error::<Ipv6, _>(
-                self,
-                original_src_ip,
-                original_dst_ip,
-                original_body,
-                err,
-            ),
-            original_next_header => trace!(
-                "IcmpContext<Ipv6>::receive_icmp_error: received ICMPv6 error message for unsupported protocol {:?}",
-                original_next_header
-            ),
+        macro_rules! mtch {
+            ($($cond:pat => $ty:ident),*) => {
+                match original_next_header {
+                    IpProto::Icmpv6 => <IcmpIpTransportContext as IpTransportContext<Ipv6, _>>
+                    ::receive_icmp_error(self, original_src_ip, original_dst_ip, original_body, err),
+                    $($cond => <<Context<D> as Ipv6TransportLayerContext>::$ty as IpTransportContext<Ipv6, _>>
+                                ::receive_icmp_error(self, original_src_ip, original_dst_ip, original_body, err),)*
+                    // TODO(joshlf): Once all IP protocol numbers are covered,
+                    // remove this default case.
+                    _ => <() as IpTransportContext<Ipv6, _>>::receive_icmp_error(self, original_src_ip, original_dst_ip, original_body, err),
+                }
+            };
         }
+
+        #[rustfmt::skip]
+        mtch!(IpProto::Tcp => Proto6, IpProto::Udp => Proto17);
     }
 }
 

@@ -20,8 +20,8 @@ use crate::context::{CounterContext, RngContext, RngContextExt, StateContext};
 use crate::data_structures::IdMapCollectionKey;
 use crate::error::{LocalAddressError, NetstackError, RemoteAddressError, SocketError};
 use crate::ip::{
-    icmp::IcmpIpExt, BufferTransportIpContext, IpPacketFromArgs, IpProto, IpTransportContext,
-    IpVersionMarker, TransportIpContext, TransportReceiveError,
+    icmp::IcmpIpExt, BufferIpTransportContext, BufferTransportIpContext, IpPacketFromArgs, IpProto,
+    IpTransportContext, IpVersionMarker, TransportIpContext, TransportReceiveError,
 };
 use crate::transport::{ConnAddrMap, ListenerAddrMap};
 use crate::wire::udp::{UdpPacket, UdpPacketBuilder, UdpPacketRaw, UdpParseArgs};
@@ -578,7 +578,44 @@ pub trait UdpEventDispatcher<I: IcmpIpExt> {
 /// An implementation of [`IpTransportContext`] for UDP.
 pub(crate) enum UdpIpTransportContext {}
 
-impl<I: IcmpIpExt, B: BufferMut, C: BufferUdpContext<I, B>> IpTransportContext<I, B, C>
+impl<I: IcmpIpExt, C: UdpContext<I>> IpTransportContext<I, C> for UdpIpTransportContext {
+    fn receive_icmp_error(
+        ctx: &mut C,
+        src_ip: Option<SpecifiedAddr<I::Addr>>,
+        dst_ip: SpecifiedAddr<I::Addr>,
+        mut udp_packet: &[u8],
+        err: I::ErrorCode,
+    ) {
+        ctx.increment_counter("UdpIpTransportContext::receive_icmp_error");
+        trace!("UdpIpTransportContext::receive_icmp_error({:?})", err);
+
+        // TODO(joshlf): Do something with this `try_unit!` calls other than
+        // just silently returning?
+        let udp_packet =
+            try_unit!(udp_packet.parse_with::<_, UdpPacketRaw<_>>(IpVersionMarker::<I>::default()));
+        if let (Some(src_ip), Some(src_port), Some(dst_port)) =
+            (src_ip, udp_packet.src_port(), udp_packet.dst_port())
+        {
+            if let Some(socket) =
+                ctx.get_state().conn_state.lookup(src_ip, dst_ip, src_port, dst_port)
+            {
+                let id = match socket {
+                    LookupResult::Conn(id, _) => Ok(id),
+                    LookupResult::Listener(id, _) | LookupResult::WildcardListener(id, _) => {
+                        Err(id)
+                    }
+                };
+                ctx.receive_icmp_error(id, err);
+            } else {
+                trace!("UdpIpTransportContext::receive_icmp_error: Got ICMP error message for nonexistent UDP socket; either the socket responsible has since been removed, or the error message was sent in error or corrupted");
+            }
+        } else {
+            trace!("UdpIpTransportContext::receive_icmp_error: Got ICMP error message for IP packet with an invalid source or destination IP or port");
+        }
+    }
+}
+
+impl<I: IcmpIpExt, B: BufferMut, C: BufferUdpContext<I, B>> BufferIpTransportContext<I, B, C>
     for UdpIpTransportContext
 {
     fn receive_ip_packet(
@@ -997,39 +1034,6 @@ impl<S: Serializer> From<S> for SendError {
     fn from(_s: S) -> SendError {
         // TODO(maufflick): Include useful information about the underlying error once propagated.
         SendError::Unknown
-    }
-}
-
-/// Receive an ICMP error related to a UDP socket.
-pub(crate) fn receive_icmp_error<I: IcmpIpExt, C: UdpContext<I>>(
-    ctx: &mut C,
-    src_ip: Option<SpecifiedAddr<I::Addr>>,
-    dst_ip: SpecifiedAddr<I::Addr>,
-    mut udp_packet: &[u8],
-    err: I::ErrorCode,
-) {
-    ctx.increment_counter("udp::receive_icmp_error");
-    trace!("udp::receive_icmp_error({:?})", err);
-
-    // TODO(joshlf): Do something with this `try_unit!` calls other than just
-    // silently returning?
-    let udp_packet =
-        try_unit!(udp_packet.parse_with::<_, UdpPacketRaw<_>>(IpVersionMarker::<I>::default()));
-    if let (Some(src_ip), Some(src_port), Some(dst_port)) =
-        (src_ip, udp_packet.src_port(), udp_packet.dst_port())
-    {
-        if let Some(socket) = ctx.get_state().conn_state.lookup(src_ip, dst_ip, src_port, dst_port)
-        {
-            let id = match socket {
-                LookupResult::Conn(id, _) => Ok(id),
-                LookupResult::Listener(id, _) | LookupResult::WildcardListener(id, _) => Err(id),
-            };
-            ctx.receive_icmp_error(id, err);
-        } else {
-            trace!("udp::receive_icmp_error: Got ICMP error message for nonexistent UDP socket; either the socket responsible has since been removed, or the error message was sent in error or corrupted");
-        }
-    } else {
-        trace!("udp::receive_icmp_error: Got ICMP error message for IP packet with an invalid source or destination IP or port");
     }
 }
 
@@ -2162,7 +2166,9 @@ mod tests {
                 let src_ip = SpecifiedAddr::new(packet.src_ip());
                 let dst_ip = SpecifiedAddr::new(packet.dst_ip()).unwrap();
                 let body = packet.body().into_inner();
-                super::receive_icmp_error(ctx, src_ip, dst_ip, body, error_code)
+                <UdpIpTransportContext as IpTransportContext<Ipv4, _>>::receive_icmp_error(
+                    ctx, src_ip, dst_ip, body, error_code,
+                )
             },
             Ipv4Addr::new([1, 2, 3, 4]),
         );
@@ -2174,7 +2180,9 @@ mod tests {
                 let src_ip = SpecifiedAddr::new(packet.src_ip());
                 let dst_ip = SpecifiedAddr::new(packet.dst_ip()).unwrap();
                 let body = packet.body().unwrap().into_inner();
-                super::receive_icmp_error(ctx, src_ip, dst_ip, body, error_code)
+                <UdpIpTransportContext as IpTransportContext<Ipv6, _>>::receive_icmp_error(
+                    ctx, src_ip, dst_ip, body, error_code,
+                )
             },
             Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8]),
         );

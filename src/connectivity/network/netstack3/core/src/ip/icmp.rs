@@ -26,7 +26,7 @@ use crate::ip::{
     socket::{
         BufferIpSocketContext, IpSock, IpSocket, IpSocketContext, SendError, UnroutableBehavior,
     },
-    IpDeviceIdContext, IpExt, IpProto, IpVersionMarker, IPV6_MIN_MTU,
+    IpDeviceIdContext, IpExt, IpProto, IpTransportContext, IpVersionMarker, IPV6_MIN_MTU,
 };
 use crate::transport::ConnAddrMap;
 use crate::wire::icmp::{
@@ -72,6 +72,11 @@ pub enum Icmpv6ErrorCode {
     ParameterProblem(Icmpv6ParameterProblemCode),
 }
 
+pub(crate) struct IcmpState<A: IpAddress, Instant, S> {
+    conns: ConnAddrMap<IcmpAddr<A>, IcmpConn<S>>,
+    error_send_bucket: TokenBucket<Instant>,
+}
+
 /// A builder for ICMPv4 state.
 #[derive(Copy, Clone)]
 pub struct Icmpv4StateBuilder {
@@ -113,8 +118,10 @@ impl Icmpv4StateBuilder {
 
     pub(crate) fn build<Instant, S>(self) -> Icmpv4State<Instant, S> {
         Icmpv4State {
-            conns: ConnAddrMap::default(),
-            error_send_bucket: TokenBucket::new(self.errors_per_second),
+            inner: IcmpState {
+                conns: ConnAddrMap::default(),
+                error_send_bucket: TokenBucket::new(self.errors_per_second),
+            },
             send_timestamp_reply: self.send_timestamp_reply,
         }
     }
@@ -122,22 +129,21 @@ impl Icmpv4StateBuilder {
 
 /// The state associated with the ICMPv4 protocol.
 pub(crate) struct Icmpv4State<Instant, S> {
-    conns: ConnAddrMap<IcmpAddr<Ipv4Addr>, IcmpConn<S>>,
-    error_send_bucket: TokenBucket<Instant>,
+    inner: IcmpState<Ipv4Addr, Instant, S>,
     send_timestamp_reply: bool,
 }
 
 // Used by `receive_icmp_echo_reply`.
-impl<Instant, S> AsRef<ConnAddrMap<IcmpAddr<Ipv4Addr>, IcmpConn<S>>> for Icmpv4State<Instant, S> {
-    fn as_ref(&self) -> &ConnAddrMap<IcmpAddr<Ipv4Addr>, IcmpConn<S>> {
-        &self.conns
+impl<Instant, S> AsRef<IcmpState<Ipv4Addr, Instant, S>> for Icmpv4State<Instant, S> {
+    fn as_ref(&self) -> &IcmpState<Ipv4Addr, Instant, S> {
+        &self.inner
     }
 }
 
 // Used by `send_icmpv4_echo_request_inner`.
-impl<Instant, S> AsMut<ConnAddrMap<IcmpAddr<Ipv4Addr>, IcmpConn<S>>> for Icmpv4State<Instant, S> {
-    fn as_mut(&mut self) -> &mut ConnAddrMap<IcmpAddr<Ipv4Addr>, IcmpConn<S>> {
-        &mut self.conns
+impl<Instant, S> AsMut<IcmpState<Ipv4Addr, Instant, S>> for Icmpv4State<Instant, S> {
+    fn as_mut(&mut self) -> &mut IcmpState<Ipv4Addr, Instant, S> {
+        &mut self.inner
     }
 }
 
@@ -171,41 +177,42 @@ impl Icmpv6StateBuilder {
 
     pub(crate) fn build<Instant, S>(self) -> Icmpv6State<Instant, S> {
         Icmpv6State {
-            conns: ConnAddrMap::default(),
-            error_send_bucket: TokenBucket::new(self.errors_per_second),
+            inner: IcmpState {
+                conns: ConnAddrMap::default(),
+                error_send_bucket: TokenBucket::new(self.errors_per_second),
+            },
         }
     }
 }
 
 /// The state associated with the ICMPv6 protocol.
 pub(crate) struct Icmpv6State<Instant, S> {
-    conns: ConnAddrMap<IcmpAddr<Ipv6Addr>, IcmpConn<S>>,
-    error_send_bucket: TokenBucket<Instant>,
+    inner: IcmpState<Ipv6Addr, Instant, S>,
 }
 
 // Used by `receive_icmp_echo_reply`.
-impl<Instant, S> AsRef<ConnAddrMap<IcmpAddr<Ipv6Addr>, IcmpConn<S>>> for Icmpv6State<Instant, S> {
-    fn as_ref(&self) -> &ConnAddrMap<IcmpAddr<Ipv6Addr>, IcmpConn<S>> {
-        &self.conns
+impl<Instant, S> AsRef<IcmpState<Ipv6Addr, Instant, S>> for Icmpv6State<Instant, S> {
+    fn as_ref(&self) -> &IcmpState<Ipv6Addr, Instant, S> {
+        &self.inner
     }
 }
 
 // Used by `send_icmpv6_echo_request_inner`.
-impl<Instant, S> AsMut<ConnAddrMap<IcmpAddr<Ipv6Addr>, IcmpConn<S>>> for Icmpv6State<Instant, S> {
-    fn as_mut(&mut self) -> &mut ConnAddrMap<IcmpAddr<Ipv6Addr>, IcmpConn<S>> {
-        &mut self.conns
+impl<Instant, S> AsMut<IcmpState<Ipv6Addr, Instant, S>> for Icmpv6State<Instant, S> {
+    fn as_mut(&mut self) -> &mut IcmpState<Ipv6Addr, Instant, S> {
+        &mut self.inner
     }
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]
-struct IcmpAddr<A: IpAddress> {
+pub(crate) struct IcmpAddr<A: IpAddress> {
     local_addr: SpecifiedAddr<A>,
     remote_addr: SpecifiedAddr<A>,
     icmp_id: u16,
 }
 
 #[derive(Clone)]
-struct IcmpConn<S> {
+pub(crate) struct IcmpConn<S> {
     icmp_id: u16,
     ip: S,
 }
@@ -251,6 +258,7 @@ pub(super) fn apply_ipv4_socket_update<C: Icmpv4SocketContext>(
     // We have to collect into a `Vec` here because the iterator borrows `ctx`,
     // which we need mutable access to in order to report the closures.
     let closed_conns = state
+        .inner
         .conns
         .update_retain(|conn| match conn.ip.apply_update(&update, meta) {
             Ok(()) => true,
@@ -272,6 +280,7 @@ pub(super) fn apply_ipv6_socket_update<C: Icmpv6SocketContext>(
     // We have to collect into a `Vec` here because the iterator borrows `ctx`,
     // which we need mutable access to in order to report the closures.
     let closed_conns = state
+        .inner
         .conns
         .update_retain(|conn| match conn.ip.apply_update(&update, meta) {
             Ok(()) => true,
@@ -479,7 +488,17 @@ impl<D: EventDispatcher> Icmpv6SocketContext for Context<D> {
 ///
 /// Unlike [`IcmpSocketContext`], `IcmpContext` is not exposed outside of this
 /// crate.
-pub(crate) trait IcmpContext<I: IcmpIpExt>: CounterContext + InstantContext {
+pub(crate) trait IcmpContext<I: IcmpIpExt>:
+    IcmpSocketContext<I>
+    + StateContext<
+        IcmpState<
+            I::Addr,
+            <Self as InstantContext>::Instant,
+            <Self as IpSocketContext<I>>::IpSocket,
+        >,
+    > + CounterContext
+    + InstantContext
+{
     // TODO(joshlf): If we end up needing to respond to these messages with new
     // outbound packets, then perhaps it'd be worth passing the original buffer
     // so that it can be reused?
@@ -619,6 +638,47 @@ pub(crate) trait BufferIcmpv4Context<B: BufferMut>:
 
 impl<B: BufferMut, C: Icmpv4Context + BufferIcmpContext<Ipv4, B>> BufferIcmpv4Context<B> for C {}
 
+impl<C>
+    StateContext<
+        IcmpState<
+            Ipv4Addr,
+            <Self as InstantContext>::Instant,
+            <Self as IpSocketContext<Ipv4>>::IpSocket,
+        >,
+    > for C
+where
+    C: InstantContext
+        + IpSocketContext<Ipv4>
+        + StateContext<
+            Icmpv4State<
+                <Self as InstantContext>::Instant,
+                <Self as IpSocketContext<Ipv4>>::IpSocket,
+            >,
+        >,
+{
+    fn get_state_with(
+        &self,
+        _id: (),
+    ) -> &IcmpState<
+        Ipv4Addr,
+        <Self as InstantContext>::Instant,
+        <Self as IpSocketContext<Ipv4>>::IpSocket,
+    > {
+        &self.get_state().inner
+    }
+
+    fn get_state_mut_with(
+        &mut self,
+        _id: (),
+    ) -> &mut IcmpState<
+        Ipv4Addr,
+        <Self as InstantContext>::Instant,
+        <Self as IpSocketContext<Ipv4>>::IpSocket,
+    > {
+        &mut self.get_state_mut().inner
+    }
+}
+
 /// The execution context for ICMPv6.
 ///
 /// `Icmpv6Context` is a shorthand for a larger collection of trait impls.
@@ -649,6 +709,47 @@ pub(crate) trait BufferIcmpv6Context<B: BufferMut>:
 
 impl<B: BufferMut, C: Icmpv6Context + BufferIcmpContext<Ipv6, B>> BufferIcmpv6Context<B> for C {}
 
+impl<C>
+    StateContext<
+        IcmpState<
+            Ipv6Addr,
+            <Self as InstantContext>::Instant,
+            <Self as IpSocketContext<Ipv6>>::IpSocket,
+        >,
+    > for C
+where
+    C: InstantContext
+        + IpSocketContext<Ipv6>
+        + StateContext<
+            Icmpv6State<
+                <Self as InstantContext>::Instant,
+                <Self as IpSocketContext<Ipv6>>::IpSocket,
+            >,
+        >,
+{
+    fn get_state_with(
+        &self,
+        _id: (),
+    ) -> &IcmpState<
+        Ipv6Addr,
+        <Self as InstantContext>::Instant,
+        <Self as IpSocketContext<Ipv6>>::IpSocket,
+    > {
+        &self.get_state().inner
+    }
+
+    fn get_state_mut_with(
+        &mut self,
+        _id: (),
+    ) -> &mut IcmpState<
+        Ipv6Addr,
+        <Self as InstantContext>::Instant,
+        <Self as IpSocketContext<Ipv6>>::IpSocket,
+    > {
+        &mut self.get_state_mut().inner
+    }
+}
+
 /// Attempt to send an ICMP or ICMPv6 error message, applying a rate limit.
 ///
 /// `try_send_error!($ctx, $e)` attempts to consume a token from the token
@@ -668,7 +769,8 @@ macro_rules! try_send_error {
         // unconditionally. See the documentation on the `CachedInstantContext`
         // type for more information.
         let instant_ctx = crate::context::new_cached_instant_context($ctx);
-        if $ctx.get_state_mut().error_send_bucket.try_take(&instant_ctx) {
+        let state: &mut IcmpState<_, _, _> = $ctx.get_state_mut();
+        if state.error_send_bucket.try_take(&instant_ctx) {
             $e
         } else {
             trace!("ip::icmp::try_send_error!: dropping rate-limited ICMP error message");
@@ -718,9 +820,7 @@ pub(crate) fn receive_icmpv4_packet<B: BufferMut, C: BufferIcmpv4Context<B> + Pm
             trace!("receive_icmpv4_packet: Received an EchoReply message");
             let id = echo_reply.message().id();
             let seq = echo_reply.message().seq();
-            receive_icmp_echo_reply::<_, _, _, Icmpv4State<_, _>, _>(
-                ctx, src_ip, dst_ip, id, seq, buffer,
-            );
+            receive_icmp_echo_reply(ctx, src_ip, dst_ip, id, seq, buffer);
         }
         Icmpv4Packet::TimestampRequest(timestamp_request) => {
             ctx.increment_counter("receive_icmpv4_packet::timestamp_request");
@@ -910,9 +1010,7 @@ pub(crate) fn receive_icmpv6_packet<
             trace!("receive_icmpv6_packet: Received an EchoReply message");
             let id = echo_reply.message().id();
             let seq = echo_reply.message().seq();
-            receive_icmp_echo_reply::<_, _, _, Icmpv6State<_, _>, _>(
-                ctx, src_ip, dst_ip, id, seq, buffer,
-            );
+            receive_icmp_echo_reply(ctx, src_ip, dst_ip, id, seq, buffer);
         }
         Icmpv6Packet::Ndp(packet) => ctx.receive_ndp_packet(
             device.expect("received NDP packet from localhost"),
@@ -1726,13 +1824,7 @@ fn is_icmp_error_message<I: IcmpIpExt>(proto: IpProto, buf: &[u8]) -> bool {
 }
 
 /// Common logic for receiving an ICMP echo reply.
-fn receive_icmp_echo_reply<
-    I: IcmpIpExt,
-    S,
-    B: BufferMut,
-    State: AsRef<ConnAddrMap<IcmpAddr<I::Addr>, IcmpConn<S>>>,
-    C: BufferIcmpContext<I, B> + StateContext<State>,
->(
+fn receive_icmp_echo_reply<I: IcmpIpExt, B: BufferMut, C: BufferIcmpContext<I, B>>(
     ctx: &mut C,
     src_ip: I::Addr,
     dst_ip: SpecifiedAddr<I::Addr>,
@@ -1741,7 +1833,7 @@ fn receive_icmp_echo_reply<
     body: B,
 ) {
     if let Some(src_ip) = SpecifiedAddr::new(src_ip) {
-        if let Some(conn) = ctx.get_state().as_ref().get_id_by_addr(&IcmpAddr {
+        if let Some(conn) = ctx.get_state().conns.get_id_by_addr(&IcmpAddr {
             local_addr: dst_ip,
             remote_addr: src_ip,
             icmp_id: id,
@@ -1766,79 +1858,48 @@ fn receive_icmp_echo_reply<
     }
 }
 
-/// Receive an ICMP(v4) error related to an ICMP socket.
-pub(crate) fn receive_icmpv4_socket_error<C: Icmpv4Context>(
-    ctx: &mut C,
-    original_src_ip: Option<SpecifiedAddr<Ipv4Addr>>,
-    original_dst_ip: SpecifiedAddr<Ipv4Addr>,
-    mut original_body: &[u8],
-    err: Icmpv4ErrorCode,
-) {
-    ctx.increment_counter("receive_icmpv4_socket_error");
-    trace!("receive_icmpv4_socket_error({:?})", err);
+/// An implementation of [`IpTransportContext`] for ICMP.
+pub(crate) enum IcmpIpTransportContext {}
 
-    let echo_request = if let Ok(echo_request) =
-        original_body.parse::<IcmpPacketRaw<Ipv4, _, IcmpEchoRequest>>()
-    {
-        echo_request
-    } else {
-        // NOTE: This might just mean that the error message was in response
-        // to a packet that we sent that wasn't an echo request, so we just
-        // silently ignore it.
-        return;
-    };
+impl<I: IcmpIpExt, C: IcmpContext<I>> IpTransportContext<I, C> for IcmpIpTransportContext
+where
+    IcmpEchoRequest: for<'a> IcmpMessage<I, &'a [u8]>,
+{
+    fn receive_icmp_error(
+        ctx: &mut C,
+        original_src_ip: Option<SpecifiedAddr<I::Addr>>,
+        original_dst_ip: SpecifiedAddr<I::Addr>,
+        mut original_body: &[u8],
+        err: I::ErrorCode,
+    ) {
+        ctx.increment_counter("IcmpIpTransportContext::receive_icmp_error");
+        trace!("IcmpIpTransportContext::receive_icmp_error({:?})", err);
 
-    let original_src_ip = try_unit!(original_src_ip.ok_or_else(|| {
-        trace!("receive_icmpv4_error: Got ICMPv4 error message for IPv4 packet with an unspecified destination IP address");
-    }));
-    let id = echo_request.message().id();
-    if let Some(conn) = ctx.get_state().as_ref().get_id_by_addr(&IcmpAddr {
-        local_addr: original_src_ip,
-        remote_addr: original_dst_ip,
-        icmp_id: id,
-    }) {
-        let seq = echo_request.message().seq();
-        IcmpSocketContext::receive_icmp_error(ctx, IcmpConnId::new(conn), seq, err);
-    } else {
-        trace!("receive_icmpv4_error: Got ICMPv4 error message for nonexistent ICMP echo socket; either the socket responsible has since been removed, or the error message was sent in error or corrupted");
-    }
-}
+        let echo_request = if let Ok(echo_request) =
+            original_body.parse::<IcmpPacketRaw<I, _, IcmpEchoRequest>>()
+        {
+            echo_request
+        } else {
+            // NOTE: This might just mean that the error message was in response
+            // to a packet that we sent that wasn't an echo request, so we just
+            // silently ignore it.
+            return;
+        };
 
-/// Receive an ICMPv6 error related to an ICMP socket.
-pub(crate) fn receive_icmpv6_socket_error<C: Icmpv6Context>(
-    ctx: &mut C,
-    original_src_ip: Option<SpecifiedAddr<Ipv6Addr>>,
-    original_dst_ip: SpecifiedAddr<Ipv6Addr>,
-    mut original_body: &[u8],
-    err: Icmpv6ErrorCode,
-) {
-    ctx.increment_counter("receive_icmpv6_socket_error");
-    trace!("receive_icmpv6_socket_error({:?})", err);
-
-    let echo_request = if let Ok(echo_request) =
-        original_body.parse::<IcmpPacketRaw<Ipv6, _, IcmpEchoRequest>>()
-    {
-        echo_request
-    } else {
-        // NOTE: This might just mean that the error message was in response
-        // to a packet that we sent that wasn't an echo request, so we just
-        // silently ignore it.
-        return;
-    };
-
-    let original_src_ip = try_unit!(original_src_ip.ok_or_else(|| {
-        trace!("receive_icmpv6_error: Got ICMPv6 error message for IPv6 packet with an unspecified destination IP address");
-    }));
-    let id = echo_request.message().id();
-    if let Some(conn) = ctx.get_state().as_ref().get_id_by_addr(&IcmpAddr {
-        local_addr: original_src_ip,
-        remote_addr: original_dst_ip,
-        icmp_id: id,
-    }) {
-        let seq = echo_request.message().seq();
-        IcmpSocketContext::receive_icmp_error(ctx, IcmpConnId::new(conn), seq, err);
-    } else {
-        trace!("receive_icmpv6_error: Got ICMPv6 error message for nonexistent ICMP echo socket; either the socket responsible has since been removed, or the error message was sent in error or corrupted");
+        let original_src_ip = try_unit!(original_src_ip.ok_or_else(|| {
+            trace!("IcmpIpTransportContext::receive_icmp_error: Got ICMP error message for IP packet with an unspecified destination IP address");
+        }));
+        let id = echo_request.message().id();
+        if let Some(conn) = ctx.get_state().conns.get_id_by_addr(&IcmpAddr {
+            local_addr: original_src_ip,
+            remote_addr: original_dst_ip,
+            icmp_id: id,
+        }) {
+            let seq = echo_request.message().seq();
+            IcmpSocketContext::receive_icmp_error(ctx, IcmpConnId::new(conn), seq, err);
+        } else {
+            trace!("IcmpIpTransportContext::receive_icmp_error: Got ICMP error message for nonexistent ICMP echo socket; either the socket responsible has since been removed, or the error message was sent in error or corrupted");
+        }
     }
 }
 
@@ -1850,21 +1911,6 @@ pub(crate) fn receive_icmpv6_socket_error<C: Icmpv6Context>(
 /// connection.
 pub fn send_icmpv4_echo_request<B: BufferMut, D: BufferDispatcher<B>>(
     ctx: &mut Context<D>,
-    conn: IcmpConnId<Ipv4>,
-    seq_num: u16,
-    body: B,
-) -> Result<(), SendError> {
-    send_icmpv4_echo_request_inner(ctx, conn, seq_num, body)
-}
-
-fn send_icmpv4_echo_request_inner<
-    B: BufferMut,
-    C: BufferIcmpSocketContext<Ipv4, B>
-        + StateContext<
-            Icmpv4State<<C as InstantContext>::Instant, <C as IpSocketContext<Ipv4>>::IpSocket>,
-        >,
->(
-    ctx: &mut C,
     conn: IcmpConnId<Ipv4>,
     seq_num: u16,
     body: B,
@@ -1884,30 +1930,10 @@ pub fn send_icmpv6_echo_request<B: BufferMut, D: BufferDispatcher<B>>(
     seq_num: u16,
     body: B,
 ) -> Result<(), SendError> {
-    send_icmpv6_echo_request_inner(ctx, conn, seq_num, body)
-}
-
-fn send_icmpv6_echo_request_inner<
-    B: BufferMut,
-    C: BufferIcmpSocketContext<Ipv6, B>
-        + StateContext<
-            Icmpv6State<<C as InstantContext>::Instant, <C as IpSocketContext<Ipv6>>::IpSocket>,
-        >,
->(
-    ctx: &mut C,
-    conn: IcmpConnId<Ipv6>,
-    seq_num: u16,
-    body: B,
-) -> Result<(), SendError> {
     send_icmp_echo_request_inner(ctx, conn, seq_num, body)
 }
 
-fn send_icmp_echo_request_inner<
-    I: IcmpIpExt,
-    B: BufferMut,
-    S: AsMut<ConnAddrMap<IcmpAddr<I::Addr>, IcmpConn<<C as IpSocketContext<I>>::IpSocket>>>,
-    C: BufferIcmpSocketContext<I, B> + StateContext<S>,
->(
+fn send_icmp_echo_request_inner<I: IcmpIpExt, B: BufferMut, C: BufferIcmpContext<I, B>>(
     ctx: &mut C,
     conn: IcmpConnId<I>,
     seq_num: u16,
@@ -1920,7 +1946,7 @@ where
     // cloning the entire socket.
     let conn = ctx
         .get_state_mut()
-        .as_mut()
+        .conns
         .get_conn_by_id(conn.0)
         .expect("icmp::send_icmp_echo_request_inner: no such conn")
         .clone();
@@ -1964,7 +1990,7 @@ fn new_icmpv4_connection_inner<C: Icmpv4SocketContext>(
 ) -> Result<IcmpConnId<Ipv4>, SocketError> {
     let ip =
         ctx.new_ip_socket(local_addr, remote_addr, IpProto::Icmp, UnroutableBehavior::Close, None)?;
-    Ok(new_icmp_connection_inner(&mut ctx.get_state_mut().conns, remote_addr, icmp_id, ip)?)
+    Ok(new_icmp_connection_inner(&mut ctx.get_state_mut().inner.conns, remote_addr, icmp_id, ip)?)
 }
 
 /// Creates a new ICMPv4 connection.
@@ -2000,7 +2026,7 @@ fn new_icmpv6_connection_inner<C: Icmpv6SocketContext>(
         UnroutableBehavior::Close,
         None,
     )?;
-    Ok(new_icmp_connection_inner(&mut ctx.get_state_mut().conns, remote_addr, icmp_id, ip)?)
+    Ok(new_icmp_connection_inner(&mut ctx.get_state_mut().inner.conns, remote_addr, icmp_id, ip)?)
 }
 
 fn new_icmp_connection_inner<I: IcmpIpExt + IpExt, S: IpSocket<I>>(
@@ -2690,13 +2716,13 @@ mod tests {
     /// Implement a number of traits and methods for the `$inner` and `$outer`
     /// context types.
     macro_rules! impl_context_traits {
-        ($ip:ident, $inner:ident, $outer:ident, $state:ident, $receive_icmp_socket_error:ident, $should_send:expr) => {
+        ($ip:ident, $inner:ident, $outer:ident, $state:ident, $should_send:expr) => {
             type $outer = DummyContext<$inner>;
 
             impl $inner {
                 fn with_errors_per_second(errors_per_second: u64) -> $inner {
                     let mut ctx = $inner::default();
-                    ctx.icmp_state.error_send_bucket = TokenBucket::new(errors_per_second);
+                    ctx.icmp_state.inner.error_send_bucket = TokenBucket::new(errors_per_second);
                     ctx
                 }
             }
@@ -2790,7 +2816,7 @@ mod tests {
                     self.increment_counter("IcmpContext::receive_icmp_error");
                     self.get_mut().inner.receive_icmp_error.push(err);
                     if original_proto == <$ip as crate::wire::icmp::IcmpIpExt>::ICMP_IP_PROTO {
-                        $receive_icmp_socket_error(
+                        <IcmpIpTransportContext as IpTransportContext<$ip, _>>::receive_icmp_error(
                             self,
                             original_src_ip,
                             original_dst_ip,
@@ -2861,22 +2887,12 @@ mod tests {
         };
     }
 
-    impl_context_traits!(
-        Ipv4,
-        DummyIcmpv4Context,
-        Dummyv4Context,
-        Icmpv4State,
-        receive_icmpv4_socket_error,
-        |f, s, d, _| { should_send_icmpv4_error(f, s, d) }
-    );
-    impl_context_traits!(
-        Ipv6,
-        DummyIcmpv6Context,
-        Dummyv6Context,
-        Icmpv6State,
-        receive_icmpv6_socket_error,
-        |f, s, d, a| { should_send_icmpv6_error(f, s, d, a) }
-    );
+    impl_context_traits!(Ipv4, DummyIcmpv4Context, Dummyv4Context, Icmpv4State, |f, s, d, _| {
+        should_send_icmpv4_error(f, s, d)
+    });
+    impl_context_traits!(Ipv6, DummyIcmpv6Context, Dummyv6Context, Icmpv6State, |f, s, d, a| {
+        should_send_icmpv6_error(f, s, d, a)
+    });
 
     impl NdpPacketHandler<DummyDeviceId> for Dummyv6Context {
         fn receive_ndp_packet<B: ByteSlice>(
@@ -3047,7 +3063,7 @@ mod tests {
             IcmpDestUnreachable::default(),
             &[
                 ("IcmpContext::receive_icmp_error", 1),
-                ("receive_icmpv4_socket_error", 1),
+                ("IcmpIpTransportContext::receive_icmp_error", 1),
                 ("IcmpSocketContext::receive_icmp_error", 1),
             ],
             |ctx| {
@@ -3072,7 +3088,7 @@ mod tests {
             IcmpTimeExceeded::default(),
             &[
                 ("IcmpContext::receive_icmp_error", 1),
-                ("receive_icmpv4_socket_error", 1),
+                ("IcmpIpTransportContext::receive_icmp_error", 1),
                 ("IcmpSocketContext::receive_icmp_error", 1),
             ],
             |ctx| {
@@ -3095,7 +3111,7 @@ mod tests {
             Icmpv4ParameterProblem::new(0),
             &[
                 ("IcmpContext::receive_icmp_error", 1),
-                ("receive_icmpv4_socket_error", 1),
+                ("IcmpIpTransportContext::receive_icmp_error", 1),
                 ("IcmpSocketContext::receive_icmp_error", 1),
             ],
             |ctx| {
@@ -3116,8 +3132,9 @@ mod tests {
 
         // Second, test with an original packet containing a malformed ICMP
         // packet (we accomplish this by leaving the IP packet's body empty). We
-        // should process this packet in `receive_icmpv4_socket_error`, but we
-        // should go no further - in particular, we should not call
+        // should process this packet in
+        // `IcmpIpTransportContext::receive_icmp_error`, but we should go no
+        // further - in particular, we should not call
         // `IcmpSocketContext::receive_icmp_error`.
 
         let mut buffer = Buf::new(&mut [], ..)
@@ -3136,7 +3153,7 @@ mod tests {
             IcmpDestUnreachable::default(),
             &[
                 ("IcmpContext::receive_icmp_error", 1),
-                ("receive_icmpv4_socket_error", 1),
+                ("IcmpIpTransportContext::receive_icmp_error", 1),
                 ("IcmpSocketContext::receive_icmp_error", 0),
             ],
             |ctx| {
@@ -3154,7 +3171,7 @@ mod tests {
             IcmpTimeExceeded::default(),
             &[
                 ("IcmpContext::receive_icmp_error", 1),
-                ("receive_icmpv4_socket_error", 1),
+                ("IcmpIpTransportContext::receive_icmp_error", 1),
                 ("IcmpSocketContext::receive_icmp_error", 0),
             ],
             |ctx| {
@@ -3170,7 +3187,7 @@ mod tests {
             Icmpv4ParameterProblem::new(0),
             &[
                 ("IcmpContext::receive_icmp_error", 1),
-                ("receive_icmpv4_socket_error", 1),
+                ("IcmpIpTransportContext::receive_icmp_error", 1),
                 ("IcmpSocketContext::receive_icmp_error", 0),
             ],
             |ctx| {
@@ -3184,7 +3201,8 @@ mod tests {
 
         // Third, test with an original packet containing a UDP packet. This
         // allows us to verify that protocol numbers are handled properly by
-        // checking that `receive_icmpv4_socket_error` was NOT called.
+        // checking that `IcmpIpTransportContext::receive_icmp_error` was NOT
+        // called.
 
         let mut buffer = Buf::new(&mut [], ..)
             .encapsulate(<Ipv4 as IpExt>::PacketBuilder::new(
@@ -3202,7 +3220,7 @@ mod tests {
             IcmpDestUnreachable::default(),
             &[
                 ("IcmpContext::receive_icmp_error", 1),
-                ("receive_icmpv4_socket_error", 0),
+                ("IcmpIpTransportContext::receive_icmp_error", 0),
                 ("IcmpSocketContext::receive_icmp_error", 0),
             ],
             |ctx| {
@@ -3220,7 +3238,7 @@ mod tests {
             IcmpTimeExceeded::default(),
             &[
                 ("IcmpContext::receive_icmp_error", 1),
-                ("receive_icmpv4_socket_error", 0),
+                ("IcmpIpTransportContext::receive_icmp_error", 0),
                 ("IcmpSocketContext::receive_icmp_error", 0),
             ],
             |ctx| {
@@ -3236,7 +3254,7 @@ mod tests {
             Icmpv4ParameterProblem::new(0),
             &[
                 ("IcmpContext::receive_icmp_error", 1),
-                ("receive_icmpv4_socket_error", 0),
+                ("IcmpIpTransportContext::receive_icmp_error", 0),
                 ("IcmpSocketContext::receive_icmp_error", 0),
             ],
             |ctx| {
@@ -3355,7 +3373,7 @@ mod tests {
             IcmpDestUnreachable::default(),
             &[
                 ("IcmpContext::receive_icmp_error", 1),
-                ("receive_icmpv6_socket_error", 1),
+                ("IcmpIpTransportContext::receive_icmp_error", 1),
                 ("IcmpSocketContext::receive_icmp_error", 1),
             ],
             |ctx| {
@@ -3378,7 +3396,7 @@ mod tests {
             IcmpTimeExceeded::default(),
             &[
                 ("IcmpContext::receive_icmp_error", 1),
-                ("receive_icmpv6_socket_error", 1),
+                ("IcmpIpTransportContext::receive_icmp_error", 1),
                 ("IcmpSocketContext::receive_icmp_error", 1),
             ],
             |ctx| {
@@ -3401,7 +3419,7 @@ mod tests {
             Icmpv6ParameterProblem::new(0),
             &[
                 ("IcmpContext::receive_icmp_error", 1),
-                ("receive_icmpv6_socket_error", 1),
+                ("IcmpIpTransportContext::receive_icmp_error", 1),
                 ("IcmpSocketContext::receive_icmp_error", 1),
             ],
             |ctx| {
@@ -3422,8 +3440,9 @@ mod tests {
 
         // Second, test with an original packet containing a malformed ICMPv6
         // packet (we accomplish this by leaving the IP packet's body empty). We
-        // should process this packet in `receive_icmpv6_socket_error`, but we
-        // should go no further - in particular, we should not call
+        // should process this packet in
+        // `IcmpIpTransportContext::receive_icmp_error`, but we should go no
+        // further - in particular, we should not call
         // `IcmpSocketContext::receive_icmp_error`.
 
         let mut buffer = Buf::new(&mut [], ..)
@@ -3442,7 +3461,7 @@ mod tests {
             IcmpDestUnreachable::default(),
             &[
                 ("IcmpContext::receive_icmp_error", 1),
-                ("receive_icmpv6_socket_error", 1),
+                ("IcmpIpTransportContext::receive_icmp_error", 1),
                 ("IcmpSocketContext::receive_icmp_error", 0),
             ],
             |ctx| {
@@ -3458,7 +3477,7 @@ mod tests {
             IcmpTimeExceeded::default(),
             &[
                 ("IcmpContext::receive_icmp_error", 1),
-                ("receive_icmpv6_socket_error", 1),
+                ("IcmpIpTransportContext::receive_icmp_error", 1),
                 ("IcmpSocketContext::receive_icmp_error", 0),
             ],
             |ctx| {
@@ -3474,7 +3493,7 @@ mod tests {
             Icmpv6ParameterProblem::new(0),
             &[
                 ("IcmpContext::receive_icmp_error", 1),
-                ("receive_icmpv6_socket_error", 1),
+                ("IcmpIpTransportContext::receive_icmp_error", 1),
                 ("IcmpSocketContext::receive_icmp_error", 0),
             ],
             |ctx| {
@@ -3488,7 +3507,8 @@ mod tests {
 
         // Third, test with an original packet containing a UDP packet. This
         // allows us to verify that protocol numbers are handled properly by
-        // checking that `receive_icmpv6_socket_error` was NOT called.
+        // checking that `IcmpIpTransportContext::receive_icmp_error` was NOT
+        // called.
 
         let mut buffer = Buf::new(&mut [], ..)
             .encapsulate(<Ipv6 as IpExt>::PacketBuilder::new(
@@ -3506,7 +3526,7 @@ mod tests {
             IcmpDestUnreachable::default(),
             &[
                 ("IcmpContext::receive_icmp_error", 1),
-                ("receive_icmpv6_socket_error", 0),
+                ("IcmpIpTransportContext::receive_icmp_error", 0),
                 ("IcmpSocketContext::receive_icmp_error", 0),
             ],
             |ctx| {
@@ -3522,7 +3542,7 @@ mod tests {
             IcmpTimeExceeded::default(),
             &[
                 ("IcmpContext::receive_icmp_error", 1),
-                ("receive_icmpv6_socket_error", 0),
+                ("IcmpIpTransportContext::receive_icmp_error", 0),
                 ("IcmpSocketContext::receive_icmp_error", 0),
             ],
             |ctx| {
@@ -3538,7 +3558,7 @@ mod tests {
             Icmpv6ParameterProblem::new(0),
             &[
                 ("IcmpContext::receive_icmp_error", 1),
-                ("receive_icmpv6_socket_error", 0),
+                ("IcmpIpTransportContext::receive_icmp_error", 0),
                 ("IcmpSocketContext::receive_icmp_error", 0),
             ],
             |ctx| {
