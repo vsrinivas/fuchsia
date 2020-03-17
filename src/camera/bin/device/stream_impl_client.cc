@@ -35,13 +35,7 @@ void StreamImpl::Client::PostSendFrame(fuchsia::camera3::FrameInfo frame) {
 void StreamImpl::Client::PostReceiveBufferCollection(
     fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
   ZX_ASSERT(async::PostTask(loop_.dispatcher(), [this, token = std::move(token)]() mutable {
-              if (watch_buffers_callback_) {
-                ZX_ASSERT(!token_);
-                watch_buffers_callback_(std::move(token));
-                watch_buffers_callback_ = nullptr;
-                return;
-              }
-              token_ = std::move(token);
+              buffers_.Set(std::move(token));
             }) == ZX_OK);
 }
 
@@ -79,18 +73,9 @@ void StreamImpl::Client::SetBufferCollection(
 }
 
 void StreamImpl::Client::WatchBufferCollection(WatchBufferCollectionCallback callback) {
-  if (watch_buffers_callback_) {
+  if (buffers_.Get(std::move(callback))) {
     CloseConnection(ZX_ERR_BAD_STATE);
-    return;
   }
-
-  if (token_) {
-    callback(std::move(token_));
-    token_ = nullptr;
-    return;
-  }
-
-  watch_buffers_callback_ = std::move(callback);
 }
 
 void StreamImpl::Client::GetNextFrame(GetNextFrameCallback callback) {

@@ -19,6 +19,7 @@
 #include <vector>
 
 #include "src/camera/bin/device/stream_impl.h"
+#include "src/camera/lib/hanging_get_helper/hanging_get_helper.h"
 
 // Represents a physical camera device, and serves multiple clients of the camera3.Device protocol.
 class DeviceImpl {
@@ -101,9 +102,7 @@ class DeviceImpl {
     uint64_t id_;
     async::Loop loop_;
     fidl::Binding<fuchsia::camera3::Device> binding_;
-    std::optional<uint32_t> last_sent_configuration_;
-    std::optional<uint32_t> pending_configuration_;
-    WatchCurrentConfigurationCallback watch_current_configuration_callback_;
+    camera::HangingGetHelper<uint32_t> configuration_;
   };
 
   async::Loop loop_;

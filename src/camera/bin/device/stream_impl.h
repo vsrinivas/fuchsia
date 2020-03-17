@@ -18,6 +18,8 @@
 #include <set>
 #include <vector>
 
+#include "src/camera/lib/hanging_get_helper/hanging_get_helper.h"
+
 // Represents a specific stream in a camera device's configuration. Serves multiple clients of the
 // camera3.Stream protocol.
 class StreamImpl {
@@ -91,8 +93,8 @@ class StreamImpl {
     uint64_t id_;
     async::Loop loop_;
     fidl::Binding<fuchsia::camera3::Stream> binding_;
-    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token_;
-    WatchBufferCollectionCallback watch_buffers_callback_;
+    camera::HangingGetHelper<fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken>>
+        buffers_;
     GetNextFrameCallback frame_callback_;
     bool participant_;
   };

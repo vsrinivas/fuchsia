@@ -17,6 +17,7 @@ source_set("lib") {
   ]
 
   deps = [
+    "//src/camera/lib/hanging_get_helper",
     "//src/lib/syslog/cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fbl",
