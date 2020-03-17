@@ -48,6 +48,10 @@ class Puppet : public test::inspect::validate::Validate {
     }
   }
 
+  void InitializeTree(InitializationParams params, InitializeTreeCallback callback) {
+    callback(nullptr, TestResult::UNIMPLEMENTED);
+  }
+
   void Act(Action action, ActCallback callback) {
     switch (action.Which()) {
       case Action::Tag::kCreateNode:
