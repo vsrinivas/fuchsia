@@ -1174,12 +1174,17 @@ impl<'a> ValidationContext<'a> {
         let decl = "OfferEventDecl";
         check_name(event.source_name.as_ref(), decl, "source_name", &mut self.errors);
 
-        // Only offer from realm is allowed.
-        match event.source.as_ref() {
+        // Only realm and framework are valid.
+        match event.source {
             Some(fsys::Ref::Realm(_)) => {}
-            None => self.errors.push(Error::missing_field(decl, "source")),
-            _ => self.errors.push(Error::invalid_field(decl, "source")),
-        }
+            Some(fsys::Ref::Framework(_)) => {}
+            Some(_) => {
+                self.errors.push(Error::invalid_field(decl, "source"));
+            }
+            None => {
+                self.errors.push(Error::missing_field(decl, "source"));
+            }
+        };
 
         let target_id = self.validate_offer_target(&event.target, decl, "target");
         if let (Some(target_id), Some(target_name)) = (target_id, event.target_name.as_ref()) {
@@ -3605,7 +3610,6 @@ mod tests {
                         Ref::Child(ChildRef {name: "netstack".to_string(), collection: None }),
                         Ref::Collection(CollectionRef {name: "modular".to_string() }),
                         Ref::Storage(StorageRef {name: "a".to_string()}),
-                        Ref::Framework(FrameworkRef {}),
                     ]
                     .into_iter()
                     .enumerate()
@@ -3638,7 +3642,6 @@ mod tests {
                 decl
             },
             result = Err(ErrorList::new(vec![
-                Error::invalid_field("OfferEventDecl", "source"),
                 Error::invalid_field("OfferEventDecl", "source"),
                 Error::invalid_field("OfferEventDecl", "source"),
                 Error::invalid_field("OfferEventDecl", "source"),

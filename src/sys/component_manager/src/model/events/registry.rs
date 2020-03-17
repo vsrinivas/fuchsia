@@ -13,7 +13,7 @@ use {
     fuchsia_trace as trace,
     futures::{channel::*, lock::Mutex, sink::SinkExt, StreamExt},
     std::{
-        collections::HashMap,
+        collections::{HashMap, HashSet},
         sync::{Arc, Weak},
     },
 };
@@ -22,9 +22,15 @@ use {
 /// Contains the Event that occurred along with a means to resume/unblock the component manager.
 #[must_use = "invoke resume() otherwise component manager will be halted indefinitely!"]
 pub struct Event {
+    /// The event itself.
     pub event: ComponentEvent,
 
-    // This Sender is used to unblock the component manager.
+    /// The scope where this event comes from. This can be seen as a superset of the
+    /// `event.target_moniker` itself given that the events might have been offered from an
+    /// ancestor realm.
+    pub scope_moniker: AbsoluteMoniker,
+
+    /// This Sender is used to unblock the component manager.
     responder: oneshot::Sender<()>,
 }
 
@@ -46,8 +52,8 @@ impl Event {
 /// to the client.
 #[derive(Clone)]
 pub struct EventDispatcher {
-    /// Optionally specifies a realm that this EventDispatcher can dispatch events from.
-    scope_moniker: Option<AbsoluteMoniker>,
+    /// Specifies the realms that this EventDispatcher can dispatch events from.
+    scope_monikers: HashSet<AbsoluteMoniker>,
     /// An `mpsc::Sender` used to dispatch an event. Note that this
     /// `mpsc::Sender` is wrapped in an Arc<Mutex<..>> to allow it to be cloneable
     /// and passed along to other tasks for dispatch.
@@ -55,18 +61,28 @@ pub struct EventDispatcher {
 }
 
 impl EventDispatcher {
-    fn new(scope_moniker: Option<AbsoluteMoniker>, tx: mpsc::Sender<Event>) -> Self {
-        Self { scope_moniker, tx: Arc::new(Mutex::new(tx)) }
+    fn new(scope_monikers: HashSet<AbsoluteMoniker>, tx: mpsc::Sender<Event>) -> Self {
+        // TODO(fxb/48360): flatten scope_monikers. There might be monikers that are
+        // contained within another moniker in the list.
+        Self { scope_monikers, tx: Arc::new(Mutex::new(tx)) }
     }
 
     /// Sends the event to an event stream, if fired in the scope of `scope_moniker`. Returns
     /// a responder which can be blocked on.
     async fn send(&self, event: ComponentEvent) -> Result<Option<oneshot::Receiver<()>>, Error> {
-        if let Some(scope_moniker) = &self.scope_moniker {
-            if !scope_moniker.contains_in_realm(&event.target_moniker) {
-                return Ok(None);
-            }
+        // TODO(fxb/48360): once flattening of monikers is done, we would expect to have a single
+        // moniker here. For now taking the first one and ignoring the rest.
+        // Ensure that the event is coming from a realm within the scope of this dispatcher.
+        let maybe_scope_moniker = self
+            .scope_monikers
+            .iter()
+            .filter(|moniker| moniker.contains_in_realm(&event.target_moniker))
+            .next();
+        if maybe_scope_moniker.is_none() {
+            return Ok(None);
         }
+
+        let scope_moniker = maybe_scope_moniker.unwrap().clone();
 
         trace::duration!("component_manager", "events:send");
         let event_type = format!("{:?}", event.payload.type_());
@@ -78,10 +94,11 @@ impl EventDispatcher {
             "event_type" => event_type.as_str(),
             "target_moniker" => target_moniker.as_str()
         );
+        //  TODO(fxb/48245): when adding support for EventSource async, this channel is not needed.
         let (responder_tx, responder_rx) = oneshot::channel();
         {
             let mut tx = self.tx.lock().await;
-            tx.send(Event { event, responder: responder_tx }).await?;
+            tx.send(Event { event, scope_moniker, responder: responder_tx }).await?;
         }
         Ok(Some(responder_rx))
     }
@@ -155,17 +172,17 @@ impl EventRegistry {
     /// Subscribes to events of a provided set of EventTypes.
     pub async fn subscribe(
         &self,
-        scope_moniker: Option<AbsoluteMoniker>,
-        event_types: Vec<EventType>,
+        event_types: Vec<(EventType, HashSet<AbsoluteMoniker>)>,
     ) -> EventStream {
+        // TODO(fxb/48510): get rid of this channel and use FIDL directly.
         let (tx, rx) = mpsc::channel(0);
-        let dispatcher = EventDispatcher::new(scope_moniker, tx);
         let event_stream = EventStream::new(rx);
 
         let mut dispatcher_map = self.dispatcher_map.lock().await;
-        for event_type in event_types {
+        for (event_type, scope_monikers) in event_types {
             let dispatchers = dispatcher_map.entry(event_type).or_insert(vec![]);
-            dispatchers.push(dispatcher.clone());
+            let dispatcher = EventDispatcher::new(scope_monikers, tx.clone());
+            dispatchers.push(dispatcher);
         }
 
         event_stream

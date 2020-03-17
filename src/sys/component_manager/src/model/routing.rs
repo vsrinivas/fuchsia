@@ -21,8 +21,9 @@ use {
     async_trait::async_trait,
     cm_rust::{
         self, CapabilityPath, ExposeDecl, ExposeDirectoryDecl, ExposeTarget, OfferDecl,
-        OfferDirectoryDecl, OfferDirectorySource, OfferRunnerSource, OfferServiceSource,
-        OfferStorageSource, StorageDirectorySource, UseDecl, UseDirectoryDecl, UseStorageDecl,
+        OfferDirectoryDecl, OfferDirectorySource, OfferEventSource, OfferRunnerSource,
+        OfferServiceSource, OfferStorageSource, StorageDirectorySource, UseDecl, UseDirectoryDecl,
+        UseStorageDecl,
     },
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io as fio, fuchsia_zircon as zx,
@@ -42,6 +43,7 @@ enum OfferSource<'a> {
     Directory(&'a OfferDirectorySource),
     Storage(&'a OfferStorageSource),
     Runner(&'a OfferRunnerSource),
+    Event(&'a OfferEventSource),
 }
 
 /// Describes the source of a capability, for any type of capability.
@@ -82,10 +84,39 @@ pub(super) async fn route_use_capability<'a>(
                 .await
         }
         UseDecl::Event(_) => {
-            // TODO(fxb/47285):  implement
+            // Events are logged separately through route_use_event_capability.
             Ok(())
         }
     }
+}
+
+pub(super) async fn route_use_event_capability<'a>(
+    use_decl: &'a UseDecl,
+    target_realm: &'a Arc<Realm>,
+) -> Result<(), ModelError> {
+    let (source, _cap_state) = find_used_capability_source(use_decl, target_realm).await?;
+
+    let capability_provider = Arc::new(Mutex::new(None));
+    let event = Event::new(
+        target_realm.abs_moniker.clone(),
+        EventPayload::CapabilityRouted {
+            source: source.clone(),
+            // The provider shouldn't be populated.
+            capability_provider: capability_provider.clone(),
+        },
+    );
+
+    target_realm.hooks.dispatch(&event).await?;
+
+    let capability_provider = { capability_provider.lock().await.take() };
+    if capability_provider.is_some() {
+        return Err(ModelError::EventCapabilityProviderError {
+            moniker: target_realm.abs_moniker.clone(),
+            event: source.name().map(|name| name.to_string()).unwrap_or("".to_string()),
+        });
+    }
+
+    Ok(())
 }
 
 /// Finds the source of the expose capability used at `source_path` by
@@ -596,7 +627,6 @@ async fn walk_offer_chain<'a>(
                     pos.capability,
                 ))),
             }?;
-
             return Ok(Some(CapabilitySource::Framework { capability, scope_moniker: None }));
         }
         let cur_realm = pos.realm().clone();
@@ -619,10 +649,7 @@ async fn walk_offer_chain<'a>(
             OfferDecl::Storage(s) => OfferSource::Storage(s.source()),
             OfferDecl::Runner(r) => OfferSource::Runner(&r.source),
             OfferDecl::Resolver(_) => return Err(ModelError::unsupported("Resolver capability")),
-            OfferDecl::Event(_) => {
-                // TODO(fxb/47285): implement
-                return Err(ModelError::unsupported("Event capability"));
-            }
+            OfferDecl::Event(e) => OfferSource::Event(&e.source),
         };
         let (dir_rights, decl_subdir) = match offer {
             OfferDecl::Directory(OfferDirectoryDecl { rights, subdir, .. }) => {
@@ -654,9 +681,25 @@ async fn walk_offer_chain<'a>(
                     scope_moniker: Some(pos.moniker().clone()),
                 }));
             }
+            OfferSource::Event(OfferEventSource::Framework) => {
+                // An event offered from framework is scoped to the current realm.
+                let capability =
+                    FrameworkCapability::framework_from_offer_decl(offer).map_err(|_| {
+                        ModelError::capability_discovery_error(format_err!(
+                            "no matching offers found for capability {} from component {}",
+                            pos.capability.source_id(),
+                            pos.moniker(),
+                        ))
+                    })?;
+                return Ok(Some(CapabilitySource::Framework {
+                    capability,
+                    scope_moniker: Some(pos.moniker().clone()),
+                }));
+            }
             OfferSource::Protocol(OfferServiceSource::Realm)
             | OfferSource::Storage(OfferStorageSource::Realm)
-            | OfferSource::Runner(OfferRunnerSource::Realm) => {
+            | OfferSource::Runner(OfferRunnerSource::Realm)
+            | OfferSource::Event(OfferEventSource::Realm) => {
                 // The offered capability comes from the realm, so follow the
                 // parent
                 pos.capability = ComponentCapability::Offer(offer.clone());

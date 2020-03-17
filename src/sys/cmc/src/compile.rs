@@ -175,6 +175,7 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<cm::Use>, Error> {
             out_uses.push(cm::Use::Runner(cm::UseRunner { source_name: cm::Name::new(p.clone())? }))
         } else if let Some(p) = use_.event() {
             let target_id = one_target_capability_id(use_, use_)?;
+            // TODO(fxb/48437): default source for events should be framework not realm.
             let source = extract_use_source(use_)?;
             out_uses.push(cm::Use::Event(cm::UseEvent {
                 source,

@@ -24,36 +24,64 @@ use {
     },
 };
 
-#[derive(Clone, Debug, Eq, PartialEq, Hash)]
-pub enum EventType {
-    /// Keep the event types listed below in alphabetical order!
+/// Defines the `EventType` enum as well as its implementation.
+/// |description| is the description of the event that will be a doc comment on that event type.
+/// |name| is the name of the event on CamelCase format, capitalized.
+/// |string_name| is the name of the event on snake_case format, not capitalized.
+macro_rules! events {
+    ([$($(#[$description:meta])* ($name:ident, $string_name:ident),)*]) => {
+        #[derive(Clone, Debug, Eq, PartialEq, Hash)]
+        pub enum EventType {
+            $(
+                $(#[$description])*
+                $name,
+            )*
+        }
 
+        impl ToString for EventType {
+            fn to_string(&self) -> String {
+                match self {
+                    $(
+                        EventType::$name => stringify!($string_name),
+                    )*
+                }
+                .to_string()
+            }
+        }
+
+        impl EventType {
+            /// Returns all available event types.
+            pub fn values() -> Vec<EventType> {
+                vec![
+                    $(EventType::$name,)*
+                ]
+            }
+        }
+    };
+}
+
+// Keep the event types listed below in alphabetical order!
+events!([
     /// A capability is being requested by a component and requires routing.
     /// The event propagation system is used to supply the capability being requested.
-    CapabilityRouted,
-
+    (CapabilityRouted, capability_routed),
     /// An instance was destroyed successfully. The instance is stopped and no longer
     /// exists in the parent's realm.
-    Destroyed,
-
+    (Destroyed, destroyed),
     /// A component instance was discovered.
-    Discovered,
-
+    (Discovered, discovered),
     /// Destruction of an instance has begun. The instance may/may not be stopped by this point.
     /// The instance still exists in the parent's realm but will soon be removed.
     /// TODO(fxb/39417): Ensure the instance is stopped before this event.
-    MarkedForDestruction,
-
+    (MarkedForDestruction, marked_for_destruction),
     /// An instance's declaration was resolved successfully for the first time.
-    Resolved,
-
+    (Resolved, resolved),
     /// An instance is about to be started.
-    Started,
-
+    (Started, started),
     /// An instance was stopped successfully.
     /// This event must occur before Destroyed.
-    Stopped,
-}
+    (Stopped, stopped),
+]);
 
 /// The component manager calls out to objects that implement the `Hook` trait on registered
 /// component manager events. Hooks block the flow of a task, and can mutate, decorate and replace

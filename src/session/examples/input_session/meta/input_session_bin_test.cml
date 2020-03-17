@@ -16,17 +16,20 @@
         },
         {
             protocol: [
+                "/svc/fuchsia.process.Launcher",
+                "/svc/fuchsia.logger.LogSink",
+            ],
+        },
+        {
+            protocol: [
                 "/svc/fuchsia.test.events.EventSourceSync",
                 "/svc/fuchsia.sys2.Realm",
             ],
             from: "framework"
         },
-        {
-            protocol: [
-                "/svc/fuchsia.process.Launcher",
-                "/svc/fuchsia.logger.LogSink",
-            ],
-        },
+        { "event": "capability_routed", "from": "framework" },
+        { "event": "started", "from": "framework" },
+        { "event": "resolved", "from": "framework" },
     ],
     expose: [
         {

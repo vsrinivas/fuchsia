@@ -69,6 +69,8 @@ test_package("events_integration_test") {
     "components:interpose_echo_looper_bin",
     "components:nested_child_bin",
     "components:nested_reporter_bin",
+    "components:realm_offered_bin",
+    "components:realm_offered_nested",
     "//examples/components/routing/echo_server",
   ]
 
@@ -125,6 +127,18 @@ test_package("events_integration_test") {
       path = rebase_path("components/event_dispatch_order/meta/child.cml")
       dest = "event_dispatch_order_child.cm"
     },
+    {
+      path = rebase_path("components/realm_offered/meta/root.cml")
+      dest = "realm_offered_root.cm"
+    },
+    {
+      path = rebase_path("components/realm_offered/meta/nested.cml")
+      dest = "realm_offered_nested.cm"
+    },
+    {
+      path = rebase_path("components/realm_offered/meta/reporter.cml")
+      dest = "realm_offered_reporter.cm"
+    },
   ]
 
   binaries = [
@@ -157,6 +171,12 @@ test_package("events_integration_test") {
     },
     {
       name = "event_dispatch_order_stub_component"
+    },
+    {
+      name = "realm_offered_reporter"
+    },
+    {
+      name = "realm_offered_nested"
     },
   ]
 

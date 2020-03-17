@@ -331,12 +331,12 @@ impl Hook for RealmCapabilityHost {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::events::registry::EventRegistry;
     use {
         crate::{
             builtin_environment::BuiltinEnvironment,
             model::{
                 binding::Binder,
+                events::core::EventSourceFactory,
                 model::ModelParams,
                 moniker::AbsoluteMoniker,
                 resolver::ResolverRegistry,
@@ -591,15 +591,18 @@ mod tests {
         let hook = Arc::new(TestHook::new());
 
         let events = vec![EventType::MarkedForDestruction, EventType::Destroyed];
-        let event_registry = Arc::new(EventRegistry::new());
-        let mut event_stream = event_registry.subscribe(None, events.clone()).await;
+
+        let event_source_factory = Arc::new(EventSourceFactory::new());
+        let event_source = event_source_factory.create_for_test(AbsoluteMoniker::root()).await;
+        let mut event_stream =
+            event_source.subscribe(events.clone()).await.expect("subscribe to event stream");
 
         let mut hooks = vec![];
         hooks.append(&mut hook.hooks());
         hooks.append(&mut vec![HooksRegistration::new(
             "EventRegistry",
             events,
-            Arc::downgrade(&event_registry) as Weak<dyn Hook>,
+            event_source.registry() as Weak<dyn Hook>,
         )]);
         let test = RealmCapabilityTest::new(
             mock_resolver,

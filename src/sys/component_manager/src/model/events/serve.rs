@@ -43,19 +43,15 @@ pub async fn serve_event_source_sync(
                             .collect();
 
                         // Subscribe to events.
-                        let event_stream = event_source.subscribe(event_types).await;
-                        let scope = event_source.scope();
+                        let maybe_event_stream = event_source.subscribe(event_types).await;
 
                         // Unblock the component
                         responder.send()?;
 
                         // Serve the event_stream over FIDL asynchronously
-                        serve_event_stream(
-                            event_stream,
-                            scope.unwrap_or(AbsoluteMoniker::root()),
-                            stream,
-                        )
-                        .await?;
+                        if let Some(event_stream) = maybe_event_stream {
+                            serve_event_stream(event_stream, stream).await?;
+                        }
                     }
                     fevents::EventSourceSyncRequest::StartComponentTree { responder } => {
                         event_source.start_component_tree().await;
@@ -74,7 +70,6 @@ pub async fn serve_event_source_sync(
 /// Serves EventStream FIDL requests received over the provided stream.
 async fn serve_event_stream(
     mut event_stream: EventStream,
-    scope_moniker: AbsoluteMoniker,
     client_end: ClientEnd<fevents::EventStreamMarker>,
 ) -> Result<(), fidl::Error> {
     let listener = client_end.into_proxy().expect("cannot create proxy from client_end");
@@ -82,7 +77,7 @@ async fn serve_event_stream(
         trace::duration!("component_manager", "events:fidl_get_next");
         // Create the basic Event FIDL object.
         // This will begin serving the Handler protocol asynchronously.
-        let event_fidl_object = create_event_fidl_object(&scope_moniker, event);
+        let event_fidl_object = create_event_fidl_object(event);
 
         if let Err(e) = listener.on_event(event_fidl_object) {
             // It's not an error for the client to drop the listener.
@@ -148,12 +143,13 @@ fn maybe_create_event_payload(
 
 /// Creates the basic FIDL Event object containing the event type, target_realm
 /// and basic handler for resumption.
-fn create_event_fidl_object(scope_moniker: &AbsoluteMoniker, event: Event) -> fevents::Event {
+fn create_event_fidl_object(event: Event) -> fevents::Event {
     let event_type = Some(convert_std_event_type_to_fidl(event.event.payload.type_()));
     let target_relative_moniker =
-        RelativeMoniker::from_absolute(scope_moniker, &event.event.target_moniker);
+        RelativeMoniker::from_absolute(&event.scope_moniker, &event.event.target_moniker);
     let target_moniker = Some(target_relative_moniker.to_string());
-    let event_payload = maybe_create_event_payload(scope_moniker, event.event.payload.clone());
+    let event_payload =
+        maybe_create_event_payload(&event.scope_moniker, event.event.payload.clone());
     let handler = Some(serve_handler_async(event));
     fevents::Event { event_type, target_moniker, handler, event_payload }
 }

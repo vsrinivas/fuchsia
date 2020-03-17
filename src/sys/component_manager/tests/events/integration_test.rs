@@ -103,6 +103,50 @@ async fn scoped_events_test() -> Result<(), Error> {
 }
 
 #[fasync::run_singlethreaded(test)]
+async fn realm_offered_event_source_test() -> Result<(), Error> {
+    let test = BlackBoxTest::default(
+        "fuchsia-pkg://fuchsia.com/events_integration_test#meta/realm_offered_root.cm",
+    )
+    .await?;
+
+    let event_source = test.connect_to_event_source().await?;
+
+    // Inject echo capability for `root/nested_realm/reporter` so that we can observe its messages
+    // here.
+    let mut echo_rx = {
+        let mut event_stream = event_source.subscribe(vec![CapabilityRouted::TYPE]).await?;
+
+        event_source.start_component_tree().await?;
+
+        // Wait for `reporter` to connect to the service.
+        let event = event_stream
+            .wait_until_framework_capability(
+                "./nested_realm:0/reporter:0",
+                "/svc/fidl.examples.routing.echo.Echo",
+                Some("./nested_realm:0/reporter:0"),
+            )
+            .await?;
+
+        // Setup the echo capability.
+        let (capability, echo_rx) = EchoCapability::new();
+        event.inject(capability).await?;
+        event.resume().await?;
+
+        echo_rx
+    };
+
+    // Verify that the `reporter` sees `Started` for the three components started under the
+    // `nested_realm`.
+    for child in vec!["a", "b", "c"] {
+        let events_echo = echo_rx.next().await.unwrap();
+        assert_eq!(events_echo.message, format!("./child_{}:0", child));
+        events_echo.resume();
+    }
+
+    Ok(())
+}
+
+#[fasync::run_singlethreaded(test)]
 async fn nested_event_source_test() -> Result<(), Error> {
     let test = BlackBoxTest::default(
         "fuchsia-pkg://fuchsia.com/events_integration_test#meta/nested_reporter.cm",

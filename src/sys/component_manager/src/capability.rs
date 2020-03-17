@@ -46,6 +46,18 @@ impl CapabilitySource {
             CapabilitySource::StorageDecl(decl, _) => Some(&decl.source_path),
         }
     }
+
+    pub fn name(&self) -> Option<String> {
+        match self {
+            CapabilitySource::Component { capability, .. } => {
+                capability.source_name().map(|name| name.to_string())
+            }
+            CapabilitySource::Framework { capability, .. } => {
+                capability.name().map(|name| name.to_string())
+            }
+            CapabilitySource::StorageDecl(decl, _) => Some(decl.name.clone()),
+        }
+    }
 }
 
 /// Describes a capability provided by the component manager which could either be
@@ -58,6 +70,7 @@ pub enum FrameworkCapability {
     Protocol(CapabilityPath),
     Directory(CapabilityPath),
     Runner(CapabilityName),
+    Event(CapabilityName),
 }
 
 impl FrameworkCapability {
@@ -66,7 +79,17 @@ impl FrameworkCapability {
             FrameworkCapability::Service(source_path) => Some(&source_path),
             FrameworkCapability::Protocol(source_path) => Some(&source_path),
             FrameworkCapability::Directory(source_path) => Some(&source_path),
-            _ => None,
+            FrameworkCapability::Runner(_) | FrameworkCapability::Event(_) => None,
+        }
+    }
+
+    pub fn name(&self) -> Option<&CapabilityName> {
+        match self {
+            FrameworkCapability::Runner(name) => Some(&name),
+            FrameworkCapability::Event(name) => Some(&name),
+            FrameworkCapability::Service(_)
+            | FrameworkCapability::Protocol(_)
+            | FrameworkCapability::Directory(_) => None,
         }
     }
 
@@ -81,10 +104,11 @@ impl FrameworkCapability {
             UseDecl::Directory(d) if d.source == UseSource::Realm => {
                 Ok(FrameworkCapability::Directory(d.source_path.clone()))
             }
-            UseDecl::Runner(s) => Ok(FrameworkCapability::Runner(s.source_name.clone())),
-            _ => {
-                return Err(Error::InvalidFrameworkCapability {});
+            UseDecl::Event(e) if e.source == UseSource::Realm => {
+                Ok(FrameworkCapability::Event(e.source_name.clone()))
             }
+            UseDecl::Runner(s) => Ok(FrameworkCapability::Runner(s.source_name.clone())),
+            _ => Err(Error::InvalidFrameworkCapability {}),
         }
     }
 
@@ -98,6 +122,9 @@ impl FrameworkCapability {
             }
             OfferDecl::Runner(s) if s.source == OfferRunnerSource::Realm => {
                 Ok(FrameworkCapability::Runner(s.source_name.clone()))
+            }
+            OfferDecl::Event(e) if e.source == OfferEventSource::Realm => {
+                Ok(FrameworkCapability::Event(e.source_name.clone()))
             }
             _ => {
                 return Err(Error::InvalidFrameworkCapability {});
@@ -124,6 +151,9 @@ impl FrameworkCapability {
             UseDecl::Directory(d) if d.source == UseSource::Framework => {
                 Ok(FrameworkCapability::Directory(d.source_path.clone()))
             }
+            UseDecl::Event(e) if e.source == UseSource::Framework => {
+                Ok(FrameworkCapability::Event(e.source_name.clone()))
+            }
             _ => {
                 return Err(Error::InvalidScopedFrameworkCapability {});
             }
@@ -138,9 +168,10 @@ impl FrameworkCapability {
             OfferDecl::Directory(d) if d.source == OfferDirectorySource::Framework => {
                 Ok(FrameworkCapability::Directory(d.source_path.clone()))
             }
-            _ => {
-                return Err(Error::InvalidScopedFrameworkCapability {});
+            OfferDecl::Event(e) if e.source == OfferEventSource::Framework => {
+                Ok(FrameworkCapability::Event(e.source_name.clone()))
             }
+            _ => Err(Error::InvalidScopedFrameworkCapability {}),
         }
     }
 
@@ -239,6 +270,12 @@ impl ComponentCapability {
                 ..
             })) => Some(source_name),
             ComponentCapability::Offer(OfferDecl::Runner(OfferRunnerDecl {
+                source_name, ..
+            })) => Some(source_name),
+            ComponentCapability::Use(UseDecl::Event(UseEventDecl { source_name, .. })) => {
+                Some(source_name)
+            }
+            ComponentCapability::Offer(OfferDecl::Event(OfferEventDecl {
                 source_name, ..
             })) => Some(source_name),
             _ => None,
@@ -398,7 +435,7 @@ impl ComponentCapability {
             ),
             // Runners offered from parent.
             (ComponentCapability::Use(UseDecl::Runner(child_use)), OfferDecl::Runner(offer)) => {
-                Self::is_offer_runner_match(
+                Self::is_offer_runner_or_event_match(
                     child_moniker,
                     &child_use.source_name,
                     &offer.target,
@@ -408,7 +445,25 @@ impl ComponentCapability {
             (
                 ComponentCapability::Offer(OfferDecl::Runner(child_offer)),
                 OfferDecl::Runner(parent_offer),
-            ) => Self::is_offer_runner_match(
+            ) => Self::is_offer_runner_or_event_match(
+                child_moniker,
+                &child_offer.source_name,
+                &parent_offer.target,
+                &parent_offer.target_name,
+            ),
+            // Events offered from parent.
+            (ComponentCapability::Use(UseDecl::Event(child_use)), OfferDecl::Event(offer)) => {
+                Self::is_offer_runner_or_event_match(
+                    child_moniker,
+                    &child_use.source_name,
+                    &offer.target,
+                    &offer.target_name,
+                )
+            }
+            (
+                ComponentCapability::Offer(OfferDecl::Event(child_offer)),
+                OfferDecl::Event(parent_offer),
+            ) => Self::is_offer_runner_or_event_match(
                 child_moniker,
                 &child_offer.source_name,
                 &parent_offer.target,
@@ -488,7 +543,7 @@ impl ComponentCapability {
         target_matches_moniker(parent_target, child_moniker)
     }
 
-    fn is_offer_runner_match(
+    fn is_offer_runner_or_event_match(
         child_moniker: &ChildMoniker,
         source_name: &CapabilityName,
         target: &OfferTarget,
@@ -695,6 +750,44 @@ mod tests {
         // Mismatched cap name.
         let misnamed_child_cap = ComponentCapability::Use(UseDecl::Runner(UseRunnerDecl {
             source_name: "dwarf".into(),
+        }));
+        assert_eq!(misnamed_child_cap.find_offer_source(&parent_decl, &"child:0".into()), None);
+    }
+
+    #[test]
+    fn find_offer_source_event() {
+        // Parent offers event named "started" to "child"
+        let parent_decl = ComponentDecl {
+            offers: vec![OfferDecl::Event(cm_rust::OfferEventDecl {
+                source: cm_rust::OfferEventSource::Realm,
+                source_name: "started".into(),
+                target: cm_rust::OfferTarget::Child("child".to_string()),
+                target_name: "started".into(),
+            })],
+            ..default_component_decl()
+        };
+
+        // A child named "child" uses the event "started" offered by its parent. Should
+        // successfully match the declaration.
+        let child_cap = ComponentCapability::Use(UseDecl::Event(UseEventDecl {
+            source: cm_rust::UseSource::Realm,
+            source_name: "started".into(),
+            target_name: "started-x".into(),
+        }));
+
+        assert_eq!(
+            child_cap.find_offer_source(&parent_decl, &"child:0".into()),
+            Some(&parent_decl.offers[0])
+        );
+
+        // Mismatched child name.
+        assert_eq!(child_cap.find_offer_source(&parent_decl, &"other-child:0".into()), None);
+
+        // Mismatched capability name.
+        let misnamed_child_cap = ComponentCapability::Use(UseDecl::Event(UseEventDecl {
+            source: cm_rust::UseSource::Realm,
+            source_name: "foo".into(),
+            target_name: "started".into(),
         }));
         assert_eq!(misnamed_child_cap.find_offer_source(&parent_decl, &"child:0".into()), None);
     }

@@ -12,6 +12,7 @@
           ],
           "from": "framework"
       },
+      {"event": "started", "from": "framework"}
     ],
     "children": [
         {

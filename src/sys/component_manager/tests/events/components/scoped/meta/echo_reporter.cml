@@ -12,6 +12,8 @@
           "protocol": "/svc/fidl.examples.routing.echo.Echo",
           "from": "framework",
       },
+      { "event": "capability_routed", "from": "framework" },
+      { "event": "started", "from": "framework" }
     ],
     "offer": [
         // Offer the ELF runner to children.

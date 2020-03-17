@@ -54,6 +54,16 @@ pub(super) async fn do_start(realm: Arc<Realm>) -> Result<(), ModelError> {
         e
     })?;
 
+    // Register event capabilities if any. It identifies the sources of these events (might be the
+    // containing realm or this realm itself). It consturcts an "allow-list tree" of events and
+    // realms.
+    // TODO(fxb/48503): route events when subscribing to them, not beforehand as here as the stream
+    // might never be created so we are wasting resources.
+    realm.register_events().await.map_err(|e| {
+        error!("failed to register events for {}: {:?}", realm.abs_moniker, e);
+        e
+    })?;
+
     // Generate the Runtime which will be set in the Execution.
     let (pending_runtime, start_info, controller_server) =
         make_execution_runtime(realm.as_weak(), resolved_url.clone(), package, &decl).await?;

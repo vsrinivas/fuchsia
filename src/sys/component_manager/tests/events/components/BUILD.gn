@@ -111,3 +111,35 @@ rustc_binary("event_dispatch_order_stub_component_bin") {
   source_root = "event_dispatch_order/stub_component.rs"
   deps = [ "//third_party/rust_crates:anyhow" ]
 }
+
+rustc_binary("realm_offered_nested") {
+  name = "realm_offered_nested"
+  edition = "2018"
+  source_root = "realm_offered/nested.rs"
+  deps = [
+    "//examples/components/routing/fidl:echo-rustc",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/sys/component_manager/tests:test_utils_lib",
+    "//src/sys/component_manager/tests/fidl:components-rustc",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
+  ]
+}
+
+rustc_binary("realm_offered_bin") {
+  name = "realm_offered_reporter"
+  edition = "2018"
+  source_root = "realm_offered/reporter.rs"
+  deps = [
+    "//examples/components/routing/fidl:echo-rustc",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/sys/component_manager/tests:test_utils_lib",
+    "//src/sys/component_manager/tests/fidl:components-rustc",
+    "//third_party/rust_crates:anyhow",
+  ]
+}

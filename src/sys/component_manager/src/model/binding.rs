@@ -129,7 +129,7 @@ mod tests {
             builtin_environment::BuiltinEnvironment,
             model::{
                 actions::{Action, ActionSet},
-                events::registry::EventRegistry,
+                events::core::EventSourceFactory,
                 hooks::{EventType, Hook, HooksRegistration},
                 model::{ComponentManagerConfig, ModelParams},
                 moniker::PartialMoniker,
@@ -231,13 +231,15 @@ mod tests {
         mock_resolver.add_component("system", component_decl_with_test_runner());
 
         let events = vec![EventType::Started];
-        let event_registry = Arc::new(EventRegistry::new());
+        let event_source_factory = Arc::new(EventSourceFactory::new());
+        let event_source = event_source_factory.create_for_test(AbsoluteMoniker::root()).await;
+
         let mut event_stream =
-            event_registry.subscribe(Some(AbsoluteMoniker::root()), events.clone()).await;
+            event_source.subscribe(events.clone()).await.expect("subscribe to event stream");
         let hooks = vec![HooksRegistration::new(
             "bind_concurrent",
             events,
-            Arc::downgrade(&event_registry) as Weak<dyn Hook>,
+            event_source.registry() as Weak<dyn Hook>,
         )];
         let (model, _builtin_environment) =
             new_model_with(mock_resolver, mock_runner.clone(), hooks).await;

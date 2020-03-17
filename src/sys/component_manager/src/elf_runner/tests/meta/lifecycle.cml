@@ -21,6 +21,7 @@
                 "/svc/fuchsia.logger.LogSink",
             ],
         },
+        { "event": "stopped", "from": "framework" }
     ],
     "expose": [
         {

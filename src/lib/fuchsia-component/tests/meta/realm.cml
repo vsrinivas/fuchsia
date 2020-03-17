@@ -6,14 +6,16 @@
     "use": [
         { "runner": "elf" },
         {
-            "protocol": [
-                // Needed to instantiate dynamic components.
-                "/svc/fuchsia.sys2.Realm",
-                // Needed to use test events, so we can wait on destroy.
-                "/svc/fuchsia.test.events.EventSourceSync",
-            ],
+            // Needed to instantiate dynamic components.
+            "protocol": "/svc/fuchsia.sys2.Realm",
             "from": "framework"
         },
+        {
+            // Needed to use test events, so we can wait on destroy.
+            "protocol": "/svc/fuchsia.test.events.EventSourceSync",
+            "from": "framework"
+        },
+        { "event": "destroyed", "from": "framework" }
     ],
     "offer": [
         { "runner": "elf", "from": "realm", "to": [ "#coll" ] },

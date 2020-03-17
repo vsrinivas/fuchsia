@@ -21,6 +21,7 @@ use {
             events::core::EventSourceFactory,
             hub::Hub,
             model::{ComponentManagerConfig, Model},
+            moniker::AbsoluteMoniker,
             runner::Runner,
         },
         root_realm_stop_notifier::RootRealmStopNotifier,
@@ -62,8 +63,9 @@ pub struct BuiltinEnvironment {
     pub realm_capability_host: Arc<RealmCapabilityHost>,
     pub hub: Arc<Hub>,
     pub builtin_runners: HashMap<CapabilityName, Arc<BuiltinRunner>>,
-    pub event_source_factory: Option<Arc<EventSourceFactory>>,
+    pub event_source_factory: Arc<EventSourceFactory>,
     pub stop_notifier: Arc<RootRealmStopNotifier>,
+    is_debug: bool,
 }
 
 impl BuiltinEnvironment {
@@ -171,15 +173,9 @@ impl BuiltinEnvironment {
         let hub = Arc::new(Hub::new(model, args.root_component_url.clone())?);
         model.root_realm.hooks.install(hub.hooks()).await;
 
-        let event_source_factory = {
-            if args.debug {
-                let event_source_factory = Arc::new(EventSourceFactory::new());
-                model.root_realm.hooks.install(event_source_factory.hooks()).await;
-                Some(event_source_factory.clone())
-            } else {
-                None
-            }
-        };
+        // Set up the event source factory.
+        let event_source_factory = Arc::new(EventSourceFactory::new());
+        model.root_realm.hooks.install(event_source_factory.hooks()).await;
 
         Ok(BuiltinEnvironment {
             boot_args,
@@ -198,6 +194,7 @@ impl BuiltinEnvironment {
             builtin_runners: builtin_runner_hooks,
             event_source_factory,
             stop_notifier,
+            is_debug: args.debug,
         })
     }
 
@@ -215,8 +212,9 @@ impl BuiltinEnvironment {
 
         // If component manager is in debug mode, create an event source scoped at the
         // root and offer it via ServiceFs to the outside world.
-        if let Some(event_source_factory) = &self.event_source_factory {
-            let event_source = event_source_factory.create(None).await;
+        if self.is_debug {
+            let mut event_source = self.event_source_factory.create(AbsoluteMoniker::root()).await;
+            event_source.allow_all_events(AbsoluteMoniker::root());
 
             service_fs.dir("svc").add_fidl_service(move |stream| {
                 let event_source = event_source.clone();

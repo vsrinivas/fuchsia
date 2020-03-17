@@ -684,6 +684,17 @@ impl UseDecl {
         };
         Some(path)
     }
+
+    pub fn name(&self) -> Option<&CapabilityName> {
+        match self {
+            UseDecl::Event(event_decl) => Some(&event_decl.source_name),
+            UseDecl::Runner(runner_decl) => Some(&runner_decl.source_name),
+            UseDecl::Service(_)
+            | UseDecl::Protocol(_)
+            | UseDecl::Directory(_)
+            | UseDecl::Storage(_) => None,
+        }
+    }
 }
 
 /// A named capability.
@@ -1356,12 +1367,14 @@ impl NativeIntoFidl<Option<fsys::Ref>> for OfferResolverSource {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum OfferEventSource {
+    Framework,
     Realm,
 }
 
 impl FidlIntoNative<OfferEventSource> for Option<fsys::Ref> {
     fn fidl_into_native(self) -> OfferEventSource {
         match self.unwrap() {
+            fsys::Ref::Framework(_) => OfferEventSource::Framework,
             fsys::Ref::Realm(_) => OfferEventSource::Realm,
             _ => panic!("invalid OfferEventSource variant"),
         }
@@ -1371,6 +1384,7 @@ impl FidlIntoNative<OfferEventSource> for Option<fsys::Ref> {
 impl NativeIntoFidl<Option<fsys::Ref>> for OfferEventSource {
     fn native_into_fidl(self) -> Option<fsys::Ref> {
         Some(match self {
+            OfferEventSource::Framework => fsys::Ref::Framework(fsys::FrameworkRef {}),
             OfferEventSource::Realm => fsys::Ref::Realm(fsys::RealmRef {}),
         })
     }

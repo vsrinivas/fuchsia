@@ -1,0 +1,55 @@
+{
+
+    "program": {
+        "binary": "bin/realm_offered_nested"
+    },
+    "offer": [
+        {
+          "runner": "elf",
+          "from": "realm",
+          "to": [
+            "#reporter",
+            "#child_a",
+            "#child_b",
+            "#child_c",
+          ]
+        },
+        {
+            "protocol": "/svc/fidl.test.components.Trigger",
+            "from": "self",
+            "to": [ "#reporter" ],
+        },
+        { "event": "started", "from": "framework", "to": [ "#reporter" ] },
+    ],
+    "use": [
+      {
+        "protocol": "/svc/fuchsia.sys2.Realm",
+        "from": "framework",
+      },
+      { "runner": "elf" },
+    ],
+    "children": [
+      // Start immediately.
+      {
+          "name": "reporter",
+          "url": "fuchsia-pkg://fuchsia.com/events_integration_test#meta/realm_offered_reporter.cm",
+          "startup": "eager",
+      },
+      // These childrens are started by the test once "reporter" has started.
+      {
+          "name": "child_a",
+          "url": "fuchsia-pkg://fuchsia.com/events_integration_test#meta/child.cm",
+          "startup": "lazy",
+      },
+      {
+          "name": "child_b",
+          "url": "fuchsia-pkg://fuchsia.com/events_integration_test#meta/child.cm",
+          "startup": "lazy",
+      },
+      {
+          "name": "child_c",
+          "url": "fuchsia-pkg://fuchsia.com/events_integration_test#meta/child.cm",
+          "startup": "lazy",
+      },
+    ],
+}

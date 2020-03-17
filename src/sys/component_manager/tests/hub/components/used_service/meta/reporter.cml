@@ -17,5 +17,6 @@
             ],
             "from": "framework"
         },
+        { "event": "capability_routed", "from": "framework" }
     ],
 }

@@ -2259,3 +2259,191 @@ async fn invalid_offer_from_component_manager() {
         )
         .await;
 }
+
+///   a
+///    \
+///     b
+///
+/// b: uses framework event "started"
+#[fuchsia_async::run_singlethreaded(test)]
+async fn use_event_from_framework() {
+    let components = vec![
+        (
+            "a",
+            ComponentDeclBuilder::new()
+                .add_lazy_child("b")
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
+        ),
+        (
+            "b",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Event(UseEventDecl {
+                    source: UseSource::Framework,
+                    source_name: "started".into(),
+                    target_name: "started".into(),
+                }))
+                .build(),
+        ),
+    ];
+    let test = RoutingTest::new("a", components).await;
+    test.check_use(
+        vec!["b:0"].into(),
+        CheckUse::Event {
+            name: "started".into(),
+            scope_moniker: AbsoluteMoniker::new(vec!["b:0".into()]),
+            should_be_allowed: true,
+        },
+    )
+    .await;
+}
+
+///   a
+///    \
+///     b
+///
+/// a: uses framework event "started" and offers to b as "started_on_a"
+/// b: uses framework event "started_on_a" as "started"
+#[fuchsia_async::run_singlethreaded(test)]
+async fn use_event_from_parent() {
+    let components = vec![
+        (
+            "a",
+            ComponentDeclBuilder::new()
+                .offer(OfferDecl::Event(OfferEventDecl {
+                    source: OfferEventSource::Framework,
+                    source_name: "started".into(),
+                    target_name: "started_on_a".into(),
+                    target: OfferTarget::Child("b".to_string()),
+                }))
+                .add_lazy_child("b")
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
+        ),
+        (
+            "b",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Event(UseEventDecl {
+                    source: UseSource::Realm,
+                    source_name: "started_on_a".into(),
+                    target_name: "started".into(),
+                }))
+                .build(),
+        ),
+    ];
+    let test = RoutingTest::new("a", components).await;
+    test.check_use(
+        vec!["b:0"].into(),
+        CheckUse::Event {
+            name: "started".into(),
+            scope_moniker: AbsoluteMoniker::root(),
+            should_be_allowed: true,
+        },
+    )
+    .await;
+}
+
+///   a
+///    \
+///     b
+///      \
+///       c
+///
+/// a: uses framework event "started" and offers to b as "started_on_a"
+/// a: uses framework event "stopped" and offers to b as "stopped_on_a"
+/// b: offers realm event "started_on_a" to c
+/// b: offers realm event "capability_ready" from framework
+/// c: uses realm event "started_on_a"
+/// c: uses realm event "capability_ready"
+/// c: uses realm event "stopped_on_a" but fails to do so
+#[fuchsia_async::run_singlethreaded(test)]
+async fn use_event_from_grandparent() {
+    let components = vec![
+        (
+            "a",
+            ComponentDeclBuilder::new()
+                .offer(OfferDecl::Event(OfferEventDecl {
+                    source: OfferEventSource::Framework,
+                    source_name: "started".into(),
+                    target_name: "started_on_a".into(),
+                    target: OfferTarget::Child("b".to_string()),
+                }))
+                .offer(OfferDecl::Event(OfferEventDecl {
+                    source: OfferEventSource::Framework,
+                    source_name: "stopped".into(),
+                    target_name: "stopped_on_b".into(),
+                    target: OfferTarget::Child("b".to_string()),
+                }))
+                .add_lazy_child("b")
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
+        ),
+        (
+            "b",
+            ComponentDeclBuilder::new()
+                .offer(OfferDecl::Event(OfferEventDecl {
+                    source: OfferEventSource::Realm,
+                    source_name: "started_on_a".into(),
+                    target_name: "started_on_a".into(),
+                    target: OfferTarget::Child("c".to_string()),
+                }))
+                .offer(OfferDecl::Event(OfferEventDecl {
+                    source: OfferEventSource::Framework,
+                    source_name: "capability_ready".into(),
+                    target_name: "capability_ready".into(),
+                    target: OfferTarget::Child("c".to_string()),
+                }))
+                .add_lazy_child("c")
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
+        ),
+        (
+            "c",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Event(UseEventDecl {
+                    source: UseSource::Realm,
+                    source_name: "started_on_a".into(),
+                    target_name: "started".into(),
+                }))
+                .use_(UseDecl::Event(UseEventDecl {
+                    source: UseSource::Realm,
+                    source_name: "capability_ready".into(),
+                    target_name: "capability_ready".into(),
+                }))
+                .use_(UseDecl::Event(UseEventDecl {
+                    source: UseSource::Realm,
+                    source_name: "stopped_on_a".into(),
+                    target_name: "stopped".into(),
+                }))
+                .build(),
+        ),
+    ];
+    let test = RoutingTest::new("a", components).await;
+    test.check_use(
+        vec!["b:0", "c:0"].into(),
+        CheckUse::Event {
+            name: "started".into(),
+            scope_moniker: AbsoluteMoniker::root(),
+            should_be_allowed: true,
+        },
+    )
+    .await;
+    test.check_use(
+        vec!["b:0", "c:0"].into(),
+        CheckUse::Event {
+            name: "stopped".into(),
+            scope_moniker: AbsoluteMoniker::root(),
+            should_be_allowed: false,
+        },
+    )
+    .await;
+    test.check_use(
+        vec!["b:0", "c:0"].into(),
+        CheckUse::Event {
+            name: "capability_ready".into(),
+            scope_moniker: vec!["b:0"].into(),
+            should_be_allowed: true,
+        },
+    )
+    .await;
+}

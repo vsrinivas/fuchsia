@@ -74,6 +74,11 @@ pub enum CheckUse {
         // test's isolated test directory.
         from_cm_namespace: bool,
     },
+    Event {
+        name: CapabilityName,
+        scope_moniker: AbsoluteMoniker,
+        should_be_allowed: bool,
+    },
 }
 
 impl CheckUse {
@@ -404,6 +409,14 @@ impl RoutingTest {
                     }
                 }
             }
+            CheckUse::Event { name, scope_moniker, should_be_allowed } => {
+                let is_allowed = self
+                    .builtin_environment
+                    .event_source_factory
+                    .is_event_allowed(&moniker, &name, &scope_moniker)
+                    .await;
+                assert_eq!(is_allowed, should_be_allowed)
+            }
         }
     }
 
@@ -431,6 +444,9 @@ impl RoutingTest {
             }
             CheckUse::Storage { .. } => {
                 panic!("storage capabilities can't be exposed");
+            }
+            CheckUse::Event { .. } => {
+                panic!("event capabilities can't be exposed");
             }
         }
     }
