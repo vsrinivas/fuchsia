@@ -102,17 +102,6 @@ __EXPORT const char* _zx_status_get_string(zx_status_t status) {
       return "ZX_ERR_CONNECTION_ABORTED";
     default:
       return "(UNKNOWN)";
-
-    // TODO(mcgrathr): Having this extra case here (a value far away from
-    // the other values) forces LLVM to disable its switch->table-lookup
-    // optimization.  That optimization produces a table of pointers in
-    // rodata, which is not PIC-friendly (requires a dynamic reloc for each
-    // element) and so makes the vDSO build bomb out at link time.  Some
-    // day we'll teach LLVM either to disable this optimization in PIC mode
-    // when it would result in dynamic relocs, or (ideally) to generate a
-    // PIC-friendly lookup table like it does for jump tables.
-    case 99999:
-      return "(UNKNOWN)";
   }
 }
 

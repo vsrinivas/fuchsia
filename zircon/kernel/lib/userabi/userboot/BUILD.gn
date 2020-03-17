@@ -18,7 +18,16 @@ if (current_toolchain == default_toolchain) {
   foreach(cpu, standard_fuchsia_cpus) {
     environment("userboot") {
       cpu = cpu
-      configs += standard_fuchsia_configs + [ ":userboot_config" ]
+      configs += standard_fuchsia_configs + [
+                   ":userboot_config",
+
+                   # TODO(48501): This is needed pervasively and not just
+                   # in the linking target so its compile-time flags can
+                   # work around fxb/48501.  It's separate from
+                   # userboot_config so it can be removed by other links
+                   # reusing this environment, e.g. hermetic_module().
+                   "$zx/public/gn/config:rodso",
+                 ]
 
       if (output_breakpad_syms) {
         breakpad_syms = "-r -n \"<_>\" -o Fuchsia"
@@ -83,7 +92,6 @@ if (current_toolchain == default_toolchain) {
       "zx_panic.cc",
     ]
     defines = [ "ZBI_TEST_SUCCESS_STRING=\"$zbi_test_success_string\"" ]
-    configs += [ "$zx/public/gn/config:rodso" ]
     ldflags = [ "-Wl,-e,_start" ]
     libs = [ vdso_syms_ld ]
     deps = [

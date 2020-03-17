@@ -44,6 +44,11 @@ template("hermetic_module") {
       if (!defined(install_path)) {
         install_path = "lib/hermetic/$output_name.so"
       }
+
+      # TODO(48501): This config is only in the userboot environment's list
+      # to work around fxb/48501.  Since hermetic modules can contain data,
+      # they shouldn't use the linker script.
+      configs -= [ "$zx/public/gn/config:rodso" ]
     }
   } else {
     # Piggy-back on the userboot toolchain to build hermetic code for us.
@@ -55,9 +60,7 @@ template("hermetic_module") {
                                "visibility",
                              ])
       environment_label = "$zx/kernel/lib/userabi/userboot"
-      deps = [
-        ":$target_name",
-      ]
+      deps = [ ":$target_name" ]
     }
   }
 }
