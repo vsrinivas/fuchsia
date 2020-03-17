@@ -19,7 +19,6 @@ class AudioCapturer : public BaseCapturer,
  public:
   AudioCapturer(fuchsia::media::AudioCapturerConfiguration configuration,
                 std::optional<Format> format,
-                std::optional<fuchsia::media::AudioCaptureUsage> usage,
                 fidl::InterfaceRequest<fuchsia::media::AudioCapturer> request, Context* context);
 
   ~AudioCapturer() override;

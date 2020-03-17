@@ -54,7 +54,7 @@ const Format kInitialFormat =
 }  // namespace
 
 BaseCapturer::BaseCapturer(
-    fuchsia::media::AudioCapturerConfiguration configuration, std::optional<Format> format,
+    std::optional<Format> format,
     fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request, Context* context,
     RouteGraphRemover remover)
     : AudioObject(Type::AudioCapturer),

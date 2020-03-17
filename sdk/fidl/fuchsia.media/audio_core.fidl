@@ -99,7 +99,6 @@ protocol AudioCore {
     [Transitional]
     CreateAudioCapturerWithConfiguration(
         AudioStreamType stream_type,
-        AudioCaptureUsage usage,
         AudioCapturerConfiguration configuration,
         request<AudioCapturer> audio_capturer_request);
 

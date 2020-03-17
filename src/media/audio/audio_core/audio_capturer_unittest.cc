@@ -36,11 +36,11 @@ class AudioCapturerTest : public testing::ThreadingModelFixture {
     testing::ThreadingModelFixture::SetUp();
 
     auto format = Format::Create(stream_type_).take_value();
-    auto capturer = std::unique_ptr<AudioCapturer>(
-        new AudioCapturer(fuchsia::media::AudioCapturerConfiguration::WithInput(
-                              fuchsia::media::InputAudioCapturerConfiguration()),
-                          {format}, {fuchsia::media::AudioCaptureUsage::BACKGROUND},
-                          fidl_capturer_.NewRequest(), &context()));
+    fuchsia::media::InputAudioCapturerConfiguration input_configuration;
+    input_configuration.set_usage(fuchsia::media::AudioCaptureUsage::BACKGROUND);
+    auto capturer = std::unique_ptr<AudioCapturer>(new AudioCapturer(
+        fuchsia::media::AudioCapturerConfiguration::WithInput(std::move(input_configuration)),
+        {format}, fidl_capturer_.NewRequest(), &context()));
     capturer_ = capturer.get();
     EXPECT_NE(capturer_, nullptr);
 

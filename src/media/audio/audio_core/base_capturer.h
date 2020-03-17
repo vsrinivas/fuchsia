@@ -33,8 +33,7 @@ namespace media::audio {
 class BaseCapturer : public AudioObject, public fuchsia::media::AudioCapturer {
  protected:
   using RouteGraphRemover = void (RouteGraph::*)(const AudioObject&);
-  BaseCapturer(fuchsia::media::AudioCapturerConfiguration configuration,
-               std::optional<Format> format,
+  BaseCapturer(std::optional<Format> format,
                fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
                Context* context, RouteGraphRemover remover = &RouteGraph::RemoveCapturer);
 

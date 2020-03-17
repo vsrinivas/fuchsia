@@ -20,10 +20,9 @@ constexpr float kInitialCaptureGainDb = Gain::kUnityGainDb;
 
 AudioCapturer::AudioCapturer(fuchsia::media::AudioCapturerConfiguration configuration,
                              std::optional<Format> format,
-                             std::optional<fuchsia::media::AudioCaptureUsage> usage,
                              fidl::InterfaceRequest<fuchsia::media::AudioCapturer> request,
                              Context* context)
-    : BaseCapturer(std::move(configuration), std::move(format), std::move(request), context,
+    : BaseCapturer(std::move(format), std::move(request), context,
                    configuration.is_loopback() ? &RouteGraph::RemoveLoopbackCapturer
                                                : &RouteGraph::RemoveCapturer),
       loopback_(configuration.is_loopback()),
@@ -31,8 +30,8 @@ AudioCapturer::AudioCapturer(fuchsia::media::AudioCapturerConfiguration configur
       stream_gain_db_(kInitialCaptureGainDb) {
   FX_DCHECK(context);
   context->volume_manager().AddStream(this);
-  if (usage) {
-    usage_ = *usage;
+  if (configuration.is_input() && configuration.input().has_usage()) {
+    usage_ = configuration.input().usage();
   }
 }
 

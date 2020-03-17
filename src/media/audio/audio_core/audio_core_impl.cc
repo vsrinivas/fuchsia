@@ -53,7 +53,7 @@ void AudioCoreImpl::CreateAudioRenderer(
 }
 
 void AudioCoreImpl::CreateAudioCapturerWithConfiguration(
-    fuchsia::media::AudioStreamType stream_type, fuchsia::media::AudioCaptureUsage usage,
+    fuchsia::media::AudioStreamType stream_type,
     fuchsia::media::AudioCapturerConfiguration configuration,
     fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request) {
   auto format = Format::Create(stream_type);
@@ -64,7 +64,7 @@ void AudioCoreImpl::CreateAudioCapturerWithConfiguration(
 
   const bool loopback = configuration.is_loopback();
   auto capturer = std::unique_ptr<AudioCapturer>(
-      new AudioCapturer(std::move(configuration), {format.take_value()}, {usage},
+      new AudioCapturer(std::move(configuration), {format.take_value()},
                         std::move(audio_capturer_request), &context_));
   if (loopback) {
     context_.route_graph().AddLoopbackCapturer(std::move(capturer));
@@ -82,16 +82,14 @@ void AudioCoreImpl::CreateAudioCapturer(
     context_.route_graph().AddLoopbackCapturer(std::make_unique<AudioCapturer>(
         fuchsia::media::AudioCapturerConfiguration::WithLoopback(
             fuchsia::media::LoopbackAudioCapturerConfiguration()),
-        /*format= */ std::nullopt,
-        /*usage= */ std::nullopt, std::move(audio_capturer_request), &context_));
+        /*format= */ std::nullopt, std::move(audio_capturer_request), &context_));
     return;
   }
 
   context_.route_graph().AddCapturer(std::make_unique<AudioCapturer>(
       fuchsia::media::AudioCapturerConfiguration::WithInput(
           fuchsia::media::InputAudioCapturerConfiguration()),
-      /*format= */ std::nullopt,
-      /*usage= */ std::nullopt, std::move(audio_capturer_request), &context_));
+      /*format= */ std::nullopt, std::move(audio_capturer_request), &context_));
 }
 
 void AudioCoreImpl::SetRenderUsageGain(fuchsia::media::AudioRenderUsage render_usage,

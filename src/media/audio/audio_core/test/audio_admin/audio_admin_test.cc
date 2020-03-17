@@ -56,18 +56,18 @@ class AudioAdminTest : public HermeticAudioTest {
                                                             int16_t data);
 
   StreamHolder<fuchsia::media::AudioCapturer> SetUpCapturer(
-      fuchsia::media::AudioCapturerConfiguration configuration,
-      fuchsia::media::AudioCaptureUsage usage, int16_t data);
+      fuchsia::media::AudioCapturerConfiguration configuration, int16_t data);
   StreamHolder<fuchsia::media::AudioCapturer> SetUpCapturer(fuchsia::media::AudioCaptureUsage usage,
                                                             int16_t data) {
-    return SetUpCapturer(fuchsia::media::AudioCapturerConfiguration::WithInput(
-                             fuchsia::media::InputAudioCapturerConfiguration()),
-                         usage, data);
+    fuchsia::media::InputAudioCapturerConfiguration input;
+    input.set_usage(usage);
+    return SetUpCapturer(fuchsia::media::AudioCapturerConfiguration::WithInput(std::move(input)),
+                         data);
   }
   StreamHolder<fuchsia::media::AudioCapturer> SetUpLoopbackCapturer(int16_t data) {
     return SetUpCapturer(fuchsia::media::AudioCapturerConfiguration::WithLoopback(
                              fuchsia::media::LoopbackAudioCapturerConfiguration()),
-                         fuchsia::media::AudioCaptureUsage::BACKGROUND, data);
+                         data);
   }
 
   zx_duration_t GetMinLeadTime(
@@ -376,8 +376,7 @@ AudioAdminTest::StreamHolder<fuchsia::media::AudioRenderer> AudioAdminTest::SetU
 //
 // For loopback tests, setup an audio_capturer interface
 AudioAdminTest::StreamHolder<fuchsia::media::AudioCapturer> AudioAdminTest::SetUpCapturer(
-    fuchsia::media::AudioCapturerConfiguration configuration,
-    fuchsia::media::AudioCaptureUsage usage, int16_t data) {
+    fuchsia::media::AudioCapturerConfiguration configuration, int16_t data) {
   StreamHolder<fuchsia::media::AudioCapturer> holder;
   int16_t* buffer;
   zx::vmo capture_vmo;
@@ -387,7 +386,7 @@ AudioAdminTest::StreamHolder<fuchsia::media::AudioCapturer> AudioAdminTest::SetU
                                       .channels = kChannelCount,
                                       .frames_per_second = kSampleRate};
 
-  audio_core_sync_->CreateAudioCapturerWithConfiguration(format, usage, std::move(configuration),
+  audio_core_sync_->CreateAudioCapturerWithConfiguration(format, std::move(configuration),
                                                          holder.stream_ptr.NewRequest());
 
   holder.stream_ptr.set_error_handler(ErrorHandler());
