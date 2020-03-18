@@ -28,13 +28,14 @@ class AllowList {
   explicit AllowList(const fxl::UniqueFD& dir, const std::string& file_path, Expectation expected);
 
   bool IsAllowed(const std::string& url) const {
-    return internal_set_.find(url) != internal_set_.end();
+    return allow_all_ || internal_set_.find(url) != internal_set_.end();
   }
 
   bool WasFilePresent() const { return file_found_; }
 
  private:
   std::unordered_set<std::string> internal_set_;
+  bool allow_all_;
   bool file_found_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(AllowList);

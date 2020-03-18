@@ -1,10 +1,9 @@
-fuchsia-pkg://fuchsia.com/cast_runner#meta/cast_runner.cmx
-fuchsia-pkg://fuchsia.com/http#meta/http.cmx
-fuchsia-pkg://fuchsia.com/web_engine#meta/context_provider.cmx
-fuchsia-pkg://fuchsia.com/web_runner#meta/web_runner.cmx
-# TODO: burn the rest of these down.  Nothing else here fundamentally requires
-# replace-as-exec; they just still call code that calls it.
-fuchsia-pkg://fuchsia.com/sysmgr#meta/sysmgr.cmx
-fuchsia-pkg://fuchsia.com/flutter_aot_product_runner#meta/flutter_aot_product_runner.cmx
-fuchsia-pkg://fuchsia.com/vulkan_loader#meta/vulkan_loader.cmx
-fuchsia-pkg://fuchsia.com/sshd-host#meta/sshd-host.cmx
+# This is an allowlist intended for use in _eng build types, including core and
+# bringup.  While no package lacking a strictly need to mark memory as executable
+# memory to perform its function should make use of it (because that makes it very
+# difficult to use those packages in more-restricted build types), we choose to be
+# permissive here so that unit tests of JITs or other tests that transitively
+# include a JIT may still get the permissive executability policy.  Known users
+# include many of the chromium tests.
+
+*

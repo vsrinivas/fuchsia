@@ -82,6 +82,23 @@ TEST_F(AllowListTest, ParsePackageUrls) {
   EXPECT_FALSE(allowlist.IsAllowed("fuchsia-pkg://"));
 }
 
+TEST_F(AllowListTest, WildcardAllow) {
+  static constexpr char kFile[] = R"F(
+  # Some comment about why we allow everything in this build
+  *)F";
+
+  std::string dir;
+  ASSERT_TRUE(tmp_dir_.NewTempDir(&dir));
+  fxl::UniqueFD dirfd(open(dir.c_str(), O_RDONLY));
+  auto filename = NewFile(dir, kFile);
+  AllowList allowlist(dirfd, filename, AllowList::kExpected);
+  EXPECT_TRUE(allowlist.WasFilePresent());
+  EXPECT_TRUE(allowlist.IsAllowed("fuchsia-pkg://fuchsia.com/foo#meta/foo.cmx"));
+  EXPECT_TRUE(allowlist.IsAllowed("fuchsia-pkg://fuchsia.com/bar#meta/bar.cmx"));
+  EXPECT_TRUE(allowlist.IsAllowed("literally-anything-at-all"));
+  EXPECT_TRUE(allowlist.IsAllowed(""));
+}
+
 TEST_F(AllowListTest, CommentsAreOmitted) {
   static constexpr char kFile[] = R"F(
     test_one
