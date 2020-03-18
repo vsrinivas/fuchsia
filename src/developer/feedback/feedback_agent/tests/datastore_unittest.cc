@@ -4,6 +4,7 @@
 
 #include "src/developer/feedback/feedback_agent/datastore.h"
 
+#include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/hwinfo/cpp/fidl.h>
 #include <fuchsia/intl/cpp/fidl.h>
 #include <lib/async/cpp/executor.h>
@@ -11,6 +12,7 @@
 #include <lib/syslog/logger.h>
 #include <lib/zx/time.h>
 
+#include <cstddef>
 #include <memory>
 #include <string>
 
@@ -30,6 +32,7 @@
 #include "src/developer/feedback/utils/cobalt.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
+#include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/syslog/cpp/logger.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
@@ -37,6 +40,7 @@
 namespace feedback {
 namespace {
 
+using ::testing::Contains;
 using ::testing::ElementsAreArray;
 using ::testing::Eq;
 using ::testing::IsEmpty;
@@ -133,8 +137,10 @@ class DatastoreTest : public UnitTestFixture, public CobaltTestFixture {
     return result;
   }
 
+  void SetExtraAnnotations(const Annotations& extra_annotations) {
+    datastore_->SetExtraAnnotations(extra_annotations);
+  }
   Annotations GetStaticAnnotations() { return datastore_->GetStaticAnnotations(); }
-
   Attachments GetStaticAttachments() { return datastore_->GetStaticAttachments(); }
 
  private:
@@ -293,6 +299,48 @@ TEST_F(DatastoreTest, GetAnnotations_Time) {
                                         }));
 
   EXPECT_THAT(GetStaticAnnotations(), IsEmpty());
+}
+
+TEST_F(DatastoreTest, GetAnnotations_ExtraAnnotations) {
+  SetUpDatastore(kDefaultAnnotationsToAvoidSpuriousLogs, kDefaultAttachmentsToAvoidSpuriousLogs);
+  SetExtraAnnotations({{"extra.k", "v"}});
+
+  fit::result<Annotations> annotations = GetAnnotations();
+  ASSERT_TRUE(annotations.is_ok());
+  EXPECT_THAT(annotations.take_value(), Contains(Pair("extra.k", "v")));
+}
+
+TEST_F(DatastoreTest, GetAnnotations_ExtraAnnotationsAboveLimit) {
+  // We set one platform annotation in the allowlist and we then check that this is the only
+  // annotation returned as we inject more extra annotations than allowed.
+  SetUpDatastore(
+      {
+          kAnnotationBuildIsDebug,
+      },
+      kDefaultAttachmentsToAvoidSpuriousLogs);
+
+  // We inject the limit in extra annotations, which with the additional platform annotation will
+  // make it go over the limit and reject all the extra annotations.
+  Annotations extra_annotations;
+  for (size_t i = 0; i < fuchsia::feedback::MAX_NUM_ANNOTATIONS_PROVIDED; i++) {
+    extra_annotations[fxl::StringPrintf("k%lu", i)] = fxl::StringPrintf("v%lu", i);
+  }
+  SetExtraAnnotations(extra_annotations);
+
+  fit::result<Annotations> annotations = GetAnnotations();
+  ASSERT_TRUE(annotations.is_ok());
+  EXPECT_THAT(annotations.take_value(), ElementsAreArray({
+                                            Pair(kAnnotationBuildIsDebug, Not(IsEmpty())),
+                                        }));
+}
+
+TEST_F(DatastoreTest, GetAnnotations_ExtraAnnotationsOnEmptyAllowlist) {
+  SetUpDatastore({}, kDefaultAttachmentsToAvoidSpuriousLogs);
+  SetExtraAnnotations({{"extra.k", "v"}});
+
+  fit::result<Annotations> annotations = GetAnnotations();
+  ASSERT_TRUE(annotations.is_ok());
+  EXPECT_THAT(annotations.take_value(), ElementsAreArray({Pair("extra.k", "v")}));
 }
 
 TEST_F(DatastoreTest, GetAnnotations_FailOn_EmptyAnnotationAllowlist) {

@@ -159,6 +159,7 @@ source_set("datastore") {
 
   deps = [
     ":constants",
+    "//sdk/fidl/fuchsia.feedback",
     "//src/developer/feedback/feedback_agent/annotations:annotation_providers",
     "//src/developer/feedback/feedback_agent/annotations:static_annotations",
     "//src/developer/feedback/feedback_agent/attachments:attachment_providers",

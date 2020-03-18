@@ -4,6 +4,7 @@
 
 #include "src/developer/feedback/feedback_agent/datastore.h"
 
+#include <fuchsia/feedback/cpp/fidl.h>
 #include <lib/fit/promise.h>
 #include <lib/zx/time.h>
 
@@ -18,6 +19,7 @@
 #include "src/developer/feedback/feedback_agent/attachments/static_attachments.h"
 #include "src/developer/feedback/feedback_agent/attachments/system_log_ptr.h"
 #include "src/developer/feedback/feedback_agent/constants.h"
+#include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
@@ -41,11 +43,11 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
       static_attachments_(feedback::GetStaticAttachments(attachment_allowlist_)) {
   if (annotation_allowlist_.empty()) {
     FX_LOGS(WARNING)
-        << "Annotation allowlist is empty, no annotations will be collected or returned";
+        << "Annotation allowlist is empty, no platform annotations will be collected or returned";
   }
   if (attachment_allowlist_.empty()) {
     FX_LOGS(WARNING)
-        << "Attachment allowlist is empty, no attachments will be collected or returned";
+        << "Attachment allowlist is empty, no platform attachments will be collected or returned";
   }
 }
 
@@ -62,7 +64,7 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
       static_attachments_({}) {}
 
 fit::promise<Annotations> Datastore::GetAnnotations() {
-  if (annotation_allowlist_.empty()) {
+  if (annotation_allowlist_.empty() && extra_annotations_.empty()) {
     return fit::make_result_promise<Annotations>(fit::error());
   }
 
@@ -75,16 +77,31 @@ fit::promise<Annotations> Datastore::GetAnnotations() {
   return fit::join_promise_vector(std::move(annotations))
       .and_then(
           [this](std::vector<fit::result<Annotations>>& annotations) -> fit::result<Annotations> {
-            // We seed the returned annotations with the static ones.
+            // We seed the returned annotations with the static platform annotations.
             Annotations ok_annotations(static_annotations_.begin(), static_annotations_.end());
 
-            // We then augment them with the dynamic ones.
+            // We then augment the returned annotations with the dynamic platform annotations.
             for (auto& result : annotations) {
               if (result.is_ok()) {
                 for (const auto& [key, value] : result.take_value()) {
                   ok_annotations[key] = value;
                 }
               }
+            }
+
+            // If we have space left, we then augment the returned annotations with the extra
+            // component annotations.
+            if (ok_annotations.size() + extra_annotations_.size() <
+                fuchsia::feedback::MAX_NUM_ANNOTATIONS_PROVIDED) {
+              for (const auto& [key, value] : extra_annotations_) {
+                ok_annotations[key] = value;
+              }
+            } else {
+              FX_LOGS(WARNING) << fxl::StringPrintf(
+                  "Skipping all %lu extra annotations as there are already %lu platform "
+                  "annotations out of %u max annotations",
+                  extra_annotations_.size(), ok_annotations.size(),
+                  fuchsia::feedback::MAX_NUM_ANNOTATIONS_PROVIDED);
             }
 
             if (ok_annotations.empty()) {

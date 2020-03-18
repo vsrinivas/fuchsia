@@ -368,6 +368,39 @@ TEST_F(FeedbackAgentIntegrationTest, DataProvider_GetData_CheckCobalt) {
               }));
 }
 
+TEST_F(FeedbackAgentIntegrationTest,
+       DataProvider_GetData_ExtraAnnotationsFromComponentDataRegister) {
+  // We make sure the components serving the services GetData() connects to are up and running.
+  WaitForLogger();
+  WaitForChannelProvider();
+  WaitForInspect();
+  WaitForBoardProvider();
+  WaitForProductProvider();
+
+  DataProviderSyncPtr data_provider;
+  environment_services_->Connect(data_provider.NewRequest());
+
+  ComponentDataRegisterSyncPtr data_register;
+  environment_services_->Connect(data_register.NewRequest());
+
+  fuchsia::feedback::ComponentData extra_data;
+  extra_data.set_namespace_("namespace");
+  extra_data.set_annotations({
+      {"k", "v"},
+  });
+  ASSERT_EQ(data_register->Upsert(std::move(extra_data)), ZX_OK);
+
+  DataProvider_GetData_Result out_result;
+  ASSERT_EQ(data_provider->GetData(&out_result), ZX_OK);
+
+  fit::result<Data, zx_status_t> result = std::move(out_result);
+  ASSERT_TRUE(result.is_ok());
+
+  const Data& data = result.value();
+  ASSERT_TRUE(data.has_annotations());
+  EXPECT_THAT(data.annotations(), testing::Contains(MatchesAnnotation("namespace.k", "v")));
+}
+
 TEST_F(FeedbackAgentIntegrationTest, DeviceIdProvider_GetId_CheckValue) {
   DeviceIdProviderSyncPtr device_id_provider;
   environment_services_->Connect(device_id_provider.NewRequest());

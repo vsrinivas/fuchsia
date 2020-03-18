@@ -24,7 +24,7 @@ namespace feedback {
 // * dynamic and collected upon data request, e.g., uptime or logs.
 // * collected synchronously, e.g., build version or uptime.
 // * collected asynchronously, e.g., hardware info or logs.
-// * pushed by other components.
+// * pushed by other components, we called these "extra" to distinguish them from the "platform".
 //
 // Because of dynamic asynchronous data, the data requests can take some time and return a
 // fit::promise.
