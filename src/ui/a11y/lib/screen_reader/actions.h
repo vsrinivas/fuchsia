@@ -42,6 +42,7 @@ class ScreenReaderAction {
   // that action.
   virtual void Run(ActionData process_data) = 0;
 
+ protected:
   // Helper function to get the tree pointer based on ActionContext and view koid.
   fxl::WeakPtr<::a11y::SemanticTree> GetTreePointer(ActionContext* context, zx_koid_t koid);
 
