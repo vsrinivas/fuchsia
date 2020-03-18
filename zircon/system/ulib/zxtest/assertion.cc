@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fit/string_view.h>
 #include <stdint.h>
 #include <stdio.h>
 
@@ -121,5 +122,24 @@ bool StrCmp(const char* actual, const fbl::String& expected) {
 }
 
 bool StrCmp(const char* actual, const char* expected) { return strcmp(actual, expected) == 0; }
+
+bool StrContain(const fbl::String& str, const fbl::String& substr) {
+  const fit::string_view str_view = fit::string_view(str.data(), str.size());
+  const fit::string_view substr_view = fit::string_view(substr.data(), substr.size());
+
+  return str_view.find(substr_view) != fit::string_view::npos;
+}
+
+bool StrContain(const fbl::String& str, const char* substr) {
+  return StrContain(str, fbl::String(substr, strlen(substr)));
+}
+
+bool StrContain(const char* str, const fbl::String& substr) {
+  return StrContain(fbl::String(str, strlen(str)), substr);
+}
+
+bool StrContain(const char* str, const char* substr) {
+  return StrContain(fbl::String(str, strlen(str)), fbl::String(substr, strlen(substr)));
+}
 
 }  // namespace zxtest

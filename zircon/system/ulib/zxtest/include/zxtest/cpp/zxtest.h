@@ -17,6 +17,7 @@
 
 #ifdef __Fuchsia__
 #include <zircon/status.h>
+
 #include <zxtest/base/death-statement.h>
 #endif
 
@@ -30,7 +31,7 @@
 #define _ZXTEST_TEST_CLASS(TestCase, Test) TestCase##_##Test##_Class
 
 #define _ZXTEST_TEST_CLASS_DECL(Fixture, TestClass) \
-  class TestClass final : public Fixture {                \
+  class TestClass final : public Fixture {          \
    public:                                          \
     TestClass() = default;                          \
     ~TestClass() final = default;                   \
@@ -93,6 +94,7 @@
   zxtest::internal::Compare(actual, expected, [](const auto& a, const auto& b) { return a >= b; })
 #define _STREQ(actual, expected) zxtest::StrCmp(actual, expected)
 #define _STRNE(actual, expected) !_STREQ(actual, expected)
+#define _SUBSTR(str, substr) zxtest::StrContain(str, substr)
 #define _BYTEEQ(actual, expected, size) \
   (memcmp(static_cast<const void*>(actual), static_cast<const void*>(expected), size) == 0)
 #define _BYTENE(actual, expected, size) !(_BYTEEQ(actual, expected, size))
@@ -149,19 +151,18 @@
     }                                                                                            \
   } while (0)
 
-#define _ASSERT_VAR_COERCE(op, expected, actual, coerce_type, fatal, file, line, desc, ...)     \
-  do {                                                                                          \
-    auto buffer_compare = [&](const auto& expected_, const auto& actual_) {                     \
-      using DecayType = typename std::decay<coerce_type>::type;                                 \
-      return op(static_cast<const DecayType&>(actual_),                                         \
-                static_cast<const DecayType&>(expected_));                                      \
-    };                                                                                          \
-    if (!zxtest::internal::EvaluateCondition(actual, expected, #actual, #expected,              \
-                                             {.filename = file, .line_number = line}, fatal,    \
-                                             _DESC_PROVIDER(desc, __VA_ARGS__), buffer_compare, \
-                                             _DEFAULT_PRINTER, _DEFAULT_PRINTER)) {             \
-      _RETURN_IF_FATAL(fatal);                                                                  \
-    }                                                                                           \
+#define _ASSERT_VAR_COERCE(op, expected, actual, coerce_type, fatal, file, line, desc, ...)        \
+  do {                                                                                             \
+    auto buffer_compare = [&](const auto& expected_, const auto& actual_) {                        \
+      using DecayType = typename std::decay<coerce_type>::type;                                    \
+      return op(static_cast<const DecayType&>(actual_), static_cast<const DecayType&>(expected_)); \
+    };                                                                                             \
+    if (!zxtest::internal::EvaluateCondition(actual, expected, #actual, #expected,                 \
+                                             {.filename = file, .line_number = line}, fatal,       \
+                                             _DESC_PROVIDER(desc, __VA_ARGS__), buffer_compare,    \
+                                             _DEFAULT_PRINTER, _DEFAULT_PRINTER)) {                \
+      _RETURN_IF_FATAL(fatal);                                                                     \
+    }                                                                                              \
   } while (0)
 
 #define _ASSERT_VAR_BYTES(op, expected, actual, size, fatal, file, line, desc, ...)              \

@@ -36,6 +36,8 @@ static inline void unittest_fails(void) {}
 //    ASSERT/EXPECT_BYTES_NE
 //    ASSERT/EXPECT_STR_EQ
 //    ASSERT/EXPECT_STR_NE
+//    ASSERT/EXPECT_SUBSTR
+//    ASSERT/EXPECT_NOT_SUBSTR
 //    CURRENT_TEST_HAS_FAILURES
 //    CURRENT_TEST_HAS_FATAL_FAILURES
 //  * There are no matchers allowed in this library.
@@ -113,6 +115,22 @@ static inline void unittest_fails(void) {}
 #define EXPECT_STR_NE(val2, val1, ...)                       \
   _ASSERT_VAR(_STRNE, val2, val1, false, __FILE__, __LINE__, \
               "Expected strings " #val1 " != " #val2 ".", ##__VA_ARGS__)
+
+#define ASSERT_SUBSTR(str, substr, ...)                       \
+  _ASSERT_VAR(_SUBSTR, substr, str, true, __FILE__, __LINE__, \
+              "Expected string " #str " to contain substring " #substr ".", ##__VA_ARGS__)
+
+#define EXPECT_SUBSTR(str, substr, ...)                        \
+  _ASSERT_VAR(_SUBSTR, substr, str, false, __FILE__, __LINE__, \
+              "Expected string " #str " to contain substring " #substr ".", ##__VA_ARGS__)
+
+#define ASSERT_NOT_SUBSTR(str, substr, ...)                    \
+  _ASSERT_VAR(!_SUBSTR, substr, str, true, __FILE__, __LINE__, \
+              "Expected string " #str " to not contain substring " #substr ".", ##__VA_ARGS__)
+
+#define EXPECT_NOT_SUBSTR(str, substr, ...)                     \
+  _ASSERT_VAR(!_SUBSTR, substr, str, false, __FILE__, __LINE__, \
+              "Expected string " #str " to not contain substring " #substr ".", ##__VA_ARGS__)
 
 // Used to evaluate _ZXTEST_NULLPTR to an actual value.
 #define _ASSERT_PTR_DELEGATE(...) _ASSERT_PTR(__VA_ARGS__)

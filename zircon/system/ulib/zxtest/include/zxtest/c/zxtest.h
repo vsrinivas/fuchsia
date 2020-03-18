@@ -94,6 +94,7 @@ __END_CDECLS
 #define _GE(actual, expected) actual >= expected
 #define _STREQ(actual, expected) (strcmp(actual, expected) == 0)
 #define _STRNE(actual, expected) !_STREQ(actual, expected)
+#define _SUBSTR(str, substr) (strstr(str, substr) != NULL)
 #define _BYTEEQ(actual, expected, size) memcmp(actual, expected, size) == 0
 #define _BYTENE(actual, expected, size) memcmp(actual, expected, size) != 0
 

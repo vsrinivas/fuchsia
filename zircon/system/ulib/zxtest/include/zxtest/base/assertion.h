@@ -5,10 +5,11 @@
 #ifndef ZXTEST_BASE_ASSERTION_H_
 #define ZXTEST_BASE_ASSERTION_H_
 
+#include <zircon/status.h>
+
 #include <fbl/string.h>
 #include <fbl/string_printf.h>
 #include <zxtest/base/types.h>
-#include <zircon/status.h>
 
 namespace zxtest {
 
@@ -127,6 +128,12 @@ bool StrCmp(const char* actual, const char* expected);
 bool StrCmp(const char* actual, const fbl::String& expected);
 bool StrCmp(const fbl::String& actual, const char* expected);
 bool StrCmp(const fbl::String& actual, const fbl::String& expected);
+
+// Overloads for string contain.
+bool StrContain(const fbl::String& str, const fbl::String& substr);
+bool StrContain(const fbl::String& str, const char* substr);
+bool StrContain(const char* str, const fbl::String& substr);
+bool StrContain(const char* str, const char* substr);
 
 }  // namespace zxtest
 

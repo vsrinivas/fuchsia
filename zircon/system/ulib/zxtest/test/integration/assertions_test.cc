@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "helper.h"
-
 #include <zircon/assert.h>
 #include <zircon/types.h>
+
 #include <zxtest/cpp/internal.h>
 #include <zxtest/zxtest.h>
+
+#include "helper.h"
 
 // Sanity check that looks for bugs in C macro implementation of ASSERT_*/EXPECT_*. This forces
 // the text replacement and allows the compiler to find errors. Otherwise is left to the user
@@ -278,6 +279,66 @@ TEST(ZxTestAssertionTest, AssertStrEqFatalFailure) {
   const char* str2 = "b";
 
   ASSERT_STR_EQ(str1, str2, "ASSERT_STR_EQ failed to identify equal strings.");
+  TEST_CHECKPOINT();
+}
+
+TEST(ZxTestAssertionTest, AssertExpectSubStr) {
+  TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS,
+                   "ASSERT/EXPECT_SUBSTR aborted test execution on success.");
+  const char* str = "abc";
+  const char* target = "bc";
+
+  EXPECT_SUBSTR(str, target, "EXPECT_SUBSTR failed to find substring.");
+  ASSERT_SUBSTR(str, target, "ASSERT_SUBSTR failed to find substring.");
+  TEST_CHECKPOINT();
+}
+
+TEST(ZxTestAssertionTest, ExpectSubStrFailure) {
+  TEST_EXPECTATION(CHECKPOINT_REACHED, HAS_ERRORS, "EXPECT_SUBSTR aborted test execution.");
+  const char* str = "abc";
+  const char* target = "bcd";
+
+  EXPECT_SUBSTR(str, target, "EXPECT_SUBSTR unexpectedly found substring.");
+  TEST_CHECKPOINT();
+}
+
+TEST(ZxTestAssertionTest, AssertSubStrFatalFailure) {
+  TEST_EXPECTATION(CHECKPOINT_NOT_REACHED, HAS_ERRORS,
+                   "ASSERT_SUBSTR aborted test execution on success.");
+  const char* str = "abc";
+  const char* target = "bcd";
+
+  ASSERT_SUBSTR(str, target, "ASSERT_SUBSTR unexpectedly found substring.");
+  TEST_CHECKPOINT();
+}
+
+TEST(ZxTestAssertionTest, AssertExpectNotSubStr) {
+  TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS,
+                   "ASSERT/EXPECT_SUBSTR aborted test execution on success.");
+  const char* str = "abc";
+  const char* target = "bcd";
+
+  EXPECT_NOT_SUBSTR(str, target, "EXPECT_SUBSTR failed to find substring.");
+  ASSERT_NOT_SUBSTR(str, target, "ASSERT_SUBSTR failed to find substring.");
+  TEST_CHECKPOINT();
+}
+
+TEST(ZxTestAssertionTest, ExpectNotSubStrFailure) {
+  TEST_EXPECTATION(CHECKPOINT_REACHED, HAS_ERRORS, "EXPECT_SUBSTR aborted test execution.");
+  const char* str = "abc";
+  const char* target = "bc";
+
+  EXPECT_NOT_SUBSTR(str, target, "EXPECT_SUBSTR unexpectedly found substring.");
+  TEST_CHECKPOINT();
+}
+
+TEST(ZxTestAssertionTest, AssertNotSubStrFatalFailure) {
+  TEST_EXPECTATION(CHECKPOINT_NOT_REACHED, HAS_ERRORS,
+                   "ASSERT_SUBSTR aborted test execution on success.");
+  const char* str = "abc";
+  const char* target = "bc";
+
+  ASSERT_NOT_SUBSTR(str, target, "ASSERT_SUBSTR unexpectedly found substring.");
   TEST_CHECKPOINT();
 }
 
