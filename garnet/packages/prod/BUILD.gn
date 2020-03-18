@@ -518,6 +518,7 @@ group("bluetooth_all") {
 }
 
 group("magma-arm-mali") {
+  testonly = true
   public_deps = [
     "//garnet/packages/prod:sysmem_connector",
     "//src/graphics/lib/magma/gnbuild/magma-arm-mali:magma-vulkan",
