@@ -50,12 +50,14 @@ check_mock_has_args() {
       return 0
     fi
   done
-  BT_EXPECT false
+  BT_EXPECT false "Could not find ${expected[*]} in ${BT_MOCK_ARGS[*]}"
   return 1
 }
 
-# Verifies that the correct emulator command is run by femu, along with the image setup
-TEST_femu() {
+# Verifies that the correct emulator command is run by femu, along with the image setup.
+# This tests the -N option. On mac os, this is expected to fail.
+TEST_femu_networking() {
+ 
   PATH_DIR_FOR_TEST="${BT_TEMP_DIR}/_isolated_path_for"
   export PATH="${PATH_DIR_FOR_TEST}:${PATH}"
 
@@ -70,12 +72,23 @@ INPUT
 zip "\$4" "${BT_TEMP_DIR}/scripts/sdk/gn/base/images/emulator/aemu-linux-amd64-${AEMU_LABEL}/emulator"
 INPUT
 
+  if is-mac; then
+    expected_result=BT_EXPECT_FAIL
+  else
+    expected_result=BT_EXPECT
+  fi
+
   # Run command.
-  BT_EXPECT gn-test-run-bash-script "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/femu.sh" \
+  ${expected_result} gn-test-run-bash-script "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/femu.sh" \
     -N \
     --unknown-arg1-to-qemu \
     --authorized-keys "${BT_TEMP_DIR}/scripts/sdk/gn/base/testdata/authorized_keys" \
     --unknown-arg2-to-qemu
+
+  #The remaining validation steps are disabled on OSX since the test failed earlier due to -N not being supported yet".
+  if is-mac; then
+    return 0
+  fi
 
   # Verify that fvm resized the disk file by 2x from the input 1024 to 2048.
   # shellcheck disable=SC1090
@@ -141,7 +154,7 @@ BT_INIT_TEMP_DIR() {
 
   # Create a small disk image to avoid downloading, and test if it is doubled in size as expected
   mkdir -p "${BT_TEMP_DIR}/scripts/sdk/gn/base/images/image"
-  dd if=/dev/zero of="${BT_TEMP_DIR}/scripts/sdk/gn/base/images/image/storage-full.blk" bs=1024 count=1 status=none
+  dd if=/dev/zero of="${BT_TEMP_DIR}/scripts/sdk/gn/base/images/image/storage-full.blk" bs=1024 count=1  > /dev/null 2>/dev/null
 
   # Create empty authorized_keys file to add to the system image, but the contents are not used.
   mkdir -p "${BT_TEMP_DIR}/scripts/sdk/gn/base/testdata"

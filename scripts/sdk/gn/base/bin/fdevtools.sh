@@ -12,13 +12,15 @@ trap 'err_print $0:$LINENO' ERR
 set -e
 
 SCRIPT_SRC_DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd)"
+# shellcheck disable=SC1090
 source "${SCRIPT_SRC_DIR}/fuchsia-common.sh" || exit $?
 # Computed from instance id at https://chrome-infra-packages.appspot.com/p/fuchsia_internal/gui_tools/fuchsia_devtools/linux-amd64/+/dogfood-1-1
 VER_DEVTOOLS="$(cat "${SCRIPT_SRC_DIR}/devtools.version")"
 
-export FUCHSIA_SDK_PATH="$(realpath "${SCRIPT_SRC_DIR}/..")"
-export FUCHSIA_IMAGE_WORK_DIR="$(realpath "${SCRIPT_SRC_DIR}/../images")"
-
+FUCHSIA_SDK_PATH="$(realpath "$(dirname "${SCRIPT_SRC_DIR}")")"
+export FUCHSIA_SDK_PATH
+FUCHSIA_IMAGE_WORK_DIR="${FUCHSIA_SDK_PATH}/images"
+export FUCHSIA_IMAGE_WORK_DIR
 
 usage () {
   echo "Usage: $0"
@@ -101,7 +103,7 @@ fuchsia_internal/gui_tools/fuchsia_devtools/\${platform} $VER_DEVTOOLS
 end
 
 FDT_DIR="${FUCHSIA_IMAGE_WORK_DIR}/fuchsia_devtools-${LABEL_DEVTOOLS}"
-if ! $(run-cipd ensure -ensure-file "${TEMP_ENSURE}" -root "${FDT_DIR}"); then
+if ! run-cipd ensure -ensure-file "${TEMP_ENSURE}" -root "${FDT_DIR}"; then
   rm "$TEMP_ENSURE"
   echo "Failed to download Fuchsia DevTools ${VER_DEVTOOLS}."
   exit 1
@@ -109,7 +111,8 @@ fi
 rm "${TEMP_ENSURE}"
 
 export FDT_TOOLCHAIN="GN"
-export FDT_GN_SSH="$(command -v ssh)"
+FDT_GN_SSH="$(command -v ssh)"
+export FDT_GN_SSH
 export FDT_SSH_CONFIG="${SCRIPT_SRC_DIR}/sshconfig"
 export FDT_SSH_KEY="${AUTH_KEYS_FILE}"
 export FDT_GN_DEVFIND="${FUCHSIA_SDK_PATH}/tools/device-finder"

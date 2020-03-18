@@ -153,7 +153,7 @@ class GNGenerateTest(unittest.TestCase):
                 found_file = os.path.relpath(os.path.join(dir_name, f), sdk_dir)
                 self.assertIn(found_file, fileset)
                 fileset.remove(found_file)
-        self.assertTrue(len(fileset) == 0)
+        self.assertTrue(len(fileset) == 0, "Files missing from manifest: %s" % str(fileset))
 
     def get_atom_files(self, atom):
         files = set()

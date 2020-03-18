@@ -19,14 +19,17 @@ echo "Cannot start emulator" > /dev/stderr
 INPUT
 
   # Run command, which is expected to fail
-  BT_EXPECT_FAIL gn-test-run-bash-script "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/femu-exec-wrapper.sh" \
-    --femu-log "${BT_TEMP_DIR}/femu.log"
+  BT_EXPECT_FAIL  "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/femu-exec-wrapper.sh" \
+    --femu-log "${BT_TEMP_DIR}/femu.log" > /dev/null 2>&1
 
   # Check that femu.sh was called
   # shellcheck disable=SC1090
   source "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/femu.sh.mock_state"
-  gn-test-check-mock-args _ANY_ --image qemu-x64 -N
-
+  if ! is-mac; then
+    gn-test-check-mock-args _ANY_ --image qemu-x64 -N
+  else
+    gn-test-check-mock-args _ANY_ --image qemu-x64
+  fi
   # Check that the stderr from femu.sh was correctly written to the log file
   BT_EXPECT_FILE_CONTAINS_SUBSTRING "${BT_TEMP_DIR}/femu.log" "Cannot start emulator"
 }

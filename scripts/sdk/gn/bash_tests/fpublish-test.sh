@@ -12,6 +12,8 @@ readonly PACKAGE_NAME=placeholder.far
 
 # Paths.
 SCRIPT_SRC_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+# shellcheck disable=SC1090
+source "${SCRIPT_SRC_DIR}/gn-bash-test-lib.sh"
 
 # Verifies that the correct pm serve command is run by fpublish.
 TEST_fpublish() {
@@ -19,6 +21,7 @@ TEST_fpublish() {
   BT_EXPECT "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fpublish.sh" "${PACKAGE_NAME}"
 
   # Verify that pm serve was run correctly.
+  # shellcheck disable=SC1090
   source "${BT_TEMP_DIR}/scripts/sdk/gn/base/tools/pm.mock_state"
   local PM_ARGS=("${BT_MOCK_ARGS[@]:1}")
 
@@ -45,10 +48,13 @@ TEST_fpublish() {
 }
 
 # Test initialization.
+# shellcheck disable=SC2034
 BT_FILE_DEPS=(
   scripts/sdk/gn/base/bin/fpublish.sh
   scripts/sdk/gn/base/bin/fuchsia-common.sh
+  scripts/sdk/gn/bash_tests/gn-bash-test-lib.sh
 )
+# shellcheck disable=SC2034
 BT_MOCKED_TOOLS=(
   scripts/sdk/gn/base/tools/pm
 )

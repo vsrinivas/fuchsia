@@ -30,6 +30,7 @@ DEVICE_NAME_FILTER=""
 DEVICE_IP=""
 POSITIONAL=()
 
+
 # Parse command line
 while (( "$#" )); do
 case $1 in
@@ -94,6 +95,8 @@ if [[ "${PRIVATE_KEY_FILE}" != "" ]]; then
 fi
 
 ssh_args+=( "${target_device_ip}" )
-ssh_args+=( "${POSITIONAL[@]}" )
+if [[ "${#POSITIONAL[@]}" -ne 0 ]]; then
+  ssh_args+=( "${POSITIONAL[@]}" )
+fi
 
 ssh-cmd "${ssh_args[@]}"

@@ -6,12 +6,15 @@
 # Tests for fuchsia-common.sh library script
 
 SCRIPT_SRC_DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd)"
+# shellcheck disable=SC1090
+source "${SCRIPT_SRC_DIR}/gn-bash-test-lib.sh"
 
 # shellcheck disable=SC2034
 BT_FILE_DEPS=(
   "scripts/sdk/gn/base/bin/fuchsia-common.sh"
   "scripts/sdk/gn/base/bin/sshconfig"
   "scripts/sdk/gn/testdata/meta/manifest.json"
+  "scripts/sdk/gn/bash_tests/gn-bash-test-lib.sh"
 )
 SOURCE_FILE="${SCRIPT_SRC_DIR}/../base/bin/fuchsia-common.sh"
 REPO_ROOT="$(realpath "$(dirname "${SOURCE_FILE}")")"
@@ -29,15 +32,16 @@ BT_MOCKED_TOOLS=(
 )
 
 BT_SET_UP() {
-    btf::make_mock "${MOCKED_SSH_BIN}"
-    cat > "${MOCKED_SSH_BIN}.mock_side_effects" <<"EOF"
+    export PATH="${BT_TEMP_DIR}/mocked:${PATH}"
+    cat > "${BT_TEMP_DIR}/${MOCKED_SSH_BIN}.mock_side_effects" <<"EOF"
       echo "$@"
 EOF
-}
 
+    export PATH="${BT_TEMP_DIR}/mocked:${PATH}"
 # shellcheck disable=SC1090
 source "${SOURCE_FILE}"
 
+}
 
 TEST_fx-warn() {
     BT_ASSERT_FUNCTION_EXISTS fx-warn
@@ -57,15 +61,16 @@ TEST_fx-error() {
 
 TEST_ssh-cmd() {
      BT_ASSERT_FUNCTION_EXISTS ssh-cmd
-     BT_ASSERT_FUNCTION_EXISTS set-ssh-path
-
-    set-ssh-path "${MOCKED_SSH_BIN}"
-    ssh-cmd remote-host ls -l
+     cat > "${BT_TEMP_DIR}/${MOCKED_SSH_BIN}.mock_side_effects" <<"EOF"
+      echo "$@"
+EOF
+    ssh-cmd remote-host ls -l > /dev/null
     # shellcheck disable=SC1090
-    source "${MOCKED_SSH_BIN}.mock_state"
-    EXPECTED_SSH_CMD_LINE=("${MOCKED_SSH_BIN}" "-F" "${REPO_ROOT}/sshconfig" "remote-host" "ls" "-l")
+    source "${BT_TEMP_DIR}/${MOCKED_SSH_BIN}.mock_state"
+    EXPECTED_SSH_CMD_LINE=("${BT_TEMP_DIR}/${MOCKED_SSH_BIN}" "-F" "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/sshconfig" "remote-host" "ls" "-l")
     BT_EXPECT_EQ "${EXPECTED_SSH_CMD_LINE[*]}" "${BT_MOCK_ARGS[*]}"
 }
+
 
 TEST_get-device-name() {
      BT_ASSERT_FUNCTION_EXISTS get-device-name
@@ -82,6 +87,7 @@ TEST_get-device-ip-by-name() {
     btf::make_mock "${MOCKED_DEVICE_FINDER}"
     MOCK_DEVICE="atom-device-name-mocked"
     get-device-ip-by-name "." "${MOCK_DEVICE}"
+    # shellcheck disable=SC1090
     source "${MOCKED_DEVICE_FINDER}.mock_state"
     EXPECTED_DEVICE_FINDER_CMD_LINE=("./${MOCKED_DEVICE_FINDER}" "resolve" "-device-limit" "1" "-ipv4=false" "-netboot" "${MOCK_DEVICE}")
     BT_EXPECT_EQ "${EXPECTED_DEVICE_FINDER_CMD_LINE[*]}" "${BT_MOCK_ARGS[*]}"
@@ -91,6 +97,7 @@ TEST_get-device-ip-by-name-no-args() {
     BT_ASSERT_FUNCTION_EXISTS get-device-ip-by-name
     btf::make_mock "${MOCKED_DEVICE_FINDER}"
     get-device-ip-by-name "."
+    # shellcheck disable=SC1090
     source "${MOCKED_DEVICE_FINDER}.mock_state"
     EXPECTED_DEVICE_FINDER_CMD_LINE=("./${MOCKED_DEVICE_FINDER}" "list" "-netboot" "-device-limit" "1" "-ipv4=false")
     BT_EXPECT_EQ "${EXPECTED_DEVICE_FINDER_CMD_LINE[*]}" "${BT_MOCK_ARGS[*]}"
@@ -101,6 +108,7 @@ TEST_get-device-ip() {
     btf::make_mock "${MOCKED_DEVICE_FINDER}"
     MOCK_DEVICE="atom-device-name-mocked"
     get-device-ip "."
+    # shellcheck disable=SC1090
     source "${MOCKED_DEVICE_FINDER}.mock_state"
     EXPECTED_DEVICE_FINDER_CMD_LINE=("./${MOCKED_DEVICE_FINDER}" "list" "-netboot" "-device-limit" "1" "-ipv4=false")
     BT_EXPECT_EQ "${EXPECTED_DEVICE_FINDER_CMD_LINE[*]}" "${BT_MOCK_ARGS[*]}"
@@ -195,3 +203,4 @@ EOF
 }
 
 BT_RUN_TESTS "$@"
+

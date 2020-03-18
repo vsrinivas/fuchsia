@@ -12,14 +12,16 @@ trap 'err_print $0:$LINENO' ERR
 set -e
 
 SCRIPT_SRC_DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd)"
+# shellcheck disable=SC1090
 source "${SCRIPT_SRC_DIR}/fuchsia-common.sh" || exit $?
 FUCHSIA_BUCKET="${DEFAULT_FUCHSIA_BUCKET}"
 IMAGE_NAME="qemu-x64"
 VER_AEMU="$(cat "${SCRIPT_SRC_DIR}/aemu.version")"
 
 # Export variables needed here but also in femu.sh
-export FUCHSIA_SDK_PATH="$(realpath "${SCRIPT_SRC_DIR}/..")"
-export FUCHSIA_IMAGE_WORK_DIR="$(realpath "${SCRIPT_SRC_DIR}/../images")"
+FUCHSIA_SDK_PATH="$(realpath "$(dirname "${SCRIPT_SRC_DIR}")")"
+export FUCHSIA_SDK_PATH
+export FUCHSIA_IMAGE_WORK_DIR="${FUCHSIA_SDK_PATH}/images"
 
 emu_help () {
   # Extract command-line argument help from emu script, similar to fx-print-command-help
@@ -155,6 +157,7 @@ export FUCHSIA_BUILD_DIR="${FUCHSIA_IMAGE_WORK_DIR}/image"
 export PREBUILT_AEMU_DIR="${CIPD_DIR}"
 
 # Need to make the SDK storage-full.blk writable so that the copy is writable as well, otherwise fvm extend fails in lib/fvm.sh
+# shellcheck disable=SC1090
 source "${SCRIPT_SRC_DIR}/fx-image-common.sh"
 echo "Setting writable permissions on $FUCHSIA_BUILD_DIR/$IMAGE_FVM_RAW"
 chmod u+w "$FUCHSIA_BUILD_DIR/$IMAGE_FVM_RAW"

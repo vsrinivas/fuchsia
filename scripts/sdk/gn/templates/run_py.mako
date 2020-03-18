@@ -176,21 +176,26 @@ class GnTester(object):
             msg += '"%s"' % stdout
             raise AssertionError(msg)
         print "Test project rebuilt successfully"
+    
+    def _run_build_tests(self):
+        self._run_test("_build_test_project")
+        self._run_test("_verify_package_depfile")
+        self._run_test("_verify_rebuild_noop")
 
     def run(self):
         self._run_test("_generate_test")
         self._run_test("_gen_fild_resp_file_unittest")
         self._run_test("_bash_tests")
-        self._run_test("_build_test_project")
-        self._run_test("_verify_package_depfile")
-        self._run_test("_verify_rebuild_noop")
+ 
+        if platform.system() == 'Darwin':
+            print "The GN SDK does not support building on macOS."
+        else:
+            self._run_build_tests()
+            
         return self._test_failed
 
 
 def main():
-    if platform.system() == 'Darwin':
-        print "The GN SDK does not support macOS"
-        return 0
     parser = argparse.ArgumentParser(description='Runs the GN SDK tests')
     parser.add_argument(
         '--gn',

@@ -8,6 +8,9 @@
 # package server with the device.
 
 set -e
+SCRIPT_SRC_DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd)"
+# shellcheck disable=SC1090
+source "${SCRIPT_SRC_DIR}/gn-bash-test-lib.sh"
 
 FSERVE_CMD="${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fserve.sh"
 
@@ -52,7 +55,6 @@ SETVAR
 # at the destination of the cp command.
 set_up_gsutil() {
   cat >"${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/gsutil.mock_side_effects" <<"SETVAR"
-set -x
 
 if [[ "$1" != "cp" ]]; then
   # Ignore any invocations other than cp.
@@ -102,7 +104,7 @@ set_up_sdk_stubs() {
   tar czf "${tarball}" foo
 
   local hash
-  hash=$(md5sum "${tarball}" | cut -d ' ' -f 1)
+  hash=$(run-md5 "${tarball}" | cut -d ' ' -f 1)
   echo "${hash}  ${tarball}" >"${BT_TEMP_DIR}/scripts/sdk/gn/base/images/image/image.md5"
 }
 
@@ -168,7 +170,7 @@ check_mock_has_args() {
       return 0
     fi
   done
-  BT_EXPECT false
+  BT_EXPECT false "Could not find ${expected[*]} in ${BT_MOCK_ARGS[*]}"
   return 1
 }
 
@@ -180,7 +182,7 @@ TEST_fserve_starts_package_server() {
   set_up_sdk_stubs
 
   # Run command.
-  BT_EXPECT run_bash_script "${FSERVE_CMD}"
+  BT_EXPECT run_bash_script "${FSERVE_CMD}" --image generic-x64
 
   # shellcheck disable=SC1090
   source "${BT_TEMP_DIR}/scripts/sdk/gn/base/tools/pm.mock_state"
@@ -203,7 +205,7 @@ TEST_fserve_registers_package_server() {
   set_up_sdk_stubs
 
   # Run command.
-  BT_EXPECT run_bash_script "${FSERVE_CMD}"
+  BT_EXPECT run_bash_script "${FSERVE_CMD}" --image generic-x64
 
   # shellcheck disable=SC1090
   source "${PATH_DIR_FOR_TEST}/ssh.mock_state"
@@ -233,6 +235,7 @@ TEST_fpave_lists_images() {
 BT_FILE_DEPS=(
   scripts/sdk/gn/base/bin/fserve.sh
   scripts/sdk/gn/base/bin/fuchsia-common.sh
+  scripts/sdk/gn/bash_tests/gn-bash-test-lib.sh
 )
 # shellcheck disable=SC2034
 BT_MOCKED_TOOLS=(

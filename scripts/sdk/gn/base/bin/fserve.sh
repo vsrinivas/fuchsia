@@ -11,12 +11,12 @@ SCRIPT_SRC_DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd)"
 # shellcheck disable=SC1090
 source "${SCRIPT_SRC_DIR}/fuchsia-common.sh" || exit $?
 
-FUCHSIA_SDK_PATH="$(realpath "${SCRIPT_SRC_DIR}/..")"
-FUCHSIA_IMAGE_WORK_DIR="$(realpath "${SCRIPT_SRC_DIR}/../images")"
+FUCHSIA_SDK_PATH="$(realpath "$(dirname "${SCRIPT_SRC_DIR}")")"
+FUCHSIA_IMAGE_WORK_DIR="${FUCHSIA_SDK_PATH}/images"
 FUCHSIA_BUCKET="${DEFAULT_FUCHSIA_BUCKET}"
-
 FUCHSIA_SERVER_PORT="8083"
 IMAGE_NAME="generic-x64"
+
 usage () {
   echo "Usage: $0"
   echo "  [--work-dir <directory to store image assets>]"
@@ -24,7 +24,7 @@ usage () {
   echo "  [--bucket <fuchsia gsutil bucket>]"
   echo "    Defaults to ${FUCHSIA_BUCKET}"
   echo "  [--image <image name>]"
-  echo "    Defaults to ${IMAGE_NAME}"
+  echo "    Defaults to ${IMAGE_NAME}. Use --image list to list all available images."
   echo "  [--private-key <identity file>]"
   echo "    Uses additional private key when using ssh to access the device."
   echo "  [--server-port <port>]"
@@ -101,7 +101,7 @@ SDK_ID=$(get-sdk-version "${FUCHSIA_SDK_PATH}")
 #
 # Consider cleaning up old tarballs when getting a new one?
 #
-if [[ ! -v  IMAGE_NAME ]]; then
+if [[ "$IMAGE_NAME" == "" ]]; then
   IMAGES=("$(get-available-images "${SDK_ID}" "${FUCHSIA_BUCKET}")")
   fx-error "IMAGE_NAME not set. Valid images for this SDK version are:" "${IMAGES[*]}."
   exit 1
@@ -131,10 +131,9 @@ fi
 # changes in the packages file.
 CHECKSUM_FILE="${FUCHSIA_IMAGE_WORK_DIR}/packages/packages.md5"
 
-
 # check that any existing contents of the image directory match the intended target device
 if [[ -f "${CHECKSUM_FILE}" ]]; then
-  if [[ "$(md5sum "${FUCHSIA_IMAGE_WORK_DIR}/${IMAGE_FILENAME}")" != "$(cat "${CHECKSUM_FILE}")" ]]; then
+  if [[ "$(run-md5 "${FUCHSIA_IMAGE_WORK_DIR}/${IMAGE_FILENAME}")" != "$(cat "${CHECKSUM_FILE}")" ]]; then
     fx-warn "Removing old package files."
     if ! rm -f "$(cut -d ' '  -f3 "${CHECKSUM_FILE}")"; then
       fx-error "Could not clean up old image archive."
@@ -167,7 +166,7 @@ if [[ ! -d "${FUCHSIA_IMAGE_WORK_DIR}/packages/amber-files" ]]; then
     fx-error "Could not extract image from ${FUCHSIA_IMAGE_WORK_DIR}/${IMAGE_FILENAME}."
     exit 1
   fi
-  md5sum "${FUCHSIA_IMAGE_WORK_DIR}/${IMAGE_FILENAME}" > "${CHECKSUM_FILE}"
+  run-md5 "${FUCHSIA_IMAGE_WORK_DIR}/${IMAGE_FILENAME}" > "${CHECKSUM_FILE}"
 fi
 
 # Exit out if we only need to prepare the downloads

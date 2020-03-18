@@ -8,6 +8,7 @@
 
 set -e
 SCRIPT_SRC_DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd)"
+# shellcheck disable=SC1090
 source "${SCRIPT_SRC_DIR}/gn-bash-test-lib.sh"
 
 BT_INIT_TEMP_DIR() {
@@ -114,7 +115,7 @@ TEST_fssh_name_not_found() {
   export PATH="${BT_TEMP_DIR}/isolated_path_for:${PATH}"
 
   # Run command.
-  BT_EXPECT_FAIL gn-test-run-bash-script "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fssh.sh" --device-name name-not-found
+  BT_EXPECT_FAIL  "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fssh.sh" --device-name name-not-found
 }
 
 

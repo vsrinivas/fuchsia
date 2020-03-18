@@ -15,20 +15,20 @@ SCRIPT_SRC_DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd)"
 # shellcheck disable=SC1090
 source "${SCRIPT_SRC_DIR}/fuchsia-common.sh" || exit $?
 
-FUCHSIA_SDK_PATH="$(realpath "${SCRIPT_SRC_DIR}/..")"
-FUCHSIA_IMAGE_WORK_DIR="$(realpath "${SCRIPT_SRC_DIR}/../images")"
+FUCHSIA_SDK_PATH="$(realpath "$(dirname "${SCRIPT_SRC_DIR}")")"
+FUCHSIA_IMAGE_WORK_DIR="${FUCHSIA_SDK_PATH}/images"
 FUCHSIA_BUCKET="${DEFAULT_FUCHSIA_BUCKET}"
 DEVICE_NAME_FILTER=""
 IMAGE_NAME="generic-x64"
 
 function usage {
   echo "Usage: $0"
+  echo "  [--image <image name>"]
+  echo "    Defaults to ${IMAGE_NAME}. Use --image list to list all available images."
   echo "  [--work-dir <working directory to store image assets>]"
   echo "    Defaults to ${FUCHSIA_IMAGE_WORK_DIR}."
   echo "  [--bucket <fuchsia gsutil bucket>]"
   echo "    Defaults to ${FUCHSIA_BUCKET}."
-  echo "  [--image <image name>]"
-  echo "    Defaults to ${IMAGE_NAME}."
   echo "  [--authorized-keys <file>]"
   echo "    The authorized public key file for securing the device.  Defaults to "
   echo "    the output of 'ssh-add -L'."
@@ -47,6 +47,7 @@ PRIVATE_KEY_FILE=""
 PREPARE_ONLY=""
 AUTH_KEYS_FILE=""
 UPDATE_ZEDBOOT=""
+
 
 # Parse command line
 while (( "$#" )); do
@@ -102,9 +103,9 @@ fi
 
 SDK_ID=$(get-sdk-version "${FUCHSIA_SDK_PATH}")
 
-if [[ ! -v  IMAGE_NAME ]]; then
+if [[ "${IMAGE_NAME}" == "list" ]]; then
   IMAGES=("$(get-available-images "${SDK_ID}" "${FUCHSIA_BUCKET}")")
-  fx-error "IMAGE_NAME not set. Valid images for this SDK version are: ${IMAGES[*]}."
+  echo "Valid images for this SDK version are: ${IMAGES[*]}."
   exit 1
 fi
 
@@ -136,7 +137,7 @@ CHECKSUM_FILE="${FUCHSIA_IMAGE_WORK_DIR}/image/image.md5"
 
 # check that any existing contents of the image directory match the intended target device
 if [[ -f "${CHECKSUM_FILE}" ]]; then
-  if [[ "$(md5sum "${FUCHSIA_IMAGE_WORK_DIR}/${IMAGE_FILENAME}")" != "$(< "${CHECKSUM_FILE}")" ]]; then
+  if [[ $(run-md5 "${FUCHSIA_IMAGE_WORK_DIR}/${IMAGE_FILENAME}") != "$(< "${CHECKSUM_FILE}")" ]]; then
     fx-warn "Removing old image files."
     if ! rm -f "$(cut -d ' ' -f3 "${CHECKSUM_FILE}")"; then
       fx-error "Could not clean up old image archive."
@@ -169,7 +170,7 @@ if [[ ! -f "${FUCHSIA_IMAGE_WORK_DIR}/image/pave.sh" ]]; then
     fx-error "Could not extract image from ${FUCHSIA_IMAGE_WORK_DIR}/${IMAGE_FILENAME}."
     exit 1
   fi
-  md5sum "${FUCHSIA_IMAGE_WORK_DIR}/${IMAGE_FILENAME}" > "${CHECKSUM_FILE}"
+  run-md5 "${FUCHSIA_IMAGE_WORK_DIR}/${IMAGE_FILENAME}" > "${CHECKSUM_FILE}"
 fi
 
 # Exit out if we only need to prepare the downloads
@@ -212,6 +213,13 @@ if [[ "$?" && -n "$DEVICE_IP" ]]; then
 else
     fx-warn "Device not detected.  Make sure the device is connected and at the 'Zedboot' screen."
 fi
+
+# The prebuilt images do not have a bootserver for mac, so overwrite the bootserver with the
+# mac bootserver. See fxb/48346.
+if is-mac; then
+  cp -f "${FUCHSIA_SDK_PATH}/tools/bootserver" "${FUCHSIA_IMAGE_WORK_DIR}/image/bootserver.exe.linux-x64"
+fi
+
 
 if [[ "${UPDATE_ZEDBOOT}" == "yes" ]]; then
   PAVE_CMD=("${FUCHSIA_IMAGE_WORK_DIR}/image/pave-zedboot.sh")

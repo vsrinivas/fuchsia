@@ -11,6 +11,31 @@
 
 set -e
 
+function is-mac {
+  [[ "$(uname -s)" == "Darwin" ]] && return 0
+  return 1
+}
+
+# Runs md5sum or equivalent on mac.
+function run-md5 {
+  if is-mac; then
+    MD5_CMD=("/sbin/md5"  "-r")
+  else
+    MD5_CMD=("md5sum")
+  fi
+
+  MD5_CMD+=("$@")
+
+  "${MD5_CMD[@]}"
+}
+
+if is-mac; then
+  realpath() {
+      [[ $1 = /* ]] && echo "$1" || echo "$PWD/${1#./}"
+  }
+fi
+
+
 # Runs a bash script. The function provides these conveniences over calling the
 # script directly:
 #

@@ -93,11 +93,12 @@ EOF
 # in manifest.json.
 set_up_sdk_stubs() {
   local hash
-  hash=$(md5sum "${BT_TEMP_DIR}/scripts/sdk/gn/testdata/empty.tar.gz" | cut -d ' ' -f 1)
+  hash=$(run-md5 "${BT_TEMP_DIR}/scripts/sdk/gn/testdata/empty.tar.gz" | cut -d ' ' -f 1)
+
   # The filename is constructed from the Core SDK version ("id") in the
   # manifest. See //scripts/sdk/gn/testdata/meta/manifest.json.
   local tarball="${BT_TEMP_DIR}/scripts/sdk/gn/base/images/8890373976687374912_generic-x64.tgz"
-  echo "${hash}  ${tarball}" >"${BT_TEMP_DIR}/scripts/sdk/gn/base/images/image/image.md5"
+  echo "${hash} ${tarball}" >"${BT_TEMP_DIR}/scripts/sdk/gn/base/images/image/image.md5"
 }
 
 
@@ -145,7 +146,7 @@ TEST_fpave_starts_paving() {
 
   local expected_args=( _ANY_ --authorized-keys "${BT_TEMP_DIR}/scripts/sdk/gn/base/testdata/authorized_keys" -1 )
   gn-test-check-mock-args "${expected_args[@]}"
- 
+
   # Verify that pave.sh was only run once.
   BT_EXPECT_FILE_DOES_NOT_EXIST "${BT_TEMP_DIR}/scripts/sdk/gn/base/images/image/pave.sh.mock_state.1"
 }
@@ -196,6 +197,7 @@ BT_FILE_DEPS=(
 # shellcheck disable=SC2034
 BT_MOCKED_TOOLS=(
   scripts/sdk/gn/base/bin/gsutil
+  scripts/sdk/gn/base/tools/bootserver
   scripts/sdk/gn/base/images/image/pave.sh
   scripts/sdk/gn/base/tools/device-finder
   isolated_path_for/ssh
@@ -203,7 +205,7 @@ BT_MOCKED_TOOLS=(
 
 BT_SET_UP() {
   mkdir -p "${BT_TEMP_DIR}/scripts/sdk/gn/testdata"
-   tar czf "${BT_TEMP_DIR}/scripts/sdk/gn/testdata/empty.tar.gz" -C "${BT_TEMP_DIR}/scripts/sdk/gn/base/images"  "image"
+  tar czf "${BT_TEMP_DIR}/scripts/sdk/gn/testdata/empty.tar.gz" -C "${BT_TEMP_DIR}/scripts/sdk/gn/base/images/image"  "."
 }
 
 BT_INIT_TEMP_DIR() {

@@ -10,6 +10,20 @@ SCRIPT_SRC_DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd)"
 DEFAULT_FUCHSIA_BUCKET="fuchsia"
 SSH_BIN="$(command -v ssh)"
 
+function is-mac {
+  [[ "$(uname -s)" == "Darwin" ]] && return 0
+  return 1
+}
+
+# Add Mac specific support
+if is-mac; then
+  # Fuchsia mac functions.
+
+  realpath() {
+      [[ $1 = /* ]] && echo "$1" || echo "$PWD/${1#./}"
+  }
+fi
+
 # fx-warn prints a line to stderr with a yellow WARNING: prefix.
 function fx-warn {
   if [[ -t 2 ]]; then
@@ -26,10 +40,6 @@ function fx-error {
   else
     echo -e >&2 "ERROR: $*"
   fi
-}
-
-function set-ssh-path {
-  SSH_BIN="$1"
 }
 
 function ssh-cmd {
@@ -114,6 +124,10 @@ function run-gsutil {
   if [[ ! -e "${GSUTIL_BIN}" ]]; then
     GSUTIL_BIN="$(command -v gsutil)"
   fi
+  if [[ ! -e "${GSUTIL_BIN}" ]]; then
+    GSUTIL_BIN="$(command -v gsutil.py)"
+  fi
+
 
   if [[ "${GSUTIL_BIN}" == "" ]]; then
     fx-error "Cannot find gsutil."
@@ -137,6 +151,19 @@ function run-cipd {
   "${CIPD_BIN}" "$@"
 }
 
+# Runs md5sum or equivalent on mac.
+function run-md5 {
+  if is-mac; then
+    MD5_CMD=("/sbin/md5"  "-r")
+  else
+    MD5_CMD=("md5sum")
+  fi
+
+  MD5_CMD+=("$@")
+
+  "${MD5_CMD[@]}"
+}
+
 function get-available-images {
   # $1 is the SDK ID.
   # $2 is the bucket, or uses the default.
@@ -144,12 +171,13 @@ function get-available-images {
   local BUCKET=""
 
   BUCKET="${2:-${DEFAULT_FUCHSIA_BUCKET}}"
-  for f in $(run-gsutil "ls" "gs://${BUCKET}/development/${1}/images" | cut -d/ -f7)
+
+  for f in $(run-gsutil "ls" "gs://${BUCKET}/development/${1}/images" | cut -d/ -f7 | tr '\n' ' ')
   do
     IMAGES+=("${f%.*}")
   done
   if [[ "${BUCKET}" != "${DEFAULT_FUCHSIA_BUCKET}" ]]; then
-      for f in $(run-gsutil "ls" "gs://${DEFAULT_FUCHSIA_BUCKET}/development/${1}/images" | cut -d/ -f7)
+      for f in $(run-gsutil "ls" "gs://${DEFAULT_FUCHSIA_BUCKET}/development/${1}/images" | cut -d/ -f7 | tr '\n' ' ')
       do
         IMAGES+=("${f%.*}")
       done
@@ -160,14 +188,16 @@ function get-available-images {
 function kill-running-pm {
   local PM_PROCESS=()
   IFS=" " read -r -a PM_PROCESS <<< "$(pgrep -ax pm)"
-  if [[ -n "${PM_PROCESS[*]}" ]]; then
-    if [[ "${PM_PROCESS[1]}" == *"tools/pm" ]]; then
-      fx-warn "Killing existing pm process"
-      kill "${PM_PROCESS[0]}"
-      return $?
+  if (( ${#PM_PROCESS[@]})); then
+    if [[ -n "${PM_PROCESS[*]}" ]]; then
+      if [[ "${PM_PROCESS[1]}" == *"tools/pm" ]]; then
+        fx-warn "Killing existing pm process"
+        kill "${PM_PROCESS[0]}"
+        return $?
+      fi
+    else
+      fx-warn "existing pm process not found"
     fi
-  else
-    fx-warn "existing pm process not found"
   fi
   return 0
 }
