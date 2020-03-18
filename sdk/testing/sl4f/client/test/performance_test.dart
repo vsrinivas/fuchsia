@@ -247,6 +247,22 @@ void main(List<String> args) {
     expect(capturedArgs[11], 'fuchsia-builder');
   });
 
+  // convertResults() should raise an error if a non-empty subset of the
+  // infra env vars are set.
+  test('convertResults error', () async {
+    final mockRunProcessObserver = MockRunProcessObserver();
+    final performance =
+        FakePerformanceTools(mockSl4f, mockDump, mockRunProcessObserver);
+
+    final environment = {
+      'BUILDBUCKET_ID': '8abc123',
+    };
+    expect(
+        performance.convertResults('/bin/catapult_converter',
+            File('test1-benchmark.fuchsiaperf.json'), environment),
+        throwsA(TypeMatcher<ArgumentError>()));
+  });
+
   test('trace options', () async {
     final List<int> data = [0x10, 0x00, 0x04, 0x46, 0x78, 0x54, 0x16, 0x00];
 

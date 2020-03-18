@@ -334,34 +334,33 @@ class Performance {
     _log.info('Converting the results into the catapult format');
 
     var bot = '', logurl = '', master = '', timestamp = 0;
-    if (!environment.containsKey(_buildbucketIdVarName)) {
+
+    final builderName = environment[_builderNameVarName];
+    final buildbucketBucket = environment[_buildbucketBucketVarName];
+    final buildbucketId = environment[_buildbucketIdVarName];
+    final buildCreateTime = environment[_buildCreateTimeVarName];
+    final inputCommitRef = environment[_inputCommitRefVarName];
+    final inputCommitHost = environment[_inputCommitHostVarName];
+    final inputCommitProject = environment[_inputCommitProjectVarName];
+
+    final envVars = [
+      builderName,
+      buildbucketBucket,
+      buildbucketId,
+      buildCreateTime,
+      inputCommitRef,
+      inputCommitHost,
+      inputCommitProject
+    ];
+
+    if (envVars.every((str) => str == null)) {
       _log.info(
-          'convertResults: No $_buildbucketIdVarName, treating as a local run.');
+          'convertResults: Infra env vars are not set; treating as a local run.');
       bot = 'local-bot';
       master = 'local-master';
       logurl = 'http://ci.example.com/build/300';
       timestamp = new DateTime.now().millisecondsSinceEpoch;
-    } else {
-      // Verify that all required environment variables are available.
-      final builderName = environment[_builderNameVarName];
-      final buildbucketBucket = environment[_buildbucketBucketVarName];
-      final buildbucketId = environment[_buildbucketIdVarName];
-      final buildCreateTime = environment[_buildCreateTimeVarName];
-      final inputCommitRef = environment[_inputCommitRefVarName];
-      final inputCommitHost = environment[_inputCommitHostVarName];
-      final inputCommitProject = environment[_inputCommitProjectVarName];
-      if (buildbucketId == null ||
-          buildbucketBucket == null ||
-          builderName == null ||
-          buildCreateTime == null ||
-          inputCommitRef == null ||
-          inputCommitHost == null ||
-          inputCommitProject == null) {
-        _log.warning('Some required environment variables are not available. '
-            'Current available variables are: ${environment.keys}');
-        return null;
-      }
-
+    } else if (envVars.every((str) => str != null)) {
       logurl = 'https://ci.chromium.org/b/$buildbucketId';
       bot = builderName;
       timestamp = int.parse(buildCreateTime);
@@ -373,6 +372,8 @@ class Performance {
       } else {
         assert(inputCommitRef == 'refs/heads/master');
       }
+    } else {
+      throw ArgumentError('Some but not all of the infra env vars were set');
     }
 
     final resultsPath = result.absolute.path;
