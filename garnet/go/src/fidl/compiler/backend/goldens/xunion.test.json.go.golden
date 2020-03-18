@@ -65,8 +65,8 @@ const (
 type FlexibleFoo struct {
 	I_flexibleFooTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8"`
 	I_unknownData []byte
-	S string  `fidl:"1,"`
-	I int32  `fidl:"2"`
+	S string  `fidl:"1," fidl_bounds:"" fidl_ordinal:"1"`
+	I int32  `fidl:"2" fidl_ordinal:"2"`
 }
 
 func (_m *FlexibleFoo) Which() I_flexibleFooTag {
@@ -116,8 +116,8 @@ const (
 
 type StrictFoo struct {
 	I_strictFooTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	S string  `fidl:"1,"`
-	I int32  `fidl:"2"`
+	S string  `fidl:"1," fidl_bounds:"" fidl_ordinal:"1"`
+	I int32  `fidl:"2" fidl_ordinal:"2"`
 }
 
 func (_m *StrictFoo) Which() I_strictFooTag {
@@ -162,8 +162,8 @@ const (
 type ExplicitFoo struct {
 	I_explicitFooTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8"`
 	I_unknownData []byte
-	S string  `fidl:"2,"`
-	I int32  `fidl:"1"`
+	S string  `fidl:"2," fidl_bounds:"" fidl_ordinal:"2"`
+	I int32  `fidl:"1" fidl_ordinal:"1"`
 }
 
 func (_m *ExplicitFoo) Which() I_explicitFooTag {
@@ -213,8 +213,8 @@ const (
 
 type ExplicitStrictFoo struct {
 	I_explicitStrictFooTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	S string  `fidl:"3,"`
-	I int32  `fidl:"2"`
+	S string  `fidl:"3," fidl_bounds:"" fidl_ordinal:"3"`
+	I int32  `fidl:"2" fidl_ordinal:"2"`
 }
 
 func (_m *ExplicitStrictFoo) Which() I_explicitStrictFooTag {
@@ -259,8 +259,8 @@ const (
 type OlderSimpleUnion struct {
 	I_olderSimpleUnionTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8"`
 	I_unknownData []byte
-	I int64  `fidl:"1"`
-	F float32  `fidl:"2"`
+	I int64  `fidl:"1" fidl_ordinal:"1"`
+	F float32  `fidl:"2" fidl_ordinal:"2"`
 }
 
 func (_m *OlderSimpleUnion) Which() I_olderSimpleUnionTag {
@@ -313,9 +313,9 @@ const (
 type NewerSimpleUnion struct {
 	I_newerSimpleUnionTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8"`
 	I_unknownData []byte
-	I int64  `fidl:"1"`
-	S string  `fidl:"2,"`
-	V []string  `fidl:"3,,"`
+	I int64  `fidl:"1" fidl_ordinal:"1"`
+	S string  `fidl:"2," fidl_bounds:"" fidl_ordinal:"2"`
+	V []string  `fidl:"3,," fidl_bounds:"" fidl_ordinal:"3"`
 }
 
 func (_m *NewerSimpleUnion) Which() I_newerSimpleUnionTag {
@@ -379,9 +379,9 @@ const (
 
 type StrictSimpleXUnion struct {
 	I_strictSimpleXUnionTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	I int32  `fidl:"1"`
-	F float32  `fidl:"2"`
-	S string  `fidl:"3,"`
+	I int32  `fidl:"1" fidl_ordinal:"1"`
+	F float32  `fidl:"2" fidl_ordinal:"2"`
+	S string  `fidl:"3," fidl_bounds:"" fidl_ordinal:"3"`
 }
 
 func (_m *StrictSimpleXUnion) Which() I_strictSimpleXUnionTag {
@@ -436,7 +436,7 @@ const (
 type XUnionContainingEmptyStruct struct {
 	I_xUnionContainingEmptyStructTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8"`
 	I_unknownData []byte
-	Empty Empty  `fidl:"1"`
+	Empty Empty  `fidl:"1" fidl_ordinal:"1"`
 }
 
 func (_m *XUnionContainingEmptyStruct) Which() I_xUnionContainingEmptyStructTag {
@@ -472,7 +472,7 @@ const (
 
 type StrictBoundedXUnion struct {
 	I_strictBoundedXUnionTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	V []uint8  `fidl:"1,10"`
+	V []uint8  `fidl:"1,10" fidl_bounds:"10" fidl_ordinal:"1"`
 }
 
 func (_m *StrictBoundedXUnion) Which() I_strictBoundedXUnionTag {
@@ -506,8 +506,8 @@ const (
 type ExplicitXUnion struct {
 	I_explicitXUnionTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8"`
 	I_unknownData []byte
-	I int64  `fidl:"1"`
-	F float32  `fidl:"4"`
+	I int64  `fidl:"1" fidl_ordinal:"1"`
+	F float32  `fidl:"4" fidl_ordinal:"4"`
 }
 
 func (_m *ExplicitXUnion) Which() I_explicitXUnionTag {

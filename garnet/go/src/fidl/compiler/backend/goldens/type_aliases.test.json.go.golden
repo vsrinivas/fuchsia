@@ -16,15 +16,15 @@ import (
 type ExampleOfUseOfAliases struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"120" fidl_alignment_v1:"8"`
 	FieldOfU32 uint32`fidl:"0" fidl_offset_v1:"0"`
-	FieldOfVecAtMostFiveOfString []string`fidl:"8,5," fidl_offset_v1:"8"`
-	FieldOfVecAtMostFiveOfUint32 []uint32`fidl:"24,5" fidl_offset_v1:"24"`
-	FieldOfVecOfStrings []string`fidl:"40,," fidl_offset_v1:"40"`
-	FieldOfVecOfStringsAtMostNine []string`fidl:"56,9," fidl_offset_v1:"56"`
-	FieldOfVecOfStringsAtMost5 []string`fidl:"72,5," fidl_offset_v1:"72"`
-	FieldOfVecAtMost5OfReferenceMe []someotherlibrary.ReferenceMe`fidl:"88,5" fidl_offset_v1:"88"`
-	FieldOfChannel _zx.Handle`fidl:"104,0" fidl_offset_v1:"104" fidl_handle_subtype:"0" fidl_handle_rights:"2147483648"`
-	FieldOfClientEnd _zx.Handle`fidl:"108,0" fidl_offset_v1:"108" fidl_handle_subtype:"0" fidl_handle_rights:"2147483648"`
-	FieldOfNullableClientEnd _zx.Handle`fidl:"112,1" fidl_offset_v1:"112" fidl_handle_subtype:"0" fidl_handle_rights:"2147483648"`
+	FieldOfVecAtMostFiveOfString []string`fidl:"8,5," fidl_offset_v1:"8" fidl_bounds:"5,"`
+	FieldOfVecAtMostFiveOfUint32 []uint32`fidl:"24,5" fidl_offset_v1:"24" fidl_bounds:"5"`
+	FieldOfVecOfStrings []string`fidl:"40,," fidl_offset_v1:"40" fidl_bounds:""`
+	FieldOfVecOfStringsAtMostNine []string`fidl:"56,9," fidl_offset_v1:"56" fidl_bounds:"9,"`
+	FieldOfVecOfStringsAtMost5 []string`fidl:"72,5," fidl_offset_v1:"72" fidl_bounds:"5,"`
+	FieldOfVecAtMost5OfReferenceMe []someotherlibrary.ReferenceMe`fidl:"88,5" fidl_offset_v1:"88" fidl_bounds:"5"`
+	FieldOfChannel _zx.Handle`fidl:"104,0" fidl_offset_v1:"104" fidl_handle_subtype:"0" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
+	FieldOfClientEnd _zx.Handle`fidl:"108,0" fidl_offset_v1:"108" fidl_handle_subtype:"0" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
+	FieldOfNullableClientEnd _zx.Handle`fidl:"112,1" fidl_offset_v1:"112" fidl_handle_subtype:"0" fidl_handle_rights:"2147483648" fidl_bounds:"1"`
 }
 
 var _mExampleOfUseOfAliases = _bindings.CreateLazyMarshaler(ExampleOfUseOfAliases{})

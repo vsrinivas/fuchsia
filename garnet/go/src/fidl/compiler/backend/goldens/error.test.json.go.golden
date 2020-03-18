@@ -25,7 +25,7 @@ func (msg *ExampleFooResponse) Marshaler() _bindings.Marshaler {
 
 type exampleWithCtxFooRequest struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8"`
-	S string`fidl:"0," fidl_offset_v1:"0"`
+	S string`fidl:"0," fidl_offset_v1:"0" fidl_bounds:""`
 }
 
 var _mexampleWithCtxFooRequest = _bindings.CreateLazyMarshaler(exampleWithCtxFooRequest{})
@@ -53,8 +53,8 @@ const (
 
 type ExampleFooResult struct {
 	I_exampleFooResultTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	Response ExampleFooResponse  `fidl:"1"`
-	Err uint32  `fidl:"2"`
+	Response ExampleFooResponse  `fidl:"1" fidl_ordinal:"1"`
+	Err uint32  `fidl:"2" fidl_ordinal:"2"`
 }
 
 func (_m *ExampleFooResult) Which() I_exampleFooResultTag {

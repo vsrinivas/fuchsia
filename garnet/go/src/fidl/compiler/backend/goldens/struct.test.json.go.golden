@@ -26,7 +26,7 @@ func (msg *Simple) Marshaler() _bindings.Marshaler {
 type BasicStruct struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8"`
 	X uint32`fidl:"0" fidl_offset_v1:"0"`
-	Y string`fidl:"8," fidl_offset_v1:"8"`
+	Y string`fidl:"8," fidl_offset_v1:"8" fidl_bounds:""`
 }
 
 var _mBasicStruct = _bindings.CreateLazyMarshaler(BasicStruct{})
