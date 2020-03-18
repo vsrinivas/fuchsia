@@ -646,9 +646,8 @@ fn parse_node_object(
                     children.push(child_node);
                 }
             },
-            serde_json::Value::Bool(_) => {
-                // TODO(37140): Deserialize booleans when supported.
-                return Err(format_err!("Booleans are not part of the diagnostics schema."));
+            serde_json::Value::Bool(val) => {
+                properties.push(Property::Bool(name.to_string(), *val));
             }
             serde_json::Value::Number(num) => {
                 properties.push(parse_number(name, num)?);
@@ -721,10 +720,14 @@ mod tests {
     fn get_unambigious_deserializable_hierarchy() -> NodeHierarchy {
         NodeHierarchy::new(
             "root",
-            vec![Property::UintArray(
-                "array".to_string(),
-                ArrayValue::new(vec![0, 2, std::u64::MAX], ArrayFormat::Default),
-            )],
+            vec![
+                Property::UintArray(
+                    "array".to_string(),
+                    ArrayValue::new(vec![0, 2, std::u64::MAX], ArrayFormat::Default),
+                ),
+                Property::Bool("bool_true".to_string(), true),
+                Property::Bool("bool_false".to_string(), false),
+            ],
             vec![
                 NodeHierarchy::new(
                     "a",
@@ -759,10 +762,14 @@ mod tests {
     fn test_hierarchy() -> NodeHierarchy {
         NodeHierarchy::new(
             "root",
-            vec![Property::UintArray(
-                "array".to_string(),
-                ArrayValue::new(vec![0, 2, 4], ArrayFormat::Default),
-            )],
+            vec![
+                Property::UintArray(
+                    "array".to_string(),
+                    ArrayValue::new(vec![0, 2, 4], ArrayFormat::Default),
+                ),
+                Property::Bool("bool_true".to_string(), true),
+                Property::Bool("bool_false".to_string(), false),
+            ],
             vec![
                 NodeHierarchy::new(
                     "a",
@@ -848,7 +855,9 @@ mod tests {
             },
             "int": -2,
             "string": "some value"
-        }
+        },
+        "bool_false": false,
+        "bool_true": true
     }
 }"#
         .to_string()
@@ -910,7 +919,9 @@ mod tests {
                     },
                     \"int\": -2,
                     \"string\": \"some value\"
-                }
+                },
+                \"bool_false\": false,
+                \"bool_true\": true
             }}"
         .to_string()
     }
