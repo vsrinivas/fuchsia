@@ -10,9 +10,13 @@ group("tests") {
     "pkg-cache:tests",
     "pkg-resolver:tests",
     "pkgctl:tests",
-    "system-tests:tests",
     "system-update-checker:tests",
     "system-updater:tests",
     "update:tests",
   ]
+}
+
+group("e2e_tests") {
+  testonly = true
+  public_deps = [ "system-tests:tests" ]
 }

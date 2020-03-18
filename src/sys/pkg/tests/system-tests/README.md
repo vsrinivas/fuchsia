@@ -7,7 +7,7 @@ This is the integration tests for a number of system tests.
 In order to build the system tests, add this to your `fx set`:
 
 ```
-% fx set ... --with //src/sys/pkg:tests
+% fx set ... --with //src/sys/pkg:e2e_tests
 % fx build
 ```
 
