@@ -1,0 +1,44 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+source_set("volume-descriptor") {
+  sources = [ "volume_descriptor.cc" ]
+  public = [
+    "block_io.h",
+    "volume_descriptor.h",
+  ]
+  public_deps = [
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fit",
+  ]
+}
+
+executable("volume-descriptor-test") {
+  testonly = true
+  sources = [ "volume_descriptor_test.cc" ]
+  deps = [
+    ":volume-descriptor",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+unittest_package("storage-volume-image-tests") {
+  deps = [ ":volume-descriptor-test" ]
+
+  tests = [
+    {
+      name = "volume-descriptor-test"
+      environments = basic_envs
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":storage-volume-image-tests" ]
+}
