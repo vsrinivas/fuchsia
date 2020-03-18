@@ -7,6 +7,7 @@
 #include <lib/fidl/internal.h>
 #include <lib/fidl/visitor.h>
 #include <lib/fidl/walker.h>
+#include <lib/fit/variant.h>
 #include <stdalign.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
@@ -54,10 +55,26 @@ class FidlEncoder final
               uint32_t next_out_of_line, const char** out_error_msg)
       : bytes_(static_cast<uint8_t*>(bytes)),
         num_bytes_(num_bytes),
-        handles_(handles),
         max_handles_(max_handles),
         next_out_of_line_(next_out_of_line),
-        out_error_msg_(out_error_msg) {}
+        out_error_msg_(out_error_msg) {
+    if (handles != nullptr) {
+      handles_ = handles;
+    }
+  }
+
+  FidlEncoder(void* bytes, uint32_t num_bytes, zx_handle_disposition_t* handle_dispositions,
+              uint32_t max_handle_dispositions, uint32_t next_out_of_line,
+              const char** out_error_msg)
+      : bytes_(static_cast<uint8_t*>(bytes)),
+        num_bytes_(num_bytes),
+        max_handles_(max_handle_dispositions),
+        next_out_of_line_(next_out_of_line),
+        out_error_msg_(out_error_msg) {
+    if (handle_dispositions != nullptr) {
+      handles_ = handle_dispositions;
+    }
+  }
 
   using StartingPoint = StartingPoint;
 
@@ -79,18 +96,30 @@ class FidlEncoder final
     return Status::kSuccess;
   }
 
-  Status VisitHandle(Position handle_position, HandlePointer handle) {
+  Status VisitHandle(Position handle_position, HandlePointer handle, zx_rights_t handle_rights,
+                     zx_obj_type_t handle_subtype) {
     if (handle_idx_ == max_handles_) {
       SetError("message tried to encode too many handles");
       ThrowAwayHandle(handle);
       return Status::kConstraintViolationError;
     }
-    if (handles_ == nullptr) {
+
+    if (has_handles()) {
+      handles()[handle_idx_] = *handle;
+    } else if (has_handle_dispositions()) {
+      handle_dispositions()[handle_idx_] = zx_handle_disposition_t{
+          .operation = ZX_HANDLE_OP_MOVE,
+          .handle = *handle,
+          .type = handle_subtype,
+          .rights = handle_rights,
+          .result = ZX_OK,
+      };
+    } else {
       SetError("did not provide place to store handles");
       ThrowAwayHandle(handle);
       return Status::kConstraintViolationError;
     }
-    handles_[handle_idx_] = *handle;
+
     *handle = FIDL_HANDLE_PRESENT;
     handle_idx_++;
     return Status::kSuccess;
@@ -192,10 +221,19 @@ class FidlEncoder final
     return true;
   }
 
+  bool has_handles() const { return fit::holds_alternative<zx_handle_t*>(handles_); }
+  bool has_handle_dispositions() const {
+    return fit::holds_alternative<zx_handle_disposition_t*>(handles_);
+  }
+  zx_handle_t* handles() const { return fit::get<zx_handle_t*>(handles_); }
+  zx_handle_disposition_t* handle_dispositions() const {
+    return fit::get<zx_handle_disposition_t*>(handles_);
+  }
+
   // Message state passed in to the constructor.
   uint8_t* const bytes_;
   const uint32_t num_bytes_;
-  zx_handle_t* const handles_;
+  fit::variant<fit::monostate, zx_handle_t*, zx_handle_disposition_t*> handles_;
   const uint32_t max_handles_;
   uint32_t next_out_of_line_;
   const char** const out_error_msg_;
@@ -206,11 +244,11 @@ class FidlEncoder final
   fidl::EnvelopeFrames envelope_frames_;
 };
 
-}  // namespace
-
-zx_status_t fidl_encode(const fidl_type_t* type, void* bytes, uint32_t num_bytes,
-                        zx_handle_t* handles, uint32_t max_handles, uint32_t* out_actual_handles,
-                        const char** out_error_msg) {
+template <typename HandleType>
+zx_status_t fidl_encode_impl(const fidl_type_t* type, void* bytes, uint32_t num_bytes,
+                             HandleType* handles, uint32_t max_handles,
+                             uint32_t* out_actual_handles, const char** out_error_msg,
+                             void (*close_handles)(const HandleType*, uint32_t)) {
   auto set_error = [&out_error_msg](const char* msg) {
     if (out_error_msg)
       *out_error_msg = msg;
@@ -249,12 +287,7 @@ zx_status_t fidl_encode(const fidl_type_t* type, void* bytes, uint32_t num_bytes
     if (out_actual_handles) {
       *out_actual_handles = 0;
     }
-#ifdef __Fuchsia__
-    if (handles) {
-      // Return value intentionally ignored. This is best-effort cleanup.
-      (void)zx_handle_close_many(handles, encoder.handle_idx());
-    }
-#endif
+    close_handles(handles, encoder.handle_idx());
   };
 
   if (encoder.status() == ZX_OK) {
@@ -280,6 +313,46 @@ zx_status_t fidl_encode(const fidl_type_t* type, void* bytes, uint32_t num_bytes
   }
 
   return encoder.status();
+}
+
+void close_handles_op(const zx_handle_t* handles, uint32_t max_idx) {
+#ifdef __Fuchsia__
+  if (handles) {
+    // Return value intentionally ignored. This is best-effort cleanup.
+    zx_handle_close_many(handles, max_idx);
+  }
+#endif
+}
+
+void close_handle_dispositions_op(const zx_handle_disposition_t* handle_dispositions,
+                                  uint32_t max_idx) {
+#ifdef __Fuchsia__
+  if (handle_dispositions) {
+    zx_handle_t* handles = reinterpret_cast<zx_handle_t*>(alloca(sizeof(zx_handle_t) * max_idx));
+    for (uint32_t i = 0; i < max_idx; i++) {
+      handles[i] = handle_dispositions[i].handle;
+    }
+    // Return value intentionally ignored. This is best-effort cleanup.
+    zx_handle_close_many(handles, max_idx);
+  }
+#endif
+}
+
+}  // namespace
+
+zx_status_t fidl_encode(const fidl_type_t* type, void* bytes, uint32_t num_bytes,
+                        zx_handle_t* handles, uint32_t max_handles, uint32_t* out_actual_handles,
+                        const char** out_error_msg) {
+  return fidl_encode_impl(type, bytes, num_bytes, handles, max_handles, out_actual_handles,
+                          out_error_msg, close_handles_op);
+}
+
+zx_status_t fidl_encode_etc(const fidl_type_t* type, void* bytes, uint32_t num_bytes,
+                            zx_handle_disposition_t* handle_dispositions,
+                            uint32_t max_handle_dispositions, uint32_t* out_actual_handles,
+                            const char** out_error_msg) {
+  return fidl_encode_impl(type, bytes, num_bytes, handle_dispositions, max_handle_dispositions,
+                          out_actual_handles, out_error_msg, close_handle_dispositions_op);
 }
 
 zx_status_t fidl_encode_msg(const fidl_type_t* type, fidl_msg_t* msg, uint32_t* out_actual_handles,

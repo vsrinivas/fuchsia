@@ -7,6 +7,7 @@
 #include <lib/fidl/internal.h>
 #include <lib/fidl/visitor.h>
 #include <lib/fidl/walker.h>
+#include <lib/fit/variant.h>
 #include <stdalign.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
@@ -50,6 +51,11 @@ constexpr uintptr_t kAllocAbsenceMarker = FIDL_ALLOC_ABSENT;
 
 using EnvelopeState = ::fidl::EnvelopeFrames::EnvelopeState;
 
+constexpr zx_rights_t subtract_rights(zx_rights_t minuend, zx_rights_t subtrahend) {
+  return minuend & ~subtrahend;
+}
+static_assert(subtract_rights(0b011, 0b101) == 0b010, "ensure rights subtraction works correctly");
+
 class FidlDecoder final
     : public fidl::Visitor<fidl::MutatingVisitorTrait, StartingPoint, Position> {
  public:
@@ -57,10 +63,25 @@ class FidlDecoder final
               uint32_t next_out_of_line, const char** out_error_msg)
       : bytes_(static_cast<uint8_t*>(bytes)),
         num_bytes_(num_bytes),
-        handles_(handles),
         num_handles_(num_handles),
         next_out_of_line_(next_out_of_line),
-        out_error_msg_(out_error_msg) {}
+        out_error_msg_(out_error_msg) {
+    if (handles != nullptr) {
+      handles_ = handles;
+    }
+  }
+
+  FidlDecoder(void* bytes, uint32_t num_bytes, const zx_handle_info_t* handle_infos,
+              uint32_t num_handle_infos, uint32_t next_out_of_line, const char** out_error_msg)
+      : bytes_(static_cast<uint8_t*>(bytes)),
+        num_bytes_(num_bytes),
+        num_handles_(num_handle_infos),
+        next_out_of_line_(next_out_of_line),
+        out_error_msg_(out_error_msg) {
+    if (handle_infos != nullptr) {
+      handles_ = handle_infos;
+    }
+  }
 
   using StartingPoint = StartingPoint;
 
@@ -98,7 +119,57 @@ class FidlDecoder final
     return Status::kSuccess;
   }
 
-  Status VisitHandle(Position handle_position, HandlePointer handle) {
+  Status VisitHandleInfo(Position handle_position, HandlePointer handle,
+                         zx_rights_t required_handle_rights,
+                         zx_obj_type_t required_handle_subtype) {
+    assert(has_handle_infos());
+    zx_handle_info_t received_handle_info = handle_infos()[handle_idx_];
+    zx_handle_t received_handle = received_handle_info.handle;
+    if (received_handle == ZX_HANDLE_INVALID) {
+      SetError("invalid handle detected in handle table");
+      return Status::kConstraintViolationError;
+    }
+
+    if (required_handle_subtype != received_handle_info.type &&
+        required_handle_subtype != ZX_OBJ_TYPE_NONE) {
+      SetError("decoded handle object type does not match expected type");
+      return Status::kConstraintViolationError;
+    }
+
+    // Special case: ZX_HANDLE_SAME_RIGHTS allows all handles through unchanged.
+    if (required_handle_rights == ZX_RIGHT_SAME_RIGHTS) {
+      *handle = received_handle;
+      handle_idx_++;
+      return Status::kSuccess;
+    }
+    // Check for required rights that are not present on the received handle.
+    if (subtract_rights(required_handle_rights, received_handle_info.rights) != 0) {
+      SetError("decoded handle missing required rights");
+      return Status::kConstraintViolationError;
+    }
+    // Check for non-requested rights that are present on the received handle.
+    if (subtract_rights(received_handle_info.rights, required_handle_rights)) {
+#ifdef __Fuchsia__
+      // The handle has more rights than required. Reduce the rights.
+      zx_status_t status =
+          zx_handle_replace(received_handle_info.handle, required_handle_rights, &received_handle);
+      assert(status != ZX_ERR_BAD_HANDLE);
+      if (status != ZX_OK) {
+        SetError("failed to replace handle");
+        return Status::kConstraintViolationError;
+      }
+#else
+      SetError("more rights received than required");
+      return Status::kConstraintViolationError;
+#endif
+    }
+    *handle = received_handle;
+    handle_idx_++;
+    return Status::kSuccess;
+  }
+
+  Status VisitHandle(Position handle_position, HandlePointer handle,
+                     zx_rights_t required_handle_rights, zx_obj_type_t required_handle_subtype) {
     if (*handle != FIDL_HANDLE_PRESENT) {
       SetError("message tried to decode a garbage handle");
       return Status::kConstraintViolationError;
@@ -107,18 +178,23 @@ class FidlDecoder final
       SetError("message decoded too many handles");
       return Status::kConstraintViolationError;
     }
-    if (handles_ == nullptr) {
+
+    if (has_handles()) {
+      if (handles()[handle_idx_] == ZX_HANDLE_INVALID) {
+        SetError("invalid handle detected in handle table");
+        return Status::kConstraintViolationError;
+      }
+      *handle = handles()[handle_idx_];
+      handle_idx_++;
+      return Status::kSuccess;
+    } else if (has_handle_infos()) {
+      return VisitHandleInfo(handle_position, handle, required_handle_rights,
+                             required_handle_subtype);
+    } else {
       SetError("decoder noticed a handle is present but the handle table is empty");
       *handle = ZX_HANDLE_INVALID;
       return Status::kConstraintViolationError;
     }
-    if (handles_[handle_idx_] == ZX_HANDLE_INVALID) {
-      SetError("invalid handle detected in handle table");
-      return Status::kConstraintViolationError;
-    }
-    *handle = handles_[handle_idx_];
-    handle_idx_++;
-    return Status::kSuccess;
   }
 
   Status VisitVectorOrStringCount(CountPointer ptr) { return Status::kSuccess; }
@@ -155,10 +231,17 @@ class FidlDecoder final
     // treat it as unknown and close its contained handles
     if (envelope->presence != kAllocAbsenceMarker && payload_type == nullptr &&
         envelope->num_handles > 0) {
-      memcpy(&unknown_handles_[unknown_handle_idx_], &handles_[handle_idx_],
-             envelope->num_handles * sizeof(zx_handle_t));
-      handle_idx_ += envelope->num_handles;
-      unknown_handle_idx_ += envelope->num_handles;
+      if (has_handles()) {
+        memcpy(&unknown_handles_[unknown_handle_idx_], &handles()[handle_idx_],
+               envelope->num_handles * sizeof(zx_handle_t));
+        handle_idx_ += envelope->num_handles;
+        unknown_handle_idx_ += envelope->num_handles;
+      } else if (has_handle_infos()) {
+        uint32_t end = handle_idx_ + envelope->num_handles;
+        for (; handle_idx_ < end; handle_idx_++, unknown_handle_idx_++) {
+          unknown_handles_[unknown_handle_idx_] = handle_infos()[handle_idx_].handle;
+        }
+      }
     }
     return Status::kSuccess;
   }
@@ -213,10 +296,19 @@ class FidlDecoder final
     return Status::kSuccess;
   }
 
+  bool has_handles() const { return fit::holds_alternative<const zx_handle_t*>(handles_); }
+  bool has_handle_infos() const {
+    return fit::holds_alternative<const zx_handle_info_t*>(handles_);
+  }
+  const zx_handle_t* handles() const { return fit::get<const zx_handle_t*>(handles_); }
+  const zx_handle_info_t* handle_infos() const {
+    return fit::get<const zx_handle_info_t*>(handles_);
+  }
+
   // Message state passed in to the constructor.
   uint8_t* const bytes_;
   const uint32_t num_bytes_;
-  const zx_handle_t* const handles_;
+  fit::variant<fit::monostate, const zx_handle_t*, const zx_handle_info_t*> handles_;
   const uint32_t num_handles_;
   uint32_t next_out_of_line_;
   const char** const out_error_msg_;
@@ -229,17 +321,12 @@ class FidlDecoder final
   fidl::EnvelopeFrames envelope_frames_;
 };
 
-}  // namespace
-
-zx_status_t fidl_decode(const fidl_type_t* type, void* bytes, uint32_t num_bytes,
-                        const zx_handle_t* handles, uint32_t num_handles,
-                        const char** out_error_msg) {
-  auto drop_all_handles = [&]() {
-#ifdef __Fuchsia__
-    // Return value intentionally ignored. This is best-effort cleanup.
-    (void)zx_handle_close_many(handles, num_handles);
-#endif
-  };
+template <typename HandleType>
+zx_status_t fidl_decode_impl(const fidl_type_t* type, void* bytes, uint32_t num_bytes,
+                             const HandleType* handles, uint32_t num_handles,
+                             const char** out_error_msg,
+                             void (*close_handles)(const HandleType*, uint32_t)) {
+  auto drop_all_handles = [&]() { close_handles(handles, num_handles); };
   auto set_error = [&out_error_msg](const char* msg) {
     if (out_error_msg)
       *out_error_msg = msg;
@@ -291,6 +378,44 @@ zx_status_t fidl_decode(const fidl_type_t* type, void* bytes, uint32_t num_bytes
   }
 #endif
   return ZX_OK;
+}
+
+void close_handles_op(const zx_handle_t* handles, uint32_t max_idx) {
+#ifdef __Fuchsia__
+  if (handles) {
+    // Return value intentionally ignored. This is best-effort cleanup.
+    zx_handle_close_many(handles, max_idx);
+  }
+#endif
+}
+
+void close_handle_infos_op(const zx_handle_info_t* handle_infos, uint32_t max_idx) {
+#ifdef __Fuchsia__
+  if (handle_infos) {
+    zx_handle_t* handles = reinterpret_cast<zx_handle_t*>(alloca(sizeof(zx_handle_t) * max_idx));
+    for (uint32_t i = 0; i < max_idx; i++) {
+      handles[i] = handle_infos[i].handle;
+    }
+    // Return value intentionally ignored. This is best-effort cleanup.
+    zx_handle_close_many(handles, max_idx);
+  }
+#endif
+}
+
+}  // namespace
+
+zx_status_t fidl_decode(const fidl_type_t* type, void* bytes, uint32_t num_bytes,
+                        const zx_handle_t* handles, uint32_t num_handles,
+                        const char** out_error_msg) {
+  return fidl_decode_impl<zx_handle_t>(type, bytes, num_bytes, handles, num_handles, out_error_msg,
+                                       close_handles_op);
+}
+
+zx_status_t fidl_decode_etc(const fidl_type_t* type, void* bytes, uint32_t num_bytes,
+                            const zx_handle_info_t* handle_infos, uint32_t num_handle_infos,
+                            const char** out_error_msg) {
+  return fidl_decode_impl<zx_handle_info_t>(type, bytes, num_bytes, handle_infos, num_handle_infos,
+                                            out_error_msg, close_handle_infos_op);
 }
 
 zx_status_t fidl_decode_msg(const fidl_type_t* type, fidl_msg_t* msg, const char** out_error_msg) {

@@ -129,7 +129,8 @@ class Visitor {
   // Visit a handle. The handle pointer will be mutable if the visitor is mutating.
   // Only called when the handle is present.
   // The handle pointer is derived from |handle_position.Get(start)|.
-  Status VisitHandle(Position handle_position, HandlePointer handle_ptr) {
+  Status VisitHandle(Position handle_position, HandlePointer handle_ptr, zx_rights_t handle_rights,
+                     zx_obj_type_t handle_subtype) {
     return Status::kSuccess;
   }
 

@@ -24,7 +24,7 @@ uint32_t ArrayCount(T const (&array)[N]) {
 const fidl_type_t nonnullable_handle = {
     .type_tag = kFidlTypeHandle,
     {.coded_handle = {.handle_subtype = ZX_OBJ_TYPE_NONE,
-                      .handle_rights = 0,
+                      .handle_rights = ZX_RIGHT_SAME_RIGHTS,
                       .nullable = kFidlNullability_Nonnullable}}};
 const fidl_type_t nullable_handle = {.type_tag = kFidlTypeHandle,
                                      {.coded_handle = {.handle_subtype = ZX_OBJ_TYPE_NONE,
@@ -33,7 +33,7 @@ const fidl_type_t nullable_handle = {.type_tag = kFidlTypeHandle,
 const fidl_type_t nullable_channel_handle = {
     .type_tag = kFidlTypeHandle,
     {.coded_handle = {.handle_subtype = ZX_OBJ_TYPE_CHANNEL,
-                      .handle_rights = 0,
+                      .handle_rights = ZX_RIGHT_READ | ZX_RIGHT_WRITE,
                       .nullable = kFidlNullability_Nullable}}};
 const fidl_type_t nullable_vmo_handle = {.type_tag = kFidlTypeHandle,
                                          {.coded_handle = {.handle_subtype = ZX_OBJ_TYPE_VMO,
@@ -42,7 +42,7 @@ const fidl_type_t nullable_vmo_handle = {.type_tag = kFidlTypeHandle,
 const fidl_type_t nonnullable_channel_handle = {
     .type_tag = kFidlTypeHandle,
     {.coded_handle = {.handle_subtype = ZX_OBJ_TYPE_CHANNEL,
-                      .handle_rights = 0,
+                      .handle_rights = ZX_RIGHT_READ | ZX_RIGHT_WRITE,
                       .nullable = kFidlNullability_Nonnullable}}};
 const fidl_type_t nonnullable_vmo_handle = {
     .type_tag = kFidlTypeHandle,
@@ -202,6 +202,20 @@ const fidl_type_t nonnullable_handle_message_type = {
                       .max_out_of_line = UINT32_MAX,
                       .contains_union = true,
                       .name = "nonnullable_handle_message",
+                      .alt_type = nullptr}}};
+
+static const FidlStructField nonnullable_channel_message_fields[] = {
+    FidlStructField(&nonnullable_channel_handle,
+                    offsetof(nonnullable_handle_message_layout, inline_struct.handle), 4),
+};
+const fidl_type_t nonnullable_channel_message_type = {
+    .type_tag = kFidlTypeStruct,
+    {.coded_struct = {.fields = nonnullable_channel_message_fields,
+                      .field_count = ArrayCount(nonnullable_channel_message_fields),
+                      .size = sizeof(nonnullable_handle_inline_data),
+                      .max_out_of_line = UINT32_MAX,
+                      .contains_union = true,
+                      .name = "nonnullable_channel_message",
                       .alt_type = nullptr}}};
 
 static const FidlStructField multiple_nonnullable_handles_fields[] = {

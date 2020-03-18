@@ -89,7 +89,8 @@ class FidlValidator final
     return Status::kSuccess;
   }
 
-  Status VisitHandle(Position handle_position, HandlePointer handle) {
+  Status VisitHandle(Position handle_position, HandlePointer handle, zx_rights_t handle_rights,
+                     zx_obj_type_t handle_subtype) {
     if (*handle != FIDL_HANDLE_PRESENT) {
       SetError("message contains a garbage handle");
       return Status::kConstraintViolationError;

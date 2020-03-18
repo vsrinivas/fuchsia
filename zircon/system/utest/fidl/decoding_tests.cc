@@ -2054,6 +2054,160 @@ bool decode_nested_struct_recursion_too_deep_error() {
   END_TEST;
 }
 
+bool decode_invalid_handle_info() {
+  BEGIN_TEST;
+
+  nonnullable_handle_message_layout message = {};
+  message.inline_struct.handle = FIDL_HANDLE_PRESENT;
+
+  zx_handle_info_t handle_infos[] = {{
+      .handle = ZX_HANDLE_INVALID,
+      .type = ZX_OBJ_TYPE_NONE,
+      .rights = 0,
+      .unused = 0,
+  }};
+
+  const char* error = nullptr;
+  auto status = fidl_decode_etc(&nonnullable_handle_message_type, &message, sizeof(message),
+                                handle_infos, ArrayCount(handle_infos), &error);
+
+  EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
+  EXPECT_NONNULL(error);
+  const char expected_error_msg[] = "invalid handle detected in handle table";
+  EXPECT_STR_EQ(expected_error_msg, error, "wrong error msg");
+
+  END_TEST;
+}
+
+bool decode_single_present_handle_info_handle_rights_subtype_match() {
+  BEGIN_TEST;
+
+  nonnullable_handle_message_layout message = {};
+  message.inline_struct.handle = FIDL_HANDLE_PRESENT;
+
+  zx_handle_info_t handle_infos[] = {{
+      .handle = dummy_handle_0,
+      .type = ZX_OBJ_TYPE_CHANNEL,
+      .rights = ZX_RIGHT_READ | ZX_RIGHT_WRITE,
+      .unused = 0,
+  }};
+
+  const char* error = nullptr;
+  auto status = fidl_decode_etc(&nonnullable_channel_message_type, &message, sizeof(message),
+                                handle_infos, ArrayCount(handle_infos), &error);
+
+  EXPECT_EQ(status, ZX_OK);
+  EXPECT_NULL(error, error);
+  EXPECT_EQ(message.inline_struct.handle, dummy_handle_0);
+
+  END_TEST;
+}
+
+bool decode_single_present_handle_info_no_subtype_same_rights() {
+  BEGIN_TEST;
+
+  nonnullable_handle_message_layout message = {};
+  message.inline_struct.handle = FIDL_HANDLE_PRESENT;
+
+  zx_handle_info_t handle_infos[] = {{
+      .handle = dummy_handle_0,
+      .type = ZX_OBJ_TYPE_CHANNEL,
+      .rights = ZX_RIGHT_READ | ZX_RIGHT_WRITE,
+      .unused = 0,
+  }};
+
+  const char* error = nullptr;
+  auto status = fidl_decode_etc(&nonnullable_handle_message_type, &message, sizeof(message),
+                                handle_infos, ArrayCount(handle_infos), &error);
+
+  EXPECT_EQ(status, ZX_OK);
+  EXPECT_NULL(error, error);
+  EXPECT_EQ(message.inline_struct.handle, dummy_handle_0);
+
+  END_TEST;
+}
+
+bool decode_single_present_handle_info_handle_rights_wrong_subtype() {
+  BEGIN_TEST;
+
+  nonnullable_handle_message_layout message = {};
+  message.inline_struct.handle = FIDL_HANDLE_PRESENT;
+
+  zx_handle_info_t handle_infos[] = {{
+      .handle = dummy_handle_0,
+      .type = ZX_OBJ_TYPE_VMO,
+      .rights = ZX_RIGHT_READ | ZX_RIGHT_WRITE,
+      .unused = 0,
+  }};
+
+  const char* error = nullptr;
+  auto status = fidl_decode_etc(&nonnullable_channel_message_type, &message, sizeof(message),
+                                handle_infos, ArrayCount(handle_infos), &error);
+
+  EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
+  ASSERT_STR_STR(error, "decoded handle object type does not match expected type");
+
+  END_TEST;
+}
+
+bool decode_single_present_handle_info_handle_rights_missing_required_rights() {
+  BEGIN_TEST;
+
+  nonnullable_handle_message_layout message = {};
+  message.inline_struct.handle = FIDL_HANDLE_PRESENT;
+
+  zx_handle_info_t handle_infos[] = {{
+      .handle = dummy_handle_0,
+      .type = ZX_OBJ_TYPE_CHANNEL,
+      .rights = ZX_RIGHT_READ,
+      .unused = 0,
+  }};
+
+  const char* error = nullptr;
+  auto status = fidl_decode_etc(&nonnullable_channel_message_type, &message, sizeof(message),
+                                handle_infos, ArrayCount(handle_infos), &error);
+
+  EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
+  ASSERT_STR_STR(error, "required rights");
+
+  END_TEST;
+}
+
+bool decode_single_present_handle_info_handle_rights_too_many_rights() {
+  BEGIN_TEST;
+
+  nonnullable_handle_message_layout message = {};
+  message.inline_struct.handle = FIDL_HANDLE_PRESENT;
+
+  zx_handle_t h0, h1;
+  auto status = zx_channel_create(0, &h0, &h1);
+  ASSERT_EQ(status, ZX_OK);
+
+  zx_handle_info_t handle_infos[] = {{
+      .handle = h0,
+      .type = ZX_OBJ_TYPE_CHANNEL,
+      .rights = ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_TRANSFER,
+      .unused = 0,
+  }};
+
+  const char* error = nullptr;
+  status = fidl_decode_etc(&nonnullable_channel_message_type, &message, sizeof(message),
+                           handle_infos, ArrayCount(handle_infos), &error);
+
+  EXPECT_EQ(status, ZX_OK);
+  EXPECT_NULL(error, error);
+  // There should be a new handle created by zx_handle_replace.
+  EXPECT_NE(message.inline_struct.handle, h0);
+
+  zx_info_handle_basic_t info;
+  zx_object_get_info(message.inline_struct.handle, ZX_INFO_HANDLE_BASIC, &info, sizeof(info),
+                     nullptr, nullptr);
+  EXPECT_EQ(info.type, handle_infos[0].type);
+  EXPECT_EQ(info.rights, ZX_RIGHT_READ | ZX_RIGHT_WRITE);
+
+  END_TEST;
+}
+
 BEGIN_TEST_CASE(null_parameters)
 RUN_TEST(decode_null_decode_parameters)
 END_TEST_CASE(null_parameters)
@@ -2141,6 +2295,17 @@ RUN_TEST(decode_nested_nonnullable_structs_check_padding)
 RUN_TEST(decode_nested_nullable_structs)
 RUN_TEST(decode_nested_struct_recursion_too_deep_error)
 END_TEST_CASE(structs)
+
+// Most fidl_encode_etc code paths are covered by the fidl_encode tests.
+// These tests cover additional paths.
+BEGIN_TEST_CASE(fidl_decode_etc)
+RUN_TEST(decode_invalid_handle_info)
+RUN_TEST(decode_single_present_handle_info_handle_rights_subtype_match)
+RUN_TEST(decode_single_present_handle_info_no_subtype_same_rights)
+RUN_TEST(decode_single_present_handle_info_handle_rights_wrong_subtype)
+RUN_TEST(decode_single_present_handle_info_handle_rights_missing_required_rights)
+RUN_TEST(decode_single_present_handle_info_handle_rights_too_many_rights)
+END_TEST_CASE(fidl_decode_etc)
 
 }  // namespace
 }  // namespace fidl

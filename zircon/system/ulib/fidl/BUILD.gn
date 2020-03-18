@@ -41,7 +41,10 @@ zx_library("fidl_base") {
     "validating.cc",
     "walker.cc",
   ]
-  deps = [ "$zx/system/ulib/zircon" ]
+  deps = [
+    "$zx/system/ulib/fit",
+    "$zx/system/ulib/zircon",
+  ]
   if (fidl_write_v1_wireformat) {
     defines = [ "FIDL_EXPERIMENTAL_WRITE_V1_WIREFORMAT" ]
   }

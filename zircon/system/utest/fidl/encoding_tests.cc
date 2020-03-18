@@ -6,10 +6,11 @@
 #include <lib/zx/eventpair.h>
 #include <limits.h>
 #include <stddef.h>
-#include <unittest/unittest.h>
 #include <zircon/syscalls.h>
 
 #include <memory>
+
+#include <unittest/unittest.h>
 
 #include "fidl_coded_types.h"
 #include "fidl_structs.h"
@@ -1979,6 +1980,33 @@ bool encode_nested_struct_recursion_too_deep_error() {
   END_TEST;
 }
 
+bool encode_single_present_handle_disposition() {
+  BEGIN_TEST;
+
+  nonnullable_handle_message_layout message = {};
+  message.inline_struct.handle = dummy_handle_0;
+
+  zx_handle_disposition_t handle_dispositions[1] = {};
+
+  const char* error = nullptr;
+  uint32_t actual_handles = 0u;
+  auto status = fidl_encode_etc(&nonnullable_channel_message_type, &message, sizeof(message),
+                                handle_dispositions, ArrayCount(handle_dispositions),
+                                &actual_handles, &error);
+
+  EXPECT_EQ(status, ZX_OK);
+  EXPECT_NULL(error, error);
+  EXPECT_EQ(actual_handles, 1u);
+  EXPECT_EQ(handle_dispositions[0].operation, ZX_HANDLE_OP_MOVE);
+  EXPECT_EQ(handle_dispositions[0].handle, dummy_handle_0);
+  EXPECT_EQ(handle_dispositions[0].type, ZX_OBJ_TYPE_CHANNEL);
+  EXPECT_EQ(handle_dispositions[0].rights, ZX_RIGHT_READ | ZX_RIGHT_WRITE);
+  EXPECT_EQ(handle_dispositions[0].result, ZX_OK);
+  EXPECT_EQ(message.inline_struct.handle, FIDL_HANDLE_PRESENT);
+
+  END_TEST;
+}
+
 BEGIN_TEST_CASE(null_parameters)
 RUN_TEST(encode_null_encode_parameters)
 END_TEST_CASE(null_parameters)
@@ -2063,6 +2091,12 @@ RUN_TEST(encode_nested_nonnullable_structs_zero_padding)
 RUN_TEST(encode_nested_nullable_structs)
 RUN_TEST(encode_nested_struct_recursion_too_deep_error)
 END_TEST_CASE(structs)
+
+// Most fidl_encode_etc code paths are covered by the fidl_encode tests.
+// These tests cover additional paths.
+BEGIN_TEST_CASE(fidl_encode_etc)
+RUN_TEST(encode_single_present_handle_disposition)
+END_TEST_CASE(fidl_encode_etc)
 
 }  // namespace
 }  // namespace fidl

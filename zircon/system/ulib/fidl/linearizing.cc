@@ -115,7 +115,8 @@ class FidlLinearizer final
     return Status::kSuccess;
   }
 
-  Status VisitHandle(Position handle_position, HandlePointer handle_ptr) {
+  Status VisitHandle(Position handle_position, HandlePointer handle_ptr, zx_rights_t handle_rights,
+                     zx_obj_type_t handle_subtype) {
     // Remember the address of the handle in the original objects,
     // such that after the entire tree is cloned into the contiguous buffer,
     // we can clear out the handles in the original tree in one fell swoop.

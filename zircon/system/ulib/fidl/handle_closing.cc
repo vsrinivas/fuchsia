@@ -62,7 +62,8 @@ class FidlHandleCloser final
     return Status::kSuccess;
   }
 
-  Status VisitHandle(Position handle_position, HandlePointer handle) {
+  Status VisitHandle(Position handle_position, HandlePointer handle, zx_rights_t handle_rights,
+                     zx_obj_type_t handle_subtype) {
     // Close the handle and mark it as invalid
     zx_handle_close(*handle);
     *handle = ZX_HANDLE_INVALID;

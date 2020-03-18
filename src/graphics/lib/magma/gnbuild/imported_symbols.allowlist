@@ -426,6 +426,7 @@ zx_guest_set_trap
 zx_handle_close
 zx_handle_close_many
 zx_handle_duplicate
+zx_handle_replace
 zx_interrupt_bind
 zx_interrupt_create
 zx_iommu_create

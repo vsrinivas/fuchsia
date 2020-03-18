@@ -46,6 +46,7 @@ extern const fidl_type_t bounded_2_nonnullable_vector_of_uint32;
 extern const fidl_type_t bounded_2_nullable_vector_of_uint32;
 
 extern const fidl_type_t nonnullable_handle_message_type;
+extern const fidl_type_t nonnullable_channel_message_type;
 extern const fidl_type_t multiple_nonnullable_handles_message_type;
 extern const fidl_type_t nullable_handle_message_type;
 extern const fidl_type_t multiple_nullable_handles_message_type;

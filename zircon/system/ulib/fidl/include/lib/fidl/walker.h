@@ -204,6 +204,8 @@ class Walker final {
           break;
         case kFidlTypeHandle:
           state = kStateHandle;
+          handle_state.handle_rights = fidl_type->coded_handle.handle_rights;
+          handle_state.handle_subtype = fidl_type->coded_handle.handle_subtype;
           handle_state.nullable = fidl_type->coded_handle.nullable;
           break;
         case kFidlTypeVector:
@@ -386,6 +388,8 @@ class Walker final {
         bool nullable;
       } string_state;
       struct {
+        zx_rights_t handle_rights;
+        zx_obj_type_t handle_subtype;
         bool nullable;
       } handle_state;
       struct {
@@ -835,7 +839,9 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
           Pop();
           continue;
         }
-        auto status = visitor.VisitHandle(frame->position, handle_ptr);
+        auto status =
+            visitor.VisitHandle(frame->position, handle_ptr, frame->handle_state.handle_rights,
+                                frame->handle_state.handle_subtype);
         FIDL_STATUS_GUARD(status);
         Pop();
         continue;
