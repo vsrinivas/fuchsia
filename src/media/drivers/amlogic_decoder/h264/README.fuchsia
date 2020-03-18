@@ -1,0 +1,9 @@
+Name: chromium
+URL: https://www.chromium.org/
+License: 3-Clause BSD
+License File: LICENSE
+Description:
+
+This path contains the portions of the chromium code used to drive h.264 decoders. It was forked
+from a1c1168f30f97c43a408e26f2fdf39d867be5d08 and has been modified to drive the amlogic video
+decoder.
