@@ -9,7 +9,7 @@ using fuchsia.component;
 
 /// Declares a capability exposed to either a component's containing realm or to the framework.
 /// For example, a legacy service exposed by the component at runtime.
-xunion ExposeDecl {
+flexible union ExposeDecl {
     1: ExposeServiceDecl service;
     2: ExposeProtocolDecl protocol;
     3: ExposeDirectoryDecl directory;

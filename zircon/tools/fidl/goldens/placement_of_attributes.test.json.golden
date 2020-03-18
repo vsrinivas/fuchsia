@@ -390,7 +390,7 @@
       "location": {
         "filename": "example.test.fidl",
         "line": 49,
-        "column": 8
+        "column": 16
       },
       "maybe_attributes": [
         {

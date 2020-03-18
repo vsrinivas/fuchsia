@@ -11,12 +11,12 @@ struct SomeStruct {
     int32 bar;
 };
 
-xunion MyXUnion {
+flexible union MyXUnion {
     1: bool foo;
     2: int32 bar;
 };
 
-strict xunion MyStrictXUnion {
+union MyStrictXUnion {
     1: bool foo;
     2: int32 bar;
 };

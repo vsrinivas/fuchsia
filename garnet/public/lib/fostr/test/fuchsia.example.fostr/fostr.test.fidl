@@ -17,7 +17,7 @@ struct MyStruct {
     MyXunion bar;
 };
 
-xunion MyXunion {
+flexible union MyXunion {
     1: int32 i;
     2: bool b;
     3: reserved;

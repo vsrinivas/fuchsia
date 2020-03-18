@@ -13,7 +13,7 @@ table TableWithEmptyStruct {
     1: EmptyStruct s;
 };
 
-xunion XUnionWithEmptyStruct {
+flexible union XUnionWithEmptyStruct {
     1: EmptyStruct s;
 };
 

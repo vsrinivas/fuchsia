@@ -25,7 +25,7 @@ flexible union FlexiblePizzaOrPasta {
     2: Pasta pasta;
 };
 
-strict union StrictPizzaOrPasta {
+union StrictPizzaOrPasta {
     1: Pizza pizza;
     2: Pasta pasta;
 };
@@ -42,7 +42,7 @@ flexible union FlexibleUnion {
     3: vector<string> VectorStringAlsoNeedsConstructor;
 };
 
-strict union StrictUnion {
+union StrictUnion {
     1: int32 Primitive;
     2: string StringNeedsConstructor;
     3: vector<string> VectorStringAlsoNeedsConstructor;

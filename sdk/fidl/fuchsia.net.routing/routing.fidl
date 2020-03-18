@@ -54,7 +54,7 @@ table RouteTableEntry {
 };
 
 /// A choice of route change action.
-xunion RouteChange {
+flexible union RouteChange {
     /// Add a new Route to the table. If the Route already exists, an error is returned.
     1: RouteTableEntry add;
     /// Delete a Route from the table. If the Route does not exist, an error is returned.

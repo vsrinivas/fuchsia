@@ -17,7 +17,7 @@ const uint16 MAXIMUM_DATA_HIERARCHY_DEPTH = 100;
 
 /// StringSelector is an xunion defining different ways to describe a pattern to match
 /// strings against.
-xunion StringSelector {
+flexible union StringSelector {
     ///   This is a provided string that defines a pattern to
     ///   match against. The parser treats asterisks (*), colons (:) and backslashes
     ///   (\) as special characters.

@@ -26,7 +26,7 @@ enum KeyEventPhase {
 ///     SemanticKeyAction.TAB
 ///   Key.GRAVE_ACCENT:
 ///     "`" or "]" or "<", depending on key layout
-xunion SemanticKey {
+flexible union SemanticKey {
     /// For symbolic keys: string representing character typed.
     1: string:16 symbol;
 

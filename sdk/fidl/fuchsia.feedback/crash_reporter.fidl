@@ -60,7 +60,7 @@ table CrashReport {
 ///
 /// Add a new member when the server needs to special case how it handles certain annotations and
 /// attachments for a given type of crashes, e.g., a `RuntimeCrashReport` for Javascript.
-xunion SpecificCrashReport {
+flexible union SpecificCrashReport {
     /// Intended for arbitrary crashes, e.g., OOM, out-of-disk.
     1: GenericCrashReport generic;
 

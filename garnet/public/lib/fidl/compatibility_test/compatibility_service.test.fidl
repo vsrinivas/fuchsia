@@ -20,7 +20,7 @@ table this_is_a_table {
     1: string s;
 };
 
-xunion this_is_a_xunion {
+flexible union this_is_a_xunion {
     1: string s;
     2: bool b;
 };
@@ -512,7 +512,7 @@ table AllTypesTable {
 };
 
 // This xunion has members all different FIDL types.
-xunion AllTypesXunion {
+flexible union AllTypesXunion {
      1: bool bool_member;
      2: int8 int8_member;
      3: int16 int16_member;

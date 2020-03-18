@@ -325,7 +325,7 @@
       "location": {
         "filename": "request_flexible_envelope.test.fidl",
         "line": 3,
-        "column": 8
+        "column": 16
       },
       "members": [
         {
@@ -374,7 +374,7 @@
       "location": {
         "filename": "request_flexible_envelope.test.fidl",
         "line": 8,
-        "column": 15
+        "column": 7
       },
       "members": [
         {

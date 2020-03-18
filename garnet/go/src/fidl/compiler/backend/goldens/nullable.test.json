@@ -510,7 +510,7 @@
       "location": {
         "filename": "nullable.test.fidl",
         "line": 35,
-        "column": 7
+        "column": 14
       },
       "members": [
         {

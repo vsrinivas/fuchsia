@@ -43,7 +43,7 @@ table StaticAssignment {
 };
 
 /// The configurable server parameters.
-xunion Parameter {
+flexible union Parameter {
     /// The IP addresses to which the server is bound. The vector bound has been
     /// arbitrarily selected as a generous upper limit.
     1: vector<fuchsia.net.Ipv4Address>:256 ip_addrs;

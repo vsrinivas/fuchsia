@@ -71,7 +71,7 @@ enum StreamError : uint32 {
     DECRYPTOR_NO_KEY = 0x03000002;
 };
 
-xunion AudioCompressedFormat {
+flexible union AudioCompressedFormat {
     1: AudioCompressedFormatAac aac;
     2: AudioCompressedFormatSbc sbc;
 };
@@ -436,7 +436,7 @@ table DecryptedFormat {
 /// CryptoFormat
 ///
 /// Crypto (encrypted or decrypted) format details.
-xunion CryptoFormat {
+flexible union CryptoFormat {
     1: EncryptedFormat encrypted;
     2: DecryptedFormat decrypted;
 };
@@ -506,7 +506,7 @@ struct AacTransportLatm {
 struct AacTransportAdts {
 };
 
-xunion AacTransport {
+flexible union AacTransport {
     1: AacTransportRaw raw;
     2: AacTransportLatm latm;
     3: AacTransportAdts adts;
@@ -556,7 +556,7 @@ table H264EncoderSettings {
 
 /// Settings for encoders that tell them how to encode raw
 /// formats.
-xunion EncoderSettings {
+flexible union EncoderSettings {
     1: SbcEncoderSettings sbc;
     2: AacEncoderSettings aac;
     3: H264EncoderSettings h264;

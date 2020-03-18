@@ -17,14 +17,14 @@ using zx;
 /// | Reachability Probe        | ARP Request | Neighbor Solicitation  |
 /// | Reachability Confirmation | ARP Reply   | Neighbor Advertisement |
 /// `---------------------------+-------------+------------------------'
-xunion EntryState {
+flexible union EntryState {
     /// Reachability is in the process of being confirmed for a newly created,
     /// non-static entry.
-    IncompleteState incomplete;
+    1: IncompleteState incomplete;
 
     /// Positive reachability has been confirmed; the path to the neighbor is
     /// functioning properly.
-    ReachableState reachable;
+    2: ReachableState reachable;
 
     /// Reachability is considered unknown.
     ///
@@ -33,24 +33,24 @@ xunion EntryState {
     ///      confirmation was received.
     ///   2. Received a reachability confirmation from a neighbor with a
     ///      different MAC address than the one cached.
-    StaleState stale;
+    3: StaleState stale;
 
     /// A packet was recently sent while reachability was considered unknown.
     ///
     /// This state is an optimization that gives non-Neighbor-Discovery related
     /// protocols time to confirm reachability after the last confirmation of
     /// reachability has expired due to lack of recent traffic.
-    DelayState delay;
+    4: DelayState delay;
 
     /// A reachability confirmation is actively sought by periodically
     /// retransmitting reachability probes until a reachability confirmation is
     /// received, or until the max amount of probes has been sent.
-    ProbeState probe;
+    5: ProbeState probe;
 
     /// Static entries are explicitly added with [`Controller.AddEntry`]. They
     /// do not expire and are not deleted until explicitly removed with
     /// [`Controller.RemoveEntry`].
-    StaticState static;
+    6: StaticState static;
 };
 
 table IncompleteState {

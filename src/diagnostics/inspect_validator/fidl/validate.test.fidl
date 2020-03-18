@@ -57,7 +57,7 @@ enum NumberType : uint8 {
     DOUBLE = 3;
 };
 
-xunion Number {
+flexible union Number {
     1: int64 int_t;
     2: uint64 uint_t;
     3: float64 double_t;
@@ -222,7 +222,7 @@ struct DeleteLazyNode {
 };
 
 /// Tells the puppet to do something to modify the VMO.
-xunion Action {
+flexible union Action {
     1: CreateNode create_node;
     2: DeleteNode delete_node;
     3: CreateNumericProperty create_numeric_property;
@@ -247,7 +247,7 @@ xunion Action {
 };
 
 /// Tells the puppet to do something to modify a lazy node.
-xunion LazyAction {
+flexible union LazyAction {
     1: CreateLazyNode create_lazy_node;
     2: ModifyLazyNode modify_lazy_node;
     3: DeleteLazyNode delete_lazy_node;

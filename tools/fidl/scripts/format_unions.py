@@ -12,19 +12,27 @@ find . \
 
 import sys
 
+KW_REPLACEMENTS = [
+    ('xunion', 'flexible union'),
+    ('union', 'strict union'),
+    ('strict xunion', 'strict union'),
+    # ('strict union', 'union')
+]
+
 
 def starts_with_oneof(s, prefixes):
     return any(s.startswith(p) for p in prefixes)
 
 
-def format_file(path, in_place):
+def format_file(path, in_place, format_lines):
     with open(path, 'r+') as f:
         result = format_lines(f)
-        if in_place:
-            f.seek(0)
+
+    if in_place:
+        with open(path, 'w') as f:
             f.writelines(result)
-        else:
-            print(''.join(result))
+    else:
+        print(''.join(result))
 
 
 def has_explicit_xunion(path):
@@ -40,7 +48,21 @@ def has_explicit_xunion(path):
     return False
 
 
-def format_lines(in_lines):
+def purge_xunion(in_lines):
+    out_lines = []
+    for line in in_lines:
+        for before, after in KW_REPLACEMENTS:
+            if line.startswith(before):
+                without_keyword = slice(len(before), None)
+                updated = after + line[without_keyword]
+                out_lines.append(updated)
+                break
+        else:
+            out_lines.append(line)
+    return out_lines
+
+
+def add_explicit_ordinals(in_lines):
     out_lines = []
     current_union_lines = []
     in_union = False
@@ -131,7 +153,7 @@ def test():
 if __name__ == '__main__':
     for filename in sys.argv[1:]:
         try:
-            format_file(filename, in_place=True)
+            format_file(filename, in_place=True, format_lines=purge_xunion)
             # if (has_explicit_xunion(filename)):
             #     print(filename)
         except:

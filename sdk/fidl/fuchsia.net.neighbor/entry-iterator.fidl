@@ -51,22 +51,22 @@ protocol EntryIterator {
 };
 
 /// Items returned from [`EntryIterator.GetNext`].
-xunion EntryIteratorItem {
+flexible union EntryIteratorItem {
     /// An existing entry in the neighbor table. Does not indicate that an event
     /// occurred.
-    Entry existing;
+    1: Entry existing;
 
     /// Event indicating the iterator will no longer return `existing` items.
-    IdleEvent idle;
+    2: IdleEvent idle;
 
     /// Event indicating an entry has been added into the neighbor table.
-    Entry added;
+    3: Entry added;
 
     /// Event indicating an entry has been changed [`EntryState`].
-    Entry changed;
+    4: Entry changed;
 
     /// Event indicating an entry has been removed from the neighbor table.
-    Entry removed;
+    5: Entry removed;
 };
 
 /// Empty event for indicating there are no more [`EntryIteratorItem.existing`]

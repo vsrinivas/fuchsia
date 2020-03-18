@@ -4,7 +4,7 @@ table TableWithHandle {
     1: handle<vmo> h;
 };
 
-xunion UnionWithHandle {
+flexible union UnionWithHandle {
     1: handle<vmo> h;
 };
 

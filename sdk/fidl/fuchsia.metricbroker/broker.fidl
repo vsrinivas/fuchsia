@@ -61,7 +61,7 @@ struct InspectSource {
 
 // The configuration that actually describes where to find data in the InspectSource and turn it
 // into Cobalt metrics
-xunion InspectConfig {
+flexible union InspectConfig {
     // Inline configuration information.
     1: fuchsia.mem.Buffer buffer;
 

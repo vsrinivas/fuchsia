@@ -32,7 +32,7 @@ table DirectoryWatchOptions {
 };
 
 /// Events returned from [`DirectoryWatcher.GetNext`].
-xunion DirectoryWatchedEvent {
+flexible union DirectoryWatchedEvent {
     /// Indicates a node already existed in the directory when watching started.
     1: DirectoryEntry existing;
 

@@ -5,13 +5,13 @@
 library fuchsia.ui.activity;
 
 /// DiscreteActivity is an activity which occurs at a point in time.
-xunion DiscreteActivity {
+flexible union DiscreteActivity {
     /// Activities that require no special handling.
     1: GenericActivity generic;
 };
 
 /// OngoingActivity is an activity which has a definite start and end time.
-xunion OngoingActivity {
+flexible union OngoingActivity {
     /// Activities that require no special handling.
     1: GenericActivity generic;
 };

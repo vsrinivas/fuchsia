@@ -134,7 +134,7 @@
       "location": {
         "filename": "union.test.fidl",
         "line": 11,
-        "column": 7
+        "column": 14
       },
       "members": [
         {
@@ -185,7 +185,7 @@
       "location": {
         "filename": "union.test.fidl",
         "line": 16,
-        "column": 7
+        "column": 14
       },
       "members": [
         {
@@ -356,7 +356,7 @@
       "location": {
         "filename": "union.test.fidl",
         "line": 33,
-        "column": 7
+        "column": 14
       },
       "members": [
         {
@@ -557,7 +557,7 @@
       "location": {
         "filename": "union.test.fidl",
         "line": 51,
-        "column": 7
+        "column": 14
       },
       "members": [
         {
@@ -592,7 +592,7 @@
       "location": {
         "filename": "union.test.fidl",
         "line": 55,
-        "column": 7
+        "column": 14
       },
       "members": [
         {
@@ -650,7 +650,7 @@
       "location": {
         "filename": "union.test.fidl",
         "line": 61,
-        "column": 7
+        "column": 14
       },
       "members": [
         {

@@ -37,7 +37,7 @@ struct Argument {
 
 /// An argument value which can be one of several types.
 [MaxHandles = "0"]
-xunion Value {
+flexible union Value {
     /// A signed integral argument.
     1: int64 signed;
     /// An unsigned integral argument.

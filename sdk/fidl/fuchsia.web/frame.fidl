@@ -279,11 +279,11 @@ table WebMessage {
     3: vector<OutgoingTransferable> outgoing_transfer;
 };
 
-xunion OutgoingTransferable {
+flexible union OutgoingTransferable {
     1: request<MessagePort> message_port;
 };
 
-xunion IncomingTransferable {
+flexible union IncomingTransferable {
     1: MessagePort message_port;
 };
 

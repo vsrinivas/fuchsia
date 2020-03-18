@@ -305,7 +305,7 @@
       "location": {
         "filename": "union.test.fidl",
         "line": 28,
-        "column": 14
+        "column": 7
       },
       "members": [
         {
@@ -490,7 +490,7 @@
       "location": {
         "filename": "union.test.fidl",
         "line": 45,
-        "column": 14
+        "column": 7
       },
       "members": [
         {

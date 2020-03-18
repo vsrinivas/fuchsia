@@ -76,7 +76,7 @@ struct LiteralRule {
 };
 
 /// A rewrite rule, represented as an xunion for future compatibility.
-xunion Rule {
+flexible union Rule {
     1: LiteralRule literal;
 };
 

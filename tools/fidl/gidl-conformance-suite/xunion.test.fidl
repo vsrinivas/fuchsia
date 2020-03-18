@@ -17,13 +17,13 @@ union SimpleUnion {
     4: string str;
 };
 
-xunion SampleXUnion {
+flexible union SampleXUnion {
     1: uint32 u;
     2: SimpleUnion su;
     3: SimpleTable st;
 };
 
-strict xunion SampleStrictXUnion {
+union SampleStrictXUnion {
     1: uint32 u;
     2: SimpleUnion su;
     3: SimpleTable st;

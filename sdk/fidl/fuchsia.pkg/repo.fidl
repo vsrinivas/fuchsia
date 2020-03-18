@@ -118,7 +118,7 @@ table RepositoryConfig {
 /// Describes the keys used by the repository to authenticate it's packages.
 ///
 /// The only supported algorithm at the moment is ed25519.
-xunion RepositoryKeyConfig {
+flexible union RepositoryKeyConfig {
     /// The raw ed25519 public key as binary data.
     1: bytes ed25519_key;
 };
@@ -126,7 +126,7 @@ xunion RepositoryKeyConfig {
 /// Describes a key used to decrypt blobs.
 ///
 /// The only supported algorithm at the moment is aes.
-xunion RepositoryBlobKey {
+flexible union RepositoryBlobKey {
     /// A raw aes key as binary data.
     1: bytes aes_key;
 };

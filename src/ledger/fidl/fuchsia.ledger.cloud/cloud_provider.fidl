@@ -133,7 +133,7 @@ table Commit {
 };
 
 /// Specification of a page state used as base for a diff.
-xunion PageState {
+flexible union PageState {
     /// The state is the empty page.
     1: EmptyPage empty_page;
     /// The state is the content of a page at the commit with the given
@@ -245,7 +245,7 @@ table DeletionEntry {
 };
 
 /// DeviceEntry contains clock entries for an active device.
-xunion DeviceEntry {
+flexible union DeviceEntry {
     // An actual clock.
     1: ClockEntry local_entry;
     // The entry is a tombstone.

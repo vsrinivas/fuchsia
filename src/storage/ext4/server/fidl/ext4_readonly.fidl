@@ -146,7 +146,7 @@ struct InvalidAddress {
 
 /// Sub-result of an [`Ext4Server.MountVmo`] call denoting the actual error
 /// that occurred in the reader.
-xunion ParseError {
+flexible union ParseError {
     // Failures during the initial parsing of the image start below.
     // See ext4_read_only::structs::ParsingError for more info.
     1: InvalidSuperBlock invalid_super_block;
@@ -176,7 +176,7 @@ xunion ParseError {
 };
 
 /// Result of an [`Ext4Server.MountVmo`] call.
-xunion MountVmoResult {
+flexible union MountVmoResult {
     // Note: It would be better to declare `MountVmo` with a result type of
     // `() error MountVmoError`, but FIDL currently does not support error
     // types that are not integers or enums of integers.  And it is nice to be

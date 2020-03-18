@@ -130,7 +130,7 @@ union IntStructUnion {
     2: TwoStringStruct variant_tss;
 };
 
-xunion IntStructXunion {
+flexible union IntStructXunion {
     1: int32 variant_i;
     2: TwoStringStruct variant_tss;
 };
@@ -146,7 +146,7 @@ union U8U16UnionReserved {
     3: uint16 variant_u16;
 };
 
-xunion U8U16Xunion {
+flexible union U8U16Xunion {
     1: uint8 variant_u8;
     2: uint16 variant_u16;
 };

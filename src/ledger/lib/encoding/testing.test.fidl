@@ -20,7 +20,7 @@ struct TestMessage2 {
     array<TestEnum>:3 test_enum;
 };
 
-xunion TestUnion {
+flexible union TestUnion {
     1: TestMessage1 message_1;
     2: TestMessage2 message_2;
     3: string:35 message_3;

@@ -252,7 +252,7 @@ struct MetricEvent {
 //
 // Note: This type is part of the Cobalt 1.1 interface which is still
 // in development. Do not use this yet.
-xunion MetricEventPayload {
+flexible union MetricEventPayload {
     // This should be used for metrics of type OCCURRENCE. See
     // MetricEventLogger::LogOcurrenceCount().
     1: uint64 count;

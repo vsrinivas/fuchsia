@@ -1,5 +1,5 @@
 {
   "fidl/fuchsia.net.dhcp/client.fidl": "ed712ac30e34dd3900d88e730a346ce6",
-  "fidl/fuchsia.net.dhcp/options.fidl": "dab189ad92092bfaa3c910fe34f9609d",
-  "fidl/fuchsia.net.dhcp/server.fidl": "d781b2a052871e1fd77c10b81c460e2e"
+  "fidl/fuchsia.net.dhcp/options.fidl": "ccbf57dd3c70e0d09eb7685f9471c58a",
+  "fidl/fuchsia.net.dhcp/server.fidl": "af53862c6f3b1c7c26465a9d1d0f4e13"
 }

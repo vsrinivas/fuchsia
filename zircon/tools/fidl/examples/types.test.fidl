@@ -12,7 +12,7 @@ union this_is_a_union {
     1: string s;
 };
 
-xunion this_is_a_xunion {
+flexible union this_is_a_xunion {
     1: string s;
     2: int32 i;
 };

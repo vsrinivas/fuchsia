@@ -4,7 +4,7 @@
 
 library fidl.rust.test.compilation;
 
-xunion TestXUnion {
+flexible union TestXUnion {
     1: bool variant;
 };
 

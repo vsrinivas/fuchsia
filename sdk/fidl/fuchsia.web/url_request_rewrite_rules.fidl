@@ -19,7 +19,7 @@ table UrlRequestRewriteRule {
     3: vector<UrlRequestRewrite>:MAX_RULE_COUNT rewrites;
 };
 
-xunion UrlRequestRewrite {
+flexible union UrlRequestRewrite {
     /// Adds a set of headers to a URL request.
     1: UrlRequestRewriteAddHeaders add_headers;
 

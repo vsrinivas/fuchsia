@@ -38,7 +38,7 @@ table NetworkConfig {
 };
 
 /// Information used to verify access to a target network.
-xunion Credential {
+flexible union Credential {
     /// The network does not use credentials (open networks).
     1: Empty none;
 

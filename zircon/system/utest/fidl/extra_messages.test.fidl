@@ -70,13 +70,13 @@ union SampleUnion {
     3: int32 raw_int;
 };
 
-xunion SampleXUnion {
+flexible union SampleXUnion {
     1: IntStruct i;
     2: SimpleTable st;
     3: int32 raw_int;
 };
 
-strict xunion SampleStrictXUnion {
+union SampleStrictXUnion {
     1: IntStruct i;
     2: SimpleTable st;
     3: int32 raw_int;

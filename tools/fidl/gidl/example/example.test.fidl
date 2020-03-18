@@ -16,13 +16,13 @@ table TableOnlyPrimitives {
     3: uint16 u;
 };
 
-xunion UnionOnlyPrimitives {
+flexible union UnionOnlyPrimitives {
     1: int32 i;
     2: bool b;
     3: uint16 u;
 };
 
-xunion UnionWithTableStructString {
+flexible union UnionWithTableStructString {
     1: StructOnlyPrimitives struct;
     2: TableOnlyPrimitives table;
     3: UnionOnlyPrimitives union;

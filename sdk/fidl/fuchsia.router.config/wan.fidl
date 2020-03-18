@@ -52,7 +52,7 @@ table L2tp {
     2: fuchsia.net.IpAddress server;
 };
 
-xunion ConnectionParameters {
+flexible union ConnectionParameters {
     1: Pppoe pppoe;
     2: Pptp pptp;
     3: L2tp l2tp;

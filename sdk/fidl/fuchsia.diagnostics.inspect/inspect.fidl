@@ -19,7 +19,7 @@ struct TextSettings {
 
 /// Criteria for how to format
 /// the selected Inspect data.
-xunion DisplaySettings {
+flexible union DisplaySettings {
     1: JsonSettings json;
     2: TextSettings text;
 };
@@ -41,7 +41,7 @@ enum ReaderError {
 };
 
 /// Selection criteria for data returned by the Reader service.
-xunion ReaderSelector {
+flexible union ReaderSelector {
     /// The reader applies the selection defined
     /// by structured_selector to all possible inspect data that it
     /// has access to, returning a potential subset, but not superset,

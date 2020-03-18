@@ -1,11 +1,11 @@
 library fidl.test.json;
 
-xunion FlexibleFoo {
+flexible union FlexibleFoo {
     1: string s;
     2: int32 i;
 };
 
-strict xunion StrictFoo {
+union StrictFoo {
     1: string s;
     2: int32 i;
 };

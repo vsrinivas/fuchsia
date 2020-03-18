@@ -117,7 +117,7 @@ struct ServiceError {
     string? message;
 };
 
-xunion ErrorValue {
+flexible union ErrorValue {
     1: MessagingErrorCode messaging;
     2: CoreErrorCode core;
     3: uint32 http;

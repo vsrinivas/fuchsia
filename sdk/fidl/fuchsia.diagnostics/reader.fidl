@@ -36,7 +36,7 @@ enum ReaderError {
 
 /// Argument used for Archive selectors, can be either the pre-parsed
 /// fidl struct or string representation.
-xunion SelectorArgument {
+flexible union SelectorArgument {
     /// A Selector defining a pattern-matcher which selects for components within a hierarchy
     /// and properties in a data hierarchy namespaced by component.
     1: Selector structured_selector;
@@ -52,7 +52,7 @@ xunion SelectorArgument {
 
 /// A fidl union containing a complete hierarchy of structured diagnostics
 /// data, such that the content can be parsed into a file by itself.
-xunion FormattedContent {
+flexible union FormattedContent {
     /// A diagnostics schema encoded as json.
     /// The VMO will contain up to 1mb of diagnostics data.
     1: fuchsia.mem.Buffer json;

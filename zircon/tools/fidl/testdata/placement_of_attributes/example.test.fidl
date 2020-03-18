@@ -46,7 +46,7 @@ union ExampleUnion {
 };
 
 [OnXUnion]
-xunion ExampleXUnion {
+flexible union ExampleXUnion {
     [OnXUnionMember]
     1: uint32 variant;
 };

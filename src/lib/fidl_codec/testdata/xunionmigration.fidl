@@ -8,7 +8,7 @@ protocol FidlCodecXUnion {
     SendAfterMigration(NowAsXUnion u, int32 i);
 };
 
-xunion NowAsXUnion {
+flexible union NowAsXUnion {
     1: uint8 variant_u8;
     2: uint16 variant_u16;
 };

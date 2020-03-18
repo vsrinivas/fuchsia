@@ -84,7 +84,7 @@ struct Empty {
 };
 
 /// Information required to connect to a protected network.
-xunion Credential {
+flexible union Credential {
     /// The network does not use credentials (open networks).
     1: Empty none;
 

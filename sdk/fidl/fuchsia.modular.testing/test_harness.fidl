@@ -72,7 +72,7 @@ protocol TestHarness {
 };
 
 /// Describes which service to connect to using `ConnectToModularService()`.
-strict xunion ModularService {
+union ModularService {
     1: request<fuchsia.modular.PuppetMaster> puppet_master;
     2: request<fuchsia.modular.ComponentContext> component_context;
     3: request<fuchsia.modular.AgentContext> agent_context;

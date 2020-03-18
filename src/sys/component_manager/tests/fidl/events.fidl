@@ -51,7 +51,7 @@ enum EventType {
 };
 
 /// Describes the source of a routed capability.
-xunion CapabilitySource {
+flexible union CapabilitySource {
     /// The capability is provided by the framework and may be
     /// scoped down to a component.
     1: FrameworkCapability framework;

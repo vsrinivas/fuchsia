@@ -11,7 +11,7 @@ const uint64 MAX_SERVICE_NAME_LENGTH = 255;
 
 /// Peer-to-peer protocol between two Overnet nodes.
 /// Client QUIC connections send this xunion to servers over QUIC stream 0.
-strict xunion PeerMessage {
+union PeerMessage {
     /// Request to create a channel to a service exported by this peer.
     1: ConnectToService connect_to_service;
     /// Update this peers description on the server.
@@ -34,7 +34,7 @@ table ConfigResponse {
 
 /// Reply messages for PeerMessage, where appropriate.
 /// The ConfigResponse message must have been sent already.
-strict xunion PeerReply {
+union PeerReply {
     /// Acknowledge an UpdateLinkStatus message
     1: Empty update_link_status_ack;
 };
@@ -107,7 +107,7 @@ struct LinkStatus {
 /// Stream control message: sent instead of usual stream frames if the frame
 /// type is 1 (StreamControl).
 /// TODO: consider defining the stream framing format in FIDL also.
-strict xunion StreamControl {
+union StreamControl {
     /// A transfer is beginning: the sending node would like to transfer
     /// control.
     1: BeginTransfer begin_transfer;
@@ -132,7 +132,7 @@ struct BeginTransfer {
 
 /// A StreamRef identifies a new proxied stream, and details how that stream
 /// will come to be on the receiving node.
-strict xunion StreamRef {
+union StreamRef {
     /// A new proxy is being created, and the other end of the proxy is on the
     /// sending node. This is the simple case, and we just communicate the QUIC
     /// stream ID that will be used to carry traffic.

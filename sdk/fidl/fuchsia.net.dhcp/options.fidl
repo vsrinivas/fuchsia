@@ -84,7 +84,7 @@ enum MessageType : byte {
 /// * Message - value determined in response to runtime error.
 /// * VendorClassIdentifer - value always selected by the DHCP client.
 /// * ClientIdentifier - value always selected by the DHCP client.
-xunion Option {
+flexible union Option {
     /// A 32-bit IPv4 subnet mask.
     1: fuchsia.net.Ipv4Address subnet_mask;
 

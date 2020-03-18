@@ -269,7 +269,7 @@
       "location": {
         "filename": "xunion.test.fidl",
         "line": 3,
-        "column": 8
+        "column": 16
       },
       "members": [
         {
@@ -318,7 +318,7 @@
       "location": {
         "filename": "xunion.test.fidl",
         "line": 8,
-        "column": 15
+        "column": 14
       },
       "members": [
         {
@@ -367,7 +367,7 @@
       "location": {
         "filename": "xunion.test.fidl",
         "line": 13,
-        "column": 8
+        "column": 16
       },
       "members": [
         {
@@ -425,7 +425,7 @@
       "location": {
         "filename": "xunion.test.fidl",
         "line": 19,
-        "column": 15
+        "column": 14
       },
       "members": [
         {
@@ -483,7 +483,7 @@
       "location": {
         "filename": "xunion.test.fidl",
         "line": 25,
-        "column": 8
+        "column": 16
       },
       "members": [
         {
@@ -532,7 +532,7 @@
       "location": {
         "filename": "xunion.test.fidl",
         "line": 30,
-        "column": 8
+        "column": 16
       },
       "members": [
         {
@@ -599,7 +599,7 @@
       "location": {
         "filename": "xunion.test.fidl",
         "line": 41,
-        "column": 15
+        "column": 14
       },
       "members": [
         {
@@ -662,7 +662,7 @@
       "location": {
         "filename": "xunion.test.fidl",
         "line": 50,
-        "column": 8
+        "column": 16
       },
       "members": [
         {
@@ -698,7 +698,7 @@
       "location": {
         "filename": "xunion.test.fidl",
         "line": 56,
-        "column": 15
+        "column": 14
       },
       "members": [
         {
@@ -738,7 +738,7 @@
       "location": {
         "filename": "xunion.test.fidl",
         "line": 69,
-        "column": 8
+        "column": 16
       },
       "members": [
         {

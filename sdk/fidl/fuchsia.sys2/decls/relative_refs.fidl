@@ -8,7 +8,7 @@ using fuchsia.component;
 
 /// A reference to a capability source or destination relative to this
 /// component.
-xunion Ref {
+flexible union Ref {
     1: RealmRef realm;
     2: SelfRef self;
     3: ChildRef child;

@@ -54,7 +54,7 @@ bits ConnectionInfoQuery : uint64 {
 ///
 /// The elements have one-to-one correspondence with the members of
 /// [`NodeProtocols`].
-xunion Representation {
+flexible union Representation {
     /// See [`NodeProtocols.CONNECTOR`].
     1: ConnectorInfo connector;
 

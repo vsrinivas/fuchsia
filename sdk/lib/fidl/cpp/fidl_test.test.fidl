@@ -31,7 +31,7 @@ struct Has2OptionalFieldStruct {
 struct Empty {
 };
 
-xunion XUnionContainingEmptyStruct {
+flexible union XUnionContainingEmptyStruct {
     1: Empty empty;
 };
 
@@ -82,7 +82,7 @@ table ComplexTable {
     3: vector<string> strings;
 };
 
-xunion SampleXUnion {
+flexible union SampleXUnion {
     1: int32 i;
     2: SimpleUnion su;
     3: SimpleTable st;

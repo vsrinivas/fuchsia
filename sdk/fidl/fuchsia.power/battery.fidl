@@ -57,7 +57,7 @@ enum HealthStatus {
 };
 
 /// The time remaining while actively charging or discharging.
-xunion TimeRemaining {
+flexible union TimeRemaining {
     /// Representation of indeterminate state with zero duration.
     1: zx.duration indeterminate;
 

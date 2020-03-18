@@ -224,7 +224,7 @@ struct Table_UnionWithVector_StructSandwichStruct {
     Table_UnionWithVector_StructSandwich table;
 };
 
-xunion XUnionWithStruct {
+flexible union XUnionWithStruct {
     1: StructSize3Align1 s;
 };
 
@@ -232,7 +232,7 @@ struct XUnionWithStructStruct {
     XUnionWithStruct xu;
 };
 
-xunion XUnionWithXUnion {
+flexible union XUnionWithXUnion {
     1: XUnionWithStruct xu;
 };
 
@@ -240,7 +240,7 @@ struct XUnionWithXUnionStruct {
     XUnionWithXUnion xu;
 };
 
-xunion XUnionWithUnions {
+flexible union XUnionWithUnions {
     1: UnionSize8Align4 u1;
     2: UnionSize12Align4 u2;
 };
@@ -386,7 +386,7 @@ union UnionAtTheBottom {
     3: uint8 tiny;
 };
 
-xunion XUnionOfUnion {
+flexible union XUnionOfUnion {
     1: UnionAtTheBottom variant; // 0x5F67105B
 };
 
@@ -395,7 +395,7 @@ table TableOfXUnionThenUnion {
     2: XUnionOfUnion member;
 };
 
-xunion XUnionOfTableThenXUnionThenUnion {
+flexible union XUnionOfTableThenXUnionThenUnion {
     1: TableOfXUnionThenUnion variant; //0x5B15934E
 };
 
@@ -578,7 +578,7 @@ table CompatTableString {
     1: string s;
 };
 
-xunion CompatXUnion {
+flexible union CompatXUnion {
     1: string s; // hashed ordinal 0x5af8efa8
     2: bool b;
 };

@@ -19,13 +19,13 @@ union TestUnion {
     3: MoveOnlyStruct move_only;
 };
 
-xunion TestXUnion {
+flexible union TestXUnion {
     1: int32 primitive;
     2: CopyableStruct copyable;
     3: handle h;
 };
 
-strict xunion TestStrictXUnion {
+union TestStrictXUnion {
     1: int32 primitive;
     2: CopyableStruct copyable;
 };

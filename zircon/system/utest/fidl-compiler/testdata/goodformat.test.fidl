@@ -54,11 +54,11 @@ union MyExplicitUnion {
     4: reserved;
 };
 
-xunion MyXUnion { // super annoying!
+flexible union MyXUnion { // super annoying!
     1: string? s;
 };
 
-xunion MyExplicitXUnion {
+flexible union MyExplicitXUnion {
     4: reserved;
     2: reserved;
     1: string? s;
