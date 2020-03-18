@@ -34,5 +34,7 @@ source_set("screen_reader") {
     "//src/ui/a11y/lib/tts",
     "//src/ui/a11y/lib/view",
     "//src/ui/lib/glm_workaround",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
 }

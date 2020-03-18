@@ -5,6 +5,8 @@
 #ifndef SRC_UI_A11Y_LIB_SCREEN_READER_SCREEN_READER_CONTEXT_H_
 #define SRC_UI_A11Y_LIB_SCREEN_READER_SCREEN_READER_CONTEXT_H_
 
+#include <lib/async/cpp/executor.h>
+
 #include <memory>
 
 #include "src/ui/a11y/lib/screen_reader/focus/a11y_focus_manager.h"
@@ -25,7 +27,12 @@ class ScreenReaderContext {
   // Returns pointer to A11yFocusManager which stores a11y focus information for screen reader.
   virtual A11yFocusManager* GetA11yFocusManager();
 
+  // Returns the Executor used by the Screen Reader to schedule promises.
+  async::Executor* executor() { return &executor_; }
+
  private:
+  async::Executor executor_;
+
   // Stores A11yFocusManager pointer.
   // A11yFocusManager pointer should never be nullptr.
   std::unique_ptr<A11yFocusManager> a11y_focus_manager_;

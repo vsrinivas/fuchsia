@@ -5,7 +5,11 @@
 #ifndef SRC_UI_A11Y_LIB_SCREEN_READER_EXPLORE_ACTION_H_
 #define SRC_UI_A11Y_LIB_SCREEN_READER_EXPLORE_ACTION_H_
 
+#include <lib/fit/promise.h>
+#include <lib/fit/scope.h>
+
 #include "src/ui/a11y/lib/screen_reader/actions.h"
+#include "src/ui/a11y/lib/screen_reader/screen_reader_context.h"
 
 namespace a11y {
 
@@ -17,7 +21,7 @@ namespace a11y {
 //   * Manage focus change for a node(if any).
 class ExploreAction : public ScreenReaderAction {
  public:
-  explicit ExploreAction(ActionContext* context);
+  explicit ExploreAction(ActionContext* context, ScreenReaderContext* screen_reader_context);
   ~ExploreAction() override;
 
   // This method will be implementing the actual sequence of events that should
@@ -25,12 +29,27 @@ class ExploreAction : public ScreenReaderAction {
   void Run(ActionData process_data) override;
 
  private:
-  // Helper method for processing results and performing sequence of events
-  // based on returned data.
-  void ProcessHitTestResult(::fuchsia::accessibility::semantics::Hit hit, ActionData process_data);
+  // Returns a promise which performs hit testing. An error is thrown if the hit test result has no
+  // node ID.
+  fit::promise<fuchsia::accessibility::semantics::Hit> ExecuteHitTestingPromise(
+      const ActionData& process_data);
+
+  // Returns a promise that from a hit testing result, builds an utterance to be spoken based on the
+  // node that was hit. An error is thrown if the semantic tree or the semantic node are missing
+  // data necessary to build an utterance.
+  fit::promise<fuchsia::accessibility::tts::Utterance> BuildUtteranceFromNodeHitPromise(
+      fuchsia::accessibility::semantics::Hit hit, zx_koid_t view_koid);
+
+  // Returns a promise that enqueues an utterance. An error is thrown if the atempt to enqueue the
+  // utterance is rejected by the TTS service.
+  fit::promise<> EnqueueUtterancePromise(fuchsia::accessibility::tts::Utterance utterance);
 
   // ActionContext which is used to make calls to Semantics Manager and TTS.
   ActionContext* action_context_;
+
+  // Pointer to the screen reader context, which owns the executor used by this class.
+  ScreenReaderContext* screen_reader_context_;
+  fit::scope scope_;
 };
 
 }  // namespace a11y

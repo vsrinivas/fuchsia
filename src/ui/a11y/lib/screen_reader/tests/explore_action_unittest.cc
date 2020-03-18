@@ -13,6 +13,8 @@
 #include <src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_provider.h>
 
 #include "src/ui/a11y/bin/a11y_manager/tests/util/util.h"
+#include "src/ui/a11y/lib/screen_reader/focus/tests/mocks/mock_a11y_focus_manager.h"
+#include "src/ui/a11y/lib/screen_reader/screen_reader_context.h"
 #include "src/ui/a11y/lib/tts/tts_manager.h"
 #include "src/ui/a11y/lib/util/util.h"
 
@@ -39,6 +41,10 @@ class ExploreActionTest : public gtest::TestLoopFixture {
                             [](fuchsia::accessibility::tts::TtsManager_OpenEngine_Result result) {
                               EXPECT_TRUE(result.is_response());
                             });
+    auto a11y_focus_manager = std::make_unique<accessibility_test::MockA11yFocusManager>();
+    a11y_focus_manager_ptr_ = a11y_focus_manager.get();
+    screen_reader_context_ =
+        std::make_unique<a11y::ScreenReaderContext>(std::move(a11y_focus_manager));
   }
 
   vfs::PseudoDir* debug_dir() { return context_provider_.context()->outgoing()->debug_dir(); }
@@ -48,6 +54,8 @@ class ExploreActionTest : public gtest::TestLoopFixture {
   a11y::ScreenReaderAction::ActionContext action_context_;
   a11y::TtsManager tts_manager_;
   accessibility_test::MockSemanticProvider semantic_provider_;
+  std::unique_ptr<a11y::ScreenReaderContext> screen_reader_context_;
+  accessibility_test::MockA11yFocusManager* a11y_focus_manager_ptr_;
 };
 
 // Create a test node with only a node id and a label.
@@ -91,7 +99,7 @@ TEST_F(ExploreActionTest, ReadLabel) {
   semantic_provider_.CommitUpdates();
   RunLoopUntilIdle();
 
-  a11y::ExploreAction explore_action(&action_context_);
+  a11y::ExploreAction explore_action(&action_context_, screen_reader_context_.get());
   a11y::ExploreAction::ActionData action_data;
   action_data.current_view_koid = semantic_provider_.koid();
 

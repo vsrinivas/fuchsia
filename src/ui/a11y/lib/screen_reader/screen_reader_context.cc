@@ -4,12 +4,15 @@
 
 #include "src/ui/a11y/lib/screen_reader/screen_reader_context.h"
 
+#include <lib/async/default.h>
+
 #include "src/lib/fxl/logging.h"
 
 namespace a11y {
 
 ScreenReaderContext::ScreenReaderContext(std::unique_ptr<A11yFocusManager> a11y_focus_manager)
-    : a11y_focus_manager_(std::move(a11y_focus_manager)) {}
+    : executor_(async_get_default_dispatcher()),
+      a11y_focus_manager_(std::move(a11y_focus_manager)) {}
 
 A11yFocusManager* ScreenReaderContext::GetA11yFocusManager() {
   FXL_DCHECK(a11y_focus_manager_.get());
