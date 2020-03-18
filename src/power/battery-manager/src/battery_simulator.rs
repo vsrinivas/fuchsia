@@ -141,10 +141,13 @@ impl SimulatedBatteryInfoSource {
                     self.set_time_remaining(duration).await?;
                 }
                 spower::BatterySimulatorRequest::DisconnectRealBattery { .. } => {
-                    Err(format_err!("Incorrect Disconnect request called"))?
+                    Err(format_err!("Unexpected Disconnect request called"))?
                 }
                 spower::BatterySimulatorRequest::ReconnectRealBattery { .. } => {
-                    Err(format_err!("Incorrect Reconnect request called"))?
+                    Err(format_err!("Unexpected  Reconnect request called"))?
+                }
+                spower::BatterySimulatorRequest::IsSimulating { responder: _, .. } => {
+                    Err(format_err!("Unexpected Simulating requested called"))?
                 }
             }
             Ok::<(), Error>(())

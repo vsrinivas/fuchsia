@@ -92,6 +92,13 @@ async fn main() -> Result<(), Error> {
                                             )
                                             .await?;
                                     }
+                                    spower::BatterySimulatorRequest::IsSimulating {
+                                        responder,
+                                        ..
+                                    } => {
+                                        let info = battery_manager.is_simulating();
+                                        responder.send(info)?;
+                                    }
                                     _ => {
                                         battery_simulator.handle_request(request).await?;
                                     }
@@ -102,7 +109,7 @@ async fn main() -> Result<(), Error> {
                         .await;
 
                     if let Err(e) = res {
-                        fx_log_err!("BatterySimulator failed {}", e);
+                        fx_log_err!("batsim: BatterySimulator failed {}", e);
                     }
                 }
             }

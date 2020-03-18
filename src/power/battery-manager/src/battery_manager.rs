@@ -293,6 +293,10 @@ impl BatteryManager {
         BatteryManager::run_watchers(watchers.clone(), info.clone());
     }
 
+    pub fn is_simulating(&self) -> bool {
+        *self.simulation_state.read().unwrap()
+    }
+
     pub(crate) async fn serve(
         &self,
         stream: fpower::BatteryManagerRequestStream,

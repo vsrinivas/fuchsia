@@ -7,10 +7,17 @@ group("power") {
 }
 
 group("battery") {
-  deps = [ "battery-manager" ]
+  deps = [
+    "battery-manager",
+    "battery-manager/battery-cli",
+  ]
 }
 
 group("tests") {
   testonly = true
-  deps = [ "battery-manager:tests" ]
+  deps = [
+    "battery-manager",
+    "battery-manager:tests",
+    "battery-manager/battery-cli:tests",
+  ]
 }

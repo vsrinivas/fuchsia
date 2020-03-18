@@ -42,6 +42,9 @@ protocol BatterySimulatorController {
     /// Disconnect the real battery connection
     DisconnectRealBattery();
 
+    /// Gets Simulation State
+    IsSimulating() -> (bool simulation_state);
+
     /// Reconnect to the real battery
     /// This should be called after DisconnectRealBattery
     ReconnectRealBattery();

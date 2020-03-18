@@ -1,0 +1,12 @@
+{
+    "program": {
+        "binary": "test/battery_cli_tests"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.power.test.BatterySimulator",
+            "fuchsia.logger.LogSink",
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}
