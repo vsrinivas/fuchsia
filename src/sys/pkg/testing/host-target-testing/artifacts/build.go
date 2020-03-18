@@ -6,7 +6,6 @@ package artifacts
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -21,7 +20,6 @@ type Build struct {
 	ID       string
 	archive  *Archive
 	packages *packages.Repository
-	snapshot *SystemSnapshot
 	dir      string
 }
 
@@ -84,66 +82,6 @@ func (b *Build) GetPaver(ctx context.Context, publicKey ssh.PublicKey) (*paver.P
 	paveZedbootScript := filepath.Join(buildArchiveDir, "pave-zedboot.sh")
 
 	return paver.NewPaver(paveZedbootScript, paveScript, publicKey), nil
-}
-
-// SystemSnapshot describes the data in the system.snapshot.json file.
-type SystemSnapshot struct {
-	BuildID  int      `json:"build_id"`
-	Snapshot Snapshot `json:"snapshot"`
-}
-
-// Snapshot describes all the packages and blobs in the package repository.
-type Snapshot struct {
-	Packages map[string]PackageInfo `json:"packages"`
-	Blobs    map[string]BlobInfo    `json:"blobs"`
-}
-
-// PackageInfo describes an individual package artifacts in the repository.
-type PackageInfo struct {
-	Files map[string]string `json:"files"`
-	Tags  []string          `json:"tags"`
-}
-
-// BlobInfo describes all the blobs in the repository.
-type BlobInfo struct {
-	Size int `json:"size"`
-}
-
-// GetSystemSnapshot downloads and returns the system snapshot for the build.
-func (b *Build) GetSystemSnapshot(ctx context.Context) (*SystemSnapshot, error) {
-	if b.snapshot != nil {
-		return b.snapshot, nil
-	}
-
-	path, err := b.archive.download(ctx, b.dir, b.ID, "system.snapshot.json")
-	if err != nil {
-		return nil, fmt.Errorf("failed to download system.snapshot.json: %s", err)
-	}
-
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open %q: %s", path, err)
-	}
-	defer f.Close()
-
-	type systemSnapshot struct {
-		BuildID  int    `json:"build_id"`
-		Snapshot string `json:"snapshot"`
-	}
-
-	var s systemSnapshot
-	if err := json.NewDecoder(f).Decode(&s); err != nil {
-		return nil, fmt.Errorf("failed to parse %q: %s", path, err)
-	}
-
-	snapshot := &SystemSnapshot{BuildID: s.BuildID}
-	if err := json.Unmarshal([]byte(s.Snapshot), &snapshot.Snapshot); err != nil {
-		return nil, fmt.Errorf("failed to parse snapshot in %q: %s", path, err)
-	}
-
-	b.snapshot = snapshot
-
-	return b.snapshot, nil
 }
 
 func (b *Build) String() string {
