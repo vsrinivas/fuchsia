@@ -11,6 +11,7 @@
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
+#include <ddk/driver.h>
 #include <ddk/fragment-device.h>
 
 #include "driver_host.h"
@@ -280,12 +281,10 @@ __EXPORT zx_off_t device_get_size(zx_device_t* dev) { return dev->GetSizeOp(); }
 
 // LibDriver Misc Interfaces
 
-namespace internal {
-extern zx_handle_t root_resource_handle;
-}
-
 // Please do not use get_root_resource() in new code. See ZX-1467.
-__EXPORT zx_handle_t get_root_resource() { return internal::root_resource_handle; }
+__EXPORT zx_handle_t get_root_resource() {
+  return internal::ContextForApi()->root_resource().get();
+}
 
 __EXPORT zx_status_t load_firmware(zx_device_t* dev, const char* path, zx_handle_t* fw,
                                    size_t* size) {

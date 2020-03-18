@@ -102,7 +102,7 @@ static zx_status_t default_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) 
 
 static void default_child_pre_release(void* ctx, void* child_ctx) {}
 
-zx_protocol_device_t device_default_ops = []() {
+const zx_protocol_device_t kDeviceDefaultOps = []() {
   zx_protocol_device_t ops = {};
   ops.open = default_open;
   ops.close = default_close;
@@ -203,20 +203,14 @@ void DriverHostContext::DeviceDestroy(zx_device_t* dev) REQ_DM_LOCK {
   }
 }
 
-namespace internal {
-
-// defered work list
-fbl::DoublyLinkedList<zx_device*, zx_device::DeferNode> defer_device_list;
-int enumerators = 0;
-
-void finalize() {
+void DriverHostContext::FinalizeDyingDevices() {
   // Early exit if there's no work
-  if (defer_device_list.is_empty()) {
+  if (defer_device_list_.is_empty()) {
     return;
   }
 
   // Otherwise we snapshot the list
-  auto list = std::move(defer_device_list);
+  auto list = std::move(defer_device_list_);
 
   // We detach all the devices from their parents list-of-children
   // while under the DM lock to avoid an enumerator starting to mutate
@@ -255,7 +249,7 @@ void finalize() {
         // Clear the wants rebind flag and request the rebind
         dev->parent->flags &= (~DEV_FLAG_WANTS_REBIND);
         std::string drv = dev->parent->get_rebind_drv_name().value_or("");
-        zx_status_t status = ContextForApi()->DeviceBind(dev->parent, drv.c_str());
+        zx_status_t status = DeviceBind(dev->parent, drv.c_str());
         if (status != ZX_OK) {
           if (auto rebind = dev->parent->take_rebind_conn(); rebind) {
             rebind(status);
@@ -267,25 +261,13 @@ void finalize() {
     }
 
     // destroy/deallocate the device
-    ContextForApi()->DeviceDestroy(dev);
+    DeviceDestroy(dev);
   }
 }
+
+namespace internal {
 
 namespace {
-
-// enum_lock_{acquire,release}() are used whenever we're iterating
-// on the device tree.  When "enum locked" it is legal to add a new
-// child to the end of a device's list-of-children, but it is not
-// legal to remove a child.  This avoids badness when we have to
-// drop the DM lock to call into device ops while enumerating.
-
-void enum_lock_acquire() REQ_DM_LOCK { internal::enumerators++; }
-
-void enum_lock_release() REQ_DM_LOCK {
-  if (--internal::enumerators == 0) {
-    internal::finalize();
-  }
-}
 
 zx_status_t device_validate(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK {
   if (dev == nullptr) {
@@ -650,7 +632,7 @@ zx_status_t DriverHostContext::DeviceCompleteRemoval(const fbl::RefPtr<zx_device
 }
 
 zx_status_t DriverHostContext::DeviceUnbind(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK {
-  internal::enum_lock_acquire();
+  enum_lock_acquire();
 
   if (!(dev->flags & DEV_FLAG_UNBOUND)) {
     dev->flags |= DEV_FLAG_UNBOUND;
@@ -666,7 +648,7 @@ zx_status_t DriverHostContext::DeviceUnbind(const fbl::RefPtr<zx_device_t>& dev)
       dev->unbind_cb(ZX_OK);
     }
   }
-  internal::enum_lock_release();
+  enum_lock_release();
 
   return ZX_OK;
 }
@@ -793,13 +775,13 @@ void DriverHostContext::DeviceSystemSuspend(const fbl::RefPtr<zx_device>& dev,
     status = internal::device_get_dev_power_state_from_mapping(dev, flags, &new_state_info,
                                                                &suspend_reason);
     if (status == ZX_OK) {
-      internal::enum_lock_acquire();
+      enum_lock_acquire();
       {
         ApiAutoRelock relock;
         dev->ops->suspend_new(dev->ctx, static_cast<uint8_t>(new_state_info.dev_state),
                               new_state_info.wakeup_enable, suspend_reason);
       }
-      internal::enum_lock_release();
+      enum_lock_release();
       return;
     }
   }
@@ -823,7 +805,7 @@ void DriverHostContext::DeviceSystemResume(const fbl::RefPtr<zx_device>& dev,
   zx_status_t status = ZX_ERR_NOT_SUPPORTED;
   // If new resume hook is implemented, prefer that.
   if (dev->ops->resume_new) {
-    internal::enum_lock_acquire();
+    enum_lock_acquire();
     {
       ApiAutoRelock relock;
       auto& sys_power_states = dev->GetSystemPowerStateMapping();
@@ -831,7 +813,7 @@ void DriverHostContext::DeviceSystemResume(const fbl::RefPtr<zx_device>& dev,
           internal::get_perf_state(dev, sys_power_states[target_system_state].performance_state);
       dev->ops->resume_new(dev->ctx, requested_perf_state);
     }
-    internal::enum_lock_release();
+    enum_lock_release();
     return;
   }
 
@@ -922,4 +904,14 @@ zx_status_t DriverHostContext::DeviceConfigureAutoSuspend(const fbl::RefPtr<zx_d
     return ZX_OK;
   }
   return ZX_ERR_NOT_SUPPORTED;
+}
+
+void DriverHostContext::QueueDeviceForFinalization(zx_device_t* device) {
+  // Put on the defered work list for finalization
+  defer_device_list_.push_back(device);
+
+  // Immediately finalize if there's not an active enumerator
+  if (enumerators_ == 0) {
+    FinalizeDyingDevices();
+  }
 }

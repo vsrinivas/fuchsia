@@ -402,7 +402,7 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
   uint32_t current_performance_state_ = llcpp::fuchsia::device::DEVICE_PERFORMANCE_STATE_P0;
   bool auto_suspend_configured_ = false;
 
-  [[maybe_unused]] DriverHostContext* const driver_host_context_;
+  DriverHostContext* const driver_host_context_;
 };
 
 // zx_device_t objects must be created or initialized by the driver manager's

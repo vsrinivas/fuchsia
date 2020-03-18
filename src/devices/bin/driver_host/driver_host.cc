@@ -325,26 +325,10 @@ void DriverHostContext::ProxyIosDestroy(const fbl::RefPtr<zx_device_t>& dev) {
   }
 }
 
-namespace internal {
-
-namespace {
-
-// We need a global pointer to a DriverHostContext so that we can implement the functions exported
-// to drivers.  Some of these functions unfortunately do not take an argument that can be used to
-// find a context.
-DriverHostContext* kContextForApi = nullptr;
-void RegisterContextForApi(DriverHostContext* context) { kContextForApi = context; }
-
-}  // namespace
-
-DriverHostContext* ContextForApi() { return kContextForApi; }
-
-// TODO(fxb/48246): This should be moved into DriverHostContext in a future patch.
-static fbl::DoublyLinkedList<fbl::RefPtr<zx_driver>> dh_drivers;
-
-zx_status_t find_driver(fbl::StringPiece libname, zx::vmo vmo, fbl::RefPtr<zx_driver_t>* out) {
+zx_status_t DriverHostContext::FindDriver(fbl::StringPiece libname, zx::vmo vmo,
+                                          fbl::RefPtr<zx_driver_t>* out) {
   // check for already-loaded driver first
-  for (auto& drv : dh_drivers) {
+  for (auto& drv : drivers_) {
     if (!libname.compare(drv.libname())) {
       *out = fbl::RefPtr(&drv);
       return drv.status();
@@ -358,8 +342,8 @@ zx_status_t find_driver(fbl::StringPiece libname, zx::vmo vmo, fbl::RefPtr<zx_dr
   }
   new_driver->set_libname(libname);
 
-  // Let the |dh_drivers| list and our out parameter each have a refcount.
-  dh_drivers.push_back(new_driver);
+  // Let the |drivers_| list and our out parameter each have a refcount.
+  drivers_.push_back(new_driver);
   *out = new_driver;
 
   const char* c_libname = new_driver->libname().c_str();
@@ -440,6 +424,20 @@ zx_status_t find_driver(fbl::StringPiece libname, zx::vmo vmo, fbl::RefPtr<zx_dr
   return new_driver->status();
 }
 
+namespace internal {
+
+namespace {
+
+// We need a global pointer to a DriverHostContext so that we can implement the functions exported
+// to drivers.  Some of these functions unfortunately do not take an argument that can be used to
+// find a context.
+DriverHostContext* kContextForApi = nullptr;
+void RegisterContextForApi(DriverHostContext* context) { kContextForApi = context; }
+
+}  // namespace
+
+DriverHostContext* ContextForApi() { return kContextForApi; }
+
 void DevhostControllerConnection::CreateDevice(zx::channel coordinator_rpc,
                                                zx::channel device_controller_rpc,
                                                ::fidl::StringView driver_path_view,
@@ -458,7 +456,7 @@ void DevhostControllerConnection::CreateDevice(zx::channel coordinator_rpc,
 
   // named driver -- ask it to create the device
   fbl::RefPtr<zx_driver_t> drv;
-  zx_status_t r = find_driver(driver_path, std::move(driver_vmo), &drv);
+  zx_status_t r = driver_host_context_->FindDriver(driver_path, std::move(driver_vmo), &drv);
   if (r != ZX_OK) {
     log(ERROR, "driver_host: driver load failed: %d\n", r);
     return;
@@ -600,7 +598,7 @@ void DevhostControllerConnection::CreateDeviceStub(zx::channel coordinator_rpc,
   }
   strcpy(dev->name, "proxy");
   dev->protocol_id = protocol_id;
-  dev->ops = &device_default_ops;
+  dev->ops = &kDeviceDefaultOps;
   dev->set_local_id(local_device_id);
 
   std::unique_ptr<DeviceControllerConnection> newconn;
@@ -674,11 +672,9 @@ void DevhostControllerConnection::HandleRpc(std::unique_ptr<DevhostControllerCon
   BeginWait(std::move(conn), dispatcher);
 }
 
-zx_handle_t root_resource_handle = ZX_HANDLE_INVALID;
-
 int main(int argc, char** argv) {
-  root_resource_handle = zx_take_startup_handle(PA_HND(PA_RESOURCE, 0));
-  if (root_resource_handle == ZX_HANDLE_INVALID) {
+  zx::resource root_resource(zx_take_startup_handle(PA_HND(PA_RESOURCE, 0)));
+  if (!root_resource.is_valid()) {
     log(TRACE, "driver_host: no root resource handle!\n");
   }
 
@@ -690,7 +686,7 @@ int main(int argc, char** argv) {
     return -1;
   }
 
-  DriverHostContext ctx(&kAsyncLoopConfigAttachToCurrentThread);
+  DriverHostContext ctx(&kAsyncLoopConfigAttachToCurrentThread, std::move(root_resource));
   RegisterContextForApi(&ctx);
 
   zx_status_t r;

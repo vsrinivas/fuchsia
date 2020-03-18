@@ -19,6 +19,7 @@
 #include "log.h"
 #include "proxy_iostate.h"
 #include "zx_device.h"
+#include "zx_driver.h"
 
 namespace {
 
@@ -138,7 +139,7 @@ void DeviceControllerConnection::BindDriver(::fidl::StringView driver_path_view,
   }
 
   zx_status_t r;
-  if ((r = internal::find_driver(driver_path, std::move(driver), &drv)) < 0) {
+  if ((r = driver_host_context_->FindDriver(driver_path, std::move(driver), &drv)) < 0) {
     log(ERROR, "driver_host[%s] driver load failed: %d\n", path, r);
     BindReply(dev, std::move(completer), r);
     return;

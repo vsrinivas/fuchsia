@@ -201,13 +201,7 @@ void zx_device::fbl_recycle() TA_NO_THREAD_SAFETY_ANALYSIS {
   this->event.reset();
   this->local_event.reset();
 
-  // Put on the defered work list for finalization
-  internal::defer_device_list.push_back(this);
-
-  // Immediately finalize if there's not an active enumerator
-  if (internal::enumerators == 0) {
-    internal::finalize();
-  }
+  driver_host_context_->QueueDeviceForFinalization(this);
 }
 
 static fbl::Mutex local_id_map_lock_;

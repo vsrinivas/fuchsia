@@ -8,6 +8,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fit/function.h>
 #include <lib/zx/event.h>
+#include <lib/zx/resource.h>
 
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
@@ -16,12 +17,14 @@
 #include "async_loop_owned_event_handler.h"
 #include "lock.h"
 #include "zx_device.h"
+#include "zx_driver.h"
 
 class DriverHostContext {
  public:
   using Callback = fit::inline_callback<void(void), 2 * sizeof(void*)>;
 
-  explicit DriverHostContext(const async_loop_config_t* config) : loop_(config) {}
+  explicit DriverHostContext(const async_loop_config_t* config, zx::resource root_resource = {})
+      : loop_(config), root_resource_(std::move(root_resource)) {}
 
   zx_status_t SetupRootDevcoordinatorConnection(zx::channel ch);
 
@@ -123,7 +126,14 @@ class DriverHostContext {
   // queue.
   void RunWorkItems(size_t how_many_to_run);
 
+  zx_status_t FindDriver(fbl::StringPiece libname, zx::vmo vmo, fbl::RefPtr<zx_driver_t>* out);
+
+  // Called when a zx_device_t has run out of references and needs its destruction finalized.
+  void QueueDeviceForFinalization(zx_device_t* device) REQ_DM_LOCK;
+
   async::Loop& loop() { return loop_; }
+
+  const zx::resource& root_resource() { return root_resource_; }
 
  private:
   struct WorkItem : public fbl::DoublyLinkedListable<std::unique_ptr<WorkItem>> {
@@ -167,12 +177,34 @@ class DriverHostContext {
   // queue.
   void InternalRunWorkItems(size_t how_many_to_run);
 
+  void FinalizeDyingDevices() REQ_DM_LOCK;
+
+  // enum_lock_{acquire,release}() are used whenever we're iterating
+  // on the device tree.  When "enum locked" it is legal to add a new
+  // child to the end of a device's list-of-children, but it is not
+  // legal to remove a child.  This avoids badness when we have to
+  // drop the DM lock to call into device ops while enumerating.
+  void enum_lock_acquire() REQ_DM_LOCK { enumerators_++; }
+
+  void enum_lock_release() REQ_DM_LOCK {
+    if (--enumerators_ == 0) {
+      FinalizeDyingDevices();
+    }
+  }
+
   async::Loop loop_;
 
   fbl::Mutex lock_;
   // Owned by `loop_`;
   EventWaiter* event_waiter_ TA_GUARDED(lock_) = nullptr;
   fbl::DoublyLinkedList<std::unique_ptr<WorkItem>> work_items_ TA_GUARDED(lock_);
+
+  fbl::DoublyLinkedList<fbl::RefPtr<zx_driver>> drivers_;
+
+  fbl::DoublyLinkedList<zx_device*, zx_device::DeferNode> defer_device_list_ USE_DM_LOCK;
+  int enumerators_ USE_DM_LOCK = 0;
+
+  zx::resource root_resource_;
 };
 
 #endif  // SRC_DEVICES_BIN_DRIVER_HOST_DEVHOST_CONTEXT_H_

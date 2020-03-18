@@ -36,109 +36,13 @@
 
 namespace fuchsia = ::llcpp::fuchsia;
 
-namespace internal {
-
-struct BindContext {
-  fbl::RefPtr<zx_device_t> parent;
-  fbl::RefPtr<zx_device_t> child;
-};
-
-struct CreationContext {
-  fbl::RefPtr<zx_device_t> parent;
-  fbl::RefPtr<zx_device_t> child;
-  zx::unowned_channel device_controller_rpc;
-  zx::unowned_channel coordinator_rpc;
-};
-
-void set_bind_context(internal::BindContext* ctx);
-void set_creation_context(internal::CreationContext* ctx);
-
-}  // namespace internal
-
 // Nothing outside of devmgr/{devmgr,driver_host,rpc-device}.c
 // should be calling internal::*() APIs, as this could
 // violate the internal locking design.
 
 // Safe external APIs are in device.h and device_internal.h
 
-// Note that this must be a struct to match the public opaque declaration.
-struct zx_driver : fbl::DoublyLinkedListable<fbl::RefPtr<zx_driver>>, fbl::RefCounted<zx_driver> {
-  static zx_status_t Create(fbl::RefPtr<zx_driver>* out_driver);
-
-  const char* name() const { return name_; }
-
-  zx_driver_rec_t* driver_rec() const { return driver_rec_; }
-
-  zx_status_t status() const { return status_; }
-
-  const fbl::String& libname() const { return libname_; }
-
-  void set_name(const char* name) { name_ = name; }
-
-  void set_driver_rec(zx_driver_rec_t* driver_rec) { driver_rec_ = driver_rec; }
-
-  void set_ops(const zx_driver_ops_t* ops) { ops_ = ops; }
-
-  void set_status(zx_status_t status) { status_ = status; }
-
-  void set_libname(fbl::StringPiece libname) { libname_ = libname; }
-
-  // Interface to |ops|. These names contain Op in order to not
-  // collide with e.g. RefPtr names.
-
-  bool has_init_op() const { return ops_->init != nullptr; }
-
-  bool has_bind_op() const { return ops_->bind != nullptr; }
-
-  bool has_create_op() const { return ops_->create != nullptr; }
-
-  bool has_run_unit_tests_op() const { return ops_->run_unit_tests != nullptr; }
-
-  zx_status_t InitOp() { return ops_->init(&ctx_); }
-
-  zx_status_t BindOp(internal::BindContext* bind_context,
-                     const fbl::RefPtr<zx_device_t>& device) const {
-    fbl::StringBuffer<32> trace_label;
-    trace_label.AppendPrintf("%s:bind", name_);
-    TRACE_DURATION("driver_host:driver-hooks", trace_label.data());
-
-    internal::set_bind_context(bind_context);
-    auto status = ops_->bind(ctx_, device.get());
-    internal::set_bind_context(nullptr);
-    return status;
-  }
-
-  zx_status_t CreateOp(internal::CreationContext* creation_context,
-                       const fbl::RefPtr<zx_device_t>& parent, const char* name, const char* args,
-                       zx_handle_t rpc_channel) const {
-    internal::set_creation_context(creation_context);
-    auto status = ops_->create(ctx_, parent.get(), name, args, rpc_channel);
-    internal::set_creation_context(nullptr);
-    return status;
-  }
-
-  void ReleaseOp() const {
-    // TODO(kulakowski/teisenbe) Consider poisoning the ops_ table on release.
-    ops_->release(ctx_);
-  }
-
-  bool RunUnitTestsOp(const fbl::RefPtr<zx_device_t>& parent, zx::channel test_output) const {
-    return ops_->run_unit_tests(ctx_, parent.get(), test_output.release());
-  }
-
- private:
-  friend std::unique_ptr<zx_driver> std::make_unique<zx_driver>();
-  zx_driver() = default;
-
-  const char* name_ = nullptr;
-  zx_driver_rec_t* driver_rec_ = nullptr;
-  const zx_driver_ops_t* ops_ = nullptr;
-  void* ctx_ = nullptr;
-  fbl::String libname_;
-  zx_status_t status_ = ZX_OK;
-};
-
-extern zx_protocol_device_t device_default_ops;
+extern const zx_protocol_device_t kDeviceDefaultOps;
 
 namespace internal {
 
@@ -173,15 +77,6 @@ class DevhostControllerConnection : public AsyncLoopOwnedRpcHandler<DevhostContr
 };
 
 zx_status_t fidl_handler(fidl_msg_t* msg, fidl_txn_t* txn, void* cookie);
-
-// State that is shared between the zx_device implementation and driver_host-core.cpp
-void finalize() REQ_DM_LOCK;
-extern fbl::DoublyLinkedList<zx_device*, zx_device::DeferNode> defer_device_list USE_DM_LOCK;
-extern int enumerators USE_DM_LOCK;
-
-// Lookup the a driver by name, and if it's not found, install the given vmo as
-// that driver.
-zx_status_t find_driver(fbl::StringPiece libname, zx::vmo vmo, fbl::RefPtr<zx_driver_t>* out);
 
 }  // namespace internal
 
