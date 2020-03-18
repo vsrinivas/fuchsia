@@ -1772,14 +1772,14 @@ mod tests {
             let alice = net.context("alice");
             assert_eq!(*alice.state.test_counters.get("timer::nop"), alice_nop);
             assert_eq!(
-                *alice.state.test_counters.get("receive_icmpv4_packet::echo_reply"),
+                *alice.state.test_counters.get("<IcmpIpTransportContext as BufferIpTransportContext<Ipv4>>::receive_ip_packet::echo_reply"),
                 alice_echo_response
             );
 
             let bob = net.context("bob");
             assert_eq!(*bob.state.test_counters.get("timer::nop"), bob_nop);
             assert_eq!(
-                *bob.state.test_counters.get("receive_icmpv4_packet::echo_request"),
+                *bob.state.test_counters.get("<IcmpIpTransportContext as BufferIpTransportContext<Ipv4>>::receive_ip_packet::echo_request"),
                 bob_echo_request
             );
         }

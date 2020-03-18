@@ -620,6 +620,7 @@ impl<I: IcmpIpExt, B: BufferMut, C: BufferUdpContext<I, B>> BufferIpTransportCon
 {
     fn receive_ip_packet(
         ctx: &mut C,
+        _device: Option<C::DeviceId>,
         src_ip: I::Addr,
         dst_ip: SpecifiedAddr<I::Addr>,
         mut buffer: B,
@@ -1046,7 +1047,7 @@ mod tests {
     use super::*;
     use crate::ip::{
         icmp::{Icmpv4ErrorCode, Icmpv6ErrorCode},
-        IpExt, IpPacketBuilder, IpProto,
+        DummyDeviceId, IpDeviceIdContext, IpExt, IpPacketBuilder, IpProto,
     };
     use crate::testutil::{set_logger_for_test, TestIpExt};
     use crate::wire::icmp::{Icmpv4DestUnreachableCode, Icmpv6DestUnreachableCode};
@@ -1102,6 +1103,10 @@ mod tests {
         (),
         IpPacketFromArgs<<I as Ip>::Addr>,
     >;
+
+    impl<I: IcmpIpExt> IpDeviceIdContext for DummyContext<I> {
+        type DeviceId = DummyDeviceId;
+    }
 
     impl<I: TestIpExt + IcmpIpExt> TransportIpContext<I> for DummyContext<I> {
         fn is_local_addr(&self, addr: <I as Ip>::Addr) -> bool {
@@ -1191,6 +1196,7 @@ mod tests {
             Buf::new(body.to_owned(), ..).encapsulate(builder).serialize_vec_outer().unwrap();
         UdpIpTransportContext::receive_ip_packet(
             ctx,
+            Some(DummyDeviceId),
             src_ip,
             SpecifiedAddr::new(dst_ip).unwrap(),
             buffer,

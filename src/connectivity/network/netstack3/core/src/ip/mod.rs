@@ -151,7 +151,7 @@ pub(crate) trait IpTransportContext<I: IcmpIpExt, C: ?Sized> {
 
 /// The execution context provided by a transport layer protocol to the IP layer
 /// when a buffer is required.
-pub(crate) trait BufferIpTransportContext<I: IcmpIpExt, B: BufferMut, C: ?Sized>:
+pub(crate) trait BufferIpTransportContext<I: IcmpIpExt, B: BufferMut, C: IpDeviceIdContext + ?Sized>:
     IpTransportContext<I, C>
 {
     /// Receive a transport layer packet in an IP packet.
@@ -161,6 +161,7 @@ pub(crate) trait BufferIpTransportContext<I: IcmpIpExt, B: BufferMut, C: ?Sized>
     /// the `Err` variant.
     fn receive_ip_packet(
         ctx: &mut C,
+        device: Option<C::DeviceId>,
         src_ip: I::Addr,
         dst_ip: SpecifiedAddr<I::Addr>,
         buffer: B,
@@ -179,9 +180,12 @@ impl<I: IcmpIpExt, C: ?Sized> IpTransportContext<I, C> for () {
     }
 }
 
-impl<I: IcmpIpExt, B: BufferMut, C: ?Sized> BufferIpTransportContext<I, B, C> for () {
+impl<I: IcmpIpExt, B: BufferMut, C: IpDeviceIdContext + ?Sized> BufferIpTransportContext<I, B, C>
+    for ()
+{
     fn receive_ip_packet(
         _ctx: &mut C,
+        _device: Option<C::DeviceId>,
         _src_ip: I::Addr,
         _dst_ip: SpecifiedAddr<I::Addr>,
         buffer: B,
@@ -194,7 +198,7 @@ impl<I: IcmpIpExt, B: BufferMut, C: ?Sized> BufferIpTransportContext<I, B, C> fo
 }
 
 /// The execution context provided by the IP layer to transport layer protocols.
-pub trait TransportIpContext<I: Ip> {
+pub trait TransportIpContext<I: Ip>: IpDeviceIdContext {
     /// Is this one of our local addresses?
     ///
     /// `is_local_addr` returns whether `addr` is the address associated with
@@ -324,7 +328,7 @@ impl<I: Ip, D: EventDispatcher> TransportIpContext<I> for Context<D> {
 /// the same `DeviceId` type rather than each providing their own, which would
 /// require lots of verbose type bounds when they need to be interoperable (such
 /// as when ICMP delivers an MLD packet to the `mld` module for processing).
-pub(crate) trait IpDeviceIdContext {
+pub trait IpDeviceIdContext {
     type DeviceId: Copy + Display + Debug + Send + Sync + 'static;
 }
 
@@ -708,10 +712,8 @@ fn dispatch_receive_ipv4_packet<B: BufferMut, D: BufferDispatcher<B>>(
     macro_rules! mtch {
         ($($cond:pat => $ty:ident),*) => {
             match proto {
-                IpProto::Icmp => {
-                    icmp::receive_icmpv4_packet(ctx, device, src_ip, dst_ip, buffer);
-                    Ok(())
-                }
+                IpProto::Icmp => <IcmpIpTransportContext as BufferIpTransportContext<Ipv4, _, _>>
+                            ::receive_ip_packet(ctx, device, src_ip, dst_ip, buffer),
                 IpProto::Igmp => {
                     igmp::receive_igmp_packet(
                         ctx,
@@ -723,7 +725,7 @@ fn dispatch_receive_ipv4_packet<B: BufferMut, D: BufferDispatcher<B>>(
                     Ok(())
                 }
                 $($cond => <<Context<D> as Ipv4TransportLayerContext>::$ty as BufferIpTransportContext<Ipv4, _, _>>
-                            ::receive_ip_packet(ctx, src_ip, dst_ip, buffer),)*
+                            ::receive_ip_packet(ctx, device, src_ip, dst_ip, buffer),)*
                 // TODO(joshlf): Once all IP protocol numbers are covered,
                 // remove this default case.
                 _ => Err((
@@ -796,16 +798,14 @@ fn dispatch_receive_ipv6_packet<B: BufferMut, D: BufferDispatcher<B>>(
     macro_rules! mtch {
         ($($cond:pat => $ty:ident),*) => {
             match proto {
-                IpProto::Icmpv6 => {
-                    icmp::receive_icmpv6_packet(ctx, device, src_ip, dst_ip, buffer);
-                    Ok(())
-                }
+                IpProto::Icmpv6 => <IcmpIpTransportContext as BufferIpTransportContext<Ipv6, _, _>>
+                            ::receive_ip_packet(ctx, device, src_ip, dst_ip, buffer),
                 // A value of `IpProto::NoNextHeader` tells us that there is no
                 // header whatsoever following the last lower-level header so we
                 // stop processing here.
                 IpProto::NoNextHeader => Ok(()),
                 $($cond => <<Context<D> as Ipv4TransportLayerContext>::$ty as BufferIpTransportContext<Ipv6, _, _>>
-                            ::receive_ip_packet(ctx, src_ip, dst_ip, buffer),)*
+                            ::receive_ip_packet(ctx, device, src_ip, dst_ip, buffer),)*
                 // TODO(joshlf): Once all IP Next Header numbers are covered,
                 // remove this default case.
                 _ => Err((
