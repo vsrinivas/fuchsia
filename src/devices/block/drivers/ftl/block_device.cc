@@ -4,12 +4,16 @@
 
 #include "block_device.h"
 
-#include <fuchsia/hardware/block/c/fidl.h>
+#include <fuchsia/hardware/block/llcpp/fidl.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <zircon/assert.h>
+#include <zircon/errors.h>
+#include <zircon/fidl.h>
+#include <zircon/types.h>
 
 #include <ddk/debug.h>
 #include <ddk/trace/event.h>
+#include <ddktl/fidl.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 
@@ -17,15 +21,23 @@
 
 namespace {
 
+namespace block_fidl = llcpp::fuchsia::hardware::block;
+
 constexpr char kDeviceName[] = "ftl";
 
-zx_status_t Format(void* ctx, fidl_txn_t* txn) {
-  ftl::BlockDevice* device = reinterpret_cast<ftl::BlockDevice*>(ctx);
-  zx_status_t status = device->Format();
-  return fuchsia_hardware_block_FtlFormat_reply(txn, status);
-}
+class FidlService final : public block_fidl::Ftl::Interface {
+ public:
+  FidlService() = delete;
+  constexpr explicit FidlService(ftl::BlockDevice* device) : device_(device) {}
+  ~FidlService() final = default;
 
-fuchsia_hardware_block_Ftl_ops_t fidl_ops = {.Format = Format};
+  void Format(FormatCompleter::Sync completer) final { completer.Reply(device_->Format()); }
+
+  void GetVmo(GetVmoCompleter::Sync completer) final { completer.ReplyError(ZX_ERR_NOT_SUPPORTED); }
+
+ private:
+  ftl::BlockDevice* device_ = nullptr;
+};
 
 // Encapsulates a block operation that is created by this device (so that it
 // goes through the worker thread).
@@ -130,7 +142,11 @@ zx_status_t BlockDevice::Init() {
 }
 
 zx_status_t BlockDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
-  return fuchsia_hardware_block_Ftl_dispatch(this, txn, msg, &fidl_ops);
+  FidlService service(this);
+  DdkTransaction transaction(txn);
+  block_fidl::Ftl::Dispatch(&service, msg, &transaction);
+
+  return transaction.Status();
 }
 
 zx_status_t BlockDevice::Suspend() {

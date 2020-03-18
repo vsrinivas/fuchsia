@@ -6,8 +6,17 @@ library fuchsia.hardware.block;
 
 using zx;
 
-[Layout = "Simple"]
+/// It is treated as a separate protocol for extension if necessary.
+[FragileBase]
+protocol InspectVmoProvider {
+    /// Requests the inspect vmo from the entity.
+    ///  - |vmo| has |ZX_RIGHTS_DUPLICATE|, |ZX_RIGHTS_TRANSFER|, |ZX_RIGHTS_READ|
+    GetVmo() -> (handle<vmo> vmo) error zx.status;
+};
+
 protocol Ftl {
-    // Discards previous contents and reinitializes the device.
+    compose InspectVmoProvider;
+
+    /// Discards previous contents and reinitializes the device.
     Format() -> (zx.status status);
 };
