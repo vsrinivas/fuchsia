@@ -24,6 +24,8 @@ zx_library("blobfs") {
     "allocator/node-reserver.h",
     "blobfs-checker.cc",
     "common.cc",
+    "compression/algorithm.cc",
+    "compression/algorithm.h",
     "compression/compressor.h",
     "compression/decompressor.cc",
     "compression/decompressor.h",

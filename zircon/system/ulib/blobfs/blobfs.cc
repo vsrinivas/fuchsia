@@ -43,6 +43,7 @@
 #include "allocator/node-reserver.h"
 #include "blob.h"
 #include "blobfs-checker.h"
+#include "compression/algorithm.h"
 #include "compression/compressor.h"
 #include "iterator/block-iterator.h"
 
@@ -107,6 +108,14 @@ zx_status_t InitializeUnjournalledWriteback(fs::TransactionHandler* transaction_
 // static.
 zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> device,
                            MountOptions* options, std::unique_ptr<Blobfs>* out) {
+  return CreateWithWriteCompressionAlgorithm(dispatcher, std::move(device), options,
+                                             kBlobfsDefaultCompressionAlgorithm, out);
+}
+
+// static.
+zx_status_t Blobfs::CreateWithWriteCompressionAlgorithm(
+    async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> device, MountOptions* options,
+    CompressionAlgorithm write_compression_algorithm, std::unique_ptr<Blobfs>* out) {
   TRACE_DURATION("blobfs", "Blobfs::Create");
   char block[kBlobfsBlockSize];
   zx_status_t status = device->ReadBlock(0, kBlobfsBlockSize, block);
@@ -148,8 +157,8 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
 
   // Construct the Blobfs object, without intensive validation, since it may require
   // upgrades / journal replays to become valid.
-  auto fs = std::unique_ptr<Blobfs>(
-      new Blobfs(dispatcher, std::move(device), superblock, options->writability));
+  auto fs = std::unique_ptr<Blobfs>(new Blobfs(dispatcher, std::move(device), superblock,
+                                               options->writability, write_compression_algorithm));
   fs->block_info_ = std::move(block_info);
 
   if (options->pager) {
@@ -682,8 +691,12 @@ void Blobfs::Sync(SyncCallback closure) {
 }
 
 Blobfs::Blobfs(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> device,
-               const Superblock* info, Writability writable)
-    : dispatcher_(dispatcher), block_device_(std::move(device)), writability_(writable) {
+               const Superblock* info, Writability writable,
+               CompressionAlgorithm write_compression_algorithm)
+    : dispatcher_(dispatcher),
+      block_device_(std::move(device)),
+      writability_(writable),
+      write_compression_algorithm_(write_compression_algorithm) {
   memcpy(&info_, info, sizeof(Superblock));
 }
 

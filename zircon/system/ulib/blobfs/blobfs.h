@@ -45,6 +45,7 @@
 #include "allocator/extent-reserver.h"
 #include "allocator/node-reserver.h"
 #include "blob-cache.h"
+#include "compression/algorithm.h"
 #include "directory.h"
 #include "iterator/allocated-extent-iterator.h"
 #include "iterator/block-iterator-provider.h"
@@ -63,6 +64,8 @@ using storage::UnbufferedOperationsBuilder;
 
 constexpr char kOutgoingDataRoot[] = "root";
 
+constexpr CompressionAlgorithm kBlobfsDefaultCompressionAlgorithm = CompressionAlgorithm::ZSTD;
+
 class Blobfs : public TransactionManager, public UserPager, public BlockIteratorProvider {
  public:
   DISALLOW_COPY_ASSIGN_AND_MOVE(Blobfs);
@@ -70,6 +73,13 @@ class Blobfs : public TransactionManager, public UserPager, public BlockIterator
   // Creates a blobfs object
   static zx_status_t Create(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> device,
                             MountOptions* options, std::unique_ptr<Blobfs>* out);
+
+  // Overrides
+  // |write_compression_algorithm = kBlobfsDefaultCompressionAlgorithm|
+  // on blob write.
+  static zx_status_t CreateWithWriteCompressionAlgorithm(
+      async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> device, MountOptions* options,
+      CompressionAlgorithm write_compression_algorithm, std::unique_ptr<Blobfs>* out);
 
   static std::unique_ptr<BlockDevice> Destroy(std::unique_ptr<Blobfs> blobfs);
 
@@ -133,6 +143,8 @@ class Blobfs : public TransactionManager, public UserPager, public BlockIterator
 
   // Returns the internal blobfs dispatcher.
   async_dispatcher_t* dispatcher() { return dispatcher_; }
+
+  const CompressionAlgorithm& write_compression_algorithm() { return write_compression_algorithm_; }
 
   bool CheckBlocksAllocated(uint64_t start_block, uint64_t end_block,
                             uint64_t* first_unset = nullptr) const {
@@ -199,7 +211,8 @@ class Blobfs : public TransactionManager, public UserPager, public BlockIterator
   zx_status_t AlignForVerification(uint64_t* offset, uint64_t* length, UserPagerInfo* info) final;
 
   Blobfs(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> device,
-         const Superblock* info, Writability writable);
+         const Superblock* info, Writability writable,
+         CompressionAlgorithm write_compression_algorithm);
 
   // Terminates all internal connections, updates the "clean bit" (if writable),
   // flushes writeback buffers, empties caches, and returns the underlying
@@ -282,6 +295,8 @@ class Blobfs : public TransactionManager, public UserPager, public BlockIterator
   // Compression is enabled by default. Use the kernel commandline "blobfs.uncompressed"
   // to disable it.
   bool write_uncompressed_ = false;
+
+  CompressionAlgorithm write_compression_algorithm_;
 };
 
 }  // namespace blobfs

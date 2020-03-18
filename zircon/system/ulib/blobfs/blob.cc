@@ -32,6 +32,7 @@
 
 #include "blob-verifier.h"
 #include "blobfs.h"
+#include "compression/algorithm.h"
 #include "compression/lz4.h"
 #include "compression/zstd-plain.h"
 #include "compression/zstd-seekable.h"
@@ -175,8 +176,8 @@ zx_status_t Blob::SpaceAllocate(uint64_t size_data) {
   }
 
   if (blobfs_->ShouldCompress() && inode_.blob_size >= kCompressionMinBytesSaved) {
-    // TODO(markdittmer): Lookup stored choice of compression algorithm here.
-    write_info->compressor = BlobCompressor::Create(CompressionAlgorithm::ZSTD, inode_.blob_size);
+    write_info->compressor =
+        BlobCompressor::Create(blobfs_->write_compression_algorithm(), inode_.blob_size);
     if (!write_info->compressor) {
       FS_TRACE_ERROR("blobfs: Failed to initialize compressor: %d\n", status);
       return status;
@@ -420,8 +421,9 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
     ZX_DEBUG_ASSERT(inode_.block_count > blocks);
 
     inode_.block_count = blocks;
-    // TODO(markdittmer): Use flag of chosen algorithm here.
-    inode_.header.flags |= kBlobFlagZSTDCompressed;
+    uint16_t compression_inode_header_flags =
+        CompressionInodeHeaderFlags(blobfs_->write_compression_algorithm());
+    inode_.header.flags |= compression_inode_header_flags;
   } else {
     uint64_t blocks64 = fbl::round_up(inode_.blob_size, kBlobfsBlockSize) / kBlobfsBlockSize;
     ZX_DEBUG_ASSERT(blocks64 <= std::numeric_limits<uint32_t>::max());

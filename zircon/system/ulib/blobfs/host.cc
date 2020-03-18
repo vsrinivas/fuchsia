@@ -45,7 +45,8 @@ namespace blobfs {
 namespace {
 
 // TODO(markdittmer): Abstract choice of host compressor, decompressor and metadata flag to support
-// choosing from multiple strategies.
+// choosing from multiple strategies. This has already been done in non-host code but host tools do
+// not use |BlobCompressor| the same way.
 using HostCompressor = ZSTDCompressor;
 using HostDecompressor = ZSTDDecompressor;
 
