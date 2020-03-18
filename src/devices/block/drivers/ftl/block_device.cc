@@ -33,7 +33,9 @@ class FidlService final : public block_fidl::Ftl::Interface {
 
   void Format(FormatCompleter::Sync completer) final { completer.Reply(device_->Format()); }
 
-  void GetVmo(GetVmoCompleter::Sync completer) final { completer.ReplyError(ZX_ERR_NOT_SUPPORTED); }
+  void GetVmo(GetVmoCompleter::Sync completer) final {
+    completer.ReplySuccess(device_->GetInspectVmo());
+  }
 
  private:
   ftl::BlockDevice* device_ = nullptr;
@@ -279,6 +281,7 @@ bool BlockDevice::InitFtl() {
   if (volume_->GetStats(&stats) == ZX_OK) {
     zxlogf(INFO, "FTL: Wear count: %u, Garbage level: %d%%\n", stats.wear_count,
            stats.garbage_level);
+    wear_count_ = inspector_.GetRoot().CreateUint("wear_count", stats.wear_count);
     if (stats.wear_count) {
       // TODO(35898): Remove this code when troubleshooting is over.
       for (uint32_t i = 0; i < fbl::count_of(stats.wear_histogram); i++) {

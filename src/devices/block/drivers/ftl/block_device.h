@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_BLOCK_DRIVERS_FTL_BLOCK_DEVICE_H_
-#define SRC_STORAGE_BLOCK_DRIVERS_FTL_BLOCK_DEVICE_H_
+#ifndef SRC_DEVICES_BLOCK_DRIVERS_FTL_BLOCK_DEVICE_H_
+#define SRC_DEVICES_BLOCK_DRIVERS_FTL_BLOCK_DEVICE_H_
 
 #include <lib/ftl/volume.h>
+#include <lib/inspect/cpp/inspect.h>
+#include <lib/inspect/cpp/vmo/types.h>
 #include <lib/sync/completion.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <threads.h>
@@ -87,6 +89,9 @@ class BlockDevice : public DeviceType,
   // Issues a command to format the FTL (aka, delete all data).
   zx_status_t Format();
 
+  // Returns a read_only handle to the underlying Inspect VMO.
+  zx::vmo GetInspectVmo() const { return inspector_.DuplicateVmo(); }
+
   void SetVolumeForTest(std::unique_ptr<ftl::Volume> volume) { volume_ = std::move(volume); }
 
   void SetNandParentForTest(const nand_protocol_t& nand) { parent_ = nand; }
@@ -122,9 +127,14 @@ class BlockDevice : public DeviceType,
   bad_block_protocol_t bad_block_ = {};
 
   std::unique_ptr<ftl::Volume> volume_;
+
   uint8_t guid_[ZBI_PARTITION_GUID_LEN] = {};
+
+  // Diagnostics.
+  inspect::Inspector inspector_;
+  inspect::UintProperty wear_count_;
 };
 
 }  // namespace ftl
 
-#endif  // SRC_STORAGE_BLOCK_DRIVERS_FTL_BLOCK_DEVICE_H_
+#endif  // SRC_DEVICES_BLOCK_DRIVERS_FTL_BLOCK_DEVICE_H_
