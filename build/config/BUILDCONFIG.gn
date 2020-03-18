@@ -627,17 +627,6 @@ declare_args() {
       name = "asan-fuzzer"
       forward_variables_from(_asan_variant, "*", [ "toolchain_args" ])
       toolchain_args = _asan_fuzzer_toolchain_args
-      configs += [ "//build/config/sanitizers:fuzzer" ]
-      configs += _fuzzer_remove_common_configs  # Ensure present when removing.
-      remove_common_configs = _fuzzer_remove_common_configs
-      remove_shared_configs = _fuzzer_remove_shared_configs
-    },
-    {
-      # See the note on //build/config/sanitizers:rust-asan. This target can
-      # only be used for binaries that are linked by clang and not rustc.
-      name = "rust-asan-fuzzer"
-      forward_variables_from(_asan_variant, "*", [ "toolchain_args" ])
-      toolchain_args = _asan_fuzzer_toolchain_args
       configs += [
         "//build/config/sanitizers:rust-asan",
         "//build/config/sanitizers:fuzzer",
