@@ -1,0 +1,22 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.media;
+
+using zx;
+
+[Discoverable, Layout = "Simple"]
+protocol ProfileProvider {
+    /// Register a thread as a media thread. This notifies the media subsystem
+    /// that this thread should have an elevated scheduling profile applied to
+    /// it in order to meet audio or video deadlines.
+    ///
+    /// `name` is the name of the component requesting the profile.
+    /// `period` is the suggested interval to be scheduled at.
+    ///
+    /// Returns the period and capacity that was applied, if a deadline profile
+    /// was selected. Returns 0 if no deadline profile was selected.
+    RegisterHandler(handle<thread> thread_handle, string:64 name, zx.duration period)
+        -> (zx.duration period, zx.duration capacity);
+};
