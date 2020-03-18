@@ -51,22 +51,32 @@ impl ComponentSelector {
     }
 }
 
-impl Into<Vec<SelectorArgument>> for &ComponentSelector {
-    fn into(self) -> Vec<SelectorArgument> {
+pub trait ToSelectorArguments {
+    fn to_selector_arguments(self) -> Vec<String>;
+}
+
+impl ToSelectorArguments for String {
+    fn to_selector_arguments(self) -> Vec<String> {
+        vec![self]
+    }
+}
+
+impl ToSelectorArguments for &str {
+    fn to_selector_arguments(self) -> Vec<String> {
+        vec![self.to_string()]
+    }
+}
+
+impl ToSelectorArguments for ComponentSelector {
+    fn to_selector_arguments(self) -> Vec<String> {
         let relative_moniker = self.relative_moniker_str();
         // If not tree selectors were provided, select the full tree.
         if self.tree_selectors.is_empty() {
-            vec![SelectorArgument::RawSelector(format!("{}:root", relative_moniker.clone()))]
+            vec![format!("{}:root", relative_moniker.clone())]
         } else {
             self.tree_selectors
                 .iter()
-                .map(|s| {
-                    SelectorArgument::RawSelector(format!(
-                        "{}:{}",
-                        relative_moniker.clone(),
-                        s.clone()
-                    ))
-                })
+                .map(|s| format!("{}:{}", relative_moniker.clone(), s.clone()))
                 .collect()
         }
     }
@@ -75,7 +85,7 @@ impl Into<Vec<SelectorArgument>> for &ComponentSelector {
 /// Utility for reading inspect data of a running component using the injected observer.cmx Archive
 /// Reader service.
 pub struct InspectDataFetcher {
-    selectors: Vec<ComponentSelector>,
+    selectors: Vec<String>,
     timeout: Duration,
 }
 
@@ -88,9 +98,21 @@ impl InspectDataFetcher {
     }
 
     /// Requests a single component tree (or sub-tree).
-    pub fn add_selector(mut self, selector: ComponentSelector) -> Self {
-        self.selectors.push(selector);
+    pub fn add_selector(mut self, selector: impl ToSelectorArguments) -> Self {
+        self.selectors.extend(selector.to_selector_arguments().into_iter());
         self
+    }
+
+    pub fn add_selectors<T, S>(self, selectors: T) -> Self
+    where
+        T: Iterator<Item = S>,
+        S: ToSelectorArguments,
+    {
+        let mut this = self;
+        for selector in selectors {
+            this = this.add_selector(selector);
+        }
+        this
     }
 
     /// Sets the maximum time to wait for a response from the Archive.
@@ -120,21 +142,16 @@ impl InspectDataFetcher {
             let (iterator, server_end) = fidl::endpoints::create_proxy::<BatchIteratorMarker>()
                 .context("failed to create iterator proxy")?;
 
-            let selector_args = self
+            let selectors = self
                 .selectors
                 .iter()
-                .map(|s| {
-                    let arguments: Vec<SelectorArgument> = s.into();
-                    arguments.into_iter()
-                })
-                .flatten()
-                .collect::<Vec<SelectorArgument>>();
-
+                .map(|selector| SelectorArgument::RawSelector(selector.clone()))
+                .collect();
             let mut stream_parameters = StreamParameters::empty();
             stream_parameters.stream_mode = Some(StreamMode::Snapshot);
             stream_parameters.data_type = Some(DataType::Inspect);
             stream_parameters.format = Some(Format::Json);
-            stream_parameters.selectors = Some(selector_args);
+            stream_parameters.selectors = Some(selectors);
 
             archive
                 .stream_diagnostics(server_end, stream_parameters)
@@ -223,10 +240,7 @@ mod tests {
         let (_env, _app) = start_component("test-ok").await?;
 
         let hierarchies = InspectDataFetcher::new()
-            .add_selector(ComponentSelector::new(vec![
-                "test-ok".to_string(),
-                "inspect_test_component.cmx".to_string(),
-            ]))
+            .add_selector("test-ok/inspect_test_component.cmx:root".to_string())
             .get()
             .await?;
 
@@ -268,10 +282,7 @@ mod tests {
         let (_env, _app) = start_component("test-timeout").await?;
 
         let result = InspectDataFetcher::new()
-            .add_selector(ComponentSelector::new(vec![
-                "test-timeout".to_string(),
-                "inspect_test_component.cmx".to_string(),
-            ]))
+            .add_selector("test-timeout/inspect_test_component.cmx:root")
             .with_timeout(0.nanos())
             .get()
             .await;
@@ -283,21 +294,18 @@ mod tests {
     async fn component_selector() {
         let selector = ComponentSelector::new(vec!["a.cmx".to_string()]);
         assert_eq!(selector.relative_moniker_str(), "a.cmx");
-        let arguments: Vec<SelectorArgument> = (&selector).into();
-        assert_eq!(arguments, vec![SelectorArgument::RawSelector("a.cmx:root".to_string())]);
+        let arguments: Vec<String> = selector.to_selector_arguments();
+        assert_eq!(arguments, vec!["a.cmx:root".to_string()]);
 
         let selector =
             ComponentSelector::new(vec!["b".to_string(), "c".to_string(), "a.cmx".to_string()]);
         assert_eq!(selector.relative_moniker_str(), "b/c/a.cmx");
 
         let selector = selector.with_tree_selector("root/b/c:d").with_tree_selector("root/e:f");
-        let arguments: Vec<SelectorArgument> = (&selector).into();
+        let arguments: Vec<String> = selector.to_selector_arguments();
         assert_eq!(
             arguments,
-            vec![
-                SelectorArgument::RawSelector("b/c/a.cmx:root/b/c:d".to_string()),
-                SelectorArgument::RawSelector("b/c/a.cmx:root/e:f".to_string()),
-            ]
+            vec!["b/c/a.cmx:root/b/c:d".to_string(), "b/c/a.cmx:root/e:f".to_string(),]
         );
     }
 }
