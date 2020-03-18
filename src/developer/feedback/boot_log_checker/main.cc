@@ -5,8 +5,10 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/executor.h>
+#include <lib/async/cpp/task.h>
 #include <lib/fit/promise.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/zx/time.h>
 
 #include <string>
 
@@ -29,9 +31,10 @@ int main(int argc, char** argv) {
                        }
                        // The delay is used to guarantee that we are not exiting the process before
                        // Cobalt had time to receive and send its events.
+                       // We delay asynchronously to avoid blocking the component's out directory.
                        // TODO(fxb/47645): remove delay.
-                       zx::nanosleep(zx::deadline_after(zx::sec(30)));
-                       loop.Quit();
+                       async::PostDelayedTask(
+                           loop.dispatcher(), [&loop] { loop.Quit(); }, zx::sec(30));
                      });
 
   executor.schedule_task(std::move(promise));
