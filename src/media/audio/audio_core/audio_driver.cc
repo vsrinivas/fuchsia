@@ -23,7 +23,7 @@ namespace {
 
 static constexpr zx_txid_t TXID = 1;
 
-static constexpr bool kEnablePositionNotifications = true;
+static constexpr bool kEnablePositionNotifications = false;
 // To what extent should position notification messages be logged? If logging level is SPEW, every
 // notification is logged (specified by Spew const). If TRACE, log less frequently, specified by
 // Trace const. If INFO, even less frequently per Info const (INFO is default for DEBUG builds).
