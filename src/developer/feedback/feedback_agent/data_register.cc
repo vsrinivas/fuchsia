@@ -46,7 +46,8 @@ void DataRegister::Upsert(fuchsia::feedback::ComponentData data, UpsertCallback 
   for (const auto& annotation : data.annotations()) {
     namespaced_annotations_[namespace_][annotation.key] = annotation.value;
   }
-  datastore_->SetExtraAnnotations(Flatten(namespaced_annotations_));
+  // TODO(fxb/47368): close all connections if false.
+  datastore_->TrySetExtraAnnotations(Flatten(namespaced_annotations_));
 
   callback();
 }

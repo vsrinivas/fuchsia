@@ -4,7 +4,6 @@
 
 #include "src/developer/feedback/feedback_agent/datastore.h"
 
-#include <fuchsia/feedback/cpp/fidl.h>
 #include <lib/fit/promise.h>
 #include <lib/zx/time.h>
 
@@ -41,6 +40,10 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
       attachment_allowlist_(attachment_allowlist),
       static_annotations_(feedback::GetStaticAnnotations(annotation_allowlist_)),
       static_attachments_(feedback::GetStaticAttachments(attachment_allowlist_)) {
+  FX_CHECK(annotation_allowlist_.size() <= kMaxNumPlatformAnnotations)
+      << "Requesting more platform annotations than the maximum number of platform annotations "
+         "allowed";
+
   if (annotation_allowlist_.empty()) {
     FX_LOGS(WARNING)
         << "Annotation allowlist is empty, no platform annotations will be collected or returned";
@@ -89,19 +92,12 @@ fit::promise<Annotations> Datastore::GetAnnotations() {
               }
             }
 
-            // If we have space left, we then augment the returned annotations with the extra
-            // component annotations.
-            if (ok_annotations.size() + extra_annotations_.size() <
-                fuchsia::feedback::MAX_NUM_ANNOTATIONS_PROVIDED) {
-              for (const auto& [key, value] : extra_annotations_) {
-                ok_annotations[key] = value;
-              }
-            } else {
-              FX_LOGS(WARNING) << fxl::StringPrintf(
-                  "Skipping all %lu extra annotations as there are already %lu platform "
-                  "annotations out of %u max annotations",
-                  extra_annotations_.size(), ok_annotations.size(),
-                  fuchsia::feedback::MAX_NUM_ANNOTATIONS_PROVIDED);
+            // We then augment the returned annotations with the extra component annotations.
+            // We are guaranteed to have enough space left in the returned annotations to do this as
+            // we cap the number of platform annotations and cap the number of extra annotations to
+            // sum to the max number of annotations we can return.
+            for (const auto& [key, value] : extra_annotations_) {
+              ok_annotations[key] = value;
             }
 
             if (ok_annotations.empty()) {
@@ -161,6 +157,18 @@ fit::promise<AttachmentValue> Datastore::BuildAttachmentValue(const AttachmentKe
   }
   // There are static attachments in the allowlist that we just skip here.
   return fit::make_result_promise<AnnotationValue>(fit::error());
+}
+
+bool Datastore::TrySetExtraAnnotations(const Annotations& extra_annotations) {
+  if (extra_annotations.size() <= kMaxNumExtraAnnotations) {
+    extra_annotations_ = extra_annotations;
+    return true;
+  } else {
+    FX_LOGS(WARNING) << fxl::StringPrintf(
+        "Ignoring all %lu new extra annotations as only %u extra annotations are allowed",
+        extra_annotations.size(), kMaxNumExtraAnnotations);
+    return false;
+  }
 }
 
 }  // namespace feedback

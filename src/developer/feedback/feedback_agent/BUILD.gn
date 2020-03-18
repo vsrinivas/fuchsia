@@ -99,6 +99,8 @@ source_set("config") {
 source_set("constants") {
   sources = [ "constants.h" ]
 
+  public_deps = [ "//sdk/fidl/fuchsia.feedback" ]
+
   visibility = [ "//src/developer/feedback/feedback_agent/*" ]
 }
 
@@ -159,7 +161,6 @@ source_set("datastore") {
 
   deps = [
     ":constants",
-    "//sdk/fidl/fuchsia.feedback",
     "//src/developer/feedback/feedback_agent/annotations:annotation_providers",
     "//src/developer/feedback/feedback_agent/annotations:static_annotations",
     "//src/developer/feedback/feedback_agent/attachments:attachment_providers",

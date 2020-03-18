@@ -295,7 +295,6 @@ executable("datastore_unittest") {
     ":stub_inspect",
     ":stub_logger",
     ":stub_product",
-    "//sdk/fidl/fuchsia.feedback",
     "//sdk/fidl/fuchsia.hwinfo",
     "//sdk/fidl/fuchsia.intl",
     "//src/developer/feedback/feedback_agent:constants",

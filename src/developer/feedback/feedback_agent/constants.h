@@ -5,12 +5,26 @@
 #ifndef SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_CONSTANTS_H_
 #define SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_CONSTANTS_H_
 
+#include <fuchsia/feedback/cpp/fidl.h>
+
 #include <cstdint>
 #include <string>
 #include <vector>
 
 namespace feedback {
 
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Annotations
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+const uint32_t kMaxNumPlatformAnnotations = 32u;
+const uint32_t kMaxNumExtraAnnotations = 32u;
+static_assert(kMaxNumPlatformAnnotations + kMaxNumExtraAnnotations ==
+                  fuchsia::feedback::MAX_NUM_ANNOTATIONS_PROVIDED,
+              "The max number of provided annotations has to be split between a max number of "
+              "platform annotations and a max number of extra annotations");
+
+// Platform annotation keys.
 constexpr char kAnnotationBuildBoard[] = "build.board";
 constexpr char kAnnotationBuildIsDebug[] = "build.is_debug";
 constexpr char kAnnotationBuildLatestCommitDate[] = "build.latest-commit-date";
@@ -31,6 +45,11 @@ constexpr char kAnnotationHardwareProductName[] = "hardware.product.name";
 constexpr char kAnnotationHardwareProductRegulatoryDomain[] = "hardware.product.regulatory-domain";
 constexpr char kAnnotationHardwareProductSKU[] = "hardware.product.sku";
 
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Attachments
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Platform attachments keys.
 constexpr char kAttachmentAnnotations[] = "annotations.json";
 constexpr char kAttachmentBuildSnapshot[] = "build.snapshot.xml";
 constexpr char kAttachmentInspect[] = "inspect.json";
@@ -38,10 +57,19 @@ constexpr char kAttachmentLogKernel[] = "log.kernel.txt";
 constexpr char kAttachmentLogSystem[] = "log.system.txt";
 constexpr char kAttachmentLogSystemPrevious[] = "log.system.previous_boot.txt";
 
+// Bugreport key.
 constexpr char kAttachmentBundle[] = "fuchsia_feedback_data.zip";
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Device ID
+///////////////////////////////////////////////////////////////////////////////////////////////////
 
 constexpr char kDeviceIdPath[] = "/data/device_id.txt";
 constexpr char kLegacyDeviceIdPath[] = "/data/feedback_id.txt";
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Logs from previous boot cycle.
+///////////////////////////////////////////////////////////////////////////////////////////////////
 
 constexpr char kPreviousLogsFilePath[] = "/tmp/log.system.previous_boot.txt";
 

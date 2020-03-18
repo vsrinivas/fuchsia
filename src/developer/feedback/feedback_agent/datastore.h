@@ -34,17 +34,16 @@ class Datastore {
             Cobalt* cobalt, const AnnotationKeys& annotation_allowlist,
             const AttachmentKeys& attachment_allowlist);
 
-  // Exposed for testing purposes.
-  Datastore(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services);
-
   fit::promise<Annotations> GetAnnotations();
   fit::promise<Attachments> GetAttachments();
 
-  void SetExtraAnnotations(const Annotations& extra_annotations) {
-    extra_annotations_ = extra_annotations;
-  }
+  // Returns whether the extra annotations were actually set as there is a cap on the number of
+  // extra annotations.
+  bool TrySetExtraAnnotations(const Annotations& extra_annotations);
 
   // Exposed for testing purposes.
+  Datastore(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services);
+
   const Annotations& GetStaticAnnotations() const { return static_annotations_; }
   const Attachments& GetStaticAttachments() const { return static_attachments_; }
   const Annotations& GetExtraAnnotations() const { return extra_annotations_; }
