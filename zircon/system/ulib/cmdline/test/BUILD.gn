@@ -2,14 +2,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx_build/public/gn/fuzzer.gni")
+import("$zx/public/gn/fuzzer.gni")
 
 group("test") {
   testonly = true
   deps = [ ":cmdline-fuzzer" ]
 }
 
-fuzzer("cmdline-fuzzer") {
+zx_fuzzer("cmdline-fuzzer") {
   sources = [ "cmdline_fuzzer.cc" ]
   deps = [ "$zx/system/ulib/cmdline" ]
 }

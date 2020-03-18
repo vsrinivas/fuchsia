@@ -21,7 +21,7 @@ zx_test("kernel-cmdline") {
   ]
 }
 
-fuzzer("kernel-cmdline-fuzzer") {
+zx_fuzzer("kernel-cmdline-fuzzer") {
   sources = [ "kernel_cmdline_fuzztest.cc" ]
   deps = [ "$zx/kernel/lib/cmdline" ]
 }

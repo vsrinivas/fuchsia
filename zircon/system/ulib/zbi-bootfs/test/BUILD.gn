@@ -61,7 +61,7 @@ zbi_input("create-zbi-image") {
   sources = [ "$zx/system/ulib/zbi-bootfs/test/payload/" ]
 }
 
-fuzzer("zbi-bootfs-fuzzer") {
+zx_fuzzer("zbi-bootfs-fuzzer") {
   sources = [ "zbi-bootfs-fuzzer.cc" ]
   deps = [ "$zx/system/ulib/zbi-bootfs" ]
 }

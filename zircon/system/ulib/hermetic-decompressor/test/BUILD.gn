@@ -23,7 +23,7 @@ zx_test("hermetic-decompressor") {
   ]
 }
 
-fuzzer("hermetic-decompressor-fuzzer") {
+zx_fuzzer("hermetic-decompressor-fuzzer") {
   sources = [ "fuzz.cc" ]
   deps = [
     "$zx/system/ulib/hermetic-decompressor",

@@ -50,12 +50,12 @@ group("test") {
   ]
 }
 
-fuzzer("lz4-decompress-fuzzer") {
+zx_fuzzer("lz4-decompress-fuzzer") {
   sources = [ "lz4-decompress-fuzzer.cc" ]
   deps = [ ":lz4" ]
 }
 
-fuzzer("lz4-fuzzer") {
+zx_fuzzer("lz4-fuzzer") {
   sources = [ "lz4-fuzzer.cc" ]
   deps = [ ":lz4" ]
 }

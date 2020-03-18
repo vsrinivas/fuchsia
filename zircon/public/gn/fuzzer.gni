@@ -24,7 +24,7 @@ foreach(sanitizer, standard_sanitizer_variants) {
 # invocation in //build/fuzzing/fuzzer.gni.  These manifests don't have
 # much meaning in a standalone Zircon, but are most easily generated alongside
 # the fuzzers.
-template("_fuzzer_cmx") {
+template("_zx_fuzzer_cmx") {
   assert(defined(invoker.name), "$target_name must define 'name'.")
   fuzzer_name = "${invoker.name}.${toolchain.variant}"
   generated_file(target_name) {
@@ -40,9 +40,7 @@ template("_fuzzer_cmx") {
         ]
       }
     }
-    outputs = [
-      "$target_gen_dir/$fuzzer_name.cmx",
-    ]
+    outputs = [ "$target_gen_dir/$fuzzer_name.cmx" ]
     output_conversion = "json"
     source = rebase_path(outputs[0], root_build_dir)
     metadata = {
@@ -58,7 +56,7 @@ template("_fuzzer_cmx") {
 # fuzzed in $deps, and provide an "LLVMFuzzerTestOneInput" fuzz target
 # function for libFuzzer in $sources.
 #
-# The fuzzer() template below will build the fuzzer binary, link the engine, and
+# The zx_fuzzer() template below will build the fuzzer binary, link the engine, and
 # instrument the $deps in an environment corresponding to an appropriate base
 # environment. This means dependents on this target will get fuzzers for their
 # base environment (e.g. host dependents will get host fuzzers, etc.).
@@ -78,7 +76,7 @@ template("_fuzzer_cmx") {
 #     Default: fuzzer_default_variants
 #
 # See executable() for additional parameters and details.
-template("fuzzer") {
+template("zx_fuzzer") {
   # Match any "*.fuzzer" environment ("*" is ${toolchain.base_environment}).
   if (get_path_info(toolchain.environment, "extension") == "fuzzer") {
     fuzzer_name = target_name
@@ -101,14 +99,12 @@ template("fuzzer") {
       if (defined(visibility)) {
         visibility += [ ":$fuzzer_name" ]
       }
-      data_deps = [
-        ":$fuzzer_name.cmx",
-      ]
+      data_deps = [ ":$fuzzer_name.cmx" ]
       metadata = {
         fuzzer = [ "$fuzzer_name.${toolchain.variant}" ]
       }
     }
-    _fuzzer_cmx("$fuzzer_name.cmx") {
+    _zx_fuzzer_cmx("$fuzzer_name.cmx") {
       name = fuzzer_name
     }
     if (defined(invoker.sanitizers)) {
