@@ -997,6 +997,7 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn run_multiple_tests() -> Result<(), Error> {
+        fuchsia_syslog::init_with_tags(&["gtest_runner_test"]).expect("cannot init logger");
         let events = run_tests(names_to_invocation(vec![
             "SampleTest1.SimpleFail",
             "SampleTest1.Crashing",
