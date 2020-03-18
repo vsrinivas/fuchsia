@@ -12,11 +12,7 @@ import os
 import re
 import sys
 
-
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-SCRIPTS_DIR = os.path.dirname(SCRIPT_DIR)
-FUCHSIA_ROOT = os.path.dirname(SCRIPTS_DIR)
-
+from common import (FUCHSIA_ROOT, run_command)
 
 sys.path.append(os.path.join(FUCHSIA_ROOT, 'build', 'images'))
 import elfinfo
@@ -74,6 +70,17 @@ class TypeBody(object):
             with open(path, 'r') as manifest_file:
                 contents = json.load(manifest_file)
                 return Manifest(origin, self, contents)
+        elif self.name == 'zbi_tests':
+            if origin == Origin.LEGACY:
+                path = os.path.join(build_dir, 'zbi_tests.json')
+                with open(path, 'r') as manifest_file:
+                    contents = json.load(manifest_file)
+                tests = [ZbiTest.extract(build_dir, t) for t in contents]
+            else:
+                # The .json file is already the aggregation of both types of
+                # tests.
+                tests = []
+            return Manifest(origin, self, tests)
         raise Exception('Unhandled type: ' + self)
 
     def to_json(self):
@@ -86,9 +93,11 @@ class Type(object):
     HOST_TESTS = TypeBody('host_tests', False)
     IMAGE = TypeBody('image', True)
     TESTS = TypeBody('tests', True)
+    ZBI_TESTS = TypeBody('zbi_tests', False)
 
     @classmethod
-    def all(cls): return [cls.AUX, cls.FUZZERS, cls.HOST_TESTS, cls.IMAGE, cls.TESTS]
+    def all(cls): return [cls.AUX, cls.FUZZERS, cls.HOST_TESTS, cls.IMAGE,
+                          cls.TESTS, cls.ZBI_TESTS]
 
     @classmethod
     def manifests(cls): return [t for t in cls.all() if t.is_manifest]
@@ -118,7 +127,8 @@ class CustomJSONEncoder(json.JSONEncoder):
     def default(self, object):
         if (isinstance(object, FileDataSet) or
             isinstance(object, FileData) or
-            isinstance(object, TypeBody)):
+            isinstance(object, TypeBody) or
+            isinstance(object, ZbiTest)):
             return object.to_json()
         return json.JSONEncoder.default(self, object)
 
@@ -198,6 +208,80 @@ class FileDataSet(object):
         return result
 
 
+class ZbiTest(object):
+
+    def __init__(self, name, bootfs, cmdline):
+        self.name = name
+        self.bootfs = sorted(bootfs)
+        self.cmdline = sorted(cmdline)
+
+    def __eq__(self, other):
+        return (self.name == other.name and
+                self.bootfs == other.bootfs and
+                self.cmdline == other.cmdline)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __repr__(self):
+        return 'Z[' + self.name + ']'
+
+    def __hash__(self):
+        return (hash(self.name) +
+                7 * hash(tuple(b for b in self.bootfs)) +
+                49 * hash(tuple(c for c in self.cmdline)))
+
+    def diff_bootfs(self, other):
+        removed = set(self.bootfs) - set(other.bootfs)
+        added = set(other.bootfs) - set(self.bootfs)
+        return removed, added
+
+    def diff_cmdline(self, other):
+        removed = set(self.cmdline) - set(other.cmdline)
+        added = set(other.cmdline) - set(self.cmdline)
+        return removed, added
+
+    def to_json(self):
+        return {
+            'name': self.name,
+            'bootfs': self.bootfs,
+            'cmdline': self.cmdline,
+        }
+
+    @classmethod
+    def from_json(cls, input):
+        return ZbiTest(input['name'], input['bootfs'], input['cmdline'])
+
+    @classmethod
+    def extract(cls, build_dir, data):
+        zbi_path = os.path.join(build_dir, data['path'])
+        zbi_tool = os.path.join(build_dir, 'host_x64', 'zbi')
+        contents = run_command([zbi_tool, '-tv', zbi_path])
+        bootfs, cmdline = cls._parse_zbi(contents)
+        return ZbiTest(data['name'], bootfs, cmdline)
+
+    @classmethod
+    def _parse_zbi(cls, data):
+        bootfs = []
+        cmdline = []
+        current_header = None
+        for line in data.splitlines():
+            header_match = re.match('^[0-9a-f]{8}: [0-9a-f]{8} (\w+).*$', line)
+            if header_match:
+                current_header = header_match.group(1)
+                continue
+            if current_header == 'BOOTFS':
+                bootfs_match = re.match('^\s{8}: [0-9a-f]{8} [0-9a-f]{8} (.+)$',
+                                        line)
+                if bootfs_match:
+                    bootfs.append(bootfs_match.group(1))
+            elif current_header == 'CMDLINE':
+                cmd_match = re.match('^\s{8}: ([^\s]+)$', line)
+                if cmd_match:
+                    cmdline.append(cmd_match.group(1))
+        return (bootfs, cmdline)
+
+
 class Summary(object):
     '''Data for a particular state of the build.'''
 
@@ -232,8 +316,10 @@ class Summary(object):
         data = json.load(input)
         for type in Type.manifests():
             result.objects[type] = FileDataSet.from_json(data[str(type)])
-        result.objects[Type.HOST_TESTS] = data[str(Type.HOST_TESTS)]
-        result.objects[Type.FUZZERS] = data[str(Type.FUZZERS)]
+        for type in [Type.HOST_TESTS, Type.FUZZERS]:
+            result.objects[type] = data[str(type)]
+        result.objects[Type.ZBI_TESTS] = [ZbiTest.from_json(t)
+                                          for t in data[str(Type.ZBI_TESTS)]]
         return result
 
 
@@ -349,6 +435,47 @@ def compare_summaries(reference, current):
             report(Type.HOST_TESTS, True, 'test removed: ' + element)
         for element in current_host_tests - reference_host_tests:
             report(Type.HOST_TESTS, True, 'test added: ' + element)
+
+    # ZBI tests.
+    reference_zbi_tests = dict((t.name, t)
+                               for t in reference.get_objects(Type.ZBI_TESTS))
+    current_zbi_tests = dict((t.name, t)
+                             for t in current.get_objects(Type.ZBI_TESTS))
+    reference_zbi_names = set(reference_zbi_tests.keys())
+    current_zbi_names = set(current_zbi_tests.keys())
+    if reference_zbi_names != current_zbi_names:
+        has_errors = True
+        for element in reference_zbi_names - current_zbi_names:
+            report(Type.ZBI_TESTS, True, 'test removed: ' + element)
+        for element in current_zbi_names - reference_zbi_names:
+            report(Type.ZBI_TESTS, True, 'test added: ' + element)
+    for name in reference_zbi_names & current_zbi_names:
+        reference_test = reference_zbi_tests[name]
+        current_test = current_zbi_tests[name]
+        if reference_test == current_test:
+            continue
+        removed, added = reference_test.diff_bootfs(current_test)
+        if removed:
+            has_errors = True
+            for element in removed:
+                report(Type.ZBI_TESTS, True,
+                       'removed from ' + name + ' bootfs: ' + element)
+        if added:
+            has_errors = True
+            for element in added:
+                report(Type.ZBI_TESTS, True,
+                       'added to ' + name + ' bootfs: ' + element)
+        removed, added = reference_test.diff_cmdline(current_test)
+        if removed:
+            has_errors = True
+            for element in removed:
+                report(Type.ZBI_TESTS, True,
+                       'removed from ' + name + ' cmdline: ' + element)
+        if added:
+            has_errors = True
+            for element in added:
+                report(Type.ZBI_TESTS, True,
+                       'added to ' + name + ' cmdline: ' + element)
 
     if has_errors:
         print('Error: summaries do not match!')
