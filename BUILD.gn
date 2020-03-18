@@ -174,7 +174,11 @@ _fx_config_lines = [
   "FUCHSIA_BOARD_NAME=${board_name}",
   "FUCHSIA_ZBI_COMPRESSION=$zbi_compression",
   "HOST_OUT_DIR='${_host_out_dir}'",
+  "USE_GOMA=$use_goma",
 ]
+if (use_goma && goma_dir != prebuilt_goma_dir) {
+  _fx_config_lines += [ "GOMA_DIR=" + rebase_path(goma_dir) ]
+}
 write_file("$root_build_dir/fx.config", _fx_config_lines)
 
 ###

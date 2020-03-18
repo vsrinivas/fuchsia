@@ -4,11 +4,13 @@
 
 # Defines the configuration of Goma.
 
+prebuilt_goma_dir = "//prebuilt/third_party/goma/$host_platform"
+
 declare_args() {
   # Set to true to enable distributed compilation using Goma.
   use_goma = false
 
   # Directory containing the Goma source code.  This can be a GN
   # source-absolute path ("//...") or a system absolute path.
-  goma_dir = getenv("HOME") + "/goma"
+  goma_dir = prebuilt_goma_dir
 }

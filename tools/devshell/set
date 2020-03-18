@@ -56,10 +56,10 @@
 ##                         individual fuzzers, e.g. "--variant asan-fuzzer/foo".
 ##   --goma|--no-goma      Whether to use the goma service during the build. Goma
 ##                         attempts to make builds faster using remote build
-##                         servers. Defaults to detecting whether goma is installed
-##                         on your machine.
-##   --goma-dir            The directory where goma is installed. Defaults to
-##                         ~/goma.
+##                         servers. Defaults to detecting whether goma has been
+##                         set up via `fx goma bootstrap`.
+##   --goma-dir            The directory where goma is installed.
+##                         By default, a Goma client from //prebuilt is used.
 ##   --help-args           Display GN arguments documentation.  If --help-args
 ##                         is followed by a GN build argument identifier, just
 ##                         that argument's documentation is displayed.
@@ -372,14 +372,12 @@ function main {
   fi
   build_dir="${FUCHSIA_DIR}/${config_build_dir}"
 
-  # If a goma directory wasn't specified explicitly then default to "~/goma".
-  if [[ -z "${goma_dir}" ]]; then
-    goma_dir="$HOME/goma"
-  fi
-
   # Automatically detect goma and ccache if not specified explicitly.
   if [[ -z "${use_goma}" ]] && [[ -z "${ccache}" ]]; then
-    if [[ -d "${goma_dir}" ]]; then
+    # Use Goma if --goma-dir was given or if the prebuilt Goma
+    # seems to have been setup.
+    if [[ -n "${goma_dir}" ]] ||
+       "$PREBUILT_GOMA_DIR/goma_auth.py" info > /dev/null 2>&1; then
       use_goma=1
     elif [[ -n "${CCACHE_DIR}" ]] && [[ -d "${CCACHE_DIR}" ]]; then
       ccache=1
@@ -388,7 +386,10 @@ function main {
 
   # Add goma or ccache settings as appropriate.
   if [[ "${use_goma}" -eq 1 ]]; then
-    gn_args+=" use_goma=true goma_dir=\"${goma_dir}\""
+    gn_args+=" use_goma=true"
+    if [[ -n "${goma_dir}" ]]; then
+      gn_args+=" goma_dir=\"${goma_dir}\""
+    fi
   elif [[ "${ccache}" -eq 1 ]]; then
     gn_args+=" use_ccache=true"
   fi
@@ -424,6 +425,9 @@ universe_package_labels+=["
   fx-build-dir-write "${config_build_dir}"
 
   if [[ "${use_goma}" -eq 1 ]] && [[ "${ensure_goma}" -eq 1 ]]; then
+    # Fetch GN's $goma_dir value, either set by us or defaulted.
+    fx-config-read
+    goma_dir="${GOMA_DIR:-${PREBUILT_GOMA_DIR}}"
     if ! [[ $("${goma_dir}/gomacc" port) =~ ^[0-9]+$ ]]; then
       "${goma_dir}/goma_ctl.py" ensure_start || return $?
     fi
