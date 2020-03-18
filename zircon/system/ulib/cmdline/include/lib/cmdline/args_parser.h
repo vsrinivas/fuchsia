@@ -79,7 +79,7 @@ class GeneralArgsParser {
   // Parses the given command line. The callbacks are called for any provided
   // switches, and any non-switch values are placed into the given output
   // vector.
-  Status ParseGeneral(int argc, const char* argv[], std::vector<std::string>* params) const;
+  Status ParseGeneral(int argc, const char* const argv[], std::vector<std::string>* params) const;
 
  private:
   struct Record {
@@ -270,7 +270,7 @@ class ArgsParser : public GeneralArgsParser {
   //   if (status.has_error())
   //     <print error and return>
   //   <use options and params>
-  Status Parse(int argc, const char* argv[], ResultStruct* options,
+  Status Parse(int argc, const char* const argv[], ResultStruct* options,
                std::vector<std::string>* params) {
     Status status = GeneralArgsParser::ParseGeneral(argc, argv, params);
     if (status.has_error())
@@ -283,7 +283,7 @@ class ArgsParser : public GeneralArgsParser {
  private:
   // Make it harder to accidentally call the base class' parse function since
   // this won't return any options.
-  Status ParseGeneral(int argc, const char* argv[],
+  Status ParseGeneral(int argc, const char* const argv[],
                       std::vector<std::string>* params) const = delete;
 
   // Collects the values while Parse() is running. This needs to be a member

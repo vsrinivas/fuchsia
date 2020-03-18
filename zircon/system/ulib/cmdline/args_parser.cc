@@ -88,7 +88,7 @@ std::string GeneralArgsParser::GetHelp() const {
   return result;
 }
 
-Status GeneralArgsParser::ParseGeneral(int argc, const char* argv[],
+Status GeneralArgsParser::ParseGeneral(int argc, const char* const argv[],
                                        std::vector<std::string>* params) const {
   // Expect argv[0] to be the program itself.
   if (argc <= 1)
