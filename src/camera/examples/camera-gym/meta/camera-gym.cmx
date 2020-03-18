@@ -1,0 +1,17 @@
+{
+    "program": {
+        "binary": "bin/app"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.camera3.DeviceWatcher",
+            "fuchsia.logger.LogSink",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
+            "fuchsia.sysmem.Allocator",
+            "fuchsia.tracing.provider.Registry",
+            "fuchsia.ui.policy.Presenter",
+            "fuchsia.ui.scenic.Scenic"
+        ]
+    }
+}

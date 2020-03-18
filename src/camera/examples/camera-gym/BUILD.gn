@@ -1,0 +1,50 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+name = "camera-gym"
+
+executable("bin") {
+  output_name = name
+
+  sources = [
+    "display_view.cc",
+    "display_view.h",
+    "main.cc",
+    "stream_provider.cc",
+    "stream_provider.h",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.camera2.hal",
+    "//sdk/fidl/fuchsia.camera3",
+    "//sdk/fidl/fuchsia.ui.gfx",
+    "//sdk/lib/fidl/cpp",
+    "//src/camera/bin/device:lib",
+    "//src/camera/examples/camera_display/text_node",
+    "//src/camera/lib/stream_utils",
+    "//src/lib/fsl",
+    "//src/lib/ui/base_view",
+    "//src/ui/lib/glm_workaround",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/fzl",
+    "//zircon/public/lib/trace",
+    "//zircon/public/lib/trace-provider-with-fdio",
+  ]
+}
+
+package("${name}") {
+  deps = [ ":bin" ]
+
+  binary = name
+
+  meta = [
+    {
+      path = rebase_path("meta/${name}.cmx")
+      dest = "${name}.cmx"
+    },
+  ]
+}

@@ -37,6 +37,7 @@ group("tests") {
     ":camera_tests",
     "bin",
     "camera_manager2:tests",
+    "examples/camera-gym",
     "examples/camera_display",
   ]
 }
