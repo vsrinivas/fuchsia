@@ -62,7 +62,7 @@ TEST(KernelCmdlineTest, InitialState) {
   ASSERT_EQ('\0', c->data()[0]);
 }
 
-TEST(KernelCmdLineTest, AppendBasic) {
+TEST(KernelCmdlineTest, AppendBasic) {
   // nullptr
   auto c = std::make_unique<Cmdline>();
   c->Append(nullptr);
@@ -130,17 +130,17 @@ TEST(KernelCmdLineTest, AppendBasic) {
   EXPECT_TRUE(Equals(c.get(), "k1=foo", "k2=red..blue"));
 }
 
-TEST(KernelCmdLineTest, OverflowByALot) {
-  ASSERT_DEATH(([]() {
+TEST(KernelCmdlineTest, OverflowByALot) {
+  auto c = std::make_unique<Cmdline>();
+  ASSERT_DEATH(([&c]() {
     constexpr char kPattern[] = "abcdefg";
-    auto c = std::make_unique<Cmdline>();
     for (size_t j = 0; j < Cmdline::kCmdlineMax; ++j) {
       c->Append(kPattern);
     }
   }));
 }
 
-TEST(KernelCmdLineTest, OverflowExact) {
+TEST(KernelCmdlineTest, OverflowExact) {
   // Maximum is 'aaaaa...aaaaa' followed by '=\0\0'. So the longest string that
   // can be added is 3 less than the max. Allocate a buffer 2 less than the max,
   // so that we can \0 terminate this string, that has a strlen() of 3 less than
@@ -180,7 +180,7 @@ TEST(KernelCmdLineTest, OverflowExact) {
   EXPECT_EQ(c3->size(), Cmdline::kCmdlineMax);
 }
 
-TEST(KernelCmdLineTest, GetString) {
+TEST(KernelCmdlineTest, GetString) {
   auto c = std::make_unique<Cmdline>();
   EXPECT_EQ(nullptr, c->GetString("k1"));
   EXPECT_EQ(nullptr, c->GetString(""));
@@ -193,7 +193,7 @@ TEST(KernelCmdLineTest, GetString) {
   EXPECT_EQ(c->data(), c->GetString(nullptr));
 }
 
-TEST(KernelCmdLineTest, GetBool) {
+TEST(KernelCmdlineTest, GetBool) {
   auto c = std::make_unique<Cmdline>();
   // not found, default is returned
   EXPECT_FALSE(c->GetBool("k0", false));
@@ -220,7 +220,7 @@ TEST(KernelCmdLineTest, GetBool) {
   EXPECT_TRUE(c->GetBool("k8", false));
 }
 
-TEST(KernelCmdLineTest, GetUInt32) {
+TEST(KernelCmdlineTest, GetUInt32) {
   auto c = std::make_unique<Cmdline>();
   EXPECT_EQ(99u, c->GetUInt32("k1", 99u));
 
@@ -232,7 +232,7 @@ TEST(KernelCmdLineTest, GetUInt32) {
   EXPECT_EQ(UINT32_MAX, c->GetUInt32("k5", 99u));
 }
 
-TEST(KernelCmdLineTest, GetUInt64) {
+TEST(KernelCmdlineTest, GetUInt64) {
   auto c = std::make_unique<Cmdline>();
   EXPECT_EQ(99u, c->GetUInt64("k1", 99u));
 
@@ -247,7 +247,7 @@ TEST(KernelCmdLineTest, GetUInt64) {
   EXPECT_EQ(static_cast<uint64_t>(INT64_MAX), c->GetUInt64("k6", 99u));
 }
 
-TEST(KernelCmdLineTest, LaterOverride) {
+TEST(KernelCmdlineTest, LaterOverride) {
   auto c = std::make_unique<Cmdline>();
   c->Append("k1 k2= k1=42");
   EXPECT_TRUE(strcmp(c->GetString("k1"), "42") == 0);
@@ -263,13 +263,13 @@ TEST(KernelCmdLineTest, LaterOverride) {
   EXPECT_TRUE(strcmp(c->GetString("k1"), "") == 0);
 }
 
-TEST(KernelCmdLineTest, Short) {
+TEST(KernelCmdlineTest, Short) {
   auto c = std::make_unique<Cmdline>();
   c->Append("a=1");
   EXPECT_EQ(c->GetUInt32("a", 0), 1);
 }
 
-TEST(KernelCmdLineTest, MaximumExpansion) {
+TEST(KernelCmdlineTest, MaximumExpansion) {
   auto c = std::make_unique<Cmdline>();
 
   static_assert(Cmdline::kCmdlineMax == 4096, "1365 below needs to be updated");
