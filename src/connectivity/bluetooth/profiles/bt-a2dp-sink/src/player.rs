@@ -186,7 +186,13 @@ impl Player {
         };
 
         let buffer = zx::Vmo::create(DEFAULT_BUFFER_LEN as u64)?;
-        let buffers = vec![buffer.duplicate_handle(zx::Rights::SAME_RIGHTS)?];
+        let buffers = vec![buffer.duplicate_handle(
+            zx::Rights::READ
+                | zx::Rights::DUPLICATE
+                | zx::Rights::GET_PROPERTY
+                | zx::Rights::TRANSFER
+                | zx::Rights::MAP,
+        )?];
 
         audio_consumer.create_stream_sink(
             &mut buffers.into_iter(),
@@ -493,6 +499,8 @@ mod tests {
         };
 
         let sink_vmo = buffers.remove(0);
+
+        sink_vmo.write(&[0], 0).expect_err("Write should fail");
 
         let sink_request_stream = stream_sink_request
             .into_stream()
