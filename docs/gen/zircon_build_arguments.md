@@ -277,13 +277,13 @@ From //public/gn/toolchain/gcc.gni:19
 Directory containing the Goma source code.  This can be a GN
 source-absolute path ("//...") or a system absolute path.
 
-**Current value for `target_cpu = `:** `"/home/swarming/goma"`
+**Current value for `target_cpu = `:** `"/b/s/w/ir/k/prebuilt/third_party/goma/linux-x64"`
 
-From /b/s/w/ir/k/root_build_dir.zircon/args.gn:12
+From /b/s/w/ir/k/root_build_dir.zircon/args.gn:13
 
-**Overridden from the default:** `"/home/swarming/goma"`
+**Overridden from the default:** `"//prebuilt/third_party/goma/linux-x64"`
 
-From //public/gn/toolchain/goma.gni:13
+From //public/gn/toolchain/goma.gni:17
 
 ### host_cpu
 
@@ -450,14 +450,14 @@ function.
 
 **Current value (from the default):** `"print_stacktrace=1:halt_on_error=1"`
 
-From //public/gn/config/instrumentation/BUILD.gn:24
+From //public/gn/config/instrumentation/BUILD.gn:29
 
 ### use_ccache
 Set to true to enable compiling with ccache.
 
 **Current value for `target_cpu = `:** `false`
 
-From /b/s/w/ir/k/root_build_dir.zircon/args.gn:13
+From /b/s/w/ir/k/root_build_dir.zircon/args.gn:14
 
 **Overridden from the default:** `false`
 
@@ -468,11 +468,11 @@ Set to true to enable distributed compilation using Goma.
 
 **Current value for `target_cpu = `:** `false`
 
-From /b/s/w/ir/k/root_build_dir.zircon/args.gn:14
+From /b/s/w/ir/k/root_build_dir.zircon/args.gn:15
 
 **Overridden from the default:** `false`
 
-From //public/gn/toolchain/goma.gni:9
+From //public/gn/toolchain/goma.gni:13
 
 ### use_prebuilt_clang
 If $clang_tool_dir is "", then this controls how the Clang toolchain
@@ -712,7 +712,7 @@ Variant scope parameters
 
 **Current value for `target_cpu = `:** `[]`
 
-From /b/s/w/ir/k/root_build_dir.zircon/args.gn:15
+From /b/s/w/ir/k/root_build_dir.zircon/args.gn:16
 
 **Overridden from the default:** `[]`
 
@@ -731,7 +731,7 @@ compression available) probably makes sense.
 
 **Current value for `target_cpu = `:** `"zstd"`
 
-From /b/s/w/ir/k/root_build_dir.zircon/args.gn:16
+From /b/s/w/ir/k/root_build_dir.zircon/args.gn:17
 
 **Overridden from the default:** `"zstd"`
 
