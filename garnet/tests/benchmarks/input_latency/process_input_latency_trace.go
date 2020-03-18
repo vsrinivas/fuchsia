@@ -59,7 +59,7 @@ func getFollowingEvents(event *benchmarking.Event) []*benchmarking.Event {
 	}
 
 	result := make([]*benchmarking.Event, 0)
-	for e, _ := range visited {
+	for e := range visited {
 		result = append(result, e)
 	}
 
