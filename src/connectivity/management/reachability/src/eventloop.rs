@@ -90,7 +90,6 @@ impl EventLoop {
     }
 
     async fn handle_stack_event(&mut self, event: fidl_fuchsia_net_stack::StackEvent) {
-        debug!("stack event received {:#?}", event);
         self.monitor
             .stack_event(event)
             .await
@@ -98,7 +97,6 @@ impl EventLoop {
     }
 
     async fn handle_netstack_event(&mut self, event: fidl_fuchsia_netstack::NetstackEvent) {
-        debug!("netstack event received {:#?}", event);
         self.monitor
             .netstack_event(event)
             .await

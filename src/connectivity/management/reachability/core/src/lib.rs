@@ -368,7 +368,6 @@ impl Monitor {
             return HashSet::new();
         }
 
-        debug!("update_state {:?}  ->  interface_info: {:?}", interface_info.id, interface_info);
         let routes = self.hal.routes().await;
         let mut new_info = match compute_state(interface_info, routes, &*self.pinger).await {
             Some(new_info) => new_info,
@@ -377,7 +376,6 @@ impl Monitor {
 
         if self.interface_state.get(interface_info.id).is_none() {
             // New interface, set timer for periodic updates if it wasn't already set.
-            debug!("update_state {:?} ->  new interface {:?}", interface_info.id, new_info);
             if let Some(timer) = &self.timer {
                 debug!("update_state {:?}  ->  setting timer", interface_info.id);
                 timer.periodic(
@@ -408,7 +406,6 @@ impl Monitor {
 
     pub async fn timer_event(&mut self, id: u64) -> error::Result<()> {
         if let Some(info) = self.hal.get_interface(id).await {
-            debug!("timer_event {} info {:?}", id, info);
             self.evaluate_state(id.into(), &info).await;
         }
         Ok(())
