@@ -13,6 +13,7 @@ source_set("lib") {
   public_deps = [
     "//sdk/fidl/fuchsia.deprecatedtimezone",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/inspect/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//third_party/icu",

@@ -3,10 +3,14 @@
 // found in the LICENSE file.
 
 #include <lib/gtest/test_loop_fixture.h>
+#include <lib/inspect/cpp/reader.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 
 #include "garnet/bin/timezone/timezone.h"
 #include "gtest/gtest.h"
+#include "lib/sys/inspect/cpp/component.h"
+#include "zircon/system/ulib/inspect/include/lib/inspect/cpp/hierarchy.h"
+#include "zircon/system/ulib/inspect/include/lib/inspect/cpp/reader.h"
 
 namespace time_zone {
 namespace test {
@@ -34,8 +38,25 @@ class DeprecatedTimeZoneUnitTest : public gtest::TestLoopFixture {
     return timezone;
   }
 
+  std::string GetHealth(const inspect::Hierarchy& hierarchy) {
+    auto* node = hierarchy.GetByPath({"fuchsia.inspect.Health"});
+    if (node == nullptr) {
+      return "";
+    }
+
+    auto* val = node->node().get_property<inspect::StringPropertyValue>("status");
+    return val ? val->value() : "";
+  }
+
+  std::string GetTZ(const inspect::Hierarchy& hierarchy) {
+    auto* val = hierarchy.node().get_property<inspect::StringPropertyValue>("timezone");
+    return val ? val->value() : "";
+  }
+
  private:
   sys::testing::ComponentContextProvider context_provider_;
+
+ protected:
   std::unique_ptr<TimezoneImpl> timezone_;
 };
 
@@ -44,8 +65,12 @@ TEST_F(DeprecatedTimeZoneUnitTest, SetTimezone_Unknown) {
   bool status = true;
   timezone_ptr->SetTimezone("invalid_timezone", [&status](bool retval) { status = retval; });
   RunLoopUntilIdle();
+
   // Should fail
   ASSERT_FALSE(status);
+
+  auto hierarchy = inspect::ReadFromVmo(timezone_->inspector().DuplicateVmo()).take_value();
+  EXPECT_EQ("OK", GetHealth(hierarchy));
 }
 
 TEST_F(DeprecatedTimeZoneUnitTest, SetTimezone_GetTimezoneId) {
@@ -56,12 +81,19 @@ TEST_F(DeprecatedTimeZoneUnitTest, SetTimezone_GetTimezoneId) {
   RunLoopUntilIdle();
   ASSERT_TRUE(success);
 
+  auto hierarchy = inspect::ReadFromVmo(timezone_->inspector().DuplicateVmo()).take_value();
+  EXPECT_EQ("OK", GetHealth(hierarchy));
+  EXPECT_EQ("America/Los_Angeles", GetTZ(hierarchy));
+
   fidl::StringPtr actual_timezone = "bogus";
   timezone_ptr->GetTimezoneId(
       [&actual_timezone](fidl::StringPtr retval) { actual_timezone = retval; });
   RunLoopUntilIdle();
   ASSERT_TRUE(actual_timezone.has_value());
   ASSERT_EQ(expected_timezone, actual_timezone.value());
+  hierarchy = inspect::ReadFromVmo(timezone_->inspector().DuplicateVmo()).take_value();
+  EXPECT_EQ("OK", GetHealth(hierarchy));
+  EXPECT_EQ("America/Los_Angeles", GetTZ(hierarchy));
 }
 
 TEST_F(DeprecatedTimeZoneUnitTest, SetTimezone_GetTimezoneOffsetMinutes) {

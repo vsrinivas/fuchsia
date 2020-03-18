@@ -29,8 +29,11 @@ TimezoneImpl::TimezoneImpl(std::unique_ptr<sys::ComponentContext> context,
     : context_(std::move(context)),
       icu_data_path_(icu_data_path),
       tz_id_path_(tz_id_path),
-      valid_(Init()) {
+      valid_(Init()),
+      inspector_(context_.get()),
+      timezone_property_(inspector_.root().CreateString("timezone", "")) {
   if (valid_) {
+    inspector_.Health().Ok();
     LoadTimezone();
   }
   context_->outgoing()->AddPublicService(deprecated_bindings_.GetHandler(this));
@@ -42,6 +45,7 @@ bool TimezoneImpl::Init() {
   fsl::SizedVmo icu_data;
   if (!fsl::VmoFromFilename(icu_data_path_, &icu_data)) {
     FXL_LOG(ERROR) << "Unable to load ICU data. Timezone data unavailable.";
+    inspector_.Health().Unhealthy("Unable to load ICU data.");
     return false;
   }
 
@@ -50,6 +54,7 @@ bool TimezoneImpl::Init() {
   if (zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ, 0, icu_data.vmo().get(), 0, icu_data.size(),
                   &icu_data_ptr) != ZX_OK) {
     FXL_LOG(ERROR) << "Unable to map ICU data into process.";
+    inspector_.Health().Unhealthy("Unable to map ICU data into process.");
     return false;
   }
 
@@ -59,6 +64,7 @@ bool TimezoneImpl::Init() {
   if (icu_set_data_status != U_ZERO_ERROR) {
     FXL_LOG(ERROR) << "Unable to set common ICU data. "
                    << "Timezone data unavailable.";
+    inspector_.Health().Unhealthy("Timezone data unavailable");
     return false;
   }
 
@@ -124,6 +130,7 @@ void TimezoneImpl::SetTimezone(std::string timezone_id, SetTimezoneCallback call
     return;
   }
 
+  timezone_property_.Set(timezone_id);
   cached_state_ = {timezone_id, std::move(timezone)};
 
   std::ofstream out_fstream(tz_id_path_, std::ofstream::trunc);
@@ -155,16 +162,19 @@ void TimezoneImpl::LoadTimezone() {
 
   if (timezone_id.empty()) {
     FXL_LOG(ERROR) << "TZ file empty at '" << tz_id_path_ << "'";
+    inspector_.Health().Unhealthy("TZ file is empty");
     timezone_id = kDefaultTimezone;
   }
 
   auto [is_valid, timezone] = ValidateTimezoneId(timezone_id);
   if (!is_valid) {
     FXL_LOG(ERROR) << "Saved TZ ID invalid: '" << timezone_id << "'";
+    inspector_.Health().Unhealthy("Saved TZ id is invalid");
     timezone_id = kDefaultTimezone;
     timezone = ValidateTimezoneId(kDefaultTimezone).second;
   }
 
+  timezone_property_.Set(timezone_id);
   cached_state_ = {timezone_id, std::move(timezone)};
 }
 

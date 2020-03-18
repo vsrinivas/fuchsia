@@ -8,6 +8,7 @@
 #include <fuchsia/deprecatedtimezone/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/sys/inspect/cpp/component.h>
 
 #include <memory>
 #include <optional>
@@ -17,6 +18,7 @@
 
 #include "third_party/icu/source/common/unicode/strenum.h"
 #include "third_party/icu/source/i18n/unicode/timezone.h"
+#include "zircon/system/ulib/inspect/include/lib/inspect/cpp/vmo/types.h"
 
 namespace time_zone {
 
@@ -43,6 +45,9 @@ class TimezoneImpl : public fuchsia::deprecatedtimezone::Timezone {
   void SetTimezone(std::string timezone_id, SetTimezoneCallback callback) override;
   void GetTimezoneId(GetTimezoneIdCallback callback) override;
   void Watch(fidl::InterfaceHandle<fuchsia::deprecatedtimezone::TimezoneWatcher> watcher) override;
+
+  // Get the inspector for testing.
+  const inspect::Inspector& inspector() { return *inspector_.inspector(); }
 
  private:
   bool Init();
@@ -78,6 +83,8 @@ class TimezoneImpl : public fuchsia::deprecatedtimezone::Timezone {
   // |fuchsia.deprecatedtimezone.Timezone|:
   fidl::BindingSet<fuchsia::deprecatedtimezone::Timezone> deprecated_bindings_;
   std::vector<fuchsia::deprecatedtimezone::TimezoneWatcherPtr> deprecated_watchers_;
+  sys::ComponentInspector inspector_;
+  inspect::StringProperty timezone_property_;
 };
 
 }  // namespace time_zone
