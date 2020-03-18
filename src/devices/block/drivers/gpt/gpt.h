@@ -81,7 +81,7 @@ class PartitionTable : public fbl::RefCounted<PartitionTable> {
 
   // Breakout of CreateAndBind suitable for testing.
   static zx_status_t Create(zx_device_t* parent, TableRef* out,
-                            fbl::Vector<PartitionDevice*>* devices = nullptr);
+                            fbl::Vector<std::unique_ptr<PartitionDevice>>* devices = nullptr);
   zx_status_t Bind();
 
  private:
@@ -89,7 +89,7 @@ class PartitionTable : public fbl::RefCounted<PartitionTable> {
   uint64_t guid_map_entries_ = 0;
   guid_map_t guid_map_[DEVICE_METADATA_GUID_MAP_MAX_ENTRIES]{};
   // Used by tests to retrieve device list. Not managed by this class.
-  fbl::Vector<PartitionDevice*>* devices_ = nullptr;
+  fbl::Vector<std::unique_ptr<PartitionDevice>>* devices_ = nullptr;
 };
 
 }  // namespace gpt

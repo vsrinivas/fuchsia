@@ -49,9 +49,6 @@ test("gpt-device-test") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/banjo/ddk.protocol.block",
   ]
-
-  # TODO(47440): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 migrated_manifest("gpt-manifest") {

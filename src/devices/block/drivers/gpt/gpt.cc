@@ -231,7 +231,7 @@ zx_status_t PartitionTable::CreateAndBind(void* ctx, zx_device_t* parent) {
 }
 
 zx_status_t PartitionTable::Create(zx_device_t* parent, TableRef* out,
-                                   fbl::Vector<PartitionDevice*>* devices) {
+                                   fbl::Vector<std::unique_ptr<PartitionDevice>>* devices) {
   fbl::AllocChecker ac;
   TableRef tab = fbl::AdoptRef(new (&ac) PartitionTable(parent));
   if (!ac.check()) {
@@ -358,9 +358,10 @@ zx_status_t PartitionTable::Bind() {
       return status;
     }
     if (devices_ != nullptr) {
-      devices_->push_back(device.get());
+      devices_->push_back(std::move(device));
+    } else {
+      device.release();
     }
-    device.release();
   }
 
   if (!has_partition) {

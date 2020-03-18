@@ -146,7 +146,7 @@ TEST_F(GptDeviceTest, DeviceTooSmall) {
 
 TEST_F(GptDeviceTest, DdkLifecycle) {
   Init();
-  fbl::Vector<PartitionDevice*> devices;
+  fbl::Vector<std::unique_ptr<PartitionDevice>> devices;
 
   TableRef tab;
   ASSERT_OK(PartitionTable::Create(fake_ddk::kFakeParent, &tab, &devices));
@@ -158,7 +158,7 @@ TEST_F(GptDeviceTest, DdkLifecycle) {
   guid_t guid;
 
   // Device 0
-  PartitionDevice* dev0 = devices[0];
+  PartitionDevice* dev0 = devices[0].get();
   ASSERT_NOT_NULL(dev0);
   ASSERT_OK(dev0->BlockPartitionGetName(name, sizeof(name)));
   ASSERT_EQ(strcmp(name, "Linux filesystem"), 0);
@@ -173,7 +173,7 @@ TEST_F(GptDeviceTest, DdkLifecycle) {
     EXPECT_BYTES_EQ(reinterpret_cast<uint8_t*>(&guid), expected_guid, GPT_GUID_LEN);
   }
 
-  PartitionDevice* dev1 = devices[1];
+  PartitionDevice* dev1 = devices[1].get();
   ASSERT_NOT_NULL(dev1);
   ASSERT_OK(dev1->BlockPartitionGetName(name, sizeof(name)));
   ASSERT_EQ(strcmp(name, "Linux filesystem"), 0);
@@ -197,7 +197,7 @@ TEST_F(GptDeviceTest, DdkLifecycle) {
 
 TEST_F(GptDeviceTest, GuidMapMetadata) {
   Init();
-  fbl::Vector<PartitionDevice*> devices;
+  fbl::Vector<std::unique_ptr<PartitionDevice>> devices;
 
   const guid_map_t guid_map[] = {
       {"Linux filesystem", GUID_METADATA},
@@ -214,7 +214,7 @@ TEST_F(GptDeviceTest, GuidMapMetadata) {
   guid_t guid;
 
   // Device 0
-  PartitionDevice* dev0 = devices[0];
+  PartitionDevice* dev0 = devices[0].get();
   ASSERT_NOT_NULL(dev0);
   ASSERT_OK(dev0->BlockPartitionGetName(name, sizeof(name)));
   ASSERT_EQ(strcmp(name, "Linux filesystem"), 0);
@@ -229,7 +229,7 @@ TEST_F(GptDeviceTest, GuidMapMetadata) {
     EXPECT_BYTES_EQ(reinterpret_cast<uint8_t*>(&guid), expected_guid, GPT_GUID_LEN);
   }
 
-  PartitionDevice* dev1 = devices[1];
+  PartitionDevice* dev1 = devices[1].get();
   ASSERT_NOT_NULL(dev1);
   ASSERT_OK(dev1->BlockPartitionGetName(name, sizeof(name)));
   ASSERT_EQ(strcmp(name, "Linux filesystem"), 0);
