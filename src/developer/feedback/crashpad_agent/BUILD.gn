@@ -139,6 +139,7 @@ source_set("src") {
     "//sdk/fidl/fuchsia.settings",
     "//sdk/lib/sys/cpp",
     "//src/developer/feedback/crashpad_agent/info",
+    "//src/developer/feedback/utils:libfit",
     "//src/developer/feedback/utils:utc_time_provider",
     "//src/lib/backoff:backoff",
     "//src/lib/fxl",

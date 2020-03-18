@@ -115,12 +115,21 @@ source_set("logs") {
   ]
 }
 
-source_set("promise") {
-  public = [ "promise.h" ]
+source_set("libfit") {
+  public = [
+    "promise.h",
+    "weak_bridge.h",
+  ]
 
-  sources = [ "promise.h" ]
+  sources = [
+    "promise.h",
+    "weak_bridge.h",
+  ]
 
-  public_deps = [ "//zircon/public/lib/fit" ]
+  public_deps = [
+    "//src/lib/fxl",
+    "//zircon/public/lib/fit",
+  ]
 
   visibility = [ "//src/developer/feedback/*" ]
 }

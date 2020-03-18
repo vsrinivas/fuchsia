@@ -62,7 +62,7 @@ source_set("src") {
   ]
 
   deps = [
-    "//src/developer/feedback/utils:promise",
+    "//src/developer/feedback/utils:libfit",
     "//src/lib/files",
     "//src/lib/fsl",
     "//src/lib/fxl",

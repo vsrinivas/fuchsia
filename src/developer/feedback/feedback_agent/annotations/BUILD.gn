@@ -55,7 +55,7 @@ source_set("board_info_provider") {
   deps = [
     "//sdk/lib/sys/cpp",
     "//src/developer/feedback/feedback_agent:constants",
-    "//src/developer/feedback/utils:promise",
+    "//src/developer/feedback/utils:libfit",
     "//src/lib/fxl",
     "//src/lib/syslog/cpp",
     "//zircon/public/lib/fit",
@@ -81,7 +81,7 @@ source_set("channel_provider") {
   deps = [
     "//sdk/lib/sys/cpp",
     "//src/developer/feedback/feedback_agent:constants",
-    "//src/developer/feedback/utils:promise",
+    "//src/developer/feedback/utils:libfit",
     "//src/lib/fxl",
     "//src/lib/syslog/cpp",
     "//zircon/public/lib/fit",
@@ -108,7 +108,7 @@ source_set("product_info_provider") {
     "//sdk/fidl/fuchsia.intl",
     "//sdk/lib/sys/cpp",
     "//src/developer/feedback/feedback_agent:constants",
-    "//src/developer/feedback/utils:promise",
+    "//src/developer/feedback/utils:libfit",
     "//src/lib/fxl",
     "//src/lib/syslog/cpp",
     "//zircon/public/lib/fit",

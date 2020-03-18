@@ -164,7 +164,7 @@ executable("promise_unittest") {
 
   deps = [
     "//src/developer/feedback/testing:gtest_with_syslog_main",
-    "//src/developer/feedback/utils:promise",
+    "//src/developer/feedback/utils:libfit",
     "//src/lib/fxl",
     "//src/lib/testing/loop_fixture",
     "//third_party/googletest:gmock",

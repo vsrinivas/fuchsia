@@ -14,6 +14,7 @@
 
 #include <memory>
 
+#include "src/developer/feedback/utils/weak_bridge.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
@@ -29,18 +30,6 @@ class FeedbackDataProvider {
   fit::promise<fuchsia::feedback::Data> GetData(zx::duration timeout);
 
  private:
-  class WeakBridge {
-   public:
-    WeakBridge() : weak_ptr_factory_(&bridge_) {}
-    fxl::WeakPtr<fit::bridge<fuchsia::feedback::Data>> GetWeakPtr() {
-      return weak_ptr_factory_.GetWeakPtr();
-    }
-
-   private:
-    fit::bridge<fuchsia::feedback::Data> bridge_;
-    fxl::WeakPtrFactory<fit::bridge<fuchsia::feedback::Data>> weak_ptr_factory_;
-  };
-
   void ConnectToDataProvider();
 
   async_dispatcher_t* dispatcher_;
@@ -49,7 +38,7 @@ class FeedbackDataProvider {
 
   // We wrap each fit::bridge in a weak pointer because the fit::bridge can be invalidated through
   // several flows, including a delayed task on the dispatcher, which outlives this class.
-  std::map<uint64_t, WeakBridge> pending_get_data_;
+  std::map<uint64_t, WeakBridge<fuchsia::feedback::Data>> pending_get_data_;
   uint64_t next_get_data_id_ = 1;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FeedbackDataProvider);
