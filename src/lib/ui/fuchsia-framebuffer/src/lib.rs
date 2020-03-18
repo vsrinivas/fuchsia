@@ -590,12 +590,20 @@ impl FrameBuffer {
         }
 
         let proxy = dc_client.into_proxy()?;
-        proxy.enable_vsync(true).context("enable_vsync failed")?;
+        FrameBuffer::new_with_proxy(usage, proxy, device_client, vsync_sender).await
+    }
 
+    async fn new_with_proxy(
+        usage: FrameUsage,
+        proxy: ControllerProxy,
+        device_client: zx::Channel,
+        vsync_sender: Option<futures::channel::mpsc::UnboundedSender<VSyncMessage>>,
+    ) -> Result<FrameBuffer, Error> {
         let mut stream = proxy.take_event_stream();
         let config = Self::create_config_from_event_stream(&mut stream).await?;
 
         if let Some(vsync_sender) = vsync_sender {
+            proxy.enable_vsync(true).context("enable_vsync failed")?;
             fasync::spawn_local(
                 stream
                     .map_ok(move |request| match request {
@@ -786,14 +794,44 @@ impl FrameBuffer {
 
 #[cfg(test)]
 mod test {
-    use crate::{FrameBuffer, FrameUsage};
-    use fuchsia_async as fasync;
+    use super::*;
+    use fidl_fuchsia_hardware_display::ControllerRequest;
 
     #[test]
     fn test_async_new() -> std::result::Result<(), anyhow::Error> {
         let mut executor = fasync::Executor::new()?;
         let fb_future = FrameBuffer::new(FrameUsage::Cpu, None, None);
         executor.run_singlethreaded(fb_future)?;
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_no_vsync() -> Result<(), anyhow::Error> {
+        let (client, server) = fidl::endpoints::create_endpoints::<ControllerMarker>()?;
+        let mut stream = server.into_stream()?;
+        let mut vsync_enabled = false;
+
+        fasync::spawn(async move {
+            while let Some(req) = stream.try_next().await.expect("Failed to get request!") {
+                match req {
+                    ControllerRequest::EnableVsync { enable: true, control_handle: _ } => {
+                        vsync_enabled = true
+                    }
+                    ControllerRequest::EnableVsync { enable: false, control_handle: _ } => {
+                        vsync_enabled = false
+                    }
+                    _ => panic!("Unexpected request"),
+                }
+            }
+        });
+
+        let proxy = client.into_proxy()?;
+        let (dummy, _) = zx::Channel::create()?;
+        let _fb = FrameBuffer::new_with_proxy(FrameUsage::Cpu, proxy, dummy, None);
+        if vsync_enabled {
+            panic!("Vsync should be disabled");
+        }
+
         Ok(())
     }
 }
