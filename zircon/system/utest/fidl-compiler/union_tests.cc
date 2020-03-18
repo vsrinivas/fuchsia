@@ -27,7 +27,7 @@ union Foo {
 )FIDL");
   ASSERT_FALSE(library.Compile());
   ASSERT_EQ(library.errors().size(), 1u);
-  ASSERT_STR_STR(library.errors().at(0).c_str(), "expecting NumericLiteral");
+  ASSERT_STR_STR(library.errors().at(0).c_str(), "missing ordinal before type");
 
   END_TEST;
 }
@@ -168,7 +168,7 @@ union Foo {
 )FIDL");
   ASSERT_FALSE(library.Compile());
   ASSERT_EQ(library.errors().size(), 1u);
-  ASSERT_STR_STR(library.errors().at(0).c_str(), "expecting NumericLiteral");
+  ASSERT_STR_STR(library.errors().at(0).c_str(), "missing ordinal before type");
 
   END_TEST;
 }

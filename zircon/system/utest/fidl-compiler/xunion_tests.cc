@@ -144,7 +144,7 @@ xunion Foo {
 )FIDL",
                         &errors));
   EXPECT_EQ(errors.size(), 1u);
-  ASSERT_STR_STR(errors.at(0).c_str(), "expecting NumericLiteral");
+  ASSERT_STR_STR(errors.at(0).c_str(), "missing ordinal before type");
 
   // Keywords as field names.
   EXPECT_TRUE(Compiles(R"FIDL(
@@ -303,7 +303,7 @@ library example;
 xunion Foo {
   [Selector = "v2"] 1: string v;
 };
- 
+
 )FIDL");
   ASSERT_FALSE(library.Compile());
   auto errors = library.errors();

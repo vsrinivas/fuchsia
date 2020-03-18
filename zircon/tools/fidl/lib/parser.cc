@@ -222,7 +222,8 @@ std::unique_ptr<raw::NumericLiteral> Parser::ParseNumericLiteral() {
 std::unique_ptr<raw::Ordinal32> Parser::ParseOrdinal32() {
   ASTScope scope(this);
 
-  ConsumeToken(OfKind(Token::Kind::kNumericLiteral));
+  if (!MaybeConsumeToken(OfKind(Token::Kind::kNumericLiteral)))
+    return Fail("missing ordinal before type");
   if (!Ok())
     return Fail();
   auto data = scope.GetSourceElement().span().data();
