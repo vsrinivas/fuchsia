@@ -622,10 +622,8 @@ pub(crate) mod testutil {
                 }
             }
 
-            self.frames.push(match frame.serialize_vec_outer() {
-                Ok(buffer) => (metadata, buffer.as_ref().to_vec()),
-                Err(_) => unreachable!(),
-            });
+            let buffer = frame.serialize_vec_outer().map_err(|(_err, s)| s)?;
+            self.frames.push((metadata, buffer.as_ref().to_vec()));
             Ok(())
         }
     }
