@@ -47,11 +47,19 @@ one-or-more = ( list-part )+ ;
 ## Tokens
 
 Whitespace and comments are ignored during lexing, and thus not
-present in the following grammar. Comments are C++-style `//` until
-the end of the line.
+present in the following grammar.
 
-TODO(US-238): Eventually comments will be read as part of a
-documentation generation system.
+Comments can start with two slashes ('//') or three slashes ('///'),
+or they can be embodied within a [`[Doc]` attribute][doc_reference].
+The three-slash variant and the `[Doc]` attribute behave the same way,
+propagating the comments to the generated target.
+
+The [fidldoc] tool processes comments propagated into the JSON-based
+Intermediate Representation (IR) to generate reference
+documentation pages for FIDL files.
+
+See the [FIDL style guide][comment_style_guide] for more details on
+comments.
 
 ## Grammar
 
@@ -184,4 +192,6 @@ limits this to protocols.
 
 <!-- xrefs -->
 [primitives]: /docs/development/languages/fidl/reference/language.md#primitives
-
+[fidldoc]: /tools/fidl/fidldoc/
+[doc_reference]: /docs/development/languages/fidl/reference/attributes.md#doc
+[comment_style_guide]: /docs/development/languages/fidl/style.md#comments
