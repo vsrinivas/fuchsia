@@ -103,7 +103,7 @@ class FuchsiaTestCommandCli {
       testNames: testNamesCollector.collect(),
     );
 
-    var _cmd = buildCommand(testsConfig);
+    _cmd = buildCommand(testsConfig);
 
     if (testsConfig.flags.shouldRebuild) {
       _cmd.outputFormatter.update(
