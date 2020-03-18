@@ -52,7 +52,7 @@
 ## (or without the switch, once `fx goma` has been done once).
 ##
 
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
 
 set -e
 
@@ -72,9 +72,11 @@ function main {
     case "$1" in
     --browser)
       login_args+=("$1")
+      shift
       ;;
     --update)
       update=true
+      shift
       ;;
     *)
       fx-command-help
