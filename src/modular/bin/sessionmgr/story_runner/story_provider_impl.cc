@@ -265,7 +265,6 @@ StoryProviderImpl::StoryProviderImpl(Environment* const session_environment, std
                                      fuchsia::modular::FocusProviderPtr focus_provider,
                                      AgentServicesFactory* const agent_services_factory,
                                      EntityProviderRunner* const entity_provider_runner,
-                                     modular::ModuleFacetReader* const module_facet_reader,
                                      PresentationProvider* const presentation_provider,
                                      const bool enable_story_shell_preload,
                                      inspect::Node* root_node)
@@ -278,7 +277,6 @@ StoryProviderImpl::StoryProviderImpl(Environment* const session_environment, std
       component_context_info_(component_context_info),
       agent_services_factory_(agent_services_factory),
       entity_provider_runner_(entity_provider_runner),
-      module_facet_reader_(module_facet_reader),
       presentation_provider_(presentation_provider),
       focus_provider_(std::move(focus_provider)),
       focus_watcher_binding_(this),

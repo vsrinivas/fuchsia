@@ -29,7 +29,6 @@
 #include "src/modular/lib/fidl/app_client.h"
 #include "src/modular/lib/fidl/environment.h"
 #include "src/modular/lib/fidl/view_host.h"
-#include "src/modular/lib/module_manifest/module_facet_reader.h"
 #include "src/modular/lib/scoped_tmpfs/scoped_tmpfs.h"
 
 namespace modular {
@@ -185,7 +184,6 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   std::unique_ptr<ViewHost> session_shell_view_host_;
 
   std::unique_ptr<EntityProviderRunner> entity_provider_runner_;
-  std::unique_ptr<ModuleFacetReader> module_facet_reader_;
 
   std::unique_ptr<SessionStorage> session_storage_;
   AsyncHolder<StoryProviderImpl> story_provider_impl_;

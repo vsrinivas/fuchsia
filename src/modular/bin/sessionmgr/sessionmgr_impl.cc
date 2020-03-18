@@ -35,7 +35,6 @@
 #include "src/modular/lib/ledger_client/constants.h"
 #include "src/modular/lib/ledger_client/ledger_client.h"
 #include "src/modular/lib/ledger_client/page_id.h"
-#include "src/modular/lib/module_manifest/module_facet_reader_impl.h"
 
 namespace modular {
 
@@ -420,14 +419,11 @@ void SessionmgrImpl::InitializeModular(const fidl::StringPtr& session_shell_url,
   session_storage_ =
       std::make_unique<SessionStorage>(ledger_client_.get(), fuchsia::ledger::PageId());
 
-  module_facet_reader_.reset(
-      new ModuleFacetReaderImpl(sessionmgr_context_->svc()->Connect<fuchsia::sys::Loader>()));
-
   story_provider_impl_.reset(new StoryProviderImpl(
       session_environment_.get(), LoadDeviceID(session_id_), session_storage_.get(),
       std::move(story_shell_config), std::move(story_shell_factory_ptr), component_context_info,
       std::move(focus_provider_story_provider), startup_agent_launcher_.get(),
-      entity_provider_runner_.get(), module_facet_reader_.get(), presentation_provider_impl_.get(),
+      entity_provider_runner_.get(), presentation_provider_impl_.get(),
       (config_.enable_story_shell_preload()), &inspect_root_node_));
 
   AtEnd(Teardown(kStoryProviderTimeout, "StoryProvider", &story_provider_impl_));

@@ -469,15 +469,7 @@ class StoryControllerImpl::LaunchModuleInShellCall : public Operation<> {
 
     operation_queue_.Add(std::make_unique<LaunchModuleCall>(
         story_controller_impl_, fidl::Clone(module_data_), std::move(module_controller_request_),
-        /*view_token=*/std::nullopt, [this, flow] { LoadModuleManifest(flow); }));
-  }
-
-  void LoadModuleManifest(FlowToken flow) {
-    story_controller_impl_->story_provider_impl_->module_facet_reader()->GetModuleManifest(
-        module_data_.module_url(), [this, flow](fuchsia::modular::ModuleManifestPtr manifest) {
-          module_manifest_ = std::move(manifest);
-          MaybeConnectViewToStoryShell(flow);
-        });
+        /*view_token=*/std::nullopt, [this, flow] { MaybeConnectViewToStoryShell(flow); }));
   }
 
   // We only add a module to story shell if it's either a root module or its

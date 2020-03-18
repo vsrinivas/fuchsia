@@ -37,7 +37,6 @@
 #include "src/modular/lib/ledger_client/ledger_client.h"
 #include "src/modular/lib/ledger_client/page_client.h"
 #include "src/modular/lib/ledger_client/types.h"
-#include "src/modular/lib/module_manifest/module_facet_reader.h"
 
 namespace modular {
 
@@ -56,7 +55,6 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::Foc
                     fuchsia::modular::FocusProviderPtr focus_provider,
                     AgentServicesFactory* agent_services_factory,
                     EntityProviderRunner* entity_provider_runner,
-                    modular::ModuleFacetReader* module_facet_reader,
                     PresentationProvider* presentation_provider, bool enable_story_shell_preload,
                     inspect::Node* root_node);
 
@@ -88,8 +86,6 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::Foc
   AgentServicesFactory* agent_services_factory() { return agent_services_factory_; }
 
   fuchsia::modular::EntityResolver* entity_resolver() { return entity_provider_runner_; }
-
-  modular::ModuleFacetReader* module_facet_reader() { return module_facet_reader_; }
 
   // Called by StoryControllerImpl.
   const fuchsia::modular::AppConfig& story_shell_config() const { return story_shell_config_; }
@@ -266,10 +262,9 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::Foc
 
   const ComponentContextInfo component_context_info_;
 
-  AgentServicesFactory* const agent_services_factory_;       // Not owned.
-  EntityProviderRunner* const entity_provider_runner_;       // Not owned.
-  modular::ModuleFacetReader* const module_facet_reader_;    // Not owned.
-  PresentationProvider* const presentation_provider_;        // Not owned.
+  AgentServicesFactory* const agent_services_factory_;  // Not owned.
+  EntityProviderRunner* const entity_provider_runner_;  // Not owned.
+  PresentationProvider* const presentation_provider_;   // Not owned.
 
   // When a story gets created, or when it gets focused on this device, we write
   // a record of the current context in the story page. So we need to watch the
