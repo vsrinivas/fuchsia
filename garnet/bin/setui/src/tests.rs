@@ -13,6 +13,7 @@ mod message_tests;
 mod night_mode_tests;
 mod privacy_tests;
 mod restore_agent_tests;
+mod service_configuration_tests;
 mod setui_tests;
 mod setup_tests;
 mod system_tests;

@@ -1,17 +1,20 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use crate::switchboard::accessibility_types::AccessibilityInfo;
-use crate::switchboard::intl_types::IntlInfo;
+
+use std::collections::HashSet;
+use std::sync::Arc;
+
 use anyhow::Error;
-use bitflags::bitflags;
 use fuchsia_syslog::fx_log_warn;
 use futures::channel::oneshot::Sender;
 use futures::lock::Mutex;
 use serde_derive::{Deserialize, Serialize};
-use std::collections::HashSet;
-use std::sync::Arc;
 use thiserror::Error;
+
+use crate::switchboard::accessibility_types::AccessibilityInfo;
+use crate::switchboard::intl_types::IntlInfo;
+use bitflags::bitflags;
 
 pub type SwitchboardHandle = Arc<Mutex<dyn Switchboard + Send + Sync>>;
 
@@ -40,7 +43,7 @@ pub enum SwitchboardError {
     InvalidArgument { setting_type: SettingType, argument: String, value: String },
 
     #[error(
-        "External failure for setting type:{setting_type:?} dependency: {dependency:?} reqeust:{request:?}"
+    "External failure for setting type:{setting_type:?} dependency: {dependency:?} reqeust:{request:?}"
     )]
     ExternalFailure { setting_type: SettingType, dependency: String, request: String },
 
@@ -54,7 +57,7 @@ pub enum SwitchboardError {
 /// The setting types supported by the messaging system. This is used as a key
 /// for listening to change notifications and sending requests.
 /// The types are arranged alphabetically.
-#[derive(PartialEq, Debug, Eq, Hash, Clone, Copy)]
+#[derive(PartialEq, Debug, Eq, Hash, Clone, Copy, Serialize, Deserialize)]
 pub enum SettingType {
     Unknown,
     Accessibility,
@@ -75,21 +78,22 @@ pub enum SettingType {
 /// Returns all known setting types. New additions to SettingType should also
 /// be inserted here.
 pub fn get_all_setting_types() -> HashSet<SettingType> {
-    let mut set = HashSet::new();
-    set.insert(SettingType::Accessibility);
-    set.insert(SettingType::Audio);
-    set.insert(SettingType::Device);
-    set.insert(SettingType::Display);
-    set.insert(SettingType::DoNotDisturb);
-    set.insert(SettingType::Intl);
-    set.insert(SettingType::LightSensor);
-    set.insert(SettingType::NightMode);
-    set.insert(SettingType::Power);
-    set.insert(SettingType::Privacy);
-    set.insert(SettingType::Setup);
-    set.insert(SettingType::System);
-
-    set
+    return vec![
+        SettingType::Accessibility,
+        SettingType::Audio,
+        SettingType::Device,
+        SettingType::Display,
+        SettingType::DoNotDisturb,
+        SettingType::Intl,
+        SettingType::LightSensor,
+        SettingType::NightMode,
+        SettingType::Power,
+        SettingType::Privacy,
+        SettingType::Setup,
+        SettingType::System,
+    ]
+    .into_iter()
+    .collect();
 }
 
 /// The possible requests that can be made on a setting. The sink will expect a
@@ -371,8 +375,9 @@ impl FidlResponseErrorLogger for Result<(), fidl::Error> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use fuchsia_zircon as zx;
+
+    use super::*;
 
     /// Should succeed either when responding was successful or there was an error on the client side.
     #[test]

@@ -34,7 +34,6 @@ use {
     crate::service_context::ServiceContextHandle,
     crate::setup::setup_controller::SetupController,
     crate::setup::spawn_setup_fidl_handler,
-    crate::switchboard::base::get_all_setting_types,
     crate::switchboard::base::SettingType,
     crate::switchboard::switchboard_impl::SwitchboardImpl,
     crate::system::spawn_setui_fidl_handler,
@@ -49,8 +48,10 @@ use {
     futures::channel::oneshot::Receiver,
     futures::lock::Mutex,
     futures::StreamExt,
+    serde_derive::{Deserialize, Serialize},
     std::collections::HashMap,
     std::collections::HashSet,
+    std::iter::FromIterator,
     std::sync::Arc,
 };
 
@@ -86,10 +87,10 @@ enum Runtime {
     Service,
     Nested(&'static str),
 }
-#[derive(PartialEq)]
-pub enum Configuration {
-    All,
-    Empty,
+
+#[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
+pub struct ServiceConfiguration {
+    pub services: HashSet<SettingType>,
 }
 
 /// Environment is handed back when an environment is spawned from the
@@ -113,8 +114,7 @@ impl Environment {
 /// The EnvironmentBuilder aggregates the parameters surrounding an environment
 /// and ultimately spawns an environment based on them.
 pub struct EnvironmentBuilder<T: DeviceStorageFactory + Send + Sync + 'static> {
-    configuration: Option<Configuration>,
-    settings: Vec<SettingType>,
+    configuration: Option<ServiceConfiguration>,
     agents: Vec<AgentHandle>,
     storage_factory: Arc<Mutex<T>>,
     generate_service: Option<GenerateService>,
@@ -131,7 +131,6 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
     pub fn new(storage_factory: Arc<Mutex<T>>) -> EnvironmentBuilder<T> {
         EnvironmentBuilder {
             configuration: None,
-            settings: vec![],
             agents: vec![],
             storage_factory: storage_factory,
             generate_service: None,
@@ -155,15 +154,16 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
     }
 
     /// A preset configuration to load preset parameters as a base.
-    pub fn configuration(mut self, configuration: Configuration) -> EnvironmentBuilder<T> {
+    pub fn configuration(mut self, configuration: ServiceConfiguration) -> EnvironmentBuilder<T> {
         self.configuration = Some(configuration);
         self
     }
 
     /// Setting types to participate.
-    pub fn settings(mut self, settings: &[SettingType]) -> EnvironmentBuilder<T> {
-        self.settings.append(&mut settings.to_vec());
-        self
+    pub fn settings(self, settings: &[SettingType]) -> EnvironmentBuilder<T> {
+        self.configuration(ServiceConfiguration {
+            services: settings.to_vec().into_iter().collect(),
+        })
     }
 
     /// Agents to participate
@@ -180,16 +180,12 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
         let service_dir =
             if let Runtime::Service = runtime { fs.dir("svc") } else { fs.root_dir() };
 
-        let mut settings = match self.configuration {
-            Some(Configuration::All) => get_all_setting_types(),
+        let settings = match self.configuration {
+            Some(configuration) => HashSet::from_iter(configuration.services),
             _ => HashSet::new(),
         };
 
         let service_context = ServiceContext::create(self.generate_service);
-
-        for setting in self.settings {
-            settings.insert(setting);
-        }
 
         let mut handler_factory = SettingHandlerFactoryImpl::new(
             settings.clone(),

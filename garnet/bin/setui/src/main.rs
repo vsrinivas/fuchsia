@@ -9,9 +9,11 @@ use {
     fuchsia_syslog::{self as syslog, fx_log_info},
     futures::lock::Mutex,
     settings::agent::restore_agent::RestoreAgent,
+    settings::config::default_settings::DefaultSetting,
     settings::registry::device_storage::StashDeviceStorageFactory,
-    settings::Configuration,
+    settings::switchboard::base::get_all_setting_types,
     settings::EnvironmentBuilder,
+    settings::ServiceConfiguration,
     std::sync::Arc,
 };
 
@@ -28,11 +30,19 @@ fn main() -> Result<(), Error> {
         connect_to_service::<fidl_fuchsia_stash::StoreMarker>().unwrap(),
     );
 
+    let default_configuration = ServiceConfiguration { services: get_all_setting_types() };
+
+    let configuration = DefaultSetting::new(
+        default_configuration,
+        Some("/config/data/service_configuration.json".to_string()),
+    )
+    .get_default_value();
+
     // EnvironmentBuilder::spawn returns a future that can be awaited for the
     // result of the startup. Since main is a synchronous function, we cannot
     // block here and therefore continue without waiting for the result.
     EnvironmentBuilder::new(Arc::new(Mutex::new(storage_factory)))
-        .configuration(Configuration::All)
+        .configuration(configuration)
         .agents(&[Arc::new(Mutex::new(RestoreAgent::new()))])
         .spawn(executor);
 
